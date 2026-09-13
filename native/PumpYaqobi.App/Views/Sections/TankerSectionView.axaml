@@ -65,7 +65,6 @@
                        IsReadOnly="True" BorderThickness="0" CornerRadius="0"
                       RowDeleteCommand="{Binding $parent[UserControl].DataContext.DeleteCommand}">
             <DataGrid.Columns>
-              <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
               <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
               <DataGridTextColumn Header="نوع تیل" Binding="{Binding FuelText}" Width="Auto" />
               <DataGridTextColumn Header="بارنامه" Binding="{Binding ManifestText}" Width="Auto" />

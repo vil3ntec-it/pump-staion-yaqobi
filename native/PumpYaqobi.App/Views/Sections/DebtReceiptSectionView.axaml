@@ -64,7 +64,6 @@
           <c:ExcelGrid Grid.Row="1" ItemsSource="{Binding Rows}" x:CompileBindings="False"
                        IsReadOnly="True" BorderThickness="0" CornerRadius="0">
             <DataGrid.Columns>
-              <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
               <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
               <DataGridTextColumn Header="نام قرض‌دار" Binding="{Binding Account}" Width="Auto" />
               <DataGridTextColumn Header="توضیحات" Binding="{Binding Note}" Width="Auto" />

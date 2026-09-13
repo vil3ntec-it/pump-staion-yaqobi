@@ -400,6 +400,59 @@ public class ExcelGrid : DataGrid
     /// <summary>یک چرخِ ماوس چند پیکسل صفحه را می‌برد.</summary>
     private const double WheelStep = 58;
 
+    /// <summary>
+    /// ══ صفحه دنبالِ خانهٔ جاری بیاید — ولی فقط با کلید ═══════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «وقتی با کلیدها به سقف یا کفِ صفحه می‌رسم، اسکرول
+    /// نمی‌شود. این را هم درست کن، مثلِ اکسل.»
+    ///
+    /// حق داشت، و ریشه‌اش یک قاعدهٔ خودمان بود: ‎RequestBringIntoView‎ بالاتر
+    /// **همیشه** بسته می‌شود. آن برای کلیک درست است (کلیک نباید کلِ صفحه را
+    /// بکشد و سربرگ را از بالا ببرد)، ولی همان قاعده جلوی دنبال کردنِ کلید را
+    /// هم می‌گرفت.
+    ///
+    /// پس به‌جای تکیه بر آن رویداد، خودمان کم‌ترین لغزشِ لازم را می‌دهیم:
+    ///   • خانه بالای دید افتاده ⇒ فقط تا زیرِ نوارِ چسبانِ بخش‌ها بیا بالا
+    ///   • خانه پایینِ دید افتاده ⇒ فقط تا لبهٔ پایین بیا پایین
+    ///   • داخلِ دید است ⇒ هیچ. (وگرنه هر فلش صفحه را می‌پراند.)
+    /// </summary>
+    private void FollowCell()
+    {
+        if (Page is not { } page) return;
+
+        var cell = this.GetVisualDescendants().OfType<DataGridCell>()
+                       .FirstOrDefault(c => c.IsVisible && c.Bounds.Height > 0
+                                         && ReferenceEquals(ColumnOfCell(c), CurrentColumn)
+                                         && c.DataContext is not null
+                                         && ReferenceEquals(c.DataContext, SelectedItem));
+        if (cell is null) return;
+        if (cell.TranslatePoint(new Point(0, 0), page) is not { } at) return;
+
+        // نوارِ بخش‌ها روی صفحه شناور است، پس بالای دید به اندازهٔ او کور است.
+        var blind = page.GetVisualRoot() is Visual root
+            ? root.GetVisualDescendants().OfType<Border>()
+                  .FirstOrDefault(b => b.Name == "NavBar")?.Bounds.Height ?? 0
+            : 0;
+
+        var top = at.Y;
+        var bottom = at.Y + cell.Bounds.Height;
+        var max = Math.Max(0, page.Extent.Height - page.Viewport.Height);
+
+        double delta;
+        if (top < blind) delta = top - blind;                       // برو بالا
+        else if (bottom > page.Viewport.Height) delta = bottom - page.Viewport.Height;
+        else return;                                                // همین‌جا پیداست
+
+        page.Offset = new Vector(page.Offset.X,
+                                 Math.Clamp(page.Offset.Y + delta, 0, max));
+    }
+
+    /// <summary>ستونی که این خانه مالِ اوست — از خودِ خانه.</summary>
+    private static DataGridColumn? ColumnOfCell(DataGridCell cell) =>
+        cell.GetType().GetProperty("OwningColumn",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic
+              | System.Reflection.BindingFlags.Public)?.GetValue(cell) as DataGridColumn;
+
     private ScrollBar? _vbar;
 
     /// <summary>نوارِ لغزشِ عمودیِ خودِ جدول (‎PART_VerticalScrollbar‎).</summary>
@@ -765,7 +818,42 @@ public class ExcelGrid : DataGrid
     /// (مجازی‌سازی) دوباره نوشته می‌شود.
     /// </summary>
     private static void OnNumberRow(object? sender, DataGridRowEventArgs e) =>
-        e.Row.Header = e.Row.GetIndex() + 1;
+        e.Row.Header = RowNumber(e.Row);
+
+    /// <summary>
+    /// ══ شمارهٔ ردیف: اول از خودِ ردیف بپرس ══════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو با عکس: «۱۲۰ است، اما تو جای تیره ۴۵ — این باید ۱۲۰
+    /// بشود.»
+    ///
+    /// حق داشت. ‎GetIndex()‎ جای ردیف در **همین جدول** است، و بخشی مثلِ ورق
+    /// یک فهرستِ واحد را بینِ دو جدول نصف می‌کند (‎TxnsFirst‎/‎TxnsSecond‎).
+    /// پس ردیفی که در کلِ ورق شمارهٔ ۱۲۰ است، در جدولِ دوم ردیفِ ۴۵ می‌افتد و
+    /// نوار همان ۴۵ را می‌نوشت. ستونِ دادهٔ «#» عددِ درست را داشت — و همین
+    /// دوتایی شدن هم ایرادِ دیگرِ همان گزارش بود.
+    ///
+    /// حالا نوار اول از خودِ ویومدلِ ردیف می‌پرسد (‎IndexText‎ یا ‎Index‎) و
+    /// فقط اگر نداشت به جای ردیف برمی‌گردد. پس ستونِ «#» می‌تواند برود.
+    /// </summary>
+    private static object RowNumber(DataGridRow row)
+    {
+        if (row.DataContext is { } dc)
+        {
+            var t = dc.GetType();
+            if (!_numProp.TryGetValue(t, out var p))
+                _numProp[t] = p = t.GetProperty("IndexText") ?? t.GetProperty("Index");
+
+            switch (p?.GetValue(dc))
+            {
+                case string s when s.Length > 0: return s;
+                case int i when i > 0: return i;
+            }
+        }
+        return row.GetIndex() + 1;
+    }
+
+    /// <summary>خاصیتِ شمارهٔ هر نوعِ ردیف — تا بازتاب هر بار تکرار نشود.</summary>
+    private static readonly Dictionary<Type, System.Reflection.PropertyInfo?> _numProp = new();
 
     /// <summary>
     /// همان قاعدهٔ اکسل: در «حالتِ نوشتن» فلش مقدار را ذخیره می‌کند و به خانهٔ
@@ -1046,6 +1134,7 @@ public class ExcelGrid : DataGrid
         var item = SelectedItem ?? (ItemsSource as System.Collections.IEnumerable)?.Cast<object>().FirstOrDefault();
         if (item is not null) ScrollIntoView(item, cols[next]);
         PaintRange();
+        Dispatcher.UIThread.Post(FollowCell, DispatcherPriority.Background);
         return true;
     }
 
@@ -1237,6 +1326,10 @@ public class ExcelGrid : DataGrid
                 if (!shift && _colAnchor >= 0) { ResetRange(CurIndex(VisibleCols())); PaintRange(); }
                 break;
 
+            case Key.PageUp:
+            case Key.PageDown:
+                break;
+
             // ── Home/End: سرِ ردیف و ته ردیف (با ‎Ctrl‎: سرِ جدول و ته جدول) ─
             case Key.Home when !ctrl:
                 MoveColumn(-VisibleCols().Count, shift);
@@ -1285,6 +1378,17 @@ public class ExcelGrid : DataGrid
         }
 
         base.OnKeyDown(e);
+
+        // ══ و بعدِ هر ناوبری، صفحه دنبالِ خانه بیاید ═════════════════════════
+        //
+        // ⚠️ این‌جا لازم است، نه فقط داخلِ ‎MoveRow‎/‎MoveColumn‎: فلشِ بالا و
+        // پایینِ تنها را **خودِ ‎DataGrid‎** انجام می‌دهد (بالا فقط ‎break‎
+        // می‌شود و کار به ‎base‎ می‌رسد)، پس آن دو تابع اصلاً صدا زده نمی‌شوند.
+        // سنجش همین را گرفت: بعدِ ۴۰ فلشِ پایین، خانهٔ جاری در ۱۲۷۷ افتاده بود
+        // و قابِ دید تا ۹۰۰ — یعنی ۳۷۷ پیکسل زیرِ صفحه.
+        if (e.Key is Key.Up or Key.Down or Key.Left or Key.Right
+                  or Key.Home or Key.End or Key.PageUp or Key.PageDown or Key.Tab or Key.Enter)
+            Dispatcher.UIThread.Post(FollowCell, DispatcherPriority.Background);
     }
 
     /// <summary>
@@ -1344,5 +1448,7 @@ public class ExcelGrid : DataGrid
 
         SelectedIndex = next;
         ScrollIntoView(list[next], CurrentColumn);
+        // ⚠️ یک پاسِ چیدمان بعد: ردیفِ تازه هنوز ساخته نشده و مختصاتش صفر است.
+        Dispatcher.UIThread.Post(FollowCell, DispatcherPriority.Background);
     }
 }

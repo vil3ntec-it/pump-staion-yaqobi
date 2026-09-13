@@ -74,6 +74,8 @@ internal static class CellEditAudit
         bad.AddRange(Resize(win, grid));
         bad.AddRange(TwoModes(win, grid));
         bad.AddRange(ChipToggles(win, vm));
+        bad.AddRange(RowNumbers(win, vm));
+        bad.AddRange(FollowsCell(win, vm));
 
         Console.WriteLine();
         if (bad.Count == 0)
@@ -458,6 +460,133 @@ internal static class CellEditAudit
                                              .FirstOrDefault()?.GetIndex() == grid.SelectedIndex);
         return (cell?.GetVisualDescendants().OfType<Button>().FirstOrDefault()?.Content
                 ?? "").ToString() ?? "";
+    }
+
+    // ══ ۶) شمارهٔ ردیف: یک بار، و عددِ درست ══════════════════════════════════
+    //
+    // گزارشِ صاحب ریپو با عکس: «دو بار عددِ جدول نوشته شده … اونی که تو جدول
+    // است رو بردار و اونی که تو جای تیره است رو هم باگ‌ش رو درست کن. ۱۲۰ است
+    // اما تو جای تیره ۴۵؛ این باید ۱۲۰ بشه.»
+
+    private static IEnumerable<string> RowNumbers(Window win, MainViewModel vm)
+    {
+        var bad = new List<string>();
+
+        Console.WriteLine();
+        Console.WriteLine("بخش            ستونِ «#»   نوارِ تیره   خودِ ردیف   نتیجه");
+        Console.WriteLine(new string('-', 78));
+
+        foreach (var (id, content) in Targets(win, vm))
+        {
+            foreach (var grid in win.GetVisualDescendants().OfType<DataGrid>())
+            {
+                // الف) ستونِ دادهٔ «#» نباید باشد
+                var dup = grid.Columns.Any(c => c.IsVisible && c.Header?.ToString()?.Trim() == "#");
+
+                // ب) عددِ نوار باید همان ‎Index‎ی خودِ ردیف باشد
+                var row = grid.GetVisualDescendants().OfType<DataGridRow>()
+                              .FirstOrDefault(r => r.DataContext is not null && r.Bounds.Height > 0);
+                if (row is null && !dup) continue;
+
+                var want = IndexOf(row?.DataContext);
+                var got = row?.Header?.ToString() ?? "";
+                var numbered = want.Length == 0 || got == want;
+
+                if (!dup && numbered) continue;
+
+                Console.WriteLine($"{Pad(id, 14)} {Pad(dup ? "هست" : "نیست", 11)} "
+                                + $"{Pad(got, 12)} {Pad(want, 11)} {(!dup && numbered ? "✔" : "✖")}");
+                if (dup) bad.Add($"{id}: ستونِ «#» هنوز در جدول هست — شماره دو بار نوشته می‌شود");
+                if (!numbered)
+                    bad.Add($"{id}: نوارِ تیره «{got}» می‌نویسد ولی شمارهٔ ردیف «{want}» است");
+            }
+        }
+
+        return bad;
+    }
+
+    /// <summary>هر بخش، و بعد صفحهٔ حسابِ نخستین قرض‌دار و نخستین ورق.</summary>
+    private static IEnumerable<(string Id, object Content)> Targets(Window win, MainViewModel vm)
+    {
+        foreach (var sec in vm.Sections.ToList())
+        {
+            Wait(win, vm.GoAsync(sec));
+            for (var k = 0; k < 4; k++) { Dispatcher.UIThread.RunJobs(); Pump(win); }
+            yield return (sec.Id, sec);
+
+            if (sec is not PumpYaqobi.App.ViewModels.ICardGridHost cards) continue;
+            Wait(win, cards.OpenByNumberAsync(1));
+            for (var k = 0; k < 4; k++) { Dispatcher.UIThread.RunJobs(); Pump(win); }
+            if (sec.ActivePage is { } page) yield return (sec.Id + "/صفحه", page);
+        }
+    }
+
+    /// <summary>شمارهٔ خودِ ردیف، همان‌طور که ویومدلش می‌گوید.</summary>
+    private static string IndexOf(object? dc)
+    {
+        if (dc is null) return "";
+        var t = dc.GetType();
+        var p = t.GetProperty("IndexText") ?? t.GetProperty("Index");
+        return p?.GetValue(dc) switch
+        {
+            string s when s.Length > 0 => s,
+            int i when i > 0 => i.ToString(),
+            _ => "",
+        };
+    }
+
+    // ══ ۷) صفحه دنبالِ خانه بیاید ═══════════════════════════════════════════
+    //
+    // گزارشِ صاحب ریپو: «وقتی با کلیدها به سقف یا کفِ صفحه می‌رسم، اسکرول
+    // نمی‌شود. مثلِ اکسل درستش کن.»
+
+    private static IEnumerable<string> FollowsCell(Window win, MainViewModel vm)
+    {
+        var bad = new List<string>();
+
+        var sec = vm.Sections.FirstOrDefault(s => s.Id == "safe");
+        if (sec is null) return bad;
+        Wait(win, vm.GoAsync(sec));
+        for (var i = 0; i < 6; i++) { Dispatcher.UIThread.RunJobs(); Pump(win); }
+
+        var page = win.GetVisualDescendants().OfType<ScrollViewer>()
+                      .FirstOrDefault(v => v.Name == "PageScroll");
+        var grid = win.GetVisualDescendants().OfType<DataGrid>().FirstOrDefault();
+        if (page is null || grid is null) return bad;
+
+        grid.Focus();
+        grid.SelectedIndex = 0;
+        grid.CurrentColumn = grid.Columns.FirstOrDefault(c => c.IsVisible);
+        Pump(win);
+
+        // ⚠️ «صفحه لغزید؟» سنجهٔ درستی نیست: اگر خودِ جدول درونی بلغزد، خانه
+        // باز هم پیداست و آفستِ صفحه دست‌نخورده می‌ماند. چیزی که کاربر می‌بیند
+        // این است: **خانهٔ جاری دیده می‌شود یا نه**. پس همان را می‌سنجیم.
+        for (var i = 0; i < 40; i++) { Tap(win, PhysicalKey.ArrowDown); Pump(win); }
+        for (var k = 0; k < 4; k++) { Dispatcher.UIThread.RunJobs(); Pump(win); }
+
+        var cell = win.GetVisualDescendants().OfType<DataGridCell>()
+                      .FirstOrDefault(c => c.IsVisible && c.Bounds.Height > 0
+                                        && ReferenceEquals(c.DataContext, grid.SelectedItem));
+        Console.WriteLine();
+        Console.WriteLine("خانهٔ جاری بعدِ ۴۰ فلشِ پایین   جای خانه   قابِ دید   نتیجه");
+        Console.WriteLine(new string('-', 78));
+
+        if (cell is null)
+        {
+            Console.WriteLine($"{Pad("خانهٔ جاری", 30)} {Pad("ساخته نشده", 11)} "
+                            + $"{Pad(page.Viewport.Height.ToString("0"), 10)} ✖");
+            bad.Add("خانهٔ جاری پس از ناوبری اصلاً ساخته نشده — یعنی از دید بیرون است");
+            return bad;
+        }
+
+        var at = cell.TranslatePoint(new Point(0, 0), page)?.Y ?? -1;
+        var seen = at >= -1 && at + cell.Bounds.Height <= page.Viewport.Height + 1;
+        Console.WriteLine($"{Pad("خانهٔ جاری", 30)} {Pad(at.ToString("0"), 11)} "
+                        + $"{Pad(page.Viewport.Height.ToString("0"), 10)} {(seen ? "✔" : "✖")}");
+        if (!seen) bad.Add($"خانهٔ جاری در {at:0} افتاده و قابِ دید تا {page.Viewport.Height:0} است");
+
+        return bad;
     }
 
     // ── ابزار ─────────────────────────────────────────────────────────────

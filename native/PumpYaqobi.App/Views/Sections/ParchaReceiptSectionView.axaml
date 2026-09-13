@@ -25,7 +25,6 @@
       <c:ExcelGrid Grid.Row="0" ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False"
                    IsVisible="{Binding !IsEmpty}">
         <DataGrid.Columns>
-          <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" IsReadOnly="True" />
           <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
           <DataGridTextColumn Header="به حساب" Binding="{Binding Account}" Width="Auto" />
           <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="Auto" />

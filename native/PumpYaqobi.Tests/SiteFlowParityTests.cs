@@ -196,7 +196,20 @@ public class SiteFlowParityTests
     {
         var g = Read("PumpYaqobi.App", "Controls", "ExcelGrid.cs");
         Assert.Contains("HeadersVisibility = DataGridHeadersVisibility.All;", g);
-        Assert.Contains("e.Row.Header = e.Row.GetIndex() + 1;", g);
+        // ⚠️ شماره اول از خودِ ردیف پرسیده می‌شود، بعد از جای ردیف در جدول.
+        // گزارشِ صاحب ریپو با عکس: «۱۲۰ است اما تو جای تیره ۴۵» — ورق یک
+        // فهرستِ واحد را بینِ دو جدول نصف می‌کند، پس جای ردیف در جدولِ دوم با
+        // شمارهٔ واقعی‌اش یکی نیست.
+        Assert.Contains("e.Row.Header = RowNumber(e.Row);", g);
+        Assert.Contains("t.GetProperty(\"IndexText\") ?? t.GetProperty(\"Index\")", g);
+        Assert.Contains("return row.GetIndex() + 1;", g);
+
+        // و ستونِ دادهٔ «#» از هیچ جدولی نمانده باشد — وگرنه شماره دو بار
+        // نوشته می‌شود، همان چیزی که در عکس دیده می‌شد.
+        var views = Directory.GetFiles(
+            Path.Combine(Root, "PumpYaqobi.App", "Views"), "*.axaml", SearchOption.AllDirectories);
+        foreach (var v in views)
+            Assert.DoesNotContain("<DataGridTextColumn Header=\"#\"", File.ReadAllText(v));
 
         // و نوارِ «جمله» پهنای همین ستون را حساب می‌کند تا جا‌به‌جا نشود
         var t = Read("PumpYaqobi.App", "Controls", "TotalsBar.cs");

@@ -12,7 +12,6 @@
 
     <c:ExcelGrid ItemsSource="{Binding Rows}" IsReadOnly="True" x:CompileBindings="False">
       <DataGrid.Columns>
-        <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
         <DataGridTextColumn Header="از تاریخ" Binding="{Binding FromText}" Width="Auto" />
         <DataGridTextColumn Header="نام قرض‌دار" Binding="{Binding Name}" Width="Auto" />
         <DataGridTextColumn Header="مدت عضویت" Binding="{Binding AgeText}" Width="Auto" />

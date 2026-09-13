@@ -13,7 +13,6 @@
         <c:ExcelGrid ItemsSource="{Binding Rows}" x:CompileBindings="False"
                      IsReadOnly="True" BorderThickness="0" CornerRadius="0">
           <DataGrid.Columns>
-            <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
             <DataGridTextColumn Header="نوع تیل" Binding="{Binding FuelText}" Width="Auto" />
             <DataGridTextColumn Header="نرخ" Binding="{Binding RateText}" Width="Auto" />
             <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />

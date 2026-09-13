@@ -92,7 +92,6 @@
       <Grid Grid.Row="3" ColumnDefinitions="*,8,*">
         <c:ExcelGrid GrowsToContent="True" Grid.Column="0" ItemsSource="{Binding TxnsFirst}" x:CompileBindings="False">
           <DataGrid.Columns>
-            <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" IsReadOnly="True" />
             <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
             <DataGridTemplateColumn Header="نوع تیل" Width="Auto">
               <DataGridTemplateColumn.CellTemplate>
@@ -142,7 +141,6 @@
 
         <c:ExcelGrid GrowsToContent="True" Grid.Column="2" ItemsSource="{Binding TxnsSecond}" x:CompileBindings="False">
           <DataGrid.Columns>
-            <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" IsReadOnly="True" />
             <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
             <DataGridTemplateColumn Header="نوع تیل" Width="Auto">
               <DataGridTemplateColumn.CellTemplate>

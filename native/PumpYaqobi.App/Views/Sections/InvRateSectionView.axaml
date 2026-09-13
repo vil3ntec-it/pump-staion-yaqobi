@@ -75,7 +75,6 @@
         <c:ExcelGrid ItemsSource="{Binding Rows}" x:CompileBindings="False"
                      IsReadOnly="True" BorderThickness="0" CornerRadius="0">
           <DataGrid.Columns>
-            <DataGridTextColumn Header="#" Binding="{Binding IndexText}" Width="Auto" />
             <DataGridTextColumn Header="شماره فاکتور" Binding="{Binding NumberText}" Width="Auto" />
             <DataGridTextColumn Header="تاریخ" Binding="{Binding DateText}" Width="Auto" />
             <DataGridTextColumn Header="مشتری" Binding="{Binding CustomerText}" Width="Auto" />
