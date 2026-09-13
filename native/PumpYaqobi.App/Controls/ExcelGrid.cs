@@ -735,19 +735,38 @@ public class ExcelGrid : DataGrid
         set => SetValue(RowDeleteCommandProperty, value);
     }
 
-    /// <summary>منوی راست‌کلیکِ ردیف — فقط وقتی فرمانِ حذف داده شده باشد.</summary>
+    /// <summary>
+    /// ══ منوی راست‌کلیکِ ردیف — ساخته‌شده در لحظهٔ راست‌کلیک ══════════════════
+    ///
+    /// ⚠️ پیش از این برای **هر ردیفِ ساخته‌شده** یک ‎MenuFlyout‎ و یک
+    /// ‎MenuItem‎ و یک اتصال ساخته می‌شد. اندازه‌گیری نشان داد هزینهٔ باز شدنِ
+    /// صفحه تقریباً خطیِ شمارِ ردیف‌های ساخته‌شده است و هر ردیف گران تمام
+    /// می‌شود — و فلای‌اوت از سنگین‌ترین چیزهایی است که می‌شود به یک ردیف
+    /// آویزان کرد، در حالی که کاربر شاید هیچ‌وقت راست‌کلیک نکند.
+    ///
+    /// حالا ردیف فقط یک قلابِ سبک می‌گیرد و منو همان لحظه‌ای ساخته می‌شود که
+    /// واقعاً راست‌کلیک شد.
+    /// </summary>
     private void OnRowMenu(object? sender, DataGridRowEventArgs e)
     {
-        if (RowDeleteCommand is null) { e.Row.ContextFlyout = null; return; }
+        e.Row.ContextFlyout = null;
+        e.Row.ContextRequested -= OnRowContext;
+        if (RowDeleteCommand is null) return;
+        e.Row.ContextRequested += OnRowContext;
+    }
 
-        var item = new MenuItem { Header = "🗑 حذفِ این ردیف" };
-        item.Bind(MenuItem.CommandProperty,
-                  this.GetObservable(RowDeleteCommandProperty));
-        item.CommandParameter = e.Row.DataContext;
+    private void OnRowContext(object? sender, ContextRequestedEventArgs e)
+    {
+        if (sender is not DataGridRow row || RowDeleteCommand is null) return;
 
-        // ⚠️ ردیف‌ها بازچرخانی می‌شوند (مجازی‌سازی)، پس منو هم باید هر بار از
-        // نو ساخته شود؛ نگه داشتنِ یک منوی مشترک، ردیفِ اشتباه را حذف می‌کرد.
-        e.Row.ContextFlyout = new MenuFlyout { ItemsSource = new[] { item } };
+        var item = new MenuItem
+        {
+            Header = "🗑 حذفِ این ردیف",
+            Command = RowDeleteCommand,
+            CommandParameter = row.DataContext,
+        };
+        new MenuFlyout { ItemsSource = new[] { item } }.ShowAt(row, showAtPointer: true);
+        e.Handled = true;
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)

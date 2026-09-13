@@ -181,6 +181,22 @@ public class TotalsStrip : Panel
 
     private static string Head(DataGridColumn c) => c.Header?.ToString()?.Trim() ?? "";
 
+    private Dictionary<string, DataGridColumnHeader>? _heads;
+
+    /// <summary>سرستون‌های همین جدول — یک بار پیدا می‌شوند و کَش می‌مانند.</summary>
+    private Dictionary<string, DataGridColumnHeader> Heads(DataGrid grid)
+    {
+        // کَش تا وقتی معتبر است که همان سرستون‌ها هنوز در درختِ زنده باشند.
+        if (_heads is { Count: > 0 } c
+            && c.Values.All(h => h.GetVisualRoot() is not null && h.Bounds.Width > 0))
+            return c;
+
+        return _heads = grid.GetVisualDescendants().OfType<DataGridColumnHeader>()
+                            .Where(hd => hd.Bounds.Width > 0)
+                            .GroupBy(hd => hd.Content?.ToString()?.Trim() ?? "")
+                            .ToDictionary(g2 => g2.Key, g2 => g2.First());
+    }
+
     /// <summary>
     /// پهنای ستونِ «#»ِ همین جدول — از روی خودِ سرستونِ ساخته‌شده، نه از روی
     /// عددی که شاید ‎NaN‎ باشد.
@@ -216,10 +232,17 @@ public class TotalsStrip : Panel
             // پرسیدن از خودِ سرستون همهٔ این‌ها را یک‌جا حل می‌کند: نوارِ لغزش،
             // ستونِ «#»، لغزشِ افقی، و آینهٔ راست‌به‌چپ. هر دو کنترل در یک
             // درختِ آینه‌شده‌اند، پس مختصاتِ محلی‌شان هم‌جنس است.
-            var heads = grid.GetVisualDescendants().OfType<DataGridColumnHeader>()
-                            .Where(hd => hd.Bounds.Width > 0)
-                            .GroupBy(hd => hd.Content?.ToString()?.Trim() ?? "")
-                            .ToDictionary(g2 => g2.Key, g2 => g2.First());
+            // ⚠️ از کَش، نه از گشتنِ درخت در **هر** چیدمان.
+            //
+            // این‌جا پیش از این کلِ درختِ جدول گشته می‌شد تا سرستون‌ها پیدا
+            // شوند — و آن درخت شاملِ همهٔ ردیف‌ها و خانه‌های ساخته‌شده است.
+            // یعنی هزینهٔ هر چیدمان با شمارِ ردیف‌ها بالا می‌رفت، دقیقاً همان
+            // چیزی که سنجش نشان داد: با ۸۰ ردیفِ ساخته‌شده هر پاسِ چیدمانِ
+            // صفحهٔ ورق ~۴۰۰ میلی‌ثانیه بود.
+            //
+            // سرستون‌ها یک بار ساخته می‌شوند و تا وقتی در درختِ زنده‌اند همان
+            // می‌مانند، پس یک بار پیدا کردنشان بس است.
+            var heads = Heads(grid);
 
             // اگر هنوز سرستونی ساخته نشده، همان حسابِ قدیمی پشتیبان است
             var x = new double[cols.Count];
