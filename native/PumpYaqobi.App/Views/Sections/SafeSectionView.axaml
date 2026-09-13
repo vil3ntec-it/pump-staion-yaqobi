@@ -89,7 +89,7 @@
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>
-        <DataGridTextColumn Header="نام"   Binding="{Binding Title}"  Width="Auto" MinWidth="150" MaxWidth="320" />
+        <DataGridTextColumn Header="نام"   Binding="{Binding Title}"  Width="Auto" />
         <DataGridTextColumn Header="مبلغ"  Binding="{Binding AmountText}" Width="Auto" />
         <DataGridTemplateColumn Header="واحد" Width="Auto">
           <DataGridTemplateColumn.CellTemplate>

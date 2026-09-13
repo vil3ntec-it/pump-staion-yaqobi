@@ -14,8 +14,8 @@
       <DataGrid.Columns>
         <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
         <DataGridTextColumn Header="از تاریخ" Binding="{Binding FromText}" Width="Auto" />
-        <DataGridTextColumn Header="نام قرض‌دار" Binding="{Binding Name}" Width="Auto" MinWidth="180" />
-        <DataGridTextColumn Header="مدت عضویت" Binding="{Binding AgeText}" Width="Auto" MinWidth="150" />
+        <DataGridTextColumn Header="نام قرض‌دار" Binding="{Binding Name}" Width="Auto" />
+        <DataGridTextColumn Header="مدت عضویت" Binding="{Binding AgeText}" Width="Auto" />
       </DataGrid.Columns>
     </c:ExcelGrid>
 

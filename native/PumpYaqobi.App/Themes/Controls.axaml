@@ -592,7 +592,12 @@
     <Setter Property="FontSize" Value="17" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
     <Setter Property="Cursor" Value="{DynamicResource Pump.CellCursor}" />
-    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <!-- ⚠️ ‎Stretch‎ است نه ‎Center‎ — و وسط‌چینی از ‎TextAlignment‎ی نوشته
+         می‌آید، نه از این. با ‎Center‎، ‎ContentPresenter‎ی خانه به اندازهٔ
+         محتوا جمع می‌شد و کادرِ تایپ **۴ پیکسل** پهنا می‌گرفت وسطِ خانهٔ ۴۴۲
+         پیکسلی: همان «توی کادر یک کادرِ دیگر» که صاحب ریپو با عکس نشان داد.
+         سنجشِ ‎cells‎ همین ۴ پیکسل را گرفت. -->
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <!-- عمودی هم وسط — خواستهٔ صریحِ صاحب ریپو: «تمام Cellها از نظر افقی و
          عمودی دقیقاً Center شوند.» -->
     <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -680,9 +685,28 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
   </Style>
+  <!-- ══ و همین برای حالتِ فوکوس و ماوس، جداگانه ═════════════════════════
+       ⚠️ بی این دو قاعده، لبه و پس‌زمینه **برمی‌گشتند**. علتش ترتیبِ سبک‌ها
+       در آوالونیا است: قاعدهٔ عمومیِ ‎TextBox:focus /template/
+       Border#PART_BorderElement‎ (بالاتر در همین فایل) با فوکوس گرفتن
+       **دیرتر** فعال می‌شود و روی قاعدهٔ بی‌حالتِ پایین‌تر می‌نشیند. سنجشِ
+       ‎cells‎ عددش را داد: لبهٔ ‎1.6‎ پیکسل و پس‌زمینهٔ **سفید** — همان کادرِ
+       سرخِ تودرتو در عکسِ صاحب ریپو.
+       پس حالت در برابرِ حالت: این دو باید بمانند. -->
   <Style Selector="DataGridCell TextBox /template/ Border#PART_BorderElement">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="DataGridCell TextBox:focus /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="DataGridCell TextBox:pointerover /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Opacity" Value="1" />
   </Style>
 
   <!-- ══ تایپ داخلِ خانه، مثلِ اکسل ═══════════════════════════════════════════
@@ -714,6 +738,12 @@
        ⚠️ پیش از این ‎DataGridCell:current‎ی با ‎BorderThickness‎ گذاشته بودم؛
        آن به این بند بود که قالبِ خانه اصلاً ‎BorderBrush‎ را بکشد — و
        نمی‌کشید. این‌جا خودِ همان مستطیلِ قالب تنظیم می‌شود، پس قطعی است. -->
+  <!-- ⚠️ اندازه‌گیری‌شده، تا کسی دوباره رویش وقت نگذارد: این مستطیل در عمل
+       **کشیده نمی‌شود**. چهار نمونه با ضخامت و پرکردنِ متفاوت رندر شد و هر
+       چهارتا مو‌به‌مو یکی درآمدند (حالتِ cellshot). ‎IsVisible‎ی این‌جا در
+       برابرِ اتصالِ خودِ قالب می‌بازد. پس قابِ «خانهٔ فعال» عملاً نداریم و
+       چیزی که دیده می‌شود فقط رنگِ ردیفِ انتخاب‌شده است. اگر روزی قاب لازم شد،
+       راهش قالبِ خودِ ‎DataGridCell‎ است، نه این ‎Setter‎ها. -->
   <Style Selector="DataGridCell /template/ Rectangle#CurrencyVisual">
     <Setter Property="IsVisible" Value="True" />
     <Setter Property="Fill" Value="Transparent" />

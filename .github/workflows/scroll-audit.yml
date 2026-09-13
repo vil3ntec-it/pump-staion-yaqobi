@@ -83,3 +83,12 @@ jobs:
       - name: سنجشِ کادرها و کشویی‌ها
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- look
+
+      # ══ خانهٔ جدول مثلِ اکسل ══════════════════════════════════════════════
+      # «محضِ این‌که می‌روم خودش انتخاب شده است و اگر بک‌اسپیس بزنم پاک می‌شود،
+      # یا اگر بزنم روی یک عدد آن تغییر می‌کند … باید سه بار بزنم رویش» و
+      # «توی کادر یک کادرِ دیگر آمده … یک کادرِ سرخ که تویش حروف نوشته».
+      # و: اندازهٔ ستون بی سقف و بی کف، با لغزشِ افقی.
+      - name: سنجشِ خانهٔ جدول
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- cells

@@ -409,7 +409,7 @@
                                    x:CompileBindings="False">
                         <DataGrid.Columns>
                           <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
-                          <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="Auto" MinWidth="140" />
+                          <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="Auto" />
                           <DataGridTextColumn Header="حواله" Binding="{Binding Hawala}" Width="Auto" />
                           <DataGridTextColumn Header="تیل" Binding="{Binding FuelText}" Width="Auto" />
                           <DataGridTextColumn Header="مقدار" Binding="{Binding LitersText}" Width="Auto" />
@@ -499,7 +499,7 @@
                   RowDeleteCommand="{Binding $parent[UserControl].DataContext.Current.DeleteRowCommand}">
         <DataGrid.Columns>
           <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
-          <DataGridTextColumn Header="نام"   Binding="{Binding Name}" Width="Auto" MinWidth="150" MaxWidth="320" />
+          <DataGridTextColumn Header="نام"   Binding="{Binding Name}" Width="Auto" />
           <DataGridTextColumn Header="حواله" Binding="{Binding Hawala}" Width="Auto" />
           <!-- ══ نوع تیل — یک کپسول، بی دایرهٔ رادیو ═══════════════════════
                مو‌به‌مو ‎.ft-pick‎ی سایت آن‌طور که **امروز** دیده می‌شود: هر ردیف

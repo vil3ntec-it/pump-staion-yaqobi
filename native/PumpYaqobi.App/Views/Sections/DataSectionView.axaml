@@ -35,11 +35,11 @@
                      IsReadOnly="True" BorderThickness="0" CornerRadius="0">
           <DataGrid.Columns>
             <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
-            <DataGridTextColumn Header="نوع" Binding="{Binding KindText}" Width="Auto" MinWidth="150" />
-            <DataGridTextColumn Header="چه بود" Binding="{Binding Label}" Width="*" MinWidth="200" />
-            <DataGridTextColumn Header="کِی پاک شد" Binding="{Binding DeletedText}" Width="Auto" MinWidth="120" />
-            <DataGridTextColumn Header="تا کِی می‌ماند" Binding="{Binding DaysLeftText}" Width="Auto" MinWidth="110" />
-            <DataGridTextColumn Header="به‌دستِ" Binding="{Binding ByText}" Width="Auto" MinWidth="90" />
+            <DataGridTextColumn Header="نوع" Binding="{Binding KindText}" Width="Auto" />
+            <DataGridTextColumn Header="چه بود" Binding="{Binding Label}" Width="*" />
+            <DataGridTextColumn Header="کِی پاک شد" Binding="{Binding DeletedText}" Width="Auto" />
+            <DataGridTextColumn Header="تا کِی می‌ماند" Binding="{Binding DaysLeftText}" Width="Auto" />
+            <DataGridTextColumn Header="به‌دستِ" Binding="{Binding ByText}" Width="Auto" />
           </DataGrid.Columns>
         </c:ExcelGrid>
       </Border>
@@ -68,9 +68,9 @@
                      IsReadOnly="True" BorderThickness="0" CornerRadius="0">
           <DataGrid.Columns>
             <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
-            <DataGridTextColumn Header="روز" Binding="{Binding Day}" Width="Auto" MinWidth="130" />
-            <DataGridTextColumn Header="ساعت" Binding="{Binding TakenText}" Width="Auto" MinWidth="80" />
-            <DataGridTextColumn Header="اندازه" Binding="{Binding SizeText}" Width="Auto" MinWidth="120" />
+            <DataGridTextColumn Header="روز" Binding="{Binding Day}" Width="Auto" />
+            <DataGridTextColumn Header="ساعت" Binding="{Binding TakenText}" Width="Auto" />
+            <DataGridTextColumn Header="اندازه" Binding="{Binding SizeText}" Width="Auto" />
           </DataGrid.Columns>
         </c:ExcelGrid>
       </Border>

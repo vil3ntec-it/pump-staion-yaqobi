@@ -112,7 +112,9 @@ public class KeyboardAndZeroTests
         Assert.Contains("MoveColumn(e.Key == Key.Right ? -1 : +1, shift)", g);
         Assert.Contains("_colAnchor", g);
         Assert.Contains("rangesel", g);
-        Assert.Contains("case Key.Delete when !IsReadOnly && ClearSelectedCells():", g);
+        // ⚠️ ‎Backspace‎ هم همان کار را می‌کند — خواستهٔ صاحب ریپو با عکسِ اکسل:
+        // «اگر بک‌اسپیس را بزنم پاک می‌شود … الان برنامهٔ من پاک نمی‌کند.»
+        Assert.Contains("case Key.Delete or Key.Back when !_editing && !IsReadOnly && ClearSelectedCells():", g);
     }
 
     /// <summary>‎Esc‎ ویرایش را لغو می‌کند، کادر را جمع می‌کند و برمی‌گردد به انتخاب.</summary>

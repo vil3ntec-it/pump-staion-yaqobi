@@ -77,8 +77,8 @@
           <DataGrid.Columns>
             <DataGridTextColumn Header="#" Binding="{Binding IndexText}" Width="Auto" />
             <DataGridTextColumn Header="شماره فاکتور" Binding="{Binding NumberText}" Width="Auto" />
-            <DataGridTextColumn Header="تاریخ" Binding="{Binding DateText}" Width="Auto" MinWidth="110" />
-            <DataGridTextColumn Header="مشتری" Binding="{Binding CustomerText}" Width="Auto" MinWidth="150" MaxWidth="320" />
+            <DataGridTextColumn Header="تاریخ" Binding="{Binding DateText}" Width="Auto" />
+            <DataGridTextColumn Header="مشتری" Binding="{Binding CustomerText}" Width="Auto" />
             <DataGridTextColumn Header="نوع تیل" Binding="{Binding FuelText}" Width="Auto" />
             <DataGridTextColumn Header="لیتر" Binding="{Binding LitersText}" Width="Auto" />
             <DataGridTextColumn Header="فیِ فاکتور — روزِ ثبت" Binding="{Binding RcText}" Width="Auto" />
@@ -99,7 +99,7 @@
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTextColumn Header="حال" Binding="{Binding NoteText}" Width="Auto" MinWidth="180" />
+            <DataGridTextColumn Header="حال" Binding="{Binding NoteText}" Width="Auto" />
           </DataGrid.Columns>
         </c:ExcelGrid>
       </Border>

@@ -17,7 +17,7 @@
                    DoubleTapped="OnOpen">
         <DataGrid.Columns>
           <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
-          <DataGridTextColumn Header="نام قرض‌دار" Binding="{Binding Name}" Width="Auto" MinWidth="160" />
+          <DataGridTextColumn Header="نام قرض‌دار" Binding="{Binding Name}" Width="Auto" />
           <DataGridTextColumn Header="جمله بردگی" Binding="{Binding BardagiText}" Width="Auto" />
           <DataGridTextColumn Header="جمله رسید" Binding="{Binding RasidText}" Width="Auto" />
           <DataGridTemplateColumn Header="الباقی" Width="Auto">

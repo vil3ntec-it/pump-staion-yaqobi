@@ -79,7 +79,7 @@
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
               <DataGridTextColumn Header="راننده" Binding="{Binding Driver}" Width="Auto" />
-              <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="Auto" MinWidth="150" MaxWidth="320" />
+              <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="Auto" />
             </DataGrid.Columns>
           </c:ExcelGrid>
 

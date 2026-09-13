@@ -68,9 +68,13 @@ public class CenteredAndCursorTests
         var t = Theme();
         const string cur = "<Setter Property=\"Cursor\" Value=\"{DynamicResource Pump.CellCursor}\" />";
 
+        // ⚠️ ‎Stretch‎ است نه ‎Center‎ — و وسط‌چینی از ‎TextAlignment‎ی خودِ نوشته
+        // می‌آید. با ‎Center‎، ‎ContentPresenter‎ی خانه به اندازهٔ محتوا جمع
+        // می‌شد و کادرِ تایپ ۴ پیکسل پهنا می‌گرفت وسطِ خانهٔ ۴۴۲ پیکسلی —
+        // همان «توی کادر یک کادرِ دیگر»ی که صاحب ریپو با عکس نشان داد.
         var cell = Between(t, "<Style Selector=\"DataGridCell\">", "</Style>");
         Assert.Contains(cur, cell);
-        Assert.Contains("<Setter Property=\"HorizontalContentAlignment\" Value=\"Center\" />", cell);
+        Assert.Contains("<Setter Property=\"HorizontalContentAlignment\" Value=\"Stretch\" />", cell);
 
         var head = Between(t, "<Style Selector=\"DataGridColumnHeader\">", "</Style>");
         Assert.Contains(cur, head);

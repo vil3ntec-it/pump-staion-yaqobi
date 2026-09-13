@@ -63,7 +63,7 @@
           <DataGridTextColumn Header="فی" Binding="{Binding PriceText}" Width="Auto" />
           <DataGridTextColumn Header="فروش" Binding="{Binding SalesText}" Width="Auto" IsReadOnly="True" />
           <DataGridTextColumn Header="قرضِ پایه" Binding="{Binding DebtText}" Width="Auto" />
-          <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="Auto" MinWidth="150" MaxWidth="320" />
+          <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="Auto" />
         </DataGrid.Columns>
       </c:ExcelGrid>
 
@@ -93,7 +93,7 @@
         <c:ExcelGrid GrowsToContent="True" Grid.Column="0" ItemsSource="{Binding TxnsFirst}" x:CompileBindings="False">
           <DataGrid.Columns>
             <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" IsReadOnly="True" />
-            <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" MinWidth="130" />
+            <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
             <DataGridTemplateColumn Header="نوع تیل" Width="Auto">
               <DataGridTemplateColumn.CellTemplate>
                 <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎: با بچه‌های
@@ -143,7 +143,7 @@
         <c:ExcelGrid GrowsToContent="True" Grid.Column="2" ItemsSource="{Binding TxnsSecond}" x:CompileBindings="False">
           <DataGrid.Columns>
             <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" IsReadOnly="True" />
-            <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" MinWidth="130" />
+            <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
             <DataGridTemplateColumn Header="نوع تیل" Width="Auto">
               <DataGridTemplateColumn.CellTemplate>
                 <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎: با بچه‌های

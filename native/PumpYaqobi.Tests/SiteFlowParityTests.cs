@@ -114,8 +114,11 @@ public class SiteFlowParityTests
         Assert.DoesNotContain("Value=\"Start\"", lbl);
 
         // و خودِ جدول‌ها هنوز وسط‌چین‌اند
-        var cell = Slice(t, "<Style Selector=\"DataGridCell\">", "</Style>");
-        Assert.Contains("HorizontalContentAlignment\" Value=\"Center\"", cell);
+        // ⚠️ وسط‌چینیِ خانه از ‎TextAlignment‎ی نوشته می‌آید، نه از
+        // ‎HorizontalContentAlignment‎: آن باید ‎Stretch‎ بماند وگرنه کادرِ
+        // تایپ به اندازهٔ نوشته جمع می‌شود و «کادر در کادر» می‌سازد.
+        var text = Slice(t, "<Style Selector=\"DataGridCell TextBlock\">", "</Style>");
+        Assert.Contains("TextAlignment\" Value=\"Center\"", text);
     }
 
     // ── کشوییِ داخلِ جدول ─────────────────────────────────────────────────────

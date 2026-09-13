@@ -46,7 +46,7 @@
                        x:CompileBindings="False" IsReadOnly="True"
                        BorderThickness="0" CornerRadius="0">
             <DataGrid.Columns>
-              <DataGridTextColumn Header="کارمند" Binding="{Binding Name}" Width="Auto" MinWidth="150" MaxWidth="320" />
+              <DataGridTextColumn Header="کارمند" Binding="{Binding Name}" Width="Auto" />
               <DataGridTextColumn Header="شیفت" Binding="{Binding ShiftsText}" Width="Auto" />
               <DataGridTemplateColumn Header="🔴 کمبودیِ مانده" Width="Auto">
                 <DataGridTemplateColumn.CellTemplate>
@@ -117,7 +117,7 @@
                        IsReadOnly="True" BorderThickness="0" CornerRadius="0"
                       RowDeleteCommand="{Binding $parent[UserControl].DataContext.DeleteSettleCommand}">
             <DataGrid.Columns>
-              <DataGridTextColumn Header="کارمند" Binding="{Binding Name}" Width="Auto" MinWidth="150" MaxWidth="320" />
+              <DataGridTextColumn Header="کارمند" Binding="{Binding Name}" Width="Auto" />
               <DataGridTemplateColumn Header="نوع" Width="Auto">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate>

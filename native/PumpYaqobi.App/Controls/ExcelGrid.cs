@@ -84,8 +84,15 @@ public class ExcelGrid : DataGrid
         HeadersVisibility = DataGridHeadersVisibility.Column;
         ClipboardCopyMode = DataGridClipboardCopyMode.ExcludeHeader;
 
+        // ══ اگر ستون‌ها از قاب پهن‌تر شدند، افقی بلغزد ═══════════════════════
+        // خواستهٔ صاحب ریپو: «اگه زیاد بزرگ شد به چپ و راست هم اسکرول بشه.»
+        // ⚠️ عمودی همچنان ‎Disabled‎ می‌ماند: قاعدهٔ برنامه این است که فقط
+        // **صفحه** عمودی می‌لغزد، نه داخلِ جدول (سنجشِ ‎scroll‎ همین را قفل
+        // کرده). افقی ربطی به آن ندارد.
+        HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
+
         // جای اضافه بینِ ستون‌ها پخش می‌شود، نه در یک ستونِ خالیِ ته جدول
-        LayoutUpdated += (_, _) => { SpreadColumns(); Settle(); };
+        LayoutUpdated += (_, _) => { SpreadColumns(); PinOnUserResize(); Settle(); };
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -405,6 +412,12 @@ public class ExcelGrid : DataGrid
     private bool _spread;
 
     /// <summary>
+    /// کم‌ترین پهنایی که یک ستون می‌تواند بگیرد — فقط آن‌قدر که ستون از دید
+    /// گم نشود و دستهٔ کشیدنش زیرِ ماوس بماند. سقفی در کار نیست.
+    /// </summary>
+    private const double FloorWidth = 24;
+
+    /// <summary>
     /// ══ جای اضافه را بینِ ستون‌ها پخش کن ═══════════════════════════════════
     ///
     /// ‎DataGrid‎ی آوالونیا ستون‌های ‎Auto‎ را هم‌قدِ محتوایشان می‌کند و باقیِ
@@ -419,10 +432,17 @@ public class ExcelGrid : DataGrid
     /// وزنِ ستاره‌اش می‌گردد. پس نسبت‌ها همان می‌ماند و جدول تمامِ پهنا را
     /// می‌گیرد.
     ///
-    /// ⚠️ ‎MinWidth‎ روی همان پهنای طبیعی می‌نشیند: ستونِ ستاره‌ای وگرنه در
-    /// پنجرهٔ باریک زیرِ اندازهٔ محتوا فشرده می‌شود و نوشته‌ها بریده. با این
-    /// کف، به‌جای بریدن، جدول افقی می‌لغزد — همان کاری که ‎overflow-x:auto‎ی
-    /// سایت می‌کند.
+    /// ⚠️ و این‌جا یک کفِ **کوچک** می‌نشیند، نه پهنای طبیعیِ ستون.
+    ///
+    /// تا امروز ‎MinWidth‎ روی همان پهنای طبیعی گذاشته می‌شد تا ستون زیرِ
+    /// اندازهٔ محتوا فشرده نشود. ولی گزارشِ صاحب ریپو همین را باگ دانست:
+    /// «اندازه‌های جدول رو نمی‌تونم هر چقد که می‌خوام بزرگ یا کوچیک کنم و این
+    /// خیلی اذیت می‌کنه … محدودیت هم نباشه.» حق داشت — آن کف یعنی ستون از
+    /// یک جایی به بعد کوچک نمی‌شد و دسته زیرِ دست گیر می‌کرد.
+    ///
+    /// حالا کف فقط <see cref="FloorWidth"/> است (به اندازه‌ای که ستون گم
+    /// نشود و دسته‌اش پیدا بماند) و سقفی هم در کار نیست. اگر جمعِ ستون‌ها از
+    /// قاب بیشتر شد، جدول افقی می‌لغزد — همان ‎overflow-x:auto‎ی سایت.
     /// </summary>
     private void SpreadColumns()
     {
@@ -455,7 +475,8 @@ public class ExcelGrid : DataGrid
 
         for (var i = 0; i < cols.Count; i++)
         {
-            if (cols[i].MinWidth < natural[i]) cols[i].MinWidth = natural[i];
+            cols[i].MinWidth = FloorWidth;
+            cols[i].MaxWidth = double.PositiveInfinity;
             cols[i].Width = spare
                 ? new DataGridLength(natural[i], DataGridLengthUnitType.Star)
                 : new DataGridLength(natural[i], DataGridLengthUnitType.Pixel);
@@ -463,6 +484,42 @@ public class ExcelGrid : DataGrid
 
         _spread = true;
     }
+
+    /// <summary>
+    /// ══ کاربر که ستونی را کشید، همه پیکسلی می‌شوند ══════════════════════════
+    ///
+    /// خواستهٔ صاحب ریپو: «اگه زیاد بزرگ شد به چپ و راست هم اسکرول بشه.»
+    ///
+    /// ⚠️ با پهنای ستاره‌ای این هرگز رخ نمی‌داد و سنجش هم همین را گرفت: ستون
+    /// را ۹۰۰ کردم، بقیه خودشان جمع شدند تا جمع در قاب بماند، و نوارِ لغزش
+    /// نیامد. ستاره یعنی «سهم از قاب»، پس جدولِ ستاره‌ای **هیچ‌وقت** از قابش
+    /// پهن‌تر نمی‌شود.
+    ///
+    /// پس همان لحظه که یکی از ستون‌ها پیکسلی شد (یعنی کاربر کشیدش)، بقیه هم
+    /// روی پهنای همان لحظه‌شان قفل می‌شوند. از آن به بعد جمعِ ستون‌ها آزاد
+    /// است از قاب بزند بیرون و جدول افقی بلغزد — مثلِ اکسل.
+    /// </summary>
+    private void PinOnUserResize()
+    {
+        if (!_spread || _pinned) return;
+
+        var cols = Columns.Where(c => c.IsVisible).ToList();
+        if (cols.Count == 0) return;
+        if (!cols.Any(c => c.Width.UnitType == DataGridLengthUnitType.Pixel)) return;
+        if (cols.All(c => c.Width.UnitType == DataGridLengthUnitType.Pixel)) { _pinned = true; return; }
+
+        foreach (var c in cols)
+        {
+            var w = c.ActualWidth;
+            if (double.IsNaN(w) || w <= 0) return;   // هنوز چیده نشده
+        }
+        foreach (var c in cols)
+            c.Width = new DataGridLength(c.ActualWidth, DataGridLengthUnitType.Pixel);
+
+        _pinned = true;
+    }
+
+    private bool _pinned;
 
 
     // ══════════════════════════════════════════════════════════════════════
@@ -1132,7 +1189,16 @@ public class ExcelGrid : DataGrid
                 e.Handled = true;
                 return;
 
-            case Key.Delete when !IsReadOnly && ClearSelectedCells():
+            // ══ Delete و Backspace: هر دو پاک می‌کنند ═════════════════════
+            //
+            // گزارشِ صاحب ریپو با عکسِ اکسل: «اگر بک‌اسپیس را بزنم پاک می‌شود …
+            // الان برنامهٔ من این را پاک نمی‌کند و باید سه بار بزنم رویش.»
+            //
+            // حق داشت و سنجشِ ‎cells‎ هم نشان داد: ‎Delete‎ کار می‌کرد و
+            // ‎Backspace‎ اصلاً دیده نمی‌شد. در اکسل هر دو خانه را خالی
+            // می‌کنند (‎Backspace‎ علاوه بر آن ویرایش را هم باز می‌کند، ولی
+            // این‌جا تفاوتش برای کاربر صفر است چون بعدش بی‌درنگ تایپ می‌کند).
+            case Key.Delete or Key.Back when !_editing && !IsReadOnly && ClearSelectedCells():
                 e.Handled = true;
                 return;
         }
@@ -1140,13 +1206,45 @@ public class ExcelGrid : DataGrid
         base.OnKeyDown(e);
     }
 
+    /// <summary>
+    /// ══ تایپ روی خانهٔ انتخاب‌شده = جایگزینی، مثلِ اکسل ══════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «اگر بزنم روی یک عدد یا حرف، آن تغییر می‌کند … الان
+    /// برنامهٔ من تغییر نمی‌دهد و باید سه بار بزنم رویش.»
+    ///
+    /// ⚠️ ‎BeginEdit()‎ تنها کافی نبود و همین سه‌کلیکه‌اش می‌کرد: کادرِ ویرایش
+    /// همان لحظه ساخته می‌شود ولی هنوز فوکوس ندارد، پس **همان حرفی که ویرایش
+    /// را باز کرد گم می‌شد** — کاربر می‌دید هیچ اتفاقی نیفتاد و دوباره
+    /// می‌زد. سنجشِ ‎cells‎ همین را گرفت: «برق دکان» ⇐ «برق دکان».
+    ///
+    /// پس حالا خودمان حرف را می‌نشانیم: محتوای قبلی می‌رود (اکسل هم همین
+    /// می‌کند) و کُرسر ته متن می‌ایستد تا ادامهٔ تایپ پشتِ همان بنشیند.
+    /// </summary>
     protected override void OnTextInput(TextInputEventArgs e)
     {
-        // تایپِ ساده روی خانه = شروعِ ویرایش (رفتارِ اکسل)
-        if (!IsReadOnly && !string.IsNullOrEmpty(e.Text) && !char.IsControl(e.Text[0]))
-            BeginEdit();
-        base.OnTextInput(e);
+        if (IsReadOnly || _editing || string.IsNullOrEmpty(e.Text) || char.IsControl(e.Text[0]))
+        {
+            base.OnTextInput(e);
+            return;
+        }
+
+        BeginEdit();
+
+        var box = CurrentEditor();
+        if (box is null) { base.OnTextInput(e); return; }
+
+        box.Text = e.Text;
+        box.CaretIndex = e.Text.Length;
+        box.Focus();
+        e.Handled = true;
     }
+
+    /// <summary>کادرِ تایپِ خانه‌ای که همین حالا در حالِ ویرایش است.</summary>
+    private TextBox? CurrentEditor() =>
+        this.GetVisualDescendants().OfType<DataGridCell>()
+            .Where(c => c.IsVisible)
+            .SelectMany(c => c.GetVisualDescendants().OfType<TextBox>())
+            .FirstOrDefault(t => t.IsVisible);
 
     private void MoveRow(int delta)
     {

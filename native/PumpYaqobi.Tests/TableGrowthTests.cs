@@ -182,9 +182,19 @@ public class TableGrowthTests
     [Fact]
     public void CellsAndHeadersAreCenteredBothWays()
     {
+        // ⚠️ ‎Stretch‎ است نه ‎Center‎ — و وسط‌چینی از ‎TextAlignment‎ی خودِ نوشته
+        // می‌آید. با ‎Center‎، ‎ContentPresenter‎ی خانه به اندازهٔ محتوا جمع
+        // می‌شد و کادرِ تایپ ۴ پیکسل پهنا می‌گرفت وسطِ خانهٔ ۴۴۲ پیکسلی —
+        // همان «توی کادر یک کادرِ دیگر»ی که صاحب ریپو با عکس نشان داد.
         var cell = Between(Theme(), "<Style Selector=\"DataGridCell\">", "</Style>");
-        Assert.Contains("<Setter Property=\"HorizontalContentAlignment\" Value=\"Center\" />", cell);
+        Assert.Contains("<Setter Property=\"HorizontalContentAlignment\" Value=\"Stretch\" />", cell);
         Assert.Contains("<Setter Property=\"VerticalContentAlignment\" Value=\"Center\" />", cell);
+
+        // و وسط‌چینی سرِ جایش است، فقط از راهِ نوشته
+        var text = Between(Theme(), "<Style Selector=\"DataGridCell TextBlock\">", "</Style>");
+        Assert.Contains("<Setter Property=\"TextAlignment\" Value=\"Center\" />", text);
+        var edit = Between(Theme(), "<Style Selector=\"DataGridCell TextBox\">", "</Style>");
+        Assert.Contains("<Setter Property=\"TextAlignment\" Value=\"Center\" />", edit);
 
         var head = Between(Theme(), "<Style Selector=\"DataGridColumnHeader\">", "</Style>");
         Assert.Contains("<Setter Property=\"HorizontalContentAlignment\" Value=\"Center\" />", head);

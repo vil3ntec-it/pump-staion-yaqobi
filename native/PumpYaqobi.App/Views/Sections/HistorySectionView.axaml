@@ -54,9 +54,9 @@
                        IsReadOnly="True" BorderThickness="0" CornerRadius="0">
             <DataGrid.Columns>
               <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="Auto" />
-              <DataGridTextColumn Header="تاریخ" Binding="{Binding DateText}" Width="Auto" MinWidth="120" />
-              <DataGridTextColumn Header="چه بود" Binding="{Binding Title}" Width="Auto" MinWidth="200" />
-              <DataGridTextColumn Header="توضیح" Binding="{Binding Detail}" Width="*" MinWidth="260" />
+              <DataGridTextColumn Header="تاریخ" Binding="{Binding DateText}" Width="Auto" />
+              <DataGridTextColumn Header="چه بود" Binding="{Binding Title}" Width="Auto" />
+              <DataGridTextColumn Header="توضیح" Binding="{Binding Detail}" Width="*" />
               <!-- مبلغ ستونِ خودش را دارد چون رنگش به «آمد/رفت» بستگی دارد -->
               <DataGridTemplateColumn Header="مبلغ" Width="Auto">
                 <DataGridTemplateColumn.CellTemplate>
