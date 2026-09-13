@@ -96,70 +96,75 @@ public sealed class ToolsDataService
             byAccount[a.Id] = a;
         }
 
-        // ── جمع‌های دفترِ تیل ────────────────────────────────────────────────
-        var fuel = await db.DebtRows.AsNoTracking().Where(r => r.FuelAccountId != null)
-            .GroupBy(r => r.FuelAccountId!.Value)
-            .Select(g => new
+        // ══ چرا جمع در حافظه و نه ‎SUM‎ی خودِ SQL ═══════════════════════════
+        //
+        // اول با ‎GroupBy(...).Select(g => g.Sum(...))‎ نوشته شد و EF آن را
+        // ترجمه نکرد: در SQLite جمعِ ستونِ ‎decimal‎ پشتیبانی نمی‌شود (اعشاری
+        // آن‌جا متن ذخیره می‌شود). می‌شد با ‎CAST(... AS REAL)‎ دورش زد، ولی
+        // در یک برنامهٔ حسابداری این یعنی ریسکِ تغییرِ خاموشِ عددها — و قرار
+        // بود هیچ محاسبه‌ای عوض نشود.
+        //
+        // پس جمع همان‌جا که بود می‌ماند (‎decimal‎، دقیق)، ولی از دیتابیس فقط
+        // **هشت ستونِ لازم** خوانده می‌شود، نه رکوردِ کاملِ ردیف با بیست‌وچند
+        // ستون و ساختِ شیءِ موجودیت. همان کارِ قبلی، با کسری از هزینه.
+        var slim = await db.DebtRows.AsNoTracking()
+            .Select(r => new
             {
-                Account = g.Key,
-                Liters = g.Sum(x => x.Liters),
-                Rasid = g.Sum(x => x.Rasid),
-                RasidFuel = g.Sum(x => x.RasidFuel),
-                Albaqi = g.Sum(x => x.Albaqi),
-                Bardagi = g.Sum(x => x.Bardagi),
-                First = g.Min(x => x.DateKey),
-                Last = g.Max(x => x.DateKey),
+                r.FuelAccountId, r.MoneyAccountId, r.DateKey,
+                r.Liters, r.Rasid, r.RasidFuel, r.Albaqi, r.Bardagi,
             }).ToListAsync(ct);
 
-        // ── جمع‌های دفترِ پول ────────────────────────────────────────────────
-        var money = await db.DebtRows.AsNoTracking().Where(r => r.MoneyAccountId != null)
-            .GroupBy(r => r.MoneyAccountId!.Value)
-            .Select(g => new
-            {
-                Account = g.Key,
-                Rasid = g.Sum(x => x.Rasid),
-                Albaqi = g.Sum(x => x.Albaqi),
-                Bardagi = g.Sum(x => x.Bardagi),
-                First = g.Min(x => x.DateKey),
-                Last = g.Max(x => x.DateKey),
-            }).ToListAsync(ct);
+        // حساب ⇦ جمع‌ها و دو تاریخ (تیل و پول جدا، مثلِ ‎AccountTotals‎)
+        var agg = new Dictionary<(long Account, bool Money), Roll>();
 
-        foreach (var f in fuel)
+        foreach (var r in slim)
         {
-            if (!byAccount.TryGetValue(f.Account, out var a)) continue;
-            a.FuelRows.Add(new DebtRow
+            var money = r.FuelAccountId is null;
+            var id = r.FuelAccountId ?? r.MoneyAccountId;
+            if (id is not { } acc || !byAccount.ContainsKey(acc)) continue;
+
+            var key = (acc, money);
+            agg.TryGetValue(key, out var v);
+            v.Rasid += r.Rasid;
+            v.Albaqi += r.Albaqi;
+            v.Bardagi += r.Bardagi;
+            if (!money) { v.Liters += r.Liters; v.RasidFuel += r.RasidFuel; }
+            if (r.DateKey > 0)
             {
-                Fuel = FuelType.Petrol,
-                Liters = f.Liters, Rasid = f.Rasid, RasidFuel = f.RasidFuel,
-                Albaqi = f.Albaqi, Bardagi = f.Bardagi,
-                DateKey = f.First, DateShamsi = Shamsi.FromKey(f.First),
-            });
-            if (f.Last != f.First)
-                a.FuelRows.Add(new DebtRow
-                {
-                    Fuel = FuelType.Petrol,
-                    DateKey = f.Last, DateShamsi = Shamsi.FromKey(f.Last),
-                });
+                if (v.First == 0 || r.DateKey < v.First) v.First = r.DateKey;
+                if (r.DateKey > v.Last) v.Last = r.DateKey;
+            }
+            agg[key] = v;
         }
 
-        foreach (var m in money)
+        foreach (var ((acc, money), v) in agg)
         {
-            if (!byAccount.TryGetValue(m.Account, out var a)) continue;
-            a.MoneyRows.Add(new DebtRow
+            if (!byAccount.TryGetValue(acc, out var a)) continue;
+            var list = money ? a.MoneyRows : a.FuelRows;
+
+            list.Add(new DebtRow
             {
                 Fuel = FuelType.Petrol,
-                Rasid = m.Rasid, Albaqi = m.Albaqi, Bardagi = m.Bardagi,
-                DateKey = m.First, DateShamsi = Shamsi.FromKey(m.First),
+                Liters = v.Liters, Rasid = v.Rasid, RasidFuel = v.RasidFuel,
+                Albaqi = v.Albaqi, Bardagi = v.Bardagi,
+                DateKey = v.First, DateShamsi = Shamsi.FromKey(v.First),
             });
-            if (m.Last != m.First)
-                a.MoneyRows.Add(new DebtRow
+            if (v.Last != v.First)
+                list.Add(new DebtRow
                 {
                     Fuel = FuelType.Petrol,
-                    DateKey = m.Last, DateShamsi = Shamsi.FromKey(m.Last),
+                    DateKey = v.Last, DateShamsi = Shamsi.FromKey(v.Last),
                 });
         }
 
         return people;
+    }
+
+    /// <summary>جمع‌های یک دفترِ یک حساب — همان چیزی که ‎AccountTotals‎ می‌سازد.</summary>
+    private struct Roll
+    {
+        public decimal Liters, Rasid, RasidFuel, Albaqi, Bardagi;
+        public int First, Last;
     }
 
     // ── قرض‌های دسته‌جمعی و مدتِ عضویت ───────────────────────────────────────
@@ -213,20 +218,29 @@ public sealed class ToolsDataService
             else if (a.DebtorId is { } sId && byId.TryGetValue(sId, out var o2)) { o2.SubAccounts.Add(a); owner[a.Id] = o2; }
         }
 
-        // قدیمی‌ترین تاریخِ هر حساب — دو ستون، نه ده‌ها هزار ردیف
-        var firsts = await db.DebtRows.AsNoTracking()
+        // ⚠️ ‎MIN‎ی خودِ SQL این‌جا هم به کار نیامد: همان محدودیتی که در
+        // ‎LoadSummarisedAsync‎ توضیح داده شد (‎GroupBy‎ روی SQLite با این
+        // شکلِ کلیدِ دوتایی ترجمه نمی‌شود). ولی خواندنِ **دو ستون** به‌جای
+        // رکوردِ کاملِ ردیف، خودش بیشترِ هزینه را برمی‌دارد.
+        var dates = await db.DebtRows.AsNoTracking()
             .Where(r => r.DateKey > 0)
-            .GroupBy(r => r.FuelAccountId ?? r.MoneyAccountId)
-            .Select(g => new { Account = g.Key, Key = g.Min(x => x.DateKey) })
+            .Select(r => new { r.FuelAccountId, r.MoneyAccountId, r.DateKey })
             .ToListAsync(ct);
 
-        foreach (var f in firsts)
+        var firsts = new Dictionary<long, int>();
+        foreach (var d in dates)
         {
-            if (f.Account is not { } id || !owner.TryGetValue(id, out var p)) continue;
+            if ((d.FuelAccountId ?? d.MoneyAccountId) is not { } id) continue;
+            if (!firsts.TryGetValue(id, out var cur) || d.DateKey < cur) firsts[id] = d.DateKey;
+        }
+
+        foreach (var (id, key) in firsts)
+        {
+            if (!owner.TryGetValue(id, out var p)) continue;
             var acc = p.MainAccount?.Id == id
                 ? p.MainAccount
                 : p.SubAccounts.FirstOrDefault(x => x.Id == id);
-            acc?.FuelRows.Add(new DebtRow { DateKey = f.Key, DateShamsi = Shamsi.FromKey(f.Key) });
+            acc?.FuelRows.Add(new DebtRow { DateKey = key, DateShamsi = Shamsi.FromKey(key) });
         }
 
         return _member.Rows(people, Shamsi.Today());
