@@ -118,3 +118,89 @@ public class AcctViewTests
         Assert.DoesNotContain("WebSocket", html);    // نه به سروری وصل می‌شود
     }
 }
+
+/// <summary>
+/// ══ لینکِ اپِ کارمندان ══════════════════════════════════════════════════════
+///
+/// کیو‌آرِ کارمند با کیو‌آرِ مشتری یکی نیست: آن یکی دادهٔ یک حساب را با خودش
+/// می‌برد و بی سرور باز می‌شود؛ این یکی هیچ داده‌ای ندارد و فقط می‌گوید «به
+/// این سرور وصل شو» — و خودِ اپ پشتِ رمزِ برنامه قفل است.
+/// </summary>
+public class KarLinkTests
+{
+    /// <summary>نشانی باید سرور و رمز و کدِ ایستگاه را با خودش ببرد.</summary>
+    [Fact]
+    public void TheLinkCarriesEverythingThePhoneNeedsToConnect()
+    {
+        var url = KarLink.Build("https://pump.example.com/view/",
+                                "wss://api.example.com", "s3cret", "pump1")!;
+
+        Assert.Equal("https://pump.example.com/kar/"
+                   + "?server=wss%3A%2F%2Fapi.example.com&token=s3cret&station=pump1", url);
+    }
+
+    /// <summary>بی رمز هم کار می‌کند — بعضی سرورها رمز ندارند.</summary>
+    [Fact]
+    public void ATokenlessServerStillGetsALink()
+        => Assert.Equal("https://pump.example.com/kar/?server=wss%3A%2F%2Fa.example&station=pump1",
+            KarLink.Build("https://pump.example.com/view/", "wss://a.example", "", "pump1"));
+
+    /// <summary>
+    /// ⚠️ بی سرور، کیو‌آری ساخته نمی‌شود — نه یک لینکِ نصفه که کارمند اسکن کند
+    /// و صفحهٔ خالی ببیند.
+    /// </summary>
+    [Fact]
+    public void NoServerMeansNoLink()
+    {
+        Assert.Null(KarLink.Build("https://pump.example.com/view/", null, "t", "pump1"));
+        Assert.Null(KarLink.Build("https://pump.example.com/view/", "   ", "t", "pump1"));
+    }
+
+    /// <summary>
+    /// اپِ کارمندان همسایهٔ صفحهٔ حساب است؛ اگر روزی سایت جای دیگری رفت،
+    /// این هم خودش دنبالش می‌رود.
+    /// </summary>
+    [Theory]
+    [InlineData("https://pump.example.com/view/", "https://pump.example.com/kar/")]
+    [InlineData("https://pump.example.com/view", "https://pump.example.com/kar/")]
+    [InlineData("https://pump.example.com", "https://pump.example.com/kar/")]
+    // بی «http» گوشی نشانی را باز نمی‌کند و متن می‌بیند
+    [InlineData("pump.example.com/view/", "https://pump.example.com/kar/")]
+    // هش یا پرسشِ قبلی جای مالِ ما را نمی‌گیرد
+    [InlineData("https://pump.example.com/view/?x=1#y", "https://pump.example.com/kar/")]
+    public void TheAppSitsNextToTheAccountPage(string viewer, string expected)
+        => Assert.Equal(expected, KarLink.BaseOf(viewer));
+
+    /// <summary>و نشانیِ پیش‌فرض هم دامنهٔ خودِ پمپ است، نه نامِ منبع.</summary>
+    [Fact]
+    public void TheDefaultIsThePumpsOwnDomain()
+    {
+        Assert.Equal(KarLink.DefaultBase, KarLink.BaseOf(""));
+        Assert.Equal(KarLink.DefaultBase, KarLink.BaseOf(null));
+        Assert.StartsWith("https://", KarLink.DefaultBase);
+        Assert.DoesNotContain("github", KarLink.DefaultBase);
+    }
+
+    /// <summary>و صفحهٔ اپ واقعاً در مخزن هست، با قفلِ رمزِ همین برنامه.</summary>
+    [Fact]
+    public void TheStaffAppExistsAndLocksWithTheDesktopPassword()
+    {
+        var root = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", "..", "..", "kar"));
+
+        var html = File.ReadAllText(Path.Combine(root, "index.html"));
+        var js = File.ReadAllText(Path.Combine(root, "app.js"));
+
+        Assert.Contains("pbkdf2", js);            // همان قالبِ PasswordHasher
+        Assert.Contains("PBKDF2", js);            // و همان الگوریتم در مرورگر
+        Assert.Contains("op: 'sub'", js);         // زنده گوش می‌دهد
+        Assert.Contains("-live", js);             // به شاخهٔ جدا، نه مالِ سایت
+        Assert.Contains("inPass", html);          // و رمز می‌پرسد
+
+        // ⚠️ اپِ کارمندان فقط می‌خوانَد. اگر روزی کسی نوشتن به آن اضافه کند،
+        // این‌جا قرمز می‌شود.
+        Assert.DoesNotContain("op: 'set'", js);
+        Assert.DoesNotContain("op: 'update'", js);
+        Assert.DoesNotContain("op: 'remove'", js);
+    }
+}

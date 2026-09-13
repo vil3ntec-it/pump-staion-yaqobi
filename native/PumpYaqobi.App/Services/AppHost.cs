@@ -84,6 +84,21 @@ public sealed class AppHost
     public PumpDbFactory Db { get; }
     public ToastService Toasts { get; }
 
+    private StationPublisher? _publisher;
+
+    /// <summary>
+    /// ══ پلِ زندهٔ برنامه به گوشی‌ها ═══════════════════════════════════════
+    ///
+    /// عکسِ برنامه را روی سرورِ خانگی تازه نگه می‌دارد تا اپِ کارمندان و ربات
+    /// همیشه همان چیزی را ببینند که روی این کامپیوتر است.
+    ///
+    /// ⚠️ تنبل ساخته می‌شود، نه در سازنده: خودش <c>AppHost</c> می‌خواهد و در
+    /// سازنده هنوز چیزی برای دادن نیست. تا کسی صدایش نزند، هیچ نخی هم
+    /// نمی‌سازد — پس آزمون‌ها و ابزارِ عکس‌گیری اصلاً با آن کاری ندارند.
+    /// </summary>
+    public StationPublisher Publisher => _publisher ??= new StationPublisher(
+        this, new HomeSync(() => HomeLink.Config(this)), () => HomeLink.StationCode(this));
+
     /// <summary>پیامِ کوتاهِ پایینِ صفحه — همان showToastِ نسخهٔ وب.</summary>
     public void Toast(string text, ToastKind kind = ToastKind.Info) => Toasts.Show(text, kind);
     public UserSession Session { get; }

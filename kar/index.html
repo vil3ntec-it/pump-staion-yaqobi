@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>دستیارِ پمپ یعقوبی</title>
+<meta name="theme-color" content="#0f1622">
+<link rel="manifest" href="./manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="دستیار پمپ">
+<link rel="apple-touch-icon" href="../icons/icon-192.png">
+<!--
+  ══ اپِ کارمندان و ربات ════════════════════════════════════════════════════
+
+  خواستهٔ صریحِ صاحب ریپو:
+    «اپ برای اندروید برای کارمندان تا قرض‌داران را چک کنند که موجودی دارند یا
+     نه — که اضافه ندهند — و موجودیِ تیل در مخزن را ببینند.
+     … اول رمزِ برنامهٔ نیتیوِ کامپیوتر را بخواهد و وقتی بزنَد، یک رباتِ
+     قدرتمند تویش باشد که هرچی از برنامه خواست سریع بدهد: هر شخص که اسم برد،
+     هر بخش، هر ماه و همهٔ بخش‌ها.
+     … این اپ موتورِ جست‌وجوی برنامهٔ نیتیوِ کامپیوتر باشد.»
+
+  ══ این صفحه چه هست و چه نیست ═════════════════════════════════════════════
+
+  • هست: نمای زندهٔ همان برنامهٔ نیتیو. برنامهٔ روی کامپیوتر هر بیست ثانیه یک
+    عکسِ کامل روی سرورِ خانگی می‌گذارد (‎StationPublisher‎) و این صفحه به همان
+    شاخه گوش می‌دهد. پس هر تغییری که آن‌جا بشود، این‌جا هم دیده می‌شود.
+
+  • نیست: هیچ‌چیزی نمی‌نویسد. راهِ داده یک‌طرفه است — نیتیو ⟶ سرور ⟶ گوشی —
+    تا کارمند به‌هیچ‌وجه نتواند حسابی را عوض کند.
+
+  ⚠️ این صفحه با ‎view/‎ یکی نیست و نباید یکی شود:
+      ‎view/‎  مالِ **مشتری** است، دادهٔ یک حساب داخلِ خودِ کیو‌آر، بی سرور و بی رمز.
+      ‎kar/‎   مالِ **کارمند و کارفرما** است، زنده از سرور و پشتِ رمزِ برنامه.
+
+  ⚠️ رمز: همان رمزِ برنامهٔ نیتیو. خودِ رمز هیچ‌وقت منتشر نمی‌شود — فقط رشتهٔ
+  ‎pbkdf2$sha256$…‎ می‌آید و همین‌جا، داخلِ خودِ گوشی، رمزِ تایپ‌شده با همان نمک
+  پخته و مقایسه می‌شود. یعنی رمز نه در نشانی می‌رود و نه در حافظهٔ گوشی می‌ماند.
+-->
+<style>
+  :root{
+    --bg:#0f1622; --card:#16202e; --line:#26344a; --txt:#e8eef7; --muted:#93a4bd;
+    --accent:#f6a623; --ok:#38a169; --warn:#d69e2e; --red:#e53e3e; --chip:#1d2836;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#f4f6fa; --card:#fff; --line:#e2e8f0; --txt:#16202e; --muted:#5b6b84;
+           --accent:#b96f00; --chip:#eef2f7; }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--txt);line-height:1.85;
+       font-family:system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:12px 12px 90px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+        padding:12px;margin-bottom:10px}
+  h1{font-size:1.1rem;margin:0 0 2px}
+  h2{font-size:.95rem;margin:0 0 8px;color:var(--muted);font-weight:800}
+  .sub{color:var(--muted);font-size:.8rem}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .grow{flex:1 1 160px;min-width:0}
+  input,select,button,textarea{font:inherit;font-family:inherit}
+  input,select{width:100%;background:var(--bg);color:var(--txt);border:1px solid var(--line);
+        border-radius:10px;padding:10px 12px}
+  button{background:var(--chip);color:var(--txt);border:1px solid var(--line);
+        border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
+  button.p{background:var(--accent);border-color:var(--accent);color:#1a1a1a}
+  button:disabled{opacity:.5;cursor:default}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--muted)}
+  .dot.on{background:var(--ok)} .dot.off{background:var(--red)}
+  .figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px}
+  .fig{background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:9px;text-align:center}
+  .fig .l{color:var(--muted);font-size:.74rem} .fig .v{font-size:1.1rem;font-weight:800}
+  .fig.bad{border-color:var(--red)} .fig.warn{border-color:var(--warn)}
+  .list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
+  .p-card{background:var(--bg);border:1px solid var(--line);border-right-width:5px;
+        border-radius:11px;padding:9px 11px;cursor:pointer;text-align:start}
+  .p-card.ok{border-right-color:var(--ok)} .p-card.low{border-right-color:var(--warn)}
+  .p-card.out{border-right-color:var(--red)} .p-card.none{border-right-color:var(--line)}
+  .p-card .n{font-weight:800}
+  .badge{font-size:.7rem;border-radius:999px;padding:1px 8px;border:1px solid var(--line);color:var(--muted)}
+  .badge.ok{color:var(--ok);border-color:var(--ok)}
+  .badge.low{color:var(--warn);border-color:var(--warn)}
+  .badge.out{color:var(--red);border-color:var(--red)}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{border-collapse:collapse;width:100%;min-width:480px;font-size:.82rem}
+  th,td{border:1px solid var(--line);padding:6px;text-align:center;white-space:nowrap}
+  th{background:var(--bg);color:var(--muted);font-weight:800;position:sticky;top:0}
+  .tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+  .tabs button{white-space:nowrap;padding:7px 12px;font-size:.84rem}
+  .tabs button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#1a1a1a}
+  .nav{position:fixed;inset-inline:0;bottom:0;background:var(--card);border-top:1px solid var(--line);
+       display:flex;padding:6px;gap:6px;z-index:9}
+  .nav button{flex:1;padding:9px 4px;font-size:.82rem}
+  .hidden{display:none!important}
+  .err{color:var(--red)} .okc{color:var(--ok)}
+  .ans{border-inline-start:4px solid var(--accent);padding-inline-start:10px}
+  .kv{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed var(--line);padding:3px 0}
+  .kv:last-child{border-bottom:0}
+  @media (max-width:420px){ .wrap{padding:10px 10px 88px} }
+</style>
+</head>
+<body>
+
+<!-- ══ ۱) تنظیمِ نشانیِ سرور — فقط بارِ اول، یا وقتی پاک شده باشد ══ -->
+<div class="wrap hidden" id="setupPane">
+  <div class="card">
+    <h1>دستیارِ پمپ یعقوبی</h1>
+    <div class="sub">این صفحه به سرورِ خانگیِ خودِ پمپ وصل می‌شود. نشانی را از
+      «تنظیمات ‹ کیو‌آرِ اپِ کارمندان»ِ برنامهٔ کامپیوتر بگیرید — یا همان کیو‌آر
+      را اسکن کنید تا خودش پُر شود.</div>
+  </div>
+  <div class="card">
+    <h2>نشانیِ سرور</h2>
+    <input id="inSrv" placeholder="wss://…" autocomplete="off" spellcheck="false">
+    <div style="height:8px"></div>
+    <h2>رمزِ سرور (اگر دارد)</h2>
+    <input id="inTok" placeholder="—" autocomplete="off" spellcheck="false">
+    <div style="height:8px"></div>
+    <h2>کدِ ایستگاه</h2>
+    <input id="inStn" value="pump1" autocomplete="off" spellcheck="false">
+    <div style="height:10px"></div>
+    <button class="p" id="btnSetup">وصل شو</button>
+  </div>
+</div>
+
+<!-- ══ ۲) قفل — همان رمزِ برنامهٔ کامپیوتر ══ -->
+<div class="wrap hidden" id="lockPane">
+  <div class="card" style="text-align:center">
+    <h1 id="lockTitle">پمپ یعقوبی</h1>
+    <div class="sub" id="lockNote">رمزِ برنامهٔ کامپیوتر را بزنید.</div>
+  </div>
+  <div class="card">
+    <input id="inPass" type="password" inputmode="numeric" placeholder="رمز"
+           autocomplete="current-password">
+    <div style="height:10px"></div>
+    <button class="p" id="btnUnlock" style="width:100%">باز کن</button>
+    <div style="height:8px"></div>
+    <div class="sub err hidden" id="lockErr"></div>
+    <div class="sub" id="lockState">در حالِ وصل شدن…</div>
+  </div>
+  <div class="card">
+    <button id="btnForget" style="width:100%">نشانیِ سرور را عوض کن</button>
+  </div>
+</div>
+
+<!-- ══ ۳) خودِ برنامه ══ -->
+<div class="wrap hidden" id="appPane">
+  <div class="card">
+    <div class="row">
+      <div class="grow">
+        <h1 id="stName">پمپ یعقوبی</h1>
+        <div class="sub"><span class="dot" id="liveDot"></span> <span id="liveText">…</span></div>
+      </div>
+      <button id="btnLock">🔒</button>
+    </div>
+  </div>
+
+  <!-- ربات -->
+  <section id="paneBot">
+    <div class="card">
+      <h2>از ربات بپرس</h2>
+      <div class="row">
+        <div class="grow"><input id="inAsk" placeholder="مثلاً: حساب هارون · مخزن · مصارف ماه ۱۴۰۵/۰۶ · همه بخش‌ها"></div>
+        <button id="btnMic" title="جست‌وجوی صوتی">🎙️</button>
+        <button class="p" id="btnAsk">بپرس</button>
+      </div>
+      <div class="sub" id="askHint">هر اسم، هر بخش، هر ماه. «همه بخش‌ها» خلاصهٔ کل را می‌دهد.</div>
+    </div>
+    <div id="botOut"></div>
+  </section>
+
+  <!-- قرض‌داران -->
+  <section id="paneDebt" class="hidden">
+    <div class="card">
+      <div class="row">
+        <div class="grow"><input id="inFind" placeholder="نامِ قرض‌دار…"></div>
+        <select id="selSt" style="width:auto">
+          <option value="">همه</option>
+          <option value="out">تمام‌شده</option>
+          <option value="low">کم مانده</option>
+          <option value="ok">موجودی دارد</option>
+        </select>
+      </div>
+    </div>
+    <div class="card"><div class="list" id="debtList"></div></div>
+  </section>
+
+  <!-- مخزن -->
+  <section id="paneTank" class="hidden">
+    <div class="card"><h2>مخزن</h2><div class="figs" id="tankBox"></div></div>
+    <div class="card"><h2>خریدهای تیل</h2><div id="buyBox"></div></div>
+  </section>
+
+  <!-- بخش‌ها -->
+  <section id="paneSec" class="hidden">
+    <div class="card">
+      <div class="tabs" id="secTabs"></div>
+      <div style="height:8px"></div>
+      <select id="selMonth"><option value="">همهٔ ماه‌ها</option></select>
+    </div>
+    <div id="secBox"></div>
+  </section>
+</div>
+
+<div class="nav hidden" id="nav">
+  <button data-pane="paneBot" aria-selected="true">🤖 ربات</button>
+  <button data-pane="paneDebt">👥 قرض‌داران</button>
+  <button data-pane="paneTank">⛽ مخزن</button>
+  <button data-pane="paneSec">📚 بخش‌ها</button>
+</div>
+
+<script src="./app.js"></script>
+</body>
+</html>

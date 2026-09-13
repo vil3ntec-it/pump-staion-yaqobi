@@ -232,6 +232,20 @@ public sealed class DebtorService
             r.IsDBNull(i) ? 0m : (decimal)Convert.ToDouble(r.GetValue(i));
     }
 
+    /// <summary>
+    /// شمارِ همهٔ ردیف‌های زندهٔ قرض‌داران — یک ‎COUNT‎ی ساده، بی خواندنِ حتی
+    /// یک ردیف.
+    ///
+    /// ⚠️ برای این است که هیچ‌کس دوباره از راهِ «همهٔ ردیف‌های همهٔ حساب‌ها را
+    /// بخوان و بعد ببین چند تا بود» نرود — همان راهی که برنامه را می‌خواباند.
+    /// </summary>
+    public async Task<int> RowCountAsync(CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        return await db.DebtRows.AsNoTracking().CountAsync(ct);
+    }
+
     public async Task<Debtor> AddDebtorAsync(string name, string? phone, bool noInvoice,
                                              CancellationToken ct = default)
     {

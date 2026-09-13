@@ -5,6 +5,7 @@ using PumpYaqobi.App.Themes;
 using PumpYaqobi.App.Update;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Services.Data;
+using PumpYaqobi.Services.Vision;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -207,6 +208,59 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
         _host.Toast(changed ? "✅ تنظیمات ذخیره شد — نرخِ تازه در تاریخچه ثبت شد"
                             : "✅ تنظیمات ذخیره شد", ToastKind.Ok);
     }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  اپِ کارمندان — کیو‌آر و انتشارِ دستی
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  خواستهٔ صریحِ صاحب ریپو: «اپ برای اندروید برای کارمندان تا قرض‌داران را
+    //  چک کنند که موجودی دارند یا نه — که اضافه ندهند — و موجودیِ تیل در مخزن
+    //  را ببینند… اول رمزِ برنامهٔ نیتیوِ کامپیوتر را بخواهد.»
+    //
+    //  همین برنامه منبعِ آن اپ است: هر بیست ثانیه یک عکسِ کامل روی سرورِ خانگی
+    //  می‌گذارد و اپ به همان گوش می‌دهد. این دو دکمه فقط دو کارِ کاربر را
+    //  ممکن می‌کنند: «کیو‌آر را بگیر و بفرست» و «همین حالا بفرست».
+
+    /// <summary>پیامِ زیرِ دکمه‌ها — چه رفت، چه نرفت و چرا.</summary>
+    [ObservableProperty] private string _staffStatus = "";
+
+    /// <summary>
+    /// «📲 کیو‌آرِ اپِ کارمندان» — نشانیِ اپ با سرور و رمز و کدِ ایستگاه.
+    ///
+    /// ⚠️ داخلِ این کیو‌آر هیچ حسابی نیست؛ فقط نشانیِ سرور است. خودِ اپ پشتِ
+    /// رمزِ همین برنامه قفل است، پس کسی که کد را ببیند هم چیزی نمی‌بیند.
+    /// </summary>
+    [RelayCommand]
+    private Task ShowStaffQrAsync() => CrashGuard.RunAsync("کیو‌آرِ اپِ کارمندان", async () =>
+    {
+        var link = KarLink.Build(_host);
+        if (link is null)
+        {
+            StaffStatus = "اول «نشانیِ سرور» را بنویسید و ذخیره کنید — "
+                        + "بی سرور، اپِ کارمندان هیچ داده‌ای ندارد.";
+            return;
+        }
+
+        var png = await Task.Run(() => QrWriter.EncodePng(link));
+        await Dialogs.ShowQrAsync("📲 اپِ کارمندان", link, png,
+            "این کد را به کارمندان بدهید. با اسکنش اپ روی گوشیشان باز می‌شود و "
+            + "رمزِ همین برنامه را می‌پرسد. اپ فقط می‌خوانَد — هیچ حسابی را عوض نمی‌کند.");
+        StaffStatus = "";
+    });
+
+    /// <summary>
+    /// «🚀 همین حالا بفرست» — بی معطلیِ حلقهٔ بیست‌ثانیه‌ای.
+    /// </summary>
+    [RelayCommand]
+    private Task PublishNowAsync() => CrashGuard.RunAsync("انتشار", async () =>
+    {
+        StaffStatus = "در حالِ فرستادن…";
+        var ok = await _host.Publisher.PublishOnceAsync(force: true);
+        StaffStatus = ok
+            ? "✅ عکسِ تازهٔ برنامه روی سرور نشست — گوشی‌ها همین حالا می‌بینند."
+            : "❌ نرفت. نشانیِ سرور یا رمزش را بررسی کنید و مطمئن شوید سرورِ "
+              + "خانگی روشن است.";
+    });
 
     // ── آوردنِ دادهٔ نسخهٔ وب ────────────────────────────────────────────────
     [ObservableProperty] private bool _importBusy;

@@ -51,13 +51,22 @@ public sealed partial class MainViewModel : ObservableObject
             // دیگر می‌رود تا باز شدنِ برنامه معطلِ آن نماند، و خودش هیچ استثنایی
             // بیرون نمی‌دهد — بکاپِ خودکار نباید ورودِ کاربر را بشکند.
             _ = Task.Run(() => AppHost.Current.Backup.SnapshotToday());
+
+            // ══ خوراکِ اپِ کارمندان و ربات ═══════════════════════════════════
+            // خواستهٔ صاحب ریپو: «هر تغییری که در اپ انجام می‌شود توی ربات هم
+            // باشد.» پس از همین‌جا یک حلقهٔ آرامِ پس‌زمینه شروع می‌شود که عکسِ
+            // برنامه را روی سرورِ خانگی تازه نگه می‌دارد.
+            //
+            // ⚠️ بعد از ورود، نه در سازنده: پیش از ورود هیچ اجازه‌ای نداریم و
+            // لایهٔ سرویس درست هم رد می‌کند. اگر سروری تنظیم نشده باشد، این
+            // حلقه بی‌صدا هیچ کاری نمی‌کند.
+            AppHost.Current.Publisher.Start();
         };
 
         Sections = new ObservableCollection<SectionViewModel>(BuildSections(AppHost.Current));
         AttachSubSections(AppHost.Current);
         Themes = new ObservableCollection<PumpTheme>(PumpTheme.All);
         _selectedTheme = PumpTheme.ById(_settings.ThemeId);
-
     }
 
     /// <summary>همان بخشی که کاربر دفعهٔ پیش داخلش بود.</summary>

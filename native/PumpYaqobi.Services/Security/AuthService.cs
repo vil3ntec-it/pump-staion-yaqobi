@@ -85,6 +85,32 @@ public sealed class AuthService
 
     public void SignOut() => _session.SignOut();
 
+    /// <summary>
+    /// ══ قفلِ اپِ کارمندان ═══════════════════════════════════════════════════
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو: «برنامه برای شورت‌کات و اندروید جوری باشد که یک
+    /// رمز داشته باشد — اول <b>رمزِ برنامهٔ نیتیوِ کامپیوتر</b> را بخواهد.»
+    ///
+    /// پس اپِ کارمندان همان رمز را می‌پرسد. رمز هیچ‌وقت از این‌جا بیرون نمی‌رود
+    /// و <b>خواندنی هم نیست</b>؛ فقط همان رشتهٔ ‎pbkdf2$sha256$…‎ (نمک + هش)
+    /// منتشر می‌شود و خودِ گوشی، رمزِ تایپ‌شده را با همان نمک و همان شمارِ دور
+    /// می‌پزد و نتیجه را مقایسه می‌کند. یعنی:
+    ///   • رمزِ خام هیچ‌جا نمی‌رود،
+    ///   • و رمزِ اپ همیشه همان رمزِ برنامه است — عوض که شد، خودبه‌خود عوض شد.
+    ///
+    /// ⚠️ همین‌طور که هست منتشر می‌شود، نه چیزی بیشتر: هشِ PBKDF2 با ۲۱۰٬۰۰۰
+    /// دور، پشتِ رمزِ خودِ سرورِ خانگی. ‎null‎ یعنی هنوز مدیری ساخته نشده.
+    /// </summary>
+    public string? AdminPasswordHash()
+    {
+        using var db = _dbf.Create();
+        return db.Users
+            .Where(u => u.IsActive && u.Role == UserRole.Admin)
+            .OrderBy(u => u.Id)
+            .Select(u => u.PasswordHash)
+            .FirstOrDefault();
+    }
+
     public void ChangePassword(string userName, string current, string next)
     {
         using var db = _dbf.Create();

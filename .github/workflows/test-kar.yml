@@ -1,0 +1,34 @@
+name: آزمونِ اپِ کارمندان
+
+# ربات و قفلِ رمزِ اپِ کارمندان (‎kar/‎) هیچ ربطی به دات‌نت ندارند و نباید
+# منتظرِ ساختِ نیتیو بمانند — یک ورک‌فلوی سبکِ چندثانیه‌ای، فقط Node.
+#
+# ⚠️ مهم‌ترین چیزی که این‌جا قفل می‌شود، سازگاریِ **قفلِ رمز** است: اپ همان
+# رمزِ برنامهٔ کامپیوتر را می‌پرسد و با PBKDF2ِ خودِ مرورگر می‌سنجد. اگر شکلِ
+# هش یا کدگذاریِ رمز یک سرِ سوزن فرق کند، کارمند رمزِ درستش را می‌زند و اپ باز
+# نمی‌شود — و هیچ‌کس نمی‌فهمد چرا.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'kar/**'
+      - 'tools/check-kar-bot.mjs'
+      - '.github/workflows/test-kar.yml'
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - 'kar/**'
+      - 'tools/check-kar-bot.mjs'
+      - '.github/workflows/test-kar.yml'
+
+jobs:
+  bot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: ربات، ماه‌ها و قفلِ رمز
+        run: node tools/check-kar-bot.mjs

@@ -268,13 +268,16 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
             //
             // ⚠️ کارت فقط جمع‌ها را دارد، پس ردیف‌ها همین‌جا از دیتابیس خوانده
             // می‌شوند — وگرنه مشتری جدولی خالی می‌دید.
+            //
+            // ⚠️ و فقط دفترِ <b>خودِ حساب</b> خوانده می‌شود، نه هر دو. پیش از
+            // این ‎FuelRows.Concat(MoneyRows)‎ بود، یعنی لیترِ دفترِ تیل با
+            // افغانیِ دفترِ پول در یک جدول و یک جمع می‌افتاد و عددِ کیو‌آر با
+            // عددِ داخلِ همان حساب فرق می‌کرد — همان «چیزِ اشتباه»ی که گزارش شد.
             var full = await _host.Debtors.LoadFullAsync(card.Entity.Id);
             var main = full?.MainAccount;
             var snap = main is null
                 ? new AcctSnapshot { Name = card.Name, Kind = "قرض‌دار", Date = Shamsi.Today() }
-                : AcctSnapshots.ForDebtAccount(card.Name, null, main,
-                                               main.FuelRows.Concat(main.MoneyRows).ToList(),
-                                               _host.Debt);
+                : AcctSnapshots.ForDebtAccount(card.Name, null, main, _host.Debt);
 
             var link = AcctView.Url(_host.Settings.GetString(SettingsKeys.ViewerUrl), snap,
                                     AcctLink.Build(card.Entity.Id));

@@ -66,6 +66,35 @@
           </StackPanel>
         </Border>
 
+        <!-- ══ اپِ کارمندان ══════════════════════════════════════════════
+             خواستهٔ صریحِ صاحب ریپو: کارمندان با گوشیِ خودشان ببینند کدام
+             قرض‌دار موجودی دارد و کدام ندارد (تا تیلِ اضافه ندهند) و مخزن
+             چقدر دارد — و همه‌اش پشتِ رمزِ همین برنامه باشد.
+
+             این برنامه منبعِ آن اپ است: خودش هر بیست ثانیه یک عکسِ کامل روی
+             سرورِ خانگی می‌گذارد و اپ به همان گوش می‌دهد. -->
+        <Border Classes="panel" Padding="0">
+          <StackPanel>
+            <Border Classes="card-head">
+              <TextBlock Text="📲 اپِ کارمندان و ربات" FontWeight="Bold"
+                         Foreground="{DynamicResource Pump.Accent}" />
+            </Border>
+            <StackPanel Margin="14" Spacing="10">
+              <TextBlock Classes="muted" TextWrapping="Wrap"
+                         Text="کارمندان با اسکنِ این کد، اپ را روی گوشیشان باز می‌کنند و رمزِ همین برنامه را می‌زنند. آن‌جا قرض‌داران با رنگِ حالشان، موجودیِ مخزن، همهٔ بخش‌ها و یک رباتِ جست‌وجو هست — ولی هیچ چیزی را نمی‌توانند عوض کنند." />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Classes="accent" Content="کیو‌آرِ اپِ کارمندان"
+                        Command="{Binding ShowStaffQrCommand}" />
+                <Button Content="همین حالا بفرست"
+                        Command="{Binding PublishNowCommand}"
+                        ToolTip.Tip="بی معطلیِ تازه‌سازیِ خودکار، همین حالا عکسِ برنامه را روی سرور بگذار." />
+              </StackPanel>
+              <TextBlock Text="{Binding StaffStatus}" Classes="muted" TextWrapping="Wrap"
+                         IsVisible="{Binding StaffStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
         <!-- نرخ‌ها -->
         <Border Classes="panel" Padding="0">
           <StackPanel>
