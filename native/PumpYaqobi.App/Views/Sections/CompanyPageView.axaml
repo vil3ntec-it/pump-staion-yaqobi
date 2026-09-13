@@ -73,7 +73,7 @@
                    کادر ‎<select class="xls-in">‎ی همیشه‌پیداست. -->
               <ComboBox ItemsSource="{Binding PoulCurrencyOptions}"
                         SelectedItem="{Binding PoulCurrencyText}"
-                        Margin="4,1" MinHeight="0" Padding="7,2" FontSize="14" />
+                        Classes="incell" />
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>

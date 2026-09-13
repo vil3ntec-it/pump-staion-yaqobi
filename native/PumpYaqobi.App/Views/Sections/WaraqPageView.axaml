@@ -52,7 +52,7 @@
               <DataTemplate>
                 <ComboBox ItemsSource="{Binding FuelOptions}"
                           SelectedItem="{Binding FuelText}"
-                          Margin="4,1" MinHeight="0" Padding="7,2" FontSize="14" />
+                          Classes="incell" />
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
@@ -112,7 +112,7 @@
                 <DataTemplate>
                   <ComboBox ItemsSource="{Binding FuelOptions}"
                             SelectedItem="{Binding FuelText}"
-                            Margin="4,1" MinHeight="0" Padding="7,2" FontSize="14" />
+                            Classes="incell" />
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
@@ -128,7 +128,7 @@
                 <DataTemplate>
                   <ComboBox ItemsSource="{Binding TypeOptions}"
                             SelectedItem="{Binding TypeText}"
-                            Margin="4,1" MinHeight="0" Padding="7,2" FontSize="14" />
+                            Classes="incell" />
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
@@ -140,7 +140,7 @@
                 <DataTemplate>
                   <ComboBox ItemsSource="{Binding UnitOptions}"
                             SelectedItem="{Binding UnitText}"
-                            Margin="4,1" MinHeight="0" Padding="7,2" FontSize="14"
+                            Classes="incell"
                             ToolTip.Tip="ردیفِ قرض به کدام دفترِ حسابِ قرض‌دار برود: واحد تیل یا واحد پول" />
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
@@ -162,7 +162,7 @@
                 <DataTemplate>
                   <ComboBox ItemsSource="{Binding FuelOptions}"
                             SelectedItem="{Binding FuelText}"
-                            Margin="4,1" MinHeight="0" Padding="7,2" FontSize="14" />
+                            Classes="incell" />
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
@@ -178,7 +178,7 @@
                 <DataTemplate>
                   <ComboBox ItemsSource="{Binding TypeOptions}"
                             SelectedItem="{Binding TypeText}"
-                            Margin="4,1" MinHeight="0" Padding="7,2" FontSize="14" />
+                            Classes="incell" />
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
@@ -190,7 +190,7 @@
                 <DataTemplate>
                   <ComboBox ItemsSource="{Binding UnitOptions}"
                             SelectedItem="{Binding UnitText}"
-                            Margin="4,1" MinHeight="0" Padding="7,2" FontSize="14"
+                            Classes="incell"
                             ToolTip.Tip="ردیفِ قرض به کدام دفترِ حسابِ قرض‌دار برود: واحد تیل یا واحد پول" />
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>

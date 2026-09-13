@@ -676,6 +676,75 @@
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="VerticalAlignment" Value="Stretch" />
   </Style>
+
+  <!-- ══ اندازهٔ کشوییِ داخلِ خانه ══════════════════════════════════════════
+       پیش از این هر بخش خودش ‎Margin="4,1" MinHeight="0" Padding="7,2"
+       FontSize="14"‎ می‌نوشت — یازده جا، و هر یازده‌تا نوشته را یک درجه
+       کوچک‌تر از کادرهای تایپیِ همان ردیف می‌کرد. حالا یک کلاس، یک جا. -->
+  <Style Selector="ComboBox.incell">
+    <Setter Property="Margin" Value="4,1" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="7,2" />
+    <Setter Property="FontSize" Value="17" />
+  </Style>
+
+  <!-- ══ کشوییِ داخلِ خانه: فلش هست ولی جا نمی‌گیرد ═════════════════════════
+
+       گزارشِ صاحب ریپو: «اون علامتِ ⌄ جوری است که فقط جا اضافه گرفته … اونو
+       حذف کن که نباشه … ولی وقتی رو اون کادر کشویی بزنم باز بشه، یعنی اون
+       باشه ولی تو جدول‌ها دیده نشه و جا نگیره.»
+
+       اندازه‌گیری حق را داد. قالبِ پیش‌فرضِ ‎ComboBox‎ی آوالونیا این است:
+
+           Grid cols=[1*→46 | 32→32]
+
+       یعنی از ۷۸ پیکسلِ خانه، ۳۲ تا سهمِ فلش است و نوشته با ۳۲ پیکسل در
+       ۴۶ پیکسل می‌چپد. آن ۳۲ یک ‎ColumnDefinition‎ی ثابت داخلِ قالب است و از
+       هیچ ‎Setter‎ی دست‌یافتنی نیست — درست همان تلهٔ سرستون‌ها.
+
+       پس قالبِ خودمان: یک لایه، بی ستونِ فلش. کشویی همان‌جور با کلیک باز
+       می‌شود (خودِ ‎ComboBox‎ این کار را می‌کند، نه فلش) و اندازهٔ خط از خودِ
+       کادر می‌آید نه از پیش‌فرضِ ۱۴ی تم.
+
+       ⚠️ ‎PART_Popup‎ و ‎PART_ItemsPresenter‎ نام‌های اجباری‌اند؛ عوضشان کنی
+       کشویی باز نمی‌شود. -->
+  <Style Selector="DataGridCell ComboBox">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel>
+          <Border Name="Background"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="{TemplateBinding CornerRadius}" />
+          <ContentControl Name="ContentPresenter"
+                          Content="{TemplateBinding SelectionBoxItem}"
+                          ContentTemplate="{TemplateBinding ItemTemplate}"
+                          Foreground="{TemplateBinding Foreground}"
+                          FontSize="{TemplateBinding FontSize}"
+                          Padding="{TemplateBinding Padding}"
+                          HorizontalContentAlignment="Center"
+                          VerticalContentAlignment="Center" />
+          <Popup Name="PART_Popup"
+                 IsOpen="{TemplateBinding IsDropDownOpen, Mode=TwoWay}"
+                 MinWidth="{Binding Bounds.Width, RelativeSource={RelativeSource TemplatedParent}}"
+                 IsLightDismissEnabled="True"
+                 InheritsTransform="True"
+                 WindowManagerAddShadowHint="False">
+            <Border Background="{DynamicResource Pump.Card}"
+                    BorderBrush="{DynamicResource Pump.Border}"
+                    BorderThickness="1" CornerRadius="8" Padding="2">
+              <ScrollViewer MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                <ItemsPresenter Name="PART_ItemsPresenter"
+                                ItemsPanel="{TemplateBinding ItemsPanel}" />
+              </ScrollViewer>
+            </Border>
+          </Popup>
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
   <!-- ══ خانه‌های داخلِ کادرِ چندانتخابی ═══════════════════════════════════
        ‎DataGrid‎ فقط «ردیف» را انتخاب می‌کند. کادرِ خانه‌به‌خانه‌ای که با
        ‎Shift+فلش‎ ساخته می‌شود، از ‎ExcelGrid.PaintRange‎ این کلاس را می‌گیرد. -->

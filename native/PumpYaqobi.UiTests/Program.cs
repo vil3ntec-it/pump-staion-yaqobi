@@ -60,6 +60,7 @@ internal static class Program
         // ══ حالتِ «کلیدِ چپ و راست هنگامِ تایپ» ═════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- keys
         if (outDir.Equals("keys", StringComparison.OrdinalIgnoreCase)) return KeyAudit.Run();
+        if (outDir.Equals("look", StringComparison.OrdinalIgnoreCase)) return LookAudit.Run();
         if (outDir.Equals("gridperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Run();
         if (outDir.Equals("cardperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Cards();
 

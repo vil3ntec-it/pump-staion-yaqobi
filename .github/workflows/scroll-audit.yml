@@ -76,3 +76,10 @@ jobs:
       - name: سنجشِ کلیدهای چپ و راست
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- keys
+
+      # ══ کادرها دیده می‌شوند؟ فلشِ کشویی جا می‌گیرد؟ ══════════════════════
+      # «کادرها با بک‌گراند تفاوت رنگ ندارن … هیچ‌کدوم دیده نمی‌شد، حتی خودِ
+      # جدول‌ها» و «اون علامتِ ⌄ فقط جا اضافه گرفته».
+      - name: سنجشِ کادرها و کشویی‌ها
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- look

@@ -84,7 +84,7 @@
                     ثبت می‌کند. -->
               <ComboBox ItemsSource="{Binding KindOptions}"
                         SelectedItem="{Binding KindText}"
-                        Margin="4,1" MinHeight="0" Padding="7,2" FontSize="14" />
+                        Classes="incell" />
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>
@@ -104,7 +104,7 @@
                     ثبت می‌کند. -->
               <ComboBox ItemsSource="{Binding CurrencyOptions}"
                         SelectedItem="{Binding CurrencyText}"
-                        Margin="4,1" MinHeight="0" Padding="7,2" FontSize="14" />
+                        Classes="incell" />
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>
