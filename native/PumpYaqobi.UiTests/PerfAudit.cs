@@ -314,6 +314,10 @@ internal static class PerfAudit
         conn.Open();
 
         Exec(conn, "PRAGMA synchronous=OFF;");
+        // ⚠️ دادهٔ این آزمون ساختگی است و رابطه‌هایش معنا ندارد؛ با کلیدِ
+        // خارجیِ روشن، ‎SQLite‎ همان اولین ردیف را پس می‌زند. (EF این را
+        // پیش‌فرض روشن می‌کند، پس باید صریح خاموشش کرد.)
+        Exec(conn, "PRAGMA foreign_keys=OFF;");
         using var tx = conn.BeginTransaction();
 
         long bigDebtor = 0;
@@ -420,20 +424,41 @@ internal static class PerfAudit
     private const int Archives = 60;
     private const int ArchiveRows = 300;
 
+    /// <summary>
+    /// چند ردیف برای هر جدولِ ساده.
+    ///
+    /// ⚠️ شکستِ یک جدول کلِ سنجش را نمی‌خواباند: هر جدولی که شکلش با این
+    /// پرکنندهٔ عمومی نخواند، با یک خط گزارش رد می‌شود. یک بخشِ بی‌داده بهتر
+    /// از هیچ سنجشی است — و همان خط می‌گوید کدام جدول جا مانده.
+    /// </summary>
     private static void SeedRows(DbConnection c, string table, int n, string now)
     {
-        using var ins = new Insert(c, table);
-        for (var i = 0; i < n; i++)
+        try
         {
-            ins.Reset();
-            Common(ins, i, now);
-            ins.Run();
+            using var ins = new Insert(c, table);
+            for (var i = 0; i < n; i++)
+            {
+                ins.Reset();
+                Common(ins, i, now);
+                ins.Run();
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"        (جدولِ {table} پر نشد: {e.Message})");
         }
     }
 
     /// <summary>سرحساب‌ها و ردیف‌هایشان — شرکت‌ها و تیل امانت.</summary>
     private static void SeedOwned(DbConnection c, string owner, string child,
                                   string fk, int owners, int rows, string now)
+    {
+        try { SeedOwnedCore(c, owner, child, fk, owners, rows, now); }
+        catch (Exception e) { Console.WriteLine($"        (جدولِ {owner} پر نشد: {e.Message})"); }
+    }
+
+    private static void SeedOwnedCore(DbConnection c, string owner, string child,
+                                      string fk, int owners, int rows, string now)
     {
         using var o = new Insert(c, owner);
         using var r = new Insert(c, child);
@@ -455,6 +480,12 @@ internal static class PerfAudit
     }
 
     private static void SeedArchives(DbConnection c, long accountId, string now)
+    {
+        try { SeedArchivesCore(c, accountId, now); }
+        catch (Exception e) { Console.WriteLine($"        (آرشیوها پر نشدند: {e.Message})"); }
+    }
+
+    private static void SeedArchivesCore(DbConnection c, long accountId, string now)
     {
         // یک بستهٔ ردیفِ آماده، همان شکلی که ‎DebtorService.ArchiveRows‎ می‌خواند
         var rows = new System.Text.StringBuilder("[");
