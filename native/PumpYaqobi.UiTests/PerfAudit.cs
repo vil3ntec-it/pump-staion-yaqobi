@@ -143,12 +143,49 @@ internal static class PerfAudit
         catch { /* از پیش باز است */ }
         Pump(win);
 
-        // ── باز کردنِ بخش‌ها ──────────────────────────────────────────────────
-        foreach (var id in new[] { "dashboard", "debt", "safe", "expenses", "waraq", "shifts" })
+        // ══ باز کردنِ **همهٔ** بخش‌ها، نه شش‌تا ══════════════════════════════
+        //
+        // گزارشِ صاحب ریپو: «با ده‌ها هزار آزمون باید ثابت کنی هیچ بخشی کند
+        // نیست.» تا امروز این حلقه شش بخشِ دستی داشت و بقیهٔ بیست‌وهشت بخش
+        // اصلاً سنجیده نمی‌شدند — از جمله همان‌هایی که جدول‌های سنگین دارند.
+        //
+        // ⚠️ زیربخش‌ها هم (قرض‌های کهنه، چکنه، تخلیهٔ تانکر، گزارشِ ماهانه و …)
+        // این‌جا می‌آیند: هر کدام صفحهٔ کاملِ خودشان‌اند.
+        foreach (var sec in vm.Sections.ToList())
         {
-            var sec = vm.Sections.FirstOrDefault(s => s.Id == id);
-            if (sec is null) continue;
-            Mark("باز کردنِ بخشِ " + id, () => Wait(win, vm.GoAsync(sec)));
+            Mark("بخشِ " + sec.Id, () => Wait(win, vm.GoAsync(sec)));
+
+            foreach (var sub in sec.SubSections.ToList())
+                Mark("  زیربخشِ " + sub.Id, () =>
+                {
+                    sec.ShowSubCommand.Execute(sub);
+                    Settle(win);
+                    sec.CloseSubCommand.Execute(null);
+                    Settle(win);
+                });
+        }
+
+        // ══ پی‌دی‌اف ════════════════════════════════════════════════════════
+        // «حتی پی‌دی‌اف خیلی کند می‌شود.» — پس همان سندی که خودِ برنامه
+        // می‌سازد، با همان تعداد ردیف، این‌جا ساخته و **واقعاً چاپ** می‌شود.
+        // ⚠️ فقط ساختنِ شیء را نسنجید: کارِ اصلی در ‎GeneratePdf‎ اتفاق می‌افتد.
+        {
+            using var db = new PumpYaqobi.Services.Data.PumpDbFactory(file).Create();
+            var rows = db.Expenses.AsNoTracking().OrderBy(x => x.Id).ToList();
+            Console.WriteLine($"(پی‌دی‌اف با {rows.Count:N0} ردیف)");
+            Mark("ساختِ پی‌دی‌افِ مصارف", () =>
+            {
+                try
+                {
+                    var doc = new PumpYaqobi.Reporting.Pdf.ExpenseReport(
+                        new PumpYaqobi.Reporting.Pdf.ExpenseReportInput(
+                            "سنبله ۱۴۰۵", rows, PumpYaqobi.Application.Localization.Shamsi.Today(), ""));
+                    using var ms = new MemoryStream();
+                    QuestPDF.Fluent.DocumentExtensions.GeneratePdf(doc, ms);
+                    Console.WriteLine($"        ({ms.Length / 1024:N0} کیلوبایت)");
+                }
+                catch (Exception e) { Console.WriteLine("        پی‌دی‌اف نساخت: " + e.Message); }
+            });
         }
 
         // ── تعویضِ تم ─────────────────────────────────────────────────────────
@@ -277,6 +314,7 @@ internal static class PerfAudit
         using var tx = conn.BeginTransaction();
 
         long bigDebtor = 0;
+        long bigAccount = 0;
         var now = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
 
         using var person = new Insert(conn, "Debtors");
@@ -299,7 +337,7 @@ internal static class PerfAudit
             account.Set("CreatedAt", now);
             account.Set("UpdatedAt", now);
             var aid = account.Run();
-            if (i == 1) bigDebtor = pid;
+            if (i == 1) { bigDebtor = pid; bigAccount = aid; }
 
             var n = i == 1 ? BigRows : SmallRows;
             for (var k = 0; k < n; k++)
@@ -323,10 +361,138 @@ internal static class PerfAudit
             }
         }
 
+        // ══ بقیهٔ بخش‌ها هم داده لازم دارند ══════════════════════════════════
+        //
+        // گزارشِ صاحب ریپو: «هر بخشی که کادر یا جدول یا حساب‌های زیادی داشته
+        // باشد کند می‌شود — همه را با آزمون بررسی کن.»
+        //
+        // تا امروز این سنجش فقط قرض‌داران را پر می‌کرد، پس بقیهٔ بخش‌ها **خالی**
+        // سنجیده می‌شدند و طبعاً سریع بودند. حالا هر جدولی که یک بخش از آن
+        // می‌خواند، داده می‌گیرد.
+        //
+        // ⚠️ ستون‌ها از خودِ دیتابیس خوانده می‌شوند، پس این‌جا فقط چند نامِ
+        // آشنا مقدار می‌گیرند و بقیه پیش‌فرضِ خودشان را. اگر جدولی فردا عوض
+        // شود، این‌جا نمی‌شکند — فقط ممکن است ستونِ تازه‌اش خالی بماند.
+        SeedRows(conn, "Expenses", Ledger, now);
+        SeedRows(conn, "SafeEntries", Ledger, now);
+        SeedRows(conn, "ExchangeRows", Ledger, now);
+        SeedRows(conn, "RasidEntries", Ledger, now);
+        SeedRows(conn, "ParchaReceipts", Ledger, now);
+        SeedRows(conn, "RetailRows", Ledger, now);
+        SeedRows(conn, "DebtQuickReceipts", Ledger, now);
+        SeedRows(conn, "Invoices", Ledger, now);
+        SeedRows(conn, "FuelPurchases", Ledger, now);
+        SeedRows(conn, "TankDips", Ledger, now);
+        SeedRows(conn, "TankerUnloads", Ledger, now);
+        SeedRows(conn, "RateHistory", Ledger, now);
+        SeedRows(conn, "Attendance", Ledger, now);
+        SeedRows(conn, "SalaryPayments", Ledger, now);
+        SeedRows(conn, "StaffShortages", Ledger, now);
+        SeedRows(conn, "WaraqEntries", Ledger, now);
+        SeedRows(conn, "WaraqTransactions", Ledger, now);
+        SeedRows(conn, "ShiftDataSet", Ledger, now);
+
+        // شرکت‌ها و امانت: چند سرحساب، هر کدام با ردیف
+        SeedOwned(conn, "TilCompanies", "CompanyRows", "CompanyId", Owners, Ledger, now);
+        SeedOwned(conn, "AmanatAccounts", "AmanatRows", "AccountId", Owners, Ledger, now);
+
+        // ══ آرشیوهای جدولِ حسابِ بزرگ ═══════════════════════════════════════
+        // این همان چیزی است که «بخشی با خیلی جدول» را می‌سازد: هر آرشیو یک
+        // جدولِ کاملِ نه‌ستونی است.
+        SeedArchives(conn, bigAccount, now);
+
         tx.Commit();
         Exec(conn, "ANALYZE;");
         conn.Close();
         return bigDebtor;
+    }
+
+    /// <summary>چند ردیف برای هر جدولِ ساده.</summary>
+    private const int Ledger = 3_000;
+
+    /// <summary>چند سرحساب (شرکت / امانت).</summary>
+    private const int Owners = 300;
+
+    /// <summary>چند آرشیو روی حسابِ بزرگ، هر کدام با ردیف‌های خودش.</summary>
+    private const int Archives = 60;
+    private const int ArchiveRows = 300;
+
+    private static void SeedRows(DbConnection c, string table, int n, string now)
+    {
+        using var ins = new Insert(c, table);
+        for (var i = 0; i < n; i++)
+        {
+            ins.Reset();
+            Common(ins, i, now);
+            ins.Run();
+        }
+    }
+
+    /// <summary>سرحساب‌ها و ردیف‌هایشان — شرکت‌ها و تیل امانت.</summary>
+    private static void SeedOwned(DbConnection c, string owner, string child,
+                                  string fk, int owners, int rows, string now)
+    {
+        using var o = new Insert(c, owner);
+        using var r = new Insert(c, child);
+        var each = Math.Max(1, rows / Math.Max(1, owners));
+        for (var i = 0; i < owners; i++)
+        {
+            o.Reset();
+            Common(o, i, now);
+            o.Set("Name", "حسابِ " + i);
+            var id = o.Run();
+            for (var k = 0; k < each; k++)
+            {
+                r.Reset();
+                Common(r, k, now);
+                r.Set(fk, id);
+                r.Run();
+            }
+        }
+    }
+
+    private static void SeedArchives(DbConnection c, long accountId, string now)
+    {
+        // یک بستهٔ ردیفِ آماده، همان شکلی که ‎DebtorService.ArchiveRows‎ می‌خواند
+        var rows = new System.Text.StringBuilder("[");
+        for (var k = 0; k < ArchiveRows; k++)
+        {
+            if (k > 0) rows.Append(',');
+            rows.Append("{\"DateShamsi\":\"1405/06/18\",\"Name\":\"ردیفِ ").Append(k)
+                .Append("\",\"Fuel\":1,\"Liters\":10,\"PricePerLiter\":62,\"Bardagi\":620,")
+                .Append("\"Rasid\":0,\"RasidFuel\":0,\"Albaqi\":620,\"ByMoney\":false}");
+        }
+        rows.Append(']');
+        var json = rows.ToString();
+
+        using var a = new Insert(c, "DebtTableArchives");
+        for (var i = 0; i < Archives; i++)
+        {
+            a.Reset();
+            Common(a, i, now);
+            a.Set("AccountId", accountId);
+            a.Set("RowsJson", json);
+            a.Set("RowCount", ArchiveRows);
+            a.Set("IsMoney", 0);
+            a.Run();
+        }
+    }
+
+    /// <summary>ستون‌های آشنایی که تقریباً همهٔ جدول‌ها دارند.</summary>
+    private static void Common(Insert ins, int i, string now)
+    {
+        ins.Set("DateShamsi", "1405/06/18");
+        ins.Set("DateKey", 14050618);
+        ins.Set("Name", "قلمِ " + i);
+        ins.Set("Title", "قلمِ " + i);
+        ins.Set("Note", "");
+        ins.Set("Amount", (i % 500 + 1) * 100);
+        ins.Set("Value", (i % 500 + 1) * 100);
+        ins.Set("Liters", i % 90 + 1);
+        ins.Set("PricePerLiter", 62);
+        ins.Set("SortIndex", i);
+        ins.Set("CreatedAt", now);
+        ins.Set("UpdatedAt", now);
     }
 
     private static void Exec(DbConnection c, string sql)
