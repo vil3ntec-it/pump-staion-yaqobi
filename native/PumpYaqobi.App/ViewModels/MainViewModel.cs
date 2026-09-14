@@ -45,7 +45,9 @@ public sealed partial class MainViewModel : ObservableObject
         //      لحظهٔ صفرِ پیش از ورود می‌ماندند و کاربر «۰ افغانی» می‌دید.
         Lock.SignedIn += () =>
         {
-            IsLocked = false;
+            // ⚠️ ترتیب مهم است: اول بخشِ آغازین بار می‌شود، بعد پرده کنار
+            // می‌رود. وگرنه کاربر یک لحظه پوستهٔ خالی را می‌بیند.
+            Phase = AppPhase.Ready;
             _ = OpenStartSectionAsync();
 
             // ══ عکسِ روزانه (بندِ ۲۳) ══════════════════════════════════════════
@@ -88,102 +90,44 @@ public sealed partial class MainViewModel : ObservableObject
     // لایهٔ سرویس درست هم رد می‌کند — همان دلیلی که بارِ بخشِ آغازین هم به
     // بعد از ورود موکول شده.
 
-    /// <summary>پرده روی صفحه است؟</summary>
-    [ObservableProperty] private bool _isWarming;
-
-    partial void OnIsWarmingChanged(bool v)
-    {
-        OnPropertyChanged(nameof(IsShellVisible));
-        OnPropertyChanged(nameof(IsLockVisible));
-    }
-
     /// <summary>صفر تا یک — میلهٔ پیشرفتِ زیرِ انیمیشن.</summary>
     [ObservableProperty] private double _warmProgress;
 
-    /// <summary>نامِ بخشی که همین حالا گرم می‌شود.</summary>
-    [ObservableProperty] private string _warmText = "";
+    /// <summary>«۴۰٪» — تنها چیزی که روی پردهٔ لودینگ نوشته می‌شود.</summary>
+    public string WarmPercentText => Shamsi.Money((int)Math.Round(WarmProgress * 100)) + "٪";
 
-    /// <summary>«۱۲ از ۴۲» — تا کاربر بداند کجای کار است.</summary>
-    [ObservableProperty] private string _warmCount = "";
+    partial void OnWarmProgressChanged(double v) => OnPropertyChanged(nameof(WarmPercentText));
 
     public Services.WarmUp Warm { get; } = new();
 
     /// <summary>
-    /// ══ گشتِ پشتِ پرده ═══════════════════════════════════════════════════════
+    /// ══ گرم کردنِ پشتِ پرده — بی هیچ ناوبری ═══════════════════════════════
     ///
-    /// برنامه یک بار خودش در همهٔ بخش‌ها می‌گردد، پشتِ پردهٔ لودینگ، و آخرش
-    /// به همان بخشی برمی‌گردد که کاربر باید ببیند.
+    /// صفحه‌ها در یک قابِ نادیدنیِ پشتِ پرده فقط **چیده** می‌شوند.
+    /// ‎Current‎ و ‎LastSection‎ دست نمی‌خورند و هیچ صفحهٔ محافظت‌شده‌ای پیش از
+    /// احراز هویت جلوی چشم نمی‌آید — چراییِ کامل در <see cref="Services.WarmUp"/>.
     ///
-    /// ⚠️ ‎layout‎ از پنجره می‌آید: ویومدل نباید به درختِ بصری دست بزند، ولی
-    /// بی یک پاسِ چیدمانِ واقعی، «گرم شدن» اتفاق نمی‌افتد.
+    /// ⚠️ پاسِ چیدمان از پنجره می‌آید: ویومدل نباید به درختِ بصری دست بزند،
+    /// ولی بی یک پاسِ واقعی، «گرم شدن» اتفاق نمی‌افتد.
     /// </summary>
     public async Task WarmUpAsync(Action layout)
     {
-        if (Warm.Done) return;
+        if (Warm.Done) { Phase = AppPhase.Locked; return; }
 
-        var all = Sections.Concat(Sections.SelectMany(s => s.SubSections)).ToList();
-        if (all.Count == 0) return;
+        var all = AllPages;
+        if (Avalonia.Application.Current?.DataTemplates.OfType<ViewLocator>().FirstOrDefault()
+            is not { } locator || all.Count == 0)
+        { Phase = AppPhase.Locked; return; }
 
-        var start = Current;
-
-        // ⚠️ «آخرین بخش» را گشتِ پشتِ پرده نباید عوض کند: ‎GoAsync‎ هر بار
-        // آن را ذخیره می‌کند، و بی این، کاربر پس از رمز خودش را در آخرین
-        // بخشِ گشت می‌دید، نه جایی که دفعهٔ پیش بود.
-        var lastSection = _settings.LastSection;
-
-        IsWarming = true;
-        WarmProgress = 0;
         try
         {
-            await Warm.RunAsync(all, async sec =>
-            {
-                // ⚠️ خطای بارِ داده نباید جلوی **چیدمان** را بگیرد: پیش از
-                // ورود هیچ اجازه‌ای نداریم و بیشترِ بخش‌ها همان‌جا رد
-                // می‌شوند — ولی صفحه‌شان پیش از آن نشانده شده
-                // (‎GoAsync‎ اول ‎SyncContent‎ می‌کند و بعد داده می‌خواند)،
-                // و چیدنِ همان صفحه گران‌ترین کارِ این گشت است.
-                try { await GoAsync(sec); } catch { }
-                layout();
-
-                // صفحهٔ درونیِ بخش، اگر دارد (ورق، حسابِ شخص، …)
-                await sec.WarmInnerAsync(async () =>
-                {
-                    layout();
-                    await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
-                });
-                layout();
-
-                // ⚠️ و «خوانده‌شده» پس گرفته می‌شود. چرایی‌اش مهم است:
-                // ‎EnsureLoadedAsync‎ یک‌بارمصرف است، و اگر گشتِ پشتِ پرده
-                // مصرفش کند، بخش تا آخرِ عمرِ برنامه روی عکسِ **لحظهٔ آغاز**
-                // می‌ماند و هر دادهٔ تازه‌ای که از بیرونِ همان بخش بیاید دیده
-                // نمی‌شود. (سنجشِ ‎cells‎ همین را گرفت: دانه پس از ورود
-                // ریخته می‌شد و جدولِ گاوصندوق خالی می‌ماند.)
-                //
-                // آن‌چه می‌خواستیم گرم شود خودِ **مسیر** است — همان گذرِ اولِ
-                // گران — و آن یک بار طی شد. خواندنِ دوباره چند میلی‌ثانیه
-                // است (‎ledgerperf‎: ۱ تا ۱۸).
-                sec.IsLoaded = false;
-
-                // نوبت را پس بده تا انیمیشن بچرخد و پنجره جواب بدهد
-                await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
-            }, (p, title) =>
-            {
-                WarmProgress = p;
-                WarmText = title;
-                WarmCount = Shamsi.Money(Warm.Warmed) + " از " + Shamsi.Money(all.Count);
-            });
-
-            // ⚠️ و برگشت به همان‌جایی که کاربر انتظارش را دارد. بی این، پرده
-            // که می‌رفت، کاربر خودش را در آخرین بخشِ گشت می‌دید.
-            if (start is not null) { try { await GoAsync(start); } catch { } }
-            _settings.LastSection = lastSection;
-            _settings.Save();
-            layout();
+            await Warm.RunAsync(all, locator, layout, p => WarmProgress = p);
         }
         finally
         {
-            IsWarming = false;
+            // ⚠️ چه گرم شده باشد چه نه، پرده باید برود و نوبتِ رمز برسد.
+            // وگرنه یک خطای گرم کردن، برنامه را روی صفحهٔ لودینگ قفل می‌کرد.
+            Phase = AppPhase.Locked;
         }
     }
 
@@ -270,7 +214,16 @@ public sealed partial class MainViewModel : ObservableObject
     public string BackText => "‹ برگشت به " + (Current?.Title ?? "");
     [ObservableProperty] private PumpTheme _selectedTheme;
     [ObservableProperty] private string _clock = "";
-    [ObservableProperty] private bool _isLocked = true;
+    /// <summary>
+    /// «قفل است؟» — حالا فقط نمایی از <see cref="Phase"/> است، نه یک حالتِ
+    /// جدا.
+    ///
+    /// ⚠️ دو منبعِ حقیقت برای یک چیز همان جایی است که باگ می‌نشیند: پیش از
+    /// این ‎IsLocked‎ و ‎IsWarming‎ جدا بودند و «کدام صفحه دیده شود» از
+    /// ترکیبشان حساب می‌شد — و همان ترکیب بود که کاربر را وسطِ لودینگ به
+    /// صفحه‌های داخلی می‌بُرد و بعد به قفل برمی‌گرداند.
+    /// </summary>
+    public bool IsLocked => Phase != AppPhase.Ready;
 
     /// <summary>
     /// نامِ نقشِ کاربر برای نشانِ سربرگ — همان ‎.role-badge‎ نسخهٔ وب.
@@ -291,34 +244,67 @@ public sealed partial class MainViewModel : ObservableObject
         _              => "Pump.Muted",
     };
 
-    partial void OnIsLockedChanged(bool value)
+
+
+    // ══ سه حالتِ مستقل، و فقط یکی در هر لحظه ══════════════════════════════
+    //
+    // گزارشِ صاحب ریپو: «هنگام اجرای لودینگ، کاربر به بخش‌های مختلف برنامه
+    // منتقل می‌شود، صفحات مختلف نمایش داده می‌شوند و در نهایت دوباره به صفحه
+    // قفل برمی‌گردد. این رفتار کاملاً اشتباه است.»
+    //
+    // ریشه دو تا بود:
+    //
+    //   ۱) پردهٔ لودینگ ‎Background="{DynamicResource Pump.Bg}"‎ داشت و
+    //      **چنین کلیدی در تم وجود ندارد** (نامِ درست ‎Pump.AppBg‎ است).
+    //      ‎DynamicResource‎ی که پیدا نشود بی‌صدا ‎null‎ می‌شود، پس پرده
+    //      کاملاً شفاف بود و همه‌چیز از پشتش دیده می‌شد. ⚠️ آوالونیا برای
+    //      منبعِ نبوده نه خطا می‌دهد نه هشدار.
+    //
+    //   ۲) و بدتر از آن، خودِ گرم کردن با ‎GoAsync‎ در بخش‌ها **می‌گشت** —
+    //      یعنی حتی با پردهٔ درست هم، صفحه‌های محافظت‌شده پیش از احراز هویت
+    //      ساخته و نشان داده می‌شدند.
+    //
+    // حالا سه حالت هست، صریح و مستقل، و هیچ‌کدام از دلِ آن یکی حساب نمی‌شود:
+    //
+    //     Starting ⇒ فقط پردهٔ لودینگ
+    //     Locked   ⇒ فقط صفحهٔ رمز
+    //     Ready    ⇒ فقط خودِ برنامه
+    //
+    // ⚠️ و گرم کردن دیگر «رفتن به بخش» نیست: صفحه‌ها در یک قابِ نادیدنیِ
+    // پشتِ پرده فقط **چیده** می‌شوند. ‎Current‎ دست نمی‌خورد، هیچ مسیری عوض
+    // نمی‌شود، و چون هنوز وارد نشده‌ایم هیچ دادهٔ محافظت‌شده‌ای هم در آن‌ها
+    // نیست.
+
+    /// <summary>حالتِ برنامه — هر لحظه دقیقاً یکی.</summary>
+    public enum AppPhase { Starting, Locked, Ready }
+
+    [ObservableProperty] private AppPhase _phase = AppPhase.Starting;
+
+    partial void OnPhaseChanged(AppPhase v)
     {
-        OnPropertyChanged(nameof(RoleText));
-        OnPropertyChanged(nameof(RoleBrushKey));
-        OnPropertyChanged(nameof(IsShellVisible));
-        OnPropertyChanged(nameof(IsLockVisible));
+        foreach (var n in new[] { nameof(IsStarting), nameof(IsLockVisible),
+                                  nameof(IsShellVisible), nameof(IsLocked),
+                                  nameof(RoleText), nameof(RoleBrushKey) })
+            OnPropertyChanged(n);
     }
 
-    // ══ سه پرده، و ترتیبشان ═══════════════════════════════════════════════
-    //
-    // گزارشِ صاحب ریپو: «این چه لودینگی است؟ یک صفحهٔ جدا موقعِ باز شدنِ اپ،
-    // نه این‌که رمز را بزنم بعد بیاید و همه چیز را لودینگ کند… من اول فکر
-    // کردم برنامه خراب شده.»
-    //
-    // حق داشت. پس ترتیب عوض شد:
-    //
-    //     ۱) برنامه باز می‌شود  ⇒ **پردهٔ لودینگ**
-    //     ۲) پرده که رفت        ⇒ صفحهٔ رمز
-    //     ۳) رمز که خورد        ⇒ برنامه، بی هیچ پرده‌ای
-    //
-    // ⚠️ و پوستهٔ برنامه حینِ لودینگ باید **دیده شود** (زیرِ پرده)، وگرنه
-    // آوالونیا اصلاً اندازه‌اش نمی‌گیرد و «گرم شدن» اتفاق نمی‌افتد.
+    /// <summary>پردهٔ لودینگِ آغاز — فقط در ‎Starting‎.</summary>
+    public bool IsStarting => Phase == AppPhase.Starting;
 
-    /// <summary>پوستهٔ برنامه — حینِ لودینگ هم هست، ولی زیرِ پرده.</summary>
-    public bool IsShellVisible => !IsLocked || IsWarming;
+    /// <summary>صفحهٔ رمز — فقط در ‎Locked‎.</summary>
+    public bool IsLockVisible => Phase == AppPhase.Locked;
 
-    /// <summary>صفحهٔ رمز — نه وقتی پرده روی صفحه است.</summary>
-    public bool IsLockVisible => IsLocked && !IsWarming;
+    /// <summary>
+    /// پوستهٔ برنامه.
+    ///
+    /// ⚠️ حینِ ‎Starting‎ هم «دیده‌شونده» است — ولی زیرِ پردهٔ **مات**ِ لودینگ،
+    /// پس کاربر هیچ‌وقت نمی‌بیندش. دلیلش در <see cref="Services.WarmUp"/>
+    /// نوشته: نمایی که در درختِ بصری نباشد اصلاً چیده نمی‌شود و گرم کردن فقط
+    /// ادایش را درمی‌آورد.
+    ///
+    /// ⚠️ و روی صفحهٔ قفل **نیست**: تا رمز نخورده، پوسته می‌رود کنار.
+    /// </summary>
+    public bool IsShellVisible => Phase is AppPhase.Ready or AppPhase.Starting;
 
     /// <summary>تاریخِ شمسیِ امروز — خطِ اولِ بلوکِ تاریخِ سربرگ.</summary>
     public string TodayText => Shamsi.DayName(DateTime.Now) + "، " + Shamsi.Today();
@@ -347,7 +333,9 @@ public sealed partial class MainViewModel : ObservableObject
     private void SignOut()
     {
         AppHost.Current.Auth.SignOut();
-        IsLocked = true;
+        // ⚠️ به ‎Locked‎ برمی‌گردیم، نه به ‎Starting‎: لودینگ یک بار در عمرِ
+        // اجرای برنامه است و خروج نباید دوباره راهش بیندازد.
+        Phase = AppPhase.Locked;
     }
 
     partial void OnSelectedThemeChanged(PumpTheme value)

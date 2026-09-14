@@ -23,6 +23,48 @@ namespace PumpYaqobi.UiTests;
 /// </summary>
 internal static class InvoiceShot
 {
+    /// <summary>
+    /// عکسِ سه حالتِ آغاز: لودینگ، قفل، و صفحهٔ اصلی — تا «کاربر چه می‌بیند»
+    /// را بشود دید، نه حدس زد.
+    /// </summary>
+    public static int Startup(string outDir)
+    {
+        Directory.CreateDirectory(outDir);
+        var dir = Path.Combine(Path.GetTempPath(), "pump-startshot-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        AppHost.Start(Path.Combine(dir, "pump.db"));
+
+        AppBuilder.Configure<PumpYaqobi.App.App>()
+            .UseSkia()
+            .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
+            .SetupWithoutStarting();
+
+        var win = new MainWindow { Width = 1440, Height = 900 };
+        var vm = (MainViewModel)win.DataContext!;
+        win.Show();
+
+        // ⚠️ **پیش از** هر ‎RunJobs‎ی عکس گرفته می‌شود: نخستین فراخوانی کلِ
+        // گرم کردن را تا ته می‌بَرد و پرده دیگر روی صفحه نیست. چیزی که باید
+        // دید همان لحظهٔ اول است.
+        win.UpdateLayout();
+        Shot(win, Path.Combine(outDir, "start-1-loading.png"), settle: false);
+
+        while (vm.IsStarting)
+        { Dispatcher.UIThread.RunJobs(); win.UpdateLayout(); }
+        Settle(win);
+        Shot(win, Path.Combine(outDir, "start-2-lock.png"));
+
+        vm.Lock.Password = "1234";
+        vm.Lock.Confirm = "1234";
+        vm.Lock.SubmitCommand.Execute(null);
+        for (var i = 0; i < 60; i++) { Dispatcher.UIThread.RunJobs(); win.UpdateLayout(); }
+        Settle(win);
+        Shot(win, Path.Combine(outDir, "start-3-main.png"));
+
+        Console.WriteLine("عکس‌ها در: " + outDir);
+        return 0;
+    }
+
     public static int Run(string outDir)
     {
         Directory.CreateDirectory(outDir);
@@ -86,9 +128,18 @@ internal static class InvoiceShot
     private static void Run(object o, string cmd, object? arg) =>
         (o.GetType().GetProperty(cmd)!.GetValue(o) as System.Windows.Input.ICommand)?.Execute(arg);
 
-    private static void Shot(Window w, string path)
+    private static void Shot(Window w, string path) => Shot(w, path, settle: true);
+
+    /// <summary>
+    /// ⚠️ ‎settle: false‎ برای عکسِ لودینگ لازم است: ‎Settle‎ خودش ‎RunJobs‎
+    /// می‌زند و نخستین ‎RunJobs‎ کلِ گرم کردن را تا ته می‌بَرد — یعنی تا
+    /// بیت‌مپ گرفته شود، پرده رفته و صفحهٔ قفل آمده. یک بار همین‌طور شد و
+    /// عکسِ «لودینگ» صفحهٔ قفل درآمد.
+    /// </summary>
+    private static void Shot(Window w, string path, bool settle)
     {
-        Settle(w);
+        if (settle) Settle(w);
+        else w.UpdateLayout();
         var px = new PixelSize((int)w.Width, (int)w.Height);
         var bmp = new RenderTargetBitmap(px, new Vector(96, 96));
         bmp.Render(w);

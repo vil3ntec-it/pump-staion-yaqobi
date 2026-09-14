@@ -58,8 +58,10 @@ public partial class MainWindow : Window
         //
         // ⚠️ یک نوبت دیرتر، تا پنجره یک بار چیده شده باشد؛ گرم کردن روی
         // پنجره‌ای که هنوز اندازه ندارد هیچ کاری نمی‌کند.
-        Dispatcher.UIThread.Post(() => _ = vm.WarmUpAsync(UpdateLayout),
-                                 DispatcherPriority.Background);
+        Dispatcher.UIThread.Post(() =>
+        {
+            _ = vm.WarmUpAsync(UpdateLayout);
+        }, DispatcherPriority.Background);
 
         StickNavToTop();
     }

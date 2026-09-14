@@ -42,15 +42,20 @@ public class StartupWarmTests
         Assert.DoesNotContain("<ContentControl Content=\"{Binding Content}\"", x);
     }
 
-    /// <summary>پرده و انیمیشنش سرِ جایشان‌اند.</summary>
+    /// <summary>
+    /// پردهٔ لودینگ فقط در حالتِ ‎Starting‎ است، و ساده: لوگو، نوارِ خطی،
+    /// و درصد. ⚠️ نه نامِ بخش — خواستهٔ صاحب ریپو «یک لودینگِ ساده و معمولی»
+    /// بود و پیش از احراز هویت هیچ چیزی از درونِ برنامه نباید دیده شود.
+    /// </summary>
     [Fact]
     public void TheCurtainHasAnAnimationAndACounter()
     {
         var x = Shell();
-        Assert.Contains("IsVisible=\"{Binding IsWarming}\"", x);
+        Assert.Contains("IsVisible=\"{Binding IsStarting}\"", x);
         Assert.Contains("{Binding WarmProgress}", x);
-        Assert.Contains("{Binding WarmCount}", x);
+        Assert.Contains("{Binding WarmPercentText}", x);
         Assert.Contains("IterationCount=\"INFINITE\"", x);
+        Assert.DoesNotContain("{Binding WarmText}", x);
 
         // ⚠️ ‎RenderTransform‎ انیماتورِ آماده ندارد و همان‌جا استثنا می‌دهد
         // («No animator registered for the property RenderTransform»).
@@ -66,7 +71,47 @@ public class StartupWarmTests
     {
         var vm = Read("PumpYaqobi.App", "ViewModels", "MainViewModel.cs");
         Assert.Contains("sec.IsLoaded = false;", vm);
-        Assert.Contains("WarmInnerAsync", vm);
+    }
+
+    /// <summary>
+    /// ⚠️ گرم کردن هرگز نباید ناوبری کند. ریشهٔ گزارشِ «کاربر به بخش‌های
+    /// مختلف منتقل می‌شود و بعد به قفل برمی‌گردد» همین بود: گذرِ گرم کردن با
+    /// ‎GoAsync‎ در بخش‌ها می‌گشت و فقط به پرده تکیه می‌کرد.
+    /// </summary>
+    [Fact]
+    public void WarmingNeverNavigates()
+    {
+        // ⚠️ کامنت‌ها کنار گذاشته می‌شوند: خودِ توضیحِ همین باگ نامِ ‎GoAsync‎
+        // را دارد و بی این، آزمون خودش را قرمز می‌کرد.
+        var w = Read("PumpYaqobi.App", "Services", "WarmUp.cs");
+        var code = string.Join("\n", w.Split('\n')
+                                      .Where(l => !l.TrimStart().StartsWith("//")));
+        Assert.DoesNotContain("GoAsync", code);
+
+        // ⚠️ گرم کردن با «دیده‌شو» ی خودِ بخش انجام می‌شود و در جای دائمیِ
+        // نما — نه در قابِ موقت. با قابِ موقت، نما سرِ برداشته شدن از درختِ
+        // بصری جدا می‌شود و ‎DataGrid‎ همهٔ ردیف‌هایش را دور می‌اندازد
+        // (سنجیده شد: ۱٬۴۷۵ ms در برابرِ ۵۳ی دفعه‌های بعد).
+        Assert.Contains("sec.IsShown = true;", code);
+        Assert.Contains("sec.IsShown = false;", code);
+    }
+
+    /// <summary>
+    /// سه حالت، و هر کدام دقیقاً یک صفحه. ⚠️ «کدام صفحه دیده شود» نباید از
+    /// ترکیبِ دو پرچم حساب شود — همان ترکیب بود که کاربر را وسطِ لودینگ به
+    /// صفحه‌های داخلی می‌بُرد.
+    /// </summary>
+    [Fact]
+    public void EachPhaseShowsExactlyOneScreen()
+    {
+        var vm = Read("PumpYaqobi.App", "ViewModels", "MainViewModel.cs");
+        Assert.Contains("enum AppPhase { Starting, Locked, Ready }", vm);
+        Assert.Contains("IsStarting => Phase == AppPhase.Starting", vm);
+        Assert.Contains("IsLockVisible => Phase == AppPhase.Locked", vm);
+        // ⚠️ پوسته حینِ ‎Starting‎ هم چیده می‌شود — ولی زیرِ پردهٔ **مات**.
+        // نمایی که در درختِ بصری نباشد اصلاً چیده نمی‌شود و گرم کردن فقط
+        // ادایش را درمی‌آورد. روی صفحهٔ قفل اما نیست.
+        Assert.Contains("IsShellVisible => Phase is AppPhase.Ready or AppPhase.Starting", vm);
     }
 
     /// <summary>گرم کردن یک بار در عمرِ برنامه — نه با هر ورود و خروج.</summary>

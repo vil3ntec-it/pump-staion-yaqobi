@@ -806,6 +806,50 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
     /// با ورقِ **واقعیِ** فهرست گرم می‌شود، نه یک ورقِ ساختگی: جدول‌ها باید
     /// با ردیفِ واقعی چیده شوند تا قالبِ ردیف و خانه هم پیاده شود.
     /// </summary>
+    /// <summary>
+    /// چند ردیفِ ساختگی برای گرم کردن — به اندازهٔ یک ورقِ معمولی، نه بیشتر.
+    /// </summary>
+    private const int WarmRows = 60;
+    private const int WarmPumps = 6;
+
+    /// <summary>
+    /// ══ صفحهٔ ورق، پشتِ پرده و با دادهٔ ساختگی ═══════════════════════════
+    ///
+    /// چراییِ کامل در <see cref="SectionViewModel.WarmInner"/>. دو نکته که با
+    /// عدد به آن‌ها رسیدیم و اگر ننویسم دوباره تکرار می‌شود:
+    ///
+    ///   ۱) ورقِ **خالی** هیچ فرقی نکرد (۲٬۱۰۶ ⇐ ۲٬۱۰۶ میلی‌ثانیه): آن‌چه
+    ///      گران است ساختنِ **ردیف و خانه** است، نه خواندنِ XAMLِ صفحه.
+    ///   ۲) و یک نمونهٔ **جدا** هم کافی نبود (۱٬۷۱۰): صفحه‌ای که کاربر بعداً
+    ///      می‌بیند همانی است که داخلِ نمای بخش نشسته، و تا ‎SheetOpen‎ روشن
+    ///      نشود آوالونیا اصلاً اندازه‌اش نمی‌گیرد.
+    ///
+    /// پس همان صفحهٔ واقعی باز می‌شود — ولی روی یک ورقِ ساختگیِ درجا، پشتِ
+    /// پردهٔ لودینگ، و بی آن‌که ‎Current‎ یا مسیرِ کاربر تکان بخورد. هیچ
+    /// خواندنی از دیتابیس در کار نیست، پس پیش از رمز هم هیچ دادهٔ
+    /// محافظت‌شده‌ای ساخته نمی‌شود.
+    ///
+    /// ⚠️ و ‎Page‎ همان‌جا می‌ماند: باز کردنِ ورقِ واقعی بعداً ‎Page.Load(full)‎
+    /// می‌زند و همین درختِ گرم را دوباره به کار می‌گیرد.
+    /// </summary>
+    public override void WarmInner(Action layout)
+    {
+        var blank = new WaraqEntry { DateShamsi = "" };
+        var shift = new WaraqShift { Kind = ShiftKind.Day };
+        blank.Shifts.Add(shift);
+
+        for (var i = 1; i <= WarmPumps; i++)
+            shift.Pumps.Add(new WaraqPump { Num = i });
+
+        for (var i = 1; i <= WarmRows; i++)
+            shift.Transactions.Add(new WaraqTransaction { SortIndex = i, Name = "" });
+
+        Page = new WaraqPageViewModel(_host, blank, this);
+        SheetOpen = true;
+        layout();
+        SheetOpen = false;
+    }
+
     public override async Task WarmInnerAsync(Func<Task> layout)
     {
         var first = Sheets.FirstOrDefault();

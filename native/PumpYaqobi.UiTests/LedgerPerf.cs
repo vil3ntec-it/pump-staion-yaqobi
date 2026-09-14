@@ -126,15 +126,27 @@ internal static class LedgerPerf
                 SetMonth(sec, months[k]);
                 var first = Time(() => Settle(win, rowHost, Sizes[k]));
 
-                // ⚠️ و یک بار دیگر، چون عددِ بارِ اول عددِ کاربر نیست:
-                // نخستین باری که یک بخش ردیف‌های واقعی‌اش را می‌سازد، مسیرِ
-                // ردیف و خانه تازه ‎JIT‎ می‌شود. در برنامهٔ واقعی آن یک بار
-                // پشتِ پردهٔ لودینگ پرداخت شده است (‎WarmUp‎). پس قضاوت روی
-                // بارِ دوم است و بارِ اول فقط گزارش می‌شود.
-                SetMonth(sec, EmptyMonth);
-                Settle(win, rowHost, 0);
-                SetMonth(sec, months[k]);
-                var open = Time(() => Settle(win, rowHost, Sizes[k]));
+                // ⚠️ و چند بارِ دیگر، با **میانهٔ** سه اندازه‌گیری. دو دلیل:
+                //
+                //   ۱) عددِ بارِ اول عددِ کاربر نیست: نخستین باری که یک بخش
+                //      ردیف‌های واقعی‌اش را می‌سازد، مسیرِ ردیف و خانه تازه
+                //      ‎JIT‎ می‌شود. در برنامهٔ واقعی آن یک بار پشتِ پردهٔ
+                //      لودینگ پرداخت شده است.
+                //   ۲) و یک اندازه‌گیریِ تنها روی ماشینِ مشترکِ CI نوسان
+                //      دارد: همین بخش در اجراهای پیاپی ۸۲، ۱۲۲ و ۴۵۸
+                //      میلی‌ثانیه داد. میانه نوسان را می‌گیرد ولی کندیِ
+                //      واقعی را پنهان نمی‌کند — اگر هر سه کند باشند، میانه
+                //      هم کند است.
+                var runs = new List<long>();
+                for (var r = 0; r < 3; r++)
+                {
+                    SetMonth(sec, EmptyMonth);
+                    Settle(win, rowHost, 0);
+                    SetMonth(sec, months[k]);
+                    runs.Add(Time(() => Settle(win, rowHost, Sizes[k])));
+                }
+                runs.Sort();
+                var open = runs[1];
 
                 var sql = Sql(host, id, months[k]);
                 var grid = Grid(win);

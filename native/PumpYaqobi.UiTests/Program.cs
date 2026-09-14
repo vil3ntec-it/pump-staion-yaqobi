@@ -76,6 +76,9 @@ internal static class Program
         // ══ سه صفحهٔ بخشِ فاکتور، بلند و کامل ═══════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- invshot <پوشه>
         if (args.Length > 1 && args[0].Equals("invshot", StringComparison.OrdinalIgnoreCase)) return InvoiceShot.Run(args[1]);
+        // ══ عکسِ سه حالتِ آغاز: لودینگ، قفل، صفحهٔ اصلی ═════════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -- startshot <پوشه>
+        if (args.Length > 1 && args[0].Equals("startshot", StringComparison.OrdinalIgnoreCase)) return InvoiceShot.Startup(args[1]);
         if (outDir.Equals("gridperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Run();
         if (outDir.Equals("cardperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Cards();
 
