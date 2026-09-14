@@ -76,6 +76,9 @@
   .list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
   .p-card{background:var(--bg);border:1px solid var(--line);border-right-width:5px;
         border-radius:11px;padding:9px 11px;cursor:pointer;text-align:start}
+  .al{background:var(--bg);border:1px solid var(--line);border-right-width:5px;
+      border-radius:10px;padding:8px 11px;margin-bottom:6px;font-weight:700;font-size:.88rem}
+  .al.out{border-right-color:var(--red)} .al.low{border-right-color:var(--warn)}
   .p-card.ok{border-right-color:var(--ok)} .p-card.low{border-right-color:var(--warn)}
   .p-card.out{border-right-color:var(--red)} .p-card.none{border-right-color:var(--line)}
   .p-card .n{font-weight:800}
@@ -155,6 +158,19 @@
       </div>
       <button id="btnLock">🔒</button>
     </div>
+  </div>
+
+  <!-- ══ هشدارها ═══════════════════════════════════════════════════════════
+       «وقتی یک قرض‌دار اضافه برد یا کم مانده بود، برنامه یک پیام بدهد.»
+       این کادر همان فهرست است، همیشه بالای همه‌چیز. اگر خبری نباشد،
+       خودش پنهان می‌شود. -->
+  <div class="card hidden" id="alertCard">
+    <div class="row">
+      <div class="grow"><h2 style="margin:0">🔔 خبرهای همین حالا</h2></div>
+      <button id="btnNotify" title="اجازهٔ اعلانِ گوشی">اعلان روشن شود</button>
+    </div>
+    <div id="alertBox"></div>
+    <div class="sub" id="alertHint"></div>
   </div>
 
   <!-- ربات -->

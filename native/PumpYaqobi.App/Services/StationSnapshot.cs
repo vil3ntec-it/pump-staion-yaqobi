@@ -71,7 +71,84 @@ public static class StationSnapshot
             ["detail"] = detailed,
             ["sections"] = await SectionsAsync(host, ct),
         };
+        snap["alerts"] = Alerts(snap["debtors"] as List<object?>, snap["tank"] as Dictionary<string, object?>);
         return snap;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  هشدارها — «برنامه یک پیام بدهد»
+    // ══════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// ══ فهرستِ کسانی که کارمند باید همین حالا خبرشان را بگیرد ═══════════════
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو: «وقتی که یک قرض‌دار اضافه برد یا کم مانده بود
+    /// از حسابش، برنامه یک پیام بدهد — حتی اگر گوشی خاموش یا حتی اگر توی
+    /// برنامه نبود هم پیام برود تا بفهمد.»
+    ///
+    /// ⚠️ اینجا هیچ قاعدهٔ تازه‌ای ساخته نمی‌شود: «اضافه برد» و «کم مانده»
+    /// همان ‎DebtStatus.Out‎ و ‎DebtStatus.Low‎ی ‎DebtCalculationService.Status‎
+    /// هستند — همان چیزی که رنگِ کارتِ قرض‌دار روی کامپیوتر از آن می‌آید. اگر
+    /// قاعده‌ای این‌جا جدا نوشته می‌شد، روزی کارت سرخ می‌بود و گوشی ساکت.
+    ///
+    /// ⚠️ چرا فهرست در خودِ عکس است و هر گیرنده‌ای خودش حسابش نمی‌کند: کارِ
+    /// پس‌زمینهٔ گوشی نباید عکسِ چندمگابایتی را باز کند و روی همهٔ حساب‌ها
+    /// بگردد. این فهرست چند خط است و همان است که هم اپ می‌بیند هم کارِ
+    /// پس‌زمینه — پس هرگز دو چیزِ متفاوت نمی‌گویند.
+    ///
+    /// <b>کلید (‎k‎)</b> مهم‌ترین تکه است: گیرنده هر کلید را <i>یک بار</i> خبر
+    /// می‌دهد. پس کلید باید هم ثابت باشد (وگرنه هر بیست ثانیه دوباره زنگ
+    /// می‌زند) و هم با عوض شدنِ حال عوض شود (وگرنه حسابی که از «کم مانده» به
+    /// «تمام شد» رسید، خبرِ تازه‌ای نمی‌داد). برای همین حال هم داخلِ کلید است.
+    /// </summary>
+    public static List<object?> Alerts(List<object?>? people, Dictionary<string, object?>? tank)
+    {
+        var outList = new List<object?>();
+
+        foreach (var p in people ?? new List<object?>())
+        {
+            if (p is not Dictionary<string, object?> d) continue;
+            var name = d.TryGetValue("name", out var n) ? n as string ?? "" : "";
+            var id = d.TryGetValue("id", out var i) ? i : 0;
+
+            foreach (var (key, fuel) in new[] { ("stP", "پطرول"), ("stD", "دیزل"), ("stM", "پول") })
+            {
+                var st = d.TryGetValue(key, out var v) ? v as string ?? "" : "";
+                if (st != "out" && st != "low") continue;
+
+                outList.Add(new Dictionary<string, object?>
+                {
+                    ["k"] = "d" + id + "-" + key + "-" + st,
+                    ["n"] = name,
+                    ["f"] = fuel,
+                    ["s"] = st,
+                    ["t"] = st == "out"
+                        ? name + " — " + fuel + "ِ حسابش تمام شد، اضافه نده"
+                        : name + " — " + fuel + "ِ حسابش کم مانده",
+                });
+            }
+        }
+
+        foreach (var (key, label) in new[] { ("petrol", "پطرول"), ("diesel", "دیزل") })
+        {
+            if (tank is null || !tank.TryGetValue(key, out var raw)) continue;
+            if (raw is not Dictionary<string, object?> t) continue;
+            var low = t.TryGetValue("low", out var l) && l is true;
+            var near = t.TryGetValue("near", out var nr) && nr is true;
+            if (!low && !near) continue;
+
+            outList.Add(new Dictionary<string, object?>
+            {
+                ["k"] = "tank-" + key + (low ? "-out" : "-low"),
+                ["n"] = "مخزنِ " + label,
+                ["f"] = label,
+                ["s"] = low ? "out" : "low",
+                ["t"] = "مخزنِ " + label + (low ? " ته کشید" : " دارد ته می‌کشد")
+                        + " — " + (t.TryGetValue("show", out var sh) ? sh : 0) + " لیتر",
+            });
+        }
+
+        return outList;
     }
 
     // ══════════════════════════════════════════════════════════════════════

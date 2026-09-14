@@ -109,6 +109,10 @@ public class MainActivity extends Activity {
 
     web.setWebViewClient(new WebViewClient());
     web.addJavascriptInterface(new Bridge(), "PumpAndroid");
+    // ⚠️ پلِ جدا برای خبرها: اپِ کارمندان (kar/) از این یکی استفاده می‌کند و
+    // اپِ اصلی اصلاً صدایش نمی‌زند — پس رفتارِ اپِ اصلی ذره‌ای عوض نمی‌شود.
+    web.addJavascriptInterface(new AlertBridge(), "PumpAlerts");
+    Alerts.ensureChannel(this);
     setupDownloads();
 
     // اجازهٔ مایکروفون برای ضبطِ پیام صوتی و جستجوی صوتی
@@ -410,6 +414,39 @@ public class MainActivity extends Activity {
    * پلِ بینِ خودِ برنامه (جاوااسکریپت) و پوستهٔ اندروید.
    * نسخهٔ تازه تکه‌تکه فرستاده می‌شود تا هیچ‌وقت به سقفِ حجمِ یک فراخوانی نخورد.
    */
+  /**
+   * ══ پلِ خبرها ═══════════════════════════════════════════════════════════
+   *
+   * تنظیماتِ سرور در ‎localStorage‎ی خودِ صفحه زندگی می‌کند و جاوا نمی‌تواند
+   * بخواندش. پس صفحه هر بار که بالا می‌آید همان سه چیز را از این راه به جاوا
+   * می‌دهد و جاوا کارِ دوره‌ای را می‌چیند.
+   *
+   * ⚠️ هیچ چیزِ دیگری از این پل رد نمی‌شود — نه نوشتن، نه خواندنِ حساب.
+   */
+  private class AlertBridge {
+
+    /** نشانی، رمزِ فقط‌خواندنی، کدِ پمپ. نشانیِ خالی یعنی «کار را بردار». */
+    @JavascriptInterface
+    public void setup(String server, String token, String station) {
+      try { Alerts.setup(MainActivity.this, server, token, station); }
+      catch (Throwable ignored) { }
+    }
+
+    /** برای دکمهٔ «همین حالا امتحان کن»ِ خودِ صفحه. */
+    @JavascriptInterface
+    public void checkNow() {
+      new Thread(new Runnable() {
+        @Override public void run() {
+          try { Alerts.runOnce(getApplicationContext()); } catch (Throwable ignored) { }
+        }
+      }, "pump-alerts-now").start();
+    }
+
+    /** صفحه با این می‌فهمد که روی اندروید است و خبرِ پس‌زمینه دارد. */
+    @JavascriptInterface
+    public boolean available() { return true; }
+  }
+
   private class Bridge {
     private Writer out;
 

@@ -11,6 +11,10 @@
        اصلاً لازم نیست؛ فقط برای گوشی‌های قدیمی‌تر (minSdk 23) گرفته می‌شود. -->
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
       android:maxSdkVersion="28"/>
+  <!-- ⚠️ برای ‎JobInfo.setPersisted(true)‎ لازم است: بی این، کارِ خبر دادن با
+       هر بار خاموش/روشن شدنِ گوشی پاک می‌شود و تا وقتی کسی برنامه را باز
+       نکند هیچ خبری نمی‌آید. -->
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
   <uses-feature android:name="android.hardware.microphone" android:required="false"/>
 
   <!-- largeHeap: سهمِ حافظهٔ برنامه از پیش‌فرضِ گوشی بیشتر می‌شود. دفترهای
@@ -38,5 +42,12 @@
         <category android:name="android.intent.category.LAUNCHER"/>
       </intent-filter>
     </activity>
+
+    <!-- خبر دادن حتی وقتی برنامه بسته است. ‎BIND_JOB_SERVICE‎ اجباریِ خودِ
+         اندروید است؛ بی آن کار هرگز اجرا نمی‌شود و هیچ خطایی هم دیده نمی‌شود. -->
+    <service
+        android:name=".AlertJob"
+        android:permission="android.permission.BIND_JOB_SERVICE"
+        android:exported="false"/>
   </application>
 </manifest>

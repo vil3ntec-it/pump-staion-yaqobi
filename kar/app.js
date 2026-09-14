@@ -188,6 +188,31 @@
   var ALL_WORDS = ['همه بخش', 'همه بخشها', 'همه بخش ها', 'خلاصه', 'کل', 'گزارش کل', 'همه چیز'];
   var DEBT_WORDS = ['قرضدار', 'قرض دار', 'قرضداران', 'بدهکار', 'مقروض', 'قرض'];
 
+  /**
+   * ══ کدام خبر تازه است ═══════════════════════════════════════════════════
+   *
+   * ⚠️ این تابع عمداً **پاک** است (نه ‎localStorage‎ می‌خواند نه اعلان می‌سازد)
+   * تا بشود مو‌به‌مو آزمونش کرد. قلبِ خبر دادن همین است: اگر اشتباه کند، یا
+   * هر بیست ثانیه زنگ می‌زند یا هیچ‌وقت زنگ نمی‌زند.
+   *
+   * ‎told‎ کلیدهایی است که قبلاً گفته‌ایم ⇒ ‎{fresh, told}‎ی تازه.
+   *
+   * ⚠️ ‎told‎ی برگشتی فقط کلیدهای **همین** فهرست را دارد، نه جمعِ همه: حسابی
+   * که تسویه شد و بعد دوباره خراب شد باید دوباره خبر بدهد.
+   */
+  function freshAlerts(list, told) {
+    var fresh = [], now = {};
+    var arr = Object.prototype.toString.call(list) === '[object Array]' ? list : [];
+    told = told || {};
+    for (var i = 0; i < arr.length; i++) {
+      var a = arr[i];
+      if (!a || !a.k) continue;
+      now[a.k] = 1;
+      if (!told[a.k]) fresh.push(a);
+    }
+    return { fresh: fresh, told: now };
+  }
+
   function anyWord(t, words) {
     for (var i = 0; i < words.length; i++) if (t.indexOf(norm(words[i])) >= 0) return true;
     return false;
@@ -426,7 +451,7 @@
     module.exports = {
       answer: answer, askedMonth: askedMonth, monthHit: monthHit,
       norm: norm, num: num, verifyPassword: verifyPassword,
-      wsBaseOf: wsBaseOf, doorsFor: doorsFor
+      wsBaseOf: wsBaseOf, doorsFor: doorsFor, freshAlerts: freshAlerts
     };
 
   if (typeof document === 'undefined') return;   // آزمونِ Node این‌جا می‌ایستد
@@ -693,9 +718,102 @@
     $('secBox').innerHTML = blockHtml(sectionBlock(secTab, sec, sel.value || null));
   }
 
+  // ══════════════════════════════════════════════════════════════════════
+  //  هشدارها — «برنامه یک پیام بدهد»
+  // ══════════════════════════════════════════════════════════════════════
+  //
+  //  خواستهٔ صریحِ صاحب ریپو: «وقتی که یک قرض‌دار اضافه برد یا کم مانده بود از
+  //  حسابش، برنامه یک پیام بدهد — حتی اگر گوشی خاموش یا حتی اگر توی برنامه
+  //  نبود هم پیام برود تا بفهمد.»
+  //
+  //  سه لایه، از نزدیک به دور:
+  //    ۱) کادرِ بالای صفحه — وقتی اپ باز است.
+  //    ۲) اعلانِ خودِ مرورگر — وقتی اپ باز است ولی جای دیگری نگاه می‌کند
+  //       (و روی آیفون، تنها راهِ ممکن).
+  //    ۳) کارِ پس‌زمینهٔ اندروید (‎PumpAlerts‎) — وقتی اپ اصلاً بسته است.
+  //
+  //  ⚠️ فهرست این‌جا ساخته نمی‌شود: ‎StationSnapshot.Alerts‎ی خودِ برنامهٔ
+  //  کامپیوتر می‌سازدش و در ‎data.alerts‎ می‌آید. اگر این‌جا قاعده‌ای جدا
+  //  نوشته می‌شد، روزی کارتِ قرض‌دار سرخ می‌بود و گوشی ساکت.
+
+  var toldKeys = {};
+  var TOLD = KEY + '.told';
+  try { toldKeys = JSON.parse(localStorage.getItem(TOLD) || '{}') || {}; } catch (e) { }
+
+  function alertsOf(d) {
+    var a = (d && d.alerts) || [];
+    return Object.prototype.toString.call(a) === '[object Array]' ? a : [];
+  }
+
+  /** اعلانِ خودِ مرورگر برای خبرهایی که تا حالا نگفته‌ایم. */
+  function pushNew(list) {
+    var r = freshAlerts(list, toldKeys);
+    var fresh = r.fresh;
+    toldKeys = r.told;
+    try { localStorage.setItem(TOLD, JSON.stringify(toldKeys)); } catch (e) { }
+
+    if (!fresh.length) return;
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    for (var j = 0; j < fresh.length && j < 5; j++) {
+      try {
+        new Notification(fresh[j].s === 'out' ? '⛔ اضافه نده' : '⚠️ کم مانده',
+                         { body: fresh[j].t || '', tag: fresh[j].k });
+      } catch (e) { }
+    }
+  }
+
+  function renderAlerts() {
+    var card = $('alertCard'), box = $('alertBox'), hint = $('alertHint');
+    if (!card) return;
+    var list = alertsOf(data);
+
+    card.classList.toggle('hidden', list.length === 0);
+    if (list.length) {
+      box.innerHTML = list.map(function (a) {
+        return '<div class="al ' + (a.s === 'out' ? 'out' : 'low') + '">' + esc(a.t || '') + '</div>';
+      }).join('');
+    }
+
+    var btn = $('btnNotify');
+    var can = typeof Notification !== 'undefined';
+    if (btn) btn.classList.toggle('hidden', !can || Notification.permission === 'granted');
+
+    if (hint) {
+      hint.textContent = !can
+        ? 'این مرورگر اعلان ندارد؛ خبرها همین‌جا دیده می‌شوند.'
+        : Notification.permission !== 'granted'
+          ? 'برای این‌که وقتی جای دیگری نگاه می‌کنید هم خبر بگیرید، «اعلان روشن شود» را بزنید.'
+          : hasBackground()
+            ? 'خبرها حتی وقتی برنامه بسته باشد هم می‌آیند.'
+            : 'اعلان روشن است. برای خبر گرفتن وقتی برنامه بسته است، فایلِ نصبِ اندروید را بگذارید.';
+    }
+
+    pushNew(list);
+  }
+
+  /** روی اپِ اندروید، کارِ پس‌زمینه هست؛ در مرورگر و آیفون نیست. */
+  function hasBackground() {
+    try { return !!(window.PumpAlerts && window.PumpAlerts.available()); } catch (e) { return false; }
+  }
+
+  /**
+   * تنظیماتِ سرور را به لایهٔ اندروید می‌دهد تا وقتی اپ بسته است هم بپرسد.
+   *
+   * ⚠️ هر بار که تنظیمات عوض می‌شود دوباره صدا زده می‌شود — نه فقط یک‌بار سرِ
+   * بالا آمدن: کاربری که کیو‌آرِ پمپِ دیگری را اسکن کند، وگرنه تا نصبِ دوباره
+   * خبرِ پمپِ قبلی را می‌گرفت.
+   */
+  function syncBackground() {
+    try {
+      if (window.PumpAlerts && window.PumpAlerts.setup)
+        window.PumpAlerts.setup(cfg.srv || '', cfg.tok || '', cfg.stn || 'pump1');
+    } catch (e) { }
+  }
+
   function render() {
     if (!unlocked) return;
     if (data && data.station && data.station.name) $('stName').textContent = data.station.name;
+    renderAlerts();
     renderTank();
     renderDebtors();
     renderSections();
@@ -742,6 +860,7 @@
       cfg.stn = $('inStn').value.trim() || 'pump1';
       if (!cfg.srv) return;
       save();
+      syncBackground();
       show('lockPane');
       connect();
     });
@@ -784,7 +903,16 @@
       if (b) goPane(b.getAttribute('data-pane'));
     });
 
+    $('btnNotify').addEventListener('click', function () {
+      if (typeof Notification === 'undefined') return;
+      // ⚠️ درخواستِ اجازه باید از دلِ یک کلیکِ واقعی بیاید، وگرنه مرورگر
+      // بی‌صدا ردش می‌کند و کاربر فکر می‌کند خراب است.
+      try { Notification.requestPermission().then(renderAlerts); } catch (e) { }
+      try { if (window.PumpAlerts && window.PumpAlerts.checkNow) window.PumpAlerts.checkNow(); } catch (e) { }
+    });
+
     setupMic();
+    syncBackground();
     show(cfg.srv ? 'lockPane' : 'setupPane');
     gateReady();
     connect();
