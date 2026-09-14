@@ -51,6 +51,39 @@ public sealed class AppSettings
     /// می‌کند و برنامه دیگر دنبالِ هیچ سروری نمی‌گردد.
     /// </summary>
     public bool AutoEnroll { get; set; } = true;
+
+    // ══ ابر — حساب و اشتراک ══════════════════════════════════════════════
+    //
+    // ⚠️ نشانیِ ابر این‌جا **نیست** و نباید بیاید: در `CloudConfig.BaseUrl`
+    // قفل است. اگر از تنظیمات خوانده می‌شد، هر کسی می‌توانست نشانیِ سرورِ
+    // خودش را بنویسد و برنامه را با مجوزِ ساختگیِ خودش باز کند — یعنی قفل
+    // با یک کادرِ متنی دور می‌خورد.
+    //
+    // این‌ها فقط چیزهایی‌اند که خودِ ابر به ما داده و باید نگه داریم.
+
+    /// <summary>شناسهٔ این کامپیوتر. یک بار ساخته می‌شود و می‌ماند.</summary>
+    public string CloudDeviceUid { get; set; } = "";
+
+    /// <summary>توکنی که ابر پس از فعال‌سازی داده. انقضا ندارد؛ مجوز دارد.</summary>
+    public string CloudDeviceToken { get; set; } = "";
+
+    /// <summary>شناسهٔ پمپِ این برنامه روی ابر.</summary>
+    public string CloudStationId { get; set; } = "";
+
+    /// <summary>
+    /// کلیدِ عمومیِ سرور — **قفل‌شده در اولین فعال‌سازی**.
+    ///
+    /// ⚠️ مهم‌ترین تکهٔ ضدِ کرک. بی این، کسی می‌توانست سرورِ خودش را بالا
+    /// بیاورد، کلیدِ خودش را بدهد و مجوزِ خودش را امضا کند. از اولین بار
+    /// به بعد فقط همین پذیرفته می‌شود.
+    /// </summary>
+    public string CloudPublicKey { get; set; } = "";
+
+    /// <summary>آخرین مجوزِ امضاشده. آفلاین هم از روی همین تصمیم گرفته می‌شود.</summary>
+    public string CloudLicense { get; set; } = "";
+
+    /// <summary>آخرین باری که با ابر حرف زدیم (میلی‌ثانیهٔ یونیکس).</summary>
+    public long CloudSyncedAt { get; set; }
     public double WindowWidth { get; set; } = 1440;
     public double WindowHeight { get; set; } = 900;
     public bool WindowMaximized { get; set; } = true;

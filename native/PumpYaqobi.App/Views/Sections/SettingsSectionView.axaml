@@ -91,6 +91,66 @@
           </StackPanel>
         </Border>
 
+        <!-- ══ اشتراک ═══════════════════════════════════════════════════
+             خواستهٔ صریحِ صاحب ریپو: «نشانی توی خودِ برنامه باشد و دیده
+             نشود، و اشتراک هم از سرور برایش برود.»
+
+             ⚠️ این کادر عمداً **هیچ کادرِ نشانی ندارد** و نباید داشته
+             باشد. نشانیِ ابر در `CloudConfig.BaseUrl` قفل است؛ اگر
+             این‌جا کادری می‌بود، هر کسی می‌توانست نشانیِ سرورِ خودش را
+             بنویسد و برنامه را با مجوزِ ساختگیِ خودش باز کند — یعنی
+             قفل با یک کادرِ متنی دور می‌خورد.
+
+             تنها چیزی که کاربر این‌جا می‌نویسد، همان شش رقمی است که
+             خریده. -->
+        <Border Classes="panel" Padding="0">
+          <StackPanel>
+            <Border Classes="card-head">
+              <TextBlock Text="💳 اشتراکِ برنامه" FontWeight="Bold"
+                         Foreground="{DynamicResource Pump.Accent}" />
+            </Border>
+            <StackPanel Margin="14" Spacing="10">
+              <TextBlock Text="{Binding SubStatus}" TextWrapping="Wrap" FontWeight="SemiBold" />
+
+              <StackPanel Spacing="5">
+                <TextBlock Text="🔢 کدِ اشتراک (شش رقم)" Classes="label" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBox Text="{Binding SubCode}" Width="150" MaxLength="6"
+                           Watermark="۱۲۳۴۵۶"
+                           ToolTip.Tip="همان شش رقمی که هنگامِ خرید گرفته‌اید. یک بار بزنید؛ از آن به بعد برنامه خودش از سرور می‌پرسد." />
+                  <Button Classes="accent" Content="فعال کن"
+                          Command="{Binding RedeemSubCommand}"
+                          IsEnabled="{Binding !SubBusy}" />
+                  <Button Content="🔄 تازه‌سازی"
+                          Command="{Binding RefreshSubCommand}"
+                          IsEnabled="{Binding !SubBusy}"
+                          ToolTip.Tip="وضعیتِ اشتراک را دوباره از سرور می‌پرسد." />
+                </StackPanel>
+              </StackPanel>
+
+              <TextBlock Text="{Binding SubMessage}" Classes="muted" TextWrapping="Wrap"
+                         IsVisible="{Binding SubMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+              <!-- کدِ پیوستنِ کارمند: گوشی با همین به این پمپ وصل می‌شود -->
+              <StackPanel Spacing="5">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Content="📱 کد برای گوشیِ کارمند"
+                          Command="{Binding MakeJoinCodeCommand}"
+                          IsEnabled="{Binding !SubBusy}"
+                          ToolTip.Tip="کارمند این شش رقم را در اپِ گوشی می‌زند و به همین پمپ وصل می‌شود." />
+                  <TextBlock Text="{Binding JoinCode}" FontSize="22" FontWeight="Bold"
+                             VerticalAlignment="Center"
+                             Foreground="{DynamicResource Pump.Accent}"
+                             IsVisible="{Binding JoinCode, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </StackPanel>
+              </StackPanel>
+
+              <TextBlock Classes="muted" TextWrapping="Wrap"
+                         Text="دفترِ شما روی همین کامپیوتر می‌ماند و با تمام شدنِ اشتراک هم سرِ جایش است؛ فقط بخش‌های پولی بسته می‌شوند." />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
         <!-- ══ اپِ کارمندان ══════════════════════════════════════════════
              خواستهٔ صریحِ صاحب ریپو: کارمندان با گوشیِ خودشان ببینند کدام
              قرض‌دار موجودی دارد و کدام ندارد (تا تیلِ اضافه ندهند) و مخزن

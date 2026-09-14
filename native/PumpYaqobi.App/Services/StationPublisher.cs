@@ -106,10 +106,50 @@ public sealed class StationPublisher : IAsyncDisposable
             var path = _sync.Mode == HomeSyncMode.Station ? LivePath : PathOf(_stationCode());
             if (!await _sync.SetAsync(path, snap, ct)) return false;
             _lastHash = hash;
+
+            //  ⚠️ نشانیِ سرورِ خانگی را هم به ابر بسپار — همان چیزی که
+            //  اپِ کارمند را از پرسیدنِ آدرس بی‌نیاز می‌کند. آی‌پیِ خانگی
+            //  با هر بار روشن شدنِ مودم عوض می‌شود، پس باید تکرار شود؛
+            //  ولی نه هر بیست ثانیه، که بی‌جهت به سرور فشار بیاورد.
+            _ = PublishHomeToCloudAsync(ct);
             return true;
         }
         catch (OperationCanceledException) { throw; }
         catch { return false; }
+    }
+
+    /// <summary>آخرین باری که نشانی به ابر رفت — تا هر بیست ثانیه نرود.</summary>
+    private DateTime _lastHomePush = DateTime.MinValue;
+
+    /// <summary>
+    /// سپردنِ نشانی و رمزِ فقط‌خواندنیِ سرورِ خانگی به ابر.
+    ///
+    /// ── چرا ────────────────────────────────────────────────────────────
+    /// اپِ کارمند دیگر آدرس نمی‌پرسد: با گوگل وارد می‌شود و نشانی را از ابر
+    /// می‌گیرد. ولی ابر فقط وقتی می‌داند که همین‌جا گفته باشیم.
+    ///
+    /// ⚠️ هیچ‌وقت جلوی انتشارِ اصلی را نمی‌گیرد: اگر اینترنت نباشد یا
+    /// برنامه هنوز فعال نشده باشد، بی‌صدا رد می‌شود. دفترِ پمپ روی سرورِ
+    /// خانگی کارِ خودش را می‌کند.
+    /// </summary>
+    private async Task PublishHomeToCloudAsync(CancellationToken ct)
+    {
+        try
+        {
+            if ((DateTime.UtcNow - _lastHomePush) < TimeSpan.FromMinutes(10)) return;
+
+            var file = AppSettings.Load();
+            if (string.IsNullOrWhiteSpace(file.CloudDeviceToken)) return;   // هنوز فعال نشده
+
+            var url = HomeLink.Url(_host);
+            if (string.IsNullOrWhiteSpace(url)) return;
+
+            _lastHomePush = DateTime.UtcNow;
+            var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
+            await cloud.PublishHomeAsync(url, HomeLink.ReadKey(_host), ct);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch { /* ابر نرسید — کارِ پمپ نباید بایستد */ }
     }
 
     /// <summary>
