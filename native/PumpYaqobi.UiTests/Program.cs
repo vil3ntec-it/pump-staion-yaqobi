@@ -70,6 +70,9 @@ internal static class Program
         //     dotnet run --project PumpYaqobi.UiTests -- warm
         if (outDir.Equals("warm", StringComparison.OrdinalIgnoreCase)) return WarmAudit.Run();
         if (args.Length > 1 && args[0].Equals("cellshot", StringComparison.OrdinalIgnoreCase)) return CellShot.Run(args[1]);
+        // ══ سه صفحهٔ بخشِ فاکتور، بلند و کامل ═══════════════════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -- invshot <پوشه>
+        if (args.Length > 1 && args[0].Equals("invshot", StringComparison.OrdinalIgnoreCase)) return InvoiceShot.Run(args[1]);
         if (outDir.Equals("gridperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Run();
         if (outDir.Equals("cardperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Cards();
 

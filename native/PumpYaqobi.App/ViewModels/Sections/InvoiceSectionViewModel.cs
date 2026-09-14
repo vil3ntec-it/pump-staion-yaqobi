@@ -50,7 +50,9 @@ public sealed partial class InvoiceRowViewModel : RowViewModel
     private void Refresh()
     {
         foreach (var n in new[] { nameof(PriceText), nameof(LitersText), nameof(AmountText),
-                                  nameof(TotalText), nameof(KindText), nameof(PartsText) })
+                                  nameof(TotalText), nameof(KindText), nameof(PartsText),
+                                  nameof(HasFuelPart), nameof(HasMoneyPart),
+                                  nameof(FuelLineText), nameof(FuelPartText) })
             OnPropertyChanged(n);
     }
 
@@ -103,6 +105,23 @@ public sealed partial class InvoiceRowViewModel : RowViewModel
     public string TotalText =>
         Shamsi.Money(InvoiceService.IsMoneyOnly(_v) ? Amount : Liters * Price);
 
+    // ══ برای صفحهٔ خودِ فاکتور ═══════════════════════════════════════════════
+    //
+    // ⚠️ خانهٔ خالی نباید نشان داده شود. پیش از این صفحهٔ فاکتور نُه ردیفِ
+    // ثابت داشت و «به نام دیگر»، «نوع ماشین» و «شماره تماس» — که اغلب خالی‌اند
+    // — یک برچسب با هیچ‌چیزِ روبه‌رویش بودند.
+    public bool HasAlias => DebtAlias.Trim().Length > 0;
+    public bool HasVehicle => Vehicle.Trim().Length > 0;
+    public bool HasPhone => Phone.Trim().Length > 0;
+    public bool HasFuelPart => Liters > 0m;
+    public bool HasMoneyPart => Amount > 0m;
+
+    /// <summary>«۲۰۰ لیتر × ۶۷» — همان پارهٔ تیل، یک‌جا.</summary>
+    public string FuelLineText =>
+        Shamsi.Money(Liters) + " لیتر " + Fuel.ToPersian() + " × " + Shamsi.Money(Price);
+
+    public string FuelPartText => Shamsi.Money(Math.Round(Liters * Price, 0, MidpointRounding.AwayFromZero));
+
     public string FuelText
     {
         get => Fuel.ToPersian();
@@ -129,7 +148,7 @@ public sealed partial class InvoiceRowViewModel : RowViewModel
 }
 
 /// <summary>حالتِ صفحهٔ بخش: فرم، فهرستِ در صف، فهرستِ تایید شده، یا یک فاکتور.</summary>
-public enum InvoicePane { Form, Pending, Approved, Detail }
+public enum InvoicePane { Form, Pending, Approved, All, Detail }
 
 /// <summary>
 /// ══ بخشِ فاکتورها ═══════════════════════════════════════════════════════════
@@ -198,16 +217,90 @@ public sealed partial class InvoiceSectionViewModel : SectionViewModel
     partial void OnFPriceChanged(string v) => CalcTotal();
     partial void OnFLitersChanged(string v) => CalcTotal();
     partial void OnFAmountChanged(string v) => CalcTotal();
+    partial void OnFCustomerChanged(string v) => CalcTotal();
+    partial void OnFAliasChanged(string v) => CalcTotal();
+    partial void OnFIsDieselChanged(bool v) => CalcTotal();
     partial void OnSearchChanged(string v) => ApplyFilter();
 
+    // ══ شکستنِ «جمله کل» به دو پاره ══════════════════════════════════════════
+    //
+    // گزارشِ صاحب ریپو: «دیزاینِ فاکتور را عوض کن، یو‌ای یو‌اکس باشد.»
+    //
+    // ⚠️ و یک نادرستیِ کهنه هم همین‌جا بود: نوشتهٔ کنارِ عدد «جمله کل
+    // (فی × لیتر)» بود، در حالی که خودِ حساب **مبلغِ بدون تیل** را هم جمع
+    // می‌زد. کاربر عددی می‌دید که با نوشتهٔ کنارش نمی‌خواند.
+    //
+    // حالا هر پاره عددِ خودش را دارد و جمع هم زیرشان می‌نشیند — چون همین دو
+    // پاره‌اند که سرِ تایید به **دو دفترِ جدا** می‌روند، و کاربر باید پیش از
+    // زدنِ دکمه ببیندشان.
+
+    /// <summary>بخشِ تیل: لیتر × فی.</summary>
+    public decimal FuelPart => Shamsi.Num(FPrice) * Shamsi.Num(FLiters);
+
+    /// <summary>بخشِ پول: «مبلغ بدون تیل» که به اعتبارِ حساب می‌نشیند.</summary>
+    public decimal MoneyPart => Shamsi.Num(FAmount);
+
+    public string FFuelPartText => Shamsi.Money(Math.Round(FuelPart, 0, MidpointRounding.AwayFromZero));
+    public string FMoneyPartText => Shamsi.Money(Math.Round(MoneyPart, 0, MidpointRounding.AwayFromZero));
+
+    /// <summary>پارهٔ تیل اصلاً هست؟ (وگرنه خطش نشان داده نمی‌شود)</summary>
+    public bool HasFuelPart => FuelPart > 0m;
+    public bool HasMoneyPart => MoneyPart > 0m;
+
+    /// <summary>نامی که این فاکتور با آن در حساب می‌نشیند — «به نام دیگر» مقدم است.</summary>
+    public string TargetName =>
+        FAlias.Trim().Length > 0 ? FAlias.Trim()
+        : FCustomer.Trim().Length > 0 ? FCustomer.Trim() : "—";
+
     /// <summary>
-    /// ‎invCalcTotal()‎ — «جمله کل (فی × لیتر)» به‌اضافهٔ «مبلغ بدون تیل».
+    /// ══ «سرِ تایید چه می‌شود» ══════════════════════════════════════════════
+    ///
+    /// زیرعنوانِ بخش این را می‌گفت ولی با جمله‌ای کلی. کاربر پیش از زدنِ دکمه
+    /// نمی‌دید که **این** فاکتور به کدام دفتر و با چه عددی می‌رود. حالا
+    /// می‌بیند، با نام و عددِ همین لحظه.
+    /// </summary>
+    public string GoesToFuelText =>
+        HasFuelPart
+            ? "«رسیدِ تیل»ِ " + TargetName + " ← " + Shamsi.Money(Shamsi.Num(FLiters)) + " لیتر "
+              + (FIsDiesel ? "دیزل" : "پطرول")
+            : "پارهٔ تیل ندارد";
+
+    public string GoesToMoneyText =>
+        HasMoneyPart
+            ? "دفترِ پولِ " + TargetName + " ← " + FMoneyPartText + " افغانی اعتبار"
+            : "پارهٔ پول ندارد";
+
+    // ══ می‌شود ثبت کرد؟ ═════════════════════════════════════════════════════
+    //
+    // ⚠️ پیش از این هر دو شرط فقط **پس از** زدنِ دکمه و به شکلِ توست گفته
+    // می‌شدند. حالا همان دو جمله زیرِ دکمه‌اند و دکمه هم تا درست نشود
+    // نمی‌خورد — همان چیزی که «یو‌اکس» یعنی.
+
+    public bool CanSubmit =>
+        FCustomer.Trim().Length > 0 && (Shamsi.Num(FLiters) > 0m || MoneyPart > 0m);
+
+    public string SubmitHint =>
+        FCustomer.Trim().Length == 0 ? "⚠️ نامِ مشتری را بنویسید"
+        : Shamsi.Num(FLiters) <= 0m && MoneyPart <= 0m
+            ? "⚠️ یا لیتر و فی را بنویسید، یا «مبلغ بدون تیل» را"
+            : "";
+
+    /// <summary>
+    /// ‎invCalcTotal()‎ — پارهٔ تیل (فی × لیتر) به‌اضافهٔ «مبلغ بدون تیل».
     /// همان دو خطِ نسخهٔ وب، بی کم و زیاد.
     /// </summary>
     private void CalcTotal()
     {
-        var total = Shamsi.Num(FPrice) * Shamsi.Num(FLiters) + Shamsi.Num(FAmount);
+        var total = FuelPart + MoneyPart;
         FTotalText = Shamsi.Money(Math.Round(total, 0, MidpointRounding.AwayFromZero)) + " افغانی";
+
+        foreach (var n in new[]
+        {
+            nameof(FFuelPartText), nameof(FMoneyPartText),
+            nameof(HasFuelPart), nameof(HasMoneyPart),
+            nameof(TargetName), nameof(GoesToFuelText), nameof(GoesToMoneyText),
+            nameof(CanSubmit), nameof(SubmitHint),
+        }) OnPropertyChanged(n);
     }
 
     // ══ کدام صفحه جلوی چشم است ══════════════════════════════════════════════
@@ -217,6 +310,7 @@ public sealed partial class InvoiceSectionViewModel : SectionViewModel
     partial void OnPaneChanged(InvoicePane v)
     {
         foreach (var n in new[] { nameof(IsForm), nameof(IsList), nameof(IsDetail),
+                                  nameof(IsPendingPane), nameof(IsApprovedPane), nameof(IsAllPane),
                                   nameof(ListTitle), nameof(ListCountText) })
             OnPropertyChanged(n);
         IsPageOpen = v != InvoicePane.Form;
@@ -224,11 +318,23 @@ public sealed partial class InvoiceSectionViewModel : SectionViewModel
     }
 
     public bool IsForm => Pane == InvoicePane.Form;
-    public bool IsList => Pane is InvoicePane.Pending or InvoicePane.Approved;
+    public bool IsList => Pane is InvoicePane.Pending or InvoicePane.Approved or InvoicePane.All;
     public bool IsDetail => Pane == InvoicePane.Detail;
 
-    public string ListTitle => Pane == InvoicePane.Approved
-        ? "🟢 فاکتورهای تایید شده" : "🟡 فاکتورهای در صف";
+    // ══ کلیدهای صافیِ بالای فهرست ════════════════════════════════════════════
+    //
+    // ⚠️ پیش از این تنها راهِ عوض کردنِ «در صف ⇄ تایید شده» برگشتن به فرم و
+    // زدنِ کارتِ دیگر بود — سه کلیک برای کاری که یکی بس است.
+    public bool IsPendingPane => Pane == InvoicePane.Pending;
+    public bool IsApprovedPane => Pane == InvoicePane.Approved;
+    public bool IsAllPane => Pane == InvoicePane.All;
+
+    public string ListTitle => Pane switch
+    {
+        InvoicePane.Approved => "🟢 فاکتورهای تایید شده",
+        InvoicePane.All => "🧾 همهٔ فاکتورها",
+        _ => "🟡 فاکتورهای در صف",
+    };
 
     public string ListCountText => Shamsi.Money(Rows.Count) + " فاکتور";
 
@@ -357,8 +463,22 @@ public sealed partial class InvoiceSectionViewModel : SectionViewModel
     private void OpenList(string? which)
     {
         Search = "";
-        Pane = which == "approved" ? InvoicePane.Approved : InvoicePane.Pending;
+        Pane = which switch
+        {
+            "approved" => InvoicePane.Approved,
+            "all" => InvoicePane.All,
+            _ => InvoicePane.Pending,
+        };
     }
+
+    /// <summary>همان صافی، بی پاک کردنِ جست‌وجو — کلیدهای بالای فهرست.</summary>
+    [RelayCommand]
+    private void Filter(string? which) => Pane = which switch
+    {
+        "approved" => InvoicePane.Approved,
+        "all" => InvoicePane.All,
+        _ => InvoicePane.Pending,
+    };
 
     [RelayCommand]
     private void CloseList() { Pane = InvoicePane.Form; Detail = null; }

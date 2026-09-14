@@ -11,189 +11,305 @@
          ۱) برگهٔ رسمیِ فاکتور + سه کارتِ آماری — همان ‎#sec-invoices‎
          ══════════════════════════════════════════════════════════════════ -->
     <c:SectionPage IsVisible="{Binding IsForm}" Header="ثبت فاکتورها"
-                   SubHeader="تایید، بخشِ پولی را به دفترِ پول و بخشِ تیل را به «رسیدِ تیل»ِ همان حساب می‌برد">
+                   SubHeader="برگه را پر کنید؛ سرِ تایید، پارهٔ تیل به «رسیدِ تیل» و پارهٔ پول به دفترِ پولِ همان حساب می‌رود">
 
-        <StackPanel Spacing="16">
+      <!-- ══ دو ستون: برگه، و کنارش «چه می‌شود» ═══════════════════════════════
+           گزارشِ صاحب ریپو: «دیزاینِ فاکتور را عوض کن، یو‌ای یو‌اکس باشد.»
 
-          <!-- ══ برگهٔ چاپیِ فاکتور — ‎.invp-frame‎ ══════════════════════════
-               قاب، عنوان، خطِ موجی، و بعد کادرها. اندازه‌ها از خودِ CSS
-               برداشته شده‌اند: قابِ ۲ پیکسلی نارنجی با شعاعِ ۱۶. -->
-          <Border BorderBrush="{DynamicResource Pump.Accent}" BorderThickness="2"
-                  CornerRadius="16" Padding="26,22"
-                  Background="{DynamicResource Pump.Panel}">
-            <StackPanel Spacing="14">
+           ایرادِ چیدمانِ قبلی یکی بود: همه چیز در **یک ستونِ بلند** — برگه،
+           دکمه‌ها، و بعد سه کارتِ آمار. برای دیدنِ «چند تا در صف است» باید تا
+           ته صفحه می‌رفتی، و «جمله کل» بالای همان دکمه‌ای بود که زیرِ دید
+           می‌ماند.
 
-              <StackPanel Spacing="2" HorizontalAlignment="Center">
-                <TextBlock Text="⛽" FontSize="34" HorizontalAlignment="Center"
-                           Foreground="{DynamicResource Pump.Accent}" />
-                <TextBlock Text="فاکتور پمپ یعقوبی" FontSize="26" FontWeight="Black"
-                           HorizontalAlignment="Center"
-                           Foreground="{DynamicResource Pump.Accent}" />
-                <TextBlock Text="برگهٔ رسمی فروش تیل — FUEL INVOICE" Classes="muted"
-                           FontSize="12" HorizontalAlignment="Center" />
-                <Border Height="2" Margin="0,8,0,0" CornerRadius="1"
-                        Background="{DynamicResource Pump.Accent}" Opacity="0.35" />
-              </StackPanel>
+           حالا برگه سمتِ خودش می‌ماند و ستونِ کناری همهٔ چیزهایی را دارد که
+           کاربر **حینِ پر کردن** لازم دارد: جمع، این‌که سرِ تایید کجا می‌رود،
+           و درهای فهرست.
 
-              <!-- ── سربرگِ فاکتور — ‎.invp-meta‎ ───────────────────────── -->
-              <StackPanel Spacing="9">
-                <Grid ColumnDefinitions="190,*">
-                  <TextBlock Grid.Column="0" Text="👤 نام مشتری:" Classes="label" VerticalAlignment="Center" />
-                  <TextBox Grid.Column="1" Text="{Binding FCustomer}" Watermark="نام کامل مشتری..." />
-                </Grid>
-                <Grid ColumnDefinitions="190,*">
-                  <TextBlock Grid.Column="0" Text="🪪 به نام دیگر:" Classes="label" VerticalAlignment="Center" />
-                  <TextBox Grid.Column="1" Text="{Binding FAlias}"
+           ⚠️ ستونِ کناری پهنای ثابت دارد و برگه ستاره‌ای است: با باریک شدنِ
+           پنجره، برگه جمع می‌شود نه ستونِ کناری — که اگر جمع می‌شد، عددهایش
+           می‌شکستند. -->
+      <Grid ColumnDefinitions="*,16,330">
+
+        <!-- ══════════════════════════════════════════════════════════════════
+             برگهٔ رسمیِ فاکتور — ‎.invp-frame‎
+             ═══════════════════════════════════════════════════════════════ -->
+        <Border Grid.Column="0"
+                BorderBrush="{DynamicResource Pump.Accent}" BorderThickness="2"
+                CornerRadius="16" Padding="26,22"
+                Background="{DynamicResource Pump.Panel}"
+                VerticalAlignment="Top">
+          <StackPanel Spacing="16">
+
+            <!-- سرِ برگه -->
+            <StackPanel Spacing="2" HorizontalAlignment="Center">
+              <TextBlock Text="⛽" FontSize="30" HorizontalAlignment="Center"
+                         Foreground="{DynamicResource Pump.Accent}" />
+              <TextBlock Text="فاکتور پمپ یعقوبی" FontSize="24" FontWeight="Black"
+                         HorizontalAlignment="Center"
+                         Foreground="{DynamicResource Pump.Accent}" />
+              <TextBlock Text="برگهٔ رسمی فروش تیل — FUEL INVOICE" Classes="muted"
+                         FontSize="12" HorizontalAlignment="Center" />
+              <Border Height="2" Margin="0,8,0,0" CornerRadius="1"
+                      Background="{DynamicResource Pump.Accent}" Opacity="0.35" />
+            </StackPanel>
+
+            <!-- ══ ۱) مشتری ═══════════════════════════════════════════════════
+                 ⚠️ همهٔ کادرها یک شکل شدند: برچسب بالا، کادر زیرش. پیش از این
+                 سربرگِ فاکتور برچسبش سمتِ راست بود (‎ColumnDefinitions="190,*"‎)
+                 و کادرهای پایین برچسب بالا — دو زبانِ متفاوت در یک برگه. -->
+            <StackPanel Spacing="8">
+              <TextBlock Text="① مشتری" Classes="label" FontWeight="ExtraBold"
+                         Foreground="{DynamicResource Pump.Accent}" />
+              <Grid ColumnDefinitions="*,14,*" RowDefinitions="Auto">
+                <StackPanel Grid.Column="0" Spacing="4">
+                  <TextBlock Text="👤 نام مشتری" Classes="fld" />
+                  <TextBox Text="{Binding FCustomer}" Watermark="نام کامل مشتری…" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Spacing="4">
+                  <TextBlock Text="🪪 به نام دیگر" Classes="fld" />
+                  <TextBox Text="{Binding FAlias}"
                            Watermark="اختیاری — خالی یعنی همان نام مشتری"
                            ToolTip.Tip="نامی که این فاکتور با آن در جدولِ حساب ثبت می‌شود" />
-                </Grid>
-                <Grid ColumnDefinitions="190,140,*">
-                  <TextBlock Grid.Column="0" Text="# شماره فاکتور:" Classes="label" VerticalAlignment="Center" />
-                  <TextBox Grid.Column="1" Text="{Binding FNumber}" HorizontalContentAlignment="Center"
-                           FontWeight="Black" />
-                  <TextBlock Grid.Column="2" Text="{Binding NumberHint}" Classes="muted" FontSize="11"
-                             VerticalAlignment="Center" Margin="10,0,0,0" TextWrapping="Wrap" />
-                </Grid>
-                <Grid ColumnDefinitions="190,180,*">
-                  <TextBlock Grid.Column="0" Text="📅 تاریخ ثبت:" Classes="label" VerticalAlignment="Center" />
-                  <TextBox Grid.Column="1" Text="{Binding FDate}" Watermark="تاریخ امروز" />
-                  <TextBlock Grid.Column="2" Text="(خودکار — قابل تغییر)" Classes="muted" FontSize="11"
-                             VerticalAlignment="Center" Margin="10,0,0,0" />
-                </Grid>
-              </StackPanel>
+                </StackPanel>
+              </Grid>
+              <Grid ColumnDefinitions="*,14,*">
+                <StackPanel Grid.Column="0" Spacing="4">
+                  <TextBlock Text="📞 شماره تماس" Classes="fld" />
+                  <TextBox Text="{Binding FPhone}" Watermark="07xxxxxxxx" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Spacing="4">
+                  <TextBlock Text="🚗 نوع ماشین" Classes="fld" />
+                  <TextBox Text="{Binding FVehicle}" Watermark="مثلاً کرولا، موتر باربری…" />
+                </StackPanel>
+              </Grid>
+            </StackPanel>
 
-              <Border Height="1" Background="{DynamicResource Pump.ChromeBorder}" Opacity="0.6" />
+            <Border Height="1" Background="{DynamicResource Pump.ChromeBorder}" Opacity="0.6" />
 
-              <!-- ── کادرهای اصلی — ‎.invp-grid‎ (دو ستون) ───────────────── -->
-              <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+            <!-- ══ ۲) پارهٔ تیل ══════════════════════════════════════════════ -->
+            <StackPanel Spacing="8">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Text="② پارهٔ تیل" Classes="label" FontWeight="ExtraBold"
+                           Foreground="{DynamicResource Pump.Accent}" />
+                <TextBlock Grid.Column="1" Text="{Binding FFuelPartText, StringFormat={}{0} افغانی}"
+                           FontWeight="Black" VerticalAlignment="Center"
+                           IsVisible="{Binding HasFuelPart}"
+                           Foreground="{DynamicResource Pump.Ok}" />
+              </Grid>
 
-                <StackPanel Grid.Row="0" Grid.Column="0" Spacing="5" Margin="0,0,0,10">
-                  <TextBlock Text="⛽ نوع تیل" Classes="label" />
-                  <StackPanel Orientation="Horizontal" Spacing="6">
+              <Grid ColumnDefinitions="Auto,14,*,14,*">
+                <StackPanel Grid.Column="0" Spacing="4">
+                  <TextBlock Text="⛽ نوع تیل" Classes="fld" />
+                  <StackPanel Orientation="Horizontal" Spacing="6" Height="36">
                     <Button Classes="seg" Content="⛽ پطرول" Command="{Binding SetFuelCommand}"
                             CommandParameter="petrol" Classes.on="{Binding !FIsDiesel}" />
                     <Button Classes="seg" Content="🟤 دیزل" Command="{Binding SetFuelCommand}"
                             CommandParameter="diesel" Classes.on="{Binding FIsDiesel}" />
                   </StackPanel>
                 </StackPanel>
-
-                <StackPanel Grid.Row="0" Grid.Column="2" Spacing="5" Margin="0,0,0,10">
-                  <TextBlock Text="🏷️ فی خرید هر لیتر" Classes="label" />
-                  <TextBox Text="{Binding FPrice}" Watermark="0" />
-                </StackPanel>
-
-                <StackPanel Grid.Row="1" Grid.Column="0" Spacing="5" Margin="0,0,0,10">
-                  <TextBlock Text="💧 مقدار خرید (لیتر)" Classes="label" />
+                <StackPanel Grid.Column="2" Spacing="4">
+                  <TextBlock Text="💧 مقدار خرید (لیتر)" Classes="fld" />
                   <TextBox Text="{Binding FLiters}" Watermark="0" />
                 </StackPanel>
-
-                <StackPanel Grid.Row="1" Grid.Column="2" Spacing="5" Margin="0,0,0,10">
-                  <TextBlock Text="🚗 نوع ماشین" Classes="label" />
-                  <TextBox Text="{Binding FVehicle}" Watermark="مثلاً کرولا، موتر باربری..." />
-                </StackPanel>
-
-                <!-- فاکتورِ «فقط مبلغ»: مشتری پول می‌گذارد تا بعداً با نرخِ روز
-                     تیل ببرد — به عنوان اعتبار در حسابش می‌نشیند. -->
-                <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Spacing="5" Margin="0,0,0,10">
-                  <TextBlock Text="💵 مبلغ بدون تیل (اعتبار)" Classes="label" />
-                  <TextBox Text="{Binding FAmount}" Watermark="0"
-                           ToolTip.Tip="اگر مشتری فقط پول داده و تیل نبرده، فقط همین کادر را پر کنید" />
-                  <TextBlock Text="اگر فقط پول گرفته شده (بدون تیل)، فقط همین کادر را پر کنید"
-                             Classes="muted" FontSize="11" />
-                </StackPanel>
-
-                <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Spacing="5">
-                  <TextBlock Text="📞 شماره تماس" Classes="label" />
-                  <TextBox Text="{Binding FPhone}" Watermark="07xxxxxxxx" />
+                <StackPanel Grid.Column="4" Spacing="4">
+                  <TextBlock Text="🏷️ فی خرید هر لیتر" Classes="fld" />
+                  <TextBox Text="{Binding FPrice}" Watermark="0"
+                           ToolTip.Tip="با عوض شدنِ نوعِ تیل، نرخِ اتحادیهٔ همان تیل خودش می‌نشیند" />
                 </StackPanel>
               </Grid>
+            </StackPanel>
 
-              <!-- ── جمله کل — ‎.invp-total‎ ─────────────────────────────── -->
-              <Border Background="{DynamicResource Pump.Dark}"
+            <Border Height="1" Background="{DynamicResource Pump.ChromeBorder}" Opacity="0.6" />
+
+            <!-- ══ ۳) پارهٔ پول ══════════════════════════════════════════════
+                 فاکتورِ «فقط مبلغ»: مشتری پول می‌گذارد تا بعداً با نرخِ روز تیل
+                 ببرد — به عنوان اعتبار در حسابش می‌نشیند. -->
+            <StackPanel Spacing="8">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Text="③ پارهٔ پول (اعتبار)" Classes="label"
+                           FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Accent}" />
+                <TextBlock Grid.Column="1" Text="{Binding FMoneyPartText, StringFormat={}{0} افغانی}"
+                           FontWeight="Black" VerticalAlignment="Center"
+                           IsVisible="{Binding HasMoneyPart}"
+                           Foreground="{DynamicResource Pump.Accent}" />
+              </Grid>
+              <Grid ColumnDefinitions="*,14,*">
+                <StackPanel Grid.Column="0" Spacing="4">
+                  <TextBlock Text="💵 مبلغ بدون تیل" Classes="fld" />
+                  <TextBox Text="{Binding FAmount}" Watermark="0"
+                           ToolTip.Tip="اگر مشتری فقط پول داده و تیل نبرده، فقط همین کادر را پر کنید" />
+                </StackPanel>
+                <TextBlock Grid.Column="2" VerticalAlignment="Bottom" Margin="0,0,0,9"
+                           Classes="muted" FontSize="11" TextWrapping="Wrap"
+                           Text="اگر فقط پول گرفته شده (بدون تیل)، فقط همین کادر را پر کنید — فاکتور «فقط مبلغ» می‌شود و لیتری در آن نمی‌نشیند." />
+              </Grid>
+            </StackPanel>
+
+            <Border Height="1" Background="{DynamicResource Pump.ChromeBorder}" Opacity="0.6" />
+
+            <!-- ══ ۴) شماره و تاریخ ═══════════════════════════════════════════
+                 ⚠️ عمداً ته برگه، نه سرش: هر دو خودکارند و کاربر معمولاً دست
+                 نمی‌زندشان. پیش از این دو ردیفِ اولِ فرم بودند و هر بار باید از
+                 رویشان رد می‌شد تا به کارِ واقعی برسد. -->
+            <StackPanel Spacing="8">
+              <TextBlock Text="④ شناسهٔ برگه" Classes="label" FontWeight="ExtraBold"
+                         Foreground="{DynamicResource Pump.Accent}" />
+              <Grid ColumnDefinitions="*,14,*">
+                <StackPanel Grid.Column="0" Spacing="4">
+                  <TextBlock Text="# شماره فاکتور" Classes="fld" />
+                  <TextBox Text="{Binding FNumber}" HorizontalContentAlignment="Center"
+                           FontWeight="Black" />
+                  <TextBlock Text="{Binding NumberHint}" Classes="muted" FontSize="11"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Spacing="4">
+                  <TextBlock Text="📅 تاریخ ثبت" Classes="fld" />
+                  <TextBox Text="{Binding FDate}" Watermark="تاریخ امروز" />
+                  <TextBlock Text="(خودکار — قابل تغییر)" Classes="muted" FontSize="11" />
+                </StackPanel>
+              </Grid>
+            </StackPanel>
+
+            <!-- ══ ته برگه: جمع، و محلِ مهر ═══════════════════════════════════
+                 ⚠️ مهر سمتِ چپِ همان ردیفِ جمع نشست — جایی که روی یک فاکتورِ
+                 کاغذی هم هست. پیش از این یک کپسولِ ۲۰۰ پیکسلیِ تنها زیرِ همه
+                 چیز بود و معلوم نبود به چه ربط دارد. -->
+            <Grid ColumnDefinitions="*,16,Auto" Margin="0,4,0,0">
+              <Border Grid.Column="0"
+                      Background="{DynamicResource Pump.Dark}"
                       BorderBrush="{DynamicResource Pump.Accent}" BorderThickness="2"
-                      CornerRadius="12" Padding="16,12">
+                      CornerRadius="12" Padding="16,12" VerticalAlignment="Center">
                 <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Grid.Column="0" Text="🧮 جمله کل (فی × لیتر)" FontWeight="ExtraBold"
-                             VerticalAlignment="Center" Foreground="{DynamicResource Pump.Accent}" />
-                  <TextBlock Grid.Column="1" Text="{Binding FTotalText}" FontSize="21" FontWeight="Black"
-                             VerticalAlignment="Center" Foreground="{DynamicResource Pump.Accent}" />
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="🧮 جمله کل فاکتور" FontWeight="ExtraBold"
+                               Foreground="{DynamicResource Pump.Accent}" />
+                    <TextBlock Classes="muted" FontSize="11" Text="پارهٔ تیل + پارهٔ پول" />
+                  </StackPanel>
+                  <TextBlock Grid.Column="1" Text="{Binding FTotalText}" FontSize="21"
+                             FontWeight="Black" VerticalAlignment="Center"
+                             Foreground="{DynamicResource Pump.Accent}" />
                 </Grid>
               </Border>
 
-              <Border BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="1"
-                      CornerRadius="80" Padding="22,16" Width="200" HorizontalAlignment="Left"
-                      Opacity="0.7">
-                <StackPanel Spacing="3">
-                  <TextBlock Text="⛽" FontSize="18" HorizontalAlignment="Center" />
-                  <TextBlock Text="محل مهر و امضا" Classes="muted" FontSize="11"
+              <Border Grid.Column="2" BorderBrush="{DynamicResource Pump.ChromeBorder}"
+                      BorderThickness="1" CornerRadius="80" Padding="20,14" Width="160"
+                      Opacity="0.7" VerticalAlignment="Center">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="⛽" FontSize="16" HorizontalAlignment="Center" />
+                  <TextBlock Text="محل مهر و امضا" Classes="muted" FontSize="10"
                              HorizontalAlignment="Center" />
                 </StackPanel>
               </Border>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- ══════════════════════════════════════════════════════════════════
+             ستونِ کناری — «چه می‌شود» و درهای فهرست
+             ═══════════════════════════════════════════════════════════════ -->
+        <StackPanel Grid.Column="2" Spacing="12" VerticalAlignment="Top">
+
+          <!-- ── سرِ تایید کجا می‌رود ──────────────────────────────────────
+               ⚠️ این کارت تازه است و مهم‌ترین تکهٔ این بازطراحی: زیرعنوانِ بخش
+               می‌گفت «پارهٔ پولی به دفترِ پول و پارهٔ تیل به رسیدِ تیل می‌رود»،
+               ولی کاربر پیش از زدنِ دکمه نمی‌دید که **این** فاکتور با **چه
+               نامی** و **چه عددی** کجا می‌نشیند. حالا می‌بیند. -->
+          <Border Classes="panel" Padding="16,14">
+            <StackPanel Spacing="10">
+              <TextBlock Text="🎯 سرِ تایید چه می‌شود" FontWeight="ExtraBold"
+                         Foreground="{DynamicResource Pump.Accent}" />
+
+              <StackPanel Spacing="3">
+                <TextBlock Text="در حسابِ این نام می‌نشیند" Classes="muted" FontSize="11" />
+                <TextBlock Text="{Binding TargetName}" FontWeight="Black" FontSize="15"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+
+              <Border Height="1" Background="{DynamicResource Pump.ChromeBorder}" Opacity="0.6" />
+
+              <StackPanel Spacing="6">
+                <TextBlock Text="{Binding GoesToFuelText}" TextWrapping="Wrap" FontSize="12"
+                           Foreground="{DynamicResource Pump.Ok}"
+                           IsVisible="{Binding HasFuelPart}" />
+                <TextBlock Text="{Binding GoesToMoneyText}" TextWrapping="Wrap" FontSize="12"
+                           Foreground="{DynamicResource Pump.Accent}"
+                           IsVisible="{Binding HasMoneyPart}" />
+                <TextBlock Text="هنوز نه لیتری نوشته شده نه مبلغی" Classes="muted" FontSize="12"
+                           TextWrapping="Wrap">
+                  <TextBlock.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                      <Binding Path="!HasFuelPart" />
+                      <Binding Path="!HasMoneyPart" />
+                    </MultiBinding>
+                  </TextBlock.IsVisible>
+                </TextBlock>
+              </StackPanel>
             </StackPanel>
           </Border>
 
-          <!-- ── دو دکمهٔ زیرِ برگه — ‎.inv-btn-row‎ ────────────────────── -->
-          <StackPanel Orientation="Horizontal" Spacing="10">
-            <Button Classes="accent" Content="ثبت فاکتور" MinWidth="170" MinHeight="42"
-                    FontWeight="ExtraBold" Command="{Binding SubmitCommand}" />
-            <Button Content="پاک کردن فرم" MinWidth="150" MinHeight="42"
+          <!-- ── دکمه‌ها، با دلیلِ نخوردنشان زیرِ خودشان ────────────────────
+               ⚠️ پیش از این هر دو شرطِ ثبت فقط **پس از** زدنِ دکمه و به شکلِ
+               توست گفته می‌شدند. -->
+          <StackPanel Spacing="8">
+            <Button Classes="accent" Content="✅ ثبت فاکتور" MinHeight="44"
+                    HorizontalAlignment="Stretch" FontWeight="ExtraBold" FontSize="15"
+                    IsEnabled="{Binding CanSubmit}" Command="{Binding SubmitCommand}" />
+            <TextBlock Text="{Binding SubmitHint}" TextWrapping="Wrap" FontSize="12"
+                       Foreground="{DynamicResource Pump.Warn}"
+                       IsVisible="{Binding SubmitHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <Button Content="🔄 پاک کردن فرم" MinHeight="38" HorizontalAlignment="Stretch"
                     Command="{Binding ResetFormCommand}" />
           </StackPanel>
 
-          <!-- ── سه کارتِ آماری — ‎.inv-stats‎ ──────────────────────────── -->
-          <c:AutoFillPanel MinItemWidth="280" Gap="12">
+          <!-- ── درهای فهرست ─────────────────────────────────────────────── -->
+          <Button Classes="card-shell" HorizontalAlignment="Stretch"
+                  Command="{Binding OpenListCommand}" CommandParameter="pending">
+            <Border Classes="stat" BorderBrush="{DynamicResource Pump.Warn}" Padding="14,12">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <TextBlock Grid.Column="0" Text="🟡" FontSize="22" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="1" Spacing="1" Margin="10,0" VerticalAlignment="Center">
+                  <TextBlock Text="در صف" Classes="label" />
+                  <TextBlock Text="{Binding PendingText}" FontSize="21" FontWeight="Black"
+                             Foreground="{DynamicResource Pump.Warn}" />
+                </StackPanel>
+                <TextBlock Grid.Column="2" Text="←" Classes="muted" VerticalAlignment="Center" />
+              </Grid>
+            </Border>
+          </Button>
 
-            <Button Classes="card-shell" Command="{Binding OpenListCommand}" CommandParameter="pending">
-              <Border Classes="stat" BorderBrush="{DynamicResource Pump.Warn}" Padding="16">
-                <Grid ColumnDefinitions="Auto,*,Auto">
-                  <TextBlock Grid.Column="0" Text="🟡" FontSize="26" VerticalAlignment="Center" />
-                  <StackPanel Grid.Column="1" Spacing="2" Margin="12,0" VerticalAlignment="Center">
-                    <TextBlock Text="فاکتورهای در صف" Classes="label" />
-                    <TextBlock Text="{Binding PendingText}" FontSize="24" FontWeight="Black"
-                              
-                               Foreground="{DynamicResource Pump.Warn}" />
-                  </StackPanel>
-                  <TextBlock Grid.Column="2" Text="مشاهده ←" Classes="muted" FontSize="12"
-                             VerticalAlignment="Center" />
-                </Grid>
-              </Border>
-            </Button>
+          <Button Classes="card-shell" HorizontalAlignment="Stretch"
+                  Command="{Binding OpenListCommand}" CommandParameter="approved">
+            <Border Classes="stat" BorderBrush="{DynamicResource Pump.Ok}" Padding="14,12">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <TextBlock Grid.Column="0" Text="🟢" FontSize="22" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="1" Spacing="1" Margin="10,0" VerticalAlignment="Center">
+                  <TextBlock Text="تایید شده" Classes="label" />
+                  <TextBlock Text="{Binding ApprovedText}" FontSize="21" FontWeight="Black"
+                             Foreground="{DynamicResource Pump.Ok}" />
+                </StackPanel>
+                <TextBlock Grid.Column="2" Text="←" Classes="muted" VerticalAlignment="Center" />
+              </Grid>
+            </Border>
+          </Button>
 
-            <Button Classes="card-shell" Command="{Binding OpenListCommand}" CommandParameter="approved">
-              <Border Classes="stat" BorderBrush="{DynamicResource Pump.Ok}" Padding="16">
-                <Grid ColumnDefinitions="Auto,*,Auto">
-                  <TextBlock Grid.Column="0" Text="🟢" FontSize="26" VerticalAlignment="Center" />
-                  <StackPanel Grid.Column="1" Spacing="2" Margin="12,0" VerticalAlignment="Center">
-                    <TextBlock Text="فاکتورهای تایید شده" Classes="label" />
-                    <TextBlock Text="{Binding ApprovedText}" FontSize="24" FontWeight="Black"
-                              
-                               Foreground="{DynamicResource Pump.Ok}" />
-                  </StackPanel>
-                  <TextBlock Grid.Column="2" Text="مشاهده ←" Classes="muted" FontSize="12"
-                             VerticalAlignment="Center" />
-                </Grid>
-              </Border>
-            </Button>
-
-            <!-- کارتِ سوم زیربخشِ «مقایسهٔ نرخ فاکتورها» را باز می‌کند — همان
-                 ‎showSection('invrate')‎ی سایت. -->
-            <Button Classes="card-shell" Command="{Binding ShowSubCommand}"
-                    CommandParameter="{Binding SubSections[0]}">
-              <Border Classes="stat" Padding="16">
-                <Grid ColumnDefinitions="Auto,*,Auto">
-                  <TextBlock Grid.Column="0" Text="📉" FontSize="26" VerticalAlignment="Center" />
-                  <StackPanel Grid.Column="1" Spacing="2" Margin="12,0" VerticalAlignment="Center">
-                    <TextBlock Text="مقایسهٔ نرخ فاکتورها" Classes="label" />
-                    <TextBlock Text="{Binding RateNetText}" FontSize="24" FontWeight="Black"
-                               />
-                  </StackPanel>
-                  <TextBlock Grid.Column="2" Text="مشاهده ←" Classes="muted" FontSize="12"
-                             VerticalAlignment="Center" />
-                </Grid>
-              </Border>
-            </Button>
-          </c:AutoFillPanel>
+          <!-- کارتِ نرخ زیربخشِ «مقایسهٔ نرخ فاکتورها» را باز می‌کند — همان
+               ‎showSection('invrate')‎ی سایت. -->
+          <Button Classes="card-shell" HorizontalAlignment="Stretch"
+                  Command="{Binding ShowSubCommand}"
+                  CommandParameter="{Binding SubSections[0]}">
+            <Border Classes="stat" Padding="14,12">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <TextBlock Grid.Column="0" Text="📉" FontSize="22" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="1" Spacing="1" Margin="10,0" VerticalAlignment="Center">
+                  <TextBlock Text="مقایسهٔ نرخ فاکتورها" Classes="label" />
+                  <TextBlock Text="{Binding RateNetText}" FontSize="21" FontWeight="Black" />
+                </StackPanel>
+                <TextBlock Grid.Column="2" Text="←" Classes="muted" VerticalAlignment="Center" />
+              </Grid>
+            </Border>
+          </Button>
         </StackPanel>
+      </Grid>
     </c:SectionPage>
 
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -203,145 +319,260 @@
                    SubHeader="{Binding ListCountText}">
 
       <c:SectionPage.Toolbar>
-        <Button Content="بستن" Command="{Binding CloseListCommand}" />
+        <Button Classes="accent" Content="＋ فاکتور تازه" Command="{Binding CloseListCommand}"
+                ToolTip.Tip="برگشت به برگهٔ فاکتور" />
       </c:SectionPage.Toolbar>
 
       <c:SectionPage.Filters>
-        <TextBox Text="{Binding Search}"
-                 Watermark="🔍 جستجو: شماره فاکتور، نام مشتری، شماره تماس یا تاریخ..." />
+        <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+
+          <!-- ⚠️ کلیدهای صافی تازه‌اند. پیش از این تنها راهِ عوض کردنِ
+               «در صف ⇄ تایید شده» برگشتن به برگه و زدنِ کارتِ دیگر بود — سه
+               کلیک برای کاری که یکی بس است. -->
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <Button Classes="seg" Content="🟡 در صف" Command="{Binding FilterCommand}"
+                    CommandParameter="pending" Classes.on="{Binding IsPendingPane}" />
+            <Button Classes="seg" Content="🟢 تایید شده" Command="{Binding FilterCommand}"
+                    CommandParameter="approved" Classes.on="{Binding IsApprovedPane}" />
+            <Button Classes="seg" Content="🧾 همه" Command="{Binding FilterCommand}"
+                    CommandParameter="all" Classes.on="{Binding IsAllPane}" />
+          </StackPanel>
+
+          <TextBox Width="430" Text="{Binding Search}"
+                   Watermark="🔍 شماره، نام مشتری، تماس، ماشین یا تاریخ…" />
+        </StackPanel>
       </c:SectionPage.Filters>
 
-        <ItemsControl ItemsSource="{Binding Rows}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:InvoiceRowViewModel">
-              <Border Classes="panel" Padding="12,10" Margin="0,0,0,9">
-                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+      <!-- ⚠️ ‎VirtualizingStackPanel‎، نه پنلِ ساده: فهرستِ فاکتورها با سال
+           بزرگ می‌شود و هر ردیف چهار دکمه دارد. بی مجازی‌سازی، همه‌شان
+           ساخته می‌شدند. -->
+      <ItemsControl ItemsSource="{Binding Rows}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <VirtualizingStackPanel />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:InvoiceRowViewModel">
+            <Border Classes="panel" Padding="14,11" Margin="0,0,0,9">
+              <Grid ColumnDefinitions="Auto,*,Auto">
 
-                  <Border Grid.Column="0" Classes="chip" MinWidth="52" Margin="0,0,12,0"
-                          VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Number}" FontWeight="Bold" FontSize="15"
+                <!-- شمارهٔ فاکتور، درشت و سرِ خط — همان چیزی که کاربر با آن
+                     دنبالِ فاکتور می‌گردد -->
+                <Border Grid.Column="0" Classes="chip" MinWidth="58" Margin="0,0,14,0"
+                        VerticalAlignment="Center"
+                        BorderBrush="{Binding ChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
+                  <StackPanel Spacing="0">
+                    <TextBlock Text="#" Classes="muted" FontSize="10"
                                HorizontalAlignment="Center" />
-                  </Border>
+                    <TextBlock Text="{Binding Number}" FontWeight="Black" FontSize="16"
+                               HorizontalAlignment="Center" />
+                  </StackPanel>
+                </Border>
 
-                  <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
                     <TextBlock Text="{Binding Customer}" FontWeight="Bold" FontSize="15" />
-                    <TextBlock Text="{Binding PartsText}" Classes="muted" FontSize="12"
-                               TextWrapping="Wrap" />
-                  </StackPanel>
-
-                  <Border Grid.Column="2" Classes="chip" VerticalAlignment="Center" Margin="10,0">
                     <TextBlock Text="{Binding ChipText}" FontSize="12" FontWeight="Bold"
+                               VerticalAlignment="Center"
                                Foreground="{Binding ChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
-                  </Border>
-
-                  <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6"
-                              VerticalAlignment="Center">
-                    <Button Content="دیدن" FontSize="12" Padding="10,0"
-                            Command="{Binding $parent[ItemsControl].((vm:InvoiceSectionViewModel)DataContext).OpenDetailCommand}"
-                            CommandParameter="{Binding}" />
-                    <Button Classes="accent" Content="تایید فاکتور" FontSize="12" Padding="10,0"
-                            IsVisible="{Binding IsPending}"
-                            Command="{Binding $parent[ItemsControl].((vm:InvoiceSectionViewModel)DataContext).ApproveCommand}"
-                            CommandParameter="{Binding}" />
-                    <Button Content="برگشت به صف" FontSize="12" Padding="10,0"
-                            IsVisible="{Binding IsApproved}"
-                            Command="{Binding $parent[ItemsControl].((vm:InvoiceSectionViewModel)DataContext).RevertCommand}"
-                            CommandParameter="{Binding}" />
-                    <Button Classes="ghost danger" Content="حذف" FontSize="12" Padding="10,0"
-                            Command="{Binding $parent[ItemsControl].((vm:InvoiceSectionViewModel)DataContext).DeleteInvoiceCommand}"
-                            CommandParameter="{Binding}" />
                   </StackPanel>
-                </Grid>
-              </Border>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
+                  <TextBlock Text="{Binding PartsText}" Classes="muted" FontSize="12"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+
+                <!-- ⚠️ فقط کارِ همین وضعیت دیده می‌شود: «تایید» برای در صف و
+                     «برگشت به صف» برای تایید شده. پیش از این هر چهار دکمه
+                     جا می‌گرفتند و دو تایشان همیشه پنهان بودند. -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6"
+                            VerticalAlignment="Center">
+                  <Button Content="👁 دیدن" FontSize="12" Padding="11,0"
+                          Command="{Binding $parent[ItemsControl].((vm:InvoiceSectionViewModel)DataContext).OpenDetailCommand}"
+                          CommandParameter="{Binding}" />
+                  <Button Classes="accent" Content="✅ تایید" FontSize="12" Padding="11,0"
+                          IsVisible="{Binding IsPending}"
+                          Command="{Binding $parent[ItemsControl].((vm:InvoiceSectionViewModel)DataContext).ApproveCommand}"
+                          CommandParameter="{Binding}" />
+                  <Button Content="↩ برگشت به صف" FontSize="12" Padding="11,0"
+                          IsVisible="{Binding IsApproved}"
+                          Command="{Binding $parent[ItemsControl].((vm:InvoiceSectionViewModel)DataContext).RevertCommand}"
+                          CommandParameter="{Binding}" />
+                  <Button Classes="ghost danger" Content="🗑" FontSize="13" Padding="11,0"
+                          ToolTip.Tip="حذفِ این فاکتور"
+                          Command="{Binding $parent[ItemsControl].((vm:InvoiceSectionViewModel)DataContext).DeleteInvoiceCommand}"
+                          CommandParameter="{Binding}" />
+                </StackPanel>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
     </c:SectionPage>
 
     <!-- ══════════════════════════════════════════════════════════════════════
          ۳) خودِ فاکتور، تمام‌صفحه — ‎#invDetailModal‎
          ══════════════════════════════════════════════════════════════════ -->
-    <c:SectionPage IsVisible="{Binding IsDetail}" Header="🧾 فاکتور">
+    <c:SectionPage IsVisible="{Binding IsDetail}" Header="🧾 فاکتور"
+                   SubHeader="{Binding Detail.PartsText}">
 
+      <!-- ⚠️ کارهای همین فاکتور از همین‌جا انجام می‌شوند. پیش از این صفحهٔ
+           فاکتور فقط یک دکمهٔ «بستن» داشت و برای تاییدش باید به فهرست
+           برمی‌گشتی و همان ردیف را دوباره پیدا می‌کردی. -->
       <c:SectionPage.Toolbar>
-        <Button Classes="danger" Content="بستن" Command="{Binding CloseListCommand}" />
+        <StackPanel Orientation="Horizontal" Spacing="8" DataContext="{Binding Detail}"
+                    x:CompileBindings="False">
+          <Button Classes="accent" Content="✅ تایید فاکتور"
+                  IsVisible="{Binding IsPending}"
+                  Command="{Binding $parent[UserControl].DataContext.ApproveCommand}"
+                  CommandParameter="{Binding}" />
+          <Button Content="↩ برگشت به صف"
+                  IsVisible="{Binding IsApproved}"
+                  Command="{Binding $parent[UserControl].DataContext.RevertCommand}"
+                  CommandParameter="{Binding}" />
+          <Button Classes="ghost danger" Content="🗑 حذف"
+                  Command="{Binding $parent[UserControl].DataContext.DeleteInvoiceCommand}"
+                  CommandParameter="{Binding}" />
+          <Button Content="بستن"
+                  Command="{Binding $parent[UserControl].DataContext.CloseListCommand}" />
+        </StackPanel>
       </c:SectionPage.Toolbar>
 
-        <Border DataContext="{Binding Detail}" x:CompileBindings="False"
-                BorderBrush="{DynamicResource Pump.Accent}" BorderThickness="2"
-                CornerRadius="16" Padding="26,22" Margin="0,0,0,14"
-                Background="{DynamicResource Pump.Panel}">
-          <StackPanel Spacing="12">
+      <!-- ⚠️ برگه پهنای کاغذی می‌گیرد و وسط می‌نشیند، نه تمامِ پنجره: صفحهٔ
+           فاکتور تمام‌عرض است (‎IsPageOpen‎)، و بی این سقف، برچسب و مقدارِ هر
+           ردیف دو سرِ یک صفحهٔ ۱۴۰۰ پیکسلی می‌افتادند و چشم باید بینشان
+           می‌دوید. یک فاکتور یک **سند** است، نه یک جدول. -->
+      <Border DataContext="{Binding Detail}" x:CompileBindings="False"
+              BorderBrush="{DynamicResource Pump.Accent}" BorderThickness="2"
+              CornerRadius="16" Padding="26,22" Margin="0,0,0,14"
+              MaxWidth="820" HorizontalAlignment="Stretch"
+              Background="{DynamicResource Pump.Panel}">
+        <StackPanel Spacing="16">
 
-            <StackPanel Spacing="2" HorizontalAlignment="Center">
-              <TextBlock Text="فاکتور پمپ یعقوبی" FontSize="24" FontWeight="Black"
-                         HorizontalAlignment="Center"
-                         Foreground="{DynamicResource Pump.Accent}" />
-              <TextBlock Text="برگهٔ رسمی فروش تیل — FUEL INVOICE" Classes="muted"
-                         FontSize="12" HorizontalAlignment="Center" />
-            </StackPanel>
+          <StackPanel Spacing="2" HorizontalAlignment="Center">
+            <TextBlock Text="⛽" FontSize="28" HorizontalAlignment="Center"
+                       Foreground="{DynamicResource Pump.Accent}" />
+            <TextBlock Text="فاکتور پمپ یعقوبی" FontSize="24" FontWeight="Black"
+                       HorizontalAlignment="Center"
+                       Foreground="{DynamicResource Pump.Accent}" />
+            <TextBlock Text="برگهٔ رسمی فروش تیل — FUEL INVOICE" Classes="muted"
+                       FontSize="12" HorizontalAlignment="Center" />
+            <Border Height="2" Margin="0,8,0,0" CornerRadius="1"
+                    Background="{DynamicResource Pump.Accent}" Opacity="0.35" />
+          </StackPanel>
 
-            <Grid ColumnDefinitions="Auto,*,Auto">
-              <Border Grid.Column="0" Classes="chip">
-                <TextBlock Text="{Binding Number, StringFormat=# {0}}" FontWeight="Black" FontSize="16" />
-              </Border>
-              <Border Grid.Column="2" Classes="chip">
-                <TextBlock Text="{Binding ChipText}" FontWeight="Bold" />
-              </Border>
+          <!-- شماره · وضعیت · تاریخ، همه در یک ردیف -->
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <Border Grid.Column="0" Classes="chip"
+                    BorderBrush="{Binding ChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
+              <TextBlock Text="{Binding Number, StringFormat=# {0}}" FontWeight="Black" FontSize="16" />
+            </Border>
+            <TextBlock Grid.Column="1" Text="{Binding DateShamsi, StringFormat=📅 {0}}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       FontWeight="Bold" />
+            <Border Grid.Column="2" Classes="chip"
+                    BorderBrush="{Binding ChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
+              <TextBlock Text="{Binding ChipText}" FontWeight="Bold"
+                         Foreground="{Binding ChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+            </Border>
+          </Grid>
+
+          <Border Height="1" Background="{DynamicResource Pump.ChromeBorder}" Opacity="0.6" />
+
+          <!-- ── مشتری ─────────────────────────────────────────────────────
+               ⚠️ هر خانهٔ خالی اصلاً نوشته نمی‌شود. -->
+          <StackPanel Spacing="8">
+            <TextBlock Text="① مشتری" Classes="label" FontWeight="ExtraBold"
+                       Foreground="{DynamicResource Pump.Accent}" />
+            <!-- ⚠️ ‎TextAlignment="Start"‎ روی مقدارها لازم است: سبکِ
+                 سراسریِ ‎TextBlock‎ نوشته را **وسط‌چین** می‌کند (قاعدهٔ
+                 جدول‌ها)، پس مقدار وسطِ ستونِ پهن می‌افتاد و بینِ برچسب و
+                 مقدار یک وجب فاصله می‌ماند. با این، مقدار می‌چسبد به برچسبِ
+                 خودش.
+
+                 ⚠️ و ‎Start‎، نه ‎Right‎: ‎HorizontalAlignment‎ در چیدمانِ
+                 راست‌به‌چپ آینه می‌شود و ‎Right‎ مقدار را به لبهٔ **چپ** برد —
+                 همان فاصله، فقط از آن طرف. ‎TextAlignment.Start‎ خودش جهتِ
+                 نوشته را می‌فهمد. -->
+            <Grid ColumnDefinitions="190,*">
+              <TextBlock Grid.Column="0" Text="👤 نام مشتری" Classes="fld" />
+              <TextBlock Grid.Column="1" Text="{Binding Customer}" FontWeight="Bold"
+                         TextAlignment="Start" />
             </Grid>
+            <Grid ColumnDefinitions="190,*" IsVisible="{Binding HasAlias}">
+              <TextBlock Grid.Column="0" Text="🪪 به نام دیگر" Classes="fld" />
+              <TextBlock Grid.Column="1" Text="{Binding DebtAlias}" FontWeight="Bold"
+                         TextAlignment="Start" />
+            </Grid>
+            <Grid ColumnDefinitions="190,*" IsVisible="{Binding HasPhone}">
+              <TextBlock Grid.Column="0" Text="📞 شماره تماس" Classes="fld" />
+              <TextBlock Grid.Column="1" Text="{Binding Phone}" TextAlignment="Start" />
+            </Grid>
+            <Grid ColumnDefinitions="190,*" IsVisible="{Binding HasVehicle}">
+              <TextBlock Grid.Column="0" Text="🚗 نوع ماشین" Classes="fld" />
+              <TextBlock Grid.Column="1" Text="{Binding Vehicle}" TextAlignment="Start" />
+            </Grid>
+          </StackPanel>
 
-            <StackPanel Spacing="8">
-              <Grid ColumnDefinitions="200,*">
-                <TextBlock Grid.Column="0" Text="📅 تاریخ ثبت:" Classes="label" />
-                <TextBlock Grid.Column="1" Text="{Binding DateShamsi}" FontWeight="Bold" />
-              </Grid>
-              <Grid ColumnDefinitions="200,*">
-                <TextBlock Grid.Column="0" Text="👤 نام مشتری:" Classes="label" />
-                <TextBlock Grid.Column="1" Text="{Binding Customer}" FontWeight="Bold" />
-              </Grid>
-              <Grid ColumnDefinitions="200,*">
-                <TextBlock Grid.Column="0" Text="🪪 به نام دیگر:" Classes="label" />
-                <TextBlock Grid.Column="1" Text="{Binding DebtAlias}" />
-              </Grid>
-              <Grid ColumnDefinitions="200,*">
-                <TextBlock Grid.Column="0" Text="⛽ نوع تیل:" Classes="label" />
-                <TextBlock Grid.Column="1" Text="{Binding FuelText}" FontWeight="Bold" />
-              </Grid>
-              <Grid ColumnDefinitions="200,*">
-                <TextBlock Grid.Column="0" Text="🏷️ فی خرید هر لیتر:" Classes="label" />
-                <TextBlock Grid.Column="1" Text="{Binding PriceText}" FontWeight="Bold" />
-              </Grid>
-              <Grid ColumnDefinitions="200,*">
-                <TextBlock Grid.Column="0" Text="💧 مقدار خرید (رسید تیل):" Classes="label" />
-                <TextBlock Grid.Column="1" Text="{Binding LitersText}" FontWeight="Bold" />
-              </Grid>
-              <Grid ColumnDefinitions="200,*">
-                <TextBlock Grid.Column="0" Text="🚗 نوع ماشین:" Classes="label" />
-                <TextBlock Grid.Column="1" Text="{Binding Vehicle}" />
-              </Grid>
-              <Grid ColumnDefinitions="200,*">
-                <TextBlock Grid.Column="0" Text="💵 مبلغ (رسید پول / اعتبار):" Classes="label" />
-                <TextBlock Grid.Column="1" Text="{Binding AmountText}" FontWeight="Bold" />
-              </Grid>
-              <Grid ColumnDefinitions="200,*">
-                <TextBlock Grid.Column="0" Text="📞 شماره تماس:" Classes="label" />
-                <TextBlock Grid.Column="1" Text="{Binding Phone}" />
-              </Grid>
-            </StackPanel>
+          <!-- ── پارهٔ تیل ──────────────────────────────────────────────── -->
+          <StackPanel Spacing="8" IsVisible="{Binding HasFuelPart}">
+            <Border Height="1" Background="{DynamicResource Pump.ChromeBorder}" Opacity="0.6" />
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Grid.Column="0" Text="② پارهٔ تیل" Classes="label" FontWeight="ExtraBold"
+                         Foreground="{DynamicResource Pump.Accent}" />
+              <TextBlock Grid.Column="1" Text="{Binding FuelPartText, StringFormat={}{0} افغانی}"
+                         FontWeight="Black" Foreground="{DynamicResource Pump.Ok}" />
+            </Grid>
+            <Grid ColumnDefinitions="190,*">
+              <TextBlock Grid.Column="0" Text="💧 مقدار و فی" Classes="fld" />
+              <TextBlock Grid.Column="1" Text="{Binding FuelLineText}" FontWeight="Bold"
+                         TextAlignment="Start" />
+            </Grid>
+          </StackPanel>
 
+          <!-- ── پارهٔ پول ──────────────────────────────────────────────── -->
+          <StackPanel Spacing="8" IsVisible="{Binding HasMoneyPart}">
+            <Border Height="1" Background="{DynamicResource Pump.ChromeBorder}" Opacity="0.6" />
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Grid.Column="0" Text="③ پارهٔ پول (اعتبار)" Classes="label"
+                         FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Accent}" />
+              <TextBlock Grid.Column="1" Text="{Binding AmountText, StringFormat={}{0} افغانی}"
+                         FontWeight="Black" Foreground="{DynamicResource Pump.Accent}" />
+            </Grid>
+          </StackPanel>
+
+          <!-- ── جمع، و زیرش محلِ مهر ─────────────────────────────────────
+               ⚠️ این‌جا عمداً زیرِ هم است و نه کنارِ هم (برخلافِ برگهٔ فرم):
+               برگهٔ سند سقفِ ۸۲۰ پیکسل دارد، و با کپسولِ مهر در همان ردیف،
+               ستونِ ‎*‎ی جمع آن‌قدر تنگ می‌شد که عدد روی نوشته می‌افتاد. -->
+          <StackPanel Spacing="12" Margin="0,4,0,0">
             <Border Background="{DynamicResource Pump.Dark}"
                     BorderBrush="{DynamicResource Pump.Accent}" BorderThickness="2"
                     CornerRadius="12" Padding="16,12">
               <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Grid.Column="0" Text="🧮 جمله کل فاکتور (تیل + پول)" FontWeight="ExtraBold"
-                           VerticalAlignment="Center" Foreground="{DynamicResource Pump.Accent}" />
+                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                  <TextBlock Text="🧮 جمله کل فاکتور" FontWeight="ExtraBold"
+                             Foreground="{DynamicResource Pump.Accent}" />
+                  <TextBlock Classes="muted" FontSize="11" Text="پارهٔ تیل + پارهٔ پول" />
+                </StackPanel>
                 <TextBlock Grid.Column="1" Text="{Binding TotalText, StringFormat={}{0} افغانی}"
                            FontSize="21" FontWeight="Black" VerticalAlignment="Center"
+                           Margin="14,0,0,0"
                            Foreground="{DynamicResource Pump.Accent}" />
               </Grid>
             </Border>
+
+            <Border BorderBrush="{DynamicResource Pump.ChromeBorder}"
+                    BorderThickness="1" CornerRadius="80" Padding="20,14" Width="170"
+                    Opacity="0.7" HorizontalAlignment="Left">
+              <StackPanel Spacing="2">
+                <TextBlock Text="⛽" FontSize="16" HorizontalAlignment="Center" />
+                <TextBlock Text="محل مهر و امضا" Classes="muted" FontSize="10"
+                           HorizontalAlignment="Center" />
+              </StackPanel>
+            </Border>
           </StackPanel>
-        </Border>
+        </StackPanel>
+      </Border>
     </c:SectionPage>
   </Panel>
 </UserControl>
