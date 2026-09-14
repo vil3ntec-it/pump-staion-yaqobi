@@ -21,16 +21,31 @@ def appVersionCodeValue = {
   return p[0] * 1000000 + p[1] * 10000 + p[2]
 }()
 
+// ══ یک پروژه، دو فایلِ نصب ═══════════════════════════════════════════════════
+//
+// خواستهٔ صاحب ریپو: «ای‌پی‌کی‌شو بده برای اندروید و کارمندان.»
+//
+// اپِ کارمندان (‎kar/‎) همان پوستهٔ وب‌ویو را می‌خواهد که اپِ اصلی دارد، پس
+// پروژهٔ گریدل یکی می‌ماند و فقط سه چیز از بیرون داده می‌شود: شناسهٔ بسته، نامِ
+// روی صفحه، و این‌که چه چیزی داخلِ ‎assets/www‎ کپی شده.
+//
+// ⚠️ پیش‌فرض‌ها **دقیقاً همان‌های قبل‌اند**، پس ساختِ اپِ اصلی ذره‌ای عوض
+// نمی‌شود. دو شناسهٔ جدا یعنی هر دو با هم روی یک گوشی نصب می‌شوند و هیچ‌کدام
+// آن یکی را پاک نمی‌کند.
+def appIdValue = project.hasProperty('appId') ? project.appId : 'top.yaqobipump.app'
+def appLabelValue = project.hasProperty('appLabel') ? project.appLabel : 'پمپ یعقوبی'
+
 android {
   namespace 'top.yaqobipump.app'
   compileSdk 34
 
   defaultConfig {
-    applicationId "top.yaqobipump.app"
+    applicationId appIdValue
     minSdk 23
     targetSdk 34
     versionCode appVersionCodeValue
     versionName appVersionNameValue
+    manifestPlaceholders = [appLabel: appLabelValue]
   }
 
   buildTypes {

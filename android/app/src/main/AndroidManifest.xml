@@ -18,7 +18,7 @@
        صفحه را دور می‌اندازد و برنامه با هر برگشتن از صفر ساخته می‌شود.
        hardwareAccelerated: کشیدنِ صفحه با کارتِ گرافیک، نه با CPU. -->
   <application
-      android:label="@string/app_name"
+      android:label="${appLabel}"
       android:icon="@mipmap/ic_launcher"
       android:roundIcon="@mipmap/ic_launcher"
       android:theme="@style/AppTheme"

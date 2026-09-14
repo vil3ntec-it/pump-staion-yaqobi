@@ -1,0 +1,133 @@
+name: ساخت برنامهٔ کارمندان (APK)
+
+# ══ فایلِ نصبِ اندرویدِ اپِ کارمندان ═══════════════════════════════════════════
+#
+# خواستهٔ صاحب ریپو: «ای‌پی‌کی‌شو بده برای اندروید و کارمندان؛ فقط برای آیفون
+# شورت‌کات باشه.»
+#
+# ⚠️ این APK با APKِ اصلی یکی نیست و جایش را نمی‌گیرد:
+#
+#     build-android.yml  ⇒  index.html  ⇒  top.yaqobipump.app  ⇒ PumpYaqobi.apk
+#     این فایل           ⇒  kar/       ⇒  top.yaqobipump.kar  ⇒ PumpYaqobiKar.apk
+#
+# دو شناسهٔ جدا یعنی هر دو با هم روی یک گوشی نصب می‌شوند و هیچ‌کدام آن یکی را
+# پاک نمی‌کند.
+#
+# ⚠️ و آیفون APK ندارد — همان ‎kar/‎ از Safari با «افزودن به صفحهٔ اصلی» نصب
+# می‌شود. خواستهٔ صریحِ صاحب ریپو هم همین بود.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'kar/**'
+      - 'android/**'
+      - '.github/workflows/build-kar-apk.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kar-apk
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: دریافت کد
+        uses: actions/checkout@v4
+
+      - name: نصب جاوا ۱۷
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: آماده‌سازی Android SDK
+        uses: android-actions/setup-android@v3
+
+      # ⚠️ ‎kar/index.html‎ باید همان ‎www/index.html‎ شود: پوستهٔ وب‌ویو همیشه
+      # همان مسیر را باز می‌کند (‎ASSET_URL‎ در ‎MainActivity‎).
+      - name: گذاشتنِ اپِ کارمندان داخلِ فایلِ نصب
+        run: |
+          rm -rf android/app/src/main/assets/www
+          mkdir -p android/app/src/main/assets/www
+          cp kar/index.html kar/app.js kar/manifest.json android/app/src/main/assets/www/
+          # ⚠️ سرویس‌ورکر عمداً نمی‌رود: داخلِ ‎file://‎ ثبت نمی‌شود و فقط در
+          # کنسول خطا می‌دهد. خودِ فایل‌ها که آفلاین‌اند.
+          echo "محتوای بسته‌شده:"; ls -la android/app/src/main/assets/www/
+
+      - name: ساختِ آیکون‌های برنامه
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick
+          for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+            n=${d%%:*}; px=${d##*:}
+            mkdir -p android/app/src/main/res/mipmap-$n
+            convert native/PumpYaqobi.App/Assets/logo.png \
+                    -resize ${px}x${px} android/app/src/main/res/mipmap-$n/ic_launcher.png
+          done
+
+      # نسخه از شمارهٔ اجرا می‌آید — اپِ کارمندان ‎APP_VERSION‎ی ندارد که خوانده
+      # شود، و شمارهٔ اجرا همیشه از قبلی بزرگ‌تر است.
+      - name: شمارهٔ نسخه
+        id: ver
+        run: |
+          V="1.0.${{ github.run_number }}"
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "نسخهٔ اپِ کارمندان: $V"
+
+      - name: ساختِ APK
+        working-directory: android
+        run: |
+          gradle wrapper --gradle-version 8.7
+          ./gradlew assembleRelease --no-daemon \
+            -PappVersionName=${{ steps.ver.outputs.version }} \
+            -PappId=top.yaqobipump.kar \
+            -PappLabel='کارمندان پمپ یعقوبی'
+
+      - name: نام‌گذاری فایل
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/release/*.apk "out/PumpYaqobiKar.apk"
+          cp android/app/build/outputs/apk/release/*.apk \
+             "out/PumpYaqobiKar-$(date +%Y%m%d).apk"
+          echo -n "${{ steps.ver.outputs.version }}" > "out/PumpYaqobiKar-version.txt"
+          ls -la out/
+
+      - name: بارگذاری به‌عنوان Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PumpYaqobi-Kar-APK
+          path: out/*.apk
+          if-no-files-found: error
+
+      - name: انتشار در Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: kar-latest
+          name: برنامهٔ کارمندان — اندروید (آخرین نسخه)
+          body: |
+            فایلِ نصبِ اندرویدِ **اپِ کارمندان**. روی گوشی دانلود و باز کنید.
+            بار اول اندروید می‌گوید «نصب از منبع ناشناس» — اجازه بدهید.
+
+            ── بارِ اول چه کنید ────────────────────────────────────────────
+            برنامه که باز شد، صفحهٔ تنظیم می‌آید و سه چیز می‌خواهد:
+            نشانیِ سرور، رمز، و کدِ پمپ.
+
+            ساده‌ترین راه: در برنامهٔ کامپیوتر بروید به **تنظیمات ←
+            کیو‌آرِ کارمندان** و همان کیو‌آر را با گوشی بگیرید — هر سه
+            خودشان پر می‌شوند.
+
+            ⚠️ رمزی که در کیو‌آر می‌رود **فقط‌خواندنی** است: با آن می‌شود
+            دید، نمی‌شود چیزی را عوض کرد. رمزِ ورود به خودِ اپ همان رمزِ
+            برنامهٔ کامپیوتر است.
+
+            ── آیفون ───────────────────────────────────────────────────────
+            آیفون فایلِ نصب ندارد. همان نشانی را در **Safari** باز کنید و
+            «افزودن به صفحهٔ اصلی» بزنید — مثلِ اپِ عادی روی صفحه می‌نشیند.
+          files: |
+            out/*.apk
+            out/PumpYaqobiKar-version.txt
+          make_latest: false
