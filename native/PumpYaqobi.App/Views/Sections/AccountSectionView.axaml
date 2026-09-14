@@ -1,0 +1,111 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             x:Class="PumpYaqobi.App.Views.Sections.AccountSectionView"
+             x:DataType="vm:AccountSectionViewModel">
+
+  <c:SectionPage Header="حسابِ من">
+
+    <StackPanel Spacing="14">
+
+      <!-- ══ ۱) ورود / پروفایل ═══════════════════════════════════════════
+           ⛔ این‌جا هیچ کادرِ نشانی و هیچ کادرِ رمزی نیست و نباید بیاید.
+           خواستهٔ صریحِ صاحب ریپو بود: «بدون این که من رمز یا چیزی بزنم،
+           اطلاعات از حسابش به سرور بیاد.» -->
+      <Border Classes="panel" Padding="0">
+        <StackPanel>
+          <Border Classes="card-head">
+            <TextBlock Text="👤 حساب" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Accent}" />
+          </Border>
+
+          <!-- وارد نشده: فقط یک دکمه -->
+          <StackPanel Margin="14" Spacing="12" IsVisible="{Binding SignedOut}">
+            <TextBlock TextWrapping="Wrap" Classes="muted"
+                       Text="با حسابِ گوگل وارد شوید. مرورگرِ خودتان باز می‌شود و همان‌جا وارد می‌شوید — رمزِ گوگل هیچ‌وقت داخلِ این برنامه تایپ نمی‌شود." />
+            <Button Classes="accent" HorizontalAlignment="Left"
+                    Content="ورود با گوگل"
+                    Command="{Binding SignInCommand}"
+                    IsEnabled="{Binding !Busy}" />
+          </StackPanel>
+
+          <!-- وارد شده: پروفایل -->
+          <StackPanel Margin="14" Spacing="12" IsVisible="{Binding SignedIn}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <Border Width="52" Height="52" CornerRadius="26"
+                      Background="{DynamicResource Pump.Accent}">
+                <TextBlock Text="{Binding Initial}" FontSize="24" FontWeight="Bold"
+                           Foreground="White"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <StackPanel VerticalAlignment="Center" Spacing="2">
+                <TextBlock Text="{Binding AccountName}" FontWeight="Bold" FontSize="16"
+                           IsVisible="{Binding AccountName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                <TextBlock Text="{Binding AccountEmail}" Classes="muted" />
+              </StackPanel>
+            </StackPanel>
+
+            <TextBlock Text="{Binding StationLine}" TextWrapping="Wrap"
+                       IsVisible="{Binding StationLine, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Content="🔄 گرفتنِ دوبارهٔ اطلاعات از حساب"
+                      Command="{Binding PullHomeCommand}"
+                      IsEnabled="{Binding !Busy}"
+                      ToolTip.Tip="نشانیِ سرور و رمزِ خواندن را دوباره از حسابتان می‌گیرد. خودتان چیزی تایپ نمی‌کنید." />
+              <Button Content="خروج از حساب"
+                      Command="{Binding SignOutCommand}"
+                      IsEnabled="{Binding !Busy}" />
+            </StackPanel>
+          </StackPanel>
+
+          <TextBlock Text="{Binding AccountStatus}" Classes="muted" TextWrapping="Wrap"
+                     Margin="14,0,14,14"
+                     IsVisible="{Binding AccountStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+      </Border>
+
+      <!-- ══ ۲) اشتراک — از تنظیمات آمد این‌جا ════════════════════════════
+           خواستهٔ صریحِ صاحب ریپو: «چرا اشتراک تو تنظیمات است؟» -->
+      <Border Classes="panel" Padding="0">
+        <StackPanel>
+          <Border Classes="card-head">
+            <TextBlock Text="💳 اشتراک" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Accent}" />
+          </Border>
+          <StackPanel Margin="14" Spacing="10">
+            <TextBlock Text="{Binding SubStatus}" TextWrapping="Wrap" FontWeight="SemiBold" />
+
+            <StackPanel Spacing="5">
+              <TextBlock Text="🔢 کدِ اشتراک (شش رقم)" Classes="label" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBox Text="{Binding SubCode}" Width="150" MaxLength="6" Watermark="۱۲۳۴۵۶" />
+                <Button Classes="accent" Content="فعال کن"
+                        Command="{Binding RedeemSubCommand}" IsEnabled="{Binding !Busy}" />
+                <Button Content="🔄 تازه‌سازی"
+                        Command="{Binding RefreshSubCommand}" IsEnabled="{Binding !Busy}" />
+              </StackPanel>
+            </StackPanel>
+
+            <TextBlock Text="{Binding SubMessage}" Classes="muted" TextWrapping="Wrap"
+                       IsVisible="{Binding SubMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Content="📱 کد برای گوشیِ کارمند"
+                      Command="{Binding MakeJoinCodeCommand}" IsEnabled="{Binding !Busy}" />
+              <TextBlock Text="{Binding JoinCode}" FontSize="22" FontWeight="Bold"
+                         VerticalAlignment="Center"
+                         Foreground="{DynamicResource Pump.Accent}"
+                         IsVisible="{Binding JoinCode, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="دفترِ شما روی همین کامپیوتر می‌ماند و با تمام شدنِ اشتراک هم سرِ جایش است؛ فقط بخش‌های پولی بسته می‌شوند." />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </c:SectionPage>
+</UserControl>

@@ -314,9 +314,50 @@ public class CloudAddressLockTests
         Assert.DoesNotContain("CloudBaseUrl", xaml);
         Assert.DoesNotContain("CloudUrl", xaml);
 
-        //  ولی کادرِ کدِ شش‌رقمی باید باشد
-        Assert.Contains("SubCode", xaml);
-        Assert.Contains("RedeemSubCommand", xaml);
+        //  ⚠️ و از این به بعد، هیچ‌کدامِ این‌ها هم در تنظیمات نیستند.
+        //  خواستهٔ صریحِ صاحب ریپو: «ادرس سرور از تو تنظیمات پاک بشه و
+        //  دیده نشه… رمز نخاد… مشخصات پمپ رو هم از دید کاربر حذف کن.»
+        //  هر کدام که برگردد، همین‌جا قرمز می‌شود.
+        Assert.DoesNotContain("Binding ServerUrl", xaml);
+        Assert.DoesNotContain("Binding SyncCode", xaml);
+        Assert.DoesNotContain("Binding ViewerUrl", xaml);
+        Assert.DoesNotContain("Binding StationCode", xaml);
+        Assert.DoesNotContain("Binding StationName", xaml);
+        Assert.DoesNotContain("Binding PairPin", xaml);
+
+        //  اشتراک رفت به صفحهٔ «حسابِ من» — همان‌جا باید باشد
+        var account = Read("PumpYaqobi.App/Views/Sections/AccountSectionView.axaml");
+        Assert.Contains("SubCode", account);
+        Assert.Contains("RedeemSubCommand", account);
+
+        //  …ولی صفحهٔ حساب هم کادرِ نشانی ندارد و نباید داشته باشد
+        Assert.DoesNotContain("api.vill3n.top", account);
+        Assert.DoesNotContain("Binding ServerUrl", account);
+        Assert.DoesNotContain("Binding SyncCode", account);
+    }
+
+    /// <summary>
+    /// ورود با گوگل باید واقعاً در برنامه باشد — نه فقط در اپِ کارمندان.
+    /// خواستهٔ صریحِ صاحب ریپو: «صفحهٔ لاگین با جیمیل هم داخلِ اپ نیست.»
+    /// </summary>
+    [Fact]
+    public void SafheyeHesab_VorudBaGoogle_Darad()
+    {
+        var xaml = Read("PumpYaqobi.App/Views/Sections/AccountSectionView.axaml");
+        Assert.Contains("SignInCommand", xaml);
+        Assert.Contains("ورود با گوگل", xaml);
+        //  پروفایل: نام و ایمیلِ حساب
+        Assert.Contains("AccountEmail", xaml);
+
+        //  ⚠️ رمزِ گوگل هیچ‌وقت داخلِ برنامه تایپ نمی‌شود: ورود از مرورگرِ
+        //  سیستم می‌رود و با PKCE برمی‌گردد، بی هیچ رازِ کلاینتی.
+        var src = Read("PumpYaqobi.App/Services/GoogleSignIn.cs");
+        Assert.Contains("code_challenge", src);
+        Assert.Contains("S256", src);
+        //  ⚠️ دنبالِ **به‌کار رفتنش** می‌گردیم، نه دنبالِ خودِ واژه: توضیحِ
+        //  بالای فایل هم همین کلمه را دارد و آن اشکالی ندارد.
+        Assert.DoesNotContain("[\"client_secret\"]", src);
+        Assert.DoesNotContain("client_secret=", src);
     }
 
     [Fact]

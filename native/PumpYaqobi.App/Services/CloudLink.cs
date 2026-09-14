@@ -233,6 +233,86 @@ public sealed class CloudLink
         return ok ? (true, Str(json, "code"), "") : (false, "", why);
     }
 
+    // ── حساب: ورود با گوگل ─────────────────────────────────────────────
+
+    /// <summary>آیا با حسابِ گوگل وارد شده‌ایم.</summary>
+    public bool SignedIn => !string.IsNullOrWhiteSpace(_settings.CloudAccountToken);
+
+    /// <summary>ایمیلِ حساب — برای نشان دادن در صفحهٔ حساب.</summary>
+    public string Email => _settings.CloudEmail;
+
+    /// <summary>نامِ حساب — برای نشان دادن در صفحهٔ حساب.</summary>
+    public string Name => _settings.CloudName;
+
+    /// <summary>
+    /// شناسهٔ کلاینتِ گوگل را از خودِ سرور می‌پرسد.
+    ///
+    /// ⚠️ از داخلِ کد نمی‌آید تا عوض شدنش نسخهٔ تازهٔ برنامه نخواهد — همان
+    /// قاعده‌ای که اپِ کارمندان هم دارد.
+    /// </summary>
+    public async Task<string> GoogleClientIdAsync(CancellationToken ct = default)
+    {
+        var (ok, json, _, _) = await GetAsync("/api/config", null, ct);
+        if (!ok) return "";
+        //  شناسهٔ Desktop مالِ همین برنامه است؛ شناسهٔ Web مالِ سایت و اپِ
+        //  کارمندان. اگر سرور هنوز جدا نکرده باشد، به همان یکی برمی‌گردیم.
+        var desktop = Str(json, "googleDesktopClientId");
+        return desktop.Length > 0 ? desktop : Str(json, "googleClientId");
+    }
+
+    /// <summary>
+    /// توکنِ هویتِ گوگل را به سرور می‌دهد و نشستِ حساب می‌گیرد.
+    /// </summary>
+    public async Task<CloudResult> SignInAsync(string idToken, CancellationToken ct = default)
+    {
+        var (ok, json, why, code) = await PostAsync(
+            "/api/auth/google", new { idToken, app = "pump" }, null, ct);
+        if (!ok) return CloudResult.No(why, code);
+
+        var token = Str(json, "token");
+        if (token.Length == 0) return CloudResult.No("سرور نشست نداد");
+
+        _settings.CloudAccountToken = token;
+        _settings.CloudRefreshToken = Str(json, "refreshToken");
+        if (json.TryGetProperty("user", out var u) && u.ValueKind == JsonValueKind.Object)
+        {
+            _settings.CloudEmail = Str(u, "email");
+            _settings.CloudName  = Str(u, "name");
+        }
+        await SaveQuiet();
+        return CloudResult.Done;
+    }
+
+    /// <summary>خروج از حساب — توکن‌ها پاک می‌شوند، دفترِ روی کامپیوتر نه.</summary>
+    public async Task SignOutAsync()
+    {
+        _settings.CloudAccountToken = "";
+        _settings.CloudRefreshToken = "";
+        _settings.CloudEmail = "";
+        _settings.CloudName = "";
+        await SaveQuiet();
+    }
+
+    /// <summary>
+    /// نشانیِ سرورِ خانگی و رمزِ خواندن را از حساب می‌گیرد.
+    ///
+    /// ⚠️ همین است که کادرِ «نشانیِ سرور» و «رمزِ سرور» را از تنظیمات
+    /// برداشت: کاربر هیچ‌کدام را تایپ نمی‌کند، از حسابش می‌آید.
+    /// </summary>
+    public async Task<(bool Ok, string Url, string ReadKey, string Station, string Why)>
+        HomeFromAccountAsync(CancellationToken ct = default)
+    {
+        if (!SignedIn) return (false, "", "", "", "اول با گوگل وارد شوید");
+
+        var (ok, json, why, _) = await GetAsync("/api/pump/me", _settings.CloudAccountToken, ct);
+        if (!ok) return (false, "", "", "", why);
+
+        if (!json.TryGetProperty("home", out var home) || home.ValueKind != JsonValueKind.Object)
+            return (false, "", "", "", "هنوز پمپی به این حساب وصل نشده است");
+
+        return (true, Str(home, "url"), Str(home, "readKey"), Str(home, "station"), "");
+    }
+
     // ── گفت‌وگو با ابر ─────────────────────────────────────────────────
 
     private static async Task<(bool, JsonElement, string, string)> Send(

@@ -84,6 +84,25 @@ public sealed class AppSettings
 
     /// <summary>آخرین باری که با ابر حرف زدیم (میلی‌ثانیهٔ یونیکس).</summary>
     public long CloudSyncedAt { get; set; }
+
+    // ── حسابِ گوگل ─────────────────────────────────────────────────────
+    //
+    //  خواستهٔ صاحب ریپو: «مثلِ برنامهٔ شاپ باشد که بی اینکه من رمز یا چیزی
+    //  بزنم، اطلاعات از حسابش به سرور بیاید.» پس نشانیِ سرورِ خانگی و رمزِ
+    //  خواندن دیگر تایپ نمی‌شوند — از همین حساب می‌آیند.
+
+    /// <summary>توکنِ نشستِ حساب (ورود با گوگل).</summary>
+    public string CloudAccountToken { get; set; } = "";
+
+    /// <summary>توکنِ تازه‌سازی — تا کاربر هر بار وارد نشود.</summary>
+    public string CloudRefreshToken { get; set; } = "";
+
+    /// <summary>ایمیلِ حساب — فقط برای نشان دادن.</summary>
+    public string CloudEmail { get; set; } = "";
+
+    /// <summary>نامِ حساب — فقط برای نشان دادن.</summary>
+    public string CloudName { get; set; } = "";
+
     public double WindowWidth { get; set; } = 1440;
     public double WindowHeight { get; set; } = 900;
     public bool WindowMaximized { get; set; } = true;

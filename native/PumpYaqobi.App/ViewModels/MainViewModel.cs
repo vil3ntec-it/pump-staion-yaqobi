@@ -643,6 +643,9 @@ public sealed partial class MainViewModel : ObservableObject
         // سایت بمانند، وگرنه ‎Ctrl+Shift+عدد‎ بخشِ دیگری را باز می‌کند.
         // (‎NavOrderTests‎ همین را گرفت، و درست هم گرفت.)
         new ChatSectionViewModel(host),              // ۱۹ — پیام‌رسان، مالِ خودِ نیتیو
+        //  ۲۰ — حساب و اشتراک. باید بعد از هجدهمی بماند، وگرنه
+        //  ‎Ctrl+Shift+عدد‎ جابه‌جا می‌شود (‎NavOrderTests‎).
+        new AccountSectionViewModel(host),           // ۲۰
     };
 
     /// <summary>

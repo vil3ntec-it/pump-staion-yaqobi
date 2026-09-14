@@ -40,10 +40,6 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
 
         // نتیجهٔ به‌روزرسانیِ گذشته — چه گرفت چه نگرفت، همین حالا گفته شود.
         // «هیچ نگفتن» بدترین حالت است: کاربر خیال می‌کند به‌روز شده.
-        //  حالِ اشتراک را همان اولِ باز شدن نشان بده — کاربر نباید دکمه
-        //  بزند تا بفهمد اشتراکش تمام شده.
-        ShowSubscription();
-
         var last = UpdateService.ConsumeLastResult();
         _lastFailure = last is null || last.Ok ? "" : last.Message;
         _lastSuccess = last is not null && last.Ok ? last.Message : "";
@@ -359,100 +355,14 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
             + (sent ? "، و عکسِ تازه همین حالا رفت." : ". هنوز چیزی نرفت؛ چند لحظه دیگر خودش می‌فرستد.");
     });
 
-    /* ══ اشتراک ═════════════════════════════════════════════════════════
+    /* ══ اشتراک رفت به «👤 حسابِ من» ═════════════════════════════════════
      *
-     * خواستهٔ صریحِ صاحب ریپو: «اشتراک هم از سرور بره براش و کسی نتونه
-     * برنامه رو کرد کنه یا دور بزنه.»
+     * خواستهٔ صریحِ صاحب ریپو: «چرا اشتراک تو تنظیمات است؟»
      *
-     * تصمیم این‌جا گرفته نمی‌شود. سرور یک برگهٔ امضاشده می‌دهد و
-     * `LicenseGuard` فقط امضایش را می‌سنجد — نه پرچمی که هر کسی در فایلِ
-     * تنظیمات عوضش کند.
+     * ورود با گوگل، پروفایل و اشتراک حالا یک‌جا در
+     * `AccountSectionViewModel` هستند — همان‌جایی که کاربرِ یک برنامهٔ
+     * اشتراکی دنبالشان می‌گردد. این‌جا برنگردند.
      */
-
-    private CloudLink Cloud => _cloud ??= new CloudLink(
-        AppSettings.Load(), () => { AppSettings.Load().Save(); return Task.CompletedTask; });
-    private CloudLink? _cloud;
-
-    /// <summary>یک خط دربارهٔ حالِ اشتراک — برای کادرِ تنظیمات.</summary>
-    private void ShowSubscription()
-    {
-        var file = AppSettings.Load();
-        var check = LicenseGuard.Check(
-            file.CloudLicense, file.CloudPublicKey,
-            CloudConfig.DeviceUid(file), file.CloudStationId,
-            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
-
-        SubActive = check.Valid;
-
-        if (string.IsNullOrWhiteSpace(file.CloudDeviceToken))
-        {
-            SubStatus = "هنوز فعال نشده — کدِ شش‌رقمیِ اشتراک را بزنید.";
-            return;
-        }
-        if (check.Valid)
-        {
-            var left = check.SubscriptionEndsAt > 0
-                ? Math.Max(0, (int)((check.SubscriptionEndsAt - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
-                                    / 86_400_000L))
-                : 0;
-            var plan = string.IsNullOrWhiteSpace(check.PlanTitle) ? "" : $" ({check.PlanTitle})";
-            SubStatus = $"✅ اشتراک فعال است{plan} — {left} روز مانده.";
-        }
-        else
-        {
-            SubStatus = "⚠️ " + check.Reason;
-        }
-    }
-
-    /// <summary>فعال‌سازی یا تمدید با کدِ شش‌رقمی.</summary>
-    [RelayCommand]
-    private Task RedeemSubAsync() => CrashGuard.RunAsync("فعال‌سازیِ اشتراک", async () =>
-    {
-        var code = new string((SubCode ?? "").Where(char.IsDigit).ToArray());
-        if (code.Length != 6) { SubMessage = "❌ کد باید شش رقم باشد."; return; }
-
-        SubBusy = true;
-        SubMessage = "در حالِ گرفتن از سرور…";
-        try
-        {
-            var res = await Cloud.RedeemAsync(code);
-            SubMessage = res.Ok ? "✅ اشتراک روی سرور ثبت شد." : "❌ " + res.Why;
-            if (res.Ok) SubCode = "";
-            ShowSubscription();
-        }
-        finally { SubBusy = false; }
-    });
-
-    /// <summary>تازه کردنِ وضعیت از سرور — بی هیچ کدی.</summary>
-    [RelayCommand]
-    private Task RefreshSubAsync() => CrashGuard.RunAsync("تازه‌سازیِ اشتراک", async () =>
-    {
-        SubBusy = true;
-        SubMessage = "در حالِ پرسیدن از سرور…";
-        try
-        {
-            var res = await Cloud.RefreshAsync();
-            SubMessage = res.Ok ? "" : "❌ " + res.Why;
-            ShowSubscription();
-        }
-        finally { SubBusy = false; }
-    });
-
-    /// <summary>کدِ کوتاه برای گوشیِ کارمند.</summary>
-    [RelayCommand]
-    private Task MakeJoinCodeAsync() => CrashGuard.RunAsync("کدِ پیوستن", async () =>
-    {
-        SubBusy = true;
-        try
-        {
-            var (ok, code, why) = await Cloud.JoinCodeAsync();
-            JoinCode = ok ? code : "";
-            SubMessage = ok
-                ? "کارمند این شش رقم را در اپِ گوشی بزند — تا ۲۴ ساعت کار می‌کند."
-                : "❌ " + why;
-        }
-        finally { SubBusy = false; }
-    });
 
     /// <summary>نشانی‌هایی که به گوشی‌ها داده می‌شود، از روی تنظیماتِ همین لحظه.</summary>
     private void RefreshServerLinks()
