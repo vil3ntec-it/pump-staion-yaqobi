@@ -63,6 +63,13 @@ internal static class KeyAudit
         bad += Probe(win, grid, "برق دکان", Key.Left);
         bad += Probe(win, grid, "برق دکان", Key.Right);
 
+        // ⚠️ و رقمِ **فارسی** — که تا امروز اصلاً سنجیده نشده بود، در حالی که
+        // بیشترِ خانه‌های عددیِ همین برنامه با همین رقم‌ها پر می‌شوند.
+        bad += Probe(win, grid, "۱۲٬۳۴۵", Key.Left);
+        bad += Probe(win, grid, "۱۲٬۳۴۵", Key.Right);
+        bad += Probe(win, grid, "۱۲۳۴۵", Key.Left);
+        bad += Probe(win, grid, "۱۲۳۴۵", Key.Right);
+
         // ══ و حالتِ دوم: «تایپ کردم، فلشِ چپ زدم، رفت راست» ═══════════════
         //
         // ⚠️ چهار سنجشِ بالا فقط **کُرسرِ داخلِ کادر** را می‌سنجند، و همین
@@ -75,13 +82,14 @@ internal static class KeyAudit
         // برنامه راست‌به‌چپ است و هر استدلالی روی شمارهٔ ستون یک بار غلط از
         // آب درآمده. چیزی که کاربر می‌بیند جای خانه روی صفحه است.
         Console.WriteLine();
-        Console.WriteLine("بخش، در حالتِ نوشتن  کلید    ایکسِ پیش ← پس     انتظار   نتیجه");
+        Console.WriteLine("بخش، در حالتِ نوشتن  کلید    جای خانه بعدِ هر فشار              انتظار   نتیجه");
         Console.WriteLine(new string('-', 66));
 
         // ⚠️ چند بخش، نه یکی: جدول‌ها ستون‌های متفاوتی دارند (کپسول، کشویی،
         // ستونِ ستاره‌ای) و گزارشِ صاحب ریپو نگفت کدام بخش. اگر جایی وارونه
         // باشد، این‌جا پیدا می‌شود.
-        foreach (var id in new[] { "expenses", "safe", "sarrafi", "waraq", "debt" })
+        foreach (var id in new[] { "expenses", "safe", "sarrafi", "waraq", "debt",
+                                   "shifts", "rasid", "amanat", "companies", "debtrasid" })
         {
             var s2 = vm.Sections.FirstOrDefault(x => x.Id == id);
             if (s2 is null) continue;
@@ -133,25 +141,43 @@ internal static class KeyAudit
         grid.CurrentColumn = cols[cols.Count / 2];
         Pump(win);
 
-        var x0 = CellX(win, grid);
+        // ══ چند بار پشتِ سرِ هم، نه یک بار ═══════════════════════════════════
+        //
+        // گزارشِ صاحب ریپو: «موقعِ تایپ کردن می‌خواهم یک جهت بروم — یا چپ یا
+        // راست — آن‌وقت باگ می‌خورد و برعکس می‌رود.»
+        //
+        // ⚠️ یک‌بار زدن این را نمی‌گیرد و یک بار همین گمراه کرد: مشکل سرِ
+        // **دومین** فشار است، نه اولی. پس این‌جا هر بار تایپ می‌شود و فلش
+        // زده می‌شود، و جای خانه بعدِ هر فشار ثبت می‌گردد.
+        var xs = new List<double> { CellX(win, grid) };
 
-        // ورود به «حالتِ نوشتن»: یک حرف تایپ می‌شود، عینِ کاربر
-        win.KeyTextInput("۵");
-        Pump(win);
+        for (var step = 0; step < 4; step++)
+        {
+            // ورود به «حالتِ نوشتن»: چند رقم تایپ می‌شود، عینِ کاربر — نه یک
+            // حرف. ⚠️ یک بار با یک حرف سنجیدیم و چیزی پیدا نشد.
+            foreach (var ch in "۱۲۳۴۵") { win.KeyTextInput(ch.ToString()); Pump(win); }
 
-        win.KeyPressQwerty(Phys(key), RawInputModifiers.None);
-        win.KeyReleaseQwerty(Phys(key), RawInputModifiers.None);
-        Pump(win);
+            win.KeyPressQwerty(Phys(key), RawInputModifiers.None);
+            win.KeyReleaseQwerty(Phys(key), RawInputModifiers.None);
+            Pump(win);
 
-        var x1 = CellX(win, grid);
+            xs.Add(CellX(win, grid));
+        }
 
-        // ‎←‎ یعنی خانه باید به چپِ صفحه برود (ایکسِ کمتر)، ‎→‎ برعکس
+        // ‎←‎ یعنی خانه باید هر بار به چپِ صفحه برود (ایکسِ کمتر)، ‎→‎ برعکس
         var want = key == Key.Left ? -1 : +1;
-        var got = Math.Sign(x1 - x0);
-        var ok = got == want && x0 >= 0 && x1 >= 0;
+        var wrong = 0;
+        for (var i = 1; i < xs.Count; i++)
+        {
+            if (xs[i] < 0 || xs[i - 1] < 0) { wrong++; continue; }
+            var d = Math.Sign(xs[i] - xs[i - 1]);
+            if (d != 0 && d != want) wrong++;        // صفر یعنی به لبه رسیده
+        }
+        var ok = wrong == 0;
 
         Console.WriteLine($"{Pad(where, 18)} {(key == Key.Left ? "←" : "→"),-6} "
-                        + $"{x0,9:0} ← {x1,-8:0} {(want > 0 ? "راست" : "چپ"),6}   {(ok ? "✔" : "✖")}");
+                        + $"{string.Join(" ← ", xs.Select(v => v.ToString("0"))),-38} "
+                        + $"{(want > 0 ? "راست" : "چپ"),6}   {(ok ? "✔" : $"✖ {wrong} پرشِ وارونه")}");
 
         Escape(win);
         return ok ? 0 : 1;
@@ -198,7 +224,12 @@ internal static class KeyAudit
         // در متنِ راست‌به‌چپ، «چپ» یعنی جلو رفتن در رشته و «راست» یعنی عقب.
         // در متنِ لاتین برعکس. این‌جا فقط می‌گوییم کُرسر تکان خورد و در کدام
         // سمتِ رشته — قضاوتِ درست/غلط را خودِ گزارش پایین‌تر می‌کند.
-        var rtl = text.Any(c => c >= 0x0600 && c <= 0x06FF);
+        // ⚠️ رقمِ فارسی (‎۰۶F۰..۰۶F۹‎) و جداکنندهٔ ‎٬‎ (‎066C‎) در این بازه‌اند
+        // ولی **عدد**اند، نه حرف: مثلِ رقمِ لاتین چپ‌به‌راست چیده می‌شوند.
+        // بی این تفکیک، انتظارِ آزمون خودش وارونه می‌شد.
+        var digits = text.All(c => c is >= '۰' and <= '۹' or '٬' or ',' or '.'
+                                   || c is >= '0' and <= '9');
+        var rtl = !digits && text.Any(c => c >= 0x0600 && c <= 0x06FF);
         var want = key == Key.Left ? (rtl ? +1 : -1) : (rtl ? -1 : +1);
         var got = Math.Sign(after - before);
         var ok = got == want;
