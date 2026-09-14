@@ -107,3 +107,10 @@ jobs:
       - name: سنجشِ ورقِ پُر
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- waraqperf
+
+      # ══ «بازگشت به صفحهٔ اصلی کند است» ══════════════════════════════════
+      # با دفترِ چندساله، نه با دانهٔ ده‌ردیفی: داشبورد با هر بار باز شدن
+      # کلِ دفترها را می‌خواند و همین سال‌ها پنهان مانده بود.
+      - name: سنجشِ بازگشت به صفحهٔ اصلی
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- dashperf

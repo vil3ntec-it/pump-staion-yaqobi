@@ -29,6 +29,20 @@ public sealed class InvoiceService
     public InvoiceService(PumpDbFactory dbf, PermissionService perm, TrashService trash, DebtorService debtors)
     { _dbf = dbf; _perm = perm; _trash = trash; _debtors = debtors; }
 
+    /// <summary>
+    /// فقط شمارِ فاکتورها.
+    ///
+    /// ⚠️ داشبورد پیش از این ‎ListAsync()‎ می‌زد و بعد ‎.Count‎ می‌گرفت —
+    /// یعنی همهٔ فاکتورها به شیءِ کامل درمی‌آمدند تا یک عدد شمرده شود، با
+    /// هر بار برگشتن به صفحهٔ اصلی.
+    /// </summary>
+    public async Task<int> CountAsync(CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        return await db.Invoices.AsNoTracking().CountAsync(ct);
+    }
+
     public async Task<List<Invoice>> ListAsync(InvoiceStatus? status = null, string? search = null,
                                                CancellationToken ct = default)
     {

@@ -31,6 +31,18 @@ public sealed class DebtorService
     public DebtorService(PumpDbFactory dbf, PermissionService perm, TrashService trash)
     { _dbf = dbf; _perm = perm; _trash = trash; }
 
+    /// <summary>
+    /// فقط شمارِ کارت‌های قرض‌دار.
+    ///
+    /// ⚠️ داشبورد پیش از این ‎ListAsync()‎ می‌زد و بعد ‎.Count‎ می‌گرفت.
+    /// </summary>
+    public async Task<int> CountAsync(bool noInvoice = false, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        return await db.Debtors.AsNoTracking().CountAsync(d => d.IsNoInvoice == noInvoice, ct);
+    }
+
     /// <summary>فهرستِ کارت‌ها. ردیف‌ها بار نمی‌شوند — فقط چیزی که کارت لازم دارد.</summary>
     public async Task<List<Debtor>> ListAsync(bool noInvoice = false, string? search = null,
                                               CancellationToken ct = default)

@@ -92,3 +92,65 @@ public class StartupWarmTests
         Assert.Contains("Task.Run", body);
     }
 }
+
+/// <summary>
+/// ══ داشبورد نباید کلِ دفتر را بخواند ═════════════════════════════════════════
+///
+/// گزارشِ صاحب ریپو، دو بار: «بازگشت به صفحهٔ اصلی هم همان‌جور کند است.»
+///
+/// ریشه‌اش این بود که ‎RefreshAsync‎ با هر بار باز شدنِ داشبورد
+/// ‎ListAsync(null)‎ می‌زد — یعنی همهٔ مصارف و همهٔ ردیف‌های گاوصندوقِ همهٔ
+/// سال‌ها به شیءِ کامل درمی‌آمدند تا چهار عدد حساب شود.
+///
+/// عددش را ‎dotnet run --project PumpYaqobi.UiTests -- dashperf‎ می‌سنجد (با
+/// دفترِ چندساله، نه با دانهٔ ده‌ردیفی که سال‌ها این را پنهان کرده بود).
+/// این‌جا فقط همان الگو قفل می‌شود، چون برگشتنی است.
+/// </summary>
+public class DashboardReadsTests
+{
+    private static readonly string Root =
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
+
+    private static string Dash() => File.ReadAllText(Path.Combine(
+        Root, "PumpYaqobi.App", "ViewModels", "Sections", "DashboardSectionViewModel.cs"));
+
+    [Fact]
+    public void TheDashboardNeverPullsEveryLedgerRow()
+    {
+        var s = Dash();
+        Assert.DoesNotContain("ExpenseLedger.ListAsync(null)", s);
+        Assert.DoesNotContain("SafeLedger.ListAsync(null)", s);
+        Assert.DoesNotContain("Invoices.ListAsync()", s);
+        Assert.DoesNotContain("Debtors.ListAsync()", s);
+    }
+
+    /// <summary>
+    /// ⚠️ «هفته» می‌تواند از سرِ سال به سالِ پیش برگردد، پس مصارف باید **دو
+    /// سال** خوانده شوند نه یکی — وگرنه اولِ سال، عددِ هفته کم می‌آید.
+    /// </summary>
+    [Fact]
+    public void ExpensesCoverLastYearToo()
+    {
+        var s = Dash();
+        Assert.Contains("ExpenseLedger.ListAsync(year + \"/\")", s);
+        Assert.Contains("ExpenseLedger.ListAsync(prev + \"/\")", s);
+    }
+
+    /// <summary>ماندهٔ گاوصندوق همهٔ تاریخ را می‌خواهد — ولی سه ستون، نه کلِ شیء.</summary>
+    [Fact]
+    public void TheSafeBalanceReadsThreeColumnsNotWholeRows()
+    {
+        var s = Dash();
+        Assert.Contains("SafeLedger.SelectAsync", s);
+
+        // ⚠️ ‎SUM‎ هرگز به SQLite داده نمی‌شود: مبلغ‌ها متن‌اند و
+        // ‎CAST(... AS REAL)‎ برای حساب‌داری خطرناک است. کامنت‌ها کنار
+        // گذاشته می‌شوند، وگرنه خودِ همین هشدار آزمون را قرمز می‌کند.
+        var led = File.ReadAllText(Path.Combine(
+            Root, "PumpYaqobi.Services", "Data", "LedgerService.cs"));
+        var code = string.Join("\n", led.Split('\n')
+                                        .Where(l => !l.TrimStart().StartsWith("//")));
+        Assert.DoesNotContain("CAST(", code);
+        Assert.DoesNotContain("FromSqlRaw", code);
+    }
+}

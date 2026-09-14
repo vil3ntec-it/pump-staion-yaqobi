@@ -249,8 +249,33 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
     {
         var petrolReports = await _host.StorageData.ReportsAsync(FuelType.Petrol);
         var dieselReports = await _host.StorageData.ReportsAsync(FuelType.Diesel);
-        var expenses = await _host.ExpenseLedger.ListAsync(null);
-        var safe = await _host.SafeLedger.ListAsync(null);
+
+        // ══ فقط آن‌قدر که لازم است، نه کلِ دفتر ══════════════════════════════
+        //
+        // گزارشِ صاحب ریپو: «بازگشت به صفحهٔ اصلی هم همان‌جور کند است.»
+        //
+        // ⚠️ و سنجش گفت چرا: این‌جا ‎ListAsync(null)‎ بود — یعنی **همهٔ
+        // مصارف و همهٔ ردیف‌های گاوصندوقِ همهٔ سال‌ها** با هر بار برگشتن به
+        // داشبورد به شیءِ کامل درمی‌آمدند. با دانهٔ کوچکِ آزمون دیده نمی‌شد؛
+        // ‎dashperf‎ با شش هزار ردیف گرفتش: ۲۲۲ میلی‌ثانیه فقط خواندنِ داده،
+        // و خطی با شمارِ ردیف بالا می‌رفت.
+        //
+        // ۱) مصارف: ‎ExpQuick‎ بیش از «امروز / هفته / ماه / سال» نمی‌خواهد.
+        //    ⚠️ ولی «هفته» می‌تواند از سرِ سال به سالِ پیش برگردد، پس سالِ
+        //    پیش هم خوانده می‌شود — دو سال، نه همهٔ سال‌ها.
+        var year = Shamsi.Of(DateTime.Now)[..4];
+        var prev = (int.Parse(year) - 1).ToString();
+        var expenses = await _host.ExpenseLedger.ListAsync(year + "/");
+        expenses = (await _host.ExpenseLedger.ListAsync(prev + "/")).Concat(expenses).ToList();
+
+        // ۲) گاوصندوق: ‎SafeBalance‎ ماندهٔ **همهٔ تاریخ** را می‌خواهد، پس
+        //    ردیف‌ها را نمی‌شود کم کرد — ولی سه ستون بس است، نه کلِ شیء.
+        var safe = await _host.SafeLedger.SelectAsync(e => new SafeEntry
+        {
+            Kind = e.Kind,
+            Amount = e.Amount,
+            Currency = e.Currency,
+        });
 
         _db = new DashInput
         {
@@ -284,7 +309,9 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
 
     private async Task<DashDebtInfo> BuildDebtInfoAsync()
     {
-        var persons = await _host.Debtors.ListAsync();
+        // ⚠️ فقط شمارش، نه فهرست: این عدد تنها جایی است که این فهرست به کار
+        // می‌آمد (‎persons.Count‎).
+        var persons = await _host.Debtors.CountAsync();
         // ⚠️ جمع‌ها از دیتابیس، بی خواندنِ ردیف‌ها — داشبورد هم مثلِ نوارِ بالا
         // با هر باز شدن این را می‌خواهد.
         var accounts = await _host.Debtors.CardAccountsAsync();
@@ -307,8 +334,8 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
 
         var companies = await _host.Companies.ListAsync();
         var comps = companies.Count(c => _host.Company.Summarize(c, c.Rows).AlbaqiAfn > 0);
-        var invoices = (await _host.Invoices.ListAsync()).Count;
-        return new DashDebtInfo(total, persons.Count, invoices, comps);
+        var invoices = await _host.Invoices.CountAsync();   // شمارش، نه فهرست
+        return new DashDebtInfo(total, persons, invoices, comps);
     }
 
     /// <summary>ساعت و تاریخِ نوارِ بالا — هر ثانیه، فقط وقتی داشبورد باز است.</summary>

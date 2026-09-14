@@ -69,6 +69,9 @@ internal static class Program
         // ══ «پردهٔ لودینگ کارش را می‌کند؟» ═════════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- warm
         if (outDir.Equals("warm", StringComparison.OrdinalIgnoreCase)) return WarmAudit.Run();
+        // ══ «بازگشت به صفحهٔ اصلی کند است» — با دفترِ چندساله ═══════════════
+        //     dotnet run --project PumpYaqobi.UiTests -- dashperf
+        if (outDir.Equals("dashperf", StringComparison.OrdinalIgnoreCase)) return DashPerf.Run();
         if (args.Length > 1 && args[0].Equals("cellshot", StringComparison.OrdinalIgnoreCase)) return CellShot.Run(args[1]);
         // ══ سه صفحهٔ بخشِ فاکتور، بلند و کامل ═══════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- invshot <پوشه>

@@ -88,6 +88,40 @@ public sealed class LedgerService<T> where T : EntityBase, ILedgerRow, new()
         return sum;
     }
 
+    /// <summary>
+    /// ══ فقط چند ستون، نه کلِ ردیف ═══════════════════════════════════════════
+    ///
+    /// خواهرِ <see cref="SumAsync"/> برای وقتی که یک عدد کافی نیست ولی کلِ
+    /// شیء هم لازم نیست.
+    ///
+    /// ⚠️ چرا لازم شد: داشبورد با هر بار باز شدن ‎ListAsync(null)‎ می‌زد —
+    /// یعنی <b>همهٔ ردیف‌های همهٔ سال‌ها</b> به شیءِ کامل درمی‌آمدند تا فقط
+    /// «مانده گاوصندوق» حساب شود. سنجشِ ‎dashperf‎ با شش هزار ردیف: ۲۲۲
+    /// میلی‌ثانیه فقط خواندنِ داده، و خطی با شمارِ ردیف بالا می‌رفت. همان
+    /// «بازگشت به صفحهٔ اصلی کند است»ی که گزارش شد.
+    ///
+    /// ⚠️ و مثلِ ‎SumAsync‎، هیچ حسابی به SQLite داده نمی‌شود: مبلغ‌ها متن
+    /// ذخیره می‌شوند و ‎CAST(... AS REAL)‎ برای حساب‌داری خطرناک است. این‌جا
+    /// فقط ستون‌های خواسته‌شده خوانده می‌شوند و حساب در حافظه با ‎decimal‎
+    /// انجام می‌گیرد.
+    /// </summary>
+    public async Task<List<TOut>> SelectAsync<TOut>(
+        System.Linq.Expressions.Expression<Func<T, TOut>> projection,
+        string? monthKey = null, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        var q = db.Set<T>().AsNoTracking().AsQueryable();
+        if (!string.IsNullOrWhiteSpace(monthKey))
+        {
+            if (monthKey.EndsWith('/'))
+                q = q.Where(x => x.MonthKey != null && x.MonthKey.StartsWith(monthKey));
+            else
+                q = q.Where(x => x.MonthKey == monthKey);
+        }
+        return await q.OrderBy(x => x.DateKey).ThenBy(x => x.Id).Select(projection).ToListAsync(ct);
+    }
+
     public async Task<List<string>> MonthsAsync(CancellationToken ct = default)
     {
         _perm.Require(Permission.ViewData);
