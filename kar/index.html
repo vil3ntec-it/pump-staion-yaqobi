@@ -106,13 +106,39 @@
 </head>
 <body>
 
-<!-- ══ ۱) تنظیمِ نشانیِ سرور — فقط بارِ اول، یا وقتی پاک شده باشد ══ -->
+<!-- ══ ۰) ورود — تنها چیزی که از کارمند پرسیده می‌شود ══════════════════
+     خواستهٔ صریحِ صاحب ریپو: «چرا ادرس اینترنتی میخان؟ این رو نخان.»
+     پس نشانی و رمز دیگر پرسیده نمی‌شوند — بعد از ورود با گوگل، سرور
+     خودش هر دو را می‌دهد (‎GET /api/pump/me‎).                          -->
+<div class="wrap hidden" id="signinPane">
+  <div class="card" style="text-align:center">
+    <h1>دستیارِ پمپ</h1>
+    <div class="sub">با حسابِ گوگلِ خودتان وارد شوید. بقیه‌اش خودکار است —
+      نه نشانی لازم است، نه رمزِ سرور.</div>
+  </div>
+  <div class="card">
+    <div id="gBtn" style="display:flex;justify-content:center;min-height:44px"></div>
+    <div style="height:10px"></div>
+    <div class="sub err hidden" id="signinErr"></div>
+    <div class="sub" id="signinState">در حالِ آماده شدن…</div>
+  </div>
+  <div class="card">
+    <div class="sub">اگر صاحبِ پمپ هنوز شما را اضافه نکرده، بعد از ورود
+      همین‌جا گفته می‌شود.</div>
+    <div style="height:10px"></div>
+    <!-- ⚠️ راهِ کیو‌آر برداشته نشد: پمپی که برنامه‌اش هنوز به‌روز نشده، و
+         جایی که شبکهٔ پمپ هست ولی اینترنت نیست، فقط همین را دارند. -->
+    <button id="btnManual" style="width:100%">اینترنت ندارم — با کیو‌آر وصل می‌شوم</button>
+  </div>
+</div>
+
+<!-- ══ ۱) تنظیمِ نشانیِ سرور — راهِ دوم، فقط وقتی خودِ کارمند بخواهد ══ -->
 <div class="wrap hidden" id="setupPane">
   <div class="card">
-    <h1>دستیارِ پمپ یعقوبی</h1>
-    <div class="sub">این صفحه به سرورِ خانگیِ خودِ پمپ وصل می‌شود. نشانی را از
-      «تنظیمات ‹ کیو‌آرِ اپِ کارمندان»ِ برنامهٔ کامپیوتر بگیرید — یا همان کیو‌آر
-      را اسکن کنید تا خودش پُر شود.</div>
+    <h1>وصل شدن با کیو‌آر</h1>
+    <div class="sub">این راه وقتی به کار می‌آید که اینترنت نباشد ولی به
+      شبکهٔ خودِ پمپ وصل باشید. کیو‌آر را از «تنظیمات ‹ کیو‌آرِ اپِ
+      کارمندان»ِ برنامهٔ کامپیوتر بگیرید — اسکنش خودش این‌ها را پُر می‌کند.</div>
   </div>
   <div class="card">
     <h2>نشانیِ سرور</h2>
@@ -125,6 +151,8 @@
     <input id="inStn" value="pump1" autocomplete="off" spellcheck="false">
     <div style="height:10px"></div>
     <button class="p" id="btnSetup">وصل شو</button>
+    <div style="height:8px"></div>
+    <button id="btnBackSignin" style="width:100%">برگرد به ورود با گوگل</button>
   </div>
 </div>
 
@@ -227,6 +255,10 @@
   <button data-pane="paneSec">📚 بخش‌ها</button>
 </div>
 
+<!-- گوگل خودش دکمهٔ ورود را می‌سازد. ‎async defer‎ تا اگر نیامد (فیلتر،
+     نتِ ضعیف) بقیهٔ صفحه معطلش نماند — راهِ کیو‌آر همچنان هست. -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="./cloud.js"></script>
 <script src="./app.js"></script>
 </body>
 </html>

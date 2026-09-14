@@ -9,8 +9,11 @@
  * ⚠️ این سرویس‌ورکر مالِ ‎/kar/‎ است و هیچ ربطی به ‎sw.js‎ی ریشهٔ سایت ندارد.
  * دامنه‌شان (‎scope‎) جداست، پس هیچ‌کدام دیگری را کنار نمی‌زند.
  */
-var CACHE = 'pump-kar-v1';
-var SHELL = ['./', './index.html', './app.js', './manifest.json'];
+//  ⚠️ با هر بار عوض شدنِ فهرستِ زیر، شمارهٔ CACHE هم باید بالا برود —
+//  وگرنه گوشیِ کارمند نسخهٔ قدیمی را نگه می‌دارد و فایلِ تازه هرگز
+//  نمی‌رسد. cloud.js اضافه شد و جوابِ درخواستِ ناموفق عوض شد، پس v3.
+var CACHE = 'pump-kar-v3';
+var SHELL = ['./', './index.html', './app.js', './cloud.js', './manifest.json'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL); })
@@ -27,16 +30,37 @@ self.addEventListener('fetch', function (e) {
   var req = e.request;
   if (req.method !== 'GET') return;
 
+  /*
+   * ⚠️ درخواستِ بیرون از این دامنه اصلاً دستِ ما نیست.
+   *
+   * اسکریپتِ ورودِ گوگل و خودِ ابر از دامنهٔ دیگری می‌آیند. اگر این‌جا
+   * جوابشان را بسازیم — که تا امروز می‌ساختیم — روی نتِ ضعیف به جای
+   * اسکریپت، صفحهٔ HTML دستِ مرورگر می‌رسید و با
+   * «Unexpected token '<'» می‌شکست. رهایشان می‌کنیم تا خودِ مرورگر
+   * خطای درست را بدهد و اپ بتواند «اینترنت نیست» را بفهمد.
+   */
+  if (new URL(req.url).origin !== location.origin) return;
+
   // ⚠️ «شبکه اول»: وگرنه نسخهٔ تازهٔ اپ هیچ‌وقت به گوشی نمی‌رسید و کارمند
   // هفته‌ها با نسخهٔ کهنه کار می‌کرد. کش فقط پشتیبانِ قطعیِ شبکه است.
   e.respondWith(
     fetch(req).then(function (res) {
-      if (res && res.ok && new URL(req.url).origin === location.origin)
+      if (res && res.ok)
         caches.open(CACHE).then(function (c) { c.put(req, res.clone()); });
       return res;
     }).catch(function () {
       return caches.match(req).then(function (hit) {
-        return hit || caches.match('./index.html');
+        if (hit) return hit;
+        /*
+         * ⚠️ صفحه فقط جوابِ «رفتن به یک صفحه» است، نه جوابِ هر چیزی.
+         *
+         * پیش از این هر درخواستِ ناموفقی — اسکریپت، عکس، مانیفست —
+         * همین صفحه را می‌گرفت. یعنی مرورگر HTML را به جای جاوااسکریپت
+         * می‌خواند و اپ با خطایی می‌شکست که هیچ ربطی به علتِ واقعی
+         * (قطع بودنِ شبکه) نداشت.
+         */
+        if (req.mode === 'navigate') return caches.match('./index.html');
+        return Response.error();
       });
     })
   );

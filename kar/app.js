@@ -558,6 +558,119 @@
     timer = setTimeout(connect, 1000 * retry);
   }
 
+  // ══════════════════════════════════════════════════════════════════════
+  //  ورود با گوگل — و «دیگر از کسی آدرس نپرس»
+  // ══════════════════════════════════════════════════════════════════════
+  //
+  //  خواستهٔ صریحِ صاحب ریپو: «چرا ادرس اینترنتی میخان؟ این رو نخان.»
+  //
+  //  بعد از ورود، ‎/api/pump/me‎ نشانی و رمزِ فقط‌خواندنیِ سرورِ خانگی را
+  //  می‌دهد و همان در ‎cfg‎ می‌نشیند — از این‌جا به بعد هیچ‌چیز عوض نشده و
+  //  ‎connect()‎ همان دو در را می‌زند.
+  //
+  //  ⚠️ راهِ کیو‌آر برداشته نشد: پمپی که برنامه‌اش هنوز به‌روز نشده، و
+  //  جایی که شبکهٔ پمپ هست ولی اینترنت نیست، فقط همان را دارند.
+
+  function signinMsg(text, bad) {
+    var e = $('signinErr'), st = $('signinState');
+    if (bad) {
+      if (e) { e.textContent = text; e.classList.remove('hidden'); }
+      if (st) st.textContent = '';
+    } else {
+      if (e) e.classList.add('hidden');
+      if (st) st.textContent = text || '';
+    }
+  }
+
+  /** نشانی و رمز را از ابر بردار و وصل شو. */
+  function adoptStation(st) {
+    if (!st) {
+      signinMsg('این حساب هنوز به هیچ پمپی وصل نیست. از صاحبِ پمپ بخواهید '
+        + 'شما را اضافه کند، بعد دوباره همین‌جا وارد شوید.', true);
+      return false;
+    }
+    var home = st.home || {};
+    if (!home.url) {
+      signinMsg('پمپِ «' + (st.name || st.code) + '» پیدا شد، ولی برنامهٔ '
+        + 'کامپیوترش هنوز به سرور وصل نشده است. وقتی روشن شد، خودش وصل می‌شود.', true);
+      return false;
+    }
+    cfg.srv = home.url;
+    //  رمزِ فقط‌خواندنی، نه رمزِ برنامه — این همان چیزی است که روی کاغذِ
+    //  کیو‌آر می‌رفت، فقط این‌بار از راهِ رمزگذاری‌شده
+    cfg.tok = home.readKey || '';
+    cfg.stn = home.station || st.code || 'pump1';
+    save();
+    door = 0;
+    retry = 0;
+    return true;
+  }
+
+  /** نشستی که از قبل هست — بی آنکه دوباره از گوگل چیزی خواسته شود. */
+  function resumeCloud() {
+    if (!window.PumpCloud || !PumpCloud.signedIn()) return Promise.resolve(false);
+    return PumpCloud.myStation().then(function (st) {
+      return adoptStation(st);
+    }).catch(function (err) {
+      //  ۴۰۱ یعنی نشست واقعاً رفته؛ هر چیز دیگری (نبودِ اینترنت) نباید
+      //  کارمند را از کارِ آفلاین بیندازد — عکسِ ذخیره‌شده هنوز هست.
+      if (err && err.status === 401) PumpCloud.signOut();
+      return false;
+    });
+  }
+
+  /** جوابِ گوگل ⇒ حساب ⇒ پمپ ⇒ وصل. */
+  function onGoogle(resp) {
+    if (!resp || !resp.credential) return;
+    signinMsg('در حالِ ورود…');
+    PumpCloud.signInWithGoogle(resp.credential)
+      .then(function () { return PumpCloud.myStation(); })
+      .then(function (st) {
+        if (!adoptStation(st)) return;
+        syncBackground();
+        show('lockPane');
+        connect();
+      })
+      .catch(function (err) {
+        signinMsg(err && err.message ? err.message : 'ورود نشد', true);
+      });
+  }
+
+  /** دکمهٔ گوگل را می‌سازد. شناسهٔ برنامه از خودِ سرور می‌آید، نه از کد. */
+  function setupGoogle() {
+    var box = $('gBtn');
+    if (!box || !window.PumpCloud) return;
+    PumpCloud.call('GET', '/api/config').then(function (cfgOut) {
+      var id = cfgOut && cfgOut.googleClientId;
+      if (!id) {
+        signinMsg('ورود با گوگل روی این سرور تنظیم نشده است. '
+          + 'فعلاً از راهِ کیو‌آر وصل شوید.', true);
+        return;
+      }
+      //  اسکریپتِ گوگل ‎async‎ است و ممکن است هنوز نیامده باشد
+      var tries = 0;
+      (function waitForGsi() {
+        if (window.google && google.accounts && google.accounts.id) {
+          google.accounts.id.initialize({ client_id: id, callback: onGoogle });
+          google.accounts.id.renderButton(box, {
+            theme: 'filled_blue', size: 'large', shape: 'pill',
+            text: 'signin_with', locale: 'fa'
+          });
+          signinMsg('');
+          return;
+        }
+        if (++tries > 40) {
+          signinMsg('دکمهٔ گوگل بالا نیامد — شاید اینترنت نیست. '
+            + 'از راهِ کیو‌آر وصل شوید.', true);
+          return;
+        }
+        setTimeout(waitForGsi, 250);
+      })();
+    }).catch(function () {
+      signinMsg('به سرور نرسیدیم. اگر اینترنت ندارید، از راهِ کیو‌آر وصل شوید.', true);
+    });
+  }
+
   // ── قفل ────────────────────────────────────────────────────────────────
 
   function gateReady() {
@@ -572,7 +685,7 @@
   }
 
   function show(which) {
-    ['setupPane', 'lockPane', 'appPane'].forEach(function (id) {
+    ['signinPane', 'setupPane', 'lockPane', 'appPane'].forEach(function (id) {
       $(id).classList.toggle('hidden', id !== which);
     });
     $('nav').classList.toggle('hidden', which !== 'appPane');
@@ -866,8 +979,23 @@
     });
 
     $('btnForget').addEventListener('click', function () {
+      //  «نشانی را عوض کن» حالا یعنی «از نو وارد شو»: نشانی چیزی است که
+      //  سرور می‌دهد، نه چیزی که کارمند بنویسد.
+      if (window.PumpCloud) PumpCloud.signOut();
+      cfg.srv = ''; cfg.tok = ''; save();
+      try { if (ws) ws.close(); } catch (e) { }
+      show('signinPane');
+      setupGoogle();
+    });
+
+    $('btnManual').addEventListener('click', function () {
       $('inSrv').value = cfg.srv; $('inTok').value = cfg.tok; $('inStn').value = cfg.stn;
       show('setupPane');
+    });
+
+    $('btnBackSignin').addEventListener('click', function () {
+      show('signinPane');
+      setupGoogle();
     });
 
     $('btnUnlock').addEventListener('click', unlock);
@@ -913,9 +1041,36 @@
 
     setupMic();
     syncBackground();
-    show(cfg.srv ? 'lockPane' : 'setupPane');
-    gateReady();
-    connect();
+
+    /*
+     *  کدام صفحه اول باز شود.
+     *
+     *  ۱) کیو‌آر/لینک نشانی داده ⇒ همان، بی معطلی. کسی که کیو‌آر را اسکن
+     *     کرده عمداً این راه را خواسته.
+     *  ۲) وگرنه اگر از قبل نشانی داریم ⇒ قفل، و در پس‌زمینه از ابر
+     *     می‌پرسیم که نشانی عوض نشده باشد (آی‌پیِ خانگی عوض می‌شود).
+     *  ۳) وگرنه ⇒ ورود با گوگل. **هیچ فرمی نشان داده نمی‌شود.**
+     */
+    if (cfg.srv) {
+      show('lockPane');
+      gateReady();
+      connect();
+      //  نشانیِ تازه‌تر، اگر ابر یکی دارد — بی‌صدا، چون کارِ کارمند نباید
+      //  منتظرِ اینترنت بماند
+      resumeCloud().then(function (moved) {
+        if (moved) connect();
+      });
+    } else {
+      show('signinPane');
+      gateReady();
+      setupGoogle();
+      //  شاید نشستی از قبل هست و فقط نشانی پاک شده
+      resumeCloud().then(function (ok) {
+        if (!ok) return;
+        show('lockPane');
+        connect();
+      });
+    }
 
     if ('serviceWorker' in navigator)
       navigator.serviceWorker.register('./sw.js').catch(function () { });
