@@ -483,11 +483,22 @@ public sealed partial class SettingsSectionViewModel : SectionViewModel
     /// بررسیِ خودکار در پس‌زمینه — یک‌بار، هنگامِ بازکردنِ همین صفحه. بی‌صدا
     /// است: اگر اینترنت نباشد یا نسخهٔ تازه‌ای نباشد، هیچ پیامی نمی‌آید.
     /// </summary>
-    public override async Task OnActivatedAsync()
+    public override Task OnActivatedAsync()
     {
-        if (_autoChecked) return;
+        if (_autoChecked) return Task.CompletedTask;
         _autoChecked = true;
-        try { await CheckUpdateAsync(); } catch { }
+
+        // ══ منتظرِ اینترنت نمی‌مانیم ══════════════════════════════════════════
+        //
+        // ⚠️ پیش از این ‎await‎ می‌شد، و سنجشِ ‎warm‎ همین را گرفت: باز کردنِ
+        // «تنظیمات» ۱٬۲۶۱ میلی‌ثانیه بود و بارِ دومش ۱۵۹ — یعنی صفحه معطلِ یک
+        // درخواستِ شبکه می‌ماند. جایی که اینترنت نباشد، همان معطلی به اندازهٔ
+        // مهلتِ اتصال طول می‌کشد.
+        //
+        // بررسیِ نسخه هیچ چیزِ دیده‌شدنی‌ای را نگه نمی‌دارد: نتیجه‌اش در
+        // ‎UpdateStatus‎ می‌نشیند و هر وقت رسید، خودش دیده می‌شود.
+        _ = Task.Run(async () => { try { await CheckUpdateAsync(); } catch { } });
+        return Task.CompletedTask;
     }
 
     private bool _autoChecked;

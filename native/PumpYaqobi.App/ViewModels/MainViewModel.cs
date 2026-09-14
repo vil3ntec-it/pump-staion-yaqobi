@@ -1,3 +1,4 @@
+using Avalonia.Controls;
 using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -63,51 +64,107 @@ public sealed partial class MainViewModel : ObservableObject
             // حلقه بی‌صدا هیچ کاری نمی‌کند.
             AppHost.Current.Publisher.Start();
 
-            // ══ صفحه‌ها را از پیش بساز ══════════════════════════════════════
-            // گزارشِ صاحب ریپو: «هنوز آن سه بخش کند باز می‌شوند.»
-            //
-            // ⚠️ آن‌چه مانده بود «بازِ اولِ سرد» است، نه ردیف‌ها: سنجشِ
-            // ‎ledgerperf‎ نشان داد باز کردنِ دوباره ۱۲ تا ۱۶۰ میلی‌ثانیه است
-            // ولی بازِ اول ۴۶۳ تا ۱٬۱۷۳ — چون صفحهٔ هر بخش همان یک‌بار از روی
-            // XAML ساخته می‌شود. ‎ViewLocator‎ آن را کش می‌کند، پس اگر همان
-            // یک‌بار را زودتر بپردازیم، کلیکِ کاربر آنی می‌شود.
-            //
-            // ⚠️ روی ‎Background‎ می‌رود و بخش‌به‌بخش، نه یک‌جا: نه ورود را
-            // معطل می‌کند و نه صفحه را قفل. و چون ساختِ صفحه همان کاری است
-            // که باز کردنِ عادی هم می‌کند، هیچ رفتارِ تازه‌ای اضافه نمی‌شود —
-            // دادهٔ بخش این‌جا خوانده نمی‌شود، آن کارِ ‎EnsureLoadedAsync‎ است.
-            PrewarmViews();
+            // ══ پردهٔ لودینگ ═══════════════════════════════════════════════
+            // ساختنِ صفحه‌ها دیگر این‌جا نیست: ‎WarmUpAsync‎ (که پنجره صدایش
+            // می‌زند) یک بار در همهٔ بخش‌ها می‌گردد، هر کدام را واقعاً می‌چیند،
+            // و آخرش به همین بخشِ آغازین برمی‌گردد — پشتِ پرده و با شمارنده.
         };
 
         Sections = new ObservableCollection<SectionViewModel>(BuildSections(AppHost.Current));
         AttachSubSections(AppHost.Current);
+        AllPages = Sections.Concat(Sections.SelectMany(s => s.SubSections)).ToList();
         Themes = new ObservableCollection<PumpTheme>(PumpTheme.All);
         _selectedTheme = PumpTheme.ById(_settings.ThemeId);
     }
 
-    /// <summary>
-    /// صفحهٔ هر بخش را یک‌بار از پیش می‌سازد تا نخستین کلیکِ کاربر معطلِ
-    /// خواندنِ XAML نشود. خطا هرگز بیرون نمی‌رود: پیش‌گرم کردن یک تجمل است و
-    /// نباید هیچ‌وقت جلوی کار را بگیرد.
-    ///
-    /// ⚠️ اندازه‌گیری‌شده، تا کسی دوباره دنبالش نگردد: چسباندنِ همین صفحه‌ها به
-    /// یک قابِ نادیدنی و چیدنِ آن‌ها (تا قالبِ ‎DataGrid‎ هم پیاده شود) هیچ چیز
-    /// اضافه نکرد — ‎۱٬۲۳۸‎ در برابرِ ‎۱٬۲۸۶‎ میلی‌ثانیه، یعنی نوسان. هزینهٔ
-    /// «بازِ اول» مالِ ساختِ صفحه نیست؛ مالِ نخستین گذر از مسیرِ داده است
-    /// (‎JIT‎ و گرم شدنِ خودِ چارچوب) و با باز شدنِ هر بخش کم می‌شود:
-    /// ‎۱٬۲۸۶ → ۷۵۴ → ۴۲۲‎. باز شدن‌های بعدی ‎۳۰‎ تا ‎۱۵۰‎ میلی‌ثانیه است.
-    /// </summary>
-    private void PrewarmViews()
-    {
-        if (Avalonia.Application.Current?.DataTemplates.OfType<ViewLocator>().FirstOrDefault()
-            is not { } locator) return;
+    // ══ پردهٔ لودینگِ آغاز ═══════════════════════════════════════════════════
+    //
+    // خواستهٔ صاحب ریپو: «موقعِ تازه باز کردنِ اپ باید یک لودینگ داشته باشه تا
+    // همهٔ بخش‌ها و برنامه رو رندر کنه؛ بعدش بازگشت به صفحهٔ اصلی نباید تأخیری
+    // داشته باشه.»
+    //
+    // ⚠️ چرا بعد از ورود و نه پیش از آن: پیش از ورود هیچ اجازه‌ای نداریم و
+    // لایهٔ سرویس درست هم رد می‌کند — همان دلیلی که بارِ بخشِ آغازین هم به
+    // بعد از ورود موکول شده.
 
-        foreach (var sec in Sections.Concat(Sections.SelectMany(s => s.SubSections)))
+    /// <summary>پرده روی صفحه است؟</summary>
+    [ObservableProperty] private bool _isWarming;
+
+    /// <summary>صفر تا یک — میلهٔ پیشرفتِ زیرِ انیمیشن.</summary>
+    [ObservableProperty] private double _warmProgress;
+
+    /// <summary>نامِ بخشی که همین حالا گرم می‌شود.</summary>
+    [ObservableProperty] private string _warmText = "";
+
+    /// <summary>«۱۲ از ۴۲» — تا کاربر بداند کجای کار است.</summary>
+    [ObservableProperty] private string _warmCount = "";
+
+    public Services.WarmUp Warm { get; } = new();
+
+    /// <summary>
+    /// ══ گشتِ پشتِ پرده ═══════════════════════════════════════════════════════
+    ///
+    /// برنامه یک بار خودش در همهٔ بخش‌ها می‌گردد، پشتِ پردهٔ لودینگ، و آخرش
+    /// به همان بخشی برمی‌گردد که کاربر باید ببیند.
+    ///
+    /// ⚠️ ‎layout‎ از پنجره می‌آید: ویومدل نباید به درختِ بصری دست بزند، ولی
+    /// بی یک پاسِ چیدمانِ واقعی، «گرم شدن» اتفاق نمی‌افتد.
+    /// </summary>
+    public async Task WarmUpAsync(Action layout)
+    {
+        if (Warm.Done) return;
+
+        var all = Sections.Concat(Sections.SelectMany(s => s.SubSections)).ToList();
+        if (all.Count == 0) return;
+
+        var start = Current;
+
+        IsWarming = true;
+        WarmProgress = 0;
+        try
         {
-            var one = sec;
-            Dispatcher.UIThread.Post(
-                () => { try { locator.Build(one); } catch { } },
-                DispatcherPriority.Background);
+            await Warm.RunAsync(all, async sec =>
+            {
+                await GoAsync(sec);
+                layout();
+
+                // صفحهٔ درونیِ بخش، اگر دارد (ورق، حسابِ شخص، …)
+                await sec.WarmInnerAsync(async () =>
+                {
+                    layout();
+                    await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+                });
+                layout();
+
+                // ⚠️ و «خوانده‌شده» پس گرفته می‌شود. چرایی‌اش مهم است:
+                // ‎EnsureLoadedAsync‎ یک‌بارمصرف است، و اگر گشتِ پشتِ پرده
+                // مصرفش کند، بخش تا آخرِ عمرِ برنامه روی عکسِ **لحظهٔ آغاز**
+                // می‌ماند و هر دادهٔ تازه‌ای که از بیرونِ همان بخش بیاید دیده
+                // نمی‌شود. (سنجشِ ‎cells‎ همین را گرفت: دانه پس از ورود
+                // ریخته می‌شد و جدولِ گاوصندوق خالی می‌ماند.)
+                //
+                // آن‌چه می‌خواستیم گرم شود خودِ **مسیر** است — همان گذرِ اولِ
+                // گران — و آن یک بار طی شد. خواندنِ دوباره چند میلی‌ثانیه
+                // است (‎ledgerperf‎: ۱ تا ۱۸).
+                sec.IsLoaded = false;
+
+                // نوبت را پس بده تا انیمیشن بچرخد و پنجره جواب بدهد
+                await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+            }, (p, title) =>
+            {
+                WarmProgress = p;
+                WarmText = title;
+                WarmCount = Shamsi.Money(Warm.Warmed) + " از " + Shamsi.Money(all.Count);
+            });
+
+            // ⚠️ و برگشت به همان‌جایی که کاربر انتظارش را دارد. بی این، پرده
+            // که می‌رفت، کاربر خودش را در آخرین بخشِ گشت می‌دید.
+            if (start is not null) await GoAsync(start);
+            layout();
+        }
+        finally
+        {
+            IsWarming = false;
         }
     }
 
@@ -336,9 +393,20 @@ public sealed partial class MainViewModel : ObservableObject
         catch (Exception ex) { AppHost.Current.Toast("باز نشد: " + ex.Message, ToastKind.Error); }
     }
 
+    /// <summary>
+    /// همهٔ بخش‌ها و زیربخش‌ها — ناحیهٔ محتوا همهٔ اینها را با هم نگه می‌دارد و
+    /// فقط یکی‌شان را نشان می‌دهد. چراییِ «نگه می‌دارد» در
+    /// <see cref="SectionViewModel.IsShown"/> نوشته شده.
+    /// </summary>
+    public IReadOnlyList<SectionViewModel> AllPages { get; private set; } =
+        Array.Empty<SectionViewModel>();
+
     private void SyncContent()
     {
         Content = Current?.OpenSub ?? Current;
+
+        // فقط یکی دیده می‌شود؛ بقیه سرِ جایشان می‌مانند
+        foreach (var p in AllPages) p.IsShown = ReferenceEquals(p, Content);
 
         if (!ReferenceEquals(_watchedContent, Content))
         {

@@ -70,6 +70,21 @@ internal static class WaraqPerf
         vm.Lock.SubmitCommand.Execute(null);
         Settle(win, TimeSpan.FromSeconds(3));
 
+        // ══ همان پردهٔ لودینگی که برنامهٔ واقعی دارد ═════════════════════════
+        //
+        // ⚠️ بی این، عددِ «بارِ ۱» عددِ برنامهٔ واقعی نیست: در برنامه، وقتی
+        // کاربر روی ورق کلیک می‌کند، صفحه‌ها از پیش ساخته و چیده شده‌اند
+        // (‎WarmUp‎). سنجشی که این را نداشته باشد، هزینه‌ای را می‌سنجد که
+        // کاربر هرگز نمی‌بیند.
+        //
+        // ⚠️ و خودِ پنجره شروعش می‌کند، نه ما با یک قابِ ساختگی: یک بار
+        // ‎new ContentControl()‎ دادیم و هیچ اثری نداشت — کنترلی که در درختِ
+        // بصری نیست، ‎UpdateLayout()‎ش هیچ کاری نمی‌کند و «گرم کردن» فقط
+        // ادایش را درمی‌آورد.
+        var warmEnd = DateTime.UtcNow + TimeSpan.FromSeconds(120);
+        while (!(vm.Warm.Done && !vm.IsWarming) && DateTime.UtcNow < warmEnd)
+        { Dispatcher.UIThread.RunJobs(); win.UpdateLayout(); Thread.Sleep(2); }
+
         var sec = vm.Sections.First(s => s.Id == "waraq");
         var cold = Time(() => Wait(win, vm.GoAsync(sec)));
 
@@ -110,6 +125,17 @@ internal static class WaraqPerf
             // ساختنِ ویومدل ۹)، ولی هر **پاسِ چیدمانِ** صفحهٔ ورق حدودِ ۴۰۰
             // میلی‌ثانیه می‌برد و باز شدن چند پاس لازم دارد. پس عددِ زیر
             // «کارِ رابط» است، نه کارِ داده — و جای درست کردنش هم همان‌جاست.
+            // ⚠️ از بارِ دوم، کاربر از بخش بیرون می‌رود و برمی‌گردد — تا معلوم
+            // شود عددِ بارِ اول «یک بار در عمرِ برنامه» است یا «هر بار که از
+            // بخش بیرون بروی».
+            if (round > 1)
+            {
+                Wait(win, vm.GoAsync(vm.Sections.First(x => x.Id == "dashboard")));
+                Settle(win, 6);
+                Wait(win, vm.GoAsync(sec));
+                Settle(win, 6);
+            }
+
             Passes = 0;
             Marks.Clear();
             Clock.Restart();
@@ -128,7 +154,8 @@ internal static class WaraqPerf
             var tRest = Time(() => Settle(win, 6));
             var open = tData + tFirst + tRest;
             Console.WriteLine($"      داده {tData} ms · نخستین چیدمان {tFirst} ms · ته‌نشینی {tRest} ms");
-            var grids = win.GetVisualDescendants().OfType<DataGrid>().Count();
+            var grids = win.GetVisualDescendants().OfType<DataGrid>()
+                           .Count(g => g.IsEffectivelyVisible);
             var rows = win.GetVisualDescendants().OfType<DataGridRow>().Count();
             Console.WriteLine($"{Pad($"  باز کردنِ ورق (بارِ {round})", 38)} {open,6:N0} ms "
                             + $"{grids,14:N0} {rows,11:N0}   ({Passes} پاسِ چیدمان، "

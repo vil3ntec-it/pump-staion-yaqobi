@@ -66,6 +66,9 @@ internal static class Program
         // ══ «یک ردیف چقدر آب می‌خورد» — ریشهٔ کندیِ ورق ════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- rowcost
         if (outDir.Equals("rowcost", StringComparison.OrdinalIgnoreCase)) return RowCost.Run();
+        // ══ «پردهٔ لودینگ کارش را می‌کند؟» ═════════════════════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -- warm
+        if (outDir.Equals("warm", StringComparison.OrdinalIgnoreCase)) return WarmAudit.Run();
         if (args.Length > 1 && args[0].Equals("cellshot", StringComparison.OrdinalIgnoreCase)) return CellShot.Run(args[1]);
         if (outDir.Equals("gridperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Run();
         if (outDir.Equals("cardperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Cards();
@@ -419,7 +422,8 @@ internal static class Program
             // ══ جدول ══════════════════════════════════════════════════════
             // ⚠️ با **نوعِ** واقعی می‌سنجیم، نه با نامِ کلاس: بدنهٔ بیشترِ
             // بخش‌ها ‎c:ExcelGrid‎ است که فرزندِ ‎DataGrid‎ است.
-            var grid = host.GetVisualDescendants().OfType<DataGrid>().FirstOrDefault();
+            var grid = host.GetVisualDescendants().OfType<DataGrid>()
+                           .FirstOrDefault(g => g.IsEffectivelyVisible);
             var gridH = grid?.Bounds.Height ?? 0;
 
             // جدولِ خالی حقِ کوتاه بودن دارد — سرِ ستون‌ها تنها همین‌قدر است.

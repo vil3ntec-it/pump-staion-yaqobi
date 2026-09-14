@@ -65,7 +65,8 @@ internal static class CellEditAudit
         Wait(win, vm.GoAsync(sec));
         for (var i = 0; i < 6; i++) { Dispatcher.UIThread.RunJobs(); Pump(win); }
 
-        var grid = win.GetVisualDescendants().OfType<DataGrid>().FirstOrDefault();
+        var grid = win.GetVisualDescendants().OfType<DataGrid>()
+                      .FirstOrDefault(g => g.IsEffectivelyVisible);
         if (grid is null) { Console.WriteLine("جدولی نبود"); return 1; }
 
         var bad = new List<string>();
@@ -423,7 +424,8 @@ internal static class CellEditAudit
         for (var i = 0; i < 6; i++) { Dispatcher.UIThread.RunJobs(); Pump(win); }
 
         var grid = win.GetVisualDescendants().OfType<DataGrid>()
-                      .FirstOrDefault(g => g.Columns.Any(c => c.Header?.ToString() == "نوع تیل"));
+                      .FirstOrDefault(g => g.IsEffectivelyVisible
+                                        && g.Columns.Any(c => c.Header?.ToString() == "نوع تیل"));
         var col = grid?.Columns.FirstOrDefault(c => c.Header?.ToString() == "نوع تیل");
         if (grid is null || col is null) return bad;
 
@@ -478,7 +480,10 @@ internal static class CellEditAudit
 
         foreach (var (id, content) in Targets(win, vm))
         {
-            foreach (var grid in win.GetVisualDescendants().OfType<DataGrid>())
+            // ⚠️ فقط جدول‌های دیده‌شونده: همهٔ بخش‌ها با هم در درختِ بصری
+            // می‌مانند و فقط یکی‌شان دیده می‌شود.
+            foreach (var grid in win.GetVisualDescendants().OfType<DataGrid>()
+                                    .Where(g => g.IsEffectivelyVisible))
             {
                 // الف) ستونِ دادهٔ «#» نباید باشد
                 var dup = grid.Columns.Any(c => c.IsVisible && c.Header?.ToString()?.Trim() == "#");
@@ -551,7 +556,8 @@ internal static class CellEditAudit
 
         var page = win.GetVisualDescendants().OfType<ScrollViewer>()
                       .FirstOrDefault(v => v.Name == "PageScroll");
-        var grid = win.GetVisualDescendants().OfType<DataGrid>().FirstOrDefault();
+        var grid = win.GetVisualDescendants().OfType<DataGrid>()
+                      .FirstOrDefault(g => g.IsEffectivelyVisible);
         if (page is null || grid is null) return bad;
 
         grid.Focus();

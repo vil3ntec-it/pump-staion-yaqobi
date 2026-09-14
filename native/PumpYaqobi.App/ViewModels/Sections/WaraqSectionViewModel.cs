@@ -784,6 +784,29 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
         OnPropertyChanged(nameof(IsEmpty));
     }
 
+    /// <summary>
+    /// ══ صفحهٔ ورق هم پشتِ پردهٔ لودینگ ساخته شود ═══════════════════════════
+    ///
+    /// ⚠️ گرم کردنِ خودِ بخش کافی نبود و سنجش همین را گفت: فهرستِ ورق‌ها گرم
+    /// می‌شد ولی صفحهٔ یک ورق تا نخستین کلیک اصلاً ساخته نمی‌شد — ۲٬۱۹۳
+    /// میلی‌ثانیه برای بارِ اول، در برابرِ ۱۱۵ برای دفعه‌های بعد.
+    ///
+    /// با ورقِ **واقعیِ** فهرست گرم می‌شود، نه یک ورقِ ساختگی: جدول‌ها باید
+    /// با ردیفِ واقعی چیده شوند تا قالبِ ردیف و خانه هم پیاده شود.
+    /// </summary>
+    public override async Task WarmInnerAsync(Func<Task> layout)
+    {
+        var first = Sheets.FirstOrDefault();
+        if (first is null) return;
+
+        var full = await _host.WaraqData.LoadAsync(first.Id);
+        if (full is null) return;
+
+        Show(full);
+        await layout();
+        SheetOpen = false;                 // ‎Page‎ می‌ماند؛ فقط از دید می‌رود
+    }
+
     [RelayCommand]
     private Task OpenCardAsync(WaraqCardViewModel? c) => OpenAsync(c?.Entity);
 

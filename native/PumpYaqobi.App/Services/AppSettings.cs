@@ -97,6 +97,18 @@ public sealed class AppSettings
     public Dictionary<string, double> SecFontScales { get; set; } = new();
 
     /// <summary>
+    /// ══ پهنای ستون‌ها، به کلیدِ جدول ═══════════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «وقتی جدولِ یک ورق را تنظیم می‌کنم، تمامِ ورق‌ها
+    /// برابر بشوند… نمی‌شود که هر روز من اندازه‌ها را درست کنم.»
+    ///
+    /// پس پهنا به **جدول** بسته است، نه به ورق: هر جدولی که ‎WidthKey‎ داشته
+    /// باشد پهنای دستیِ کاربر را همین‌جا می‌گذارد و همهٔ ورق‌های دیگر — و
+    /// فردا، بعدِ بسته شدنِ برنامه — همان را برمی‌دارند.
+    /// </summary>
+    public Dictionary<string, double[]> ColumnWidths { get; set; } = new();
+
+    /// <summary>
     /// اندازهٔ نوشتهٔ «کادرهای یادداشت» — همتای ‎noteFontScale‎ی سایت. یکی است
     /// برای همهٔ بخش‌ها (سایت هم یک متغیرِ ریشه‌ای دارد، نه یکی برای هر بخش).
     /// </summary>
@@ -151,6 +163,23 @@ public sealed class AppSettings
         var a = Load();
         if (Math.Abs(scale - 1) < 0.005) a.SecFontScales.Remove(sectionId);
         else a.SecFontScales[sectionId] = scale;
+        a.Save();
+    }
+
+    /// <summary>پهنای دستیِ ستون‌های یک جدول — نبود، ‎null‎.</summary>
+    public static double[]? LoadColumnWidths(string key) =>
+        string.IsNullOrWhiteSpace(key) ? null
+        : Load().ColumnWidths.TryGetValue(key, out var w) ? w : null;
+
+    /// <summary>
+    /// پهنای ستون‌های یک جدول را نگه دار و بقیهٔ فایل را دست‌نخورده بگذار —
+    /// مثلِ ‎SavePrintSetup‎، وگرنه تم و «آخرین بخش» پاک می‌شدند.
+    /// </summary>
+    public static void SaveColumnWidths(string key, double[] widths)
+    {
+        if (string.IsNullOrWhiteSpace(key) || widths.Length == 0) return;
+        var a = Load();
+        a.ColumnWidths[key] = widths;
         a.Save();
     }
 

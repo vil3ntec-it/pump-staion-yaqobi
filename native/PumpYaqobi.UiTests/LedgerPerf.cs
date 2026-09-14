@@ -181,8 +181,15 @@ internal static class LedgerPerf
         section.GetType().GetProperty("Month", BindingFlags.Public | BindingFlags.Instance)
                ?.SetValue(section, month);
 
+    /// <summary>
+    /// ⚠️ فقط جدولِ **دیده‌شونده**: از وقتی همهٔ بخش‌ها با هم در درختِ بصری
+    /// می‌مانند و فقط یکی‌شان دیده می‌شود (‎SectionViewModel.IsShown‎)،
+    /// ‎FirstOrDefault‎ی ساده جدولِ یک بخشِ پنهان را برمی‌داشت — و آن‌وقت
+    /// سنجش می‌گفت «۰ ردیفِ زنده و ۴۷ پیکسل»، که مالِ همان جدولِ پنهان بود.
+    /// </summary>
     private static Avalonia.Controls.DataGrid? Grid(Window w) =>
-        w.GetVisualDescendants().OfType<Avalonia.Controls.DataGrid>().FirstOrDefault();
+        w.GetVisualDescendants().OfType<Avalonia.Controls.DataGrid>()
+         .FirstOrDefault(g => g.IsEffectivelyVisible);
 
     /// <summary>
     /// عوض کردنِ ماه ‎async void‎ است (‎_ = ReloadRowsAsync()‎)، پس نمی‌شود

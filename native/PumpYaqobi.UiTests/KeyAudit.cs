@@ -48,7 +48,8 @@ internal static class KeyAudit
         Wait(win, vm.GoAsync(sec));
         for (var i = 0; i < 6; i++) { Dispatcher.UIThread.RunJobs(); Pump(win); }
 
-        var grid = win.GetVisualDescendants().OfType<DataGrid>().FirstOrDefault();
+        var grid = win.GetVisualDescendants().OfType<DataGrid>()
+                      .FirstOrDefault(g => g.IsEffectivelyVisible);
         if (grid is null) { Console.WriteLine("جدولی نبود"); return 1; }
 
         var bad = 0;

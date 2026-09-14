@@ -40,6 +40,23 @@ public partial class MainWindow : Window
                 this.FindControl<Controls.NavStrip>("Nav")?.BringActiveIntoView();
         };
 
+        // ══ پردهٔ لودینگ، همان لحظهٔ ورود ═══════════════════════════════════
+        //
+        // خواستهٔ صاحب ریپو: «موقعِ تازه باز کردنِ اپ باید یک لودینگ داشته باشه
+        // تا همهٔ بخش‌ها و برنامه رو رندر کنه؛ بعدش بازگشت به صفحهٔ اصلی نباید
+        // تأخیری داشته باشه.»
+        //
+        // ⚠️ از این‌جا صدا زده می‌شود نه از خودِ ویومدل: قابِ گرم‌کن یک کنترلِ
+        // واقعیِ همین پنجره است و ویومدل نباید به درختِ بصری دست بزند.
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != nameof(MainViewModel.IsLocked) || vm.IsLocked) return;
+
+            // یک نوبت دیرتر، تا بخشِ آغازین جای خودش نشسته باشد.
+            Dispatcher.UIThread.Post(() => _ = vm.WarmUpAsync(UpdateLayout),
+                                     DispatcherPriority.Background);
+        };
+
         StickNavToTop();
     }
 

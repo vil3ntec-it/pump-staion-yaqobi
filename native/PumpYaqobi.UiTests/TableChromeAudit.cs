@@ -70,7 +70,8 @@ internal static class TableChromeAudit
                           .FirstOrDefault(c => ReferenceEquals(c.Content, sec));
             if (host is null) continue;
 
-            var grid = host.GetVisualDescendants().OfType<DataGrid>().FirstOrDefault();
+            var grid = host.GetVisualDescendants().OfType<DataGrid>()
+                           .FirstOrDefault(g => g.IsEffectivelyVisible);
             if (grid is null) continue;
 
             // مرکزِ هر سرستون و مرکزِ نوشتهٔ داخلش، در مختصاتِ پنجره

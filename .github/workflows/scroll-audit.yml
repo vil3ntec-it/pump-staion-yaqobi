@@ -92,3 +92,18 @@ jobs:
       - name: سنجشِ خانهٔ جدول
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- cells
+
+      # ══ پردهٔ لودینگِ آغاز ═══════════════════════════════════════════════
+      # «موقعِ تازه باز کردنِ اپ باید یک لودینگ داشته باشه تا همهٔ بخش‌ها و
+      # برنامه رو رندر کنه؛ بعدش بازگشت به صفحهٔ اصلی نباید تأخیری داشته باشه.»
+      # پرده می‌آید و می‌رود، همهٔ بخش‌ها گرم می‌شوند، و بازِ اول دیگر سرد نیست.
+      - name: سنجشِ پردهٔ لودینگ
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- warm
+
+      # ══ ورقِ پُر زود باز شود ═══════════════════════════════════════════════
+      # «ورق جوری باشه که سقف پایینی نداشته باشه و تا ۱۰۰ تا کادر رو به راحتی
+      # باز کنه.» باز کردن و بازگشت هر دو زیرِ مرز می‌مانند.
+      - name: سنجشِ ورقِ پُر
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- waraqperf

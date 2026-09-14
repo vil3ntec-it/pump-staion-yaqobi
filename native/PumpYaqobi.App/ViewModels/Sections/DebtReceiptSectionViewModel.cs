@@ -81,7 +81,17 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
     /// <summary>فوکوس باید به کادرِ «نام» برگردد — صفحه به آن گوش می‌دهد.</summary>
     public event Action? FocusNameRequested;
 
-    partial void OnMonthChanged(string v) => _ = ReloadAsync();
+    /// <summary>
+    /// ⚠️ کادرِ کشوییِ ماه می‌تواند ‎null‎ پس بدهد — وقتی فهرستِ ماه‌ها خالی
+    /// باشد، آوالونیا ‎SelectedItem‎ را پاک می‌کند و همان ‎null‎ روی این
+    /// خاصیت می‌نشیند. بعدش هر ‎Month.Length‎ی در این کلاس می‌ترکد. یک بار
+    /// همین‌طور شد. پس ‎null‎ همان‌جا به «هیچ ماه» ترجمه می‌شود.
+    /// </summary>
+    partial void OnMonthChanged(string? v)
+    {
+        if (v is null) { Month = ""; return; }
+        _ = ReloadAsync();
+    }
 
     protected override async Task LoadAsync()
     {

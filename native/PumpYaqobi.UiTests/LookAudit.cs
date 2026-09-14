@@ -154,7 +154,13 @@ internal static class LookAudit
             Wait(win, vm.GoAsync(sec));
             for (var k = 0; k < 4; k++) { Dispatcher.UIThread.RunJobs(); Pump(win); }
 
-            foreach (var cell in win.GetVisualDescendants().OfType<DataGridCell>())
+            // ⚠️ فقط خانه‌های **دیده‌شونده**: از وقتی همهٔ بخش‌ها با هم در درختِ
+            // بصری می‌مانند و فقط یکی‌شان دیده می‌شود
+            // (‎SectionViewModel.IsShown‎)، این حلقه به خانه‌های بخش‌های پنهان
+            // هم می‌رسید — و باز کردنِ پاپ‌آپی که روی صفحه نیست، همان‌جا
+            // استثنا می‌داد.
+            foreach (var cell in win.GetVisualDescendants().OfType<DataGridCell>()
+                                    .Where(c => c.IsEffectivelyVisible))
             {
                 var box = cell.GetVisualDescendants().OfType<ComboBox>().FirstOrDefault();
                 if (box is null || box.Bounds.Width <= 0) continue;

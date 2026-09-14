@@ -37,7 +37,7 @@
 
 
     <Grid RowDefinitions="*,Auto,10,*,Auto">
-      <c:ExcelGrid GrowsToContent="True" Grid.Row="0" x:Name="PumpGrid" ItemsSource="{Binding Pumps}" x:CompileBindings="False"
+      <c:ExcelGrid GrowsToContent="True" WidthKey="waraq.pumps" Grid.Row="0" x:Name="PumpGrid" ItemsSource="{Binding Pumps}" x:CompileBindings="False"
                   RowDeleteCommand="{Binding $parent[UserControl].DataContext.DeletePumpCommand}">
         <DataGrid.Columns>
           <DataGridTextColumn Header="پایه" Binding="{Binding Num}" Width="Auto" />
@@ -100,7 +100,7 @@
         <c:LazyBox.Deferred>
           <DataTemplate>
           <Grid ColumnDefinitions="*,8,*">
-            <c:ExcelGrid GrowsToContent="True" Grid.Column="0" ItemsSource="{Binding TxnsFirst}" x:CompileBindings="False">
+            <c:ExcelGrid GrowsToContent="True" WidthKey="waraq.txns" Grid.Column="0" ItemsSource="{Binding TxnsFirst}" x:CompileBindings="False">
               <DataGrid.Columns>
                 <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
                 <DataGridTemplateColumn Header="نوع تیل" Width="Auto">
@@ -157,7 +157,7 @@
               </DataGrid.Columns>
             </c:ExcelGrid>
 
-            <c:ExcelGrid GrowsToContent="True" Grid.Column="2" ItemsSource="{Binding TxnsSecond}" x:CompileBindings="False">
+            <c:ExcelGrid GrowsToContent="True" WidthKey="waraq.txns" Grid.Column="2" ItemsSource="{Binding TxnsSecond}" x:CompileBindings="False">
               <DataGrid.Columns>
                 <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
                 <DataGridTemplateColumn Header="نوع تیل" Width="Auto">
