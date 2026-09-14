@@ -94,8 +94,8 @@ internal static class LedgerPerf
         Settle(win, TimeSpan.FromSeconds(3));
 
         Console.WriteLine();
-        Console.WriteLine("بخش        ردیف     ماه‌ها(SQL)  ردیف‌ها(SQL)  باز شدن   ردیفِ زنده  بلندیِ جدول");
-        Console.WriteLine(new string('-', 88));
+        Console.WriteLine("بخش        ردیف     ماه‌ها(SQL)  ردیف‌ها(SQL)  بارِ اول   بارِ دوم   ردیفِ زنده  بلندیِ جدول");
+        Console.WriteLine(new string('-', 100));
 
         var bad = new List<string>();
 
@@ -124,6 +124,16 @@ internal static class LedgerPerf
                 // واحدی که باز شدنِ بخش هم از آن می‌گذرد، ولی بی هزینهٔ
                 // یک‌بارهٔ ساختِ صفحه.
                 SetMonth(sec, months[k]);
+                var first = Time(() => Settle(win, rowHost, Sizes[k]));
+
+                // ⚠️ و یک بار دیگر، چون عددِ بارِ اول عددِ کاربر نیست:
+                // نخستین باری که یک بخش ردیف‌های واقعی‌اش را می‌سازد، مسیرِ
+                // ردیف و خانه تازه ‎JIT‎ می‌شود. در برنامهٔ واقعی آن یک بار
+                // پشتِ پردهٔ لودینگ پرداخت شده است (‎WarmUp‎). پس قضاوت روی
+                // بارِ دوم است و بارِ اول فقط گزارش می‌شود.
+                SetMonth(sec, EmptyMonth);
+                Settle(win, rowHost, 0);
+                SetMonth(sec, months[k]);
                 var open = Time(() => Settle(win, rowHost, Sizes[k]));
 
                 var sql = Sql(host, id, months[k]);
@@ -132,7 +142,7 @@ internal static class LedgerPerf
                                .OfType<Avalonia.Controls.DataGridRow>().Count() ?? 0;
 
                 Console.WriteLine($"{title,-10} {Sizes[k],6:N0}  {sql.Months,8:N0} ms  {sql.Rows,8:N0} ms  "
-                                + $"{open,7:N0} ms  {live,8:N0}  {grid?.Bounds.Height ?? 0,8:N0}px");
+                                + $"{first,7:N0} ms {open,7:N0} ms  {live,8:N0}  {grid?.Bounds.Height ?? 0,8:N0}px");
 
                 if (open > Goal) bad.Add($"{title} با {Sizes[k]:N0} ردیف: {open:N0} ms");
                 if (live > 200) bad.Add($"{title} با {Sizes[k]:N0} ردیف: {live:N0} ردیفِ زنده — مجازی‌سازی نمی‌کند");

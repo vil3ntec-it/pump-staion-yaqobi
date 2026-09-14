@@ -64,10 +64,11 @@ public sealed partial class MainViewModel : ObservableObject
             // حلقه بی‌صدا هیچ کاری نمی‌کند.
             AppHost.Current.Publisher.Start();
 
-            // ══ پردهٔ لودینگ ═══════════════════════════════════════════════
-            // ساختنِ صفحه‌ها دیگر این‌جا نیست: ‎WarmUpAsync‎ (که پنجره صدایش
-            // می‌زند) یک بار در همهٔ بخش‌ها می‌گردد، هر کدام را واقعاً می‌چیند،
-            // و آخرش به همین بخشِ آغازین برمی‌گردد — پشتِ پرده و با شمارنده.
+            // ══ گذرِ دومِ گرم کردن ═══════════════════════════════════════════
+            // پردهٔ لودینگ **پیش از** این اتفاق افتاده و صفحه‌ها را ساخته و
+            // چیده است (‎WarmUpAsync‎، از سازندهٔ پنجره). آن‌جا اجازه‌ای نبود،
+            // پس مسیرِ داده همین حالا و بی‌صدا یک بار گرم می‌شود.
+            Dispatcher.UIThread.Post(() => _ = WarmDataAsync(), DispatcherPriority.Background);
         };
 
         Sections = new ObservableCollection<SectionViewModel>(BuildSections(AppHost.Current));
@@ -89,6 +90,12 @@ public sealed partial class MainViewModel : ObservableObject
 
     /// <summary>پرده روی صفحه است؟</summary>
     [ObservableProperty] private bool _isWarming;
+
+    partial void OnIsWarmingChanged(bool v)
+    {
+        OnPropertyChanged(nameof(IsShellVisible));
+        OnPropertyChanged(nameof(IsLockVisible));
+    }
 
     /// <summary>صفر تا یک — میلهٔ پیشرفتِ زیرِ انیمیشن.</summary>
     [ObservableProperty] private double _warmProgress;
@@ -119,13 +126,23 @@ public sealed partial class MainViewModel : ObservableObject
 
         var start = Current;
 
+        // ⚠️ «آخرین بخش» را گشتِ پشتِ پرده نباید عوض کند: ‎GoAsync‎ هر بار
+        // آن را ذخیره می‌کند، و بی این، کاربر پس از رمز خودش را در آخرین
+        // بخشِ گشت می‌دید، نه جایی که دفعهٔ پیش بود.
+        var lastSection = _settings.LastSection;
+
         IsWarming = true;
         WarmProgress = 0;
         try
         {
             await Warm.RunAsync(all, async sec =>
             {
-                await GoAsync(sec);
+                // ⚠️ خطای بارِ داده نباید جلوی **چیدمان** را بگیرد: پیش از
+                // ورود هیچ اجازه‌ای نداریم و بیشترِ بخش‌ها همان‌جا رد
+                // می‌شوند — ولی صفحه‌شان پیش از آن نشانده شده
+                // (‎GoAsync‎ اول ‎SyncContent‎ می‌کند و بعد داده می‌خواند)،
+                // و چیدنِ همان صفحه گران‌ترین کارِ این گشت است.
+                try { await GoAsync(sec); } catch { }
                 layout();
 
                 // صفحهٔ درونیِ بخش، اگر دارد (ورق، حسابِ شخص، …)
@@ -159,12 +176,43 @@ public sealed partial class MainViewModel : ObservableObject
 
             // ⚠️ و برگشت به همان‌جایی که کاربر انتظارش را دارد. بی این، پرده
             // که می‌رفت، کاربر خودش را در آخرین بخشِ گشت می‌دید.
-            if (start is not null) await GoAsync(start);
+            if (start is not null) { try { await GoAsync(start); } catch { } }
+            _settings.LastSection = lastSection;
+            _settings.Save();
             layout();
         }
         finally
         {
             IsWarming = false;
+        }
+    }
+
+    /// <summary>
+    /// ══ گذرِ دومِ داده — بی‌صدا، پس از رمز ═══════════════════════════════════
+    ///
+    /// پرده پیش از رمز است، و پیش از ورود هیچ اجازه‌ای نداریم. پس مسیرِ داده
+    /// همان یک بارِ گرانش را این‌جا می‌دهد — بی پرده، چون کاربر همان لحظه
+    /// بخشِ خودش را می‌بیند و این پشتِ سرش می‌گذرد.
+    ///
+    /// ⚠️ و «خوانده‌شده» پس گرفته می‌شود، وگرنه هر بخش تا آخرِ عمرِ برنامه
+    /// روی عکسِ همین لحظه می‌ماند.
+    /// </summary>
+    public async Task WarmDataAsync()
+    {
+        if (Warm.DataDone) return;
+        Warm.MarkDataDone();
+
+        foreach (var sec in AllPages)
+        {
+            if (sec.IsLoaded) continue;                  // بخشِ جلوی چشم، دست نخورد
+            try
+            {
+                await sec.EnsureLoadedAsync();
+                sec.IsLoaded = false;
+            }
+            catch { /* گرم کردن یک تجمل است */ }
+
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
         }
     }
 
@@ -247,7 +295,30 @@ public sealed partial class MainViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(RoleText));
         OnPropertyChanged(nameof(RoleBrushKey));
+        OnPropertyChanged(nameof(IsShellVisible));
+        OnPropertyChanged(nameof(IsLockVisible));
     }
+
+    // ══ سه پرده، و ترتیبشان ═══════════════════════════════════════════════
+    //
+    // گزارشِ صاحب ریپو: «این چه لودینگی است؟ یک صفحهٔ جدا موقعِ باز شدنِ اپ،
+    // نه این‌که رمز را بزنم بعد بیاید و همه چیز را لودینگ کند… من اول فکر
+    // کردم برنامه خراب شده.»
+    //
+    // حق داشت. پس ترتیب عوض شد:
+    //
+    //     ۱) برنامه باز می‌شود  ⇒ **پردهٔ لودینگ**
+    //     ۲) پرده که رفت        ⇒ صفحهٔ رمز
+    //     ۳) رمز که خورد        ⇒ برنامه، بی هیچ پرده‌ای
+    //
+    // ⚠️ و پوستهٔ برنامه حینِ لودینگ باید **دیده شود** (زیرِ پرده)، وگرنه
+    // آوالونیا اصلاً اندازه‌اش نمی‌گیرد و «گرم شدن» اتفاق نمی‌افتد.
+
+    /// <summary>پوستهٔ برنامه — حینِ لودینگ هم هست، ولی زیرِ پرده.</summary>
+    public bool IsShellVisible => !IsLocked || IsWarming;
+
+    /// <summary>صفحهٔ رمز — نه وقتی پرده روی صفحه است.</summary>
+    public bool IsLockVisible => IsLocked && !IsWarming;
 
     /// <summary>تاریخِ شمسیِ امروز — خطِ اولِ بلوکِ تاریخِ سربرگ.</summary>
     public string TodayText => Shamsi.DayName(DateTime.Now) + "، " + Shamsi.Today();

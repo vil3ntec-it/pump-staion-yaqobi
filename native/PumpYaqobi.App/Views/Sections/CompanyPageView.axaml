@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
              xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
              x:Class="PumpYaqobi.App.Views.Sections.CompanyPageView"
              x:DataType="vm:CompanyPageViewModel">
 
@@ -65,17 +66,18 @@
         <DataGridTextColumn Header="رسید"  Binding="{Binding PoulText}" Width="Auto" />
         <DataGridTemplateColumn Header="واحدِ رسید" Width="Auto">
           <DataGridTemplateColumn.CellTemplate>
-            <DataTemplate>
-              <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎.
-                   با بچه‌های ‎ComboBoxItem‎، ‎SelectedItem‎ یک **شیء** است نه
-                   رشته — پس نه سرِ بار مقدار می‌نشست و نه انتخابِ کاربر
-                   برمی‌گشت. و داخلِ ‎CellEditingTemplate‎ بودنش یعنی مقدارِ
-                   فعلی دیده نمی‌شد و هر تغییر دو کلیک می‌خواست. در سایت این
-                   کادر ‎<select class="xls-in">‎ی همیشه‌پیداست. -->
-              <ComboBox ItemsSource="{Binding PoulCurrencyOptions}"
-                        SelectedItem="{Binding PoulCurrencyText}"
-                        Classes="incell" />
-            </DataTemplate>
+                      <!-- ⚠️ کپسول، نه کشویی. با دو-سه گزینه، ‎ComboBox‎ یک قالبِ کامل با
+                         ‎Popup‎ی خودش می‌ساخت — و ‎ledgerperf‎ گرفتش: نزدیک به چهل درصدِ
+                         وقتِ باز شدنِ گاوصندوقِ ۲۰۰ ردیفی مالِ همین ستون‌ها بود. خواستهٔ
+                         صاحب ریپو هم همین بود: «اون علامتِ ▾ فقط جا گرفته» و «با تب یا
+                         اینتر عوض بشه». ‎ExcelGrid‎ کلاسِ ‎celltoggle‎ را می‌زند. -->
+                      <DataTemplate>
+                        <Button Classes="fuelchip celltoggle" Content="{Binding PoulCurrencyText}"
+                                Command="{Binding TogglePoulCurrencyCommand}"
+                                Foreground="{Binding PoulCurrencyChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                                BorderBrush="{Binding PoulCurrencyChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                                ToolTip.Tip="زدنش واحدِ رسید را افغانی ⇄ دالر می‌کند" />
+                      </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>
         <DataGridTextColumn Header="الباقیِ افغانی" Binding="{Binding AlbaqiAfnText}" Width="Auto" IsReadOnly="True" />

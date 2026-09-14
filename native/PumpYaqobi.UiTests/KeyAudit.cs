@@ -63,12 +63,118 @@ internal static class KeyAudit
         bad += Probe(win, grid, "برق دکان", Key.Left);
         bad += Probe(win, grid, "برق دکان", Key.Right);
 
+        // ══ و حالتِ دوم: «تایپ کردم، فلشِ چپ زدم، رفت راست» ═══════════════
+        //
+        // ⚠️ چهار سنجشِ بالا فقط **کُرسرِ داخلِ کادر** را می‌سنجند، و همین
+        // گمراه کرد: گزارشِ صاحب ریپو دربارهٔ همان نیست، دربارهٔ **پریدنِ
+        // خانه** است. در «حالتِ نوشتن» (وقتی با تایپ وارد خانه شده‌ای) فلش
+        // ذخیره می‌کند و به خانهٔ بغلی می‌رود — و آن‌جاست که جهت وارونه
+        // می‌شود.
+        //
+        // ⚠️ و این بار با **پیکسل** سنجیده می‌شود، نه با ایندکسِ ستون: کلِ
+        // برنامه راست‌به‌چپ است و هر استدلالی روی شمارهٔ ستون یک بار غلط از
+        // آب درآمده. چیزی که کاربر می‌بیند جای خانه روی صفحه است.
+        Console.WriteLine();
+        Console.WriteLine("بخش، در حالتِ نوشتن  کلید    ایکسِ پیش ← پس     انتظار   نتیجه");
+        Console.WriteLine(new string('-', 66));
+
+        // ⚠️ چند بخش، نه یکی: جدول‌ها ستون‌های متفاوتی دارند (کپسول، کشویی،
+        // ستونِ ستاره‌ای) و گزارشِ صاحب ریپو نگفت کدام بخش. اگر جایی وارونه
+        // باشد، این‌جا پیدا می‌شود.
+        foreach (var id in new[] { "expenses", "safe", "sarrafi", "waraq", "debt" })
+        {
+            var s2 = vm.Sections.FirstOrDefault(x => x.Id == id);
+            if (s2 is null) continue;
+            Wait(win, vm.GoAsync(s2));
+            for (var i = 0; i < 6; i++) { Dispatcher.UIThread.RunJobs(); Pump(win); }
+
+            // بخشی که صفحهٔ درونی دارد، جدولش پشتِ یک کلیک است
+            if (s2 is PumpYaqobi.App.ViewModels.ICardGridHost cards)
+            { Wait(win, cards.OpenByNumberAsync(1)); for (var i = 0; i < 6; i++) Pump(win); }
+
+            // ورق کارتِ خودش را دارد، نه ‎ICardGridHost‎
+            if (s2.GetType().GetProperty("OpenCardCommand")?.GetValue(s2)
+                    is CommunityToolkit.Mvvm.Input.IAsyncRelayCommand open
+                && s2.GetType().GetProperty("Cards")?.GetValue(s2)
+                    is System.Collections.IEnumerable list
+                && list.Cast<object>().FirstOrDefault() is { } card)
+            { Wait(win, open.ExecuteAsync(card)); for (var i = 0; i < 6; i++) Pump(win); }
+
+            var g = win.GetVisualDescendants().OfType<DataGrid>()
+                       .FirstOrDefault(x => x.IsEffectivelyVisible
+                                         && x.Columns.Count(c => c.IsVisible && !c.IsReadOnly) >= 3
+                                         && x.GetVisualDescendants().OfType<DataGridRow>().Any());
+            if (g is null) { Console.WriteLine($"{Pad(id, 18)} جدولی با ردیف نبود"); continue; }
+
+            bad += Jump(win, g, Key.Left, id);
+            bad += Jump(win, g, Key.Right, id);
+        }
+
         Console.WriteLine();
         Console.WriteLine(bad == 0
-            ? "✅ کُرسر همان‌جایی می‌رود که کلید می‌گوید"
+            ? "✅ کُرسر و خانه، هر دو همان‌جایی می‌روند که کلید می‌گوید"
             : $"❌ {bad} حالت وارونه است");
         return bad == 0 ? 0 : 1;
     }
+
+    /// <summary>
+    /// خانه‌ای را با **تایپ** باز می‌کند (نه با ‎F2‎)، یک فلش می‌زند، و
+    /// می‌سنجد خانهٔ جاری روی صفحه به کدام سمت رفت.
+    /// خروجی ۱ یعنی به سمتِ وارونه پرید.
+    /// </summary>
+    private static int Jump(Window win, DataGrid grid, Key key, string where)
+    {
+        grid.Focus();
+        if (grid.SelectedIndex < 0) grid.SelectedIndex = 0;
+
+        // از ستونِ وسط شروع می‌کنیم تا هر دو سمت جا داشته باشند
+        var cols = grid.Columns.Where(c => c.IsVisible && !c.IsReadOnly).ToList();
+        if (cols.Count < 3) { Console.WriteLine($"{Pad(where, 18)} ستونِ کافی نبود"); return 1; }
+        grid.CurrentColumn = cols[cols.Count / 2];
+        Pump(win);
+
+        var x0 = CellX(win, grid);
+
+        // ورود به «حالتِ نوشتن»: یک حرف تایپ می‌شود، عینِ کاربر
+        win.KeyTextInput("۵");
+        Pump(win);
+
+        win.KeyPressQwerty(Phys(key), RawInputModifiers.None);
+        win.KeyReleaseQwerty(Phys(key), RawInputModifiers.None);
+        Pump(win);
+
+        var x1 = CellX(win, grid);
+
+        // ‎←‎ یعنی خانه باید به چپِ صفحه برود (ایکسِ کمتر)، ‎→‎ برعکس
+        var want = key == Key.Left ? -1 : +1;
+        var got = Math.Sign(x1 - x0);
+        var ok = got == want && x0 >= 0 && x1 >= 0;
+
+        Console.WriteLine($"{Pad(where, 18)} {(key == Key.Left ? "←" : "→"),-6} "
+                        + $"{x0,9:0} ← {x1,-8:0} {(want > 0 ? "راست" : "چپ"),6}   {(ok ? "✔" : "✖")}");
+
+        Escape(win);
+        return ok ? 0 : 1;
+    }
+
+    /// <summary>ایکسِ خانهٔ جاری در مختصاتِ پنجره — همان چیزی که چشم می‌بیند.</summary>
+    private static double CellX(Window win, DataGrid grid)
+    {
+        var col = grid.CurrentColumn;
+        if (col is null) return -1;
+
+        var cell = grid.GetVisualDescendants().OfType<DataGridCell>()
+                       .FirstOrDefault(c => c.IsEffectivelyVisible
+                                         && ReferenceEquals(ColumnOf(c), col));
+        if (cell is null) return -1;
+        return cell.TranslatePoint(new Point(0, 0), win)?.X ?? -1;
+    }
+
+    private static DataGridColumn? ColumnOf(DataGridCell cell) =>
+        cell.GetType().GetProperty("OwningColumn",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic
+                | System.Reflection.BindingFlags.Public)
+            ?.GetValue(cell) as DataGridColumn;
 
     /// <summary>
     /// یک خانه را باز می‌کند، متن می‌گذارد، کُرسر را وسط می‌برد و یک کلید

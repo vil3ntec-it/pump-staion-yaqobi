@@ -183,6 +183,29 @@ public class ExcelGrid : DataGrid
     /// </summary>
     public const int GrowRowLimit = 250;
 
+    /// <summary>
+    /// ══ دفترهای ماهانه: سقف به **ردیف** است، نه به «یک صفحه» ════════════════
+    ///
+    /// گزارشِ صاحب ریپو، دو بار: «اون سقفِ زیرینِ جدول‌ها هم هستند، گفتم اون‌ها
+    /// هم نباشند» و «سقفِ زیری نباشد که جمله سرِ جا بماند و جدول از زیرشان
+    /// کم‌کم بیاید».
+    ///
+    /// حق داشت. قاعدهٔ قبلی «تا یک صفحه بلند شو» بود، و یک صفحه یعنی حدودِ
+    /// **هفده** ردیف — یعنی دفترِ بیست‌ردیفی هم داخلِ کادر گیر می‌کرد و
+    /// بقیه‌اش از زیرِ جمله‌ها رد می‌شد. همان چیزی که از آن شکایت داشت.
+    ///
+    /// ⚠️ ولی سقف کلاً هم نمی‌تواند برود، و این با عدد ثابت شد
+    /// (‎ledgerperf‎، پس از سبک شدنِ ردیف‌ها):
+    ///
+    ///     ۸۰ ردیف  →   ۱۱۲ ms      ← بی سقف، و روان
+    ///     ۲۰۰ ردیف → ۱٬۴۷۴ ms      ← دیگر نه
+    ///
+    /// پس سقف ماند ولی جایش عوض شد: دیگر «یک صفحه» نیست، **صد ردیف** است.
+    /// هیچ ماهِ واقعیِ این پمپ به صد ردیف نمی‌رسد، پس عملاً سقفی دیده
+    /// نمی‌شود؛ و اگر روزی رسید، برنامه به‌جای قفل شدن همان‌جا می‌ایستد.
+    /// </summary>
+    public const int PageRowLimit = 100;
+
     // ══════════════════════════════════════════════════════════════════════
     //  ⚠️ چرا تنگنا هست — با عدد، نه با حدس
     // ══════════════════════════════════════════════════════════════════════
@@ -284,7 +307,7 @@ public class ExcelGrid : DataGrid
         // یعنی دفترِ سه‌ردیفی یک کادرِ ۸۰۰ پیکسلیِ تقریباً خالی می‌شد. تا
         // وقتی محتوا از یک صفحه کوتاه‌تر است، جدول دقیقاً هم‌قدِ ردیف‌هایش
         // می‌ماند و ساختنِ آن چند ردیف هم ارزان است.
-        if (!GrowsToContent && want > screen) return Capped(availableSize, screen);
+        if (!GrowsToContent && rows > PageRowLimit) return Capped(availableSize, screen);
 
         if (availableSize.Height > want) availableSize = availableSize.WithHeight(want);
         var size = base.MeasureOverride(availableSize);
@@ -336,8 +359,8 @@ public class ExcelGrid : DataGrid
         if (rows < 0 || rows > GrowRowLimit) return;
         if (_pad > 400) return;
 
-        // جدولی که سرِ یک صفحه ایستاده، نوارِ لغزشِ خودش را به‌عمد دارد
-        if (!GrowsToContent && WantedHeight(rows) > ScreenHeight()) return;
+        // جدولی که سرِ سقفِ ردیف ایستاده، نوارِ لغزشِ خودش را به‌عمد دارد
+        if (!GrowsToContent && rows > PageRowLimit) return;
 
         if (VerticalBar is not { IsVisible: true } vbar || vbar.Maximum <= 1) return;
 

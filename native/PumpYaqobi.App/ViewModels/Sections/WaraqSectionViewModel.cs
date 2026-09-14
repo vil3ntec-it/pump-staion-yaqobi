@@ -159,6 +159,7 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
     {
         Touch();
         OnPropertyChanged(nameof(FuelText));
+        OnPropertyChanged(nameof(FuelChipText));
         OnPropertyChanged(nameof(FuelChipBrushKey));
     }
 
@@ -254,6 +255,17 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
     // ⚠️ ‎FuelText‎/‎TypeText‎/‎UnitText‎ سرِ جای خود مانده‌اند: هم نوشتنی‌اند
     // (کپسول از همان‌ها می‌خواند) و هم جاهای دیگر — کپی، PDF، آزمون‌ها —
     // رویشان حساب کرده‌اند.
+
+    /// <summary>
+    /// نوشتهٔ روی کپسولِ نوعِ تیل.
+    ///
+    /// ⚠️ یک بار نبودش و کپسول **خالی** دیده می‌شد: نما ‎FuelChipText‎ را
+    /// می‌خواست و این کلاس فقط ‎FuelText‎ داشت. اتصالِ نبوده در آوالونیا
+    /// بی‌صدا خالی می‌ماند، پس نه خطایی می‌آمد نه چیزی — فقط ستونِ «نوع تیل»
+    /// در ورق سفید بود. گزارشِ صاحب ریپو: «نوع تیل توی بخش ورق‌ها دیده
+    /// نمی‌شه.»
+    /// </summary>
+    public string FuelChipText => Fuel.ToPersian();
 
     public string FuelChipBrushKey => Fuel == FuelType.Diesel ? "Pump.Warn" : "Pump.Ok";
 

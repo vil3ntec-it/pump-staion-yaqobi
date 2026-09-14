@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
              xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
              x:Class="PumpYaqobi.App.Views.Sections.SafeSectionView"
              x:DataType="vm:SafeSectionViewModel">
 
@@ -73,40 +74,36 @@
         <DataGridTextColumn Header="تاریخ"  Binding="{Binding DateShamsi}" Width="Auto" />
         <DataGridTemplateColumn Header="نوع" Width="Auto">
           <DataGridTemplateColumn.CellTemplate>
-            <DataTemplate x:DataType="vm:SafeRowViewModel">
-            <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎.
-                 دو باگ با هم بود:
-                 ۱) با بچه‌های ‎ComboBoxItem‎، ‎SelectedItem‎ یک **شیء** است نه
-                    رشته — پس نه سرِ بار مقدار می‌نشست و نه انتخابِ کاربر
-                    برمی‌گشت («خودبه‌خود عوض می‌شود»).
-                 ۲) داخلِ ‎CellEditingTemplate‎ بود، پس مقدارِ فعلی دیده نمی‌شد
-                    و هر تغییر دو کلیک می‌خواست. در سایت این کادر
-                    ‎<select class="xls-in">‎ی همیشه‌پیداست که ‎onchange‎ فوراً
-                    ثبت می‌کند. -->
-              <ComboBox ItemsSource="{Binding KindOptions}"
-                        SelectedItem="{Binding KindText}"
-                        Classes="incell" />
-            </DataTemplate>
+                      <!-- ⚠️ کپسول، نه کشویی. با دو-سه گزینه، ‎ComboBox‎ یک قالبِ کامل با
+                         ‎Popup‎ی خودش می‌ساخت — و ‎ledgerperf‎ گرفتش: نزدیک به چهل درصدِ
+                         وقتِ باز شدنِ گاوصندوقِ ۲۰۰ ردیفی مالِ همین ستون‌ها بود. خواستهٔ
+                         صاحب ریپو هم همین بود: «اون علامتِ ▾ فقط جا گرفته» و «با تب یا
+                         اینتر عوض بشه». ‎ExcelGrid‎ کلاسِ ‎celltoggle‎ را می‌زند. -->
+                      <DataTemplate>
+                        <Button Classes="fuelchip celltoggle" Content="{Binding KindText}"
+                                Command="{Binding ToggleKindCommand}"
+                                Foreground="{Binding KindChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                                BorderBrush="{Binding KindChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                                ToolTip.Tip="زدنش این ردیف را بردگی ⇄ ماندگی می‌کند" />
+                      </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>
         <DataGridTextColumn Header="نام"   Binding="{Binding Title}"  Width="Auto" />
         <DataGridTextColumn Header="مبلغ"  Binding="{Binding AmountText}" Width="Auto" />
         <DataGridTemplateColumn Header="واحد" Width="Auto">
           <DataGridTemplateColumn.CellTemplate>
-            <DataTemplate x:DataType="vm:SafeRowViewModel">
-            <!-- ⚠️ کشویی همیشه پیداست و رشته می‌دهد، نه ‎ComboBoxItem‎.
-                 دو باگ با هم بود:
-                 ۱) با بچه‌های ‎ComboBoxItem‎، ‎SelectedItem‎ یک **شیء** است نه
-                    رشته — پس نه سرِ بار مقدار می‌نشست و نه انتخابِ کاربر
-                    برمی‌گشت («خودبه‌خود عوض می‌شود»).
-                 ۲) داخلِ ‎CellEditingTemplate‎ بود، پس مقدارِ فعلی دیده نمی‌شد
-                    و هر تغییر دو کلیک می‌خواست. در سایت این کادر
-                    ‎<select class="xls-in">‎ی همیشه‌پیداست که ‎onchange‎ فوراً
-                    ثبت می‌کند. -->
-              <ComboBox ItemsSource="{Binding CurrencyOptions}"
-                        SelectedItem="{Binding CurrencyText}"
-                        Classes="incell" />
-            </DataTemplate>
+                      <!-- ⚠️ کپسول، نه کشویی. با دو-سه گزینه، ‎ComboBox‎ یک قالبِ کامل با
+                         ‎Popup‎ی خودش می‌ساخت — و ‎ledgerperf‎ گرفتش: نزدیک به چهل درصدِ
+                         وقتِ باز شدنِ گاوصندوقِ ۲۰۰ ردیفی مالِ همین ستون‌ها بود. خواستهٔ
+                         صاحب ریپو هم همین بود: «اون علامتِ ▾ فقط جا گرفته» و «با تب یا
+                         اینتر عوض بشه». ‎ExcelGrid‎ کلاسِ ‎celltoggle‎ را می‌زند. -->
+                      <DataTemplate>
+                        <Button Classes="fuelchip celltoggle" Content="{Binding CurrencyText}"
+                                Command="{Binding ToggleCurrencyCommand}"
+                                Foreground="{Binding CurrencyChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                                BorderBrush="{Binding CurrencyChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                                ToolTip.Tip="زدنش واحد را افغانی ⇄ دالر می‌کند" />
+                      </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>
         <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="Auto" />

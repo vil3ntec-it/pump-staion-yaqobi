@@ -38,6 +38,18 @@ public sealed class WarmUp
     /// <summary>گرم کردن یک بار در عمرِ برنامه — نه با هر ورود و خروج.</summary>
     public bool Done { get; private set; }
 
+    /// <summary>
+    /// گذرِ دومِ داده، پس از رمز.
+    ///
+    /// ⚠️ چرا دو گذر: پرده حالا **پیش از** صفحهٔ رمز است، و پیش از ورود هیچ
+    /// اجازه‌ای نداریم — لایهٔ سرویس درست هم رد می‌کند. پس گذرِ اول فقط
+    /// صفحه‌ها را می‌سازد و می‌چیند (همان گران‌ترین بخش)، و گذرِ دوم بعد از
+    /// ورود، بی‌صدا و بی پرده، یک بار از مسیرِ داده هم رد می‌شود.
+    /// </summary>
+    public bool DataDone { get; private set; }
+
+    public void MarkDataDone() => DataDone = true;
+
     /// <summary>چند بخش گرم شد — برای نوشتهٔ زیرِ انیمیشن و برای آزمون.</summary>
     public int Warmed { get; private set; }
 

@@ -53,7 +53,12 @@ public sealed partial class CompanyRowViewModel : RowViewModel
     partial void OnUsdChanged(decimal v) { Touch(); Refresh(); }
     partial void OnRateChanged(decimal v) { Touch(); Refresh(); }
     partial void OnPoulChanged(decimal v) { Touch(); Refresh(); }
-    partial void OnIsUsdPayChanged(bool v) { Touch(); Refresh(); OnPropertyChanged(nameof(PoulCurrencyText)); }
+    partial void OnIsUsdPayChanged(bool v)
+    {
+        Touch(); Refresh();
+        OnPropertyChanged(nameof(PoulCurrencyText));
+        OnPropertyChanged(nameof(PoulCurrencyChipBrushKey));
+    }
 
     private void Refresh()
     {
@@ -78,6 +83,14 @@ public sealed partial class CompanyRowViewModel : RowViewModel
         get => IsUsdPay ? "دالر" : "افغانی";
         set => IsUsdPay = value == "دالر";
     }
+
+    // ══ کپسول به‌جای کشویی ════════════════════════════════════════════════
+    // خواستهٔ صاحب ریپو: «اون علامتِ ▾ فقط جا گرفته» و «با تب یا اینتر عوض
+    // بشه». ‎ExcelGrid‎ کلاسِ ‎celltoggle‎ را با ‎Enter‎/‎Tab‎ می‌زند.
+    public string PoulCurrencyChipBrushKey => IsUsdPay ? "Pump.Accent" : "Pump.Text";
+
+    [RelayCommand]
+    private void TogglePoulCurrency() => IsUsdPay = !IsUsdPay;
 
     public string TotalUsdText => Shamsi.Money(Math.Round(_owner.Calc.TotalUsd(_r), 2));
     public string TotalAfnText => Shamsi.Money(Math.Round(_owner.Calc.TotalAfn(_r), 2));

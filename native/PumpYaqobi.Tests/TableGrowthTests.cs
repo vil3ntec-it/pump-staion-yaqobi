@@ -79,19 +79,26 @@ public class TableGrowthTests
         => Assert.Contains("if (!_spread) return Capped(", Bare(Grid()));
 
     /// <summary>
-    /// ══ «هم‌قدِ ردیف‌ها شدن» انتخابی است، و پیش‌فرضش خاموش ═══════════════
+    /// ══ «هم‌قدِ ردیف‌ها شدن» انتخابی است، ولی سقفش دیگر «یک صفحه» نیست ═══
     ///
-    /// چون ساختنِ ردیف گران است (‎ledgerperf‎): گاوصندوق با ۸۰ ردیفِ آزاد
-    /// ۱٬۹۳۳ms، و همان وقتی مجازی‌سازی می‌کند ۱۲ تا ۳۸ms. پس دفترهای ماهانه
-    /// سرِ یک صفحه می‌ایستند و فقط ورق و پارچه — که کوتاه‌اند و خواستهٔ صریحِ
-    /// صاحب ریپو دربارهٔ همان‌ها بود — آزادند.
+    /// گزارشِ صاحب ریپو، دو بار: «اون سقفِ زیرینِ جدول‌ها هم هستند، گفتم
+    /// اون‌ها هم نباشند.» حق داشت — «یک صفحه» یعنی حدودِ **هفده** ردیف، پس
+    /// دفترِ بیست‌ردیفی هم داخلِ کادر گیر می‌کرد.
+    ///
+    /// حالا سقف به **ردیف** است (‎PageRowLimit‎)، و با عدد انتخاب شده
+    /// (‎ledgerperf‎، پس از سبک شدنِ ردیف‌ها): ۸۰ ردیف آزاد و روان (۸۲ تا
+    /// ۲۹۳ms در حالتِ پایدار)، ۲۰۰ ردیف نه. هیچ ماهِ واقعی به صد ردیف
+    /// نمی‌رسد، پس عملاً سقفی دیده نمی‌شود.
     /// </summary>
     [Fact]
     public void GrowingToContentIsOptInAndOnlyTheSheetsOptIn()
     {
         var g = Bare(Grid());
         Assert.Contains("GrowsToContentProperty", g);
-        Assert.Contains("!GrowsToContent && want > screen", g);
+
+        // ⚠️ سقفِ دفترها باید به **شمارِ ردیف** باشد، نه به «یک صفحه»
+        Assert.Contains("!GrowsToContent && rows > PageRowLimit", g);
+        Assert.DoesNotContain("!GrowsToContent && want > screen", g);
 
         // ورق روشنش می‌کند…
         Assert.Contains("GrowsToContent=\"True\"",

@@ -101,7 +101,10 @@
        نوار بیرونِ اسکرول است و با ‎TranslateTransform‎ (در کدِ پشتِ پنجره)
        تا وقتی سربرگ دیده می‌شود پایین می‌ایستد و بعد سرِ صفر قفل می‌شود؛
        آوالونیا ‎position:sticky‎ ندارد و این نزدیک‌ترین معادلش است. -->
-  <Grid IsVisible="{Binding !IsLocked}">
+  <!-- ⚠️ ‎IsShellVisible‎، نه ‎!IsLocked‎: حینِ پردهٔ لودینگ پوسته باید زیرِ
+       پرده **دیده شود**، وگرنه آوالونیا اصلاً اندازه‌اش نمی‌گیرد و هیچ صفحه‌ای
+       گرم نمی‌شود. چراییِ کامل در ‎MainViewModel.IsShellVisible‎. -->
+  <Grid IsVisible="{Binding IsShellVisible}">
    <ScrollViewer Name="PageScroll" VerticalScrollBarVisibility="Auto"
                  HorizontalScrollBarVisibility="Disabled">
     <StackPanel>
@@ -282,7 +285,8 @@
   </Grid>
 
     <!-- ══ قفل ══ -->
-    <Panel IsVisible="{Binding IsLocked}">
+    <!-- صفحهٔ رمز پس از پرده می‌آید، نه پیش از آن -->
+    <Panel IsVisible="{Binding IsLockVisible}">
       <v:LockView DataContext="{Binding Lock}" />
     </Panel>
 

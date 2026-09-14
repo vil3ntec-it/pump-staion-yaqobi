@@ -48,14 +48,18 @@ public partial class MainWindow : Window
         //
         // ⚠️ از این‌جا صدا زده می‌شود نه از خودِ ویومدل: قابِ گرم‌کن یک کنترلِ
         // واقعیِ همین پنجره است و ویومدل نباید به درختِ بصری دست بزند.
-        vm.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName != nameof(MainViewModel.IsLocked) || vm.IsLocked) return;
-
-            // یک نوبت دیرتر، تا بخشِ آغازین جای خودش نشسته باشد.
-            Dispatcher.UIThread.Post(() => _ = vm.WarmUpAsync(UpdateLayout),
-                                     DispatcherPriority.Background);
-        };
+        // ══ پرده **پیش از** رمز، نه بعدش ═══════════════════════════════════
+        //
+        // گزارشِ صاحب ریپو: «یک صفحهٔ جدا موقعِ باز شدنِ اپ، نه این‌که رمز را
+        // بزنم بعد بیاید… من اول فکر کردم برنامه خراب شده.»
+        //
+        // پس همین‌جا، در سازندهٔ پنجره، شروع می‌شود — پیش از آن‌که کاربر چیزی
+        // ببیند. پرده که رفت، صفحهٔ رمز می‌آید.
+        //
+        // ⚠️ یک نوبت دیرتر، تا پنجره یک بار چیده شده باشد؛ گرم کردن روی
+        // پنجره‌ای که هنوز اندازه ندارد هیچ کاری نمی‌کند.
+        Dispatcher.UIThread.Post(() => _ = vm.WarmUpAsync(UpdateLayout),
+                                 DispatcherPriority.Background);
 
         StickNavToTop();
     }

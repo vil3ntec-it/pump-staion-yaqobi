@@ -77,6 +77,7 @@ internal static class CellEditAudit
         bad.AddRange(ChipToggles(win, vm));
         bad.AddRange(RowNumbers(win, vm));
         bad.AddRange(FollowsCell(win, vm));
+        bad.AddRange(ChipsHaveText(win, vm));
 
         Console.WriteLine();
         if (bad.Count == 0)
@@ -609,6 +610,54 @@ internal static class CellEditAudit
     {
         win.KeyPressQwerty(key, RawInputModifiers.None);
         win.KeyReleaseQwerty(key, RawInputModifiers.None);
+    }
+
+    /// <summary>
+    /// ══ کپسولِ خالی، باگِ خاموش ══════════════════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «نوع تیل توی بخش ورق‌ها دیده نمی‌شه.»
+    ///
+    /// ⚠️ و چرا هیچ‌کس نفهمید: نما ‎{Binding FuelChipText}‎ می‌خواست و آن
+    /// ویومدل فقط ‎FuelText‎ داشت. اتصالِ نبوده در آوالونیا **بی‌صدا** خالی
+    /// می‌ماند — نه خطایی، نه هشداری، فقط یک ستونِ سفید. پس از این به بعد
+    /// هر کپسولی که روی صفحه باشد باید نوشته داشته باشد.
+    /// </summary>
+    private static List<string> ChipsHaveText(Window win, MainViewModel vm)
+    {
+        var bad = new List<string>();
+
+        Console.WriteLine();
+        Console.WriteLine("بخش            کپسول‌های روی صفحه   خالی   نتیجه");
+        Console.WriteLine(new string('-', 78));
+
+        foreach (var id in new[] { "waraq", "safe", "sarrafi", "debt" })
+        {
+            var sec = vm.Sections.FirstOrDefault(s => s.Id == id);
+            if (sec is null) continue;
+            Wait(win, vm.GoAsync(sec));
+            for (var i = 0; i < 6; i++) { Dispatcher.UIThread.RunJobs(); Pump(win); }
+
+            if (sec is PumpYaqobi.App.ViewModels.ICardGridHost cards)
+            { Wait(win, cards.OpenByNumberAsync(1)); for (var i = 0; i < 6; i++) Pump(win); }
+
+            if (sec.GetType().GetProperty("OpenCardCommand")?.GetValue(sec)
+                    is CommunityToolkit.Mvvm.Input.IAsyncRelayCommand open
+                && sec.GetType().GetProperty("Cards")?.GetValue(sec)
+                    is System.Collections.IEnumerable list
+                && list.Cast<object>().FirstOrDefault() is { } card)
+            { Wait(win, open.ExecuteAsync(card)); for (var i = 0; i < 6; i++) Pump(win); }
+
+            var chips = win.GetVisualDescendants().OfType<Button>()
+                           .Where(b => b.IsEffectivelyVisible && b.Classes.Contains("celltoggle"))
+                           .ToList();
+            var blank = chips.Count(b => string.IsNullOrWhiteSpace(b.Content?.ToString()));
+
+            var ok = chips.Count == 0 || blank == 0;
+            Console.WriteLine($"{Pad(id, 14)} {chips.Count,18:N0} {blank,7:N0}   {(ok ? "✔" : "✖")}");
+            if (!ok) bad.Add($"{id}: {blank} کپسولِ خالی — اتصالِ نبوده");
+        }
+
+        return bad;
     }
 
     private static string Pad(string s, int n) =>

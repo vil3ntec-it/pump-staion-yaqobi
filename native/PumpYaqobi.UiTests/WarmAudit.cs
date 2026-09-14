@@ -43,28 +43,34 @@ internal static class WarmAudit
             .SetupWithoutStarting();
 
         var win = new MainWindow { Width = 1440, Height = 900 };
-        win.Show();
-        Pump(win);
-
         var vm = (MainViewModel)win.DataContext!;
         var bad = new List<string>();
 
-        // ── ورود ──────────────────────────────────────────────────────────
-        vm.Lock.Password = "1234";
-        vm.Lock.Confirm = "1234";
-        vm.Lock.SubmitCommand.Execute(null);
-
-        // ── پرده باید بیاید ───────────────────────────────────────────────
-        //
-        // ⚠️ با نگاه کردن در حلقه گرفته نمی‌شود و یک بار همین گمراه کرد:
-        // ‎RunJobs()‎ کلِ گرم کردن را در همان یک فراخوانی تا ته می‌بَرد، پس
-        // وقتی حلقه دوباره نگاه می‌کند پرده رفته است. باید **شنید**، نه دید.
+        // ⚠️ **پیش از** هر پمپی گوش می‌دهیم، وگرنه چیزی گرفته نمی‌شود: پنجره
+        // گرم کردن را در سازنده‌اش صف می‌کند و نخستین ‎RunJobs()‎ کلش را تا ته
+        // می‌بَرد. یک بار همین‌طور شد و سنجش گفت «پرده اصلاً نیامد» در حالی که
+        // آمده و رفته بود.
         var sawCurtain = false;
+        var lockHiddenUnderCurtain = true;
         vm.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(MainViewModel.IsWarming) && vm.IsWarming)
-                sawCurtain = true;
+            if (e.PropertyName != nameof(MainViewModel.IsWarming) || !vm.IsWarming) return;
+            sawCurtain = true;
+            if (vm.IsLockVisible) lockHiddenUnderCurtain = false;
         };
+
+        win.Show();
+        Pump(win);
+
+        // ══ پرده باید **پیش از** رمز بیاید ════════════════════════════════
+        //
+        // گزارشِ صاحب ریپو: «یک صفحهٔ جدا موقعِ باز شدنِ اپ، نه این‌که رمز را
+        // بزنم بعد بیاید… من اول فکر کردم برنامه خراب شده.»
+        //
+        // پس این‌جا **پیش از** ورود سنجیده می‌شود: اگر کسی روزی ترتیب را
+        // برگرداند، همین‌جا قرمز می‌شود.
+        // ⚠️ «پیش از رمز» یعنی: تا وقتی پرده هست، هنوز وارد نشده‌ایم.
+        var curtainBeforePassword = sawCurtain && vm.IsLocked;
 
         var sw = Stopwatch.StartNew();
         while (sw.ElapsedMilliseconds < 60_000)
@@ -76,9 +82,20 @@ internal static class WarmAudit
         }
         sw.Stop();
 
+        // ── و حالا رمز، پس از پرده ────────────────────────────────────────
+        var lockShownAfterCurtain = vm.IsLockVisible;
+
+        vm.Lock.Password = "1234";
+        vm.Lock.Confirm = "1234";
+        vm.Lock.SubmitCommand.Execute(null);
+        for (var i = 0; i < 40; i++) { Dispatcher.UIThread.RunJobs(); win.UpdateLayout(); }
+
         var all = vm.Sections.Concat(vm.Sections.SelectMany(s => s.SubSections)).ToList();
 
         Console.WriteLine();
+        Console.WriteLine($"پرده پیش از رمز آمد؟             {(curtainBeforePassword ? "بله" : "نه")}");
+        Console.WriteLine($"صفحهٔ رمز زیرِ پرده پنهان بود؟   {(lockHiddenUnderCurtain ? "بله" : "نه")}");
+        Console.WriteLine($"پرده که رفت، رمز آمد؟            {(lockShownAfterCurtain ? "بله" : "نه")}");
         Console.WriteLine($"پردهٔ لودینگ دیده شد؟            {(sawCurtain ? "بله" : "نه")}");
         Console.WriteLine($"پرده رفت؟                        {(vm.IsWarming ? "نه" : "بله")}");
         Console.WriteLine($"چند بخش گرم شد                   {vm.Warm.Warmed} از {all.Count}");
@@ -87,6 +104,9 @@ internal static class WarmAudit
         Console.WriteLine();
 
         if (!sawCurtain) bad.Add("پردهٔ لودینگ اصلاً نیامد");
+        if (!curtainBeforePassword) bad.Add("پرده پیش از صفحهٔ رمز نیامد");
+        if (!lockHiddenUnderCurtain) bad.Add("صفحهٔ رمز زیرِ پرده هم دیده می‌شد");
+        if (!lockShownAfterCurtain) bad.Add("پرده که رفت، صفحهٔ رمز نیامد");
         if (vm.IsWarming) bad.Add("پرده نرفت");
         if (vm.Warm.Warmed < all.Count) bad.Add($"فقط {vm.Warm.Warmed} بخش از {all.Count} گرم شد");
 

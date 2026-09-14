@@ -41,7 +41,8 @@ public sealed partial class ExchangeRowViewModel : RowViewModel
     partial void OnDateShamsiChanged(string v) => Touch();
     partial void OnDescriptionChanged(string v) => Touch();
     partial void OnAmountChanged(decimal v) { Touch(); Refresh(); }
-    partial void OnCurrencyChanged(ExchangeCurrency v) { Touch(); OnPropertyChanged(nameof(CurrencyText)); }
+    partial void OnCurrencyChanged(ExchangeCurrency v)
+    { Touch(); OnPropertyChanged(nameof(CurrencyText)); OnPropertyChanged(nameof(CurrencyChipBrushKey)); }
     partial void OnRateChanged(decimal v) { Touch(); Refresh(); }
     partial void OnBardagiChanged(decimal v) { Touch(); Refresh(); }
 
@@ -103,6 +104,28 @@ public sealed partial class ExchangeRowViewModel : RowViewModel
             _ => ExchangeCurrency.Afghani,
         };
     }
+
+    // ══ کپسول به‌جای کشویی ════════════════════════════════════════════════
+    //
+    // خواستهٔ صاحب ریپو: «اون علامتِ ▾ فقط جا گرفته» و «با تب یا اینتر عوض
+    // بشه». ‎ExcelGrid‎ کلاسِ ‎celltoggle‎ را با ‎Enter‎/‎Tab‎ می‌زند.
+    //
+    // ⚠️ این یکی **سه** حالت دارد، نه دو: هر زدن یکی جلو می‌رود و از آخر به
+    // اول برمی‌گردد. پس هیچ گزینه‌ای از دسترس خارج نمی‌شود.
+    public string CurrencyChipBrushKey => Currency switch
+    {
+        ExchangeCurrency.Toman => "Pump.Purple",
+        ExchangeCurrency.Kaldar => "Pump.Warn",
+        _ => "Pump.Ok",
+    };
+
+    [RelayCommand]
+    private void ToggleCurrency() => Currency = Currency switch
+    {
+        ExchangeCurrency.Afghani => ExchangeCurrency.Toman,
+        ExchangeCurrency.Toman => ExchangeCurrency.Kaldar,
+        _ => ExchangeCurrency.Afghani,
+    };
 
     protected override void Apply()
     {

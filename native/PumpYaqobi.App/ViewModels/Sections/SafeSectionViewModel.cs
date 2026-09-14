@@ -39,10 +39,12 @@ public sealed partial class SafeRowViewModel : RowViewModel
     [ObservableProperty] private string _note = "";
 
     partial void OnDateShamsiChanged(string v) => Touch();
-    partial void OnIsBardagiChanged(bool v) { Touch(); OnPropertyChanged(nameof(KindText)); }
+    partial void OnIsBardagiChanged(bool v)
+    { Touch(); OnPropertyChanged(nameof(KindText)); OnPropertyChanged(nameof(KindChipBrushKey)); }
     partial void OnTitleChanged(string v) => Touch();
     partial void OnAmountChanged(decimal v) { Touch(); OnPropertyChanged(nameof(AmountText)); }
-    partial void OnIsUsdChanged(bool v) { Touch(); OnPropertyChanged(nameof(CurrencyText)); }
+    partial void OnIsUsdChanged(bool v)
+    { Touch(); OnPropertyChanged(nameof(CurrencyText)); OnPropertyChanged(nameof(CurrencyChipBrushKey)); }
     partial void OnNoteChanged(string v) => Touch();
 
     /// <summary>مبلغ برای نمایش و تایپ: با جداکنندهٔ هزارگان دیده می‌شود و
@@ -68,6 +70,27 @@ public sealed partial class SafeRowViewModel : RowViewModel
         get => IsUsd ? "دالر" : "افغانی";
         set => IsUsd = value == "دالر";
     }
+
+    // ══ کپسول به‌جای کشویی ════════════════════════════════════════════════
+    //
+    // خواستهٔ صاحب ریپو، دو بار: «اون علامتِ ▾ فقط جا گرفته، حذفش کن» و
+    // «با تب یا اینتر عوض بشه».
+    //
+    // ⚠️ و یک دلیلِ سنجیده هم دارد: هر ‎ComboBox‎ی داخلِ خانه یک قالبِ کامل با
+    // ‎Popup‎ و ‎ItemsPresenter‎ی خودش می‌سازد. ‎ledgerperf‎ روی گاوصندوقِ
+    // ۲۰۰ ردیفی: با کشویی ۲٬۳۷۴ میلی‌ثانیه، بی آن ۱٬۴۷۴ — یعنی نزدیک به
+    // چهل درصدِ وقتِ باز شدن مالِ همین دو ستون بود.
+    //
+    // ‎ExcelGrid‎ کلاسِ ‎celltoggle‎ را با ‎Enter‎/‎Tab‎ می‌زند.
+
+    public string KindChipBrushKey => IsBardagi ? "Pump.Danger" : "Pump.Ok";
+    public string CurrencyChipBrushKey => IsUsd ? "Pump.Accent" : "Pump.Text";
+
+    [RelayCommand]
+    private void ToggleKind() => IsBardagi = !IsBardagi;
+
+    [RelayCommand]
+    private void ToggleCurrency() => IsUsd = !IsUsd;
 
     protected override void Apply()
     {
