@@ -52,13 +52,13 @@ public static class AcctSnapshots
         IReadOnlyList<DebtRow> rows, DebtCalculationService calc)
     {
         var money = acct.Mode.IsMoney();
-        var t = calc.SplitTotals(rows);
+        var pctP = calc.PercentOf(acct, FuelType.Petrol);
+        var pctD = calc.PercentOf(acct, FuelType.Diesel);
 
-        // ── هر تیل با فیصدیِ خودش ───────────────────────────────────────────
-        // عینِ ‎PersonViewModel.Remainder(fuel)‎. «بردگی» در دفترِ پول افغانی
-        // است و در دفترِ تیل لیتر — همان تفکیکی که کلِ برنامه دارد.
-        var (bordP, rasidP, commP, remP) = Leg(t.Petrol, money, calc.PercentOf(acct, FuelType.Petrol));
-        var (bordD, rasidD, commD, remD) = Leg(t.Diesel, money, calc.PercentOf(acct, FuelType.Diesel));
+        // دفترِ فعال از ردیف‌هایی که به ما داده شد (یعنی همان چیزی که همین
+        // حالا روی صفحه است)، و دفترِ دیگر از خودِ حساب.
+        var fuelRows  = money ? (IReadOnlyList<DebtRow>)acct.FuelRows  : rows;
+        var moneyRows = money ? rows : (IReadOnlyList<DebtRow>)acct.MoneyRows;
 
         var snap = new AcctSnapshot
         {
@@ -67,12 +67,60 @@ public static class AcctSnapshots
             Account = accountTitle ?? "",
             Unit = money ? "افغانی" : "لیتر",
             Date = Shamsi.Today(),
+        };
+
+        // ⚠️ ترتیب مهم است: دفترِ **فعال** اول می‌آید، تا صفحه که تبِ اول را
+        // باز می‌کند همان دفتری را نشان بدهد که روی کامپیوتر باز بود.
+        var active = Book(money, money ? moneyRows : fuelRows, pctP, pctD, calc);
+        var other  = Book(!money, money ? fuelRows : moneyRows, pctP, pctD, calc);
+
+        snap.Books.Add(active);
+        // دفترِ دومی که هیچ ردیف و هیچ عددی ندارد فقط کیو‌آر را چاق می‌کند و
+        // به مشتری یک تبِ خالی نشان می‌دهد.
+        if (HasAnything(other)) snap.Books.Add(other);
+
+        // ══ جای قدیمی، دست‌نخورده ══════════════════════════════════════════
+        // صفحه‌های قدیمی و کدهای چاپ‌شده همین را می‌خوانند.
+        snap.Summary.AddRange(active.Summary);
+        snap.Head.AddRange(active.Head);
+        snap.Rows.AddRange(active.Rows);
+
+        return snap;
+    }
+
+    /// <summary>یک دفتر از یک حساب — خلاصه، تفکیکِ تیل، جدول و آرشیوِ ماه‌ها.</summary>
+    private static AcctBook Book(bool money, IReadOnlyList<DebtRow> rows,
+                                 decimal pctP, decimal pctD,
+                                 DebtCalculationService calc)
+    {
+        var t = calc.SplitTotals(rows);
+
+        // ── هر تیل با فیصدیِ خودش ───────────────────────────────────────────
+        // عینِ ‎PersonViewModel.Remainder(fuel)‎. «بردگی» در دفترِ پول افغانی
+        // است و در دفترِ تیل لیتر — همان تفکیکی که کلِ برنامه دارد.
+        var p = Leg(t.Petrol, money, pctP);
+        var d = Leg(t.Diesel, money, pctD);
+
+        var book = new AcctBook
+        {
+            Title = money ? "واحد پول" : "واحد تیل",
+            Unit = money ? "افغانی" : "لیتر",
+            DateCol = 0,
+            FuelCol = 3,
             Summary =
             {
-                new[] { "جمله بردگی", Shamsi.Money(bordP + bordD) },
-                new[] { "جمله رسید", Shamsi.Money(rasidP + rasidD) },
-                new[] { "فیصدی ما", Shamsi.Money(commP + commD) },
-                new[] { "الباقی", Shamsi.Money(remP + remD) },
+                new[] { "جمله بردگی", Shamsi.Money(p.Bord + d.Bord) },
+                new[] { "جمله رسید", Shamsi.Money(p.Rasid + d.Rasid) },
+                new[] { "فیصدی ما", Shamsi.Money(p.Comm + d.Comm) },
+                new[] { "الباقی", Shamsi.Money(p.Albaqi + d.Albaqi) },
+            },
+            // ══ «شرکت‌ها نمی‌دانند دیزل چقدر از من می‌خواهند یا پطرول چقدر» ══
+            // همین جدول جوابِ آن است: هر تیل، چهار عددِ خودش.
+            FuelHead = { "تیل", "بردگی", "رسید", "فیصدی", "الباقی" },
+            Fuels =
+            {
+                Fuel("پطرول", p, pctP),
+                Fuel("دیزل", d, pctD),
             },
             // ⚠️ همان ستونی که در جدولِ برنامه دیده می‌شود، نه هر دو —
             // ‎ShowRasidColumn‎ / ‎ShowRasidFuelColumn‎.
@@ -81,10 +129,15 @@ public static class AcctSnapshots
                      "فی", "بردگی", money ? "رسید" : "رسید تیل" },
         };
 
+        // ماه ⇒ [بردگی, رسید]. ⚠️ روی **همهٔ** ردیف‌ها، پیش از هر کم شدنی
+        // برای جا شدن در کیو‌آر — وگرنه ماه‌های قدیمی از آرشیو هم می‌افتادند.
+        var months = new Dictionary<string, decimal[]>();
+        var order = new List<string>();
+
         foreach (var r in rows)
         {
             if (r is null) continue;
-            snap.Rows.Add(new[]
+            book.Rows.Add(new[]
             {
                 r.DateShamsi ?? "",
                 r.Name ?? "",
@@ -95,10 +148,45 @@ public static class AcctSnapshots
                 Shamsi.MoneyOrBlank(r.Bardagi),
                 Shamsi.MoneyOrBlank(money ? r.Rasid : r.RasidFuel),
             });
+
+            var key = Shamsi.MonthKey(r.DateShamsi);
+            if (key.Length == 0) continue;
+            if (!months.TryGetValue(key, out var acc)) { months[key] = acc = new decimal[2]; order.Add(key); }
+            acc[0] += money ? r.Bardagi : r.Liters;
+            acc[1] += money ? r.Rasid : r.RasidFuel;
         }
 
-        return snap;
+        foreach (var key in order.OrderBy(k => k, StringComparer.Ordinal))
+        {
+            var acc = months[key];
+            book.Archive.Add(new[]
+            {
+                key,
+                Shamsi.Money(acc[0]),
+                Shamsi.Money(acc[1]),
+                Shamsi.Money(acc[0] - acc[1]),
+            });
+        }
+
+        return book;
     }
+
+    /// <summary>یک ردیفِ تفکیکِ تیل — با فیصدیِ خودش کنارِ نام.</summary>
+    private static string[] Fuel(string name,
+        (decimal Bord, decimal Rasid, decimal Comm, decimal Albaqi) t, decimal pct)
+        => new[]
+        {
+            pct == 0m ? name : name + " (٪" + Shamsi.Money(pct) + ")",
+            Shamsi.Money(t.Bord), Shamsi.Money(t.Rasid),
+            Shamsi.Money(t.Comm), Shamsi.Money(t.Albaqi),
+        };
+
+    /// <summary>
+    /// دفتری که نه ردیفی دارد نه عددی — یعنی اصلاً وجود ندارد و نباید تبِ
+    /// خالی بسازد.
+    /// </summary>
+    private static bool HasAnything(AcctBook b)
+        => b.Rows.Count > 0 || b.Summary.Any(s => Shamsi.Num(s[1]) != 0m);
 
     /// <summary>
     /// همان بالایی، ولی دفترِ درست را <b>خودش</b> برمی‌دارد.
@@ -123,22 +211,107 @@ public static class AcctSnapshots
         return (bord, rasid, comm, DebtCalculationService.Round0(bord + comm - rasid));
     }
 
-    /// <summary>حسابِ یک شرکتِ تیل — خریدها و رسیدهایش.</summary>
-    public static AcctSnapshot ForCompany(string name, string unit,
-                                          IEnumerable<string[]> rows,
-                                          IEnumerable<string[]> summary,
-                                          IEnumerable<string> head)
+    // ══════════════════════════════════════════════════════════════════════
+    //  شرکتِ تیل
+    // ══════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// حسابِ یک شرکتِ تیل — خریدها، پرداخت‌ها، تفکیکِ پطرول/دیزل و آرشیوِ ماه‌ها.
+    ///
+    /// گزارشِ صاحب ریپو: «شرکت‌ها نمی‌دانند دیزل چقدر از من می‌خواهند یا پطرول
+    /// چقدر.» کیو‌آر تا امروز فقط یک جمعِ کل داشت؛ حالا هر تیل ردیفِ خودش را
+    /// دارد.
+    ///
+    /// ⚠️ هیچ حسابی این‌جا نیست: هر عدد از <see cref="CompanyService"/> می‌آید،
+    /// همان سرویسی که خودِ صفحهٔ شرکت از آن می‌خواند. تفکیکِ تیل هم فقط یعنی
+    /// همان ‎Summarize‎ روی زیرمجموعهٔ ردیف‌ها.
+    /// </summary>
+    public static AcctSnapshot ForCompany(TilCompany company, CompanyService calc)
     {
+        var name = company.Name ?? "";
+        var all = company.Rows.OrderBy(r => r.DateKey).ThenBy(r => r.SortIndex).ToList();
+        var s = calc.Summarize(company, all);
+
+        var book = new AcctBook
+        {
+            Title = "خرید تیل",
+            Unit = "افغانی",
+            DateCol = 0,
+            FuelCol = 2,
+            Summary =
+            {
+                new[] { "کلِ دالر", Shamsi.Money(Math.Round(s.TotalUsd, 2), 2) + " $" },
+                new[] { "کلِ افغانی", Shamsi.Money(Math.Round(s.TotalAfn, 0)) },
+                new[] { "پرداخت‌شده", Shamsi.Money(Math.Round(s.PaidAfn, 0)) },
+                new[] { "الباقی", Shamsi.Money(Math.Round(s.AlbaqiAfn, 0)) },
+            },
+            FuelHead = { "تیل", "تن", "کلِ افغانی", "پرداخت‌شده", "الباقی" },
+            Head = { "تاریخ", "نام", "تیل", "تن", "دالر", "نرخ", "پول" },
+        };
+
+        foreach (var (fuel, label) in new[] { (FuelType.Petrol, "پطرول"), (FuelType.Diesel, "دیزل") })
+        {
+            var part = all.Where(r => r.Fuel == fuel).ToList();
+            // ⚠️ نرخِ تبدیل از **کلِ** شرکت می‌آید، نه از همین تکه: نرخ مالِ
+            // شرکت است و اگر جدا حساب می‌شد، جمعِ دو تیل با کلِ افغانی
+            // نمی‌خواند.
+            var ps = calc.Summarize(company, part);
+            book.Fuels.Add(new[]
+            {
+                label,
+                Shamsi.Money(Math.Round(part.Sum(calc.Ton), 2), 2),
+                Shamsi.Money(Math.Round(ps.TotalAfn, 0)),
+                Shamsi.Money(Math.Round(ps.PaidAfn, 0)),
+                Shamsi.Money(Math.Round(ps.AlbaqiAfn, 0)),
+            });
+        }
+
+        var months = new Dictionary<string, decimal[]>();
+        var order = new List<string>();
+
+        foreach (var r in all)
+        {
+            book.Rows.Add(new[]
+            {
+                r.DateShamsi ?? "",
+                r.Name ?? "",
+                r.Fuel == FuelType.Diesel ? "دیزل" : "پطرول",
+                Shamsi.MoneyOrBlank(calc.Ton(r)),
+                Shamsi.MoneyOrBlank(r.Usd),
+                Shamsi.MoneyOrBlank(r.Rate),
+                Shamsi.MoneyOrBlank(r.Poul),
+            });
+
+            var key = Shamsi.MonthKey(r.DateShamsi);
+            if (key.Length == 0) continue;
+            if (!months.TryGetValue(key, out var acc)) { months[key] = acc = new decimal[2]; order.Add(key); }
+            acc[0] += calc.TotalAfn(r);
+            acc[1] += calc.PaidAfn(r, s.ConvRate);
+        }
+
+        foreach (var key in order.OrderBy(k => k, StringComparer.Ordinal))
+        {
+            var acc = months[key];
+            book.Archive.Add(new[]
+            {
+                key,
+                Shamsi.Money(Math.Round(acc[0], 0)),
+                Shamsi.Money(Math.Round(acc[1], 0)),
+                Shamsi.Money(Math.Round(acc[0] - acc[1], 0)),
+            });
+        }
+
         var snap = new AcctSnapshot
         {
             Kind = "شرکت تیل",
             Name = name,
-            Unit = unit,
+            Unit = "افغانی",
             Date = Shamsi.Today(),
         };
-        snap.Head.AddRange(head);
-        snap.Summary.AddRange(summary);
-        snap.Rows.AddRange(rows);
+        snap.Books.Add(book);
+        snap.Summary.AddRange(book.Summary);
+        snap.Head.AddRange(book.Head);
+        snap.Rows.AddRange(book.Rows);
         return snap;
     }
 }

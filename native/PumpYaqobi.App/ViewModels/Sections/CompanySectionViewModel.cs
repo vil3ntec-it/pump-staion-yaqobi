@@ -456,29 +456,13 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
             if (card is null) return;
 
             var full = await _host.Companies.LoadAsync(card.Entity.Id);
-            var rows = (full?.Rows ?? new List<CompanyRow>())
-                .OrderBy(r => r.DateKey).ThenBy(r => r.SortIndex)
-                .Select(r => new[]
-                {
-                    r.DateShamsi ?? "",
-                    r.Name ?? "",
-                    r.Fuel == FuelType.Diesel ? "دیزل" : "پطرول",
-                    Shamsi.MoneyOrBlank(r.Ton),
-                    Shamsi.MoneyOrBlank(r.Usd),
-                    Shamsi.MoneyOrBlank(r.Rate),
-                    Shamsi.MoneyOrBlank(r.Poul),
-                })
-                .ToList();
 
-            var snap = AcctSnapshots.ForCompany(
-                card.Name, "افغانی", rows,
-                new[]
-                {
-                    new[] { "جمله افغانی", card.TotalAfnText },
-                    new[] { "جمله دالر", card.UsdText },
-                    new[] { "الباقی", card.AlbaqiAfnText },
-                },
-                new[] { "تاریخ", "نام", "تیل", "تن", "دالر", "نرخ", "پول" });
+            // ⚠️ عکس را خودِ ‎AcctSnapshots‎ از روی **موجودیتِ شرکت** می‌سازد،
+            // نه از روی ردیف‌هایی که این‌جا آماده شوند: تفکیکِ پطرول/دیزل و
+            // آرشیوِ ماه‌ها هر دو به خودِ ردیف‌ها نیاز دارند، نه به متنِ آن‌ها.
+            var snap = full is null
+                ? new AcctSnapshot { Name = card.Name, Kind = "شرکت تیل", Date = Shamsi.Today() }
+                : AcctSnapshots.ForCompany(full, _host.Company);
 
             var link = AcctView.Url(_host.Settings.GetString(SettingsKeys.ViewerUrl), snap,
                                     AcctLink.Build(card.Entity.Id, null, "company"));

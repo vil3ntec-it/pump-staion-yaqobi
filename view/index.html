@@ -16,15 +16,33 @@
      • مشتری اینترنتِ سرورِ خانگی را لازم ندارد،
      • هیچ حسابی از راهِ این صفحه لو نمی‌رود — هر کد فقط همان حسابِ خودش را دارد،
      • و کدی که امروز چاپ شود، فردا هم همان عددهای امروز را نشان می‌دهد.
+
+  ══ گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۴) ══════════════════════════════════════════
+  «بعضی جدول‌ها یا کادرهای جدول‌ها نیست؛ یارو نمی‌تواند ببیند که واحدِ پول چقدر
+   قرض‌دار است یا تیل چقدر، یا شرکت‌ها نمی‌دانند دیزل چقدر از من می‌خواهند یا
+   پطرول چقدر… جدول‌ها را تکمیل و درست کن و فقط خواندنی باشد، ولی بتواند با
+   دکمه‌ها واحدها و غیره را عوض کند… و آرشیوها یادم نرود، و ماه و سال — که در
+   هر ماه یا سال چقدر برد یا تحویل داشت.»
+
+  پس این صفحه از امروز:
+    ۱) هر «دفتر» را یک تب می‌کند (واحد تیل / واحد پول) — پیش از این فقط دفترِ
+       فعال داخلِ کیو‌آر می‌رفت و نیمِ حساب اصلاً دیده نمی‌شد.
+    ۲) جدولِ تفکیکِ پطرول و دیزل را نشان می‌دهد.
+    ۳) دکمه‌های فیلتر دارد — تیل و ماه — و اینها هیچ چیزی را عوض نمی‌کنند،
+       فقط کم و زیاد می‌کنند که چه دیده شود. صفحه فقط‌خواندنی است و می‌ماند.
+    ۴) آرشیوِ ماه‌به‌ماه و سال‌به‌سال دارد.
+
+  ⚠️ و شکلِ قدیمِ داده (‎h‎/‎r‎/‎s‎ی تخت، بی ‎b‎) هنوز باز می‌شود و باید بشود:
+  کیو‌آرهایی که چاپ شده و دستِ مشتری است همان شکل‌اند.
 -->
 <style>
   :root{
     --bg:#0f1622; --card:#16202e; --line:#26344a; --txt:#e8eef7;
-    --muted:#93a4bd; --accent:#f6a623; --ok:#38a169; --red:#e53e3e;
+    --muted:#93a4bd; --accent:#f6a623; --ok:#38a169; --red:#e53e3e; --chip:#1d2836;
   }
   @media (prefers-color-scheme: light){
     :root{ --bg:#f6f7fb; --card:#fff; --line:#e2e8f0; --txt:#1a202c;
-           --muted:#64748b; --accent:#c97d00; }
+           --muted:#64748b; --accent:#c97d00; --chip:#eef2f7; }
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--txt);
@@ -34,24 +52,43 @@
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
         padding:14px;margin-bottom:12px}
   h1{font-size:1.15rem;margin:0 0 2px}
+  h2{font-size:.9rem;margin:0 0 9px;color:var(--muted);font-weight:800}
   .sub{color:var(--muted);font-size:.82rem}
   .figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:12px}
   .fig{background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:10px;text-align:center}
   .fig .l{color:var(--muted);font-size:.76rem}
   .fig .v{font-size:1.15rem;font-weight:800;margin-top:3px}
+  .fig.hot{border-color:var(--accent)}
   .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
   table{border-collapse:collapse;width:100%;min-width:520px;font-size:.85rem}
+  .mini table{min-width:0}
   th,td{border:1px solid var(--line);padding:7px 6px;text-align:center;white-space:nowrap}
   th{background:var(--bg);color:var(--muted);font-weight:800}
   tr:nth-child(even) td{background:rgba(127,127,127,.05)}
+  tfoot td{font-weight:800;background:rgba(246,166,35,.08)}
   .note{color:var(--muted);font-size:.8rem;margin-top:8px;text-align:center}
   .err{border-color:var(--red);color:var(--red)}
   .btn{display:inline-block;border:1px solid var(--line);background:var(--bg);color:var(--txt);
        border-radius:10px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:.85rem}
+  /* ── دکمه‌های فیلتر ─────────────────────────────────────────────────────
+     ⚠️ اینها «ویرایش» نیستند و نباید بشوند: صفحه فقط‌خواندنی است. هر کدام
+     فقط می‌گوید چه چیزی دیده شود. */
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+  .chip{border:1px solid var(--line);background:var(--chip);color:var(--txt);
+        border-radius:999px;padding:6px 13px;font-size:.82rem;font-weight:700;cursor:pointer}
+  .chip.on{background:var(--accent);border-color:var(--accent);color:#17202b}
+  .lbl{color:var(--muted);font-size:.78rem;align-self:center;margin-inline-end:2px}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .tab{flex:1 1 120px;border:1px solid var(--line);background:var(--card);color:var(--txt);
+       border-radius:11px;padding:9px 10px;font-weight:800;cursor:pointer;font-size:.9rem}
+  .tab.on{background:var(--accent);border-color:var(--accent);color:#17202b}
+  .ro{display:inline-block;background:var(--chip);border:1px solid var(--line);
+      border-radius:999px;padding:2px 10px;font-size:.72rem;color:var(--muted)}
   @media print{
     body{background:#fff;color:#000;padding:0}
     .card{border-color:#999}
     .noprint{display:none}
+    table{min-width:0}
   }
 </style>
 </head>
@@ -66,7 +103,8 @@
 
   function esc(s) {
     return String(s == null ? '' : s)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   function fail(msg, detail) {
@@ -91,44 +129,270 @@
     return new Response(s).text();
   }
 
-  function render(d) {
+  // ══════════════════════════════════════════════════════════════════════
+  //  عدد — برنامه با رقمِ لاتین و «,» می‌نویسد (Shamsi.Money)
+  // ══════════════════════════════════════════════════════════════════════
+
+  function num(s) {
+    var t = String(s == null ? '' : s).replace(/[,٬\s$]/g, '')
+      .replace(/[۰-۹]/g, function (c) { return c.charCodeAt(0) - 0x06F0; })
+      .replace(/[٠-٩]/g, function (c) { return c.charCodeAt(0) - 0x0660; });
+    var v = parseFloat(t);
+    return isFinite(v) ? v : 0;
+  }
+
+  function fmt(v) {
+    var neg = v < 0; v = Math.abs(v);
+    var s = (Math.round(v * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });
+    return (neg ? '−' : '') + s;
+  }
+
+  // «1405/06/23» ⇒ «1405/06» · «1405/06» ⇒ خودش
+  function monthOf(s) {
+    var m = /^\s*(\d{4})\s*\/\s*(\d{1,2})/.exec(String(s || ''));
+    return m ? m[1] + '/' + (m[2].length < 2 ? '0' + m[2] : m[2]) : '';
+  }
+  function yearOf(s) { var m = monthOf(s); return m ? m.slice(0, 4) : ''; }
+
+  var MONTHS = ['حمل','ثور','جوزا','سرطان','اسد','سنبله',
+                'میزان','عقرب','قوس','جدی','دلو','حوت'];
+  function monthLabel(key) {
+    var m = /^(\d{4})\/(\d{2})$/.exec(key || '');
+    if (!m) return key || '';
+    var i = parseInt(m[2], 10);
+    return (MONTHS[i - 1] || m[2]) + ' ' + m[1];
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  //  تکه‌های صفحه
+  // ══════════════════════════════════════════════════════════════════════
+
+  function figsHtml(list, unit, hotLabel) {
+    if (!list || !list.length) return '';
+    var h = '<div class="figs">';
+    for (var i = 0; i < list.length; i++) {
+      var f = list[i], hot = hotLabel && f[0] === hotLabel;
+      h += '<div class="fig' + (hot ? ' hot' : '') + '"><div class="l">' + esc(f[0]) + '</div>' +
+           '<div class="v">' + esc(f[1]) + (unit ? ' ' + esc(unit) : '') + '</div></div>';
+    }
+    return h + '</div>';
+  }
+
+  function tableHtml(head, rows, opts) {
+    opts = opts || {};
+    if (!rows || !rows.length) {
+      return '<div class="note">' + esc(opts.empty || 'ردیفی نیست.') + '</div>';
+    }
+    var h = '<div class="scroll' + (opts.mini ? ' mini' : '') + '"><table><thead><tr>';
+    if (opts.numbered) h += '<th>#</th>';
+    for (var c = 0; c < (head || []).length; c++) h += '<th>' + esc(head[c]) + '</th>';
+    h += '</tr></thead><tbody>';
+    for (var r = 0; r < rows.length; r++) {
+      h += '<tr>';
+      if (opts.numbered) h += '<td>' + (r + 1) + '</td>';
+      for (var k = 0; k < rows[r].length; k++) h += '<td>' + esc(rows[r][k]) + '</td>';
+      h += '</tr>';
+    }
+    h += '</tbody>';
+    if (opts.foot && opts.foot.length) {
+      h += '<tfoot><tr>';
+      if (opts.numbered) h += '<td></td>';
+      for (var f = 0; f < opts.foot.length; f++) h += '<td>' + esc(opts.foot[f]) + '</td>';
+      h += '</tr></tfoot>';
+    }
+    return h + '</table></div>';
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  //  آرشیو — ماه‌به‌ماه از خودِ کد، سال‌به‌سال از جمعِ همان‌ها
+  //
+  //  ⚠️ آرشیو از ردیف‌های جدول ساخته نمی‌شود: ممکن است ردیف‌های قدیمی برای
+  //  جا شدن در کیو‌آر کم شده باشند و آن‌وقت ماه‌های قدیمی هم گم می‌شدند.
+  //  برنامه آرشیو را روی **همهٔ** ردیف‌ها حساب می‌کند و کامل می‌فرستد.
+  // ══════════════════════════════════════════════════════════════════════
+
+  function yearsOf(archive) {
+    var by = {}, order = [];
+    for (var i = 0; i < archive.length; i++) {
+      var y = yearOf(archive[i][0]);
+      if (!y) continue;
+      if (!by[y]) { by[y] = [0, 0]; order.push(y); }
+      by[y][0] += num(archive[i][1]);
+      by[y][1] += num(archive[i][2]);
+    }
+    order.sort();
+    return order.map(function (y) {
+      return [y, fmt(by[y][0]), fmt(by[y][1]), fmt(by[y][0] - by[y][1])];
+    });
+  }
+
+  function archiveCard(book) {
+    var a = book.g || [];
+    if (!a.length) return '';
+
+    var head = ['ماه', 'بردگی', 'رسید / پرداخت', 'تفاوت'];
+    var months = a.map(function (r) { return [monthLabel(r[0]), r[1], r[2], r[3]]; });
+    var tot = [0, 0];
+    for (var i = 0; i < a.length; i++) { tot[0] += num(a[i][1]); tot[1] += num(a[i][2]); }
+
+    var years = yearsOf(a);
+    var h = '<div class="card"><h2>🗂️ آرشیو — هر ماه چقدر برد و چقدر تحویل داد'
+          + (book.u ? ' (' + esc(book.u) + ')' : '') + '</h2>';
+    h += tableHtml(head, months, {
+      foot: ['جمعِ کل', fmt(tot[0]), fmt(tot[1]), fmt(tot[0] - tot[1])]
+    });
+    if (years.length > 1) {
+      h += '<h2 style="margin-top:14px">📅 سال‌به‌سال</h2>';
+      h += tableHtml(['سال', 'بردگی', 'رسید / پرداخت', 'تفاوت'], years);
+    }
+    return h + '</div>';
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  //  یک دفتر
+  // ══════════════════════════════════════════════════════════════════════
+
+  var state = { book: 0, fuel: '', month: '' };
+
+  function bookCard(book) {
     var h = '';
+
+    h += '<div class="card">';
+    h += '<h2>📊 خلاصهٔ ' + esc(book.k || 'حساب') + '</h2>';
+    h += figsHtml(book.s, book.u, 'الباقی');
+    h += '</div>';
+
+    // ── تفکیکِ تیل ────────────────────────────────────────────────────────
+    if (book.f && book.f.length) {
+      h += '<div class="card"><h2>⛽ پطرول و دیزل — جدا از هم</h2>';
+      h += tableHtml(book.fh || ['تیل', 'بردگی', 'رسید', 'فیصدی', 'الباقی'], book.f, { mini: true });
+      h += '</div>';
+    }
+
+    h += rowsCard(book);
+    h += archiveCard(book);
+    return h;
+  }
+
+  /// ردیف‌هایی که با فیلترهای همین لحظه دیده می‌شوند.
+  function visibleRows(book) {
+    var rows = book.r || [];
+    var fc = typeof book.fc === 'number' ? book.fc : -1;
+    var dc = typeof book.dc === 'number' ? book.dc : -1;
+    return rows.filter(function (r) {
+      if (state.fuel && fc >= 0 && r[fc] !== state.fuel) return false;
+      if (state.month && dc >= 0 && monthOf(r[dc]) !== state.month) return false;
+      return true;
+    });
+  }
+
+  function rowsCard(book) {
+    var fc = typeof book.fc === 'number' ? book.fc : -1;
+    var dc = typeof book.dc === 'number' ? book.dc : -1;
+    var h = '<div class="card"><h2>📋 ردیف‌ها <span class="ro">فقط خواندنی</span></h2>';
+
+    // ── دکمه‌های فیلتر ──────────────────────────────────────────────────
+    if (fc >= 0) {
+      h += '<div class="chips noprint"><span class="lbl">تیل:</span>';
+      ['', 'پطرول', 'دیزل'].forEach(function (f) {
+        h += '<button class="chip' + (state.fuel === f ? ' on' : '') +
+             '" data-act="fuel" data-v="' + esc(f) + '">' + (f || 'هر دو') + '</button>';
+      });
+      h += '</div>';
+    }
+
+    // ماه‌ها از آرشیو می‌آیند، نه از ردیف‌های دیده‌شونده — تا ماهی که ردیفش
+    // در کد جا نشده هم در فهرست باشد و مشتری بداند هست.
+    var months = (book.g || []).map(function (r) { return r[0]; });
+    if (dc >= 0 && months.length) {
+      h += '<div class="chips noprint"><span class="lbl">ماه:</span>';
+      h += '<button class="chip' + (state.month === '' ? ' on' : '') +
+           '" data-act="month" data-v="">همه</button>';
+      months.forEach(function (m) {
+        h += '<button class="chip' + (state.month === m ? ' on' : '') +
+             '" data-act="month" data-v="' + esc(m) + '">' + esc(monthLabel(m)) + '</button>';
+      });
+      h += '</div>';
+    }
+
+    var rows = visibleRows(book);
+    h += tableHtml(book.h, rows, {
+      numbered: true,
+      empty: (state.fuel || state.month)
+        ? 'با این فیلتر ردیفی نیست — دکمهٔ «همه» را بزنید.'
+        : 'ردیفی نیست.'
+    });
+
+    var note = book.n || '';
+    if (rows.length !== (book.r || []).length)
+      note = (note ? note + ' · ' : '') + rows.length + ' ردیف از ' + (book.r || []).length + ' نشان داده شد.';
+    if (note) h += '<div class="note">' + esc(note) + '</div>';
+
+    return h + '</div>';
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  //  صفحه
+  // ══════════════════════════════════════════════════════════════════════
+
+  var data = null;
+
+  function render() {
+    var d = data;
+    var books = d.b && d.b.length ? d.b : null;
+    var h = '';
+
     h += '<div class="card">';
     h += '<h1>' + esc(d.n || 'حساب') + '</h1>';
     if (d.a) h += '<div class="sub">' + esc(d.a) + '</div>';
     h += '<div class="sub">' + esc(d.t || '') + (d.d ? ' · ' + esc(d.d) : '') + '</div>';
-
-    if (d.s && d.s.length) {
-      h += '<div class="figs">';
-      for (var i = 0; i < d.s.length; i++) {
-        var f = d.s[i];
-        h += '<div class="fig"><div class="l">' + esc(f[0]) + '</div>' +
-             '<div class="v">' + esc(f[1]) + (d.u ? ' ' + esc(d.u) : '') + '</div></div>';
-      }
-      h += '</div>';
-    }
+    if (!books) h += figsHtml(d.s, d.u, 'الباقی');
     h += '</div>';
 
-    if (d.r && d.r.length) {
-      h += '<div class="card"><div class="scroll"><table><thead><tr><th>#</th>';
-      for (var c = 0; c < (d.h || []).length; c++) h += '<th>' + esc(d.h[c]) + '</th>';
-      h += '</tr></thead><tbody>';
-      for (var r = 0; r < d.r.length; r++) {
-        h += '<tr><td>' + (r + 1) + '</td>';
-        for (var k = 0; k < d.r[r].length; k++) h += '<td>' + esc(d.r[r][k]) + '</td>';
-        h += '</tr>';
+    if (books) {
+      if (books.length > 1) {
+        // ⚠️ «بتواند با دکمه‌ها واحدها را عوض کند» — همین تب‌ها. عوض کردنِ
+        // تب هیچ چیزی را نمی‌نویسد، فقط دفترِ دیگر را نشان می‌دهد.
+        h += '<div class="tabs noprint">';
+        books.forEach(function (b, i) {
+          h += '<button class="tab' + (state.book === i ? ' on' : '') +
+               '" data-act="book" data-v="' + i + '">' + esc(b.k || ('دفتر ' + (i + 1))) +
+               '<div class="sub" style="font-weight:600">' + esc(b.u || '') + '</div></button>';
+        });
+        h += '</div>';
       }
-      h += '</tbody></table></div>';
+      h += bookCard(books[Math.min(state.book, books.length - 1)]);
+    } else {
+      // ══ شکلِ قدیم — کدهای چاپ‌شده ═══════════════════════════════════════
+      h += '<div class="card"><h2>📋 ردیف‌ها <span class="ro">فقط خواندنی</span></h2>';
+      h += tableHtml(d.h, d.r, { numbered: true });
       if (d.m) h += '<div class="note">' + esc(d.m) + '</div>';
       h += '</div>';
     }
 
     h += '<div class="card noprint" style="text-align:center">' +
-         '<button class="btn" onclick="window.print()">🖨️ چاپ / ذخیره PDF</button></div>';
+         '<button class="btn" data-act="print">🖨️ چاپ / ذخیره PDF</button>' +
+         '<div class="note">این صفحه فقط نشان می‌دهد؛ هیچ چیزی از این‌جا عوض نمی‌شود.</div></div>';
 
     app.innerHTML = h;
     if (d.n) document.title = d.n + ' — پمپ یعقوبی';
   }
+
+  app.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-act]');
+    if (!t) return;
+    var v = t.getAttribute('data-v');
+    switch (t.getAttribute('data-act')) {
+      case 'print': window.print(); return;
+      // ⚠️ با عوض شدنِ دفتر، فیلترها صفر می‌شوند: ماهِ دفترِ تیل ممکن است در
+      // دفترِ پول اصلاً نباشد و مشتری جدولی خالی می‌دید بی این‌که بفهمد چرا.
+      case 'book': state.book = parseInt(v, 10) || 0; state.fuel = ''; state.month = ''; break;
+      case 'fuel': state.fuel = v; break;
+      case 'month': state.month = v; break;
+      default: return;
+    }
+    render();
+  });
 
   var hash = (location.hash || '').replace(/^#/, '');
   var m = /(?:^|&)d=([^&]+)/.exec(hash);
@@ -140,7 +404,7 @@
 
   try {
     inflate(b64(m[1]))
-      .then(function (txt) { render(JSON.parse(txt)); })
+      .then(function (txt) { data = JSON.parse(txt); render(); })
       .catch(function (e) {
         fail(e === 'old-browser'
               ? 'مرورگرِ گوشی قدیمی است و نمی‌تواند این کد را باز کند.'
