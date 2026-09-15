@@ -52,6 +52,21 @@ internal static class PrintShot
         Pump(preview);
         Shot(preview, Path.Combine(outDir, "print-preview.png"));
 
+        // «چاپِ ورق‌های دلخواه» — کادرِ ۱،۳ و تیکِ هر ورق
+        vm.What = vm.Whats.First(w => w.Value == "pages");
+        vm.PagesText = "1,3";
+        Pump(preview);
+        Shot(preview, Path.Combine(outDir, "print-preview-pages.png"));
+        // تیک‌ها همان متن‌اند — و زدنِ تیک متن را می‌نویسد
+        var ticked = string.Join(",", vm.PageChecks.Where(c => c.IsOn).Select(c => c.Number));
+        if (ticked != "1,3") { Console.WriteLine("  ✘ تیک‌های ورق با کادر یکی نیست: " + ticked); return 1; }
+        vm.PageChecks[1].IsOn = true;
+        if (vm.PagesText != "1-3") { Console.WriteLine("  ✘ زدنِ تیک متن را ننوشت: " + vm.PagesText); return 1; }
+        if (string.Join(",", vm.PickedPages()) != "1,2,3") { Console.WriteLine("  ✘ ورق‌های چاپ با تیک‌ها یکی نیست"); return 1; }
+        Console.WriteLine("  ✔ تیک‌های ورق و کادرِ «ورق‌ها» یک چیزند");
+        vm.What = vm.Whats.First(w => w.Value == "all");
+        Pump(preview);
+
         // پنجرهٔ تنظیمِ ورق — هر چهار زبانه
         var setup = new PrintSetupWindow(new PrintSetupViewModel(vm.Setup));
         setup.Show(preview);

@@ -118,6 +118,26 @@
               <TextBox Text="{Binding ToText}" Width="74" Classes="spinbox" />
             </StackPanel>
 
+            <!-- ورق‌های دلخواه: «۱،۳» یا «۲-۴»، و یک تیک برای هر ورق — مثلِ کادرِ
+                 «Pages»ِ چاپِ اکسل. متن و تیک‌ها یک چیزند. -->
+            <StackPanel Spacing="6" IsVisible="{Binding IsPages}">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="ورق‌ها:" VerticalAlignment="Center" Classes="pl" />
+                <TextBox Text="{Binding PagesText}" Width="160" Classes="spinbox"
+                         Watermark="مثلاً ۱،۳ یا ۲-۴" />
+              </StackPanel>
+              <ItemsControl ItemsSource="{Binding PageChecks}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <CheckBox Content="{Binding Label}" IsChecked="{Binding IsOn}" Margin="0,0,10,2" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+
             <c:SettingCard Classes="card" HorizontalAlignment="Stretch" ItemsSource="{Binding Collates}" SelectedItem="{Binding Collate}" />
             <c:SettingCard Classes="card" HorizontalAlignment="Stretch" ItemsSource="{Binding Orientations}" SelectedItem="{Binding Orientation}" />
             <c:SettingCard Classes="card" HorizontalAlignment="Stretch" ItemsSource="{Binding Papers}" SelectedItem="{Binding Paper}" />

@@ -288,7 +288,7 @@ public sealed partial class PrintSetupViewModel : ObservableObject
         _orig = PageSetup.Default with
         {
             Copies = _orig.Copies, Collate = _orig.Collate,
-            What = _orig.What, From = _orig.From, To = _orig.To,
+            What = _orig.What, From = _orig.From, To = _orig.To, PagesText = _orig.PagesText,
         };
         Pull(_orig);
     }

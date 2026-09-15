@@ -407,6 +407,12 @@ data/stations/<کد پمپ>/
   پیش‌فرض‌های تازه بار شود — `AnOldSavedSetup_StillLoadsWithTheNewDefaults`.
 - عکسِ سند برای چشم: `dotnet run --project PumpYaqobi.UiTests -c Release -- printshot <پوشه>`
   (پیش‌نمایش + هر چهار تبِ تنظیمِ ورق).
+- **انتخابِ ورق مثلِ اکسل** (خواستهٔ صاحب ریپو: «از سه ورق فقط دومی، یا یک و
+  سه و دومی نه»): حالتِ چهارمِ کادرِ «کدام ورق‌ها» — `PrintWhat.Pages` با
+  `PageSetup.PagesText` («۱،۳» یا «2,4-6»؛ `PrintJob.ParsePages`) و یک تیک برای
+  هر ورق (`PageChecks`). ⚠️ تیک‌ها و کادر یک چیزند و `RebuildPageChecks` از خودِ
+  کادر می‌خواند، نه از `Setup` — وگرنه یک قدم عقب می‌ماند. سنجشِ رفتارش در
+  `printshot` است (ویومدلِ پیش‌نمایش بی پلتفرمِ آوالونیا ساخته نمی‌شود).
 - آزمون: `PrintPageTests` و `PageSetupTests` در `PumpYaqobi.Tests`.
 
 ## 📉 زیان ناشی از افزایش قیمت — و ⚙️ تنظیمات مدیرِ تیل امانت (از ۱۴۰۵/۰۶/۲۵)

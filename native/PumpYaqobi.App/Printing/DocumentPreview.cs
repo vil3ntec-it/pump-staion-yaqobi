@@ -106,9 +106,46 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     [ObservableProperty] private string _copiesText = "۱";
     [ObservableProperty] private string _fromText = "۱";
     [ObservableProperty] private string _toText = "۱";
+    /// <summary>«۱،۳» یا «2,4-6» — کادرِ ورق‌های دلخواه، مثلِ «Pages»ِ چاپِ اکسل.</summary>
+    [ObservableProperty] private string _pagesText = "";
 
     /// <summary>«ورق‌ها: از … تا …» فقط در حالتِ بازه به کار می‌آید.</summary>
     public bool IsRange => Setup.What == PrintWhat.Range;
+    /// <summary>کادرِ ورق‌های دلخواه و تیک‌های هر ورق — فقط در حالتِ «ورق‌های دلخواه».</summary>
+    public bool IsPages => Setup.What == PrintWhat.Pages;
+
+    /// <summary>
+    /// یک تیک برای هر ورق — همان چیزی که صاحب ریپو خواست: «از سه ورق فقط
+    /// دومی را بگیرم، یا یک و سه را و دومی را نه». تیک‌ها و کادرِ متن یک چیزند:
+    /// زدنِ تیک متن را می‌نویسد و نوشتنِ متن تیک‌ها را می‌زند.
+    /// </summary>
+    public ObservableCollection<PageCheck> PageChecks { get; } = new();
+    private bool _syncingChecks;
+
+    private void RebuildPageChecks()
+    {
+        _syncingChecks = true;
+        try
+        {
+            // ⚠️ از خودِ کادر، نه از ‎Setup‎: کادر پیش از ‎Push‎ عوض می‌شود و اگر از
+            // تنظیمِ کهنه می‌خواندیم، تیک‌ها یک قدم عقب می‌ماندند (در عکس دیده شد).
+            var on = PrintJob.ParsePages(PagesText, _pages.Count).ToHashSet();
+            if (PageChecks.Count != _pages.Count)
+            {
+                PageChecks.Clear();
+                for (var i = 1; i <= _pages.Count; i++) PageChecks.Add(new PageCheck(i, on.Contains(i), OnCheckToggled));
+            }
+            else
+                foreach (var c in PageChecks) c.IsOn = on.Contains(c.Number);
+        }
+        finally { _syncingChecks = false; }
+    }
+
+    private void OnCheckToggled()
+    {
+        if (_syncingChecks) return;
+        PagesText = PrintJob.FormatPages(PageChecks.Where(c => c.IsOn).Select(c => c.Number));
+    }
 
     private void FillOptions()
     {
@@ -116,6 +153,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         Whats.Add(new SetupOption("all", "چاپِ همهٔ گزارش", "همهٔ ورق‌ها چاپ می‌شوند", "🗒"));
         Whats.Add(new SetupOption("current", "چاپِ همین ورق", "فقط ورقی که می‌بینید", "📄"));
         Whats.Add(new SetupOption("range", "چاپِ بازهٔ ورق‌ها", "از شمارهٔ ورقی تا شمارهٔ ورقی", "🔢"));
+        Whats.Add(new SetupOption("pages", "چاپِ ورق‌های دلخواه", "مثلاً ۱،۳ یا ۲-۴ — یا تیکِ هر ورق", "☑"));
 
         // ── مرتب/نامرتب — همان ‎COLL‎ ──────────────────────────────────────
         Collates.Add(new SetupOption("1", "مرتب", "۱،۲،۳   ۱،۲،۳   ۱،۲،۳", "🔃"));
@@ -182,6 +220,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         {
             PrintWhat.Current => "current",
             PrintWhat.Range => "range",
+            PrintWhat.Pages => "pages",
             _ => "all",
         });
         Collate = Pick(Collates, Setup.Collate ? "1" : "0");
@@ -206,6 +245,8 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         CopiesText = Shamsi.Money(Setup.Copies);
         FromText = Shamsi.Money(Setup.From);
         ToText = Shamsi.Money(Setup.To);
+        PagesText = Setup.PagesText;
+        RebuildPageChecks();
 
         _loading = was;
         RefreshNotes();
@@ -220,6 +261,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
             {
                 "current" => PrintWhat.Current,
                 "range" => PrintWhat.Range,
+                "pages" => PrintWhat.Pages,
                 _ => PrintWhat.All,
             },
             Collate = Collate?.Value != "0",
@@ -241,6 +283,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
             Copies = (int)Math.Clamp(Shamsi.Num(CopiesText), 1m, 999m),
             From = (int)Math.Clamp(Shamsi.Num(FromText), 1m, 9999m),
             To = (int)Math.Clamp(Shamsi.Num(ToText), 1m, 9999m),
+            PagesText = PagesText ?? "",
         };
 
         // کاغذ و حاشیه عددهای همراهشان را هم با خود می‌آورند — مثلِ سایت
@@ -261,6 +304,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     partial void OnCopiesTextChanged(string v) => Push();
     partial void OnFromTextChanged(string v) => Push();
     partial void OnToTextChanged(string v) => Push();
+    partial void OnPagesTextChanged(string v) { RebuildPageChecks(); Push(); }
 
     private void Push()
     {
@@ -386,6 +430,10 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         PrintWhat.Current => "فقط ورقِ " + Shamsi.Money(PageIndex + 1) + " چاپ می‌شود",
         PrintWhat.Range => "ورقِ " + Shamsi.Money(Setup.From) + " تا "
                            + Shamsi.Money(Setup.To) + " چاپ می‌شود",
+        PrintWhat.Pages => PickedPages().Count == 0
+            ? "هیچ ورقی انتخاب نشده — شماره بنویسید یا تیک بزنید"
+            : "فقط ورقِ " + PrintJob.FormatPages(PickedPages()) + " چاپ می‌شود ("
+              + Shamsi.Money(PickedPages().Count) + " ورق)",
         _ => "هر " + Shamsi.Money(PageCount) + " ورق چاپ می‌شود",
     };
 
@@ -426,7 +474,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         foreach (var n in new[]
         {
             nameof(WhatNote), nameof(PaperNoteText), nameof(MarginNoteText),
-            nameof(ScaleNote), nameof(ScaleInfo), nameof(IsRange), nameof(PageCount),
+            nameof(ScaleNote), nameof(ScaleInfo), nameof(IsRange), nameof(IsPages), nameof(PageCount),
         })
             OnPropertyChanged(n);
     }
@@ -544,6 +592,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
             PageIndex = 0;
             Show();
             OnPropertyChanged(nameof(PageCount));
+            RebuildPageChecks();
             RefreshNotes();
         }
 
@@ -669,4 +718,15 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
             catch { return (595f, 842f); }        // A4، اگر تصویر خوانده نشد
         }
     }
+}
+
+/// <summary>تیکِ یک ورق در ستونِ تنظیماتِ چاپ — همان «☑ ورقِ ۲».</summary>
+public sealed partial class PageCheck : ObservableObject
+{
+    private readonly Action _changed;
+    public PageCheck(int number, bool on, Action changed) { Number = number; _isOn = on; _changed = changed; }
+    public int Number { get; }
+    public string Label => "ورقِ " + Shamsi.Money(Number);
+    [ObservableProperty] private bool _isOn;
+    partial void OnIsOnChanged(bool v) => _changed();
 }

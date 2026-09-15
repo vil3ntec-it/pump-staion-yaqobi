@@ -1,3 +1,4 @@
+using PumpYaqobi.App.Printing;
 using PumpYaqobi.Reporting.Pdf;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
@@ -468,4 +469,57 @@ public class PrintPageTests
             });
         return rows;
     }
+    // ══ ورق‌های دلخواه — «از سه ورق فقط دومی، یا یک و سه و دومی نه» ══════════
+
+    [Theory]
+    [InlineData("2", 3, new[] { 2 })]
+    [InlineData("1,3", 3, new[] { 1, 3 })]
+    [InlineData("۱،۳", 3, new[] { 1, 3 })]            // رقم و ویرگولِ فارسی
+    [InlineData("2-4", 6, new[] { 2, 3, 4 })]
+    [InlineData("۴-۲", 6, new[] { 2, 3, 4 })]         // وارونه هم می‌شود
+    [InlineData("1 , 3 ; 5", 6, new[] { 1, 3, 5 })]
+    [InlineData("3,1,3", 6, new[] { 1, 3 })]          // هر ورق یک‌بار، به ترتیب
+    [InlineData("-2", 5, new[] { 1, 2 })]             // «تا ۲»
+    [InlineData("4-", 5, new[] { 4, 5 })]             // «از ۴ تا آخر»
+    [InlineData("2 تا 4", 5, new[] { 2, 3, 4 })]
+    [InlineData("9", 3, new int[0])]                  // ورقی که نیست
+    [InlineData("abc,2", 3, new[] { 2 })]             // تکهٔ ناخوانا نادیده
+    [InlineData("", 3, new int[0])]
+    public void PagesText_IsParsedLikeExcelsPagesBox(string text, int count, int[] want)
+        => Assert.Equal(want, PrintJob.ParsePages(text, count));
+
+    [Fact] // حالتِ «ورق‌های دلخواه» همان فهرست را چاپ می‌کند و فایلِ اصلی نیست
+    public void PagesMode_PicksExactlyThoseSheets()
+    {
+        var s = PageSetup.Default with { What = PrintWhat.Pages, PagesText = "1,3" };
+        Assert.Equal(new[] { 1, 3 }, PrintJob.Picked(s, 3, 2));
+        Assert.False(PrintJob.IsWholeDocument(PrintJob.Order(s, 3, 1), 3));
+        var all = s with { PagesText = "1-3" };
+        Assert.True(PrintJob.IsWholeDocument(PrintJob.Order(all, 3, 1), 3));
+    }
+
+    [Theory]
+    [InlineData(new[] { 2 }, "2")]
+    [InlineData(new[] { 1, 3 }, "1،3")]
+    [InlineData(new[] { 1, 2, 3, 5 }, "1-3،5")]
+    [InlineData(new[] { 1, 2 }, "1،2")]
+    [InlineData(new int[0], "")]
+    public void PagesText_IsWrittenBackShort(int[] pages, string want)
+        => Assert.Equal(want, PrintJob.FormatPages(pages));
+
+    [Fact] // تیک‌ها و کادرِ متن یک چیزند — رفتارش در ‎printshot‎ی UiTests سنجیده می‌شود
+    //        (ویومدلِ پیش‌نمایش برای ساختنِ تصویر پلتفرمِ آوالونیا می‌خواهد). این‌جا
+    //        فقط قفل می‌کنیم که کادر و تیک‌ها هر دو در ستونِ تنظیمات هستند.
+    public void TheSheetTicksAndThePagesBoxAreInTheRail()
+    {
+        var v = File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Views", "DocumentPreviewWindow.axaml"));
+        Assert.Contains("{Binding PagesText}", v);
+        Assert.Contains("{Binding PageChecks}", v);
+        Assert.Contains("IsChecked=\"{Binding IsOn}\"", v);
+        Assert.Contains("IsVisible=\"{Binding IsPages}\"", v);
+        var vm = File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Printing", "DocumentPreview.cs"));
+        Assert.Contains("\"pages\"", vm);
+        Assert.Contains("PrintJob.FormatPages(PageChecks", vm);
+    }
+
 }
