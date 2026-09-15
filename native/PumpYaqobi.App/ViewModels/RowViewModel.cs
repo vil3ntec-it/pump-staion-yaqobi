@@ -56,3 +56,13 @@ public abstract partial class RowViewModel : ObservableObject
     /// <summary>بخش با این خبردار می‌شود که جمع‌ها را دوباره حساب کند.</summary>
     public event Action? Recalculated;
 }
+
+/// <summary>
+/// ردیفی که ویرایش نمی‌شود — مثلِ ردیفِ 📦 حسابِ شرکت که از خریدِ مخزن آمده
+/// (‎readonly‎ی سایت). <see cref="Controls.ExcelGrid"/> پیش از باز کردنِ
+/// ویرایشگر همین را می‌پرسد. حذفش آزاد است؛ فقط خانه‌هایش تایپ نمی‌شوند.
+/// </summary>
+public interface ILockedRow
+{
+    bool IsLocked { get; }
+}

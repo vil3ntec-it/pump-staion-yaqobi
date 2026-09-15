@@ -1,0 +1,110 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
+             x:Class="PumpYaqobi.App.Views.Sections.CompanyPurchasesView"
+             x:DataType="vm:CompanyPurchasesPageViewModel">
+
+  <!-- ══ 📦 خریدهای یک شرکت — ‎companyPurchasesModal‎ی سایت ═════════════════
+       هر تیل یک بخش: چهار کادرِ خلاصه، جدولِ خریدهای مخزن (📦) و زیرش
+       «ردیف‌های دستی جدول». فقط نمایش است — هیچ چیزی نمی‌نویسد. -->
+  <c:SectionPage Header="{Binding Title}"
+                 SubHeader="خریدهای مخزنی که با نامِ همین شرکت ثبت شده‌اند. نمای زنده خریدهای بعد از آخرین «جدول جدید» است و نمای آرشیو فقط بازهٔ همان جدول.">
+    <c:SectionPage.Toolbar>
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Classes="ghost info" Content="📄 PDF" Command="{Binding PdfCommand}" />
+        <Button Classes="accent" Content="✕ بستن" Command="{Binding CloseCommand}" />
+      </StackPanel>
+    </c:SectionPage.Toolbar>
+
+    <ItemsControl ItemsSource="{Binding Sections}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:PurchaseSectionViewModel">
+          <StackPanel Spacing="8" Margin="0,0,0,18">
+            <TextBlock Text="{Binding Label}" FontSize="16" FontWeight="Black"
+                       Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+
+            <c:AutoFillPanel MinItemWidth="200" Gap="8" IsVisible="{Binding HasPurchases}">
+              <Border Classes="stat"><StackPanel Spacing="3">
+                <TextBlock Text="تعداد" Classes="label" />
+                <TextBlock Text="{Binding CountText}" Classes="num" />
+              </StackPanel></Border>
+              <Border Classes="stat"><StackPanel Spacing="3">
+                <TextBlock Text="جمله لیتر" Classes="label" />
+                <TextBlock Text="{Binding LitersText}" Classes="num" Foreground="{DynamicResource Pump.Ok}" />
+              </StackPanel></Border>
+              <Border Classes="stat"><StackPanel Spacing="3">
+                <TextBlock Text="جمله کل دالر" Classes="label" />
+                <TextBlock Text="{Binding UsdText}" Classes="num" Foreground="{DynamicResource Pump.Info}" />
+              </StackPanel></Border>
+              <Border Classes="stat"><StackPanel Spacing="3">
+                <TextBlock Text="جمله کل افغانی" Classes="label" />
+                <TextBlock Text="{Binding AfnText}" Classes="num" Foreground="{DynamicResource Pump.Accent}" />
+              </StackPanel></Border>
+            </c:AutoFillPanel>
+
+            <Border Classes="panel" Padding="0" IsVisible="{Binding HasPurchases}">
+              <c:ExcelGrid ItemsSource="{Binding Purchases}" x:CompileBindings="False"
+                           IsReadOnly="True" BorderThickness="0" CornerRadius="0">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="تاریخ" Binding="{Binding DateText}" Width="Auto" MinWidth="110" />
+                  <DataGridTextColumn Header="فروشنده" Binding="{Binding SellerText}" Width="Auto" MinWidth="150" />
+                  <DataGridTextColumn Header="وزن (تن)" Binding="{Binding TonText}" Width="Auto" MinWidth="110" />
+                  <DataGridTextColumn Header="ثقلت" Binding="{Binding DensityText}" Width="Auto" />
+                  <DataGridTextColumn Header="لیتر" Binding="{Binding LitersText}" Width="Auto" MinWidth="100" />
+                  <DataGridTextColumn Header="فی تن ($)" Binding="{Binding PriceTonText}" Width="Auto" />
+                  <DataGridTextColumn Header="نرخ دالر" Binding="{Binding UsdRateText}" Width="Auto" />
+                  <DataGridTextColumn Header="کل (دالر)" Binding="{Binding TotalUsdText}" Width="Auto" MinWidth="120" />
+                  <DataGridTextColumn Header="کل (افغانی)" Binding="{Binding TotalAfnText}" Width="Auto" MinWidth="120" />
+                  <DataGridTextColumn Header="فی لیتر (افغانی)" Binding="{Binding PerLiterText}" Width="Auto" />
+                  <DataGridTextColumn Header="یادداشت" Binding="{Binding NoteText}" Width="Auto" />
+                </DataGrid.Columns>
+              </c:ExcelGrid>
+            </Border>
+            <Border Classes="panel" IsVisible="{Binding !HasPurchases}" Opacity="0.75">
+              <TextBlock Text="{Binding EmptyText}" Classes="muted" HorizontalAlignment="Center" />
+            </Border>
+
+            <!-- ردیف‌های دستیِ جدولِ شرکت (بی خریدِ مخزن) -->
+            <StackPanel Spacing="6" IsVisible="{Binding HasManual}">
+              <TextBlock Text="ردیف‌های دستی جدول" Classes="label" FontWeight="Bold" />
+              <c:AutoFillPanel MinItemWidth="200" Gap="8">
+                <Border Classes="stat"><StackPanel Spacing="3">
+                  <TextBlock Text="تعداد" Classes="label" />
+                  <TextBlock Text="{Binding ManualCountText}" Classes="num" />
+                </StackPanel></Border>
+                <Border Classes="stat"><StackPanel Spacing="3">
+                  <TextBlock Text="جمله (تن)" Classes="label" />
+                  <TextBlock Text="{Binding ManualTonText}" Classes="num" Foreground="{DynamicResource Pump.Ok}" />
+                </StackPanel></Border>
+                <Border Classes="stat"><StackPanel Spacing="3">
+                  <TextBlock Text="جمله کل دالر" Classes="label" />
+                  <TextBlock Text="{Binding ManualUsdText}" Classes="num" Foreground="{DynamicResource Pump.Info}" />
+                </StackPanel></Border>
+                <Border Classes="stat"><StackPanel Spacing="3">
+                  <TextBlock Text="جمله کل افغانی" Classes="label" />
+                  <TextBlock Text="{Binding ManualAfnText}" Classes="num" Foreground="{DynamicResource Pump.Accent}" />
+                </StackPanel></Border>
+              </c:AutoFillPanel>
+              <Border Classes="panel" Padding="0">
+                <c:ExcelGrid ItemsSource="{Binding Manual}" x:CompileBindings="False"
+                             IsReadOnly="True" BorderThickness="0" CornerRadius="0">
+                  <DataGrid.Columns>
+                    <DataGridTextColumn Header="تاریخ" Binding="{Binding DateText}" Width="Auto" MinWidth="110" />
+                    <DataGridTextColumn Header="نام" Binding="{Binding NameText}" Width="Auto" MinWidth="150" />
+                    <DataGridTextColumn Header="مقدار (تن)" Binding="{Binding TonText}" Width="Auto" MinWidth="110" />
+                    <DataGridTextColumn Header="فی تن ($)" Binding="{Binding UsdText}" Width="Auto" />
+                    <DataGridTextColumn Header="نرخ دالر" Binding="{Binding RateText}" Width="Auto" />
+                    <DataGridTextColumn Header="کل (دالر)" Binding="{Binding TotalUsdText}" Width="Auto" MinWidth="120" />
+                    <DataGridTextColumn Header="کل (افغانی)" Binding="{Binding TotalAfnText}" Width="Auto" MinWidth="120" />
+                  </DataGrid.Columns>
+                </c:ExcelGrid>
+              </Border>
+            </StackPanel>
+          </StackPanel>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </c:SectionPage>
+</UserControl>

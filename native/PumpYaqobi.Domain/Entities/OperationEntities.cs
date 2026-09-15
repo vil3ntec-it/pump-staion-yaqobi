@@ -144,6 +144,32 @@ public class TilCompany : EntityBase
     /// <summary>نرخِ تبدیلِ دستیِ همین شرکت. صفر یعنی «از میانگینِ خریدها بگیر».</summary>
     public decimal? UsdRate { get; set; }
     public List<CompanyRow> Rows { get; set; } = new();
+
+    /// <summary>
+    /// ‎company.purchaseCheckpoint‎ی سایت: شمارهٔ آخرین خریدِ مخزن که پیش از
+    /// «جدول جدید» شمرده شد. کادرِ «خریدهای پطرول/دیزل» فقط خریدهای بعد از
+    /// این را می‌شمارد تا مثل خودِ جدول از صفر شروع کند؛ خریدهای قدیم در
+    /// آرشیو می‌مانند و خودِ خریدِ مخزن هیچ‌وقت پاک نمی‌شود.
+    /// </summary>
+    public long PurchaseCheckpointPetrol { get; set; }
+    public long PurchaseCheckpointDiesel { get; set; }
+}
+
+/// <summary>
+/// یک جدولِ آرشیوشدهٔ شرکت — ‎company.tableHistory[i]‎ی سایت. با «جدول جدید»
+/// ردیف‌های همان تیل عکس گرفته می‌شوند و جدول خالی می‌شود؛ پطرول و دیزل دو
+/// دفترِ جدا هستند و نو کردنِ یکی آنِ دیگری را آرشیو نمی‌کند.
+/// </summary>
+public class CompanyTableArchive : EntityBase
+{
+    public long CompanyId { get; set; }
+    public FuelType Fuel { get; set; } = FuelType.Petrol;
+    public string? CreatedShamsi { get; set; }
+    public string RowsJson { get; set; } = "[]";
+    public int RowCount { get; set; }
+    /// <summary>بازهٔ خریدهای مخزنِ همین جدول: ‎purchasesAfter < Id ≤ purchasesBefore‎.</summary>
+    public long PurchasesAfter { get; set; }
+    public long PurchasesBefore { get; set; }
 }
 
 /// <summary>یک ردیفِ حسابِ شرکت. «تن/دالر/فی» خرید است و «پول» پرداخت.</summary>

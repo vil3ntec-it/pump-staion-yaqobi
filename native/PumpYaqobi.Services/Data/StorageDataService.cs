@@ -36,6 +36,14 @@ public sealed class StorageDataService
                        .OrderByDescending(p => p.DateKey).ThenByDescending(p => p.Id).ToListAsync(ct);
     }
 
+    /// <summary>هر دو تیل، به ترتیبِ ثبت — برای کادرِ «خریدهای شرکت» و «جستجوی خرید».</summary>
+    public async Task<List<FuelPurchase>> AllPurchasesAsync(CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        return await db.FuelPurchases.AsNoTracking().OrderBy(p => p.Id).ToListAsync(ct);
+    }
+
     public async Task<List<ParchaReport>> ReportsAsync(FuelType fuel, CancellationToken ct = default)
     {
         _perm.Require(Permission.ViewData);

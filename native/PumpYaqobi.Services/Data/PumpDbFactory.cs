@@ -162,6 +162,9 @@ public sealed class PumpDbFactory
             ("CompanyRows", "SourceExchangeId", "TEXT"),
             ("Expenses", "SalaryStaffId", "INTEGER"),
             ("Expenses", "SalaryMonth", "TEXT"),
+            // «جدول جدید»ِ شرکت — نقطهٔ شمارشِ خریدهای هر تیل (‎purchaseCheckpoint‎)
+            ("TilCompanies", "PurchaseCheckpointPetrol", "INTEGER NOT NULL DEFAULT 0"),
+            ("TilCompanies", "PurchaseCheckpointDiesel", "INTEGER NOT NULL DEFAULT 0"),
         };
 
         foreach (var (table, column, type) in wanted)

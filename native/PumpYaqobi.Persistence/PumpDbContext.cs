@@ -37,6 +37,7 @@ public sealed class PumpDbContext : DbContext
     public DbSet<TankerUnload> TankerUnloads => Set<TankerUnload>();
     public DbSet<TilCompany> TilCompanies => Set<TilCompany>();
     public DbSet<CompanyRow> CompanyRows => Set<CompanyRow>();
+    public DbSet<CompanyTableArchive> CompanyTableArchives => Set<CompanyTableArchive>();
     public DbSet<AmanatAccount> AmanatAccounts => Set<AmanatAccount>();
     public DbSet<AmanatRow> AmanatRows => Set<AmanatRow>();
     public DbSet<WaraqEntry> WaraqEntries => Set<WaraqEntry>();
@@ -258,6 +259,14 @@ public sealed class PumpDbContext : DbContext
             e.HasIndex(x => x.LegacyId);
             e.HasMany(x => x.Rows).WithOne(x => x.Company!).HasForeignKey(x => x.CompanyId)
              .OnDelete(DeleteBehavior.Cascade);
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        b.Entity<CompanyTableArchive>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.CompanyId);
+            e.Property(x => x.Fuel).HasConversion<int>();
             e.HasQueryFilter(x => x.DeletedAt == null);
         });
 

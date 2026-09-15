@@ -116,6 +116,13 @@ public class ExcelGrid : DataGrid
 
         // جای اضافه بینِ ستون‌ها پخش می‌شود، نه در یک ستونِ خالیِ ته جدول
         LayoutUpdated += (_, _) => { SpreadColumns(); PinOnUserResize(); RememberWidths(); Settle(); };
+
+        // ردیفِ قفل‌شده (‎ILockedRow‎ — مثلِ ردیفِ 📦 خریدِ مخزن در حسابِ شرکت)
+        // ویرایشگر باز نمی‌کند؛ همان ‎readonly‎ی سایت
+        BeginningEdit += (_, e) =>
+        {
+            if (e.Row?.DataContext is ViewModels.ILockedRow { IsLocked: true }) e.Cancel = true;
+        };
     }
 
     // ══════════════════════════════════════════════════════════════════════

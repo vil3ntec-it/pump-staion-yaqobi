@@ -234,6 +234,117 @@ public sealed class CompanyDataService
     /// رسیدِ خودکار در نخستین ردیفِ خالی می‌نشیند؛ اگر همه پر بودند، ردیفِ تازه.
     /// ‎_putReceiptInCompany‎ — هیچ ردیفِ پری بازنویسی نمی‌شود.
     /// </summary>
+    // ══ جدول‌های آرشیو — ‎newCompanyTable()‎ و ‎company.tableHistory‎ ═══════════
+    //
+    // «جدول جدید» فقط جدولِ همان تیلی که حسابش باز است را عکس می‌گیرد، در
+    // آرشیو می‌گذارد و خالی می‌کند — پطرول و دیزل دو دفترِ جدا هستند (باگِ
+    // گزارش‌شدهٔ سایت: نو کردنِ یکی نباید آنِ دیگری را هم آرشیو کند).
+    // نقطهٔ شمارشِ خریدهای همان تیل هم جلو کشیده می‌شود تا کادرِ «خریدهای
+    // پطرول/دیزل» مثلِ خودِ جدول از صفر شروع کند؛ خودِ خریدِ مخزن پاک نمی‌شود.
+
+    private static readonly System.Text.Json.JsonSerializerOptions ArchiveJson = new() { WriteIndented = false };
+
+    public async Task<CompanyTableArchive> ArchiveTableAsync(long companyId, FuelType fuel, string createdShamsi,
+                                                             CancellationToken ct = default)
+    {
+        _perm.Require(Permission.EditData);
+        await using var db = _dbf.Create();
+        var c = await db.TilCompanies.FirstOrDefaultAsync(x => x.Id == companyId, ct)
+                ?? throw new InvalidOperationException("شرکت پیدا نشد");
+        var rows = await db.CompanyRows.Where(r => r.CompanyId == companyId && r.Fuel == fuel)
+                           .OrderBy(r => r.SortIndex).ThenBy(r => r.Id).ToListAsync(ct);
+        if (rows.Count == 0) throw new InvalidOperationException("جدول خالی است");
+
+        var lastPurchase = await db.FuelPurchases.IgnoreQueryFilters().MaxAsync(p => (long?)p.Id, ct) ?? 0L;
+        var after = fuel == FuelType.Diesel ? c.PurchaseCheckpointDiesel : c.PurchaseCheckpointPetrol;
+
+        // ردیف‌ها بی ناوبری عکس گرفته می‌شوند تا JSON حلقه نزند
+        foreach (var r in rows) r.Company = null;
+        var snap = new CompanyTableArchive
+        {
+            CompanyId = companyId, Fuel = fuel, CreatedShamsi = createdShamsi,
+            RowCount = rows.Count, RowsJson = System.Text.Json.JsonSerializer.Serialize(rows, ArchiveJson),
+            PurchasesAfter = after, PurchasesBefore = lastPurchase,
+        };
+        db.CompanyTableArchives.Add(snap);
+
+        // خریدهای وصل‌شده به این ردیف‌ها دیگر به جدولِ نو برنمی‌گردند (در آرشیو ماندند)
+        foreach (var r in rows)
+            if (!string.IsNullOrWhiteSpace(r.SourcePurchaseId)) MarkUnlinked(db, r.SourcePurchaseId!);
+        db.CompanyRows.RemoveRange(rows);
+
+        if (fuel == FuelType.Diesel) c.PurchaseCheckpointDiesel = lastPurchase;
+        else c.PurchaseCheckpointPetrol = lastPurchase;
+
+        await db.SaveChangesAsync(ct);
+        return snap;
+    }
+
+    public async Task<List<CompanyTableArchive>> ListArchivesAsync(long companyId, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        return await db.CompanyTableArchives.AsNoTracking()
+                       .Where(x => x.CompanyId == companyId)
+                       .OrderByDescending(x => x.Id).ToListAsync(ct);
+    }
+
+    /// <summary>همهٔ آرشیوهای همهٔ شرکت‌ها — برای «جستجوی خرید».</summary>
+    public async Task<List<CompanyTableArchive>> AllArchivesAsync(CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        return await db.CompanyTableArchives.AsNoTracking().OrderByDescending(x => x.Id).ToListAsync(ct);
+    }
+
+    public static List<CompanyRow> ArchiveRows(CompanyTableArchive h)
+    {
+        try { return System.Text.Json.JsonSerializer.Deserialize<List<CompanyRow>>(h.RowsJson ?? "[]") ?? new(); }
+        catch { return new(); }
+    }
+
+    public async Task DeleteArchiveAsync(long archiveId, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.DeleteData);
+        await using var db = _dbf.Create();
+        var h = await db.CompanyTableArchives.FirstOrDefaultAsync(x => x.Id == archiveId, ct);
+        if (h is null) return;
+        await _trash.RememberAsync(db, "companyarchive", (h.CreatedShamsi ?? "") + " — " + h.RowCount + " ردیف", h, ct);
+        db.CompanyTableArchives.Remove(h);
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// «🗑️ حذف این جدول» — ‎deleteCurrentCompanyTable‎: فقط ردیف‌های جدولِ فعلیِ
+    /// همین تیل پاک می‌شوند؛ جدول‌های آرشیو هرگز دست نمی‌خورند.
+    /// </summary>
+    public async Task<int> ClearTableAsync(long companyId, FuelType fuel, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.DeleteData);
+        await using var db = _dbf.Create();
+        var rows = await db.CompanyRows.Where(r => r.CompanyId == companyId && r.Fuel == fuel).ToListAsync(ct);
+        foreach (var r in rows)
+        {
+            r.Company = null;
+            await _trash.RememberAsync(db, "companyrow", (r.Name ?? "") + " — " + (r.DateShamsi ?? ""), r, ct);
+            if (!string.IsNullOrWhiteSpace(r.SourcePurchaseId)) MarkUnlinked(db, r.SourcePurchaseId!);
+        }
+        db.CompanyRows.RemoveRange(rows);
+        await db.SaveChangesAsync(ct);
+        return rows.Count;
+    }
+
+    /// <summary>«✏️ تغییر نام» — ‎renameCurrentCompany‎.</summary>
+    public async Task RenameAsync(long companyId, string name, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.EditData);
+        await using var db = _dbf.Create();
+        var c = await db.TilCompanies.FirstOrDefaultAsync(x => x.Id == companyId, ct);
+        if (c is null) return;
+        c.Name = name.Trim();
+        await db.SaveChangesAsync(ct);
+    }
+
     public async Task PutReceiptAsync(long companyId, FuelType fuel, CompanyRow receipt,
                                       CancellationToken ct = default)
     {

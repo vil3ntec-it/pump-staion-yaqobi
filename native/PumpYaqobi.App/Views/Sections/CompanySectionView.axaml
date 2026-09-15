@@ -95,8 +95,26 @@
       
     </c:SectionPage>
 
-    <Panel IsVisible="{Binding !IsListVisible}">
+    <Panel IsVisible="{Binding IsPageVisible}">
       <v:CompanyPageView DataContext="{Binding Page}" />
+    </Panel>
+
+    <!-- ══ صفحه‌های رویی — «خریدها»، «جدول‌های آرشیو»، «جستجوی خرید» ═══════
+         در سایت سه مودالِ جداگانه بودند که روی حساب باز می‌شدند. -->
+    <Panel IsVisible="{Binding IsOverlayVisible}">
+      <ContentControl Content="{Binding Overlay}">
+        <ContentControl.DataTemplates>
+          <DataTemplate DataType="vm:CompanyPurchasesPageViewModel">
+            <v:CompanyPurchasesView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:CompanyArchivePageViewModel">
+            <v:CompanyArchiveView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:CompanySearchPageViewModel">
+            <v:CompanySearchView />
+          </DataTemplate>
+        </ContentControl.DataTemplates>
+      </ContentControl>
     </Panel>
   </Panel>
 </UserControl>

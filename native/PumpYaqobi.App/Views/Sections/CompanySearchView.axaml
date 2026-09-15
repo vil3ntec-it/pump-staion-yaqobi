@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
+             x:Class="PumpYaqobi.App.Views.Sections.CompanySearchView"
+             x:DataType="vm:CompanySearchPageViewModel">
+
+  <!-- ══ 🔍 جستجوی خرید — ‎cmpSearchModal‎ی سایت ═══════════════════════════
+       مقدار (کیلو یا تن) و/یا تاریخ، با انتخابِ تیل. هر مورد یک کارت با دکمهٔ
+       «رفتن» که همان خرید یا همان جدول را باز می‌کند. فقط می‌خواند. -->
+  <c:SectionPage Header="🔍 جستجوی خرید" SubHeader="{Binding ScopeText}">
+    <c:SectionPage.Toolbar>
+      <Button Classes="accent" Content="✕ بستن" Command="{Binding CloseCommand}" />
+    </c:SectionPage.Toolbar>
+
+    <StackPanel Spacing="10">
+      <WrapPanel Orientation="Horizontal">
+        <StackPanel Spacing="3" Margin="0,0,10,6">
+          <TextBlock Text="مقدار (کیلو یا تن)" Classes="muted" />
+          <TextBox Width="200" Text="{Binding QtyText}" Watermark="مثلاً 12300 یا 12.3" />
+        </StackPanel>
+        <StackPanel Spacing="3" Margin="0,0,10,6">
+          <TextBlock Text="تاریخ" Classes="muted" />
+          <TextBox Width="170" Text="{Binding DateText}" Watermark="مثلاً 1405/5/12" />
+        </StackPanel>
+        <StackPanel Spacing="3" Margin="0,0,10,6">
+          <TextBlock Text="نوع تیل" Classes="muted" />
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <Button Classes="seg" Content="📋 هر دو" Command="{Binding SetFuelCommand}" CommandParameter="all" Classes.on="{Binding IsAll}" />
+            <Button Classes="seg" Content="⛽ پطرول" Command="{Binding SetFuelCommand}" CommandParameter="petrol" Classes.on="{Binding IsPetrol}" />
+            <Button Classes="seg" Content="🟤 دیزل" Command="{Binding SetFuelCommand}" CommandParameter="diesel" Classes.on="{Binding IsDiesel}" />
+          </StackPanel>
+        </StackPanel>
+        <Button Classes="accent" Content="🔍 جستجو" Command="{Binding RunCommand}" VerticalAlignment="Bottom" Margin="0,0,0,6" IsDefault="True" />
+      </WrapPanel>
+
+      <TextBlock Text="{Binding Message}" Classes="label" TextWrapping="Wrap"
+                 Foreground="{DynamicResource Pump.Danger}" IsVisible="{Binding NotFound}" FontWeight="Bold" />
+      <TextBlock Text="{Binding Message}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding !NotFound}" />
+
+      <ItemsControl ItemsSource="{Binding Results}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:PurchaseHitViewModel">
+            <Border Classes="panel" Margin="0,0,0,8"
+                    BorderBrush="{Binding FuelBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
+              <StackPanel Spacing="4">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="Black" FontSize="15" />
+                  <TextBlock Grid.Column="1" Text="{Binding FuelText}" FontWeight="Bold"
+                             Foreground="{Binding FuelBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                </Grid>
+                <TextBlock Text="{Binding DateText}" Classes="muted" />
+                <WrapPanel Orientation="Horizontal">
+                  <TextBlock Text="{Binding TonText}" FontWeight="Bold" Foreground="{DynamicResource Pump.Info}" Margin="0,0,16,0" />
+                  <TextBlock Text="{Binding UsdText}" FontWeight="Bold" Foreground="{DynamicResource Pump.Ok}" Margin="0,0,16,0" />
+                  <TextBlock Text="{Binding AfnText}" FontWeight="Bold" Foreground="{DynamicResource Pump.Accent}" />
+                </WrapPanel>
+                <Button Classes="accent" Content="{Binding GoText}" Command="{Binding GoCommand}"
+                        IsVisible="{Binding CanGo}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </c:SectionPage>
+</UserControl>

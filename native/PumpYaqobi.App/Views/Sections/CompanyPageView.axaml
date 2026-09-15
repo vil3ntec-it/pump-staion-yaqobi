@@ -6,85 +6,136 @@
              x:Class="PumpYaqobi.App.Views.Sections.CompanyPageView"
              x:DataType="vm:CompanyPageViewModel">
 
-  <c:SectionPage Header="{Binding Name}" SubHeader="دفترِ خرید و رسیدِ همین شرکت">
+  <!-- ══ حسابِ یک شرکتِ تیل — همان ‎#companyModal‎ی سایت ═══════════════════
+       سربرگ: قبلی/بعدی، نامِ شرکت، دیزل/پطرول، تغییر نام، PDF.
+       خلاصه: شش کادر (تن، کل دالر، کل افغانی، رسید دالر، رسید افغانی، الباقی).
+       بالای جدول: کادرهای «جدول‌های آرشیو» (فقط اگر آرشیوی هست)، کادرِ کشوییِ
+       «کارها»، دو دکمهٔ «خریدهای پطرول/دیزل» و «جستجوی خرید».
+       ته صفحه، دور از بقیه: «🗑️ حذف این جدول».
+       ⚠️ ستونِ «کیلو» عمداً نیست — خواستهٔ صاحب ریپو: خرید به تن است و کیلو اضافه. -->
+  <c:SectionPage Header="{Binding Name}" SubHeader="{Binding PosText, StringFormat='شرکت {0} — دفترِ خرید و رسیدِ همین شرکت'}">
 
     <c:SectionPage.Toolbar>
-      <StackPanel Orientation="Horizontal" Spacing="8">
-        <ToggleSwitch OnContent="دیزل" OffContent="پطرول" IsChecked="{Binding IsDiesel}" />
-        <Button Classes="ghost info" Content="PDF" Command="{Binding PdfCommand}" />
-        <Button Classes="ghost info" Content="هر دو تیل" Command="{Binding PdfBothCommand}" />
+      <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+        <Button Classes="ghost" Content="→ قبلی" Command="{Binding PrevCommand}" IsEnabled="{Binding CanPrev}" Margin="0,0,4,0" />
+        <Button Classes="ghost" Content="بعدی ←" Command="{Binding NextCommand}" IsEnabled="{Binding CanNext}" Margin="0,0,10,0" />
+        <ToggleSwitch OnContent="🟤 دیزل" OffContent="⛽ پطرول" IsChecked="{Binding IsDiesel}" Margin="0,0,10,0" />
+        <Button Classes="ghost" Content="✏️ تغییر نام" Command="{Binding RenameCommand}" Margin="0,0,6,0" />
+        <Button Classes="ghost info" Content="📄 PDF" Command="{Binding PdfCommand}" Margin="0,0,6,0" />
+        <Button Classes="ghost info" Content="هر دو تیل" Command="{Binding PdfBothCommand}" Margin="0,0,6,0" />
         <Button Classes="accent" Content="بازگشت به فهرست" Command="{Binding BackCommand}" />
-      </StackPanel>
+      </WrapPanel>
     </c:SectionPage.Toolbar>
 
     <c:SectionPage.Summary>
-      <!-- ‎Rows="1"‎ یعنی «همه در یک ردیف، با عرضِ مساوی» — کادرها تا لبه پخش
-           می‌شوند به‌جای آن‌که راست جمع شوند و کنارشان خالی بماند. -->
       <UniformGrid Rows="1" Classes="stats">
         <Border Classes="stat">
           <StackPanel Spacing="3">
-            <TextBlock Text="کلِ خرید" Classes="label" />
-            <TextBlock Text="{Binding TotalAfn, StringFormat={}{0} افغانی}" Classes="num" />
-            <TextBlock Text="{Binding TotalUsd, StringFormat={}{0} دالر}" Classes="muted" />
+            <TextBlock Text="جمله مقدار (تن)" Classes="label" />
+            <TextBlock Text="{Binding TotalTon}" Classes="num" Foreground="{DynamicResource Pump.Info}" />
           </StackPanel>
         </Border>
         <Border Classes="stat">
           <StackPanel Spacing="3">
-            <TextBlock Text="رسید" Classes="label" />
-            <TextBlock Text="{Binding PaidAfn, StringFormat={}{0} افغانی}" Classes="num" />
+            <TextBlock Text="جمله کل دالر" Classes="label" />
+            <TextBlock Text="{Binding TotalUsd, StringFormat={}{0} $}" Classes="num" Foreground="{DynamicResource Pump.Info}" />
           </StackPanel>
         </Border>
         <Border Classes="stat">
           <StackPanel Spacing="3">
-            <TextBlock Text="الباقی" Classes="label" />
-            <TextBlock Text="{Binding AlbaqiAfn, StringFormat={}{0} افغانی}" Classes="num" />
-            <TextBlock Text="{Binding AlbaqiUsd, StringFormat={}{0} دالر}" Classes="muted" />
+            <TextBlock Text="جمله کل (افغانی)" Classes="label" />
+            <TextBlock Text="{Binding TotalAfn, StringFormat={}{0} افغانی}" Classes="num" Foreground="{DynamicResource Pump.Accent}" />
           </StackPanel>
         </Border>
         <Border Classes="stat">
           <StackPanel Spacing="3">
-            <TextBlock Text="نرخِ تبدیل" Classes="label" />
-            <TextBlock Text="{Binding ConvRate}" Classes="num" />
+            <TextBlock Text="رسید دالر" Classes="label" />
+            <TextBlock Text="{Binding PaidUsd}" Classes="num" Foreground="{DynamicResource Pump.Ok}" />
+          </StackPanel>
+        </Border>
+        <Border Classes="stat">
+          <StackPanel Spacing="3">
+            <TextBlock Text="رسید (افغانی)" Classes="label" />
+            <TextBlock Text="{Binding PaidAfn, StringFormat={}{0} افغانی}" Classes="num" Foreground="{DynamicResource Pump.Ok}" />
+          </StackPanel>
+        </Border>
+        <Border Classes="stat">
+          <StackPanel Spacing="3">
+            <TextBlock Text="جمله الباقی" Classes="label" />
+            <TextBlock Text="{Binding AlbaqiAfn, StringFormat={}{0} AFN}" Classes="num"
+                       Foreground="{Binding AlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+            <TextBlock Text="{Binding AlbaqiUsd, StringFormat={}{0} $}" Classes="muted" />
+            <TextBlock Text="{Binding AlbaqiStatus}" Classes="muted" FontWeight="Bold" />
           </StackPanel>
         </Border>
       </UniformGrid>
     </c:SectionPage.Summary>
 
-    <!-- جدول + ردیفِ «جمله»ی همین دفتر (پطرول و دیزل جدا) -->
-    <Grid RowDefinitions="*,Auto">
-    <c:ExcelGrid Grid.Row="0" ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False"
-                RowDeleteCommand="{Binding $parent[UserControl].DataContext.DeleteRowCommand}">
-      <DataGrid.Columns>
-        <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
-        <DataGridTextColumn Header="شرح"   Binding="{Binding Name}" Width="Auto" />
-        <DataGridTextColumn Header="کیلو"  Binding="{Binding KgText}" Width="Auto" />
-        <DataGridTextColumn Header="تن"    Binding="{Binding TonText}" Width="Auto" />
-        <DataGridTextColumn Header="فیِ تن ($)" Binding="{Binding UsdText}" Width="Auto" />
-        <DataGridTextColumn Header="نرخ"   Binding="{Binding RateText}" Width="Auto" />
-        <DataGridTextColumn Header="کلِ دالر" Binding="{Binding TotalUsdText}" Width="Auto" IsReadOnly="True" />
-        <DataGridTextColumn Header="کلِ افغانی" Binding="{Binding TotalAfnText}" Width="Auto" IsReadOnly="True" />
-        <DataGridTextColumn Header="رسید"  Binding="{Binding PoulText}" Width="Auto" />
-        <DataGridTemplateColumn Header="واحدِ رسید" Width="Auto">
-          <DataGridTemplateColumn.CellTemplate>
-                      <!-- ⚠️ کپسول، نه کشویی. با دو-سه گزینه، ‎ComboBox‎ یک قالبِ کامل با
-                         ‎Popup‎ی خودش می‌ساخت — و ‎ledgerperf‎ گرفتش: نزدیک به چهل درصدِ
-                         وقتِ باز شدنِ گاوصندوقِ ۲۰۰ ردیفی مالِ همین ستون‌ها بود. خواستهٔ
-                         صاحب ریپو هم همین بود: «اون علامتِ ▾ فقط جا گرفته» و «با تب یا
-                         اینتر عوض بشه». ‎ExcelGrid‎ کلاسِ ‎celltoggle‎ را می‌زند. -->
-                      <DataTemplate>
-                        <Button Classes="fuelchip celltoggle" Content="{Binding PoulCurrencyText}"
-                                Command="{Binding TogglePoulCurrencyCommand}"
-                                Foreground="{Binding PoulCurrencyChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
-                                BorderBrush="{Binding PoulCurrencyChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
-                                ToolTip.Tip="زدنش واحدِ رسید را افغانی ⇄ دالر می‌کند" />
-                      </DataTemplate>
-          </DataGridTemplateColumn.CellTemplate>
-        </DataGridTemplateColumn>
-        <DataGridTextColumn Header="الباقیِ افغانی" Binding="{Binding AlbaqiAfnText}" Width="Auto" IsReadOnly="True" />
-        <DataGridTextColumn Header="الباقیِ دالر"  Binding="{Binding AlbaqiUsdText}" Width="Auto" IsReadOnly="True" />
-      </DataGrid.Columns>
-    </c:ExcelGrid>
-    <c:TotalsBar Grid.Row="1" ItemsSource="{Binding TotalCells}" />
-    </Grid>
+    <StackPanel Spacing="10">
+
+      <!-- ── دو کادرِ آرشیو (پطرول / دیزل) — ‎cm-arc-boxes‎: عمداً بالای جدول،
+           چون تهِ صفحه با هر ردیف پایین‌تر می‌رفت و «گم می‌شد» -->
+      <WrapPanel Orientation="Horizontal" IsVisible="{Binding HasArchives}">
+        <Button Classes="tool-link" Content="{Binding ArcPetrolText}" IsVisible="{Binding HasArcPetrol}"
+                Command="{Binding OpenArchiveCommand}" CommandParameter="petrol" Margin="0,0,8,0" MinWidth="220" />
+        <Button Classes="tool-link" Content="{Binding ArcDieselText}" IsVisible="{Binding HasArcDiesel}"
+                Command="{Binding OpenArchiveCommand}" CommandParameter="diesel" MinWidth="220" />
+      </WrapPanel>
+
+      <!-- ── کارها (کشویی) + خریدها + جستجو — ‎cm-actions‎ / ‎cm-purchases‎ -->
+      <WrapPanel Orientation="Horizontal">
+        <c:SettingCard Classes="card" MinWidth="260" ItemsSource="{Binding Actions}" SelectedItem="{Binding Action}"
+                       Margin="0,0,8,6" ToolTip.Tip="همهٔ کارهای این حساب یک‌جا — «حذف این جدول» عمداً ته صفحه است" />
+        <Button Classes="ghost ok" Content="{Binding PetrolBuyText}" Command="{Binding OpenPurchasesCommand}"
+                CommandParameter="petrol" Margin="0,0,8,6" ToolTip.Tip="خریدهای مخزنِ همین شرکت — پطرول" />
+        <Button Classes="ghost" Content="{Binding DieselBuyText}" Command="{Binding OpenPurchasesCommand}"
+                CommandParameter="diesel" Margin="0,0,8,6" Foreground="{DynamicResource Pump.Warn}"
+                BorderBrush="{DynamicResource Pump.Warn}" ToolTip.Tip="خریدهای مخزنِ همین شرکت — دیزل" />
+        <Button Classes="ghost info" Content="🔍 جستجوی خرید" Command="{Binding SearchCommand}" Margin="0,0,8,6"
+                ToolTip.Tip="مقدارِ تن و/یا تاریخ را بزنید و همان لحظه خرید پیدا شود" />
+      </WrapPanel>
+
+      <!-- ── جدول + ردیفِ «جمله»ی همین دفتر (پطرول و دیزل جدا) ─────────────
+           ردیفِ 📦 از خریدِ مخزن آمده و خانه‌هایش تایپ نمی‌شوند (‎ILockedRow‎). -->
+      <Grid RowDefinitions="*,Auto">
+        <c:ExcelGrid Grid.Row="0" ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False"
+                     RowDeleteCommand="{Binding $parent[UserControl].DataContext.DeleteRowCommand}">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="📦" Binding="{Binding LinkMark}" Width="Auto" IsReadOnly="True" />
+            <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
+            <DataGridTextColumn Header="نام"   Binding="{Binding Name}" Width="Auto" />
+            <DataGridTextColumn Header="خرید (تن)" Binding="{Binding TonText}" Width="Auto" />
+            <DataGridTextColumn Header="قیمت تن ($)" Binding="{Binding UsdText}" Width="Auto" />
+            <DataGridTextColumn Header="کل ($)" Binding="{Binding TotalUsdText}" Width="Auto" IsReadOnly="True" />
+            <DataGridTextColumn Header="نرخ"   Binding="{Binding RateText}" Width="Auto" />
+            <DataGridTextColumn Header="کل (افغانی)" Binding="{Binding TotalAfnText}" Width="Auto" IsReadOnly="True" />
+            <DataGridTextColumn Header="رسید"  Binding="{Binding PoulText}" Width="Auto" />
+            <DataGridTemplateColumn Header="واحدِ رسید" Width="Auto">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <Button Classes="fuelchip celltoggle" Content="{Binding PoulCurrencyText}"
+                          Command="{Binding TogglePoulCurrencyCommand}"
+                          Foreground="{Binding PoulCurrencyChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                          BorderBrush="{Binding PoulCurrencyChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                          ToolTip.Tip="زدنش واحدِ رسید را افغانی ⇄ دالر می‌کند" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTextColumn Header="الباقی" Binding="{Binding AlbaqiAfnText}" Width="Auto" IsReadOnly="True" />
+            <DataGridTextColumn Header="الباقیِ دالر" Binding="{Binding AlbaqiUsdText}" Width="Auto" IsReadOnly="True" />
+          </DataGrid.Columns>
+        </c:ExcelGrid>
+        <c:TotalsBar Grid.Row="1" ItemsSource="{Binding TotalCells}" />
+      </Grid>
+
+      <!-- «➕ ردیف جدید / ➕➕ چندتایی» را خودِ ‎SectionPage‎ از ‎RowAddCommand‎ می‌سازد -->
+
+      <!-- «🗑️ حذف این جدول» — عمداً ته صفحه و دور از بقیه، تا دست اشتباهی نخورد -->
+      <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Pump.Border}" Margin="0,16,0,0" Padding="0,12,0,0">
+        <Button Classes="ghost danger" Content="🗑️ حذف این جدول" HorizontalAlignment="Left"
+                Command="{Binding ClearTableCommand}"
+                ToolTip.Tip="فقط ردیف‌های جدولِ فعلیِ همین تیل پاک می‌شود — جدول‌های آرشیو دست نمی‌خورند" />
+      </Border>
+    </StackPanel>
   </c:SectionPage>
 </UserControl>

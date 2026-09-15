@@ -33,6 +33,7 @@ public sealed class AppHost
         Retail = new RetailService();
         Expenses = new ExpenseService();
         Company = new CompanyService();
+        CompanyPurchases = new CompanyPurchaseService(Company);
         Parcha = new ParchaService();
         Waraq = new WaraqService();
         Storage = new StorageService();
@@ -117,6 +118,8 @@ public sealed class AppHost
     public DebtorService Debtors { get; }
     public CompanyDataService Companies { get; }
     public CompanyService Company { get; }
+    /// <summary>خریدهای مخزنِ هر شرکت و «جستجوی خرید» — فقط‌خواندنی.</summary>
+    public CompanyPurchaseService CompanyPurchases { get; }
     public ParchaService Parcha { get; }
     public ParchaDataService ParchaData { get; }
     public WaraqService Waraq { get; }

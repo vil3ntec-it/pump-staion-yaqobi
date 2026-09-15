@@ -196,6 +196,35 @@ internal static class Program
             Dispatcher.UIThread.RunJobs();
             Pump(win);
             Shot(win, Path.Combine(outDir, "21-company-page.png"));
+
+            // صفحه‌های روییِ حساب: خریدها، جدول‌های آرشیو (بعد از «جدول جدید»)، جستجوی خرید
+            if (comp.Page is { } cp)
+            {
+                Wait(win, comp.OpenPurchasesAsync(cp.Entity, null, null));
+                Pump(win); Dispatcher.UIThread.RunJobs(); Pump(win);
+                Shot(win, Path.Combine(outDir, "21b-company-purchases.png"));
+                comp.CloseOverlay(); Pump(win);
+
+                PumpYaqobi.App.Services.Dialogs.ConfirmHook = (_, _) => true;
+                Wait(win, cp.NewTableCommand.ExecuteAsync(null));
+                PumpYaqobi.App.Services.Dialogs.ConfirmHook = null;
+                Pump(win); Dispatcher.UIThread.RunJobs(); Pump(win);
+                Shot(win, Path.Combine(outDir, "21c-company-after-newtable.png"));
+                Wait(win, comp.OpenArchiveAsync(cp.Entity, cp.Fuel));
+                Pump(win); Dispatcher.UIThread.RunJobs(); Pump(win);
+                Shot(win, Path.Combine(outDir, "21d-company-archive.png"));
+                comp.CloseOverlay(); Pump(win);
+
+                Wait(win, comp.OpenSearchAsync(cp.Entity.Id));
+                if (comp.Overlay is PumpYaqobi.App.ViewModels.Sections.CompanySearchPageViewModel sp)
+                {
+                    sp.QtyText = "20";
+                    Wait(win, sp.RunCommand.ExecuteAsync(null));
+                }
+                Pump(win); Dispatcher.UIThread.RunJobs(); Pump(win);
+                Shot(win, Path.Combine(outDir, "21e-company-search.png"));
+                comp.CloseOverlay(); Pump(win);
+            }
         }
 
         if (vm.Sections.FirstOrDefault(s => s.Id == "waraq") is PumpYaqobi.App.ViewModels.Sections.WaraqSectionViewModel wq)

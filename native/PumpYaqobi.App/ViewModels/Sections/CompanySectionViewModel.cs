@@ -15,7 +15,7 @@ using PumpYaqobi.Services.Vision;
 namespace PumpYaqobi.App.ViewModels.Sections;
 
 /// <summary>یک ردیفِ حسابِ شرکت. همهٔ عددهای محاسبه‌ای از CompanyService می‌آیند.</summary>
-public sealed partial class CompanyRowViewModel : RowViewModel
+public sealed partial class CompanyRowViewModel : RowViewModel, ILockedRow
 {
     private readonly CompanyRow _r;
     private readonly CompanyPageViewModel _owner;
@@ -36,6 +36,15 @@ public sealed partial class CompanyRowViewModel : RowViewModel
     }
 
     public CompanyRow Entity => _r;
+
+    /// <summary>
+    /// ردیفی که از خریدِ مخزن آمده (‎srcPurchaseId‎): در سایت با نشانِ 📦 و
+    /// خانه‌های فقط‌خواندنی. حذفش آزاد است — «فقط همین ردیفِ حساب پاک می‌شود،
+    /// خریدِ مخزن سرِ جایش می‌ماند».
+    /// </summary>
+    public bool IsLinked => !string.IsNullOrWhiteSpace(_r.SourcePurchaseId);
+    public bool IsLocked => IsLinked;
+    public string LinkMark => IsLinked ? "📦" : "";
 
     [ObservableProperty] private string _dateShamsi = "";
     [ObservableProperty] private string _name = "";
@@ -70,7 +79,8 @@ public sealed partial class CompanyRowViewModel : RowViewModel
     }
 
     public string KgText { get => Shamsi.MoneyOrBlank(Kg); set => Kg = Shamsi.Num(value); }
-    public string TonText { get => Shamsi.MoneyOrBlank(Ton); set => Ton = Shamsi.Num(value); }
+    /// <summary>ستونِ «خرید (تن)» — ردیفِ کهنه که فقط کیلو دارد هم به تن دیده می‌شود (‎cmpTon‎).</summary>
+    public string TonText { get => Shamsi.MoneyOrBlank(_owner.Calc.Ton(_r)); set => Ton = Shamsi.Num(value); }
     public string UsdText { get => Shamsi.MoneyOrBlank(Usd); set => Usd = Shamsi.Num(value); }
     public string RateText { get => Shamsi.MoneyOrBlank(Rate); set => Rate = Shamsi.Num(value); }
     public string PoulText { get => Shamsi.MoneyOrBlank(Poul); set => Poul = Shamsi.Num(value); }
@@ -125,6 +135,11 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
     public CompanyPageViewModel(AppHost host, TilCompany c, CompanySectionViewModel section)
     {
         _host = host; _section = section; Entity = c;
+        Actions.Add(new SetupOption("", "☰ کارها — انتخاب کنید…", "", ""));
+        Actions.Add(new SetupOption("new", "📋 جدول جدید", "جدولِ فعلی آرشیو می‌شود و جدولِ خالی باز می‌شود", "📋"));
+        Actions.Add(new SetupOption("buy-petrol", "⛽ خریدهای پطرول", "خریدهای مخزنِ همین شرکت", "⛽"));
+        Actions.Add(new SetupOption("buy-diesel", "🟤 خریدهای دیزل", "خریدهای مخزنِ همین شرکت", "🟤"));
+        Action = Actions[0];
         BuildRows();
         Recalc();
     }
@@ -133,11 +148,144 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
     public CompanyService Calc => _host.Company;
     public string Name => Entity.Name ?? "";
 
+    // ══ سربرگِ صفحه — «قبلی/بعدی»، «تغییر نام» ════════════════════════════
+    [ObservableProperty] private string _posText = "";
+    [ObservableProperty] private bool _canPrev;
+    [ObservableProperty] private bool _canNext;
+    [ObservableProperty] private string _nameText = "";
+
+    [RelayCommand] private Task PrevAsync() => _section.NavigateAsync(-1);
+    [RelayCommand] private Task NextAsync() => _section.NavigateAsync(+1);
+
+    /// <summary>‎renameCurrentCompany‎ — نامِ تازه؛ خریدهای مخزن با نامِ فروشنده پیدا می‌شوند، پس نام مهم است.</summary>
+    [RelayCommand]
+    private Task RenameAsync() => CrashGuard.RunAsync("تغییر نام", async () =>
+    {
+        var n = (await Dialogs.PromptAsync("✏️ تغییر نام", "نامِ تازهٔ شرکت:", Name, "✔ ذخیره") ?? "").Trim();
+        if (n.Length == 0 || n == Name) return;
+        await _host.Companies.RenameAsync(Entity.Id, n);
+        Entity.Name = n;
+        NameText = n;
+        OnPropertyChanged(nameof(Name));
+        await RefreshMetaAsync();
+        _host.Toast("✅ نام عوض شد", ToastKind.Ok);
+    });
+
+    // ══ کادرِ کشوییِ «کارها» — ‎cm-actions‎ / ‎cmDoAction‎ ═══════════════════
+    // خواستهٔ صاحب ریپو در سایت: «یک کادرِ کشویی به‌جای ردیفِ شلوغِ دکمه‌ها».
+    // «حذف این جدول» عمداً این‌جا نیست و ته صفحه، دور از بقیه، نشسته.
+    public ObservableCollection<SetupOption> Actions { get; } = new();
+    [ObservableProperty] private SetupOption? _action;
+    private bool _actionBusy;
+
+    partial void OnActionChanged(SetupOption? v)
+    {
+        if (v is null || v.Value.Length == 0 || _actionBusy) return;
+        _actionBusy = true;
+        try
+        {
+            switch (v.Value)
+            {
+                case "new": _ = NewTableAsync(); break;
+                case "buy-petrol": _ = OpenPurchasesAsync("petrol"); break;
+                case "buy-diesel": _ = OpenPurchasesAsync("diesel"); break;
+            }
+            Action = Actions[0];      // ‎this.selectedIndex = 0‎ی سایت
+        }
+        finally { _actionBusy = false; }
+    }
+
+    // ══ خریدهای مخزن و جدول‌های آرشیو — شمارنده‌های سربرگ ══════════════════
+    [ObservableProperty] private string _petrolBuyText = "⛽ خریدهای پطرول";
+    [ObservableProperty] private string _dieselBuyText = "🟤 خریدهای دیزل";
+    [ObservableProperty] private string _arcPetrolText = "";
+    [ObservableProperty] private string _arcDieselText = "";
+    [ObservableProperty] private bool _hasArcPetrol;
+    [ObservableProperty] private bool _hasArcDiesel;
+    public bool HasArchives => HasArcPetrol || HasArcDiesel;
+    partial void OnHasArcPetrolChanged(bool v) => OnPropertyChanged(nameof(HasArchives));
+    partial void OnHasArcDieselChanged(bool v) => OnPropertyChanged(nameof(HasArchives));
+
+    /// <summary>‎renderCompanyPurchases‎ + ‎_renderCompanyArcBoxes‎ — شمارنده‌ها از نو.</summary>
+    public async Task RefreshMetaAsync()
+    {
+        var all = await _host.StorageData.AllPurchasesAsync();
+        var nP = CompanyPurchaseService.Live(all, Entity, FuelType.Petrol).Count;
+        var nD = CompanyPurchaseService.Live(all, Entity, FuelType.Diesel).Count;
+        PetrolBuyText = "⛽ خریدهای پطرول (" + Shamsi.Money(nP) + ")";
+        DieselBuyText = "🟤 خریدهای دیزل (" + Shamsi.Money(nD) + ")";
+
+        var arcs = await _host.Companies.ListArchivesAsync(Entity.Id);
+        var aP = arcs.Count(h => h.Fuel != FuelType.Diesel);
+        var aD = arcs.Count(h => h.Fuel == FuelType.Diesel);
+        HasArcPetrol = aP > 0; HasArcDiesel = aD > 0;
+        ArcPetrolText = "🗂️ جدول‌های آرشیو پطرول (" + Shamsi.Money(aP) + ")";
+        ArcDieselText = "🗂️ جدول‌های آرشیو دیزل (" + Shamsi.Money(aD) + ")";
+    }
+
+    [RelayCommand]
+    private Task OpenPurchasesAsync(string? fuel) =>
+        _section.OpenPurchasesAsync(Entity, fuel == "diesel" ? FuelType.Diesel : fuel == "petrol" ? FuelType.Petrol : null, null);
+
+    [RelayCommand]
+    private Task OpenArchiveAsync(string? fuel) =>
+        _section.OpenArchiveAsync(Entity, fuel == "diesel" ? FuelType.Diesel : FuelType.Petrol);
+
+    /// <summary>«🔍 جستجوی خرید» — در خریدها و جدول‌های همین شرکت.</summary>
+    [RelayCommand]
+    private Task SearchAsync() => _section.OpenSearchAsync(Entity.Id);
+
+    /// <summary>
+    /// ‎newCompanyTable‎ — فقط جدولِ همان تیلی که باز است نو می‌شود؛ پطرول و دیزل
+    /// دو دفترِ جدا هستند.
+    /// </summary>
+    [RelayCommand]
+    private Task NewTableAsync() => CrashGuard.RunAsync("جدول جدید", async () =>
+    {
+        var fuelWord = IsDiesel ? "🟤 دیزل" : "⛽ پطرول";
+        if (Rows.Count == 0) { _host.Toast("جدولِ " + fuelWord + " خالی است", ToastKind.Error); return; }
+        if (!await Dialogs.ConfirmAsync("📋 جدول جدید",
+                "جدولِ فعلیِ " + fuelWord + " آرشیو می‌شود و جدولِ خالیِ تازه‌ای باز می‌شود. ادامه؟")) return;
+        await FlushAsync();
+        await _host.Companies.ArchiveTableAsync(Entity.Id, Fuel, Shamsi.Today());
+        Entity.Rows.RemoveAll(r => r.Fuel == Fuel);
+        var full = await _host.Companies.LoadAsync(Entity.Id);
+        if (full is not null)
+        {
+            Entity.PurchaseCheckpointPetrol = full.PurchaseCheckpointPetrol;
+            Entity.PurchaseCheckpointDiesel = full.PurchaseCheckpointDiesel;
+        }
+        BuildRows();
+        Recalc();
+        await RefreshMetaAsync();
+        _host.Toast("✅ جدولِ " + fuelWord + " نو شد — جدولِ قبلی در کادرِ «جدول‌های آرشیو» است", ToastKind.Ok);
+    });
+
+    /// <summary>‎deleteCurrentCompanyTable‎ — فقط ردیف‌های جدولِ فعلی؛ آرشیوها دست‌نخورده.</summary>
+    [RelayCommand]
+    private Task ClearTableAsync() => CrashGuard.RunAsync("حذف این جدول", async () =>
+    {
+        var fuelWord = IsDiesel ? "🟤 دیزل" : "⛽ پطرول";
+        if (!await Dialogs.ConfirmAsync("🗑️ حذف این جدول",
+                "جدولِ فعلیِ " + fuelWord + " حسابِ «" + Name + "» با " + Shamsi.Money(Rows.Count)
+                + " ردیف پاک شود؟\n\nجدول‌های آرشیو دست نمی‌خورند.")) return;
+        await FlushAsync();
+        await _host.Companies.ClearTableAsync(Entity.Id, Fuel);
+        Entity.Rows.RemoveAll(r => r.Fuel == Fuel);
+        BuildRows();
+        Recalc();
+        _host.Toast("🗑️ جدولِ فعلی پاک شد — آرشیوها دست‌نخورده‌اند", ToastKind.Warn);
+    });
+
     /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
     /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
     public BulkRows<CompanyRowViewModel> Rows { get; } = new();
 
     [ObservableProperty] private bool _isDiesel;
+    [ObservableProperty] private string _totalTon = "";
+    [ObservableProperty] private string _paidUsd = "";
+    [ObservableProperty] private string _albaqiStatus = "";
+    [ObservableProperty] private string _albaqiBrushKey = "Pump.Muted";
     [ObservableProperty] private string _totalUsd = "";
     [ObservableProperty] private string _totalAfn = "";
     [ObservableProperty] private string _paidAfn = "";
@@ -182,6 +330,11 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
         var rows = CompanyService.RowsOf(Entity, Fuel).ToList();
         var s = Calc.Summarize(Entity, rows);
         Rate = s.ConvRate;
+        // «جمله مقدار (تن)» — سایت کیلو و تن را با هم می‌نوشت؛ خواستهٔ صاحب ریپو: فقط تن
+        TotalTon = Shamsi.Money(Math.Round(rows.Sum(r => Calc.Ton(r)), 2), 2) + " تن";
+        PaidUsd = Shamsi.Money(Math.Round(s.PaidUsd, 1), 1) + " $";
+        AlbaqiStatus = s.AlbaqiAfn > 0m ? "🔴 بدهکاریم" : s.AlbaqiAfn < 0m ? "🟢 طلبکاریم" : "⚪ تسویه";
+        AlbaqiBrushKey = s.AlbaqiAfn > 0m ? "Pump.Danger" : s.AlbaqiAfn < 0m ? "Pump.Ok" : "Pump.Muted";
         TotalUsd = Shamsi.Money(Math.Round(s.TotalUsd, 2));
         TotalAfn = Shamsi.Money(Math.Round(s.TotalAfn, 2));
         PaidAfn = Shamsi.Money(Math.Round(s.PaidAfn, 2));
@@ -200,10 +353,12 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
     /// </summary>
     public IReadOnlyList<TotalCell> TotalCells => new[]
     {
-        new TotalCell("کلِ دالر", TotalUsd),
-        new TotalCell("کلِ افغانی", TotalAfn),
+        // ⚠️ برچسب‌ها همان سربرگِ ستون‌های جدول‌اند تا هر جمع زیرِ ستونِ خودش بنشیند
+        new TotalCell("خرید (تن)", TotalTon),
+        new TotalCell("کل ($)", TotalUsd),
+        new TotalCell("کل (افغانی)", TotalAfn),
         new TotalCell("رسید (افغانی)", PaidAfn, "Pump.Ok", "رسید"),
-        new TotalCell("الباقیِ افغانی", AlbaqiAfn, _albaqiAfnRaw > 0m ? "Pump.Danger" : "Pump.Ok"),
+        new TotalCell("الباقی", AlbaqiAfn, _albaqiAfnRaw > 0m ? "Pump.Danger" : "Pump.Ok"),
         new TotalCell("الباقیِ دالر", AlbaqiUsd, _albaqiAfnRaw > 0m ? "Pump.Danger" : "Pump.Ok"),
     };
 
@@ -331,10 +486,18 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
 
     [ObservableProperty] private string _search = "";
     [ObservableProperty] private string _newName = "";
-    [ObservableProperty] private string _purchaseQuery = "";
     [ObservableProperty] private CompanyPageViewModel? _page;
 
-    public bool IsListVisible => Page is null;
+    /// <summary>
+    /// صفحهٔ رویی — «خریدها»، «جدول‌های آرشیو» یا «جستجوی خرید». در سایت هر
+    /// کدام یک مودالِ جداگانه بود که روی حساب باز می‌شد؛ این‌جا هم روی حساب
+    /// می‌نشیند و با «✕» به همان حساب برمی‌گردد.
+    /// </summary>
+    [ObservableProperty] private object? _overlay;
+
+    public bool IsListVisible => Page is null && Overlay is null;
+    public bool IsPageVisible => Page is not null && Overlay is null;
+    public bool IsOverlayVisible => Overlay is not null;
 
     /// <summary>صفحهٔ شرکت — تا باز است، میانبرهای ردیف به آن می‌روند نه به فهرست.</summary>
     public override object? ActivePage => Page;
@@ -342,9 +505,88 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
     partial void OnPageChanged(CompanyPageViewModel? v)
     {
         OnPropertyChanged(nameof(IsListVisible));
+        OnPropertyChanged(nameof(IsPageVisible));
         // صفحهٔ حساب تمام‌عرض است، مثلِ مودالِ تمام‌صفحهٔ نسخهٔ وب
-        IsPageOpen = v is not null;
+        IsPageOpen = v is not null || Overlay is not null;
     }
+
+    partial void OnOverlayChanged(object? v)
+    {
+        OnPropertyChanged(nameof(IsListVisible));
+        OnPropertyChanged(nameof(IsPageVisible));
+        OnPropertyChanged(nameof(IsOverlayVisible));
+        IsPageOpen = Page is not null || v is not null;
+    }
+
+    public void CloseOverlay() => Overlay = null;
+
+    /// <summary>‎navigateCompany(dir)‎ — قبلی/بعدی در همان ترتیبِ فهرست.</summary>
+    public async Task NavigateAsync(int delta)
+    {
+        if (Page is null) return;
+        var idx = _all.FindIndex(c => c.Entity.Id == Page.Entity.Id);
+        var to = idx + delta;
+        if (idx < 0 || to < 0 || to >= _all.Count) return;
+        await Page.FlushAsync();
+        await OpenAsync(_all[to]);
+    }
+
+    private async Task<TilCompany?> FreshAsync(TilCompany c) => await _host.Companies.LoadAsync(c.Id) ?? c;
+
+    /// <summary>‎openCompanyPurchases‎ / ‎openCompanyPurchasesHistory‎.</summary>
+    public async Task OpenPurchasesAsync(TilCompany c, FuelType? fuel, CompanyTableArchive? archive)
+    {
+        var full = await FreshAsync(c) ?? c;
+        var all = await _host.StorageData.AllPurchasesAsync();
+        Overlay = new CompanyPurchasesPageViewModel(_host, full, fuel, archive, all, this);
+    }
+
+    /// <summary>‎openCompanyArchive(fuel)‎ — صفحهٔ جداگانهٔ جدول‌های آرشیوِ همان تیل.</summary>
+    public async Task OpenArchiveAsync(TilCompany c, FuelType fuel)
+    {
+        var full = await FreshAsync(c) ?? c;
+        var arcs = await _host.Companies.ListArchivesAsync(c.Id);
+        var all = await _host.StorageData.AllPurchasesAsync();
+        Overlay = new CompanyArchivePageViewModel(_host, full, fuel, arcs, all, this);
+    }
+
+    /// <summary>‎openCmpSearch(companyId)‎ — ‎null‎ یعنی همهٔ شرکت‌ها.</summary>
+    public Task OpenSearchAsync(long? companyId)
+    {
+        Overlay = new CompanySearchPageViewModel(_host, companyId, this);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>‎csGoBuy‎ / ‎csGoRow‎ — رفتن به همان خرید یا همان جدول.</summary>
+    public Task GoToAsync(PurchaseHit hit) => CrashGuard.RunAsync("رفتن", async () =>
+    {
+        if (hit.CompanyId == 0) { _host.Toast("این خرید به حسابِ هیچ شرکتی وصل نیست", ToastKind.Warn); return; }
+        var card = _all.FirstOrDefault(c => c.Entity.Id == hit.CompanyId);
+        if (card is null) { await RefreshAsync(); card = _all.FirstOrDefault(c => c.Entity.Id == hit.CompanyId); }
+        if (card is null) return;
+        Overlay = null;
+        await OpenAsync(card);
+        if (Page is null) return;
+        Page.IsDiesel = hit.Fuel == FuelType.Diesel;
+
+        if (hit.IsPurchase)
+        {
+            // خریدِ قدیمی که با «جدول جدید» آرشیو شده در صفحهٔ خریدهای «زنده» نیست
+            var arcs = await _host.Companies.ListArchivesAsync(hit.CompanyId);
+            var cp = hit.Fuel == FuelType.Diesel ? Page.Entity.PurchaseCheckpointDiesel : Page.Entity.PurchaseCheckpointPetrol;
+            var h = hit.PurchaseId > cp ? null
+                  : arcs.FirstOrDefault(x => x.Fuel == hit.Fuel && hit.PurchaseId > x.PurchasesAfter && hit.PurchaseId <= x.PurchasesBefore);
+            await OpenPurchasesAsync(Page.Entity, hit.Fuel, h);
+            if (Overlay is CompanyPurchasesPageViewModel pp) pp.Highlight(hit.PurchaseId);
+        }
+        else if (hit.ArchiveId != 0)
+        {
+            await OpenArchiveAsync(Page.Entity, hit.Fuel);
+            if (Overlay is CompanyArchivePageViewModel ap) ap.Highlight(hit.ArchiveId, hit.RowIndex);
+        }
+        else
+            _host.Toast("ردیفِ " + Shamsi.Money(hit.RowIndex + 1) + " جدولِ فعلی", ToastKind.Info);
+    });
     partial void OnSearchChanged(string v) => ApplyFilter();
 
     protected override Task LoadAsync() => RefreshAsync();
@@ -383,7 +625,14 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
         if (card is null) return;
         var full = await _host.Companies.LoadAsync(card.Entity.Id);
         if (full is null) return;
-        Page = new CompanyPageViewModel(_host, full, this);
+        var page = new CompanyPageViewModel(_host, full, this);
+        var idx = _all.FindIndex(c => c.Entity.Id == full.Id);
+        page.PosText = Shamsi.Money(idx + 1) + " از " + Shamsi.Money(_all.Count);
+        page.CanPrev = idx > 0;
+        page.CanNext = idx >= 0 && idx < _all.Count - 1;
+        page.NameText = page.Name;
+        Page = page;
+        await page.RefreshMetaAsync();
     });
 
     [RelayCommand]
@@ -432,15 +681,9 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
         _host.Toast("✅ شرکت افزوده شد", ToastKind.Ok);
     });
 
-    /// <summary>«🔍 جستجوی خرید» — گشتن در ردیف‌های خریدِ همهٔ شرکت‌ها.</summary>
+    /// <summary>«🔍 جستجوی خرید» — ‎openCmpSearch()‎ روی همهٔ شرکت‌ها؛ با تن و/یا تاریخ.</summary>
     [RelayCommand]
-    private async Task SearchPurchaseAsync()
-    {
-        var q = (await Dialogs.PromptAsync("جستجوی خرید", "تاریخ، مقدار یا نام:") ?? "").Trim();
-        if (q.Length == 0) return;
-        PurchaseQuery = q;
-        await RefreshAsync();
-    }
+    private Task SearchPurchaseAsync() => OpenSearchAsync(null);
 
     /// <summary>
     /// «📲 کیو‌آر کد» — حسابِ همین شرکت، داخلِ خودِ کد.
