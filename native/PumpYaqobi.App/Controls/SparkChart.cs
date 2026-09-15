@@ -28,6 +28,10 @@ public class SparkChart : Control
     public static readonly StyledProperty<IBrush?> SecondLineBrushProperty =
         AvaloniaProperty.Register<SparkChart, IBrush?>(nameof(SecondLineBrush));
 
+    /// <summary>رنگِ نقطه‌های روی خط — ‎#60A5FA‎ی مرجع؛ خالی = همان رنگِ خط.</summary>
+    public static readonly StyledProperty<IBrush?> PointBrushProperty =
+        AvaloniaProperty.Register<SparkChart, IBrush?>(nameof(PointBrush));
+
     public static readonly StyledProperty<IBrush?> GridBrushProperty =
         AvaloniaProperty.Register<SparkChart, IBrush?>(nameof(GridBrush));
 
@@ -44,7 +48,7 @@ public class SparkChart : Control
     static SparkChart()
     {
         AffectsRender<SparkChart>(ValuesProperty, SecondValuesProperty, LabelsProperty,
-            LineBrushProperty, SecondLineBrushProperty, GridBrushProperty, LabelBrushProperty,
+            LineBrushProperty, SecondLineBrushProperty, PointBrushProperty, GridBrushProperty, LabelBrushProperty,
             ShowAxisProperty, SelectedIndexProperty);
     }
 
@@ -53,6 +57,7 @@ public class SparkChart : Control
     public IReadOnlyList<string>? Labels { get => GetValue(LabelsProperty); set => SetValue(LabelsProperty, value); }
     public IBrush? LineBrush { get => GetValue(LineBrushProperty); set => SetValue(LineBrushProperty, value); }
     public IBrush? SecondLineBrush { get => GetValue(SecondLineBrushProperty); set => SetValue(SecondLineBrushProperty, value); }
+    public IBrush? PointBrush { get => GetValue(PointBrushProperty); set => SetValue(PointBrushProperty, value); }
     public IBrush? GridBrush { get => GetValue(GridBrushProperty); set => SetValue(GridBrushProperty, value); }
     public IBrush? LabelBrush { get => GetValue(LabelBrushProperty); set => SetValue(LabelBrushProperty, value); }
     public bool ShowAxis { get => GetValue(ShowAxisProperty); set => SetValue(ShowAxisProperty, value); }
@@ -132,7 +137,7 @@ public class SparkChart : Control
         {
             var p = new Point(X(i), Y(vals[i]));
             var r = i == SelectedIndex ? 6.0 : 4.0;
-            ctx.DrawEllipse(line, null, p, r, r);
+            ctx.DrawEllipse(PointBrush ?? line, null, p, r, r);
             if (Labels is { } lb && i < lb.Count)
                 Text(ctx, lb[i], X(i) - 34, bottom + 6, labelBrush, 10, TextAlignment.Center, 68);
         }

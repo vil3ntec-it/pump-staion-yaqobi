@@ -131,7 +131,8 @@
             </Grid>
             <c:SparkChart Grid.Row="1" FlowDirection="LeftToRight"
                           Values="{Binding AreaValues}" Labels="{Binding AreaLabels}"
-                          LineBrush="{DynamicResource Pump.Info}"
+                          LineBrush="{DynamicResource Pump.ChartLine}"
+                          PointBrush="{DynamicResource Pump.ChartPoint}"
                           GridBrush="{DynamicResource Pump.GridLine}"
                           LabelBrush="{DynamicResource Pump.Muted}" />
           </Grid>

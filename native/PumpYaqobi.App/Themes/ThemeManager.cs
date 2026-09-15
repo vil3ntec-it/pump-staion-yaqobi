@@ -30,6 +30,9 @@ public static class ThemeManager
         return b;
     }
 
+    private static BoxShadows ParseShadow(string s) =>
+        string.IsNullOrWhiteSpace(s) ? new BoxShadows() : BoxShadows.Parse(s);
+
     private static Color Mix(Color a, Color b, double t) => new(
         (byte)(a.A + (b.A - a.A) * t), (byte)(a.R + (b.R - a.R) * t),
         (byte)(a.G + (b.G - a.G) * t), (byte)(a.B + (b.B - a.B) * t));
@@ -75,7 +78,25 @@ public static class ThemeManager
         // از پنل تیره‌تر است — تا «جای خالیِ بغلِ کادر» با خودِ کادر و کادرِ
         // تایپ با کارتش یک رنگ نباشند (شرحش بالای ‎PumpTheme.SectionBg‎).
         Br("Section", t.SectionBg);
-        Br("Input", Mix(t.Panel, t.Dark, t.IsDark ? 0.45 : 0.5));
+        Br("Input", t.Input ?? Mix(t.Panel, t.Dark, t.IsDark ? 0.45 : 0.5));
+
+        // ══ نورِ لبه و سایهٔ کارت (دو تمِ آبی) ═══════════════════════════
+        // چهار لایه در یک BoxShadows: هایلایتِ داخلی، خطِ آبی، هالهٔ ۶۰A5FA،
+        // سایهٔ بیرونی. تمی که رشته‌اش خالی باشد هیچ سایه‌ای نمی‌گیرد.
+        Set("Pump.CardShadow", ParseShadow(t.CardShadow));
+        Set("Pump.CardShadowHover", ParseShadow(string.IsNullOrEmpty(t.CardShadowHover) ? t.CardShadow : t.CardShadowHover));
+
+        // تبِ فعالِ نوار: لایت = زمینهٔ آبیِ بسیار روشن با نوشتهٔ آبیِ تیره،
+        // دارک = گرادیانِ تاکید با نوشتهٔ سفید.
+        Set("Pump.NavActiveBg", Horizontal(t.NavActiveBg ?? t.AccentGrad));
+        Br("NavActiveFg", t.NavActiveFg ?? t.OnAccent);
+
+        // نمودارها و آیکون‌ها: هویتِ آبیِ مشترک در هر دو تم
+        Br("ChartLine", PumpTheme.C("#3b82f6"));
+        Br("ChartPoint", PumpTheme.C("#60a5fa"));
+        Br("ChartBarSel", t.IsDark ? PumpTheme.C("#60a5fa") : PumpTheme.C("#1e3a8a"));
+        Br("IconFg", t.IsDark ? PumpTheme.C("#93c5fd") : PumpTheme.C("#3b82f6"));
+        Br("IconBadge", t.IsDark ? Color.FromArgb(0x40, 0x3b, 0x82, 0xf6) : PumpTheme.C("#e0f2fe"));
         Br("Border", t.Border);
         Br("Text", t.Text);
         Br("Muted", t.Muted);

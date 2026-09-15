@@ -200,7 +200,7 @@ internal static class PerfAudit
         // بی‌اعتبار می‌کند — و ‎ThemeManager‎ شصت‌تا از آن‌ها می‌داد.
         Mark("تعویضِ تم (تیره ⇄ روشن)", () =>
         {
-            PumpYaqobi.App.Themes.ThemeManager.Apply(PumpYaqobi.App.Themes.PumpTheme.Gold);
+            PumpYaqobi.App.Themes.ThemeManager.Apply(PumpYaqobi.App.Themes.PumpTheme.Navy);
             Pump(win);
             PumpYaqobi.App.Themes.ThemeManager.Apply(PumpYaqobi.App.Themes.PumpTheme.Blue);
             Pump(win);

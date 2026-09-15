@@ -108,13 +108,22 @@
        برنامه دیگر کپیِ سایت نباشد. خطِ ۲ پیکسلی روی ده‌ها کادرِ یک صفحه، صفحه
        را قفس‌مانند می‌کرد؛ خطِ ۱ پیکسلی همان جدایی را می‌سازد بی آن‌که فریاد
        بزند. (آزمونِ ‎SiteMetricsTests‎ هم با همین توضیح به‌روز شد.) -->
+  <!-- ══ نورِ لبه + سایه (‎Pump.CardShadow‎) ═══════════════════════════════════
+       خواستهٔ صاحب ریپو با دو عکسِ مرجع: «یک Border ساده نمی‌خواهم — خطِ باریکِ
+       آبی روی لبه، هالهٔ نورِ بسیار ملایم نزدیکِ لبه، و سایهٔ تیره بیرون.» رشته‌اش
+       در خودِ تم است (‎PumpTheme.CardShadow‎) و زیرِ ماوس کمی پررنگ‌تر می‌شود.
+       ⚠️ ‎ClipToBounds‎ برداشته شد: سایه بیرونِ کادر کشیده می‌شود و کلیپ آن را
+       می‌بُرید. گوشهٔ گردِ سربرگِ کارت با ‎card-head‎ی خودش گرد است. -->
   <Style Selector="Border.card">
     <Setter Property="Background" Value="{DynamicResource Pump.Card}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.Border}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="14" />
     <Setter Property="Padding" Value="14" />
-    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="BoxShadow" Value="{DynamicResource Pump.CardShadow}" />
+  </Style>
+  <Style Selector="Border.card:pointerover">
+    <Setter Property="BoxShadow" Value="{DynamicResource Pump.CardShadowHover}" />
   </Style>
   <!-- کارتِ بیرونیِ یک بخش: بی‌بالشتک، تا سربرگِ رنگی به لبهٔ کارت بچسبد.
        ⚠️ نوشتنِ ‎Padding="0"‎ روی همان ‎Border‎ داخلِ ‎ControlTemplate‎ کار نمی‌کند:
@@ -141,7 +150,10 @@
          — و بندِ ۳ صریح گفته کادرِ ثابت هرگز سایه ندارد.
          با ‎inset‎ کشیده می‌شود، نه با یک ‎Border‎ی تودرتو: بندِ ۸ بوردرِ
          تودرتو را هم ممنوع کرده. -->
-    <Setter Property="BoxShadow" Value="inset 0 1 0 0 #0FFFFFFF" />
+    <Setter Property="BoxShadow" Value="{DynamicResource Pump.CardShadow}" />
+  </Style>
+  <Style Selector="Border.panel:pointerover">
+    <Setter Property="BoxShadow" Value="{DynamicResource Pump.CardShadowHover}" />
   </Style>
 
   <!-- دکمه‌ها -->
@@ -253,11 +265,11 @@
     <Setter Property="Background" Value="{DynamicResource Pump.Hover}" />
   </Style>
   <Style Selector="Button.nav.active">
-    <Setter Property="Foreground" Value="{DynamicResource Pump.OnAccent}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.NavActiveFg}" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
   <Style Selector="Button.nav.active /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource Pump.AccentGrad}" />
+    <Setter Property="Background" Value="{DynamicResource Pump.NavActiveBg}" />
   </Style>
   <!-- نشانِ گردِ پشتِ آیکونِ بخش در نوار (زمینه از ‎IconColorConverter‎، پارامترِ badge) -->
   <Style Selector="Border.icon-badge">
@@ -1094,6 +1106,7 @@
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.Border}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="BoxShadow" Value="{DynamicResource Pump.CardShadow}" />
     <Setter Property="Padding" Value="13" />
     <Setter Property="MinWidth" Value="150" />
     <Setter Property="MinHeight" Value="82" />
@@ -1441,11 +1454,11 @@
 
   <!-- ستونِ نمودارِ فروشِ داشبورد -->
   <Style Selector="Border.db-bar">
-    <Setter Property="Background" Value="{DynamicResource Pump.Info}" />
+    <Setter Property="Background" Value="{DynamicResource Pump.ChartLine}" />
     <Setter Property="Opacity" Value="0.62" />
   </Style>
   <Style Selector="Border.db-bar.sel">
-    <Setter Property="Background" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="Background" Value="{DynamicResource Pump.ChartBarSel}" />
     <Setter Property="Opacity" Value="1" />
   </Style>
 

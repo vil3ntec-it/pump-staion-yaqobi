@@ -131,7 +131,12 @@ internal static class LookAudit
                 var step = Ratio(surface, canvas);
                 var rim = edge is null ? 1 : Ratio(edge.Value, surface);
 
-                var ok = step >= MinStep && rim >= MinRim;
+                // ⚠️ تمِ «بومِ صاف» (‎FlatCanvas‎): بوم و کارت عمداً هر دو سفیدند
+                // (خواستهٔ صریحِ صاحب ریپو) و جدایی از خطِ آبی + سایه/نورِ لبه
+                // می‌آید که این سنجش نمی‌بیند. پس آن‌جا فقط لبه سنجیده می‌شود،
+                // و این که سایه واقعاً تعریف شده باشد.
+                var flat = t.FlatCanvas && !string.IsNullOrEmpty(t.CardShadow);
+                var ok = (flat || step >= MinStep) && rim >= MinRim;
                 Console.WriteLine($"{t.Id,-9} {name,-12} {Hex(surface),10} {Luma(surface),8:0.000} "
                                 + $"{step,12:0.00}× {rim,11:0.00}×   {(ok ? "✔" : "✖")}");
 
@@ -151,7 +156,8 @@ internal static class LookAudit
                 var s1 = Ratio(panel, section);
                 var s2 = Ratio(input, panel);
                 var s0 = Ratio(section, canvas);
-                var ok = s0 >= MinLayer && s1 >= MinLayer && s2 >= MinLayer;
+                var flat = t.FlatCanvas && !string.IsNullOrEmpty(t.CardShadow);
+                var ok = flat || (s0 >= MinLayer && s1 >= MinLayer && s2 >= MinLayer);
                 Console.WriteLine($"{t.Id,-9} {"طبقه‌ها",-12} {Hex(section),10} "
                                 + $"بدنه/بوم {s0:0.00}×  پنل/بدنه {s1:0.00}×  تایپ/پنل {s2:0.00}×   {(ok ? "✔" : "✖")}");
                 if (!ok)
