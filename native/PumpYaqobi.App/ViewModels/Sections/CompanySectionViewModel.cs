@@ -712,12 +712,16 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
                 ? new AcctSnapshot { Name = card.Name, Kind = "شرکت تیل", Date = Shamsi.Today() }
                 : AcctSnapshots.ForCompany(full, _host.Company);
 
+            var live = full is null ? "" : await AcctLive.EnsureAsync(_host, full);
+
             var link = AcctView.Url(_host.Settings.GetString(SettingsKeys.ViewerUrl), snap,
-                                    AcctLink.Build(card.Entity.Id, null, "company"));
+                                    AcctLink.Build(card.Entity.Id, null, "company"), live);
             var png = await Task.Run(() => QrWriter.EncodePng(link));
 
             await Dialogs.ShowQrAsync("📲 " + card.Name, link, png,
-                "این کد حسابِ همین شرکت را روی گوشی باز می‌کند — بی رمز و بی سرور.");
+                live.Length > 0
+                    ? "این کد حسابِ همین شرکت را روی گوشی باز می‌کند — بی رمز؛ و هر تغییری که این‌جا بدهید تا یک دقیقه بعد روی گوشی هم می‌آید."
+                    : "این کد حسابِ همین شرکت را روی گوشی باز می‌کند — بی رمز و بی سرور.");
         });
 
     [RelayCommand]

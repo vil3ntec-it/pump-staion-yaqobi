@@ -153,6 +153,9 @@ public class TilCompany : EntityBase
     /// </summary>
     public long PurchaseCheckpointPetrol { get; set; }
     public long PurchaseCheckpointDiesel { get; set; }
+
+    /// <summary>رمزِ کیو‌آرِ زنده — همان قاعدهٔ ‎DebtAccount.QrKey‎.</summary>
+    public string? QrKey { get; set; }
 }
 
 /// <summary>

@@ -165,6 +165,9 @@ public sealed class PumpDbFactory
             // «جدول جدید»ِ شرکت — نقطهٔ شمارشِ خریدهای هر تیل (‎purchaseCheckpoint‎)
             ("TilCompanies", "PurchaseCheckpointPetrol", "INTEGER NOT NULL DEFAULT 0"),
             ("TilCompanies", "PurchaseCheckpointDiesel", "INTEGER NOT NULL DEFAULT 0"),
+            // کیو‌آرِ زنده — رمزِ هر حساب؛ خالی یعنی کیو‌آری ساخته نشده
+            ("DebtAccounts", "QrKey", "TEXT"),
+            ("TilCompanies", "QrKey", "TEXT"),
         };
 
         foreach (var (table, column, type) in wanted)

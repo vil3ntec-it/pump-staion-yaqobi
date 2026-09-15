@@ -25,7 +25,7 @@ const ok = (c, m) => { if (!c) { bad++; console.error('  ✗ ' + m); } else cons
 // ── DOMِ کوچک ────────────────────────────────────────────────────────────────
 // فقط همان چند چیزی که صفحه به کار می‌برد. هر چیزِ بیشتری یعنی آزمونی که
 // خودش را می‌سنجد نه صفحه را.
-function makePage(hash) {
+function makePage(hash, fetchImpl) {
   const app = {
     innerHTML: '<div class="card"></div>',
     _click: null,
@@ -38,6 +38,8 @@ function makePage(hash) {
     atob, Blob, Response, DecompressionStream, console,
     setTimeout, Promise, Uint8Array,
   };
+  // ‎fetch‎ فقط وقتی هست که آزمون بدهد — صفحهٔ بی‌‎fetch‎ باید بی‌صدا ایستا بماند.
+  if (fetchImpl) ctx.fetch = fetchImpl;
   ctx.window.document = ctx.document;
   vm.createContext(ctx);
 
@@ -148,6 +150,48 @@ console.log('\n۹) نشانیِ بی‌داده');
 const empty = makePage('');
 await settle();
 ok(empty.html.includes('باز نشد'), 'پیامِ روشن، نه صفحهٔ سفید');
+
+console.log('\n۱۰) کیو‌آرِ زنده — «هر دقیقه بتونه چک کنه و بفهمه»');
+// همان چهار پارامتر که ‎AcctLive.Fragment‎ پیش از ‎d=‎ می‌گذارد.
+const liveHash = '#s=pump1&a=d7&k=abc123&t=1000&d=' + encode(snapV2);
+const okJson = (body, status = 200) => ({
+  ok: status < 300, status, json: async () => body,
+});
+const calls = [];
+const newer = { ...snapV2, n: 'محمد هارون (تازه)', d: '1405/06/25' };
+const fresh = makePage(liveHash, async (url) => { calls.push(url); return okJson({ at: 2000, d: newer }); });
+await settle();
+ok(fresh.html.includes('محمد هارون (تازه)'), 'عکسِ تازه‌ترِ ابر جای دادهٔ داخلِ کد نشست');
+ok(fresh.html.includes('زنده — آخرین بررسی'), 'نشانِ سبزِ «زنده» با ساعتِ بررسی');
+ok(calls.length === 1 && calls[0].startsWith('https://api.vill3n.top/api/pump/public/pump1/acct/d7?k=abc123'),
+   'از نشانیِ قفل‌شدهٔ ابر، با کدِ پمپ و شناسه و رمزِ همین حساب می‌پرسد: ' + calls[0]);
+fresh.click('refresh');
+await settle();
+ok(calls.length === 2, 'دکمهٔ «به‌روز کن» دوباره می‌پرسد');
+
+const older = makePage(liveHash, async () => okJson({ at: 500, d: newer }));
+await settle();
+ok(older.html.includes('محمد هارون') && !older.html.includes('(تازه)'),
+   'عکسِ کهنه‌تر از خودِ کد (t) نادیده می‌ماند');
+
+const off = makePage(liveHash, async () => { throw new Error('network'); });
+await settle();
+ok(off.html.includes('محمد هارون'), 'بی‌اینترنت، دادهٔ داخلِ کد همچنان دیده می‌شود');
+ok(off.html.includes('ابر در دسترس نیست'), '…و صفحه می‌گوید که نتوانست بپرسد');
+
+const none = makePage(liveHash, async () => okJson({ error: 'not_found' }, 404));
+await settle();
+ok(none.html.includes('هنوز نسخهٔ تازه‌تری نیامده'), '۴۰۴ یعنی هنوز منتشر نشده، نه خطا');
+
+let staticCalls = 0;
+const still = makePage('#d=' + encode(snapV2), async () => { staticCalls++; return okJson({}); });
+await settle();
+ok(staticCalls === 0 && !still.html.includes('به‌روز کن'), 'کیو‌آرِ ایستا (بی s/a/k) هیچ درخواستی نمی‌زند');
+
+const tailFirst = makePage('#d=' + encode(snapV2) + '&s=pump1&a=d7&k=abc123&t=1',
+                           async () => okJson({ at: 2, d: newer }));
+await settle();
+ok(tailFirst.html.includes('(تازه)'), 'پارامترها بعد از d= هم خوانده می‌شوند');
 
 console.log(bad === 0 ? '\n✅ صفحهٔ view/ سالم است\n' : `\n❌ ${bad} ایراد\n`);
 process.exit(bad === 0 ? 0 : 1);

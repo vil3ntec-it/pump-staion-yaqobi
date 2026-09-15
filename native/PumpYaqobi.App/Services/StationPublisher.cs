@@ -94,28 +94,87 @@ public sealed class StationPublisher : IAsyncDisposable
     {
         try
         {
-            if (!await ReadyAsync(force, ct)) return false;
+            var ready = await ReadyAsync(force, ct);
+
+            // ⚠️ بی سرورِ خانگی و بی ابر، عکس گرفتن فقط CPU می‌سوزاند.
+            if (!ready && !CloudActivated) return false;
 
             var snap = await StationSnapshot.BuildAsync(_host, ct);
 
             // ⚠️ ‎seq‎ هر بار عوض می‌شود، پس در محکِ «چیزی عوض شده؟» نمی‌آید —
             // وگرنه هر بیست ثانیه یک‌بار کلِ داده بیخود فرستاده می‌شد.
             var hash = HashOf(snap);
-            if (!force && hash == _lastHash) return false;
+            var went = false;
 
-            var path = _sync.Mode == HomeSyncMode.Station ? LivePath : PathOf(_stationCode());
-            if (!await _sync.SetAsync(path, snap, ct)) return false;
-            _lastHash = hash;
+            if (ready && (force || hash != _lastHash))
+            {
+                var path = _sync.Mode == HomeSyncMode.Station ? LivePath : PathOf(_stationCode());
+                if (await _sync.SetAsync(path, snap, ct))
+                {
+                    _lastHash = hash;
+                    went = true;
 
-            //  ⚠️ نشانیِ سرورِ خانگی را هم به ابر بسپار — همان چیزی که
-            //  اپِ کارمند را از پرسیدنِ آدرس بی‌نیاز می‌کند. آی‌پیِ خانگی
-            //  با هر بار روشن شدنِ مودم عوض می‌شود، پس باید تکرار شود؛
-            //  ولی نه هر بیست ثانیه، که بی‌جهت به سرور فشار بیاورد.
-            _ = PublishHomeToCloudAsync(ct);
-            return true;
+                    //  ⚠️ نشانیِ سرورِ خانگی را هم به ابر بسپار — همان چیزی که
+                    //  اپِ کارمند را از پرسیدنِ آدرس بی‌نیاز می‌کند. آی‌پیِ خانگی
+                    //  با هر بار روشن شدنِ مودم عوض می‌شود، پس باید تکرار شود؛
+                    //  ولی نه هر بیست ثانیه، که بی‌جهت به سرور فشار بیاورد.
+                    _ = PublishHomeToCloudAsync(ct);
+                }
+            }
+
+            // کیو‌آرِ زنده: حساب‌های کیو‌آردار، فقط وقتی چیزی عوض شده — یا
+            // دورِ پیش یکی‌شان نرفته و هنوز طلبکار است.
+            if (force || hash != _lastAcctHash || _accts.Pending > 0)
+            {
+                _lastAcctHash = hash;
+                await PublishAccountsAsync(ready, ct);
+            }
+            return went;
         }
         catch (OperationCanceledException) { throw; }
         catch { return false; }
+    }
+
+    /// <summary>انتشارِ حساب‌های کیو‌آردار — به هر دو مقصد (<see cref="AcctLive"/>).</summary>
+    private readonly AcctLivePublisher _accts = new();
+    private string _lastAcctHash = "";
+
+    /// <summary>آیا برنامه با کدِ شش‌رقمی به ابر وصل شده — بی این، فایلی به ابر نمی‌رود.</summary>
+    private static bool CloudActivated => !string.IsNullOrWhiteSpace(AppSettings.Load().CloudDeviceToken);
+
+    /// <summary>حساب‌های کیو‌آردار در این دور — برای آزمون و گزارشِ صفحهٔ تنظیمات.</summary>
+    public int LastAccountsSent => _accts.LastSent;
+
+    /// <summary>
+    /// ── چرا این از انتشارِ اصلی جداست ──────────────────────────────────
+    /// مشتری روی اینترنت است، نه در شبکهٔ پمپ؛ پس مقصدِ اصلی‌اش **ابر** است
+    /// و باید حتی وقتی سرورِ خانگی خاموش است برود. مقصدِ خانگی فقط وقتی هست
+    /// که درِ تازه (پوشهٔ همین پمپ) باز باشد: درِ قدیمی شاخهٔ ‎acct‎ ندارد.
+    /// </summary>
+    private async Task PublishAccountsAsync(bool homeReady, CancellationToken ct)
+    {
+        try
+        {
+            var items = await AcctLive.CollectAsync(_host, ct);
+            if (items.Count == 0 && _accts.Pending == 0) return;
+
+            Func<string, object, CancellationToken, Task<bool>>? home =
+                homeReady && _sync.Mode == HomeSyncMode.Station
+                    ? (p, v, c) => _sync.SetAsync(p, v, c)
+                    : null;
+
+            Func<string, object, CancellationToken, Task<bool>>? cloud = null;
+            var file = AppSettings.Load();
+            if (!string.IsNullOrWhiteSpace(file.CloudDeviceToken))
+            {
+                var link = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
+                cloud = async (p, v, c) => (await link.PutFileAsync(p, v, c)).Ok;
+            }
+
+            await _accts.PublishAsync(items, home, cloud, ct);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch { /* پیش از ورود، یا سرورِ خاموش — دورِ بعد */ }
     }
 
     /// <summary>آخرین باری که نشانی به ابر رفت — تا هر بیست ثانیه نرود.</summary>

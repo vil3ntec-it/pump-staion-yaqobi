@@ -1171,14 +1171,20 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
             Name, isSub ? acct.Title : null, acct.Entity,
             acct.Rows.Select(r => r.Entity).ToList(), _host.Debt);
 
+        // کیو‌آرِ زنده: رمزِ همین حساب (یک‌بار ساخته و ذخیره می‌شود) تا صفحهٔ
+        // مشتری هر دقیقه از ابر بپرسد «تازه‌تر شد؟». خالی ⇒ همان کدِ ایستا.
+        var live = await AcctLive.EnsureAsync(_host, acct.Entity);
+
         var link = AcctView.Url(_host.Settings.GetString(SettingsKeys.ViewerUrl), snap,
-                                AcctLink.Build(Entity.Id, sub));
+                                AcctLink.Build(Entity.Id, sub), live);
 
         var png = await Task.Run(() => QrWriter.EncodePng(link));
         var title = isSub ? "📲 📄 " + acct.Title : "📲 " + Name;
         var hint = "این کد را به مشتری بدهید؛ با اسکنش همین حساب — با همهٔ "
-                 + "ردیف‌هایش — روی گوشیِ خودش باز می‌شود. نه رمز می‌خواهد و نه "
-                 + "به سرور وصل می‌شود.";
+                 + "ردیف‌هایش — روی گوشیِ خودش باز می‌شود. رمز نمی‌خواهد"
+                 + (live.Length > 0
+                    ? "، و هر تغییری که این‌جا بدهید تا یک دقیقه بعد روی گوشی‌اش هم می‌آید."
+                    : " و به سرور وصل نمی‌شود.");
 
         await Dialogs.ShowQrAsync(title, link, png, hint);
     });

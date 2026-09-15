@@ -224,6 +224,21 @@ public sealed class CloudLink
         return ok ? CloudResult.Done : CloudResult.No(why, code);
     }
 
+    /// <summary>
+    /// نوشتنِ یک فایل در پوشهٔ ابریِ همین پمپ — ‎PUT /api/pump/device/files/&lt;نام&gt;‎.
+    /// برای کیو‌آرِ زنده (‎AcctLive‎). سرور خودش اشتراک را می‌سنجد؛ اگر تمام
+    /// شده باشد ‎subscription_required‎ برمی‌گردد و این‌جا فقط ‎false‎ می‌شود.
+    /// </summary>
+    public async Task<CloudResult> PutFileAsync(string name, object data, CancellationToken ct = default)
+    {
+        if (!Activated) return CloudResult.No("فعال نشده", "not_activated");
+        if (string.IsNullOrWhiteSpace(name)) return CloudResult.No("نامِ فایل خالی است");
+
+        var (ok, _, why, code) = await PutAsync("/api/pump/device/files/" + Uri.EscapeDataString(name.Trim()),
+            new { data }, _settings.CloudDeviceToken, ct);
+        return ok ? CloudResult.Done : CloudResult.No(why, code);
+    }
+
     /// <summary>کدِ کوتاهی که کارمند با آن به این پمپ می‌پیوندد.</summary>
     public async Task<(bool Ok, string Code, string Why)> JoinCodeAsync(CancellationToken ct = default)
     {
@@ -351,6 +366,17 @@ public sealed class CloudLink
         string path, object body, string? token, CancellationToken ct)
     {
         var req = new HttpRequestMessage(HttpMethod.Post, CloudConfig.BaseUrl + path)
+        {
+            Content = JsonContent.Create(body),
+        };
+        if (!string.IsNullOrWhiteSpace(token)) req.Headers.Add("Authorization", $"Bearer {token}");
+        return Send(req, ct);
+    }
+
+    private static Task<(bool, JsonElement, string, string)> PutAsync(
+        string path, object body, string? token, CancellationToken ct)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Put, CloudConfig.BaseUrl + path)
         {
             Content = JsonContent.Create(body),
         };

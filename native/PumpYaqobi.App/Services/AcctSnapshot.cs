@@ -96,6 +96,9 @@ public static class AcctView
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
+    /// <summary>همان تنظیمِ JSON برای هر کسی که عکس را جای دیگری می‌فرستد (کیو‌آرِ زنده).</summary>
+    public static JsonSerializerOptions JsonOptions => Json;
+
     /// <summary>
     /// نشانیِ کاملِ باز‌شدنی. ‎baseUrl‎ خالی یعنی نشانیِ پیش‌فرضِ خودِ برنامه.
     ///
@@ -103,10 +106,18 @@ public static class AcctView
     /// بماند و همان‌جا هم در صفحه نوشته می‌شود که چند ردیفِ آخر آمده. هرگز
     /// نشانیِ ناقص برنمی‌گردد.
     /// </summary>
-    public static string Url(string? baseUrl, AcctSnapshot snap, string? marker = null)
+    /// <param name="live">
+    /// تکهٔ کیو‌آرِ زنده (‎s=…&amp;a=…&amp;k=…&amp;t=…‎ از <see cref="AcctLive.Fragment"/>)
+    /// که پیش از ‎d=‎ در هش می‌نشیند. خالی یعنی کیو‌آرِ ایستا — همان قبلی.
+    /// ⚠️ پیش از ‎d=‎، نه بعدش: صفحه ‎d‎ را با ‎(?:^|&amp;)d=([^&amp;]+)‎ می‌خواند و
+    /// دادهٔ فشرده هیچ ‎&amp;‎ ندارد، پس هر دو ترتیب کار می‌کند؛ ولی این‌طور
+    /// پارامترهای کوتاه اولِ نشانی‌اند و در کیو‌آرِ بریده هم خوانا می‌مانند.
+    /// </param>
+    public static string Url(string? baseUrl, AcctSnapshot snap, string? marker = null, string? live = null)
     {
         var b = Clean(baseUrl);
         var tail = string.IsNullOrEmpty(marker) ? "" : "?p=" + Uri.EscapeDataString(marker);
+        var head = string.IsNullOrEmpty(live) ? "#d=" : "#" + live + "&d=";
 
         // ⚠️ ردیف‌های اصلِ همهٔ دفترها کنار گذاشته می‌شوند و در پایان — چه کد
         // جا شده باشد چه نه — سرِ جایشان برمی‌گردند. عکسی که به این تابع
@@ -127,7 +138,7 @@ public static class AcctView
                 Trim(book, bookAll[i], keep, n => book.Note = n);
             }
 
-            var url = b + tail + "#d=" + Encode(snap);
+            var url = b + tail + head + Encode(snap);
             if (url.Length <= MaxUrl || keep <= MinRows) { Restore(); return url; }
 
             // هر بار یک‌چهارمِ ردیف‌های مانده کم می‌شود — چند تکرارِ کوتاه

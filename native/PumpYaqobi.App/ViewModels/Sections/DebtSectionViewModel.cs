@@ -309,13 +309,17 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
                 ? new AcctSnapshot { Name = card.Name, Kind = "قرض‌دار", Date = Shamsi.Today() }
                 : AcctSnapshots.ForDebtAccount(card.Name, null, main, _host.Debt);
 
+            var live = main is null ? "" : await AcctLive.EnsureAsync(_host, main);
+
             var link = AcctView.Url(_host.Settings.GetString(SettingsKeys.ViewerUrl), snap,
-                                    AcctLink.Build(card.Entity.Id));
+                                    AcctLink.Build(card.Entity.Id), live);
 
             var png = await Task.Run(() => QrWriter.EncodePng(link));
             var hint = "این کد را به مشتری بدهید؛ با اسکنش حسابِ خودش — با همهٔ "
-                     + "ردیف‌هایش — روی گوشی باز می‌شود. نه رمز می‌خواهد و نه به "
-                     + "سرور وصل می‌شود.";
+                     + "ردیف‌هایش — روی گوشی باز می‌شود. رمز نمی‌خواهد"
+                     + (live.Length > 0
+                        ? "، و هر تغییری که این‌جا بدهید تا یک دقیقه بعد روی گوشی‌اش هم می‌آید."
+                        : " و به سرور وصل نمی‌شود.");
 
             await Dialogs.ShowQrAsync("📲 " + card.Name, link, png, hint);
         });

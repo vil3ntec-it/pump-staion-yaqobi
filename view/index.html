@@ -34,6 +34,22 @@
 
   ⚠️ و شکلِ قدیمِ داده (‎h‎/‎r‎/‎s‎ی تخت، بی ‎b‎) هنوز باز می‌شود و باید بشود:
   کیو‌آرهایی که چاپ شده و دستِ مشتری است همان شکل‌اند.
+
+  ══ کیو‌آرِ زنده (۱۴۰۵/۰۶/۲۵) ══════════════════════════════════════════════
+  «من دارم زنده تغییرات میارم توی حسابِ طرف، طرف هم داره با کیو‌آر حسابشو چک
+   می‌کنه و می‌خوام درجا برای اون هم بره… که هر دقیقه بتونه چک کنه و بفهمه.»
+
+  کیو‌آرِ تازه چهار پارامترِ کوتاه پیش از ‎d=‎ دارد: ‎s‎ (کدِ پمپ)، ‎a‎ (شناسهٔ
+  حساب)، ‎k‎ (رمزِ همین یک حساب) و ‎t‎ (زمانِ ساختِ کد). صفحه اول همان دادهٔ
+  داخلِ کد را نشان می‌دهد — پس بی‌اینترنت هم باز می‌شود — و بعد از ابرِ
+  خودِ پمپ می‌پرسد (‎LIVE_API‎)؛ اگر عکسِ تازه‌تری بود، همان لحظه جایش
+  می‌گذارد. هر ۶۰ ثانیه، هر بار که صفحه دوباره جلوی چشم بیاید، و با دکمهٔ
+  «به‌روز کن».
+
+  ⚠️ نشانیِ ابر در خودِ کد قفل است و از نشانی خوانده نمی‌شود (همان قاعدهٔ
+  ‎kar/cloud.js‎)، وگرنه هر کسی می‌توانست صفحه را به سرورِ خودش ببرد. ‎k‎ فقط
+  همین یک حساب را باز می‌کند؛ نه رمزِ برنامه است نه رمزِ سرور. کیو‌آرهای
+  بی این چهار پارامتر همان کیو‌آرِ ایستا هستند و صفحه هیچ درخواستی نمی‌زند.
 -->
 <style>
   :root{
@@ -84,6 +100,15 @@
   .tab.on{background:var(--accent);border-color:var(--accent);color:#17202b}
   .ro{display:inline-block;background:var(--chip);border:1px solid var(--line);
       border-radius:999px;padding:2px 10px;font-size:.72rem;color:var(--muted)}
+  /* ── نشانِ کیو‌آرِ زنده ───────────────────────────────────────────────── */
+  .live{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;
+        margin-top:10px;padding:7px 10px;border-radius:10px;border:1px solid var(--line);
+        background:var(--chip);font-size:.8rem}
+  .live .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#9aa3ad;
+             margin-inline-end:6px;vertical-align:middle}
+  .live.ok .dot{background:#3ddc84;box-shadow:0 0 0 3px rgba(61,220,132,.25)}
+  .live.off .dot{background:var(--red)}
+  .live .btn{padding:4px 10px;font-size:.78rem}
   @media print{
     body{background:#fff;color:#000;padding:0}
     .card{border-color:#999}
@@ -347,6 +372,7 @@
     if (d.a) h += '<div class="sub">' + esc(d.a) + '</div>';
     h += '<div class="sub">' + esc(d.t || '') + (d.d ? ' · ' + esc(d.d) : '') + '</div>';
     if (!books) h += figsHtml(d.s, d.u, 'الباقی');
+    h += liveHtml();
     h += '</div>';
 
     if (books) {
@@ -384,6 +410,7 @@
     var v = t.getAttribute('data-v');
     switch (t.getAttribute('data-act')) {
       case 'print': window.print(); return;
+      case 'refresh': liveCheck(); return;
       // ⚠️ با عوض شدنِ دفتر، فیلترها صفر می‌شوند: ماهِ دفترِ تیل ممکن است در
       // دفترِ پول اصلاً نباشد و مشتری جدولی خالی می‌دید بی این‌که بفهمد چرا.
       case 'book': state.book = parseInt(v, 10) || 0; state.fuel = ''; state.month = ''; break;
@@ -394,7 +421,109 @@
     render();
   });
 
+  // ══ کیو‌آرِ زنده ══════════════════════════════════════════════════════
+  //
+  // ⚠️ نشانیِ ابر این‌جا قفل است — نه از نشانی، نه از حافظه. (شرحش بالای
+  // صفحه.) اگر روزی ابر جای دیگری رفت، همین یک خط عوض می‌شود.
+  var LIVE_API = 'https://api.vill3n.top';
+  var LIVE_EVERY = 60 * 1000;
+
+  var live = null;                               // {s, a, k, t} یا null
+  var liveAt = 0;                                // زمانِ عکسی که حالا روی صفحه است
+  var liveStatus = '';                           // '' · 'wait' · 'ok' · 'off' · 'none'
+  var liveWhen = '';                             // ساعتِ آخرین بررسیِ موفق
+  var liveBusy = false;
+
+  function liveParse(hash) {
+    var g = function (k) {
+      var r = new RegExp('(?:^|&)' + k + '=([^&]*)').exec(hash);
+      return r ? decodeURIComponent(r[1]) : '';
+    };
+    var s = g('s'), a = g('a'), k = g('k');
+    if (!s || !a || !k) return null;
+    return { s: s, a: a, k: k, t: parseInt(g('t'), 10) || 0 };
+  }
+
+  function liveUrl() {
+    return LIVE_API + '/api/pump/public/' + encodeURIComponent(live.s) +
+           '/acct/' + encodeURIComponent(live.a) + '?k=' + encodeURIComponent(live.k);
+  }
+
+  function clock() {
+    try {
+      return new Date().toLocaleTimeString('fa-AF', { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      var n = new Date();
+      return (n.getHours() < 10 ? '0' : '') + n.getHours() + ':' + (n.getMinutes() < 10 ? '0' : '') + n.getMinutes();
+    }
+  }
+
+  // نشانِ زنده در کادرِ بالا — فقط وقتی کیو‌آر زنده است.
+  function liveHtml() {
+    if (!live) return '';
+    var cls = liveStatus === 'ok' ? ' ok' : liveStatus === 'off' ? ' off' : '';
+    var txt;
+    switch (liveStatus) {
+      case 'ok':   txt = 'زنده — آخرین بررسی ' + liveWhen; break;
+      case 'off':  txt = 'ابر در دسترس نیست — نسخهٔ داخلِ کد'; break;
+      case 'none': txt = 'هنوز نسخهٔ تازه‌تری نیامده — نسخهٔ داخلِ کد'; break;
+      case 'wait': txt = 'در حالِ بررسی…'; break;
+      default:     txt = 'نسخهٔ داخلِ کد';
+    }
+    return '<div class="live noprint' + cls + '"><span><span class="dot"></span>' + esc(txt) +
+           '</span><button class="btn" data-act="refresh">🔄 به‌روز کن</button></div>';
+  }
+
+  // یک بار بپرس. اگر عکسِ ابر تازه‌تر از چیزی بود که روی صفحه است، جایش
+  // می‌گذارد؛ وگرنه فقط ساعتِ بررسی را نو می‌کند. هیچ‌وقت خطا بیرون نمی‌دهد.
+  function liveCheck() {
+    if (!live || liveBusy || typeof fetch !== 'function') return Promise.resolve(false);
+    liveBusy = true;
+    liveStatus = 'wait';
+    if (data) render();
+    return fetch(liveUrl(), { cache: 'no-store' })
+      .then(function (r) {
+        if (r.status === 404) return { none: true };
+        if (!r.ok) throw new Error('http ' + r.status);
+        return r.json();
+      })
+      .then(function (j) {
+        var fresh = false;
+        if (j && j.none) {
+          liveStatus = 'none';
+        } else {
+          var at = j && typeof j.at === 'number' ? j.at : 0;
+          if (j && j.d && at > liveAt) { data = j.d; liveAt = at; fresh = true; }
+          liveStatus = 'ok';
+          liveWhen = clock();
+        }
+        liveBusy = false;
+        if (data) render();
+        return fresh;
+      })
+      .catch(function () {
+        liveStatus = 'off';
+        liveBusy = false;
+        if (data) render();
+        return false;
+      });
+  }
+
+  function liveStart() {
+    if (!live) return;
+    liveCheck();
+    if (typeof setInterval === 'function') setInterval(liveCheck, LIVE_EVERY);
+    // ⚠️ گوشی که از جیب درمی‌آید باید همان لحظه بپرسد، نه تا ۶۰ ثانیهٔ بعد.
+    if (document.addEventListener) {
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') liveCheck();
+      });
+    }
+  }
+
   var hash = (location.hash || '').replace(/^#/, '');
+  live = liveParse(hash);
+  if (live) liveAt = live.t;
   var m = /(?:^|&)d=([^&]+)/.exec(hash);
   if (!m) {
     fail('این نشانی دادهٔ حسابی ندارد.',
@@ -404,7 +533,7 @@
 
   try {
     inflate(b64(m[1]))
-      .then(function (txt) { data = JSON.parse(txt); render(); })
+      .then(function (txt) { data = JSON.parse(txt); render(); liveStart(); })
       .catch(function (e) {
         fail(e === 'old-browser'
               ? 'مرورگرِ گوشی قدیمی است و نمی‌تواند این کد را باز کند.'

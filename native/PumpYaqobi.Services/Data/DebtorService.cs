@@ -337,6 +337,56 @@ public sealed class DebtorService
     }
 
     /// <summary>
+    /// ══ حساب‌هایی که کیو‌آرِ زنده دارند ═══════════════════════════════════════
+    ///
+    /// فقط حساب‌هایی که ‎QrKey‎ دارند — یعنی دستِ‌کم یک بار کیو‌آرشان ساخته
+    /// شده — با همهٔ ردیف‌های هر دو دفترشان و نامِ صاحبِ حساب. برای انتشارِ
+    /// زندهٔ حساب به مشتری (‎AcctLive‎).
+    ///
+    /// ⚠️ شمارِ کوئری ثابت است (سه تا)، نه «برای هر حساب یکی». و اگر هیچ
+    /// حسابی کیو‌آر نداشته باشد با یک کوئریِ خالی برمی‌گردد — حلقهٔ
+    /// بیست‌ثانیه‌ای نباید روی پمپی که کیو‌آر نداده هزینه‌ای داشته باشد.
+    /// </summary>
+    public async Task<List<(Debtor Person, DebtAccount Account)>> LoadQrAccountsAsync(
+        CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+
+        var accts = await db.DebtAccounts.AsNoTracking()
+            .Where(a => a.QrKey != null && a.QrKey != "")
+            .ToListAsync(ct);
+        if (accts.Count == 0) return new();
+
+        var pids = accts.Select(a => a.MainOfDebtorId ?? a.DebtorId ?? 0).Distinct().ToList();
+        var people = await db.Debtors.AsNoTracking()
+            .Where(d => pids.Contains(d.Id))
+            .ToDictionaryAsync(d => d.Id, ct);
+
+        var byAcct = accts.ToDictionary(a => a.Id);
+        foreach (var a in accts) { a.FuelRows = new(); a.MoneyRows = new(); a.RasidLog = new(); }
+        var accIds = byAcct.Keys.ToList();
+        var rows = await db.DebtRows.AsNoTracking()
+            .Where(r => (r.FuelAccountId != null && accIds.Contains(r.FuelAccountId.Value))
+                     || (r.MoneyAccountId != null && accIds.Contains(r.MoneyAccountId.Value)))
+            .OrderBy(r => r.SortIndex).ThenBy(r => r.Id)
+            .ToListAsync(ct);
+        foreach (var r in rows)
+        {
+            if (r.FuelAccountId is { } f && byAcct.TryGetValue(f, out var fa)) fa.FuelRows.Add(r);
+            else if (r.MoneyAccountId is { } m && byAcct.TryGetValue(m, out var ma)) ma.MoneyRows.Add(r);
+        }
+
+        var list = new List<(Debtor, DebtAccount)>();
+        foreach (var a in accts)
+        {
+            var pid = a.MainOfDebtorId ?? a.DebtorId ?? 0;
+            if (people.TryGetValue(pid, out var p)) list.Add((p, a));
+        }
+        return list;
+    }
+
+    /// <summary>
     /// شمارِ همهٔ ردیف‌های زندهٔ قرض‌داران — یک ‎COUNT‎ی ساده، بی خواندنِ حتی
     /// یک ردیف.
     ///
