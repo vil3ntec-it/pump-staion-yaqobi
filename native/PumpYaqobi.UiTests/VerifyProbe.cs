@@ -158,8 +158,49 @@ internal static class VerifyProbe
         Check("اندازه با کشیدن عوض می‌شود", vm.Calculator.Width == w0 + 50);
         vm.Calculator.IsOpen = false;
 
+        // ── ۸) اندازهٔ ماشین‌حساب در تنظیمات می‌ماند ────────────────────────
+        Console.WriteLine("── ۸) اندازهٔ ماشین‌حساب پس از تغییر، ذخیره می‌شود");
+        vm.Calculator.Width = 333; vm.Calculator.Height = 444;
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(4);
+        while (DateTime.UtcNow < deadline && AppSettings.Load().CalcWidth != 333) { Pump(win); Thread.Sleep(50); }
+        var saved = AppSettings.Load();
+        Check("پهنا و بلندی در فایلِ تنظیمات نشست", saved.CalcWidth == 333 && saved.CalcHeight == 444, $"{saved.CalcWidth}×{saved.CalcHeight}");
+
+        // ── ۹) متنِ بلند در خانه: ردیف بلند نمی‌شود، کادرِ ویرایش از خانه بیرون نمی‌زند ──
+        Console.WriteLine("── ۹) متنِ بلند در خانهٔ «توضیحات»");
+        grid.Focus(); grid.SelectedIndex = 1; grid.CurrentColumn = col; Pump(win);
+        grid.BeginEdit(); for (var i = 0; i < 3; i++) Pump(win);
+        var ed = grid.GetVisualDescendants().OfType<TextBox>().FirstOrDefault(t => t.IsFocused);
+        if (ed is not null) { ed.Text = new string('h', 60) + " hoioihhhhhhhhhhhhhhhhhhhhhhhhhhhhhh"; for (var i = 0; i < 4; i++) Pump(win); }
+        var cell = ed?.GetVisualAncestors().OfType<DataGridCell>().FirstOrDefault();
+        Check("کادرِ ویرایش داخلِ خانه می‌ماند", ed is not null && cell is not null && ed.Bounds.Width <= cell.Bounds.Width + 1,
+              ed is null ? "کادر نیست" : $"کادر {ed.Bounds.Width:0} · خانه {cell?.Bounds.Width:0}");
+        grid.CommitEdit(); for (var i = 0; i < 6; i++) Pump(win);
+        var heights = grid.GetVisualDescendants().OfType<DataGridRow>().Where(r => r.Bounds.Height > 0).Select(r => Math.Round(r.Bounds.Height)).Distinct().ToList();
+        Check("همهٔ ردیف‌ها هم‌قد ماندند (خط نشکست)", heights.Count == 1, string.Join("،", heights));
+        var widthsBefore = grid.Columns.Select(c => c.ActualWidth).ToArray();
+        Check("پهنای ستون‌ها با متنِ بلند تکان نخورد", grid.Columns.All(c => c.ActualWidth > 0), string.Join("،", widthsBefore.Select(w => w.ToString("0"))));
+
+        // ── ۱۰) سربرگِ گاوصندوق: دالر جدا و درست جمع می‌شود ─────────────────
+        Console.WriteLine("── ۱۰) سربرگِ گاوصندوق با ردیفِ دالری");
+        Wait(win, vm.GoAsync(safe)); for (var i = 0; i < 6; i++) Pump(win);
+        var safeLedger = (IRowBatchHost)safe;
+        decimal N(string t) => Shamsi.Num(t);
+        var mUsd0 = N(safe.MandagiUsd); var mAfn0 = N(safe.MandagiAfn); var bUsd0 = N(safe.BardagiUsd); var nUsd0 = N(safe.NetUsd);
+        Wait(win, safeLedger.AddRowsAsync(1)); Pump(win);
+        var last = safe.Rows[^1];
+        last.IsUsd = true; last.Amount = 777m; last.IsBardagi = false;
+        for (var i = 0; i < 12; i++) Pump(win);
+        Check("«جمله ماندگی» دالر ۷۷۷ بیشتر شد", N(safe.MandagiUsd) == mUsd0 + 777m, $"{mUsd0} ← {safe.MandagiUsd}");
+        Check("افغانیِ ماندگی دست نخورد (دالر و افغانی جمع نمی‌شوند)", N(safe.MandagiAfn) == mAfn0, safe.MandagiAfn);
+        Check("«موجودی خالص» دالر هم ۷۷۷ بیشتر شد", N(safe.NetUsd) == nUsd0 + 777m, $"{nUsd0} ← {safe.NetUsd}");
+        last.IsBardagi = true; for (var i = 0; i < 12; i++) Pump(win);
+        Check("با بردگی شدنِ همان ردیف، ۷۷۷ از ماندگی به بردگی رفت",
+              N(safe.BardagiUsd) == bUsd0 + 777m && N(safe.MandagiUsd) == mUsd0, $"بردگی {safe.BardagiUsd} · ماندگی {safe.MandagiUsd}");
+        Wait(win, safeLedger.DeleteRowsAsync(1));
+
         Console.WriteLine();
-        Console.WriteLine(_bad == 0 ? "✅ هر هفت رفتار همان‌طور که خواسته شده کار می‌کند" : $"❌ {_bad} ایراد");
+        Console.WriteLine(_bad == 0 ? "✅ هر ده رفتار همان‌طور که خواسته شده کار می‌کند" : $"❌ {_bad} ایراد");
         return _bad == 0 ? 0 : 1;
     }
 
