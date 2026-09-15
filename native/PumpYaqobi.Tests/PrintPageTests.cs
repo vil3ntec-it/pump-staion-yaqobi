@@ -1,4 +1,6 @@
 using PumpYaqobi.Reporting.Pdf;
+using QuestPDF.Fluent;
+using QuestPDF.Infrastructure;
 using Xunit;
 
 namespace PumpYaqobi.Tests;
@@ -181,7 +183,12 @@ public class PrintPageTests
     public void TheDropdownsAreExcelStyleCards()
     {
         var w = Read("PumpYaqobi.App", "Views", "DocumentPreviewWindow.axaml");
-        Assert.Contains("c|SettingCard", w);
+        // ⚠️ گزینشگر باید روی کلاس باشد: کلیدِ سبکِ SettingCard همان ComboBox
+        // است و ‎c|SettingCard‎ هیچ‌وقت نمی‌خورد — کارت‌ها یک کشوی باریکِ ساده
+        // می‌شدند.
+        Assert.Contains("Selector=\"ComboBox.card\"", w);
+        Assert.DoesNotContain("Selector=\"c|SettingCard\"", w);
+        Assert.Contains("<c:SettingCard Classes=\"card\" HorizontalAlignment=\"Stretch\"", w);
         Assert.Contains("{Binding Icon}", w);
         Assert.Contains("{Binding Note}", w);
 
@@ -264,9 +271,26 @@ public class PrintPageTests
     [Fact]
     public void ThePageSetupDialogKeepsTheJobSettings()
     {
-        var vm = Read("PumpYaqobi.App", "Printing", "PrintSetupViewModel.cs");
-        Assert.Contains("public PageSetup Build() => _orig with", vm);
-        Assert.Contains("private readonly PageSetup _orig;", vm);
+        var job = PageSetup.Default with
+        {
+            Copies = 7, Collate = false, What = PrintWhat.Range, From = 2, To = 3,
+        };
+        var vm = new PumpYaqobi.App.Printing.PrintSetupViewModel(job);
+
+        // تایید، بی هیچ تغییری
+        var built = vm.Build();
+        Assert.Equal(7, built.Copies);
+        Assert.False(built.Collate);
+        Assert.Equal(PrintWhat.Range, built.What);
+        Assert.Equal((2, 3), (built.From, built.To));
+
+        // حتی «برگرداندن به پیش‌فرض» هم کارِ چاپ را دست نمی‌زند — آن‌ها در
+        // این پنجره نیستند و نباید بی‌صدا پاک شوند.
+        vm.ResetCommand.Execute(null);
+        var reset = vm.Build();
+        Assert.Equal(7, reset.Copies);
+        Assert.Equal(PrintWhat.Range, reset.What);
+        Assert.Equal(PageSetup.Default.MarginTop, reset.MarginTop);   // ولی خودِ ورق برگشت
     }
 
     /// <summary>مقیاس یک جا اعمال می‌شود — پس روی همهٔ گزارش‌ها یکسان است.</summary>
@@ -274,8 +298,174 @@ public class PrintPageTests
     public void ScalingIsAppliedInOnePlaceForEveryReport()
     {
         var d = Read("PumpYaqobi.Reporting", "Pdf", "DocStyle.cs");
-        Assert.Contains("PrintScale.FitPage => c.ScaleToFit()", d);
         Assert.Contains("PrintScale.Custom => c.Scale(", d);
         Assert.Contains("Sized(page.Content())", d);
+
+        // حالت‌های «جا دادن» پیش از ساختنِ سند حل می‌شوند — یک جا، برای همه
+        var p = Read("PumpYaqobi.App", "Printing", "DocumentPreview.cs");
+        Assert.Contains("ScaleSolver.Solve(s, _build)", p);
+        Assert.DoesNotContain("_doc = _build(", NoComments(p));   // همه از BuildSolved می‌گذرند
+    }
+
+    // ══ کم‌بودی‌های چاپ که برطرف شد ══════════════════════════════════════════
+    //
+    // گزارشِ صاحب ریپو: «بخشِ پرینت خیلی کم‌بودی دارد، نه شبیهِ سایت است نه
+    // شبیهِ اکسل.» این‌ها همان چیزهایی‌اند که کارگاهِ چاپِ سایت داشت و این‌جا
+    // نبود — هر کدام یک سنجه، تا برنگردند.
+
+    /// <summary>
+    /// سرستونِ جدول فقط در ورقِ اول — خواستهٔ صریحِ صاحب ریپو («چرا آن سربرگِ
+    /// جدول در صفحهٔ دیگر هم هست؟ نباید باشد»). تا پیش از این همهٔ گزارش‌ها
+    /// مستقیم ‎t.Header(‎ می‌زدند و موتور روی هر ورق تکرارش می‌کرد.
+    /// </summary>
+    [Fact]
+    public void NoReportRepeatsTheTableHeaderOnItsOwn()
+    {
+        var dir = Path.Combine(Root, "PumpYaqobi.Reporting", "Pdf");
+        foreach (var f in Directory.GetFiles(dir, "*Report.cs"))
+            Assert.DoesNotContain("t.Header(", NoComments(File.ReadAllText(f)));
+    }
+
+    /// <summary>
+    /// و واقعاً روی ورق: با تکرار، سرستون جای می‌گیرد و ورقِ بیشتری می‌خورد.
+    /// (هشتاد ردیف روی A5 چند ورق می‌شود؛ تکرارِ سرستون در هر ورق جا می‌گیرد.)
+    /// </summary>
+    [Fact]
+    public void RepeatingTheHeaderReallyCostsRows()
+    {
+        PdfEngine.Initialize();
+        var input = new ExpenseReportInput("سنبله 1405", Rows(120), "1405/06/09", "—");
+        var off = new ExpenseReport(input) { Setup = PageSetup.Default with { Paper = "A5", Orientation = PageOrientation.Portrait, RepeatHead = false } };
+        var on  = new ExpenseReport(input) { Setup = PageSetup.Default with { Paper = "A5", Orientation = PageOrientation.Portrait, RepeatHead = true } };
+
+        var pOff = off.GenerateImages(Small()).Count();
+        var pOn  = on.GenerateImages(Small()).Count();
+        Assert.True(pOff >= 2, "دادهٔ آزمون باید چند ورق شود");
+        Assert.True(pOn >= pOff, $"تکرارِ سرستون نباید ورق کم کند (off={pOff}, on={pOn})");
+        Assert.False(PageSetup.Default.RepeatHead, "پیش‌فرض باید خاموش باشد — همان خواستهٔ صاحب ریپو");
+    }
+
+    /// <summary>«جا دادن کلِ گزارش در یک ورق» واقعاً یک ورق می‌دهد — با شمردنِ ورق، نه حدس.</summary>
+    [Fact]
+    public void FitAllReallyLandsOnOnePage()
+    {
+        PdfEngine.Initialize();
+        var input = new ExpenseReportInput("سنبله 1405", Rows(60), "1405/06/09", "—");
+        IDocument Build(PageSetup s) => new ExpenseReport(input) { Setup = s };
+
+        var s = PageSetup.Default with { Scale = PrintScale.FitPage, Orientation = PageOrientation.Portrait };
+        var pct = ScaleSolver.Solve(s, Build);
+        Assert.InRange(pct, 10, 99);                        // باید کوچک شده باشد
+
+        var pages = Build(s.WithResolvedScale(pct)).GenerateImages(Small()).Count();
+        Assert.Equal(1, pages);
+    }
+
+    /// <summary>«جا دادن در ۱×۲ ورق» — دو ورق، نه یکی، نه سه‌تا.</summary>
+    [Fact]
+    public void FitPagesHonoursTheRequestedCount()
+    {
+        PdfEngine.Initialize();
+        var input = new ExpenseReportInput("سنبله 1405", Rows(110), "1405/06/09", "—");
+        IDocument Build(PageSetup s) => new ExpenseReport(input) { Setup = s };
+
+        var s = PageSetup.Default with
+        {
+            Scale = PrintScale.FitPages, FitWidthPages = 1, FitHeightPages = 2,
+            Orientation = PageOrientation.Portrait,
+        };
+        var pct = ScaleSolver.Solve(s, Build);
+        var pages = Build(s.WithResolvedScale(pct)).GenerateImages(Small()).Count();
+        Assert.True(pages <= 2, $"باید در ۲ ورق جا شود، شد {pages}");
+    }
+
+    /// <summary>حالت‌هایی که «جا دادن» نیستند، دست نمی‌خورند.</summary>
+    [Theory]
+    [InlineData(PrintScale.None, 100, 100)]
+    [InlineData(PrintScale.FitColumns, 100, 100)]
+    [InlineData(PrintScale.Custom, 73, 73)]
+    public void NonFitModesKeepTheirPercent(PrintScale mode, int pct, int want)
+    {
+        var s = PageSetup.Default with { Scale = mode, ScalePercent = pct };
+        Assert.Equal(want, ScaleSolver.Solve(s, _ => throw new Exception("نباید سند بسازد")));
+    }
+
+    /// <summary>خاکستری و سیاه‌وسفید — همان ‎grayscale(1)‎ و ‎contrast(3.2)‎ی سایت.</summary>
+    [Fact]
+    public void ColourModesMapEveryColourThroughOneFunction()
+    {
+        // بیرونِ Compose، تنظیمِ جاری پیش‌فرض است: رنگی
+        Assert.Equal("#e53e3e", DocStyle.Paint("#e53e3e"));
+
+        var d = NoComments(Read("PumpYaqobi.Reporting", "Pdf", "DocStyle.cs"));
+        // هیچ رنگی مستقیم روی ورق نمی‌نشیند — همه از Paint می‌گذرند
+        foreach (var call in new[] { ".FontColor(HeadFg)", ".FontColor(CellFg)", ".Background(HeadBg)", ".Background(RowAlt)" })
+            Assert.DoesNotContain(call, d);
+        Assert.Contains("FontColor(Paint(", d);
+        Assert.Contains("Background(Paint(", d);
+        // و خطِ خانه با «خطوطِ جدول» خاموش، هیچ
+        Assert.Contains("Current.Gridlines ? Paint(hex) : Colors.Transparent", d);
+    }
+
+    /// <summary>پنجرهٔ «تنظیمِ ورق» چهار زبانه دارد — همان چهارتای سایت و اکسل.</summary>
+    [Fact]
+    public void ThePageSetupDialogHasTheFourExcelTabs()
+    {
+        var w = Read("PumpYaqobi.App", "Views", "PrintSetupWindow.axaml");
+        Assert.Contains("<TabControl", w);
+        foreach (var tab in new[] { "Header=\"ورق\"", "Header=\"حاشیه‌ها\"", "Header=\"سربرگ/پاورقی\"", "Header=\"جدول\"" })
+            Assert.Contains(tab, w);
+
+        // و هر چیزی که سایت داشت و این‌جا نبود
+        foreach (var piece in new[]
+        {
+            "{Binding HeaderGap}", "{Binding FooterGap}",       // فاصلهٔ سربرگ/پاورقی
+            "{Binding CenterH}", "{Binding CenterV}",           // وسط‌چین
+            "{Binding FitW}", "{Binding FitH}",                 // جا دادن در N×M
+            "{Binding RepeatHead}", "{Binding Gridlines}",      // زبانهٔ جدول
+            "{Binding Colors}",                                 // رنگ
+            "{Binding Presets}",                                // سربرگِ آماده
+            "Name=\"Tokens\"",                                  // دکمه‌های کد
+            "{Binding MapBody}",                                // نقشهٔ حاشیه
+            "ResetCommand",                                     // برگرداندن به پیش‌فرض
+        })
+            Assert.Contains(piece, w);
+    }
+
+    /// <summary>ستونِ کناری همان شش حالتِ مقیاسِ سایت را دارد.</summary>
+    [Fact]
+    public void TheRailOffersAllSixScaleModes()
+    {
+        var p = Read("PumpYaqobi.App", "Printing", "DocumentPreview.cs");
+        foreach (var v in new[] { "\"none\"", "\"fitCols\"", "\"fitRows\"", "\"fitAll\"", "\"custom\"", "\"fitPages\"" })
+            Assert.Contains("new SetupOption(" + v, p);
+        Assert.Contains("مقیاسِ اعمال‌شده:", p);   // همان ‎xpr-scaleinfo‎
+    }
+
+    /// <summary>دورِ ورق دیگر کادری نیست — سایت هم ندارد.</summary>
+    [Fact]
+    public void TheSheetHasNoFrame()
+    {
+        var d = NoComments(Read("PumpYaqobi.Reporting", "Pdf", "DocStyle.cs"));
+        Assert.DoesNotContain(".Border(1).BorderColor(FootLine).Padding(10)", d);
+    }
+
+    private static QuestPDF.Infrastructure.ImageGenerationSettings Small() => new()
+    {
+        ImageFormat = QuestPDF.Infrastructure.ImageFormat.Png,
+        RasterDpi = 36,
+    };
+
+    private static List<PumpYaqobi.Domain.Entities.Expense> Rows(int n)
+    {
+        var rows = new List<PumpYaqobi.Domain.Entities.Expense>();
+        for (var i = 1; i <= n; i++)
+            rows.Add(new PumpYaqobi.Domain.Entities.Expense
+            {
+                DateShamsi = "1405/06/" + ((i % 30) + 1).ToString("00"),
+                Title = "مصرف شمارهٔ " + i,
+                Amount = 1_000m * i,
+            });
+        return rows;
     }
 }

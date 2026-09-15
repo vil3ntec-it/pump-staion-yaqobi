@@ -109,9 +109,9 @@ public sealed class CompanyReport : ISetupDocument
             cd.RelativeColumn(1.7f);                     // الباقی (افغانی)
         });
 
-        t.Header(h =>
+        DocStyle.Head(t, cell =>
         {
-            void Th(string s2) => DocStyle.ThText(h.Cell(), s2);
+            void Th(string s2) => DocStyle.ThText(cell(), s2);
             Th("#"); Th("تاریخ"); Th("نام");
             if (BothFuels) Th("نوع تیل");
             Th("خرید (کیلو)"); Th("قیمت تن ($)"); Th("کل ($)"); Th("نرخ");

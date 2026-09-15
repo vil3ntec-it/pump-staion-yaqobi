@@ -104,9 +104,9 @@ public sealed class WaraqReport : ISetupDocument
             cd.RelativeColumn(1.2f);   // جمله قرض
         });
 
-        t.Header(h =>
+        DocStyle.Head(t, cell =>
         {
-            void Th(string s) => DocStyle.ThText(h.Cell(), s);
+            void Th(string s) => DocStyle.ThText(cell(), s);
             Th("بایه"); Th("نام"); Th("نوع"); Th("توضیح/ساعت"); Th("شروع"); Th("ختم");
             Th("فی لیتر"); Th("لیتر"); Th("مبلغ"); Th("جمله قرض");
         });
@@ -163,9 +163,9 @@ public sealed class WaraqReport : ISetupDocument
             cd.RelativeColumn(1.0f);   // نوع
         });
 
-        t.Header(h =>
+        DocStyle.Head(t, cell =>
         {
-            void Th(string s) => DocStyle.ThText(h.Cell(), s);
+            void Th(string s) => DocStyle.ThText(cell(), s);
             Th("📋"); Th("نام"); Th("مقدار تیل"); Th("مبلغ"); Th("نوع");
         });
 

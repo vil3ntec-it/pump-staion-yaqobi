@@ -130,9 +130,9 @@ public sealed class StorageReport : ISetupDocument
             cd.RelativeColumn(1.2f);   // فی لیتر (افغ)
         });
 
-        t.Header(h =>
+        DocStyle.Head(t, cell =>
         {
-            void Th(string s) => DocStyle.ThText(h.Cell(), s);
+            void Th(string s) => DocStyle.ThText(cell(), s);
             Th("#"); Th("تاریخ"); Th("فروشنده"); Th("وزن (کگ)"); Th("تن"); Th("تقلت");
             Th("لیتر"); Th("فی تن ($)"); Th("نرخ دالر"); Th("کل ($)");
             Th("کل (افغانی)"); Th("فی لیتر (افغ)");

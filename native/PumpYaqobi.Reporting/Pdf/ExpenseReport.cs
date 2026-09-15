@@ -61,9 +61,9 @@ public sealed class ExpenseReport : ISetupDocument
             cd.RelativeColumn(2.6f);   // یادداشت
         });
 
-        t.Header(h =>
+        DocStyle.Head(t, cell =>
         {
-            void Th(string s) => DocStyle.ThText(h.Cell(), s);
+            void Th(string s) => DocStyle.ThText(cell(), s);
             Th("#"); Th("تاریخ"); Th("عنوان"); Th("مبلغ"); Th("یادداشت");
         });
 

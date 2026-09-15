@@ -30,6 +30,43 @@ public class PageSetupTests
         Assert.Equal(19.1m, m.Bottom);
         Assert.Equal(6.4m, m.Left);
         Assert.Equal(6.4m, m.Right);
+
+        // آن‌هایی که تا دیروز نبودند — همان ‎DEF‎ی سایت
+        Assert.Equal(7.6m, s.MarginHeader);
+        Assert.Equal(7.6m, s.MarginFooter);
+        Assert.False(s.CenterH); Assert.False(s.CenterV);
+        Assert.Equal(PrintScale.FitColumns, s.Scale);      // ‎scaleMode:'fitCols'‎
+        Assert.Equal((1, 1), (s.FitWidthPages, s.FitHeightPages));
+        Assert.False(s.RepeatHead);                        // خواستهٔ صریحِ صاحب ریپو
+        Assert.True(s.Gridlines);
+        Assert.Equal(PrintColor.Color, s.Color);
+    }
+
+    /// <summary>
+    /// فایلِ تنظیماتِ کاربرِ قدیمی (بی فیلدهای تازه) همان‌طور خوانده می‌شود و
+    /// فیلدهای تازه پیش‌فرضِ خودشان را می‌گیرند — نه استثنا، نه صفر.
+    /// </summary>
+    [Fact]
+    public void AnOldSavedSetup_StillLoadsWithTheNewDefaults()
+    {
+        var old = """{"Paper":"A5","MarginPreset":"wide","Scale":1,"ScalePercent":80,"Copies":3}""";
+        var s = System.Text.Json.JsonSerializer.Deserialize<PageSetup>(old)!;
+        Assert.Equal("A5", s.Paper);
+        Assert.Equal(3, s.Copies);
+        Assert.Equal(PrintScale.FitPage, s.Scale);        // عددِ ۱ همان معنیِ قدیمش را دارد
+        Assert.Equal(7.6m, s.MarginHeader);               // تازه‌ها: پیش‌فرض
+        Assert.True(s.Gridlines);
+        Assert.False(s.RepeatHead);
+    }
+
+    /// <summary>سربرگ و پاورقی از حاشیهٔ خودشان بیرون نمی‌روند — همان ‎geo()‎.</summary>
+    [Fact]
+    public void BandOffsets_NeverExceedTheMargin()
+    {
+        var s = PageSetup.Default with { MarginHeader = 40m, MarginFooter = 0.5m };
+        var (h, f) = s.BandOffsets();
+        Assert.Equal(19.1m, h);        // بریده شد به ‎mt‎
+        Assert.Equal(0.5m, f);
     }
 
     /// <summary>اندازه‌های کاغذ همان جدولِ ‎PAPERS‎اند.</summary>

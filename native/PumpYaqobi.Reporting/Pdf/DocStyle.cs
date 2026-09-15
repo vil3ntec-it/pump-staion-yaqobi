@@ -1,3 +1,4 @@
+using QuestPDF.Elements.Table;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -14,6 +15,20 @@ namespace PumpYaqobi.Reporting.Pdf;
 /// </summary>
 public static class DocStyle
 {
+    /// <summary>
+    /// تنظیمِ ورقی که همین لحظه دارد چیده می‌شود.
+    ///
+    /// ⚠️ چرا ایستا و نخ‌محور: خانه‌های جدول (‎Td‎/‎Th‎) از ده‌ها جای ۱۶ گزارش
+    /// صدا زده می‌شوند و هیچ‌کدام تنظیم را دستشان ندارند. به‌جای این‌که به هر
+    /// یک از آن‌ها یک پارامتر اضافه شود، <see cref="Compose"/> تنظیم را
+    /// این‌جا می‌نشاند و همان‌جا برمی‌دارد. موتورِ سند همه‌چیز را روی همان نخ
+    /// و همان لحظه می‌چیند، پس دو سندِ هم‌زمان روی دو نخ به هم نمی‌ریزند.
+    /// </summary>
+    [ThreadStatic] private static PageSetup? _current;
+
+    /// <summary>تنظیمِ جاری — بیرونِ ‎Compose‎ همان پیش‌فرض است.</summary>
+    public static PageSetup Current => _current ?? PageSetup.Default;
+
     // ── رنگ‌ها (همان کدهای CSS) ──────────────────────────────────────────────
     public const string Title = "#b45309";      // عنوانِ سند و خطِ زیرش
     public const string Sub = "#5b6472";        // زیرنویس و تاریخ‌های سربرگ
@@ -61,59 +76,86 @@ public static class DocStyle
         var s = setup ?? PageSetup.Default;
         var (w, h) = s.SizeMm(landscape);
         var m = s.Margins();
+        var (mh, mf) = s.BandOffsets();
 
-        doc.Page(page =>
+        var hasHeader = HasText(s.HeaderLeft, s.HeaderCenter, s.HeaderRight);
+        var hasFooter = HasText(s.FooterLeft, s.FooterCenter, s.FooterRight);
+
+        _current = s;
+        try
         {
-            // اندازه از خودِ جدولِ کاغذ می‌آید (میلی‌متر)، نه یک ثابتِ A4 —
-            // هر کاغذی که کاربر بردارد، ورق دقیقاً به همان اندازه می‌شود.
-            page.Size((float)w, (float)h, Unit.Millimetre);
-            page.MarginTop((float)m.Top, Unit.Millimetre);
-            page.MarginBottom((float)m.Bottom, Unit.Millimetre);
-            page.MarginLeft((float)m.Left, Unit.Millimetre);
-            page.MarginRight((float)m.Right, Unit.Millimetre);
-            page.PageColor(Colors.White);
-            // ⚠️ Fallback لازم است: وزیرمتن ایموجی ندارد و بدونِ آن ستونِ
-            // «نوع تیل» و نشانه‌های سربرگ در ورق خالی می‌مانند.
-            page.DefaultTextStyle(t => t.FontFamily(PdfEngine.Font).FontSize(CellSize)
-                                        .SemiBold().FontColor(CellFg)
-                                        .Fallback(f => f.FontFamily(PdfEngine.EmojiFont)));
-            page.ContentFromRightToLeft();
-
-            // «ورقِ اول سربرگ/پاورقی نداشته باشد» — همان ‎hfSkipFirst‎ی نسخهٔ وب
-            IContainer Slot(IContainer x) => s.SkipFirstHeaderFooter ? x.SkipOnce() : x;
-
-            if (HasText(s.HeaderLeft, s.HeaderCenter, s.HeaderRight))
-                Slot(page.Header()).PaddingBottom(5)
-                    .Element(c => Band(c, s.HeaderLeft, s.HeaderCenter, s.HeaderRight,
-                                       s, title, dates, top: true));
-
-            // ── مقیاسِ چاپ ───────────────────────────────────────────────
-            // همان کادرِ «مقیاس»ِ صفحهٔ چاپ. تنها جایی است که مقیاس اعمال
-            // می‌شود، پس روی **همهٔ** گزارش‌ها یکسان کار می‌کند.
-            //
-            // ⚠️ «هم‌اندازهٔ یک ورق» با ‎ScaleToFit‎ی خودِ موتور است، نه یک
-            // ضریبِ حدسی: موتور خودش محتوا را اندازه می‌گیرد و تا جایی کوچک
-            // می‌کند که واقعاً جا شود — پس آنچه می‌بینید همان است که چاپ
-            // می‌شود.
-            IContainer Sized(IContainer c) => s.Scale switch
+            doc.Page(page =>
             {
-                PrintScale.FitPage => c.ScaleToFit(),
-                PrintScale.Custom => c.Scale(Math.Clamp(s.ScalePercent, 10, 400) / 100f),
-                _ => c,
-            };
+                // اندازه از خودِ جدولِ کاغذ می‌آید (میلی‌متر)، نه یک ثابتِ A4 —
+                // هر کاغذی که کاربر بردارد، ورق دقیقاً به همان اندازه می‌شود.
+                page.Size((float)w, (float)h, Unit.Millimetre);
 
-            // کادرِ نقطه‌چینِ دورِ ورق — همان چیزی که در چاپِ نسخهٔ وب دیده می‌شود
-            Sized(page.Content()).Border(1).BorderColor(FootLine).Padding(10).Column(col =>
-            {
-                col.Item().Element(c => Header(c, title, subtitle, titleColor));
-                col.Item().PaddingTop(8).Element(body);
+                // ── سربرگ و پاورقی جای خودشان را دارند ─────────────────────
+                // مثلِ سایت (و اکسل)، سربرگ ‎mh‎ میلی‌متر از لبهٔ ورق می‌نشیند و
+                // محتوا از ‎mt‎. پس حاشیهٔ ورق تا سربرگ است و فاصلهٔ سربرگ تا
+                // محتوا با خودِ نوار پر می‌شود. بی سربرگ، حاشیه همان ‎mt‎ است.
+                page.MarginTop((float)(hasHeader ? mh : m.Top), Unit.Millimetre);
+                page.MarginBottom((float)(hasFooter ? mf : m.Bottom), Unit.Millimetre);
+                page.MarginLeft((float)m.Left, Unit.Millimetre);
+                page.MarginRight((float)m.Right, Unit.Millimetre);
+                page.PageColor(Colors.White);
+                // ⚠️ Fallback لازم است: وزیرمتن ایموجی ندارد و بدونِ آن ستونِ
+                // «نوع تیل» و نشانه‌های سربرگ در ورق خالی می‌مانند.
+                page.DefaultTextStyle(t => t.FontFamily(PdfEngine.Font).FontSize(CellSize)
+                                            .SemiBold().FontColor(Paint(CellFg))
+                                            .Fallback(f => f.FontFamily(PdfEngine.EmojiFont)));
+                page.ContentFromRightToLeft();
+
+                // «ورقِ اول سربرگ/پاورقی نداشته باشد» — همان ‎hfSkipFirst‎ی نسخهٔ وب
+                IContainer Slot(IContainer x) => s.SkipFirstHeaderFooter ? x.SkipOnce() : x;
+
+                if (hasHeader)
+                    Slot(page.Header())
+                        .Height((float)Math.Max(0m, m.Top - mh), Unit.Millimetre)
+                        .AlignTop()
+                        .Element(c => Band(c, s.HeaderLeft, s.HeaderCenter, s.HeaderRight,
+                                           s, title, dates, top: true));
+
+                // ── مقیاسِ چاپ ───────────────────────────────────────────────
+                // تنها جایی است که مقیاس اعمال می‌شود، پس روی **همهٔ** گزارش‌ها
+                // یکسان کار می‌کند. حالت‌های «جا دادن» پیش از رسیدن به این‌جا
+                // با شمردنِ ورق به یک درصد تبدیل شده‌اند (‎ScaleSolver‎)؛ این‌جا
+                // فقط «بی‌مقیاس» و «درصد» معنا دارد.
+                IContainer Sized(IContainer c) => s.Scale switch
+                {
+                    PrintScale.Custom => c.Scale(Math.Clamp(s.ScalePercent, 10, 400) / 100f),
+                    // اگر حل نشده به این‌جا رسید (سندی که بیرونِ پیش‌نمایش ساخته
+                    // شده)، همان کارِ همیشگیِ موتور: هر ورق در خودش جا شود.
+                    PrintScale.FitPage or PrintScale.FitRows or PrintScale.FitPages => c.ScaleToFit(),
+                    _ => c,
+                };
+
+                // ── وسط‌چین روی ورق — زبانهٔ «حاشیه‌ها» ─────────────────────
+                IContainer Centered(IContainer c)
+                {
+                    if (s.CenterH) c = c.AlignCenter();
+                    if (s.CenterV) c = c.AlignMiddle();
+                    return c;
+                }
+
+                // ⚠️ دورِ ورق هیچ کادری نیست — سایت هم ندارد. کادرِ نقطه‌چینی که
+                // این‌جا بود با حاشیه‌اش یک‌دهمِ ورق را می‌خورد و روی ورق‌های بعدی
+                // یک نوارِ خالیِ بی‌دلیل می‌گذاشت.
+                Centered(Sized(page.Content())).Column(col =>
+                {
+                    col.Item().Element(c => Header(c, title, subtitle, titleColor));
+                    col.Item().PaddingTop(8).Element(body);
+                });
+
+                if (hasFooter)
+                    Slot(page.Footer())
+                        .Height((float)Math.Max(0m, m.Bottom - mf), Unit.Millimetre)
+                        .AlignBottom()
+                        .Element(c => Band(c, s.FooterLeft, s.FooterCenter, s.FooterRight,
+                                           s, title, dates, top: false));
             });
-
-            if (HasText(s.FooterLeft, s.FooterCenter, s.FooterRight))
-                Slot(page.Footer()).PaddingTop(6)
-                    .Element(c => Band(c, s.FooterLeft, s.FooterCenter, s.FooterRight,
-                                       s, title, dates, top: false));
-        });
+        }
+        finally { _current = null; }
     }
 
     private static bool HasText(params string?[] parts) =>
@@ -161,7 +203,7 @@ public static class DocStyle
 
         box.Text(t =>
         {
-            t.DefaultTextStyle(x => x.FontSize(FootSize).FontColor(FootFg));
+            t.DefaultTextStyle(x => x.FontSize(FootSize).FontColor(Paint(FootFg)));
             foreach (var piece in Split(tpl!))
             {
                 if (piece == "&[Page]") t.CurrentPageNumber().Format(Shift);
@@ -209,39 +251,80 @@ public static class DocStyle
     /// </summary>
     private static void Header(IContainer c, string title, string? subtitle, string titleColor)
     {
-        c.BorderBottom(2).BorderColor(titleColor).PaddingBottom(6).Column(col =>
+        c.BorderBottom(2).BorderColor(Paint(titleColor)).PaddingBottom(6).Column(col =>
         {
-            col.Item().Text(title).FontSize(TitleSize).Bold().FontColor(titleColor);
+            col.Item().Text(title).FontSize(TitleSize).Bold().FontColor(Paint(titleColor));
             if (!string.IsNullOrWhiteSpace(subtitle))
-                col.Item().PaddingTop(2).Text(subtitle!).FontSize(SubSize).FontColor(Sub);
+                col.Item().PaddingTop(2).Text(subtitle!).FontSize(SubSize).FontColor(Paint(Sub));
         });
     }
 
     /// <summary>یک «کادرِ خلاصه» — برچسبِ کوچک بالا، عددِ پررنگ پایین.</summary>
     public static void SumBox(IContainer c, string label, string value, string color)
     {
-        c.Border(1).BorderColor(CellLine).Padding(5).Column(col =>
+        c.Border(1).BorderColor(Paint(CellLine)).Padding(5).Column(col =>
         {
-            col.Item().AlignCenter().Text(label).FontSize(BoxLabel).FontColor(Sub);
+            col.Item().AlignCenter().Text(label).FontSize(BoxLabel).FontColor(Paint(Sub));
             col.Item().PaddingTop(2).AlignCenter().Text(value)
-               .FontSize(BoxValue).Bold().FontColor(color);
+               .FontSize(BoxValue).Bold().FontColor(Paint(color));
         });
     }
 
+    // ── رنگِ چاپ: رنگی / خاکستری / سیاه‌وسفید ─────────────────────────────
+    //
+    // همان کشوی «رنگ»ِ زبانهٔ «جدول». هر رنگی که روی ورق می‌نشیند از همین
+    // یک تابع رد می‌شود، پس یک حالت برای همهٔ گزارش‌ها یکسان کار می‌کند.
+    // خاکستری = روشناییِ همان رنگ (‎grayscale(1)‎ی سایت)؛ سیاه‌وسفید = روشن‌ها
+    // سفید و تیره‌ها سیاه (‎grayscale(1) contrast(3.2)‎).
+
+    /// <summary>رنگِ نهایی روی ورق، با توجه به حالتِ رنگِ چاپ.</summary>
+    public static string Paint(string hex)
+    {
+        var mode = Current.Color;
+        if (mode == PrintColor.Color || hex.Length != 7 || hex[0] != '#') return hex;
+
+        var r = Convert.ToInt32(hex.Substring(1, 2), 16);
+        var g = Convert.ToInt32(hex.Substring(3, 2), 16);
+        var b = Convert.ToInt32(hex.Substring(5, 2), 16);
+        var y = (int)Math.Round(0.299 * r + 0.587 * g + 0.114 * b);
+
+        if (mode == PrintColor.BlackWhite) y = y < 140 ? 0 : 255;
+        return $"#{y:x2}{y:x2}{y:x2}";
+    }
+
+    /// <summary>خطِ خانه — با «خطوطِ جدول» خاموش، هیچ.</summary>
+    private static string Line(string hex) => Current.Gridlines ? Paint(hex) : Colors.Transparent;
+
     /// <summary>سرستونِ جدول — نوارِ تیره با نوشتهٔ روشن.</summary>
     public static IContainer Th(IContainer c) =>
-        c.Background(HeadBg).Border(1).BorderColor(HeadLine).PaddingVertical(6).PaddingHorizontal(4)
+        c.Background(Paint(HeadBg)).Border(1).BorderColor(Line(HeadLine))
+         .PaddingVertical(6).PaddingHorizontal(4)
          .AlignCenter().AlignMiddle();
 
     /// <summary>سرستون — کادر و نوشته با هم. یک‌جا انجام می‌شود تا کادر دوبار
     /// کشیده نشود (یک‌بار همین شد و دورِ هر خانه یک کادرِ اضافه افتاد).</summary>
     public static void ThText(IContainer c, string text) =>
-        Th(c).Text(text).FontSize(HeadSize).Bold().FontColor(HeadFg);
+        Th(c).Text(text).FontSize(HeadSize).Bold().FontColor(Paint(HeadFg));
+
+    /// <summary>
+    /// سرستونِ جدول — فقط در ورقِ اول، مگر «تکرارِ سطرِ عنوان» روشن باشد.
+    ///
+    /// ⚠️ تا پیش از این همهٔ گزارش‌ها مستقیم ‎t.Header(...)‎ می‌زدند و موتور
+    /// آن را روی **هر** ورق تکرار می‌کرد — درست خلافِ خواستهٔ صریحِ صاحب
+    /// ریپو («چرا آن سربرگِ جدول در صفحهٔ دیگر هم هست؟ نباید باشد»). حالا
+    /// همان یک خط از این‌جا می‌گذرد و تنظیمِ ورق تصمیم می‌گیرد.
+    /// </summary>
+    /// <param name="fill">خانه‌های سرستون را می‌سازد؛ هر بار ‎cell()‎ یک خانهٔ تازه می‌دهد.</param>
+    public static void Head(TableDescriptor t, Action<Func<ITableCellContainer>> fill)
+    {
+        if (Current.RepeatHead) t.Header(h => fill(h.Cell));
+        else fill(t.Cell);
+    }
 
     /// <summary>خانهٔ جدول — ردیف‌های زوج ته‌رنگِ ملایم دارند، مثلِ خودِ سند.</summary>
     public static IContainer Td(IContainer c, bool even) =>
-        (even ? c.Background(RowAlt) : c)
-            .Border(1).BorderColor(CellLine).PaddingVertical(5).PaddingHorizontal(4)
+        (even ? c.Background(Paint(RowAlt)) : c)
+            .Border(1).BorderColor(Line(CellLine)).PaddingVertical(5).PaddingHorizontal(4)
             .AlignCenter().AlignMiddle();
 
     /// <summary>
@@ -254,14 +337,15 @@ public static class DocStyle
     {
         var cell = Td(c, even);
         if (string.IsNullOrEmpty(text)) { cell.Text(string.Empty); return; }
-        cell.Text(text).FontSize(CellSize).SemiBold().FontColor(color ?? CellFg);
+        cell.Text(text).FontSize(CellSize).SemiBold().FontColor(Paint(color ?? CellFg));
     }
 
     /// <summary>ردیفِ «جمله» — همان نوارِ تیرهٔ پایینِ جدول.</summary>
     public static void Tf(IContainer c, string text) =>
-        c.Background(HeadBg).Border(1).BorderColor(HeadLine).PaddingVertical(6).PaddingHorizontal(4)
+        c.Background(Paint(HeadBg)).Border(1).BorderColor(Line(HeadLine))
+         .PaddingVertical(6).PaddingHorizontal(4)
          .AlignCenter().AlignMiddle()
-         .Text(text).FontSize(HeadSize).Bold().FontColor(HeadFg);
+         .Text(text).FontSize(HeadSize).Bold().FontColor(Paint(HeadFg));
 
     /// <summary>«—» برای خانهٔ خالی — مثلِ خودِ سند، نه صفر.</summary>
     public static string Dash(string? s) => string.IsNullOrWhiteSpace(s) ? "—" : s!;

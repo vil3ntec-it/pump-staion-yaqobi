@@ -79,9 +79,9 @@ public sealed class StaffShortReport : ISetupDocument
             cd.RelativeColumn(2.0f);   // اضافیِ مانده
         });
 
-        t.Header(h =>
+        DocStyle.Head(t, cell =>
         {
-            void Th(string s) => DocStyle.ThText(h.Cell(), s);
+            void Th(string s) => DocStyle.ThText(cell(), s);
             Th("#"); Th("کارمند"); Th("شیفت"); Th("🔴 کمبودیِ مانده"); Th("🟢 اضافیِ مانده");
         });
 
@@ -115,9 +115,9 @@ public sealed class StaffShortReport : ISetupDocument
             cd.RelativeColumn(1.6f);   // مبلغ
         });
 
-        t.Header(h =>
+        DocStyle.Head(t, cell =>
         {
-            void Th(string s) => DocStyle.ThText(h.Cell(), s);
+            void Th(string s) => DocStyle.ThText(cell(), s);
             Th("#"); Th("تاریخ"); Th("کارمند"); Th("نوع"); Th("مبلغ");
         });
 

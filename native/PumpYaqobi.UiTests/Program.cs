@@ -72,6 +72,9 @@ internal static class Program
         // ══ «بازگشت به صفحهٔ اصلی کند است» — با دفترِ چندساله ═══════════════
         //     dotnet run --project PumpYaqobi.UiTests -- dashperf
         if (outDir.Equals("dashperf", StringComparison.OrdinalIgnoreCase)) return DashPerf.Run();
+        // ══ عکسِ صفحهٔ چاپ و «تنظیمِ ورق» با گزارشِ واقعی ══════════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -- printshot <پوشه>
+        if (args.Length > 1 && args[0].Equals("printshot", StringComparison.OrdinalIgnoreCase)) return PrintShot.Run(args[1]);
         if (args.Length > 1 && args[0].Equals("cellshot", StringComparison.OrdinalIgnoreCase)) return CellShot.Run(args[1]);
         // ══ سه صفحهٔ بخشِ فاکتور، بلند و کامل ═══════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- invshot <پوشه>

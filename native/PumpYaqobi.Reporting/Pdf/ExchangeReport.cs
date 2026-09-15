@@ -87,9 +87,9 @@ public sealed class ExchangeReport : ISetupDocument
             cd.RelativeColumn(1.2f);   // الباقی ($)
         });
 
-        t.Header(h =>
+        DocStyle.Head(t, cell =>
         {
-            void Th(string s) => DocStyle.ThText(h.Cell(), s);
+            void Th(string s) => DocStyle.ThText(cell(), s);
             Th("#"); Th("تاریخ"); Th("توضیحات"); Th("مبلغ"); Th("واحد");
             Th("فی"); Th("دالر"); Th("رسید به صرافی"); Th("بردگی پمپ بنزین ($)"); Th("الباقی ($)");
         });

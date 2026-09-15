@@ -78,9 +78,9 @@ public sealed class SafeReport : ISetupDocument
             cd.RelativeColumn(2.2f);   // یادداشت
         });
 
-        t.Header(h =>
+        DocStyle.Head(t, cell =>
         {
-            void Th(string s2) => DocStyle.ThText(h.Cell(), s2);
+            void Th(string s2) => DocStyle.ThText(cell(), s2);
             Th("#"); Th("تاریخ شمسی"); Th("نوع"); Th("نام"); Th("مبلغ"); Th("یادداشت");
         });
 

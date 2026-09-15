@@ -57,9 +57,9 @@ public sealed class DebtReceiptReport : ISetupDocument
             cd.RelativeColumn(1.8f);   // مبلغ رسید
         });
 
-        t.Header(h =>
+        DocStyle.Head(t, cell =>
         {
-            void Th(string s) => DocStyle.ThText(h.Cell(), s);
+            void Th(string s) => DocStyle.ThText(cell(), s);
             Th("#"); Th("تاریخ"); Th("نام قرض‌دار"); Th("توضیحات"); Th("مبلغ رسید");
         });
 

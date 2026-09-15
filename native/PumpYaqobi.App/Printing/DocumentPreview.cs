@@ -57,7 +57,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         FillOptions();
         PullFromSetup();
 
-        _doc = _build(Setup);
+        _doc = BuildSolved(Setup);
         // ⚠️ در سازنده مستقیم نشانده می‌شود، نه از راهِ دیسپچر: این شیء هنوز به
         // هیچ کادری بسته نشده، و خودِ سازنده روی نخِ پس‌زمینه صدا زده می‌شود
         // (‎Documents.ShowAsync‎). رفتن به نخِ رابط این‌جا فقط یک انتظارِ بی‌دلیل
@@ -138,13 +138,19 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         MarginChoices.Add(new SetupOption("custom", "حاشیهٔ دلخواه",
             "عددهایش را در «تنظیمِ ورق» بگذارید", "▭"));
 
-        // ── مقیاس — سه حالت؛ چرایی‌اش در ‎PrintScale‎ ──────────────────────
+        // ── مقیاس — همان شش حالتِ ‎SCAL‎ی سایت، با همان نوشته‌ها ──────────
         Scales.Add(new SetupOption("none", "بدون مقیاس",
-            "در اندازهٔ واقعیِ خودش — ستون‌ها خودشان تا عرضِ ورق جا می‌شوند", "🔍"));
-        Scales.Add(new SetupOption("fit", "جا دادنِ ورق در یک صفحه",
-            "هر ورق تا جایی کوچک می‌شود که کامل بنشیند", "⤡"));
+            "در اندازهٔ واقعیِ خودش چاپ می‌شود", "🔍"));
+        Scales.Add(new SetupOption("fitCols", "جا دادن همهٔ ستون‌ها در یک ورق",
+            "پهنای جدول تا عرضِ ورق کوچک می‌شود", "↔"));
+        Scales.Add(new SetupOption("fitRows", "جا دادن همهٔ سطرها در یک ورق",
+            "بلندیِ گزارش تا یک ورق کوچک می‌شود", "↕"));
+        Scales.Add(new SetupOption("fitAll", "جا دادن کلِ گزارش در یک ورق",
+            "همه‌چیز در یک ورقِ واحد", "⤡"));
         Scales.Add(new SetupOption("custom", "مقیاسِ دلخواه",
             "درصدش را در «تنظیمِ ورق» بگذارید", "％"));
+        Scales.Add(new SetupOption("fitPages", "جا دادن در چند ورقِ مشخص",
+            "پهنا و بلندا را در «تنظیمِ ورق» بگذارید", "▦"));
     }
 
     private static string Inch(decimal mm) => (mm / 25.4m).ToString("0.00");
@@ -189,8 +195,11 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         Margin = Pick(MarginChoices, Setup.MarginPreset);
         Scale = Pick(Scales, Setup.Scale switch
         {
-            PrintScale.FitPage => "fit",
+            PrintScale.FitColumns => "fitCols",
+            PrintScale.FitRows => "fitRows",
+            PrintScale.FitPage => "fitAll",
             PrintScale.Custom => "custom",
+            PrintScale.FitPages => "fitPages",
             _ => "none",
         });
 
@@ -222,8 +231,11 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
             },
             Scale = Scale?.Value switch
             {
-                "fit" => PrintScale.FitPage,
+                "fitCols" => PrintScale.FitColumns,
+                "fitRows" => PrintScale.FitRows,
+                "fitAll" => PrintScale.FitPage,
                 "custom" => PrintScale.Custom,
+                "fitPages" => PrintScale.FitPages,
                 _ => PrintScale.None,
             },
             Copies = (int)Math.Clamp(Shamsi.Num(CopiesText), 1m, 999m),
@@ -279,7 +291,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
             {
                 var pages = await Task.Run(() =>
                 {
-                    _doc = _build(next);
+                    _doc = BuildSolved(next);
                     return RenderPages();
                 });
                 Apply(pages);
@@ -293,7 +305,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
                 Status = "این تنظیم روی ورق جا نمی‌شود: " + ex.Message;
                 try
                 {
-                    var back = await Task.Run(() => { _doc = _build(prev); return RenderPages(); });
+                    var back = await Task.Run(() => { _doc = BuildSolved(prev); return RenderPages(); });
                     Apply(back);
                 }
                 catch { }
@@ -323,7 +335,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         Status = "در حال ساختنِ دوبارهٔ ورق…";
         try
         {
-            var pages = await Task.Run(() => { _doc = _build(next); return RenderPages(); });
+            var pages = await Task.Run(() => { _doc = BuildSolved(next); return RenderPages(); });
             Apply(pages);
             Status = "";
             SetupChanged?.Invoke(next);
@@ -335,13 +347,31 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
             Status = "این تنظیم روی ورق جا نمی‌شود: " + ex.Message;
             try
             {
-                var back = await Task.Run(() => { _doc = _build(prev); return RenderPages(); });
+                var back = await Task.Run(() => { _doc = BuildSolved(prev); return RenderPages(); });
                 Apply(back);
             }
             catch { }
         }
         Busy = false;
         RefreshNotes();
+    }
+
+    /// <summary>
+    /// مقیاسی که واقعاً روی ورق نشست — همان «مقیاسِ اعمال‌شده»ی زیرِ ستون.
+    /// برای حالت‌های «جا دادن» با شمردنِ ورق پیدا می‌شود (‎ScaleSolver‎).
+    /// </summary>
+    public int AppliedPercent { get; private set; } = 100;
+
+    /// <summary>
+    /// سند را می‌سازد — و اگر مقیاس از نوعِ «جا دادن» است، اول با شمردنِ ورقِ
+    /// واقعی درصدش را پیدا می‌کند و بعد با همان درصد می‌سازد. تنها راهِ
+    /// ساختنِ سند در این کلاس همین است تا «آنچه می‌بینی همان چاپ می‌شود»
+    /// روی هر مسیری بماند.
+    /// </summary>
+    private IDocument BuildSolved(PageSetup s)
+    {
+        AppliedPercent = ScaleSolver.Solve(s, _build);
+        return _build(s.NeedsScaleSolve ? s.WithResolvedScale(AppliedPercent) : s);
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -371,18 +401,25 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     public string ScaleNote => Setup.Scale switch
     {
         PrintScale.Custom => Shamsi.Money(Setup.ScalePercent) + "٪ از اندازهٔ واقعی",
-        PrintScale.FitPage => "هر ورق تا جایی کوچک می‌شود که کامل بنشیند",
+        PrintScale.FitColumns => "پهنای جدول تا عرضِ ورق کوچک می‌شود",
+        PrintScale.FitRows => "بلندیِ گزارش تا یک ورق کوچک می‌شود",
+        PrintScale.FitPage => "همه‌چیز در یک ورقِ واحد",
+        PrintScale.FitPages => Shamsi.Money(Setup.FitWidthPages) + " ورق پهنا × "
+                               + Shamsi.Money(Setup.FitHeightPages) + " ورق بلندا",
         _ => "در اندازهٔ واقعیِ خودش",
     };
 
-    /// <summary>خطِ راهنمای زیرِ «تنظیمِ ورق…» — همان ‎xpr-scaleinfo‎ی سایت.</summary>
+    /// <summary>
+    /// خطِ راهنمای زیرِ «تنظیمِ ورق…» — همان ‎xpr-scaleinfo‎ی سایت:
+    /// «مقیاسِ اعمال‌شده: ۷۳٪ · تعدادِ ورق: ۲»، به اضافهٔ کاغذ و جهت.
+    /// </summary>
     public string ScaleInfo =>
-        "کاغذ " + (Setup.Paper == "Custom"
+        "مقیاسِ اعمال‌شده: " + Shamsi.Money(AppliedPercent) + "٪ · تعدادِ ورق: " + Shamsi.Money(PageCount)
+        + " · کاغذ " + (Setup.Paper == "Custom"
                     ? Shamsi.Money(Setup.CustomWidth) + "×" + Shamsi.Money(Setup.CustomHeight)
                     : Setup.Paper)
-        + " · " + (Setup.Orientation == PageOrientation.Landscape ? "خوابیده"
-                   : Setup.Orientation == PageOrientation.Portrait ? "ایستاده" : "خودکار")
-        + " · " + Shamsi.Money(PageCount) + " ورق";
+        + " " + (Setup.Orientation == PageOrientation.Landscape ? "خوابیده"
+                   : Setup.Orientation == PageOrientation.Portrait ? "ایستاده" : "خودکار");
 
     private void RefreshNotes()
     {
@@ -518,7 +555,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     public void Rebuild(PageSetup setup)
     {
         Setup = setup;
-        _doc = _build(setup);
+        _doc = BuildSolved(setup);
         Apply(RenderPages());
         PullFromSetup();
     }

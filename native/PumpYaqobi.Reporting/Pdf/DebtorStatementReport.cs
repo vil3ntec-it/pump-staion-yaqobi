@@ -127,9 +127,9 @@ public sealed class DebtorStatementReport : ISetupDocument
             cd.ConstantColumn(56);    // الباقی
         });
 
-        t.Header(h =>
+        DocStyle.Head(t, cell =>
         {
-            void Th(string s) => DocStyle.ThText(h.Cell(), s);
+            void Th(string s) => DocStyle.ThText(cell(), s);
             Th("#"); Th("تاریخ"); Th("نام"); Th("حواله");
             if (ShowFuelColumn) Th("نوع تیل");
             Th("مقدار تیل"); Th("فی لیتر"); Th("مقدار بردگی");

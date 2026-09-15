@@ -3,133 +3,258 @@
         xmlns:p="using:PumpYaqobi.App.Printing"
         x:Class="PumpYaqobi.App.Views.PrintSetupWindow"
         x:DataType="p:PrintSetupViewModel"
-        Width="560" Height="720" CanResize="True"
+        Width="640" Height="640" CanResize="True"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         FlowDirection="RightToLeft"
-        Background="{DynamicResource Pump.Card}"
+        Background="#f3f2f1"
         Title="تنظیمِ ورق">
 
-  <!-- ══ تنظیمِ ورق ════════════════════════════════════════════════════════
-       همان چیزهایی که «کارگاه چاپ»ِ نسخهٔ وب داشت. هر کادر یک خطِ توضیح دارد
-       تا کاربر مجبور نباشد حدس بزند کدام کدام است. -->
+  <!-- ══ تنظیمِ ورق — چهار زبانه، مو‌به‌مو مثلِ Page Setup اکسل و کارگاهِ سایت ══
+       ورق · حاشیه‌ها · سربرگ/پاورقی · جدول
+       رنگ‌ها همان‌هایی است که پنجرهٔ چاپ دارد (#217346 سبزِ اکسل، #d2d0ce لبه). -->
   <Grid RowDefinitions="Auto,*,Auto">
 
-    <Border Grid.Row="0" Background="#1f7a4d" Padding="12,9">
-      <TextBlock Text="⚙ تنظیمِ ورق" Foreground="White" FontWeight="Bold" FontSize="15" />
+    <Border Grid.Row="0" Background="#217346" Padding="14,9">
+      <TextBlock Text="تنظیمِ ورق" Foreground="White" FontWeight="Bold" FontSize="15" />
     </Border>
 
-    <ScrollViewer Grid.Row="1" Padding="16">
-      <StackPanel Spacing="14">
+    <TabControl Grid.Row="1" Margin="12,10,12,0" Padding="0,8,0,0">
 
-        <!-- ── کاغذ ── -->
-        <StackPanel Spacing="4">
-          <TextBlock Text="اندازهٔ کاغذ" Classes="label" />
-          <ComboBox ItemsSource="{Binding Papers}" SelectedItem="{Binding Paper}"
-                    HorizontalAlignment="Stretch" />
-          <TextBlock Text="{Binding Paper.Note}" Classes="muted" />
-        </StackPanel>
+      <!-- ══ زبانهٔ «ورق» ══════════════════════════════════════════════ -->
+      <TabItem Header="ورق">
+        <ScrollViewer>
+          <StackPanel Spacing="12" Margin="8,4">
 
-        <UniformGrid Rows="1" IsVisible="{Binding IsCustomPaper}">
-          <StackPanel Spacing="3" Margin="0,0,8,0">
-            <TextBlock Text="عرض (میلی‌متر)" Classes="label" />
-            <TextBox Text="{Binding CustomWidth}" />
+            <Border Classes="fs">
+              <StackPanel Spacing="6">
+                <TextBlock Text="جهت" Classes="lg" />
+                <StackPanel Orientation="Horizontal" Spacing="18">
+                  <RadioButton GroupName="ori" IsChecked="{Binding IsPortrait}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <Border Classes="oriA"><TextBlock Text="A" /></Border>
+                      <TextBlock Text="ایستاده" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </RadioButton>
+                  <RadioButton GroupName="ori" IsChecked="{Binding !IsPortrait}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <Border Classes="oriA wide"><TextBlock Text="A" /></Border>
+                      <TextBlock Text="خوابیده" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </RadioButton>
+                </StackPanel>
+                <CheckBox IsChecked="{Binding IsAuto}" Content="به‌انتخابِ خودِ گزارش (جدول‌های پهن خوابیده، فرم‌ها ایستاده)" />
+              </StackPanel>
+            </Border>
+
+            <Border Classes="fs">
+              <StackPanel Spacing="8">
+                <TextBlock Text="مقیاس" Classes="lg" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <RadioButton GroupName="sc" IsChecked="{Binding !IsFitPages}" Content="اندازهٔ دلخواه:" MinWidth="120" />
+                  <TextBox Text="{Binding ScalePercent}" Width="84" Classes="num" />
+                  <TextBlock Text="٪ از اندازهٔ عادی" VerticalAlignment="Center" Classes="u" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <RadioButton GroupName="sc" IsChecked="{Binding IsFitPages}" Content="جا دادن در:" MinWidth="120" />
+                  <TextBox Text="{Binding FitW}" Width="70" Classes="num" />
+                  <TextBlock Text="ورق پهنا در" VerticalAlignment="Center" Classes="u" />
+                  <TextBox Text="{Binding FitH}" Width="70" Classes="num" />
+                  <TextBlock Text="ورق بلندا" VerticalAlignment="Center" Classes="u" />
+                </StackPanel>
+                <TextBlock Classes="hint" Text="حالت‌های آمادهٔ «جا دادن همهٔ ستون‌ها / سطرها» را از کادرِ مقیاس در ستونِ کناری بزنید." />
+              </StackPanel>
+            </Border>
+
+            <StackPanel Spacing="4">
+              <TextBlock Text="اندازهٔ کاغذ" Classes="lb" />
+              <ComboBox ItemsSource="{Binding Papers}" SelectedItem="{Binding Paper}" HorizontalAlignment="Stretch" />
+              <TextBlock Text="{Binding Paper.Note}" Classes="hint" />
+            </StackPanel>
+
+            <UniformGrid Rows="1" IsVisible="{Binding IsCustomPaper}">
+              <StackPanel Spacing="3" Margin="0,0,8,0">
+                <TextBlock Text="عرض (میلی‌متر)" Classes="lb" />
+                <TextBox Text="{Binding CustomWidth}" Classes="num" />
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Text="بلندی (میلی‌متر)" Classes="lb" />
+                <TextBox Text="{Binding CustomHeight}" Classes="num" />
+              </StackPanel>
+            </UniformGrid>
+
+            <UniformGrid Rows="1">
+              <StackPanel Spacing="3" Margin="0,0,8,0">
+                <TextBlock Text="کیفیتِ چاپ" Classes="lb" />
+                <ComboBox ItemsSource="{Binding Dpis}" SelectedItem="{Binding Dpi}" HorizontalAlignment="Stretch" />
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Text="شمارهٔ ورقِ اول" Classes="lb" />
+                <TextBox Text="{Binding FirstPage}" Classes="num" />
+              </StackPanel>
+            </UniformGrid>
+            <TextBlock Classes="hint" Text="کیفیت فقط روی فایلِ PDFِ ساخته‌شده و پیش‌نمایش اثر دارد؛ چاپِ روی کاغذ را خودِ چاپگر تعیین می‌کند." />
           </StackPanel>
-          <StackPanel Spacing="3">
-            <TextBlock Text="بلندا (میلی‌متر)" Classes="label" />
-            <TextBox Text="{Binding CustomHeight}" />
+        </ScrollViewer>
+      </TabItem>
+
+      <!-- ══ زبانهٔ «حاشیه‌ها» ═════════════════════════════════════════ -->
+      <TabItem Header="حاشیه‌ها">
+        <ScrollViewer>
+          <StackPanel Spacing="12" Margin="8,4">
+            <Grid ColumnDefinitions="*,Auto">
+
+              <!-- شش عدد: بالا/سربرگ · چپ/راست · پایین/پاورقی — همان چیدمانِ سایت -->
+              <StackPanel Grid.Column="0" Spacing="8" Margin="0,0,16,0">
+                <UniformGrid Rows="1">
+                  <StackPanel Spacing="3" Margin="0,0,8,0"><TextBlock Text="بالا" Classes="lb" /><TextBox Text="{Binding Top}" Classes="num" /></StackPanel>
+                  <StackPanel Spacing="3"><TextBlock Text="سربرگ" Classes="lb" /><TextBox Text="{Binding HeaderGap}" Classes="num" /></StackPanel>
+                </UniformGrid>
+                <UniformGrid Rows="1">
+                  <StackPanel Spacing="3" Margin="0,0,8,0"><TextBlock Text="چپ" Classes="lb" /><TextBox Text="{Binding Left}" Classes="num" /></StackPanel>
+                  <StackPanel Spacing="3"><TextBlock Text="راست" Classes="lb" /><TextBox Text="{Binding Right}" Classes="num" /></StackPanel>
+                </UniformGrid>
+                <UniformGrid Rows="1">
+                  <StackPanel Spacing="3" Margin="0,0,8,0"><TextBlock Text="پایین" Classes="lb" /><TextBox Text="{Binding Bottom}" Classes="num" /></StackPanel>
+                  <StackPanel Spacing="3"><TextBlock Text="پاورقی" Classes="lb" /><TextBox Text="{Binding FooterGap}" Classes="num" /></StackPanel>
+                </UniformGrid>
+              </StackPanel>
+
+              <!-- نقشهٔ کوچکِ ورق — با هر تغییرِ عدد جلوی چشم عوض می‌شود.
+                   همان ‎paintMarginPrev()‎ی سایت: ورقِ سفید، بدنهٔ آبی درست روی
+                   مرزِ حاشیه‌ها، و دو خطِ نارنجی جای سربرگ و پاورقی. -->
+              <Border Grid.Column="1" Width="{Binding MapW}" Height="{Binding MapH}"
+                      Background="White" BorderBrush="#a19f9d" BorderThickness="1"
+                      VerticalAlignment="Top" FlowDirection="LeftToRight">
+                <Panel>
+                  <Border BorderBrush="#2b6cb0" BorderThickness="1" Margin="{Binding MapBody}" />
+                  <Border Height="1" Background="#c07700" VerticalAlignment="Top"
+                          Margin="{Binding MapHeaderLine}" />
+                  <Border Height="1" Background="#c07700" VerticalAlignment="Bottom"
+                          Margin="{Binding MapFooterLine}" />
+                </Panel>
+              </Border>
+            </Grid>
+
+            <Border Classes="fs">
+              <StackPanel Spacing="6">
+                <TextBlock Text="وسط‌چین روی ورق" Classes="lg" />
+                <StackPanel Orientation="Horizontal" Spacing="18">
+                  <CheckBox IsChecked="{Binding CenterH}" Content="افقی" />
+                  <CheckBox IsChecked="{Binding CenterV}" Content="عمودی" />
+                </StackPanel>
+              </StackPanel>
+            </Border>
+            <TextBlock Classes="hint" Text="همهٔ عددها میلی‌متر است. با دست زدن به آن‌ها، حالتِ حاشیه خودکار «دلخواه» می‌شود." />
           </StackPanel>
-        </UniformGrid>
+        </ScrollViewer>
+      </TabItem>
 
-        <!-- ── جهت ── -->
-        <StackPanel Spacing="4">
-          <TextBlock Text="جهتِ ورق" Classes="label" />
-          <ComboBox ItemsSource="{Binding Orientations}" SelectedItem="{Binding Orientation}"
-                    HorizontalAlignment="Stretch" />
-          <TextBlock Text="{Binding Orientation.Note}" Classes="muted" />
-        </StackPanel>
+      <!-- ══ زبانهٔ «سربرگ/پاورقی» ═════════════════════════════════════ -->
+      <TabItem Header="سربرگ/پاورقی">
+        <ScrollViewer>
+          <StackPanel Spacing="10" Margin="8,4">
+            <StackPanel Spacing="3">
+              <TextBlock Text="سربرگِ آماده" Classes="lb" />
+              <ComboBox ItemsSource="{Binding Presets}" SelectedItem="{Binding Preset}" HorizontalAlignment="Stretch" />
+            </StackPanel>
 
-        <!-- ── حاشیه ── -->
-        <StackPanel Spacing="4">
-          <TextBlock Text="حاشیه‌ها" Classes="label" />
-          <ComboBox ItemsSource="{Binding Margins}" SelectedItem="{Binding Margin}"
-                    HorizontalAlignment="Stretch" />
-          <TextBlock Text="{Binding Margin.Note}" Classes="muted" />
-        </StackPanel>
+            <UniformGrid Rows="1">
+              <StackPanel Spacing="3" Margin="0,0,6,0"><TextBlock Text="سربرگ راست" Classes="lb" /><TextBox Text="{Binding HeaderRight}" Name="HeaderRight" GotFocus="OnBoxFocus" /></StackPanel>
+              <StackPanel Spacing="3" Margin="0,0,6,0"><TextBlock Text="سربرگ وسط" Classes="lb" /><TextBox Text="{Binding HeaderCenter}" Name="HeaderCenter" GotFocus="OnBoxFocus" /></StackPanel>
+              <StackPanel Spacing="3"><TextBlock Text="سربرگ چپ" Classes="lb" /><TextBox Text="{Binding HeaderLeft}" Name="HeaderLeft" GotFocus="OnBoxFocus" /></StackPanel>
+            </UniformGrid>
+            <UniformGrid Rows="1">
+              <StackPanel Spacing="3" Margin="0,0,6,0"><TextBlock Text="پاورقی راست" Classes="lb" /><TextBox Text="{Binding FooterRight}" Name="FooterRight" GotFocus="OnBoxFocus" /></StackPanel>
+              <StackPanel Spacing="3" Margin="0,0,6,0"><TextBlock Text="پاورقی وسط" Classes="lb" /><TextBox Text="{Binding FooterCenter}" Name="FooterCenter" GotFocus="OnBoxFocus" /></StackPanel>
+              <StackPanel Spacing="3"><TextBlock Text="پاورقی چپ" Classes="lb" /><TextBox Text="{Binding FooterLeft}" Name="FooterLeft" GotFocus="OnBoxFocus" /></StackPanel>
+            </UniformGrid>
 
-        <UniformGrid Rows="1" IsVisible="{Binding IsCustomMargin}">
-          <StackPanel Spacing="3" Margin="0,0,6,0">
-            <TextBlock Text="بالا" Classes="label" />
-            <TextBox Text="{Binding Top}" />
+            <!-- دکمه‌های کد — روی کادر کلیک کنید، بعد یکی از این‌ها را بزنید -->
+            <WrapPanel Name="Tokens" />
+
+            <CheckBox IsChecked="{Binding SkipFirst}" Content="ورقِ اول سربرگ/پاورقی نداشته باشد" />
+            <TextBlock Classes="hint" Text="روی کادرِ دلخواه کلیک کنید، بعد یکی از کدها را بزنید تا همان‌جا افزوده شود." />
           </StackPanel>
-          <StackPanel Spacing="3" Margin="0,0,6,0">
-            <TextBlock Text="پایین" Classes="label" />
-            <TextBox Text="{Binding Bottom}" />
+        </ScrollViewer>
+      </TabItem>
+
+      <!-- ══ زبانهٔ «جدول» ═════════════════════════════════════════════ -->
+      <TabItem Header="جدول">
+        <ScrollViewer>
+          <StackPanel Spacing="12" Margin="8,4">
+            <Border Classes="fs">
+              <StackPanel Spacing="6">
+                <TextBlock Text="تیترهای چاپ" Classes="lg" />
+                <CheckBox IsChecked="{Binding RepeatHead}" Content="تکرارِ سطرِ عنوانِ جدول در بالای همهٔ ورق‌ها" />
+                <TextBlock Classes="hint" Text="پیش‌فرض خاموش است: سرستون فقط در ورقِ اول می‌آید — همان چیزی که برای همهٔ پی‌دی‌اف‌ها خواسته شده بود." />
+              </StackPanel>
+            </Border>
+            <Border Classes="fs">
+              <StackPanel Spacing="6">
+                <TextBlock Text="چاپ" Classes="lg" />
+                <CheckBox IsChecked="{Binding Gridlines}" Content="خطوطِ جدول" />
+                <StackPanel Spacing="3">
+                  <TextBlock Text="رنگ" Classes="lb" />
+                  <ComboBox ItemsSource="{Binding Colors}" SelectedItem="{Binding Color}" HorizontalAlignment="Stretch" />
+                </StackPanel>
+              </StackPanel>
+            </Border>
           </StackPanel>
-          <StackPanel Spacing="3" Margin="0,0,6,0">
-            <TextBlock Text="چپ" Classes="label" />
-            <TextBox Text="{Binding Left}" />
-          </StackPanel>
-          <StackPanel Spacing="3">
-            <TextBlock Text="راست" Classes="label" />
-            <TextBox Text="{Binding Right}" />
-          </StackPanel>
-        </UniformGrid>
+        </ScrollViewer>
+      </TabItem>
+    </TabControl>
 
-        <!-- ── سربرگ ── -->
-        <StackPanel Spacing="4">
-          <TextBlock Text="سربرگِ ورق (راست · وسط · چپ)" Classes="label" />
-          <UniformGrid Rows="1">
-            <TextBox Text="{Binding HeaderRight}" Margin="0,0,6,0" Watermark="راست" />
-            <TextBox Text="{Binding HeaderCenter}" Margin="0,0,6,0" Watermark="وسط" />
-            <TextBox Text="{Binding HeaderLeft}" Watermark="چپ" />
-          </UniformGrid>
-        </StackPanel>
-
-        <!-- ── پاورقی ── -->
-        <StackPanel Spacing="4">
-          <TextBlock Text="پاورقیِ ورق (راست · وسط · چپ)" Classes="label" />
-          <UniformGrid Rows="1">
-            <TextBox Text="{Binding FooterRight}" Margin="0,0,6,0" Watermark="راست" />
-            <TextBox Text="{Binding FooterCenter}" Margin="0,0,6,0" Watermark="وسط" />
-            <TextBox Text="{Binding FooterLeft}" Watermark="چپ" />
-          </UniformGrid>
-          <TextBlock Text="{x:Static p:PrintSetupViewModel.TokenHelp}"
-                     Classes="muted" TextWrapping="Wrap" />
-        </StackPanel>
-
-        <!-- ── مقیاسِ دلخواه ──────────────────────────────────────────────
-             کادرِ «٪ از اندازهٔ عادی»ی ‎Page Setup‎ی اکسل. فقط وقتی به کار
-             می‌آید که در ستونِ چاپ «مقیاسِ دلخواه» انتخاب شده باشد. -->
-        <StackPanel Spacing="4">
-          <TextBlock Text="مقیاسِ دلخواه (٪ از اندازهٔ عادی)" Classes="label" />
-          <TextBox Text="{Binding ScalePercent}" />
-          <TextBlock Classes="muted" TextWrapping="Wrap"
-                     Text="بینِ ۱۰ تا ۴۰۰. تا وقتی در ستونِ چاپ «مقیاسِ دلخواه» را نزده‌اید، این عدد اثری ندارد." />
-        </StackPanel>
-
-        <!-- ── بقیه ── -->
-        <UniformGrid Rows="1">
-          <StackPanel Spacing="3" Margin="0,0,8,0">
-            <TextBlock Text="شمارهٔ ورقِ اول" Classes="label" />
-            <TextBox Text="{Binding FirstPage}" />
-          </StackPanel>
-          <StackPanel Spacing="3">
-            <TextBlock Text="کیفیتِ پیش‌نمایش (DPI)" Classes="label" />
-            <TextBox Text="{Binding Dpi}" />
-          </StackPanel>
-        </UniformGrid>
-
-        <CheckBox IsChecked="{Binding SkipFirst}"
-                  Content="ورقِ اول سربرگ و پاورقی نداشته باشد" />
-      </StackPanel>
-    </ScrollViewer>
-
-    <Border Grid.Row="2" BorderBrush="{DynamicResource Pump.Border}" BorderThickness="0,1,0,0"
-            Padding="14,10">
-      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
-        <Button Classes="accent" Content="اعمال" Click="OnOk" MinWidth="96" />
-        <Button Content="انصراف" Click="OnCancel" MinWidth="96" />
-      </StackPanel>
+    <Border Grid.Row="2" BorderBrush="#d2d0ce" BorderThickness="0,1,0,0" Background="#faf9f8" Padding="14,10">
+      <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+        <Button Grid.Column="0" Classes="ok" Content="تایید" Click="OnOk" MinWidth="96" Margin="0,0,8,0" />
+        <Button Grid.Column="1" Content="انصراف" Click="OnCancel" MinWidth="96" />
+        <Button Grid.Column="3" Classes="link" Content="برگرداندن به پیش‌فرض" Command="{Binding ResetCommand}" />
+      </Grid>
     </Border>
   </Grid>
+
+  <Window.Styles>
+    <Style Selector="TabControl"><Setter Property="Background" Value="Transparent" /></Style>
+    <Style Selector="TabItem">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Padding" Value="14,6" />
+      <Setter Property="MinHeight" Value="34" />
+    </Style>
+    <Style Selector="TabItem:selected"><Setter Property="Foreground" Value="#217346" /></Style>
+    <Style Selector="Border.fs">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="BorderBrush" Value="#d2d0ce" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="Padding" Value="12,10" />
+    </Style>
+    <Style Selector="TextBlock.lg"><Setter Property="FontWeight" Value="Bold" /><Setter Property="Foreground" Value="#217346" /><Setter Property="FontSize" Value="13" /></Style>
+    <Style Selector="TextBlock.lb"><Setter Property="FontSize" Value="12" /><Setter Property="Foreground" Value="#5b6472" /></Style>
+    <Style Selector="TextBlock.u"><Setter Property="FontSize" Value="12" /><Setter Property="Foreground" Value="#5b6472" /></Style>
+    <Style Selector="TextBlock.hint"><Setter Property="FontSize" Value="11.5" /><Setter Property="Foreground" Value="#7b8494" /><Setter Property="TextWrapping" Value="Wrap" /></Style>
+    <Style Selector="TextBox.num"><Setter Property="TextAlignment" Value="Center" /><Setter Property="MinHeight" Value="30" /></Style>
+    <Style Selector="Border.oriA">
+      <Setter Property="Width" Value="18" /><Setter Property="Height" Value="24" />
+      <Setter Property="BorderBrush" Value="#605e5c" /><Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Background" Value="White" />
+    </Style>
+    <Style Selector="Border.oriA.wide"><Setter Property="Width" Value="24" /><Setter Property="Height" Value="18" /></Style>
+    <Style Selector="Border.oriA > TextBlock"><Setter Property="HorizontalAlignment" Value="Center" /><Setter Property="VerticalAlignment" Value="Center" /><Setter Property="FontSize" Value="11" /></Style>
+    <Style Selector="Button.ok">
+      <Setter Property="Background" Value="#217346" /><Setter Property="Foreground" Value="White" />
+      <Setter Property="FontWeight" Value="Bold" /><Setter Property="CornerRadius" Value="2" />
+    </Style>
+    <Style Selector="Button.link">
+      <Setter Property="Background" Value="Transparent" /><Setter Property="Foreground" Value="#0f6cbd" />
+      <Setter Property="BorderThickness" Value="0" /><Setter Property="FontSize" Value="12.5" />
+    </Style>
+    <Style Selector="Button.link /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
+    <Style Selector="Button.tok">
+      <Setter Property="Background" Value="White" /><Setter Property="Foreground" Value="#2b6cb0" />
+      <Setter Property="BorderBrush" Value="#cfd6de" /><Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" /><Setter Property="Padding" Value="10,3" />
+      <Setter Property="Margin" Value="0,0,6,6" /><Setter Property="FontSize" Value="12" />
+    </Style>
+  </Window.Styles>
 </Window>

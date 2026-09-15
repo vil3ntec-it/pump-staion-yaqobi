@@ -146,10 +146,10 @@ public sealed class AmanatReport : ISetupDocument
         });
 
         // سربرگِ دوطبقه — همان گروه‌بندیِ ورقِ نسخهٔ وب
-        t.Header(h =>
+        DocStyle.Head(t, cell =>
         {
             void Group(string s, uint span, uint rows = 1) =>
-                DocStyle.ThText(h.Cell().ColumnSpan(span).RowSpan(rows), s);
+                DocStyle.ThText(cell().ColumnSpan(span).RowSpan(rows), s);
 
             Group("#", 1, 2);
             Group("شناسه", 3);
@@ -161,7 +161,7 @@ public sealed class AmanatReport : ISetupDocument
             Group("الباقیِ طرف (لیتر)", 1, 2);
             Group("📏 اندازه‌گیری", 2);
 
-            void Th(string s) => DocStyle.ThText(h.Cell(), s);
+            void Th(string s) => DocStyle.ThText(cell(), s);
             Th("تاریخ"); Th("نام"); Th("به حسابهٔ");
             Th("رسید تیل"); Th("برده شده");
             Th("مدت زمان"); Th("درجه گرما");

@@ -107,7 +107,7 @@
             <!-- ── تنظیمات ── -->
             <TextBlock Text="تنظیمات" Classes="ph" />
 
-            <c:SettingCard ItemsSource="{Binding Whats}" SelectedItem="{Binding What}" />
+            <c:SettingCard Classes="card" HorizontalAlignment="Stretch" ItemsSource="{Binding Whats}" SelectedItem="{Binding What}" />
             <TextBlock Text="{Binding WhatNote}" Classes="pn" Margin="4,-4,4,2" />
 
             <!-- ورق‌ها: از … تا … — فقط وقتی «بازه» انتخاب شده، مثلِ اکسل -->
@@ -118,12 +118,12 @@
               <TextBox Text="{Binding ToText}" Width="74" Classes="spinbox" />
             </StackPanel>
 
-            <c:SettingCard ItemsSource="{Binding Collates}" SelectedItem="{Binding Collate}" />
-            <c:SettingCard ItemsSource="{Binding Orientations}" SelectedItem="{Binding Orientation}" />
-            <c:SettingCard ItemsSource="{Binding Papers}" SelectedItem="{Binding Paper}" />
-            <c:SettingCard ItemsSource="{Binding MarginChoices}" SelectedItem="{Binding Margin}" />
+            <c:SettingCard Classes="card" HorizontalAlignment="Stretch" ItemsSource="{Binding Collates}" SelectedItem="{Binding Collate}" />
+            <c:SettingCard Classes="card" HorizontalAlignment="Stretch" ItemsSource="{Binding Orientations}" SelectedItem="{Binding Orientation}" />
+            <c:SettingCard Classes="card" HorizontalAlignment="Stretch" ItemsSource="{Binding Papers}" SelectedItem="{Binding Paper}" />
+            <c:SettingCard Classes="card" HorizontalAlignment="Stretch" ItemsSource="{Binding MarginChoices}" SelectedItem="{Binding Margin}" />
             <TextBlock Text="{Binding MarginNoteText}" Classes="pn" Margin="4,-4,4,2" />
-            <c:SettingCard ItemsSource="{Binding Scales}" SelectedItem="{Binding Scale}" />
+            <c:SettingCard Classes="card" HorizontalAlignment="Stretch" ItemsSource="{Binding Scales}" SelectedItem="{Binding Scale}" />
             <TextBlock Text="{Binding ScaleNote}" Classes="pn" Margin="4,-4,4,2" />
 
             <Button Classes="link" Content="تنظیمِ ورق…" Click="OnSetup" />
@@ -305,8 +305,12 @@
     <!-- ══ کشوی اکسلی — نشانه، عنوانِ پررنگ و یک خطِ توضیح ══
          کشوی معمولی فقط یک خطِ ساده نشان می‌دهد؛ این یکی همان کارتِ دوخطیِ
          اکسل است، هم بسته و هم باز (‎ItemTemplate‎ی یکسان برای هر دو). -->
-    <!-- ‎.xcard{border:1px solid #d2d0ce;border-radius:2px;padding:7px 9px;min-height:52px}‎ -->
-    <Style Selector="c|SettingCard">
+    <!-- ‎.xcard{border:1px solid #d2d0ce;border-radius:2px;padding:7px 9px;min-height:52px}‎
+         ⚠️ گزینشگر روی **کلاس** است نه روی نامِ کنترل: ‎SettingCard‎ کلیدِ سبکش
+         را عمداً ‎ComboBox‎ گزارش می‌کند (تا قالبِ خودِ کشو را ارث ببرد)، پس
+         ‎c|SettingCard‎ هیچ‌وقت با آن نمی‌خورد. یک‌بار همین شد و کارت‌ها یک
+         کشوی باریکِ یک‌خطیِ ساده درآمدند — همان چیزی که «طراحی خراب» دیده شد. -->
+    <Style Selector="ComboBox.card">
       <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="Background" Value="White" />

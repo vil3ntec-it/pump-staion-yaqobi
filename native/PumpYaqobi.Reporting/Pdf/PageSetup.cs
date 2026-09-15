@@ -9,23 +9,40 @@ public enum PageOrientation { Auto = 0, Portrait = 1, Landscape = 2 }
 public enum PrintWhat { All = 0, Current = 1, Range = 2 }
 
 /// <summary>
-/// مقیاسِ چاپ — همان کادرِ «مقیاس».
+/// مقیاسِ چاپ — همان کادرِ «مقیاس»، با همان شش حالتِ سایت (‎SCAL‎).
 ///
-/// ⚠️ چهار حالت است نه شش‌تای نسخهٔ وب، و دلیلش این است که موتورِ سندِ این
-/// برنامه با مرورگر فرق دارد: آن‌جا جدولِ HTML از عرضِ ورق بیرون می‌زد و
-/// «جا دادن ستون‌ها» کارِ واقعی می‌کرد؛ این‌جا ستون‌ها خودشان تا عرضِ ورق
-/// چیده می‌شوند، پس آن حالت همان ‎None‎ است و ساختنِ یک گزینهٔ قلابی برایش
-/// فقط کاربر را گمراه می‌کرد.
+/// ⚠️ سه حالتِ «جا دادن» با **شمردنِ ورقِ واقعی** پیدا می‌شوند، نه با یک ضریبِ
+/// حدسی: سند در چند مقیاس واقعاً چیده می‌شود و کوچک‌ترین کوچک‌شدنی که ورق‌ها
+/// را به عددِ خواسته می‌رساند برداشته می‌شود — همان ‎biggestScaleFor‎ی
+/// سایت. چرایی‌اش آن‌جا نوشته شده: سطرها از وسط نصف نمی‌شوند، پس «جمعِ
+/// بلندیِ محتوا ÷ بلندیِ ورق» گاهی ۱٫۹ ورق درمی‌آید در حالی که روی کاغذ ۲
+/// ورق است.
 /// </summary>
 public enum PrintScale
 {
     /// <summary>در اندازهٔ واقعیِ خودش.</summary>
     None = 0,
-    /// <summary>هر ورق تا جایی کوچک می‌شود که کاملاً در یک صفحه بنشیند.</summary>
+    /// <summary>
+    /// کلِ گزارش در یک ورق (همان ‎fitAll‎). ⚠️ نامِ قدیمی نگه داشته شده تا
+    /// تنظیمِ ذخیره‌شدهٔ کاربر با همان عدد خوانده شود.
+    /// </summary>
     FitPage = 1,
     /// <summary>درصدِ دستیِ کاربر.</summary>
     Custom = 2,
+    /// <summary>
+    /// همهٔ ستون‌ها در پهنای یک ورق (‎fitCols‎) — پیش‌فرضِ سایت.
+    /// در این موتور جدول‌ها خودشان تا پهنای ورق چیده می‌شوند، پس این حالت
+    /// همان «بدون مقیاس» است؛ سرِ جایش مانده تا کشو با سایت یکی باشد.
+    /// </summary>
+    FitColumns = 3,
+    /// <summary>همهٔ سطرها در بلندیِ یک ورق (‎fitRows‎).</summary>
+    FitRows = 4,
+    /// <summary>در N ورقِ پهنا × M ورقِ بلندا (‎fitPages‎).</summary>
+    FitPages = 5,
 }
+
+/// <summary>رنگِ چاپ — همان کشوی «رنگ» در زبانهٔ «جدول».</summary>
+public enum PrintColor { Color = 0, Gray = 1, BlackWhite = 2 }
 
 /// <summary>
 /// ══ تنظیمِ ورق — «کارگاه چاپ» ══════════════════════════════════════════════
@@ -84,6 +101,18 @@ public sealed record PageSetup
     public decimal MarginLeft { get; init; } = 6.4m;
     public decimal MarginRight { get; init; } = 6.4m;
 
+    /// <summary>فاصلهٔ سربرگ از لبهٔ بالای ورق — همان ‎mh‎ی سایت.</summary>
+    public decimal MarginHeader { get; init; } = 7.6m;
+
+    /// <summary>فاصلهٔ پاورقی از لبهٔ پایینِ ورق — همان ‎mf‎.</summary>
+    public decimal MarginFooter { get; init; } = 7.6m;
+
+    /// <summary>وسط‌چین روی ورق — افقی (‎centerH‎).</summary>
+    public bool CenterH { get; init; }
+
+    /// <summary>وسط‌چین روی ورق — عمودی (‎centerV‎).</summary>
+    public bool CenterV { get; init; }
+
     // ── سربرگ و پاورقیِ سه‌قسمتی ──────────────────────────────────────────
     public string HeaderLeft { get; init; } = "";
     public string HeaderCenter { get; init; } = "";
@@ -102,10 +131,36 @@ public sealed record PageSetup
     public int Dpi { get; init; } = 144;
 
     // ── مقیاس ─────────────────────────────────────────────────────────────
-    public PrintScale Scale { get; init; } = PrintScale.None;
+    //
+    // پیش‌فرض همان پیش‌فرضِ سایت است (‎scaleMode:'fitCols'‎)؛ چرایی‌اش در
+    // ‎PrintScale.FitColumns‎.
+    public PrintScale Scale { get; init; } = PrintScale.FitColumns;
 
     /// <summary>درصدِ «مقیاسِ دلخواه» — ۱۰ تا ۴۰۰.</summary>
     public int ScalePercent { get; init; } = 100;
+
+    /// <summary>«جا دادن در … ورق پهنا» — ‎fitW‎.</summary>
+    public int FitWidthPages { get; init; } = 1;
+
+    /// <summary>«… در … ورق بلندا» — ‎fitH‎.</summary>
+    public int FitHeightPages { get; init; } = 1;
+
+    // ── زبانهٔ «جدول» ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// سرستونِ جدول در بالای همهٔ ورق‌ها تکرار شود؟
+    ///
+    /// ⚠️ پیش‌فرض **خاموش** — خواستهٔ صریحِ صاحب ریپو برای همهٔ پی‌دی‌اف‌ها:
+    /// «چرا آن سربرگِ جدول در صفحهٔ دیگر هم هست؟ نباید باشد، گیج‌کننده
+    /// می‌شود.» همان پیش‌فرضِ ‎repeatHead:false‎ی سایت.
+    /// </summary>
+    public bool RepeatHead { get; init; }
+
+    /// <summary>خطوطِ جدول — ‎gridlines‎.</summary>
+    public bool Gridlines { get; init; } = true;
+
+    /// <summary>رنگی، خاکستری یا سیاه‌وسفید — ‎color‎.</summary>
+    public PrintColor Color { get; init; } = PrintColor.Color;
 
     // ── کارِ چاپ ───────────────────────────────────────────────────────────
     //
@@ -137,6 +192,19 @@ public sealed record PageSetup
         Copies = 1, Collate = true, What = PrintWhat.All, From = 1, To = 1,
     };
 
+    /// <summary>
+    /// همین تنظیم، ولی مقیاسش عددِ صریح — برای ساختنِ سند پس از آن‌که
+    /// «جا دادن» حساب شد. سند فقط دو حالت را می‌فهمد: بی‌مقیاس و درصد.
+    /// </summary>
+    public PageSetup WithResolvedScale(int percent) => this with
+    {
+        Scale = percent == 100 ? PrintScale.None : PrintScale.Custom,
+        ScalePercent = Math.Clamp(percent, 10, 400),
+    };
+
+    /// <summary>حالت‌هایی که پیش از ساختنِ سند باید با شمردنِ ورق حل شوند.</summary>
+    public bool NeedsScaleSolve => Scale is PrintScale.FitPage or PrintScale.FitRows or PrintScale.FitPages;
+
     /// <summary>اندازهٔ نهاییِ ورق، با درنظر گرفتنِ ایستاده/خوابیده.</summary>
     public (decimal W, decimal H) SizeMm(bool naturalLandscape)
     {
@@ -163,6 +231,17 @@ public sealed record PageSetup
         MarginPreset != "custom" && MarginPresets.TryGetValue(MarginPreset, out var m)
             ? m
             : new MarginSet(MarginTop, MarginBottom, MarginLeft, MarginRight);
+
+    /// <summary>
+    /// جای سربرگ و پاورقی — هیچ‌وقت بیرونِ حاشیهٔ خودشان نمی‌روند، مثلِ
+    /// ‎geo()‎ی سایت (‎mh: Math.min(S.mh, mt)‎).
+    /// </summary>
+    public (decimal Header, decimal Footer) BandOffsets()
+    {
+        var m = Margins();
+        return (Math.Min(Math.Max(0m, MarginHeader), m.Top),
+                Math.Min(Math.Max(0m, MarginFooter), m.Bottom));
+    }
 
     /// <summary>پیش‌فرضِ عددهای حاشیه وقتی کاربر یک آمادهٔ دیگر را برمی‌دارد.</summary>
     public PageSetup WithMarginPreset(string preset)

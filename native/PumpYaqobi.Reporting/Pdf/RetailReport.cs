@@ -74,9 +74,9 @@ public sealed class RetailReport : ISetupDocument
             cd.RelativeColumn(1.3f);   // الباقی
         });
 
-        t.Header(h =>
+        DocStyle.Head(t, cell =>
         {
-            void Th(string s2) => DocStyle.ThText(h.Cell(), s2);
+            void Th(string s2) => DocStyle.ThText(cell(), s2);
             Th("شماره"); Th("تاریخ"); Th("نام"); Th("نوع تیل"); Th("مقدار تیل");
             Th("فی"); Th("مقدار بردگی"); Th("رسید"); Th("الباقی");
         });

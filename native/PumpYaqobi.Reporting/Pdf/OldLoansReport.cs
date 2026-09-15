@@ -82,9 +82,9 @@ public sealed class OldLoansReport : ISetupDocument
             cd.RelativeColumn(2.0f);                    // شماره تماس
         });
 
-        t.Header(h =>
+        DocStyle.Head(t, cell =>
         {
-            void Th(string s) => DocStyle.ThText(h.Cell(), s);
+            void Th(string s) => DocStyle.ThText(cell(), s);
             Th("#"); Th("نام قرض‌دار");
             Th(IsMixed ? "الباقی" : "الباقی (" + Unit + ")");
             if (IsMixed) Th("واحد");
