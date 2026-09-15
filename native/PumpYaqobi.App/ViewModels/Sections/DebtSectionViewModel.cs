@@ -165,7 +165,15 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
     [ObservableProperty] private string _newName = "";
     [ObservableProperty] private string _newPhone = "";
 
-    public bool IsListVisible => Person is null;
+    /// <summary>
+    /// صفحهٔ رویی — «🗂️ جدول‌های آرشیو»ِ یک حساب (‎personArchiveModal‎ی سایت).
+    /// روی صفحهٔ شخص می‌نشیند و با «✕» به همان حساب برمی‌گردد.
+    /// </summary>
+    [ObservableProperty] private object? _overlay;
+
+    public bool IsListVisible => Person is null && Overlay is null;
+    public bool IsPersonVisible => Person is not null && Overlay is null;
+    public bool IsOverlayVisible => Overlay is not null;
 
     /// <summary>حسابِ شخص — تا باز است، میانبرهای ردیف به آن می‌روند نه به فهرست.</summary>
     public override object? ActivePage => Person;
@@ -173,8 +181,30 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
     partial void OnPersonChanged(PersonViewModel? v)
     {
         OnPropertyChanged(nameof(IsListVisible));
+        OnPropertyChanged(nameof(IsPersonVisible));
         // صفحهٔ حساب تمام‌عرض است، مثلِ مودالِ تمام‌صفحهٔ نسخهٔ وب
-        IsPageOpen = v is not null;
+        IsPageOpen = v is not null || Overlay is not null;
+    }
+
+    partial void OnOverlayChanged(object? v)
+    {
+        OnPropertyChanged(nameof(IsListVisible));
+        OnPropertyChanged(nameof(IsPersonVisible));
+        OnPropertyChanged(nameof(IsOverlayVisible));
+        IsPageOpen = Person is not null || v is not null;
+    }
+
+    public async Task OpenArchivesAsync(PersonViewModel person, AccountViewModel acct)
+    {
+        var arcs = await _host.Debtors.ListArchivesAsync(acct.Entity.Id);
+        Overlay = new DebtArchivePageViewModel(_host, person, acct, arcs, this);
+    }
+
+    public async Task CloseOverlayAsync()
+    {
+        if (Overlay is DebtArchivePageViewModel p) await p.FlushAsync();
+        Overlay = null;
+        if (Person?.Current is { } cur) await cur.LoadArchiveCountAsync();
     }
 
     partial void OnSearchChanged(string v) => ApplyFilter();

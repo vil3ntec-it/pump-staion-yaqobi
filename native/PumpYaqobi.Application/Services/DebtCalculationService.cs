@@ -18,6 +18,12 @@ public readonly record struct SplitTotals(FuelTotals Petrol, FuelTotals Diesel)
     public FuelTotals All => Petrol + Diesel;
 }
 
+/// <summary>سربرگِ یک تیل در جدولِ آرشیو — ‎_histFigures‎.</summary>
+public readonly record struct ArchiveFuelFigures(
+    decimal HeaderRasid, decimal RowRasid, decimal Rasid, decimal Bord, decimal Comm, decimal Rem);
+
+public readonly record struct ArchiveFigures(SplitTotals Totals, ArchiveFuelFigures Petrol, ArchiveFuelFigures Diesel);
+
 /// <summary>الباقیِ یک شخص/حساب — معادلِ ‎_debtBalancesFrom‎.</summary>
 public readonly record struct DebtBalances(decimal Money, decimal Petrol, decimal Diesel, decimal Fuel);
 
@@ -151,6 +157,27 @@ public sealed class DebtCalculationService
 
     // ── جمع‌ها ───────────────────────────────────────────────────────────────
     /// <summary>‎_splitTotals(rows)‎ — پطرول و دیزل جدا، بعد جمعِ کل.</summary>
+    /// <summary>
+    /// ‎_histFigures‎ — سربرگِ یک جدولِ آرشیو، مو‌به‌مو مثلِ حسابِ زنده:
+    /// «مقدار رسید» = رسیدِ سربرگِ خودِ آرشیو + رسیدهای داخلِ همان جدول؛
+    /// فیصدی روی کلِ رسید؛ الباقی = برد + فیصدی − رسید.
+    /// ⚠️ رسیدِ سربرگ (‎hdr‎) جدا نگه داشته می‌شود تا ویرایشش دوباره‌شماری نکند.
+    /// </summary>
+    public ArchiveFigures ArchiveFigures(IEnumerable<DebtRow> rows, bool money,
+                                         decimal pctP, decimal pctD, decimal hdrP, decimal hdrD)
+    {
+        var st = SplitTotals(rows);
+        ArchiveFuelFigures One(FuelTotals t, decimal pct, decimal hdr)
+        {
+            var rowRasid = money ? t.Rasid : t.RasidFuel;
+            var rasid = hdr + rowRasid;
+            var bord = money ? t.Bardagi : t.Liters;
+            var comm = rasid * pct / 100m;
+            return new ArchiveFuelFigures(hdr, rowRasid, rasid, bord, Round0(comm), Round0(bord + comm - rasid));
+        }
+        return new ArchiveFigures(st, One(st.Petrol, pctP, hdrP), One(st.Diesel, pctD, hdrD));
+    }
+
     public SplitTotals SplitTotals(IEnumerable<DebtRow> rows)
     {
         decimal pf = 0, pr = 0, prf = 0, pa = 0, pb = 0;

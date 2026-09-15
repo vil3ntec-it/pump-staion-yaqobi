@@ -159,8 +159,19 @@
       
     </c:SectionPage>
 
-    <Panel IsVisible="{Binding !IsListVisible}">
+    <Panel IsVisible="{Binding IsPersonVisible}">
       <v:PersonView DataContext="{Binding Person}" />
+    </Panel>
+
+    <!-- «🗂️ جدول‌های آرشیو» — صفحهٔ جداگانه روی حسابِ شخص، مثلِ ‎personArchiveModal‎ -->
+    <Panel IsVisible="{Binding IsOverlayVisible}">
+      <ContentControl Content="{Binding Overlay}">
+        <ContentControl.DataTemplates>
+          <DataTemplate DataType="vm:DebtArchivePageViewModel">
+            <v:DebtArchiveView />
+          </DataTemplate>
+        </ContentControl.DataTemplates>
+      </ContentControl>
     </Panel>
   </Panel>
 </UserControl>

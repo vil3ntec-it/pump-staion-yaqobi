@@ -530,6 +530,22 @@ public sealed class DebtorService
         catch { return new List<DebtRow>(); }
     }
 
+    /// <summary>
+    /// ویرایشِ یک جدولِ آرشیو — ‎updateHistoryRow‎ · ‎updateHistoryPercent‎ ·
+    /// ‎histRasidBlur‎ی سایت: ردیف‌ها، فیصدی‌ها، رسیدِ سربرگ و یادداشتِ همان آرشیو.
+    /// فقط خودِ آرشیو عوض می‌شود؛ جدولِ زنده و بقیهٔ آرشیوها دست نمی‌خورند.
+    /// </summary>
+    public async Task UpdateArchiveAsync(DebtTableArchive h, IReadOnlyList<DebtRow> rows, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.EditData);
+        h.RowsJson = System.Text.Json.JsonSerializer.Serialize(rows, ArchiveJson);
+        h.RowCount = rows.Count;
+        await using var db = _dbf.Create();
+        db.DebtTableArchives.Attach(h);
+        db.Entry(h).State = EntityState.Modified;
+        await db.SaveChangesAsync(ct);
+    }
+
     public async Task DeleteArchiveAsync(long archiveId, CancellationToken ct = default)
     {
         _perm.Require(Permission.DeleteData);

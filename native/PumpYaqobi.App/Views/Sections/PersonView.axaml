@@ -355,86 +355,14 @@
           <Button Classes="ghost" Content="{Binding Current.ArchiveToggleText}"
                   Command="{Binding Current.ToggleArchivesCommand}"
                   IsVisible="{Binding Current.HasArchives, FallbackValue=False}"
-                  ToolTip.Tip="جدول‌های آرشیوِ این حساب — با زدنِ همین کادر باز و بسته می‌شود" />
+                  ToolTip.Tip="جدول‌های آرشیوِ این حساب — در صفحهٔ جداگانه باز می‌شود" />
 
         </WrapPanel>
 
-        <!-- کادرِ کشوییِ «جدول‌های آرشیو» — تا آرشیوی نباشد، اصلاً دیده نمی‌شود -->
-        <!-- ⚠️ کادرِ بزرگِ آرشیو عمداً همین بالاست، بالای جدول — عینِ ‎#pm-arc-box‎ی
-             سایت، که خودش هم نوشته چرا: «پیش از این تهِ صفحه، زیرِ جدول بود و
-             اگر جدول کمی بزرگ می‌شد آن زیر می‌رفت و گم می‌شد و دیگر برگشتی
-             نداشت. پایین نبریدش.»
-             دکمهٔ باز/بسته‌اش رفت داخلِ نوارِ حساب، بغلِ «٪ فیصدی». -->
-        <StackPanel Spacing="6" DataContext="{Binding Current}"
-                    IsVisible="{Binding IsArchiveOpen}">
-
-          <ItemsControl ItemsSource="{Binding Archives}"
-                        x:CompileBindings="False">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate>
-                <Border Classes="panel" Margin="0,0,0,6" Padding="0">
-                  <StackPanel>
-                    <!-- عنوانِ کوچکِ هر آرشیو — با کلیک، آکاردئون باز می‌شود -->
-                    <Button Classes="tool-link" HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Left" Padding="12,9"
-                            Command="{Binding ToggleCommand}">
-                      <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="{Binding CaretText}" FontWeight="ExtraBold" />
-                        <TextBlock Text="{Binding Title}" FontWeight="Bold" />
-                      </StackPanel>
-                    </Button>
-
-                    <!-- ══ بدنهٔ آرشیو — تا باز نشود ساخته نمی‌شود ══════════
-                         ⚠️ این‌جا ‎IsVisible‎ به کار نمی‌رود و نباید برگردد:
-                         در آوالونیا ‎IsVisible="False"‎ کنترل را **می‌سازد** و
-                         فقط نشانش نمی‌دهد. یعنی جدولِ ۹ ستونیِ هر آرشیو —
-                         بسته یا باز — ساخته می‌شد و بخشِ شخص با چند آرشیو
-                         ثانیه‌ها طول می‌کشید.
-
-                         ‎ContentControl‎ با محتوای ‎null‎ هیچ قالبی نمی‌سازد، و
-                         ‎Body‎ تا آرشیو بسته است ‎null‎ می‌دهد. -->
-                    <ContentControl Content="{Binding Body}">
-                     <ContentControl.ContentTemplate>
-                      <DataTemplate>
-                       <StackPanel Margin="12,0,12,12" Spacing="8">
-                        <TextBlock Text="{Binding PetrolHeadText}" TextWrapping="Wrap"
-                                 Foreground="{DynamicResource Pump.Ok}" FontWeight="Bold" />
-                        <TextBlock Text="{Binding DieselHeadText}" TextWrapping="Wrap"
-                                 Foreground="{DynamicResource Pump.Warn}" FontWeight="Bold" />
-                        <TextBlock Text="{Binding NoteText}" TextWrapping="Wrap"
-                                 IsVisible="{Binding HasNote}" Classes="label" />
-
-                        <!-- ⚠️ فقط برای دیدن — عکسِ گذشته ویرایش نمی‌شود -->
-                        <c:ExcelGrid ItemsSource="{Binding Rows}" IsReadOnly="True"
-                                   x:CompileBindings="False">
-                        <DataGrid.Columns>
-                          <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
-                          <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="Auto" />
-                          <DataGridTextColumn Header="حواله" Binding="{Binding Hawala}" Width="Auto" />
-                          <DataGridTextColumn Header="تیل" Binding="{Binding FuelText}" Width="Auto" />
-                          <DataGridTextColumn Header="مقدار" Binding="{Binding LitersText}" Width="Auto" />
-                          <DataGridTextColumn Header="فی" Binding="{Binding PriceText}" Width="Auto" />
-                          <DataGridTextColumn Header="بردگی" Binding="{Binding BardagiText}" Width="Auto" />
-                          <DataGridTextColumn Header="رسید" Binding="{Binding RasidText}" Width="Auto" />
-                          <DataGridTextColumn Header="رسیدِ تیل" Binding="{Binding RasidFuelText}" Width="Auto" />
-                        </DataGrid.Columns>
-                        </c:ExcelGrid>
-                        <c:TotalsBar ItemsSource="{Binding Totals}" />
-
-                        <Button Classes="ghost danger" Content="حذفِ این آرشیو"
-                              HorizontalAlignment="Right" Padding="10,4" FontSize="11"
-                              Command="{Binding $parent[UserControl].DataContext.Current.DeleteArchiveCommand}"
-                              CommandParameter="{Binding}" />
-                       </StackPanel>
-                      </DataTemplate>
-                     </ContentControl.ContentTemplate>
-                    </ContentControl>
-                  </StackPanel>
-                </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </StackPanel>
+        <!-- «🗂️ جدول‌های آرشیو» صفحهٔ جداگانهٔ خودش را دارد (مثلِ سایت:
+             ‎personArchiveModal‎). دکمه‌اش در نوارِ حساب، بغلِ «٪ فیصدی» است و
+             هیچ چیزی زیرِ جدول پهن نمی‌شود — پیش از این آکاردئونی خواندنی بود
+             که نه سربرگِ حسابِ زنده را داشت، نه فیلترِ تیل و نه ویرایش. -->
       </StackPanel>
 
       <!-- ══ فیصدی — بسته، مگر این‌که خودت بازش کنی ══════════════════════

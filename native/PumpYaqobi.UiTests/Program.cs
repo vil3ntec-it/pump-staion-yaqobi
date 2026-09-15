@@ -184,6 +184,19 @@ internal static class Program
             Dispatcher.UIThread.RunJobs();
             Pump(win);
             Shot(win, Path.Combine(outDir, "20-debt-person.png"));
+
+            // «جدول جدید» → صفحهٔ جدول‌های آرشیو، با سربرگِ حسابِ زنده و ردیف‌های ویرایش‌شدنی
+            if (debt.Person?.Current is { } cur)
+            {
+                PumpYaqobi.App.Services.Dialogs.ConfirmHook = (_, _) => true;
+                Wait(win, cur.NewTableCommand.ExecuteAsync(null));
+                PumpYaqobi.App.Services.Dialogs.ConfirmHook = null;
+                Wait(win, cur.ToggleArchivesCommand.ExecuteAsync(null));
+                Pump(win); Dispatcher.UIThread.RunJobs(); Pump(win);
+                Shot(win, Path.Combine(outDir, "20b-debt-archive.png"));
+                Wait(win, debt.CloseOverlayAsync());
+                Pump(win);
+            }
         }
 
         if (vm.Sections.FirstOrDefault(s => s.Id == "noinv") is PumpYaqobi.App.ViewModels.Sections.CompanySectionViewModel comp)
