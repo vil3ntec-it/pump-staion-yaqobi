@@ -106,7 +106,80 @@ public sealed record PumpTheme(
         new[] { C("#12162c"), C("#0e1121"), C("#0b0d17"), C("#090b14") },
         new[] { C("#a6a7ff"), C("#8b8cff"), C("#6f70e6") });
 
-    public static readonly PumpTheme[] All = { Marble, Obsidian };
+    // ══ نمونه‌های تازه — گزارشِ صاحب ریپو با عکس ═══════════════════════════
+    // «این تم و رنگ و جدول یا سربرگ‌ها یا کادرها واقعاً به‌خوبی دیده نمی‌شن…
+    //  فقط یک خط دور کادر است که دیده نمی‌شه… نوشته‌ها با بک‌گراند تفاوتی
+    //  نشون نمی‌دن.» ریشه‌اش در «مرمر»: کارت و پنل هر دو سفیدند، خطِ دورِ کارت
+    //  ‎#d5cacb‎ روی ‎#e9e5e5‎ تقریباً همرنگِ بوم است و نوشتهٔ کم‌رنگ ‎#68585a‎.
+    //  در این‌ها بوم و کارت دو پله از هم فاصله دارند، خطِ دورِ کارت پررنگ است
+    //  و نوشته‌ها تیره — تا کادر بی هیچ سایه‌ای خوانده شود.
+
+    /// <summary>کاغذِ سرد و زغال — خنثی، آبیِ حرفه‌ای، بیشترین تضاد.</summary>
+    public static readonly PumpTheme Paper = new(
+        "paper", "کاغذ و زغال", false,
+        C("#eef1f5"), C("#ffffff"), C("#ffffff"), C("#aeb8c6"),
+        C("#111827"), C("#4b5563"), C("#1f2937"), C("#1d4ed8"), C("#ffffff"),
+        C("#111827"), C("#aeb8c6"),
+        C("#dfe5ee"), C("#1e3a8a"),
+        new[] { C("#ffffff"), C("#f6f8fb"), C("#ffffff") },
+        new[] { C("#f6f8fb"), C("#ffffff"), C("#f6f8fb") },
+        new[] { C("#ffffff"), C("#f9fafc"), C("#ffffff") },
+        new[] { C("#f2f4f8"), C("#eef1f5"), C("#e9edf3"), C("#e3e8ef") },
+        new[] { C("#3b82f6"), C("#1d4ed8"), C("#1e40af") });
+
+    /// <summary>شیرِ گرم — کِرِمِ گرم با قهوه‌ای، مثلِ دفترِ کاغذی.</summary>
+    public static readonly PumpTheme Cream = new(
+        "cream", "شیرِ گرم", false,
+        C("#f1ebdf"), C("#fffdf8"), C("#ffffff"), C("#c4b39a"),
+        C("#1c1917"), C("#57534e"), C("#7c2d12"), C("#9a3412"), C("#ffffff"),
+        C("#1c1917"), C("#c4b39a"),
+        C("#eadfca"), C("#7c2d12"),
+        new[] { C("#fffdf8"), C("#faf5ec"), C("#fffdf8") },
+        new[] { C("#faf5ec"), C("#fffdf8"), C("#faf5ec") },
+        new[] { C("#fffdf8"), C("#fbf7f0"), C("#fffdf8") },
+        new[] { C("#f5f0e6"), C("#f1ebdf"), C("#ede6d8"), C("#e8e0d0") },
+        new[] { C("#c2410c"), C("#9a3412"), C("#7c2d12") });
+
+    /// <summary>زیتون — سبزِ آرام، کادرها با خطِ سبزِ خاکستری.</summary>
+    public static readonly PumpTheme Olive = new(
+        "olive", "زیتون", false,
+        C("#eaf0ea"), C("#ffffff"), C("#ffffff"), C("#9fb5a4"),
+        C("#0f1f14"), C("#46584b"), C("#166534"), C("#15803d"), C("#ffffff"),
+        C("#0f1f14"), C("#9fb5a4"),
+        C("#d8e8db"), C("#14532d"),
+        new[] { C("#ffffff"), C("#f4f8f4"), C("#ffffff") },
+        new[] { C("#f4f8f4"), C("#ffffff"), C("#f4f8f4") },
+        new[] { C("#ffffff"), C("#f7faf7"), C("#ffffff") },
+        new[] { C("#eff4ef"), C("#eaf0ea"), C("#e4ece5"), C("#dde7de") },
+        new[] { C("#22c55e"), C("#15803d"), C("#166534") });
+
+    /// <summary>شرابیِ پررنگ — همان مرمرِ شرابی، ولی کادر و نوشته‌ها تیره و روشن.</summary>
+    public static readonly PumpTheme WineBold = new(
+        "winebold", "شرابیِ پررنگ", false,
+        C("#e6dfe0"), C("#ffffff"), C("#ffffff"), C("#a88a90"),
+        C("#140c0e"), C("#4d3d40"), C("#7a2233"), C("#8c2233"), C("#ffffff"),
+        C("#140c0e"), C("#a88a90"),
+        C("#e2c9cd"), C("#6d1626"),
+        new[] { C("#ffffff"), C("#f8f3f4"), C("#ffffff") },
+        new[] { C("#f8f3f4"), C("#ffffff"), C("#f8f3f4") },
+        new[] { C("#ffffff"), C("#fbf8f8"), C("#ffffff") },
+        new[] { C("#ece6e7"), C("#e6dfe0"), C("#e0d8d9"), C("#d9d0d1") },
+        new[] { C("#b0384a"), C("#8c2233"), C("#6d1626") });
+
+    /// <summary>گرافیت — تیرهٔ خنثی با کادرهای روشن‌تر از بوم و خطِ دورِ پیدا.</summary>
+    public static readonly PumpTheme Graphite = new(
+        "graphite", "گرافیت", true,
+        C("#191c22"), C("#232730"), C("#282d38"), C("#4a5262"),
+        C("#f3f4f6"), C("#aab1c0"), C("#c7d2fe"), C("#60a5fa"), C("#0b1220"),
+        C("#f3f4f6"), C("#4a5262"),
+        C("#343b4a"), C("#bfdbfe"),
+        new[] { C("#232730"), C("#1e2229"), C("#232730") },
+        new[] { C("#1e2229"), C("#242831"), C("#1e2229") },
+        new[] { C("#1c1f26"), C("#20242c"), C("#1c1f26") },
+        new[] { C("#1e2128"), C("#191c22"), C("#16181e"), C("#131519") },
+        new[] { C("#93c5fd"), C("#60a5fa"), C("#3b82f6") });
+
+    public static readonly PumpTheme[] All = { Marble, Obsidian, Paper, Cream, Olive, WineBold, Graphite };
 
     public static PumpTheme ById(string? id) =>
         All.FirstOrDefault(t => t.Id == id) ?? Marble;

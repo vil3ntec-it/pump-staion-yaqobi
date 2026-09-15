@@ -118,14 +118,29 @@ internal static class Program
             is PumpYaqobi.App.ViewModels.Sections.DashboardSectionViewModel dash)
             Wait(win, dash.RefreshAsync());
 
-        // ۳) هر تم یک عکس از داشبورد
+        // ۳) هر تم یک عکس از داشبورد — و یک عکسِ چهارتایی (داشبورد، مخزن، شرکت‌ها،
+        //    تنظیمات) تا صاحب ریپو تم‌ها را کنارِ هم ببیند و یکی را برگزیند
         foreach (var theme in PumpTheme.All)
         {
             ThemeManager.Apply(theme);
             Pump(win);
             Shot(win, Path.Combine(outDir, "theme-" + theme.Id + ".png"));
+
+            var parts = new List<string>();
+            foreach (var id in new[] { "dashboard", "storage", "noinv", "settings" })
+            {
+                if (vm.Sections.FirstOrDefault(s => s.Id == id) is not { } sec) continue;
+                Wait(win, vm.GoAsync(sec));
+                Pump(win); Dispatcher.UIThread.RunJobs(); Pump(win);
+                var f = Path.Combine(outDir, "theme-" + theme.Id + "-" + id + ".png");
+                Shot(win, f);
+                parts.Add(f);
+            }
+            ThemeShot.Compose(parts, Path.Combine(outDir, "theme-" + theme.Id + "-4up.png"));
+            foreach (var f in parts) File.Delete(f);
         }
         ThemeManager.Apply(PumpTheme.Marble);
+        if (vm.Sections.FirstOrDefault(s => s.Id == "dashboard") is { } home) Wait(win, vm.GoAsync(home));
 
         // ۴) هر بخش یک عکس — چیزی تحویل نمی‌دهیم که ندیده باشیم
         var n = 0;

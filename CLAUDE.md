@@ -452,3 +452,35 @@ data/stations/<کد پمپ>/
 - آزمون: `PriceLossTests` و `AmanatSettingsTests`؛ `SubSectionTests` جای
   `priceloss` را زیرِ «قرض‌داران» قفل کرده. عکس: `shots/23-sub-priceloss.png`،
   `33-priceloss-person.png` و `24-amanat-settings.png` از `dotnet run --project PumpYaqobi.UiTests -- <پوشه>`.
+
+## شرکت‌ها تیل، آرشیوِ قرض‌داران و تم‌های نمونه (از ۱۴۰۵/۰۶/۲۵)
+
+گزارشِ صاحب ریپو: «بخش شرکت‌ها و جدول‌های شرکت‌ها خیلی کم‌بودی داره… کیلو رو حذف کن…
+بخش قرض‌داران آرشیو اون هم مشکل داره… چند نوع دیزاین بده تا ببینم.»
+
+- **شرکت‌ها تیل** (`CompanySectionViewModel` + `CompanyPagesViewModel`): سه صفحهٔ
+  رویی مثلِ سه مودالِ سایت — «📦 خریدها»، «🗂️ جدول‌های آرشیو»، «🔍 جستجوی خرید» —
+  با `Overlay` روی حساب می‌نشینند. کادرِ کشوییِ «کارها» همان `cm-actions` است.
+  - ردیفِ خریدِ مخزن (`SourcePurchaseId`) با نشانِ 📦 و **قفل** (`ILockedRow`؛
+    `ExcelGrid` پیش از ویرایش می‌پرسد). حذفش آزاد است.
+  - «جدول جدید» فقط جدولِ همان تیل را آرشیو می‌کند (`CompanyTableArchive`) و
+    `PurchaseCheckpointPetrol/Diesel` را به آخرین شمارهٔ خرید می‌برد؛ خریدهای
+    آرشیوشده با `MarkUnlinked` به جدولِ نو برنمی‌گردند. صفحهٔ خریدهای یک آرشیو
+    فقط بازهٔ `PurchasesAfter < Id ≤ PurchasesBefore` را نشان می‌دهد.
+  - «جستجوی خرید» در `CompanyPurchaseService` است و فقط می‌خواند: عدد هم کیلو
+    است هم تن، ردیفِ بی‌مقدار با هیچ عددی جور نیست، هر خرید یک‌بار.
+  - ⛔ ستونِ «کیلو» برنمی‌گردد. `Kg` در داده می‌ماند و `CompanyService.Ton` هر
+    ردیفِ کهنه را به تن می‌دهد.
+  - آزمون: `CompanyArchiveTests`. عکس‌ها: `21-company-page.png` و `21b…21e`.
+- **آرشیوِ قرض‌داران** (`DebtArchivePageViewModel`): صفحهٔ جداگانه روی شخص
+  (`DebtSectionViewModel.Overlay`)، نه آکاردئون. سربرگِ هر تیل از
+  `DebtCalculationService.ArchiveFigures` (همان `_histFigures`: رسید = سربرگ +
+  رسیدهای جدول؛ الباقی = برد + فیصدی − رسید). ردیف‌ها ویرایش‌شدنی‌اند و با
+  `DebtorService.UpdateArchiveAsync` فقط در خودِ آرشیو (`RowsJson`) می‌نشینند —
+  جدولِ زنده هرگز دست نمی‌خورد. ستون‌های رسید/رسید تیل/نوع تیل مثلِ `PersonView`
+  از کد پنهان می‌شوند (`DebtArchiveView.axaml.cs`). آزمون: `DebtArchivePageTests`.
+- **تم‌های نمونه**: `PumpTheme.All` پنج تمِ تازه دارد (کاغذ و زغال، شیرِ گرم،
+  زیتون، شرابیِ پررنگ، گرافیت) که در تنظیمات انتخاب می‌شوند. قاعده‌شان: بوم و
+  کارت دو پله از هم فاصله دارند، خطِ دورِ کارت پررنگ و نوشته تیره. عکسِ
+  چهارتاییِ هر تم: `theme-<id>-4up.png` از `dotnet run --project PumpYaqobi.UiTests -- <پوشه>`
+  (`ThemeShot.Compose`). پیش‌فرض همچنان «مرمرِ شرابی» است تا صاحب ریپو یکی را برگزیند.
