@@ -259,6 +259,17 @@
   <Style Selector="Button.nav.active /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource Pump.AccentGrad}" />
   </Style>
+  <!-- نشانِ گردِ پشتِ آیکونِ بخش در نوار (زمینه از ‎IconColorConverter‎، پارامترِ badge) -->
+  <Style Selector="Border.icon-badge">
+    <Setter Property="Width" Value="27" />
+    <Setter Property="Height" Value="27" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.icon-badge > Path">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
 
   <!-- ══ دکمه‌های «یکی از چند تا» — همان رادیوییِ سایت ═══════════════════════
        گزارشِ صاحب ریپو: «مثلِ اون دکمهٔ رادیو باشه که یکی انتخاب بشه.»
@@ -952,10 +963,14 @@
                         <Button Classes="tool-link" Margin="0,0,6,0"
                                 Command="{Binding ParentSection.ShowSubCommand}"
                                 CommandParameter="{Binding}">
-                          <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="{Binding LinkTitle}"
+                          <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Path Grid.Column="0" Data="{Binding IconKey, Converter={x:Static th:IconLookupConverter.Instance}}"
+                                  Stroke="{Binding IconKey, Converter={x:Static th:IconColorConverter.Instance}}"
+                                  StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round"
+                                  Width="15" Height="15" Stretch="Uniform" Margin="0,0,7,0" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="{Binding LinkTitle}"
                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Grid.Column="1" Text="‹" FontSize="17" Margin="8,0,0,0"
+                            <TextBlock Grid.Column="2" Text="‹" FontSize="17" Margin="8,0,0,0"
                                        VerticalAlignment="Center" Opacity="0.7" />
                           </Grid>
                         </Button>

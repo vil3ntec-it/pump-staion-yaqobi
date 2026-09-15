@@ -11,7 +11,7 @@ namespace PumpYaqobi.App.Themes;
 /// </summary>
 public static class ThemeManager
 {
-    public static PumpTheme Current { get; private set; } = PumpTheme.Marble;
+    public static PumpTheme Current { get; private set; } = PumpTheme.Blue;
 
     public static event Action<PumpTheme>? Changed;
 

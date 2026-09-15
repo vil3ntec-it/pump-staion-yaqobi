@@ -76,8 +76,9 @@
             BorderBrush="{DynamicResource Pump.Accent}" BorderThickness="0,0,0,2" Padding="20,12">
       <Grid ColumnDefinitions="Auto,*,Auto">
         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-          <Path Data="{StaticResource Icon.shifts}" Stroke="{DynamicResource Pump.HeaderTitle}"
-                StrokeThickness="1.6" Width="26" Height="26" Stretch="Uniform" />
+          <Path Data="{StaticResource Icon.pump}" Stroke="{DynamicResource Pump.Accent}"
+                StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round"
+                Width="26" Height="26" Stretch="Uniform" />
           <TextBlock Text="پمپ یعقوبی" FontSize="21" FontWeight="Black"
                      Foreground="{DynamicResource Pump.HeaderTitle}" VerticalAlignment="Center" />
         </StackPanel>
@@ -225,10 +226,16 @@
                 <Classes.active>
                   <Binding Path="IsActive" />
                 </Classes.active>
-                <StackPanel Orientation="Horizontal" Spacing="7">
-                  <Path Data="{Binding IconKey, Converter={StaticResource IconLookup}}"
-                        Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.5"
-                        Width="19" Height="19" Stretch="Uniform" VerticalAlignment="Center" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <!-- آیکونِ رنگیِ خودِ بخش داخلِ نشانِ گردِ کم‌رنگ — رنگ با تب
+                       فعال شدن عوض نمی‌شود؛ رنگ هویتِ بخش است، نه حالتش. -->
+                  <Border Classes="icon-badge"
+                          Background="{Binding IconKey, Converter={x:Static th:IconColorConverter.Instance}, ConverterParameter=badge}">
+                    <Path Data="{Binding IconKey, Converter={StaticResource IconLookup}}"
+                          Stroke="{Binding IconKey, Converter={x:Static th:IconColorConverter.Instance}}"
+                          StrokeThickness="1.75" StrokeLineCap="Round" StrokeJoin="Round"
+                          Width="17" Height="17" Stretch="Uniform" />
+                  </Border>
                   <TextBlock Text="{Binding Title}" VerticalAlignment="Center" FontSize="16" />
                 </StackPanel>
               </Button>

@@ -7,7 +7,7 @@
     <Border Classes="panel" Width="420" Padding="30,28" VerticalAlignment="Center" HorizontalAlignment="Center">
       <StackPanel Spacing="14">
         <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
-          <Path Data="{StaticResource Icon.shifts}" Stroke="{DynamicResource Pump.Accent}"
+          <Path Data="{StaticResource Icon.pump}" Stroke="{DynamicResource Pump.Accent}"
                 StrokeThickness="1.6" Width="30" Height="30" Stretch="Uniform" />
           <TextBlock Text="{Binding Title}" Classes="h1" VerticalAlignment="Center" />
         </StackPanel>

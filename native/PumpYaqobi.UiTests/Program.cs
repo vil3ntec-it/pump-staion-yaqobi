@@ -139,7 +139,7 @@ internal static class Program
             ThemeShot.Compose(parts, Path.Combine(outDir, "theme-" + theme.Id + "-4up.png"));
             foreach (var f in parts) File.Delete(f);
         }
-        ThemeManager.Apply(PumpTheme.Marble);
+        ThemeManager.Apply(PumpTheme.Blue);
         if (vm.Sections.FirstOrDefault(s => s.Id == "dashboard") is { } home) Wait(win, vm.GoAsync(home));
 
         // ۴) هر بخش یک عکس — چیزی تحویل نمی‌دهیم که ندیده باشیم
