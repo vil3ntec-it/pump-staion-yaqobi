@@ -110,12 +110,22 @@
             <c:SettingCard Classes="card" HorizontalAlignment="Stretch" ItemsSource="{Binding Whats}" SelectedItem="{Binding What}" />
             <TextBlock Text="{Binding WhatNote}" Classes="pn" Margin="4,-4,4,2" />
 
-            <!-- ورق‌ها: از … تا … — فقط وقتی «بازه» انتخاب شده، مثلِ اکسل -->
-            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsRange}">
+            <!-- ورق‌ها: از … تا … — همیشه دیده می‌شود، مثلِ سایت و اکسل: «۱ تا ۳»،
+                 و تا بازه انتخاب نشده کلِ گزارش را نشان می‌دهد. تایپ کردن در آن
+                 خودش حالت را روی «بازهٔ ورق‌ها» می‌گذارد. -->
+            <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBlock Text="ورق‌ها:" VerticalAlignment="Center" Classes="pl" />
-              <TextBox Text="{Binding FromText}" Width="74" Classes="spinbox" />
+              <Grid ColumnDefinitions="Auto,Auto,Auto">
+                <Button Grid.Column="0" Classes="spin" Content="−" Click="OnFromMinus" />
+                <TextBox Grid.Column="1" Text="{Binding FromText}" Width="58" Classes="spinbox" />
+                <Button Grid.Column="2" Classes="spin" Content="+" Click="OnFromPlus" />
+              </Grid>
               <TextBlock Text="تا" VerticalAlignment="Center" Classes="pl" />
-              <TextBox Text="{Binding ToText}" Width="74" Classes="spinbox" />
+              <Grid ColumnDefinitions="Auto,Auto,Auto">
+                <Button Grid.Column="0" Classes="spin" Content="−" Click="OnToMinus" />
+                <TextBox Grid.Column="1" Text="{Binding ToText}" Width="58" Classes="spinbox" />
+                <Button Grid.Column="2" Classes="spin" Content="+" Click="OnToPlus" />
+              </Grid>
             </StackPanel>
 
             <!-- ورق‌های دلخواه: «۱،۳» یا «۲-۴»، و یک تیک برای هر ورق — مثلِ کادرِ

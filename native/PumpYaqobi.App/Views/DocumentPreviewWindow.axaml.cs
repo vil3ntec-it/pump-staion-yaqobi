@@ -59,6 +59,21 @@ public partial class DocumentPreviewWindow : Window
     private void OnCopiesPlus(object? sender, RoutedEventArgs e) => Bump(+1);
     private void OnCopiesMinus(object? sender, RoutedEventArgs e) => Bump(-1);
 
+    // ▲▼ِ «ورق‌ها: از … تا …» — همان ‎numBox‎ی سایت؛ به شمارِ ورق‌ها بریده می‌شود
+    private void OnFromPlus(object? sender, RoutedEventArgs e) => BumpPage(true, +1);
+    private void OnFromMinus(object? sender, RoutedEventArgs e) => BumpPage(true, -1);
+    private void OnToPlus(object? sender, RoutedEventArgs e) => BumpPage(false, +1);
+    private void OnToMinus(object? sender, RoutedEventArgs e) => BumpPage(false, -1);
+
+    private void BumpPage(bool from, int step)
+    {
+        if (Vm is null) return;
+        var max = Math.Max(1, Vm.PageCount);
+        var cur = Shamsi.Num(from ? Vm.FromText : Vm.ToText);
+        var n = (int)Math.Clamp(cur + step, 1m, max);
+        if (from) Vm.FromText = Shamsi.Money(n); else Vm.ToText = Shamsi.Money(n);
+    }
+
     private void Bump(int step)
     {
         if (Vm is null) return;

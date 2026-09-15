@@ -243,8 +243,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         });
 
         CopiesText = Shamsi.Money(Setup.Copies);
-        FromText = Shamsi.Money(Setup.From);
-        ToText = Shamsi.Money(Setup.To);
+        SyncRangeBoxes();
         PagesText = Setup.PagesText;
         RebuildPageChecks();
 
@@ -302,8 +301,40 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     partial void OnMarginChanged(SetupOption? v) => Push();
     partial void OnScaleChanged(SetupOption? v) => Push();
     partial void OnCopiesTextChanged(string v) => Push();
-    partial void OnFromTextChanged(string v) => Push();
-    partial void OnToTextChanged(string v) => Push();
+    /* ⚠️ تایپ کردن در «ورق‌ها: از … تا …» خودش حالت را روی «بازهٔ ورق‌ها»
+       می‌گذارد — همان کاری که سایت و اکسل می‌کنند. وگرنه عددها را می‌زدی ولی
+       چون حالت روی «همهٔ گزارش» مانده بود، بی‌صدا نادیده گرفته می‌شدند. */
+    partial void OnFromTextChanged(string v) { ToRange(); Push(); }
+    partial void OnToTextChanged(string v) { ToRange(); Push(); }
+
+    private void ToRange()
+    {
+        if (_loading || _syncingRange || Setup.What == PrintWhat.Range) return;
+        What = Pick(Whats, "range");     // خودش ‎Push‎ می‌کند
+    }
+
+    private bool _syncingRange;
+
+    /// <summary>
+    /// تا وقتی کاربر «بازهٔ ورق‌ها» را انتخاب نکرده، این دو کادر همیشه کلِ
+    /// گزارش را نشان می‌دهند (۱ تا آخر) — مثلِ اکسل. به‌محضِ انتخابِ بازه،
+    /// عددهای خودِ کاربر دست‌نخورده می‌مانند (فقط به شمارِ ورق‌ها بریده می‌شوند).
+    /// </summary>
+    private void SyncRangeBoxes()
+    {
+        var was = _loading; _loading = true; _syncingRange = true;
+        try
+        {
+            var n = Math.Max(1, _pages.Count);
+            if (Setup.What != PrintWhat.Range) { FromText = Shamsi.Money(1); ToText = Shamsi.Money(n); }
+            else
+            {
+                FromText = Shamsi.Money(Math.Clamp(Setup.From, 1, n));
+                ToText = Shamsi.Money(Math.Clamp(Setup.To, 1, n));
+            }
+        }
+        finally { _loading = was; _syncingRange = false; }
+    }
     partial void OnPagesTextChanged(string v) { RebuildPageChecks(); Push(); }
 
     private void Push()
@@ -593,6 +624,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
             Show();
             OnPropertyChanged(nameof(PageCount));
             RebuildPageChecks();
+            SyncRangeBoxes();
             RefreshNotes();
         }
 

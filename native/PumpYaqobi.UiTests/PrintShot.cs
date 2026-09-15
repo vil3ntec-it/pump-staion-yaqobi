@@ -52,6 +52,16 @@ internal static class PrintShot
         Pump(preview);
         Shot(preview, Path.Combine(outDir, "print-preview.png"));
 
+        // «ورق‌ها: ۱ تا ۳» همیشه دیده می‌شود و تایپ در آن خودش حالت را بازه می‌کند (مثلِ سایت)
+        if (vm.FromText != "1" || vm.ToText != vm.PageCount.ToString())
+        { Console.WriteLine("  ✘ کادرِ از/تا کلِ گزارش را نشان نمی‌دهد: " + vm.FromText + " تا " + vm.ToText); return 1; }
+        vm.ToText = "2";
+        Pump(preview);
+        if (vm.What?.Value != "range" || string.Join(",", vm.PickedPages()) != "1,2")
+        { Console.WriteLine("  ✘ تایپ در «تا» حالت را بازه نکرد: " + vm.What?.Value); return 1; }
+        Shot(preview, Path.Combine(outDir, "print-preview-range.png"));
+        Console.WriteLine("  ✔ «ورق‌ها: ۱ تا ۲» خودش بازه شد و همان دو ورق را می‌دهد");
+
         // «چاپِ ورق‌های دلخواه» — کادرِ ۱،۳ و تیکِ هر ورق
         vm.What = vm.Whats.First(w => w.Value == "pages");
         vm.PagesText = "1,3";
