@@ -327,11 +327,18 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
     /// حالا ویومدل یکی است و فقط **بار می‌شود**: جدول‌ها سرِ جایشان می‌مانند و
     /// تنها ردیف‌هایشان عوض می‌شود.
     /// </summary>
+    public bool IsDay => !IsNight;
+
+    /// <summary>روز/شب با دو دکمهٔ رادیویی — نه کلیدِ لغزان.</summary>
+    [RelayCommand]
+    private void SetNight(string? which) => IsNight = which == "night";
+
     public void Load(WaraqEntry w)
     {
         Entity = w;
         _isNight = w.ActiveShift == ShiftKind.Night;
         OnPropertyChanged(nameof(IsNight));
+        OnPropertyChanged(nameof(IsDay));
         OnPropertyChanged(nameof(Title));
         Build();
     }
@@ -405,7 +412,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         set => FabricDebt = Shamsi.Num(value);
     }
 
-    partial void OnIsNightChanged(bool v) => Build();
+    partial void OnIsNightChanged(bool v) { OnPropertyChanged(nameof(IsDay)); Build(); }
 
     /// <summary>
     /// ⚠️ هنگامِ پر کردنِ اولیهٔ کادرها هیچ چیزی ذخیره نمی‌شود.

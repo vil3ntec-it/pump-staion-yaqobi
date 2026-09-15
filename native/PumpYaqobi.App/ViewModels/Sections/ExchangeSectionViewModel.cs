@@ -150,7 +150,12 @@ public sealed partial class ExchangeSectionViewModel
 {
     private readonly AppHost _host;
 
+    /// <summary>🕘 تاریخچهٔ همین بخش — همان ‎openSectionHistory('sarrafi')‎ی سایت.</summary>
+    [RelayCommand]
+    private Task OpenHistory() => _host.OpenHistory?.Invoke("sarrafi") ?? Task.CompletedTask;
+
     public ExchangeSectionViewModel(AppHost host)
+
         : base("sarrafi", "sarrafi", "صرافی", host.ExchangeLedger)
     {
         _host = host;

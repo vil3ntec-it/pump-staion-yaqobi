@@ -78,7 +78,7 @@
                     <Border Classes="card-rule" Margin="11,10,11,0" />
                     <Grid ColumnDefinitions="*,Auto" Margin="11,8,7,9">
                       <TextBlock Grid.Column="0" Text="{Binding UsdText}"
-                                 FontWeight="Bold" FontSize="12" TextAlignment="Start"
+                                 FontWeight="Bold" FontSize="15" TextAlignment="Start"
                                  TextTrimming="CharacterEllipsis"
                                  Foreground="{DynamicResource Pump.Info}" />
                       <Button Grid.Column="1" Classes="qr-link" Content="کیوآر"

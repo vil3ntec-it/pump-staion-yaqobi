@@ -91,33 +91,43 @@ public class TableGrowthTests
     /// نمی‌رسد، پس عملاً سقفی دیده نمی‌شود.
     /// </summary>
     [Fact]
-    public void GrowingToContentIsOptInAndOnlyTheSheetsOptIn()
+    public void EveryGridGrowsToItsRowsProgressively()
     {
         var g = Bare(Grid());
-        Assert.Contains("GrowsToContentProperty", g);
 
-        // ⚠️ سقفِ دفترها باید به **شمارِ ردیف** باشد، نه به «یک صفحه»
-        Assert.Contains("!GrowsToContent && rows > PageRowLimit", g);
+        // ⚠️ سقفِ «یک صفحه» رفت (خواستهٔ چندبارهٔ صاحب ریپو: «سقفِ زیرِ جدول
+        // نباشد که جمله سرِ جا بماند و جدول‌های دیگر از زیرش رد شوند»). هیچ
+        // جدولی دیگر با ‎PageRowLimit‎ تنگ نمی‌شود.
+        Assert.DoesNotContain("rows > PageRowLimit", g);
         Assert.DoesNotContain("!GrowsToContent && want > screen", g);
 
-        // ورق روشنش می‌کند…
-        Assert.Contains("GrowsToContent=\"True\"",
-                        Read("PumpYaqobi.App", "Views", "Sections", "WaraqPageView.axaml"));
+        // …ولی همه‌شان **تدریجی** بلند می‌شوند: یک صفحه در پاسِ اول، بقیه در
+        // فریم‌های بعد با اولویتِ پس‌زمینه — وگرنه باز شدنِ بخش می‌ایستاد.
+        Assert.Contains("QueueGrow(", g);
+        Assert.Contains("DispatcherPriority.Background", g);
+        Assert.Contains("FirstChunk(", g);
 
-        // …و دفترهای ماهانه نه
-        foreach (var v in new[] { "SafeSectionView", "ExchangeSectionView", "ExpenseSectionView" })
-            Assert.DoesNotContain("GrowsToContent",
-                                  Read("PumpYaqobi.App", "Views", "Sections", v + ".axaml"));
+        // و رشد با شمارِ ردیف‌های تازه دوباره راه می‌افتد (‎DataGrid‎ خودش
+        // با اضافه شدنِ ردیف دوباره اندازه نمی‌گیرد)
+        Assert.Contains("CollectionChanged += OnRowsChanged", g);
     }
 
     /// <summary>
-    /// و تا مرزِ رشد هیچ سقفی روی جدول نمی‌نشیند: نه ‎MaxHeight‎ی هست و نه
-    /// چیزی که بلندیِ در دسترس را کم کند.
-    ///
-    /// ⚠️ تنگنا در ‎MeasureOverride‎ اعمال می‌شود، نه پس از چیدمان — وگرنه
-    /// همان پاسِ اولِ اندازه‌گیری با بلندیِ بی‌کران انجام شده و جدولِ بزرگ
-    /// همان لحظه همهٔ ردیف‌هایش را ساخته است.
+    /// اصلاحیهٔ بلندی (‎Settle‎) یک بار یک صفحهٔ خالی زیرِ جدول گذاشت: نوارِ
+    /// لغزشِ گذرا هزار پیکسل «جای لغزش» داشت و همه‌اش به بلندی اضافه شد.
+    /// حالا فقط پس از رشدِ کامل و فقط چند پیکسل.
     /// </summary>
+    [Fact]
+    public void TheSettleFixIsCappedAndWaitsForFullGrowth()
+    {
+        var g = Bare(Grid());
+        Assert.Contains("if (!_spread || _shown < rows) return;", g);
+        var m = Regex.Match(g, @"MaxPad\s*=\s*(\d+)");
+        Assert.True(m.Success && int.Parse(m.Groups[1].Value) <= 48, "اصلاحیهٔ بلندی باید چند پیکسل باشد، نه یک صفحه");
+        // و بلندیِ ردیف از خودِ ردیفِ چیده‌شده می‌آید، نه از ‎RowHeight‎ی ۴۴
+        Assert.Contains("MeasuredRowHeight()", g);
+    }
+
     [Fact]
     public void BelowTheLimitTheGridHasNoCeilingAtAll()
     {
@@ -149,7 +159,9 @@ public class TableGrowthTests
         Assert.True(m.Success, "مرزِ رشد پیدا نشد");
         var limit = int.Parse(m.Groups[1].Value);
         Assert.True(limit >= 120, "ورقِ صدردیفی نباید داخلِ کادر گیر کند");
-        Assert.True(limit <= 400, "بی هیچ مرزی، دفترِ صدهزارردیفی برنامه را قفل می‌کند");
+        // با رشدِ تدریجی، مرز بالاتر رفت تا دفترِ ماهانهٔ بزرگ هم بی سقف باز شود؛
+        // ولی همچنان هست: بی هیچ مرزی، دفترِ صدهزارردیفی حافظه را می‌بلعد.
+        Assert.True(limit <= 1500, "بی هیچ مرزی، دفترِ صدهزارردیفی برنامه را قفل می‌کند");
     }
 
     // ══ ۲) پهنای ستون با تایپ تکان نخورد ════════════════════════════════════

@@ -1,6 +1,9 @@
 using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia;
+using Avalonia.VisualTree;
 using Avalonia.Markup.Xaml;
 using PumpYaqobi.App.ViewModels.Sections;
 
@@ -13,6 +16,20 @@ public partial class PersonView : UserControl
         AvaloniaXamlLoader.Load(this);
         DataContextChanged += (_, _) => Follow();
         Follow();
+
+        // ══ کلیک بیرونِ کادرِ رسیدِ سربرگ، فوکوس را ببرد ══════════════════════
+        // گزارشِ صاحب ریپو: «تو سربرگ رسید می‌زنم، بعد هر جای صفحه کلیک کنم از
+        // اون کادر خارج نمی‌شه.» آوالونیا با کلیک روی چیزی که فوکوس‌پذیر نیست
+        // (زمینهٔ صفحه، نوشته‌ها) فوکوس را از کادرِ قبلی نمی‌گیرد، پس ‎LostFocus‎
+        // هیچ‌وقت شلیک نمی‌شد و عدد هم ثبت نمی‌شد. این‌جا خودمان می‌گیریم.
+        AddHandler(PointerPressedEvent, (_, e) =>
+        {
+            if (TopLevel.GetTopLevel(this) is not { } top) return;
+            if (top.FocusManager?.GetFocusedElement() is not TextBox tb) return;
+            if (!tb.Classes.Contains("fsv")) return;
+            if (e.Source is Visual v && (ReferenceEquals(v, tb) || tb.IsVisualAncestorOf(v))) return;
+            top.FocusManager?.ClearFocus();
+        }, RoutingStrategies.Tunnel);
     }
 
     // ══════════════════════════════════════════════════════════════════════

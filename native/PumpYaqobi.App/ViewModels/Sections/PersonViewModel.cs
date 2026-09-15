@@ -588,14 +588,60 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     private void AddHeadReceipt(FuelType fuel, string text)
     {
         var v = Shamsi.Num(text);
-        if (v == 0m) { RefreshTotals(); return; }
+        if (v == 0m) { RefreshTotals(); RepaintHeadEdits(); return; }
         _ = AddHeadReceiptAsync(fuel, v);
     }
 
+    /// <summary>
+    /// ⚠️ کادرِ رسیدِ سربرگ با ‎LostFocus‎ می‌نویسد، و اتصالِ دوطرفه در همان لحظه
+    /// که دارد مقدار را به منبع می‌دهد، خبرِ برگشتی را نادیده می‌گیرد (پاسدارِ
+    /// بازگشتی). پس اگر کاربر کادر را باز کند و چیزی ننویسد، کادر خالی می‌ماند تا
+    /// دوباره وارد حساب شود — گزارشِ صاحب ریپو. خبر یک فریم بعد دوباره داده
+    /// می‌شود تا کادر جمعِ واقعی را نشان بدهد.
+    /// </summary>
+    private void RepaintHeadEdits() =>
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            OnPropertyChanged(nameof(HeadPetrolRasidEdit));
+            OnPropertyChanged(nameof(HeadDieselRasidEdit));
+        }, Avalonia.Threading.DispatcherPriority.Background);
+
+    /// <summary>ردیفی که هیچ چیزی در آن نوشته نشده — جای طبیعیِ رسیدِ تازه.</summary>
+    private static bool IsBlank(DebtRow r) =>
+        r.Liters == 0m && r.Rasid == 0m && r.RasidFuel == 0m && r.Bardagi == 0m
+        && string.IsNullOrWhiteSpace(r.Name) && string.IsNullOrWhiteSpace(r.Hawala)
+        && string.IsNullOrWhiteSpace(r.DateShamsi);
+
+    /// <summary>
+    /// رسیدِ سربرگ **از اول** در جدول می‌نشیند، نه تهِ آن. خواستهٔ صاحب ریپو:
+    /// «میره آخرِ جدول رسید زده می‌شه؛ می‌خوام به ترتیب از اول بره، اگه پر بود
+    /// بره دومی، اگه جدول نبود خودش بسازه.» پس اولین ردیفِ خالیِ جدول (از بالا)
+    /// پر می‌شود؛ اگر هیچ ردیفِ خالی‌ای نبود، ردیفِ تازه ساخته می‌شود.
+    /// </summary>
     private async Task AddHeadReceiptAsync(FuelType fuel, decimal value)
     {
         var unit = IsMoney ? LedgerMode.Money : LedgerMode.Fuel;
         var row = _host.Debt.AddReceiptRow(Entity, unit, fuel, value, Shamsi.Today());
+
+        var blank = Rows.FirstOrDefault(r => IsBlank(r.Entity));
+        if (blank is not null)
+        {
+            // همان رسید، ولی روی ردیفِ خالیِ موجود؛ ردیفِ تازه دور ریخته می‌شود
+            (IsMoney ? Entity.MoneyRows : Entity.FuelRows).Remove(row);
+            blank.Entity.ByMoney = row.ByMoney;
+            blank.Fuel = fuel;
+            blank.DateShamsi = row.DateShamsi ?? "";
+            if (IsMoney) blank.Rasid = row.Rasid; else blank.RasidFuel = row.RasidFuel;
+            blank.Entity.Rasid = row.Rasid; blank.Entity.RasidFuel = row.RasidFuel;
+            blank.Entity.DateShamsi = row.DateShamsi; blank.Entity.Fuel = fuel;
+            _host.Debt.NormalizeRow(blank.Entity);
+            await _host.Debtors.SaveRowAsync(blank.Entity);
+            await SyncReceiptsAsync();
+            _person.Recalc();
+            RefreshTotals();
+            RepaintHeadEdits();
+            return;
+        }
 
         await _host.Debtors.SaveRowAsync(row);
         await SyncReceiptsAsync();
@@ -606,6 +652,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
 
         _person.Recalc();
         RefreshTotals();
+        RepaintHeadEdits();
     }
 
     /// <summary>
@@ -679,8 +726,9 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     [ObservableProperty] private int _archiveCount;
 
     public bool HasArchives => ArchiveCount > 0;
+    /// <summary>«🗂️ آرشیو — جدول ۳»: خواستهٔ صاحب ریپو، کوتاه و با شمارِ جدول‌ها.</summary>
     public string ArchiveToggleText =>
-        "🗂️ جدول‌های آرشیو این حساب — " + Shamsi.Money(ArchiveCount) + " جدول ↗";
+        "🗂️ آرشیو — جدول " + Shamsi.Money(ArchiveCount);
     partial void OnArchiveCountChanged(int v)
     {
         OnPropertyChanged(nameof(HasArchives));

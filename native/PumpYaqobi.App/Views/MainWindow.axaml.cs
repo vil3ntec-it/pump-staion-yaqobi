@@ -8,6 +8,12 @@ namespace PumpYaqobi.App.Views;
 
 public partial class MainWindow : Window
 {
+    /// <summary>کشیدنِ گوشهٔ بالا-چپِ ماشین‌حساب: به چپ/بالا = بزرگ‌تر.</summary>
+    private void OnCalcResize(object? sender, Avalonia.Input.VectorEventArgs e)
+    {
+        if (DataContext is ViewModels.MainViewModel vm) vm.Calculator.Resize(-e.Vector.X, -e.Vector.Y);
+    }
+
     private readonly DispatcherTimer? _clock;
     private readonly ShortcutService? _keys;
     private readonly FieldNavigationService? _fieldNav;

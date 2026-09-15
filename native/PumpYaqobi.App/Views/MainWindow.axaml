@@ -256,25 +256,51 @@
     <!-- ══ ماشین‌حسابِ شناور ══════════════════════════════════════════════
          بیرونِ اسکرول و روی همهٔ بخش‌هاست، چون «داینامیک» یعنی هر جای برنامه
          که هستی همان‌جا باز شود — نه این‌که بخشی را ترک کنی. -->
+    <!-- اندازه از ویومدل (در تنظیمات می‌ماند)، گوشهٔ بالا-چپ کشیدنی (‎Thumb‎)،
+         دکمهٔ بزرگ/کوچک مثلِ سایت، و قلمِ کلیدها با بلندی بزرگ می‌شود.
+         ⚠️ ‎FlowDirection‎ی چپ‌به‌راست روی خودِ قاب: تا جهتِ کشیدنِ گوشه با
+         جهتِ حرکتِ ماوس یکی باشد و عددها چپ‌به‌راست بنشینند. -->
     <Border DataContext="{Binding Calculator}" IsVisible="{Binding IsOpen}"
             HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,22,22"
-            Width="272" Classes="card" Padding="0">
-      <StackPanel>
-        <Grid ColumnDefinitions="Auto,*,Auto" Margin="12,10,8,0">
+            Width="{Binding Width}" Height="{Binding Height}" Classes="card" Padding="0"
+            FlowDirection="LeftToRight">
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
+        <Thumb Name="CalcResize" Grid.Row="0" Width="18" Height="18" HorizontalAlignment="Left" VerticalAlignment="Top"
+               Cursor="SizeAll" Background="Transparent" ZIndex="5" DragDelta="OnCalcResize"
+               ToolTip.Tip="بکشید تا بزرگ یا کوچک شود">
+          <Thumb.Template>
+            <ControlTemplate>
+              <Border Background="Transparent" Padding="4">
+                <Border Width="9" Height="9" BorderThickness="2,2,0,0" BorderBrush="{DynamicResource Pump.Muted}" CornerRadius="2,0,0,0" Opacity="0.7" />
+              </Border>
+            </ControlTemplate>
+          </Thumb.Template>
+        </Thumb>
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto" Margin="12,10,8,0" FlowDirection="RightToLeft">
           <TextBlock Grid.Column="0" Text="ماشین‌حساب" FontWeight="ExtraBold" FontSize="13"
                      VerticalAlignment="Center" />
-          <Button Grid.Column="2" Classes="card-x" Content="✕" Command="{Binding CloseCommand}" />
+          <Button Grid.Column="3" Classes="card-x" Content="✕" Command="{Binding CloseCommand}" />
+          <Button Grid.Column="2" Classes="card-x" Content="⤢" Command="{Binding ToggleSizeCommand}" HorizontalAlignment="Left"
+                  ToolTip.Tip="بزرگ/کوچک" />
         </Grid>
 
-        <TextBlock Text="{Binding Trail}" Classes="card-sub" Margin="12,8,12,0"
+        <TextBlock Grid.Row="1" Text="{Binding Trail}" Classes="card-sub" Margin="12,8,12,0"
                    TextAlignment="End" MinHeight="15" />
-        <TextBlock Text="{Binding Display}" FontSize="27" FontWeight="ExtraBold"
+        <TextBlock Grid.Row="2" Text="{Binding Display}" FontSize="{Binding DisplayFont}" FontWeight="ExtraBold"
                    Margin="12,2,12,10" TextAlignment="End"
                    TextTrimming="CharacterEllipsis" />
 
-        <Border Classes="card-rule" Margin="0" />
+        <Border Grid.Row="3" Classes="card-rule" Margin="0" />
 
-        <UniformGrid Columns="4" Margin="8">
+        <UniformGrid Grid.Row="4" Columns="4" Margin="8">
+          <UniformGrid.Styles>
+            <Style Selector="Button.calc">
+              <Setter Property="FontSize" Value="{Binding KeyFont}" />
+              <Setter Property="MinHeight" Value="0" />
+              <Setter Property="VerticalAlignment" Value="Stretch" />
+              <Setter Property="HorizontalAlignment" Value="Stretch" />
+            </Style>
+          </UniformGrid.Styles>
           <Button Classes="calc" Content="C" Command="{Binding KeyCommand}" CommandParameter="C" />
           <Button Classes="calc" Content="←" Command="{Binding KeyCommand}" CommandParameter="←" />
           <Button Classes="calc" Content="%" Command="{Binding KeyCommand}" CommandParameter="%" />
@@ -300,7 +326,7 @@
           <Button Classes="calc" Content="." Command="{Binding KeyCommand}" CommandParameter="." />
           <Button Classes="calc accent" Content="=" Command="{Binding KeyCommand}" CommandParameter="=" />
         </UniformGrid>
-      </StackPanel>
+      </Grid>
     </Border>
 
     <!-- ══ پردهٔ لودینگِ آغاز ═════════════════════════════════════════════════

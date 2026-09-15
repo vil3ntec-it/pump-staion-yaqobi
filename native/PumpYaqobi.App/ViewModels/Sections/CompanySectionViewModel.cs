@@ -282,6 +282,11 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
     public BulkRows<CompanyRowViewModel> Rows { get; } = new();
 
     [ObservableProperty] private bool _isDiesel;
+    public bool IsPetrol => !IsDiesel;
+
+    /// <summary>پطرول/دیزل با دو دکمهٔ رادیویی — نه کلیدِ لغزان.</summary>
+    [RelayCommand]
+    private void SetFuel(string? which) => IsDiesel = which == "diesel";
     [ObservableProperty] private string _totalTon = "";
     [ObservableProperty] private string _paidUsd = "";
     [ObservableProperty] private string _albaqiStatus = "";
@@ -313,7 +318,7 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
     /// <summary>نرخِ تبدیلِ مؤثرِ همین دفتر — پایهٔ تبدیلِ رسیدها.</summary>
     public decimal Rate { get; private set; }
 
-    partial void OnIsDieselChanged(bool v) { BuildRows(); Recalc(); }
+    partial void OnIsDieselChanged(bool v) { OnPropertyChanged(nameof(IsPetrol)); BuildRows(); Recalc(); }
 
     private void BuildRows()
     {

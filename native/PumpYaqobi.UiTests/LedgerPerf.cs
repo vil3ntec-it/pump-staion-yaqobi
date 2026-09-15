@@ -52,6 +52,10 @@ internal static class LedgerPerf
 
     /// <summary>هدف: هر بخش، با هر باری، زیرِ این عدد باز شود.</summary>
     private const long Goal = 400;
+    private static int _shownAtFirst;
+
+    /// <summary>رشدِ تدریجیِ جدول تا آخرین ردیف — سقفِ کلِ کارِ پس‌زمینه.</summary>
+    private const long GrowGoal = 2500;
 
     /// <summary>ماهی که هیچ ردیفی ندارد — برای صفر کردنِ جدول بینِ دو سنجش.</summary>
     private const string EmptyMonth = "1300/01";
@@ -94,7 +98,7 @@ internal static class LedgerPerf
         Settle(win, TimeSpan.FromSeconds(3));
 
         Console.WriteLine();
-        Console.WriteLine("بخش        ردیف     ماه‌ها(SQL)  ردیف‌ها(SQL)  بارِ اول   بارِ دوم   ردیفِ زنده  بلندیِ جدول");
+        Console.WriteLine("بخش        ردیف     ماه‌ها(SQL)  ردیف‌ها(SQL)  بارِ اول   بارِ دوم    رشد      ردیفِ زنده  بلندیِ جدول");
         Console.WriteLine(new string('-', 100));
 
         var bad = new List<string>();
@@ -137,27 +141,41 @@ internal static class LedgerPerf
                 //      میلی‌ثانیه داد. میانه نوسان را می‌گیرد ولی کندیِ
                 //      واقعی را پنهان نمی‌کند — اگر هر سه کند باشند، میانه
                 //      هم کند است.
+                var growFirst = Grow(win);
                 var runs = new List<long>();
+                var grows = new List<long>();
                 for (var r = 0; r < 3; r++)
                 {
                     SetMonth(sec, EmptyMonth);
-                    Settle(win, rowHost, 0);
+                    Settle(win, rowHost, 0); Grow(win);
                     SetMonth(sec, months[k]);
                     runs.Add(Time(() => Settle(win, rowHost, Sizes[k])));
+                    _shownAtFirst = (Grid(win) as PumpYaqobi.App.Controls.ExcelGrid)?.DiagShown ?? -1;
+                    grows.Add(Grow(win));
                 }
-                runs.Sort();
+                runs.Sort(); grows.Sort();
                 var open = runs[1];
+                var grow = grows[1];
 
                 var sql = Sql(host, id, months[k]);
                 var grid = Grid(win);
+                var shownAtFirst = _shownAtFirst;
                 var live = grid?.GetVisualDescendants()
                                .OfType<Avalonia.Controls.DataGridRow>().Count() ?? 0;
 
                 Console.WriteLine($"{title,-10} {Sizes[k],6:N0}  {sql.Months,8:N0} ms  {sql.Rows,8:N0} ms  "
-                                + $"{first,7:N0} ms {open,7:N0} ms  {live,8:N0}  {grid?.Bounds.Height ?? 0,8:N0}px");
+                                + $"{first,7:N0} ms {open,7:N0} ms  {grow,7:N0} ms  {live,8:N0}  {grid?.Bounds.Height ?? 0,8:N0}px  (فریمِ اول {shownAtFirst} ردیف)");
 
+                // «باز شدن» = اولین فریمِ قابلِ کار؛ «رشد» = ساخته شدنِ بقیهٔ
+                // ردیف‌ها در پس‌زمینه، که کاربر منتظرش نمی‌ماند ولی نباید بی‌حد
+                // باشد (کامپیوتر داغ نشود).
                 if (open > Goal) bad.Add($"{title} با {Sizes[k]:N0} ردیف: {open:N0} ms");
-                if (live > 200) bad.Add($"{title} با {Sizes[k]:N0} ردیف: {live:N0} ردیفِ زنده — مجازی‌سازی نمی‌کند");
+                if (grow > GrowGoal) bad.Add($"{title} با {Sizes[k]:N0} ردیف: رشدِ کامل {grow:N0} ms");
+                // بالای سقفِ رشد، جدول باید سرِ یک صفحه بایستد و مجازی‌سازی کند
+                if (Sizes[k] > PumpYaqobi.App.Controls.ExcelGrid.GrowRowLimit && live > 200)
+                    bad.Add($"{title} با {Sizes[k]:N0} ردیف: {live:N0} ردیفِ زنده — مجازی‌سازی نمی‌کند");
+                if (Sizes[k] <= PumpYaqobi.App.Controls.ExcelGrid.GrowRowLimit && live < Sizes[k])
+                    bad.Add($"{title} با {Sizes[k]:N0} ردیف: فقط {live:N0} ردیف ساخته شد — رشدِ تدریجی تمام نشد");
             }
         }
 
@@ -222,12 +240,42 @@ internal static class LedgerPerf
         var end = DateTime.UtcNow + TimeSpan.FromSeconds(60);
         while (DateTime.UtcNow < end)
         {
-            Dispatcher.UIThread.RunJobs();
+            Dispatcher.UIThread.RunJobs(DispatcherPriority.Render);   // بی تکه‌های رشدِ پس‌زمینه
             w.UpdateLayout();
             if (host.RowCount == want) break;
             Thread.Sleep(2);
         }
-        Pump(w);
+        // ⚠️ فقط **یک** پاسِ چیدمان، نه هشت تا: این همان «اولین فریمِ
+        // قابلِ کار» است که کاربر می‌بیند. رشدِ تدریجیِ جدول (‎ExcelGrid‎)
+        // بقیهٔ ردیف‌ها را در فریم‌های بعد می‌سازد و جدا سنجیده می‌شود (‎Grow‎).
+        // ⚠️ فقط کارهای بالاتر از پس‌زمینه: تکه‌های رشدِ تدریجی با اولویتِ
+        // ‎Background‎ صف می‌شوند و ‎RunJobs()‎ی بی‌پارامتر همه‌شان را پشتِ سرِ هم
+        // می‌دواند — یعنی «اولین فریم» عملاً «رشدِ کامل» سنجیده می‌شد.
+        Dispatcher.UIThread.RunJobs(DispatcherPriority.Render);
+        w.UpdateLayout();
+    }
+
+    /// <summary>
+    /// تا وقتی جدول دیگر بلند نمی‌شود پمپ می‌کند — یعنی رشدِ تدریجی تمام شده.
+    /// برمی‌گرداند چند میلی‌ثانیه طول کشید.
+    /// </summary>
+    private static long Grow(Window w)
+    {
+        var sw = Stopwatch.StartNew();
+        var last = -1d;
+        var still = 0;
+        var end = DateTime.UtcNow + TimeSpan.FromSeconds(60);
+        while (DateTime.UtcNow < end)
+        {
+            Dispatcher.UIThread.RunJobs();
+            w.UpdateLayout();
+            var h = Grid(w)?.Bounds.Height ?? 0;
+            if (Math.Abs(h - last) < 0.5) { if (++still >= 4) break; }
+            else still = 0;
+            last = h;
+        }
+        sw.Stop();
+        return sw.ElapsedMilliseconds;
     }
 
     /// <summary>تا ته‌نشین شدنِ کارهای پس‌زمینه (یا سررسیدِ مهلت) پمپ می‌کند.</summary>

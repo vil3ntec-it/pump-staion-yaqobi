@@ -30,6 +30,47 @@ public sealed partial class CalculatorViewModel : ObservableObject
 
     [ObservableProperty] private bool _isOpen;
 
+    // ══ اندازه — مثلِ سایت ════════════════════════════════════════════════
+    // ‎#calcPanel‎ ۲۸۶×۴۳۰ است، ‎.large‎ ۴۰۰×۵۸۰، چهار گوشه‌اش کشیدنی، و قلمِ
+    // کلیدها با بلندی بزرگ می‌شود (‎cqh‎). گزارشِ صاحب ریپو: «نمی‌شه با همون
+    // اندازه که می‌خوایم بزرگ یا کوچیک کنیم و اندازه‌اش ثبت نمی‌شه.» پس اندازه
+    // آزاد است، در تنظیمات می‌ماند و قلم دنبالش می‌آید.
+    public const double MinW = 230, MinH = 300, MaxW = 900, MaxH = 1100;
+    [ObservableProperty] private double _width = 286;
+    [ObservableProperty] private double _height = 430;
+    [ObservableProperty] private bool _isLarge;
+
+    /// <summary>قلمِ کلیدها و صفحه، به نسبتِ بلندی — همان ‎clamp(…, 5.2cqh, …)‎ی سایت.</summary>
+    public double KeyFont => Math.Clamp(Height * 0.045, 13, 30);
+    public double DisplayFont => Math.Clamp(Height * 0.075, 20, 46);
+    public double KeyHeight => Math.Clamp((Height - 130) / 6.0, 34, 120);
+
+    partial void OnWidthChanged(double v) => SizeChanged?.Invoke();
+    partial void OnHeightChanged(double v)
+    {
+        OnPropertyChanged(nameof(KeyFont)); OnPropertyChanged(nameof(DisplayFont)); OnPropertyChanged(nameof(KeyHeight));
+        SizeChanged?.Invoke();
+    }
+
+    /// <summary>هر تغییرِ اندازه — ویومدلِ اصلی همین را در تنظیمات می‌نویسد.</summary>
+    public event Action? SizeChanged;
+
+    /// <summary>کشیدنِ گوشه: ‎dw‎/‎dh‎ به پیکسل.</summary>
+    public void Resize(double dw, double dh)
+    {
+        Width = Math.Clamp(Width + dw, MinW, MaxW);
+        Height = Math.Clamp(Height + dh, MinH, MaxH);
+    }
+
+    /// <summary>بزرگ ⇄ کوچک — همان ‎toggleCalcSize‎ی سایت.</summary>
+    [RelayCommand]
+    private void ToggleSize()
+    {
+        IsLarge = !IsLarge;
+        Width = IsLarge ? 400 : 286;
+        Height = IsLarge ? 580 : 430;
+    }
+
     /// <summary>چیزی که روی صفحه است — همیشه رشته، تا «۰٫» هم بشود نوشت.</summary>
     [ObservableProperty] private string _display = "0";
 

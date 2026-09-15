@@ -76,8 +76,27 @@ public sealed partial class MainViewModel : ObservableObject
         Sections = new ObservableCollection<SectionViewModel>(BuildSections(AppHost.Current));
         AttachSubSections(AppHost.Current);
         AllPages = Sections.Concat(Sections.SelectMany(s => s.SubSections)).ToList();
+        // «🕘 تاریخچه»ی هر بخش — همان ‎openSectionHistory(kind)‎ی سایت: به بخشِ
+        // تاریخچه‌ها می‌رود و همان‌جا تاریخچهٔ همان بخش را باز می‌کند.
+        AppHost.Current.OpenHistory = OpenHistoryAsync;
+        // فهرست‌های نام‌دارِ پیشنهادِ خودکار — همان ‎datalist‎های سایت
+        var host0 = AppHost.Current;
+        Controls.Suggest.Provide("staff", async () => (await host0.Attendance.StaffAsync()).Select(x => x.Name ?? ""));
+        Controls.Suggest.Provide("debtor", async () => (await host0.Debtors.ListAsync()).Select(x => x.Name));
         Themes = new ObservableCollection<PumpTheme>(PumpTheme.All);
         _selectedTheme = PumpTheme.ById(_settings.ThemeId);
+
+        // اندازهٔ ماشین‌حساب از تنظیمات، و هر تغییرش با تأخیر به تنظیمات
+        Calculator.Width = Math.Clamp(_settings.CalcWidth, CalculatorViewModel.MinW, CalculatorViewModel.MaxW);
+        Calculator.Height = Math.Clamp(_settings.CalcHeight, CalculatorViewModel.MinH, CalculatorViewModel.MaxH);
+        Calculator.IsLarge = _settings.CalcLarge;
+        Calculator.SizeChanged += () =>
+        {
+            _settings.CalcWidth = Calculator.Width; _settings.CalcHeight = Calculator.Height; _settings.CalcLarge = Calculator.IsLarge;
+            _calcSave?.Cancel();
+            var cts = _calcSave = new CancellationTokenSource();
+            _ = Task.Delay(600, cts.Token).ContinueWith(t => { if (!t.IsCanceled) _settings.Save(); }, TaskScheduler.Default);
+        };
     }
 
     // ══ پردهٔ لودینگِ آغاز ═══════════════════════════════════════════════════
@@ -207,6 +226,7 @@ public sealed partial class MainViewModel : ObservableObject
     /// دکمهٔ سربرگ باز می‌شود. خواستهٔ صریحِ صاحب ریپو: «ماشین‌حساب داینامیک».
     /// </summary>
     public CalculatorViewModel Calculator { get; } = new();
+    private CancellationTokenSource? _calcSave;
 
     public bool IsChromeVisible => Content?.IsPageOpen != true;
 
@@ -365,6 +385,13 @@ public sealed partial class MainViewModel : ObservableObject
     /// اولین ‎await‎ اجرا می‌شوند، پس آخرین کلیک همان چیزی است که روی صفحه
     /// می‌نشیند، و ‎EnsureLoadedAsync‎ خودش با ‎IsLoaded‎ دوبار بار نمی‌کند.
     /// </summary>
+    private async Task OpenHistoryAsync(string kind)
+    {
+        if (Sections.FirstOrDefault(x => x.Id == "history") is not Sections.HistorySectionViewModel h) return;
+        await GoAsync(h);
+        await h.OpenAsync(kind);
+    }
+
     [RelayCommand(AllowConcurrentExecutions = true)]
     public async Task GoAsync(SectionViewModel? s)
     {

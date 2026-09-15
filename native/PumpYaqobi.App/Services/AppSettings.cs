@@ -12,6 +12,11 @@ public sealed class AppSettings
     public string ThemeId { get; set; } = "blue";
     public string LastSection { get; set; } = "dashboard";
 
+    /// <summary>اندازهٔ ماشین‌حسابِ شناور — «اندازه‌اش ثبت بشه».</summary>
+    public double CalcWidth { get; set; } = 286;
+    public double CalcHeight { get; set; } = 430;
+    public bool CalcLarge { get; set; }
+
     /// <summary>
     /// نشانیِ سرورِ خانگیِ خودِ صاحب ریپو — پیام‌رسان از همین می‌خواند.
     /// ⚠️ هیچ سرویسِ بیرونی‌ای این‌جا نمی‌آید؛ خالی یعنی پیام‌رسان خاموش.

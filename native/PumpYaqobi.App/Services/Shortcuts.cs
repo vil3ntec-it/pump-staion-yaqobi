@@ -128,6 +128,16 @@ public sealed class ShortcutService
             e.Handled = true;
             return;
         }
+        // ماشین‌حسابِ باز، صفحه‌کلید هم می‌گیرد — مثلِ ‎_calcKeyHandler‎ی سایت،
+        // مگر وقتی کاربر داخلِ کادرِ تایپی است.
+        if (_vm.Calculator.IsOpen && !ctrl && !alt
+            && (sender as TopLevel)?.FocusManager?.GetFocusedElement() is not TextBox
+            && CalcKey(e.Key, shift) is { } ck)
+        {
+            _vm.Calculator.Key(ck);
+            e.Handled = true;
+            return;
+        }
 
         // ══ Ctrl+P → پی‌دی‌افِ همین‌جا ══════════════════════════════════════
         // همان ترتیبِ اولویتِ ‎_kbPdfAction‎ی نسخهٔ وب: اول صفحهٔ بازِ درونِ بخش
@@ -255,4 +265,21 @@ public sealed class ShortcutService
         if (host.RowCount == before) return;
         AppHost.Current.Toasts.Show($"🗑️ {n} ردیف حذف شد", ToastKind.Error);
     }
+
+    private static string? CalcKey(Key k, bool shift) => k switch
+    {
+        >= Key.D0 and <= Key.D9 when !shift => ((int)k - (int)Key.D0).ToString(),
+        >= Key.NumPad0 and <= Key.NumPad9 => ((int)k - (int)Key.NumPad0).ToString(),
+        Key.Add or Key.OemPlus => "+",
+        Key.Subtract or Key.OemMinus => "-",
+        Key.Multiply => "×",
+        Key.Divide or Key.OemQuestion => "÷",
+        Key.Decimal or Key.OemPeriod => ".",
+        Key.Enter or Key.Return => "=",
+        Key.Back => "←",
+        Key.Delete => "C",
+        Key.D8 when shift => "×",
+        Key.D5 when shift => "%",
+        _ => null,
+    };
 }

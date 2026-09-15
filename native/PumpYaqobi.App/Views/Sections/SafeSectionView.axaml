@@ -15,7 +15,7 @@
         <Button Classes="ghost info" Content="ماه جدید" Margin="0,0,6,0"
                 Command="{Binding NewMonthCommand}"
                 ToolTip.Tip="جدولِ ماهِ بعد را باز می‌کند" />
-        <Button Classes="ghost info" Content="تاریخچه" Margin="0,0,6,0" />
+        <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0" Command="{Binding OpenHistoryCommand}" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
         <Button Classes="ghost" Content="ماه بعد" Margin="0,0,6,0" />
         <Button Classes="ghost info" Content="PDF این ماه" Margin="0,0,6,0"
                 Command="{Binding PdfCommand}" />
@@ -45,7 +45,7 @@
             <TextBlock Text="🏛️ جمله ماندگی" Classes="label" />
             <TextBlock Text="{Binding MandagiAfn, StringFormat={}{0} افغانی}" Classes="num"
                        Foreground="{DynamicResource Pump.Info}" />
-            <TextBlock Text="{Binding MandagiUsd, StringFormat={}{0} دالر}" Classes="muted" />
+            <TextBlock Text="{Binding MandagiUsd, StringFormat={}{0} دالر}" Classes="num2" />
           </StackPanel>
         </Border>
         <Border Grid.Column="2" Classes="stat" HorizontalAlignment="Stretch">
@@ -53,14 +53,14 @@
             <TextBlock Text="💵 جمله بردگی" Classes="label" />
             <TextBlock Text="{Binding BardagiAfn, StringFormat={}{0} افغانی}" Classes="num"
                        Foreground="{DynamicResource Pump.Ok}" />
-            <TextBlock Text="{Binding BardagiUsd, StringFormat={}{0} دالر}" Classes="muted" />
+            <TextBlock Text="{Binding BardagiUsd, StringFormat={}{0} دالر}" Classes="num2" />
           </StackPanel>
         </Border>
         <Border Grid.Column="4" Classes="stat" HorizontalAlignment="Stretch">
           <StackPanel Spacing="3">
             <TextBlock Text="🏦 موجودی خالص" Classes="label" />
             <TextBlock Text="{Binding NetAfn, StringFormat={}{0} افغانی}" Classes="num" />
-            <TextBlock Text="{Binding NetUsd, StringFormat={}{0} دالر}" Classes="muted" />
+            <TextBlock Text="{Binding NetUsd, StringFormat={}{0} دالر}" Classes="num2" />
           </StackPanel>
         </Border>
       </Grid>

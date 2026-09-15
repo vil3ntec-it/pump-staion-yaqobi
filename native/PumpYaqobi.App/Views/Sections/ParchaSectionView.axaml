@@ -39,7 +39,7 @@
             <StackPanel Spacing="4">
               <TextBlock Text="نام کارمند" Classes="fld" />
               <Grid ColumnDefinitions="*,10,Auto">
-                <TextBox Grid.Column="0" Text="{Binding Name}" Watermark="نام" />
+                <TextBox Grid.Column="0" Text="{Binding Name}" Watermark="نام" c:Suggest.Key="staff" />
                 <StackPanel Grid.Column="2" Spacing="2" HorizontalAlignment="Center">
                   <TextBlock Text="شماره پایه" FontSize="10.5" Foreground="{DynamicResource Pump.Muted}"
                              HorizontalAlignment="Center" />

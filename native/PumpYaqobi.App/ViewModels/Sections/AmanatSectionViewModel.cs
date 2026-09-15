@@ -328,7 +328,12 @@ public sealed partial class AmanatSectionViewModel : SectionViewModel
     private readonly AppHost _host;
     private List<AmanatAccountViewModel> _all = new();
 
+    /// <summary>🕘 تاریخچهٔ همین بخش — همان ‎openSectionHistory('amanat')‎ی سایت.</summary>
+    [RelayCommand]
+    private Task OpenHistory() => _host.OpenHistory?.Invoke("amanat") ?? Task.CompletedTask;
+
     public AmanatSectionViewModel(AppHost host) : base("amanat", "amanat", "تیل امانت")
+
     {
         // «📝 یادداشت این بخش» — همتای ‎.sec-note-box‎ی سایت. کلیدش همان
         // کلیدِ نسخهٔ وب است تا نوت‌های واردشده سرِ جای خودشان بنشینند.

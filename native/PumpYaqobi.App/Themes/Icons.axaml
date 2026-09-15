@@ -5,53 +5,76 @@
        بازسازیِ تمام ایکون‌ها از سر باشه و جذاب‌تر، و ایکون‌ها رنگ هم داشته باشه.»
 
        قاعده: شبکهٔ ۲۴×۲۴، خطِ ۱٫۷۵ با سرِ گرد، گوشه‌های گرد (شعاعِ ۲)، شکلِ
-       آشنا (پمپ، ورق، بشکه، مخزن، تقویم…). رنگِ آیکون از خودِ تم می‌آید
-       (‎Pump.IconFg‎: آبیِ اصلی در لایت، آبیِ روشن در دارک) و پشتش در نوار یک
-       «نشانِ» گردِ آبیِ کم‌رنگ می‌نشیند (‎IconColorConverter‎ با پارامترِ ‎badge‎).
-       رنگِ جدا برای هر آیکون یک بار آزموده و برداشته شد — هویتِ تم آبی است.
+       آشنا (پمپ، ورق، بشکه، مخزن، تقویم…). **هر آیکون رنگِ خودش را دارد**
+       (‎IconColor.<key>‎) — خواستهٔ دوبارهٔ صاحب ریپو: «ایکون‌ها همه یک رنگ‌اند
+       و تشخیص‌شون مشکله؛ هر ایکون رنگ مربوطهٔ خودشو داشته باشه.» پشتِ آیکون
+       در نوار یک «نشانِ» گردِ کم‌رنگ از همان رنگ می‌نشیند (‎IconColorConverter‎
+       با پارامترِ ‎badge‎). رنگ‌ها سیرِ میانی‌اند تا روی سفید و مشکی هر دو
+       خوانده شوند.
 
        ⚠️ بدون تصویر، بدون فونتِ آیکون — فقط مسیرِ برداری، تا در هر اندازه و
        هر تم تیز بماند. کلید همان ‎IconKey‎ی بخش است. -->
   <!-- چهار کاشیِ گرد -->
   <StreamGeometry x:Key="Icon.dashboard">M5,3 H9 A2,2 0 0 1 11,5 V9 A2,2 0 0 1 9,11 H5 A2,2 0 0 1 3,9 V5 A2,2 0 0 1 5,3 Z M15,3 H19 A2,2 0 0 1 21,5 V6 A2,2 0 0 1 19,8 H15 A2,2 0 0 1 13,6 V5 A2,2 0 0 1 15,3 Z M15,11 H19 A2,2 0 0 1 21,13 V19 A2,2 0 0 1 19,21 H15 A2,2 0 0 1 13,19 V13 A2,2 0 0 1 15,11 Z M5,14 H9 A2,2 0 0 1 11,16 V19 A2,2 0 0 1 9,21 H5 A2,2 0 0 1 3,19 V16 A2,2 0 0 1 5,14 Z</StreamGeometry>
+  <Color x:Key="IconColor.dashboard">#3b82f6</Color>
   <!-- پمپِ تیل با نازل -->
   <StreamGeometry x:Key="Icon.shifts">M3,21 V6 A3,3 0 0 1 6,3 H12 A3,3 0 0 1 15,6 V21 M2,21 H16 M7,6 H11 A1,1 0 0 1 12,7 V10 A1,1 0 0 1 11,11 H7 A1,1 0 0 1 6,10 V7 A1,1 0 0 1 7,6 Z M15,10 H17 A1.5,1.5 0 0 1 18.5,11.5 V16.5 A1.5,1.5 0 0 0 21.5,16.5 V9.5 L19,7</StreamGeometry>
+  <Color x:Key="IconColor.shifts">#f97316</Color>
   <!-- ورقِ تاخورده با خط‌ها -->
   <StreamGeometry x:Key="Icon.waraq">M7,2 H14 L19,7 V20 A2,2 0 0 1 17,22 H7 A2,2 0 0 1 5,20 V4 A2,2 0 0 1 7,2 Z M14,2 V7 H19 M9,12 H15 M9,16 H15 M9,19.5 H12</StreamGeometry>
+  <Color x:Key="IconColor.waraq">#0ea5e9</Color>
   <!-- دو نفر و سکه -->
   <StreamGeometry x:Key="Icon.debt">M5,7 A4,4 0 1 0 13,7 A4,4 0 1 0 5,7 Z M2,21 V19 A5,5 0 0 1 7,14 H11 A5,5 0 0 1 16,19 V21 M15.0,13 A3.5,3.5 0 1 0 22.0,13 A3.5,3.5 0 1 0 15.0,13 Z M18.5,11.5 V14.5 M17,13 H20</StreamGeometry>
+  <Color x:Key="IconColor.debt">#ef4444</Color>
   <!-- فاکتورِ دندانه‌دار -->
   <StreamGeometry x:Key="Icon.invoices">M6,2 H18 A1,1 0 0 1 19,3 V22 L16.7,20 L14.3,22 L12,20 L9.7,22 L7.3,20 L5,22 V3 A1,1 0 0 1 6,2 Z M9,7 H15 M9,11 H15 M9,15 H12</StreamGeometry>
+  <Color x:Key="IconColor.invoices">#8b5cf6</Color>
   <!-- رسیدِ تأییدشده -->
   <StreamGeometry x:Key="Icon.debtrasid">M5,3 H19 A1,1 0 0 1 20,4 V21 L16,18.5 L12,21 L8,18.5 L4,21 V4 A1,1 0 0 1 5,3 Z M8.5,11 L11,13.5 L15.5,8.5</StreamGeometry>
+  <Color x:Key="IconColor.debtrasid">#14b8a6</Color>
   <!-- تبادلِ دو سویه -->
   <StreamGeometry x:Key="Icon.sarrafi">M3,7 H16 M13,4 L16,7 L13,10 M21,17 H8 M11,14 L8,17 L11,20 M9.5,12 A2.5,2.5 0 1 0 14.5,12 A2.5,2.5 0 1 0 9.5,12 Z</StreamGeometry>
+  <Color x:Key="IconColor.sarrafi">#22c55e</Color>
   <!-- کیسهٔ خرید با منها -->
   <StreamGeometry x:Key="Icon.expenses">M5,8 H19 L20.5,20 A1,1 0 0 1 19.5,21 H4.5 A1,1 0 0 1 3.5,20 Z M9,8 V6 A3,3 0 0 1 15,6 V8 M9,14.5 H15</StreamGeometry>
+  <Color x:Key="IconColor.expenses">#f43f5e</Color>
   <!-- برگهٔ رسید -->
   <StreamGeometry x:Key="Icon.rasid">M6,2 H18 A1,1 0 0 1 19,3 V21 L12,17 L5,21 V3 A1,1 0 0 1 6,2 Z M9,7.5 H15 M9,11 H15</StreamGeometry>
+  <Color x:Key="IconColor.rasid">#06b6d4</Color>
   <!-- گاوصندوق با دستگیره -->
   <StreamGeometry x:Key="Icon.safe">M5.5,3 H18.5 A2.5,2.5 0 0 1 21,5.5 V17.5 A2.5,2.5 0 0 1 18.5,20 H5.5 A2.5,2.5 0 0 1 3,17.5 V5.5 A2.5,2.5 0 0 1 5.5,3 Z M7.5,11.5 A4.5,4.5 0 1 0 16.5,11.5 A4.5,4.5 0 1 0 7.5,11.5 Z M12,9.5 V11.5 H14 M6,20 V22.5 M18,20 V22.5 M19,8 H21 M19,15 H21</StreamGeometry>
+  <Color x:Key="IconColor.safe">#eab308</Color>
   <!-- بشکهٔ تیل -->
   <StreamGeometry x:Key="Icon.amanat">M5,5 A7,2 0 0 0 19,5 A7,2 0 0 0 5,5 V19 A7,2 0 0 0 19,19 V5 M5,9.5 H19 M5,14.5 H19</StreamGeometry>
+  <Color x:Key="IconColor.amanat">#b45309</Color>
   <!-- کارخانه -->
   <StreamGeometry x:Key="Icon.noinv">M3,21 V11 L9,7.5 V11 L15,7.5 V21 M15,21 H21 V3.5 H17.5 V7.5 M2,21 H22 M6,14 H8 M6,17.5 H8 M11,14 H13 M11,17.5 H13</StreamGeometry>
+  <Color x:Key="IconColor.noinv">#6366f1</Color>
   <!-- مخزنِ استوانه‌ای -->
   <StreamGeometry x:Key="Icon.storage">M4,7 A8,3 0 1 0 20,7 A8,3 0 1 0 4,7 M4,7 V17 A8,3 0 0 0 20,17 V7 M4,12 A8,3 0 0 0 20,12 M17,10.5 V14.5</StreamGeometry>
+  <Color x:Key="IconColor.storage">#0891b2</Color>
   <!-- دوربین -->
   <StreamGeometry x:Key="Icon.cameras">M4,7 H8 L10,4 H14 L16,7 H20 A1.5,1.5 0 0 1 21.5,8.5 V19 A1.5,1.5 0 0 1 20,20.5 H4 A1.5,1.5 0 0 1 2.5,19 V8.5 A1.5,1.5 0 0 1 4,7 Z M8,13.5 A4,4 0 1 0 16,13.5 A4,4 0 1 0 8,13.5 Z</StreamGeometry>
+  <Color x:Key="IconColor.cameras">#64748b</Color>
   <!-- تقویم با تیک -->
   <StreamGeometry x:Key="Icon.attendance">M5,5 H19 A2,2 0 0 1 21,7 V19 A2,2 0 0 1 19,21 H5 A2,2 0 0 1 3,19 V7 A2,2 0 0 1 5,5 Z M3,10 H21 M8,3 V7 M16,3 V7 M8.5,15.5 L11,18 L15.5,13</StreamGeometry>
+  <Color x:Key="IconColor.attendance">#10b981</Color>
   <!-- نمودارِ رو به بالا -->
   <StreamGeometry x:Key="Icon.profit">M3,21 H21 M4,16 L9,11 L13,14.5 L20,7 M15.5,7 H20 V11.5</StreamGeometry>
+  <Color x:Key="IconColor.profit">#16a34a</Color>
   <!-- چرخ‌دنده -->
   <StreamGeometry x:Key="Icon.settings">M9,12 A3,3 0 1 0 15,12 A3,3 0 1 0 9,12 Z M12,2.5 L13.6,5.2 L16.7,4.7 L17.2,7.8 L19.9,9.4 L18.4,12 L19.9,14.6 L17.2,16.2 L16.7,19.3 L13.6,18.8 L12,21.5 L10.4,18.8 L7.3,19.3 L6.8,16.2 L4.1,14.6 L5.6,12 L4.1,9.4 L6.8,7.8 L7.3,4.7 L10.4,5.2 Z</StreamGeometry>
+  <Color x:Key="IconColor.settings">#6b7280</Color>
   <!-- ساعت با برگشت -->
   <StreamGeometry x:Key="Icon.history">M3,12 A9,9 0 1 0 6.2,5.2 M3,3.5 V8.5 H8 M12,7.5 V12 L15,14.5</StreamGeometry>
+  <Color x:Key="IconColor.history">#7c3aed</Color>
   <!-- حبابِ گفت‌وگو -->
   <StreamGeometry x:Key="Icon.chat">M4,4.5 H20 A2,2 0 0 1 22,6.5 V15 A2,2 0 0 1 20,17 H9.5 L4.5,21 V17 H4 A2,2 0 0 1 2,15 V6.5 A2,2 0 0 1 4,4.5 Z M7,9.5 H17 M7,12.5 H13</StreamGeometry>
+  <Color x:Key="IconColor.chat">#ec4899</Color>
   <!-- نشانِ سربرگ و قفل -->
   <StreamGeometry x:Key="Icon.pump">M3,21 V6 A3,3 0 0 1 6,3 H12 A3,3 0 0 1 15,6 V21 M2,21 H16 M7,6 H11 A1,1 0 0 1 12,7 V10 A1,1 0 0 1 11,11 H7 A1,1 0 0 1 6,10 V7 A1,1 0 0 1 7,6 Z M15,10 H17 A1.5,1.5 0 0 1 18.5,11.5 V16.5 A1.5,1.5 0 0 0 21.5,16.5 V9.5 L19,7</StreamGeometry>
+  <Color x:Key="IconColor.pump">#3b82f6</Color>
   <!-- ناشناخته -->
   <StreamGeometry x:Key="Icon.fallback">M4,12 A8,8 0 1 0 20,12 A8,8 0 1 0 4,12 Z M12,8 V12.5 M12,15.5 V16</StreamGeometry>
+  <Color x:Key="IconColor.fallback">#6b7280</Color>
 </ResourceDictionary>

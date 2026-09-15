@@ -114,9 +114,16 @@ public sealed partial class SafeSectionViewModel : LedgerSectionViewModel<SafeRo
 {
     private readonly SafeService _calc;
 
+    private readonly AppHost _host;
+
+    /// <summary>🕘 تاریخچهٔ همین بخش — همان ‎openSectionHistory('safe')‎ی سایت.</summary>
+    [RelayCommand]
+    private Task OpenHistory() => _host.OpenHistory?.Invoke("safe") ?? Task.CompletedTask;
+
     public SafeSectionViewModel(AppHost host)
         : base("safe", "safe", "گاوصندوق", host.SafeLedger)
     {
+        _host = host;
         _calc = host.Safe;
         // «📝 یادداشت این بخش» — همتای ‎.sec-note-box‎ی سایت. کلیدش همان
         // کلیدِ نسخهٔ وب است تا نوت‌های واردشده سرِ جای خودشان بنشینند.

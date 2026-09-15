@@ -19,7 +19,10 @@
       <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
         <Button Classes="ghost" Content="→ قبلی" Command="{Binding PrevCommand}" IsEnabled="{Binding CanPrev}" Margin="0,0,4,0" />
         <Button Classes="ghost" Content="بعدی ←" Command="{Binding NextCommand}" IsEnabled="{Binding CanNext}" Margin="0,0,10,0" />
-        <ToggleSwitch OnContent="🟤 دیزل" OffContent="⛽ پطرول" IsChecked="{Binding IsDiesel}" Margin="0,0,10,0" />
+        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="0,0,10,0">
+          <Button Classes="seg" Content="⛽ پطرول" Command="{Binding SetFuelCommand}" CommandParameter="petrol" Classes.active="{Binding IsPetrol}" />
+          <Button Classes="seg" Content="🟤 دیزل" Command="{Binding SetFuelCommand}" CommandParameter="diesel" Classes.active="{Binding IsDiesel}" />
+        </StackPanel>
         <Button Classes="ghost" Content="✏️ تغییر نام" Command="{Binding RenameCommand}" Margin="0,0,6,0" />
         <Button Classes="ghost info" Content="📄 PDF" Command="{Binding PdfCommand}" Margin="0,0,6,0" />
         <Button Classes="ghost info" Content="هر دو تیل" Command="{Binding PdfBothCommand}" Margin="0,0,6,0" />
@@ -64,7 +67,7 @@
             <TextBlock Text="جمله الباقی" Classes="label" />
             <TextBlock Text="{Binding AlbaqiAfn, StringFormat={}{0} AFN}" Classes="num"
                        Foreground="{Binding AlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
-            <TextBlock Text="{Binding AlbaqiUsd, StringFormat={}{0} $}" Classes="muted" />
+            <TextBlock Text="{Binding AlbaqiUsd, StringFormat={}{0} $}" Classes="num2" />
             <TextBlock Text="{Binding AlbaqiStatus}" Classes="muted" FontWeight="Bold" />
           </StackPanel>
         </Border>

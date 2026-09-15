@@ -10,25 +10,21 @@
 
     <c:SectionPage.Toolbar>
       <StackPanel Orientation="Horizontal" Spacing="8">
-        <ToggleSwitch OnContent="شب" OffContent="روز" IsChecked="{Binding IsNight}" />
+        <!-- روز/شب: دو دکمهٔ رادیویی، نه ‎ToggleSwitch‎. گزارشِ صاحب ریپو: «کادرِ
+             روز و شبش داغونه، با کلیک تغییر نمی‌کنه، یک کادرِ ولوم اومده.» -->
+        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+          <Button Classes="seg" Content="☀️ روز" Command="{Binding SetNightCommand}" CommandParameter="day" Classes.active="{Binding IsDay}" />
+          <Button Classes="seg" Content="🌙 شب" Command="{Binding SetNightCommand}" CommandParameter="night" Classes.active="{Binding IsNight}" />
+        </StackPanel>
         <Button Content="پایهٔ تازه" Command="{Binding AddPumpCommand}" />
         <Button Classes="ghost info" Content="PDF ورق" Command="{Binding PdfCommand}" />
         <Button Classes="accent" Content="بازگشت" Command="{Binding BackCommand}" />
       </StackPanel>
     </c:SectionPage.Toolbar>
 
-    <c:SectionPage.Filters>
-      <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
-        <StackPanel Spacing="3" Width="200">
-          <TextBlock Text="کارمندِ شیفت" Classes="fld" />
-          <TextBox Text="{Binding WorkerName}" />
-        </StackPanel>
-        <StackPanel Spacing="3" Width="150">
-          <TextBlock Text="قرضِ پارچه" Classes="fld" />
-          <TextBox Text="{Binding FabricDebtText}" />
-        </StackPanel>
-      </StackPanel>
-    </c:SectionPage.Filters>
+    <!-- «کارمندِ شیفت» و «قرضِ پارچه» عمداً این‌جا نیستند: خواستهٔ صاحب ریپو —
+         «این دو کادر اضافه‌اند و این‌ها تو بخشِ پارچه‌ها رسانده می‌شن.» داده‌شان
+         در ویومدل می‌ماند (‎WorkerName‎/‎FabricDebt‎) و از پارچه‌ها پر می‌شود. -->
 
     <!-- ⚠️ این‌جا عمداً ‎SectionPage.Summary‎ نیست: شش کادرِ «خلاصه شیفت» در
          سایت زیرِ جدولِ تراکنش‌ها می‌نشینند، نه بالای صفحه (‎index.html‎ خط
@@ -42,7 +38,7 @@
         <DataGrid.Columns>
           <DataGridTextColumn Header="پایه" Binding="{Binding Num}" Width="Auto" />
           <DataGridTextColumn Header="تاریخ" Binding="{Binding PumpDate}" Width="Auto" />
-          <DataGridTextColumn Header="نام" Binding="{Binding Worker}" Width="Auto" />
+          <DataGridTextColumn Header="نام" Binding="{Binding Worker}" Width="Auto" c:Suggest.Key="staff" />
           <DataGridTemplateColumn Header="تیل" Width="Auto">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>

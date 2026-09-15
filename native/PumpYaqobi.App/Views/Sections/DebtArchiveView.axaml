@@ -22,7 +22,16 @@
       <ItemsControl ItemsSource="{Binding Archives}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:DebtArchiveViewModel">
-            <Border Classes="panel" Margin="0,0,0,10">
+            <StackPanel Margin="0,0,0,10" Spacing="6">
+              <!-- نوارِ رنگیِ کشویی — مثلِ سایت: بسته، با یک خط؛ زدنش باز می‌کند -->
+              <Button Classes="arc-bar" Command="{Binding ToggleCommand}" HorizontalAlignment="Stretch"
+                      Background="{Binding BarBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
+                <Grid ColumnDefinitions="Auto,*">
+                  <TextBlock Grid.Column="0" Text="{Binding IsOpen, Converter={x:Static vm:OpenArrowConverter.Instance}}" Margin="0,0,10,0" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Text="{Binding BarText}" FontWeight="Bold" VerticalAlignment="Center" />
+                </Grid>
+              </Button>
+            <Border Classes="panel" IsVisible="{Binding IsOpen}">
               <StackPanel Spacing="8">
                 <TextBlock Text="{Binding Title}" FontWeight="Black" FontSize="15" />
 
@@ -142,6 +151,7 @@
                 </Grid>
               </StackPanel>
             </Border>
+            </StackPanel>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>

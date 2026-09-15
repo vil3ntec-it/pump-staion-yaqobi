@@ -145,6 +145,12 @@ public sealed class AppHost
     public AttendanceService AttendanceCalc { get; }
     public AttendanceDataService Attendance { get; }
 
+    /// <summary>
+    /// «تاریخچهٔ همین بخش» — همان ‎openSectionHistory(kind)‎ی سایت. ویومدلِ اصلی
+    /// آن را می‌نشاند؛ بخش‌ها فقط کلیدِ خودشان را می‌دهند (‎HistoryService.Kinds‎).
+    /// </summary>
+    public Func<string, Task>? OpenHistory { get; set; }
+
     /// <summary>قرض‌های کهنه — «چند روز است هیچ ردیفی ندارد».</summary>
     public AgingService Aging { get; }
 

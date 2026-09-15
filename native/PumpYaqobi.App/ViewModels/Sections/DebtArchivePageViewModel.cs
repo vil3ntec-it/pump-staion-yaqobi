@@ -128,12 +128,14 @@ public sealed partial class DebtArchiveViewModel : ObservableObject, IRowBatchHo
     private readonly List<DebtRow> _rows;
     private bool _pulling;
 
-    public DebtArchiveViewModel(DebtTableArchive h, AppHost host, DebtArchivePageViewModel page)
+    public DebtArchiveViewModel(DebtTableArchive h, AppHost host, DebtArchivePageViewModel page, int no = 1)
     {
         _host = host; _page = page; Entity = h;
         _rows = DebtorService.ArchiveRows(h);
         IsMoney = h.IsMoney;
         Title = "🗂️ " + (h.CreatedShamsi ?? "—") + " — " + Shamsi.Money(_rows.Count) + " ردیف · واحدِ " + (IsMoney ? "پول" : "تیل");
+        No = no;
+        BarText = BarLabel(h.CreatedShamsi, no);
         _pulling = true;
         PercentPetrolText = Shamsi.MoneyOrBlank(h.PercentPetrol ?? 0m);
         PercentDieselText = Shamsi.MoneyOrBlank(h.PercentDiesel ?? 0m);
@@ -144,6 +146,40 @@ public sealed partial class DebtArchiveViewModel : ObservableObject, IRowBatchHo
 
     public DebtTableArchive Entity { get; }
     public DebtCalculationService Calc => _host.Debt;
+
+    // ══ نوارِ کشویی — همان ‎personArchiveModal‎ی سایت ══════════════════════
+    // خواستهٔ صاحب ریپو با عکس: هر جدول یک نوارِ رنگیِ تمام‌عرض، بسته؛ زدنش
+    // مشخصاتِ همان جدول را باز می‌کند. روی نوار فقط چهار چیز است:
+    // «۱۴۰۳/۱۲/۱۱ · شنبه · ماه حوت · جدول چهارم». شمارهٔ جدول از ترتیبِ
+    // ساخته شدن می‌آید (قدیمی‌ترین = جدول اول) تا با آرشیوِ تازه جابه‌جا نشود.
+    public int No { get; }
+    public string BarText { get; }
+    [ObservableProperty] private bool _isOpen;
+    [RelayCommand] private void Toggle() => IsOpen = !IsOpen;
+
+    private static readonly string[] BarKeys = { "Pump.Orange", "Pump.Purple", "Pump.Ok", "Pump.Info" };
+    public string BarBrushKey => BarKeys[(No - 1) % BarKeys.Length];
+
+    private static readonly string[] Ordinals =
+        { "اول", "دوم", "سوم", "چهارم", "پنجم", "ششم", "هفتم", "هشتم", "نهم", "دهم",
+          "یازدهم", "دوازدهم", "سیزدهم", "چهاردهم", "پانزدهم" };
+
+    public static string BarLabel(string? created, int no)
+    {
+        var ord = no >= 1 && no <= Ordinals.Length ? Ordinals[no - 1] : Shamsi.Money(no);
+        var parts = new List<string>();
+        var date = (created ?? "").Trim();
+        if (date.Length > 0)
+        {
+            parts.Add(date);
+            if (Shamsi.ToDate(date) is { } d) parts.Add(Shamsi.DayName(d));
+            var mk = Shamsi.MonthKey(date);
+            if (mk.Length >= 7 && int.TryParse(mk[^2..], out var m) && Shamsi.MonthName(m) is { Length: > 0 } mn)
+                parts.Add("ماه " + mn);
+        }
+        parts.Add("جدول " + ord);
+        return string.Join(" · ", parts);
+    }
     public string Title { get; }
     public bool IsMoney { get; }
     public string UnitText => IsMoney ? "افغانی" : "لیتر";
@@ -337,7 +373,10 @@ public sealed partial class DebtArchivePageViewModel : ObservableObject
         Account = acct;
         Title = "🗂️ جدول‌های آرشیو — " + person.Name
               + (acct.Entity.MainOfDebtorId is null ? " · 📄 " + acct.Title : "");
-        foreach (var h in arcs) Archives.Add(new DebtArchiveViewModel(h, host, this));
+        // شمارهٔ جدول از ترتیبِ ساخته شدن (قدیمی‌ترین = اول)؛ نمایش تازه‌به‌کهنه مثلِ سایت
+        var ordered = arcs.OrderBy(a => a.Id).ToList();
+        foreach (var h in ordered.AsEnumerable().Reverse())
+            Archives.Add(new DebtArchiveViewModel(h, host, this, ordered.IndexOf(h) + 1));
     }
 
     public AccountViewModel Account { get; }

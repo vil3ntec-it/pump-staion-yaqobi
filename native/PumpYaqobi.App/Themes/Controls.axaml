@@ -94,6 +94,13 @@
     <Setter Property="FontWeight" Value="Bold" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Accent}" />
   </Style>
+  <!-- عددِ دوم (دالر کنارِ افغانی): همان وزن، کمی کوچک‌تر — نه ریز و کم‌رنگ.
+       گزارشِ صاحب ریپو: «دالر رو تو سربرگ خیلی کوچیک و بی‌اهمیت نشون میده.» -->
+  <Style Selector="TextBlock.num2">
+    <Setter Property="FontSize" Value="18" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Info}" />
+  </Style>
 
   <!-- ══ کارت — ‎.card‎ نسخهٔ وب ══
        ⚠️ عددها از خودِ **مرورگر** آمده‌اند، نه از متنِ CSS. در CSS نوشته
@@ -641,6 +648,7 @@
          اکسل می‌کند: نوشته بریده می‌شود، نه این‌که جدول به‌هم بریزد. -->
     <Setter Property="TextWrapping" Value="NoWrap" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    <Setter Property="MaxLines" Value="1" />
   </Style>
   <!-- ══ کادرِ تایپِ داخلِ خانه — ‎.xls-in‎ی سایت ═══════════════════════════
        گزارشِ صاحب ریپو: «توی کادرهای جدول وقتی می‌خوام چیزی بنویسم کادر سفید
@@ -683,6 +691,8 @@
     <Setter Property="FontSize" Value="17" />
     <Setter Property="AcceptsReturn" Value="False" />
     <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="MaxLines" Value="1" />
+    <Setter Property="ClipToBounds" Value="True" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
     <Setter Property="FontWeight" Value="Bold" />
     <!-- ⚠️ ‎Margin‎ی صفر لازم است: بی آن، کادرِ ویرایشی چند پیکسل تو می‌رفت و
@@ -1452,6 +1462,23 @@
     <Setter Property="Background" Value="{DynamicResource Pump.Accent}" />
   </Style>
 
+  <!-- ══ نوارِ کشوییِ جدولِ آرشیو (قرض‌داران) — همان نوارهای رنگیِ سایت ══════
+       تمام‌عرض، پررنگ، نوشتهٔ سفید؛ زمینه از ‎BarBrushKey‎ی خودِ ردیف می‌آید. -->
+  <Style Selector="Button.arc-bar">
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="16,9" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Button.arc-bar /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{Binding $parent[Button].Background}" />
+  </Style>
+  <Style Selector="Button.arc-bar:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Opacity" Value="0.9" />
+  </Style>
+
   <!-- ستونِ نمودارِ فروشِ داشبورد -->
   <Style Selector="Border.db-bar">
     <Setter Property="Background" Value="{DynamicResource Pump.ChartLine}" />
@@ -1680,6 +1707,9 @@
     <Setter Property="FontWeight" Value="Bold" />
     <Setter Property="CornerRadius" Value="10" />
     <Setter Property="Padding" Value="0" />
+    <!-- کلیدها یک پله از کارت جدا — وگرنه در تمِ تیره کلید و کارت یک رنگ بودند -->
+    <Setter Property="Background" Value="{DynamicResource Pump.Input}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Border}" />
   </Style>
   <Style Selector="Button.calc.op">
     <Setter Property="Foreground" Value="{DynamicResource Pump.Accent}" />

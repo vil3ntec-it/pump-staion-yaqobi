@@ -66,6 +66,7 @@ internal static class Program
         // ══ «یک ردیف چقدر آب می‌خورد» — ریشهٔ کندیِ ورق ════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- rowcost
         if (outDir.Equals("rowcost", StringComparison.OrdinalIgnoreCase)) return RowCost.Run();
+        if (outDir.Equals("vanish", StringComparison.OrdinalIgnoreCase)) return VanishProbe.Run();
         // ══ «پردهٔ لودینگ کارش را می‌کند؟» ═════════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- warm
         if (outDir.Equals("warm", StringComparison.OrdinalIgnoreCase)) return WarmAudit.Run();

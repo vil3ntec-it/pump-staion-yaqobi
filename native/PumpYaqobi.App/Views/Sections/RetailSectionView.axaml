@@ -54,7 +54,7 @@
                 RowDeleteCommand="{Binding $parent[UserControl].DataContext.DeleteRowCommand}">
       <DataGrid.Columns>
         <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
-        <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="Auto" />
+        <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="Auto" c:Suggest.Key="debtor" />
         <DataGridTextColumn Header="مقدار تیل" Binding="{Binding LitersText}" Width="Auto" />
         <DataGridTextColumn Header="فی" Binding="{Binding PriceText}" Width="Auto" />
         <DataGridTextColumn Header="مقدار بردگی" Binding="{Binding BardagiText}" Width="Auto" />

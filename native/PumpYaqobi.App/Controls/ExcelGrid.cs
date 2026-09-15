@@ -188,7 +188,7 @@ public class ExcelGrid : DataGrid
     /// یک میلیون ردیف می‌سنجد). این عدد فقط آن‌قدر بالا رفت که هیچ ورقِ
     /// واقعی به آن نرسد.
     /// </summary>
-    public const int GrowRowLimit = 250;
+    public const int GrowRowLimit = 600;
 
     /// <summary>
     /// ══ دفترهای ماهانه: سقف به **ردیف** است، نه به «یک صفحه» ════════════════
@@ -211,6 +211,7 @@ public class ExcelGrid : DataGrid
     /// هیچ ماهِ واقعیِ این پمپ به صد ردیف نمی‌رسد، پس عملاً سقفی دیده
     /// نمی‌شود؛ و اگر روزی رسید، برنامه به‌جای قفل شدن همان‌جا می‌ایستد.
     /// </summary>
+    /// <summary>دیگر سقفِ «یک صفحه» نیست — رشدِ تدریجی جایش را گرفت (پایین). عدد برای سنجش‌های قدیمی مانده.</summary>
     public const int PageRowLimit = 100;
 
     // ══════════════════════════════════════════════════════════════════════
@@ -288,6 +289,98 @@ public class ExcelGrid : DataGrid
     /// </summary>
     public static int DiagMeasure, DiagSettle;
 
+    /// <summary>اصلاحیهٔ بلندی — فقط برای سنجش.</summary>
+    public double DiagPad => _pad;
+    public int DiagShown => _shown;
+    public bool DiagQueued => _growQueued;
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  رشدِ تدریجی — «کلِ صفحه به اندازهٔ جدول بزرگ شود، ولی لگ نزند»
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  خواستهٔ چندبارهٔ صاحب ریپو: «سقفِ زیرِ جدول نباشد که جمله سرِ جا بماند و
+    //  جدول‌های دیگر از زیرش رد شوند… تمام صفحه به اندازهٔ همان جدول بزرگ
+    //  شود… مثلِ اکسل موقعِ اسکرول جدول‌های زیر هم رندر شوند و لگ نزند و
+    //  کامپیوتر را داغ نکند.»
+    //
+    //  پس دیگر هیچ جدولی سرِ «یک صفحه» نمی‌ایستد (‎PageRowLimit‎ رفت). ولی
+    //  ساختنِ همهٔ ردیف‌ها در یک پاسِ چیدمان همان چیزی است که باز شدنِ بخش را
+    //  کند می‌کرد (۲۰۰ ردیف ⇒ ۱٫۴ ثانیه). راهِ میانه: **رشدِ تدریجی**.
+    //
+    //      پاسِ اول:  فقط یک صفحه ردیف (ستون‌ها سفت می‌شوند)
+    //      هر فریم:  ‎GrowChunk‎ ردیفِ دیگر، با اولویتِ پس‌زمینه
+    //      …تا همهٔ ردیف‌ها ساخته شوند
+    //
+    //  کاربر همان لحظه یک صفحهٔ کامل می‌بیند و می‌تواند کار کند؛ بقیهٔ جدول
+    //  در چند فریمِ بعد زیرِ آن ساخته می‌شود — پیش از آن‌که با اسکرول به آن
+    //  برسد. هیچ فریمی بیش از یک تکه کار نمی‌کند، پس رابط نمی‌پرد.
+    //
+    //  ⚠️ سقفِ ایمنی (‎GrowRowLimit‎) می‌ماند: بی مجازی‌سازی، یک دفترِ
+    //  صدهزارردیفی حافظه را می‌بلعد. آن‌قدر بالاست که هیچ دفترِ ماهانه به آن
+    //  نمی‌رسد؛ اگر رسید، جدول همان‌جا با نوارِ خودش می‌لغزد.
+
+    /// <summary>چند ردیف در هر فریمِ رشد ساخته می‌شود.</summary>
+    private const int GrowChunk = 24;
+
+    /// <summary>بیشترین ردیفی که یک فریمِ رشد می‌سازد — سقفِ مکثِ یک فریم.</summary>
+    private const int GrowMax = 120;
+
+    /// <summary>تا این‌جا بلند شده‌ایم (شمارِ ردیف). صفر یعنی هنوز شروع نشده.</summary>
+    private int _shown;
+
+    private bool _growQueued;
+
+    /// <summary>ردیف‌هایی که یک صفحه جا می‌گیرند — پاسِ اولِ رشد.</summary>
+    private int FirstChunk(double screen)
+    {
+        var rowH = MeasuredRowHeight();
+        return Math.Max(GrowChunk / 2, (int)Math.Ceiling(screen / rowH) + 2);
+    }
+
+    // ══ شمارِ ردیف‌ها عوض شد ⇒ دوباره اندازه بگیر ═══════════════════════════
+    // ⚠️ ‎DataGrid‎ با اضافه/کم شدنِ ردیف خودش را دوباره اندازه **نمی‌گیرد**؛
+    // فقط گسترهٔ لغزشِ درونی‌اش را به‌روز می‌کند. پیش از این رشدِ جدول پس از
+    // «➕ ردیف» فقط از راهِ ‎Settle‎ رخ می‌داد (نوارِ لغزش پیدا می‌شد و بلندی
+    // پُر می‌شد) — همان راهی که صفحهٔ خالی می‌ساخت. حالا خودِ فهرست خبر می‌دهد.
+    private System.Collections.Specialized.INotifyCollectionChanged? _watched;
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property != ItemsSourceProperty) return;
+        if (_watched is not null) _watched.CollectionChanged -= OnRowsChanged;
+        _watched = ItemsSource as System.Collections.Specialized.INotifyCollectionChanged;
+        if (_watched is not null) _watched.CollectionChanged += OnRowsChanged;
+        _shown = 0;
+        InvalidateMeasure();
+    }
+
+    private void OnRowsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        // فهرست از نو پر شد (ماهِ دیگر، حسابِ دیگر) ⇒ رشد از اول، تدریجی.
+        // وگرنه ‎_shown‎ی ماهِ قبل می‌ماند و کلِ ماهِ تازه در یک پاس ساخته می‌شد.
+        if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset
+            || RowCount() < _shown) _shown = 0;
+        InvalidateMeasure();
+    }
+
+    private void QueueGrow(int rows, int show)
+    {
+        if (_growQueued) return;
+        _growQueued = true;
+        Dispatcher.UIThread.Post(() =>
+        {
+            _growQueued = false;
+            // ⚠️ هر پاسِ رشد همهٔ ردیف‌های ساخته‌شده را دوباره اندازه می‌گیرد،
+            // پس با تکه‌های ثابتِ کوچک هزینه مربعی می‌شد (۲۶۵ ردیف: ۳٫۲ ثانیه
+            // در برابرِ ۲٫۱ ثانیهٔ یک‌جا). تکه هر بار دو برابر می‌شود — چند پاس
+            // بیشتر نیست — ولی سقفی دارد تا هیچ فریمی بیش از حد مکث نکند.
+            var chunk = Math.Clamp(show, GrowChunk, GrowMax);
+            _shown = Math.Min(rows, show + chunk);
+            InvalidateMeasure();
+        }, DispatcherPriority.Background);
+    }
+
     protected override Size MeasureOverride(Size availableSize)
     {
         DiagMeasure++;
@@ -304,18 +397,12 @@ public class ExcelGrid : DataGrid
 
         if (rows != _padRows) { _pad = 0; _padRows = rows; }
 
-        var want = WantedHeight(rows);
+        // رشدِ تدریجی: این پاس فقط تا ‎show‎ ردیف بلند می‌شود؛ بقیه فریمِ بعد.
+        var show = Math.Min(rows, Math.Max(_shown, FirstChunk(screen)));
+        if (show < rows) QueueGrow(rows, show);
+        else _shown = rows;
 
-        // ⚠️ دفترِ ماهانه فقط تا یک صفحه بلند می‌شود و بعد می‌ایستد؛ ورق و
-        // پارچه تا ‎GrowRowLimit‎ آزادند.
-        //
-        // ⚠️ و چرا جدولِ کوتاه هم از همین راه می‌گذرد، نه از ‎Capped‎: تنگنا
-        // بلندیِ در دسترس را می‌بُرد و ‎DataGrid‎ همان بلندی را پر می‌کند —
-        // یعنی دفترِ سه‌ردیفی یک کادرِ ۸۰۰ پیکسلیِ تقریباً خالی می‌شد. تا
-        // وقتی محتوا از یک صفحه کوتاه‌تر است، جدول دقیقاً هم‌قدِ ردیف‌هایش
-        // می‌ماند و ساختنِ آن چند ردیف هم ارزان است.
-        if (!GrowsToContent && rows > PageRowLimit) return Capped(availableSize, screen);
-
+        var want = WantedHeight(show);
         if (availableSize.Height > want) availableSize = availableSize.WithHeight(want);
         var size = base.MeasureOverride(availableSize);
         return size.WithHeight(want);
@@ -329,9 +416,26 @@ public class ExcelGrid : DataGrid
     }
 
     /// <summary>بلندیِ واقعیِ جدول برای این شمارِ ردیف.</summary>
+    /// <summary>
+    /// بلندیِ واقعیِ یک ردیف — از خودِ ردیفِ ساخته‌شده، نه از ‎RowHeight‎.
+    /// ⚠️ ‎RowHeight‎ ۴۴ است ولی ردیفِ چیده‌شده ۴۵ پیکسل است (خطِ زیرش). با ۴۴
+    /// هر ردیف یک پیکسل کم می‌آمد، جدولِ ۶۱ ردیفی ۶۱ پیکسل کوتاه می‌شد، نوارِ
+    /// لغزشِ خودش پیدا می‌شد و ‎Settle‎ به جبرانش می‌افتاد — همان چیزی که یک
+    /// بار یک صفحهٔ خالی زیرِ جدول گذاشت.
+    /// </summary>
+    private double MeasuredRowHeight()
+    {
+        if (_rowH > 0) return _rowH;
+        var row = this.GetVisualDescendants().OfType<DataGridRow>().FirstOrDefault(r => r.Bounds.Height > 0);
+        if (row is not null) _rowH = row.Bounds.Height;
+        return _rowH > 0 ? _rowH : (double.IsNaN(RowHeight) || RowHeight <= 0 ? 45d : RowHeight + 1);
+    }
+
+    private double _rowH;
+
     private double WantedHeight(int rows)
     {
-        var rowH = double.IsNaN(RowHeight) || RowHeight <= 0 ? 44d : RowHeight;
+        var rowH = MeasuredRowHeight();
 
         // ⚠️ از کَش، نه از گشتنِ درخت. این تابع در هر پاسِ چیدمان صدا زده
         // می‌شود (هم از ‎MeasureOverride‎ هم از ‎Settle‎)، و گشتنِ کلِ درخت در
@@ -364,18 +468,28 @@ public class ExcelGrid : DataGrid
     {
         var rows = RowCount();
         if (rows < 0 || rows > GrowRowLimit) return;
-        if (_pad > 400) return;
 
-        // جدولی که سرِ سقفِ ردیف ایستاده، نوارِ لغزشِ خودش را به‌عمد دارد
-        if (!GrowsToContent && rows > PageRowLimit) return;
+        // ⚠️ فقط وقتی جدول واقعاً هم‌قدِ همهٔ ردیف‌هایش شده. پیش از آن (پاسِ
+        // تنگِ اول، یا وسطِ رشدِ تدریجی) نوارِ لغزش به‌عمد پیداست و «جای
+        // لغزش»ش هزار پیکسل است — یک بار همان هزار پیکسل به بلندی اضافه شد و
+        // زیرِ جدول یک صفحهٔ خالی ماند (گزارشِ صاحب ریپو با عکس).
+        if (!_spread || _shown < rows) return;
 
         if (VerticalBar is not { IsVisible: true } vbar || vbar.Maximum <= 1) return;
 
+        // سقفِ اصلاح: چند پیکسلِ گردکردن، نه بیشتر. اگر بیش از این کم آمده،
+        // حسابِ بلندی غلط است و باید همان درست شود، نه با پُر کردن پنهان.
+        var add = Math.Min(vbar.Maximum + 2, MaxPad - _pad);
+        if (add <= 0) return;
+
         DiagSettle++;
-        _pad += vbar.Maximum + 2;
+        _pad += add;
         _padRows = rows;
         InvalidateMeasure();
     }
+
+    /// <summary>بیشترین اصلاحیهٔ بلندی که ‎Settle‎ حق دارد بدهد.</summary>
+    private const int MaxPad = 24;
 
     // ══ کَشِ اجزای قالب ═══════════════════════════════════════════════════════
     //
@@ -906,7 +1020,17 @@ public class ExcelGrid : DataGrid
         if (_wired) return;
         _wired = true;
         // تنها منبعِ درستِ «الان در حال ویرایشیم» — خودِ جدول می‌گوید.
-        PreparingCellForEdit += (_, e) => { _editing = true; AutoDirection(e.EditingElement); };
+        PreparingCellForEdit += (_, e) =>
+        {
+            _editing = true; AutoDirection(e.EditingElement);
+            // پیشنهادِ خودکار: فهرستِ نام‌دارِ ستون (اگر داشت) + مقدارهای همان ستون
+            if (e.EditingElement is TextBox tb || (e.EditingElement?.GetVisualDescendants().OfType<TextBox>().FirstOrDefault() is { } tb2 && (tb = tb2) is not null))
+            {
+                var named = Suggest.Of(Suggest.GetKey(e.Column));
+                var learned = Suggest.ColumnValues(ItemsSource, e.Column);
+                if (named.Count + learned.Count > 0) Suggest.Attach(tb, named, learned);
+            }
+        };
         CellEditEnded += (_, _) => { _editing = false; _typedIn = false; };
 
         // ══ جدول خودش می‌لغزد، نه کلِ صفحه ══════════════════════════════════
@@ -1578,6 +1702,17 @@ public class ExcelGrid : DataGrid
             // می‌کنند (‎Backspace‎ علاوه بر آن ویرایش را هم باز می‌کند، ولی
             // این‌جا تفاوتش برای کاربر صفر است چون بعدش بی‌درنگ تایپ می‌کند).
             case Key.Delete or Key.Back when !_editing && !IsReadOnly && ClearSelectedCells():
+                e.Handled = true;
+                return;
+
+            // ══ Ctrl+Delete: حذفِ ردیفِ جاری ══════════════════════════════════
+            // گزارشِ صاحب ریپو: «حذفِ یک ردیف گم شده… جوری باشه که جا نگیره.»
+            // ستونِ حذف جا می‌گرفت و برداشته شد؛ راست‌کلیک هست ولی کسی نمی‌داند.
+            // پس یک کلید هم: ‎Ctrl+Delete‎ همان فرمانِ حذفِ همان ردیف را می‌زند
+            // (که خودش می‌پرسد). و ‎ToolTip‎ی سرستونِ ردیف همین را می‌گوید.
+            case Key.Delete when !_editing && e.KeyModifiers.HasFlag(KeyModifiers.Control)
+                                 && RowDeleteCommand is { } del && SelectedItem is { } cur:
+                if (del.CanExecute(cur)) del.Execute(cur);
                 e.Handled = true;
                 return;
         }
