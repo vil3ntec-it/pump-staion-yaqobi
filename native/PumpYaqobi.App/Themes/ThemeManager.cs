@@ -91,12 +91,12 @@ public static class ThemeManager
         Set("Pump.NavActiveBg", Horizontal(t.NavActiveBg ?? t.AccentGrad));
         Br("NavActiveFg", t.NavActiveFg ?? t.OnAccent);
 
-        // نمودارها و آیکون‌ها: هویتِ آبیِ مشترک در هر دو تم
-        Br("ChartLine", PumpTheme.C("#3b82f6"));
-        Br("ChartPoint", PumpTheme.C("#60a5fa"));
-        Br("ChartBarSel", t.IsDark ? PumpTheme.C("#60a5fa") : PumpTheme.C("#1e3a8a"));
-        Br("IconFg", t.IsDark ? PumpTheme.C("#93c5fd") : PumpTheme.C("#3b82f6"));
-        Br("IconBadge", t.IsDark ? Color.FromArgb(0x40, 0x3b, 0x82, 0xf6) : PumpTheme.C("#e0f2fe"));
+        // نمودارها و آیکون‌ها: لایت آبی (#3B82F6 / #60A5FA)، دارک طلایی (#FFD700 / #FFF3C4)
+        Br("ChartLine", t.IsDark ? PumpTheme.C("#ffd700") : PumpTheme.C("#3b82f6"));
+        Br("ChartPoint", t.IsDark ? PumpTheme.C("#fff3c4") : PumpTheme.C("#60a5fa"));
+        Br("ChartBarSel", t.IsDark ? PumpTheme.C("#fff3c4") : PumpTheme.C("#1e3a8a"));
+        Br("IconFg", t.IsDark ? PumpTheme.C("#ffd700") : PumpTheme.C("#3b82f6"));
+        Br("IconBadge", t.IsDark ? Color.FromArgb(0x2e, 0xff, 0xd7, 0x00) : PumpTheme.C("#e0f2fe"));
         Br("Border", t.Border);
         Br("Text", t.Text);
         Br("Muted", t.Muted);
