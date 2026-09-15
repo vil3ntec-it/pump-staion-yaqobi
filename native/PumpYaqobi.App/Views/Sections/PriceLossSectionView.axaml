@@ -1,0 +1,333 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
+             x:Class="PumpYaqobi.App.Views.Sections.PriceLossSectionView"
+             x:DataType="vm:PriceLossSectionViewModel">
+
+  <!-- ══ 📉 زیان ناشی از افزایش قیمت ═══════════════════════════════════════
+       همان ‎#sec-priceloss‎ و ‎#sec-plperson‎ی نسخهٔ وب: کارت‌های خلاصه، سه
+       دکمهٔ فیلتر، جدولی که هر قرض‌دار یک ردیفِ آن است، و صفحهٔ جزئیاتِ هر
+       شخص. فقط گزارش است — هیچ عددی از این‌جا وارد بدهی یا الباقی نمی‌شود. -->
+  <Panel>
+
+    <!-- ── فهرست ─────────────────────────────────────────────────────────── -->
+    <c:SectionPage IsVisible="{Binding IsListVisible}"
+                   Header="📉 زیان ناشی از افزایش قیمت"
+                   SubHeader="زیان = (نرخِ اتحادیه در روزِ رسید − نرخِ خودِ برداشت) × لیتر. برداشت و رسیدِ همان روز ⇒ زیان صفر. زیان با بدهی یکی نیست؛ اگر بدهیِ کسی صفر شود، سابقهٔ زیانش این‌جا می‌ماند.">
+
+      <c:SectionPage.Toolbar>
+        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <Button Classes="seg" Content="همه" Command="{Binding SetFilterCommand}"
+                  CommandParameter="all" Classes.on="{Binding IsAll}" />
+          <Button Classes="seg" Content="🔴 پرداخت‌نشده" Command="{Binding SetFilterCommand}"
+                  CommandParameter="open" Classes.on="{Binding IsOpen}" />
+          <Button Classes="seg" Content="✅ پرداخت‌شده" Command="{Binding SetFilterCommand}"
+                  CommandParameter="paid" Classes.on="{Binding IsPaid}" />
+        </StackPanel>
+      </c:SectionPage.Toolbar>
+
+      <StackPanel Spacing="10">
+
+        <!-- کارت‌های بالا همیشه تصویرِ کاملِ همهٔ داده‌ها را نشان می‌دهند؛
+             فیلتر فقط می‌گوید کدام قرض‌داران در جدول دیده شوند. -->
+        <c:AutoFillPanel MinItemWidth="220" Gap="8">
+          <Border Classes="stat">
+            <StackPanel Spacing="3">
+              <TextBlock Text="قرض‌داران دارای زیان" Classes="label" />
+              <TextBlock Text="{Binding LossPersonsText}" Classes="num"
+                         Foreground="{Binding LossPersonsBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="stat">
+            <StackPanel Spacing="3">
+              <TextBlock Text="مجموع تیل باقی‌مانده" Classes="label" />
+              <TextBlock Text="{Binding FuelText}" Classes="num" Foreground="{DynamicResource Pump.Info}" />
+              <TextBlock Text="تیلی که در زمانِ رسید هنوز تسویه نشده بود و همان رسید آن را بست" Classes="muted" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+          <Border Classes="stat">
+            <StackPanel Spacing="3">
+              <TextBlock Text="مجموع مبلغ ثبت‌شده" Classes="label" />
+              <TextBlock Text="{Binding PrincipalText}" Classes="num" Foreground="{DynamicResource Pump.Accent}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="stat">
+            <StackPanel Spacing="3">
+              <TextBlock Text="مجموع ارزش با نرخ رسید" Classes="label" />
+              <TextBlock Text="{Binding RefValueText}" Classes="num" Foreground="{DynamicResource Pump.Purple}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="stat">
+            <StackPanel Spacing="3">
+              <TextBlock Text="زیان ناشی از افزایش قیمت" Classes="label" />
+              <TextBlock Text="{Binding LossText}" Classes="num"
+                         Foreground="{Binding LossBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="stat">
+            <StackPanel Spacing="3">
+              <TextBlock Text="زیان اختلاف نرخ فاکتور (از ثبت تا تایید)" Classes="label" />
+              <TextBlock Text="{Binding InvLossText}" Classes="num"
+                         Foreground="{Binding InvLossBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="stat">
+            <StackPanel Spacing="3">
+              <TextBlock Text="جمع کل زیان" Classes="label" />
+              <TextBlock Text="{Binding TotalText}" Classes="num"
+                         Foreground="{Binding TotalBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+              <TextBlock Text="جمعِ دو زیانِ بالا — این دو یک چیز نیستند" Classes="muted" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+          <Border Classes="stat">
+            <StackPanel Spacing="3">
+              <TextBlock Text="تیلِ هنوز تسویه‌نشده (بی‌زیان)" Classes="label" />
+              <TextBlock Text="{Binding OpenFuelText}" Classes="num" Foreground="{DynamicResource Pump.Muted}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="stat">
+            <StackPanel Spacing="3">
+              <TextBlock Text="رکوردهای گزارش" Classes="label" />
+              <TextBlock Text="{Binding RecordsText}" Classes="num" Foreground="{DynamicResource Pump.Info}" />
+            </StackPanel>
+          </Border>
+        </c:AutoFillPanel>
+
+        <Border Classes="panel" IsVisible="{Binding HasNoRateWarn}"
+                BorderBrush="{DynamicResource Pump.Accent}">
+          <TextBlock Text="{Binding NoRateWarn}" TextWrapping="Wrap"
+                     Foreground="{DynamicResource Pump.Accent}" />
+        </Border>
+        <Border Classes="panel" IsVisible="{Binding HasPendWarn}"
+                BorderBrush="{DynamicResource Pump.Purple}">
+          <TextBlock Text="{Binding PendWarn}" TextWrapping="Wrap"
+                     Foreground="{DynamicResource Pump.Purple}" />
+        </Border>
+
+        <!-- هر قرض‌دار فقط یک ردیف؛ دوبار کلیک (یا دکمهٔ جزئیات) صفحهٔ خودش را باز می‌کند -->
+        <Border Classes="panel" Padding="0">
+          <c:ExcelGrid ItemsSource="{Binding Rows}" x:CompileBindings="False"
+                       IsReadOnly="True" BorderThickness="0" CornerRadius="0"
+                       DoubleTapped="OnOpen">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="نام قرض‌دار" Binding="{Binding Name}" Width="Auto" MinWidth="200" />
+              <DataGridTextColumn Header="تیل باقی‌مانده" Binding="{Binding FuelText}" Width="Auto" MinWidth="250" />
+              <DataGridTextColumn Header="مبلغ ثبت‌شده" Binding="{Binding PrincipalText}" Width="Auto" MinWidth="150" />
+              <DataGridTextColumn Header="ارزش با نرخ رسید" Binding="{Binding RefValueText}" Width="Auto" MinWidth="160" />
+              <DataGridTemplateColumn Header="زیان افزایش قیمت" Width="Auto" MinWidth="150">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding LossText}" FontWeight="Bold" VerticalAlignment="Center"
+                               Foreground="{Binding LossBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="زیان نرخ فاکتور" Width="Auto" MinWidth="210">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding InvLossText}" FontWeight="Bold" VerticalAlignment="Center"
+                               Foreground="{Binding InvLossBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTextColumn Header="تعداد فاکتور" Binding="{Binding InvCountText}" Width="Auto" MinWidth="150" />
+              <DataGridTextColumn Header="تعداد برداشت تکی" Binding="{Binding SingleText}" Width="Auto" MinWidth="220" />
+              <DataGridTemplateColumn Header="جزئیات" Width="Auto" MinWidth="110">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <Button Classes="ghost info" Content="جزئیات ‹" Padding="8,2"
+                            Command="{Binding $parent[DataGrid].DataContext.OpenRowCommand}"
+                            CommandParameter="{Binding}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+            </DataGrid.Columns>
+          </c:ExcelGrid>
+        </Border>
+
+        <TextBlock Text="{Binding ShownText}" Classes="label" IsVisible="{Binding !IsEmpty}" />
+        <c:TotalsBar ItemsSource="{Binding TotalCells}" IsVisible="{Binding !IsEmpty}" />
+
+        <TextBlock Text="هنوز چیزی برای گزارش نیست — این صفحه وقتی پر می‌شود که در حسابِ یک قرض‌دار «مقدار تیل» ثبت شده باشد یا فاکتورِ تیل داشته باشد."
+                   Classes="label" TextWrapping="Wrap" IsVisible="{Binding IsEmpty}"
+                   HorizontalAlignment="Center" Margin="0,10" />
+
+        <TextBlock Classes="muted" TextWrapping="Wrap"
+                   Text="📌 برداشت تکی و فاکتور، هر دو در همین یک گزارش‌اند. فاکتور سمتِ رسید می‌نشیند: با تاییدش لیترش به‌عنوانِ اعتبار در همان حساب ثبت می‌شود و تاریخِ خودِ فاکتور تاریخِ آن رسید است. «زیان نرخ فاکتور» چیزِ دیگری است: فاکتور با قیمتِ خودش در صف می‌نشیند و روزی که تایید می‌شود نرخِ اتحادیهٔ همان لحظه رویش قفل می‌شود؛ تفاوتشان ضربدرِ لیتر، ضررِ همان فاکتور است. نرخ فقط از «نرخ اتحادیه» و فقط برای تاریخِ واقعیِ همان رسید خوانده می‌شود — نرخِ امروز جای نرخِ رسیدهای قدیمی نمی‌نشیند." />
+      </StackPanel>
+    </c:SectionPage>
+
+    <!-- ── صفحهٔ جزئیاتِ یک قرض‌دار ────────────────────────────────────────── -->
+    <Panel IsVisible="{Binding !IsListVisible}">
+      <c:SectionPage DataContext="{Binding Page}" x:CompileBindings="False"
+                     Header="{Binding Title}"
+                     SubHeader="هر برداشت با نوعِ خودش، نرخِ خودش و نرخِ اتحادیهٔ روزِ رسیدِ خودش. اگر یک برداشت با چند رسیدِ جدا تسویه شده باشد، هر تکه نرخِ روزِ رسیدِ خودش را می‌گیرد.">
+
+        <c:SectionPage.Toolbar>
+          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <Button Classes="ghost info" Content="👥 باز کردنِ حسابِ کاملِ این شخص"
+                    Command="{Binding OpenAccountCommand}" IsVisible="{Binding CanOpenAccount}" />
+            <Button Classes="accent" Content="📉 برگشت به فهرست" Command="{Binding BackCommand}" />
+          </StackPanel>
+        </c:SectionPage.Toolbar>
+
+        <StackPanel Spacing="10">
+          <c:AutoFillPanel MinItemWidth="220" Gap="8">
+            <Border Classes="stat">
+              <StackPanel Spacing="3">
+                <TextBlock Text="تیل باقی‌مانده" Classes="label" />
+                <TextBlock Text="{Binding FuelText}" Classes="num" Foreground="{DynamicResource Pump.Info}" />
+              </StackPanel>
+            </Border>
+            <Border Classes="stat">
+              <StackPanel Spacing="3">
+                <TextBlock Text="مبلغ ثبت‌شده" Classes="label" />
+                <TextBlock Text="{Binding PrincipalText}" Classes="num" Foreground="{DynamicResource Pump.Accent}" />
+              </StackPanel>
+            </Border>
+            <Border Classes="stat">
+              <StackPanel Spacing="3">
+                <TextBlock Text="ارزش با نرخ رسید" Classes="label" />
+                <TextBlock Text="{Binding RefValueText}" Classes="num" Foreground="{DynamicResource Pump.Purple}" />
+              </StackPanel>
+            </Border>
+            <Border Classes="stat">
+              <StackPanel Spacing="3">
+                <TextBlock Text="زیان افزایش قیمت" Classes="label" />
+                <TextBlock Text="{Binding LossText}" Classes="num"
+                           Foreground="{Binding LossBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+              </StackPanel>
+            </Border>
+            <Border Classes="stat">
+              <StackPanel Spacing="3">
+                <TextBlock Text="زیان اختلاف نرخ فاکتور (از ثبت تا تایید)" Classes="label" />
+                <TextBlock Text="{Binding InvLossText}" Classes="num"
+                           Foreground="{Binding InvLossBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+              </StackPanel>
+            </Border>
+            <Border Classes="stat">
+              <StackPanel Spacing="3">
+                <TextBlock Text="جمع کل زیان" Classes="label" />
+                <TextBlock Text="{Binding TotalText}" Classes="num"
+                           Foreground="{Binding TotalBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+              </StackPanel>
+            </Border>
+            <Border Classes="stat">
+              <StackPanel Spacing="3">
+                <TextBlock Text="تیلِ هنوز تسویه‌نشده (بی‌زیان)" Classes="label" />
+                <TextBlock Text="{Binding OpenFuelText}" Classes="num" Foreground="{DynamicResource Pump.Muted}" />
+              </StackPanel>
+            </Border>
+            <Border Classes="stat">
+              <StackPanel Spacing="3">
+                <TextBlock Text="رکوردها" Classes="label" />
+                <TextBlock Text="{Binding RecordsText}" Classes="num" Foreground="{DynamicResource Pump.Info}" />
+              </StackPanel>
+            </Border>
+          </c:AutoFillPanel>
+
+          <Border Classes="panel" IsVisible="{Binding HasNoRateWarn}" BorderBrush="{DynamicResource Pump.Accent}">
+            <TextBlock Text="{Binding NoRateWarn}" TextWrapping="Wrap" Foreground="{DynamicResource Pump.Accent}" />
+          </Border>
+          <Border Classes="panel" IsVisible="{Binding HasPendWarn}" BorderBrush="{DynamicResource Pump.Purple}">
+            <TextBlock Text="{Binding PendWarn}" TextWrapping="Wrap" Foreground="{DynamicResource Pump.Purple}" />
+          </Border>
+
+          <!-- 🛢️ برداشت‌های تیل -->
+          <TextBlock Text="🛢️ برداشت‌های تیل" Classes="label" FontWeight="Bold" />
+          <Border Classes="panel" Padding="0" IsVisible="{Binding HasLines}">
+            <c:ExcelGrid ItemsSource="{Binding Lines}" x:CompileBindings="False"
+                         IsReadOnly="True" BorderThickness="0" CornerRadius="0">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="تاریخ برداشت" Binding="{Binding DateText}" Width="Auto" MinWidth="190" />
+                <DataGridTextColumn Header="مقدار باقی‌مانده" Binding="{Binding QtyText}" Width="Auto" MinWidth="190" />
+                <DataGridTextColumn Header="نرخ برداشت" Binding="{Binding SaleText}" Width="Auto" MinWidth="110" />
+                <DataGridTextColumn Header="تاریخ رسید" Binding="{Binding ReceiptText}" Width="Auto" MinWidth="190" />
+                <DataGridTextColumn Header="نرخ اتحادیه روز رسید" Binding="{Binding RefText}" Width="Auto" MinWidth="230" />
+                <DataGridTemplateColumn Header="زیان" Width="Auto" MinWidth="130">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding LossText}" FontWeight="Bold" VerticalAlignment="Center"
+                                 Foreground="{Binding LossBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="وضعیت" Width="Auto" MinWidth="190">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding StatusText}" FontWeight="Bold" VerticalAlignment="Center"
+                                 Foreground="{Binding StatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="مبلغ ثبت‌شده" Binding="{Binding PrincipalText}" Width="Auto" MinWidth="140" />
+                <DataGridTextColumn Header="ارزش با نرخ رسید" Binding="{Binding RefValueText}" Width="Auto" MinWidth="150" />
+                <DataGridTemplateColumn Header="نوع" Width="Auto" MinWidth="150">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding KindText}" FontWeight="Bold" VerticalAlignment="Center"
+                                 Foreground="{Binding KindBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="نوع تیل" Binding="{Binding FuelText}" Width="Auto" />
+              </DataGrid.Columns>
+            </c:ExcelGrid>
+          </Border>
+          <c:TotalsBar ItemsSource="{Binding LineTotals}" IsVisible="{Binding HasLines}" />
+          <TextBlock Text="برای این نام هنوز برداشتِ تیلی در حسابِ قرض‌داران ثبت نشده." Classes="muted"
+                     IsVisible="{Binding !HasLines}" />
+
+          <!-- 🧾 فاکتورها -->
+          <TextBlock Text="🧾 فاکتورها" Classes="label" FontWeight="Bold" IsVisible="{Binding HasInvoices}" />
+          <TextBlock Classes="muted" TextWrapping="Wrap" IsVisible="{Binding HasInvoices}"
+                     Text="قیمتِ خودِ فاکتور در برابرِ نرخِ اتحادیه در لحظهٔ زدنِ «تایید»؛ تفاوتشان ضربدرِ لیتر، ضررِ همان فاکتور است. فاکتورِ تاییدشده در جدولِ بالا هم به‌عنوانِ «رسید» نشسته و لیترش همان‌جا شمرده شده." />
+          <Border Classes="panel" Padding="0" IsVisible="{Binding HasInvoices}">
+            <c:ExcelGrid ItemsSource="{Binding Invoices}" x:CompileBindings="False"
+                         IsReadOnly="True" BorderThickness="0" CornerRadius="0">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="شماره" Binding="{Binding NumberText}" Width="Auto" MinWidth="140" />
+                <DataGridTextColumn Header="تاریخ" Binding="{Binding DateText}" Width="Auto" />
+                <DataGridTextColumn Header="مقدار" Binding="{Binding LitersText}" Width="Auto" MinWidth="130" />
+                <DataGridTextColumn Header="نرخ ثبت فاکتور" Binding="{Binding RcText}" Width="Auto" />
+                <DataGridTextColumn Header="نرخ اتحادیه روز تایید" Binding="{Binding RaText}" Width="Auto" MinWidth="260" />
+                <DataGridTemplateColumn Header="تفاوت هر لیتر" Width="Auto" MinWidth="220">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding DplText}" FontWeight="Bold" VerticalAlignment="Center"
+                                 Foreground="{Binding DiffBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="ضرر این فاکتور" Width="Auto" MinWidth="280">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding LossText}" FontWeight="Bold" VerticalAlignment="Center"
+                                 Foreground="{Binding DiffBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="وضعیت" Width="Auto" MinWidth="190">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding StatusText}" FontWeight="Bold" VerticalAlignment="Center"
+                                 Foreground="{Binding StatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="مبلغ فاکتور" Binding="{Binding AmountText}" Width="Auto" MinWidth="140" />
+                <DataGridTextColumn Header="نوع تیل" Binding="{Binding FuelText}" Width="Auto" />
+              </DataGrid.Columns>
+            </c:ExcelGrid>
+          </Border>
+          <c:TotalsBar ItemsSource="{Binding InvoiceTotals}" IsVisible="{Binding HasInvoices}" />
+
+          <TextBlock Classes="muted" TextWrapping="Wrap"
+                     Text="📌 زیان با بدهی یکی نیست. بدهی همان چیزی است که مشتری باید بپردازد؛ زیانِ افزایش قیمت اختلافِ ارزشِ همان تیل بین نرخِ خودِ برداشت و نرخِ اتحادیه در روزِ رسید است. این صفحه فقط گزارش است: هیچ عددی از این‌جا وارد بدهی، الباقی، موجودی یا حسابداری نمی‌شود." />
+        </StackPanel>
+      </c:SectionPage>
+    </Panel>
+  </Panel>
+</UserControl>

@@ -686,6 +686,9 @@ public sealed partial class MainViewModel : ObservableObject
                                     "⛽ قرض‌های دسته‌جمعی — واحد تیل");
             By("debtrasid")?.AddSub(new DebtSummarySectionViewModel(host, true, Open),
                                     "💵 قرض‌های دسته‌جمعی — واحد پول");
+            // «📉 زیان ناشی از افزایش قیمت» — کارتِ بخشِ قرض‌دارانِ سایت
+            // (‎sec-priceloss‎ و ‎sec-plperson‎). تا امروز در برنامه نبود.
+            debt.AddSub(new PriceLossSectionViewModel(host, Open), "📉 زیان ناشی از افزایش قیمت");
         }
         By("profit")?.AddSub(new MonthReportSectionViewModel(host),    "📅 گزارش پایان ماه");
         By("profit")?.AddSub(new RateHistorySectionViewModel(host),    "📈 تاریخچهٔ نرخ اتحادیه");

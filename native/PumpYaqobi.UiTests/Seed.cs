@@ -91,6 +91,22 @@ internal static class Seed
             }
         }
 
+        // یک نرخِ اتحادیه و یک رسیدِ تاریخ‌دار — تا «زیان ناشی از افزایش قیمت» خالی نباشد
+        host.Tools.RecordRateAsync(PumpYaqobi.Domain.Enums.FuelType.Petrol, 70m).GetAwaiter().GetResult();
+        {
+            var d = host.Debtors.ListAsync().GetAwaiter().GetResult().First();
+            var full = host.Debtors.LoadFullAsync(d.Id).GetAwaiter().GetResult()!;
+            // عددِ بی‌تاریخِ سربرگ همهٔ قرض را دست‌نخورده می‌بلعید — این یکی رسیدِ تاریخ‌دار می‌گیرد
+            full.MainAccount.RasidFuelPetrol = 0m;
+            full.MainAccount.ReceiptsMigrated = true;
+            host.Debtors.UpdateAccountAsync(full.MainAccount).GetAwaiter().GetResult();
+            host.Debtors.SaveRowAsync(new DebtRow
+            {
+                FuelAccountId = full.MainAccount.Id, SortIndex = 7, DateShamsi = Shamsi.Today(),
+                Name = "رسیدِ تیل", Fuel = PumpYaqobi.Domain.Enums.FuelType.Petrol, RasidFuel = 45,
+            }).GetAwaiter().GetResult();
+        }
+
         // شرکت‌های تیل — دو دفترِ جدا
         for (var k = 1; k <= 5; k++)
         {

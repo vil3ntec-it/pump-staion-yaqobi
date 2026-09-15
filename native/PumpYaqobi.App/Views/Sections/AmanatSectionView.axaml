@@ -18,6 +18,8 @@
           <Button Classes="ghost" Content="خلاصه و ابزارها" Margin="0,0,6,0" />
           <Button Classes="ghost info" Content="PDF" Margin="0,0,6,0"
                   Command="{Binding PdfCommand}" />
+          <Button Classes="seg" Content="⚙️ تنظیمات مدیر" Margin="0,0,6,0"
+                  Classes.on="{Binding ShowSettings}" Command="{Binding ToggleSettingsCommand}" />
           <Button Classes="accent" Content="حساب جدید" Command="{Binding AddAccountCommand}" />
         </WrapPanel>
       </c:SectionPage.Toolbar>
@@ -35,6 +37,88 @@
                   Command="{Binding ClearFuelCommand}" />
         </StackPanel>
       </c:SectionPage.Filters>
+
+      <StackPanel Spacing="10">
+
+        <!-- ══ ⚙️ تنظیمات مدیر — ضریب‌های محاسبه ═══════════════════════════
+             همان ‎#am-settings‎ی سایت (§۲۰): نُه ضریب، فرمول، جدولِ «تبخیر در هر
+             گرما» و منابع. هر خانه همان لحظه ذخیره می‌شود و همهٔ حساب‌ها از نو
+             حساب می‌شوند. -->
+        <Panel IsVisible="{Binding ShowSettings}">
+        <Border Classes="panel"
+                DataContext="{Binding SettingsEditor}" x:DataType="vm:AmanatSettingsEditorViewModel">
+          <StackPanel Spacing="10">
+            <TextBlock Text="⚙️ تنظیمات مدیر — ضریب‌های محاسبه" Classes="label" FontWeight="Bold" />
+            <c:AutoFillPanel MinItemWidth="200" Gap="8">
+              <StackPanel Spacing="3">
+                <TextBlock Text="پایه: درصد کمبودی ماهانه (٪)" Classes="muted" TextWrapping="Wrap" />
+                <TextBox Text="{Binding BasePct}" />
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Text="ضریب پطرول" Classes="muted" />
+                <TextBox Text="{Binding FPetrol}" />
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Text="ضریب دیزل" Classes="muted" />
+                <TextBox Text="{Binding FDiesel}" />
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Text="ضریب مخزن (۱ = روی زمین · ۰٫۵ = زیرزمینی)" Classes="muted" TextWrapping="Wrap" />
+                <TextBox Text="{Binding TankFactor}" ToolTip.Tip="مخزن زیرزمینی آفتاب نمی‌خورد، پس بخارش کمتر است" />
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Text="درجه گرمای پیش‌فرض (°C)" Classes="muted" />
+                <TextBox Text="{Binding DefTemp}" />
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Text="حاشیهٔ اطمینانِ فیصدی (٪)" Classes="muted" />
+                <TextBox Text="{Binding SafetyPct}" ToolTip.Tip="فیصدیِ پیشنهادی = فیصدیِ سربه‌سر + همین درصد از خودش" />
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Text="دمای مرجعِ پایه (°C)" Classes="muted" />
+                <TextBox Text="{Binding RefTemp}" ToolTip.Tip="پایه در همین دما شمرده می‌شود" />
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Text="هر چند درجه، تبخیر دو برابر" Classes="muted" />
+                <TextBox Text="{Binding TDouble}" ToolTip.Tip="فشارِ بخارِ پطرول تقریباً هر ۱۰ درجه دو برابر می‌شود" />
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Text="کمبودیِ اندازه‌گیری و ریخت‌وپاش (٪)" Classes="muted" TextWrapping="Wrap" />
+                <TextBox Text="{Binding HandlingPct}" ToolTip.Tip="تبخیر نیست — خطای پیمانه و ریخت‌وپاش. روی «فیصدیِ لازم» اضافه می‌شود." />
+              </StackPanel>
+            </c:AutoFillPanel>
+
+            <TextBlock Text="{Binding FormulaText}" Classes="muted" TextWrapping="Wrap" />
+
+            <TextBlock Text="🌡️ تبخیر در هر گرما — با همین تنظیمات" Classes="label" Foreground="{DynamicResource Pump.Ok}" />
+            <Border Classes="panel" Padding="0">
+              <c:ExcelGrid ItemsSource="{Binding TempRows}" x:CompileBindings="False"
+                           IsReadOnly="True" BorderThickness="0" CornerRadius="0">
+                <DataGrid.Columns>
+                  <DataGridTemplateColumn Header="گرما" Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding TempText}" FontWeight="Bold" VerticalAlignment="Center"
+                                   Foreground="{Binding NearBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTextColumn Header="ضریب" Binding="{Binding FactorText}" Width="Auto" />
+                  <DataGridTextColumn Header="تبخیر در ماه" Binding="{Binding MonthText}" Width="Auto" />
+                  <DataGridTextColumn Header="تبخیر در سال" Binding="{Binding YearText}" Width="Auto" />
+                  <DataGridTextColumn Header="انبساط گرمایی (تبخیر نیست — با سرد شدن برمی‌گردد)" Binding="{Binding ThermalText}" Width="Auto" />
+                </DataGrid.Columns>
+              </c:ExcelGrid>
+            </Border>
+
+            <TextBlock Text="📚 این عددها از کجا آمده‌اند" Classes="label" Foreground="{DynamicResource Pump.Ok}" />
+            <TextBlock Text="{Binding SourcesText}" Classes="muted" TextWrapping="Wrap" />
+
+            <Button Classes="ghost" Content="📚 برگشت به ضریب‌های منبع" HorizontalAlignment="Right"
+                    Command="{Binding ResetCommand}" />
+          </StackPanel>
+        </Border>
+        </Panel>
 
               <Panel>
           <TextBlock Text="{Binding EmptyText}" Classes="muted" HorizontalAlignment="Center"
@@ -106,7 +190,8 @@
             </ItemsRepeater.ItemTemplate>
           </ItemsRepeater>
         </Panel>
-      
+      </StackPanel>
+
     </c:SectionPage>
 
     <!-- ══ صفحهٔ یک حساب ══

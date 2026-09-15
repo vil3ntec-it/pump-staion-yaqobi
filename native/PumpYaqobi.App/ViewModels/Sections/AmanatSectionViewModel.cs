@@ -336,9 +336,22 @@ public sealed partial class AmanatSectionViewModel : SectionViewModel
             (m, ok) => host.Toast(m, ok ? ToastKind.Ok : ToastKind.Warn));
         _host = host;
         Settings = host.Amanat.Settings();
+        SettingsEditor = new AmanatSettingsEditorViewModel(host.AmanatCalc, host.Amanat.SaveSettings, RefreshAsync);
+        SettingsEditor.Fill(Settings);
     }
 
     public AmanatSettings Settings { get; private set; }
+
+    /// <summary>«⚙️ تنظیمات مدیر» — ‎toggleAmanatSettings‎؛ کادرش زیرِ نوارِ فیلتر باز می‌شود.</summary>
+    public AmanatSettingsEditorViewModel SettingsEditor { get; }
+    [ObservableProperty] private bool _showSettings;
+
+    [RelayCommand]
+    private void ToggleSettings()
+    {
+        ShowSettings = !ShowSettings;
+        if (ShowSettings) SettingsEditor.Fill(_host.Amanat.Settings());
+    }
 
     /// <summary>کارت‌های دیده‌شده — پس از جست‌وجو و فیلترِ سوخت.</summary>
     public ObservableCollection<AmanatCardViewModel> Cards { get; } = new();
@@ -384,6 +397,7 @@ public sealed partial class AmanatSectionViewModel : SectionViewModel
     public async Task RefreshAsync()
     {
         Settings = _host.Amanat.Settings();
+        if (Settings != SettingsEditor.Current) SettingsEditor.Fill(Settings);
         var list = new List<AmanatAccountViewModel>();
         foreach (var fuel in new[] { FuelType.Petrol, FuelType.Diesel })
             foreach (var a in await _host.Amanat.ListAsync(fuel))
@@ -492,5 +506,181 @@ public sealed partial class AmanatSectionViewModel : SectionViewModel
         _all.Remove(vm);
         if (ReferenceEquals(Page, vm)) Page = null;
         ApplyFilter();
+    }
+}
+
+/// <summary>یک ردیفِ جدولِ «در هر گرما چقدر تبخیر می‌شود» — ‎_amTempTableHtml‎.</summary>
+public sealed class AmanatTempRowViewModel
+{
+    public AmanatTempRowViewModel(decimal temp, double factor, decimal perMonth, decimal thermalPct, bool near)
+    {
+        // ‎_amFmt(n, dec)‎ — تا ‎dec‎ رقمِ اعشار، بی صفرهای انتهایی («۱×»، نه «۱٫۰۰×»)
+        TempText = F(temp, 0) + "°C";
+        FactorText = F((decimal)factor, 2) + "×";
+        MonthText = F(perMonth, 3) + "٪";
+        YearText = F(perMonth * 12m, 3) + "٪";
+        ThermalText = (thermalPct >= 0m ? "+" : "−") + F(Math.Abs(thermalPct), 2) + "٪";
+        IsNear = near;
+    }
+
+    private static string F(decimal v, int d) =>
+        Math.Round(v, d).ToString(d <= 0 ? "0" : "0." + new string('#', d),
+                                  System.Globalization.CultureInfo.InvariantCulture);
+
+    public string TempText { get; }
+    public string FactorText { get; }
+    public string MonthText { get; }
+    public string YearText { get; }
+    /// <summary>انبساطِ گرمایی — تبخیر نیست و با سرد شدن برمی‌گردد.</summary>
+    public string ThermalText { get; }
+    /// <summary>نزدیک‌ترین ردیف به گرمای پیش‌فرض — در سایت پررنگ می‌شود.</summary>
+    public bool IsNear { get; }
+    public string NearBrushKey => IsNear ? "Pump.Ok" : "Pump.Text";
+}
+
+/// <summary>
+/// ══ ⚙️ تنظیمات مدیر — ضریب‌های محاسبهٔ تیل امانت ═══════════════════════════
+/// همتای ‎#am-settings‎ · ‎fillAmanatSettings‎ · ‎setAmanatSetting‎ ·
+/// ‎resetAmanatSettings‎ی سایت. تا امروز برنامه این ضریب‌ها را فقط می‌خواند
+/// و هیچ‌جا نمی‌شد عوضشان کرد.
+///
+/// هر خانه مثلِ سایت ‎oninput‎ است: تا عدد عوض شود، همان لحظه ذخیره می‌شود و
+/// همهٔ حساب‌ها دوباره حساب می‌شوند. عددِ خراب یا خالی همان پیش‌فرضِ همان
+/// ضریب حساب می‌شود (‎amSettings()‎ همین کار را می‌کند).
+///
+/// ⚠️ فرمول‌ها این‌جا نیستند — <see cref="AmanatService"/> است. این‌جا فقط
+/// خانه‌های تایپ و همان جدولِ راهنمای «تبخیر در هر گرما».
+/// </summary>
+public sealed partial class AmanatSettingsEditorViewModel : ObservableObject
+{
+    /// <summary>دماهای جدولِ راهنما — ‎AM_TEMP_ROWS‎.</summary>
+    private static readonly decimal[] TempRowsC = { 0, 10, 15, 20, 25, 30, 35, 40, 45, 50 };
+
+    /// <summary>منابعِ ضریب‌ها — ‎AM_SOURCES‎.</summary>
+    public static readonly IReadOnlyList<(string Title, string Url)> Sources = new[]
+    {
+        ("پژوهشِ میدانیِ تبخیرِ مخزنِ پطرول — با میانگین دمای ۳۲٫۶°C، بیش از ۰٫۵۲٪ در سال",
+         "https://www.researchgate.net/publication/274376940_MANAGEMENT_OF_EVAPORATION_LOSSES_OF_GASOLINE'S_STORAGE_TANKS"),
+        ("تبخیرِ پطرول و دیزل در انبارش — دیزل در برابر پطرول ناچیز",
+         "https://link.springer.com/article/10.1007/s10553-021-01304-0"),
+        ("آمارِ رسمیِ کانادا با مدلِ EPA — کلِ تبخیرِ یک پمپ ۰٫۱۵٪ِ گردشِ تیل",
+         "https://www150.statcan.gc.ca/n1/pub/16-001-m/2012015/part-partie1-eng.htm"),
+        ("همان — روشِ محاسبهٔ تبخیر و اثرِ دمای مخزنِ زیرزمینی",
+         "https://www150.statcan.gc.ca/n1/pub/16-001-m/2012015/appendix-appendice1-eng.htm"),
+    };
+
+    private readonly AmanatService _calc;
+    private readonly Action<AmanatSettings> _save;
+    private readonly Func<Task> _refresh;
+    private bool _filling;
+
+    public AmanatSettingsEditorViewModel(AmanatService calc, Action<AmanatSettings> save, Func<Task> refresh)
+    { _calc = calc; _save = save; _refresh = refresh; Fill(AmanatSettings.Default); }
+
+    [ObservableProperty] private string _basePct = "";
+    [ObservableProperty] private string _fPetrol = "";
+    [ObservableProperty] private string _fDiesel = "";
+    [ObservableProperty] private string _tankFactor = "";
+    [ObservableProperty] private string _defTemp = "";
+    [ObservableProperty] private string _safetyPct = "";
+    [ObservableProperty] private string _refTemp = "";
+    [ObservableProperty] private string _tDouble = "";
+    [ObservableProperty] private string _handlingPct = "";
+
+    [ObservableProperty] private string _formulaText = "";
+    public BulkRows<AmanatTempRowViewModel> TempRows { get; } = new();
+    public string SourcesText => string.Join("\n", Sources.Select(s => "• " + s.Title + "\n  " + s.Url));
+
+    /// <summary>تنظیمِ در حالِ اثر — همان که آخرین بار ذخیره شد.</summary>
+    public AmanatSettings Current { get; private set; } = AmanatSettings.Default;
+
+    /// <summary>‎fillAmanatSettings‎ — خانه‌ها را از تنظیمِ ذخیره‌شده پر می‌کند، بی ذخیرهٔ دوباره.</summary>
+    public void Fill(AmanatSettings s)
+    {
+        _filling = true;
+        try
+        {
+            Current = s;
+            BasePct = N(s.BasePct); FPetrol = N(s.FPetrol); FDiesel = N(s.FDiesel);
+            TankFactor = N(s.TankFactor); DefTemp = N(s.DefTemp); SafetyPct = N(s.SafetyPct);
+            RefTemp = N(s.RefTemp); TDouble = N(s.TDouble); HandlingPct = N(s.HandlingPct);
+        }
+        finally { _filling = false; }
+        Describe(s);
+    }
+
+    private static string N(decimal v) => v.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>‎_amNum‎ — رقمِ فارسی هم پذیرفته می‌شود؛ خراب یا خالی ⇒ پیش‌فرضِ همان ضریب.</summary>
+    public static decimal Num(string? v, decimal fallback) =>
+        decimal.TryParse(Shamsi.ToEnDigits(v ?? "").Trim().Replace('٫', '.').Replace(',', '.'),
+                         System.Globalization.NumberStyles.Float,
+                         System.Globalization.CultureInfo.InvariantCulture, out var n)
+            ? n : fallback;
+
+    /// <summary>خانه‌های تایپ → تنظیم. هر خانهٔ خراب همان پیش‌فرضِ خودش می‌شود.</summary>
+    public AmanatSettings Parse()
+    {
+        var d = AmanatSettings.Default;
+        return Current with
+        {
+            BasePct = Num(BasePct, d.BasePct), FPetrol = Num(FPetrol, d.FPetrol), FDiesel = Num(FDiesel, d.FDiesel),
+            TankFactor = Num(TankFactor, d.TankFactor), DefTemp = Num(DefTemp, d.DefTemp),
+            SafetyPct = Num(SafetyPct, d.SafetyPct), RefTemp = Num(RefTemp, d.RefTemp),
+            TDouble = Num(TDouble, d.TDouble), HandlingPct = Num(HandlingPct, d.HandlingPct),
+        };
+    }
+
+    partial void OnBasePctChanged(string v) => Apply();
+    partial void OnFPetrolChanged(string v) => Apply();
+    partial void OnFDieselChanged(string v) => Apply();
+    partial void OnTankFactorChanged(string v) => Apply();
+    partial void OnDefTempChanged(string v) => Apply();
+    partial void OnSafetyPctChanged(string v) => Apply();
+    partial void OnRefTempChanged(string v) => Apply();
+    partial void OnTDoubleChanged(string v) => Apply();
+    partial void OnHandlingPctChanged(string v) => Apply();
+
+    /// <summary>‎setAmanatSetting‎ — ذخیره و حسابِ دوبارهٔ همهٔ حساب‌ها، همان لحظه.</summary>
+    private void Apply()
+    {
+        if (_filling) return;
+        var s = Parse();
+        if (s == Current) return;
+        Current = s;
+        _save(s);
+        Describe(s);
+        _ = _refresh();
+    }
+
+    /// <summary>‎resetAmanatSettings‎ — «📚 برگشت به ضریب‌های منبع».</summary>
+    [RelayCommand]
+    private Task Reset()
+    {
+        _save(AmanatSettings.Default);
+        Fill(AmanatSettings.Default);
+        return _refresh();
+    }
+
+    /// <summary>متنِ فرمول و جدولِ «تبخیر در هر گرما» — ‎fillAmanatSettings‎ + ‎_amTempTableHtml‎.</summary>
+    private void Describe(AmanatSettings s)
+    {
+        FormulaText =
+            "ضریب گرما = ۲ ^ ((گرما − " + Shamsi.Money(s.RefTemp) + ") ÷ " + Shamsi.Money(s.TDouble) + ")"
+            + " — یعنی هر " + Shamsi.Money(s.TDouble) + " درجه، تبخیر دو برابر می‌شود.\n"
+            + "تبخیر = مقدار تیل × (پایه ÷ ۱۰۰) × (روز ÷ ۳۰) × ضریب گرما × ضریب تیل × ضریب مخزن\n"
+            + "فیصدیِ لازم = فیصدیِ هدفِ شما + درصد تبخیر"
+            + (s.HandlingPct != 0m ? " + " + Shamsi.Money(Math.Round(s.HandlingPct, 2), 2) + "٪ (اندازه‌گیری و ریخت‌وپاش)" : "");
+
+        var ff = _calc.FuelFactor(FuelType.Petrol, s);
+        var rows = new List<AmanatTempRowViewModel>();
+        foreach (var t in TempRowsC)
+        {
+            var f = _calc.TempFactor(t, s);
+            var perMonth = s.BasePct * (decimal)f * ff * s.TankFactor;      // ٪ در ماه
+            var th = _calc.Thermal(1m, t, FuelType.Petrol, s).Pct;
+            rows.Add(new AmanatTempRowViewModel(t, f, perMonth, th, Math.Abs(t - s.DefTemp) < 2.5m));
+        }
+        TempRows.ResetTo(rows);
     }
 }

@@ -46,6 +46,7 @@ public class SubSectionTests
     [InlineData("tanker", "storage")]
     [InlineData("staffshort", "attendance")]
     [InlineData("oldloans", "debt")]
+    [InlineData("priceloss", "debt")]
     [InlineData("monthreport", "profit")]
     [InlineData("ratehist", "profit")]
     [InlineData("datamgmt", "settings")]

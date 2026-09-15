@@ -257,12 +257,16 @@ public sealed class DebtorService
     /// ترتیبِ جدولِ روی صفحه است (‎SortIndex‎ بعد ‎Id‎)، تا هر نمایی که از این
     /// می‌خواند همان چیزی را ببیند که کاربر در برنامه می‌بیند.
     ///
-    /// ⚠️ «دفترِ رسیدهای سربرگ» (‎RasidLog‎) عمداً نمی‌آید: این تابع برای
+    /// ⚠️ «دفترِ رسیدهای سربرگ» (‎RasidLog‎) پیش‌فرض نمی‌آید: این تابع برای
     /// <b>خواندن و نشان دادن</b> است، نه برای ویرایش. هر کسی که می‌خواهد
-    /// چیزی را عوض کند باید از <see cref="LoadFullAsync"/> برود.
+    /// چیزی را عوض کند باید از <see cref="LoadFullAsync"/> برود. گزارشی که
+    /// تاریخِ واقعیِ هر رسید را لازم دارد («زیان ناشی از افزایش قیمت»)
+    /// ‎withReceipts‎ می‌دهد و همان دفتر را هم — باز هم فقط برای خواندن —
+    /// با یک پرس‌وجو می‌گیرد.
     /// </summary>
     public async Task<List<Debtor>> LoadAllAsync(bool noInvoice = false,
-                                                 CancellationToken ct = default)
+                                                 CancellationToken ct = default,
+                                                 bool withReceipts = false)
     {
         _perm.Require(Permission.ViewData);
         await using var db = _dbf.Create();
@@ -300,6 +304,16 @@ public sealed class DebtorService
                 // و ردیفِ دفترِ پول ‎MoneyAccountId‎ — هرگز هر دو.
                 if (r.FuelAccountId is { } f && byAcct.TryGetValue(f, out var fa)) fa.FuelRows.Add(r);
                 else if (r.MoneyAccountId is { } m && byAcct.TryGetValue(m, out var ma)) ma.MoneyRows.Add(r);
+            }
+
+            if (withReceipts)
+            {
+                var log = await db.RasidEntries.AsNoTracking()
+                    .Where(e => accIds.Contains(e.AccountId))
+                    .OrderBy(e => e.SortIndex).ThenBy(e => e.Id)
+                    .ToListAsync(ct);
+                foreach (var e in log)
+                    if (byAcct.TryGetValue(e.AccountId, out var a)) a.RasidLog.Add(e);
             }
         }
 
