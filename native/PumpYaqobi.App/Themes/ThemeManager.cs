@@ -70,6 +70,12 @@ public static class ThemeManager
         Br("Dark", t.Dark);
         Br("Panel", t.Panel);
         Br("Card", t.Card);
+        // ══ سه طبقه ═══════════════════════════════════════════════════════
+        // بدنهٔ کادرِ بخش بینِ بوم و کارتِ داخلی می‌نشیند، و کادرِ تایپ یک پله
+        // از پنل تیره‌تر است — تا «جای خالیِ بغلِ کادر» با خودِ کادر و کادرِ
+        // تایپ با کارتش یک رنگ نباشند (شرحش بالای ‎PumpTheme.SectionBg‎).
+        Br("Section", t.SectionBg);
+        Br("Input", Mix(t.Panel, t.Dark, t.IsDark ? 0.45 : 0.5));
         Br("Border", t.Border);
         Br("Text", t.Text);
         Br("Muted", t.Muted);

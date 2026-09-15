@@ -124,6 +124,11 @@
   <Style Selector="Border.card.flush">
     <Setter Property="Padding" Value="0" />
   </Style>
+  <!-- بدنهٔ کادرِ بخش: یک پله بینِ بوم و کارت‌های داخلی (‎Pump.Section‎)، تا
+       کارتِ داخلی و جای خالیِ دورش یک رنگ نباشند — شرحش در ‎PumpTheme.SectionBg‎. -->
+  <Style Selector="Border.card.section">
+    <Setter Property="Background" Value="{DynamicResource Pump.Section}" />
+  </Style>
 
   <Style Selector="Border.panel">
     <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
@@ -338,7 +343,7 @@
        حلقهٔ فوکوس هم‌رنگِ برند است، مثلِ ‎.xls-in:focus‎ نسخهٔ وب. -->
   <Style Selector="TextBox">
     <Setter Property="FontFamily" Value="{StaticResource Pump.Font}" />
-    <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
+    <Setter Property="Background" Value="{DynamicResource Pump.Input}" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
     <Setter Property="BorderThickness" Value="1" />
@@ -371,7 +376,7 @@
   </Style>
   <Style Selector="ComboBox">
     <Setter Property="FontFamily" Value="{StaticResource Pump.Font}" />
-    <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
+    <Setter Property="Background" Value="{DynamicResource Pump.Input}" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
     <Setter Property="CornerRadius" Value="8" />
@@ -878,7 +883,7 @@
   <Style Selector="c|SectionPage">
     <Setter Property="Template">
       <ControlTemplate>
-        <Border Classes="card flush" Margin="16,14">
+        <Border Classes="card flush section" Margin="16,14">
           <Grid RowDefinitions="Auto,*">
 
             <!-- ══ سربرگِ کادر ══ -->
@@ -1171,7 +1176,7 @@
 
   <!-- خانهٔ «خودکار» — خوانده می‌شود، تایپ نمی‌شود -->
   <Style Selector="Border.calc">
-    <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
+    <Setter Property="Background" Value="{DynamicResource Pump.Input}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="8" />

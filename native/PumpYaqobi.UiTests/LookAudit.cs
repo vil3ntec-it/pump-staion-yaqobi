@@ -49,6 +49,12 @@ internal static class LookAudit
     /// <summary>کم‌ترین نسبتِ کنتراستِ لبه با سطحی که دورش کشیده شده.</summary>
     private const double MinRim = 1.18;
 
+    /// <summary>
+    /// کم‌ترین پلهٔ هر طبقه از طبقهٔ زیرش (بوم ← بدنهٔ بخش ← پنل ← کادرِ تایپ).
+    /// کم‌تر از پلهٔ کارت است چون سه پله پشتِ هم روی هم جمع می‌شوند.
+    /// </summary>
+    private const double MinLayer = 1.06;
+
     /// <summary>بیشترین جایی که فلشِ کشویی حق دارد در خانهٔ جدول بخورد.</summary>
     private const double MaxGlyph = 6.0;
 
@@ -132,6 +138,25 @@ internal static class LookAudit
                 if (!ok)
                     bad.Add($"{t.Title} · «{name}»: پله از بوم {step:0.00}× (کمینه {MinStep:0.00}×) "
                           + $"و جداییِ لبه {rim:0.00}× (کمینه {MinRim:0.00}×)");
+            }
+
+            // ══ سه طبقه ═══════════════════════════════════════════════════
+            // گزارشِ دومِ صاحب ریپو با عکس: «کادرها باید با جاهای خالیِ بغلشان
+            // فرق کنند». جای خالیِ بغلِ کارتِ داخلی، بدنهٔ بخش است (‎Pump.Section‎)
+            // نه بوم؛ و کادرِ تایپ داخلِ همان کارت می‌نشیند. پس دو پلهٔ دیگر:
+            //   کارتِ داخلی (پنل) از بدنهٔ بخش، و کادرِ تایپ از پنل.
+            if (Res("Pump.Section") is { } section && Res("Pump.Panel") is { } panel
+                && Res("Pump.Input") is { } input)
+            {
+                var s1 = Ratio(panel, section);
+                var s2 = Ratio(input, panel);
+                var s0 = Ratio(section, canvas);
+                var ok = s0 >= MinLayer && s1 >= MinLayer && s2 >= MinLayer;
+                Console.WriteLine($"{t.Id,-9} {"طبقه‌ها",-12} {Hex(section),10} "
+                                + $"بدنه/بوم {s0:0.00}×  پنل/بدنه {s1:0.00}×  تایپ/پنل {s2:0.00}×   {(ok ? "✔" : "✖")}");
+                if (!ok)
+                    bad.Add($"{t.Title} · طبقه‌ها: بدنه/بوم {s0:0.00}× پنل/بدنه {s1:0.00}× تایپ/پنل {s2:0.00}× "
+                          + $"(هر سه کمینه {MinLayer:0.00}×)");
             }
         }
 
