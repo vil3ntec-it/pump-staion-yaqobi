@@ -98,6 +98,7 @@ public static class Suggest
 
     /// <summary>برای سنجش: پاپ‌آپ باز است و چند پیشنهاد دارد؟</summary>
     public static int Showing => _popup is { IsOpen: true } ? _items.Count : 0;
+    public static int Active => _active;
 
     /// <summary>به یک کادرِ تایپ وصل می‌شود: نام‌دار + آموخته‌ها.</summary>
     public static void Attach(TextBox box, IReadOnlyList<string> named, IReadOnlyList<string> learned)

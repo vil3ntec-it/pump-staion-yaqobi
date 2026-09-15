@@ -606,11 +606,14 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
             OnPropertyChanged(nameof(HeadDieselRasidEdit));
         }, Avalonia.Threading.DispatcherPriority.Background);
 
-    /// <summary>ردیفی که هیچ چیزی در آن نوشته نشده — جای طبیعیِ رسیدِ تازه.</summary>
+    /// <summary>
+    /// ردیفی که هیچ چیزی در آن نوشته نشده — جای طبیعیِ رسیدِ تازه.
+    /// ⚠️ تاریخ شمرده نمی‌شود: «➕ ردیف» خودش تاریخِ امروز را می‌گذارد، پس ردیفِ
+    /// خالیِ تازه هم تاریخ دارد (سنجشِ ‎verify‎ همین را گرفت — رسید تهِ جدول می‌رفت).
+    /// </summary>
     private static bool IsBlank(DebtRow r) =>
         r.Liters == 0m && r.Rasid == 0m && r.RasidFuel == 0m && r.Bardagi == 0m
-        && string.IsNullOrWhiteSpace(r.Name) && string.IsNullOrWhiteSpace(r.Hawala)
-        && string.IsNullOrWhiteSpace(r.DateShamsi);
+        && string.IsNullOrWhiteSpace(r.Name) && string.IsNullOrWhiteSpace(r.Hawala);
 
     /// <summary>
     /// رسیدِ سربرگ **از اول** در جدول می‌نشیند، نه تهِ آن. خواستهٔ صاحب ریپو:

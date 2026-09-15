@@ -67,6 +67,7 @@ internal static class Program
         //     dotnet run --project PumpYaqobi.UiTests -- rowcost
         if (outDir.Equals("rowcost", StringComparison.OrdinalIgnoreCase)) return RowCost.Run();
         if (outDir.Equals("vanish", StringComparison.OrdinalIgnoreCase)) return VanishProbe.Run();
+        if (outDir.Equals("verify", StringComparison.OrdinalIgnoreCase)) return VerifyProbe.Run();
         // ══ «پردهٔ لودینگ کارش را می‌کند؟» ═════════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- warm
         if (outDir.Equals("warm", StringComparison.OrdinalIgnoreCase)) return WarmAudit.Run();

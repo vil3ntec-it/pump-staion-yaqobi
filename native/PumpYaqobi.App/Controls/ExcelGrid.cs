@@ -1701,18 +1701,18 @@ public class ExcelGrid : DataGrid
             // ‎Backspace‎ اصلاً دیده نمی‌شد. در اکسل هر دو خانه را خالی
             // می‌کنند (‎Backspace‎ علاوه بر آن ویرایش را هم باز می‌کند، ولی
             // این‌جا تفاوتش برای کاربر صفر است چون بعدش بی‌درنگ تایپ می‌کند).
-            case Key.Delete or Key.Back when !_editing && !IsReadOnly && ClearSelectedCells():
-                e.Handled = true;
-                return;
-
             // ══ Ctrl+Delete: حذفِ ردیفِ جاری ══════════════════════════════════
             // گزارشِ صاحب ریپو: «حذفِ یک ردیف گم شده… جوری باشه که جا نگیره.»
             // ستونِ حذف جا می‌گرفت و برداشته شد؛ راست‌کلیک هست ولی کسی نمی‌داند.
             // پس یک کلید هم: ‎Ctrl+Delete‎ همان فرمانِ حذفِ همان ردیف را می‌زند
-            // (که خودش می‌پرسد). و ‎ToolTip‎ی سرستونِ ردیف همین را می‌گوید.
+            // ⚠️ پیش از ‎Delete‎ی خالی‌کننده، وگرنه آن یکی می‌بلعدش (سنجشِ ‎verify‎).
             case Key.Delete when !_editing && e.KeyModifiers.HasFlag(KeyModifiers.Control)
                                  && RowDeleteCommand is { } del && SelectedItem is { } cur:
                 if (del.CanExecute(cur)) del.Execute(cur);
+                e.Handled = true;
+                return;
+
+            case Key.Delete or Key.Back when !_editing && !IsReadOnly && ClearSelectedCells():
                 e.Handled = true;
                 return;
         }
