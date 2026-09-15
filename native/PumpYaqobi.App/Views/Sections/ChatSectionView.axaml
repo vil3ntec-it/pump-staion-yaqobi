@@ -7,10 +7,11 @@
 
   <!-- ══ پیام‌رسان ══════════════════════════════════════════════════════════
        یک بخشِ کاملِ خودش، نه پنجرهٔ شناور — خواستهٔ صریحِ صاحب ریپو.
-       چپ: فهرستِ گفت‌وگوها · راست: خودِ گفت‌وگو و کادرِ نوشتن. -->
+       چپ: فهرستِ گفت‌وگوها (کارمندان + مشتری‌های کیو‌آر) · راست: خودِ گفت‌وگو.
+       حباب‌ها مثلِ واتساپ: نام، متن یا عکس/ویدیو/صدا، ساعت، و دکمهٔ پاک کردن. -->
   <c:SectionPage Header="{Binding Title}" SubHeader="{Binding State}">
 
-    <Grid ColumnDefinitions="240,*" Height="560" Margin="14">
+    <Grid ColumnDefinitions="260,*" Height="620" Margin="14">
 
       <!-- ── فهرستِ گفت‌وگوها ── -->
       <Border Grid.Column="0" Classes="panel" Margin="0,0,10,0" Padding="0">
@@ -22,7 +23,9 @@
                 <StackPanel Grid.Column="0" Spacing="2">
                   <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="13.5"
                              TextAlignment="Start" TextTrimming="CharacterEllipsis" />
-                  <TextBlock Text="{Binding Preview}" Classes="card-sub" Margin="0" />
+                  <TextBlock Text="{Binding Subtitle}" FontSize="10.5" TextAlignment="Start"
+                             Foreground="{DynamicResource Pump.Muted}" />
+                  <TextBlock Text="{Binding Preview}" Classes="card-sub" Margin="0" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
                 <Border Grid.Column="1" Classes="pill" IsVisible="{Binding HasUnread}"
                         Background="{DynamicResource Pump.Danger}" Padding="7,2"
@@ -37,30 +40,56 @@
       </Border>
 
       <!-- ── گفت‌وگو ── -->
-      <Grid Grid.Column="1" RowDefinitions="*,Auto">
+      <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto">
 
-        <Border Grid.Row="0" Classes="panel" Padding="10">
+        <!-- سرِ گفت‌وگو: نام، حال، بلاک -->
+        <Border Grid.Row="0" Classes="panel" Padding="10,8" Margin="0,0,0,8"
+                IsVisible="{Binding Current.IsSupport, FallbackValue=False}">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Grid.Column="0" Spacing="1">
+              <TextBlock Text="{Binding Current.Title}" FontWeight="ExtraBold" FontSize="14" TextAlignment="Start" />
+              <TextBlock Text="{Binding Current.Subtitle}" FontSize="11" TextAlignment="Start"
+                         Foreground="{DynamicResource Pump.Muted}" />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="ghost danger" Content="{Binding Current.BlockText}"
+                    Command="{Binding ToggleBlockCommand}" Padding="12,4"
+                    ToolTip.Tip="مشتریِ بلاک‌شده نمی‌تواند بنویسد، ولی می‌تواند حسابش را ببیند" />
+          </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Classes="panel" Padding="10">
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding Current.Messages}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:ChatMessageViewModel">
                   <!-- حبابِ پیام — مالِ خودم سمتِ دیگر و رنگی -->
-                  <!-- جهتِ حباب را سبک تعیین می‌کند، نه مبدل: یک قاعده در
-                       Controls.axaml برای ‎.bubble‎ و یکی برای ‎.bubble.mine‎. -->
                   <Border Classes="bubble" Classes.mine="{Binding Mine}">
-                    <StackPanel Spacing="2">
-                      <TextBlock Text="{Binding Sender}" FontSize="11" FontWeight="ExtraBold"
-                                 TextAlignment="Start"
-                                 Foreground="{DynamicResource Pump.Accent}" />
-                      <TextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="13.5"
-                                 TextAlignment="Start" />
-                      <StackPanel Orientation="Horizontal" Spacing="6">
-                        <TextBlock Text="{Binding Time}" FontSize="10.5"
-                                   Foreground="{DynamicResource Pump.Muted}" />
-                        <TextBlock Text="در صف" FontSize="10.5" IsVisible="{Binding IsPending}"
-                                   Foreground="{DynamicResource Pump.Warn}" />
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Grid.Column="0" Spacing="3">
+                        <TextBlock Text="{Binding Sender}" FontSize="11" FontWeight="ExtraBold"
+                                   TextAlignment="Start"
+                                   Foreground="{DynamicResource Pump.Accent}" />
+                        <TextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="13.5"
+                                   TextAlignment="Start" IsVisible="{Binding IsText}" />
+                        <TextBlock Text="🚫 این پیام پاک شد" FontSize="12" FontStyle="Italic"
+                                   Foreground="{DynamicResource Pump.Muted}" IsVisible="{Binding Deleted}" />
+                        <Image Source="{Binding Image}" MaxWidth="320" MaxHeight="320" Stretch="Uniform"
+                               HorizontalAlignment="Left" IsVisible="{Binding IsImage}" />
+                        <Button Classes="ghost" Content="{Binding MediaLabel}" IsVisible="{Binding IsMedia}"
+                                Command="{Binding $parent[ItemsControl].((vm:ChatSectionViewModel)DataContext).OpenMediaCommand}"
+                                CommandParameter="{Binding}" Padding="8,3" HorizontalAlignment="Left" />
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                          <TextBlock Text="{Binding Time}" FontSize="10.5"
+                                     Foreground="{DynamicResource Pump.Muted}" />
+                          <TextBlock Text="در صف" FontSize="10.5" IsVisible="{Binding IsPending}"
+                                     Foreground="{DynamicResource Pump.Warn}" />
+                        </StackPanel>
                       </StackPanel>
-                    </StackPanel>
+                      <Button Grid.Column="1" Classes="ghost danger" Content="🗑" Padding="6,0" FontSize="12"
+                              VerticalAlignment="Top" IsVisible="{Binding CanDelete}" ToolTip.Tip="پاک کردن"
+                              Command="{Binding $parent[ItemsControl].((vm:ChatSectionViewModel)DataContext).DeleteMessageCommand}"
+                              CommandParameter="{Binding}" />
+                    </Grid>
                   </Border>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
@@ -69,10 +98,22 @@
         </Border>
 
         <!-- ── نوشتن ── -->
-        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,10,0,0">
-          <TextBox Grid.Column="0" Text="{Binding Draft}" Watermark="پیام…"
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,10,0,0">
+          <Button Grid.Column="0" Classes="ghost" Content="📎" Padding="10,4" FontSize="15"
+                  ToolTip.Tip="عکس یا ویدیو" Command="{Binding AttachCommand}"
+                  IsVisible="{Binding Current.IsSupport, FallbackValue=False}" />
+          <Button Grid.Column="1" Classes="ghost" Content="{Binding RecordText}" Padding="10,4"
+                  Classes.danger="{Binding Recording}" Command="{Binding RecordCommand}" Margin="4,0,0,0">
+            <Button.IsVisible>
+              <MultiBinding Converter="{x:Static BoolConverters.And}">
+                <Binding Path="Current.IsSupport" FallbackValue="False" />
+                <Binding Path="CanRecord" />
+              </MultiBinding>
+            </Button.IsVisible>
+          </Button>
+          <TextBox Grid.Column="2" Text="{Binding Draft}" Watermark="پیام…" Margin="6,0,0,0"
                    AcceptsReturn="False" />
-          <Button Grid.Column="1" Classes="accent" Content="فرستادن" Margin="8,0,0,0"
+          <Button Grid.Column="3" Classes="accent" Content="فرستادن" Margin="8,0,0,0"
                   Command="{Binding SendCommand}" IsDefault="True" />
         </Grid>
       </Grid>

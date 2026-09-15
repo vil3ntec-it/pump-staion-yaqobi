@@ -119,8 +119,8 @@ public sealed class StorageReport : ISetupDocument
             cd.RelativeColumn(0.5f);   // #
             cd.RelativeColumn(1.3f);   // تاریخ
             cd.RelativeColumn(2.0f);   // فروشنده
-            cd.RelativeColumn(1.1f);   // وزن (کگ)
-            cd.RelativeColumn(1.0f);   // تن
+            // ⛔ ستونِ «وزن (کگ)» برداشته شد — صاحب ریپو: «کیلو نباشد»
+            cd.RelativeColumn(1.1f);   // تن
             cd.RelativeColumn(0.9f);   // تقلت
             cd.RelativeColumn(1.1f);   // لیتر
             cd.RelativeColumn(1.1f);   // فی تن ($)
@@ -133,7 +133,7 @@ public sealed class StorageReport : ISetupDocument
         DocStyle.Head(t, cell =>
         {
             void Th(string s) => DocStyle.ThText(cell(), s);
-            Th("#"); Th("تاریخ"); Th("فروشنده"); Th("وزن (کگ)"); Th("تن"); Th("تقلت");
+            Th("#"); Th("تاریخ"); Th("فروشنده"); Th("تن"); Th("تقلت");
             Th("لیتر"); Th("فی تن ($)"); Th("نرخ دالر"); Th("کل ($)");
             Th("کل (افغانی)"); Th("فی لیتر (افغ)");
         });
@@ -149,7 +149,6 @@ public sealed class StorageReport : ISetupDocument
             Td(PersianText.Num(n), DocStyle.Index);
             Td(DocStyle.Dash(p.DateShamsi), DocStyle.Hawala);
             Td(DocStyle.Dash(p.Seller));
-            Td(PersianText.Num(p.Kg));
             Td(PersianText.Ton(num.Ton));
             Td(PersianText.Num(p.Density));
             Td(R(num.Liters), DocStyle.Fuel);

@@ -141,12 +141,10 @@
                        نه نُه کادرِ تایپی. ویرایشِ خرید هم در سایت نیست: خریدِ
                        اشتباه پاک می‌شود و دوباره ثبت. -->
                   <c:AutoFillPanel MinItemWidth="150" Gap="8" Margin="14">
-                    <Border Classes="stat" MinHeight="70">
-                      <StackPanel Spacing="3">
-                        <TextBlock Text="وزن (کگ)" Classes="label" />
-                        <TextBlock Text="{Binding KgText}" FontWeight="ExtraBold" />
-                      </StackPanel>
-                    </Border>
+                    <!-- ⛔ کادرِ «وزن (کگ)» برداشته شد — خواستهٔ صاحب ریپو:
+                         «موقعِ خرید دو نوع اندازه است، یکی کیلو یکی تن؛ کیلو نباشد.»
+                         ‎Kg‎ در داده می‌ماند (تن × ۱۰۰۰) تا فرمول‌ها و فایل‌های
+                         کهنه دست نخورند. -->
                     <Border Classes="stat" MinHeight="70">
                       <StackPanel Spacing="3">
                         <TextBlock Text="وزن (تن)" Classes="label" />
@@ -333,8 +331,8 @@
 
             <Grid ColumnDefinitions="*,12,*">
               <StackPanel Grid.Column="0" Spacing="4">
-                <TextBlock Text="وزن (کیلوگرم)" Classes="label" />
-                <TextBox Text="{Binding BuyKg}" Watermark="مثلاً 5320" />
+                <TextBlock Text="وزن (تن)" Classes="label" />
+                <TextBox Text="{Binding BuyTon}" Watermark="مثلاً 5.32" />
               </StackPanel>
               <StackPanel Grid.Column="2" Spacing="4">
                 <TextBlock Text="ثقلت (چگالی)" Classes="label" />

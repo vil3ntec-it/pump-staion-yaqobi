@@ -366,6 +366,13 @@
     <Setter Property="Background" Value="{DynamicResource Pump.Danger}" />
     <Setter Property="TextBlock.Foreground" Value="White" />
   </Style>
+  <!-- دکمهٔ پشتیبانی رنگِ تاکید، نه سرخ — سرخ مالِ «قفل» است -->
+  <Style Selector="Button.pill-btn.support">
+    <Setter Property="Background" Value="{DynamicResource Pump.Accent}" />
+  </Style>
+  <Style Selector="Button.pill-btn.support /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Pump.Accent}" />
+  </Style>
 
   <!-- ══ ورودی‌ها ═══════════════════════════════════════════════════════════
        قدِ همهٔ کادرها و دکمه‌ها یکی است (۳۶ پیکسل) تا در یک ردیف هم‌تراز

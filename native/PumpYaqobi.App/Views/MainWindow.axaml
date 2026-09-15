@@ -120,6 +120,20 @@
                   Padding="11,5">
             <TextBlock Text="{Binding RoleText}" FontSize="12.5" FontWeight="ExtraBold" Foreground="White" />
           </Border>
+          <!-- 💬 پشتیبانی — پیام‌های مشتری‌های کیو‌آر، همیشه جلوی چشم (خواستهٔ
+               صاحب ریپو: «چتِ بخشِ پمپ رو ببرن بالا جای قفل و غیره»). با
+               نخوانده، شماره می‌گیرد. -->
+          <Button Classes="pill-btn support" FontSize="12.5" FontWeight="ExtraBold" Padding="13,5"
+                  Command="{Binding GoCommand}" CommandParameter="{Binding Chat}"
+                  ToolTip.Tip="پیام‌رسان و پشتیبانیِ مشتری‌ها">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Text="💬 پشتیبانی" FontSize="12.5" FontWeight="ExtraBold" Foreground="White" />
+              <Border Classes="pill" Background="White" Padding="6,0" IsVisible="{Binding Chat.HasSupportUnread}">
+                <TextBlock Text="{Binding Chat.SupportUnread}" FontSize="11" FontWeight="ExtraBold"
+                           Foreground="{DynamicResource Pump.Danger}" />
+              </Border>
+            </StackPanel>
+          </Button>
           <!-- ماشین‌حسابِ شناور — هر جای برنامه، با همین دکمه یا ‎Ctrl+K‎ -->
           <Button Classes="pill-btn" Content="ماشین‌حساب" FontSize="12.5" FontWeight="ExtraBold"
                   Padding="13,5" Command="{Binding Calculator.ToggleCommand}"

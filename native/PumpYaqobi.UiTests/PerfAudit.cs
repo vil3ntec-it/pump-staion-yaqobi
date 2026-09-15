@@ -561,7 +561,7 @@ internal static class PerfAudit
         ins.Set("UpdatedAt", now);
     }
 
-    private static void Exec(DbConnection c, string sql)
+    internal static void Exec(DbConnection c, string sql)
     {
         using var cmd = c.CreateCommand();
         cmd.CommandText = sql;
@@ -574,7 +574,7 @@ internal static class PerfAudit
     /// ⚠️ دستور و پارامترها یک‌بار ساخته می‌شوند و بعد فقط مقدارشان عوض
     /// می‌شود: با سیصد هزار ردیف، ساختنِ دوبارهٔ دستور خودش دقیقه‌ها می‌شد.
     /// </summary>
-    private sealed class Insert : IDisposable
+    internal sealed class Insert : IDisposable
     {
         private readonly DbCommand _cmd;
         private readonly Dictionary<string, DbParameter> _p = new();
@@ -608,8 +608,10 @@ internal static class PerfAudit
             }
 
             _cmd = c.CreateCommand();
+            // ⚠️ نامِ ستون‌ها در گیومه: جدولِ حاضری ستونی به نامِ ‎In‎ دارد که
+            // واژهٔ رزروِ SQL است و بی گیومه ‎INSERT‎ همان‌جا می‌شکست.
             _cmd.CommandText =
-                $"INSERT INTO {table} ({string.Join(", ", cols)}) VALUES " +
+                $"INSERT INTO \"{table}\" ({string.Join(", ", cols.Select(x => "\"" + x + "\""))}) VALUES " +
                 $"({string.Join(", ", cols.Select(x => "@" + x))}); SELECT last_insert_rowid();";
             foreach (var col in cols)
             {

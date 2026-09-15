@@ -198,6 +198,9 @@ public sealed partial class MainViewModel : ObservableObject
     };
     public ObservableCollection<PumpTheme> Themes { get; }
 
+    /// <summary>پیام‌رسان — برای دکمهٔ «💬 پشتیبانی»ی سربرگ و شمارهٔ نخوانده‌هایش.</summary>
+    public ChatSectionViewModel Chat => Sections.OfType<ChatSectionViewModel>().First();
+
     [ObservableProperty] private SectionViewModel? _current;
 
     /// <summary>

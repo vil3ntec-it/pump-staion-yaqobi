@@ -8,6 +8,41 @@ namespace PumpYaqobi.App.Services;
 /// <param name="Ok">شد یا نشد.</param>
 /// <param name="Why">اگر نشد، چرا — به فارسیِ خودِ سرور، برای نشان دادن به کاربر.</param>
 /// <param name="Code">کدِ ماشینیِ خطا، اگر سرور داده باشد.</param>
+/// <summary>یک پیامِ چتِ پشتیبانی، همان‌طور که ابر می‌دهد.</summary>
+public sealed record CloudChatMessage(string Id, long Seq, string Acct, string From, string Name,
+                                      string Kind, string Text, string? MediaId, long At, bool Deleted)
+{
+    public bool FromCustomer => From == "c";
+
+    public static CloudChatMessage? Parse(JsonElement m, string acctFallback = "")
+    {
+        if (m.ValueKind != JsonValueKind.Object) return null;
+        string S(string k) => m.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
+        long N(string k) => m.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt64(out var n) ? n : 0;
+        var id = S("id");
+        if (id.Length == 0) return null;
+        var acct = S("acct");
+        var media = S("mediaId");
+        return new CloudChatMessage(id, N("seq"), acct.Length > 0 ? acct : acctFallback, S("from"), S("name"),
+            S("kind").Length > 0 ? S("kind") : "text", S("text"), media.Length > 0 ? media : null, N("at"),
+            m.TryGetProperty("deleted", out var d) && d.ValueKind == JsonValueKind.True);
+    }
+
+    public static List<CloudChatMessage> ParseList(JsonElement json, string acctFallback = "")
+    {
+        var list = new List<CloudChatMessage>();
+        if (json.ValueKind == JsonValueKind.Object && json.TryGetProperty("messages", out var arr)
+            && arr.ValueKind == JsonValueKind.Array)
+            foreach (var m in arr.EnumerateArray())
+                if (Parse(m, acctFallback) is { } x) list.Add(x);
+        return list;
+    }
+}
+
+/// <summary>یک گفت‌وگوی پشتیبانی از دیدِ صاحبِ پمپ.</summary>
+public sealed record CloudChatThread(string Acct, string Name, bool Blocked, int Unread, long UpdatedAt,
+                                     CloudChatMessage? Last);
+
 public sealed record CloudResult(bool Ok, string Why = "", string Code = "")
 {
     public static readonly CloudResult Done = new(true);
@@ -237,6 +272,120 @@ public sealed class CloudLink
         var (ok, _, why, code) = await PutAsync("/api/pump/device/files/" + Uri.EscapeDataString(name.Trim()),
             new { data }, _settings.CloudDeviceToken, ct);
         return ok ? CloudResult.Done : CloudResult.No(why, code);
+    }
+
+    // ── چتِ پشتیبانی — مشتریِ کیو‌آر ↔ صاحبِ پمپ ────────────────────────
+    //
+    // خواستهٔ صاحب ریپو: «داخلِ کیو‌آر یک چتِ پشتیبانی با من داشته باشد… عینِ
+    // واتساپ.» مشتری با رمزِ حسابش روی ابر می‌نویسد؛ این‌ها همان درها از
+    // سمتِ برنامه‌اند (‎/api/pump/device/chat/…‎ با توکنِ دستگاه).
+
+    /// <summary>گفت‌وگوها با نخوانده‌ها و آخرین پیام.</summary>
+    public async Task<(bool Ok, List<CloudChatThread> Threads, string Why)> ChatThreadsAsync(CancellationToken ct = default)
+    {
+        if (!Activated) return (false, new(), "فعال نشده");
+        var (ok, json, why, _) = await GetAsync("/api/pump/device/chat/threads", _settings.CloudDeviceToken, ct);
+        if (!ok) return (false, new(), why);
+        var list = new List<CloudChatThread>();
+        if (json.TryGetProperty("threads", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            foreach (var t in arr.EnumerateArray())
+            {
+                CloudChatMessage? last = t.TryGetProperty("last", out var l) && l.ValueKind == JsonValueKind.Object
+                    ? CloudChatMessage.Parse(l, Str(t, "acct")) : null;
+                list.Add(new CloudChatThread(Str(t, "acct"), Str(t, "name"),
+                    t.TryGetProperty("blocked", out var b) && b.ValueKind == JsonValueKind.True,
+                    (int)Num(t, "unread"), Num(t, "updatedAt"), last));
+            }
+        return (true, list, "");
+    }
+
+    /// <summary>همهٔ پیام‌های تازهٔ همهٔ گفت‌وگوها بعد از ‎after‎.</summary>
+    public async Task<(bool Ok, List<CloudChatMessage> Messages, string Why)> ChatInboxAsync(long after, CancellationToken ct = default)
+    {
+        if (!Activated) return (false, new(), "فعال نشده");
+        var (ok, json, why, _) = await GetAsync("/api/pump/device/chat/inbox?after=" + after, _settings.CloudDeviceToken, ct);
+        if (!ok) return (false, new(), why);
+        return (true, CloudChatMessage.ParseList(json), "");
+    }
+
+    /// <summary>پیامِ متنی یا رسانه‌ای به یک حساب. ‎kind‎ی خالی یعنی متن.</summary>
+    public async Task<(bool Ok, CloudChatMessage? Message, string Why)> ChatSendAsync(
+        string acct, string name, string text, string kind = "", string? mediaId = null, CancellationToken ct = default)
+    {
+        if (!Activated) return (false, null, "فعال نشده");
+        object body = string.IsNullOrEmpty(kind)
+            ? new { name, text }
+            : new { name, kind, mediaId };
+        var (ok, json, why, _) = await PostAsync("/api/pump/device/chat/" + Uri.EscapeDataString(acct), body, _settings.CloudDeviceToken, ct);
+        if (!ok) return (false, null, why);
+        return (true, json.TryGetProperty("message", out var m) ? CloudChatMessage.Parse(m, acct) : null, "");
+    }
+
+    /// <summary>بالا بردنِ عکس/ویدیو/صدا — خام، با نوعش. خروجی شناسهٔ رسانه.</summary>
+    public async Task<(bool Ok, string MediaId, string Why)> ChatUploadAsync(
+        string acct, byte[] bytes, string mime, CancellationToken ct = default)
+    {
+        if (!Activated) return (false, "", "فعال نشده");
+        var req = new HttpRequestMessage(HttpMethod.Post,
+            CloudConfig.BaseUrl + "/api/pump/device/chat/" + Uri.EscapeDataString(acct) + "/media")
+        {
+            Content = new ByteArrayContent(bytes),
+        };
+        req.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mime);
+        req.Headers.Add("Authorization", $"Bearer {_settings.CloudDeviceToken}");
+        var (ok, json, why, _) = await Send(req, ct);
+        return ok ? (true, Str(json, "mediaId"), "") : (false, "", why);
+    }
+
+    /// <summary>خودِ رسانه — بایت‌ها و نوعش. ‎null‎ یعنی نرسید.</summary>
+    public async Task<(byte[] Bytes, string Mime)?> ChatMediaAsync(string mediaId, CancellationToken ct = default)
+    {
+        if (!Activated || string.IsNullOrWhiteSpace(mediaId)) return null;
+        try
+        {
+            var req = new HttpRequestMessage(HttpMethod.Get,
+                CloudConfig.BaseUrl + "/api/pump/device/chat/media/" + Uri.EscapeDataString(mediaId));
+            req.Headers.Add("Authorization", $"Bearer {_settings.CloudDeviceToken}");
+            using var res = await Http.SendAsync(req, ct);
+            if (!res.IsSuccessStatusCode) return null;
+            var bytes = await res.Content.ReadAsByteArrayAsync(ct);
+            return (bytes, res.Content.Headers.ContentType?.MediaType ?? "application/octet-stream");
+        }
+        catch { return null; }
+    }
+
+    /// <summary>پاک کردنِ نرمِ یک پیام (هر پیامی — صاحبِ پمپ است).</summary>
+    public async Task<CloudResult> ChatDeleteAsync(string messageId, CancellationToken ct = default)
+    {
+        if (!Activated) return CloudResult.No("فعال نشده", "not_activated");
+        var req = new HttpRequestMessage(HttpMethod.Delete,
+            CloudConfig.BaseUrl + "/api/pump/device/chat/message/" + Uri.EscapeDataString(messageId));
+        req.Headers.Add("Authorization", $"Bearer {_settings.CloudDeviceToken}");
+        var (ok, _, why, code) = await Send(req, ct);
+        return ok ? CloudResult.Done : CloudResult.No(why, code);
+    }
+
+    /// <summary>بلاک / رفعِ بلاکِ یک مشتری.</summary>
+    public async Task<CloudResult> ChatBlockAsync(string acct, bool blocked, CancellationToken ct = default)
+    {
+        if (!Activated) return CloudResult.No("فعال نشده", "not_activated");
+        var req = new HttpRequestMessage(blocked ? HttpMethod.Post : HttpMethod.Delete,
+            CloudConfig.BaseUrl + "/api/pump/device/chat/" + Uri.EscapeDataString(acct) + "/block")
+        {
+            Content = blocked ? JsonContent.Create(new { }) : null,
+        };
+        req.Headers.Add("Authorization", $"Bearer {_settings.CloudDeviceToken}");
+        var (ok, _, why, code) = await Send(req, ct);
+        return ok ? CloudResult.Done : CloudResult.No(why, code);
+    }
+
+    /// <summary>«تا این‌جا خواندم» — نخوانده‌های همان گفت‌وگو صفر می‌شود.</summary>
+    public async Task<bool> ChatSeenAsync(string acct, long seq, CancellationToken ct = default)
+    {
+        if (!Activated) return false;
+        var (ok, _, _, _) = await PostAsync("/api/pump/device/chat/" + Uri.EscapeDataString(acct) + "/seen",
+            new { seq }, _settings.CloudDeviceToken, ct);
+        return ok;
     }
 
     /// <summary>کدِ کوتاهی که کارمند با آن به این پمپ می‌پیوندد.</summary>

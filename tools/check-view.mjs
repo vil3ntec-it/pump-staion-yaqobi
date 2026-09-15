@@ -31,8 +31,29 @@ function makePage(hash, fetchImpl) {
     _click: null,
     addEventListener(type, fn) { if (type === 'click') this._click = fn; },
   };
+  // عنصرِ ساختگی برای صفحهٔ چت: ‎innerHTML‎ می‌گیرد و ‎querySelector('#id')‎ یک
+  // کادرِ تایپ با ‎value‎ی ماندگار می‌دهد — همین‌قدر که چت واقعاً اجرا شود.
+  function fakeEl() {
+    const el = {
+      className: '', innerHTML: '', _attrs: {}, _inputs: {},
+      setAttribute(k, v) { this._attrs[k] = v; },
+      addEventListener() {},
+      appendChild() {},
+      querySelector(sel) {
+        const id = String(sel).replace(/^#/, '');
+        if (!this.innerHTML.includes('id="' + id + '"')) return null;
+        if (!this._inputs[id]) this._inputs[id] = { id, value: '', scrollTop: 0 };
+        return this._inputs[id];
+      },
+    };
+    return el;
+  }
+  const body = { children: [], appendChild(el) { this.children.push(el); } };
   const ctx = {
-    document: { getElementById: (id) => (id === 'app' ? app : null), title: '' },
+    document: {
+      getElementById: (id) => (id === 'app' ? app : null), title: '',
+      createElement: () => fakeEl(), body,
+    },
     location: { hash },
     window: { print() { ctx.window._printed = true; }, _printed: false },
     atob, Blob, Response, DecompressionStream, console,
@@ -52,7 +73,8 @@ function makePage(hash, fetchImpl) {
     const el = { getAttribute: (k) => (k === 'data-act' ? act : k === 'data-v' ? v : null) };
     app._click({ target: { closest: () => el } });
   };
-  return { app, ctx, click, get html() { return app.innerHTML; } };
+  return { app, ctx, click, body, get html() { return app.innerHTML; },
+           get chat() { return body.children[0] || null; } };
 }
 
 const encode = (obj) =>
@@ -159,15 +181,20 @@ const okJson = (body, status = 200) => ({
 });
 const calls = [];
 const newer = { ...snapV2, n: 'محمد هارون (تازه)', d: '1405/06/25' };
-const fresh = makePage(liveHash, async (url) => { calls.push(url); return okJson({ at: 2000, d: newer }); });
+//  ⚠️ چت هم از همان ‎fetch‎ می‌پرسد؛ این‌جا فقط درخواست‌های خودِ کیو‌آرِ زنده شمرده می‌شوند.
+const liveCalls = () => calls.filter((u) => /\/acct\/d7\?k=/.test(u));
+const fresh = makePage(liveHash, async (url) => {
+  calls.push(url);
+  return /\/chat/.test(url) ? okJson({ ok: true, messages: [] }) : okJson({ at: 2000, d: newer });
+});
 await settle();
 ok(fresh.html.includes('محمد هارون (تازه)'), 'عکسِ تازه‌ترِ ابر جای دادهٔ داخلِ کد نشست');
 ok(fresh.html.includes('زنده — آخرین بررسی'), 'نشانِ سبزِ «زنده» با ساعتِ بررسی');
-ok(calls.length === 1 && calls[0].startsWith('https://api.vill3n.top/api/pump/public/pump1/acct/d7?k=abc123'),
-   'از نشانیِ قفل‌شدهٔ ابر، با کدِ پمپ و شناسه و رمزِ همین حساب می‌پرسد: ' + calls[0]);
+ok(liveCalls().length === 1 && liveCalls()[0].startsWith('https://api.vill3n.top/api/pump/public/pump1/acct/d7?k=abc123'),
+   'از نشانیِ قفل‌شدهٔ ابر، با کدِ پمپ و شناسه و رمزِ همین حساب می‌پرسد: ' + liveCalls()[0]);
 fresh.click('refresh');
 await settle();
-ok(calls.length === 2, 'دکمهٔ «به‌روز کن» دوباره می‌پرسد');
+ok(liveCalls().length === 2, 'دکمهٔ «به‌روز کن» دوباره می‌پرسد');
 
 const older = makePage(liveHash, async () => okJson({ at: 500, d: newer }));
 await settle();
@@ -192,6 +219,95 @@ const tailFirst = makePage('#d=' + encode(snapV2) + '&s=pump1&a=d7&k=abc123&t=1'
                            async () => okJson({ at: 2, d: newer }));
 await settle();
 ok(tailFirst.html.includes('(تازه)'), 'پارامترها بعد از d= هم خوانده می‌شوند');
+
+console.log('\n۱۱) چتِ پشتیبانی — «داخلِ کیو‌آر یک چت با من داشته باشد»');
+{
+  const calls = [];
+  let seq = 0;
+  const serverMsgs = [];
+  const fetchChat = async (url, opt = {}) => {
+    calls.push({ url, method: opt.method || 'GET', body: opt.body, headers: opt.headers || {} });
+    const u = String(url);
+    if (u.includes('/acct/d7?k=')) return okJson({ at: 500, d: snapV2 });           // کیو‌آرِ زنده — کهنه‌تر
+    if (u.includes('/chat/seen')) return okJson({ ok: true });
+    if (u.includes('/chat/push')) return okJson({ ok: true }, 201);
+    if (u.includes('/chat/media?')) return okJson({ ok: true, mediaId: 'med1', kind: 'image' }, 201);
+    if (/\/chat\/msg\d+\?k=/.test(u) && opt.method === 'DELETE') {
+      const id = /\/chat\/(msg\d+)\?/.exec(u)[1];
+      const m = serverMsgs.find((x) => x.id === id);
+      m.deleted = true; m.text = '';
+      return okJson({ ok: true, message: m });
+    }
+    if (u.includes('/chat?k=') && opt.method === 'POST') {
+      const b = JSON.parse(opt.body);
+      const m = { id: 'msg' + (++seq), seq, from: 'c', name: b.name, kind: b.kind || 'text', text: b.text || '',
+                  mediaId: b.mediaId || null, at: 1700000000000, deleted: false };
+      serverMsgs.push(m);
+      return okJson({ ok: true, message: m }, 201);
+    }
+    if (u.includes('/chat?k=')) {
+      const after = parseInt((/after=(\d+)/.exec(u) || [0, 0])[1], 10) || 0;
+      return okJson({ ok: true, blocked: false, name: '', vapid: 'BAbc', messages: serverMsgs.filter((m) => m.seq > after) });
+    }
+    return okJson({}, 404);
+  };
+
+  // صاحبِ پمپ از قبل یک پیام گذاشته
+  serverMsgs.push({ id: 'msg' + (++seq), seq, from: 'o', name: 'پمپ یعقوبی', kind: 'text', text: 'سلام، بفرمایید',
+                    at: 1700000000000, deleted: false });
+
+  const pg = makePage(liveHash, fetchChat);
+  await settle();
+  ok(pg.html.includes('data-act="chat-open"'), 'دکمهٔ شناورِ «پشتیبانی» روی کیو‌آرِ زنده هست');
+  ok(pg.html.includes('<span class="n">1</span>'), 'پیامِ نخواندهٔ پمپ روی دکمه شمرده می‌شود');
+  ok(pg.chat !== null && pg.chat.className.includes('hidden'), 'صفحهٔ چت ساخته شده ولی پنهان است');
+
+  pg.click('chat-open');
+  await settle();
+  ok(!pg.chat.className.includes('hidden'), 'با ضربه باز می‌شود');
+  ok(pg.chat.innerHTML.includes('سلام، بفرمایید') && pg.chat.innerHTML.includes('پمپ یعقوبی'),
+     'پیامِ پمپ با نامش در حباب دیده می‌شود');
+  ok(pg.chat.innerHTML.includes('id="chatNameIn"'), 'بارِ اول نامِ مشتری را می‌پرسد');
+  ok(calls.some((c) => c.url.includes('/chat/seen')), 'با باز شدن، «خوانده شد» به سرور می‌رود');
+
+  pg.chat.querySelector('#chatNameIn').value = 'هارون';
+  pg.click('chat-name');
+  await settle();
+  ok(pg.chat.innerHTML.includes('id="chatText"'), 'بعد از نام، کادرِ پیام می‌آید');
+  //  در این DOMِ کوچک ‎navigator‎/‎PushManager‎ نیست ⇒ دکمه نباید بیاید (مرورگرِ بی‌پوش)
+  ok(!pg.chat.innerHTML.includes('data-act="chat-push"'), 'بی پشتیبانیِ پوش در مرورگر، دکمهٔ «خبرم کن» نمی‌آید');
+
+  pg.chat.querySelector('#chatText').value = 'حسابم درست است؟';
+  pg.click('chat-send');
+  await settle();
+  const posted = calls.find((c) => c.method === 'POST' && c.url.includes('/chat?k='));
+  ok(!!posted && JSON.parse(posted.body).name === 'هارون' && JSON.parse(posted.body).text === 'حسابم درست است؟',
+     'پیام با نامِ مشتری فرستاده می‌شود');
+  ok(pg.chat.innerHTML.includes('حسابم درست است؟') && pg.chat.innerHTML.includes('class="msg me"'),
+     'حبابِ خودش سمتِ خودش می‌نشیند');
+  ok(pg.chat.innerHTML.includes('data-act="chat-del"'), 'پیامِ خودش دکمهٔ پاک کردن دارد');
+
+  pg.click('chat-del', 'msg2');
+  await settle();
+  ok(calls.some((c) => c.method === 'DELETE' && c.url.includes('/chat/msg2?k=')), 'پاک کردن به سرور می‌رود');
+  ok(pg.chat.innerHTML.includes('این پیام پاک شد') && !pg.chat.innerHTML.includes('حسابم درست است؟'),
+     'جای پیام می‌ماند ولی متنش می‌رود');
+
+  // صاحبِ پمپ عکس می‌فرستد ⇒ با گرفتنِ بعدی، حبابِ عکس
+  serverMsgs.push({ id: 'msg' + (++seq), seq, from: 'o', name: 'پمپ', kind: 'image', text: '', mediaId: 'medX',
+                    at: 1700000000000, deleted: false });
+  pg.click('chat-close'); await settle();
+  pg.click('chat-open'); await settle();
+  ok(pg.chat.innerHTML.includes('/chat/media/medX?k=abc123') && pg.chat.innerHTML.includes('<img'),
+     'عکسِ پمپ از همان درِ رمزدار نشان داده می‌شود');
+  ok(!calls.some((c) => c.url.includes('LIVE_API') || !c.url.startsWith('https://api.vill3n.top/')),
+     'همهٔ درخواست‌ها به نشانیِ قفل‌شدهٔ ابر می‌روند');
+
+  // کیو‌آرِ ایستا: نه دکمه، نه چت
+  const st = makePage('#d=' + encode(snapV2), fetchChat);
+  await settle();
+  ok(!st.html.includes('chat-open') && st.chat === null, 'کیو‌آرِ ایستا (بی رمز) چت ندارد');
+}
 
 console.log(bad === 0 ? '\n✅ صفحهٔ view/ سالم است\n' : `\n❌ ${bad} ایراد\n`);
 process.exit(bad === 0 ? 0 : 1);
