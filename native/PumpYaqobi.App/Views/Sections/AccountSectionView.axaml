@@ -53,6 +53,22 @@
       <Setter Property="FontSize" Value="14.5" />
       <Setter Property="FontWeight" Value="Bold" />
     </Style>
+    <Style Selector="Border.stepchip">
+      <Setter Property="CornerRadius" Value="999" />
+      <Setter Property="Padding" Value="11,3" />
+      <Setter Property="Background" Value="{DynamicResource Pump.Input}" />
+    </Style>
+    <Style Selector="Border.stepchip TextBlock">
+      <Setter Property="FontSize" Value="11.5" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
+    </Style>
+    <Style Selector="Border.stepchip.on">
+      <Setter Property="Background" Value="{DynamicResource Pump.Accent}" />
+    </Style>
+    <Style Selector="Border.stepchip.on TextBlock">
+      <Setter Property="Foreground" Value="White" />
+    </Style>
     <Style Selector="Border.logincard TextBlock.lbl">
       <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
       <Setter Property="FontSize" Value="12" />
@@ -74,7 +90,7 @@
            ⚠️ عکس فقط وقتی خوانده می‌شود که کاربر روی این صفحه بیاید. -->
       <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Classes="logincard"
               CornerRadius="26" Margin="0,0,0,16" ClipToBounds="True"
-              MaxWidth="880" HorizontalAlignment="Center"
+              MaxWidth="940" HorizontalAlignment="Center"
               Background="{DynamicResource Pump.Panel}"
               BoxShadow="{DynamicResource Pump.CardShadow}">
         <!-- ⚠️ عکسِ اصلی **ایستاده** است (۳۷۶×۴۱۲)، پس اگر تمامِ یک کارتِ
@@ -85,15 +101,15 @@
              اگر اندازه را نگوییم خودِ قاب به اندازهٔ پهن‌ترین پنل جمع می‌شود
              و فرم تمامِ عکس را می‌پوشاند (یک بار همین شد).
              و بلندی آن‌قدر است که تهِ فرم («ورود با گوگل») بریده نشود. -->
-        <Grid Width="880" Height="552">
+        <Grid Width="940" Height="648">
 
           <!-- عکسِ بریده — یک طرفِ کارت، از بالا تا پایین -->
           <Image Source="{Binding LoginArt}" Stretch="UniformToFill"
-                 VerticalAlignment="Center" HorizontalAlignment="Right" Width="470"
+                 VerticalAlignment="Center" HorizontalAlignment="Right" Width="500"
                  IsVisible="{Binding LoginArt, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
           <!-- پردهٔ ملایم روی همان عکس، تا نوشته‌اش خوانده شود -->
-          <Border HorizontalAlignment="Right" Width="470"
+          <Border HorizontalAlignment="Right" Width="500"
                   IsVisible="{Binding LoginArt, Converter={x:Static ObjectConverters.IsNotNull}}">
             <Border.Background>
               <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
@@ -117,45 +133,111 @@
                   Background="{DynamicResource Pump.Card}"
                   BoxShadow="0 12 34 0 #40000000">
             <StackPanel Spacing="8" VerticalAlignment="Center">
-              <TextBlock Text="خوش آمدید" FontSize="28" FontWeight="Black" />
-              <TextBlock Text="ایمیل و کدِ شش‌رقمی را بزنید؛ رمزی لازم نیست."
-                         Classes="muted" FontSize="12.5" TextWrapping="Wrap" />
 
-              <TextBlock Text="ایمیل" Classes="lbl" Margin="0,8,0,0" />
-              <TextBox Text="{Binding LoginEmail}" Watermark="name@gmail.com" FlowDirection="LeftToRight" />
+              <!-- ══ نشانِ گام‌ها: هر سه دیده می‌شوند، گامِ جاری پررنگ ══ -->
+              <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                <Border Classes="stepchip" Classes.on="{Binding StepAccount}">
+                  <TextBlock Text="۱ حساب" />
+                </Border>
+                <Border Classes="stepchip" Classes.on="{Binding StepPump}">
+                  <TextBlock Text="۲ پمپ" />
+                </Border>
+                <Border Classes="stepchip" Classes.on="{Binding StepDone}">
+                  <TextBlock Text="۳ تمام" />
+                </Border>
+              </StackPanel>
 
-              <TextBlock Text="کدِ شش‌رقمیِ اشتراک" Classes="lbl" />
-              <TextBox Text="{Binding LoginCode}" MaxLength="6" Watermark="۱۲۳۴۵۶" />
+              <!-- ══════════ گامِ ۱: حساب ══════════ -->
+              <StackPanel Spacing="8" IsVisible="{Binding StepAccount}">
+                <TextBlock Text="خوش آمدید" FontSize="26" FontWeight="Black" />
 
-              <Grid ColumnDefinitions="*,10,*">
-                <StackPanel Grid.Column="0" Spacing="5">
+                <!-- «حساب داری یا نه؟» — دو راهِ جدا و دیدنی -->
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                  <Button Classes="seg" Classes.active="{Binding IsSignUp}" Content="حساب می‌سازم"
+                          Command="{Binding SetSignUpCommand}" CommandParameter="yes" />
+                  <Button Classes="seg" Classes.active="{Binding IsSignIn}" Content="حساب دارم"
+                          Command="{Binding SetSignUpCommand}" CommandParameter="no" />
+                </StackPanel>
+
+                <StackPanel Spacing="5" IsVisible="{Binding IsSignUp}">
                   <TextBlock Text="نامِ شما" Classes="lbl" />
                   <TextBox Text="{Binding LoginName}" Watermark="نامِ خودتان" />
                 </StackPanel>
-                <StackPanel Grid.Column="2" Spacing="5">
-                  <TextBlock Text="نامِ پمپ" Classes="lbl" />
-                  <TextBox Text="{Binding LoginPump}" Watermark="پمپ یعقوبی" />
+
+                <TextBlock Text="ایمیل" Classes="lbl" />
+                <TextBox Text="{Binding LoginEmail}" Watermark="name@gmail.com" FlowDirection="LeftToRight" />
+
+                <TextBlock Text="رمز" Classes="lbl" />
+                <TextBox Text="{Binding LoginPassword}" PasswordChar="•" Watermark="دستِ‌کم شش نویسه" />
+
+                <StackPanel Spacing="5" IsVisible="{Binding IsSignUp}">
+                  <TextBlock Text="تکرارِ رمز" Classes="lbl" />
+                  <TextBox Text="{Binding LoginPassword2}" PasswordChar="•" Watermark="همان رمز، دوباره" />
                 </StackPanel>
-              </Grid>
 
-              <Button Classes="accent go" Content="ثبت و فعال‌سازی" Margin="0,10,0,0"
-                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                      Command="{Binding SubmitLoginCommand}" IsEnabled="{Binding !Busy}" />
+                <Button Classes="accent go" Content="{Binding AccountButtonText}" Margin="0,6,0,0"
+                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                        Command="{Binding AccountStepCommand}" IsEnabled="{Binding !Busy}" />
 
-              <Grid ColumnDefinitions="*,Auto,*" Margin="0,4">
-                <Border Grid.Column="0" Height="1" Background="{DynamicResource Pump.Border}" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="1" Text="یا" Classes="muted" FontSize="12" Margin="10,0" />
-                <Border Grid.Column="2" Height="1" Background="{DynamicResource Pump.Border}" VerticalAlignment="Center" />
-              </Grid>
+                <Grid ColumnDefinitions="*,Auto,*" Margin="0,2">
+                  <Border Grid.Column="0" Height="1" Background="{DynamicResource Pump.Border}" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Text="یا" Classes="muted" FontSize="12" Margin="10,0" />
+                  <Border Grid.Column="2" Height="1" Background="{DynamicResource Pump.Border}" VerticalAlignment="Center" />
+                </Grid>
 
-              <Button Classes="ghost go" Content="ورود با گوگل"
-                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                      Command="{Binding SignInCommand}" IsEnabled="{Binding !Busy}" />
+                <Button Classes="ghost go" Content="ورود با گوگل"
+                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                        Command="{Binding SignInCommand}" IsEnabled="{Binding !Busy}" />
+                <Button Classes="tool-link" Content="بعداً — فعلاً بی حساب ادامه می‌دهم"
+                        HorizontalAlignment="Center" FontSize="12"
+                        Command="{Binding SkipAccountCommand}" IsEnabled="{Binding !Busy}" />
+              </StackPanel>
+
+              <!-- ══════════ گامِ ۲: پمپ ══════════ -->
+              <StackPanel Spacing="8" IsVisible="{Binding StepPump}">
+                <TextBlock Text="پمپِ خودتان" FontSize="26" FontWeight="Black" />
+                <TextBlock Text="کدِ شش‌رقمی را بزنید تا سرور تاییدش کند، و نام و لوکیشنِ پمپ را بنویسید."
+                           Classes="muted" FontSize="12.5" TextWrapping="Wrap" />
+
+                <TextBlock Text="کدِ شش‌رقمی" Classes="lbl" Margin="0,4,0,0" />
+                <TextBox Text="{Binding LoginCode}" MaxLength="6" Watermark="۱۲۳۴۵۶" />
+
+                <TextBlock Text="نامِ پمپ" Classes="lbl" />
+                <TextBox Text="{Binding LoginPump}" Watermark="پمپ یعقوبی" />
+
+                <TextBlock Text="لوکیشنِ پمپ" Classes="lbl" />
+                <TextBox Text="{Binding LoginLocation}" Watermark="شهر و آدرسِ پمپ" />
+
+                <Button Classes="accent go" Content="تایید از سرور و پایان" Margin="0,6,0,0"
+                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                        Command="{Binding VerifyCodeCommand}" IsEnabled="{Binding !Busy}" />
+                <Button Classes="tool-link" Content="‹ برگشت به حساب" HorizontalAlignment="Center" FontSize="12"
+                        Command="{Binding BackToAccountCommand}" IsEnabled="{Binding !Busy}" />
+              </StackPanel>
+
+              <!-- ══════════ گامِ ۳: تمام ══════════ -->
+              <StackPanel Spacing="10" IsVisible="{Binding StepDone}">
+                <TextBlock Text="✅ تمام" FontSize="28" FontWeight="Black"
+                           Foreground="{DynamicResource Pump.Ok}" />
+                <TextBlock Text="حساب ساخته شد، کد از سرور تایید شد و پمپ ثبت شد."
+                           Classes="muted" TextWrapping="Wrap" />
+                <Grid ColumnDefinitions="90,*" RowDefinitions="Auto,Auto,Auto">
+                  <TextBlock Grid.Row="0" Grid.Column="0" Text="ایمیل" Classes="lbl" />
+                  <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding LoginEmail}" FontWeight="SemiBold" />
+                  <TextBlock Grid.Row="1" Grid.Column="0" Text="پمپ" Classes="lbl" Margin="0,6,0,0" />
+                  <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LoginPump}" FontWeight="SemiBold" Margin="0,6,0,0" />
+                  <TextBlock Grid.Row="2" Grid.Column="0" Text="لوکیشن" Classes="lbl" Margin="0,6,0,0" />
+                  <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding LoginLocation}" FontWeight="SemiBold"
+                             TextWrapping="Wrap" Margin="0,6,0,0" />
+                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                  <Button Classes="ghost" Content="تغییرِ پمپ" Command="{Binding BackToPumpCommand}" />
+                  <Button Classes="ghost" Content="تغییرِ حساب" Command="{Binding BackToAccountCommand}" />
+                </StackPanel>
+              </StackPanel>
 
               <TextBlock Text="{Binding LoginStatus}" TextWrapping="Wrap" FontSize="12.5" FontWeight="Bold"
                          IsVisible="{Binding LoginStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-              <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
-                         Text="نام و نامِ پمپ بی کد هم ذخیره می‌شوند؛ دفترِ خودتان همیشه باز است." />
             </StackPanel>
           </Border>
         </Grid>

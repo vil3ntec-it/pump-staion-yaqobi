@@ -394,7 +394,7 @@ internal static class VerifyProbe
         // ⚠️ فعال‌سازیِ واقعیِ کدِ شش‌رقمی اینترنت و سرورِ ابر می‌خواهد، پس آن
         // یک بند پشتِ ‎PUMP_VERIFY_CLOUD=1‎ است و در CI نمی‌دود: نباید هر اجرا
         // یک کدِ الکی به سرورِ واقعیِ اشتراک بفرستد.
-        Console.WriteLine("── ۱۴) کارتِ ورودِ پروفایل");
+        Console.WriteLine("── ۱۴) ثبت‌نام و ورود — دو گام");
         {
             var account = (AccountSectionViewModel)vm.Sections.First(s => s.Id == "account");
             host.Settings.Set(SettingsService.StationName, "پمپ آزمون");
@@ -407,56 +407,97 @@ internal static class VerifyProbe
                   && account.LoginArt.Size.Width > 300 && account.LoginArt.Size.Width < 400,
                   account.LoginArt is null ? "نیامد"
                   : $"{account.LoginArt.Size.Width:0}×{account.LoginArt.Size.Height:0}");
-            Check("کادرِ نامِ پمپ از تنظیماتِ همین پمپ پر شد",
-                  account.LoginPump == "پمپ آزمون", account.LoginPump);
 
-            //  الف) ایمیلِ بی «@» رد می‌شود و هیچ چیزی ذخیره نمی‌شود
-            var pumpBefore = host.Settings.GetString(SettingsService.StationName);
-            account.LoginEmail = "naam-bi-at";
-            account.LoginName = "هارون";
-            account.LoginPump = "پمپِ نو";
-            Wait(win, account.SubmitLoginCommand.ExecuteAsync(null));
-            Check("ایمیلِ غلط رد شد", account.LoginStatus.Contains("ایمیل"), account.LoginStatus);
-            Check("و با ایمیلِ غلط هیچ چیزی ذخیره نشد",
-                  host.Settings.GetString(SettingsService.StationName) == pumpBefore,
-                  host.Settings.GetString(SettingsService.StationName));
+            //  الف) گامِ اول باید گامِ «حساب» باشد — چون وارد نشده‌ایم
+            Check("گامِ اول، گامِ حساب است", account.LoginStep == 1 && account.StepAccount,
+                  "گامِ " + account.LoginStep);
+            Check("و «حساب می‌سازم» / «حساب دارم» هر دو در دسترس‌اند",
+                  account.SetSignUpCommand.CanExecute("yes") && account.SetSignUpCommand.CanExecute("no"));
 
-            //  ب) بی کد: نام و ایمیل و نامِ پمپ ذخیره می‌شوند
-            account.LoginEmail = "test@gmail.com";
+            //  ب) هر چهار خطای گامِ اول — و هیچ‌کدام از گام جلو نمی‌رود
+            account.SetSignUpCommand.Execute("yes");
             account.LoginName = "هارون یعقوبی";
-            account.LoginPump = "پمپِ نو";
-            account.LoginCode = "";
-            Wait(win, account.SubmitLoginCommand.ExecuteAsync(null));
-            var file = AppSettings.Load();
-            Check("پیامِ «ذخیره شد» آمد", account.LoginStatus.StartsWith("✅"), account.LoginStatus);
-            Check("ایمیل در تنظیمات نشست", file.CloudEmail == "test@gmail.com", file.CloudEmail);
-            Check("نام در تنظیمات نشست", file.CloudName == "هارون یعقوبی", file.CloudName);
-            Check("نامِ پمپ در تنظیماتِ برنامه نشست",
-                  host.Settings.GetString(SettingsService.StationName) == "پمپِ نو",
-                  host.Settings.GetString(SettingsService.StationName));
-            Check("و خودِ پروفایل همان لحظه نامِ تازه را نشان می‌دهد",
-                  account.PumpName == "پمپِ نو", account.PumpName);
+            account.LoginEmail = "bi-at";
+            account.LoginPassword = "123456";
+            account.LoginPassword2 = "123456";
+            Wait(win, account.AccountStepCommand.ExecuteAsync(null));
+            Check("ایمیلِ غلط رد شد و گام جلو نرفت",
+                  account.LoginStatus.Contains("ایمیل") && account.LoginStep == 1, account.LoginStatus);
 
-            //  ج) کدِ ناقص: داده ذخیره می‌شود ولی کد رد می‌شود
+            account.LoginEmail = "test@gmail.com";
+            account.LoginPassword = "123";
+            account.LoginPassword2 = "123";
+            Wait(win, account.AccountStepCommand.ExecuteAsync(null));
+            Check("رمزِ کوتاه رد شد", account.LoginStatus.Contains("شش نویسه") && account.LoginStep == 1,
+                  account.LoginStatus);
+
+            account.LoginPassword = "123456";
+            account.LoginPassword2 = "654321";
+            Wait(win, account.AccountStepCommand.ExecuteAsync(null));
+            Check("دو رمزِ ناهمسان رد شد", account.LoginStatus.Contains("یکی نیستند") && account.LoginStep == 1,
+                  account.LoginStatus);
+
+            account.SetSignUpCommand.Execute("yes");
+            account.LoginName = "ا";
+            account.LoginPassword = "123456"; account.LoginPassword2 = "123456";
+            Wait(win, account.AccountStepCommand.ExecuteAsync(null));
+            Check("نامِ خالی در «حساب می‌سازم» رد شد",
+                  account.LoginStatus.Contains("نامتان") && account.LoginStep == 1, account.LoginStatus);
+
+            //  ج) «بعداً» — بی‌اینترنت هم راه بسته نیست
+            account.LoginName = "هارون یعقوبی";
+            account.SkipAccountCommand.Execute(null);
+            for (var i = 0; i < 10; i++) Pump(win);
+            var f1 = AppSettings.Load();
+            Check("«بعداً» به گامِ پمپ برد", account.LoginStep == 2 && account.StepPump);
+            Check("نام و ایمیل ذخیره شدند", f1.CloudEmail == "test@gmail.com"
+                  && f1.CloudName == "هارون یعقوبی", f1.CloudEmail + " · " + f1.CloudName);
+            Check("⛔ و رمز هیچ‌جا نماند", account.LoginPassword.Length == 0
+                  && account.LoginPassword2.Length == 0);
+
+            //  د) گامِ دو: نامِ پمپ و کد سنجیده می‌شوند
+            account.LoginPump = "";
+            account.LoginCode = "123456";
+            Wait(win, account.VerifyCodeCommand.ExecuteAsync(null));
+            Check("نامِ پمپِ خالی رد شد", account.LoginStatus.Contains("نامِ پمپ") && account.LoginStep == 2,
+                  account.LoginStatus);
+
+            account.LoginPump = "پمپِ نو";
+            account.LoginLocation = "هرات، جادهٔ کندهار";
             account.LoginCode = "123";
-            Wait(win, account.SubmitLoginCommand.ExecuteAsync(null));
-            Check("کدِ سه‌رقمی رد شد", account.LoginStatus.Contains("شش رقم"), account.LoginStatus);
+            Wait(win, account.VerifyCodeCommand.ExecuteAsync(null));
+            Check("کدِ سه‌رقمی رد شد", account.LoginStatus.Contains("شش رقم") && account.LoginStep == 2,
+                  account.LoginStatus);
             Check("و با کدِ ناقص هیچ توکنی ساخته نشد",
                   string.IsNullOrWhiteSpace(AppSettings.Load().CloudDeviceToken), "بی توکن");
 
-            //  د) فعال‌سازیِ واقعی — فقط با ‎PUMP_VERIFY_CLOUD=1‎
+            //  ه) نامِ پمپ و لوکیشن **پیش از** فرستادنِ کد می‌نشینند
+            account.LoginCode = "000000";
             if (Environment.GetEnvironmentVariable("PUMP_VERIFY_CLOUD") == "1")
             {
-                account.LoginCode = "000000";
-                Wait(win, account.SubmitLoginCommand.ExecuteAsync(null));
-                Check("کدِ شش‌رقمی به ابر رفت و جوابش نشست (بی کرش)",
-                      account.LoginStatus.Length > 0, account.LoginStatus);
+                Wait(win, account.VerifyCodeCommand.ExecuteAsync(null));
+                Check("کدِ شش‌رقمی به سرور رفت و جوابش نشست (بی کرش)",
+                      account.LoginStatus.Length > 0 || account.LoginStep == 3, account.LoginStatus);
             }
             else
             {
-                Console.WriteLine("  ⚠️ فعال‌سازیِ واقعیِ کد نسنجیده ماند "
+                Console.WriteLine("  ⚠️ تاییدِ واقعیِ کد از سرور نسنجیده ماند "
                                   + "(PUMP_VERIFY_CLOUD=1 لازم است — اینترنت و سرورِ ابر می‌خواهد)");
+                Wait(win, account.VerifyCodeCommand.ExecuteAsync(null));   // بی‌اینترنت: باید خطا بدهد، نه کرش
+                Check("بی سرور، خطای روشن می‌دهد و در گامِ دو می‌ماند",
+                      account.LoginStep == 2 && account.LoginStatus.StartsWith("❌"), account.LoginStatus);
             }
+            Check("ولی نامِ پمپ و لوکیشن همان لحظه ذخیره شدند",
+                  host.Settings.GetString(SettingsService.StationName) == "پمپِ نو"
+                  && host.Settings.GetString(SettingsService.StationAddress) == "هرات، جادهٔ کندهار",
+                  host.Settings.GetString(SettingsService.StationName) + " · "
+                  + host.Settings.GetString(SettingsService.StationAddress));
+            Check("و خودِ پروفایل همان لحظه نامِ تازه را نشان می‌دهد",
+                  account.PumpName == "پمپِ نو", account.PumpName);
+
+            //  و) برگشت‌ها
+            account.BackToAccountCommand.Execute(null);
+            Check("«برگشت به حساب» به گامِ یک می‌برد", account.LoginStep == 1 && account.StepAccount);
         }
 
         // ── ۱۵) بخشِ «اشتراک و پلن‌ها» و کلیدِ آزمایش ────────────────────────

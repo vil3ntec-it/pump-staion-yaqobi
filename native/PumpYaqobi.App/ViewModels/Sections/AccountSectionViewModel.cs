@@ -513,19 +513,30 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         SubSourceText = check.Valid ? "مجوزِ امضاشدهٔ سرور" : activated ? check.Reason : "کدِ شش‌رقمی را بزنید";
     }
 
-    // ══ 🪪 کارتِ ورود — «ایمیل، کدِ شش‌رقمی، نام، نامِ پمپ» ══════════════════
+    // ══ 🪪 ثبت‌نام و ورود — دو گام، و بس ════════════════════════════════════
     //
-    //  خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۸) با دو عکس: «پروفایل یک بخش بگذار،
-    //  بخشِ لاگین با ایمیل با اضافه کردنِ کدِ شش‌رقمی و زدنِ اسم و اسمِ پمپش…
-    //  عکسِ آن اولی باشد، دیزاینِ این دومی.»
+    //  گزارشِ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۸): «نه می‌گوید حساب داری یا نه، نه
+    //  ثبت یا ساختنِ حساب دارد و نه رمز دارد و می‌خواهد — خیلی اشتباه درست
+    //  شده. اول اسم، ایمیل، رمز، تکرارِ رمز؛ بعد برود بخشِ بعدی: کدِ شش‌رقمی
+    //  و تاییدِ آن از سرور و اسمِ پمپ و لوکیشنِ پمپ. همین و بعد هم تمام.»
     //
-    //  پس کارتی است دوستونه مثلِ همان طرح: یک طرف عکس، طرفِ دیگر فرم. و همان
-    //  کاری را می‌کند که تا امروز پراکنده بود: نام و نامِ پمپ و ایمیل در
-    //  تنظیمات می‌نشینند و کدِ شش‌رقمی همان فعال‌سازیِ اشتراک است.
+    //      گامِ ۱  ساختنِ حساب یا ورود   نام · ایمیل · رمز · تکرارِ رمز
+    //      گامِ ۲  پمپ                   کدِ شش‌رقمی (تاییدِ سرور) · نامِ پمپ · لوکیشن
+    //      گامِ ۳  تمام
     //
-    //  ⚠️ **رمزی این‌جا تایپ نمی‌شود** — نه رمزِ گوگل، نه رمزِ سرور. ورود با
-    //  گوگل همان مرورگرِ سیستم است (‎GoogleSignIn‎) و کدِ شش‌رقمی از خودِ
-    //  فروشنده می‌آید.
+    //  ⚠️ **رمز هیچ‌جا روی این کامپیوتر نمی‌نشیند** — نه خام، نه هش. فقط
+    //  همان یک بار به ابر می‌رود و توکنِ نشست برمی‌گردد
+    //  (<see cref="CloudLink.RegisterAsync"/>). پس از هر گام پاک می‌شود.
+    //
+    //  ⚠️ **«حساب دارم» و «حساب می‌سازم» دو راهِ جدا هستند** و کاربر باید
+    //  ببیند روی کدام است — همان چیزی که نبود.
+    //
+    //  ⚠️ گام‌ها از حالِ واقعیِ برنامه حساب می‌شوند، نه از حافظهٔ صفحه: وارد
+    //  شده؟ فعال شده؟ نامِ پمپ دارد؟ (<see cref="ShowLogin"/>) پس با بسته و
+    //  باز شدنِ برنامه همان‌جایی است که باید باشد.
+    //
+    //  ⚠️ **بی‌اینترنت هم راه بسته نمی‌شود**: «بعداً» گامِ حساب را رد می‌کند و
+    //  نام و ایمیل را همان‌جا ذخیره می‌کند. دفترِ کاربر هیچ‌وقت گروگان نیست.
     //
     //  ⚠️ **عکس یک درصدِ ثانیه هم به برنامه اضافه نمی‌کند** — خواستهٔ صریحِ
     //  صاحب ریپو. سه قاعده: (۱) فقط در ‎OnActivatedAsync‎ خوانده می‌شود، یعنی
@@ -534,11 +545,176 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     //  ‎DecodeToWidth‎ به پهنای نمایش باز می‌شود، نه با اندازهٔ اصلی؛ (۳) یک
     //  بار و برای همیشه (‎_art‎). سنجه‌اش ‎startup‎ و ‎idle‎ است.
 
-    [ObservableProperty] private string _loginEmail = "";
+    /// <summary>گامِ جاری: ۱ حساب · ۲ پمپ · ۳ تمام.</summary>
+    [ObservableProperty] private int _loginStep = 1;
+
+    /// <summary>روی «حساب می‌سازم» هستیم یا «حساب دارم».</summary>
+    [ObservableProperty] private bool _isSignUp = true;
+
     [ObservableProperty] private string _loginName = "";
-    [ObservableProperty] private string _loginPump = "";
+    [ObservableProperty] private string _loginEmail = "";
+    [ObservableProperty] private string _loginPassword = "";
+    [ObservableProperty] private string _loginPassword2 = "";
     [ObservableProperty] private string _loginCode = "";
+    [ObservableProperty] private string _loginPump = "";
+    [ObservableProperty] private string _loginLocation = "";
     [ObservableProperty] private string _loginStatus = "";
+
+    public bool IsSignIn => !IsSignUp;
+    public bool StepAccount => LoginStep == 1;
+    public bool StepPump => LoginStep == 2;
+    public bool StepDone => LoginStep == 3;
+
+    /// <summary>نوشتهٔ دکمهٔ گامِ اول — با راهِ انتخاب‌شده عوض می‌شود.</summary>
+    public string AccountButtonText => IsSignUp ? "ساختنِ حساب و ادامه" : "ورود و ادامه";
+
+    partial void OnIsSignUpChanged(bool v)
+    {
+        OnPropertyChanged(nameof(IsSignIn));
+        OnPropertyChanged(nameof(AccountButtonText));
+        LoginStatus = "";
+    }
+
+    partial void OnLoginStepChanged(int v)
+    {
+        OnPropertyChanged(nameof(StepAccount));
+        OnPropertyChanged(nameof(StepPump));
+        OnPropertyChanged(nameof(StepDone));
+    }
+
+    [RelayCommand]
+    private void SetSignUp(string? yes) => IsSignUp = yes != "no";
+
+    /// <summary>
+    /// گام‌ها را از حالِ واقعیِ برنامه می‌چیند و کادرها را از تنظیمات پر
+    /// می‌کند. رمز هیچ‌وقت پر نمی‌شود، چون هیچ‌جا ذخیره نشده.
+    /// </summary>
+    private void ShowLogin()
+    {
+        var f = AppSettings.Load();
+        if (LoginEmail.Length == 0) LoginEmail = f.CloudEmail;
+        if (LoginName.Length == 0) LoginName = f.CloudName;
+        if (LoginPump.Length == 0) LoginPump = _host.Settings.GetString(SettingsService.StationName);
+        if (LoginLocation.Length == 0) LoginLocation = _host.Settings.GetString(SettingsService.StationAddress);
+
+        var activated = !string.IsNullOrWhiteSpace(f.CloudDeviceToken);
+        var hasPump = !string.IsNullOrWhiteSpace(_host.Settings.GetString(SettingsService.StationName));
+
+        LoginStep = !SignedIn ? 1 : activated && hasPump ? 3 : 2;
+        //  کسی که حساب دارد، پیش‌فرضش «ورود» است نه «ثبت‌نام»
+        if (SignedIn || f.CloudEmail.Length > 0) IsSignUp = !SignedIn && f.CloudEmail.Length == 0;
+    }
+
+    // ── گامِ ۱: حساب ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// «ساختنِ حساب» یا «ورود» — و بعد می‌رود گامِ دو.
+    ///
+    /// ⚠️ رمز پس از رفتن پاک می‌شود و هیچ‌وقت ذخیره نمی‌شود.
+    /// </summary>
+    [RelayCommand]
+    private Task AccountStepAsync() => CrashGuard.RunAsync("حسابِ ابر", async () =>
+    {
+        var name = (LoginName ?? "").Trim();
+        var email = (LoginEmail ?? "").Trim();
+        var pass = LoginPassword ?? "";
+        var pass2 = LoginPassword2 ?? "";
+
+        if (email.Length == 0 || !email.Contains('@') || email.EndsWith("@"))
+        { LoginStatus = "❌ ایمیل درست نیست."; return; }
+        if (IsSignUp && name.Length < 2) { LoginStatus = "❌ نامتان را بنویسید."; return; }
+        if (pass.Length < 6) { LoginStatus = "❌ رمز دستِ‌کم شش نویسه باشد."; return; }
+        if (IsSignUp && pass != pass2) { LoginStatus = "❌ دو رمز یکی نیستند."; return; }
+
+        Busy = true;
+        LoginStatus = IsSignUp ? "در حالِ ساختنِ حساب روی سرور…" : "در حالِ ورود…";
+        try
+        {
+            var res = IsSignUp
+                ? await Cloud.RegisterAsync(name, email, pass)
+                : await Cloud.SignInWithPasswordAsync(email, pass);
+
+            if (!res.Ok) { LoginStatus = "❌ " + res.Why; return; }
+
+            //  ⚠️ رمز از حافظهٔ صفحه هم می‌رود
+            LoginPassword = ""; LoginPassword2 = "";
+            LoginStatus = "";
+            RefreshAll();
+            LoginStep = 2;
+        }
+        finally { Busy = false; }
+    });
+
+    /// <summary>
+    /// «بعداً» — بی‌اینترنت یا بی حساب هم باید بتوان ادامه داد. نام و ایمیل
+    /// همان‌جا ذخیره می‌شوند؛ رمز نه (چون حسابی ساخته نشده).
+    /// </summary>
+    [RelayCommand]
+    private void SkipAccount()
+    {
+        var f = AppSettings.Load();
+        var email = (LoginEmail ?? "").Trim();
+        var name = (LoginName ?? "").Trim();
+        if (email.Length > 0 && email.Contains('@')) f.CloudEmail = email;
+        if (name.Length > 0) f.CloudName = name;
+        f.Save();
+
+        LoginPassword = ""; LoginPassword2 = "";
+        LoginStatus = "نام و ایمیل ذخیره شد — حساب روی سرور بعداً ساخته می‌شود.";
+        RefreshAll();
+        LoginStep = 2;
+    }
+
+    // ── گامِ ۲: پمپ ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// کدِ شش‌رقمی را **از سرور** تایید می‌کند و نامِ پمپ و لوکیشن را
+    /// می‌نشاند؛ بعد «تمام».
+    ///
+    /// ⚠️ نامِ پمپ و لوکیشن **پیش از** فرستادنِ کد ذخیره می‌شوند و همراهِ
+    /// همان درخواست به ابر هم می‌روند، تا ابر همان پمپ را با همان نام و
+    /// لوکیشن بشناسد.
+    /// </summary>
+    [RelayCommand]
+    private Task VerifyCodeAsync() => CrashGuard.RunAsync("تاییدِ کدِ پمپ", async () =>
+    {
+        var pump = (LoginPump ?? "").Trim();
+        var where = (LoginLocation ?? "").Trim();
+        var code = new string((LoginCode ?? "").Where(char.IsDigit).ToArray());
+
+        if (pump.Length < 2) { LoginStatus = "❌ نامِ پمپ را بنویسید."; return; }
+        if (code.Length != 6) { LoginStatus = "❌ کد باید شش رقم باشد."; return; }
+
+        Busy = true;
+        LoginStatus = "در حالِ تایید از سرور…";
+        try
+        {
+            _host.Settings.Set(SettingsService.StationName, pump);
+            if (where.Length > 0) _host.Settings.Set(SettingsService.StationAddress, where);
+            //  ⚠️ **همین‌جا** تازه می‌شود، نه فقط سرِ موفقیت: نام و لوکیشن از
+            //  همین لحظه ذخیره شده‌اند، پس اگر سرور جواب نداد هم باید همان
+            //  نامِ تازه در پروفایل و سربرگ دیده شود. (سنجهٔ ۱۴ گرفتش: نام
+            //  ذخیره شده بود ولی صفحه نامِ قبلی را نشان می‌داد.)
+            RefreshAll();
+
+            var res = await Cloud.RedeemAsync(code, pump, where);
+            if (!res.Ok) { LoginStatus = "❌ " + res.Why; return; }
+
+            LoginCode = "";
+            LoginStatus = "";
+            RefreshAll();
+            LoginStep = 3;
+        }
+        finally { Busy = false; }
+    });
+
+    /// <summary>برگشت به گامِ حساب — برای عوض کردنِ حساب یا رمز.</summary>
+    [RelayCommand]
+    private void BackToAccount() { LoginStatus = ""; LoginStep = 1; }
+
+    /// <summary>از گامِ «تمام» به گامِ پمپ — برای عوض کردنِ نام یا لوکیشن.</summary>
+    [RelayCommand]
+    private void BackToPump() { LoginStatus = ""; LoginStep = 2; }
 
     /// <summary>عکسِ کنارِ فرم — تا خوانده نشده ‎null‎ است و کادرش دیده نمی‌شود.</summary>
     [ObservableProperty] private IImage? _loginArt;
@@ -561,62 +737,6 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
 
     private static IImage? _art;
     private static bool _artTried;
-
-    private void ShowLogin()
-    {
-        var f = AppSettings.Load();
-        if (LoginEmail.Length == 0) LoginEmail = f.CloudEmail;
-        if (LoginName.Length == 0) LoginName = f.CloudName;
-        if (LoginPump.Length == 0)
-        {
-            var name = _host.Settings.GetString(SettingsService.StationName);
-            LoginPump = string.IsNullOrWhiteSpace(name) ? "" : name;
-        }
-    }
-
-    /// <summary>
-    /// «ثبت و فعال‌سازی»: نام و نامِ پمپ و ایمیل می‌نشینند و — اگر کدِ
-    /// شش‌رقمی داده شده باشد — همان لحظه اشتراک هم فعال می‌شود.
-    ///
-    /// ⚠️ نامِ پمپ و نام بی کد هم ذخیره می‌شوند: کسی که هنوز کد نخریده باید
-    /// بتواند نامش را بنویسد.
-    /// </summary>
-    [RelayCommand]
-    private Task SubmitLoginAsync() => CrashGuard.RunAsync("ثبتِ حساب", async () =>
-    {
-        Busy = true;
-        try
-        {
-            var f = AppSettings.Load();
-            var email = (LoginEmail ?? "").Trim();
-            var name = (LoginName ?? "").Trim();
-            var pump = (LoginPump ?? "").Trim();
-
-            if (email.Length > 0 && !email.Contains('@'))
-            { LoginStatus = "❌ ایمیل درست نیست."; return; }
-
-            if (email.Length > 0) f.CloudEmail = email;
-            if (name.Length > 0) f.CloudName = name;
-            f.Save();
-            if (pump.Length > 0) _host.Settings.Set(SettingsService.StationName, pump);
-
-            var code = new string((LoginCode ?? "").Where(char.IsDigit).ToArray());
-            if (code.Length == 0)
-            {
-                LoginStatus = "✅ ذخیره شد. برای فعال شدنِ اشتراک، کدِ شش‌رقمی را هم بزنید.";
-                RefreshAll();
-                return;
-            }
-            if (code.Length != 6) { LoginStatus = "❌ کد باید شش رقم باشد."; return; }
-
-            LoginStatus = "در حالِ فعال‌سازی روی سرور…";
-            var res = await Cloud.RedeemAsync(code);
-            LoginStatus = res.Ok ? "✅ اشتراک فعال شد." : "❌ " + res.Why;
-            if (res.Ok) LoginCode = "";
-            RefreshAll();
-        }
-        finally { Busy = false; }
-    });
 
     /// <summary>
     /// عکسِ کارتِ ورود — روی نخِ دیگر، به پهنای نمایش، یک بار.

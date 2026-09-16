@@ -140,7 +140,11 @@ public sealed class CloudLink
     /// کدِ پمپ و نامش از تنظیماتِ خودِ برنامه می‌روند، پس کاربر جز همان شش
     /// رقم چیزی تایپ نمی‌کند.
     /// </summary>
-    public async Task<CloudResult> ActivateAsync(string code, CancellationToken ct = default)
+    /// <param name="stationName">نامِ پمپ — تا ابر همان نامی را بشناسد که کاربر نوشته.</param>
+    /// <param name="stationLocation">لوکیشنِ پمپ (نشانی) — همان کادرِ گامِ دومِ ثبت.</param>
+    public async Task<CloudResult> ActivateAsync(string code, string stationName = "",
+                                                 string stationLocation = "",
+                                                 CancellationToken ct = default)
     {
         var clean = new string((code ?? "").Where(char.IsDigit).ToArray());
         if (clean.Length != 6) return CloudResult.No("کد باید شش رقم باشد");
@@ -157,7 +161,8 @@ public sealed class CloudLink
             station = new
             {
                 code = _settings.StationCode ?? "",
-                name = "",
+                name = (stationName ?? "").Trim(),
+                location = (stationLocation ?? "").Trim(),
             },
         };
 
@@ -195,9 +200,11 @@ public sealed class CloudLink
     }
 
     /// <summary>تمدید با کدِ تازه — بی فعال‌سازیِ دوباره.</summary>
-    public async Task<CloudResult> RedeemAsync(string code, CancellationToken ct = default)
+    public async Task<CloudResult> RedeemAsync(string code, string stationName = "",
+                                               string stationLocation = "",
+                                               CancellationToken ct = default)
     {
-        if (!Activated) return await ActivateAsync(code, ct);
+        if (!Activated) return await ActivateAsync(code, stationName, stationLocation, ct);
 
         var clean = new string((code ?? "").Where(char.IsDigit).ToArray());
         if (clean.Length != 6) return CloudResult.No("کد باید شش رقم باشد");
@@ -492,6 +499,62 @@ public sealed class CloudLink
         {
             _settings.CloudEmail = Str(u, "email");
             _settings.CloudName  = Str(u, "name");
+        }
+        await SaveQuiet();
+        return CloudResult.Done;
+    }
+
+    // ── حساب با ایمیل و رمز ─────────────────────────────────────────────
+    //
+    //  خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۸): «نه می‌گوید حساب داری یا نه، نه
+    //  ثبت یا ساختنِ حساب دارد و نه رمز دارد و می‌خواهد… اول اسم، ایمیل،
+    //  رمز، تکرارِ رمز؛ بعد برود بخشِ بعدی: کدِ شش‌رقمی و تاییدش از سرور و
+    //  اسمِ پمپ و لوکیشنِ پمپ. همین.»
+    //
+    //  ⚠️ **رمز هیچ‌جا روی این کامپیوتر ذخیره نمی‌شود** — نه خام، نه هش.
+    //  فقط همان یک بار به ابر می‌رود و آن‌جا با توکنِ نشست جواب می‌آید،
+    //  دقیقاً مثلِ راهِ گوگل. چیزی که ذخیره می‌شود همان توکن است.
+    //
+    //  ⚠️ پاسخِ سرور **همان شکلِ راهِ گوگل** است (`{token, refreshToken,
+    //  user{email,name}}`) تا هیچ جای دیگرِ برنامه فرق نفهمد.
+
+    /// <summary>ساختنِ حسابِ تازه با نام و ایمیل و رمز.</summary>
+    public Task<CloudResult> RegisterAsync(string name, string email, string password,
+                                           CancellationToken ct = default) =>
+        AuthAsync("/api/auth/register",
+                  new { name = (name ?? "").Trim(), email = (email ?? "").Trim(), password, app = "pump" },
+                  ct);
+
+    /// <summary>ورود به حسابی که از قبل ساخته شده.</summary>
+    public Task<CloudResult> SignInWithPasswordAsync(string email, string password,
+                                                     CancellationToken ct = default) =>
+        AuthAsync("/api/auth/login",
+                  new { email = (email ?? "").Trim(), password, app = "pump" },
+                  ct);
+
+    private async Task<CloudResult> AuthAsync(string path, object body, CancellationToken ct)
+    {
+        var (ok, json, why, code) = await PostAsync(path, body, null, ct);
+        if (!ok)
+        {
+            //  ⚠️ صادق باش: اگر سرورِ ابر این راه را هنوز ندارد، «رمز غلط»
+            //  نگو. کاربر باید بداند که باید با گوگل وارد شود.
+            if (code == "404" || why.Contains("404"))
+                return CloudResult.No(
+                    "سرورِ حساب هنوز ورود با ایمیل و رمز را ندارد — فعلاً «ورود با گوگل» را بزنید.",
+                    "no_route");
+            return CloudResult.No(why, code);
+        }
+
+        var token = Str(json, "token");
+        if (token.Length == 0) return CloudResult.No("سرور نشست نداد");
+
+        _settings.CloudAccountToken = token;
+        _settings.CloudRefreshToken = Str(json, "refreshToken");
+        if (json.TryGetProperty("user", out var u) && u.ValueKind == JsonValueKind.Object)
+        {
+            var em = Str(u, "email"); if (em.Length > 0) _settings.CloudEmail = em;
+            var nm = Str(u, "name");  if (nm.Length > 0) _settings.CloudName = nm;
         }
         await SaveQuiet();
         return CloudResult.Done;

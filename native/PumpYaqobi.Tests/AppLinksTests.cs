@@ -130,24 +130,74 @@ public class AppLinksTests
 
     // ── ۴) کارتِ ورودِ پروفایل ─────────────────────────────────────────────
 
+    /// <summary>
+    /// ══ دو گامِ ثبت‌نام، همان‌طور که صاحب ریپو شمرد ══════════════════════
+    ///
+    /// «اول اسم، ایمیل، رمز، تکرارِ رمز؛ بعد برود بخشِ بعدی: کدِ شش‌رقمی و
+    /// تاییدِ آن از سرور و اسمِ پمپ و لوکیشنِ پمپ. همین و بعد هم تمام.»
+    /// </summary>
     [Fact]
-    public void KarteVorud_Email_KodeShishRaghmi_Nam_VaNamePomp_Darad()
+    public void SabtName_DoGam_Ast_VaRamzHamDarad()
     {
         var xaml = Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml");
-        Assert.Contains("Binding LoginEmail", xaml);
-        Assert.Contains("Binding LoginCode", xaml);
+
+        //  گامِ ۱ — چهار کادرِ خواسته‌شده، و رمز **واقعاً** رمز است
         Assert.Contains("Binding LoginName", xaml);
+        Assert.Contains("Binding LoginEmail", xaml);
+        Assert.Contains("Binding LoginPassword}", xaml);
+        Assert.Contains("Binding LoginPassword2", xaml);
+        Assert.Contains("PasswordChar=\"•\"", xaml);
+        //  «حساب داری یا نه» — دو راهِ دیدنی
+        Assert.Contains("Content=\"حساب می‌سازم\"", xaml);
+        Assert.Contains("Content=\"حساب دارم\"", xaml);
+        Assert.Contains("SetSignUpCommand", xaml);
+        Assert.Contains("AccountStepCommand", xaml);
+
+        //  گامِ ۲ — کد و تاییدش از سرور، نامِ پمپ و لوکیشن
+        Assert.Contains("Binding LoginCode", xaml);
         Assert.Contains("Binding LoginPump", xaml);
-        Assert.Contains("SubmitLoginCommand", xaml);
-        //  ورود با گوگل سرِ جایش ماند — و رمزی تایپ نمی‌شود
+        Assert.Contains("Binding LoginLocation", xaml);
+        Assert.Contains("VerifyCodeCommand", xaml);
+        //  و گامِ سوم «تمام» است
+        Assert.Contains("Binding StepDone", xaml);
+
+        //  ورودِ گوگل سرِ جایش ماند
         Assert.Contains("SignInCommand", xaml);
-        Assert.DoesNotContain("PasswordChar", xaml);
 
         var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs");
-        //  کد همان کدِ اشتراک است، پس از همان درِ همیشگی می‌رود
-        Assert.Contains("Cloud.RedeemAsync(code)", vm);
-        //  نام و نامِ پمپ بی کد هم ذخیره می‌شوند
+        //  حساب از راهِ ایمیل و رمزِ ابر ساخته می‌شود
+        Assert.Contains("Cloud.RegisterAsync(name, email, pass)", vm);
+        Assert.Contains("Cloud.SignInWithPasswordAsync(email, pass)", vm);
+        //  کد همان کدِ اشتراک است و نام و لوکیشنِ پمپ همراهش می‌روند
+        Assert.Contains("Cloud.RedeemAsync(code, pump, where)", vm);
         Assert.Contains("SettingsService.StationName, pump", vm);
+        Assert.Contains("SettingsService.StationAddress, where", vm);
+    }
+
+    /// <summary>
+    /// ⛔ **رمز هیچ‌جا روی این کامپیوتر نمی‌نشیند** — نه خام، نه هش. فقط به
+    /// ابر می‌رود و توکنِ نشست برمی‌گردد، و بعد از هر گام پاک می‌شود.
+    /// </summary>
+    [Fact]
+    public void RamzeAbr_RoyeDisk_ZakhireNemishavad()
+    {
+        var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs");
+        //  هیچ‌جا رمز در تنظیمات نوشته نمی‌شود
+        Assert.DoesNotContain("CloudPassword", vm);
+        Assert.DoesNotContain("f.Password", vm);
+        //  و در هر دو مسیر پاک می‌شود
+        Assert.Equal(2, vm.Split("LoginPassword = \"\"; LoginPassword2 = \"\";").Length - 1);
+
+        var settings = Read("PumpYaqobi.App", "Services", "AppSettings.cs");
+        Assert.DoesNotContain("Password", settings);
+
+        var link = Read("PumpYaqobi.App", "Services", "CloudLink.cs");
+        //  رمز فقط در بدنهٔ همان دو درخواست است
+        Assert.Contains("\"/api/auth/register\"", link);
+        Assert.Contains("\"/api/auth/login\"", link);
+        Assert.DoesNotContain("_settings.CloudPassword", link);
+        //  و اگر سرور این راه را نداشت، «رمز غلط» نمی‌گوید
+        Assert.Contains("no_route", link);
     }
 
     /// <summary>
@@ -208,7 +258,7 @@ public class AppLinksTests
         var form = grid.IndexOf("Background=\"{DynamicResource Pump.Card}\"", StringComparison.Ordinal);
         Assert.True(img > 0 && form > img, "پنلِ فرم باید بعد از عکس بیاید تا رویش کشیده شود");
         //  و اندازهٔ قاب صریح است، وگرنه فرم تمامِ عکس را می‌پوشاند (یک بار شد)
-        Assert.Contains("<Grid Width=\"880\" Height=\"552\">", grid);
+        Assert.Contains("<Grid Width=\"940\" Height=\"648\">", grid);
         //  کادرها گِردند، نه مربعی
         Assert.Contains("Selector=\"Border.logincard TextBox\"", xaml);
         Assert.Contains("CornerRadius\" Value=\"14\"", xaml);
