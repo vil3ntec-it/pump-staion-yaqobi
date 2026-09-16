@@ -35,16 +35,18 @@ public class SettingsPagesTests
     }
 
     [Fact]
-    public void SettingsHasExactlyTheThreePagesInOrder()
+    public void SettingsHasExactlyTheFourPagesInOrder()
     {
         Host();
         var vm = new MainViewModel();
         var settings = vm.Sections.Single(s => s.Id == "settings");
 
-        Assert.Equal(new[] { "keys", "backups", "trash" },
+        //  درِ چهارم (۱۴۰۵/۰۶/۲۸): «لینکِ اپِ اندروید و آیفون را توی یک بخشِ
+        //  جدید توی تنظیمات بزار» — و همان‌جا کدِ پمپ هم دیده می‌شود.
+        Assert.Equal(new[] { "keys", "backups", "trash", "apps" },
                      settings.SubSections.Select(s => s.Id).ToArray());
 
-        // صفحهٔ تنظیمات خودش سه کارت دارد، پس ردیفِ خودکارِ لینک‌ها خاموش است
+        // صفحهٔ تنظیمات خودش کارت‌های بزرگ دارد، پس ردیفِ خودکارِ لینک‌ها خاموش است
         Assert.False(settings.ShowSubLinkCards);
     }
 

@@ -5,12 +5,14 @@
              x:Class="PumpYaqobi.App.Views.Sections.SettingsSectionView"
              x:DataType="vm:SettingsSectionViewModel">
 
-  <!-- ══ تنظیمات: سه در، و بس ═══════════════════════════════════════════════
+  <!-- ══ تنظیمات: چهار در، و بس ═════════════════════════════════════════════
        خواستهٔ صریحِ صاحب ریپو: «سه بخش داشته باشه، هر کدوم که بزنی صفحهٔ
-       جداگانه باز بشه.» پس این صفحه هیچ کادرِ تنظیمی ندارد — فقط سه کارت.
+       جداگانه باز بشه.» و بعد (۱۴۰۵/۰۶/۲۸) درِ چهارم را خودش خواست: «لینکِ
+       دانلودِ اپِ اندروید و لینکِ برنامهٔ آیفون را توی یک بخشِ جدید توی
+       تنظیمات بزار.» پس این صفحه هیچ کادرِ تنظیمی ندارد — فقط چهار کارت.
        چیزی به این‌جا اضافه نکنید؛ فهرستِ آنچه برداشته شد و کجا رفت، بالای
        SettingsSectionViewModel نوشته است. -->
-  <c:SectionPage Header="تنظیمات" SubHeader="سه بخش — هر کدام صفحهٔ خودش">
+  <c:SectionPage Header="تنظیمات" SubHeader="چهار بخش — هر کدام صفحهٔ خودش">
 
     <StackPanel Spacing="14" MaxWidth="900" HorizontalAlignment="Stretch">
 
@@ -53,6 +55,21 @@
               <TextBlock Text="سطل زباله" Classes="card-title" />
               <TextBlock Classes="muted" TextWrapping="Wrap"
                          Text="هر حسابی که پاک کرده‌اید پانزده روز این‌جا می‌ماند و هر وقت خواستید برمی‌گردد." />
+            </StackPanel>
+            <TextBlock Grid.Column="3" Text="‹" FontSize="24" Opacity="0.6" VerticalAlignment="Center" />
+          </Grid>
+        </Border>
+      </Button>
+
+      <Button Classes="card-shell" Command="{Binding ShowSubCommand}"
+              CommandParameter="{Binding AppsPage}">
+        <Border Classes="card" Padding="18">
+          <Grid ColumnDefinitions="Auto,14,*,Auto">
+            <TextBlock Grid.Column="0" Text="📲" FontSize="30" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="2" Spacing="4">
+              <TextBlock Text="اپِ گوشی — لینک و کد" Classes="card-title" />
+              <TextBlock Classes="muted" TextWrapping="Wrap"
+                         Text="لینکِ فایلِ نصبِ اندروید، لینکِ آیفون و کدِ همین پمپ — کپی کنید یا در واتساپ برای کارمند و کارفرما بفرستید." />
             </StackPanel>
             <TextBlock Grid.Column="3" Text="‹" FontSize="24" Opacity="0.6" VerticalAlignment="Center" />
           </Grid>

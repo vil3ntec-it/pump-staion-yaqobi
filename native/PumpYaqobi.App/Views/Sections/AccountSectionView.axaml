@@ -39,10 +39,76 @@
   </UserControl.Styles>
 
   <c:SectionPage Header="پروفایل">
-    <Grid ColumnDefinitions="300,*,330" RowDefinitions="Auto,*">
+    <Grid ColumnDefinitions="300,*,330" RowDefinitions="Auto,Auto,*">
+
+      <!-- ══ 🪪 کارتِ ورود — عکس + فرم، مثلِ همان طرحِ مرجع ══════════════════
+           خواستهٔ صاحب ریپو با دو عکس: «بخشِ لاگین با ایمیل با اضافه کردنِ
+           کدِ شش‌رقمی و زدنِ اسم و اسمِ پمپش… عکسِ آن اولی، دیزاینِ این دومی.»
+           ⚠️ عکس فقط وقتی خوانده می‌شود که کاربر روی این صفحه بیاید و با
+           پهنای نمایش باز می‌شود — هیچ هزینه‌ای به باز شدنِ برنامه نمی‌دهد. -->
+      <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Classes="card" Padding="0" Margin="0,0,0,14">
+        <Grid ColumnDefinitions="*,1.05*">
+
+          <!-- عکس -->
+          <Border Grid.Column="0" CornerRadius="14" Margin="14" ClipToBounds="True"
+                  Background="{DynamicResource Pump.Input}" MinHeight="250">
+            <Grid>
+              <Image Source="{Binding LoginArt}" Stretch="UniformToFill"
+                     IsVisible="{Binding LoginArt, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="18" Spacing="2">
+                <TextBlock Text="{Binding PumpName}" FontSize="19" FontWeight="Black" Foreground="White" />
+                <TextBlock Text="حساب و اشتراکِ همین پمپ" FontSize="12" Foreground="#e8e8e8" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <!-- فرم -->
+          <StackPanel Grid.Column="1" Margin="22" Spacing="10" VerticalAlignment="Center">
+            <TextBlock Text="خوش آمدید" FontSize="30" FontWeight="Black" />
+            <TextBlock Text="ایمیل و کدِ شش‌رقمی را این‌جا بزنید؛ رمزی لازم نیست."
+                       Classes="muted" TextWrapping="Wrap" />
+
+            <TextBlock Text="ایمیل" Classes="kvl" Margin="0,6,0,0" />
+            <TextBox Text="{Binding LoginEmail}" Watermark="name@gmail.com" FlowDirection="LeftToRight" />
+
+            <TextBlock Text="کدِ شش‌رقمیِ اشتراک" Classes="kvl" />
+            <TextBox Text="{Binding LoginCode}" MaxLength="6" Watermark="۱۲۳۴۵۶" />
+
+            <Grid ColumnDefinitions="*,10,*">
+              <StackPanel Grid.Column="0" Spacing="6">
+                <TextBlock Text="نامِ شما" Classes="kvl" />
+                <TextBox Text="{Binding LoginName}" Watermark="نامِ خودتان" />
+              </StackPanel>
+              <StackPanel Grid.Column="2" Spacing="6">
+                <TextBlock Text="نامِ پمپ" Classes="kvl" />
+                <TextBox Text="{Binding LoginPump}" Watermark="پمپ یعقوبی" />
+              </StackPanel>
+            </Grid>
+
+            <Button Classes="accent" Content="ثبت و فعال‌سازی" Margin="0,6,0,0"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Command="{Binding SubmitLoginCommand}" IsEnabled="{Binding !Busy}" />
+
+            <Grid ColumnDefinitions="*,Auto,*" Margin="0,2">
+              <Border Grid.Column="0" Height="1" Background="{DynamicResource Pump.Border}" VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1" Text="یا" Classes="muted" Margin="10,0" />
+              <Border Grid.Column="2" Height="1" Background="{DynamicResource Pump.Border}" VerticalAlignment="Center" />
+            </Grid>
+
+            <Button Classes="ghost" Content="ورود با گوگل"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Command="{Binding SignInCommand}" IsEnabled="{Binding !Busy}" />
+
+            <TextBlock Text="{Binding LoginStatus}" TextWrapping="Wrap" FontSize="12.5" FontWeight="Bold"
+                       IsVisible="{Binding LoginStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <TextBlock Classes="muted" FontSize="11.5" TextWrapping="Wrap"
+                       Text="نام و نامِ پمپ بی کد هم ذخیره می‌شوند. کدِ شش‌رقمی همان کدِ اشتراک است و اگر نزنید، دفترِ خودتان مثلِ همیشه باز است." />
+          </StackPanel>
+        </Grid>
+      </Border>
 
       <!-- ══ آواتار ══ -->
-      <Border Grid.Row="0" Grid.Column="0" Classes="panel" Padding="22" Margin="0,0,14,14">
+      <Border Grid.Row="1" Grid.Column="0" Classes="panel" Padding="22" Margin="0,0,14,14">
         <StackPanel Spacing="10" HorizontalAlignment="Center">
           <Border Width="110" Height="110" CornerRadius="55" Background="{DynamicResource Pump.Accent}"
                   BoxShadow="{DynamicResource Pump.CardShadow}">
@@ -81,7 +147,7 @@
       </Border>
 
       <!-- ══ مشخصاتِ پمپ ══ -->
-      <Border Grid.Row="0" Grid.Column="1" Classes="panel" Padding="22" Margin="0,0,14,14">
+      <Border Grid.Row="1" Grid.Column="1" Classes="panel" Padding="22" Margin="0,0,14,14">
         <StackPanel Spacing="12">
           <TextBlock Text="مشخصاتِ پمپ" Classes="ptitle" />
           <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
@@ -132,7 +198,7 @@
       </Border>
 
       <!-- ══ اشتراکِ VIP ══ -->
-      <Border Grid.Row="0" Grid.Column="2" Classes="panel" Padding="22" Margin="0,0,0,14">
+      <Border Grid.Row="1" Grid.Column="2" Classes="panel" Padding="22" Margin="0,0,0,14">
         <StackPanel Spacing="12">
           <StackPanel Orientation="Horizontal" Spacing="8">
             <TextBlock Text="اشتراکِ VIP" Classes="ptitle" />
@@ -187,7 +253,7 @@
       </Border>
 
       <!-- ══ تب‌ها: کارمندان · تاریخچه · پشتیبان‌ها ══ -->
-      <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Classes="panel" Padding="22" Margin="0,0,14,0">
+      <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Classes="panel" Padding="22" Margin="0,0,14,0">
         <DockPanel>
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,14">
             <Button Classes="seg" Classes.active="{Binding TabStaff}" Content="کارمندان"
@@ -234,7 +300,7 @@
       </Border>
 
       <!-- ══ فایل‌ها: پشتیبان‌ها ══ -->
-      <Border Grid.Row="1" Grid.Column="2" Classes="panel" Padding="22">
+      <Border Grid.Row="2" Grid.Column="2" Classes="panel" Padding="22">
         <DockPanel>
           <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
             <TextBlock Text="فایل‌های پشتیبان" Classes="ptitle" VerticalAlignment="Center" />

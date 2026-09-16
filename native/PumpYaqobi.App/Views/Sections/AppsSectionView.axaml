@@ -1,0 +1,112 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             x:Class="PumpYaqobi.App.Views.Sections.AppsSectionView"
+             x:DataType="vm:AppsSectionViewModel">
+
+  <!-- ══ اپِ گوشی: لینک و کد ═════════════════════════════════════════════════
+       خواستهٔ صاحب ریپو: «لینکِ اندروید و آیفون را بگذار که کپی کنم یا به
+       کارفرما در واتساپ بفرستم… و کدِ پمپ هم همین‌جا دیده شود.»
+       ⛔ هیچ رمزی در این صفحه نیست و نباید بیاید. -->
+  <c:SectionPage Header="اپِ گوشی — لینک و کد"
+                 SubHeader="لینکِ اندروید و آیفون، و کدِ همین پمپ">
+
+    <StackPanel Spacing="14" MaxWidth="900">
+
+      <!-- ══ اندروید ═════════════════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="0">
+        <StackPanel>
+          <Border Classes="card-head">
+            <TextBlock Text="📱 اپِ اندروید — فایلِ نصب" Classes="card-title" />
+          </Border>
+          <StackPanel Margin="14" Spacing="10">
+            <Border Classes="stat" Padding="12,10">
+              <SelectableTextBlock Text="{Binding AndroidLink}" FontSize="13.5"
+                                   TextWrapping="Wrap" FlowDirection="LeftToRight" />
+            </Border>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="accent" Content="📋 کپیِ لینک" Command="{Binding CopyAndroidCommand}" />
+              <Button Classes="ghost" Content="🌐 باز کردن" Command="{Binding OpenCommand}"
+                      CommandParameter="{Binding AndroidLink}" />
+            </StackPanel>
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="همین لینک را به کارمند یا کارفرما بدهید؛ گوشی فایل را می‌گیرد و نصب می‌کند. هر بار که نسخهٔ تازه‌ای منتشر شود، همین لینک تازه‌ترین فایل است." />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- ══ آیفون ═══════════════════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="0">
+        <StackPanel>
+          <Border Classes="card-head">
+            <TextBlock Text="🍎 اپِ آیفون" Classes="card-title" />
+          </Border>
+          <StackPanel Margin="14" Spacing="10">
+            <Border Classes="stat" Padding="12,10">
+              <SelectableTextBlock Text="{Binding IphoneLink}" FontSize="13.5"
+                                   TextWrapping="Wrap" FlowDirection="LeftToRight" />
+            </Border>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="accent" Content="📋 کپیِ لینک" Command="{Binding CopyIphoneCommand}" />
+              <Button Classes="ghost" Content="🌐 باز کردن" Command="{Binding OpenCommand}"
+                      CommandParameter="{Binding IphoneLink}" />
+            </StackPanel>
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="آیفون فایلِ نصب ندارد: این لینک را در سافاری باز کند و «افزودن به صفحهٔ اصلی» را بزند — از آن پس مثلِ خودِ اپ باز می‌شود. روی اندروید هم اگر کسی نصب نخواست، همین لینک کار می‌کند." />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- ══ کدِ پمپ — فقط دیدنی ══════════════════════════════════════════
+           ⛔ هیچ کادرِ تایپی برای کد نیست: کد از ابر می‌آید و عوض کردنش در
+           «پروفایل» است. -->
+      <Border Classes="panel" Padding="0">
+        <StackPanel>
+          <Border Classes="card-head">
+            <TextBlock Text="🔑 کدِ همین پمپ" Classes="card-title" />
+          </Border>
+          <StackPanel Margin="14" Spacing="10">
+            <Border Classes="stat" Padding="18,10" HorizontalAlignment="Left">
+              <SelectableTextBlock Text="{Binding CodeText}" FontSize="30" FontWeight="Black"
+                                   FontFamily="Consolas,Menlo,monospace" LetterSpacing="4"
+                                   Foreground="{DynamicResource Pump.Accent}" FlowDirection="LeftToRight" />
+            </Border>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="accent" Content="📋 کپیِ کد" Command="{Binding CopyCodeCommand}"
+                      IsVisible="{Binding HasCode}" />
+              <Button Classes="ghost" Content="📲 کیو‌آر" Command="{Binding ShowQrCommand}"
+                      IsVisible="{Binding HasCode}" />
+            </StackPanel>
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="هر کسی اپ را نصب می‌کند همین کد را می‌زند و فقط حساب‌های همین پمپ را می‌بیند؛ بعدش رمزِ خودِ برنامه را هم می‌خواهد. ساختن و عوض کردنِ کد در «پروفایل» است." />
+            <TextBlock Text="{Binding CodeHint}" Classes="muted" TextWrapping="Wrap"
+                       IsVisible="{Binding CodeHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- ══ پیامِ آمادهٔ فرستادن ═════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="0">
+        <StackPanel>
+          <Border Classes="card-head">
+            <TextBlock Text="💬 پیامِ آماده — برای واتساپ" Classes="card-title" />
+          </Border>
+          <StackPanel Margin="14" Spacing="10">
+            <Border Classes="stat" Padding="12,10">
+              <SelectableTextBlock Text="{Binding ShareText}" FontSize="13" TextWrapping="Wrap" />
+            </Border>
+            <Button Classes="accent" Content="📋 کپیِ پیام" Command="{Binding CopyShareCommand}"
+                    HorizontalAlignment="Left" />
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="این را در واتساپ بچسبانید؛ هر دو لینک و کدِ پمپ داخلش هست." />
+            <TextBlock Text="{Binding Done}" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Ok}"
+                       IsVisible="{Binding Done, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </c:SectionPage>
+</UserControl>

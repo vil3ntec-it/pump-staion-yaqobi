@@ -893,5 +893,12 @@ public sealed partial class MainViewModel : ObservableObject
         By("settings")?.AddSub(new KeysSectionViewModel(host),         "🔑 رمزها و کد");
         By("settings")?.AddSub(new BackupSectionViewModel(host, this), "💾 بک‌اپ و به‌روزرسانی‌ها");
         By("settings")?.AddSub(new TrashSectionViewModel(host, this),  "🗑️ سطل زباله");
+        //  خواستهٔ صاحب ریپو (۱۴۰۵/۰۶/۲۸): «لینکِ دانلودِ اپِ اندروید و لینکِ
+        //  برنامهٔ آیفون را توی یک بخشِ جدید توی تنظیمات بگذار… و کدِ پمپ هم
+        //  همان‌جا دیده شود.»
+        By("settings")?.AddSub(new AppsSectionViewModel(host),         "📲 اپِ گوشی — لینک و کد");
+        //  «بخشِ وی‌آی‌پی را هم اعمال کن که من ببینم و تست کنم» — زیرِ خودِ
+        //  پروفایل، چون همان‌جا حالِ اشتراک دیده می‌شود.
+        By("account")?.AddSub(new VipSectionViewModel(host),           "💎 اشتراک و پلن‌ها");
     }
 }

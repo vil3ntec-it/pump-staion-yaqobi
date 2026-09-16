@@ -54,6 +54,10 @@ public class SubSectionTests
     [InlineData("keys", "settings")]
     [InlineData("backups", "settings")]
     [InlineData("trash", "settings")]
+    //  درِ چهارمِ تنظیمات (۱۴۰۵/۰۶/۲۸): لینکِ اپِ اندروید و آیفون و کدِ پمپ،
+    //  و «اشتراک و پلن‌ها» زیرِ خودِ پروفایل.
+    [InlineData("apps", "settings")]
+    [InlineData("vip", "account")]
     public void EachExtraPageSitsUnderTheRightSection(string subId, string parentId)
     {
         var vm = Shell();

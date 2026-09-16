@@ -1,0 +1,134 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             x:Class="PumpYaqobi.App.Views.Sections.VipSectionView"
+             x:DataType="vm:VipSectionViewModel">
+
+  <!-- ══ اشتراک و پلن‌ها ═══════════════════════════════════════════════════
+       خواستهٔ صاحب ریپو: «بخشِ وی‌آی‌پی را اعمال کن که من ببینم و تست کنم.»
+       ⛔ ستونِ قیمت عمداً «—» است؛ خودِ صاحب ریپو بعداً پرش می‌کند. -->
+  <UserControl.Styles>
+    <Style Selector="TextBlock.kvl">
+      <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBlock.kvv">
+      <Setter Property="FontSize" Value="14" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+  </UserControl.Styles>
+
+  <c:SectionPage Header="اشتراک و پلن‌ها"
+                 SubHeader="چه چیزی باز است، و هر پلن چه دارد">
+
+    <StackPanel Spacing="14" MaxWidth="1000">
+
+      <!-- ══ همین حالا ═══════════════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="0">
+        <StackPanel>
+          <Border Classes="card-head">
+            <TextBlock Text="💎 حالِ اشتراکِ همین پمپ" Classes="card-title" />
+          </Border>
+          <StackPanel Margin="14" Spacing="12">
+            <UniformGrid Rows="1" Classes="stats">
+              <StackPanel Classes="cell">
+                <TextBlock Text="پلن" Classes="label" />
+                <TextBlock Text="{Binding PlanText}" Classes="num2" />
+              </StackPanel>
+              <StackPanel Classes="cell">
+                <TextBlock Text="مانده" Classes="label" />
+                <TextBlock Text="{Binding DaysText}" Classes="num2" />
+              </StackPanel>
+              <StackPanel Classes="cell">
+                <TextBlock Text="وضعیت" Classes="label" />
+                <TextBlock Text="{Binding StateText}" Classes="kvv" />
+              </StackPanel>
+            </UniformGrid>
+
+            <TextBlock Text="{Binding GraceText}" FontWeight="Bold" TextWrapping="Wrap"
+                       Foreground="{DynamicResource Pump.Warn}"
+                       IsVisible="{Binding GraceText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+            <Border Height="1" Background="{DynamicResource Pump.Border}" />
+
+            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="اپِ کارمندان و ربات" Classes="kvv" />
+              <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding KarText}" Classes="kvv" />
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="کیو‌آرِ حسابِ مشتری" Classes="kvv" Margin="0,6,0,0" />
+              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding QrText}" Classes="kvv" Margin="0,6,0,0" />
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="بک‌اپِ خودکار روی سرور" Classes="kvv" Margin="0,6,0,0" />
+              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding BackupText}" Classes="kvv" Margin="0,6,0,0" />
+              <TextBlock Grid.Row="3" Grid.Column="0" Text="چتِ پشتیبانی" Classes="kvv" Margin="0,6,0,0" />
+              <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SupportText}" Classes="kvv" Margin="0,6,0,0"
+                         Foreground="{DynamicResource Pump.Ok}" />
+            </Grid>
+
+            <Border Height="1" Background="{DynamicResource Pump.Border}" />
+
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Button Classes="seg" Classes.active="{Binding TestDeny}"
+                      Content="🧪 آزمایشِ حالتِ بی‌اشتراک"
+                      Command="{Binding ToggleTestCommand}" />
+              <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" MaxWidth="600" VerticalAlignment="Center"
+                         Text="برای دیدنِ قفل‌ها با چشمِ خودتان. فقط می‌بندد و هیچ‌وقت باز نمی‌کند، و با بسته شدنِ برنامه خودش خاموش می‌شود." />
+            </StackPanel>
+
+            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                       Text="دفترِ شما هیچ‌وقت قفل نمی‌شود — قرض‌داران، ورق، مخزن، گاوصندوق، چاپ، سطلِ زباله و بک‌اپِ محلی با تمام شدنِ اشتراک هم سرِ جایشان هستند. و اگر اینترنت نبود یا سرور جواب نداد، دو هفته ارفاق هست تا هیچ‌کس با یک خرابی بی‌کار نماند." />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- ══ پلن‌ها — قیمت خالی ═══════════════════════════════════════════ -->
+      <ItemsControl ItemsSource="{Binding Plans}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><StackPanel Spacing="14" /></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:PlanCard">
+            <Border Classes="panel" Padding="0">
+              <StackPanel>
+                <Border Classes="card-head">
+                  <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                    <TextBlock Grid.Column="0" Text="{Binding Title}" Classes="card-title" />
+                    <Border Grid.Column="1" Classes="pill" Padding="9,2" Margin="8,0,0,0"
+                            Background="#FFD700" IsVisible="{Binding Current}" VerticalAlignment="Center">
+                      <TextBlock Text="پلنِ فعلی" FontSize="11" FontWeight="Black" Foreground="#1a1a1a" />
+                    </Border>
+                    <TextBlock Grid.Column="3" Text="{Binding Price}" FontSize="17" FontWeight="Black"
+                               Foreground="{DynamicResource Pump.Info}" VerticalAlignment="Center" />
+                  </Grid>
+                </Border>
+                <StackPanel Margin="14" Spacing="6">
+                  <TextBlock Text="{Binding Note}" Classes="muted" TextWrapping="Wrap" />
+                  <ItemsControl ItemsSource="{Binding Yes}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:String">
+                        <TextBlock Text="{Binding StringFormat=✅ {0}}" TextWrapping="Wrap" FontSize="13" Margin="0,2,0,0" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <ItemsControl ItemsSource="{Binding No}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:String">
+                        <TextBlock Text="{Binding StringFormat=🔒 {0}}" TextWrapping="Wrap" FontSize="13" Margin="0,2,0,0"
+                                   Foreground="{DynamicResource Pump.Muted}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                 Text="⛔ جای قیمت‌ها عمداً خالی است — خودِ صاحبِ برنامه بعداً پرش می‌کند." />
+
+    </StackPanel>
+  </c:SectionPage>
+</UserControl>

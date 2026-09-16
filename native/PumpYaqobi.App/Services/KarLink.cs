@@ -31,6 +31,63 @@ public static class KarLink
     public const string DefaultBase = "https://yaqobipump.top/kar/";
 
     /// <summary>
+    /// فایلِ نصبِ اندروید — <b>روی دامنهٔ خودِ صاحب ریپو</b>، نه روی نشانیِ
+    /// مخزن. ورک‌فلوی صفحه (<c>deploy-pages.yml</c>) همان فایلِ انتشارِ
+    /// <c>kar-latest</c> را کنارِ سایت می‌گذارد، پس این لینک همیشه تازه‌ترین
+    /// فایلِ نصب است و می‌شود در واتساپ فرستادش.
+    ///
+    /// ⚠️ فقط <c>PumpYaqobiKar.apk</c> — فایلِ نصبِ سایتِ قدیم
+    /// (<c>android-latest</c>) هیچ‌وقت به کاربر داده نمی‌شود.
+    /// </summary>
+    public static string ApkUrl(string viewerUrl = "") =>
+        SiteOf(viewerUrl) + "/downloads/PumpYaqobiKar.apk";
+
+    /// <summary>
+    /// لینکِ آیفون (و هر مرورگرِ دیگری): همان صفحهٔ <c>kar/</c>. کاربر در
+    /// سافاری بازش می‌کند و «افزودن به صفحهٔ اصلی» می‌زند — اپِ آیفون همین
+    /// است و چیزِ دیگری ندارد.
+    /// </summary>
+    public static string IphoneUrl(string viewerUrl = "") => BaseOf(viewerUrl);
+
+    /// <summary>
+    /// پیامِ آمادهٔ فرستادن به کارمند یا کارفرما — همان چیزی که در واتساپ
+    /// چسبانده می‌شود. کد اگر نباشد، جای خطش خالی می‌ماند (لینک‌ها بی کد هم
+    /// کار می‌کنند؛ اپ خودش کد می‌پرسد).
+    /// </summary>
+    public static string ShareText(string code, string pumpName = "", string viewerUrl = "")
+    {
+        var name = string.IsNullOrWhiteSpace(pumpName) ? "پمپ" : pumpName.Trim();
+        var clean = new string((code ?? "").Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
+        var lines = new List<string>
+        {
+            "اپِ «" + name + "» — دیدنِ حساب‌ها و مخزن روی گوشی:",
+            "",
+            "📱 اندروید (فایلِ نصب): " + ApkUrl(viewerUrl),
+            "🍎 آیفون: " + IphoneUrl(viewerUrl) + "  (در سافاری باز کنید و «افزودن به صفحهٔ اصلی» را بزنید)",
+        };
+        if (clean.Length > 0)
+        {
+            lines.Add("");
+            lines.Add("🔑 کدِ پمپ: " + FormatCode(clean));
+            lines.Add("همین کد را در اپ بزنید — فقط حساب‌های همین پمپ را می‌بینید.");
+        }
+        return string.Join("\n", lines);
+    }
+
+    /// <summary>‎K7PM-3XQ2‎ — همان شکلی که در پروفایل دیده می‌شود.</summary>
+    private static string FormatCode(string clean) =>
+        clean.Length > 4 ? clean[..4] + "-" + clean[4..] : clean;
+
+    /// <summary>
+    /// ریشهٔ سایت (بی ‎/kar/‎ و بی ‎/view/‎) — برای فایل‌های کنارِ سایت.
+    /// </summary>
+    public static string SiteOf(string? viewerUrl)
+    {
+        var b = BaseOf(viewerUrl);                       // …/kar/
+        return b[..^"/kar/".Length];
+    }
+
+    /// <summary>
     /// لینکِ «با کدِ پمپ»: اپِ گوشی با این باز می‌شود و همان لحظه کد را
     /// می‌زند (‎?code=‎). ⚠️ هیچ رمزِ سروری در این لینک نیست — فقط همان کدی
     /// که خودِ صاحبِ پمپ به کارمند می‌دهد؛ نشانی و رمزِ خواندن را اپ خودش از

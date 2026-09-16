@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.Application.Localization;
@@ -509,6 +511,122 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         SubSourceText = check.Valid ? "مجوزِ امضاشدهٔ سرور" : activated ? check.Reason : "کدِ شش‌رقمی را بزنید";
     }
 
+    // ══ 🪪 کارتِ ورود — «ایمیل، کدِ شش‌رقمی، نام، نامِ پمپ» ══════════════════
+    //
+    //  خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۸) با دو عکس: «پروفایل یک بخش بگذار،
+    //  بخشِ لاگین با ایمیل با اضافه کردنِ کدِ شش‌رقمی و زدنِ اسم و اسمِ پمپش…
+    //  عکسِ آن اولی باشد، دیزاینِ این دومی.»
+    //
+    //  پس کارتی است دوستونه مثلِ همان طرح: یک طرف عکس، طرفِ دیگر فرم. و همان
+    //  کاری را می‌کند که تا امروز پراکنده بود: نام و نامِ پمپ و ایمیل در
+    //  تنظیمات می‌نشینند و کدِ شش‌رقمی همان فعال‌سازیِ اشتراک است.
+    //
+    //  ⚠️ **رمزی این‌جا تایپ نمی‌شود** — نه رمزِ گوگل، نه رمزِ سرور. ورود با
+    //  گوگل همان مرورگرِ سیستم است (‎GoogleSignIn‎) و کدِ شش‌رقمی از خودِ
+    //  فروشنده می‌آید.
+    //
+    //  ⚠️ **عکس یک درصدِ ثانیه هم به برنامه اضافه نمی‌کند** — خواستهٔ صریحِ
+    //  صاحب ریپو. سه قاعده: (۱) فقط در ‎OnActivatedAsync‎ خوانده می‌شود، یعنی
+    //  وقتی کاربر واقعاً روی این صفحه آمد — نه در سازنده و نه در
+    //  ‎EnsureLoadedAsync‎ که پردهٔ لودینگ می‌زندشان؛ (۲) روی نخِ دیگر و با
+    //  ‎DecodeToWidth‎ به پهنای نمایش باز می‌شود، نه با اندازهٔ اصلی؛ (۳) یک
+    //  بار و برای همیشه (‎_art‎). سنجه‌اش ‎startup‎ و ‎idle‎ است.
+
+    [ObservableProperty] private string _loginEmail = "";
+    [ObservableProperty] private string _loginName = "";
+    [ObservableProperty] private string _loginPump = "";
+    [ObservableProperty] private string _loginCode = "";
+    [ObservableProperty] private string _loginStatus = "";
+
+    /// <summary>عکسِ کنارِ فرم — تا خوانده نشده ‎null‎ است و کادرش دیده نمی‌شود.</summary>
+    [ObservableProperty] private Bitmap? _loginArt;
+
+    /// <summary>پهنای نمایشِ عکس؛ بیشتر از این باز نمی‌شود.</summary>
+    private const int ArtWidth = 460;
+
+    private static Bitmap? _art;
+    private static bool _artTried;
+
+    private void ShowLogin()
+    {
+        var f = AppSettings.Load();
+        if (LoginEmail.Length == 0) LoginEmail = f.CloudEmail;
+        if (LoginName.Length == 0) LoginName = f.CloudName;
+        if (LoginPump.Length == 0)
+        {
+            var name = _host.Settings.GetString(SettingsService.StationName);
+            LoginPump = string.IsNullOrWhiteSpace(name) ? "" : name;
+        }
+    }
+
+    /// <summary>
+    /// «ثبت و فعال‌سازی»: نام و نامِ پمپ و ایمیل می‌نشینند و — اگر کدِ
+    /// شش‌رقمی داده شده باشد — همان لحظه اشتراک هم فعال می‌شود.
+    ///
+    /// ⚠️ نامِ پمپ و نام بی کد هم ذخیره می‌شوند: کسی که هنوز کد نخریده باید
+    /// بتواند نامش را بنویسد.
+    /// </summary>
+    [RelayCommand]
+    private Task SubmitLoginAsync() => CrashGuard.RunAsync("ثبتِ حساب", async () =>
+    {
+        Busy = true;
+        try
+        {
+            var f = AppSettings.Load();
+            var email = (LoginEmail ?? "").Trim();
+            var name = (LoginName ?? "").Trim();
+            var pump = (LoginPump ?? "").Trim();
+
+            if (email.Length > 0 && !email.Contains('@'))
+            { LoginStatus = "❌ ایمیل درست نیست."; return; }
+
+            if (email.Length > 0) f.CloudEmail = email;
+            if (name.Length > 0) f.CloudName = name;
+            f.Save();
+            if (pump.Length > 0) _host.Settings.Set(SettingsService.StationName, pump);
+
+            var code = new string((LoginCode ?? "").Where(char.IsDigit).ToArray());
+            if (code.Length == 0)
+            {
+                LoginStatus = "✅ ذخیره شد. برای فعال شدنِ اشتراک، کدِ شش‌رقمی را هم بزنید.";
+                RefreshAll();
+                return;
+            }
+            if (code.Length != 6) { LoginStatus = "❌ کد باید شش رقم باشد."; return; }
+
+            LoginStatus = "در حالِ فعال‌سازی روی سرور…";
+            var res = await Cloud.RedeemAsync(code);
+            LoginStatus = res.Ok ? "✅ اشتراک فعال شد." : "❌ " + res.Why;
+            if (res.Ok) LoginCode = "";
+            RefreshAll();
+        }
+        finally { Busy = false; }
+    });
+
+    /// <summary>
+    /// عکسِ کارتِ ورود — روی نخِ دیگر، به پهنای نمایش، یک بار.
+    /// نشدنش هیچ اهمیتی ندارد: صفحه بی عکس هم کامل است.
+    /// </summary>
+    private async Task LoadArtAsync()
+    {
+        if (LoginArt is not null) return;
+        if (_art is not null) { LoginArt = _art; return; }
+        if (_artTried) return;
+        _artTried = true;
+
+        try
+        {
+            var bmp = await Task.Run(() =>
+            {
+                using var s = AssetLoader.Open(new Uri("avares://PumpYaqobi/Assets/login-art.jpg"));
+                return Bitmap.DecodeToWidth(s, ArtWidth);
+            });
+            _art = bmp;
+            LoginArt = bmp;
+        }
+        catch { }
+    }
+
     /// <summary>ردیف‌های تب‌ها — کارمندان، تاریخچهٔ بخش‌ها، پشتیبان‌ها.</summary>
     private async Task LoadRowsAsync()
     {
@@ -548,7 +666,11 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     public override async Task OnActivatedAsync()
     {
         RefreshAll();
+        ShowLogin();
         await LoadRowsAsync();
+        //  ⚠️ عکس آخر از همه، و فقط همین‌جا — مسیرِ لودینگِ برنامه به آن
+        //  دست نمی‌زند.
+        await LoadArtAsync();
     }
 
     /// <summary>پوشهٔ پشتیبان‌ها را با فایل‌منیجرِ سیستم باز می‌کند.</summary>

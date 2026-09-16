@@ -91,6 +91,9 @@ jobs:
                       os.remove(dest)
 
           grab('kar-latest', 'version.txt', 'kar-apk-version.txt')
+          # فایلِ نصبِ اپِ کارمندان کنارِ سایت هم گذاشته می‌شود تا لینکِ
+          # دادنی به کارمند روی دامنهٔ خودِ پمپ باشد (KarLink.ApkUrl).
+          grab('kar-latest', '.apk', 'PumpYaqobiKar.apk')
           grab('android-latest', '.apk', 'PumpYaqobi.apk')
           grab('android-latest', 'version.txt', 'apk-version.txt')
           grab('desktop-latest', '.exe', 'PumpYaqobi-Setup.exe')

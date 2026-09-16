@@ -39,4 +39,10 @@ public sealed class SettingsSectionViewModel : SectionViewModel
     public SectionViewModel? KeysPage => SubSections.FirstOrDefault(s => s.Id == "keys");
     public SectionViewModel? BackupsPage => SubSections.FirstOrDefault(s => s.Id == "backups");
     public SectionViewModel? TrashPage => SubSections.FirstOrDefault(s => s.Id == "trash");
+
+    /// <summary>
+    /// درِ چهارم — «اپِ گوشی: لینک و کد». خواستهٔ صریحِ صاحب ریپو
+    /// (۱۴۰۵/۰۶/۲۸): لینکِ اندروید و آیفون و کدِ پمپ، یک‌جا و کپی‌شدنی.
+    /// </summary>
+    public SectionViewModel? AppsPage => SubSections.FirstOrDefault(s => s.Id == "apps");
 }

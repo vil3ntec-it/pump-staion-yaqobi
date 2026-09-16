@@ -64,6 +64,17 @@ public static class Entitlements
     /// </summary>
     public static readonly TimeSpan Grace = TimeSpan.FromDays(14);
 
+    /// <summary>
+    /// «آزمایشِ حالتِ بی‌اشتراک» — خواستهٔ صاحب ریپو: «بخشِ وی‌آی‌پی را اعمال
+    /// کن که من ببینم و تست کنم.» با روشن بودنش هر سه کارِ ابری بسته دیده
+    /// می‌شوند، پس صاحبِ پمپ می‌تواند خودش قفل‌ها را ببیند.
+    ///
+    /// ⚠️ <b>فقط می‌بندد، هیچ‌وقت باز نمی‌کند</b> — پس راهِ دور زدنِ اشتراک
+    /// نیست. و فقط در حافظه است: با بسته شدنِ برنامه خودش می‌رود
+    /// (روی دیسک نمی‌نشیند).
+    /// </summary>
+    public static bool TestDeny { get; set; }
+
     /// <summary>حالا — تزریق‌پذیر تا آزمون بتواند زمان را جلو ببرد.</summary>
     public static Func<long> Now { get; set; } =
         () => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -212,6 +223,8 @@ public sealed record EntitlementState(
     {
         if (feature is not (Entitlements.Kar or Entitlements.QrLive or Entitlements.CloudBackup))
             return true;
+        //  ⚠️ فقط می‌بندد — آزمایشِ دستیِ خودِ صاحبِ پمپ، بی اثر روی دیسک.
+        if (Entitlements.TestDeny) return false;
         if (NotActivated) return false;
         if (InGrace) return true;                        // ⚠️ ارفاق: باگ و آفلاین نباید ببندد
         if (!Open) return false;
