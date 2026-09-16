@@ -1,3 +1,4 @@
+using PumpYaqobi.Domain.Entities;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using PumpYaqobi.Persistence;
@@ -38,9 +39,76 @@ public sealed class PumpDbFactory
         db.Database.EnsureCreated();
         db.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
         db.Database.ExecuteSqlRaw("PRAGMA foreign_keys=ON;");
+
+        // ══ وصله‌ها فقط یک بار برای هر ساختِ برنامه ══════════════════════════
+        // هر سه وصله نقشهٔ کاملِ EF را می‌سازند و ده‌ها دستور را با استثنای
+        // «از پیش هست» می‌دوانند — با هر بار باز شدنِ برنامه، حتی وقتی هیچ
+        // چیزی عوض نشده. مهرِ ساخت (‎ModuleVersionId‎ی همین اسمبلی، که با هر
+        // کامپایل عوض می‌شود) در جدولِ تنظیمات می‌نشیند؛ تا وقتی همان است،
+        // دیتابیس همان است که همین ساخت یک بار وصله زده. نسخهٔ تازه ⇒ مهرِ
+        // تازه ⇒ یک بارِ دیگر، و بعد دوباره آرام.
+        // مهر شمارِ جدول‌ها و ایندکس‌های خودِ فایل را هم دارد: جدولی که (به هر
+        // دلیل) افتاده باشد شمار را عوض می‌کند و وصله دوباره می‌رود.
+        var stamp = typeof(PumpDbFactory).Assembly.ManifestModule.ModuleVersionId.ToString("N")
+                    + ":" + SchemaObjects(db);
+        if (ReadStamp(db) == stamp) return;
+
         PatchTables(db);
         PatchColumns(db);
         PatchIndexes(db);
+        WriteStamp(db, typeof(PumpDbFactory).Assembly.ManifestModule.ModuleVersionId.ToString("N")
+                       + ":" + SchemaObjects(db));
+    }
+
+    /// <summary>شمارِ جدول‌ها و ایندکس‌های فایل — بخشِ دومِ مهر.</summary>
+    private static long SchemaObjects(PumpDbContext db)
+    {
+        try
+        {
+            using var cmd = db.Database.GetDbConnection().CreateCommand();
+            var opened = cmd.Connection!.State != System.Data.ConnectionState.Open;
+            if (opened) cmd.Connection.Open();
+            try
+            {
+                cmd.CommandText = "SELECT count(*) FROM sqlite_master WHERE type IN ('table','index');";
+                return Convert.ToInt64(cmd.ExecuteScalar());
+            }
+            finally { if (opened) cmd.Connection.Close(); }
+        }
+        catch { return -1; }
+    }
+
+    private const string StampKey = "schema.stamp";
+
+    private static string? ReadStamp(PumpDbContext db)
+    {
+        try
+        {
+            using var cmd = db.Database.GetDbConnection().CreateCommand();
+            var opened = cmd.Connection!.State != System.Data.ConnectionState.Open;
+            if (opened) cmd.Connection.Open();
+            try
+            {
+                cmd.CommandText = "SELECT \"Value\" FROM \"Settings\" WHERE \"Key\" = @k LIMIT 1;";
+                var prm = cmd.CreateParameter(); prm.ParameterName = "@k"; prm.Value = StampKey;
+                cmd.Parameters.Add(prm);
+                return cmd.ExecuteScalar() as string;
+            }
+            finally { if (opened) cmd.Connection.Close(); }
+        }
+        catch { return null; }   // جدولِ تنظیمات هنوز نیست ⇒ وصله بزن
+    }
+
+    private static void WriteStamp(PumpDbContext db, string stamp)
+    {
+        try
+        {
+            var row = db.Settings.FirstOrDefault(s => s.Key == StampKey);
+            if (row is null) db.Settings.Add(new Setting { Key = StampKey, Value = stamp });
+            else row.Value = stamp;
+            db.SaveChanges();
+        }
+        catch { /* دفعهٔ بعد دوباره وصله می‌زند — بی‌ضرر */ }
     }
 
     /// <summary>

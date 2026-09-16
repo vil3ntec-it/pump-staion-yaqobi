@@ -133,19 +133,51 @@ internal static class WarmAudit
         if (strayedDuringSplash) bad.Add("حینِ لودینگ ناوبری رخ داد (Current عوض شد)");
         if (lockDuringSplash) bad.Add("صفحهٔ قفل حینِ لودینگ دیده می‌شد");
         if (vm.Phase != MainViewModel.AppPhase.Locked) bad.Add($"پس از لودینگ به {vm.Phase} رفت، نه قفل");
+        // پرده فقط بخشِ آغازین را گرم می‌کند (کوتاه بماند)؛ بقیه پشتِ قفل
+        if (vm.Warm.Warmed < 1) bad.Add("پرده هیچ صفحه‌ای را گرم نکرد");
+        var splashWarmed = vm.Warm.Warmed;
+
+        // ── بقیه پشتِ صفحهٔ قفل، همان چند ثانیه‌ای که کاربر رمز می‌زند ──────
+        var sw2 = Stopwatch.StartNew();
+        while (sw2.ElapsedMilliseconds < 120_000)
+        {
+            Dispatcher.UIThread.RunJobs();
+            win.UpdateLayout();
+            if (vm.Warm.Warmed >= all.Count) break;
+            Thread.Sleep(1);
+        }
+        Console.WriteLine($"   پشتِ قفل گرم شد                {vm.Warm.Warmed - splashWarmed} صفحهٔ دیگر در {sw2.ElapsedMilliseconds:N0} ms");
         if (vm.Warm.Warmed < all.Count) bad.Add($"فقط {vm.Warm.Warmed} صفحه از {all.Count} گرم شد");
+        if (vm.Phase != MainViewModel.AppPhase.Locked) bad.Add("گرم کردنِ پشتِ قفل حالت را عوض کرد");
+        if (vm.Current is not null) bad.Add("گرم کردنِ پشتِ قفل ناوبری کرد");
 
         // ── ۶) هیچ چیزِ محافظت‌شده‌ای پیش از رمز ───────────────────────────
-        var liveGrids = win.GetVisualDescendants().OfType<DataGrid>()
-                           .Count(g => g.IsEffectivelyVisible);
-        var liveRows = win.GetVisualDescendants().OfType<DataGridRow>()
-                          .Count(r => r.IsEffectivelyVisible);
+        // پوسته زیرِ قفل چیده می‌شود (تا گرم شود)، پس «دیده شدن» یعنی: صفحهٔ
+        // رمز باید مات باشد و بعد از پوسته در ترتیبِ رسم، و هیچ چیزِ
+        // دیده‌شونده‌ای بعد از آن نباشد. جدولی که زیرِ یک صفحهٔ ماتِ تمام‌قد
+        // است، دیده نمی‌شود.
+        var lockView = win.GetVisualDescendants().OfType<LockView>().FirstOrDefault();
+        var lockPanel = lockView?.Parent as Control;
+        var lockRoot = lockPanel?.Parent as Panel;
+        var lockBg = lockView?.GetVisualDescendants().OfType<Border>().FirstOrDefault()?.Background;
+        var lockOpaque = lockBg is ISolidColorBrush lb && lb.Color.A == 255
+                         || lockBg is IGradientBrush lg && lg.GradientStops.Count > 0 && lg.GradientStops.All(g => g.Color.A == 255);
+        var lockCovers = lockView is not null && lockPanel is not null && lockRoot is not null
+                         && lockPanel.IsVisible
+                         && Math.Abs(lockView.Bounds.Width - win.Bounds.Width) < 2
+                         && Math.Abs(lockView.Bounds.Height - win.Bounds.Height) < 2;
+        var lockOnTop = lockRoot is not null && lockPanel is not null
+                        && lockRoot.Children.Skip(lockRoot.Children.IndexOf(lockPanel) + 1).All(c => !c.IsVisible);
+        var liveGrids = win.GetVisualDescendants().OfType<DataGrid>().Count(g => g.IsEffectivelyVisible);
         Console.WriteLine();
         Console.WriteLine("۶) پیش از رمز، روی صفحه");
-        Console.WriteLine($"   جدولِ دیده‌شونده                {liveGrids}   (باید صفر باشد)");
-        Console.WriteLine($"   ردیفِ دیده‌شونده                {liveRows}   (باید صفر باشد)");
-        if (liveGrids > 0) bad.Add($"{liveGrids} جدولِ محافظت‌شده پیش از رمز دیده می‌شود");
-        if (liveRows > 0) bad.Add($"{liveRows} ردیفِ محافظت‌شده پیش از رمز دیده می‌شود");
+        Console.WriteLine($"   صفحهٔ رمز مات است؟             {Yn(lockOpaque)}   (باید «بله» باشد)");
+        Console.WriteLine($"   صفحهٔ رمز تمامِ پنجره را می‌پوشاند؟ {Yn(lockCovers)}   (باید «بله» باشد)");
+        Console.WriteLine($"   صفحهٔ رمز روی همه‌چیز است؟      {Yn(lockOnTop)}   (باید «بله» باشد)");
+        Console.WriteLine($"   جدول‌های چیده‌شده زیرِ آن        {liveGrids}   (فقط زیرِ قفل، نه جلوی چشم)");
+        if (!lockOpaque) bad.Add("صفحهٔ رمز مات نیست — پوستهٔ زیرش دیده می‌شود");
+        if (!lockCovers) bad.Add("صفحهٔ رمز تمامِ پنجره را نمی‌پوشاند");
+        if (!lockOnTop) bad.Add("صفحهٔ رمز روی همه‌چیز نیست");
 
         // ── ۳) رمزِ غلط ───────────────────────────────────────────────────
         vm.Lock.Password = "1234";

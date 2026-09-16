@@ -52,13 +52,24 @@ public sealed class WarmUp
     /// <summary>چند صفحه گرم شد — برای نوشتهٔ زیرِ انیمیشن و برای آزمون.</summary>
     public int Warmed { get; private set; }
 
+    /// <summary>صفحه‌هایی که یک بار گرم شده‌اند — دوباره نه.</summary>
+    private readonly HashSet<SectionViewModel> _warmed = new();
+
+    /// <summary>
+    /// ⚠️ دو نوبت صدا زده می‌شود: نوبتِ اول زیرِ پرده فقط بخشِ آغازین (تا پرده
+    /// کوتاه باشد)، نوبتِ دوم پشتِ صفحهٔ قفل بقیه. ‎Done‎ با نوبتِ اول بسته
+    /// می‌شود (پرده یک بار در عمرِ برنامه است)؛ صفحه‌ای که گرم شده دوباره گرم
+    /// نمی‌شود؛ و ‎keepGoing‎ اگر «نه» بگوید (کاربر رمز را زد و پوسته جلوی چشم
+    /// است) همان‌جا می‌ایستد — وگرنه صفحهٔ در حالِ گرم شدن کنارِ صفحهٔ کاربر
+    /// دیده می‌شد.
+    /// </summary>
     public async Task RunAsync(
         IReadOnlyList<SectionViewModel> sections,
         ViewLocator locator,
         Action layout,
-        Action<double> report)
+        Action<double> report,
+        Func<bool>? keepGoing = null)
     {
-        if (Done) return;
         Done = true;
 
         var n = sections.Count;
@@ -66,6 +77,8 @@ public sealed class WarmUp
         {
             var sec = sections[i];
             report((double)(i + 1) / n);
+            if (!_warmed.Add(sec)) continue;
+            if (keepGoing is not null && !keepGoing()) { _warmed.Remove(sec); return; }
 
             try
             {

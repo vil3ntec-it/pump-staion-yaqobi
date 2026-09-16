@@ -13,6 +13,13 @@ internal static class Program
         CrashGuard.Install();
         try
         {
+            // ══ میزبان روی نخِ دیگر، هم‌زمان با بالا آمدنِ آوالونیا ═══════════
+            // سنجشِ ‎startup‎: میزبان (دیتابیس + EF + سرویس‌ها) ۲٫۶ ثانیه و
+            // راه‌اندازیِ آوالونیا ۱ ثانیه بود — پشتِ سرِ هم. هیچ‌کدام به دیگری
+            // نیاز ندارد، پس با هم می‌روند و ‎App‎ فقط منتظرِ همان یکی می‌ماند
+            // (قفلِ ‎AppHost.Start‎ خودش انتظار را می‌سازد). خطایش هم گم نمی‌شود:
+            // ‎Start‎ی دوم همان استثنا را دوباره می‌سازد و ‎CrashGuard‎ می‌گیرد.
+            _ = System.Threading.Tasks.Task.Run(() => { try { AppHost.Start(); } catch { } });
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
         catch (Exception ex)

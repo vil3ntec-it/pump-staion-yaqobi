@@ -138,9 +138,18 @@ public sealed partial class MainViewModel : ObservableObject
             is not { } locator || all.Count == 0)
         { Phase = AppPhase.Locked; return; }
 
+        // ══ پرده فقط بخشِ آغازین را گرم می‌کند ═════════════════════════════
+        // گزارشِ صاحب ریپو: «برنامه خیلی کند باز می‌شود؛ برنامه‌های دیگر زود
+        // باز می‌شوند.» سنجشِ ‎startup‎: پرده با دیتابیسِ **خالی** چهار ثانیه
+        // بود — بیست‌ونه صفحه پشتِ سرِ هم، پیش از آن‌که کاربر حتی صفحهٔ رمز را
+        // ببیند. حالا زیرِ پرده فقط همان بخشی چیده می‌شود که پس از رمز جلوی
+        // چشم می‌آید؛ بقیه پشتِ صفحهٔ قفل (‎WarmRestAsync‎)، همان چند ثانیه‌ای
+        // که کاربر رمز می‌زند. اگر زودتر وارد شد، هر صفحه سرِ اولین دیدار
+        // خودش ساخته می‌شود — مثلِ هر برنامهٔ دیگری.
+        var first = Sections.FirstOrDefault(x => x.Id == _settings.LastSection) ?? Sections[0];
         try
         {
-            await Warm.RunAsync(all, locator, layout, p => WarmProgress = p);
+            await Warm.RunAsync(new[] { first }, locator, layout, p => WarmProgress = p);
         }
         finally
         {
@@ -148,6 +157,21 @@ public sealed partial class MainViewModel : ObservableObject
             // وگرنه یک خطای گرم کردن، برنامه را روی صفحهٔ لودینگ قفل می‌کرد.
             Phase = AppPhase.Locked;
         }
+
+        // ══ بقیه پشتِ صفحهٔ قفل ═══════════════════════════════════════════
+        // پوسته زیرِ قفل هم «دیده‌شونده» است (‎IsShellVisible‎) ولی صفحهٔ رمز
+        // مات و رویش است. با اولین ‎Ready‎ می‌ایستد.
+        _ = WarmRestAsync(locator, layout);
+    }
+
+    private async Task WarmRestAsync(ViewLocator locator, Action layout)
+    {
+        try
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+            await Warm.RunAsync(AllPages, locator, layout, _ => { }, () => Phase == AppPhase.Locked);
+        }
+        catch { /* گرم کردن یک تجمل است */ }
     }
 
     /// <summary>
@@ -325,9 +349,12 @@ public sealed partial class MainViewModel : ObservableObject
     /// نوشته: نمایی که در درختِ بصری نباشد اصلاً چیده نمی‌شود و گرم کردن فقط
     /// ادایش را درمی‌آورد.
     ///
-    /// ⚠️ و روی صفحهٔ قفل **نیست**: تا رمز نخورده، پوسته می‌رود کنار.
+    /// ⚠️ زیرِ صفحهٔ قفل هم هست — تا بقیهٔ صفحه‌ها همان چند ثانیه‌ای که کاربر
+    /// رمز می‌زند گرم شوند (‎WarmRestAsync‎). صفحهٔ رمز مات است و روی همه؛
+    /// ‎WarmAudit‎ همین را می‌سنجد. داده‌ای هم در کار نیست: تا رمز نخورده هیچ
+    /// بخشی خوانده نمی‌شود.
     /// </summary>
-    public bool IsShellVisible => Phase is AppPhase.Ready or AppPhase.Starting;
+    public bool IsShellVisible => true;
 
     /// <summary>تاریخِ شمسیِ امروز — خطِ اولِ بلوکِ تاریخِ سربرگ.</summary>
     public string TodayText => Shamsi.DayName(DateTime.Now) + "، " + Shamsi.Today();

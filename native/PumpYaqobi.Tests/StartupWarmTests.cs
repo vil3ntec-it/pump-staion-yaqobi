@@ -111,7 +111,11 @@ public class StartupWarmTests
         // ⚠️ پوسته حینِ ‎Starting‎ هم چیده می‌شود — ولی زیرِ پردهٔ **مات**.
         // نمایی که در درختِ بصری نباشد اصلاً چیده نمی‌شود و گرم کردن فقط
         // ادایش را درمی‌آورد. روی صفحهٔ قفل اما نیست.
-        Assert.Contains("IsShellVisible => Phase is AppPhase.Ready or AppPhase.Starting", vm);
+        // پوسته زیرِ قفل هم هست تا بقیهٔ صفحه‌ها پشتِ صفحهٔ رمز گرم شوند؛
+        // خودِ صفحهٔ رمز مات و روی همه است (WarmAudit).
+        Assert.Contains("IsShellVisible => true;", vm);
+        Assert.Contains("WarmRestAsync", vm);
+        Assert.Contains("() => Phase == AppPhase.Locked", vm);
     }
 
     /// <summary>گرم کردن یک بار در عمرِ برنامه — نه با هر ورود و خروج.</summary>
@@ -119,7 +123,10 @@ public class StartupWarmTests
     public void WarmingRunsOnlyOnce()
     {
         var w = Read("PumpYaqobi.App", "Services", "WarmUp.cs");
-        Assert.Matches(new Regex(@"if \(Done\) return;\s*\r?\n\s*Done = true;"), w);
+        // دو نوبت صدا زده می‌شود (پرده و پشتِ قفل)، پس Done دیگر در را نمی‌بندد؛
+        // صفحهٔ گرم‌شده با _warmed دوباره گرم نمی‌شود.
+        Assert.Contains("Done = true;", w);
+        Assert.Contains("if (!_warmed.Add(sec)) continue;", w);
     }
 
     /// <summary>

@@ -76,6 +76,9 @@ internal static class Program
         // ══ «پنج سال استفاده از اپ» — کندی و باگ با دفترِ پنج‌ساله ═══════════
         //     dotnet run --project PumpYaqobi.UiTests -- years
         if (outDir.Equals("years", StringComparison.OrdinalIgnoreCase)) return YearsAudit.Run();
+        // ══ «برنامه چرا دیر باز می‌شود؟» — اجرای سرد، مرحله به مرحله ═════════
+        //     dotnet run --project PumpYaqobi.UiTests -- startup
+        if (outDir.Equals("startup", StringComparison.OrdinalIgnoreCase)) return StartupAudit.Run();
         if (outDir.Equals("plprof", StringComparison.OrdinalIgnoreCase)) return YearsAudit.RunPriceLossProfile();
         // ══ «پردهٔ لودینگ کارش را می‌کند؟» ═════════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- warm
