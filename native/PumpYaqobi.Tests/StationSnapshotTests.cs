@@ -48,8 +48,12 @@ public class StationSnapshotTests
         Assert.True(j.TryGetProperty("debtors", out _));
 
         var sections = j.GetProperty("sections");
+        //  «حساب‌های پمپ» در گوشی همان بخش‌های برنامهٔ کامپیوتر است — پارچه، ورق،
+        //  رسیدها و حاضری هم باید بروند (خواستهٔ صاحب ریپو، ۱۴۰۵/۰۶/۲۶).
+        Assert.Equal(4, j.GetProperty("banner").GetArrayLength());
         foreach (var id in new[] { "safe", "sarrafi", "expense", "chakana", "extraincome",
-                                   "company", "amanat", "invoice", "storage", "staff" })
+                                   "company", "amanat", "invoice", "storage", "staff",
+                                   "parcha", "waraq", "debtrasid", "parcharasid", "attendance" })
         {
             Assert.True(sections.TryGetProperty(id, out var sec), "بخشِ " + id + " نیست");
             // شکلِ واحدِ هر بخش — رباتِ گوشی روی همین حساب می‌کند

@@ -72,6 +72,9 @@ public static class StationSnapshot
             ["sections"] = await SectionsAsync(host, ct),
         };
         snap["alerts"] = Alerts(snap["debtors"] as List<object?>, snap["tank"] as Dictionary<string, object?>);
+        // چهار عددِ نوارِ بالای برنامهٔ کامپیوتر — همان ‎MainViewModel.Banner‎، تا
+        // صاحبِ پمپ در گوشی هم اول همین چهار عدد را ببیند.
+        snap["banner"] = await BannerAsync(host, ct);
         return snap;
     }
 
@@ -469,7 +472,158 @@ public static class StationSnapshot
             staff.Select(_ => ""),
             new[] { new[] { "شمارِ کارمند", Shamsi.Money(staff.Count) } });
 
+        // ── پارچه (پطرول و دیزل) ─────────────────────────────────────────────
+        //  خواستهٔ صاحب ریپو: «حساب‌های پمپ» در گوشی همان بخش‌های برنامهٔ
+        //  کامپیوتر باشد. تا این‌جا پارچه، ورق، رسیدها و حاضری جا مانده بودند.
+        var parchaRows = new List<string[]>();
+        var parchaMonths = new List<string>();
+        decimal pSale = 0, pMoney = 0, pDebt = 0, pProfit = 0;
+        foreach (var fuel in new[] { FuelType.Petrol, FuelType.Diesel })
+        {
+            foreach (var r in await host.ParchaData.ListAsync(fuel, null, ct))
+            {
+                foreach (var (kind, sh) in new[] { ("روز", r.DayShift), ("شب", r.NightShift) })
+                {
+                    if (sh is null) continue;
+                    var n = host.Parcha.Compute(sh);
+                    pSale += n.Sale; pMoney += n.Money; pDebt += sh.Debt; pProfit += n.Profit;
+                    parchaRows.Add(new[]
+                    {
+                        r.DateShamsi ?? "", fuel == FuelType.Diesel ? "دیزل" : "پطرول", kind,
+                        sh.Name ?? "", Shamsi.Money(n.Sale), Shamsi.Money(sh.Price),
+                        Shamsi.Money(n.Money), Shamsi.Money(sh.Debt), Shamsi.Money(n.Profit),
+                    });
+                    parchaMonths.Add(MonthOf(r.DateShamsi));
+                }
+            }
+        }
+        out_["parcha"] = Section("پارچه",
+            new[] { "تاریخ", "تیل", "شیفت", "کارمند", "فروش (لیتر)", "فی", "پول", "قرض", "فایده" },
+            parchaRows, parchaMonths,
+            new[]
+            {
+                new[] { "جمله فروش (لیتر)", Shamsi.Money(pSale) },
+                new[] { "جمله پول", Shamsi.Money(pMoney) },
+                new[] { "جمله قرض", Shamsi.Money(pDebt) },
+                new[] { "جمله فایده", Shamsi.Money(pProfit) },
+            });
+
+        // ── ورق ──────────────────────────────────────────────────────────────
+        var waraqRows = new List<string[]>();
+        var waraqMonths = new List<string>();
+        decimal wPetrol = 0, wDiesel = 0, wSales = 0, wDebt = 0, wExp = 0, wShort = 0;
+        foreach (var w in await host.WaraqData.ListAsync(null, ct))
+        {
+            foreach (var sh in w.Shifts)
+            {
+                var t = host.Waraq.ShiftTotals(sh);
+                var sc = host.Waraq.Shortage(t);
+                wPetrol += t.PetrolLiters; wDiesel += t.DieselLiters; wSales += t.Sales;
+                wDebt += t.Debt; wExp += t.Expenses; wShort += sc.Shortage;
+                waraqRows.Add(new[]
+                {
+                    w.DateShamsi ?? "", sh.Kind == ShiftKind.Night ? "شب" : "روز", sh.WorkerName ?? "",
+                    Shamsi.Money(t.PetrolLiters), Shamsi.Money(t.DieselLiters), Shamsi.Money(t.Sales),
+                    Shamsi.Money(t.Debt), Shamsi.Money(t.Expenses),
+                    sc.Shortage > 0 ? Shamsi.Money(sc.Shortage) : (sc.Excess > 0 ? "+" + Shamsi.Money(sc.Excess) : "0"),
+                });
+                waraqMonths.Add(MonthOf(w.DateShamsi));
+            }
+        }
+        out_["waraq"] = Section("ورق",
+            new[] { "تاریخ", "شیفت", "کارمند", "پطرول (لیتر)", "دیزل (لیتر)", "فروش", "قرض", "مصرف", "کمبودی" },
+            waraqRows, waraqMonths,
+            new[]
+            {
+                new[] { "جمله پطرول", Shamsi.Money(wPetrol) },
+                new[] { "جمله دیزل", Shamsi.Money(wDiesel) },
+                new[] { "جمله فروش", Shamsi.Money(wSales) },
+                new[] { "جمله قرض", Shamsi.Money(wDebt) },
+                new[] { "جمله مصرف", Shamsi.Money(wExp) },
+                new[] { "جمله کمبودی", Shamsi.Money(wShort) },
+            });
+
+        // ── رسیدهای قرض‌داران ─────────────────────────────────────────────────
+        var quick = await host.DebtReceipts.ListAsync(null, ct);
+        out_["debtrasid"] = Section("رسید قرض‌داران",
+            new[] { "تاریخ", "حساب", "مبلغ", "یادداشت" },
+            quick.Select(q => new[] { q.DateShamsi ?? "", q.Account ?? "", Shamsi.Money(q.Amount), q.Note ?? "" }),
+            quick.Select(q => q.MonthKey ?? MonthOf(q.DateShamsi)),
+            new[]
+            {
+                new[] { "شمارِ رسید", Shamsi.Money(quick.Count) },
+                new[] { "جمله مبلغ", Shamsi.Money(quick.Sum(q => q.Amount)) },
+            });
+
+        // ── رسیدهای پارچه (در انتظارِ ثبت) ──────────────────────────────────
+        var pr = await host.ParchaReceipts.ListAsync(ct);
+        out_["parcharasid"] = Section("رسید پارچه",
+            new[] { "تاریخ", "به حساب", "شرح", "حواله", "لیتر", "فی", "رسید" },
+            pr.Select(x => new[]
+            {
+                x.DateShamsi ?? "", x.Account ?? "", x.Name ?? "", x.Hawala ?? "",
+                Shamsi.MoneyOrBlank(x.Liters), Shamsi.MoneyOrBlank(x.PricePerLiter), Shamsi.Money(x.Rasid),
+            }),
+            pr.Select(x => MonthOf(x.DateShamsi)),
+            new[]
+            {
+                new[] { "شمارِ ردیف", Shamsi.Money(pr.Count) },
+                new[] { "جمله رسید", Shamsi.Money(pr.Sum(x => x.Rasid)) },
+            });
+
+        // ── حاضری (ماهِ جاری) و معاش‌های پرداخت‌شده ─────────────────────────
+        var thisMonth = Shamsi.ThisMonth();
+        var attRows = await host.Attendance.RowsAsync(thisMonth, ct);
+        var pays = await host.Attendance.PaymentsAsync(ct);
+        var byId = staff.ToDictionary(m => m.Id, m => m.Name ?? "");
+        out_["attendance"] = Section("حاضری",
+            new[] { "تاریخ", "کارمند", "آمدن", "رفتن", "ساعت", "یادداشت" },
+            attRows.Select(r => new[]
+            {
+                r.DateShamsi ?? "", byId.TryGetValue(r.StaffId, out var nm) ? nm : (r.Staff?.Name ?? ""),
+                r.In ?? "", r.Out ?? "", Shamsi.Money(host.AttendanceCalc.Hours(r)), r.Note ?? "",
+            }),
+            attRows.Select(r => MonthOf(r.DateShamsi)),
+            new[]
+            {
+                new[] { "روزهای ثبت‌شدهٔ این ماه", Shamsi.Money(attRows.Count) },
+                new[] { "جمله ساعت", Shamsi.Money(attRows.Sum(r => host.AttendanceCalc.Hours(r))) },
+                new[] { "معاشِ پرداخت‌شده (همه)", Shamsi.Money(pays.Sum(p => p.Amount)) },
+            });
+
         return out_;
+    }
+
+    /// <summary>
+    /// چهار عددِ نوارِ بالا — رونوشتِ ‎MainViewModel.RefreshBannerAsync‎ با همان
+    /// سرویس‌ها؛ هیچ حسابِ تازه‌ای این‌جا نیست.
+    /// </summary>
+    private static async Task<List<string[]>> BannerAsync(AppHost host, CancellationToken ct)
+    {
+        var companies = await host.Companies.ListAsync(ct);
+        var compAlbaqi = companies.Sum(c => host.Company.Summarize(c, c.Rows).AlbaqiAfn);
+
+        var accounts = await host.Debtors.CardAccountsAsync(ct: ct);
+        decimal debt = 0;
+        foreach (var list in accounts.Values) debt += host.Debt.SumTotals(list).All.Albaqi;
+
+        var today = Shamsi.Today();
+        var reports = (await host.StorageData.ReportsAsync(FuelType.Petrol, ct))
+            .Concat(await host.StorageData.ReportsAsync(FuelType.Diesel, ct))
+            .Where(r => r.DateShamsi == today);
+        var profit = reports.Sum(r => (r.DayShift?.Profit ?? 0) + (r.NightShift?.Profit ?? 0));
+
+        var expToday = new PumpYaqobi.Application.Services.DashboardService()
+            .ExpQuick(await host.ExpenseLedger.ListAsync(Shamsi.ThisMonth(), ct)).Day;
+
+        static string M(decimal v) => Shamsi.Money(Math.Round(v, 0, MidpointRounding.AwayFromZero));
+        return new List<string[]>
+        {
+            new[] { "شرکت ها تیل (الباقی)", M(compAlbaqi), "accent" },
+            new[] { "قرض کل", M(debt), "danger" },
+            new[] { "مفاد امروز", M(profit), "ok" },
+            new[] { "مصارف امروز", M(expToday), "warn" },
+        };
     }
 
     private static async Task<Dictionary<string, object?>> CompaniesAsync(AppHost host, CancellationToken ct)

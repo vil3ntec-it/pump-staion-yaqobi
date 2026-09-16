@@ -338,5 +338,27 @@ console.log('\n── کدِ پمپ و جداسازیِ پمپ‌ها ───�
   ok(!/pump-kar-v3'/.test(swSrc), 'شمارهٔ کشِ سرویس‌ورکر بالا رفته است');
 }
 
+// ══════════════════════════════════════════════════════════════════════
+//  دو در: «حساب‌های پمپ» و «کارمندان»
+// ══════════════════════════════════════════════════════════════════════
+console.log('\n── دو در ─────────────────────────────────────────────────');
+{
+  const { readFileSync } = await import("node:fs");
+  const htmlSrc = readFileSync(new URL('../kar/index.html', import.meta.url), 'utf8');
+  const appSrc  = readFileSync(new URL('../kar/app.js', import.meta.url), 'utf8');
+  ok(/id="paneHome"/.test(htmlSrc) && /class="door owner"/.test(htmlSrc) && /class="door staff"/.test(htmlSrc),
+     'صفحهٔ خانه دو در دارد: حساب‌های پمپ و کارمندان');
+  ok(/id="paneDash"/.test(htmlSrc) && /id="bannerBox"/.test(htmlSrc), 'داشبوردِ حساب‌ها با چهار عددِ نوار هست');
+  ok(/id="paneStaff"/.test(htmlSrc) && /id="staffList"/.test(htmlSrc), 'درِ کارمندان چراغِ هر قرض‌دار را دارد');
+  ok(/var NAVS = \{[\s\S]*owner:[\s\S]*staff:/.test(appSrc), 'هر در نوارِ خودش را دارد');
+  ok(/stnKey\('mode'\)/.test(appSrc), 'درِ انتخاب‌شده زیرِ کلیدِ همان پمپ می‌ماند');
+  ok(/mode = '';\s*\}/.test(appSrc.slice(appSrc.indexOf('function switchStation'))), 'رفتن به پمپِ دیگر در را فراموش می‌کند');
+  ok(/PumpAndroid\.boot\('ready'\)/.test(appSrc), 'پردهٔ لودینگِ اندروید با «ready» برداشته می‌شود');
+  // ربات بخش‌های تازه را می‌شناسد
+  for (const id of ['parcha', 'waraq', 'debtrasid', 'parcharasid', 'attendance'])
+    ok(new RegExp(id + ':\\s*\\[').test(appSrc), 'ربات واژه‌های بخشِ ' + id + ' را دارد');
+  ok(!/pump-kar-v4'/.test(readFileSync(new URL('../kar/sw.js', import.meta.url), 'utf8')), 'شمارهٔ کش بالا رفته');
+}
+
 console.log(bad ? '\n' + bad + ' آزمون شکست خورد' : '\nهمه درست');
 process.exit(bad ? 1 : 0);

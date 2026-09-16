@@ -181,7 +181,12 @@
     amanat: ['امانت'],
     invoice: ['فاکتور', 'فاکتورها', 'بل'],
     storage: ['خرید', 'خریدها', 'خرید تیل'],
-    staff: ['کارمند', 'کارمندان', 'معاش', 'پرسونل']
+    staff: ['کارمند', 'کارمندان', 'معاش', 'پرسونل'],
+    parcha: ['پارچه', 'پارچه ها', 'شیفت', 'فایده', 'مفاد'],
+    waraq: ['ورق', 'ورق روزانه', 'کمبودی'],
+    debtrasid: ['رسید قرضدار', 'رسید قرض دار', 'رسیدها', 'رسید'],
+    parcharasid: ['رسید پارچه'],
+    attendance: ['حاضری', 'حضور', 'غیاب']
   };
 
   var TANK_WORDS = ['مخزن', 'موجودی تیل', 'ذخیره', 'تانک', 'استاک'];
@@ -501,6 +506,7 @@
       if (cfg.stn) {
         localStorage.removeItem(stnKey('snap'));
         localStorage.removeItem(stnKey('told'));
+        localStorage.removeItem(stnKey('mode'));
       }
       localStorage.removeItem(KEY + '.snap');      // کلیدِ قدیمیِ بی‌پمپ
       localStorage.removeItem(KEY + '.told');
@@ -510,6 +516,7 @@
     toldKeys = {};
     unlocked = false;
     fromCloud = false;
+    mode = '';
   }
 
   /** فقط عکسِ همین پمپ پذیرفته می‌شود — چه از سرورِ خانگی چه از ابر. */
@@ -525,6 +532,61 @@
   }
 
   var fromCloud = false;
+
+  /*
+   *  ══ دو در: «حساب‌های پمپ» و «کارمندان» ═══════════════════════════════
+   *
+   *  خواستهٔ صریحِ صاحب ریپو: «وقتی اپ باز می‌شود دو بخش باشد: یکی برای
+   *  دیدنِ حساب‌های پمپ، یکی برای کارمندان تا افرادی که تیل دارند و ندارند
+   *  را با مخزن ببینند.»
+   *
+   *  ‎mode‎ زیرِ کلیدِ همان پمپ می‌ماند (‎stnKey('mode')‎) تا با کدِ پمپِ
+   *  دیگر، درِ قبلی به یاد نماند. هر دو در فقط می‌خوانند.
+   */
+  var mode = '';
+  var NAVS = {
+    owner: [
+      ['paneDash', '🏠 خانه'], ['paneSec', '📚 بخش‌ها'],
+      ['paneDebt', '👥 قرض‌داران'], ['paneTank', '⛽ مخزن'], ['paneBot', '🤖 ربات']
+    ],
+    staff: [
+      ['paneStaff', '🚦 تیل دارد؟'], ['paneTank', '⛽ مخزن'], ['paneBot', '🤖 ربات']
+    ]
+  };
+  var ALL_PANES = ['paneHome', 'paneDash', 'paneStaff', 'paneBot', 'paneDebt', 'paneTank', 'paneSec'];
+
+  function loadMode() {
+    try { mode = localStorage.getItem(stnKey('mode')) || ''; } catch (e) { mode = ''; }
+    if (mode !== 'owner' && mode !== 'staff') mode = '';
+  }
+
+  function setMode(m) {
+    mode = m === 'staff' ? 'staff' : (m === 'owner' ? 'owner' : '');
+    try {
+      if (mode) localStorage.setItem(stnKey('mode'), mode);
+      else localStorage.removeItem(stnKey('mode'));
+    } catch (e) { }
+    buildNav();
+    var seg = $('modeSeg');
+    if (seg) {
+      seg.classList.toggle('hidden', !mode);
+      Array.prototype.forEach.call(seg.querySelectorAll('button'), function (b) {
+        b.setAttribute('aria-selected', String(b.getAttribute('data-mode') === mode));
+      });
+    }
+    if (!mode) { goPane('paneHome'); return; }
+    goPane(NAVS[mode][0][0]);
+    render();
+  }
+
+  function buildNav() {
+    var nav = $('nav');
+    if (!nav) return;
+    nav.innerHTML = (NAVS[mode] || []).map(function (n) {
+      return '<button data-pane="' + n[0] + '">' + n[1] + '</button>';
+    }).join('');
+    nav.classList.toggle('hidden', !mode || !unlocked);
+  }
 
   /** نشانیِ داخلِ لینک/کیو‌آر برداشته و از نوارِ نشانی پاک می‌شود. */
   var pendingCode = '';
@@ -891,7 +953,7 @@
     ['codePane', 'signinPane', 'setupPane', 'lockPane', 'appPane'].forEach(function (id) {
       $(id).classList.toggle('hidden', id !== which);
     });
-    $('nav').classList.toggle('hidden', which !== 'appPane');
+    $('nav').classList.toggle('hidden', which !== 'appPane' || !mode);
   }
 
   async function unlock() {
@@ -910,7 +972,10 @@
       unlocked = true;
       $('inPass').value = '';
       show('appPane');
+      loadMode();
+      setMode(mode);          // بی در ⇒ خانه؛ با در ⇒ همان در
       render();
+      try { if (window.PumpAndroid && PumpAndroid.boot) PumpAndroid.boot('render'); } catch (e) { }
     } catch (e) {
       err.textContent = 'رمز سنجیده نشد: ' + e;
       err.classList.remove('hidden');
@@ -969,6 +1034,82 @@
       h += '</div>';
     });
     return h;
+  }
+
+  /** چهار عددِ نوارِ بالای برنامهٔ کامپیوتر + مخزن + کاشیِ بخش‌ها — درِ «حساب‌ها». */
+  function renderDash() {
+    var box = $('bannerBox');
+    if (!box) return;
+    var bn = (data && data.banner) || [];
+    box.innerHTML = bn.length
+      ? bn.map(function (b) {
+          return '<div class="bn ' + esc(b[2] || '') + '"><div class="l">' + esc(b[0]) + '</div>' +
+            '<div class="v">' + esc(b[1]) + ' <span class="l">افغانی</span></div></div>';
+        }).join('')
+      : '<div class="sub">برنامهٔ کامپیوتر باید به نسخهٔ تازه برسد تا این چهار عدد بیاید.</div>';
+    $('dashTank').innerHTML = tankFigs(true);
+    var secs = (data && data.sections) || {};
+    $('dashTiles').innerHTML = Object.keys(secs).map(function (id) {
+      var sec = secs[id], first = (sec.sum || [])[0];
+      return '<button class="tile" data-sec="' + esc(id) + '"><b>' + esc(sec.t) + '</b>' +
+        '<span class="sub">' + fmt((sec.rows || []).length) + ' ردیف' +
+        (first ? ' · ' + esc(first[0]) + ' ' + esc(first[1]) : '') + '</span></button>';
+    }).join('') || '<div class="sub">هنوز بخشی نرسیده.</div>';
+  }
+
+  var staffFilter = '';
+
+  /** چراغِ هر قرض‌دار — درِ «کارمندان». سبز: دارد · زرد: کم · سرخ: تمام/اضافه. */
+  function renderStaff() {
+    var list = $('staffList');
+    if (!list) return;
+    var people = (data && data.debtors) || [];
+    var q = norm(($('inStaffFind') || {}).value || '');
+    var c = { '': people.length, out: 0, low: 0, ok: 0 };
+    people.forEach(function (p) { if (c[p.status] !== undefined) c[p.status]++; });
+    $('staffCounts').innerHTML = [['', 'همه'], ['out', '⛔ تمام‌شده'], ['low', '⚠️ کم مانده'], ['ok', '✅ دارد']]
+      .map(function (f) {
+        return '<button data-f="' + f[0] + '" aria-selected="' + (staffFilter === f[0]) + '">' +
+          f[1] + ' (' + fmt(c[f[0]] || 0) + ')</button>';
+      }).join('');
+
+    //  ⚠️ سرخ اول، بعد زرد، بعد سبز — ‎out‎ صفر است، پس ‎||‎ نه (صفر را ۳ می‌کرد
+    //  و تمام‌شده‌ها تهِ فهرست می‌رفتند؛ آزمونِ مرورگر همین را گرفت).
+    var order = { out: 0, low: 1, ok: 2, none: 3 };
+    var rank = function (p) { return p.status in order ? order[p.status] : 3; };
+    var rows = people.filter(function (p) {
+      if (staffFilter && p.status !== staffFilter) return false;
+      return !q || norm(p.name).indexOf(q) >= 0;
+    }).sort(function (a, b) {
+      return rank(a) - rank(b) || String(a.name).localeCompare(String(b.name), 'fa');
+    });
+    list.innerHTML = rows.map(function (p) {
+      var b = p.bal || {};
+      var what = p.status === 'out' ? 'تمام شده — تیل ندهید'
+        : p.status === 'low' ? 'کم مانده'
+        : p.status === 'ok' ? 'موجودی دارد' : 'ردیفی ندارد';
+      var bal = [b.petrol ? 'پطرول ' + fmt(b.petrol) : '', b.diesel ? 'دیزل ' + fmt(b.diesel) : '',
+        b.money ? 'پول ' + fmt(b.money) : ''].filter(Boolean).join(' · ');
+      return '<button class="st-row ' + esc(p.status) + '" data-pid="' + esc(p.id) + '">' +
+        '<span class="light"></span><span class="n">' + esc(p.name) + '</span>' +
+        '<span class="b">' + esc(what) + (bal ? ' · ' + esc(bal) : '') + '</span></button>';
+    }).join('') || '<div class="sub">کسی پیدا نشد.</div>';
+  }
+
+  function tankFigs(compact) {
+    var t = (data && data.tank) || {}, h = '';
+    [['petrol', 'پطرول'], ['diesel', 'دیزل']].forEach(function (p) {
+      var x = t[p[0]] || {};
+      var cls = x.low ? ' bad' : (x.near ? ' warn' : '');
+      h += '<div class="fig' + cls + '"><div class="l">' + p[1] + ' — موجودی</div>' +
+        '<div class="v">' + fmt(x.show) + '</div><div class="l">لیتر' +
+        (x.low ? ' · کم آمده' : (x.near ? ' · نزدیکِ حد' : '')) + '</div></div>';
+      if (!compact) {
+        h += '<div class="fig"><div class="l">' + p[1] + ' — وارد</div><div class="v">' + fmt(x['in']) + '</div></div>';
+        h += '<div class="fig"><div class="l">' + p[1] + ' — فروش</div><div class="v">' + fmt(x.out) + '</div></div>';
+      }
+    });
+    return h || '<div class="sub">داده‌ای نیست.</div>';
   }
 
   function renderTank() {
@@ -1136,6 +1277,8 @@
     renderTank();
     renderDebtors();
     renderSections();
+    renderDash();
+    renderStaff();
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -1215,7 +1358,45 @@
 
     $('btnUnlock').addEventListener('click', unlock);
     $('inPass').addEventListener('keydown', function (e) { if (e.key === 'Enter') unlock(); });
-    $('btnLock').addEventListener('click', function () { unlocked = false; show('lockPane'); });
+    $('btnLock').addEventListener('click', function () { unlocked = false; buildNav(); show('lockPane'); });
+
+    // ── دو در ──
+    $('paneHome').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-mode]');
+      if (b) setMode(b.getAttribute('data-mode'));
+    });
+    $('modeSeg').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-mode]');
+      if (b) setMode(b.getAttribute('data-mode'));
+    });
+    $('dashTiles').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-sec]');
+      if (!b) return;
+      secTab = b.getAttribute('data-sec');
+      $('selMonth').value = '';
+      renderSections();
+      goPane('paneSec');
+    });
+    $('inStaffFind').addEventListener('input', renderStaff);
+    $('staffCounts').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-f]');
+      if (!b) return;
+      staffFilter = b.getAttribute('data-f');
+      renderStaff();
+    });
+    $('staffList').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-pid]');
+      if (!b) return;
+      var id = b.getAttribute('data-pid');
+      var p = ((data && data.debtors) || []).filter(function (x) { return String(x.id) === id; })[0];
+      if (!p) return;
+      //  کارمند حسابِ کامل را نمی‌خواهد؛ فقط حال و الباقی — همان بلوکِ ربات
+      var blk = personBlock(p); blk.person = null;
+      $('botOut').innerHTML = blockHtml(blk) +
+        '<button class="back" id="btnBackStaff">‹ برگرد به فهرست</button>';
+      goPane('paneBot');
+      $('btnBackStaff').addEventListener('click', function () { goPane('paneStaff'); });
+    });
 
     $('btnAsk').addEventListener('click', ask);
     $('inAsk').addEventListener('keydown', function (e) { if (e.key === 'Enter') ask(); });
@@ -1296,12 +1477,21 @@
 
     if ('serviceWorker' in navigator)
       navigator.serviceWorker.register('./sw.js').catch(function () { });
+
+    //  ⚠️ پردهٔ لودینگِ اندروید فقط با همین برداشته می‌شود (وگرنه ۳۰ ثانیه
+    //  می‌ماند). تا پیش از این هیچ‌جا صدا زده نمی‌شد.
+    try { if (window.PumpAndroid && PumpAndroid.boot) PumpAndroid.boot('ready'); } catch (e) { }
   }
 
   function goPane(id) {
-    ['paneBot', 'paneDebt', 'paneTank', 'paneSec'].forEach(function (p) {
-      $(p).classList.toggle('hidden', p !== id);
+    ALL_PANES.forEach(function (p) {
+      var el = $(p);
+      if (el) el.classList.toggle('hidden', p !== id);
     });
+    //  خبرها روی صفحهٔ خانه نه — آن‌جا فقط دو در
+    var ac = $('alertCard');
+    if (ac && id === 'paneHome') ac.classList.add('hidden');
+    else if (ac) renderAlerts();
     Array.prototype.forEach.call($('nav').querySelectorAll('button'), function (b) {
       b.setAttribute('aria-selected', String(b.getAttribute('data-pane') === id));
     });

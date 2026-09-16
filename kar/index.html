@@ -126,6 +126,38 @@
   .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);
         border-radius:50%;animation:sp .8s linear infinite;vertical-align:-3px;margin-inline-end:6px}
   @keyframes sp{to{transform:rotate(360deg)}}
+  /* ── خانه: دو درِ اپ ─────────────────────────────────────────────────── */
+  .home{display:grid;gap:12px;margin-top:6px}
+  .door{display:flex;gap:14px;align-items:center;text-align:start;padding:18px 16px;border-radius:16px;
+        border:1px solid var(--line);background:var(--card);cursor:pointer;width:100%}
+  .door:active{transform:scale(.99)}
+  .door .ic{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;font-size:1.6rem;flex:none}
+  .door.owner .ic{background:linear-gradient(135deg,var(--accent),#ffcf6b);color:#1a1a1a}
+  .door.staff .ic{background:linear-gradient(135deg,#2b6cb0,#63b3ed);color:#fff}
+  .door b{font-size:1.05rem;display:block}
+  .door .sub{margin-top:2px}
+  .seg{display:inline-flex;background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px}
+  .seg button{border:0;background:transparent;padding:6px 12px;border-radius:999px;font-size:.8rem}
+  .seg button[aria-selected="true"]{background:var(--accent);color:#1a1a1a}
+  .banner{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+  .bn{border-radius:12px;padding:10px 12px;background:var(--bg);border:1px solid var(--line);border-inline-start:5px solid var(--muted)}
+  .bn .l{color:var(--muted);font-size:.74rem} .bn .v{font-size:1.15rem;font-weight:800;margin-top:2px}
+  .bn.accent{border-inline-start-color:var(--accent)} .bn.danger{border-inline-start-color:var(--red)}
+  .bn.ok{border-inline-start-color:var(--ok)} .bn.warn{border-inline-start-color:var(--warn)}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .tile{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;text-align:start;cursor:pointer}
+  .tile b{display:block;font-size:.95rem} .tile .sub{font-size:.74rem}
+  .st-row{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);
+        border-radius:12px;padding:10px 12px;margin-bottom:6px;cursor:pointer;width:100%;text-align:start}
+  .st-row .light{width:14px;height:14px;border-radius:50%;flex:none;background:var(--muted);box-shadow:0 0 0 3px var(--chip)}
+  .st-row.ok .light{background:var(--ok)} .st-row.low .light{background:var(--warn)} .st-row.out .light{background:var(--red)}
+  .st-row .n{font-weight:800;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .st-row .b{font-size:.78rem;color:var(--muted);white-space:nowrap}
+  .st-row.out .b{color:var(--red);font-weight:700}
+  .counts{display:flex;gap:6px;flex-wrap:wrap}
+  .counts button{flex:1;padding:8px 6px;font-size:.8rem}
+  .counts button[aria-selected="true"]{border-color:var(--accent);color:var(--accent)}
+  .back{background:transparent;border:0;color:var(--muted);padding:6px 8px;font-size:.85rem}
   @media (max-width:420px){ .wrap{padding:10px 10px 88px} .gate{padding-top:3vh} }
 </style>
 </head>
@@ -244,7 +276,16 @@
   </div>
 </div>
 
-<!-- ══ ۳) خودِ برنامه ══ -->
+<!-- ══ ۳) خودِ برنامه — دو در: «حساب‌های پمپ» و «کارمندان» ══════════════
+     خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۶): «بعد از زدنِ کدِ پمپ وقتی اپ باز
+     می‌شود دو بخش باشد: یکی برای دیدنِ حساب‌های پمپ، یکی برای کارمندان تا
+     افرادی که تیل دارند و ندارند را با مخزن ببینند.»
+
+     • حساب‌های پمپ (کارفرما): چهار عددِ نوارِ بالای برنامهٔ کامپیوتر، همهٔ
+       بخش‌ها (پارچه، ورق، گاوصندوق، صرافی، مصارف، …)، قرض‌داران با حساب‌های
+       کامل، مخزن و ربات.
+     • کارمندان: چراغِ سبز/زرد/سرخِ هر قرض‌دار، مخزن، خبرها — و بس.
+     هر دو فقط می‌خوانند؛ نوشتن فقط از برنامهٔ کامپیوتر.                    -->
 <div class="wrap hidden" id="appPane">
   <div class="card">
     <div class="row">
@@ -253,14 +294,32 @@
         <div class="sub"><span class="dot" id="liveDot"></span> <span id="liveText">…</span>
           <span class="chip" id="stChip"></span></div>
       </div>
-      <button id="btnLock">🔒</button>
+      <div class="seg hidden" id="modeSeg">
+        <button data-mode="owner">حساب‌ها</button>
+        <button data-mode="staff">کارمندان</button>
+      </div>
+      <button id="btnLock" title="قفل">🔒</button>
     </div>
   </div>
 
-  <!-- ══ هشدارها ═══════════════════════════════════════════════════════════
-       «وقتی یک قرض‌دار اضافه برد یا کم مانده بود، برنامه یک پیام بدهد.»
-       این کادر همان فهرست است، همیشه بالای همه‌چیز. اگر خبری نباشد،
-       خودش پنهان می‌شود. -->
+  <!-- ══ خانه — انتخابِ در ══ -->
+  <section id="paneHome" class="hidden">
+    <div class="home">
+      <button class="door owner" data-mode="owner">
+        <span class="ic">📒</span>
+        <span class="grow"><b>حساب‌های پمپ</b>
+          <span class="sub">همهٔ بخش‌های برنامهٔ کامپیوتر: قرض‌داران، پارچه، ورق، گاوصندوق، صرافی، مصارف، شرکت‌ها، فاکتورها و رباتِ جست‌وجو.</span></span>
+      </button>
+      <button class="door staff" data-mode="staff">
+        <span class="ic">⛽</span>
+        <span class="grow"><b>کارمندان</b>
+          <span class="sub">کی تیل دارد و کی ندارد — با یک نگاه، و موجودیِ مخزن. برای سرِ پمپ.</span></span>
+      </button>
+    </div>
+    <div class="card" style="margin-top:12px"><div class="sub">هر دو فقط می‌خوانند؛ هیچ حسابی از گوشی عوض نمی‌شود. بعداً با دکمه‌های بالای صفحه می‌توانید جابه‌جا شوید.</div></div>
+  </section>
+
+  <!-- ══ هشدارها — بالای همه‌چیز، در هر دو در ══ -->
   <div class="card hidden" id="alertCard">
     <div class="row">
       <div class="grow"><h2 style="margin:0">🔔 خبرهای همین حالا</h2></div>
@@ -270,8 +329,25 @@
     <div class="sub" id="alertHint"></div>
   </div>
 
+  <!-- ══ حساب‌های پمپ: داشبورد ══ -->
+  <section id="paneDash" class="hidden">
+    <div class="card"><h2>یک نگاه — همان چهار عددِ برنامهٔ کامپیوتر</h2><div class="banner" id="bannerBox"></div></div>
+    <div class="card"><h2>مخزن</h2><div class="figs" id="dashTank"></div></div>
+    <div class="card"><h2>بخش‌ها</h2><div class="tiles" id="dashTiles"></div></div>
+  </section>
+
+  <!-- ══ کارمندان: چراغِ هر قرض‌دار ══ -->
+  <section id="paneStaff" class="hidden">
+    <div class="card">
+      <input id="inStaffFind" placeholder="نامِ قرض‌دار را بنویسید…">
+      <div style="height:8px"></div>
+      <div class="counts" id="staffCounts"></div>
+    </div>
+    <div class="card"><div id="staffList"></div></div>
+  </section>
+
   <!-- ربات -->
-  <section id="paneBot">
+  <section id="paneBot" class="hidden">
     <div class="card">
       <h2>از ربات بپرس</h2>
       <div class="row">
@@ -284,7 +360,7 @@
     <div id="botOut"></div>
   </section>
 
-  <!-- قرض‌داران -->
+  <!-- قرض‌داران (حساب‌های کامل) -->
   <section id="paneDebt" class="hidden">
     <div class="card">
       <div class="row">
@@ -317,12 +393,7 @@
   </section>
 </div>
 
-<div class="nav hidden" id="nav">
-  <button data-pane="paneBot" aria-selected="true">🤖 ربات</button>
-  <button data-pane="paneDebt">👥 قرض‌داران</button>
-  <button data-pane="paneTank">⛽ مخزن</button>
-  <button data-pane="paneSec">📚 بخش‌ها</button>
-</div>
+<div class="nav hidden" id="nav"></div>
 
 <!-- گوگل خودش دکمهٔ ورود را می‌سازد. ‎async defer‎ تا اگر نیامد (فیلتر،
      نتِ ضعیف) بقیهٔ صفحه معطلش نماند — راهِ کیو‌آر همچنان هست. -->
