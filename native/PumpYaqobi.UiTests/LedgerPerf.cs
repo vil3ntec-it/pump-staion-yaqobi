@@ -171,10 +171,13 @@ internal static class LedgerPerf
                 // باشد (کامپیوتر داغ نشود).
                 if (open > Goal) bad.Add($"{title} با {Sizes[k]:N0} ردیف: {open:N0} ms");
                 if (grow > GrowGoal) bad.Add($"{title} با {Sizes[k]:N0} ردیف: رشدِ کامل {grow:N0} ms");
-                // بالای سقفِ رشد، جدول باید سرِ یک صفحه بایستد و مجازی‌سازی کند
-                if (Sizes[k] > PumpYaqobi.App.Controls.ExcelGrid.GrowRowLimit && live > 200)
+                // ⚠️ از ‎StickyRowLimit‎ به بالا، جدول **پنجرهٔ چسبان** می‌گیرد:
+                // به اندازهٔ همهٔ ردیف‌هایش جا می‌گیرد (بلندیِ جدول همان است) ولی
+                // فقط یک صفحه ردیف می‌سازد. پس «همهٔ ردیف‌ها ساخته شدند» دیگر
+                // نشانهٔ سلامت نیست — وارونه‌اش است (‎bigtable‎).
+                if (Sizes[k] > PumpYaqobi.App.Controls.ExcelGrid.StickyRowLimit && live > 80)
                     bad.Add($"{title} با {Sizes[k]:N0} ردیف: {live:N0} ردیفِ زنده — مجازی‌سازی نمی‌کند");
-                if (Sizes[k] <= PumpYaqobi.App.Controls.ExcelGrid.GrowRowLimit && live < Sizes[k])
+                if (Sizes[k] <= PumpYaqobi.App.Controls.ExcelGrid.StickyRowLimit && live < Sizes[k])
                     bad.Add($"{title} با {Sizes[k]:N0} ردیف: فقط {live:N0} ردیف ساخته شد — رشدِ تدریجی تمام نشد");
             }
         }
@@ -343,7 +346,7 @@ internal static class LedgerPerf
         conn.Close();
     }
 
-    private static void Fill(DbConnection conn, string table, string month, int n)
+    internal static void Fill(DbConnection conn, string table, string month, int n)
     {
         var cols = Columns(conn, table);
         var named = new[] { "DateShamsi", "DateKey", "MonthKey", "Name", "Title", "Description",
@@ -384,7 +387,7 @@ internal static class LedgerPerf
         }
     }
 
-    private static HashSet<string> Columns(DbConnection c, string table)
+    internal static HashSet<string> Columns(DbConnection c, string table)
     {
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         using var cmd = c.CreateCommand();
@@ -394,7 +397,7 @@ internal static class LedgerPerf
         return set;
     }
 
-    private static void Exec(DbConnection c, string sql)
+    internal static void Exec(DbConnection c, string sql)
     {
         using var cmd = c.CreateCommand();
         cmd.CommandText = sql;

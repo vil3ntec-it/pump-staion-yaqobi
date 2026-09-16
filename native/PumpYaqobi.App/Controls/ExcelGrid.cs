@@ -4,6 +4,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 
@@ -121,7 +122,7 @@ public class ExcelGrid : DataGrid
         LayoutUpdated += (_, _) =>
         {
             if (!IsEffectivelyVisible) return;
-            SpreadColumns(); PinOnUserResize(); RememberWidths(); Settle();
+            SpreadColumns(); PinOnUserResize(); RememberWidths(); Settle(); SyncSticky();
         };
 
         // ردیفِ قفل‌شده (‎ILockedRow‎ — مثلِ ردیفِ 📦 خریدِ مخزن در حسابِ شرکت)
@@ -461,6 +462,7 @@ public class ExcelGrid : DataGrid
         _watched = ItemsSource as System.Collections.Specialized.INotifyCollectionChanged;
         if (_watched is not null) _watched.CollectionChanged += OnRowsChanged;
         _shown = 0; _measuredShown = 0;
+        LeaveSticky();
         FixRowHeaderWidth();
         InvalidateMeasure();
     }
@@ -530,6 +532,7 @@ public class ExcelGrid : DataGrid
 
     private void OnPageScroll(object? sender, ScrollChangedEventArgs e)
     {
+        if (_sticky) { SyncSticky(); return; }
         var rows = RowCount();
         if (!_spread || _growQueued || rows < 0 || rows > GrowRowLimit || _shown >= rows) return;
         if (NearViewport(Math.Max(_shown, 1))) QueueGrow(rows, Math.Max(_shown, 1));
@@ -577,7 +580,12 @@ public class ExcelGrid : DataGrid
         // مربعی بالا می‌رود. ‎SpreadColumns‎ همین که پهناها را سفت کرد،
         // ‎_spread‎ می‌شود و از پاسِ بعد جدول آزاد است.
         if (!_spread) return Capped(availableSize, screen);
-        if (rows < 0 || rows > GrowRowLimit) return Capped(availableSize, screen);
+        if (rows < 0) return Capped(availableSize, screen);
+
+        // ══ جدولِ بلند: پنجرهٔ چسبان، نه ساختنِ همهٔ ردیف‌ها ═══════════════
+        if (WantsSticky(rows, screen)) return MeasureSticky(availableSize, rows, screen);
+        LeaveSticky();
+        if (rows > GrowRowLimit) return Capped(availableSize, screen);
 
         if (rows != _padRows) { _pad = 0; _padRows = rows; }
 
@@ -603,6 +611,195 @@ public class ExcelGrid : DataGrid
             if (sw.ElapsedMilliseconds > DiagChunkMaxMs) { DiagChunkMaxMs = sw.ElapsedMilliseconds; DiagChunkMaxRows = grew; }
         }
         return size.WithHeight(want);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ پنجرهٔ چسبان — مجازی‌سازیِ واقعی، با اسکرولِ صفحه ═══════════════════
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۷): «برنامه با زیاد شدنِ جدول خیلی کند
+    //  می‌شود… اسکرول نرم نیست، گیر گیر دارد… برنامه بی‌نهایت هم باشد نباید
+    //  افتی داشته باشد، مثلِ برنامه‌های حرفه‌ای.»
+    //
+    //  سنجشِ ‎bigtable‎ حق را به او داد، و ریشه را هم نشان داد — نه باز شدن
+    //  کند بود و نه خودِ اسکرول:
+    //
+    //      ردیف   باز شدن   رشدِ کامل   ردیفِ زنده   حافظه
+    //         50     69 ms      435 ms         50    157 MB
+    //        200    118 ms    3,805 ms        200    294 MB
+    //        600     16 ms    7,714 ms        600    650 MB
+    //
+    //  یعنی هر ردیفِ ساخته‌شده ~۱۲ میلی‌ثانیه CPU و نزدیک به یک مگابایت
+    //  حافظه می‌برد، و رشدِ تدریجی **همهٔ** ردیف‌ها را می‌ساخت. با این قاعده
+    //  هیچ ترفندی «ده سال داده» را نجات نمی‌دهد: هزینه با شمارِ ردیف بالا
+    //  می‌رود، همین.
+    //
+    //  ⚠️ پس تنها راهِ درست این است که **شمارِ ردیفِ زنده از شمارِ ردیف‌های
+    //  داده جدا شود**. راهِ رایجش (پنجره کردنِ خودِ ‎ItemsSource‎) شمارهٔ
+    //  ردیف، انتخاب، ویرایش و کلیدها را می‌شکند، چون آن‌وقت ‎DataGrid‎
+    //  فهرستِ کامل را نمی‌بیند. پس راهِ دیگری رفته‌ایم:
+    //
+    //      • ‎DataGrid‎ همان فهرستِ کامل را دارد (شماره، انتخاب، ویرایش،
+    //        Enter و Tab همه دست‌نخورده) ولی **قابش یک صفحه است** — یعنی
+    //        مجازی‌سازیِ خودش زنده است و فقط یک صفحه ردیف می‌سازد.
+    //      • ولی جدول به اندازهٔ **همهٔ** ردیف‌هایش جا می‌گیرد، پس صفحه
+    //        هم‌قدِ جدول بلند است و هیچ «کادرِ محدود»ی دیده نمی‌شود — همان
+    //        چیزی که صاحب ریپو بارها خواسته.
+    //      • و با لغزشِ صفحه، آن قابِ یک‌صفحه‌ای داخلِ جای خودش پایین
+    //        می‌آید (‎_stickyY‎) و به همان اندازه ردیف‌های داخلش هم
+    //        می‌لغزند (‎ScrollSlotsByHeight‎). نتیجه برای چشم دقیقاً یک
+    //        جدولِ بلند است که با صفحه می‌لغزد؛ سربرگش هم بالای دید
+    //        می‌ماند، مثلِ اکسل.
+    //
+    //  ⚠️ جابه‌جاییِ قاب با ‎RenderTransform‎ است نه با ‎Arrange‎: جابه‌جاییِ
+    //  رندری هیچ پاسِ چیدمانی نمی‌خواهد، پس هر گامِ اسکرول فقط یک ترجمه است
+    //  به‌علاوهٔ بازچرخانیِ چند ردیف.
+    //
+    //  ⚠️ ‎ScrollSlotsByHeight‎ درونیِ ‎DataGrid‎ است و با بازتاب صدا زده
+    //  می‌شود. راهِ عمومی‌اش ‎ScrollIntoView‎ است که «ردیف را به دید بیاور»
+    //  می‌گوید، نه «دقیقاً این‌قدر پیکسل بلغز» — و برای چسبیدنِ قاب به صفحه
+    //  عددِ دقیق لازم است. اگر روزی این متد نبود، ‎_slots‎ خالی می‌ماند و
+    //  جدول خودبه‌خود به رفتارِ پیشین (سقفِ یک صفحه با نوارِ خودش) برمی‌گردد
+    //  — نه استثنا، نه صفحهٔ خراب.
+
+    /// <summary>
+    /// از این شمارِ ردیف به بالا، جدول پنجرهٔ چسبان می‌گیرد.
+    ///
+    /// ⚠️ چرا نه از ردیفِ اول: جدولِ کوتاه (دفترِ یک ماهِ معمولی، ورق، پارچه)
+    /// ارزان است و رفتارِ امروزش سال‌ها سنجیده شده. پنجرهٔ چسبان برای جایی
+    /// است که هزینه واقعاً بالا می‌رود — و ۶۰ ردیف حدودِ سه صفحه است.
+    /// </summary>
+    public const int StickyRowLimit = 60;
+
+    /// <summary>الان با پنجرهٔ چسبان کار می‌کنیم؟ (سنجش‌ها می‌خوانند)</summary>
+    public bool DiagSticky => _sticky;
+
+    private bool _sticky;
+    private double _windowH;
+    private double _stickyY;
+    private TranslateTransform? _slide;
+
+    private bool WantsSticky(int rows, double screen) =>
+        !GrowsToContent && rows > StickyRowLimit && Page is not null
+        && _proc is not null && _barField is not null && MeasuredRowHeight() > 0;
+
+    /// <summary>
+    /// نوارِ بخش‌ها روی صفحه شناور است، پس بالای دید به اندازهٔ او کور است و
+    /// قابِ چسبان باید از زیرِ او شروع شود — وگرنه سربرگِ جدول پشتِ نوار
+    /// پنهان می‌ماند (با عکس دیده شد).
+    /// </summary>
+    private double BlindTop()
+    {
+        if (Page?.GetVisualRoot() is not Visual root) return 0;
+        return root.GetVisualDescendants().OfType<Border>()
+                   .FirstOrDefault(b => b.Name == "NavBar")?.Bounds.Height ?? 0;
+    }
+
+    private double _blind;
+
+    private Size MeasureSticky(Size availableSize, int rows, double screen)
+    {
+        var total = WantedHeight(rows);
+        _windowH = Math.Min(screen, total);
+        _blind = BlindTop();
+        if (!_sticky)
+        {
+            _sticky = true;
+            _stickyY = 0;
+            Classes.Set("sticky", true);
+        }
+        HookPage();
+        var size = base.MeasureOverride(availableSize.WithHeight(_windowH));
+        return size.WithHeight(total).WithWidth(size.Width);
+    }
+
+    private void LeaveSticky()
+    {
+        if (!_sticky) return;
+        _sticky = false;
+        _stickyY = 0;
+        Classes.Set("sticky", false);
+        if (_slide is not null) _slide.Y = 0;
+    }
+
+    protected override Size ArrangeOverride(Size finalSize)
+    {
+        // ⚠️ قاب به اندازهٔ **یک صفحه** چیده می‌شود، هرچند جدول به اندازهٔ
+        // همهٔ ردیف‌هایش جا گرفته باشد: همین است که مجازی‌سازیِ ‎DataGrid‎ را
+        // زنده نگه می‌دارد.
+        if (!_sticky) return base.ArrangeOverride(finalSize);
+        base.ArrangeOverride(new Size(finalSize.Width, _windowH));
+        ApplySlide();
+        return finalSize;
+    }
+
+    private void ApplySlide()
+    {
+        if (this.GetVisualChildren().OfType<Control>().FirstOrDefault() is not { } child) return;
+        if (_slide is null || !ReferenceEquals(child.RenderTransform, _slide))
+        {
+            _slide = new TranslateTransform();
+            child.RenderTransformOrigin = RelativePoint.TopLeft;
+            child.RenderTransform = _slide;
+        }
+        if (Math.Abs(_slide.Y - _stickyY) > 0.01) _slide.Y = _stickyY;
+    }
+
+    /// <summary>
+    /// قاب را با صفحه هم‌گام می‌کند: هرقدر بالای جدول از دید بیرون رفته،
+    /// همان‌قدر قاب پایین می‌آید و همان‌قدر ردیف‌ها می‌لغزند.
+    /// </summary>
+    private void SyncSticky()
+    {
+        if (!_sticky || Page is not { } page) return;
+        if (this.TranslatePoint(new Point(0, 0), page) is not { } at) return;
+
+        var span = Math.Max(0, Bounds.Height - _windowH);
+        var bar = InnerBar();
+        var want = Math.Clamp(_blind - at.Y, 0, span);
+        // ⚠️ سقفِ واقعی را خودِ جدول می‌گوید: اگر بلندیِ حساب‌شدهٔ ما یکی-دو
+        // پیکسل با شمارشِ خودِ جدول فرق داشته باشد، بی این، آخرین گام همیشه
+        // «هنوز نرسیده» می‌ماند.
+        if (bar is not null) want = Math.Min(want, bar.Maximum);
+
+        if (Math.Abs(want - _stickyY) > 0.5)
+        {
+            _stickyY = want;
+            ApplySlide();
+        }
+        ScrollTo(want);
+    }
+
+    // ══ دو درِ درونیِ ‎DataGrid‎ ═══════════════════════════════════════════════
+    //
+    //  ⚠️ **راهِ خودِ جدول** را می‌رویم، نه یک میان‌بُر: نوارِ لغزشِ درونی را
+    //  می‌گذاریم و ‎ProcessVerticalScroll‎ را صدا می‌زنیم — دقیقاً همان دو
+    //  خطی که ‎VerticalScrollBar_Scroll‎ی خودِ ‎DataGrid‎ انجام می‌دهد. جدول
+    //  آن‌وقت در پاسِ چیدمانِ بعدیِ **خودش** می‌لغزد.
+    //
+    //  یک بار میان‌بُر زدیم (‎ScrollSlotsByHeight‎ی مستقیم) و عکس‌ها ریشه را
+    //  نشان دادند: با پرشِ بزرگ، ردیف‌ها وارونه چیده می‌شدند (۳۰۷، ۳۰۶، ۳۰۵…)
+    //  و یک ردیفِ کهنه ته جدول می‌ماند، چون لغزاندن بیرون از پاسِ چیدمانِ
+    //  جدول انجام می‌شد. قاعده: با حالتِ درونیِ یک کنترل، از درِ خودش وارد شو.
+    private static readonly System.Reflection.FieldInfo? _barField =
+        typeof(DataGrid).GetField("_vScrollBar",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+    private static readonly System.Reflection.MethodInfo? _proc =
+        typeof(DataGrid).GetMethod("ProcessVerticalScroll",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
+            null, new[] { typeof(ScrollEventType) }, null);
+
+    private ScrollBar? InnerBar() => _barField?.GetValue(this) as ScrollBar;
+
+    private void ScrollTo(double want)
+    {
+        if (_proc is null || InnerBar() is not { } bar) return;
+        var v = Math.Clamp(want, bar.Minimum, bar.Maximum);
+        if (Math.Abs(bar.Value - v) < 0.5) return;
+        bar.Value = v;
+        try { _proc.Invoke(this, new object[] { ScrollEventType.ThumbTrack }); }
+        catch { /* جدول هنوز آمادهٔ لغزیدن نیست — فریمِ بعد */ }
     }
 
     /// <summary>اندازه‌گیری با تنگنای «یک صفحه» — همان‌جا که مجازی‌سازی زنده است.</summary>
@@ -664,6 +861,9 @@ public class ExcelGrid : DataGrid
     private void Settle()
     {
         var rows = RowCount();
+        // ⚠️ در حالتِ چسبان نوارِ لغزشِ جدول همیشه چیزی برای لغزاندن دارد
+        // (قاب عمداً یک صفحه است)، پس این اصلاحیه بی‌معنی و بی‌پایان می‌شد.
+        if (_sticky) return;
         if (rows < 0 || rows > GrowRowLimit) return;
 
         // ⚠️ فقط وقتی جدول واقعاً هم‌قدِ همهٔ ردیف‌هایش شده. پیش از آن (پاسِ
@@ -790,7 +990,9 @@ public class ExcelGrid : DataGrid
             // «جدول سرِ خط است؟» را از نوارِ لغزشِ خودِ جدول می‌پرسیم؛
             // ‎DataGrid‎ آفستِ عمودی‌اش را بیرون نمی‌دهد.
             var bar = VerticalBar;
-            var gridTop = bar is null || bar.Value <= 0.5;
+            // ⚠️ در حالتِ چسبان جدول خودش نمی‌لغزد؛ صفحه می‌لغزد و قابِ جدول
+            // با آن می‌آید. پس چرخ همیشه مالِ صفحه است.
+            var gridTop = _sticky || bar is null || bar.Value <= 0.5;
 
             // پایین می‌رویم: تا وقتی صفحه جا دارد، صفحه می‌لغزد.
             // بالا می‌آییم: تا وقتی جدول سرِ خط نیامده، خودِ جدول می‌لغزد.

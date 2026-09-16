@@ -54,6 +54,16 @@ internal static class Program
         // گاوصندوق، صرافی و مصارف با دادهٔ واقعاً دیده‌شونده. چرایی‌اش در
         // ‎LedgerPerf‎ نوشته شده — ‎PerfAudit‎ این سه را **خالی** می‌سنجید.
         if (outDir.Equals("ledgerperf", StringComparison.OrdinalIgnoreCase)) return LedgerPerf.Run();
+        // ══ حالتِ «با زیاد شدنِ جدول کند می‌شود» ══════════════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- bigtable
+        // یک دفتر با شش اندازه (۵۰ تا ۲۰٬۰۰۰ ردیف) و چهار عدد برای هرکدام.
+        // چرایی‌اش در ‎BigTable‎ نوشته شده.
+        if (outDir.Equals("bigtable", StringComparison.OrdinalIgnoreCase))
+        {
+            BigTable.Trace = args.Length > 1 && args[1].Equals("trace", StringComparison.OrdinalIgnoreCase);
+            if (args.Length > 2 && args[1].Equals("shot", StringComparison.OrdinalIgnoreCase)) BigTable.Shots = args[2];
+            return BigTable.Run();
+        }
         // ══ حالتِ «سرِ جدول و جملهٔ زیرش» ═══════════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- chrome
         if (outDir.Equals("chrome", StringComparison.OrdinalIgnoreCase)) return TableChromeAudit.Run();

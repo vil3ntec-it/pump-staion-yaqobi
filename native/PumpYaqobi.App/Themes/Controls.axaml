@@ -440,6 +440,18 @@
   </Style>
 
   <!-- جدول -->
+  <!-- ══ جدولِ چسبان: نوارِ لغزشِ خودش دیده نمی‌شود ══════════════════════
+       جدولِ بلند قابش عمداً یک صفحه است (‎ExcelGrid‎ ⇒ پنجرهٔ چسبان) ولی
+       کاربر یک جدولِ بلند می‌بیند که با **صفحه** می‌لغزد. نوارِ لغزشِ خودِ
+       جدول آن‌جا دروغ است: گسترهٔ یک صفحه را نشان می‌دهد و کاربر را به
+       اسکرولِ دوم دعوت می‌کند. پس پهنایش صفر می‌شود تا جایی هم نگیرد. -->
+  <Style Selector="DataGrid.sticky /template/ ScrollBar#PART_VerticalScrollbar">
+    <Setter Property="Width" Value="0" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+  </Style>
+
   <Style Selector="DataGrid">
     <Setter Property="FontFamily" Value="{StaticResource Pump.Font}" />
     <Setter Property="Background" Value="{DynamicResource Pump.Card}" />
