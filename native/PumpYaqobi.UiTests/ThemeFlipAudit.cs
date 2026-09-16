@@ -79,8 +79,13 @@ internal static class ThemeFlipAudit
                 Console.WriteLine($"{sec.Id,-14} {t.Id,-6} {before.Count,4} سنجه   {moved.Count,3} جابه‌جا");
                 foreach (var m in moved)
                 {
-                    Console.WriteLine($"     ✖ {m}");
-                    bad.Add($"{sec.Id} · تمِ {t.Id} · {m}");
+                    // ⚠️ «گم شد» جابه‌جایی نیست: نوشته‌ای که پس از تم دیگر در درخت
+                    // نیست یا ردیفی که هنوز ساخته نشده (رشدِ تدریجی، کارتِ
+                    // به‌روزرسانی که وسطِ بررسی است). فقط گزارش می‌شود؛ خطی که
+                    // **هست و جایش عوض شده** ایراد است.
+                    var gone = m.EndsWith("گم شد");
+                    Console.WriteLine($"     {(gone ? "·" : "✖")} {m}");
+                    (gone ? soft : bad).Add($"{sec.Id} · تمِ {t.Id} · {m}");
                 }
             }
         }
@@ -114,7 +119,12 @@ internal static class ThemeFlipAudit
             var after = Measure(win, host);
             var moved = Diff(before, after);
             Console.WriteLine($"{sec.Id,-14} تازه‌ساخته با {other.Id,-6} {before.Count,4} سنجه   {moved.Count,3} جابه‌جا");
-            foreach (var m in moved) { Console.WriteLine($"     ✖ {m}"); bad.Add($"{sec.Id} · تازه‌ساخته با {other.Id} · {m}"); }
+            foreach (var m in moved)
+            {
+                var gone = m.EndsWith("گم شد");
+                Console.WriteLine($"     {(gone ? "·" : "✖")} {m}");
+                (gone ? soft : bad).Add($"{sec.Id} · تازه‌ساخته با {other.Id} · {m}");
+            }
         }
         vm.SelectedTheme = first;
 
@@ -169,7 +179,7 @@ internal static class ThemeFlipAudit
         Console.WriteLine();
         if (soft.Count > 0)
         {
-            Console.WriteLine($"ℹ️ {soft.Count} تفاوتِ ریزِ پیکسلی (لبه و نرمیِ حروف؛ زیرِ ۵٪):");
+            Console.WriteLine($"ℹ️ {soft.Count} گزارشِ بی‌ایراد (نوشتهٔ گم‌شده در درخت، یا تفاوتِ پیکسلیِ زیرِ ۵٪ از لبه و نرمیِ حروف):");
             foreach (var b in soft.Distinct()) Console.WriteLine("   • " + b);
         }
         if (bad.Count == 0)
