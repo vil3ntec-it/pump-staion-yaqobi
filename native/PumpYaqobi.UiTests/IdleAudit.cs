@@ -5,6 +5,7 @@ using Avalonia.Headless;
 using Avalonia.Layout;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using PumpYaqobi.App.Controls;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.App.ViewModels;
 using PumpYaqobi.App.ViewModels.Sections;
@@ -151,9 +152,20 @@ internal static class IdleAudit
         return 1;
     }
 
-    /// <summary>ردیف‌های زنده‌ای که زیرِ یک کنترلِ نامرئی نشسته‌اند.</summary>
+    /// <summary>
+    /// ردیف‌های زنده‌ای که زیرِ یک کنترلِ نامرئی نشسته‌اند.
+    ///
+    /// ⚠️ ردیف‌های جدولِ **هم‌قدِ ردیف‌ها** (ورق و پارچه) شمرده نمی‌شوند: آن‌ها
+    /// عمداً پارک نمی‌شوند، چون سقفشان ۸۰ ردیف است و بازسازی‌شان باز کردنِ
+    /// دوبارهٔ ورق را ۱٫۲ ثانیه می‌کرد (سنجشِ ‎waraqperf‎). شرحش بالای
+    /// ‎ExcelGrid.OnShownChanged‎.
+    /// </summary>
     private static int StrayRows(Window w) =>
-        w.GetVisualDescendants().OfType<DataGridRow>().Count(r => !r.IsEffectivelyVisible);
+        w.GetVisualDescendants().OfType<DataGridRow>()
+         .Count(r => !r.IsEffectivelyVisible && !InTallGrid(r));
+
+    private static bool InTallGrid(Visual row) =>
+        row.GetVisualAncestors().OfType<ExcelGrid>().FirstOrDefault()?.GrowsToContent == true;
 
     /// <summary>کنترلِ نامرئی‌ای که با این همه در پاسِ چیدمان اندازه گرفته شده.</summary>
     private static int StrayLaidOut(Window w)
@@ -163,7 +175,7 @@ internal static class IdleAudit
         {
             if (c.IsEffectivelyVisible) continue;
             // نامرئی و با این حال اندازهٔ غیرصفر ⇒ کسی مجبورش کرده اندازه بگیرد
-            if (c is DataGridRow && c.Bounds.Height > 0) n++;
+            if (c is DataGridRow && c.Bounds.Height > 0 && !InTallGrid(c)) n++;
         }
         return n;
     }

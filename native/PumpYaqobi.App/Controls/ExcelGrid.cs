@@ -346,6 +346,13 @@ public class ExcelGrid : DataGrid
     /// <summary>بیشترین ردیفی که یک فریمِ رشد می‌سازد — سقفِ مکثِ یک فریم.</summary>
     private const int GrowMax = 8;
 
+    /// <summary>
+    /// همان سقف برای جدولِ <see cref="GrowsToContent"/> — ورق و پارچه.
+    /// آن‌ها یک صفحه‌اند و با هم باز و بسته می‌شوند، پس یک مکثِ کوتاه بهتر از
+    /// ده پاسِ پس‌زمینه است.
+    /// </summary>
+    private const int GrowTall = 40;
+
     /// <summary>تا این‌جا بلند شده‌ایم (شمارِ ردیف). صفر یعنی هنوز شروع نشده.</summary>
     private int _shown;
 
@@ -420,6 +427,14 @@ public class ExcelGrid : DataGrid
 
     private void OnShownChanged(bool shown)
     {
+        // ⚠️ جدولِ **هم‌قدِ ردیف‌هایش** (ورق و پارچه) پارک نمی‌شود. آن‌ها هیچ
+        // ردیفی را مجازی‌سازی نمی‌کنند، پس بازسازی یعنی ساختنِ دوبارهٔ هر سه
+        // جدولِ صفحه از صفر — سنجشِ ‎waraqperf‎ عددش را داد: باز کردنِ دوبارهٔ
+        // یک ورق از ~۳۰ میلی‌ثانیه به ۱٫۲ ثانیه می‌رفت. در عوض سقفِ خودشان
+        // (‎GrowRowLimit‎ = ۸۰ ردیف) یعنی زنده ماندنشان ارزان است. پارک برای
+        // دفترها و حساب‌های بلند است، که صدها ردیف زنده می‌گذاشتند.
+        if (GrowsToContent) return;
+
         if (!shown)
         {
             if (_parkedAway || _editing || ItemsSource is null) return;
@@ -538,7 +553,13 @@ public class ExcelGrid : DataGrid
             _growQueued = false;
             // تکهٔ کوچک و ثابت — چرایی‌اش بالای ‎GrowChunk‎. هیچ فریمی بیش از
             // ‎GrowMax‎ ردیفِ تازه نمی‌سازد.
-            var chunk = Math.Clamp(show, GrowChunk, GrowMax);
+            //
+            // ⚠️ مگر جدولی که **هم‌قدِ ردیف‌هایش** است (ورق و پارچه): آن‌ها ذاتاً
+            // کوتاه‌اند (سقفِ ‎GrowRowLimit‎ی خودشان ۸۰ ردیف) و کاربر پشتِ سرِ هم
+            // بازشان می‌کند. با تکهٔ هشت‌تایی، باز کردنِ یک ورق ده پاسِ پس‌زمینه
+            // می‌شد و سنجشِ ‎waraqperf‎ آن را گرفت (۶۳۱ms در برابرِ سقفِ ۴۰۰).
+            // لگِ اسکرول هم مالِ همان‌ها نبود: دفترهای بلندِ لغزنده بودند.
+            var chunk = Math.Clamp(show, GrowChunk, GrowsToContent ? GrowTall : GrowMax);
             _shown = Math.Min(rows, show + chunk);
             InvalidateMeasure();
         }, DispatcherPriority.Background);
