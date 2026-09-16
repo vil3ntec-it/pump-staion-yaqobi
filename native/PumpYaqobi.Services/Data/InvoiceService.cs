@@ -3,6 +3,7 @@ using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Security;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
+using PumpYaqobi.Application.Services;
 
 namespace PumpYaqobi.Services.Data;
 
@@ -272,9 +273,32 @@ public sealed class InvoiceService
         var name = (string.IsNullOrWhiteSpace(v.DebtAlias) ? v.CustomerName : v.DebtAlias)?.Trim() ?? "";
         var key = CompanyDataService.NormalizeName(name);
 
-        var people = await db.Debtors.Include(d => d.MainAccount).ToListAsync(ct);
+        // ══ حسابِ فرعی هم یک مقصدِ کامل است ═══════════════════════════════════
+        //
+        // خواستهٔ صاحب ریپو (۱۴۰۵/۰۶/۲۷): «اگر بخواهم برای حسابِ فرعی فاکتور
+        // بنویسم، این کار هم بشود.» تا امروز فقط نامِ **شخص** سنجیده می‌شد،
+        // پس نامِ یک حسابِ فرعی به هیچ حسابی نمی‌خورد و برنامه یک قرض‌دارِ
+        // **تازه** با همان نام می‌ساخت — یعنی حسابِ فرعی خالی می‌ماند و یک
+        // اسمِ تکراری هم به فهرست اضافه می‌شد.
+        //
+        // ترتیب عمدی است و از خاص به عام می‌رود:
+        //   ۱) نامِ شخص خورد ⇒ اگر در همان متن نامِ یکی از حساب‌های فرعی‌اش هم
+        //      باشد («کریم — موترِ دوم»)، همان فرعی؛ وگرنه حسابِ اصلی.
+        //   ۲) نامِ شخص نخورد ⇒ نامِ حساب‌های فرعی سنجیده می‌شود («موترِ دوم»).
+        //   ۳) هیچ‌کدام ⇒ مثلِ همیشه، قرض‌دارِ تازه.
+        var people = await db.Debtors
+            .Include(d => d.MainAccount)
+            .Include(d => d.SubAccounts)
+            .ToListAsync(ct);
+
         var person = people.FirstOrDefault(d => CompanyDataService.NormalizeName(d.Name) == key);
-        if (person?.MainAccount is not null) return person.MainAccount;
+        if (person?.MainAccount is not null)
+            return PostingService.SubForText(person, name) ?? person.MainAccount;
+
+        foreach (var p in people)
+            foreach (var s in p.SubAccounts)
+                if (s is not null && CompanyDataService.NormalizeName(s.Name) == key && key.Length > 0)
+                    return s;
 
         var acc = new DebtAccount { Mode = LedgerMode.Fuel };
         var fresh = new Debtor

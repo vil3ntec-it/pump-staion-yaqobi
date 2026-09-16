@@ -345,8 +345,47 @@ internal static class VerifyProbe
             }
         }
 
+        // ── ۱۳) فاکتور به نامِ یک حسابِ فرعی ⇒ همان حسابِ فرعی ──────────────
+        //
+        // خواستهٔ صاحب ریپو (۱۴۰۵/۰۶/۲۷): «اگر بخواهم برای حسابِ فرعی فاکتور
+        // بنویسم، این کار هم بشود.» پیش از این نامِ حسابِ فرعی به هیچ حسابی
+        // نمی‌خورد و برنامه یک قرض‌دارِ **تازه** با همان نام می‌ساخت.
+        Console.WriteLine("── ۱۳) فاکتور به نامِ حسابِ فرعی ⇒ همان حسابِ فرعی");
+        {
+            var owner = Wait(host.Debtors.AddDebtorAsync("نعیم جان", "0700000022", false));
+            var sub = Wait(host.Debtors.AddSubAccountAsync(owner.Id, "تانکر سوم"));
+            Wait(win, debt.RefreshAsync());
+            var peopleBefore = debt.Cards.Count;
+
+            var inv = Wait(host.Invoices.AddAsync(new PumpYaqobi.Domain.Entities.Invoice
+            {
+                CustomerName = "تانکر سوم",
+                DateShamsi = Shamsi.Today(),
+                Fuel = PumpYaqobi.Domain.Enums.FuelType.Petrol,
+                Liters = 75m,
+                PricePerLiter = 61m,
+            }));
+            Wait(host.Invoices.ApproveAsync(inv.Id, 63m));
+
+            Wait(win, debt.RefreshAsync());
+            Check("قرض‌دارِ تکراری برای نامِ حسابِ فرعی ساخته نشد",
+                  debt.Cards.Count == peopleBefore, $"{peopleBefore} ← {debt.Cards.Count}");
+
+            var full = Wait(host.Debtors.LoadFullAsync(owner.Id));
+            var rows = full is null ? new List<PumpYaqobi.Domain.Entities.DebtRow>()
+                     : full.AllAccounts().SelectMany(a => a.FuelRows.Concat(a.MoneyRows)).ToList();
+            var mine = rows.FirstOrDefault(r => r.InvoiceId == inv.Id);
+            Check("ردیفِ رسیدِ فاکتور در همان حسابِ فرعی نشست",
+                  mine is not null && (mine.FuelAccountId == sub.Id || mine.MoneyAccountId == sub.Id),
+                  mine is null ? "ردیفی نیست"
+                  : (mine.FuelAccountId == sub.Id || mine.MoneyAccountId == sub.Id
+                     ? "فرعی" : "حسابِ اصلی"));
+            Check("و رسیدِ تیلش همان ۷۵ لیتر است",
+                  mine is not null && mine.RasidFuel == 75m, mine?.RasidFuel.ToString());
+        }
+
         Console.WriteLine();
-        Console.WriteLine(_bad == 0 ? "✅ هر سیزده رفتار همان‌طور که خواسته شده کار می‌کند" : $"❌ {_bad} ایراد");
+        Console.WriteLine(_bad == 0 ? "✅ هر چهارده رفتار همان‌طور که خواسته شده کار می‌کند" : $"❌ {_bad} ایراد");
         return _bad == 0 ? 0 : 1;
     }
 

@@ -370,6 +370,7 @@ internal static class ParchaWaraqAudit
         HeaderCellsFit(win, wq);
         SummaryBelowTxns(win, page, grids);
         PostsToAccountAndSafe(win, page);
+        WaraqDetails(win, page);
         GrowsWithRows(win, page, grids);
     }
 
@@ -489,6 +490,89 @@ internal static class ParchaWaraqAudit
         // ردیف پاک شود تا سنجش‌های بعدی روی دادهٔ تمیز بدوند
         row.Name = "";
         row.AmountText = "";
+        Wait(win, row.FlushAsync());
+        Settle(win);
+    }
+
+    /// <summary>
+    /// ══ «از ورق با جزئیات به حساب برود» ═══════════════════════════════════
+    ///
+    /// خواستهٔ صاحب ریپو (۱۴۰۵/۰۶/۲۷): «می‌خواهم ردیف‌های ورق خیلی خوب و با
+    /// جزئیات به حساب‌ها بروند — اگر گفتم حوالهٔ فلان، عددِ همان حواله در
+    /// حسابِ طرف نوشته شود؛ اگر مصرف بود در مصارف برود و در حسابِ طرف نرود؛
+    /// و اگر واحدِ پول یا تیل بود، به‌راحتی در واحدِ موردِ نظرشان بنشیند… و
+    /// حساب‌های فرعی هم کار کنند: اسمِ حسابِ فرعی را که در جای نام نوشتم،
+    /// همان‌جا برود.»
+    ///
+    /// چهار چیز، هر کدام با نوشتنِ واقعی در همان صفحهٔ ورق و بعد خواندنِ
+    /// دیتابیس — نه ماکت.
+    /// </summary>
+    private static void WaraqDetails(Window win, WaraqPageViewModel page)
+    {
+        var host = AppHost.Current;
+        if (page.Txns.Count == 0) { Check("ردیفِ تراکنش هست", false); return; }
+        var row = page.Txns[0];
+
+        // ── ۱) «حوالهٔ ۷۴۲ کریم» ⇒ شمارهٔ حواله در ستونِ حوالهٔ همان حساب ──
+        var addK = host.Debtors.AddDebtorAsync("کریم جان", "0700000011", false);
+        Wait(win, addK);
+        var karim = addK.Result;
+
+        row.Name = "حواله 742 کریم جان";
+        row.AmountText = "1200";
+        row.TypeText = "قرض";
+        row.UnitText = "تیل";
+        Wait(win, row.FlushAsync());
+        Settle(win);
+
+        var full = Load(win, host, karim.Id);
+        var hit = full is null ? null : Waraq(full).FirstOrDefault();
+        Check("ردیفِ «حواله ۷۴۲ …» به حسابِ کریم رسید", hit is not null,
+              full is null ? "حساب خوانده نشد" : Waraq(full).Count + " ردیف");
+        if (hit is not null)
+        {
+            Check("شمارهٔ حواله در ستونِ حواله نشست", hit.Hawala == "742", "«" + hit.Hawala + "»");
+            Check("و واژهٔ «حواله» از نامِ ردیف پاک شد",
+                  !(hit.Name ?? "").Contains("حواله"), "«" + hit.Name + "»");
+            Check("در دفترِ تیل نشست، نه دفترِ پول", hit.FuelAccountId is not null,
+                  hit.FuelAccountId is not null ? "دفترِ تیل" : "دفترِ پول");
+        }
+
+        // ── ۲) همان ردیف با واحدِ «پول» ⇒ دفترِ واحدِ پول ────────────────────
+        row.UnitText = "پول";
+        Wait(win, row.FlushAsync());
+        Settle(win);
+        full = Load(win, host, karim.Id);
+        hit = full is null ? null : Waraq(full).FirstOrDefault();
+        Check("با واحدِ «پول»، همان ردیف به دفترِ پول رفت",
+              hit is not null && hit.MoneyAccountId is not null && hit.FuelAccountId is null,
+              hit is null ? "ردیفی نیست"
+              : (hit.MoneyAccountId is not null ? "دفترِ پول" : "دفترِ تیل"));
+        Check("و در دو دفتر دوتا نشد", full is not null && Waraq(full).Count == 1,
+              full is null ? "?" : Waraq(full).Count + " ردیف");
+
+        // ── ۳) حسابِ فرعی: نامِ فرعی در جای نام ⇒ همان حسابِ فرعی ───────────
+        var sub = host.Debtors.AddSubAccountAsync(karim.Id, "موتر دوم");
+        Wait(win, sub);
+        var subId = sub.Result.Id;
+
+        row.Name = "موتر دوم";
+        row.AmountText = "900";
+        row.UnitText = "تیل";
+        Wait(win, row.FlushAsync());
+        Settle(win);
+
+        full = Load(win, host, karim.Id);
+        var inSub = full is null ? new List<DebtRow>()
+                  : Waraq(full).Where(r => r.FuelAccountId == subId || r.MoneyAccountId == subId).ToList();
+        Check("ردیفِ ورق با نامِ حسابِ فرعی، در همان حسابِ فرعی نشست",
+              inSub.Count == 1, inSub.Count + " ردیف در فرعی");
+        Check("و در حسابِ اصلی چیزی نماند",
+              full is not null && Waraq(full).Count == inSub.Count,
+              full is null ? "?" : Waraq(full).Count + " ردیف روی هم");
+
+        // ردیف پاک شود تا سنجش‌های بعدی روی دادهٔ تمیز بدوند
+        row.Name = ""; row.AmountText = "";
         Wait(win, row.FlushAsync());
         Settle(win);
     }
