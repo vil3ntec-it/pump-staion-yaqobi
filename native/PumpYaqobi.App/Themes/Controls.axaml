@@ -142,8 +142,17 @@
   </Style>
   <!-- بدنهٔ کادرِ بخش: یک پله بینِ بوم و کارت‌های داخلی (‎Pump.Section‎)، تا
        کارتِ داخلی و جای خالیِ دورش یک رنگ نباشند — شرحش در ‎PumpTheme.SectionBg‎. -->
+  <!-- ⚠️ بدنهٔ بخش صفحه‌قد است و سایهٔ **بی‌محو** می‌گیرد (‎Pump.SectionShadow‎):
+       سایهٔ محو روی کادری به بلندیِ کلِ صفحه با هر فریمِ اسکرول از نو کشیده
+       می‌شد و هر چرخِ ماوس را ~۳۰ میلی‌ثانیه گران می‌کرد (سنجشِ ‎scrollperf‎؛
+       شرحش بالای ‎PumpTheme.SectionShadowOrCard‎). زیرِ ماوس هم همان می‌ماند،
+       وگرنه با ماوسِ روی صفحه — یعنی همیشه — سایهٔ محوِ ‎hover‎ برمی‌گشت. -->
   <Style Selector="Border.card.section">
     <Setter Property="Background" Value="{DynamicResource Pump.Section}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource Pump.SectionShadow}" />
+  </Style>
+  <Style Selector="Border.card.section:pointerover">
+    <Setter Property="BoxShadow" Value="{DynamicResource Pump.SectionShadow}" />
   </Style>
 
   <Style Selector="Border.panel">
@@ -157,10 +166,9 @@
          — و بندِ ۳ صریح گفته کادرِ ثابت هرگز سایه ندارد.
          با ‎inset‎ کشیده می‌شود، نه با یک ‎Border‎ی تودرتو: بندِ ۸ بوردرِ
          تودرتو را هم ممنوع کرده. -->
-    <Setter Property="BoxShadow" Value="{DynamicResource Pump.CardShadow}" />
-  </Style>
-  <Style Selector="Border.panel:pointerover">
-    <Setter Property="BoxShadow" Value="{DynamicResource Pump.CardShadowHover}" />
+    <!-- ⚠️ پنل‌ها گاهی صفحه‌قدند (دورِ جدول‌ها)، پس سایهٔ بی‌محو — همان قاعدهٔ
+         ‎Border.card.section‎. کارت‌های کوچکِ ‎.stat‎ و ‎.card‎ سایهٔ محو را دارند. -->
+    <Setter Property="BoxShadow" Value="{DynamicResource Pump.SectionShadow}" />
   </Style>
 
   <!-- دکمه‌ها -->

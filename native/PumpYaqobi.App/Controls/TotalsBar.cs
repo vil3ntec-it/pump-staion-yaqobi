@@ -132,7 +132,6 @@ public class TotalsStrip : Panel
 {
     private TotalsBar? _bar;
     private DataGrid? _watched;
-    private string _sig = "";
 
     private TotalsBar? Bar => _bar ??= this.FindAncestorOfType<TotalsBar>();
 
@@ -161,8 +160,13 @@ public class TotalsStrip : Panel
         var g = Bar?.ResolveGrid();
         if (g is null || ReferenceEquals(g, _watched)) return;
         _watched = g;
+        _hbar = null;
         g.LayoutUpdated += (_, _) =>
         {
+            // ⚠️ ‎LayoutUpdated‎ برای **هر** چیدمانِ **هر جای** پنجره شلیک می‌شود —
+            // یعنی نوارِ جملهٔ بخشِ پنهان هم با هر چرخِ ماوس در بخشِ دیگر بیدار
+            // می‌شد. بخشِ پنهان چیزی برای چیدن ندارد.
+            if (!g.IsEffectivelyVisible) return;
             var sig = Signature(g);
             if (sig == _sig) return;
             _sig = sig;
@@ -170,14 +174,50 @@ public class TotalsStrip : Panel
         };
     }
 
-    private static string Signature(DataGrid g) =>
-        string.Join(',', g.Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex)
-                          .Select(c => Math.Round(c.ActualWidth))) + "|" + Math.Round(HScroll(g));
+    /// <summary>
+    /// امضای پهنای ستون‌ها و لغزشِ افقی — یک عدد، بی رشته‌سازی.
+    ///
+    /// ⚠️ این در هر پاسِ چیدمان صدا می‌خورد؛ سنجشِ ‎scrollperf‎ (نمونه‌بردارِ
+    /// ‎dotnet-trace‎) نشان داد نسخهٔ پیشین — که هر بار برای پیدا کردنِ نوارِ
+    /// لغزشِ افقی **کلِ درختِ جدول** را می‌گشت — به‌تنهایی ۱۳٪ کلِ وقتِ نخِ رابط
+    /// هنگامِ اسکرول بود، و با بزرگ شدنِ جدول بیشتر می‌شد.
+    /// </summary>
+    private long Signature(DataGrid g)
+    {
+        long h = 17;
+        foreach (var c in g.Columns)
+        {
+            if (!c.IsVisible) continue;
+            h = unchecked(h * 31 + (long)Math.Round(c.ActualWidth) * 8 + c.DisplayIndex);
+        }
+        return unchecked(h * 31 + (long)Math.Round(HScroll(g)));
+    }
 
-    /// <summary>جدول چقدر افقی لغزیده — نوار باید همان‌قدر بلغزد.</summary>
-    private static double HScroll(DataGrid g) =>
-        g.GetVisualDescendants().OfType<ScrollBar>()
-         .FirstOrDefault(b => b.Orientation == Orientation.Horizontal)?.Value ?? 0;
+    private long _sig;
+    private ScrollBar? _hbar;
+    private Visual? _hbarRoot;
+    private int _hbarMiss;
+
+    /// <summary>
+    /// جدول چقدر افقی لغزیده — نوار باید همان‌قدر بلغزد.
+    /// نوارِ لغزش یک بار پیدا می‌شود و تا وقتی در همان درختِ زنده است، همان می‌ماند.
+    /// </summary>
+    private double HScroll(DataGrid g)
+    {
+        var root = g.GetVisualRoot() as Visual;
+        if (root is null) return 0;
+        if (!ReferenceEquals(_hbarRoot, root)) { _hbarRoot = root; _hbar = null; _hbarMiss = 0; }
+        if (_hbar is null || _hbar.GetVisualRoot() is null)
+        {
+            // قالبِ جدول شاید هنوز پیاده نشده باشد؛ چند بار می‌گردیم و بس —
+            // جدولی که نوارِ افقی ندارد نباید در هر چیدمان دوباره گشته شود.
+            if (_hbarMiss >= 3) return 0;
+            _hbar = g.GetVisualDescendants().OfType<ScrollBar>()
+                     .FirstOrDefault(b => b.Orientation == Orientation.Horizontal);
+            if (_hbar is null) { _hbarMiss++; return 0; }
+        }
+        return _hbar.Value;
+    }
 
     private static string Head(DataGridColumn c) => c.Header?.ToString()?.Trim() ?? "";
 

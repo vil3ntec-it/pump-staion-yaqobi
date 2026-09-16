@@ -145,6 +145,8 @@ public static class ThemeManager
         // سایهٔ بیرونی. تمی که رشته‌اش خالی باشد هیچ سایه‌ای نمی‌گیرد.
         Set("Pump.CardShadow", ParseShadow(t.CardShadow));
         Set("Pump.CardShadowHover", ParseShadow(string.IsNullOrEmpty(t.CardShadowHover) ? t.CardShadow : t.CardShadowHover));
+        // کادرهای صفحه‌قد سایهٔ بی‌محو می‌گیرند — چرایی‌اش بالای ‎PumpTheme.SectionShadowOrCard‎.
+        Set("Pump.SectionShadow", ParseShadow(t.SectionShadowOrCard));
 
         // تبِ فعالِ نوار: لایت = زمینهٔ آبیِ بسیار روشن با نوشتهٔ آبیِ تیره،
         // دارک = گرادیانِ تاکید با نوشتهٔ سفید.

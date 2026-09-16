@@ -46,3 +46,11 @@ jobs:
       - name: کند نشدن با دادهٔ بزرگ
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- perf
+
+      # ══ «موقعِ اسکرول لگ می‌زند» ═══════════════════════════════════════════
+      # گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۶). صفحه چرخ‌به‌چرخ پایین می‌رود و هر گام
+      # سنجیده می‌شود: اسکرولِ جدولِ ساخته‌شده باید زیرِ ‎Broken‎ بماند و هیچ
+      # تکهٔ رشدی از ‎GrowBroken‎ نگذرد. ریشهٔ بارِ اول: سایهٔ محوِ کادرِ صفحه‌قد.
+      - name: اسکرولِ بی‌لگ
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- scrollperf

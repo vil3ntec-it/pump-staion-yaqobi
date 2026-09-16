@@ -71,6 +71,14 @@ internal static class Program
         // ══ «عوض کردنِ تم خط‌ها را کج می‌کند؟» ══════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- themeflip
         if (outDir.Equals("themeflip", StringComparison.OrdinalIgnoreCase)) return ThemeFlipAudit.Run();
+        // ══ «موقعِ اسکرول لگ می‌زند؟» ═════════════════════════════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -- scrollperf
+        if (outDir.Equals("scrollperf", StringComparison.OrdinalIgnoreCase))
+        {
+            ScrollPerf.Why = args.Length > 1 && args[1].Equals("why", StringComparison.OrdinalIgnoreCase);
+            ScrollPerf.Trace = args.Length > 1 && args[1].Equals("trace", StringComparison.OrdinalIgnoreCase);
+            return ScrollPerf.Run();
+        }
         if (args.Length > 1 && args[0].Equals("themediff", StringComparison.OrdinalIgnoreCase))
             return ThemeFlipAudit.RunDiff(args[1], args.Length > 2 ? args[2] : null);
         // ══ «پنج سال استفاده از اپ» — کندی و باگ با دفترِ پنج‌ساله ═══════════

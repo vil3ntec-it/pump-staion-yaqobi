@@ -115,7 +115,14 @@ public class ExcelGrid : DataGrid
         HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
 
         // جای اضافه بینِ ستون‌ها پخش می‌شود، نه در یک ستونِ خالیِ ته جدول
-        LayoutUpdated += (_, _) => { SpreadColumns(); PinOnUserResize(); RememberWidths(); Settle(); };
+        // ⚠️ ‎LayoutUpdated‎ برای هر چیدمانِ هر جای پنجره شلیک می‌شود، و همهٔ
+        // بخش‌ها با هم در درخت می‌مانند؛ جدولِ بخشِ پنهان با هر چرخِ ماوس در
+        // بخشِ دیگر نباید کاری کند.
+        LayoutUpdated += (_, _) =>
+        {
+            if (!IsEffectivelyVisible) return;
+            SpreadColumns(); PinOnUserResize(); RememberWidths(); Settle();
+        };
 
         // ردیفِ قفل‌شده (‎ILockedRow‎ — مثلِ ردیفِ 📦 خریدِ مخزن در حسابِ شرکت)
         // ویرایشگر باز نمی‌کند؛ همان ‎readonly‎ی سایت
@@ -288,6 +295,10 @@ public class ExcelGrid : DataGrid
     /// فقط دو بار اندازه گرفته می‌شد.
     /// </summary>
     public static int DiagMeasure, DiagSettle;
+    /// <summary>گران‌ترین پاسِ اندازه‌گیری‌ای که ردیفِ تازه ساخت، و چند ردیف — برای ‎scrollperf‎.</summary>
+    public static long DiagChunkMaxMs;
+    public static int DiagChunkMaxRows;
+    private int _measuredShown;
 
     /// <summary>اصلاحیهٔ بلندی — فقط برای سنجش.</summary>
     public double DiagPad => _pad;
@@ -319,11 +330,21 @@ public class ExcelGrid : DataGrid
     //  صدهزارردیفی حافظه را می‌بلعد. آن‌قدر بالاست که هیچ دفترِ ماهانه به آن
     //  نمی‌رسد؛ اگر رسید، جدول همان‌جا با نوارِ خودش می‌لغزد.
 
-    /// <summary>چند ردیف در هر فریمِ رشد ساخته می‌شود.</summary>
-    private const int GrowChunk = 24;
+    /// <summary>
+    /// چند ردیف در هر فریمِ رشد ساخته می‌شود.
+    ///
+    /// ⚠️ کوچک و ثابت — سنجشِ ‎scrollperf‎ (۱۴۰۵/۰۶/۲۶): ساختنِ هر ردیف ۱۰ تا ۲۵
+    /// میلی‌ثانیه است (قالب، سبک‌ها، درختِ ترکیب‌گر)، پس تکهٔ ۱۲۰ ردیفیِ پیشین
+    /// یک مکثِ ۱٫۳ ثانیه‌ای وسطِ اسکرول بود — همان «کادرها دیر می‌آیند و لگ
+    /// می‌زند». «تکهٔ بزرگ‌تر ارزان‌تر است» که پیش‌تر اندازه گرفته شده بود، مالِ
+    /// وقتی بود که هر پاسِ چیدمان با ‎TotalsStrip‎ کلِ درختِ جدول را می‌گشت؛
+    /// با کَش شدنِ آن، پاسِ بی‌ردیفِ تازه ارزان است و تکهٔ کوچک دیگر مربعی نمی‌شود
+    /// (‎ledgerperf‎: رشدِ کاملِ ۲۰۰ ردیف ۳۶۰ تا ۶۰۰ میلی‌ثانیه).
+    /// </summary>
+    private const int GrowChunk = 8;
 
     /// <summary>بیشترین ردیفی که یک فریمِ رشد می‌سازد — سقفِ مکثِ یک فریم.</summary>
-    private const int GrowMax = 120;
+    private const int GrowMax = 8;
 
     /// <summary>تا این‌جا بلند شده‌ایم (شمارِ ردیف). صفر یعنی هنوز شروع نشده.</summary>
     private int _shown;
@@ -351,7 +372,7 @@ public class ExcelGrid : DataGrid
         if (_watched is not null) _watched.CollectionChanged -= OnRowsChanged;
         _watched = ItemsSource as System.Collections.Specialized.INotifyCollectionChanged;
         if (_watched is not null) _watched.CollectionChanged += OnRowsChanged;
-        _shown = 0;
+        _shown = 0; _measuredShown = 0;
         FixRowHeaderWidth();
         InvalidateMeasure();
     }
@@ -380,7 +401,7 @@ public class ExcelGrid : DataGrid
         // فهرست از نو پر شد (ماهِ دیگر، حسابِ دیگر) ⇒ رشد از اول، تدریجی.
         // وگرنه ‎_shown‎ی ماهِ قبل می‌ماند و کلِ ماهِ تازه در یک پاس ساخته می‌شد.
         if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset
-            || RowCount() < _shown) _shown = 0;
+            || RowCount() < _shown) { _shown = 0; _measuredShown = 0; }
         FixRowHeaderWidth();
         InvalidateMeasure();
     }
@@ -441,10 +462,8 @@ public class ExcelGrid : DataGrid
         Dispatcher.UIThread.Post(() =>
         {
             _growQueued = false;
-            // ⚠️ هر پاسِ رشد همهٔ ردیف‌های ساخته‌شده را دوباره اندازه می‌گیرد،
-            // پس با تکه‌های ثابتِ کوچک هزینه مربعی می‌شد (۲۶۵ ردیف: ۳٫۲ ثانیه
-            // در برابرِ ۲٫۱ ثانیهٔ یک‌جا). تکه هر بار دو برابر می‌شود — چند پاس
-            // بیشتر نیست — ولی سقفی دارد تا هیچ فریمی بیش از حد مکث نکند.
+            // تکهٔ کوچک و ثابت — چرایی‌اش بالای ‎GrowChunk‎. هیچ فریمی بیش از
+            // ‎GrowMax‎ ردیفِ تازه نمی‌سازد.
             var chunk = Math.Clamp(show, GrowChunk, GrowMax);
             _shown = Math.Min(rows, show + chunk);
             InvalidateMeasure();
@@ -478,7 +497,16 @@ public class ExcelGrid : DataGrid
 
         var want = WantedHeight(show);
         if (availableSize.Height > want) availableSize = availableSize.WithHeight(want);
+        // سنجش: گران‌ترین تکهٔ رشد (ردیف‌های تازه در یک پاس) — ‎scrollperf‎ می‌خواند
+        var grew = show - _measuredShown;
+        var sw = grew > 0 ? System.Diagnostics.Stopwatch.StartNew() : null;
         var size = base.MeasureOverride(availableSize);
+        if (sw is not null)
+        {
+            sw.Stop();
+            _measuredShown = show;
+            if (sw.ElapsedMilliseconds > DiagChunkMaxMs) { DiagChunkMaxMs = sw.ElapsedMilliseconds; DiagChunkMaxRows = grew; }
+        }
         return size.WithHeight(want);
     }
 

@@ -61,8 +61,27 @@ public sealed record PumpTheme(
     Color? NavActiveFg = null,   // نوشتهٔ تبِ فعال (پیش‌فرض: OnAccent)
     string CardShadow = "",      // نورِ لبه + سایهٔ کارت (BoxShadows)
     string CardShadowHover = "", // همان، کمی پررنگ‌تر زیرِ ماوس
-    bool FlatCanvas = false)     // بوم و کارت عمداً هم‌رنگ‌اند؛ جدایی از سایه و خط می‌آید
+    bool FlatCanvas = false,     // بوم و کارت عمداً هم‌رنگ‌اند؛ جدایی از سایه و خط می‌آید
+    string SectionShadow = "")   // سایهٔ کادرهای صفحه‌قد — بی محو (شرحش پایین)
 {
+    /// <summary>
+    /// ══ سایهٔ کادرِ بزرگ، بی محو ═══════════════════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «موقعِ اسکرول کادرها خیلی دیر می‌آیند و لگ می‌زند.»
+    /// سنجشِ ‎scrollperf‎ ریشه را نشان داد: بدنهٔ بخش (‎Border.card.section‎) یک
+    /// کادرِ **صفحه‌قد** است و سایهٔ محوِ آن با هر فریمِ اسکرول از نو کشیده
+    /// می‌شود — با هر شعاعِ محوی (۲، ۶ یا ۱۲ پیکسل) هر گامِ چرخ ۲۶ تا ۳۰
+    /// میلی‌ثانیه گران‌تر بود؛ همان سایه بی محو (خط + جابه‌جایی) صفر هزینه داشت:
+    ///
+    ///     همه‌چیز روشن ۹۴ms · بی سایه ۳۸ms · خط + محوِ ۱۲ ۶۵ms · خط + بی‌محو ۳۸ms
+    ///
+    /// پس کادرهای بزرگ (بدنهٔ بخش و ‎.panel‎) این سایه را می‌گیرند: خطِ ۱ پیکسلیِ
+    /// لبه، هالهٔ ۳ پیکسلیِ کم‌آلفا (با ‎spread‎، نه ‎blur‎) و یک خطِ سایهٔ کوتاهِ
+    /// زیرِ کادر. کارت‌های کوچک (‎.stat‎ و ‎.card‎ی معمولی) همان سایهٔ محوِ
+    /// <see cref="CardShadow"/> را نگه می‌دارند — مساحتشان کم است و ارزان.
+    /// </summary>
+    public string SectionShadowOrCard => string.IsNullOrEmpty(SectionShadow) ? CardShadow : SectionShadow;
+
     /// <summary>
     /// ══ سه طبقه، نه دو ═══════════════════════════════════════════════════════
     /// گزارشِ صاحب ریپو با عکس (۱۴۰۵/۰۶/۲۵): «کادرهای آبی که کشیدم باید متفاوت
@@ -116,7 +135,8 @@ public sealed record PumpTheme(
         NavActiveFg: C("#1e3a8a"),
         CardShadow: "0 0 0 1 #2660A5FA, 0 1 2 0 #140B1F3A, 0 4 12 0 #121E3A8A",
         CardShadowHover: "0 0 0 1 #5560A5FA, 0 0 6 0 #3360A5FA, 0 6 16 0 #1A1E3A8A",
-        FlatCanvas: true);
+        FlatCanvas: true,
+        SectionShadow: "0 0 0 1 #2660A5FA, 0 0 0 3 #0C60A5FA, 0 3 0 0 #101E3A8A");
 
     /// <summary>
     /// «مشکی و زرد» — دارک مود (عکسِ مرجعِ صاحب ریپو، ۱۴۰۵/۰۶/۲۵؛ «اون قبلیه [سرمه‌ای]
@@ -139,7 +159,8 @@ public sealed record PumpTheme(
         Section: C("#141419"),
         Input: C("#131317"),
         CardShadow: "inset 0 1 0 0 #14FFF3C4, 0 0 0 1 #55E6C800, 0 0 7 0 #33FFD700, 0 6 16 0 #90000000",
-        CardShadowHover: "inset 0 1 0 0 #22FFF3C4, 0 0 0 1 #88E6C800, 0 0 10 1 #55FFD700, 0 8 20 0 #A0000000");
+        CardShadowHover: "inset 0 1 0 0 #22FFF3C4, 0 0 0 1 #88E6C800, 0 0 10 1 #55FFD700, 0 8 20 0 #A0000000",
+        SectionShadow: "0 0 0 1 #55E6C800, 0 0 0 3 #14FFD700, 0 4 0 0 #80000000");
 
     public static readonly PumpTheme[] All = { Blue, Gold };
 
