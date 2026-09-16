@@ -132,18 +132,25 @@ public class StartupWarmTests
     }
 
     /// <summary>
-    /// ⚠️ صفحهٔ «تنظیمات» نباید دوباره منتظرِ بررسیِ نسخه بماند: جایی که
-    /// اینترنت نباشد، باز شدنش به اندازهٔ مهلتِ اتصال طول می‌کشد
-    /// (سنجشِ ‎warm‎: ۱٬۲۶۱ میلی‌ثانیه، و پس از این تغییر ۱۷۵).
+    /// ⚠️ صفحه‌ای که کارتِ به‌روزرسانی دارد نباید منتظرِ بررسیِ نسخه بماند:
+    /// جایی که اینترنت نباشد، باز شدنش به اندازهٔ مهلتِ اتصال طول می‌کشد
+    /// (سنجشِ ‎warm‎: ۱٬۲۶۱ میلی‌ثانیه، و پس از آن تغییر ۱۷۵).
+    ///
+    /// از ۱۴۰۵/۰۶/۲۸ آن صفحه «بک‌اپ و به‌روزرسانی‌ها» است، نه «تنظیمات».
     /// </summary>
     [Fact]
-    public void SettingsDoesNotWaitForTheUpdateCheck()
+    public void TheUpdateCardDoesNotWaitForTheVersionCheck()
     {
-        var s = Read("PumpYaqobi.App", "ViewModels", "Sections", "SettingsSectionViewModel.cs");
-        var body = s[s.IndexOf("public override Task OnActivatedAsync()", StringComparison.Ordinal)..];
+        var s = Read("PumpYaqobi.App", "ViewModels", "Sections", "BackupSectionViewModel.cs");
+
+        // تنها جایی که بررسی از مسیرِ باز شدنِ صفحه صدا می‌خورد، همان
+        // ‎Task.Run‎ی بی‌انتظار است.
+        Assert.Contains("_ = Task.Run(async () => { try { await CheckUpdateAsync(); } catch { } });", s);
+
+        var body = s[s.IndexOf("private Task RefreshAsync()", StringComparison.Ordinal)..];
         body = body[..body.IndexOf("\n    }", StringComparison.Ordinal)];
-        Assert.DoesNotContain("await CheckUpdateAsync()", body.Replace("try { await CheckUpdateAsync(); } catch { }", ""));
-        Assert.Contains("Task.Run", body);
+        Assert.DoesNotContain("await CheckUpdateAsync()",
+            body.Replace("try { await CheckUpdateAsync(); } catch { }", ""));
     }
 }
 

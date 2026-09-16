@@ -67,16 +67,30 @@ public class TableStyleAndLedgerTests
         Assert.Contains("TableStyle.Apply(app: this);", app);
     }
 
-    /// <summary>بخشِ «ظاهرِ جدول‌ها» در صفحهٔ تنظیمات هست و هر سه ضخامت را دارد.</summary>
+    /// <summary>
+    /// ⛔ کارتِ «ظاهرِ جدول‌ها» از تنظیمات **برداشته شد** — خواستهٔ صریحِ صاحب
+    /// ریپو (۱۴۰۵/۰۶/۲۸): «تنظیماتِ الان همه‌شونو حذف کن… اون تنظیماتِ قدیم
+    /// هیچ از اون‌ها نباشه داخلش.» پس این‌جا سنجهٔ وارونه است: صفحهٔ تنظیمات
+    /// باید هیچ کادرِ تنظیمی نداشته باشد.
+    ///
+    /// خودِ رنگ و ضخامتِ ذخیره‌شده همچنان روی همهٔ جدول‌ها می‌نشیند
+    /// (‎TableStyle.Apply‎، سنجهٔ بالا)؛ فقط کادرهایش دیگر نیست.
+    /// </summary>
     [Fact]
-    public void SettingsHasATableAppearanceCard()
+    public void SettingsHasNoOldSettingCardsAnyMore()
     {
         var v = Read("PumpYaqobi.App", "Views", "Sections", "SettingsSectionView.axaml");
-        Assert.Contains("ظاهرِ جدول‌ها", v);
-        Assert.Contains("{Binding TableBorderColor}", v);
-        Assert.Contains("{Binding TableLine}", v);
-        Assert.Contains("{Binding TableHeadLine}", v);
-        Assert.Contains("{Binding TableSumLine}", v);
+        foreach (var gone in new[]
+                 {
+                     "TableBorderColor", "TableLine", "TableHeadLine", "TableSumLine",
+                     "UnionRatePetrol", "LowStockThreshold", "SelectedTheme", "ImportLegacy",
+                 })
+            Assert.DoesNotContain(gone, v);
+
+        // و همان سه در سرِ جایشان
+        Assert.Contains("KeysPage", v);
+        Assert.Contains("BackupsPage", v);
+        Assert.Contains("TrashPage", v);
     }
 
     // ══ ردیفِ «جمله» زیرِ ستونِ خودش ═══════════════════════════════════════

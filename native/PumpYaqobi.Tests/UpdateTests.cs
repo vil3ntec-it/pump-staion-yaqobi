@@ -167,8 +167,9 @@ public class UpdateTests
         Assert.Contains("Compare(AppVersion.Current, target)", svc);
 
         // و نسخهٔ هدف باید واقعاً از رابط کاربری پاس داده شود
+        // کارتِ به‌روزرسانی از ۱۴۰۵/۰۶/۲۸ در صفحهٔ «بک‌اپ و به‌روزرسانی‌ها» است.
         var vm = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections",
-                                               "SettingsSectionViewModel.cs"));
+                                               "BackupSectionViewModel.cs"));
         Assert.Contains("Launch(_downloaded, _info?.LatestVersion)", vm);
     }
 
@@ -180,7 +181,7 @@ public class UpdateTests
     public void BothOutcomesReachTheUser()
     {
         var view = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections",
-                                                 "SettingsSectionView.axaml"));
+                                                 "BackupSectionView.axaml"));
         Assert.Contains("LastSuccess", view);
         Assert.Contains("LastFailure", view);
     }

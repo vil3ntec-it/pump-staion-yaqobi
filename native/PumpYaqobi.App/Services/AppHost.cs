@@ -26,6 +26,7 @@ public sealed class AppHost
         Permissions = new PermissionService(Session);
         Auth = new AuthService(Db, Session);
         Settings = new SettingsService(Db, Permissions);
+        Locks = new SectionLockService(Settings);
         SectionNotes = new SectionNoteService(Db, Permissions);
         Debt = new DebtCalculationService(Settings);
         Safe = new SafeService();
@@ -120,6 +121,9 @@ public sealed class AppHost
     public PermissionService Permissions { get; }
     public AuthService Auth { get; }
     public SettingsService Settings { get; }
+
+    /// <summary>رمزِ بخش‌های «مفاد» و «ضرر» — شرحش در <see cref="SectionLockService"/>.</summary>
+    public SectionLockService Locks { get; }
 
     /// <summary>صندوقِ نوت‌های هر بخش — همتای ‎.sec-note-box‎ی نسخهٔ وب.</summary>
     public SectionNoteService SectionNotes { get; }

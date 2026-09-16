@@ -64,6 +64,12 @@
                   <TextBlock Text="ظرفیت مخزن (لیتر)" Classes="label" FontSize="11" />
                   <TextBox Text="{Binding Capacity}" HorizontalAlignment="Stretch" />
                 </StackPanel>
+                <!-- از «تنظیمات» به این‌جا آمد (۱۴۰۵/۰۶/۲۸) — جای طبیعی‌اش
+                     همین‌جاست، کنارِ ظرفیت. -->
+                <StackPanel Spacing="1" Margin="6,0">
+                  <TextBlock Text="آستانهٔ هشدار (لیتر)" Classes="label" FontSize="11" />
+                  <TextBox Text="{Binding LowStock}" HorizontalAlignment="Stretch" />
+                </StackPanel>
               </UniformGrid>
 
               <!-- «🕘 تاریخچهٔ خریدهای مخزن» برداشته شد: هیچ فرمانی نداشت و

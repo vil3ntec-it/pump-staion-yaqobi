@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             x:Class="PumpYaqobi.App.Views.Sections.TrashSectionView"
+             x:DataType="vm:TrashSectionViewModel">
+
+  <c:SectionPage Header="سطل زباله"
+                 SubHeader="هر چه پاک کرده‌اید — پانزده روز می‌ماند و برمی‌گردد">
+
+    <StackPanel Spacing="14" MaxWidth="900">
+
+      <!-- ══ تازه‌ترین پاک‌شده ═══════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="0">
+        <StackPanel>
+          <Border Classes="card-head">
+            <TextBlock Text="🗑️ تازه‌ترین پاک‌شده" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Accent}" />
+          </Border>
+          <StackPanel Margin="14" Spacing="10">
+
+            <TextBlock Text="سطلِ زباله خالی است — هیچ چیزی پاک نشده" Classes="label"
+                       IsVisible="{Binding IsEmpty}" />
+
+            <StackPanel Spacing="6" IsVisible="{Binding !IsEmpty}">
+              <TextBlock Text="{Binding Newest.OneLine}" FontSize="17" FontWeight="Bold"
+                         TextWrapping="Wrap" />
+              <TextBlock Classes="muted">
+                <Run Text="{Binding Newest.DeletedText}" />
+                <Run Text=" · " />
+                <Run Text="{Binding Newest.DaysLeftText}" />
+              </TextBlock>
+            </StackPanel>
+
+            <TextBlock Text="{Binding RetentionText}" Classes="muted" TextWrapping="Wrap" />
+
+            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding !IsEmpty}">
+              <Button Classes="accent" Content="برگرداندنِ همین"
+                      Command="{Binding RestoreNewestCommand}" />
+              <Button Classes="ghost danger" Content="حذفِ همیشگی"
+                      Command="{Binding PurgeCommand}" IsVisible="{Binding CanPurge}" />
+              <Button Classes="ghost danger" Content="خالی کردنِ سطل"
+                      Command="{Binding EmptyCommand}" IsVisible="{Binding CanPurge}" />
+            </StackPanel>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- ══ بقیه — کشویی، مثلِ بکاپ‌ها ═════════════════════════════════ -->
+      <StackPanel Spacing="8" IsVisible="{Binding HasOlder}">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <Button Classes="ghost" Content="{Binding ToggleText}"
+                  Command="{Binding ToggleOlderCommand}" />
+          <TextBlock Text="{Binding OlderText}" Classes="muted" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <Border Classes="panel" Padding="0" IsVisible="{Binding ShowOlder}">
+          <StackPanel>
+            <c:ExcelGrid ItemsSource="{Binding Older}" x:CompileBindings="False"
+                         SelectedItem="{Binding Selected, Mode=TwoWay}"
+                         IsReadOnly="True" BorderThickness="0" CornerRadius="0">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="نوع" Binding="{Binding KindText}" Width="Auto" />
+                <DataGridTextColumn Header="چه بود" Binding="{Binding Label}" Width="*" />
+                <DataGridTextColumn Header="کِی پاک شد" Binding="{Binding DeletedText}" Width="Auto" />
+                <DataGridTextColumn Header="تا کِی می‌ماند" Binding="{Binding DaysLeftText}" Width="Auto" />
+                <DataGridTextColumn Header="به‌دستِ" Binding="{Binding ByText}" Width="Auto" />
+              </DataGrid.Columns>
+            </c:ExcelGrid>
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="14,10" HorizontalAlignment="Right">
+              <Button Classes="accent" Content="برگرداندنِ انتخاب‌شده"
+                      Command="{Binding RestoreSelectedCommand}" />
+              <Button Classes="ghost danger" Content="حذفِ همیشگیِ انتخاب‌شده"
+                      Command="{Binding PurgeCommand}" IsVisible="{Binding CanPurge}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+    </StackPanel>
+  </c:SectionPage>
+</UserControl>

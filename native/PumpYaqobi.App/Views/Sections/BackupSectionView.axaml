@@ -1,0 +1,151 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             x:Class="PumpYaqobi.App.Views.Sections.BackupSectionView"
+             x:DataType="vm:BackupSectionViewModel">
+
+  <c:SectionPage Header="بک‌اپ و به‌روزرسانی‌ها"
+                 SubHeader="تازه‌ترین بکاپ بالا، بقیه داخلِ کادرِ کشویی">
+
+    <StackPanel Spacing="14" MaxWidth="900">
+
+      <!-- ══ تازه‌ترین بکاپ — یکی، که صفحه شلوغ نشود ═══════════════════ -->
+      <Border Classes="panel" Padding="0">
+        <StackPanel>
+          <Border Classes="card-head">
+            <TextBlock Text="💾 تازه‌ترین بکاپ" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Accent}" />
+          </Border>
+          <StackPanel Margin="14" Spacing="10">
+
+            <TextBlock Text="هنوز هیچ بکاپی گرفته نشده" Classes="label"
+                       IsVisible="{Binding NoBackups}" />
+
+            <StackPanel Spacing="8" IsVisible="{Binding !NoBackups}">
+              <TextBlock Text="{Binding Newest.OneLine}" FontSize="17" FontWeight="Bold" />
+              <TextBlock Text="{Binding KeepText}" Classes="muted" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="accent" Content="ذخیرهٔ فایلِ بکاپ"
+                      Command="{Binding SaveBackupCommand}" IsEnabled="{Binding !Busy}" />
+              <Button Classes="ghost" Content="گرفتنِ بکاپِ همین حالا"
+                      Command="{Binding SnapshotNowCommand}" IsEnabled="{Binding !Busy}" />
+              <Button Classes="ghost danger" Content="بازگرداندنِ همین بکاپ"
+                      Command="{Binding RestoreNewestCommand}"
+                      IsVisible="{Binding CanRestore}" IsEnabled="{Binding !Busy}" />
+              <Button Classes="ghost danger" Content="بازگردانی از فایل"
+                      Command="{Binding RestoreFromFileCommand}"
+                      IsVisible="{Binding CanRestore}" IsEnabled="{Binding !Busy}" />
+            </StackPanel>
+
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="⚠️ بازگردانی همهٔ حساب‌های فعلی را با بکاپ جایگزین می‌کند. پیش از آن، از حالِ فعلی یک عکسِ ایمنی گرفته می‌شود تا راهِ برگشت باشد." />
+
+            <TextBlock Text="{Binding Status}" Classes="muted" TextWrapping="Wrap"
+                       IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- ══ بقیهٔ بکاپ‌ها — کشویی ═══════════════════════════════════════
+           ⚠️ جدولِ داخلِ کادرِ بسته نامرئی است و ‎ExcelGrid‎ ردیف‌هایش را پارک
+           می‌کند. با یک ‎ItemsControl‎ ساده، همهٔ ردیف‌ها تا ابد زنده می‌ماندند
+           — همان چیزی که سنجشِ ‎idle‎ قدغن کرده. -->
+      <StackPanel Spacing="8" IsVisible="{Binding HasOlder}">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <Button Classes="ghost" Content="{Binding ToggleText}"
+                  Command="{Binding ToggleOlderCommand}" />
+          <TextBlock Text="{Binding OlderText}" Classes="muted" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <Border Classes="panel" Padding="0" IsVisible="{Binding ShowOlder}">
+          <StackPanel>
+            <c:ExcelGrid ItemsSource="{Binding Older}" x:CompileBindings="False"
+                         SelectedItem="{Binding SelectedBackup, Mode=TwoWay}"
+                         IsReadOnly="True" BorderThickness="0" CornerRadius="0">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="روز" Binding="{Binding Day}" Width="Auto" />
+                <DataGridTextColumn Header="ساعت" Binding="{Binding TakenText}" Width="Auto" />
+                <DataGridTextColumn Header="اندازه" Binding="{Binding SizeText}" Width="*" />
+              </DataGrid.Columns>
+            </c:ExcelGrid>
+            <Button Classes="ghost danger" Margin="14,10" HorizontalAlignment="Right"
+                    Content="بازگرداندنِ بکاپِ انتخاب‌شده"
+                    Command="{Binding RestoreSelectedCommand}"
+                    IsVisible="{Binding CanRestore}" IsEnabled="{Binding !Busy}" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+      <!-- ══ به‌روزرسانیِ برنامه ══════════════════════════════════════════
+           ⚠️ عمداً هیچ نشانی یا نامِ منبعی نوشته نمی‌شود — فقط نسخه و دکمه. -->
+      <Border Classes="panel" Padding="0">
+        <StackPanel>
+          <Border Classes="card-head">
+            <TextBlock Text="⬇️ به‌روزرسانیِ برنامه" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Accent}" />
+          </Border>
+          <StackPanel Margin="14" Spacing="10">
+            <TextBlock Text="{Binding CurrentVersion, StringFormat=نسخهٔ فعلی: {0}}" FontWeight="Bold" />
+
+            <TextBlock Text="{Binding InstallDir, StringFormat=پوشهٔ نصب: {0}}" Classes="muted"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{Binding InstallNote}" Classes="muted" TextWrapping="Wrap"
+                       IsVisible="{Binding InstallNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                       Foreground="{DynamicResource Pump.Warn}" />
+
+            <TextBlock Text="{Binding UpdateStatus}" Classes="muted"
+                       IsVisible="{Binding UpdateStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+            <TextBlock Text="{Binding PackageText}" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Ok}"
+                       IsVisible="{Binding PackageText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+            <TextBlock Text="{Binding LastSuccess}" TextWrapping="Wrap" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Ok}"
+                       IsVisible="{Binding LastSuccess, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <TextBlock Text="{Binding LastFailure}" TextWrapping="Wrap"
+                       Foreground="{DynamicResource Pump.Danger}"
+                       IsVisible="{Binding LastFailure, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+            <ProgressBar Value="{Binding DownloadPercent}" Maximum="100" Height="7"
+                         IsVisible="{Binding Downloading}" />
+
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Content="بررسیِ به‌روزرسانی" Command="{Binding CheckUpdateCommand}"
+                      IsEnabled="{Binding !Checking}" />
+              <Button Classes="accent" Content="گرفتنِ نسخهٔ تازه"
+                      Command="{Binding DownloadUpdateCommand}"
+                      IsVisible="{Binding UpdateAvailable}" IsEnabled="{Binding !Downloading}" />
+              <Button Classes="accent" Content="نصب و راه‌اندازیِ دوباره"
+                      Command="{Binding InstallUpdateCommand}"
+                      IsVisible="{Binding ReadyToInstall}" />
+            </StackPanel>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- ══ آوردنِ دادهٔ نسخهٔ وب ══════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="0">
+        <StackPanel>
+          <Border Classes="card-head">
+            <TextBlock Text="📥 آوردنِ حساب‌ها از نسخهٔ وب" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Accent}" />
+          </Border>
+          <StackPanel Margin="14" Spacing="9">
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="فایلِ pump-backup-….json نسخهٔ وب را این‌جا بدهید. پیش از هر نوشتنی یک بکاپِ کامل از دادهٔ فعلی گرفته می‌شود، و اگر شمارشِ رکوردها نخواند هیچ چیزی نوشته نمی‌شود." />
+            <Button Classes="ghost" Content="انتخابِ فایلِ بکاپِ وب"
+                    Command="{Binding ImportLegacyCommand}" IsEnabled="{Binding !ImportBusy}"
+                    HorizontalAlignment="Right" />
+            <TextBlock Text="{Binding ImportStatus}" TextWrapping="Wrap" Classes="muted"
+                       IsVisible="{Binding ImportStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </c:SectionPage>
+</UserControl>

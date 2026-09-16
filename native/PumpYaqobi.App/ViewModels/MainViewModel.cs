@@ -212,9 +212,20 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>همان بخشی که کاربر دفعهٔ پیش داخلش بود.</summary>
-    public Task OpenStartSectionAsync() =>
-        GoAsync(Sections.FirstOrDefault(s => s.Id == _settings.LastSection) ?? Sections[0]);
+    /// <summary>
+    /// همان بخشی که کاربر دفعهٔ پیش داخلش بود.
+    ///
+    /// ⚠️ اگر آن بخش قفل‌دار باشد، به جایش صفحهٔ اول باز می‌شود: سرِ بالا آمدنِ
+    /// برنامه رمز پرسیدن یعنی کاربری که انصراف بدهد با صفحهٔ خالی روبه‌رو
+    /// شود. قفل سرِ جایش هست؛ همان لحظه‌ای می‌پرسد که کاربر خودش روی آن بخش
+    /// بزند.
+    /// </summary>
+    public Task OpenStartSectionAsync()
+    {
+        var last = Sections.FirstOrDefault(s => s.Id == _settings.LastSection);
+        if (last is null || AppHost.Current.Locks.NeedsUnlock(last.Id)) last = Sections[0];
+        return GoAsync(last);
+    }
 
     public ObservableCollection<SectionViewModel> Sections { get; }
 
@@ -482,6 +493,9 @@ public sealed partial class MainViewModel : ObservableObject
     {
         if (s is null) return;
 
+        // ⛔ بخشِ قفل‌دار (مفاد/ضرر) بی رمز باز نمی‌شود — شرحش در ‎UnlockAsync‎.
+        if (!await UnlockAsync(s)) return;
+
         // زدنِ دکمهٔ همان بخشی که باز است یعنی «تازه‌اش کن» — نه «هیچ کاری نکن».
         // پیش از این این‌جا برمی‌گشتیم و نتیجه‌اش این بود که عددهای نوارِ بالا
         // روی همان لحظهٔ بارِ اول می‌ماندند.
@@ -542,6 +556,17 @@ public sealed partial class MainViewModel : ObservableObject
     private void OnSectionPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName != nameof(SectionViewModel.OpenSub)) return;
+
+        // ⛔ زیربخشِ قفل‌دار («زیان ناشی از افزایش قیمت») اول بسته می‌ماند و
+        // بعد از رمزِ درست خودش باز می‌شود. اگر همین‌جا نشان داده می‌شد،
+        // رمز پرسیدن پس از دیده شدنِ داده بی‌معنا بود.
+        if (Current?.OpenSub is { } locked && AppHost.Current.Locks.NeedsUnlock(locked.Id))
+        {
+            Current.OpenSub = null;
+            LastSubOpen = UnlockThenShowAsync(Current, locked);
+            return;
+        }
+
         SyncContent();
         if (Current?.OpenSub is { } sub) LastSubOpen = OpenSubAsync(sub);
     }
@@ -560,6 +585,39 @@ public sealed partial class MainViewModel : ObservableObject
         // حساب/شرکت/ورقِ باز عوض شد (‎Person‎، ‎Overlay‎، ‎Page‎…) ⇒ همان قاعده:
         // صفحه‌ای که رفت، ردیف‌هایش هم می‌روند.
         Controls.ExcelGrid.NotifyPagesChanged();
+    }
+
+    /// <summary>
+    /// ══ قفلِ بخش ══════════════════════════════════════════════════════════
+    /// بخشی که در «تنظیمات › رمزها و کد» رمز گرفته باشد، بارِ اولِ هر اجرا
+    /// رمزش را می‌پرسد. ‎false‎ یعنی «باز نشد» — و آن‌وقت هیچ چیزی از آن بخش
+    /// روی صفحه نمی‌آید.
+    ///
+    /// ⚠️ رمز **پیش از** نشان دادنِ صفحه پرسیده می‌شود، نه بعدش: رمزی که پس
+    /// از دیده شدنِ داده پرسیده شود هیچ چیزی را نگه نداشته است.
+    /// </summary>
+    private async Task<bool> UnlockAsync(SectionViewModel s)
+    {
+        var locks = AppHost.Current.Locks;
+        if (!locks.NeedsUnlock(s.Id)) return true;
+
+        var pw = await Dialogs.PromptAsync("🔒 " + s.Title,
+                                           "این بخش رمز دارد. رمزش را بزنید.");
+        if (pw is null) return false;
+
+        if (!locks.Unlock(s.Id, pw))
+        {
+            AppHost.Current.Toast("❌ رمزِ این بخش درست نیست", ToastKind.Error);
+            return false;
+        }
+        return true;
+    }
+
+    /// <summary>رمز درست بود ⇒ همان زیربخش دوباره باز می‌شود (این‌بار بی قفل).</summary>
+    private async Task UnlockThenShowAsync(SectionViewModel parent, SectionViewModel sub)
+    {
+        if (!await UnlockAsync(sub)) return;
+        parent.ShowSub(sub);
     }
 
     private async Task OpenSubAsync(SectionViewModel sub)
@@ -829,6 +887,11 @@ public sealed partial class MainViewModel : ObservableObject
         }
         By("profit")?.AddSub(new MonthReportSectionViewModel(host),    "📅 گزارش پایان ماه");
         By("profit")?.AddSub(new RateHistorySectionViewModel(host),    "📈 تاریخچهٔ نرخ اتحادیه");
-        By("settings")?.AddSub(new DataSectionViewModel(host, this),   "🗂️ مدیریت داده‌ها");
+        // ══ تنظیمات: سه صفحه، و بس ═══════════════════════════════════════
+        // خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۸). ترتیبشان همان ترتیبی است که
+        // گفت و کارت‌های صفحهٔ تنظیمات هم همین است.
+        By("settings")?.AddSub(new KeysSectionViewModel(host),         "🔑 رمزها و کد");
+        By("settings")?.AddSub(new BackupSectionViewModel(host, this), "💾 بک‌اپ و به‌روزرسانی‌ها");
+        By("settings")?.AddSub(new TrashSectionViewModel(host, this),  "🗑️ سطل زباله");
     }
 }

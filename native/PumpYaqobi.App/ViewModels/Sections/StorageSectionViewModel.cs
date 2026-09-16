@@ -227,6 +227,14 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     [ObservableProperty] private string _lastBuyDate = "—";
     [ObservableProperty] private bool _isLow;
     [ObservableProperty] private string _capacity = "";
+
+    /// <summary>
+    /// آستانهٔ هشدارِ کمبودِ مخزن (لیتر) — از «تنظیمات» به این‌جا آمد
+    /// (خواستهٔ ۱۴۰۵/۰۶/۲۸: تنظیمات فقط سه صفحه). همان کلیدِ همیشگی
+    /// (‎lowStockThreshold‎) است و داشبورد و عکسِ ایستگاه هم از همان
+    /// می‌خوانند، پس جایش عوض شد نه معنایش.
+    /// </summary>
+    [ObservableProperty] private string _lowStock = "";
     [ObservableProperty] private double _fillPercent;
     [ObservableProperty] private string _fillText = "0%";
     [ObservableProperty] private string _thresholdText = "";
@@ -385,6 +393,9 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     });
 
     /// <summary>ظرفیتِ مخزن — تنظیمی است و روی نوارِ پرشدگی اثر می‌گذارد.</summary>
+    /// <summary>تا خواندنِ اولِ تنظیمات تمام نشده، تایپِ ساختگی ذخیره نشود.</summary>
+    private bool _ready;
+
     private string CapacityKey => IsDiesel ? "tankCapacity_diesel" : "tankCapacity_petrol";
 
     partial void OnIsDieselChanged(bool v)
@@ -399,6 +410,13 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     partial void OnCapacityChanged(string v)
     {
         _host.Settings.Set(CapacityKey, Shamsi.Num(v));
+        _ = RecalcAsync();
+    }
+
+    partial void OnLowStockChanged(string v)
+    {
+        if (!_ready) return;
+        _host.Settings.Set(PumpYaqobi.Services.Data.SettingsService.LowStockThreshold, Shamsi.Num(v));
         _ = RecalcAsync();
     }
 
@@ -472,6 +490,10 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         RefreshDipTotals();
 
         Capacity = Shamsi.Money(_host.Settings.GetDecimal(CapacityKey, 10000m));
+        _ready = false;
+        LowStock = Shamsi.Money(_host.Settings.GetDecimal(
+            PumpYaqobi.Services.Data.SettingsService.LowStockThreshold, 1000m));
+        _ready = true;
         await RecalcAsync();
     }
 

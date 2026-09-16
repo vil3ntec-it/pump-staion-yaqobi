@@ -49,7 +49,11 @@ public class SubSectionTests
     [InlineData("priceloss", "debt")]
     [InlineData("monthreport", "profit")]
     [InlineData("ratehist", "profit")]
-    [InlineData("datamgmt", "settings")]
+    // تنظیمات از ۱۴۰۵/۰۶/۲۸ سه صفحه دارد و بس — «مدیریت داده‌ها» به دو
+    // صفحهٔ «بک‌اپ» و «سطل زباله» شکست و «رمزها و کد» تازه است.
+    [InlineData("keys", "settings")]
+    [InlineData("backups", "settings")]
+    [InlineData("trash", "settings")]
     public void EachExtraPageSitsUnderTheRightSection(string subId, string parentId)
     {
         var vm = Shell();

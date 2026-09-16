@@ -1,0 +1,117 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             x:Class="PumpYaqobi.App.Views.Sections.KeysSectionView"
+             x:DataType="vm:KeysSectionViewModel">
+
+  <c:SectionPage Header="رمزها و کد"
+                 SubHeader="رمزِ برنامه، و رمزِ جدا برای مفاد و ضرر">
+
+    <StackPanel Spacing="14" MaxWidth="900">
+
+      <!-- ══ رمزِ خودِ برنامه ═════════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="0">
+        <StackPanel>
+          <Border Classes="card-head">
+            <TextBlock Text="🔐 رمزِ ورودِ برنامه" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Accent}" />
+          </Border>
+          <StackPanel Margin="14" Spacing="10">
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="همین رمز، رمزِ اپِ کارمندان روی گوشی هم هست. با عوض کردنش، گوشی‌ها هم از همان لحظه رمزِ تازه می‌خواهند." />
+
+            <UniformGrid Rows="1" Classes="stats">
+              <StackPanel Classes="cell">
+                <TextBlock Text="رمزِ فعلی" Classes="label" />
+                <TextBox Text="{Binding Current}" PasswordChar="•" />
+              </StackPanel>
+              <StackPanel Classes="cell">
+                <TextBlock Text="رمزِ تازه" Classes="label" />
+                <TextBox Text="{Binding Next}" PasswordChar="•" />
+              </StackPanel>
+              <StackPanel Classes="cell">
+                <TextBlock Text="تکرارِ رمزِ تازه" Classes="label" />
+                <TextBox Text="{Binding Confirm}" PasswordChar="•" />
+              </StackPanel>
+            </UniformGrid>
+
+            <Button Classes="accent" Content="عوض کردنِ رمزِ برنامه"
+                    Command="{Binding ChangeAppPasswordCommand}" HorizontalAlignment="Right" />
+
+            <TextBlock Text="{Binding AppError}" TextWrapping="Wrap"
+                       Foreground="{DynamicResource Pump.Danger}"
+                       IsVisible="{Binding AppError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <TextBlock Text="{Binding AppDone}" TextWrapping="Wrap" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Ok}"
+                       IsVisible="{Binding AppDone, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- ══ کدِ اپِ کارمندان — فقط برای دیدن ══════════════════════════════
+           ⛔ هیچ کادرِ تایپی برای کد نیست و نباید باشد: کد از ابر می‌آید
+           (‎ProfilePillTests‎ قفلش کرده). این‌جا فقط نشان داده می‌شود. -->
+      <Border Classes="panel" Padding="0">
+        <StackPanel>
+          <Border Classes="card-head">
+            <TextBlock Text="📲 کدِ اپِ کارمندان" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Accent}" />
+          </Border>
+          <StackPanel Margin="14" Spacing="6">
+            <TextBlock Text="{Binding AccessCode}" Classes="num2" />
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="کارمند این کد را در اپِ گوشی می‌زند و بعد رمزِ بالا را. عوض کردنِ خودِ کد در «پروفایل» است." />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- ══ رمزِ بخش‌های حساس ═══════════════════════════════════════════ -->
+      <ItemsControl ItemsSource="{Binding Locks}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><StackPanel Spacing="14" /></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:SectionLockViewModel">
+            <Border Classes="panel" Padding="0">
+              <StackPanel>
+                <Border Classes="card-head">
+                  <TextBlock Text="{Binding Title, StringFormat=🔒 رمزِ بخشِ «{0}»}" FontWeight="Bold"
+                             Foreground="{DynamicResource Pump.Accent}" />
+                </Border>
+                <StackPanel Margin="14" Spacing="10">
+                  <TextBlock Text="{Binding StateText}" />
+
+                  <UniformGrid Rows="1" Classes="stats">
+                    <StackPanel Classes="cell">
+                      <TextBlock Text="رمزِ تازهٔ این بخش" Classes="label" />
+                      <TextBox Text="{Binding Password}" PasswordChar="•" />
+                    </StackPanel>
+                    <StackPanel Classes="cell">
+                      <TextBlock Text="تکرارِ رمز" Classes="label" />
+                      <TextBox Text="{Binding Confirm}" PasswordChar="•" />
+                    </StackPanel>
+                  </UniformGrid>
+
+                  <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                    <Button Classes="accent" Content="{Binding ActionText}"
+                            Command="{Binding SaveCommand}" />
+                    <Button Classes="ghost" Content="همین حالا دوباره قفل کن"
+                            Command="{Binding RelockCommand}" IsVisible="{Binding HasPassword}" />
+                    <Button Classes="ghost danger" Content="برداشتنِ قفل"
+                            Command="{Binding RemoveCommand}" IsVisible="{Binding HasPassword}" />
+                  </StackPanel>
+
+                  <TextBlock Text="{Binding Error}" TextWrapping="Wrap"
+                             Foreground="{DynamicResource Pump.Danger}"
+                             IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </StackPanel>
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+    </StackPanel>
+  </c:SectionPage>
+</UserControl>
