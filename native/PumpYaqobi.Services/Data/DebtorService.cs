@@ -459,6 +459,47 @@ public sealed class DebtorService
         await db.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// ══ مهاجرتِ رسیدها، یک‌بار و برای همیشه ═════════════════════════════════
+    ///
+    /// <see cref="PumpYaqobi.Application.Services.DebtCalculationService.MigrateReceiptsToRows"/>
+    /// در **حافظه** سه کار می‌کند: ردیف‌های رسید را می‌سازد، ‎RasidLog‎ را
+    /// خالی می‌کند و ‎ReceiptsMigrated‎ را راست می‌گذارد. تا امروز فقط کارِ
+    /// اول روی دیسک می‌نشست — پس هر بار که همان حساب باز می‌شد، همان
+    /// رکوردهای ‎RasidEntries‎ دوباره خوانده و دوباره به ردیف تبدیل می‌شدند.
+    ///
+    /// یعنی نه فقط کندی (‎enterperf‎: شش ‎INSERT‎ و بیست‌وچهار ‎UPDATE‎ با هر
+    /// باز کردن)، بلکه **خرابیِ داده**: رسیدِ مشتری با هر باز کردنِ حساب یک
+    /// بار دیگر در جدول می‌نشست.
+    ///
+    /// پس هر سه کار این‌جا در **یک** ‎SaveChanges‎ می‌نشیند: ردیف‌های تازه،
+    /// پاک شدنِ دفترِ کهنه، و مهرِ «مهاجرت شد» روی خودِ حساب.
+    /// </summary>
+    public async Task CommitReceiptMigrationAsync(
+        DebtAccount a, IReadOnlyList<DebtRow> made, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.EditData);
+        await using var db = _dbf.Create();
+
+        foreach (var r in made)
+        {
+            r.DateKey = Shamsi.Key(r.DateShamsi);
+            if (r.Id == 0) db.DebtRows.Add(r);
+            else { db.DebtRows.Attach(r); db.Entry(r).State = EntityState.Modified; }
+        }
+
+        if (a.Id != 0)
+        {
+            var old = await db.RasidEntries.Where(x => x.AccountId == a.Id).ToListAsync(ct);
+            if (old.Count > 0) db.RasidEntries.RemoveRange(old);
+
+            db.DebtAccounts.Attach(a);
+            db.Entry(a).State = EntityState.Modified;
+        }
+
+        await db.SaveChangesAsync(ct);
+    }
+
     /// <summary>ذخیرهٔ یک ردیف — فقط همان ردیف، نه کلِ حساب.</summary>
     public async Task SaveRowAsync(DebtRow r, CancellationToken ct = default)
     {

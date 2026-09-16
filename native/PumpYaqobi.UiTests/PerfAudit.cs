@@ -234,7 +234,7 @@ internal static class PerfAudit
                     Pump(win);
                 });
 
-            Mark("بستنِ حساب", () => { debt.Person = null; Pump(win); });
+            Mark("بستنِ حساب", () => { debt.PersonOpen = false; Pump(win); });
 
             // ⚠️ فهرستِ کارت‌ها باید مجازی‌سازی کند: اگر همهٔ ده هزار کارت
             // ساخته شوند، هر چیدمانِ صفحه ده هزار عنصر را می‌سنجد و برنامه

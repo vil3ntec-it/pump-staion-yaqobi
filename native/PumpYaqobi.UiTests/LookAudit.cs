@@ -169,8 +169,16 @@ internal static class LookAudit
         return bad;
     }
 
+    /// <summary>
+    /// ⚠️ **با گونهٔ تم**، نه بی آن. از روزی که هر دو تم زیرِ
+    /// ‎ThemeDictionaries‎ ادغام شدند (اصلاحِ «تعویضِ تم یک خبر است، نه دو»)،
+    /// جست‌وجوی بی‌گونه هیچ‌چیز پیدا نمی‌کرد و این سنجه **بی‌صدا توخالی**
+    /// شده بود: جدولش خالی چاپ می‌شد و همیشه سبز می‌داد. با گونه، دوباره
+    /// همان رنگ‌هایی را می‌بیند که کاربر می‌بیند.
+    /// </summary>
     private static Color? Res(string key) =>
-        Avalonia.Application.Current!.TryFindResource(key, out var v) && v is ISolidColorBrush b
+        Avalonia.Application.Current!.TryFindResource(
+            key, Avalonia.Application.Current!.ActualThemeVariant, out var v) && v is ISolidColorBrush b
             ? b.Color : null;
 
     // ══ ۲) فلشِ کشویی در خانهٔ جدول جا نگیرد ════════════════════════════════

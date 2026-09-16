@@ -144,7 +144,24 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
         Recalc();
     }
 
-    public TilCompany Entity { get; }
+    /// <summary>
+    /// ══ همین صفحه، شرکتِ دیگر ══════════════════════════════════════════════
+    /// همان قاعده‌ای که «ورق‌ها» و از امروز «قرض‌داران» دارند — چرایی‌اش بالای
+    /// <see cref="DebtSectionViewModel.PersonOpen"/>: صفحه دور انداخته
+    /// نمی‌شود، پس ‎Rows‎ همان شیء می‌ماند و ‎DataGrid‎ خانه‌هایش را بازیافت
+    /// می‌کند به‌جای ساختنِ دوبارهٔ همه.
+    /// </summary>
+    internal void Load(TilCompany c)
+    {
+        Entity = c;
+        _isDiesel = false;                     // هر شرکت با دفترِ پطرول باز می‌شود
+        BuildRows();
+        Recalc();
+        foreach (var n in new[] { nameof(Name), nameof(IsDiesel), nameof(IsPetrol) })
+            OnPropertyChanged(n);
+    }
+
+    public TilCompany Entity { get; private set; }
     public CompanyService Calc => _host.Company;
     public string Name => Entity.Name ?? "";
 
@@ -501,19 +518,23 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
     /// </summary>
     [ObservableProperty] private object? _overlay;
 
-    public bool IsListVisible => Page is null && Overlay is null;
-    public bool IsPageVisible => Page is not null && Overlay is null;
+    /// <summary>صفحهٔ شرکت باز است؟ — جانشینِ «‎Page is null‎»ی قدیم؛ چرایی‌اش
+    /// بالای <see cref="CompanyPageViewModel.Load"/>.</summary>
+    [ObservableProperty] private bool _pageOpen;
+
+    public bool IsListVisible => !PageOpen && Overlay is null;
+    public bool IsPageVisible => PageOpen && Overlay is null;
     public bool IsOverlayVisible => Overlay is not null;
 
     /// <summary>صفحهٔ شرکت — تا باز است، میانبرهای ردیف به آن می‌روند نه به فهرست.</summary>
-    public override object? ActivePage => Page;
+    public override object? ActivePage => PageOpen ? Page : null;
 
-    partial void OnPageChanged(CompanyPageViewModel? v)
+    partial void OnPageOpenChanged(bool v)
     {
         OnPropertyChanged(nameof(IsListVisible));
         OnPropertyChanged(nameof(IsPageVisible));
         // صفحهٔ حساب تمام‌عرض است، مثلِ مودالِ تمام‌صفحهٔ نسخهٔ وب
-        IsPageOpen = v is not null || Overlay is not null;
+        IsPageOpen = v || Overlay is not null;
     }
 
     partial void OnOverlayChanged(object? v)
@@ -521,7 +542,7 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
         OnPropertyChanged(nameof(IsListVisible));
         OnPropertyChanged(nameof(IsPageVisible));
         OnPropertyChanged(nameof(IsOverlayVisible));
-        IsPageOpen = Page is not null || v is not null;
+        IsPageOpen = PageOpen || v is not null;
     }
 
     public void CloseOverlay() => Overlay = null;
@@ -631,13 +652,16 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
         if (card is null) return;
         var full = await _host.Companies.LoadAsync(card.Entity.Id);
         if (full is null) return;
-        var page = new CompanyPageViewModel(_host, full, this);
+        // همان صفحه، دادهٔ تازه — چرایی‌اش بالای ‎CompanyPageViewModel.Load‎
+        if (Page is null) Page = new CompanyPageViewModel(_host, full, this);
+        else Page.Load(full);
+        var page = Page;
         var idx = _all.FindIndex(c => c.Entity.Id == full.Id);
         page.PosText = Shamsi.Money(idx + 1) + " از " + Shamsi.Money(_all.Count);
         page.CanPrev = idx > 0;
         page.CanNext = idx >= 0 && idx < _all.Count - 1;
         page.NameText = page.Name;
-        Page = page;
+        PageOpen = true;
         await page.RefreshMetaAsync();
     });
 
@@ -645,7 +669,7 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
     private async Task BackAsync()
     {
         if (Page is not null) await Page.FlushAsync();
-        Page = null;
+        PageOpen = false;
         await RefreshAsync();
     }
 

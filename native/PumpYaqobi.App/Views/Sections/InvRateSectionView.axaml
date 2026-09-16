@@ -21,10 +21,15 @@
                 CommandParameter="loss" Classes.on="{Binding IsLoss}" />
         <Button Classes="seg" Content="مفاد" Command="{Binding SetFilterCommand}"
                 CommandParameter="gain" Classes.on="{Binding IsGain}" />
+        <!-- جست‌وجو: شمارهٔ فاکتور یا نامِ مشتری — خواستهٔ صاحب ریپو -->
+        <TextBox Text="{Binding Search}" Width="220" Watermark="🔍 شمارهٔ فاکتور یا نام" />
       </StackPanel>
     </c:SectionPage.Toolbar>
 
     <StackPanel Spacing="10">
+
+      <!-- کارت‌ها مالِ همهٔ فاکتورهایند، مگر ردیفی انتخاب شده باشد -->
+      <TextBlock Text="{Binding ScopeText}" Classes="label" Margin="2,0,0,0" />
 
       <c:AutoFillPanel MinItemWidth="220" Gap="8">
         <Border Classes="stat">
@@ -72,7 +77,9 @@
       </c:AutoFillPanel>
 
       <Border Classes="panel" Padding="0">
-        <c:ExcelGrid ItemsSource="{Binding Rows}" x:CompileBindings="False"
+        <c:ExcelGrid ItemsSource="{Binding Rows}" x:CompileBindings="False" Name="RateGrid"
+                     SelectedItem="{Binding Selected, Mode=TwoWay}"
+                     SelectionMode="Single"
                      IsReadOnly="True" BorderThickness="0" CornerRadius="0">
           <DataGrid.Columns>
             <DataGridTextColumn Header="شماره فاکتور" Binding="{Binding NumberText}" Width="Auto" />
@@ -98,7 +105,8 @@
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTextColumn Header="حال" Binding="{Binding NoteText}" Width="Auto" />
+            <!-- ⚠️ سقفِ پهنا: «حال» پیش از این جای دو ستون را می‌گرفت -->
+            <DataGridTextColumn Header="حال" Binding="{Binding NoteText}" Width="Auto" MaxWidth="170" />
           </DataGrid.Columns>
         </c:ExcelGrid>
       </Border>
@@ -106,9 +114,8 @@
       <!-- ردیفِ «جمله» — همان جمع‌های ‎_invRateTotals()‎ -->
       <c:TotalsBar ItemsSource="{Binding TotalCells}" IsVisible="{Binding !IsEmpty}" />
 
-      <TextBlock Text="هنوز فاکتوری ثبت نشده — این صفحه با اولین فاکتور پر می‌شود."
-                 Classes="label" IsVisible="{Binding IsEmpty}"
-                 HorizontalAlignment="Center" Margin="0,10" />
+      <!-- ⛔ جملهٔ زیرِ جدول برداشته شد — خواستهٔ صریحِ صاحب ریپو
+           («جملهٔ زیرِ جدولِ این بخش را هم حذف کن، به درد نمی‌خورد»). -->
     </StackPanel>
   </c:SectionPage>
 </UserControl>

@@ -140,9 +140,9 @@ internal static class YearsAudit
                 Mark($"ویرایشِ یک خانه در جدولِ {acct.Rows.Count:N0} ردیفی", () => { acct.Rows[0].LitersText = "7"; Pump(win); });
                 Mark("رسیدِ سربرگ در حسابِ بزرگ", () => { acct.RasidFuelPetrolText = "500"; SettleLong(win); });
             }
-            Mark("بستنِ حساب", () => { debt.Person = null; Pump(win); });
+            Mark("بستنِ حساب", () => { debt.PersonOpen = false; Pump(win); });
             Mark("باز کردنِ حسابِ معمولی (شمارهٔ ۳۰۰)", () => { Wait(win, debt.OpenByNumberAsync(300)); Settle(win); });
-            debt.Person = null; Pump(win);
+            debt.PersonOpen = false; Pump(win);
         }
 
         // ══ ورق: امروز و پنج سال پیش ═══════════════════════════════════════

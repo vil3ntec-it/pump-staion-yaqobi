@@ -357,7 +357,35 @@
                   IsVisible="{Binding Current.HasArchives, FallbackValue=False}"
                   ToolTip.Tip="جدول‌های آرشیوِ این حساب — در صفحهٔ جداگانه باز می‌شود" />
 
+          <!-- ══ 🧾 فاکتورهای همین مشتری — «تو صفِ خودش» ══════════════════
+               گزارشِ صاحب ریپو: «فاکتور به اسمِ قرض‌داری که هست… تو صفش
+               نیست.» فاکتورِ تاییدشده ردیفِ رسیدش را در جدول دارد؛ این دکمه
+               فاکتورهای **در صف** را هم نشان می‌دهد. فقط دیدنی است. -->
+          <Button Classes="ghost" Content="{Binding Current.InvoicesToggleText}"
+                  Command="{Binding Current.ToggleInvoicesCommand}"
+                  IsVisible="{Binding Current.HasInvoices, FallbackValue=False}"
+                  ToolTip.Tip="فاکتورهای همین مشتری — در صف و تاییدشده. فقط دیدنی است؛ تایید در بخشِ فاکتورها" />
+
         </WrapPanel>
+
+        <!-- فهرستِ همان فاکتورها، بسته مگر خودت بازش کنی -->
+        <Border Classes="panel" Padding="10" Margin="0,6,0,0"
+                IsVisible="{Binding Current.IsInvoicesOpen, FallbackValue=False}">
+          <ItemsControl ItemsSource="{Binding Current.Invoices}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:AcctInvoiceViewModel">
+                <Grid ColumnDefinitions="Auto,12,Auto,12,Auto,12,*,Auto" Margin="0,3">
+                  <TextBlock Grid.Column="0" Text="{Binding NumberText}" FontWeight="Bold" />
+                  <TextBlock Grid.Column="2" Text="{Binding DateText}" Classes="muted" />
+                  <TextBlock Grid.Column="4" Text="{Binding FuelText}" />
+                  <TextBlock Grid.Column="6" Text="{Binding ValueText}" />
+                  <TextBlock Grid.Column="7" Text="{Binding StatusText}" FontWeight="Bold"
+                             Foreground="{Binding StatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Border>
 
         <!-- «🗂️ جدول‌های آرشیو» صفحهٔ جداگانهٔ خودش را دارد (مثلِ سایت:
              ‎personArchiveModal‎). دکمه‌اش در نوارِ حساب، بغلِ «٪ فیصدی» است و

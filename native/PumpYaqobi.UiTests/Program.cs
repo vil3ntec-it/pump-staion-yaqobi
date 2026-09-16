@@ -61,6 +61,13 @@ internal static class Program
         // ══ حالتِ «بخشِ پرینت دیر باز می‌شود» ══════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- printperf
         if (outDir.Equals("printperf", StringComparison.OrdinalIgnoreCase)) return PrintPerf.Run();
+        // ══ حالتِ «رفتن داخلِ حساب و برگشتن، هر دو کند است» ═════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- enterperf
+        if (outDir.Equals("enterperf", StringComparison.OrdinalIgnoreCase)) return EnterPerf.Run();
+
+        // ⟦ ته اسکرول باید بایستد، نه پرپر بزند ⟧
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- scrollend
+        if (outDir.Equals("scrollend", StringComparison.OrdinalIgnoreCase)) return ScrollEnd.Run();
         if (outDir.Equals("bigtable", StringComparison.OrdinalIgnoreCase))
         {
             BigTable.Trace = args.Length > 1 && args[1].Equals("trace", StringComparison.OrdinalIgnoreCase);

@@ -86,10 +86,16 @@ public sealed class InvRateRowViewModel
             ? Sign(PendDiff) + Shamsi.Money(Math.Round(PendDiff, 0, MidpointRounding.AwayFromZero))
         : "—";
 
+    /// <summary>
+    /// ستونِ «حال» — کوتاه، به خواستهٔ صاحب ریپو (۱۴۰۵/۰۶/۲۷): «این کادر به
+    /// اسمِ حال جا اضافه می‌گیرد؛ یا بردار یا نوشته‌هایش کم شود — این مدل:
+    /// «در صف ــ با نرخ امروز».» پس جمله‌های بلند رفتند و خودِ ستون هم سقفِ
+    /// پهنا گرفت.
+    /// </summary>
     public string NoteText =>
         HasDiff ? (Diff > 0m ? "🔴 زیان" : Diff < 0m ? "🟢 مفاد" : "⚪ بی‌تفاوت")
-        : !Approved ? "🟡 در صف — پیش‌نمایش با نرخِ امروز"
-        : "⚪ نرخِ روزِ تایید ثبت نشده";
+        : !Approved ? "🟡 در صف — با نرخ امروز"
+        : "⚪ بی‌نرخ";
 
     /// <summary>سرخ برای زیان، سبز برای مفاد، خاکستری برای پیش‌نمایش.</summary>
     public string DiffBrushKey =>
@@ -135,6 +141,36 @@ public sealed partial class InvRateSectionViewModel : SectionViewModel
     [ObservableProperty] private string _pendingText = "0 فاکتور";
     [ObservableProperty] private bool _isEmpty = true;
 
+    /// <summary>
+    /// ══ جست‌وجو: «شماره فاکتور را بیرون کن، یا با اسم پیدا شود» ════════════
+    /// خواستهٔ صاحب ریپو (۱۴۰۵/۰۶/۲۷). هم شمارهٔ فاکتور و هم نامِ مشتری، و
+    /// رقمِ فارسی هم می‌گیرد (‎Shamsi.Fold‎ در ‎Match‎).
+    /// </summary>
+    [ObservableProperty] private string _search = "";
+
+    partial void OnSearchChanged(string v) => ApplyFilter();
+
+    /// <summary>
+    /// ══ یک ردیف که انتخاب شد، سربرگ همان را نشان بدهد ══════════════════════
+    ///
+    /// خواستهٔ صاحب ریپو: «روی یکی از کادرها که زدم همه‌شان انتخاب شوند —
+    /// یعنی همه یک کادر باشند — و سربرگ اطلاعاتِ همان را بالا نشان بدهد؛
+    /// جای دیگر که کلیک کردم، از همه را نشان بدهد.»
+    ///
+    /// پس ‎DataGrid‎ کلِ ردیف را یک واحد انتخاب می‌کند (‎SelectionUnit‎ی
+    /// ردیفی) و شش کارتِ بالا با همین یکی از نو حساب می‌شوند. کلیکِ بیرونِ
+    /// جدول انتخاب را برمی‌دارد (‎InvRateSectionView‎) و کارت‌ها به همهٔ
+    /// فاکتورها برمی‌گردند.
+    /// </summary>
+    [ObservableProperty] private InvRateRowViewModel? _selected;
+
+    partial void OnSelectedChanged(InvRateRowViewModel? v) => Sum();
+
+    /// <summary>سربرگِ کارت‌ها: همه، یا همان فاکتوری که انتخاب شده.</summary>
+    public string ScopeText => Selected is { } r
+        ? "فاکتور شمارهٔ " + r.NumberText + (r.Customer.Length > 0 ? " · " + r.Customer : "")
+        : "همهٔ فاکتورها";
+
     /// <summary>خالصِ تفاوت — همان عددی که روی کارتِ بخشِ فاکتورها می‌نشیند.</summary>
     public decimal Net { get; private set; }
 
@@ -179,10 +215,21 @@ public sealed partial class InvRateSectionViewModel : SectionViewModel
                        v, i + 1, v.Fuel == FuelType.Diesel ? diesel : petrol))
                    .ToList();
 
-        // ── جمع‌ها — مو‌به‌مو ‎_invRateTotals()‎ ─────────────────────────────
+        Sum();
+        ApplyFilter();
+    }
+
+    /// <summary>
+    /// شش کارتِ بالا — مو‌به‌مو ‎_invRateTotals()‎، ولی روی «دامنه»: همهٔ
+    /// فاکتورها، یا فقط همانی که کاربر انتخاب کرده.
+    /// </summary>
+    private void Sum()
+    {
+        var scope = Selected is { } one ? new[] { one } : _all.ToArray();
+
         decimal loss = 0, gain = 0, liters = 0;
         int n = 0, pend = 0;
-        foreach (var r in _all)
+        foreach (var r in scope)
         {
             if (!r.Approved) { pend++; continue; }
             if (!r.HasDiff) continue;
@@ -198,8 +245,7 @@ public sealed partial class InvRateSectionViewModel : SectionViewModel
         NetText = Shamsi.Money(Math.Round(Net, 0, MidpointRounding.AwayFromZero)) + " افغانی";
         PendingText = Shamsi.Money(pend) + " فاکتور";
         OnPropertyChanged(nameof(NetBrushKey));
-
-        ApplyFilter();
+        OnPropertyChanged(nameof(ScopeText));
     }
 
     private void ApplyFilter()
@@ -215,9 +261,21 @@ public sealed partial class InvRateSectionViewModel : SectionViewModel
                     2 => r.Approved && r.HasDiff && r.Diff < 0m,
                     _ => true,
                 };
-                if (keep) Rows.Add(r);
+                if (keep && Match(r)) Rows.Add(r);
             }
         }
         IsEmpty = Rows.Count == 0;
+        // ردیفی که با جست‌وجو از فهرست افتاد، انتخاب هم نمی‌ماند
+        if (Selected is { } sel && !Rows.Contains(sel)) Selected = null;
+    }
+
+    /// <summary>جست‌وجو روی شمارهٔ فاکتور و نامِ مشتری — خالی یعنی همه.</summary>
+    private bool Match(InvRateRowViewModel r)
+    {
+        var q = Shamsi.ToEnDigits(Search).Trim();
+        if (q.Length == 0) return true;
+        return Shamsi.ToEnDigits(r.Customer).Contains(q, StringComparison.OrdinalIgnoreCase)
+            || Shamsi.ToEnDigits(r.Number.ToString()).Contains(q, StringComparison.Ordinal)
+            || Shamsi.ToEnDigits(r.DateShamsi).Contains(q, StringComparison.Ordinal);
     }
 }

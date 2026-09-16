@@ -249,9 +249,120 @@ internal static class VerifyProbe
               N(safe.BardagiUsd) == bUsd0 + 777m && N(safe.MandagiUsd) == mUsd0, $"بردگی {safe.BardagiUsd} · ماندگی {safe.MandagiUsd}");
         Wait(win, safeLedger.DeleteRowsAsync(1));
 
+        // ── ۱۱) مقایسهٔ نرخ فاکتورها: جست‌وجو و انتخابِ یک ردیف ─────────────
+        //
+        // خواستهٔ صاحب ریپو (۱۴۰۵/۰۶/۲۷): «یک جست‌وجو توی این بخش هم باشه تا
+        // شمارهٔ فاکتور را بیرون کند یا با اسم پیدا شود… و روی یکی از کادرها
+        // که زدم، سربرگ اطلاعاتِ همان را بالا نشان بدهد؛ جای دیگر که کلیک
+        // کردم، از همه را.»
+        Console.WriteLine("── ۱۱) مقایسهٔ نرخ فاکتورها: جست‌وجو و انتخابِ یک ردیف");
+        if (vm.Sections.SelectMany(x => x.SubSections).FirstOrDefault(x => x.Id == "invrate")
+                is InvRateSectionViewModel rate)
+        {
+            Wait(win, rate.RefreshAsync()); Pump(win);
+            var all = rate.Rows.Count;
+            Check("فهرستِ فاکتورها آمد", all > 0, all + " ردیف");
+            if (all > 0)
+            {
+                var pick = rate.Rows[0];
+                var allScope = rate.ScopeText;
+
+                rate.Search = pick.Number.ToString(); Pump(win);
+                Check("جست‌وجو با شمارهٔ فاکتور همان یکی را بیرون کشید",
+                      rate.Rows.Count >= 1 && rate.Rows.All(r => r.Number.ToString().Contains(pick.Number.ToString())),
+                      rate.Rows.Count + " ردیف");
+
+                rate.Search = ""; Pump(win);
+                Check("خالی کردنِ جست‌وجو همه را برمی‌گرداند", rate.Rows.Count == all);
+
+                rate.Selected = pick; Pump(win);
+                Check("سربرگ روی همان فاکتور رفت", rate.ScopeText.Contains(pick.NumberText), rate.ScopeText);
+                Check("شمارِ کارت‌ها هم همان یکی شد",
+                      rate.CountText.StartsWith(Shamsi.Money(pick.Approved && pick.HasDiff ? 1 : 0)),
+                      rate.CountText);
+
+                rate.Selected = null; Pump(win);
+                Check("با برداشتنِ انتخاب، دوباره همه", rate.ScopeText == allScope, rate.ScopeText);
+            }
+        }
+        else Check("زیربخشِ مقایسهٔ نرخ پیدا شد", false);
+
+        // ── ۱۲) فاکتورِ به‌نامِ یک قرض‌دارِ موجود، به حسابِ خودش برود ─────────
+        //
+        // گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۷): «فاکتور به اسمِ قرض‌داری که هست
+        // نمی‌رود داخلِ حسابِ همان قرض‌دار و تو صفش نیست.»
+        Console.WriteLine("── ۱۲) فاکتور به‌نامِ قرض‌دارِ موجود ⇒ حسابِ خودش");
+        {
+            Wait(win, vm.GoAsync(debt)); Wait(win, debt.RefreshAsync());
+            var card = debt.Cards.First();
+            var who = card.Name;
+            var peopleBefore = debt.Cards.Count;
+
+            var inv = Wait(host.Invoices.AddAsync(new PumpYaqobi.Domain.Entities.Invoice
+            {
+                CustomerName = who,
+                DateShamsi = Shamsi.Today(),
+                Fuel = PumpYaqobi.Domain.Enums.FuelType.Petrol,
+                Liters = 120m,
+                PricePerLiter = 60m,
+                Amount = 0m,
+                ByMoney = false,
+            }));
+            Wait(host.Invoices.ApproveAsync(inv.Id, 62m));
+            Pump(win);
+
+            Wait(win, debt.RefreshAsync()); Pump(win);
+            Check("قرض‌دارِ تکراری ساخته نشد", debt.Cards.Count == peopleBefore,
+                  $"{peopleBefore} ← {debt.Cards.Count}");
+
+            var again = debt.Cards.FirstOrDefault(c => c.Name == who);
+            if (again is null) Check("همان قرض‌دار پیدا شد", false);
+            else
+            {
+                debt.OpenCommand.Execute(again); Pump(win);
+                var rows = debt.Person!.Accounts.SelectMany(a => a.Rows).ToList();
+                var hit = rows.FirstOrDefault(r => r.Entity.InvoiceId == inv.Id);
+                Check("ردیفِ رسیدِ همان فاکتور در حسابش نشست", hit is not null,
+                      hit?.Name ?? $"{rows.Count} ردیف، هیچ‌کدام مالِ این فاکتور");
+                Check("و رسیدِ تیلش همان ۱۲۰ لیتر است",
+                      hit is not null && hit.Entity.RasidFuel == 120m, hit?.Entity.RasidFuel.ToString());
+
+                // و فاکتورِ **در صف** هم روی همین صفحه دیده شود
+                var pending = Wait(host.Invoices.AddAsync(new PumpYaqobi.Domain.Entities.Invoice
+                {
+                    CustomerName = who,
+                    DateShamsi = Shamsi.Today(),
+                    Fuel = PumpYaqobi.Domain.Enums.FuelType.Diesel,
+                    Liters = 40m,
+                    PricePerLiter = 58m,
+                }));
+                Wait(debt.Person!.Current!.LoadInvoicesAsync()); Pump(win);
+                var acctInvs = debt.Person!.Current!.Invoices;
+                Check("فاکتورِ در صف هم در صفحهٔ همان حساب دیده می‌شود",
+                      acctInvs.Any(x => x.Number == pending.InvoiceNumber && !x.Approved),
+                      acctInvs.Count + " فاکتور · " + debt.Person!.Current!.InvoicesText);
+                debt.PersonOpen = false; Pump(win);
+            }
+        }
+
         Console.WriteLine();
-        Console.WriteLine(_bad == 0 ? "✅ هر یازده رفتار همان‌طور که خواسته شده کار می‌کند" : $"❌ {_bad} ایراد");
+        Console.WriteLine(_bad == 0 ? "✅ هر سیزده رفتار همان‌طور که خواسته شده کار می‌کند" : $"❌ {_bad} ایراد");
         return _bad == 0 ? 0 : 1;
+    }
+
+    /// <summary>همان ‎Wait‎، برای کاری که مقدار برمی‌گرداند.</summary>
+    private static T Wait<T>(Task<T> t)
+    {
+        var end = DateTime.UtcNow + TimeSpan.FromSeconds(30);
+        while (!t.IsCompleted && DateTime.UtcNow < end) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(5); }
+        return t.GetAwaiter().GetResult();
+    }
+
+    private static void Wait(Task t)
+    {
+        var end = DateTime.UtcNow + TimeSpan.FromSeconds(30);
+        while (!t.IsCompleted && DateTime.UtcNow < end) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(5); }
+        t.GetAwaiter().GetResult();
     }
 
     private static void Wait(Window w, Task t)

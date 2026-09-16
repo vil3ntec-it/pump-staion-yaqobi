@@ -70,6 +70,31 @@ public sealed class InvoiceService
     public static bool IsMoneyOnly(Invoice v) =>
         v.Amount > 0m && !(v.PricePerLiter > 0m && v.Liters > 0m);
 
+    /// <summary>
+    /// ══ فاکتورهای همین حساب — «در صفِ خودش» ════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۷): «فاکتور به اسمِ قرض‌داری که هست نمی‌رود
+    /// داخلِ حسابِ همان قرض‌دار و تو صفش نیست.» فاکتورِ **تاییدشده** از قبل
+    /// ردیفِ خودش را در حساب می‌گرفت (بندِ ۱۲ در ‎verify‎ قفلش کرده)، ولی
+    /// فاکتورِ **در صف** هیچ‌جای صفحهٔ شخص دیده نمی‌شد. حالا می‌شود.
+    ///
+    /// ⚠️ همهٔ فاکتورها خوانده نمی‌شوند: صافی روی خودِ SQLite است — یا به این
+    /// حساب چسبیده (‎DebtAccountId‎، یعنی تاییدشده‌ها) یا نامِ مشتری/«نام
+    /// دیگر»ش دقیقاً همین است. با ده سال فاکتور هم همان یک پرس‌وجو می‌ماند.
+    /// </summary>
+    public async Task<List<Invoice>> ForAccountAsync(long accountId, string? name,
+                                                     CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        var who = (name ?? "").Trim();
+        await using var db = _dbf.Create();
+        return await db.Invoices.AsNoTracking()
+            .Where(v => v.DebtAccountId == accountId
+                     || (who.Length > 0 && (v.CustomerName == who || v.DebtAlias == who)))
+            .OrderByDescending(v => v.InvoiceNumber)
+            .ToListAsync(ct);
+    }
+
     public async Task<Invoice> AddAsync(Invoice v, CancellationToken ct = default)
     {
         _perm.Require(Permission.EditData);

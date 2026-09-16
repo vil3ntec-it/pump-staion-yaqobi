@@ -158,7 +158,7 @@ internal static class ScrollPerf
             Wait(win, debt.OpenByNumberAsync(300)); Settle(win);
             ScrollThrough(win, "حسابِ قرض‌دار (شمارهٔ ۳۰۰)", build: true);
             ScrollThrough(win, "حسابِ قرض‌دار (بارِ دوم)");
-            debt.Person = null; Pump(win);
+            debt.PersonOpen = false; Pump(win);
         }
 
         // ══ ورق ═════════════════════════════════════════════════════════════

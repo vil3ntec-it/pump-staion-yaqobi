@@ -200,17 +200,61 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     public AccountViewModel(AppHost host, DebtAccount a, PersonViewModel person)
     {
         _host = host; _person = person; Entity = a;
+        Adopt(a);
+    }
+
+    /// <summary>
+    /// ══ همین ویومدل، حسابِ دیگر ═══════════════════════════════════════════
+    /// چرایی‌اش بالای <see cref="DebtSectionViewModel.PersonOpen"/>: صفحه دور
+    /// انداخته نمی‌شود، پس ‎Rows‎ همان شیء می‌ماند و ‎DataGrid‎ ردیف‌هایش را
+    /// بازیافت می‌کند به‌جای ساختنِ دوبارهٔ هر خانه.
+    ///
+    /// ⚠️ ‎ArchiveCount‎ هم صفر می‌شود، وگرنه دکمهٔ آرشیوِ حسابِ قبلی روی
+    /// حسابِ تازه می‌ماند تا شمارشِ تازه برسد.
+    /// </summary>
+    internal void Load(DebtAccount a)
+    {
+        Entity = a;
+        ArchiveCount = 0;
+        _rowFilter = "all";      // فیلترِ حسابِ قبلی روی حسابِ تازه نماند
+        Adopt(a);
+        OnPropertyChanged(nameof(Title));
+        RefreshAll();
+    }
+
+    private void Adopt(DebtAccount a)
+    {
+        _pullingSums = true;
         _isMoney = a.Mode.IsMoney();
-        _percentPetrol = host.Debt.PercentOf(a, FuelType.Petrol);
-        _percentDiesel = host.Debt.PercentOf(a, FuelType.Diesel);
+        _percentPetrol = _host.Debt.PercentOf(a, FuelType.Petrol);
+        _percentDiesel = _host.Debt.PercentOf(a, FuelType.Diesel);
         _rasidFuelPetrol = a.RasidFuelPetrol;
         _rasidFuelDiesel = a.RasidFuelDiesel;
         _rasidMoneyPetrol = a.RasidMoneyPetrol;
         _rasidMoneyDiesel = a.RasidMoneyDiesel;
+        _pullingSums = false;
         BuildRows();
     }
 
-    public DebtAccount Entity { get; }
+    /// <summary>پس از نشستنِ حسابِ تازه، هر کادرِ سربرگ دوباره خوانده شود.</summary>
+    private void RefreshAll()
+    {
+        foreach (var n in new[]
+        {
+            nameof(IsMoney), nameof(PercentPetrol), nameof(PercentDiesel),
+            nameof(RasidFuelPetrol), nameof(RasidFuelDiesel),
+            nameof(RasidMoneyPetrol), nameof(RasidMoneyDiesel),
+            nameof(PercentPetrolText), nameof(PercentDieselText), nameof(PercentBothText),
+            nameof(RasidFuelPetrolText), nameof(RasidFuelDieselText),
+            nameof(RasidMoneyPetrolText), nameof(RasidMoneyDieselText),
+            nameof(RowFilter), nameof(IsFilterAll), nameof(IsFilterPetrol), nameof(IsFilterDiesel),
+            nameof(ShowPetrolCard), nameof(ShowDieselCard), nameof(ShowFuelTypeColumn),
+        })
+            OnPropertyChanged(n);
+        RefreshTotals();
+    }
+
+    public DebtAccount Entity { get; private set; }
     public DebtCalculationService Calc => _host.Debt;
     public string Title => Entity.MainOfDebtorId != null ? "حسابِ اصلی" : (Entity.Name ?? "حسابِ فرعی");
 
@@ -739,6 +783,49 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     }
 
     /// <summary>شمارِ آرشیوها را می‌خواند، بی ساختنِ خودِ جدول‌ها.</summary>
+    // ══ 🧾 فاکتورهای همین مشتری — هم در صف، هم تاییدشده ═══════════════════
+    //
+    // گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۷): «فاکتور به اسمِ قرض‌داری که هست نمی‌رود
+    // داخلِ حسابِ همان قرض‌دار و تو صفش نیست.» فاکتورِ تاییدشده از قبل ردیفِ
+    // رسیدِ خودش را در جدول می‌گرفت (بندِ ۱۲ در ‎verify‎)، ولی فاکتورِ **در
+    // صف** هیچ‌جای این صفحه دیده نمی‌شد — و همان «تو صفش نیست»ِ گزارش بود.
+    //
+    // ⚠️ فقط دیدنی است: هیچ عددی از این‌جا وارد بدهی، الباقی یا رسید نمی‌شود.
+    // تاییدِ فاکتور همان‌جای همیشگی‌اش است (بخشِ فاکتورها).
+
+    public ObservableCollection<AcctInvoiceViewModel> Invoices { get; } = new();
+
+    [ObservableProperty] private string _invoicesText = "";
+
+    public bool HasInvoices => Invoices.Count > 0;
+
+    [ObservableProperty] private bool _isInvoicesOpen;
+
+    public string InvoicesToggleText => (IsInvoicesOpen ? "▴ " : "▾ ") + InvoicesText;
+
+    partial void OnIsInvoicesOpenChanged(bool v) => OnPropertyChanged(nameof(InvoicesToggleText));
+
+    [RelayCommand]
+    private void ToggleInvoices() => IsInvoicesOpen = !IsInvoicesOpen;
+
+    public async Task LoadInvoicesAsync()
+    {
+        try
+        {
+            var name = Entity.MainOfDebtorId != null ? _person.Name : (Entity.Name ?? _person.Name);
+            var list = await _host.Invoices.ForAccountAsync(Entity.Id, name);
+            Invoices.Clear();
+            foreach (var v in list) Invoices.Add(new AcctInvoiceViewModel(v));
+            var pend = list.Count(v => v.Status != InvoiceStatus.Approved);
+            InvoicesText = list.Count == 0 ? ""
+                : "🧾 فاکتورها: " + Shamsi.Money(list.Count)
+                  + (pend > 0 ? " · 🟡 " + Shamsi.Money(pend) + " در صف" : " · همه تایید شده");
+        }
+        catch { /* فاکتور رفاه است، نه حساب */ }
+        OnPropertyChanged(nameof(HasInvoices));
+        OnPropertyChanged(nameof(InvoicesToggleText));
+    }
+
     public async Task LoadArchiveCountAsync()
     {
         try { ArchiveCount = (await _host.Debtors.ListArchivesAsync(Entity.Id)).Count; }
@@ -863,8 +950,15 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         // عددِ خودِ حساب (و نسخهٔ پیشین، در دفترِ جدا) دارند. یک‌بار به ردیفِ
         // واقعی تبدیل می‌شوند تا از این پس فقط یک انبار بماند و هیچ عددی گم
         // نشود. بارِ دوم چیزی نمی‌سازد.
+        // ⚠️ «بارِ دوم چیزی نمی‌سازد» تا امروز دروغ بود: نشانِ ‎ReceiptsMigrated‎
+        // و خالی شدنِ ‎RasidLog‎ فقط در حافظه می‌نشستند و هیچ‌وقت ذخیره
+        // نمی‌شدند، پس هر بار که همین حساب باز می‌شد همان رسیدها **دوباره**
+        // ردیف می‌شدند. ‎enterperf‎ همین را لو داد (شش ‎INSERT‎ و بیست‌وچهار
+        // ‎UPDATE‎ با هر باز کردن، و شمارِ ردیف‌ها ۱۰۰ ⇒ ۱۰۶ ⇒ ۱۱۲).
+        // حالا نشان هم با همان ردیف‌ها در یک ‎SaveChanges‎ می‌نشیند.
+        var firstTime = !Entity.ReceiptsMigrated;
         var moved = _host.Debt.MigrateReceiptsToRows(Entity, Shamsi.Today());
-        if (moved.Count > 0) _ = PersistMigratedAsync(moved);
+        if (firstTime) _ = PersistMigratedAsync(moved);
 
         // خوددرمانیِ دادهٔ کهنه پیش از کشیدنِ جدول — همان کاری که renderPersonRows
         // می‌کرد. اگر چیزی عوض شد، همان‌جا ذخیره می‌شود تا دوباره لازم نشود.
@@ -905,7 +999,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     /// <summary>ردیف‌هایی که از رسیدهای قدیمی ساخته شدند، ذخیره شوند.</summary>
     private async Task PersistMigratedAsync(List<DebtRow> rows)
     {
-        foreach (var r in rows) await _host.Debtors.SaveRowAsync(r);
+        await _host.Debtors.CommitReceiptMigrationAsync(Entity, rows);
         await SyncReceiptsAsync();
     }
 
@@ -1005,12 +1099,39 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
             Accounts.Add(vm);
             // فقط شمارنده — خودِ جدول‌های آرشیو تا باز نشوند ساخته نمی‌شوند
             _ = vm.LoadArchiveCountAsync();
+            _ = vm.LoadInvoicesAsync();
         }
         _current = Accounts.FirstOrDefault();
         Recalc();
     }
 
-    public Debtor Entity { get; }
+    /// <summary>
+    /// ══ همین صفحه، شخصِ دیگر ══════════════════════════════════════════════
+    /// چرایی‌اش بالای <see cref="DebtSectionViewModel.PersonOpen"/>. ویومدلِ
+    /// هر حساب هم **بازیافت** می‌شود، نه ساختِ تازه — وگرنه ‎Current.Rows‎ یک
+    /// شیءِ نو می‌شد و ‎DataGrid‎ باز هم همه‌چیز را از صفر می‌ساخت.
+    /// </summary>
+    internal void Load(Debtor d)
+    {
+        Entity = d;
+
+        var want = d.AllAccounts().ToList();
+        for (var i = 0; i < want.Count; i++)
+        {
+            if (i < Accounts.Count) Accounts[i].Load(want[i]);
+            else Accounts.Add(new AccountViewModel(_host, want[i], this));
+        }
+        while (Accounts.Count > want.Count) Accounts.RemoveAt(Accounts.Count - 1);
+
+        Current = Accounts.FirstOrDefault();
+        foreach (var a in Accounts) { _ = a.LoadArchiveCountAsync(); _ = a.LoadInvoicesAsync(); }
+
+        foreach (var n in new[] { nameof(Name), nameof(Phone), nameof(PhoneText), nameof(BuyFeeText) })
+            OnPropertyChanged(n);
+        Recalc();
+    }
+
+    public Debtor Entity { get; private set; }
     public string Name => Entity.Name ?? "";
     public string Phone => Entity.Phone ?? "";
 
@@ -1246,4 +1367,37 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
     {
         foreach (var a in Accounts) await a.FlushAsync();
     }
+}
+
+/// <summary>
+/// یک فاکتورِ همین حساب، فقط برای دیدن — شماره، تاریخ، تیل، مقدار و حال.
+/// هیچ فرمانی ندارد و در هیچ جمعی نیست.
+/// </summary>
+public sealed class AcctInvoiceViewModel
+{
+    public AcctInvoiceViewModel(Invoice v)
+    {
+        Number = v.InvoiceNumber;
+        DateShamsi = v.DateShamsi ?? "";
+        Approved = v.Status == InvoiceStatus.Approved;
+        Fuel = v.Fuel;
+        Liters = v.Liters;
+        Amount = v.Amount;
+    }
+
+    public int Number { get; }
+    public string DateShamsi { get; }
+    public bool Approved { get; }
+    public FuelType Fuel { get; }
+    public decimal Liters { get; }
+    public decimal Amount { get; }
+
+    public string NumberText => "شمارهٔ " + Shamsi.Money(Number);
+    public string DateText => DateShamsi.Length > 0 ? DateShamsi : "—";
+    public string FuelText => Fuel == FuelType.Diesel ? "🟤 دیزل" : "⛽ پطرول";
+    public string ValueText =>
+        Liters > 0m ? Shamsi.Money(Math.Round(Liters, 2), 2) + " لیتر"
+        : Amount > 0m ? Shamsi.Money(Amount) + " افغانی" : "—";
+    public string StatusText => Approved ? "🟢 تایید شده" : "🟡 در صف";
+    public string StatusBrushKey => Approved ? "Pump.Ok" : "Pump.Warn";
 }

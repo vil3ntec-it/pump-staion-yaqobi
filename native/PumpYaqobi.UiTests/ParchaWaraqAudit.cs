@@ -71,6 +71,10 @@ internal static class ParchaWaraqAudit
         ParchaLogic(win, vm);
 
         Console.WriteLine();
+        Console.WriteLine("── ۳ب) ذخیرهٔ شیفت ⇒ ورقِ همان تاریخ ──");
+        ShiftMakesWaraq(win, vm);
+
+        Console.WriteLine();
         Console.WriteLine("── ۴) ورق‌ها: دو جدولِ هم‌شکل، کنارِ هم ──");
         WaraqSplit(win, vm);
 
@@ -187,6 +191,73 @@ internal static class ParchaWaraqAudit
 
         Check($"دو پارچهٔ جدا ساخته شد ({before} ← {pa.Reports.Count})",
               pa.Reports.Count >= before + 2);
+    }
+
+    /// <summary>
+    /// ══ گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۷) ═══════════════════════════════════════
+    /// «تو پارچه‌ها وقتی شیفتِ صبح یا شب را ثبت می‌کنم، در بخشِ ورق‌ها ورق
+    ///  ساخته نمی‌شود… و اگر ورقی با همان تاریخ بود، اطلاعات برود توی همان
+    ///  ورقِ تاریخِ مشابه.»
+    ///
+    /// پس همان کارِ کاربر انجام می‌شود — تاریخ می‌گذارد، شیفت را پر و ذخیره
+    /// می‌کند — و بعد در بخشِ ورق‌ها دنبالِ ورقِ همان تاریخ می‌گردیم. دو بار
+    /// ذخیره (روز و شب) نباید دو ورق بسازد.
+    /// </summary>
+    private static void ShiftMakesWaraq(Window win, MainViewModel vm)
+    {
+        if (vm.Sections.FirstOrDefault(s => s.Id == "shifts") is not ParchaSectionViewModel pa
+         || vm.Sections.FirstOrDefault(s => s.Id == "waraq") is not WaraqSectionViewModel wq)
+        { Check("هر دو بخش پیدا شدند", false); return; }
+
+        // ⚠️ اول یک بار به ورق‌ها سر می‌زنیم — همان کاری که هر کاربری کرده.
+        // ریشهٔ باگ همین بود: بخش فهرستش را فقط بارِ اول می‌خواند، پس ورقِ
+        // ساخته‌شده پس از آن دیده نمی‌شد. بی این خط، سنجه باگ را نمی‌گرفت.
+        Wait(win, vm.GoAsync(wq));
+        Pump(win);
+
+        Wait(win, vm.GoAsync(pa));
+        Pump(win);
+
+        var date = pa.PaDate;
+        pa.NewParchaDayCommand.Execute(null); Pump(win);
+        Fill(pa.Day, "کارمندِ ورق", "10", "210");
+        pa.Day.SaveCommand.Execute(null);
+        Settle(win);
+
+        // ⚠️ عمداً ‎ReloadAsync‎ی دستی نیست: کاربر فقط روی «ورق‌ها» می‌زند.
+        Wait(win, vm.GoAsync(wq));
+        Pump(win);
+
+        var sheet = wq.Sheets.FirstOrDefault(w => (w.DateShamsi ?? "") == date);
+        Check($"ورقِ «{date}» ساخته شد", sheet is not null,
+              wq.Sheets.Count + " ورق: " + string.Join("، ", wq.Sheets.Take(3).Select(w => w.DateShamsi)));
+        if (sheet is null) return;
+
+        // شیفتِ شب هم روی **همان** ورق بنشیند، نه ورقِ تازه
+        Wait(win, vm.GoAsync(pa)); Pump(win);
+        Fill(pa.Night, "کارمندِ شب", "5", "105");
+        pa.Night.SaveCommand.Execute(null);
+        Settle(win);
+
+        // ⚠️ عمداً ‎ReloadAsync‎ی دستی نیست: کاربر فقط روی «ورق‌ها» می‌زند.
+        Wait(win, vm.GoAsync(wq));
+        Pump(win);
+        var same = wq.Sheets.Count(w => (w.DateShamsi ?? "") == date);
+        Check("شیفتِ دوم ورقِ تازه نساخت (همان تاریخ یکی است)", same == 1, same + " ورق با این تاریخ");
+
+        wq.OpenCommand.Execute(wq.Sheets.First(w => (w.DateShamsi ?? "") == date));
+        Settle(win);
+        var page = wq.Page;
+        if (page is null) { Check("ورق باز شد", false); return; }
+        page.IsNight = false; Settle(win);
+        var day = page.Pumps.Count(pu => pu.End != 0m);
+        page.IsNight = true; Settle(win);
+        var night = page.Pumps.Count(pu => pu.End != 0m);
+        page.IsNight = false; Settle(win);
+        Check("پایهٔ هر دو شیفت در همان ورق نشسته", day >= 1 && night >= 1,
+              $"روز {day} · شب {night}");
+        wq.BackCommand.Execute(null);
+        Settle(win);
     }
 
     private static void Fill(ShiftFormViewModel f, string name, string start, string end)

@@ -63,11 +63,21 @@
               <Grid ColumnDefinitions="*,14,*" RowDefinitions="Auto">
                 <StackPanel Grid.Column="0" Spacing="4">
                   <TextBlock Text="👤 نام مشتری" Classes="fld" />
-                  <TextBox Text="{Binding FCustomer}" Watermark="نام کامل مشتری…" />
+                  <!-- ══ نامِ قرض‌داران خودش تکمیل شود ═══════════════════════
+                       گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۷): «وقتی توی فاکتورها
+                       می‌خواهم نامِ مشتری را بنویسم، نام‌ها نمی‌آیند… با تب
+                       برود روشان و با اینتر انتخاب بشه، و با کلیدِ بالا و
+                       پایین نرود سرشان.»
+
+                       همان تکملهٔ درون‌خطیِ خودِ برنامه (‎Controls/Suggest‎):
+                       نامِ قرض‌داران، Tab/Enter می‌پذیرد، ↑↓ را نمی‌گیرد، و
+                       تکملهٔ پذیرفته‌نشده هیچ‌وقت ذخیره نمی‌شود. -->
+                  <TextBox Text="{Binding FCustomer}" Watermark="نام کامل مشتری…"
+                           c:Suggest.Key="debtor" />
                 </StackPanel>
                 <StackPanel Grid.Column="2" Spacing="4">
                   <TextBlock Text="🪪 به نام دیگر" Classes="fld" />
-                  <TextBox Text="{Binding FAlias}"
+                  <TextBox Text="{Binding FAlias}" c:Suggest.Key="debtor"
                            Watermark="اختیاری — خالی یعنی همان نام مشتری"
                            ToolTip.Tip="نامی که این فاکتور با آن در جدولِ حساب ثبت می‌شود" />
                 </StackPanel>

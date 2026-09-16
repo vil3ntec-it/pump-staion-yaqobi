@@ -789,8 +789,31 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
         Months.Clear();
         foreach (var m in await _host.WaraqData.MonthsAsync()) Months.Add(m);
         if (!Months.Contains(Month)) Months.Insert(0, Month);
+        _seenVersion = PumpYaqobi.Persistence.PumpDbContext.Version;
         await ReloadAsync();
     }
+
+    /// <summary>
+    /// ══ «شیفت را ثبت کردم، ولی در ورق‌ها ورقی ساخته نشد» ═══════════════════
+    ///
+    /// گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۷). ورق **ساخته می‌شد** — سنجشِ ۳ب در
+    /// ‎parcha‎ نشان داد که ‎ShiftWaraqSync‎ کارش را درست می‌کند — ولی این
+    /// بخش فهرستش را فقط **یک بار** می‌خواند (‎EnsureLoadedAsync‎ با
+    /// ‎IsLoaded‎). پس هر کس یک بار به ورق‌ها سر زده بود، تا بسته شدنِ برنامه
+    /// همان فهرستِ کهنه را می‌دید و ورقِ تازه غیب بود.
+    ///
+    /// ⚠️ و بی‌قید تازه نمی‌شود: ‎PumpDbContext.Version‎ ترمزِ همیشگیِ این
+    /// برنامه است (قاعدهٔ «کارِ دوره‌ای بی ترمزِ Version ممنوع»). داده عوض
+    /// نشده ⇒ هیچ پرس‌وجویی. ماه‌ها هم از نو خوانده می‌شوند، وگرنه ورقی که
+    /// در ماهِ تازه‌ای نشسته حتی در کشویی هم پیدا نمی‌شد.
+    /// </summary>
+    public override Task OnActivatedAsync()
+    {
+        if (_seenVersion == PumpYaqobi.Persistence.PumpDbContext.Version) return Task.CompletedTask;
+        return LoadAsync();
+    }
+
+    private long _seenVersion = -1;
 
     public async Task ReloadAsync()
     {

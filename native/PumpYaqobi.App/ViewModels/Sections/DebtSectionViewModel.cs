@@ -171,19 +171,39 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
     /// </summary>
     [ObservableProperty] private object? _overlay;
 
-    public bool IsListVisible => Person is null && Overlay is null;
-    public bool IsPersonVisible => Person is not null && Overlay is null;
+    /// <summary>
+    /// ══ صفحهٔ شخص باز است؟ — جانشینِ «‎Person is null‎»ی قدیم ═══════════════
+    ///
+    /// گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۷): «داخل رفتنِ حسابِ قرض‌داران کند بود.»
+    /// سنجشِ ‎enterperf‎ نشان داد خواندنِ داده ۱۰ میلی‌ثانیه است و ساختنِ
+    /// ویومدل ۷ — ولی **یک پاسِ چیدمان ۶۵۰ میلی‌ثانیه**. نمونه‌بردار ریشه را
+    /// گفت: با هر باز کردن، ‎Person‎ یک شیءِ تازه بود، پس قالب کلِ
+    /// ‎PersonView‎ را از نو می‌ساخت و ‎DataGrid‎ هر خانهٔ هر ردیف را از صفر
+    /// (سبک‌ها و ‎PropertyStore‎، ۱۳٫۸ ثانیه CPUِ چیدمان در نمونه).
+    ///
+    /// بخشِ «ورق‌ها» سالِ پیش همین را حل کرده بود و هشت میلی‌ثانیه باز می‌شود:
+    /// صفحه **یکی** است و دور انداخته نمی‌شود؛ فقط دیده/ندیده می‌شود و
+    /// دادهٔ تازه در همان می‌نشیند، پس ‎DataGrid‎ ردیف‌هایش را بازیافت می‌کند.
+    /// همان الگو حالا برای حسابِ قرض‌دار هم هست.
+    ///
+    /// ⚠️ صفحهٔ بسته هزینه‌ای ندارد: جدولِ نامرئی فهرستش را پارک می‌کند
+    /// (‎ExcelGrid.OnShownChanged‎) و سنجشِ ‎idle‎ همین را قفل کرده.
+    /// </summary>
+    [ObservableProperty] private bool _personOpen;
+
+    public bool IsListVisible => !PersonOpen && Overlay is null;
+    public bool IsPersonVisible => PersonOpen && Overlay is null;
     public bool IsOverlayVisible => Overlay is not null;
 
     /// <summary>حسابِ شخص — تا باز است، میانبرهای ردیف به آن می‌روند نه به فهرست.</summary>
-    public override object? ActivePage => Person;
+    public override object? ActivePage => PersonOpen ? Person : null;
 
-    partial void OnPersonChanged(PersonViewModel? v)
+    partial void OnPersonOpenChanged(bool v)
     {
         OnPropertyChanged(nameof(IsListVisible));
         OnPropertyChanged(nameof(IsPersonVisible));
         // صفحهٔ حساب تمام‌عرض است، مثلِ مودالِ تمام‌صفحهٔ نسخهٔ وب
-        IsPageOpen = v is not null || Overlay is not null;
+        IsPageOpen = v || Overlay is not null;
     }
 
     partial void OnOverlayChanged(object? v)
@@ -191,7 +211,7 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
         OnPropertyChanged(nameof(IsListVisible));
         OnPropertyChanged(nameof(IsPersonVisible));
         OnPropertyChanged(nameof(IsOverlayVisible));
-        IsPageOpen = Person is not null || v is not null;
+        IsPageOpen = PersonOpen || v is not null;
     }
 
     public async Task OpenArchivesAsync(PersonViewModel person, AccountViewModel acct)
@@ -223,7 +243,7 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
     /// </summary>
     public override async Task OnActivatedAsync()
     {
-        if (IsLoaded && Person is null) await RefreshAsync();
+        if (IsLoaded && !PersonOpen) await RefreshAsync();
     }
 
     public async Task RefreshAsync()
@@ -420,7 +440,10 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
         if (card is null) return;
         var full = await _host.Debtors.LoadFullAsync(card.Entity.Id);
         if (full is null) return;
-        Person = new PersonViewModel(_host, full, this);
+        // همان صفحه، دادهٔ تازه — چرایی‌اش بالای ‎PersonOpen‎
+        if (Person is null) Person = new PersonViewModel(_host, full, this);
+        else Person.Load(full);
+        PersonOpen = true;
 
         // ══ یادگیری، خاموش و بی‌سروصدا ══════════════════════════════════════
         // خواستهٔ صریحِ صاحب ریپو: «آموزش صدا را از همه جا حذف کن — آموزش چیه،
@@ -544,7 +567,7 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
     private async Task BackAsync()
     {
         if (Person is not null) await Person.FlushAsync();
-        Person = null;
+        PersonOpen = false;
         await RefreshAsync();
     }
 

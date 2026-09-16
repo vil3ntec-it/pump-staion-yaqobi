@@ -126,7 +126,7 @@ internal static class ThemeFlipAudit
             Wait(win, vm.GoAsync(debt));
             Wait(win, debt.OpenByNumberAsync(1));
             FlipOpenPage("حسابِ قرض‌دار", () => debt.Person);
-            debt.Person = null; Pump(win);
+            debt.PersonOpen = false; Pump(win);
         }
         if (vm.Sections.FirstOrDefault(x => x.Id == "companies") is { } co)
         {

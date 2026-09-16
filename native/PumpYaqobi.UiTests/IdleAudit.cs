@@ -138,7 +138,7 @@ internal static class IdleAudit
             if (sit > IdleQueryBudget)
                 bad.Add($"حسابِ باز: در بی‌کاری {sit} دستورِ دیتابیس");
 
-            debt.Person = null; Pump(win);
+            debt.PersonOpen = false; Pump(win);
         }
 
         Console.WriteLine();

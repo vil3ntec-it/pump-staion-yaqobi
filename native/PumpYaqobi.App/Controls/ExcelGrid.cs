@@ -443,6 +443,16 @@ public class ExcelGrid : DataGrid
         // دفترها و حساب‌های بلند است، که صدها ردیف زنده می‌گذاشتند.
         if (GrowsToContent) return;
 
+        // ⚠️ و جدولی که فقط **صفحه‌اش** بسته شده، نه بخشش. کاربر که از حسابِ
+        // یک قرض‌دار بیرون می‌آید تا حسابِ بعدی را باز کند، هنوز در همان بخش
+        // است — و پارک کردن یعنی ‎DataGrid‎ همهٔ خانه‌های همهٔ ردیف‌ها را برای
+        // حسابِ بعدی از صفر بسازد. ‎enterperf‎ عددش را داد: باز کردنِ حساب با
+        // پارک ۶۳۰ میلی‌ثانیه، بی پارک ۶۷.
+        //
+        // قاعده دست‌نخورده می‌ماند: **بخشِ پنهان** همچنان صفر ردیفِ زنده دارد
+        // (سنجشِ ‎idle‎)، چون میزانِ سنجش خودِ صفحهٔ بخش است، نه این جدول.
+        if (!shown && SectionShown()) return;
+
         if (!shown)
         {
             if (_parkedAway || _editing || ItemsSource is null) return;
@@ -457,6 +467,27 @@ public class ExcelGrid : DataGrid
             _parked = null;
             if (back is not null) SetCurrentValue(ItemsSourceProperty, back);
         }
+    }
+
+    /// <summary>
+    /// بخشی که این جدول در آن نشسته هنوز جلوی چشم است؟
+    ///
+    /// ⚠️ از روی **ویومدل** پرسیده می‌شود، نه از روی ‎IsEffectivelyVisible‎ی
+    /// جدِ دیداری. یک بار از راهِ دیداری رفتم و سنجشِ ‎idle‎ همان‌جا گرفتش:
+    /// ‎ContentPresenter‎ی که ‎ItemsControl‎ دورِ هر بخش می‌سازد هیچ‌وقت پنهان
+    /// نمی‌شود (پنهانی روی ‎ContentControl‎ِ داخلش است) ولی ‎DataContext‎ش
+    /// همان ویومدلِ بخش است — پس «بیرونی‌ترین جد» همیشه دیده‌شده درمی‌آمد و
+    /// هیچ جدولی پارک نمی‌شد (۱۶۶ ردیفِ زندهٔ بخشِ پنهان).
+    ///
+    /// <see cref="ViewModels.SectionViewModel.IsShown"/> را خودِ پوسته
+    /// می‌نویسد (‎MainViewModel.SyncContent‎) و دقیقاً یعنی «این صفحه همانی
+    /// است که کاربر می‌بیند».
+    /// </summary>
+    private bool SectionShown()
+    {
+        foreach (var v in this.GetVisualAncestors())
+            if (v is Control { DataContext: ViewModels.SectionViewModel sec }) return sec.IsShown;
+        return false;
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -695,11 +726,21 @@ public class ExcelGrid : DataGrid
     /// قابِ چسبان باید از زیرِ او شروع شود — وگرنه سربرگِ جدول پشتِ نوار
     /// پنهان می‌ماند (با عکس دیده شد).
     /// </summary>
+    /// ⚠️ خودِ نوار یک‌بار پیدا می‌شود و همان می‌ماند — مثلِ بقیهٔ کَش‌های
+    /// بالا. این تابع از ‎MeasureSticky‎ صدا می‌خورد، یعنی در هر پاسِ چیدمانِ
+    /// هر جدولِ چسبان؛ و گشتنِ **کلِ درختِ پنجره** در آن مسیر گران است:
+    /// نمونه‌بردار (‎dotnet-trace‎ روی ‎enterperf‎) ۹۱۲ میلی‌ثانیه از وقتِ
+    /// چیدمان را همین‌جا نشان داد. بلندیِ نوار هر بار از خودِ نوار خوانده
+    /// می‌شود، پس عوض شدنِ اندازه‌اش هم دیده می‌شود.
+    private Border? _navBar;
+
     private double BlindTop()
     {
+        if (_navBar is { } cached && cached.GetVisualRoot() is not null) return cached.Bounds.Height;
         if (Page?.GetVisualRoot() is not Visual root) return 0;
-        return root.GetVisualDescendants().OfType<Border>()
-                   .FirstOrDefault(b => b.Name == "NavBar")?.Bounds.Height ?? 0;
+        _navBar = root.GetVisualDescendants().OfType<Border>()
+                      .FirstOrDefault(b => b.Name == "NavBar");
+        return _navBar?.Bounds.Height ?? 0;
     }
 
     private double _blind;
@@ -1014,6 +1055,14 @@ public class ExcelGrid : DataGrid
                 e.Handled = true;
                 return;
             }
+
+            // ⚠️ در حالتِ چسبان، چرخ **هرگز** به خودِ جدول نمی‌رسد — حتی وقتی
+            // صفحه دیگر جا ندارد. جای ردیف‌های قابِ چسبان را فقط ‎SyncSticky‎
+            // می‌نویسد (از روی لغزشِ صفحه)؛ اگر ‎DataGrid‎ خودش هم بلغزاند،
+            // یک فریم ردیف‌ها می‌پرند و فریمِ بعد ‎SyncSticky‎ برشان می‌گرداند
+            // — همان «به آخر که می‌رسد پرپر می‌شود و بعد درست می‌شود»ی
+            // گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۷). سنجه: ‎scrollend‎.
+            if (_sticky) { e.Handled = true; return; }
         }
 
         base.OnPointerWheelChanged(e);
@@ -1208,6 +1257,20 @@ public class ExcelGrid : DataGrid
 
         var natural = cols.Select(c => c.ActualWidth).ToArray();
         if (natural.Any(w => double.IsNaN(w) || w <= 0)) return;   // هنوز چیده نشده
+
+        // ══ تا ردیفی چیده نشده، پهنا سفت نشود ═══════════════════════════════
+        //
+        // «پهنای طبیعی»ِ یک ستونِ ‎Auto‎ پیش از آمدنِ ردیف‌ها فقط پهنای
+        // **سربرگ** است. اگر همان‌جا سفت شود، ستونی که سرستونِ کوتاه و عددِ
+        // بلند دارد تا ابد تنگ می‌ماند و متنش «…» می‌شود — در ورق‌ها ستونِ
+        // «ختم» دقیقاً همین بود («۱۰,۹۳۰» ⇒ «…,۹۳۰») در حالی که «شروع»ِ
+        // بغلش جا داشت. همان تلهٔ ‎Auto‎ که در جدول‌های «زیانِ افزایش قیمت»
+        // با پهنای صریح دور زده شده بود.
+        //
+        // پس یک پاس صبر می‌کنیم: جدولی که ردیف دارد، تا نخستین ردیفش چیده
+        // نشده پهنایش را قفل نمی‌کند. (پاسِ اول به‌هرحال تنگ است — بالای
+        // ‎MeasureOverride‎ — پس این یک پاس هزینه‌ای ندارد.)
+        if (!_anyRowLoaded && RowCount() > 0) return;
 
         var room = Bounds.Width;
         if (room <= 0) return;
@@ -1478,8 +1541,12 @@ public class ExcelGrid : DataGrid
     /// حالا ردیف فقط یک قلابِ سبک می‌گیرد و منو همان لحظه‌ای ساخته می‌شود که
     /// واقعاً راست‌کلیک شد.
     /// </summary>
+    /// <summary>دستِ‌کم یک ردیف واقعاً چیده شده؟ — شرحش در ‎SpreadColumns‎.</summary>
+    private bool _anyRowLoaded;
+
     private void OnRowMenu(object? sender, DataGridRowEventArgs e)
     {
+        _anyRowLoaded = true;
         e.Row.ContextFlyout = null;
         e.Row.ContextRequested -= OnRowContext;
         if (RowDeleteCommand is null) return;
