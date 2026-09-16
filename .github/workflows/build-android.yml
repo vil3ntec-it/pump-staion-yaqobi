@@ -43,8 +43,17 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # ⚠️ ‎android-actions/setup-android@v3‎ از ۱۴۰۵/۰۶/۲۶ می‌شکند: بستهٔ ‎tools‎ از
+      # مخزنِ گوگل برداشته شده و همان اکشن پیش‌فرض دنبالش می‌گردد. SDK روی
+      # خودِ ماشینِ گیت‌هاب هست؛ فقط مجوزها و همان دو بسته‌ای که گریدل می‌خواهد.
       - name: آماده‌سازی Android SDK
-        uses: android-actions/setup-android@v3
+        run: |
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          SDKM="$(ls -d "$SDK"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)"
+          yes | "$SDKM" --licenses >/dev/null 2>&1 || true
+          "$SDKM" "platforms;android-34" "build-tools;34.0.0" "platform-tools" >/dev/null
 
       - name: گذاشتنِ خودِ برنامه داخلِ فایل نصب
         run: |
