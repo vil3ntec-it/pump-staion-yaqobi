@@ -86,21 +86,58 @@ internal static class StartupAudit
             }
         });
 
-        Mark("گذرِ دومِ داده (پس‌زمینه، تا آرام شدن)", () =>
+        Mark("پس از ورود تا آرام شدنِ صفِ کارها", () =>
         {
-            var t = DateTime.UtcNow + TimeSpan.FromSeconds(60);
+            var t = DateTime.UtcNow + TimeSpan.FromSeconds(20);
             while (DateTime.UtcNow < t)
             {
                 Dispatcher.UIThread.RunJobs();
                 win.UpdateLayout();
-                if (vm.Warm.DataDone && !Dispatcher.UIThread.HasJobsWithPriority(DispatcherPriority.Background)) { Thread.Sleep(50); Dispatcher.UIThread.RunJobs(); break; }
+                if (!Dispatcher.UIThread.HasJobsWithPriority(DispatcherPriority.Background)) { Thread.Sleep(50); Dispatcher.UIThread.RunJobs(); break; }
                 Thread.Sleep(1);
             }
         });
 
+        // ══ بی‌کاری: برنامه که کاری ندارد، چقدر کار می‌کند؟ ═══════════════════
+        // «کامپیوترم می‌خواهد بسوزد»: انیمیشنِ بی‌پایان، حلقهٔ چیدمان یا تایمرِ
+        // پرکار همین‌جا خودش را نشان می‌دهد — شمارِ چیدمان‌ها و CPU در سه ثانیه.
+        // دو پنجرهٔ سه‌ثانیه‌ای: یکی همان اولِ ورود (JITِ پس‌زمینه هنوز کار
+        // می‌کند) و یکی ده ثانیه بعد — عددِ دومی «بی‌کاریِ واقعی» است.
+        for (var round = 1; round <= 2; round++)
+        {
+            if (round == 2)
+            {
+                var pause = Stopwatch.StartNew();
+                while (pause.ElapsedMilliseconds < 10_000) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(16); }
+            }
+            var layouts = 0;
+            EventHandler h = (_, _) => layouts++;
+            win.LayoutUpdated += h;
+            var proc = System.Diagnostics.Process.GetCurrentProcess();
+            proc.Refresh();
+            var cpu0 = proc.TotalProcessorTime;
+            var t = Stopwatch.StartNew();
+            while (t.ElapsedMilliseconds < 3000)
+            {
+                Dispatcher.UIThread.RunJobs();
+                Thread.Sleep(16);   // مثلِ یک فریمِ واقعی
+            }
+            proc.Refresh();
+            var cpu = (proc.TotalProcessorTime - cpu0).TotalMilliseconds;
+            win.LayoutUpdated -= h;
+            var tag = round == 1 ? "بلافاصله پس از ورود" : "ده ثانیه بعد";
+            Console.WriteLine($"{"بی‌کاری ۳ ثانیه (" + tag + ") — چیدمان",-48}{layouts,6:N0} بار");
+            Console.WriteLine($"{"بی‌کاری ۳ ثانیه (" + tag + ") — CPU",-48}{cpu,6:N0} ms   ({cpu / 30:0.0}٪ یک هسته)");
+            if (round == 2)
+            {
+                Marks.Add(("بی‌کاری — CPU (ms در ۳ ثانیه)", (long)cpu));
+                if (cpu > 300) Console.WriteLine("   ⚠️ برنامهٔ بی‌کار نباید بیش از ۱۰٪ یک هسته بخورد");
+            }
+        }
+
         Console.WriteLine();
         Console.WriteLine($"کل تا آرام شدن: {total.ElapsedMilliseconds:N0} ms");
-        var toLock = Marks.Where(m => m.What != "گذرِ دومِ داده (پس‌زمینه، تا آرام شدن)" && m.What != "رمز ⇒ بخشِ آغازین جلوی چشم" && m.What != "بقیهٔ صفحه‌ها پشتِ صفحهٔ قفل (کاربر رمز می‌زند)").Sum(m => m.Ms);
+        var toLock = Marks.Where(m => m.What != "پس از ورود تا آرام شدنِ صفِ کارها" && m.What != "رمز ⇒ بخشِ آغازین جلوی چشم" && m.What != "بقیهٔ صفحه‌ها پشتِ صفحهٔ قفل (کاربر رمز می‌زند)").Sum(m => m.Ms);
         Console.WriteLine($"تا صفحهٔ رمز (آنچه کاربر منتظرش می‌ماند): {toLock:N0} ms");
         return 0;
     }

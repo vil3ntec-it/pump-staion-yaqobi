@@ -70,7 +70,11 @@ public sealed partial class MainViewModel : ObservableObject
             // پردهٔ لودینگ **پیش از** این اتفاق افتاده و صفحه‌ها را ساخته و
             // چیده است (‎WarmUpAsync‎، از سازندهٔ پنجره). آن‌جا اجازه‌ای نبود،
             // پس مسیرِ داده همین حالا و بی‌صدا یک بار گرم می‌شود.
-            Dispatcher.UIThread.Post(() => _ = WarmDataAsync(), DispatcherPriority.Background);
+            // ⚠️ گذرِ دومِ داده (‎WarmDataAsync‎) دیگر این‌جا صدا زده نمی‌شود:
+            // خواندنِ دادهٔ سی‌ودو بخش پشتِ سرِ هم، درست بعد از رمز، همان «بعد
+            // از رمز هنوز کند است» بود — با پنج سال داده ده ثانیه CPU روی نخِ
+            // رابط. هر بخش سرِ اولین دیدارِ خودش خوانده می‌شود (ده‌ها تا صد
+            // میلی‌ثانیه). خودِ تابع برای سنجش‌ها می‌ماند.
         };
 
         Sections = new ObservableCollection<SectionViewModel>(BuildSections(AppHost.Current));
@@ -359,6 +363,13 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>تاریخِ شمسیِ امروز — خطِ اولِ بلوکِ تاریخِ سربرگ.</summary>
     public string TodayText => Shamsi.DayName(DateTime.Now) + "، " + Shamsi.Today();
 
+    /// <summary>روز عوض شد (نیمه‌شب): تاریخِ سربرگ و عددهای نوار از نو.</summary>
+    public void DayChanged()
+    {
+        OnPropertyChanged(nameof(TodayText));
+        QueueBannerRefresh();
+    }
+
     public LockViewModel Lock { get; }
 
     /// <summary>
@@ -630,7 +641,9 @@ public sealed partial class MainViewModel : ObservableObject
         // ردیف‌های شرکت‌ها و همهٔ گزارش‌های پارچه را می‌خواند — یک ثانیه روی
         // **هر** جابه‌جایی، حتی به بخشی خالی مثلِ دوربین‌ها. تا چیزی ذخیره
         // نشده، عددها همان‌اند.
-        var version = PumpYaqobi.Persistence.PumpDbContext.Version;
+        // ⚠️ روز هم بخشی از کلید است: «مفادِ امروز» و «مصارفِ امروز» با نیمه‌شب
+        // عوض می‌شوند بی آن‌که چیزی ذخیره شده باشد (چک‌لیستِ تحویل، بندِ ۶۲).
+        var version = PumpYaqobi.Persistence.PumpDbContext.Version * 100000L + DateTime.Now.DayOfYear;
         if (version == _bannerVersion) return;
         _bannerVersion = version;
 

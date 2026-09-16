@@ -31,9 +31,15 @@ public partial class MainWindow : Window
         _fieldNav = new FieldNavigationService(this);
 
         _clock = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        var day = DateTime.Now.Date;
         _clock.Tick += (_, _) =>
         {
             vm.Clock = PumpYaqobi.App.Localization.Clock.Now();
+            // ══ نیمه‌شب: تاریخِ سربرگ و نوار هم عوض شوند ══════════════════
+            // چک‌لیستِ تحویل (بندِ ۶۲–۶۴): پیش از این «امروز» فقط یک بار در
+            // ساخت خوانده می‌شد و برنامه‌ای که شب باز مانده بود، صبح هنوز
+            // تاریخِ دیروز را نشان می‌داد.
+            if (DateTime.Now.Date != day) { day = DateTime.Now.Date; vm.DayChanged(); }
         };
         _clock.Start();
         vm.Clock = PumpYaqobi.App.Localization.Clock.Now();

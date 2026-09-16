@@ -1006,6 +1006,9 @@
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
+                  <!-- کادرهای کوچکِ همین نوار — بعد از کارت‌های زیربخش (جست‌وجوی قرض‌داران) -->
+                  <ContentPresenter Content="{TemplateBinding Inline}" VerticalAlignment="Center"
+                                    Margin="6,3,0,3" />
 
                   <!-- کادرهای فیلتر (ماه، جست‌وجو، …) هم همین‌جا -->
                   <ContentPresenter Content="{TemplateBinding Filters}" VerticalAlignment="Center"

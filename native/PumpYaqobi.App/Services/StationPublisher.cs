@@ -310,8 +310,14 @@ public sealed class StationPublisher : IAsyncDisposable
         _ = Task.Run(() => LoopAsync(cts.Token), cts.Token);
     }
 
+    /// <summary>پیش از اولین انتشار — تا ورود و اولین صفحه بی رقیب بمانند.</summary>
+    public static readonly TimeSpan FirstDelay = TimeSpan.FromSeconds(12);
+
     private async Task LoopAsync(CancellationToken ct)
     {
+        // ⚠️ نه همان لحظهٔ ورود: عکسِ ایستگاه با داده‌ی زیاد یک ثانیه CPU است و
+        // درست وقتی می‌رفت که کاربر تازه رمز زده و منتظرِ صفحهٔ اول بود.
+        try { await Task.Delay(FirstDelay, ct); } catch { return; }
         while (!ct.IsCancellationRequested)
         {
             try { await PublishOnceAsync(false, ct); }

@@ -25,6 +25,10 @@ public class SectionPage : TemplatedControl
     public static readonly StyledProperty<object?> FiltersProperty =
         AvaloniaProperty.Register<SectionPage, object?>(nameof(Filters));
 
+    /// <summary>کادرهایی که بعد از کارت‌های زیربخش در همان نوار می‌نشینند (جست‌وجوی کوچک).</summary>
+    public static readonly StyledProperty<object?> InlineProperty =
+        AvaloniaProperty.Register<SectionPage, object?>(nameof(Inline));
+
     public static readonly StyledProperty<object?> SummaryProperty =
         AvaloniaProperty.Register<SectionPage, object?>(nameof(Summary));
 
@@ -39,6 +43,7 @@ public class SectionPage : TemplatedControl
     public string? SubHeader { get => GetValue(SubHeaderProperty); set => SetValue(SubHeaderProperty, value); }
     public object? Toolbar { get => GetValue(ToolbarProperty); set => SetValue(ToolbarProperty, value); }
     public object? Filters { get => GetValue(FiltersProperty); set => SetValue(FiltersProperty, value); }
+    public object? Inline { get => GetValue(InlineProperty); set => SetValue(InlineProperty, value); }
     public object? Summary { get => GetValue(SummaryProperty); set => SetValue(SummaryProperty, value); }
     public object? Footer { get => GetValue(FooterProperty); set => SetValue(FooterProperty, value); }
 

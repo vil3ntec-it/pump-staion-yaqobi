@@ -44,24 +44,66 @@
               </StackPanel></Border>
             </c:AutoFillPanel>
 
-            <Border Classes="panel" Padding="0" IsVisible="{Binding HasPurchases}">
-              <c:ExcelGrid ItemsSource="{Binding Purchases}" x:CompileBindings="False"
-                           IsReadOnly="True" BorderThickness="0" CornerRadius="0">
-                <DataGrid.Columns>
-                  <DataGridTextColumn Header="تاریخ" Binding="{Binding DateText}" Width="Auto" MinWidth="110" />
-                  <DataGridTextColumn Header="فروشنده" Binding="{Binding SellerText}" Width="Auto" MinWidth="150" />
-                  <DataGridTextColumn Header="وزن (تن)" Binding="{Binding TonText}" Width="Auto" MinWidth="110" />
-                  <DataGridTextColumn Header="ثقلت" Binding="{Binding DensityText}" Width="Auto" />
-                  <DataGridTextColumn Header="لیتر" Binding="{Binding LitersText}" Width="Auto" MinWidth="100" />
-                  <DataGridTextColumn Header="فی تن ($)" Binding="{Binding PriceTonText}" Width="Auto" />
-                  <DataGridTextColumn Header="نرخ دالر" Binding="{Binding UsdRateText}" Width="Auto" />
-                  <DataGridTextColumn Header="کل (دالر)" Binding="{Binding TotalUsdText}" Width="Auto" MinWidth="120" />
-                  <DataGridTextColumn Header="کل (افغانی)" Binding="{Binding TotalAfnText}" Width="Auto" MinWidth="120" />
-                  <DataGridTextColumn Header="فی لیتر (افغانی)" Binding="{Binding PerLiterText}" Width="Auto" />
-                  <DataGridTextColumn Header="یادداشت" Binding="{Binding NoteText}" Width="Auto" />
-                </DataGrid.Columns>
-              </c:ExcelGrid>
-            </Border>
+            <!-- ══ هر خرید یک کارتِ خواندنی — همان شکلِ بخشِ مخزن ═══════════════
+                 گزارشِ صاحب ریپو: «خریدهای پطرول و دیزل را همان‌جوری که توی
+                 بخشِ مخزن دیده می‌شود این‌جا هم همین‌طور — ولی تو همه را جدول
+                 کردی.» سایت هم همین است (‎cmp-card‎). فقط ردیف‌های دستیِ جدول
+                 پایین جدول می‌مانند، مثلِ خودِ سایت. -->
+            <ItemsControl ItemsSource="{Binding Purchases}" IsVisible="{Binding HasPurchases}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:PurchaseItemViewModel">
+                  <Border Classes="panel" Margin="0,0,0,12" Padding="0">
+                    <StackPanel>
+                      <Border Classes="card-head">
+                        <StackPanel Orientation="Horizontal" Spacing="14">
+                          <TextBlock Text="{Binding IndexText, StringFormat=خرید #{0}}" FontWeight="Bold"
+                                     Foreground="{DynamicResource Pump.Accent}" />
+                          <TextBlock Text="{Binding DateText, StringFormat=📅 {0}}" Classes="muted" />
+                          <TextBlock Text="{Binding SellerText, StringFormat=👤 {0}}"
+                                     Foreground="{DynamicResource Pump.Info}" />
+                          <TextBlock Text="{Binding NoteText}" Classes="muted"
+                                     IsVisible="{Binding NoteText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                        </StackPanel>
+                      </Border>
+                      <c:AutoFillPanel MinItemWidth="150" Gap="8" Margin="14">
+                        <Border Classes="stat" MinHeight="70"><StackPanel Spacing="3">
+                          <TextBlock Text="وزن (تن)" Classes="label" />
+                          <TextBlock Text="{Binding TonText}" FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Info}" />
+                        </StackPanel></Border>
+                        <Border Classes="stat" MinHeight="70"><StackPanel Spacing="3">
+                          <TextBlock Text="ثقلت" Classes="label" />
+                          <TextBlock Text="{Binding DensityText}" FontWeight="ExtraBold" />
+                        </StackPanel></Border>
+                        <Border Classes="stat" MinHeight="70"><StackPanel Spacing="3">
+                          <TextBlock Text="لیتر" Classes="label" />
+                          <TextBlock Text="{Binding LitersText}" FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Ok}" />
+                        </StackPanel></Border>
+                        <Border Classes="stat" MinHeight="70"><StackPanel Spacing="3">
+                          <TextBlock Text="فی تن ($)" Classes="label" />
+                          <TextBlock Text="{Binding PriceTonText}" FontWeight="ExtraBold" />
+                        </StackPanel></Border>
+                        <Border Classes="stat" MinHeight="70"><StackPanel Spacing="3">
+                          <TextBlock Text="نرخ دالر" Classes="label" />
+                          <TextBlock Text="{Binding UsdRateText}" FontWeight="ExtraBold" />
+                        </StackPanel></Border>
+                        <Border Classes="stat" MinHeight="70"><StackPanel Spacing="3">
+                          <TextBlock Text="کل (دالر)" Classes="label" />
+                          <TextBlock Text="{Binding TotalUsdText}" FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Info}" />
+                        </StackPanel></Border>
+                        <Border Classes="stat" MinHeight="70"><StackPanel Spacing="3">
+                          <TextBlock Text="کل (افغانی)" Classes="label" />
+                          <TextBlock Text="{Binding TotalAfnText}" FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Accent}" />
+                        </StackPanel></Border>
+                        <Border Classes="stat" MinHeight="70"><StackPanel Spacing="3">
+                          <TextBlock Text="فی لیتر (افغانی)" Classes="label" />
+                          <TextBlock Text="{Binding PerLiterText}" FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Danger}" />
+                        </StackPanel></Border>
+                      </c:AutoFillPanel>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
             <Border Classes="panel" IsVisible="{Binding !HasPurchases}" Opacity="0.75">
               <TextBlock Text="{Binding EmptyText}" Classes="muted" HorizontalAlignment="Center" />
             </Border>

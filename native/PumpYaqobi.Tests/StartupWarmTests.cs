@@ -71,6 +71,8 @@ public class StartupWarmTests
     {
         var vm = Read("PumpYaqobi.App", "ViewModels", "MainViewModel.cs");
         Assert.Contains("sec.IsLoaded = false;", vm);
+        // گذرِ دومِ داده دیگر پس از رمز اجرا نمی‌شود («بعد از رمز هنوز کند است»)
+        Assert.DoesNotContain("Dispatcher.UIThread.Post(() => _ = WarmDataAsync()", vm);
     }
 
     /// <summary>

@@ -32,7 +32,10 @@
        همان‌جا استثنا می‌دهد («No animator registered for the property
        RenderTransform»). ‎Opacity‎ انیماتورِ ‎double‎ دارد و همیشه کار می‌کند. -->
   <Window.Styles>
-    <Style Selector="Border#WarmLogo">
+    <!-- ⚠️ فقط با کلاسِ ‎pulse‎ که به ‎IsStarting‎ بسته است: انیمیشنِ بی‌پایان روی
+         کنترلِ **پنهان** هم می‌چرخد و هر فریم پنجره را از نو می‌کشد — همان
+         «کامپیوتر داغ می‌شود»ِ صاحب ریپو، بعد از رمز و تا ابد. -->
+    <Style Selector="Border#WarmLogo.pulse">
       <Style.Animations>
         <Animation Duration="0:0:1.8" IterationCount="INFINITE" Easing="SineEaseInOut">
           <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0.72" /></KeyFrame>
@@ -365,6 +368,7 @@
              همان فایلی که نشانِ پنجره و آیکونِ نصب هم از آن ساخته شده، پس
              همه‌جا یک تصویر است. -->
         <Border Name="WarmLogo" Width="168" Height="168" CornerRadius="34"
+                Classes.pulse="{Binding IsStarting}"
                 HorizontalAlignment="Center" ClipToBounds="True"
                 BoxShadow="0 10 34 0 #33000000">
           <Image Source="avares://PumpYaqobi/Assets/logo.png"

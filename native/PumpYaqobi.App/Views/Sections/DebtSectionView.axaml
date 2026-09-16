@@ -32,23 +32,19 @@
         </WrapPanel>
       </c:SectionPage.Toolbar>
 
-      <c:SectionPage.Filters>
-        <!-- ⚠️ کادرهای «حسابِ تازه: نام / شماره» از این‌جا رفتند. در سایت چنین
-             کادرهایی بالای صفحه نیست: «➕ افزودن شخص» یک کادرِ کوچکِ «نام» باز
-             می‌کند (‎addPersonModal‎) و شماره بعداً داخلِ خودِ حساب نوشته
-             می‌شود. خواستهٔ صریحِ صاحب ریپو با عکسِ همان کادر. -->
-        <Grid ColumnDefinitions="Auto,240,Auto">
-          <TextBlock Grid.Column="0" Text="🔍 جست‌وجو" Classes="label" VerticalAlignment="Center" Margin="0,0,8,0" />
-          <TextBox Grid.Column="1" Text="{Binding Search}" Watermark="نام یا شماره" />
-
-          <!-- 🎤 جست‌وجوی صوتی — همه روی خودِ دستگاه، بی اینترنت و بی سرور.
-               صفحهٔ «آموزش صدا» برداشته شد؛ یادگیری خاموش و پشتِ پرده است. -->
-          <Button Grid.Column="2" Margin="6,0,0,0" Padding="10,4"
-                  Content="🎤" ToolTip.Tip="نام را بگویید — حسابش باز می‌شود"
+      <!-- ══ جست‌وجو: کوچک و در همان نوار، بغلِ «زیان ناشی از افزایش قیمت» ══
+           گزارشِ صاحب ریپو با عکس: «جا اضافه گرفته شده، اون جستجو رو کوچیک کن
+           و بذار بغلِ زیان ناشی از افزایش قیمت». پس نه ردیفِ جدا (‎Filters‎)،
+           بلکه ‎Inline‎ی همان نوار، بعد از کارت‌های زیربخش. -->
+      <c:SectionPage.Inline>
+        <StackPanel Orientation="Horizontal" Spacing="4">
+          <TextBox Text="{Binding Search}" Watermark="🔍 نام یا شماره" Width="170" />
+          <!-- 🎤 جست‌وجوی صوتی — همه روی خودِ دستگاه، بی اینترنت و بی سرور. -->
+          <Button Padding="8,4" Content="🎤" ToolTip.Tip="نام را بگویید — حسابش باز می‌شود"
                   Command="{Binding VoiceSearchCommand}"
                   Classes.danger="{Binding Listening}" />
-        </Grid>
-      </c:SectionPage.Filters>
+        </StackPanel>
+      </c:SectionPage.Inline>
 
               <ItemsRepeater ItemsSource="{Binding Cards}">
           <ItemsRepeater.Layout>
@@ -65,7 +61,7 @@
                    • ‎MaximumRowsOrColumns‎ نبود، پس روی نمایشگرِ پهن ‎ItemsStretch‎
                      کارت‌ها را بی‌جهت پهن می‌کرد. حالا سقفِ هشت‌تا دارد و
                      ‎MinItemWidth‎ی ۲۰۰ روی باریک‌ترین صفحه هم شش‌تا می‌دهد. -->
-              <UniformGridLayout MinItemWidth="200" MinItemHeight="200"
+              <UniformGridLayout MinItemWidth="210" MinItemHeight="215"
                                  MaximumRowsOrColumns="8" ItemsStretch="Fill"
                                  MinColumnSpacing="10" MinRowSpacing="10" />
             </ItemsRepeater.Layout>
@@ -108,29 +104,30 @@
                     <Button Grid.Column="0" Classes="card-x" Content="✕"
                             Command="{Binding $parent[ItemsRepeater].((vm:DebtSectionViewModel)DataContext).DeleteDebtorCommand}"
                             CommandParameter="{Binding}" />
-                    <TextBlock Grid.Column="2" Text="{Binding MeterText}" FontSize="11" FontWeight="Bold"
+                    <TextBlock Grid.Column="2" Text="{Binding MeterText}" FontSize="13" FontWeight="Bold"
                                VerticalAlignment="Center"
                                Foreground="{Binding MeterBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
                   </Grid>
 
-                  <TextBlock Grid.Row="2" Text="{Binding Name}" FontWeight="Bold" FontSize="14.5"
+                  <!-- ⚠️ نام درشت و پررنگ: گزارشِ صاحب ریپو «اسم خیلی کوچک است، محتوا دیده نمی‌شود» -->
+                  <TextBlock Grid.Row="2" Text="{Binding Name}" FontWeight="Black" FontSize="19"
                              Margin="11,8,11,0" TextTrimming="CharacterEllipsis" />
 
                   <TextBlock Grid.Row="3" Text="{Binding MoneyText}"
-                             FontWeight="ExtraBold" FontSize="23" Margin="11,7,11,0"
+                             FontWeight="ExtraBold" FontSize="26" Margin="11,6,11,0"
                              Foreground="{Binding StatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
 
                   <StackPanel Grid.Row="4" Margin="11,1,11,0" Spacing="5">
-                    <TextBlock Text="الباقی · افغانی" FontSize="11" FontWeight="SemiBold"
+                    <TextBlock Text="الباقی · افغانی" FontSize="13" FontWeight="SemiBold"
                                Foreground="{DynamicResource Pump.Muted}" />
                     <!-- دو نشانِ جدا سرِ جایشان‌اند: «اتمام تیل» و «اتمام پول»
                          از دو دفترِ کاملاً جدا می‌آیند و یکی‌شان نمی‌تواند
                          جایِ آن یکی را بگیرد. -->
                     <StackPanel Orientation="Horizontal" Spacing="9">
-                      <TextBlock Text="{Binding MoneyBadge}" FontSize="11" FontWeight="Bold"
+                      <TextBlock Text="{Binding MoneyBadge}" FontSize="13" FontWeight="Bold"
                                  IsVisible="{Binding HasMoneyBadge}"
                                  Foreground="{DynamicResource Pump.Danger}" />
-                      <TextBlock Text="{Binding FuelBadge}" FontSize="11" FontWeight="Bold"
+                      <TextBlock Text="{Binding FuelBadge}" FontSize="13" FontWeight="Bold"
                                  IsVisible="{Binding HasFuelBadge}"
                                  Foreground="{DynamicResource Pump.Danger}" />
                     </StackPanel>
@@ -140,10 +137,10 @@
                     <Border Classes="card-rule" Margin="11,0" />
                     <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="11,8,7,9">
                       <TextBlock Grid.Column="0" Text="{Binding PetrolText, StringFormat=⛽ {0}}"
-                                 FontWeight="Bold" FontSize="12"
+                                 FontWeight="Bold" FontSize="13.5"
                                  Foreground="{DynamicResource Pump.Muted}" />
                       <TextBlock Grid.Column="1" Text="{Binding DieselText, StringFormat=🟤 {0}}"
-                                 FontWeight="Bold" FontSize="12" Margin="12,0,0,0"
+                                 FontWeight="Bold" FontSize="13.5" Margin="12,0,0,0"
                                  Foreground="{DynamicResource Pump.Muted}" />
                       <Button Grid.Column="3" Classes="qr-link" Content="کیوآر"
                               Command="{Binding $parent[ItemsRepeater].((vm:DebtSectionViewModel)DataContext).ShowCardQrCommand}"
