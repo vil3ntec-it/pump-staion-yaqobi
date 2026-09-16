@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Styling;
@@ -58,13 +60,71 @@ public static class ThemeManager
     /// </summary>
     private static int _slot = -1;
 
+    /// <summary>فرهنگِ تمِ فعلی — تا ‎TableStyle‎ خط‌ها را همان‌جا بنویسد، نه روی سرِ آن.</summary>
+    public static Avalonia.Controls.ResourceDictionary? Dictionary { get; private set; }
+
+    /// <summary>
+    /// ══ هر دو تم از اول داخلِ یک فرهنگ‌اند؛ تعویض فقط «گونه» را عوض می‌کند ═══
+    ///
+    /// با پنج سال داده و بیست صفحهٔ گرم‌شده در درخت، هر خبرِ «منابع عوض شد»
+    /// ۴۰۰ میلی‌ثانیه است. تا دیروز تعویضِ تم دو خبر بود: یکی برای گونهٔ
+    /// روشن/تیره و یکی برای نشستنِ فرهنگِ تازه. حالا فرهنگِ آبی و طلایی هر دو
+    /// از همان اول ساخته و زیرِ ‎ThemeDictionaries‎ (‎Light‎/‎Dark‎) یک‌بار ادغام
+    /// می‌شوند؛ تعویضِ تم تنها ‎RequestedThemeVariant‎ را عوض می‌کند — همان یک
+    /// خبری که به‌هرحال لازم بود.
+    ///
+    /// ⚠️ به همین خاطر «آبی = روشن» و «طلایی = تیره» یک قرارداد است، نه
+    /// تصادف: ‎PumpTheme.IsDark‎ می‌گوید هر تم زیرِ کدام گونه می‌نشیند و دو تم
+    /// با یک گونه نمی‌توانند هم‌زمان نصب باشند (تمِ سوم اضافه نکنید).
+    /// </summary>
+    private static readonly Dictionary<ThemeVariant, (PumpTheme Theme, Avalonia.Controls.ResourceDictionary Dict)> _installed = new();
+
+    /// <summary>فرهنگِ هر گونهٔ نصب‌شده با تمش — تا ‎TableStyle.Apply‎ روی هر دو بنویسد.</summary>
+    public static IEnumerable<(PumpTheme Theme, Avalonia.Controls.ResourceDictionary Dict)> Installed => _installed.Values;
+
+    private static ThemeVariant VariantOf(PumpTheme t) => t.IsDark ? ThemeVariant.Dark : ThemeVariant.Light;
+
     public static void Apply(PumpTheme t, Avalonia.Application? app = null)
     {
         app ??= Avalonia.Application.Current;
         if (app is null) return;
         Current = t;
 
-        // همه‌چیز در یک فرهنگِ تازه ساخته می‌شود و در پایان یک‌جا می‌نشیند
+        var variant = VariantOf(t);
+        var fresh = !_installed.TryGetValue(variant, out var have) || !ReferenceEquals(have.Theme, t);
+        if (fresh)
+        {
+            // تمِ این گونه هنوز ساخته نشده (یا تمِ دیگری با همین گونه خواسته
+            // شده — آزمون‌ها): همهٔ گونه‌ها یک‌جا از نو ساخته و یک‌بار ادغام
+            // می‌شوند. در کارِ عادی این فقط در راه‌اندازی رخ می‌دهد.
+            _installed[variant] = (t, Build(t));
+            foreach (var other in PumpTheme.All)
+                if (!_installed.ContainsKey(VariantOf(other)))
+                    _installed[VariantOf(other)] = (other, Build(other));
+
+            var container = new Avalonia.Controls.ResourceDictionary();
+            foreach (var (v, pair) in _installed) container.ThemeDictionaries[v] = pair.Dict;
+
+            // ⚠️ اول گونه، بعد فرهنگ: هر کدام یک خبر است و وقتی گونه پیش از
+            // فرهنگ عوض شود، خبرِ دوم روی فرهنگِ درست می‌نشیند و سومی لازم نیست.
+            app.RequestedThemeVariant = variant;
+            var merged = app.Resources.MergedDictionaries;
+            if (_slot >= 0 && _slot < merged.Count) merged[_slot] = container;
+            else { merged.Add(container); _slot = merged.Count - 1; }
+        }
+        else
+        {
+            // راهِ همیشگی: فقط گونه — یک خبر، نه دو تا
+            app.RequestedThemeVariant = variant;
+        }
+
+        Dictionary = _installed[variant].Dict;
+        Changed?.Invoke(t);
+    }
+
+    /// <summary>همهٔ کلیدهای یک تم در یک فرهنگِ تازه — بی هیچ خبری به درخت.</summary>
+    private static Avalonia.Controls.ResourceDictionary Build(PumpTheme t)
+    {
         var r = new Avalonia.Controls.ResourceDictionary();
 
         void Set(string key, object v) => r[key] = v;
@@ -172,12 +232,8 @@ public static class ThemeManager
         Set("Pump.AppBg", Vertical(t.AppBg));
         Set("Pump.AccentGrad", Gradient(t.AccentGrad, true));
 
-        // ── و حالا، یک‌بار ─────────────────────────────────────────────────
-        var merged = app.Resources.MergedDictionaries;
-        if (_slot >= 0 && _slot < merged.Count) merged[_slot] = r;
-        else { merged.Add(r); _slot = merged.Count - 1; }
-
-        app.RequestedThemeVariant = t.IsDark ? ThemeVariant.Dark : ThemeVariant.Light;
-        Changed?.Invoke(t);
+        // خط‌های جدول هم در همین فرهنگ — نه یک پاسِ جدا برای هر کدام
+        TableStyle.Fill(r, t);
+        return r;
     }
 }

@@ -166,6 +166,7 @@ public sealed partial class InvRateSectionViewModel : SectionViewModel
 
     protected override Task LoadAsync() => RefreshAsync();
     public override Task OnActivatedAsync() => RefreshAsync();
+    public override bool ActivationRepeatsLoad => true;
 
     public async Task RefreshAsync()
     {

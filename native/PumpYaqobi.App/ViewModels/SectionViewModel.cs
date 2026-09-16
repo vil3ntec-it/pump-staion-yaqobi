@@ -206,10 +206,11 @@ public abstract partial class SectionViewModel : ObservableObject
     [ObservableProperty] private bool _isLoaded;
     [ObservableProperty] private bool _isBusy;
 
-    /// <summary>بارِ اولِ داده — فقط یک‌بار، همان لحظه‌ای که کاربر واقعاً وارد بخش شد.</summary>
-    public async Task EnsureLoadedAsync()
+    /// <summary>بارِ اولِ داده — فقط یک‌بار، همان لحظه‌ای که کاربر واقعاً وارد بخش شد.
+    /// ‎true‎ یعنی همین حالا خوانده شد (نه این‌که از قبل خوانده بود).</summary>
+    public async Task<bool> EnsureLoadedAsync()
     {
-        if (IsLoaded) return;
+        if (IsLoaded) return false;
         IsBusy = true;
         try
         {
@@ -220,7 +221,19 @@ public abstract partial class SectionViewModel : ObservableObject
             IsLoaded = true;
         }
         finally { IsBusy = false; }
+        return true;
     }
+
+    /// <summary>
+    /// ‎true‎ یعنی ‎OnActivatedAsync‎ همان کارِ ‎LoadAsync‎ را می‌کند (هر دو
+    /// ‎RefreshAsync‎). ورود به بخش اول ‎EnsureLoadedAsync‎ و بعد
+    /// ‎OnActivatedAsync‎ را صدا می‌زند؛ اگر همین حالا خوانده شده باشد، دومی
+    /// همان داده را دوباره می‌خواند — با پنج سال داده، هر زیربخشِ سنگین دو
+    /// برابرِ لازم طول می‌کشید. ‎MainViewModel‎ با این پرچم دومی را رد می‌کند.
+    /// بخشی که در فعال‌سازی کارِ دیگری هم دارد (تاریخچه‌ها، قرض‌داران) روشنش
+    /// نمی‌کند.
+    /// </summary>
+    public virtual bool ActivationRepeatsLoad => false;
 
     protected virtual Task LoadAsync() => Task.CompletedTask;
 

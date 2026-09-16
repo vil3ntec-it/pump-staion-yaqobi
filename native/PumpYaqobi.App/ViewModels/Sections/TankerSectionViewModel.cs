@@ -114,6 +114,7 @@ public sealed partial class TankerSectionViewModel : SectionViewModel
     protected override Task LoadAsync() => RefreshAsync();
 
     public override Task OnActivatedAsync() => RefreshAsync();
+    public override bool ActivationRepeatsLoad => true;
 
     private async Task RefreshAsync()
     {

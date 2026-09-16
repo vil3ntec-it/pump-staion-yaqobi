@@ -283,9 +283,17 @@ public sealed class PriceLossService
         var key = Shamsi.Key(date);
         if (key == 0) return new RateOn(0m, "", false, true, false, "تاریخِ رسید ثبت نشده");
         var arr = fuel == FuelType.Diesel ? idx.Diesel : idx.Petrol;
-        for (var i = arr.Count - 1; i >= 0; i--)
-            if (arr[i].Key <= key)
-                return new RateOn(arr[i].Rate, arr[i].Date, arr[i].Key == key, false, false, "");
+        // ⚠️ جست‌وجوی دودویی، نه پیمایشِ خطی: پنج سال تاریخچهٔ روزانه × ده‌ها
+        // هزار رسید، خطی یک ثانیه می‌شد. فهرست از ‎BuildRateIndex‎ مرتب است و
+        // «آخرین رکورد با کلیدِ ≤ تاریخ» همان رکوردِ معتبرِ آن روز است.
+        var lo = 0; var hi = arr.Count - 1; var hit = -1;
+        while (lo <= hi)
+        {
+            var mid = (lo + hi) >> 1;
+            if (arr[mid].Key <= key) { hit = mid; lo = mid + 1; } else hi = mid - 1;
+        }
+        if (hit >= 0)
+            return new RateOn(arr[hit].Rate, arr[hit].Date, arr[hit].Key == key, false, false, "");
         // امروز نرخِ اتحادیهٔ همین لحظه، خودش رکوردِ همین تاریخ است
         var now = fuel == FuelType.Diesel ? idx.NowDiesel : idx.NowPetrol;
         if (key == idx.Today && now > 0m) return new RateOn(now, date, true, false, false, "");
@@ -362,13 +370,19 @@ public sealed class PriceLossService
             }
 
             // ب) رسیدهای سربرگ و فاکتورها — از قدیمی‌ترین رسید، روی قدیمی‌ترین قرضِ باقی‌مانده
+            // ⚠️ ‎first‎ روی اولین برداشتی می‌ایستد که هنوز باقی دارد: رسیدها از
+            // قدیمی به نو روی همان ترتیب می‌نشینند، پس ردیف‌های پیش از آن برای
+            // همیشه تسویه‌اند و هر رسید نباید از صفر دوباره از رویشان رد شود
+            // (با پانصد ردیف و صدها رسید، مربعی می‌شد).
+            var first = 0;
             foreach (var e in Receipts(acct, rows, money, ft))
             {
                 var pool = e.V;
                 Invoice? inv = e.InvId is { } id && ix.ById.TryGetValue(id, out var vv) ? vv : null;
                 var lockRate = inv is null ? 0m : inv.RateOnCreate ?? inv.PricePerLiter;
                 var invNo = inv?.InvoiceNumber ?? 0;
-                for (var n = 0; n < order.Count && pool > Eps; n++)
+                while (first < order.Count && !(outp[order[first]].Fuel - outp[order[first]].Settled > Eps)) first++;
+                for (var n = first; n < order.Count && pool > Eps; n++)
                 {
                     var x = outp[order[n]];
                     var left = x.Fuel - x.Settled;

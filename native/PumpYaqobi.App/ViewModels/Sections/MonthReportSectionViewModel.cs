@@ -70,6 +70,7 @@ public sealed partial class MonthReportSectionViewModel : SectionViewModel
     protected override Task LoadAsync() => ReloadSourceAsync();
 
     public override Task OnActivatedAsync() => ReloadSourceAsync();
+    public override bool ActivationRepeatsLoad => true;
 
     private async Task ReloadSourceAsync()
     {

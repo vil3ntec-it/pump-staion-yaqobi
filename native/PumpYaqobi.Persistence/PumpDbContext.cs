@@ -1,3 +1,4 @@
+using System.Threading;
 using Microsoft.EntityFrameworkCore;
 using PumpYaqobi.Domain.Entities;
 
@@ -489,11 +490,23 @@ public sealed class PumpDbContext : DbContext
     /// مهرِ زمان خودکار. هیچ سرویسی نباید یادش برود — پس این‌جا، در یک جا،
     /// برای همهٔ موجودیت‌ها انجام می‌شود.
     /// </summary>
-    public override int SaveChanges()
-    { Stamp(); return base.SaveChanges(); }
+    /// <summary>
+    /// ══ شمارهٔ نسخهٔ داده ═══════════════════════════════════════════════════
+    /// با هر ذخیره یکی بالا می‌رود. هر کاری که «اگر چیزی عوض نشده، دوباره
+    /// حساب نکن» می‌خواهد (نوارِ بالا، داشبورد، عکسِ زندهٔ سرور) همین را
+    /// نگاه می‌کند — نه این‌که هر بار همهٔ دفترها را از نو بخواند.
+    /// ⚠️ فقط نوشتن‌های EF را می‌بیند؛ نوشتنِ خام (‎ExecuteSql‎) باید خودش
+    /// <see cref="Bump"/> بزند. پشتیبان‌گیری (‎VACUUM INTO‎) چیزی را عوض نمی‌کند.
+    /// </summary>
+    public static long Version => Interlocked.Read(ref _version);
+    private static long _version = 1;
+    public static void Bump() => Interlocked.Increment(ref _version);
 
-    public override Task<int> SaveChangesAsync(CancellationToken ct = default)
-    { Stamp(); return base.SaveChangesAsync(ct); }
+    public override int SaveChanges()
+    { Stamp(); var n = base.SaveChanges(); Bump(); return n; }
+
+    public override async Task<int> SaveChangesAsync(CancellationToken ct = default)
+    { Stamp(); var n = await base.SaveChangesAsync(ct); Bump(); return n; }
 
     private void Stamp()
     {

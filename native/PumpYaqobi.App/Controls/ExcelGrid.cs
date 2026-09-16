@@ -352,7 +352,27 @@ public class ExcelGrid : DataGrid
         _watched = ItemsSource as System.Collections.Specialized.INotifyCollectionChanged;
         if (_watched is not null) _watched.CollectionChanged += OnRowsChanged;
         _shown = 0;
+        FixRowHeaderWidth();
         InvalidateMeasure();
+    }
+
+    /// <summary>
+    /// ══ پهنای ستونِ «#» صریح است، نه خودکار ═══════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «تعویضِ تم خط‌ها را کج می‌کرد — از وسطِ کادر به چپ یا
+    /// راست می‌آمدند.» سنجشِ ‎themeflip‎ ریشه‌اش را نشان داد: با ‎RowHeaderWidth‎ی
+    /// خودکار، ‎DataGrid‎ پهنای سرستونِ ردیف را از خودِ سرستون‌ها می‌گیرد و در
+    /// چیدمانِ اول آن را صفر می‌شمارد (۴۲ پیکسلِ خالی به ستونِ پُرکننده می‌رفت)؛
+    /// اولین بی‌اعتبارسازیِ بزرگ — تعویضِ تم — دوباره می‌شمرد، ۴۲ می‌شد و همهٔ
+    /// خط‌های عمودی ۴۲ پیکسل جابه‌جا می‌شدند. پهنای صریح در هر دو حال یکی است.
+    /// عدد از شمارِ ردیف‌ها درمی‌آید تا ۶۴٬۰۰۰ هم جا شود.
+    /// </summary>
+    private void FixRowHeaderWidth()
+    {
+        if (!RowNumbers) return;
+        var digits = Math.Max(2, RowCount().ToString().Length);
+        var w = 26 + 8 * digits;                       // دو رقم ⇒ همان ۴۲ی همیشگی
+        if (double.IsNaN(RowHeaderWidth) || Math.Abs(RowHeaderWidth - w) > 0.5) RowHeaderWidth = w;
     }
 
     private void OnRowsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -361,7 +381,57 @@ public class ExcelGrid : DataGrid
         // وگرنه ‎_shown‎ی ماهِ قبل می‌ماند و کلِ ماهِ تازه در یک پاس ساخته می‌شد.
         if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset
             || RowCount() < _shown) _shown = 0;
+        FixRowHeaderWidth();
         InvalidateMeasure();
+    }
+
+    /// <summary>
+    /// ══ رشد فقط تا جایی که دیده می‌شود ═══════════════════════════════════════
+    ///
+    /// سنجشِ «پنج سال داده» (‎years‎): فهرست‌های گزارشی با ۶۰۰ ردیف (قرض‌های
+    /// کهنه، مدتِ عضویت، جمعِ رسیدها) شش تا هشت ثانیه CPU می‌خوردند فقط برای
+    /// ساختنِ ردیف‌هایی که کاربر شاید هیچ‌وقت تا آن‌جا نلغزد — و همان CPU،
+    /// تعویضِ تم را هم چهارده ثانیه می‌کرد (هر ردیفِ زنده ده‌ها منبعِ پویا دارد).
+    ///
+    /// حالا جدول تا <see cref="Lookahead"/> صفحه پایین‌ترِ دیدِ کاربر بلند
+    /// می‌شود و بس؛ همین که صفحه بلغزد، تکهٔ بعدی می‌آید — پیش از آن‌که کاربر
+    /// به آن برسد. «سقفِ زیرِ جدول» همچنان نیست: بلندیِ جدول با هر تکه بیشتر
+    /// می‌شود و اسکرول مالِ کلِ صفحه است.
+    /// </summary>
+    private const double Lookahead = 1.5;
+
+    private bool _pageHooked;
+
+    /// <summary>آیا پایینِ ‎show‎ ردیفِ ساخته‌شده نزدیکِ دیدِ کاربر است.</summary>
+    private bool NearViewport(int show)
+    {
+        var page = Page;
+        if (page is null || page.Viewport.Height <= 0) return true;
+        var top = this.TranslatePoint(new Point(0, 0), page)?.Y;
+        if (top is null) return true;
+        return top.Value + WantedHeight(show) <= page.Viewport.Height * (1 + Lookahead);
+    }
+
+    private void HookPage()
+    {
+        if (_pageHooked || Page is not { } page) return;
+        _pageHooked = true;
+        page.ScrollChanged += OnPageScroll;
+    }
+
+    private void OnPageScroll(object? sender, ScrollChangedEventArgs e)
+    {
+        var rows = RowCount();
+        if (!_spread || _growQueued || rows < 0 || rows > GrowRowLimit || _shown >= rows) return;
+        if (NearViewport(Math.Max(_shown, 1))) QueueGrow(rows, Math.Max(_shown, 1));
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        if (_pageHooked && _page is { } page) page.ScrollChanged -= OnPageScroll;
+        _pageHooked = false;
+        _page = null;
     }
 
     private void QueueGrow(int rows, int show)
@@ -399,7 +469,11 @@ public class ExcelGrid : DataGrid
 
         // رشدِ تدریجی: این پاس فقط تا ‎show‎ ردیف بلند می‌شود؛ بقیه فریمِ بعد.
         var show = Math.Min(rows, Math.Max(_shown, FirstChunk(screen)));
-        if (show < rows) QueueGrow(rows, show);
+        // ⚠️ و فقط اگر آن «بعد» به چشم بیاید (شرحِ ‎NearViewport‎): ردیفی که
+        // دو صفحه پایین‌تر از دیدِ کاربر است تا او به آن نزدیک نشده ساخته
+        // نمی‌شود — همان چیزی که صفحهٔ سیصدردیفی را از چند ثانیه CPU به چند
+        // ده میلی‌ثانیه رساند. با لغزشِ صفحه، ‎OnPageScroll‎ ادامه می‌دهد.
+        if (show < rows) { if (NearViewport(show)) QueueGrow(rows, show); else HookPage(); }
         else _shown = rows;
 
         var want = WantedHeight(show);
@@ -1108,6 +1182,7 @@ public class ExcelGrid : DataGrid
         if (RowNumbers)
         {
             HeadersVisibility = DataGridHeadersVisibility.All;
+            FixRowHeaderWidth();
             LoadingRow -= OnNumberRow;
             LoadingRow += OnNumberRow;
         }

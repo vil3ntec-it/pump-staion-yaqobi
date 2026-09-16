@@ -243,10 +243,21 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
 
     /// <summary>داشبورد خلاصهٔ بقیهٔ بخش‌هاست، پس هر بارِ ورود از نو خوانده می‌شود.</summary>
     public override Task OnActivatedAsync() => RefreshAsync();
+    public override bool ActivationRepeatsLoad => true;
 
     /// <summary>خواندنِ دوبارهٔ همهٔ منبع‌ها و رسمِ صفحه.</summary>
+    /// <summary>نسخهٔ داده و روزی که این عددها برایش حساب شده‌اند.</summary>
+    private (long Version, string Day) _shownFor = (-1, "");
+
     public async Task RefreshAsync()
     {
+        // «بازگشت به صفحهٔ اصلی» با پنج سال داده ۱٫۴ ثانیه بود — هر بار همهٔ
+        // گزارش‌ها و دو سال مصرف از نو. تا چیزی ذخیره نشده و روز عوض نشده،
+        // همان عددهای قبلی درست‌اند.
+        var stamp = (PumpYaqobi.Persistence.PumpDbContext.Version, Shamsi.Today());
+        if (stamp == _shownFor) return;
+        _shownFor = stamp;
+
         var petrolReports = await _host.StorageData.ReportsAsync(FuelType.Petrol);
         var dieselReports = await _host.StorageData.ReportsAsync(FuelType.Diesel);
 

@@ -101,6 +101,7 @@ public sealed partial class DebtSummarySectionViewModel : SectionViewModel
     protected override Task LoadAsync() => RefreshAsync();
 
     public override Task OnActivatedAsync() => RefreshAsync();
+    public override bool ActivationRepeatsLoad => true;
 
     private async Task RefreshAsync()
     {
@@ -151,6 +152,7 @@ public sealed partial class MembershipSectionViewModel : SectionViewModel
     protected override Task LoadAsync() => RefreshAsync();
 
     public override Task OnActivatedAsync() => RefreshAsync();
+    public override bool ActivationRepeatsLoad => true;
 
     private async Task RefreshAsync()
     {

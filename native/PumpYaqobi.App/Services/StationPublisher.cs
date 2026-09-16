@@ -59,6 +59,7 @@ public sealed class StationPublisher : IAsyncDisposable
     private readonly Func<string> _stationCode;
     private CancellationTokenSource? _loop;
     private string _lastHash = "";
+    private long _lastVersion = -1;
     private DateTime _lastEnrollTry = DateTime.MinValue;
     private bool _inboxWatched;
 
@@ -99,7 +100,14 @@ public sealed class StationPublisher : IAsyncDisposable
             // ⚠️ بی سرورِ خانگی و بی ابر، عکس گرفتن فقط CPU می‌سوزاند.
             if (!ready && !CloudActivated) return false;
 
+            // ⚠️ و بی تغییر هم: با پنج سال داده، ساختنِ عکس یک ثانیه است و هر
+            // بیست ثانیه یک‌بار یعنی پنج درصدِ CPU برای همیشه («کامپیوتر داغ»).
+            // شمارهٔ نسخهٔ داده می‌گوید از دورِ قبل چیزی ذخیره شده یا نه.
+            var version = PumpYaqobi.Persistence.PumpDbContext.Version;
+            if (!force && version == _lastVersion && _accts.Pending == 0) return false;
+
             var snap = await StationSnapshot.BuildAsync(_host, ct);
+            _lastVersion = version;
 
             // ⚠️ ‎seq‎ هر بار عوض می‌شود، پس در محکِ «چیزی عوض شده؟» نمی‌آید —
             // وگرنه هر بیست ثانیه یک‌بار کلِ داده بیخود فرستاده می‌شد.

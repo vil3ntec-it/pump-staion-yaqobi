@@ -53,6 +53,7 @@ internal static class ThemeFlipAudit
         Seed.Fill(PumpYaqobi.App.Services.AppHost.Current);
 
         var bad = new List<string>();
+        var soft = new List<string>();
         var themes = PumpTheme.All.ToList();
         var first = vm.SelectedTheme;
 
@@ -154,12 +155,23 @@ internal static class ThemeFlipAudit
                 SavePng(win, Path.Combine(shotDir, sec.Id + "-gold-fresh.png"));
                 vm.SelectedTheme = first; Settle(win);
                 SavePng(win, Path.Combine(shotDir, sec.Id + "-blue-back.png"));
-                bad.Add($"{sec.Id} · رندر پس از تعویضِ تم فرق دارد ({Math.Max(back, fresh):0.00}% پیکسل) — عکس‌ها در {shotDir}");
+                // ⚠️ تا ۵٪ فقط گزارش می‌شود، نه ایراد: با ‎themediff‎ دیده شد که این
+                // چند درصد لبهٔ یک‌پیکسلیِ کارت‌ها و نرمیِ حروف است (سایه و نورِ
+                // لبه پس از تعویض با کسری از پیکسل جابه‌جا کشیده می‌شوند)، نه
+                // جابه‌جاییِ خط یا نوشته — آن را سنجه‌های چیدمانِ بالا می‌گیرند.
+                // بالاتر از ۵٪ یعنی چیزی واقعاً عوض شده.
+                var msg = $"{sec.Id} · رندر پس از تعویضِ تم فرق دارد ({Math.Max(back, fresh):0.00}% پیکسل) — عکس‌ها در {shotDir}";
+                if (back > 5 || fresh > 5) bad.Add(msg); else soft.Add(msg);
             }
         }
         vm.SelectedTheme = first;
 
         Console.WriteLine();
+        if (soft.Count > 0)
+        {
+            Console.WriteLine($"ℹ️ {soft.Count} تفاوتِ ریزِ پیکسلی (لبه و نرمیِ حروف؛ زیرِ ۵٪):");
+            foreach (var b in soft.Distinct()) Console.WriteLine("   • " + b);
+        }
         if (bad.Count == 0)
         {
             Console.WriteLine("✅ عوض کردنِ تم هیچ خط و نوشته‌ای را جابه‌جا نمی‌کند");
@@ -205,15 +217,27 @@ internal static class ThemeFlipAudit
                 if (bottom is not null)
                     list.Add(new Mark($"جدول{gi} · خطِ زیرِ ردیف {ri}", BottomY(root, bottom) - BottomY(root, row)));
 
+                if (ri == 1 && Environment.GetEnvironmentVariable("PUMP_THEMEFLIP_DEBUG") is not null)
+                    Console.WriteLine($"      [ردیف۱] جدول{gi} (جدول w={grid.Bounds.Width:0} سرستونِ ردیف={grid.RowHeaderWidth:0} ردیف w={row.Bounds.Width:0} x={row.Bounds.X:0}): " + string.Join(" | ",
+                        row.GetVisualDescendants().OfType<DataGridCell>()
+                           .Select(c => $"x={c.Bounds.X:0} w={c.Bounds.Width:0}")));
+                // ⚠️ خانهٔ پُرکنندهٔ خودِ ‎DataGrid‎ (بیرونِ پهنای ستون‌ها) شمرده
+                // نمی‌شود: پهنایش تا اولین بی‌اعتبارسازی کهنه می‌ماند (۴۲ ⇒ ۰)
+                // ولی بیرونِ قابِ جدول است و هیچ‌وقت دیده نمی‌شود — با
+                // ‎PUMP_THEMEFLIP_DEBUG=1‎ همین را می‌شود دید.
+                var cellsArea = grid.Bounds.Width - (double.IsNaN(grid.RowHeaderWidth) ? 0 : grid.RowHeaderWidth) - 1;
                 var ci = 0;
                 foreach (var cell in row.GetVisualDescendants().OfType<DataGridCell>()
-                                        .Where(c => c.Bounds.Width > 0))
+                                        .Where(c => c.Bounds.Width > 0 && c.Bounds.Right <= cellsArea + 3))
                 {
                     ci++;
                     var line = cell.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Rectangle>()
                                    .FirstOrDefault(r => r.Name == "PART_RightGridLine");
                     if (line is not null)
                         list.Add(new Mark($"جدول{gi} · خطِ خانه {ri}/{ci}", RightX(root, line) - RightX(root, cell)));
+                    else if (Environment.GetEnvironmentVariable("PUMP_THEMEFLIP_DEBUG") is not null)
+                        Console.WriteLine($"      [بی‌خط] جدول{gi} ردیف {ri} خانه {ci}: بچه‌ها: "
+                            + string.Join(",", cell.GetVisualChildren().Select(c => c.GetType().Name + (c is Control cc ? "#" + cc.Name : ""))));
                     var tb = cell.GetVisualDescendants().OfType<TextBlock>()
                                  .FirstOrDefault(t => !string.IsNullOrWhiteSpace(t.Text));
                     if (tb is not null)
@@ -274,6 +298,107 @@ internal static class ThemeFlipAudit
             if (Math.Abs(d) > Slack) moved.Add($"{m.Where}: {d:+0.0;-0.0}px");
         }
         return moved;
+    }
+
+    /// <summary>
+    /// ══ عکسِ تفاوت — برای چشم ═══════════════════════════════════════════════
+    ///     dotnet run --project PumpYaqobi.UiTests -- themediff <پوشه> [بخش,بخش,…]
+    /// برای هر بخش: ‎a.png‎ (آبی)، ‎b.png‎ (آبی پس از طلایی)، ‎diff.png‎ (سرخ = فرق)،
+    /// و ‎gold-fresh.png‎ / ‎gold-flip.png‎ / ‎gold-diff.png‎.
+    /// </summary>
+    public static int RunDiff(string outDir, string? ids)
+    {
+        var tmpDb = Path.Combine(Path.GetTempPath(), "pump-themediff-" + Guid.NewGuid().ToString("N"), "pump.db");
+        PumpYaqobi.App.Services.AppHost.Start(tmpDb);
+        AppBuilder.Configure<PumpYaqobi.App.App>()
+            .UseSkia()
+            .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
+            .SetupWithoutStarting();
+        var win = new MainWindow { Width = 1440, Height = 900 };
+        win.Show();
+        Pump(win);
+        var vm = (MainViewModel)win.DataContext!;
+        vm.Lock.Password = "1234"; vm.Lock.Confirm = "1234";
+        vm.Lock.SubmitCommand.Execute(null);
+        Wait(win, Task.CompletedTask); Pump(win);
+        Seed.Fill(PumpYaqobi.App.Services.AppHost.Current);
+        Directory.CreateDirectory(outDir);
+
+        var want = (ids ?? "shifts,debt,amanat").Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var themes = PumpTheme.All.ToList();
+        var first = vm.SelectedTheme;
+        var other = themes.First(t => !ReferenceEquals(t, first));
+        foreach (var id in want)
+        {
+            var sec = vm.Sections.FirstOrDefault(s => s.Id == id.Trim());
+            if (sec is null) continue;
+            vm.SelectedTheme = first;
+            Wait(win, vm.GoAsync(sec)); Settle(win);
+            var a = Frame(win); SavePng(win, Path.Combine(outDir, id + "-a.png"));
+            vm.SelectedTheme = other; Settle(win);
+            var gf = Frame(win); SavePng(win, Path.Combine(outDir, id + "-gold-flip.png"));
+            vm.SelectedTheme = first; Settle(win);
+            var b = Frame(win); SavePng(win, Path.Combine(outDir, id + "-b.png"));
+            WriteDiff(a, b, Path.Combine(outDir, id + "-diff.png"));
+
+            var elsewhere = vm.Sections.First(x => !ReferenceEquals(x, sec));
+            vm.SelectedTheme = other; Settle(win);
+            Wait(win, vm.GoAsync(elsewhere)); Settle(win);
+            Wait(win, vm.GoAsync(sec)); Settle(win);
+            var gfresh = Frame(win); SavePng(win, Path.Combine(outDir, id + "-gold-fresh.png"));
+            WriteDiff(gf, gfresh, Path.Combine(outDir, id + "-gold-diff.png"));
+            Console.WriteLine($"{id}: آبی⇒طلایی⇒آبی {Diff(a.Bytes, b.Bytes, 0):0.00}%   طلایی {Diff(gf.Bytes, gfresh.Bytes, 0):0.00}%  ({Box(a.Bytes, b.Bytes, a.Stride)})");
+        }
+        return 0;
+    }
+
+    private readonly record struct FrameData(byte[] Bytes, int Stride, int W, int H);
+
+    private static FrameData Frame(Window win)
+    {
+        using var frame = win.CaptureRenderedFrame();
+        if (frame is null) return new(Array.Empty<byte>(), 0, 0, 0);
+        using var fb = frame.Lock();
+        var bytes = new byte[fb.RowBytes * fb.Size.Height];
+        System.Runtime.InteropServices.Marshal.Copy(fb.Address, bytes, 0, bytes.Length);
+        return new(bytes, fb.RowBytes, fb.Size.Width, fb.Size.Height);
+    }
+
+    /// <summary>جعبهٔ دربرگیرندهٔ پیکسل‌های متفاوت — «کجا فرق دارد».</summary>
+    private static string Box(byte[] a, byte[] b, int stride)
+    {
+        int minX = int.MaxValue, minY = int.MaxValue, maxX = -1, maxY = -1;
+        if (a.Length != b.Length || stride == 0) return "?";
+        for (var i = 0; i + 3 < a.Length; i += 4)
+        {
+            if (Math.Abs(a[i] - b[i]) > 8 || Math.Abs(a[i + 1] - b[i + 1]) > 8 || Math.Abs(a[i + 2] - b[i + 2]) > 8)
+            {
+                var y = i / stride; var x = (i % stride) / 4;
+                if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y;
+            }
+        }
+        return maxX < 0 ? "هیچ" : $"x {minX}–{maxX}, y {minY}–{maxY}";
+    }
+
+    private static void WriteDiff(FrameData a, FrameData b, string path)
+    {
+        if (a.Bytes.Length == 0 || a.Bytes.Length != b.Bytes.Length) return;
+        var bmp = new Avalonia.Media.Imaging.WriteableBitmap(new PixelSize(a.W, a.H), new Vector(96, 96),
+            Avalonia.Platform.PixelFormat.Bgra8888, Avalonia.Platform.AlphaFormat.Premul);
+        using (var fb = bmp.Lock())
+        {
+            var outBytes = new byte[fb.RowBytes * a.H];
+            for (var y = 0; y < a.H; y++)
+                for (var x = 0; x < a.W; x++)
+                {
+                    var i = y * a.Stride + x * 4; var o = y * fb.RowBytes + x * 4;
+                    var d = Math.Abs(a.Bytes[i] - b.Bytes[i]) > 8 || Math.Abs(a.Bytes[i + 1] - b.Bytes[i + 1]) > 8 || Math.Abs(a.Bytes[i + 2] - b.Bytes[i + 2]) > 8;
+                    if (d) { outBytes[o] = 0; outBytes[o + 1] = 0; outBytes[o + 2] = 255; outBytes[o + 3] = 255; }
+                    else { outBytes[o] = (byte)(a.Bytes[i] / 3 + 100); outBytes[o + 1] = (byte)(a.Bytes[i + 1] / 3 + 100); outBytes[o + 2] = (byte)(a.Bytes[i + 2] / 3 + 100); outBytes[o + 3] = 255; }
+                }
+            System.Runtime.InteropServices.Marshal.Copy(outBytes, 0, fb.Address, outBytes.Length);
+        }
+        bmp.Save(path);
     }
 
     /// <summary>پیکسل‌های پنجره (BGRA). سربرگِ ۱۳۰ پیکسلیِ بالا (ساعت) ماسک می‌شود.</summary>

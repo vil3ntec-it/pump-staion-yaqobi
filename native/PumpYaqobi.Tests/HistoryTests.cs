@@ -198,6 +198,46 @@ public class HistoryTests : IDisposable
         Assert.Equal(0, cards.Single(c => c.Key == "waraq").Count);
     }
 
+    /// <summary>
+    /// کارت‌ها دیگر از ‎FeedAsync‎ ساخته نمی‌شوند (با پنج سال داده ۳٫۵ ثانیه
+    /// بود)، پس باید ثابت شود که شمار و تازه‌ترین تاریخِ هر کارت با خودِ
+    /// فهرست یکی است — از جمله ردیف‌های خالی که فهرست رد می‌کند و سطرِ
+    /// صرافی‌ای که دو ردیف می‌دهد.
+    /// </summary>
+    [Fact]
+    public async Task TheCardsMatchTheFeed()
+    {
+        var (h, dbf) = Host();
+        await using (var db = dbf.Create())
+        {
+            db.SafeEntries.Add(new SafeEntry { DateShamsi = "1405/06/10", DateKey = 14050610, Amount = 0m, Title = " " }); // خالی ⇒ رد
+            db.SafeEntries.Add(new SafeEntry { DateShamsi = "1405/06/11", DateKey = 14050611, Amount = 500m });
+            db.ExchangeRows.Add(new ExchangeRow { DateShamsi = "1405/06/12", DateKey = 14050612, Amount = 700m, Rate = 70m, Bardagi = 3m }); // دو ردیف
+            db.ExchangeRows.Add(new ExchangeRow { DateShamsi = "1405/06/13", DateKey = 14050613 });                                           // هیچ
+            db.DebtQuickReceipts.Add(new DebtQuickReceipt { LegacyId = "q1", DateShamsi = "1405/06/14", DateKey = 14050614, Account = "" });                    // رد
+            db.DebtQuickReceipts.Add(new DebtQuickReceipt { LegacyId = "q2", DateShamsi = "1405/06/15", DateKey = 14050615, Amount = 10m });
+            db.RetailRows.Add(new RetailRow { DateShamsi = "1405/06/16", DateKey = 14050616, Liters = 5m, PricePerLiter = 60m });
+            db.RetailRows.Add(new RetailRow { DateShamsi = "1405/06/17", DateKey = 14050617 });                                                 // رد
+            db.DebtRows.Add(new DebtRow { DateShamsi = "1405/06/18", DateKey = 14050618, Liters = 4m, PricePerLiter = 60m });
+            db.DebtRows.Add(new DebtRow { DateShamsi = "1405/06/19", DateKey = 14050619 });                                                    // رد
+            db.Expenses.Add(new Expense { DateShamsi = "1405/06/01", DateKey = 14050601, Title = "برق", Amount = 900m });
+            db.Reports.Add(new ParchaReport { DateShamsi = "1405/06/20", DateKey = 14050620, DayShift = new ShiftData { Sale = 1m } });
+            await db.SaveChangesAsync();
+        }
+
+        var cards = await h.CardsAsync();
+        foreach (var (key, _) in HistoryService.Kinds)
+        {
+            var feed = await h.FeedAsync(key);
+            var card = cards.Single(c => c.Key == key);
+            Assert.Equal(feed.Count, card.Count);
+            Assert.Equal(feed.Count > 0 ? feed[0].DateShamsi : "", card.LatestDate);
+        }
+        Assert.Equal(1, cards.Single(c => c.Key == "safe").Count);
+        Assert.Equal(2, cards.Single(c => c.Key == "sarrafi").Count);
+        Assert.Equal(1, cards.Single(c => c.Key == "shift").Count);
+    }
+
     /// <summary>گروهِ ماه از کلیدِ تاریخ می‌آید — خوراکِ کشویِ «سال و ماه».</summary>
     [Fact]
     public void MonthKeyComesFromTheDateKey()

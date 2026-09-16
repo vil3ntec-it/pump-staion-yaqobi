@@ -425,8 +425,9 @@ public sealed partial class MainViewModel : ObservableObject
         SyncContent();
         _settings.LastSection = s.Id;
         _settings.Save();
-        await s.EnsureLoadedAsync();
-        await s.OnActivatedAsync();
+        // ⚠️ اگر همین حالا خوانده شد و فعال‌سازی همان خواندن است، دوباره نه
+        var fresh = await s.EnsureLoadedAsync();
+        if (!(fresh && s.ActivationRepeatsLoad)) await s.OnActivatedAsync();
         QueueBannerRefresh();
     }
 
@@ -460,8 +461,11 @@ public sealed partial class MainViewModel : ObservableObject
     {
         if (e.PropertyName != nameof(SectionViewModel.OpenSub)) return;
         SyncContent();
-        if (Current?.OpenSub is { } sub) _ = OpenSubAsync(sub);
+        if (Current?.OpenSub is { } sub) LastSubOpen = OpenSubAsync(sub);
     }
+
+    /// <summary>آخرین باز شدنِ زیربخش — تا سنجش‌ها بتوانند منتظرِ همان بمانند، نه دوباره خودشان بار کنند.</summary>
+    public Task? LastSubOpen { get; private set; }
 
     /// <summary>بخشی که همین حالا محتوا است — تا باز و بسته شدنِ حسابش را بشنویم.</summary>
     private SectionViewModel? _watchedContent;
@@ -476,8 +480,8 @@ public sealed partial class MainViewModel : ObservableObject
     {
         try
         {
-            await sub.EnsureLoadedAsync();
-            await sub.OnActivatedAsync();
+            var fresh = await sub.EnsureLoadedAsync();
+            if (!(fresh && sub.ActivationRepeatsLoad)) await sub.OnActivatedAsync();
         }
         catch (Exception ex) { AppHost.Current.Toast("باز نشد: " + ex.Message, ToastKind.Error); }
     }
@@ -587,10 +591,21 @@ public sealed partial class MainViewModel : ObservableObject
     /// چهار عددِ نوارِ بالا — همان ‎updateBanner‎ِ نسخهٔ وب. فقط خواندنی است و
     /// هر بار که کاربر بخشی را باز می‌کند تازه می‌شود.
     /// </summary>
+    /// <summary>نسخهٔ داده‌ای که نوار با آن حساب شده — تا با هر جابه‌جایی از نو نخواند.</summary>
+    private long _bannerVersion = -1;
+
     public async Task RefreshBannerAsync()
     {
         var host = AppHost.Current;
         var calc = new DashboardService();
+
+        // ⚠️ سنجشِ «پنج سال داده»: این تابع با هر بار عوض کردنِ بخش همهٔ
+        // ردیف‌های شرکت‌ها و همهٔ گزارش‌های پارچه را می‌خواند — یک ثانیه روی
+        // **هر** جابه‌جایی، حتی به بخشی خالی مثلِ دوربین‌ها. تا چیزی ذخیره
+        // نشده، عددها همان‌اند.
+        var version = PumpYaqobi.Persistence.PumpDbContext.Version;
+        if (version == _bannerVersion) return;
+        _bannerVersion = version;
 
         // ۱) الباقیِ شرکت‌های تیل
         var companies = await host.Companies.ListAsync();

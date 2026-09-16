@@ -82,17 +82,152 @@ public sealed class HistoryService
         _company = company; _amanat = amanat; _amanatData = amanatData;
     }
 
-    /// <summary>شمار و تازه‌ترین تاریخِ هر بخش — خوراکِ کارت‌های صفحهٔ اول.</summary>
+    /// <summary>
+    /// شمار و تازه‌ترین تاریخِ هر بخش — خوراکِ کارت‌های صفحهٔ اول.
+    ///
+    /// ⚠️ این‌جا ‎FeedAsync‎ صدا زده **نمی‌شود**: آن یکی هر ردیفِ هر دفتر را با
+    /// همهٔ ستون‌ها و ‎Include‎ها و متن‌سازی می‌خواند و با پنج سال داده ۳٫۵ ثانیه
+    /// طول می‌کشید — فقط برای این‌که سیزده عدد روی کارت بنشیند. هر بخش این‌جا
+    /// تنها ستون‌هایی را می‌خواند که قاعدهٔ «این ردیف شمرده می‌شود؟»ِ همان
+    /// دفتر به آن نیاز دارد، پس عددِ کارت با شمارِ ردیف‌های ‎FeedAsync‎ یکی
+    /// می‌ماند (آزمونِ ‎TheCardsMatchTheFeed‎).
+    /// </summary>
     public async Task<List<HistoryKind>> CardsAsync(CancellationToken ct = default)
     {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+
         var all = new List<HistoryKind>(Kinds.Length);
         foreach (var (key, label) in Kinds)
         {
-            var rows = await FeedAsync(key, ct);
-            all.Add(new HistoryKind(key, label, rows.Count,
-                                    rows.Count > 0 ? rows[0].DateShamsi : ""));
+            var stamps = key switch
+            {
+                "safe"    => await SafeStampsAsync(db, ct),
+                "amanat"  => await AmanatStampsAsync(db, ct),
+                "sarrafi" => await ExchangeStampsAsync(db, ct),
+                "storage" => await Stamps(db.FuelPurchases.AsNoTracking().Select(e => new Stamp(e.DateShamsi, e.DateKey)), ct),
+                "debt"    => await DebtStampsAsync(db, ct),
+                "rasid"   => await Stamps(db.DebtQuickReceipts.AsNoTracking()
+                                 .Where(r => r.Amount != 0m || (r.Account != null && r.Account.Trim() != ""))
+                                 .Select(r => new Stamp(r.DateShamsi, r.DateKey)), ct),
+                "chakana" => await RetailStampsAsync(db, ct),
+                "company" => await CompanyStampsAsync(db, ct),
+                "expense" => await Stamps(db.Expenses.AsNoTracking().Select(e => new Stamp(e.DateShamsi, e.DateKey)), ct),
+                "waraq"   => await Stamps(db.WaraqEntries.AsNoTracking().Select(w => new Stamp(w.DateShamsi, w.DateKey)), ct),
+                "invoice" => await Stamps(db.Invoices.AsNoTracking().Select(v => new Stamp(v.DateShamsi, v.DateKey)), ct),
+                "shift"   => await ShiftStampsAsync(db, ct),
+                "attend"  => await Stamps(db.Attendance.AsNoTracking().Select(a => new Stamp(a.DateShamsi, a.DateKey)), ct),
+                _         => new List<Stamp>(),
+            };
+            all.Add(Card(key, label, stamps));
         }
         return all;
+    }
+
+    /// <summary>تاریخِ یک ردیفِ شمرده‌شده — تنها چیزی که کارت لازم دارد.</summary>
+    private readonly record struct Stamp(string? DateShamsi, int DateKey);
+
+    private static async Task<List<Stamp>> Stamps(IQueryable<Stamp> q, CancellationToken ct)
+        => await q.ToListAsync(ct);
+
+    /// <summary>همان «تازه به کهنه»ِ ‎FeedAsync‎: تازه‌ترین تاریخ، اولین ردیف با بزرگ‌ترین کلید.</summary>
+    private static HistoryKind Card(string key, string label, List<Stamp> stamps)
+    {
+        if (stamps.Count == 0) return new HistoryKind(key, label, 0, "");
+        var best = stamps[0];
+        foreach (var s in stamps) if (s.DateKey > best.DateKey) best = s;
+        return new HistoryKind(key, label, stamps.Count, best.DateShamsi ?? "");
+    }
+
+    private static Task<List<Stamp>> SafeStampsAsync(Persistence.PumpDbContext db, CancellationToken ct)
+        => Stamps(db.SafeEntries.AsNoTracking()
+            .Where(e => e.Amount != 0m || (e.Title != null && e.Title.Trim() != ""))
+            .Select(e => new Stamp(e.DateShamsi, e.DateKey)), ct);
+
+    /// <summary>‎RowCalc‎ لیتر را ‎Max(0, Liters)‎ می‌گیرد و صفر را رد می‌کند ⇒ فقط لیترِ مثبت.</summary>
+    private static Task<List<Stamp>> AmanatStampsAsync(Persistence.PumpDbContext db, CancellationToken ct)
+        => Stamps(db.AmanatRows.AsNoTracking()
+            .Where(r => r.Liters != null && r.Liters > 0m)
+            .Select(r => new Stamp(r.DateShamsi, r.DateKey)), ct);
+
+    private async Task<List<Stamp>> ExchangeStampsAsync(Persistence.PumpDbContext db, CancellationToken ct)
+    {
+        var rows = await db.ExchangeRows.AsNoTracking()
+            .Select(r => new { r.DateShamsi, r.DateKey, r.Amount, r.Rate, r.Bardagi, r.Description })
+            .ToListAsync(ct);
+        var list = new List<Stamp>(rows.Count);
+        foreach (var r in rows)
+        {
+            var usd = _exchange.ToUsd(new ExchangeRow { Amount = r.Amount, Rate = r.Rate });
+            if (usd == 0m && r.Bardagi == 0m && r.Amount == 0m && string.IsNullOrWhiteSpace(r.Description)) continue;
+            var st = new Stamp(r.DateShamsi, r.DateKey);
+            if (usd != 0m) list.Add(st);
+            if (r.Bardagi != 0m) list.Add(st);
+            if (usd == 0m && r.Bardagi == 0m && r.Amount != 0m) list.Add(st);
+        }
+        return list;
+    }
+
+    /// <summary>ضربِ اعشاری را به SQLite نمی‌دهیم (مبلغ‌ها متن‌اند)؛ همان قاعدهٔ ‎SumAsync‎.</summary>
+    private static async Task<List<Stamp>> DebtStampsAsync(Persistence.PumpDbContext db, CancellationToken ct)
+    {
+        var rows = await db.DebtRows.AsNoTracking()
+            .Select(r => new { r.DateShamsi, r.DateKey, r.ByMoney, r.Bardagi, r.Liters, r.PricePerLiter, r.Rasid })
+            .ToListAsync(ct);
+        var list = new List<Stamp>(rows.Count);
+        foreach (var r in rows)
+        {
+            var bardagi = r.ByMoney ? r.Bardagi : r.Liters * (r.PricePerLiter ?? 0m);
+            if (bardagi == 0m && r.Rasid == 0m && r.Liters == 0m) continue;
+            list.Add(new Stamp(r.DateShamsi, r.DateKey));
+        }
+        return list;
+    }
+
+    private async Task<List<Stamp>> RetailStampsAsync(Persistence.PumpDbContext db, CancellationToken ct)
+    {
+        var rows = await db.RetailRows.AsNoTracking()
+            .Select(e => new { e.DateShamsi, e.DateKey, e.ByMoney, e.Bardagi, e.Liters, e.PricePerLiter, e.Rasid, e.Name })
+            .ToListAsync(ct);
+        var list = new List<Stamp>(rows.Count);
+        foreach (var e in rows)
+        {
+            var bord = _retail.Bardagi(new RetailRow
+                { ByMoney = e.ByMoney, Bardagi = e.Bardagi, Liters = e.Liters, PricePerLiter = e.PricePerLiter });
+            if (bord == 0m && e.Rasid == 0m && e.Liters == 0m && string.IsNullOrWhiteSpace(e.Name)) continue;
+            list.Add(new Stamp(e.DateShamsi, e.DateKey));
+        }
+        return list;
+    }
+
+    private async Task<List<Stamp>> CompanyStampsAsync(Persistence.PumpDbContext db, CancellationToken ct)
+    {
+        var rows = await db.CompanyRows.AsNoTracking()
+            .Select(r => new { r.DateShamsi, r.DateKey, r.Ton, r.Kg, r.Usd, r.Poul })
+            .ToListAsync(ct);
+        var list = new List<Stamp>(rows.Count);
+        foreach (var r in rows)
+        {
+            var usd = _company.TotalUsd(new CompanyRow { Ton = r.Ton, Kg = r.Kg, Usd = r.Usd });
+            if (usd == 0m && r.Poul == 0m) continue;
+            list.Add(new Stamp(r.DateShamsi, r.DateKey));
+        }
+        return list;
+    }
+
+    /// <summary>هر گزارش تا دو ردیف: شیفتِ روز و شیفتِ شب، اگر باشند.</summary>
+    private static async Task<List<Stamp>> ShiftStampsAsync(Persistence.PumpDbContext db, CancellationToken ct)
+    {
+        var rows = await db.Reports.AsNoTracking()
+            .Select(r => new { r.DateShamsi, r.DateKey, Day = r.DayShiftId != null, Night = r.NightShiftId != null })
+            .ToListAsync(ct);
+        var list = new List<Stamp>(rows.Count * 2);
+        foreach (var r in rows)
+        {
+            if (r.Day) list.Add(new Stamp(r.DateShamsi, r.DateKey));
+            if (r.Night) list.Add(new Stamp(r.DateShamsi, r.DateKey));
+        }
+        return list;
     }
 
     /// <summary>

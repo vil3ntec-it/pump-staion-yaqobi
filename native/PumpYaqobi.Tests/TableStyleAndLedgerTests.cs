@@ -55,7 +55,12 @@ public class TableStyleAndLedgerTests
                                     "Pump.Table.SumBorder" })
             Assert.Contains("r[\"" + key + "\"]", s);
 
-        Assert.Contains("ThemeManager.Changed += _ => Apply();", s);
+        // ⚠️ دیگر روی ‎Changed‎ نمی‌نشیند: تعویضِ تم باید **یک** پاسِ
+        // بی‌اعتبارسازی باشد، پس خودِ ‎ThemeManager.Apply‎ خط‌ها را داخلِ همان
+        // فرهنگِ تم می‌گذارد (‎Fill‎) پیش از این‌که یک‌جا بنشیند.
+        Assert.DoesNotContain("ThemeManager.Changed += _ => Apply();", s);
+        var tm = Read("PumpYaqobi.App", "Themes", "ThemeManager.cs");
+        Assert.Contains("TableStyle.Fill(r, t", tm);
 
         var app = Read("PumpYaqobi.App", "App.axaml.cs");
         Assert.Contains("TableStyle.Hook();", app);

@@ -103,7 +103,9 @@ internal static class YearsAudit
             Console.WriteLine($"     ({LastPasses} پاس · {GridDiag(win)})");
             foreach (var sub in sec.SubSections.ToList())
             {
-                Mark("  زیربخشِ " + sub.Id, () => { sec.ShowSub(sub); Settle(win); Wait(win, sub.OnActivatedAsync()); Settle(win); });
+                // ⚠️ مثلِ خودِ کاربر: فقط باز کردن، و انتظار برای همان باری که
+                // ‎MainViewModel‎ می‌کند — نه یک ‎OnActivatedAsync‎ی اضافه از این‌جا.
+                Mark("  زیربخشِ " + sub.Id, () => { sec.ShowSub(sub); Wait(win, vm.LastSubOpen ?? Task.CompletedTask); Settle(win); });
                 sec.CloseSub();
                 Settle(win);
             }
@@ -185,8 +187,18 @@ internal static class YearsAudit
         }
 
         // ══ تم ═════════════════════════════════════════════════════════════
+        // ⚠️ روی همان بخشی که کاربر ایستاده (این‌جا: تاریخچه با فهرستِ بلند)،
+        // چون هزینهٔ تعویضِ تم همان درختِ جلوی چشم است، نه صفحه‌های کش‌شده.
         Mark("تعویضِ تم (آبی ⇄ طلایی)", () =>
         {
+            Mark("  تم ⇒ طلایی (فقط Apply)", () => PumpYaqobi.App.Themes.ThemeManager.Apply(PumpYaqobi.App.Themes.PumpTheme.Gold));
+            Mark("  تم ⇒ طلایی (چیدمان)", () => Pump(win));
+            Mark("  تم ⇒ آبی (فقط Apply)", () => PumpYaqobi.App.Themes.ThemeManager.Apply(PumpYaqobi.App.Themes.PumpTheme.Blue));
+            Mark("  تم ⇒ آبی (چیدمان)", () => Pump(win));
+        });
+        Mark("تعویضِ تم روی داشبورد (آبی ⇄ طلایی)", () =>
+        {
+            Wait(win, vm.GoAsync(home)); Settle(win);
             PumpYaqobi.App.Themes.ThemeManager.Apply(PumpYaqobi.App.Themes.PumpTheme.Gold); Pump(win);
             PumpYaqobi.App.Themes.ThemeManager.Apply(PumpYaqobi.App.Themes.PumpTheme.Blue); Pump(win);
         });
@@ -219,9 +231,48 @@ internal static class YearsAudit
         if (Budget.ElapsedMilliseconds > BudgetMs) { _outOfTime = true; Console.WriteLine("⛔ بودجهٔ زمان تمام شد"); }
     }
 
+    /// <summary>
+    /// ══ «زیان ناشی از افزایش قیمت» با پنج سال داده — کجا وقت می‌رود؟ ══════════
+    ///     dotnet run --project PumpYaqobi.UiTests -- plprof
+    /// بی پنجره: خواندنِ قرض‌داران با رسیدها، فاکتورها، تاریخچهٔ نرخ، و خودِ
+    /// ‎Build‎ — هر کدام جدا، سه بار.
+    /// </summary>
+    public static int RunPriceLossProfile()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "pump-plprof-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        var file = Path.Combine(dir, "pump.db");
+        Seed(file);
+        AppHost.Start(file);
+        var host = AppHost.Current;
+        if (host.Auth.NeedsFirstRun()) host.Auth.CreateFirstAdmin("1234");
+        host.Auth.SignIn("admin", "1234");
+
+        var svc = new PumpYaqobi.Application.Services.PriceLossService();
+        for (var round = 1; round <= 3; round++)
+        {
+            Console.WriteLine($"── دورِ {round}");
+            IReadOnlyList<PumpYaqobi.Domain.Entities.Debtor> debtors = Array.Empty<PumpYaqobi.Domain.Entities.Debtor>();
+            IReadOnlyList<PumpYaqobi.Domain.Entities.Invoice> invoices = Array.Empty<PumpYaqobi.Domain.Entities.Invoice>();
+            IReadOnlyList<PumpYaqobi.Domain.Entities.RateHistoryEntry> rates = Array.Empty<PumpYaqobi.Domain.Entities.RateHistoryEntry>();
+            Mark("قرض‌داران با رسیدها (LoadAllAsync withReceipts)", () => debtors = host.Debtors.LoadAllAsync(withReceipts: true).GetAwaiter().GetResult());
+            Mark("فاکتورها (Invoices.ListAsync)", () => invoices = host.Invoices.ListAsync().GetAwaiter().GetResult());
+            Mark("تاریخچهٔ نرخ (RateHistoryAsync)", () => rates = host.Tools.RateHistoryAsync().GetAwaiter().GetResult());
+            PumpYaqobi.Application.Services.PriceLossReport? rep = null;
+            Mark("خودِ گزارش (PriceLossService.Build)", () => rep = svc.Build(debtors, invoices, rates,
+                host.Settings.UnionRate(PumpYaqobi.Domain.Enums.FuelType.Petrol),
+                host.Settings.UnionRate(PumpYaqobi.Domain.Enums.FuelType.Diesel), PumpYaqobi.Application.Localization.Shamsi.Today()));
+            Console.WriteLine($"   قرض‌دار {debtors.Count:N0} · ردیف {debtors.Sum(d => d.AllAccounts().Sum(a => (a.FuelRows?.Count ?? 0) + (a.MoneyRows?.Count ?? 0))):N0} · فاکتور {invoices.Count:N0} · نرخ {rates.Count:N0} · اشخاصِ گزارش {rep?.List.Count ?? 0:N0}");
+            var vm = new PumpYaqobi.App.ViewModels.Sections.PriceLossSectionViewModel(host);
+            Mark("ویومدل کامل (RefreshAsync، بی پنجره)", () => vm.RefreshAsync().GetAwaiter().GetResult());
+            Console.WriteLine($"   ردیف‌های جدول {vm.Rows.Count:N0}");
+        }
+        return 0;
+    }
+
     // ══ ساختنِ پنج سال داده ═══════════════════════════════════════════════════
 
-    private static List<(string, long)> Seed(string file)
+    internal static List<(string, long)> Seed(string file)
     {
         var dbf = new PumpYaqobi.Services.Data.PumpDbFactory(file);
         dbf.EnsureReady();

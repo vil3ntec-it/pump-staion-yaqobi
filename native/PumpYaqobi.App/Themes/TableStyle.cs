@@ -38,7 +38,28 @@ public static class TableStyle
     {
         if (_hooked) return;
         _hooked = true;
-        ThemeManager.Changed += _ => Apply();
+        // ⚠️ دیگر روی ‎ThemeManager.Changed‎ نمی‌نشیند: خودِ ‎ThemeManager.Apply‎
+        // این چهار منبع را در همان فرهنگِ تم می‌گذارد (‎Fill‎) تا تعویضِ تم
+        // **یک** پاسِ بی‌اعتبارسازی باشد، نه هفت تا. با پنج سال داده هر پاس
+        // روی جدول‌های زنده دو ثانیه بود.
+    }
+
+    /// <summary>
+    /// همان چهار منبع، ولی داخلِ فرهنگی که ‎ThemeManager‎ می‌سازد — پیش از
+    /// این‌که یک‌جا بنشیند. رنگِ خط از خودِ همان تم می‌آید.
+    /// </summary>
+    public static void Fill(Avalonia.Controls.ResourceDictionary r, PumpTheme t, AppSettings? s = null)
+    {
+        s ??= AppSettings.Load();
+        var picked = Parse(s.TableBorderColor);
+        r["Pump.Table.Border"] = new SolidColorBrush(picked ?? t.Border);
+        var line = Clamp(s.TableLine, 1);
+        var head = Clamp(s.TableHeadLine, 2);
+        var sum = Clamp(s.TableSumLine, 2);
+        r["Pump.Table.Line"] = line;
+        r["Pump.Table.HeadLine"] = head;
+        r["Pump.Table.HeadUnderline"] = new Thickness(0, 0, 0, head);
+        r["Pump.Table.SumBorder"] = new Thickness(line, sum, line, line);
     }
 
     /// <summary>رنگِ متنِ ‎#rrggbb‎ را می‌خواند؛ نشد، ‎null‎.</summary>
@@ -54,23 +75,29 @@ public static class TableStyle
         app ??= Avalonia.Application.Current;
         if (app is null) return;
         s ??= AppSettings.Load();
-        var r = app.Resources;
+        // ⚠️ روی فرهنگِ **هر** تمِ نصب‌شده می‌نویسیم، نه ‎app.Resources‎: مقدارِ
+        // داخلِ ‎app.Resources‎ روی فرهنگ‌های ادغام‌شده اولویت دارد و اگر آن‌جا
+        // می‌نوشتیم، رنگِ خطِ تمِ بعدی هرگز دیده نمی‌شد. و چون هر دو تم از اول
+        // نصب‌اند (‎ThemeManager.Installed‎)، ضخامتی که کاربر برمی‌گزیند باید
+        // همان لحظه در تمِ دیگر هم بنشیند، وگرنه با تعویضِ تم می‌پرید.
+        var any = false;
+        foreach (var (t, r) in ThemeManager.Installed) { Fill(r, t, s); any = true; }
+        if (any) return;
 
-        // رنگ: انتخابِ کاربر، وگرنه رنگِ لبهٔ خودِ تم
+        // هنوز تمی نصب نشده (آزمون‌های بی‌تم): همان قاعده روی منابعِ خودِ برنامه
+        Avalonia.Controls.IResourceDictionary root = app.Resources;
         var picked = Parse(s.TableBorderColor);
-        r["Pump.Table.Border"] = picked is { } c
+        root["Pump.Table.Border"] = picked is { } c
             ? new SolidColorBrush(c)
-            : (r.TryGetResource("Pump.Border", app.ActualThemeVariant, out var b) && b is IBrush br
+            : (root.TryGetResource("Pump.Border", app.ActualThemeVariant, out var b) && b is IBrush br
                  ? br : new SolidColorBrush(Colors.Gray));
-
         var line = Clamp(s.TableLine, 1);
         var head = Clamp(s.TableHeadLine, 2);
         var sum = Clamp(s.TableSumLine, 2);
-
-        r["Pump.Table.Line"] = line;
-        r["Pump.Table.HeadLine"] = head;
-        r["Pump.Table.HeadUnderline"] = new Thickness(0, 0, 0, head);
-        r["Pump.Table.SumBorder"] = new Thickness(line, sum, line, line);
+        root["Pump.Table.Line"] = line;
+        root["Pump.Table.HeadLine"] = head;
+        root["Pump.Table.HeadUnderline"] = new Thickness(0, 0, 0, head);
+        root["Pump.Table.SumBorder"] = new Thickness(line, sum, line, line);
     }
 
     private static double Clamp(double v, double fallback)

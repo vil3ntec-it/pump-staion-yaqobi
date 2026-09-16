@@ -265,8 +265,12 @@ internal static class LedgerPerf
         var last = -1d;
         var still = 0;
         var end = DateTime.UtcNow + TimeSpan.FromSeconds(60);
+        // ⚠️ جدول فقط تا نزدیکِ دیدِ کاربر بلند می‌شود (رشدِ با لغزش)؛ «رشدِ
+        // کامل» یعنی کاربر تا ته لغزیده — پس هر دور صفحه تا ته می‌رود.
+        var page = w.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault(v => v.Name == "PageScroll");
         while (DateTime.UtcNow < end)
         {
+            if (page is not null) page.Offset = new Vector(0, Math.Max(0, page.Extent.Height - page.Viewport.Height));
             Dispatcher.UIThread.RunJobs();
             w.UpdateLayout();
             var h = Grid(w)?.Bounds.Height ?? 0;
