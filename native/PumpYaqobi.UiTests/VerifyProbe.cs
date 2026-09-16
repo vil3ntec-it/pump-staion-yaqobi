@@ -126,26 +126,76 @@ internal static class VerifyProbe
         Check("بخشِ تاریخچه‌ها باز شد", vm.Current?.Id == "history", vm.Current?.Id);
         Check("و مستقیم روی تاریخچهٔ گاوصندوق", !hist.IsListVisible && hist.OpenKind == "safe", hist.OpenKind);
 
-        // ── ۶) پیشنهادِ خودکار: Tab می‌چرخد، Enter برمی‌دارد ───────────────
-        Console.WriteLine("── ۶) پیشنهادِ خودکار در خانهٔ «توضیحات»ِ صرافی");
+        // ── ۶) تکمیلِ خودکار **داخلِ خودِ کادر** ────────────────────────────
+        //  خواستهٔ صاحب ریپو با عکس (۱۴۰۵/۰۶/۲۷): «پاپ‌آپ نه — با همان «س» که
+        //  دادم داخلِ کادر تکملهٔ جمله را نشان بده و با Tab یا Enter تمامش کن.»
+        //  و قاعدهٔ حیاتی: تکملهٔ پذیرفته‌نشده نباید در دفتر ذخیره شود.
+        Console.WriteLine("── ۶) تکمیلِ خودکار داخلِ خانهٔ «توضیحات»ِ صرافی");
         Wait(win, vm.GoAsync(sarrafi)); for (var i = 0; i < 6; i++) Pump(win);
         grid = win.GetVisualDescendants().OfType<ExcelGrid>().First(g => g.IsEffectivelyVisible);
         var col = grid.Columns.First(c => (c.Header as string) == "توضیحات");
         grid.Focus(); grid.SelectedIndex = 0; grid.CurrentColumn = col; Pump(win);
         grid.BeginEdit(); for (var i = 0; i < 4; i++) Pump(win);
         var editor = grid.GetVisualDescendants().OfType<TextBox>().FirstOrDefault(t => t.IsFocused);
-        // مثلِ کاربر: خانه را پاک می‌کند تا فهرستِ کامل بیاید (متنِ خودِ خانه پیشنهاد نمی‌شود)
-        if (editor is not null) { editor.Text = ""; Pump(win); }
-        Check("کادرِ ویرایش باز و فهرست پیدا", editor is not null && Suggest.Showing > 1, $"{Suggest.Showing} پیشنهاد");
+        if (editor is not null) { editor.Text = ""; editor.CaretIndex = 0; Pump(win); }
+
+        // مثلِ کاربر: یک حرف تایپ می‌شود («حوالهٔ …»ی همین ستون)
+        win.KeyTextInput("ح"); for (var i = 0; i < 3; i++) Pump(win);
+        var inline = editor?.Text ?? "";
+        Check("با یک حرف، ادامهٔ جمله داخلِ خودِ کادر آمد",
+              Suggest.Showing == 1 && inline.StartsWith("ح") && inline.Length > 1,
+              $"«{inline}» · تکمله={Suggest.Showing}");
+        Check("و فقط بخشِ تکمله انتخاب است، نه چیزی که تایپ شده",
+              editor is not null && editor.SelectionStart == 1 && editor.SelectionEnd == inline.Length,
+              editor is null ? "کادر نیست" : $"{editor.SelectionStart}..{editor.SelectionEnd}");
+
+        // Tab تکمیل می‌کند و از خانه بیرون نمی‌رود
         win.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.None); win.KeyReleaseQwerty(PhysicalKey.Tab, RawInputModifiers.None);
-        Pump(win);
-        Check("Tab اولین پیشنهاد را روشن می‌کند و از خانه بیرون نمی‌رود", Suggest.Active == 0 && Suggest.Showing > 0 && grid.CurrentColumn == col,
-              $"active={Suggest.Active} showing={Suggest.Showing}");
-        win.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None); win.KeyReleaseQwerty(PhysicalKey.Enter, RawInputModifiers.None);
-        for (var i = 0; i < 4; i++) Pump(win);
+        for (var i = 0; i < 3; i++) Pump(win);
         var picked = editor?.Text ?? "";
-        Check("Enter پیشنهاد را در خانه می‌نشاند", picked.Length > 0 && Suggest.Showing == 0, $"«{picked}»");
+        Check("Tab جمله را تکمیل می‌کند و در همان خانه می‌ماند",
+              picked == inline && picked.Length > 1 && Suggest.Showing == 0 && grid.CurrentColumn == col,
+              $"«{picked}»");
         grid.CancelEdit(); Pump(win);
+
+        // ⚠️ و تکملهٔ **پذیرفته‌نشده** هرگز در داده نمی‌نشیند
+        grid.Focus(); grid.SelectedIndex = 1; grid.CurrentColumn = col; Pump(win);
+        grid.BeginEdit(); for (var i = 0; i < 4; i++) Pump(win);
+        var ed2 = grid.GetVisualDescendants().OfType<TextBox>().FirstOrDefault(t => t.IsFocused);
+        if (ed2 is not null) { ed2.Text = ""; ed2.CaretIndex = 0; Pump(win); }
+        win.KeyTextInput("ح"); for (var i = 0; i < 3; i++) Pump(win);
+        var ghosted = ed2?.Text ?? "";
+        grid.CommitEdit(); for (var i = 0; i < 6; i++) Pump(win);
+        var saved2 = (grid.ItemsSource as System.Collections.IEnumerable)?.Cast<object>().ElementAtOrDefault(1);
+        var savedText = saved2?.GetType().GetProperty("Description")?.GetValue(saved2) as string ?? "";
+        Check("تکملهٔ پذیرفته‌نشده در دفتر ذخیره نمی‌شود",
+              savedText == "ح", $"در کادر «{ghosted}» بود · ذخیره‌شده «{savedText}»");
+
+        // ── ۶ب) دوبار-کلیک روی خطِ ستون، مثلِ اکسل ─────────────────────────
+        Console.WriteLine("── ۶ب) دوبار-کلیک روی خطِ ستون، ستون را هم‌قدِ محتوا می‌کند");
+        grid.Focus(); grid.SelectedIndex = 0; grid.CurrentColumn = col; Pump(win);
+        grid.BeginEdit(); for (var i = 0; i < 3; i++) Pump(win);
+        var ed3 = grid.GetVisualDescendants().OfType<TextBox>().FirstOrDefault(t => t.IsFocused);
+        if (ed3 is not null) { ed3.Text = new string('م', 40); ed3.CaretIndex = 40; }
+        grid.CommitEdit(); for (var i = 0; i < 6; i++) Pump(win);
+
+        var header = grid.GetVisualDescendants().OfType<DataGridColumnHeader>()
+                         .FirstOrDefault(h => (h.Content as string) == "توضیحات");
+        var wBefore = col.ActualWidth;
+        // دوبار-کلیک درست روی خطِ راستِ همان سربرگ — همان‌جا که دستهٔ کشیدن است
+        if (header is not null) grid.AutoFitAt(header, header.Bounds.Width - 2);
+        for (var i = 0; i < 10; i++) Pump(win);
+        var wAfter = col.ActualWidth;
+        Check("دوبار-کلیک روی خطِ ستون، پهنا را به محتوا رساند",
+              header is not null && wAfter > wBefore + 10
+              && col.Width.UnitType == DataGridLengthUnitType.Pixel,
+              $"{wBefore:0} ⇒ {wAfter:0} پیکسل");
+
+        // و کلیکِ وسطِ سربرگ (نه روی خط) نباید کاری کند
+        var wMid = col.ActualWidth;
+        var moved = header is not null && grid.AutoFitAt(header, header.Bounds.Width / 2);
+        for (var i = 0; i < 4; i++) Pump(win);
+        Check("دوبار-کلیکِ وسطِ سربرگ کاری نمی‌کند", !moved && Math.Abs(col.ActualWidth - wMid) < 1);
 
         // ── ۷) ماشین‌حساب با صفحه‌کلید ─────────────────────────────────────
         Console.WriteLine("── ۷) ماشین‌حساب با صفحه‌کلید (۱۲ + ۷ =)");
@@ -200,7 +250,7 @@ internal static class VerifyProbe
         Wait(win, safeLedger.DeleteRowsAsync(1));
 
         Console.WriteLine();
-        Console.WriteLine(_bad == 0 ? "✅ هر ده رفتار همان‌طور که خواسته شده کار می‌کند" : $"❌ {_bad} ایراد");
+        Console.WriteLine(_bad == 0 ? "✅ هر یازده رفتار همان‌طور که خواسته شده کار می‌کند" : $"❌ {_bad} ایراد");
         return _bad == 0 ? 0 : 1;
     }
 

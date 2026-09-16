@@ -62,7 +62,12 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         // هیچ کادری بسته نشده، و خودِ سازنده روی نخِ پس‌زمینه صدا زده می‌شود
         // (‎Documents.ShowAsync‎). رفتن به نخِ رابط این‌جا فقط یک انتظارِ بی‌دلیل
         // بود — و در جایی که حلقهٔ رابط نچرخد، یک قفلِ کامل.
-        Apply(RenderPages(), marshal: false);
+        // ⚠️ **پنجره منتظرِ تصویرِ ورق نمی‌ماند.** سنجشِ ‎printperf‎ نشان داد
+        // ‎GenerateImages‎ی QuestPDF تنبل نیست: پیش از دادنِ ورقِ اول، همهٔ
+        // ورق‌ها را می‌سازد (۶۰۰ ردیف ⇒ ۱٫۷ ثانیه). پس ساختن به پس‌زمینه
+        // می‌رود و پنجره همان لحظه باز می‌شود؛ ورق‌ها که آماده شدند خودشان
+        // می‌نشینند.
+        StartPages(marshal: false, background: true);
         _loading = false;
     }
 
@@ -364,12 +369,11 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
             Status = "در حال ساختنِ دوبارهٔ ورق…";
             try
             {
-                var pages = await Task.Run(() =>
+                await Task.Run(() =>
                 {
                     _doc = BuildSolved(next);
-                    return RenderPages();
+                    StartPages();
                 });
-                Apply(pages);
                 Status = "";
             }
             catch (Exception ex)
@@ -380,8 +384,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
                 Status = "این تنظیم روی ورق جا نمی‌شود: " + ex.Message;
                 try
                 {
-                    var back = await Task.Run(() => { _doc = BuildSolved(prev); return RenderPages(); });
-                    Apply(back);
+                    await Task.Run(() => { _doc = BuildSolved(prev); StartPages(); });
                 }
                 catch { }
                 PullFromSetup();
@@ -410,8 +413,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         Status = "در حال ساختنِ دوبارهٔ ورق…";
         try
         {
-            var pages = await Task.Run(() => { _doc = BuildSolved(next); return RenderPages(); });
-            Apply(pages);
+            await Task.Run(() => { _doc = BuildSolved(next); StartPages(); });
             Status = "";
             SetupChanged?.Invoke(next);
         }
@@ -422,8 +424,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
             Status = "این تنظیم روی ورق جا نمی‌شود: " + ex.Message;
             try
             {
-                var back = await Task.Run(() => { _doc = BuildSolved(prev); return RenderPages(); });
-                Apply(back);
+                await Task.Run(() => { _doc = BuildSolved(prev); StartPages(); });
             }
             catch { }
         }
@@ -568,7 +569,9 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
             var bmp = CurrentPage;
             if (bmp is null || bmp.PixelSize.Width <= 0) return new Thickness(0);
 
-            var mmWide = bmp.PixelSize.Width / (double)Math.Clamp(Setup.Dpi, 72, 400) * 25.4;
+            // ⚠️ dpiِ خودِ **تصویر**، نه dpiِ چاپ: پیش‌نمایش سبک‌تر تصویر می‌شود
+            // (‎PreviewDpi‎) و با عددِ چاپ، خط‌چینِ حاشیه جابه‌جا می‌افتاد.
+            var mmWide = bmp.PixelSize.Width / (double)Math.Clamp(_pagesDpi, 72, 400) * 25.4;
             if (mmWide <= 0) return new Thickness(0);
             var px = PageWidth / mmWide;                 // پیکسلِ صفحه در هر میلی‌متر
 
@@ -596,38 +599,167 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         }
     }
 
-    /// <summary>ورق‌ها را می‌سازد — روی نخِ پس‌زمینه، بی دست زدن به رابط.</summary>
-    private List<byte[]> RenderPages() =>
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ ورقِ اول همان لحظه، بقیه در پس‌زمینه ═══════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۷): «برنامه خیلی سریع شده، ولی بخشِ پی‌دی‌اف
+    //  هنوز دیر باز می‌شود.»
+    //
+    //  سنجشِ ‎printperf‎ حق را به او داد و ریشه را هم نشان داد: پیش از باز شدنِ
+    //  پنجره، **همهٔ** ورق‌ها تصویر می‌شدند — هر ورق ~۱۳۰ میلی‌ثانیه:
+    //
+    //      ۴۰ ردیف  =  ۲ ورق  →   ۴۷۸ ms
+    //     ۲۰۰ ردیف  =  ۸ ورق  → ۱٬۰۷۴ ms
+    //     ۶۰۰ ردیف  = ۲۳ ورق  → ۲٬۸۹۸ ms
+    //
+    //  یعنی همان قاعدهٔ همیشگی: هزینه با اندازهٔ گزارش بالا می‌رفت. حالا فقط
+    //  **ورقِ اول** پیش از باز شدن ساخته می‌شود و بقیه در پس‌زمینه یکی‌یکی
+    //  می‌آیند — پس گزارشِ صد ورقی هم به‌اندازهٔ گزارشِ یک‌ورقی زود باز می‌شود.
+    //
+    //  ⚠️ **پیش‌نمایش با ‎PreviewDpi‎ تصویر می‌شود، نه با ‎Setup.Dpi‎.** آن‌چه
+    //  روی صفحه دیده می‌شود یک تصویرِ چندصد پیکسلی است و ۱۱۰dpi برایش بس؛ ولی
+    //  چاپ باید همان کیفیتی باشد که کاربر خواسته، پس مسیرِ «فقط این ورق‌ها»
+    //  ورق‌های برگزیده را دوباره با ‎Setup.Dpi‎ می‌سازد (‎PagesDocument‎).
+    //  هزینهٔ تصویر با **مربعِ** dpi بالا می‌رود، پس این خودش نصفِ کار است.
+    //
+    //  ⚠️ ‎_renderGen‎ نگهبانِ «تنظیم وسطِ کار عوض شد» است: هر بار که ساختِ
+    //  تازه‌ای شروع شود شماره بالا می‌رود و جریانِ کهنه ورق‌هایش را دور
+    //  می‌ریزد. بی این، ورق‌های تنظیمِ قبلی روی تنظیمِ تازه می‌نشستند.
+
+    /// <summary>
+    /// dpiِ تصویرِ پیش‌نمایش — فقط برای چشم، نه برای چاپ.
+    ///
+    /// ⚠️ ۹۶ عددِ خودِ صفحهٔ نمایش است: A4 در این dpi می‌شود ۷۹۴×۱۱۲۳ پیکسل،
+    /// یعنی از قابِ پیش‌نمایش هم بزرگ‌تر. هزینهٔ تصویر با **مربعِ** dpi بالا
+    /// می‌رود، پس ۱۴۴ ⇒ ۹۶ یعنی کمتر از نصفِ کار، بی این‌که چشم چیزی ببیند.
+    /// چاپ و ذخیره همچنان با ‎Setup.Dpi‎ی خودِ کاربر است.
+    /// </summary>
+    public const int PreviewDpi = 96;
+
+    private int _renderGen;
+
+    /// <summary>ورق‌های همین لحظه با چه dpi ساخته شده‌اند (برای خط‌چینِ حاشیه).</summary>
+    private int _pagesDpi = PreviewDpi;
+
+    /// <summary>همهٔ ورق‌ها ساخته شده‌اند؟ — سنجش‌ها منتظرِ همین می‌مانند.</summary>
+    [ObservableProperty] private bool _allRendered;
+
+    private IEnumerable<byte[]> RenderStream(int dpi) =>
         _doc.GenerateImages(new ImageGenerationSettings
         {
             ImageFormat = ImageFormat.Png,
-            RasterDpi = Math.Clamp(Setup.Dpi, 72, 400),
-        }).ToList();
+            RasterDpi = Math.Clamp(dpi, 72, 400),
+        });
 
-    /// <summary>ورق‌های تازه را می‌نشاند — روی نخِ رابط.</summary>
-    private void Apply(List<byte[]> pages, bool marshal = true)
+    /// <summary>
+    /// ورقِ اول را همین‌جا می‌سازد (پس خطای «این تنظیم جا نمی‌شود» همان‌جا که
+    /// باید پیدا می‌شود) و بقیه را به پس‌زمینه می‌سپارد.
+    /// </summary>
+    private void StartPages(bool marshal = true, bool background = false)
+    {
+        var gen = ++_renderGen;
+        _pagesDpi = PreviewDpi;
+
+        // ══ حالتِ باز شدنِ پنجره: هیچ انتظاری ═════════════════════════════
+        if (background)
+        {
+            ResetPages(null, marshal);
+            Busy = true;
+            Status = "در حال ساختنِ ورق‌ها…";
+            Task.Run(() =>
+            {
+                IEnumerator<byte[]>? it = null;
+                try { it = RenderStream(PreviewDpi).GetEnumerator(); }
+                catch
+                {
+                    Dispatcher.UIThread.Post(() => { if (gen == _renderGen) { Busy = false; Status = "این گزارش ساخته نشد."; } });
+                    return;
+                }
+                Stream(gen, it);
+            });
+            return;
+        }
+
+        var sync = RenderStream(PreviewDpi).GetEnumerator();
+        byte[]? first;
+        try { first = sync.MoveNext() ? sync.Current : null; }
+        catch { sync.Dispose(); throw; }
+
+        ResetPages(first, marshal);
+        if (first is null) { sync.Dispose(); Finish(gen, marshal); return; }
+        Task.Run(() => Stream(gen, sync));
+    }
+
+    private void Stream(int gen, IEnumerator<byte[]> rest)
+    {
+        try
+        {
+            while (gen == _renderGen && rest.MoveNext())
+            {
+                var bytes = rest.Current;
+                Dispatcher.UIThread.Post(() => { if (gen == _renderGen) AppendPage(bytes); });
+            }
+        }
+        catch { /* ورقی که ساخته نشد، پیش‌نمایش را نمی‌شکند */ }
+        finally
+        {
+            rest.Dispose();
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (gen != _renderGen) return;
+                Busy = false;
+                if (Status == "در حال ساختنِ ورق‌ها…") Status = "";
+                Finish(gen, marshal: false);
+            });
+        }
+    }
+
+    /// <summary>ورق‌های کهنه می‌روند و ورقِ اولِ تازه می‌نشیند.</summary>
+    private void ResetPages(byte[]? first, bool marshal)
     {
         void Set()
         {
             foreach (var b in _pages) b.Dispose();
             _pages.Clear();
             _png.Clear();
-
-            foreach (var bytes in pages)
-            {
-                using var ms = new MemoryStream(bytes);
-                _pages.Add(new Bitmap(ms));
-                _png.Add(bytes);
-            }
-
+            AllRendered = false;
+            if (first is not null) AddPage(first);
             PageIndex = 0;
             Show();
+            OnPropertyChanged(nameof(PageCount));
+        }
+        if (!marshal || Dispatcher.UIThread.CheckAccess()) Set();
+        else Dispatcher.UIThread.Invoke(Set);
+    }
+
+    private void AppendPage(byte[] bytes)
+    {
+        AddPage(bytes);
+        OnPropertyChanged(nameof(PageCount));
+        Show();
+    }
+
+    private void AddPage(byte[] bytes)
+    {
+        using var ms = new MemoryStream(bytes);
+        _pages.Add(new Bitmap(ms));
+        _png.Add(bytes);
+    }
+
+    /// <summary>ساختِ ورق‌ها تمام شد — حالا کادرهایی که به شمارِ ورق بسته‌اند.</summary>
+    private void Finish(int gen, bool marshal)
+    {
+        if (gen != _renderGen) return;
+        void Set()
+        {
+            AllRendered = true;
             OnPropertyChanged(nameof(PageCount));
             RebuildPageChecks();
             SyncRangeBoxes();
             RefreshNotes();
+            Show();
         }
-
         if (!marshal || Dispatcher.UIThread.CheckAccess()) Set();
         else Dispatcher.UIThread.Invoke(Set);
     }
@@ -637,7 +769,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     {
         Setup = setup;
         _doc = BuildSolved(setup);
-        Apply(RenderPages());
+        StartPages();
         PullFromSetup();
     }
 
@@ -703,10 +835,21 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         return ms.ToArray();
     }
 
-    /// <summary>سندی از ورق‌های انتخاب‌شده، به همان ترتیب.</summary>
-    private IDocument PagesDocument(IReadOnlyList<int> order) =>
-        new PickedPagesDocument(order.Select(i => _png[i - 1]).ToList(),
-                                Math.Clamp(Setup.Dpi, 72, 400));
+    /// <summary>
+    /// سندی از ورق‌های انتخاب‌شده، به همان ترتیب.
+    ///
+    /// ⚠️ ورق‌ها این‌جا **دوباره و با ‎Setup.Dpi‎** ساخته می‌شوند، نه از تصویرِ
+    /// پیش‌نمایش: پیش‌نمایش عمداً سبک است (‎PreviewDpi‎) تا زود باز شود، ولی
+    /// چاپ باید همان کیفیتی باشد که کاربر انتخاب کرده. این مسیر فقط با کلیکِ
+    /// صریحِ «چاپ/ذخیره» می‌دود، نه هنگامِ باز شدن.
+    /// </summary>
+    private IDocument PagesDocument(IReadOnlyList<int> order)
+    {
+        var dpi = Math.Clamp(Setup.Dpi, 72, 400);
+        var full = RenderStream(dpi).ToList();
+        var picked = order.Where(i => i >= 1 && i <= full.Count).Select(i => full[i - 1]).ToList();
+        return new PickedPagesDocument(picked, dpi);
+    }
 
     /// <summary>
     /// ورق‌های برگزیده، هر کدام یک صفحه. اندازهٔ هر صفحه از پیکسلِ خودِ تصویر

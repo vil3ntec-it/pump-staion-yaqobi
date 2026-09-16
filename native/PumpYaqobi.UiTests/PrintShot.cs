@@ -50,6 +50,12 @@ internal static class PrintShot
         var preview = new DocumentPreviewWindow(vm) { Width = 1440, Height = 900, WindowState = WindowState.Normal };
         preview.Show(win);
         Pump(preview);
+
+        // ⚠️ پنجره دیگر منتظرِ ورق‌ها نمی‌ماند (‎printperf‎): ورق‌ها در پس‌زمینه
+        // می‌آیند، پس سنجش هم مثلِ کاربر صبر می‌کند تا همه بنشینند.
+        var ready = DateTime.UtcNow + TimeSpan.FromMinutes(2);
+        while (!vm.AllRendered && DateTime.UtcNow < ready) { Pump(preview); Thread.Sleep(5); }
+        Pump(preview);
         Shot(preview, Path.Combine(outDir, "print-preview.png"));
 
         // «ورق‌ها: ۱ تا ۳» همیشه دیده می‌شود و تایپ در آن خودش حالت را بازه می‌کند (مثلِ سایت)

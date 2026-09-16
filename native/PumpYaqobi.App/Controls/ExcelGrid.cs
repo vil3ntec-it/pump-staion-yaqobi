@@ -125,6 +125,13 @@ public class ExcelGrid : DataGrid
             SpreadColumns(); PinOnUserResize(); RememberWidths(); Settle(); SyncSticky();
         };
 
+        // ══ دوبار-کلیک روی خطِ ستون = هم‌قدِ محتوا، مثلِ اکسل ═════════════════
+        // خواستهٔ صاحب ریپو (۱۴۰۵/۰۶/۲۷): «روی اندازه کردنِ جدول‌ها یک سیستم
+        // بگذار مثلِ اکسل که دوبار روی خطِ همان جدول بزنی، خودکار اندازه‌اش
+        // ⚠️ ‎Bubble‎، نه ‎Tunnel‎: ‎DoubleTapped‎ی آوالونیا رویدادِ حبابی است و
+        // شنوندهٔ تونلی هرگز شلیک نمی‌شود.
+        AddHandler(Gestures.DoubleTappedEvent, OnHeaderLineDoubleTap, RoutingStrategies.Bubble);
+
         // ردیفِ قفل‌شده (‎ILockedRow‎ — مثلِ ردیفِ 📦 خریدِ مخزن در حسابِ شرکت)
         // ویرایشگر باز نمی‌کند؛ همان ‎readonly‎ی سایت
         BeginningEdit += (_, e) =>
@@ -1062,6 +1069,86 @@ public class ExcelGrid : DataGrid
                                  Math.Clamp(page.Offset.Y + delta, 0, max));
     }
 
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ دوبار-کلیک روی خطِ ستون: هم‌قدِ محتوا ═══════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  همان کارِ اکسل. قاعده‌اش ساده و قابلِ حدس است: **همان ستونی هم‌قد
+    //  می‌شود که کشیدنِ همان دسته پهنش می‌کرد** — دستهٔ راستِ یک سربرگ مالِ
+    //  خودش است و دستهٔ چپش مالِ ستونِ پیشین (به ترتیبِ نمایش). این‌طور کاربر
+    //  لازم نیست قاعدهٔ تازه‌ای یاد بگیرد؛ همان چیزی که با کشیدن می‌دید.
+    //
+    //  ⚠️ پهنا از **ردیف‌های ساخته‌شده** درمی‌آید، نه از همهٔ ردیف‌های داده:
+    //  جدولِ چسبان فقط یک صفحه ردیف زنده دارد و همین هم درست است — اکسل هم
+    //  ستون را به بلندترین چیزی که در دید هست می‌رساند، نه به کلِ فایل.
+    //
+    //  ⚠️ پس از هم‌قد شدن، همهٔ ستون‌ها پیکسلی می‌شوند (همان قاعدهٔ
+    //  ‎PinOnUserResize‎): ستونِ ستاره‌ای «سهم از قاب» است، پس اگر یکی پهن شود
+    //  بقیه خودشان جمع می‌شوند و کاربر می‌بیند ستون‌هایی که دست نزده هم تکان
+    //  خوردند. و پهنای تازه با ‎WidthKey‎ همان‌جا ذخیره می‌شود.
+
+    /// <summary>
+    /// ⚠️ ‎DataGrid‎ی آوالونیا برای خطِ ستون **دستهٔ جداگانه‌ای ندارد**: خودِ
+    /// سربرگ، نزدیکیِ لبه‌اش را «خطِ تغییرِ اندازه» می‌شمارد
+    /// (‎DATAGRIDCOLUMNHEADER_resizeRegionWidth‎). یک بار دنبالِ ‎Thumb‎ گشتیم و
+    /// سنجه گرفتش: در درختِ سربرگ اصلاً ‎Thumb‎ی نیست. پس همان قاعدهٔ خودِ
+    /// جدول: لبهٔ راست ⇒ همین ستون، لبهٔ چپ ⇒ ستونِ پیشین.
+    /// </summary>
+    private const double LineGrab = 8;
+
+    private void OnHeaderLineDoubleTap(object? sender, TappedEventArgs e)
+    {
+        if (e.Source is not Visual v) return;
+        var header = v as DataGridColumnHeader ?? v.GetVisualAncestors().OfType<DataGridColumnHeader>().FirstOrDefault();
+        if (header is null) return;
+        double x;
+        try { x = e.GetPosition(header).X; } catch { return; }
+        if (AutoFitAt(header, x)) e.Handled = true;
+    }
+
+    /// <summary>
+    /// دوبار-کلیک در نقطهٔ ‎x‎ از سربرگ: اگر روی خطِ ستون بود، همان ستونی را
+    /// هم‌قدِ محتوا می‌کند که کشیدنِ همان خط پهنش می‌کرد. برمی‌گرداند «کاری کردم».
+    /// </summary>
+    public bool AutoFitAt(DataGridColumnHeader header, double x)
+    {
+        if (ColumnOfHeader(header) is not { } own) return false;
+        var w = header.Bounds.Width;
+        var cols = Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).ToList();
+        var i = cols.IndexOf(own);
+
+        DataGridColumn? target = null;
+        if (w - x <= LineGrab) target = own;
+        else if (x <= LineGrab && i > 0) target = cols[i - 1];
+        if (target is null) return false;
+
+        AutoFit(target);
+        return true;
+    }
+
+    /// <summary>ستون را هم‌قدِ محتوایش می‌کند و همان پهنا را سفت نگه می‌دارد.</summary>
+    public void AutoFit(DataGridColumn col)
+    {
+        col.Width = new DataGridLength(1, DataGridLengthUnitType.Auto);
+        InvalidateMeasure();
+        // یک پاس بعد، وقتی ‎Auto‎ پهنای طبیعی را حساب کرد، همان عدد سفت می‌شود
+        Dispatcher.UIThread.Post(() =>
+        {
+            var w = col.ActualWidth;
+            if (double.IsNaN(w) || w <= 0) return;
+            col.Width = new DataGridLength(Math.Max(FloorWidth, w), DataGridLengthUnitType.Pixel);
+            _pinned = false;
+            PinOnUserResize();
+            RememberWidths();
+        }, DispatcherPriority.Loaded);
+    }
+
+    /// <summary>ستونِ یک سربرگ — مثلِ ‎ColumnOfCell‎، از خودِ سربرگ.</summary>
+    private static DataGridColumn? ColumnOfHeader(DataGridColumnHeader h) =>
+        h.GetType().GetProperty("OwningColumn",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic
+              | System.Reflection.BindingFlags.Public)?.GetValue(h) as DataGridColumn;
+
     /// <summary>ستونی که این خانه مالِ اوست — از خودِ خانه.</summary>
     private static DataGridColumn? ColumnOfCell(DataGridCell cell) =>
         cell.GetType().GetProperty("OwningColumn",
@@ -1433,6 +1520,9 @@ public class ExcelGrid : DataGrid
                 if (named.Count + learned.Count > 0) Suggest.Attach(tb, named, learned);
             }
         };
+        // ⚠️ پیش از نشستنِ مقدار در ردیف: تکملهٔ پذیرفته‌نشدهٔ پیشنهادِ خودکار
+        // برداشته شود، وگرنه «س»ی کاربر «سلام من هارون هستم» ذخیره می‌شد.
+        CellEditEnding += (_, _) => Suggest.Settle();
         CellEditEnded += (_, _) => { _editing = false; _typedIn = false; };
 
         // ══ جدول خودش می‌لغزد، نه کلِ صفحه ══════════════════════════════════

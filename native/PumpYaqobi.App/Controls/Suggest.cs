@@ -87,33 +87,77 @@ public static class Suggest
         if (sender is TextBox tb) Attach(tb, Of(GetKey(tb)), Array.Empty<string>());
     }
 
-    // ══ پاپ‌آپ ═════════════════════════════════════════════════════════════
-    private static Popup? _popup;
-    private static StackPanel? _list;
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ تکمیلِ داخلِ خودِ کادر — نه پاپ‌آپ ═══════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  گزارشِ صاحب ریپو با عکس (۱۴۰۵/۰۶/۲۷): «این تکمیلِ خودکار جوری است که
+    //  پیشنهاد پاپ‌آپ می‌آید — نه. با همان «س» که دادم، داخلِ خودِ کادر
+    //  تکمیلش را نشان بده که با زدنِ Tab یا Enter آن جمله تکمیل شود.»
+    //
+    //  پس فهرستِ شناور رفت و جایش همان چیزی آمد که مرورگر و اکسل می‌کنند:
+    //
+    //      کاربر «س» می‌زند  ⇒  کادر: «س|لام من هارون هستم»
+    //                            (بخشِ تکمیل، انتخاب‌شده و برجسته)
+    //      Tab یا Enter      ⇒  جمله می‌ماند و انتخاب برداشته می‌شود
+    //      تایپِ ادامه       ⇒  حرفِ تازه جای بخشِ انتخاب‌شده می‌نشیند
+    //      Backspace / Esc   ⇒  تکمیل می‌رود و همان چیزی می‌ماند که تایپ شده
+    //
+    //  ⚠️ **مهم‌ترین قاعده: تکمیلِ پذیرفته‌نشده هرگز در داده نمی‌نشیند.**
+    //  متنِ داخلِ کادر برای دیدن است؛ اگر کاربر بی‌آن‌که بپذیرد جایی دیگر
+    //  کلیک کند، پیش از هر ذخیره‌ای کادر به همان چیزی برمی‌گردد که خودش
+    //  تایپ کرده بود (‎OnBoxLost‎ ⇒ ‎Revert‎). وگرنه یک «س» می‌توانست در
+    //  دفتر «سلام من هارون هستم» ذخیره شود — و این دیگر رفاه نیست، خرابیِ
+    //  داده است. سنجهٔ ۶ در ‎verify‎ همین را قفل کرده.
+    //
+    //  ⚠️ فقط از **سرِ** واژه تکمیل می‌شود (‎StartsWith‎)، نه هر جای متن:
+    //  «تکمیل» یعنی ادامهٔ چیزی که تایپ شده. جست‌وجوی «شامل» جایش در فهرست
+    //  بود، نه این‌جا.
+
     private static TextBox? _box;
     private static List<string> _all = new();
-    private static List<string> _items = new();
-    private static int _active = -1;
-    private static bool _picking;
 
-    /// <summary>برای سنجش: پاپ‌آپ باز است و چند پیشنهاد دارد؟</summary>
-    public static int Showing => _popup is { IsOpen: true } ? _items.Count : 0;
-    public static int Active => _active;
+    /// <summary>آن‌چه کاربر واقعاً تایپ کرده — تکیه‌گاهِ برگشت.</summary>
+    private static string _typed = "";
+
+    /// <summary>تکملهٔ نشان‌داده‌شده (کلِ جمله)، یا خالی.</summary>
+    private static string _ghost = "";
+
+    /// <summary>خودمان داریم متنِ کادر را عوض می‌کنیم.</summary>
+    private static bool _busy;
+
+    /// <summary>کلیدِ قبلی پاک‌کن بود ⇒ تکمیلِ تازه پیشنهاد نکن.</summary>
+    private static bool _erasing;
+
+    /// <summary>برای سنجش: تکمله‌ای نشان داده می‌شود؟ (۰ یا ۱)</summary>
+    public static int Showing => _ghost.Length > 0 ? 1 : 0;
+
+    /// <summary>برای سنجش: کلِ جملهٔ پیشنهادی، یا خالی.</summary>
+    public static string Ghost => _ghost;
+
+    /// <summary>برای سنجش: همان چیزی که کاربر تایپ کرده.</summary>
+    public static string TypedText => _typed;
+
+    /// <summary>سازگاری با سنجش‌های قدیمی: ۰ یعنی تکمله هست، ‎-1‎ یعنی نیست.</summary>
+    public static int Active => _ghost.Length > 0 ? 0 : -1;
 
     /// <summary>به یک کادرِ تایپ وصل می‌شود: نام‌دار + آموخته‌ها.</summary>
     public static void Attach(TextBox box, IReadOnlyList<string> named, IReadOnlyList<string> learned)
     {
         Detach();
         _all = named.Concat(learned).Where(s => !string.IsNullOrWhiteSpace(s))
-                    .Select(s => s.Trim()).Distinct().ToList();
+                    .Select(s => s.Trim()).Distinct()
+                    // کوتاه‌ترین اول: تکمله‌ای که زودتر تمام شود کم‌آزارتر است
+                    .OrderBy(s => s.Length).ThenBy(s => s, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
         if (_all.Count == 0) return;
 
         _box = box;
+        _typed = box.Text ?? "";
         box.PropertyChanged += OnBoxText;
         box.LostFocus += OnBoxLost;
         box.AddHandler(InputElement.KeyDownEvent, OnBoxKey, RoutingStrategies.Tunnel);
         box.DetachedFromVisualTree += OnBoxGone;
-        Show();
     }
 
     private static void Detach()
@@ -125,109 +169,141 @@ public static class Suggest
             b.RemoveHandler(InputElement.KeyDownEvent, OnBoxKey);
             b.DetachedFromVisualTree -= OnBoxGone;
         }
-        _box = null; _items = new(); _active = -1;
-        if (_popup is not null) _popup.IsOpen = false;
+        _box = null; _ghost = ""; _typed = ""; _erasing = false;
     }
 
     private static void OnBoxGone(object? s, VisualTreeAttachmentEventArgs e) => Detach();
+
+    /// <summary>
+    /// فوکوس رفت: تکملهٔ پذیرفته‌نشده **همین‌جا** برداشته می‌شود — پیش از
+    /// آن‌که جدول مقدارِ کادر را در ردیف بنشاند.
+    /// </summary>
     private static void OnBoxLost(object? s, RoutedEventArgs e)
     {
-        // مثلِ سایت: کمی صبر، تا کلیک روی خودِ فهرست گم نشود
-        var box = _box;
-        DispatcherTimer.RunOnce(() => { if (ReferenceEquals(box, _box) && !_picking) Detach(); }, TimeSpan.FromMilliseconds(150));
+        Revert();
+        Detach();
     }
+
+    /// <summary>
+    /// پیش از این‌که مقدارِ کادر جایی ذخیره شود: تکملهٔ پذیرفته‌نشده برداشته
+    /// شود. ‎ExcelGrid‎ این را در ‎CellEditEnding‎ می‌زند — یعنی درست پیش از
+    /// آن‌که جدول متنِ کادر را در ردیف بنشاند. فوکوس‌رفتن هم همین را می‌کند،
+    /// ولی تنها تکیه بر آن کافی نیست: ‎CommitEdit‎ی برنامه‌ای فوکوس را نمی‌برد.
+    /// </summary>
+    public static void Settle() => Revert();
+
     private static void OnBoxText(object? s, AvaloniaPropertyChangedEventArgs e)
     {
-        if (e.Property == TextBox.TextProperty && !_picking) Show();
+        if (e.Property != TextBox.TextProperty || _busy || _box is null) return;
+        _ghost = "";
+        _typed = _box.Text ?? "";
+        if (_erasing) { _erasing = false; return; }
+
+        // ⚠️ یک تیک بعد، نه همین حالا. ‎TextBox‎ اول متن را عوض می‌کند و بعد
+        // مکان‌نما را جابه‌جا؛ اگر همین‌جا بپرسیم «مکان‌نما تهِ متن است؟» جوابِ
+        // حرفِ اولِ هر خانه «نه» است و تکمیل هیچ‌وقت شروع نمی‌شود. (همین باگ
+        // را ‎verify‎ گرفت: کادر «ح» بود و تکمله صفر.)
+        if (_queued) return;
+        _queued = true;
+        Dispatcher.UIThread.Post(() => { _queued = false; Propose(); }, DispatcherPriority.Input);
     }
 
-    private static void Show()
+    private static bool _queued;
+
+    /// <summary>ادامهٔ آن‌چه تایپ شده را داخلِ کادر می‌گذارد و انتخابش می‌کند.</summary>
+    private static void Propose()
     {
         if (_box is not { } box) return;
-        var q = (box.Text ?? "").Trim();
-        _items = (q.Length == 0 ? _all : _all.Where(v => v.Contains(q, StringComparison.OrdinalIgnoreCase)))
-                 .Where(v => !string.Equals(v, q, StringComparison.Ordinal))
-                 .Take(8).ToList();
-        _active = -1;
-        if (_items.Count == 0) { if (_popup is not null) _popup.IsOpen = false; return; }
+        var typed = box.Text ?? "";
+        if (typed.Length == 0) return;
+        // فقط وقتی مکان‌نما تهِ متن است؛ ویرایشِ وسطِ جمله تکمیل نمی‌خواهد
+        if (box.CaretIndex < typed.Length) return;
 
-        var p = EnsurePopup();
-        _list!.Children.Clear();
-        foreach (var v in _items)
-        {
-            var item = new Border
-            {
-                Padding = new Thickness(10, 6), CornerRadius = new CornerRadius(6), Cursor = new Cursor(StandardCursorType.Hand),
-                Child = new TextBlock { Text = v, FontSize = 14, TextTrimming = TextTrimming.CharacterEllipsis },
-                Tag = v,
-            };
-            item.PointerPressed += (_, e) => { Pick((string)item.Tag!); e.Handled = true; };
-            item.PointerEntered += (_, _) => { _active = _list.Children.IndexOf(item); Highlight(); };
-            _list.Children.Add(item);
-        }
-        p.PlacementTarget = box;
-        p.Width = Math.Max(160, box.Bounds.Width);
-        if (!p.IsOpen) p.IsOpen = true;
-        Highlight();
-    }
+        var hit = _all.FirstOrDefault(v => v.Length > typed.Length
+                                        && v.StartsWith(typed, StringComparison.CurrentCultureIgnoreCase));
+        if (hit is null) return;
 
-    private static Popup EnsurePopup()
-    {
-        if (_popup is not null) return _popup;
-        _list = new StackPanel { Spacing = 1 };
-        var border = new Border
-        {
-            Child = _list, Padding = new Thickness(4), CornerRadius = new CornerRadius(10), BorderThickness = new Thickness(1),
-        };
-        border.Bind(Border.BackgroundProperty, border.GetResourceObservable("Pump.Panel"));
-        border.Bind(Border.BorderBrushProperty, border.GetResourceObservable("Pump.Border"));
-        border.Bind(Border.BoxShadowProperty, border.GetResourceObservable("Pump.CardShadowHover"));
-        _popup = new Popup
-        {
-            Child = border, Placement = PlacementMode.Bottom, VerticalOffset = 4,
-            IsLightDismissEnabled = false, Topmost = true,
-        };
-        return _popup;
-    }
-
-    private static void Highlight()
-    {
-        if (_list is null) return;
-        for (var i = 0; i < _list.Children.Count; i++)
-        {
-            if (_list.Children[i] is not Border b) continue;
-            if (i == _active) b.Bind(Border.BackgroundProperty, b.GetResourceObservable("Pump.Selected"));
-            else b.Background = Brushes.Transparent;
-        }
-    }
-
-    private static void Pick(string v)
-    {
-        if (_box is not { } box) return;
-        _picking = true;
+        _busy = true;
         try
         {
-            box.Text = v;
-            box.CaretIndex = v.Length;
-            box.SelectionStart = box.SelectionEnd = v.Length;
+            box.Text = hit;
+            // ⚠️ ترتیب مهم است: ‎CaretIndex‎ انتخاب را جمع می‌کند، پس اول
+            // مکان‌نما و بعد انتخاب. وگرنه تکمله دیده می‌شود ولی برجسته نیست
+            // و کاربر نمی‌فهمد کدام تکه پیشنهاد است (‎verify‎ همین را گرفت).
+            box.CaretIndex = hit.Length;
+            box.SelectionStart = typed.Length;
+            box.SelectionEnd = hit.Length;
         }
-        finally { _picking = false; }
-        Detach();
+        finally { _busy = false; }
+        _typed = typed;
+        _ghost = hit;
+    }
+
+    /// <summary>Tab/Enter: جمله می‌ماند و انتخاب برداشته می‌شود.</summary>
+    private static bool Accept()
+    {
+        if (_ghost.Length == 0 || _box is not { } box) return false;
+        _busy = true;
+        try
+        {
+            var end = (box.Text ?? "").Length;
+            box.SelectionStart = box.SelectionEnd = end;
+            box.CaretIndex = end;
+        }
+        finally { _busy = false; }
+        _typed = box.Text ?? "";
+        _ghost = "";
+        return true;
+    }
+
+    /// <summary>تکمله را برمی‌دارد و همان چیزی می‌ماند که تایپ شده بود.</summary>
+    private static bool Revert()
+    {
+        if (_ghost.Length == 0 || _box is not { } box) return false;
+        _busy = true;
+        try
+        {
+            box.Text = _typed;
+            box.SelectionStart = box.SelectionEnd = _typed.Length;
+            box.CaretIndex = _typed.Length;
+        }
+        finally { _busy = false; }
+        _ghost = "";
+        return true;
     }
 
     private static void OnBoxKey(object? sender, KeyEventArgs e)
     {
-        if (_popup is not { IsOpen: true } || _items.Count == 0) return;
         switch (e.Key)
         {
-            case Key.Tab:
-                var next = e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? _active - 1 : _active + 1;
-                if (next < 0 || next >= _items.Count) { Detach(); return; }   // بگذار Tab به خانهٔ بعد برود
-                _active = next; Highlight(); e.Handled = true; return;
-            case Key.Enter when _active >= 0:
-                Pick(_items[_active]); e.Handled = true; return;
-            case Key.Escape:
-                Detach(); e.Handled = true; return;
+            // پاک‌کن‌ها: اول تکمله می‌رود (مثلِ مرورگر)، بارِ بعد خودِ حرف
+            case Key.Back:
+            case Key.Delete:
+                _erasing = true;
+                if (Revert()) e.Handled = true;
+                return;
+
+            case Key.Tab when _ghost.Length > 0:
+            case Key.Enter when _ghost.Length > 0:
+                Accept();
+                e.Handled = true;      // همین یک بار؛ Tab/Enterِ بعدی کارِ خودش را می‌کند
+                return;
+
+            case Key.Escape when _ghost.Length > 0:
+                Revert();
+                e.Handled = true;
+                return;
+
+            // رفتن به تهِ متن یعنی «قبول»، ولی جلوی خودِ کلید را نمی‌گیریم
+            case Key.Right:
+            case Key.Left:
+            case Key.End:
+                Accept();
+                return;
+
+            default:
+                _erasing = false;
+                return;
         }
     }
 

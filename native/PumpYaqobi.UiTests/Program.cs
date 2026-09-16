@@ -58,6 +58,9 @@ internal static class Program
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- bigtable
         // یک دفتر با شش اندازه (۵۰ تا ۲۰٬۰۰۰ ردیف) و چهار عدد برای هرکدام.
         // چرایی‌اش در ‎BigTable‎ نوشته شده.
+        // ══ حالتِ «بخشِ پرینت دیر باز می‌شود» ══════════════════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- printperf
+        if (outDir.Equals("printperf", StringComparison.OrdinalIgnoreCase)) return PrintPerf.Run();
         if (outDir.Equals("bigtable", StringComparison.OrdinalIgnoreCase))
         {
             BigTable.Trace = args.Length > 1 && args[1].Equals("trace", StringComparison.OrdinalIgnoreCase);
