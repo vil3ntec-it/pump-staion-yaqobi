@@ -100,6 +100,20 @@ public sealed class AppHost
     public StationPublisher Publisher => _publisher ??= new StationPublisher(
         this, new HomeSync(() => HomeLink.Config(this)), () => HomeLink.StationCode(this));
 
+    /// <summary>
+    /// پشتیبانِ هر شش ساعت روی سرورِ خانگی — شرحش در <see cref="BackupPusher"/>.
+    /// تنبل ساخته می‌شود، مثلِ ناشر.
+    /// </summary>
+    public BackupPusher BackupToServer => _backupPusher ??= new BackupPusher(this);
+
+    private BackupPusher? _backupPusher;
+
+    /// <summary>
+    /// همان ناشر، ولی **بی ساختن**. چراغِ سرورِ سربرگ هر ثانیه از این می‌پرسد و
+    /// نباید در آزمون‌ها و عکس‌گیری‌ها نخِ ناشر را بیدار کند.
+    /// </summary>
+    public StationPublisher? PublisherIfStarted => _publisher;
+
     /// <summary>پیامِ کوتاهِ پایینِ صفحه — همان showToastِ نسخهٔ وب.</summary>
     public void Toast(string text, ToastKind kind = ToastKind.Info) => Toasts.Show(text, kind);
     public UserSession Session { get; }

@@ -1182,9 +1182,7 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
         var title = isSub ? "📲 📄 " + acct.Title : "📲 " + Name;
         var hint = "این کد را به مشتری بدهید؛ با اسکنش همین حساب — با همهٔ "
                  + "ردیف‌هایش — روی گوشیِ خودش باز می‌شود. رمز نمی‌خواهد"
-                 + (live.Length > 0
-                    ? "، و هر تغییری که این‌جا بدهید تا یک دقیقه بعد روی گوشی‌اش هم می‌آید."
-                    : " و به سرور وصل نمی‌شود.");
+                 + AcctLive.Hint(_host, live);
 
         await Dialogs.ShowQrAsync(title, link, png, hint);
     });

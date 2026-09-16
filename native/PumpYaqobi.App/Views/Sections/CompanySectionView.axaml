@@ -74,7 +74,7 @@
                   <StackPanel Grid.Row="3">
                     <TextBlock Text="{Binding AlbaqiText}" Classes="cmp-fig"
                                Foreground="{Binding AlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
-                    <TextBlock Text="الباقی" Classes="card-sub" />
+                    <TextBlock Text="الباقی · افغانی" Classes="card-sub" />
                     <Border Classes="card-rule" Margin="11,10,11,0" />
                     <Grid ColumnDefinitions="*,Auto" Margin="11,8,7,9">
                       <TextBlock Grid.Column="0" Text="{Binding UsdText}"

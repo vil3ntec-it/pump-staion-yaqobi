@@ -35,6 +35,7 @@ public partial class MainWindow : Window
         _clock.Tick += (_, _) =>
         {
             vm.Clock = PumpYaqobi.App.Localization.Clock.Now();
+            vm.TickServerDot();
             // ══ نیمه‌شب: تاریخِ سربرگ و نوار هم عوض شوند ══════════════════
             // چک‌لیستِ تحویل (بندِ ۶۲–۶۴): پیش از این «امروز» فقط یک بار در
             // ساخت خوانده می‌شد و برنامه‌ای که شب باز مانده بود، صبح هنوز

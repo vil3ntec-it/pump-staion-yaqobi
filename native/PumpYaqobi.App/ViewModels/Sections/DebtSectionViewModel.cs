@@ -317,9 +317,7 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
             var png = await Task.Run(() => QrWriter.EncodePng(link));
             var hint = "این کد را به مشتری بدهید؛ با اسکنش حسابِ خودش — با همهٔ "
                      + "ردیف‌هایش — روی گوشی باز می‌شود. رمز نمی‌خواهد"
-                     + (live.Length > 0
-                        ? "، و هر تغییری که این‌جا بدهید تا یک دقیقه بعد روی گوشی‌اش هم می‌آید."
-                        : " و به سرور وصل نمی‌شود.");
+                     + AcctLive.Hint(_host, live);
 
             await Dialogs.ShowQrAsync("📲 " + card.Name, link, png, hint);
         });

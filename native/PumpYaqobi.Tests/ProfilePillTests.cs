@@ -97,4 +97,71 @@ public class ProfilePillTests
         var s = Read("PumpYaqobi.App", "Services", "AppSettings.cs");
         Assert.Contains("CloudAccessCode", s);
     }
+
+    /// <summary>
+    /// ══ هیچ خانه‌ای در پروفایل خالی نمی‌ماند ══════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۶): «بخشِ پروفایل هنوز درست نشده برایم.»
+    /// ریشه‌اش یک بازگشتِ زودهنگام بود: روی پمپی که هنوز با کدِ شش‌رقمی فعال
+    /// نشده (یعنی حالِ عادیِ یک نصبِ تازه) ‎ShowSubscription‎ پیش از پر کردنِ
+    /// چهار خانهٔ کارتِ اشتراک برمی‌گشت و کارت **خالی** دیده می‌شد.
+    ///
+    /// این آزمون همان ترتیب را روی سورس قفل می‌کند، و «—»ی مشخصاتِ پمپ را هم.
+    /// </summary>
+    [Fact]
+    public void KarteEshterak_RoyePompeFaalNashode_KhaliNemimanad()
+    {
+        var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs");
+
+        var fill = vm.IndexOf("ShowSubDetails(check, file);", StringComparison.Ordinal);
+        var bail = vm.IndexOf("SubStatus = \"هنوز فعال نشده", StringComparison.Ordinal);
+        Assert.True(fill > 0, "‎ShowSubDetails‎ صدا زده نمی‌شود");
+        Assert.True(bail > 0, "حالتِ «فعال نشده» پیدا نشد");
+        Assert.True(fill < bail,
+            "‎ShowSubDetails‎ باید **پیش از** بازگشتِ «هنوز فعال نشده» بدود، وگرنه "
+            + "روی نصبِ تازه چهار خانهٔ کارتِ اشتراک خالی می‌مانند");
+
+        //  تلفن و نشانیِ نداشته «—» می‌شوند، نه هیچ
+        Assert.Contains("PumpPhone = Dash(", vm);
+        Assert.Contains("PumpAddress = Dash(", vm);
+    }
+
+    /// <summary>
+    /// ⛔ «پیام‌رسان» و «پروفایل» دو جا نباشند — خواستهٔ صریحِ صاحب ریپو
+    /// (۱۴۰۵/۰۶/۲۶): «دو بخش دو جا هستند، آن بالا هستند، این‌جا هم نمی‌خواهد
+    /// باشند.» هر دو دکمهٔ سربرگِ خودشان را دارند، پس از نوار برداشته شدند —
+    /// ولی خودِ بخش‌ها سرِ جایشان در ‎Sections‎ می‌مانند (‎NavOrderTests‎).
+    /// </summary>
+    [Fact]
+    public void NavarBedoneChatVaProfile_Ast()
+    {
+        var vm = Read("PumpYaqobi.App", "ViewModels", "MainViewModel.cs");
+        var xaml = Read("PumpYaqobi.App", "Views", "MainWindow.axaml");
+
+        Assert.Contains("public IReadOnlyList<SectionViewModel> NavSections", vm);
+        Assert.Contains("s.Id is not (\"chat\" or \"account\")", vm);
+        Assert.Contains("ItemsSource=\"{Binding NavSections}\"", xaml);
+        Assert.DoesNotContain("<ItemsControl ItemsSource=\"{Binding Sections}\">", xaml);
+    }
+
+    /// <summary>
+    /// ● چراغِ سرور بغلِ نامِ پمپ — و هیچ نام/نشانیِ سروری کنارش.
+    /// خواستهٔ صاحب ریپو: «یک نقطه که سبز یا سرخ شود و دلیلش را بگوید؛ اسم و
+    /// آدرسِ سرور داخلش نوشته نباشد.»
+    /// </summary>
+    [Fact]
+    public void CheraghEServer_BaghaleNamePomp_Ast()
+    {
+        var xaml = Read("PumpYaqobi.App", "Views", "MainWindow.axaml");
+        var title = xaml.IndexOf("Text=\"پمپ یعقوبی\"", StringComparison.Ordinal);
+        var dot = xaml.IndexOf("Binding ServerDotBrushKey", StringComparison.Ordinal);
+        Assert.True(title > 0 && dot > title, "چراغ باید درست بعد از نامِ پمپ بیاید");
+        Assert.Contains("ToolTip.Tip=\"{Binding ServerDotReason}\"", xaml);
+
+        var vm = Read("PumpYaqobi.App", "ViewModels", "MainViewModel.cs");
+        Assert.Contains("public void TickServerDot()", vm);
+        //  دلیل‌ها متن‌اند، نه نشانی: هیچ‌کدام ‎http‎ یا نامِ میزبان ندارند
+        var reasons = vm.Split("TickServerDot()")[1].Split("}")[0];
+        Assert.DoesNotContain("http", reasons);
+    }
 }

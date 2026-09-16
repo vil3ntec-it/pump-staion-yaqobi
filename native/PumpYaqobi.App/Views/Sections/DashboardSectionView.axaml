@@ -9,6 +9,10 @@
   <!-- ══ داشبورد ══════════════════════════════════════════════════════════
        چیدمان مو‌به‌مو از ‎#sec-dashboard‎: نوارِ بالا، پنجی کارتِ آماری، و دو
        ردیفِ سه‌کارتی که ستونِ میانی‌شان پهن‌تر است (‎.k-wide‎). -->
+      <!-- بدنهٔ داشبورد یک پله از بوم رنگی‌تر (‎Pump.Section‎، همان بدنهٔ بخش‌ها)
+           تا کارت‌ها و سایه‌شان از زمینه جدا شوند — خواستهٔ صاحب ریپو:
+           «داشبورد رنگش کمی تفاوت داشته باشد و سایهٔ کادر هم داشته باشد.» -->
+      <Border Background="{DynamicResource Pump.Section}" CornerRadius="14" Margin="8">
       <StackPanel Margin="14" Spacing="12">
 
       <!-- ── نوارِ بالا (‎.dash-head‎) ── -->
@@ -328,5 +332,6 @@
       <TextBlock Text="{Binding FootNote}" Classes="muted" FontSize="11"
                  HorizontalAlignment="Center" Margin="0,4,0,0" />
     </StackPanel>
+      </Border>
   
 </UserControl>

@@ -170,6 +170,7 @@
                       <StackPanel Grid.Row="3">
                         <TextBlock Text="{Binding RestText}" Classes="cmp-fig"
                                    Foreground="{Binding RestBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                        <TextBlock Text="باقیِ مشتری · لیتر" Classes="card-sub" />
                         <TextBlock Text="{Binding State}" Classes="card-sub"
                                    Foreground="{Binding StateBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
                         <TextBlock Text="{Binding PctText}" Classes="card-sub" />

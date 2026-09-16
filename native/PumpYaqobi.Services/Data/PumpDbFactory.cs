@@ -1,9 +1,73 @@
 using PumpYaqobi.Domain.Entities;
+using System.Data.Common;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using PumpYaqobi.Persistence;
 
 namespace PumpYaqobi.Services.Data;
+
+/// <summary>
+/// ══ شمارندهٔ دستورهای دیتابیس ═══════════════════════════════════════════════
+///
+/// خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۶): «اگر توی بخشی نیستم، آن بخش فعال
+/// نباشد و هیچ مصرفی نداشته باشد — حتی یک درصد.» «مصرف» را نمی‌شود با نگاه
+/// کردن به کد ثابت کرد؛ این‌جا هر دستوری که واقعاً به SQLite می‌رسد شمرده
+/// می‌شود و سنجشِ ‎idle‎ روی همین عدد قضاوت می‌کند.
+///
+/// ⚠️ هزینه‌اش یک ‎Interlocked.Increment‎ در هر دستور است — در برابرِ خودِ
+/// پرس‌وجو هیچ. برای همین همیشه روشن است و لازم نیست کسی یادش بماند روشنش کند.
+/// </summary>
+public sealed class DbWatch : DbCommandInterceptor
+{
+    public static readonly DbWatch Instance = new();
+
+    private static long _count;
+
+    /// <summary>چند دستور تا حالا به دیتابیس رفته.</summary>
+    public static long Count => Interlocked.Read(ref _count);
+
+    /// <summary>آخرین دستورها — فقط وقتی <see cref="Recording"/> روشن باشد.</summary>
+    public static readonly System.Collections.Concurrent.ConcurrentQueue<string> Log = new();
+
+    /// <summary>ضبطِ متنِ دستورها برای سنجش‌ها. در برنامهٔ واقعی خاموش است.</summary>
+    public static bool Recording;
+
+    private static void Seen(DbCommand cmd)
+    {
+        Interlocked.Increment(ref _count);
+        if (!Recording) return;
+        Log.Enqueue(cmd.CommandText.Length > 160 ? cmd.CommandText[..160] : cmd.CommandText);
+        while (Log.Count > 400) Log.TryDequeue(out _);
+    }
+
+    public override InterceptionResult<DbDataReader> ReaderExecuting(
+        DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result)
+    { Seen(command); return base.ReaderExecuting(command, eventData, result); }
+
+    public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+        DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result,
+        CancellationToken cancellationToken = default)
+    { Seen(command); return base.ReaderExecutingAsync(command, eventData, result, cancellationToken); }
+
+    public override InterceptionResult<object> ScalarExecuting(
+        DbCommand command, CommandEventData eventData, InterceptionResult<object> result)
+    { Seen(command); return base.ScalarExecuting(command, eventData, result); }
+
+    public override ValueTask<InterceptionResult<object>> ScalarExecutingAsync(
+        DbCommand command, CommandEventData eventData, InterceptionResult<object> result,
+        CancellationToken cancellationToken = default)
+    { Seen(command); return base.ScalarExecutingAsync(command, eventData, result, cancellationToken); }
+
+    public override InterceptionResult<int> NonQueryExecuting(
+        DbCommand command, CommandEventData eventData, InterceptionResult<int> result)
+    { Seen(command); return base.NonQueryExecuting(command, eventData, result); }
+
+    public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
+        DbCommand command, CommandEventData eventData, InterceptionResult<int> result,
+        CancellationToken cancellationToken = default)
+    { Seen(command); return base.NonQueryExecutingAsync(command, eventData, result, cancellationToken); }
+}
 
 /// <summary>
 /// یک‌جا ساختنِ اتصالِ دیتابیس. مسیرِ فایل کنارِ دادهٔ کاربر است، نه کنارِ EXE،
@@ -28,6 +92,7 @@ public sealed class PumpDbFactory
     {
         var opts = new DbContextOptionsBuilder<PumpDbContext>()
             .UseSqlite($"Data Source={DbPath}")
+            .AddInterceptors(DbWatch.Instance)
             .Options;
         return new PumpDbContext(opts);
     }

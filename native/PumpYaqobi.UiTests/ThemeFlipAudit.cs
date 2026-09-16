@@ -57,6 +57,36 @@ internal static class ThemeFlipAudit
         var themes = PumpTheme.All.ToList();
         var first = vm.SelectedTheme;
 
+        // ══ صفحه‌های رویی هم — نه فقط بخش‌های نوار ══════════════════════════
+        // گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۶): «دارک مود که می‌زنم خیلی باگ می‌آید،
+        // همهٔ نوشته‌ها می‌روند یک کنج.» بخش‌های نوار سالم بودند، پس این‌جا
+        // همان صفحه‌هایی سنجیده می‌شوند که کاربر واقعاً بازشان می‌گذارد:
+        // حسابِ یک قرض‌دار، حسابِ یک شرکت، و ورقِ یک روز.
+        void FlipOpenPage(string what, Func<object?> page)
+        {
+            Settle(win);
+            var target = page();
+            if (target is null) { Console.WriteLine($"{what,-22} باز نشد"); return; }
+            var host = win.GetVisualDescendants().OfType<ContentControl>()
+                          .FirstOrDefault(c => ReferenceEquals(c.Content, target));
+            if (host is null) { Console.WriteLine($"{what,-22} قابش پیدا نشد"); return; }
+            var before = Measure(win, host);
+            if (before.Count == 0) { Console.WriteLine($"{what,-22} سنجه‌ای نداشت"); return; }
+            foreach (var t in themes.Where(t => !ReferenceEquals(t, first)).Append(first))
+            {
+                vm.SelectedTheme = t;
+                Settle(win);
+                var moved = Diff(before, Measure(win, host));
+                Console.WriteLine($"{what,-22} {t.Id,-6} {before.Count,4} سنجه   {moved.Count,3} جابه‌جا");
+                foreach (var m in moved)
+                {
+                    var gone = m.EndsWith("گم شد");
+                    Console.WriteLine($"     {(gone ? "·" : "✖")} {m}");
+                    (gone ? soft : bad).Add($"{what} · تمِ {t.Id} · {m}");
+                }
+            }
+        }
+
         foreach (var sec in vm.Sections.ToList())
         {
             Wait(win, vm.GoAsync(sec));
@@ -87,6 +117,35 @@ internal static class ThemeFlipAudit
                     Console.WriteLine($"     {(gone ? "·" : "✖")} {m}");
                     (gone ? soft : bad).Add($"{sec.Id} · تمِ {t.Id} · {m}");
                 }
+            }
+        }
+
+        // ══ همان کار روی صفحه‌های رویی ═══════════════════════════════════
+        if (vm.Sections.FirstOrDefault(x => x.Id == "debt") is PumpYaqobi.App.ViewModels.Sections.DebtSectionViewModel debt)
+        {
+            Wait(win, vm.GoAsync(debt));
+            Wait(win, debt.OpenByNumberAsync(1));
+            FlipOpenPage("حسابِ قرض‌دار", () => debt.Person);
+            debt.Person = null; Pump(win);
+        }
+        if (vm.Sections.FirstOrDefault(x => x.Id == "companies") is { } co)
+        {
+            Wait(win, vm.GoAsync(co));
+            if (co.GetType().GetProperty("Cards")?.GetValue(co) is System.Collections.IList cards && cards.Count > 0
+                && co.GetType().GetProperty("OpenCommand")?.GetValue(co) is System.Windows.Input.ICommand open)
+            {
+                open.Execute(cards[0]!);
+                FlipOpenPage("حسابِ شرکت", () => co.GetType().GetProperty("Page")?.GetValue(co));
+            }
+        }
+        if (vm.Sections.FirstOrDefault(x => x.Id == "waraq") is PumpYaqobi.App.ViewModels.Sections.WaraqSectionViewModel wq)
+        {
+            Wait(win, vm.GoAsync(wq));
+            Wait(win, wq.ReloadAsync());
+            if (wq.Sheets.Count > 0)
+            {
+                wq.OpenCommand.Execute(wq.Sheets.First());
+                FlipOpenPage("ورقِ روز", () => wq.Page);
             }
         }
 

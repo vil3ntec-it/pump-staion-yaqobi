@@ -73,6 +73,9 @@ internal static class Program
         if (outDir.Equals("themeflip", StringComparison.OrdinalIgnoreCase)) return ThemeFlipAudit.Run();
         // ══ «موقعِ اسکرول لگ می‌زند؟» ═════════════════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- scrollperf
+        // ══ «بخشی که تویش نیستم هیچ مصرفی نداشته باشد» ═══════════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -- idle
+        if (outDir.Equals("idle", StringComparison.OrdinalIgnoreCase)) return IdleAudit.Run();
         if (outDir.Equals("scrollperf", StringComparison.OrdinalIgnoreCase))
         {
             ScrollPerf.Why = args.Length > 1 && args[1].Equals("why", StringComparison.OrdinalIgnoreCase);
@@ -161,7 +164,9 @@ internal static class Program
             ThemeShot.Compose(parts, Path.Combine(outDir, "theme-" + theme.Id + "-4up.png"));
             foreach (var f in parts) File.Delete(f);
         }
-        ThemeManager.Apply(PumpTheme.Blue);
+        // ‎PUMP_SHOT_THEME=gold‎ ⇒ همهٔ عکس‌های بخش‌ها با تمِ تیره — برای دیدنِ باگ‌های دارک
+        ThemeManager.Apply(string.Equals(Environment.GetEnvironmentVariable("PUMP_SHOT_THEME"), "gold", StringComparison.OrdinalIgnoreCase)
+            ? PumpTheme.Gold : PumpTheme.Blue);
         if (vm.Sections.FirstOrDefault(s => s.Id == "dashboard") is { } home) Wait(win, vm.GoAsync(home));
 
         // ۴) هر بخش یک عکس — چیزی تحویل نمی‌دهیم که ندیده باشیم

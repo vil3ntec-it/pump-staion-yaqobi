@@ -75,7 +75,7 @@
                       <StackPanel Grid.Row="4">
                         <TextBlock Text="{Binding SalesText}" Classes="cmp-fig"
                                    Foreground="{DynamicResource Pump.Danger}" />
-                        <TextBlock Text="فروشِ ورق" Classes="card-sub" />
+                        <TextBlock Text="فروشِ ورق · افغانی" Classes="card-sub" />
                         <Border Classes="card-rule" Margin="11,10,11,0" />
                         <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="11,8,7,9">
                           <TextBlock Grid.Column="0" Text="{Binding DebtText}" FontWeight="Bold" FontSize="12"

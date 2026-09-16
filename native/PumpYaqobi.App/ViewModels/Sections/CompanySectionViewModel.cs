@@ -458,7 +458,8 @@ public sealed class CompanyCardViewModel
         RowCount = all.Count;
         // ‎settled = albaqi <= 0 && rows.length > 0‎
         IsSettled = s.AlbaqiAfn <= 0 && all.Count > 0;
-        AlbaqiText = IsSettled ? "✅ تسویه" : "الباقی: " + AlbaqiAfnText + " AFN";
+        // عددِ ساده، بی «الباقی:» و بی «AFN» — برچسب زیرش می‌آید (خواستهٔ صاحب ریپو با عکس)
+        AlbaqiText = IsSettled ? "✅ تسویه" : AlbaqiAfnText;
     }
 
     public TilCompany Entity { get; }

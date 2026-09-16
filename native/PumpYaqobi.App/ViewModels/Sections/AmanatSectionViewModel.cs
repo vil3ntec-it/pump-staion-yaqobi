@@ -108,7 +108,8 @@ public sealed class AmanatCardViewModel
         Name = string.IsNullOrWhiteSpace(a.Name) ? "بی‌نام" : a.Name!.Trim();
         Index = seq;
         IsDiesel = a.Fuel == FuelType.Diesel;
-        RestText = "باقیِ مشتری: " + Fmt2(t.Rest) + " لیتر";
+        // عددِ ساده — برچسبش زیرِ همان عدد در کارت نوشته می‌شود (خواستهٔ صاحب ریپو)
+        RestText = Fmt2(t.Rest);
         // ‎.pdebt.clear‎ سبز است وقتی چیزی برای مشتری مانده
         RestBrushKey = t.Rest > 0 ? "Pump.Ok" : "Pump.Danger";
         LitersText = (IsDiesel ? "🟤 " : "⛽ ") + Shamsi.Money(Math.Round(t.Liters, 0, MidpointRounding.AwayFromZero));

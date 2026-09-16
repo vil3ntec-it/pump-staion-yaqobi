@@ -110,6 +110,9 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
     /// <summary>هر چند وقت صندوقِ ابر پرسیده شود.</summary>
     public static readonly TimeSpan CloudEvery = TimeSpan.FromSeconds(8);
 
+    /// <summary>وقتی چت باز نیست: فقط برای شمارهٔ نخوانده، هر دقیقه.</summary>
+    public static readonly TimeSpan CloudEveryIdle = TimeSpan.FromSeconds(60);
+
     private readonly AppHost _host;
     private readonly HomeServer _server;
     private readonly CancellationTokenSource _life = new();
@@ -386,7 +389,10 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
             try { await PollCloudAsync(_life.Token); }
             catch (OperationCanceledException) { return; }
             catch { /* ابر نرسید — دورِ بعد */ }
-            try { await Task.Delay(CloudEvery, _life.Token); } catch { return; }
+            // ⚠️ فقط وقتی خودِ چت باز است هر ۸ ثانیه؛ وگرنه هر دقیقه — بخشِ بسته
+            // نباید هیچ کاری بکند (خواستهٔ صاحب ریپو). شمارهٔ نخواندهٔ سربرگ
+            // با همان دورِ یک‌دقیقه‌ای زنده می‌ماند.
+            try { await Task.Delay(IsActive ? CloudEvery : CloudEveryIdle, _life.Token); } catch { return; }
         }
     }
 

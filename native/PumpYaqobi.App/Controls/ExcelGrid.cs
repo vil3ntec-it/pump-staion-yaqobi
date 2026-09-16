@@ -365,10 +365,83 @@ public class ExcelGrid : DataGrid
     // پُر می‌شد) — همان راهی که صفحهٔ خالی می‌ساخت. حالا خودِ فهرست خبر می‌دهد.
     private System.Collections.Specialized.INotifyCollectionChanged? _watched;
 
+    // ══════════════════════════════════════════════════════════════════════
+    //  بخشی که دیده نمی‌شود، ردیفِ زنده هم ندارد
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۶): «اگر توی بخش نیستم، آن بخش فعال
+    //  نباشد و هیچ مصرفی نداشته باشد — حتی یک درصد… توی یک حساب یا حسابِ شرکت
+    //  یا ورقی هستم، نباید ورق‌های دیگر و حساب‌های دیگر داده‌ای مصرف کنند.»
+    //
+    //  سنجشِ ‎idle‎ نشان داد پرس‌وجویی در کار نیست (بی‌کاریِ هر بخش صفر دستور)،
+    //  ولی **ردیف‌های ساخته‌شده** می‌مانند: هر بخشی که یک بار باز شده بود،
+    //  ردیف‌هایش تا همیشه در درختِ بصری زنده بودند — پس از یک گشتِ ساده در
+    //  برنامه ۲۴۵ ردیفِ نامرئی روی حافظه و روی هر بی‌اعتبارسازیِ بزرگ (تعویضِ
+    //  تم) کار می‌ماند.
+    //
+    //  حالا جدولی که نامرئی می‌شود فهرستش را «پارک» می‌کند: ‎ItemsSource‎ برداشته
+    //  می‌شود، ‎DataGrid‎ همهٔ ردیف‌هایش را دور می‌ریزد، و با دیده شدنِ دوباره
+    //  همان فهرست برمی‌گردد و از نو — تدریجی — ساخته می‌شود.
+    //
+    //  ⚠️ با ‎SetCurrentValue‎، نه با ‎SetValue‎: اتصالِ ‎{Binding Rows}‎ سرِ جایش
+    //  می‌ماند، پس اگر ویومدل وسطِ پنهانی فهرستِ تازه‌ای بدهد (ماهِ دیگر، حسابِ
+    //  دیگر) همان می‌نشیند و پارکِ کهنه دور ریخته می‌شود.
+    //
+    //  ⚠️ وسطِ ویرایش پارک نمی‌کنیم: برداشتنِ فهرست زیرِ پای ویرایشگر یعنی
+    //  نوشتهٔ نیمه‌تمام. جدولِ نامرئی در حالِ ویرایش نیست، ولی قاعده صریح بماند.
+
+    private object? _parked;
+    private bool _parkedAway;
+
+    /// <summary>
+    /// ⚠️ ‎IsEffectivelyVisible‎ در آوالونیا ۱۱ خبر نمی‌دهد (یک ویژگیِ ساده است،
+    /// نه ‎AvaloniaProperty‎). پس پوسته خودش بعد از هر عوض شدنِ صفحه یک بار
+    /// <see cref="NotifyPagesChanged"/> را می‌زند و هر جدولِ زنده خودش را
+    /// می‌سنجد. جدول‌ها چهل‌تا هم نمی‌شوند، پس این حلقه هیچ است.
+    /// </summary>
+    private static event Action? PagesChanged;
+
+    private static bool _notifyQueued;
+
+    public static void NotifyPagesChanged()
+    {
+        if (_notifyQueued || PagesChanged is null) return;
+        _notifyQueued = true;
+        // ⚠️ پس از چیدمان، نه همان لحظه: اتصالِ ‎IsVisible‎ تازه رسیده و
+        // ‎IsEffectivelyVisible‎ هنوز مقدارِ قبلی را می‌دهد.
+        Dispatcher.UIThread.Post(() =>
+        {
+            _notifyQueued = false;
+            PagesChanged?.Invoke();
+        }, DispatcherPriority.Loaded);
+    }
+
+    private void OnPagesChanged() => OnShownChanged(IsEffectivelyVisible);
+
+    private void OnShownChanged(bool shown)
+    {
+        if (!shown)
+        {
+            if (_parkedAway || _editing || ItemsSource is null) return;
+            _parked = ItemsSource;
+            _parkedAway = true;
+            SetCurrentValue(ItemsSourceProperty, null);
+        }
+        else if (_parkedAway)
+        {
+            _parkedAway = false;
+            var back = _parked;
+            _parked = null;
+            if (back is not null) SetCurrentValue(ItemsSourceProperty, back);
+        }
+    }
+
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
         if (change.Property != ItemsSourceProperty) return;
+        // فهرستِ تازه‌ای از خودِ اتصال رسید ⇒ پارکِ کهنه دیگر معتبر نیست
+        if (_parkedAway && ItemsSource is not null) { _parkedAway = false; _parked = null; }
         if (_watched is not null) _watched.CollectionChanged -= OnRowsChanged;
         _watched = ItemsSource as System.Collections.Specialized.INotifyCollectionChanged;
         if (_watched is not null) _watched.CollectionChanged += OnRowsChanged;
@@ -450,6 +523,7 @@ public class ExcelGrid : DataGrid
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
+        PagesChanged -= OnPagesChanged;
         if (_pageHooked && _page is { } page) page.ScrollChanged -= OnPageScroll;
         _pageHooked = false;
         _page = null;
@@ -1119,6 +1193,9 @@ public class ExcelGrid : DataGrid
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        // «صفحهٔ دیده‌شونده عوض شد» — شرحش بالای ‎NotifyPagesChanged‎
+        PagesChanged -= OnPagesChanged;
+        PagesChanged += OnPagesChanged;
         if (_wired) return;
         _wired = true;
         // تنها منبعِ درستِ «الان در حال ویرایشیم» — خودِ جدول می‌گوید.

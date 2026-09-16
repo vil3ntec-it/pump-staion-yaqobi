@@ -84,6 +84,12 @@
                 Width="26" Height="26" Stretch="Uniform" />
           <TextBlock Text="پمپ یعقوبی" FontSize="21" FontWeight="Black"
                      Foreground="{DynamicResource Pump.HeaderTitle}" VerticalAlignment="Center" />
+          <!-- ● چراغِ سرور — خواستهٔ صاحب ریپو: «بغلِ اسمِ پمپ یعقوبی یک نقطه
+               که سبز یا سرخ شود و دلیلش را بگوید؛ نام و نشانیِ سرور نوشته
+               نباشد.» دلیل فقط در ‎ToolTip‎ است، نشانی هیچ‌جا نیست. -->
+          <Border Width="12" Height="12" CornerRadius="6" VerticalAlignment="Center" Margin="4,2,0,0"
+                  Background="{Binding ServerDotBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                  ToolTip.Tip="{Binding ServerDotReason}" />
         </StackPanel>
 
         <TextBlock Grid.Column="1" Text="{Binding Current.Title}"
@@ -253,7 +259,7 @@
             Background="{DynamicResource Pump.NavBg}"
             BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="0,0,0,1">
       <c:NavStrip Name="Nav">
-        <ItemsControl ItemsSource="{Binding Sections}">
+        <ItemsControl ItemsSource="{Binding NavSections}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>

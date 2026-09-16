@@ -255,6 +255,8 @@
     <Setter Property="Padding" Value="14,0" />
     <Setter Property="FontWeight" Value="Bold" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <!-- هم‌قد و هم‌قلمِ کادرِ جست‌وجوی بغلش (خواستهٔ صاحب ریپو) -->
+    <Setter Property="FontSize" Value="14.5" />
   </Style>
   <Style Selector="Button.tool-link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource Pump.Hover}" />
@@ -1388,9 +1390,11 @@
        چون نام‌ها تقریباً همیشه یک‌خطه‌اند، عملاً یک حفرهٔ خالیِ ۲۵ پیکسلی وسطِ
        هر کارت می‌ساخت. حالا نامِ بلند با «…» بریده می‌شود و هم‌قدی از
        ‎MinItemHeight‎ی خودِ چیدمان می‌آید، نه از کش‌آوردنِ نام. -->
+  <!-- ⚠️ نام از همه درشت‌تر — گزارشِ صاحب ریپو با عکس: «اسم که اصلاً دیده
+       نمی‌شود، مهم‌ترین همان است.» همان ۱۹ی سیاهِ کارتِ قرض‌دار. -->
   <Style Selector="TextBlock.pname">
-    <Setter Property="FontSize" Value="14.5" />
-    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="FontSize" Value="19" />
+    <Setter Property="FontWeight" Value="Black" />
     <Setter Property="TextAlignment" Value="Start" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="TextWrapping" Value="NoWrap" />

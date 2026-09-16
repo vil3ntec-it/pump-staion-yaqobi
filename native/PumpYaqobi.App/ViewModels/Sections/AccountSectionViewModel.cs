@@ -211,6 +211,11 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
                                 / 86_400_000L))
             : 0;
 
+        // ⚠️ **پیش از** هر بازگشتِ زودهنگام: تا دیروز روی پمپی که هنوز فعال
+        // نشده بود (یعنی همان چیزی که صاحب ریپو می‌دید) این چهار خانه خالی
+        // می‌ماندند و کارتِ اشتراک «خراب» به نظر می‌رسید.
+        ShowSubDetails(check, file);
+
         if (string.IsNullOrWhiteSpace(file.CloudDeviceToken))
         {
             SubStatus = "هنوز فعال نشده — کدِ شش‌رقمیِ اشتراک را بزنید.";
@@ -226,7 +231,6 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         {
             SubStatus = "⚠️ " + check.Reason;
         }
-        ShowSubDetails(check, file);
         UpdatePill();
     }
 
@@ -427,8 +431,10 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         if (string.IsNullOrWhiteSpace(PumpName)) PumpName = "پمپ یعقوبی";
         //  آواتار: تا وارد نشده، حرفِ اولِ نامِ پمپ — نه علامتِ سوال
         if (Initial == "؟") Initial = PumpName.Trim()[..1];
-        PumpPhone = s.GetString(SettingsService.StationPhone);
-        PumpAddress = s.GetString(SettingsService.StationAddress);
+        // ⚠️ خانهٔ خالی «خراب» به نظر می‌رسد — نداشتن با «—» گفته می‌شود، با
+        // هیچ نه. (گزارشِ صاحب ریپو: «بخشِ پروفایل هنوز درست نشده برایم».)
+        PumpPhone = Dash(s.GetString(SettingsService.StationPhone));
+        PumpAddress = Dash(s.GetString(SettingsService.StationAddress));
         PumpCodeLine = string.IsNullOrWhiteSpace(f.CloudStationId) ? "هنوز روی ابر ثبت نشده" : f.CloudStationId;
         HomeLine = string.IsNullOrWhiteSpace(s.GetString(SettingsService.ServerUrl))
             ? "هنوز پیدا نشده — با روشن شدنِ سرورِ خانگی خودش پیدا می‌شود"
@@ -451,6 +457,9 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
             _ => "Pump.Muted",
         };
     }
+
+    /// <summary>متنِ خالی را «—» می‌کند — هیچ خانه‌ای در پروفایل خالی نمی‌ماند.</summary>
+    private static string Dash(string? v) => string.IsNullOrWhiteSpace(v) ? "—" : v.Trim();
 
     private void ShowSubDetails(LicenseCheck check, AppSettings file)
     {

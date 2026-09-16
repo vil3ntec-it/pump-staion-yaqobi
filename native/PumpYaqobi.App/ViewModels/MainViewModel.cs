@@ -66,6 +66,11 @@ public sealed partial class MainViewModel : ObservableObject
             // حلقه بی‌صدا هیچ کاری نمی‌کند.
             AppHost.Current.Publisher.Start();
 
+            // ══ پشتیبانِ هر شش ساعت روی سرورِ خانگی ═════════════════════════
+            // خواستهٔ صاحب ریپو: «هر ۶ ساعت بک‌آپ برود به سرور و سه روز بماند؛
+            // نرفت، به مدیر بگو.» شرحِ کامل در ‎BackupPusher‎.
+            AppHost.Current.BackupToServer.Start();
+
             // ══ گذرِ دومِ گرم کردن ═══════════════════════════════════════════
             // پردهٔ لودینگ **پیش از** این اتفاق افتاده و صفحه‌ها را ساخته و
             // چیده است (‎WarmUpAsync‎، از سازندهٔ پنجره). آن‌جا اجازه‌ای نبود،
@@ -214,6 +219,17 @@ public sealed partial class MainViewModel : ObservableObject
     public ObservableCollection<SectionViewModel> Sections { get; }
 
     /// <summary>
+    /// ══ دکمه‌های نوار — بی «پیام‌رسان» و «پروفایل» ═══════════════════════════
+    /// خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۶): «این دو بخش دو جا هستند؛ آن بالا
+    /// هستند، این‌جا هم نمی‌خواهد باشند.» هر دو دکمهٔ خودشان را در سربرگ دارند
+    /// (💬 پشتیبانی و 👤 پروفایل)، پس از نوار برداشته شدند. خودِ بخش‌ها سرِ
+    /// جایشان در <see cref="Sections"/> می‌مانند (نوزدهم و بیستم — ‎NavOrderTests‎)
+    /// و با همان دکمه‌های سربرگ باز می‌شوند.
+    /// </summary>
+    public IReadOnlyList<SectionViewModel> NavSections =>
+        Sections.Where(s => s.Id is not ("chat" or "account")).ToList();
+
+    /// <summary>
     /// چهار عددِ نوارِ بالا — همان ‎#topBanner‎: الباقیِ شرکت‌ها، قرضِ کل،
     /// مفادِ امروز و مصارفِ امروز. با هر بار عوض کردنِ بخش تازه می‌شوند.
     /// </summary>
@@ -271,6 +287,26 @@ public sealed partial class MainViewModel : ObservableObject
     public string BackText => "‹ برگشت به " + (Current?.Title ?? "");
     [ObservableProperty] private PumpTheme _selectedTheme;
     [ObservableProperty] private string _clock = "";
+
+    /// <summary>
+    /// ══ چراغِ سرور در سربرگ ══════════════════════════════════════════════════
+    /// سبز = به سرورِ خانگی وصل‌ایم؛ سرخ = سرور تنظیم شده ولی جواب نمی‌دهد؛
+    /// خاکستری = سروری تنظیم نشده. با تیکِ ساعتِ پنجره تازه می‌شود
+    /// (<see cref="TickServerDot"/>) — فقط خواندنِ دو ویژگی، هیچ درخواستی.
+    /// </summary>
+    [ObservableProperty] private string _serverDotBrushKey = "Pump.Muted";
+    [ObservableProperty] private string _serverDotReason = "سرور تنظیم نشده";
+
+    public void TickServerDot()
+    {
+        var sync = AppHost.Current.PublisherIfStarted;
+        string key, why;
+        if (sync is null || !sync.Configured) { key = "Pump.Muted"; why = "سرورِ خانگی هنوز تنظیم نشده — از پروفایل وارد شوید"; }
+        else if (sync.Connected) { key = "Pump.Ok"; why = sync.Mode == Services.HomeSyncMode.Station ? "به سرورِ خانگی وصل است" : "به سرورِ خانگی وصل است (درِ قدیمی)"; }
+        else { key = "Pump.Danger"; why = "سرورِ خانگی جواب نمی‌دهد — خاموش است یا شبکه قطع است"; }
+        if (key != ServerDotBrushKey) ServerDotBrushKey = key;
+        if (why != ServerDotReason) ServerDotReason = why;
+    }
     /// <summary>
     /// «قفل است؟» — حالا فقط نمایی از <see cref="Phase"/> است، نه یک حالتِ
     /// جدا.
@@ -520,6 +556,10 @@ public sealed partial class MainViewModel : ObservableObject
     {
         if (e.PropertyName == nameof(SectionViewModel.IsPageOpen))
             OnPropertyChanged(nameof(IsChromeVisible));
+
+        // حساب/شرکت/ورقِ باز عوض شد (‎Person‎، ‎Overlay‎، ‎Page‎…) ⇒ همان قاعده:
+        // صفحه‌ای که رفت، ردیف‌هایش هم می‌روند.
+        Controls.ExcelGrid.NotifyPagesChanged();
     }
 
     private async Task OpenSubAsync(SectionViewModel sub)
@@ -555,6 +595,10 @@ public sealed partial class MainViewModel : ObservableObject
             if (_watchedContent is not null)
                 _watchedContent.PropertyChanged += OnContentPropertyChanged;
         }
+
+        // صفحهٔ دیده‌شونده عوض شد ⇒ جدول‌های پنهان ردیف‌هایشان را رها کنند
+        // (شرحش بالای ‎ExcelGrid.NotifyPagesChanged‎).
+        Controls.ExcelGrid.NotifyPagesChanged();
 
         OnPropertyChanged(nameof(IsChromeVisible));
         OnPropertyChanged(nameof(IsSubOpen));

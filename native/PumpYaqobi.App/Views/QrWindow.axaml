@@ -21,7 +21,10 @@
     <TextBlock x:Name="HintText" Classes="muted" TextWrapping="Wrap"
                HorizontalAlignment="Center" TextAlignment="Center" />
 
-    <SelectableTextBlock x:Name="LinkText" Classes="muted" FontSize="11"
+    <!-- ⚠️ نشانی دیگر نوشته نمی‌شود — گزارشِ صاحب ریپو: «چرا این‌قدر آدرسِ بزرگ؟
+         فقط کیو‌آرِ خالی را بده، بس است.» متن همچنان نگه داشته می‌شود تا
+         «ذخیرهٔ عکس» و آزمون‌ها همان را داشته باشند. -->
+    <SelectableTextBlock x:Name="LinkText" Classes="muted" FontSize="11" IsVisible="False"
                          TextWrapping="Wrap" HorizontalAlignment="Center"
                          TextAlignment="Center" />
 

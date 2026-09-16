@@ -48,6 +48,13 @@ public sealed class AppSettings
     public string StationCode { get; set; } = "pump1";
 
     /// <summary>
+    /// آخرین باری که پشتیبان واقعاً روی سرورِ خانگی نشست (‎ISO‎).
+    /// خالی یعنی هنوز هیچ‌وقت نرفته — <see cref="BackupPusher"/> از همین
+    /// می‌فهمد کِی باید به مدیر بگوید.
+    /// </summary>
+    public string LastBackupSentAt { get; set; } = "";
+
+    /// <summary>
     /// ثبتِ خودکار در سرورِ خانگی روشن باشد؟
     ///
     /// روشن یعنی: اگر نشانی نداشتیم، برنامه خودش سرور را در شبکهٔ خانگی

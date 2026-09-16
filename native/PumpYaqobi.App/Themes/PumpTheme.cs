@@ -158,9 +158,11 @@ public sealed record PumpTheme(
         new[] { C("#ffe14d"), C("#ffd700"), C("#e6c800") },
         Section: C("#141419"),
         Input: C("#131317"),
-        CardShadow: "inset 0 1 0 0 #14FFF3C4, 0 0 0 1 #55E6C800, 0 0 7 0 #33FFD700, 0 6 16 0 #90000000",
-        CardShadowHover: "inset 0 1 0 0 #22FFF3C4, 0 0 0 1 #88E6C800, 0 0 10 1 #55FFD700, 0 8 20 0 #A0000000",
-        SectionShadow: "0 0 0 1 #55E6C800, 0 0 0 3 #14FFD700, 0 4 0 0 #80000000");
+        // ⚠️ نورِ لبه کم‌تر از پیش — گزارشِ صاحب ریپو: «رنگِ زردش خیلی پرنور است،
+        //  نورِ کادرها را می‌گویم، دکمه‌ها نه.» خطِ لبه ‎#38‎ و هاله ‎#1C‎ به‌جای ‎#55‎ و ‎#33‎.
+        CardShadow: "inset 0 1 0 0 #10FFF3C4, 0 0 0 1 #38E6C800, 0 0 7 0 #1CFFD700, 0 6 16 0 #90000000",
+        CardShadowHover: "inset 0 1 0 0 #18FFF3C4, 0 0 0 1 #55E6C800, 0 0 10 1 #2EFFD700, 0 8 20 0 #A0000000",
+        SectionShadow: "0 0 0 1 #38E6C800, 0 0 0 3 #0CFFD700, 0 4 0 0 #80000000");
 
     public static readonly PumpTheme[] All = { Blue, Gold };
 

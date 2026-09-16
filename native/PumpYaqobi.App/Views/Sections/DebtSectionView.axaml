@@ -38,9 +38,9 @@
            بلکه ‎Inline‎ی همان نوار، بعد از کارت‌های زیربخش. -->
       <c:SectionPage.Inline>
         <StackPanel Orientation="Horizontal" Spacing="4">
-          <TextBox Text="{Binding Search}" Watermark="🔍 نام یا شماره" Width="170" />
+          <TextBox Text="{Binding Search}" Watermark="🔍 نام یا شماره" Width="165" MinHeight="44" FontSize="14.5" VerticalContentAlignment="Center" />
           <!-- 🎤 جست‌وجوی صوتی — همه روی خودِ دستگاه، بی اینترنت و بی سرور. -->
-          <Button Padding="8,4" Content="🎤" ToolTip.Tip="نام را بگویید — حسابش باز می‌شود"
+          <Button Padding="8,4" MinHeight="44" Content="🎤" ToolTip.Tip="نام را بگویید — حسابش باز می‌شود"
                   Command="{Binding VoiceSearchCommand}"
                   Classes.danger="{Binding Listening}" />
         </StackPanel>
@@ -61,7 +61,7 @@
                    • ‎MaximumRowsOrColumns‎ نبود، پس روی نمایشگرِ پهن ‎ItemsStretch‎
                      کارت‌ها را بی‌جهت پهن می‌کرد. حالا سقفِ هشت‌تا دارد و
                      ‎MinItemWidth‎ی ۲۰۰ روی باریک‌ترین صفحه هم شش‌تا می‌دهد. -->
-              <UniformGridLayout MinItemWidth="210" MinItemHeight="215"
+              <UniformGridLayout MinItemWidth="210" MinItemHeight="238"
                                  MaximumRowsOrColumns="8" ItemsStretch="Fill"
                                  MinColumnSpacing="10" MinRowSpacing="10" />
             </ItemsRepeater.Layout>

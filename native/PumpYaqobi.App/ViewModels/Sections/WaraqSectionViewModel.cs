@@ -718,7 +718,8 @@ public sealed class WaraqCardViewModel
             .Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
         SubText = (w.Station ?? "") + (workers.Length > 0 ? " — " + string.Join(" / ", workers) : "");
 
-        SalesText = Money(d.Sales + n.Sales) + " افغانی";
+        // عددِ ساده — «فروشِ ورق · افغانی» زیرش در کارت می‌آید
+        SalesText = Money(d.Sales + n.Sales);
         DebtText = "قرض: " + Money(d.Debt + n.Debt);
         ExpenseText = "مصرف: " + Money(d.Expenses + n.Expenses);
     }

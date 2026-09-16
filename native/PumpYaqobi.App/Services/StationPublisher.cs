@@ -75,6 +75,12 @@ public sealed class StationPublisher : IAsyncDisposable
     /// <summary>از کدام در وصل‌ایم — برای صفحهٔ تنظیمات.</summary>
     public HomeSyncMode Mode => _sync.Mode;
 
+    /// <summary>سروری تنظیم شده است؟ — چراغِ سربرگ از این می‌پرسد.</summary>
+    public bool Configured => _sync.Configured;
+
+    /// <summary>همین حالا وصل‌ایم؟ — چراغِ سربرگ از این می‌پرسد.</summary>
+    public bool Connected => _sync.Connected;
+
     /// <summary>‎stations/&lt;کد&gt;-live‎ — مسیرِ سرورهای به‌روزنشده.</summary>
     public static string PathOf(string? stationCode)
     {
