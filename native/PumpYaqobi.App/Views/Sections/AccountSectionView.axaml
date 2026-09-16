@@ -36,74 +36,128 @@
       <Setter Property="FontSize" Value="17" />
       <Setter Property="FontWeight" Value="Bold" />
     </Style>
+
+    <!-- ══ کادرهای کارتِ ورود: گِرد و بلند، نه مربعی ══════════════════════
+         «اون مربعی نبود و کادرهای لاگینش خیلی بهتر بود» — پس فقط داخلِ همین
+         کارت، کادرها گوشهٔ ۱۴ و بلندیِ ۴۴ می‌گیرند و دکمه‌ها کپسولی می‌شوند.
+         بیرونِ این کارت هیچ چیزی عوض نمی‌شود. -->
+    <Style Selector="Border.logincard TextBox">
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="MinHeight" Value="44" />
+      <Setter Property="Padding" Value="14,9" />
+      <Setter Property="FontSize" Value="14" />
+    </Style>
+    <Style Selector="Border.logincard Button.go">
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="MinHeight" Value="44" />
+      <Setter Property="FontSize" Value="14.5" />
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+    <Style Selector="Border.logincard TextBlock.lbl">
+      <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
   </UserControl.Styles>
 
   <c:SectionPage Header="پروفایل">
     <Grid ColumnDefinitions="300,*,330" RowDefinitions="Auto,Auto,*">
 
-      <!-- ══ 🪪 کارتِ ورود — عکس + فرم، مثلِ همان طرحِ مرجع ══════════════════
-           خواستهٔ صاحب ریپو با دو عکس: «بخشِ لاگین با ایمیل با اضافه کردنِ
-           کدِ شش‌رقمی و زدنِ اسم و اسمِ پمپش… عکسِ آن اولی، دیزاینِ این دومی.»
-           ⚠️ عکس فقط وقتی خوانده می‌شود که کاربر روی این صفحه بیاید و با
-           پهنای نمایش باز می‌شود — هیچ هزینه‌ای به باز شدنِ برنامه نمی‌دهد. -->
-      <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Classes="card" Padding="0" Margin="0,0,0,14">
-        <Grid ColumnDefinitions="*,1.05*">
+      <!-- ══ 🪪 کارتِ ورود — فرم روی خودِ عکس ═══════════════════════════════
+           خواستهٔ صاحب ریپو (۱۴۰۵/۰۶/۲۸، با دو عکس و بعد اصلاحش): «خودِ لاگین
+           تو اون عکس باشه و خیلی بهتر و قشنگ‌تر… اون عکسِ پمپ‌استیشن باشه، نه
+           این که اون نوشته‌های عکس هم باشه… اون مربعی نبود و کادرهای لاگینش
+           خیلی بهتر بود.»
 
-          <!-- عکس -->
-          <Border Grid.Column="0" CornerRadius="14" Margin="14" ClipToBounds="True"
-                  Background="{DynamicResource Pump.Input}" MinHeight="250">
-            <Grid>
-              <Image Source="{Binding LoginArt}" Stretch="UniformToFill"
-                     IsVisible="{Binding LoginArt, Converter={x:Static ObjectConverters.IsNotNull}}" />
-              <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="18" Spacing="2">
-                <TextBlock Text="{Binding PumpName}" FontSize="19" FontWeight="Black" Foreground="White" />
-                <TextBlock Text="حساب و اشتراکِ همین پمپ" FontSize="12" Foreground="#e8e8e8" />
-              </StackPanel>
-            </Grid>
+           پس: عکس تمام‌قدِ کارت است و **بریده** (فقط پمپ، بی هیچ نوشتهٔ عکس)،
+           و فرم یک پنلِ سفیدِ گردِ شناور **روی** همان عکس می‌نشیند. گوشه‌ها
+           بزرگ و کادرها گِرد و بلندند — مربعی نیست.
+           ⚠️ عکس فقط وقتی خوانده می‌شود که کاربر روی این صفحه بیاید. -->
+      <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Classes="logincard"
+              CornerRadius="26" Margin="0,0,0,16" ClipToBounds="True"
+              MaxWidth="880" HorizontalAlignment="Center"
+              Background="{DynamicResource Pump.Panel}"
+              BoxShadow="{DynamicResource Pump.CardShadow}">
+        <!-- ⚠️ عکسِ اصلی **ایستاده** است (۳۷۶×۴۱۲)، پس اگر تمامِ یک کارتِ
+             پهن را پر کند فقط سقفِ پمپ دیده می‌شود. برای همین کارت باریک
+             است و عکس یک طرفش را با نسبتِ طبیعیِ خودش می‌گیرد، و پنلِ فرم
+             **لبه‌اش را می‌پوشاند** — همان طرحی که صاحب ریپو نشان داد. -->
+        <!-- ⚠️ پهنا و بلندی **صریح**‌اند: هر دو پنل به دو لبه چسبیده‌اند، پس
+             اگر اندازه را نگوییم خودِ قاب به اندازهٔ پهن‌ترین پنل جمع می‌شود
+             و فرم تمامِ عکس را می‌پوشاند (یک بار همین شد).
+             و بلندی آن‌قدر است که تهِ فرم («ورود با گوگل») بریده نشود. -->
+        <Grid Width="880" Height="552">
+
+          <!-- عکسِ بریده — یک طرفِ کارت، از بالا تا پایین -->
+          <Image Source="{Binding LoginArt}" Stretch="UniformToFill"
+                 VerticalAlignment="Center" HorizontalAlignment="Right" Width="470"
+                 IsVisible="{Binding LoginArt, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+          <!-- پردهٔ ملایم روی همان عکس، تا نوشته‌اش خوانده شود -->
+          <Border HorizontalAlignment="Right" Width="470"
+                  IsVisible="{Binding LoginArt, Converter={x:Static ObjectConverters.IsNotNull}}">
+            <Border.Background>
+              <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                <GradientStop Offset="0" Color="#00000000" />
+                <GradientStop Offset="0.45" Color="#26000000" />
+                <GradientStop Offset="1" Color="#59000000" />
+              </LinearGradientBrush>
+            </Border.Background>
           </Border>
 
-          <!-- فرم -->
-          <StackPanel Grid.Column="1" Margin="22" Spacing="10" VerticalAlignment="Center">
-            <TextBlock Text="خوش آمدید" FontSize="30" FontWeight="Black" />
-            <TextBlock Text="ایمیل و کدِ شش‌رقمی را این‌جا بزنید؛ رمزی لازم نیست."
-                       Classes="muted" TextWrapping="Wrap" />
-
-            <TextBlock Text="ایمیل" Classes="kvl" Margin="0,6,0,0" />
-            <TextBox Text="{Binding LoginEmail}" Watermark="name@gmail.com" FlowDirection="LeftToRight" />
-
-            <TextBlock Text="کدِ شش‌رقمیِ اشتراک" Classes="kvl" />
-            <TextBox Text="{Binding LoginCode}" MaxLength="6" Watermark="۱۲۳۴۵۶" />
-
-            <Grid ColumnDefinitions="*,10,*">
-              <StackPanel Grid.Column="0" Spacing="6">
-                <TextBlock Text="نامِ شما" Classes="kvl" />
-                <TextBox Text="{Binding LoginName}" Watermark="نامِ خودتان" />
-              </StackPanel>
-              <StackPanel Grid.Column="2" Spacing="6">
-                <TextBlock Text="نامِ پمپ" Classes="kvl" />
-                <TextBox Text="{Binding LoginPump}" Watermark="پمپ یعقوبی" />
-              </StackPanel>
-            </Grid>
-
-            <Button Classes="accent" Content="ثبت و فعال‌سازی" Margin="0,6,0,0"
-                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                    Command="{Binding SubmitLoginCommand}" IsEnabled="{Binding !Busy}" />
-
-            <Grid ColumnDefinitions="*,Auto,*" Margin="0,2">
-              <Border Grid.Column="0" Height="1" Background="{DynamicResource Pump.Border}" VerticalAlignment="Center" />
-              <TextBlock Grid.Column="1" Text="یا" Classes="muted" Margin="10,0" />
-              <Border Grid.Column="2" Height="1" Background="{DynamicResource Pump.Border}" VerticalAlignment="Center" />
-            </Grid>
-
-            <Button Classes="ghost" Content="ورود با گوگل"
-                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                    Command="{Binding SignInCommand}" IsEnabled="{Binding !Busy}" />
-
-            <TextBlock Text="{Binding LoginStatus}" TextWrapping="Wrap" FontSize="12.5" FontWeight="Bold"
-                       IsVisible="{Binding LoginStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-            <TextBlock Classes="muted" FontSize="11.5" TextWrapping="Wrap"
-                       Text="نام و نامِ پمپ بی کد هم ذخیره می‌شوند. کدِ شش‌رقمی همان کدِ اشتراک است و اگر نزنید، دفترِ خودتان مثلِ همیشه باز است." />
+          <!-- نامِ پمپ، گوشهٔ عکس -->
+          <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="26,22" Spacing="2"
+                      IsVisible="{Binding LoginArt, Converter={x:Static ObjectConverters.IsNotNull}}">
+            <TextBlock Text="{Binding PumpName}" FontSize="21" FontWeight="Black" Foreground="White" />
+            <TextBlock Text="حساب و اشتراکِ همین پمپ" FontSize="12" Foreground="#eaeaea" />
           </StackPanel>
+
+          <!-- ══ پنلِ شناورِ فرم — روی خودِ عکس ══ -->
+          <Border HorizontalAlignment="Left" VerticalAlignment="Stretch" Width="438"
+                  Margin="16" CornerRadius="22" Padding="26,16"
+                  Background="{DynamicResource Pump.Card}"
+                  BoxShadow="0 12 34 0 #40000000">
+            <StackPanel Spacing="8" VerticalAlignment="Center">
+              <TextBlock Text="خوش آمدید" FontSize="28" FontWeight="Black" />
+              <TextBlock Text="ایمیل و کدِ شش‌رقمی را بزنید؛ رمزی لازم نیست."
+                         Classes="muted" FontSize="12.5" TextWrapping="Wrap" />
+
+              <TextBlock Text="ایمیل" Classes="lbl" Margin="0,8,0,0" />
+              <TextBox Text="{Binding LoginEmail}" Watermark="name@gmail.com" FlowDirection="LeftToRight" />
+
+              <TextBlock Text="کدِ شش‌رقمیِ اشتراک" Classes="lbl" />
+              <TextBox Text="{Binding LoginCode}" MaxLength="6" Watermark="۱۲۳۴۵۶" />
+
+              <Grid ColumnDefinitions="*,10,*">
+                <StackPanel Grid.Column="0" Spacing="5">
+                  <TextBlock Text="نامِ شما" Classes="lbl" />
+                  <TextBox Text="{Binding LoginName}" Watermark="نامِ خودتان" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Spacing="5">
+                  <TextBlock Text="نامِ پمپ" Classes="lbl" />
+                  <TextBox Text="{Binding LoginPump}" Watermark="پمپ یعقوبی" />
+                </StackPanel>
+              </Grid>
+
+              <Button Classes="accent go" Content="ثبت و فعال‌سازی" Margin="0,10,0,0"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                      Command="{Binding SubmitLoginCommand}" IsEnabled="{Binding !Busy}" />
+
+              <Grid ColumnDefinitions="*,Auto,*" Margin="0,4">
+                <Border Grid.Column="0" Height="1" Background="{DynamicResource Pump.Border}" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="یا" Classes="muted" FontSize="12" Margin="10,0" />
+                <Border Grid.Column="2" Height="1" Background="{DynamicResource Pump.Border}" VerticalAlignment="Center" />
+              </Grid>
+
+              <Button Classes="ghost go" Content="ورود با گوگل"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                      Command="{Binding SignInCommand}" IsEnabled="{Binding !Busy}" />
+
+              <TextBlock Text="{Binding LoginStatus}" TextWrapping="Wrap" FontSize="12.5" FontWeight="Bold"
+                         IsVisible="{Binding LoginStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                         Text="نام و نامِ پمپ بی کد هم ذخیره می‌شوند؛ دفترِ خودتان همیشه باز است." />
+            </StackPanel>
+          </Border>
         </Grid>
       </Border>
 

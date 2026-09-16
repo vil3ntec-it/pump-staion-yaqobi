@@ -173,13 +173,45 @@ public class AppLinksTests
         //  (۲) روی نخِ دیگر و (۳) به پهنای نمایش، نه اندازهٔ اصلی
         Assert.Contains("await Task.Run(() =>", vm);
         Assert.Contains("Bitmap.DecodeToWidth(s, ArtWidth)", vm);
+
+        //  ⚠️ بریدن **بعد از** ‎await‎ است، یعنی روی نخِ رابط: ‎CroppedBitmap‎
+        //  یک ‎AvaloniaObject‎ است و روی نخِ دیگر «Call from invalid thread»
+        //  می‌دهد (همین باگ یک بار عکس را کاملاً ناپدید کرد).
+        var body = vm.Split("await Task.Run(() =>")[1].Split("});")[0];
+        Assert.DoesNotContain("CroppedBitmap", body);
+        Assert.Contains("new CroppedBitmap(full, box)", vm);
         //  و یک بار برای همیشه
-        Assert.Contains("private static Bitmap? _art;", vm);
+        Assert.Contains("private static IImage? _art;", vm);
 
         //  خودِ فایلِ عکس هم کوچک است — ۱۵۰ کیلوبایت سقفِ خودمان
         var art = new FileInfo(Path.Combine(Root, "PumpYaqobi.App", "Assets", "login-art.jpg"));
         Assert.True(art.Exists, "عکسِ کارتِ ورود نیست");
         Assert.True(art.Length < 150 * 1024, $"عکس بزرگ است: {art.Length} بایت");
+    }
+
+    /// <summary>
+    /// ⚠️ «آن نوشته‌های عکس هم نباشد» — خواستهٔ صریحِ صاحب ریپو. عکسِ اصلی یک
+    /// کارتِ تبلیغاتی است («Gas Station / Learn More»)؛ فقط پنجرهٔ خودِ پمپ
+    /// نشان داده می‌شود و فرم **روی همان عکس** می‌نشیند.
+    /// </summary>
+    [Fact]
+    public void Akse_FaghatKhodePompAst_VaFarmRoyeHamanAks()
+    {
+        var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs");
+        //  پنجرهٔ بریدن هست و نوشته‌های سمتِ راستِ عکس (از ۴۳۲ به بعد) را نمی‌گیرد
+        Assert.Contains("ArtCrop = new(56, 42, 376, 412)", vm);
+
+        var xaml = Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml");
+        //  فرم یک پنلِ شناور **داخلِ همان قاب** است، نه ستونی کنارِ عکس
+        var grid = xaml.Split("Classes=\"logincard\"")[1].Split("<!-- ══ آواتار")[0];
+        var img = grid.IndexOf("<Image Source=\"{Binding LoginArt}\"", StringComparison.Ordinal);
+        var form = grid.IndexOf("Background=\"{DynamicResource Pump.Card}\"", StringComparison.Ordinal);
+        Assert.True(img > 0 && form > img, "پنلِ فرم باید بعد از عکس بیاید تا رویش کشیده شود");
+        //  و اندازهٔ قاب صریح است، وگرنه فرم تمامِ عکس را می‌پوشاند (یک بار شد)
+        Assert.Contains("<Grid Width=\"880\" Height=\"552\">", grid);
+        //  کادرها گِردند، نه مربعی
+        Assert.Contains("Selector=\"Border.logincard TextBox\"", xaml);
+        Assert.Contains("CornerRadius\" Value=\"14\"", xaml);
     }
 
     // ── ۵) بخشِ وی‌آی‌پی ───────────────────────────────────────────────────

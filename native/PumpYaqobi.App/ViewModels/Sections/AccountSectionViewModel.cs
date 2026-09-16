@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using Avalonia;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -539,12 +541,25 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     [ObservableProperty] private string _loginStatus = "";
 
     /// <summary>عکسِ کنارِ فرم — تا خوانده نشده ‎null‎ است و کادرش دیده نمی‌شود.</summary>
-    [ObservableProperty] private Bitmap? _loginArt;
+    [ObservableProperty] private IImage? _loginArt;
 
-    /// <summary>پهنای نمایشِ عکس؛ بیشتر از این باز نمی‌شود.</summary>
-    private const int ArtWidth = 460;
+    /// <summary>
+    /// پهنای بازکردنِ عکس. عکسِ اصلی ۷۳۵ پیکسل است و از آن فقط خودِ
+    /// پمپ‌بنزین بریده می‌شود، پس بیشتر از اندازهٔ خودش بازش نمی‌کنیم.
+    /// </summary>
+    private const int ArtWidth = 736;
 
-    private static Bitmap? _art;
+    /// <summary>
+    /// ⚠️ **فقط خودِ پمپ‌بنزین** — خواستهٔ صریحِ صاحب ریپو: «آن نوشته‌های
+    /// عکس هم نباشد.» عکسِ اصلی یک کارتِ تبلیغاتی است («TRANSPARENT GLASS /
+    /// Gas Station / Learn More»)؛ این پنجره همان نوشته‌ها و حاشیه را
+    /// می‌بُرد و فقط تصویرِ پمپ می‌ماند. بریدن روی خودِ عکسِ بازشده انجام
+    /// می‌شود (<see cref="CroppedBitmap"/>) — یک پوشش است، نه یک عکسِ تازه،
+    /// پس هیچ حافظه و وقتی اضافه نمی‌کند.
+    /// </summary>
+    private static readonly PixelRect ArtCrop = new(56, 42, 376, 412);
+
+    private static IImage? _art;
     private static bool _artTried;
 
     private void ShowLogin()
@@ -616,13 +631,22 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
 
         try
         {
-            var bmp = await Task.Run(() =>
+            //  کارِ سنگین (باز کردنِ JPEG) روی نخِ دیگر
+            var full = await Task.Run(() =>
             {
                 using var s = AssetLoader.Open(new Uri("avares://PumpYaqobi/Assets/login-art.jpg"));
                 return Bitmap.DecodeToWidth(s, ArtWidth);
             });
-            _art = bmp;
-            LoginArt = bmp;
+
+            //  ⚠️ بریدن **باید** روی نخِ رابط باشد: ‎CroppedBitmap‎ یک
+            //  ‎AvaloniaObject‎ است و سازنده‌اش نخ را می‌سنجد («Call from
+            //  invalid thread»). خودش کاری نمی‌کند جز نگه داشتنِ یک مستطیل،
+            //  پس هزینه‌اش صفر است — همان عکس، بی کپی.
+            var box = ArtCrop.Intersect(new PixelRect(full.PixelSize));
+            IImage art = box.Width > 0 && box.Height > 0 ? new CroppedBitmap(full, box) : full;
+
+            _art = art;
+            LoginArt = art;
         }
         catch { }
     }
