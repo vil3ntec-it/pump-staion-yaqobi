@@ -80,6 +80,19 @@ public sealed class BackupPusher : IAsyncDisposable
     /// </summary>
     public async Task<bool> RunOnceAsync(CancellationToken ct = default)
     {
+        // ══ قفلِ اشتراک ═══════════════════════════════════════════════════
+        //  بک‌اپِ خودکارِ روی سرور با اشتراک است. ⚠️ بک‌اپِ **محلی** هرگز قفل
+        //  نمی‌شود — نه این‌جا نه جای دیگر: دادهٔ کاربر مالِ خودش است و
+        //  «سطل زباله و بک‌اپِ محلی همیشه باز» قاعدهٔ ثابتِ این برنامه است.
+        if (!Entitlements.Allows(Entitlements.CloudBackup))
+        {
+            LastError = Entitlements.Why(Entitlements.CloudBackup);
+            //  و هشدارِ «۲۶ ساعت است نرفته» را هم نمی‌دهیم: نرفتنش تصمیمِ
+            //  خودِ پلن است، نه خرابی.
+            WarningText = "";
+            return false;
+        }
+
         var file = _host.Backup.SnapshotToday();
         if (file is null || !File.Exists(file))
         {

@@ -12,6 +12,16 @@ namespace PumpYaqobi.App.Services;
 /// <param name="SubscriptionEndsAt">پایانِ اشتراک (میلی‌ثانیهٔ یونیکس).</param>
 /// <param name="ExpiresAt">پایانِ خودِ مجوز — کوتاه‌تر از اشتراک.</param>
 /// <param name="PlanTitle">نامِ پلن، برای نمایش.</param>
+/// <param name="HasFeatureList">
+/// آیا خودِ مجوز کلیدِ <c>feat</c> را داشت.
+///
+/// ⚠️ «نبودنِ فهرست» با «فهرستِ خالی» یکی نیست و نباید یکی شود:
+///   • نبود  ⇒ مجوزِ نسلِ اول ⇒ پلنِ کامل (وگرنه با آمدنِ قفل، همهٔ
+///             مشتری‌های امروز یک‌شبه خاموش می‌شدند).
+///   • خالی  ⇒ پلنِ «پایه» ⇒ هیچ‌کدام از کارهای ابری.
+/// هر دو در <see cref="Features"/> یک چیز دیده می‌شوند، پس تفاوتشان همین
+/// پرچم است.
+/// </param>
 public sealed record LicenseCheck(
     bool Valid,
     string Reason,
@@ -19,7 +29,8 @@ public sealed record LicenseCheck(
     IReadOnlyList<string> Core,
     long SubscriptionEndsAt,
     long ExpiresAt,
-    string PlanTitle)
+    string PlanTitle,
+    bool HasFeatureList = false)
 {
     public static LicenseCheck Fail(string why) =>
         new(false, why, Array.Empty<string>(), Array.Empty<string>(), 0, 0, "");
@@ -139,7 +150,9 @@ public static class LicenseGuard
             Arr(payload, "core"),
             Num(payload, "sub_ends"),
             exp,
-            Str(payload, "plan_title"));
+            Str(payload, "plan_title"),
+            payload.TryGetProperty("feat", out var featProp)
+                && featProp.ValueKind == JsonValueKind.Array);
     }
 
     /// <summary>

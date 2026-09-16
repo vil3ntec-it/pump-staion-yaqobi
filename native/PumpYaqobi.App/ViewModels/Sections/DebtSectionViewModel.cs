@@ -311,6 +311,7 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
         CrashGuard.RunAsync("کیو‌آر", async () =>
         {
             if (card is null) return;
+            if (!Entitlements.Gate(_host, Entitlements.QrLive)) return;
 
             // ══ تمامِ حساب داخلِ خودِ کیو‌آر ══════════════════════════════
             // مثلِ کیو‌آرِ صفحهٔ شخص: عکسِ حساب فشرده می‌شود و در تکهٔ ‎#d=…‎ی

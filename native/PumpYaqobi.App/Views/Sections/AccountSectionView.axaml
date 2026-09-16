@@ -160,8 +160,29 @@
           </StackPanel>
           <TextBlock Text="{Binding SubMessage}" Classes="muted" FontSize="12" TextWrapping="Wrap"
                      IsVisible="{Binding SubMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          <TextBlock Text="{Binding GraceText}" FontSize="12" TextWrapping="Wrap" FontWeight="Bold"
+                     Foreground="{DynamicResource Pump.Warn}"
+                     IsVisible="{Binding GraceText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+          <!-- ══ چه چیزی در اشتراکِ من است ══════════════════════════════
+               سه کارِ ابری با اشتراک‌اند و پشتیبانی همیشه باز. دفترِ خودش
+               هیچ‌وقت قفل نمی‌شود، پس این‌جا هم اسمی از آن نیست. -->
+          <Border Height="1" Background="{DynamicResource Pump.Border}" />
+          <TextBlock Text="دسترسی‌ها" Classes="kvl" />
+          <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="اپِ کارمندان و ربات" Classes="kvv" />
+            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding AccessKarText}" Classes="kvv" />
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="کیو‌آرِ حسابِ مشتری" Classes="kvv" Margin="0,6,0,0" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AccessQrText}" Classes="kvv" Margin="0,6,0,0" />
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="بک‌اپِ خودکار روی سرور" Classes="kvv" Margin="0,6,0,0" />
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding AccessBackupText}" Classes="kvv" Margin="0,6,0,0" />
+            <TextBlock Grid.Row="3" Grid.Column="0" Text="چتِ پشتیبانی" Classes="kvv" Margin="0,6,0,0" />
+            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding AccessSupportText}" Classes="kvv" Margin="0,6,0,0"
+                       Foreground="{DynamicResource Pump.Ok}" />
+          </Grid>
+
           <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                     Text="دفترِ شما روی همین کامپیوتر می‌ماند و با تمام شدنِ اشتراک هم سرِ جایش است؛ فقط بخش‌های پولی بسته می‌شوند." />
+                     Text="دفترِ شما روی همین کامپیوتر می‌ماند و با تمام شدنِ اشتراک هم سرِ جایش است — قرض‌داران، ورق، مخزن، گاوصندوق، چاپ و بک‌اپِ محلی. فقط سه کارِ ابریِ بالا بسته می‌شوند." />
         </StackPanel>
       </Border>
 

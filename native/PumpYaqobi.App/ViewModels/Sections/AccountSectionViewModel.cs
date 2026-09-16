@@ -315,6 +315,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     private Task ShowAccessQrAsync() => CrashGuard.RunAsync("کیو‌آرِ کدِ پمپ", async () =>
     {
         if (!HasAccessCode) return;
+        if (!Entitlements.Gate(_host, Entitlements.Kar)) return;
         var link = KarLink.ForCode(AccessCode, _host.Settings.GetString(SettingsService.ViewerUrl));
         var png = await Task.Run(() => PumpYaqobi.Services.Vision.QrWriter.EncodePng(link));
         await Dialogs.ShowQrAsync("📲 کدِ پمپ — " + AccessCodeDisplay, link, png,
@@ -461,8 +462,42 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     /// <summary>متنِ خالی را «—» می‌کند — هیچ خانه‌ای در پروفایل خالی نمی‌ماند.</summary>
     private static string Dash(string? v) => string.IsNullOrWhiteSpace(v) ? "—" : v.Trim();
 
+    // ══ «چه چیزی در اشتراکِ من است» ═══════════════════════════════════════
+    //
+    //  خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۸): کیو‌آر، اپِ کارمندان و ربات، و
+    //  بک‌اپِ خودکار روی سرور با اشتراک باشند — و پشتیبانی همیشه باز، «چون
+    //  یکی از واجبات است». پس همین‌جا، سیاه روی سفید، نوشته می‌شود کدام باز
+    //  است و کدام نه. کاربری که نداند چه خریده، فردا شکایت می‌کند.
+
+    [ObservableProperty] private string _accessKarText = "";
+    [ObservableProperty] private string _accessQrText = "";
+    [ObservableProperty] private string _accessBackupText = "";
+    [ObservableProperty] private string _accessSupportText = "";
+
+    /// <summary>«⏳ ۹ روز ارفاق» — خالی یعنی ارفاقی در کار نیست.</summary>
+    [ObservableProperty] private string _graceText = "";
+
+    private void ShowAccess(AppSettings file)
+    {
+        var st = Entitlements.State(file, _cloud?.Subscription);
+        static string Mark(bool ok) => ok ? "✅ باز" : "🔒 با اشتراک";
+
+        AccessKarText = Mark(st.Allows(Entitlements.Kar));
+        AccessQrText = Mark(st.Allows(Entitlements.QrLive));
+        AccessBackupText = Mark(st.Allows(Entitlements.CloudBackup));
+
+        //  ⚠️ پشتیبانی هیچ‌وقت قفل نمی‌شود و این‌جا هم همین را می‌گوید.
+        AccessSupportText = "✅ همیشه باز";
+
+        GraceText = st.InGrace
+            ? "⏳ اشتراک تمام شده — " + Shamsi.Money(st.GraceDaysLeft)
+              + " روز ارفاق. در این مدت همه‌چیز کار می‌کند."
+            : "";
+    }
+
     private void ShowSubDetails(LicenseCheck check, AppSettings file)
     {
+        ShowAccess(file);
         var activated = !string.IsNullOrWhiteSpace(file.CloudDeviceToken);
         SubPlanText = check.Valid
             ? (string.IsNullOrWhiteSpace(check.PlanTitle) ? "اشتراکِ VIP" : check.PlanTitle)

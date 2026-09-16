@@ -101,10 +101,21 @@ public sealed class StationPublisher : IAsyncDisposable
     {
         try
         {
-            var ready = await ReadyAsync(force, ct);
+            // ══ قفلِ اشتراک ═══════════════════════════════════════════════
+            //  عکسِ زندهٔ پمپ فقط یک مشتری دارد: اپِ کارمندان و ربات. پس بی
+            //  اشتراک ساخته و فرستاده نمی‌شود — و کیو‌آرِ حساب‌ها هم قفلِ
+            //  خودش را دارد. بی این دو، هیچ‌کدام واقعاً قفل نبودند.
+            //
+            //  ⚠️ «باز» بودن با ارفاق سنجیده می‌شود (‎Entitlements‎)، پس یک
+            //  روزِ بی‌اینترنت گوشیِ کارمندِ مشتریِ پول‌داده را خاموش نمی‌کند.
+            var karOk = Entitlements.Allows(Entitlements.Kar);
+            var qrOk = Entitlements.Allows(Entitlements.QrLive);
+            if (!karOk && !qrOk) return false;
+
+            var ready = karOk && await ReadyAsync(force, ct);
 
             // ⚠️ بی سرورِ خانگی و بی ابر، عکس گرفتن فقط CPU می‌سوزاند.
-            if (!ready && !CloudActivated) return false;
+            if (!ready && !(qrOk && CloudActivated)) return false;
 
             // ⚠️ و بی تغییر هم: با پنج سال داده، ساختنِ عکس یک ثانیه است و هر
             // بیست ثانیه یک‌بار یعنی پنج درصدِ CPU برای همیشه («کامپیوتر داغ»).
@@ -138,7 +149,7 @@ public sealed class StationPublisher : IAsyncDisposable
 
             // کیو‌آرِ زنده: حساب‌های کیو‌آردار، فقط وقتی چیزی عوض شده — یا
             // دورِ پیش یکی‌شان نرفته و هنوز طلبکار است.
-            if (force || hash != _lastAcctHash || _accts.Pending > 0)
+            if (qrOk && (force || hash != _lastAcctHash || _accts.Pending > 0))
             {
                 _lastAcctHash = hash;
                 await PublishAccountsAsync(ready, ct);

@@ -1272,6 +1272,7 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
     {
         var acct = Current;
         if (acct is null) return;
+        if (!Entitlements.Gate(_host, Entitlements.QrLive)) return;
 
         // حسابِ فرعی همیشه ‎LegacySubId‎ دارد (هم آن‌هایی که از نسخهٔ وب آمده‌اند،
         // هم آن‌هایی که ‎AddSubAccountAsync‎ می‌سازد)، پس ‎IsMain‎ همان محکِ درست است.

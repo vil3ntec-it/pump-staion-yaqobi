@@ -727,6 +727,7 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
         CrashGuard.RunAsync("کیو‌آر", async () =>
         {
             if (card is null) return;
+            if (!Entitlements.Gate(_host, Entitlements.QrLive)) return;
 
             var full = await _host.Companies.LoadAsync(card.Entity.Id);
 

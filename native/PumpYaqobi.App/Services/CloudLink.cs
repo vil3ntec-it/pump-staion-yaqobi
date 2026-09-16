@@ -118,6 +118,12 @@ public sealed class CloudLink
     /// <summary>آخرین وضعیتِ اشتراک که از سرور گرفته شده.</summary>
     public PumpSubscription Subscription { get; private set; } = PumpSubscription.None;
 
+    /// <summary>
+    /// حالِ اشتراک برای قفلِ سه چیزِ ابری — همان چیزی که صفحهٔ پروفایل
+    /// نشان می‌دهد (<see cref="Entitlements"/>).
+    /// </summary>
+    public EntitlementState Entitlement => Entitlements.State(_settings, Subscription);
+
     /// <summary>سنجشِ مجوزِ ذخیره‌شده — همان چیزی که آفلاین هم کار می‌کند.</summary>
     public LicenseCheck Verify(long? nowMs = null) => LicenseGuard.Check(
         _settings.CloudLicense,
@@ -179,6 +185,10 @@ public sealed class CloudLink
         _settings.CloudLicense = Str(json, "license");
         _settings.CloudSyncedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         ReadSubscription(json);
+        //  مُهرِ «دیدیم که باز است» — پایهٔ ارفاق (‎Entitlements.Grace‎). بی این،
+        //  یک روزِ بی‌اینترنت می‌توانست کیو‌آر و اپِ کارمندانِ مشتریِ پول‌داده
+        //  را خاموش کند.
+        Entitlements.Remember(_settings, Subscription, Verify());
         await SaveQuiet();
 
         return CloudResult.Done;
@@ -199,6 +209,10 @@ public sealed class CloudLink
         _settings.CloudLicense = Str(json, "license");
         _settings.CloudSyncedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         ReadSubscription(json);
+        //  مُهرِ «دیدیم که باز است» — پایهٔ ارفاق (‎Entitlements.Grace‎). بی این،
+        //  یک روزِ بی‌اینترنت می‌توانست کیو‌آر و اپِ کارمندانِ مشتریِ پول‌داده
+        //  را خاموش کند.
+        Entitlements.Remember(_settings, Subscription, Verify());
         await SaveQuiet();
         return CloudResult.Done;
     }
@@ -237,6 +251,10 @@ public sealed class CloudLink
         }
 
         _settings.CloudSyncedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        //  مُهرِ «دیدیم که باز است» — پایهٔ ارفاق (‎Entitlements.Grace‎). بی این،
+        //  یک روزِ بی‌اینترنت می‌توانست کیو‌آر و اپِ کارمندانِ مشتریِ پول‌داده
+        //  را خاموش کند.
+        Entitlements.Remember(_settings, Subscription, Verify());
         await SaveQuiet();
         return CloudResult.Done;
     }
