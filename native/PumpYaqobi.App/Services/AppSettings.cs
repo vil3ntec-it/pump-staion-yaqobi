@@ -108,6 +108,13 @@ public sealed class AppSettings
     /// <summary>نامِ حساب — فقط برای نشان دادن.</summary>
     public string CloudName { get; set; } = "";
 
+    /// <summary>
+    /// کدِ دسترسیِ پمپ — همان کدِ هشت‌حرفی که کارمند در اپِ گوشی می‌زند.
+    /// سرور می‌دهدش؛ این‌جا فقط نسخهٔ آخر می‌ماند تا بی‌اینترنت هم روی
+    /// صفحهٔ پروفایل دیده شود.
+    /// </summary>
+    public string CloudAccessCode { get; set; } = "";
+
     public double WindowWidth { get; set; } = 1440;
     public double WindowHeight { get; set; } = 900;
     public bool WindowMaximized { get; set; } = true;

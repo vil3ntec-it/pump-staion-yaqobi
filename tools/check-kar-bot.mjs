@@ -252,5 +252,91 @@ console.log('\n── ابر و ورود ─────────────
   ok(!/pump-kar-v1'/.test(swSrc), 'شمارهٔ کش بالا رفته است');
 }
 
+// ══════════════════════════════════════════════════════════════════════
+//  کدِ پمپ — «هر کسی که برنامه را نصب می‌کند باید آن کد را بزند»
+// ══════════════════════════════════════════════════════════════════════
+//
+// خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۶): «برای هر پمپ یک کد باشد که در
+// اندروید و آیفون بزند، حساب‌های همان پمپ را نشان بدهد و با پمپ‌های دیگر
+// قاطی نشود — این را خیلی جدی بگیر.»
+
+console.log('\n── کدِ پمپ و جداسازیِ پمپ‌ها ─────────────────────────────');
+{
+  const { readFileSync } = await import("node:fs");
+  const cloudSrc = readFileSync(new URL('../kar/cloud.js', import.meta.url), 'utf8');
+  const htmlSrc  = readFileSync(new URL('../kar/index.html', import.meta.url), 'utf8');
+  const appSrc   = readFileSync(new URL('../kar/app.js', import.meta.url), 'utf8');
+  const swSrc    = readFileSync(new URL('../kar/sw.js', import.meta.url), 'utf8');
+  const apkYml   = readFileSync(new URL('../.github/workflows/build-kar-apk.yml', import.meta.url), 'utf8');
+  const cloud    = require(path.join(here, '..', 'kar', 'cloud.js'));
+
+  // ── صفحهٔ اول کدِ پمپ است ─────────────────────────────────────────
+  ok(/id="codePane"/.test(htmlSrc) && /id="inCode"/.test(htmlSrc) && /id="btnJoin"/.test(htmlSrc),
+     'صفحهٔ «کدِ پمپ» با کادر و دکمه هست');
+  const bootPart = appSrc.slice(appSrc.indexOf('function boot()'));
+  ok(/else \{[\s\S]{0,400}show\('codePane'\)/.test(bootPart),
+     'بی هیچ تنظیمی، اولین صفحه کدِ پمپ است — نه گوگل، نه فرمِ نشانی');
+  ok(/btnGoogleWay/.test(htmlSrc) && /btnGoogleWay/.test(appSrc), 'راهِ گوگل از همان صفحه در دسترس است');
+  ok(htmlSrc.indexOf('id="codePane"') < htmlSrc.indexOf('id="signinPane"'), 'کدِ پمپ پیش از ورودِ گوگل می‌آید');
+
+  // ── کد به ابر می‌رود و فقط نشانی و رمزِ خواندنِ همان پمپ برمی‌گردد ──
+  ok(/\/api\/pump\/public\/join/.test(cloudSrc), 'کد از درِ عمومیِ join می‌رود');
+  ok(!/\/api\/pump\/public\/join[^\n]*token/.test(cloudSrc), 'برای join هیچ توکنی فرستاده نمی‌شود');
+  ok(cloud.normalizeCode(' k7pm-3xq2 ') === 'K7PM3XQ2', 'کدِ کوچک و خط‌تیره‌دار یکسان می‌شود');
+  ok(cloud.formatCode('K7PM3XQ2') === 'K7PM-3XQ2', 'کد برای نمایش خط‌تیره می‌گیرد');
+
+  // ── رفتار با سرورِ ساختگی ──────────────────────────────────────────
+  const calls = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, opt) => {
+    calls.push({ url: String(url), opt });
+    const body = opt && opt.body ? JSON.parse(opt.body) : {};
+    if (/\/join$/.test(url)) {
+      if (body.code === 'K7PM3XQ2')
+        return new Response(JSON.stringify({ ok: true, station: { code: 'ac-one', name: 'پمپِ یک' },
+          home: { url: 'wss://a.example', readKey: 'read-a', station: 'ac-one' }, cloudLiveAt: 5 }), { status: 200 });
+      return new Response(JSON.stringify({ error: { code: 'bad_access_code', message: 'این کد به هیچ پمپی نمی‌رسد' } }), { status: 404 });
+    }
+    if (/\/live\?code=K7PM3XQ2$/.test(url))
+      return new Response(JSON.stringify({ ok: true, updatedAt: 7, live: { seq: 9, station: { name: 'پمپِ یک' } } }), { status: 200 });
+    return new Response('{}', { status: 404 });
+  };
+  try {
+    const st = await cloud.joinWithCode('k7pm-3xq2');
+    ok(st && st.code === 'ac-one' && st.home.url === 'wss://a.example' && st.home.readKey === 'read-a',
+       'کدِ درست ⇒ نشانی و رمزِ خواندنِ همان پمپ');
+    ok(st.accessCode === 'K7PM3XQ2' && st.cloudLiveAt === 5, 'کد و تازگیِ عکسِ ابری همراهش می‌آید');
+    ok(calls[0].url === 'https://api.vill3n.top/api/pump/public/join' && !(calls[0].opt.headers || {}).Authorization,
+       'join به نشانیِ قفل‌شدهٔ ابر و بی‌توکن می‌رود');
+    let failed = null;
+    try { await cloud.joinWithCode('AAAA-AAAA'); } catch (e) { failed = e; }
+    ok(failed && failed.status === 404, 'کدِ غلط ⇒ خطای ۴۰۴ با پیامِ سرور');
+    let short = null;
+    try { await cloud.joinWithCode('ABC'); } catch (e) { short = e; }
+    ok(short && short.code === 'bad_access_code' && calls.length === 2, 'کدِ کوتاه اصلاً به سرور نمی‌رود');
+    const lv = await cloud.cloudLive('k7pm-3xq2');
+    ok(lv && lv.live.seq === 9 && lv.updatedAt === 7, 'عکسِ ابری با همان کد می‌آید');
+  } finally { globalThis.fetch = realFetch; }
+
+  // ── جداسازی: هر پمپ کلیدِ خودش ──────────────────────────────────────
+  ok(/function stnKey\(suffix\)/.test(appSrc) && /stnKey\('snap'\)/.test(appSrc) && /stnKey\('told'\)/.test(appSrc),
+     'عکس و خبرهای گفته‌شده زیرِ کلیدِ همان پمپ می‌نشینند');
+  ok(!/localStorage\.setItem\(KEY \+ '\.snap'/.test(appSrc), 'کلیدِ مشترکِ قدیمیِ عکس دیگر نوشته نمی‌شود');
+  ok(/function switchStation\(stn\)[\s\S]{0,600}removeItem\(stnKey\('snap'\)\)/.test(appSrc),
+     'رفتن به پمپِ دیگر عکسِ پمپِ قبلی را پاک می‌کند');
+  ok(/function forgetAll\(/.test(appSrc) && /btnForget[\s\S]{0,300}forgetAll\(/.test(appSrc),
+     '«پمپِ دیگر» همه‌چیز را پاک می‌کند و به صفحهٔ کد برمی‌گردد');
+  ok(/function acceptSnapshot\(/.test(appSrc) && /\(v\.seq \|\| 0\) < data\.seq/.test(appSrc),
+     'عکسِ کهنه (چه از ابر چه از خانه) جای تازه را نمی‌گیرد');
+  ok(/function cloudFallback\(/.test(appSrc) && /retry >= 2\) cloudFallback\(\)/.test(appSrc),
+     'اگر سرورِ خانگی جواب نداد، عکسِ ابریِ همان پمپ می‌آید');
+  ok(/status === 404[\s\S]{0,120}forgetAll\(/.test(appSrc), 'کدِ عوض‌شده ⇒ این گوشی بیرون می‌رود');
+
+  // ── فایلِ نصبِ اندروید cloud.js را دارد ─────────────────────────────
+  ok(/cp kar\/index\.html kar\/app\.js kar\/cloud\.js kar\/manifest\.json/.test(apkYml),
+     'cloud.js داخلِ فایلِ نصبِ اندروید می‌رود — بی آن، کدِ پمپ در اپِ نصبی کار نمی‌کرد');
+  ok(!/pump-kar-v3'/.test(swSrc), 'شمارهٔ کشِ سرویس‌ورکر بالا رفته است');
+}
+
 console.log(bad ? '\n' + bad + ' آزمون شکست خورد' : '\nهمه درست');
 process.exit(bad ? 1 : 0);

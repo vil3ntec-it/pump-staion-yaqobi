@@ -54,7 +54,9 @@ jobs:
         run: |
           rm -rf android/app/src/main/assets/www
           mkdir -p android/app/src/main/assets/www
-          cp kar/index.html kar/app.js kar/manifest.json android/app/src/main/assets/www/
+          # ⚠️ cloud.js هم می‌رود: بی آن، «کدِ پمپ» و ورودِ گوگل داخلِ فایلِ نصب
+          # کار نمی‌کنند (تا ۱۴۰۵/۰۶/۲۶ جا مانده بود و اپِ نصبی فقط راهِ کیو‌آر داشت).
+          cp kar/index.html kar/app.js kar/cloud.js kar/manifest.json android/app/src/main/assets/www/
           # ⚠️ سرویس‌ورکر عمداً نمی‌رود: داخلِ ‎file://‎ ثبت نمی‌شود و فقط در
           # کنسول خطا می‌دهد. خودِ فایل‌ها که آفلاین‌اند.
           echo "محتوای بسته‌شده:"; ls -la android/app/src/main/assets/www/

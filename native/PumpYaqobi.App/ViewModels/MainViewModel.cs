@@ -229,6 +229,12 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>پیام‌رسان — برای دکمهٔ «💬 پشتیبانی»ی سربرگ و شمارهٔ نخوانده‌هایش.</summary>
     public ChatSectionViewModel Chat => Sections.OfType<ChatSectionViewModel>().First();
 
+    /// <summary>
+    /// «پروفایل» — برای دکمهٔ کنارِ تم در سربرگ: ورود با گوگل، VIP و روزهای
+    /// مانده، و کدِ پمپ برای اپِ کارمندان. بخشِ بیستم است و بیستم می‌ماند.
+    /// </summary>
+    public AccountSectionViewModel Account => Sections.OfType<AccountSectionViewModel>().First();
+
     [ObservableProperty] private SectionViewModel? _current;
 
     /// <summary>
@@ -337,6 +343,8 @@ public sealed partial class MainViewModel : ObservableObject
                                   nameof(IsShellVisible), nameof(IsLocked),
                                   nameof(RoleText), nameof(RoleBrushKey) })
             OnPropertyChanged(n);
+        //  دکمهٔ «پروفایل»ِ سربرگ همان لحظهٔ ورود درست بگوید VIP هست یا نه
+        if (v == AppPhase.Ready) Account.RefreshAll();
     }
 
     /// <summary>پردهٔ لودینگِ آغاز — فقط در ‎Starting‎.</summary>

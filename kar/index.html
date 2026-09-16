@@ -101,16 +101,83 @@
   .ans{border-inline-start:4px solid var(--accent);padding-inline-start:10px}
   .kv{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed var(--line);padding:3px 0}
   .kv:last-child{border-bottom:0}
-  @media (max-width:420px){ .wrap{padding:10px 10px 88px} }
+  /* ── صفحه‌های ورود: کدِ پمپ، گوگل، کیو‌آر ─────────────────────────────── */
+  .gate{max-width:440px;margin:0 auto;padding-top:6vh}
+  .hero{text-align:center;padding:22px 12px 14px}
+  .hero .logo{width:72px;height:72px;border-radius:22px;margin:0 auto 12px;display:grid;place-items:center;
+        background:linear-gradient(135deg,var(--accent),#ffcf6b);color:#1a1a1a;font-size:2rem;
+        box-shadow:0 10px 30px rgba(246,166,35,.28)}
+  .hero h1{font-size:1.35rem;margin:0 0 4px}
+  .hero .sub{font-size:.86rem}
+  .code-in{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:1.55rem;
+        letter-spacing:.28em;text-align:center;direction:ltr;text-transform:uppercase;
+        padding:14px 10px;border-width:2px}
+  .code-in:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px rgba(246,166,35,.18)}
+  button.big{width:100%;padding:13px 14px;font-size:1rem;border-radius:12px}
+  .links{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+  .links button{background:transparent;border:0;color:var(--muted);font-weight:600;font-size:.86rem;
+        padding:8px;text-decoration:underline;text-underline-offset:4px}
+  .links button:hover{color:var(--txt)}
+  .steps{display:grid;gap:6px;font-size:.82rem;color:var(--muted)}
+  .steps div::before{content:'●';color:var(--accent);margin-inline-end:6px;font-size:.6rem;vertical-align:middle}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:var(--chip);border:1px solid var(--line);
+        border-radius:999px;padding:2px 10px;font-size:.74rem;color:var(--muted);direction:ltr;
+        font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.08em}
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);
+        border-radius:50%;animation:sp .8s linear infinite;vertical-align:-3px;margin-inline-end:6px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  @media (max-width:420px){ .wrap{padding:10px 10px 88px} .gate{padding-top:3vh} }
 </style>
 </head>
 <body>
 
-<!-- ══ ۰) ورود — تنها چیزی که از کارمند پرسیده می‌شود ══════════════════
+<!-- ══ ۰) کدِ پمپ — اولین و تنها چیزی که از هر کسی پرسیده می‌شود ═══════
+     خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۶): «برای هر پمپ یک کد باشد که در
+     برنامهٔ اندروید و آیفون بزند، حساب‌های همان پمپ را نشان بدهد و با
+     پمپ‌های دیگر قاطی نشود… هر کسی که برنامه را نصب می‌کند باید آن کد را
+     بزند تا بتواند بیاید توی حساب‌ها.»
+
+     کد را برنامهٔ کامپیوترِ همان پمپ نشان می‌دهد (بخشِ «پروفایل»). گوشی
+     آن را به ابر می‌دهد و در جواب فقط نشانی و رمزِ فقط‌خواندنیِ همان پمپ
+     را می‌گیرد — بعدش همان دو درِ سرورِ خانگی، مثلِ همیشه.              -->
+<div class="wrap gate hidden" id="codePane">
+  <div class="hero">
+    <div class="logo">⛽</div>
+    <h1>دستیارِ پمپ</h1>
+    <div class="sub">کدِ پمپِ خودتان را بزنید. این کد را صاحبِ پمپ در برنامهٔ
+      کامپیوتر، بخشِ «پروفایل»، می‌بیند.</div>
+  </div>
+  <div class="card">
+    <h2>کدِ پمپ</h2>
+    <input class="code-in" id="inCode" placeholder="XXXX-XXXX" maxlength="9"
+           autocomplete="one-time-code" autocapitalize="characters" spellcheck="false"
+           inputmode="latin">
+    <div style="height:12px"></div>
+    <button class="p big" id="btnJoin">ورود به پمپ</button>
+    <div style="height:8px"></div>
+    <div class="sub err hidden" id="codeErr"></div>
+    <div class="sub" id="codeState"></div>
+  </div>
+  <div class="card">
+    <div class="steps">
+      <div>فقط حساب‌های همین پمپ دیده می‌شود — هیچ پمپِ دیگری نه.</div>
+      <div>بعد از کد، رمزِ برنامهٔ کامپیوتر را هم می‌خواهد.</div>
+      <div>هیچ‌کس از داخلِ گوشی چیزی را عوض نمی‌کند؛ فقط می‌بیند.</div>
+    </div>
+    <div class="links">
+      <button id="btnGoogleWay">صاحبِ پمپ هستم — با گوگل وارد می‌شوم</button>
+      <!-- ⚠️ راهِ کیو‌آر برداشته نشد: پمپی که برنامه‌اش هنوز به‌روز نشده، و
+           جایی که شبکهٔ پمپ هست ولی اینترنت نیست، فقط همین را دارند. -->
+      <button id="btnManual">اینترنت ندارم — با کیو‌آر وصل می‌شوم</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ۰ب) ورود با گوگل — راهِ صاحبِ پمپ ═══════════════════════════════
      خواستهٔ صریحِ صاحب ریپو: «چرا ادرس اینترنتی میخان؟ این رو نخان.»
      پس نشانی و رمز دیگر پرسیده نمی‌شوند — بعد از ورود با گوگل، سرور
      خودش هر دو را می‌دهد (‎GET /api/pump/me‎).                          -->
-<div class="wrap hidden" id="signinPane">
+<div class="wrap gate hidden" id="signinPane">
   <div class="card" style="text-align:center">
     <h1>دستیارِ پمپ</h1>
     <div class="sub">با حسابِ گوگلِ خودتان وارد شوید. بقیه‌اش خودکار است —
@@ -123,17 +190,16 @@
     <div class="sub" id="signinState">در حالِ آماده شدن…</div>
   </div>
   <div class="card">
-    <div class="sub">اگر صاحبِ پمپ هنوز شما را اضافه نکرده، بعد از ورود
+    <div class="sub">اگر این حساب هنوز به پمپی وصل نیست، بعد از ورود
       همین‌جا گفته می‌شود.</div>
-    <div style="height:10px"></div>
-    <!-- ⚠️ راهِ کیو‌آر برداشته نشد: پمپی که برنامه‌اش هنوز به‌روز نشده، و
-         جایی که شبکهٔ پمپ هست ولی اینترنت نیست، فقط همین را دارند. -->
-    <button id="btnManual" style="width:100%">اینترنت ندارم — با کیو‌آر وصل می‌شوم</button>
+    <div class="links">
+      <button id="btnBackCode">برگرد به کدِ پمپ</button>
+    </div>
   </div>
 </div>
 
 <!-- ══ ۱) تنظیمِ نشانیِ سرور — راهِ دوم، فقط وقتی خودِ کارمند بخواهد ══ -->
-<div class="wrap hidden" id="setupPane">
+<div class="wrap gate hidden" id="setupPane">
   <div class="card">
     <h1>وصل شدن با کیو‌آر</h1>
     <div class="sub">این راه وقتی به کار می‌آید که اینترنت نباشد ولی به
@@ -152,15 +218,17 @@
     <div style="height:10px"></div>
     <button class="p" id="btnSetup">وصل شو</button>
     <div style="height:8px"></div>
-    <button id="btnBackSignin" style="width:100%">برگرد به ورود با گوگل</button>
+    <button id="btnBackSignin" style="width:100%">برگرد به کدِ پمپ</button>
   </div>
 </div>
 
 <!-- ══ ۲) قفل — همان رمزِ برنامهٔ کامپیوتر ══ -->
-<div class="wrap hidden" id="lockPane">
+<div class="wrap gate hidden" id="lockPane">
   <div class="card" style="text-align:center">
     <h1 id="lockTitle">پمپ یعقوبی</h1>
     <div class="sub" id="lockNote">رمزِ برنامهٔ کامپیوتر را بزنید.</div>
+    <div style="height:6px"></div>
+    <span class="chip" id="lockChip"></span>
   </div>
   <div class="card">
     <input id="inPass" type="password" inputmode="numeric" placeholder="رمز"
@@ -172,7 +240,7 @@
     <div class="sub" id="lockState">در حالِ وصل شدن…</div>
   </div>
   <div class="card">
-    <button id="btnForget" style="width:100%">نشانیِ سرور را عوض کن</button>
+    <button id="btnForget" style="width:100%">پمپِ دیگر / خروج از این پمپ</button>
   </div>
 </div>
 
@@ -182,7 +250,8 @@
     <div class="row">
       <div class="grow">
         <h1 id="stName">پمپ یعقوبی</h1>
-        <div class="sub"><span class="dot" id="liveDot"></span> <span id="liveText">…</span></div>
+        <div class="sub"><span class="dot" id="liveDot"></span> <span id="liveText">…</span>
+          <span class="chip" id="stChip"></span></div>
       </div>
       <button id="btnLock">🔒</button>
     </div>

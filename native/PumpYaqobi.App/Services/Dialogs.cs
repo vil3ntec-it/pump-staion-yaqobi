@@ -31,6 +31,16 @@ public static class Dialogs
         Avalonia.Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime d
             ? d.MainWindow : null;
 
+    /// <summary>متنی را در کلیپ‌بوردِ سیستم بگذار. ‎false‎ یعنی پنجره‌ای نبود.</summary>
+    public static async Task<bool> CopyAsync(string text)
+    {
+        var owner = Owner;
+        var clip = owner?.Clipboard;
+        if (clip is null) return false;
+        await Dispatcher.UIThread.InvokeAsync(async () => await clip.SetTextAsync(text));
+        return true;
+    }
+
     /// <summary>یک رشته بپرس. ‎null‎ یعنی کاربر انصراف داد.</summary>
     public static async Task<string?> PromptAsync(string title, string message = "",
                                                   string initial = "", string ok = "تایید")

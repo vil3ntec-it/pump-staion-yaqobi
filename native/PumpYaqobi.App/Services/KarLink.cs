@@ -31,6 +31,18 @@ public static class KarLink
     public const string DefaultBase = "https://yaqobipump.top/kar/";
 
     /// <summary>
+    /// لینکِ «با کدِ پمپ»: اپِ گوشی با این باز می‌شود و همان لحظه کد را
+    /// می‌زند (‎?code=‎). ⚠️ هیچ رمزِ سروری در این لینک نیست — فقط همان کدی
+    /// که خودِ صاحبِ پمپ به کارمند می‌دهد؛ نشانی و رمزِ خواندن را اپ خودش از
+    /// ابر می‌گیرد.
+    /// </summary>
+    public static string ForCode(string code, string viewerUrl = "")
+    {
+        var clean = new string((code ?? "").Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
+        return BaseOf(viewerUrl) + "?code=" + Uri.EscapeDataString(clean);
+    }
+
+    /// <summary>
     /// نشانیِ کاملِ باز‌شدنی. ‎null‎ یعنی سروری تنظیم نشده و کیو‌آری نمی‌شود
     /// ساخت — اپِ کارمندان بی سرور هیچ کاری نمی‌تواند بکند.
     /// </summary>

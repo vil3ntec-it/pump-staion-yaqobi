@@ -28,11 +28,46 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
 {
     private readonly AppHost _host;
 
-    public AccountSectionViewModel(AppHost host) : base("account", "settings", "حسابِ من")
+    public AccountSectionViewModel(AppHost host) : base("account", "settings", "پروفایل")
     {
         _host = host;
         ShowAccount();
         ShowSubscription();
+        ShowAccessCode();
+    }
+
+    /// <summary>
+    /// نوشتهٔ دکمهٔ «پروفایل»ِ سربرگ — کنارِ تم. خواستهٔ صریحِ صاحب ریپو:
+    /// «یک بخشِ جدید بالای صفحه بغلِ تم بگذار به اسمِ پروفایل که آن‌جا هم
+    /// بتواند لاگین با جیمیل را انجام بدهد و هم VIP و مدتش را ببیند.»
+    /// همان‌جا، بی کلیک، دیده می‌شود: «VIP · ۴۲ روز» یا «بدون اشتراک».
+    /// </summary>
+    [ObservableProperty] private string _pillText = "پروفایل";
+
+    /// <summary>خطِ دومِ دکمه — نامِ حساب یا «وارد نشده».</summary>
+    [ObservableProperty] private string _pillSub = "";
+
+    /// <summary>اشتراکِ فعال ⇒ رنگِ طلایی؛ وگرنه خنثی.</summary>
+    [ObservableProperty] private bool _vipActive;
+
+    /// <summary>روزهای مانده — برای دکمه و کارت.</summary>
+    [ObservableProperty] private int _vipDays;
+
+    /// <summary>پس از ورود یا هر تغییرِ تنظیمات، همه‌چیز از نو خوانده می‌شود.</summary>
+    public void RefreshAll()
+    {
+        ShowAccount();
+        ShowSubscription();
+        ShowAccessCode();
+    }
+
+    private void UpdatePill()
+    {
+        VipActive = SubActive;
+        PillText = SubActive ? $"VIP · {VipDays} روز" : "پروفایل";
+        PillSub = SignedIn
+            ? (AccountName.Trim().Length > 0 ? AccountName.Trim() : AccountEmail.Trim())
+            : (SubActive ? "بدون ورود" : "وارد نشده");
     }
 
     private CloudLink Cloud => _cloud ??= new CloudLink(
@@ -74,6 +109,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         Initial = source.Length > 0 ? source[..1].ToUpperInvariant() : "؟";
 
         AccountStatus = SignedIn ? "" : "برای گرفتن اشتراک و وصل شدنِ خودکار، با گوگل وارد شوید.";
+        UpdatePill();
     }
 
     /// <summary>
@@ -164,26 +200,116 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
             DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 
         SubActive = check.Valid;
+        VipDays = check.Valid && check.SubscriptionEndsAt > 0
+            ? Math.Max(0, (int)((check.SubscriptionEndsAt - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                                / 86_400_000L))
+            : 0;
 
         if (string.IsNullOrWhiteSpace(file.CloudDeviceToken))
         {
             SubStatus = "هنوز فعال نشده — کدِ شش‌رقمیِ اشتراک را بزنید.";
+            UpdatePill();
             return;
         }
         if (check.Valid)
         {
-            var left = check.SubscriptionEndsAt > 0
-                ? Math.Max(0, (int)((check.SubscriptionEndsAt - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
-                                    / 86_400_000L))
-                : 0;
             var plan = string.IsNullOrWhiteSpace(check.PlanTitle) ? "" : $" ({check.PlanTitle})";
-            SubStatus = $"✅ اشتراک فعال است{plan} — {left} روز مانده.";
+            SubStatus = $"✅ اشتراکِ VIP فعال است{plan} — {VipDays} روز مانده.";
         }
         else
         {
             SubStatus = "⚠️ " + check.Reason;
         }
+        UpdatePill();
     }
+
+    // ── ۴) کدِ پمپ — درِ اپِ گوشیِ کارمندان ─────────────────────────────
+    //
+    //  خواستهٔ صریحِ صاحب ریپو: «برای هر پمپ یک کد باشد که در اندروید و
+    //  آیفون بزند، حساب‌های همان پمپ را نشان بدهد و با پمپ‌های دیگر قاطی
+    //  نشود… هر کسی که برنامه را نصب می‌کند باید آن کد را بزند.»
+    //
+    //  کد را سرور می‌سازد و برای این پمپ ثابت است. این‌جا فقط نشان داده،
+    //  کپی، کیو‌آر و — اگر لازم شد — عوض می‌شود.
+
+    /// <summary>کدِ خام، هشت حرف — همان که در تنظیمات می‌ماند.</summary>
+    [ObservableProperty] private string _accessCode = "";
+
+    /// <summary>برای نمایش: ‎K7PM-3XQ2‎.</summary>
+    [ObservableProperty] private string _accessCodeDisplay = "";
+
+    /// <summary>یک خط دربارهٔ حالِ کد.</summary>
+    [ObservableProperty] private string _accessStatus = "";
+
+    public bool HasAccessCode => AccessCode.Length > 0;
+    partial void OnAccessCodeChanged(string v)
+    {
+        AccessCodeDisplay = CloudLink.FormatAccessCode(v);
+        OnPropertyChanged(nameof(HasAccessCode));
+    }
+
+    private void ShowAccessCode()
+    {
+        var file = AppSettings.Load();
+        AccessCode = file.CloudAccessCode ?? "";
+        AccessStatus = string.IsNullOrWhiteSpace(file.CloudDeviceToken)
+            ? "کدِ پمپ بعد از فعال شدنِ اشتراک از سرور می‌آید."
+            : HasAccessCode ? "" : "هنوز از سرور گرفته نشده — «گرفتنِ کد» را بزنید.";
+    }
+
+    [RelayCommand]
+    private Task LoadAccessCodeAsync() => CrashGuard.RunAsync("کدِ پمپ", async () =>
+    {
+        Busy = true;
+        AccessStatus = "در حالِ گرفتن از سرور…";
+        try
+        {
+            var (ok, code, why) = await Cloud.AccessCodeAsync();
+            if (ok) { AccessCode = code; AccessStatus = ""; }
+            else AccessStatus = "❌ " + why;
+        }
+        finally { Busy = false; }
+    });
+
+    /// <summary>
+    /// کدِ تازه — کدِ قبلی همان لحظه از کار می‌افتد. گوشی‌هایی که از قبل
+    /// وصل‌اند سرِ کارند تا رمزِ خواندنِ سرورِ خانگی عوض نشود.
+    /// </summary>
+    [RelayCommand]
+    private Task RotateAccessCodeAsync() => CrashGuard.RunAsync("عوض کردنِ کدِ پمپ", async () =>
+    {
+        if (!await Dialogs.ConfirmAsync("عوض کردنِ کدِ پمپ",
+                "کدِ قبلی همان لحظه از کار می‌افتد و باید کدِ تازه را به کارمندان بدهید. مطمئنید؟",
+                "عوض کن")) return;
+        Busy = true;
+        AccessStatus = "در حالِ ساختنِ کدِ تازه…";
+        try
+        {
+            var (ok, code, why) = await Cloud.AccessCodeAsync(rotate: true);
+            if (ok) { AccessCode = code; AccessStatus = "✅ کدِ تازه ساخته شد؛ کدِ قبلی دیگر کار نمی‌کند."; }
+            else AccessStatus = "❌ " + why;
+        }
+        finally { Busy = false; }
+    });
+
+    [RelayCommand]
+    private Task CopyAccessCodeAsync() => CrashGuard.RunAsync("کپیِ کدِ پمپ", async () =>
+    {
+        if (!HasAccessCode) return;
+        AccessStatus = await Dialogs.CopyAsync(AccessCodeDisplay) ? "📋 کپی شد." : "";
+    });
+
+    /// <summary>کیو‌آرِ «با کدِ پمپ» — اسکنش اپ را باز می‌کند و کد را خودش می‌زند.</summary>
+    [RelayCommand]
+    private Task ShowAccessQrAsync() => CrashGuard.RunAsync("کیو‌آرِ کدِ پمپ", async () =>
+    {
+        if (!HasAccessCode) return;
+        var link = KarLink.ForCode(AccessCode, _host.Settings.GetString(SettingsService.ViewerUrl));
+        var png = await Task.Run(() => PumpYaqobi.Services.Vision.QrWriter.EncodePng(link));
+        await Dialogs.ShowQrAsync("📲 کدِ پمپ — " + AccessCodeDisplay, link, png,
+            "کارمند این را اسکن کند یا همین کد را در اپ بزند. فقط حساب‌های همین پمپ را می‌بیند "
+            + "و بعدش رمزِ برنامه را هم می‌خواهد. هیچ رمزِ سروری در این کد نیست.");
+    });
 
     [RelayCommand]
     private Task RedeemSubAsync() => CrashGuard.RunAsync("فعال‌سازیِ اشتراک", async () =>

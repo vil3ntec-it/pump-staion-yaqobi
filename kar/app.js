@@ -461,30 +461,87 @@
   // ══════════════════════════════════════════════════════════════════════
 
   var KEY = 'pumpKar.v1';
-  var cfg = { srv: '', tok: '', stn: 'pump1' };
+  //  ‎code‎ کدِ هشت‌حرفیِ پمپ است (درِ اپ)؛ ‎name‎ نامش برای نمایش پیش از
+  //  اولین عکس. بقیه همان سه چیزِ همیشگیِ سرورِ خانگی.
+  var cfg = { srv: '', tok: '', stn: '', code: '', name: '' };
   var data = null, ws = null, retry = 0, unlocked = false, timer = 0;
+
+  /*
+   *  ⚠️ جداسازیِ پمپ‌ها — «با پمپ‌های دیگه قاطی نشه، اینو خیلی جدی بگیر»
+   *
+   *  هر چیزی که از یک پمپ در گوشی می‌ماند (آخرین عکس، خبرهایی که گفته
+   *  شده) زیرِ کلیدِ **همان پمپ** می‌نشیند: ‎pumpKar.v1.snap.<کد>‎. پس
+   *  کارمندی که با کدِ پمپِ دیگری وارد شود، حتی یک لحظه هم عکسِ پمپِ
+   *  قبلی را نمی‌بیند، و عکسِ پمپِ قبلی پاک می‌شود.
+   */
+  function stnKey(suffix) { return KEY + '.' + suffix + '.' + (cfg.stn || 'pump1'); }
 
   function load() {
     try {
       var raw = localStorage.getItem(KEY);
-      if (raw) { var o = JSON.parse(raw); cfg.srv = o.srv || ''; cfg.tok = o.tok || ''; cfg.stn = o.stn || 'pump1'; }
+      if (raw) {
+        var o = JSON.parse(raw);
+        cfg.srv = o.srv || ''; cfg.tok = o.tok || ''; cfg.stn = o.stn || '';
+        cfg.code = o.code || ''; cfg.name = o.name || '';
+      }
     } catch (e) { }
     try {
-      var cached = localStorage.getItem(KEY + '.snap');
+      var cached = localStorage.getItem(stnKey('snap'));
       if (cached) data = JSON.parse(cached);      // تا بی‌اینترنت هم چیزی باشد
     } catch (e) { }
   }
 
   function save() { try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch (e) { } }
 
+  /** رفتن به پمپِ دیگر: هر چه از پمپِ قبلی در گوشی مانده پاک می‌شود. */
+  function switchStation(stn) {
+    var next = String(stn || 'pump1');
+    if (cfg.stn === next && data) return;
+    try {
+      if (cfg.stn) {
+        localStorage.removeItem(stnKey('snap'));
+        localStorage.removeItem(stnKey('told'));
+      }
+      localStorage.removeItem(KEY + '.snap');      // کلیدِ قدیمیِ بی‌پمپ
+      localStorage.removeItem(KEY + '.told');
+    } catch (e) { }
+    cfg.stn = next;
+    data = null;
+    toldKeys = {};
+    unlocked = false;
+    fromCloud = false;
+  }
+
+  /** فقط عکسِ همین پمپ پذیرفته می‌شود — چه از سرورِ خانگی چه از ابر. */
+  function acceptSnapshot(v, viaCloud) {
+    if (!v || typeof v !== 'object') return false;
+    // ⚠️ عکسِ کهنه هرگز جای تازه را نگیرد
+    if (data && data.seq && (v.seq || 0) < data.seq) return false;
+    data = v;
+    fromCloud = !!viaCloud;
+    try { localStorage.setItem(stnKey('snap'), JSON.stringify(data)); } catch (e) { }
+    render();
+    return true;
+  }
+
+  var fromCloud = false;
+
   /** نشانیِ داخلِ لینک/کیو‌آر برداشته و از نوارِ نشانی پاک می‌شود. */
+  var pendingCode = '';
+
   function readUrl() {
     var p = new URLSearchParams(location.search);
     var got = false;
+    //  لینک/کیو‌آرِ «با کدِ پمپ» (‎?code=‎): همان کد را خودش می‌زند
+    if (p.get('code')) {
+      pendingCode = p.get('code');
+      try { history.replaceState(null, '', location.pathname); } catch (e) { }
+    }
     if (p.get('server')) { cfg.srv = p.get('server'); got = true; }
     if (p.get('token')) { cfg.tok = p.get('token'); got = true; }
-    if (p.get('station')) { cfg.stn = p.get('station'); got = true; }
+    if (p.get('station')) { switchStation(p.get('station')); got = true; }
     if (got) {
+      cfg.code = '';          // کیو‌آر راهِ خودش را دارد؛ کدِ قبلی مالِ این پمپ نیست
       save();
       // ⚠️ رمز نباید در نوارِ نشانی بماند و در تاریخچهٔ مرورگر ثبت شود
       try { history.replaceState(null, '', location.pathname); } catch (e) { }
@@ -535,13 +592,8 @@
       }
       if (m.op === 'event' && m.subId === 'live') {
         if (m.value && typeof m.value === 'object') {
-          // ⚠️ عکسِ کهنه هرگز جای تازه را نگیرد
-          if (!data || !data.seq || (m.value.seq || 0) >= data.seq) {
-            data = m.value;
-            try { localStorage.setItem(KEY + '.snap', JSON.stringify(data)); } catch (e) { }
-            render();
-          }
-          live(true, 'زنده — تازه‌سازی ' + (data.at || ''));
+          acceptSnapshot(m.value, false);
+          live(true, 'زنده — تازه‌سازی ' + ((data && data.at) || ''));
         } else {
           live(true, 'وصل است، ولی برنامهٔ کامپیوتر هنوز چیزی نفرستاده');
         }
@@ -556,6 +608,33 @@
     clearTimeout(timer);
     retry = Math.min(retry + 1, 6);
     timer = setTimeout(connect, 1000 * retry);
+    //  دو بار پشتِ سرِ هم نشد ⇒ عکسِ ابری، تا کارمندِ دور از پمپ دستِ خالی
+    //  نماند. ‎connect()‎ همچنان تلاش می‌کند و همین که سرورِ خانگی جواب داد،
+    //  عکسِ زنده جای ابری می‌نشیند (‎seq‎ی بزرگ‌تر).
+    if (retry >= 2) cloudFallback();
+  }
+
+  var cloudBusy = false, cloudLastAt = 0;
+
+  /**
+   * عکسِ ده‌دقیقه‌ایِ ابر — فقط با کدِ پمپ، فقط همان پمپ.
+   * از هر ۶۰ ثانیه بیشتر نمی‌پرسد؛ برنامهٔ کامپیوتر خودش هر ده دقیقه یک بار
+   * به ابر می‌فرستد، پس تندتر پرسیدن چیزی نمی‌آورد.
+   */
+  function cloudFallback() {
+    if (!cfg.code || !window.PumpCloud || cloudBusy) return;
+    if (Date.now() - cloudLastAt < 60000) return;
+    cloudBusy = true;
+    PumpCloud.cloudLive(cfg.code).then(function (r) {
+      cloudLastAt = Date.now();
+      if (!r || !r.live) return;
+      if (acceptSnapshot(r.live, true) || fromCloud) {
+        var when = r.updatedAt ? new Date(r.updatedAt).toLocaleString('fa-IR') : '';
+        live(true, 'از ابر — سرورِ پمپ در دسترس نیست · ' + when);
+        gateReady();
+      }
+    }).catch(function () { cloudLastAt = Date.now(); })
+      .then(function () { cloudBusy = false; });
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -595,15 +674,137 @@
         + 'کامپیوترش هنوز به سرور وصل نشده است. وقتی روشن شد، خودش وصل می‌شود.', true);
       return false;
     }
+    switchStation(home.station || st.code || 'pump1');
     cfg.srv = home.url;
     //  رمزِ فقط‌خواندنی، نه رمزِ برنامه — این همان چیزی است که روی کاغذِ
     //  کیو‌آر می‌رفت، فقط این‌بار از راهِ رمزگذاری‌شده
     cfg.tok = home.readKey || '';
-    cfg.stn = home.station || st.code || 'pump1';
+    if (st.accessCode !== undefined) cfg.code = st.accessCode || '';
+    cfg.name = st.name || cfg.name || '';
     save();
     door = 0;
     retry = 0;
+    chips();
     return true;
+  }
+
+  /** نشانِ «کدام پمپ» روی صفحهٔ قفل و سربرگ — تا کارمند یک لحظه هم شک نکند. */
+  function chips() {
+    var label = cfg.stn ? cfg.stn : '';
+    if (cfg.code && window.PumpCloud) label = PumpCloud.formatCode(cfg.code) + (label ? ' · ' + label : '');
+    ['lockChip', 'stChip'].forEach(function (id) {
+      var el = $(id);
+      if (!el) return;
+      el.textContent = label;
+      el.classList.toggle('hidden', !label);
+    });
+    var name = cfg.name || (data && data.station && data.station.name) || '';
+    if (name) { $('lockTitle').textContent = name; $('stName').textContent = name; }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  //  کدِ پمپ — درِ اصلی
+  // ══════════════════════════════════════════════════════════════════════
+  //
+  //  خواستهٔ صریحِ صاحب ریپو: «هر کسی که برنامه را نصب می‌کند باید آن کد را
+  //  بزند تا بتواند بیاید توی حساب‌ها… با پمپ‌های دیگر قاطی نشود.»
+  //
+  //  کد ⇒ ‎POST /api/pump/public/join‎ ⇒ نشانی و رمزِ خواندنِ همان پمپ ⇒
+  //  همان دو درِ سرورِ خانگی. اگر سرورِ خانگی از این‌جا در دسترس نبود،
+  //  عکسِ ابریِ همان پمپ (‎cloudFallback‎).
+
+  function codeMsg(text, bad) {
+    var e = $('codeErr'), st = $('codeState');
+    if (bad) {
+      if (e) { e.textContent = text; e.classList.remove('hidden'); }
+      if (st) st.textContent = '';
+    } else {
+      if (e) e.classList.add('hidden');
+      if (st) st.innerHTML = text ? '<span class="spin"></span>' + esc(text) : '';
+    }
+  }
+
+  var joining = false;
+
+  function joinWithCode(raw) {
+    if (joining || !window.PumpCloud) return;
+    var code = PumpCloud.normalizeCode(raw);
+    if (code.length !== 8) { codeMsg('کد هشت حرف و رقم است — مثلِ K7PM-3XQ2.', true); return; }
+    joining = true;
+    $('btnJoin').disabled = true;
+    codeMsg('در حالِ پیدا کردنِ پمپ…');
+    PumpCloud.joinWithCode(code)
+      .then(function (st) {
+        if (!st) { codeMsg('این کد به هیچ پمپی نمی‌رسد.', true); return; }
+        //  پمپ پیدا شد ولی برنامهٔ کامپیوترش هنوز نشانی نداده ⇒ اگر عکسِ
+        //  ابری دارد، باز هم می‌شود دید؛ وگرنه صریح بگو.
+        if (!st.home || !st.home.url) {
+          if (!st.cloudLiveAt) {
+            codeMsg('پمپِ «' + (st.name || st.code) + '» پیدا شد، ولی برنامهٔ کامپیوترش هنوز به سرور وصل نشده. '
+              + 'وقتی روشن شد، دوباره همین کد را بزنید.', true);
+            return;
+          }
+          st.home = { url: '', readKey: '', station: st.code };
+          switchStation(st.code);
+          cfg.srv = ''; cfg.tok = ''; cfg.code = code; cfg.name = st.name || '';
+          save();
+          chips();
+          syncBackground();
+          show('lockPane');
+          live(false, 'سرورِ پمپ نشانی ندارد — عکسِ ابری');
+          cloudLastAt = 0;
+          cloudFallback();
+          return;
+        }
+        adoptStation(st);
+        codeMsg('');
+        $('inCode').value = '';
+        syncBackground();
+        show('lockPane');
+        gateReady();
+        connect();
+      })
+      .catch(function (err) {
+        var why = err && err.status === 404 ? 'این کد به هیچ پمپی نمی‌رسد. کد را از صاحبِ پمپ بگیرید.'
+          : err && err.status === 429 ? 'چند بار پشتِ سرِ هم اشتباه شد؛ چند دقیقه بعد دوباره.'
+          : err && err.status ? (err.message || 'خطای سرور')
+          : 'به سرور نرسیدیم — اینترنت را بررسی کنید.';
+        codeMsg(why, true);
+      })
+      .then(function () { joining = false; $('btnJoin').disabled = false; });
+  }
+
+  /** نشانیِ تازه‌تر با همان کد — آی‌پیِ خانگی با هر بار روشن شدنِ مودم عوض می‌شود. */
+  function resumeCode() {
+    if (!cfg.code || !window.PumpCloud) return Promise.resolve(false);
+    return PumpCloud.joinWithCode(cfg.code).then(function (st) {
+      if (!st || !st.home || !st.home.url) return false;
+      var moved = st.home.url !== cfg.srv || (st.home.readKey || '') !== cfg.tok
+        || (st.home.station || st.code) !== cfg.stn;
+      if (!moved) { cfg.name = st.name || cfg.name; save(); chips(); return false; }
+      adoptStation(st);
+      syncBackground();
+      return true;
+    }).catch(function (err) {
+      //  ۴۰۴ یعنی کد عوض شده (صاحبِ پمپ «عوض کردن» را زده): این گوشی دیگر
+      //  راه ندارد — برگرد به صفحهٔ کد و هر چه از این پمپ مانده پاک کن.
+      if (err && err.status === 404) { forgetAll('کدِ این پمپ عوض شده است. کدِ تازه را از صاحبِ پمپ بگیرید.'); }
+      return false;
+    });
+  }
+
+  /** خروج از پمپ: همه‌چیزِ همین پمپ از گوشی پاک می‌شود. */
+  function forgetAll(note) {
+    try { if (ws) ws.close(); } catch (e) { }
+    clearTimeout(timer);
+    if (window.PumpCloud) PumpCloud.signOut();
+    switchStation('');
+    cfg.srv = ''; cfg.tok = ''; cfg.code = ''; cfg.name = ''; cfg.stn = '';
+    save();
+    try { localStorage.removeItem(KEY + '.snap.pump1'); localStorage.removeItem(KEY + '.told.pump1'); } catch (e) { }
+    syncBackground();
+    show('codePane');
+    if (note) codeMsg(note, true);
   }
 
   /** نشستی که از قبل هست — بی آنکه دوباره از گوگل چیزی خواسته شود. */
@@ -677,15 +878,17 @@
     var b = $('btnUnlock');
     if (b) b.disabled = !(data && data.gate);
     if (data && data.station && data.station.name) {
+      cfg.name = data.station.name;
       $('lockTitle').textContent = data.station.name;
       $('stName').textContent = data.station.name;
     }
+    chips();
     if (data && !data.gate)
       $('lockNote').textContent = 'برنامهٔ کامپیوتر هنوز رمزی نساخته است.';
   }
 
   function show(which) {
-    ['signinPane', 'setupPane', 'lockPane', 'appPane'].forEach(function (id) {
+    ['codePane', 'signinPane', 'setupPane', 'lockPane', 'appPane'].forEach(function (id) {
       $(id).classList.toggle('hidden', id !== which);
     });
     $('nav').classList.toggle('hidden', which !== 'appPane');
@@ -850,8 +1053,10 @@
   //  نوشته می‌شد، روزی کارتِ قرض‌دار سرخ می‌بود و گوشی ساکت.
 
   var toldKeys = {};
-  var TOLD = KEY + '.told';
-  try { toldKeys = JSON.parse(localStorage.getItem(TOLD) || '{}') || {}; } catch (e) { }
+  //  ⚠️ کلیدِ هر پمپ جداست (‎stnKey‎): خبرِ «گفته‌شده»ی پمپِ قبلی نباید
+  //  خبرِ پمپِ تازه را ساکت کند.
+  function TOLD() { return stnKey('told'); }
+  try { toldKeys = JSON.parse(localStorage.getItem(TOLD()) || '{}') || {}; } catch (e) { }
 
   function alertsOf(d) {
     var a = (d && d.alerts) || [];
@@ -863,7 +1068,7 @@
     var r = freshAlerts(list, toldKeys);
     var fresh = r.fresh;
     toldKeys = r.told;
-    try { localStorage.setItem(TOLD, JSON.stringify(toldKeys)); } catch (e) { }
+    try { localStorage.setItem(TOLD(), JSON.stringify(toldKeys)); } catch (e) { }
 
     if (!fresh.length) return;
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
@@ -926,6 +1131,7 @@
   function render() {
     if (!unlocked) return;
     if (data && data.station && data.station.name) $('stName').textContent = data.station.name;
+    chips();
     renderAlerts();
     renderTank();
     renderDebtors();
@@ -967,36 +1173,45 @@
     load();
     readUrl();
 
+    // ── کدِ پمپ ──
+    $('btnJoin').addEventListener('click', function () { joinWithCode($('inCode').value); });
+    $('inCode').addEventListener('keydown', function (e) { if (e.key === 'Enter') joinWithCode($('inCode').value); });
+    $('inCode').addEventListener('input', function () {
+      //  همان‌طور که تایپ می‌کند خطِ تیره می‌نشیند: ‎K7PM-3XQ2‎
+      var el = $('inCode'), c = (window.PumpCloud ? PumpCloud.normalizeCode(el.value) : el.value).slice(0, 8);
+      el.value = c.length > 4 ? c.slice(0, 4) + '-' + c.slice(4) : c;
+      codeMsg('');
+    });
+    $('btnGoogleWay').addEventListener('click', function () { show('signinPane'); setupGoogle(); });
+    $('btnBackCode').addEventListener('click', function () { show('codePane'); });
+
     $('btnSetup').addEventListener('click', function () {
-      cfg.srv = $('inSrv').value.trim();
+      var srv = $('inSrv').value.trim();
+      if (!srv) return;
+      switchStation($('inStn').value.trim() || 'pump1');
+      cfg.srv = srv;
       cfg.tok = $('inTok').value.trim();
-      cfg.stn = $('inStn').value.trim() || 'pump1';
-      if (!cfg.srv) return;
+      cfg.code = '';
       save();
+      chips();
       syncBackground();
       show('lockPane');
       connect();
     });
 
     $('btnForget').addEventListener('click', function () {
-      //  «نشانی را عوض کن» حالا یعنی «از نو وارد شو»: نشانی چیزی است که
-      //  سرور می‌دهد، نه چیزی که کارمند بنویسد.
-      if (window.PumpCloud) PumpCloud.signOut();
-      cfg.srv = ''; cfg.tok = ''; save();
-      try { if (ws) ws.close(); } catch (e) { }
-      show('signinPane');
-      setupGoogle();
+      //  «پمپِ دیگر»: هر چه از این پمپ در گوشی مانده پاک می‌شود و از کد
+      //  شروع می‌کنیم — نشانی چیزی است که سرور می‌دهد، نه چیزی که کارمند
+      //  بنویسد.
+      forgetAll('');
     });
 
     $('btnManual').addEventListener('click', function () {
-      $('inSrv').value = cfg.srv; $('inTok').value = cfg.tok; $('inStn').value = cfg.stn;
+      $('inSrv').value = cfg.srv; $('inTok').value = cfg.tok; $('inStn').value = cfg.stn || 'pump1';
       show('setupPane');
     });
 
-    $('btnBackSignin').addEventListener('click', function () {
-      show('signinPane');
-      setupGoogle();
-    });
+    $('btnBackSignin').addEventListener('click', function () { show('codePane'); });
 
     $('btnUnlock').addEventListener('click', unlock);
     $('inPass').addEventListener('keydown', function (e) { if (e.key === 'Enter') unlock(); });
@@ -1051,20 +1266,27 @@
      *     می‌پرسیم که نشانی عوض نشده باشد (آی‌پیِ خانگی عوض می‌شود).
      *  ۳) وگرنه ⇒ ورود با گوگل. **هیچ فرمی نشان داده نمی‌شود.**
      */
-    if (cfg.srv) {
+    chips();
+    if (pendingCode) {
+      //  کیو‌آرِ کدِ پمپ اسکن شده ⇒ صفحهٔ کد با کدِ پُرشده، و همان لحظه برو
+      show('codePane');
+      $('inCode').value = window.PumpCloud ? PumpCloud.formatCode(pendingCode) : pendingCode;
+      joinWithCode(pendingCode);
+    } else if (cfg.srv || cfg.code) {
       show('lockPane');
       gateReady();
-      connect();
+      if (cfg.srv) connect(); else { live(false, 'سرورِ پمپ نشانی ندارد — عکسِ ابری'); cloudFallback(); }
       //  نشانیِ تازه‌تر، اگر ابر یکی دارد — بی‌صدا، چون کارِ کارمند نباید
-      //  منتظرِ اینترنت بماند
-      resumeCloud().then(function (moved) {
+      //  منتظرِ اینترنت بماند. اول با کدِ پمپ، وگرنه با نشستِ گوگل.
+      (cfg.code ? resumeCode() : resumeCloud()).then(function (moved) {
         if (moved) connect();
       });
     } else {
-      show('signinPane');
+      //  ⚠️ صفحهٔ اول **کدِ پمپ** است — نه فرمِ نشانی، نه گوگل. خواستهٔ صریحِ
+      //  صاحب ریپو: «هر کسی که برنامه را نصب می‌کند باید آن کد را بزند.»
+      show('codePane');
       gateReady();
-      setupGoogle();
-      //  شاید نشستی از قبل هست و فقط نشانی پاک شده
+      //  شاید نشستِ گوگلی از قبل هست (صاحبِ پمپ) و فقط نشانی پاک شده
       resumeCloud().then(function (ok) {
         if (!ok) return;
         show('lockPane');

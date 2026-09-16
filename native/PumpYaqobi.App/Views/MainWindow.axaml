@@ -116,6 +116,28 @@
             </ComboBox.ItemTemplate>
           </ComboBox>
 
+          <!-- 👤 پروفایل — بغلِ تم، خواستهٔ صریحِ صاحب ریپو: «یک بخشِ جدید
+               بالای صفحه بغلِ تم بگذار به اسمِ پروفایل که آن‌جا هم بتواند
+               لاگین با جیمیل را انجام بدهد و هم VIP و مدتش را ببیند.» متنش
+               همین‌جا می‌گوید: «VIP · ۴۲ روز» یا «پروفایل». -->
+          <Button Classes="pill-btn profile" Padding="13,4"
+                  Command="{Binding GoCommand}" CommandParameter="{Binding Account}"
+                  ToolTip.Tip="پروفایل: ورود با گوگل، اشتراکِ VIP و کدِ پمپ برای اپِ کارمندان">
+            <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+              <TextBlock Text="👤" FontSize="13" VerticalAlignment="Center" />
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="{Binding Account.PillText}" FontSize="12.5" FontWeight="ExtraBold"
+                           Foreground="White" TextWrapping="NoWrap" />
+                <TextBlock Text="{Binding Account.PillSub}" FontSize="9.5" FontWeight="SemiBold"
+                           Foreground="White" Opacity="0.85" TextWrapping="NoWrap"
+                           IsVisible="{Binding Account.PillSub, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              </StackPanel>
+              <Border Classes="pill" Background="#FFD700" Padding="6,0" IsVisible="{Binding Account.VipActive}">
+                <TextBlock Text="VIP" FontSize="10" FontWeight="Black" Foreground="#1a1a1a" />
+              </Border>
+            </StackPanel>
+          </Button>
+
           <!-- نشانِ نقش و دکمهٔ قفل — کپسولی، مثلِ نسخهٔ وب.
                «قفل» به همان ‎SignOut‎ی وصل است که تا امروز ساخته شده بود ولی
                هیچ دکمه‌ای صدایش نمی‌زد. -->

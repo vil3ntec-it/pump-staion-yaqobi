@@ -185,6 +185,61 @@
     });
   }
 
+  /* ── کدِ پمپ — «هر کسی که برنامه را نصب می‌کند باید آن کد را بزند» ─── */
+
+  /**
+   * کدِ هشت‌حرفیِ پمپ ⇒ نشانی و رمزِ فقط‌خواندنیِ **همان یک** پمپ.
+   *
+   * خواستهٔ صریحِ صاحب ریپو: «ادرسِ همان پمپ را در برنامه بزنم، حساب‌های
+   * همان پمپ را نشان بدهد… با پمپ‌های دیگر قاطی نشود — این را خیلی جدی
+   * بگیر.» هیچ حسابی لازم نیست؛ همین کد هویت است. سرور برای کدِ غلط،
+   * کدِ عوض‌شده و پمپِ بسته یکسان ۴۰۴ می‌دهد.
+   *
+   * جواب همان شکلِ ‎myStation()‎ است تا ‎adoptStation‎ی اپ فرقی نبیند.
+   */
+  function joinWithCode(code) {
+    var clean = normalizeCode(code);
+    if (clean.length !== 8) {
+      var e = new Error('کدِ پمپ هشت حرف و رقم است، مثلِ K7PM-3XQ2');
+      e.code = 'bad_access_code';
+      return Promise.reject(e);
+    }
+    return call('POST', '/api/pump/public/join', { code: clean }).then(function (out) {
+      if (!out || !out.station) return null;
+      return {
+        code: out.station.code,
+        name: out.station.name || '',
+        role: 'staff',
+        accessCode: clean,
+        cloudLiveAt: out.cloudLiveAt || null,
+        home: out.home || { url: '', readKey: '', station: out.station.code }
+      };
+    });
+  }
+
+  /**
+   * عکسِ ابریِ پمپ — برای وقتی که سرورِ خانگی از راهِ دور جواب نمی‌دهد.
+   * همان ‎live.json‎ی است که برنامهٔ کامپیوتر هر ده دقیقه به ابر می‌فرستد؛
+   * تازگی‌اش را ‎updatedAt‎ می‌گوید و اپ همان را به کارمند نشان می‌دهد.
+   */
+  function cloudLive(code) {
+    return call('GET', '/api/pump/public/live?code=' + encodeURIComponent(normalizeCode(code)))
+      .then(function (out) {
+        return out && out.live ? { live: out.live, updatedAt: out.updatedAt || 0 } : null;
+      });
+  }
+
+  /** ‎' k7pm-3xq2 '‎ ⇒ ‎'K7PM3XQ2'‎ — همان قاعدهٔ سرور. */
+  function normalizeCode(raw) {
+    return String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  }
+
+  /** برای نمایش: ‎K7PM-3XQ2‎. */
+  function formatCode(raw) {
+    var c = normalizeCode(raw);
+    return c.length === 8 ? c.slice(0, 4) + '-' + c.slice(4) : c;
+  }
+
   /** پیامی در صندوقِ ورودیِ پمپ — راهِ برگشتِ داده از گوشیِ کارمند. */
   function postInbox(data) {
     return authed('PUT', '/api/pump/files/inbox.json', { data: data });
@@ -208,6 +263,10 @@
     signInWithGoogle: signInWithGoogle,
     refresh: refresh,
     myStation: myStation,
+    joinWithCode: joinWithCode,
+    cloudLive: cloudLive,
+    normalizeCode: normalizeCode,
+    formatCode: formatCode,
     postInbox: postInbox,
     signOut: signOut,
     session: session,

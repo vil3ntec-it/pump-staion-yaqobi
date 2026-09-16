@@ -397,6 +397,38 @@ public sealed class CloudLink
         return ok ? (true, Str(json, "code"), "") : (false, "", why);
     }
 
+    /// <summary>
+    /// کدِ دسترسیِ پمپ — همان کدی که هر کسی اپِ گوشی را نصب می‌کند باید بزند.
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو: «برای هر پمپ یک کد باشد… با پمپ‌های دیگر قاطی
+    /// نشود.» سرور برای هر پمپ یک کدِ دائمی دارد؛ ‎rotate‎ کدِ تازه می‌سازد و
+    /// کدِ قبلی همان لحظه از کار می‌افتد. نسخهٔ آخر در تنظیمات می‌ماند تا
+    /// بی‌اینترنت هم دیده شود.
+    /// </summary>
+    public async Task<(bool Ok, string Code, string Why)> AccessCodeAsync(bool rotate = false,
+                                                                          CancellationToken ct = default)
+    {
+        if (!Activated) return (false, _settings.CloudAccessCode, "این برنامه هنوز فعال نشده است");
+        var (ok, json, why, _) = rotate
+            ? await PostAsync("/api/pump/device/access-code/rotate", new { }, _settings.CloudDeviceToken, ct)
+            : await GetAsync("/api/pump/device/access-code", _settings.CloudDeviceToken, ct);
+        if (!ok) return (false, _settings.CloudAccessCode, why);
+        var code = Str(json, "code");
+        if (code.Length > 0 && code != _settings.CloudAccessCode)
+        {
+            _settings.CloudAccessCode = code;
+            await _save();
+        }
+        return (true, code, "");
+    }
+
+    /// <summary>برای نمایش: ‎K7PM-3XQ2‎ — همان قاعدهٔ سرور و اپِ گوشی.</summary>
+    public static string FormatAccessCode(string code)
+    {
+        var c = (code ?? "").Trim().ToUpperInvariant();
+        return c.Length == 8 ? c[..4] + "-" + c[4..] : c;
+    }
+
     // ── حساب: ورود با گوگل ─────────────────────────────────────────────
 
     /// <summary>آیا با حسابِ گوگل وارد شده‌ایم.</summary>

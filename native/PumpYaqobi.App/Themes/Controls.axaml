@@ -374,6 +374,15 @@
     <Setter Property="Background" Value="{DynamicResource Pump.Accent}" />
   </Style>
 
+  <!-- دکمهٔ پروفایل رنگِ برند (‎Pump.Info‎)، نه سرخ و نه تاکید — تا سه دکمهٔ
+       سربرگ از هم جدا باشند -->
+  <Style Selector="Button.pill-btn.profile">
+    <Setter Property="Background" Value="{DynamicResource Pump.Info}" />
+  </Style>
+  <Style Selector="Button.pill-btn.profile /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Pump.Info}" />
+  </Style>
+
   <!-- ══ ورودی‌ها ═══════════════════════════════════════════════════════════
        قدِ همهٔ کادرها و دکمه‌ها یکی است (۳۶ پیکسل) تا در یک ردیف هم‌تراز
        بنشینند — همان چیزی که یک فرمِ مرتب را از یک فرمِ شلخته جدا می‌کند.

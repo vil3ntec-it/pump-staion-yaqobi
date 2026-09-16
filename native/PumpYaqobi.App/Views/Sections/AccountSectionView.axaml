@@ -5,7 +5,7 @@
              x:Class="PumpYaqobi.App.Views.Sections.AccountSectionView"
              x:DataType="vm:AccountSectionViewModel">
 
-  <c:SectionPage Header="حسابِ من">
+  <c:SectionPage Header="پروفایل">
 
     <StackPanel Spacing="14">
 
@@ -66,12 +66,59 @@
         </StackPanel>
       </Border>
 
+      <!-- ══ ۱ب) کدِ پمپ — درِ اپِ گوشیِ کارمندان ═════════════════════════
+           خواستهٔ صریحِ صاحب ریپو: «برای هر پمپ یک کد باشد که در اندروید و
+           آیفون بزند… با پمپ‌های دیگر قاطی نشود… هر کسی که برنامه را نصب
+           می‌کند باید آن کد را بزند.» کد را سرور می‌سازد؛ این‌جا فقط دیده،
+           کپی و کیو‌آر می‌شود. -->
+      <Border Classes="panel" Padding="0">
+        <StackPanel>
+          <Border Classes="card-head">
+            <TextBlock Text="📲 کدِ پمپ برای اپِ کارمندان" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Accent}" />
+          </Border>
+          <StackPanel Margin="14" Spacing="10">
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="هر کارمندی که اپِ اندروید یا آیفون را نصب می‌کند، همین کد را می‌زند و فقط حساب‌های همین پمپ را می‌بیند. بعدش رمزِ همین برنامه را هم می‌خواهد. هیچ‌کس از داخلِ گوشی چیزی را عوض نمی‌کند." />
+
+            <Border Classes="stat" Padding="16,12" HorizontalAlignment="Left" MinWidth="260"
+                    IsVisible="{Binding HasAccessCode}">
+              <StackPanel Spacing="4">
+                <TextBlock Text="کدِ پمپ" Classes="label" />
+                <SelectableTextBlock Text="{Binding AccessCodeDisplay}" FontSize="30" FontWeight="Black"
+                                     FontFamily="Consolas,Menlo,monospace" LetterSpacing="4"
+                                     Foreground="{DynamicResource Pump.Accent}" FlowDirection="LeftToRight" />
+              </StackPanel>
+            </Border>
+
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="accent" Content="📋 کپی"
+                      Command="{Binding CopyAccessCodeCommand}"
+                      IsVisible="{Binding HasAccessCode}" IsEnabled="{Binding !Busy}" />
+              <Button Content="📲 کیو‌آر"
+                      Command="{Binding ShowAccessQrCommand}"
+                      IsVisible="{Binding HasAccessCode}" IsEnabled="{Binding !Busy}"
+                      ToolTip.Tip="کارمند اسکن کند؛ اپ باز می‌شود و کد را خودش می‌زند" />
+              <Button Content="🔄 گرفتنِ کد از سرور"
+                      Command="{Binding LoadAccessCodeCommand}" IsEnabled="{Binding !Busy}" />
+              <Button Content="♻️ عوض کردنِ کد"
+                      Command="{Binding RotateAccessCodeCommand}"
+                      IsVisible="{Binding HasAccessCode}" IsEnabled="{Binding !Busy}"
+                      ToolTip.Tip="کدِ قبلی همان لحظه از کار می‌افتد" />
+            </StackPanel>
+
+            <TextBlock Text="{Binding AccessStatus}" Classes="muted" TextWrapping="Wrap"
+                       IsVisible="{Binding AccessStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
       <!-- ══ ۲) اشتراک — از تنظیمات آمد این‌جا ════════════════════════════
            خواستهٔ صریحِ صاحب ریپو: «چرا اشتراک تو تنظیمات است؟» -->
       <Border Classes="panel" Padding="0">
         <StackPanel>
           <Border Classes="card-head">
-            <TextBlock Text="💳 اشتراک" FontWeight="Bold"
+            <TextBlock Text="💳 اشتراکِ VIP" FontWeight="Bold"
                        Foreground="{DynamicResource Pump.Accent}" />
           </Border>
           <StackPanel Margin="14" Spacing="10">
