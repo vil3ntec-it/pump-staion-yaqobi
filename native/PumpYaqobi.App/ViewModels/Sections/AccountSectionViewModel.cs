@@ -24,7 +24,7 @@ namespace PumpYaqobi.App.ViewModels.Sections;
 /// پس این سه چیز از تنظیمات درآمدند و یک‌جا شدند — همان‌جایی که کاربرِ یک
 /// برنامهٔ اشتراکی دنبالشان می‌گردد:
 ///
-///   ۱) ورود با گوگل   — بی رمز، بی نشانی، بی کدِ دستی
+///   ۱) حساب           — ایمیل و رمزِ خودمان، بی هیچ سرویسِ بیرونی
 ///   ۲) پروفایل        — کیستم، و کدام پمپ به این حساب وصل است
 ///   ۳) اشتراک         — چند روز مانده، و کدِ شش‌رقمی
 ///
@@ -118,41 +118,17 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         var source = AccountName.Trim().Length > 0 ? AccountName.Trim() : AccountEmail.Trim();
         Initial = source.Length > 0 ? source[..1].ToUpperInvariant() : "؟";
 
-        AccountStatus = SignedIn ? "" : "برای گرفتن اشتراک و وصل شدنِ خودکار، با گوگل وارد شوید.";
+        AccountStatus = SignedIn ? "" : "برای گرفتنِ اشتراک و وصل شدنِ خودکار، حساب بسازید یا وارد شوید.";
         UpdatePill();
     }
 
-    /// <summary>
-    /// ورود با گوگل — مرورگرِ سیستم باز می‌شود و کاربر همان‌جا وارد می‌شود.
-    /// رمزِ گوگل هیچ‌وقت داخلِ این برنامه تایپ نمی‌شود.
-    /// </summary>
-    [RelayCommand]
-    private Task SignInAsync() => CrashGuard.RunAsync("ورود با گوگل", async () =>
-    {
-        Busy = true;
-        AccountStatus = "در حالِ باز کردنِ مرورگر…";
-        try
-        {
-            var clientId = await Cloud.GoogleClientIdAsync();
-            if (string.IsNullOrWhiteSpace(clientId))
-            {
-                AccountStatus = "❌ ورود با گوگل روی سرور روشن نیست.";
-                return;
-            }
-
-            var google = await GoogleSignIn.RunAsync(clientId);
-            if (!google.Ok) { AccountStatus = "❌ " + google.Why; return; }
-
-            AccountStatus = "در حالِ ساختنِ حساب روی سرور…";
-            var res = await Cloud.SignInAsync(google.IdToken);
-            if (!res.Ok) { AccountStatus = "❌ " + res.Why; return; }
-
-            ShowAccount();
-            await PullHomeAsync();
-            ShowSubscription();
-        }
-        finally { Busy = false; }
-    });
+    //  ⛔ **دکمهٔ «ورود با گوگل» از این صفحه برداشته شد** — خواستهٔ صریحِ
+    //  صاحب ریپو (۱۴۰۵/۰۶/۲۸): «هیچ پکنه‌ای نباشد، نه از گوگل و نه غیره؛
+    //  هیچ‌کدامشان را نمی‌خواهم.» پس تنها راهِ حساب همان ایمیل و رمزِ خودمان
+    //  است (`AccountStepAsync`) و «بعداً» برای بی‌اینترنت.
+    //  ⚠️ `Services/GoogleSignIn.cs` و `CloudLink.SignInAsync` پاک نشدند:
+    //  اپِ کارمندان (`kar/cloud.js`) همان راه را دارد و سرور همان مسیر را
+    //  می‌شناسد. فقط این صفحه دیگر آن را نشان نمی‌دهد.
 
     /// <summary>خروج — دفترِ روی کامپیوتر دست نمی‌خورد.</summary>
     [RelayCommand]
@@ -538,12 +514,14 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     //  ⚠️ **بی‌اینترنت هم راه بسته نمی‌شود**: «بعداً» گامِ حساب را رد می‌کند و
     //  نام و ایمیل را همان‌جا ذخیره می‌کند. دفترِ کاربر هیچ‌وقت گروگان نیست.
     //
-    //  ⚠️ **عکس یک درصدِ ثانیه هم به برنامه اضافه نمی‌کند** — خواستهٔ صریحِ
-    //  صاحب ریپو. سه قاعده: (۱) فقط در ‎OnActivatedAsync‎ خوانده می‌شود، یعنی
-    //  وقتی کاربر واقعاً روی این صفحه آمد — نه در سازنده و نه در
-    //  ‎EnsureLoadedAsync‎ که پردهٔ لودینگ می‌زندشان؛ (۲) روی نخِ دیگر و با
-    //  ‎DecodeToWidth‎ به پهنای نمایش باز می‌شود، نه با اندازهٔ اصلی؛ (۳) یک
-    //  بار و برای همیشه (‎_art‎). سنجه‌اش ‎startup‎ و ‎idle‎ است.
+    //  ⚠️ **عکسِ مرجع خودش در صفحه است** — «همین مدل باشد و این آدمک‌ها هم
+    //  باشند؛ اصلاً همین عکس باید باشد.» فقط آدمک‌ها بریده می‌شوند
+    //  (<see cref="ArtCrop"/>)، چون نوشته‌ها و دو نشانِ فروشگاهِ عکس نباید
+    //  دیده شوند.
+    //
+    //  ⛔ **هیچ دکمهٔ گوگل یا هر سرویسِ دیگری نیست**: «هیچ‌کدامشان را
+    //  نمی‌خواهم.» تنها راهِ حساب همان ایمیل و رمزِ خودمان است، و «بعداً» که
+    //  بی‌اینترنت هم کار کند.
 
     /// <summary>گامِ جاری: ۱ حساب · ۲ پمپ · ۳ تمام.</summary>
     [ObservableProperty] private int _loginStep = 1;
@@ -561,6 +539,19 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     [ObservableProperty] private string _loginStatus = "";
 
     public bool IsSignIn => !IsSignUp;
+
+    /// <summary>
+    /// ⚠️ **کسی که حساب ندارد، تمامِ صفحهٔ پروفایل برایش همین صفحهٔ ورود
+    /// است** — خواستهٔ صریحِ صاحب ریپو: «وقتی پروفایل را کلیک می‌کنم این
+    /// صفحهٔ لاگین اولویت باشد و تمامِ صفحه همین را نشان بدهد برای کسانی که
+    /// حساب ندارند؛ و برای کسانی که دارند، پروفایل همان مشخصات را نشان
+    /// بدهد.» گامِ سه یعنی «تمام» ⇒ از آن پس خودِ پروفایل دیده می‌شود.
+    /// </summary>
+    public bool ShowLoginPage => LoginStep < 3;
+
+    /// <summary>وارونهٔ بالا — خودِ پروفایل.</summary>
+    public bool ShowProfilePage => !ShowLoginPage;
+
     public bool StepAccount => LoginStep == 1;
     public bool StepPump => LoginStep == 2;
     public bool StepDone => LoginStep == 3;
@@ -580,6 +571,8 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         OnPropertyChanged(nameof(StepAccount));
         OnPropertyChanged(nameof(StepPump));
         OnPropertyChanged(nameof(StepDone));
+        OnPropertyChanged(nameof(ShowLoginPage));
+        OnPropertyChanged(nameof(ShowProfilePage));
     }
 
     [RelayCommand]
@@ -600,7 +593,12 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         var activated = !string.IsNullOrWhiteSpace(f.CloudDeviceToken);
         var hasPump = !string.IsNullOrWhiteSpace(_host.Settings.GetString(SettingsService.StationName));
 
-        LoginStep = !SignedIn ? 1 : activated && hasPump ? 3 : 2;
+        //  ⚠️ «تمام» یعنی یا واقعاً همه‌چیز هست، یا کاربر خودش گفته «بعداً»
+        //  (`AppSettings.LoginSkipped`) — وگرنه صفحهٔ ورود می‌شد یک دیوار
+        //  جلوی دفترِ خودش، و آن خلافِ قاعدهٔ «دفتر گروگان نیست» بود.
+        LoginStep = SignedIn && activated && hasPump ? 3
+                  : f.LoginSkipped ? 3
+                  : !SignedIn ? 1 : 2;
         //  کسی که حساب دارد، پیش‌فرضش «ورود» است نه «ثبت‌نام»
         if (SignedIn || f.CloudEmail.Length > 0) IsSignUp = !SignedIn && f.CloudEmail.Length == 0;
     }
@@ -638,6 +636,8 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
 
             //  ⚠️ رمز از حافظهٔ صفحه هم می‌رود
             LoginPassword = ""; LoginPassword2 = "";
+            var f = AppSettings.Load();
+            if (f.LoginSkipped) { f.LoginSkipped = false; f.Save(); }
             LoginStatus = "";
             RefreshAll();
             LoginStep = 2;
@@ -708,6 +708,31 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         finally { Busy = false; }
     });
 
+    /// <summary>
+    /// «بعداً» روی گامِ پمپ: نام و لوکیشن ذخیره می‌شوند و صفحه رد می‌شود.
+    /// بی این، پمپی که اینترنت ندارد تا ابد روی همین صفحه می‌ماند.
+    /// </summary>
+    [RelayCommand]
+    private void SkipPump()
+    {
+        var pump = (LoginPump ?? "").Trim();
+        var where = (LoginLocation ?? "").Trim();
+        if (pump.Length > 0) _host.Settings.Set(SettingsService.StationName, pump);
+        if (where.Length > 0) _host.Settings.Set(SettingsService.StationAddress, where);
+
+        var f = AppSettings.Load();
+        f.LoginSkipped = true;
+        f.Save();
+
+        LoginStatus = "";
+        RefreshAll();
+        LoginStep = 3;
+    }
+
+    /// <summary>از خودِ پروفایل برگرد به صفحهٔ ورود (عوض کردنِ حساب یا پمپ).</summary>
+    [RelayCommand]
+    private void OpenAccountPage() { LoginStatus = ""; LoginStep = 1; }
+
     /// <summary>برگشت به گامِ حساب — برای عوض کردنِ حساب یا رمز.</summary>
     [RelayCommand]
     private void BackToAccount() { LoginStatus = ""; LoginStep = 1; }
@@ -716,30 +741,36 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     [RelayCommand]
     private void BackToPump() { LoginStatus = ""; LoginStep = 2; }
 
+    // ── عکسِ کنارِ فرم — همان آدمک‌های عکسِ مرجع ─────────────────────────
+    //
+    //  خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۸): «همین مدل باشد و این آدمک‌ها هم
+    //  باشند؛ اصلاً همین عکس باید باشد.» پس عکسِ خودش کنارِ فرم می‌نشیند.
+    //
+    //  ⚠️ و همان سه قاعدهٔ «یک درصدِ ثانیه هم اضافه نکند» سرِ جایش است:
+    //  فقط در فعال‌سازیِ همین صفحه، روی نخِ دیگر، به پهنای نمایش، و یک
+    //  بار برای همیشه (`_art`). سنجه‌اش `startup` و `idle` است.
+
     /// <summary>عکسِ کنارِ فرم — تا خوانده نشده ‎null‎ است و کادرش دیده نمی‌شود.</summary>
     [ObservableProperty] private IImage? _loginArt;
 
-    /// <summary>
-    /// پهنای بازکردنِ عکس. عکسِ اصلی ۷۳۵ پیکسل است و از آن فقط خودِ
-    /// پمپ‌بنزین بریده می‌شود، پس بیشتر از اندازهٔ خودش بازش نمی‌کنیم.
-    /// </summary>
+    /// <summary>پهنای بازکردنِ عکس — خودِ فایل ۷۳۶ پیکسل است.</summary>
     private const int ArtWidth = 736;
 
     /// <summary>
-    /// ⚠️ **فقط خودِ پمپ‌بنزین** — خواستهٔ صریحِ صاحب ریپو: «آن نوشته‌های
-    /// عکس هم نباشد.» عکسِ اصلی یک کارتِ تبلیغاتی است («TRANSPARENT GLASS /
-    /// Gas Station / Learn More»)؛ این پنجره همان نوشته‌ها و حاشیه را
-    /// می‌بُرد و فقط تصویرِ پمپ می‌ماند. بریدن روی خودِ عکسِ بازشده انجام
-    /// می‌شود (<see cref="CroppedBitmap"/>) — یک پوشش است، نه یک عکسِ تازه،
-    /// پس هیچ حافظه و وقتی اضافه نمی‌کند.
+    /// ⚠️ **فقط خودِ آدمک‌ها** — نه نوشته‌های انگلیسیِ عکس و نه آن دو نشانِ
+    /// «App Store / Google Play»: خواستهٔ صریحِ صاحب ریپو «هیچ پکنه‌ای نباشد،
+    /// نه از گوگل و نه غیره» با این پنجره هم برقرار می‌ماند. فرمِ واقعی خودِ
+    /// برنامه است، نه فرمِ داخلِ عکس.
+    /// بریدن با <see cref="CroppedBitmap"/> است — یک پوشش روی همان عکس، بی
+    /// کپی و بی هزینه.
     /// </summary>
-    private static readonly PixelRect ArtCrop = new(56, 42, 376, 412);
+    private static readonly PixelRect ArtCrop = new(52, 86, 368, 396);
 
     private static IImage? _art;
     private static bool _artTried;
 
     /// <summary>
-    /// عکسِ کارتِ ورود — روی نخِ دیگر، به پهنای نمایش، یک بار.
+    /// عکسِ صفحهٔ ورود — روی نخِ دیگر، به پهنای نمایش، یک بار.
     /// نشدنش هیچ اهمیتی ندارد: صفحه بی عکس هم کامل است.
     /// </summary>
     private async Task LoadArtAsync()
@@ -760,8 +791,8 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
 
             //  ⚠️ بریدن **باید** روی نخِ رابط باشد: ‎CroppedBitmap‎ یک
             //  ‎AvaloniaObject‎ است و سازنده‌اش نخ را می‌سنجد («Call from
-            //  invalid thread»). خودش کاری نمی‌کند جز نگه داشتنِ یک مستطیل،
-            //  پس هزینه‌اش صفر است — همان عکس، بی کپی.
+            //  invalid thread»). یک بار همین باگ عکس را کاملاً ناپدید کرد و
+            //  ‎catch { }‎ هم صدایش را خورد.
             var box = ArtCrop.Intersect(new PixelRect(full.PixelSize));
             IImage art = box.Width > 0 && box.Height > 0 ? new CroppedBitmap(full, box) : full;
 
@@ -812,8 +843,8 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         RefreshAll();
         ShowLogin();
         await LoadRowsAsync();
-        //  ⚠️ عکس آخر از همه، و فقط همین‌جا — مسیرِ لودینگِ برنامه به آن
-        //  دست نمی‌زند.
+        //  ⚠️ عکس فقط این‌جا خوانده می‌شود — پردهٔ لودینگ فقط
+        //  `EnsureLoadedAsync` را می‌زند، پس در مسیرِ باز شدنِ برنامه نیست.
         await LoadArtAsync();
     }
 

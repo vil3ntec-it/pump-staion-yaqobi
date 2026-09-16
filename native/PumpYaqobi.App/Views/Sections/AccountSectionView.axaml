@@ -6,11 +6,28 @@
              x:Class="PumpYaqobi.App.Views.Sections.AccountSectionView"
              x:DataType="vm:AccountSectionViewModel">
 
-  <!-- ══ پروفایل — به شکلِ «پروفایلِ بیمار»ِ مرجع ══════════════════════════════
+  <!-- ══ پروفایل — و صفحهٔ ورودی که اولویت دارد ═══════════════════════════════
+       دو صفحه داخلِ یک ‎Panel‎ روی هم‌اند و هر لحظه فقط یکی دیده می‌شود:
+         `ShowLoginPage`   ⇒ صفحهٔ ورود، تمامِ صفحه (کسی که حساب ندارد)
+         `ShowProfilePage` ⇒ خودِ پروفایل، با همان مشخصات
+       ⛔ رنگ‌بندیِ عکسِ مرجع **فقط** در صفحهٔ ورود است، نه جای دیگر — خواستهٔ
+       صریحِ صاحب ریپو: «رنگ را گفتم فقط توی صفحهٔ لاگینِ حساب باشد.»
+       ⛔ و هیچ دکمهٔ گوگل یا هر سرویسِ دیگری در هیچ‌کدام نیست.
+
+       ══ پروفایل — به شکلِ «پروفایلِ بیمار»ِ مرجع ══════════════════════════════
        خواستهٔ صاحب ریپو با عکس: «باید شبیهِ این عکس باشد، نه این که توی تنظیمات
        برود.» سه ستون: آواتار · مشخصاتِ پمپ · اشتراک؛ زیرش تب‌ها با ردیف‌های
        رنگی و ستونِ فایل‌ها (پشتیبان‌ها) و کدِ اپِ کارمندان.
        ⛔ هیچ کادرِ نشانی و رمزی این‌جا نیست و نباید بیاید. -->
+  <UserControl.Resources>
+    <!-- گرادیانِ همان قالب: #ff7a59 → #e8458b → #7b3fe4 (فقط صفحهٔ ورود) -->
+    <LinearGradientBrush x:Key="Login.Grad" StartPoint="0%,0%" EndPoint="100%,0%">
+      <GradientStop Offset="0" Color="#ff7a59" />
+      <GradientStop Offset="0.5" Color="#e8458b" />
+      <GradientStop Offset="1" Color="#7b3fe4" />
+    </LinearGradientBrush>
+  </UserControl.Resources>
+
   <UserControl.Styles>
     <Style Selector="TextBlock.kvl">
       <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
@@ -37,214 +54,268 @@
       <Setter Property="FontWeight" Value="Bold" />
     </Style>
 
-    <!-- ══ کادرهای کارتِ ورود: گِرد و بلند، نه مربعی ══════════════════════
-         «اون مربعی نبود و کادرهای لاگینش خیلی بهتر بود» — پس فقط داخلِ همین
-         کارت، کادرها گوشهٔ ۱۴ و بلندیِ ۴۴ می‌گیرند و دکمه‌ها کپسولی می‌شوند.
-         بیرونِ این کارت هیچ چیزی عوض نمی‌شود. -->
-    <Style Selector="Border.logincard TextBox">
-      <Setter Property="CornerRadius" Value="14" />
-      <Setter Property="MinHeight" Value="44" />
-      <Setter Property="Padding" Value="14,9" />
-      <Setter Property="FontSize" Value="14" />
+    <!-- ══ رنگ‌بندی و کادرهای **صفحهٔ ورود** ══════════════════════════════
+         خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۸، با عکسِ مرجعِ لاگین و یک قالبِ
+         ایمیل): «همین مدل باشد و این آدمک‌ها هم باشند… و من رنگ‌های همان
+         سایت را گفتم بگیر، نه که شبیه آن بسازی… و رنگ را گفتم فقط توی صفحهٔ
+         لاگینِ حساب باشد، نه جای دیگر.»
+
+         پس دقیقاً همان رنگ‌های آن قالب، و **فقط** زیرِ `Border.loginpage`:
+           بوم        #f6e3d8
+           گرادیان    #ff7a59 → #e8458b → #7b3fe4
+           نوشتهٔ تیره #2b1640   متن #4a3b52   کم‌رنگ #7a6a82
+           تینت‌ها     #ffe9e1 · #fde4f0 · #ece3fc
+           لینک       #c2185b
+           کارتِ سفید  گوشهٔ ۲۸ با سایهٔ 0 20 50 0 #2E7B3FE4
+           دکمهٔ اصلی  #2b1640 با گوشهٔ ۴۰
+         ⛔ هیچ‌کدامِ این رنگ‌ها بیرونِ این صفحه به کار نمی‌رود و دو تمِ
+         برنامه (آبی و طلایی) دست نمی‌خورند.
+         ⚠️ ترتیبِ سبک‌ها مهم است: در آوالونیا سبکِ **بعدی** برنده است، نه
+         خاص‌تر — پس اول نوشتهٔ عمومی و بعد کلاس‌ها. -->
+    <Style Selector="Border.loginpage TextBlock">
+      <Setter Property="Foreground" Value="#4a3b52" />
     </Style>
-    <Style Selector="Border.logincard Button.go">
-      <Setter Property="CornerRadius" Value="14" />
+    <Style Selector="Border.loginpage TextBlock.dim">
+      <Setter Property="Foreground" Value="#7a6a82" />
+    </Style>
+    <Style Selector="Border.loginpage TextBlock.lbl">
+      <Setter Property="Foreground" Value="#7a6a82" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Border.loginpage TextBlock.h1">
+      <Setter Property="Foreground" Value="#2b1640" />
+      <Setter Property="FontSize" Value="30" />
+      <Setter Property="FontWeight" Value="Black" />
+    </Style>
+
+    <!-- ══ کادرها: خط‌دار و بی‌قاب، مثلِ خودِ عکسِ مرجع ══════════════════
+         «اون مربعی نبود و کادرهای لاگینش خیلی بهتر بود» — کادرهای عکس فقط
+         یک خطِ زیرین دارند. ⚠️ رنگ باید روی **قالبِ** `TextBox` بنشیند
+         (`PART_BorderElement`)، وگرنه در تمِ تیره کادر سیاه می‌ماند. -->
+    <Style Selector="Border.loginpage TextBox">
       <Setter Property="MinHeight" Value="44" />
+      <Setter Property="Padding" Value="2,8" />
       <Setter Property="FontSize" Value="14.5" />
+      <Setter Property="Foreground" Value="#2b1640" />
+      <Setter Property="CaretBrush" Value="#7b3fe4" />
+    </Style>
+    <Style Selector="Border.loginpage TextBox /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="#e0d3e6" />
+      <Setter Property="BorderThickness" Value="0,0,0,1.6" />
+      <Setter Property="CornerRadius" Value="0" />
+    </Style>
+    <Style Selector="Border.loginpage TextBox:pointerover /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="#e8458b" />
+    </Style>
+    <Style Selector="Border.loginpage TextBox:focus /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="#7b3fe4" />
+    </Style>
+    <Style Selector="Border.loginpage TextBox /template/ TextBlock#PART_Watermark">
+      <Setter Property="Foreground" Value="#a99bb0" />
+    </Style>
+
+    <!-- ══ دکمه‌ها ══════════════════════════════════════════════════════ -->
+    <Style Selector="Border.loginpage Button.go">
+      <Setter Property="Foreground" Value="#ffffff" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="FontSize" Value="15" />
+      <Setter Property="MinHeight" Value="48" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="40" />
+    </Style>
+    <Style Selector="Border.loginpage Button.go /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#2b1640" />
+      <Setter Property="CornerRadius" Value="40" />
+    </Style>
+    <Style Selector="Border.loginpage Button.go:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#41215f" />
+      <Setter Property="TextBlock.Foreground" Value="#ffffff" />
+    </Style>
+    <Style Selector="Border.loginpage Button.link">
+      <Setter Property="Foreground" Value="#c2185b" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="MinHeight" Value="28" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Border.loginpage Button.link /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.loginpage Button.link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="TextBlock.Foreground" Value="#e8458b" />
+    </Style>
+    <Style Selector="Border.loginpage Button.mode">
+      <Setter Property="Foreground" Value="#7a6a82" />
+      <Setter Property="CornerRadius" Value="999" />
+      <Setter Property="MinHeight" Value="34" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Padding" Value="18,0" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Border.loginpage Button.mode /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="CornerRadius" Value="999" />
+    </Style>
+    <Style Selector="Border.loginpage Button.mode.active">
+      <Setter Property="Foreground" Value="#ffffff" />
       <Setter Property="FontWeight" Value="Bold" />
     </Style>
-    <Style Selector="Border.stepchip">
-      <Setter Property="CornerRadius" Value="999" />
-      <Setter Property="Padding" Value="11,3" />
-      <Setter Property="Background" Value="{DynamicResource Pump.Input}" />
+    <Style Selector="Border.loginpage Button.mode.active /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource Login.Grad}" />
     </Style>
-    <Style Selector="Border.stepchip TextBlock">
+    <Style Selector="Border.loginpage Border.stepchip">
+      <Setter Property="CornerRadius" Value="999" />
+      <Setter Property="Padding" Value="12,4" />
+      <Setter Property="Background" Value="#f6e3d8" />
+    </Style>
+    <Style Selector="Border.loginpage Border.stepchip TextBlock">
       <Setter Property="FontSize" Value="11.5" />
       <Setter Property="FontWeight" Value="Bold" />
-      <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
+      <Setter Property="Foreground" Value="#7a6a82" />
     </Style>
-    <Style Selector="Border.stepchip.on">
-      <Setter Property="Background" Value="{DynamicResource Pump.Accent}" />
+    <Style Selector="Border.loginpage Border.stepchip.on">
+      <Setter Property="Background" Value="{StaticResource Login.Grad}" />
     </Style>
-    <Style Selector="Border.stepchip.on TextBlock">
-      <Setter Property="Foreground" Value="White" />
-    </Style>
-    <Style Selector="Border.logincard TextBlock.lbl">
-      <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
-      <Setter Property="FontSize" Value="12" />
+    <Style Selector="Border.loginpage Border.stepchip.on TextBlock">
+      <Setter Property="Foreground" Value="#ffffff" />
     </Style>
   </UserControl.Styles>
 
   <c:SectionPage Header="پروفایل">
-    <Grid ColumnDefinitions="300,*,330" RowDefinitions="Auto,Auto,*">
+    <Panel>
 
-      <!-- ══ 🪪 کارتِ ورود — فرم روی خودِ عکس ═══════════════════════════════
-           خواستهٔ صاحب ریپو (۱۴۰۵/۰۶/۲۸، با دو عکس و بعد اصلاحش): «خودِ لاگین
-           تو اون عکس باشه و خیلی بهتر و قشنگ‌تر… اون عکسِ پمپ‌استیشن باشه، نه
-           این که اون نوشته‌های عکس هم باشه… اون مربعی نبود و کادرهای لاگینش
-           خیلی بهتر بود.»
+      <!-- ══════════════════════════════════════════════════════════════════
+           🪪 صفحهٔ ورود — تمامِ صفحه، به همان مدلِ عکسِ مرجع
+           ══════════════════════════════════════════════════════════════════
+           خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۸): «وقتی پروفایل را کلیک می‌کنم
+           این صفحهٔ لاگین اولویت باشد و تمامِ صفحه همین را نشان بدهد برای
+           کسانی که حساب ندارند، و برای کسانی که دارند پروفایل همان مشخصات را
+           نشان بدهد… همین مدل باشد و این آدمک‌ها هم باشند؛ اصلاً همین عکس
+           باید باشد… هیچ پکنه‌ای نباشد، نه از گوگل و نه غیره.»
 
-           پس: عکس تمام‌قدِ کارت است و **بریده** (فقط پمپ، بی هیچ نوشتهٔ عکس)،
-           و فرم یک پنلِ سفیدِ گردِ شناور **روی** همان عکس می‌نشیند. گوشه‌ها
-           بزرگ و کادرها گِرد و بلندند — مربعی نیست.
+           پس: آدمک‌های همان عکس یک طرفِ کارت، فرمِ **خودِ برنامه** طرفِ دیگر،
+           و هیچ دکمهٔ سرویسِ بیرونی‌ای در کار نیست. رنگ‌ها همان قالبی است که
+           داد — و فقط همین‌جا.
            ⚠️ عکس فقط وقتی خوانده می‌شود که کاربر روی این صفحه بیاید. -->
-      <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Classes="logincard"
-              CornerRadius="26" Margin="0,0,0,16" ClipToBounds="True"
-              MaxWidth="940" HorizontalAlignment="Center"
-              Background="{DynamicResource Pump.Panel}"
-              BoxShadow="{DynamicResource Pump.CardShadow}">
-        <!-- ⚠️ عکسِ اصلی **ایستاده** است (۳۷۶×۴۱۲)، پس اگر تمامِ یک کارتِ
-             پهن را پر کند فقط سقفِ پمپ دیده می‌شود. برای همین کارت باریک
-             است و عکس یک طرفش را با نسبتِ طبیعیِ خودش می‌گیرد، و پنلِ فرم
-             **لبه‌اش را می‌پوشاند** — همان طرحی که صاحب ریپو نشان داد. -->
-        <!-- ⚠️ پهنا و بلندی **صریح**‌اند: هر دو پنل به دو لبه چسبیده‌اند، پس
-             اگر اندازه را نگوییم خودِ قاب به اندازهٔ پهن‌ترین پنل جمع می‌شود
-             و فرم تمامِ عکس را می‌پوشاند (یک بار همین شد).
-             و بلندی آن‌قدر است که تهِ فرم («ورود با گوگل») بریده نشود. -->
-        <Grid Width="940" Height="648">
+      <Border Classes="loginpage" Background="#f6e3d8" CornerRadius="24"
+              IsVisible="{Binding ShowLoginPage}">
+        <Grid>
+          <!-- مربع‌های نرمِ پس‌زمینه — همان تزئینِ گوشه‌های عکسِ مرجع -->
+          <Border Width="150" Height="150" CornerRadius="36" Background="#22e8458b"
+                  HorizontalAlignment="Left" VerticalAlignment="Top" Margin="46,30,0,0" />
+          <Border Width="110" Height="110" CornerRadius="28" Background="#1Aff7a59"
+                  HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,60,34" />
+          <Border Width="74" Height="74" CornerRadius="22" Background="#207b3fe4"
+                  HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="120,0,0,60" />
 
-          <!-- عکسِ بریده — یک طرفِ کارت، از بالا تا پایین -->
-          <Image Source="{Binding LoginArt}" Stretch="UniformToFill"
-                 VerticalAlignment="Center" HorizontalAlignment="Right" Width="500"
-                 IsVisible="{Binding LoginArt, Converter={x:Static ObjectConverters.IsNotNull}}" />
+          <!-- ══ کارتِ سفید ══
+               ⚠️ اندازه **صریح** است: دو پنل به دو لبه چسبیده‌اند و بی
+               اندازهٔ صریح، قاب به اندازهٔ پهن‌ترین پنل جمع می‌شود و فرم
+               تمامِ عکس را می‌پوشاند (یک بار همین شد و با عکس دیده شد). -->
+          <Border Background="#ffffff" CornerRadius="28" HorizontalAlignment="Center"
+                  VerticalAlignment="Center" ClipToBounds="True"
+                  BoxShadow="0 20 50 0 #2E7B3FE4">
+            <Grid Width="980" Height="536" ColumnDefinitions="*,430">
 
-          <!-- پردهٔ ملایم روی همان عکس، تا نوشته‌اش خوانده شود -->
-          <Border HorizontalAlignment="Right" Width="500"
-                  IsVisible="{Binding LoginArt, Converter={x:Static ObjectConverters.IsNotNull}}">
-            <Border.Background>
-              <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
-                <GradientStop Offset="0" Color="#00000000" />
-                <GradientStop Offset="0.45" Color="#26000000" />
-                <GradientStop Offset="1" Color="#59000000" />
-              </LinearGradientBrush>
-            </Border.Background>
-          </Border>
+              <!-- آدمک‌های همان عکس -->
+              <Border Grid.Column="0" Background="#f4eefd" Margin="0">
+                <Image Source="{Binding LoginArt}" Stretch="Uniform" Margin="22"
+                       IsVisible="{Binding LoginArt, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              </Border>
 
-          <!-- نامِ پمپ، گوشهٔ عکس -->
-          <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="26,22" Spacing="2"
-                      IsVisible="{Binding LoginArt, Converter={x:Static ObjectConverters.IsNotNull}}">
-            <TextBlock Text="{Binding PumpName}" FontSize="21" FontWeight="Black" Foreground="White" />
-            <TextBlock Text="حساب و اشتراکِ همین پمپ" FontSize="12" Foreground="#eaeaea" />
-          </StackPanel>
+              <!-- ══ فرمِ خودِ برنامه ══ -->
+              <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled" Padding="36,26">
+                <StackPanel Spacing="10">
 
-          <!-- ══ پنلِ شناورِ فرم — روی خودِ عکس ══ -->
-          <Border HorizontalAlignment="Left" VerticalAlignment="Stretch" Width="438"
-                  Margin="16" CornerRadius="22" Padding="26,16"
-                  Background="{DynamicResource Pump.Card}"
-                  BoxShadow="0 12 34 0 #40000000">
-            <StackPanel Spacing="8" VerticalAlignment="Center">
+                  <!-- نشانِ گام‌ها -->
+                  <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                    <Border Classes="stepchip" Classes.on="{Binding StepAccount}">
+                      <TextBlock Text="۱ حساب" />
+                    </Border>
+                    <Border Classes="stepchip" Classes.on="{Binding StepPump}">
+                      <TextBlock Text="۲ پمپ" />
+                    </Border>
+                    <Border Classes="stepchip" Classes.on="{Binding StepDone}">
+                      <TextBlock Text="۳ تمام" />
+                    </Border>
+                  </StackPanel>
 
-              <!-- ══ نشانِ گام‌ها: هر سه دیده می‌شوند، گامِ جاری پررنگ ══ -->
-              <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                <Border Classes="stepchip" Classes.on="{Binding StepAccount}">
-                  <TextBlock Text="۱ حساب" />
-                </Border>
-                <Border Classes="stepchip" Classes.on="{Binding StepPump}">
-                  <TextBlock Text="۲ پمپ" />
-                </Border>
-                <Border Classes="stepchip" Classes.on="{Binding StepDone}">
-                  <TextBlock Text="۳ تمام" />
-                </Border>
-              </StackPanel>
+                  <!-- ══════════ گامِ ۱: حساب ══════════ -->
+                  <StackPanel Spacing="8" IsVisible="{Binding StepAccount}">
+                    <TextBlock Text="سلام،" Classes="h1" />
+                    <TextBlock Text="خوش آمدید" Classes="h1" Margin="0,-8,0,6" />
 
-              <!-- ══════════ گامِ ۱: حساب ══════════ -->
-              <StackPanel Spacing="8" IsVisible="{Binding StepAccount}">
-                <TextBlock Text="خوش آمدید" FontSize="26" FontWeight="Black" />
+                    <!-- «حساب داری یا نه؟» — دو راهِ جدا و دیدنی -->
+                    <Border CornerRadius="999" Background="#f6e3d8" Padding="4" HorizontalAlignment="Center">
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <Button Classes="mode" Classes.active="{Binding IsSignUp}" Content="حساب می‌سازم"
+                                Command="{Binding SetSignUpCommand}" CommandParameter="yes" />
+                        <Button Classes="mode" Classes.active="{Binding IsSignIn}" Content="حساب دارم"
+                                Command="{Binding SetSignUpCommand}" CommandParameter="no" />
+                      </StackPanel>
+                    </Border>
 
-                <!-- «حساب داری یا نه؟» — دو راهِ جدا و دیدنی -->
-                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                  <Button Classes="seg" Classes.active="{Binding IsSignUp}" Content="حساب می‌سازم"
-                          Command="{Binding SetSignUpCommand}" CommandParameter="yes" />
-                  <Button Classes="seg" Classes.active="{Binding IsSignIn}" Content="حساب دارم"
-                          Command="{Binding SetSignUpCommand}" CommandParameter="no" />
+                    <!-- ⚠️ نوشتهٔ راهنما **داخلِ خودِ کادر** است، مثلِ عکسِ
+                         مرجع — نه برچسبِ جدا. -->
+                    <TextBox Text="{Binding LoginName}" Watermark="نامِ شما" IsVisible="{Binding IsSignUp}" />
+                    <TextBox Text="{Binding LoginEmail}" Watermark="ایمیل" FlowDirection="LeftToRight" />
+                    <TextBox Text="{Binding LoginPassword}" PasswordChar="•" Watermark="رمز — دستِ‌کم شش نویسه" />
+                    <TextBox Text="{Binding LoginPassword2}" PasswordChar="•" Watermark="تکرارِ رمز"
+                             IsVisible="{Binding IsSignUp}" />
+
+                    <Button Classes="go" Content="{Binding AccountButtonText}" Margin="0,10,0,0"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            Command="{Binding AccountStepCommand}" IsEnabled="{Binding !Busy}" />
+
+                    <Button Classes="link" Content="بعداً — فعلاً بی حساب ادامه می‌دهم"
+                            HorizontalAlignment="Center"
+                            Command="{Binding SkipAccountCommand}" IsEnabled="{Binding !Busy}" />
+                  </StackPanel>
+
+                  <!-- ══════════ گامِ ۲: پمپ ══════════ -->
+                  <StackPanel Spacing="8" IsVisible="{Binding StepPump}">
+                    <TextBlock Text="پمپِ خودتان" Classes="h1" FontSize="26" />
+                    <TextBlock Text="کدِ شش‌رقمی را بزنید تا سرور تاییدش کند، و نام و لوکیشنِ پمپ را بنویسید."
+                               Classes="dim" FontSize="12.5" TextWrapping="Wrap" />
+
+                    <TextBox Text="{Binding LoginCode}" MaxLength="6" Margin="0,6,0,0"
+                             Watermark="کدِ شش‌رقمی" />
+                    <TextBox Text="{Binding LoginPump}" Watermark="نامِ پمپ" />
+                    <TextBox Text="{Binding LoginLocation}" Watermark="لوکیشنِ پمپ" />
+
+                    <Button Classes="go" Content="تایید از سرور و پایان" Margin="0,10,0,0"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            Command="{Binding VerifyCodeCommand}" IsEnabled="{Binding !Busy}" />
+                    <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                      <Button Classes="link" Content="‹ برگشت به حساب"
+                              Command="{Binding BackToAccountCommand}" IsEnabled="{Binding !Busy}" />
+                      <Button Classes="link" Content="بعداً — بعد کد را می‌زنم"
+                              Command="{Binding SkipPumpCommand}" IsEnabled="{Binding !Busy}" />
+                    </StackPanel>
+                  </StackPanel>
+
+                  <TextBlock Text="{Binding LoginStatus}" TextWrapping="Wrap" FontSize="12.5" FontWeight="Bold"
+                             Foreground="#c2185b"
+                             IsVisible="{Binding LoginStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                 </StackPanel>
-
-                <StackPanel Spacing="5" IsVisible="{Binding IsSignUp}">
-                  <TextBlock Text="نامِ شما" Classes="lbl" />
-                  <TextBox Text="{Binding LoginName}" Watermark="نامِ خودتان" />
-                </StackPanel>
-
-                <TextBlock Text="ایمیل" Classes="lbl" />
-                <TextBox Text="{Binding LoginEmail}" Watermark="name@gmail.com" FlowDirection="LeftToRight" />
-
-                <TextBlock Text="رمز" Classes="lbl" />
-                <TextBox Text="{Binding LoginPassword}" PasswordChar="•" Watermark="دستِ‌کم شش نویسه" />
-
-                <StackPanel Spacing="5" IsVisible="{Binding IsSignUp}">
-                  <TextBlock Text="تکرارِ رمز" Classes="lbl" />
-                  <TextBox Text="{Binding LoginPassword2}" PasswordChar="•" Watermark="همان رمز، دوباره" />
-                </StackPanel>
-
-                <Button Classes="accent go" Content="{Binding AccountButtonText}" Margin="0,6,0,0"
-                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                        Command="{Binding AccountStepCommand}" IsEnabled="{Binding !Busy}" />
-
-                <Grid ColumnDefinitions="*,Auto,*" Margin="0,2">
-                  <Border Grid.Column="0" Height="1" Background="{DynamicResource Pump.Border}" VerticalAlignment="Center" />
-                  <TextBlock Grid.Column="1" Text="یا" Classes="muted" FontSize="12" Margin="10,0" />
-                  <Border Grid.Column="2" Height="1" Background="{DynamicResource Pump.Border}" VerticalAlignment="Center" />
-                </Grid>
-
-                <Button Classes="ghost go" Content="ورود با گوگل"
-                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                        Command="{Binding SignInCommand}" IsEnabled="{Binding !Busy}" />
-                <Button Classes="tool-link" Content="بعداً — فعلاً بی حساب ادامه می‌دهم"
-                        HorizontalAlignment="Center" FontSize="12"
-                        Command="{Binding SkipAccountCommand}" IsEnabled="{Binding !Busy}" />
-              </StackPanel>
-
-              <!-- ══════════ گامِ ۲: پمپ ══════════ -->
-              <StackPanel Spacing="8" IsVisible="{Binding StepPump}">
-                <TextBlock Text="پمپِ خودتان" FontSize="26" FontWeight="Black" />
-                <TextBlock Text="کدِ شش‌رقمی را بزنید تا سرور تاییدش کند، و نام و لوکیشنِ پمپ را بنویسید."
-                           Classes="muted" FontSize="12.5" TextWrapping="Wrap" />
-
-                <TextBlock Text="کدِ شش‌رقمی" Classes="lbl" Margin="0,4,0,0" />
-                <TextBox Text="{Binding LoginCode}" MaxLength="6" Watermark="۱۲۳۴۵۶" />
-
-                <TextBlock Text="نامِ پمپ" Classes="lbl" />
-                <TextBox Text="{Binding LoginPump}" Watermark="پمپ یعقوبی" />
-
-                <TextBlock Text="لوکیشنِ پمپ" Classes="lbl" />
-                <TextBox Text="{Binding LoginLocation}" Watermark="شهر و آدرسِ پمپ" />
-
-                <Button Classes="accent go" Content="تایید از سرور و پایان" Margin="0,6,0,0"
-                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                        Command="{Binding VerifyCodeCommand}" IsEnabled="{Binding !Busy}" />
-                <Button Classes="tool-link" Content="‹ برگشت به حساب" HorizontalAlignment="Center" FontSize="12"
-                        Command="{Binding BackToAccountCommand}" IsEnabled="{Binding !Busy}" />
-              </StackPanel>
-
-              <!-- ══════════ گامِ ۳: تمام ══════════ -->
-              <StackPanel Spacing="10" IsVisible="{Binding StepDone}">
-                <TextBlock Text="✅ تمام" FontSize="28" FontWeight="Black"
-                           Foreground="{DynamicResource Pump.Ok}" />
-                <TextBlock Text="حساب ساخته شد، کد از سرور تایید شد و پمپ ثبت شد."
-                           Classes="muted" TextWrapping="Wrap" />
-                <Grid ColumnDefinitions="90,*" RowDefinitions="Auto,Auto,Auto">
-                  <TextBlock Grid.Row="0" Grid.Column="0" Text="ایمیل" Classes="lbl" />
-                  <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding LoginEmail}" FontWeight="SemiBold" />
-                  <TextBlock Grid.Row="1" Grid.Column="0" Text="پمپ" Classes="lbl" Margin="0,6,0,0" />
-                  <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LoginPump}" FontWeight="SemiBold" Margin="0,6,0,0" />
-                  <TextBlock Grid.Row="2" Grid.Column="0" Text="لوکیشن" Classes="lbl" Margin="0,6,0,0" />
-                  <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding LoginLocation}" FontWeight="SemiBold"
-                             TextWrapping="Wrap" Margin="0,6,0,0" />
-                </Grid>
-                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                  <Button Classes="ghost" Content="تغییرِ پمپ" Command="{Binding BackToPumpCommand}" />
-                  <Button Classes="ghost" Content="تغییرِ حساب" Command="{Binding BackToAccountCommand}" />
-                </StackPanel>
-              </StackPanel>
-
-              <TextBlock Text="{Binding LoginStatus}" TextWrapping="Wrap" FontSize="12.5" FontWeight="Bold"
-                         IsVisible="{Binding LoginStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-            </StackPanel>
+              </ScrollViewer>
+            </Grid>
           </Border>
         </Grid>
       </Border>
 
+      <!-- ══════════════════════════════════════════════════════════════════
+           👤 خودِ پروفایل — همان مشخصات، با تمِ خودِ برنامه
+           ══════════════════════════════════════════════════════════════════ -->
+      <Grid IsVisible="{Binding ShowProfilePage}" ColumnDefinitions="300,*,330" RowDefinitions="Auto,*">
+
       <!-- ══ آواتار ══ -->
-      <Border Grid.Row="1" Grid.Column="0" Classes="panel" Padding="22" Margin="0,0,14,14">
+      <Border Grid.Row="0" Grid.Column="0" Classes="panel" Padding="22" Margin="0,0,14,14">
         <StackPanel Spacing="10" HorizontalAlignment="Center">
           <Border Width="110" Height="110" CornerRadius="55" Background="{DynamicResource Pump.Accent}"
                   BoxShadow="{DynamicResource Pump.CardShadow}">
@@ -266,9 +337,11 @@
             </Border>
           </StackPanel>
           <Border Height="1" Background="{DynamicResource Pump.Border}" Margin="0,6" />
+          <!-- ⚠️ راهِ برگشت به صفحهٔ ورود. ⛔ هیچ دکمهٔ سرویسِ بیرونی‌ای این‌جا
+               نیست: «هیچ پکنه‌ای نباشد، نه از گوگل و نه غیره.» -->
           <Button Classes="accent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                  Content="ورود با گوگل" Command="{Binding SignInCommand}"
-                  IsVisible="{Binding SignedOut}" IsEnabled="{Binding !Busy}" />
+                  Content="حساب و ورود" Command="{Binding OpenAccountPageCommand}"
+                  IsEnabled="{Binding !Busy}" />
           <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                   Content="🔄 گرفتنِ دوبارهٔ اطلاعات" Command="{Binding PullHomeCommand}"
                   IsVisible="{Binding SignedIn}" IsEnabled="{Binding !Busy}" />
@@ -283,7 +356,7 @@
       </Border>
 
       <!-- ══ مشخصاتِ پمپ ══ -->
-      <Border Grid.Row="1" Grid.Column="1" Classes="panel" Padding="22" Margin="0,0,14,14">
+      <Border Grid.Row="0" Grid.Column="1" Classes="panel" Padding="22" Margin="0,0,14,14">
         <StackPanel Spacing="12">
           <TextBlock Text="مشخصاتِ پمپ" Classes="ptitle" />
           <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
@@ -334,7 +407,7 @@
       </Border>
 
       <!-- ══ اشتراکِ VIP ══ -->
-      <Border Grid.Row="1" Grid.Column="2" Classes="panel" Padding="22" Margin="0,0,0,14">
+      <Border Grid.Row="0" Grid.Column="2" Classes="panel" Padding="22" Margin="0,0,0,14">
         <StackPanel Spacing="12">
           <StackPanel Orientation="Horizontal" Spacing="8">
             <TextBlock Text="اشتراکِ VIP" Classes="ptitle" />
@@ -389,7 +462,7 @@
       </Border>
 
       <!-- ══ تب‌ها: کارمندان · تاریخچه · پشتیبان‌ها ══ -->
-      <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Classes="panel" Padding="22" Margin="0,0,14,0">
+      <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Classes="panel" Padding="22" Margin="0,0,14,0">
         <DockPanel>
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,14">
             <Button Classes="seg" Classes.active="{Binding TabStaff}" Content="کارمندان"
@@ -436,7 +509,7 @@
       </Border>
 
       <!-- ══ فایل‌ها: پشتیبان‌ها ══ -->
-      <Border Grid.Row="2" Grid.Column="2" Classes="panel" Padding="22">
+      <Border Grid.Row="1" Grid.Column="2" Classes="panel" Padding="22">
         <DockPanel>
           <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
             <TextBlock Text="فایل‌های پشتیبان" Classes="ptitle" VerticalAlignment="Center" />
@@ -465,6 +538,7 @@
           </ScrollViewer>
         </DockPanel>
       </Border>
-    </Grid>
+      </Grid>
+    </Panel>
   </c:SectionPage>
 </UserControl>

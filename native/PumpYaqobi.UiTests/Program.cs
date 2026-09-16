@@ -217,6 +217,23 @@ internal static class Program
             }
         }
 
+        // ۴٫۵ب) خودِ پروفایل — نه صفحهٔ ورود
+        //
+        // ⚠️ عکسِ ۲۰ عمداً صفحهٔ **ورود** است، چون دیتابیسِ آزمون حسابی ندارد
+        // و همان چیزی است که کاربرِ تازه می‌بیند. ولی صفحهٔ پروفایل هم باید
+        // دیده شود، پس همان‌جا «بعداً» را می‌زنیم و دوباره عکس می‌گیریم.
+        if (vm.Sections.FirstOrDefault(s => s.Id == "account")
+            is PumpYaqobi.App.ViewModels.Sections.AccountSectionViewModel acc)
+        {
+            Wait(win, vm.GoAsync(acc));
+            acc.SkipPumpCommand.Execute(null);
+            Pump(win);
+            Dispatcher.UIThread.RunJobs();
+            Pump(win);
+            Shot(win, Path.Combine(outDir, "20b-account-profile.png"));
+            acc.OpenAccountPageCommand.Execute(null);
+        }
+
         // ۴٫۶) صفحهٔ جزئیاتِ «زیان ناشی از افزایش قیمت» — دو جدولِ برداشت‌ها و فاکتورها
         if (vm.Sections.FirstOrDefault(s => s.Id == "debt") is { } debtSec
             && debtSec.SubSections.OfType<PumpYaqobi.App.ViewModels.Sections.PriceLossSectionViewModel>().FirstOrDefault() is { } pl)

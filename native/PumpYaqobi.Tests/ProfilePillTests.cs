@@ -49,9 +49,11 @@ public class ProfilePillTests
         Assert.Contains("CopyAccessCodeCommand", xaml);
         Assert.Contains("ShowAccessQrCommand", xaml);
         Assert.Contains("RotateAccessCodeCommand", xaml);
-        //  ورود با گوگل و اشتراک همان‌جا ماندند
-        Assert.Contains("SignInCommand", xaml);
+        //  اشتراک همان‌جا ماند
         Assert.Contains("RedeemSubCommand", xaml);
+        //  ⛔ ورود با گوگل به خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۸) از این
+        //  صفحه برداشته شد: «هیچ پکنه‌ای نباشد، نه از گوگل و نه غیره.»
+        Assert.DoesNotContain("SignInCommand", xaml);
         //  ⛔ کادرِ نشانی همچنان هیچ‌جا نیست
         Assert.DoesNotContain("Binding ServerUrl", xaml);
         Assert.DoesNotContain("Binding SyncCode", xaml);

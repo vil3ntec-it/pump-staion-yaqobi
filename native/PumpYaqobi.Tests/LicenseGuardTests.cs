@@ -337,15 +337,20 @@ public class CloudAddressLockTests
     }
 
     /// <summary>
-    /// ورود با گوگل باید واقعاً در برنامه باشد — نه فقط در اپِ کارمندان.
-    /// خواستهٔ صریحِ صاحب ریپو: «صفحهٔ لاگین با جیمیل هم داخلِ اپ نیست.»
+    /// صفحهٔ حساب باید واقعاً راهِ ورود داشته باشد — ولی از ۱۴۰۵/۰۶/۲۸ با
+    /// ایمیل و رمزِ خودمان، نه با هیچ سرویسِ بیرونی: «هیچ پکنه‌ای نباشد، نه
+    /// از گوگل و نه غیره؛ هیچ‌کدامشان را نمی‌خواهم.»
+    /// ⚠️ خودِ <c>GoogleSignIn</c> پاک نشد (اپِ کارمندان همان راه را دارد)،
+    /// پس قاعدهٔ PKCE و بی‌رازیِ کلاینت همچنان سنجیده می‌شود.
     /// </summary>
     [Fact]
-    public void SafheyeHesab_VorudBaGoogle_Darad()
+    public void SafheyeHesab_RaheVorud_Darad()
     {
         var xaml = Read("PumpYaqobi.App/Views/Sections/AccountSectionView.axaml");
-        Assert.Contains("SignInCommand", xaml);
-        Assert.Contains("ورود با گوگل", xaml);
+        Assert.Contains("AccountStepCommand", xaml);
+        Assert.Contains("Binding LoginEmail", xaml);
+        Assert.Contains("Binding LoginPassword", xaml);
+        Assert.DoesNotContain("SignInCommand", xaml);
         //  پروفایل: نام و ایمیلِ حساب
         Assert.Contains("AccountEmail", xaml);
 

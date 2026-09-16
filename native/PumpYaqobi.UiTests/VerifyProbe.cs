@@ -402,11 +402,21 @@ internal static class VerifyProbe
             for (var i = 0; i < 60; i++) Pump(win);          // عکس روی نخِ دیگر باز می‌شود
 
             Check("صفحهٔ پروفایل باز شد", vm.Content == account);
-            Check("عکسِ کارتِ ورود واقعاً آمد (و بریده شده است)",
+            //  ⚠️ «این آدمک‌ها هم باشند؛ اصلاً همین عکس باید باشد» — و فقط
+            //  آدمک‌ها: همین اندازه ثابت می‌کند بریدن کار کرده و نوشته‌ها و
+            //  دو نشانِ فروشگاهِ عکس بیرون مانده‌اند.
+            Check("آدمک‌های عکسِ مرجع آمدند (و فقط خودشان بریده شده‌اند)",
                   account.LoginArt is not null
-                  && account.LoginArt.Size.Width > 300 && account.LoginArt.Size.Width < 400,
+                  && account.LoginArt.Size.Width > 360 && account.LoginArt.Size.Width < 380
+                  && account.LoginArt.Size.Height > 385 && account.LoginArt.Size.Height < 405,
                   account.LoginArt is null ? "نیامد"
                   : $"{account.LoginArt.Size.Width:0}×{account.LoginArt.Size.Height:0}");
+            //  ⚠️ «این صفحهٔ لاگین اولویت باشد و تمامِ صفحه همین را نشان بدهد
+            //  برای کسانی که حساب ندارند» — پس تا گامِ سه، خودِ پروفایل دیده
+            //  نمی‌شود.
+            Check("صفحهٔ ورود اولویت دارد و خودِ پروفایل دیده نمی‌شود",
+                  account.ShowLoginPage && !account.ShowProfilePage,
+                  $"ورود={account.ShowLoginPage} · پروفایل={account.ShowProfilePage}");
 
             //  الف) گامِ اول باید گامِ «حساب» باشد — چون وارد نشده‌ایم
             Check("گامِ اول، گامِ حساب است", account.LoginStep == 1 && account.StepAccount,
@@ -495,7 +505,23 @@ internal static class VerifyProbe
             Check("و خودِ پروفایل همان لحظه نامِ تازه را نشان می‌دهد",
                   account.PumpName == "پمپِ نو", account.PumpName);
 
-            //  و) برگشت‌ها
+            //  و) «بعداً»ی گامِ دو — دفترِ کاربر هیچ‌وقت گروگان نیست
+            account.SkipPumpCommand.Execute(null);
+            for (var i = 0; i < 10; i++) Pump(win);
+            Check("«بعداً»ی گامِ دو به «تمام» برد", account.LoginStep == 3 && account.StepDone);
+            Check("و از آن پس خودِ پروفایل دیده می‌شود، نه صفحهٔ ورود",
+                  account.ShowProfilePage && !account.ShowLoginPage,
+                  $"ورود={account.ShowLoginPage} · پروفایل={account.ShowProfilePage}");
+
+            //  ز) و راهِ برگشت به صفحهٔ ورود از خودِ پروفایل
+            account.OpenAccountPageCommand.Execute(null);
+            for (var i = 0; i < 10; i++) Pump(win);
+            Check("«حساب و ورود» صفحهٔ ورود را برمی‌گرداند",
+                  account.LoginStep == 1 && account.ShowLoginPage);
+
+            //  ح) برگشت‌ها
+            account.BackToPumpCommand.Execute(null);
+            Check("«تغییرِ پمپ» به گامِ دو می‌برد", account.LoginStep == 2 && account.StepPump);
             account.BackToAccountCommand.Execute(null);
             Check("«برگشت به حساب» به گامِ یک می‌برد", account.LoginStep == 1 && account.StepAccount);
         }

@@ -161,8 +161,9 @@ public class AppLinksTests
         //  و گامِ سوم «تمام» است
         Assert.Contains("Binding StepDone", xaml);
 
-        //  ورودِ گوگل سرِ جایش ماند
-        Assert.Contains("SignInCommand", xaml);
+        //  ⛔ و هیچ راهِ سرویسِ بیرونی‌ای نیست (خواستهٔ صاحب ریپو: «هیچ
+        //  پکنه‌ای نباشد، نه از گوگل و نه غیره»)
+        Assert.DoesNotContain("SignInCommand", xaml);
 
         var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs");
         //  حساب از راهِ ایمیل و رمزِ ابر ساخته می‌شود
@@ -201,11 +202,14 @@ public class AppLinksTests
     }
 
     /// <summary>
-    /// ⚠️ «آن عکس یک درصدِ ثانیه هم اپ را کند نکند»: سه قاعده روی سورس قفل
-    /// شده — فقط در فعال‌سازیِ همان صفحه، روی نخِ دیگر، و با پهنای نمایش.
+    /// ⚠️ **آدمک‌های عکسِ مرجع در صفحه‌اند** — خواستهٔ صریحِ صاحب ریپو
+    /// (۱۴۰۵/۰۶/۲۸): «همین مدل باشد و این آدمک‌ها هم باشند؛ اصلاً همین عکس
+    /// باید باشد.» و همان سه قاعدهٔ «یک درصدِ ثانیه هم اپ را کند نکند» سرِ
+    /// جایش است: فقط در فعال‌سازیِ همان صفحه، روی نخِ دیگر، به پهنای نمایش،
+    /// و یک بار برای همیشه.
     /// </summary>
     [Fact]
-    public void Akse_KarteVorud_HichHazineyeShoruAppNadarad()
+    public void Akse_Adamakha_Hast_Va_HichHazineyeShoruAppNadarad()
     {
         var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs");
 
@@ -217,8 +221,6 @@ public class AppLinksTests
                                   StringComparison.Ordinal);
         Assert.True(activate > 0);
         Assert.Contains("await LoadArtAsync();", vm[activate..]);
-        Assert.DoesNotContain("LoadArtAsync", vm[..activate]
-            .Split("private async Task LoadArtAsync")[0]);
 
         //  (۲) روی نخِ دیگر و (۳) به پهنای نمایش، نه اندازهٔ اصلی
         Assert.Contains("await Task.Run(() =>", vm);
@@ -235,33 +237,103 @@ public class AppLinksTests
 
         //  خودِ فایلِ عکس هم کوچک است — ۱۵۰ کیلوبایت سقفِ خودمان
         var art = new FileInfo(Path.Combine(Root, "PumpYaqobi.App", "Assets", "login-art.jpg"));
-        Assert.True(art.Exists, "عکسِ کارتِ ورود نیست");
+        Assert.True(art.Exists, "عکسِ صفحهٔ ورود نیست");
         Assert.True(art.Length < 150 * 1024, $"عکس بزرگ است: {art.Length} بایت");
+
+        //  و عکس واقعاً در صفحه کشیده می‌شود
+        var xaml = Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml");
+        Assert.Contains("<Image Source=\"{Binding LoginArt}\"", xaml);
     }
 
     /// <summary>
-    /// ⚠️ «آن نوشته‌های عکس هم نباشد» — خواستهٔ صریحِ صاحب ریپو. عکسِ اصلی یک
-    /// کارتِ تبلیغاتی است («Gas Station / Learn More»)؛ فقط پنجرهٔ خودِ پمپ
-    /// نشان داده می‌شود و فرم **روی همان عکس** می‌نشیند.
+    /// ⛔ **از عکس فقط آدمک‌ها بریده می‌شوند** — نه نوشته‌های انگلیسی‌اش و نه
+    /// آن دو نشانِ «App Store / Google Play»: «هیچ پکنه‌ای نباشد، نه از گوگل
+    /// و نه غیره.» فرم، فرمِ خودِ برنامه است، نه فرمِ داخلِ عکس.
     /// </summary>
     [Fact]
-    public void Akse_FaghatKhodePompAst_VaFarmRoyeHamanAks()
+    public void Akse_FaghatAdamakha_Ast_VaHichPaknehyi_Nadarad()
     {
         var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs");
-        //  پنجرهٔ بریدن هست و نوشته‌های سمتِ راستِ عکس (از ۴۳۲ به بعد) را نمی‌گیرد
-        Assert.Contains("ArtCrop = new(56, 42, 376, 412)", vm);
+        Assert.Contains("ArtCrop = new(52, 86, 368, 396)", vm);
 
         var xaml = Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml");
-        //  فرم یک پنلِ شناور **داخلِ همان قاب** است، نه ستونی کنارِ عکس
-        var grid = xaml.Split("Classes=\"logincard\"")[1].Split("<!-- ══ آواتار")[0];
-        var img = grid.IndexOf("<Image Source=\"{Binding LoginArt}\"", StringComparison.Ordinal);
-        var form = grid.IndexOf("Background=\"{DynamicResource Pump.Card}\"", StringComparison.Ordinal);
-        Assert.True(img > 0 && form > img, "پنلِ فرم باید بعد از عکس بیاید تا رویش کشیده شود");
-        //  و اندازهٔ قاب صریح است، وگرنه فرم تمامِ عکس را می‌پوشاند (یک بار شد)
-        Assert.Contains("<Grid Width=\"940\" Height=\"648\">", grid);
-        //  کادرها گِردند، نه مربعی
-        Assert.Contains("Selector=\"Border.logincard TextBox\"", xaml);
-        Assert.Contains("CornerRadius\" Value=\"14\"", xaml);
+        //  ⚠️ دنبالِ **خودِ صفحه** می‌گردیم، نه توضیح‌های بالای فایل: همان
+        //  توضیح که می‌گوید «هیچ دکمهٔ گوگلی نیست» خودش واژه را دارد.
+        var body = System.Text.RegularExpressions.Regex.Replace(
+            xaml, "<!--.*?-->", "", System.Text.RegularExpressions.RegexOptions.Singleline);
+        foreach (var bad in new[] { "گوگل", "Google", "جیمیل", "Apple", "Facebook", "App Store" })
+            Assert.DoesNotContain(bad, body);
+        Assert.DoesNotContain("SignInCommand", body);
+
+        //  ویومدل هم دیگر آن فرمان را ندارد
+        Assert.DoesNotContain("private Task SignInAsync()", vm);
+        Assert.DoesNotContain("GoogleSignIn.RunAsync", vm);
+
+        //  فرم **بعد از** عکس نیست، بغلش است: دو ستونِ یک قابِ صریح
+        Assert.Contains("<Grid Width=\"980\" Height=\"536\" ColumnDefinitions=\"*,430\">", xaml);
+    }
+
+    /// <summary>
+    /// ⚠️ **صفحهٔ ورود اولویت دارد و تمامِ صفحه است** — «وقتی پروفایل را کلیک
+    /// می‌کنم این صفحهٔ لاگین اولویت باشد و تمامِ صفحه همین را نشان بدهد برای
+    /// کسانی که حساب ندارند، و برای کسانی که دارند پروفایل همان مشخصات را
+    /// نشان بدهد.» پس دو صفحه روی هم‌اند و هر لحظه فقط یکی دیده می‌شود.
+    /// </summary>
+    [Fact]
+    public void SafheyeVorud_Olaviat_Darad_Va_TamameSafhe_Ast()
+    {
+        var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs");
+        Assert.Contains("public bool ShowLoginPage => LoginStep < 3;", vm);
+        Assert.Contains("public bool ShowProfilePage => !ShowLoginPage;", vm);
+        //  «بعداً»ی گامِ دو هم هست، وگرنه صفحهٔ ورود یک دیوار می‌شد
+        Assert.Contains("private void SkipPump()", vm);
+        Assert.Contains("private void OpenAccountPage()", vm);
+
+        var xaml = Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml");
+        Assert.Contains("IsVisible=\"{Binding ShowLoginPage}\"", xaml);
+        Assert.Contains("IsVisible=\"{Binding ShowProfilePage}\"", xaml);
+        Assert.Contains("SkipPumpCommand", xaml);
+        Assert.Contains("OpenAccountPageCommand", xaml);
+
+        //  ⚠️ هر دو داخلِ یک ‎Panel‎ اند و با ‎IsVisible‎ جا عوض می‌کنند، پس
+        //  هیچ‌کدام کارِ دیگری را انجام نمی‌دهد.
+        Assert.Contains("<Panel>", xaml);
+    }
+
+    /// <summary>
+    /// ⚠️ **رنگ‌بندی همان قالبی است که صاحب ریپو داد — و فقط در صفحهٔ ورود.**
+    /// جملهٔ خودش: «من رنگ‌های همان سایت را گفتم بگیر، نه که شبیه آن بسازی…
+    /// و رنگ را گفتم فقط توی صفحهٔ لاگینِ حساب باشد، نه جای دیگر.»
+    /// </summary>
+    [Fact]
+    public void RangBandi_FaghatDarSafheyeVorud_Ast()
+    {
+        var xaml = Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml");
+        var palette = new[]
+        {
+            "#f6e3d8",                          // بوم
+            "#ff7a59", "#e8458b", "#7b3fe4",    // گرادیان
+            "#2b1640",                          // نوشتهٔ تیره و دکمهٔ اصلی
+            "#4a3b52", "#7a6a82",               // متن و کم‌رنگ
+            "#c2185b",                          // لینک
+        };
+        foreach (var hex in palette) Assert.Contains(hex, xaml);
+
+        //  کارتِ سفید با گوشهٔ ۲۸ و همان سایهٔ بنفش، و دکمهٔ اصلی با گوشهٔ ۴۰
+        Assert.Contains("CornerRadius=\"28\"", xaml);
+        Assert.Contains("0 20 50 0 #2E7B3FE4", xaml);
+
+        //  ⛔ و هیچ‌کدام در **صفحهٔ پروفایل** نیست: آن‌جا تمِ خودِ برنامه است
+        var profile = xaml[xaml.IndexOf("👤 خودِ پروفایل", StringComparison.Ordinal)..];
+        foreach (var hex in palette)
+            Assert.DoesNotContain(hex, profile);
+        //  پروفایل همچنان از تمِ برنامه رنگ می‌گیرد
+        Assert.Contains("{DynamicResource Pump.Muted}", xaml);
+
+        //  ⛔ و به تم‌های برنامه هم نرفته‌اند
+        var theme = Read("PumpYaqobi.App", "Themes", "PumpTheme.cs");
+        Assert.DoesNotContain("f6e3d8", theme);
+        Assert.DoesNotContain("7b3fe4", theme);
     }
 
     // ── ۵) بخشِ وی‌آی‌پی ───────────────────────────────────────────────────

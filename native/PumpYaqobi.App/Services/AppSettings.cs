@@ -125,6 +125,15 @@ public sealed class AppSettings
     public string CloudRefreshToken { get; set; } = "";
 
     /// <summary>ایمیلِ حساب — فقط برای نشان دادن.</summary>
+    /// <summary>
+    /// کاربر روی صفحهٔ ورود «بعداً» را زده است.
+    ///
+    /// ⚠️ این «حساب دارم» نیست — فقط یعنی صفحهٔ ورود دیگر جلوی دفترش را
+    /// نمی‌گیرد. با ساختنِ حسابِ واقعی خودش برداشته می‌شود، و در خودِ
+    /// پروفایل دکمهٔ برگشت به همان صفحه هست.
+    /// </summary>
+    public bool LoginSkipped { get; set; }
+
     public string CloudEmail { get; set; } = "";
 
     /// <summary>نامِ حساب — فقط برای نشان دادن.</summary>
