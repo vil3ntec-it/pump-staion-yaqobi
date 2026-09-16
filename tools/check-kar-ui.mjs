@@ -76,6 +76,13 @@ await page.route('https://api.vill3n.top/**', async (route) => {
   return route.fulfill({ status: 404, body: '{}' });
 });
 
+// نسخهٔ سایت: اولین بار ۱۰، از بارِ سوم ۱۱ ⇒ نوارِ «نسخهٔ تازه»
+let verHits = 0;
+await page.route(/\/kar\/version\.json/, (route) => {
+  verHits++;
+  route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ v: verHits >= 3 ? '11' : '10', apk: '1.0.8' }) });
+});
+
 let bad = 0;
 const ok = (c, m) => { if (!c) bad++; console.log((c ? '✓ ' : '✗ ') + m); };
 const vis = (id) => page.evaluate((id) => { const e = document.getElementById(id); return !!e && !e.classList.contains('hidden'); }, id);
@@ -146,6 +153,20 @@ await page.click('#btnForget');
 ok(await vis('codePane'), '«پمپِ دیگر» ⇒ صفحهٔ کد');
 const left = await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('pumpKar.v1.')));
 ok(left.length === 0, 'هیچ چیزی از پمپ در گوشی نماند: ' + JSON.stringify(left));
+
+// ── به‌روزرسانیِ خودکار ──
+await page.evaluate(() => window.PumpUpdate.check(true));
+await page.waitForFunction(() => window.PumpUpdate._state().runningV === 10);
+ok(true, 'نسخهٔ در حالِ اجرا یاد گرفته شد (۱۰)');
+await page.evaluate(() => window.PumpUpdate.check(true));
+await page.evaluate(() => window.PumpUpdate.check(true));
+await page.waitForFunction(() => !document.getElementById('updBar').classList.contains('hidden'), null, { timeout: 8000 });
+ok((await page.textContent('#updTitle')).includes('نسخهٔ تازه'), 'نوارِ «نسخهٔ تازه» با نسخهٔ ۱۱ آمد');
+await page.click('#updLater');
+ok(!(await vis('updBar')), '«بعداً» نوار را می‌بندد');
+await page.evaluate(() => window.PumpUpdate.check(true));
+await page.waitForTimeout(300);
+ok(!(await vis('updBar')), 'همان نسخه دوباره نوار نمی‌آورد (خواب)');
 
 ok(errors.length === 0, 'بی خطای جاوااسکریپت' + (errors.length ? ': ' + errors.join(' | ') : ''));
 await browser.close(); srv.close();

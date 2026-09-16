@@ -158,6 +158,11 @@
   .counts button{flex:1;padding:8px 6px;font-size:.8rem}
   .counts button[aria-selected="true"]{border-color:var(--accent);color:var(--accent)}
   .back{background:transparent;border:0;color:var(--muted);padding:6px 8px;font-size:.85rem}
+  /* ── نوارِ «نسخهٔ تازه» ─────────────────────────────────────────────────── */
+  .upd{position:fixed;inset-inline:10px;bottom:74px;z-index:20;background:var(--card);border:1px solid var(--accent);
+       border-radius:14px;padding:10px 12px;display:flex;gap:10px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .upd .t{flex:1;min-width:0;font-size:.86rem} .upd .t b{display:block}
+  .upd button{padding:8px 12px}
   @media (max-width:420px){ .wrap{padding:10px 10px 88px} .gate{padding-top:3vh} }
 </style>
 </head>
@@ -395,10 +400,19 @@
 
 <div class="nav hidden" id="nav"></div>
 
+<!-- ══ نسخهٔ تازه — از گیت‌هاب، خودکار ═══════════════════════════════════════
+     خواستهٔ صاحب ریپو: «برنامه و سایت خودشان از گیت‌هاب آپدیت شوند.» -->
+<div class="upd hidden" id="updBar">
+  <div class="t"><b id="updTitle">نسخهٔ تازه آماده است</b><span class="sub" id="updNote"></span></div>
+  <button class="p" id="updGo">به‌روز کن</button>
+  <button id="updLater" title="بعداً">✕</button>
+</div>
+
 <!-- گوگل خودش دکمهٔ ورود را می‌سازد. ‎async defer‎ تا اگر نیامد (فیلتر،
      نتِ ضعیف) بقیهٔ صفحه معطلش نماند — راهِ کیو‌آر همچنان هست. -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="./cloud.js"></script>
+<script src="./update.js"></script>
 <script src="./app.js"></script>
 </body>
 </html>

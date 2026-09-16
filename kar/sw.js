@@ -12,9 +12,10 @@
 //  ⚠️ با هر بار عوض شدنِ فهرستِ زیر، شمارهٔ CACHE هم باید بالا برود —
 //  وگرنه گوشیِ کارمند نسخهٔ قدیمی را نگه می‌دارد و فایلِ تازه هرگز
 //  نمی‌رسد. cloud.js اضافه شد و جوابِ درخواستِ ناموفق عوض شد، پس v3؛
-//  صفحهٔ «کدِ پمپ» و جداسازیِ هر پمپ، پس v4؛ دو درِ «حساب‌ها/کارمندان»، پس v5.
-var CACHE = 'pump-kar-v5';
-var SHELL = ['./', './index.html', './app.js', './cloud.js', './manifest.json'];
+//  صفحهٔ «کدِ پمپ» و جداسازیِ هر پمپ، پس v4؛ دو درِ «حساب‌ها/کارمندان»، پس v5؛
+//  update.js اضافه شد، پس v6.
+var CACHE = 'pump-kar-v6';
+var SHELL = ['./', './index.html', './app.js', './cloud.js', './update.js', './manifest.json'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL); })
@@ -41,6 +42,10 @@ self.addEventListener('fetch', function (e) {
    * خطای درست را بدهد و اپ بتواند «اینترنت نیست» را بفهمد.
    */
   if (new URL(req.url).origin !== location.origin) return;
+
+  //  ⚠️ version.json هیچ‌وقت از کش نمی‌آید: تنها راهِ فهمیدنِ «نسخهٔ تازه هست»
+  //  همین فایل است و کش‌شده‌اش دروغ می‌گوید.
+  if (/\/version\.json(\?|$)/.test(req.url)) return;
 
   // ⚠️ «شبکه اول»: وگرنه نسخهٔ تازهٔ اپ هیچ‌وقت به گوشی نمی‌رسید و کارمند
   // هفته‌ها با نسخهٔ کهنه کار می‌کرد. کش فقط پشتیبانِ قطعیِ شبکه است.

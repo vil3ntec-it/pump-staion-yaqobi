@@ -38,6 +38,8 @@ jobs:
     steps:
       - name: دریافت کد
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # شمارِ کامیت‌ها = نسخهٔ وبِ داخلِ فایلِ نصب (همان شمارهٔ سایت)
 
       - name: نصب جاوا ۱۷
         uses: actions/setup-java@v4
@@ -65,7 +67,14 @@ jobs:
           mkdir -p android/app/src/main/assets/www
           # ⚠️ cloud.js هم می‌رود: بی آن، «کدِ پمپ» و ورودِ گوگل داخلِ فایلِ نصب
           # کار نمی‌کنند (تا ۱۴۰۵/۰۶/۲۶ جا مانده بود و اپِ نصبی فقط راهِ کیو‌آر داشت).
-          cp kar/index.html kar/app.js kar/cloud.js kar/manifest.json android/app/src/main/assets/www/
+          cp kar/index.html kar/app.js kar/cloud.js kar/update.js kar/manifest.json android/app/src/main/assets/www/
+          # ⚠️ همان شماره‌ای که سایت در kar/version.json منتشر می‌کند: شمارِ کامیت‌ها.
+          # پوستهٔ اندروید با همین می‌فهمد آپدیتِ وبِ ذخیره‌شده تازه‌تر از نسخهٔ
+          # همراهِ نصب است یا نه، و اپ می‌فهمد سایت تازه‌تر شده یا نه.
+          V=$(git rev-list --count HEAD)
+          printf '{"v":"%s","sha":"%s","apk":"1.0.${{ github.run_number }}"}' "$V" "${GITHUB_SHA::8}" \
+            > android/app/src/main/assets/www/version.json
+          cat android/app/src/main/assets/www/version.json
           # ⚠️ سرویس‌ورکر عمداً نمی‌رود: داخلِ ‎file://‎ ثبت نمی‌شود و فقط در
           # کنسول خطا می‌دهد. خودِ فایل‌ها که آفلاین‌اند.
           echo "محتوای بسته‌شده:"; ls -la android/app/src/main/assets/www/

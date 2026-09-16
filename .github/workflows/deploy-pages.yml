@@ -23,6 +23,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # شمارِ کامیت‌ها = نسخهٔ اپِ کارمندان (kar/version.json)
       # enablement: true تنظیماتِ Pages را در هر دیپلوی بازنویسی می‌کند؛ Pages
       # از قبل روشن است، پس دست نمی‌زنیم تا دامنهٔ اختصاصی (CNAME) و گواهی https
       # آن هرگز از تنظیمات پاک نشود.
@@ -88,6 +90,7 @@ jobs:
                   if os.path.exists(dest):
                       os.remove(dest)
 
+          grab('kar-latest', 'version.txt', 'kar-apk-version.txt')
           grab('android-latest', '.apk', 'PumpYaqobi.apk')
           grab('android-latest', 'version.txt', 'apk-version.txt')
           grab('desktop-latest', '.exe', 'PumpYaqobi-Setup.exe')
@@ -140,6 +143,20 @@ jobs:
               json.dump(data, f, ensure_ascii=False, indent=2)
           print(json.dumps(data, ensure_ascii=False))
           PY
+      # ── نسخهٔ اپِ کارمندان (kar/version.json) ──────────────────────────────
+      # خواستهٔ صاحب ریپو: «برنامه و سایت خودشان از گیت‌هاب آپدیت شوند.»
+      # اپِ کارمندان (اندروید و آیفون) همین فایل را می‌خواند: ‎v‎ = شمارِ کامیت‌ها
+      # (همان شماره‌ای که فایلِ نصب هم داخلِ خودش دارد) و ‎apk‎ = نسخهٔ آخرین
+      # فایلِ نصبِ اندروید. اگر ‎v‎ تازه‌تر باشد، اپ فایل‌های تازه را می‌گیرد و
+      # خودش سوار می‌شود؛ اگر ‎apk‎ تازه‌تر باشد، دکمهٔ «فایلِ نصبِ تازه» می‌آید.
+      - name: ساختِ kar/version.json
+        run: |
+          V=$(git rev-list --count HEAD)
+          APK=$(cat downloads/kar-apk-version.txt 2>/dev/null || echo "")
+          printf '{"v":"%s","sha":"%s","apk":"%s","at":"%s"}' "$V" "${GITHUB_SHA::8}" "$APK" \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > kar/version.json
+          cat kar/version.json
+
       # ── کوچک‌کردنِ فایل‌های منتشرشده ──────────────────────────────────────
       # گزارشِ صاحب ریپو: «سایت آن‌قدر لگ می‌زند که گوشی‌ام دیگر بازش نمی‌کند.»
       # ۲۸٪ِ جاوااسکریپتِ index.html فقط کامنت و تورفتگی است. برداشتنشان حجمِ

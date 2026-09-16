@@ -333,7 +333,7 @@ console.log('\n── کدِ پمپ و جداسازیِ پمپ‌ها ───�
   ok(/status === 404[\s\S]{0,120}forgetAll\(/.test(appSrc), 'کدِ عوض‌شده ⇒ این گوشی بیرون می‌رود');
 
   // ── فایلِ نصبِ اندروید cloud.js را دارد ─────────────────────────────
-  ok(/cp kar\/index\.html kar\/app\.js kar\/cloud\.js kar\/manifest\.json/.test(apkYml),
+  ok(/cp kar\/index\.html kar\/app\.js kar\/cloud\.js kar\/update\.js kar\/manifest\.json/.test(apkYml),
      'cloud.js داخلِ فایلِ نصبِ اندروید می‌رود — بی آن، کدِ پمپ در اپِ نصبی کار نمی‌کرد');
   ok(!/pump-kar-v3'/.test(swSrc), 'شمارهٔ کشِ سرویس‌ورکر بالا رفته است');
 }
@@ -358,6 +358,38 @@ console.log('\n── دو در ────────────────
   for (const id of ['parcha', 'waraq', 'debtrasid', 'parcharasid', 'attendance'])
     ok(new RegExp(id + ':\\s*\\[').test(appSrc), 'ربات واژه‌های بخشِ ' + id + ' را دارد');
   ok(!/pump-kar-v4'/.test(readFileSync(new URL('../kar/sw.js', import.meta.url), 'utf8')), 'شمارهٔ کش بالا رفته');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  به‌روزرسانیِ خودکار از گیت‌هاب — برنامه و سایت
+// ══════════════════════════════════════════════════════════════════════
+console.log('\n── به‌روزرسانیِ خودکار ───────────────────────────────────');
+{
+  const { readFileSync } = await import("node:fs");
+  const updSrc  = readFileSync(new URL('../kar/update.js', import.meta.url), 'utf8');
+  const htmlSrc = readFileSync(new URL('../kar/index.html', import.meta.url), 'utf8');
+  const swSrc   = readFileSync(new URL('../kar/sw.js', import.meta.url), 'utf8');
+  const apkYml  = readFileSync(new URL('../.github/workflows/build-kar-apk.yml', import.meta.url), 'utf8');
+  const pagesYml= readFileSync(new URL('../.github/workflows/deploy-pages.yml', import.meta.url), 'utf8');
+  const javaSrc = readFileSync(new URL('../android/app/src/main/java/top/yaqobipump/app/MainActivity.java', import.meta.url), 'utf8');
+  const upd = require(path.join(here, '..', 'kar', 'update.js'));
+
+  ok(/var SITE = 'https:\/\/yaqobipump\.top\/kar\/'/.test(updSrc), 'نشانیِ سایت در خودِ کد قفل است');
+  ok(!/SITE\s*=\s*(localStorage|location|p\.get)/.test(updSrc.slice(updSrc.indexOf('var SITE'))), 'نشانی از تنظیمات خوانده نمی‌شود');
+  ok(/<script src="\.\/update\.js">/.test(htmlSrc) && /id="updBar"/.test(htmlSrc), 'update.js و نوارِ نسخهٔ تازه در صفحه‌اند');
+  ok(/'\.\/update\.js'/.test(swSrc) && !/pump-kar-v5'/.test(swSrc), 'update.js در سرویس‌ورکر و شمارهٔ کش بالا رفته');
+  ok(/version\.json\(\\\?\|\$\)/.test(swSrc) || /version\\\.json/.test(swSrc), 'version.json هیچ‌وقت از کش نمی‌آید');
+  ok(/kar\/update\.js/.test(apkYml) && /assets\/www\/version\.json/.test(apkYml) && /git rev-list --count HEAD/.test(apkYml),
+     'فایلِ نصب update.js و version.json (شمارِ کامیت‌ها) را دارد');
+  ok(/kar\/version\.json/.test(pagesYml) && /git rev-list --count HEAD/.test(pagesYml) && /kar-latest', 'version\.txt'/.test(pagesYml),
+     'سایت kar/version.json را با همان شماره و نسخهٔ فایلِ نصب می‌سازد');
+  ok(/updateOk\(\)/.test(updSrc), 'سالم بالا آمدن به پوسته گفته می‌شود (وگرنه آپدیت دور می‌ریخت)');
+  for (const m of ['updateFileBegin', 'updateFileCommit', 'updateFinish', 'openUrl', 'multiComplete'])
+    ok(javaSrc.includes(m + '('), 'پوسته ' + m + ' دارد');
+  ok(javaSrc.includes('www/version.json'), 'پوسته نسخهٔ همراهِ نصب را از version.json می‌خواند');
+  ok(upd.verCmp('1.0.12', '1.0.8') === 1 && upd.verCmp('1.0.8', '1.0.8') === 0 && upd.num('1234') === 1234, 'مقایسهٔ نسخه درست است');
+  ok(JSON.stringify(upd.FILES) === JSON.stringify(['index.html', 'app.js', 'cloud.js', 'update.js', 'manifest.json']),
+     'هر پنج فایلِ اپ با هم به‌روز می‌شوند');
 }
 
 console.log(bad ? '\n' + bad + ' آزمون شکست خورد' : '\nهمه درست');

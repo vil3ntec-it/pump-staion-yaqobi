@@ -333,16 +333,41 @@ public class MainActivity extends Activity {
   private File updateDir()  { return new File(getFilesDir(), "update"); }
   private File updateFile() { return new File(updateDir(), "index.html"); }
   private File stagingFile() { return new File(updateDir(), "index.part"); }
+  /** نشانِ «این آپدیت چندفایله است» (اپِ کارمندان) — فهرستِ فایل‌ها داخلش. */
+  private File multiMarker() { return new File(updateDir(), ".files"); }
   private SharedPreferences prefs() { return getSharedPreferences(PREFS, Context.MODE_PRIVATE); }
 
-  /** نسخهٔ برنامه‌ای که همراهِ خودِ فایلِ نصب آمده (همان APP_VERSIONِ index.html) */
-  private String bundledVersion() {
+  /** نسخهٔ خودِ فایلِ نصب (versionName) — برای «فایلِ نصبِ تازه هست؟». */
+  private String packageVersion() {
     try {
       String v = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
       return v == null ? "" : v;
     } catch (Throwable t) {
       return "";
     }
+  }
+
+  /**
+   * نسخهٔ برنامه‌ای که همراهِ خودِ فایلِ نصب آمده.
+   *
+   * اپِ کارمندان یک ‎www/version.json‎ کنارِ خودش دارد (همان شماره‌ای که سایت
+   * هم منتشر می‌کند: شمارِ کامیت‌ها)؛ اگر بود، همان. وگرنه — اپِ اصلیِ قدیمی —
+   * همان versionName، مثلِ همیشه.
+   */
+  private String bundledVersion() {
+    try {
+      java.io.InputStream in = getAssets().open("www/version.json");
+      byte[] buf = new byte[4096];
+      int n = in.read(buf);
+      in.close();
+      if (n > 0) {
+        java.util.regex.Matcher m = java.util.regex.Pattern
+            .compile("\"v\"\s*:\s*\"?([0-9][0-9.]*)")
+            .matcher(new String(buf, 0, n, StandardCharsets.UTF_8));
+        if (m.find()) return m.group(1);
+      }
+    } catch (Throwable ignored) { }
+    return packageVersion();
   }
 
   /** ۱ اگر a تازه‌تر از b باشد — همان مقایسه‌ای که خودِ برنامه می‌کند */
@@ -376,7 +401,10 @@ public class MainActivity extends Activity {
   private String pickStartUrl() {
     File f = updateFile();
     try {
-      if (f.exists() && f.length() > 200000) {
+      //  آپدیتِ چندفایله (اپِ کارمندان): همهٔ فایل‌های فهرست باید باشند؛
+      //  آپدیتِ تک‌فایلهٔ قدیمی: index.html بزرگ‌تر از ۲۰۰ کیلوبایت.
+      boolean multi = multiMarker().exists() && multiComplete();
+      if (f.exists() && (multi || f.length() > 200000)) {
         String stored = prefs().getString(KEY_VERSION, "");
         if (stored.isEmpty() || verCmp(stored, bundledVersion()) <= 0) {
           dropUpdate();
@@ -399,12 +427,27 @@ public class MainActivity extends Activity {
     return ASSET_URL;
   }
 
+  /** همهٔ فایل‌هایی که ‎.files‎ می‌گوید، هستند و خالی نیستند؟ */
+  private boolean multiComplete() {
+    try {
+      byte[] b = java.nio.file.Files.readAllBytes(multiMarker().toPath());
+      for (String name : new String(b, StandardCharsets.UTF_8).split("\n")) {
+        name = name.trim();
+        if (name.isEmpty()) continue;
+        File x = new File(updateDir(), name);
+        if (!x.exists() || x.length() < 200) return false;
+      }
+      return true;
+    } catch (Throwable t) {
+      return false;
+    }
+  }
+
   private void dropUpdate() {
     try {
-      File f = updateFile();
-      if (f.exists()) f.delete();
-      File p = stagingFile();
-      if (p.exists()) p.delete();
+      File dir = updateDir();
+      File[] all = dir.listFiles();
+      if (all != null) for (File x : all) x.delete();
     } catch (Throwable ignored) { }
     try { prefs().edit().putInt(KEY_TRIES, 0).remove(KEY_VERSION).apply(); } catch (Throwable ignored) { }
     usingUpdate = false;
@@ -466,12 +509,97 @@ public class MainActivity extends Activity {
       }
     }
 
-    /** {usingUpdate, version, tries} — برنامه می‌داند الان کدام نسخه بالا آمده */
+    /** {usingUpdate, version, bundled, app} — برنامه می‌داند الان کدام نسخه بالا آمده */
     @JavascriptInterface
     public String info() {
       String v = prefs().getString(KEY_VERSION, "");
       return "{\"usingUpdate\":" + (usingUpdate ? "true" : "false")
-          + ",\"version\":\"" + v.replace("\"", "") + "\"}";
+          + ",\"version\":\"" + v.replace("\"", "") + "\""
+          + ",\"bundled\":\"" + bundledVersion().replace("\"", "") + "\""
+          + ",\"app\":\"" + packageVersion().replace("\"", "") + "\"}";
+    }
+
+    /** بازکردنِ یک نشانی بیرون از برنامه — برای گرفتنِ فایلِ نصبِ تازه. */
+    @JavascriptInterface
+    public void openUrl(final String url) {
+      if (url == null || !(url.startsWith("https://") || url.startsWith("http://"))) return;
+      runOnUiThread(() -> openOutside(url));
+    }
+
+    // ── آپدیتِ چندفایله (اپِ کارمندان: index.html + app.js + cloud.js + …) ──
+    //
+    //  همان راهِ تکه‌تکه، ولی هر فایل با نامِ خودش. ‎updateFinish(version)‎ آخرِ
+    //  کار فهرستِ فایل‌ها را در ‎.files‎ می‌نویسد؛ تا آن نوشته نشده، هیچ‌کدام
+    //  از فایل‌های تازه شمرده نمی‌شوند (‎pickStartUrl‎ فهرست را می‌خواهد).
+    //  ⚠️ نام فقط حرف/رقم/نقطه/خطِ تیره — نه ‎/‎ و نه ‎..‎.
+    private final List<String> pendingFiles = new ArrayList<>();
+    private String currentName;
+
+    private static boolean safeName(String n) {
+      return n != null && n.matches("[A-Za-z0-9][A-Za-z0-9._-]{0,60}") && !n.contains("..");
+    }
+
+    @JavascriptInterface
+    public synchronized boolean updateFileBegin(String name) {
+      try {
+        if (!safeName(name)) return false;
+        closeQuietly();
+        File dir = updateDir();
+        if (!dir.exists() && !dir.mkdirs()) return false;
+        File part = new File(dir, name + ".part");
+        if (part.exists() && !part.delete()) return false;
+        out = new OutputStreamWriter(new FileOutputStream(part), StandardCharsets.UTF_8);
+        currentName = name;
+        return true;
+      } catch (Throwable t) {
+        closeQuietly();
+        return false;
+      }
+    }
+
+    @JavascriptInterface
+    public synchronized boolean updateFileCommit() {
+      try {
+        if (out == null || currentName == null) return false;
+        out.flush();
+        closeQuietly();
+        File part = new File(updateDir(), currentName + ".part");
+        File dest = new File(updateDir(), currentName + ".new");
+        if (!part.exists() || part.length() < 200) { part.delete(); return false; }
+        if (dest.exists() && !dest.delete()) { part.delete(); return false; }
+        if (!part.renameTo(dest)) { part.delete(); return false; }
+        pendingFiles.add(currentName);
+        currentName = null;
+        return true;
+      } catch (Throwable t) {
+        abortInternal();
+        return false;
+      }
+    }
+
+    /** همهٔ ‎.new‎ها یک‌جا جای فایل‌های قبلی می‌نشینند؛ بعد فهرست و نسخه. */
+    @JavascriptInterface
+    public synchronized boolean updateFinish(String version) {
+      try {
+        if (pendingFiles.isEmpty()) return false;
+        File dir = updateDir();
+        StringBuilder list = new StringBuilder();
+        for (String n : pendingFiles) {
+          File nw = new File(dir, n + ".new"), dest = new File(dir, n);
+          if (!nw.exists()) return false;
+          if (dest.exists() && !dest.delete()) return false;
+          if (!nw.renameTo(dest)) return false;
+          list.append(n).append('\n');
+        }
+        java.nio.file.Files.write(multiMarker().toPath(), list.toString().getBytes(StandardCharsets.UTF_8));
+        pendingFiles.clear();
+        prefs().edit().putInt(KEY_TRIES, 0)
+            .putString(KEY_VERSION, version == null ? "" : version).apply();
+        return true;
+      } catch (Throwable t) {
+        pendingFiles.clear();
+        return false;
+      }
     }
 
     /** برنامه سالم بالا آمد — شمارندهٔ تلاش صفر می‌شود */
