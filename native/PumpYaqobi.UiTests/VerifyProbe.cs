@@ -12,6 +12,7 @@ using PumpYaqobi.App.Views;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
+using PumpYaqobi.Services.Data;
 
 namespace PumpYaqobi.UiTests;
 
@@ -384,8 +385,128 @@ internal static class VerifyProbe
                   mine is not null && mine.RasidFuel == 75m, mine?.RasidFuel.ToString());
         }
 
+        // ── ۱۴) کارتِ ورودِ پروفایل: واقعاً لاگین می‌شود؟ ────────────────────
+        //
+        // خواستهٔ صاحب ریپو (۱۴۰۵/۰۶/۲۸): «تست بزن ببین کار می‌کنه، لاگین
+        // می‌شه یا که نه.» پس این بند خودِ فرم را پر می‌کند و دکمه را می‌زند،
+        // و بعد **دیتابیس و تنظیمات** را می‌خواند — نه متغیرهای روی صفحه.
+        //
+        // ⚠️ فعال‌سازیِ واقعیِ کدِ شش‌رقمی اینترنت و سرورِ ابر می‌خواهد، پس آن
+        // یک بند پشتِ ‎PUMP_VERIFY_CLOUD=1‎ است و در CI نمی‌دود: نباید هر اجرا
+        // یک کدِ الکی به سرورِ واقعیِ اشتراک بفرستد.
+        Console.WriteLine("── ۱۴) کارتِ ورودِ پروفایل");
+        {
+            var account = (AccountSectionViewModel)vm.Sections.First(s => s.Id == "account");
+            host.Settings.Set(SettingsService.StationName, "پمپ آزمون");
+            Wait(win, vm.GoAsync(account));
+            for (var i = 0; i < 60; i++) Pump(win);          // عکس روی نخِ دیگر باز می‌شود
+
+            Check("صفحهٔ پروفایل باز شد", vm.Content == account);
+            Check("عکسِ کارتِ ورود واقعاً آمد (و بریده شده است)",
+                  account.LoginArt is not null
+                  && account.LoginArt.Size.Width > 300 && account.LoginArt.Size.Width < 400,
+                  account.LoginArt is null ? "نیامد"
+                  : $"{account.LoginArt.Size.Width:0}×{account.LoginArt.Size.Height:0}");
+            Check("کادرِ نامِ پمپ از تنظیماتِ همین پمپ پر شد",
+                  account.LoginPump == "پمپ آزمون", account.LoginPump);
+
+            //  الف) ایمیلِ بی «@» رد می‌شود و هیچ چیزی ذخیره نمی‌شود
+            var pumpBefore = host.Settings.GetString(SettingsService.StationName);
+            account.LoginEmail = "naam-bi-at";
+            account.LoginName = "هارون";
+            account.LoginPump = "پمپِ نو";
+            Wait(win, account.SubmitLoginCommand.ExecuteAsync(null));
+            Check("ایمیلِ غلط رد شد", account.LoginStatus.Contains("ایمیل"), account.LoginStatus);
+            Check("و با ایمیلِ غلط هیچ چیزی ذخیره نشد",
+                  host.Settings.GetString(SettingsService.StationName) == pumpBefore,
+                  host.Settings.GetString(SettingsService.StationName));
+
+            //  ب) بی کد: نام و ایمیل و نامِ پمپ ذخیره می‌شوند
+            account.LoginEmail = "test@gmail.com";
+            account.LoginName = "هارون یعقوبی";
+            account.LoginPump = "پمپِ نو";
+            account.LoginCode = "";
+            Wait(win, account.SubmitLoginCommand.ExecuteAsync(null));
+            var file = AppSettings.Load();
+            Check("پیامِ «ذخیره شد» آمد", account.LoginStatus.StartsWith("✅"), account.LoginStatus);
+            Check("ایمیل در تنظیمات نشست", file.CloudEmail == "test@gmail.com", file.CloudEmail);
+            Check("نام در تنظیمات نشست", file.CloudName == "هارون یعقوبی", file.CloudName);
+            Check("نامِ پمپ در تنظیماتِ برنامه نشست",
+                  host.Settings.GetString(SettingsService.StationName) == "پمپِ نو",
+                  host.Settings.GetString(SettingsService.StationName));
+            Check("و خودِ پروفایل همان لحظه نامِ تازه را نشان می‌دهد",
+                  account.PumpName == "پمپِ نو", account.PumpName);
+
+            //  ج) کدِ ناقص: داده ذخیره می‌شود ولی کد رد می‌شود
+            account.LoginCode = "123";
+            Wait(win, account.SubmitLoginCommand.ExecuteAsync(null));
+            Check("کدِ سه‌رقمی رد شد", account.LoginStatus.Contains("شش رقم"), account.LoginStatus);
+            Check("و با کدِ ناقص هیچ توکنی ساخته نشد",
+                  string.IsNullOrWhiteSpace(AppSettings.Load().CloudDeviceToken), "بی توکن");
+
+            //  د) فعال‌سازیِ واقعی — فقط با ‎PUMP_VERIFY_CLOUD=1‎
+            if (Environment.GetEnvironmentVariable("PUMP_VERIFY_CLOUD") == "1")
+            {
+                account.LoginCode = "000000";
+                Wait(win, account.SubmitLoginCommand.ExecuteAsync(null));
+                Check("کدِ شش‌رقمی به ابر رفت و جوابش نشست (بی کرش)",
+                      account.LoginStatus.Length > 0, account.LoginStatus);
+            }
+            else
+            {
+                Console.WriteLine("  ⚠️ فعال‌سازیِ واقعیِ کد نسنجیده ماند "
+                                  + "(PUMP_VERIFY_CLOUD=1 لازم است — اینترنت و سرورِ ابر می‌خواهد)");
+            }
+        }
+
+        // ── ۱۵) بخشِ «اشتراک و پلن‌ها» و کلیدِ آزمایش ────────────────────────
+        //
+        // «بخشِ وی‌آی‌پی را هم اعمال کن که من ببینم و تست کنم» — پس این‌جا هم
+        // با دست زده می‌شود: کلیدِ آزمایش باید قفل‌ها را ببندد و بعد برگرداند،
+        // و پشتیبانی در هر دو حال باز بماند.
+        Console.WriteLine("── ۱۵) اشتراک و پلن‌ها + کلیدِ آزمایشِ بی‌اشتراک");
+        {
+            var account = vm.Sections.First(s => s.Id == "account");
+            var vip = (VipSectionViewModel)account.SubSections.First(s => s.Id == "vip");
+            account.ShowSubCommand.Execute(vip);
+            for (var i = 0; i < 20; i++) Pump(win);
+            Check("صفحهٔ اشتراک و پلن‌ها باز شد", vm.Content == vip);
+            Check("چهار پلن با قیمتِ خالی", vip.Plans.Count == 4
+                  && vip.Plans.Count(p => p.Price == "—") == 3, $"{vip.Plans.Count} پلن");
+            Check("پشتیبانی همیشه باز است", vip.SupportText.StartsWith("✅"), vip.SupportText);
+
+            var karBefore = Entitlements.Allows(Entitlements.Kar);
+            vip.ToggleTestCommand.Execute(null); Pump(win);
+            Check("کلیدِ آزمایش روشن شد", vip.TestDeny);
+            Check("با آزمایش، اپِ کارمندان بسته است",
+                  !Entitlements.Allows(Entitlements.Kar) && vip.KarText.StartsWith("🔒"), vip.KarText);
+            Check("ولی پشتیبانی با آزمایش هم باز است",
+                  Entitlements.Allows(Entitlements.Support), vip.SupportText);
+            vip.ToggleTestCommand.Execute(null); Pump(win);
+            Check("خاموش کردنش همان حالِ واقعی را برمی‌گرداند",
+                  !vip.TestDeny && Entitlements.Allows(Entitlements.Kar) == karBefore);
+        }
+
+        // ── ۱۶) صفحهٔ «اپِ گوشی»: دو لینک و پیامِ آماده ─────────────────────
+        Console.WriteLine("── ۱۶) اپِ گوشی — لینک و کد");
+        {
+            var settings = vm.Sections.First(s => s.Id == "settings");
+            var apps = (AppsSectionViewModel)settings.SubSections.First(s => s.Id == "apps");
+            Wait(win, vm.GoAsync(settings));
+            settings.ShowSubCommand.Execute(apps);
+            for (var i = 0; i < 20; i++) Pump(win);
+            Check("صفحهٔ اپِ گوشی باز شد", vm.Content == apps);
+            Check("لینکِ اندروید فایلِ نصبِ کارمندان است",
+                  apps.AndroidLink.EndsWith("/downloads/PumpYaqobiKar.apk"), apps.AndroidLink);
+            Check("لینکِ آیفون همان صفحهٔ اپ است",
+                  apps.IphoneLink.EndsWith("/kar/"), apps.IphoneLink);
+            Check("پیامِ آماده هر دو لینک را دارد و هیچ رمزی ندارد",
+                  apps.ShareText.Contains(apps.AndroidLink) && apps.ShareText.Contains(apps.IphoneLink)
+                  && !apps.ShareText.Contains("token"));
+        }
+
         Console.WriteLine();
-        Console.WriteLine(_bad == 0 ? "✅ هر چهارده رفتار همان‌طور که خواسته شده کار می‌کند" : $"❌ {_bad} ایراد");
+        Console.WriteLine(_bad == 0 ? "✅ هر شانزده رفتار همان‌طور که خواسته شده کار می‌کند" : $"❌ {_bad} ایراد");
         return _bad == 0 ? 0 : 1;
     }
 
