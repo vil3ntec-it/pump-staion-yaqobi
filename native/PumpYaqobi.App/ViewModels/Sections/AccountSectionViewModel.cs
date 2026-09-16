@@ -1,5 +1,9 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PumpYaqobi.Application.Localization;
+using PumpYaqobi.Application.Security;
+using PumpYaqobi.Domain.Enums;
 using PumpYaqobi.Services.Data;
 using PumpYaqobi.App.Services;
 
@@ -34,6 +38,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         ShowAccount();
         ShowSubscription();
         ShowAccessCode();
+        ShowPump();
     }
 
     /// <summary>
@@ -59,6 +64,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         ShowAccount();
         ShowSubscription();
         ShowAccessCode();
+        ShowPump();
     }
 
     private void UpdatePill()
@@ -220,6 +226,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         {
             SubStatus = "⚠️ " + check.Reason;
         }
+        ShowSubDetails(check, file);
         UpdatePill();
     }
 
@@ -357,4 +364,165 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         }
         finally { Busy = false; }
     });
+
+    // ══ صفحهٔ پروفایل — به شکلِ «پروفایلِ بیمار»ِ مرجع ═══════════════════════
+    //
+    //  خواستهٔ صاحب ریپو با عکس: «پروفایلِ پمپ بنزین باید شبیهِ این عکس باشد، نه
+    //  این که توی تنظیمات برود.» سه ستون: کارتِ آواتار (چپ)، مشخصاتِ پمپ (وسط)،
+    //  اشتراک (راست)؛ زیرش تب‌ها با ردیف‌های رنگی، و ستونِ فایل‌ها (پشتیبان‌ها).
+    //  ⚠️ هیچ کادرِ نشانی و رمزی این‌جا نیست — همان قاعدهٔ ‎CloudAddressLockTests‎.
+
+    /// <summary>نام و نقشِ کسی که وارد شده — کارتِ آواتار.</summary>
+    [ObservableProperty] private string _userLine = "";
+    [ObservableProperty] private string _roleText = "";
+    [ObservableProperty] private string _roleBrushKey = "Pump.Info";
+
+    /// <summary>مشخصاتِ پمپ — از تنظیماتِ خودِ برنامه، فقط‌خواندنی این‌جا.</summary>
+    [ObservableProperty] private string _pumpName = "";
+    [ObservableProperty] private string _pumpPhone = "";
+    [ObservableProperty] private string _pumpAddress = "";
+    [ObservableProperty] private string _pumpCodeLine = "";
+    [ObservableProperty] private string _homeLine = "";
+    [ObservableProperty] private string _cloudLine = "";
+    [ObservableProperty] private string _appVersionLine = "";
+
+    /// <summary>اشتراک — به شکلِ کارتِ مرجع: چند سطرِ «برچسب: مقدار».</summary>
+    [ObservableProperty] private string _subPlanText = "";
+    [ObservableProperty] private string _subEndsText = "";
+    [ObservableProperty] private string _subDaysText = "";
+    [ObservableProperty] private string _subSourceText = "";
+
+    /// <summary>ردیف‌های تبِ فعال (کارمندان / تاریخچه / پشتیبان‌ها).</summary>
+    public ObservableCollection<ProfileRow> Rows { get; } = new();
+    public ObservableCollection<ProfileRow> Backups { get; } = new();
+
+    [ObservableProperty] private string _tab = "staff";
+    public bool TabStaff => Tab == "staff";
+    public bool TabHistory => Tab == "history";
+    public bool TabBackups => Tab == "backups";
+    partial void OnTabChanged(string v)
+    {
+        OnPropertyChanged(nameof(TabStaff)); OnPropertyChanged(nameof(TabHistory)); OnPropertyChanged(nameof(TabBackups));
+        FillRows();
+    }
+
+    [RelayCommand] private void SetTab(string t) => Tab = t;
+
+    private List<ProfileRow> _staffRows = new(), _historyRows = new(), _backupRows = new();
+
+    private static readonly string[] Palette = { "Pump.Info", "Pump.Accent", "Pump.Ok", "Pump.Warn" };
+
+    private void FillRows()
+    {
+        Rows.Clear();
+        var src = Tab == "history" ? _historyRows : Tab == "backups" ? _backupRows : _staffRows;
+        foreach (var r in src) Rows.Add(r);
+    }
+
+    private void ShowPump()
+    {
+        var s = _host.Settings;
+        var f = AppSettings.Load();
+        PumpName = s.GetString(SettingsService.StationName);
+        if (string.IsNullOrWhiteSpace(PumpName)) PumpName = "پمپ یعقوبی";
+        //  آواتار: تا وارد نشده، حرفِ اولِ نامِ پمپ — نه علامتِ سوال
+        if (Initial == "؟") Initial = PumpName.Trim()[..1];
+        PumpPhone = s.GetString(SettingsService.StationPhone);
+        PumpAddress = s.GetString(SettingsService.StationAddress);
+        PumpCodeLine = string.IsNullOrWhiteSpace(f.CloudStationId) ? "هنوز روی ابر ثبت نشده" : f.CloudStationId;
+        HomeLine = string.IsNullOrWhiteSpace(s.GetString(SettingsService.ServerUrl))
+            ? "هنوز پیدا نشده — با روشن شدنِ سرورِ خانگی خودش پیدا می‌شود"
+            : "وصل و ثبت‌شده";
+        CloudLine = string.IsNullOrWhiteSpace(f.CloudDeviceToken) ? "فعال نشده" : "فعال — با کدِ شش‌رقمی";
+        AppVersionLine = PumpYaqobi.App.Update.AppVersion.Current;
+
+        var session = _host.Session;
+        UserLine = string.IsNullOrWhiteSpace(session.UserName) ? "کاربرِ برنامه" : session.UserName!;
+        RoleText = session.Role switch
+        {
+            UserRole.Admin => "🛡️ مدیر",
+            UserRole.Staff => "👤 کارمند",
+            _ => "👁️ نظاره‌گر",
+        };
+        RoleBrushKey = session.Role switch
+        {
+            UserRole.Admin => "Pump.Ok",
+            UserRole.Staff => "Pump.Info",
+            _ => "Pump.Muted",
+        };
+    }
+
+    private void ShowSubDetails(LicenseCheck check, AppSettings file)
+    {
+        var activated = !string.IsNullOrWhiteSpace(file.CloudDeviceToken);
+        SubPlanText = check.Valid
+            ? (string.IsNullOrWhiteSpace(check.PlanTitle) ? "اشتراکِ VIP" : check.PlanTitle)
+            : activated ? "بدونِ اشتراکِ فعال" : "فعال نشده";
+        SubEndsText = check.Valid && check.SubscriptionEndsAt > 0
+            ? Shamsi.Of(DateTimeOffset.FromUnixTimeMilliseconds(check.SubscriptionEndsAt).LocalDateTime)
+            : "—";
+        SubDaysText = check.Valid ? $"{Shamsi.Money(VipDays)} روز" : "—";
+        SubSourceText = check.Valid ? "مجوزِ امضاشدهٔ سرور" : activated ? check.Reason : "کدِ شش‌رقمی را بزنید";
+    }
+
+    /// <summary>ردیف‌های تب‌ها — کارمندان، تاریخچهٔ بخش‌ها، پشتیبان‌ها.</summary>
+    private async Task LoadRowsAsync()
+    {
+        try
+        {
+            var staff = await _host.Attendance.StaffAsync();
+            _staffRows = staff.Select((m, i) => new ProfileRow(
+                m.Name ?? "", "شیفت", (m.ShiftIn ?? "—") + " تا " + (m.ShiftOut ?? "—"),
+                "معاش", Shamsi.Money(m.Salary), string.IsNullOrWhiteSpace(m.Note) ? "" : m.Note!,
+                Palette[i % Palette.Length])).ToList();
+        }
+        catch { _staffRows = new(); }
+
+        try
+        {
+            var kinds = await _host.History.CardsAsync();
+            _historyRows = kinds.Where(k => k.Count > 0).Select((k, i) => new ProfileRow(
+                k.Label, "ردیف", Shamsi.Money(k.Count), "آخرین", string.IsNullOrWhiteSpace(k.LatestDate) ? "—" : k.LatestDate, "",
+                Palette[i % Palette.Length])).ToList();
+        }
+        catch { _historyRows = new(); }
+
+        try
+        {
+            var files = _host.Backup.List();
+            _backupRows = files.Take(30).Select((b, i) => new ProfileRow(
+                "پشتیبانِ " + b.Day, "حجم", b.SizeText, "ساعت", b.TakenAt.ToString("HH:mm"), b.Path,
+                Palette[i % Palette.Length])).ToList();
+            Backups.Clear();
+            foreach (var r in _backupRows.Take(6)) Backups.Add(r);
+        }
+        catch { _backupRows = new(); }
+
+        FillRows();
+    }
+
+    public override async Task OnActivatedAsync()
+    {
+        RefreshAll();
+        await LoadRowsAsync();
+    }
+
+    /// <summary>پوشهٔ پشتیبان‌ها را با فایل‌منیجرِ سیستم باز می‌کند.</summary>
+    [RelayCommand]
+    private void OpenBackups()
+    {
+        try
+        {
+            var dir = _host.Backup.SnapshotDir;
+            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(dir) { UseShellExecute = true });
+        }
+        catch { }
+    }
+}
+
+/// <summary>یک ردیفِ رنگیِ تب‌های پروفایل — همان «ویزیت»های مرجع: عنوان و سه ستونِ برچسب/مقدار.</summary>
+public sealed record ProfileRow(string Title, string L1, string V1, string L2, string V2, string Note, string ColorKey)
+{
+    public bool HasNote => Note.Length > 0;
 }
