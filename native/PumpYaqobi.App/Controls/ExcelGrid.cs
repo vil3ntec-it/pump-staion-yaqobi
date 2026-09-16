@@ -529,7 +529,29 @@ public class ExcelGrid : DataGrid
         // فهرست از نو پر شد (ماهِ دیگر، حسابِ دیگر) ⇒ رشد از اول، تدریجی.
         // وگرنه ‎_shown‎ی ماهِ قبل می‌ماند و کلِ ماهِ تازه در یک پاس ساخته می‌شد.
         if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset
-            || RowCount() < _shown) { _shown = 0; _measuredShown = 0; }
+            || RowCount() < _shown)
+        {
+            _shown = 0; _measuredShown = 0;
+
+            // ══ محتوای تازه ⇒ پهنای تازه ═════════════════════════════════════
+            //
+            // گزارشِ صاحب ریپو با عکس (۱۴۰۵/۰۶/۲۷): بالای ورق، «شروع» و «ختم»ِ
+            // پایه‌ها «…» می‌شدند. ریشه: جدولِ ورق با ردیف‌های **خالی** باز
+            // می‌شود، پس پهنای طبیعیِ ستون همان پهنای سرستون است و همان‌جا
+            // سفت می‌شود؛ بعد که عددهای واقعی نشستند، دیگر جا نبود.
+            //
+            // پس با پر شدنِ دوبارهٔ فهرست (ورقِ دیگر، ماهِ دیگر، حسابِ دیگر)
+            // یک بار دیگر پهنا از روی محتوای واقعی حساب می‌شود.
+            //
+            // ⚠️ نه وقتی کاربر خودش پهنا ذخیره کرده (‎_saved‎) — آن‌جا حرفِ
+            // کاربر آخر است، مثلِ اکسل.
+            if (_saved is null)
+            {
+                _spread = false; _pinned = false; _anyRowLoaded = false; _autoWidths = null;
+                foreach (var c in Columns)
+                    c.Width = new DataGridLength(1, DataGridLengthUnitType.Auto);
+            }
+        }
         FixRowHeaderWidth();
         InvalidateMeasure();
     }
@@ -1351,6 +1373,20 @@ public class ExcelGrid : DataGrid
         if (cols.Count == 0) return;
         var w = cols.Select(c => c.ActualWidth).ToArray();
         if (w.Any(x => double.IsNaN(x) || x <= 0)) return;
+
+        // ══ فقط پهنایی که **کاربر** ساخته ذخیره می‌شود ══════════════════════
+        //
+        // پیش از این هر جدولی در نخستین چیدمانش پهنای خودکارش را هم ذخیره
+        // می‌کرد — و چون جدولِ ورق با ردیف‌های **خالی** باز می‌شود، همان
+        // پهنای «سرستونِ خالی» برای همیشه در تنظیمات می‌نشست و از فردا هر
+        // عددی «…» می‌شد. گزارشِ صاحب ریپو با عکس: «شروع و ختمِ پایه‌ها از
+        // کادرشان بیرون زده.»
+        //
+        // حالا تا وقتی پهناها همان‌اند که خودِ برنامه سنجاق کرده، چیزی
+        // نوشته نمی‌شود؛ اولین کشیدنِ دستیِ ستون (یا دوبار-کلیکِ هم‌قدسازی)
+        // همه را ذخیره می‌کند، همان‌طور که همیشه بود.
+        if (_autoWidths is { } auto && auto.Length == w.Length
+            && auto.Zip(w, (a, b) => Math.Abs(a - b) < 0.5).All(x => x)) return;
         if (_saved is { } old && old.Length == w.Length
             && old.Zip(w, (a, b) => Math.Abs(a - b) < 0.5).All(x => x)) return;
 
@@ -1393,10 +1429,16 @@ public class ExcelGrid : DataGrid
             c.Width = new DataGridLength(c.ActualWidth, DataGridLengthUnitType.Pixel);
 
         _pinned = true;
-        RememberWidths();
+        // ⚠️ این پهناها را **ذخیره نمی‌کنیم**: خودکارند، نه خواستهٔ کاربر.
+        // همین‌جا نگهشان می‌داریم تا بعداً معلوم شود کاربر ستونی را کشیده
+        // یا نه — شرحش بالای ‎RememberWidths‎.
+        _autoWidths = cols.Select(c => c.ActualWidth).ToArray();
     }
 
     private bool _pinned;
+
+    /// <summary>پهنای خودکارِ همین جدول در لحظهٔ سنجاق شدن.</summary>
+    private double[]? _autoWidths;
 
 
     // ══════════════════════════════════════════════════════════════════════

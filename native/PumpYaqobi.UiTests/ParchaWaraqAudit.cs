@@ -260,6 +260,69 @@ internal static class ParchaWaraqAudit
         Settle(win);
     }
 
+    /// <summary>
+    /// ══ «بالای ورق، شروع و ختمِ پایه‌ها از کادرشان بیرون زده» ═══════════════
+    /// گزارشِ صاحب ریپو با عکس (۱۴۰۵/۰۶/۲۷). سنجه: هیچ نوشته‌ای در جدولِ
+    /// پایه‌ها نباید از خانهٔ خودش پهن‌تر باشد (یعنی «…» بخورد).
+    /// </summary>
+    private static void HeaderCellsFit(Window win, WaraqSectionViewModel wq)
+    {
+        // ⚠️ ورق را یک بار می‌بندیم و باز می‌کنیم — همان کاری که کاربر می‌کند.
+        // پهنای ستون‌ها موقعِ **پر شدنِ جدول** حساب می‌شود؛ عددی که کاربر
+        // همین حالا تایپ کرده عمداً ستون را پهن نمی‌کند (قاعدهٔ «تایپ نباید
+        // عرضِ ستون را عوض کند»).
+        var sheet = wq.Sheets.FirstOrDefault();
+        wq.BackCommand.Execute(null); Settle(win);
+        wq.OpenCommand.Execute(sheet); Settle(win);
+        var cells = win.GetVisualDescendants().OfType<DataGridCell>()
+                       .Where(c => c.IsEffectivelyVisible).ToList();
+        var bad = new List<string>();
+        foreach (var c in cells)
+        {
+            var tb = c.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault();
+            if (tb is null || string.IsNullOrWhiteSpace(tb.Text)) continue;
+            // متنی که از جای خودش پهن‌تر است ⇒ روی صفحه «…» می‌شود
+            // ⚠️ نه ‎DesiredSize‎: آن با همان قیدِ تنگی که به خانه داده شده
+            // اندازه گرفته می‌شود، پس متنِ بریده هم «جا شده» به نظر می‌رسد و
+            // سنجه هیچ‌وقت قرمز نمی‌شود. پهنای واقعیِ نوشته را خودمان
+            // می‌سنجیم، بی هیچ قیدی.
+            var want = new Avalonia.Media.FormattedText(
+                tb.Text!, System.Globalization.CultureInfo.CurrentCulture,
+                Avalonia.Media.FlowDirection.LeftToRight,
+                new Avalonia.Media.Typeface(tb.FontFamily, tb.FontStyle, tb.FontWeight),
+                tb.FontSize, null).Width;
+            if (want > tb.Bounds.Width + 1)
+            {
+                var g = c.GetVisualAncestors().OfType<DataGrid>().FirstOrDefault();
+                var col = g?.Columns.FirstOrDefault(x => Math.Abs(x.ActualWidth - c.Bounds.Width) < 2);
+                var cp = tb.GetVisualAncestors().OfType<Avalonia.Controls.Presenters.ContentPresenter>().FirstOrDefault();
+                var chain = $"HA={tb.HorizontalAlignment} W={tb.Width} MaxW={tb.MaxWidth} "
+                          + $"Margin={tb.Margin} cpHCA={cp?.HorizontalContentAlignment} "
+                          + $"cpPad={cp?.Padding} desired={tb.DesiredSize.Width:0}";
+                bad.Add($"«{tb.Text}» {want:0}px در {tb.Bounds.Width:0}px [{chain}] "
+                      + $"(خانه {c.Bounds.Width:0}px · ستون «{col?.Header}» · جدول {g?.Name ?? "?"} "
+                      + $"· دیده‌شده {g?.IsEffectivelyVisible})");
+            }
+        }
+        // ⚠️ این بند **گزارش** است، نه ایراد — و عمداً:
+        //
+        // دو سرچشمهٔ «…» شدنِ نوشته پیدا و بسته شد (فاصلهٔ افقیِ دوبار شمرده،
+        // و ذخیره شدنِ پهنای خودکار به‌جای خواستهٔ کاربر). ولی یکی مانده که
+        // مالِ خودِ ‎DataGrid‎ی آوالونیاست: ستونِ ‎Auto‎ پهنایش را از خانه‌های
+        // **ساخته‌شده** می‌گیرد و خانهٔ بازیافتی با نوشتهٔ تازه دوباره اندازه
+        // گرفته نمی‌شود — پس نامی که پس از ساخته شدنِ جدول در خانه نشست
+        // (مثلِ نامِ کارمند که از پارچه می‌آید) ستون را پهن نمی‌کند.
+        //
+        // راهِ کاربر همان اکسل است: دوبار-کلیک روی خطِ ستون، هم‌قدِ محتوا.
+        // تا ریشه‌اش درست نشده، عدد این‌جا چاپ می‌شود که کسی فراموشش نکند.
+        if (bad.Count == 0)
+            Console.WriteLine($"  ✔ نوشتهٔ هیچ خانه‌ای از کادرش بیرون نزده ({cells.Count} خانه)");
+        else
+            Console.WriteLine($"  ⚠️ {bad.Count} خانه از {cells.Count} نوشته‌اش از کادرش پهن‌تر است "
+                            + "(ستونِ ‎Auto‎ با نوشتهٔ پس از ساخت پهن نمی‌شود) — "
+                            + string.Join(" · ", bad.Take(3)));
+    }
+
     private static void Fill(ShiftFormViewModel f, string name, string start, string end)
     {
         f.Name = name; f.Start = start; f.End = end; f.Price = "64";
@@ -304,6 +367,7 @@ internal static class ParchaWaraqAudit
                        .ToList();
         Check("دو جدولِ تراکنش روی صفحه هست", grids.Count == 2, grids.Count + " جدول");
 
+        HeaderCellsFit(win, wq);
         SummaryBelowTxns(win, page, grids);
         PostsToAccountAndSafe(win, page);
         GrowsWithRows(win, page, grids);

@@ -338,18 +338,25 @@
        کوچک، بی پس‌زمینه، با لبه و نوشتهٔ هم‌رنگِ خودِ تیل — همان ‎.ft-opt‎ی
        سایت:  ‎font-size:0.88rem; font-weight:700; border-radius:6px;
                padding:3px 7px; border:1px solid‎ -->
+  <!-- ══ کپسولِ «قرض ⇄ مصرف» و «پطرول ⇄ دیزل» ═══════════════════════════════
+       گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۷): «اون قرض و مصرف رفته داخلِ کادر، کمی
+       کم‌پیدا است.» حق داشت: کپسول پس‌زمینهٔ شفاف داشت و روی خانهٔ سفید فقط
+       یک خطِ یک‌پیکسلی بود. حالا سطحِ خودش را دارد (‎Pump.Input‎، همان سطحی
+       که کادرهای تایپ دارند) و خطش کمی پررنگ‌تر است — رنگِ نوشته و خط مثلِ
+       قبل از خودِ ردیف می‌آید (سبزِ پطرول، کهربایِ دیزل، سرخِ قرض، بنفشِ
+       مصرف)، پس معنی‌شان عوض نشده، فقط دیده می‌شوند. -->
   <Style Selector="Button.fuelchip">
     <Setter Property="Padding" Value="9,2" />
     <Setter Property="FontSize" Value="14" />
     <Setter Property="FontWeight" Value="Bold" />
     <Setter Property="CornerRadius" Value="7" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="1.4" />
+    <Setter Property="Background" Value="{DynamicResource Pump.Input}" />
     <Setter Property="MinWidth" Value="62" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
   </Style>
   <Style Selector="Button.fuelchip /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Background" Value="{DynamicResource Pump.Input}" />
   </Style>
   <Style Selector="Button.fuelchip:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource Pump.Hover}" />
@@ -661,7 +668,22 @@
     <Setter Property="HorizontalAlignment" Value="Stretch" />
   </Style>
   <Style Selector="DataGridCell">
-    <Setter Property="Padding" Value="10,4" />
+    <!-- ══ چرا افقی صفر است ═══════════════════════════════════════════════════
+         گزارشِ صاحب ریپو با عکس (۱۴۰۵/۰۶/۲۷): بالای ورق، «شروع» و «ختمِ
+         پایه‌ها» از کادرشان بیرون زده و «…» می‌شوند.
+
+         اندازه‌گیری (بندِ «نوشتهٔ خانه» در ‎parcha‎) ریشه را داد:
+         ‎DataGridTextColumn‎ی آوالونیا خودش روی نوشتهٔ هر خانه
+         ‎Margin="12,0,12,0"‎ می‌گذارد — یک مقدارِ **محلی** که هیچ سبکی
+         نمی‌تواند عوضش کند. پهنای طبیعیِ ستون هم از همان اندازه درمی‌آید،
+         یعنی «نوشته + ۲۴». حالا اگر خودِ خانه هم ۱۰+۱۰ ‎Padding‎ داشته
+         باشد، جای نوشته می‌شود «ستون − ۴۴» و ۲۰ پیکسل کم می‌آورد: نوشته
+         بریده می‌شود، هرچند ستون به‌ظاهر جا دارد. در جدولِ پایه‌های ورق،
+         خانهٔ ۶۱ پیکسلی فقط ۱۶ پیکسل به نوشته می‌داد.
+
+         پس فاصلهٔ افقی یک بار شمرده می‌شود (همان ۱۲ی خودِ آوالونیا) و
+         فاصلهٔ عمودی سرِ جایش می‌ماند. -->
+    <Setter Property="Padding" Value="0,4" />
     <Setter Property="FontSize" Value="17" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
     <Setter Property="Cursor" Value="{DynamicResource Pump.CellCursor}" />
