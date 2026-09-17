@@ -147,13 +147,27 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     //  اپِ کارمندان (`kar/cloud.js`) همان راه را دارد و سرور همان مسیر را
     //  می‌شناسد. فقط این صفحه دیگر آن را نشان نمی‌دهد.
 
-    /// <summary>خروج — دفترِ روی کامپیوتر دست نمی‌خورد.</summary>
+    /// <summary>
+    /// خروج — دفترِ روی کامپیوتر دست نمی‌خورد.
+    ///
+    /// ⚠️ <see cref="CloudLink.SignOutAsync"/> از ۱۴۰۵/۰۶/۳۰ نشست را روی
+    /// <b>سرور</b> هم باطل می‌کند، نه فقط این‌جا.
+    ///
+    /// ⚠️ و صفحه دوباره از حالِ واقعی چیده می‌شود (<c>ShowLogin</c>): پیش
+    /// از این گام روی «تمام» می‌ماند، پس کاربری که تازه خارج شده بود هنوز
+    /// صفحهٔ پروفایل را می‌دید — با نامِ پاک‌شده و کارتِ خالی.
+    /// </summary>
     [RelayCommand]
     private Task SignOutAsync() => CrashGuard.RunAsync("خروج از حساب", async () =>
     {
-        await Cloud.SignOutAsync();
-        ShowAccount();
+        Busy = true;
+        try { await Cloud.SignOutAsync(); }
+        finally { Busy = false; }
+
         StationLine = "";
+        LoginPassword = ""; LoginPassword2 = "";
+        RefreshAll();
+        ShowLogin();
     });
 
     // ── ۲) پروفایل: نشانیِ سرور از حساب می‌آید ──────────────────────────
@@ -606,6 +620,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         OnPropertyChanged(nameof(StepEmailCode));
         OnPropertyChanged(nameof(StepPump));
         OnPropertyChanged(nameof(StepDone));
+        OnPropertyChanged(nameof(StepForgot));
         OnPropertyChanged(nameof(ShowLoginPage));
         OnPropertyChanged(nameof(ShowProfilePage));
 
@@ -664,12 +679,9 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         var pass = LoginPassword ?? "";
         var pass2 = LoginPassword2 ?? "";
 
-        if (email.Length == 0 || !email.Contains('@') || email.EndsWith("@"))
-        { LoginStatus = "❌ ایمیل درست نیست."; return; }
+        if (LoginRules.BadEmail(email) is { } mailWhy) { LoginStatus = "❌ " + mailWhy; return; }
         if (IsSignUp && name.Length < 2) { LoginStatus = "❌ نامتان را بنویسید."; return; }
-        //  ⚠️ هشت نویسه، همان قاعدهٔ خودِ سرور (`password.checkStrength`) —
-        //  وگرنه کاربر رمزِ شش‌نویسه‌ای می‌زد و سرور ردش می‌کرد.
-        if (pass.Length < 8) { LoginStatus = "❌ رمز دستِ‌کم هشت نویسه باشد."; return; }
+        if (LoginRules.WeakPassword(pass) is { } passWhy) { LoginStatus = "❌ " + passWhy; return; }
         if (IsSignUp && pass != pass2) { LoginStatus = "❌ دو رمز یکی نیستند."; return; }
         if (IsSignUp && !AcceptTerms) { LoginStatus = "❌ شرایط و ضوابط را بپذیرید."; return; }
 
@@ -888,6 +900,120 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     /// <summary>برگشت به گامِ حساب — برای عوض کردنِ حساب یا رمز.</summary>
     [RelayCommand]
     private void BackToAccount() { LoginStatus = ""; LoginStep = 1; }
+
+    // ── گامِ ۰: رمزم را فراموش کرده‌ام ───────────────────────────────────
+    //
+    //  ⚠️ **گامِ صفر، نه گامِ پنج.** `ShowLoginPage => LoginStep < 4` قفل
+    //  است (`AppLinksTests`) و باید همان بماند؛ صفر هم زیرِ چهار است، پس
+    //  صفحهٔ ورود تمامِ پنجره را می‌گیرد، درست مثلِ بقیهٔ گام‌ها.
+    //
+    //  ⚠️ **رمزِ تازه نامِ فیلدِ جدا دارد** (`ResetPass`)، نه `LoginPassword`:
+    //  آن یکی سه جای مشخص پاک می‌شود و سنجه شمارشش را قفل کرده.
+
+    /// <summary>کدِ شش‌رقمی که برای بازیابی به ایمیل آمده.</summary>
+    [ObservableProperty] private string _resetCode = "";
+
+    /// <summary>رمزِ تازه — مثلِ هر رمزِ دیگری، هیچ‌جا ذخیره نمی‌شود.</summary>
+    [ObservableProperty] private string _resetPass = "";
+    [ObservableProperty] private string _resetPass2 = "";
+
+    /// <summary>کد فرستاده شد؟ تا نرفته، نیمهٔ دومِ فرم دیده نمی‌شود.</summary>
+    [ObservableProperty] private bool _resetSent;
+
+    public bool StepForgot => LoginStep == 0;
+
+    /// <summary>«رمزم را فراموش کرده‌ام» — از گامِ یک.</summary>
+    [RelayCommand]
+    private void OpenForgot()
+    {
+        LoginStatus = "";
+        ResetSent = false;
+        ResetCode = ""; ResetPass = ""; ResetPass2 = "";
+        LoginStep = 0;
+    }
+
+    /// <summary>
+    /// پلهٔ یک — کد به ایمیل.
+    ///
+    /// ⚠️ پیامِ موفقیت عمداً «اگر این ایمیل حساب داشته باشد…» است، نه «کد
+    /// فرستاده شد»: خودِ سرور هم برای ایمیلِ موجود و ناموجود <b>یک جواب</b>
+    /// می‌دهد تا فهرستِ ایمیل‌های مشتری‌ها لو نرود. برنامه نباید آن کار را
+    /// خراب کند.
+    /// </summary>
+    [RelayCommand]
+    private Task SendResetCodeAsync() => CrashGuard.RunAsync("کدِ بازیابی", async () =>
+    {
+        var email = (LoginEmail ?? "").Trim();
+        if (LoginRules.BadEmail(email) is { } why) { LoginStatus = "❌ " + why; return; }
+
+        Busy = true;
+        LoginStatus = "در حالِ فرستادنِ کد…";
+        try
+        {
+            var res = await Cloud.ForgotPasswordAsync(email);
+            if (!res.Ok) { LoginStatus = "❌ " + res.Why; return; }
+            ResetSent = true;
+            LoginStatus = "✅ اگر این ایمیل حسابی داشته باشد، کدِ شش‌رقمی برایش رفت.";
+        }
+        finally { Busy = false; }
+    });
+
+    /// <summary>پلهٔ دو — کد و رمزِ تازه. سرور همان‌جا وارد هم می‌کند.</summary>
+    [RelayCommand]
+    private Task ResetPasswordAsync() => CrashGuard.RunAsync("رمزِ تازه", async () =>
+    {
+        var email = (LoginEmail ?? "").Trim();
+        var code = new string((ResetCode ?? "").Where(char.IsDigit).ToArray());
+        var pass = ResetPass ?? "";
+
+        if (code.Length != 6) { LoginStatus = "❌ کدِ ایمیل باید شش رقم باشد."; return; }
+        if (LoginRules.WeakPassword(pass) is { } why) { LoginStatus = "❌ " + why; return; }
+        if (pass != (ResetPass2 ?? "")) { LoginStatus = "❌ دو رمز یکی نیستند."; return; }
+
+        Busy = true;
+        LoginStatus = "در حالِ گذاشتنِ رمزِ تازه…";
+        try
+        {
+            var res = await Cloud.ResetPasswordAsync(email, code, pass);
+            if (!res.Ok) { LoginStatus = "❌ " + res.Why; return; }
+
+            //  رمزِ تازه از حافظهٔ صفحه هم می‌رود — همان قاعدهٔ همیشه
+            ResetPass = ""; ResetPass2 = ""; ResetCode = ""; ResetSent = false;
+            ClearSkipped();
+            LoginStatus = "";
+            RefreshAll();
+            LoginStep = 3;
+        }
+        finally { Busy = false; }
+    });
+
+    // ── نشان دادنِ رمز ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// «چشم» — خواستهٔ بندِ ۲ی صاحب ریپو: «نمایش/مخفی کردنِ رمز عبور».
+    ///
+    /// ⚠️ روی <b>هر سه</b> کادرِ رمز (ورود، تکرار، رمزِ تازه) یک‌جا اثر
+    /// می‌کند: کاربری که رمز را می‌بیند، تکرارش را هم می‌خواهد ببیند.
+    /// </summary>
+    [ObservableProperty] private bool _revealPass;
+
+    /// <summary>
+    /// نویسهٔ پوشاننده. <c>'\0'</c> یعنی «نپوشان» — همان چیزی که
+    /// <c>TextBox.PasswordChar</c> برای متنِ آشکار می‌خواهد.
+    /// </summary>
+    public char PassChar => RevealPass ? '\0' : '•';
+
+    /// <summary>نوشتهٔ خودِ دکمه، تا کاربر بداند زدنش چه می‌کند.</summary>
+    public string RevealPassText => RevealPass ? "🙈 پنهان کردنِ رمز" : "👁 نشان دادنِ رمز";
+
+    partial void OnRevealPassChanged(bool v)
+    {
+        OnPropertyChanged(nameof(PassChar));
+        OnPropertyChanged(nameof(RevealPassText));
+    }
+
+    [RelayCommand]
+    private void ToggleRevealPass() => RevealPass = !RevealPass;
 
     /// <summary>از گامِ «تمام» به گامِ پمپ — برای عوض کردنِ نام یا لوکیشن.</summary>
     [RelayCommand]

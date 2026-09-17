@@ -146,16 +146,24 @@ public class InfraTests : IDisposable
     [Fact]
     public void JodaKardan_HichDastoorieDatabase_Nemizanad()
     {
-        var file = Path.Combine(_dir, "pump.db");
-        var dbf = new PumpDbFactory(file);
-        dbf.EnsureReady();
+        //  ⚠️ **چرا از روی سورس و نه با شمارندهٔ `DbWatch`**: آن شمارنده
+        //  مالِ کلِ فرآیند است و آزمون‌های موازیِ دیگر هم بالایش می‌برند —
+        //  یک بار همین‌جا سبزِ دروغ و بعد قرمزِ تصادفی داد. شاهدِ درست
+        //  خودِ بدنهٔ تابع است: جز `_settings`ِ در حافظه و ذخیرهٔ همان،
+        //  هیچ سرویس و هیچ دیتابیسی در کار نیست.
+        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
+            "..", "..", "..", "..", "PumpYaqobi.App", "Services"));
+        var src = File.ReadAllText(Path.Combine(root, "CloudLink.cs"));
+        var i = src.IndexOf("public async Task ForgetStationAsync()", StringComparison.Ordinal);
+        Assert.True(i > 0, "ForgetStationAsync پیدا نشد.");
+        var body = src[i..src.IndexOf("\n    }", i, StringComparison.Ordinal)];
 
-        var before = DbWatch.Count;
-        var s = new AppSettings { CloudDeviceToken = "pd", CloudStationId = "stn" };
-        new CloudLink(s, () => Task.CompletedTask).ForgetStationAsync().GetAwaiter().GetResult();
+        foreach (var forbidden in new[] { "Db", "Debtors", "db.", "SaveChanges", "Delete", "Remove" })
+            Assert.DoesNotContain(forbidden, body);
 
-        Assert.Equal(before, DbWatch.Count);
-        Assert.True(File.Exists(file), "فایلِ دفتر باید دست‌نخورده سرِ جایش باشد.");
+        //  و آن‌چه باید باشد: فقط تنظیمات، و ذخیره‌اش
+        Assert.Contains("_settings.CloudDeviceToken = \"\"", body);
+        Assert.Contains("SaveQuiet", body);
     }
 
     // ── ۴) حسابِ پمپِ دیگر، نشانیِ پمپِ دیگر را نمی‌نشاند ───────────────
@@ -167,11 +175,13 @@ public class InfraTests : IDisposable
         {
             CloudAccountToken = "acc",
             CloudDeviceToken = "pd_test",   // یعنی این نصب فعال شده
+            CloudStationId = "stn_ALEF",    // و روی همین پمپ قفل است
             StationCode = "pump1",
         };
         var link = new CloudLink(s, () => Task.CompletedTask);
+        //  حسابِ پمپِ دیگر — شناسهٔ ابریِ دیگری می‌دهد
         CloudLink.TestTransport = (req, _) => Task.FromResult(Json(HttpStatusCode.OK,
-            """{"home":{"url":"http://10.0.0.5:4700","readKey":"rk","station":"pump-digar"}}"""));
+            """{"station":{"id":"stn_BE"},"home":{"url":"http://10.0.0.5:4700","readKey":"rk","station":"pump-digar"}}"""));
 
         var (ok, url, readKey, _, why) = await link.HomeFromAccountAsync();
 
@@ -188,18 +198,21 @@ public class InfraTests : IDisposable
         {
             CloudAccountToken = "acc",
             CloudDeviceToken = "pd_test",
+            CloudStationId = "stn_ALEF",
             StationCode = "pump1",
         };
         var link = new CloudLink(s, () => Task.CompletedTask);
+        //  ⚠️ کدِ ابر («pump-cloud») با کدِ محلی («pump1») یکی نیست و این
+        //  اشکالی ندارد — سنجش روی شناسه است.
         CloudLink.TestTransport = (req, _) => Task.FromResult(Json(HttpStatusCode.OK,
-            """{"home":{"url":"http://10.0.0.5:4700","readKey":"rk","station":"pump1"}}"""));
+            """{"station":{"id":"stn_ALEF"},"home":{"url":"http://10.0.0.5:4700","readKey":"rk","station":"pump-cloud"}}"""));
 
         var (ok, url, readKey, station, _) = await link.HomeFromAccountAsync();
 
         Assert.True(ok);
         Assert.Equal("http://10.0.0.5:4700", url);
         Assert.Equal("rk", readKey);
-        Assert.Equal("pump1", station);
+        Assert.Equal("pump-cloud", station);
     }
 
     // ── ۵) «قفل بود، صبر کن» روی هر اتصال ─────────────────────────────
