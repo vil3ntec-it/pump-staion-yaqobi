@@ -374,9 +374,11 @@
                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                             Command="{Binding AccountStepCommand}" IsEnabled="{Binding !Busy}" />
 
-                    <Button Classes="link" Content="بعداً — فعلاً بی حساب ادامه می‌دهم"
-                            HorizontalAlignment="Center"
-                            Command="{Binding SkipAccountCommand}" IsEnabled="{Binding !Busy}" />
+                    <!-- ⛔ «بعداً — فعلاً بی حساب ادامه می‌دهم» برداشته شد
+                         (۱۴۰۵/۰۶/۳۰). دروغ می‌گفت: بی حساب ادامه نمی‌داد،
+                         فقط به گامِ کدِ پمپ می‌رفت و کاربر همچنان داخلِ همان
+                         دیوارِ ورود می‌ماند. راهِ واقعی «‹ برگشت به برنامه»ی
+                         بالای همین صفحه است. -->
                   </StackPanel>
 
                   <!-- ══════════ گامِ ۰: رمزم را فراموش کرده‌ام ══════════

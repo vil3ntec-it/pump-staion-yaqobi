@@ -557,4 +557,76 @@ public class AppLinksTests
         }
         finally { Entitlements.TestDeny = false; }
     }
+
+    // ── ۵) دکمه‌ای که دروغ می‌گفت ─────────────────────────────────────────
+
+    /// <summary>
+    /// ══ «بعداً — فعلاً بی حساب ادامه می‌دهم» برداشته شد ═════════════════════
+    ///
+    /// گزارشِ صاحب ریپو با عکس (۱۴۰۵/۰۶/۳۰): «این نباشه و کار نمی‌کنه.»
+    ///
+    /// ⛔ و درست می‌گفت — آن دکمه **دروغ می‌گفت**: نوشته‌اش «بی حساب ادامه
+    /// می‌دهم» بود ولی <c>LoginSkipped</c> را نمی‌گذاشت و فقط
+    /// <c>LoginStep = 3</c> می‌کرد، یعنی کاربر همچنان **داخلِ همان دیوارِ
+    /// ورود** می‌ماند، این بار روی گامِ کدِ پمپ.
+    ///
+    /// ⚠️ ولی قاعدهٔ «صفحهٔ ورود نباید دیوار شود» سرِ جایش است: راهِ واقعی
+    /// «‹ برگشت به برنامه» است و همان باید بماند.
+    /// </summary>
+    [Fact]
+    public void Dokmeye_BadanBiHesab_Bardashte_Shod_Va_BargashtBeBarname_Mimanad()
+    {
+        var xaml = Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml");
+        var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs");
+
+        //  ⚠️ روی خودِ **نشانه‌گذاری** می‌گردیم، نه روی توضیحات: نامِ دکمهٔ
+        //  برداشته‌شده در کامنتِ «این برداشته شد» هست و باید هم باشد —
+        //  همان قاعده‌ای که `ApkeSayteGhadim_…` هم دارد.
+        var markup = System.Text.RegularExpressions.Regex.Replace(
+            xaml, "<!--.*?-->", "", System.Text.RegularExpressions.RegexOptions.Singleline);
+
+        //  ⛔ نه دکمه‌اش، نه فرمانش
+        Assert.DoesNotContain("SkipAccountCommand", markup);
+        Assert.DoesNotContain("بی حساب ادامه می‌دهم", markup);
+        Assert.DoesNotContain("private void SkipAccount()", vm);
+
+        //  ⚠️ ولی راهِ واقعیِ بیرون رفتن سرِ جایش است
+        Assert.Contains("CloseLoginCommand", markup);
+        Assert.Contains("برگشت به برنامه", markup);
+        //  و «بعداً»ی گامِ پمپ هم می‌ماند — آن یکی واقعاً `LoginSkipped` می‌گذارد
+        Assert.Contains("SkipPumpCommand", markup);
+
+        //  ⭐ و «برگشت به برنامه» آن‌چه تایپ شده را گم نمی‌کند
+        var body = vm[vm.IndexOf("private Task CloseLoginAsync", StringComparison.Ordinal)..];
+        body = body[..body.IndexOf("});", StringComparison.Ordinal)];
+        Assert.Contains("f.LoginSkipped = true;", body);
+        Assert.Contains("f.CloudEmail = email;", body);
+        Assert.Contains("f.CloudName = name;", body);
+        //  ⛔ ولی رمز نه — حسابی ساخته نشده که رمزی داشته باشد
+        Assert.Contains("LoginPassword = \"\"; LoginPassword2 = \"\";", body);
+    }
+
+    /// <summary>
+    /// ⚠️ **کدِ خطای فنی زیرِ تیکِ شرایط نوشته نمی‌شود.** «سرور جواب نداد
+    /// (۴۰۴)» فقط کاربر را می‌ترساند؛ متنِ شرایط یک نوشتهٔ خواندنی است و
+    /// نبودنش هیچ چیزی از ثبت‌نام کم نمی‌کند.
+    /// </summary>
+    [Fact]
+    public void MatneSharayet_KodeKhataye_Fanni_Neshan_Nemidahad()
+    {
+        var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs");
+        Assert.DoesNotContain("\"متنِ شرایط از سرور نیامد — \" + why", vm);
+        Assert.Contains("متنِ شرایط فعلاً در دسترس نیست.", vm);
+    }
+
+    /// <summary>
+    /// ۴۲۹ («تلاشِ زیاد») همیشه پیامِ آدمیزاد می‌دهد، نه «سرور جواب نداد».
+    /// </summary>
+    [Fact]
+    public void ChaharSadBistONoh_Hamishe_Payame_Adamizad_Midahad()
+    {
+        var link = Read("PumpYaqobi.App", "Services", "CloudLink.cs");
+        Assert.Contains("if (status == 429)", link);
+        Assert.Contains("تلاشِ زیاد — چند دقیقه صبر کنید و دوباره بزنید", link);
+    }
 }

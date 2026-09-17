@@ -80,7 +80,7 @@ internal static class InputCharsProbe
         Type(win, email);
 
         Console.WriteLine("── کادرِ نامِ پمپ (گامِ دو)");
-        account.SkipAccountCommand.Execute(null);
+        account.BackToPumpCommand.Execute(null);
         for (var i = 0; i < 20; i++) Pump(win);
         var pump = Boxes(win).FirstOrDefault(b => b.Watermark == "نامِ پمپ");
         if (pump is not null) Type(win, pump);

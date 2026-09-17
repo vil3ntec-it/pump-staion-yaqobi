@@ -468,16 +468,29 @@ internal static class VerifyProbe
             Check("بی پذیرشِ شرایط، گام جلو نرفت",
                   account.LoginStatus.Contains("شرایط") && account.LoginStep == 1, account.LoginStatus);
 
-            //  ج) «بعداً» — بی‌اینترنت هم راه بسته نیست
+            //  ج) «‹ برگشت به برنامه» — تنها راهِ «بی حساب ادامه بده»، و
+            //     واقعاً کارش را می‌کند.
+            //
+            //  ⛔ دکمهٔ «بعداً — فعلاً بی حساب ادامه می‌دهم» از ۱۴۰۵/۰۶/۳۰
+            //  برداشته شد: **دروغ می‌گفت.** `LoginSkipped` نمی‌گذاشت و فقط
+            //  به گامِ کدِ پمپ می‌رفت، یعنی کاربر همچنان داخلِ همان دیوارِ
+            //  ورود می‌ماند. (گزارشِ صاحب ریپو با عکس: «این نباشه و کار
+            //  نمی‌کنه».)
             account.LoginName = "هارون یعقوبی";
-            account.SkipAccountCommand.Execute(null);
+            Wait(win, account.CloseLoginCommand.ExecuteAsync(null));
             for (var i = 0; i < 10; i++) Pump(win);
             var f1 = AppSettings.Load();
-            Check("«بعداً» به گامِ پمپ برد", account.StepPump, "گامِ " + account.LoginStep);
-            Check("نام و ایمیل ذخیره شدند", f1.CloudEmail == "test@gmail.com"
+            Check("⭐ «برگشت به برنامه» واقعاً از صفحهٔ ورود بیرون برد",
+                  account.StepDone && !account.ShowLoginPage, "گامِ " + account.LoginStep);
+            Check("و نشانِ «بی حساب ادامه بده» روی دیسک نشست", f1.LoginSkipped);
+            Check("⭐ و آن‌چه تایپ شده بود گم نشد", f1.CloudEmail == "test@gmail.com"
                   && f1.CloudName == "هارون یعقوبی", f1.CloudEmail + " · " + f1.CloudName);
             Check("⛔ و رمز هیچ‌جا نماند", account.LoginPassword.Length == 0
                   && account.LoginPassword2.Length == 0);
+
+            //  و حالا برگرد به گامِ پمپ تا بندِ بعدی سنجیده شود
+            account.BackToPumpCommand.Execute(null);
+            for (var i = 0; i < 10; i++) Pump(win);
 
             //  د) گامِ دو: نامِ پمپ و کد سنجیده می‌شوند
             account.LoginPump = "";

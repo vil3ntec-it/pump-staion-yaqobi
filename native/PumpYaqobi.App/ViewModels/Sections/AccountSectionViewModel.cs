@@ -777,7 +777,12 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         ShowTerms = !ShowTerms;
         if (!ShowTerms || TermsText.Length > 0) return;
         var (ok, text, why) = await Cloud.TermsAsync();
-        TermsText = ok ? text : "متنِ شرایط از سرور نیامد — " + why;
+        //  ⚠️ **کدِ خطای فنی به کاربر نشان داده نمی‌شود.** «سرور جواب نداد
+        //  (۴۰۴)» زیرِ تیکِ شرایط فقط کاربر را می‌ترساند؛ متنِ شرایط یک
+        //  نوشتهٔ خواندنی است، نه بخشی از کارِ ثبت‌نام (پذیرش را خودِ سرور
+        //  سرِ `register/complete` می‌سنجد). پس نبودنش یک جملهٔ آرام است.
+        TermsText = ok ? text : "متنِ شرایط فعلاً در دسترس نیست.";
+        _ = why;
     });
 
     /// <summary>نشانِ «بعداً» را برمی‌دارد، چون حالا حسابِ واقعی هست.</summary>
@@ -789,25 +794,17 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         f.Save();
     }
 
-    /// <summary>
-    /// «بعداً» — بی‌اینترنت یا بی حساب هم باید بتوان ادامه داد. نام و ایمیل
-    /// همان‌جا ذخیره می‌شوند؛ رمز نه (چون حسابی ساخته نشده).
-    /// </summary>
-    [RelayCommand]
-    private void SkipAccount()
-    {
-        var f = AppSettings.Load();
-        var email = (LoginEmail ?? "").Trim();
-        var name = (LoginName ?? "").Trim();
-        if (email.Length > 0 && email.Contains('@')) f.CloudEmail = email;
-        if (name.Length > 0) f.CloudName = name;
-        f.Save();
-
-        LoginPassword = ""; LoginPassword2 = "";
-        LoginStatus = "نام و ایمیل ذخیره شد — حساب روی سرور بعداً ساخته می‌شود.";
-        RefreshAll();
-        LoginStep = 3;
-    }
+    //  ⛔ **«بعداً — فعلاً بی حساب ادامه می‌دهم» برداشته شد** (۱۴۰۵/۰۶/۳۰).
+    //
+    //  گزارشِ صاحب ریپو با عکس: «این نباشه و کار نمی‌کنه.» و درست می‌گفت —
+    //  آن دکمه **دروغ می‌گفت**: نوشته‌اش «بی حساب ادامه می‌دهم» بود ولی
+    //  `LoginSkipped` را نمی‌گذاشت و فقط `LoginStep = 3` می‌کرد، یعنی کاربر
+    //  همچنان **داخلِ همان دیوارِ ورود** می‌ماند، این بار روی گامِ کدِ پمپ.
+    //
+    //  ⚠️ راهِ واقعیِ «بی حساب ادامه بده» همان **«‹ برگشت به برنامه»**ی بالای
+    //  صفحه است (`CloseLoginAsync`) که واقعاً `LoginSkipped` می‌گذارد و به
+    //  دفتر برمی‌گردد — و حالا آن‌چه کاربر تایپ کرده را هم نگه می‌دارد. پس
+    //  قاعدهٔ «صفحهٔ ورود نباید دیوار شود» سرِ جایش است؛ فقط دکمهٔ دروغ‌گو رفت.
 
     // ── گامِ ۲: پمپ ─────────────────────────────────────────────────────
 
@@ -889,8 +886,21 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     [RelayCommand]
     private Task CloseLoginAsync() => CrashGuard.RunAsync("برگشت از صفحهٔ ورود", async () =>
     {
+        //  ⚠️ آن‌چه کاربر تایپ کرده گم نمی‌شود — همان کاری که «بعداً»ی
+        //  برداشته‌شده می‌کرد، ولی این بار روی دکمه‌ای که واقعاً کارش را
+        //  می‌کند. رمز عمداً نه: حسابی ساخته نشده که رمزی داشته باشد.
         var f = AppSettings.Load();
-        if (!f.LoginSkipped) { f.LoginSkipped = true; f.Save(); }
+        var email = (LoginEmail ?? "").Trim();
+        var name = (LoginName ?? "").Trim();
+        if (email.Length > 0 && LoginRules.BadEmail(email) is null) f.CloudEmail = email;
+        if (name.Length > 0) f.CloudName = name;
+        f.LoginSkipped = true;
+        f.Save();
+
+        var pump = (LoginPump ?? "").Trim();
+        if (pump.Length > 0) _host.Settings.Set(SettingsService.StationName, pump);
+
+        LoginPassword = ""; LoginPassword2 = "";
         LoginStatus = "";
         RefreshAll();
         LoginStep = 4;
