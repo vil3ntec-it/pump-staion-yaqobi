@@ -1001,16 +1001,18 @@ public sealed class CloudLink
     {
         if (TooSoon("register/start", email) is { } wait) return CloudResult.No(wait, "too_soon");
 
-        var (ok, _, why, code) = await PostAsync("/api/auth/register/start", new
+        var res = await SendFull(Build(HttpMethod.Post, "/api/auth/register/start", new
         {
             name = (name ?? "").Trim(),
             email = (email ?? "").Trim(),
             password,
             passwordConfirm = password,
             app = "pump",
-        }, null, ct);
-        if (ok) MailSent("register/start", email);
-        return ok ? CloudResult.Done : CloudResult.No(why, code);
+        }, null), ct);
+        if (res.Ok) { MailSent("register/start", email); return CloudResult.Done; }
+        //  ⚠️ ۴۰۴ اینجا «سرور جواب نداد» نیست — پایینِ همین فایل، `NoRouteAsync`.
+        if (res.Status == 404) return await NoRouteAsync(ct);
+        return CloudResult.No(res.Why, res.Code);
     }
 
     /// <summary>پلهٔ دو — کدِ ایمیل. جوابش بلیتِ بیست‌دقیقه‌ای است.</summary>
@@ -1020,9 +1022,14 @@ public sealed class CloudLink
         var clean = new string((emailCode ?? "").Where(char.IsDigit).ToArray());
         if (clean.Length != 6) return CloudResult.No("کدِ ایمیل باید شش رقم باشد");
 
-        var (ok, json, why, code) = await PostAsync("/api/auth/register/verify",
-            new { email = (email ?? "").Trim(), code = clean, app = "pump" }, null, ct);
-        if (!ok) return CloudResult.No(why, code);
+        var res = await SendFull(Build(HttpMethod.Post, "/api/auth/register/verify",
+            new { email = (email ?? "").Trim(), code = clean, app = "pump" }, null), ct);
+        if (!res.Ok)
+        {
+            if (res.Status == 404) return await NoRouteAsync(ct);
+            return CloudResult.No(res.Why, res.Code);
+        }
+        var json = res.Json;
 
         _registerTicket = Str(json, "ticket");
         if (_registerTicket.Length == 0) return CloudResult.No("سرور بلیتِ ثبت‌نام نداد");
@@ -1044,7 +1051,7 @@ public sealed class CloudLink
         if (_registerTicket.Length == 0) return CloudResult.No("اول کدِ ایمیل را بزنید");
         if (!termsAccepted) return CloudResult.No("برای ساختنِ حساب باید شرایط را بپذیرید", "terms_required");
 
-        var (ok, json, why, code) = await PostAsync("/api/auth/register/complete", new
+        var res = await SendFull(Build(HttpMethod.Post, "/api/auth/register/complete", new
         {
             ticket = _registerTicket,
             name = (name ?? "").Trim(),
@@ -1052,11 +1059,15 @@ public sealed class CloudLink
             terms = new { accepted = true, version = _termsVersion },
             device = new { uid = DeviceUid, name = Environment.MachineName, platform = "windows" },
             app = "pump",
-        }, null, ct);
-        if (!ok) return CloudResult.No(why, code);
+        }, null), ct);
+        if (!res.Ok)
+        {
+            if (res.Status == 404) return await NoRouteAsync(ct);
+            return CloudResult.No(res.Why, res.Code);
+        }
 
         _registerTicket = "";      // بلیت خرج شد
-        return await SeatAsync(json);
+        return await SeatAsync(res.Json);
     }
 
     /// <summary>متنِ شرایط و ضوابط — همان چیزی که کاربر می‌پذیرد.</summary>
@@ -1097,14 +1108,60 @@ public sealed class CloudLink
             //  رشتهٔ «404» در متنِ فارسیِ خطا: سرورِ به‌روز برای مسیرِ نبوده
             //  پیامِ خودش را می‌دهد («این مسیر وجود ندارد») و آن گشتن دیگر
             //  نمی‌گرفت.
-            if (res.Status == 404)
-                return CloudResult.No(
-                    "سرورِ حساب این راه را ندارد — برنامه را به‌روز کنید یا «بعداً» را بزنید.",
-                    "no_route");
+            if (res.Status == 404) return await NoRouteAsync(ct);
             return CloudResult.No(res.Why, res.Code);
         }
 
         return await SeatAsync(res.Json);
+    }
+
+    // ── ۴۰۴ی که «سرور جواب نداد» نیست ────────────────────────────────────
+    //
+    //  ⛔ **پیامی که کاربر را گمراه می‌کرد** (با عکسِ صاحب ریپو، ۱۴۰۵/۰۷/۰۱):
+    //  زیرِ دکمهٔ «ساختنِ حساب و ادامه» نوشته می‌شد «سرور جواب نداد (404)» —
+    //  و کاربر درست می‌گفت که این پیام هیچ کاری دستش نمی‌دهد. دو حالِ
+    //  کاملاً جدا زیرِ آن یک جمله قایم شده بود، با دو کارِ جدا:
+    //
+    //      سرورِ حساب بالا است ولی این مسیر را ندارد ⇒ سرورِ حساب را به‌روز کن
+    //      خودِ سرورِ حساب جواب نمی‌دهد               ⇒ سرویس/دامنه/پروکسی
+    //
+    //  ⚠️ **و این از روی خودِ ۴۰۴ دیدنی نیست** — سنجیده شد، حدس نیست:
+    //  سرورِ نودِ ما برای مسیرِ نبوده همیشه **JSONِ فارسی** می‌دهد (زیرِ
+    //  `/api/auth` می‌شود ۴۰۱ «احراز هویت لازم است»، جای دیگر ۴۰۴ «این مسیر
+    //  وجود ندارد») — هر دو نسخهٔ کهنه (۲.۰.۰) و تازه محلی سنجیده شدند و هر
+    //  دو همین را دادند. پس ۴۰۴ِ **بی‌بدنه** یعنی درخواست به خودِ سرور
+    //  نرسیده و چیزی جلوی آن نشسته. تنها راهِ فهمیدنش پرسیدن از
+    //  `/api/health` است، که باز است و توکن نمی‌خواهد.
+    //
+    //  ⚠️ «برنامه را به‌روز کنید» پیامِ غلطی بود و برداشته شد: برنامه تازه
+    //  است و سرور کهنه، پس کاربر را دنبالِ نخودِ سیاه می‌فرستاد.
+    //  ⛔ و **نامِ میزبان در پیام نمی‌آید** — همان قاعدهٔ همیشه؛ فقط نسخه.
+
+    /// <summary>
+    /// حالِ سرورِ حساب: بالا است؟ چه نسخه‌ای؟ (بی توکن، پیش از ورود هم.)
+    /// </summary>
+    public static async Task<(bool Up, string Version)> CloudHealthAsync(CancellationToken ct = default)
+    {
+        var r = await SendFull(Build(HttpMethod.Get, "/api/health", null, null), ct);
+        return r.Ok ? (true, Str(r.Json, "version")) : (false, "");
+    }
+
+    /// <summary>
+    /// ۴۰۴ی که از یک مسیرِ حساب آمد ⇒ همان جمله‌ای که کاربر با آن می‌داند
+    /// چه کار کند.
+    /// </summary>
+    private static async Task<CloudResult> NoRouteAsync(CancellationToken ct)
+    {
+        var (up, ver) = await CloudHealthAsync(ct);
+        if (!up)
+            return CloudResult.No(
+                "به سرورِ حساب نرسیدیم — سرور بالا نیست یا درخواست به آن نمی‌رسد.",
+                "no_server");
+
+        var v = ver.Length > 0 ? $" (نسخهٔ {ver})" : "";
+        return CloudResult.No(
+            $"سرورِ حساب{v} این مسیر را ندارد — سرورِ حساب را به‌روز کنید.",
+            "no_route");
     }
 
     // ── رمزِ فراموش‌شده ─────────────────────────────────────────────────
@@ -1129,10 +1186,11 @@ public sealed class CloudLink
         if (clean.Length == 0) return CloudResult.No("ایمیل را بنویسید");
         if (TooSoon("password/forgot", clean) is { } wait) return CloudResult.No(wait, "too_soon");
 
-        var (ok, _, why, code) = await PostAsync("/api/auth/password/forgot",
-            new { email = clean, app = "pump" }, null, ct);
-        if (ok) MailSent("password/forgot", clean);
-        return ok ? CloudResult.Done : CloudResult.No(why, code);
+        var res = await SendFull(Build(HttpMethod.Post, "/api/auth/password/forgot",
+            new { email = clean, app = "pump" }, null), ct);
+        if (res.Ok) { MailSent("password/forgot", clean); return CloudResult.Done; }
+        if (res.Status == 404) return await NoRouteAsync(ct);
+        return CloudResult.No(res.Why, res.Code);
     }
 
     /// <summary>
@@ -1149,17 +1207,21 @@ public sealed class CloudLink
         var clean = new string((emailCode ?? "").Where(char.IsDigit).ToArray());
         if (clean.Length != 6) return CloudResult.No("کدِ ایمیل باید شش رقم باشد");
 
-        var (ok, json, why, code) = await PostAsync("/api/auth/password/reset", new
+        var res = await SendFull(Build(HttpMethod.Post, "/api/auth/password/reset", new
         {
             email = (email ?? "").Trim(),
             code = clean,
             password = newPassword,
             device = new { uid = DeviceUid, name = Environment.MachineName, platform = "windows" },
             app = "pump",
-        }, null, ct);
-        if (!ok) return CloudResult.No(why, code);
+        }, null), ct);
+        if (!res.Ok)
+        {
+            if (res.Status == 404) return await NoRouteAsync(ct);
+            return CloudResult.No(res.Why, res.Code);
+        }
 
-        return await SeatAsync(json);
+        return await SeatAsync(res.Json);
     }
 
     // ── نشستِ تازه، و ۴۰۱ ────────────────────────────────────────────────

@@ -626,8 +626,10 @@ public class CloudSessionTests : IDisposable
     [Fact]
     public async Task Masire_Naboode_NoRoute_Midahad_NeKe_RamzeGhalat()
     {
-        Serve((_, _) => Json(HttpStatusCode.NotFound,
-            """{"error":{"code":"not_found","message":"این مسیر وجود ندارد"}}"""));
+        Serve((path, _) => path == "/api/health"
+            ? Json(HttpStatusCode.OK, """{"ok":true,"version":"2.5.5"}""")
+            : Json(HttpStatusCode.NotFound,
+                """{"error":{"code":"not_found","message":"این مسیر وجود ندارد"}}"""));
 
         var (link, _) = Link();
         var res = await link.SignInWithPasswordAsync("a@b.com", "ramz-1234");
@@ -635,6 +637,93 @@ public class CloudSessionTests : IDisposable
         Assert.False(res.Ok);
         Assert.Equal("no_route", res.Code);
         Assert.DoesNotContain("رمز", res.Why);
+    }
+
+    // ── ۵ب) ۴۰۴ی که «سرور جواب نداد» نیست ───────────────────────────────
+    //
+    //  ⛔ گزارشِ صاحب ریپو با عکس (۱۴۰۵/۰۷/۰۱): زیرِ «ساختنِ حساب و ادامه»
+    //  نوشته می‌شد «سرور جواب نداد (404)». آن پیام هم **غلط** بود (سرور
+    //  جواب داده بود) و هم **بی‌فایده** (نمی‌گفت چه کار کند). حالا برنامه
+    //  خودش از `/api/health` می‌پرسد و همان دو حالِ واقعی را از هم جدا
+    //  می‌کند.
+
+    /// <summary>
+    /// سرورِ حساب بالا است ولی مسیرِ ثبت‌نام را ندارد ⇒ «سرور را به‌روز کنید»،
+    /// با نسخهٔ خودش. ⛔ نه «سرور جواب نداد» و نه «برنامه را به‌روز کنید».
+    /// </summary>
+    [Fact]
+    public async Task SabteNam_404_MigooyadSarvareHesabRaBeRuzKonid()
+    {
+        Serve((path, _) => path == "/api/health"
+            ? Json(HttpStatusCode.OK, """{"ok":true,"version":"2.4.0"}""")
+            : new HttpResponseMessage(HttpStatusCode.NotFound)
+              { Content = new StringContent("<html>404</html>", System.Text.Encoding.UTF8, "text/html") });
+
+        var (link, _) = Link();
+        var res = await link.RegisterStartAsync("haroon", "a@b.com", "ramz-1234");
+
+        Assert.False(res.Ok);
+        Assert.Equal("no_route", res.Code);
+        Assert.DoesNotContain("سرور جواب نداد", res.Why);
+        Assert.Contains("به‌روز", res.Why);
+        Assert.Contains("2.4.0", res.Why);                 // نسخهٔ واقعیِ سرور
+        Assert.Contains("/api/health", _hits);             // واقعاً پرسید
+    }
+
+    /// <summary>
+    /// همان ۴۰۴، ولی خودِ سرور هم جواب نمی‌دهد ⇒ جملهٔ دیگری لازم است:
+    /// این‌جا به‌روزرسانیِ سرور کاری نمی‌کند، سرویس/دامنه مشکل دارد.
+    /// </summary>
+    [Fact]
+    public async Task SabteNam_404_Va_HealthKhamush_MigooyadNaresidim()
+    {
+        Serve((_, _) => new HttpResponseMessage(HttpStatusCode.NotFound)
+            { Content = new StringContent("<html>404</html>", System.Text.Encoding.UTF8, "text/html") });
+
+        var (link, _) = Link();
+        var res = await link.RegisterStartAsync("haroon", "a@b.com", "ramz-1234");
+
+        Assert.False(res.Ok);
+        Assert.Equal("no_server", res.Code);
+        Assert.DoesNotContain("سرور جواب نداد", res.Why);
+        Assert.DoesNotContain("به‌روز", res.Why);
+    }
+
+    /// <summary>
+    /// ⚠️ پیامِ ۴۰۴ هیچ نام یا نشانیِ میزبانی نمی‌برد — همان قاعدهٔ همیشه.
+    /// </summary>
+    [Fact]
+    public async Task Payame_404_NameMizban_RaNemibarad()
+    {
+        Serve((path, _) => path == "/api/health"
+            ? Json(HttpStatusCode.OK, """{"ok":true,"version":"2.5.5"}""")
+            : Json(HttpStatusCode.NotFound, "{}"));
+
+        var (link, _) = Link();
+        var res = await link.RegisterStartAsync("haroon", "a@b.com", "ramz-1234");
+
+        Assert.False(res.Ok);
+        Assert.DoesNotContain("vill3n", res.Why);
+        Assert.DoesNotContain("http", res.Why);
+    }
+
+    /// <summary>
+    /// ⛔ و ۴۰۴ِ مسیرهای دیگرِ حساب هم همین‌طور — نه فقط ثبت‌نام. رمزِ
+    /// فراموش‌شده هم روی سرورِ کهنه همین حال را داشت.
+    /// </summary>
+    [Fact]
+    public async Task RamzeFaramushShode_404_HamanJomleRaMidahad()
+    {
+        Serve((path, _) => path == "/api/health"
+            ? Json(HttpStatusCode.OK, """{"ok":true,"version":"2.5.5"}""")
+            : Json(HttpStatusCode.NotFound, "{}"));
+
+        var (link, _) = Link();
+        var res = await link.ForgotPasswordAsync("a@b.com");
+
+        Assert.False(res.Ok);
+        Assert.Equal("no_route", res.Code);
+        Assert.DoesNotContain("سرور جواب نداد", res.Why);
     }
 
     // ── ۶) بی نشست، هیچ درخواستی نمی‌رود ─────────────────────────────────
