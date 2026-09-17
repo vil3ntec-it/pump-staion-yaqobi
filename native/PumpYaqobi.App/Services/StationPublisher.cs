@@ -51,6 +51,26 @@ public sealed class StationPublisher : IAsyncDisposable
     /// </summary>
     public static readonly TimeSpan LinkTick = TimeSpan.FromSeconds(5);
 
+    /// <summary>
+    /// هر چند وقت یک‌بار خودِ برنامه سراغِ <b>ابر</b> برود — جدا از سرورِ
+    /// خانگی و جدا از انتشار.
+    ///
+    /// <para>
+    /// ⛔ <b>باگی که «چرا وصل نمی‌شود» را می‌ساخت</b> (۱۴۰۵/۰۷/۰۱): تا امروز
+    /// هیچ‌جای برنامه خودش به ابر وصل نمی‌شد. هر تماسِ ابری پشتِ
+    /// <c>CloudDeviceToken</c> بود و آن توکن فقط وقتی می‌آمد که کاربر
+    /// <b>صفحهٔ پروفایل را باز کند</b>. یعنی نصبی که حساب داشت ولی پروفایل
+    /// را باز نکرده بود، تا ابد بند نمی‌شد: نه اشتراکش می‌آمد، نه مجوزش، و
+    /// نه هیچ خبری از ابر می‌گرفت — و برنامه هم هیچ نمی‌گفت.
+    /// </para>
+    ///
+    /// <para>
+    /// ⚠️ شصت ثانیه، نه پنج: برخلافِ تیکِ سرورِ خانگی، این یکی واقعاً
+    /// اینترنت می‌زند و <c>/api/pump/me</c> را می‌خواند.
+    /// </para>
+    /// </summary>
+    public static readonly TimeSpan CloudTick = TimeSpan.FromSeconds(60);
+
     /// <summary>عکسِ زنده، داخلِ پوشهٔ اختصاصیِ همین پمپ.</summary>
     public const string LivePath = "live";
 
@@ -424,6 +444,8 @@ public sealed class StationPublisher : IAsyncDisposable
         // درست وقتی می‌رفت که کاربر تازه رمز زده و منتظرِ صفحهٔ اول بود.
         try { await Task.Delay(FirstDelay, ct); } catch { return; }
         var lastPublish = DateTime.MinValue;
+        //  ⚠️ `MinValue` یعنی همان دورِ اول می‌رود — «در جا وصل شود».
+        var lastCloud = DateTime.MinValue;
         while (!ct.IsCancellationRequested)
         {
             //  ۱) اتصال — هر پنج ثانیه، بی هیچ هزینه‌ای (وصل باشیم، همین
@@ -442,9 +464,53 @@ public sealed class StationPublisher : IAsyncDisposable
                 catch { /* سرورِ خاموش خطا نیست */ }
             }
 
+            //  ۳) ابر — خودش، بی این‌که کاربر صفحه‌ای را باز کند.
+            if (DateTime.UtcNow - lastCloud >= CloudTick)
+            {
+                lastCloud = DateTime.UtcNow;
+                try { await CloudKeepAsync(ct); }
+                catch (OperationCanceledException) { return; }
+                catch { /* بی‌اینترنت خطا نیست */ }
+            }
+
             try { await Task.Delay(LinkTick, ct); }
             catch { return; }
         }
+    }
+
+    /// <summary>
+    /// وصل شدن به ابر — خودکار، و بی هیچ ادعای دروغ.
+    ///
+    /// <para>
+    /// دو حالت، و هر دو یک درخواستِ <b>واقعی</b> می‌زنند:
+    /// </para>
+    /// <list type="bullet">
+    ///   <item>توکنِ حساب داریم ⇒ <see cref="CloudLink.HomeFromAccountAsync"/>:
+    ///     نشست را تازه می‌کند، دستگاه را (اگر نبند بود) خودش بند می‌کند،
+    ///     اشتراک و مجوز را می‌آورد و نشانیِ سرورِ خانگی را هم می‌گیرد.</item>
+    ///   <item>حساب نداریم ⇒ فقط <see cref="CloudLink.CloudHealthAsync"/>، تا
+    ///     دستِ‌کم بدانیم ابر بالا است یا نه. این بی توکن است و هیچ دری را
+    ///     باز نمی‌کند.</item>
+    /// </list>
+    ///
+    /// <para>
+    /// ⚠️ خروجی‌اش دور ریخته می‌شود و هیچ استثنایی بیرون نمی‌دهد: چراغِ ابر
+    /// از <see cref="CloudLink.Reach"/> حرف می‌زند که خودِ
+    /// <c>SendFull</c> پرش می‌کند — یعنی از جوابِ واقعیِ سرور، نه از این‌که
+    /// این تابع صدا زده شده باشد.
+    /// </para>
+    /// </summary>
+    private static async Task CloudKeepAsync(CancellationToken ct)
+    {
+        var file = AppSettings.Load();
+        if (!string.IsNullOrWhiteSpace(file.CloudAccountToken))
+        {
+            var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
+            await cloud.HomeFromAccountAsync(ct);
+            return;
+        }
+
+        await CloudLink.CloudHealthAsync(ct);
     }
 
     /// <summary>

@@ -353,6 +353,68 @@ public sealed partial class MainViewModel : ObservableObject
         if (why != ServerDotReason) ServerDotReason = why;
     }
 
+    // ══ ● چراغِ دوم: ابر ═══════════════════════════════════════════════════
+    //
+    //  گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۱): «ببین برنامه‌ها چرا به سرور وصل
+    //  نمی‌شوند… و هیچ کلکِ دروغی نباشد که بگوید وصل است.»
+    //
+    //  ⚠️ **دو سرور داریم و یکی نیستند.** چراغِ اول مالِ سرورِ **خانگی** است
+    //  (دفتر و دادهٔ زنده، در شبکهٔ خودِ پمپ). این یکی مالِ **ابر** است
+    //  (حساب و اشتراک). تا امروز فقط اولی چراغ داشت، پس کاربر یک سبز
+    //  می‌دید و گمان می‌کرد همه‌چیز وصل است — در حالی که ممکن بود برنامه
+    //  هیچ‌وقت به ابر نرسیده باشد.
+    //
+    //  ⛔ **سبز فقط با جوابِ واقعی.** این‌جا هیچ تصمیمی گرفته نمی‌شود؛ فقط
+    //  `CloudLink.Reach` خوانده می‌شود که خودش از `SendFull` پر می‌شود.
+    //  «هنوز نپرسیده‌ایم» خاکستری است، نه سبز.
+    //  ⛔ و هیچ نام و نشانیِ سروری نوشته نمی‌شود — همان قاعدهٔ چراغِ اول.
+
+    [ObservableProperty] private string _cloudDotBrushKey = "Pump.Muted";
+    [ObservableProperty] private string _cloudDotReason = "هنوز با سرورِ حساب تماس نگرفته‌ایم";
+
+    public void TickCloudDot()
+    {
+        string key, why;
+        switch (Services.CloudLink.Reach)
+        {
+            case Services.CloudReach.Online:
+                key = "Pump.Ok";
+                why = "به سرورِ حساب وصل است"
+                    + (Services.CloudLink.CloudOkAt is { } at ? $" · آخرین جواب: {at:HH:mm}" : "");
+                break;
+
+            case Services.CloudReach.Offline:
+                key = "Pump.Danger";
+                var seen = Services.CloudLink.CloudOkAt is { } ok ? $" · آخرین جوابِ درست: {ok:HH:mm}" : "";
+                var reason = Services.CloudLink.CloudWhy.Length > 0
+                    ? " — " + Services.CloudLink.CloudWhy : "";
+                why = "به سرورِ حساب نمی‌رسیم" + reason + seen
+                    + " · هر دقیقه خودش دوباره می‌گردد؛ برای بررسیِ همین حالا کلیک کنید";
+                break;
+
+            default:
+                key = "Pump.Muted";
+                why = "هنوز با سرورِ حساب تماس نگرفته‌ایم — برای بررسیِ همین حالا کلیک کنید";
+                break;
+        }
+        if (key != CloudDotBrushKey) CloudDotBrushKey = key;
+        if (why != CloudDotReason) CloudDotReason = why;
+    }
+
+    /// <summary>کلیکِ چراغِ ابر — همین حالا یک درخواستِ واقعی می‌زند.</summary>
+    [RelayCommand]
+    private async Task CheckCloudAsync()
+    {
+        AppHost.Current.Toast("در حالِ تماس با سرورِ حساب…", ToastKind.Info);
+        var (up, ver) = await Services.CloudLink.CloudHealthAsync();
+        TickCloudDot();
+        var v = ver.Length > 0 ? $" (نسخهٔ {ver})" : "";
+        AppHost.Current.Toast(
+            up ? "✅ سرورِ حساب جواب داد" + v
+               : "❌ به سرورِ حساب نرسیدیم — اینترنت و بالا بودنِ سرور را ببینید",
+            up ? ToastKind.Ok : ToastKind.Error);
+    }
+
     /// <summary>
     /// کلیکِ روی چراغ — «همین حالا بررسی کن».
     ///

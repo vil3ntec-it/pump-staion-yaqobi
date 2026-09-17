@@ -69,6 +69,24 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         ShowPump();
     }
 
+    /// <summary>
+    /// حالِ واقعیِ نشست — از <see cref="CloudLink.Reach"/> که فقط با جوابِ
+    /// خودِ سرور پر می‌شود.
+    ///
+    /// ⚠️ «نرسیدیم» کاربر را از حسابش بیرون نمی‌اندازد و توکن را هم پاک
+    /// نمی‌کند — فقط راستش را می‌گوید. بیرون انداختنِ کاربر با یک قطعیِ
+    /// اینترنت، خودش باگِ بزرگ‌تری است.
+    /// </summary>
+    private static string CloudNote() => CloudLink.Reach switch
+    {
+        CloudReach.Online => CloudLink.CloudOkAt is { } at
+            ? $"✅ سرورِ حساب تایید کرد · آخرین تماس: {at:HH:mm}"
+            : "✅ سرورِ حساب تایید کرد",
+        CloudReach.Offline => "⚠️ نشستِ شما روی این کامپیوتر هست، ولی به سرورِ حساب نمی‌رسیم"
+            + (CloudLink.CloudOkAt is { } ok ? $" — آخرین تاییدِ واقعی: {ok:HH:mm}" : " و هنوز هیچ تاییدی نگرفته‌ایم"),
+        _ => "⏳ هنوز با سرورِ حساب تماس نگرفته‌ایم — خودش تا یک دقیقهٔ دیگر می‌پرسد",
+    };
+
     private void UpdatePill()
     {
         VipActive = SubActive;
@@ -135,7 +153,15 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         var source = AccountName.Trim().Length > 0 ? AccountName.Trim() : AccountEmail.Trim();
         Initial = source.Length > 0 ? source[..1].ToUpperInvariant() : "؟";
 
-        AccountStatus = SignedIn ? "" : "برای گرفتنِ اشتراک و وصل شدنِ خودکار، حساب بسازید یا وارد شوید.";
+        //  ⛔ **«وارد شده‌اید» از روی فایلِ روی دیسک گفته نمی‌شود.**
+        //  `SignedIn` فقط یعنی «توکنی روی این کامپیوتر هست» — نه این‌که ابر
+        //  آن را پذیرفته باشد. تا دیروز همین‌جا یک رشتهٔ خالی می‌نشست و
+        //  صفحه با اطمینان می‌گفت وارد شده‌اید، حتی اگر برنامه **هیچ‌وقت**
+        //  با ابر حرف نزده بود. (خواستهٔ ۱۴۰۵/۰۷/۰۱: «هیچ کلکِ دروغی نباشد
+        //  که بگوید وصل است.»)
+        AccountStatus = SignedIn
+            ? CloudNote()
+            : "برای گرفتنِ اشتراک و وصل شدنِ خودکار، حساب بسازید یا وارد شوید.";
         UpdatePill();
     }
 
