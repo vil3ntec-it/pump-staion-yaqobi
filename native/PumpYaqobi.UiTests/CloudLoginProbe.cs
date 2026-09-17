@@ -297,6 +297,12 @@ internal static class CloudLoginProbe
                 "{\"station\":{\"id\":\"stn-1\",\"code\":\"yaqobi\",\"name\":\"پمپ یعقوبی\"},\"role\":\"owner\","
                 + "\"home\":{\"url\":\"http://192.168.1.50:4701\",\"readKey\":\"read-key\",\"station\":\"yaqobi\"}}"),
 
+            //  ⚠️ سرورِ واقعی این را دارد و باز است؛ برنامه سرِ هر ۴۰۴ی از
+            //  مسیرهای حساب از همین می‌پرسد تا بفهمد «سرور کهنه است» یا
+            //  «درخواست به سرور نمی‌رسد» (`CloudLink.NoRouteAsync`).
+            "/api/health" => Json(HttpStatusCode.OK,
+                """{"ok":true,"server":"online","database":"connected","version":"2.5.5"}"""),
+
             _ => Json(HttpStatusCode.NotFound, """{"error":{"message":"مسیر نیست","code":"no_route"}}"""),
         };
     }
