@@ -137,7 +137,7 @@ public class AppLinksTests
     /// تاییدِ آن از سرور و اسمِ پمپ و لوکیشنِ پمپ. همین و بعد هم تمام.»
     /// </summary>
     [Fact]
-    public void SabtName_DoGam_Ast_VaRamzHamDarad()
+    public void SabtName_SeGam_Ast_VaKodeEmail_Darad()
     {
         var xaml = Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml");
 
@@ -165,10 +165,24 @@ public class AppLinksTests
         //  پکنه‌ای نباشد، نه از گوگل و نه غیره»)
         Assert.DoesNotContain("SignInCommand", xaml);
 
+        //  ⚠️ گامِ «کدِ ایمیل» — سرور حسابِ بی تأییدِ ایمیل نمی‌سازد
+        Assert.Contains("Binding EmailCode", xaml);
+        Assert.Contains("VerifyEmailCommand", xaml);
+        Assert.Contains("ResendEmailCodeCommand", xaml);
+        //  و پذیرشِ شرایط، که خودِ سرور اجباری‌اش کرده
+        Assert.Contains("Binding AcceptTerms", xaml);
+        Assert.Contains("LoadTermsCommand", xaml);
+
         var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs");
-        //  حساب از راهِ ایمیل و رمزِ ابر ساخته می‌شود
-        Assert.Contains("Cloud.RegisterAsync(name, email, pass)", vm);
+        //  حساب از راهِ سه‌پلهٔ خودِ سرور ساخته می‌شود
+        Assert.Contains("Cloud.RegisterStartAsync(name, email, pass)", vm);
+        Assert.Contains("Cloud.RegisterVerifyAsync((LoginEmail ?? \"\").Trim(), code)", vm);
+        Assert.Contains("Cloud.RegisterCompleteAsync((LoginName ?? \"\").Trim(), pass, AcceptTerms)", vm);
         Assert.Contains("Cloud.SignInWithPasswordAsync(email, pass)", vm);
+        //  چهار گام: حساب · کدِ ایمیل · پمپ · تمام
+        Assert.Contains("public bool StepEmailCode => LoginStep == 2;", vm);
+        Assert.Contains("public bool StepPump => LoginStep == 3;", vm);
+        Assert.Contains("public bool StepDone => LoginStep == 4;", vm);
         //  کد همان کدِ اشتراک است و نام و لوکیشنِ پمپ همراهش می‌روند
         Assert.Contains("Cloud.RedeemAsync(code, pump, where)", vm);
         Assert.Contains("SettingsService.StationName, pump", vm);
@@ -187,14 +201,16 @@ public class AppLinksTests
         Assert.DoesNotContain("CloudPassword", vm);
         Assert.DoesNotContain("f.Password", vm);
         //  و در هر دو مسیر پاک می‌شود
-        Assert.Equal(2, vm.Split("LoginPassword = \"\"; LoginPassword2 = \"\";").Length - 1);
+        //  سه جا رمز را از حافظهٔ صفحه پاک می‌کند: ورود، تاییدِ کدِ ایمیل،
+        //  و «بعداً». (پلهٔ یکِ ثبت‌نام عمداً پاکش نمی‌کند، چون پلهٔ سوم
+        //  همان رمز را می‌خواهد.)
+        Assert.Equal(3, vm.Split("LoginPassword = \"\"; LoginPassword2 = \"\";").Length - 1);
 
         var settings = Read("PumpYaqobi.App", "Services", "AppSettings.cs");
         Assert.DoesNotContain("Password", settings);
 
         var link = Read("PumpYaqobi.App", "Services", "CloudLink.cs");
         //  رمز فقط در بدنهٔ همان دو درخواست است
-        Assert.Contains("\"/api/auth/register\"", link);
         Assert.Contains("\"/api/auth/login\"", link);
         Assert.DoesNotContain("_settings.CloudPassword", link);
         //  و اگر سرور این راه را نداشت، «رمز غلط» نمی‌گوید
@@ -269,8 +285,13 @@ public class AppLinksTests
         Assert.DoesNotContain("private Task SignInAsync()", vm);
         Assert.DoesNotContain("GoogleSignIn.RunAsync", vm);
 
-        //  فرم **بعد از** عکس نیست، بغلش است: دو ستونِ یک قابِ صریح
-        Assert.Contains("<Grid Width=\"980\" Height=\"536\" ColumnDefinitions=\"*,430\">", xaml);
+        //  ⚠️ صفحهٔ ورود **تمامِ صفحه** است، نه یک کارتِ کوچک (خواستهٔ
+        //  ۱۴۰۵/۰۶/۲۹: «کلِ صفحه را بگیرد… این‌جوری کوچک نباشد»)؛ فرم بغلِ
+        //  عکس است، با پهنای صریحِ خودش.
+        Assert.Contains("<Grid ColumnDefinitions=\"*,440\">", xaml);
+        Assert.DoesNotContain("Grid Width=\"980\"", xaml);
+        //  و راهِ برگشت برای کسی که نمی‌خواهد ثبت‌نام کند
+        Assert.Contains("CloseLoginCommand", xaml);
     }
 
     /// <summary>
@@ -283,7 +304,7 @@ public class AppLinksTests
     public void SafheyeVorud_Olaviat_Darad_Va_TamameSafhe_Ast()
     {
         var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs");
-        Assert.Contains("public bool ShowLoginPage => LoginStep < 3;", vm);
+        Assert.Contains("public bool ShowLoginPage => LoginStep < 4;", vm);
         Assert.Contains("public bool ShowProfilePage => !ShowLoginPage;", vm);
         //  «بعداً»ی گامِ دو هم هست، وگرنه صفحهٔ ورود یک دیوار می‌شد
         Assert.Contains("private void SkipPump()", vm);
@@ -298,6 +319,45 @@ public class AppLinksTests
         //  ⚠️ هر دو داخلِ یک ‎Panel‎ اند و با ‎IsVisible‎ جا عوض می‌کنند، پس
         //  هیچ‌کدام کارِ دیگری را انجام نمی‌دهد.
         Assert.Contains("<Panel>", xaml);
+    }
+
+    /// <summary>
+    /// ⚠️ **«تمام صفحه» یعنی فقط همین صفحه — نه سربرگ، نه نوارِ جمله‌ها، نه
+    /// نوارِ بخش‌ها.** جملهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۹): «تمام صفحه منظورم
+    /// فقط همین را نشان بده در صفحه، نه بخش‌ها باشند نه غیره.»
+    ///
+    /// دو چیز این را می‌سازند و هر دو این‌جا قفل‌اند:
+    /// ۱) صفحهٔ ورود **بیرونِ** <c>SectionPage</c> است، پس نه سربرگِ بخش دارد
+    ///    نه کارتِ بخش؛
+    /// ۲) <c>IsPageOpen</c> با خودِ <c>ShowLoginPage</c> یکی می‌شود، و پوستهٔ
+    ///    پنجره از همان می‌فهمد که پنهان شود
+    ///    (<c>MainViewModel.IsChromeVisible</c>).
+    /// </summary>
+    [Fact]
+    public void SafheyeVorud_TamameSafhe_Ast_VaPostePanjere_PenhanMishavad()
+    {
+        var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs");
+        //  دو جا: یکی با عوض شدنِ گام، یکی صریح در ‎ShowLogin‎ (گامِ یک
+        //  مقدارِ پیش‌فرض است و خبری نمی‌دهد)
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(vm, @"IsPageOpen = ShowLoginPage;").Count);
+
+        var main = Read("PumpYaqobi.App", "ViewModels", "MainViewModel.cs");
+        Assert.Contains("IsChromeVisible => Content?.IsPageOpen != true", main);
+
+        var xaml = Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml");
+        //  ریشهٔ فایل ‎Panel‎ است، و ‎SectionPage‎ فقط دورِ خودِ پروفایل
+        var root = xaml.IndexOf("<Panel>", System.StringComparison.Ordinal);
+        var section = xaml.IndexOf("<c:SectionPage", System.StringComparison.Ordinal);
+        var login = xaml.IndexOf("Name=\"LoginPage\"", System.StringComparison.Ordinal);
+        Assert.True(root > 0 && login > root, "صفحهٔ ورود باید داخلِ همان ‎Panel‎ی ریشه باشد.");
+        Assert.True(section > login, "‎SectionPage‎ باید **پس از** صفحهٔ ورود و فقط دورِ پروفایل باشد.");
+        Assert.Contains("<c:SectionPage Header=\"پروفایل\" IsVisible=\"{Binding ShowProfilePage}\">", xaml);
+
+        //  و بلندی از خودِ پنجره می‌آید (صفحه‌ها داخلِ ‎StackPanel‎اند و
+        //  بلندیِ خودکار دارند)، بی هیچ شنوندهٔ ‎LayoutUpdated‎ی
+        var code = Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml.cs");
+        Assert.Contains("TopLevel.ClientSizeProperty", code);
+        Assert.DoesNotContain("LayoutUpdated", code);
     }
 
     /// <summary>

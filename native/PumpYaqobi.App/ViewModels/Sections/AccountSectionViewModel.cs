@@ -542,7 +542,13 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     //  نمی‌خواهم.» تنها راهِ حساب همان ایمیل و رمزِ خودمان است، و «بعداً» که
     //  بی‌اینترنت هم کار کند.
 
-    /// <summary>گامِ جاری: ۱ حساب · ۲ پمپ · ۳ تمام.</summary>
+    /// <summary>
+    /// گامِ جاری: ۱ حساب · ۲ کدِ ایمیل · ۳ پمپ · ۴ تمام.
+    ///
+    /// ⚠️ گامِ «کدِ ایمیل» از ۱۴۰۵/۰۶/۲۹ اضافه شد: سرور حسابِ بی تأییدِ
+    /// ایمیل نمی‌سازد (`verification_required`) و راهِ درستش سه‌پله است.
+    /// «حساب دارم» این گام را ندارد و از ۱ به ۳ می‌رود.
+    /// </summary>
     [ObservableProperty] private int _loginStep = 1;
 
     /// <summary>روی «حساب می‌سازم» هستیم یا «حساب دارم».</summary>
@@ -553,6 +559,17 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     [ObservableProperty] private string _loginPassword = "";
     [ObservableProperty] private string _loginPassword2 = "";
     [ObservableProperty] private string _loginCode = "";
+
+    /// <summary>کدِ شش‌رقمی که به **ایمیل** آمد — با کدِ اشتراک یکی نیست.</summary>
+    [ObservableProperty] private string _emailCode = "";
+
+    /// <summary>شرایط و ضوابط را پذیرفته‌ام — خودِ سرور اجباری‌اش کرده.</summary>
+    [ObservableProperty] private bool _acceptTerms;
+
+    /// <summary>متنِ شرایط، وقتی کاربر خواست ببیندش.</summary>
+    [ObservableProperty] private string _termsText = "";
+
+    [ObservableProperty] private bool _showTerms;
     [ObservableProperty] private string _loginPump = "";
     [ObservableProperty] private string _loginLocation = "";
     [ObservableProperty] private string _loginStatus = "";
@@ -566,14 +583,15 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     /// حساب ندارند؛ و برای کسانی که دارند، پروفایل همان مشخصات را نشان
     /// بدهد.» گامِ سه یعنی «تمام» ⇒ از آن پس خودِ پروفایل دیده می‌شود.
     /// </summary>
-    public bool ShowLoginPage => LoginStep < 3;
+    public bool ShowLoginPage => LoginStep < 4;
 
     /// <summary>وارونهٔ بالا — خودِ پروفایل.</summary>
     public bool ShowProfilePage => !ShowLoginPage;
 
     public bool StepAccount => LoginStep == 1;
-    public bool StepPump => LoginStep == 2;
-    public bool StepDone => LoginStep == 3;
+    public bool StepEmailCode => LoginStep == 2;
+    public bool StepPump => LoginStep == 3;
+    public bool StepDone => LoginStep == 4;
 
     /// <summary>نوشتهٔ دکمهٔ گامِ اول — با راهِ انتخاب‌شده عوض می‌شود.</summary>
     public string AccountButtonText => IsSignUp ? "ساختنِ حساب و ادامه" : "ورود و ادامه";
@@ -588,10 +606,17 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     partial void OnLoginStepChanged(int v)
     {
         OnPropertyChanged(nameof(StepAccount));
+        OnPropertyChanged(nameof(StepEmailCode));
         OnPropertyChanged(nameof(StepPump));
         OnPropertyChanged(nameof(StepDone));
         OnPropertyChanged(nameof(ShowLoginPage));
         OnPropertyChanged(nameof(ShowProfilePage));
+
+        // ⚠️ «فقط همین را نشان بده، نه بخش‌ها باشند نه غیره» — سربرگ، نوارِ
+        // جمله‌ها و نوارِ بخش‌های خودِ پنجره با همین یک نشان پنهان می‌شوند
+        // (`MainViewModel.IsChromeVisible`). همان راهی که صفحهٔ حسابِ قرض‌دار
+        // و صفحهٔ شرکت از پارسال می‌روند — قاعدهٔ تازه‌ای ساخته نشد.
+        IsPageOpen = ShowLoginPage;
     }
 
     [RelayCommand]
@@ -615,11 +640,16 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         //  ⚠️ «تمام» یعنی یا واقعاً همه‌چیز هست، یا کاربر خودش گفته «بعداً»
         //  (`AppSettings.LoginSkipped`) — وگرنه صفحهٔ ورود می‌شد یک دیوار
         //  جلوی دفترِ خودش، و آن خلافِ قاعدهٔ «دفتر گروگان نیست» بود.
-        LoginStep = SignedIn && activated && hasPump ? 3
-                  : f.LoginSkipped ? 3
-                  : !SignedIn ? 1 : 2;
+        LoginStep = SignedIn && activated && hasPump ? 4
+                  : f.LoginSkipped ? 4
+                  : !SignedIn ? 1 : 3;
         //  کسی که حساب دارد، پیش‌فرضش «ورود» است نه «ثبت‌نام»
         if (SignedIn || f.CloudEmail.Length > 0) IsSignUp = !SignedIn && f.CloudEmail.Length == 0;
+
+        //  ⚠️ صریح، نه فقط از راهِ `OnLoginStepChanged`: گامِ یک مقدارِ
+        //  پیش‌فرضِ خودِ فیلد است، پس وقتی صفحهٔ ورود همان گامِ یک بماند هیچ
+        //  خبری نمی‌آید و پوستهٔ پنجره پنهان نمی‌شد.
+        IsPageOpen = ShowLoginPage;
     }
 
     // ── گامِ ۱: حساب ────────────────────────────────────────────────────
@@ -640,29 +670,115 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         if (email.Length == 0 || !email.Contains('@') || email.EndsWith("@"))
         { LoginStatus = "❌ ایمیل درست نیست."; return; }
         if (IsSignUp && name.Length < 2) { LoginStatus = "❌ نامتان را بنویسید."; return; }
-        if (pass.Length < 6) { LoginStatus = "❌ رمز دستِ‌کم شش نویسه باشد."; return; }
+        //  ⚠️ هشت نویسه، همان قاعدهٔ خودِ سرور (`password.checkStrength`) —
+        //  وگرنه کاربر رمزِ شش‌نویسه‌ای می‌زد و سرور ردش می‌کرد.
+        if (pass.Length < 8) { LoginStatus = "❌ رمز دستِ‌کم هشت نویسه باشد."; return; }
         if (IsSignUp && pass != pass2) { LoginStatus = "❌ دو رمز یکی نیستند."; return; }
+        if (IsSignUp && !AcceptTerms) { LoginStatus = "❌ شرایط و ضوابط را بپذیرید."; return; }
 
         Busy = true;
-        LoginStatus = IsSignUp ? "در حالِ ساختنِ حساب روی سرور…" : "در حالِ ورود…";
+        LoginStatus = IsSignUp ? "در حالِ فرستادنِ کد به ایمیل…" : "در حالِ ورود…";
         try
         {
-            var res = IsSignUp
-                ? await Cloud.RegisterAsync(name, email, pass)
-                : await Cloud.SignInWithPasswordAsync(email, pass);
+            if (IsSignUp)
+            {
+                //  پلهٔ یک: کد به ایمیل می‌رود و حسابی ساخته **نمی‌شود**.
+                var start = await Cloud.RegisterStartAsync(name, email, pass);
+                if (!start.Ok) { LoginStatus = "❌ " + start.Why; return; }
 
+                //  ⚠️ رمز این‌جا پاک نمی‌شود: پلهٔ سوم خودش رمز را می‌خواهد.
+                //  فقط روی دیسک نمی‌نشیند — همان قاعدهٔ همیشه.
+                EmailCode = "";
+                LoginStatus = "✅ کدِ شش‌رقمی به " + email + " فرستاده شد.";
+                RefreshAll();
+                LoginStep = 2;
+                return;
+            }
+
+            var res = await Cloud.SignInWithPasswordAsync(email, pass);
             if (!res.Ok) { LoginStatus = "❌ " + res.Why; return; }
 
             //  ⚠️ رمز از حافظهٔ صفحه هم می‌رود
             LoginPassword = ""; LoginPassword2 = "";
-            var f = AppSettings.Load();
-            if (f.LoginSkipped) { f.LoginSkipped = false; f.Save(); }
+            ClearSkipped();
             LoginStatus = "";
             RefreshAll();
-            LoginStep = 2;
+            LoginStep = 3;
         }
         finally { Busy = false; }
     });
+
+    // ── گامِ ۲: کدِ ایمیل ────────────────────────────────────────────────
+
+    /// <summary>
+    /// کدی که به ایمیل آمد ⇒ بلیتِ ثبت‌نام ⇒ حساب و نشست.
+    ///
+    /// ⚠️ دو پلهٔ سرور (`verify` و `complete`) این‌جا یکی دیده می‌شوند، چون
+    /// از دیدِ کاربر یک کار است: «کد را زدم، حسابم ساخته شد».
+    /// </summary>
+    [RelayCommand]
+    private Task VerifyEmailAsync() => CrashGuard.RunAsync("تاییدِ کدِ ایمیل", async () =>
+    {
+        var code = new string((EmailCode ?? "").Where(char.IsDigit).ToArray());
+        var pass = LoginPassword ?? "";
+        if (code.Length != 6) { LoginStatus = "❌ کدِ ایمیل باید شش رقم باشد."; return; }
+        if (pass.Length < 8) { LoginStatus = "❌ رمز گم شد — از گامِ حساب دوباره شروع کنید."; return; }
+
+        Busy = true;
+        LoginStatus = "در حالِ تاییدِ کد…";
+        try
+        {
+            var ver = await Cloud.RegisterVerifyAsync((LoginEmail ?? "").Trim(), code);
+            if (!ver.Ok) { LoginStatus = "❌ " + ver.Why; return; }
+
+            var done = await Cloud.RegisterCompleteAsync((LoginName ?? "").Trim(), pass, AcceptTerms);
+            if (!done.Ok) { LoginStatus = "❌ " + done.Why; return; }
+
+            //  ⚠️ حساب ساخته شد؛ از این‌جا به بعد رمز هیچ‌جا لازم نیست
+            LoginPassword = ""; LoginPassword2 = ""; EmailCode = "";
+            ClearSkipped();
+            LoginStatus = "";
+            RefreshAll();
+            LoginStep = 3;
+        }
+        finally { Busy = false; }
+    });
+
+    /// <summary>کد نرسید — دوباره بفرست (همان پلهٔ یک).</summary>
+    [RelayCommand]
+    private Task ResendEmailCodeAsync() => CrashGuard.RunAsync("فرستادنِ دوبارهٔ کد", async () =>
+    {
+        var email = (LoginEmail ?? "").Trim();
+        var pass = LoginPassword ?? "";
+        if (pass.Length < 8) { LoginStatus = "❌ از گامِ حساب دوباره شروع کنید."; return; }
+
+        Busy = true;
+        try
+        {
+            var again = await Cloud.RegisterStartAsync((LoginName ?? "").Trim(), email, pass);
+            LoginStatus = again.Ok ? "✅ کد دوباره فرستاده شد." : "❌ " + again.Why;
+        }
+        finally { Busy = false; }
+    });
+
+    /// <summary>متنِ شرایط و ضوابط را از سرور بگیر و نشان بده.</summary>
+    [RelayCommand]
+    private Task LoadTermsAsync() => CrashGuard.RunAsync("شرایط و ضوابط", async () =>
+    {
+        ShowTerms = !ShowTerms;
+        if (!ShowTerms || TermsText.Length > 0) return;
+        var (ok, text, why) = await Cloud.TermsAsync();
+        TermsText = ok ? text : "متنِ شرایط از سرور نیامد — " + why;
+    });
+
+    /// <summary>نشانِ «بعداً» را برمی‌دارد، چون حالا حسابِ واقعی هست.</summary>
+    private static void ClearSkipped()
+    {
+        var f = AppSettings.Load();
+        if (!f.LoginSkipped) return;
+        f.LoginSkipped = false;
+        f.Save();
+    }
 
     /// <summary>
     /// «بعداً» — بی‌اینترنت یا بی حساب هم باید بتوان ادامه داد. نام و ایمیل
@@ -681,7 +797,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         LoginPassword = ""; LoginPassword2 = "";
         LoginStatus = "نام و ایمیل ذخیره شد — حساب روی سرور بعداً ساخته می‌شود.";
         RefreshAll();
-        LoginStep = 2;
+        LoginStep = 3;
     }
 
     // ── گامِ ۲: پمپ ─────────────────────────────────────────────────────
@@ -722,7 +838,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
             LoginCode = "";
             LoginStatus = "";
             RefreshAll();
-            LoginStep = 3;
+            LoginStep = 4;
         }
         finally { Busy = false; }
     });
@@ -745,12 +861,32 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
 
         LoginStatus = "";
         RefreshAll();
-        LoginStep = 3;
+        LoginStep = 4;
     }
 
     /// <summary>از خودِ پروفایل برگرد به صفحهٔ ورود (عوض کردنِ حساب یا پمپ).</summary>
     [RelayCommand]
     private void OpenAccountPage() { LoginStatus = ""; LoginStep = 1; }
+
+    /// <summary>
+    /// «برگشت» — کسی که نمی‌خواهد حساب بسازد برمی‌گردد سرِ دفترِ خودش.
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۹): «یک برگشت هم داشته باشد که پس
+    /// برود اگر کسی نخواست ثبت‌نام کند.»
+    ///
+    /// ⚠️ نشانِ «بعداً» هم گذاشته می‌شود، وگرنه دفعهٔ بعد همین صفحه دوباره
+    /// جلویش سبز می‌شد و «برگشت» معنی نداشت.
+    /// </summary>
+    [RelayCommand]
+    private Task CloseLoginAsync() => CrashGuard.RunAsync("برگشت از صفحهٔ ورود", async () =>
+    {
+        var f = AppSettings.Load();
+        if (!f.LoginSkipped) { f.LoginSkipped = true; f.Save(); }
+        LoginStatus = "";
+        RefreshAll();
+        LoginStep = 4;
+        if (_host.GoHome is { } home) await home();
+    });
 
     /// <summary>برگشت به گامِ حساب — برای عوض کردنِ حساب یا رمز.</summary>
     [RelayCommand]
@@ -758,7 +894,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
 
     /// <summary>از گامِ «تمام» به گامِ پمپ — برای عوض کردنِ نام یا لوکیشن.</summary>
     [RelayCommand]
-    private void BackToPump() { LoginStatus = ""; LoginStep = 2; }
+    private void BackToPump() { LoginStatus = ""; LoginStep = 3; }
 
     // ── عکسِ کنارِ فرم — همان آدمک‌های عکسِ مرجع ─────────────────────────
     //

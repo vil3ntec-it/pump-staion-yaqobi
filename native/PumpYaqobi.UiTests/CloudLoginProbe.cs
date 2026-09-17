@@ -49,6 +49,12 @@ internal static class CloudLoginProbe
     /// <summary>رمزی که ابرِ ساختگی درست می‌داند — هر چیزِ دیگری «غلط» است.</summary>
     private const string RightPass = "ramz-1234";
 
+    /// <summary>کدی که «به ایمیل رفته» — سنجه همان را می‌زند.</summary>
+    private const string EmailCode = "424242";
+
+    /// <summary>پس از ساختنِ حساب، همان ایمیل دوباره ثبت نمی‌شود.</summary>
+    private static bool _emailTaken;
+
     private static readonly List<string> Seen = new();
     private static string _lastBody = "";
     private static string _serverKey = "";      // کلیدی که ابر می‌دهد (برای سنجشِ جعل)
@@ -82,6 +88,24 @@ internal static class CloudLoginProbe
             feat = new[] { Entitlements.Kar, Entitlements.QrLive, Entitlements.CloudBackup },
             core = Array.Empty<string>(),
         });
+    }
+
+    private static string StartOk() =>
+        "{\"ok\":true,\"step\":\"verify\",\"email\":\"haroon@gmail.com\",\"devCode\":\"" + EmailCode + "\"}";
+
+    /// <summary>پلهٔ سه — بی بلیت و بی پذیرشِ شرایط، حسابی ساخته نمی‌شود.</summary>
+    private static HttpResponseMessage Complete()
+    {
+        if (!_lastBody.Contains("tkt-1"))
+            return Json(HttpStatusCode.Unauthorized,
+                """{"error":{"message":"مهلت ثبت‌نام تمام شد","code":"register_ticket_invalid"}}""");
+        if (!_lastBody.Contains("\"accepted\":true"))
+            return Json(HttpStatusCode.BadRequest,
+                """{"error":{"message":"برای ساختن حساب باید شرایط و ضوابط را بپذیرید","code":"terms_required"}}""");
+        _emailTaken = true;
+        return Json(HttpStatusCode.Created,
+            "{\"created\":true,\"accessToken\":\"acct-token\",\"refreshToken\":\"acct-refresh\","
+            + "\"user\":{\"email\":\"haroon@gmail.com\",\"name\":\"هارون یعقوبی\"}}");
     }
 
     private static HttpResponseMessage Json(HttpStatusCode code, string body) =>
@@ -119,13 +143,36 @@ internal static class CloudLoginProbe
         }
         catch { }
 
-        const string acct = """{"token":"acct-token","refreshToken":"acct-refresh","user":{"email":"haroon@gmail.com","name":"هارون یعقوبی"}}""";
+        //  ⚠️ **همان شکلی که سرورِ واقعی می‌دهد**: نشست در `accessToken`
+        //  است، نه `token` — با آزمونِ خودِ سرور دیده شد
+        //  (`shop/server/test/pump-account.test.js`). اگر این‌جا `token`
+        //  بگذاریم، سنجه سبزِ دروغ می‌دهد و باگِ کاربر پیدا نمی‌شود.
+        const string acct = """{"accessToken":"acct-token","refreshToken":"acct-refresh","user":{"email":"haroon@gmail.com","name":"هارون یعقوبی"}}""";
         var ent = "\"entitlement\":{\"source\":\"subscription\",\"features\":[\"kar\",\"qrlive\",\"cloudbackup\"],"
                   + "\"subscription\":{\"plan\":\"VIP\",\"daysLeft\":42,\"endsAt\":0}}";
 
         return path switch
         {
-            "/api/auth/register" or "/api/auth/login" => Json(HttpStatusCode.OK, acct),
+            //  ⛔ درِ یک‌مرحله‌ای عمداً بسته است — همان جوابِ سرورِ واقعی
+            "/api/auth/register" => Json(HttpStatusCode.Forbidden,
+                """{"error":{"message":"ثبت‌نام بدونِ تأییدِ ایمیل ممکن نیست — برنامه را به‌روز کنید","code":"verification_required"}}"""),
+
+            //  راهِ سه‌پله
+            "/api/auth/register/start" => _emailTaken
+                ? Json(HttpStatusCode.Conflict,
+                    """{"error":{"message":"این ایمیل از قبل ثبت شده است","code":"already_registered"}}""")
+                : Json(HttpStatusCode.Created, StartOk()),
+            "/api/auth/register/verify" => _lastBody.Contains("\"code\":\"" + EmailCode + "\"")
+                ? Json(HttpStatusCode.OK,
+                    """{"ok":true,"step":"location","ticket":"tkt-1","terms":{"version":"1","title":"شرایط","sections":[{"title":"یک","body":"متنِ یک"}]}}""")
+                : Json(HttpStatusCode.BadRequest,
+                    """{"error":{"message":"کد درست نیست","code":"otp_bad"}}"""),
+            "/api/auth/register/complete" => Complete(),
+
+            "/api/auth/terms" => Json(HttpStatusCode.OK,
+                """{"version":"1","title":"شرایط و ضوابط","sections":[{"title":"یک","body":"متنِ یک"}]}"""),
+
+            "/api/auth/login" => Json(HttpStatusCode.OK, acct),
 
             "/api/pump/device/activate" => Json(HttpStatusCode.OK,
                 "{\"deviceToken\":\"dev-token\",\"publicKey\":\"" + (_serverKey.Length > 0 ? _serverKey : PublicKey)
@@ -159,6 +206,7 @@ internal static class CloudLoginProbe
     {
         //  ابرِ ساختگی، پیش از هر کاری
         CloudLink.TestTransport = Cloud;
+        _emailTaken = false;
 
         //  دفترِ پاک و حسابِ پاک — وگرنه «فعال‌شده»ی اجرای قبلی همه را دروغ می‌کند
         var f = AppSettings.Load();
@@ -189,18 +237,48 @@ internal static class CloudLoginProbe
         Check("صفحهٔ ورود اولویت دارد", account.ShowLoginPage && !account.ShowProfilePage);
         Check("گامِ اول، گامِ حساب است", account.StepAccount, "گامِ " + account.LoginStep);
 
-        Console.WriteLine("── ۲) «حساب می‌سازم» — ثبت‌نام واقعاً روی سرور");
+        Console.WriteLine("── ۲) «حساب می‌سازم» — سه پله، همان‌طور که سرور می‌خواهد");
         account.SetSignUpCommand.Execute("yes");
         account.LoginName = "هارون یعقوبی";
         account.LoginEmail = "haroon@gmail.com";
         account.LoginPassword = RightPass;
         account.LoginPassword2 = RightPass;
+
+        //  ⚠️ بی پذیرشِ شرایط، هیچ درخواستی هم نمی‌رود — سرور خودش
+        //  `terms_required` می‌دهد، ولی نباید کار به سرور بکشد.
+        account.AcceptTerms = false;
+        Wait(win, account.AccountStepCommand.ExecuteAsync(null));
+        for (var i = 0; i < 10; i++) Pump(win);
+        Check("بی پذیرشِ شرایط، گام جلو نرفت", account.StepAccount
+              && account.LoginStatus.Contains("شرایط"), account.LoginStatus);
+        Check("و هیچ درخواستی هم به سرور نرفت", !Seen.Contains("POST /api/auth/register/start"));
+
+        account.AcceptTerms = true;
         Wait(win, account.AccountStepCommand.ExecuteAsync(null));
         for (var i = 0; i < 20; i++) Pump(win);
-        var f1 = AppSettings.Load();
-        Check("درخواستِ ثبت‌نام به همان مسیرِ ابر رفت", Seen.Contains("POST /api/auth/register"),
+        Check("⛔ درِ یک‌مرحله‌ای زده نشد (بسته است)", !Seen.Contains("POST /api/auth/register"),
               string.Join(" · ", Seen));
-        Check("رمز فقط در بدنهٔ همان درخواست رفت", _lastBody.Contains(RightPass) || Seen.Count > 0);
+        Check("پلهٔ یک رفت و کد به ایمیل فرستاده شد",
+              Seen.Contains("POST /api/auth/register/start") && account.StepEmailCode,
+              "گامِ " + account.LoginStep + " · " + account.LoginStatus);
+        Check("رمز در بدنهٔ همان درخواست رفت", _lastBody.Contains(RightPass));
+        Check("⛔ ولی روی دیسک نماند", !File.ReadAllText(SettingsPath()).Contains(RightPass));
+        Check("⛔ و هیچ توکنی هنوز ساخته نشده", AppSettings.Load().CloudAccountToken.Length == 0);
+
+        //  کدِ غلط حساب نمی‌سازد
+        account.EmailCode = "111111";
+        Wait(win, account.VerifyEmailCommand.ExecuteAsync(null));
+        for (var i = 0; i < 20; i++) Pump(win);
+        Check("کدِ ایمیلِ غلط رد شد و در همان گام ماند",
+              account.StepEmailCode && AppSettings.Load().CloudAccountToken.Length == 0,
+              account.LoginStatus);
+
+        account.EmailCode = EmailCode;
+        Wait(win, account.VerifyEmailCommand.ExecuteAsync(null));
+        for (var i = 0; i < 20; i++) Pump(win);
+        var f1 = AppSettings.Load();
+        Check("پلهٔ دو و سه رفتند", Seen.Contains("POST /api/auth/register/verify")
+              && Seen.Contains("POST /api/auth/register/complete"), string.Join(" · ", Seen));
         Check("توکنِ حساب نشست ⇒ حساب ساخته شد", f1.CloudAccountToken == "acct-token", f1.CloudAccountToken);
         Check("نام و ایمیلِ حساب از خودِ سرور آمدند",
               f1.CloudName == "هارون یعقوبی" && f1.CloudEmail == "haroon@gmail.com",
@@ -227,6 +305,9 @@ internal static class CloudLoginProbe
         for (var i = 0; i < 20; i++) Pump(win);
         Check("با رمزِ درست وارد شد", Seen.Contains("POST /api/auth/login") && account.StepPump,
               "گامِ " + account.LoginStep);
+        Check("⚠️ و نشست از فیلدِ accessToken خوانده شد (نه token)",
+              AppSettings.Load().CloudAccountToken == "acct-token",
+              AppSettings.Load().CloudAccountToken);
 
         Console.WriteLine("── ۴) کدِ شش‌رقمیِ غلط — هیچ چیزی فعال نمی‌شود");
         account.LoginPump = "پمپ یعقوبی";

@@ -169,6 +169,14 @@ public sealed class AppHost
     /// </summary>
     public Func<string, Task>? OpenHistory { get; set; }
 
+    /// <summary>
+    /// «برگرد به صفحهٔ اول» — همان کاری که دکمهٔ برگشتِ صفحهٔ ورود می‌کند.
+    ///
+    /// ویومدلِ اصلی آن را می‌نشاند؛ بخش‌ها فقط صدایش می‌زنند. کسی که
+    /// نمی‌خواهد حساب بسازد باید بتواند برگردد سرِ دفترِ خودش.
+    /// </summary>
+    public Func<Task>? GoHome { get; set; }
+
     /// <summary>قرض‌های کهنه — «چند روز است هیچ ردیفی ندارد».</summary>
     public AgingService Aging { get; }
 

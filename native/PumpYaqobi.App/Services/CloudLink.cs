@@ -505,15 +505,31 @@ public sealed class CloudLink
             "/api/auth/google", new { idToken, app = "pump" }, null, ct);
         if (!ok) return CloudResult.No(why, code);
 
-        var token = Str(json, "token");
+        return await SeatAsync(json);
+    }
+
+    /// <summary>
+    /// نشستی که سرور داد را می‌نشاند.
+    ///
+    /// ⚠️ **سرور `accessToken` می‌دهد، نه `token`** — و برنامه تا امروز فقط
+    /// دنبالِ `token` بود، پس هر ورودِ **موفقی** را «سرور نشست نداد»
+    /// می‌خواند. با آزمونِ واقعیِ سرور دیده شد
+    /// (`shop/server/test/pump-account.test.js`). هر دو نام خوانده می‌شوند
+    /// تا نسخهٔ قدیمیِ سرور هم کار کند.
+    /// </summary>
+    private async Task<CloudResult> SeatAsync(JsonElement json)
+    {
+        var token = Str(json, "accessToken");
+        if (token.Length == 0) token = Str(json, "token");
         if (token.Length == 0) return CloudResult.No("سرور نشست نداد");
 
         _settings.CloudAccountToken = token;
-        _settings.CloudRefreshToken = Str(json, "refreshToken");
+        var refresh = Str(json, "refreshToken");
+        if (refresh.Length > 0) _settings.CloudRefreshToken = refresh;
         if (json.TryGetProperty("user", out var u) && u.ValueKind == JsonValueKind.Object)
         {
-            _settings.CloudEmail = Str(u, "email");
-            _settings.CloudName  = Str(u, "name");
+            var em = Str(u, "email"); if (em.Length > 0) _settings.CloudEmail = em;
+            var nm = Str(u, "name");  if (nm.Length > 0) _settings.CloudName = nm;
         }
         await SaveQuiet();
         return CloudResult.Done;
@@ -533,12 +549,113 @@ public sealed class CloudLink
     //  ⚠️ پاسخِ سرور **همان شکلِ راهِ گوگل** است (`{token, refreshToken,
     //  user{email,name}}`) تا هیچ جای دیگرِ برنامه فرق نفهمد.
 
-    /// <summary>ساختنِ حسابِ تازه با نام و ایمیل و رمز.</summary>
-    public Task<CloudResult> RegisterAsync(string name, string email, string password,
-                                           CancellationToken ct = default) =>
-        AuthAsync("/api/auth/register",
-                  new { name = (name ?? "").Trim(), email = (email ?? "").Trim(), password, app = "pump" },
-                  ct);
+    // ── ثبت‌نام سه‌پله‌ای: نام و ایمیل و رمز ⇒ کدِ ایمیل ⇒ حساب ─────────
+    //
+    //  گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۹): «می‌خواهم با ایمیل خودم حسابی بسازم،
+    //  نمی‌شود.»
+    //
+    //  ⛔ **درِ یک‌مرحله‌ایِ `/api/auth/register` عمداً بسته است** و
+    //  `verification_required` می‌دهد: حساب بی تأییدِ ایمیل ساخته نمی‌شود.
+    //  همین را با آزمونِ واقعیِ سرور دیدیم، نه با حدس
+    //  (`shop/server/test/pump-account.test.js`). پس راهِ درست سه‌پله است:
+    //
+    //      ۱) /register/start     نام · ایمیل · رمز · تکرارِ رمز ⇒ کد به ایمیل
+    //      ۲) /register/verify    کدِ شش‌رقمیِ ایمیل ⇒ «بلیتِ ثبت‌نام»
+    //      ۳) /register/complete  بلیت + پذیرشِ شرایط ⇒ حساب و نشست
+    //
+    //  ⚠️ **بلیت و رمز هیچ‌وقت روی دیسک نمی‌نشینند** — بلیت در حافظهٔ همین
+    //  شیء است و رمز را ویومدل در همان صفحه نگه می‌دارد و بعد پاکش می‌کند.
+
+    /// <summary>بلیتِ ثبت‌نام — فقط در حافظه، تا پلهٔ سوم.</summary>
+    private string _registerTicket = "";
+
+    /// <summary>نسخهٔ شرایطی که همراهِ بلیت آمد — همان را برمی‌گردانیم.</summary>
+    private string _termsVersion = "";
+
+    /// <summary>پلهٔ دوم را رفته‌ایم و بلیت داریم؟</summary>
+    public bool HasRegisterTicket => _registerTicket.Length > 0;
+
+    /// <summary>پلهٔ یک — کد به ایمیل فرستاده می‌شود. حسابی ساخته نمی‌شود.</summary>
+    public async Task<CloudResult> RegisterStartAsync(string name, string email, string password,
+                                                      CancellationToken ct = default)
+    {
+        var (ok, _, why, code) = await PostAsync("/api/auth/register/start", new
+        {
+            name = (name ?? "").Trim(),
+            email = (email ?? "").Trim(),
+            password,
+            passwordConfirm = password,
+            app = "pump",
+        }, null, ct);
+        return ok ? CloudResult.Done : CloudResult.No(why, code);
+    }
+
+    /// <summary>پلهٔ دو — کدِ ایمیل. جوابش بلیتِ بیست‌دقیقه‌ای است.</summary>
+    public async Task<CloudResult> RegisterVerifyAsync(string email, string emailCode,
+                                                       CancellationToken ct = default)
+    {
+        var clean = new string((emailCode ?? "").Where(char.IsDigit).ToArray());
+        if (clean.Length != 6) return CloudResult.No("کدِ ایمیل باید شش رقم باشد");
+
+        var (ok, json, why, code) = await PostAsync("/api/auth/register/verify",
+            new { email = (email ?? "").Trim(), code = clean, app = "pump" }, null, ct);
+        if (!ok) return CloudResult.No(why, code);
+
+        _registerTicket = Str(json, "ticket");
+        if (_registerTicket.Length == 0) return CloudResult.No("سرور بلیتِ ثبت‌نام نداد");
+        if (json.TryGetProperty("terms", out var t) && t.ValueKind == JsonValueKind.Object)
+            _termsVersion = Str(t, "version");
+        return CloudResult.Done;
+    }
+
+    /// <summary>
+    /// پلهٔ سه — حساب ساخته می‌شود و نشست می‌آید.
+    ///
+    /// ⚠️ پذیرشِ شرایط **اجباریِ خودِ سرور** است (`terms_required`)، پس
+    /// برنامه باید واقعاً از کاربر پرسیده باشد.
+    /// </summary>
+    public async Task<CloudResult> RegisterCompleteAsync(string name, string password,
+                                                         bool termsAccepted,
+                                                         CancellationToken ct = default)
+    {
+        if (_registerTicket.Length == 0) return CloudResult.No("اول کدِ ایمیل را بزنید");
+        if (!termsAccepted) return CloudResult.No("برای ساختنِ حساب باید شرایط را بپذیرید", "terms_required");
+
+        var (ok, json, why, code) = await PostAsync("/api/auth/register/complete", new
+        {
+            ticket = _registerTicket,
+            name = (name ?? "").Trim(),
+            password,
+            terms = new { accepted = true, version = _termsVersion },
+            device = new { uid = DeviceUid, name = Environment.MachineName, platform = "windows" },
+            app = "pump",
+        }, null, ct);
+        if (!ok) return CloudResult.No(why, code);
+
+        _registerTicket = "";      // بلیت خرج شد
+        return await SeatAsync(json);
+    }
+
+    /// <summary>متنِ شرایط و ضوابط — همان چیزی که کاربر می‌پذیرد.</summary>
+    public async Task<(bool Ok, string Text, string Why)> TermsAsync(CancellationToken ct = default)
+    {
+        var (ok, json, why, _) = await GetAsync("/api/auth/terms", null, ct);
+        if (!ok) return (false, "", why);
+
+        var sb = new System.Text.StringBuilder();
+        var title = Str(json, "title");
+        if (title.Length > 0) sb.AppendLine(title).AppendLine();
+        if (json.TryGetProperty("sections", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            foreach (var sec in arr.EnumerateArray())
+            {
+                var st = Str(sec, "title");
+                var sb2 = Str(sec, "body");
+                if (st.Length > 0) sb.AppendLine("• " + st);
+                if (sb2.Length > 0) sb.AppendLine(sb2).AppendLine();
+            }
+        var text = sb.ToString().Trim();
+        return (text.Length > 0, text, text.Length > 0 ? "" : "متنِ شرایط نیامد");
+    }
 
     /// <summary>ورود به حسابی که از قبل ساخته شده.</summary>
     public Task<CloudResult> SignInWithPasswordAsync(string email, string password,
@@ -552,27 +669,15 @@ public sealed class CloudLink
         var (ok, json, why, code) = await PostAsync(path, body, null, ct);
         if (!ok)
         {
-            //  ⚠️ صادق باش: اگر سرورِ ابر این راه را هنوز ندارد، «رمز غلط»
-            //  نگو. کاربر باید بداند که باید با گوگل وارد شود.
+            //  ⚠️ صادق باش: اگر سرورِ ابر این راه را نداشت، «رمز غلط» نگو.
             if (code == "404" || why.Contains("404"))
                 return CloudResult.No(
-                    "سرورِ حساب هنوز ورود با ایمیل و رمز را ندارد — فعلاً «ورود با گوگل» را بزنید.",
+                    "سرورِ حساب این راه را ندارد — برنامه را به‌روز کنید یا «بعداً» را بزنید.",
                     "no_route");
             return CloudResult.No(why, code);
         }
 
-        var token = Str(json, "token");
-        if (token.Length == 0) return CloudResult.No("سرور نشست نداد");
-
-        _settings.CloudAccountToken = token;
-        _settings.CloudRefreshToken = Str(json, "refreshToken");
-        if (json.TryGetProperty("user", out var u) && u.ValueKind == JsonValueKind.Object)
-        {
-            var em = Str(u, "email"); if (em.Length > 0) _settings.CloudEmail = em;
-            var nm = Str(u, "name");  if (nm.Length > 0) _settings.CloudName = nm;
-        }
-        await SaveQuiet();
-        return CloudResult.Done;
+        return await SeatAsync(json);
     }
 
     /// <summary>خروج از حساب — توکن‌ها پاک می‌شوند، دفترِ روی کامپیوتر نه.</summary>

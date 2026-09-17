@@ -438,28 +438,38 @@ internal static class VerifyProbe
             account.LoginPassword = "123";
             account.LoginPassword2 = "123";
             Wait(win, account.AccountStepCommand.ExecuteAsync(null));
-            Check("رمزِ کوتاه رد شد", account.LoginStatus.Contains("شش نویسه") && account.LoginStep == 1,
+            //  ⚠️ هشت نویسه — همان قاعدهٔ خودِ سرور، وگرنه کاربر رمزِ
+            //  شش‌نویسه می‌زد و سرور ردش می‌کرد
+            Check("رمزِ کوتاه رد شد", account.LoginStatus.Contains("هشت نویسه") && account.LoginStep == 1,
                   account.LoginStatus);
 
-            account.LoginPassword = "123456";
-            account.LoginPassword2 = "654321";
+            account.LoginPassword = "Ramz-1234";
+            account.LoginPassword2 = "Ramz-4321";
             Wait(win, account.AccountStepCommand.ExecuteAsync(null));
             Check("دو رمزِ ناهمسان رد شد", account.LoginStatus.Contains("یکی نیستند") && account.LoginStep == 1,
                   account.LoginStatus);
 
             account.SetSignUpCommand.Execute("yes");
             account.LoginName = "ا";
-            account.LoginPassword = "123456"; account.LoginPassword2 = "123456";
+            account.LoginPassword = "Ramz-1234"; account.LoginPassword2 = "Ramz-1234";
             Wait(win, account.AccountStepCommand.ExecuteAsync(null));
             Check("نامِ خالی در «حساب می‌سازم» رد شد",
                   account.LoginStatus.Contains("نامتان") && account.LoginStep == 1, account.LoginStatus);
+
+            //  ⚠️ پذیرشِ شرایط اجباریِ خودِ سرور است — پس بی آن هیچ
+            //  درخواستی هم نباید برود
+            account.LoginName = "هارون یعقوبی";
+            account.AcceptTerms = false;
+            Wait(win, account.AccountStepCommand.ExecuteAsync(null));
+            Check("بی پذیرشِ شرایط، گام جلو نرفت",
+                  account.LoginStatus.Contains("شرایط") && account.LoginStep == 1, account.LoginStatus);
 
             //  ج) «بعداً» — بی‌اینترنت هم راه بسته نیست
             account.LoginName = "هارون یعقوبی";
             account.SkipAccountCommand.Execute(null);
             for (var i = 0; i < 10; i++) Pump(win);
             var f1 = AppSettings.Load();
-            Check("«بعداً» به گامِ پمپ برد", account.LoginStep == 2 && account.StepPump);
+            Check("«بعداً» به گامِ پمپ برد", account.StepPump, "گامِ " + account.LoginStep);
             Check("نام و ایمیل ذخیره شدند", f1.CloudEmail == "test@gmail.com"
                   && f1.CloudName == "هارون یعقوبی", f1.CloudEmail + " · " + f1.CloudName);
             Check("⛔ و رمز هیچ‌جا نماند", account.LoginPassword.Length == 0
@@ -469,14 +479,14 @@ internal static class VerifyProbe
             account.LoginPump = "";
             account.LoginCode = "123456";
             Wait(win, account.VerifyCodeCommand.ExecuteAsync(null));
-            Check("نامِ پمپِ خالی رد شد", account.LoginStatus.Contains("نامِ پمپ") && account.LoginStep == 2,
+            Check("نامِ پمپِ خالی رد شد", account.LoginStatus.Contains("نامِ پمپ") && account.StepPump,
                   account.LoginStatus);
 
             account.LoginPump = "پمپِ نو";
             account.LoginLocation = "هرات، جادهٔ کندهار";
             account.LoginCode = "123";
             Wait(win, account.VerifyCodeCommand.ExecuteAsync(null));
-            Check("کدِ سه‌رقمی رد شد", account.LoginStatus.Contains("شش رقم") && account.LoginStep == 2,
+            Check("کدِ سه‌رقمی رد شد", account.LoginStatus.Contains("شش رقم") && account.StepPump,
                   account.LoginStatus);
             Check("و با کدِ ناقص هیچ توکنی ساخته نشد",
                   string.IsNullOrWhiteSpace(AppSettings.Load().CloudDeviceToken), "بی توکن");
@@ -494,8 +504,8 @@ internal static class VerifyProbe
                 Console.WriteLine("  ⚠️ تاییدِ واقعیِ کد از سرور نسنجیده ماند "
                                   + "(PUMP_VERIFY_CLOUD=1 لازم است — اینترنت و سرورِ ابر می‌خواهد)");
                 Wait(win, account.VerifyCodeCommand.ExecuteAsync(null));   // بی‌اینترنت: باید خطا بدهد، نه کرش
-                Check("بی سرور، خطای روشن می‌دهد و در گامِ دو می‌ماند",
-                      account.LoginStep == 2 && account.LoginStatus.StartsWith("❌"), account.LoginStatus);
+                Check("بی سرور، خطای روشن می‌دهد و در گامِ پمپ می‌ماند",
+                      account.StepPump && account.LoginStatus.StartsWith("❌"), account.LoginStatus);
             }
             Check("ولی نامِ پمپ و لوکیشن همان لحظه ذخیره شدند",
                   host.Settings.GetString(SettingsService.StationName) == "پمپِ نو"
@@ -508,7 +518,7 @@ internal static class VerifyProbe
             //  و) «بعداً»ی گامِ دو — دفترِ کاربر هیچ‌وقت گروگان نیست
             account.SkipPumpCommand.Execute(null);
             for (var i = 0; i < 10; i++) Pump(win);
-            Check("«بعداً»ی گامِ دو به «تمام» برد", account.LoginStep == 3 && account.StepDone);
+            Check("«بعداً»ی گامِ پمپ به «تمام» برد", account.StepDone, "گامِ " + account.LoginStep);
             Check("و از آن پس خودِ پروفایل دیده می‌شود، نه صفحهٔ ورود",
                   account.ShowProfilePage && !account.ShowLoginPage,
                   $"ورود={account.ShowLoginPage} · پروفایل={account.ShowProfilePage}");
@@ -521,7 +531,7 @@ internal static class VerifyProbe
 
             //  ح) برگشت‌ها
             account.BackToPumpCommand.Execute(null);
-            Check("«تغییرِ پمپ» به گامِ دو می‌برد", account.LoginStep == 2 && account.StepPump);
+            Check("«تغییرِ پمپ» به گامِ پمپ می‌برد", account.StepPump, "گامِ " + account.LoginStep);
             account.BackToAccountCommand.Execute(null);
             Check("«برگشت به حساب» به گامِ یک می‌برد", account.LoginStep == 1 && account.StepAccount);
         }

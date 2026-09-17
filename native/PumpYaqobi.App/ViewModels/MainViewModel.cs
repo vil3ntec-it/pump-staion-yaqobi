@@ -88,6 +88,7 @@ public sealed partial class MainViewModel : ObservableObject
         // «🕘 تاریخچه»ی هر بخش — همان ‎openSectionHistory(kind)‎ی سایت: به بخشِ
         // تاریخچه‌ها می‌رود و همان‌جا تاریخچهٔ همان بخش را باز می‌کند.
         AppHost.Current.OpenHistory = OpenHistoryAsync;
+        AppHost.Current.GoHome = OpenStartSectionAsync;
         // فهرست‌های نام‌دارِ پیشنهادِ خودکار — همان ‎datalist‎های سایت
         var host0 = AppHost.Current;
         Controls.Suggest.Provide("staff", async () => (await host0.Attendance.StaffAsync()).Select(x => x.Name ?? ""));
