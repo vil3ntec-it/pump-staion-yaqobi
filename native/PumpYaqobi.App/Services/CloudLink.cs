@@ -232,6 +232,86 @@ public sealed class CloudLink
         return CloudResult.Done;
     }
 
+    /// <summary>
+    /// ⛔ <b>بند شدنِ این دستگاه به پمپِ همین حسابِ وارد شده — بی هیچ کدی.</b>
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۳۰): «اشتراک رو من به حسابِ یارو از
+    /// سرور می‌دم اینترنتی و تو برنامه تو حسابِ همون ثبت می‌شن… من یادم
+    /// نمیاد که برای اشتراک کدی گفته باشم.»
+    ///
+    /// <para>
+    /// ⚠️ <b>و چرا این لازم بود، در حالی که <see cref="HomeFromAccountAsync"/>
+    /// از قبل اشتراک را از حساب می‌خواند:</b> آن راه فقط «فعال است یا نه» را
+    /// می‌آورد، <b>نه فهرستِ قابلیت‌های پلن</b>. فهرست تنها داخلِ مجوزِ
+    /// امضاشده (<c>feat</c>) است و مجوز فقط با توکنِ <b>دستگاه</b> صادر
+    /// می‌شود. پس برنامه‌ای که فقط از راهِ حساب می‌آمد،
+    /// <see cref="LicenseCheck.Listed"/>ش دروغ می‌گفت و
+    /// <see cref="Entitlements.Allows"/> همه‌چیز را باز می‌کرد — یعنی
+    /// مشتریِ پلنِ <b>استاندارد</b> کیو‌آر و اپِ کارمندان و مفاد/ضرر و
+    /// تاریخچه‌ها و داشبورد را هم می‌گرفت. مستقیم روی پول.
+    /// </para>
+    ///
+    /// <para>
+    /// ⚠️ این مسیر <b>اشتراک نمی‌سازد</b>: پمپِ بی‌اشتراک هم بند می‌شود و
+    /// مجوزی نمی‌گیرد — که درست است. باز شدنِ قفل‌ها کارِ پنلِ سرور است.
+    /// </para>
+    ///
+    /// <para>
+    /// ⚠️ و <b>قفلِ کلیدِ عمومی همان‌جاست</b>: نخستین بار ذخیره می‌شود و از
+    /// آن به بعد کلیدِ متفاوت رد می‌شود (<c>key_mismatch</c>) — همان قیدی
+    /// که سرورِ ساختگی را بی‌اثر می‌کند.
+    /// </para>
+    /// </summary>
+    public async Task<CloudResult> BindAsync(CancellationToken ct = default)
+    {
+        if (!SignedIn) return CloudResult.No("اول وارد حساب شوید", "no_account");
+
+        var body = new
+        {
+            device = new
+            {
+                uid = DeviceUid,
+                name = Environment.MachineName,
+                platform = "windows",
+            },
+        };
+
+        //  ⚠️ از راهِ `AccountAsync` می‌رود، نه `PostAsync`ِ خام: توکنِ
+        //  دسترسی یک ساعت عمر دارد و همین‌جا بی‌صدا می‌مرد.
+        var res = await AccountAsync(HttpMethod.Post, "/api/pump/device/bind", body, ct);
+        if (!res.Ok) return CloudResult.No(res.Why, res.Code);
+        var json = res.Json;
+
+        //  کلیدِ عمومی فقط یک بار قفل می‌شود — همان قاعدهٔ `ActivateAsync`
+        var serverKey = Str(json, "publicKey");
+        if (string.IsNullOrWhiteSpace(_settings.CloudPublicKey))
+        {
+            if (!string.IsNullOrWhiteSpace(serverKey)) _settings.CloudPublicKey = serverKey;
+        }
+        else if (!string.IsNullOrWhiteSpace(serverKey) && serverKey != _settings.CloudPublicKey)
+        {
+            return CloudResult.No(
+                "کلیدِ سرور با آن‌چه این برنامه قفل کرده فرق دارد. اگر سرور را واقعاً "
+                + "عوض کرده‌اید، با پشتیبانی تماس بگیرید.", "key_mismatch");
+        }
+
+        var token = Str(json, "deviceToken");
+        if (string.IsNullOrWhiteSpace(token))
+            return CloudResult.No("سرور توکنِ دستگاه نداد", "no_device_token");
+
+        _settings.CloudDeviceToken = token;
+        var station = StationId(json);
+        if (station.Length > 0) _settings.CloudStationId = station;
+        //  ⚠️ مجوزِ **خالی** هم می‌نشیند: «اشتراک ندارد» یک جوابِ درست
+        //  است، و نگه داشتنِ مجوزِ کهنه یعنی قفلی که باز مانده
+        _settings.CloudLicense = Str(json, "license");
+        _settings.CloudSyncedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        ReadSubscription(json);
+        Entitlements.Remember(_settings, Subscription, Verify());
+        await SaveQuiet();
+        return CloudResult.Done;
+    }
+
     /// <summary>تمدید با کدِ تازه — بی فعال‌سازیِ دوباره.</summary>
     public async Task<CloudResult> RedeemAsync(string code, string stationName = "",
                                                string stationLocation = "",
@@ -1257,9 +1337,6 @@ public sealed class CloudLink
         ReadSubscription(json);
         if (Subscription.Active) Entitlements.Remember(_settings, Subscription, Verify());
 
-        if (!json.TryGetProperty("home", out var home) || home.ValueKind != JsonValueKind.Object)
-            return (false, "", "", "", "هنوز پمپی به این حساب وصل نشده است");
-
         //  ⛔ **پمپِ این حساب با پمپی که این دستگاه رویش قفل شده یکی نیست.**
         //  بی این سنجش، ورود با حسابِ پمپِ دیگر نشانی و رمزِ **آن** پمپ را
         //  روی تنظیماتِ این یکی می‌نشاند: از آن لحظه دفترِ این پمپ به سرورِ
@@ -1277,6 +1354,33 @@ public sealed class CloudLink
             && !string.Equals(acctStation, locked, StringComparison.Ordinal))
             return (false, "", "", "", "این حساب مالِ پمپِ دیگری است. برای جابه‌جایی، "
                 + "این دستگاه را از پمپِ فعلی جدا کنید.");
+
+        /*
+         *  ⛔ نصبی که فقط وارد حساب شده، خودش بند می‌شود — بی هیچ کدی.
+         *
+         *  تا دیروز تنها راهِ گرفتنِ توکنِ دستگاه و مجوز، کدِ شش‌رقمی بود.
+         *  یعنی صاحبِ پمپی که اشتراکش را مدیر روی **حسابش** گذاشته بود،
+         *  باز هم بی کد نمی‌توانست برنامه را راه بیندازد — و بی مجوز،
+         *  فهرستِ قابلیت‌های پلن هم به برنامه نمی‌رسید.
+         *
+         *  ⚠️ **پس از** سنجشِ «این حساب مالِ پمپِ دیگری است» می‌آید، وگرنه
+         *  ورود با حسابِ پمپِ دیگر همین دستگاه را به آن پمپ می‌بست.
+         *  ⚠️ و نشدنش این مسیر را نمی‌شکند: نشانیِ خانگی همان است که بود.
+         */
+        if (!Activated && acctStation.Length > 0)
+        {
+            try { await BindAsync(ct); } catch { /* نشانیِ خانگی مهم‌تر است */ }
+        }
+
+        /*
+         *  ⚠️ سنجشِ «پمپی هست؟» **پس از** بند شدن آمد، نه پیش از آن.
+         *
+         *  پمپی که هنوز سرورِ خانگی‌اش را معرفی نکرده `home` ندارد، و با
+         *  ترتیبِ قبلی همان‌جا برمی‌گشتیم — پس نصبِ تازه هیچ‌وقت بند
+         *  نمی‌شد و مجوزش را نمی‌گرفت. نشانیِ خانگی رفاه است، اشتراک اصل.
+         */
+        if (!json.TryGetProperty("home", out var home) || home.ValueKind != JsonValueKind.Object)
+            return (false, "", "", "", "هنوز سرورِ خانگیِ این پمپ معرفی نشده است");
 
         return (true, Str(home, "url"), Str(home, "readKey"), Str(home, "station"), "");
     }
