@@ -78,7 +78,7 @@ dotnet run --project PumpYaqobi.UiTests -c Release -- fullscan quick   بی سه
 
 
 ```
-dotnet test PumpYaqobi.Tests -c Release                    ۹۷۲ آزمون
+dotnet test PumpYaqobi.Tests -c Release                  ۱٬۰۱۱ آزمون
 dotnet run --project PumpYaqobi.UiTests -c Release -- bigtable    اندازهٔ جدول بی‌اثر + درستیِ ترتیبِ ردیف‌ها
                                                      -- ledgerperf   دفترها زیرِ ۴۰۰ms
                                                      -- scrollperf   گامِ چرخ زیرِ ۱۲۰ms
@@ -162,8 +162,10 @@ CI اضافه‌اش کند. **سنجه را ضعیف نکنید تا سبز ش�
   `ListArchivesAsync(...).Count` در `PersonViewModel.LoadArchiveCountAsync` و
   `CompanySectionViewModel.RefreshMetaAsync`. یعنی `RowsJson`ِ هر جدولِ آرشیو
   (هر کدام صدها ردیفِ سریال‌شده) با **هر باز کردنِ حساب** از دیسک می‌آمد تا
-  یک عدد نوشته شود. حالا `CountArchivesAsync` است (یک `COUNT`؛ برای شرکت‌ها
-  دو تا، پطرول و دیزل). همان قاعدهٔ «برای یک جمع، همهٔ ردیف‌ها را نخوان».
+  یک عدد نوشته شود. حالا `CountArchivesAsync` است: برای حساب یک `COUNT` و
+  برای شرکت **یک** `GROUP BY x.Fuel` (نه دو `COUNT`ِ جدا — وگرنه شمارِ
+  دستورِ دیتابیسِ باز کردنِ حسابِ شرکت از ۳ به ۴ می‌رفت و همان هم پس‌رفت
+  بود؛ `enterperf` گرفتش). همان قاعدهٔ «برای یک جمع، همهٔ ردیف‌ها را نخوان».
 
 ## ⛔ سایت دیگر به‌روز نمی‌شود — فقط برنامهٔ نیتیو
 
