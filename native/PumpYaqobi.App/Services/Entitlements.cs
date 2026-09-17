@@ -231,7 +231,40 @@ public sealed record EntitlementState(
         //  فهرستی نیامده یعنی پلنِ کامل — مجوزهای نسلِ اول ‎feat‎ نداشتند و
         //  نباید یک‌شبه همه‌چیزشان بسته شود. فهرستِ **خالی** ولی یعنی پلنِ
         //  پایه: هیچ‌کدام.
-        return !Listed || Features.Contains(feature);
+        return !Listed || Has(feature);
+    }
+
+    /// <summary>
+    /// ⛔ <b>نامِ قابلیت در برنامه و روی سرور یکی نیست — و این یک بار
+    /// نزدیک بود همهٔ مشتری‌های پولی را قفل کند.</b>
+    ///
+    /// کاتالوگِ پمپ روی سرور (‎lib/features.js‎) این نام‌ها را دارد:
+    /// <c>kar_app</c> · <c>bot</c> · <c>cloud</c> · <c>multi_device</c> و…
+    /// ولی سه دروازهٔ این برنامه <c>kar</c> · <c>qrlive</c> ·
+    /// <c>cloudbackup</c> است. یعنی روزی که سرور فهرستِ واقعیِ پلن را
+    /// بفرستد، یک مشتریِ <b>وی‌آی‌پی</b> هر سه را <b>قفل</b> می‌دید — چون
+    /// هیچ‌کدام از آن سه رشته در فهرستش نبود.
+    ///
+    /// پس نامِ سرور هم پذیرفته می‌شود. این نگاشت <b>ساختگی نیست</b>، از خودِ
+    /// سرور درآمده: مسیرِ فایلِ ابری — همان جایی که هم عکسِ زندهٔ حساب و هم
+    /// پشتیبان از آن رد می‌شوند — روی کلیدِ <c>cloud</c> قفل است
+    /// (‎routes/pump-device.js‎). و اپِ کارمندان همان <c>kar_app</c> است.
+    ///
+    /// ⚠️ قاعده همان قاعدهٔ همیشگیِ این پرونده است: <b>قفلِ ناخواسته بدتر
+    /// از بازِ ناخواسته است.</b> پس هر دو نام باز می‌کنند، و هیچ‌کدام
+    /// چیزی را نمی‌بندد.
+    /// </summary>
+    private bool Has(string feature)
+    {
+        if (Features.Contains(feature)) return true;
+
+        return feature switch
+        {
+            Entitlements.Kar         => Features.Contains("kar_app") || Features.Contains("bot"),
+            Entitlements.QrLive      => Features.Contains("cloud"),
+            Entitlements.CloudBackup => Features.Contains("cloud"),
+            _ => false,
+        };
     }
 
     /// <summary>جملهٔ «چرا بسته است» برای همان کار.</summary>

@@ -125,6 +125,49 @@ public class EntitlementsTests : IDisposable
         Assert.False(st.Allows(Entitlements.CloudBackup));
     }
 
+    // ── ۳ب) نامِ قابلیت روی سرور ──────────────────────────────────────────
+
+    /// <summary>
+    /// ⭐ <b>باگی که نزدیک بود همهٔ مشتری‌های پولی را قفل کند.</b>
+    ///
+    /// کاتالوگِ پمپ روی سرور (‎lib/features.js‎ در ریپوی ‎shop‎) این نام‌ها
+    /// را دارد: <c>kar_app</c> · <c>bot</c> · <c>cloud</c> — نه
+    /// <c>kar</c>/<c>qrlive</c>/<c>cloudbackup</c>ی که این برنامه می‌پرسد.
+    ///
+    /// پس روزی که سرور فهرستِ واقعیِ پلن را بفرستد، یک مشتریِ <b>وی‌آی‌پی</b>
+    /// هر سه را <b>قفل</b> می‌دید. این سنجه دقیقاً همان فهرستی را می‌دهد که
+    /// سرورِ امروز می‌سازد.
+    /// </summary>
+    [Fact]
+    public void NamhayeSarvar_HamanSeKar_RaBazMikonand()
+    {
+        //  همان چیزی که سرور برای پلنِ کاملِ پمپ می‌فرستد
+        var st = Entitlements.State(Activated(new[]
+        {
+            "safe", "sarrafi", "chakana", "invoice", "storage", "staff",
+            "companies", "amanat", "kar_app", "bot", "cloud", "multi_device",
+        }));
+
+        Assert.True(st.Open);
+        Assert.True(st.Allows(Entitlements.Kar));          // ⇐ kar_app
+        Assert.True(st.Allows(Entitlements.QrLive));       // ⇐ cloud
+        Assert.True(st.Allows(Entitlements.CloudBackup));  // ⇐ cloud
+    }
+
+    /// <summary>
+    /// ⛔ و هم‌معنی‌ها <b>چیزی را باز نمی‌کنند که نباید</b>: پلنی که فقط
+    /// اپِ کارمندان را دارد، پوشهٔ ابری را ندارد.
+    /// </summary>
+    [Fact]
+    public void FaghatKarApp_AbrRaBazNemikonad()
+    {
+        var st = Entitlements.State(Activated(new[] { "kar_app" }));
+
+        Assert.True(st.Allows(Entitlements.Kar));
+        Assert.False(st.Allows(Entitlements.QrLive));
+        Assert.False(st.Allows(Entitlements.CloudBackup));
+    }
+
     /// <summary>
     /// ⚠️ مجوزِ نسلِ اول ‎feat‎ نداشت. نبودنِ فهرست یعنی «پلنِ کامل»، نه
     /// «هیچ‌چیز» — وگرنه با همین یک تغییر، همهٔ مشتری‌های امروز صبح خاموش
