@@ -69,6 +69,28 @@ public sealed record CloudResult(bool Ok, string Why = "", string Code = "")
     public static CloudResult No(string why, string code = "") => new(false, why, code);
 }
 
+/// <summary>
+/// حالِ رسیدن به ابر — و <b>فقط</b> از جوابِ واقعیِ سرور پر می‌شود.
+///
+/// <para>
+/// ⛔ خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۰۱): «هیچ کلکِ دروغی نباشد که بگوید
+/// وصل است.» پس <see cref="Unknown"/> یک حالتِ واقعی است و سبز نیست: یعنی
+/// «هنوز نپرسیده‌ایم». تا وقتی یک درخواستِ واقعی نرفته و جوابِ واقعی
+/// نیامده، هیچ‌جای برنامه حق ندارد بگوید وصل است.
+/// </para>
+/// </summary>
+public enum CloudReach
+{
+    /// <summary>هنوز هیچ درخواستی نرفته — نه وصل، نه قطع.</summary>
+    Unknown,
+
+    /// <summary><b>سرورِ خودمان</b> جواب داد (حتی اگر جوابش خطا بود).</summary>
+    Online,
+
+    /// <summary>نرسیدیم، یا چیزی جواب داد که سرورِ ما نبود.</summary>
+    Offline,
+}
+
 /// <summary>وضعیتِ اشتراک، آن‌طور که برنامه نشان می‌دهد.</summary>
 /// <param name="Active">اشتراک یا دورهٔ آزمایشی باز است.</param>
 /// <param name="Source">subscription | trial | free | none</param>
@@ -1137,6 +1159,47 @@ public sealed class CloudLink
     //  است و سرور کهنه، پس کاربر را دنبالِ نخودِ سیاه می‌فرستاد.
     //  ⛔ و **نامِ میزبان در پیام نمی‌آید** — همان قاعدهٔ همیشه؛ فقط نسخه.
 
+    // ══ چراغِ ابر — راست می‌گوید یا هیچ نمی‌گوید ═════════════════════════
+    //
+    //  ⛔ **هیچ‌کدامِ این‌ها حدس نیستند.** `Reach` تنها از `SendFull` پر
+    //  می‌شود، یعنی از خودِ جوابِ سرور؛ و «سرورِ ما جواب داد» یعنی یا ۲xx
+    //  بود یا خطایی به شکلِ خودمان (`error.code`). یک ۴۰۴ِ بی‌بدنه از
+    //  پروکسی **وصل حساب نمی‌شود** — همان چیزی که ۱۴۰۵/۰۷/۰۱ گرفتیم.
+    //
+    //  ⚠️ چرا ایستا: `CloudLink` در شش جای برنامه با یک `new` ساخته می‌شود
+    //  (پروفایل، چت، انتشار، پشتیبان…). حالِ «به ابر می‌رسیم؟» مالِ خودِ
+    //  برنامه است، نه مالِ یک نمونه.
+
+    /// <summary>آخرین باری که واقعاً جواب گرفتیم چه بود.</summary>
+    public static CloudReach Reach { get; private set; } = CloudReach.Unknown;
+
+    /// <summary>آخرین باری که سرورِ ما واقعاً جواب داد (به وقتِ محلی).</summary>
+    public static DateTime? CloudOkAt { get; private set; }
+
+    /// <summary>اگر نرسیدیم، چرا — بی نام و نشانیِ میزبان.</summary>
+    public static string CloudWhy { get; private set; } = "";
+
+    private static void NoteOnline()
+    {
+        Reach = CloudReach.Online;
+        CloudOkAt = DateTime.Now;
+        CloudWhy = "";
+    }
+
+    private static void NoteOffline(string why)
+    {
+        Reach = CloudReach.Offline;
+        CloudWhy = why;
+    }
+
+    /// <summary>فقط برای سنجه‌ها — برنامه هیچ‌وقت حال را دستی نمی‌سازد.</summary>
+    public static void ResetReach()
+    {
+        Reach = CloudReach.Unknown;
+        CloudOkAt = null;
+        CloudWhy = "";
+    }
+
     /// <summary>
     /// حالِ سرورِ حساب: بالا است؟ چه نسخه‌ای؟ (بی توکن، پیش از ورود هم.)
     /// </summary>
@@ -1565,7 +1628,11 @@ public sealed class CloudLink
             }
             catch { /* پاسخِ بی‌شکل */ }
 
-            if (res.IsSuccessStatusCode) return new CloudReply(true, json, "", "", status);
+            if (res.IsSuccessStatusCode)
+            {
+                NoteOnline();
+                return new CloudReply(true, json, "", "", status);
+            }
 
             var why = "";
             var code = "";
@@ -1573,6 +1640,16 @@ public sealed class CloudLink
             {
                 why = Str(e, "message");
                 code = Str(e, "code");
+                //  ⚠️ خطای **خودِ سرورِ ما** هم یعنی وصل‌ایم: «رمز غلط» یا
+                //  «این مسیر وجود ندارد» را فقط سرورِ ما به این شکل می‌گوید.
+                NoteOnline();
+            }
+            else
+            {
+                //  ⛔ پاسخی که شکلِ خطای ما را ندارد، از سرورِ ما نیامده —
+                //  پروکسی، تونل، یا دامنه‌ای که به سرورِ حساب نمی‌رسد. چراغ
+                //  نباید این را «وصل» بشمارد. (همان ۴۰۴ِ بی‌بدنهٔ ۱۴۰۵/۰۷/۰۱.)
+                NoteOffline($"پاسخِ ناشناس از نشانیِ ابر ({status})");
             }
             //  ⚠️ **۴۲۹ همیشه پیامِ خودمان را می‌گیرد، حتی اگر سرور متنی
             //  داده باشد.** متنِ سرور («تعداد درخواست بیش از حد مجاز است»)
@@ -1600,13 +1677,22 @@ public sealed class CloudLink
             //  ⚠️ `HttpClient.Timeout` هم همین را پرت می‌کند. جدا کردنش از
             //  «کاربر خودش لغو کرد» مهم است، وگرنه تایم‌اوت «لغو شد» دیده
             //  می‌شد.
+            NoteOffline("سرور دیر جواب داد");
             return CloudReply.Fail("سرور دیر جواب داد — دوباره بزنید", "timeout");
         }
         catch (OperationCanceledException) { return CloudReply.Fail("لغو شد", "cancelled"); }
-        catch (HttpRequestException) { return CloudReply.Fail("به سرور نرسیدیم — اینترنت را بررسی کنید", "offline"); }
+        catch (HttpRequestException)
+        {
+            NoteOffline("به ابر نرسیدیم — اینترنت یا نشانی");
+            return CloudReply.Fail("به سرور نرسیدیم — اینترنت را بررسی کنید", "offline");
+        }
         //  ⚠️ پیامِ خامِ استثنا به کاربر نشان داده نمی‌شود: ممکن است نشانی،
         //  نامِ میزبان یا جزئیاتِ TLS داشته باشد.
-        catch { return CloudReply.Fail("ارتباط با سرور برقرار نشد", "error"); }
+        catch
+        {
+            NoteOffline("ارتباط با ابر برقرار نشد");
+            return CloudReply.Fail("ارتباط با سرور برقرار نشد", "error");
+        }
     }
 
     private static async Task<(bool, JsonElement, string, string)> Send(

@@ -96,6 +96,16 @@
             <Border Width="12" Height="12" CornerRadius="6"
                     Background="{Binding ServerDotBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
           </Button>
+          <!-- ● چراغِ دوم — ابر (حساب و اشتراک). خواستهٔ صاحب ریپو
+               (۱۴۰۵/۰۷/۰۱): «ببین چرا وصل نمی‌شوند… هیچ کلکِ دروغی نباشد
+               که بگوید وصل است.» خاکستری یعنی هنوز نپرسیده‌ایم؛ سبز فقط با
+               جوابِ واقعیِ سرورِ خودمان. دلیل فقط در ‎ToolTip‎، بی نشانی. -->
+          <Button Padding="4" Margin="0,2,0,0" VerticalAlignment="Center" Background="Transparent"
+                  BorderThickness="0" Command="{Binding CheckCloudCommand}"
+                  ToolTip.Tip="{Binding CloudDotReason}">
+            <Border Width="12" Height="12" CornerRadius="6"
+                    Background="{Binding CloudDotBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+          </Button>
         </StackPanel>
 
         <TextBlock Grid.Column="1" Text="{Binding Current.Title}"
