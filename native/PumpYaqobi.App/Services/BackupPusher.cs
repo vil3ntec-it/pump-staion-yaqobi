@@ -6,15 +6,24 @@ using PumpYaqobi.Application.Localization;
 namespace PumpYaqobi.App.Services;
 
 /// <summary>
-/// ══ پشتیبانِ هر شش ساعت، روی سرورِ خانگی ═══════════════════════════════════
+/// ══ پشتیبانِ هر شش ساعت — سرورِ خانگی **و** ابر ═══════════════════════════
 ///
 /// خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۶): «هر روز بک‌آپ بگیرد و بفرستد به سرورِ
 /// برنامه هر ۶ ساعت، و تا سه روز در سرور بماند — یعنی روزِ چهارم که آمد، آن
 /// آخرین نسخهٔ بک‌آپ حذف و جدید جایگزین شود. و اگر بک‌آپ گرفته نشده یک پیام به
 /// مدیر بدهد که بک‌آپ بگیرد یا نتش را وصل کند تا اتومات برود.»
 ///
-///     هر ۶ ساعت ──▶ VACUUM INTO (‎BackupService‎) ──▶ POST /api/stations/&lt;کد&gt;/backup
-///                                                  (بدنه = خودِ فایل، رمزِ برنامه)
+///     هر ۶ ساعت ──▶ VACUUM INTO ──┬─▶ POST /api/stations/&lt;کد&gt;/backup   (خانگی)
+///                                  └─▶ POST /api/pump/device/backups   (ابر)
+///
+/// ⛔ <b>دو مقصد، نه یکی — و این از ۱۴۰۵/۰۶/۳۱ است.</b> تا آن روز پشتیبان فقط
+///    روی سرورِ خانگی می‌نشست: مودم که بسوزد یا کامپیوترِ سرور که خراب شود،
+///    هر دو با هم می‌رفتند. و نامِ قابلیت هم <c>cloudbackup</c> بود، که
+///    گمراه‌کننده بود — هیچ ابری در کار نبود.
+///
+/// ⚠️ «رفت» یعنی <b>دستِ‌کم یکی</b> رفت. پمپی که هنوز سرورِ خانگی‌اش را راه
+///    نینداخته نباید هر شش ساعت هشدارِ «پشتیبان نرفته» ببیند در حالی که
+///    نسخه‌اش روی ابر سالم نشسته.
 ///
 /// سه قاعده که باید بمانند:
 ///
@@ -102,10 +111,32 @@ public sealed class BackupPusher : IAsyncDisposable
         }
 
         var sent = await SendAsync(file, ct);
-        if (sent)
+
+        /*
+         *  ══ و همان فایل، روی ابر ═════════════════════════════════════
+         *
+         *  ⛔ تا امروز پشتیبان **فقط** روی سرورِ خانگی می‌نشست. مودم که
+         *  بسوزد یا کامپیوترِ سرور که خراب شود، هر دو با هم می‌روند —
+         *  و `data/stations/<کد>/backups/` روی همان یک دیسک است. اسمِ
+         *  قابلیت هم `cloudbackup` بود، که گمراه‌کننده بود: هیچ ابری در
+         *  کار نبود.
+         *
+         *  ⚠️ **مقصدِ دوم، نه جانشین.** سرورِ خانگی سریع است و در همان
+         *  شبکه؛ ابر جایی است که آتش‌سوزیِ پمپ به آن نمی‌رسد. هر کدام
+         *  جدا سنجیده می‌شود و نرفتنِ یکی، دیگری را نمی‌شکند.
+         *
+         *  ⚠️ و «رفت» یعنی **دستِ‌کم یکی** رفت: پمپی که هنوز سرورِ
+         *  خانگی‌اش را راه نینداخته، نباید هر شش ساعت هشدارِ «پشتیبان
+         *  نرفته» ببیند در حالی که نسخه‌اش روی ابر سالم نشسته.
+         */
+        var toCloud = await SendToCloudAsync(file, ct);
+
+        if (sent || toCloud)
         {
             LastSentAt = DateTime.Now;
-            LastError = "";
+            LastError = sent && toCloud ? ""
+                : sent ? "روی ابر ننشست — فقط سرورِ خانگی"
+                : "روی سرورِ خانگی ننشست — فقط ابر";
             var s = AppSettings.Load();
             s.LastBackupSentAt = LastSentAt.Value.ToString("O");
             s.Save();
@@ -116,6 +147,54 @@ public sealed class BackupPusher : IAsyncDisposable
         Warn();
         return false;
     }
+
+    /// <summary>
+    /// همان فایل، روی پوشهٔ ابریِ همین پمپ.
+    /// </summary>
+    /// <remarks>
+    /// ⛔ <b>هیچ‌وقت استثنا بیرون نمی‌دهد.</b> پشتیبان کارِ پس‌زمینه است و
+    /// نباید نه برنامه را بشکند نه جلوی مقصدِ دیگر را بگیرد.
+    ///
+    /// ⚠️ برخلافِ سرورِ خانگی، این‌جا فایل یک‌جا خوانده می‌شود چون
+    /// <c>CloudLink</c> بایت می‌گیرد. پس سقفِ اندازه سنجیده می‌شود: فایلی
+    /// که از سهمِ سرور بزرگ‌تر است، خواندنش در حافظه فقط خرج است و
+    /// سرور هم ردش می‌کند.
+    /// </remarks>
+    private async Task<bool> SendToCloudAsync(string file, CancellationToken ct)
+    {
+        try
+        {
+            /*
+             *  ⚠️ `CloudLink` همان‌جا ساخته می‌شود، از تنظیماتِ **تازه
+             *  خوانده‌شده** — همان الگویی که `StationPublisher` دارد.
+             *  نگه داشتنِ یک نمونه در `AppHost` یعنی توکنی که در نشستِ
+             *  دیگری عوض شده، این‌جا کهنه می‌ماند.
+             */
+            var file2 = AppSettings.Load();
+            var cloud = new CloudLink(file2, () => { file2.Save(); return Task.CompletedTask; });
+            if (!cloud.Activated) return false;
+
+            var info = new FileInfo(file);
+            if (!info.Exists || info.Length == 0) return false;
+            if (info.Length > CloudMaxBytes) return false;
+
+            var bytes = await File.ReadAllBytesAsync(file, ct);
+            var res = await cloud.BackupUploadAsync(
+                bytes,
+                label: Shamsi.Today(),
+                manual: false,
+                ext: "db",
+                ct: ct);
+            return res.Ok;
+        }
+        catch { return false; }
+    }
+
+    /// <summary>
+    /// بزرگ‌ترین فایلی که ارزشِ خواندن در حافظه را دارد.
+    /// همان سقفی که سرور دارد (<c>BACKUP_ACCOUNT_MAX_MB</c>ِ پیش‌فرض).
+    /// </summary>
+    private const long CloudMaxBytes = 64L * 1024 * 1024;
 
     /// <summary>
     /// همان فایل، با رمزِ برنامه، روی سرورِ خانگی.

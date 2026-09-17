@@ -43,6 +43,26 @@ public sealed record CloudChatMessage(string Id, long Seq, string Acct, string F
 public sealed record CloudChatThread(string Acct, string Name, bool Blocked, int Unread, long UpdatedAt,
                                      CloudChatMessage? Last);
 
+/// <summary>یک نسخهٔ پشتیبان روی پوشهٔ ابریِ این پمپ.</summary>
+/// <remarks>
+/// ⚠️ نامِ فایل را <b>سرور</b> می‌سازد، نه برنامه: نامی که از این‌جا
+/// برود می‌تواند <c>../</c> داشته باشد و جای دیگری بنشیند.
+/// </remarks>
+public sealed record CloudBackup(string Id, string Name, long Bytes, string Kind,
+                                 string Label, long CreatedAt);
+
+/// <summary>سهمِ این پمپ از پوشهٔ ابری — و چقدرش پر است.</summary>
+/// <remarks>
+/// ⚠️ سهم دو پله دارد و <b>سرور</b> تصمیمش را می‌گیرد، نه برنامه:
+/// پمپِ بی‌اشتراک جای کمتری دارد. همین‌جا نوشته می‌شود تا صاحبِ پمپ
+/// غافلگیر نشود.
+/// </remarks>
+public sealed record CloudBackupStats(int Count, int Keep, long UsedBytes, long QuotaBytes,
+                                      long LastAt, bool Paid)
+{
+    public static readonly CloudBackupStats None = new(0, 0, 0, 0, 0, false);
+}
+
 public sealed record CloudResult(bool Ok, string Why = "", string Code = "")
 {
     public static readonly CloudResult Done = new(true);
@@ -322,6 +342,128 @@ public sealed class CloudLink
         var (ok, _, why, code) = await PutAsync("/api/pump/device/files/" + Uri.EscapeDataString(name.Trim()),
             new { data }, _settings.CloudDeviceToken, ct);
         return ok ? CloudResult.Done : CloudResult.No(why, code);
+    }
+
+    // ══ پشتیبانِ ابری ═══════════════════════════════════════════════════
+    //
+    // ⛔ چیزی که تا امروز نبود:
+    //
+    // `BackupPusher` هر شش ساعت پشتیبان می‌گرفت و فقط به **سرورِ خانگی**
+    // می‌فرستاد. مودم که بسوزد، یا کامپیوترِ سرور که خراب شود، همان‌جا
+    // با هم می‌روند — و `data/stations/<کد>/backups/` روی همان یک دیسک
+    // است. قابلیتش هم `cloudbackup` نام داشت، که گمراه‌کننده بود: هیچ
+    // ابری در کار نبود.
+    //
+    // حالا همان فایل به ابر هم می‌رود: پوشهٔ همین پمپ، سهمِ همین پمپ.
+    //
+    // ⚠️ بدنه **خام** است، نه JSON. پشتیبانِ یک پمپِ پنج‌ساله چند صد
+    // مگابایت است؛ داخلِ JSON باید base64 می‌شد — یک‌سوم بزرگ‌تر و کلِ
+    // فایل دو بار در حافظه.
+
+    /// <summary>یک نسخهٔ پشتیبان روی پوشهٔ ابریِ همین پمپ.</summary>
+    /// <param name="bytes">خودِ فایل — همان چیزی که ‎VACUUM INTO‎ ساخته</param>
+    public async Task<CloudResult> BackupUploadAsync(
+        byte[] bytes, string label = "", bool manual = false, string ext = "db",
+        CancellationToken ct = default)
+    {
+        if (!Activated) return CloudResult.No("فعال نشده", "not_activated");
+        if (bytes is null || bytes.Length == 0) return CloudResult.No("فایلِ پشتیبان خالی است", "empty_backup");
+
+        var path = "/api/pump/device/backups"
+            + "?ext=" + Uri.EscapeDataString(ext)
+            + "&kind=" + (manual ? "manual" : "auto")
+            + "&label=" + Uri.EscapeDataString(label ?? "");
+
+        var req = new HttpRequestMessage(HttpMethod.Post, CloudConfig.Url(path))
+        {
+            Content = new ByteArrayContent(bytes),
+        };
+        req.Content.Headers.ContentType =
+            new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+        req.Headers.Add("Authorization", $"Bearer {_settings.CloudDeviceToken}");
+        var (ok, _, why, code) = await Send(req, ct);
+        return ok ? CloudResult.Done : CloudResult.No(why, code);
+    }
+
+    /// <summary>فهرستِ پشتیبان‌های ابریِ همین پمپ، تازه‌ترین اول.</summary>
+    public async Task<(bool Ok, List<CloudBackup> Items, CloudBackupStats Stats, string Why)>
+        BackupListAsync(CancellationToken ct = default)
+    {
+        if (!Activated) return (false, new(), CloudBackupStats.None, "فعال نشده");
+        var (ok, json, why, _) = await GetAsync("/api/pump/device/backups", _settings.CloudDeviceToken, ct);
+        if (!ok) return (false, new(), CloudBackupStats.None, why);
+
+        var list = new List<CloudBackup>();
+        if (json.TryGetProperty("backups", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            foreach (var b in arr.EnumerateArray())
+                list.Add(new CloudBackup(Str(b, "id"), Str(b, "name"), Num(b, "bytes"),
+                    Str(b, "kind"), Str(b, "label"), Num(b, "createdAt")));
+
+        var stats = CloudBackupStats.None;
+        if (json.TryGetProperty("stats", out var st) && st.ValueKind == JsonValueKind.Object)
+            stats = new CloudBackupStats((int)Num(st, "count"), (int)Num(st, "keep"),
+                Num(st, "usedBytes"), Num(st, "quotaBytes"), Num(st, "lastAt"),
+                st.TryGetProperty("paid", out var p) && p.ValueKind == JsonValueKind.True);
+
+        return (true, list, stats, "");
+    }
+
+    // ══ پشتیبانیِ صاحبِ پمپ ↔ مدیرِ سامانه ═══════════════════════════════
+    //
+    // ⚠️ **این با چتِ پایین یکی نیست و نباید قاطی شود.**
+    //
+    //   چتِ پایین  = مشتریِ کیو‌آر ↔ صاحبِ پمپ   (‎/chat/…‎)
+    //   این یکی    = صاحبِ پمپ ↔ کسی که برنامه را ساخته (‎/support/…‎)
+    //
+    // ⛔ تا امروز پمپ‌داری که گیر می‌کرد **هیچ دری** نداشت: `/api/support`
+    // مالِ بخشِ دکان بود و این برنامه حساب ندارد. حالا رشته به خودِ پمپ
+    // بسته است (`station_id`)، پس گوشیِ صاحب و این کامپیوتر به **یک**
+    // گفت‌وگو می‌رسند.
+    //
+    // ⛔ و هیچ‌وقت پشتِ اشتراک نمی‌رود: «پشتیبانی یکی از واجبات است.»
+    // کسی که اشتراکش تمام شده، بیشتر از همه لازم دارد بپرسد چرا.
+
+    /// <summary>گفت‌وگو با پشتیبانی — پیام‌های بعد از ‎after‎.</summary>
+    public async Task<(bool Ok, List<CloudChatMessage> Messages, int Unread, string Why)>
+        SupportThreadAsync(long after = 0, CancellationToken ct = default)
+    {
+        if (!Activated) return (false, new(), 0, "فعال نشده");
+        var (ok, json, why, _) = await GetAsync(
+            "/api/pump/device/support/thread?after=" + after, _settings.CloudDeviceToken, ct);
+        if (!ok) return (false, new(), 0, why);
+
+        var list = new List<CloudChatMessage>();
+        if (json.TryGetProperty("messages", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            foreach (var m in arr.EnumerateArray())
+            {
+                var parsed = CloudChatMessage.Parse(m, "support");
+                if (parsed is not null) list.Add(parsed);
+            }
+
+        var unread = 0;
+        if (json.TryGetProperty("thread", out var th) && th.ValueKind == JsonValueKind.Object)
+            unread = (int)Num(th, "unreadUser");
+
+        return (true, list, unread, "");
+    }
+
+    /// <summary>پیام به پشتیبانی.</summary>
+    public async Task<CloudResult> SupportSendAsync(string text, CancellationToken ct = default)
+    {
+        if (!Activated) return CloudResult.No("فعال نشده", "not_activated");
+        if (string.IsNullOrWhiteSpace(text)) return CloudResult.No("پیام خالی است", "empty_message");
+        var (ok, _, why, code) = await PostAsync("/api/pump/device/support/messages",
+            new { body = text.Trim() }, _settings.CloudDeviceToken, ct);
+        return ok ? CloudResult.Done : CloudResult.No(why, code);
+    }
+
+    /// <summary>«خواندم» — نقطهٔ قرمز را پاک می‌کند.</summary>
+    public async Task<bool> SupportSeenAsync(CancellationToken ct = default)
+    {
+        if (!Activated) return false;
+        var (ok, _, _, _) = await PostAsync("/api/pump/device/support/read",
+            new { }, _settings.CloudDeviceToken, ct);
+        return ok;
     }
 
     // ── چتِ پشتیبانی — مشتریِ کیو‌آر ↔ صاحبِ پمپ ────────────────────────
