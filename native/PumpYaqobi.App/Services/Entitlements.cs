@@ -40,11 +40,40 @@ public static class Entitlements
     /// <summary>بک‌اپِ خودکار روی سرور/ابر.</summary>
     public const string CloudBackup = "cloudbackup";
 
+    //  ── سه دروازهٔ تازه، از مرزِ «استاندارد ⇄ وی‌آی‌پی» ────────────────
+    //
+    //  خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۳۰) دربارهٔ پلنِ استاندارد: «مفاد و
+    //  ضرر براش نشون داده نشه یا هم تار باشه که هیچی دیده نشه، نه فایده نه
+    //  ضررشو… تاریخچه‌ها هم بسته بشه و برای هیچ بخشی تاریخچه‌ای نباشه… و
+    //  داشبورد هم قفل باشه.»
+    //
+    //  ⛔ و در همان جمله، قاعده‌ای که این سه را از «گروگان گرفتنِ دفتر» جدا
+    //  می‌کند: «این‌ها هم براشون باشن، اطلاعاتشون باشن ولی دیده نتونن، و
+    //  اگه یارو بار دیگه وی‌آی‌پی یا دائمی رو خرید قفلِ اون‌ها باز بشه.»
+    //  یعنی هیچ محاسبه‌ای خاموش نمی‌شود و هیچ ردیفی پاک نمی‌شود — فقط درِ
+    //  صفحه بسته است.
+
+    /// <summary>بخشِ «مفاد / ضرر / اتحادیه» و همان عددش در صفحهٔ اصلی.</summary>
+    /// <remarks>
+    /// ⚠️ <b>نرخِ اتحادیه آسیب نمی‌بیند.</b> جملهٔ خودِ صاحب ریپو: «ببین که
+    /// نرخِ اتحادیه این وسط آسیب نبینه.» نرخ این‌جا فقط <b>دیده</b> می‌شود؛
+    /// خواندنش برای زیانِ افزایشِ قیمت و فاکتورها از تاریخچهٔ اتحادیه است و
+    /// این قفل به آن دست نمی‌زند.
+    /// </remarks>
+    public const string Profit = "profit";
+
+    /// <summary>بخشِ «تاریخچه‌ها» و دکمهٔ تاریخچهٔ هر بخش.</summary>
+    public const string History = "history";
+
+    /// <summary>صفحهٔ داشبورد.</summary>
+    public const string Dashboard = "dashboard";
+
     /// <summary>چتِ پشتیبانی — «یکی از واجبات است»، پس هرگز قفل نمی‌شود.</summary>
     public const string Support = "support";
 
     /// <summary>همهٔ چیزهایی که اشتراک می‌خواهند — بی ترتیبِ خاص.</summary>
-    public static readonly string[] Paid = { Kar, QrLive, CloudBackup };
+    public static readonly string[] Paid =
+        { Kar, QrLive, CloudBackup, Profit, History, Dashboard };
 
     /// <summary>نامِ فارسیِ هر کدام، برای پیام و صفحهٔ پروفایل.</summary>
     public static string TitleOf(string feature) => feature switch
@@ -52,6 +81,9 @@ public static class Entitlements
         Kar => "اپِ کارمندان و ربات",
         QrLive => "کیو‌آرِ حسابِ مشتری",
         CloudBackup => "بک‌اپِ خودکار روی سرور",
+        Profit => "مفاد / ضرر / اتحادیه",
+        History => "تاریخچه‌ها",
+        Dashboard => "داشبورد",
         Support => "چتِ پشتیبانی",
         _ => feature,
     };
@@ -87,7 +119,7 @@ public static class Entitlements
     /// </summary>
     public static bool Allows(string feature)
     {
-        if (feature is not (Kar or QrLive or CloudBackup)) return true;   // پشتیبانی و هر چیزِ دیگر
+        if (Array.IndexOf(Paid, feature) < 0) return true;   // پشتیبانی و هر چیزِ دیگر
         return State().Allows(feature);
     }
 
@@ -221,8 +253,7 @@ public sealed record EntitlementState(
     /// <summary>این کار باز است؟</summary>
     public bool Allows(string feature)
     {
-        if (feature is not (Entitlements.Kar or Entitlements.QrLive or Entitlements.CloudBackup))
-            return true;
+        if (Array.IndexOf(Entitlements.Paid, feature) < 0) return true;
         //  ⚠️ فقط می‌بندد — آزمایشِ دستیِ خودِ صاحبِ پمپ، بی اثر روی دیسک.
         if (Entitlements.TestDeny) return false;
         if (NotActivated) return false;
@@ -263,6 +294,8 @@ public sealed record EntitlementState(
             Entitlements.Kar         => Features.Contains("kar_app") || Features.Contains("bot"),
             Entitlements.QrLive      => Features.Contains("cloud"),
             Entitlements.CloudBackup => Features.Contains("cloud"),
+            //  ⚠️ این سه هنوز روی سرور نیستند (‎docs/PLANS-fa.md‎، «کارِ
+            //  سرور»). تا آن روز فقط نامِ خودِ برنامه کار می‌کند.
             _ => false,
         };
     }

@@ -221,11 +221,26 @@ public sealed partial class MainViewModel : ObservableObject
     /// شود. قفل سرِ جایش هست؛ همان لحظه‌ای می‌پرسد که کاربر خودش روی آن بخش
     /// بزند.
     /// </summary>
+    /// <remarks>
+    /// ⛔ <b>و همین قاعده برای قفلِ پلن هم هست — با یک دلیلِ سنگین‌تر.</b>
+    /// صفحهٔ اولِ برنامه داشبورد است و داشبورد از امروز مالِ وی‌آی‌پی است.
+    /// بی این خط، نصبی که هنوز اشتراک ندارد (یا اینترنتش قطع است) بالا
+    /// می‌آمد و <b>صفحهٔ خالی</b> می‌دید — یعنی همان «برنامه خراب است»ی که
+    /// اعتبار را می‌برد. پس اولین بخشی که پلن اجازه‌اش را می‌دهد باز
+    /// می‌شود، بی هیچ پیامی.
+    ///
+    /// ⚠️ توست هم نمی‌دهیم: کاربر این‌جا روی چیزی نزده که بخواهد جوابی
+    /// بگیرد. قفل همان لحظه‌ای حرف می‌زند که خودش روی آن بخش بزند.
+    /// </remarks>
     public Task OpenStartSectionAsync()
     {
         var last = Sections.FirstOrDefault(s => s.Id == _settings.LastSection);
-        if (last is null || AppHost.Current.Locks.NeedsUnlock(last.Id)) last = Sections[0];
+        if (last is null || Blocked(last)) last = Sections.FirstOrDefault(x => !Blocked(x)) ?? Sections[0];
         return GoAsync(last);
+
+        static bool Blocked(SectionViewModel x) =>
+            AppHost.Current.Locks.NeedsUnlock(x.Id)
+            || (PlanFeatureOf(x.Id) is { } f && !Entitlements.Allows(f));
     }
 
     public ObservableCollection<SectionViewModel> Sections { get; }
@@ -529,6 +544,9 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     private async Task OpenHistoryAsync(string kind)
     {
+        //  ⛔ همان قفلِ پلن — «برای هیچ بخشی تاریخچه‌ای نباشه». دکمهٔ تاریخچهٔ
+        //  گاوصندوق/صرافی/امانت هم از همین در رد می‌شود، نه فقط خودِ بخش.
+        if (!Entitlements.Gate(AppHost.Current, Entitlements.History)) return;
         if (Sections.FirstOrDefault(x => x.Id == "history") is not Sections.HistorySectionViewModel h) return;
         await GoAsync(h);
         await h.OpenAsync(kind);
@@ -642,8 +660,45 @@ public sealed partial class MainViewModel : ObservableObject
     /// ⚠️ رمز **پیش از** نشان دادنِ صفحه پرسیده می‌شود، نه بعدش: رمزی که پس
     /// از دیده شدنِ داده پرسیده شود هیچ چیزی را نگه نداشته است.
     /// </summary>
+    /// <summary>
+    /// ══ قفلِ پلن — «استاندارد این بخش را ندارد» ═══════════════════════════
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۳۰) دربارهٔ پلنِ استاندارد: «مفاد و
+    /// ضرر براش نشون داده نشه… تاریخچه‌ها هم بسته بشه و برای هیچ بخشی
+    /// تاریخچه‌ای نباشه… و داشبورد هم قفل باشه.»
+    ///
+    /// ⛔ <b>این با قفلِ رمزِ بخش یکی نیست</b> و جایش را نمی‌گیرد: آن یکی
+    /// خواستهٔ خودِ صاحبِ پمپ است (رمز روی «مفاد» و «زیانِ افزایشِ قیمت»)،
+    /// این یکی مرزِ پلن است. هر دو می‌دوند و ترتیبشان مهم نیست.
+    ///
+    /// ⚠️ <b>داده دست نمی‌خورد.</b> فقط درِ صفحه بسته است — «اطلاعاتشون باشن
+    /// ولی دیده نتونن، و اگه بار دیگه وی‌آی‌پی یا دائمی رو خرید قفلِ اون‌ها
+    /// باز بشه». پس هیچ محاسبه‌ای خاموش نمی‌شود و نرخِ اتحادیه هم — که جای
+    /// دیگری هم به کار می‌رود — آسیب نمی‌بیند.
+    /// </summary>
+    private static string? PlanFeatureOf(string? id) => id switch
+    {
+        "profit"    => Entitlements.Profit,
+        "priceloss" => Entitlements.Profit,   // زیربخشِ همان «ضرر»
+        "history"   => Entitlements.History,
+        "dashboard" => Entitlements.Dashboard,
+        _ => null,
+    };
+
+    /// <summary>پلن این بخش را دارد؟ نداشت، خودش به کاربر می‌گوید چرا.</summary>
+    private static bool PlanAllows(SectionViewModel s)
+    {
+        var feature = PlanFeatureOf(s.Id);
+        if (feature is null) return true;
+        //  ⚠️ `Gate` خودش توست می‌دهد — دکمه‌ای که زده شود و هیچ اتفاقی
+        //  نیفتد، در چشمِ کاربر باگ است نه قفل.
+        return Entitlements.Gate(AppHost.Current, feature);
+    }
+
     private async Task<bool> UnlockAsync(SectionViewModel s)
     {
+        if (!PlanAllows(s)) return false;
+
         var locks = AppHost.Current.Locks;
         if (!locks.NeedsUnlock(s.Id)) return true;
 
@@ -834,7 +889,10 @@ public sealed partial class MainViewModel : ObservableObject
         string M(decimal v) => Shamsi.Money(Math.Round(v, 0, MidpointRounding.AwayFromZero)) + " افغانی";
         Banner[0].Value = M(compAlbaqi);
         Banner[1].Value = M(debt);
-        Banner[2].Value = M(profit);
+        //  ⛔ «مفاد و ضرر هم یک نوع اس تو صفحهٔ اصلی است و دیده نمیشه» —
+        //  جملهٔ خودِ صاحب ریپو دربارهٔ پلنِ استاندارد. عدد **حساب می‌شود**
+        //  (چون بقیهٔ برنامه به آن نیاز دارد) ولی روی نوار «•••» می‌نشیند.
+        Banner[2].Value = Entitlements.Allows(Entitlements.Profit) ? M(profit) : "•••";
         Banner[3].Value = M(expToday);
     }
 

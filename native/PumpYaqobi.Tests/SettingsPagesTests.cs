@@ -153,8 +153,25 @@ public class SettingsPagesTests
     public async Task ALockedSectionDoesNotOpenWithoutThePassword()
     {
         var host = Host();
+
+        //  ⛔ **پیش از ساختنِ ویومدل، نه بعدش.** ویومدل نسخهٔ خودش از تنظیمات
+        //  را نگه می‌دارد و با ذخیرهٔ «آخرین بخش» همان را روی دیسک می‌نویسد،
+        //  پس هر چیزی که بعد از ساختنش در فایل بنویسیم همان لحظه پاک
+        //  می‌شود. (همین آزمون گرفتش.)
+        //
+        //  و اشتراک باز گذاشته می‌شود چون «مفاد» از ۱۴۰۵/۰۶/۳۰ قفلِ **پلن**
+        //  هم دارد و این آزمون دربارهٔ قفلِ **رمز** است. ارفاق کافی است —
+        //  همان راهی که برنامهٔ بی‌اینترنت هم از آن باز می‌ماند.
+        var file = AppSettings.Load();
+        file.CloudDeviceToken = "pd-test";
+        file.EntitledUntil = DateTimeOffset.UtcNow.AddDays(30).ToUnixTimeMilliseconds();
+        file.Save();
+
         var vm = new MainViewModel();
-        var dash = vm.Sections.Single(s => s.Id == "dashboard");
+
+        //  ⚠️ صفحهٔ «پیشین» عمداً داشبورد نیست: داشبورد هم قفلِ پلن دارد.
+        //  «قرض‌داران» در هیچ پلنی قفل نمی‌شود.
+        var dash = vm.Sections.Single(s => s.Id == "debt");
         var profit = vm.Sections.Single(s => s.Id == "profit");
 
         await vm.GoAsync(dash);
