@@ -252,7 +252,19 @@ public sealed class CloudLink
         var (ok, me, why, errCode) = await GetAsync("/api/pump/device/me", _settings.CloudDeviceToken, ct);
         if (!ok) return CloudResult.No(why, errCode);
 
-        _settings.CloudStationId = StationId(me);
+        //  ⚠️ **شناسهٔ پمپ هم مثلِ کلیدِ عمومی قفل است.** پیش از این هر چه
+        //  سرور می‌گفت بی سنجش روی تنظیمات می‌نشست؛ یعنی اگر روزی همین
+        //  توکن به پمپِ دیگری می‌خورد، برنامه بی‌صدا پمپش را عوض می‌کرد و
+        //  از آن به بعد عکسِ حساب‌های این پمپ به پوشهٔ پمپِ دیگری می‌رفت.
+        //  `stn`ِ مجوز هم روی همین سنجیده می‌شود (`LicenseGuard`)، پس
+        //  عوض شدنش یعنی «یا دستگاه جابه‌جا شده یا کسی وسط نشسته».
+        var seen = StationId(me);
+        if (seen.Length > 0 && _settings.CloudStationId.Length > 0
+            && !string.Equals(seen, _settings.CloudStationId, StringComparison.Ordinal))
+            return CloudResult.No(
+                "این دستگاه روی پمپِ دیگری ثبت شده است. اگر واقعاً پمپ را عوض کرده‌اید، "
+                + "دوباره با کدِ شش‌رقمیِ همان پمپ فعال کنید.", "station_mismatch");
+        if (seen.Length > 0) _settings.CloudStationId = seen;
         ReadSubscription(me);
 
         //  مجوزِ تازه — جدا، چون ممکن است اشتراک تمام شده باشد و مجوزی
@@ -882,6 +894,45 @@ public sealed class CloudLink
     }
 
     /// <summary>
+    /// ══ «این دستگاه دیگر مالِ این پمپ نیست» ═════════════════════════════
+    ///
+    /// ⛔ **نشتی که این می‌بندد**: خروج از حساب تا امروز فقط چهار فیلدِ
+    /// حساب را پاک می‌کرد. توکنِ **دستگاه**، شناسهٔ پمپ، مجوز، کلیدِ عمومی،
+    /// کدِ اپِ کارمندان، نشانی و رمزِ سرورِ خانگی و مُهرِ ارفاق همه سرِ جا
+    /// می‌ماندند. یعنی اگر همین کامپیوتر به حسابِ پمپِ دیگری می‌رفت:
+    ///   • عکسِ حساب‌ها به پوشهٔ ابریِ **پمپِ قبلی** می‌رفت (توکنِ دستگاهِ او)،
+    ///   • کدِ اپِ کارمندان و اشتراکِ پمپِ قبلی روی صفحهٔ پروفایل دیده می‌شد،
+    ///   • و ارفاقِ اشتراکِ او برای این یکی خرج می‌شد.
+    ///
+    /// ⚠️ **دفترِ روی کامپیوتر دست نمی‌خورد.** این تابع یک بیت از دیتابیس
+    /// را هم لمس نمی‌کند — دفترِ صاحبِ پمپ مالِ خودش است و گروگان گرفتنش
+    /// (یا پاک کردنش) هیچ‌وقت کارِ ما نیست. فقط بندهای «این نصب به کدام پمپ
+    /// وصل است» باز می‌شوند.
+    ///
+    /// ⚠️ کلیدِ عمومی هم پاک می‌شود، و این عمدی است: قفلِ TOFU برای «همین
+    /// دستگاه، همین سرور» است و با عوض شدنِ پمپ باید از نو قفل شود. نشانیِ
+    /// ابر همچنان در کد قفل است، پس این هیچ دری را باز نمی‌کند.
+    /// </summary>
+    public async Task ForgetStationAsync()
+    {
+        _settings.CloudDeviceToken = "";
+        _settings.CloudStationId = "";
+        _settings.CloudLicense = "";
+        _settings.CloudPublicKey = "";
+        _settings.CloudAccessCode = "";
+        _settings.CloudSyncedAt = 0;
+        _settings.EntitledUntil = 0;
+        _settings.EntitledPlan = "";
+        //  نشانی و رمزهای سرورِ خانگی هم مالِ همان پمپ بودند
+        _settings.ServerUrl = "";
+        _settings.ServerToken = "";
+        _settings.ServerReadKey = "";
+        _settings.ServerId = "";
+        Subscription = PumpSubscription.None;
+        await SaveQuiet();
+    }
+
+    /// <summary>
     /// نشانیِ سرورِ خانگی و رمزِ خواندن را از حساب می‌گیرد.
     ///
     /// ⚠️ همین است که کادرِ «نشانیِ سرور» و «رمزِ سرور» را از تنظیمات
@@ -901,10 +952,56 @@ public sealed class CloudLink
         if (!json.TryGetProperty("home", out var home) || home.ValueKind != JsonValueKind.Object)
             return (false, "", "", "", "هنوز پمپی به این حساب وصل نشده است");
 
+        //  ⛔ **پمپِ این حساب با پمپی که این دستگاه رویش قفل شده یکی نیست.**
+        //  بی این سنجش، ورود با حسابِ پمپِ دیگر نشانی و رمزِ **آن** پمپ را
+        //  روی تنظیماتِ این یکی می‌نشاند: از آن لحظه دفترِ این پمپ به سرورِ
+        //  خانگیِ پمپِ دیگری می‌رفت. راهِ درستِ جابه‌جایی
+        //  `ForgetStationAsync` است.
+        //
+        //  ⚠️ **سنجش روی شناسهٔ ابری است، نه کدِ پمپ.** یک بار با کدِ پمپ
+        //  نوشتمش و سنجهٔ `cloudlogin` گرفتش: کدِ ابر لازم نیست با
+        //  `AppSettings.StationCode`ی محلی یکی باشد (ابر می‌تواند
+        //  هنجارش کند یا خودش بسازدش)، پس آن مقایسه نصبِ سالم را هم رد
+        //  می‌کرد. شناسه همان چیزی است که مجوز (`stn`) هم رویش قفل است.
+        var acctStation = StationId(json);
+        var locked = (_settings.CloudStationId ?? "").Trim();
+        if (locked.Length > 0 && acctStation.Length > 0
+            && !string.Equals(acctStation, locked, StringComparison.Ordinal))
+            return (false, "", "", "", "این حساب مالِ پمپِ دیگری است. برای جابه‌جایی، "
+                + "این دستگاه را از پمپِ فعلی جدا کنید.");
+
         return (true, Str(home, "url"), Str(home, "readKey"), Str(home, "station"), "");
     }
 
     // ── گفت‌وگو با ابر ─────────────────────────────────────────────────
+
+    /// <summary>
+    /// ══ هویتِ نسخه روی هر درخواست ═══════════════════════════════════════
+    ///
+    /// تا پیش از این هیچ درخواستی نمی‌گفت از کدام نسخهٔ برنامه آمده — نه
+    /// ‎User-Agent‎ی، نه هدرِ نسخه‌ای. نتیجه‌اش دو چیز بود: سرور نمی‌توانست
+    /// نسخهٔ قدیم را از تازه جدا کند (پس هر تغییرِ سرور خطرِ شکستنِ نصب‌های
+    /// قدیم داشت)، و در لاگِ خطا معلوم نبود کدام نسخه خطا داده.
+    ///
+    /// ⚠️ **هیچ چیزِ شناسایی‌کنندهٔ کاربر این‌جا نمی‌رود** — نه ایمیل، نه نامِ
+    /// ماشین، نه شناسهٔ دستگاه. فقط شمارهٔ نسخه و نامِ برنامه. خودِ توکن
+    /// می‌گوید این کدام دستگاه است.
+    ///
+    /// ⚠️ جایش عمداً داخلِ <see cref="Build"/> است، نه در فرستنده: هر
+    /// درخواست — و هر **تلاشِ دوم** پس از تازه‌سازیِ توکن — از همان یک جا
+    /// ساخته می‌شود، پس هیچ مسیری بی هدر نمی‌ماند.
+    /// </summary>
+    public static void Stamp(HttpRequestMessage req)
+    {
+        try
+        {
+            var v = PumpYaqobi.App.Update.AppVersion.Current;
+            req.Headers.TryAddWithoutValidation("User-Agent", "PumpYaqobi/" + v);
+            req.Headers.TryAddWithoutValidation("X-App-Version", v);
+            req.Headers.TryAddWithoutValidation("X-App-Platform", "windows-native");
+        }
+        catch { /* هدر نرفتن هیچ‌وقت نباید جلوی درخواست را بگیرد */ }
+    }
 
     /// <summary>
     /// پاسخِ خامِ ابر — مثلِ قبل، به‌علاوهٔ <b>خودِ کدِ HTTP</b>.
@@ -929,6 +1026,7 @@ public sealed class CloudLink
         var req = new HttpRequestMessage(method, CloudConfig.BaseUrl + path);
         if (body is not null) req.Content = JsonContent.Create(body);
         if (!string.IsNullOrWhiteSpace(token)) req.Headers.Add("Authorization", $"Bearer {token}");
+        Stamp(req);
         return req;
     }
 

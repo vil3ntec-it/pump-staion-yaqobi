@@ -828,7 +828,10 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
 
     public async Task LoadArchiveCountAsync()
     {
-        try { ArchiveCount = (await _host.Debtors.ListArchivesAsync(Entity.Id)).Count; }
+        //  ⚠️ شمارنده با `COUNT` می‌آید، نه با خواندنِ همهٔ آرشیوها: `RowsJson`ِ
+        //  هر جدولِ آرشیو صدها ردیفِ سریال‌شده است و این‌جا فقط یک عدد
+        //  می‌خواهیم (اسکنِ کاملِ ۱۴۰۵/۰۶/۳۰).
+        try { ArchiveCount = await _host.Debtors.CountArchivesAsync(Entity.Id); }
         catch { /* شمارنده نباید صفحه را بشکند */ }
     }
 

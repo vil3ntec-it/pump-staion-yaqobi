@@ -137,10 +137,19 @@ public sealed class BackupPusher : IAsyncDisposable
         {
             var target = url.TrimEnd('/') + "/api/stations/" + Uri.EscapeDataString(code) + "/backup";
             using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
-            using var body = new ByteArrayContent(await File.ReadAllBytesAsync(file, ct));
+            //  ⚠️ **فایل جریانی می‌رود، نه یک‌جا در حافظه.** پیش از این
+            //  ‎File.ReadAllBytesAsync‎ بود: دفترِ چندصد مگابایتیِ یک پمپِ
+            //  چندساله همان‌قدر رم می‌خواست، یک‌جا، هر شش ساعت. حالا هرچه
+            //  دفتر بزرگ‌تر شود، حافظهٔ این کار همان اندازه می‌ماند.
+            await using var stream = new FileStream(
+                file, FileMode.Open, FileAccess.Read, FileShare.Read,
+                bufferSize: 64 * 1024, useAsync: true);
+            using var body = new StreamContent(stream, 64 * 1024);
             body.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+            body.Headers.ContentLength = stream.Length;
 
             using var req = new HttpRequestMessage(HttpMethod.Post, target) { Content = body };
+            CloudLink.Stamp(req);
             req.Headers.TryAddWithoutValidation("x-station-token", token);
             // نامِ فایل همان نامِ روزِ عکس + ساعت، تا چهار پشتیبانِ یک روز روی هم نیفتند
             req.Headers.TryAddWithoutValidation(

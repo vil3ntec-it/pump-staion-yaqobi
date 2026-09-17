@@ -155,4 +155,34 @@ public class TableArchiveTests : IDisposable
         await svc.DeleteArchiveAsync(list[0].Id);
         Assert.Single(await svc.ListArchivesAsync(a.Id));
     }
+
+    /// <summary>
+    /// ⚠️ **شمارنده با `COUNT` می‌آید، نه با خواندنِ همهٔ آرشیوها.**
+    ///
+    /// صفحهٔ حساب برای نوشتنِ «🗂️ آرشیو — جدول N» فقط همین عدد را می‌خواهد؛
+    /// پیش از اسکنِ ۱۴۰۵/۰۶/۳۰ کلِ `RowsJson`ِ هر جدولِ آرشیو با هر باز کردنِ
+    /// حساب خوانده می‌شد. عدد باید مو‌به‌مو همان شمارِ فهرست باشد، وگرنه
+    /// دکمه دروغ می‌گوید.
+    /// </summary>
+    [Fact]
+    public async Task ShomarandeyeArshiv_BaCountMiayad_VaHamanAdadeFehrestAst()
+    {
+        var (svc, dbf) = Host();
+        var a = await SeedAsync(dbf);
+
+        Assert.Equal(0, await svc.CountArchivesAsync(a.Id));
+
+        await svc.ArchiveTableAsync(a.Id, "1405/6/14");
+        Assert.Equal(1, await svc.CountArchivesAsync(a.Id));
+
+        await svc.SaveRowAsync(new DebtRow
+        { FuelAccountId = a.Id, DateShamsi = "1405/7/1", Name = "دورِ دوم", Liters = 9m });
+        await svc.ArchiveTableAsync(a.Id, "1405/7/2");
+
+        var list = await svc.ListArchivesAsync(a.Id);
+        Assert.Equal(list.Count, await svc.CountArchivesAsync(a.Id));
+
+        //  و حسابِ دیگر با شمارندهٔ این یکی قاطی نمی‌شود
+        Assert.Equal(0, await svc.CountArchivesAsync(a.Id + 9999));
+    }
 }

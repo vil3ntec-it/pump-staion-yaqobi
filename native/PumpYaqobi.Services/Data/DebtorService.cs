@@ -610,6 +610,24 @@ public sealed class DebtorService
             .OrderByDescending(x => x.Id).ToListAsync(ct);
     }
 
+    /// <summary>
+    /// ⚠️ **فقط شمارِ جدول‌های آرشیو** — بی خواندنِ خودِ ردیف‌ها.
+    ///
+    /// صفحهٔ حساب برای نوشتنِ «🗂️ آرشیو — جدول N» تنها به همین عدد نیاز دارد،
+    /// ولی تا امروز <see cref="ListArchivesAsync"/> را صدا می‌زد و
+    /// <c>.Count</c> می‌گرفت — یعنی `RowsJson`ِ **همهٔ** جدول‌های آرشیوِ همان
+    /// حساب (هر کدام صدها ردیفِ سریال‌شده) با هر باز کردنِ حساب از دیسک
+    /// می‌آمد. با ده سال آرشیو، همان چالهٔ همیشگیِ «همهٔ ردیف‌ها را بخوان
+    /// برای یک عدد». اسکنِ کاملِ ۱۴۰۵/۰۶/۳۰ پیدایش کرد.
+    /// </summary>
+    public async Task<int> CountArchivesAsync(long accountId, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        return await db.DebtTableArchives.AsNoTracking()
+            .CountAsync(x => x.AccountId == accountId, ct);
+    }
+
     /// <summary>ردیف‌های داخلِ یک آرشیو — فقط برای دیدن، بی کلید و بی ذخیره.</summary>
     public static List<DebtRow> ArchiveRows(DebtTableArchive h)
     {

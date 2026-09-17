@@ -232,9 +232,9 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
         PetrolBuyText = "⛽ خریدهای پطرول (" + Shamsi.Money(nP) + ")";
         DieselBuyText = "🟤 خریدهای دیزل (" + Shamsi.Money(nD) + ")";
 
-        var arcs = await _host.Companies.ListArchivesAsync(Entity.Id);
-        var aP = arcs.Count(h => h.Fuel != FuelType.Diesel);
-        var aD = arcs.Count(h => h.Fuel == FuelType.Diesel);
+        //  ⚠️ فقط دو عدد می‌خواهیم، پس با `COUNT` — نه با خواندنِ `RowsJson`ِ
+        //  همهٔ جدول‌های آرشیوِ این شرکت (اسکنِ کاملِ ۱۴۰۵/۰۶/۳۰).
+        var (aP, aD) = await _host.Companies.CountArchivesAsync(Entity.Id);
         HasArcPetrol = aP > 0; HasArcDiesel = aD > 0;
         ArcPetrolText = "🗂️ جدول‌های آرشیو پطرول (" + Shamsi.Money(aP) + ")";
         ArcDieselText = "🗂️ جدول‌های آرشیو دیزل (" + Shamsi.Money(aD) + ")";

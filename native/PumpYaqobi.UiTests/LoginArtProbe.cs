@@ -74,6 +74,17 @@ internal static class LoginArtProbe
         foreach (var gone in new[] { "LoginArt", "DecodeToWidth", "CroppedBitmap", "AssetLoader", "login-art.jpg" })
             Check($"«{gone}» در ویومدل نیست", !code.Contains(gone));
 
+        // ── ۱ب) نخِ رابط برای نقشه هیچ وقتی نمی‌دهد ───────────────────────
+        //  گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۳۰): «برنامه باز خیلی کند شده… لگ داره.»
+        //  خودِ تجزیهٔ نقشه ~۱۱۶ میلی‌ثانیه است (سنجیده شد) و تا امروز روی
+        //  **نخِ رابط** می‌رفت — یک فریمِ گم‌شده، هم وقتِ گرم کردنِ صفحه‌ها و
+        //  هم سرِ باز کردنِ صفحه. حالا روی نخِ دیگر می‌رود.
+        Console.WriteLine("── ۱ب) تجزیهٔ نقشه روی نخِ رابط نیست");
+        Check("نخِ رابط برای نقشه چیزی نپرداخته",
+              PumpYaqobi.App.Controls.LoginArt.UiMs <= 5,
+              $"نخِ رابط {PumpYaqobi.App.Controls.LoginArt.UiMs}ms · نخِ دیگر "
+              + $"{PumpYaqobi.App.Controls.LoginArt.OffMs}ms · {PumpYaqobi.App.Controls.LoginArt.Parses} بار");
+
         // ── ۲) خودِ نقشه در درخت است ──────────────────────────────────────
         Console.WriteLine("── ۲) نقشهٔ برداری در صفحه");
         var db0 = DbWatch.Count;
@@ -101,6 +112,12 @@ internal static class LoginArtProbe
         Check("نقشه واقعاً نشانده شده", Bitmap0(win) is not null);
         Check("و **فوری** با همان باز شدنِ صفحه آمد", firstMs >= 0 && firstMs <= pageMs,
               $"نقشه {firstMs}ms · صفحه {pageMs}ms");
+        Check("نقشه برای هر تم فقط یک بار ساخته می‌شود",
+              PumpYaqobi.App.Controls.LoginArt.Parses == 1,
+              $"{PumpYaqobi.App.Controls.LoginArt.Parses} بار · نخِ دیگر {PumpYaqobi.App.Controls.LoginArt.OffMs}ms");
+        Check("و نخِ رابط هنوز چیزی نپرداخته",
+              PumpYaqobi.App.Controls.LoginArt.UiMs <= 5,
+              $"{PumpYaqobi.App.Controls.LoginArt.UiMs}ms");
         Note("حافظهٔ کلِ باز شدنِ صفحه", $"{(mem1 - mem0) / 1024.0 / 1024.0:0.0} MB");
         Note("دستورِ دیتابیسِ خودِ صفحه", $"{DbWatch.Count - db0} دستور (کارمندان · تاریخچه · پشتیبان‌ها)");
 
