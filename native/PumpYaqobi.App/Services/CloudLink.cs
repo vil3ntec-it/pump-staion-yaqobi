@@ -529,11 +529,93 @@ public sealed class CloudLink
     /// (`shop/server/test/pump-account.test.js`). هر دو نام خوانده می‌شوند
     /// تا نسخهٔ قدیمیِ سرور هم کار کند.
     /// </summary>
+    /// <summary>
+    /// ══ «این کامپیوتر حالا مالِ حسابِ دیگری است» ═════════════════════════
+    ///
+    /// ⛔ <b>نشتی که این می‌بندد</b> (بندِ ۱۲ی خواستهٔ صاحب ریپو: «اگر یک
+    /// حساب از دستگاه دیگری وارد شود… اطلاعاتِ حسابِ قبلی نباید باقی
+    /// بماند، با حسابِ جدید مخلوط نشود، و توکنِ حسابِ قبلی اشتباهاً برای
+    /// حسابِ جدید استفاده نشود»): تا امروز ورودِ یک حسابِ <b>دیگر</b> روی
+    /// همین نصب فقط چهار فیلدِ حساب را عوض می‌کرد و بندهای پمپِ قبلی
+    /// دست‌نخورده می‌ماندند — توکنِ <b>دستگاه</b>، شناسهٔ پمپ، مجوزِ
+    /// امضاشده، کلیدِ عمومی، کدِ اپِ کارمندان، نشانی و رمزِ سرورِ خانگی و
+    /// مُهرِ ارفاق. نتیجه‌اش سه چیز بود:
+    ///   • عکسِ حساب‌ها با توکنِ دستگاهِ پمپِ قبلی به پوشهٔ ابریِ <b>او</b>
+    ///     می‌رفت،
+    ///   • کدِ اپِ کارمندان و اشتراکِ پمپِ قبلی روی پروفایلِ حسابِ تازه
+    ///     دیده می‌شد (و ارفاقش برای این یکی خرج می‌شد)،
+    ///   • و <see cref="HomeFromAccountAsync"/> با «این حساب مالِ پمپِ
+    ///     دیگری است — دستگاه را جدا کنید» جلوی کاربر دیوار می‌کشید،
+    ///     در حالی که <b>هیچ راهی برای جدا کردن نبود</b>:
+    ///     <see cref="ForgetStationAsync"/> نوشته شده بود و هیچ‌جا صدا
+    ///     زده نمی‌شد. یعنی جابه‌جاییِ پمپ عملاً ناممکن بود.
+    ///
+    /// ⚠️ <b>فقط با شناسهٔ حساب تصمیم می‌گیریم</b>، و فقط وقتی شناسهٔ کهنه
+    /// را <b>داریم</b> و با تازه <b>یکی نیست</b>. پس این سه حالت هیچ چیزی
+    /// را باز نمی‌کنند: ورودِ دوبارهٔ همان حساب، نخستین ورودِ یک نصبِ تازه،
+    /// و نصبی که شناسه‌اش را ندارد (نسخهٔ پیش از امروز) و ایمیلش هم همان
+    /// است. «قفلِ ناخواسته بدتر از بازِ ناخواسته است» این‌جا هم برقرار
+    /// است: مشتریِ امروزی نباید با یک به‌روزرسانی از پمپش جدا شود.
+    ///
+    /// ⚠️ و برای نصبِ کهنه‌ای که شناسه ندارد، <b>ایمیل</b> ملاک است —
+    /// همان چیزی که داریم. (ایمیلِ عوض‌شدهٔ همان حساب یک بار بندها را
+    /// بی‌دلیل باز می‌کند و کاربر دوباره کدِ شش‌رقمی می‌زند؛ بدترین
+    /// حالتش همین است، و دفتر دست نمی‌خورد.)
+    ///
+    /// ⛔ <b>یک بیت از دفتر لمس نمی‌شود</b> — همان قاعدهٔ
+    /// <see cref="ForgetStationAsync"/>.
+    /// </summary>
+    private async Task ReleaseIfOtherAccountAsync(JsonElement json)
+    {
+        //  ⚠️ هر ورود از صفر: وگرنه هشدارِ یک جابه‌جاییِ قدیمی سرِ ورودهای
+        //  بعدیِ همان حساب هم نشان داده می‌شد.
+        AccountSwitched = false;
+
+        if (!json.TryGetProperty("user", out var u) || u.ValueKind != JsonValueKind.Object) return;
+
+        var freshId = Ident(u, "id");
+        var freshMail = Str(u, "email").Trim();
+        var oldId = (_settings.CloudUserId ?? "").Trim();
+        var oldMail = (_settings.CloudEmail ?? "").Trim();
+
+        bool other;
+        if (oldId.Length > 0 && freshId.Length > 0)
+            other = !string.Equals(oldId, freshId, StringComparison.Ordinal);
+        else if (oldMail.Length > 0 && freshMail.Length > 0)
+            other = !string.Equals(oldMail, freshMail, StringComparison.OrdinalIgnoreCase);
+        else
+            other = false;
+
+        if (!other) return;
+
+        //  بندی هست که باز شود؟ نصبی که هیچ‌وقت فعال نشده چیزی ندارد.
+        var bound = (_settings.CloudDeviceToken ?? "").Length > 0
+                 || (_settings.CloudStationId ?? "").Length > 0
+                 || (_settings.CloudAccessCode ?? "").Length > 0;
+
+        AccountSwitched = bound;
+        if (bound) await ForgetStationAsync();
+    }
+
+    /// <summary>
+    /// آخرین ورود، حسابِ دیگری بود و بندهای پمپِ قبلی باز شدند.
+    ///
+    /// ⚠️ برای همین است که هست: قفلی که بی‌صدا باشد در چشمِ کاربر باگ
+    /// است. صفحهٔ ورود همین را به او می‌گوید تا بداند چرا باید کدِ
+    /// شش‌رقمیِ پمپش را دوباره بزند.
+    /// </summary>
+    public bool AccountSwitched { get; private set; }
+
     private async Task<CloudResult> SeatAsync(JsonElement json)
     {
         var token = Str(json, "accessToken");
         if (token.Length == 0) token = Str(json, "token");
         if (token.Length == 0) return CloudResult.No("سرور نشست نداد");
+
+        //  ⚠️ **پیش از نشستنِ توکنِ تازه** — وگرنه یک لحظه توکنِ حسابِ تازه
+        //  کنارِ توکنِ دستگاهِ حسابِ قبلی می‌نشیند و هر انتشاری که در همان
+        //  لحظه بدود به پوشهٔ پمپِ قبلی می‌رود.
+        await ReleaseIfOtherAccountAsync(json);
 
         _settings.CloudAccountToken = token;
         var refresh = Str(json, "refreshToken");
@@ -545,6 +627,10 @@ public sealed class CloudLink
         {
             var em = Str(u, "email"); if (em.Length > 0) _settings.CloudEmail = em;
             var nm = Str(u, "name");  if (nm.Length > 0) _settings.CloudName = nm;
+            //  ⚠️ شناسه **جانشین** می‌شود، نه «اگر بود»: حسابِ تازه باید
+            //  شناسهٔ خودش را بنشاند، وگرنه دفعهٔ بعد شناسهٔ حسابِ قبلی
+            //  ملاکِ مقایسه می‌ماند.
+            var id = Ident(u, "id"); if (id.Length > 0) _settings.CloudUserId = id;
         }
         await SaveQuiet();
         return CloudResult.Done;
@@ -581,6 +667,48 @@ public sealed class CloudLink
     //  ⚠️ **بلیت و رمز هیچ‌وقت روی دیسک نمی‌نشینند** — بلیت در حافظهٔ همین
     //  شیء است و رمز را ویومدل در همان صفحه نگه می‌دارد و بعد پاکش می‌کند.
 
+    // ── ترمزِ «ارسالِ بی‌نهایت» ──────────────────────────────────────────
+    //
+    //  بندِ آخرِ خواستهٔ صاحب ریپو دربارهٔ ورود: «درخواست‌های ورود قابلِ
+    //  سوءاستفاده و ارسالِ بی‌نهایت نباشند.»
+    //
+    //  ⚠️ سقفِ **واقعی** روی خودِ سرور است و هست (سنجیده شد، نه حدس:
+    //  `shop/server/src/routes/auth.js` — مسیرهای کدِ یک‌بارمصرف
+    //  `otpLimit` دارند، پنج تا در هر پانزده دقیقه، و ورود و ثبت‌نام
+    //  `authLimit` ده تا، به‌علاوهٔ قفلِ هشت‌تلاشیِ خودِ حساب). این ترمزِ
+    //  محلی **جایش را نمی‌گیرد** — کارِ دیگری می‌کند:
+    //
+    //    ۱) دو مسیرِ این‌جا به هر زدنِ دکمه یک **ایمیل** می‌فرستند؛
+    //    ۲) و کاربری که پنج بار «دوباره بفرست» را بزند، سقفِ سرور را خرج
+    //       می‌کند و **پانزده دقیقه** از ثبت‌نامِ خودش بیرون می‌افتد.
+    //
+    //  پس شمردنِ محلی هم به سود کاربر است هم به سودِ سرور.
+    //
+    //  ⚠️ ترمز روی **همین شیء** است، نه static: سنجه‌ها هر کدام لینکِ خودشان
+    //  را می‌سازند و ترمزِ یکی سنجهٔ دیگری را قرمز نمی‌کند. در خودِ برنامه
+    //  صفحهٔ ورود یک لینک دارد و همان است که دکمه‌اش زده می‌شود.
+    //  ⚠️ و فقط با **موفقیت** مهر می‌خورد: درخواستی که به سرور نرسید (مودم
+    //  خاموش) هیچ ایمیلی نفرستاده، پس نباید کاربر را یک دقیقه معطل کند.
+
+    /// <summary>فاصلهٔ لازم میان دو ایمیلِ کد — به ثانیه.</summary>
+    public const int ResendWaitSeconds = 60;
+
+    private readonly Dictionary<string, long> _lastMail = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>هنوز زود است؟ پیامِ آدمیزاد برمی‌گردد، وگرنه <c>null</c>.</summary>
+    private string? TooSoon(string route, string email)
+    {
+        var key = route + "|" + (email ?? "").Trim();
+        if (!_lastMail.TryGetValue(key, out var at)) return null;
+        var left = ResendWaitSeconds - (int)((DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - at) / 1000);
+        return left > 0
+            ? $"کد همین حالا فرستاده شد — {left} ثانیه صبر کنید و صندوقِ ایمیلتان را ببینید."
+            : null;
+    }
+
+    private void MailSent(string route, string email) =>
+        _lastMail[route + "|" + (email ?? "").Trim()] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
     /// <summary>بلیتِ ثبت‌نام — فقط در حافظه، تا پلهٔ سوم.</summary>
     private string _registerTicket = "";
 
@@ -594,6 +722,8 @@ public sealed class CloudLink
     public async Task<CloudResult> RegisterStartAsync(string name, string email, string password,
                                                       CancellationToken ct = default)
     {
+        if (TooSoon("register/start", email) is { } wait) return CloudResult.No(wait, "too_soon");
+
         var (ok, _, why, code) = await PostAsync("/api/auth/register/start", new
         {
             name = (name ?? "").Trim(),
@@ -602,6 +732,7 @@ public sealed class CloudLink
             passwordConfirm = password,
             app = "pump",
         }, null, ct);
+        if (ok) MailSent("register/start", email);
         return ok ? CloudResult.Done : CloudResult.No(why, code);
     }
 
@@ -719,9 +850,11 @@ public sealed class CloudLink
     {
         var clean = (email ?? "").Trim();
         if (clean.Length == 0) return CloudResult.No("ایمیل را بنویسید");
+        if (TooSoon("password/forgot", clean) is { } wait) return CloudResult.No(wait, "too_soon");
 
         var (ok, _, why, code) = await PostAsync("/api/auth/password/forgot",
             new { email = clean, app = "pump" }, null, ct);
+        if (ok) MailSent("password/forgot", clean);
         return ok ? CloudResult.Done : CloudResult.No(why, code);
     }
 
@@ -1154,6 +1287,25 @@ public sealed class CloudLink
     private static string Str(JsonElement e, string k) =>
         e.ValueKind == JsonValueKind.Object && e.TryGetProperty(k, out var v)
         && v.ValueKind == JsonValueKind.String ? (v.GetString() ?? "") : "";
+
+    /// <summary>
+    /// شناسه — چه سرور رشته بدهد چه عدد.
+    ///
+    /// ⚠️ <c>users.id</c>ی ابر امروز <c>text</c> است (سنجیده شد، نه حدس:
+    /// <c>shop/server/migrations/001_core.sql</c>)، ولی مقایسهٔ «همان حساب
+    /// است؟» چیزی است که خرابیِ بی‌صدا می‌دهد، پس عددی بودنِ روزی‌اش هم
+    /// از همین‌جا می‌گذرد.
+    /// </summary>
+    private static string Ident(JsonElement e, string k)
+    {
+        if (e.ValueKind != JsonValueKind.Object || !e.TryGetProperty(k, out var v)) return "";
+        return v.ValueKind switch
+        {
+            JsonValueKind.String => v.GetString() ?? "",
+            JsonValueKind.Number => v.GetRawText(),
+            _ => "",
+        };
+    }
 
     private static long Num(JsonElement e, string k) =>
         e.ValueKind == JsonValueKind.Object && e.TryGetProperty(k, out var v)
