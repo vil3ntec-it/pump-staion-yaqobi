@@ -409,11 +409,12 @@ internal static class VerifyProbe
             var artwork = win.GetVisualDescendants()
                              .OfType<PumpYaqobi.App.Controls.LoginArt>()
                              .FirstOrDefault(a => a.IsEffectivelyVisible);
-            var artShapes = artwork?.GetVisualDescendants()
-                                    .OfType<Avalonia.Controls.Shapes.Shape>().Count() ?? 0;
+            var vector = artwork?.GetVisualDescendants().OfType<Image>()
+                                 .FirstOrDefault()?.Source as Avalonia.Svg.Skia.SvgImage;
             Check("آدمک‌های برداری آمدند و کشیده شدند",
-                  artwork is not null && artwork.Bounds.Width > 100 && artShapes >= 25,
-                  artwork is null ? "نیامد" : $"{artwork.Bounds.Width:0}×{artwork.Bounds.Height:0} · {artShapes} شکل");
+                  artwork is not null && artwork.Bounds.Width > 100 && vector is not null,
+                  artwork is null ? "نیامد"
+                  : $"{artwork.Bounds.Width:0}×{artwork.Bounds.Height:0} · {(vector is null ? "بی نقشه" : "SVG")}");
             //  ⚠️ «این صفحهٔ لاگین اولویت باشد و تمامِ صفحه همین را نشان بدهد
             //  برای کسانی که حساب ندارند» — پس تا گامِ سه، خودِ پروفایل دیده
             //  نمی‌شود.

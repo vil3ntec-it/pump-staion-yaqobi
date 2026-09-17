@@ -258,13 +258,19 @@
                    لازم ندارد (شرحش بالای `Controls/LoginArt.axaml`). -->
               <Border Grid.Column="0" Background="{DynamicResource Pump.Section}" Margin="0">
                 <Panel>
-                  <Ellipse Width="300" Height="300" Fill="{DynamicResource Pump.IconBadge}"
-                           Opacity="0.7" HorizontalAlignment="Left" VerticalAlignment="Top"
+                  <!-- ⚠️ هالهٔ تاکید با آلفای کم — نه `IconBadge` که در تمِ
+                       تیره یک لکهٔ روشنِ درشت می‌شد (با عکس دیده شد). -->
+                  <Ellipse Width="300" Height="300" Fill="{DynamicResource Pump.Accent}"
+                           Opacity="0.09" HorizontalAlignment="Left" VerticalAlignment="Top"
                            Margin="-70,-60,0,0" />
-                  <Ellipse Width="220" Height="220" Fill="{DynamicResource Pump.IconBadge}"
-                           Opacity="0.55" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                  <Ellipse Width="220" Height="220" Fill="{DynamicResource Pump.Accent}"
+                           Opacity="0.07" HorizontalAlignment="Right" VerticalAlignment="Bottom"
                            Margin="0,0,-50,-40" />
-                  <c:LoginArt Margin="34,26" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  <!-- ⚠️ نقشه جا برای نفس کشیدن دارد: بی سقفِ پهنا، در کارتِ
+                       کشیده لبه‌به‌لبه می‌شد و آدمک‌ها به کنارهٔ کارت
+                       می‌چسبیدند. -->
+                  <c:LoginArt Margin="46,40" MaxWidth="700" MaxHeight="660"
+                              HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Panel>
               </Border>
 

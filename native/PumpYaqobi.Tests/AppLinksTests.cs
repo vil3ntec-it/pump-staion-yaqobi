@@ -245,18 +245,28 @@ public class AppLinksTests
         Assert.False(File.Exists(Path.Combine(Root, "PumpYaqobi.App", "Assets", "login-art.jpg")),
                      "فایلِ عکسِ قدیمی باید پاک شده باشد.");
 
-        //  خودِ نقشهٔ برداری
-        var art = Read("PumpYaqobi.App", "Controls", "LoginArt.axaml");
-        Assert.Contains("<Viewbox", art);
-        Assert.Contains("Background=\"Transparent\"", art);     // بی کادرِ سفیدِ داخلی
-        //  ⚠️ صفحه راست‌به‌چپ است و بی این، کلِ نقشه آینه می‌شود (تیکِ ✓
-        //  برعکس می‌شد — با عکس دیده شد).
-        Assert.Contains("FlowDirection=\"LeftToRight\"", art);
+        //  ⚠️ **نقشهٔ حرفه‌ای و برداری، نه طرحِ دست‌سازِ ما**: خواستهٔ
+        //  صریحِ صاحب ریپو پس از دیدنِ طرحِ دست‌ساز: «نه، این چیه؛ یک عکس
+        //  پیدا کن مثلِ همون که بود ولی با کیفیت و جزئیات.»
+        var svg = Path.Combine(Root, "PumpYaqobi.App", "Assets", "login-art.svg");
+        Assert.True(File.Exists(svg), "نقشهٔ SVGِ صفحهٔ ورود نیست.");
+        var art = File.ReadAllText(svg);
+        //  پرجزئیات: نقشهٔ دست‌سازِ قبلی ~۵۰ شکلِ ساده بود؛ این ۵۰ مسیرِ
+        //  واقعی با خم و سایه دارد
+        Assert.True(art.Split("<path").Length - 1 >= 40,
+                    "نقشه باید پرجزئیات باشد، نه چند شکلِ ساده.");
+        //  ⛔ پروانه‌اش کنارش نوشته شده (unDraw، MIT)
+        Assert.True(File.Exists(Path.Combine(Root, "PumpYaqobi.App", "Assets", "ART-LICENCE.md")),
+                    "پروانهٔ نقشه باید کنارش نوشته شود.");
 
-        //  رنگ‌ها از تمِ برنامه می‌آیند، نه رنگِ خامِ صحنه
-        foreach (var key in new[] { "Pump.Accent", "Pump.Info", "Pump.Card",
-                                    "Pump.Border", "Pump.AccentGrad", "Pump.ChartLine" })
-            Assert.Contains("{DynamicResource " + key + "}", art);
+        //  رنگ‌ها با تمِ برنامه جا عوض می‌کنند، و خودِ فایل دست‌نخورده می‌ماند
+        var code2 = Read("PumpYaqobi.App", "Controls", "LoginArt.axaml.cs");
+        Assert.Contains("Palette(bool dark)", code2);
+        Assert.Contains("text.Replace(from, to", code2);
+        Assert.Contains("#ffd700", code2);          // تاکیدِ تمِ طلایی
+        Assert.Contains("#1e3a8a", code2);          // تاکیدِ تمِ آبی
+        //  و نتیجهٔ هر تم یک بار ساخته و کَش می‌شود
+        Assert.Contains("Dictionary<bool, SvgImage>", code2);
 
         //  و در صفحه به کار رفته، با پس‌زمینهٔ تمِ برنامه (نه آن بنفشِ عکس)
         var xaml = Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml");
@@ -264,11 +274,6 @@ public class AppLinksTests
         Assert.DoesNotContain("<Image Source=\"{Binding LoginArt}\"", xaml);
         Assert.DoesNotContain("#f4eefd", xaml);
         Assert.Contains("Background=\"{DynamicResource Pump.Section}\"", xaml);
-
-        //  ⛔ و نقشه هیچ کدِ C#ی ندارد: نه نخی می‌گیرد، نه فایلی می‌خواند
-        var code2 = Read("PumpYaqobi.App", "Controls", "LoginArt.axaml.cs");
-        Assert.DoesNotContain("Task", code2);
-        Assert.DoesNotContain("Bitmap", code2);
     }
 
     /// <summary>

@@ -50,6 +50,9 @@
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.2.3" />
     <PackageReference Include="Avalonia.Desktop" Version="11.2.3" />
+    <!-- ⚠️ فقط برای نقشهٔ برداریِ صفحهٔ ورود (`Assets/login-art.svg`): بی آن
+         باید عکسِ پیکسلی بگذاریم و «کیفیتِ خیلی بالا» از دست می‌رود. -->
+    <PackageReference Include="Avalonia.Svg.Skia" Version="11.2.0.2" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.3" />
     <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.2.3" />
     <!-- فهرست‌های کارتی را مجازی‌سازی می‌کند؛ در بستهٔ اصلیِ آوالونیا نیست -->

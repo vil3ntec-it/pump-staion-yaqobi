@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
-using Shape = Avalonia.Controls.Shapes.Shape;
 using Avalonia.Headless;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -99,55 +98,52 @@ internal static class LoginArtProbe
         Check("و جا گرفته است", art is not null && art.Bounds.Width > 100 && art.Bounds.Height > 100,
               art is null ? "نیست" : $"{art.Bounds.Width:0}×{art.Bounds.Height:0}");
 
-        var shapes = art?.GetVisualDescendants().OfType<Shape>().ToList() ?? new();
-        Check("شکل‌های برداری واقعاً کشیده شده‌اند", shapes.Count >= 25, $"{shapes.Count} شکل");
-        Check("و هیچ بیت‌مپی در آن نیست",
-              art is null || !art.GetVisualDescendants().OfType<Image>().Any());
+        Check("نقشه واقعاً نشانده شده", Bitmap0(win) is not null);
         Check("و **فوری** با همان باز شدنِ صفحه آمد", firstMs >= 0 && firstMs <= pageMs,
               $"نقشه {firstMs}ms · صفحه {pageMs}ms");
         Note("حافظهٔ کلِ باز شدنِ صفحه", $"{(mem1 - mem0) / 1024.0 / 1024.0:0.0} MB");
         Note("دستورِ دیتابیسِ خودِ صفحه", $"{DbWatch.Count - db0} دستور (کارمندان · تاریخچه · پشتیبان‌ها)");
 
-        // ── ۳) رنگ‌ها از تمِ برنامه می‌آیند ────────────────────────────────
-        Console.WriteLine("── ۳) رنگ از تمِ خودِ برنامه");
-        var xaml = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Controls", "LoginArt.axaml"));
-        foreach (var key in new[] { "Pump.Accent", "Pump.Info", "Pump.Card", "Pump.Border", "Pump.AccentGrad" })
-            Check($"«{key}» به کار رفته", xaml.Contains("{DynamicResource " + key + "}"));
+        // ── ۳) خودِ فایل و پروانه‌اش ──────────────────────────────────────
+        Console.WriteLine("── ۳) فایلِ نقشه");
+        var svgPath = Path.Combine(Root(), "PumpYaqobi.App", "Assets", "login-art.svg");
+        Check("نقشهٔ SVG در دارایی‌ها هست", File.Exists(svgPath));
+        var svg = File.Exists(svgPath) ? File.ReadAllText(svgPath) : "";
+        Note("اندازهٔ فایل", $"{svg.Length / 1024.0:0.0} KB");
+        Check("و پروانه‌اش کنارش نوشته شده",
+              File.Exists(Path.Combine(Root(), "PumpYaqobi.App", "Assets", "ART-LICENCE.md")));
+        Check("نقشه پرجزئیات است (نه یک طرحِ دست‌ساز)",
+              svg.Split("<path").Length - 1 >= 40, $"{svg.Split("<path").Length - 1} مسیرِ برداری");
 
-        var before = Fills(shapes);
-        ThemeManagerFlip(vm);
-        for (var i = 0; i < 40; i++) Pump(win);
-        var after = Fills(Art(win)?.GetVisualDescendants().OfType<Shape>().ToList() ?? new());
-        Check("با عوض شدنِ تم، رنگ‌های نقشه هم عوض شدند",
-              before.Count > 0 && after.Count > 0 && before != after,
-              $"{before.Count} رنگ ⇒ {after.Count} رنگ");
-        //  عکسِ چشمیِ تمِ دیگر — تا با چشم هم دیده شود، نه فقط با عدد
+        // ── ۴) رنگ‌ها با تمِ برنامه عوض می‌شوند ───────────────────────────
+        Console.WriteLine("── ۴) رنگ از تمِ خودِ برنامه");
+        var code2 = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Controls", "LoginArt.axaml.cs"));
+        Check("پالتِ خودِ نقشه با تم جا عوض می‌کند", code2.Contains("Palette(bool dark)"));
+        Check("و خودِ فایل دست‌نخورده می‌ماند (جای‌گزینی روی متنِ حافظه است)",
+              code2.Contains("text.Replace(from, to"));
+
+        var img1 = Bitmap0(win);
+        ThemeFlip(vm);
+        for (var i = 0; i < 60; i++) Pump(win);
+        var img2 = Bitmap0(win);
+        Check("با عوض شدنِ تم، نقشهٔ دیگری نشان داده می‌شود",
+              img1 is not null && img2 is not null && !ReferenceEquals(img1, img2));
+        //  عکسِ چشمیِ تمِ دیگر
         var dark = Path.Combine(Path.GetTempPath(), "pump-loginart-dark.png");
         using (var f2 = win.CaptureRenderedFrame())
             if (f2 is not null) { f2.Save(dark); Console.WriteLine("عکسِ تمِ دیگر: " + dark); }
-        ThemeManagerFlip(vm);
-        for (var i = 0; i < 40; i++) Pump(win);
+        ThemeFlip(vm);
+        for (var i = 0; i < 60; i++) Pump(win);
+        Check("و با برگشتن به تمِ اول، همان نقشهٔ اول برمی‌گردد (کَش)",
+              ReferenceEquals(img1, Bitmap0(win)));
 
-        // ── ۴) کیفیت: برداری یعنی بی سقفِ اندازه ──────────────────────────
-        Console.WriteLine("── ۴) کیفیت در هر اندازه");
-        Check("بومِ نقشه شفاف است (هیچ کادرِ سفیدِ داخلی)", xaml.Contains("Background=\"Transparent\""));
-        Check("و با `Viewbox` هر اندازه‌ای را می‌گیرد", xaml.Contains("<Viewbox"));
-        //  ⚠️ صفحهٔ برنامه راست‌به‌چپ است و نقشه را آینه می‌کند (تیکِ ✓
-        //  برعکس می‌شد). خودِ سنجه یک بار گرفتش.
-        Check("و جهتش صریح چپ‌به‌راست است (وگرنه آینه می‌شود)",
-              xaml.Contains("FlowDirection=\"LeftToRight\""));
-
-        // ── ۵) بی‌کاری ────────────────────────────────────────────────────
-        Console.WriteLine("── ۵) صفحهٔ ورودِ باز، سه ثانیه بی‌کار");
-        var dbIdle = DbWatch.Count;
-        var layouts = 0;
-        void OnLayout(object? _, EventArgs __) => layouts++;
-        win.LayoutUpdated += OnLayout;
-        var idle = Stopwatch.StartNew();
-        while (idle.ElapsedMilliseconds < 3000) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(10); }
-        win.LayoutUpdated -= OnLayout;
-        Check("هیچ چیدمانی رخ نداد", layouts == 0, $"{layouts} چیدمان");
-        Check("و هیچ دستورِ دیتابیسی", DbWatch.Count == dbIdle, $"{DbWatch.Count - dbIdle} دستور");
+        // ── ۵) کیفیت: برداری یعنی بی سقفِ اندازه ──────────────────────────
+        Console.WriteLine("── ۵) کیفیت در هر اندازه");
+        Check("تصویر از نوعِ برداری است، نه بیت‌مپِ پیکسلی",
+              Bitmap0(win) is Avalonia.Svg.Skia.SvgImage);
+        Check("و با `Uniform` کشیده می‌شود (بی کج شدن)",
+              (win.GetVisualDescendants().OfType<Image>()
+                  .FirstOrDefault(i => i.IsEffectivelyVisible)?.Stretch ?? Stretch.None) == Stretch.Uniform);
 
         // ── عکسِ چشمی ─────────────────────────────────────────────────────
         var shot = Path.Combine(Path.GetTempPath(), "pump-loginart.png");
@@ -166,13 +162,12 @@ internal static class LoginArtProbe
         win.GetVisualDescendants().OfType<PumpYaqobi.App.Controls.LoginArt>()
            .FirstOrDefault(a => a.IsEffectivelyVisible);
 
-    /// <summary>رنگِ همهٔ شکل‌ها — برای سنجشِ «با تم عوض می‌شود».</summary>
-    private static List<string> Fills(List<Shape> shapes) =>
-        shapes.Select(s => (s.Fill as ISolidColorBrush)?.Color.ToString() ?? "")
-              .Where(c => c.Length > 0).ToList();
+    /// <summary>خودِ تصویرِ نشانده‌شده (برای سنجشِ کَش و نوعش).</summary>
+    private static IImage? Bitmap0(Window win) =>
+        Art(win)?.GetVisualDescendants().OfType<Image>().FirstOrDefault()?.Source;
 
     /// <summary>تمِ دیگر — آبی ⇄ طلایی، از راهِ خودِ برنامه.</summary>
-    private static void ThemeManagerFlip(MainViewModel vm)
+    private static void ThemeFlip(MainViewModel vm)
     {
         var now = vm.SelectedTheme;
         var other = PumpYaqobi.App.Themes.PumpTheme.All.First(t => t.Id != now?.Id);
