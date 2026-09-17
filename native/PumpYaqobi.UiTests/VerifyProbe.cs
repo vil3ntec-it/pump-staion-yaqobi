@@ -523,11 +523,18 @@ internal static class VerifyProbe
             account.LoginPump = "پمپِ نو";
             account.LoginLocation = "هرات، جادهٔ کندهار";
             account.LoginCode = "123";
+            //  ⚠️ «هیچ توکنی نساخت» با «توکن را عوض نکرد» یکی نیست.
+            //  این سنجه از امروز با یک نصبِ **پلن‌دار** می‌دود (بالای
+            //  `Run`)، پس توکنِ دستگاه از قبل هست و سنجشِ «خالی باشد»
+            //  حرفِ درستی نمی‌زد. خواستهٔ اصلی همین است و سخت‌گیرانه‌تر:
+            //  کدِ ناقص نه توکنی می‌سازد و نه توکنِ سالم را جابه‌جا می‌کند.
+            var tokenBefore = AppSettings.Load().CloudDeviceToken;
             Wait(win, account.VerifyCodeCommand.ExecuteAsync(null));
             Check("کدِ سه‌رقمی رد شد", account.LoginStatus.Contains("شش رقم") && account.StepPump,
                   account.LoginStatus);
-            Check("و با کدِ ناقص هیچ توکنی ساخته نشد",
-                  string.IsNullOrWhiteSpace(AppSettings.Load().CloudDeviceToken), "بی توکن");
+            Check("و کدِ ناقص توکنِ دستگاه را نه ساخت و نه عوض کرد",
+                  AppSettings.Load().CloudDeviceToken == tokenBefore,
+                  tokenBefore.Length == 0 ? "بی توکن" : "دست‌نخورده");
 
             //  ه) نامِ پمپ و لوکیشن **پیش از** فرستادنِ کد می‌نشینند
             account.LoginCode = "000000";
