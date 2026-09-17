@@ -133,12 +133,18 @@ public sealed class StationPublisher : IAsyncDisposable
             //  روزِ بی‌اینترنت گوشیِ کارمندِ مشتریِ پول‌داده را خاموش نمی‌کند.
             var karOk = Entitlements.Allows(Entitlements.Kar);
             var qrOk = Entitlements.Allows(Entitlements.QrLive);
-            if (!karOk && !qrOk) return false;
+
+            //  ⚠️ خبرها پشتِ اشتراک نیستند — همان قاعده‌ای که سرور دارد
+            //  (`routes/pump-events.js`): خبر پیام است، نه دادهٔ فروشی، و
+            //  بستنش فقط صاحبِ پمپ را کور می‌کند. کسی که اشتراکش تمام شده
+            //  بیشتر از همه لازم دارد بداند تیلش تمام شده.
+            var newsOk = CloudActivated;
+            if (!karOk && !qrOk && !newsOk) return false;
 
             var ready = karOk && await ReadyAsync(force, ct);
 
             // ⚠️ بی سرورِ خانگی و بی ابر، عکس گرفتن فقط CPU می‌سوزاند.
-            if (!ready && !(qrOk && CloudActivated)) return false;
+            if (!ready && !((qrOk || newsOk) && CloudActivated)) return false;
 
             // ⚠️ و بی تغییر هم: با پنج سال داده، ساختنِ عکس یک ثانیه است و هر
             // بیست ثانیه یک‌بار یعنی پنج درصدِ CPU برای همیشه («کامپیوتر داغ»).
@@ -177,6 +183,12 @@ public sealed class StationPublisher : IAsyncDisposable
                 _lastAcctHash = hash;
                 await PublishAccountsAsync(ready, ct);
             }
+
+            //  ⚠️ خبرها **آخر** می‌روند و نتیجه‌شان `went` را عوض نمی‌کند:
+            //  `went` یعنی «عکس روی سرورِ خانگی نشست»، و چراغ و سنجه‌ها
+            //  همان را می‌خوانند.
+            if (newsOk) await PublishAlertsAsync(snap, ct);
+
             return went;
         }
         catch (OperationCanceledException) { throw; }
@@ -192,6 +204,40 @@ public sealed class StationPublisher : IAsyncDisposable
 
     /// <summary>حساب‌های کیو‌آردار در این دور — برای آزمون و گزارشِ صفحهٔ تنظیمات.</summary>
     public int LastAccountsSent => _accts.LastSent;
+
+    /// <summary>خبرهای این پمپ روی ابر — «برنامه بسته هم باشد، خبر برسد».</summary>
+    private readonly CloudEvents _events = new();
+
+    /// <summary>خبرهایی که آخرین بار به ابر رفت — برای سنجه‌ها.</summary>
+    public int LastEventsSent => _events.LastSent;
+
+    /// <summary>
+    /// هشدارهای تازهٔ همین عکس ⇒ دفترِ خبرِ ابریِ همین پمپ.
+    ///
+    /// <para>
+    /// ⛔ فهرست از <see cref="StationSnapshot.Alerts"/> می‌آید و جای دیگری
+    /// ساخته نمی‌شود — همان جایی که رنگِ کارتِ قرض‌دار هم از آن می‌آید.
+    /// </para>
+    /// <para>
+    /// ⚠️ و هیچ‌وقت خطا بیرون نمی‌دهد: خبر نرفتن نباید انتشارِ عکس را
+    /// بشکند.
+    /// </para>
+    /// </summary>
+    private async Task PublishAlertsAsync(Dictionary<string, object?> snap, CancellationToken ct)
+    {
+        try
+        {
+            var alerts = snap.TryGetValue("alerts", out var a) ? a as List<object?> : null;
+            if (alerts is null || alerts.Count == 0) return;
+
+            var file = AppSettings.Load();
+            if (string.IsNullOrWhiteSpace(file.CloudDeviceToken)) return;   // هنوز فعال نشده
+            var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
+            await _events.PublishAsync(cloud, alerts, ct);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch { /* خبر رفاه است، دفتر اصل */ }
+    }
 
     /// <summary>
     /// ── چرا این از انتشارِ اصلی جداست ──────────────────────────────────

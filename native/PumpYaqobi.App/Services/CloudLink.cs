@@ -424,6 +424,45 @@ public sealed class CloudLink
         return ok ? CloudResult.Done : CloudResult.No(why, code);
     }
 
+    // ══ خبرها ═══════════════════════════════════════════════════════════
+    //
+    // ⛔ چیزی که تا امروز نبود:
+    //
+    // خواستهٔ صاحبِ ریپوی shop: «برنامه‌ها جوری باشند که بسته هم باشند،
+    // هر اتفاقی که در برنامه بیفتد به سرور برود و سرور وقتی برنامه‌ها
+    // بسته هم هستند پیام را برایشان بدهد.»
+    //
+    // بخشِ دکان این را از روزِ اول داشت (`/api/events`). پمپ نداشت:
+    // «اضافه برد» و «کم مانده» فقط روی سرورِ **خانگی** می‌نشستند و
+    // گوشیِ کارمند هر پانزده دقیقه از **همان شبکه** می‌پرسید. پس
+    // صاحبِ پمپی که بیرون بود — یا مودمش خاموش بود — هیچ‌وقت خبر
+    // نمی‌گرفت.
+    //
+    // ⚠️ فهرست از همان `StationSnapshot.Alerts` می‌آید و جای دیگری
+    // ساخته نمی‌شود؛ وگرنه روزی کارتِ قرض‌دار سرخ است و گوشی ساکت.
+
+    /// <summary>
+    /// فرستادنِ یک دسته خبر به دفترِ ابریِ همین پمپ.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ <b>کلیدِ هر خبر (<c>clientId</c>) لازم است.</b> سرور با همان
+    /// ردیفِ تکراری نمی‌سازد، پس صفی که دو بار برسد دو زنگ نمی‌زند و
+    /// خبرِ دیروز فردا دوباره بالا نمی‌آید.
+    ///
+    /// ⚠️ هیچ‌وقت استثنا بیرون نمی‌دهد — خبر رفاه است، دفتر اصل.
+    /// </remarks>
+    public async Task<CloudResult> SendEventsAsync(
+        IEnumerable<object> events, CancellationToken ct = default)
+    {
+        if (!Activated) return CloudResult.No("فعال نشده", "not_activated");
+        var list = events?.ToList() ?? new List<object>();
+        if (list.Count == 0) return CloudResult.Done;
+
+        var (ok, _, why, code) = await PostAsync("/api/pump/device/events",
+            new { events = list }, _settings.CloudDeviceToken, ct);
+        return ok ? CloudResult.Done : CloudResult.No(why, code);
+    }
+
     // ══ پشتیبانِ ابری ═══════════════════════════════════════════════════
     //
     // ⛔ چیزی که تا امروز نبود:
