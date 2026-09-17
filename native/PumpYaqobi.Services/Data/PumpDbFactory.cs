@@ -73,6 +73,45 @@ public sealed class DbWatch : DbCommandInterceptor
 /// یک‌جا ساختنِ اتصالِ دیتابیس. مسیرِ فایل کنارِ دادهٔ کاربر است، نه کنارِ EXE،
 /// تا نصبِ دوباره یا به‌روزرسانی داده را نبَرد.
 /// </summary>
+/// <summary>
+/// ══ «قفل بود، کمی صبر کن» — روی هر اتصال ═══════════════════════════════════
+///
+/// ‎busy_timeout‎ یک تنظیمِ **هر اتصال** است، پس نوشتنش یک بار در
+/// ‎EnsureReady‎ هیچ اثری روی اتصال‌های بعدیِ برنامه ندارد (سنجیده شد: صفر).
+/// این شنونده با هر بار باز شدنِ اتصال همان را می‌گذارد — پنج ثانیه، که برای
+/// نوشتنِ کوتاهِ یک دفتر زیاد هم هست.
+/// </summary>
+public sealed class BusyWait : DbConnectionInterceptor
+{
+    public static readonly BusyWait Instance = new();
+
+    private static void Apply(System.Data.Common.DbConnection conn)
+    {
+        try
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "PRAGMA busy_timeout=5000;";
+            cmd.ExecuteNonQuery();
+        }
+        catch { /* اگر نشد، همان رفتارِ قبلی — هیچ‌وقت جلوی کار را نمی‌گیرد */ }
+    }
+
+    public override void ConnectionOpened(System.Data.Common.DbConnection connection,
+                                          ConnectionEndEventData eventData)
+    {
+        Apply(connection);
+        base.ConnectionOpened(connection, eventData);
+    }
+
+    public override Task ConnectionOpenedAsync(System.Data.Common.DbConnection connection,
+                                               ConnectionEndEventData eventData,
+                                               CancellationToken cancellationToken = default)
+    {
+        Apply(connection);
+        return base.ConnectionOpenedAsync(connection, eventData, cancellationToken);
+    }
+}
+
 public sealed class PumpDbFactory
 {
     public PumpDbFactory(string? dbPath = null)
@@ -88,11 +127,29 @@ public sealed class PumpDbFactory
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "PumpYaqobi", "pump.db");
 
+    /// <summary>
+    /// ⚠️ **چرا ‎busy_timeout‎ صریح**: سنجیده شد که روی اتصالِ واقعیِ برنامه
+    /// ‎foreign_keys=1‎ است (خودِ ارائه‌دهنده روشنش می‌کند) ولی
+    /// ‎busy_timeout=0‎. یعنی انتظارِ «دیتابیس قفل است» تنها به حلقهٔ تلاشِ
+    /// دوبارهٔ خودِ ‎Microsoft.Data.Sqlite‎ (به اندازهٔ ‎CommandTimeout‎) سپرده
+    /// بود، نه به خودِ اتصال. با نوشتنِ برنامه از یک طرف و حلقهٔ انتشارِ
+    /// ایستگاه از طرفِ دیگر، این همان چیزی است که روزی «database is locked»
+    /// می‌شود. ‎Pooling‎ هم صریح روشن است تا هر ‎Create()‎ اتصالِ تازه از صفر
+    /// باز نکند.
+    ///
+    /// ⚠️ ‎journal_mode=WAL‎ این‌جا لازم نیست چون در **خودِ فایل** می‌ماند
+    /// (‎EnsureReady‎ یک بار می‌نویسدش)؛ ولی ‎busy_timeout‎ مالِ هر اتصال است
+    /// و باید در رشتهٔ اتصال بیاید، وگرنه فقط روی همان یک اتصالِ
+    /// ‎EnsureReady‎ می‌نشیند.
+    /// </summary>
+    private string ConnectionString =>
+        $"Data Source={DbPath};Pooling=True;Default Timeout=30";
+
     public PumpDbContext Create()
     {
         var opts = new DbContextOptionsBuilder<PumpDbContext>()
-            .UseSqlite($"Data Source={DbPath}")
-            .AddInterceptors(DbWatch.Instance)
+            .UseSqlite(ConnectionString, o => o.CommandTimeout(30))
+            .AddInterceptors(DbWatch.Instance, BusyWait.Instance)
             .Options;
         return new PumpDbContext(opts);
     }
