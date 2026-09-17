@@ -66,15 +66,28 @@ public sealed partial class AppsSectionViewModel : SectionViewModel
         AndroidLink = KarLink.ApkUrl(viewer);
         IphoneLink = KarLink.IphoneUrl(viewer);
 
-        _code = file.CloudAccessCode ?? "";
+        //  ⛔ **پلنِ استاندارد کدِ پمپ نمی‌گیرد.** خواستهٔ صریحِ صاحب ریپو:
+        //  «اپِ کارمندان و آیفون براش فعال نشه، یعنی کدی که برای این‌ها
+        //  استفاده می‌شد برای این نوعِ خرید داده نشه.»
+        //
+        //  ⚠️ کد **پاک نمی‌شود**، فقط نشان داده نمی‌شود: با خریدِ وی‌آی‌پی
+        //  همان کدِ قبلی برمی‌گردد و گوشی‌ها لازم نیست دوباره چیزی بزنند.
+        var planHasKar = Entitlements.Allows(Entitlements.Kar);
+
+        _code = planHasKar ? (file.CloudAccessCode ?? "") : "";
         CodeText = HasCode ? CloudLink.FormatAccessCode(_code) : "—";
-        CodeHint = HasCode
+        CodeHint = !planHasKar
+            ? "اپِ کارمندان و آیفون در پلنِ شما نیست. با وی‌آی‌پی یا دائمی باز می‌شود."
+            : HasCode
             ? ""
             : string.IsNullOrWhiteSpace(file.CloudDeviceToken)
                 ? "کدِ پمپ بعد از فعال شدنِ اشتراک از سرور می‌آید — «پروفایل»."
                 : "هنوز از سرور گرفته نشده — در «پروفایل» دکمهٔ «گرفتنِ کد» را بزنید.";
 
-        ShareText = KarLink.ShareText(_code, _host.Settings.GetString(SettingsService.StationName), viewer);
+        //  و پیامِ آماده هم کدی را که نداریم جا نمی‌گذارد
+        ShareText = planHasKar
+            ? KarLink.ShareText(_code, _host.Settings.GetString(SettingsService.StationName), viewer)
+            : "";
         OnPropertyChanged(nameof(HasCode));
     }
 
