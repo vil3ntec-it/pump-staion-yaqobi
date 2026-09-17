@@ -52,6 +52,12 @@ internal static class PersonAudit
                                  "pump-person-" + Guid.NewGuid().ToString("N"), "pump.db");
         AppHost.Start(tmpDb);
 
+        //  سنجه با نصبِ **پلن‌دار** می‌دود — وگرنه داشبورد و مفاد/ضرر و
+        //  تاریخچه‌ها قفل‌اند و باز نمی‌شوند. شرحش در `FakeLicense`؛ خودِ
+        //  قفل در بندِ ۱۷ی `verify` و در `EntitlementsTests` سنجیده می‌شود.
+        FakeLicense.Grant();
+
+
         AppBuilder.Configure<PumpYaqobi.App.App>()
             .UseSkia()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })

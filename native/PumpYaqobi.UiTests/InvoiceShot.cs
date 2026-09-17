@@ -34,6 +34,12 @@ internal static class InvoiceShot
         Directory.CreateDirectory(dir);
         AppHost.Start(Path.Combine(dir, "pump.db"));
 
+        //  سنجه با نصبِ **پلن‌دار** می‌دود — وگرنه داشبورد و مفاد/ضرر و
+        //  تاریخچه‌ها قفل‌اند و باز نمی‌شوند. شرحش در `FakeLicense`؛ خودِ
+        //  قفل در بندِ ۱۷ی `verify` و در `EntitlementsTests` سنجیده می‌شود.
+        FakeLicense.Grant();
+
+
         AppBuilder.Configure<PumpYaqobi.App.App>()
             .UseSkia()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
@@ -72,6 +78,12 @@ internal static class InvoiceShot
         var dir = Path.Combine(Path.GetTempPath(), "pump-invshot-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         AppHost.Start(Path.Combine(dir, "pump.db"));
+
+        //  سنجه با نصبِ **پلن‌دار** می‌دود — وگرنه داشبورد و مفاد/ضرر و
+        //  تاریخچه‌ها قفل‌اند و باز نمی‌شوند. شرحش در `FakeLicense`؛ خودِ
+        //  قفل در بندِ ۱۷ی `verify` و در `EntitlementsTests` سنجیده می‌شود.
+        FakeLicense.Grant();
+
 
         AppBuilder.Configure<PumpYaqobi.App.App>()
             .UseSkia()
