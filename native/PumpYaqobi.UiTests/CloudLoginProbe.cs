@@ -110,7 +110,11 @@ internal static class CloudLoginProbe
             exp = now + 7L * 24 * 3600 * 1000,
             sub_ends = now + 42L * 24 * 3600 * 1000,
             plan_title = "VIP",
-            feat = new[] { Entitlements.Kar, Entitlements.QrLive, Entitlements.CloudBackup },
+            //  ⚠️ هر **شش** دروازه، نه سه تا. از ۱۴۰۵/۰۶/۳۰ «مفاد/ضرر» و
+            //  «تاریخچه‌ها» و «داشبورد» هم پلن‌دار شدند؛ با فهرستِ سه‌تایی
+            //  این سنجه یک مشتریِ وی‌آی‌پی را با سه قفلِ بسته می‌دید و
+            //  هیچ‌جا قرمز نمی‌شد.
+            feat = FakeLicense.VipFeatures,
             core = Array.Empty<string>(),
         });
     }
@@ -454,6 +458,12 @@ internal static class CloudLoginProbe
               && Entitlements.Allows(Entitlements.QrLive)
               && Entitlements.Allows(Entitlements.CloudBackup),
               account.AccessKarText + " · " + account.AccessQrText + " · " + account.AccessBackupText);
+        //  و سه دروازهٔ تازهٔ پلنِ وی‌آی‌پی — بی این، همان مشتریِ پول‌داده
+        //  «مفاد/ضرر» و «تاریخچه‌ها» و «داشبورد» را قفل می‌دید
+        Check("و سه دروازهٔ تازه هم باز شدند",
+              Entitlements.Allows(Entitlements.Profit)
+              && Entitlements.Allows(Entitlements.History)
+              && Entitlements.Allows(Entitlements.Dashboard));
         Check("و پشتیبانی — که هیچ‌وقت قفل نمی‌شود", Entitlements.Allows(Entitlements.Support));
 
         //  ⚠️ **همان باگی که این سنجه گرفت**: تا دیروز همهٔ این‌ها فقط در

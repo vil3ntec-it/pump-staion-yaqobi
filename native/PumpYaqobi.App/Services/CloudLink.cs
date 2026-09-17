@@ -43,6 +43,26 @@ public sealed record CloudChatMessage(string Id, long Seq, string Acct, string F
 public sealed record CloudChatThread(string Acct, string Name, bool Blocked, int Unread, long UpdatedAt,
                                      CloudChatMessage? Last);
 
+/// <summary>یک نسخهٔ پشتیبان روی پوشهٔ ابریِ این پمپ.</summary>
+/// <remarks>
+/// ⚠️ نامِ فایل را <b>سرور</b> می‌سازد، نه برنامه: نامی که از این‌جا
+/// برود می‌تواند <c>../</c> داشته باشد و جای دیگری بنشیند.
+/// </remarks>
+public sealed record CloudBackup(string Id, string Name, long Bytes, string Kind,
+                                 string Label, long CreatedAt);
+
+/// <summary>سهمِ این پمپ از پوشهٔ ابری — و چقدرش پر است.</summary>
+/// <remarks>
+/// ⚠️ سهم دو پله دارد و <b>سرور</b> تصمیمش را می‌گیرد، نه برنامه:
+/// پمپِ بی‌اشتراک جای کمتری دارد. همین‌جا نوشته می‌شود تا صاحبِ پمپ
+/// غافلگیر نشود.
+/// </remarks>
+public sealed record CloudBackupStats(int Count, int Keep, long UsedBytes, long QuotaBytes,
+                                      long LastAt, bool Paid)
+{
+    public static readonly CloudBackupStats None = new(0, 0, 0, 0, 0, false);
+}
+
 public sealed record CloudResult(bool Ok, string Why = "", string Code = "")
 {
     public static readonly CloudResult Done = new(true);
@@ -212,6 +232,86 @@ public sealed class CloudLink
         return CloudResult.Done;
     }
 
+    /// <summary>
+    /// ⛔ <b>بند شدنِ این دستگاه به پمپِ همین حسابِ وارد شده — بی هیچ کدی.</b>
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۳۰): «اشتراک رو من به حسابِ یارو از
+    /// سرور می‌دم اینترنتی و تو برنامه تو حسابِ همون ثبت می‌شن… من یادم
+    /// نمیاد که برای اشتراک کدی گفته باشم.»
+    ///
+    /// <para>
+    /// ⚠️ <b>و چرا این لازم بود، در حالی که <see cref="HomeFromAccountAsync"/>
+    /// از قبل اشتراک را از حساب می‌خواند:</b> آن راه فقط «فعال است یا نه» را
+    /// می‌آورد، <b>نه فهرستِ قابلیت‌های پلن</b>. فهرست تنها داخلِ مجوزِ
+    /// امضاشده (<c>feat</c>) است و مجوز فقط با توکنِ <b>دستگاه</b> صادر
+    /// می‌شود. پس برنامه‌ای که فقط از راهِ حساب می‌آمد،
+    /// <see cref="LicenseCheck.Listed"/>ش دروغ می‌گفت و
+    /// <see cref="Entitlements.Allows"/> همه‌چیز را باز می‌کرد — یعنی
+    /// مشتریِ پلنِ <b>استاندارد</b> کیو‌آر و اپِ کارمندان و مفاد/ضرر و
+    /// تاریخچه‌ها و داشبورد را هم می‌گرفت. مستقیم روی پول.
+    /// </para>
+    ///
+    /// <para>
+    /// ⚠️ این مسیر <b>اشتراک نمی‌سازد</b>: پمپِ بی‌اشتراک هم بند می‌شود و
+    /// مجوزی نمی‌گیرد — که درست است. باز شدنِ قفل‌ها کارِ پنلِ سرور است.
+    /// </para>
+    ///
+    /// <para>
+    /// ⚠️ و <b>قفلِ کلیدِ عمومی همان‌جاست</b>: نخستین بار ذخیره می‌شود و از
+    /// آن به بعد کلیدِ متفاوت رد می‌شود (<c>key_mismatch</c>) — همان قیدی
+    /// که سرورِ ساختگی را بی‌اثر می‌کند.
+    /// </para>
+    /// </summary>
+    public async Task<CloudResult> BindAsync(CancellationToken ct = default)
+    {
+        if (!SignedIn) return CloudResult.No("اول وارد حساب شوید", "no_account");
+
+        var body = new
+        {
+            device = new
+            {
+                uid = DeviceUid,
+                name = Environment.MachineName,
+                platform = "windows",
+            },
+        };
+
+        //  ⚠️ از راهِ `AccountAsync` می‌رود، نه `PostAsync`ِ خام: توکنِ
+        //  دسترسی یک ساعت عمر دارد و همین‌جا بی‌صدا می‌مرد.
+        var res = await AccountAsync(HttpMethod.Post, "/api/pump/device/bind", body, ct);
+        if (!res.Ok) return CloudResult.No(res.Why, res.Code);
+        var json = res.Json;
+
+        //  کلیدِ عمومی فقط یک بار قفل می‌شود — همان قاعدهٔ `ActivateAsync`
+        var serverKey = Str(json, "publicKey");
+        if (string.IsNullOrWhiteSpace(_settings.CloudPublicKey))
+        {
+            if (!string.IsNullOrWhiteSpace(serverKey)) _settings.CloudPublicKey = serverKey;
+        }
+        else if (!string.IsNullOrWhiteSpace(serverKey) && serverKey != _settings.CloudPublicKey)
+        {
+            return CloudResult.No(
+                "کلیدِ سرور با آن‌چه این برنامه قفل کرده فرق دارد. اگر سرور را واقعاً "
+                + "عوض کرده‌اید، با پشتیبانی تماس بگیرید.", "key_mismatch");
+        }
+
+        var token = Str(json, "deviceToken");
+        if (string.IsNullOrWhiteSpace(token))
+            return CloudResult.No("سرور توکنِ دستگاه نداد", "no_device_token");
+
+        _settings.CloudDeviceToken = token;
+        var station = StationId(json);
+        if (station.Length > 0) _settings.CloudStationId = station;
+        //  ⚠️ مجوزِ **خالی** هم می‌نشیند: «اشتراک ندارد» یک جوابِ درست
+        //  است، و نگه داشتنِ مجوزِ کهنه یعنی قفلی که باز مانده
+        _settings.CloudLicense = Str(json, "license");
+        _settings.CloudSyncedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        ReadSubscription(json);
+        Entitlements.Remember(_settings, Subscription, Verify());
+        await SaveQuiet();
+        return CloudResult.Done;
+    }
+
     /// <summary>تمدید با کدِ تازه — بی فعال‌سازیِ دوباره.</summary>
     public async Task<CloudResult> RedeemAsync(string code, string stationName = "",
                                                string stationLocation = "",
@@ -322,6 +422,144 @@ public sealed class CloudLink
         var (ok, _, why, code) = await PutAsync("/api/pump/device/files/" + Uri.EscapeDataString(name.Trim()),
             new { data }, _settings.CloudDeviceToken, ct);
         return ok ? CloudResult.Done : CloudResult.No(why, code);
+    }
+
+    // ══ پشتیبانِ ابری ═══════════════════════════════════════════════════
+    //
+    // ⛔ چیزی که تا امروز نبود:
+    //
+    // `BackupPusher` هر شش ساعت پشتیبان می‌گرفت و فقط به **سرورِ خانگی**
+    // می‌فرستاد. مودم که بسوزد، یا کامپیوترِ سرور که خراب شود، همان‌جا
+    // با هم می‌روند — و `data/stations/<کد>/backups/` روی همان یک دیسک
+    // است. قابلیتش هم `cloudbackup` نام داشت، که گمراه‌کننده بود: هیچ
+    // ابری در کار نبود.
+    //
+    // حالا همان فایل به ابر هم می‌رود: پوشهٔ همین پمپ، سهمِ همین پمپ.
+    //
+    // ⚠️ بدنه **خام** است، نه JSON. پشتیبانِ یک پمپِ پنج‌ساله چند صد
+    // مگابایت است؛ داخلِ JSON باید base64 می‌شد — یک‌سوم بزرگ‌تر و کلِ
+    // فایل دو بار در حافظه.
+
+    /// <summary>یک نسخهٔ پشتیبان روی پوشهٔ ابریِ همین پمپ.</summary>
+    /// <param name="file">مسیرِ فایل — همان چیزی که ‎VACUUM INTO‎ ساخته</param>
+    /// <remarks>
+    /// ⛔ <b>فایل جریانی می‌رود، نه یک‌جا در حافظه.</b> همان قاعده‌ای که
+    /// مقصدِ خانگی دارد و <c>InfraTests.Poshtiban_FileRa_YekJa_DarHafeze_Nemikhanad</c>
+    /// قفلش کرده: دفترِ چندصد مگابایتیِ یک پمپِ چندساله نباید هر شش ساعت
+    /// همان‌قدر رم بخواهد. یک بار همین‌جا با <c>ReadAllBytesAsync</c>
+    /// نوشته شد و همان آزمون گرفتش.
+    ///
+    /// ⚠️ به همین دلیل مسیرِ فایل می‌گیرد، نه <c>byte[]</c>: امضایی که
+    /// آرایه بخواهد، خودش دعوت به خواندنِ کلِ فایل در حافظه است.
+    /// </remarks>
+    public async Task<CloudResult> BackupUploadAsync(
+        string file, string label = "", bool manual = false, string ext = "db",
+        CancellationToken ct = default)
+    {
+        if (!Activated) return CloudResult.No("فعال نشده", "not_activated");
+        if (string.IsNullOrWhiteSpace(file) || !File.Exists(file))
+            return CloudResult.No("فایلِ پشتیبان پیدا نشد", "empty_backup");
+
+        var path = "/api/pump/device/backups"
+            + "?ext=" + Uri.EscapeDataString(ext)
+            + "&kind=" + (manual ? "manual" : "auto")
+            + "&label=" + Uri.EscapeDataString(label ?? "");
+
+        await using var stream = new FileStream(
+            file, FileMode.Open, FileAccess.Read, FileShare.Read,
+            bufferSize: 64 * 1024, useAsync: true);
+        if (stream.Length == 0) return CloudResult.No("فایلِ پشتیبان خالی است", "empty_backup");
+
+        using var body = new StreamContent(stream, 64 * 1024);
+        body.Headers.ContentType =
+            new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+        body.Headers.ContentLength = stream.Length;
+
+        using var req = new HttpRequestMessage(HttpMethod.Post, CloudConfig.Url(path)) { Content = body };
+        req.Headers.Add("Authorization", $"Bearer {_settings.CloudDeviceToken}");
+        var (ok, _, why, code) = await Send(req, ct);
+        return ok ? CloudResult.Done : CloudResult.No(why, code);
+    }
+
+    /// <summary>فهرستِ پشتیبان‌های ابریِ همین پمپ، تازه‌ترین اول.</summary>
+    public async Task<(bool Ok, List<CloudBackup> Items, CloudBackupStats Stats, string Why)>
+        BackupListAsync(CancellationToken ct = default)
+    {
+        if (!Activated) return (false, new(), CloudBackupStats.None, "فعال نشده");
+        var (ok, json, why, _) = await GetAsync("/api/pump/device/backups", _settings.CloudDeviceToken, ct);
+        if (!ok) return (false, new(), CloudBackupStats.None, why);
+
+        var list = new List<CloudBackup>();
+        if (json.TryGetProperty("backups", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            foreach (var b in arr.EnumerateArray())
+                list.Add(new CloudBackup(Str(b, "id"), Str(b, "name"), Num(b, "bytes"),
+                    Str(b, "kind"), Str(b, "label"), Num(b, "createdAt")));
+
+        var stats = CloudBackupStats.None;
+        if (json.TryGetProperty("stats", out var st) && st.ValueKind == JsonValueKind.Object)
+            stats = new CloudBackupStats((int)Num(st, "count"), (int)Num(st, "keep"),
+                Num(st, "usedBytes"), Num(st, "quotaBytes"), Num(st, "lastAt"),
+                st.TryGetProperty("paid", out var p) && p.ValueKind == JsonValueKind.True);
+
+        return (true, list, stats, "");
+    }
+
+    // ══ پشتیبانیِ صاحبِ پمپ ↔ مدیرِ سامانه ═══════════════════════════════
+    //
+    // ⚠️ **این با چتِ پایین یکی نیست و نباید قاطی شود.**
+    //
+    //   چتِ پایین  = مشتریِ کیو‌آر ↔ صاحبِ پمپ   (‎/chat/…‎)
+    //   این یکی    = صاحبِ پمپ ↔ کسی که برنامه را ساخته (‎/support/…‎)
+    //
+    // ⛔ تا امروز پمپ‌داری که گیر می‌کرد **هیچ دری** نداشت: `/api/support`
+    // مالِ بخشِ دکان بود و این برنامه حساب ندارد. حالا رشته به خودِ پمپ
+    // بسته است (`station_id`)، پس گوشیِ صاحب و این کامپیوتر به **یک**
+    // گفت‌وگو می‌رسند.
+    //
+    // ⛔ و هیچ‌وقت پشتِ اشتراک نمی‌رود: «پشتیبانی یکی از واجبات است.»
+    // کسی که اشتراکش تمام شده، بیشتر از همه لازم دارد بپرسد چرا.
+
+    /// <summary>گفت‌وگو با پشتیبانی — پیام‌های بعد از ‎after‎.</summary>
+    public async Task<(bool Ok, List<CloudChatMessage> Messages, int Unread, string Why)>
+        SupportThreadAsync(long after = 0, CancellationToken ct = default)
+    {
+        if (!Activated) return (false, new(), 0, "فعال نشده");
+        var (ok, json, why, _) = await GetAsync(
+            "/api/pump/device/support/thread?after=" + after, _settings.CloudDeviceToken, ct);
+        if (!ok) return (false, new(), 0, why);
+
+        var list = new List<CloudChatMessage>();
+        if (json.TryGetProperty("messages", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            foreach (var m in arr.EnumerateArray())
+            {
+                var parsed = CloudChatMessage.Parse(m, "support");
+                if (parsed is not null) list.Add(parsed);
+            }
+
+        var unread = 0;
+        if (json.TryGetProperty("thread", out var th) && th.ValueKind == JsonValueKind.Object)
+            unread = (int)Num(th, "unreadUser");
+
+        return (true, list, unread, "");
+    }
+
+    /// <summary>پیام به پشتیبانی.</summary>
+    public async Task<CloudResult> SupportSendAsync(string text, CancellationToken ct = default)
+    {
+        if (!Activated) return CloudResult.No("فعال نشده", "not_activated");
+        if (string.IsNullOrWhiteSpace(text)) return CloudResult.No("پیام خالی است", "empty_message");
+        var (ok, _, why, code) = await PostAsync("/api/pump/device/support/messages",
+            new { body = text.Trim() }, _settings.CloudDeviceToken, ct);
+        return ok ? CloudResult.Done : CloudResult.No(why, code);
+    }
+
+    /// <summary>«خواندم» — نقطهٔ قرمز را پاک می‌کند.</summary>
+    public async Task<bool> SupportSeenAsync(CancellationToken ct = default)
+    {
+        if (!Activated) return false;
+        var (ok, _, _, _) = await PostAsync("/api/pump/device/support/read",
+            new { }, _settings.CloudDeviceToken, ct);
+        return ok;
     }
 
     // ── چتِ پشتیبانی — مشتریِ کیو‌آر ↔ صاحبِ پمپ ────────────────────────
@@ -1099,9 +1337,6 @@ public sealed class CloudLink
         ReadSubscription(json);
         if (Subscription.Active) Entitlements.Remember(_settings, Subscription, Verify());
 
-        if (!json.TryGetProperty("home", out var home) || home.ValueKind != JsonValueKind.Object)
-            return (false, "", "", "", "هنوز پمپی به این حساب وصل نشده است");
-
         //  ⛔ **پمپِ این حساب با پمپی که این دستگاه رویش قفل شده یکی نیست.**
         //  بی این سنجش، ورود با حسابِ پمپِ دیگر نشانی و رمزِ **آن** پمپ را
         //  روی تنظیماتِ این یکی می‌نشاند: از آن لحظه دفترِ این پمپ به سرورِ
@@ -1119,6 +1354,33 @@ public sealed class CloudLink
             && !string.Equals(acctStation, locked, StringComparison.Ordinal))
             return (false, "", "", "", "این حساب مالِ پمپِ دیگری است. برای جابه‌جایی، "
                 + "این دستگاه را از پمپِ فعلی جدا کنید.");
+
+        /*
+         *  ⛔ نصبی که فقط وارد حساب شده، خودش بند می‌شود — بی هیچ کدی.
+         *
+         *  تا دیروز تنها راهِ گرفتنِ توکنِ دستگاه و مجوز، کدِ شش‌رقمی بود.
+         *  یعنی صاحبِ پمپی که اشتراکش را مدیر روی **حسابش** گذاشته بود،
+         *  باز هم بی کد نمی‌توانست برنامه را راه بیندازد — و بی مجوز،
+         *  فهرستِ قابلیت‌های پلن هم به برنامه نمی‌رسید.
+         *
+         *  ⚠️ **پس از** سنجشِ «این حساب مالِ پمپِ دیگری است» می‌آید، وگرنه
+         *  ورود با حسابِ پمپِ دیگر همین دستگاه را به آن پمپ می‌بست.
+         *  ⚠️ و نشدنش این مسیر را نمی‌شکند: نشانیِ خانگی همان است که بود.
+         */
+        if (!Activated && acctStation.Length > 0)
+        {
+            try { await BindAsync(ct); } catch { /* نشانیِ خانگی مهم‌تر است */ }
+        }
+
+        /*
+         *  ⚠️ سنجشِ «پمپی هست؟» **پس از** بند شدن آمد، نه پیش از آن.
+         *
+         *  پمپی که هنوز سرورِ خانگی‌اش را معرفی نکرده `home` ندارد، و با
+         *  ترتیبِ قبلی همان‌جا برمی‌گشتیم — پس نصبِ تازه هیچ‌وقت بند
+         *  نمی‌شد و مجوزش را نمی‌گرفت. نشانیِ خانگی رفاه است، اشتراک اصل.
+         */
+        if (!json.TryGetProperty("home", out var home) || home.ValueKind != JsonValueKind.Object)
+            return (false, "", "", "", "هنوز سرورِ خانگیِ این پمپ معرفی نشده است");
 
         return (true, Str(home, "url"), Str(home, "readKey"), Str(home, "station"), "");
     }

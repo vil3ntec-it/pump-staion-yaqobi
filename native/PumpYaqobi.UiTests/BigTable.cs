@@ -68,6 +68,12 @@ internal static class BigTable
         Seed(file, months);
 
         AppHost.Start(file);
+
+        //  سنجه با نصبِ **پلن‌دار** می‌دود — وگرنه داشبورد و مفاد/ضرر و
+        //  تاریخچه‌ها قفل‌اند و باز نمی‌شوند. شرحش در `FakeLicense`؛ خودِ
+        //  قفل در بندِ ۱۷ی `verify` و در `EntitlementsTests` سنجیده می‌شود.
+        FakeLicense.Grant();
+
         var host = AppHost.Current;
         if (host.Auth.NeedsFirstRun()) host.Auth.CreateFirstAdmin("1234");
 

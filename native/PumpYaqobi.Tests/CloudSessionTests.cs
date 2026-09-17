@@ -256,6 +256,205 @@ public class CloudSessionTests : IDisposable
         Assert.Equal(2, _hits.Count(h => h == "/api/pump/me"));
     }
 
+    // ── ۲ب) بند شدن با حساب — بی هیچ کدی ────────────────────────────────
+
+    /// <summary>
+    /// ⛔ <b>«اشتراک رو من به حسابِ یارو از سرور می‌دم… من یادم نمیاد که برای
+    /// اشتراک کدی گفته باشم.»</b>
+    ///
+    /// تا دیروز تنها راهِ گرفتنِ توکنِ دستگاه و مجوز، کدِ شش‌رقمی بود. یعنی
+    /// صاحبِ پمپی که اشتراکش را مدیر روی <b>حسابش</b> گذاشته بود، بی کد
+    /// نمی‌توانست برنامه را راه بیندازد.
+    /// </summary>
+    [Fact]
+    public async Task Bind_BaHesab_Tokene_Dastgah_VaMojavez_Migirad()
+    {
+        Serve((path, req) => path == "/api/pump/device/bind" && Bearer(req) == "acc-1"
+            ? Json(HttpStatusCode.Created, """
+                {"deviceToken":"pd_from_account","station":{"id":"stn-9","code":"yaqobi"},
+                 "license":"lic.from.account","publicKey":"pk-1",
+                 "entitlement":{"source":"subscription"},
+                 "subscription":{"active":true,"plan":"std","daysLeft":365}}
+                """)
+            : Json(HttpStatusCode.NotFound, "{}"));
+
+        var (link, _) = Link(s =>
+        {
+            s.CloudAccountToken = "acc-1";
+            s.CloudAccessExpiresAt = InAnHour;
+        });
+
+        var r = await link.BindAsync();
+
+        Assert.True(r.Ok, r.Why);
+        //  ⚠️ از **دیسک** خوانده می‌شود، نه از شیءِ در حافظه: یک بار همین
+        //  باگ بود که توکن تا بسته شدنِ برنامه کار می‌کرد و بعد نه
+        var f = AppSettings.Load();
+        Assert.Equal("pd_from_account", f.CloudDeviceToken);
+        Assert.Equal("stn-9", f.CloudStationId);
+        Assert.Equal("lic.from.account", f.CloudLicense);
+        Assert.Equal("pk-1", f.CloudPublicKey);
+        Assert.True(link.Activated);
+    }
+
+    /// <summary>
+    /// ⛔ قفلِ کلیدِ عمومی (TOFU) این‌جا هم هست — وگرنه سرورِ ساختگی با
+    /// کلیدِ خودش می‌توانست مجوزِ خودش را امضا کند.
+    /// </summary>
+    [Fact]
+    public async Task Bind_KelideDigar_Ra_RadMikonad()
+    {
+        Serve((path, _) => path == "/api/pump/device/bind"
+            ? Json(HttpStatusCode.Created, """
+                {"deviceToken":"pd_evil","station":{"id":"stn-9"},
+                 "license":"lic.evil","publicKey":"pk-EVIL"}
+                """)
+            : Json(HttpStatusCode.NotFound, "{}"));
+
+        var (link, _) = Link(s =>
+        {
+            s.CloudAccountToken = "acc-1";
+            s.CloudAccessExpiresAt = InAnHour;
+            s.CloudPublicKey = "pk-1";               // از قبل قفل شده
+        });
+
+        var r = await link.BindAsync();
+
+        Assert.False(r.Ok);
+        Assert.Equal("key_mismatch", r.Code);
+        var f = AppSettings.Load();
+        Assert.Equal("pk-1", f.CloudPublicKey);
+        Assert.True(string.IsNullOrEmpty(f.CloudDeviceToken));
+    }
+
+    /// <summary>بی حساب، هیچ درخواستی هم زده نمی‌شود.</summary>
+    [Fact]
+    public async Task Bind_BiHesab_HichDarkhasti_Nemizanad()
+    {
+        Serve((_, _) => Json(HttpStatusCode.OK, "{}"));
+        var (link, _) = Link();
+
+        var r = await link.BindAsync();
+
+        Assert.False(r.Ok);
+        Assert.Equal("no_account", r.Code);
+        Assert.Empty(_hits);
+    }
+
+    /// <summary>
+    /// ⚠️ سرور توکن نداد ⇒ «نیمه‌کاره» نمی‌مانیم: نه توکنی می‌نشیند و نه
+    /// مجوزی.
+    /// </summary>
+    [Fact]
+    public async Task Bind_BiTokene_Dastgah_Nimekare_Nemimanad()
+    {
+        Serve((path, _) => path == "/api/pump/device/bind"
+            ? Json(HttpStatusCode.Created, """{"station":{"id":"stn-9"},"license":"lic.x"}""")
+            : Json(HttpStatusCode.NotFound, "{}"));
+
+        var (link, _) = Link(s =>
+        {
+            s.CloudAccountToken = "acc-1";
+            s.CloudAccessExpiresAt = InAnHour;
+        });
+
+        var r = await link.BindAsync();
+
+        Assert.False(r.Ok);
+        Assert.Equal("no_device_token", r.Code);
+        Assert.False(link.Activated);
+    }
+
+    /// <summary>
+    /// نصبی که فقط وارد حساب شده، سرِ گرفتنِ نشانیِ خانگی <b>خودش</b> بند
+    /// می‌شود — کاربر هیچ کدی نمی‌زند.
+    /// </summary>
+    [Fact]
+    public async Task Vorud_BeHesab_Dastgah_Ra_Khodash_Band_Mikonad()
+    {
+        Serve((path, _) => path switch
+        {
+            "/api/pump/me" => Json(HttpStatusCode.OK, """
+                {"station":{"id":"stn-9","code":"yaqobi"},
+                 "home":{"url":"http://192.168.1.50:4701","readKey":"rk","station":"yaqobi"}}
+                """),
+            "/api/pump/device/bind" => Json(HttpStatusCode.Created,
+                """{"deviceToken":"pd_auto","station":{"id":"stn-9"},"license":"lic.auto","publicKey":"pk-1"}"""),
+            _ => Json(HttpStatusCode.NotFound, "{}"),
+        });
+
+        var (link, _) = Link(s =>
+        {
+            s.CloudAccountToken = "acc-1";
+            s.CloudAccessExpiresAt = InAnHour;
+        });
+
+        var (ok, url, _, _, why) = await link.HomeFromAccountAsync();
+
+        Assert.True(ok, why);
+        Assert.Equal("http://192.168.1.50:4701", url);
+        Assert.Contains("/api/pump/device/bind", _hits);
+        Assert.Equal("pd_auto", AppSettings.Load().CloudDeviceToken);
+    }
+
+    /// <summary>
+    /// ⛔ و <b>پس از</b> سنجشِ «این حساب مالِ پمپِ دیگری است» — وگرنه ورود با
+    /// حسابِ پمپِ دیگر همین دستگاه را به آن پمپ می‌بست.
+    /// </summary>
+    [Fact]
+    public async Task Hesabe_PompeDigar_Dastgah_Ra_Band_Nemikonad()
+    {
+        Serve((path, _) => path switch
+        {
+            "/api/pump/me" => Json(HttpStatusCode.OK,
+                """{"station":{"id":"stn-OTHER"},"home":{"url":"http://x","readKey":"","station":"o"}}"""),
+            _ => Json(HttpStatusCode.Created, """{"deviceToken":"pd_wrong"}"""),
+        });
+
+        var (link, _) = Link(s =>
+        {
+            s.CloudAccountToken = "acc-1";
+            s.CloudAccessExpiresAt = InAnHour;
+            s.CloudStationId = "stn-MINE";           // این دستگاه روی پمپِ خودش قفل است
+        });
+
+        var (ok, _, _, _, why) = await link.HomeFromAccountAsync();
+
+        Assert.False(ok);
+        Assert.Contains("پمپِ دیگری", why);
+        Assert.DoesNotContain("/api/pump/device/bind", _hits);
+        Assert.True(string.IsNullOrEmpty(AppSettings.Load().CloudDeviceToken));
+    }
+
+    /// <summary>
+    /// دستگاهی که از قبل بند است دوباره بند نمی‌شود — نه درخواستِ اضافه، نه
+    /// توکنِ تازه‌ای که توکنِ کهنه را باطل کند.
+    /// </summary>
+    [Fact]
+    public async Task Dastgahe_Band_Shode_Dobare_Band_Nemishavad()
+    {
+        Serve((path, _) => path switch
+        {
+            "/api/pump/me" => Json(HttpStatusCode.OK,
+                """{"station":{"id":"stn-9"},"home":{"url":"http://x","readKey":"","station":"s"}}"""),
+            _ => Json(HttpStatusCode.Created, """{"deviceToken":"pd_new"}"""),
+        });
+
+        var (link, _) = Link(s =>
+        {
+            s.CloudAccountToken = "acc-1";
+            s.CloudAccessExpiresAt = InAnHour;
+            s.CloudDeviceToken = "pd_old";
+            s.CloudStationId = "stn-9";
+        });
+
+        var (ok, _, _, _, why) = await link.HomeFromAccountAsync();
+
+        Assert.True(ok, why);
+        Assert.DoesNotContain("/api/pump/device/bind", _hits);
+        Assert.Equal("pd_old", AppSettings.Load().CloudDeviceToken);
+    }
+
     // ── ۳) خروج، روی سرور هم ─────────────────────────────────────────────
 
     /// <summary>

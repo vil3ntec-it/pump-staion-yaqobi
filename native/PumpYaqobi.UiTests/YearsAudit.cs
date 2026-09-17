@@ -59,6 +59,12 @@ internal static class YearsAudit
         foreach (var (k, v) in stats) Console.WriteLine($"   {k,-28}{v,10:N0}");
 
         AppHost.Start(file);
+
+        //  سنجه با نصبِ **پلن‌دار** می‌دود — وگرنه داشبورد و مفاد/ضرر و
+        //  تاریخچه‌ها قفل‌اند و باز نمی‌شوند. شرحش در `FakeLicense`؛ خودِ
+        //  قفل در بندِ ۱۷ی `verify` و در `EntitlementsTests` سنجیده می‌شود.
+        FakeLicense.Grant();
+
         var host = AppHost.Current;
         if (host.Auth.NeedsFirstRun()) host.Auth.CreateFirstAdmin("1234");
         host.Auth.SignIn("admin", "1234");
@@ -244,6 +250,12 @@ internal static class YearsAudit
         var file = Path.Combine(dir, "pump.db");
         Seed(file);
         AppHost.Start(file);
+
+        //  سنجه با نصبِ **پلن‌دار** می‌دود — وگرنه داشبورد و مفاد/ضرر و
+        //  تاریخچه‌ها قفل‌اند و باز نمی‌شوند. شرحش در `FakeLicense`؛ خودِ
+        //  قفل در بندِ ۱۷ی `verify` و در `EntitlementsTests` سنجیده می‌شود.
+        FakeLicense.Grant();
+
         var host = AppHost.Current;
         if (host.Auth.NeedsFirstRun()) host.Auth.CreateFirstAdmin("1234");
         host.Auth.SignIn("admin", "1234");
