@@ -598,6 +598,18 @@
                          IsVisible="{Binding AccessStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             </StackPanel>
           </StackPanel>
+
+          <!-- ⚠️ جابه‌جاییِ پمپ: برنامه از قبل می‌گفت «این دستگاه را از پمپِ
+               فعلی جدا کنید» ولی هیچ دکمه‌ای برایش نبود. ⛔ دفتر دست نمی‌خورد،
+               و پیش از انجام پرسیده می‌شود. -->
+          <Border Height="1" Background="{DynamicResource Pump.Border}" IsVisible="{Binding PumpBound}" />
+          <StackPanel Spacing="6" IsVisible="{Binding PumpBound}">
+            <Button HorizontalAlignment="Left" Content="🔓 جدا کردنِ این دستگاه از این پمپ"
+                    Command="{Binding ForgetPumpCommand}" IsEnabled="{Binding !Busy}"
+                    ToolTip.Tip="برای بردنِ این کامپیوتر به پمپِ دیگر" />
+            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" MaxWidth="420"
+                       Text="اشتراک و کدِ اپِ کارمندان و نشانیِ سرورِ این پمپ برداشته می‌شوند؛ دفتر و حساب‌ها دست نمی‌خورند." />
+          </StackPanel>
         </StackPanel>
       </Border>
 

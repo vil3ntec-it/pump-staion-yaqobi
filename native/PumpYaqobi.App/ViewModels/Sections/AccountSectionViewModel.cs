@@ -170,6 +170,63 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         ShowLogin();
     });
 
+    // ── ۱ب) «این دستگاه دیگر مالِ این پمپ نیست» ─────────────────────────
+
+    /// <summary>
+    /// این نصب به پمپی روی ابر بند است؟ (توکنِ دستگاه، شناسهٔ پمپ یا کدِ
+    /// اپِ کارمندان — هر کدام باشد یعنی بند هست.)
+    /// </summary>
+    [ObservableProperty] private bool _pumpBound;
+
+    /// <summary>
+    /// ══ جدا کردنِ این دستگاه از این پمپ ═════════════════════════════════
+    ///
+    /// ⛔ <b>تا امروز این کار هیچ دکمه‌ای نداشت.</b>
+    /// <see cref="CloudLink.ForgetStationAsync"/> نوشته شده بود و از هیچ‌جا
+    /// صدا زده نمی‌شد، در حالی که خودِ برنامه سرِ ورودِ حسابِ پمپِ دیگر
+    /// می‌گفت «برای جابه‌جایی، این دستگاه را از پمپِ فعلی جدا کنید» —
+    /// یعنی کاربر را به کاری راهنمایی می‌کرد که راهش وجود نداشت. حالا
+    /// <see cref="SeatAsync"/>ِ ابر خودش با عوض شدنِ حساب بندها را باز
+    /// می‌کند، و این دکمه همان کار را <b>دستی</b> هم ممکن می‌کند (برای
+    /// نصب‌های کهنه که شناسهٔ حساب ندارند، و برای حسابی که خودش چند پمپ
+    /// دارد).
+    ///
+    /// ⚠️ <b>دفتر دست نمی‌خورد و پرسیده می‌شود.</b> فقط بندهای «این نصب به
+    /// کدام پمپ وصل است» باز می‌شوند؛ یک ردیف از حساب‌ها هم پاک نمی‌شود.
+    /// </summary>
+    [RelayCommand]
+    private Task ForgetPumpAsync() => CrashGuard.RunAsync("جدا کردنِ دستگاه از پمپ", async () =>
+    {
+        var yes = await Dialogs.ConfirmAsync(
+            "جدا کردنِ این دستگاه از این پمپ",
+            "اشتراک، کدِ اپِ کارمندان و نشانیِ سرورِ خانگیِ این پمپ از این کامپیوتر "
+            + "برداشته می‌شوند و برای وصل شدنِ دوباره باید کدِ شش‌رقمی را بزنید.\n\n"
+            + "⛔ دفتر و حساب‌های روی این کامپیوتر دست نمی‌خورند.",
+            "جدا کن", "بی‌خیال");
+        if (!yes) return;
+
+        Busy = true;
+        try { await Cloud.ForgetStationAsync(); }
+        finally { Busy = false; }
+
+        StationLine = "";
+        RefreshAll();
+        _host.Toast("این دستگاه از پمپ جدا شد. برای وصل شدنِ دوباره کدِ شش‌رقمی را بزنید.");
+    });
+
+    /// <summary>
+    /// اگر ورودِ همین حالا حسابِ <b>دیگری</b> بود و بندهای پمپِ قبلی باز
+    /// شدند، همان را می‌گوید.
+    ///
+    /// ⚠️ قاعدهٔ «قفل بی‌صدا نباشد» این‌جا هم هست: کاربری که بی توضیح
+    /// می‌بیند اشتراک و کدِ اپش رفته‌اند، فکر می‌کند برنامه خراب شده.
+    /// </summary>
+    private string SwitchNote() => Cloud.AccountSwitched
+        ? "⚠️ این کامپیوتر پیش از این به حسابِ دیگری وصل بود، پس بندهای پمپِ قبلی "
+          + "(اشتراک، کدِ اپِ کارمندان و نشانیِ سرور) برداشته شدند. دفتر دست نخورده است — "
+          + "برای وصل شدن، کدِ شش‌رقمیِ همین پمپ را بزنید."
+        : "";
+
     // ── ۲) پروفایل: نشانیِ سرور از حساب می‌آید ──────────────────────────
 
     /// <summary>
@@ -454,6 +511,11 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         CloudLine = string.IsNullOrWhiteSpace(f.CloudDeviceToken) ? "فعال نشده" : "فعال — با کدِ شش‌رقمی";
         AppVersionLine = PumpYaqobi.App.Update.AppVersion.Current;
 
+        //  دکمهٔ «جدا کردن» فقط وقتی دیده می‌شود که بندی برای باز کردن باشد
+        PumpBound = !string.IsNullOrWhiteSpace(f.CloudDeviceToken)
+                 || !string.IsNullOrWhiteSpace(f.CloudStationId)
+                 || !string.IsNullOrWhiteSpace(f.CloudAccessCode);
+
         var session = _host.Session;
         UserLine = string.IsNullOrWhiteSpace(session.UserName) ? "کاربرِ برنامه" : session.UserName!;
         RoleText = session.Role switch
@@ -710,7 +772,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
             //  ⚠️ رمز از حافظهٔ صفحه هم می‌رود
             LoginPassword = ""; LoginPassword2 = "";
             ClearSkipped();
-            LoginStatus = "";
+            LoginStatus = SwitchNote();
             RefreshAll();
             LoginStep = 3;
         }
@@ -746,7 +808,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
             //  ⚠️ حساب ساخته شد؛ از این‌جا به بعد رمز هیچ‌جا لازم نیست
             LoginPassword = ""; LoginPassword2 = ""; EmailCode = "";
             ClearSkipped();
-            LoginStatus = "";
+            LoginStatus = SwitchNote();
             RefreshAll();
             LoginStep = 3;
         }

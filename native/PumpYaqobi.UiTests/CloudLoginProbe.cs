@@ -74,6 +74,12 @@ internal static class CloudLoginProbe
     /// <summary>رمزِ تازه‌ای که از راهِ «فراموشی» گذاشته شد.</summary>
     private static string _newPass = "";
 
+    /// <summary>مکثِ ساختگیِ سرور — به میلی‌ثانیه.</summary>
+    private static int _slowMs;
+
+    /// <summary>ایمیلی که آخرین ورود با آن آمد — شناسهٔ حساب از همین می‌آید.</summary>
+    private static string _loginMail = "haroon@gmail.com";
+
     private static readonly List<string> Seen = new();
     private static string _lastBody = "";
     private static string _serverKey = "";      // کلیدی که ابر می‌دهد (برای سنجشِ جعل)
@@ -124,7 +130,7 @@ internal static class CloudLoginProbe
         _emailTaken = true;
         return Json(HttpStatusCode.Created,
             "{\"created\":true,\"accessToken\":\"acct-token\",\"refreshToken\":\"acct-refresh\","
-            + "\"user\":{\"email\":\"haroon@gmail.com\",\"name\":\"هارون یعقوبی\"}}");
+            + "\"user\":{\"id\":\"user-haroon\",\"email\":\"haroon@gmail.com\",\"name\":\"هارون یعقوبی\"}}");
     }
 
     private static HttpResponseMessage Json(HttpStatusCode code, string body) =>
@@ -166,6 +172,12 @@ internal static class CloudLoginProbe
         Seen.Add(req.Method + " " + path);
         _lastBody = req.Content is null ? "" : await req.Content.ReadAsStringAsync(ct);
 
+        //  ⚠️ سرورِ **کُند** — فقط برای سنجهٔ «یک کلیک = یک درخواست».
+        //  بی این، ابرِ ساختگی هم‌زمان جواب می‌دهد و پنجرهٔ «در حالِ کار»
+        //  هیچ‌وقت دیده نمی‌شود؛ سنجه‌ای که نمی‌تواند ببیند، سبزِ دروغ
+        //  می‌دهد — پس عمداً مکث می‌گذاریم.
+        if (_slowMs > 0) await Task.Delay(_slowMs, ct);
+
         //  ⚠️ نشانی باید همان نشانیِ قفل‌شده باشد — اگر روزی از تنظیمات
         //  خوانده شود، همین‌جا دیده می‌شود.
         if (req.RequestUri.GetLeftPart(UriPartial.Authority)
@@ -180,6 +192,9 @@ internal static class CloudLoginProbe
             if (doc.RootElement.TryGetProperty("device", out var d)
                 && d.TryGetProperty("uid", out var u) && u.ValueKind == JsonValueKind.String)
                 uid = u.GetString() ?? "";
+            if (doc.RootElement.TryGetProperty("email", out var em)
+                && em.ValueKind == JsonValueKind.String && path == "/api/auth/login")
+                _loginMail = em.GetString() ?? _loginMail;
             if (doc.RootElement.TryGetProperty("password", out var pw)
                 && pw.ValueKind == JsonValueKind.String && pw.GetString() != RightPass
                 && path == "/api/auth/login")
@@ -196,7 +211,13 @@ internal static class CloudLoginProbe
         //  است، نه `token` — با آزمونِ خودِ سرور دیده شد
         //  (`shop/server/test/pump-account.test.js`). اگر این‌جا `token`
         //  بگذاریم، سنجه سبزِ دروغ می‌دهد و باگِ کاربر پیدا نمی‌شود.
-        const string acct = """{"accessToken":"acct-token","refreshToken":"acct-refresh","user":{"email":"haroon@gmail.com","name":"هارون یعقوبی"}}""";
+        //  ⚠️ و `user.id` هم می‌آید، چون سرورِ واقعی می‌دهدش
+        //  (`publicUser` در `shop/server/src/routes/auth.js`). همین شناسه
+        //  است که «همان حساب است یا حسابِ دیگری؟» را جواب می‌دهد، پس
+        //  سنجه‌ای که بی آن باشد جابه‌جاییِ حساب را نمی‌بیند.
+        var acct = "{\"accessToken\":\"acct-token\",\"refreshToken\":\"acct-refresh\",\"user\":{\"id\":\""
+                 + (_loginMail == "haroon@gmail.com" ? "user-haroon" : "user-digar")
+                 + "\",\"email\":\"" + _loginMail + "\",\"name\":\"هارون یعقوبی\"}}";
         var ent = "\"entitlement\":{\"source\":\"subscription\",\"features\":[\"kar\",\"qrlive\",\"cloudbackup\"],"
                   + "\"subscription\":{\"plan\":\"VIP\",\"daysLeft\":42,\"endsAt\":0}}";
 
@@ -283,6 +304,8 @@ internal static class CloudLoginProbe
         //  ابرِ ساختگی، پیش از هر کاری
         CloudLink.TestTransport = Cloud;
         _emailTaken = false;
+        _loginMail = "haroon@gmail.com";
+        _slowMs = 0;
 
         //  دفترِ پاک و حسابِ پاک — وگرنه «فعال‌شده»ی اجرای قبلی همه را دروغ می‌کند
         var f = AppSettings.Load();
@@ -625,12 +648,126 @@ internal static class CloudLoginProbe
               && AppSettings.Load().CloudRefreshToken == "acct-refresh");
         CloudLink.TestTransport = Cloud;
 
+        // ══ ۱۵) یک کلیک = یک درخواست ═════════════════════════════════════
+        //
+        //  «چند بار کلیک کردن روی ورود باعثِ ارسالِ درخواست‌های تکراری
+        //  نشود.» این را با **خودِ فرمان** می‌سنجیم، نه با نگاه به کد:
+        //  `AsyncRelayCommand`ِ تولکیت تا کارش تمام نشود `CanExecute` را
+        //  `false` می‌کند، و هم دکمه و هم `KeyBinding`ِ Enter از همان
+        //  می‌پرسند. اگر روزی کسی `AllowConcurrentExecutions` را روشن
+        //  کند، همین‌جا قرمز می‌شود.
+        Console.WriteLine("── ۱۵) یک کلیک = یک درخواست (کلیکِ پشتِ سرِ هم)");
+        Seen.Clear();
+        account.BackToAccountCommand.Execute(null);
+        account.SetSignUpCommand.Execute("no");
+        account.LoginEmail = "haroon@gmail.com";
+        account.LoginPassword = "ramz-tazeh-1";   // رمزی که همین حالا گذاشتیم
+        _slowMs = 300;
+        var slow = account.AccountStepCommand.ExecuteAsync(null);
+        //  چند فریم صبر، تا واقعاً وسطِ کار باشیم
+        for (var i = 0; i < 10; i++) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(5); }
+        var midRun = !account.AccountStepCommand.CanExecute(null);
+        //  ⚠️ دو کلیکِ دیگر، در همان لحظه — دکمه و Enter هر دو از
+        //  `CanExecute` می‌پرسند، پس نباید درخواستی بسازند.
+        var blocked = !account.AccountStepCommand.CanExecute(null);
+        Wait(win, slow);
+        _slowMs = 0;
+        for (var i = 0; i < 20; i++) Pump(win);
+        Check("تا کار تمام نشده، دکمه و Enter خوابند", midRun && blocked);
+        Check("⭐ و فقط یک درخواستِ ورود رفت",
+              Seen.Count(x => x == "POST /api/auth/login") == 1, string.Join(" · ", Seen));
+        Check("و پس از تمام شدن، دکمه بیدار است", account.AccountStepCommand.CanExecute(null));
+
+        // ══ ۱۶) کدِ ایمیل پشتِ سرِ هم فرستاده نمی‌شود ═════════════════════
+        //
+        //  «درخواست‌های ورود قابلِ سوءاستفاده و ارسالِ بی‌نهایت نباشند.»
+        //  هر زدنِ این دکمه یک **ایمیل** است و سقفِ خودِ سرور پنج تا در
+        //  پانزده دقیقه (`otpLimit`) — پس کاربری که پشتِ سرِ هم بزند،
+        //  خودش را از ثبت‌نامش بیرون می‌انداخت.
+        Console.WriteLine("── ۱۶) «دوباره بفرست» ترمز دارد");
+        Seen.Clear();
+        account.OpenForgotCommand.Execute(null);
+        account.LoginEmail = "digar@gmail.com";
+        Wait(win, account.SendResetCodeCommand.ExecuteAsync(null));
+        for (var i = 0; i < 10; i++) Pump(win);
+        Check("بارِ اول رفت", Seen.Count(x => x == "POST /api/auth/password/forgot") == 1);
+        Wait(win, account.SendResetCodeCommand.ExecuteAsync(null));
+        for (var i = 0; i < 10; i++) Pump(win);
+        Check("⭐ بارِ دوم نرفت و به کاربر گفت چند ثانیه صبر کند",
+              Seen.Count(x => x == "POST /api/auth/password/forgot") == 1
+              && account.LoginStatus.Contains("ثانیه"), account.LoginStatus);
+
+        // ══ ۱۷) حسابِ دیگری وارد شد ⇒ بندهای پمپِ قبلی باز می‌شوند ════════
+        //
+        //  بندِ ۱۲: «اگر یک حساب از دستگاه دیگری وارد شود… اطلاعاتِ حسابِ
+        //  قبلی نباید باقی بماند و Tokenِ حسابِ قبلی اشتباهاً برای حسابِ
+        //  جدید استفاده نشود.»
+        //
+        //  ⛔ و پیش از این برنامه سرِ همین حالت می‌گفت «این دستگاه را از
+        //  پمپِ فعلی جدا کنید» در حالی که **هیچ راهی برای جدا کردن نبود**.
+        Console.WriteLine("── ۱۷) ورودِ حسابِ دیگر — بندهای پمپِ قبلی باز می‌شوند");
+        var before = AppSettings.Load();
+        before.CloudDeviceToken = "dev-token";
+        before.CloudStationId = "stn-1";
+        before.CloudAccessCode = "K7PM3XQ2";
+        before.CloudUserId = "user-haroon";
+        before.CloudEmail = "haroon@gmail.com";
+        before.ServerReadKey = "read-key";
+        before.Save();
+        //  ⚠️ دفتر باید **پُر** باشد، وگرنه «صفر ⇒ صفر» هیچ چیزی ثابت
+        //  نمی‌کند: سنجه‌ای که با دفترِ خالی بدود همیشه سبز است.
+        using (var db = host.Db.Create())
+        {
+            for (var i = 0; i < 5; i++)
+                db.SafeEntries.Add(new PumpYaqobi.Domain.Entities.SafeEntry
+                {
+                    DateShamsi = "1405/06/30", DateKey = 14050630, MonthKey = "1405/06",
+                    Title = "ردیفِ آزمایشی " + i, Amount = 1000 + i,
+                });
+            db.SaveChanges();
+        }
+        var rowsBefore = Rows(host);
+        Check("دفتر برای سنجش پُر است", rowsBefore >= 5, rowsBefore + " ردیف");
+
+        account.BackToAccountCommand.Execute(null);
+        account.SetSignUpCommand.Execute("no");
+        account.LoginEmail = "digar@gmail.com";
+        account.LoginPassword = RightPass;
+        Wait(win, account.AccountStepCommand.ExecuteAsync(null));
+        for (var i = 0; i < 20; i++) Pump(win);
+
+        var after = AppSettings.Load();
+        Check("حسابِ تازه وارد شد", after.CloudUserId == "user-digar", after.CloudUserId);
+        Check("⭐ توکنِ دستگاهِ پمپِ قبلی پاک شد", after.CloudDeviceToken.Length == 0);
+        Check("⭐ شناسهٔ پمپ و کدِ اپِ کارمندانِ قبلی هم پاک شدند",
+              after.CloudStationId.Length == 0 && after.CloudAccessCode.Length == 0);
+        Check("⭐ و رمزِ خواندنِ سرورِ خانگیِ قبلی هم", after.ServerReadKey.Length == 0);
+        Check("⚠️ و بی‌صدا نبود — به کاربر گفت چه شد",
+              account.LoginStatus.Contains("حسابِ دیگری"), account.LoginStatus);
+        Check("⛔ ولی دفتر یک ردیف هم کم و زیاد نشد", Rows(host) == rowsBefore,
+              rowsBefore + " ⇒ " + Rows(host));
+
+        //  و «جدا کردنِ دستی» هم هست — همان کاری که برنامه توصیه می‌کرد
+        Check("دکمهٔ «جدا کردنِ این دستگاه از این پمپ» هست",
+              account.ForgetPumpCommand is not null);
+
         CloudLink.TestTransport = null;
         Console.WriteLine();
         Console.WriteLine(_bad == 0
             ? "✅ ثبت‌نام، ورود، کدِ شش‌رقمی و اشتراک — همه با سرورِ ساختگی تا تهِ کار رفتند"
             : $"❌ {_bad} ایراد");
         return _bad == 0 ? 0 : 1;
+    }
+
+    /// <summary>
+    /// شمارِ ردیف‌های دفتر — همان عددی که ثابت می‌کند جابه‌جاییِ حساب
+    /// «یک بیت از دفتر را لمس نمی‌کند».
+    /// </summary>
+    private static int Rows(AppHost host)
+    {
+        using var db = host.Db.Create();
+        return db.DebtAccounts.Count() + db.DebtRows.Count() + db.SafeEntries.Count()
+             + db.TilCompanies.Count() + db.CompanyRows.Count();
     }
 
     private static string SettingsPath() =>
