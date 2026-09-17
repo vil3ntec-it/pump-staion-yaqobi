@@ -104,6 +104,15 @@ public sealed class ShortcutService
         _ => null,
     };
 
+    /// <summary>
+    /// کاربر همین حالا داخلِ یک کادرِ تایپ است؟
+    ///
+    /// هر کلیدی که **نویسه می‌سازد** باید در این حالت دستِ خودِ کادر بماند؛
+    /// میانبری که نویسه را بخورد، از چشمِ کاربر یعنی «برنامه چیزی نمی‌نویسد».
+    /// </summary>
+    private static bool TypingInBox(object? sender) =>
+        (sender as TopLevel)?.FocusManager?.GetFocusedElement() is TextBox;
+
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {
         if (Locked) return;
@@ -130,8 +139,7 @@ public sealed class ShortcutService
         }
         // ماشین‌حسابِ باز، صفحه‌کلید هم می‌گیرد — مثلِ ‎_calcKeyHandler‎ی سایت،
         // مگر وقتی کاربر داخلِ کادرِ تایپی است.
-        if (_vm.Calculator.IsOpen && !ctrl && !alt
-            && (sender as TopLevel)?.FocusManager?.GetFocusedElement() is not TextBox
+        if (_vm.Calculator.IsOpen && !ctrl && !alt && !TypingInBox(sender)
             && CalcKey(e.Key, shift) is { } ck)
         {
             _vm.Calculator.Key(ck);
@@ -180,7 +188,20 @@ public sealed class ShortcutService
         }
 
         // ۴) Shift+عدد → حذفِ ردیف
-        if (shift && !alt)
+        //
+        // ⛔ **ولی نه وقتی کاربر داخلِ کادرِ تایپ است.**
+        // گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۹): «این کادرِ ایمیل ایمیل نیست و هیچی
+        // توش نوشته نمی‌شود؛ + @ # ﷼ ( ) ؟ ؛ : , . توی هیچ‌کدام نوشته
+        // نمی‌شوند.» ریشه همین‌جا بود: ردیفِ عددها با Shift **نویسه** می‌سازد
+        // — انگلیسی `@ # $ % ( )` و فارسی/دری `، ؛ ؟ ﷼ ٪ × ) (` — و این
+        // شنونده کلید را `Handled` می‌کرد. روی ویندوز کلیدِ خورده‌شده دیگر
+        // `WM_CHAR` نمی‌سازد، پس آن نویسه **اصلاً تایپ نمی‌شد** (و بدتر:
+        // همان لحظه چند ردیف هم پاک می‌شد).
+        //
+        // ⚠️ Ctrl و Alt این مشکل را ندارند (نویسه نمی‌سازند) و سرِ جایشان
+        // ماندند؛ AltGr هم از قبل رد می‌شد، چون Ctrl+Alt را با هم دارد.
+        // سنجه: `dotnet run --project PumpYaqobi.UiTests -- inputchars`.
+        if (shift && !alt && !TypingInBox(sender))
         {
             e.Handled = true;
             if (_delBuf.Length < 3) _delBuf += digit;

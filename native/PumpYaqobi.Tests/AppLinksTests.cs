@@ -362,6 +362,28 @@ public class AppLinksTests
         }
     }
 
+    /// <summary>
+    /// ⛔ **میانبری که نویسه را بخورد، یعنی «برنامه چیزی نمی‌نویسد».**
+    ///
+    /// گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۹): «این کادرِ ایمیل ایمیل نیست و هیچی توش
+    /// نوشته نمی‌شود؛ + @ # ﷼ ( ) ؟ ؛ : , . توی هیچ‌کدام نوشته نمی‌شوند.»
+    /// ریشه: `Shift+عدد` (میانبرِ حذفِ ردیف) کلید را `Handled` می‌کرد و روی
+    /// ویندوز کلیدِ خورده‌شده `WM_CHAR` نمی‌سازد — یعنی ردیفِ عددها با Shift
+    /// هیچ نویسه‌ای تایپ نمی‌کرد: انگلیسی `@ # $ % ( )` و فارسی/دری
+    /// `، ؛ ؟ ﷼ ٪ × ) (`.
+    /// </summary>
+    [Fact]
+    public void ShiftAdad_DakheleKadreTypAn_MianborNist()
+    {
+        var src = Read("PumpYaqobi.App", "Services", "Shortcuts.cs");
+        Assert.Contains("private static bool TypingInBox(object? sender)", src);
+        //  فقط شاخهٔ Shift این قید را می‌خواهد — Ctrl و Alt نویسه نمی‌سازند
+        Assert.Contains("if (shift && !alt && !TypingInBox(sender))", src);
+        //  و میانبرها برداشته نشده‌اند
+        Assert.Contains("if (ctrl && !alt)", src);
+        Assert.Contains("if (alt && !ctrl)", src);
+    }
+
     // ── ۵) بخشِ وی‌آی‌پی ───────────────────────────────────────────────────
 
     [Fact]
