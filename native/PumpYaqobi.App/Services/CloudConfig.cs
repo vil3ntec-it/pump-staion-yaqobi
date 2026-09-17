@@ -28,8 +28,45 @@ public static class CloudConfig
     /// <summary>نشانیِ ابر. قفل — نه از تنظیمات خوانده می‌شود نه از محیط.</summary>
     public const string BaseUrl = "https://api.vill3n.top";
 
+    /// <summary>
+    /// همان <see cref="BaseUrl"/>، با نامی که پرامپتِ «سرورِ مرکزیِ احراز
+    /// هویت» می‌خواهد (<c>AUTH_SERVER_URL</c>).
+    ///
+    /// ⚠️ سرورِ حساب و سرورِ اشتراک <b>یکی‌اند</b> و باید یکی بمانند: مجوزِ
+    /// امضاشده به همان حسابی بسته می‌شود که توکنش از همان‌جا آمده. اگر روزی
+    /// دو نشانیِ جدا شوند، `LicenseGuard` چیزی را می‌سنجد که از جای دیگری
+    /// آمده — یعنی قفل بی‌اثر است.
+    /// </summary>
+    public const string AuthServerUrl = BaseUrl;
+
     /// <summary>شنونده‌ای که مجوزِ این برنامه باید داشته باشد.</summary>
     public const string Audience = "tohid-pump-app";
+
+    /// <summary>
+    /// شناسهٔ همین برنامه روی سرورِ مرکزی (<c>APPLICATION_ID</c>) — همان
+    /// <see cref="Audience"/>، چون سرور با همین رشته مجوزِ این برنامه را از
+    /// مجوزِ بخشِ دکان جدا می‌کند. دو نام برای یک چیز نمی‌سازیم.
+    /// </summary>
+    public const string ApplicationId = Audience;
+
+    /// <summary>
+    /// نسخهٔ همین برنامه (<c>APPLICATION_VERSION</c>) — از شمارهٔ اسمبلی که
+    /// <c>build-native.yml</c> می‌گذارد، نه یک رشتهٔ دستی.
+    /// </summary>
+    public static string ApplicationVersion => PumpYaqobi.App.Update.AppVersion.Current;
+
+    /// <summary>
+    /// <b>تنها</b> جای ساختنِ نشانیِ یک مسیرِ ابری.
+    ///
+    /// خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/…): «تمام آدرس‌های Server/API باید از
+    /// Configuration دریافت شوند و داخل کد به صورت پراکنده Hard-code نشوند.»
+    /// نشانی به خواستهٔ خودش <b>قفل</b> ماند (بالا نوشته شده چرا)، ولی
+    /// «پراکنده» بودنش رفت: هیچ فایلی دیگر خودش <c>BaseUrl + "…"</c>
+    /// نمی‌چسباند.
+    ///
+    /// ⚠️ <paramref name="path"/> باید با <c>/</c> شروع شود.
+    /// </summary>
+    public static string Url(string path) => BaseUrl + path;
 
     /// <summary>صادرکنندهٔ مجوز.</summary>
     public const string Issuer = "tohid-license-server";

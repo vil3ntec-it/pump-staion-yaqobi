@@ -47,8 +47,8 @@ public static class AcctLive
 
     /// <summary>نشانیِ ابر که صفحهٔ مشتری از آن می‌پرسد — همان نشانیِ قفل‌شده.</summary>
     public static string PublicUrl(string station, string id, string key) =>
-        CloudConfig.BaseUrl + "/api/pump/public/" + Uri.EscapeDataString(station)
-        + "/acct/" + Uri.EscapeDataString(id) + "?k=" + Uri.EscapeDataString(key);
+        CloudConfig.Url("/api/pump/public/" + Uri.EscapeDataString(station)
+        + "/acct/" + Uri.EscapeDataString(id) + "?k=" + Uri.EscapeDataString(key));
 
     /// <summary>رمزِ تازه — ۸۰ بیت، شانزده‌شانزدهی، همیشه ۲۰ حرف.</summary>
     public static string NewKey() =>

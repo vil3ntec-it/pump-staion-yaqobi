@@ -289,6 +289,59 @@ public class CloudAddressLockTests
         Assert.Contains("const string BaseUrl", src);
     }
 
+    /// <summary>
+    /// ══ «از Configuration، و پراکنده نباشد» ═══════════════════════════════
+    ///
+    /// خواستهٔ صاحب ریپو: «تمام آدرس‌های Server/API باید از Configuration
+    /// دریافت شوند و داخل کد به صورت پراکنده Hard-code نشوند» — با سه نامِ
+    /// <c>AUTH_SERVER_URL</c> · <c>APPLICATION_ID</c> · <c>APPLICATION_VERSION</c>.
+    ///
+    /// ⚠️ و خواستهٔ قبلیِ خودش که پس گرفته نشد: نشانی <b>قفل</b> بماند، وگرنه
+    /// هر کسی برنامه را به سرورِ خودش می‌برد و مجوزِ ساختگیِ خودش را قبول
+    /// می‌کند. پس «Configuration» این‌جا یعنی <b>یک جای واحد در کد</b>، نه
+    /// یک کادرِ متنی. این سنجه هر دو را با هم نگه می‌دارد.
+    /// </summary>
+    [Fact]
+    public void SeMeghdareNamdar_YekJa_Hastand()
+    {
+        Assert.Equal(CloudConfig.BaseUrl, CloudConfig.AuthServerUrl);
+        Assert.Equal(CloudConfig.Audience, CloudConfig.ApplicationId);
+        Assert.False(string.IsNullOrWhiteSpace(CloudConfig.ApplicationVersion));
+
+        //  و ساختنِ نشانی فقط از همین یک تابع
+        Assert.Equal(CloudConfig.BaseUrl + "/api/x", CloudConfig.Url("/api/x"));
+    }
+
+    /// <summary>
+    /// ⛔ هیچ فایلی جز <c>CloudConfig.cs</c> حق ندارد خودش نشانی بچسباند.
+    ///
+    /// پیش از این پنج جا <c>BaseUrl + "…"</c> می‌نوشتند؛ کسی که روزی نشانی
+    /// را عوض کند باید <b>یک</b> جا را عوض کند، نه شش جا را پیدا کند.
+    /// </summary>
+    [Fact]
+    public void HichFayle_Digari_NeshaniRa_Namichasbanad()
+    {
+        var app = Path.Combine(Root, "PumpYaqobi.App");
+        var bad = new List<string>();
+
+        foreach (var f in Directory.GetFiles(app, "*.cs", SearchOption.AllDirectories))
+        {
+            if (Path.GetFileName(f) == "CloudConfig.cs") continue;
+            foreach (var (line, i) in File.ReadAllLines(f).Select((l, i) => (l, i)))
+            {
+                var t = line.Trim();
+                //  خطِ توضیح حساب نمی‌شود — نوشتنِ نامش در توضیح آزاد است
+                if (t.StartsWith("//") || t.StartsWith("///") || t.StartsWith("*")) continue;
+                if (t.Contains("api.vill3n.top") || t.Contains("CloudConfig.BaseUrl"))
+                    bad.Add($"{Path.GetFileName(f)}:{i + 1}  {t}");
+            }
+        }
+
+        Assert.True(bad.Count == 0,
+            "نشانیِ ابر باید فقط در CloudConfig.cs باشد و بقیه از CloudConfig.Url(...) بگیرند:\n"
+            + string.Join("\n", bad));
+    }
+
     [Fact]
     public void NeshaniyeAbr_AzTanzimat_Khandeh_Nemishavad()
     {

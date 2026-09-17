@@ -59,6 +59,9 @@ public class InfraTests : IDisposable
 
         Assert.True(req.Headers.Contains("X-App-Version"));
         Assert.True(req.Headers.Contains("X-App-Platform"));
+        //  سرورِ مرکزی مالِ چند برنامه است و باید بداند کدام زده
+        Assert.Equal(CloudConfig.ApplicationId,
+            string.Join("", req.Headers.GetValues("X-App-Id")));
         var ua = string.Join("", req.Headers.GetValues("User-Agent"));
         Assert.StartsWith("PumpYaqobi/", ua);
 

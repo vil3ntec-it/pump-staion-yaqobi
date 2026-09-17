@@ -377,7 +377,7 @@ public sealed class CloudLink
     {
         if (!Activated) return (false, "", "فعال نشده");
         var req = new HttpRequestMessage(HttpMethod.Post,
-            CloudConfig.BaseUrl + "/api/pump/device/chat/" + Uri.EscapeDataString(acct) + "/media")
+            CloudConfig.Url("/api/pump/device/chat/" + Uri.EscapeDataString(acct) + "/media"))
         {
             Content = new ByteArrayContent(bytes),
         };
@@ -394,7 +394,7 @@ public sealed class CloudLink
         try
         {
             var req = new HttpRequestMessage(HttpMethod.Get,
-                CloudConfig.BaseUrl + "/api/pump/device/chat/media/" + Uri.EscapeDataString(mediaId));
+                CloudConfig.Url("/api/pump/device/chat/media/" + Uri.EscapeDataString(mediaId)));
             req.Headers.Add("Authorization", $"Bearer {_settings.CloudDeviceToken}");
             using var res = TestTransport is null
                 ? await Http.SendAsync(req, ct)
@@ -411,7 +411,7 @@ public sealed class CloudLink
     {
         if (!Activated) return CloudResult.No("فعال نشده", "not_activated");
         var req = new HttpRequestMessage(HttpMethod.Delete,
-            CloudConfig.BaseUrl + "/api/pump/device/chat/message/" + Uri.EscapeDataString(messageId));
+            CloudConfig.Url("/api/pump/device/chat/message/" + Uri.EscapeDataString(messageId)));
         req.Headers.Add("Authorization", $"Bearer {_settings.CloudDeviceToken}");
         var (ok, _, why, code) = await Send(req, ct);
         return ok ? CloudResult.Done : CloudResult.No(why, code);
@@ -422,7 +422,7 @@ public sealed class CloudLink
     {
         if (!Activated) return CloudResult.No("فعال نشده", "not_activated");
         var req = new HttpRequestMessage(blocked ? HttpMethod.Post : HttpMethod.Delete,
-            CloudConfig.BaseUrl + "/api/pump/device/chat/" + Uri.EscapeDataString(acct) + "/block")
+            CloudConfig.Url("/api/pump/device/chat/" + Uri.EscapeDataString(acct) + "/block"))
         {
             Content = blocked ? JsonContent.Create(new { }) : null,
         };
@@ -1128,10 +1128,14 @@ public sealed class CloudLink
     {
         try
         {
-            var v = PumpYaqobi.App.Update.AppVersion.Current;
+            var v = CloudConfig.ApplicationVersion;
             req.Headers.TryAddWithoutValidation("User-Agent", "PumpYaqobi/" + v);
             req.Headers.TryAddWithoutValidation("X-App-Version", v);
             req.Headers.TryAddWithoutValidation("X-App-Platform", "windows-native");
+            //  ⚠️ سرورِ مرکزی مالِ چند برنامه است؛ بی این، لاگِ خطا نمی‌گوید
+            //  کدام برنامه زده. همان `aud`ی است که مجوز هم با آن سنجیده
+            //  می‌شود — نه یک نامِ تازه، و نه چیزی که کاربر را بشناساند.
+            req.Headers.TryAddWithoutValidation("X-App-Id", CloudConfig.ApplicationId);
         }
         catch { /* هدر نرفتن هیچ‌وقت نباید جلوی درخواست را بگیرد */ }
     }
@@ -1156,7 +1160,7 @@ public sealed class CloudLink
     /// </summary>
     private static HttpRequestMessage Build(HttpMethod method, string path, object? body, string? token)
     {
-        var req = new HttpRequestMessage(method, CloudConfig.BaseUrl + path);
+        var req = new HttpRequestMessage(method, CloudConfig.Url(path));
         if (body is not null) req.Content = JsonContent.Create(body);
         if (!string.IsNullOrWhiteSpace(token)) req.Headers.Add("Authorization", $"Bearer {token}");
         Stamp(req);
