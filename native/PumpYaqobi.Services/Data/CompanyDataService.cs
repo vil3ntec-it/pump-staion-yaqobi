@@ -289,6 +289,29 @@ public sealed class CompanyDataService
                        .OrderByDescending(x => x.Id).ToListAsync(ct);
     }
 
+    /// <summary>
+    /// ⚠️ **شمارِ جدول‌های آرشیو، پطرول و دیزل جدا** — بی خواندنِ ردیف‌ها.
+    ///
+    /// کارتِ شرکت فقط همین دو عدد را می‌خواهد؛ پیش از این کلِ
+    /// <see cref="ListArchivesAsync"/> (با `RowsJson`ِ هر جدول) خوانده می‌شد
+    /// و در C# شمرده می‌شد. همان قاعدهٔ «برای یک عدد، همهٔ ردیف‌ها را نخوان».
+    /// </summary>
+    public async Task<(int Petrol, int Diesel)> CountArchivesAsync(long companyId, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        //  ⚠️ **یک دستور، نه دو**: شمارِ دستورِ دیتابیس خودش یکی از سنجه‌های
+        //  اصلیِ ریپو است، پس دو `COUNT` جدا (پطرول و دیزل) هم پس‌رفت بود.
+        var byFuel = await db.CompanyTableArchives.AsNoTracking()
+            .Where(x => x.CompanyId == companyId)
+            .GroupBy(x => x.Fuel)
+            .Select(g => new { Fuel = g.Key, N = g.Count() })
+            .ToListAsync(ct);
+        var diesel = byFuel.Where(x => x.Fuel == FuelType.Diesel).Sum(x => x.N);
+        var petrol = byFuel.Sum(x => x.N) - diesel;
+        return (petrol, diesel);
+    }
+
     /// <summary>همهٔ آرشیوهای همهٔ شرکت‌ها — برای «جستجوی خرید».</summary>
     public async Task<List<CompanyTableArchive>> AllArchivesAsync(CancellationToken ct = default)
     {

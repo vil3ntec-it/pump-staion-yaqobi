@@ -268,6 +268,16 @@ public class AppLinksTests
         //  و نتیجهٔ هر تم یک بار ساخته و کَش می‌شود
         Assert.Contains("Dictionary<bool, SvgImage>", code2);
 
+        //  ⛔ **و سرِ باز شدنِ برنامه تجزیه نمی‌شود.** همهٔ بخش‌ها از اول در
+        //  درخت‌اند (`AllPages`)، پس ساختنِ نقشه در `OnAttachedToVisualTree`
+        //  یعنی هزینه‌اش روی باز شدنِ پنجره — برای صفحه‌ای که کاربر ندیده.
+        //  اسکنِ کاملِ ۱۴۰۵/۰۶/۳۰ همین را گرفت. تنها جای ساختن، اولین
+        //  اندازه‌گیریِ واقعی است (کنترلِ پنهان اندازه گرفته نمی‌شود).
+        Assert.Contains("MeasureOverride", code2);
+        var attach = code2[code2.IndexOf("OnAttachedToVisualTree", StringComparison.Ordinal)..];
+        attach = attach[..attach.IndexOf("OnDetachedFromVisualTree", StringComparison.Ordinal)];
+        Assert.DoesNotContain("Paint();", attach);
+
         //  و در صفحه به کار رفته، با پس‌زمینهٔ تمِ برنامه (نه آن بنفشِ عکس)
         var xaml = Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml");
         Assert.Contains("<c:LoginArt", xaml);

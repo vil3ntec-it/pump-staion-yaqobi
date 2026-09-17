@@ -139,6 +139,14 @@ internal static class Program
         if (outDir.Equals("gridperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Run();
         if (outDir.Equals("cardperf", StringComparison.OrdinalIgnoreCase)) return GridPerf.Cards();
 
+        // ══ حالتِ «اسکنِ کاملِ برنامه» ═════════════════════════════════════
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- fullscan
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- fullscan quick
+        // خواستهٔ صاحب ریپو: «بعد هر اپدیت همه برنامه از اول تا اخر اسکن بشه».
+        // چرایی و فهرستِ سنجه‌ها در ‎FullScan‎ نوشته شده.
+        if (outDir.Equals("fullscan", StringComparison.OrdinalIgnoreCase))
+            return FullScan.Run(args.Length > 1 && args[1].Equals("quick", StringComparison.OrdinalIgnoreCase));
+
         Directory.CreateDirectory(outDir);
 
         // دیتابیسِ موقت — عکس‌گیری هرگز به دادهٔ واقعیِ کاربر دست نمی‌زند

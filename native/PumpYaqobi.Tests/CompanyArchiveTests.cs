@@ -53,6 +53,12 @@ public class CompanyArchiveTests : IDisposable
         Assert.Empty(CompanyService.RowsOf(full, FuelType.Petrol));
         Assert.Single(CompanyService.RowsOf(full, FuelType.Diesel));
         Assert.Single(await co.ListArchivesAsync(c.Id));
+
+        //  ⚠️ شمارندهٔ کارت با `COUNT` می‌آید، نه با خواندنِ `RowsJson`ِ همهٔ
+        //  آرشیوها (اسکنِ ۱۴۰۵/۰۶/۳۰) — و پطرول و دیزل را قاطی نمی‌کند.
+        var (aP, aD) = await co.CountArchivesAsync(c.Id);
+        Assert.Equal(1, aP);
+        Assert.Equal(0, aD);
     }
 
     [Fact] // جدولِ خالی آرشیو نمی‌شود
