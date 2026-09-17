@@ -100,6 +100,19 @@ public sealed class CloudLink
 {
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(20) };
 
+    /// <summary>
+    /// ⚠️ **تنها راهِ سنجش** — یک شنوندهٔ ساختگی به جای شبکه، تا سنجشِ
+    /// `cloudlogin` بتواند «ثبت‌نام، ورود، و زدنِ کدِ شش‌رقمی» را واقعاً تا
+    /// تهِ کار ببرد بی این‌که به سرورِ واقعیِ اشتراک دست بزند.
+    ///
+    /// ⛔ **این قفلِ نشانی را باز نمی‌کند**: نشانی همچنان
+    /// <see cref="CloudConfig.BaseUrl"/> است و از تنظیمات یا محیط خوانده
+    /// نمی‌شود. این فقط با یک خطِ **کد** مقدار می‌گیرد (و فقط در
+    /// `PumpYaqobi.UiTests`)، پس کسی که فایلِ تنظیمات را عوض می‌کند از
+    /// این راه هیچ کاری نمی‌تواند بکند. در برنامهٔ واقعی همیشه `null` است.
+    /// </summary>
+    public static Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>? TestTransport { get; set; }
+
     private readonly AppSettings _settings;
     private readonly Func<Task> _save;
 
@@ -371,7 +384,9 @@ public sealed class CloudLink
             var req = new HttpRequestMessage(HttpMethod.Get,
                 CloudConfig.BaseUrl + "/api/pump/device/chat/media/" + Uri.EscapeDataString(mediaId));
             req.Headers.Add("Authorization", $"Bearer {_settings.CloudDeviceToken}");
-            using var res = await Http.SendAsync(req, ct);
+            using var res = TestTransport is null
+                ? await Http.SendAsync(req, ct)
+                : await TestTransport(req, ct);
             if (!res.IsSuccessStatusCode) return null;
             var bytes = await res.Content.ReadAsByteArrayAsync(ct);
             return (bytes, res.Content.Headers.ContentType?.MediaType ?? "application/octet-stream");
@@ -597,7 +612,9 @@ public sealed class CloudLink
     {
         try
         {
-            using var res = await Http.SendAsync(req, ct);
+            using var res = TestTransport is null
+                ? await Http.SendAsync(req, ct)
+                : await TestTransport(req, ct);
             var text = await res.Content.ReadAsStringAsync(ct);
             JsonElement json = default;
             try

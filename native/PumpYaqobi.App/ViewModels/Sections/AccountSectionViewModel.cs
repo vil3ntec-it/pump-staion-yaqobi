@@ -80,8 +80,27 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
             : (SubActive ? "بدون ورود" : "وارد نشده");
     }
 
-    private CloudLink Cloud => _cloud ??= new CloudLink(
-        AppSettings.Load(), () => { AppSettings.Load().Save(); return Task.CompletedTask; });
+    /// <summary>
+    /// ⚠️ **همان شیئی ذخیره می‌شود که <see cref="CloudLink"/> عوضش می‌کند.**
+    ///
+    /// پیش از این، پاسخِ ذخیره یک `AppSettings.Load()`ِ **تازه** بود:
+    /// `CloudLink` توکنِ حساب و توکنِ دستگاه و مجوز را روی شیءِ خودش
+    /// می‌نشاند و بعد یک شیءِ تازه از دیسک خوانده و **همان کهنه** دوباره
+    /// نوشته می‌شد — یعنی ثبت‌نام و فعال‌سازی روی دیسک هیچ‌وقت نمی‌نشست و
+    /// با هر بار باز شدنِ برنامه کاربر باید دوباره کدِ شش‌رقمی می‌زد.
+    /// (سنجهٔ `cloudlogin` گرفتش؛ بقیهٔ جاهای برنامه —
+    /// `StationPublisher` و چت — از اول درست بودند.)
+    /// </summary>
+    private CloudLink Cloud
+    {
+        get
+        {
+            if (_cloud is not null) return _cloud;
+            var file = AppSettings.Load();
+            return _cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
+        }
+    }
+
     private CloudLink? _cloud;
 
     // ── ۱) ورود ─────────────────────────────────────────────────────────

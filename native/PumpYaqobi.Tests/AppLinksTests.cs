@@ -336,6 +336,32 @@ public class AppLinksTests
         Assert.DoesNotContain("7b3fe4", theme);
     }
 
+    /// <summary>
+    /// ⛔ **ذخیرهٔ تنظیماتِ ابر باید همان شیئی باشد که عوض شده.**
+    ///
+    /// باگی که سنجهٔ `cloudlogin` گرفت: پاسخِ ذخیرهٔ `CloudLink` یک
+    /// `AppSettings.Load()`ِ **تازه** بود، پس توکنِ حساب و توکنِ دستگاه و
+    /// مجوز که روی شیءِ خودِ `CloudLink` نشسته بودند، با نوشتنِ همان شیءِ
+    /// تازه **دور ریخته می‌شدند** — ثبت‌نام و فعال‌سازی روی دیسک نمی‌نشست و
+    /// با هر بار باز شدنِ برنامه کاربر باید دوباره کد می‌زد.
+    /// </summary>
+    [Fact]
+    public void TanzimateAbr_HamanShey_Zakhire_Mishavad()
+    {
+        foreach (var f in new[]
+        {
+            Path.Combine("ViewModels", "Sections", "AccountSectionViewModel.cs"),
+            Path.Combine("ViewModels", "Sections", "ChatSectionViewModel.cs"),
+            Path.Combine("Services", "StationPublisher.cs"),
+        })
+        {
+            var src = Read("PumpYaqobi.App", f);
+            Assert.DoesNotContain("AppSettings.Load().Save()", src);
+            if (src.Contains("new CloudLink("))
+                Assert.Contains("file.Save()", src);
+        }
+    }
+
     // ── ۵) بخشِ وی‌آی‌پی ───────────────────────────────────────────────────
 
     [Fact]

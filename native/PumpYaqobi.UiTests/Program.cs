@@ -88,6 +88,8 @@ internal static class Program
         if (outDir.Equals("rowcost", StringComparison.OrdinalIgnoreCase)) return RowCost.Run();
         if (outDir.Equals("vanish", StringComparison.OrdinalIgnoreCase)) return VanishProbe.Run();
         if (outDir.Equals("verify", StringComparison.OrdinalIgnoreCase)) return VerifyProbe.Run();
+        //  «تست بزن ببین لاگین می‌شود، کد بزنی چه می‌شود، حساب ساخته می‌شود یا نه»
+        if (outDir.Equals("cloudlogin", StringComparison.OrdinalIgnoreCase)) return CloudLoginProbe.Run();
         // ══ «عوض کردنِ تم خط‌ها را کج می‌کند؟» ══════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- themeflip
         if (outDir.Equals("themeflip", StringComparison.OrdinalIgnoreCase)) return ThemeFlipAudit.Run();
