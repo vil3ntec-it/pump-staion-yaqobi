@@ -35,6 +35,27 @@ internal static class VerifyProbe
     {
         var tmpDb = Path.Combine(Path.GetTempPath(), "pump-verify-" + Guid.NewGuid().ToString("N"), "pump.db");
         AppHost.Start(tmpDb);
+
+        /*
+         *  ⛔ **این نصب باید پلن داشته باشد، وگرنه سنجه دو رفتارِ سالم را
+         *  «✖» می‌دید.**
+         *
+         *  از ۱۴۰۵/۰۶/۳۰ شش دروازهٔ پلن داریم و این سنجه در یک پوشهٔ
+         *  موقتِ **خالی** بالا می‌آید — یعنی «بی‌اشتراک». پس تاریخچهٔ
+         *  گاوصندوق باز نمی‌شد (بندِ ۵) و پیامِ آمادهٔ واتساپ خالی بود
+         *  (بندِ ۱۶)، و هر دو **درست** بودند؛ انتظارِ سنجه کهنه بود.
+         *
+         *  ⚠️ سقفِ سنجه پایین نیامد و هیچ قفلی ضعیف نشد: مجوز واقعاً با
+         *  یک جفت‌کلیدِ ES256ِ همین فرآیند امضا می‌شود و همان کلید در
+         *  تنظیمات قفل می‌شود — همان کارِ نخستین فعال‌سازیِ واقعی.
+         *  حالتِ **بی‌اشتراک** هم سنجیده می‌شود، در بندِ ۱۷.
+         *
+         *  ⚠️ و **پیش از** ساختنِ پنجره: `MainViewModel` نسخهٔ خودش از
+         *  تنظیمات را نگه می‌دارد و با ذخیرهٔ «آخرین بخش» همان را روی
+         *  دیسک می‌نویسد، پس نوشتنِ بعد از آن همان لحظه پاک می‌شود.
+         */
+        var accessCode = FakeLicense.Grant();
+
         AppBuilder.Configure<PumpYaqobi.App.App>().UseSkia()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
             .SetupWithoutStarting();
@@ -502,11 +523,18 @@ internal static class VerifyProbe
             account.LoginPump = "پمپِ نو";
             account.LoginLocation = "هرات، جادهٔ کندهار";
             account.LoginCode = "123";
+            //  ⚠️ «هیچ توکنی نساخت» با «توکن را عوض نکرد» یکی نیست.
+            //  این سنجه از امروز با یک نصبِ **پلن‌دار** می‌دود (بالای
+            //  `Run`)، پس توکنِ دستگاه از قبل هست و سنجشِ «خالی باشد»
+            //  حرفِ درستی نمی‌زد. خواستهٔ اصلی همین است و سخت‌گیرانه‌تر:
+            //  کدِ ناقص نه توکنی می‌سازد و نه توکنِ سالم را جابه‌جا می‌کند.
+            var tokenBefore = AppSettings.Load().CloudDeviceToken;
             Wait(win, account.VerifyCodeCommand.ExecuteAsync(null));
             Check("کدِ سه‌رقمی رد شد", account.LoginStatus.Contains("شش رقم") && account.StepPump,
                   account.LoginStatus);
-            Check("و با کدِ ناقص هیچ توکنی ساخته نشد",
-                  string.IsNullOrWhiteSpace(AppSettings.Load().CloudDeviceToken), "بی توکن");
+            Check("و کدِ ناقص توکنِ دستگاه را نه ساخت و نه عوض کرد",
+                  AppSettings.Load().CloudDeviceToken == tokenBefore,
+                  tokenBefore.Length == 0 ? "بی توکن" : "دست‌نخورده");
 
             //  ه) نامِ پمپ و لوکیشن **پیش از** فرستادنِ کد می‌نشینند
             account.LoginCode = "000000";
@@ -599,8 +627,78 @@ internal static class VerifyProbe
                   && !apps.ShareText.Contains("token"));
         }
 
+        // ── ۱۷) قفلِ پلن: می‌بندد، بی‌صدا نیست، و داده را پاک نمی‌کند ───────
+        /*
+         *  چهار قاعدهٔ `native/docs/PLANS-fa.md` با رفتارِ واقعی سنجیده
+         *  می‌شوند، نه از روی کد:
+         *    ۱) داده پاک نمی‌شود، فقط دیده نمی‌شود
+         *    ۲) دفترِ خودِ کاربر هیچ‌وقت بسته نمی‌شود
+         *    ۳) قفل بی‌صدا نیست — می‌گوید چرا
+         *    ۴) با برگشتنِ پلن، همان لحظه باز می‌شود
+         *
+         *  ⚠️ کلیدِ «آزمایشِ حالتِ بی‌اشتراک» تنها راهِ دیدنِ قفل‌هاست و
+         *  **فقط می‌بندد** (`Entitlements.TestDeny`)، پس همین‌جا هم راهِ
+         *  دور زدنِ اشتراک نمی‌شود.
+         */
+        Console.WriteLine("── ۱۷) قفلِ پلن — بستن، دلیل، و باز شدنِ دوباره");
+        {
+            var settings = vm.Sections.First(s => s.Id == "settings");
+            var apps = (AppsSectionViewModel)settings.SubSections.First(s => s.Id == "apps");
+            var histVm = vm.Sections.OfType<HistorySectionViewModel>().First();
+            var safeVm = (SafeSectionViewModel)vm.Sections.First(s => s.Id == "safe");
+
+            Entitlements.TestDeny = true;
+            try
+            {
+                //  ۳) بی‌صدا نیست
+                Check("قفلِ تاریخچه‌ها دلیل دارد", Entitlements.Why(Entitlements.History).Length > 0,
+                      Entitlements.Why(Entitlements.History));
+                Check("قفلِ اپِ کارمندان دلیل دارد", Entitlements.Why(Entitlements.Kar).Length > 0);
+
+                //  قفل واقعاً می‌بندد — دکمهٔ تاریخچه جایی نمی‌رود
+                Wait(win, vm.GoAsync(safeVm)); Pump(win);
+                safeVm.OpenHistoryCommand.Execute(null);
+                for (var i = 0; i < 30; i++) { Dispatcher.UIThread.RunJobs(); win.UpdateLayout(); }
+                Check("بی پلن، تاریخچه‌ها باز نمی‌شود", vm.Current?.Id != "history", vm.Current?.Id);
+
+                //  ۱) و داده پاک نشده: خودِ بخش سرِ جایش است
+                Check("ولی خودِ بخشِ تاریخچه‌ها پاک نشده", histVm is not null);
+
+                //  ۲) دفترِ خودِ کاربر باز است
+                Check("دفترِ خودِ کاربر بسته نمی‌شود",
+                      Entitlements.Allows("debtors") && Entitlements.Allows("safe")
+                      && Entitlements.Allows(Entitlements.Support));
+
+                //  پیامِ آماده خالی است، ولی کد از دیسک پاک نشده
+                Wait(win, vm.GoAsync(settings));
+                settings.ShowSubCommand.Execute(apps);
+                //  ⚠️ صریح، نه با تکیه بر فرمان: صفحه‌ای که از قبل باز است
+                //  دوباره فعال نمی‌شود و `Show()` نمی‌دود، پس سنجه یک قدم
+                //  عقب می‌ماند و **سبزِ دروغ** می‌دهد.
+                Wait(win, apps.OnActivatedAsync());
+                for (var i = 0; i < 20; i++) Pump(win);
+                Check("بی پلن، پیامِ آمادهٔ واتساپ داده نمی‌شود", apps.ShareText.Length == 0);
+                Check("و دلیلش نوشته شده", apps.CodeHint.Length > 0, apps.CodeHint);
+                Check("ولی کدِ پمپ روی دیسک پاک نشده",
+                      AppSettings.Load().CloudAccessCode == accessCode, AppSettings.Load().CloudAccessCode);
+                Check("و دو لینک همیشه هستند — قفلِ پلن نیستند",
+                      apps.AndroidLink.Length > 0 && apps.IphoneLink.Length > 0);
+            }
+            finally { Entitlements.TestDeny = false; }
+
+            //  ۴) با برگشتنِ پلن، همان لحظه باز می‌شود
+            Wait(win, apps.OnActivatedAsync());
+            for (var i = 0; i < 20; i++) Pump(win);
+            Check("با برگشتنِ پلن، پیامِ آماده همان لحظه برمی‌گردد",
+                  apps.ShareText.Contains(apps.AndroidLink) && apps.ShareText.Contains(apps.IphoneLink));
+            Wait(win, vm.GoAsync(safeVm)); Pump(win);
+            safeVm.OpenHistoryCommand.Execute(null);
+            for (var i = 0; i < 30; i++) { Dispatcher.UIThread.RunJobs(); win.UpdateLayout(); }
+            Check("و تاریخچه‌ها دوباره باز می‌شود", vm.Current?.Id == "history", vm.Current?.Id);
+        }
+
         Console.WriteLine();
-        Console.WriteLine(_bad == 0 ? "✅ هر شانزده رفتار همان‌طور که خواسته شده کار می‌کند" : $"❌ {_bad} ایراد");
+        Console.WriteLine(_bad == 0 ? "✅ هر هفده رفتار همان‌طور که خواسته شده کار می‌کند" : $"❌ {_bad} ایراد");
         return _bad == 0 ? 0 : 1;
     }
 
