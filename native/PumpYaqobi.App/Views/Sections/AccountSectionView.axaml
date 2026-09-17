@@ -317,11 +317,41 @@
 
                     <!-- ⚠️ نوشتهٔ راهنما **داخلِ خودِ کادر** است، مثلِ عکسِ
                          مرجع — نه برچسبِ جدا. -->
-                    <TextBox Text="{Binding LoginName}" Watermark="نامِ شما" IsVisible="{Binding IsSignUp}" />
-                    <TextBox Text="{Binding LoginEmail}" Watermark="ایمیل" FlowDirection="LeftToRight" />
-                    <TextBox Text="{Binding LoginPassword}" PasswordChar="•" Watermark="رمز — دستِ‌کم هشت نویسه" />
-                    <TextBox Text="{Binding LoginPassword2}" PasswordChar="•" Watermark="تکرارِ رمز"
-                             IsVisible="{Binding IsSignUp}" />
+                    <!-- ⚠️ **Enter هم فرم را می‌فرستد** (بندِ ۲ی صاحب ریپو:
+                         «امکانِ ارسالِ فرم با Enter»). روی خودِ کادرها
+                         می‌نشیند، نه روی صفحه، وگرنه Enter در هر جای دیگری
+                         هم دکمه را می‌زد. -->
+                    <TextBox Text="{Binding LoginName}" Watermark="نامِ شما" IsVisible="{Binding IsSignUp}">
+                      <TextBox.KeyBindings>
+                        <KeyBinding Gesture="Enter" Command="{Binding AccountStepCommand}" />
+                      </TextBox.KeyBindings>
+                    </TextBox>
+                    <TextBox Text="{Binding LoginEmail}" Watermark="ایمیل" FlowDirection="LeftToRight">
+                      <TextBox.KeyBindings>
+                        <KeyBinding Gesture="Enter" Command="{Binding AccountStepCommand}" />
+                      </TextBox.KeyBindings>
+                    </TextBox>
+                    <TextBox Text="{Binding LoginPassword}" PasswordChar="{Binding PassChar}"
+                             Watermark="رمز — دستِ‌کم هشت نویسه">
+                      <TextBox.KeyBindings>
+                        <KeyBinding Gesture="Enter" Command="{Binding AccountStepCommand}" />
+                      </TextBox.KeyBindings>
+                    </TextBox>
+                    <TextBox Text="{Binding LoginPassword2}" PasswordChar="{Binding PassChar}" Watermark="تکرارِ رمز"
+                             IsVisible="{Binding IsSignUp}">
+                      <TextBox.KeyBindings>
+                        <KeyBinding Gesture="Enter" Command="{Binding AccountStepCommand}" />
+                      </TextBox.KeyBindings>
+                    </TextBox>
+
+                    <!-- «چشم» و «رمزم را فراموش کرده‌ام» — هر دو خواستهٔ
+                         بندهای ۲ و ۹ی صاحب ریپو. -->
+                    <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                      <Button Classes="link" Content="{Binding RevealPassText}"
+                              Command="{Binding ToggleRevealPassCommand}" />
+                      <Button Classes="link" Content="رمزم را فراموش کرده‌ام" IsVisible="{Binding IsSignIn}"
+                              Command="{Binding OpenForgotCommand}" IsEnabled="{Binding !Busy}" />
+                    </StackPanel>
 
                     <!-- ⚠️ پذیرشِ شرایط **اجباریِ خودِ سرور** است
                          (`terms_required`)، پس واقعاً پرسیده می‌شود و متنش
@@ -349,6 +379,50 @@
                             Command="{Binding SkipAccountCommand}" IsEnabled="{Binding !Busy}" />
                   </StackPanel>
 
+                  <!-- ══════════ گامِ ۰: رمزم را فراموش کرده‌ام ══════════
+                       بندِ ۹ی صاحب ریپو. ⚠️ این راه روی سرور از قبل بود
+                       (`/api/auth/password/forgot` و `/password/reset`) و
+                       فقط برنامهٔ نیتیو هیچ‌وقت صدایش نزده بود — پس کسی که
+                       رمزش را گم می‌کرد هیچ راهی جز ساختنِ حسابِ تازه
+                       نداشت. -->
+                  <StackPanel Spacing="9" IsVisible="{Binding StepForgot}">
+                    <TextBlock Text="رمزِ تازه" Classes="h1" FontSize="26" />
+                    <TextBlock Classes="dim" FontSize="12.5" TextWrapping="Wrap"
+                               Text="ایمیلتان را بنویسید تا یک کدِ شش‌رقمی برایش بفرستیم، بعد رمزِ تازه را بگذارید." />
+
+                    <TextBox Text="{Binding LoginEmail}" Watermark="ایمیل" FlowDirection="LeftToRight"
+                             Margin="0,6,0,0">
+                      <TextBox.KeyBindings>
+                        <KeyBinding Gesture="Enter" Command="{Binding SendResetCodeCommand}" />
+                      </TextBox.KeyBindings>
+                    </TextBox>
+                    <Button Classes="go" Content="فرستادنِ کد به ایمیل" HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Command="{Binding SendResetCodeCommand}" IsEnabled="{Binding !Busy}" />
+
+                    <!-- تا کد نرفته، نیمهٔ دوم دیده نمی‌شود -->
+                    <StackPanel Spacing="9" IsVisible="{Binding ResetSent}" Margin="0,8,0,0">
+                      <TextBox Text="{Binding ResetCode}" MaxLength="6" Watermark="کدِ ایمیل — شش رقم"
+                               FlowDirection="LeftToRight" />
+                      <TextBox Text="{Binding ResetPass}" PasswordChar="{Binding PassChar}"
+                               Watermark="رمزِ تازه — دستِ‌کم هشت نویسه" />
+                      <TextBox Text="{Binding ResetPass2}" PasswordChar="{Binding PassChar}"
+                               Watermark="تکرارِ رمزِ تازه">
+                        <TextBox.KeyBindings>
+                          <KeyBinding Gesture="Enter" Command="{Binding ResetPasswordCommand}" />
+                        </TextBox.KeyBindings>
+                      </TextBox>
+                      <Button Classes="go" Content="گذاشتنِ رمزِ تازه و ورود"
+                              HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                              Command="{Binding ResetPasswordCommand}" IsEnabled="{Binding !Busy}" />
+                      <Button Classes="link" Content="کد نرسید؟ دوباره بفرست" HorizontalAlignment="Center"
+                              Command="{Binding SendResetCodeCommand}" IsEnabled="{Binding !Busy}" />
+                    </StackPanel>
+
+                    <Button Classes="link" Content="‹ برگشت به ورود" HorizontalAlignment="Center"
+                            Command="{Binding BackToAccountCommand}" IsEnabled="{Binding !Busy}" />
+                  </StackPanel>
+
                   <!-- ══════════ گامِ ۲: کدِ ایمیل ══════════
                        گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۹): «می‌خواهم با ایمیل خودم
                        حسابی بسازم، نمی‌شود.» ریشه: سرور حسابِ بی تأییدِ
@@ -360,7 +434,11 @@
                                Text="یک کدِ شش‌رقمی به ایمیلتان فرستادیم. همان را این‌جا بزنید تا حساب ساخته شود. (این با کدِ اشتراک فرق دارد.)" />
 
                     <TextBox Text="{Binding EmailCode}" MaxLength="6" Margin="0,6,0,0"
-                             Watermark="کدِ ایمیل — شش رقم" FlowDirection="LeftToRight" />
+                             Watermark="کدِ ایمیل — شش رقم" FlowDirection="LeftToRight">
+                      <TextBox.KeyBindings>
+                        <KeyBinding Gesture="Enter" Command="{Binding VerifyEmailCommand}" />
+                      </TextBox.KeyBindings>
+                    </TextBox>
 
                     <Button Classes="go" Content="تایید و ساختنِ حساب" Margin="0,10,0,0"
                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
@@ -380,9 +458,21 @@
                                Classes="dim" FontSize="12.5" TextWrapping="Wrap" />
 
                     <TextBox Text="{Binding LoginCode}" MaxLength="6" Margin="0,6,0,0"
-                             Watermark="کدِ شش‌رقمی" />
-                    <TextBox Text="{Binding LoginPump}" Watermark="نامِ پمپ" />
-                    <TextBox Text="{Binding LoginLocation}" Watermark="لوکیشنِ پمپ" />
+                             Watermark="کدِ شش‌رقمی">
+                      <TextBox.KeyBindings>
+                        <KeyBinding Gesture="Enter" Command="{Binding VerifyCodeCommand}" />
+                      </TextBox.KeyBindings>
+                    </TextBox>
+                    <TextBox Text="{Binding LoginPump}" Watermark="نامِ پمپ">
+                      <TextBox.KeyBindings>
+                        <KeyBinding Gesture="Enter" Command="{Binding VerifyCodeCommand}" />
+                      </TextBox.KeyBindings>
+                    </TextBox>
+                    <TextBox Text="{Binding LoginLocation}" Watermark="لوکیشنِ پمپ">
+                      <TextBox.KeyBindings>
+                        <KeyBinding Gesture="Enter" Command="{Binding VerifyCodeCommand}" />
+                      </TextBox.KeyBindings>
+                    </TextBox>
 
                     <Button Classes="go" Content="تایید از سرور و پایان" Margin="0,10,0,0"
                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
@@ -394,6 +484,14 @@
                               Command="{Binding SkipPumpCommand}" IsEnabled="{Binding !Busy}" />
                     </StackPanel>
                   </StackPanel>
+
+                  <!-- ⚠️ **حالتِ Loading دیدنی** (بندِ ۲ی صاحب ریپو): تا امروز
+                       فقط دکمه‌ها خاکستری می‌شدند و کاربر نمی‌فهمید برنامه
+                       دارد کار می‌کند یا گیر کرده. نوار نامعین است چون
+                       نمی‌دانیم سرور چقدر طول می‌دهد. -->
+                  <ProgressBar IsIndeterminate="True" Height="3" Margin="0,4,0,0"
+                               Foreground="#c2185b" Background="Transparent"
+                               IsVisible="{Binding Busy}" />
 
                   <TextBlock Text="{Binding LoginStatus}" TextWrapping="Wrap" FontSize="12.5" FontWeight="Bold"
                              Foreground="#c2185b"

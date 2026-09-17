@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using PumpYaqobi.Reporting.Pdf;
 
 namespace PumpYaqobi.App.Services;
@@ -27,7 +28,7 @@ public sealed class AppSettings
     /// رمزِ همین پمپ روی سرور — همانی که اجازهٔ <b>نوشتن</b> دارد.
     /// ⚠️ فقط در همین برنامه می‌ماند. در کیو‌آرِ کارمند نمی‌رود.
     /// </summary>
-    public string ServerToken { get; set; } = "";
+    [JsonIgnore] public string ServerToken { get; set; } = "";
 
     /// <summary>
     /// رمزِ <b>فقط‌خواندنیِ</b> همین پمپ — همانی که در کیو‌آرِ کارمند و اپِ
@@ -77,7 +78,7 @@ public sealed class AppSettings
     public string CloudDeviceUid { get; set; } = "";
 
     /// <summary>توکنی که ابر پس از فعال‌سازی داده. انقضا ندارد؛ مجوز دارد.</summary>
-    public string CloudDeviceToken { get; set; } = "";
+    [JsonIgnore] public string CloudDeviceToken { get; set; } = "";
 
     /// <summary>شناسهٔ پمپِ این برنامه روی ابر.</summary>
     public string CloudStationId { get; set; } = "";
@@ -119,10 +120,10 @@ public sealed class AppSettings
     //  خواندن دیگر تایپ نمی‌شوند — از همین حساب می‌آیند.
 
     /// <summary>توکنِ نشستِ حساب (ورود با گوگل).</summary>
-    public string CloudAccountToken { get; set; } = "";
+    [JsonIgnore] public string CloudAccountToken { get; set; } = "";
 
     /// <summary>توکنِ تازه‌سازی — تا کاربر هر بار وارد نشود.</summary>
-    public string CloudRefreshToken { get; set; } = "";
+    [JsonIgnore] public string CloudRefreshToken { get; set; } = "";
 
     /// <summary>ایمیلِ حساب — فقط برای نشان دادن.</summary>
     /// <summary>
@@ -145,6 +146,97 @@ public sealed class AppSettings
     /// صفحهٔ پروفایل دیده شود.
     /// </summary>
     public string CloudAccessCode { get; set; } = "";
+
+    // ══ توکن‌ها روی دیسک رمز می‌شوند ═════════════════════════════════════
+    //
+    //  گزارشِ صاحب ریپو: «توکن را داخلِ فایلِ متنیِ ساده یا تنظیماتِ قابلِ
+    //  مشاهده ذخیره نکن.» تا امروز هر چهارتا — توکنِ حساب، توکنِ تازه‌سازی
+    //  (که روی سرور **نود روز** عمر دارد)، توکنِ دستگاه و رمزِ نوشتنِ سرورِ
+    //  خانگی — **خام** در `settings.json` می‌نشستند.
+    //
+    //  پس خودِ خاصیت‌ها بالا `[JsonIgnore]` شدند و این چهار «دوقلوی رمزی»
+    //  جایشان در فایل می‌نشینند (`SecretStore` ⇒ DPAPI روی ویندوز).
+    //
+    //  ⚠️ **هیچ‌کدام هیچ‌وقت خالی نمی‌کنند، فقط پر می‌کنند.** برای همین
+    //  ترتیبِ کلیدها در فایل مهم نیست و نصبِ امروزی — که هنوز کلیدِ کهنهٔ
+    //  خام را دارد — با به‌روزرسانی از حساب بیرون نمی‌افتد و کدِ شش‌رقمی را
+    //  دوباره نمی‌پرسد. با اولین `Save` خودشان رمز می‌شوند.
+    //  (`SettingsSecretTests`)
+
+    [JsonPropertyName("CloudDeviceTokenEnc")]
+    public string CloudDeviceTokenEnc
+    {
+        get => SecretStore.Protect(CloudDeviceToken);
+        set { var v = SecretStore.Unprotect(value); if (v.Length > 0) CloudDeviceToken = v; }
+    }
+
+    [JsonPropertyName("CloudAccountTokenEnc")]
+    public string CloudAccountTokenEnc
+    {
+        get => SecretStore.Protect(CloudAccountToken);
+        set { var v = SecretStore.Unprotect(value); if (v.Length > 0) CloudAccountToken = v; }
+    }
+
+    [JsonPropertyName("CloudRefreshTokenEnc")]
+    public string CloudRefreshTokenEnc
+    {
+        get => SecretStore.Protect(CloudRefreshToken);
+        set { var v = SecretStore.Unprotect(value); if (v.Length > 0) CloudRefreshToken = v; }
+    }
+
+    [JsonPropertyName("ServerTokenEnc")]
+    public string ServerTokenEnc
+    {
+        get => SecretStore.Protect(ServerToken);
+        set { var v = SecretStore.Unprotect(value); if (v.Length > 0) ServerToken = v; }
+    }
+
+    //  ── و خواندنِ فایلِ کهنه ───────────────────────────────────────────
+    //  ⚠️ این چهار تا فقط **خوانده** می‌شوند: `get` همیشه `null` است، پس
+    //  `WhenWritingNull` آن‌ها را در فایلِ تازه نمی‌نویسد و کلیدِ خام با
+    //  اولین ذخیره از فایل می‌رود.
+
+    [JsonPropertyName("CloudDeviceToken")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LegacyCloudDeviceToken
+    {
+        get => null;
+        set { if (!string.IsNullOrEmpty(value) && CloudDeviceToken.Length == 0) CloudDeviceToken = value; }
+    }
+
+    [JsonPropertyName("CloudAccountToken")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LegacyCloudAccountToken
+    {
+        get => null;
+        set { if (!string.IsNullOrEmpty(value) && CloudAccountToken.Length == 0) CloudAccountToken = value; }
+    }
+
+    [JsonPropertyName("CloudRefreshToken")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LegacyCloudRefreshToken
+    {
+        get => null;
+        set { if (!string.IsNullOrEmpty(value) && CloudRefreshToken.Length == 0) CloudRefreshToken = value; }
+    }
+
+    [JsonPropertyName("ServerToken")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LegacyServerToken
+    {
+        get => null;
+        set { if (!string.IsNullOrEmpty(value) && ServerToken.Length == 0) ServerToken = value; }
+    }
+
+    /// <summary>
+    /// لحظه‌ای که توکنِ دسترسیِ حساب منقضی می‌شود (میلی‌ثانیهٔ یونیکس).
+    ///
+    /// ⚠️ سرور به این توکن **یک ساعت** عمر می‌دهد
+    /// (<c>ACCESS_TOKEN_TTL_MIN</c>)، پس بی این عدد هر درخواستِ حساب پس از
+    /// یک ساعت یک ۴۰۱ِ حتمی بود. <see cref="CloudLink"/> کمی زودتر خودش
+    /// تازه‌اش می‌کند. صفر یعنی «نمی‌دانیم» — آن‌وقت همان راهِ ۴۰۱ می‌رود.
+    /// </summary>
+    public long CloudAccessExpiresAt { get; set; }
 
     public double WindowWidth { get; set; } = 1440;
     public double WindowHeight { get; set; } = 900;
@@ -215,7 +307,18 @@ public sealed class AppSettings
     /// جای فایلِ تنظیمات. ابزارِ عکس‌گیری و آزمون‌ها آن را به یک پوشهٔ موقت
     /// می‌برند تا هرگز تنظیماتِ واقعیِ کاربر را نخوانند و ننویسند.
     /// </summary>
-    public static string? DirOverride { get; set; }
+    /// <remarks>
+    /// ⚠️ عوض شدنِ پوشه، کلیدِ رمزِ کَش‌شدهٔ <see cref="SecretStore"/> را هم
+    /// باطل می‌کند — وگرنه سنجهٔ بعدی فایلِ پوشهٔ تازه را با کلیدِ پوشهٔ قبلی
+    /// می‌خواند و توکن‌ها خالی درمی‌آمدند.
+    /// </remarks>
+    public static string? DirOverride
+    {
+        get => _dirOverride;
+        set { _dirOverride = value; SecretStore.ForgetKey(); }
+    }
+
+    private static string? _dirOverride;
 
     public static string Dir => DirOverride ?? Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PumpYaqobi");

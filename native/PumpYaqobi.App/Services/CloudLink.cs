@@ -526,6 +526,9 @@ public sealed class CloudLink
         _settings.CloudAccountToken = token;
         var refresh = Str(json, "refreshToken");
         if (refresh.Length > 0) _settings.CloudRefreshToken = refresh;
+        //  ⚠️ عمرِ توکن را از خودِ سرور برمی‌داریم (یک ساعت)، تا کمی پیش از
+        //  انقضا خودمان تازه کنیم و کاربر هیچ‌وقت به دیوارِ ۴۰۱ نخورد.
+        _settings.CloudAccessExpiresAt = Num(json, "accessExpiresAt");
         if (json.TryGetProperty("user", out var u) && u.ValueKind == JsonValueKind.Object)
         {
             var em = Str(u, "email"); if (em.Length > 0) _settings.CloudEmail = em;
@@ -666,25 +669,213 @@ public sealed class CloudLink
 
     private async Task<CloudResult> AuthAsync(string path, object body, CancellationToken ct)
     {
-        var (ok, json, why, code) = await PostAsync(path, body, null, ct);
-        if (!ok)
+        var res = await SendFull(Build(HttpMethod.Post, path, body, null), ct);
+        if (!res.Ok)
         {
             //  ⚠️ صادق باش: اگر سرورِ ابر این راه را نداشت، «رمز غلط» نگو.
-            if (code == "404" || why.Contains("404"))
+            //  ⚠️ از روی **کدِ خودِ HTTP** تصمیم می‌گیریم، نه از روی گشتنِ
+            //  رشتهٔ «404» در متنِ فارسیِ خطا: سرورِ به‌روز برای مسیرِ نبوده
+            //  پیامِ خودش را می‌دهد («این مسیر وجود ندارد») و آن گشتن دیگر
+            //  نمی‌گرفت.
+            if (res.Status == 404)
                 return CloudResult.No(
                     "سرورِ حساب این راه را ندارد — برنامه را به‌روز کنید یا «بعداً» را بزنید.",
                     "no_route");
-            return CloudResult.No(why, code);
+            return CloudResult.No(res.Why, res.Code);
         }
+
+        return await SeatAsync(res.Json);
+    }
+
+    // ── رمزِ فراموش‌شده ─────────────────────────────────────────────────
+    //
+    //  ⚠️ این راه **ساخته نشد، پیدا شد**: سرور از قبل هر دو مسیر را دارد
+    //  (`shop/server/src/routes/auth.js` و `test/password-reset.test.js`) و
+    //  فقط برنامهٔ نیتیو هیچ‌وقت صدایشان نزده بود. پس کسی که رمزش را گم
+    //  می‌کرد هیچ راهی جز ساختنِ حسابِ تازه نداشت.
+    //
+    //      POST /api/auth/password/forgot  { email }         ⇒ کد به ایمیل
+    //      POST /api/auth/password/reset   { email, code, password }
+    //                                      ⇒ رمزِ تازه + نشست، یک‌جا
+    //
+    //  ⚠️ **جوابِ «این ایمیل هست» و «نیست» عمداً یکی است** (خودِ سرور
+    //  این‌طور نوشته). پس این‌جا هم نباید چیزی به آن اضافه کرد: پیامی مثلِ
+    //  «چنین حسابی نیست» فهرستِ ایمیل‌های مشتری‌ها را لو می‌دهد.
+
+    /// <summary>پلهٔ یک — کدِ یک‌بارمصرف به همان ایمیل می‌رود.</summary>
+    public async Task<CloudResult> ForgotPasswordAsync(string email, CancellationToken ct = default)
+    {
+        var clean = (email ?? "").Trim();
+        if (clean.Length == 0) return CloudResult.No("ایمیل را بنویسید");
+
+        var (ok, _, why, code) = await PostAsync("/api/auth/password/forgot",
+            new { email = clean, app = "pump" }, null, ct);
+        return ok ? CloudResult.Done : CloudResult.No(why, code);
+    }
+
+    /// <summary>
+    /// پلهٔ دو — کدِ ایمیل و رمزِ تازه. سرور خودش همان‌جا وارد هم می‌کند، پس
+    /// کاربر رمزِ تازه‌اش را دوباره تایپ نمی‌کند.
+    ///
+    /// ⚠️ سرور پس از عوض شدنِ رمز **همهٔ نشست‌های باز را می‌بندد**
+    /// (<c>revokeAllForSubject</c>) — یعنی اگر رمز را گم کرده بودید چون
+    /// گوشی‌تان دستِ دیگری افتاده، آن نشست هم همان لحظه می‌میرد.
+    /// </summary>
+    public async Task<CloudResult> ResetPasswordAsync(string email, string emailCode, string newPassword,
+                                                      CancellationToken ct = default)
+    {
+        var clean = new string((emailCode ?? "").Where(char.IsDigit).ToArray());
+        if (clean.Length != 6) return CloudResult.No("کدِ ایمیل باید شش رقم باشد");
+
+        var (ok, json, why, code) = await PostAsync("/api/auth/password/reset", new
+        {
+            email = (email ?? "").Trim(),
+            code = clean,
+            password = newPassword,
+            device = new { uid = DeviceUid, name = Environment.MachineName, platform = "windows" },
+            app = "pump",
+        }, null, ct);
+        if (!ok) return CloudResult.No(why, code);
 
         return await SeatAsync(json);
     }
 
-    /// <summary>خروج از حساب — توکن‌ها پاک می‌شوند، دفترِ روی کامپیوتر نه.</summary>
-    public async Task SignOutAsync()
+    // ── نشستِ تازه، و ۴۰۱ ────────────────────────────────────────────────
+    //
+    //  ⛔ **باگی که برنامه را یک‌ساعته خاموش می‌کرد.** سرور به توکنِ دسترسی
+    //  دقیقاً **یک ساعت** عمر می‌دهد (`ACCESS_TOKEN_TTL_MIN = 60`) و
+    //  `refreshToken` را برای نود روز می‌دهد. برنامه `refreshToken` را
+    //  ذخیره می‌کرد ولی **هیچ‌جا نمی‌خواندش** و هیچ ۴۰۱ی را هم نمی‌فهمید.
+    //  یعنی یک ساعت پس از ورود، `/api/pump/me` و کدِ اپِ کارمندان و هر کارِ
+    //  حسابیِ دیگر بی‌صدا شکست می‌خوردند و **دیگر هیچ‌وقت درست نمی‌شدند** —
+    //  در حالی که صفحهٔ پروفایل همچنان «وارد شده‌اید» می‌گفت.
+    //
+    //  همان کاری که `kar/cloud.js` از اول می‌کرد (`authed()`): یک بار تازه
+    //  کن، یک بار دوباره بزن. ⚠️ **فقط یک بار** — حلقه زدن جز پنهان کردنِ
+    //  مشکل کاری نمی‌کند.
+
+    /// <summary>
+    /// چند دقیقه پیش از انقضا خودمان تازه می‌کنیم — یک درخواستِ حتماً-شکست
+    /// کمتر، و کاربری که وسطِ کار پیامِ خطا نمی‌بیند.
+    /// </summary>
+    private const long RefreshSkewMs = 60_000;
+
+    /// <summary>دو کارِ هم‌زمان نباید دو بار تازه کنند (بندِ «Race Condition»).</summary>
+    private readonly SemaphoreSlim _refreshGate = new(1, 1);
+
+    /// <summary>توکنِ دسترسی نزدیکِ انقضاست؟</summary>
+    private bool AccessNearlyExpired =>
+        _settings.CloudAccessExpiresAt > 0
+        && DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + RefreshSkewMs >= _settings.CloudAccessExpiresAt;
+
+    /// <summary>
+    /// نشستِ تازه از روی <c>refreshToken</c>.
+    ///
+    /// سه پایان دارد و هر سه مهم‌اند:
+    ///  • شد ⇒ توکنِ تازه می‌نشیند.
+    ///  • سرور گفت این توکن باطل است (۴۰۱/۴۰۳) ⇒ نشست <b>پاک</b> می‌شود، تا
+    ///    صفحهٔ پروفایل دیگر دروغ نگوید و کاربر دوباره وارد شود.
+    ///  • ⚠️ <b>نرسیدیم</b> (بی‌اینترنت، سرورِ خاموش، تایم‌اوت) ⇒ هیچ چیزی
+    ///    پاک نمی‌شود. وگرنه یک قطعیِ اینترنت کاربر را از حسابش بیرون
+    ///    می‌انداخت — و این برنامه اساساً آفلاین است.
+    /// </summary>
+    private async Task<bool> RefreshSessionAsync(CancellationToken ct)
+    {
+        await _refreshGate.WaitAsync(ct);
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_settings.CloudRefreshToken))
+            {
+                await ClearSessionAsync();
+                return false;
+            }
+
+            var res = await SendFull(Build(HttpMethod.Post, "/api/auth/refresh",
+                new { refreshToken = _settings.CloudRefreshToken, device = new { deviceId = DeviceUid } },
+                null), ct);
+
+            if (res.Ok)
+            {
+                var token = Str(res.Json, "accessToken");
+                if (token.Length == 0) return false;
+                _settings.CloudAccountToken = token;
+                //  ⚠️ این مسیر `refreshToken`ِ تازه **نمی‌دهد** — همان قبلی
+                //  می‌ماند و درست هم هست. ولی اگر روزی داد، برمی‌داریم.
+                var again = Str(res.Json, "refreshToken");
+                if (again.Length > 0) _settings.CloudRefreshToken = again;
+                _settings.CloudAccessExpiresAt = Num(res.Json, "accessExpiresAt");
+                await SaveQuiet();
+                return true;
+            }
+
+            if (res.Status is 401 or 403) await ClearSessionAsync();
+            return false;
+        }
+        catch (OperationCanceledException) { return false; }
+        finally { _refreshGate.Release(); }
+    }
+
+    /// <summary>
+    /// نشست را پاک می‌کند — ولی <b>نام و ایمیل می‌مانند</b>، تا صفحهٔ ورود
+    /// کادرها را پر کند و کاربر فقط رمز بزند.
+    /// ⛔ و دفترِ روی کامپیوتر و اشتراکِ دستگاه دست نمی‌خورند.
+    /// </summary>
+    private async Task ClearSessionAsync()
     {
         _settings.CloudAccountToken = "";
         _settings.CloudRefreshToken = "";
+        _settings.CloudAccessExpiresAt = 0;
+        await SaveQuiet();
+    }
+
+    /// <summary>
+    /// درخواستی با توکنِ حساب — با یک تازه‌سازی و یک تلاشِ دوباره.
+    ///
+    /// ⚠️ هر تلاش <b>پیامِ تازه‌ای</b> می‌سازد: یک
+    /// <see cref="HttpRequestMessage"/> فقط یک بار فرستادنی است.
+    /// </summary>
+    private async Task<CloudReply> AccountAsync(HttpMethod method, string path, object? body,
+                                                CancellationToken ct)
+    {
+        if (!SignedIn) return CloudReply.Fail("اول وارد حساب شوید", "signed_out");
+
+        //  زودتر از انقضا، بی این‌که منتظرِ یک ۴۰۱ِ حتمی بمانیم
+        if (AccessNearlyExpired) await RefreshSessionAsync(ct);
+        if (!SignedIn) return CloudReply.Fail("نشست منقضی شده — دوباره وارد شوید", "signed_out");
+
+        var first = await SendFull(Build(method, path, body, _settings.CloudAccountToken), ct);
+        if (first.Status != 401) return first;
+
+        if (!await RefreshSessionAsync(ct)) return first;
+        return await SendFull(Build(method, path, body, _settings.CloudAccountToken), ct);
+    }
+
+    /// <summary>
+    /// خروج از حساب — دفترِ روی کامپیوتر دست نمی‌خورد.
+    ///
+    /// ⛔ **پیش از این فقط محلی بود.** توکنِ دسترسی و توکنِ تازه‌سازی روی
+    /// سرور زنده می‌ماندند (تازه‌سازی تا نود روز)، پس هر کسی که یک بار
+    /// آن رشته را برداشته بود، «خروج»ِ کاربر جلویش را نمی‌گرفت. حالا اول
+    /// از سرور باطل می‌شوند (<c>POST /api/auth/logout</c>).
+    ///
+    /// ⚠️ ولی نشدنِ آن هیچ‌وقت جلوی خروجِ محلی را نمی‌گیرد: کسی که
+    /// اینترنت ندارد هم باید بتواند از حسابش بیرون بیاید.
+    /// </summary>
+    public async Task SignOutAsync(CancellationToken ct = default)
+    {
+        if (SignedIn)
+        {
+            try
+            {
+                await SendFull(Build(HttpMethod.Post, "/api/auth/logout",
+                    new { refreshToken = _settings.CloudRefreshToken }, _settings.CloudAccountToken), ct);
+            }
+            catch { /* خروجِ محلی گروگانِ سرور نیست */ }
+        }
+
+        _settings.CloudAccountToken = "";
+        _settings.CloudRefreshToken = "";
+        _settings.CloudAccessExpiresAt = 0;
         _settings.CloudEmail = "";
         _settings.CloudName = "";
         await SaveQuiet();
@@ -699,10 +890,13 @@ public sealed class CloudLink
     public async Task<(bool Ok, string Url, string ReadKey, string Station, string Why)>
         HomeFromAccountAsync(CancellationToken ct = default)
     {
-        if (!SignedIn) return (false, "", "", "", "اول با گوگل وارد شوید");
+        if (!SignedIn) return (false, "", "", "", "اول وارد حساب شوید");
 
-        var (ok, json, why, _) = await GetAsync("/api/pump/me", _settings.CloudAccountToken, ct);
-        if (!ok) return (false, "", "", "", why);
+        //  ⚠️ از راهِ `AccountAsync` می‌رود، نه `GetAsync`ِ خام: توکنِ دسترسی
+        //  یک ساعت عمر دارد و این همان جایی بود که بی‌صدا می‌مرد.
+        var res = await AccountAsync(HttpMethod.Get, "/api/pump/me", null, ct);
+        if (!res.Ok) return (false, "", "", "", res.Why);
+        var json = res.Json;
 
         if (!json.TryGetProperty("home", out var home) || home.ValueKind != JsonValueKind.Object)
             return (false, "", "", "", "هنوز پمپی به این حساب وصل نشده است");
@@ -712,15 +906,42 @@ public sealed class CloudLink
 
     // ── گفت‌وگو با ابر ─────────────────────────────────────────────────
 
-    private static async Task<(bool, JsonElement, string, string)> Send(
-        HttpRequestMessage req, CancellationToken ct)
+    /// <summary>
+    /// پاسخِ خامِ ابر — مثلِ قبل، به‌علاوهٔ <b>خودِ کدِ HTTP</b>.
+    ///
+    /// ⚠️ بی این، «۴۰۱» از «۴۰۰» جدا نمی‌شد و تنها راهِ تشخیصش گشتن دنبالِ
+    /// رشتهٔ «404» داخلِ متنِ فارسیِ خطا بود — که هم شکننده بود و هم اجازه
+    /// نمی‌داد نشستِ منقضی از رمزِ غلط جدا شود.
+    /// </summary>
+    private readonly record struct CloudReply(bool Ok, JsonElement Json, string Why, string Code, int Status)
     {
+        public static CloudReply Fail(string why, string code, int status = 0) =>
+            new(false, default, why, code, status);
+    }
+
+    /// <summary>
+    /// ⚠️ یک <see cref="HttpRequestMessage"/> فقط <b>یک بار</b> فرستادنی
+    /// است، پس هر تلاش باید پیامِ خودش را بسازد — همین است که تلاشِ دوم پس
+    /// از تازه‌سازیِ توکن را ممکن می‌کند.
+    /// </summary>
+    private static HttpRequestMessage Build(HttpMethod method, string path, object? body, string? token)
+    {
+        var req = new HttpRequestMessage(method, CloudConfig.BaseUrl + path);
+        if (body is not null) req.Content = JsonContent.Create(body);
+        if (!string.IsNullOrWhiteSpace(token)) req.Headers.Add("Authorization", $"Bearer {token}");
+        return req;
+    }
+
+    private static async Task<CloudReply> SendFull(HttpRequestMessage req, CancellationToken ct)
+    {
+        using var _ = req;
         try
         {
             using var res = TestTransport is null
                 ? await Http.SendAsync(req, ct)
                 : await TestTransport(req, ct);
             var text = await res.Content.ReadAsStringAsync(ct);
+            var status = (int)res.StatusCode;
             JsonElement json = default;
             try
             {
@@ -729,7 +950,7 @@ public sealed class CloudLink
             }
             catch { /* پاسخِ بی‌شکل */ }
 
-            if (res.IsSuccessStatusCode) return (true, json, "", "");
+            if (res.IsSuccessStatusCode) return new CloudReply(true, json, "", "", status);
 
             var why = "";
             var code = "";
@@ -738,43 +959,54 @@ public sealed class CloudLink
                 why = Str(e, "message");
                 code = Str(e, "code");
             }
-            if (string.IsNullOrWhiteSpace(why)) why = $"سرور جواب نداد ({(int)res.StatusCode})";
-            return (false, json, why, code);
+            //  ⚠️ سرور برای «تلاشِ زیاد» ۴۲۹ می‌دهد (ده ورود در ربع ساعت).
+            //  بی این، کاربر «سرور جواب نداد (429)» می‌دید و فکر می‌کرد
+            //  برنامه خراب است.
+            if (string.IsNullOrWhiteSpace(why))
+                why = status switch
+                {
+                    429 => "تلاشِ زیاد — چند دقیقه صبر کنید و دوباره بزنید",
+                    401 => "نشست منقضی شده — دوباره وارد شوید",
+                    >= 500 => "سرور همین حالا مشکل دارد — کمی بعد دوباره",
+                    _ => $"سرور جواب نداد ({status})",
+                };
+            //  کدِ ماشینی: اگر سرور نداد، خودِ شمارهٔ HTTP. (`AuthAsync` از
+            //  همین برای تشخیصِ «این راه روی سرور نیست» استفاده می‌کند.)
+            if (code.Length == 0) code = status.ToString();
+            return new CloudReply(false, json, why, code, status);
         }
-        catch (TaskCanceledException) { return (false, default, "سرور دیر جواب داد", "timeout"); }
-        catch (HttpRequestException) { return (false, default, "به سرور نرسیدیم — اینترنت را بررسی کنید", "offline"); }
-        catch (Exception ex) { return (false, default, ex.Message, "error"); }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            //  ⚠️ `HttpClient.Timeout` هم همین را پرت می‌کند. جدا کردنش از
+            //  «کاربر خودش لغو کرد» مهم است، وگرنه تایم‌اوت «لغو شد» دیده
+            //  می‌شد.
+            return CloudReply.Fail("سرور دیر جواب داد — دوباره بزنید", "timeout");
+        }
+        catch (OperationCanceledException) { return CloudReply.Fail("لغو شد", "cancelled"); }
+        catch (HttpRequestException) { return CloudReply.Fail("به سرور نرسیدیم — اینترنت را بررسی کنید", "offline"); }
+        //  ⚠️ پیامِ خامِ استثنا به کاربر نشان داده نمی‌شود: ممکن است نشانی،
+        //  نامِ میزبان یا جزئیاتِ TLS داشته باشد.
+        catch { return CloudReply.Fail("ارتباط با سرور برقرار نشد", "error"); }
+    }
+
+    private static async Task<(bool, JsonElement, string, string)> Send(
+        HttpRequestMessage req, CancellationToken ct)
+    {
+        var r = await SendFull(req, ct);
+        return (r.Ok, r.Json, r.Why, r.Code);
     }
 
     private static Task<(bool, JsonElement, string, string)> PostAsync(
-        string path, object body, string? token, CancellationToken ct)
-    {
-        var req = new HttpRequestMessage(HttpMethod.Post, CloudConfig.BaseUrl + path)
-        {
-            Content = JsonContent.Create(body),
-        };
-        if (!string.IsNullOrWhiteSpace(token)) req.Headers.Add("Authorization", $"Bearer {token}");
-        return Send(req, ct);
-    }
+        string path, object body, string? token, CancellationToken ct) =>
+        Send(Build(HttpMethod.Post, path, body, token), ct);
 
     private static Task<(bool, JsonElement, string, string)> PutAsync(
-        string path, object body, string? token, CancellationToken ct)
-    {
-        var req = new HttpRequestMessage(HttpMethod.Put, CloudConfig.BaseUrl + path)
-        {
-            Content = JsonContent.Create(body),
-        };
-        if (!string.IsNullOrWhiteSpace(token)) req.Headers.Add("Authorization", $"Bearer {token}");
-        return Send(req, ct);
-    }
+        string path, object body, string? token, CancellationToken ct) =>
+        Send(Build(HttpMethod.Put, path, body, token), ct);
 
     private static Task<(bool, JsonElement, string, string)> GetAsync(
-        string path, string? token, CancellationToken ct)
-    {
-        var req = new HttpRequestMessage(HttpMethod.Get, CloudConfig.BaseUrl + path);
-        if (!string.IsNullOrWhiteSpace(token)) req.Headers.Add("Authorization", $"Bearer {token}");
-        return Send(req, ct);
-    }
+        string path, string? token, CancellationToken ct) =>
+        Send(Build(HttpMethod.Get, path, null, token), ct);
 
     // ── خواندنِ پاسخ ───────────────────────────────────────────────────
 

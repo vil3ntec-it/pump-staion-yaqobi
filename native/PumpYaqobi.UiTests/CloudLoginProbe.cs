@@ -55,6 +55,25 @@ internal static class CloudLoginProbe
     /// <summary>پس از ساختنِ حساب، همان ایمیل دوباره ثبت نمی‌شود.</summary>
     private static bool _emailTaken;
 
+    /// <summary>
+    /// ⚠️ **توکنِ دسترسی مرده است** — یعنی سرور به هر کسی جز دارندهٔ توکنِ
+    /// تازه ۴۰۱ می‌دهد. همان چیزی که یک ساعت پس از ورود واقعاً رخ می‌دهد
+    /// (<c>ACCESS_TOKEN_TTL_MIN = 60</c>).
+    /// </summary>
+    private static bool _accessDead;
+
+    /// <summary>توکنی که ابرِ ساختگی پس از تازه‌سازی می‌دهد.</summary>
+    private const string FreshToken = "acct-token-2";
+
+    /// <summary>توکنِ تازه‌سازی هم باطل است؟ (نشستِ واقعاً مرده)</summary>
+    private static bool _refreshDead;
+
+    /// <summary>روی سرور خروج ثبت شد؟</summary>
+    private static bool _loggedOut;
+
+    /// <summary>رمزِ تازه‌ای که از راهِ «فراموشی» گذاشته شد.</summary>
+    private static string _newPass = "";
+
     private static readonly List<string> Seen = new();
     private static string _lastBody = "";
     private static string _serverKey = "";      // کلیدی که ابر می‌دهد (برای سنجشِ جعل)
@@ -111,6 +130,36 @@ internal static class CloudLoginProbe
     private static HttpResponseMessage Json(HttpStatusCode code, string body) =>
         new(code) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 
+    /// <summary>خروج — سرور هر دو توکن را باطل می‌کند.</summary>
+    private static HttpResponseMessage LoggedOut()
+    {
+        //  ⚠️ توکنِ تازه‌سازی باید واقعاً در بدنه آمده باشد، وگرنه سرور
+        //  چیزی برای باطل کردن ندارد و نشستِ نودروزه زنده می‌ماند.
+        _loggedOut = _lastBody.Contains("acct-refresh");
+        return Json(HttpStatusCode.OK, """{"ok":true}""");
+    }
+
+    /// <summary>
+    /// رمزِ تازه با کدِ ایمیل. سرورِ واقعی همان‌جا وارد هم می‌کند و همهٔ
+    /// نشست‌های قبلی را می‌بندد.
+    /// </summary>
+    private static HttpResponseMessage ResetPass()
+    {
+        if (!_lastBody.Contains("\"code\":\"" + EmailCode + "\""))
+            return Json(HttpStatusCode.BadRequest,
+                """{"error":{"message":"کد درست نیست","code":"otp_bad"}}""");
+        try
+        {
+            using var doc = JsonDocument.Parse(_lastBody);
+            _newPass = doc.RootElement.TryGetProperty("password", out var p) ? p.GetString() ?? "" : "";
+        }
+        catch { }
+        return Json(HttpStatusCode.OK,
+            "{\"accessToken\":\"acct-token-3\",\"refreshToken\":\"acct-refresh-3\",\"accessExpiresAt\":"
+            + (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + 3_600_000)
+            + ",\"user\":{\"email\":\"haroon@gmail.com\",\"name\":\"هارون یعقوبی\"}}");
+    }
+
     private static async Task<HttpResponseMessage> Cloud(HttpRequestMessage req, CancellationToken ct)
     {
         var path = req.RequestUri!.AbsolutePath;
@@ -151,8 +200,35 @@ internal static class CloudLoginProbe
         var ent = "\"entitlement\":{\"source\":\"subscription\",\"features\":[\"kar\",\"qrlive\",\"cloudbackup\"],"
                   + "\"subscription\":{\"plan\":\"VIP\",\"daysLeft\":42,\"endsAt\":0}}";
 
+        //  ══ توکنِ منقضی ══════════════════════════════════════════════
+        //  ⚠️ همان رفتارِ سرورِ واقعی: هر مسیرِ **حساب‌دار** با توکنِ کهنه
+        //  ۴۰۱ِ `invalid_token` می‌گیرد. مسیرهای `device` جدا هستند —
+        //  توکنِ دستگاه انقضا ندارد.
+        var bearer = req.Headers.TryGetValues("Authorization", out var hv)
+            ? hv.First().Replace("Bearer ", "") : "";
+        if (_accessDead && path == "/api/pump/me" && bearer != FreshToken)
+            return Json(HttpStatusCode.Unauthorized,
+                """{"error":{"message":"نشست منقضی شده است، دوباره وارد شوید","code":"invalid_token"}}""");
+
         return path switch
         {
+            //  ══ نشستِ تازه ═══════════════════════════════════════════
+            "/api/auth/refresh" => _refreshDead
+                ? Json(HttpStatusCode.Unauthorized,
+                    """{"error":{"message":"نشست منقضی شده است، دوباره وارد شوید","code":"invalid_token"}}""")
+                : Json(HttpStatusCode.OK,
+                    "{\"accessToken\":\"" + FreshToken + "\",\"accessExpiresAt\":"
+                    + (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + 3_600_000) + "}"),
+
+            "/api/auth/logout" => LoggedOut(),
+
+            //  ══ رمزِ فراموش‌شده ══════════════════════════════════════
+            //  ⚠️ جوابِ «این ایمیل هست» و «نیست» عمداً یکی است — همان کاری
+            //  که سرورِ واقعی می‌کند تا فهرستِ ایمیل‌ها لو نرود.
+            "/api/auth/password/forgot" => Json(HttpStatusCode.OK,
+                """{"ok":true,"sent":true,"email":"haroon@gmail.com","resendSeconds":60}"""),
+            "/api/auth/password/reset" => ResetPass(),
+
             //  ⛔ درِ یک‌مرحله‌ای عمداً بسته است — همان جوابِ سرورِ واقعی
             "/api/auth/register" => Json(HttpStatusCode.Forbidden,
                 """{"error":{"message":"ثبت‌نام بدونِ تأییدِ ایمیل ممکن نیست — برنامه را به‌روز کنید","code":"verification_required"}}"""),
@@ -401,6 +477,153 @@ internal static class CloudLoginProbe
         Check("⛔ و مجوزِ جعلی هیچ‌وقت ذخیره نشد",
               string.IsNullOrWhiteSpace(f3.CloudDeviceToken));
         _serverKey = "";
+
+        // ══ ۹) توکنِ یک‌ساعته منقضی می‌شود — و خودش تازه می‌شود ═══════════
+        //
+        //  ⛔ **همان باگی که برنامه را یک‌ساعته خاموش می‌کرد.** سرور به توکنِ
+        //  دسترسی دقیقاً یک ساعت عمر می‌دهد و `refreshToken` را نود روز.
+        //  برنامه `refreshToken` را ذخیره می‌کرد ولی **هیچ‌جا نمی‌خواندش**،
+        //  پس یک ساعت پس از ورود `/api/pump/me` و کدِ اپِ کارمندان بی‌صدا
+        //  می‌مردند و دیگر هیچ‌وقت درست نمی‌شدند — در حالی که پروفایل
+        //  همچنان «وارد شده‌اید» می‌گفت.
+        Console.WriteLine("── ۹) توکنِ منقضی — خودش تازه می‌شود و کاربر هیچ نمی‌فهمد");
+        _accessDead = true;
+        Seen.Clear();
+        host.Settings.Set(SettingsService.ServerUrl, "");
+        Wait(win, account.PullHomeCommand.ExecuteAsync(null));
+        for (var i = 0; i < 20; i++) Pump(win);
+
+        Check("به ۴۰۱ خورد و همان‌جا نشستِ تازه گرفت", Seen.Contains("POST /api/auth/refresh"));
+        Check("و دوباره زد — نه یک بار، دو بار",
+              Seen.Count(x => x == "GET /api/pump/me") == 2,
+              Seen.Count(x => x == "GET /api/pump/me") + " بار");
+        Check("⭐ و کار **گرفت** — کاربر هیچ خطایی ندید",
+              account.StationLine.Contains("yaqobi"), account.StationLine);
+        Check("توکنِ تازه روی دیسک نشست",
+              AppSettings.Load().CloudAccountToken == FreshToken);
+        Check("و هنوز وارد است", account.SignedIn);
+        Check("⚠️ و حلقه نزد — فقط یک بار تازه کرد",
+              Seen.Count(x => x == "POST /api/auth/refresh") == 1);
+        _accessDead = false;
+
+        // ══ ۱۰) توکن‌ها روی دیسک خام نیستند ══════════════════════════════
+        Console.WriteLine("── ۱۰) توکن‌ها روی دیسک خام نیستند");
+        var onDisk = File.ReadAllText(SettingsPath());
+        Check("⛔ توکنِ حساب در متنِ فایل پیدا نمی‌شود", !onDisk.Contains(FreshToken));
+        Check("⛔ توکنِ تازه‌سازی هم نه", !onDisk.Contains("acct-refresh"));
+        Check("⛔ توکنِ دستگاه هم نه", !onDisk.Contains("dev-token"));
+        Check("و کلیدِ خامِ کهنه دیگر در فایل نوشته نمی‌شود",
+              !onDisk.Contains("\"CloudAccountToken\":"));
+        Check("⭐ ولی خودِ برنامه همان‌ها را می‌خواند",
+              AppSettings.Load().CloudDeviceToken == "dev-token"
+              && AppSettings.Load().CloudAccountToken == FreshToken);
+
+        // ══ ۱۱) خروج — روی سرور هم، نه فقط این‌جا ════════════════════════
+        //
+        //  ⛔ پیش از این خروج **فقط محلی** بود: توکنِ دسترسی و توکنِ
+        //  تازه‌سازی روی سرور زنده می‌ماندند (تازه‌سازی تا نود روز)، پس
+        //  «خروج»ِ کاربر جلوی کسی را که آن رشته را برداشته بود نمی‌گرفت.
+        Console.WriteLine("── ۱۱) خروج از حساب — نشست روی سرور هم باطل می‌شود");
+        Seen.Clear();
+        _loggedOut = false;
+        //  توکنِ تازه‌سازی همان `acct-refresh`ِ ورود است
+        Wait(win, account.SignOutCommand.ExecuteAsync(null));
+        for (var i = 0; i < 20; i++) Pump(win);
+
+        Check("به سرور خبر داد", Seen.Contains("POST /api/auth/logout"));
+        Check("⭐ و توکنِ تازه‌سازی را هم فرستاد تا باطل شود", _loggedOut);
+        var afterOut = AppSettings.Load();
+        Check("توکن‌های نشست پاک شدند",
+              afterOut.CloudAccountToken.Length == 0 && afterOut.CloudRefreshToken.Length == 0);
+        Check("⛔ ولی اشتراکِ دستگاه دست نخورد", afterOut.CloudDeviceToken == "dev-token");
+        Check("و صفحه برگشت به همان صفحهٔ ورود، نه پروفایلِ خالی",
+              account.ShowLoginPage && account.StepAccount, "گامِ " + account.LoginStep);
+
+        // ══ ۱۲) رمزم را فراموش کرده‌ام ═══════════════════════════════════
+        //
+        //  ⚠️ این راه روی سرور از قبل بود (`/api/auth/password/forgot` و
+        //  `/password/reset`) و فقط برنامهٔ نیتیو هیچ‌وقت صدایش نزده بود —
+        //  پس کسی که رمزش را گم می‌کرد هیچ راهی جز ساختنِ حسابِ تازه نداشت.
+        Console.WriteLine("── ۱۲) رمزِ فراموش‌شده — کد به ایمیل، رمزِ تازه، و ورود");
+        Seen.Clear();
+        account.OpenForgotCommand.Execute(null);
+        Pump(win);
+        Check("صفحهٔ بازیابی باز شد و تمامِ پنجره را گرفت",
+              account.StepForgot && account.ShowLoginPage);
+
+        account.LoginEmail = "نه-ایمیل";
+        Wait(win, account.SendResetCodeCommand.ExecuteAsync(null));
+        Check("ایمیلِ غلط رد شد و هیچ درخواستی نرفت",
+              !Seen.Contains("POST /api/auth/password/forgot") && account.LoginStatus.StartsWith("❌"),
+              account.LoginStatus);
+
+        account.LoginEmail = "haroon@gmail.com";
+        Wait(win, account.SendResetCodeCommand.ExecuteAsync(null));
+        for (var i = 0; i < 20; i++) Pump(win);
+        Check("کد فرستاده شد", Seen.Contains("POST /api/auth/password/forgot"));
+        Check("⚠️ و پیام نگفت این ایمیل حساب دارد یا نه",
+              account.LoginStatus.Contains("اگر"), account.LoginStatus);
+        Check("نیمهٔ دومِ فرم باز شد", account.ResetSent);
+
+        //  رمزِ ضعیف — همان قاعدهٔ خودِ سرور، پیش از رفتن
+        account.ResetCode = EmailCode;
+        account.ResetPass = "12345678"; account.ResetPass2 = "12345678";
+        Wait(win, account.ResetPasswordCommand.ExecuteAsync(null));
+        Check("رمزِ «فقط عدد» رد شد و به سرور نرسید",
+              !Seen.Contains("POST /api/auth/password/reset") && account.LoginStatus.Contains("عدد"),
+              account.LoginStatus);
+
+        //  دو رمزِ ناهم‌خوان
+        account.ResetPass = "ramz-tazeh-1"; account.ResetPass2 = "ramz-tazeh-2";
+        Wait(win, account.ResetPasswordCommand.ExecuteAsync(null));
+        Check("دو رمزِ ناهم‌خوان رد شدند",
+              !Seen.Contains("POST /api/auth/password/reset"), account.LoginStatus);
+
+        //  و حالا درست
+        account.ResetPass2 = "ramz-tazeh-1";
+        Wait(win, account.ResetPasswordCommand.ExecuteAsync(null));
+        for (var i = 0; i < 20; i++) Pump(win);
+        Check("رمزِ تازه نشست", Seen.Contains("POST /api/auth/password/reset"));
+        Check("و همان رمز به سرور رفت", _newPass == "ramz-tazeh-1");
+        Check("⭐ و همان‌جا وارد شد — رمز را دوباره نپرسید", account.SignedIn);
+        Check("⛔ رمزِ تازه روی دیسک ننشست",
+              !File.ReadAllText(SettingsPath()).Contains("ramz-tazeh-1"));
+        Check("⛔ و در حافظهٔ صفحه هم نماند",
+              account.ResetPass.Length == 0 && account.ResetPass2.Length == 0);
+        Check("رفت به گامِ پمپ", account.LoginStep == 3, "گامِ " + account.LoginStep);
+
+        // ══ ۱۳) نشستِ واقعاً مرده ⇒ برنامه اعتراف می‌کند ══════════════════
+        //
+        //  ⚠️ اگر خودِ `refreshToken` هم باطل باشد، پروفایل نباید تا ابد
+        //  «وارد شده‌اید» بگوید در حالی که هیچ دکمه‌ای کار نمی‌کند.
+        Console.WriteLine("── ۱۳) نشستِ واقعاً مرده — برنامه دروغ نمی‌گوید");
+        _accessDead = true; _refreshDead = true;
+        Seen.Clear();
+        Wait(win, account.PullHomeCommand.ExecuteAsync(null));
+        for (var i = 0; i < 20; i++) Pump(win);
+
+        Check("تلاشِ تازه‌سازی رفت و رد شد", Seen.Contains("POST /api/auth/refresh"));
+        Check("⭐ و نشست پاک شد — دیگر «وارد شده‌اید» نمی‌گوید",
+              AppSettings.Load().CloudAccountToken.Length == 0);
+        Check("⛔ ولی اشتراکِ دستگاه باز هم دست نخورد",
+              AppSettings.Load().CloudDeviceToken == "dev-token");
+        _accessDead = false; _refreshDead = false;
+
+        // ══ ۱۴) قطعیِ اینترنت هیچ‌کس را بیرون نمی‌اندازد ══════════════════
+        Console.WriteLine("── ۱۴) بی‌اینترنت — نشست پاک نمی‌شود");
+        var f4 = AppSettings.Load();
+        f4.CloudAccountToken = "acct-token"; f4.CloudRefreshToken = "acct-refresh";
+        f4.CloudAccessExpiresAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - 1000;  // منقضی
+        f4.Save();
+        CloudLink.TestTransport = (_, _) => throw new HttpRequestException("شبکه نیست");
+        var offline = new CloudLink(AppSettings.Load(), () => Task.CompletedTask);
+        (bool Ok, string Url, string Key, string Stn, string Why) off = default;
+        Wait(win, Task.Run(async () => off = await offline.HomeFromAccountAsync()));
+        Check("نشد، و دلیلش هم روشن است", !off.Ok && off.Why.Contains("اینترنت"), off.Why);
+        Check("⭐ ولی نشست سرِ جایش ماند — یک قطعیِ مودم کسی را بیرون نمی‌اندازد",
+              AppSettings.Load().CloudAccountToken == "acct-token"
+              && AppSettings.Load().CloudRefreshToken == "acct-refresh");
+        CloudLink.TestTransport = Cloud;
 
         CloudLink.TestTransport = null;
         Console.WriteLine();

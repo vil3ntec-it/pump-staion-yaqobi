@@ -146,7 +146,14 @@ public class AppLinksTests
         Assert.Contains("Binding LoginEmail", xaml);
         Assert.Contains("Binding LoginPassword}", xaml);
         Assert.Contains("Binding LoginPassword2", xaml);
-        Assert.Contains("PasswordChar=\"•\"", xaml);
+        //  ⚠️ رمز همچنان **واقعاً** رمز است، ولی از ۱۴۰۵/۰۶/۳۰ یک دکمهٔ
+        //  «چشم» هم دارد (بندِ ۲ی صاحب ریپو)، پس نویسهٔ پوشاننده از ویومدل
+        //  می‌آید نه از خودِ XAML. پیش‌فرضش همان «•» است و پنهان.
+        Assert.Contains("PasswordChar=\"{Binding PassChar}\"", xaml);
+        var pass = Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs");
+        //  \u067e\u06cc\u0634\u200c\u0641\u0631\u0636\u0650 \u00ab\u0686\u0634\u0645\u00bb \u062e\u0627\u0645\u0648\u0634 \u0627\u0633\u062a \u0648 \u0646\u0648\u06cc\u0633\u0647\u0654 \u067e\u0648\u0634\u0627\u0646\u0646\u062f\u0647 \u00ab\u2022\u00bb
+        Assert.Contains("private bool _revealPass;", pass);
+        Assert.Contains("public char PassChar => RevealPass ? '\\0' : '\u2022';", pass);
         //  «حساب داری یا نه» — دو راهِ دیدنی
         Assert.Contains("Content=\"حساب می‌سازم\"", xaml);
         Assert.Contains("Content=\"حساب دارم\"", xaml);
@@ -200,11 +207,16 @@ public class AppLinksTests
         //  هیچ‌جا رمز در تنظیمات نوشته نمی‌شود
         Assert.DoesNotContain("CloudPassword", vm);
         Assert.DoesNotContain("f.Password", vm);
-        //  و در هر دو مسیر پاک می‌شود
-        //  سه جا رمز را از حافظهٔ صفحه پاک می‌کند: ورود، تاییدِ کدِ ایمیل،
-        //  و «بعداً». (پلهٔ یکِ ثبت‌نام عمداً پاکش نمی‌کند، چون پلهٔ سوم
-        //  همان رمز را می‌خواهد.)
-        Assert.Equal(3, vm.Split("LoginPassword = \"\"; LoginPassword2 = \"\";").Length - 1);
+        //  و در هر مسیر پاک می‌شود
+        //  چهار جا رمز را از حافظهٔ صفحه پاک می‌کند: ورود، تاییدِ کدِ ایمیل،
+        //  «بعداً»، و — از ۱۴۰۵/۰۶/۳۰ — **خروج از حساب**. (پلهٔ یکِ ثبت‌نام
+        //  عمداً پاکش نمی‌کند، چون پلهٔ سوم همان رمز را می‌خواهد.)
+        Assert.Equal(4, vm.Split("LoginPassword = \"\"; LoginPassword2 = \"\";").Length - 1);
+
+        //  ⚠️ رمزِ **بازیابی** هم همان قاعده را دارد و نامش جداست، تا شمارشِ
+        //  بالا را به هم نزند.
+        Assert.Contains("ResetPass = \"\"; ResetPass2 = \"\";", vm);
+        Assert.DoesNotContain("CloudResetPass", vm);
 
         var settings = Read("PumpYaqobi.App", "Services", "AppSettings.cs");
         Assert.DoesNotContain("Password", settings);
