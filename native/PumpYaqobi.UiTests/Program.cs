@@ -92,6 +92,9 @@ internal static class Program
         if (outDir.Equals("cloudlogin", StringComparison.OrdinalIgnoreCase)) return CloudLoginProbe.Run();
         //  «تو کادرها + @ # ﷼ ( ) ؟ ؛ : , . نوشته نمی‌شوند»
         if (outDir.Equals("inputchars", StringComparison.OrdinalIgnoreCase)) return InputCharsProbe.Run();
+
+        //  «آن عکسِ آدم‌ها را فوری کن و برنامه را با یک عکس سنگین نکن»
+        if (outDir.Equals("loginart", StringComparison.OrdinalIgnoreCase)) return LoginArtProbe.Run();
         //  «سرور روشن است اما برنامه می‌گوید خاموش»
         if (outDir.Equals("serverdot", StringComparison.OrdinalIgnoreCase)) return ServerDotProbe.Run();
         // ══ «عوض کردنِ تم خط‌ها را کج می‌کند؟» ══════════════════════════════

@@ -251,6 +251,16 @@ public class AppLinksTests
         //  و یک بار برای همیشه
         Assert.Contains("private static IImage? _art;", vm);
 
+        //  (۴) ⚠️ **«فوری»**: عکس پیش از ردیف‌های تب‌ها خوانده می‌شود.
+        //  خواستهٔ صاحب ریپو (۱۴۰۵/۰۶/۲۹) «آن عکسِ آدم‌ها را فوری کن». سنجهٔ
+        //  `loginart` عددش را داد: خودِ عکس ۳ تا ۴ میلی‌ثانیه است و هیچ
+        //  دستورِ دیتابیسی نمی‌زند، ولی `LoadRowsAsync` سه پرس‌وجو دارد.
+        var act = vm[activate..];
+        var iArt = act.IndexOf("await LoadArtAsync();", StringComparison.Ordinal);
+        var iRows = act.IndexOf("await LoadRowsAsync();", StringComparison.Ordinal);
+        Assert.True(iArt > 0 && iRows > iArt,
+                    "عکس باید پیش از ردیف‌های تب‌ها خوانده شود، نه پشتِ سه پرس‌وجو.");
+
         //  خودِ فایلِ عکس هم کوچک است — ۱۵۰ کیلوبایت سقفِ خودمان
         var art = new FileInfo(Path.Combine(Root, "PumpYaqobi.App", "Assets", "login-art.jpg"));
         Assert.True(art.Exists, "عکسِ صفحهٔ ورود نیست");
