@@ -36,6 +36,20 @@
 
   var TOKEN_KEY = 'pumpKar.cloud.v1';
 
+  /**
+   * شناسهٔ این برنامه نزدِ سرورِ مرکزی.
+   *
+   * ⛔ **بی این، ورود با گوگل بی‌صدا می‌شکست.** سرور نشست را به بخشِ
+   * برنامه مهر می‌زند (`tokens.app`) و توکنِ یک بخش در بخشِ دیگر
+   * **پیدا نمی‌شود**. این اپ هیچ‌وقت نمی‌گفت کیست، پس نشستش «دکان»
+   * می‌شد و همان لحظه `‎GET /api/pump/me‎` می‌گفت «چنین نشستی نیست» —
+   * کارمند «صاحبِ پمپ هستم» را می‌زد، گوگل را رد می‌کرد، و اپ
+   * برمی‌گشت سرِ خانهٔ اول بی آن‌که بگوید چرا.
+   *
+   * همان مقداری که برنامهٔ کامپیوتر می‌فرستد (`CloudConfig.ApplicationId`).
+   */
+  var APP_ID = 'tohid-pump-app';
+
   /* ── نگه‌داریِ نشست ─────────────────────────────────────────────────── */
 
   function loadSession() {
@@ -82,7 +96,9 @@
    * وارد شو» را از «اینترنت نبود» جدا کند.
    */
   function call(method, path, body, token) {
-    var headers = { 'Content-Type': 'application/json' };
+    //  ⚠️ روی **هر** درخواست، نه فقط ورود: سرور از همین می‌فهمد کدام
+    //  برنامه است، و مسیرهای دیگر هم روزی ممکن است لازمش داشته باشند.
+    var headers = { 'Content-Type': 'application/json', 'X-App-Id': APP_ID };
     if (token) headers.Authorization = 'Bearer ' + token;
     return fetch(CLOUD + path, {
       method: method,
@@ -114,6 +130,9 @@
   function signInWithGoogle(idToken) {
     return call('POST', '/api/auth/google', {
       idToken: idToken,
+      //  ⚠️ در بدنه **هم** می‌آید، نه فقط در هدر: سرورِ قدیمی هدر را
+      //  نمی‌خواند و همان است که امروز روی هوا است.
+      app: 'pump',
       device: { deviceId: deviceId(), name: 'اپِ کارمندان', platform: 'web' }
     }).then(function (out) {
       var s = {

@@ -250,6 +250,49 @@ console.log('\n── ابر و ورود ─────────────
   //  نمی‌رسد — اپ بی‌صدا همان فرمِ قدیمی را نشان می‌دهد.
   ok(/'\.\/cloud\.js'/.test(swSrc), 'cloud.js در فهرستِ سرویس‌ورکر هست');
   ok(!/pump-kar-v1'/.test(swSrc), 'شمارهٔ کش بالا رفته است');
+
+  // ── اپ می‌گوید کدام برنامه است ───────────────────────────────────
+  //
+  // ⛔ باگی که این می‌بندد: سرور نشست را به بخشِ برنامه مهر می‌زند
+  //    (`tokens.app`) و توکنِ یک بخش در بخشِ دیگر **پیدا نمی‌شود**.
+  //    این اپ هیچ‌وقت نمی‌گفت کیست، پس نشستش «دکان» می‌شد و همان
+  //    لحظه `GET /api/pump/me` می‌گفت «چنین نشستی نیست» — یعنی
+  //    «صاحبِ پمپ هستم» تا امروز اصلاً کار نمی‌کرد.
+  const calls = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, opt) => {
+    calls.push({ url: String(url), opt });
+    if (/\/auth\/google$/.test(url)) {
+      return new Response(JSON.stringify({
+        accessToken: 'tok-a', refreshToken: 'tok-r', accessExpiresAt: Date.now() + 3600e3,
+        user: { name: 'کارمند', email: 'k@example.com' },
+      }), { status: 200 });
+    }
+    if (/\/pump\/me$/.test(url)) {
+      return new Response(JSON.stringify({
+        home: { url: 'wss://home.example', readKey: 'read-k', station: 'ac-one' },
+      }), { status: 200 });
+    }
+    return new Response('{}', { status: 404 });
+  };
+  try {
+    const cloud = require(path.join(here, '..', 'kar', 'cloud.js'));
+    await cloud.signInWithGoogle('id-token-from-google');
+    const login = calls.find(c => /\/auth\/google$/.test(c.url));
+    ok(!!login, 'ورود با گوگل به همان مسیرِ ابر می‌رود');
+    ok(JSON.parse(login.opt.body).app === 'pump',
+       'بدنهٔ ورود می‌گوید این برنامه پمپ است');
+    ok((login.opt.headers || {})['X-App-Id'] === 'tohid-pump-app',
+       'هدرِ X-App-Id هم روی همان درخواست هست');
+
+    //  و روی **هر** درخواست، نه فقط ورود
+    //  (مستقیم `call`، چون `myStation` نشستِ ذخیره‌شده می‌خواهد و
+    //   این‌جا localStorage نیست)
+    await cloud.call('GET', '/api/pump/me').catch(() => {});
+    const home = calls.find(c => /\/pump\/me$/.test(c.url));
+    ok(home && (home.opt.headers || {})['X-App-Id'] === 'tohid-pump-app',
+       'هر درخواستِ دیگری هم شناسهٔ برنامه را می‌برد');
+  } finally { globalThis.fetch = realFetch; }
 }
 
 // ══════════════════════════════════════════════════════════════════════
