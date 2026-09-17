@@ -218,57 +218,57 @@ public class AppLinksTests
     }
 
     /// <summary>
-    /// ⚠️ **آدمک‌های عکسِ مرجع در صفحه‌اند** — خواستهٔ صریحِ صاحب ریپو
-    /// (۱۴۰۵/۰۶/۲۸): «همین مدل باشد و این آدمک‌ها هم باشند؛ اصلاً همین عکس
-    /// باید باشد.» و همان سه قاعدهٔ «یک درصدِ ثانیه هم اپ را کند نکند» سرِ
-    /// جایش است: فقط در فعال‌سازیِ همان صفحه، روی نخِ دیگر، به پهنای نمایش،
-    /// و یک بار برای همیشه.
+    /// ⚠️ **آدمک‌ها هستند — و از ۱۴۰۵/۰۶/۲۹ برداری‌اند، با تمِ خودِ برنامه.**
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو با عکس و خطِ زردِ دورِ همان آدمک‌ها: «اون
+    /// آدمک‌ها رو باسازی کن و بک‌گراندشو درست کن و با رنگ و تمِ خودِ برنامه
+    /// باشه و همه‌چی با کیفیتِ خیلی بالا درست کن… و برنامه رو ببین سنگین
+    /// نکنه با یک عکس.»
+    ///
+    /// پس «سنگین نشدن» حالا **از ریشه** حل است، نه با ترفند: هیچ عکسی در
+    /// کار نیست. سنجهٔ رفتاری‌اش `loginart`.
     /// </summary>
     [Fact]
-    public void Akse_Adamakha_Hast_Va_HichHazineyeShoruAppNadarad()
+    public void Adamakha_Bordari_Ast_Va_HichAksi_DarKarNist()
     {
         var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs");
 
-        //  (۱) فقط از ‎OnActivatedAsync‎ — یعنی وقتی کاربر واقعاً آمد.
-        //  پردهٔ لودینگ فقط ‎EnsureLoadedAsync‎ را می‌زند.
-        var calls = vm.Split("LoadArtAsync()").Length - 1;
-        Assert.Equal(2, calls);                       // تعریف + یک صدا زدن
-        var activate = vm.IndexOf("public override async Task OnActivatedAsync()",
-                                  StringComparison.Ordinal);
-        Assert.True(activate > 0);
-        Assert.Contains("await LoadArtAsync();", vm[activate..]);
+        //  ⚠️ روی خودِ **کد** می‌گردیم، نه روی توضیحات: نامِ قدیمی در کامنتِ
+        //  «دیگر نیست» هست و باید هم باشد.
+        var code = string.Join("\n", vm.Split('\n')
+            .Where(l => !l.TrimStart().StartsWith("//")));
+        foreach (var gone in new[] { "LoginArt", "DecodeToWidth", "CroppedBitmap",
+                                     "AssetLoader", "login-art.jpg", "ArtCrop", "ArtWidth" })
+            Assert.DoesNotContain(gone, code);
 
-        //  (۲) روی نخِ دیگر و (۳) به پهنای نمایش، نه اندازهٔ اصلی
-        Assert.Contains("await Task.Run(() =>", vm);
-        Assert.Contains("Bitmap.DecodeToWidth(s, ArtWidth)", vm);
+        //  ⛔ و خودِ فایلِ عکس هم پاک شده — وگرنه در بستهٔ نصب می‌ماند
+        Assert.False(File.Exists(Path.Combine(Root, "PumpYaqobi.App", "Assets", "login-art.jpg")),
+                     "فایلِ عکسِ قدیمی باید پاک شده باشد.");
 
-        //  ⚠️ بریدن **بعد از** ‎await‎ است، یعنی روی نخِ رابط: ‎CroppedBitmap‎
-        //  یک ‎AvaloniaObject‎ است و روی نخِ دیگر «Call from invalid thread»
-        //  می‌دهد (همین باگ یک بار عکس را کاملاً ناپدید کرد).
-        var body = vm.Split("await Task.Run(() =>")[1].Split("});")[0];
-        Assert.DoesNotContain("CroppedBitmap", body);
-        Assert.Contains("new CroppedBitmap(full, box)", vm);
-        //  و یک بار برای همیشه
-        Assert.Contains("private static IImage? _art;", vm);
+        //  خودِ نقشهٔ برداری
+        var art = Read("PumpYaqobi.App", "Controls", "LoginArt.axaml");
+        Assert.Contains("<Viewbox", art);
+        Assert.Contains("Background=\"Transparent\"", art);     // بی کادرِ سفیدِ داخلی
+        //  ⚠️ صفحه راست‌به‌چپ است و بی این، کلِ نقشه آینه می‌شود (تیکِ ✓
+        //  برعکس می‌شد — با عکس دیده شد).
+        Assert.Contains("FlowDirection=\"LeftToRight\"", art);
 
-        //  (۴) ⚠️ **«فوری»**: عکس پیش از ردیف‌های تب‌ها خوانده می‌شود.
-        //  خواستهٔ صاحب ریپو (۱۴۰۵/۰۶/۲۹) «آن عکسِ آدم‌ها را فوری کن». سنجهٔ
-        //  `loginart` عددش را داد: خودِ عکس ۳ تا ۴ میلی‌ثانیه است و هیچ
-        //  دستورِ دیتابیسی نمی‌زند، ولی `LoadRowsAsync` سه پرس‌وجو دارد.
-        var act = vm[activate..];
-        var iArt = act.IndexOf("await LoadArtAsync();", StringComparison.Ordinal);
-        var iRows = act.IndexOf("await LoadRowsAsync();", StringComparison.Ordinal);
-        Assert.True(iArt > 0 && iRows > iArt,
-                    "عکس باید پیش از ردیف‌های تب‌ها خوانده شود، نه پشتِ سه پرس‌وجو.");
+        //  رنگ‌ها از تمِ برنامه می‌آیند، نه رنگِ خامِ صحنه
+        foreach (var key in new[] { "Pump.Accent", "Pump.Info", "Pump.Card",
+                                    "Pump.Border", "Pump.AccentGrad", "Pump.ChartLine" })
+            Assert.Contains("{DynamicResource " + key + "}", art);
 
-        //  خودِ فایلِ عکس هم کوچک است — ۱۵۰ کیلوبایت سقفِ خودمان
-        var art = new FileInfo(Path.Combine(Root, "PumpYaqobi.App", "Assets", "login-art.jpg"));
-        Assert.True(art.Exists, "عکسِ صفحهٔ ورود نیست");
-        Assert.True(art.Length < 150 * 1024, $"عکس بزرگ است: {art.Length} بایت");
-
-        //  و عکس واقعاً در صفحه کشیده می‌شود
+        //  و در صفحه به کار رفته، با پس‌زمینهٔ تمِ برنامه (نه آن بنفشِ عکس)
         var xaml = Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml");
-        Assert.Contains("<Image Source=\"{Binding LoginArt}\"", xaml);
+        Assert.Contains("<c:LoginArt", xaml);
+        Assert.DoesNotContain("<Image Source=\"{Binding LoginArt}\"", xaml);
+        Assert.DoesNotContain("#f4eefd", xaml);
+        Assert.Contains("Background=\"{DynamicResource Pump.Section}\"", xaml);
+
+        //  ⛔ و نقشه هیچ کدِ C#ی ندارد: نه نخی می‌گیرد، نه فایلی می‌خواند
+        var code2 = Read("PumpYaqobi.App", "Controls", "LoginArt.axaml.cs");
+        Assert.DoesNotContain("Task", code2);
+        Assert.DoesNotContain("Bitmap", code2);
     }
 
     /// <summary>
@@ -280,7 +280,6 @@ public class AppLinksTests
     public void Akse_FaghatAdamakha_Ast_VaHichPaknehyi_Nadarad()
     {
         var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs");
-        Assert.Contains("ArtCrop = new(52, 86, 368, 396)", vm);
 
         var xaml = Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml");
         //  ⚠️ دنبالِ **خودِ صفحه** می‌گردیم، نه توضیح‌های بالای فایل: همان

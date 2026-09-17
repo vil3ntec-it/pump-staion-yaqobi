@@ -119,6 +119,24 @@
     </Style>
 
     <!-- ══ دکمه‌ها ══════════════════════════════════════════════════════ -->
+    <!-- ⚠️ تیکِ شرایط و ضوابط: قالبِ خودِ آوالونیا در تمِ تیره کادرش را
+         سیاه می‌کند و روی کارتِ سفیدِ این صفحه **گم** می‌شود (با عکس دیده
+         شد). پس همان‌جا سفیدِ خط‌دار می‌شود، مثلِ بقیهٔ کادرهای این صفحه. -->
+    <Style Selector="Border.loginpage CheckBox /template/ Border#NormalRectangle">
+      <Setter Property="Background" Value="#ffffff" />
+      <Setter Property="BorderBrush" Value="#b9a6bd" />
+      <Setter Property="BorderThickness" Value="1.6" />
+      <Setter Property="CornerRadius" Value="5" />
+    </Style>
+    <Style Selector="Border.loginpage CheckBox:checked /template/ Border#NormalRectangle">
+      <Setter Property="Background" Value="#2b1640" />
+      <Setter Property="BorderBrush" Value="#2b1640" />
+    </Style>
+    <Style Selector="Border.loginpage CheckBox /template/ Path#CheckGlyph">
+      <Setter Property="Stroke" Value="#ffffff" />
+      <Setter Property="Fill" Value="#ffffff" />
+    </Style>
+
     <Style Selector="Border.loginpage Button.go">
       <Setter Property="Foreground" Value="#ffffff" />
       <Setter Property="FontWeight" Value="Bold" />
@@ -229,14 +247,25 @@
                   BoxShadow="0 20 50 0 #2E7B3FE4">
             <Grid ColumnDefinitions="*,440">
 
-              <!-- آدمک‌های همان عکس -->
-              <Border Grid.Column="0" Background="#f4eefd" Margin="0">
-                <!-- ⚠️ سقفِ اندازه دارد: عکسِ اصلی ۳۶۸×۳۹۶ است و کشیدنش تا
-                     تمامِ صفحه فقط پیکسلی‌اش می‌کند. -->
-                <Image Source="{Binding LoginArt}" Stretch="Uniform" Margin="30"
-                       MaxWidth="560" MaxHeight="600"
-                       HorizontalAlignment="Center" VerticalAlignment="Center"
-                       IsVisible="{Binding LoginArt, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              <!-- ══ آدمک‌ها — برداری، با رنگ و تمِ خودِ برنامه ══
+                   خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۹، با عکس): «اون آدمک‌ها
+                   رو باسازی کن و بک‌گراندشو درست کن و با رنگ و تمِ خودِ
+                   برنامه باشه و همه‌چی با کیفیتِ خیلی بالا درست کن.»
+                   ⛔ پس نه عکسِ JPEGی مانده و نه آن کادرِ سفیدِ داخلِ کادرِ
+                   بنفش که دورش خط کشید: بومِ نقشه شفاف است و پس‌زمینه از
+                   خودِ تم می‌آید (`Pump.Section`)، با دو هالهٔ نرمِ تاکید.
+                   ⚠️ برداری است، پس در هر اندازه تیز است — سقفِ اندازه هم
+                   لازم ندارد (شرحش بالای `Controls/LoginArt.axaml`). -->
+              <Border Grid.Column="0" Background="{DynamicResource Pump.Section}" Margin="0">
+                <Panel>
+                  <Ellipse Width="300" Height="300" Fill="{DynamicResource Pump.IconBadge}"
+                           Opacity="0.7" HorizontalAlignment="Left" VerticalAlignment="Top"
+                           Margin="-70,-60,0,0" />
+                  <Ellipse Width="220" Height="220" Fill="{DynamicResource Pump.IconBadge}"
+                           Opacity="0.55" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                           Margin="0,0,-50,-40" />
+                  <c:LoginArt Margin="34,26" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Panel>
               </Border>
 
               <!-- ══ فرمِ خودِ برنامه ══ -->

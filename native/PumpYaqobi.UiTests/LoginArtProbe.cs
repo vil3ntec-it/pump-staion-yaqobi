@@ -1,31 +1,35 @@
 using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
+using Shape = Avalonia.Controls.Shapes.Shape;
 using Avalonia.Headless;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using PumpYaqobi.Services.Data;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.App.ViewModels;
 using PumpYaqobi.App.ViewModels.Sections;
 using PumpYaqobi.App.Views;
+using PumpYaqobi.Services.Data;
 
 namespace PumpYaqobi.UiTests;
 
 /// <summary>
-/// ══ «آن عکسِ آدم‌ها را فوری کن و برنامه را با یک عکس سنگین نکن» ═════════════
+/// ══ «آدمک‌ها را باسازی کن، با تمِ خودِ برنامه، با کیفیتِ خیلی بالا» ═════════
 ///
-/// خواستهٔ صاحب ریپو (۱۴۰۵/۰۶/۲۹). پس این‌جا **عدد** می‌گیریم، نه اطمینانِ
-/// حرفی:
+/// خواستهٔ صاحب ریپو (۱۴۰۵/۰۶/۲۹، با عکس و خطِ زردِ دورِ همان آدمک‌ها): «اون
+/// آدمک‌ها رو باسازی کن و بک‌گراندشو درست کن و با رنگ و تمِ خودِ برنامه باشه
+/// و همه‌چی با کیفیتِ خیلی بالا درست کن… و برنامه رو ببین سنگین نکنه با یک
+/// عکس.»
 ///
-///   ۱) خودِ فایل چند کیلوبایت است و باز کردن + بریدنش چند میلی‌ثانیه
-///   ۲) از لحظهٔ رفتن به پروفایل تا دیده شدنِ عکس چند میلی‌ثانیه («فوری»)
-///   ۳) بارِ دوم باید **صفر** کار باشد (یک بار برای همیشه)
-///   ۴) چند مگابایت حافظه می‌گیرد و پس از بریدن چند پیکسل می‌ماند
-///   ۵) هیچ دستورِ دیتابیسی نمی‌زند
-///   ۶) و پردهٔ لودینگ (بارگذاریِ بخش) هیچ‌وقت لمسش نمی‌کند
+/// پس صحنه از عکسِ JPEG به **نقشهٔ برداری** (`Controls/LoginArt.axaml`) رفت و
+/// این سنجه همان را با عدد ثابت می‌کند:
+///
+///   ۱) هیچ فایلِ عکسی در کار نیست و ویومدل هیچ بیت‌مپی ندارد
+///   ۲) خودِ نقشه در درخت است و شکل‌هایش واقعاً کشیده شده‌اند
+///   ۳) رنگ‌هایش از تمِ برنامه می‌آید — با عوض شدنِ تم عوض می‌شود
+///   ۴) با همان اولین باز شدنِ صفحه دیده می‌شود (فوری)
+///   ۵) هیچ دستورِ دیتابیسی و هیچ چیدمانی در بی‌کاری ندارد
 ///
 ///     dotnet run --project PumpYaqobi.UiTests -c Release -- loginart
 /// </summary>
@@ -58,134 +62,121 @@ internal static class LoginArtProbe
 
         var account = (AccountSectionViewModel)vm.Sections.First(s => s.Id == "account");
 
-        // ── ۱) خودِ فایل و هزینهٔ خامِ باز کردنش ───────────────────────────
-        Console.WriteLine("── ۱) خودِ فایل");
-        long bytes;
-        using (var s = AssetLoader.Open(new Uri("avares://PumpYaqobi/Assets/login-art.jpg")))
-        {
-            using var ms = new MemoryStream();
-            s.CopyTo(ms);
-            bytes = ms.Length;
-        }
-        Check("فایل زیرِ ۱۵۰ کیلوبایت است", bytes <= 150 * 1024, $"{bytes / 1024.0:0.0} KB");
+        // ── ۱) هیچ عکسی نمانده ────────────────────────────────────────────
+        Console.WriteLine("── ۱) هیچ فایلِ عکسی در کار نیست");
+        var jpg = Path.Combine(Root(), "PumpYaqobi.App", "Assets", "login-art.jpg");
+        Check("فایلِ JPEGی صفحهٔ ورود پاک شده", !File.Exists(jpg));
 
-        // ── ۲) «فوری»: از رفتن به پروفایل تا دیده شدنِ عکس ────────────────
-        Console.WriteLine("── ۲) از رفتن به پروفایل تا دیده شدنِ عکس");
+        var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels",
+                                                "Sections", "AccountSectionViewModel.cs"));
+        //  ⚠️ روی خودِ **کد** می‌گردیم، نه روی توضیحات: نامِ قدیمی در کامنتِ
+        //  «دیگر نیست» هست و باید هم باشد.
+        var code = string.Join("\n", src.Split('\n').Where(l => !l.TrimStart().StartsWith("//") && !l.TrimStart().StartsWith("///")));
+        foreach (var gone in new[] { "LoginArt", "DecodeToWidth", "CroppedBitmap", "AssetLoader", "login-art.jpg" })
+            Check($"«{gone}» در ویومدل نیست", !code.Contains(gone));
+
+        // ── ۲) خودِ نقشه در درخت است ──────────────────────────────────────
+        Console.WriteLine("── ۲) نقشهٔ برداری در صفحه");
         var db0 = DbWatch.Count;
         var mem0 = GC.GetTotalMemory(true);
-        //  ⚠️ **همان لحظه‌ای که عکس می‌نشیند** سنجیده می‌شود، نه تهِ
-        //  `GoAsync`: اگر منتظرِ تمام شدنِ کلِ باز شدنِ صفحه بمانیم، وقتِ
-        //  خواندنِ ردیف‌های تب‌ها هم داخلش می‌آید و عددِ عکس دروغ می‌شود.
         var sw = Stopwatch.StartNew();
         var go = vm.GoAsync(account);
         long firstMs = -1;
-        for (var i = 0; i < 4000 && (!go.IsCompleted || firstMs < 0); i++)
+        for (var i = 0; i < 4000; i++)
         {
             Dispatcher.UIThread.RunJobs();
             win.UpdateLayout();
-            if (firstMs < 0 && account.LoginArt is not null) firstMs = sw.ElapsedMilliseconds;
+            if (firstMs < 0 && Art(win) is { Bounds.Width: > 0 }) firstMs = sw.ElapsedMilliseconds;
             if (go.IsCompleted && firstMs >= 0) break;
             Thread.Sleep(1);
         }
         var pageMs = sw.ElapsedMilliseconds;
-        if (go.IsFaulted) throw go.Exception!;
         var mem1 = GC.GetTotalMemory(true);
-        var dbSpent = DbWatch.Count - db0;
+        if (go.IsFaulted) throw go.Exception!;
 
-        Check("عکس آمد", account.LoginArt is not null);
-        Check("و با همان اولین باز شدنِ صفحه آمد، نه چند لحظه بعد",
-              firstMs >= 0 && firstMs <= pageMs, $"عکس {firstMs}ms · صفحه {pageMs}ms");
-        Note("کلِ باز شدنِ صفحه (ساختِ صفحه + عکس + ردیف‌های تب‌ها)", $"{pageMs}ms");
-        //  ⚠️ «عکس زودتر از ردیف‌ها می‌آید» را **از روی ترتیبِ خودِ کد** قفل
-        //  می‌کنیم، نه از روی میلی‌ثانیه: در اجرای بی‌پنجره هر دو داخلِ همان
-        //  یک `GoAsync` می‌نشینند و ساعت نمی‌تواند جدایشان کند (قاعدهٔ
-        //  «عددِ ساختاری دروغ نمی‌گوید»).
+        var art = Art(win);
+        Check("نقشه در درخت است و دیده می‌شود", art is { IsEffectivelyVisible: true });
+        Check("و جا گرفته است", art is not null && art.Bounds.Width > 100 && art.Bounds.Height > 100,
+              art is null ? "نیست" : $"{art.Bounds.Width:0}×{art.Bounds.Height:0}");
 
-        if (account.LoginArt is Avalonia.Media.IImage img)
-            Note("اندازهٔ عکسِ بریده", $"{img.Size.Width:0}×{img.Size.Height:0}");
-        Note("حافظه", $"{(mem1 - mem0) / 1024.0 / 1024.0:0.0} MB برای کلِ باز شدنِ صفحه");
-        //  ⚠️ این عدد مالِ **خودِ صفحهٔ پروفایل** است (کارمندان، تاریخچه،
-        //  پشتیبان‌ها)، نه مالِ عکس. سهمِ عکس از دیتابیس در بندِ ۴ سنجیده
-        //  می‌شود — از روی خودِ مسیرِ خواندنش.
-        Note("دستورِ دیتابیسِ خودِ صفحهٔ پروفایل", $"{dbSpent} دستور (کارمندان · تاریخچه · پشتیبان‌ها)");
+        var shapes = art?.GetVisualDescendants().OfType<Shape>().ToList() ?? new();
+        Check("شکل‌های برداری واقعاً کشیده شده‌اند", shapes.Count >= 25, $"{shapes.Count} شکل");
+        Check("و هیچ بیت‌مپی در آن نیست",
+              art is null || !art.GetVisualDescendants().OfType<Image>().Any());
+        Check("و **فوری** با همان باز شدنِ صفحه آمد", firstMs >= 0 && firstMs <= pageMs,
+              $"نقشه {firstMs}ms · صفحه {pageMs}ms");
+        Note("حافظهٔ کلِ باز شدنِ صفحه", $"{(mem1 - mem0) / 1024.0 / 1024.0:0.0} MB");
+        Note("دستورِ دیتابیسِ خودِ صفحه", $"{DbWatch.Count - db0} دستور (کارمندان · تاریخچه · پشتیبان‌ها)");
 
-        // ── ۳) بارِ دوم: هیچ کاری نباید بشود ──────────────────────────────
-        Console.WriteLine("── ۳) بارِ دوم — یک بار برای همیشه");
-        var first = account.LoginArt;
-        var other = vm.Sections.First(s => s.Id == "debt");
-        Wait(win, vm.GoAsync(other));
-        for (var i = 0; i < 20; i++) Pump(win);
+        // ── ۳) رنگ‌ها از تمِ برنامه می‌آیند ────────────────────────────────
+        Console.WriteLine("── ۳) رنگ از تمِ خودِ برنامه");
+        var xaml = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Controls", "LoginArt.axaml"));
+        foreach (var key in new[] { "Pump.Accent", "Pump.Info", "Pump.Card", "Pump.Border", "Pump.AccentGrad" })
+            Check($"«{key}» به کار رفته", xaml.Contains("{DynamicResource " + key + "}"));
 
-        var mem2 = GC.GetTotalMemory(true);
-        sw.Restart();
-        Wait(win, vm.GoAsync(account));
-        Pump(win);
-        var againMs = sw.ElapsedMilliseconds;
-        var mem3 = GC.GetTotalMemory(true);
+        var before = Fills(shapes);
+        ThemeManagerFlip(vm);
+        for (var i = 0; i < 40; i++) Pump(win);
+        var after = Fills(Art(win)?.GetVisualDescendants().OfType<Shape>().ToList() ?? new());
+        Check("با عوض شدنِ تم، رنگ‌های نقشه هم عوض شدند",
+              before.Count > 0 && after.Count > 0 && before != after,
+              $"{before.Count} رنگ ⇒ {after.Count} رنگ");
+        //  عکسِ چشمیِ تمِ دیگر — تا با چشم هم دیده شود، نه فقط با عدد
+        var dark = Path.Combine(Path.GetTempPath(), "pump-loginart-dark.png");
+        using (var f2 = win.CaptureRenderedFrame())
+            if (f2 is not null) { f2.Save(dark); Console.WriteLine("عکسِ تمِ دیگر: " + dark); }
+        ThemeManagerFlip(vm);
+        for (var i = 0; i < 40; i++) Pump(win);
 
-        Check("همان شیءِ عکس است، نه یک عکسِ تازه", ReferenceEquals(first, account.LoginArt));
-        Note("بارِ دومِ کلِ صفحه", $"{againMs}ms (عکس دیگر خوانده نمی‌شود)");
-        Check("و حافظهٔ تازه‌ای نگرفت", mem3 - mem2 < 1024 * 1024,
-              $"{(mem3 - mem2) / 1024.0:0} KB");
+        // ── ۴) کیفیت: برداری یعنی بی سقفِ اندازه ──────────────────────────
+        Console.WriteLine("── ۴) کیفیت در هر اندازه");
+        Check("بومِ نقشه شفاف است (هیچ کادرِ سفیدِ داخلی)", xaml.Contains("Background=\"Transparent\""));
+        Check("و با `Viewbox` هر اندازه‌ای را می‌گیرد", xaml.Contains("<Viewbox"));
+        //  ⚠️ صفحهٔ برنامه راست‌به‌چپ است و نقشه را آینه می‌کند (تیکِ ✓
+        //  برعکس می‌شد). خودِ سنجه یک بار گرفتش.
+        Check("و جهتش صریح چپ‌به‌راست است (وگرنه آینه می‌شود)",
+              xaml.Contains("FlowDirection=\"LeftToRight\""));
 
-        // ── ۴) پردهٔ لودینگ عکس را لمس نمی‌کند ────────────────────────────
-        Console.WriteLine("── ۴) بارگذاریِ بخش (پردهٔ لودینگ) عکس را نمی‌خواند");
-        var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels",
-                                                "Sections", "AccountSectionViewModel.cs"));
-        var load = Between(src, "protected override async Task LoadAsync", "protected override");
-        Check("در ‎LoadAsync‎ هیچ نامی از عکس نیست", !load.Contains("Art"),
-              load.Contains("Art") ? "پردهٔ لودینگ عکس را می‌خواند" : "");
-
-        //  «فوری» به شکلِ ساختاری: عکس پیش از ردیف‌های تب‌ها (سه پرس‌وجو)
-        var act = Between(src, "public override async Task OnActivatedAsync", "/// <summary>پوشهٔ پشتیبان‌ها");
-        var iArt = act.IndexOf("await LoadArtAsync", StringComparison.Ordinal);
-        var iRows = act.IndexOf("await LoadRowsAsync", StringComparison.Ordinal);
-        Check("عکس **پیش از** ردیف‌های تب‌ها خوانده می‌شود", iArt > 0 && iRows > iArt,
-              iArt < 0 || iRows < 0 ? "یکی‌شان پیدا نشد" : $"عکس در {iArt} · ردیف‌ها در {iRows}");
-        Check("و خواندنش فقط روی نخِ دیگر است", src.Contains("Task.Run"));
-        Check("و عکس ‎static‎ است (یک بار برای همیشه)", src.Contains("private static IImage? _art"));
-
-        //  سهمِ خودِ عکس از دیتابیس: مسیرِ خواندنش هیچ سرویسی را صدا نمی‌زند
-        var art = Between(src, "private async Task LoadArtAsync", "LoadRowsAsync");
-        Check("مسیرِ خواندنِ عکس هیچ سرویس یا دیتابیسی را لمس نمی‌کند",
-              art.Length > 0 && !art.Contains("_host.") && !art.Contains("Service"),
-              art.Length == 0 ? "مسیرِ خواندن پیدا نشد" : "");
-
-        // ── ۵) خودِ باز کردن و بریدن، جدا از هر چیزِ دیگر ──────────────────
-        Console.WriteLine("── ۵) خودِ باز کردن و بریدن، جدا");
-        sw.Restart();
-        using (var s = AssetLoader.Open(new Uri("avares://PumpYaqobi/Assets/login-art.jpg")))
-        {
-            var full = Bitmap.DecodeToWidth(s, 736);
-            var open = sw.ElapsedMilliseconds;
-            sw.Restart();
-            var crop = new CroppedBitmap(full, new PixelRect(52, 86, 368, 396));
-            var cut = sw.ElapsedMilliseconds;
-            Note("باز کردنِ JPEG", $"{open}ms");
-            Note("بریدن", $"{cut}ms");
-            Check("باز کردن زیرِ ۱۰۰ میلی‌ثانیه است", open < 100, $"{open}ms");
-            Check("بریدن تقریباً بی‌هزینه است (پوشش، نه کپی)", cut <= 5, $"{cut}ms");
-            crop.Dispose();
-            full.Dispose();
-        }
-
-        // ── ۶) و بی‌کاریِ صفحهٔ ورود: عکس چیزی را نمی‌چرخاند ───────────────
-        Console.WriteLine("── ۶) صفحهٔ ورودِ باز، سه ثانیه بی‌کار");
-        Wait(win, vm.GoAsync(account));
-        for (var i = 0; i < 30; i++) Pump(win);
+        // ── ۵) بی‌کاری ────────────────────────────────────────────────────
+        Console.WriteLine("── ۵) صفحهٔ ورودِ باز، سه ثانیه بی‌کار");
+        var dbIdle = DbWatch.Count;
         var layouts = 0;
         void OnLayout(object? _, EventArgs __) => layouts++;
         win.LayoutUpdated += OnLayout;
         var idle = Stopwatch.StartNew();
         while (idle.ElapsedMilliseconds < 3000) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(10); }
         win.LayoutUpdated -= OnLayout;
-        Check("هیچ چیدمانی در بی‌کاری رخ نداد", layouts == 0, $"{layouts} چیدمان");
+        Check("هیچ چیدمانی رخ نداد", layouts == 0, $"{layouts} چیدمان");
+        Check("و هیچ دستورِ دیتابیسی", DbWatch.Count == dbIdle, $"{DbWatch.Count - dbIdle} دستور");
+
+        // ── عکسِ چشمی ─────────────────────────────────────────────────────
+        var shot = Path.Combine(Path.GetTempPath(), "pump-loginart.png");
+        using (var frame = win.CaptureRenderedFrame())
+            if (frame is not null) { frame.Save(shot); Console.WriteLine("عکس: " + shot); }
 
         Console.WriteLine();
         Console.WriteLine(_bad == 0
-            ? "✅ عکس فوری می‌آید و برنامه را سنگین نمی‌کند"
+            ? "✅ آدمک‌ها برداری‌اند، با تمِ خودِ برنامه، بی هیچ وزنی"
             : $"❌ {_bad} ایراد");
         return _bad == 0 ? 0 : 1;
+    }
+
+    /// <summary>خودِ نقشه در درختِ پنجره.</summary>
+    private static Control? Art(Window win) =>
+        win.GetVisualDescendants().OfType<PumpYaqobi.App.Controls.LoginArt>()
+           .FirstOrDefault(a => a.IsEffectivelyVisible);
+
+    /// <summary>رنگِ همهٔ شکل‌ها — برای سنجشِ «با تم عوض می‌شود».</summary>
+    private static List<string> Fills(List<Shape> shapes) =>
+        shapes.Select(s => (s.Fill as ISolidColorBrush)?.Color.ToString() ?? "")
+              .Where(c => c.Length > 0).ToList();
+
+    /// <summary>تمِ دیگر — آبی ⇄ طلایی، از راهِ خودِ برنامه.</summary>
+    private static void ThemeManagerFlip(MainViewModel vm)
+    {
+        var now = vm.SelectedTheme;
+        var other = PumpYaqobi.App.Themes.PumpTheme.All.First(t => t.Id != now?.Id);
+        vm.SelectedTheme = other;
     }
 
     private static string Root()
@@ -196,23 +187,8 @@ internal static class LoginArtProbe
         return d ?? ".";
     }
 
-    private static string Between(string src, string from, string to)
-    {
-        var a = src.IndexOf(from, StringComparison.Ordinal);
-        if (a < 0) return "";
-        var b = src.IndexOf(to, a + from.Length, StringComparison.Ordinal);
-        return b < 0 ? src[a..] : src[a..b];
-    }
-
     private static void Pump(Window w)
     {
         for (var i = 0; i < 8; i++) { Dispatcher.UIThread.RunJobs(); w.UpdateLayout(); }
-    }
-
-    private static void Wait(Window win, Task t)
-    {
-        for (var i = 0; i < 4000 && !t.IsCompleted; i++) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(2); }
-        Dispatcher.UIThread.RunJobs();
-        if (t.IsFaulted) throw t.Exception!;
     }
 }

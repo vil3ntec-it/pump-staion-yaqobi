@@ -1,8 +1,6 @@
 using System.Collections.ObjectModel;
 using Avalonia;
 using Avalonia.Media;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.Application.Localization;
@@ -533,10 +531,9 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     //  ⚠️ **بی‌اینترنت هم راه بسته نمی‌شود**: «بعداً» گامِ حساب را رد می‌کند و
     //  نام و ایمیل را همان‌جا ذخیره می‌کند. دفترِ کاربر هیچ‌وقت گروگان نیست.
     //
-    //  ⚠️ **عکسِ مرجع خودش در صفحه است** — «همین مدل باشد و این آدمک‌ها هم
-    //  باشند؛ اصلاً همین عکس باید باشد.» فقط آدمک‌ها بریده می‌شوند
-    //  (<see cref="ArtCrop"/>)، چون نوشته‌ها و دو نشانِ فروشگاهِ عکس نباید
-    //  دیده شوند.
+    //  ⚠️ **آدمک‌های عکسِ مرجع در صفحه هستند** — «همین مدل باشد و این
+    //  آدمک‌ها هم باشند.» ولی از ۱۴۰۵/۰۶/۲۹ **برداری** کشیده شده‌اند، با
+    //  رنگ و تمِ خودِ برنامه: `Controls/LoginArt.axaml`.
     //
     //  ⛔ **هیچ دکمهٔ گوگل یا هر سرویسِ دیگری نیست**: «هیچ‌کدامشان را
     //  نمی‌خواهم.» تنها راهِ حساب همان ایمیل و رمزِ خودمان است، و «بعداً» که
@@ -896,66 +893,17 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     [RelayCommand]
     private void BackToPump() { LoginStatus = ""; LoginStep = 3; }
 
-    // ── عکسِ کنارِ فرم — همان آدمک‌های عکسِ مرجع ─────────────────────────
+    // ── آدمک‌های کنارِ فرم — دیگر عکس نیستند، نقشهٔ برداری‌اند ───────────
     //
-    //  خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۸): «همین مدل باشد و این آدمک‌ها هم
-    //  باشند؛ اصلاً همین عکس باید باشد.» پس عکسِ خودش کنارِ فرم می‌نشیند.
+    //  خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۹، با عکس و خطِ زردِ دورِ همان
+    //  آدمک‌ها): «اون آدمک‌ها رو باسازی کن و بک‌گراندشو درست کن و با رنگ و
+    //  تمِ خودِ برنامه باشه و همه‌چی با کیفیتِ خیلی بالا درست کن.»
     //
-    //  ⚠️ و همان سه قاعدهٔ «یک درصدِ ثانیه هم اضافه نکند» سرِ جایش است:
-    //  فقط در فعال‌سازیِ همین صفحه، روی نخِ دیگر، به پهنای نمایش، و یک
-    //  بار برای همیشه (`_art`). سنجه‌اش `startup` و `idle` است.
-
-    /// <summary>عکسِ کنارِ فرم — تا خوانده نشده ‎null‎ است و کادرش دیده نمی‌شود.</summary>
-    [ObservableProperty] private IImage? _loginArt;
-
-    /// <summary>پهنای بازکردنِ عکس — خودِ فایل ۷۳۶ پیکسل است.</summary>
-    private const int ArtWidth = 736;
-
-    /// <summary>
-    /// ⚠️ **فقط خودِ آدمک‌ها** — نه نوشته‌های انگلیسیِ عکس و نه آن دو نشانِ
-    /// «App Store / Google Play»: خواستهٔ صریحِ صاحب ریپو «هیچ پکنه‌ای نباشد،
-    /// نه از گوگل و نه غیره» با این پنجره هم برقرار می‌ماند. فرمِ واقعی خودِ
-    /// برنامه است، نه فرمِ داخلِ عکس.
-    /// بریدن با <see cref="CroppedBitmap"/> است — یک پوشش روی همان عکس، بی
-    /// کپی و بی هزینه.
-    /// </summary>
-    private static readonly PixelRect ArtCrop = new(52, 86, 368, 396);
-
-    private static IImage? _art;
-    private static bool _artTried;
-
-    /// <summary>
-    /// عکسِ صفحهٔ ورود — روی نخِ دیگر، به پهنای نمایش، یک بار.
-    /// نشدنش هیچ اهمیتی ندارد: صفحه بی عکس هم کامل است.
-    /// </summary>
-    private async Task LoadArtAsync()
-    {
-        if (LoginArt is not null) return;
-        if (_art is not null) { LoginArt = _art; return; }
-        if (_artTried) return;
-        _artTried = true;
-
-        try
-        {
-            //  کارِ سنگین (باز کردنِ JPEG) روی نخِ دیگر
-            var full = await Task.Run(() =>
-            {
-                using var s = AssetLoader.Open(new Uri("avares://PumpYaqobi/Assets/login-art.jpg"));
-                return Bitmap.DecodeToWidth(s, ArtWidth);
-            });
-
-            //  ⚠️ بریدن **باید** روی نخِ رابط باشد: ‎CroppedBitmap‎ یک
-            //  ‎AvaloniaObject‎ است و سازنده‌اش نخ را می‌سنجد («Call from
-            //  invalid thread»). یک بار همین باگ عکس را کاملاً ناپدید کرد و
-            //  ‎catch { }‎ هم صدایش را خورد.
-            var box = ArtCrop.Intersect(new PixelRect(full.PixelSize));
-            IImage art = box.Width > 0 && box.Height > 0 ? new CroppedBitmap(full, box) : full;
-
-            _art = art;
-            LoginArt = art;
-        }
-        catch { }
-    }
+    //  ⛔ پس **هیچ چیزی از عکس در ویومدل نمانده**: نه `LoginArt`، نه
+    //  `DecodeToWidth`، نه `CroppedBitmap`، نه فایلِ JPEG. خودِ صحنه در
+    //  `Controls/LoginArt.axaml` برداری کشیده شده و رنگ‌هایش از تمِ برنامه
+    //  می‌آید، پس در هر اندازه تیز است و هیچ بایتی خوانده نمی‌شود.
+    //  سنجه: `dotnet run --project PumpYaqobi.UiTests -c Release -- loginart`.
 
     /// <summary>ردیف‌های تب‌ها — کارمندان، تاریخچهٔ بخش‌ها، پشتیبان‌ها.</summary>
     private async Task LoadRowsAsync()
@@ -998,14 +946,10 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         RefreshAll();
         ShowLogin();
 
-        //  ⚠️ عکس **پیش از** ردیف‌های تب‌ها خوانده می‌شود — خواستهٔ صاحب ریپو
-        //  «آن عکسِ آدم‌ها را فوری کن». سنجیده شد (`loginart`): خودِ عکس ۴
-        //  میلی‌ثانیه است و هیچ دستورِ دیتابیسی نمی‌زند، ولی `LoadRowsAsync`
-        //  سه پرس‌وجو دارد (کارمندان · تاریخچه · پشتیبان‌ها) و عکس پشتِ آن‌ها
-        //  ~۱۱۰ میلی‌ثانیه دیر می‌آمد. با همین جابه‌جایی ۱۱۰ ⇒ ۱۰ شد.
-        //  ⚠️ و عکس فقط همین‌جا خوانده می‌شود — پردهٔ لودینگ فقط
-        //  `EnsureLoadedAsync` را می‌زند، پس در مسیرِ باز شدنِ برنامه نیست.
-        await LoadArtAsync();
+        //  ⚠️ **آدمک‌ها هیچ‌جا خوانده نمی‌شوند** — نقشهٔ برداری با خودِ
+        //  چیدمانِ صفحه کشیده می‌شود، پس نه گامی برایش لازم است و نه بایتی.
+        //  (پیش از این یک JPEG بود و باید پیش از `LoadRowsAsync` خوانده
+        //  می‌شد تا پشتِ سه پرس‌وجوی تب‌ها نماند.)
         await LoadRowsAsync();
     }
 

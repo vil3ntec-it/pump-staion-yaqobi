@@ -402,15 +402,18 @@ internal static class VerifyProbe
             for (var i = 0; i < 60; i++) Pump(win);          // عکس روی نخِ دیگر باز می‌شود
 
             Check("صفحهٔ پروفایل باز شد", vm.Content == account);
-            //  ⚠️ «این آدمک‌ها هم باشند؛ اصلاً همین عکس باید باشد» — و فقط
-            //  آدمک‌ها: همین اندازه ثابت می‌کند بریدن کار کرده و نوشته‌ها و
-            //  دو نشانِ فروشگاهِ عکس بیرون مانده‌اند.
-            Check("آدمک‌های عکسِ مرجع آمدند (و فقط خودشان بریده شده‌اند)",
-                  account.LoginArt is not null
-                  && account.LoginArt.Size.Width > 360 && account.LoginArt.Size.Width < 380
-                  && account.LoginArt.Size.Height > 385 && account.LoginArt.Size.Height < 405,
-                  account.LoginArt is null ? "نیامد"
-                  : $"{account.LoginArt.Size.Width:0}×{account.LoginArt.Size.Height:0}");
+            //  ⚠️ «این آدمک‌ها هم باشند» — و از ۱۴۰۵/۰۶/۲۹ **برداری**‌اند
+            //  («باسازی کن… با رنگ و تمِ خودِ برنامه… با کیفیتِ خیلی بالا»).
+            //  پس به‌جای اندازهٔ بیت‌مپ، خودِ نقشه را در درخت می‌سنجیم.
+            //  سنجهٔ کاملش `loginart` است.
+            var artwork = win.GetVisualDescendants()
+                             .OfType<PumpYaqobi.App.Controls.LoginArt>()
+                             .FirstOrDefault(a => a.IsEffectivelyVisible);
+            var artShapes = artwork?.GetVisualDescendants()
+                                    .OfType<Avalonia.Controls.Shapes.Shape>().Count() ?? 0;
+            Check("آدمک‌های برداری آمدند و کشیده شدند",
+                  artwork is not null && artwork.Bounds.Width > 100 && artShapes >= 25,
+                  artwork is null ? "نیامد" : $"{artwork.Bounds.Width:0}×{artwork.Bounds.Height:0} · {artShapes} شکل");
             //  ⚠️ «این صفحهٔ لاگین اولویت باشد و تمامِ صفحه همین را نشان بدهد
             //  برای کسانی که حساب ندارند» — پس تا گامِ سه، خودِ پروفایل دیده
             //  نمی‌شود.
