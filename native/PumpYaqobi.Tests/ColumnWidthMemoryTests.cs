@@ -18,6 +18,10 @@ namespace PumpYaqobi.Tests;
 ///   ۲) دو جدولِ تراکنشِ ورق **یک کلید** بگیرند، وگرنه چپ و راست هم‌اندازه
 ///      نمی‌مانند.
 /// </summary>
+//  ⚠️ `AppSettings.DirOverride` **استاتیک** است و xUnit کلاس‌ها را موازی
+//  می‌دواند؛ بی این نشان، این کلاس و هر کلاسِ دیگری که همان را عوض
+//  می‌کند روی هم می‌نویسند و آزمون‌ها **گاهی** سرخ می‌شوند.
+[Collection(AppHostCollection.Name)]
 public class ColumnWidthMemoryTests
 {
     private static readonly string Root =

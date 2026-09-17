@@ -24,6 +24,10 @@ namespace PumpYaqobi.Tests;
 /// ⚠️ سرورِ ساختگی است، ولی <b>شکلِ پاسخِ واقعی</b> را می‌دهد — از روی خودِ
 /// <c>shop/server/src/routes/auth.js</c> خوانده شده، نه از روی حدس.
 /// </summary>
+//  ⚠️ `AppSettings.DirOverride` **استاتیک** است و xUnit کلاس‌ها را موازی
+//  می‌دواند؛ بی این نشان، این کلاس و هر کلاسِ دیگری که همان را عوض
+//  می‌کند روی هم می‌نویسند و آزمون‌ها **گاهی** سرخ می‌شوند.
+[Collection(AppHostCollection.Name)]
 public class CloudSessionTests : IDisposable
 {
     private readonly string _dir;

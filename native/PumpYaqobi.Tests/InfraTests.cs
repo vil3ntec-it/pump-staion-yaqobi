@@ -16,20 +16,32 @@ namespace PumpYaqobi.Tests;
 /// این آزمون‌ها همان چهار چیزی را قفل می‌کنند که در بررسی خراب بودند — و
 /// شرحِ کاملشان در <c>native/docs/INFRA-fa.md</c> است.
 /// </summary>
+//  ⚠️ `AppSettings.DirOverride` **استاتیک** است و xUnit کلاس‌ها را موازی
+//  می‌دواند؛ بی این نشان، این کلاس و هر کلاسِ دیگری که همان را عوض
+//  می‌کند روی هم می‌نویسند و آزمون‌ها **گاهی** سرخ می‌شوند.
+[Collection(AppHostCollection.Name)]
 public class InfraTests : IDisposable
 {
     private readonly string _dir =
         Path.Combine(Path.GetTempPath(), "pump-infra-" + Guid.NewGuid().ToString("N"));
 
+    /// <summary>
+    /// ⚠️ پوشهٔ قبلی نگه داشته می‌شود و سرِ پاک‌سازی برمی‌گردد. پیش از این
+    /// <c>null</c> می‌شد — یعنی آزمونِ بعدی به <b>تنظیماتِ واقعیِ خودِ
+    /// کاربر</b> (<c>%APPDATA%\PumpYaqobi</c>) می‌نوشت.
+    /// </summary>
+    private readonly string? _was;
+
     public InfraTests()
     {
+        _was = AppSettings.DirOverride;
         Directory.CreateDirectory(_dir);
         AppSettings.DirOverride = _dir;
     }
 
     public void Dispose()
     {
-        AppSettings.DirOverride = null;
+        AppSettings.DirOverride = _was;
         CloudLink.TestTransport = null;
         try { Directory.Delete(_dir, true); } catch { }
     }

@@ -18,6 +18,10 @@ namespace PumpYaqobi.Tests;
 /// ⚠️ سنجه روی خودِ <b>فایل</b> می‌گردد، نه روی شیءِ حافظه: «رمز شد» را فقط
 /// متنِ روی دیسک ثابت می‌کند.
 /// </summary>
+//  ⚠️ `AppSettings.DirOverride` **استاتیک** است و xUnit کلاس‌ها را موازی
+//  می‌دواند؛ بی این نشان، این کلاس و هر کلاسِ دیگری که همان را عوض
+//  می‌کند روی هم می‌نویسند و آزمون‌ها **گاهی** سرخ می‌شوند.
+[Collection(AppHostCollection.Name)]
 public class SettingsSecretTests : IDisposable
 {
     private readonly string _dir;
@@ -189,6 +193,10 @@ public class SettingsSecretTests : IDisposable
 /// دستگاه، رفتنِ قفلِ ضدِ کرک (TOFU)، و برگشتنِ کدِ پمپ به `pump1`ِ
 /// پیش‌فرض (پس نوشتن روی پوشهٔ **اشتباهِ** سرور).
 /// </summary>
+//  ⚠️ `AppSettings.DirOverride` **استاتیک** است و xUnit کلاس‌ها را موازی
+//  می‌دواند؛ بی این نشان، این کلاس و هر کلاسِ دیگری که همان را عوض
+//  می‌کند روی هم می‌نویسند و آزمون‌ها **گاهی** سرخ می‌شوند.
+[Collection(AppHostCollection.Name)]
 public class SettingsDurabilityTests : IDisposable
 {
     private readonly string _dir;
