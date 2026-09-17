@@ -384,6 +384,41 @@ public class AppLinksTests
         Assert.Contains("if (alt && !ctrl)", src);
     }
 
+    /// <summary>
+    /// ⛔ **قفلِ اشتراک روی «عکسِ زنده» است، نه روی خودِ اتصالِ خانگی.**
+    ///
+    /// گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۹): «سرور روشن است اما پمپ بنزین می‌گوید
+    /// خاموش است.» ریشه: برنامهٔ بی‌اشتراک در نخستین خطِ `PublishOnceAsync`
+    /// برمی‌گشت، پس هیچ‌وقت به سرورِ خانگی وصل نمی‌شد و چراغِ سربرگ «جواب
+    /// نمی‌دهد» می‌گفت در حالی که سرور روشن بود.
+    /// </summary>
+    [Fact]
+    public void CheraghSarvar_HaghighatRaMigooyad()
+    {
+        var src = Read("PumpYaqobi.App", "Services", "StationPublisher.cs");
+        //  اتصال جدا از انتشار است و حلقه هر دو را می‌زند
+        Assert.Contains("public async Task<bool> KeepLinkAsync(", src);
+        Assert.Contains("await KeepLinkAsync(false, ct)", src);
+        //  و اتصال زودتر از بیست ثانیه سنجیده می‌شود
+        Assert.Contains("LinkTick = TimeSpan.FromSeconds(5)", src);
+        //  ⚠️ ولی قفلِ اشتراک روی خودِ انتشار سرِ جایش است
+        Assert.Contains("Entitlements.Allows(Entitlements.Kar)", src);
+        //  و قطعیِ ناگهانی زود دوباره می‌گردد، نه پنج دقیقه بعد
+        Assert.Contains("EnrollRetryLost = TimeSpan.FromSeconds(30)", src);
+
+        var vm = Read("PumpYaqobi.App", "ViewModels", "MainViewModel.cs");
+        //  چراغ دلیل و آخرین وصل را می‌گوید، و کلیک همان لحظه می‌گردد
+        Assert.Contains("private async Task CheckServerAsync()", vm);
+        Assert.Contains("KeepLinkAsync(force: true)", vm);
+        Assert.Contains("آخرین وصل", vm);
+        //  ⛔ و هیچ نام/نشانیِ سروری در چراغ نوشته نمی‌شود (قاعدهٔ ۱۴۰۵/۰۶/۲۶)
+        var dot = vm.Split("public void TickServerDot()")[1].Split("[RelayCommand]")[0];
+        Assert.DoesNotContain("Url", dot);
+
+        var xaml = Read("PumpYaqobi.App", "Views", "MainWindow.axaml");
+        Assert.Contains("CheckServerCommand", xaml);
+    }
+
     // ── ۵) بخشِ وی‌آی‌پی ───────────────────────────────────────────────────
 
     [Fact]

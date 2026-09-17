@@ -42,6 +42,15 @@ public sealed class StationPublisher : IAsyncDisposable
     /// <summary>هر چند وقت یک‌بار دنبالِ تغییر بگردد.</summary>
     public static readonly TimeSpan Interval = TimeSpan.FromSeconds(20);
 
+    /// <summary>
+    /// هر چند وقت یک‌بار **خودِ اتصال** سنجیده شود — جدا از انتشار.
+    ///
+    /// گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۹): «سرور روشن است اما برنامه می‌گوید
+    /// خاموش است.» چراغِ سربرگ از همین اتصال حرف می‌زند، پس اتصال باید
+    /// زنده و **زودتر از بیست ثانیه** سنجیده شود.
+    /// </summary>
+    public static readonly TimeSpan LinkTick = TimeSpan.FromSeconds(5);
+
     /// <summary>عکسِ زنده، داخلِ پوشهٔ اختصاصیِ همین پمپ.</summary>
     public const string LivePath = "live";
 
@@ -53,6 +62,20 @@ public sealed class StationPublisher : IAsyncDisposable
     /// UDP و یک درخواستِ HTTP است و روی شبکهٔ خاموش فقط نویز می‌سازد.
     /// </summary>
     private static readonly TimeSpan EnrollRetry = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// ⚠️ ولی وقتی **وصل بودیم و قطع شد**، پنج دقیقه صبر کردن غلط است: آی‌پیِ
+    /// خانگی با هر بار روشن شدنِ مودم عوض می‌شود و کاربر همان لحظه می‌بیند
+    /// که «سرور روشن است و برنامه می‌گوید خاموش». پس در آن حال هر
+    /// <see cref="EnrollRetryLost"/> دوباره دنبالِ سرور می‌گردیم.
+    /// </summary>
+    private static readonly TimeSpan EnrollRetryLost = TimeSpan.FromSeconds(30);
+
+    /// <summary>یک بار وصل شده‌ایم؟ (برای تشخیصِ «قطع شد» از «هیچ‌وقت نبود»)</summary>
+    private bool _everLinked;
+
+    /// <summary>آخرین لحظه‌ای که واقعاً وصل بودیم — برای چراغ و راهنمایش.</summary>
+    public DateTime? LastLinkedAt { get; private set; }
 
     private readonly AppHost _host;
     private readonly HomeSync _sync;
@@ -246,8 +269,10 @@ public sealed class StationPublisher : IAsyncDisposable
     {
         if (!_sync.Configured || _sync.Mode == HomeSyncMode.None)
         {
-            // روی سرورِ خاموش، هر بیست ثانیه نگردیم
-            var due = DateTime.UtcNow - _lastEnrollTry >= EnrollRetry;
+            // روی سرورِ خاموش، هر بیست ثانیه نگردیم — ولی اگر یک بار وصل
+            // بوده‌ایم و قطع شده، زود دوباره بگرد (آی‌پی عوض شده باشد).
+            var wait = _everLinked ? EnrollRetryLost : EnrollRetry;
+            var due = DateTime.UtcNow - _lastEnrollTry >= wait;
             if (force || due)
             {
                 _lastEnrollTry = DateTime.UtcNow;
@@ -260,8 +285,25 @@ public sealed class StationPublisher : IAsyncDisposable
         }
 
         if (!await _sync.ConnectAsync(ct)) return false;
+        _everLinked = true;
+        LastLinkedAt = DateTime.Now;
         await WatchInboxAsync(ct);
         return true;
+    }
+
+    /// <summary>
+    /// «فقط وصل بمان» — بی ساختنِ عکس و بی هیچ دستورِ دیتابیس.
+    ///
+    /// ⚠️ **قفلِ اشتراک روی عکسِ زنده است، نه روی خودِ اتصال.** پیش از این،
+    /// برنامهٔ بی‌اشتراک در نخستین خطِ <see cref="PublishOnceAsync"/> برمی‌گشت
+    /// و هیچ‌وقت به سرورِ خانگی وصل نمی‌شد — پس چراغِ سربرگ «سرور جواب
+    /// نمی‌دهد» می‌گفت در حالی که سرور روشن بود. حالا اتصال همیشه برقرار
+    /// می‌ماند (که رایگان است) و آن‌چه قفل می‌شود همان انتشارِ عکس است.
+    /// </summary>
+    public async Task<bool> KeepLinkAsync(bool force = false, CancellationToken ct = default)
+    {
+        try { return await ReadyAsync(force, ct); }
+        catch { return false; }
     }
 
     /// <summary>
@@ -335,13 +377,26 @@ public sealed class StationPublisher : IAsyncDisposable
         // ⚠️ نه همان لحظهٔ ورود: عکسِ ایستگاه با داده‌ی زیاد یک ثانیه CPU است و
         // درست وقتی می‌رفت که کاربر تازه رمز زده و منتظرِ صفحهٔ اول بود.
         try { await Task.Delay(FirstDelay, ct); } catch { return; }
+        var lastPublish = DateTime.MinValue;
         while (!ct.IsCancellationRequested)
         {
-            try { await PublishOnceAsync(false, ct); }
+            //  ۱) اتصال — هر پنج ثانیه، بی هیچ هزینه‌ای (وصل باشیم، همین
+            //     بی‌درنگ برمی‌گردد). چراغِ سربرگ از همین حرف می‌زند.
+            try { await KeepLinkAsync(false, ct); }
             catch (OperationCanceledException) { return; }
             catch { /* سرورِ خاموش خطا نیست */ }
 
-            try { await Task.Delay(Interval, ct); }
+            //  ۲) انتشار — همان بیست ثانیهٔ همیشگی، نه زودتر: ساختنِ عکس با
+            //     پنج سال داده یک ثانیه CPU است.
+            if (DateTime.UtcNow - lastPublish >= Interval)
+            {
+                lastPublish = DateTime.UtcNow;
+                try { await PublishOnceAsync(false, ct); }
+                catch (OperationCanceledException) { return; }
+                catch { /* سرورِ خاموش خطا نیست */ }
+            }
+
+            try { await Task.Delay(LinkTick, ct); }
             catch { return; }
         }
     }

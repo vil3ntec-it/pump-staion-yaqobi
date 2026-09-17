@@ -312,11 +312,56 @@ public sealed partial class MainViewModel : ObservableObject
     {
         var sync = AppHost.Current.PublisherIfStarted;
         string key, why;
-        if (sync is null || !sync.Configured) { key = "Pump.Muted"; why = "سرورِ خانگی هنوز تنظیم نشده — از پروفایل وارد شوید"; }
-        else if (sync.Connected) { key = "Pump.Ok"; why = sync.Mode == Services.HomeSyncMode.Station ? "به سرورِ خانگی وصل است" : "به سرورِ خانگی وصل است (درِ قدیمی)"; }
-        else { key = "Pump.Danger"; why = "سرورِ خانگی جواب نمی‌دهد — خاموش است یا شبکه قطع است"; }
+        if (sync is null || !sync.Configured)
+        {
+            key = "Pump.Muted";
+            why = "سرورِ خانگی هنوز تنظیم نشده — از پروفایل وارد شوید";
+        }
+        else if (sync.Connected)
+        {
+            key = "Pump.Ok";
+            why = sync.Mode == Services.HomeSyncMode.Station
+                ? "به سرورِ خانگی وصل است"
+                : "به سرورِ خانگی وصل است (درِ قدیمی)";
+        }
+        else
+        {
+            key = "Pump.Danger";
+            //  ⚠️ «آخرین وصل» را می‌گوید تا کاربر بداند همین حالا قطع شده یا
+            //  از اول وصل نشده — و این‌که هر پنج ثانیه خودش دوباره می‌گردد.
+            var last = sync.LastLinkedAt is { } t ? $" · آخرین وصل: {t:HH:mm}" : "";
+            why = "سرورِ خانگی جواب نمی‌دهد — خاموش است یا شبکه قطع است" + last
+                + " · هر پنج ثانیه خودش دوباره می‌گردد؛ برای بررسیِ همین حالا کلیک کنید";
+        }
         if (key != ServerDotBrushKey) ServerDotBrushKey = key;
         if (why != ServerDotReason) ServerDotReason = why;
+    }
+
+    /// <summary>
+    /// کلیکِ روی چراغ — «همین حالا بررسی کن».
+    ///
+    /// گزارشِ صاحب ریپو (۱۴۰۵/۰۶/۲۹): «سرور روشن است اما پمپ بنزین می‌گوید
+    /// خاموش است… آن‌جوری هست که هر ثانیه چک کند؟» خودِ حلقه هر پنج ثانیه
+    /// می‌گردد، ولی کاربر باید بتواند **همین حالا** هم بپرسد و جواب ببیند.
+    /// </summary>
+    [RelayCommand]
+    private async Task CheckServerAsync()
+    {
+        var sync = AppHost.Current.PublisherIfStarted;
+        if (sync is null || !sync.Configured)
+        {
+            AppHost.Current.Toast("سرورِ خانگی تنظیم نشده — از «پروفایل» وارد شوید", ToastKind.Info);
+            return;
+        }
+
+        AppHost.Current.Toast("در حالِ گشتن برای سرورِ خانگی…", ToastKind.Info);
+        //  ⚠️ `force` یعنی ترمزِ «پنج دقیقه دوباره نگرد» را هم رد کن: کاربر
+        //  خودش گفته همین حالا.
+        var ok = await sync.KeepLinkAsync(force: true);
+        TickServerDot();
+        AppHost.Current.Toast(
+            ok ? "✅ به سرورِ خانگی وصل شد" : "❌ سرورِ خانگی پیدا نشد — روشن بودنش و شبکه را ببینید",
+            ok ? ToastKind.Ok : ToastKind.Error);
     }
     /// <summary>
     /// «قفل است؟» — حالا فقط نمایی از <see cref="Phase"/> است، نه یک حالتِ

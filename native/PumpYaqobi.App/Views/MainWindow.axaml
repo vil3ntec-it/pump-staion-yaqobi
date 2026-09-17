@@ -87,9 +87,15 @@
           <!-- ● چراغِ سرور — خواستهٔ صاحب ریپو: «بغلِ اسمِ پمپ یعقوبی یک نقطه
                که سبز یا سرخ شود و دلیلش را بگوید؛ نام و نشانیِ سرور نوشته
                نباشد.» دلیل فقط در ‎ToolTip‎ است، نشانی هیچ‌جا نیست. -->
-          <Border Width="12" Height="12" CornerRadius="6" VerticalAlignment="Center" Margin="4,2,0,0"
-                  Background="{Binding ServerDotBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
-                  ToolTip.Tip="{Binding ServerDotReason}" />
+          <!-- ⚠️ کلیک‌شدنی: «همین حالا بررسی کن» (گزارشِ ۱۴۰۵/۰۶/۲۹ — «سرور
+               روشن است اما برنامه می‌گوید خاموش»). خودِ حلقه هر پنج ثانیه
+               می‌گردد؛ این برای وقتی است که کاربر نمی‌خواهد منتظر بماند. -->
+          <Button Padding="4" Margin="2,2,0,0" VerticalAlignment="Center" Background="Transparent"
+                  BorderThickness="0" Command="{Binding CheckServerCommand}"
+                  ToolTip.Tip="{Binding ServerDotReason}">
+            <Border Width="12" Height="12" CornerRadius="6"
+                    Background="{Binding ServerDotBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+          </Button>
         </StackPanel>
 
         <TextBlock Grid.Column="1" Text="{Binding Current.Title}"

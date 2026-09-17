@@ -92,6 +92,8 @@ internal static class Program
         if (outDir.Equals("cloudlogin", StringComparison.OrdinalIgnoreCase)) return CloudLoginProbe.Run();
         //  «تو کادرها + @ # ﷼ ( ) ؟ ؛ : , . نوشته نمی‌شوند»
         if (outDir.Equals("inputchars", StringComparison.OrdinalIgnoreCase)) return InputCharsProbe.Run();
+        //  «سرور روشن است اما برنامه می‌گوید خاموش»
+        if (outDir.Equals("serverdot", StringComparison.OrdinalIgnoreCase)) return ServerDotProbe.Run();
         // ══ «عوض کردنِ تم خط‌ها را کج می‌کند؟» ══════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- themeflip
         if (outDir.Equals("themeflip", StringComparison.OrdinalIgnoreCase)) return ThemeFlipAudit.Run();
