@@ -25,6 +25,11 @@ namespace PumpYaqobi.Tests;
 /// چیزی را باز نمی‌کند. قاعدهٔ «مشتریِ امروزی نباید با یک به‌روزرسانی از
 /// پمپش جدا شود» از قفلِ ناخواسته مهم‌تر است.
 /// </summary>
+//  ⚠️ `AppSettings.DirOverride` **استاتیک** است و xUnit کلاس‌ها را موازی
+//  می‌دواند؛ بی این نشان، این کلاس پوشهٔ تنظیمات را زیرِ پای کلاسِ دیگری
+//  عوض می‌کند (و کلیدِ کَش‌شدهٔ `SecretStore` را هم باطل می‌کند). همین یک
+//  خطِ جامانده بود که `SettingsDurabilityTests` را **گاهی** سرخ می‌کرد.
+[Collection(AppHostCollection.Name)]
 public class AccountSwitchTests : IDisposable
 {
     private readonly string _dir;

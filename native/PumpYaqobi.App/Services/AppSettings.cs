@@ -175,32 +175,78 @@ public sealed class AppSettings
     //  دوباره نمی‌پرسد. با اولین `Save` خودشان رمز می‌شوند.
     //  (`SettingsSecretTests`)
 
+    //  ⛔ **یک رمزگشاییِ ناموفق حق ندارد راز را پاک کند.**
+    //
+    //  باگی که ساختِ ویندوزِ CI گرفت (اجرای #128): اگر `Unprotect` یک بار
+    //  خالی برمی‌گرداند — یک خطای گذرای DPAPI، فایلی که وسطِ جایگزینی
+    //  خوانده شد، هر چه — آن `AppSettings` با توکنِ **خالی** بالا می‌آمد و
+    //  ذخیرهٔ بعدی همان خالی را روی بلوکِ سالمِ دیسک می‌نوشت. یعنی **یک**
+    //  لغزش، توکنِ دستگاه را برای همیشه می‌برد و کاربر باید دوباره کدِ
+    //  شش‌رقمی می‌زد. در آن اجرا از ۴۰ خواندنِ پشتِ سرِ هم، ۳۸ تا پس از
+    //  همان یک لغزش خراب بودند — شکلِ «مسمومیت»، نه شکلِ «مسابقه».
+    //
+    //  پس حالا بلوکِ باز-نشده **دست‌نخورده** نگه داشته می‌شود و همان
+    //  دوباره نوشته می‌شود: در حافظه «توکن ندارم» (پس برنامه ورود
+    //  می‌خواهد، و با زبالهٔ رمزنشده به سرور نمی‌زند) ولی روی دیسک چیزی
+    //  از بین نمی‌رود و لغزشِ گذرا خودش خوب می‌شود.
+    //
+    //  ⚠️ با پر شدنِ توکنِ واقعی، بلوکِ کهنه دور انداخته می‌شود — وگرنه
+    //  ورودِ تازه هم بلوکِ حسابِ قبلی را با خودش می‌کشید.
+
+    private string _deviceBlob = "";
+    private string _accountBlob = "";
+    private string _refreshBlob = "";
+    private string _serverBlob = "";
+
+    private static string Keep(string live, string blob) =>
+        live.Length > 0 ? SecretStore.Protect(live) : blob;
+
     [JsonPropertyName("CloudDeviceTokenEnc")]
     public string CloudDeviceTokenEnc
     {
-        get => SecretStore.Protect(CloudDeviceToken);
-        set { var v = SecretStore.Unprotect(value); if (v.Length > 0) CloudDeviceToken = v; }
+        get => Keep(CloudDeviceToken, _deviceBlob);
+        set
+        {
+            var v = SecretStore.Unprotect(value);
+            if (v.Length > 0) { CloudDeviceToken = v; _deviceBlob = ""; }
+            else _deviceBlob = value ?? "";
+        }
     }
 
     [JsonPropertyName("CloudAccountTokenEnc")]
     public string CloudAccountTokenEnc
     {
-        get => SecretStore.Protect(CloudAccountToken);
-        set { var v = SecretStore.Unprotect(value); if (v.Length > 0) CloudAccountToken = v; }
+        get => Keep(CloudAccountToken, _accountBlob);
+        set
+        {
+            var v = SecretStore.Unprotect(value);
+            if (v.Length > 0) { CloudAccountToken = v; _accountBlob = ""; }
+            else _accountBlob = value ?? "";
+        }
     }
 
     [JsonPropertyName("CloudRefreshTokenEnc")]
     public string CloudRefreshTokenEnc
     {
-        get => SecretStore.Protect(CloudRefreshToken);
-        set { var v = SecretStore.Unprotect(value); if (v.Length > 0) CloudRefreshToken = v; }
+        get => Keep(CloudRefreshToken, _refreshBlob);
+        set
+        {
+            var v = SecretStore.Unprotect(value);
+            if (v.Length > 0) { CloudRefreshToken = v; _refreshBlob = ""; }
+            else _refreshBlob = value ?? "";
+        }
     }
 
     [JsonPropertyName("ServerTokenEnc")]
     public string ServerTokenEnc
     {
-        get => SecretStore.Protect(ServerToken);
-        set { var v = SecretStore.Unprotect(value); if (v.Length > 0) ServerToken = v; }
+        get => Keep(ServerToken, _serverBlob);
+        set
+        {
+            var v = SecretStore.Unprotect(value);
+            if (v.Length > 0) { ServerToken = v; _serverBlob = ""; }
+            else _serverBlob = value ?? "";
+        }
     }
 
     //  ── و خواندنِ فایلِ کهنه ───────────────────────────────────────────
@@ -327,7 +373,11 @@ public sealed class AppSettings
     public static string? DirOverride
     {
         get => _dirOverride;
-        set { _dirOverride = value; SecretStore.ForgetKey(); }
+        //  ⚠️ دیگر کلید را فراموش نمی‌کنیم: `SecretStore` کلیدِ **هر پوشه**
+        //  را جدا نگه می‌دارد، پس عوض شدنِ این، کلیدِ پوشهٔ دیگری را باطل
+        //  نمی‌کند. (پاک کردنِ سراسری همان چیزی بود که سنجه‌های موازی را
+        //  گاهی سرخ می‌کرد.)
+        set => _dirOverride = value;
     }
 
     private static string? _dirOverride;
@@ -356,20 +406,55 @@ public sealed class AppSettings
         lock (FileGate)
         {
             //  اول فایلِ اصلی، بعد نسخهٔ سالمِ قبلی
-            return Read(File_) ?? Read(Backup_) ?? new AppSettings();
+            var locked = false;
+            var a = Read(File_, ref locked) ?? Read(Backup_, ref locked);
+            if (a is not null) return a;
+
+            //  ⛔ **فایل بود ولی قفل بود ⇒ پیش‌فرض ندهیم که ذخیره‌اش کنیم.**
+            //  روی ویندوز ضدِ ویروس و نمایه‌سازِ سیستم گاهی یک لحظه دستهٔ
+            //  فایل را نگه می‌دارند. تا امروز همان یک لحظه یعنی `Load`ی که
+            //  تنظیماتِ **خالی** برمی‌گرداند و `Save`ِ بعدی آن را روی دفترِ
+            //  واقعی می‌نوشت: کدِ پمپ به `pump1` برمی‌گشت (نوشتن روی پوشهٔ
+            //  اشتباهِ سرور)، قفلِ ضدِ کرک می‌رفت و توکنِ دستگاه هم.
+            //  حالا چنین نمونه‌ای **کور** است و هیچ‌وقت نمی‌نویسد.
+            var blind = new AppSettings();
+            if (locked) blind._blind = true;
+            return blind;
         }
     }
 
-    private static AppSettings? Read(string path)
+    /// <summary>
+    /// این نمونه از فایلی آمد که **قفل** بود، نه از فایلِ سالم. پس هر چه
+    /// دارد پیش‌فرض است و نوشتنش یعنی پاک کردنِ دادهٔ واقعی.
+    /// </summary>
+    [JsonIgnore]
+    private bool _blind;
+
+    /// <param name="locked">
+    /// اگر فایل **هست** ولی خوانده نشد (قفلِ گذرا)، راست می‌شود. خرابیِ
+    /// خودِ JSON این را راست نمی‌کند — آن فایل واقعاً خراب است و باید
+    /// روی‌نویسی شود.
+    /// </param>
+    private static AppSettings? Read(string path, ref bool locked)
     {
-        try
+        if (!File.Exists(path)) return null;
+
+        //  ⚠️ قفلِ گذرا را با چند تلاشِ کوتاه رد می‌کنیم — همان کاری که
+        //  هر برنامهٔ ویندوزی باید بکند.
+        for (var i = 0; i < 4; i++)
         {
-            if (!File.Exists(path)) return null;
-            var text = File.ReadAllText(path);
-            if (string.IsNullOrWhiteSpace(text)) return null;
-            return JsonSerializer.Deserialize<AppSettings>(text);
+            try
+            {
+                var text = File.ReadAllText(path);
+                if (string.IsNullOrWhiteSpace(text)) return null;
+                return JsonSerializer.Deserialize<AppSettings>(text);
+            }
+            catch (IOException) { Thread.Sleep(15); }
+            catch (UnauthorizedAccessException) { Thread.Sleep(15); }
+            catch { return null; /* خرابیِ خودِ JSON — روی‌نویسی آزاد است */ }
         }
-        catch { /* تنظیماتِ خراب هرگز نباید جلوی باز شدنِ برنامه را بگیرد */ }
+
+        locked = true;
         return null;
     }
 
@@ -450,6 +535,9 @@ public sealed class AppSettings
     /// </summary>
     public void Save()
     {
+        //  ⛔ نمونهٔ «کور» هیچ‌وقت نمی‌نویسد — بالا نوشته چرا.
+        if (_blind) return;
+
         lock (FileGate)
         {
             var tmp = File_ + ".tmp";

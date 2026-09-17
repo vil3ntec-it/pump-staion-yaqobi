@@ -184,7 +184,14 @@ public static class SecretStore
             return raw;
         }
 
-        private static byte[]? _key;
+        //  ⛔ **کلید به پوشه‌اش بسته است، نه به «آخرین باری که پرسیدیم».**
+        //
+        //  پیش از این یک `_key`ِ تنها بود و عوض شدنِ پوشه آن را دور
+        //  می‌ریخت. در خودِ برنامه پوشه هیچ‌وقت عوض نمی‌شود، ولی یک کَشِ
+        //  بی‌نام ذاتاً شکننده است: هر کسی که پوشه را عوض کند، کلیدِ
+        //  پوشهٔ دیگری را هم باطل می‌کند. حالا هر پوشه کلیدِ خودش را دارد
+        //  و باطل کردن بی‌معنا شده.
+        private static readonly Dictionary<string, byte[]> Keys = new(StringComparer.Ordinal);
         private static readonly object Gate = new();
 
         /// <summary>
@@ -193,36 +200,34 @@ public static class SecretStore
         /// </summary>
         private static byte[] Key()
         {
+            var dir = AppSettings.Dir;
             lock (Gate)
             {
-                if (_key is not null) return _key;
-                var path = Path.Combine(AppSettings.Dir, "secret.key");
+                if (Keys.TryGetValue(dir, out var have)) return have;
+
+                var path = Path.Combine(dir, "secret.key");
                 if (File.Exists(path))
                 {
                     var found = Convert.FromBase64String(File.ReadAllText(path).Trim());
-                    if (found.Length == 32) return _key = found;
+                    if (found.Length == 32) return Keys[dir] = found;
                 }
 
                 var made = RandomNumberGenerator.GetBytes(32);
-                Directory.CreateDirectory(AppSettings.Dir);
+                Directory.CreateDirectory(dir);
                 File.WriteAllText(path, Convert.ToBase64String(made));
                 if (!OperatingSystem.IsWindows())
                     try { File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite); }
                     catch { }
-                return _key = made;
+                return Keys[dir] = made;
             }
         }
 
-        /// <summary>
-        /// ⚠️ فقط برای آزمون: پوشهٔ تنظیمات که عوض شد، کلیدِ کَش‌شده هم باید
-        /// دور ریخته شود، وگرنه سنجهٔ بعدی با کلیدِ پوشهٔ قبلی می‌خواند.
-        /// </summary>
-        public static void Forget() { lock (Gate) _key = null; }
+        public static void Forget() { lock (Gate) Keys.Clear(); }
     }
 
     /// <summary>
-    /// ⚠️ فقط برای آزمون‌ها — با عوض شدنِ <see cref="AppSettings.DirOverride"/>
-    /// کلیدِ کَش‌شده باید فراموش شود.
+    /// ⚠️ دیگر لازم نیست — کلید به پوشه‌اش بسته است. فقط برای آزمونی که
+    /// می‌خواهد «انگار تازه بالا آمده‌ایم» را بسازد نگه داشته شده.
     /// </summary>
     public static void ForgetKey() => Portable.Forget();
 }
