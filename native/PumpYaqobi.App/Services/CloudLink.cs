@@ -361,25 +361,41 @@ public sealed class CloudLink
     // فایل دو بار در حافظه.
 
     /// <summary>یک نسخهٔ پشتیبان روی پوشهٔ ابریِ همین پمپ.</summary>
-    /// <param name="bytes">خودِ فایل — همان چیزی که ‎VACUUM INTO‎ ساخته</param>
+    /// <param name="file">مسیرِ فایل — همان چیزی که ‎VACUUM INTO‎ ساخته</param>
+    /// <remarks>
+    /// ⛔ <b>فایل جریانی می‌رود، نه یک‌جا در حافظه.</b> همان قاعده‌ای که
+    /// مقصدِ خانگی دارد و <c>InfraTests.Poshtiban_FileRa_YekJa_DarHafeze_Nemikhanad</c>
+    /// قفلش کرده: دفترِ چندصد مگابایتیِ یک پمپِ چندساله نباید هر شش ساعت
+    /// همان‌قدر رم بخواهد. یک بار همین‌جا با <c>ReadAllBytesAsync</c>
+    /// نوشته شد و همان آزمون گرفتش.
+    ///
+    /// ⚠️ به همین دلیل مسیرِ فایل می‌گیرد، نه <c>byte[]</c>: امضایی که
+    /// آرایه بخواهد، خودش دعوت به خواندنِ کلِ فایل در حافظه است.
+    /// </remarks>
     public async Task<CloudResult> BackupUploadAsync(
-        byte[] bytes, string label = "", bool manual = false, string ext = "db",
+        string file, string label = "", bool manual = false, string ext = "db",
         CancellationToken ct = default)
     {
         if (!Activated) return CloudResult.No("فعال نشده", "not_activated");
-        if (bytes is null || bytes.Length == 0) return CloudResult.No("فایلِ پشتیبان خالی است", "empty_backup");
+        if (string.IsNullOrWhiteSpace(file) || !File.Exists(file))
+            return CloudResult.No("فایلِ پشتیبان پیدا نشد", "empty_backup");
 
         var path = "/api/pump/device/backups"
             + "?ext=" + Uri.EscapeDataString(ext)
             + "&kind=" + (manual ? "manual" : "auto")
             + "&label=" + Uri.EscapeDataString(label ?? "");
 
-        var req = new HttpRequestMessage(HttpMethod.Post, CloudConfig.Url(path))
-        {
-            Content = new ByteArrayContent(bytes),
-        };
-        req.Content.Headers.ContentType =
+        await using var stream = new FileStream(
+            file, FileMode.Open, FileAccess.Read, FileShare.Read,
+            bufferSize: 64 * 1024, useAsync: true);
+        if (stream.Length == 0) return CloudResult.No("فایلِ پشتیبان خالی است", "empty_backup");
+
+        using var body = new StreamContent(stream, 64 * 1024);
+        body.Headers.ContentType =
             new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+        body.Headers.ContentLength = stream.Length;
+
+        using var req = new HttpRequestMessage(HttpMethod.Post, CloudConfig.Url(path)) { Content = body };
         req.Headers.Add("Authorization", $"Bearer {_settings.CloudDeviceToken}");
         var (ok, _, why, code) = await Send(req, ct);
         return ok ? CloudResult.Done : CloudResult.No(why, code);

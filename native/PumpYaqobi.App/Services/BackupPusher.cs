@@ -155,10 +155,10 @@ public sealed class BackupPusher : IAsyncDisposable
     /// ⛔ <b>هیچ‌وقت استثنا بیرون نمی‌دهد.</b> پشتیبان کارِ پس‌زمینه است و
     /// نباید نه برنامه را بشکند نه جلوی مقصدِ دیگر را بگیرد.
     ///
-    /// ⚠️ برخلافِ سرورِ خانگی، این‌جا فایل یک‌جا خوانده می‌شود چون
-    /// <c>CloudLink</c> بایت می‌گیرد. پس سقفِ اندازه سنجیده می‌شود: فایلی
-    /// که از سهمِ سرور بزرگ‌تر است، خواندنش در حافظه فقط خرج است و
-    /// سرور هم ردش می‌کند.
+    /// ⛔ <b>و این‌جا هم فایل جریانی می‌رود، نه یک‌جا در حافظه.</b> یک بار
+    /// با <c>ReadAllBytesAsync</c> نوشته شد چون «فقط یک مقصدِ دوم است»؛
+    /// <c>InfraTests.Poshtiban_FileRa_YekJa_DarHafeze_Nemikhanad</c> همان
+    /// لحظه قرمز شد و درست هم شد: دفترِ چندصد مگابایتی، دو برابر رم.
     /// </remarks>
     private async Task<bool> SendToCloudAsync(string file, CancellationToken ct)
     {
@@ -176,11 +176,12 @@ public sealed class BackupPusher : IAsyncDisposable
 
             var info = new FileInfo(file);
             if (!info.Exists || info.Length == 0) return false;
+            //  بزرگ‌تر از سقفِ سرور اصلاً فرستاده نمی‌شود: سرور ردش می‌کند
+            //  و فرستادنش فقط پهنای باند است.
             if (info.Length > CloudMaxBytes) return false;
 
-            var bytes = await File.ReadAllBytesAsync(file, ct);
             var res = await cloud.BackupUploadAsync(
-                bytes,
+                file,
                 label: Shamsi.Today(),
                 manual: false,
                 ext: "db",
