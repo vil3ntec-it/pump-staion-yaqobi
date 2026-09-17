@@ -67,7 +67,7 @@ internal static class WaraqPerf
         var vm = (MainViewModel)win.DataContext!;
         vm.Lock.Password = "1234";
         vm.Lock.Confirm = "1234";
-        vm.Lock.SubmitCommand.Execute(null);
+        LockIn.Wait(vm.Lock);
         Settle(win, TimeSpan.FromSeconds(3));
 
         // ══ همان پردهٔ لودینگی که برنامهٔ واقعی دارد ═════════════════════════

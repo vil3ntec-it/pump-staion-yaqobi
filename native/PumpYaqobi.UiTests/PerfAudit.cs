@@ -142,7 +142,7 @@ internal static class PerfAudit
         try
         {
             vm.Lock.Password = "1234";
-            vm.Lock.SubmitCommand.Execute(null);
+            LockIn.Wait(vm.Lock);
         }
         catch { /* از پیش باز است */ }
         Pump(win);

@@ -143,7 +143,7 @@ internal static class ServerDotProbe
         var win = new MainWindow { Width = 1366, Height = 768 };
         win.Show(); Pump(win);
         var vm = (MainViewModel)win.DataContext!;
-        vm.Lock.Password = "1234"; vm.Lock.Confirm = "1234"; vm.Lock.SubmitCommand.Execute(null);
+        vm.Lock.Password = "1234"; vm.Lock.Confirm = "1234"; LockIn.Wait(vm.Lock);
         for (var i = 0; i < 40; i++) Pump(win);
 
         //  ⚠️ **بی اشتراک** — همان حالی که باگ در آن دیده شد

@@ -63,7 +63,7 @@ internal static class InputCharsProbe
         win.Show(); Pump(win);
         Watch(win);
         var vm = (MainViewModel)win.DataContext!;
-        vm.Lock.Password = "1234"; vm.Lock.Confirm = "1234"; vm.Lock.SubmitCommand.Execute(null);
+        vm.Lock.Password = "1234"; vm.Lock.Confirm = "1234"; LockIn.Wait(vm.Lock);
         for (var i = 0; i < 40; i++) Pump(win);
 
         var account = (AccountSectionViewModel)vm.Sections.First(s => s.Id == "account");

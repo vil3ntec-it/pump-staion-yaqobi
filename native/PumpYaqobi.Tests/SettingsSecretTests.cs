@@ -175,3 +175,106 @@ public class SettingsSecretTests : IDisposable
         Assert.Equal("", SecretStore.Unprotect("enc:v1:نه-base64"));
     }
 }
+
+/// <summary>
+/// ══ فایلِ تنظیمات: یا کاملِ تازه، یا کاملِ کهنه — هیچ‌وقت نیمه ══════════════
+///
+/// خواستهٔ صریحِ صاحب ریپو (بندهای ۱۲ و ۱۹): «برنامه ناگهانی بسته شده ·
+/// کامپیوتر Restart شده · بستنِ برنامه هنگامِ Request · دو درخواستِ Sync
+/// هم‌زمان… در هیچ‌کدام برنامه نباید Crash یا داده‌ای را از دست بدهد.»
+///
+/// ⛔ **باگی که این‌ها گرفتند**: `File.WriteAllText` فایل را اول **خالی**
+/// می‌کند و بعد می‌نویسد. مردنِ برنامه وسطِ همان لحظه یعنی `settings.json`ِ
+/// نصفه، و `Load` یک تنظیماتِ **خالی** برمی‌گرداند — یعنی رفتنِ توکنِ
+/// دستگاه، رفتنِ قفلِ ضدِ کرک (TOFU)، و برگشتنِ کدِ پمپ به `pump1`ِ
+/// پیش‌فرض (پس نوشتن روی پوشهٔ **اشتباهِ** سرور).
+/// </summary>
+public class SettingsDurabilityTests : IDisposable
+{
+    private readonly string _dir;
+    private readonly string? _was;
+
+    public SettingsDurabilityTests()
+    {
+        _was = AppSettings.DirOverride;
+        _dir = Path.Combine(Path.GetTempPath(), "pump-dur-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(_dir);
+        AppSettings.DirOverride = _dir;
+    }
+
+    public void Dispose()
+    {
+        AppSettings.DirOverride = _was;
+        try { Directory.Delete(_dir, true); } catch { }
+        GC.SuppressFinalize(this);
+    }
+
+    private string Path_ => Path.Combine(_dir, "settings.json");
+
+    /// <summary>⭐ نیمه‌ماندنِ فایل، دیگر اشتراکِ کاربر را نمی‌برد.</summary>
+    [Fact]
+    public void FayleNimeMande_Az_NosekheyeSalem_Khande_Mishavad()
+    {
+        //  یک ذخیرهٔ سالم، بعد یکی دیگر تا `.bak` هم ساخته شود
+        new AppSettings
+        {
+            CloudDeviceToken = "dev-token", CloudPublicKey = "PIN-TOFU",
+            StationCode = "yaqobi", ThemeId = "gold",
+        }.Save();
+        AppSettings.Load().Save();
+
+        //  «برنامه وسطِ نوشتن بسته شد» — فایلِ اصلی نصفه
+        var good = File.ReadAllText(Path_);
+        File.WriteAllText(Path_, good[..(good.Length / 2)]);
+
+        var after = AppSettings.Load();
+        Assert.Equal("dev-token", after.CloudDeviceToken);   // اشتراک سرِ جایش
+        Assert.Equal("PIN-TOFU", after.CloudPublicKey);      // قفلِ ضدِ کرک سرِ جایش
+        Assert.Equal("yaqobi", after.StationCode);           // نه `pump1`ِ پیش‌فرض
+        Assert.Equal("gold", after.ThemeId);
+    }
+
+    /// <summary>فایلِ خالی هم همان‌طور.</summary>
+    [Fact]
+    public void FayleKhali_Ham_Az_Bak_Khande_Mishavad()
+    {
+        new AppSettings { CloudDeviceToken = "dev-token", StationCode = "yaqobi" }.Save();
+        AppSettings.Load().Save();
+        File.WriteAllText(Path_, "");
+
+        Assert.Equal("dev-token", AppSettings.Load().CloudDeviceToken);
+    }
+
+    /// <summary>
+    /// ⚠️ سه نخ هم‌زمان این فایل را می‌نویسند (رابط، `StationPublisher`ِ
+    /// بیست‌ثانیه‌ای، و `BackupPusher`). پیش از این، از ۴۰ ذخیرهٔ هم‌زمان
+    /// **۱۸ تا** خراب یا خالی خوانده می‌شدند.
+    /// </summary>
+    [Fact]
+    public async Task ChehelZakhireyeHamzaman_HichKhandane_Kharabi_Nemidahad()
+    {
+        new AppSettings { CloudDeviceToken = "dev-token" }.Save();
+
+        var bad = 0;
+        await Task.WhenAll(Enumerable.Range(0, 40).Select(i => Task.Run(() =>
+        {
+            var f = AppSettings.Load();
+            f.StationCode = "s" + i;
+            f.Save();
+            if (AppSettings.Load().CloudDeviceToken != "dev-token") Interlocked.Increment(ref bad);
+        })));
+
+        Assert.Equal(0, bad);
+        //  و هیچ فایلِ موقتی جا نمانده
+        Assert.Empty(Directory.GetFiles(_dir, "*.tmp"));
+    }
+
+    /// <summary>هیچ‌وقت استثنا بیرون نمی‌دهد — حتی وقتی پوشه رفته باشد.</summary>
+    [Fact]
+    public void Zakhire_Hichvaght_Estesna_Partab_Nemikonad()
+    {
+        Directory.Delete(_dir, true);
+        var ex = Record.Exception(() => new AppSettings { ThemeId = "gold" }.Save());
+        Assert.Null(ex);
+    }
+}

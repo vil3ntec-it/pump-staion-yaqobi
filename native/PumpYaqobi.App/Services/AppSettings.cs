@@ -325,15 +325,40 @@ public sealed class AppSettings
 
     private static string File_ => Path.Combine(Dir, "settings.json");
 
+    /// <summary>نسخهٔ سالمِ قبلی — تورِ ایمنیِ «فایل نصفه ماند».</summary>
+    private static string Backup_ => File_ + ".bak";
+
+    /// <summary>
+    /// ══ نوشتن و خواندن، هر دو زیرِ یک قفل ══════════════════════════════════
+    ///
+    /// ⚠️ <b>سه نخ هم‌زمان این فایل را می‌نویسند</b>: خودِ رابط (تم، ورود،
+    /// پهنای ستون)، حلقهٔ بیست‌ثانیه‌ایِ <see cref="StationPublisher"/>، و
+    /// <see cref="BackupPusher"/>. بی این قفل، دو نوشتنِ هم‌زمان یکدیگر را
+    /// قطع می‌کردند. سنجیده شد: از ۴۰ ذخیرهٔ هم‌زمان، <b>۱۸ تا</b> خراب یا
+    /// خالی خوانده می‌شدند.
+    /// </summary>
+    private static readonly object FileGate = new();
+
     public static AppSettings Load()
+    {
+        lock (FileGate)
+        {
+            //  اول فایلِ اصلی، بعد نسخهٔ سالمِ قبلی
+            return Read(File_) ?? Read(Backup_) ?? new AppSettings();
+        }
+    }
+
+    private static AppSettings? Read(string path)
     {
         try
         {
-            if (File.Exists(File_))
-                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(File_)) ?? new AppSettings();
+            if (!File.Exists(path)) return null;
+            var text = File.ReadAllText(path);
+            if (string.IsNullOrWhiteSpace(text)) return null;
+            return JsonSerializer.Deserialize<AppSettings>(text);
         }
         catch { /* تنظیماتِ خراب هرگز نباید جلوی باز شدنِ برنامه را بگیرد */ }
-        return new AppSettings();
+        return null;
     }
 
     /// <summary>تنظیمِ ورقِ ذخیره‌شده — نبود، همان پیش‌فرضِ همیشگی.</summary>
@@ -389,13 +414,58 @@ public sealed class AppSettings
         a.Save();
     }
 
+    /// <summary>
+    /// ══ ذخیره — یا کاملِ تازه، یا کاملِ کهنه؛ هیچ‌وقت نیمه ═════════════════
+    ///
+    /// ⛔ <b>باگی که یک بستنِ ناگهانی، اشتراکِ کاربر را می‌برد.</b> پیش از
+    /// این <c>File.WriteAllText</c> بود: فایل را اول <b>خالی</b> می‌کند و بعد
+    /// می‌نویسد. اگر برنامه (یا برق) وسطِ همان لحظه می‌رفت، <c>settings.json</c>
+    /// نصفه می‌ماند، <see cref="Load"/> خطا می‌گرفت و یک تنظیماتِ
+    /// <b>خالی</b> برمی‌گرداند. سنجیده شد، حدس نیست — این‌ها می‌رفتند:
+    ///
+    ///   • <c>CloudDeviceToken</c> ⇒ کاربر باید دوباره کدِ شش‌رقمی می‌زد
+    ///   • <c>CloudPublicKey</c>   ⇒ <b>قفلِ ضدِ کرک (TOFU) باز می‌شد</b> و
+    ///     کلیدِ هر سروری که بعد جواب می‌داد جایش می‌نشست
+    ///   • <c>StationCode</c>      ⇒ به <c>pump1</c>ِ پیش‌فرض برمی‌گشت، یعنی
+    ///     پمپ روی <b>پوشهٔ اشتباهِ</b> سرورِ خانگی می‌نوشت
+    ///
+    /// حالا: در فایلِ موقت می‌نویسیم، روی دیسک ته‌نشینش می‌کنیم، و بعد
+    /// <b>جایگزینِ اتمی</b> می‌کنیم. پس هر لحظه که برنامه بمیرد، روی دیسک یا
+    /// نسخهٔ کاملِ تازه است یا نسخهٔ کاملِ کهنه.
+    ///
+    /// ⚠️ <c>File.Replace</c> نسخهٔ قبلی را خودش در <c>.bak</c> نگه می‌دارد،
+    /// و <see cref="Load"/> اگر اصلی خراب بود از همان می‌خواند.
+    /// </summary>
     public void Save()
     {
-        try
+        lock (FileGate)
         {
-            Directory.CreateDirectory(Dir);
-            File.WriteAllText(File_, JsonSerializer.Serialize(this, Json));
+            var tmp = File_ + ".tmp";
+            try
+            {
+                Directory.CreateDirectory(Dir);
+                var text = JsonSerializer.Serialize(this, Json);
+
+                //  ⚠️ ‎Flush(true)‎ یعنی «تا روی خودِ دیسک ننشست برنگرد» —
+                //  وگرنه جایگزینیِ اتمی هم فایلی را جابه‌جا می‌کرد که هنوز
+                //  در حافظهٔ سیستم‌عامل است و با قطعِ برق از دست می‌رفت.
+                using (var fs = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
+                using (var w = new StreamWriter(fs, new System.Text.UTF8Encoding(false)))
+                {
+                    w.Write(text);
+                    w.Flush();
+                    fs.Flush(true);
+                }
+
+                if (File.Exists(File_)) File.Replace(tmp, File_, Backup_, ignoreMetadataErrors: true);
+                else File.Move(tmp, File_);
+            }
+            catch
+            {
+                //  ⛔ نشدنِ ذخیره هیچ‌وقت نباید کار را بشکند — ولی حالا فایلِ
+                //  سالمِ قبلی هم دست‌نخورده می‌ماند، نه این‌که نصفه شود.
+                try { if (File.Exists(tmp)) File.Delete(tmp); } catch { }
+            }
         }
-        catch { }
     }
 }

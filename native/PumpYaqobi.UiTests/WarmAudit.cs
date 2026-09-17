@@ -182,13 +182,13 @@ internal static class WarmAudit
         // ── ۳) رمزِ غلط ───────────────────────────────────────────────────
         vm.Lock.Password = "1234";
         vm.Lock.Confirm = "1234";
-        vm.Lock.SubmitCommand.Execute(null);      // رمز را می‌سازد
+        LockIn.Wait(vm.Lock);      // رمز را می‌سازد
         Pump(win);
         vm.SignOutCommand.Execute(null);
         Pump(win);
 
         vm.Lock.Password = "9999";
-        vm.Lock.SubmitCommand.Execute(null);
+        LockIn.Wait(vm.Lock);
         Pump(win);
 
         Console.WriteLine();
@@ -205,7 +205,7 @@ internal static class WarmAudit
         };
 
         vm.Lock.Password = "1234";
-        vm.Lock.SubmitCommand.Execute(null);
+        LockIn.Wait(vm.Lock);
         for (var i = 0; i < 60; i++) { Dispatcher.UIThread.RunJobs(); win.UpdateLayout(); }
 
         Console.WriteLine();
@@ -252,7 +252,7 @@ internal static class WarmAudit
         var lockedAfterSignOut = vm.Phase == MainViewModel.AppPhase.Locked;
 
         vm.Lock.Password = "1234";
-        vm.Lock.SubmitCommand.Execute(null);
+        LockIn.Wait(vm.Lock);
         for (var i = 0; i < 40; i++) { Dispatcher.UIThread.RunJobs(); win.UpdateLayout(); }
 
         Console.WriteLine();

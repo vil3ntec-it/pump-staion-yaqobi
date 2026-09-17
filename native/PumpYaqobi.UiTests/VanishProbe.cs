@@ -32,7 +32,7 @@ internal static class VanishProbe
         var win = new MainWindow { Width = 1366, Height = 700 };
         win.Show(); Pump(win);
         var vm = (MainViewModel)win.DataContext!;
-        vm.Lock.Password = "1234"; vm.Lock.Confirm = "1234"; vm.Lock.SubmitCommand.Execute(null);
+        vm.Lock.Password = "1234"; vm.Lock.Confirm = "1234"; LockIn.Wait(vm.Lock);
         Wait(win, Task.CompletedTask);
         var month = Shamsi.ThisMonth();
         for (var i = 1; i <= 30; i++)

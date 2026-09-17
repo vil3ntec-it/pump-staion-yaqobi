@@ -75,7 +75,7 @@ internal static class StartupAudit
         Mark("رمز ⇒ بخشِ آغازین جلوی چشم", () =>
         {
             vm.Lock.Password = "1234";
-            vm.Lock.SubmitCommand.Execute(null);
+            LockIn.Wait(vm.Lock);
             var t = DateTime.UtcNow + TimeSpan.FromSeconds(30);
             while (DateTime.UtcNow < t)
             {

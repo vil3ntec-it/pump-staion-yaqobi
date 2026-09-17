@@ -54,7 +54,7 @@ internal static class ParchaWaraqAudit
         var vm = (MainViewModel)win.DataContext!;
         vm.Lock.Password = "1234";
         vm.Lock.Confirm = "1234";
-        vm.Lock.SubmitCommand.Execute(null);
+        LockIn.Wait(vm.Lock);
         Pump(win);
         Seed.Fill(AppHost.Current);
 
