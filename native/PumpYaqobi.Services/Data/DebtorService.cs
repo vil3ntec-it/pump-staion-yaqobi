@@ -445,8 +445,7 @@ public sealed class DebtorService
     {
         _perm.Require(Permission.EditData);
         await using var db = _dbf.Create();
-        db.Debtors.Attach(d);
-        db.Entry(d).State = EntityState.Modified;
+        MarkOnly(db, d);
         await db.SaveChangesAsync(ct);
     }
 
@@ -454,9 +453,37 @@ public sealed class DebtorService
     {
         _perm.Require(Permission.EditData);
         await using var db = _dbf.Create();
-        db.DebtAccounts.Attach(a);
-        db.Entry(a).State = EntityState.Modified;
+        MarkOnly(db, a);
         await db.SaveChangesAsync(ct);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  ⛔ حسابِ بزرگ را با ردیف‌هایش به ‎EF‎ ندهید
+    // ══════════════════════════════════════════════════════════════════════════
+    //
+    //  ‎DbSet.Attach(a)‎ گرافِ موجودیت را می‌پیماید: هر ‎DebtRow‎ی که در
+    //  ‎a.FuelRows‎ و ‎a.MoneyRows‎ نشسته باشد ردیابی می‌شود، و بعد
+    //  ‎SaveChanges‎ روی همان‌ها ‎DetectChanges‎ می‌دود. برای حسابی که تازه از
+    //  ‎LoadFullAsync‎ آمده یعنی **همهٔ** ردیف‌هایش.
+    //
+    //  عددش را ‎personperf‎ داد: در حسابِ ۵۰٬۰۰۰ ردیفی، یک «مهرِ مهاجرت» که
+    //  فقط یک ستونِ ‎bool‎ را عوض می‌کند **۱۲٬۴۵۶ میلی‌ثانیه** طول می‌کشید،
+    //  در حالی که ساختنِ هر ۵۰٬۰۰۰ ویومدلِ ردیف ۲۱ میلی‌ثانیه بود. و شکلش
+    //  خطی نبود: ۲۰٬۰۰۰ ردیف ۲٬۲۰۲ms و ۵۰٬۰۰۰ ردیف ۱۲٬۴۵۶ms — دو و نیم
+    //  برابر ردیف، پنج برابر وقت.
+    //
+    //  ⚠️ ‎AutoDetectChangesEnabled = false‎ لازم است، نه تجمل: بی آن،
+    //  ‎Entry(...)‎ و ‎SaveChanges‎ هر دو ‎DetectChanges‎ می‌زنند و همان
+    //  پیمایشِ گراف از درِ دیگر برمی‌گردد.
+    //
+    //  ⚠️ و چرا بی‌خطر است: ‎State = Modified‎ همهٔ ستون‌های خودِ موجودیت را
+    //  «عوض شده» می‌کند، پس ‎UPDATE‎ همان است که بود. ردیف‌ها از این در
+    //  ذخیره نمی‌شدند (‎SaveRowAsync‎ کارِ خودش را دارد) — فقط شمرده و
+    //  پیموده می‌شدند.
+    private static void MarkOnly<T>(PumpDbContext db, T entity) where T : class
+    {
+        db.ChangeTracker.AutoDetectChangesEnabled = false;
+        db.Entry(entity).State = EntityState.Modified;
     }
 
     /// <summary>
@@ -493,8 +520,10 @@ public sealed class DebtorService
             var old = await db.RasidEntries.Where(x => x.AccountId == a.Id).ToListAsync(ct);
             if (old.Count > 0) db.RasidEntries.RemoveRange(old);
 
-            db.DebtAccounts.Attach(a);
-            db.Entry(a).State = EntityState.Modified;
+            //  ⚠️ همان قاعدهٔ ‎MarkOnly‎ — چرایی‌اش آن‌جا نوشته شده. این یکی
+            //  بعد از ‎Add‎ی ردیف‌های تازه می‌آید، پس خاموش کردنِ تشخیصِ
+            //  خودکار چیزی را از قلم نمی‌اندازد: هر سه کار صریح‌اند.
+            MarkOnly(db, a);
         }
 
         await db.SaveChangesAsync(ct);

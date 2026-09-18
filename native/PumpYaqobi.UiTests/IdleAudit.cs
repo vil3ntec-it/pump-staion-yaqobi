@@ -82,6 +82,21 @@ internal static class IdleAudit
         { Dispatcher.UIThread.RunJobs(); win.UpdateLayout(); Thread.Sleep(2); }
         Settle(win);
 
+        //  ══ عکسِ ایستگاه کارِ خودِ برنامه است، نه مصرفِ یک بخش ═══════════════
+        //
+        //  ‎StationPublisher‎ هر بیست ثانیه یک عکس می‌سازد و برای ساختنش
+        //  دیتابیس را می‌خواند. تا پیش از پلن‌دار شدنِ این سنجه، قفلِ اشتراک
+        //  خودش جلویش را می‌گرفت و این ستون صفر بود؛ با آمدنِ
+        //  ‎FakeLicense.Grant()‎ آن تیک باز شد و از آن پس به گردنِ **هر بخشی**
+        //  می‌افتاد که همان لحظه باز بود — یک اجرا «invoices» و «history»،
+        //  اجرای بعد «settings». یعنی سرخی‌اش جای اشتباه را نشان می‌داد.
+        //
+        //  ⛔ پس همان‌جا خاموشش می‌کنیم، درست به همان دلیلی که ‎VACUUM INTO‎ی
+        //  ‎BackupPusher‎ پایین از شمارش بیرون است: پرسشِ این سنجه «بخشی که
+        //  تویش نیستم چه مصرفی دارد» است. هزینهٔ خودِ این حلقه جای دیگری
+        //  سنجیده می‌شود (‎years‎ و ‎startup‎).
+        if (host.PublisherIfStarted is { } pub) pub.DisposeAsync().AsTask().GetAwaiter().GetResult();
+
         Console.WriteLine();
         Console.WriteLine("بخش               باز شدن(دستور)   بی‌کاری(دستور)   ردیفِ زندهٔ بخش‌های دیگر   کنترلِ نامرئیِ چیده‌شده");
         Console.WriteLine(new string('-', 104));

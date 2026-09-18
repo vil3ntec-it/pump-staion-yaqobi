@@ -47,11 +47,23 @@ public sealed class CompanyDataService
         return c;
     }
 
+    /// <summary>
+    /// ⛔ همان قاعدهٔ <c>DebtorService.MarkOnly</c>: شرکتی که از
+    /// <see cref="LoadAsync"/> آمده ردیف‌هایش را هم در <c>c.Rows</c> دارد، و
+    /// <c>Attach</c> گرافِ موجودیت را می‌پیماید — پس نوشتنِ یک ستون، همهٔ
+    /// ردیف‌ها را ردیابی می‌کند و <c>SaveChanges</c> رویشان
+    /// <c>DetectChanges</c> می‌دود.
+    ///
+    /// <para>تنها صداکنندهٔ این متد <c>AcctLive.EnsureAsync</c> است — یعنی
+    /// همان یک‌بار که کاربر برای یک شرکت کیو‌آر می‌گیرد و <c>QrKey</c> ساخته
+    /// می‌شود. روی شرکتی با ده‌ها هزار ردیف، همان یک کلیک برنامه را ثانیه‌ها
+    /// می‌خشکاند. عدد و شرحِ کاملش در <c>personperf</c> و CLAUDE.md.</para>
+    /// </summary>
     public async Task UpdateAsync(TilCompany c, CancellationToken ct = default)
     {
         _perm.Require(Permission.EditData);
         await using var db = _dbf.Create();
-        db.TilCompanies.Attach(c);
+        db.ChangeTracker.AutoDetectChangesEnabled = false;
         db.Entry(c).State = EntityState.Modified;
         await db.SaveChangesAsync(ct);
     }
