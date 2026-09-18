@@ -296,6 +296,72 @@ console.log('\n── ابر و ورود ─────────────
 }
 
 // ══════════════════════════════════════════════════════════════════════
+//  ورود با ایمیل و رمز — «صاحبِ پمپ هستم» بی گوگل
+// ══════════════════════════════════════════════════════════════════════
+//
+// ⛔ دو دلیلِ سنجیده، نه حدس:
+//   ۱) `googleClientId` روی سرور می‌تواند **خالی** باشد (پیش‌فرضش همین
+//      است؛ `/api/config` را زدیم و دیدیم). آن وقت صفحهٔ ورود فقط
+//      می‌گفت «ورود با گوگل روی این سرور تنظیم نشده است» و صاحبِ پمپ
+//      هیچ دری نداشت.
+//   ۲) حسابی که در برنامهٔ کامپیوتر با **ایمیل و رمز** ساخته می‌شود
+//      اصلاً حسابِ گوگلی نیست — پس همان آدم روی گوشی‌اش وارد نمی‌شد،
+//      در حالی که قاعدهٔ «یک سرور، یک حساب» می‌گوید باید بتواند.
+
+console.log('\n── ورود با ایمیل و رمز ───────────────────────────────────');
+{
+  const { readFileSync } = await import("node:fs");
+  const htmlSrc = readFileSync(new URL('../kar/index.html', import.meta.url), 'utf8');
+  const appSrc  = readFileSync(new URL('../kar/app.js', import.meta.url), 'utf8');
+
+  ok(/id="inEmail"/.test(htmlSrc) && /id="inPw"/.test(htmlSrc),
+     'کادرِ ایمیل و رمز در صفحهٔ ورود هست');
+  //  ⚠️ `inPass` مالِ صفحهٔ قفل است و شناسهٔ تکراری یعنی یکی از دو کادر
+  //  بی‌صدا از کار می‌افتد — همین یک بار پیش آمد و همین‌جا گرفته شد.
+  ok((htmlSrc.match(/id="inPass"/g) || []).length === 1,
+     'شناسهٔ کادرِ رمزِ قفل تکراری نشده است');
+  ok(/btnPassIn/.test(appSrc) && /btnForgot/.test(appSrc),
+     'دکمهٔ ورود و «رمزم را فراموش کرده‌ام» سیم‌کشی شده‌اند');
+  //  ⛔ راهِ گوگل برداشته نشد
+  ok(/id="gBtn"/.test(htmlSrc) && /signInWithGoogle/.test(appSrc),
+     'راهِ گوگل هنوز سرِ جایش است');
+
+  const calls = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, opt) => {
+    calls.push({ url: String(url), opt });
+    if (/\/auth\/login$/.test(url)) {
+      return new Response(JSON.stringify({
+        accessToken: 'tok-a', refreshToken: 'tok-r', accessExpiresAt: Date.now() + 3600e3,
+        user: { name: 'صاحبِ پمپ', email: 'p@example.com' },
+      }), { status: 200 });
+    }
+    if (/password\/forgot$/.test(url)) return new Response('{"ok":true}', { status: 200 });
+    return new Response('{}', { status: 404 });
+  };
+  try {
+    const cloud = require(path.join(here, '..', 'kar', 'cloud.js'));
+    const s = await cloud.signInWithPassword(' p@example.com ', 'Salam12345');
+    const login = calls.find(c => /\/auth\/login$/.test(c.url));
+    ok(!!login, 'ورود با رمز به /api/auth/login می‌رود');
+    const body = JSON.parse(login.opt.body);
+    ok(body.app === 'pump', 'بدنه می‌گوید این برنامه پمپ است');
+    ok(body.email === 'p@example.com', 'فاصله‌های دورِ ایمیل بریده می‌شوند');
+    ok((login.opt.headers || {})['X-App-Id'] === 'tohid-pump-app',
+       'هدرِ X-App-Id روی ورودِ رمزی هم هست');
+    ok(s && s.token === 'tok-a' && s.refresh === 'tok-r', 'نشست نشست');
+
+    await cloud.forgotPassword('p@example.com');
+    const forgot = calls.find(c => /password\/forgot$/.test(c.url));
+    ok(!!forgot && JSON.parse(forgot.opt.body).app === 'pump',
+       '«رمزم را فراموش کرده‌ام» هم به بخشِ پمپ می‌رود');
+
+    //  ⛔ رمز هیچ‌جا ذخیره نمی‌شود — نه در نشست، نه در حافظهٔ ماژول
+    ok(!JSON.stringify(s).includes('Salam12345'), 'رمز در نشست نمی‌نشیند');
+  } finally { globalThis.fetch = realFetch; }
+}
+
+// ══════════════════════════════════════════════════════════════════════
 //  کدِ پمپ — «هر کسی که برنامه را نصب می‌کند باید آن کد را بزند»
 // ══════════════════════════════════════════════════════════════════════
 //

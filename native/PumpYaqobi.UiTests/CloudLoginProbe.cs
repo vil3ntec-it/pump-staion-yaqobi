@@ -56,6 +56,19 @@ internal static class CloudLoginProbe
     private static bool _emailTaken;
 
     /// <summary>
+    /// «این حساب هنوز پمپی ندارد» — همان چیزی که سرورِ واقعی برای هر حسابِ
+    /// تازه‌ای می‌گوید. بندِ ۱۸ روشنش می‌کند.
+    /// </summary>
+    private static bool _noStation;
+
+    /// <summary>یک کارِ جانبی، بعد همان پاسخ — برای `switch`ی که عبارت است.</summary>
+    private static HttpResponseMessage Free(Action side, HttpResponseMessage res)
+    {
+        side();
+        return res;
+    }
+
+    /// <summary>
     /// ⚠️ **توکنِ دسترسی مرده است** — یعنی سرور به هر کسی جز دارندهٔ توکنِ
     /// تازه ۴۰۱ می‌دهد. همان چیزی که یک ساعت پس از ورود واقعاً رخ می‌دهد
     /// (<c>ACCESS_TOKEN_TTL_MIN = 60</c>).
@@ -293,9 +306,17 @@ internal static class CloudLoginProbe
 
             //  ⚠️ همان شکلی که سرورِ واقعی می‌دهد و `kar/cloud.js` هم می‌خواند:
             //  نشانیِ خانه زیرِ `home` است، نه تخت.
-            "/api/pump/me" => Json(HttpStatusCode.OK,
-                "{\"station\":{\"id\":\"stn-1\",\"code\":\"yaqobi\",\"name\":\"پمپ یعقوبی\"},\"role\":\"owner\","
+            //  ⚠️ حسابِ **تازه** هیچ پمپی ندارد و سرورِ واقعی همین را
+            //  می‌گوید (`station: null`). بندِ ۱۸ همان حالت را می‌سنجد.
+            "/api/pump/me" => Json(HttpStatusCode.OK, _noStation
+                ? """{"station":null,"entitlement":null}"""
+                : "{\"station\":{\"id\":\"stn-1\",\"code\":\"yaqobi\",\"name\":\"پمپ یعقوبی\"},\"role\":\"owner\","
                 + "\"home\":{\"url\":\"http://192.168.1.50:4701\",\"readKey\":\"read-key\",\"station\":\"yaqobi\"}}"),
+
+            //  ساختنِ پمپ برای حسابی که ندارد — «هر حساب یک پمپ»
+            "/api/pump" => Free(() => _noStation = false,
+                Json(HttpStatusCode.Created,
+                     """{"station":{"id":"stn-1","code":"yaqobi","name":"پمپ یعقوبی"}}""")),
 
             //  ⚠️ سرورِ واقعی این را دارد و باز است؛ برنامه سرِ هر ۴۰۴ی از
             //  مسیرهای حساب از همین می‌پرسد تا بفهمد «سرور کهنه است» یا
@@ -314,6 +335,7 @@ internal static class CloudLoginProbe
         //  ابرِ ساختگی، پیش از هر کاری
         CloudLink.TestTransport = Cloud;
         _emailTaken = false;
+        _noStation = false;
         _loginMail = "haroon@gmail.com";
         _slowMs = 0;
 
@@ -766,6 +788,48 @@ internal static class CloudLoginProbe
         //  و «جدا کردنِ دستی» هم هست — همان کاری که برنامه توصیه می‌کرد
         Check("دکمهٔ «جدا کردنِ این دستگاه از این پمپ» هست",
               account.ForgetPumpCommand is not null);
+
+        //  ══ بندِ ۱۸ ═════════════════════════════════════════════════════
+        //
+        //  ⛔ **همان جایی که هر کاربرِ تازه‌ای گیر می‌کرد** — و با سرورِ
+        //  واقعی سنجیده شد، نه از روی کد: ثبت‌نام و ورود سبز، و بعد
+        //  `bind` ۴۰۴ِ `no_station`، چون حسابِ تازه هیچ پمپی ندارد. تنها
+        //  راهِ ساختنِ پمپ کدِ شش‌رقمی بود — کدی که صاحب ریپو صریح گفت در
+        //  کار نیست.
+        Console.WriteLine("── ۱۸) حسابِ تازه بی هیچ کدی تا «تمام» می‌رود");
+        _noStation = true;
+        var clean = AppSettings.Load();
+        clean.CloudDeviceToken = "";
+        clean.CloudStationId = "";
+        clean.CloudLicense = "";
+        clean.CloudPublicKey = "";
+        clean.Save();
+
+        account.LoginPump = "پمپ تازه";
+        account.LoginLocation = "کابل";
+        account.LoginCode = "";                 // ⚠️ هیچ کدی
+        Wait(win, account.VerifyCodeCommand.ExecuteAsync(null));
+        for (var i = 0; i < 40; i++) Pump(win);
+
+        var made = AppSettings.Load();
+        Check("پمپ روی سرور ساخته شد", Seen.Contains("POST /api/pump"));
+        Check("و دستگاه بند شد", Seen.Contains("POST /api/pump/device/bind"));
+        Check("⭐ توکنِ دستگاه نشست — بی هیچ کدی",
+              made.CloudDeviceToken.Length > 0, made.CloudDeviceToken);
+        Check("و گامِ «تمام» رسید", account.StepDone && !account.ShowLoginPage,
+              account.LoginStatus);
+        Check("⚠️ و پیامِ خطایی روی صفحه نماند", account.LoginStatus.Length == 0,
+              account.LoginStatus);
+
+        //  ⛔ کدِ **نصفه** همچنان خطاست — یکی اشتباهِ تایپ است و آن یکی
+        //  راهِ عادیِ کسی که اصلاً کدی ندارد.
+        account.LoginCode = "123";
+        Wait(win, account.VerifyCodeCommand.ExecuteAsync(null));
+        for (var i = 0; i < 20; i++) Pump(win);
+        Check("کدِ نصفه رد می‌شود", account.LoginStatus.Contains("شش رقم"), account.LoginStatus);
+        account.LoginCode = "";
+        account.LoginStatus = "";
+        _noStation = false;
 
         CloudLink.TestTransport = null;
         Console.WriteLine();

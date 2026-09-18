@@ -739,6 +739,161 @@ public class CloudSessionTests : IDisposable
         Assert.Empty(_hits);
     }
 
+    // ── ۶ب) پمپِ حسابِ تازه — «تا آخرِ مرحله‌ها» ──────────────────────────
+
+    /*
+     *  ⛔ **همان جایی که هر کاربرِ تازه‌ای گیر می‌کرد.**
+     *
+     *  با سرورِ **واقعی** سنجیده شد، نه از روی کد: ثبت‌نامِ سه‌پله‌ای و ورود
+     *  هر دو ۲۰۰/۲۰۱ می‌دادند، و بعد `POST /api/pump/device/bind` ۴۰۴ِ
+     *  `no_station` می‌گرفت — چون حسابِ تازه **هیچ پمپی ندارد** و
+     *  `/api/pump/me` می‌گفت `station: null`. نتیجه: نه توکنِ دستگاه، نه
+     *  مجوز، نه کدِ اپِ کارمندان. تنها راهِ ساختنِ پمپ کدِ شش‌رقمی بود —
+     *  همان کدی که صاحب ریپو صریح گفت در کار نیست.
+     */
+
+    /// <summary>حسابِ بی‌پمپ: پمپ ساخته می‌شود و بعد بند.</summary>
+    [Fact]
+    public async Task HesabeBiPomp_PompRaMisazad_VaBandMishavad()
+    {
+        var made = false;
+        Serve((path, req) =>
+        {
+            if (path == "/api/pump/me")
+                return Json(HttpStatusCode.OK, made
+                    ? """{"station":{"id":"stn-new","code":"p1"},"role":"owner"}"""
+                    : """{"station":null,"entitlement":null}""");
+            if (path == "/api/pump")
+            {
+                made = true;
+                return Json(HttpStatusCode.Created, """{"station":{"id":"stn-new","code":"p1"}}""");
+            }
+            if (path == "/api/pump/device/bind")
+                return Json(HttpStatusCode.Created, """
+                    {"deviceToken":"pd-new","station":{"id":"stn-new","code":"p1"},
+                     "license":"","publicKey":"pk-1","entitlement":{"source":"free"}}
+                    """);
+            return Json(HttpStatusCode.NotFound, "{}");
+        });
+
+        var (link, _) = Link(s =>
+        {
+            s.CloudAccountToken = "acc-1";
+            s.CloudAccessExpiresAt = InAnHour;
+        });
+
+        var r = await link.EnsureStationAsync("پمپ یعقوبی");
+
+        Assert.True(r.Ok, r.Why);
+        Assert.Contains("/api/pump", _hits);
+        Assert.Contains("/api/pump/device/bind", _hits);
+        //  ⚠️ از **دیسک**، نه از شیءِ در حافظه
+        var f = AppSettings.Load();
+        Assert.Equal("pd-new", f.CloudDeviceToken);
+        Assert.Equal("stn-new", f.CloudStationId);
+    }
+
+    /// <summary>
+    /// ⛔ حسابی که از قبل پمپ دارد، پمپِ دومی نمی‌سازد — «هر حساب یک پمپ»
+    /// قاعدهٔ خودِ سرور است و ساختنِ بی‌خبر یعنی حسابی که دیگر نمی‌تواند به
+    /// پمپِ واقعی‌اش بپیوندد.
+    /// </summary>
+    [Fact]
+    public async Task HesabiKePompDarad_PompeDovom_Nemisazad()
+    {
+        Serve((path, _) => path switch
+        {
+            "/api/pump/me" => Json(HttpStatusCode.OK,
+                """{"station":{"id":"stn-7","code":"yaqobi"},"role":"owner"}"""),
+            "/api/pump/device/bind" => Json(HttpStatusCode.Created,
+                """{"deviceToken":"pd-7","station":{"id":"stn-7"},"publicKey":"pk-1"}"""),
+            _ => Json(HttpStatusCode.NotFound, "{}"),
+        });
+
+        var (link, _) = Link(s =>
+        {
+            s.CloudAccountToken = "acc-1";
+            s.CloudAccessExpiresAt = InAnHour;
+        });
+
+        var r = await link.EnsureStationAsync("هر چه");
+
+        Assert.True(r.Ok, r.Why);
+        Assert.DoesNotContain("/api/pump", _hits.Where(h => h.Length == "/api/pump".Length));
+        Assert.Contains("/api/pump/device/bind", _hits);
+    }
+
+    /// <summary>
+    /// ⚠️ <c>already_member</c> خطا نیست: یعنی پمپ همین حالا هست (دو کلیک،
+    /// یا دستگاهِ دیگری که زودتر ساختش). بند شدن باید ادامه پیدا کند.
+    /// </summary>
+    [Fact]
+    public async Task AlreadyMember_Khata_Nist_VaBandShodan_Edame_Midahad()
+    {
+        Serve((path, _) => path switch
+        {
+            "/api/pump/me" => Json(HttpStatusCode.OK, """{"station":null}"""),
+            "/api/pump" => Json(HttpStatusCode.Conflict,
+                """{"error":{"code":"already_member","message":"این حساب از قبل عضو یک پمپ است"}}"""),
+            "/api/pump/device/bind" => Json(HttpStatusCode.Created,
+                """{"deviceToken":"pd-x","station":{"id":"stn-x"},"publicKey":"pk-1"}"""),
+            _ => Json(HttpStatusCode.NotFound, "{}"),
+        });
+
+        var (link, _) = Link(s =>
+        {
+            s.CloudAccountToken = "acc-1";
+            s.CloudAccessExpiresAt = InAnHour;
+        });
+
+        var r = await link.EnsureStationAsync("پمپ");
+
+        Assert.True(r.Ok, r.Why);
+        Assert.Equal("pd-x", AppSettings.Load().CloudDeviceToken);
+    }
+
+    /// <summary>بی حساب، هیچ درخواستی زده نمی‌شود.</summary>
+    [Fact]
+    public async Task EnsureStation_BiHesab_HichDarkhasti_Nemizanad()
+    {
+        Serve((_, _) => Json(HttpStatusCode.OK, "{}"));
+
+        var (link, _) = Link();
+        var r = await link.EnsureStationAsync("پمپ");
+
+        Assert.False(r.Ok);
+        Assert.Equal("no_account", r.Code);
+        Assert.Empty(_hits);
+    }
+
+    /// <summary>
+    /// ⛔ قفلِ کلیدِ عمومی این‌جا هم زنده است: ساختنِ پمپ آن را دور نمی‌زند.
+    /// </summary>
+    [Fact]
+    public async Task EnsureStation_KelideDigar_Ra_RadMikonad()
+    {
+        Serve((path, _) => path switch
+        {
+            "/api/pump/me" => Json(HttpStatusCode.OK, """{"station":{"id":"stn-1"}}"""),
+            "/api/pump/device/bind" => Json(HttpStatusCode.Created,
+                """{"deviceToken":"pd-bad","station":{"id":"stn-1"},"publicKey":"pk-OTHER"}"""),
+            _ => Json(HttpStatusCode.NotFound, "{}"),
+        });
+
+        var (link, _) = Link(s =>
+        {
+            s.CloudAccountToken = "acc-1";
+            s.CloudAccessExpiresAt = InAnHour;
+            s.CloudPublicKey = "pk-1";
+        });
+
+        var r = await link.EnsureStationAsync("پمپ");
+
+        Assert.False(r.Ok);
+        Assert.Equal("key_mismatch", r.Code);
+        Assert.Equal("", AppSettings.Load().CloudDeviceToken);
+    }
+
     // ── ۷) قاعده‌های فرم ─────────────────────────────────────────────────
 
     [Theory]
