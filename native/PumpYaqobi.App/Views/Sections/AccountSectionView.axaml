@@ -456,11 +456,11 @@
                   <!-- ══════════ گامِ ۳: پمپ ══════════ -->
                   <StackPanel Spacing="8" IsVisible="{Binding StepPump}">
                     <TextBlock Text="پمپِ خودتان" Classes="h1" FontSize="26" />
-                    <TextBlock Text="کدِ شش‌رقمی را بزنید تا سرور تاییدش کند، و نام و لوکیشنِ پمپ را بنویسید."
+                    <TextBlock Text="نام و لوکیشنِ پمپ را بنویسید و ادامه بدهید. اشتراک روی همین حساب می‌نشیند، پس کدی لازم نیست."
                                Classes="dim" FontSize="12.5" TextWrapping="Wrap" />
 
                     <TextBox Text="{Binding LoginCode}" MaxLength="6" Margin="0,6,0,0"
-                             Watermark="کدِ شش‌رقمی">
+                             Watermark="کدِ شش‌رقمی — اگر دارید (اختیاری)">
                       <TextBox.KeyBindings>
                         <KeyBinding Gesture="Enter" Command="{Binding VerifyCodeCommand}" />
                       </TextBox.KeyBindings>
@@ -476,7 +476,7 @@
                       </TextBox.KeyBindings>
                     </TextBox>
 
-                    <Button Classes="go" Content="تایید از سرور و پایان" Margin="0,10,0,0"
+                    <Button Classes="go" Content="ساختنِ پمپ و پایان" Margin="0,10,0,0"
                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                             Command="{Binding VerifyCodeCommand}" IsEnabled="{Binding !Busy}" />
                     <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">

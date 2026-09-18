@@ -899,6 +899,77 @@
       });
   }
 
+  /**
+   * ورود با ایمیل و رمز — همان حسابی که در برنامهٔ کامپیوتر ساخته شده.
+   *
+   * ⛔ راهِ گوگل برداشته نشد؛ این کنارش نشست. دو دلیل، هر دو سنجیده:
+   * ‎googleClientId‎ روی سرور می‌تواند خالی باشد (پیش‌فرضش همین است) و آن
+   * وقت صاحبِ پمپ هیچ دری نداشت؛ و حسابی که با ایمیل و رمز ساخته شده
+   * اصلاً گوگلی نیست، پس همان آدم روی گوشی‌اش وارد نمی‌شد.
+   */
+  function signInWithPassword() {
+    var email = ($('inEmail') && $('inEmail').value || '').trim();
+    var pass = ($('inPw') && $('inPw').value) || '';
+    if (!email || email.indexOf('@') < 0) { signinMsg('ایمیل را درست بنویسید.', true); return; }
+    if (!pass) { signinMsg('رمز را بنویسید.', true); return; }
+
+    signinMsg('در حالِ ورود…');
+    PumpCloud.signInWithPassword(email, pass)
+      .then(function () { return PumpCloud.myStation(); })
+      .then(function (st) {
+        //  ⚠️ رمز در حافظهٔ صفحه هم نمی‌ماند
+        if ($('inPw')) $('inPw').value = '';
+        if (!adoptStation(st)) return;
+        syncBackground();
+        show('lockPane');
+        connect();
+      })
+      .catch(function (err) {
+        signinMsg(err && err.message ? err.message : 'ورود نشد', true);
+      });
+  }
+
+  /** «رمزم را فراموش کرده‌ام» ⇒ کد به ایمیل، و کادرِ رمزِ تازه باز می‌شود. */
+  function forgotPassword() {
+    var email = ($('inEmail') && $('inEmail').value || '').trim();
+    if (!email || email.indexOf('@') < 0) { signinMsg('اول ایمیلتان را بنویسید.', true); return; }
+    signinMsg('در حالِ فرستادنِ کد…');
+    PumpCloud.forgotPassword(email).then(function () {
+      //  ⚠️ پیام نمی‌گوید این ایمیل حساب دارد یا نه — خودِ سرور هم برای
+      //  موجود و ناموجود یک جواب می‌دهد.
+      signinMsg('اگر این ایمیل حسابی داشته باشد، کد برایش رفت.');
+      if ($('resetBox')) $('resetBox').classList.remove('hidden');
+    }).catch(function (err) {
+      signinMsg(err && err.message ? err.message : 'نشد', true);
+    });
+  }
+
+  /** کدِ ایمیل + رمزِ تازه ⇒ نشست. */
+  function resetPassword() {
+    var email = ($('inEmail') && $('inEmail').value || '').trim();
+    var code = ($('inResetCode') && $('inResetCode').value || '').replace(/[^0-9]/g, '');
+    var pass = ($('inNewPass') && $('inNewPass').value) || '';
+    if (code.length !== 6) { signinMsg('کد شش رقم است.', true); return; }
+    if (pass.length < 8) { signinMsg('رمزِ تازه دستِ‌کم هشت نویسه باشد.', true); return; }
+
+    signinMsg('در حالِ ثبتِ رمزِ تازه…');
+    PumpCloud.resetPassword(email, code, pass).then(function (s) {
+      if ($('inNewPass')) $('inNewPass').value = '';
+      if ($('resetBox')) $('resetBox').classList.add('hidden');
+      //  سرور ممکن است نشست ندهد و فقط رمز را عوض کند — آن وقت کاربر
+      //  همان‌جا با رمزِ تازه وارد می‌شود.
+      if (!s) { signinMsg('رمز عوض شد. حالا با رمزِ تازه وارد شوید.'); return; }
+      return PumpCloud.myStation().then(function (st) {
+        if (!adoptStation(st)) return;
+        syncBackground();
+        show('lockPane');
+        connect();
+      });
+    }).catch(function (err) {
+      signinMsg(err && err.message ? err.message : 'نشد', true);
+    });
+  }
+
   /** دکمهٔ گوگل را می‌سازد. شناسهٔ برنامه از خودِ سرور می‌آید، نه از کد. */
   function setupGoogle() {
     var box = $('gBtn');
@@ -1327,6 +1398,16 @@
     });
     $('btnGoogleWay').addEventListener('click', function () { show('signinPane'); setupGoogle(); });
     $('btnBackCode').addEventListener('click', function () { show('codePane'); });
+    $('btnPassIn').addEventListener('click', signInWithPassword);
+    $('btnForgot').addEventListener('click', forgotPassword);
+    $('btnReset').addEventListener('click', resetPassword);
+    //  Enter در هر دو کادر همان دکمه را می‌زند
+    ['inEmail', 'inPw'].forEach(function (id) {
+      var el = $(id);
+      if (el) el.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') signInWithPassword();
+      });
+    });
 
     $('btnSetup').addEventListener('click', function () {
       var srv = $('inSrv').value.trim();

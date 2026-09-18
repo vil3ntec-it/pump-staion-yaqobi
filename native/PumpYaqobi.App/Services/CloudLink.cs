@@ -255,6 +255,54 @@ public sealed class CloudLink
     }
 
     /// <summary>
+    /// ⛔ <b>پمپِ این حساب — و اگر نداشت، همین‌جا ساخته می‌شود.</b>
+    ///
+    /// <para>
+    /// ⚠️ <b>این همان حلقهٔ گم‌شدهٔ «تا آخرِ مرحله‌ها» بود.</b> ثبت‌نام و ورود
+    /// بی‌عیب کار می‌کردند، ولی حسابِ تازه <b>هیچ پمپی</b> ندارد:
+    /// <c>/api/pump/me</c> می‌گفت <c>station: null</c>، پس
+    /// <see cref="BindAsync"/> ۴۰۴ِ <c>no_station</c> می‌گرفت، توکنِ دستگاه
+    /// نمی‌آمد، مجوز صادر نمی‌شد و کدِ اپِ کارمندان هم نه. تنها راهِ ساختنِ
+    /// پمپ کدِ شش‌رقمی بود — همان کدی که صاحب ریپو صریح گفت در کار نیست
+    /// («اشتراک رو من به حسابِ یارو از سرور می‌دم»). یعنی کاربرِ تازه روی
+    /// گامِ دوم گیر می‌کرد و هیچ راهی جلو نداشت.
+    /// </para>
+    ///
+    /// <para>
+    /// ⚠️ <b>خودکار نیست و نباید بشود.</b> فقط از دکمهٔ خودِ کاربر صدا زده
+    /// می‌شود، نه از حلقهٔ پس‌زمینه: «هر حساب یک پمپ» قاعدهٔ سرور است و
+    /// ساختنِ بی‌خبرِ پمپ یعنی حسابی که دیگر نمی‌تواند به پمپِ واقعی‌اش
+    /// بپیوندد.
+    /// </para>
+    ///
+    /// <para>
+    /// ⚠️ <c>already_member</c> خطا نیست: یعنی پمپ همین حالا هست (دو کلیک،
+    /// یا گوشیِ دیگری که زودتر ساختش). همان را می‌پذیریم.
+    /// </para>
+    /// </summary>
+    public async Task<CloudResult> EnsureStationAsync(string stationName,
+                                                      CancellationToken ct = default)
+    {
+        if (!SignedIn) return CloudResult.No("اول وارد حساب شوید", "no_account");
+
+        //  ۱) پمپی هست؟ — از خودِ حساب پرسیده می‌شود، نه از تنظیماتِ محلی.
+        var me = await AccountAsync(HttpMethod.Get, "/api/pump/me", null, ct);
+        if (!me.Ok) return CloudResult.No(me.Why, me.Code);
+        if (StationId(me.Json).Length == 0)
+        {
+            //  ۲) ندارد ⇒ بساز. نامِ خالی را خودِ سرور با «پمپ من» پر می‌کند،
+            //  ولی نامِ کاربر همیشه بهتر است.
+            var body = new { name = (stationName ?? "").Trim() };
+            var made = await AccountAsync(HttpMethod.Post, "/api/pump", body, ct);
+            if (!made.Ok && made.Code != "already_member")
+                return CloudResult.No(made.Why, made.Code);
+        }
+
+        //  ۳) و حالا بند شدن — همان راهِ همیشگی، با همان قفلِ کلیدِ عمومی.
+        return await BindAsync(ct);
+    }
+
+    /// <summary>
     /// ⛔ <b>بند شدنِ این دستگاه به پمپِ همین حسابِ وارد شده — بی هیچ کدی.</b>
     ///
     /// خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۳۰): «اشتراک رو من به حسابِ یارو از

@@ -56,7 +56,11 @@ const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromi
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
 const errors = [];
 page.on('pageerror', e => errors.push('pageerror: ' + e.message));
-page.on('console', m => { if (m.type() === 'error' && !/ERR_CERT|404/.test(m.text())) errors.push('console: ' + m.text()); });
+page.on('console', m => {
+  //  ⚠️ ۴۰۱ و ۴۰۴ی شبکه خطای جاوااسکریپت نیستند — خودِ همین سنجه یک
+  //  ورودِ **عمداً** غلط می‌زند و مرورگر ۴۰۱ را در کنسول می‌نویسد.
+  if (m.type() === 'error' && !/ERR_CERT|401|404/.test(m.text())) errors.push('console: ' + m.text());
+});
 
 // mock cloud
 await page.route('https://api.vill3n.top/**', async (route) => {
@@ -73,6 +77,19 @@ await page.route('https://api.vill3n.top/**', async (route) => {
     return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
       body: JSON.stringify({ ok: true, updatedAt: Date.now(), live: snap }) });
   if (url.includes('/api/config')) return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '{}' });
+  //  ورود با ایمیل و رمز — همان شکلِ پاسخِ سرورِ واقعی
+  if (url.endsWith('/api/auth/login')) {
+    if (body.password !== 'Salam12345')
+      return route.fulfill({ status: 401, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
+        body: JSON.stringify({ error: { code: 'bad_credentials', message: 'ایمیل/شماره یا رمز درست نیست' } }) });
+    return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
+      body: JSON.stringify({ accessToken: 'tok-a', refreshToken: 'tok-r', accessExpiresAt: Date.now() + 3600e3,
+                             user: { id: 'u1', name: 'صاحبِ پمپ', email: 'p@example.com' } }) });
+  }
+  if (url.endsWith('/api/pump/me'))
+    return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
+      body: JSON.stringify({ station: { id: 'stn1', code: 'ac-one', name: 'پمپِ آزمون' }, role: 'owner',
+                             home: { url: 'wss://home.example', readKey: 'read-k', station: 'ac-one' } }) });
   return route.fulfill({ status: 404, body: '{}' });
 });
 
@@ -153,6 +170,41 @@ await page.click('#btnForget');
 ok(await vis('codePane'), '«پمپِ دیگر» ⇒ صفحهٔ کد');
 const left = await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('pumpKar.v1.')));
 ok(left.length === 0, 'هیچ چیزی از پمپ در گوشی نماند: ' + JSON.stringify(left));
+
+// ── ورود با ایمیل و رمز («صاحبِ پمپ هستم») ──
+//
+//  ⛔ تا دیروز این در فقط گوگل بود، و `googleClientId` روی سرور می‌تواند
+//  خالی باشد — یعنی صاحبِ پمپ هیچ راهی نداشت. و حسابی که با ایمیل و رمز
+//  ساخته شده اصلاً گوگلی نیست.
+await page.click('#btnGoogleWay');
+ok(await vis('signinPane'), 'صفحهٔ ورودِ صاحبِ پمپ باز شد');
+ok(await vis('inEmail'), 'کادرِ ایمیل هست');
+
+await page.fill('#inEmail', 'p@example.com');
+await page.fill('#inPw', 'GhaltGhalt1');
+await page.click('#btnPassIn');
+await page.waitForFunction(() => !document.getElementById('signinErr').classList.contains('hidden'));
+ok((await page.textContent('#signinErr')).includes('رمز درست نیست'), 'رمزِ غلط پیامِ خودِ سرور را می‌دهد');
+ok(await vis('signinPane'), 'با رمزِ غلط هیچ‌جا نمی‌رود');
+
+await page.fill('#inPw', 'Salam12345');
+await page.click('#btnPassIn');
+await page.waitForFunction(() => !document.getElementById('lockPane').classList.contains('hidden'), null, { timeout: 8000 });
+ok(await vis('lockPane'), 'رمزِ درست ⇒ نشانیِ پمپ از حساب آمد و صفحهٔ قفل باز شد');
+ok((await page.inputValue('#inPw')) === '', 'رمز در کادر نمی‌ماند');
+const adopted = await page.evaluate(() => {
+  try { return JSON.parse(localStorage.getItem('pumpKar.v1') || '{}'); } catch { return {}; }
+});
+ok(adopted.srv === 'wss://home.example' && adopted.tok === 'read-k',
+   'نشانی و رمزِ فقط‌خواندنیِ سرورِ خانگی از حساب نشست');
+
+//  و راهِ گوگل برداشته نشده
+ok(await vis('gBtn'), 'دکمهٔ گوگل هنوز سرِ جایش است');
+
+//  پاک‌سازی برای بندِ بعدی — از خودِ صفحهٔ قفل، بی رمز زدن
+await page.evaluate(() => localStorage.clear());
+await page.reload();
+await page.waitForFunction(() => !document.getElementById('codePane').classList.contains('hidden'));
 
 // ── به‌روزرسانیِ خودکار ──
 await page.evaluate(() => window.PumpUpdate.check(true));

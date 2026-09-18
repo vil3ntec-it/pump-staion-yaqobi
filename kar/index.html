@@ -217,10 +217,45 @@
 <div class="wrap gate hidden" id="signinPane">
   <div class="card" style="text-align:center">
     <h1>دستیارِ پمپ</h1>
-    <div class="sub">با حسابِ گوگلِ خودتان وارد شوید. بقیه‌اش خودکار است —
-      نه نشانی لازم است، نه رمزِ سرور.</div>
+    <div class="sub">با همان حسابی که در برنامهٔ کامپیوتر ساخته‌اید وارد شوید —
+      ایمیل و رمز، یا گوگل. بقیه‌اش خودکار است: نه نشانی لازم است، نه رمزِ سرور.</div>
   </div>
+  <!-- ══ ایمیل و رمز — همان حسابِ برنامهٔ کامپیوتر ═══════════════════
+       ⛔ تا دیروز فقط گوگل بود، و ‎googleClientId‎ روی سرور می‌تواند خالی
+       باشد؛ آن وقت صاحبِ پمپ هیچ راهی نداشت. و حسابی که با ایمیل و رمز
+       ساخته شده اصلاً گوگلی نیست — همان آدم روی گوشی‌اش نمی‌توانست وارد
+       شود، در حالی که «یک سرور، یک حساب» می‌گوید باید بتواند.        -->
   <div class="card">
+    <h2>ایمیل و رمز</h2>
+    <input id="inEmail" type="email" placeholder="ایمیل" autocomplete="username"
+           spellcheck="false" dir="ltr">
+    <div style="height:8px"></div>
+    <input id="inPw" type="password" placeholder="رمز" autocomplete="current-password">
+    <div style="height:12px"></div>
+    <button class="p big" id="btnPassIn">ورود</button>
+    <div style="height:8px"></div>
+    <div class="links">
+      <button id="btnForgot">رمزم را فراموش کرده‌ام</button>
+    </div>
+  </div>
+
+  <!-- رمزِ فراموش‌شده: کدِ ایمیل و رمزِ تازه، در همین صفحه -->
+  <div class="card hidden" id="resetBox">
+    <h2>رمزِ تازه</h2>
+    <div class="sub">کدِ شش‌رقمی به همان ایمیل فرستاده شد.</div>
+    <div style="height:8px"></div>
+    <input id="inResetCode" placeholder="کدِ شش‌رقمی" maxlength="6"
+           inputmode="numeric" autocomplete="one-time-code" dir="ltr">
+    <div style="height:8px"></div>
+    <input id="inNewPass" type="password" placeholder="رمزِ تازه — دستِ‌کم هشت نویسه"
+           autocomplete="new-password">
+    <div style="height:12px"></div>
+    <button class="p big" id="btnReset">ثبتِ رمزِ تازه و ورود</button>
+  </div>
+
+  <div class="card">
+    <div class="sub">یا با گوگل:</div>
+    <div style="height:8px"></div>
     <div id="gBtn" style="display:flex;justify-content:center;min-height:44px"></div>
     <div style="height:10px"></div>
     <div class="sub err hidden" id="signinErr"></div>

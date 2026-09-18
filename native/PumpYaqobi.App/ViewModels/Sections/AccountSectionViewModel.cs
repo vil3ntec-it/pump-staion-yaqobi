@@ -897,37 +897,59 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     // ── گامِ ۲: پمپ ─────────────────────────────────────────────────────
 
     /// <summary>
-    /// کدِ شش‌رقمی را **از سرور** تایید می‌کند و نامِ پمپ و لوکیشن را
-    /// می‌نشاند؛ بعد «تمام».
+    /// گامِ پمپ را تمام می‌کند — <b>با کد یا بی کد</b>.
     ///
-    /// ⚠️ نامِ پمپ و لوکیشن **پیش از** فرستادنِ کد ذخیره می‌شوند و همراهِ
-    /// همان درخواست به ابر هم می‌روند، تا ابر همان پمپ را با همان نام و
-    /// لوکیشن بشناسد.
+    /// <para>
+    /// ⛔ <b>تا دیروز کدِ شش‌رقمی اجباری بود و همین‌جا همه گیر می‌کردند.</b>
+    /// حسابِ تازه هیچ پمپی ندارد، و تنها راهِ ساختنش کد بود — کدی که صاحب
+    /// ریپو صریح گفت در کار نیست («اشتراک رو من به حسابِ یارو از سرور
+    /// می‌دم»). سنجشِ واقعی روی سرورِ واقعی نشانش داد: ثبت‌نام و ورود سبز،
+    /// و بعد <c>bind</c> ۴۰۴ِ <c>no_station</c> — یعنی نه توکنِ دستگاه، نه
+    /// مجوز، نه کدِ اپِ کارمندان.
+    /// </para>
+    ///
+    /// <para>
+    /// ⚠️ کد <b>برداشته نشد، فقط اختیاری شد</b>: کسی که کدِ تمدید دارد
+    /// همان راهِ همیشگی‌اش را دارد (<see cref="CloudLink.RedeemAsync"/>)، و
+    /// کسی که ندارد پمپش ساخته و بند می‌شود
+    /// (<see cref="CloudLink.EnsureStationAsync"/>).
+    /// </para>
+    ///
+    /// ⚠️ نامِ پمپ و لوکیشن **پیش از** رفتن به سرور ذخیره می‌شوند، تا اگر
+    /// سرور جواب نداد هم همان نامِ تازه در پروفایل و سربرگ دیده شود.
     /// </summary>
     [RelayCommand]
-    private Task VerifyCodeAsync() => CrashGuard.RunAsync("تاییدِ کدِ پمپ", async () =>
+    private Task VerifyCodeAsync() => CrashGuard.RunAsync("گامِ پمپ", async () =>
     {
         var pump = (LoginPump ?? "").Trim();
         var where = (LoginLocation ?? "").Trim();
         var code = new string((LoginCode ?? "").Where(char.IsDigit).ToArray());
 
         if (pump.Length < 2) { LoginStatus = "❌ نامِ پمپ را بنویسید."; return; }
-        if (code.Length != 6) { LoginStatus = "❌ کد باید شش رقم باشد."; return; }
+        //  ⚠️ کدِ **نصفه** خطاست، ولی کدِ **خالی** نه: یکی اشتباهِ تایپ است
+        //  و آن یکی راهِ عادیِ کسی که اصلاً کدی ندارد.
+        if (code.Length > 0 && code.Length != 6)
+        {
+            LoginStatus = "❌ کد شش رقم است — یا کاملش کنید یا خالی بگذارید.";
+            return;
+        }
 
         Busy = true;
-        LoginStatus = "در حالِ تایید از سرور…";
+        LoginStatus = code.Length == 6 ? "در حالِ تایید از سرور…" : "در حالِ ساختنِ پمپ روی سرور…";
         try
         {
             _host.Settings.Set(SettingsService.StationName, pump);
             if (where.Length > 0) _host.Settings.Set(SettingsService.StationAddress, where);
-            //  ⚠️ **همین‌جا** تازه می‌شود، نه فقط سرِ موفقیت: نام و لوکیشن از
-            //  همین لحظه ذخیره شده‌اند، پس اگر سرور جواب نداد هم باید همان
-            //  نامِ تازه در پروفایل و سربرگ دیده شود. (سنجهٔ ۱۴ گرفتش: نام
-            //  ذخیره شده بود ولی صفحه نامِ قبلی را نشان می‌داد.)
             RefreshAll();
 
-            var res = await Cloud.RedeemAsync(code, pump, where);
+            var res = code.Length == 6
+                ? await Cloud.RedeemAsync(code, pump, where)
+                : await Cloud.EnsureStationAsync(pump);
             if (!res.Ok) { LoginStatus = "❌ " + res.Why; return; }
+
+            //  نشانیِ سرورِ خانگی و اشتراک را هم همین‌جا برمی‌داریم، وگرنه
+            //  کاربر تا تیکِ بعدیِ پس‌زمینه «هنوز وصل نیست» می‌بیند.
+            try { await Cloud.HomeFromAccountAsync(); } catch { /* رفاه است */ }
 
             LoginCode = "";
             LoginStatus = "";

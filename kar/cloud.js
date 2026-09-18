@@ -148,6 +148,72 @@
   }
 
   /**
+   * ورود با ایمیل و رمز — همان حسابی که در برنامهٔ کامپیوتر ساخته شده.
+   *
+   * ⛔ <b>چرا لازم شد:</b> تا دیروز تنها راهِ «صاحبِ پمپ هستم» گوگل بود، و
+   * ‎googleClientId‎ روی سرور می‌تواند خالی باشد (پیش‌فرضش همین است) — آن
+   * وقت صفحه فقط می‌گفت «ورود با گوگل روی این سرور تنظیم نشده است» و
+   * صاحبِ پمپ هیچ راهی نداشت. و مهم‌تر: حسابی که با <b>ایمیل و رمز</b>
+   * ساخته شده اصلاً حسابِ گوگلی نیست، پس همان آدم روی گوشی‌اش نمی‌توانست
+   * وارد شود — در حالی که قاعدهٔ «یک سرور، یک حساب» می‌گوید باید بتواند.
+   *
+   * ⚠️ همان بدنه و همان هدرِ ‎X-App-Id‎ی برنامهٔ کامپیوتر: نشست به بخشِ
+   * <b>پمپ</b> مهر می‌خورد، وگرنه ‎/api/pump/me‎ می‌گوید «چنین نشستی نیست».
+   */
+  function signInWithPassword(email, password) {
+    return call('POST', '/api/auth/login', {
+      email: String(email || '').trim(),
+      password: String(password || ''),
+      app: 'pump',
+      device: { deviceId: deviceId(), name: 'اپِ کارمندان', platform: 'web' }
+    }).then(function (out) {
+      var s = {
+        token: out.accessToken || out.token,
+        refresh: out.refreshToken,
+        expiresAt: out.accessExpiresAt || 0,
+        name: (out.user && out.user.name) || '',
+        email: (out.user && out.user.email) || ''
+      };
+      if (!s.token) throw new Error('سرور نشست نداد');
+      saveSession(s);
+      return s;
+    });
+  }
+
+  /**
+   * «رمزم را فراموش کرده‌ام» — کد به همان ایمیل می‌رود.
+   *
+   * ⚠️ پیامِ سرور برای ایمیلِ موجود و ناموجود یکی است و باید همان بماند.
+   */
+  function forgotPassword(email) {
+    return call('POST', '/api/auth/password/forgot', {
+      email: String(email || '').trim(), app: 'pump'
+    });
+  }
+
+  /** کدِ ایمیل + رمزِ تازه ⇒ نشستِ تازه. */
+  function resetPassword(email, code, password) {
+    return call('POST', '/api/auth/password/reset', {
+      email: String(email || '').trim(),
+      code: String(code || '').replace(/[^0-9]/g, ''),
+      password: String(password || ''),
+      app: 'pump',
+      device: { deviceId: deviceId(), name: 'اپِ کارمندان', platform: 'web' }
+    }).then(function (out) {
+      if (!out || !(out.accessToken || out.token)) return null;
+      var s = {
+        token: out.accessToken || out.token,
+        refresh: out.refreshToken,
+        expiresAt: out.accessExpiresAt || 0,
+        name: (out.user && out.user.name) || '',
+        email: (out.user && out.user.email) || ''
+      };
+      saveSession(s);
+      return s;
+    });
+  }
+
+  /**
    * نشستِ تازه از روی ‎refreshToken‎.
    *
    * توکنِ دسترسی عمرِ کوتاهی دارد. بی این، کارمند هر چند روز یک بار باید
@@ -280,6 +346,9 @@
     authed: authed,
     deviceId: deviceId,
     signInWithGoogle: signInWithGoogle,
+    signInWithPassword: signInWithPassword,
+    forgotPassword: forgotPassword,
+    resetPassword: resetPassword,
     refresh: refresh,
     myStation: myStation,
     joinWithCode: joinWithCode,
