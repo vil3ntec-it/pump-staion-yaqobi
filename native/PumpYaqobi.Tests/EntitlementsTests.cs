@@ -23,7 +23,15 @@ public class EntitlementsTests : IDisposable
 
     private readonly long _now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-    public EntitlementsTests() => Entitlements.Now = () => _now;
+    //  ⚠️ این آزمون‌ها مرزِ واقعیِ پلن‌ها را می‌سنجند، پس بازِ موقتِ
+    //  ‎Entitlements.UnlockedForNow‎ (۱۴۰۵/۰۷/۰۲) این‌جا خاموش است — و
+    //  برنمی‌گردد، چون هیچ آزمونی به «باز» بودنش تکیه ندارد و xUnit
+    //  کلاس‌ها را موازی می‌دواند (برگرداندنش وسطِ آزمونِ کلاسِ دیگر می‌افتاد).
+    public EntitlementsTests()
+    {
+        Entitlements.Unlocked = false;
+        Entitlements.Now = () => _now;
+    }
     public void Dispose() =>
         Entitlements.Now = () => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 

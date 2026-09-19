@@ -107,6 +107,33 @@ public static class Entitlements
     /// </summary>
     public static bool TestDeny { get; set; }
 
+    /// <summary>
+    /// ⏳ <b>باز کردنِ موقتِ همهٔ قفل‌ها — خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۰۲):</b>
+    /// «برنامهٔ پمپ بنزین رو فعلاً اون‌هایی که گفته بودم قفل کن رو باز کن،
+    /// بعداً می‌گم دوباره قفل کنی؛ همین‌ها رو الان لازم دارم قفل نباشه.»
+    ///
+    /// تا این <c>true</c> است هر شش دروازهٔ <see cref="Paid"/> برای همه باز
+    /// است — با اشتراک، بی اشتراک، فعال‌نشده. هیچ چیزِ دیگری از این پرونده
+    /// برداشته نشده: مجوز، ارفاق، فهرستِ پلن و پیام‌ها همه سرِ جایشان‌اند و
+    /// همان لحظه که این یک خط <c>false</c> شود، همان رفتارِ قبلی برمی‌گردد.
+    ///
+    /// ⚠️ <b>برای قفل کردنِ دوباره فقط همین یک مقدار را <c>false</c> کنید</b> —
+    /// نه چیزِ دیگری. آزمون‌ها قفل را با <see cref="Unlocked"/>ِ خاموش
+    /// می‌سنجند، پس مرزِ پلن‌ها همچنان زیرِ آزمون است و روزِ قفل کردن غافلگیر
+    /// نمی‌شوید.
+    ///
+    /// ⚠️ <see cref="TestDeny"/> از این هم جلوتر است: کلیدِ «آزمایشِ حالتِ
+    /// بی‌اشتراک» همچنان می‌بندد، تا صاحبِ پمپ بتواند قفل‌ها را ببیند.
+    /// </summary>
+    public const bool UnlockedForNow = true;
+
+    /// <summary>
+    /// همان <see cref="UnlockedForNow"/>، ولی تزریق‌پذیر — فقط برای آزمون‌ها
+    /// که مرزِ واقعیِ پلن‌ها را با قفلِ روشن بسنجند. در خودِ برنامه هیچ‌جا
+    /// نوشته نمی‌شود.
+    /// </summary>
+    public static bool Unlocked { get; set; } = UnlockedForNow;
+
     /// <summary>حالا — تزریق‌پذیر تا آزمون بتواند زمان را جلو ببرد.</summary>
     public static Func<long> Now { get; set; } =
         () => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -256,6 +283,8 @@ public sealed record EntitlementState(
         if (Array.IndexOf(Entitlements.Paid, feature) < 0) return true;
         //  ⚠️ فقط می‌بندد — آزمایشِ دستیِ خودِ صاحبِ پمپ، بی اثر روی دیسک.
         if (Entitlements.TestDeny) return false;
+        //  ⏳ بازِ موقت — خواستهٔ ۱۴۰۵/۰۷/۰۲؛ شرحش بالای ‎UnlockedForNow‎.
+        if (Entitlements.Unlocked) return true;
         if (NotActivated) return false;
         if (InGrace) return true;                        // ⚠️ ارفاق: باگ و آفلاین نباید ببندد
         if (!Open) return false;
