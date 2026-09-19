@@ -64,6 +64,16 @@ internal static class Program
         // ══ حالتِ «رفتن داخلِ حساب و برگشتن، هر دو کند است» ═════════════════
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- enterperf
         if (outDir.Equals("enterperf", StringComparison.OrdinalIgnoreCase)) return EnterPerf.Run();
+        // ══ حالتِ «حسابی که ردیف‌هایش زیاد است دیر باز می‌شود» ════════════
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- personperf
+        // شش اندازه (۵۰۰ تا ۵۰٬۰۰۰ ردیف در یک حساب) و سه تکهٔ جدا: خواندن،
+        // ویومدل، چیدمان. چرایی‌اش در ‎PersonPerf‎ نوشته شده — ‎perf‎ فقط یک
+        // عددِ سربسته می‌داد و «کجا» را نمی‌گفت.
+        if (outDir.Equals("personperf", StringComparison.OrdinalIgnoreCase))
+        {
+            PersonPerf.Trace = args.Any(a => a.Equals("trace", StringComparison.OrdinalIgnoreCase));
+            return PersonPerf.Run();
+        }
 
         // ⟦ ته اسکرول باید بایستد، نه پرپر بزند ⟧
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- scrollend

@@ -82,6 +82,33 @@ internal static class IdleAudit
         { Dispatcher.UIThread.RunJobs(); win.UpdateLayout(); Thread.Sleep(2); }
         Settle(win);
 
+        //  ══ عکسِ ایستگاه کارِ خودِ برنامه است، نه مصرفِ یک بخش ═══════════════
+        //
+        //  ‎StationPublisher‎ هر بیست ثانیه یک عکس می‌سازد و برای ساختنش
+        //  دیتابیس را می‌خواند. تا پیش از پلن‌دار شدنِ این سنجه، قفلِ اشتراک
+        //  خودش جلویش را می‌گرفت و این ستون صفر بود؛ با آمدنِ
+        //  ‎FakeLicense.Grant()‎ آن تیک باز شد و از آن پس به گردنِ **هر بخشی**
+        //  می‌افتاد که همان لحظه باز بود — یک اجرا «invoices» و «history»،
+        //  اجرای بعد «settings». یعنی سرخی‌اش جای اشتباه را نشان می‌داد.
+        //
+        //  ⛔ پس همان‌جا خاموشش می‌کنیم، درست به همان دلیلی که ‎VACUUM INTO‎ی
+        //  ‎BackupPusher‎ پایین از شمارش بیرون است: پرسشِ این سنجه «بخشی که
+        //  تویش نیستم چه مصرفی دارد» است. هزینهٔ خودِ این حلقه جای دیگری
+        //  سنجیده می‌شود (‎years‎ و ‎startup‎).
+        //  ⚠️ **بی مسدود کردنِ نخِ رابط**: یک بار این‌جا
+        //  ‎DisposeAsync().GetAwaiter().GetResult()‎ نوشتم و سنجه برای همیشه
+        //  می‌ماسید — صفر بایت خروجی و هیچ خروجی‌ای. چون خودِ حلقه
+        //  ‎await‎هایش را روی همین نخ ادامه می‌دهد، بستنِ هم‌زمانش یعنی
+        //  نخِ رابط منتظرِ کاری است که فقط همان نخ می‌تواند انجام دهد.
+        //  پس به نخِ دیگر سپرده می‌شود و این‌جا فقط چند فریم پمپ می‌کنیم.
+        if (host.PublisherIfStarted is { } pub)
+        {
+            var stop = Task.Run(() => pub.DisposeAsync().AsTask());
+            var until = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+            while (!stop.IsCompleted && DateTime.UtcNow < until)
+            { Dispatcher.UIThread.RunJobs(); Thread.Sleep(5); }
+        }
+
         Console.WriteLine();
         Console.WriteLine("بخش               باز شدن(دستور)   بی‌کاری(دستور)   ردیفِ زندهٔ بخش‌های دیگر   کنترلِ نامرئیِ چیده‌شده");
         Console.WriteLine(new string('-', 104));
