@@ -218,7 +218,7 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
     private async Task SendSupportAsync(ChatThreadViewModel th, string text, string kind = "", string? mediaId = null)
     {
         var cloud = Cloud;
-        if (cloud is null || th.Acct is null) { State = "برنامه به ابر وصل نیست"; return; }
+        if (cloud is null || th.Acct is null) { State = "برنامه به سرورِ حساب وصل نیست"; return; }
         State = "در حالِ فرستادن…";
         var (ok, msg, why) = await cloud.ChatSendAsync(th.Acct, OwnerName, text, kind, mediaId, _life.Token);
         if (!ok || msg is null) { State = "نرفت: " + why; _host.Toast("پیام فرستاده نشد: " + why, ToastKind.Error); return; }
@@ -244,7 +244,7 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
     private async Task UploadAndSendAsync(ChatThreadViewModel th, byte[] bytes, string mime)
     {
         var cloud = Cloud;
-        if (cloud is null || th.Acct is null) { State = "برنامه به ابر وصل نیست"; return; }
+        if (cloud is null || th.Acct is null) { State = "برنامه به سرورِ حساب وصل نیست"; return; }
         var kind = mime.StartsWith("image/") ? "image" : mime.StartsWith("video/") ? "video" : "audio";
         State = "در حالِ بالا بردن…";
         var (ok, mediaId, why) = await cloud.ChatUploadAsync(th.Acct, bytes, mime, _life.Token);

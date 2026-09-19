@@ -530,7 +530,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         // هیچ نه. (گزارشِ صاحب ریپو: «بخشِ پروفایل هنوز درست نشده برایم».)
         PumpPhone = Dash(s.GetString(SettingsService.StationPhone));
         PumpAddress = Dash(s.GetString(SettingsService.StationAddress));
-        PumpCodeLine = string.IsNullOrWhiteSpace(f.CloudStationId) ? "هنوز روی ابر ثبت نشده" : f.CloudStationId;
+        PumpCodeLine = string.IsNullOrWhiteSpace(f.CloudStationId) ? "هنوز روی سرورِ حساب ثبت نشده" : f.CloudStationId;
         HomeLine = string.IsNullOrWhiteSpace(s.GetString(SettingsService.ServerUrl))
             ? "هنوز پیدا نشده — با روشن شدنِ سرورِ خانگی خودش پیدا می‌شود"
             : "وصل و ثبت‌شده";
@@ -760,7 +760,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     /// ⚠️ رمز پس از رفتن پاک می‌شود و هیچ‌وقت ذخیره نمی‌شود.
     /// </summary>
     [RelayCommand]
-    private Task AccountStepAsync() => CrashGuard.RunAsync("حسابِ ابر", async () =>
+    private Task AccountStepAsync() => CrashGuard.RunAsync("سرورِ حساب", async () =>
     {
         var name = (LoginName ?? "").Trim();
         var email = (LoginEmail ?? "").Trim();
