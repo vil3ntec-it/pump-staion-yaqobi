@@ -559,7 +559,7 @@
           <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
             <TextBlock Grid.Row="0" Grid.Column="0" Text="نامِ پمپ" Classes="kvl" />
             <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding PumpName}" Classes="kvv" />
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="کدِ پمپ روی ابر" Classes="kvl" Margin="0,8,0,0" />
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="کدِ پمپ روی سرورِ حساب" Classes="kvl" Margin="0,8,0,0" />
             <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding PumpCodeLine}" Classes="kvv" Margin="0,8,0,0" />
             <TextBlock Grid.Row="2" Grid.Column="0" Text="تلفن" Classes="kvl" Margin="0,8,0,0" />
             <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding PumpPhone}" Classes="kvv" Margin="0,8,0,0" />
@@ -567,7 +567,7 @@
             <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PumpAddress}" Classes="kvv" Margin="0,8,0,0" />
             <TextBlock Grid.Row="4" Grid.Column="0" Text="سرورِ خانگی" Classes="kvl" Margin="0,8,0,0" />
             <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding HomeLine}" Classes="kvv" Margin="0,8,0,0" />
-            <TextBlock Grid.Row="5" Grid.Column="0" Text="ابر" Classes="kvl" Margin="0,8,0,0" />
+            <TextBlock Grid.Row="5" Grid.Column="0" Text="سرورِ حساب" Classes="kvl" Margin="0,8,0,0" />
             <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding CloudLine}" Classes="kvv" Margin="0,8,0,0" />
             <TextBlock Grid.Row="6" Grid.Column="0" Text="نسخهٔ برنامه" Classes="kvl" Margin="0,8,0,0" />
             <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding AppVersionLine}" Classes="kvv" Margin="0,8,0,0" />

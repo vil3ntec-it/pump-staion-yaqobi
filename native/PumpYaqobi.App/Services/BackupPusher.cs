@@ -135,7 +135,7 @@ public sealed class BackupPusher : IAsyncDisposable
         {
             LastSentAt = DateTime.Now;
             LastError = sent && toCloud ? ""
-                : sent ? "روی ابر ننشست — فقط سرورِ خانگی"
+                : sent ? "روی سرورِ حساب ننشست — فقط سرورِ خانگی"
                 : "روی سرورِ خانگی ننشست — فقط ابر";
             var s = AppSettings.Load();
             s.LastBackupSentAt = LastSentAt.Value.ToString("O");
