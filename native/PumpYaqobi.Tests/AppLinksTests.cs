@@ -545,6 +545,8 @@ public class AppLinksTests
     {
         try
         {
+            //  بازِ موقتِ ۱۴۰۵/۰۷/۰۲ این‌جا خاموش: مرزِ واقعی سنجیده می‌شود
+            Entitlements.Unlocked = false;
             //  بی اشتراک: با آزمایش هم بسته می‌ماند (باز نمی‌کند)
             var none = Entitlements.State(new AppSettings());
             Assert.False(none.Allows(Entitlements.Kar));
