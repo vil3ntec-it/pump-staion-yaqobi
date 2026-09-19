@@ -95,7 +95,19 @@ internal static class IdleAudit
         //  ‎BackupPusher‎ پایین از شمارش بیرون است: پرسشِ این سنجه «بخشی که
         //  تویش نیستم چه مصرفی دارد» است. هزینهٔ خودِ این حلقه جای دیگری
         //  سنجیده می‌شود (‎years‎ و ‎startup‎).
-        if (host.PublisherIfStarted is { } pub) pub.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        //  ⚠️ **بی مسدود کردنِ نخِ رابط**: یک بار این‌جا
+        //  ‎DisposeAsync().GetAwaiter().GetResult()‎ نوشتم و سنجه برای همیشه
+        //  می‌ماسید — صفر بایت خروجی و هیچ خروجی‌ای. چون خودِ حلقه
+        //  ‎await‎هایش را روی همین نخ ادامه می‌دهد، بستنِ هم‌زمانش یعنی
+        //  نخِ رابط منتظرِ کاری است که فقط همان نخ می‌تواند انجام دهد.
+        //  پس به نخِ دیگر سپرده می‌شود و این‌جا فقط چند فریم پمپ می‌کنیم.
+        if (host.PublisherIfStarted is { } pub)
+        {
+            var stop = Task.Run(() => pub.DisposeAsync().AsTask());
+            var until = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+            while (!stop.IsCompleted && DateTime.UtcNow < until)
+            { Dispatcher.UIThread.RunJobs(); Thread.Sleep(5); }
+        }
 
         Console.WriteLine();
         Console.WriteLine("بخش               باز شدن(دستور)   بی‌کاری(دستور)   ردیفِ زندهٔ بخش‌های دیگر   کنترلِ نامرئیِ چیده‌شده");
