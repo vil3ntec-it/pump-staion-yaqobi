@@ -2785,3 +2785,14 @@ dotnet run --project PumpYaqobi.UiTests -c Release -- personperf trace   ← ف�
 - ⚠️ سنجشِ کاملِ همان زنجیره: `gw-e2e` — پنلِ خانگیِ واقعی ⇒ درگاه ⇒ `shop/server`ِ
   واقعی روی پستگرس؛ هر ۱۸ مرحلهٔ این برنامه و ۱۲ مرحلهٔ اپِ کارمندان در
   کرومیوم، از پورتِ عمومیِ پنل. ریپوی `server`: `npm run test:gateway`.
+
+## 🔴 چراغِ سرورِ حساب با «سرورِ حساب روشن نیست» سبز نمی‌ماند (از ۱۴۰۵/۰۷/۰۲)
+
+با عکس دیده شد: درگاهِ پنلِ خانگی وقتی خودِ shop/server خاموش است ۵۰۳ی با
+شکلِ خودمان می‌دهد (`account_server_down`)، و چون شکلش «خطای سرورِ ما» بود
+چراغِ دوم **سبز** می‌ماند در حالی که هر ورودی همین خطا را می‌گرفت.
+`CloudLink.IsDownCode` آن دو کد (`account_server_down` ·
+`account_server_unreachable`) را «نرسیدیم» می‌شمارد و `CloudWhy` همان پیامِ
+درگاه را می‌گیرد. ⛔ جوابِ درگاه جوابِ سرورِ حساب نیست. سنجه:
+`CloudReachTests.Dargah_Miguyad_Sarvare_Hesab_Khamush_Ast_Yani_Ghat`.
+

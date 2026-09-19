@@ -1240,6 +1240,13 @@ public sealed class CloudLink
         CloudWhy = why;
     }
 
+    /// <summary>
+    /// کدهایی که درگاهِ سرورِ خانگی به جای سرورِ حساب می‌دهد: سرورِ حساب
+    /// خاموش است یا درگاه به آن نمی‌رسد. جوابِ خودِ درگاه است، نه سرورِ حساب.
+    /// </summary>
+    public static bool IsDownCode(string code) =>
+        code is "account_server_down" or "account_server_unreachable";
+
     /// <summary>فقط برای سنجه‌ها — برنامه هیچ‌وقت حال را دستی نمی‌سازد.</summary>
     public static void ResetReach()
     {
@@ -1688,9 +1695,16 @@ public sealed class CloudLink
             {
                 why = Str(e, "message");
                 code = Str(e, "code");
-                //  ⚠️ خطای **خودِ سرورِ ما** هم یعنی وصل‌ایم: «رمز غلط» یا
-                //  «این مسیر وجود ندارد» را فقط سرورِ ما به این شکل می‌گوید.
-                NoteOnline();
+                //  ⛔ درگاهِ سرورِ خانگی وقتی خودِ سرورِ حساب روشن نیست، ۵۰۳ی
+                //  با شکلِ خودمان می‌دهد (`account_server_down`) — و این یعنی
+                //  **نرسیدیم**، نه «وصل‌ایم». با عکس دیده شد (۱۴۰۵/۰۷/۰۲):
+                //  چراغِ دوم سبز بود در حالی که هر ورودی همین خطا را می‌گرفت.
+                if (IsDownCode(code))
+                    NoteOffline(why.Length > 0 ? why : "سرورِ حساب روی سرورِ خانگی روشن نیست");
+                else
+                    //  ⚠️ خطای **خودِ سرورِ ما** هم یعنی وصل‌ایم: «رمز غلط» یا
+                    //  «این مسیر وجود ندارد» را فقط سرورِ ما به این شکل می‌گوید.
+                    NoteOnline();
             }
             else
             {
