@@ -106,6 +106,30 @@ public class CloudReachTests : IDisposable
         Assert.Null(CloudLink.CloudOkAt);
     }
 
+    // ── ۴ب) درگاهِ سرورِ خانگی می‌گوید «سرورِ حساب روشن نیست» ⇒ قطع ─────────
+
+    /// <summary>
+    /// ⛔ با عکس دیده شد (۱۴۰۵/۰۷/۰۲): درگاهِ پنلِ خانگی وقتی shop/server
+    /// خاموش است ۵۰۳ی با شکلِ خودمان می‌دهد (<c>account_server_down</c>) و
+    /// چراغ آن را «سرورِ ما جواب داد» می‌شمرد — سبز، در حالی که هر ورودی همین
+    /// خطا را می‌گرفت. جوابِ درگاه جوابِ سرورِ حساب نیست.
+    /// </summary>
+    [Fact]
+    public async Task Dargah_Miguyad_Sarvare_Hesab_Khamush_Ast_Yani_Ghat()
+    {
+        Serve(() => Json(HttpStatusCode.ServiceUnavailable,
+            """{"error":{"code":"account_server_down","message":"سرورِ حساب روی سرورِ خانگی روشن نیست."}}"""));
+
+        var (up, _) = await CloudLink.CloudHealthAsync();
+
+        Assert.False(up);
+        Assert.Equal(CloudReach.Offline, CloudLink.Reach);
+        Assert.Null(CloudLink.CloudOkAt);
+        Assert.Contains("روشن نیست", CloudLink.CloudWhy);
+        Assert.True(CloudLink.IsDownCode("account_server_unreachable"));
+        Assert.False(CloudLink.IsDownCode("unauthorized"));
+    }
+
     // ── ۵) بی‌اینترنت ⇒ قطع، نه «وصل» ────────────────────────────────────
 
     [Fact]
