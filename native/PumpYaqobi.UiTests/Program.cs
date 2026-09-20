@@ -25,6 +25,19 @@ internal static class Program
     {
         var outDir = args.Length > 0 ? args[0] : "shots";
 
+        // ══ حلقهٔ همگام‌سازی در سنجه‌ها روشن نمی‌شود ═════════════════════════
+        //
+        // ⛔ هر سنجه‌ای که پنجره می‌سازد از راهِ `Lock.SignedIn` موتورِ
+        // همگام‌سازی را راه می‌انداخت، و چون `FakeLicense.Grant()` توکنِ
+        // دستگاه می‌نشاند، آن موتور واقعاً به سرورِ حسابِ **زنده** درخواست
+        // می‌زد — از رانرِ CI، با دادهٔ ساختگی. و برای سنجهٔ `idle` هم یعنی
+        // خواندنِ دیتابیس به گردنِ بخشی که همان لحظه باز بود.
+        //
+        // ⚠️ سنجهٔ خودِ همگام‌سازی (`syncui`) صفحه را می‌سنجد، نه حلقه را؛
+        // حلقه در `PumpYaqobi.Tests` سنجیده می‌شود، بی پنجره و بی شبکه.
+        PumpYaqobi.App.Services.SyncEngine.Disabled = true;
+        PumpYaqobi.App.Services.CrashGuard.ReportingOff = true;
+
         // ══ حالتِ «سنجشِ اسکرول» ═════════════════════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- scroll
         //
@@ -107,6 +120,8 @@ internal static class Program
         if (outDir.Equals("loginart", StringComparison.OrdinalIgnoreCase)) return LoginArtProbe.Run();
         //  «سرور روشن است اما برنامه می‌گوید خاموش»
         if (outDir.Equals("serverdot", StringComparison.OrdinalIgnoreCase)) return ServerDotProbe.Run();
+        //  شش خانهٔ کدِ ایمیلی و چراغِ همگام‌سازی در نوارِ پایین (بندهای ۴ و ۱۳)
+        if (outDir.Equals("syncui", StringComparison.OrdinalIgnoreCase)) return SyncProbe.Run();
         // ══ «عوض کردنِ تم خط‌ها را کج می‌کند؟» ══════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- themeflip
         if (outDir.Equals("themeflip", StringComparison.OrdinalIgnoreCase)) return ThemeFlipAudit.Run();

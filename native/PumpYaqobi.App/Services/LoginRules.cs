@@ -61,4 +61,30 @@ public static class LoginRules
 
     private static readonly HashSet<string> Weak = new(StringComparer.Ordinal)
     { "password", "12345678", "qwertyui", "admin123", "11111111" };
+
+    /// <summary>
+    /// فقط رقم‌ها — و ارقامِ <b>فارسی و عربی</b> هم انگلیسی می‌شوند.
+    ///
+    /// ⚠️ خواستهٔ صریحِ بندِ ۴ی پرامپت: «ارقامِ فارسی/انگلیسی». کاربری که
+    /// صفحه‌کلیدش فارسی است «۱۲۳۴۵۶» می‌زند و بی این، کدش شش نویسهٔ
+    /// ناشناخته می‌شد و سرور «کد اشتباه است» می‌گفت — بدترین شکلِ خطا،
+    /// چون کاربر مطمئن است درست زده.
+    ///
+    /// ⚠️ سرور هم همین کار را می‌کند (<c>lib/login-codes.js</c>)، ولی
+    /// این‌جا لازم است تا شمارشِ «شش رقم شد؟» روی خانه‌ها درست باشد.
+    /// </summary>
+    public static string Digits(string? raw)
+    {
+        if (string.IsNullOrEmpty(raw)) return "";
+        var sb = new System.Text.StringBuilder(raw.Length);
+        foreach (var c in raw)
+        {
+            if (c is >= '0' and <= '9') sb.Append(c);
+            //  ۰۱۲۳۴۵۶۷۸۹ فارسی
+            else if (c is >= '\u06F0' and <= '\u06F9') sb.Append((char)('0' + (c - '\u06F0')));
+            //  ٠١٢٣٤٥٦٧٨٩ عربی
+            else if (c is >= '\u0660' and <= '\u0669') sb.Append((char)('0' + (c - '\u0660')));
+        }
+        return sb.ToString();
+    }
 }

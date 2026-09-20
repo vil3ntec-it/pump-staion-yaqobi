@@ -177,6 +177,7 @@ public sealed class PumpDbFactory
 
         PatchTables(db);
         PatchColumns(db);
+        PatchSyncUid(db);
         PatchIndexes(db);
         WriteStamp(db, typeof(PumpDbFactory).Assembly.ManifestModule.ModuleVersionId.ToString("N")
                        + ":" + SchemaObjects(db));
@@ -366,6 +367,102 @@ public sealed class PumpDbFactory
             if (ColumnExists(db, table, column)) continue;
             db.Database.ExecuteSqlRaw($"ALTER TABLE \"{table}\" ADD COLUMN \"{column}\" {type};");
         }
+    }
+
+    /// <summary>
+    /// ══ ستونِ <c>SyncUid</c> روی هر جدولِ داده — مهاجرتِ Sync v1 ═══════════
+    ///
+    /// بندِ ۲۰٫۱ پرامپت شناسهٔ ULID برای هر ردیف می‌خواهد. کلیدِ اصلیِ این
+    /// برنامه شمارهٔ خودافزا است و <b>عوض نمی‌شود</b> (چرایش در
+    /// <c>native/docs/SYNC-fa.md</c>)؛ به‌جایش هر ردیف یک شناسهٔ رشته‌ایِ
+    /// ثابت می‌گیرد که کنارِ کلید می‌نشیند.
+    ///
+    /// ── چرا هیچ داده‌ای در خطر نیست ────────────────────────────────────
+    /// افزودنِ ستونِ nullable در SQLite جدول را بازنویسی نمی‌کند و لحظه‌ای
+    /// است؛ و پر کردنش <b>یک</b> <c>UPDATE</c> برای هر جدول است، نه یکی
+    /// برای هر ردیف: شناسهٔ ردیف‌های کهنه از «ریشهٔ همین نصب + شمارهٔ ردیف»
+    /// ساخته می‌شود. یکتا در جدول (چون <c>Id</c> یکتاست) و یکتا میانِ
+    /// دستگاه‌ها (چون ریشه تصادفی و مالِ همین نصب است).
+    ///
+    /// ⚠️ ردیف‌های <b>تازه</b> ULIDِ واقعی می‌گیرند
+    /// (<see cref="PumpYaqobi.Domain.Ulid"/>). ردیف‌های کهنه ترتیبِ زمانی
+    /// ندارند، و لازم هم ندارند: ترتیب را <c>server_seq</c>ِ سرور می‌گوید.
+    ///
+    /// ⛔ ریشه یک بار ساخته می‌شود و <b>هیچ‌وقت عوض نمی‌شود</b>. عوض شدنش
+    /// یعنی همان ردیف‌ها بارِ دوم با شناسهٔ دیگری به سرور می‌روند — یعنی
+    /// کلِ دفتر دو برابر.
+    /// </summary>
+    private void PatchSyncUid(PumpDbContext db)
+    {
+        var seed = SyncUidSeed(db);
+        if (seed.Length == 0) return;
+
+        //  ⛔ **پشتیبانِ رمزشده پیش از مهاجرت** (بندِ ۹ی پرامپتِ ۲۲). فقط
+        //  وقتی واقعاً کاری در پیش است: اگر ستون از پیش هست، مهاجرتی در
+        //  کار نیست و یک نسخهٔ تکراری فقط دیسک می‌خورد.
+        if (NeedsSyncUid(db)) SyncBackup.Write(this, label: "pre-sync");
+
+        foreach (var et in db.Model.GetEntityTypes())
+        {
+            if (!typeof(EntityBase).IsAssignableFrom(et.ClrType)) continue;
+            var table = et.GetTableName();
+            if (string.IsNullOrEmpty(table) || !TableExists(db, table)) continue;
+
+            try
+            {
+                if (!ColumnExists(db, table, "SyncUid"))
+                    db.Database.ExecuteSqlRaw($"ALTER TABLE \"{table}\" ADD COLUMN \"SyncUid\" TEXT;");
+
+                //  یک دستور برای کلِ جدول — نه یکی برای هر ردیف
+                db.Database.ExecuteSqlRaw(
+                    $"UPDATE \"{table}\" SET \"SyncUid\" = '{seed}' || \"Id\" " +
+                    "WHERE \"SyncUid\" IS NULL OR \"SyncUid\" = '';");
+
+                //  «این ردیف کدام است؟» — پرس‌وجوی هر opی که از سرور می‌آید
+                db.Database.ExecuteSqlRaw(
+                    $"CREATE INDEX IF NOT EXISTS \"IX_{table}_SyncUid\" ON \"{table}\" (\"SyncUid\");");
+            }
+            catch { /* جدولی که ستونِ Id ندارد یا دستِ سیستم است — بی‌ضرر رد شود */ }
+        }
+    }
+
+    /// <summary>جدولی هست که هنوز ستونِ <c>SyncUid</c> ندارد؟</summary>
+    private static bool NeedsSyncUid(PumpDbContext db)
+    {
+        foreach (var et in db.Model.GetEntityTypes())
+        {
+            if (!typeof(EntityBase).IsAssignableFrom(et.ClrType)) continue;
+            var table = et.GetTableName();
+            if (string.IsNullOrEmpty(table) || !TableExists(db, table)) continue;
+            if (!ColumnExists(db, table, "SyncUid")) return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// ریشهٔ شناسه‌های کهنه. یک بار ساخته و در <c>SyncState</c> نگه داشته
+    /// می‌شود؛ بارهای بعد همان برمی‌گردد.
+    /// </summary>
+    private static string SyncUidSeed(PumpDbContext db)
+    {
+        try
+        {
+            var row = db.SyncState.FirstOrDefault(x => x.Id == 1);
+            if (row is not null && !string.IsNullOrEmpty(row.UidSeed)) return row.UidSeed;
+
+            //  بیست‌وشش نویسهٔ ULID + یک خطِ تیره ⇒ شناسه‌ای که با ULIDهای
+            //  تازه قاطی نمی‌شود و از هشتاد نویسهٔ سقفِ سرور هم نمی‌گذرد.
+            var seed = PumpYaqobi.Domain.Ulid.New() + "-";
+            if (row is null) db.SyncState.Add(new SyncStateRow { Id = 1, UidSeed = seed });
+            else row.UidSeed = seed;
+            //  ⚠️ دفترِ تغییرات این‌جا خاموش است: مهاجرت خودش «تغییرِ کاربر»
+            //  نیست و صدهزار opِ بی‌مصرف می‌ساخت.
+            var was = OpLog.Enabled;
+            OpLog.Enabled = false;
+            try { db.SaveChanges(); } finally { OpLog.Enabled = was; }
+            return seed;
+        }
+        catch { return ""; }
     }
 
     private static bool TableExists(PumpDbContext db, string table)

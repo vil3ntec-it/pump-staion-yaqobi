@@ -1,5 +1,6 @@
 using System.Threading;
 using Microsoft.EntityFrameworkCore;
+using PumpYaqobi.Domain;
 using PumpYaqobi.Domain.Entities;
 
 namespace PumpYaqobi.Persistence;
@@ -66,6 +67,12 @@ public sealed class PumpDbContext : DbContext
     /// <summary>یادداشت‌های هر بخش — همتای «صندوق نوت‌ها»ی نسخهٔ وب.</summary>
     public DbSet<SectionNote> SectionNotes => Set<SectionNote>();
     public DbSet<SectionNoteDraft> SectionNoteDrafts => Set<SectionNoteDraft>();
+
+    /// <summary>دفترِ تغییرات — بندِ ۲۰٫۱. شرحش در <see cref="OpLog"/>.</summary>
+    public DbSet<SyncOp> SyncOps => Set<SyncOp>();
+
+    /// <summary>حالِ همگام‌سازی — همیشه یک ردیف.</summary>
+    public DbSet<SyncStateRow> SyncState => Set<SyncStateRow>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -483,6 +490,26 @@ public sealed class PumpDbContext : DbContext
             e.HasIndex(x => x.SectionKey).IsUnique();
         });
 
+        b.Entity<SyncOp>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.OpId).IsRequired();
+            //  ⚠️ یکتا: دو بار فرستادنِ یک دسته نباید دو ردیف بسازد، و
+            //  خودِ سرور هم با همین «تکراری» را می‌شناسد.
+            e.HasIndex(x => x.OpId).IsUnique();
+            //  «چه چیزی هنوز نرفته» — پرس‌وجوی همیشگیِ فرستنده
+            e.HasIndex(x => new { x.Synced, x.Id });
+            //  «این ردیف از پیش opی دارد؟» — پرس‌وجوی پاسِ «بارِ اول»
+            e.HasIndex(x => new { x.TableName, x.RowUid });
+            //  ⛔ حذفِ نرم ندارد: دفترِ کار است، نه دادهٔ کاربر.
+        });
+
+        b.Entity<SyncStateRow>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).ValueGeneratedNever();
+        });
+
         base.OnModelCreating(b);
     }
 
@@ -500,7 +527,21 @@ public sealed class PumpDbContext : DbContext
     /// </summary>
     public static long Version => Interlocked.Read(ref _version);
     private static long _version = 1;
-    public static void Bump() => Interlocked.Increment(ref _version);
+
+    /// <summary>
+    /// هر ذخیره — موتورِ همگام‌سازی از همین‌جا بیدار می‌شود (مکثِ ۵۰۰ms
+    /// آن‌طرف اعمال می‌شود، پس صد ذخیرهٔ پشتِ سرِ هم یک <c>push</c> است).
+    ///
+    /// ⚠️ هیچ کارِ سنگینی به این نچسبانید: روی همان نخی صدا می‌خورد که
+    /// نوشته است.
+    /// </summary>
+    public static event Action? Saved;
+
+    public static void Bump()
+    {
+        Interlocked.Increment(ref _version);
+        try { Saved?.Invoke(); } catch { /* شنونده نباید ذخیره را بشکند */ }
+    }
 
     public override int SaveChanges()
     { Stamp(); var n = base.SaveChanges(); Bump(); return n; }
@@ -511,11 +552,21 @@ public sealed class PumpDbContext : DbContext
     private void Stamp()
     {
         var now = DateTime.UtcNow;
-        foreach (var entry in ChangeTracker.Entries<EntityBase>())
+        var nowMs = new DateTimeOffset(now, TimeSpan.Zero).ToUnixTimeMilliseconds();
+
+        // ⚠️ **فهرست، نه شمارنده**: پایین‌تر ردیف‌های `SyncOp` به همین
+        // ChangeTracker اضافه می‌شوند و شمارشِ زنده همان‌جا می‌شکست.
+        var entries = ChangeTracker.Entries<EntityBase>().ToList();
+        var ops = OpLog.Enabled ? new List<SyncOp>() : null;
+
+        foreach (var entry in entries)
         {
-            if (entry.State == EntityState.Added) { entry.Entity.CreatedAt = now; entry.Entity.UpdatedAt = now; }
-            else if (entry.State == EntityState.Modified) entry.Entity.UpdatedAt = now;
-            else if (entry.State == EntityState.Deleted)
+            // حالِ **پیش از** حذفِ نرم — وگرنه حذف در دفتر «ویرایش» دیده می‌شد
+            var was = entry.State;
+
+            if (was == EntityState.Added) { entry.Entity.CreatedAt = now; entry.Entity.UpdatedAt = now; }
+            else if (was == EntityState.Modified) entry.Entity.UpdatedAt = now;
+            else if (was == EntityState.Deleted)
             {
                 // سطلِ زباله و تاریخچه خودشان «بایگانی»اند؛ حذف از آن‌ها باید
                 // واقعاً حذف باشد، وگرنه «خالی کردنِ سطل» هیچ‌وقت خالی نمی‌کند.
@@ -526,6 +577,18 @@ public sealed class PumpDbContext : DbContext
                 entry.Entity.DeletedAt = now;
                 entry.Entity.UpdatedAt = now;
             }
+            else continue;
+
+            // ══ دفترِ تغییرات ═══════════════════════════════════════════════
+            // همین‌جا و نه جای دیگر: هر سرویسی که چیزی می‌نویسد سرِ آخر به
+            // همین `SaveChanges` می‌رسد، پس «یک نقطه»ی بندِ ۲۰٫۱ همین است.
+            if (ops is null) continue;
+            if (!OpLog.Tracked(entry)) continue;
+            if (string.IsNullOrEmpty(entry.Entity.SyncUid)) entry.Entity.SyncUid = Ulid.New(nowMs);
+            if (OpLog.Build(entry, was, nowMs) is { } op) ops.Add(op);
         }
+
+        // در **همان** تراکنش می‌نشینند: یا داده و دفتر هر دو، یا هیچ‌کدام
+        if (ops is { Count: > 0 }) SyncOps.AddRange(ops);
     }
 }

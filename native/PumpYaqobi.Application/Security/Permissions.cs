@@ -64,8 +64,34 @@ public sealed class PermissionService
 
     public PermissionService(IUserSession session) => _session = session;
 
-    public bool Can(Permission p) =>
-        Map.TryGetValue(_session.Role, out var set) && set.Contains(p);
+    /// <summary>
+    /// ══ قفلِ نرمِ پایانِ اشتراک ══════════════════════════════════════════
+    ///
+    /// بندِ ۲۰٫۷ و بندِ ۸ی پرامپتِ ۲۲: «منقضی ⇒ قفلِ نرم (فقط‌خواندنی +
+    /// خروجی Excel/PDF). داده هرگز حذف نمی‌شود.»
+    ///
+    /// تصمیمش این‌جا نیست — این‌جا فقط <b>یک</b> نقطهٔ اعمال است، همان‌جا
+    /// که هر سرویسی اجازه می‌گیرد. خودِ تصمیم در
+    /// <c>PumpYaqobi.App.Services.SoftLock</c> است و با <c>null</c> بودنِ
+    /// این قلاب (آزمون‌ها، عکس‌گیری) هیچ چیزی قفل نمی‌شود.
+    ///
+    /// ⛔ <b>فقط نوشتن را می‌بندد.</b> <see cref="Permission.ViewData"/> و
+    /// <see cref="Permission.Backup"/> و <see cref="Permission.ViewProfit"/>
+    /// دست‌نخورده‌اند — پس دیدن، چاپ، PDF و بکاپ همیشه کار می‌کنند. کسی
+    /// که پولش تمام شده باید بتواند دفترش را ببرد.
+    /// </summary>
+    public static Func<bool>? ReadOnlyHook { get; set; }
+
+    /// <summary>این اجازه «نوشتن» است؟</summary>
+    private static bool Writes(Permission p) =>
+        p is Permission.EditData or Permission.DeleteData or Permission.ManagerOnly
+          or Permission.PurgeData or Permission.Import or Permission.Restore;
+
+    public bool Can(Permission p)
+    {
+        if (Writes(p) && ReadOnlyHook?.Invoke() == true) return false;
+        return Map.TryGetValue(_session.Role, out var set) && set.Contains(p);
+    }
 
     /// <summary>اجازه را می‌خواهد؛ اگر نباشد کار همان‌جا می‌ایستد.</summary>
     public void Require(Permission p)

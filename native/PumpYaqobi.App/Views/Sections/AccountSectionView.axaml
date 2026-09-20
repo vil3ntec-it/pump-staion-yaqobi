@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:vmr="using:PumpYaqobi.App.ViewModels"
              xmlns:c="using:PumpYaqobi.App.Controls"
              xmlns:th="using:PumpYaqobi.App.Themes"
              x:Class="PumpYaqobi.App.Views.Sections.AccountSectionView"
@@ -186,6 +187,21 @@
     <Style Selector="Border.loginpage Button.mode.active /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="{StaticResource Login.Grad}" />
     </Style>
+    <!-- ══ خانه‌های کد ═══════════════════════════════════════════════════
+         شش کادرِ مربعیِ هم‌اندازه، عدد درشت و وسط — همان شکلی که کاربر در
+         هر برنامهٔ دیگری دیده. ⚠️ `MaxLength` عمداً بلندتر از یک است تا
+         چسباندنِ شش رقم در یک خانه هم کار کند؛ خودِ ویومدل پخششان می‌کند. -->
+    <Style Selector="Border.loginpage TextBox.codebox">
+      <Setter Property="Width" Value="46" />
+      <Setter Property="Height" Value="54" />
+      <Setter Property="MaxLength" Value="12" />
+      <Setter Property="FontSize" Value="24" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="TextAlignment" Value="Center" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
     <Style Selector="Border.loginpage Border.stepchip">
       <Setter Property="CornerRadius" Value="999" />
       <Setter Property="Padding" Value="12,4" />
@@ -312,6 +328,10 @@
                                 Command="{Binding SetSignUpCommand}" CommandParameter="yes" />
                         <Button Classes="mode" Classes.active="{Binding IsSignIn}" Content="حساب دارم"
                                 Command="{Binding SetSignUpCommand}" CommandParameter="no" />
+                        <!-- درِ سوم: بی رمز. بندِ ۲۰٫۷ی پرامپت — ایمیل ⇒ کدِ
+                             شش‌رقمی ⇒ نشست. ثبت‌نام و ورود در این راه یکی‌اند. -->
+                        <Button Classes="mode" Classes.active="{Binding IsCodeLogin}" Content="کدِ ایمیلی"
+                                Command="{Binding SetSignUpCommand}" CommandParameter="code" />
                       </StackPanel>
                     </Border>
 
@@ -435,7 +455,45 @@
                     <TextBlock Classes="dim" FontSize="12.5" TextWrapping="Wrap"
                                Text="یک کدِ شش‌رقمی به ایمیلتان فرستادیم. همان را این‌جا بزنید تا حساب ساخته شود. (این با کدِ اشتراک فرق دارد.)" />
 
+                    <!-- ══ شش خانهٔ کد — بندِ ۴ی پرامپتِ ۲۲ ════════════════
+                         پرشِ خودکار، Paste، ارقامِ فارسی/انگلیسی و ارسالِ
+                         خودکار پس از رقمِ ششم. همهٔ تصمیم‌ها در
+                         `CodeBoxesViewModel` است؛ این‌جا فقط فوکوس جابه‌جا
+                         می‌شود (`AccountSectionView.axaml.cs`).
+                         ⚠️ چپ‌به‌راست، وگرنه رقمِ اول سمتِ راست می‌افتد و
+                         کاربر کد را وارونه می‌بیند. -->
+                    <!-- ⚠️ `IsVisible` روی قابِ بیرونی است و `DataContext` روی
+                         خودِ ردیف: با بایندِ کامپایل‌شده، عوض کردنِ
+                         `DataContext` بدونِ `x:DataType` اصلاً کامپایل
+                         نمی‌شود، و اگر `IsVisible` هم داخلِ همان می‌نشست
+                         روی `CodeBoxesViewModel` دنبالِ `IsCodeLogin`
+                         می‌گشت — که آن‌جا وجود ندارد. -->
+                    <Panel IsVisible="{Binding IsCodeLogin}" Margin="0,8,0,0">
+                      <StackPanel Name="CodeBoxRow" Orientation="Horizontal" Spacing="8"
+                                  HorizontalAlignment="Center"
+                                  FlowDirection="LeftToRight"
+                                  DataContext="{Binding CodeBoxes}"
+                                  x:DataType="vmr:CodeBoxesViewModel">
+                        <TextBox Name="Code0" Classes="codebox" Text="{Binding B1, Mode=OneWay}" />
+                        <TextBox Name="Code1" Classes="codebox" Text="{Binding B2, Mode=OneWay}" />
+                        <TextBox Name="Code2" Classes="codebox" Text="{Binding B3, Mode=OneWay}" />
+                        <TextBox Name="Code3" Classes="codebox" Text="{Binding B4, Mode=OneWay}" />
+                        <TextBox Name="Code4" Classes="codebox" Text="{Binding B5, Mode=OneWay}" />
+                        <TextBox Name="Code5" Classes="codebox" Text="{Binding B6, Mode=OneWay}" />
+                      </StackPanel>
+                    </Panel>
+
+                    <!-- ایمیلِ پوشانده و حالِ تحویل — هر دو از خودِ سرور -->
+                    <TextBlock Classes="dim" FontSize="12" HorizontalAlignment="Center"
+                               IsVisible="{Binding IsCodeLogin}" Text="{Binding CodeMasked}"
+                               FlowDirection="LeftToRight" />
+                    <TextBlock Classes="dim" FontSize="12" HorizontalAlignment="Center"
+                               TextWrapping="Wrap" IsVisible="{Binding IsCodeLogin}"
+                               Text="{Binding CodeDelivery}" />
+
+                    <!-- راهِ رمز همان کادرِ تک‌خطیِ همیشگی‌اش را دارد -->
                     <TextBox Text="{Binding EmailCode}" MaxLength="6" Margin="0,6,0,0"
+                             IsVisible="{Binding !IsCodeLogin}"
                              Watermark="کدِ ایمیل — شش رقم" FlowDirection="LeftToRight">
                       <TextBox.KeyBindings>
                         <KeyBinding Gesture="Enter" Command="{Binding VerifyEmailCommand}" />
@@ -446,8 +504,14 @@
                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                             Command="{Binding VerifyEmailCommand}" IsEnabled="{Binding !Busy}" />
                     <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                      <!-- ⚠️ شمارشِ معکوسِ شصت ثانیه — عددش از خودِ سرور
+                           می‌آید (`resend_after`)، نه از حدسِ ما. -->
                       <Button Classes="link" Content="کد نرسید؟ دوباره بفرست"
-                              Command="{Binding ResendEmailCodeCommand}" IsEnabled="{Binding !Busy}" />
+                              Command="{Binding ResendEmailCodeCommand}"
+                              IsEnabled="{Binding CanResendCode}" />
+                      <TextBlock Classes="dim" FontSize="12" VerticalAlignment="Center"
+                                 IsVisible="{Binding !CanResendCode}"
+                                 Text="{Binding CodeSeconds, StringFormat='{}{0} ثانیه'}" />
                       <Button Classes="link" Content="‹ برگشت به حساب"
                               Command="{Binding BackToAccountCommand}" IsEnabled="{Binding !Busy}" />
                     </StackPanel>

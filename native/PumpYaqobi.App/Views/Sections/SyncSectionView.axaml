@@ -1,0 +1,100 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
+             x:Class="PumpYaqobi.App.Views.Sections.SyncSectionView"
+             x:DataType="vm:SyncSectionViewModel">
+
+  <!-- ══ همگام‌سازی — بندِ ۱۱ی پرامپتِ ۲۲ ══════════════════════════════════
+       صف، آخرین موفق، خطای آخر، «الان همگام کن»، و گزارشِ خطا روشن/خاموش.
+       ⛔ کادرِ نشانیِ سرور این‌جا نیست و نباید بیاید — نشانی در خودِ برنامه
+       قفل است (‎CloudAddressLockTests‎). شرحش در ‎native/docs/SYNC-fa.md‎. -->
+  <c:SectionPage Header="همگام‌سازی"
+                 SubHeader="دفترِ این پمپ روی سرورِ حساب — و آن‌چه هنوز نرفته">
+
+    <StackPanel Spacing="14" MaxWidth="900">
+
+      <!-- ══ حال ═════════════════════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="0">
+        <StackPanel>
+          <Border Classes="card-head">
+            <TextBlock Text="🔄 حالِ همگام‌سازی" Classes="card-title" />
+          </Border>
+          <StackPanel Margin="14" Spacing="10">
+
+            <StackPanel Orientation="Horizontal" Spacing="9">
+              <Border Width="14" Height="14" CornerRadius="7" VerticalAlignment="Center"
+                      Background="{Binding LightBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+              <TextBlock Text="{Binding Light}" FontSize="16" FontWeight="ExtraBold"
+                         VerticalAlignment="Center" />
+            </StackPanel>
+
+            <TextBlock Text="{Binding Reason}" Classes="muted" TextWrapping="Wrap" />
+
+            <Border Classes="stat" Padding="12,10">
+              <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="در صف:" Classes="muted" Margin="0,0,10,4" />
+                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding QueuedText}" FontWeight="Bold" Margin="0,0,0,4" />
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="آخرین رفت‌وآمدِ موفق:" Classes="muted" Margin="0,0,10,4" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LastOkText}" Margin="0,0,0,4" />
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="آخرین خطا:" Classes="muted" Margin="0,0,10,4" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding LastErrorText}" TextWrapping="Wrap" Margin="0,0,0,4" />
+
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="نسخهٔ Schema:" Classes="muted" Margin="0,0,10,4" />
+                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SchemaText}" Margin="0,0,0,4" />
+
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="نشانهٔ دفترِ سرور:" Classes="muted" Margin="0,0,10,0" />
+                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding CursorText}" FlowDirection="LeftToRight" />
+              </Grid>
+            </Border>
+
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="accent" Content="🔄 الان همگام کن"
+                      Command="{Binding SyncNowCommand}" IsEnabled="{Binding !Busy}" />
+              <Button Classes="ghost" Content="↻ تازه کن" Command="{Binding RefreshNowCommand}" />
+            </StackPanel>
+
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="تغییرهای شما در خودِ دیتابیس صف می‌بندند، پس بستنِ برنامه یا رفتنِ برق چیزی را نمی‌برد — اجرای بعدی از همان‌جا ادامه می‌دهد. نشانیِ سرور در خودِ برنامه است و عوض نمی‌شود." />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- ══ پشتیبان و بازیابی ═══════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="0">
+        <StackPanel>
+          <Border Classes="card-head">
+            <TextBlock Text="💾 پشتیبانِ رمزشده و بازیابی از سرور" Classes="card-title" />
+          </Border>
+          <StackPanel Margin="14" Spacing="10">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="ghost" Content="🔐 پشتیبانِ رمزشده بگیر" Command="{Binding BackupNowCommand}" />
+              <Button Classes="ghost" Content="☁️ بازیابی از سرور"
+                      Command="{Binding RestoreCommand}" IsEnabled="{Binding !Busy}" />
+            </StackPanel>
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="پشتیبانِ رمزشده روی همین کامپیوتر باز می‌شود و روی کامپیوترِ دیگر نه — برای بردن روی فلش یا فرستادن. «بازیابی از سرور» همهٔ حساب‌های این پمپ را از سرور می‌گیرد و پیش از هر کاری یک پشتیبانِ خودکار می‌گیرد؛ هیچ ردیفی پاک نمی‌شود." />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- ══ گزارشِ خطا ══════════════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="0">
+        <StackPanel>
+          <Border Classes="card-head">
+            <TextBlock Text="🐞 گزارشِ خطا" Classes="card-title" />
+          </Border>
+          <StackPanel Margin="14" Spacing="10">
+            <CheckBox Content="خطاهای برنامه به سرور گزارش شوند" IsChecked="{Binding ReportErrors}" />
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="فقط پیامِ خطا، نوعش و چند خطِ آخرِ ردپا می‌رود — هیچ دادهٔ حساب، نام، شماره یا مبلغی نمی‌رود. با این، خرابی پیش از تماسِ شما دیده می‌شود." />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </c:SectionPage>
+</UserControl>

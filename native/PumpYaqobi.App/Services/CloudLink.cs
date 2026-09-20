@@ -138,7 +138,7 @@ public sealed record PumpSubscription(
 ///    <see cref="LicenseGuard"/> امضایش را می‌سنجد — نه یک پرچمِ ساده که
 ///    هر کسی در فایلِ تنظیمات عوضش کند.
 /// </summary>
-public sealed class CloudLink
+public sealed partial class CloudLink
 {
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(20) };
 
@@ -1665,13 +1665,23 @@ public sealed class CloudLink
         return req;
     }
 
-    private static async Task<CloudReply> SendFull(HttpRequestMessage req, CancellationToken ct)
+    private static Task<CloudReply> SendFull(HttpRequestMessage req, CancellationToken ct) =>
+        SendOn(Http, req, ct);
+
+    /// <summary>
+    /// همان فرستنده، روی یک <see cref="HttpClient"/>ِ دلخواه.
+    ///
+    /// ⚠️ نیمهٔ همگام‌سازی فرستندهٔ خودش را دارد (gzip و مهلتِ بلندتر) ولی
+    /// باید <b>دقیقاً همین</b> خواندنِ پاسخ و همین تصمیمِ «وصل‌ایم یا نه» را
+    /// داشته باشد — وگرنه چراغِ سرورِ حساب دو حقیقتِ جدا پیدا می‌کرد.
+    /// </summary>
+    private static async Task<CloudReply> SendOn(HttpClient client, HttpRequestMessage req, CancellationToken ct)
     {
         using var _ = req;
         try
         {
             using var res = TestTransport is null
-                ? await Http.SendAsync(req, ct)
+                ? await client.SendAsync(req, ct)
                 : await TestTransport(req, ct);
             var text = await res.Content.ReadAsStringAsync(ct);
             var status = (int)res.StatusCode;

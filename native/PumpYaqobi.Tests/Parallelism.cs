@@ -54,6 +54,16 @@ internal static class TestSettingsHome
                 "pump-tests-" + Guid.NewGuid().ToString("N")[..8]);
             Directory.CreateDirectory(dir);
             PumpYaqobi.App.Services.AppSettings.DirOverride = dir;
+
+            //  ⛔ **حلقهٔ همگام‌سازی در آزمون‌ها اصلاً روشن نمی‌شود.** هر
+            //  آزمونی که پنجره می‌سازد از راهِ `Lock.SignedIn` آن را راه
+            //  می‌انداخت، و چون `FakeLicense` توکنِ دستگاه می‌نشاند، همان
+            //  حلقه واقعاً به `api.vill3n.top` درخواست می‌زد — از رانرِ CI.
+            //  سنجهٔ خودش (`SyncStoreTests`) موتور را لازم ندارد.
+            PumpYaqobi.App.Services.SyncEngine.Disabled = true;
+
+            //  و گزارشِ خطا هم از آزمون بیرون نمی‌رود
+            PumpYaqobi.App.Services.CrashGuard.ReportingOff = true;
         }
         catch { /* نشدنش نباید جلوی دویدنِ آزمون‌ها را بگیرد */ }
     }

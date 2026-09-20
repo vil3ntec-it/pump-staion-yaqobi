@@ -266,6 +266,11 @@
         </DataTemplate>
       </ItemsControl.ItemTemplate>
     </ItemsControl>
+
+    <!-- جای خالیِ نوارِ پایین: نوار خودش بیرونِ اسکرول شناور است، پس
+         این‌جا به همان بلندی جا باز می‌شود تا تهِ محتوا زیرش پنهان نشود —
+         همان کاری که ‎NavGap‎ برای نوارِ بالا می‌کند. -->
+    <Panel Name="StatusGap" Height="30" IsVisible="{Binding IsChromeVisible}" />
     </StackPanel>
    </ScrollViewer>
 
@@ -304,6 +309,41 @@
           </ItemsControl.ItemTemplate>
         </ItemsControl>
       </c:NavStrip>
+    </Border>
+
+    <!-- ══ نوارِ وضعیت — چسبانِ پایین ══════════════════════════════════════
+         بندِ ۱۳ی پرامپتِ ۲۲: «نمایشِ وضعیتِ Sync در نوارِ وضعیتِ پایینِ
+         پنجره (سبز/زرد/خاکستری/قرمز).»
+         ⚠️ بیرونِ اسکرول و ‎VerticalAlignment="Bottom"‎ — همان الگوی نوارِ
+         بخش‌ها، که بالای صفحه می‌ایستد. آوالونیا ‎position:sticky‎ ندارد.
+         ⛔ هیچ نام و نشانیِ سروری در آن نیست؛ دلیل فقط در ‎ToolTip‎. -->
+    <Border Name="StatusBar" VerticalAlignment="Bottom"
+            IsVisible="{Binding IsChromeVisible}"
+            Background="{DynamicResource Pump.NavBg}"
+            BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="0,1,0,0"
+            Padding="14,4">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Button Grid.Column="0" Padding="4,2" Background="Transparent" BorderThickness="0"
+                Command="{Binding SyncNowCommand}" ToolTip.Tip="{Binding SyncDotReason}">
+          <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+            <Border Width="10" Height="10" CornerRadius="5" VerticalAlignment="Center"
+                    Background="{Binding SyncDotBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+            <TextBlock Text="{Binding SyncDotText}" FontSize="12" VerticalAlignment="Center"
+                       Foreground="{DynamicResource Pump.Muted}" />
+          </StackPanel>
+        </Button>
+
+        <!-- بنرِ اعلانِ مدیر و قفلِ نرم — یک جا، نه دو -->
+        <TextBlock Grid.Column="1" Text="{Binding NoticeText}" IsVisible="{Binding HasNotice}"
+                   FontSize="12" FontWeight="Bold" TextTrimming="CharacterEllipsis"
+                   VerticalAlignment="Center" Margin="14,0"
+                   Foreground="{DynamicResource Pump.Info}" />
+
+        <Button Grid.Column="2" Classes="link" Content="بستن" FontSize="11"
+                IsVisible="{Binding HasNotice}" Command="{Binding CloseNoticeCommand}"
+                Background="Transparent" BorderThickness="0"
+                Foreground="{DynamicResource Pump.Muted}" />
+      </Grid>
     </Border>
 
   </Grid>
