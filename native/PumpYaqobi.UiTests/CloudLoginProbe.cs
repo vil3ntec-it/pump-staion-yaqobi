@@ -440,21 +440,28 @@ internal static class CloudLoginProbe
               AppSettings.Load().CloudAccountToken == "acct-token",
               AppSettings.Load().CloudAccountToken);
 
-        Console.WriteLine("── ۴) کدِ شش‌رقمیِ غلط — هیچ چیزی فعال نمی‌شود");
+        //  ⛔ **کدِ دوم از گامِ پمپ رفت** (۱۴۰۵/۰۷/۰۴): «بعد از کد شش رقمی
+        //  یک کد شش رقمی دیگه می‌خواد، اون چیه؟ اون رو حذف کن.» پس کد از
+        //  جای واقعیِ خودش سنجیده می‌شود — کارتِ اشتراکِ پروفایل — و گامِ
+        //  پمپ فقط نام و لوکیشن می‌خواهد.
+        Console.WriteLine("── ۴) کدِ شش‌رقمیِ غلط در کارتِ اشتراک — هیچ چیزی فعال نمی‌شود");
         account.LoginPump = "پمپ یعقوبی";
         account.LoginLocation = "هرات، جادهٔ کندهار";
-        account.LoginCode = "111111";
-        Wait(win, account.VerifyCodeCommand.ExecuteAsync(null));
+        account.SubCode = "111111";
+        Wait(win, account.RedeemSubCommand.ExecuteAsync(null));
         for (var i = 0; i < 20; i++) Pump(win);
-        Check("کدِ غلط با پیامِ خودِ سرور رد شد", account.LoginStatus.Contains("این کد پیدا نشد"),
-              account.LoginStatus);
+        Check("کدِ غلط با پیامِ خودِ سرور رد شد", account.SubMessage.Contains("این کد پیدا نشد"),
+              account.SubMessage);
         Check("⛔ و هیچ توکنِ دستگاهی ساخته نشد",
               string.IsNullOrWhiteSpace(AppSettings.Load().CloudDeviceToken));
-        Check("و در گامِ دو ماند", account.StepPump);
+        Check("⛔ و گامِ ورود اصلاً تکان نخورد", account.StepPump, "گامِ " + account.LoginStep);
 
         Console.WriteLine("── ۵) کدِ درست — فعال‌سازی، اشتراک، و باز شدنِ قفل‌ها");
-        account.LoginCode = "654321";
-        Wait(win, account.VerifyCodeCommand.ExecuteAsync(null));
+        account.SubCode = "654321";
+        Wait(win, account.RedeemSubCommand.ExecuteAsync(null));
+        for (var i = 0; i < 20; i++) Pump(win);
+        //  و گامِ پمپ خودش، بی هیچ کدی، تمام می‌شود
+        Wait(win, account.FinishPumpCommand.ExecuteAsync(null));
         for (var i = 0; i < 40; i++) Pump(win);
         var f2 = AppSettings.Load();
         Check("درخواستِ فعال‌سازی رفت", Seen.Contains("POST /api/pump/device/activate"));
@@ -807,8 +814,8 @@ internal static class CloudLoginProbe
 
         account.LoginPump = "پمپ تازه";
         account.LoginLocation = "کابل";
-        account.LoginCode = "";                 // ⚠️ هیچ کدی
-        Wait(win, account.VerifyCodeCommand.ExecuteAsync(null));
+        //  ⚠️ گامِ پمپ از ۱۴۰۵/۰۷/۰۴ اصلاً کادرِ کدی ندارد
+        Wait(win, account.FinishPumpCommand.ExecuteAsync(null));
         for (var i = 0; i < 40; i++) Pump(win);
 
         var made = AppSettings.Load();
@@ -821,13 +828,14 @@ internal static class CloudLoginProbe
         Check("⚠️ و پیامِ خطایی روی صفحه نماند", account.LoginStatus.Length == 0,
               account.LoginStatus);
 
-        //  ⛔ کدِ **نصفه** همچنان خطاست — یکی اشتباهِ تایپ است و آن یکی
-        //  راهِ عادیِ کسی که اصلاً کدی ندارد.
-        account.LoginCode = "123";
-        Wait(win, account.VerifyCodeCommand.ExecuteAsync(null));
+        //  ⛔ کدِ **نصفه** همچنان خطاست — ولی حالا آن‌جایی که کد واقعاً
+        //  زده می‌شود: کارتِ اشتراک.
+        account.SubCode = "123";
+        Wait(win, account.RedeemSubCommand.ExecuteAsync(null));
         for (var i = 0; i < 20; i++) Pump(win);
-        Check("کدِ نصفه رد می‌شود", account.LoginStatus.Contains("شش رقم"), account.LoginStatus);
-        account.LoginCode = "";
+        Check("کدِ نصفه رد می‌شود", account.SubMessage.Contains("شش رقم"), account.SubMessage);
+        account.SubCode = "";
+        account.SubMessage = "";
         account.LoginStatus = "";
         _noStation = false;
 

@@ -1,3 +1,4 @@
+using System.Linq;
 using PumpYaqobi.App.Services;
 using Xunit;
 
@@ -160,11 +161,29 @@ public class AppLinksTests
         Assert.Contains("SetSignUpCommand", xaml);
         Assert.Contains("AccountStepCommand", xaml);
 
-        //  گامِ ۲ — کد و تاییدش از سرور، نامِ پمپ و لوکیشن
-        Assert.Contains("Binding LoginCode", xaml);
+        //  گامِ پمپ — فقط نام و لوکیشن
         Assert.Contains("Binding LoginPump", xaml);
         Assert.Contains("Binding LoginLocation", xaml);
-        Assert.Contains("VerifyCodeCommand", xaml);
+        Assert.Contains("FinishPumpCommand", xaml);
+
+        //  ⛔ **کدِ دومِ شش‌رقمی از گامِ پمپ رفت** (۱۴۰۵/۰۷/۰۴). گزارشِ صاحب
+        //  ریپو: «بعد از کد شش رقمی یک کد شش رقمی دیگه می‌خواد، اون چیه؟
+        //  اون رو حذف کن، لازم نیست.» درست بعد از کدِ **ایمیل** یک کادرِ
+        //  شش‌رقمیِ دیگر با همان شکل می‌آمد که هیچ ربطی به آن یکی نداشت.
+        Assert.DoesNotContain("LoginCode", xaml);
+        //  ⚠️ روی خودِ **کد** می‌گردیم، نه روی توضیحات — همان قاعدهٔ
+        //  `Adamakha_…`: نامِ برداشته‌شده در کامنتِ «این رفت و چرا» هست و
+        //  باید هم باشد.
+        var vmCode = string.Join("\n",
+            Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs")
+                .Split('\n').Where(l => !l.TrimStart().StartsWith("//")));
+        Assert.DoesNotContain("_loginCode", vmCode);
+
+        //  ⚠️ ولی خرج کردنِ کدِ اشتراک **از بین نرفت** — همان‌جایی ماند که
+        //  باید باشد: کارتِ «اشتراک»ِ خودِ پروفایل. بی این دو خط، «حذفش
+        //  کردم» می‌توانست یعنی «قابلیت را هم بردم».
+        Assert.Contains("Binding SubCode", xaml);
+        Assert.Contains("RedeemSubCommand", xaml);
         //  و گامِ سوم «تمام» است
         Assert.Contains("Binding StepDone", xaml);
 
@@ -190,8 +209,11 @@ public class AppLinksTests
         Assert.Contains("public bool StepEmailCode => LoginStep == 2;", vm);
         Assert.Contains("public bool StepPump => LoginStep == 3;", vm);
         Assert.Contains("public bool StepDone => LoginStep == 4;", vm);
-        //  کد همان کدِ اشتراک است و نام و لوکیشنِ پمپ همراهش می‌روند
-        Assert.Contains("Cloud.RedeemAsync(code, pump, where)", vm);
+        //  ⛔ گامِ پمپ از ۱۴۰۵/۰۷/۰۴ هیچ کدی نمی‌خواهد — فقط پمپ را می‌سازد
+        Assert.Contains("Cloud.EnsureStationAsync(pump)", vm);
+        Assert.DoesNotContain("Cloud.RedeemAsync(code, pump, where)", vm);
+        //  ⚠️ ولی خرج کردنِ کد از بین نرفته؛ فقط جایش کارتِ اشتراک است
+        Assert.Contains("Cloud.RedeemAsync(code)", vm);
         Assert.Contains("SettingsService.StationName, pump", vm);
         Assert.Contains("SettingsService.StationAddress, where", vm);
     }
@@ -290,12 +312,16 @@ public class AppLinksTests
         attach = attach[..attach.IndexOf("OnDetachedFromVisualTree", StringComparison.Ordinal)];
         Assert.DoesNotContain("Paint();", attach);
 
-        //  و در صفحه به کار رفته، با پس‌زمینهٔ تمِ برنامه (نه آن بنفشِ عکس)
+        //  و در صفحه به کار رفته — از ۱۴۰۵/۰۷/۰۴ داخلِ پنلِ برند، روی
+        //  گرادیانِ خودِ صفحهٔ ورود. ⚠️ پیش از این پس‌زمینه‌اش `Pump.Section`
+        //  بود؛ خواستهٔ تازه («شبیه این عکس باشد همه‌چی») پنلِ گرادیانی را
+        //  آورد. آن‌چه **عوض نشد** خودِ قاعده است: هیچ کادرِ سفیدِ
+        //  سفت‌وسختی دورِ نقشه نیست و بومش شفاف می‌ماند.
         var xaml = Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml");
         Assert.Contains("<c:LoginArt", xaml);
         Assert.DoesNotContain("<Image Source=\"{Binding LoginArt}\"", xaml);
         Assert.DoesNotContain("#f4eefd", xaml);
-        Assert.Contains("Background=\"{DynamicResource Pump.Section}\"", xaml);
+        Assert.Contains("Background=\"{StaticResource Login.Grad}\"", xaml);
     }
 
     /// <summary>
@@ -324,7 +350,7 @@ public class AppLinksTests
         //  ⚠️ صفحهٔ ورود **تمامِ صفحه** است، نه یک کارتِ کوچک (خواستهٔ
         //  ۱۴۰۵/۰۶/۲۹: «کلِ صفحه را بگیرد… این‌جوری کوچک نباشد»)؛ فرم بغلِ
         //  عکس است، با پهنای صریحِ خودش.
-        Assert.Contains("<Grid ColumnDefinitions=\"*,440\">", xaml);
+        Assert.Contains("<Grid ColumnDefinitions=\"*,470\">", xaml);
         Assert.DoesNotContain("Grid Width=\"980\"", xaml);
         //  و راهِ برگشت برای کسی که نمی‌خواهد ثبت‌نام کند
         Assert.Contains("CloseLoginCommand", xaml);
@@ -397,9 +423,13 @@ public class AppLinksTests
     }
 
     /// <summary>
-    /// ⚠️ **رنگ‌بندی همان قالبی است که صاحب ریپو داد — و فقط در صفحهٔ ورود.**
-    /// جملهٔ خودش: «من رنگ‌های همان سایت را گفتم بگیر، نه که شبیه آن بسازی…
-    /// و رنگ را گفتم فقط توی صفحهٔ لاگینِ حساب باشد، نه جای دیگر.»
+    /// ⚠️ **رنگ‌بندی همان عکسی است که صاحب ریپو داد — و فقط در صفحهٔ ورود.**
+    ///
+    /// ۱۴۰۵/۰۶/۲۸ پالتِ نارنجی/بنفش بود؛ ۱۴۰۵/۰۷/۰۴ با یک عکسِ تازه و جملهٔ
+    /// «بخشِ لاگین خیلی داغون است، اصلاً ریمیک کن ۱۰۰… شبیه این عکس باشد
+    /// همه‌چی» جایش پالتِ آبی نشست. آن‌چه **عوض نشد** خودِ قاعده است: این
+    /// رنگ‌ها فقط زیرِ ‎Border.loginpage‎ می‌مانند و نه به صفحهٔ پروفایل
+    /// می‌روند نه به دو تمِ برنامه.
     /// </summary>
     [Fact]
     public void RangBandi_FaghatDarSafheyeVorud_Ast()
@@ -407,17 +437,17 @@ public class AppLinksTests
         var xaml = Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml");
         var palette = new[]
         {
-            "#f6e3d8",                          // بوم
-            "#ff7a59", "#e8458b", "#7b3fe4",    // گرادیان
-            "#2b1640",                          // نوشتهٔ تیره و دکمهٔ اصلی
-            "#4a3b52", "#7a6a82",               // متن و کم‌رنگ
-            "#c2185b",                          // لینک
+            "#eaf4fe",                          // بومِ صفحه
+            "#1746c9", "#2a6ae8", "#4b93f7",    // گرادیانِ پنلِ برند
+            "#16233d",                          // نوشتهٔ تیره
+            "#3f4d68", "#7b879e",               // متن و کم‌رنگ
+            "#eef4fc", "#dce6f5",               // کادرِ تایپ و خطش
         };
         foreach (var hex in palette) Assert.Contains(hex, xaml);
 
-        //  کارتِ سفید با گوشهٔ ۲۸ و همان سایهٔ بنفش، و دکمهٔ اصلی با گوشهٔ ۴۰
+        //  کارتِ سفید با گوشهٔ ۲۸ و سایهٔ آبی
         Assert.Contains("CornerRadius=\"28\"", xaml);
-        Assert.Contains("0 20 50 0 #2E7B3FE4", xaml);
+        Assert.Contains("0 24 60 0 #1F1746C9", xaml);
 
         //  ⛔ و هیچ‌کدام در **صفحهٔ پروفایل** نیست: آن‌جا تمِ خودِ برنامه است
         var profile = xaml[xaml.IndexOf("👤 خودِ پروفایل", StringComparison.Ordinal)..];
@@ -428,8 +458,67 @@ public class AppLinksTests
 
         //  ⛔ و به تم‌های برنامه هم نرفته‌اند
         var theme = Read("PumpYaqobi.App", "Themes", "PumpTheme.cs");
-        Assert.DoesNotContain("f6e3d8", theme);
-        Assert.DoesNotContain("7b3fe4", theme);
+        Assert.DoesNotContain("eaf4fe", theme);
+        Assert.DoesNotContain("1746c9", theme);
+
+        //  ⛔ و پالتِ قدیمی هیچ ردی نگذاشته — وگرنه صفحه دو رنگ‌بندی
+        //     نیمه‌کاره می‌شد، که بدتر از هر کدامشان است
+        foreach (var gone in new[] { "#f6e3d8", "#ff7a59", "#e8458b", "#7b3fe4",
+                                     "#2b1640", "#4a3b52", "#7a6a82", "#c2185b" })
+            Assert.DoesNotContain(gone, xaml);
+    }
+
+    /// <summary>
+    /// ⚠️ **ریمیکِ صفحهٔ ورود — آن‌چه گزارش شد و آن‌چه عمداً ساخته نشد.**
+    ///
+    /// گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۴، با عکس): «بخشِ لاگینِ برنامهٔ پمپ خیلی
+    /// داغون و خراب است… همهٔ کادرها و بخش‌هایش را بهتر و حرفه‌ای‌تر کن.
+    /// منطق‌ها و کاربردی‌ها یک دانه هم دست نخورد. و شرایط و ضوابط هم
+    /// ندارد.»
+    ///
+    /// سه چیز این‌جا قفل می‌شود:
+    /// ⛔ **برچسبِ بالای کادرها** — نبودنشان همان «داغون»ی بود که دیده شد:
+    ///    با پر شدنِ کادر، نوشتهٔ راهنمای داخلش می‌رفت و کاربر دیگر
+    ///    نمی‌دانست کدام خانه چیست.
+    /// ⛔ **تیکِ شرایط و ضوابط** واقعاً روی صفحه است. (از قبل هم بود، ولی
+    ///    ته یک ستونِ شلوغ و وسط‌چین؛ حالا درست بالای دکمهٔ اصلی.)
+    /// ⛔ **هیچ دکمهٔ سرویسِ بیرونی‌ای ساخته نشد** — عکسِ مرجع گوگل و
+    ///    فیسبوک و اپل دارد، ولی هیچ‌کدام در این برنامه **وجود ندارد** و
+    ///    دکمه‌ای که بخورد به هیچ، از نبودنش بدتر است.
+    /// </summary>
+    [Fact]
+    public void SafheyeVorud_Remake_Shod_Va_HichDokmeyeSakhtegi_Nadarad()
+    {
+        var xaml = Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml");
+        var block = xaml[xaml.IndexOf("Name=\"LoginPage\"", StringComparison.Ordinal)
+                         ..xaml.IndexOf("👤 خودِ پروفایل", StringComparison.Ordinal)];
+        //  ⚠️ روی خودِ **نشانه‌گذاری** می‌گردیم، نه روی توضیحات: نامِ آن
+        //  سرویس‌ها در کامنتِ «این‌ها ساخته نشدند و چرا» هست و باید هم باشد.
+        var login = System.Text.RegularExpressions.Regex.Replace(
+            block, "<!--.*?-->", "", System.Text.RegularExpressions.RegexOptions.Singleline);
+
+        //  دو پنل: برندِ گرادیانی و فرم
+        Assert.Contains("ColumnDefinitions=\"*,470\"", login);
+        Assert.Contains("{StaticResource Login.Grad}", login);
+
+        //  برچسبِ بالای هر کادرِ گامِ حساب
+        foreach (var label in new[] { "نامِ شما", "ایمیل", "رمز", "تکرارِ رمز" })
+            Assert.Contains($"Text=\"{label}\" Classes=\"lbl\"", login);
+
+        //  شرایط و ضوابط: هم تیک، هم متنش
+        Assert.Contains("{Binding AcceptTerms}", login);
+        Assert.Contains("{Binding LoadTermsCommand}", login);
+        Assert.Contains("{Binding ShowTerms}", login);
+
+        //  ⛔ هیچ سرویسِ بیرونی‌ای
+        foreach (var fake in new[] { "گوگل", "فیسبوک", "اپل", "Google", "Facebook", "Apple" })
+            Assert.DoesNotContain(fake, login);
+
+        //  ⛔ و منطق دست نخورده: ویومدل در این کار اصلاً عوض نشد، پس هیچ
+        //     خاصیتِ تازه‌ای برای نمایش ساخته نشده
+        var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs");
+        foreach (var invented in new[] { "AccountTitle", "SwitchHint", "SwitchAction", "SwitchTarget" })
+            Assert.DoesNotContain(invented, vm);
     }
 
     /// <summary>

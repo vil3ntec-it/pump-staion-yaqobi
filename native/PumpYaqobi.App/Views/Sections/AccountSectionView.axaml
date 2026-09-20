@@ -21,11 +21,16 @@
        رنگی و ستونِ فایل‌ها (پشتیبان‌ها) و کدِ اپِ کارمندان.
        ⛔ هیچ کادرِ نشانی و رمزی این‌جا نیست و نباید بیاید. -->
   <UserControl.Resources>
-    <!-- گرادیانِ همان قالب: #ff7a59 → #e8458b → #7b3fe4 (فقط صفحهٔ ورود) -->
-    <LinearGradientBrush x:Key="Login.Grad" StartPoint="0%,0%" EndPoint="100%,0%">
-      <GradientStop Offset="0" Color="#ff7a59" />
-      <GradientStop Offset="0.5" Color="#e8458b" />
-      <GradientStop Offset="1" Color="#7b3fe4" />
+    <!-- ══ پالتِ صفحهٔ ورود ═══════════════════════════════════════════════
+         خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۰۴، با عکسِ مرجع): «بخشِ لاگینِ
+         برنامهٔ پمپ خیلی داغون و خراب است، اصلاً ریمیک کن ۱۰۰… همه کادرها و
+         بخش‌هایش را بهتر و حرفه‌ای‌تر کن… شبیه این عکس باشد همه‌چی.»
+         ⛔ فقط زیرِ `Border.loginpage` — دو تمِ برنامه (آبی و طلایی) دست
+         نمی‌خورند و هیچ‌کدامِ این رنگ‌ها جای دیگری نمی‌رود. -->
+    <LinearGradientBrush x:Key="Login.Grad" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Offset="0" Color="#1746c9" />
+      <GradientStop Offset="0.55" Color="#2a6ae8" />
+      <GradientStop Offset="1" Color="#4b93f7" />
     </LinearGradientBrush>
   </UserControl.Resources>
 
@@ -56,82 +61,92 @@
     </Style>
 
     <!-- ══ رنگ‌بندی و کادرهای **صفحهٔ ورود** ══════════════════════════════
-         خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۸، با عکسِ مرجعِ لاگین و یک قالبِ
-         ایمیل): «همین مدل باشد و این آدمک‌ها هم باشند… و من رنگ‌های همان
-         سایت را گفتم بگیر، نه که شبیه آن بسازی… و رنگ را گفتم فقط توی صفحهٔ
-         لاگینِ حساب باشد، نه جای دیگر.»
+         گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۴، با عکسِ مرجع): «بخشِ لاگینِ برنامهٔ پمپ
+         خیلی داغون و خراب است، اصلاً ریمیک کن ۱۰۰ و همهٔ کادرها و بخش‌هایش
+         را بهتر و حرفه‌ای‌تر کن… ظاهری خیلی داغون است… شبیه این عکس باشد
+         همه‌چی.»
 
-         پس دقیقاً همان رنگ‌های آن قالب، و **فقط** زیرِ `Border.loginpage`:
-           بوم        #f6e3d8
-           گرادیان    #ff7a59 → #e8458b → #7b3fe4
-           نوشتهٔ تیره #2b1640   متن #4a3b52   کم‌رنگ #7a6a82
-           تینت‌ها     #ffe9e1 · #fde4f0 · #ece3fc
-           لینک       #c2185b
-           کارتِ سفید  گوشهٔ ۲۸ با سایهٔ 0 20 50 0 #2E7B3FE4
-           دکمهٔ اصلی  #2b1640 با گوشهٔ ۴۰
-         ⛔ هیچ‌کدامِ این رنگ‌ها بیرونِ این صفحه به کار نمی‌رود و دو تمِ
-         برنامه (آبی و طلایی) دست نمی‌خورند.
+         پس پالتِ قالبِ نارنجی/بنفشِ قبلی کاملاً کنار رفت و جایش پالتِ آبیِ
+         همان عکس نشست — و **فقط** زیرِ `Border.loginpage`:
+           بومِ صفحه  #eaf4fe            کارتِ سفید  #ffffff، گوشهٔ ۲۸
+           گرادیان    #1746c9 → #2a6ae8 → #4b93f7
+           نوشتهٔ تیره #16233d   متن #3f4d68   کم‌رنگ #7b879e
+           کادرِ تایپ  #eef4fc با خطِ #dce6f5، گوشهٔ ۱۰
+           دکمهٔ اصلی و لینک  #1746c9، گوشهٔ ۱۰
+         ⛔ هیچ‌کدام بیرونِ این صفحه به کار نمی‌رود و دو تمِ برنامه (آبی و
+            طلایی) دست نمی‌خورند — آزمونِ `RangBandi_FaghatDarSafheyeVorud_Ast`.
          ⚠️ ترتیبِ سبک‌ها مهم است: در آوالونیا سبکِ **بعدی** برنده است، نه
-         خاص‌تر — پس اول نوشتهٔ عمومی و بعد کلاس‌ها. -->
+            خاص‌تر — پس اول نوشتهٔ عمومی و بعد کلاس‌ها. -->
     <Style Selector="Border.loginpage TextBlock">
-      <Setter Property="Foreground" Value="#4a3b52" />
+      <Setter Property="Foreground" Value="#3f4d68" />
     </Style>
     <Style Selector="Border.loginpage TextBlock.dim">
-      <Setter Property="Foreground" Value="#7a6a82" />
+      <Setter Property="Foreground" Value="#7b879e" />
     </Style>
+    <!-- ⚠️ برچسبِ **بالای** هر کادر — همان چیزی که عکسِ مرجع دارد و این
+         صفحه نداشت: کاربر تا داخلِ کادر نمی‌زد نمی‌دانست چه می‌خواهد، و با
+         پر شدنِ کادر نوشتهٔ راهنما هم می‌رفت. -->
     <Style Selector="Border.loginpage TextBlock.lbl">
-      <Setter Property="Foreground" Value="#7a6a82" />
-      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="#16233d" />
+      <Setter Property="FontSize" Value="12.5" />
       <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Margin" Value="2,0,0,5" />
     </Style>
     <Style Selector="Border.loginpage TextBlock.h1">
-      <Setter Property="Foreground" Value="#2b1640" />
-      <Setter Property="FontSize" Value="30" />
+      <Setter Property="Foreground" Value="#16233d" />
+      <Setter Property="FontSize" Value="25" />
       <Setter Property="FontWeight" Value="Black" />
     </Style>
+    <!-- نوشته‌های روی پنلِ آبی — سفید، جدا از نوشته‌های روی کارتِ سفید -->
+    <Style Selector="Border.loginpage StackPanel.brand TextBlock">
+      <Setter Property="Foreground" Value="#ffffff" />
+    </Style>
 
-    <!-- ══ کادرها: خط‌دار و بی‌قاب، مثلِ خودِ عکسِ مرجع ══════════════════
-         «اون مربعی نبود و کادرهای لاگینش خیلی بهتر بود» — کادرهای عکس فقط
-         یک خطِ زیرین دارند. ⚠️ رنگ باید روی **قالبِ** `TextBox` بنشیند
-         (`PART_BorderElement`)، وگرنه در تمِ تیره کادر سیاه می‌ماند. -->
+    <!-- ══ کادرها: پُر و گوشه‌گرد، مثلِ عکسِ مرجع ════════════════════════
+         ⛔ کادرِ خط‌دارِ قبلی رفت: روی کارتِ سفید تقریباً دیده نمی‌شد و
+            همان «داغون» بودنی بود که گزارش شد. حالا زمینهٔ آبیِ روشن دارد،
+            پس مرزِ کادر بی هیچ تلاشی پیداست.
+         ⚠️ رنگ باید روی **قالبِ** `TextBox` بنشیند (`PART_BorderElement`)،
+            وگرنه در تمِ تیره کادر سیاه می‌ماند. -->
     <Style Selector="Border.loginpage TextBox">
       <Setter Property="MinHeight" Value="44" />
-      <Setter Property="Padding" Value="2,8" />
-      <Setter Property="FontSize" Value="14.5" />
-      <Setter Property="Foreground" Value="#2b1640" />
-      <Setter Property="CaretBrush" Value="#7b3fe4" />
+      <Setter Property="Padding" Value="12,8" />
+      <Setter Property="FontSize" Value="14" />
+      <Setter Property="Foreground" Value="#16233d" />
+      <Setter Property="CaretBrush" Value="#1746c9" />
     </Style>
     <Style Selector="Border.loginpage TextBox /template/ Border#PART_BorderElement">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderBrush" Value="#e0d3e6" />
-      <Setter Property="BorderThickness" Value="0,0,0,1.6" />
-      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="Background" Value="#eef4fc" />
+      <Setter Property="BorderBrush" Value="#dce6f5" />
+      <Setter Property="BorderThickness" Value="1.2" />
+      <Setter Property="CornerRadius" Value="10" />
     </Style>
     <Style Selector="Border.loginpage TextBox:pointerover /template/ Border#PART_BorderElement">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderBrush" Value="#e8458b" />
+      <Setter Property="Background" Value="#e7effb" />
+      <Setter Property="BorderBrush" Value="#b9d0f4" />
     </Style>
     <Style Selector="Border.loginpage TextBox:focus /template/ Border#PART_BorderElement">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderBrush" Value="#7b3fe4" />
+      <Setter Property="Background" Value="#ffffff" />
+      <Setter Property="BorderBrush" Value="#2a6ae8" />
+      <Setter Property="BorderThickness" Value="1.6" />
     </Style>
     <Style Selector="Border.loginpage TextBox /template/ TextBlock#PART_Watermark">
-      <Setter Property="Foreground" Value="#a99bb0" />
+      <Setter Property="Foreground" Value="#9aa7bd" />
     </Style>
 
     <!-- ══ دکمه‌ها ══════════════════════════════════════════════════════ -->
     <!-- ⚠️ تیکِ شرایط و ضوابط: قالبِ خودِ آوالونیا در تمِ تیره کادرش را
          سیاه می‌کند و روی کارتِ سفیدِ این صفحه **گم** می‌شود (با عکس دیده
-         شد). پس همان‌جا سفیدِ خط‌دار می‌شود، مثلِ بقیهٔ کادرهای این صفحه. -->
+         شد). پس همان‌جا رنگِ خودش را می‌گیرد. -->
     <Style Selector="Border.loginpage CheckBox /template/ Border#NormalRectangle">
       <Setter Property="Background" Value="#ffffff" />
-      <Setter Property="BorderBrush" Value="#b9a6bd" />
+      <Setter Property="BorderBrush" Value="#b9c6da" />
       <Setter Property="BorderThickness" Value="1.6" />
       <Setter Property="CornerRadius" Value="5" />
     </Style>
     <Style Selector="Border.loginpage CheckBox:checked /template/ Border#NormalRectangle">
-      <Setter Property="Background" Value="#2b1640" />
-      <Setter Property="BorderBrush" Value="#2b1640" />
+      <Setter Property="Background" Value="#1746c9" />
+      <Setter Property="BorderBrush" Value="#1746c9" />
     </Style>
     <Style Selector="Border.loginpage CheckBox /template/ Path#CheckGlyph">
       <Setter Property="Stroke" Value="#ffffff" />
@@ -141,39 +156,58 @@
     <Style Selector="Border.loginpage Button.go">
       <Setter Property="Foreground" Value="#ffffff" />
       <Setter Property="FontWeight" Value="Bold" />
-      <Setter Property="FontSize" Value="15" />
-      <Setter Property="MinHeight" Value="48" />
+      <Setter Property="FontSize" Value="14.5" />
+      <Setter Property="MinHeight" Value="46" />
       <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="CornerRadius" Value="40" />
+      <Setter Property="CornerRadius" Value="10" />
     </Style>
     <Style Selector="Border.loginpage Button.go /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="#2b1640" />
-      <Setter Property="CornerRadius" Value="40" />
+      <Setter Property="Background" Value="#1746c9" />
+      <Setter Property="CornerRadius" Value="10" />
     </Style>
     <Style Selector="Border.loginpage Button.go:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="#41215f" />
+      <Setter Property="Background" Value="#2a6ae8" />
       <Setter Property="TextBlock.Foreground" Value="#ffffff" />
     </Style>
     <Style Selector="Border.loginpage Button.link">
-      <Setter Property="Foreground" Value="#c2185b" />
+      <Setter Property="Foreground" Value="#1746c9" />
       <Setter Property="FontWeight" Value="Bold" />
-      <Setter Property="FontSize" Value="13" />
-      <Setter Property="MinHeight" Value="28" />
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="MinHeight" Value="26" />
       <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="4,0" />
     </Style>
     <Style Selector="Border.loginpage Button.link /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="Transparent" />
     </Style>
     <Style Selector="Border.loginpage Button.link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="TextBlock.Foreground" Value="#e8458b" />
+      <Setter Property="TextBlock.Foreground" Value="#4b93f7" />
     </Style>
+    <!-- لینک‌های کفِ پنلِ آبی — سفیدِ کم‌رنگ، نه آبی روی آبی -->
+    <Style Selector="Border.loginpage Button.linkw">
+      <Setter Property="Foreground" Value="#d8e6ff" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="FontSize" Value="11.5" />
+      <Setter Property="MinHeight" Value="24" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="4,0" />
+    </Style>
+    <Style Selector="Border.loginpage Button.linkw /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.loginpage Button.linkw:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="TextBlock.Foreground" Value="#ffffff" />
+    </Style>
+
+    <!-- کپسولِ «حساب می‌سازم / حساب دارم / کدِ ایمیلی» -->
     <Style Selector="Border.loginpage Button.mode">
-      <Setter Property="Foreground" Value="#7a6a82" />
+      <Setter Property="Foreground" Value="#5b6b85" />
       <Setter Property="CornerRadius" Value="999" />
-      <Setter Property="MinHeight" Value="34" />
-      <Setter Property="FontSize" Value="13" />
-      <Setter Property="Padding" Value="18,0" />
+      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="Padding" Value="16,0" />
       <Setter Property="BorderThickness" Value="0" />
     </Style>
     <Style Selector="Border.loginpage Button.mode /template/ ContentPresenter#PART_ContentPresenter">
@@ -185,7 +219,7 @@
       <Setter Property="FontWeight" Value="Bold" />
     </Style>
     <Style Selector="Border.loginpage Button.mode.active /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="{StaticResource Login.Grad}" />
+      <Setter Property="Background" Value="#1746c9" />
     </Style>
     <!-- ══ خانه‌های کد ═══════════════════════════════════════════════════
          شش کادرِ مربعیِ هم‌اندازه، عدد درشت و وسط — همان شکلی که کاربر در
@@ -205,12 +239,12 @@
     <Style Selector="Border.loginpage Border.stepchip">
       <Setter Property="CornerRadius" Value="999" />
       <Setter Property="Padding" Value="12,4" />
-      <Setter Property="Background" Value="#f6e3d8" />
+      <Setter Property="Background" Value="#eef4fc" />
     </Style>
     <Style Selector="Border.loginpage Border.stepchip TextBlock">
       <Setter Property="FontSize" Value="11.5" />
       <Setter Property="FontWeight" Value="Bold" />
-      <Setter Property="Foreground" Value="#7a6a82" />
+      <Setter Property="Foreground" Value="#7b879e" />
     </Style>
     <Style Selector="Border.loginpage Border.stepchip.on">
       <Setter Property="Background" Value="{StaticResource Login.Grad}" />
@@ -228,71 +262,119 @@
   <Panel>
 
       <!-- ══════════════════════════════════════════════════════════════════
-           🪪 صفحهٔ ورود — تمامِ صفحه، به همان مدلِ عکسِ مرجع
+           🪪 صفحهٔ ورود — دو پنل، به مدلِ عکسِ مرجعِ ۱۴۰۵/۰۷/۰۴
            ══════════════════════════════════════════════════════════════════
-           خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۸): «وقتی پروفایل را کلیک می‌کنم
-           این صفحهٔ لاگین اولویت باشد و تمامِ صفحه همین را نشان بدهد برای
-           کسانی که حساب ندارند، و برای کسانی که دارند پروفایل همان مشخصات را
-           نشان بدهد… همین مدل باشد و این آدمک‌ها هم باشند؛ اصلاً همین عکس
-           باید باشد… هیچ پکنه‌ای نباشد، نه از گوگل و نه غیره.»
+           گزارشِ صاحب ریپو: «بخشِ لاگینِ برنامهٔ پمپ خیلی داغون و خراب است،
+           اصلاً ریمیک کن ۱۰۰ و همهٔ کادرها و بخش‌هایش را بهتر و حرفه‌ای‌تر
+           کن. منطق‌ها و کاربردی‌ها یک دانه هم دست نخورد؛ ظاهری خیلی داغون
+           است. و شرایط و ضوابط هم ندارد. شبیه این عکس باشد همه‌چی.»
 
-           پس: آدمک‌های همان عکس یک طرفِ کارت، فرمِ **خودِ برنامه** طرفِ دیگر،
-           و هیچ دکمهٔ سرویسِ بیرونی‌ای در کار نیست. رنگ‌ها همان قالبی است که
-           داد — و فقط همین‌جا.
-           ⚠️ عکس فقط وقتی خوانده می‌شود که کاربر روی این صفحه بیاید. -->
-      <Border Name="LoginPage" Classes="loginpage" Background="#f6e3d8" CornerRadius="0"
+           ⛔ **هیچ منطقی عوض نشد.** هر `Binding`، هر `Command` و هر
+              `IsVisible` دقیقاً همانی است که بود؛ آن‌چه عوض شد چیدمان،
+              رنگ، برچسب و فاصله است.
+           ⚠️ «شرایط و ضوابط ندارد» درست دیده شده بود ولی ریشه‌اش نبودن
+              نبود: تیک **بود**، ته یک ستونِ شلوغ و وسط‌چین، و فقط در حالتِ
+              «حساب می‌سازم». حالا مثلِ عکس، یک ردیفِ روشن درست بالای دکمهٔ
+              اصلی است و متنِ شرایط همان‌جا باز می‌شود.
+           ⛔ **هیچ دکمهٔ سرویسِ بیرونی‌ای اضافه نشد** — نه گوگل، نه فیسبوک،
+              نه اپل. عکسِ مرجع دارد، ولی این برنامه هیچ‌کدام را **ندارد**؛
+              دکمه‌ای که زده شود و هیچ کاری نکند از نبودنش بدتر است، و
+              قاعدهٔ «هیچ سرویسِ بیرونی در این صفحه» از ۱۴۰۵/۰۶/۲۸ سرِ
+              جایش است. -->
+      <Border Name="LoginPage" Classes="loginpage" Background="#eaf4fe" CornerRadius="0"
               IsVisible="{Binding ShowLoginPage}">
         <Grid>
-          <!-- مربع‌های نرمِ پس‌زمینه — همان تزئینِ گوشه‌های عکسِ مرجع -->
-          <Border Width="150" Height="150" CornerRadius="36" Background="#22e8458b"
+          <!-- لکه‌های نرمِ پس‌زمینه — همان تزئینِ گوشه‌های عکسِ مرجع -->
+          <Border Width="150" Height="150" CornerRadius="40" Background="#141746c9"
                   HorizontalAlignment="Left" VerticalAlignment="Top" Margin="46,30,0,0" />
-          <Border Width="110" Height="110" CornerRadius="28" Background="#1Aff7a59"
+          <Border Width="110" Height="110" CornerRadius="30" Background="#144b93f7"
                   HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,60,34" />
-          <Border Width="74" Height="74" CornerRadius="22" Background="#207b3fe4"
-                  HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="120,0,0,60" />
 
           <!-- ══ کارتِ سفید — **تمامِ صفحه** ══
-               خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۹): «این لاگین تمام صفحه
-               باشد و کلِ صفحه را بگیرد… این‌جوری کوچک نباشد.»
-               ⚠️ پس اندازهٔ صریحِ قبلی (۹۸۰×۶۰۴) برداشته شد و کارت
-               **کشیده** است. ستونِ فرم پهنای صریح دارد (`440`) و ستونِ
-               عکس بقیه را می‌گیرد — بی این، قاب به اندازهٔ پهن‌ترین پنل
-               جمع می‌شد و فرم تمامِ عکس را می‌پوشاند (یک بار همین شد). -->
-          <Border Background="#ffffff" CornerRadius="28" Margin="18"
+               خواستهٔ صاحب ریپو (۱۴۰۵/۰۶/۲۹): «این لاگین تمام صفحه باشد و
+               کلِ صفحه را بگیرد.» پس اندازهٔ صریح ندارد و کشیده است؛ فقط
+               ستونِ فرم پهنای ثابت دارد، وگرنه قاب به اندازهٔ پهن‌ترین پنل
+               جمع می‌شود و فرم تمامِ پنلِ برند را می‌پوشاند. -->
+          <Border Background="#ffffff" CornerRadius="28" Margin="26"
                   HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ClipToBounds="True"
-                  BoxShadow="0 20 50 0 #2E7B3FE4">
-            <Grid ColumnDefinitions="*,440">
+                  BoxShadow="0 24 60 0 #1F1746C9">
+            <Grid ColumnDefinitions="*,470">
 
-              <!-- ══ آدمک‌ها — برداری، با رنگ و تمِ خودِ برنامه ══
-                   خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۶/۲۹، با عکس): «اون آدمک‌ها
-                   رو باسازی کن و بک‌گراندشو درست کن و با رنگ و تمِ خودِ
-                   برنامه باشه و همه‌چی با کیفیتِ خیلی بالا درست کن.»
-                   ⛔ پس نه عکسِ JPEGی مانده و نه آن کادرِ سفیدِ داخلِ کادرِ
-                   بنفش که دورش خط کشید: بومِ نقشه شفاف است و پس‌زمینه از
-                   خودِ تم می‌آید (`Pump.Section`)، با دو هالهٔ نرمِ تاکید.
-                   ⚠️ برداری است، پس در هر اندازه تیز است — سقفِ اندازه هم
-                   لازم ندارد (شرحش بالای `Controls/LoginArt.axaml`). -->
-              <Border Grid.Column="0" Background="{DynamicResource Pump.Section}" Margin="0">
-                <Panel>
-                  <!-- ⚠️ هالهٔ تاکید با آلفای کم — نه `IconBadge` که در تمِ
-                       تیره یک لکهٔ روشنِ درشت می‌شد (با عکس دیده شد). -->
-                  <Ellipse Width="300" Height="300" Fill="{DynamicResource Pump.Accent}"
-                           Opacity="0.09" HorizontalAlignment="Left" VerticalAlignment="Top"
-                           Margin="-70,-60,0,0" />
-                  <Ellipse Width="220" Height="220" Fill="{DynamicResource Pump.Accent}"
-                           Opacity="0.07" HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                           Margin="0,0,-50,-40" />
-                  <!-- ⚠️ نقشه جا برای نفس کشیدن دارد: بی سقفِ پهنا، در کارتِ
-                       کشیده لبه‌به‌لبه می‌شد و آدمک‌ها به کنارهٔ کارت
-                       می‌چسبیدند. -->
-                  <c:LoginArt Margin="46,40" MaxWidth="700" MaxHeight="660"
-                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+              <!-- ══════════ پنلِ برند — گرادیانِ آبی ══════════
+                   عکسِ مرجع: «خوش آمدید به» بالا، نشانِ گرد وسط، نامِ
+                   برنامه، یک بندِ توضیح، و دو لینکِ کوچک در کف. -->
+              <Panel Grid.Column="0">
+                <Border Background="{StaticResource Login.Grad}" />
+
+                <!-- ══ لبهٔ موجی ══
+                     همان موجِ لایه‌لایهٔ عکس. ⚠️ داخلِ یک پنلِ
+                     `LeftToRight` است تا «چپ» واقعاً چپِ هندسی باشد: در
+                     چیدمانِ راست‌به‌راست، ستونِ صفر سمتِ راست کشیده
+                     می‌شود و لبهٔ داخلی‌اش (مرزِ فرم) چپِ خودش است.
+                     ⚠️ `Stretch="Fill"` یعنی همین داده در هر بلندیِ
+                     پنجره درست کشیده می‌شود — بی هیچ حسابِ دستی. -->
+                <Panel FlowDirection="LeftToRight" ClipToBounds="True">
+                  <Path HorizontalAlignment="Left" VerticalAlignment="Stretch" Width="104"
+                        Stretch="Fill" Fill="#24ffffff"
+                        Data="M104,0 L44,0 C96,96 8,176 52,268 C94,356 4,432 46,524 C86,612 12,660 58,720 L104,720 Z" />
+                  <Path HorizontalAlignment="Left" VerticalAlignment="Stretch" Width="72"
+                        Stretch="Fill" Fill="#2effffff"
+                        Data="M104,0 L44,0 C96,96 8,176 52,268 C94,356 4,432 46,524 C86,612 12,660 58,720 L104,720 Z" />
+                  <Path HorizontalAlignment="Left" VerticalAlignment="Stretch" Width="40"
+                        Stretch="Fill" Fill="#3affffff"
+                        Data="M104,0 L44,0 C96,96 8,176 52,268 C94,356 4,432 46,524 C86,612 12,660 58,720 L104,720 Z" />
                 </Panel>
-              </Border>
 
-              <!-- ══ فرمِ خودِ برنامه ══ -->
-              <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled" Padding="36,22">
-                <StackPanel Spacing="10" VerticalAlignment="Center">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled" Padding="46,34">
+                  <StackPanel Classes="brand" Spacing="0" VerticalAlignment="Center"
+                              HorizontalAlignment="Center" MaxWidth="440">
+
+                    <TextBlock Text="خوش آمدید به" FontSize="21" FontWeight="Bold"
+                               HorizontalAlignment="Center" Margin="0,0,0,18" />
+
+                    <!-- نشانِ گردِ سفید با آیکنِ خودِ برنامه — مثلِ عکس -->
+                    <Border Width="96" Height="96" CornerRadius="48" Background="#ffffff"
+                            HorizontalAlignment="Center">
+                      <Path Data="{StaticResource Icon.pump}" Stroke="#1746c9" StrokeThickness="1.75"
+                            Stretch="Uniform" Width="46" Height="46"
+                            HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+
+                    <TextBlock Text="پمپ یعقوبی" FontSize="17" FontWeight="Bold"
+                               HorizontalAlignment="Center" Margin="0,12,0,0" />
+
+                    <!-- ══ آدمک‌های برداری ══
+                         ⛔ نقشهٔ unDraw (پروانهٔ MIT) سرِ جایش ماند — خواستهٔ
+                            صریحِ صاحب ریپو از ۱۴۰۵/۰۶/۲۹ («اون آدمک‌ها رو
+                            باسازی کن… با رنگ و تمِ خودِ برنامه») و سنجهٔ
+                            `loginart` هم بودنش در درخت را قفل کرده.
+                         ⚠️ رنگش با تم جا عوض می‌کند و یک بار برای همیشه
+                            تجزیه می‌شود؛ خواندنش فقط سرِ باز شدنِ همین صفحه
+                            است. -->
+                    <c:LoginArt Margin="0,10,0,6" MaxWidth="420" MaxHeight="300"
+                                HorizontalAlignment="Center" />
+
+                    <TextBlock TextWrapping="Wrap" TextAlignment="Center" FontSize="12.5"
+                               Foreground="#d8e6ff" LineHeight="21" Margin="0,4,0,0"
+                               Text="حساب بسازید تا دفترِ پمپتان روی سرورِ خودتان پشتیبان بگیرد، اشتراک روی همین حساب بنشیند و گوشیِ کارمندان به همین پمپ وصل شود." />
+
+                    <!-- دو لینکِ کفِ پنل، مثلِ عکس — و هر دو کارِ واقعی
+                         می‌کنند: یکی به ساختنِ حساب می‌برد و یکی به ورود. -->
+                    <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center"
+                                Margin="0,20,0,0">
+                      <Button Classes="linkw" Content="ساختنِ حساب"
+                              Command="{Binding SetSignUpCommand}" CommandParameter="yes" />
+                      <TextBlock Text="|" Foreground="#7fb0f5" VerticalAlignment="Center" />
+                      <Button Classes="linkw" Content="ورود با کدِ ایمیلی"
+                              Command="{Binding SetSignUpCommand}" CommandParameter="code" />
+                    </StackPanel>
+                  </StackPanel>
+                </ScrollViewer>
+              </Panel>
+
+              <!-- ══════════ فرم ══════════ -->
+              <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled" Padding="44,26">
+                <StackPanel Spacing="0" VerticalAlignment="Center">
 
                   <!-- ⚠️ «برگشت» — کسی که نمی‌خواهد حساب بسازد باید بتواند
                        برگردد سرِ دفترِ خودش (خواستهٔ ۱۴۰۵/۰۶/۲۹). -->
@@ -300,7 +382,8 @@
                           Command="{Binding CloseLoginCommand}" IsEnabled="{Binding !Busy}" />
 
                   <!-- نشانِ گام‌ها -->
-                  <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                  <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center"
+                              Margin="0,10,0,16">
                     <Border Classes="stepchip" Classes.on="{Binding StepAccount}">
                       <TextBlock Text="۱ حساب" />
                     </Border>
@@ -317,12 +400,20 @@
                   </StackPanel>
 
                   <!-- ══════════ گامِ ۱: حساب ══════════ -->
-                  <StackPanel Spacing="8" IsVisible="{Binding StepAccount}">
-                    <TextBlock Text="سلام،" Classes="h1" />
-                    <TextBlock Text="خوش آمدید" Classes="h1" Margin="0,-8,0,6" />
+                  <StackPanel Spacing="0" IsVisible="{Binding StepAccount}">
+                    <!-- ⛔ عنوان از همان حالت‌های موجود می‌آید، نه از یک
+                         خاصیتِ تازه در ویومدل: خواستهٔ صریحِ صاحب ریپو این
+                         بود که «منطق‌ها و کاربردی‌ها یک دانه هم دست نخورد». -->
+                    <TextBlock Text="ساختنِ حساب" Classes="h1" HorizontalAlignment="Center"
+                               IsVisible="{Binding IsSignUp}" />
+                    <TextBlock Text="ورود به حساب" Classes="h1" HorizontalAlignment="Center"
+                               IsVisible="{Binding IsSignIn}" />
+                    <TextBlock Text="ورود با کدِ ایمیلی" Classes="h1" HorizontalAlignment="Center"
+                               IsVisible="{Binding IsCodeLogin}" />
 
-                    <!-- «حساب داری یا نه؟» — دو راهِ جدا و دیدنی -->
-                    <Border CornerRadius="999" Background="#f6e3d8" Padding="4" HorizontalAlignment="Center">
+                    <!-- «حساب داری یا نه؟» — سه راهِ جدا و دیدنی -->
+                    <Border CornerRadius="999" Background="#eef4fc" Padding="4"
+                            HorizontalAlignment="Center" Margin="0,14,0,18">
                       <StackPanel Orientation="Horizontal" Spacing="4">
                         <Button Classes="mode" Classes.active="{Binding IsSignUp}" Content="حساب می‌سازم"
                                 Command="{Binding SetSignUpCommand}" CommandParameter="yes" />
@@ -335,64 +426,114 @@
                       </StackPanel>
                     </Border>
 
-                    <!-- ⚠️ نوشتهٔ راهنما **داخلِ خودِ کادر** است، مثلِ عکسِ
-                         مرجع — نه برچسبِ جدا. -->
-                    <!-- ⚠️ **Enter هم فرم را می‌فرستد** (بندِ ۲ی صاحب ریپو:
-                         «امکانِ ارسالِ فرم با Enter»). روی خودِ کادرها
-                         می‌نشیند، نه روی صفحه، وگرنه Enter در هر جای دیگری
-                         هم دکمه را می‌زد. -->
-                    <TextBox Text="{Binding LoginName}" Watermark="نامِ شما" IsVisible="{Binding IsSignUp}">
-                      <TextBox.KeyBindings>
-                        <KeyBinding Gesture="Enter" Command="{Binding AccountStepCommand}" />
-                      </TextBox.KeyBindings>
-                    </TextBox>
-                    <TextBox Text="{Binding LoginEmail}" Watermark="ایمیل" FlowDirection="LeftToRight">
-                      <TextBox.KeyBindings>
-                        <KeyBinding Gesture="Enter" Command="{Binding AccountStepCommand}" />
-                      </TextBox.KeyBindings>
-                    </TextBox>
-                    <TextBox Text="{Binding LoginPassword}" PasswordChar="{Binding PassChar}"
-                             Watermark="رمز — دستِ‌کم هشت نویسه">
-                      <TextBox.KeyBindings>
-                        <KeyBinding Gesture="Enter" Command="{Binding AccountStepCommand}" />
-                      </TextBox.KeyBindings>
-                    </TextBox>
-                    <TextBox Text="{Binding LoginPassword2}" PasswordChar="{Binding PassChar}" Watermark="تکرارِ رمز"
-                             IsVisible="{Binding IsSignUp}">
-                      <TextBox.KeyBindings>
-                        <KeyBinding Gesture="Enter" Command="{Binding AccountStepCommand}" />
-                      </TextBox.KeyBindings>
-                    </TextBox>
+                    <!-- ⚠️ **برچسب بالای هر کادر** — همان چیزی که عکسِ مرجع
+                         دارد و این صفحه نداشت. نوشتهٔ راهنمای داخلِ کادر با
+                         پر شدنِ کادر می‌رفت و کاربر دیگر نمی‌دانست کدام
+                         خانه چیست.
+                         ⚠️ **Enter هم فرم را می‌فرستد** (بندِ ۲ی صاحب ریپو).
+                         روی خودِ کادرها می‌نشیند، نه روی صفحه، وگرنه Enter
+                         در هر جای دیگری هم دکمه را می‌زد. -->
+                    <StackPanel IsVisible="{Binding IsSignUp}" Margin="0,0,0,12">
+                      <TextBlock Text="نامِ شما" Classes="lbl" />
+                      <TextBox Text="{Binding LoginName}" Watermark="نام و نامِ خانوادگی">
+                        <TextBox.KeyBindings>
+                          <KeyBinding Gesture="Enter" Command="{Binding AccountStepCommand}" />
+                        </TextBox.KeyBindings>
+                      </TextBox>
+                    </StackPanel>
+
+                    <StackPanel Margin="0,0,0,12">
+                      <TextBlock Text="ایمیل" Classes="lbl" />
+                      <TextBox Text="{Binding LoginEmail}" Watermark="you@example.com"
+                               FlowDirection="LeftToRight">
+                        <TextBox.KeyBindings>
+                          <KeyBinding Gesture="Enter" Command="{Binding AccountStepCommand}" />
+                        </TextBox.KeyBindings>
+                      </TextBox>
+                    </StackPanel>
+
+                    <!-- ⚠️ در راهِ «کدِ ایمیلی» اصلاً رمزی در کار نیست، پس
+                         کادرش هم نباید دیده شود. -->
+                    <StackPanel IsVisible="{Binding !IsCodeLogin}" Margin="0,0,0,12">
+                      <TextBlock Text="رمز" Classes="lbl" />
+                      <TextBox Text="{Binding LoginPassword}" PasswordChar="{Binding PassChar}"
+                               Watermark="دستِ‌کم هشت نویسه">
+                        <TextBox.KeyBindings>
+                          <KeyBinding Gesture="Enter" Command="{Binding AccountStepCommand}" />
+                        </TextBox.KeyBindings>
+                      </TextBox>
+                    </StackPanel>
+
+                    <StackPanel IsVisible="{Binding IsSignUp}" Margin="0,0,0,12">
+                      <TextBlock Text="تکرارِ رمز" Classes="lbl" />
+                      <TextBox Text="{Binding LoginPassword2}" PasswordChar="{Binding PassChar}"
+                               Watermark="همان رمز را دوباره بنویسید">
+                        <TextBox.KeyBindings>
+                          <KeyBinding Gesture="Enter" Command="{Binding AccountStepCommand}" />
+                        </TextBox.KeyBindings>
+                      </TextBox>
+                    </StackPanel>
 
                     <!-- «چشم» و «رمزم را فراموش کرده‌ام» — هر دو خواستهٔ
                          بندهای ۲ و ۹ی صاحب ریپو. -->
-                    <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4"
+                                IsVisible="{Binding !IsCodeLogin}">
                       <Button Classes="link" Content="{Binding RevealPassText}"
                               Command="{Binding ToggleRevealPassCommand}" />
                       <Button Classes="link" Content="رمزم را فراموش کرده‌ام" IsVisible="{Binding IsSignIn}"
                               Command="{Binding OpenForgotCommand}" IsEnabled="{Binding !Busy}" />
                     </StackPanel>
 
-                    <!-- ⚠️ پذیرشِ شرایط **اجباریِ خودِ سرور** است
-                         (`terms_required`)، پس واقعاً پرسیده می‌شود و متنش
-                         هم از سرور می‌آید — نه یک تیکِ تشریفاتی. -->
-                    <StackPanel Spacing="4" IsVisible="{Binding IsSignUp}" Margin="0,6,0,0">
-                      <CheckBox IsChecked="{Binding AcceptTerms}" Content="شرایط و ضوابط را می‌پذیرم"
-                                Foreground="#2b1640" FontSize="13" HorizontalAlignment="Center" />
-                      <Button Classes="link" Content="متنِ شرایط و ضوابط" HorizontalAlignment="Center"
-                              Command="{Binding LoadTermsCommand}" />
-                      <Border Background="#fbf6f3" CornerRadius="12" Padding="10" MaxHeight="150"
+                    <!-- ══ شرایط و ضوابط ══
+                         ⚠️ پذیرشِ شرایط **اجباریِ خودِ سرور** است
+                         (`terms_required`) و متنش هم از سرور می‌آید — نه یک
+                         تیکِ تشریفاتی. حالا درست بالای دکمهٔ اصلی و در یک
+                         ردیف است، مثلِ عکسِ مرجع. -->
+                    <StackPanel IsVisible="{Binding IsSignUp}" Margin="0,8,0,0">
+                      <!-- ⚠️ ترتیب مهم است: در راست‌به‌چپ این سه‌تا کنارِ هم
+                           «شرایط و ضوابط را می‌پذیرم» خوانده می‌شوند. متنِ
+                           شرایط روی همان لینک باز می‌شود، پس کاربر بی
+                           بیرون رفتن از فرم می‌خواندش. -->
+                      <StackPanel Orientation="Horizontal" Spacing="2">
+                        <CheckBox IsChecked="{Binding AcceptTerms}" VerticalAlignment="Center" />
+                        <Button Classes="link" Content="شرایط و ضوابط" VerticalAlignment="Center"
+                                Command="{Binding LoadTermsCommand}" />
+                        <TextBlock Text="را می‌پذیرم" FontSize="12.5" Foreground="#3f4d68"
+                                   VerticalAlignment="Center" />
+                      </StackPanel>
+                      <Border Background="#f4f8fd" BorderBrush="#dce6f5" BorderThickness="1"
+                              CornerRadius="10" Padding="12" MaxHeight="160" Margin="0,8,0,0"
                               IsVisible="{Binding ShowTerms}">
                         <ScrollViewer>
                           <SelectableTextBlock Text="{Binding TermsText}" FontSize="11.5"
-                                               Foreground="#4a3b52" TextWrapping="Wrap" />
+                                               Foreground="#3f4d68" TextWrapping="Wrap" />
                         </ScrollViewer>
                       </Border>
                     </StackPanel>
 
-                    <Button Classes="go" Content="{Binding AccountButtonText}" Margin="0,10,0,0"
+                    <Button Classes="go" Content="{Binding AccountButtonText}" Margin="0,16,0,0"
                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                             Command="{Binding AccountStepCommand}" IsEnabled="{Binding !Busy}" />
+
+                    <!-- ⛔ زیرِ دکمه، در عکسِ مرجع، ردیفِ «Sign Up with» و
+                         نشانِ گوگل و فیسبوک و اپل است. این‌جا **ساخته
+                         نشد**: هیچ‌کدامِ آن راه‌ها در این برنامه وجود
+                         ندارد و یک دکمهٔ بی‌کار از نبودنش بدتر است. جایش
+                         همان راهِ سومِ واقعیِ خودمان است — کدِ ایمیلی. -->
+                    <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center"
+                                Margin="0,14,0,0" IsVisible="{Binding IsSignUp}">
+                      <TextBlock Text="حساب دارید؟" FontSize="12.5" VerticalAlignment="Center"
+                                 Foreground="#7b879e" />
+                      <Button Classes="link" Content="وارد شوید"
+                              Command="{Binding SetSignUpCommand}" CommandParameter="no" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center"
+                                Margin="0,14,0,0" IsVisible="{Binding !IsSignUp}">
+                      <TextBlock Text="حساب ندارید؟" FontSize="12.5" VerticalAlignment="Center"
+                                 Foreground="#7b879e" />
+                      <Button Classes="link" Content="یک حساب بسازید"
+                              Command="{Binding SetSignUpCommand}" CommandParameter="yes" />
+                    </StackPanel>
 
                     <!-- ⛔ «بعداً — فعلاً بی حساب ادامه می‌دهم» برداشته شد
                          (۱۴۰۵/۰۶/۳۰). دروغ می‌گفت: بی حساب ادامه نمی‌داد،
@@ -407,41 +548,48 @@
                        فقط برنامهٔ نیتیو هیچ‌وقت صدایش نزده بود — پس کسی که
                        رمزش را گم می‌کرد هیچ راهی جز ساختنِ حسابِ تازه
                        نداشت. -->
-                  <StackPanel Spacing="9" IsVisible="{Binding StepForgot}">
-                    <TextBlock Text="رمزِ تازه" Classes="h1" FontSize="26" />
-                    <TextBlock Classes="dim" FontSize="12.5" TextWrapping="Wrap"
+                  <StackPanel Spacing="0" IsVisible="{Binding StepForgot}">
+                    <TextBlock Text="رمزِ تازه" Classes="h1" HorizontalAlignment="Center" />
+                    <TextBlock Classes="dim" FontSize="12.5" TextWrapping="Wrap" TextAlignment="Center"
+                               Margin="0,8,0,18"
                                Text="ایمیلتان را بنویسید تا یک کدِ شش‌رقمی برایش بفرستیم، بعد رمزِ تازه را بگذارید." />
 
-                    <TextBox Text="{Binding LoginEmail}" Watermark="ایمیل" FlowDirection="LeftToRight"
-                             Margin="0,6,0,0">
+                    <TextBlock Text="ایمیل" Classes="lbl" />
+                    <TextBox Text="{Binding LoginEmail}" Watermark="you@example.com"
+                             FlowDirection="LeftToRight">
                       <TextBox.KeyBindings>
                         <KeyBinding Gesture="Enter" Command="{Binding SendResetCodeCommand}" />
                       </TextBox.KeyBindings>
                     </TextBox>
-                    <Button Classes="go" Content="فرستادنِ کد به ایمیل" HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Center"
+                    <Button Classes="go" Content="فرستادنِ کد به ایمیل" Margin="0,14,0,0"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                             Command="{Binding SendResetCodeCommand}" IsEnabled="{Binding !Busy}" />
 
                     <!-- تا کد نرفته، نیمهٔ دوم دیده نمی‌شود -->
-                    <StackPanel Spacing="9" IsVisible="{Binding ResetSent}" Margin="0,8,0,0">
-                      <TextBox Text="{Binding ResetCode}" MaxLength="6" Watermark="کدِ ایمیل — شش رقم"
-                               FlowDirection="LeftToRight" />
+                    <StackPanel Spacing="0" IsVisible="{Binding ResetSent}" Margin="0,16,0,0">
+                      <TextBlock Text="کدِ ایمیل" Classes="lbl" />
+                      <TextBox Text="{Binding ResetCode}" MaxLength="6" Watermark="شش رقم"
+                               FlowDirection="LeftToRight" Margin="0,0,0,12" />
+                      <TextBlock Text="رمزِ تازه" Classes="lbl" />
                       <TextBox Text="{Binding ResetPass}" PasswordChar="{Binding PassChar}"
-                               Watermark="رمزِ تازه — دستِ‌کم هشت نویسه" />
+                               Watermark="دستِ‌کم هشت نویسه" Margin="0,0,0,12" />
+                      <TextBlock Text="تکرارِ رمزِ تازه" Classes="lbl" />
                       <TextBox Text="{Binding ResetPass2}" PasswordChar="{Binding PassChar}"
-                               Watermark="تکرارِ رمزِ تازه">
+                               Watermark="همان رمز را دوباره بنویسید">
                         <TextBox.KeyBindings>
                           <KeyBinding Gesture="Enter" Command="{Binding ResetPasswordCommand}" />
                         </TextBox.KeyBindings>
                       </TextBox>
-                      <Button Classes="go" Content="گذاشتنِ رمزِ تازه و ورود"
+                      <Button Classes="go" Content="گذاشتنِ رمزِ تازه و ورود" Margin="0,14,0,0"
                               HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                               Command="{Binding ResetPasswordCommand}" IsEnabled="{Binding !Busy}" />
                       <Button Classes="link" Content="کد نرسید؟ دوباره بفرست" HorizontalAlignment="Center"
+                              Margin="0,8,0,0"
                               Command="{Binding SendResetCodeCommand}" IsEnabled="{Binding !Busy}" />
                     </StackPanel>
 
                     <Button Classes="link" Content="‹ برگشت به ورود" HorizontalAlignment="Center"
+                            Margin="0,12,0,0"
                             Command="{Binding BackToAccountCommand}" IsEnabled="{Binding !Busy}" />
                   </StackPanel>
 
@@ -450,9 +598,10 @@
                        حسابی بسازم، نمی‌شود.» ریشه: سرور حسابِ بی تأییدِ
                        ایمیل نمی‌سازد. پس این گام آمد — و ⚠️ این کد **کدِ
                        ایمیل** است، نه کدِ اشتراک. -->
-                  <StackPanel Spacing="9" IsVisible="{Binding StepEmailCode}">
-                    <TextBlock Text="کدِ ایمیل" Classes="h1" FontSize="26" />
-                    <TextBlock Classes="dim" FontSize="12.5" TextWrapping="Wrap"
+                  <StackPanel Spacing="0" IsVisible="{Binding StepEmailCode}">
+                    <TextBlock Text="کدِ ایمیل" Classes="h1" HorizontalAlignment="Center" />
+                    <TextBlock Classes="dim" FontSize="12.5" TextWrapping="Wrap" TextAlignment="Center"
+                               Margin="0,8,0,16"
                                Text="یک کدِ شش‌رقمی به ایمیلتان فرستادیم. همان را این‌جا بزنید تا حساب ساخته شود. (این با کدِ اشتراک فرق دارد.)" />
 
                     <!-- ══ شش خانهٔ کد — بندِ ۴ی پرامپتِ ۲۲ ════════════════
@@ -468,7 +617,7 @@
                          نمی‌شود، و اگر `IsVisible` هم داخلِ همان می‌نشست
                          روی `CodeBoxesViewModel` دنبالِ `IsCodeLogin`
                          می‌گشت — که آن‌جا وجود ندارد. -->
-                    <Panel IsVisible="{Binding IsCodeLogin}" Margin="0,8,0,0">
+                    <Panel IsVisible="{Binding IsCodeLogin}">
                       <StackPanel Name="CodeBoxRow" Orientation="Horizontal" Spacing="8"
                                   HorizontalAlignment="Center"
                                   FlowDirection="LeftToRight"
@@ -484,26 +633,29 @@
                     </Panel>
 
                     <!-- ایمیلِ پوشانده و حالِ تحویل — هر دو از خودِ سرور -->
-                    <TextBlock Classes="dim" FontSize="12" HorizontalAlignment="Center"
+                    <TextBlock Classes="dim" FontSize="12" HorizontalAlignment="Center" Margin="0,10,0,0"
                                IsVisible="{Binding IsCodeLogin}" Text="{Binding CodeMasked}"
                                FlowDirection="LeftToRight" />
                     <TextBlock Classes="dim" FontSize="12" HorizontalAlignment="Center"
-                               TextWrapping="Wrap" IsVisible="{Binding IsCodeLogin}"
+                               TextWrapping="Wrap" TextAlignment="Center" IsVisible="{Binding IsCodeLogin}"
                                Text="{Binding CodeDelivery}" />
 
                     <!-- راهِ رمز همان کادرِ تک‌خطیِ همیشگی‌اش را دارد -->
-                    <TextBox Text="{Binding EmailCode}" MaxLength="6" Margin="0,6,0,0"
-                             IsVisible="{Binding !IsCodeLogin}"
-                             Watermark="کدِ ایمیل — شش رقم" FlowDirection="LeftToRight">
-                      <TextBox.KeyBindings>
-                        <KeyBinding Gesture="Enter" Command="{Binding VerifyEmailCommand}" />
-                      </TextBox.KeyBindings>
-                    </TextBox>
+                    <StackPanel IsVisible="{Binding !IsCodeLogin}">
+                      <TextBlock Text="کدِ ایمیل" Classes="lbl" />
+                      <TextBox Text="{Binding EmailCode}" MaxLength="6"
+                               Watermark="شش رقم" FlowDirection="LeftToRight">
+                        <TextBox.KeyBindings>
+                          <KeyBinding Gesture="Enter" Command="{Binding VerifyEmailCommand}" />
+                        </TextBox.KeyBindings>
+                      </TextBox>
+                    </StackPanel>
 
-                    <Button Classes="go" Content="تایید و ساختنِ حساب" Margin="0,10,0,0"
+                    <Button Classes="go" Content="تایید و ساختنِ حساب" Margin="0,16,0,0"
                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                             Command="{Binding VerifyEmailCommand}" IsEnabled="{Binding !Busy}" />
-                    <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center"
+                                Margin="0,10,0,0">
                       <!-- ⚠️ شمارشِ معکوسِ شصت ثانیه — عددش از خودِ سرور
                            می‌آید (`resend_after`)، نه از حدسِ ما. -->
                       <Button Classes="link" Content="کد نرسید؟ دوباره بفرست"
@@ -518,32 +670,40 @@
                   </StackPanel>
 
                   <!-- ══════════ گامِ ۳: پمپ ══════════ -->
-                  <StackPanel Spacing="8" IsVisible="{Binding StepPump}">
-                    <TextBlock Text="پمپِ خودتان" Classes="h1" FontSize="26" />
-                    <TextBlock Text="نام و لوکیشنِ پمپ را بنویسید و ادامه بدهید. اشتراک روی همین حساب می‌نشیند، پس کدی لازم نیست."
-                               Classes="dim" FontSize="12.5" TextWrapping="Wrap" />
+                  <StackPanel Spacing="0" IsVisible="{Binding StepPump}">
+                    <TextBlock Text="پمپِ خودتان" Classes="h1" HorizontalAlignment="Center" />
+                    <TextBlock Classes="dim" FontSize="12.5" TextWrapping="Wrap" TextAlignment="Center"
+                               Margin="0,8,0,18"
+                               Text="نام و لوکیشنِ پمپ را بنویسید و تمام. اشتراک روی همین حساب می‌نشیند، پس هیچ کدی لازم نیست." />
 
-                    <TextBox Text="{Binding LoginCode}" MaxLength="6" Margin="0,6,0,0"
-                             Watermark="کدِ شش‌رقمی — اگر دارید (اختیاری)">
+                    <!-- ⛔ کادرِ «کدِ شش‌رقمی — اگر دارید» در ۱۴۰۵/۰۷/۰۴ از
+                         همین‌جا برداشته شد. گزارشِ صاحب ریپو: «بعد از کد شش
+                         رقمی یک کد شش رقمی دیگه می‌خواد، اون چیه؟ اون رو
+                         حذف کن، لازم نیست.» و حق داشت: درست پس از کدِ
+                         **ایمیل**، یک کادرِ شش‌رقمیِ دیگر با همان شکل
+                         می‌آمد که هیچ ربطی به آن یکی نداشت.
+                         ⚠️ هیچ قابلیتی از بین نرفت: خرج کردنِ کدِ اشتراک
+                         همان‌جایی ماند که باید باشد — کارتِ «اشتراک»ِ خودِ
+                         پروفایل (`SubCode` + `RedeemSubCommand`). -->
+                    <TextBlock Text="نامِ پمپ" Classes="lbl" />
+                    <TextBox Text="{Binding LoginPump}" Watermark="مثلاً پمپ یعقوبی" Margin="0,0,0,12">
                       <TextBox.KeyBindings>
-                        <KeyBinding Gesture="Enter" Command="{Binding VerifyCodeCommand}" />
-                      </TextBox.KeyBindings>
-                    </TextBox>
-                    <TextBox Text="{Binding LoginPump}" Watermark="نامِ پمپ">
-                      <TextBox.KeyBindings>
-                        <KeyBinding Gesture="Enter" Command="{Binding VerifyCodeCommand}" />
-                      </TextBox.KeyBindings>
-                    </TextBox>
-                    <TextBox Text="{Binding LoginLocation}" Watermark="لوکیشنِ پمپ">
-                      <TextBox.KeyBindings>
-                        <KeyBinding Gesture="Enter" Command="{Binding VerifyCodeCommand}" />
+                        <KeyBinding Gesture="Enter" Command="{Binding FinishPumpCommand}" />
                       </TextBox.KeyBindings>
                     </TextBox>
 
-                    <Button Classes="go" Content="ساختنِ پمپ و پایان" Margin="0,10,0,0"
+                    <TextBlock Text="لوکیشنِ پمپ" Classes="lbl" />
+                    <TextBox Text="{Binding LoginLocation}" Watermark="شهر و آدرس">
+                      <TextBox.KeyBindings>
+                        <KeyBinding Gesture="Enter" Command="{Binding FinishPumpCommand}" />
+                      </TextBox.KeyBindings>
+                    </TextBox>
+
+                    <Button Classes="go" Content="ساختنِ پمپ و پایان" Margin="0,16,0,0"
                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                            Command="{Binding VerifyCodeCommand}" IsEnabled="{Binding !Busy}" />
-                    <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                            Command="{Binding FinishPumpCommand}" IsEnabled="{Binding !Busy}" />
+                    <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center"
+                                Margin="0,10,0,0">
                       <Button Classes="link" Content="‹ برگشت به حساب"
                               Command="{Binding BackToAccountCommand}" IsEnabled="{Binding !Busy}" />
                       <Button Classes="link" Content="بعداً — بعد کد را می‌زنم"
@@ -555,13 +715,17 @@
                        فقط دکمه‌ها خاکستری می‌شدند و کاربر نمی‌فهمید برنامه
                        دارد کار می‌کند یا گیر کرده. نوار نامعین است چون
                        نمی‌دانیم سرور چقدر طول می‌دهد. -->
-                  <ProgressBar IsIndeterminate="True" Height="3" Margin="0,4,0,0"
-                               Foreground="#c2185b" Background="Transparent"
+                  <ProgressBar IsIndeterminate="True" Height="3" Margin="0,14,0,0"
+                               Foreground="#1746c9" Background="Transparent"
                                IsVisible="{Binding Busy}" />
 
-                  <TextBlock Text="{Binding LoginStatus}" TextWrapping="Wrap" FontSize="12.5" FontWeight="Bold"
-                             Foreground="#c2185b"
-                             IsVisible="{Binding LoginStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                  <!-- حالِ کار — پیامِ خودِ سرور، در یک کادرِ دیدنی -->
+                  <Border Background="#eef4fc" BorderBrush="#dce6f5" BorderThickness="1"
+                          CornerRadius="10" Padding="12,10" Margin="0,12,0,0"
+                          IsVisible="{Binding LoginStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <TextBlock Text="{Binding LoginStatus}" TextWrapping="Wrap" FontSize="12.5"
+                               FontWeight="Bold" Foreground="#16233d" />
+                  </Border>
                 </StackPanel>
               </ScrollViewer>
             </Grid>

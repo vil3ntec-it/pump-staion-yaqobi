@@ -739,7 +739,11 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     [ObservableProperty] private string _loginEmail = "";
     [ObservableProperty] private string _loginPassword = "";
     [ObservableProperty] private string _loginPassword2 = "";
-    [ObservableProperty] private string _loginCode = "";
+    //  ⛔ `_loginCode` (کدِ اشتراک در گامِ پمپ) در ۱۴۰۵/۰۷/۰۴ برداشته شد —
+    //  خواستهٔ صریحِ صاحب ریپو: «بعد از کد شش رقمی یک کد شش رقمی دیگه
+    //  می‌خواد، اون چیه؟ اون رو حذف کن، لازم نیست.» راهِ خرج کردنِ کد
+    //  دست‌نخورده ماند و همان‌جایی است که باید باشد: کارتِ اشتراکِ پروفایل
+    //  (`SubCode` + `RedeemSubCommand`).
 
     /// <summary>کدِ شش‌رقمی که به **ایمیل** آمد — با کدِ اشتراک یکی نیست.</summary>
     [ObservableProperty] private string _emailCode = "";
@@ -1110,7 +1114,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     // ── گامِ ۲: پمپ ─────────────────────────────────────────────────────
 
     /// <summary>
-    /// گامِ پمپ را تمام می‌کند — <b>با کد یا بی کد</b>.
+    /// گامِ پمپ را تمام می‌کند — <b>بی هیچ کدی</b>.
     ///
     /// <para>
     /// ⛔ <b>تا دیروز کدِ شش‌رقمی اجباری بود و همین‌جا همه گیر می‌کردند.</b>
@@ -1122,49 +1126,48 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     /// </para>
     ///
     /// <para>
-    /// ⚠️ کد <b>برداشته نشد، فقط اختیاری شد</b>: کسی که کدِ تمدید دارد
-    /// همان راهِ همیشگی‌اش را دارد (<see cref="CloudLink.RedeemAsync"/>)، و
-    /// کسی که ندارد پمپش ساخته و بند می‌شود
-    /// (<see cref="CloudLink.EnsureStationAsync"/>).
+    /// ⛔ و از ۱۴۰۵/۰۷/۰۴ کد <b>کاملاً از این گام رفت</b>. گزارشِ صاحب
+    /// ریپو: «بعد از کد شش رقمی یک کد شش رقمی دیگه می‌خواد، اون چیه؟ اون
+    /// رو حذف کن، لازم نیست.» و حق داشت: درست بعد از کدِ <b>ایمیل</b>، یک
+    /// کادرِ شش‌رقمیِ دیگر با همان شکل و همان اندازه می‌آمد که هیچ ربطی به
+    /// آن یکی نداشت — «اختیاری» بودنش هم دردی دوا نمی‌کرد، چون کاربر
+    /// نمی‌دانست کدام است و دنبالِ کدی می‌گشت که اصلاً ندارد.
+    /// </para>
+    ///
+    /// <para>
+    /// ⚠️ <b>هیچ قابلیتی از بین نرفت</b>: خرج کردنِ کدِ اشتراک همان‌جایی
+    /// ماند که باید باشد — کارتِ «اشتراک»ِ خودِ پروفایل
+    /// (<c>SubCode</c> + <c>RedeemSubCommand</c> ⇒
+    /// <see cref="CloudLink.RedeemAsync"/>). کسی که کد دارد، بعد از ورود
+    /// آن‌جا می‌زندش؛ کسی که ندارد اصلاً کادری نمی‌بیند.
     /// </para>
     ///
     /// ⚠️ نامِ پمپ و لوکیشن **پیش از** رفتن به سرور ذخیره می‌شوند، تا اگر
     /// سرور جواب نداد هم همان نامِ تازه در پروفایل و سربرگ دیده شود.
     /// </summary>
     [RelayCommand]
-    private Task VerifyCodeAsync() => CrashGuard.RunAsync("گامِ پمپ", async () =>
+    private Task FinishPumpAsync() => CrashGuard.RunAsync("گامِ پمپ", async () =>
     {
         var pump = (LoginPump ?? "").Trim();
         var where = (LoginLocation ?? "").Trim();
-        var code = new string((LoginCode ?? "").Where(char.IsDigit).ToArray());
 
         if (pump.Length < 2) { LoginStatus = "❌ نامِ پمپ را بنویسید."; return; }
-        //  ⚠️ کدِ **نصفه** خطاست، ولی کدِ **خالی** نه: یکی اشتباهِ تایپ است
-        //  و آن یکی راهِ عادیِ کسی که اصلاً کدی ندارد.
-        if (code.Length > 0 && code.Length != 6)
-        {
-            LoginStatus = "❌ کد شش رقم است — یا کاملش کنید یا خالی بگذارید.";
-            return;
-        }
 
         Busy = true;
-        LoginStatus = code.Length == 6 ? "در حالِ تایید از سرور…" : "در حالِ ساختنِ پمپ روی سرور…";
+        LoginStatus = "در حالِ ساختنِ پمپ روی سرور…";
         try
         {
             _host.Settings.Set(SettingsService.StationName, pump);
             if (where.Length > 0) _host.Settings.Set(SettingsService.StationAddress, where);
             RefreshAll();
 
-            var res = code.Length == 6
-                ? await Cloud.RedeemAsync(code, pump, where)
-                : await Cloud.EnsureStationAsync(pump);
+            var res = await Cloud.EnsureStationAsync(pump);
             if (!res.Ok) { LoginStatus = "❌ " + res.Why; return; }
 
             //  نشانیِ سرورِ خانگی و اشتراک را هم همین‌جا برمی‌داریم، وگرنه
             //  کاربر تا تیکِ بعدیِ پس‌زمینه «هنوز وصل نیست» می‌بیند.
             try { await Cloud.HomeFromAccountAsync(); } catch { /* رفاه است */ }
 
-            LoginCode = "";
             LoginStatus = "";
             RefreshAll();
             LoginStep = 4;
