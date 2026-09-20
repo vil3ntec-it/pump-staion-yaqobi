@@ -209,8 +209,11 @@ public class AppLinksTests
         Assert.Contains("public bool StepEmailCode => LoginStep == 2;", vm);
         Assert.Contains("public bool StepPump => LoginStep == 3;", vm);
         Assert.Contains("public bool StepDone => LoginStep == 4;", vm);
-        //  کد همان کدِ اشتراک است و نام و لوکیشنِ پمپ همراهش می‌روند
-        Assert.Contains("Cloud.RedeemAsync(code, pump, where)", vm);
+        //  ⛔ گامِ پمپ از ۱۴۰۵/۰۷/۰۴ هیچ کدی نمی‌خواهد — فقط پمپ را می‌سازد
+        Assert.Contains("Cloud.EnsureStationAsync(pump)", vm);
+        Assert.DoesNotContain("Cloud.RedeemAsync(code, pump, where)", vm);
+        //  ⚠️ ولی خرج کردنِ کد از بین نرفته؛ فقط جایش کارتِ اشتراک است
+        Assert.Contains("Cloud.RedeemAsync(code)", vm);
         Assert.Contains("SettingsService.StationName, pump", vm);
         Assert.Contains("SettingsService.StationAddress, where", vm);
     }
@@ -309,12 +312,16 @@ public class AppLinksTests
         attach = attach[..attach.IndexOf("OnDetachedFromVisualTree", StringComparison.Ordinal)];
         Assert.DoesNotContain("Paint();", attach);
 
-        //  و در صفحه به کار رفته، با پس‌زمینهٔ تمِ برنامه (نه آن بنفشِ عکس)
+        //  و در صفحه به کار رفته — از ۱۴۰۵/۰۷/۰۴ داخلِ پنلِ برند، روی
+        //  گرادیانِ خودِ صفحهٔ ورود. ⚠️ پیش از این پس‌زمینه‌اش `Pump.Section`
+        //  بود؛ خواستهٔ تازه («شبیه این عکس باشد همه‌چی») پنلِ گرادیانی را
+        //  آورد. آن‌چه **عوض نشد** خودِ قاعده است: هیچ کادرِ سفیدِ
+        //  سفت‌وسختی دورِ نقشه نیست و بومش شفاف می‌ماند.
         var xaml = Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml");
         Assert.Contains("<c:LoginArt", xaml);
         Assert.DoesNotContain("<Image Source=\"{Binding LoginArt}\"", xaml);
         Assert.DoesNotContain("#f4eefd", xaml);
-        Assert.Contains("Background=\"{DynamicResource Pump.Section}\"", xaml);
+        Assert.Contains("Background=\"{StaticResource Login.Grad}\"", xaml);
     }
 
     /// <summary>
@@ -343,7 +350,7 @@ public class AppLinksTests
         //  ⚠️ صفحهٔ ورود **تمامِ صفحه** است، نه یک کارتِ کوچک (خواستهٔ
         //  ۱۴۰۵/۰۶/۲۹: «کلِ صفحه را بگیرد… این‌جوری کوچک نباشد»)؛ فرم بغلِ
         //  عکس است، با پهنای صریحِ خودش.
-        Assert.Contains("<Grid ColumnDefinitions=\"*,440\">", xaml);
+        Assert.Contains("<Grid ColumnDefinitions=\"*,470\">", xaml);
         Assert.DoesNotContain("Grid Width=\"980\"", xaml);
         //  و راهِ برگشت برای کسی که نمی‌خواهد ثبت‌نام کند
         Assert.Contains("CloseLoginCommand", xaml);
