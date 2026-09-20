@@ -1,3 +1,4 @@
+using System.Linq;
 using PumpYaqobi.App.Services;
 using Xunit;
 
@@ -160,11 +161,29 @@ public class AppLinksTests
         Assert.Contains("SetSignUpCommand", xaml);
         Assert.Contains("AccountStepCommand", xaml);
 
-        //  گامِ ۲ — کد و تاییدش از سرور، نامِ پمپ و لوکیشن
-        Assert.Contains("Binding LoginCode", xaml);
+        //  گامِ پمپ — فقط نام و لوکیشن
         Assert.Contains("Binding LoginPump", xaml);
         Assert.Contains("Binding LoginLocation", xaml);
-        Assert.Contains("VerifyCodeCommand", xaml);
+        Assert.Contains("FinishPumpCommand", xaml);
+
+        //  ⛔ **کدِ دومِ شش‌رقمی از گامِ پمپ رفت** (۱۴۰۵/۰۷/۰۴). گزارشِ صاحب
+        //  ریپو: «بعد از کد شش رقمی یک کد شش رقمی دیگه می‌خواد، اون چیه؟
+        //  اون رو حذف کن، لازم نیست.» درست بعد از کدِ **ایمیل** یک کادرِ
+        //  شش‌رقمیِ دیگر با همان شکل می‌آمد که هیچ ربطی به آن یکی نداشت.
+        Assert.DoesNotContain("LoginCode", xaml);
+        //  ⚠️ روی خودِ **کد** می‌گردیم، نه روی توضیحات — همان قاعدهٔ
+        //  `Adamakha_…`: نامِ برداشته‌شده در کامنتِ «این رفت و چرا» هست و
+        //  باید هم باشد.
+        var vmCode = string.Join("\n",
+            Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs")
+                .Split('\n').Where(l => !l.TrimStart().StartsWith("//")));
+        Assert.DoesNotContain("_loginCode", vmCode);
+
+        //  ⚠️ ولی خرج کردنِ کدِ اشتراک **از بین نرفت** — همان‌جایی ماند که
+        //  باید باشد: کارتِ «اشتراک»ِ خودِ پروفایل. بی این دو خط، «حذفش
+        //  کردم» می‌توانست یعنی «قابلیت را هم بردم».
+        Assert.Contains("Binding SubCode", xaml);
+        Assert.Contains("RedeemSubCommand", xaml);
         //  و گامِ سوم «تمام» است
         Assert.Contains("Binding StepDone", xaml);
 

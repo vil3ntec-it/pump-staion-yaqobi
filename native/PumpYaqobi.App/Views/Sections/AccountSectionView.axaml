@@ -674,33 +674,34 @@
                     <TextBlock Text="پمپِ خودتان" Classes="h1" HorizontalAlignment="Center" />
                     <TextBlock Classes="dim" FontSize="12.5" TextWrapping="Wrap" TextAlignment="Center"
                                Margin="0,8,0,18"
-                               Text="نام و لوکیشنِ پمپ را بنویسید و ادامه بدهید. اشتراک روی همین حساب می‌نشیند، پس کدی لازم نیست." />
+                               Text="نام و لوکیشنِ پمپ را بنویسید و تمام. اشتراک روی همین حساب می‌نشیند، پس هیچ کدی لازم نیست." />
 
-                    <TextBlock Text="کدِ شش‌رقمی — اگر دارید" Classes="lbl" />
-                    <TextBox Text="{Binding LoginCode}" MaxLength="6" Margin="0,0,0,12"
-                             Watermark="اختیاری">
-                      <TextBox.KeyBindings>
-                        <KeyBinding Gesture="Enter" Command="{Binding VerifyCodeCommand}" />
-                      </TextBox.KeyBindings>
-                    </TextBox>
-
+                    <!-- ⛔ کادرِ «کدِ شش‌رقمی — اگر دارید» در ۱۴۰۵/۰۷/۰۴ از
+                         همین‌جا برداشته شد. گزارشِ صاحب ریپو: «بعد از کد شش
+                         رقمی یک کد شش رقمی دیگه می‌خواد، اون چیه؟ اون رو
+                         حذف کن، لازم نیست.» و حق داشت: درست پس از کدِ
+                         **ایمیل**، یک کادرِ شش‌رقمیِ دیگر با همان شکل
+                         می‌آمد که هیچ ربطی به آن یکی نداشت.
+                         ⚠️ هیچ قابلیتی از بین نرفت: خرج کردنِ کدِ اشتراک
+                         همان‌جایی ماند که باید باشد — کارتِ «اشتراک»ِ خودِ
+                         پروفایل (`SubCode` + `RedeemSubCommand`). -->
                     <TextBlock Text="نامِ پمپ" Classes="lbl" />
                     <TextBox Text="{Binding LoginPump}" Watermark="مثلاً پمپ یعقوبی" Margin="0,0,0,12">
                       <TextBox.KeyBindings>
-                        <KeyBinding Gesture="Enter" Command="{Binding VerifyCodeCommand}" />
+                        <KeyBinding Gesture="Enter" Command="{Binding FinishPumpCommand}" />
                       </TextBox.KeyBindings>
                     </TextBox>
 
                     <TextBlock Text="لوکیشنِ پمپ" Classes="lbl" />
                     <TextBox Text="{Binding LoginLocation}" Watermark="شهر و آدرس">
                       <TextBox.KeyBindings>
-                        <KeyBinding Gesture="Enter" Command="{Binding VerifyCodeCommand}" />
+                        <KeyBinding Gesture="Enter" Command="{Binding FinishPumpCommand}" />
                       </TextBox.KeyBindings>
                     </TextBox>
 
                     <Button Classes="go" Content="ساختنِ پمپ و پایان" Margin="0,16,0,0"
                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                            Command="{Binding VerifyCodeCommand}" IsEnabled="{Binding !Busy}" />
+                            Command="{Binding FinishPumpCommand}" IsEnabled="{Binding !Busy}" />
                     <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center"
                                 Margin="0,10,0,0">
                       <Button Classes="link" Content="‹ برگشت به حساب"

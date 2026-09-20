@@ -513,42 +513,46 @@ internal static class VerifyProbe
             account.BackToPumpCommand.Execute(null);
             for (var i = 0; i < 10; i++) Pump(win);
 
-            //  د) گامِ دو: نامِ پمپ و کد سنجیده می‌شوند
+            //  د) گامِ پمپ: فقط نامِ پمپ سنجیده می‌شود
+            //  ⛔ کادرِ دومِ کدِ شش‌رقمی در ۱۴۰۵/۰۷/۰۴ از این گام رفت —
+            //  «بعد از کد شش رقمی یک کد شش رقمی دیگه می‌خواد، اون چیه؟
+            //  اون رو حذف کن.» پس این‌جا دیگر کدی سنجیده نمی‌شود؛ کد
+            //  جای خودش، در کارتِ اشتراکِ پروفایل، سنجیده می‌شود.
             account.LoginPump = "";
-            account.LoginCode = "123456";
-            Wait(win, account.VerifyCodeCommand.ExecuteAsync(null));
+            Wait(win, account.FinishPumpCommand.ExecuteAsync(null));
             Check("نامِ پمپِ خالی رد شد", account.LoginStatus.Contains("نامِ پمپ") && account.StepPump,
                   account.LoginStatus);
 
             account.LoginPump = "پمپِ نو";
             account.LoginLocation = "هرات، جادهٔ کندهار";
-            account.LoginCode = "123";
+
             //  ⚠️ «هیچ توکنی نساخت» با «توکن را عوض نکرد» یکی نیست.
-            //  این سنجه از امروز با یک نصبِ **پلن‌دار** می‌دود (بالای
-            //  `Run`)، پس توکنِ دستگاه از قبل هست و سنجشِ «خالی باشد»
-            //  حرفِ درستی نمی‌زد. خواستهٔ اصلی همین است و سخت‌گیرانه‌تر:
-            //  کدِ ناقص نه توکنی می‌سازد و نه توکنِ سالم را جابه‌جا می‌کند.
+            //  این سنجه با یک نصبِ **پلن‌دار** می‌دود (بالای `Run`)، پس
+            //  توکنِ دستگاه از قبل هست و سنجشِ «خالی باشد» حرفِ درستی
+            //  نمی‌زد: کدِ ناقص نه توکنی می‌سازد و نه توکنِ سالم را
+            //  جابه‌جا می‌کند.
             var tokenBefore = AppSettings.Load().CloudDeviceToken;
-            Wait(win, account.VerifyCodeCommand.ExecuteAsync(null));
-            Check("کدِ سه‌رقمی رد شد", account.LoginStatus.Contains("شش رقم") && account.StepPump,
-                  account.LoginStatus);
+            account.SubCode = "123";
+            Wait(win, account.RedeemSubCommand.ExecuteAsync(null));
+            Check("کدِ سه‌رقمیِ کارتِ اشتراک رد شد",
+                  account.SubMessage.Contains("شش رقم") && account.StepPump, account.SubMessage);
             Check("و کدِ ناقص توکنِ دستگاه را نه ساخت و نه عوض کرد",
                   AppSettings.Load().CloudDeviceToken == tokenBefore,
                   tokenBefore.Length == 0 ? "بی توکن" : "دست‌نخورده");
+            account.SubCode = "";
 
-            //  ه) نامِ پمپ و لوکیشن **پیش از** فرستادنِ کد می‌نشینند
-            account.LoginCode = "000000";
+            //  ه) نامِ پمپ و لوکیشن **پیش از** رفتن به سرور می‌نشینند
             if (Environment.GetEnvironmentVariable("PUMP_VERIFY_CLOUD") == "1")
             {
-                Wait(win, account.VerifyCodeCommand.ExecuteAsync(null));
-                Check("کدِ شش‌رقمی به سرور رفت و جوابش نشست (بی کرش)",
+                Wait(win, account.FinishPumpCommand.ExecuteAsync(null));
+                Check("ساختنِ پمپ به سرور رفت و جوابش نشست (بی کرش)",
                       account.LoginStatus.Length > 0 || account.LoginStep == 3, account.LoginStatus);
             }
             else
             {
-                Console.WriteLine("  ⚠️ تاییدِ واقعیِ کد از سرور نسنجیده ماند "
-                                  + "(PUMP_VERIFY_CLOUD=1 لازم است — اینترنت و سرورِ ابر می‌خواهد)");
-                Wait(win, account.VerifyCodeCommand.ExecuteAsync(null));   // بی‌اینترنت: باید خطا بدهد، نه کرش
+                Console.WriteLine("  ⚠️ ساختنِ واقعیِ پمپ روی سرور نسنجیده ماند "
+                                  + "(PUMP_VERIFY_CLOUD=1 لازم است — اینترنت و سرورِ حساب می‌خواهد)");
+                Wait(win, account.FinishPumpCommand.ExecuteAsync(null));   // بی‌اینترنت: باید خطا بدهد، نه کرش
                 Check("بی سرور، خطای روشن می‌دهد و در گامِ پمپ می‌ماند",
                       account.StepPump && account.LoginStatus.StartsWith("❌"), account.LoginStatus);
             }
