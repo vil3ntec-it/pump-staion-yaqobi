@@ -28,7 +28,10 @@ public sealed partial class SyncSectionViewModel : SectionViewModel
     public SyncSectionViewModel(AppHost host) : base("sync", "settings", "همگام‌سازی")
     {
         _host = host;
-        Show();
+        //  ⛔ این‌جا هیچ چیزی خوانده نمی‌شود. سازندهٔ هر بخش سرِ بالا آمدنِ
+        //  برنامه می‌دود، پس خواندن در سازنده یعنی هزینه برای صفحه‌ای که
+        //  کاربر هیچ‌وقت بازش نکرده — همان قاعدهٔ «بخشی که تویش نیستی هیچ
+        //  مصرفی ندارد». عددها در `OnActivatedAsync` می‌آیند.
     }
 
     [ObservableProperty] private string _light = "خاکستری";
