@@ -489,6 +489,36 @@ internal static class VerifyProbe
             Check("بی پذیرشِ شرایط، گام جلو نرفت",
                   account.LoginStatus.Contains("شرایط") && account.LoginStep == 1, account.LoginStatus);
 
+            //  ب‌ب) ⭐ **ریمیکِ ۱۴۰۵/۰۷/۰۵ — چهار بندِ خواسته، با رفتار**
+            //
+            //  «اون سه مرحله نباید دیده بشن… شرایط و ضوابط باید با زدنش بره
+            //  صفحهٔ جداگانه… لاگین رو وسط صفحه‌اش بزار… منطق دست نخوره.»
+            //
+            //  ⚠️ سه‌تای اول **ظاهر**اند و سنجهٔ سورسشان در `AppLinksTests`
+            //  است؛ آن‌چه این‌جا می‌سنجیم چیزی است که فقط با اجرا معلوم
+            //  می‌شود: صفحهٔ شرایط واقعاً باز و بسته می‌شود، متنش می‌آید،
+            //  و تیکِ پذیرش همان `AcceptTerms`ِ همیشگی است — نه یک حالتِ
+            //  تازه که بی‌صدا از فرم جدا افتاده باشد.
+            Check("⛔ پیش از زدنِ «شرایط و ضوابط»، صفحه‌اش بسته است",
+                  !account.ShowTerms);
+            Wait(win, account.LoadTermsCommand.ExecuteAsync(null));
+            for (var i = 0; i < 10; i++) Pump(win);
+            Check("⭐ زدنِ «شرایط و ضوابط» صفحهٔ جدا را باز کرد",
+                  account.ShowTerms, "ShowTerms=" + account.ShowTerms);
+            Check("و متنِ شرایط آمد", account.TermsText.Length > 0,
+                  account.TermsText.Length + " نویسه");
+            //  ⚠️ تیکِ داخلِ همان صفحه **همان** `AcceptTerms` است: کسی که
+            //  تا ته متن آمده نباید برای زدنِ تیک برگردد.
+            account.AcceptTerms = true;
+            Wait(win, account.LoadTermsCommand.ExecuteAsync(null));
+            for (var i = 0; i < 10; i++) Pump(win);
+            Check("⭐ «بستن و برگشت» همان صفحه را بست",
+                  !account.ShowTerms && account.AcceptTerms);
+            //  ⛔ و گام‌ها فقط از صفحه رفتند، نه از منطق
+            Check("⛔ گام‌ها سرِ جایشان‌اند، فقط شمرده نمی‌شوند",
+                  account.StepAccount && !account.StepEmailCode && !account.StepPump);
+            account.AcceptTerms = false;
+
             //  ج) «‹ برگشت به برنامه» — تنها راهِ «بی حساب ادامه بده»، و
             //     واقعاً کارش را می‌کند.
             //

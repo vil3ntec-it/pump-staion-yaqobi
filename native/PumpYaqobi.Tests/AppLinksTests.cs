@@ -184,8 +184,11 @@ public class AppLinksTests
         //  کردم» می‌توانست یعنی «قابلیت را هم بردم».
         Assert.Contains("Binding SubCode", xaml);
         Assert.Contains("RedeemSubCommand", xaml);
-        //  و گامِ سوم «تمام» است
-        Assert.Contains("Binding StepDone", xaml);
+        //  ⛔ **نوارِ گام‌ها از صفحه رفت** (۱۴۰۵/۰۷/۰۵): «اون سه مرحله
+        //  نباید دیده بشن». ⚠️ ولی خودِ گام‌ها نرفتند — این تفاوت مهم است،
+        //  وگرنه «پنهانش کردم» فردا می‌شد «منطقش را بردم».
+        Assert.DoesNotContain("Binding StepDone", xaml);
+        Assert.Contains("public bool StepDone => LoginStep == 4;", pass);
 
         //  ⛔ و هیچ راهِ سرویسِ بیرونی‌ای نیست (خواستهٔ صاحب ریپو: «هیچ
         //  پکنه‌ای نباشد، نه از گوگل و نه غیره»)
@@ -321,7 +324,11 @@ public class AppLinksTests
         Assert.Contains("<c:LoginArt", xaml);
         Assert.DoesNotContain("<Image Source=\"{Binding LoginArt}\"", xaml);
         Assert.DoesNotContain("#f4eefd", xaml);
-        Assert.Contains("Background=\"{StaticResource Login.Grad}\"", xaml);
+        //  ⚠️ از ۱۴۰۵/۰۷/۰۵ نقشه دیگر کنارِ فرم نیست: فرم وسطِ صفحه است و
+        //  نقشه تزئینِ خودِ آسمان، کم‌رنگ و گوشهٔ پایین. پس پس‌زمینه‌اش
+        //  `Login.Sky` است، نه `Login.Grad`ِ پنلِ برندِ برداشته‌شده.
+        Assert.Contains("Background=\"{StaticResource Login.Sky}\"", xaml);
+        Assert.Contains("<c:LoginArt Width=", xaml);
     }
 
     /// <summary>
@@ -347,11 +354,13 @@ public class AppLinksTests
         Assert.DoesNotContain("private Task SignInAsync()", vm);
         Assert.DoesNotContain("GoogleSignIn.RunAsync", vm);
 
-        //  ⚠️ صفحهٔ ورود **تمامِ صفحه** است، نه یک کارتِ کوچک (خواستهٔ
-        //  ۱۴۰۵/۰۶/۲۹: «کلِ صفحه را بگیرد… این‌جوری کوچک نباشد»)؛ فرم بغلِ
-        //  عکس است، با پهنای صریحِ خودش.
-        Assert.Contains("<Grid ColumnDefinitions=\"*,470\">", xaml);
+        //  ⚠️ صفحهٔ ورود **تمامِ صفحه** است و همیشه بوده؛ آن‌چه در
+        //  ۱۴۰۵/۰۷/۰۵ عوض شد جای **فرم** است: «لاگین رو هم وسط صفحه‌اش
+        //  بزار». پس دیگر دو ستونِ `*,470` نیست — یک کارتِ کشیده‌شده وسطِ
+        //  همان صفحهٔ تمام‌قد است.
+        Assert.DoesNotContain("ColumnDefinitions=\"*,470\"", xaml);
         Assert.DoesNotContain("Grid Width=\"980\"", xaml);
+        Assert.Contains("VerticalAlignment=\"Center\"", xaml);
         //  و راهِ برگشت برای کسی که نمی‌خواهد ثبت‌نام کند
         Assert.Contains("CloseLoginCommand", xaml);
     }
@@ -437,17 +446,17 @@ public class AppLinksTests
         var xaml = Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml");
         var palette = new[]
         {
-            "#eaf4fe",                          // بومِ صفحه
-            "#1746c9", "#2a6ae8", "#4b93f7",    // گرادیانِ پنلِ برند
-            "#16233d",                          // نوشتهٔ تیره
-            "#3f4d68", "#7b879e",               // متن و کم‌رنگ
-            "#eef4fc", "#dce6f5",               // کادرِ تایپ و خطش
+            "#070b1e", "#14225c", "#2d1b69",    // آسمانِ شب
+            "#3f8cff", "#6c5ce7", "#a855f7",    // گرادیانِ تاکید
+            "#101935",                          // نوشتهٔ تیره
+            "#5a6a8c", "#8d9ab5",               // متن و کم‌رنگ
+            "#f0f5ff", "#dbe5f7",               // کادرِ تایپ و خطش
         };
         foreach (var hex in palette) Assert.Contains(hex, xaml);
 
-        //  کارتِ سفید با گوشهٔ ۲۸ و سایهٔ آبی
-        Assert.Contains("CornerRadius=\"28\"", xaml);
-        Assert.Contains("0 24 60 0 #1F1746C9", xaml);
+        //  کارتِ شیشه‌ای با گوشهٔ ۳۰ و سایهٔ عمیق
+        Assert.Contains("CornerRadius=\"30\"", xaml);
+        Assert.Contains("0 40 90 0 #66050a24", xaml);
 
         //  ⛔ و هیچ‌کدام در **صفحهٔ پروفایل** نیست: آن‌جا تمِ خودِ برنامه است
         var profile = xaml[xaml.IndexOf("👤 خودِ پروفایل", StringComparison.Ordinal)..];
@@ -464,7 +473,12 @@ public class AppLinksTests
         //  ⛔ و پالتِ قدیمی هیچ ردی نگذاشته — وگرنه صفحه دو رنگ‌بندی
         //     نیمه‌کاره می‌شد، که بدتر از هر کدامشان است
         foreach (var gone in new[] { "#f6e3d8", "#ff7a59", "#e8458b", "#7b3fe4",
-                                     "#2b1640", "#4a3b52", "#7a6a82", "#c2185b" })
+                                     "#2b1640", "#4a3b52", "#7a6a82", "#c2185b",
+                                     //  و پالتِ آبیِ ریمیکِ ۱۴۰۵/۰۷/۰۴ هم رفت:
+                                     //  «این مدل و ظاهر یک درصد هم دیگه نباشه»
+                                     "#eaf4fe", "#1746c9", "#2a6ae8", "#4b93f7",
+                                     "#16233d", "#3f4d68", "#7b879e",
+                                     "#eef4fc", "#dce6f5" })
             Assert.DoesNotContain(gone, xaml);
     }
 
@@ -497,18 +511,39 @@ public class AppLinksTests
         var login = System.Text.RegularExpressions.Regex.Replace(
             block, "<!--.*?-->", "", System.Text.RegularExpressions.RegexOptions.Singleline);
 
-        //  دو پنل: برندِ گرادیانی و فرم
-        Assert.Contains("ColumnDefinitions=\"*,470\"", login);
+        //  ══ ریمیکِ دوم (۱۴۰۵/۰۷/۰۵) — چهار بندِ خواستهٔ صاحب ریپو ══
+
+        //  ۱) ⛔ نوارِ گام‌ها دیده نمی‌شود: «اون سه مرحله نباید دیده بشن»
+        Assert.DoesNotContain("stepchip", login);
+        Assert.DoesNotContain("۲ کدِ ایمیل", login);
+        Assert.DoesNotContain("۳ پمپ", login);
+        Assert.DoesNotContain("۴ تمام", login);
+        //  ⚠️ ولی خودِ گام‌ها سرِ جایشان‌اند — این نمایش بود که رفت، نه منطق
+        foreach (var step in new[] { "StepAccount", "StepEmailCode", "StepPump", "StepForgot" })
+            Assert.Contains("{Binding " + step + "}", login);
+
+        //  ۲) ⛔ فرم وسطِ صفحه است: «لاگین رو هم وسط صفحه‌اش بزار»
+        Assert.Contains("VerticalAlignment=\"Center\"", login);
+        Assert.DoesNotContain("ColumnDefinitions=\"*,470\"", login);
+
+        //  ۳) ⛔ ظاهرِ تازه: آسمانِ شب و کارتِ شیشه‌ای، نه کارتِ سفیدِ دوپنلی
+        Assert.Contains("{StaticResource Login.Sky}", login);
         Assert.Contains("{StaticResource Login.Grad}", login);
 
-        //  برچسبِ بالای هر کادرِ گامِ حساب
+        //  برچسبِ بالای هر کادرِ گامِ حساب — این یکی از ریمیکِ قبلی ماند
         foreach (var label in new[] { "نامِ شما", "ایمیل", "رمز", "تکرارِ رمز" })
             Assert.Contains($"Text=\"{label}\" Classes=\"lbl\"", login);
 
-        //  شرایط و ضوابط: هم تیک، هم متنش
+        //  ۴) ⛔ شرایط و ضوابط: تیک روی فرم، و متنش در یک **صفحهٔ جدا**
+        //     («باید با زدنِ شرایط و ضوابط بره صفحهٔ جداگانه»)
         Assert.Contains("{Binding AcceptTerms}", login);
         Assert.Contains("{Binding LoadTermsCommand}", login);
         Assert.Contains("{Binding ShowTerms}", login);
+        //  صفحهٔ شرایط: قابِ تمام‌صفحه با پس‌زمینهٔ خودِ آسمان، نه کادرِ
+        //  کشوییِ ۱۶۰پیکسلیِ ته فرم
+        Assert.Contains("IsVisible=\"{Binding ShowTerms}\" Background=\"{StaticResource Login.Sky}\"", login);
+        Assert.DoesNotContain("MaxHeight=\"160\"", login);
+        Assert.Contains("{Binding TermsText}", login);
 
         //  ⛔ هیچ سرویسِ بیرونی‌ای
         foreach (var fake in new[] { "گوگل", "فیسبوک", "اپل", "Google", "Facebook", "Apple" })
