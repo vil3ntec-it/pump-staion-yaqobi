@@ -113,15 +113,18 @@ public sealed partial class MainViewModel : ObservableObject
         _selectedTheme = PumpTheme.ById(_settings.ThemeId);
 
         // اندازهٔ ماشین‌حساب از تنظیمات، و هر تغییرش با تأخیر به تنظیمات
+        //  ⚠️ همان تأخیرِ ۶۰۰ میلی‌ثانیه‌ای، ولی حالا از راهِ یگانهٔ
+        //  `AppSettings.SaveSoon` — این‌جا از ۱۴۰۵/۰۶/۲۵ دستیِ خودش را
+        //  داشت (`CancellationTokenSource` + `Task.Delay`)، و وقتی همان
+        //  الگو برای «آخرین بخش» هم لازم شد، یک‌جا شد. دو سازوکارِ هم‌کار
+        //  یعنی روزی یکی‌شان اصلاح می‌شود و آن یکی نه.
         Calculator.Width = Math.Clamp(_settings.CalcWidth, CalculatorViewModel.MinW, CalculatorViewModel.MaxW);
         Calculator.Height = Math.Clamp(_settings.CalcHeight, CalculatorViewModel.MinH, CalculatorViewModel.MaxH);
         Calculator.IsLarge = _settings.CalcLarge;
         Calculator.SizeChanged += () =>
         {
             _settings.CalcWidth = Calculator.Width; _settings.CalcHeight = Calculator.Height; _settings.CalcLarge = Calculator.IsLarge;
-            _calcSave?.Cancel();
-            var cts = _calcSave = new CancellationTokenSource();
-            _ = Task.Delay(600, cts.Token).ContinueWith(t => { if (!t.IsCanceled) _settings.Save(); }, TaskScheduler.Default);
+            _settings.SaveSoon();
         };
     }
 
@@ -322,7 +325,6 @@ public sealed partial class MainViewModel : ObservableObject
     /// دکمهٔ سربرگ باز می‌شود. خواستهٔ صریحِ صاحب ریپو: «ماشین‌حساب داینامیک».
     /// </summary>
     public CalculatorViewModel Calculator { get; } = new();
-    private CancellationTokenSource? _calcSave;
 
     public bool IsChromeVisible => Content?.IsPageOpen != true;
 
@@ -686,7 +688,9 @@ public sealed partial class MainViewModel : ObservableObject
     {
         ThemeManager.Apply(value);
         _settings.ThemeId = value.Id;
-        _settings.Save();
+        //  تعویضِ تم خودش یک خبرِ بزرگ به کلِ درخت است (~۴۰۰ms با پنج سال
+        //  داده)؛ یک `fsync` هم رویش گذاشتن فقط همان را درازتر می‌کرد.
+        _settings.SaveSoon();
     }
 
     /// <summary>
@@ -751,7 +755,13 @@ public sealed partial class MainViewModel : ObservableObject
         s.PropertyChanged += OnSectionPropertyChanged;
         SyncContent();
         _settings.LastSection = s.Id;
-        _settings.Save();
+        //  ⛔ **نوشتنِ «آخرین بخش» روی نخِ رابط نمی‌ماند.** گزارشِ صاحب ریپو
+        //  (۱۴۰۵/۰۷/۰۵): «هر بخش رو باز می‌کنم جدول‌ها یک ثانیه بعد میان.»
+        //  ریشه دقیقاً همین خط بود: `Save()` یک نوشتنِ بادوام است
+        //  (`Flush(true)` + `File.Replace`)، و این‌جا **بینِ** نشان دادنِ صفحه
+        //  و خواندنِ داده‌اش می‌نشست — یعنی ردیف‌ها پشتِ یک `fsync` معطل
+        //  می‌ماندند. شرحِ کامل بالای `AppSettings.SaveSoon`.
+        _settings.SaveSoon();
         // ⚠️ اگر همین حالا خوانده شد و فعال‌سازی همان خواندن است، دوباره نه
         var fresh = await s.EnsureLoadedAsync();
         if (!(fresh && s.ActivationRepeatsLoad)) await s.OnActivatedAsync();

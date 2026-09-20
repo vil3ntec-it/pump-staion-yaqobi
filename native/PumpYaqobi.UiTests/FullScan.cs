@@ -36,6 +36,7 @@ internal static class FullScan
         ("look",       "سه پلهٔ رنگ (بوم ← بدنه ← کادر)",      true),
         ("ledgerperf", "دفترها (گاوصندوق، صرافی، مصارف)",      true),
         ("enterperf",  "داخل و بیرونِ حساب",                   true),
+        ("sectionopen","باز شدنِ بخش: جدول در همان فریمِ اول",  true),
         ("personperf", "حسابِ بزرگ: ۵۰۰ تا ۵۰٬۰۰۰ ردیف",       false),
         ("scrollperf", "گامِ چرخِ ماوس",                        true),
         ("scrollend",  "ته اسکرول می‌ایستد",                   true),
