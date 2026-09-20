@@ -68,6 +68,20 @@ public static class CloudConfig
     /// </summary>
     public static string Url(string path) => BaseUrl + path;
 
+    /// <summary>
+    /// همان <see cref="Url"/> برای وب‌سوکت — <c>wss://</c> به‌جای
+    /// <c>https://</c>.
+    ///
+    /// ⚠️ این‌جاست و جای دیگری نیست، چون <c>LicenseGuardTests</c> هر فایلِ
+    /// دیگری را که نامِ نشانی را در خطِ <b>کد</b> بیاورد قرمز می‌کند — و
+    /// آن سنجه درست است: نشانی یک جا می‌ماند، وگرنه فردا یکی‌شان عوض
+    /// می‌شود و دیگری نه.
+    /// </summary>
+    public static string WsUrl(string path) =>
+        (BaseUrl.StartsWith("https://", StringComparison.Ordinal)
+            ? "wss://" + BaseUrl["https://".Length..]
+            : "ws://" + BaseUrl["http://".Length..]) + path;
+
     /// <summary>صادرکنندهٔ مجوز.</summary>
     public const string Issuer = "tohid-license-server";
 

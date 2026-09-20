@@ -388,9 +388,10 @@ public sealed class SyncEngine : IAsyncDisposable
 
         try
         {
-            var url = CloudConfig.BaseUrl.Replace("https://", "wss://").Replace("http://", "ws://")
-                    + "/api/sync/v1/live?device_id=" + Uri.EscapeDataString(deviceId)
-                    + "&app=pump";
+            //  ⛔ نشانی این‌جا چسبانده نمی‌شود — `CloudConfig` تنها جای
+            //  دانستنش است (سنجهٔ `HichFayle_Digari_NeshaniRa_Namichasbanad`).
+            var url = CloudConfig.WsUrl("/api/sync/v1/live?device_id="
+                    + Uri.EscapeDataString(deviceId) + "&app=pump");
             using var ws = new ClientWebSocket();
             ws.Options.SetRequestHeader("Authorization", "Bearer " + token);
             ws.Options.SetRequestHeader("X-App-Id", CloudConfig.ApplicationId);

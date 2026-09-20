@@ -35,7 +35,7 @@ public class SettingsPagesTests
     }
 
     [Fact]
-    public void SettingsHasExactlyTheFourPagesInOrder()
+    public void SettingsHasExactlyTheFivePagesInOrder()
     {
         Host();
         var vm = new MainViewModel();
@@ -43,7 +43,12 @@ public class SettingsPagesTests
 
         //  درِ چهارم (۱۴۰۵/۰۶/۲۸): «لینکِ اپِ اندروید و آیفون را توی یک بخشِ
         //  جدید توی تنظیمات بزار» — و همان‌جا کدِ پمپ هم دیده می‌شود.
-        Assert.Equal(new[] { "keys", "backups", "trash", "apps" },
+        //  درِ پنجم (۱۴۰۵/۰۷/۰۴، WP-E2): جزئیاتِ همگام‌سازی — صف، آخرین موفق،
+        //  خطای آخر و «الان همگام کن» (بندِ ۱۱ی بخشِ ۲۲ پرامپت).
+        //  ⛔ این فهرست همچنان **دقیق** است، نه «دستِ‌کم»: درِ ششمی که بی
+        //  نوشتنِ همین‌جا اضافه شود باید همین‌جا سرخ شود. و ⛔ هیچ‌کدامشان
+        //  کادرِ نشانیِ سرور ندارند — `CloudAddressLockTests` جداگانه قفلش کرده.
+        Assert.Equal(new[] { "keys", "backups", "trash", "apps", "sync" },
                      settings.SubSections.Select(s => s.Id).ToArray());
 
         // صفحهٔ تنظیمات خودش کارت‌های بزرگ دارد، پس ردیفِ خودکارِ لینک‌ها خاموش است
