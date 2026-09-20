@@ -367,6 +367,47 @@ public class SettingsDurabilityTests : IDisposable
         Assert.Equal("yaqobi-2", AppSettings.Load().StationCode);
     }
 
+    /// <summary>
+    /// ⭐ **نوشتنِ در صف در پوشهٔ کسِ دیگری نمی‌نشیند.**
+    ///
+    /// <c>SaveSoon</c> ششصد میلی‌ثانیه بعد می‌نویسد. اگر تا آن لحظه
+    /// <see cref="AppSettings.DirOverride"/> عوض شده باشد، آن نوشتن در دفترِ
+    /// پوشهٔ <b>تازه</b> می‌نشست — و یک بار همین شد: توکنِ یک کلاسِ آزمون در
+    /// دفترِ کلاسِ دیگری پیدا شد و CI سرخ شد، ولی فقط در یکی از دو اجرا.
+    ///
+    /// ⚠️ مقدارِ راحتی (تم، آخرین بخش) گم شدنش اشکالی ندارد؛ نشستنش در دفترِ
+    /// اشتباه دارد.
+    /// </summary>
+    [Fact]
+    public void NevashtaneDarSaf_DarPushehyeDigari_Nemineshinad()
+    {
+        new AppSettings { CloudDeviceToken = "asli", ThemeId = "blue" }.Save();
+
+        //  یک نوشتنِ در صف، برای همین پوشه
+        new AppSettings { CloudDeviceToken = "dar-saf", ThemeId = "gold" }.SaveSoon();
+
+        var digar = Path.Combine(Path.GetTempPath(), "pump-dur2-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(digar);
+        try
+        {
+            //  پوشه عوض شد، پیش از رسیدنِ نوبت
+            AppSettings.DirOverride = digar;
+            Thread.Sleep(1200);
+
+            //  ⛔ هیچ چیزی در پوشهٔ تازه ننشسته
+            Assert.False(File.Exists(Path.Combine(digar, "settings.json")));
+            Assert.Equal("", AppSettings.Load().CloudDeviceToken);
+        }
+        finally
+        {
+            AppSettings.DirOverride = _dir;
+            try { Directory.Delete(digar, true); } catch { }
+        }
+
+        //  و دفترِ خودمان هم دست‌نخورده مانده
+        Assert.Equal("asli", AppSettings.Load().CloudDeviceToken);
+    }
+
     /// <summary>هیچ‌وقت استثنا بیرون نمی‌دهد — حتی وقتی پوشه رفته باشد.</summary>
     [Fact]
     public void Zakhire_Hichvaght_Estesna_Partab_Nemikonad()
