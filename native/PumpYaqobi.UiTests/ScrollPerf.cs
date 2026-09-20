@@ -145,10 +145,29 @@ internal static class ScrollPerf
             return 0;
         }
 
-        // ══ دفترِ ماهانه ═══════════════════════════════════════════════════
-        foreach (var id in new[] { "safe", "expenses" })
+        // ══ داشبورد و تنظیمات — «اسکرولشان لگ دارد» ════════════════════════
+        //
+        //  گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۵): «بخش‌های زیادی اسکرولشان لگ دارد و
+        //  راحت نیست… نمونه‌ها داشبورد و تنظیمات و غیره هستند.»
+        //
+        //  ⚠️ تا امروز این سنجه فقط **جدول‌ها** را می‌گشت (دفتر، کارت‌های
+        //  قرض‌دار، ورق، تاریخچه). داشبورد و تنظیمات جدولِ بلند ندارند، پس
+        //  اگر آن‌جا لگی هست، مالِ ردیف‌ها نیست و هیچ عددی هم از آن نداشتیم.
+        //  حالا داریم.
+        foreach (var id in new[] { "dashboard", "settings" })
         {
-            var sec = vm.Sections.First(s => s.Id == id);
+            if (vm.Sections.FirstOrDefault(x => x.Id == id) is not { } page) continue;
+            Wait(win, vm.GoAsync(page)); Settle(win);
+            ScrollThrough(win, page.Title, build: true);
+            ScrollThrough(win, page.Title + " (بارِ دوم)");
+        }
+
+        // ══ دفترِ ماهانه ═══════════════════════════════════════════════════
+        //  ⚠️ «رسید قرض‌داران» و «رسید پارچه» هم اضافه شدند: صاحب ریپو هر دو
+        //  را نام برد و هیچ‌کدام تا امروز در این سنجه نبودند.
+        foreach (var id in new[] { "safe", "expenses", "sarrafi", "debtrasid", "rasid" })
+        {
+            if (vm.Sections.FirstOrDefault(x => x.Id == id) is not { } sec) continue;
             Wait(win, vm.GoAsync(sec)); Settle(win);
             ScrollThrough(win, "دفترِ " + sec.Title, build: true);
             ScrollThrough(win, "دفترِ " + sec.Title + " (بارِ دوم، ساخته‌شده)");

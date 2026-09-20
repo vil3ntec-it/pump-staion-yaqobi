@@ -100,6 +100,14 @@ public sealed partial class DebtSummarySectionViewModel : SectionViewModel
 
     protected override Task LoadAsync() => RefreshAsync();
 
+    /// <summary>
+    /// ⛔ فعال‌سازیِ این بخش فقط دفترِ دیتابیس را دوباره می‌خواند، پس با
+    /// <c>PumpDbContext.Version</c>ِ دست‌نخورده اصلاً صدا زده نمی‌شود —
+    /// ریشهٔ «هر بخش رو باز می‌کنم جدول‌ها یک ثانیه بعد میان» (۱۴۰۵/۰۷/۰۵).
+    /// شرحش بالای <see cref="SectionViewModel.ActivationOnlyReadsDb"/>.
+    /// </summary>
+    public override bool ActivationOnlyReadsDb => true;
+
     public override Task OnActivatedAsync() => RefreshAsync();
     public override bool ActivationRepeatsLoad => true;
 
@@ -150,6 +158,11 @@ public sealed partial class MembershipSectionViewModel : SectionViewModel
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string _summaryText = "";
 
     protected override Task LoadAsync() => RefreshAsync();
+
+    /// <summary>
+    /// ⛔ همان قاعدهٔ بالا — فعال‌سازی فقط دفتر را می‌خواند.
+    /// </summary>
+    public override bool ActivationOnlyReadsDb => true;
 
     public override Task OnActivatedAsync() => RefreshAsync();
     public override bool ActivationRepeatsLoad => true;

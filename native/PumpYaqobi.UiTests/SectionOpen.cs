@@ -85,7 +85,9 @@ internal static class SectionOpen
         Settle(win);
 
         //  بخش‌هایی که جدول دارند — همان‌هایی که شکایت درباره‌شان بود
-        var ids = new[] { "safe", "sarrafi", "expenses", "noinv", "attendance" };
+        //  ⚠️ دقیقاً همان پنج بخشی که صاحب ریپو نام برد (۱۴۰۵/۰۷/۰۵):
+        //  «رسید قرض‌داران · صرافی · مصارف · رسید پارچه‌ها · گاوصندوق»
+        var ids = new[] { "debtrasid", "sarrafi", "expenses", "rasid", "safe" };
         var pages = ids
             .Select(id => vm.Sections.FirstOrDefault(s => s.Id == id))
             .Where(s => s is not null)

@@ -241,6 +241,14 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
     /// وقتی صفحهٔ یک حساب باز است دست نمی‌خورد، تا چیزی که کاربر همان لحظه
     /// تایپ کرده گم نشود.
     /// </summary>
+    /// <summary>
+    /// ⛔ فعال‌سازیِ این بخش فقط دفترِ دیتابیس را دوباره می‌خواند، پس با
+    /// <c>PumpDbContext.Version</c>ِ دست‌نخورده اصلاً صدا زده نمی‌شود —
+    /// ریشهٔ «هر بخش رو باز می‌کنم جدول‌ها یک ثانیه بعد میان» (۱۴۰۵/۰۷/۰۵).
+    /// شرحش بالای <see cref="SectionViewModel.ActivationOnlyReadsDb"/>.
+    /// </summary>
+    public override bool ActivationOnlyReadsDb => true;
+
     public override async Task OnActivatedAsync()
     {
         if (IsLoaded && !PersonOpen) await RefreshAsync();
