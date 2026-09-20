@@ -45,4 +45,11 @@ public sealed class SettingsSectionViewModel : SectionViewModel
     /// (۱۴۰۵/۰۶/۲۸): لینکِ اندروید و آیفون و کدِ پمپ، یک‌جا و کپی‌شدنی.
     /// </summary>
     public SectionViewModel? AppsPage => SubSections.FirstOrDefault(s => s.Id == "apps");
+
+    /// <summary>
+    /// درِ پنجم — «همگام‌سازی». بندِ ۱۱ی پرامپتِ ۲۲: صف، آخرین موفق،
+    /// خطای آخر و «الان همگام کن».
+    /// ⛔ کادرِ نشانیِ سرور آن‌جا نیست و نباید بیاید.
+    /// </summary>
+    public SectionViewModel? SyncPage => SubSections.FirstOrDefault(s => s.Id == "sync");
 }

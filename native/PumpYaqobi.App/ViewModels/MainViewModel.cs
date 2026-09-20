@@ -66,6 +66,22 @@ public sealed partial class MainViewModel : ObservableObject
             // حلقه بی‌صدا هیچ کاری نمی‌کند.
             AppHost.Current.Publisher.Start();
 
+            // ══ همگام‌سازی با سرورِ حساب (VILL3N Sync v1) ════════════════════
+            // بندِ ۳ی پرامپتِ ۲۲. صف در خودِ SQLite است، پس بسته شدنِ برنامه
+            // چیزی را نمی‌برد و این حلقه فقط «از همان‌جا ادامه می‌دهد».
+            // ⚠️ بعد از ورود، نه در سازنده — همان دلیلِ ناشر: پیش از ورود
+            // هیچ اجازه‌ای نداریم.
+            SoftLock.Install();
+            var sync = AppHost.Current.Sync;
+            sync.Changed += () => Dispatcher.UIThread.Post(TickSyncDot);
+            sync.NoticeArrived += n => Dispatcher.UIThread.Post(() => ShowNotice(n));
+            sync.Start();
+            TickSyncDot();
+            //  ⚠️ قفلِ نرم بی‌صدا نباشد: اگر اشتراک تمام شده (یا هفت روز
+            //  مانده) کاربر باید بداند چرا نوشتن نمی‌شود، نه این‌که فکر کند
+            //  برنامه خراب است. امروز این جمله خالی است، چون قفل‌ها بازند.
+            NoticeText = SoftLock.Banner();
+
             // ══ پشتیبانِ هر شش ساعت روی سرورِ خانگی ═════════════════════════
             // خواستهٔ صاحب ریپو: «هر ۶ ساعت بک‌آپ برود به سرور و سه روز بماند؛
             // نرفت، به مدیر بگو.» شرحِ کامل در ‎BackupPusher‎.
@@ -400,6 +416,95 @@ public sealed partial class MainViewModel : ObservableObject
         if (key != CloudDotBrushKey) CloudDotBrushKey = key;
         if (why != CloudDotReason) CloudDotReason = why;
     }
+
+    // ══ ● چراغِ سوم: همگام‌سازی — در نوارِ **پایینِ** پنجره ═══════════════
+    //
+    //  بندِ ۱۳ی پرامپتِ ۲۲: «نمایشِ وضعیتِ Sync در نوارِ وضعیتِ پایینِ پنجره
+    //  (سبز/زرد/خاکستری/قرمز).»
+    //
+    //  ⛔ **هیچ نام و نشانیِ سروری نوشته نمی‌شود** — همان قاعدهٔ دو چراغِ
+    //  سربرگ. دلیل فقط در ‎ToolTip‎ است.
+    //  ⚠️ و هیچ تصمیمی این‌جا گرفته نمی‌شود: فقط ‎SyncEngine‎ خوانده می‌شود،
+    //  که خودش از جوابِ واقعیِ سرور پر می‌شود.
+
+    [ObservableProperty] private string _syncDotBrushKey = "Pump.Muted";
+    [ObservableProperty] private string _syncDotReason = "همگام‌سازی هنوز شروع نشده";
+    [ObservableProperty] private string _syncDotText = "همگام‌سازی";
+
+    public void TickSyncDot()
+    {
+        var sync = AppHost.Current.SyncIfStarted;
+        if (sync is null)
+        {
+            SyncDotBrushKey = "Pump.Muted";
+            SyncDotReason = "همگام‌سازی هنوز شروع نشده";
+            SyncDotText = "همگام‌سازی";
+            return;
+        }
+
+        var key = sync.Light switch
+        {
+            SyncLight.Synced => "Pump.Ok",
+            SyncLight.Queued => "Pump.Warn",
+            SyncLight.Failed => "Pump.Danger",
+            _ => "Pump.Muted",
+        };
+        var text = sync.Light switch
+        {
+            SyncLight.Synced => "همگام",
+            SyncLight.Queued => sync.Queued > 0 ? $"{sync.Queued} در صف" : "در صف",
+            SyncLight.Failed => "همگام نشد",
+            _ => "همگام‌سازی",
+        };
+
+        if (key != SyncDotBrushKey) SyncDotBrushKey = key;
+        if (text != SyncDotText) SyncDotText = text;
+        if (sync.Reason != SyncDotReason) SyncDotReason = sync.Reason;
+    }
+
+    /// <summary>کلیکِ چراغِ همگام‌سازی — «الان همگام کن».</summary>
+    [RelayCommand]
+    private async Task SyncNowAsync()
+    {
+        AppHost.Current.Toast("در حالِ همگام‌سازی…", ToastKind.Info);
+        var ok = await AppHost.Current.Sync.SyncNowAsync();
+        TickSyncDot();
+        AppHost.Current.Toast(
+            ok ? "✅ همگام شد" : "⏳ " + AppHost.Current.Sync.Reason,
+            ok ? ToastKind.Ok : ToastKind.Warn);
+    }
+
+    // ══ بنرِ بالای صفحه — اعلانِ مدیر و قفلِ نرم ═════════════════════════
+
+    /// <summary>جملهٔ بنر — خالی یعنی بنری نیست.</summary>
+    [ObservableProperty] private string _noticeText = "";
+
+    public bool HasNotice => NoticeText.Length > 0;
+
+    partial void OnNoticeTextChanged(string v) => OnPropertyChanged(nameof(HasNotice));
+
+    /// <summary>بنر را می‌بندد — تا اعلانِ بعدی.</summary>
+    [RelayCommand]
+    private void CloseNotice() => NoticeText = SoftLock.Banner();
+
+    /// <summary>
+    /// اعلانِ تازه: هم بنرِ داخلِ برنامه، هم اعلانِ خودِ ویندوز.
+    ///
+    /// ⚠️ هر دو از <b>یک</b> جا می‌آیند. قاعدهٔ جدا ننویسید، وگرنه روزی
+    /// یکی می‌آید و آن یکی نه.
+    /// </summary>
+    private void ShowNotice(CloudNotice n)
+    {
+        NoticeText = "📣 " + n.Title + (n.Body.Length > 0 ? " — " + n.Body : "");
+        AppHost.Current.Toast(NoticeText, ToastKind.Info);
+        NativeNotice.Show(n.Title.Length > 0 ? n.Title : "پمپ یعقوبی", n.Body, WindowHandle);
+    }
+
+    /// <summary>
+    /// دستگیرهٔ پنجره — فقط برای اعلانِ خودِ ویندوز.
+    /// ⚠️ صفر یعنی «نمی‌شود»، و همان‌جا بی‌صدا رد می‌شود.
+    /// </summary>
+    public IntPtr WindowHandle { get; set; }
 
     /// <summary>کلیکِ چراغِ ابر — همین حالا یک درخواستِ واقعی می‌زند.</summary>
     [RelayCommand]
@@ -1063,6 +1168,9 @@ public sealed partial class MainViewModel : ObservableObject
         //  برنامهٔ آیفون را توی یک بخشِ جدید توی تنظیمات بگذار… و کدِ پمپ هم
         //  همان‌جا دیده شود.»
         By("settings")?.AddSub(new AppsSectionViewModel(host),         "📲 اپِ گوشی — لینک و کد");
+        //  بندِ ۱۱ی پرامپتِ ۲۲: «وضعیتِ Sync با جزئیات… و دکمهٔ الان همگام کن.»
+        //  ⛔ کادرِ نشانیِ سرور آن‌جا **نیست** — نشانی قفل است.
+        By("settings")?.AddSub(new SyncSectionViewModel(host),         "🔄 همگام‌سازی");
         //  «بخشِ وی‌آی‌پی را هم اعمال کن که من ببینم و تست کنم» — زیرِ خودِ
         //  پروفایل، چون همان‌جا حالِ اشتراک دیده می‌شود.
         By("account")?.AddSub(new VipSectionViewModel(host),           "💎 اشتراک و پلن‌ها");

@@ -76,6 +76,21 @@
         </Border>
       </Button>
 
+      <Button Classes="card-shell" Command="{Binding ShowSubCommand}"
+              CommandParameter="{Binding SyncPage}">
+        <Border Classes="card" Padding="18">
+          <Grid ColumnDefinitions="Auto,14,*,Auto">
+            <TextBlock Grid.Column="0" Text="🔄" FontSize="30" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="2" Spacing="4">
+              <TextBlock Text="همگام‌سازی" Classes="card-title" />
+              <TextBlock Classes="muted" TextWrapping="Wrap"
+                         Text="چه چیزی هنوز به سرورِ حساب نرفته، آخرین رفت‌وآمدِ موفق، و دکمهٔ «الان همگام کن». پشتیبانِ رمزشده و بازیابی از سرور هم همان‌جاست." />
+            </StackPanel>
+            <TextBlock Grid.Column="3" Text="‹" FontSize="24" Opacity="0.6" VerticalAlignment="Center" />
+          </Grid>
+        </Border>
+      </Button>
+
     </StackPanel>
   </c:SectionPage>
 </UserControl>

@@ -46,6 +46,15 @@ public partial class MainWindow : Window
         _clock.Start();
         vm.Clock = PumpYaqobi.App.Localization.Clock.Now();
 
+        //  ⚠️ دستگیرهٔ پنجره — تنها چیزی که اعلانِ خودِ ویندوز لازم دارد.
+        //  پیش از باز شدنِ پنجره هنوز وجود ندارد، پس همین‌جا سرِ ‎Opened‎
+        //  گرفته می‌شود؛ صفر یعنی «نمی‌شود» و بی‌صدا رد می‌شود.
+        Opened += (_, _) =>
+        {
+            try { vm.WindowHandle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero; }
+            catch { /* اعلانِ سیستمی رفاه است */ }
+        };
+
         // با هر عوض شدنِ بخش، دکمهٔ همان بخش داخلِ قابِ نوار بیاید — چه با
         // ماوس زده شده باشد چه با ‎Ctrl+Shift+عدد‎.
         vm.PropertyChanged += (_, e) =>

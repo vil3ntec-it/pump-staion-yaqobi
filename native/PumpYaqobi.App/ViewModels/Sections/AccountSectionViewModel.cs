@@ -36,6 +36,12 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
 
     public AccountSectionViewModel(AppHost host) : base("account", "settings", "پروفایل")
     {
+        //  ⚠️ «ارسالِ خودکار بعد از رقمِ ششم» — بندِ ۴ی پرامپت. خودِ خانه‌ها
+        //  خبر می‌دهند که پر شدند؛ صفحه هیچ تصمیمی نمی‌گیرد.
+        CodeBoxes.Completed += () =>
+        {
+            if (IsCodeLogin && !Busy && LoginStep == 2) VerifyEmailCommand.Execute(null);
+        };
         _host = host;
         ShowAccount();
         ShowSubscription();
@@ -653,6 +659,82 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     /// <summary>روی «حساب می‌سازم» هستیم یا «حساب دارم».</summary>
     [ObservableProperty] private bool _isSignUp = true;
 
+    // ══ درِ سوم: ورود با کدِ ایمیلی (بندِ ۲۰٫۷) ═══════════════════════════
+    //
+    //  ⚠️ **جانشینِ راهِ رمز نیست، کنارِ آن است.** مشتری‌های امروز با ایمیل و
+    //  رمز وارد می‌شوند و آن مسیر دست‌نخورده ماند؛ این یکی قراردادِ ثابتِ
+    //  پرامپت است (`POST /api/auth/{app}/request-code` و `/verify`) که هر
+    //  سه برنامه با همان نوشته می‌شوند.
+    //
+    //  ⚠️ و رمزی در کار نیست: ثبت‌نام و ورود یکی‌اند — حسابِ نبوده سرِ
+    //  همان `verify`ِ موفق ساخته می‌شود. پس کاربر نه رمزی می‌سازد و نه
+    //  رمزی گم می‌کند.
+
+    /// <summary>روی «ورود با کدِ ایمیلی» هستیم — از دو حالتِ بالا جلوتر است.</summary>
+    [ObservableProperty] private bool _isCodeLogin;
+
+    /// <summary>شش خانهٔ کد — پرشِ خودکار، Paste، ارقامِ فارسی، ارسالِ خودکار.</summary>
+    public CodeBoxesViewModel CodeBoxes { get; } = new();
+
+    /// <summary>ثانیه‌های ماندهٔ «دوباره بفرست». صفر یعنی می‌شود.</summary>
+    [ObservableProperty] private int _codeSeconds;
+
+    /// <summary>ایمیلِ پوشانده، همان‌طور که سرور برگرداند.</summary>
+    [ObservableProperty] private string _codeMasked = "";
+
+    /// <summary>ایمیل رفت یا نه — از <c>request-status</c>ِ خودِ سرور.</summary>
+    [ObservableProperty] private string _codeDelivery = "";
+
+    public bool CanResendCode => CodeSeconds <= 0;
+
+    partial void OnCodeSecondsChanged(int v) => OnPropertyChanged(nameof(CanResendCode));
+
+    partial void OnIsCodeLoginChanged(bool v)
+    {
+        OnPropertyChanged(nameof(AccountButtonText));
+        LoginStatus = "";
+    }
+
+    private CancellationTokenSource? _codeTick;
+
+    /// <summary>
+    /// شمارشِ معکوسِ شصت ثانیه.
+    ///
+    /// ⚠️ با بسته شدنِ صفحه خاموش می‌شود — تایمری که پشتِ صفحهٔ بسته بچرخد
+    /// همان چیزی است که قاعدهٔ «بخشی که تویش نیستی هیچ مصرفی ندارد» قدغن
+    /// کرده. و هیچ دستورِ دیتابیسی هم نمی‌زند.
+    /// </summary>
+    private void StartCountdown(int seconds)
+    {
+        StopCountdown();
+        CodeSeconds = Math.Max(0, seconds);
+        if (CodeSeconds == 0) return;
+        var cts = new CancellationTokenSource();
+        _codeTick = cts;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                while (!cts.IsCancellationRequested && CodeSeconds > 0)
+                {
+                    await Task.Delay(1000, cts.Token);
+                    Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                    {
+                        if (!cts.IsCancellationRequested && CodeSeconds > 0) CodeSeconds--;
+                    });
+                }
+            }
+            catch { /* لغو شد */ }
+        }, cts.Token);
+    }
+
+    private void StopCountdown()
+    {
+        var cts = _codeTick;
+        _codeTick = null;
+        try { cts?.Cancel(); cts?.Dispose(); } catch { }
+    }
+
     [ObservableProperty] private string _loginName = "";
     [ObservableProperty] private string _loginEmail = "";
     [ObservableProperty] private string _loginPassword = "";
@@ -693,7 +775,10 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     public bool StepDone => LoginStep == 4;
 
     /// <summary>نوشتهٔ دکمهٔ گامِ اول — با راهِ انتخاب‌شده عوض می‌شود.</summary>
-    public string AccountButtonText => IsSignUp ? "ساختنِ حساب و ادامه" : "ورود و ادامه";
+    public string AccountButtonText =>
+        IsCodeLogin ? "فرستادنِ کد به ایمیل"
+        : IsSignUp ? "ساختنِ حساب و ادامه"
+        : "ورود و ادامه";
 
     partial void OnIsSignUpChanged(bool v)
     {
@@ -712,6 +797,10 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         OnPropertyChanged(nameof(ShowLoginPage));
         OnPropertyChanged(nameof(ShowProfilePage));
 
+        //  شمارشِ معکوس فقط روی همان گام می‌چرخد — تایمرِ پشتِ صفحهٔ بسته
+        //  همان چیزی است که قاعدهٔ «بخشِ پنهان صفر مصرف» قدغن کرده.
+        if (v != 2) StopCountdown();
+
         // ⚠️ «فقط همین را نشان بده، نه بخش‌ها باشند نه غیره» — سربرگ، نوارِ
         // جمله‌ها و نوارِ بخش‌های خودِ پنجره با همین یک نشان پنهان می‌شوند
         // (`MainViewModel.IsChromeVisible`). همان راهی که صفحهٔ حسابِ قرض‌دار
@@ -720,7 +809,12 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     }
 
     [RelayCommand]
-    private void SetSignUp(string? yes) => IsSignUp = yes != "no";
+    private void SetSignUp(string? yes)
+    {
+        //  «کد» درِ سوم است؛ دو دکمهٔ قبلی همان کارِ قبلی را می‌کنند
+        IsCodeLogin = yes == "code";
+        if (!IsCodeLogin) IsSignUp = yes != "no";
+    }
 
     /// <summary>
     /// گام‌ها را از حالِ واقعیِ برنامه می‌چیند و کادرها را از تنظیمات پر
@@ -768,15 +862,39 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         var pass2 = LoginPassword2 ?? "";
 
         if (LoginRules.BadEmail(email) is { } mailWhy) { LoginStatus = "❌ " + mailWhy; return; }
-        if (IsSignUp && name.Length < 2) { LoginStatus = "❌ نامتان را بنویسید."; return; }
-        if (LoginRules.WeakPassword(pass) is { } passWhy) { LoginStatus = "❌ " + passWhy; return; }
-        if (IsSignUp && pass != pass2) { LoginStatus = "❌ دو رمز یکی نیستند."; return; }
-        if (IsSignUp && !AcceptTerms) { LoginStatus = "❌ شرایط و ضوابط را بپذیرید."; return; }
+        //  ⚠️ راهِ کد رمز ندارد و نباید بخواهد — ثبت‌نام و ورود در آن یکی‌اند
+        if (!IsCodeLogin)
+        {
+            if (IsSignUp && name.Length < 2) { LoginStatus = "❌ نامتان را بنویسید."; return; }
+            if (LoginRules.WeakPassword(pass) is { } passWhy) { LoginStatus = "❌ " + passWhy; return; }
+            if (IsSignUp && pass != pass2) { LoginStatus = "❌ دو رمز یکی نیستند."; return; }
+            if (IsSignUp && !AcceptTerms) { LoginStatus = "❌ شرایط و ضوابط را بپذیرید."; return; }
+        }
 
         Busy = true;
         LoginStatus = IsSignUp ? "در حالِ فرستادنِ کد به ایمیل…" : "در حالِ ورود…";
         try
         {
+            if (IsCodeLogin)
+            {
+                //  ⛔ **پاسخ همیشه ۲۰۰ است مگر سقفِ نرخ** — پس این‌جا هم
+                //  هیچ‌وقت نمی‌گوییم «چنین حسابی نیست». همان قاعدهٔ سرور:
+                //  با این مسیر نباید بشود فهمید کدام ایمیل حساب دارد.
+                var sent = await Cloud.RequestCodeAsync(email);
+                if (!sent.Ok) { LoginStatus = "❌ " + sent.Why; return; }
+
+                CodeBoxes.Clear();
+                CodeMasked = Cloud.CodeMaskedEmail;
+                CodeDelivery = "";
+                StartCountdown(Cloud.CodeResendAfter);
+                LoginStatus = "✅ کدِ شش‌رقمی به "
+                            + (CodeMasked.Length > 0 ? CodeMasked : email) + " فرستاده شد.";
+                RefreshAll();
+                LoginStep = 2;
+                _ = CheckDeliveryAsync();
+                return;
+            }
+
             if (IsSignUp)
             {
                 //  پلهٔ یک: کد به ایمیل می‌رود و حسابی ساخته **نمی‌شود**.
@@ -816,7 +934,9 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     [RelayCommand]
     private Task VerifyEmailAsync() => CrashGuard.RunAsync("تاییدِ کدِ ایمیل", async () =>
     {
-        var code = new string((EmailCode ?? "").Where(char.IsDigit).ToArray());
+        if (IsCodeLogin) { await VerifyCodeLoginAsync(); return; }
+
+        var code = LoginRules.Digits(EmailCode);
         var pass = LoginPassword ?? "";
         if (code.Length != 6) { LoginStatus = "❌ کدِ ایمیل باید شش رقم باشد."; return; }
         if (pass.Length < 8) { LoginStatus = "❌ رمز گم شد — از گامِ حساب دوباره شروع کنید."; return; }
@@ -841,11 +961,104 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         finally { Busy = false; }
     });
 
+    /// <summary>
+    /// ══ کدِ ایمیلی ⇒ نشست ═══════════════════════════════════════════════
+    ///
+    /// یک پله، نه دو: حسابِ نبوده همان‌جا ساخته می‌شود.
+    ///
+    /// ⚠️ کدِ اشتباه خانه‌ها را <b>پاک می‌کند</b> و فوکوس را برمی‌گرداند
+    /// سرِ خانهٔ اول — وگرنه کاربر باید شش بار Backspace بزند، و سرور هم
+    /// پنج تلاش بیشتر نمی‌دهد.
+    /// </summary>
+    private async Task VerifyCodeLoginAsync()
+    {
+        var code = CodeBoxes.Code;
+        if (code.Length != CodeBoxesViewModel.Size)
+        {
+            LoginStatus = "❌ کد باید شش رقم باشد.";
+            return;
+        }
+
+        Busy = true;
+        LoginStatus = "در حالِ تاییدِ کد…";
+        try
+        {
+            var res = await Cloud.VerifyCodeAsync(code);
+            if (!res.Ok)
+            {
+                CodeBoxes.Clear();
+                LoginStatus = "❌ " + res.Why;
+                return;
+            }
+
+            StopCountdown();
+            CodeBoxes.Clear();
+            ClearSkipped();
+            LoginStatus = SwitchNote();
+            RefreshAll();
+            LoginStep = 3;
+        }
+        finally { Busy = false; }
+    }
+
+    /// <summary>
+    /// «ایمیل رفت یا نه؟» — جوابش از خودِ سرور می‌آید
+    /// (<c>request-status</c>)، نه از حدسِ ما.
+    ///
+    /// ⚠️ همین است که کاربر را از انتظارِ کور بیرون می‌آورد: اگر سرویسِ
+    /// ایمیلِ سرور خراب باشد، به‌جای شصت ثانیه نگاه کردن به صندوقِ خالی،
+    /// همان لحظه می‌فهمد.
+    /// </summary>
+    private async Task CheckDeliveryAsync()
+    {
+        try
+        {
+            //  یک مکثِ کوتاه تا Worker فرصتِ فرستادن داشته باشد
+            await Task.Delay(3000);
+            var (ok, state, reason, _) = await Cloud.RequestStatusAsync();
+            if (!ok) return;
+            CodeDelivery = state switch
+            {
+                "sent" => "✅ ایمیل فرستاده شد — صندوقِ ورودی و پوشهٔ هرزنامه را ببینید.",
+                "failed" => "❌ فرستادنِ ایمیل نشد" + (reason.Length > 0 ? " — " + reason : "") + ".",
+                "sending" => "در حالِ فرستادن…",
+                _ => "در صفِ فرستادن…",
+            };
+        }
+        catch { /* خبرِ تحویل رفاه است */ }
+    }
+
     /// <summary>کد نرسید — دوباره بفرست (همان پلهٔ یک).</summary>
     [RelayCommand]
     private Task ResendEmailCodeAsync() => CrashGuard.RunAsync("فرستادنِ دوبارهٔ کد", async () =>
     {
         var email = (LoginEmail ?? "").Trim();
+
+        if (IsCodeLogin)
+        {
+            if (!CanResendCode)
+            {
+                LoginStatus = $"❌ {CodeSeconds} ثانیه صبر کنید.";
+                return;
+            }
+            Busy = true;
+            try
+            {
+                var again = await Cloud.RequestCodeAsync(email);
+                if (again.Ok)
+                {
+                    CodeBoxes.Clear();
+                    CodeMasked = Cloud.CodeMaskedEmail;
+                    CodeDelivery = "";
+                    StartCountdown(Cloud.CodeResendAfter);
+                    _ = CheckDeliveryAsync();
+                }
+                LoginStatus = again.Ok ? "✅ کد دوباره فرستاده شد." : "❌ " + again.Why;
+            }
+            finally { Busy = false; }
+            return;
+        }
+
         var pass = LoginPassword ?? "";
         if (pass.Length < 8) { LoginStatus = "❌ از گامِ حساب دوباره شروع کنید."; return; }
 

@@ -115,6 +115,19 @@ public sealed class AppHost
     /// </summary>
     public StationPublisher? PublisherIfStarted => _publisher;
 
+    private SyncEngine? _sync;
+
+    /// <summary>
+    /// ══ همگام‌سازی با سرورِ حساب (VILL3N Sync v1) ════════════════════════
+    ///
+    /// شرحش در <see cref="SyncEngine"/> و <c>native/docs/SYNC-fa.md</c>.
+    /// تنبل ساخته می‌شود، مثلِ ناشر: تا کسی صدایش نزند هیچ نخی هم نمی‌سازد.
+    /// </summary>
+    public SyncEngine Sync => _sync ??= new SyncEngine(this);
+
+    /// <summary>همان موتور، ولی **بی ساختن** — برای چراغِ نوارِ پایین.</summary>
+    public SyncEngine? SyncIfStarted => _sync;
+
     /// <summary>پیامِ کوتاهِ پایینِ صفحه — همان showToastِ نسخهٔ وب.</summary>
     public void Toast(string text, ToastKind kind = ToastKind.Info) => Toasts.Show(text, kind);
     public UserSession Session { get; }

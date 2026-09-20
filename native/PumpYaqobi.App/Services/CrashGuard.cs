@@ -108,5 +108,43 @@ public static class CrashGuard
             lock (Lock) File.AppendAllText(path, line);
         }
         catch { }
+
+        Report(where, ex);
+    }
+
+    // ══ گزارشِ خطا به سرور — بندِ ۲۰٫۸ ═════════════════════════════════════
+    //
+    //  «من قبل از تماسِ مشتری خبر داشته باشم.»
+    //
+    //  ⛔ **با اجازهٔ کاربر**: کلیدِ «گزارشِ خطا» در تنظیمات ← همگام‌سازی.
+    //  خاموش که باشد، هیچ چیزی نمی‌رود.
+    //  ⛔ **هیچ دادهٔ مشتری نمی‌رود** — فقط پیام، نوعِ استثنا و ردپای کوتاه.
+    //  خودِ سرور هم هر چیزی شبیهِ ایمیل و شماره و توکن را می‌پوشاند.
+    //  ⚠️ و هیچ‌وقت منتظرش نمی‌مانیم: گزارشِ خطا نباید خودش کاری را کُند کند.
+
+    /// <summary>خاموشِ صریح — سنجه‌ها و ابزارِ عکس‌گیری هیچ‌وقت گزارش نمی‌دهند.</summary>
+    public static bool ReportingOff { get; set; }
+
+    private static DateTime _lastReport = DateTime.MinValue;
+
+    private static void Report(string where, Exception ex)
+    {
+        try
+        {
+            if (ReportingOff || CloudLink.TestTransport is not null) return;
+
+            //  ⚠️ ترمز: یک حلقهٔ خطا نباید هر ثانیه یک درخواست بزند
+            if (DateTime.UtcNow - _lastReport < TimeSpan.FromMinutes(1)) return;
+
+            //  انتخابِ خودِ کاربر
+            var file = AppSettings.Load();
+            if (file.ReportErrorsOff) return;
+
+            _lastReport = DateTime.UtcNow;
+            var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
+            var stack = ex.StackTrace ?? "";
+            _ = Task.Run(() => cloud.ReportErrorAsync(where + ": " + Friendly(ex), stack));
+        }
+        catch { /* گزارشِ خطا هیچ‌وقت خودش خطا نمی‌دهد */ }
     }
 }
