@@ -546,10 +546,78 @@ public sealed class AppSettings
     /// ⚠️ <c>File.Replace</c> نسخهٔ قبلی را خودش در <c>.bak</c> نگه می‌دارد،
     /// و <see cref="Load"/> اگر اصلی خراب بود از همان می‌خواند.
     /// </summary>
+    /// <summary>
+    /// ══ ذخیرهٔ «بعداً» — برای چیزهای راحتی، بیرونِ نخِ رابط ═══════════════
+    ///
+    /// ⛔ <b>باگی که هر باز کردنِ یک بخش را کُند می‌کرد.</b> گزارشِ صاحب ریپو
+    /// (۱۴۰۵/۰۷/۰۵): «هر بخش رو باز می‌کنم جدول‌ها یک ثانیه بعد میان.»
+    ///
+    /// ریشه‌اش این‌جا بود: <see cref="Save"/> عمداً یک نوشتنِ <b>بادوام</b>
+    /// است — فایلِ موقت، <c>Flush(true)</c> (یعنی «تا روی خودِ بشقابِ دیسک
+    /// ننشست برنگرد») و بعد <c>File.Replace</c>ِ سه‌فایلی. آن دوام برای
+    /// توکن و کلیدِ عمومی <b>لازم</b> است و برنمی‌گردد.
+    ///
+    /// ولی <c>MainViewModel.GoAsync</c> همان را برای نوشتنِ «آخرین بخش»
+    /// صدا می‌زد — <b>روی نخِ رابط</b>، درست بینِ نشان دادنِ صفحه و خواندنِ
+    /// داده‌اش. یعنی کاربر صفحه را می‌دید، بعد نخِ رابط پشتِ یک
+    /// <c>FlushFileBuffers</c> و یک جایگزینیِ اتمی می‌ایستاد (و روی ویندوز،
+    /// پشتِ ضدِ ویروسی که همان لحظه فایل را باز می‌کند)، و <b>تازه بعدش</b>
+    /// ردیف‌ها خوانده و ساخته می‌شدند.
+    ///
+    /// <para>
+    /// ⚠️ الگو تازه نیست: اندازهٔ ماشین‌حساب از ۱۴۰۵/۰۶/۲۵ دقیقاً همین کار
+    /// را می‌کرد (۶۰۰ میلی‌ثانیه تأخیر، روی <c>TaskScheduler.Default</c>).
+    /// این فقط همان را یک‌جا کرد تا هر جای دیگری هم بتواند از آن استفاده کند.
+    /// </para>
+    ///
+    /// <para>
+    /// ⛔ <b>فقط برای مقدارهای راحتی</b> — تم، آخرین بخش، اندازهٔ پنجره.
+    /// هر چیزی که از دست رفتنش کاربر را از حسابش بیرون می‌اندازد
+    /// (<c>CloudDeviceToken</c>، <c>CloudPublicKey</c>، <c>StationCode</c>)
+    /// همچنان <see cref="Save"/>ِ بادوام را صدا می‌زند.
+    /// </para>
+    ///
+    /// <para>
+    /// ⚠️ و هر <see cref="Save"/>ِ واقعی، نوبتِ در صفِ این را هم <b>می‌خورد</b>:
+    /// آن یکی کلِ شیء را می‌نویسد، پس نوشتنِ دوباره فقط یک <c>fsync</c>ِ
+    /// بیهوده است.
+    /// </para>
+    /// </summary>
+    public void SaveSoon()
+    {
+        if (_blind) return;
+        lock (SoonGate)
+        {
+            _soonWho = this;
+            _soonTimer ??= new System.Threading.Timer(
+                _ => FlushSoon(), null,
+                System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
+            _soonTimer.Change(SoonMs, System.Threading.Timeout.Infinite);
+        }
+    }
+
+    /// <summary>مهلتِ جمع شدنِ چند تغییرِ پشتِ سرِ هم در یک نوشتن.</summary>
+    private const int SoonMs = 600;
+
+    private static readonly object SoonGate = new();
+    private static AppSettings? _soonWho;
+    private static System.Threading.Timer? _soonTimer;
+
+    private static void FlushSoon()
+    {
+        AppSettings? who;
+        lock (SoonGate) { who = _soonWho; _soonWho = null; }
+        //  ⛔ نشدنش هیچ‌وقت چیزی را نمی‌شکند — این فقط «آخرین بخش» است.
+        try { who?.Save(); } catch { }
+    }
+
     public void Save()
     {
         //  ⛔ نمونهٔ «کور» هیچ‌وقت نمی‌نویسد — بالا نوشته چرا.
         if (_blind) return;
+
+        //  نوبتِ در صف دیگر لازم نیست: همین نوشتن کلِ شیء را می‌برد.
+        lock (SoonGate) { if (ReferenceEquals(_soonWho, this)) _soonWho = null; }
 
         lock (FileGate)
         {

@@ -416,14 +416,55 @@ public class ExcelGrid : DataGrid
     /// </summary>
     private static event Action? PagesChanged;
 
+    /// <summary>
+    /// ══ «برگرد» — همین حالا، نه یک پاسِ دیگر بعد ═══════════════════════════
+    ///
+    /// ⛔ <b>باگی که هر باز کردنِ یک بخش را «یک ثانیه بعد» می‌کرد.</b> گزارشِ
+    /// صاحب ریپو (۱۴۰۵/۰۷/۰۵): «هر بخش رو باز می‌کنم جدول‌ها یک ثانیه بعد
+    /// میان و این خیلی روی مخ من است.»
+    ///
+    /// ریشه، ترتیبِ کارها بود:
+    /// <code>
+    ///   SyncContent()  ⇒ IsShown نشست، صفحه عوض شد
+    ///                  ⇒ NotifyPagesChanged()  ← فقط یک Post، با اولویتِ Loaded
+    ///   چیدمانِ ۱      ⇒ جدول دیده می‌شود ولی ItemsSourceش هنوز **پارک** است
+    ///                  ⇒ یک جدولِ **خالی** کشیده و به کاربر نشان داده می‌شود
+    ///   نوبتِ Loaded   ⇒ تازه حالا فهرست برمی‌گردد
+    ///   چیدمانِ ۲      ⇒ و تازه حالا ردیف‌ها ساخته می‌شوند
+    /// </code>
+    ///
+    /// پس «جدول یک ثانیه بعد می‌آید» توصیفِ دقیقِ همان بود: یک فریمِ خالی که
+    /// پشتِ صفِ ‎Dispatcher‎ به چند فریم کش می‌آمد.
+    ///
+    /// <para>
+    /// ⚠️ <b>و چرا اصلاً ‎Post‎ بود:</b> ‎IsEffectivelyVisible‎ همان لحظه هنوز
+    /// مقدارِ قبلی را می‌دهد. ولی آن فقط برای جهتِ <b>پنهان کردن</b> لازم
+    /// است. برای جهتِ <b>برگرداندن</b> اصلاً به آن نیازی نیست:
+    /// <see cref="SectionShown"/> از خودِ ویومدل می‌پرسد
+    /// (<c>SectionViewModel.IsShown</c>) و <c>SyncContent</c> آن را
+    /// <b>پیش از</b> صدا زدنِ این متد نوشته است. پس همین حالا درست است.
+    /// </para>
+    ///
+    /// <para>
+    /// ⛔ پس: برگرداندن <b>هم‌زمان</b>، پنهان کردن همچنان با ‎Post‎. هیچ
+    /// قاعده‌ای پس نرفت — «بخشِ پنهان صفر ردیفِ زنده دارد» همان است و
+    /// سنجشِ ‎idle‎ همان را می‌سنجد، چون این جهت فقط جدولی را برمی‌گرداند که
+    /// بخشش <b>همین حالا</b> دیده می‌شود.
+    /// </para>
+    /// </summary>
+    private static event Action? PagesShown;
+
     private static bool _notifyQueued;
 
     public static void NotifyPagesChanged()
     {
+        //  ۱) برگرداندن: همین حالا، پیش از چیدمانِ همین پاس
+        PagesShown?.Invoke();
+
+        //  ۲) پارک کردن: پس از چیدمان، چون ‎IsEffectivelyVisible‎ تازه رسیده
+        //     و هنوز مقدارِ قبلی را می‌دهد.
         if (_notifyQueued || PagesChanged is null) return;
         _notifyQueued = true;
-        // ⚠️ پس از چیدمان، نه همان لحظه: اتصالِ ‎IsVisible‎ تازه رسیده و
-        // ‎IsEffectivelyVisible‎ هنوز مقدارِ قبلی را می‌دهد.
         Dispatcher.UIThread.Post(() =>
         {
             _notifyQueued = false;
@@ -432,6 +473,25 @@ public class ExcelGrid : DataGrid
     }
 
     private void OnPagesChanged() => OnShownChanged(IsEffectivelyVisible);
+
+    /// <summary>
+    /// جهتِ «برگرد»، بی هیچ صبری.
+    ///
+    /// ⚠️ عمداً فقط <see cref="SectionShown"/> را می‌پرسد و نه
+    /// ‎IsEffectivelyVisible‎ را: آن یکی هنوز به‌روز نشده. و عمداً فقط
+    /// <b>برمی‌گرداند</b> — اگر این‌جا پارک هم می‌کرد، جدولی که همین حالا
+    /// دارد نشان داده می‌شود با مقدارِ کهنهٔ ‎IsEffectivelyVisible‎ پارک
+    /// می‌شد.
+    /// </summary>
+    private void OnPagesShown()
+    {
+        if (!_parkedAway || GrowsToContent) return;
+        if (!SectionShown()) return;
+        _parkedAway = false;
+        var back = _parked;
+        _parked = null;
+        if (back is not null) SetCurrentValue(ItemsSourceProperty, back);
+    }
 
     private void OnShownChanged(bool shown)
     {
@@ -602,6 +662,7 @@ public class ExcelGrid : DataGrid
     {
         base.OnDetachedFromVisualTree(e);
         PagesChanged -= OnPagesChanged;
+        PagesShown -= OnPagesShown;
         if (_pageHooked && _page is { } page) page.ScrollChanged -= OnPageScroll;
         _pageHooked = false;
         _page = null;
@@ -1615,6 +1676,9 @@ public class ExcelGrid : DataGrid
         // «صفحهٔ دیده‌شونده عوض شد» — شرحش بالای ‎NotifyPagesChanged‎
         PagesChanged -= OnPagesChanged;
         PagesChanged += OnPagesChanged;
+        //  و جهتِ «برگرد»، که هم‌زمان است و نه با یک پاس تأخیر
+        PagesShown -= OnPagesShown;
+        PagesShown += OnPagesShown;
         if (_wired) return;
         _wired = true;
         // تنها منبعِ درستِ «الان در حال ویرایشیم» — خودِ جدول می‌گوید.

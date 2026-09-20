@@ -20,7 +20,17 @@ public partial class DebtArchiveView : UserControl
     {
         AvaloniaXamlLoader.Load(this);
         Loaded += (_, _) => WireGrids();
-        LayoutUpdated += (_, _) => WireGrids();
+        //  ⚠️ ‎LayoutUpdated‎ برای **هر** چیدمانِ **هر جای** پنجره شلیک می‌شود
+        //  و این صفحه — مثلِ همهٔ بخش‌ها — همیشه در درخت می‌ماند. بی این
+        //  نگهبان، هر فریمِ اسکرولِ هر بخشِ دیگری یک ‎GetVisualDescendants‎ی
+        //  کاملِ این صفحه را می‌دواند. همان قاعده‌ای که برای ‎ExcelGrid‎ و
+        //  ‎TotalsBar‎ از ۱۴۰۵/۰۶/۲۶ نوشته شده:
+        //  «هیچ شنوندهٔ ‎LayoutUpdated‎ی بی ‎IsEffectivelyVisible‎».
+        LayoutUpdated += (_, _) =>
+        {
+            if (!IsEffectivelyVisible) return;
+            WireGrids();
+        };
     }
 
     private readonly HashSet<ExcelGrid> _wired = new();

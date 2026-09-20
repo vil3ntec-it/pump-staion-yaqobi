@@ -106,6 +106,9 @@ internal static class Program
         if (outDir.Equals("look", StringComparison.OrdinalIgnoreCase)) return LookAudit.Run();
         if (outDir.Equals("cells", StringComparison.OrdinalIgnoreCase)) return CellEditAudit.Run();
         if (outDir.Equals("waraqperf", StringComparison.OrdinalIgnoreCase)) return WaraqPerf.Run();
+        // ══ «هر بخش رو باز می‌کنم جدول‌ها یک ثانیه بعد میان» ═══════════════
+        //     dotnet run --project PumpYaqobi.UiTests -- sectionopen
+        if (outDir.Equals("sectionopen", StringComparison.OrdinalIgnoreCase)) return SectionOpen.Run();
         // ══ «یک ردیف چقدر آب می‌خورد» — ریشهٔ کندیِ ورق ════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- rowcost
         if (outDir.Equals("rowcost", StringComparison.OrdinalIgnoreCase)) return RowCost.Run();
