@@ -62,6 +62,14 @@
       <Setter Property="TextWrapping" Value="Wrap" />
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
+    <!-- ردیفِ «کلید ⇠ مقدار» — خطِ مویی زیرش، مثلِ هر برگهٔ مشخصاتِ حرفه‌ای.
+         ⚠️ ردیفِ آخرِ هر دسته ‎BorderThickness="0"‎ می‌گیرد؛ در آوالونیا
+         ‎:nth-last-child‎ روی ‎Border‎ی داخلِ ‎StackPanel‎ قابلِ اتکا نیست. -->
+    <Style Selector="Border.kvrow">
+      <Setter Property="Padding" Value="0,9" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Pump.Border}" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+    </Style>
     <Style Selector="Border.prow">
       <Setter Property="CornerRadius" Value="12" />
       <Setter Property="Padding" Value="14,10" />
@@ -734,245 +742,376 @@
            👤 خودِ پروفایل — همان مشخصات، با تمِ خودِ برنامه
            ══════════════════════════════════════════════════════════════════ -->
       <c:SectionPage Header="پروفایل" IsVisible="{Binding ShowProfilePage}">
-      <Grid ColumnDefinitions="300,*,330" RowDefinitions="Auto,*">
+      <StackPanel Spacing="14">
 
-      <!-- ══ آواتار ══ -->
-      <Border Grid.Row="0" Grid.Column="0" Classes="panel" Padding="22" Margin="0,0,14,14">
-        <StackPanel Spacing="10" HorizontalAlignment="Center">
-          <Border Width="110" Height="110" CornerRadius="55" Background="{DynamicResource Pump.Accent}"
+      <!-- ══ سرصفحه — آواتار، نام، نشان‌ها و کارها ═══════════════════════════
+           پیش از این سه ستونِ هم‌وزن بود («آواتار | مشخصات | اشتراک») و هر سه
+           از بالای صفحه شروع می‌شدند، پس هیچ‌کدام سرصفحه نبود و چشم نمی‌دانست
+           از کجا شروع کند. حالا یک سرصفحهٔ پهن است و بقیه زیرش. -->
+      <Border Classes="card" Padding="24,20">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+
+          <Border Grid.Column="0" Width="104" Height="104" CornerRadius="52"
+                  VerticalAlignment="Center"
+                  Background="{DynamicResource Pump.Accent}"
                   BoxShadow="{DynamicResource Pump.CardShadow}">
-            <TextBlock Text="{Binding Initial}" FontSize="48" FontWeight="Black" Foreground="White"
+            <TextBlock Text="{Binding Initial}" FontSize="46" FontWeight="Black" Foreground="White"
                        HorizontalAlignment="Center" VerticalAlignment="Center" />
           </Border>
-          <TextBlock Text="{Binding PumpName}" FontSize="20" FontWeight="Black" TextAlignment="Center" TextWrapping="Wrap" />
-          <TextBlock Text="{Binding UserLine}" Classes="muted" TextAlignment="Center" />
-          <TextBlock Text="{Binding AccountEmail}" Classes="muted" FontSize="12.5" TextAlignment="Center"
-                     Foreground="{DynamicResource Pump.Info}"
-                     IsVisible="{Binding AccountEmail, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-            <Border Classes="pill" Padding="11,4"
-                    Background="{Binding RoleBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
-              <TextBlock Text="{Binding RoleText}" FontSize="12" FontWeight="ExtraBold" />
-            </Border>
-            <Border Classes="pill" Padding="11,4" Background="#FFD700" IsVisible="{Binding VipActive}">
-              <TextBlock Text="{Binding PillText}" FontSize="12" FontWeight="Black" Foreground="#1a1a1a" />
-            </Border>
+
+          <StackPanel Grid.Column="1" Margin="20,0" Spacing="6" VerticalAlignment="Center">
+            <TextBlock Text="{Binding PumpName}" FontSize="26" FontWeight="Black"
+                       TextAlignment="Start" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding UserLine}" Classes="muted" FontSize="13" TextAlignment="Start" />
+            <TextBlock Text="{Binding AccountEmail}" FontSize="12.5" TextAlignment="Start"
+                       Foreground="{DynamicResource Pump.Info}"
+                       IsVisible="{Binding AccountEmail, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+            <WrapPanel Margin="0,4,0,0">
+              <Border Classes="pill" Padding="12,4" Margin="0,0,7,6"
+                      Background="{Binding RoleBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
+                <TextBlock Text="{Binding RoleText}" FontSize="12" FontWeight="ExtraBold" />
+              </Border>
+              <Border Classes="pill" Padding="12,4" Margin="0,0,7,6"
+                      Background="#FFD700" IsVisible="{Binding VipActive}">
+                <TextBlock Text="{Binding PillText}" FontSize="12" FontWeight="Black" Foreground="#1a1a1a" />
+              </Border>
+            </WrapPanel>
+
+            <!-- ⚠️ «وارد شده‌اید» از روی فایلِ روی دیسک گفته نمی‌شود — این
+                 همان جمله‌ای است که خودِ پاسخِ سرورِ حساب ساخته. -->
+            <TextBlock Text="{Binding AccountStatus}" Classes="muted" FontSize="12" TextWrapping="Wrap"
+                       TextAlignment="Start"
+                       IsVisible="{Binding AccountStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <TextBlock Text="{Binding StationLine}" Classes="muted" FontSize="12" TextWrapping="Wrap"
+                       TextAlignment="Start"
+                       IsVisible="{Binding StationLine, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           </StackPanel>
-          <Border Height="1" Background="{DynamicResource Pump.Border}" Margin="0,6" />
+
           <!-- ⚠️ راهِ برگشت به صفحهٔ ورود. ⛔ هیچ دکمهٔ سرویسِ بیرونی‌ای این‌جا
                نیست: «هیچ پکنه‌ای نباشد، نه از گوگل و نه غیره.» -->
-          <Button Classes="accent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                  Content="حساب و ورود" Command="{Binding OpenAccountPageCommand}"
-                  IsEnabled="{Binding !Busy}" />
-          <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                  Content="🔄 گرفتنِ دوبارهٔ اطلاعات" Command="{Binding PullHomeCommand}"
-                  IsVisible="{Binding SignedIn}" IsEnabled="{Binding !Busy}" />
-          <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                  Content="خروج از حساب" Command="{Binding SignOutCommand}"
-                  IsVisible="{Binding SignedIn}" IsEnabled="{Binding !Busy}" />
-          <TextBlock Text="{Binding AccountStatus}" Classes="muted" FontSize="12" TextWrapping="Wrap" TextAlignment="Center"
-                     IsVisible="{Binding AccountStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-          <TextBlock Text="{Binding StationLine}" Classes="muted" FontSize="12" TextWrapping="Wrap" TextAlignment="Center"
-                     IsVisible="{Binding StationLine, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-        </StackPanel>
+          <StackPanel Grid.Column="2" Spacing="7" VerticalAlignment="Center" MinWidth="196">
+            <Button Classes="accent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    MinHeight="40" Content="حساب و ورود" Command="{Binding OpenAccountPageCommand}"
+                    IsEnabled="{Binding !Busy}" />
+            <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Content="🔄 گرفتنِ دوبارهٔ اطلاعات" Command="{Binding PullHomeCommand}"
+                    IsVisible="{Binding SignedIn}" IsEnabled="{Binding !Busy}" />
+            <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Content="خروج از حساب" Command="{Binding SignOutCommand}"
+                    IsVisible="{Binding SignedIn}" IsEnabled="{Binding !Busy}" />
+          </StackPanel>
+        </Grid>
       </Border>
 
-      <!-- ══ مشخصاتِ پمپ ══ -->
-      <Border Grid.Row="0" Grid.Column="1" Classes="panel" Padding="22" Margin="0,0,14,14">
-        <StackPanel Spacing="12">
-          <TextBlock Text="مشخصاتِ پمپ" Classes="ptitle" />
-          <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="نامِ پمپ" Classes="kvl" />
-            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding PumpName}" Classes="kvv" />
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="کدِ پمپ روی سرورِ حساب" Classes="kvl" Margin="0,8,0,0" />
-            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding PumpCodeLine}" Classes="kvv" Margin="0,8,0,0" />
-            <TextBlock Grid.Row="2" Grid.Column="0" Text="تلفن" Classes="kvl" Margin="0,8,0,0" />
-            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding PumpPhone}" Classes="kvv" Margin="0,8,0,0" />
-            <TextBlock Grid.Row="3" Grid.Column="0" Text="نشانی" Classes="kvl" Margin="0,8,0,0" />
-            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PumpAddress}" Classes="kvv" Margin="0,8,0,0" />
-            <TextBlock Grid.Row="4" Grid.Column="0" Text="سرورِ خانگی" Classes="kvl" Margin="0,8,0,0" />
-            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding HomeLine}" Classes="kvv" Margin="0,8,0,0" />
-            <TextBlock Grid.Row="5" Grid.Column="0" Text="سرورِ حساب" Classes="kvl" Margin="0,8,0,0" />
-            <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding CloudLine}" Classes="kvv" Margin="0,8,0,0" />
-            <TextBlock Grid.Row="6" Grid.Column="0" Text="نسخهٔ برنامه" Classes="kvl" Margin="0,8,0,0" />
-            <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding AppVersionLine}" Classes="kvv" Margin="0,8,0,0" />
-          </Grid>
+      <!-- ══ چهار عددِ سرِ دست ═══════════════════════════════════════════════
+           آن‌چه صاحبِ پمپ بیشتر از همه نگاهش می‌کند، بی باز کردنِ هیچ کارتی. -->
+      <Grid ColumnDefinitions="*,12,*,12,*,12,*">
+        <Border Grid.Column="0" Classes="stat" Padding="16,13">
+          <StackPanel Spacing="3">
+            <TextBlock Text="💎 پلنِ اشتراک" Classes="label" />
+            <TextBlock Text="{Binding SubPlanText}" Classes="num" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="2" Classes="stat" Padding="16,13">
+          <StackPanel Spacing="3">
+            <TextBlock Text="⏳ ماندهٔ اشتراک" Classes="label" />
+            <TextBlock Text="{Binding SubDaysText}" Classes="num"
+                       Foreground="{DynamicResource Pump.Ok}" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="4" Classes="stat" Padding="16,13">
+          <StackPanel Spacing="3">
+            <TextBlock Text="🖥️ سرورِ حساب" Classes="label" />
+            <TextBlock Text="{Binding CloudLine}" Classes="num2" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="6" Classes="stat" Padding="16,13">
+          <StackPanel Spacing="3">
+            <TextBlock Text="📦 نسخهٔ برنامه" Classes="label" />
+            <TextBlock Text="{Binding AppVersionLine}" Classes="num2" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+        </Border>
+      </Grid>
 
-          <Border Height="1" Background="{DynamicResource Pump.Border}" />
+      <!-- ══ دو ستون: مشخصاتِ پمپ  |  اشتراک و دسترسی‌ها ═════════════════════ -->
+      <Grid ColumnDefinitions="*,14,380">
+
+        <StackPanel Grid.Column="0" Spacing="14">
+
+          <!-- مشخصاتِ پمپ -->
+          <Border Classes="card" Padding="22,18">
+            <StackPanel Spacing="4">
+              <TextBlock Text="🏷️ مشخصاتِ پمپ" Classes="ptitle" Margin="0,0,0,8" />
+
+              <Border Classes="kvrow">
+                <Grid ColumnDefinitions="150,*">
+                  <TextBlock Grid.Column="0" Text="نامِ پمپ" Classes="kvl" />
+                  <TextBlock Grid.Column="1" Text="{Binding PumpName}" Classes="kvv" />
+                </Grid>
+              </Border>
+              <Border Classes="kvrow">
+                <Grid ColumnDefinitions="150,*">
+                  <TextBlock Grid.Column="0" Text="کدِ پمپ روی سرورِ حساب" Classes="kvl" />
+                  <TextBlock Grid.Column="1" Text="{Binding PumpCodeLine}" Classes="kvv" />
+                </Grid>
+              </Border>
+              <Border Classes="kvrow">
+                <Grid ColumnDefinitions="150,*">
+                  <TextBlock Grid.Column="0" Text="تلفن" Classes="kvl" />
+                  <TextBlock Grid.Column="1" Text="{Binding PumpPhone}" Classes="kvv" />
+                </Grid>
+              </Border>
+              <Border Classes="kvrow">
+                <Grid ColumnDefinitions="150,*">
+                  <TextBlock Grid.Column="0" Text="نشانی" Classes="kvl" />
+                  <TextBlock Grid.Column="1" Text="{Binding PumpAddress}" Classes="kvv" />
+                </Grid>
+              </Border>
+              <Border Classes="kvrow">
+                <Grid ColumnDefinitions="150,*">
+                  <TextBlock Grid.Column="0" Text="سرورِ خانگی" Classes="kvl" />
+                  <TextBlock Grid.Column="1" Text="{Binding HomeLine}" Classes="kvv" />
+                </Grid>
+              </Border>
+              <Border Classes="kvrow" BorderThickness="0">
+                <Grid ColumnDefinitions="150,*">
+                  <TextBlock Grid.Column="0" Text="سرورِ حساب" Classes="kvl" />
+                  <TextBlock Grid.Column="1" Text="{Binding CloudLine}" Classes="kvv" />
+                </Grid>
+              </Border>
+            </StackPanel>
+          </Border>
 
           <!-- کدِ اپِ کارمندان — همان چیزی که هر کارمند در گوشی می‌زند -->
-          <TextBlock Text="کدِ پمپ برای اپِ کارمندان" Classes="ptitle" FontSize="15" />
-          <StackPanel Orientation="Horizontal" Spacing="12">
-            <Border Classes="stat" Padding="18,10" MinWidth="220" IsVisible="{Binding HasAccessCode}">
-              <SelectableTextBlock Text="{Binding AccessCodeDisplay}" FontSize="30" FontWeight="Black"
-                                   FontFamily="Consolas,Menlo,monospace" LetterSpacing="4"
-                                   Foreground="{DynamicResource Pump.Accent}" FlowDirection="LeftToRight" />
-            </Border>
-            <StackPanel Spacing="6" VerticalAlignment="Center">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <Button Classes="accent" Content="📋 کپی" Command="{Binding CopyAccessCodeCommand}"
+          <Border Classes="card" Padding="22,18">
+            <StackPanel Spacing="12">
+              <TextBlock Text="📲 کدِ پمپ برای اپِ کارمندان" Classes="ptitle" />
+
+              <Border Classes="stat" Padding="20,14" HorizontalAlignment="Left"
+                      MinWidth="250" IsVisible="{Binding HasAccessCode}">
+                <SelectableTextBlock Text="{Binding AccessCodeDisplay}" FontSize="32" FontWeight="Black"
+                                     FontFamily="Consolas,Menlo,monospace" LetterSpacing="5"
+                                     Foreground="{DynamicResource Pump.Accent}" FlowDirection="LeftToRight" />
+              </Border>
+
+              <WrapPanel>
+                <Button Classes="accent" Content="📋 کپی" Margin="0,0,7,7"
+                        Command="{Binding CopyAccessCodeCommand}"
                         IsVisible="{Binding HasAccessCode}" IsEnabled="{Binding !Busy}" />
-                <Button Content="📲 کیو‌آر" Command="{Binding ShowAccessQrCommand}"
+                <Button Content="📲 کیو‌آر" Margin="0,0,7,7" Command="{Binding ShowAccessQrCommand}"
                         IsVisible="{Binding HasAccessCode}" IsEnabled="{Binding !Busy}" />
-                <Button Content="🔄 گرفتنِ کد" Command="{Binding LoadAccessCodeCommand}" IsEnabled="{Binding !Busy}" />
-                <Button Content="♻️ عوض کردن" Command="{Binding RotateAccessCodeCommand}"
+                <Button Content="🔄 گرفتنِ کد" Margin="0,0,7,7"
+                        Command="{Binding LoadAccessCodeCommand}" IsEnabled="{Binding !Busy}" />
+                <Button Content="♻️ عوض کردن" Margin="0,0,7,7"
+                        Command="{Binding RotateAccessCodeCommand}"
                         IsVisible="{Binding HasAccessCode}" IsEnabled="{Binding !Busy}"
                         ToolTip.Tip="کدِ قبلی همان لحظه از کار می‌افتد" />
-              </StackPanel>
-              <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" MaxWidth="420"
+              </WrapPanel>
+
+              <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
                          Text="هر کسی اپِ اندروید یا آیفون را نصب می‌کند این کد را می‌زند و فقط حساب‌های همین پمپ را می‌بیند؛ بعدش رمزِ همین برنامه را هم می‌خواهد." />
               <TextBlock Text="{Binding AccessStatus}" Classes="muted" FontSize="12" TextWrapping="Wrap"
                          IsVisible="{Binding AccessStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+              <!-- ⚠️ جابه‌جاییِ پمپ: برنامه از قبل می‌گفت «این دستگاه را از پمپِ
+                   فعلی جدا کنید» ولی هیچ دکمه‌ای برایش نبود. ⛔ دفتر دست نمی‌خورد،
+                   و پیش از انجام پرسیده می‌شود. -->
+              <Border Height="1" Background="{DynamicResource Pump.Border}" IsVisible="{Binding PumpBound}" />
+              <StackPanel Spacing="6" IsVisible="{Binding PumpBound}">
+                <Button HorizontalAlignment="Left" Content="🔓 جدا کردنِ این دستگاه از این پمپ"
+                        Command="{Binding ForgetPumpCommand}" IsEnabled="{Binding !Busy}"
+                        ToolTip.Tip="برای بردنِ این کامپیوتر به پمپِ دیگر" />
+                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                           Text="اشتراک و کدِ اپِ کارمندان و نشانیِ سرورِ این پمپ برداشته می‌شوند؛ دفتر و حساب‌ها دست نمی‌خورند." />
+              </StackPanel>
             </StackPanel>
-          </StackPanel>
-
-          <!-- ⚠️ جابه‌جاییِ پمپ: برنامه از قبل می‌گفت «این دستگاه را از پمپِ
-               فعلی جدا کنید» ولی هیچ دکمه‌ای برایش نبود. ⛔ دفتر دست نمی‌خورد،
-               و پیش از انجام پرسیده می‌شود. -->
-          <Border Height="1" Background="{DynamicResource Pump.Border}" IsVisible="{Binding PumpBound}" />
-          <StackPanel Spacing="6" IsVisible="{Binding PumpBound}">
-            <Button HorizontalAlignment="Left" Content="🔓 جدا کردنِ این دستگاه از این پمپ"
-                    Command="{Binding ForgetPumpCommand}" IsEnabled="{Binding !Busy}"
-                    ToolTip.Tip="برای بردنِ این کامپیوتر به پمپِ دیگر" />
-            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" MaxWidth="420"
-                       Text="اشتراک و کدِ اپِ کارمندان و نشانیِ سرورِ این پمپ برداشته می‌شوند؛ دفتر و حساب‌ها دست نمی‌خورند." />
-          </StackPanel>
+          </Border>
         </StackPanel>
-      </Border>
 
-      <!-- ══ اشتراکِ VIP ══ -->
-      <Border Grid.Row="0" Grid.Column="2" Classes="panel" Padding="22" Margin="0,0,0,14">
-        <StackPanel Spacing="12">
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock Text="اشتراکِ VIP" Classes="ptitle" />
-            <Border Classes="pill" Padding="9,2" Background="#FFD700" IsVisible="{Binding VipActive}" VerticalAlignment="Center">
-              <TextBlock Text="فعال" FontSize="11" FontWeight="Black" Foreground="#1a1a1a" />
+        <!-- ══ اشتراک ══ -->
+        <Border Grid.Column="2" Classes="card" Padding="22,18" VerticalAlignment="Top">
+          <StackPanel Spacing="12">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="💎 اشتراکِ VIP" Classes="ptitle" VerticalAlignment="Center" />
+              <Border Grid.Column="1" Classes="pill" Padding="10,3" Background="#FFD700"
+                      IsVisible="{Binding VipActive}" VerticalAlignment="Center">
+                <TextBlock Text="فعال" FontSize="11" FontWeight="Black" Foreground="#1a1a1a" />
+              </Border>
+            </Grid>
+
+            <!-- ماندهٔ اشتراک، درشت -->
+            <Border Classes="stat" Padding="18,14">
+              <StackPanel Spacing="2">
+                <TextBlock Text="ماندهٔ اشتراک" Classes="label" />
+                <TextBlock Text="{Binding SubDaysText}" FontSize="28" FontWeight="Black"
+                           Foreground="{DynamicResource Pump.Ok}" />
+              </StackPanel>
             </Border>
-          </StackPanel>
-          <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto">
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="پلن" Classes="kvl" />
-            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SubPlanText}" Classes="kvv" />
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="پایان" Classes="kvl" Margin="0,8,0,0" />
-            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SubEndsText}" Classes="kvv" Margin="0,8,0,0" />
-            <TextBlock Grid.Row="2" Grid.Column="0" Text="مانده" Classes="kvl" Margin="0,8,0,0" />
-            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SubDaysText}" Classes="kvv" Margin="0,8,0,0"
-                       Foreground="{DynamicResource Pump.Ok}" FontSize="18" FontWeight="Black" />
-            <TextBlock Grid.Row="3" Grid.Column="0" Text="وضعیت" Classes="kvl" Margin="0,8,0,0" />
-            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SubSourceText}" Classes="kvv" Margin="0,8,0,0" />
-          </Grid>
-          <Border Height="1" Background="{DynamicResource Pump.Border}" />
-          <TextBlock Text="کدِ اشتراک (شش رقم)" Classes="kvl" />
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <TextBox Text="{Binding SubCode}" Width="130" MaxLength="6" Watermark="۱۲۳۴۵۶" />
-            <Button Classes="accent" Content="فعال کن" Command="{Binding RedeemSubCommand}" IsEnabled="{Binding !Busy}" />
-            <Button Content="🔄" Command="{Binding RefreshSubCommand}" IsEnabled="{Binding !Busy}" ToolTip.Tip="تازه‌سازی از سرور" />
-          </StackPanel>
-          <TextBlock Text="{Binding SubMessage}" Classes="muted" FontSize="12" TextWrapping="Wrap"
-                     IsVisible="{Binding SubMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-          <TextBlock Text="{Binding GraceText}" FontSize="12" TextWrapping="Wrap" FontWeight="Bold"
-                     Foreground="{DynamicResource Pump.Warn}"
-                     IsVisible="{Binding GraceText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
-          <!-- ══ چه چیزی در اشتراکِ من است ══════════════════════════════
-               سه کارِ ابری با اشتراک‌اند و پشتیبانی همیشه باز. دفترِ خودش
-               هیچ‌وقت قفل نمی‌شود، پس این‌جا هم اسمی از آن نیست. -->
-          <Border Height="1" Background="{DynamicResource Pump.Border}" />
-          <TextBlock Text="دسترسی‌ها" Classes="kvl" />
-          <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="اپِ کارمندان و ربات" Classes="kvv" />
-            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding AccessKarText}" Classes="kvv" />
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="کیو‌آرِ حسابِ مشتری" Classes="kvv" Margin="0,6,0,0" />
-            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AccessQrText}" Classes="kvv" Margin="0,6,0,0" />
-            <TextBlock Grid.Row="2" Grid.Column="0" Text="بک‌اپِ خودکار روی سرور" Classes="kvv" Margin="0,6,0,0" />
-            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding AccessBackupText}" Classes="kvv" Margin="0,6,0,0" />
-            <TextBlock Grid.Row="3" Grid.Column="0" Text="چتِ پشتیبانی" Classes="kvv" Margin="0,6,0,0" />
-            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding AccessSupportText}" Classes="kvv" Margin="0,6,0,0"
-                       Foreground="{DynamicResource Pump.Ok}" />
-          </Grid>
-
-          <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                     Text="دفترِ شما روی همین کامپیوتر می‌ماند و با تمام شدنِ اشتراک هم سرِ جایش است — قرض‌داران، ورق، مخزن، گاوصندوق، چاپ و بک‌اپِ محلی. فقط سه کارِ ابریِ بالا بسته می‌شوند." />
-        </StackPanel>
-      </Border>
-
-      <!-- ══ تب‌ها: کارمندان · تاریخچه · پشتیبان‌ها ══ -->
-      <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Classes="panel" Padding="22" Margin="0,0,14,0">
-        <DockPanel>
-          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,14">
-            <Button Classes="seg" Classes.active="{Binding TabStaff}" Content="کارمندان"
-                    Command="{Binding SetTabCommand}" CommandParameter="staff" />
-            <Button Classes="seg" Classes.active="{Binding TabHistory}" Content="تاریخچهٔ بخش‌ها"
-                    Command="{Binding SetTabCommand}" CommandParameter="history" />
-            <Button Classes="seg" Classes.active="{Binding TabBackups}" Content="پشتیبان‌ها"
-                    Command="{Binding SetTabCommand}" CommandParameter="backups" />
-          </StackPanel>
-          <ScrollViewer>
-            <StackPanel>
-              <TextBlock Text="ردیفی نیست." Classes="muted" IsVisible="{Binding !Rows.Count}" />
-              <ItemsControl ItemsSource="{Binding Rows}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:ProfileRow">
-                    <Border Classes="prow" Background="{DynamicResource Pump.Input}"
-                            BorderBrush="{Binding ColorKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
-                      <Grid ColumnDefinitions="2*,1.4*,1.4*,2*">
-                        <StackPanel Grid.Column="0" Spacing="2">
-                          <TextBlock Text="عنوان" Classes="kvl" FontSize="11" />
-                          <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="14.5" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Spacing="2">
-                          <TextBlock Text="{Binding L1}" Classes="kvl" FontSize="11" />
-                          <TextBlock Text="{Binding V1}" FontWeight="SemiBold"
-                                     Foreground="{Binding ColorKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="2" Spacing="2">
-                          <TextBlock Text="{Binding L2}" Classes="kvl" FontSize="11" />
-                          <TextBlock Text="{Binding V2}" FontWeight="SemiBold" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="3" Spacing="2" IsVisible="{Binding HasNote}">
-                          <TextBlock Text="یادداشت" Classes="kvl" FontSize="11" />
-                          <TextBlock Text="{Binding Note}" Classes="muted" FontSize="12" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
-                      </Grid>
-                    </Border>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
+            <StackPanel Spacing="4">
+              <Border Classes="kvrow">
+                <Grid ColumnDefinitions="90,*">
+                  <TextBlock Grid.Column="0" Text="پلن" Classes="kvl" />
+                  <TextBlock Grid.Column="1" Text="{Binding SubPlanText}" Classes="kvv" />
+                </Grid>
+              </Border>
+              <Border Classes="kvrow">
+                <Grid ColumnDefinitions="90,*">
+                  <TextBlock Grid.Column="0" Text="پایان" Classes="kvl" />
+                  <TextBlock Grid.Column="1" Text="{Binding SubEndsText}" Classes="kvv" />
+                </Grid>
+              </Border>
+              <Border Classes="kvrow" BorderThickness="0">
+                <Grid ColumnDefinitions="90,*">
+                  <TextBlock Grid.Column="0" Text="وضعیت" Classes="kvl" />
+                  <TextBlock Grid.Column="1" Text="{Binding SubSourceText}" Classes="kvv" />
+                </Grid>
+              </Border>
             </StackPanel>
-          </ScrollViewer>
-        </DockPanel>
-      </Border>
 
-      <!-- ══ فایل‌ها: پشتیبان‌ها ══ -->
-      <Border Grid.Row="1" Grid.Column="2" Classes="panel" Padding="22">
-        <DockPanel>
-          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
-            <TextBlock Text="فایل‌های پشتیبان" Classes="ptitle" VerticalAlignment="Center" />
-            <Button Grid.Column="1" Classes="pill-btn support" Content="باز کردنِ پوشه" FontSize="12" Padding="12,4"
-                    Command="{Binding OpenBackupsCommand}" />
-          </Grid>
-          <ScrollViewer>
-            <StackPanel>
-              <TextBlock Text="هنوز پشتیبانی گرفته نشده — هر روز سرِ ورود خودکار گرفته می‌شود." Classes="muted" FontSize="12"
-                         TextWrapping="Wrap" IsVisible="{Binding !Backups.Count}" />
-              <ItemsControl ItemsSource="{Binding Backups}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:ProfileRow">
-                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,10">
-                      <TextBlock Grid.Column="0" Text="🗄️" FontSize="16" VerticalAlignment="Center" Margin="0,0,10,0" />
-                      <StackPanel Grid.Column="1">
-                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="13.5" />
-                        <TextBlock Text="{Binding V2}" Classes="muted" FontSize="11.5" />
-                      </StackPanel>
-                      <TextBlock Grid.Column="2" Text="{Binding V1}" Classes="muted" FontSize="12" VerticalAlignment="Center" />
-                    </Grid>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
+            <TextBlock Text="{Binding GraceText}" FontSize="12" TextWrapping="Wrap" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Warn}"
+                       IsVisible="{Binding GraceText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+            <Border Height="1" Background="{DynamicResource Pump.Border}" />
+
+            <!-- ⛔ کدِ اشتراک همین‌جاست و برنمی‌گردد به گامِ ورود: کسی که کد
+                 دارد بعد از ورود این‌جا می‌زندش، و کسی که ندارد کادری
+                 نمی‌بیند که دنبالش بگردد. -->
+            <TextBlock Text="کدِ اشتراک (شش رقم)" Classes="kvl" />
+            <Grid ColumnDefinitions="*,Auto,Auto">
+              <TextBox Grid.Column="0" Text="{Binding SubCode}" MaxLength="6" Watermark="۱۲۳۴۵۶"
+                       TextAlignment="Center" FontSize="16" MinHeight="40" />
+              <Button Grid.Column="1" Classes="accent" Content="فعال کن" Margin="7,0,0,0" MinHeight="40"
+                      Command="{Binding RedeemSubCommand}" IsEnabled="{Binding !Busy}" />
+              <Button Grid.Column="2" Content="🔄" Margin="6,0,0,0" MinHeight="40"
+                      Command="{Binding RefreshSubCommand}" IsEnabled="{Binding !Busy}"
+                      ToolTip.Tip="تازه‌سازی از سرور" />
+            </Grid>
+            <TextBlock Text="{Binding SubMessage}" Classes="muted" FontSize="12" TextWrapping="Wrap"
+                       IsVisible="{Binding SubMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+            <!-- ══ چه چیزی در اشتراکِ من است ══════════════════════════════
+                 سه کارِ ابری با اشتراک‌اند و پشتیبانی همیشه باز. دفترِ خودش
+                 هیچ‌وقت قفل نمی‌شود، پس این‌جا هم اسمی از آن نیست. -->
+            <Border Height="1" Background="{DynamicResource Pump.Border}" />
+            <TextBlock Text="دسترسی‌ها" Classes="ptitle" FontSize="15" />
+            <StackPanel Spacing="4">
+              <Border Classes="kvrow">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Grid.Column="0" Text="اپِ کارمندان و ربات" Classes="kvv" />
+                  <TextBlock Grid.Column="1" Text="{Binding AccessKarText}" Classes="kvv" />
+                </Grid>
+              </Border>
+              <Border Classes="kvrow">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Grid.Column="0" Text="کیو‌آرِ حسابِ مشتری" Classes="kvv" />
+                  <TextBlock Grid.Column="1" Text="{Binding AccessQrText}" Classes="kvv" />
+                </Grid>
+              </Border>
+              <Border Classes="kvrow">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Grid.Column="0" Text="بک‌اپِ خودکار روی سرور" Classes="kvv" />
+                  <TextBlock Grid.Column="1" Text="{Binding AccessBackupText}" Classes="kvv" />
+                </Grid>
+              </Border>
+              <Border Classes="kvrow" BorderThickness="0">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Grid.Column="0" Text="چتِ پشتیبانی" Classes="kvv" />
+                  <TextBlock Grid.Column="1" Text="{Binding AccessSupportText}" Classes="kvv"
+                             Foreground="{DynamicResource Pump.Ok}" />
+                </Grid>
+              </Border>
             </StackPanel>
-          </ScrollViewer>
-        </DockPanel>
-      </Border>
+
+            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                       Text="دفترِ شما روی همین کامپیوتر می‌ماند و با تمام شدنِ اشتراک هم سرِ جایش است — قرض‌داران، ورق، مخزن، گاوصندوق، چاپ و بک‌اپِ محلی. فقط سه کارِ ابریِ بالا بسته می‌شوند." />
+          </StackPanel>
+        </Border>
       </Grid>
+
+      <!-- ══ تب‌ها: کارمندان · تاریخچه · پشتیبان‌ها  |  فایل‌های پشتیبان ══ -->
+      <Grid ColumnDefinitions="*,14,380" Height="380">
+        <Border Grid.Column="0" Classes="card" Padding="22,18">
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,14">
+              <Button Classes="seg" Classes.active="{Binding TabStaff}" Content="کارمندان"
+                      Command="{Binding SetTabCommand}" CommandParameter="staff" />
+              <Button Classes="seg" Classes.active="{Binding TabHistory}" Content="تاریخچهٔ بخش‌ها"
+                      Command="{Binding SetTabCommand}" CommandParameter="history" />
+              <Button Classes="seg" Classes.active="{Binding TabBackups}" Content="پشتیبان‌ها"
+                      Command="{Binding SetTabCommand}" CommandParameter="backups" />
+            </StackPanel>
+            <ScrollViewer>
+              <StackPanel>
+                <TextBlock Text="ردیفی نیست." Classes="muted" IsVisible="{Binding !Rows.Count}" />
+                <ItemsControl ItemsSource="{Binding Rows}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ProfileRow">
+                      <Border Classes="prow" Background="{DynamicResource Pump.Input}"
+                              BorderBrush="{Binding ColorKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
+                        <Grid ColumnDefinitions="2*,1.4*,1.4*,2*">
+                          <StackPanel Grid.Column="0" Spacing="2">
+                            <TextBlock Text="عنوان" Classes="kvl" FontSize="11" />
+                            <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="14.5" />
+                          </StackPanel>
+                          <StackPanel Grid.Column="1" Spacing="2">
+                            <TextBlock Text="{Binding L1}" Classes="kvl" FontSize="11" />
+                            <TextBlock Text="{Binding V1}" FontWeight="SemiBold"
+                                       Foreground="{Binding ColorKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                          </StackPanel>
+                          <StackPanel Grid.Column="2" Spacing="2">
+                            <TextBlock Text="{Binding L2}" Classes="kvl" FontSize="11" />
+                            <TextBlock Text="{Binding V2}" FontWeight="SemiBold" />
+                          </StackPanel>
+                          <StackPanel Grid.Column="3" Spacing="2" IsVisible="{Binding HasNote}">
+                            <TextBlock Text="یادداشت" Classes="kvl" FontSize="11" />
+                            <TextBlock Text="{Binding Note}" Classes="muted" FontSize="12" TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </ScrollViewer>
+          </DockPanel>
+        </Border>
+
+        <!-- ══ فایل‌ها: پشتیبان‌ها ══ -->
+        <Border Grid.Column="2" Classes="card" Padding="22,18">
+          <DockPanel>
+            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+              <TextBlock Text="🗄️ فایل‌های پشتیبان" Classes="ptitle" VerticalAlignment="Center" />
+              <Button Grid.Column="1" Classes="pill-btn support" Content="باز کردنِ پوشه" FontSize="12" Padding="12,4"
+                      Command="{Binding OpenBackupsCommand}" />
+            </Grid>
+            <ScrollViewer>
+              <StackPanel>
+                <TextBlock Text="هنوز پشتیبانی گرفته نشده — هر روز سرِ ورود خودکار گرفته می‌شود." Classes="muted" FontSize="12"
+                           TextWrapping="Wrap" IsVisible="{Binding !Backups.Count}" />
+                <ItemsControl ItemsSource="{Binding Backups}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ProfileRow">
+                      <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,10">
+                        <TextBlock Grid.Column="0" Text="🗄️" FontSize="16" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <StackPanel Grid.Column="1">
+                          <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="13.5" />
+                          <TextBlock Text="{Binding V2}" Classes="muted" FontSize="11.5" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="2" Text="{Binding V1}" Classes="muted" FontSize="12" VerticalAlignment="Center" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </ScrollViewer>
+          </DockPanel>
+        </Border>
+      </Grid>
+
+      </StackPanel>
       </c:SectionPage>
   </Panel>
 </UserControl>

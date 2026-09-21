@@ -1716,8 +1716,11 @@
                 BorderThickness="{DynamicResource Pump.Table.SumBorder}"
                 CornerRadius="0,0,10,10" Padding="0">
           <Panel ClipToBounds="True">
-            <!-- «جمله» روی خانهٔ اولِ ردیف می‌نشیند، درست مثلِ ‎tfoot‎ی سایت -->
-            <TextBlock Text="{TemplateBinding Title}" FontWeight="ExtraBold" FontSize="13"
+            <!-- «جمله» روی خانهٔ اولِ ردیف می‌نشیند، درست مثلِ ‎tfoot‎ی سایت.
+                 ⚠️ نامش ‎PART_Title‎ است چون ‎TotalsStrip‎ پهنایش را می‌خواند:
+                 خانه‌هایی که زیرِ هیچ ستونی نیستند نباید رویش بیفتند. -->
+            <TextBlock Name="PART_Title" Text="{TemplateBinding Title}"
+                       FontWeight="ExtraBold" FontSize="13"
                        VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0"
                        Foreground="{DynamicResource Pump.OnHeadBand}" />
             <ItemsControl ItemsSource="{TemplateBinding ItemsSource}" x:CompileBindings="False">
@@ -1728,16 +1731,22 @@
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <StackPanel Spacing="1" Margin="4,9">
-                    <TextBlock Text="{Binding Label}" FontSize="11" TextAlignment="Center"
-                               TextTrimming="CharacterEllipsis"
-                               Foreground="{DynamicResource Pump.OnHeadBandMuted}" />
-                    <!-- ‎ConverterParameter=band‎: همان کلیدِ رنگِ ویومدل، ولی نسخهٔ
-                         خواندنی‌اش روی نوارِ تیره. ویومدل دست‌نخورده می‌ماند. -->
-                    <TextBlock Text="{Binding Value}" FontWeight="ExtraBold" FontSize="14"
-                               TextAlignment="Center"
-                               Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=band}" />
-                  </StackPanel>
+                  <!-- ⚠️ خطِ عمودیِ کنارِ هر خانه — همان چیزی که یک ‎&lt;td&gt;‎ دارد و
+                       این نوار نداشت. با آن، هر جمع «کادرِ خودش» را دارد و
+                       شش عددِ گاوصندوق دیگر یک تودهٔ به‌هم‌چسبیده نیستند. -->
+                  <Border BorderBrush="{DynamicResource Pump.Table.Border}"
+                          BorderThickness="1,0,0,0" Padding="4,0">
+                    <StackPanel Spacing="1" Margin="0,9" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding Label}" FontSize="11" TextAlignment="Center"
+                                 TextTrimming="CharacterEllipsis"
+                                 Foreground="{DynamicResource Pump.OnHeadBandMuted}" />
+                      <!-- ‎ConverterParameter=band‎: همان کلیدِ رنگِ ویومدل، ولی نسخهٔ
+                           خواندنی‌اش روی نوارِ تیره. ویومدل دست‌نخورده می‌ماند. -->
+                      <TextBlock Text="{Binding Value}" FontWeight="ExtraBold" FontSize="14"
+                                 TextAlignment="Center" TextTrimming="CharacterEllipsis"
+                                 Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=band}" />
+                    </StackPanel>
+                  </Border>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>

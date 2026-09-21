@@ -184,6 +184,11 @@ public sealed class ExchangeCompanySyncService
             empty.Name = fresh.Name; empty.Poul = fresh.Poul;
             empty.PoulCurrency = fresh.PoulCurrency; empty.Note = fresh.Note;
             empty.SourceExchangeId = fresh.SourceExchangeId;
+            // ⚠️ ‎PayRate‎ در ‎IsEmpty‎ شمرده نمی‌شود (ستونش از دفتر برداشته
+            // شده و فقط برای دادهٔ کهنه مانده)، پس ردیفی که «خالی» است
+            // می‌تواند نرخِ پولِ یک ردیفِ قدیمی را هنوز داشته باشد. پاک
+            // می‌شود تا نرخِ یک ردیفِ مرده به رسیدِ تازه نچسبد.
+            empty.PayRate = null;
             return;
         }
         fresh.SortIndex = rows.Count;

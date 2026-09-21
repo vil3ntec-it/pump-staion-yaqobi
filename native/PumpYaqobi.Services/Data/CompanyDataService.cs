@@ -380,35 +380,54 @@ public sealed class CompanyDataService
         await db.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// ══ رسید/خرید ⇒ حسابِ شرکت ═════════════════════════════════════════════
+    ///
+    /// سه قاعده، همان سه‌تایی که «صرافی ← حسابِ شرکت» هم دارد — و تا امروز
+    /// این‌جا فقط سومی بود:
+    ///
+    ///   ۱. ردیفِ خودکارِ همین منبع، از هر جای <b>دیگری</b> که باشد (شرکتِ
+    ///      دیگر یا دفترِ تیلِ دیگر) برداشته می‌شود. بی این، عوض کردنِ
+    ///      <b>فروشنده</b> یا <b>نوعِ تیلِ</b> یک خرید، مبلغ را در حسابِ
+    ///      قبلی هم جا می‌گذاشت و همان پول <b>دو بار</b> شمرده می‌شد.
+    ///   ۲. اگر همین منبع از قبل ردیفی این‌جا دارد، <b>سرِ جایش</b> به‌روز
+    ///      می‌شود — ‎SortIndex‎ دست نمی‌خورد، پس ردیف در جدول نمی‌پرد.
+    ///      بی این، ویرایشِ تُن یا فیِ یک خرید هیچ‌وقت به حسابِ شرکت
+    ///      نمی‌رسید: عددِ کهنه تا ابد آن‌جا می‌ماند.
+    ///   ۳. وگرنه نخستین ردیفِ <b>خالی</b>، و اگر نبود ردیفِ تازه ته جدول.
+    /// </summary>
     public async Task PutReceiptAsync(long companyId, FuelType fuel, CompanyRow receipt,
                                       CancellationToken ct = default)
     {
         _perm.Require(Permission.EditData);
         await using var db = _dbf.Create();
-        var rows = await db.CompanyRows.Where(r => r.CompanyId == companyId && r.Fuel == fuel)
-                           .OrderBy(r => r.SortIndex).ToListAsync(ct);
-        var empty = rows.FirstOrDefault(r => r.IsEmpty);
-        if (empty is not null)
+
+        var src = receipt.SourcePurchaseId;
+        var rcp = receipt.SourceReceiptId;
+
+        // ۱) نسخه‌های جامانده در هر حسابِ دیگری
+        if (!string.IsNullOrEmpty(src) || !string.IsNullOrEmpty(rcp))
         {
-            // ⚠️ همهٔ خانه‌ها کپی می‌شوند. یک‌بار این‌جا فقط تاریخ و نام و پول
-            // نوشته می‌شد و ‎Ton‎ و ‎Usd‎ و ‎SourcePurchaseId‎ جا می‌ماندند —
-            // یعنی خریدی که در ردیفِ خالیِ حسابِ شرکت می‌نشست، تُن و فیِ تنش
-            // را از دست می‌داد و دیگر به خودِ خرید هم وصل نبود. بی‌صدا، چون
-            // ردیف ظاهراً ثبت شده بود.
-            empty.DateShamsi = receipt.DateShamsi; empty.DateKey = Shamsi.Key(receipt.DateShamsi);
-            empty.Name = receipt.Name;
-            empty.Kg = receipt.Kg;
-            empty.Ton = receipt.Ton;
-            empty.Usd = receipt.Usd;
-            empty.Rate = receipt.Rate;
-            empty.Poul = receipt.Poul;
-            empty.PoulCurrency = receipt.PoulCurrency;
-            empty.PayRate = receipt.PayRate;
-            empty.Note = receipt.Note;
-            empty.SourcePurchaseId = receipt.SourcePurchaseId;
-            empty.SourceReceiptId = receipt.SourceReceiptId;
+            var stale = await db.CompanyRows
+                .Where(r => (src != null && src != "" && r.SourcePurchaseId == src)
+                         || (rcp != null && rcp != "" && r.SourceReceiptId == rcp))
+                .Where(r => r.CompanyId != companyId || r.Fuel != fuel)
+                .ToListAsync(ct);
+            if (stale.Count > 0) db.CompanyRows.RemoveRange(stale);
         }
-        else
+
+        var rows = await db.CompanyRows.Where(r => r.CompanyId == companyId && r.Fuel == fuel)
+                           .OrderBy(r => r.SortIndex).ThenBy(r => r.Id).ToListAsync(ct);
+
+        // ۲) همین منبع، همین‌جا
+        var target = rows.FirstOrDefault(r =>
+            (!string.IsNullOrEmpty(src) && r.SourcePurchaseId == src)
+            || (!string.IsNullOrEmpty(rcp) && r.SourceReceiptId == rcp));
+
+        // ۳) نخستین ردیفِ خالی، از بالا
+        target ??= rows.FirstOrDefault(r => r.IsEmpty);
+
+        if (target is null)
         {
             receipt.CompanyId = companyId;
             receipt.Fuel = fuel;
@@ -416,6 +435,54 @@ public sealed class CompanyDataService
             receipt.DateKey = Shamsi.Key(receipt.DateShamsi);
             db.CompanyRows.Add(receipt);
         }
+        else
+        {
+            // ⚠️ همهٔ خانه‌ها کپی می‌شوند. یک‌بار این‌جا فقط تاریخ و نام و پول
+            // نوشته می‌شد و ‎Ton‎ و ‎Usd‎ و ‎SourcePurchaseId‎ جا می‌ماندند —
+            // یعنی خریدی که در ردیفِ خالیِ حسابِ شرکت می‌نشست، تُن و فیِ تنش
+            // را از دست می‌داد و دیگر به خودِ خرید هم وصل نبود. بی‌صدا، چون
+            // ردیف ظاهراً ثبت شده بود.
+            target.DateShamsi = receipt.DateShamsi; target.DateKey = Shamsi.Key(receipt.DateShamsi);
+            target.Name = receipt.Name;
+            target.Kg = receipt.Kg;
+            target.Ton = receipt.Ton;
+            target.Usd = receipt.Usd;
+            target.Rate = receipt.Rate;
+            target.Poul = receipt.Poul;
+            target.PoulCurrency = receipt.PoulCurrency;
+            target.PayRate = receipt.PayRate;
+            target.Note = receipt.Note;
+            target.SourcePurchaseId = receipt.SourcePurchaseId;
+            target.SourceReceiptId = receipt.SourceReceiptId;
+        }
         await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// ردیفِ خودکارِ یک خرید را از حسابِ هر شرکتی برمی‌دارد.
+    ///
+    /// حذفِ خرید بی این، پول را در حسابِ شرکت جا می‌گذاشت بی آن‌که خریدی
+    /// پشتش باشد — همان چیزی که ‎ExchangeCompanySyncService.UnlinkAsync‎ برای
+    /// صرافی می‌گیرد و این‌جا نبود.
+    /// </summary>
+    /// <summary>این خرید همین حالا ردیفی در حسابِ شرکتی دارد؟</summary>
+    public async Task<bool> HasPurchaseRowAsync(string? purchaseId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(purchaseId)) return false;
+        await using var db = _dbf.Create();
+        return await db.CompanyRows.AsNoTracking()
+                       .AnyAsync(r => r.SourcePurchaseId == purchaseId, ct);
+    }
+
+    public async Task<int> UnlinkPurchaseAsync(string? purchaseId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(purchaseId)) return 0;
+        _perm.Require(Permission.EditData);
+        await using var db = _dbf.Create();
+        var rows = await db.CompanyRows.Where(r => r.SourcePurchaseId == purchaseId).ToListAsync(ct);
+        if (rows.Count == 0) return 0;
+        db.CompanyRows.RemoveRange(rows);
+        await db.SaveChangesAsync(ct);
+        return rows.Count;
     }
 }

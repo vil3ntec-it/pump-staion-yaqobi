@@ -185,12 +185,30 @@ public sealed class ShiftWaraqSyncService
                       + (kind == ShiftKind.Night ? "شب" : "روز")
                       + (string.IsNullOrWhiteSpace(w.Station) ? "" : " (" + w.Station + ")");
 
+            var month = Shamsi.MonthKey(w.DateShamsi ?? "");
+
             if (row is null)
             {
-                // مثلِ نسخهٔ وب: اول در اولین خانهٔ خالیِ گاوصندوق می‌نشیند
-                row = await db.SafeEntries.FirstOrDefaultAsync(
-                    e => e.SrcKey == null && (e.Title == null || e.Title == "")
-                         && e.Amount == 0m && (e.Note == null || e.Note == ""), ct);
+                // ══ نخستین خانهٔ خالیِ گاوصندوق — با دو قیدِ تازه ══════════
+                //
+                // ⛔ <b>فقط همان ماه</b>: جدولِ گاوصندوق ماه‌به‌ماه دیده
+                // می‌شود و این ردیف ماهِ خودش را روی ردیفِ برداشته‌شده
+                // می‌نویسد. بی این قید، ردیفِ خالیِ کاربر از ماهِ **دیگری**
+                // برداشته می‌شد و همان لحظه از جدولِ آن ماه ناپدید — یک
+                // ردیف که کاربر باز کرده بود و دیگر پیدایش نمی‌کرد.
+                //
+                // ⛔ <b>و با ترتیب</b>: بی ‎OrderBy‎، SQLite هر ردیفی را
+                // می‌توانست بدهد. «اولین خانهٔ خالی» یعنی همان که کاربر
+                // بالای جدول می‌بیند — ‎DateKey‎ و بعد ‎Id‎، همان ترتیبی که
+                // خودِ جدول با آن چیده می‌شود.
+                row = await db.SafeEntries
+                    .Where(e => e.MonthKey == month
+                             && (e.SrcKey == null || e.SrcKey == "")
+                             && (e.Title == null || e.Title == "")
+                             && e.Amount == 0m
+                             && (e.Note == null || e.Note == ""))
+                    .OrderBy(e => e.DateKey).ThenBy(e => e.Id)
+                    .FirstOrDefaultAsync(ct);
                 if (row is null) { row = new SafeEntry(); db.SafeEntries.Add(row); }
                 row.SrcKey = srcKey;
                 row.Kind = SafeEntryKind.Mandagi;
@@ -198,9 +216,14 @@ public sealed class ShiftWaraqSyncService
 
             row.Title = title;
             row.Amount = sales;
+            // ⛔ ارز صریح نوشته می‌شود. فروشِ ورق همیشه افغانی است، ولی ردیفِ
+            // خالی‌ای که برداشته می‌شود ممکن است کاربر واحدش را روی دالر
+            // گذاشته باشد — و آن‌وقت فروشِ افغانیِ یک شیفت در ستونِ دالرِ
+            // گاوصندوق می‌نشست. یک عددِ کاملاً غلط، بی هیچ صدایی.
+            row.Currency = Currency.Afn;
             row.DateShamsi = w.DateShamsi ?? "";
             row.DateKey = Shamsi.Key(w.DateShamsi ?? "");
-            row.MonthKey = Shamsi.MonthKey(w.DateShamsi ?? "");
+            row.MonthKey = month;
         }
     }
 

@@ -142,15 +142,33 @@ public sealed class StorageDataService
         return added;
     }
 
+    /// <summary>
+    /// ویرایشِ یک خرید — و رساندنِ همان تغییر به حسابِ شرکت.
+    ///
+    /// ⛔ <b>تا امروز نمی‌رسید.</b> تُن، فیِ تن، نرخِ دالر، فروشنده و نوعِ تیل
+    /// را می‌شد عوض کرد و حسابِ شرکت تا ابد عددِ کهنه را نگه می‌داشت — بی هیچ
+    /// نشانه‌ای. دقیقاً همان «یک عددِ اشتباه در حساب» که نباید بماند.
+    ///
+    /// ⚠️ <b>خریدی که کاربر خودش ردیفش را از حساب برداشته، برنمی‌گردد.</b>
+    /// همان قاعدهٔ «دستی جدا شده»: فقط خریدی دوباره نوشته می‌شود که همین
+    /// حالا ردیفی در حسابِ شرکتی دارد. و فروشنده که خالی شود، ردیف برداشته
+    /// می‌شود، نه این‌که با نامِ خالی بماند.
+    /// </summary>
     public async Task UpdatePurchaseAsync(FuelPurchase p, CancellationToken ct = default)
     {
         _perm.Require(Permission.EditData);
         _calc.Apply(p);
         p.DateKey = Shamsi.Key(p.DateShamsi);
-        await using var db = _dbf.Create();
-        db.FuelPurchases.Attach(p);
-        db.Entry(p).State = EntityState.Modified;
-        await db.SaveChangesAsync(ct);
+        await using (var db = _dbf.Create())
+        {
+            db.FuelPurchases.Attach(p);
+            db.Entry(p).State = EntityState.Modified;
+            await db.SaveChangesAsync(ct);
+        }
+
+        if (!await _companies.HasPurchaseRowAsync(p.LegacyId, ct)) return;
+        if (string.IsNullOrWhiteSpace(p.Seller)) await _companies.UnlinkPurchaseAsync(p.LegacyId, ct);
+        else await LinkToCompanyAsync(p, ct);
     }
 
     public async Task DeletePurchaseAsync(long id, CancellationToken ct = default)
@@ -162,6 +180,13 @@ public sealed class StorageDataService
         await _trash.RememberAsync(db, "purchase", (p.Seller ?? "") + " — " + (p.DateShamsi ?? ""), p, ct);
         db.FuelPurchases.Remove(p);
         await db.SaveChangesAsync(ct);
+
+        // ⛔ ردیفِ حسابِ شرکت عمداً دست‌نخورده می‌ماند — همان چیزی که نسخهٔ
+        // وب هم در پرسشِ قبل از حذف صریح می‌گوید: «ردیفِ همین خرید در
+        // حساب شرکت دست‌نخورده می‌ماند — اگر آن را هم نمی‌خواهید، از داخلِ حساب
+        // شرکت جداگانه پاکش کنید». دفترِ شرکت حسابِ دادوستد است، نه آینهٔ
+        // فهرستِ مخزن؛ برداشتنِ خودکارش یعنی بدهیِ واقعیِ شرکت بی‌خبر کم شود.
+        // سنجه‌اش: PurchaseCompanyParityTests.DeletingAPurchaseLeavesTheCompanyRowAlone
     }
 
     // ── میله‌زنی ───────────────────────────────────────────────────────────

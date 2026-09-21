@@ -219,6 +219,31 @@ public class TotalsStrip : Panel
         return _hbar.Value;
     }
 
+    private TextBlock? _title;
+
+    /// <summary>
+    /// جایی که نوشتهٔ «🧮 جمله» گرفته — خانه‌های بی‌ستون از این‌جا به بعد
+    /// می‌نشینند.
+    ///
+    /// ⛔ <b>باگی که این را لازم کرد</b>: خانه‌های بی‌ستون از ‎x = 0‎ چیده
+    /// می‌شدند، یعنی <b>دقیقاً روی خودِ «جمله»</b>. در گاوصندوق هر شش عدد
+    /// بی‌ستون‌اند (یک ستونِ «مبلغ» و شش جمع)، پس همه‌شان روی هم و روی
+    /// نوشته می‌افتادند — همان «خیلی داغون» بودنِ نوار.
+    /// </summary>
+    private double TitleGutter()
+    {
+        if (_title is null || _title.GetVisualRoot() is null)
+            _title = Bar?.GetVisualDescendants().OfType<TextBlock>()
+                        .FirstOrDefault(t => t.Name == "PART_Title");
+        var w = _title?.Bounds.Width ?? 0;
+
+        // ⚠️ در نخستین پاسِ چیدمان، نوشته هنوز اندازه نگرفته و پهنایش صفر
+        // است. صفر برگرداندن یعنی همان یک فریم خانه‌ها روی «جمله» می‌افتند
+        // و چون چیزی نوار را دوباره بی‌اعتبار نمی‌کند، همان‌جا می‌مانند.
+        // پس کفِ ثابتی هست که از پهنای واقعیِ «🧮 جمله» کمتر نیست.
+        return w > 0 ? w + 20 : 76;         // ۱۰ حاشیه از هر طرف
+    }
+
     private static string Head(DataGridColumn c) => c.Header?.ToString()?.Trim() ?? "";
 
     private Dictionary<string, DataGridColumnHeader>? _heads;
@@ -291,11 +316,13 @@ public class TotalsStrip : Panel
             var scroll = HScroll(grid);
 
             var loose = new List<Control>();
+            var anyPlaced = false;
             foreach (var child in Children)
             {
                 var want = (child.DataContext as TotalCell)?.Column;
                 var i = string.IsNullOrEmpty(want) ? -1 : cols.FindIndex(c => Head(c) == want);
                 if (i < 0) { loose.Add(child); continue; }
+                anyPlaced = true;
 
                 double left, width;
                 if (!string.IsNullOrEmpty(want) && heads.TryGetValue(want, out var head)
@@ -313,20 +340,48 @@ public class TotalsStrip : Panel
                 child.Arrange(new Rect(left, 0, width, h));
                 tail = Math.Max(tail, left + width);
             }
-            foreach (var child in loose)
-            {
-                child.Arrange(new Rect(tail, 0, child.DesiredSize.Width, h));
-                tail += child.DesiredSize.Width;
-            }
+            ArrangeLoose(loose, Math.Max(tail, TitleGutter()), finalSize.Width, h, !anyPlaced);
             return finalSize;
         }
 
         // جدولی پیدا نشد — همان چیدنِ پشتِ‌سرِ‌هم، تا دستِ‌کم چیزی گم نشود
-        foreach (var child in Children)
-        {
-            child.Arrange(new Rect(tail, 0, child.DesiredSize.Width, h));
-            tail += child.DesiredSize.Width;
-        }
+        ArrangeLoose(Children.ToList(), TitleGutter(), finalSize.Width, h, true);
         return finalSize;
+    }
+
+    /// <summary>
+    /// خانه‌هایی که زیرِ هیچ ستونی نیستند.
+    ///
+    /// <para>اگر <b>هیچ</b> خانه‌ای ستون نداشته باشد (مثلِ گاوصندوق، که یک
+    /// ستونِ «مبلغ» دارد و شش جمع) نوار یک ردیفِ کاملِ خودش است: جا به
+    /// تساوی بینشان پخش می‌شود، از بعدِ «جمله» تا لبهٔ راست. این‌طور هر عدد
+    /// کادرِ خودش را دارد و نوار هم‌قدِ جدول دیده می‌شود.</para>
+    ///
+    /// <para>اگر بعضی ستون دارند و بعضی نه، بی‌ستون‌ها پشتِ آخرین
+    /// خانهٔ چیده‌شده می‌نشینند — همان رفتارِ همیشگی — ولی دیگر از لبهٔ نوار
+    /// بیرون نمی‌زنند.</para>
+    /// </summary>
+    private static void ArrangeLoose(List<Control> loose, double start, double width,
+                                     double h, bool spread)
+    {
+        if (loose.Count == 0) return;
+        var room = Math.Max(0, width - start);
+
+        if (spread && room > 0)
+        {
+            var each = room / loose.Count;
+            for (var i = 0; i < loose.Count; i++)
+                loose[i].Arrange(new Rect(start + i * each, 0, each, h));
+            return;
+        }
+
+        var x = start;
+        foreach (var child in loose)
+        {
+            // از لبه بیرون نزند: آخرین خانه هرچه مانده را می‌گیرد
+            var w = Math.Min(child.DesiredSize.Width, Math.Max(0, width - x));
+            child.Arrange(new Rect(x, 0, w, h));
+            x += w;
+        }
     }
 }

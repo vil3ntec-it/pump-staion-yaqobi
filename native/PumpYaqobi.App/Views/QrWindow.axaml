@@ -9,7 +9,7 @@
 
   <!-- همتای ‎#qrModal‎ی سایت: کیو‌آرِ همین حسابی که باز است، با نامش بالای آن
        و نشانیِ داخلش پایین. با اسکنِ همین کد، همان حساب باز می‌شود. -->
-  <StackPanel Margin="22" Spacing="14" MaxWidth="340">
+  <StackPanel Margin="22" Spacing="14" MaxWidth="380">
     <TextBlock x:Name="NameText" Classes="h2" TextWrapping="Wrap"
                HorizontalAlignment="Center" TextAlignment="Center" />
 
@@ -27,6 +27,36 @@
     <SelectableTextBlock x:Name="LinkText" Classes="muted" FontSize="11" IsVisible="False"
                          TextWrapping="Wrap" HorizontalAlignment="Center"
                          TextAlignment="Center" />
+
+    <!-- ══ ارسال به جاهای دیگر ═══════════════════════════════════════════
+         گزارشِ صاحب ریپو: «روی کیو‌آرِ هر حساب که می‌زنم، دیگر ارسال به
+         پلتفرم‌های دیگر را ندارد.»
+
+         درست دیده بود: این پنجره فقط «ذخیرهٔ عکس» داشت، پس تنها راهِ
+         رساندنِ کیو‌آر به مشتری ذخیره و بعد پیدا کردنِ فایل بود.
+
+         ⚠️ روی برنامهٔ نصبیِ ویندوز «اشتراک‌گذاریِ سیستمی» وجود ندارد، پس
+         راهِ واقعی همان دو تاست: لینک در کلیپ‌بورد، یا باز کردنِ خودِ
+         واتساپ/تلگرام با همان متنِ آماده. هیچ‌کدام سرویسِ تازه‌ای نیست —
+         فقط یک نشانی که مرورگرِ خودِ سیستم باز می‌کند. -->
+    <Border Classes="panel" Padding="10,9">
+      <StackPanel Spacing="8">
+        <TextBlock Text="📤 فرستادن به مشتری" FontWeight="Bold" FontSize="12"
+                   TextAlignment="Center" />
+        <WrapPanel HorizontalAlignment="Center">
+          <Button x:Name="CopyBtn" Classes="ghost info" Content="🔗 کپیِ لینک"
+                  Click="OnCopyLink" Margin="3" MinWidth="104"
+                  ToolTip.Tip="نشانیِ همین حساب در کلیپ‌بورد می‌نشیند" />
+          <Button x:Name="TextBtn" Classes="ghost info" Content="📝 کپیِ پیام"
+                  Click="OnCopyText" Margin="3" MinWidth="104"
+                  ToolTip.Tip="یک پیامِ آماده با نام و لینک، برای چسباندن در هر برنامه‌ای" />
+          <Button x:Name="WaBtn" Classes="ghost" Content="واتساپ"
+                  Click="OnWhatsApp" Margin="3" MinWidth="104" />
+          <Button x:Name="TgBtn" Classes="ghost" Content="تلگرام"
+                  Click="OnTelegram" Margin="3" MinWidth="104" />
+        </WrapPanel>
+      </StackPanel>
+    </Border>
 
     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
       <Button x:Name="SaveBtn" Classes="accent" Content="ذخیرهٔ عکس" Click="OnSave" MinWidth="110" />
