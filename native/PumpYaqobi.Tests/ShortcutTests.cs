@@ -169,7 +169,7 @@ public class ShortcutTests
 
         await host.Debtors.AddDebtorAsync("آزمون", "", false);
         await debtors.RefreshAsync();
-        await debtors.OpenByNumberAsync(1);          // همان ‎Alt+1‎
+        await debtors.OpenByNumberAsync(1);          // همان ‎Ctrl+Shift+1‎ (تا ۳.۱.۱۴۷: ‎Alt+1‎)
 
         // حالا حسابِ شخص باز است و میانبرها باید به آن بروند
         Assert.NotNull(debtors.ActivePage);

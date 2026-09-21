@@ -1,0 +1,34 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PumpYaqobi.App.Views.ShortcutsWindow"
+        Width="620" Height="640" MinWidth="460" MinHeight="360"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        FlowDirection="RightToLeft"
+        Background="{DynamicResource Pump.Card}"
+        Title="میانبرهای صفحه‌کلید">
+
+  <!-- ══ فهرستِ میانبرها ═══════════════════════════════════════════════════
+       صاحب ریپو: «برای اف ۱ تا ۱۲ نمی‌دانم چی‌ها بزنم لازم است یا نه.»
+
+       پس ‎F1‎ همین شد: جایی که خودِ برنامه می‌گوید چه کلیدهایی دارد. میانبری
+       که کسی از آن خبر نداشته باشد، نداشتنش با داشتنش یکی است.
+
+       ⚠️ ردیف‌ها در کد ساخته می‌شوند (‎ShortcutsWindow.axaml.cs‎)، نه این‌جا:
+       فهرست باید کنارِ خودِ ‎ShortcutService‎ بماند تا با افزودنِ میانبرِ تازه
+       یک جای دیگر از قلم نیفتد. -->
+  <DockPanel Margin="20">
+
+    <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,14">
+      <TextBlock Classes="h2" Text="⌨️ میانبرهای صفحه‌کلید" TextAlignment="Center" />
+      <TextBlock Classes="muted" FontSize="12" TextAlignment="Center" TextWrapping="Wrap"
+                 Text="هر کلیدی که نویسه می‌سازد، داخلِ کادرِ تایپ مالِ خودِ کادر است — میانبرها آن‌جا دخالت نمی‌کنند." />
+    </StackPanel>
+
+    <Button DockPanel.Dock="Bottom" Classes="accent" Content="بستن" Click="OnClose"
+            HorizontalAlignment="Center" MinWidth="120" Margin="0,14,0,0" />
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+      <StackPanel x:Name="Rows" Spacing="3" />
+    </ScrollViewer>
+  </DockPanel>
+</Window>
