@@ -746,16 +746,24 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
 /// فهرستِ ورق‌ها و صفحهٔ هر ورق. یک ورق برای هر روز — ورقِ تکراری ساخته نمی‌شود.
 /// </summary>
 /// <summary>
-/// کارتِ یک ورق در فهرست — مو‌به‌مو همان کارتی که <c>renderWaraqList</c>
-/// می‌سازد: «☀️🌙 تاریخ»، نامِ جایگاه و کارمندان، مبلغِ فروشِ هر دو شیفت،
-/// و خطِ «قرض / مصرف».
+/// کارتِ یک ورق در فهرست: تاریخ، نامِ جایگاه و کارمندان، مبلغِ فروشِ هر دو
+/// شیفت، و خطِ «قرض / مصرف».
+///
+/// ⛔ <b>نشانِ ☀️🌙 از سرِ کارت برداشته شد</b> — خواستهٔ صریحِ صاحب ریپو
+/// (۱۴۰۵/۰۷/۱۰): «اون ایکون ماه و آفتاب رو حذف کن نباشن و کادرشون کمی تو
+/// رفته.» آن دو نشان هیچ چیزی نمی‌گفتند که کارت از قبل نگوید (هر ورق هر
+/// دو شیفت را دارد) و در چیدمانِ راست‌به‌چپ سرِ خط می‌نشستند، پس تاریخ را
+/// از لبهٔ کارت تو می‌بردند و با عددِ کفِ کارت هم‌تراز نمی‌ماند.
+///
+/// ⚠️ ☀️/🌙ی خودِ <b>صفحهٔ ورق</b> (کپسولِ «روز ⇄ شب») و کارت‌های پارچه
+/// دست‌نخورده‌اند: آن‌جا نشان یک <b>انتخاب</b> است، نه تزئین.
 /// </summary>
 public sealed class WaraqCardViewModel
 {
     public WaraqCardViewModel(WaraqEntry w, WaraqService calc)
     {
         Entity = w;
-        Title = "☀️🌙 " + (string.IsNullOrWhiteSpace(w.DateShamsi) ? "—" : w.DateShamsi);
+        Title = string.IsNullOrWhiteSpace(w.DateShamsi) ? "—" : w.DateShamsi;
 
         var day = w.Shifts.FirstOrDefault(s => s.Kind == ShiftKind.Day);
         var night = w.Shifts.FirstOrDefault(s => s.Kind == ShiftKind.Night);

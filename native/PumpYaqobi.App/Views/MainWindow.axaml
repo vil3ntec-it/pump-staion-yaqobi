@@ -90,21 +90,17 @@
           <!-- ⚠️ کلیک‌شدنی: «همین حالا بررسی کن» (گزارشِ ۱۴۰۵/۰۶/۲۹ — «سرور
                روشن است اما برنامه می‌گوید خاموش»). خودِ حلقه هر پنج ثانیه
                می‌گردد؛ این برای وقتی است که کاربر نمی‌خواهد منتظر بماند. -->
+          <!-- ⛔ **و از ۱۴۰۵/۰۷/۱۰ یکی است، نه دو.** گزارشِ صاحب ریپو با
+               عکس: «چرا دو نوع سرور رو نشون میده؟ یکی باشه اصلی که واقعاً
+               نشون بده وصل است یا نه؛ الان یکی میگه وصل یکی میگه قط.»
+               دو حقیقت (سرورِ خانگی و سرورِ حساب) سرِ جایشان‌اند و هر دو
+               در ‎ToolTip‎ نوشته می‌شوند؛ فقط چراغ یکی شد. زرد یعنی «یکی
+               وصل است و یکی نه» — سبز کردنش دروغ بود و سرخ کردنش هم. -->
           <Button Padding="4" Margin="2,2,0,0" VerticalAlignment="Center" Background="Transparent"
-                  BorderThickness="0" Command="{Binding CheckServerCommand}"
-                  ToolTip.Tip="{Binding ServerDotReason}">
+                  BorderThickness="0" Command="{Binding CheckLinksCommand}"
+                  ToolTip.Tip="{Binding LinkDotReason}">
             <Border Width="12" Height="12" CornerRadius="6"
-                    Background="{Binding ServerDotBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
-          </Button>
-          <!-- ● چراغِ دوم — ابر (حساب و اشتراک). خواستهٔ صاحب ریپو
-               (۱۴۰۵/۰۷/۰۱): «ببین چرا وصل نمی‌شوند… هیچ کلکِ دروغی نباشد
-               که بگوید وصل است.» خاکستری یعنی هنوز نپرسیده‌ایم؛ سبز فقط با
-               جوابِ واقعیِ سرورِ خودمان. دلیل فقط در ‎ToolTip‎، بی نشانی. -->
-          <Button Padding="4" Margin="0,2,0,0" VerticalAlignment="Center" Background="Transparent"
-                  BorderThickness="0" Command="{Binding CheckCloudCommand}"
-                  ToolTip.Tip="{Binding CloudDotReason}">
-            <Border Width="12" Height="12" CornerRadius="6"
-                    Background="{Binding CloudDotBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                    Background="{Binding LinkDotBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
           </Button>
         </StackPanel>
 

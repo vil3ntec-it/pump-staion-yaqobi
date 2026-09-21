@@ -635,8 +635,34 @@ public class AppLinksTests
         var dot = vm.Split("public void TickServerDot()")[1].Split("[RelayCommand]")[0];
         Assert.DoesNotContain("Url", dot);
 
+        //  ⛔ **و از ۱۴۰۵/۰۷/۱۰ سربرگ یک چراغ دارد، نه دو.** خواستهٔ صریحِ
+        //  صاحب ریپو: «چرا دو نوع سرور رو نشون میده؟ یکی باشه اصلی که
+        //  واقعاً نشون بده وصل است یا نه؛ الان یکی میگه وصل یکی میگه قط.»
+        //
+        //  ⚠️ آن‌چه این بند از قبل نگه می‌داشت — «چراغ کلیک‌شدنی است و
+        //  همان لحظه می‌گردد» — پاک نشد، از درِ تازه گرفته می‌شود.
         var xaml = Read("PumpYaqobi.App", "Views", "MainWindow.axaml");
-        Assert.Contains("CheckServerCommand", xaml);
+        Assert.Contains("CheckLinksCommand", xaml);
+        Assert.Contains("LinkDotBrushKey", xaml);
+        Assert.DoesNotContain("CheckServerCommand", xaml);
+        Assert.DoesNotContain("CheckCloudCommand", xaml);
+
+        //  ⛔ و آن یک چراغ هر دو حقیقت را می‌خواند — نه این‌که یکی را
+        //  انتخاب کند و آن یکی را دور بریزد.
+        var link = vm.Split("public void TickLinkDot()")[1].Split("[RelayCommand]")[0];
+        Assert.Contains("TickServerDot();", link);
+        Assert.Contains("TickCloudDot();", link);
+        Assert.Contains("ServerDotBrushKey", link);
+        Assert.Contains("CloudDotBrushKey", link);
+        //  ⛔ «یکی وصل، یکی نه» نه سبز است نه سرخ — سبز کردنش همان کلکِ دروغ
+        Assert.Contains("Pump.Warn", link);
+        //  ⛔ و باز هم هیچ نام/نشانیِ سروری
+        Assert.DoesNotContain("Url", link);
+
+        //  و کلیک هر دو را می‌پرسد، نه یکی را
+        var both = vm.Split("private async Task CheckLinksAsync()")[1].Split("}")[0];
+        Assert.Contains("CheckServerAsync()", both);
+        Assert.Contains("CheckCloudAsync()", both);
     }
 
     // ── ۵) بخشِ وی‌آی‌پی ───────────────────────────────────────────────────

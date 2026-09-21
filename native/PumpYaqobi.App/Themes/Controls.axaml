@@ -1286,6 +1286,36 @@
   </Style>
 
   <!-- خانهٔ «خودکار» — خوانده می‌شود، تایپ نمی‌شود -->
+  <!-- ══ ‎.wfield‎ — یک قدِ واحد برای همهٔ خانه‌های فرمِ پارچه ═══════════════
+       گزارشِ صاحب ریپو با عکس (۱۴۰۵/۰۷/۱۰): «هیچ کادرش برابر نیست و نامِ
+       کارمندها از همه متفاوت‌تر است… همه را با دقت درست کن و تراز.»
+
+       ⛔ **یک عدد، یک جا.** پیش از این بلندیِ کادرِ نام (۴۸) در خودِ نما
+       نوشته شده بود و بقیه ‎MinHeight‎ی ۳۶ی پیش‌فرض را داشتند و خانه‌های
+       «خودکار» (‎Border.calc‎) از هر دو کوتاه‌تر بودند — سه قد روی یک کارت.
+       حالا هر سه از همین یک خط می‌آیند.
+
+       ⚠️ و خواستهٔ ۱۴۰۵/۰۶/۰۶ («کادرِ نام طولش بزرگ باشه نه عرضش») پس
+       گرفته نشد: ۴۴ از پیش‌فرضِ ۳۶ بلندتر است و حالا **همه** آن را دارند. -->
+  <Style Selector="TextBox.wfield">
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.calc.wfield">
+    <Setter Property="MinHeight" Value="44" />
+  </Style>
+
+  <!-- دکمهٔ کنارِ خانه («گرفتن از شب» / «فرستادن به روز») — هم‌قدِ خانه و
+       هم‌پهنای ستونِ کناری، وگرنه همان ناهمواری از سمتِ دکمه برمی‌گردد. -->
+  <Style Selector="Button.wside">
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="Padding" Value="6,0" />
+    <Setter Property="FontSize" Value="11.5" />
+  </Style>
+
   <Style Selector="Border.calc">
     <Setter Property="Background" Value="{DynamicResource Pump.Input}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
