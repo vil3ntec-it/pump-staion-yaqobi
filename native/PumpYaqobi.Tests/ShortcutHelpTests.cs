@@ -93,8 +93,9 @@ public class ShortcutHelpTests
         Assert.True(alt > 0 && cs > 0);
 
         // شاخهٔ Alt باید بافرِ «بخش» را پر کند، و Ctrl+Shift بافرِ «کارت» را
-        Assert.Contains("_sectionBuf += digit", s[alt..(alt + 260)]);
-        Assert.Contains("_openBuf += digit", s[cs..(cs + 260)]);
+        // ⚠️ بازه بریده می‌شود، وگرنه شاخه‌ای نزدیکِ تهِ فایل آزمون را می‌ترکاند
+        Assert.Contains("_sectionBuf += digit", s[alt..Math.Min(s.Length, alt + 260)]);
+        Assert.Contains("_openBuf += digit", s[cs..Math.Min(s.Length, cs + 260)]);
 
         // و رها شدنِ Alt باید بخش را باز کند
         Assert.Contains("if (sec.Length > 0) GotoSection(sec);", s);
