@@ -747,7 +747,6 @@ public sealed partial class MainViewModel : ObservableObject
         if (Sections.FirstOrDefault(x => x.Id == id) is { } s) await GoAsync(s);
     }
 
-    [RelayCommand(AllowConcurrentExecutions = true)]
     /// <summary>
     /// «همین حالا از راهِ <see cref="OpenHistoryAsync"/> می‌رویم» — یک نشانِ
     /// یک‌بارمصرف. ⚠️ لازم است چون رفتنِ <b>مستقیم</b> به «تاریخچه‌ها» (از
@@ -757,6 +756,10 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     private bool _historyFromSection;
 
+    // ⚠️ ‎[RelayCommand]‎ مالِ ‎GoAsync‎ است و باید **بی‌فاصله** بالایش بماند:
+    // یک بار چیزی بینشان افتاد و کامپایلر ‎CS0592‎ داد («این ویژگی فقط روی
+    // متد معتبر است»). هیچ فیلد یا سندی این‌جا نگذارید.
+    [RelayCommand(AllowConcurrentExecutions = true)]
     public async Task GoAsync(SectionViewModel? s)
     {
         if (s is null) return;

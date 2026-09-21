@@ -311,7 +311,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
     /// </summary>
     private CancellationTokenSource? _checkCts;
 
-    // ⛔ ⁧AllowConcurrentExecutions⁩ **مهم‌ترین خطِ این بخش است** و همان
+    // ⛔ AllowConcurrentExecutions **مهم‌ترین خطِ این بخش است** و همان
     // ریشه‌ای است که دکمه را مرده می‌کرد: ‎AsyncRelayCommand‎ی پیش‌فرض تا
     // پایانِ یک اجرا ‎CanExecute‎ را ‎false‎ می‌کند، و این اجرا **یک درخواستِ
     // اینترنتی** است — تا ۷۵ ثانیه با دو در. پس کلیکِ اول دکمه را خاکستری
