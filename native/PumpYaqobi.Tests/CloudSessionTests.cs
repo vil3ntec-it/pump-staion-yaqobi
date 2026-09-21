@@ -47,6 +47,10 @@ public class CloudSessionTests : IDisposable
     public void Dispose()
     {
         CloudLink.TestTransport = null;
+        //  ⚠️ همان قاعده: `Reach` استاتیک است و این کلاس پرش می‌کند، پس
+        //  بی این خط بندِ ۱ی `CloudReachTests` — که هم‌کالکشن است — به
+        //  ترتیبِ اجرا بند می‌شد و **گاهی** سرخ می‌داد.
+        CloudLink.ResetReach();
         AppSettings.DirOverride = _was;
         try { Directory.Delete(_dir, true); } catch { }
         GC.SuppressFinalize(this);

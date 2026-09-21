@@ -774,9 +774,13 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     [ObservableProperty] private int _archiveCount;
 
     public bool HasArchives => ArchiveCount > 0;
-    /// <summary>«🗂️ آرشیو — جدول ۳»: خواستهٔ صاحب ریپو، کوتاه و با شمارِ جدول‌ها.</summary>
+    /// <summary>
+    /// «🗂️ آرشیو ۳» — کوتاه و با شمارِ جدول‌ها.
+    /// ⚠️ «— جدول» از میانش برداشته شد (۱۴۰۵/۰۷/۰۷): نوارِ حساب یک
+    /// <c>WrapPanel</c> است و هر واژهٔ اضافه یک دکمه را به خطِ بعد می‌انداخت.
+    /// </summary>
     public string ArchiveToggleText =>
-        "🗂️ آرشیو — جدول " + Shamsi.Money(ArchiveCount);
+        "🗂️ آرشیو " + Shamsi.Money(ArchiveCount);
     partial void OnArchiveCountChanged(int v)
     {
         OnPropertyChanged(nameof(HasArchives));
@@ -802,7 +806,20 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
 
     [ObservableProperty] private bool _isInvoicesOpen;
 
-    public string InvoicesToggleText => (IsInvoicesOpen ? "▴ " : "▾ ") + InvoicesText;
+    /// <summary>
+    /// «🧾 فاکتورها ۲ 🟡۱ ▼» — کوتاه، تا کنارِ «🗂️ آرشیو» در همان خط جا شود.
+    ///
+    /// گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۷): «اون کادر کشوییِ فاکتور رو کوچیک کن و
+    /// بزار بغلِ اون کادرهای دیگه… الان اومده پایینِ اون کادرها و جا اشغال
+    /// کرده… اسمشو هم بزار فاکتورها ۱ یا هر چند تا که تو صف بودن.»
+    ///
+    /// ⛔ نوشتهٔ بلندِ قبلی («🧾 فاکتورها: ۲ · 🟡 ۱ در صف» / «· همه تایید شده»)
+    /// دکمه را از نوار بیرون می‌انداخت. حالا شمارِ در صف فقط یک نشانِ کوچک
+    /// است و وقتی صفر باشد اصلاً نوشته نمی‌شود.
+    /// ⚠️ هیچ عددی عوض نشد — همان دو عدد، فقط کوتاه‌تر نوشته می‌شوند.
+    /// </summary>
+    public string InvoicesToggleText =>
+        InvoicesText.Length == 0 ? "" : InvoicesText + (IsInvoicesOpen ? " ▲" : " ▼");
 
     partial void OnIsInvoicesOpenChanged(bool v) => OnPropertyChanged(nameof(InvoicesToggleText));
 
@@ -819,8 +836,8 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
             foreach (var v in list) Invoices.Add(new AcctInvoiceViewModel(v));
             var pend = list.Count(v => v.Status != InvoiceStatus.Approved);
             InvoicesText = list.Count == 0 ? ""
-                : "🧾 فاکتورها: " + Shamsi.Money(list.Count)
-                  + (pend > 0 ? " · 🟡 " + Shamsi.Money(pend) + " در صف" : " · همه تایید شده");
+                : "🧾 فاکتورها " + Shamsi.Money(list.Count)
+                  + (pend > 0 ? " 🟡" + Shamsi.Money(pend) : "");
         }
         catch { /* فاکتور رفاه است، نه حساب */ }
         OnPropertyChanged(nameof(HasInvoices));

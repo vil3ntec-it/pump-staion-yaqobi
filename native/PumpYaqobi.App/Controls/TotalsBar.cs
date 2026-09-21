@@ -315,6 +315,26 @@ public class TotalsStrip : Panel
             for (var i = 0; i < cols.Count; i++) { x[i] = acc; acc += cols[i].ActualWidth; }
             var scroll = HScroll(grid);
 
+            // ══ مرزهای واقعیِ ستون‌ها — برای چسباندنِ خانه‌های بی‌ستون ═══════
+            //
+            // گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۷): «خطِ جدول روی جمله‌ها وصل نیست و
+            // به‌خوبی دیده نمی‌شود که این جمله برای کدام است… با کادرهای خودِ
+            // همان کادر وصل نیست و هم‌اندازهٔ همان‌ها نمی‌شود.»
+            //
+            // خانهٔ **ستون‌دار** از اول درست بود (لبه‌هایش همان لبه‌های سرستون).
+            // خانهٔ **بی‌ستون** بود که جا به تساوی می‌گرفت، پس خطِ کنارش هیچ‌جا
+            // روی خطِ جدول نمی‌افتاد. حالا آن هم به همین مرزها چسبانده می‌شود.
+            var bounds = new List<(double L, double R)>(cols.Count);
+            for (var i = 0; i < cols.Count; i++)
+            {
+                var head0 = Head(cols[i]);
+                if (head0.Length > 0 && heads.TryGetValue(head0, out var hd)
+                    && hd.TranslatePoint(new Point(0, 0), this) is { } p0 && hd.Bounds.Width > 0)
+                    bounds.Add((p0.X, p0.X + hd.Bounds.Width));
+                else
+                    bounds.Add((x[i] - HScroll(grid), x[i] - HScroll(grid) + cols[i].ActualWidth));
+            }
+
             var loose = new List<Control>();
             var anyPlaced = false;
             foreach (var child in Children)
@@ -340,7 +360,9 @@ public class TotalsStrip : Panel
                 child.Arrange(new Rect(left, 0, width, h));
                 tail = Math.Max(tail, left + width);
             }
-            ArrangeLoose(loose, Math.Max(tail, TitleGutter()), finalSize.Width, h, !anyPlaced);
+            var from = Math.Max(tail, TitleGutter());
+            if (!Snap(loose, bounds, from, h))
+                ArrangeLoose(loose, from, finalSize.Width, h, !anyPlaced);
             return finalSize;
         }
 
@@ -361,6 +383,42 @@ public class TotalsStrip : Panel
     /// خانهٔ چیده‌شده می‌نشینند — همان رفتارِ همیشگی — ولی دیگر از لبهٔ نوار
     /// بیرون نمی‌زنند.</para>
     /// </summary>
+    /// <summary>
+    /// ══ خانهٔ بی‌ستون روی مرزِ ستون‌های واقعی می‌نشیند ═══════════════════════
+    ///
+    /// هر خانه یک یا چند ستونِ **کامل** را می‌گیرد، پس هر دو لبه‌اش دقیقاً روی
+    /// خطِ عمودیِ خودِ جدول می‌افتد — همان «وصل بودن» و «هم‌اندازه بودن».
+    ///
+    /// ⛔ <b>و اگر جا نبود، دست نمی‌زند</b> (‎false‎ برمی‌گرداند و چیدنِ
+    /// همیشگی سرِ جایش است): خانه‌های بیشتر از ستون‌های آزاد یعنی چسباندنی
+    /// در کار نیست، و نصفه‌چسباندن از نچسباندن بدتر است.
+    /// ⚠️ ستون‌هایی که پشتِ «جمله» یا پشتِ خانه‌های ستون‌دار مانده‌اند کنار
+    /// گذاشته می‌شوند؛ مرزِ کار همان <paramref name="start"/> است.
+    /// </summary>
+    private static bool Snap(List<Control> loose, List<(double L, double R)> bounds,
+                             double start, double h)
+    {
+        if (loose.Count == 0) return true;
+
+        //  مرزها به ترتیبِ همین درخت (چه راست‌به‌چپ، چه چپ‌به‌راست): هر دو
+        //  لبهٔ هر ستون، یکتا و مرتب.
+        var edges = bounds.SelectMany(b => new[] { b.L, b.R })
+                          .Where(v => v >= start - 0.5)
+                          .Select(v => Math.Round(v, 2))
+                          .Distinct().OrderBy(v => v).ToList();
+
+        var gaps = edges.Count - 1;
+        if (gaps < loose.Count) return false;      // جا نیست ⇒ دست نزن
+
+        for (var j = 0; j < loose.Count; j++)
+        {
+            var a = edges[j * gaps / loose.Count];
+            var b = edges[(j + 1) * gaps / loose.Count];
+            loose[j].Arrange(new Rect(a, 0, Math.Max(0, b - a), h));
+        }
+        return true;
+    }
+
     private static void ArrangeLoose(List<Control> loose, double start, double width,
                                      double h, bool spread)
     {

@@ -18,11 +18,15 @@
                        Foreground="{DynamicResource Pump.Accent}" />
           </Border>
           <StackPanel Margin="14" Spacing="10">
-            <TextBlock Classes="muted" TextWrapping="Wrap"
-                       Text="همین رمز، رمزِ اپِ کارمندان روی گوشی هم هست. با عوض کردنش، گوشی‌ها هم از همان لحظه رمزِ تازه می‌خواهند." />
+            <!-- ⛔ حالِ واقعی، نه یک جملهٔ ثابت: بی رمز، این کارت باید بگوید
+                 که برنامه بی رمز باز می‌شود — وگرنه کاربر گمان می‌کند رمزی
+                 هست و فقط یادش رفته. -->
+            <TextBlock Text="{Binding AppLockStateText}" FontWeight="Bold" TextWrapping="Wrap" />
+            <TextBlock Classes="muted" TextWrapping="Wrap" Text="{Binding AppLockHint}" />
 
             <UniformGrid Rows="1" Classes="stats">
-              <StackPanel Classes="cell">
+              <!-- ⚠️ کادرِ «رمزِ فعلی» فقط وقتی هست که رمزی باشد. -->
+              <StackPanel Classes="cell" IsVisible="{Binding HasAppPassword}">
                 <TextBlock Text="رمزِ فعلی" Classes="label" />
                 <TextBox Text="{Binding Current}" PasswordChar="•" />
               </StackPanel>
@@ -36,8 +40,12 @@
               </StackPanel>
             </UniformGrid>
 
-            <Button Classes="accent" Content="عوض کردنِ رمزِ برنامه"
-                    Command="{Binding ChangeAppPasswordCommand}" HorizontalAlignment="Right" />
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+              <Button Content="برداشتنِ رمز" IsVisible="{Binding HasAppPassword}"
+                      Command="{Binding RemoveAppPasswordCommand}" />
+              <Button Classes="accent" Content="{Binding AppActionText}"
+                      Command="{Binding ChangeAppPasswordCommand}" />
+            </StackPanel>
 
             <TextBlock Text="{Binding AppError}" TextWrapping="Wrap"
                        Foreground="{DynamicResource Pump.Danger}"

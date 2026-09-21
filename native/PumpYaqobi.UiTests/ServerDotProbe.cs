@@ -122,6 +122,9 @@ internal static class ServerDotProbe
 
         var tmpDb = Path.Combine(Path.GetTempPath(), "pump-serverdot-" + Guid.NewGuid().ToString("N"), "pump.db");
         AppHost.Start(tmpDb);
+        //  ⛔ نصبِ تازه از ۱۴۰۵/۰۷/۰۷ **بی‌رمز** باز می‌شود و صفحهٔ قفل ندارد.
+        //  این سنجه همان مسیرِ رمزدار را می‌سنجد، پس رمز را خودش می‌گذارد.
+        if (AppHost.Current.Auth.NeedsFirstRun()) AppHost.Current.Auth.CreateFirstAdmin("1234");
 
         //  ⚠️ **پس از** `AppHost.Start`: خودش `AppSettings.DirOverride` را به
         //  پوشهٔ همین دیتابیسِ آزمون می‌برد، پس نوشتنِ پیش از آن به فایلِ
@@ -143,7 +146,7 @@ internal static class ServerDotProbe
         var win = new MainWindow { Width = 1366, Height = 768 };
         win.Show(); Pump(win);
         var vm = (MainViewModel)win.DataContext!;
-        vm.Lock.Password = "1234"; vm.Lock.Confirm = "1234"; LockIn.Wait(vm.Lock);
+        vm.Lock.Password = "1234"; LockIn.Wait(vm.Lock);
         for (var i = 0; i < 40; i++) Pump(win);
 
         //  ⚠️ **بی اشتراک** — همان حالی که باگ در آن دیده شد

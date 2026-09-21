@@ -64,9 +64,9 @@
                           Command="{Binding $parent[ItemsRepeater].((vm:CompanySectionViewModel)DataContext).DeleteCompanyCommand}"
                           CommandParameter="{Binding}" />
 
-                  <!-- ‎.pname‎ — دقیقاً دو خط جا دارد؛ نامِ بلندتر با «…» بریده
-                       می‌شود ولی فونتش با بقیه یکی می‌ماند. -->
-                  <TextBlock Grid.Row="1" Text="{Binding Name}" Classes="pname"
+                  <!-- ‎.cname‎ — وسطِ کادر، دو خط، و نامِ کامل (نه «…»).
+                       شرحش کنارِ خودِ سبک در ‎Themes/Controls.axaml‎. -->
+                  <TextBlock Grid.Row="1" Text="{Binding Name}" Classes="cname"
                              ToolTip.Tip="{Binding Name}" />
 
                   <!-- کفِ کارت — همان زبانِ کارتِ قرض‌دار: عددِ درشت، سطرِ ریزِ

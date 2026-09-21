@@ -50,6 +50,9 @@ internal static class ScrollEnd
         YearsAudit.Seed(file);
 
         AppHost.Start(file);
+        //  ⛔ نصبِ تازه از ۱۴۰۵/۰۷/۰۷ **بی‌رمز** باز می‌شود و صفحهٔ قفل ندارد.
+        //  این سنجه همان مسیرِ رمزدار را می‌سنجد، پس رمز را خودش می‌گذارد.
+        if (AppHost.Current.Auth.NeedsFirstRun()) AppHost.Current.Auth.CreateFirstAdmin("1234");
 
         //  سنجه با نصبِ **پلن‌دار** می‌دود — وگرنه داشبورد و مفاد/ضرر و
         //  تاریخچه‌ها قفل‌اند و باز نمی‌شوند. شرحش در `FakeLicense`؛ خودِ
@@ -63,7 +66,7 @@ internal static class ScrollEnd
         var win = new MainWindow { Width = 1280, Height = 800 };
         var vm = (MainViewModel)win.DataContext!;
         win.Show(); Pump(win);
-        vm.Lock.Password = "1234"; vm.Lock.Confirm = "1234";
+        vm.Lock.Password = "1234";
         LockIn.Wait(vm.Lock);
         var end = DateTime.UtcNow + TimeSpan.FromSeconds(180);
         while (vm.Phase == MainViewModel.AppPhase.Starting && DateTime.UtcNow < end)

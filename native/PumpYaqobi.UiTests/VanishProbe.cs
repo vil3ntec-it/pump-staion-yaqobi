@@ -24,6 +24,9 @@ internal static class VanishProbe
     {
         var tmpDb = Path.Combine(Path.GetTempPath(), "pump-vanish-" + Guid.NewGuid().ToString("N"), "pump.db");
         AppHost.Start(tmpDb);
+        //  ⛔ نصبِ تازه از ۱۴۰۵/۰۷/۰۷ **بی‌رمز** باز می‌شود و صفحهٔ قفل ندارد.
+        //  این سنجه همان مسیرِ رمزدار را می‌سنجد، پس رمز را خودش می‌گذارد.
+        if (AppHost.Current.Auth.NeedsFirstRun()) AppHost.Current.Auth.CreateFirstAdmin("1234");
 
         //  سنجه با نصبِ **پلن‌دار** می‌دود — وگرنه داشبورد و مفاد/ضرر و
         //  تاریخچه‌ها قفل‌اند و باز نمی‌شوند. شرحش در `FakeLicense`؛ خودِ
@@ -38,7 +41,7 @@ internal static class VanishProbe
         var win = new MainWindow { Width = 1366, Height = 700 };
         win.Show(); Pump(win);
         var vm = (MainViewModel)win.DataContext!;
-        vm.Lock.Password = "1234"; vm.Lock.Confirm = "1234"; LockIn.Wait(vm.Lock);
+        vm.Lock.Password = "1234"; LockIn.Wait(vm.Lock);
         Wait(win, Task.CompletedTask);
         var month = Shamsi.ThisMonth();
         for (var i = 1; i <= 30; i++)

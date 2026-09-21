@@ -89,6 +89,9 @@ internal static class SyncProbe
 
         var tmpDb = Path.Combine(Path.GetTempPath(), "pump-syncui-" + Guid.NewGuid().ToString("N"), "pump.db");
         AppHost.Start(tmpDb);
+        //  ⛔ نصبِ تازه از ۱۴۰۵/۰۷/۰۷ **بی‌رمز** باز می‌شود و صفحهٔ قفل ندارد.
+        //  این سنجه همان مسیرِ رمزدار را می‌سنجد، پس رمز را خودش می‌گذارد.
+        if (AppHost.Current.Auth.NeedsFirstRun()) AppHost.Current.Auth.CreateFirstAdmin("1234");
 
         //  ⚠️ هر سنجهٔ رابطی که پنجره می‌سازد با نصبِ پلن‌دار می‌دود — وگرنه
         //  بخش‌های پلن‌دار باز نمی‌شوند و سنجه جای اشتباه را نشان می‌دهد.
@@ -104,7 +107,7 @@ internal static class SyncProbe
         var win = new MainWindow { Width = 1366, Height = 768 };
         win.Show(); Pump(win);
         var vm = (MainViewModel)win.DataContext!;
-        vm.Lock.Password = "1234"; vm.Lock.Confirm = "1234"; LockIn.Wait(vm.Lock);
+        vm.Lock.Password = "1234"; LockIn.Wait(vm.Lock);
         for (var i = 0; i < 40; i++) Pump(win);
 
         var account = vm.Sections.OfType<AccountSectionViewModel>().FirstOrDefault();

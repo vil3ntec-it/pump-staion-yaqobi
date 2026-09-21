@@ -180,6 +180,9 @@ internal static class Program
         // دیتابیسِ موقت — عکس‌گیری هرگز به دادهٔ واقعیِ کاربر دست نمی‌زند
         var tmpDb = Path.Combine(Path.GetTempPath(), "pump-shots-" + Guid.NewGuid().ToString("N"), "pump.db");
         PumpYaqobi.App.Services.AppHost.Start(tmpDb);
+        //  ⛔ نصبِ تازه از ۱۴۰۵/۰۷/۰۷ **بی‌رمز** باز می‌شود و صفحهٔ قفل ندارد.
+        //  این سنجه همان مسیرِ رمزدار را می‌سنجد، پس رمز را خودش می‌گذارد.
+        if (PumpYaqobi.App.Services.AppHost.Current.Auth.NeedsFirstRun()) PumpYaqobi.App.Services.AppHost.Current.Auth.CreateFirstAdmin("1234");
 
         //  سنجه با نصبِ **پلن‌دار** می‌دود — وگرنه داشبورد و مفاد/ضرر و
         //  تاریخچه‌ها قفل‌اند و باز نمی‌شوند. شرحش در `FakeLicense`؛ خودِ
@@ -202,7 +205,6 @@ internal static class Program
         // ۲) ورود با رمزِ نخستین اجرا، سپس هر تم یک عکس
         var vm = (MainViewModel)win.DataContext!;
         vm.Lock.Password = "1234";
-        vm.Lock.Confirm = "1234";
         LockIn.Wait(vm.Lock);
         Wait(win, Task.CompletedTask);
         Pump(win);
@@ -582,6 +584,9 @@ internal static class Program
     {
         var tmpDb = Path.Combine(Path.GetTempPath(), "pump-scroll-" + Guid.NewGuid().ToString("N"), "pump.db");
         PumpYaqobi.App.Services.AppHost.Start(tmpDb);
+        //  ⛔ نصبِ تازه از ۱۴۰۵/۰۷/۰۷ **بی‌رمز** باز می‌شود و صفحهٔ قفل ندارد.
+        //  این سنجه همان مسیرِ رمزدار را می‌سنجد، پس رمز را خودش می‌گذارد.
+        if (PumpYaqobi.App.Services.AppHost.Current.Auth.NeedsFirstRun()) PumpYaqobi.App.Services.AppHost.Current.Auth.CreateFirstAdmin("1234");
 
         //  سنجه با نصبِ **پلن‌دار** می‌دود — وگرنه داشبورد و مفاد/ضرر و
         //  تاریخچه‌ها قفل‌اند و باز نمی‌شوند. شرحش در `FakeLicense`؛ خودِ
@@ -600,7 +605,6 @@ internal static class Program
 
         var vm = (MainViewModel)win.DataContext!;
         vm.Lock.Password = "1234";
-        vm.Lock.Confirm = "1234";
         LockIn.Wait(vm.Lock);
         Wait(win, Task.CompletedTask);
         Pump(win);

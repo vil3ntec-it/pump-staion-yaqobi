@@ -29,6 +29,9 @@ internal static class CellShot
         var tmpDb = Path.Combine(Path.GetTempPath(),
                                  "pump-cellshot-" + Guid.NewGuid().ToString("N"), "pump.db");
         PumpYaqobi.App.Services.AppHost.Start(tmpDb);
+        //  ⛔ نصبِ تازه از ۱۴۰۵/۰۷/۰۷ **بی‌رمز** باز می‌شود و صفحهٔ قفل ندارد.
+        //  این سنجه همان مسیرِ رمزدار را می‌سنجد، پس رمز را خودش می‌گذارد.
+        if (PumpYaqobi.App.Services.AppHost.Current.Auth.NeedsFirstRun()) PumpYaqobi.App.Services.AppHost.Current.Auth.CreateFirstAdmin("1234");
 
         //  سنجه با نصبِ **پلن‌دار** می‌دود — وگرنه داشبورد و مفاد/ضرر و
         //  تاریخچه‌ها قفل‌اند و باز نمی‌شوند. شرحش در `FakeLicense`؛ خودِ
@@ -47,7 +50,6 @@ internal static class CellShot
 
         var vm = (MainViewModel)win.DataContext!;
         vm.Lock.Password = "1234";
-        vm.Lock.Confirm = "1234";
         LockIn.Wait(vm.Lock);
         Pump(win);
         Seed.Fill(PumpYaqobi.App.Services.AppHost.Current);

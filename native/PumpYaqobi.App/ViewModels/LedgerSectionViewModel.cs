@@ -25,7 +25,7 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
         : base(id, iconKey, title)
     {
         Service = svc;
-        _month = Shamsi.ThisMonth();
+        _month = _autoMonth = Shamsi.ThisMonth();
         // کشوی ماه فقط چیزی را که بخش با آن رندر می‌کند عوض می‌کند؛ خودِ منطق
         // دست‌نخورده می‌ماند — همان چیزی که سایت هم صریح نوشته.
         // ⚠️ «همهٔ ماه‌ها» هم یک گزینه است، مثلِ سایت — پس کلیدِ خالی/«1405/*»
@@ -54,6 +54,37 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
     [ObservableProperty] private string _search = "";
 
     partial void OnMonthChanged(string value) => _ = ReloadRowsAsync();
+
+    // ══ نیمه‌شبِ آخرِ ماه: خودِ بخش به ماهِ تازه می‌رود ═══════════════════════
+    //
+    // پرسشِ صاحب ریپو (۱۴۰۵/۰۷/۰۷): «اتومات ماه که عوض بشه، ماه هم جدید
+    // می‌شود با حساب‌های ماهِ جدید می‌آید یا نه؟»
+    //
+    // ⛔ تا امروز **نه**: ‎_month‎ یک بار در سازنده از ‎Shamsi.ThisMonth()‎
+    // پر می‌شد (یعنی لحظهٔ باز شدنِ برنامه) و ‎DayChanged‎ فقط تاریخِ سربرگ و
+    // نوار را از نو می‌ساخت. پس برنامه‌ای که شبِ آخرِ ماه باز مانده بود، فردا
+    // هنوز جدولِ ماهِ گذشته را نشان می‌داد — و ردیفِ تازه (که تاریخش امروز
+    // است) در آن نما نمی‌گنجید.
+    //
+    // ⚠️ **و ماهِ انتخابیِ خودِ کاربر دست نمی‌خورد.** ‎_autoMonth‎ همان ماهی
+    // است که *برنامه* خودش گذاشته؛ اگر کاربر ماهِ دیگری (یا «همهٔ ماه‌ها») را
+    // برگزیده باشد، ‎Month != _autoMonth‎ است و این‌جا هیچ کاری نمی‌شود. یک
+    // جدولِ سه‌سال‌پیش که وسطِ کار زیرِ دستِ کاربر بپرد، باگ است نه راحتی.
+
+    /// <summary>ماهی که خودِ برنامه گذاشته — نه چیزی که کاربر برگزیده.</summary>
+    private string _autoMonth;
+
+    public override void OnDayChanged()
+    {
+        var now = Shamsi.ThisMonth();
+        var roll = MonthRoll.Decide(Month, _autoMonth, now);
+        _autoMonth = now;
+        if (!roll) return;
+
+        if (!Months.Contains(now)) Months.Insert(0, now);
+        Picker.Adopt(now);
+        Month = now;                                // خودش ‎ReloadRowsAsync‎ را می‌زند
+    }
     partial void OnSearchChanged(string value) => ApplyFilter();
 
     /// <summary>ردیفِ دیتابیس ← ردیفِ جدول.</summary>
@@ -266,4 +297,24 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
         row.Recalculated += RecalcAll;
         return row;
     }
+}
+
+/// <summary>
+/// ══ «ماه عوض شد — بروم ماهِ تازه؟» ════════════════════════════════════════
+///
+/// یک تصمیمِ <b>خالص</b>، جدا از ویومدل، تا آزمون بتواند هر چهار حالت را بی
+/// ساعتِ ساختگی بسنجد — همان الگوی <c>guard.decide()</c>ِ ریپوی سرور.
+/// </summary>
+public static class MonthRoll
+{
+    /// <param name="shown">ماهی که همین حالا جلوی چشم است.</param>
+    /// <param name="auto">آخرین ماهی که خودِ <b>برنامه</b> گذاشته.</param>
+    /// <param name="now">ماهِ امروز.</param>
+    /// <returns>
+    /// ‎true‎ فقط وقتی ماه واقعاً عوض شده <b>و</b> کاربر همان ماهِ خودکار را
+    /// می‌دیده. ⛔ ماهِ انتخابیِ کاربر («۱۴۰۴/۰۳» یا «همهٔ ماه‌ها») هیچ‌وقت
+    /// زیرِ دستش عوض نمی‌شود.
+    /// </returns>
+    public static bool Decide(string shown, string auto, string now) =>
+        now != auto && shown == auto;
 }

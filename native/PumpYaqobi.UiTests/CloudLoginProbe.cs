@@ -350,13 +350,16 @@ internal static class CloudLoginProbe
 
         var tmpDb = Path.Combine(Path.GetTempPath(), "pump-cloudlogin-" + Guid.NewGuid().ToString("N"), "pump.db");
         AppHost.Start(tmpDb);
+        //  ⛔ نصبِ تازه از ۱۴۰۵/۰۷/۰۷ **بی‌رمز** باز می‌شود و صفحهٔ قفل ندارد.
+        //  این سنجه همان مسیرِ رمزدار را می‌سنجد، پس رمز را خودش می‌گذارد.
+        if (AppHost.Current.Auth.NeedsFirstRun()) AppHost.Current.Auth.CreateFirstAdmin("1234");
         AppBuilder.Configure<PumpYaqobi.App.App>().UseSkia()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
             .SetupWithoutStarting();
         var win = new MainWindow { Width = 1366, Height = 768 };
         win.Show(); Pump(win);
         var vm = (MainViewModel)win.DataContext!;
-        vm.Lock.Password = "1234"; vm.Lock.Confirm = "1234"; LockIn.Wait(vm.Lock);
+        vm.Lock.Password = "1234"; LockIn.Wait(vm.Lock);
         Wait(win, Task.CompletedTask);
         var host = AppHost.Current;
 

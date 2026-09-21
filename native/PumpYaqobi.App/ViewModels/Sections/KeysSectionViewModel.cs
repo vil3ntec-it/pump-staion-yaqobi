@@ -116,26 +116,100 @@ public sealed partial class KeysSectionViewModel : SectionViewModel
     /// <summary>کدِ اپِ کارمندان — همان کدی که در «پروفایل» هم هست، فقط برای دیدن.</summary>
     public string AccessCode => AppSettings.Load().CloudAccessCode is { Length: > 0 } c ? c : "—";
 
+    // ══ «برنامه بی رمز باز می‌شود، مگر خودِ کاربر رمزی بگذارد» ═══════════════
+    //
+    // خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۰۷): «برنامه بدون رمز باشه، چون کسایی
+    // که تازه به برنامه می‌رسن نباید رمز داشته باشه و خود طرف برای خودش رمز
+    // خودشو می‌زنه.»
+    //
+    // ⛔ پس این صفحه تنها جایی است که رمزِ برنامه **ساخته** می‌شود. صفحهٔ قفل
+    // دیگر رمز نمی‌سازد (‎LockViewModel‎)، و تا این‌جا رمزی گذاشته نشود هیچ
+    // صفحهٔ قفلی دیده نمی‌شود.
+
+    /// <summary>رمزی گذاشته شده؟ کلِ شکلِ این کارت از همین می‌آید.</summary>
+    public bool HasAppPassword => _host.Auth.HasPassword();
+
+    public string AppLockStateText => HasAppPassword
+        ? "🔒 برنامه با رمز باز می‌شود"
+        : "🔓 برنامه بی رمز باز می‌شود — هر کسی که پای این کامپیوتر بنشیند دفتر را می‌بیند";
+
+    public string AppActionText => HasAppPassword ? "عوض کردنِ رمزِ برنامه" : "گذاشتنِ رمز";
+
+    /// <summary>
+    /// ⚠️ بی رمز، اپِ کارمندان هم باز نمی‌شود: آن‌چه منتشر می‌شود هشِ **خالی**
+    /// است و گوشی خودش می‌گوید صاحبِ پمپ هنوز رمزی نگذاشته. کیو‌آر و کدِ پمپ
+    /// روی کاغذ می‌گردند؛ دفترِ پمپ نباید بی رمز از شبکه خوانده شود.
+    /// </summary>
+    public string AppLockHint => HasAppPassword
+        ? "همین رمز، رمزِ اپِ کارمندان روی گوشی هم هست. با عوض کردنش، گوشی‌ها هم از همان لحظه رمزِ تازه می‌خواهند."
+        : "تا رمزی نگذارید، اپِ کارمندان روی گوشی هم باز نمی‌شود. رمزی که این‌جا بگذارید همان رمزِ اپِ گوشی است.";
+
     [RelayCommand]
     private void ChangeAppPassword()
     {
         AppError = ""; AppDone = "";
-        if (Current.Length == 0) { AppError = "رمزِ فعلی را بنویسید."; return; }
-        if (Next.Trim().Length < 4) { AppError = "رمزِ تازه دستِ‌کم چهار نویسه باشد."; return; }
-        if (Next.Trim() != Confirm.Trim()) { AppError = "دو رمزِ تازه یکی نیستند."; return; }
+        var had = HasAppPassword;
 
-        try { _host.Auth.ChangePassword("admin", Current, Next.Trim()); }
+        //  ⚠️ بی رمزِ فعلی، «رمزِ فعلی را بنویسید» فقط کاربر را گیج می‌کرد —
+        //  رمزی نیست که بنویسد.
+        if (had && Current.Length == 0) { AppError = "رمزِ فعلی را بنویسید."; return; }
+        if (Next.Trim().Length < 4) { AppError = "رمز دستِ‌کم چهار نویسه باشد."; return; }
+        if (Next.Trim() != Confirm.Trim()) { AppError = "دو رمز یکی نیستند."; return; }
+
+        try
+        {
+            if (had) _host.Auth.ChangePassword("admin", Current, Next.Trim());
+            else _host.Auth.SetFirstPassword(Next.Trim());
+        }
         catch (UnauthorizedAccessException) { AppError = "رمزِ فعلی درست نیست."; return; }
         catch (Exception ex) { AppError = ex.Message; return; }
 
         Current = ""; Next = ""; Confirm = "";
-        AppDone = "✅ رمزِ برنامه عوض شد — رمزِ اپِ کارمندان هم همین شد.";
+        AppDone = had
+            ? "✅ رمزِ برنامه عوض شد — رمزِ اپِ کارمندان هم همین شد."
+            : "✅ رمز گذاشته شد — از این پس برنامه با همین رمز باز می‌شود، و اپِ کارمندان هم.";
+        RefreshAppLock();
         _host.Toast(AppDone, ToastKind.Ok);
+    }
+
+    /// <summary>
+    /// رمز را برمی‌دارد و برنامه دوباره بی‌رمز باز می‌شود — با رمزِ فعلی.
+    /// ⛔ پیامدش گفته می‌شود، نه «مطمئنید؟»: قاعدهٔ همیشگیِ پنجره‌های تأیید.
+    /// </summary>
+    [RelayCommand]
+    private async Task RemoveAppPasswordAsync()
+    {
+        AppError = ""; AppDone = "";
+        if (!HasAppPassword) return;
+        if (Current.Length == 0) { AppError = "برای برداشتنِ رمز، رمزِ فعلی را بنویسید."; return; }
+
+        if (!await Dialogs.ConfirmAsync("برداشتنِ رمزِ برنامه",
+                "رمز برداشته شود؟ از آن پس برنامه بی هیچ رمزی باز می‌شود و اپِ کارمندان روی گوشی هم دیگر باز نمی‌شود. "
+                + "هیچ داده‌ای پاک نمی‌شود."))
+            return;
+
+        try { _host.Auth.ClearPassword(Current); }
+        catch (UnauthorizedAccessException) { AppError = "رمزِ فعلی درست نیست."; return; }
+        catch (Exception ex) { AppError = ex.Message; return; }
+
+        Current = ""; Next = ""; Confirm = "";
+        AppDone = "🔓 رمز برداشته شد — برنامه بی رمز باز می‌شود.";
+        RefreshAppLock();
+        _host.Toast(AppDone, ToastKind.Warn);
+    }
+
+    private void RefreshAppLock()
+    {
+        OnPropertyChanged(nameof(HasAppPassword));
+        OnPropertyChanged(nameof(AppLockStateText));
+        OnPropertyChanged(nameof(AppActionText));
+        OnPropertyChanged(nameof(AppLockHint));
     }
 
     public override Task OnActivatedAsync()
     {
         foreach (var l in Locks) l.Refresh();
+        RefreshAppLock();
         OnPropertyChanged(nameof(AccessCode));
         return Task.CompletedTask;
     }

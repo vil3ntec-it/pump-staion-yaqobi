@@ -1446,6 +1446,29 @@
     <Setter Property="Margin" Value="11,8,11,0" />
   </Style>
 
+  <!-- ══ نامِ شرکت روی کارتِ خودش — وسطِ کادر و کامل ═══════════════════════
+       گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۷): «اسمِ شرکت‌ها روی هدرها به‌خوبی دیده
+       نمی‌شود و وسطِ کادر نیست؛ اسمِ دقیق دیده بشه و وسط باشه.»
+
+       ⛔ دو چیز عوض شد و هر دو لازم بود:
+         ۱) ‎TextAlignment=Center‎ — ‎.pname‎ی مشترک ‎Start‎ است و برای کارتِ
+            قرض‌دار همان درست است (کنارِ ✕ و عددِ کفِ کارت)، ولی کارتِ شرکت
+            نامش تنها چیزِ بالای کارت است.
+         ۲) ‎Wrap‎ به‌جای «…» — نامِ دو‌کلمه‌ای («شرکتِ نفتِ بلخ») با
+            ‎NoWrap‎ بریده می‌شد، یعنی «اسمِ دقیق» دیده نمی‌شد. ردیفِ کارت
+            ‎Auto‎ است، پس دو خط جا دارد.
+       ⚠️ ‎.pname‎ دست‌نخورده ماند: کارتِ قرض‌دار همان است که بود. -->
+  <Style Selector="TextBlock.cname">
+    <Setter Property="FontSize" Value="20" />
+    <Setter Property="FontWeight" Value="Black" />
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="MaxLines" Value="2" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    <Setter Property="Margin" Value="8,6,8,0" />
+  </Style>
+
   <!-- ‎.cmp-fig‎ — کادرِ «دالر» و «الباقی» کارتِ شرکت: بی‌خط، وسط‌چین، هم‌قد -->
   <!-- عددِ اصلیِ کارت — درشت و سرِ خط، مثلِ کارتِ قرض‌دار.
        عددِ ۱۴ پیکسلیِ وسط‌چینِ قبلی از نامِ بالایش هم کوچک‌تر بود و کارت

@@ -164,12 +164,12 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     public async Task WarmUpAsync(Action layout)
     {
-        if (Warm.Done) { Phase = AppPhase.Locked; return; }
+        if (Warm.Done) { await LockOrOpenAsync(); return; }
 
         var all = AllPages;
         if (Avalonia.Application.Current?.DataTemplates.OfType<ViewLocator>().FirstOrDefault()
             is not { } locator || all.Count == 0)
-        { Phase = AppPhase.Locked; return; }
+        { await LockOrOpenAsync(); return; }
 
         // ══ پرده فقط بخشِ آغازین را گرم می‌کند ═════════════════════════════
         // گزارشِ صاحب ریپو: «برنامه خیلی کند باز می‌شود؛ برنامه‌های دیگر زود
@@ -188,13 +188,40 @@ public sealed partial class MainViewModel : ObservableObject
         {
             // ⚠️ چه گرم شده باشد چه نه، پرده باید برود و نوبتِ رمز برسد.
             // وگرنه یک خطای گرم کردن، برنامه را روی صفحهٔ لودینگ قفل می‌کرد.
-            Phase = AppPhase.Locked;
+            await LockOrOpenAsync();
         }
 
         // ══ بقیه پشتِ صفحهٔ قفل ═══════════════════════════════════════════
         // پوسته زیرِ قفل هم «دیده‌شونده» است (‎IsShellVisible‎) ولی صفحهٔ رمز
         // مات و رویش است. با اولین ‎Ready‎ می‌ایستد.
         _ = WarmRestAsync(locator, layout);
+    }
+
+    /// <summary>
+    /// ══ نصبِ بی‌رمز هیچ صفحهٔ قفلی نمی‌بیند ════════════════════════════════
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۰۷): «برنامه بدون رمز باشه، چون کسایی
+    /// که تازه به برنامه می‌رسن نباید رمز داشته باشه و خود طرف برای خودش رمز
+    /// خودشو می‌زنه.»
+    ///
+    /// ⛔ <b>این تنها جای تصمیم است.</b> هر سه راهِ خروجِ
+    /// <see cref="WarmUpAsync"/> از همین رد می‌شوند، وگرنه یکی‌شان جا
+    /// می‌ماند و برنامه گاهی صفحهٔ قفلِ بی‌رمز نشان می‌داد.
+    ///
+    /// ⚠️ تصمیم از <see cref="Services.Security.AuthService.HasPassword"/>
+    /// می‌آید، نه از رشتهٔ خالی: هشِ خالی «رمزی نیست» است و
+    /// <c>PasswordHasher.Verify</c> هیچ‌وقت رویش درست نمی‌گوید.
+    /// ⚠️ و پرده تا نشستنِ <c>Phase</c> نمی‌رود: <c>SignedIn</c> خودش
+    /// <c>Ready</c> می‌گذارد، پس صفحهٔ قفل حتی یک فریم هم دیده نمی‌شود.
+    /// </summary>
+    private async Task LockOrOpenAsync()
+    {
+        try
+        {
+            if (await Lock.OpenIfNoPasswordAsync()) return;
+        }
+        catch { /* نشد ⇒ همان صفحهٔ قفل، نه پردهٔ جاویدان */ }
+        Phase = AppPhase.Locked;
     }
 
     private async Task WarmRestAsync(ViewLocator locator, Action layout)
@@ -652,11 +679,21 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>تاریخِ شمسیِ امروز — خطِ اولِ بلوکِ تاریخِ سربرگ.</summary>
     public string TodayText => Shamsi.DayName(DateTime.Now) + "، " + Shamsi.Today();
 
-    /// <summary>روز عوض شد (نیمه‌شب): تاریخِ سربرگ و عددهای نوار از نو.</summary>
+    /// <summary>
+    /// روز عوض شد (نیمه‌شب): تاریخِ سربرگ و عددهای نوار از نو — و بخش‌های
+    /// دفتری هم خبر می‌شوند، چون شاید **ماه** هم عوض شده باشد.
+    ///
+    /// ⛔ تا امروز فقط سربرگ و نوار از نو ساخته می‌شدند، پس برنامه‌ای که شبِ
+    /// آخرِ ماه باز مانده بود فردا هنوز جدولِ ماهِ گذشته را نشان می‌داد
+    /// (شرحِ کامل بالای <c>LedgerSectionViewModel.OnDayChanged</c>).
+    /// ⚠️ بخشی که ماه ندارد پیش‌فرضِ خالی می‌گیرد، پس این حلقه برای نوزده
+    /// بخش از بیست‌ودو بخش **هیچ** کاری نمی‌کند.
+    /// </summary>
     public void DayChanged()
     {
         OnPropertyChanged(nameof(TodayText));
         QueueBannerRefresh();
+        foreach (var p in AllPages) p.OnDayChanged();
     }
 
     public LockViewModel Lock { get; }
@@ -678,10 +715,22 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>پیام‌های کوتاهِ پایینِ صفحه.</summary>
     public Services.ToastService Toasts => AppHost.Current.Toasts;
 
-    /// <summary>خروج و برگشت به صفحهٔ قفل — بی آن‌که برنامه بسته شود.</summary>
+    /// <summary>
+    /// خروج و برگشت به صفحهٔ قفل — بی آن‌که برنامه بسته شود.
+    ///
+    /// ⛔ <b>بی رمز، خروج یک بن‌بست است و انجام نمی‌شود.</b> صفحهٔ قفلی که
+    /// رمزی برای زدن ندارد فقط کاربر را از دفترِ خودش بیرون می‌گذاشت و تنها
+    /// راهِ برگشت بستن و باز کردنِ برنامه بود. پس می‌گوییم چرا، نه این‌که
+    /// بی‌صدا رد شویم — دکمه‌ای که زده شود و هیچ اتفاقی نیفتد باگ است.
+    /// </summary>
     [RelayCommand]
     private void SignOut()
     {
+        if (!AppHost.Current.Auth.HasPassword())
+        {
+            AppHost.Current.Toasts.Show("رمزی گذاشته نشده — برای خروج، اول در «تنظیمات ← رمزها و کد» رمز بگذارید.");
+            return;
+        }
         AppHost.Current.Auth.SignOut();
         // ⚠️ به ‎Locked‎ برمی‌گردیم، نه به ‎Starting‎: لودینگ یک بار در عمرِ
         // اجرای برنامه است و خروج نباید دوباره راهش بیندازد.

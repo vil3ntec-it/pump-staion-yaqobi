@@ -33,6 +33,9 @@ internal static class InvoiceShot
         var dir = Path.Combine(Path.GetTempPath(), "pump-startshot-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         AppHost.Start(Path.Combine(dir, "pump.db"));
+        //  ⛔ نصبِ تازه از ۱۴۰۵/۰۷/۰۷ **بی‌رمز** باز می‌شود و صفحهٔ قفل ندارد.
+        //  این سنجه همان مسیرِ رمزدار را می‌سنجد، پس رمز را خودش می‌گذارد.
+        if (AppHost.Current.Auth.NeedsFirstRun()) AppHost.Current.Auth.CreateFirstAdmin("1234");
 
         //  سنجه با نصبِ **پلن‌دار** می‌دود — وگرنه داشبورد و مفاد/ضرر و
         //  تاریخچه‌ها قفل‌اند و باز نمی‌شوند. شرحش در `FakeLicense`؛ خودِ
@@ -61,7 +64,6 @@ internal static class InvoiceShot
         Shot(win, Path.Combine(outDir, "start-2-lock.png"));
 
         vm.Lock.Password = "1234";
-        vm.Lock.Confirm = "1234";
         LockIn.Wait(vm.Lock);
         for (var i = 0; i < 60; i++) { Dispatcher.UIThread.RunJobs(); win.UpdateLayout(); }
         Settle(win);
@@ -78,6 +80,9 @@ internal static class InvoiceShot
         var dir = Path.Combine(Path.GetTempPath(), "pump-invshot-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         AppHost.Start(Path.Combine(dir, "pump.db"));
+        //  ⛔ نصبِ تازه از ۱۴۰۵/۰۷/۰۷ **بی‌رمز** باز می‌شود و صفحهٔ قفل ندارد.
+        //  این سنجه همان مسیرِ رمزدار را می‌سنجد، پس رمز را خودش می‌گذارد.
+        if (AppHost.Current.Auth.NeedsFirstRun()) AppHost.Current.Auth.CreateFirstAdmin("1234");
 
         //  سنجه با نصبِ **پلن‌دار** می‌دود — وگرنه داشبورد و مفاد/ضرر و
         //  تاریخچه‌ها قفل‌اند و باز نمی‌شوند. شرحش در `FakeLicense`؛ خودِ
@@ -96,7 +101,6 @@ internal static class InvoiceShot
 
         var vm = (MainViewModel)win.DataContext!;
         vm.Lock.Password = "1234";
-        vm.Lock.Confirm = "1234";
         LockIn.Wait(vm.Lock);
         Pump(win);
         Seed.Fill(AppHost.Current);

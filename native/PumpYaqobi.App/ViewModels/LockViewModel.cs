@@ -6,29 +6,51 @@ using PumpYaqobi.Services.Security;
 namespace PumpYaqobi.App.ViewModels;
 
 /// <summary>
-/// صفحهٔ قفل. دو حالت دارد: نخستین اجرا (ساختنِ رمزِ مدیر) و ورودِ عادی.
+/// ══ صفحهٔ قفل — فقط وقتی رمزی گذاشته شده باشد ═════════════════════════════
+///
+/// خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۰۷): «برنامه بدون رمز باشه، چون کسایی که
+/// تازه به برنامه می‌رسن نباید رمز داشته باشه و خود طرف برای خودش رمز خودشو
+/// می‌زنه.»
+///
+/// ⛔ پس «نخستین اجرا ⇒ رمز بساز» برداشته شد. نصبِ تازه هیچ صفحهٔ قفلی
+/// نمی‌بیند (<see cref="AuthService.OpenWithoutPassword"/>) و این صفحه فقط
+/// وقتی می‌آید که خودِ کاربر در «تنظیمات ← رمزها و کد» رمزی گذاشته باشد.
+///
 /// رمز هرگز در حافظهٔ برنامه نمی‌ماند و هرگز جایی نوشته نمی‌شود.
 /// </summary>
 public sealed partial class LockViewModel : ObservableObject
 {
     private readonly AppHost _host;
 
-    public LockViewModel(AppHost host)
-    {
-        _host = host;
-        IsFirstRun = host.Auth.NeedsFirstRun();
-    }
+    public LockViewModel(AppHost host) => _host = host;
 
     public event Action? SignedIn;
 
-    [ObservableProperty] private bool _isFirstRun;
     [ObservableProperty] private string _password = "";
-    [ObservableProperty] private string _confirm = "";
     [ObservableProperty] private string _error = "";
     [ObservableProperty] private bool _busy;
 
-    public string Title => IsFirstRun ? "نخستین اجرا — رمزِ مدیر را بگذارید" : "پمپ یعقوبی";
-    public string ActionText => IsFirstRun ? "ساختنِ رمز و ورود" : "ورود";
+    public string Title => "پمپ یعقوبی";
+    public string ActionText => "ورود";
+
+    /// <summary>
+    /// رمزی گذاشته شده؟ پوسته با همین تصمیم می‌گیرد که صفحهٔ قفل را نشان
+    /// بدهد یا همان لحظه وارد شود.
+    /// </summary>
+    public bool HasPassword() => _host.Auth.HasPassword();
+
+    /// <summary>
+    /// نصبِ بی‌رمز: وارد می‌شود و <see cref="SignedIn"/> را شلیک می‌کند.
+    /// ⚠️ روی نخِ دیگر می‌رود چون یک نوشتنِ دیتابیس دارد، و ادامه‌اش به
+    /// همان نخِ رابط برمی‌گردد — همان قاعدهٔ <see cref="SubmitAsync"/>.
+    /// </summary>
+    public async Task<bool> OpenIfNoPasswordAsync()
+    {
+        if (_host.Auth.HasPassword()) return false;
+        var ok = await Task.Run(() => _host.Auth.OpenWithoutPassword());
+        if (ok) SignedIn?.Invoke();
+        return ok;
+    }
 
     /// <summary>
     /// ══ ورود — روی نخِ دیگر، نه روی نخِ رابط ═══════════════════════════════
@@ -62,23 +84,14 @@ public sealed partial class LockViewModel : ObservableObject
         Busy = true;
         try
         {
-            if (IsFirstRun)
-            {
-                if (Password.Length < 4) { Error = "رمز دستِ‌کم چهار نویسه باشد."; return; }
-                if (Password != Confirm) { Error = "دو رمز یکی نیستند."; return; }
-                //  ⚠️ رمز پیش از رفتن به نخِ دیگر برداشته می‌شود، تا اگر کاربر
-                //  وسطِ کار کادر را عوض کرد، همان چیزی سنجیده شود که زد.
-                var first = Password;
-                await Task.Run(() => _host.Auth.CreateFirstAdmin(first));
-                IsFirstRun = false;
-            }
-
+            //  ⚠️ رمز پیش از رفتن به نخِ دیگر برداشته می‌شود، تا اگر کاربر
+            //  وسطِ کار کادر را عوض کرد، همان چیزی سنجیده شود که زد.
             var pass = Password;
             var r = await Task.Run(() => _host.Auth.SignIn("admin", pass));
             switch (r.Result)
             {
                 case SignInResult.Ok:
-                    Password = ""; Confirm = "";
+                    Password = "";
                     SignedIn?.Invoke();
                     break;
                 case SignInResult.LockedOut:

@@ -37,6 +37,94 @@ public sealed class AuthService
         return !db.Users.Any();
     }
 
+    /// <summary>
+    /// ══ برنامه بی رمز باز می‌شود ═══════════════════════════════════════════
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۰۷): «برنامه بدون رمز باشه، چون
+    /// کسایی که تازه به برنامه می‌رسن نباید رمز داشته باشه و خود طرف برای
+    /// خودش رمز خودشو می‌زنه.»
+    ///
+    /// پس نصبِ تازه <b>هیچ صفحهٔ قفلی</b> ندارد: مدیرِ بی‌رمز همان لحظه
+    /// ساخته می‌شود و برنامه باز است. هر وقت خودِ کاربر در
+    /// «تنظیمات ← رمزها و کد» رمزی گذاشت، از آن به بعد صفحهٔ قفل می‌آید.
+    ///
+    /// ⛔ <b>هشِ خالی یعنی «رمزی نیست»، نه «رمزی که خالی است».</b>
+    /// <see cref="PasswordHasher.Verify"/> با هشِ خالی هیچ‌وقت درست
+    /// نمی‌گوید، پس هیچ راهی نیست که رشتهٔ خالی «رمزِ درست» شمرده شود —
+    /// تصمیم فقط از <see cref="HasPassword"/> می‌آید.
+    /// ⚠️ و اپِ کارمندان با رمزِ نگذاشته باز نمی‌شود: هشِ خالی منتشر
+    /// می‌شود و گوشی خودش می‌گوید «صاحبِ پمپ هنوز رمزی نگذاشته». کیو‌آر و
+    /// کدِ پمپ روی کاغذ می‌گردند؛ دفترِ پمپ نباید بی رمز از شبکه خوانده
+    /// شود.
+    /// </summary>
+    public bool HasPassword()
+    {
+        using var db = _dbf.Create();
+        return db.Users.Any(u => u.IsActive && u.PasswordHash != null && u.PasswordHash != "");
+    }
+
+    /// <summary>
+    /// نصبِ تازه: مدیرِ بی‌رمز ساخته و همان لحظه وارد می‌شود.
+    /// اگر رمزی گذاشته شده باشد هیچ کاری نمی‌کند و <c>false</c> می‌دهد.
+    /// </summary>
+    public bool OpenWithoutPassword()
+    {
+        using var db = _dbf.Create();
+        var user = db.Users.Where(u => u.IsActive).OrderBy(u => u.Id).FirstOrDefault();
+        if (user is null)
+        {
+            user = new AppUser
+            {
+                UserName = "admin",
+                DisplayName = "مدیر",
+                Role = UserRole.Admin,
+                PasswordHash = "",      // ⛔ «رمزی نیست»
+            };
+            db.Users.Add(user);
+        }
+        else if (!string.IsNullOrEmpty(user.PasswordHash)) return false;
+
+        user.LastLoginUtc = DateTime.UtcNow;
+        db.Audit.Add(new AuditEntry { Actor = user.UserName, Action = "open-no-password" });
+        db.SaveChanges();
+        _session.SignIn(user.Role, user.UserName);
+        return true;
+    }
+
+    /// <summary>
+    /// رمزِ نخست را می‌گذارد — همان‌جا که هنوز رمزی نیست.
+    /// ⚠️ اگر رمزی هست، این راه بسته است و باید <see cref="ChangePassword"/>
+    /// با رمزِ فعلی زده شود؛ وگرنه نشستِ بازِ یک کامپیوتر می‌توانست رمزِ
+    /// صاحبش را عوض کند.
+    /// </summary>
+    public void SetFirstPassword(string password)
+    {
+        using var db = _dbf.Create();
+        var user = db.Users.Where(u => u.IsActive).OrderBy(u => u.Id).FirstOrDefault()
+                   ?? throw new InvalidOperationException("کاربری نیست.");
+        if (!string.IsNullOrEmpty(user.PasswordHash))
+            throw new InvalidOperationException("رمز از قبل گذاشته شده است.");
+        user.PasswordHash = PasswordHasher.Hash(password);
+        db.Audit.Add(new AuditEntry { Actor = user.UserName, Action = "password-set" });
+        db.SaveChanges();
+    }
+
+    /// <summary>
+    /// رمز را برمی‌دارد و برنامه دوباره بی‌رمز باز می‌شود — با رمزِ فعلی.
+    /// همان قاعدهٔ «خودِ طرف رمزِ خودش را می‌زند»، از هر دو طرف.
+    /// </summary>
+    public void ClearPassword(string current)
+    {
+        using var db = _dbf.Create();
+        var user = db.Users.Where(u => u.IsActive).OrderBy(u => u.Id).FirstOrDefault()
+                   ?? throw new InvalidOperationException("کاربری نیست.");
+        if (!PasswordHasher.Verify(current, user.PasswordHash))
+            throw new UnauthorizedAccessException("رمزِ فعلی درست نیست.");
+        user.PasswordHash = "";
+        db.Audit.Add(new AuditEntry { Actor = user.UserName, Action = "password-clear" });
+        db.SaveChanges();
+    }
+
     public void CreateFirstAdmin(string password, string userName = "admin")
     {
         using var db = _dbf.Create();

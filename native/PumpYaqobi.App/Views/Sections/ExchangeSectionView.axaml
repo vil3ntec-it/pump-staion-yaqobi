@@ -39,34 +39,43 @@
     </c:SectionPage.Filters>
 
     <!-- دو کادرِ بالای جدول و جملهٔ الباقی — همان سه چیزی که نسخهٔ وب دارد -->
+    <!-- ══ سربرگ — سه کارتِ کنارِ هم، دقیقاً مثلِ «مصارف» ══════════════════
+         گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۷): «بخشِ صرافی سربرگ‌هاشون خیلی بزرگ
+         استن و مسخره؛ همه رو بغلِ هم بزار، مثلِ بخشِ مصارف درست‌شون کن.»
+
+         ⛔ نوارِ پهنِ زیرِ دو کارت (‎Border.panel‎ با جملهٔ ۱۵پیکسلی و
+         زیرنویسش) برداشته شد — همان چیزی بود که سربرگ را دو طبقه و بلند
+         می‌کرد. حالا الباقی کارتِ سومِ همان ردیف است.
+         ⚠️ هیچ عددی عوض نشد: همان ‎Baqi‎ی همیشگی با همان رنگِ
+         ‎BaqiSentenceBrushKey‎، و ‎BaqiSentenceNote‎ زیرش می‌ماند تا کاربر
+         بداند مثبت یعنی طلب و منفی یعنی بدهی.
+         ⚠️ ‎BaqiSentence‎ دست نخورد و در ویومدل سرِ جایش است. -->
     <c:SectionPage.Summary>
-      <StackPanel Spacing="10">
-        <Grid ColumnDefinitions="*,12,*">
-          <Border Grid.Column="0" Classes="stat" HorizontalAlignment="Stretch">
-            <StackPanel Spacing="3">
-              <TextBlock Text="💲 جمله دالر این ماه" Classes="label" />
-              <TextBlock Text="{Binding TotalUsd}" Classes="num"
-                         Foreground="{DynamicResource Pump.Info}" />
-            </StackPanel>
-          </Border>
-          <Border Grid.Column="2" Classes="stat" HorizontalAlignment="Stretch">
-            <StackPanel Spacing="3">
-              <TextBlock Text="💵 جمله بردگی این ماه" Classes="label" />
-              <TextBlock Text="{Binding TotalBardagi}" Classes="num"
-                         Foreground="{DynamicResource Pump.Ok}" />
-            </StackPanel>
-          </Border>
-        </Grid>
-        <Border Classes="panel" Padding="14,12" HorizontalAlignment="Stretch">
+      <Grid ColumnDefinitions="*,12,*,12,*">
+        <Border Grid.Column="0" Classes="stat" HorizontalAlignment="Stretch">
           <StackPanel Spacing="3">
-            <TextBlock Text="{Binding BaqiSentence}" FontWeight="Bold" FontSize="15"
-                       HorizontalAlignment="Center"
-                       Foreground="{Binding BaqiSentenceBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
-            <TextBlock Text="{Binding BaqiSentenceNote}" Classes="muted" FontSize="11.5"
-                       HorizontalAlignment="Center" />
+            <TextBlock Text="💲 جمله دالر این ماه" Classes="label" />
+            <TextBlock Text="{Binding TotalUsd}" Classes="num"
+                       Foreground="{DynamicResource Pump.Info}" />
           </StackPanel>
         </Border>
-      </StackPanel>
+        <Border Grid.Column="2" Classes="stat" HorizontalAlignment="Stretch">
+          <StackPanel Spacing="3">
+            <TextBlock Text="💵 جمله بردگی این ماه" Classes="label" />
+            <TextBlock Text="{Binding TotalBardagi}" Classes="num"
+                       Foreground="{DynamicResource Pump.Ok}" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="4" Classes="stat" HorizontalAlignment="Stretch">
+          <StackPanel Spacing="3">
+            <TextBlock Text="💱 الباقی ($)" Classes="label" />
+            <TextBlock Text="{Binding Baqi}" Classes="num"
+                       Foreground="{Binding BaqiSentenceBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+            <TextBlock Text="{Binding BaqiSentenceNote}" Classes="muted" FontSize="11.5"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+      </Grid>
     </c:SectionPage.Summary>
 
     <!-- جدول + ردیفِ «جمله»ی ته آن — همتای ‎<tfoot class="xls-foot">‎ی سایت -->

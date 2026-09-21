@@ -487,7 +487,12 @@ public sealed class StationPublisher : IAsyncDisposable
     /// <list type="bullet">
     ///   <item>توکنِ حساب داریم ⇒ <see cref="CloudLink.HomeFromAccountAsync"/>:
     ///     نشست را تازه می‌کند، دستگاه را (اگر نبند بود) خودش بند می‌کند،
-    ///     اشتراک و مجوز را می‌آورد و نشانیِ سرورِ خانگی را هم می‌گیرد.</item>
+    ///     حالِ اشتراک را می‌خواند و نشانیِ سرورِ خانگی را می‌گیرد؛ و بعد
+    ///     <see cref="CloudLink.KeepLicenseFreshAsync"/> مجوزِ امضاشده را
+    ///     تازه می‌کند.
+    ///     ⚠️ آن دومی <b>لازم است</b>: خودِ <c>HomeFromAccountAsync</c>
+    ///     برای دستگاهی که از قبل بند شده هیچ مجوزی نمی‌گیرد، و مجوز
+    ///     تنها جایی است که <b>فهرستِ قابلیت‌های پلن</b> در آن است.</item>
     ///   <item>حساب نداریم ⇒ فقط <see cref="CloudLink.CloudHealthAsync"/>، تا
     ///     دستِ‌کم بدانیم ابر بالا است یا نه. این بی توکن است و هیچ دری را
     ///     باز نمی‌کند.</item>
@@ -507,6 +512,10 @@ public sealed class StationPublisher : IAsyncDisposable
         {
             var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
             await cloud.HomeFromAccountAsync(ct);
+            //  ⛔ و مجوز — وگرنه اشتراکی که مدیر همین حالا روی سرور داد
+            //  هیچ‌وقت به این دستگاه نمی‌رسید مگر کاربر صفحهٔ پروفایل را
+            //  باز کند. شرحِ کامل بالای `CloudLink.KeepLicenseFreshAsync`.
+            await cloud.KeepLicenseFreshAsync(ct);
             return;
         }
 
