@@ -374,6 +374,11 @@ public sealed class PumpDbFactory
             // تازه نمی‌رساند. خالی یعنی «نمی‌دانیم» و هیچ چیزی را از نو
             // نمی‌کند، پس نصبِ امروزی بی‌دردسر بالا می‌آید. (`SyncStore.BindTo`)
             ("SyncState", "AccountId", "TEXT NOT NULL DEFAULT ''"),
+            // ⛔ «نخستین گرفتنِ کاملِ دفترِ این حساب تمام شد یا نه» — پردهٔ
+            // «آوردنِ اطلاعاتِ حساب» از همین می‌آید. صفر یعنی هنوز نه، ولی
+            // نصبِ امروزی که از قبل همگام است ‎Cursor > 0‎ دارد و پرده‌ای
+            // نمی‌بیند (`SyncEngine.PrimeWanted`).
+            ("SyncState", "PrimedAt", "INTEGER NOT NULL DEFAULT 0"),
         };
 
         foreach (var (table, column, type) in wanted)

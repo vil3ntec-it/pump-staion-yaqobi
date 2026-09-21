@@ -44,6 +44,18 @@
         </Animation>
       </Style.Animations>
     </Style>
+    <!-- ⚠️ همان قاعده، برای پردهٔ «آوردنِ اطلاعاتِ حساب»: انیمیشن فقط با
+         کلاسی که به ‎IsSyncPriming‎ بسته است، وگرنه یک انیمیشنِ بی‌پایان
+         روی کنترلِ پنهان تا ابد می‌چرخد. -->
+    <Style Selector="Border#PrimeDot.pulse">
+      <Style.Animations>
+        <Animation Duration="0:0:1.4" IterationCount="INFINITE" Easing="SineEaseInOut">
+          <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0.35" /></KeyFrame>
+          <KeyFrame Cue="50%"><Setter Property="Opacity" Value="1.0" /></KeyFrame>
+          <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.35" /></KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
   </Window.Styles>
 
   <Panel>
@@ -478,6 +490,52 @@
         <TextBlock Text="{Binding WarmPercentText}" FontWeight="Bold" FontSize="13"
                    HorizontalAlignment="Center"
                    Foreground="{DynamicResource Pump.Accent}" />
+      </StackPanel>
+    </Border>
+
+    <!-- ══ ⏳ پردهٔ «آوردنِ اطلاعاتِ حساب» ═══════════════════════════════════
+         خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۱): «یارو اینترنت داره و می‌ره تو حساب
+         است و لودینگ روی صفحه نمیاد تا اطلاعاتی که توی حساب و سرور است
+         بیاد روی همون حساب.»
+
+         ⛔ فقط **نخستین** گرفتنِ هر حساب (‎SyncEngine.PrimeWanted‎). بعدش
+         همان چراغِ کوچکِ نوارِ پایین کار را می‌کند.
+         ⛔ و دیوار نیست: «ادامه در پس‌زمینه» همیشه این‌جاست، و هر خطایی
+         خودش پرده را می‌برد. -->
+    <Border IsVisible="{Binding IsSyncPriming}"
+            Background="{DynamicResource Pump.AppBg}">
+      <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="18">
+
+        <Border Name="PrimeDot" Width="120" Height="120" CornerRadius="26"
+                Classes.pulse="{Binding IsSyncPriming}"
+                HorizontalAlignment="Center" ClipToBounds="True">
+          <Image Source="avares://PumpYaqobi/Assets/logo.png" Stretch="UniformToFill" />
+        </Border>
+
+        <TextBlock Text="آوردنِ اطلاعاتِ حسابِ شما" HorizontalAlignment="Center"
+                   FontSize="20" FontWeight="ExtraBold"
+                   Foreground="{DynamicResource Pump.Accent}" />
+
+        <!-- ⚠️ جملهٔ خودِ موتور، نه یک نوشتهٔ دومِ این‌جا: دو جای نوشتن یعنی
+             روزی پرده یک چیز می‌گوید و چراغ چیزِ دیگر. -->
+        <TextBlock Text="{Binding SyncPrimeText}" HorizontalAlignment="Center"
+                   FontSize="14" Opacity="0.8" MaxWidth="420" TextWrapping="Wrap"
+                   TextAlignment="Center" />
+
+        <Border Width="340" Height="8" CornerRadius="999"
+                Background="{DynamicResource Pump.Hover}"
+                HorizontalAlignment="Center" ClipToBounds="True">
+          <ProgressBar IsIndeterminate="True" Height="8" CornerRadius="999"
+                       Foreground="{DynamicResource Pump.Accent}"
+                       Background="Transparent" />
+        </Border>
+
+        <TextBlock Text="دفترِ این کامپیوتر دست‌نخورده است — چیزی پاک نمی‌شود."
+                   HorizontalAlignment="Center" FontSize="12" Opacity="0.65" />
+
+        <Button Content="ادامه در پس‌زمینه"
+                Command="{Binding DismissSyncPrimeCommand}"
+                HorizontalAlignment="Center" Padding="18,8" />
       </StackPanel>
     </Border>
 

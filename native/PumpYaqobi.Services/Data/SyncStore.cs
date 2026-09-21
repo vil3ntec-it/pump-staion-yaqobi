@@ -154,6 +154,9 @@ public sealed class SyncStore
         state.SeededAt = 0;
         state.SeedCursor = "";
         state.Cursor = 0;
+        //  ⛔ حسابِ تازه یعنی دفترِ تازه‌ای که هنوز نیامده — پس پردهٔ
+        //  «آوردنِ اطلاعاتِ حساب» دوباره حق دارد بیاید.
+        state.PrimedAt = 0;
         state.LastPushAt = 0;
         state.LastPullAt = 0;
         state.LastOkAt = 0;
