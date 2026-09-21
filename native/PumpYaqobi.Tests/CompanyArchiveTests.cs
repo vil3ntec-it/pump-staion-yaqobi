@@ -199,9 +199,19 @@ public class CompanyArchiveTests : IDisposable
         // کسی یکی از این چهار کار را از فهرستِ کشویی بیندازد، این آزمون
         // قرمز می‌شود. («حذفش کردم» نباید یعنی «قابلیت را هم بردم».)
         Assert.DoesNotContain("OpenPurchasesCommand", v);
-        Assert.DoesNotContain("OpenArchiveCommand", v);
+
+        // ══ «بغلِ کشویی باشن تا دیده بشن» — ۱۴۰۵/۰۷/۰۷ ═════════════════════
+        //
+        // خواستهٔ بعدیِ صاحب ریپو دو تای آن چهار کار را دوباره بیرون آورد:
+        // «جدول‌های آرشیو» و «جستجوی خرید» حالا دکمهٔ کنارِ کشویی‌اند.
+        //
+        // ⛔ ولی همان قفل سرِ جایش است، فقط از درِ تازه‌اش: هر چهار کار باید
+        // **جایی** در صفحه باشند. «خریدهای مخزن» و «جدول جدید» داخلِ کشویی،
+        // «آرشیو» و «جستجو» کنارش.
+        Assert.Contains("OpenArchiveCommand", v);
+        Assert.Contains("SearchCommand", v);
         var vmSrc = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "Sections", "CompanySectionViewModel.cs"));
-        foreach (var act in new[] { "\"buy-petrol\"", "\"buy-diesel\"", "\"arc\"", "\"search\"", "\"new\"" })
+        foreach (var act in new[] { "\"buy-petrol\"", "\"buy-diesel\"", "\"new\"" })
             Assert.Contains("case " + act + ":", vmSrc);
         Assert.Contains("OpenPurchasesAsync", vmSrc);
         Assert.Contains("OpenArchiveAsync", vmSrc);

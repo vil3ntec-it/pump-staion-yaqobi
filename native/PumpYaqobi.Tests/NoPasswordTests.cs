@@ -141,6 +141,25 @@ public class NoPasswordSourceTests
         File.ReadAllText(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
 
     /// <summary>
+    /// بدنهٔ یک متد، با شمردنِ آکولاد — نه «تا متدِ بعدی».
+    /// ⚠️ مرزِ «تا نامِ متدِ بعدی» شکننده است: هر متدی که بینشان بنشیند
+    /// شمارش را به‌هم می‌زند و سنجه را سرخِ دروغ می‌کند (یک بار شد).
+    /// </summary>
+    private static string Body(string src, string signature)
+    {
+        var i = src.IndexOf(signature, StringComparison.Ordinal);
+        Assert.True(i > 0, signature + " در سورس نیست");
+        var open = src.IndexOf('{', i);
+        var depth = 0;
+        for (var j = open; j < src.Length; j++)
+        {
+            if (src[j] == '{') depth++;
+            else if (src[j] == '}' && --depth == 0) return src[i..(j + 1)];
+        }
+        throw new Xunit.Sdk.XunitException("بدنهٔ " + signature + " بسته نشد");
+    }
+
+    /// <summary>
     /// ⛔ «نخستین اجرا ⇒ رمز بساز» برداشته شد و برنمی‌گردد: نه کادرِ
     /// «تکرارِ رمز»، نه <c>IsFirstRun</c>، نه <c>Confirm</c>.
     /// </summary>
@@ -171,7 +190,10 @@ public class NoPasswordSourceTests
     public void HarSeRahe_WarmUp_AzYekJa_RadMishavand()
     {
         var mv = Read("PumpYaqobi.App", "ViewModels", "MainViewModel.cs");
-        var warm = mv[mv.IndexOf("public async Task WarmUpAsync")..mv.IndexOf("private async Task WarmRestAsync")];
+        //  ⚠️ **خودِ بدنه** برداشته می‌شود، نه «تا متدِ بعدی»: یک بار مرزِ
+        //  سنجه ‎WarmRestAsync‎ بود و تعریفِ خودِ ‎LockOrOpenAsync‎ بینشان
+        //  نشست، پس سه فراخوان چهار شمرده شد و سنجه سرخِ دروغ داد.
+        var warm = Body(mv, "public async Task WarmUpAsync");
 
         Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(warm, @"LockOrOpenAsync\(\)").Count);
         Assert.DoesNotContain("Phase = AppPhase.Locked", warm);
