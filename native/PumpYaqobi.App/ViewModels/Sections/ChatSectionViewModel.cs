@@ -75,10 +75,39 @@ public sealed partial class ChatThreadViewModel : ObservableObject
     [ObservableProperty] private string _preview = "";
     [ObservableProperty] private bool _blocked;
 
+    /// <summary>
+    /// نامی که خودِ مشتری در صفحهٔ کیو‌آر نوشته.
+    ///
+    /// ⚠️ <b>عنوان نیست، زیرنویس است.</b> عنوان نامِ همان حسابی است که
+    /// کیو‌آرش را اسکن کرده — خواستهٔ صریحِ صاحب ریپو. نامی که مشتری خودش
+    /// تایپ می‌کند هر چیزی می‌تواند باشد و دو نفر از یک حساب هم می‌توانند
+    /// بنویسند؛ حساب همان یکی است.
+    /// </summary>
+    [ObservableProperty] private string _who = "";
+
     public bool HasUnread => Unread > 0;
-    public string Subtitle => IsSupport ? (Blocked ? "🚫 بلاک شده · مشتریِ کیو‌آر" : "مشتریِ کیو‌آر") : "شبکهٔ پمپ";
+
+    /// <summary>حرفِ اولِ عنوان — دایرهٔ کنارِ هر گفت‌وگو.</summary>
+    public string Avatar
+    {
+        get
+        {
+            var t = (Title ?? "").TrimStart();
+            return t.Length == 0 ? "؟" : t[..1];
+        }
+    }
+
+    public string Subtitle => IsSupport
+        ? (Blocked ? "🚫 بلاک شده · " : "") + (Who.Length > 0 ? Who + " · " : "") + "مشتریِ کیو‌آر"
+        : "شبکهٔ پمپ";
+
     public string BlockText => Blocked ? "رفعِ بلاک" : "بلاک";
+    public bool HasPreview => !string.IsNullOrWhiteSpace(Preview);
+
     partial void OnUnreadChanged(int v) => OnPropertyChanged(nameof(HasUnread));
+    partial void OnPreviewChanged(string v) => OnPropertyChanged(nameof(HasPreview));
+    partial void OnTitleChanged(string v) => OnPropertyChanged(nameof(Avatar));
+    partial void OnWhoChanged(string v) => OnPropertyChanged(nameof(Subtitle));
     partial void OnBlockedChanged(bool v) { OnPropertyChanged(nameof(Subtitle)); OnPropertyChanged(nameof(BlockText)); }
 }
 
@@ -179,8 +208,12 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
         }
     }
 
+    /// <summary>گفت‌وگویی باز است؟ — برای حالتِ «هیچ گفت‌وگویی انتخاب نشده».</summary>
+    public bool HasCurrent => Current is not null;
+
     partial void OnCurrentChanged(ChatThreadViewModel? v)
     {
+        OnPropertyChanged(nameof(HasCurrent));
         if (v is null) return;
         v.Unread = 0;
         if (v.IsSupport) _ = MarkSeenAsync(v);
@@ -436,20 +469,76 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
         var th = Threads.FirstOrDefault(x => x.Id == id);
         if (th is null)
         {
-            th = new ChatThreadViewModel(id, TitleOf(t), t.Acct);
+            th = new ChatThreadViewModel(id, TitleOf(t), t.Acct) { Who = t.Name };
             Threads.Add(th);
         }
+        WantName(t.Acct);
         return th;
     }
 
-    private static string TitleOf(SupportState.Thread t) =>
-        (t.Name.Length > 0 ? t.Name : "مشتری") + " · " + t.Acct;
+    /// <summary>
+    /// عنوانِ گفت‌وگو — <b>نامِ همان حسابی که کیو‌آرش اسکن شده</b>.
+    ///
+    /// تا امروز «کریم · d12» بود: هم شناسهٔ خام را نشان می‌داد و هم نمی‌گفت
+    /// پیام از کدام حساب است. حالا «محمد هارون» است (یا «محمد هارون › دکان»
+    /// برای حسابِ فرعی) و نامِ خودِ مشتری به زیرنویس رفت.
+    ///
+    /// ⚠️ تا وقتی نامِ حساب از دفتر نیامده، همان نامِ مشتری عنوان است — نه
+    /// یک عنوانِ خالی. پیدا کردنِ نام یک پرس‌وجوی جداست و نباید فهرست را
+    /// نگه دارد.
+    /// </summary>
+    private string TitleOf(SupportState.Thread t)
+    {
+        if (_acctNames.TryGetValue(t.Acct, out var n) && n.Length > 0) return n;
+        return t.Name.Length > 0 ? t.Name : "مشتری · " + t.Acct;
+    }
+
+    /// <summary>نامِ حسابِ هر کیو‌آر — یک بار پرسیده و نگه داشته می‌شود.</summary>
+    private readonly Dictionary<string, string> _acctNames = new();
+    private readonly HashSet<string> _naming = new();
+
+    private void WantName(string? acct)
+    {
+        if (string.IsNullOrEmpty(acct)) return;
+        if (_acctNames.ContainsKey(acct) || !_naming.Add(acct)) return;
+        _ = ResolveNameAsync(acct);
+    }
+
+    /// <summary>
+    /// ‎d12‎ ⇒ نامِ حسابِ قرض‌دار · ‎c3‎ ⇒ نامِ شرکت.
+    ///
+    /// ⚠️ همه‌اش پشتِ ‎try‎ است و هیچ‌وقت چت را نمی‌شکند: نامِ حساب رفاه
+    /// است، خودِ پیام اصل.
+    /// </summary>
+    private async Task ResolveNameAsync(string acct)
+    {
+        try
+        {
+            var label = "";
+            if (acct.Length > 1 && long.TryParse(acct[1..], out var id) && id > 0)
+            {
+                if (acct[0] == 'd')
+                    label = await _host.Debtors.AccountLabelAsync(id, _life.Token);
+                else if (acct[0] == 'c')
+                    label = (await _host.Companies.LoadAsync(id, _life.Token))?.Name ?? "";
+            }
+            if (string.IsNullOrWhiteSpace(label)) return;
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                _acctNames[acct] = label.Trim();
+                foreach (var th in Threads.Where(x => x.Acct == acct)) th.Title = label.Trim();
+            });
+        }
+        catch { /* نامِ حساب رفاه است، نه اصل */ }
+    }
 
     /// <summary>پیام‌های ویومدل را با حالتِ ابر یکی می‌کند.</summary>
     private void Refresh(ChatThreadViewModel th)
     {
         if (th.Acct is null || !_support.TryGet(th.Acct, out var t)) return;
         th.Title = TitleOf(t);
+        th.Who = t.Name;
         th.Blocked = t.Blocked;
         th.Unread = ReferenceEquals(th, Current) ? 0 : t.Unread;
 

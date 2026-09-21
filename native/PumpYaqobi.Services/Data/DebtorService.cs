@@ -32,6 +32,44 @@ public sealed class DebtorService
     { _dbf = dbf; _perm = perm; _trash = trash; }
 
     /// <summary>
+    /// ══ نامِ خوانای یک حساب از روی شناسه‌اش ═══════════════════════════════
+    ///
+    /// خواستهٔ صاحب ریپو: «اگه یارو با کیو‌آرِ یک حساب اومد، با اسمِ همون
+    /// حساب برای میرزا دیده بشه.» کیو‌آر فقط ‎d&lt;شناسه&gt;‎ را می‌برد
+    /// (<see cref="Application.Services.PostingService"/> با آن کاری ندارد)،
+    /// پس چتِ پشتیبانی تا امروز همان ‎d12‎ی خام را عنوان می‌کرد.
+    ///
+    /// ⚠️ حسابِ فرعی «شخص › فرعی» می‌شود، نه فقط نامِ فرعی: دو نفر می‌توانند
+    /// حسابِ فرعیِ هم‌نام داشته باشند («دکان»، «موتر») و بی نامِ شخص معلوم
+    /// نیست پیام از کدام است.
+    ///
+    /// <returns>خالی یعنی چنین حسابی نیست — فراخوان خودش تصمیم می‌گیرد.</returns>
+    /// </summary>
+    public async Task<string> AccountLabelAsync(long accountId, CancellationToken ct = default)
+    {
+        if (accountId <= 0) return "";
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+
+        var a = await db.DebtAccounts.AsNoTracking()
+                        .FirstOrDefaultAsync(x => x.Id == accountId, ct);
+        if (a is null) return "";
+
+        var ownerId = a.MainOfDebtorId ?? a.DebtorId;
+        var owner = ownerId is { } oid
+            ? await db.Debtors.AsNoTracking()
+                      .Where(d => d.Id == oid).Select(d => d.Name).FirstOrDefaultAsync(ct)
+            : null;
+
+        var self = (a.Name ?? "").Trim();
+        var who = (owner ?? "").Trim();
+
+        if (who.Length == 0) return self;
+        if (a.MainOfDebtorId is not null) return who;            // حسابِ اصلی
+        return self.Length == 0 || self == who ? who : who + " › " + self;
+    }
+
+    /// <summary>
     /// فقط شمارِ کارت‌های قرض‌دار.
     ///
     /// ⚠️ داشبورد پیش از این ‎ListAsync()‎ می‌زد و بعد ‎.Count‎ می‌گرفت.
