@@ -56,7 +56,7 @@ public sealed class DebtorService
         if (a is null) return "";
 
         var ownerId = a.MainOfDebtorId ?? a.DebtorId;
-        var owner = ownerId is { } oid
+        string? owner = ownerId is { } oid
             ? await db.Debtors.AsNoTracking()
                       .Where(d => d.Id == oid).Select(d => d.Name).FirstOrDefaultAsync(ct)
             : null;

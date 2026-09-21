@@ -522,7 +522,14 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
                 else if (acct[0] == 'c')
                     label = (await _host.Companies.LoadAsync(id, _life.Token))?.Name ?? "";
             }
-            if (string.IsNullOrWhiteSpace(label)) return;
+            if (string.IsNullOrWhiteSpace(label))
+            {
+                // ⚠️ نشد ⇒ نشانِ «در حالِ پرسیدن» پس گرفته می‌شود تا دورِ
+                // بعدِ صندوق دوباره بپرسد. بی این، یک خطای گذرا عنوانِ آن
+                // گفت‌وگو را تا بسته شدنِ برنامه خام نگه می‌داشت.
+                _naming.Remove(acct);
+                return;
+            }
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
@@ -530,7 +537,7 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
                 foreach (var th in Threads.Where(x => x.Acct == acct)) th.Title = label.Trim();
             });
         }
-        catch { /* نامِ حساب رفاه است، نه اصل */ }
+        catch { _naming.Remove(acct); }
     }
 
     /// <summary>پیام‌های ویومدل را با حالتِ ابر یکی می‌کند.</summary>
