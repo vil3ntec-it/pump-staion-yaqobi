@@ -168,8 +168,16 @@ public class UpdateBehaviourTests : IDisposable
         Assert.Equal("Pump.Danger", info.StatusBrushKey);
         // ⛔ همان دروغی که کاربر را روی ۳.۱.۱۴۴ نگه داشت
         Assert.DoesNotContain("برنامه به‌روز است", info.StatusText);
-        // ⚠️ و نامِ میزبان در پیام نیست
-        Assert.DoesNotContain("github", info.StatusText, StringComparison.OrdinalIgnoreCase);
+        // ⚠️ و نشانی در پیام نیست. ⛔ ادعا عوض شد چون جمله از ۳.۱.۱۵۳ عمداً
+        //    نامِ گیت‌هاب را می‌گوید (خواستهٔ صریحِ صاحب سامانه)؛ آن‌چه قدغن
+        //    است نامِ **مخزن و نشانی** است و همان این‌جا خواسته می‌شود.
+        //  ⚠️ نامِ مخزن عمداً این‌جا **نوشته نشده**: سنجهٔ
+        //     NoUserFacingFileMentionsTheRepository هر فایلِ .cs را دنبالِ
+        //     همان رشته می‌گردد و نوشتنش این‌جا خودش همان را می‌شکست.
+        //     پس آن‌چه خواسته می‌شود «نشانی نیست» است، نه یک نامِ خاص.
+        Assert.DoesNotContain("http", info.StatusText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(".com", info.StatusText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("/", info.StatusText, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -197,14 +205,23 @@ public class UpdateBehaviourTests : IDisposable
 
         //  ⛔ واژه‌ای که کاربر را دنبالِ سرورِ خانگی فرستاد
         Assert.DoesNotContain("سرورِ به‌روزرسانی", info.StatusText);
-        //  و می‌گوید کارِ اینترنت است
-        Assert.Contains("اینترنت", info.StatusText);
+        //  ⛔ و خواستهٔ صریحِ صاحب سامانه: «اپدیت از گیت‌هاب بگیره نه سرور»
+        Assert.Contains("گیت‌هاب", info.StatusText);
         //  ⛔ و صریح می‌گوید به سرورِ خانگیِ پمپ ربطی ندارد
         Assert.Contains("ربطی ندارد", info.StatusText);
 
-        //  ادعاهای قدیمی، دست‌نخورده
+        //  ادعای قدیمی، دست‌نخورده
         Assert.DoesNotContain("برنامه به‌روز است", info.StatusText);
-        Assert.DoesNotContain("github", info.StatusText, StringComparison.OrdinalIgnoreCase);
+
+        //  ⚠️ و «نشانی در پیام نیست» ضعیف نشد، از درِ تازه گرفته شد: آن‌چه
+        //     قدغن است نامِ **مخزن و نشانی** است، نه نامِ خودِ گیت‌هاب.
+        //  ⚠️ نامِ مخزن عمداً این‌جا **نوشته نشده**: سنجهٔ
+        //     NoUserFacingFileMentionsTheRepository هر فایلِ .cs را دنبالِ
+        //     همان رشته می‌گردد و نوشتنش این‌جا خودش همان را می‌شکست.
+        //     پس آن‌چه خواسته می‌شود «نشانی نیست» است، نه یک نامِ خاص.
+        Assert.DoesNotContain("http", info.StatusText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(".com", info.StatusText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("/", info.StatusText, StringComparison.Ordinal);
     }
 
     [Fact]
