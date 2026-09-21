@@ -172,6 +172,41 @@ public class UpdateBehaviourTests : IDisposable
         Assert.DoesNotContain("github", info.StatusText, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// ⛔ گزارشِ صاحب سامانه با عکس (۱۴۰۵/۰۷/۱۰): روی ۳.۱.۱۵۱ پیامِ
+    /// «سرورِ به‌روزرسانی جواب نداد — وقت تمام شد» را دید و پرسید «مگه از
+    /// سرور اپدیت می‌گرفت؟» — یعنی آن را <b>سرورِ خانگیِ پمپ</b> خواند.
+    ///
+    /// این برنامه سه سرور دارد (خانگی · حساب · به‌روزرسانی) و کاربر قرار
+    /// نیست از روی یک واژه حدس بزند کدام‌شان خراب است. پس جملهٔ مهلت دیگر
+    /// واژهٔ «سرور» ندارد و صریح می‌گوید کارِ اینترنت است.
+    ///
+    /// ⚠️ و ادعای قدیمی ضعیف نشد، از درِ تازه گرفته شد: «نامِ میزبان نیست»
+    /// و «‹به‌روز است› نمی‌گوید» هر دو این‌جا هم خواسته می‌شوند.
+    /// </summary>
+    [Fact]
+    public async Task ATimeoutBlamesTheInternet_NotThePumpsOwnServer()
+    {
+        UpdateService.TestTransport = (_, _) => throw new TaskCanceledException("timeout");
+
+        var info = await new UpdateService().CheckAsync();
+
+        Assert.True(info.Failed);
+        Assert.False(info.Available);
+        Assert.Equal("Pump.Danger", info.StatusBrushKey);
+
+        //  ⛔ واژه‌ای که کاربر را دنبالِ سرورِ خانگی فرستاد
+        Assert.DoesNotContain("سرورِ به‌روزرسانی", info.StatusText);
+        //  و می‌گوید کارِ اینترنت است
+        Assert.Contains("اینترنت", info.StatusText);
+        //  ⛔ و صریح می‌گوید به سرورِ خانگیِ پمپ ربطی ندارد
+        Assert.Contains("ربطی ندارد", info.StatusText);
+
+        //  ادعاهای قدیمی، دست‌نخورده
+        Assert.DoesNotContain("برنامه به‌روز است", info.StatusText);
+        Assert.DoesNotContain("github", info.StatusText, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public async Task ATaglessReleaseIsNotTreatedAsUpToDate()
     {
