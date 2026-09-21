@@ -71,6 +71,8 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
             (m, ok) => host.Toast(m, ok ? ToastKind.Ok : ToastKind.Warn));
         _host = host;
         _dateShamsi = Shamsi.Today();
+        // درِ «🕘 تاریخچه»ی همین بخش — شرحش بالای ‎SectionViewModel.HistoryKind‎
+        HistoryKind = "rasid";
     }
 
     /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر

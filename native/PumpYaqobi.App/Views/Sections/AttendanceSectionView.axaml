@@ -8,6 +8,12 @@
   <c:SectionPage Header="حاضری و معاش"
                  SubHeader="شیفتی که از نیمه‌شب رد می‌شود، ساعتش درست شمرده می‌شود">
 
+    <c:SectionPage.Toolbar>
+      <Button Classes="ghost info" Content="🕘 تاریخچه" Command="{Binding OpenHistoryCommand}"
+              IsVisible="{Binding HasHistory}"
+              ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
+    </c:SectionPage.Toolbar>
+
     <c:SectionPage.Filters>
       <Grid ColumnDefinitions="Auto,140,24,Auto,200,140,Auto">
         <TextBlock Grid.Column="0" Text="ماه" Classes="label" VerticalAlignment="Center" Margin="0,0,8,0" />

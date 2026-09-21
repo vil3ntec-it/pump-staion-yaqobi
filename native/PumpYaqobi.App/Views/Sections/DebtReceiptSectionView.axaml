@@ -11,6 +11,7 @@
 
     <c:SectionPage.Toolbar>
       <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0" Command="{Binding OpenHistoryCommand}" IsVisible="{Binding HasHistory}" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
         <TextBlock Text="📅 ماه:" VerticalAlignment="Center" Classes="label" />
         <ComboBox ItemsSource="{Binding Months}" SelectedItem="{Binding Month}" MinWidth="130" />
         <Button Classes="ghost info" Content="PDF" Command="{Binding PdfCommand}" />

@@ -366,6 +366,9 @@ public sealed class PumpDbFactory
             // نوعِ تیلِ ردیفِ «رسید پارچه‌ها». ⛔ ‎NULL‎پذیر است و پیش‌فرض ندارد:
             // ‎NULL‎ یعنی «خودکار». با ‎DEFAULT 1‎ هر رسیدِ دیزلیِ ثبت‌شده یک‌شبه پطرول می‌شد.
             ("ParchaReceipts", "Fuel", "INTEGER"),
+            // نشانِ «شروعِ پایه از پایهٔ قبلی کمتر بود» روی ردیفِ ورق — فقط رنگ،
+            // هیچ محاسبه‌ای از آن نمی‌گذرد. ۰ یعنی سالم، پس ردیفِ کهنه سرخ نمی‌شود.
+            ("WaraqPumps", "LowBase", "INTEGER NOT NULL DEFAULT 0"),
         };
 
         foreach (var (table, column, type) in wanted)

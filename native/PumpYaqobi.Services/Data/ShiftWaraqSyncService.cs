@@ -47,9 +47,15 @@ public sealed class ShiftWaraqSyncService
     /// ‎syncShiftToWaraq‎ — پس از ذخیرهٔ پارچه. ورقِ آن تاریخ اگر نباشد ساخته
     /// می‌شود (برخلافِ مسیرِ زنده که ورقِ نساخته را رها می‌کند).
     /// </summary>
+    /// <param name="lowBase">
+    /// «شروعِ این پایه از پایهٔ قبلی کمتر بود و کاربر هم دکمهٔ ‹دیدم› را نزد» —
+    /// فقط روی ردیفِ ورق می‌نشیند تا سرخ دیده شود. هیچ عددی را عوض نمی‌کند.
+    /// </param>
     public Task SyncSavedShiftAsync(ShiftKind kind, ShiftData shift, FuelType fuel,
-                                    string srcKey, CancellationToken ct = default) =>
-        SyncAsync(kind, shift, fuel, srcKey, createWaraq: true, addAvailable: true, ct);
+                                    string srcKey, bool lowBase = false,
+                                    CancellationToken ct = default) =>
+        SyncAsync(kind, shift, fuel, srcKey, createWaraq: true, addAvailable: true,
+                  lowBase: lowBase, ct);
 
     /// <summary>
     /// ‎liveWaraqSync‎ — حین تایپ. اگر ورقی برای آن تاریخ نباشد هیچ نمی‌کند
@@ -57,10 +63,15 @@ public sealed class ShiftWaraqSyncService
     /// </summary>
     public Task SyncLiveShiftAsync(ShiftKind kind, ShiftData shift, FuelType fuel,
                                    string srcKey, CancellationToken ct = default) =>
-        SyncAsync(kind, shift, fuel, srcKey, createWaraq: false, addAvailable: false, ct);
+        SyncAsync(kind, shift, fuel, srcKey, createWaraq: false, addAvailable: false,
+                  lowBase: null, ct);
 
+    /// <param name="lowBase">
+    /// ‎null‎ یعنی «دست نزن» — مسیرِ زنده نشانِ ذخیرهٔ قبلی را پاک نمی‌کند.
+    /// </param>
     private async Task SyncAsync(ShiftKind kind, ShiftData shift, FuelType fuel, string srcKey,
-                                 bool createWaraq, bool addAvailable, CancellationToken ct)
+                                 bool createWaraq, bool addAvailable, bool? lowBase,
+                                 CancellationToken ct)
     {
         if (shift is null) return;
         _perm.Require(Permission.EditData);
@@ -127,6 +138,7 @@ public sealed class ShiftWaraqSyncService
         entry.End = shift.End;
         entry.PricePerLiter = shift.Price;
         entry.Debt = shift.Debt;
+        if (lowBase is bool low) entry.LowBase = low;
 
         if (shift.Price > 0m)
         {

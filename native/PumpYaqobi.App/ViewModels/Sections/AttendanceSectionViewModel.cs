@@ -84,6 +84,9 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
 
     public AttendanceSectionViewModel(AppHost host) : base("attendance", "attendance", "حاضری و معاش")
     {
+        // ↓ درِ «🕘 تاریخچه»ی همین بخش — شرحش بالای ‎SectionViewModel.HistoryKind‎
+        HistoryKind = "attend";
+
         _host = host;
         _month = Shamsi.ThisMonth();
     }

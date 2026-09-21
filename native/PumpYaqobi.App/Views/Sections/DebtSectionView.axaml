@@ -13,6 +13,7 @@
 
       <c:SectionPage.Toolbar>
         <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+          <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0" Command="{Binding OpenHistoryCommand}" IsVisible="{Binding HasHistory}" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
           <Button Classes="accent" Content="افزودن شخص" Margin="0,0,8,0"
                   Command="{Binding AddDebtorCommand}" />
           <!-- «قرض‌های کهنه» از این‌جا رفت: حالا کارتِ زیربخشِ همین بخش است و

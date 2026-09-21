@@ -336,20 +336,34 @@ public sealed class HistoryService
                 _ => "تومان",
             };
 
-            // یک سطرِ صرافی می‌تواند دو ردیفِ تاریخچه بدهد: رسید و بردگی.
+            // ══ یک سطرِ صرافی می‌تواند دو ردیفِ تاریخچه بدهد ══════════════
+            //
+            // گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «برای صرافی دقیق نیست — نگفته
+            // بردگی یا چند تحویل دادم.»
+            //
+            // حق داشت: هر دو ردیف عنوانِ یکسانِ «صرافی» (یا توضیحِ خودِ ردیف)
+            // می‌گرفتند و تنها فرقشان یک ایموجیِ کوچک وسطِ متن بود. حالا خودِ
+            // **عنوان** می‌گوید کدام است، و رسید عددِ خامِ ارز و نرخ و معادلِ
+            // دالرش را کنارِ هم می‌گذارد.
+            //
+            // ⛔ هیچ عددی عوض نشد — همان ‎ToUsd‎ و همان ‎Bardagi‎.
             if (usd != 0m)
-                list.Add(new HistoryRow("sarrafi", r.DateShamsi ?? "", r.DateKey, title,
-                    "💵 رسید — " + Shamsi.Money(r.Amount) + " " + cur
-                        + (r.Rate != 0m ? " · نرخ " + Shamsi.Money(r.Rate) : ""),
+                list.Add(new HistoryRow("sarrafi", r.DateShamsi ?? "", r.DateKey,
+                    "💵 تحویل — " + title,
+                    Shamsi.Money(r.Amount) + " " + cur
+                        + (r.Rate != 0m ? " · نرخ " + Shamsi.Money(r.Rate) : "")
+                        + " ⇐ " + Shamsi.Money(Math.Round(usd, 2)) + " $",
                     Math.Round(usd, 2), " $", "in"));
 
             if (r.Bardagi != 0m)
-                list.Add(new HistoryRow("sarrafi", r.DateShamsi ?? "", r.DateKey, title,
-                    "📤 بردگی", r.Bardagi, " $", "out"));
+                list.Add(new HistoryRow("sarrafi", r.DateShamsi ?? "", r.DateKey,
+                    "📤 بردگی — " + title,
+                    "از صندوقِ صرافی برداشته شد", r.Bardagi, " $", "out"));
 
             if (usd == 0m && r.Bardagi == 0m && r.Amount != 0m)
-                list.Add(new HistoryRow("sarrafi", r.DateShamsi ?? "", r.DateKey, title,
-                    "بدون نرخ", r.Amount, " " + cur, ""));
+                list.Add(new HistoryRow("sarrafi", r.DateShamsi ?? "", r.DateKey,
+                    "💵 تحویل — " + title,
+                    "نرخ نوشته نشده، پس معادلِ دالری حساب نشد", r.Amount, " " + cur, ""));
         }
         return list;
     }
@@ -471,13 +485,40 @@ public sealed class HistoryService
         return list;
     }
 
+    /// <summary>
+    /// ══ مصارف ═════════════════════════════════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «برای مصارف هم [دقیق] نیست.»
+    ///
+    /// حق داشت: ستونِ شرح فقط یادداشتِ کاربر بود و مصرفی که خودِ برنامه ساخته
+    /// (معاشِ کارمند، ردیفِ مصرفِ یک ورق) از مصرفِ دستی جدا نمی‌شد. حالا
+    /// **منبعِ** هر مصرف نوشته می‌شود — همان چیزی که خودِ رکورد از قبل داشت و
+    /// هیچ‌جا دیده نمی‌شد.
+    ///
+    /// ⛔ هیچ مبلغی عوض نشد و هیچ ردیفی کم و زیاد نشد.
+    /// </summary>
     private static async Task<List<HistoryRow>> ExpenseAsync(Persistence.PumpDbContext db, CancellationToken ct)
     {
+        var staff = await db.StaffMembers.AsNoTracking().ToDictionaryAsync(x => x.Id, x => x.Name ?? "", ct);
         var list = new List<HistoryRow>();
         foreach (var e in await db.Expenses.AsNoTracking().ToListAsync(ct))
+        {
+            var bits = new List<string>();
+            if (e.SalaryStaffId is long sid)
+                bits.Add("👤 معاشِ " + (staff.TryGetValue(sid, out var nm) && nm.Length > 0 ? nm : "کارمند")
+                         + (string.IsNullOrWhiteSpace(e.SalaryMonth)
+                                ? "" : " — " + Shamsi.MonthLabel(e.SalaryMonth)));
+            else if (!string.IsNullOrWhiteSpace(e.SrcKey))
+                bits.Add("📝 از ورقِ روزانه");
+            else
+                bits.Add("✍️ مصرفِ دستی");
+
+            if (!string.IsNullOrWhiteSpace(e.Note)) bits.Add(e.Note!.Trim());
+
             list.Add(new HistoryRow("expense", e.DateShamsi ?? "", e.DateKey,
                 string.IsNullOrWhiteSpace(e.Title) ? "مصرف" : e.Title!,
-                e.Note ?? "", Math.Round(e.Amount), " افغانی", "out"));
+                string.Join(" · ", bits), Math.Round(e.Amount), " افغانی", "out"));
+        }
         return list;
     }
 

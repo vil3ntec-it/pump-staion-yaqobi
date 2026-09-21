@@ -6,6 +6,14 @@
              x:Class="PumpYaqobi.App.Views.Sections.WaraqPageView"
              x:DataType="vm:WaraqPageViewModel">
 
+  <!-- نوشتهٔ راهنمای کادرها سمتِ راست — شرحِ کامل در ‎ParchaSectionView.axaml‎.
+       ⛔ نوشتهٔ تایپ‌شده همچنان وسط‌چین است؛ فقط راهنما راست می‌شود. -->
+  <UserControl.Styles>
+    <Style Selector="TextBox /template/ TextBlock#PART_Watermark">
+      <Setter Property="TextAlignment" Value="Right" />
+    </Style>
+  </UserControl.Styles>
+
   <c:SectionPage Header="{Binding Title}" SubHeader="پایه‌ها و ردیف‌های قرض و مصرفِ همین شیفت">
 
     <c:SectionPage.Toolbar>
@@ -56,6 +64,22 @@
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
           <DataGridTextColumn Header="شروع" Binding="{Binding StartText}" Width="Auto" />
+          <!-- ══ «این پایه کمتر از پایهٔ قبلی بود» ═══════════════════════════
+               خواستهٔ صاحب ریپو: عدد سرخ باشد و «با یک دکمه بشود عادی‌اش
+               کرد». ستونِ «شروع» متنی است و رنگِ ردیف‌به‌ردیف نمی‌گیرد؛
+               قالبی کردنش کپی/پیستِ همان ستون را می‌بُرد. پس نشان بغلش
+               می‌نشیند — و زدنش همان دکمهٔ «عادی شد» است. -->
+          <DataGridTemplateColumn Header="هشدار" Width="Auto" IsReadOnly="True">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <Button Classes="ghost" Content="{Binding LowBaseText}" Padding="6,2" FontSize="11.5"
+                        IsVisible="{Binding LowBase}" FontWeight="Bold"
+                        Foreground="{DynamicResource Pump.Danger}"
+                        Command="{Binding ClearLowBaseCommand}"
+                        ToolTip.Tip="شروعِ این پایه از پایهٔ قبلی کمتر بود. زدنِ این دکمه فقط نشان را برمی‌دارد — هیچ عددی عوض نمی‌شود." />
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
           <DataGridTextColumn Header="ختم" Binding="{Binding EndText}" Width="Auto" />
           <DataGridTextColumn Header="لیتر" Binding="{Binding LitersText}" Width="Auto" IsReadOnly="True" />
           <DataGridTextColumn Header="فی" Binding="{Binding PriceText}" Width="Auto" />

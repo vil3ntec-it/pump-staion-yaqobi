@@ -503,7 +503,11 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
     private List<CompanyCardViewModel> _all = new();
 
     public CompanySectionViewModel(AppHost host) : base("noinv", "noinv", "شرکت‌ها تیل")
-        => _host = host;
+    {
+        _host = host;
+        // درِ «🕘 تاریخچه»ی همین بخش — شرحش بالای ‎SectionViewModel.HistoryKind‎
+        HistoryKind = "company";
+    }
 
     public ObservableCollection<CompanyCardViewModel> Cards { get; } = new();
 

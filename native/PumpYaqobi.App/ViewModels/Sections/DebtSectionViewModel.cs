@@ -138,7 +138,11 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
         : base(noInvoice ? "noinv" : "debt",
                noInvoice ? "noinv" : "debt",
                noInvoice ? "شرکت‌ها تیل" : "قرض‌داران")
-    { _host = host; _noInvoice = noInvoice; }
+    {
+        _host = host; _noInvoice = noInvoice;
+        // درِ «🕘 تاریخچه»ی همین بخش — شرحش بالای ‎SectionViewModel.HistoryKind‎
+        HistoryKind = noInvoice ? "company" : "debt";
+    }
 
     /// <summary>
     /// ⚠️ ‎BulkRows‎ است نه ‎ObservableCollection‎ی ساده: با ده هزار قرض‌دار،
