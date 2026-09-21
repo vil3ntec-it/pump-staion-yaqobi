@@ -73,10 +73,13 @@ public sealed partial class MainViewModel : ObservableObject
             // هیچ اجازه‌ای نداریم.
             SoftLock.Install();
             var sync = AppHost.Current.Sync;
-            sync.Changed += () => Dispatcher.UIThread.Post(TickSyncDot);
+            sync.Changed += () => Dispatcher.UIThread.Post(() => { TickSyncDot(); TickSyncPrime(); });
             sync.NoticeArrived += n => Dispatcher.UIThread.Post(() => ShowNotice(n));
+            sync.PrimeFinished += (okPrime, why, got) =>
+                Dispatcher.UIThread.Post(() => _ = OnPrimeFinishedAsync(okPrime, why, got));
             sync.Start();
             TickSyncDot();
+            TickSyncPrime();
             //  ⚠️ قفلِ نرم بی‌صدا نباشد: اگر اشتراک تمام شده (یا هفت روز
             //  مانده) کاربر باید بداند چرا نوشتن نمی‌شود، نه این‌که فکر کند
             //  برنامه خراب است. امروز این جمله خالی است، چون قفل‌ها بازند.
@@ -561,6 +564,78 @@ public sealed partial class MainViewModel : ObservableObject
         if (key != SyncDotBrushKey) SyncDotBrushKey = key;
         if (text != SyncDotText) SyncDotText = text;
         if (sync.Reason != SyncDotReason) SyncDotReason = sync.Reason;
+    }
+
+    // ══ ⏳ پردهٔ «آوردنِ اطلاعاتِ حساب» ═══════════════════════════════════
+    //
+    //  خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۱۱): «یارو اینترنت داره و می‌ره تو
+    //  حساب است و لودینگ روی صفحه نمیاد تا اطلاعاتی که توی حساب و سرور
+    //  است بیاد روی همون حساب.»
+    //
+    //  ⚠️ **هیچ تصمیمی این‌جا گرفته نمی‌شود** — همان قاعدهٔ چراغِ همگام‌سازی.
+    //  «پرده باید باشد یا نه» فقط در خودِ موتورِ همگام‌سازی تصمیم
+    //  گرفته می‌شود و این‌جا فقط **خوانده** می‌شود. دو جای تصمیم یعنی
+    //  روزی پرده هست و همگام‌سازی نیست.
+
+    /// <summary>پردهٔ «اطلاعاتِ حسابتان دارد می‌آید» روی صفحه است؟</summary>
+    [ObservableProperty] private bool _isSyncPriming;
+
+    /// <summary>همان لحظه چه می‌گذرد — جملهٔ آمادهٔ خودِ موتور.</summary>
+    [ObservableProperty] private string _syncPrimeText = "";
+
+    /// <summary>
+    /// «ادامه در پس‌زمینه» — پرده می‌رود و همگام‌سازی سرِ جایش می‌ماند.
+    ///
+    /// ⛔ این دکمه <b>همیشه</b> روی پرده هست. صفحهٔ ورود نباید دیوار شود و
+    /// این پرده هم نباید — کسی که اینترنتش کند است باید بتواند دفترِ خودش
+    /// را ببیند (قاعدهٔ ۱۴۰۵/۰۶/۳۰).
+    /// </summary>
+    [RelayCommand]
+    private void DismissSyncPrime()
+    {
+        AppHost.Current.SyncIfStarted?.DismissPrime();
+        IsSyncPriming = false;
+    }
+
+    private void TickSyncPrime()
+    {
+        var sync = AppHost.Current.SyncIfStarted;
+        var on = sync is { Priming: true };
+        if (IsSyncPriming != on) IsSyncPriming = on;
+        var text = on ? sync!.PrimeText : "";
+        if (SyncPrimeText != text) SyncPrimeText = text;
+    }
+
+    /// <summary>
+    /// دفترِ حساب رسید (یا نرسید) — پرده رفت.
+    ///
+    /// ⛔ <b>بخشِ جلوی چشم از نو خوانده می‌شود.</b> ردیف‌های رسیده با SQLِ
+    /// خام می‌نشینند و <c>PumpDbContext.Bump()</c> می‌خورند، پس <b>هر بخشِ
+    /// دیگری</b> سرِ نخستین دیدارش خودش تازه می‌شود (ترمزِ <c>Version</c>).
+    /// ولی بخشی که همین حالا باز است تا کاربر جایی نرود دوباره خوانده
+    /// نمی‌شود — یعنی صفحه‌ای که همین الان دیده می‌شود از دادهٔ تازه عقب
+    /// می‌ماند.
+    /// </summary>
+    private async Task OnPrimeFinishedAsync(bool ok, string why, int got)
+    {
+        TickSyncPrime();
+        TickSyncDot();
+
+        if (ok && got > 0)
+        {
+            try { if (Current is { } cur) await cur.ReloadAsync(); }
+            catch { /* تازه کردنِ صفحه رفاه است، خودِ داده روی دیسک نشسته */ }
+            AppHost.Current.Toast(
+                $"✅ اطلاعاتِ حسابتان آمد — {Shamsi.Money(got)} تغییر", ToastKind.Ok);
+        }
+        else if (!ok)
+        {
+            //  ⚠️ پرده رفت ولی همگام‌سازی نرفته: حلقه خودش دوباره می‌کوشد و
+            //  چراغِ نوارِ پایین دلیلش را نگه می‌دارد.
+            AppHost.Current.Toast(
+                "⏳ اطلاعاتِ حساب هنوز نیامد — در پس‌زمینه دوباره تلاش می‌شود"
+                + (why.Length > 0 ? " · " + why : ""), ToastKind.Warn);
+        }
     }
 
     /// <summary>کلیکِ چراغِ همگام‌سازی — «الان همگام کن».</summary>

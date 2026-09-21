@@ -1,6 +1,7 @@
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Persistence;
 using PumpYaqobi.Services.Data;
 
@@ -81,8 +82,11 @@ public sealed class SyncEngine : IAsyncDisposable
 
     private readonly SyncStore _store;
     private readonly SemaphoreSlim _wake = new(0, 1);
+    /// <summary>«مکثِ نخست را رد کن» — فقط از <see cref="PrimeNow"/>.</summary>
+    private readonly SemaphoreSlim _startNow = new(0, 1);
     private CancellationTokenSource? _loop;
     private Task? _live;
+    private bool _primeOver;
 
     private long _lastVersion = -1;
     private int _fails;
@@ -108,6 +112,33 @@ public sealed class SyncEngine : IAsyncDisposable
 
     /// <summary>آخرین خطا — برای صفحهٔ تنظیمات.</summary>
     public string LastError { get; private set; } = "";
+
+    // ══ پردهٔ «آوردنِ اطلاعاتِ حساب» ════════════════════════════════════
+    //
+    //  خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۱۱): «یارو اینترنت داره و می‌ره تو
+    //  حساب است و لودینگ روی صفحه نمیاد تا اطلاعاتی که توی حساب و سرور
+    //  است بیاد روی همون حساب.»
+    //
+    //  ⛔ <b>فقط نخستین گرفتنِ هر حساب.</b> بعدش همان چراغِ کوچکِ نوار کار
+    //  را می‌کند؛ پرده‌ای که با هر ‎pull‎ بیاید، یک پرده نیست، یک مزاحم است.
+    //  ⛔ <b>و هیچ‌وقت دیوار نیست</b>: «ادامه در پس‌زمینه» همیشه هست، و هر
+    //  خطایی خودش پرده را می‌برد. برنامه آفلاین هم باید کار کند.
+
+    /// <summary>همین حالا در حالِ آوردنِ اطلاعاتِ حسابیم؟</summary>
+    public bool Priming { get; private set; }
+
+    /// <summary>کاربر همین حالا چه می‌بیند — یک جملهٔ آماده.</summary>
+    public string PrimeText { get; private set; } = "";
+
+    /// <summary>چند تغییر تا این لحظه از حساب رسیده.</summary>
+    public int PrimeGot { get; private set; }
+
+    /// <summary>
+    /// پرده تمام شد. <c>ok</c> یعنی دفترِ حساب واقعاً آمد.
+    /// ⚠️ پوسته با همین بخشِ جلوی چشم را از نو می‌خواند — وگرنه کاربر
+    /// صفحه‌ای را می‌بیند که پیش از رسیدنِ داده خوانده شده بود.
+    /// </summary>
+    public event Action<bool, string, int>? PrimeFinished;
 
     /// <summary>هر بار که یکی از بالایی‌ها عوض شد.</summary>
     public event Action? Changed;
@@ -140,6 +171,75 @@ public sealed class SyncEngine : IAsyncDisposable
         catch (SemaphoreFullException) { /* از پیش بیدار است */ }
     }
 
+    /// <summary>
+    /// ══ «همین حالا، نه پانزده ثانیهٔ دیگر» ══════════════════════════════
+    ///
+    /// از لحظه‌ای صدا زده می‌شود که کاربر واقعاً واردِ حسابش شده
+    /// (<c>AccountSectionViewModel</c>). <see cref="FirstDelay"/> برای این
+    /// است که صفحهٔ اولِ برنامه بی رقیب بالا بیاید — ولی کسی که همین حالا
+    /// وارد شده و منتظرِ دفترِ خودش است، پانزده ثانیه به یک صفحهٔ
+    /// <b>خالی</b> نگاه می‌کند و گمان می‌کند اطلاعاتش رفته.
+    ///
+    /// ⚠️ مکث را فقط همین یک در رد می‌کند، نه هر ذخیرهٔ دیتابیس: وگرنه
+    /// بالا آمدنِ برنامه خودش دوباره با همگام‌سازی رقیب می‌شد.
+    /// </summary>
+    public void PrimeNow()
+    {
+        try { if (_startNow.CurrentCount == 0) _startNow.Release(); }
+        catch (SemaphoreFullException) { /* از پیش گفته شده */ }
+        Nudge();
+    }
+
+    /// <summary>
+    /// «ادامه در پس‌زمینه» — پرده می‌رود و دیگر در این اجرا برنمی‌گردد.
+    /// ⚠️ خودِ همگام‌سازی هیچ کاری‌اش نمی‌شود؛ فقط دیگر جلوی صفحه نیست.
+    /// </summary>
+    public void DismissPrime()
+    {
+        if (!Priming && _primeOver) return;
+        _primeOver = true;
+        Priming = false;
+        PrimeText = "";
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// پرده حق دارد بیاید؟
+    ///
+    /// ⛔ <b>هر دو شرط لازم‌اند.</b> <c>PrimedAt == 0</c> تنها مهرِ درست
+    /// است (حسابِ خالی با گرفتنِ موفق هم <c>Cursor</c>ش صفر می‌ماند)، و
+    /// <c>Cursor == 0</c> نصب‌های امروزی را — که از قبل همگام‌اند و این
+    /// ستون را تازه گرفته‌اند — از یک پردهٔ بی‌دلیل نگه می‌دارد.
+    /// </summary>
+    public static bool PrimeWanted(Domain.Entities.SyncStateRow s) =>
+        s.PrimedAt == 0 && s.Cursor == 0;
+
+    private void SetPrime(bool on, string text)
+    {
+        if (_primeOver) on = false;
+        if (Priming == on && PrimeText == text) return;
+        Priming = on;
+        PrimeText = on ? text : "";
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// پرده تمام شد — چه دفتر آمده باشد چه نیامده.
+    ///
+    /// ⛔ <b>یک بار در هر اجرا، و بس.</b> بی این قفل، یک شبکهٔ لرزان هر
+    /// چند دقیقه پرده را جلوی چشمِ کاربر روشن و خاموش می‌کرد.
+    /// </summary>
+    private void EndPrime(bool ok, string why)
+    {
+        if (_primeOver && !Priming) return;
+        _primeOver = true;
+        var got = PrimeGot;
+        Priming = false;
+        PrimeText = "";
+        Changed?.Invoke();
+        PrimeFinished?.Invoke(ok, why, got);
+    }
+
     /// <summary>دکمهٔ «الان همگام کن» در تنظیمات.</summary>
     public async Task<bool> SyncNowAsync(CancellationToken ct = default)
     {
@@ -150,7 +250,9 @@ public sealed class SyncEngine : IAsyncDisposable
 
     private async Task LoopAsync(CancellationToken ct)
     {
-        try { await Task.Delay(FirstDelay, ct); } catch { return; }
+        //  ⚠️ «تا پانزده ثانیه صبر کن، مگر کسی بگوید همین حالا»
+        //  (<see cref="PrimeNow"/>) — نه یک ‎Task.Delay‎ی شکست‌ناپذیر.
+        try { await _startNow.WaitAsync(FirstDelay, ct); } catch { return; }
 
         while (!ct.IsCancellationRequested)
         {
@@ -184,6 +286,8 @@ public sealed class SyncEngine : IAsyncDisposable
         if (!cloud.CanSync)
         {
             //  ⚠️ هیچ دستورِ دیتابیسی: نصبی که هنوز بند نشده صفر مصرف دارد
+            //  ⛔ و هیچ پرده‌ای: کسی که حساب ندارد منتظرِ هیچ دفتری نیست.
+            SetPrime(false, "");
             Set(SyncLight.Idle, "هنوز به سرورِ حساب بند نشده‌ایم — از «پروفایل» وارد شوید", 0);
             return;
         }
@@ -221,6 +325,8 @@ public sealed class SyncEngine : IAsyncDisposable
                 //  وگرنه پیام در همین دور با پیامِ «بارِ اول» عوض می‌شد و
                 //  کاربر هیچ‌وقت نمی‌فهمید چرا کلِ دفترش دوباره می‌رود.
                 _lastVersion = -1;
+                PrimeGot = 0;
+                SetPrime(PrimeWanted(state), "حسابِ تازه — دفتر برای حسابِ شما آماده می‌شود…");
                 Set(SyncLight.Queued,
                     "حسابِ تازه — کلِ دفترِ این کامپیوتر برای حسابِ شما فرستاده می‌شود", 0);
                 Nudge();
@@ -228,12 +334,19 @@ public sealed class SyncEngine : IAsyncDisposable
             }
         }
 
+        //  ══ پرده: «آوردنِ اطلاعاتِ حساب» ════════════════════════════════
+        //  از همین‌جا تا پایانِ نخستین گرفتنِ کامل. `PrimeWanted` هر دو
+        //  شرط را با هم می‌سنجد و `SetPrime` خودش `_primeOver` را رعایت
+        //  می‌کند، پس هیچ دو-جای-تصمیمی ساخته نمی‌شود.
+        var priming = PrimeWanted(state);
+
         // ── ۱) بارِ اول: ردیف‌هایی که پیش از این نسخه ساخته شده‌اند ──────
         if (state.SeededAt == 0)
         {
             var step = _store.SeedStep();
             if (!step.Done)
             {
+                SetPrime(priming, "آماده کردنِ دفترِ این کامپیوتر…");
                 Set(SyncLight.Queued, "در حالِ آماده کردنِ دفتر برای اولین همگام‌سازی…", _store.Pending());
                 Nudge();
                 return;
@@ -245,6 +358,8 @@ public sealed class SyncEngine : IAsyncDisposable
         Queued = pending;
         if (pending > 0 && !state.Holding)
         {
+            if (priming)
+                SetPrime(true, $"فرستادنِ دفترِ این کامپیوتر به حسابِ شما… ({Shamsi.Money(pending)} مانده)");
             var batch = _store.Take();
             var res = await cloud.SyncPushAsync(batch, pending, ct);
 
@@ -257,6 +372,7 @@ public sealed class SyncEngine : IAsyncDisposable
                     pending);
                 LastError = res.Why;
                 _fails = 0;
+                if (priming) EndPrime(false, "نسخهٔ برنامه از سرورِ حساب جلوتر است");
                 return;
             }
 
@@ -267,6 +383,7 @@ public sealed class SyncEngine : IAsyncDisposable
                 _store.Update(x => x.LastError = res.Why);
                 LastError = res.Why;
                 Set(SyncLight.Queued, "در صف — " + res.Why, pending);
+                if (priming) EndPrime(false, res.Why);
                 return;
             }
 
@@ -306,6 +423,11 @@ public sealed class SyncEngine : IAsyncDisposable
         // ── ۳) گرفتن ───────────────────────────────────────────────────
         if (pullDue)
         {
+            if (priming)
+                SetPrime(true, PrimeGot > 0
+                    ? $"آوردنِ اطلاعاتِ حساب… ({Shamsi.Money(PrimeGot)} تغییر تا این‌جا)"
+                    : "آوردنِ اطلاعاتِ حساب از سرور…");
+
             _lastPull = DateTime.UtcNow;
             var pull = await cloud.SyncPullAsync(state.Cursor, ct);
             if (!pull.Ok)
@@ -313,6 +435,10 @@ public sealed class SyncEngine : IAsyncDisposable
                 _fails++;
                 LastError = pull.Why;
                 Set(SyncLight.Queued, "به سرورِ حساب نمی‌رسیم — " + pull.Why, Queued);
+                //  ⛔ پرده می‌رود و دیگر برنمی‌گردد. حلقه خودش عقب‌نشینی
+                //  می‌کند و باز می‌کوشد؛ ولی کاربر نباید پشتِ یک پردهٔ
+                //  بی‌پایان بماند — برنامه آفلاین هم باید کار کند.
+                if (priming) EndPrime(false, pull.Why);
                 return;
             }
 
@@ -321,6 +447,7 @@ public sealed class SyncEngine : IAsyncDisposable
             {
                 var applied = _store.ApplyIncoming(pull.Ops);
                 if (applied.Failed > 0) LastError = "چند تغییرِ رسیده ننشست: " + applied.LastWhy;
+                PrimeGot += pull.Ops.Count;
             }
             _store.Update(x =>
             {
@@ -331,6 +458,14 @@ public sealed class SyncEngine : IAsyncDisposable
 
             //  هنوز مانده ⇒ همین حالا دورِ بعد
             if (pull.HasMore) { _lastPull = DateTime.MinValue; Nudge(); }
+            else if (priming)
+            {
+                //  ⛔ **مهرِ صریح**، نه «مکان‌نما بزرگ‌تر از صفر»: حسابی که
+                //  روی سرور هیچ چیزی ندارد هم همین‌جا تمام می‌شود و پرده‌اش
+                //  دیگر هر سی ثانیه برنمی‌گردد.
+                _store.Update(x => x.PrimedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                EndPrime(true, "");
+            }
         }
 
         // ── ۴) چراغ ────────────────────────────────────────────────────
