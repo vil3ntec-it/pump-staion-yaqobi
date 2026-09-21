@@ -322,7 +322,11 @@ public class InstallerTests
         //  حتی وقتی فایل در هیچ انتشاری بالا نرود هم سبز می‌ماند — یعنی
         //  سنجه‌ای که چیزی را نگه نمی‌دارد.
         var uploads = Regex.Matches(
-            w, @"^ {12}rel/SHA256SUMS\.txt$", RegexOptions.Multiline).Count;
+            //  ⚠️ ‎\r?‎ لازم است: روی ویندوز گیت فایل را با CRLF چک‌اوت
+            //  می‌کند و در دات‌نت ‎$‎ با ‎Multiline‎ پیش از ‎\n‎ می‌ایستد، پس
+            //  یک ‎\r‎ بینشان می‌ماند و الگو هیچ‌وقت نمی‌گیرد. بی این، همین
+            //  سنجه روی رانرِ ویندوز «۰ سطر» دید در حالی که فایل درست بود.
+            w, @"^ {12}rel/SHA256SUMS\.txt\r?$", RegexOptions.Multiline).Count;
         Assert.True(uploads == 2,
             $"چک‌سام باید در هر دو انتشار بالا برود — {uploads} سطر دیده شد");
     }
