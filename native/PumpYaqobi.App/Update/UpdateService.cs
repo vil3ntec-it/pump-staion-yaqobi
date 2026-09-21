@@ -100,6 +100,32 @@ public sealed class UpdateService
     }
 
     /// <summary>
+    /// ══ درگاهِ سنجش ═════════════════════════════════════════════════════════
+    /// همان الگوی <c>CloudLink.TestTransport</c>. ⛔ این‌جا **لازم** بود، نه
+    /// تجمل: تا امروز سی‌ویک آزمون دربارهٔ به‌روزرسانی داشتیم و **هیچ‌کدام**
+    /// نه <see cref="CheckAsync"/> را می‌دواند و نه
+    /// <see cref="DownloadAsync"/> را — همه رشته‌های سورس و خودِ رکورد را
+    /// می‌سنجیدند. پس هر خرابیِ **رفتاری** در این مسیر بی‌صدا از CI رد می‌شد،
+    /// و همین شد که کاربر روی نسخهٔ کهنه ماند و آزمون‌ها سبز بودند.
+    ///
+    /// ⚠️ نشانی را باز نمی‌کند: مقدارش فقط از خودِ آزمون می‌آید (نه از
+    /// تنظیمات، نه از محیط) و آزمونِ ‎CloudAddressLock‎مانندِ
+    /// ‎TheUpdateServiceItselfKeepsTheAddressPrivate‎ سرِ جایش است.
+    /// </summary>
+    public static Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>? TestTransport { get; set; }
+
+    /// <summary>تنها جای فرستادنِ درخواست — تا درگاهِ سنجش یک نقطه بماند.</summary>
+    private static async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage req, HttpCompletionOption how, CancellationToken ct)
+        => TestTransport is null
+            ? await Http.SendAsync(req, how, ct)
+            : await TestTransport(req, ct);
+
+    private static Task<HttpResponseMessage> GetAsync(string url, CancellationToken ct)
+        => SendAsync(new HttpRequestMessage(HttpMethod.Get, url),
+                     HttpCompletionOption.ResponseContentRead, ct);
+
+    /// <summary>
     /// ══ آیا نسخهٔ تازه‌ای هست؟ ══════════════════════════════════════════════
     /// دو در، به همان ترتیب:
     ///
@@ -132,7 +158,7 @@ public sealed class UpdateService
     {
         try
         {
-            using var res = await Http.GetAsync(FeedUrl, ct);
+            using var res = await GetAsync(FeedUrl, ct);
             if (!res.IsSuccessStatusCode)
                 return (null, "سرورِ به‌روزرسانی پاسخ نداد (کدِ " + (int)res.StatusCode + ")");
 
@@ -229,7 +255,7 @@ public sealed class UpdateService
     /// <summary>یک فایلِ متنیِ کوچک از انتشارِ چرخشی.</summary>
     private static async Task<string> TextAsync(string name, CancellationToken ct)
     {
-        using var res = await Http.GetAsync(FileUrl(name), ct);
+        using var res = await GetAsync(FileUrl(name), ct);
         if (!res.IsSuccessStatusCode) return "";
         var text = await res.Content.ReadAsStringAsync(ct);
         return text.Split('\n')[0].Trim();
@@ -274,6 +300,34 @@ public sealed class UpdateService
         {
             var probe = Path.Combine(dir, ".pump-write-test-" + Guid.NewGuid().ToString("N")[..8]);
             using (File.Create(probe, 1, FileOptions.DeleteOnClose)) { }
+            return true;
+        }
+        catch { return false; }
+    }
+
+    /// <summary>
+    /// ══ راهِ بیرون ═══════════════════════════════════════════════════════════
+    /// صفحهٔ انتشار در مرورگرِ خودِ سیستم باز می‌شود.
+    ///
+    /// ⛔ چرا لازم است: هر بررسی و هر دانلودی می‌تواند به شبکه بخورد، و وقتی
+    /// خورد کاربر باید **یک راه** داشته باشد، نه یک کارتِ بسته. خواستهٔ
+    /// خودش هم همین بود: «بده لینک دانلود مستقیم».
+    ///
+    /// ⚠️ نشانی همچنان در **رابط کاربری نوشته نمی‌شود** — فقط به مرورگر
+    /// سپرده می‌شود، و ساخته شدنش این‌جا است، نه در ویومدل، تا قاعدهٔ
+    /// «نامِ مخزن فقط در همین فایل» دست‌نخورده بماند.
+    /// </summary>
+    public static bool OpenDownloadPage()
+    {
+        try
+        {
+            var parts = new Uri(FeedUrl).AbsolutePath
+                .Split('/', StringSplitOptions.RemoveEmptyEntries);
+            var url = "https://github.com/" + parts[1] + "/" + parts[2] + "/releases/latest";
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url)
+            {
+                UseShellExecute = true,
+            });
             return true;
         }
         catch { return false; }
@@ -387,6 +441,17 @@ public sealed class UpdateService
     public async Task<string?> DownloadAsync(UpdateInfo info, IProgress<double>? progress,
                                              CancellationToken ct = default)
     {
+        // ⛔ هیچ‌وقت استثنا بیرون نمی‌دهد. تا امروز می‌داد، و فرمانِ صفحه هم
+        // ‎catch‎ نداشت: یک قطعیِ وسطِ دانلود، یک ضدِ ویروسی که فایلِ ‎.part‎ را
+        // قفل کند، یا دیسکِ پر ⇒ استثنا از ‎AsyncRelayCommand‎ بیرون می‌زد و
+        // کاربر **هیچ پیامی** نمی‌دید — همان «دانلود هم نیست».
+        try { return await GetPackageAsync(info, progress, ct); }
+        catch { return null; }
+    }
+
+    private async Task<string?> GetPackageAsync(UpdateInfo info, IProgress<double>? progress,
+                                                CancellationToken ct)
+    {
         if (!info.Available || info.DownloadUrl is null) return null;
 
         var dir = Path.Combine(Services.AppSettings.Dir, "updates");
@@ -400,7 +465,8 @@ public sealed class UpdateService
         // رد می‌کرد و یک دانلودِ بریده روی برنامه می‌نشست.
         long expected = info.SizeBytes;
 
-        using (var res = await Http.GetAsync(info.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, ct))
+        using (var res = await SendAsync(new HttpRequestMessage(HttpMethod.Get, info.DownloadUrl),
+                                        HttpCompletionOption.ResponseHeadersRead, ct))
         {
             if (!res.IsSuccessStatusCode) return null;
             var total = res.Content.Headers.ContentLength ?? info.SizeBytes;
@@ -444,6 +510,15 @@ public sealed class UpdateService
     /// ⚠️ خودِ برنامه نمی‌تواند فایل‌های در حالِ اجرای خودش را جابه‌جا کند —
     /// برای همین کار به آن دستورِ بیرونی سپرده می‌شود و برنامه بلافاصله بسته
     /// می‌شود. اگر بستن را فراموش کنید، جابه‌جایی شکست می‌خورد.
+    ///
+    /// ⛔ <b>و نصاب همیشه با <c>/DIR</c> صدا زده می‌شود</b> — نبودش یک خرابیِ
+    /// واقعی بود: <c>UsePreviousAppDir=yes</c> پوشه را از <b>ثبتِ نصبِ
+    /// پیشین</b> برمی‌دارد، و نصبی که کاربر خودش از زیپ باز کرده هیچ ثبتی
+    /// ندارد. پس نصابِ بی‌صدا می‌رفت در
+    /// <c>%LocalAppData%\Programs\PumpYaqobi</c> می‌نشست — یک پوشهٔ
+    /// <b>دیگر</b> — و نسخهٔ در حالِ اجرا (مثلاً <c>D:\…\PumpYaqobi</c>)
+    /// دست‌نخورده می‌ماند. کاربر برنامه را باز می‌کرد، همان نسخهٔ کهنه را
+    /// می‌دید و به حق می‌گفت «به‌روز نمی‌شود».
     /// </summary>
     public static bool Launch(string packagePath, string? targetVersion = null)
     {
@@ -463,9 +538,11 @@ public sealed class UpdateService
             // می‌بندد، فایل‌ها را عوض می‌کند و دوباره بازش می‌کند.
             // (بارِ اول که کاربر خودش ‎setup.exe‎ را می‌زند، بی‌آرگومان اجرا
             //  می‌شود و ویزارد کامل را می‌بیند — این مسیر فقط به‌روزرسانی است.)
+            // ⛔ ‎/DIR‎ لازم است — شرحش بالای همین متد.
             var psi = new System.Diagnostics.ProcessStartInfo(packagePath)
             {
-                Arguments = "/SILENT /NORESTART /RESTARTAPPLICATIONS",
+                Arguments = "/SILENT /NORESTART /RESTARTAPPLICATIONS"
+                          + " /DIR=\"" + InstallDir + "\"",
                 UseShellExecute = true,
             };
 
@@ -602,10 +679,18 @@ public static class AppVersion
 public static class AppBase
 {
     /// <summary>شناسهٔ پایهٔ همین نصب. خالی یعنی «نمی‌دانم» → بستهٔ کامل.</summary>
+    /// <summary>
+    /// جای شناسهٔ پایه برای آزمون‌ها — همان الگوی
+    /// <c>AppSettings.DirOverride</c>. ⚠️ فقط از خودِ آزمون مقدار می‌گیرد؛
+    /// نه از تنظیمات و نه از محیط، پس راهی به دستِ کاربر ندارد.
+    /// </summary>
+    public static string? LocalIdOverride { get; set; }
+
     public static string LocalId
     {
         get
         {
+            if (LocalIdOverride is not null) return LocalIdOverride;
             try
             {
                 var dir = Path.GetDirectoryName(Environment.ProcessPath);

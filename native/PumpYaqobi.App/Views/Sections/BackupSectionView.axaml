@@ -117,16 +117,22 @@
 
             <StackPanel Orientation="Horizontal" Spacing="8">
               <!-- ⛔ کارِ اصلیِ این کارت است، پس تاکیدی می‌ماند: کاربر باید
-                   بی گشتن پیدایش کند (۱۴۰۵/۰۷/۰۶). -->
+                   بی گشتن پیدایش کند (۱۴۰۵/۰۷/۰۶).
+                   ⛔ و **هیچ‌وقت خاکستری نمی‌شود**: بررسیِ خودکارِ سرِ باز شدنِ
+                   صفحه ‎Checking‎ را روشن می‌کرد و با شبکهٔ کند این دکمه تا
+                   ۷۵ ثانیه مرده بود — کاربر می‌زد و هیچ اتفاقی نمی‌افتاد.
+                   کلیک، بررسیِ در جریان را لغو می‌کند و از نو می‌پرسد. -->
               <Button Classes="accent" Content="🔄 بررسیِ به‌روزرسانی"
-                      Command="{Binding CheckUpdateCommand}"
-                      IsEnabled="{Binding !Checking}" />
+                      Command="{Binding CheckUpdateCommand}" />
               <Button Classes="accent" Content="گرفتنِ نسخهٔ تازه"
                       Command="{Binding DownloadUpdateCommand}"
                       IsVisible="{Binding UpdateAvailable}" IsEnabled="{Binding !Downloading}" />
               <Button Classes="accent" Content="نصب و راه‌اندازیِ دوباره"
                       Command="{Binding InstallUpdateCommand}"
                       IsVisible="{Binding ReadyToInstall}" />
+              <!-- راهِ بیرون: شبکه که نگذاشت، کاربر نباید در بست بماند -->
+              <Button Classes="ghost" Content="باز کردنِ صفحهٔ دانلود"
+                      Command="{Binding OpenDownloadPageCommand}" />
             </StackPanel>
           </StackPanel>
         </StackPanel>

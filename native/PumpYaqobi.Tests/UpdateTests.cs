@@ -350,4 +350,143 @@ public class UpdateTests
     [InlineData("PumpYaqobi-app-.zip", null)]
     public void OnlyTheSmallPackageCarriesABaseId(string name, string? expected)
         => Assert.Equal(expected, PumpYaqobi.App.Update.AppBase.IdInAssetName(name));
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  ۱۴۰۵/۰۷/۰۶، بارِ دوم — «هنوز اون دکمه کار نمیکنه و برسی نمیکنه و
+    //  دانلود هم نیست». چهار ریشه، چهار سنجه.
+    // ══════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// ══ ریشهٔ اصلی: دکمه خودش را غیرفعال می‌کرد ═════════════════════════════
+    ///
+    /// ⛔ <c>AsyncRelayCommand</c>ی پیش‌فرض تا پایانِ یک اجرا
+    /// <c>CanExecute</c> را <c>false</c> می‌کند — و این اجرا یک درخواستِ
+    /// اینترنتی است (تا ۷۵ ثانیه با دو در). پس کلیکِ اول دکمه را خاکستری
+    /// می‌کرد و هر کلیکِ بعدی بی‌صدا بلعیده می‌شد. روی شبکهٔ کند یا بسته،
+    /// کاربر یک دکمهٔ مرده می‌دید و حق داشت بگوید «کار نمی‌کند».
+    ///
+    /// و <c>IsEnabled="{Binding !Checking}"</c> همان را دوبار می‌کرد: بررسیِ
+    /// **خودکارِ** سرِ باز شدنِ صفحه هم <c>Checking</c> را روشن می‌کرد.
+    ///
+    /// ⚠️ همان قاعدهٔ <c>DebtSectionViewModel.OpenAsync</c> است، نه چیزِ تازه.
+    /// </summary>
+    [Fact]
+    public void TheCheckButtonNeverDisablesItself()
+    {
+        var vm = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections",
+                                               "BackupSectionViewModel.cs"));
+        var i = vm.IndexOf("private async Task CheckUpdateAsync", StringComparison.Ordinal);
+        Assert.True(i > 0, "CheckUpdateAsync پیدا نشد");
+        Assert.Contains("AllowConcurrentExecutions = true", vm[Math.Max(0, i - 400)..i]);
+
+        var view = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections",
+                                                 "BackupSectionView.axaml"));
+        var b = view.IndexOf("بررسیِ به‌روزرسانی\"", StringComparison.Ordinal);
+        Assert.True(b > 0, "دکمهٔ بررسی پیدا نشد");
+        // ⚠️ تا پایانِ **همین** تگ، نه بیشتر — وگرنه ‎IsEnabled‎ی دکمهٔ بعدی
+        // شمرده می‌شود و سنجه سرخِ دروغ می‌دهد.
+        var end = view.IndexOf("/>", b, StringComparison.Ordinal);
+        Assert.True(end > b, "پایانِ تگِ دکمه پیدا نشد");
+        Assert.DoesNotContain("IsEnabled", view[b..end]);
+    }
+
+    /// <summary>
+    /// ⛔ و هیچ مسیری از آن فرمان بی‌جواب برنمی‌گردد: هر شکستی یک جملهٔ سرخ
+    /// می‌شود. پیش از این هیچ <c>catch</c>ی نبود و استثنا از فرمان بیرون
+    /// می‌زد — صفحه روی «در حال بررسی…» می‌ماند، برای همیشه.
+    /// </summary>
+    [Fact]
+    public void EveryFailurePathLeavesASentenceOnTheScreen()
+    {
+        var vm = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections",
+                                               "BackupSectionViewModel.cs"));
+
+        var i = vm.IndexOf("private async Task CheckUpdateAsync", StringComparison.Ordinal);
+        var j = vm.IndexOf("private void OpenDownloadPage", StringComparison.Ordinal);
+        Assert.True(i > 0 && j > i, "بدنهٔ بررسی پیدا نشد");
+        var check = vm[i..j];
+        Assert.Contains("catch", check);
+        Assert.Contains("Pump.Danger", check);
+
+        var d = vm.IndexOf("private async Task DownloadUpdateAsync", StringComparison.Ordinal);
+        Assert.True(d > 0);
+        var down = vm[d..Math.Min(vm.Length, d + 1800)];
+        Assert.Contains("catch", down);
+        Assert.Contains("Pump.Danger", down);
+
+        // و خودِ سرویس هم استثنا بیرون نمی‌دهد
+        var svc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        var g = svc.IndexOf("public async Task<string?> DownloadAsync", StringComparison.Ordinal);
+        Assert.True(g > 0);
+        Assert.Contains("catch { return null; }", svc[g..Math.Min(svc.Length, g + 900)]);
+    }
+
+    /// <summary>
+    /// ══ نصاب باید در **همان** پوشه‌ای بنشیند که برنامه در آن اجرا می‌شود ════
+    ///
+    /// ⛔ <c>UsePreviousAppDir=yes</c> پوشه را از ثبتِ نصبِ **پیشین** برمی‌دارد،
+    /// و نصبی که کاربر خودش از زیپ باز کرده هیچ ثبتی ندارد. پس نصابِ بی‌صدا
+    /// می‌رفت در <c>%LocalAppData%\Programs\PumpYaqobi</c> می‌نشست — یک پوشهٔ
+    /// دیگر — و نسخهٔ در حالِ اجرا (مثلاً <c>D:\…\PumpYaqobi</c>) دست‌نخورده
+    /// می‌ماند. کاربر برنامه را باز می‌کرد، همان نسخهٔ کهنه را می‌دید و به
+    /// حق می‌گفت «به‌روز نمی‌شود».
+    /// </summary>
+    [Fact]
+    public void TheInstallerIsPointedAtTheFolderTheAppIsRunningFrom()
+    {
+        var svc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        var i = svc.IndexOf("/SILENT /NORESTART /RESTARTAPPLICATIONS", StringComparison.Ordinal);
+        Assert.True(i > 0, "آرگومان‌های نصاب پیدا نشد");
+        Assert.Contains("/DIR=", svc[i..Math.Min(svc.Length, i + 200)]);
+        Assert.Contains("InstallDir", svc[i..Math.Min(svc.Length, i + 200)]);
+
+        // و خودِ نصاب هم همان پوشه را نگه می‌دارد
+        var iss = File.ReadAllText(Path.Combine(Root(), "installer", "PumpYaqobi.iss"));
+        Assert.Contains("UsePreviousAppDir=yes", iss);
+    }
+
+    /// <summary>
+    /// ⛔ و یک راهِ بیرون که به شبکه بند نیست: صفحهٔ دانلود در مرورگرِ خودِ
+    /// سیستم. دکمه‌ای که زده شود و هیچ اتفاقی نیفتد در چشمِ کاربر باگ است.
+    ///
+    /// ⚠️ نشانی همچنان در رابط نوشته نمی‌شود — ساختنش داخلِ
+    /// <c>UpdateService</c> است، همان یک جا
+    /// (<see cref="TheUpdateServiceItselfKeepsTheAddressPrivate"/>).
+    /// </summary>
+    [Fact]
+    public void ThereIsAWayOutThatDoesNotDependOnTheNetwork()
+    {
+        var svc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        Assert.Contains("public static bool OpenDownloadPage()", svc);
+
+        var vm = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections",
+                                               "BackupSectionViewModel.cs"));
+        Assert.Contains("UpdateService.OpenDownloadPage()", vm);
+
+        var view = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections",
+                                                 "BackupSectionView.axaml"));
+        Assert.Contains("OpenDownloadPageCommand", view);
+    }
+
+    /// <summary>
+    /// ══ و از امروز خودِ مسیر آزمونِ **رفتاری** دارد ═════════════════════════
+    ///
+    /// ⛔ سی‌ویک آزمونِ پیشین همه رشته‌های سورس و خودِ رکورد را می‌سنجیدند و
+    /// **هیچ‌کدام** <c>CheckAsync</c> یا <c>DownloadAsync</c> را نمی‌دواند.
+    /// همین شد که خرابیِ واقعیِ این مسیر بی‌صدا از CI رد شد. ⛔ آن درگاه را
+    /// برندارید.
+    /// </summary>
+    [Fact]
+    public void TheUpdatePathItselfIsUnderBehaviourTest()
+    {
+        var svc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        Assert.Contains("public static Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>? TestTransport",
+                        svc);
+
+        var behaviour = Path.Combine(Root(), "PumpYaqobi.Tests", "UpdateBehaviourTests.cs");
+        Assert.True(File.Exists(behaviour), "آزمونِ رفتاریِ به‌روزرسانی پیدا نشد");
+        var t = File.ReadAllText(behaviour);
+        Assert.Contains("CheckAsync()", t);
+        Assert.Contains("DownloadAsync(", t);
+    }
 }
