@@ -128,6 +128,46 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "ساختِ نصاب شکست خورد" }
           "نصاب: {0:N1} مگابایت" -f ((Get-Item rel/PumpYaqobi-Setup.exe).Length/1MB)
 
+      # ── چک‌سام ──────────────────────────────────────────────────────────
+      #  گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۸) با عکس: نصاب وسطِ کار
+      #  «The source file is corrupted» داد روی
+      #  `System.IO.Compression.Native.dll`، در حالی که اندازهٔ فایلِ
+      #  دانلودشده مو‌به‌مو با اندازهٔ منتشرشده یکی بود.
+      #
+      #  ⛔ و هیچ راهی نبود بفهمیم خرابی از دانلود است یا از خودِ ساخت —
+      #  چون این انتشار هیچ چک‌سامی نداشت. ریپوی `server` از قبل
+      #  `SHA256SUMS.txt` می‌دهد و همان‌جا این پرسش یک دستور است، نه حدس.
+      #
+      #  ⚠️ و چرا مهم است: `SolidCompression=yes` یعنی همهٔ فایل‌ها در یک
+      #  جریانِ پیوستهٔ فشرده‌اند، پس **یک بایتِ خراب** هر فایلی را که بعد
+      #  از آن نقطه بیاید «corrupted» می‌کند. یعنی نامِ فایلِ داخلِ پیام
+      #  جای خرابی را نشان نمی‌دهد و دنبالش گشتن وقت تلف کردن است.
+      #
+      #  ⚠️ پس از ساختِ نصاب می‌دود، نه در گامِ «بسته‌ها»: خودِ نصاب هم
+      #  باید در فهرست باشد.
+      - name: چک‌سام‌ها
+        shell: pwsh
+        run: |
+          $names = @(
+            'PumpYaqobi-Setup.exe',
+            'PumpYaqobi-Windows.zip',
+            "PumpYaqobi-app-${{ steps.pack.outputs.baseId }}.zip"
+          )
+          $lines = foreach ($n in $names) {
+            $f = "rel/$n"
+            if (Test-Path $f) {
+              $h = (Get-FileHash $f -Algorithm SHA256).Hash.ToLower()
+              "$h  $n"
+            }
+          }
+          #  ⚠️ بی BOM و با خطِ LF — وگرنه `sha256sum -c` روی لینوکس/مک
+          #  همان خطِ اول را «improperly formatted» می‌خواند.
+          $text = ($lines -join "`n") + "`n"
+          [System.IO.File]::WriteAllText(
+            (Join-Path $PWD 'rel/SHA256SUMS.txt'), $text,
+            (New-Object System.Text.UTF8Encoding $false))
+          Get-Content rel/SHA256SUMS.txt
+
       - name: انتشار
         uses: softprops/action-gh-release@v2
         with:
@@ -185,6 +225,7 @@ jobs:
             rel/PumpYaqobi-Setup.exe
             rel/PumpYaqobi-app-${{ steps.pack.outputs.baseId }}.zip
             rel/version.txt
+            rel/SHA256SUMS.txt
           make_latest: true
 
       #  ⚠️ و زیپِ بزرگ جداگانه و **بی حقِ شکستن**: اگر شبکهٔ گیت‌هاب باز هم
@@ -221,6 +262,7 @@ jobs:
             rel/PumpYaqobi-app-${{ steps.pack.outputs.baseId }}.zip
             rel/version.txt
             rel/base.txt
+            rel/SHA256SUMS.txt
 
       - name: انتشارِ زیپِ بی‌نصاب (اختیاری)
         continue-on-error: true

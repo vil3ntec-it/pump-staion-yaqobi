@@ -295,4 +295,56 @@ public class InstallerTests
         // کنارِ سایت گذاشتنش یعنی کسی ۶ مگابایت می‌گیرد و برنامه بالا نمی‌آید.
         Assert.DoesNotContain("'PumpYaqobi-Portable.zip'", pages);
     }
+
+    // ══ چک‌سام ══
+    // گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۸) با عکس: نصاب وسطِ کار «The source file
+    // is corrupted» داد، و اندازهٔ فایلِ دانلودشده مو‌به‌مو با اندازهٔ
+    // منتشرشده یکی بود. هیچ راهی نبود بفهمیم خرابی از دانلود است یا از
+    // خودِ ساخت — چون این انتشار چک‌سام نداشت.
+
+    /// <summary>
+    /// ⛔ هر انتشار باید ‎SHA256SUMS.txt‎ داشته باشد. بی آن، «دانلودت خراب
+    /// است» و «ساختِ ما خراب است» از هم جدا نمی‌شوند و هر دو طرف حدس
+    /// می‌زنند. ریپوی ‎server‎ این را از قبل دارد.
+    /// </summary>
+    [Fact]
+    public void Every_release_publishes_a_checksum_file()
+    {
+        var w = Workflow();
+        Assert.Contains("name: چک‌سام‌ها", w);
+        Assert.Contains("SHA256SUMS.txt", w);
+
+        //  در هر دو انتشار — اصلی و چرخشی. برچسبِ چرخشی همان است که
+        //  درِ دومِ به‌روزرسانی و دکمهٔ دانلودِ سایت از آن می‌خوانند، پس
+        //  فایلی که آن‌جا نباشد برای نیمی از دانلودها بی‌فایده است.
+        //  ⚠️ فقط سطرهای فهرستِ ‎files:‎ شمرده می‌شوند، نه هر جایی که این
+        //  نام آمده: خودِ گامِ چک‌سام دو بار نامش را می‌برد، پس شمارشِ خام
+        //  حتی وقتی فایل در هیچ انتشاری بالا نرود هم سبز می‌ماند — یعنی
+        //  سنجه‌ای که چیزی را نگه نمی‌دارد.
+        var uploads = Regex.Matches(
+            w, @"^ {12}rel/SHA256SUMS\.txt$", RegexOptions.Multiline).Count;
+        Assert.True(uploads == 2,
+            $"چک‌سام باید در هر دو انتشار بالا برود — {uploads} سطر دیده شد");
+    }
+
+    /// <summary>
+    /// ⚠️ چک‌سام باید <b>پس از</b> ساختِ نصاب گرفته شود، وگرنه خودِ نصاب —
+    /// یعنی همان فایلی که کاربر دانلود می‌کند — در فهرست نیست و این کار
+    /// هیچ کدام از دو حالتِ بالا را جدا نمی‌کند.
+    /// </summary>
+    [Fact]
+    public void Checksums_are_taken_after_the_installer_is_built()
+    {
+        var w = Workflow();
+        var installer = w.IndexOf("name: ساختِ نصاب", StringComparison.Ordinal);
+        var sums = w.IndexOf("name: چک‌سام‌ها", StringComparison.Ordinal);
+        Assert.True(installer > 0 && sums > 0, "مرحله‌ها پیدا نشدند");
+        Assert.True(installer < sums,
+            "چک‌سام پیش از ساختِ نصاب گرفته می‌شود — خودِ نصاب در فهرست نیست");
+
+        //  و پیش از انتشار، وگرنه فایلی برای بالا فرستادن نیست.
+        var release = w.IndexOf("name: انتشار", StringComparison.Ordinal);
+        Assert.True(release > sums,
+            "چک‌سام پس از انتشار گرفته می‌شود — فایلش هیچ‌وقت بالا نمی‌رود");
+    }
 }
