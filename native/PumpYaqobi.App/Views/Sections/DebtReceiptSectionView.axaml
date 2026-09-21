@@ -33,24 +33,48 @@
             </WrapPanel.Styles>
 
             <!-- ⚠️ کادرها عمداً بزرگ‌ترند: «خیلی کادرهاشون کوچیک است» -->
+
+            <!-- ══ ترتیب — تاریخ اولِ اول ═══════════════════════════════════
+                 خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۱۰): «کادرِ تاریخ رو هم
+                 بیار اولِ اول، بغلِ نام سمتِ راست بزار.» در چیدمانِ
+                 راست‌به‌چپ، نخستین فرزندِ ‎WrapPanel‎ همان سمتِ راست است.
+                 ترتیب: تاریخ ← نام ← واحد ← نوعِ تیل ← مقدار ← توضیحات. -->
+            <StackPanel Classes="q" Spacing="3" Width="160">
+              <TextBlock Text="تاریخ" Classes="label" />
+              <TextBox Text="{Binding DateShamsi}" HorizontalContentAlignment="Center"
+                       FontSize="15" Padding="10,8" />
+            </StackPanel>
+
             <StackPanel Classes="q" Spacing="3" Width="280">
               <TextBlock Text="نام قرض‌دار" Classes="label" />
               <TextBox x:Name="NameBox" Text="{Binding TypedName}" Watermark="نام…"
                        FontSize="15" Padding="10,8" c:Suggest.Key="debtor" />
             </StackPanel>
 
-            <!-- ══ واحدِ رسید ══════════════════════════════════════════════
-                 خواستهٔ صریحِ صاحب ریپو: «واحد ندارد که رسید پول است یا تیلِ
-                 دیزل است یا پطرول». پول ⇄ تیلِ پطرول ⇄ تیلِ دیزل. -->
+            <!-- ══ واحدِ رسید — دو کشویی، نه یک دکمهٔ چرخشی ═════════════════
+                 خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۱۰): «چرا اون واحدِ رسید
+                 دکمه‌ای است؟ اون و اپشن‌هاش رو کشویی کن که هر کدوم رو
+                 خواستم انتخاب کنم.»
+
+                 ⛔ دکمهٔ چرخشی گزینه‌ها را **نشان نمی‌داد** و رسیدنِ به
+                 «تیلِ دیزل» از «پول» دو کلیک لازم داشت. و دو تصمیم‌اند، نه
+                 یکی: در دفتر هم ‎Unit‎ و ‎Fuel‎ دو ستونِ جدا هستند. -->
             <StackPanel Classes="q" Spacing="3" Width="170">
               <TextBlock Text="واحد رسید" Classes="label" />
-              <Button Classes="fuelchip" Content="{Binding UnitChipText}"
-                      Command="{Binding ToggleUnitCommand}"
-                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                      FontSize="15" Padding="10,8"
-                      Foreground="{Binding UnitChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
-                      BorderBrush="{Binding UnitChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
-                      ToolTip.Tip="زدنش واحدِ رسید را پول ⇄ تیلِ پطرول ⇄ تیلِ دیزل می‌کند" />
+              <ComboBox ItemsSource="{Binding UnitOptions}" SelectedIndex="{Binding UnitIndex}"
+                        HorizontalAlignment="Stretch" FontSize="15" Padding="10,8" />
+            </StackPanel>
+
+            <!-- ⛔ «رسیدِ پول هیچ‌کدوم لازم نیست، نه پطرول نه دیزل» — پس با
+                 واحدِ پول بسته می‌شود، و برچسبِ زیرش می‌گوید چرا. بسته
+                 می‌شود و **پنهان نه**: پنهان شدنش ردیف را جابه‌جا می‌کند. -->
+            <StackPanel Classes="q" Spacing="3" Width="170">
+              <TextBlock Text="نوع تیل" Classes="label" />
+              <ComboBox ItemsSource="{Binding FuelOptions}" SelectedIndex="{Binding FuelIndex}"
+                        IsEnabled="{Binding IsFuel}" HorizontalAlignment="Stretch"
+                        FontSize="15" Padding="10,8" ToolTip.Tip="{Binding FuelHint}" />
+              <TextBlock Text="{Binding FuelHint}" FontSize="11"
+                         Foreground="{DynamicResource Pump.Muted}" />
             </StackPanel>
 
             <StackPanel Classes="q" Spacing="3" Width="200">
@@ -62,12 +86,6 @@
             <StackPanel Classes="q" Spacing="3" Width="280">
               <TextBlock Text="توضیحات" Classes="label" />
               <TextBox Text="{Binding Note}" Watermark="اختیاری" FontSize="15" Padding="10,8" />
-            </StackPanel>
-
-            <StackPanel Classes="q" Spacing="3" Width="160">
-              <TextBlock Text="تاریخ" Classes="label" />
-              <TextBox Text="{Binding DateShamsi}" HorizontalContentAlignment="Center"
-                       FontSize="15" Padding="10,8" />
             </StackPanel>
           </WrapPanel>
         </StackPanel>

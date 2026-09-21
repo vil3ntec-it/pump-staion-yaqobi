@@ -209,9 +209,14 @@ public class CloudReachTests : IDisposable
         Assert.Contains("Services.CloudLink.Reach", vm);
         Assert.Contains("_cloudDotBrushKey = \"Pump.Muted\"", vm);
 
+        //  ⚠️ از ۱۴۰۵/۰۷/۱۰ این چراغ **خودش** در سربرگ نیست — با چراغِ
+        //  سرورِ خانگی یکی شده (خواستهٔ صریحِ صاحب ریپو: «یکی باشه اصلی»).
+        //  ولی آن‌چه این بند نگه می‌داشت عوض نشده: حالِ ابر همچنان از
+        //  `Reach` می‌آید و همچنان به چراغ می‌رسد.
+        Assert.Contains("TickCloudDot();", vm);
         var xaml = App(Path.Combine("Views", "MainWindow.axaml"));
-        Assert.Contains("CloudDotBrushKey", xaml);
-        Assert.Contains("CheckCloudCommand", xaml);
+        Assert.Contains("LinkDotBrushKey", xaml);
+        Assert.Contains("CheckLinksCommand", xaml);
     }
 
     /// <summary>

@@ -161,9 +161,15 @@ public class AppLinksTests
         Assert.Contains("SetSignUpCommand", xaml);
         Assert.Contains("AccountStepCommand", xaml);
 
-        //  گامِ پمپ — فقط نام و لوکیشن
+        //  گامِ پمپ — **فقط نام**
+        //
+        //  ⛔ کادرِ «لوکیشنِ پمپ» در ۱۴۰۵/۰۷/۱۰ برداشته شد و برنمی‌گردد:
+        //  «اون لوکیشن رو حذف کن لازم نیست، یارو همین که اسمِ پمپشو بزنه
+        //  بسه.» و به سرور هم هیچ‌وقت نمی‌رفت — `EnsureStationAsync` فقط
+        //  `{ name }` می‌فرستد. هر خانهٔ اضافه روی تنها دیوارِ بینِ کاربر و
+        //  برنامه، هزینه دارد.
         Assert.Contains("Binding LoginPump", xaml);
-        Assert.Contains("Binding LoginLocation", xaml);
+        Assert.DoesNotContain("Binding LoginLocation", xaml);
         Assert.Contains("FinishPumpCommand", xaml);
 
         //  ⛔ **کدِ دومِ شش‌رقمی از گامِ پمپ رفت** (۱۴۰۵/۰۷/۰۴). گزارشِ صاحب
@@ -217,8 +223,16 @@ public class AppLinksTests
         Assert.DoesNotContain("Cloud.RedeemAsync(code, pump, where)", vm);
         //  ⚠️ ولی خرج کردنِ کد از بین نرفته؛ فقط جایش کارتِ اشتراک است
         Assert.Contains("Cloud.RedeemAsync(code)", vm);
+        //  ⛔ نامِ پمپ **پیش از** رفتن به سرور می‌نشیند — بی‌اینترنت هم
+        //  چیزی که کاربر تایپ کرده گم نشود.
         Assert.Contains("SettingsService.StationName, pump", vm);
-        Assert.Contains("SettingsService.StationAddress, where", vm);
+        //  ⛔ و لوکیشن از این گام رفت (۱۴۰۵/۰۷/۱۰) و برنمی‌گردد: «اون
+        //  لوکیشن رو حذف کن لازم نیست، یارو همین که اسمِ پمپشو بزنه بسه.»
+        //  ⚠️ و هیچ‌وقت هم به سرور نمی‌رفت — `EnsureStationAsync` از روزِ
+        //  اول فقط `{ name }` می‌فرستد. یعنی فقط یک خانهٔ اضافه بود روی
+        //  تنها دیواری که بینِ کاربر و برنامه هست.
+        Assert.DoesNotContain("SettingsService.StationAddress, where", vm);
+        Assert.DoesNotContain("LoginLocation", vm);
     }
 
     /// <summary>
@@ -635,8 +649,34 @@ public class AppLinksTests
         var dot = vm.Split("public void TickServerDot()")[1].Split("[RelayCommand]")[0];
         Assert.DoesNotContain("Url", dot);
 
+        //  ⛔ **و از ۱۴۰۵/۰۷/۱۰ سربرگ یک چراغ دارد، نه دو.** خواستهٔ صریحِ
+        //  صاحب ریپو: «چرا دو نوع سرور رو نشون میده؟ یکی باشه اصلی که
+        //  واقعاً نشون بده وصل است یا نه؛ الان یکی میگه وصل یکی میگه قط.»
+        //
+        //  ⚠️ آن‌چه این بند از قبل نگه می‌داشت — «چراغ کلیک‌شدنی است و
+        //  همان لحظه می‌گردد» — پاک نشد، از درِ تازه گرفته می‌شود.
         var xaml = Read("PumpYaqobi.App", "Views", "MainWindow.axaml");
-        Assert.Contains("CheckServerCommand", xaml);
+        Assert.Contains("CheckLinksCommand", xaml);
+        Assert.Contains("LinkDotBrushKey", xaml);
+        Assert.DoesNotContain("CheckServerCommand", xaml);
+        Assert.DoesNotContain("CheckCloudCommand", xaml);
+
+        //  ⛔ و آن یک چراغ هر دو حقیقت را می‌خواند — نه این‌که یکی را
+        //  انتخاب کند و آن یکی را دور بریزد.
+        var link = vm.Split("public void TickLinkDot()")[1].Split("[RelayCommand]")[0];
+        Assert.Contains("TickServerDot();", link);
+        Assert.Contains("TickCloudDot();", link);
+        Assert.Contains("ServerDotBrushKey", link);
+        Assert.Contains("CloudDotBrushKey", link);
+        //  ⛔ «یکی وصل، یکی نه» نه سبز است نه سرخ — سبز کردنش همان کلکِ دروغ
+        Assert.Contains("Pump.Warn", link);
+        //  ⛔ و باز هم هیچ نام/نشانیِ سروری
+        Assert.DoesNotContain("Url", link);
+
+        //  و کلیک هر دو را می‌پرسد، نه یکی را
+        var both = vm.Split("private async Task CheckLinksAsync()")[1].Split("}")[0];
+        Assert.Contains("CheckServerAsync()", both);
+        Assert.Contains("CheckCloudAsync()", both);
     }
 
     // ── ۵) بخشِ وی‌آی‌پی ───────────────────────────────────────────────────

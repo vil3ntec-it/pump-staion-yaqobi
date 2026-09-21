@@ -100,7 +100,62 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
         OnPropertyChanged(nameof(UnitChipBrushKey));
         OnPropertyChanged(nameof(AmountLabel));
         OnPropertyChanged(nameof(AmountWatermark));
+        OnPropertyChanged(nameof(UnitIndex));
+        OnPropertyChanged(nameof(FuelIndex));
+        OnPropertyChanged(nameof(IsFuel));
+        OnPropertyChanged(nameof(FuelHint));
     }
+
+    // ══ دو کشویی، نه یک دکمهٔ چرخشی ═══════════════════════════════════════
+    //
+    //  گزارشِ صاحب ریپو با عکس (۱۴۰۵/۰۷/۱۰): «چرا اون واحدِ رسید دکمه‌ای
+    //  است؟ اون و اپشن‌هاش رو کشویی کن که هر کدوم رو خواستم انتخاب کنم:
+    //  واحدِ تیل، واحدِ پول، و پطرول یا دیزل. الان شاید واحد تیل باشه و
+    //  رسیدش دیزل… الان که کاری هم نمیشه کرد.»
+    //
+    //  ⛔ **و حق داشت، این فقط سلیقه نبود.** دکمهٔ چرخشی سه حال را پشتِ سرِ
+    //  هم می‌چرخاند (پول ⇄ تیلِ پطرول ⇄ تیلِ دیزل)، پس رسیدنِ به «تیلِ
+    //  دیزل» از «پول» دو کلیک لازم داشت و **هیچ راهی نبود که بشود دید چه
+    //  گزینه‌هایی هست** — کاربر باید حدس می‌زد. با کشویی، هر دو تصمیم
+    //  مستقل و دیدنی‌اند.
+    //
+    //  ⛔ **و دو تصمیم‌اند، نه یکی.** «واحد» (پول/تیل) و «کدام تیل» دو
+    //  چیزند و در دفتر هم دو ستونِ جدا (`Unit` و `Fuel`)؛ یکی کردنشان در
+    //  یک فهرستِ سه‌تایی همان چیزی بود که این گزارش را ساخت.
+    //
+    //  ⚠️ و هیچ منطقی عوض نشد: `Unit` و `Fuel` همان دو خاصیتِ قبلی‌اند و
+    //  `AddAsync` همان‌ها را می‌گیرد. این‌جا فقط دو نما به همان دو نشسته.
+
+    /// <summary>گزینه‌های کشوییِ واحد — ترتیبشان با <see cref="UnitIndex"/> قفل است.</summary>
+    public string[] UnitOptions { get; } = { "💵 پول", "⛽ تیل" };
+
+    /// <summary>گزینه‌های کشوییِ نوعِ تیل — ترتیبشان با <see cref="FuelIndex"/> قفل است.</summary>
+    public string[] FuelOptions { get; } = { "پطرول", "دیزل" };
+
+    public int UnitIndex
+    {
+        get => Unit == LedgerMode.Fuel ? 1 : 0;
+        set { if (value >= 0) Unit = value == 1 ? LedgerMode.Fuel : LedgerMode.Money; }
+    }
+
+    public int FuelIndex
+    {
+        get => Fuel == FuelType.Diesel ? 1 : 0;
+        set { if (value >= 0) Fuel = value == 1 ? FuelType.Diesel : FuelType.Petrol; }
+    }
+
+    /// <summary>
+    /// ⛔ «رسیدِ پول هیچ‌کدوم لازم نیست، نه پطرول نه دیزل» — خواستهٔ صریحِ
+    /// صاحب ریپو. پس کشوییِ تیل با واحدِ «پول» **بسته** می‌شود.
+    ///
+    /// ⚠️ بسته می‌شود، پنهان نه: پنهان شدنش ردیف را جابه‌جا می‌کند و کادرِ
+    /// بعدی از زیرِ دستِ کاربر فرار می‌کند — همان درسی که کادرِ هشدارِ
+    /// پارچه داد.
+    /// </summary>
+    public bool IsFuel => Unit == LedgerMode.Fuel;
+
+    /// <summary>و چرا بسته است، نوشته می‌شود — قفلِ بی‌توضیح باگ است.</summary>
+    public string FuelHint => IsFuel ? "پطرول یا دیزل" : "برای رسیدِ پول لازم نیست";
 
     /// <summary>برچسبِ واحد — یک جا، پس ردیفِ جدول و کپسولِ فرم هیچ‌وقت دو چیز نمی‌گویند.</summary>
     public static string UnitLabel(LedgerMode unit, FuelType fuel) =>
@@ -116,14 +171,6 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
     public string AmountLabel => Unit == LedgerMode.Fuel ? "مقدار رسید (لیتر)" : "مبلغ رسید (افغانی)";
     public string AmountWatermark => Unit == LedgerMode.Fuel ? "لیتر…" : "افغانی…";
 
-    /// <summary>پول ⇄ تیلِ پطرول ⇄ تیلِ دیزل — همان کپسولِ همیشگیِ برنامه، نه ‎ComboBox‎.</summary>
-    [RelayCommand]
-    private void ToggleUnit()
-    {
-        if (Unit == LedgerMode.Money) { Fuel = FuelType.Petrol; Unit = LedgerMode.Fuel; }
-        else if (Fuel == FuelType.Petrol) Fuel = FuelType.Diesel;
-        else Unit = LedgerMode.Money;
-    }
 
     [ObservableProperty] private string _month = "";
     [ObservableProperty] private string _totalText = "0";

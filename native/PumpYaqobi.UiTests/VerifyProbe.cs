@@ -557,7 +557,6 @@ internal static class VerifyProbe
                   account.LoginStatus);
 
             account.LoginPump = "پمپِ نو";
-            account.LoginLocation = "هرات، جادهٔ کندهار";
 
             //  ⚠️ «هیچ توکنی نساخت» با «توکن را عوض نکرد» یکی نیست.
             //  این سنجه با یک نصبِ **پلن‌دار** می‌دود (بالای `Run`)، پس
@@ -574,7 +573,7 @@ internal static class VerifyProbe
                   tokenBefore.Length == 0 ? "بی توکن" : "دست‌نخورده");
             account.SubCode = "";
 
-            //  ه) نامِ پمپ و لوکیشن **پیش از** رفتن به سرور می‌نشینند
+            //  ه) نامِ پمپ **پیش از** رفتن به سرور می‌نشیند
             if (Environment.GetEnvironmentVariable("PUMP_VERIFY_CLOUD") == "1")
             {
                 Wait(win, account.FinishPumpCommand.ExecuteAsync(null));
@@ -589,11 +588,12 @@ internal static class VerifyProbe
                 Check("بی سرور، خطای روشن می‌دهد و در گامِ پمپ می‌ماند",
                       account.StepPump && account.LoginStatus.StartsWith("❌"), account.LoginStatus);
             }
-            Check("ولی نامِ پمپ و لوکیشن همان لحظه ذخیره شدند",
-                  host.Settings.GetString(SettingsService.StationName) == "پمپِ نو"
-                  && host.Settings.GetString(SettingsService.StationAddress) == "هرات، جادهٔ کندهار",
-                  host.Settings.GetString(SettingsService.StationName) + " · "
-                  + host.Settings.GetString(SettingsService.StationAddress));
+            //  ⛔ لوکیشن از گامِ پمپ رفت (۱۴۰۵/۰۷/۱۰). ادعای این بند همان
+            //  است که بود — «پیش از رفتن به سرور می‌نشیند» — فقط روی
+            //  چیزی که واقعاً مانده.
+            Check("ولی نامِ پمپ همان لحظه ذخیره شد",
+                  host.Settings.GetString(SettingsService.StationName) == "پمپِ نو",
+                  host.Settings.GetString(SettingsService.StationName));
             Check("و خودِ پروفایل همان لحظه نامِ تازه را نشان می‌دهد",
                   account.PumpName == "پمپِ نو", account.PumpName);
 

@@ -154,16 +154,22 @@ public class ProfilePillTests
     [Fact]
     public void CheraghEServer_BaghaleNamePomp_Ast()
     {
+        //  ⚠️ از ۱۴۰۵/۰۷/۱۰ **یک** چراغ است، نه دو (خواستهٔ صریحِ صاحب
+        //  ریپو). آن‌چه این بند نگه می‌داشت عوض نشده: چراغ درست بعدِ نامِ
+        //  پمپ است و دلیلش فقط در ToolTip می‌آید، بی هیچ نشانی.
         var xaml = Read("PumpYaqobi.App", "Views", "MainWindow.axaml");
         var title = xaml.IndexOf("Text=\"پمپ یعقوبی\"", StringComparison.Ordinal);
-        var dot = xaml.IndexOf("Binding ServerDotBrushKey", StringComparison.Ordinal);
+        var dot = xaml.IndexOf("Binding LinkDotBrushKey", StringComparison.Ordinal);
         Assert.True(title > 0 && dot > title, "چراغ باید درست بعد از نامِ پمپ بیاید");
-        Assert.Contains("ToolTip.Tip=\"{Binding ServerDotReason}\"", xaml);
+        Assert.Contains("ToolTip.Tip=\"{Binding LinkDotReason}\"", xaml);
 
         var vm = Read("PumpYaqobi.App", "ViewModels", "MainViewModel.cs");
         Assert.Contains("public void TickServerDot()", vm);
         //  دلیل‌ها متن‌اند، نه نشانی: هیچ‌کدام ‎http‎ یا نامِ میزبان ندارند
         var reasons = vm.Split("TickServerDot()")[1].Split("}")[0];
         Assert.DoesNotContain("http", reasons);
+        //  ⛔ و همان قاعده روی متنِ چراغِ یکی‌شده هم هست
+        var linked = vm.Split("public void TickLinkDot()")[1].Split("[RelayCommand]")[0];
+        Assert.DoesNotContain("http", linked);
     }
 }

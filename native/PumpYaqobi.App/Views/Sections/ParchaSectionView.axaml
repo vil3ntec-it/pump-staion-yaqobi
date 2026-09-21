@@ -52,35 +52,51 @@
                فایده ← پولِ موجود ← یادداشت.                                -->
           <StackPanel Grid.Row="1" Margin="13,12,13,12" Spacing="9">
 
-            <!-- نامِ کارمند + شمارهٔ پایه -->
+            <!-- ══ همهٔ ردیف‌ها یک قالب دارند — «تراز» ═══════════════════
+                 گزارشِ صاحب ریپو با عکس (۱۴۰۵/۰۷/۱۰): «هیچ کادرش برابر
+                 نیست و نامِ کارمندها از همه متفاوت‌تر است؛ فاصله‌هاشو چرا
+                 رعایت نکردی؟ همه را با دقت درست کن و تراز.»
+
+                 حق داشت و سه پهنای متفاوت روی یک کارت بود:
+                   • نامِ کارمند   ⇒ پهنای **ثابتِ** ۲۱۰ و بلندیِ ۴۸
+                   • شروع/ختمِ پایه ⇒ ‎*‎ منهای دکمهٔ کنارش
+                   • بقیه           ⇒ تمام‌عرض
+                 پس هیچ دو کادری لبه‌های یکسان نداشتند.
+
+                 ⛔ **راهِ درست یک قالب برای همه بود، نه اصلاحِ تک‌تک.**
+                 ‎SIDE‎ (ستونِ کناری) روی **هر** ردیف رزرو می‌شود — حتی
+                 ردیفی که دکمه ندارد — پس لبهٔ همهٔ کادرها دقیقاً یکی است.
+                 ردیفِ تازه‌ای که فردا اضافه شود هم خودبه‌خود تراز می‌ماند.
+
+                 ⚠️ و «بلندیِ کادرِ نام» پس گرفته نشد (خواستهٔ ۱۴۰۵/۰۷/۰۶:
+                 «طولش بزرگ باشه نه عرضش») — **همهٔ** کادرها همان بلندی را
+                 گرفتند (‎.wfield‎)، پس هم بزرگ است هم برابر. -->
+
+            <!-- نامِ کارمند + شمارهٔ پایه — برچسب‌ها هم روی همان دو ستون -->
             <StackPanel Spacing="4">
-              <TextBlock Text="نام کارمند" Classes="fld" />
-              <!-- ⚠️ کادرِ نام پهنای صریح دارد: «کادرِ نامِ کارمندان خیلی بزرگ
-                   است». ستونِ آخر خالی می‌ماند تا کارت به‌هم نریزد.
-                   ⛔ و **بلند** است، نه پهن — خواستهٔ صریحِ صاحب ریپو
-                   (۱۴۰۵/۰۷/۰۶): «طولش بزرگ باشه نه عرضش». پهنای ۲۱۰ همان
-                   می‌ماند و فقط بلندی بالا رفت؛ پهن‌ترش نکنید. -->
-              <Grid ColumnDefinitions="210,10,Auto,*">
-                <TextBox Grid.Column="0" Text="{Binding Name}" Watermark="نام کارمند"
-                         MinHeight="48" FontSize="15" VerticalContentAlignment="Center"
-                         c:Suggest.Key="staff" />
-                <StackPanel Grid.Column="2" Spacing="2" HorizontalAlignment="Center">
-                  <TextBlock Text="شماره پایه" FontSize="10.5" Foreground="{DynamicResource Pump.Muted}"
-                             HorizontalAlignment="Center" />
-                  <TextBox Text="{Binding PumpNum}" Watermark="#" Width="54"
-                           HorizontalContentAlignment="Center" FontWeight="Bold" />
-                </StackPanel>
+              <Grid ColumnDefinitions="*,8,106">
+                <TextBlock Grid.Column="0" Text="نام کارمند" Classes="fld" />
+                <TextBlock Grid.Column="2" Text="شماره پایه" Classes="fld"
+                           TextAlignment="Center" />
+              </Grid>
+              <Grid ColumnDefinitions="*,8,106">
+                <TextBox Grid.Column="0" Classes="wfield" Text="{Binding Name}"
+                         Watermark="نام کارمند" c:Suggest.Key="staff" />
+                <TextBox Grid.Column="2" Classes="wfield" Text="{Binding PumpNum}"
+                         Watermark="#" FontWeight="Bold" />
               </Grid>
             </StackPanel>
 
             <StackPanel Spacing="4">
               <TextBlock Text="شروع پایه (لیتر)" Classes="fld" />
-              <Grid ColumnDefinitions="*,7,Auto">
+              <Grid ColumnDefinitions="*,8,106">
                 <!-- ⛔ خودِ عدد سرخ می‌شود («توی خود همون کادر هم عدد سرخ
                      بشه») — پس نشانه با رفتن به کادرِ دیگر از چشم نمی‌افتد. -->
-                <TextBox Grid.Column="0" Text="{Binding Start}" Watermark="0"
+                <TextBox Grid.Column="0" Classes="wfield" Text="{Binding Start}" Watermark="0"
                          Foreground="{Binding StartBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
-                <Button Grid.Column="2" Content="{Binding PullText}" Padding="10,6" FontSize="11.5"
+                <!-- ⚠️ دکمه هم‌قدِ کادر و هم‌پهنای ستون است، وگرنه همان
+                     ناهمواری از سمتِ دکمه برمی‌گردد. -->
+                <Button Grid.Column="2" Classes="wside" Content="{Binding PullText}"
                         Command="{Binding $parent[UserControl].((vm:ParchaSectionViewModel)DataContext).PullBaseCommand}"
                         CommandParameter="{Binding}" />
               </Grid>
@@ -106,9 +122,9 @@
 
             <StackPanel Spacing="4">
               <TextBlock Text="ختم پایه (لیتر)" Classes="fld" />
-              <Grid ColumnDefinitions="*,7,Auto">
-                <TextBox Grid.Column="0" Text="{Binding End}" Watermark="0" />
-                <Button Grid.Column="2" Content="{Binding PushText}" Padding="10,6" FontSize="11.5"
+              <Grid ColumnDefinitions="*,8,106">
+                <TextBox Grid.Column="0" Classes="wfield" Text="{Binding End}" Watermark="0" />
+                <Button Grid.Column="2" Classes="wside" Content="{Binding PushText}"
                         Command="{Binding $parent[UserControl].((vm:ParchaSectionViewModel)DataContext).PushBaseCommand}"
                         CommandParameter="{Binding}" />
               </Grid>
@@ -116,52 +132,74 @@
 
             <StackPanel Spacing="4">
               <TextBlock Text="جمله قرض (افغانی)" Classes="fld" />
-              <TextBox Text="{Binding Debt}" Watermark="0" />
+              <Grid ColumnDefinitions="*,8,106">
+                <TextBox Grid.Column="0" Classes="wfield" Text="{Binding Debt}" Watermark="0" />
+              </Grid>
             </StackPanel>
 
             <StackPanel Spacing="4">
               <TextBlock Text="فی لیتر (افغانی)" Classes="fld" />
-              <TextBox Text="{Binding Price}" Watermark="0" />
+              <Grid ColumnDefinitions="*,8,106">
+                <TextBox Grid.Column="0" Classes="wfield" Text="{Binding Price}" Watermark="0" />
+              </Grid>
             </StackPanel>
 
             <!-- فایدهٔ فیِ لیتر — و زیرش همان جملهٔ کج‌نوشتهٔ «فی خرید…» سایت -->
             <StackPanel Spacing="4">
               <TextBlock Text="فایده فی لیتر (افغانی) — اتومات از مخزن" Classes="fld" />
-              <TextBox Text="{Binding ProfitPer}" Watermark="اتومات پر می‌شه" />
+              <Grid ColumnDefinitions="*,8,106">
+                <TextBox Grid.Column="0" Classes="wfield" Text="{Binding ProfitPer}"
+                         Watermark="اتومات پر می‌شه" />
+              </Grid>
               <TextBlock Text="{Binding BuyPerLabel}" FontSize="11" FontStyle="Italic"
                          Foreground="{DynamicResource Pump.Muted}" />
             </StackPanel>
 
             <StackPanel Spacing="4">
               <TextBlock Text="فروش (لیتر) — خودکار" Classes="fld" />
-              <Border Classes="calc"><TextBlock Text="{Binding SaleText}" /></Border>
+              <Grid ColumnDefinitions="*,8,106">
+                <Border Grid.Column="0" Classes="calc wfield">
+                  <TextBlock Text="{Binding SaleText}" VerticalAlignment="Center" />
+                </Border>
+              </Grid>
             </StackPanel>
 
             <StackPanel Spacing="4">
               <TextBlock Text="جمله موجودی افغانی — خودکار" Classes="fld" />
-              <Border Classes="calc"><TextBlock Text="{Binding MoneyText}" /></Border>
+              <Grid ColumnDefinitions="*,8,106">
+                <Border Grid.Column="0" Classes="calc wfield">
+                  <TextBlock Text="{Binding MoneyText}" VerticalAlignment="Center" />
+                </Border>
+              </Grid>
             </StackPanel>
 
             <StackPanel Spacing="4">
               <TextBlock Text="فایده — خودکار" Classes="fld" />
-              <Border Classes="calc">
-                <TextBlock Text="{Binding ProfitText}" Foreground="{DynamicResource Pump.Ok}" />
-              </Border>
+              <Grid ColumnDefinitions="*,8,106">
+                <Border Grid.Column="0" Classes="calc wfield">
+                  <TextBlock Text="{Binding ProfitText}" VerticalAlignment="Center"
+                             Foreground="{DynamicResource Pump.Ok}" />
+                </Border>
+              </Grid>
             </StackPanel>
 
             <StackPanel Spacing="4">
               <TextBlock Text="💵 پول موجود افغانی — خودکار" Classes="fld"
                          Foreground="{DynamicResource Pump.Ok}" FontWeight="Bold" />
-              <Border Classes="calc">
-                <TextBlock Text="{Binding AvailableText}"
-                           Foreground="{Binding AvailableBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
-                           FontWeight="Bold" FontSize="16" />
-              </Border>
+              <Grid ColumnDefinitions="*,8,106">
+                <Border Grid.Column="0" Classes="calc wfield">
+                  <TextBlock Text="{Binding AvailableText}" VerticalAlignment="Center"
+                             Foreground="{Binding AvailableBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                             FontWeight="Bold" FontSize="16" />
+                </Border>
+              </Grid>
             </StackPanel>
 
             <StackPanel Spacing="4">
               <TextBlock Text="یادداشت" Classes="fld" />
-              <TextBox Text="{Binding Note}" Watermark="..." />
+              <Grid ColumnDefinitions="*,8,106">
+                <TextBox Grid.Column="0" Classes="wfield" Text="{Binding Note}" Watermark="..." />
+              </Grid>
             </StackPanel>
 
             <Border Classes="saved-badge" IsVisible="{Binding Saved}">

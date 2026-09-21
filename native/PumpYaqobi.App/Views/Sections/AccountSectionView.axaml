@@ -640,18 +640,22 @@
                          «اشتراک»ِ خودِ پروفایل (`SubCode` +
                          `RedeemSubCommand`). -->
                     <TextBlock Text="نامِ پمپ" Classes="lbl" />
-                    <TextBox Text="{Binding LoginPump}" Watermark="مثلاً پمپ یعقوبی" Margin="0,0,0,13">
+                    <TextBox Text="{Binding LoginPump}" Watermark="مثلاً پمپ یعقوبی">
                       <TextBox.KeyBindings>
                         <KeyBinding Gesture="Enter" Command="{Binding FinishPumpCommand}" />
                       </TextBox.KeyBindings>
                     </TextBox>
 
-                    <TextBlock Text="لوکیشنِ پمپ" Classes="lbl" />
-                    <TextBox Text="{Binding LoginLocation}" Watermark="شهر و آدرس">
-                      <TextBox.KeyBindings>
-                        <KeyBinding Gesture="Enter" Command="{Binding FinishPumpCommand}" />
-                      </TextBox.KeyBindings>
-                    </TextBox>
+                    <!-- ⛔ **کادرِ «لوکیشنِ پمپ» برداشته شد و برنمی‌گردد.**
+                         خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۱۰): «اون لوکیشن
+                         رو حذف کن لازم نیست، یارو همین که اسمِ پمپشو بزنه
+                         بسه.»
+
+                         ⚠️ و به سرور هم هیچ‌وقت نمی‌رفت: `EnsureStationAsync`
+                         فقط `{ name }` می‌فرستد. آن کادر یک خانهٔ دیگر بود
+                         که کاربر نمی‌دانست باید پرش کند یا نه — و چون
+                         گامِ پمپ تنها دیوارِ بینِ او و برنامه است، هر خانهٔ
+                         اضافه همان‌جا هزینه دارد. -->
 
                     <Button Classes="go" Content="ساختنِ پمپ و پایان" Margin="0,18,0,0"
                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
