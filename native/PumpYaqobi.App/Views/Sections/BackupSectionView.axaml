@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
              xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
              x:Class="PumpYaqobi.App.Views.Sections.BackupSectionView"
              x:DataType="vm:BackupSectionViewModel">
 
@@ -96,7 +97,8 @@
                        IsVisible="{Binding InstallNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                        Foreground="{DynamicResource Pump.Warn}" />
 
-            <TextBlock Text="{Binding UpdateStatus}" Classes="muted"
+            <TextBlock Text="{Binding UpdateStatus}" TextWrapping="Wrap"
+                       Foreground="{Binding UpdateStatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
                        IsVisible="{Binding UpdateStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
             <TextBlock Text="{Binding PackageText}" FontWeight="Bold"

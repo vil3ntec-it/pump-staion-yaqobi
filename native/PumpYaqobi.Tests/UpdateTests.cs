@@ -186,6 +186,110 @@ public class UpdateTests
         Assert.Contains("LastFailure", view);
     }
 
+    // ══ «نشد» با «به‌روز است» یکی نیست ══════════════════════════════════════
+    // گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «از داخل برنامه چرا اپدیت نمیشه؟» —
+    // برنامه روی ۳.۱.۱۴۴ بود و نسخهٔ تازه منتشر شده بود. ریشه: هر شکستی
+    // (قطعیِ اینترنت، بسته بودنِ مسیر، سقفِ نرخ) به «برنامه به‌روز است»
+    // ترجمه می‌شد، پس کاربر هیچ‌وقت نفهمید بررسی اصلاً انجام نشده.
+
+    [Fact]
+    public void AFailedCheckNeverClaimsTheAppIsUpToDate()
+    {
+        var broken = new PumpYaqobi.App.Update.UpdateInfo(
+            false, "3.1.144", "3.1.144", null, 0, null, false, "به سرورِ به‌روزرسانی نرسیدیم");
+
+        Assert.True(broken.Failed);
+        Assert.DoesNotContain("به‌روز است", broken.StatusText);
+        Assert.Contains("نرسیدیم", broken.StatusText);
+        Assert.Equal("Pump.Danger", broken.StatusBrushKey);
+    }
+
+    [Fact]
+    public void AGenuineUpToDateAnswerStillSaysSo()
+    {
+        var ok = new PumpYaqobi.App.Update.UpdateInfo(false, "3.1.146", "3.1.146", null, 0, null);
+        Assert.False(ok.Failed);
+        Assert.Contains("به‌روز است", ok.StatusText);
+        Assert.Equal("Pump.Muted", ok.StatusBrushKey);
+    }
+
+    [Fact]
+    public void AnAvailableUpdateNamesTheVersion()
+    {
+        var up = new PumpYaqobi.App.Update.UpdateInfo(
+            true, "3.1.144", "3.1.146", "https://example.invalid/x.zip", 10, null, true);
+        Assert.False(up.Failed);
+        Assert.Contains("3.1.146", up.StatusText);
+    }
+
+    /// <summary>
+    /// و همان جمله باید به صفحه برسد — ⛔ ویومدل نباید جملهٔ خودش را بسازد،
+    /// وگرنه همان سه حال دوباره جایی با هم قاطی می‌شوند.
+    /// </summary>
+    [Fact]
+    public void TheScreenShowsTheHonestSentence()
+    {
+        var vm = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections",
+                                               "BackupSectionViewModel.cs"));
+        Assert.Contains("_info.StatusText", vm);
+        Assert.Contains("_info.StatusBrushKey", vm);
+        Assert.DoesNotContain("\"برنامه به‌روز است\"", vm);
+
+        var view = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections",
+                                                 "BackupSectionView.axaml"));
+        Assert.Contains("UpdateStatusBrushKey", view);
+    }
+
+    /// <summary>
+    /// ══ درِ دوم ═════════════════════════════════════════════════════════════
+    /// ریپوی خواهر (اپِ دکان) از اول دو در داشت و دلیلش را هم نوشته بود:
+    /// فهرستِ انتشار برای درخواستِ بی‌توکن سقفِ ساعتی دارد و «به‌روزرسانی
+    /// بی‌صدا شکست می‌خورد». برنامهٔ پمپ فقط یک در داشت.
+    /// </summary>
+    [Fact]
+    public void TheCheckHasASecondDoorThatNeedsNoApi()
+    {
+        var svc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        Assert.Contains("FromApiAsync", svc);
+        Assert.Contains("FromFileAsync", svc);
+        Assert.Contains("RollingTag", svc);
+        Assert.Contains("version.txt", svc);
+        Assert.Contains("base.txt", svc);
+
+        // و نشانیِ درِ دوم از خودِ همان یک ثابت ساخته می‌شود، نه از رشتهٔ دوم
+        Assert.Contains("new Uri(FeedUrl)", svc);
+
+        // ⛔ خطای خامِ استثنا به کاربر نمی‌رسد (ممکن است نامِ میزبان داشته باشد)
+        Assert.DoesNotContain("e.Message", svc);
+    }
+
+    /// <summary>
+    /// اگر برچسبِ «تازه‌ترین انتشار» شماره نداشته باشد (انتشارِ اپِ گوشی، یا
+    /// یک برچسبِ چرخشی)، آن جواب به کارِ برنامهٔ کامپیوتر نمی‌آید و باید درِ
+    /// دوم زده شود — نه اینکه «به‌روز است» گفته شود. همان تله‌ای که ریپوی
+    /// سرور یک بار خورد.
+    /// </summary>
+    [Fact]
+    public void ATaglessReleaseFallsThroughToTheSecondDoor()
+    {
+        var svc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        var i = svc.IndexOf("if (latest.Length == 0) return (null,", StringComparison.Ordinal);
+        Assert.True(i > 0, "برچسبِ بی‌شماره باید به درِ دوم برود");
+    }
+
+    /// <summary>
+    /// و فایلِ نیمه‌کاره باید در **هر دو** در رد شود. درِ دوم اندازه را از
+    /// قبل نمی‌داند، پس نگهبان باید از خودِ پاسخ بخواند — وگرنه آن مسیر یک
+    /// دانلودِ بریده را روی برنامه می‌نشاند.
+    /// </summary>
+    [Fact]
+    public void AHalfDownloadIsRejectedOnBothDoors()
+    {
+        var svc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        Assert.Contains("if (expected <= 0) expected = res.Content.Headers.ContentLength", svc);
+        Assert.Contains("if (expected > 0 && new FileInfo(partial).Length != expected)", svc);
+    }
+
     /// <summary>
     /// نامِ بستهٔ کوچک باید شناسهٔ پایه را بدهد و نامِ بستهٔ کامل هیچ.
     ///

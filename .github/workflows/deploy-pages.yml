@@ -96,9 +96,16 @@ jobs:
           grab('kar-latest', '.apk', 'PumpYaqobiKar.apk')
           grab('android-latest', '.apk', 'PumpYaqobi.apk')
           grab('android-latest', 'version.txt', 'apk-version.txt')
+          # ⚠️ «desktop-latest» یک برچسبِ چرخشی است که build-native.yml
+          # می‌سازد. تا ۱۴۰۵/۰۷/۰۶ ساخته نمی‌شد و هر سه خطِ زیر با یک
+          # هشدار رد می‌شدند — یعنی دکمهٔ دانلودِ ویندوزِ سایت ماه‌ها مرده
+          # بود و هیچ‌کس نمی‌فهمید (version.json ستونِ windows را null
+          # می‌داد). InstallerTests حالا وجودِ آن برچسب را قفل کرده.
           grab('desktop-latest', '.exe', 'PumpYaqobi-Setup.exe')
-          grab('desktop-latest', '.zip', 'PumpYaqobi-Portable.zip')
           grab('desktop-latest', 'version.txt', 'exe-version.txt')
+          # ⛔ زیپِ کنارِ همان برچسب **بستهٔ کوچکِ به‌روزرسانی** است، نه
+          # برنامهٔ کامل. کنارِ سایت گذاشتنش یعنی کسی ۶ مگابایت می‌گیرد و
+          # برنامه‌ای که بالا نمی‌آید. سایت فقط نصاب را می‌دهد.
           PY
 
       # ── نسخهٔ سایت به‌صورت خودکار ─────────────────────────────────────────

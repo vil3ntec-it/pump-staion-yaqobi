@@ -256,4 +256,43 @@ public class InstallerTests
         var proj = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.App", "PumpYaqobi.App.csproj"));
         Assert.Contains("<Version>3.1.1</Version>", proj);
     }
+
+    // ══ برچسبِ چرخشی ═════════════════════════════════════════════════════════
+    // دو چیز از آن می‌خورند و هر دو تا ۱۴۰۵/۰۷/۰۶ بی‌صدا مرده بودند: درِ دومِ
+    // به‌روزرسانیِ خودِ برنامه، و دکمهٔ دانلودِ ویندوزِ سایت. سایت ماه‌ها
+    // `grab('desktop-latest', …)` می‌زد و ورک‌فلو چنین برچسبی نمی‌ساخت، پس
+    // فقط یک `::warning::` می‌گرفت و `version.json` ستونِ ویندوز را null
+    // می‌داد. هیچ‌کس نمی‌فهمید.
+
+    [Fact]
+    public void The_workflow_publishes_the_rolling_tag()
+    {
+        var w = Workflow();
+        Assert.Contains("tag_name: desktop-latest", w);
+        Assert.Contains("rel/base.txt", w);
+
+        // ⛔ و هرگز «تازه‌ترین انتشار» نشود: برچسبِ بی‌شماره یعنی برنامه هیچ
+        // شماره‌ای از آن درنمی‌آورد. (همان تله‌ای که ریپوی سرور خورد.)
+        var i = w.IndexOf("tag_name: desktop-latest", StringComparison.Ordinal);
+        var block = w[i..Math.Min(w.Length, i + 900)];
+        Assert.Contains("prerelease: true", block);
+        Assert.Contains("make_latest: false", block);
+
+        // و همان برچسب باید همان فایل‌هایی را داشته باشد که درِ دوم می‌خواند
+        Assert.Contains("rel/version.txt", block);
+        Assert.Contains("rel/base.txt", block);
+        Assert.Contains("rel/PumpYaqobi-Setup.exe", block);
+    }
+
+    [Fact]
+    public void The_site_reads_the_same_rolling_tag()
+    {
+        var pages = File.ReadAllText(Path.Combine(Repo, ".github", "workflows", "deploy-pages.yml"));
+        Assert.Contains("grab('desktop-latest', '.exe', 'PumpYaqobi-Setup.exe')", pages);
+        Assert.Contains("grab('desktop-latest', 'version.txt', 'exe-version.txt')", pages);
+
+        // ⛔ زیپِ آن برچسب بستهٔ کوچکِ به‌روزرسانی است، نه برنامهٔ کامل —
+        // کنارِ سایت گذاشتنش یعنی کسی ۶ مگابایت می‌گیرد و برنامه بالا نمی‌آید.
+        Assert.DoesNotContain("'PumpYaqobi-Portable.zip'", pages);
+    }
 }

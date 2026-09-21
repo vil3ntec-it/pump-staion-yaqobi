@@ -101,6 +101,10 @@ jobs:
           Compress-Archive -Path "$pub/*" -DestinationPath rel/PumpYaqobi-Windows.zip -Force
           Compress-Archive -Path $app.FullName -DestinationPath "rel/PumpYaqobi-app-$baseId.zip" -Force
           "${{ steps.ver.outputs.version }}" | Out-File -Encoding ascii rel/version.txt
+          # شناسهٔ پایه کنارِ نسخه هم منتشر می‌شود: درِ دومِ به‌روزرسانی هیچ
+          # پرس‌وجویی نمی‌زند، پس باید از روی همین فایل بفهمد نامِ بستهٔ کوچک
+          # چیست و آیا با پایهٔ نصبِ کاربر یکی است یا نه.
+          $baseId | Out-File -Encoding ascii -NoNewline rel/base.txt
 
           "بستهٔ کامل: {0:N1} مگابایت" -f ((Get-Item rel/PumpYaqobi-Windows.zip).Length/1MB)
           "بستهٔ کوچک: {0:N1} مگابایت" -f ((Get-Item "rel/PumpYaqobi-app-$baseId.zip").Length/1MB)
@@ -186,6 +190,38 @@ jobs:
       #  ⚠️ و زیپِ بزرگ جداگانه و **بی حقِ شکستن**: اگر شبکهٔ گیت‌هاب باز هم
       #  وسطِ راه مرد، انتشار سرِ جایش است و فقط این یک فایل کم دارد —
       #  که با یک اجرای دوباره اضافه می‌شود. متنِ انتشار هم همین را می‌گوید.
+      #  ══ درِ دومِ به‌روزرسانی ═════════════════════════════════════════════
+      #  برچسبِ چرخشی: نشانیِ فایل‌هایش ثابت است، پس برنامه می‌تواند بی هیچ
+      #  پرس‌وجویی «آخرین نسخه چند است» را بخواند. لازم بود چون تنها راهِ
+      #  برنامه فهرستِ انتشار بود و آن یکی سقفِ نرخ دارد و روی بعضی
+      #  شبکه‌ها اصلاً باز نمی‌شود — و برنامه همان را «به‌روز است» می‌خواند.
+      #  همین برچسب است که سایت هم برای دکمهٔ دانلودِ ویندوز می‌خواندش
+      #  (`deploy-pages.yml`)؛ تا امروز ساخته نمی‌شد و آن دکمه مرده بود.
+      #
+      #  ⛔ prerelease و make_latest: false هر دو لازم‌اند. برچسبِ بی‌شماره
+      #  اگر «تازه‌ترین انتشار» شود، برنامه از آن هیچ شماره‌ای درنمی‌آورد و
+      #  برای همیشه می‌گوید «به‌روز است». همان تله‌ای که ریپوی سرور یک بار
+      #  با انتشارِ اپِ اندروید خورد.
+      - name: انتشارِ چرخشی (درِ دومِ به‌روزرسانی)
+        continue-on-error: true
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-latest
+          name: پمپ یعقوبی — آخرین نسخهٔ کامپیوتر
+          body: |
+            همیشه روی تازه‌ترین ساخت می‌نشیند — نسخهٔ
+            ${{ steps.ver.outputs.version }}.
+
+            برنامه وقتی فهرستِ انتشارها در دسترس نباشد از همین‌جا
+            می‌خواند، و دکمهٔ دانلودِ ویندوزِ سایت هم از همین‌جا پر می‌شود.
+          prerelease: true
+          make_latest: false
+          files: |
+            rel/PumpYaqobi-Setup.exe
+            rel/PumpYaqobi-app-${{ steps.pack.outputs.baseId }}.zip
+            rel/version.txt
+            rel/base.txt
+
       - name: انتشارِ زیپِ بی‌نصاب (اختیاری)
         continue-on-error: true
         uses: softprops/action-gh-release@v2
