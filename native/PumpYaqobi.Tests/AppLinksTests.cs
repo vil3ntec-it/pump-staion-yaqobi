@@ -223,8 +223,16 @@ public class AppLinksTests
         Assert.DoesNotContain("Cloud.RedeemAsync(code, pump, where)", vm);
         //  ⚠️ ولی خرج کردنِ کد از بین نرفته؛ فقط جایش کارتِ اشتراک است
         Assert.Contains("Cloud.RedeemAsync(code)", vm);
+        //  ⛔ نامِ پمپ **پیش از** رفتن به سرور می‌نشیند — بی‌اینترنت هم
+        //  چیزی که کاربر تایپ کرده گم نشود.
         Assert.Contains("SettingsService.StationName, pump", vm);
-        Assert.Contains("SettingsService.StationAddress, where", vm);
+        //  ⛔ و لوکیشن از این گام رفت (۱۴۰۵/۰۷/۱۰) و برنمی‌گردد: «اون
+        //  لوکیشن رو حذف کن لازم نیست، یارو همین که اسمِ پمپشو بزنه بسه.»
+        //  ⚠️ و هیچ‌وقت هم به سرور نمی‌رفت — `EnsureStationAsync` از روزِ
+        //  اول فقط `{ name }` می‌فرستد. یعنی فقط یک خانهٔ اضافه بود روی
+        //  تنها دیواری که بینِ کاربر و برنامه هست.
+        Assert.DoesNotContain("SettingsService.StationAddress, where", vm);
+        Assert.DoesNotContain("LoginLocation", vm);
     }
 
     /// <summary>
