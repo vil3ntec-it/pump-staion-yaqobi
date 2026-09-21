@@ -241,6 +241,49 @@ public class UpdateTests
     }
 
     /// <summary>
+    /// ══ دکمه‌ای که دیده نمی‌شد ══════════════════════════════════════════════
+    /// گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «دکمهٔ دیدنِ این‌که به‌روزرسانی است را
+    /// اصلاً نمی‌بینم، آن دکمه‌اش کجا شده؟»
+    ///
+    /// دکمه سرِ جایش بود. ریشه در سبکِ **پایهٔ** دکمه بود: زمینه‌اش
+    /// `Pump.Card` بود و در تمِ آبی هم کارت سفیدِ خالص است هم `Border.panel` —
+    /// پس دکمهٔ بی‌کلاس می‌شد سفید روی سفید با یک خطِ ۱ پیکسلیِ کم‌رنگ.
+    /// ⛔ سطحِ دکمه باید از سطحِ کارت جدا باشد، در هر دو تم.
+    /// </summary>
+    [Fact]
+    public void APlainButtonHasItsOwnSurface_NotTheCardsOwn()
+    {
+        var controls = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Themes", "Controls.axaml"));
+        var i = controls.IndexOf("<Style Selector=\"Button\">", StringComparison.Ordinal);
+        Assert.True(i > 0, "سبکِ پایهٔ دکمه پیدا نشد");
+
+        var block = controls[i..Math.Min(controls.Length, i + 700)];
+        Assert.Contains("{DynamicResource Pump.Input}", block);
+        Assert.DoesNotContain("{DynamicResource Pump.Card}", block);
+
+        // و در هر دو تم، آن سطح با سطحِ کارت یکی نیست
+        var theme = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Themes", "PumpTheme.cs"));
+        foreach (var name in new[] { "Blue", "Gold" })
+        {
+            var t = theme.IndexOf("PumpTheme " + name + " = new(", StringComparison.Ordinal);
+            Assert.True(t > 0, name + " پیدا نشد");
+            Assert.Contains("Input: C(", theme[t..Math.Min(theme.Length, t + 1600)]);
+        }
+    }
+
+    /// <summary>و خودِ آن دکمه کارِ اصلیِ کارت است، پس تاکیدی می‌ماند.</summary>
+    [Fact]
+    public void TheCheckButtonIsThePrimaryActionOfItsCard()
+    {
+        var view = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections",
+                                                 "BackupSectionView.axaml"));
+        var i = view.IndexOf("بررسیِ به‌روزرسانی", StringComparison.Ordinal);
+        Assert.True(i > 0, "دکمهٔ بررسی پیدا نشد");
+        // کلاس پیش از نوشتهٔ دکمه نوشته می‌شود
+        Assert.Contains("Classes=\"accent\"", view[Math.Max(0, i - 200)..i]);
+    }
+
+    /// <summary>
     /// ══ درِ دوم ═════════════════════════════════════════════════════════════
     /// ریپوی خواهر (اپِ دکان) از اول دو در داشت و دلیلش را هم نوشته بود:
     /// فهرستِ انتشار برای درخواستِ بی‌توکن سقفِ ساعتی دارد و «به‌روزرسانی

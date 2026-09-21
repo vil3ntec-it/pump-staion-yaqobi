@@ -116,7 +116,10 @@
                          IsVisible="{Binding Downloading}" />
 
             <StackPanel Orientation="Horizontal" Spacing="8">
-              <Button Content="بررسیِ به‌روزرسانی" Command="{Binding CheckUpdateCommand}"
+              <!-- ⛔ کارِ اصلیِ این کارت است، پس تاکیدی می‌ماند: کاربر باید
+                   بی گشتن پیدایش کند (۱۴۰۵/۰۷/۰۶). -->
+              <Button Classes="accent" Content="🔄 بررسیِ به‌روزرسانی"
+                      Command="{Binding CheckUpdateCommand}"
                       IsEnabled="{Binding !Checking}" />
               <Button Classes="accent" Content="گرفتنِ نسخهٔ تازه"
                       Command="{Binding DownloadUpdateCommand}"
