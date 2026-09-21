@@ -135,11 +135,7 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
     public CompanyPageViewModel(AppHost host, TilCompany c, CompanySectionViewModel section)
     {
         _host = host; _section = section; Entity = c;
-        Actions.Add(new SetupOption("", "☰ کارها — انتخاب کنید…", "", ""));
-        Actions.Add(new SetupOption("new", "📋 جدول جدید", "جدولِ فعلی آرشیو می‌شود و جدولِ خالی باز می‌شود", "📋"));
-        Actions.Add(new SetupOption("buy-petrol", "⛽ خریدهای پطرول", "خریدهای مخزنِ همین شرکت", "⛽"));
-        Actions.Add(new SetupOption("buy-diesel", "🟤 خریدهای دیزل", "خریدهای مخزنِ همین شرکت", "🟤"));
-        Action = Actions[0];
+        BuildActions();
         BuildRows();
         Recalc();
     }
@@ -195,6 +191,44 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
     [ObservableProperty] private SetupOption? _action;
     private bool _actionBusy;
 
+    /// <summary>
+    /// ══ «چرا دوتا از هر کدام است؟» ═════════════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «خریدهای دیزل و پطرول هم توی کشویی هست
+    /// هم بیرونش… و کادرِ آرشیو را بیاور توی کادرِ کشویی بگذار که جا خیلی
+    /// می‌گیرد.»
+    ///
+    /// حق داشت: ردیفِ بالای جدول دو دکمهٔ آرشیو + دو دکمهٔ خرید + یک دکمهٔ
+    /// جست‌وجو داشت، و همان خریدها **دوباره** در کشویی هم بودند.
+    ///
+    /// حالا همه‌شان یک جا هستند — و شمارنده‌ها که تنها چیزِ مفیدِ آن دکمه‌ها
+    /// بودند، داخلِ نوشتهٔ خودِ گزینه می‌نشینند.
+    ///
+    /// ⚠️ فهرست با هر تازه‌سازیِ شمارنده‌ها (‎RefreshMetaAsync‎) از نو ساخته
+    /// می‌شود، پس ‎_actionBusy‎ لازم است: گذاشتنِ ‎Action‎ روی گزینهٔ اولِ
+    /// **تازه** نباید همان لحظه یک کار را اجرا کند.
+    /// </summary>
+    private void BuildActions()
+    {
+        _actionBusy = true;
+        try
+        {
+            Actions.Clear();
+            Actions.Add(new SetupOption("", "☰ کارها — انتخاب کنید…", "", ""));
+            Actions.Add(new SetupOption("new", "📋 جدول جدید",
+                "جدولِ فعلی آرشیو می‌شود و جدولِ خالی باز می‌شود", "📋"));
+            Actions.Add(new SetupOption("buy-petrol", PetrolBuyText, "خریدهای مخزنِ همین شرکت", "⛽"));
+            Actions.Add(new SetupOption("buy-diesel", DieselBuyText, "خریدهای مخزنِ همین شرکت", "🟤"));
+            if (HasArchives)
+                Actions.Add(new SetupOption("arc", ArcText,
+                    "همهٔ جدول‌های آرشیوِ این شرکت — کشویی، هر دو تیل", "🗂️"));
+            Actions.Add(new SetupOption("search", "🔍 جستجوی خرید",
+                "مقدارِ تن و/یا تاریخ را بزنید و همان لحظه خرید پیدا شود", "🔍"));
+            Action = Actions[0];
+        }
+        finally { _actionBusy = false; }
+    }
+
     partial void OnActionChanged(SetupOption? v)
     {
         if (v is null || v.Value.Length == 0 || _actionBusy) return;
@@ -206,6 +240,8 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
                 case "new": _ = NewTableAsync(); break;
                 case "buy-petrol": _ = OpenPurchasesAsync("petrol"); break;
                 case "buy-diesel": _ = OpenPurchasesAsync("diesel"); break;
+                case "arc": _ = OpenArchiveAsync(); break;
+                case "search": _ = SearchAsync(); break;
             }
             Action = Actions[0];      // ‎this.selectedIndex = 0‎ی سایت
         }
@@ -215,8 +251,8 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
     // ══ خریدهای مخزن و جدول‌های آرشیو — شمارنده‌های سربرگ ══════════════════
     [ObservableProperty] private string _petrolBuyText = "⛽ خریدهای پطرول";
     [ObservableProperty] private string _dieselBuyText = "🟤 خریدهای دیزل";
-    [ObservableProperty] private string _arcPetrolText = "";
-    [ObservableProperty] private string _arcDieselText = "";
+    /// <summary>«🗂️ جدول‌های آرشیو (۳ پطرول · ۲ دیزل)» — یک نوشته برای هر دو تیل.</summary>
+    [ObservableProperty] private string _arcText = "🗂️ جدول‌های آرشیو";
     [ObservableProperty] private bool _hasArcPetrol;
     [ObservableProperty] private bool _hasArcDiesel;
     public bool HasArchives => HasArcPetrol || HasArcDiesel;
@@ -236,17 +272,23 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
         //  همهٔ جدول‌های آرشیوِ این شرکت (اسکنِ کاملِ ۱۴۰۵/۰۶/۳۰).
         var (aP, aD) = await _host.Companies.CountArchivesAsync(Entity.Id);
         HasArcPetrol = aP > 0; HasArcDiesel = aD > 0;
-        ArcPetrolText = "🗂️ جدول‌های آرشیو پطرول (" + Shamsi.Money(aP) + ")";
-        ArcDieselText = "🗂️ جدول‌های آرشیو دیزل (" + Shamsi.Money(aD) + ")";
+        ArcText = "🗂️ جدول‌های آرشیو (" + Shamsi.Money(aP) + " پطرول · "
+                + Shamsi.Money(aD) + " دیزل)";
+
+        // نوشته‌ها عوض شدند ⇒ فهرستِ کشویی از نو
+        BuildActions();
     }
 
     [RelayCommand]
     private Task OpenPurchasesAsync(string? fuel) =>
         _section.OpenPurchasesAsync(Entity, fuel == "diesel" ? FuelType.Diesel : fuel == "petrol" ? FuelType.Petrol : null, null);
 
+    /// <summary>
+    /// «🗂️ جدول‌های آرشیو» — یک صفحه برای **هر دو** تیل؛ تیلِ باز فقط
+    /// می‌گوید کدام آرشیو از اول باز باشد. (پیش از این دو صفحهٔ جدا بود.)
+    /// </summary>
     [RelayCommand]
-    private Task OpenArchiveAsync(string? fuel) =>
-        _section.OpenArchiveAsync(Entity, fuel == "diesel" ? FuelType.Diesel : FuelType.Petrol);
+    private Task OpenArchiveAsync() => _section.OpenArchiveAsync(Entity, Fuel);
 
     /// <summary>«🔍 جستجوی خرید» — در خریدها و جدول‌های همین شرکت.</summary>
     [RelayCommand]

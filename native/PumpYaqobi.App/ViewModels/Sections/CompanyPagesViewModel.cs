@@ -208,10 +208,16 @@ public sealed class CompanyArchiveRowViewModel
         RateText = Shamsi.MoneyOrBlank(r.Rate);
         TotalUsdText = Shamsi.Money(Math.Round(calc.TotalUsd(r), 1), 1) + " $";
         TotalAfnText = Shamsi.Money(Math.Round(calc.TotalAfn(r), 0, MidpointRounding.AwayFromZero));
-        PoulText = Shamsi.MoneyOrBlank(r.Poul) + (r.Poul != 0m ? (r.PoulCurrency == Currency.Usd ? " $" : " ؋") : "");
+        PoulText = Shamsi.MoneyOrBlank(r.Poul);
+        // ⛔ «واحدِ رسید» ستونِ خودش را دارد، مثلِ جدولِ زنده — پیش از این به
+        // دُمِ عدد چسبیده بود («۵۰۰ ؋») و ستونِ جدولِ آرشیو با ستونِ جدولِ
+        // اصلی یکی نبود. همان «جدول‌های آرشیو عینِ جدولِ اصلی نیستند».
+        PoulCurrencyText = r.PoulCurrency == Currency.Usd ? "دالر" : "افغانی";
+        PoulCurrencyBrushKey = r.PoulCurrency == Currency.Usd ? "Pump.Info" : "Pump.Ok";
         var alb = calc.AlbaqiAfn(r, rate);
         AlbaqiText = Shamsi.Money(Math.Round(alb, 0, MidpointRounding.AwayFromZero));
         AlbaqiBrushKey = alb > 0m ? "Pump.Danger" : "Pump.Ok";
+        AlbaqiUsdText = Shamsi.Money(Math.Round(calc.AlbaqiUsd(r, rate), 2));
     }
     public int Index { get; }
     public string IndexText { get; }
@@ -224,8 +230,15 @@ public sealed class CompanyArchiveRowViewModel
     public string TotalUsdText { get; }
     public string TotalAfnText { get; }
     public string PoulText { get; }
+    public string PoulCurrencyText { get; }
+    public string PoulCurrencyBrushKey { get; }
     public string AlbaqiText { get; }
     public string AlbaqiBrushKey { get; }
+    public string AlbaqiUsdText { get; }
+
+    /// <summary>خوراکِ جست‌وجوی همین صفحه — تاریخ، نام و عددها.</summary>
+    public string Haystack => (DateText + " " + NameText + " " + TonText + " " + UsdText + " "
+                               + RateText + " " + PoulText).Trim();
 }
 
 /// <summary>یک جدولِ آرشیو با جمع‌ها و دو دکمهٔ خریدهای همان بازه — ‎_renderCompanyHistoryPanel‎.</summary>
@@ -244,6 +257,36 @@ public sealed partial class CompanyArchiveViewModel : ObservableObject
         Title = "🗂️ " + (h.Fuel == FuelType.Diesel ? "🟤 دیزل" : "⛽ پطرول") + " — " + (h.CreatedShamsi ?? "—")
               + " — " + Shamsi.Money(h.RowCount) + " ردیف";
         var ton = rows.Sum(r => calc.Ton(r));
+
+        // ══ سربرگِ خودِ این آرشیو ═══════════════════════════════════════════
+        //
+        // گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «جدول‌های آرشیو عینِ جدولِ اصلی
+        // نیستند و سربرگ‌های خودشان را هم ندارند و دقیق نیستند.»
+        //
+        // حق داشت: جدولِ زنده شش کادرِ خلاصه دارد (تن، کل دالر، کل افغانی،
+        // رسیدِ دالر، رسیدِ افغانی، الباقی) و آرشیو هیچ‌کدام را نداشت — فقط
+        // یک نوارِ «جمله» ته جدول. حالا همان شش عدد، از **همان**
+        // ‎CompanyService.Summarize‎ی جدولِ زنده.
+        //
+        // ⛔ هیچ فرمولِ تازه‌ای این‌جا نوشته نشد؛ عددِ دومی و متفاوت بدتر از
+        // نبودنِ عدد است.
+        Fuel = h.Fuel;
+        FuelWord = h.Fuel == FuelType.Diesel ? "🟤 دیزل" : "⛽ پطرول";
+        DateText = h.CreatedShamsi ?? "—";
+        RowCountText = Shamsi.Money(h.RowCount) + " ردیف";
+        BarText = FuelWord + " · " + DateText + " · " + RowCountText;
+        BarBrushKey = h.Fuel == FuelType.Diesel ? "Pump.Warn" : "Pump.Ok";
+
+        TotalTonText = Shamsi.Money(Math.Round(ton, 2), 2) + " تن";
+        TotalUsdText = Shamsi.Money(Math.Round(s.TotalUsd, 1), 1) + " $";
+        TotalAfnText = Shamsi.Money(Math.Round(s.TotalAfn, 0, MidpointRounding.AwayFromZero)) + " افغانی";
+        PaidUsdText = Shamsi.Money(Math.Round(s.PaidUsd, 1), 1) + " $";
+        PaidAfnText = Shamsi.Money(Math.Round(s.PaidAfn, 0, MidpointRounding.AwayFromZero)) + " افغانی";
+        AlbaqiAfnText = Shamsi.Money(Math.Round(s.AlbaqiAfn, 0, MidpointRounding.AwayFromZero)) + " AFN";
+        AlbaqiUsdText = Shamsi.Money(Math.Round(s.AlbaqiUsd, 2)) + " $";
+        AlbaqiBrushKey = s.AlbaqiAfn > 0m ? "Pump.Danger" : "Pump.Ok";
+        AlbaqiStatus = s.AlbaqiAfn > 0m ? "بدهکاریم" : s.AlbaqiAfn < 0m ? "پیش‌پرداخت" : "تسویه";
+
         Totals = new[]
         {
             new TotalCell("خرید (تن)", Shamsi.Money(Math.Round(ton, 3), 3)),
@@ -267,27 +310,95 @@ public sealed partial class CompanyArchiveViewModel : ObservableObject
     public string DieselBuyText { get; }
     [ObservableProperty] private int _highlightedRow = -1;
 
+    // ══ نوارِ کشویی — همان الگوی آرشیوِ قرض‌داران ═══════════════════════════
+    //
+    // خواستهٔ صریحِ صاحب ریپو: «کاری کن آن جدول‌ها شبیهِ جدول‌های آرشیوِ
+    // قرض‌داران بشود — همه یک جا ولی کشویی، هر کدام را خواستم باز کنم.»
+    //
+    // ⚠️ و این فقط ظاهر نیست: جدولِ بسته **نامرئی** است و ‎ExcelGrid‎
+    // ردیف‌هایش را پارک می‌کند. پیش از این هر آرشیوِ این شرکت با همهٔ
+    // ردیف‌هایش هم‌زمان زنده بود — ده آرشیوِ صدردیفی یعنی هزار ردیفِ زنده در
+    // یک صفحه، همان چیزی که قاعدهٔ ‎idle‎ قدغنش کرده.
+    public FuelType Fuel { get; }
+    public string FuelWord { get; }
+    public string DateText { get; }
+    public string RowCountText { get; }
+    public string BarText { get; }
+    public string BarBrushKey { get; }
+
+    [ObservableProperty] private bool _isOpen;
+
+    [RelayCommand] private void Toggle() => IsOpen = !IsOpen;
+
+    // ── شش عددِ سربرگ، همان‌هایی که جدولِ زنده دارد ──────────────────────
+    public string TotalTonText { get; }
+    public string TotalUsdText { get; }
+    public string TotalAfnText { get; }
+    public string PaidUsdText { get; }
+    public string PaidAfnText { get; }
+    public string AlbaqiAfnText { get; }
+    public string AlbaqiUsdText { get; }
+    public string AlbaqiBrushKey { get; }
+    public string AlbaqiStatus { get; }
+
+    /// <summary>
+    /// «این آرشیو با جست‌وجو جور است؟» — تاریخ، تیل، و متنِ هر ردیفش.
+    /// ⚠️ ردیف‌ها همین حالا در حافظه‌اند، پس هیچ پرس‌وجوی تازه‌ای نمی‌خواهد.
+    /// </summary>
+    public bool Matches(string q)
+    {
+        if (q.Length == 0) return true;
+        if (BarText.Contains(q, StringComparison.OrdinalIgnoreCase)) return true;
+        foreach (var r in Rows)
+            if (r.Haystack.Contains(q, StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
+    }
+
     [RelayCommand] private Task OpenPurchases(string? fuel) =>
         _page.OpenPurchasesAsync(this, fuel == "diesel" ? FuelType.Diesel : FuelType.Petrol);
     [RelayCommand] private Task Delete() => _page.DeleteAsync(this);
 }
 
-/// <summary>«🗂️ جدول‌های آرشیو» — ‎openCompanyArchive(fuel)‎: صفحهٔ جداگانه، فقط همان تیل.</summary>
+/// <summary>
+/// ══ «🗂️ جدول‌های آرشیو» — همهٔ آرشیوهای یک شرکت، یک‌جا و کشویی ═══════════
+///
+/// خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «کاری کن آن جدول‌ها شبیهِ جدول‌های
+/// آرشیوِ قرض‌داران بشود — همه یک جا ولی کشویی، هر کدام را خواستم باز کنم و
+/// حساب‌های مربوطِ همان را نشانم بدهد… و سرچ هم ندارد.»
+///
+/// ⛔ **دو صفحهٔ جدا برای پطرول و دیزل رفت.** پیش از این هر تیل صفحهٔ خودش را
+/// داشت و از صفحهٔ حساب دو دکمهٔ جدا باز می‌شدند — همان «کادرِ آرشیو جا خیلی
+/// می‌گیرد». حالا یک صفحه، هر دو تیل، و نوارِ رنگیِ هر آرشیو می‌گوید مالِ
+/// کدام تیل است.
+///
+/// ⚠️ ‎Fuel‎ی صفحه برداشته نشد و همان تیلی است که کاربر از آن آمده — فقط
+/// برای پیش‌باز کردنِ تازه‌ترین آرشیوِ همان تیل به کار می‌رود.
+/// </summary>
 public sealed partial class CompanyArchivePageViewModel : ObservableObject
 {
     private readonly AppHost _host;
     private readonly CompanySectionViewModel _section;
     private readonly IReadOnlyList<FuelPurchase> _all;
+    private readonly List<CompanyArchiveViewModel> _every = new();
 
     public CompanyArchivePageViewModel(AppHost host, TilCompany c, FuelType fuel, IReadOnlyList<CompanyTableArchive> arcs,
                                        IReadOnlyList<FuelPurchase> all, CompanySectionViewModel section)
     {
         _host = host; _section = section; _all = all;
         Company = c; Fuel = fuel;
-        Title = "🗂️ جدول‌های آرشیو " + (fuel == FuelType.Diesel ? "🟤 دیزل" : "⛽ پطرول") + " — " + (c.Name ?? "");
-        foreach (var h in arcs.Where(h => h.Fuel == fuel))
-            Archives.Add(new CompanyArchiveViewModel(h, c, host.Company, all, this));
-        EmptyText = fuel == FuelType.Diesel ? "🟤 جدول آرشیوِ دیزل ندارد" : "⛽ جدول آرشیوِ پطرول ندارد";
+        Title = "🗂️ جدول‌های آرشیو — " + (c.Name ?? "");
+
+        // تازه‌ترین اول، هر دو تیل با هم
+        foreach (var h in arcs.OrderByDescending(h => h.Id))
+            _every.Add(new CompanyArchiveViewModel(h, c, host.Company, all, this));
+
+        // ⚠️ تازه‌ترین آرشیوِ همان تیلی که کاربر از آن آمده، باز باشد — وگرنه
+        // صفحه‌ای پر از نوارِ بسته باز می‌شود و کاربر نمی‌داند کدام را بزند.
+        var first = _every.FirstOrDefault(a => a.Fuel == fuel) ?? _every.FirstOrDefault();
+        if (first is not null) first.IsOpen = true;
+
+        ApplyFilter();
+        EmptyText = "این شرکت هنوز جدولِ آرشیوی ندارد";
     }
 
     public TilCompany Company { get; }
@@ -297,9 +408,32 @@ public sealed partial class CompanyArchivePageViewModel : ObservableObject
     public ObservableCollection<CompanyArchiveViewModel> Archives { get; } = new();
     public bool IsEmpty => Archives.Count == 0;
 
+    /// <summary>«🔍 سرچ» — روی تاریخ، تیل و متنِ ردیف‌های هر آرشیو.</summary>
+    [ObservableProperty] private string _search = "";
+
+    partial void OnSearchChanged(string v) => ApplyFilter();
+
+    private void ApplyFilter()
+    {
+        var q = (Search ?? "").Trim();
+        Archives.Clear();
+        foreach (var a in _every) if (a.Matches(q)) Archives.Add(a);
+        OnPropertyChanged(nameof(IsEmpty));
+        OnPropertyChanged(nameof(CountText));
+    }
+
+    public string CountText => Shamsi.Money(Archives.Count) + " جدول از "
+                             + Shamsi.Money(_every.Count);
+
     public void Highlight(long archiveId, int rowIndex)
     {
-        foreach (var a in Archives) a.HighlightedRow = a.Entity.Id == archiveId ? rowIndex : -1;
+        foreach (var a in Archives)
+        {
+            a.HighlightedRow = a.Entity.Id == archiveId ? rowIndex : -1;
+            // ⚠️ آرشیوی که «برو به همان ردیف» نشانش می‌دهد باید باز باشد،
+            // وگرنه کاربر به نوارِ بسته فرستاده می‌شود.
+            if (a.Entity.Id == archiveId) a.IsOpen = true;
+        }
     }
 
     [RelayCommand] private void Close() => _section.CloseOverlay();
@@ -324,8 +458,10 @@ public sealed partial class CompanyArchivePageViewModel : ObservableObject
         if (!await Dialogs.ConfirmAsync("حذف جدول آرشیو",
                 "این جدولِ آرشیو با " + Shamsi.Money(a.Entity.RowCount) + " ردیف حذف شود؟")) return;
         await _host.Companies.DeleteArchiveAsync(a.Entity.Id);
+        _every.Remove(a);
         Archives.Remove(a);
         OnPropertyChanged(nameof(IsEmpty));
+        OnPropertyChanged(nameof(CountText));
         if (_section.Page is { } p) await p.RefreshMetaAsync();
         _host.Toast("🗑️ آرشیو حذف شد", ToastKind.Warn);
     });
