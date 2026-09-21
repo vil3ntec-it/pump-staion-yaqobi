@@ -219,11 +219,14 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
                 "جدولِ فعلی آرشیو می‌شود و جدولِ خالی باز می‌شود", "📋"));
             Actions.Add(new SetupOption("buy-petrol", PetrolBuyText, "خریدهای مخزنِ همین شرکت", "⛽"));
             Actions.Add(new SetupOption("buy-diesel", DieselBuyText, "خریدهای مخزنِ همین شرکت", "🟤"));
-            if (HasArchives)
-                Actions.Add(new SetupOption("arc", ArcText,
-                    "همهٔ جدول‌های آرشیوِ این شرکت — کشویی، هر دو تیل", "🗂️"));
-            Actions.Add(new SetupOption("search", "🔍 جستجوی خرید",
-                "مقدارِ تن و/یا تاریخ را بزنید و همان لحظه خرید پیدا شود", "🔍"));
+            //  ⛔ «جدول‌های آرشیو» و «جستجوی خرید» از این کشویی بیرون آمدند
+            //  (۱۴۰۵/۰۷/۰۷، خواستهٔ صریحِ صاحب ریپو: «جدول‌های آرشیو و
+            //  جستجوی خرید توی بخشِ شرکت‌ها بغلِ اون کادرِ کشویی باشن تا
+            //  دیده بشن»). حالا دو دکمهٔ کنارِ همین کشویی‌اند.
+            //  ⚠️ هیچ فرمانی عوض نشد: همان ‎OpenArchiveCommand‎ و
+            //  ‎SearchCommand‎ که این دو گزینه هم صدایشان می‌زدند.
+            //  ⚠️ و «خریدهای مخزن» عمداً داخلِ کشویی ماندند — خواستهٔ
+            //  ۱۴۰۵/۰۷/۰۶ («چرا دوتا از هر کدام است؟») همان‌جا سرِ جایش است.
             Action = Actions[0];
         }
         finally { _actionBusy = false; }
@@ -240,8 +243,6 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
                 case "new": _ = NewTableAsync(); break;
                 case "buy-petrol": _ = OpenPurchasesAsync("petrol"); break;
                 case "buy-diesel": _ = OpenPurchasesAsync("diesel"); break;
-                case "arc": _ = OpenArchiveAsync(); break;
-                case "search": _ = SearchAsync(); break;
             }
             Action = Actions[0];      // ‎this.selectedIndex = 0‎ی سایت
         }
@@ -272,7 +273,9 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
         //  همهٔ جدول‌های آرشیوِ این شرکت (اسکنِ کاملِ ۱۴۰۵/۰۶/۳۰).
         var (aP, aD) = await _host.Companies.CountArchivesAsync(Entity.Id);
         HasArcPetrol = aP > 0; HasArcDiesel = aD > 0;
-        ArcText = "🗂️ جدول‌های آرشیو (" + Shamsi.Money(aP) + " پطرول · "
+        //  ⚠️ کوتاه، چون از ۱۴۰۵/۰۷/۰۷ نوشتهٔ یک **دکمه**ی کنارِ کشویی است،
+        //  نه یک ردیفِ کشویی: «جدول‌های» از میانش رفت تا ردیف نشکند.
+        ArcText = "🗂️ آرشیو (" + Shamsi.Money(aP) + " پطرول · "
                 + Shamsi.Money(aD) + " دیزل)";
 
         // نوشته‌ها عوض شدند ⇒ فهرستِ کشویی از نو

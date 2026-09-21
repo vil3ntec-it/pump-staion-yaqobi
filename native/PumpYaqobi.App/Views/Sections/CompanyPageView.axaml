@@ -86,9 +86,20 @@
            خودشان، که تنها چیزِ مفیدِ آن دکمه‌ها بود.
 
            ⚠️ «حذف این جدول» همچنان ته صفحه و دور از بقیه است. -->
+      <!-- ⛔ «جدول‌های آرشیو» و «جستجوی خرید» از کشویی بیرون آمدند و کنارش
+           نشستند (۱۴۰۵/۰۷/۰۷): «توی بخشِ شرکت‌ها بغلِ اون کادرِ کشویی باشن تا
+           دیده بشن». کشویی از ۳۴۰ به ۲۶۰ کوتاه شد تا هر سه در یک خط جا شوند.
+           ⚠️ «خریدهای مخزن» و «جدول جدید» عمداً داخلِ کشویی ماندند. -->
       <WrapPanel Orientation="Horizontal">
-        <c:SettingCard Classes="card" MinWidth="340" ItemsSource="{Binding Actions}" SelectedItem="{Binding Action}"
-                       Margin="0,0,8,6" ToolTip.Tip="همهٔ کارهای این حساب یک‌جا — «حذف این جدول» عمداً ته صفحه است" />
+        <c:SettingCard Classes="card" MinWidth="260" ItemsSource="{Binding Actions}" SelectedItem="{Binding Action}"
+                       Margin="0,0,8,6" ToolTip.Tip="کارهای این حساب — «حذف این جدول» عمداً ته صفحه است" />
+        <Button Classes="ghost info" Content="{Binding ArcText}" Margin="0,0,8,6"
+                Command="{Binding OpenArchiveCommand}"
+                IsVisible="{Binding HasArchives}"
+                ToolTip.Tip="همهٔ جدول‌های آرشیوِ این شرکت — کشویی، هر دو تیل" />
+        <Button Classes="ghost info" Content="🔍 جستجوی خرید" Margin="0,0,8,6"
+                Command="{Binding SearchCommand}"
+                ToolTip.Tip="مقدارِ تن و/یا تاریخ را بزنید و همان لحظه خرید پیدا شود" />
       </WrapPanel>
 
       <!-- ── جدول + ردیفِ «جمله»ی همین دفتر (پطرول و دیزل جدا) ─────────────

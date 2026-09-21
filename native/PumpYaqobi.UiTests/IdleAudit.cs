@@ -75,7 +75,6 @@ internal static class IdleAudit
         var vm = (MainViewModel)win.DataContext!;
         win.Show(); Pump(win);
         vm.Lock.Password = "1234";
-        vm.Lock.Confirm = "1234";
         LockIn.Wait(vm.Lock);
         var end = DateTime.UtcNow + TimeSpan.FromSeconds(180);
         while (vm.Phase == MainViewModel.AppPhase.Starting && DateTime.UtcNow < end)

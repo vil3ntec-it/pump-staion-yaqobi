@@ -35,6 +35,9 @@ internal static class VerifyProbe
     {
         var tmpDb = Path.Combine(Path.GetTempPath(), "pump-verify-" + Guid.NewGuid().ToString("N"), "pump.db");
         AppHost.Start(tmpDb);
+        //  ⛔ نصبِ تازه از ۱۴۰۵/۰۷/۰۷ **بی‌رمز** باز می‌شود و صفحهٔ قفل ندارد.
+        //  این سنجه همان مسیرِ رمزدار را می‌سنجد، پس رمز را خودش می‌گذارد.
+        if (AppHost.Current.Auth.NeedsFirstRun()) AppHost.Current.Auth.CreateFirstAdmin("1234");
 
         /*
          *  ⛔ **این نصب باید پلن داشته باشد، وگرنه سنجه دو رفتارِ سالم را
@@ -62,7 +65,7 @@ internal static class VerifyProbe
         var win = new MainWindow { Width = 1366, Height = 768 };
         win.Show(); Pump(win);
         var vm = (MainViewModel)win.DataContext!;
-        vm.Lock.Password = "1234"; vm.Lock.Confirm = "1234"; LockIn.Wait(vm.Lock);
+        vm.Lock.Password = "1234"; LockIn.Wait(vm.Lock);
         Wait(win, Task.CompletedTask);
         Seed.Fill(AppHost.Current);
         var host = AppHost.Current;

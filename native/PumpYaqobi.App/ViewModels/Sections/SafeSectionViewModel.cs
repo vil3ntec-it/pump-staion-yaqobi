@@ -164,16 +164,32 @@ public sealed partial class SafeSectionViewModel : LedgerSectionViewModel<SafeRo
     /// </summary>
     protected override IReadOnlyList<TotalCell> BuildTotals() => new[]
     {
-        // ⚠️ هیچ‌کدام زیرِ ستون نمی‌نشینند و همان درست است: جدولِ گاوصندوق یک
-        // ستونِ «مبلغ» دارد و یک «واحد»، پس شش عددِ زیر خلاصه‌اند نه جمعِ ستون.
-        new TotalCell("بردگی (افغانی)", BardagiAfn, "Pump.Warn", TotalCell.NoColumn),
-        new TotalCell("بردگی ($)", BardagiUsd, "Pump.Warn", TotalCell.NoColumn),
-        new TotalCell("ماندگی (افغانی)", MandagiAfn, "Pump.Ok", TotalCell.NoColumn),
-        new TotalCell("ماندگی ($)", MandagiUsd, "Pump.Ok", TotalCell.NoColumn),
-        new TotalCell("خالص (افغانی)", NetAfn,
-                      Summary.Net.Afn < 0m ? "Pump.Danger" : "Pump.Ok", TotalCell.NoColumn),
-        new TotalCell("خالص ($)", NetUsd,
-                      Summary.Net.Usd < 0m ? "Pump.Danger" : "Pump.Ok", TotalCell.NoColumn),
+        // ══ سه خانه، نه شش ═════════════════════════════════════════════════
+        //
+        // گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۷): «پایینِ جدول، توی جمله‌ها چی‌ها
+        // نوشته درستش کن؛ خیلی خراب است… با کادرهای خودِ همان کادر وصل نیست،
+        // هم‌اندازهٔ همان‌ها نمی‌شود، و آدم نمی‌فهمد چی به چیه.»
+        //
+        // ⛔ ریشه دو تا بود و هر دو بسته شد:
+        //   ۱) شش خانهٔ بی‌ستون در نواری که شش ستون دارد ⇒ هیچ‌وقت روی مرزِ
+        //      ستون‌ها نمی‌نشستند (‎TotalsStrip.Snap‎ حالا سه خانه را می‌چسباند،
+        //      شش تا جا نمی‌شد).
+        //   ۲) «بردگی (افغانی)» و «بردگی ($)» دو خانهٔ جدا بودند و واحد فقط
+        //      در برچسبِ ریزِ بالا نوشته می‌شد. حالا هر خانه یک موضوع است و
+        //      واحد **کنارِ خودِ عدد** است.
+        //
+        // ⚠️ هیچ عددی عوض نشد و هیچ جمعِ تازه‌ای ساخته نشد — همان شش عددِ
+        // ‎Summary‎، سه‌تا-سه‌تا در یک خانه. افغانی و دالر همچنان **هرگز** با
+        // هم جمع نمی‌شوند (قاعدهٔ خودِ سرویس: نرخ وارد حساب نمی‌شود).
+        new TotalCell("بردگی", BardagiAfn + " افغانی · " + BardagiUsd + " $",
+                      "Pump.Warn", TotalCell.NoColumn),
+        new TotalCell("ماندگی", MandagiAfn + " افغانی · " + MandagiUsd + " $",
+                      "Pump.Ok", TotalCell.NoColumn),
+        //  ⚠️ رنگ از افغانی می‌آید (ارزِ اصلیِ دفتر)؛ منفی بودنِ هر کدام از
+        //  دو عدد سرخش می‌کند، وگرنه یک خالصِ منفیِ دالری بی‌نشان می‌مانْد.
+        new TotalCell("خالص", NetAfn + " افغانی · " + NetUsd + " $",
+                      Summary.Net.Afn < 0m || Summary.Net.Usd < 0m ? "Pump.Danger" : "Pump.Ok",
+                      TotalCell.NoColumn),
     };
 
     /// <summary>‎printSafe(monthKey)‎ — ورقِ همین ماه، همان‌طور که روی صفحه است.</summary>

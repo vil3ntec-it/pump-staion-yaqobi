@@ -331,14 +331,14 @@
 
           <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
             <TextBlock Text="📞 شماره تماس:" Classes="barl" />
-            <TextBox Text="{Binding PhoneText}" Width="170" Watermark="مثلاً 0700000000" />
+            <TextBox Text="{Binding PhoneText}" Width="140" Watermark="0700000000" />
           </StackPanel>
 
           <!-- «فیِ خرید» فقط یادداشت است و در هیچ محاسبه‌ای نیست — همان جمله‌ای
                که خودِ سایت روی ‎title‎ی این کادر نوشته. -->
           <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
             <TextBlock Text="📝 فیِ خرید:" Classes="barl" />
-            <TextBox Text="{Binding BuyFeeText}" Width="96" Watermark="56 / 57"
+            <TextBox Text="{Binding BuyFeeText}" Width="80" Watermark="56 / 57"
                      ToolTip.Tip="فقط یادداشت — تیلِ مشتری با چه فی خریداری شده. در هیچ محاسبه‌ای استفاده نمی‌شود." />
           </StackPanel>
 
