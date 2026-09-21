@@ -105,6 +105,7 @@ public sealed partial class MainViewModel : ObservableObject
         // تاریخچه‌ها می‌رود و همان‌جا تاریخچهٔ همان بخش را باز می‌کند.
         AppHost.Current.OpenHistory = OpenHistoryAsync;
         AppHost.Current.GoHome = OpenStartSectionAsync;
+        AppHost.Current.GoSection = GoSectionAsync;
         // فهرست‌های نام‌دارِ پیشنهادِ خودکار — همان ‎datalist‎های سایت
         var host0 = AppHost.Current;
         Controls.Suggest.Provide("staff", async () => (await host0.Attendance.StaffAsync()).Select(x => x.Name ?? ""));
@@ -722,17 +723,49 @@ public sealed partial class MainViewModel : ObservableObject
         //  گاوصندوق/صرافی/امانت هم از همین در رد می‌شود، نه فقط خودِ بخش.
         if (!Entitlements.Gate(AppHost.Current, Entitlements.History)) return;
         if (Sections.FirstOrDefault(x => x.Id == "history") is not Sections.HistorySectionViewModel h) return;
-        await GoAsync(h);
+
+        //  ⛔ **پیش از** رفتن، جایی که از آن آمدیم را به خاطر بسپار — وگرنه
+        //  کاربر در تاریخچه‌ها گیر می‌کند و باید از نوار دنبالِ بخشِ خودش
+        //  بگردد (گزارشِ ۱۴۰۵/۰۷/۰۶). «همان بخش»، نه «صفحهٔ اول».
+        //  ⚠️ و اگر خودِ تاریخچه‌ها باز بود، مبدأ دست نمی‌خورد: زدنِ یک کارتِ
+        //  دیگر نباید راهِ برگشت را به «تاریخچه‌ها» عوض کند.
+        if (Current is not null && Current.Id != "history")
+            h.SetOrigin(Current.Id, Current.Title);
+
+        _historyFromSection = true;
+        try { await GoAsync(h); }
+        finally { _historyFromSection = false; }
         await h.OpenAsync(kind);
     }
 
+    /// <summary>
+    /// رفتن به یک بخش با شناسه‌اش — درِ <see cref="AppHost.GoSection"/>.
+    /// ⚠️ به همان <c>GoAsync</c> می‌رسد، پس قفلِ پلن و رمزِ بخش سرِ جایشان‌اند.
+    /// </summary>
+    private async Task GoSectionAsync(string id)
+    {
+        if (Sections.FirstOrDefault(x => x.Id == id) is { } s) await GoAsync(s);
+    }
+
     [RelayCommand(AllowConcurrentExecutions = true)]
+    /// <summary>
+    /// «همین حالا از راهِ <see cref="OpenHistoryAsync"/> می‌رویم» — یک نشانِ
+    /// یک‌بارمصرف. ⚠️ لازم است چون رفتنِ <b>مستقیم</b> به «تاریخچه‌ها» (از
+    /// نوار یا ‎Alt+عدد‎) باید راهِ برگشتِ کهنه را پاک کند؛ وگرنه دکمهٔ
+    /// «برگشت به گاوصندوق» یک هفتهٔ بعد هم آن‌جا می‌مانْد و کاربر را به بخشی
+    /// می‌بُرد که یادش نبود.
+    /// </summary>
+    private bool _historyFromSection;
+
     public async Task GoAsync(SectionViewModel? s)
     {
         if (s is null) return;
 
         // ⛔ بخشِ قفل‌دار (مفاد/ضرر) بی رمز باز نمی‌شود — شرحش در ‎UnlockAsync‎.
         if (!await UnlockAsync(s)) return;
+
+        if (s is Sections.HistorySectionViewModel hv && !_historyFromSection)
+            hv.SetOrigin("", "");
 
         // زدنِ دکمهٔ همان بخشی که باز است یعنی «تازه‌اش کن» — نه «هیچ کاری نکن».
         // پیش از این این‌جا برمی‌گشتیم و نتیجه‌اش این بود که عددهای نوارِ بالا

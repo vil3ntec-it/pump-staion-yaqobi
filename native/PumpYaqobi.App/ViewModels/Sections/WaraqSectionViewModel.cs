@@ -174,7 +174,24 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
     [ObservableProperty] private bool _isExpense;
     [ObservableProperty] private FuelType _fuel;
 
-    partial void OnNameChanged(string v) => Touch();
+    /// <summary>
+    /// ══ نام که عوض شد، سوخت و واحد خودشان را پیدا می‌کنند ═══════════════════
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «ستونِ نوعِ تیل را حذف کن ولی اگر
+    /// در نام پطرول/دیزل (یا «پ»/«د»ی خالی) نوشتم، در حسابِ یارو همان انتخاب
+    /// بشه… و اسمِ قرض‌دار را که نوشتم، سیستم اتومات تشخیص بده واحدِ این حساب
+    /// تیل است یا پول.»
+    ///
+    /// ⚠️ تصمیم این‌جا گرفته نمی‌شود — هر دو قاعده در
+    /// <see cref="PostingService"/> است، همان‌جا که خودِ پست هم از آن
+    /// می‌خواند. دو نسخه یعنی روزی ردیف در دفتری بنشیند که صفحه نشانش داده
+    /// بود.
+    /// </summary>
+    partial void OnNameChanged(string v)
+    {
+        Touch();
+        if (!Loading) _owner.AutoFromName(this);
+    }
     partial void OnLitersChanged(decimal v) { _t.AmountAuto ??= true; Touch(); Refresh(); }
     partial void OnIsExpenseChanged(bool v)
     {
@@ -713,6 +730,9 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
     [RelayCommand]
     private Task BackAsync() => _section.BackCommand.ExecuteAsync(null);
 
+    /// <summary>پلِ «نام ⇒ سوخت و واحد» — تصمیمش در بخش است، نه این‌جا.</summary>
+    internal void AutoFromName(WaraqTxnViewModel row) => _section.AutoFromName(row);
+
     public async Task FlushAsync()
     {
         foreach (var p in Pumps.ToList()) await p.FlushAsync();
@@ -766,6 +786,85 @@ public sealed class WaraqCardViewModel
 public sealed partial class WaraqSectionViewModel : SectionViewModel
 {
     private readonly AppHost _host;
+
+    // ══ «این نام مالِ کدام حساب است؟» — یک کَش، با ترمزِ Version ══════════════
+    //
+    // ⛔ این با **هر حرفِ تایپِ کاربر** صدا زده می‌شود، پس یک پرس‌وجو به ازای
+    // هر کلید همان کندی‌ای است که قاعدهٔ سرعتِ این ریپو قدغنش کرده. تا شمارهٔ
+    // دفتر عوض نشود، **صفر** دستورِ دیتابیس.
+    private List<AccountUnitRow>? _units;
+    private Dictionary<long, AccountUnitRow>? _unitById;
+    private List<Debtor>? _unitPeople;
+    private long _unitsVersion = -1;
+
+    /// <summary>
+    /// نام که عوض شد: سوخت از خودِ متن، و واحد از حسابی که نامش خورده.
+    ///
+    /// ⚠️ منتظرش نمی‌مانیم و هیچ استثنایی بیرون نمی‌دهد: این یک **راحتی**
+    /// است، و خودِ پست (<see cref="WaraqPostingService"/>) دوباره و مستقل
+    /// همین دو قاعده را می‌زند. پس نشدنش هیچ عددی را غلط نمی‌کند.
+    /// </summary>
+    internal void AutoFromName(WaraqTxnViewModel row) => _ = AutoFromNameAsync(row);
+
+    private async Task AutoFromNameAsync(WaraqTxnViewModel row)
+    {
+        try
+        {
+            var text = row.Name ?? "";
+            if (text.Trim().Length == 0) return;
+
+            // ۱) سوخت: «پطرول» · «دیزل» · «پ» · «د» — هر جای جمله
+            if (PostingService.MentionsFuel(text))
+                row.Fuel = PostingService.DetectFuelType(text);
+
+            // ۲) واحد: تیل یا پول، از روی حسابی که نامش خورده
+            await EnsureUnitsAsync();
+            if (_unitPeople is null || _unitById is null) return;
+            if ((row.Name ?? "") != text) return;      // کاربر ادامه داد — نتیجه کهنه است
+
+            var hw = PostingService.ExtractHawala(text);
+            var display = PostingService.StripFuelWords(
+                string.IsNullOrWhiteSpace(hw.Clean) ? text : hw.Clean);
+
+            // ⛔ همان یک تطبیق‌کنندهٔ همیشگی — حساب‌های فرعی را هم می‌بیند.
+            var m = PostingService.FindAccountForText(_unitPeople, text, display);
+            if (m is null) return;
+            if (!_unitById.TryGetValue(m.Value.Account.Id, out var info)) return;
+
+            var want = PostingService.UnitForAccount(info.HasFuelRows, info.HasMoneyRows, info.Mode);
+            if (want is not null) row.IsMoney = want.Value == LedgerMode.Money;
+        }
+        catch { /* راحتی است، نه اصل */ }
+    }
+
+    private async Task EnsureUnitsAsync()
+    {
+        var v = PumpYaqobi.Persistence.PumpDbContext.Version;
+        if (_units is not null && _unitsVersion == v) return;
+
+        var rows = await _host.Debtors.AccountUnitsAsync();
+
+        // گرافِ سبکِ «شخص ⇒ حساب‌ها» تا همان ‎FindAccountForText‎ی همیشگی
+        // بتواند رویش کار کند. ⛔ هیچ ردیفی در این گراف نیست.
+        var people = new Dictionary<long, Debtor>();
+        foreach (var r in rows)
+        {
+            if (!people.TryGetValue(r.PersonId, out var p))
+            {
+                p = new Debtor { Id = r.PersonId, Name = r.PersonName };
+                people[r.PersonId] = p;
+            }
+            var a = new DebtAccount { Id = r.AccountId, Name = r.AccountName, Mode = r.Mode };
+            if (r.IsMain) { a.MainOfDebtorId = r.PersonId; p.MainAccount = a; }
+            // ⚠️ ‎LegacySubId‎ لازم است: ‎DebtAccount.IsMain‎ از همان می‌خواند.
+            else { a.DebtorId = r.PersonId; a.LegacySubId = "s" + r.AccountId; p.SubAccounts.Add(a); }
+        }
+
+        _units = rows;
+        _unitById = rows.ToDictionary(x => x.AccountId);
+        _unitPeople = people.Values.ToList();
+        _unitsVersion = v;
+    }
 
     public WaraqSectionViewModel(AppHost host) : base("waraq", "waraq", "ورق‌های روزانه")
     {

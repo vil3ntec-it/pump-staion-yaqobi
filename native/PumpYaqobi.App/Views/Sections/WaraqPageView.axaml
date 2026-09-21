@@ -104,7 +104,7 @@
            را در جدولِ اول و نیمهٔ دوم را در جدولِ دوم می‌ریزد.
 
            ستون‌ها هم مو‌به‌مو همان‌های سایت‌اند و به همان ترتیب:
-               # │ نام │ نوع تیل │ مقدار تیل │ مبلغ │ نوع
+               # │ نام │ مقدار تیل │ مبلغ │ نوع │ واحد
            («مبلغِ مؤثر» که پیش از این بود، در سایتِ این جدول نیست و برداشته
            شد؛ همان عدد در ردیفِ «جمله»ی ته صفحه دیده می‌شود.)
 
@@ -123,22 +123,15 @@
             <c:ExcelGrid GrowsToContent="True" WidthKey="waraq.txns" Grid.Column="0" ItemsSource="{Binding TxnsFirst}" x:CompileBindings="False">
               <DataGrid.Columns>
                 <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
-                <DataGridTemplateColumn Header="نوع تیل" Width="Auto">
-                  <DataGridTemplateColumn.CellTemplate>
-                    <DataTemplate>
-                      <!-- ⚠️ کپسول، نه کشویی. با دو گزینه، ‎ComboBox‎ یک قالبِ کامل با ‎Popup‎ و
-                           ‎ItemsPresenter‎ی خودش می‌ساخت — ده‌ها بصری در هر خانه — و سنجشِ ‎waraqperf‎
-                           نشان داد بیشترِ وقتِ باز شدنِ ورقِ پُر همین است. خواستهٔ صاحب ریپو هم همین
-                           بود: «اون فلش فقط جا گرفته» و «با تب یا اینتر عوض بشه». ‎ExcelGrid‎ کلاسِ
-                           ‎celltoggle‎ را با ‎Enter‎/‎Tab‎ می‌زند. -->
-                      <Button Classes="fuelchip celltoggle" Content="{Binding FuelChipText}"
-                              Command="{Binding ToggleFuelCommand}"
-                              Foreground="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
-                              BorderBrush="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
-                              ToolTip.Tip="زدنش نوعِ تیلِ همین ردیف را پطرول ⇄ دیزل می‌کند" />
-                    </DataTemplate>
-                  </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
+                <!-- ⛔ ستونِ «نوع تیل» برداشته شد (۱۴۰۵/۰۷/۰۶) و برنمی‌گردد.
+                     خواستهٔ صریحِ صاحب ریپو: «از داخلِ بخشِ ورق‌ها از تراکنش‌ها
+                     نوعِ تیل رو حذف کن… ولی اگر توی نام پطرول یا دیزل نوشتم،
+                     توی حسابِ یارو همان انتخاب بشه اتومات.»
+                     ⚠️ خودِ ‎Fuel‎ی ردیف نرفت — فقط ستونش. نام که «دیزل» یا
+                     «د» داشته باشد همان لحظه رویش می‌نشیند
+                     (‎WaraqSectionViewModel.AutoFromName‎)، و ‎FuelChipText‎ و
+                     ‎ToggleFuelCommand‎ سرِ جایشان‌اند چون جدولِ **پایه‌ها**ی
+                     همین صفحه هم از آن‌ها می‌خواند. -->
                 <DataGridTextColumn Header="مقدار تیل" Binding="{Binding LitersText}" Width="Auto" />
                 <DataGridTextColumn Header="مبلغ" Binding="{Binding AmountText}" Width="Auto" />
                 <DataGridTemplateColumn Header="نوع" Width="Auto">
@@ -180,22 +173,6 @@
             <c:ExcelGrid GrowsToContent="True" WidthKey="waraq.txns" Grid.Column="2" ItemsSource="{Binding TxnsSecond}" x:CompileBindings="False">
               <DataGrid.Columns>
                 <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
-                <DataGridTemplateColumn Header="نوع تیل" Width="Auto">
-                  <DataGridTemplateColumn.CellTemplate>
-                    <DataTemplate>
-                      <!-- ⚠️ کپسول، نه کشویی. با دو گزینه، ‎ComboBox‎ یک قالبِ کامل با ‎Popup‎ و
-                           ‎ItemsPresenter‎ی خودش می‌ساخت — ده‌ها بصری در هر خانه — و سنجشِ ‎waraqperf‎
-                           نشان داد بیشترِ وقتِ باز شدنِ ورقِ پُر همین است. خواستهٔ صاحب ریپو هم همین
-                           بود: «اون فلش فقط جا گرفته» و «با تب یا اینتر عوض بشه». ‎ExcelGrid‎ کلاسِ
-                           ‎celltoggle‎ را با ‎Enter‎/‎Tab‎ می‌زند. -->
-                      <Button Classes="fuelchip celltoggle" Content="{Binding FuelChipText}"
-                              Command="{Binding ToggleFuelCommand}"
-                              Foreground="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
-                              BorderBrush="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
-                              ToolTip.Tip="زدنش نوعِ تیلِ همین ردیف را پطرول ⇄ دیزل می‌کند" />
-                    </DataTemplate>
-                  </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
                 <DataGridTextColumn Header="مقدار تیل" Binding="{Binding LitersText}" Width="Auto" />
                 <DataGridTextColumn Header="مبلغ" Binding="{Binding AmountText}" Width="Auto" />
                 <DataGridTemplateColumn Header="نوع" Width="Auto">

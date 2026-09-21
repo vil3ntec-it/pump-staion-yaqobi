@@ -56,9 +56,13 @@
             <StackPanel Spacing="4">
               <TextBlock Text="نام کارمند" Classes="fld" />
               <!-- ⚠️ کادرِ نام پهنای صریح دارد: «کادرِ نامِ کارمندان خیلی بزرگ
-                   است». ستونِ آخر خالی می‌ماند تا کارت به‌هم نریزد. -->
+                   است». ستونِ آخر خالی می‌ماند تا کارت به‌هم نریزد.
+                   ⛔ و **بلند** است، نه پهن — خواستهٔ صریحِ صاحب ریپو
+                   (۱۴۰۵/۰۷/۰۶): «طولش بزرگ باشه نه عرضش». پهنای ۲۱۰ همان
+                   می‌ماند و فقط بلندی بالا رفت؛ پهن‌ترش نکنید. -->
               <Grid ColumnDefinitions="210,10,Auto,*">
                 <TextBox Grid.Column="0" Text="{Binding Name}" Watermark="نام کارمند"
+                         MinHeight="48" FontSize="15" VerticalContentAlignment="Center"
                          c:Suggest.Key="staff" />
                 <StackPanel Grid.Column="2" Spacing="2" HorizontalAlignment="Center">
                   <TextBlock Text="شماره پایه" FontSize="10.5" Foreground="{DynamicResource Pump.Muted}"
@@ -72,26 +76,32 @@
             <StackPanel Spacing="4">
               <TextBlock Text="شروع پایه (لیتر)" Classes="fld" />
               <Grid ColumnDefinitions="*,7,Auto">
-                <TextBox Grid.Column="0" Text="{Binding Start}" Watermark="0" />
+                <!-- ⛔ خودِ عدد سرخ می‌شود («توی خود همون کادر هم عدد سرخ
+                     بشه») — پس نشانه با رفتن به کادرِ دیگر از چشم نمی‌افتد. -->
+                <TextBox Grid.Column="0" Text="{Binding Start}" Watermark="0"
+                         Foreground="{Binding StartBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
                 <Button Grid.Column="2" Content="{Binding PullText}" Padding="10,6" FontSize="11.5"
                         Command="{Binding $parent[UserControl].((vm:ParchaSectionViewModel)DataContext).PullBaseCommand}"
                         CommandParameter="{Binding}" />
               </Grid>
 
-              <!-- ══ «این پایه کمتر است» ══════════════════════════════════
-                   بغلِ همان کادر، همان‌جا که خواسته شده — و **مانع نیست**:
-                   ذخیره سرِ جایش است، فقط اگر «دیدم» زده نشود عدد در ورق
-                   سرخ می‌ماند. -->
-              <Border Classes="panel" IsVisible="{Binding LowBase}" Padding="9,7"
-                      CornerRadius="8" BorderThickness="1.4"
-                      BorderBrush="{DynamicResource Pump.Danger}">
-                <StackPanel Spacing="6">
-                  <TextBlock Text="{Binding LowBaseText}" TextWrapping="Wrap" FontSize="12"
-                             Foreground="{DynamicResource Pump.Danger}" />
-                  <Button Content="✔ دیدم — سرخ نشود" Classes="ghost" Padding="10,4" FontSize="12"
-                          HorizontalAlignment="Right" Command="{Binding AckLowBaseCommand}" />
-                </StackPanel>
-              </Border>
+              <!-- ══ هشدارِ زنجیرهٔ پایه ═══════════════════════════════════
+                   ⛔ **یک ردیفِ همیشه‌حاضرِ ۲۲ پیکسلی، نه یک کادرِ بازشو.**
+                   ریشهٔ «نمی‌گذارد بروم کادرِ پایین» همین بود: کادرِ هشدار با
+                   دکمهٔ «دیدم» داخلِ همین ستون باز می‌شد و «ختم پایه» را ~۷۰
+                   پیکسل پایین می‌پراند — کاربر تایپ می‌کرد، کادرِ بعدی از
+                   زیرِ نشانگرش فرار می‌کرد. حالا ردیف همیشه هست (خالی، وقتی
+                   هشداری نیست)، پس **هیچ چیزی جابه‌جا نمی‌شود**.
+                   ⛔ و مانع نیست: ذخیره سرِ جایش است. -->
+              <Grid Height="22" ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Text="{Binding LowBaseText}" FontSize="11.5"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                           ToolTip.Tip="{Binding LowBaseText}"
+                           Foreground="{DynamicResource Pump.Danger}" />
+                <Button Grid.Column="1" Content="✔ دیدم" Classes="ghost" Padding="8,1"
+                        FontSize="11" VerticalAlignment="Center"
+                        IsVisible="{Binding LowBase}" Command="{Binding AckLowBaseCommand}" />
+              </Grid>
             </StackPanel>
 
             <StackPanel Spacing="4">
@@ -206,8 +216,14 @@
                         Command="{Binding StartNewReportCommand}" />
                 <Button Content="پارچهٔ جدید روز" Margin="0,0,8,6"
                         Command="{Binding NewParchaDayCommand}" />
-                <Button Content="پارچهٔ جدید شب" Margin="0,0,0,6"
+                <Button Content="پارچهٔ جدید شب" Margin="0,0,8,6"
                         Command="{Binding NewParchaNightCommand}" />
+                <!-- ⛔ حالتِ **اختیاریِ** تازه (۱۴۰۵/۰۷/۰۶): ختمِ هر پایه باید
+                     شروعِ پارچهٔ بعدیِ همان پایه باشد. خاموش که شود، فقط
+                     هشدارِ «کمتر است» می‌ماند. -->
+                <CheckBox Content="⛓️ برسیِ زنجیرهٔ پایه‌ها" Margin="0,0,0,6"
+                          IsChecked="{Binding ChainCheck}"
+                          ToolTip.Tip="ختمِ هر پایه باید با شروعِ پارچهٔ بعدیِ همان پایه یکی باشد؛ روز و شبِ یک پایه یک زنجیره‌اند و هر پایه زنجیرهٔ خودش را دارد." />
               </WrapPanel>
             </StackPanel>
           </Border>

@@ -12,6 +12,13 @@
          تاریخش؛ زدنِ کادر، تاریخچهٔ همان بخش را باز می‌کند. -->
     <c:SectionPage IsVisible="{Binding IsListVisible}" Header="تاریخچه‌ها"
                    SubHeader="هر بخش تاریخچهٔ خودش را دارد — از تازه به کهنه. فقط برای دیدن است؛ هیچ چیزی عوض یا پاک نمی‌شود.">
+      <c:SectionPage.Toolbar>
+        <!-- «برگشت به تاریخچه‌ها»ی صفحهٔ بخش آدم را همین‌جا می‌گذارد، پس راهِ
+             برگشت به بخشِ مبدأ باید این‌جا هم باشد. -->
+        <Button Classes="accent" Content="{Binding OriginBackText}"
+                IsVisible="{Binding HasOrigin}"
+                Command="{Binding BackToOriginCommand}" />
+      </c:SectionPage.Toolbar>
               <ItemsRepeater ItemsSource="{Binding Cards}">
           <ItemsRepeater.Layout>
               <UniformGridLayout MinItemWidth="272" ItemsStretch="Fill"
@@ -39,6 +46,12 @@
 
       <c:SectionPage.Toolbar>
         <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+          <!-- ⛔ دو راهِ برگشت، و هر دو لازم‌اند: یکی به فهرستِ کارت‌ها و یکی
+               به **همان بخشی که از آن آمدیم** (۱۴۰۵/۰۷/۰۶). دومی فقط وقتی
+               دیده می‌شود که واقعاً از بخشی آمده باشیم. -->
+          <Button Classes="accent" Content="{Binding OriginBackText}" Margin="0,0,10,0"
+                  IsVisible="{Binding HasOrigin}"
+                  Command="{Binding BackToOriginCommand}" />
           <Button Classes="ghost" Content="برگشت به تاریخچه‌ها" Margin="0,0,10,0"
                   Command="{Binding BackCommand}" />
           <TextBlock Text="📅 ماه:" Classes="label" VerticalAlignment="Center" Margin="0,0,6,0" />
