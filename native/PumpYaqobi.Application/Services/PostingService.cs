@@ -245,9 +245,7 @@ public sealed class PostingService
     public static DebtRow PlaceRow(Debtor person, DebtRow data, string? descText,
                                    DebtAccount? targetAccount, bool intoMoneyLedger = false)
     {
-        var acct = targetAccount is not null && !ReferenceEquals(targetAccount, person.MainAccount)
-            ? targetAccount
-            : SubForText(person, descText) ?? person.MainAccount;
+        var acct = ResolveAccount(person, descText, targetAccount);
 
         var arr = intoMoneyLedger ? acct.MoneyRows : acct.FuelRows;
 
@@ -288,9 +286,7 @@ public sealed class PostingService
             }
         }
 
-        var empty = arr.FirstOrDefault(r =>
-            string.IsNullOrWhiteSpace(r.Name) && string.IsNullOrWhiteSpace(r.Hawala)
-            && r.Liters == 0 && r.Bardagi == 0 && r.Rasid == 0);
+        var empty = FirstBlank(arr);
         if (empty is not null) { CopyInto(data, empty); return empty; }
 
         data.SortIndex = arr.Count;
@@ -308,6 +304,52 @@ public sealed class PostingService
         to.Albaqi = from.Albaqi; to.ByMoney = from.ByMoney;
         to.Src = from.Src; to.SrcKey = from.SrcKey;
     }
+
+    // ── ردیفِ خالی — یک قاعده، یک جا ─────────────────────────────────────
+
+    /// <summary>
+    /// ردیفی که هیچ چیزی در آن نوشته نشده — جای طبیعیِ ردیفِ خودکارِ تازه.
+    ///
+    /// ⚠️ <b>تاریخ شمرده نمی‌شود</b>: «➕ ردیف» خودش تاریخِ امروز را می‌گذارد،
+    /// پس ردیفِ خالیِ تازه هم تاریخ دارد. اگر تاریخ شمرده شود، هیچ ردیفِ
+    /// خالی‌ای پیدا نمی‌شود و همه‌چیز ته جدول می‌رود — همان شکایتِ صاحب ریپو.
+    ///
+    /// ⛔ <b>‎RasidFuel‎ هم شمرده می‌شود</b>، و این یک باگِ واقعی را می‌بندد:
+    /// رسیدِ تیلِ سربرگ ردیفی می‌سازد که جز ‎RasidFuel‎ همه‌چیزش صفر است. با
+    /// قاعدهٔ پیشین، اولین ردیفِ خودکارِ ورق روی همان می‌نشست و <b>رسیدِ
+    /// تیلِ مشتری پاک می‌شد</b> — بی هیچ صدایی.
+    ///
+    /// ⛔ <b>ردیفی که کلیدِ منبع دارد خالی نیست</b>، حتی اگر همهٔ خانه‌هایش
+    /// صفر باشد: مالِ منبعِ دیگری است و با پر شدن، آن منبع دو ردیف پیدا می‌کرد.
+    /// </summary>
+    public static bool IsBlankRow(DebtRow r) =>
+        string.IsNullOrWhiteSpace(r.Name) && string.IsNullOrWhiteSpace(r.Hawala)
+        && r.Liters == 0m && r.Bardagi == 0m && r.Rasid == 0m && r.RasidFuel == 0m
+        && string.IsNullOrEmpty(r.SrcKey);
+
+    /// <summary>
+    /// نخستین ردیفِ خالیِ دفتر، <b>از بالا</b> — به همان ترتیبی که کاربر
+    /// می‌بیند (‎SortIndex‎ و بعد ‎Id‎)، نه به ترتیبِ تصادفیِ فهرستِ حافظه.
+    ///
+    /// خواستهٔ صاحب ریپو: «اگه کادرِ اولی خالی بود همان، اگه نبود دومی، و اگه
+    /// جدولی نبود خودش ساخته شود.»
+    /// </summary>
+    public static DebtRow? FirstBlank(IEnumerable<DebtRow> rows) =>
+        rows.Where(IsBlankRow).OrderBy(r => r.SortIndex).ThenBy(r => r.Id).FirstOrDefault();
+
+    /// <summary>
+    /// دفتری که یک ردیف باید در آن بنشیند — تنها جای این تصمیم.
+    ///
+    /// ⚠️ جدا شد تا «کدام حساب» را بشود <b>پیش از</b> نشاندنِ ردیف هم پرسید:
+    /// همگام‌سازیِ ورق با همین، ردیف‌های خالیِ همان حساب‌ها را از دیتابیس
+    /// می‌آورد. دو نسخه از این قاعده یعنی روزی ردیف در حسابی بنشیند که
+    /// ردیف‌های خالی‌اش خوانده نشده بود.
+    /// </summary>
+    public static DebtAccount ResolveAccount(Debtor person, string? descText,
+                                             DebtAccount? targetAccount) =>
+        targetAccount is not null && !ReferenceEquals(targetAccount, person.MainAccount)
+            ? targetAccount
+            : SubForText(person, descText) ?? person.MainAccount;
 
     /// <summary>‎_fuelBardagi‎ — بردگیِ حالتِ تیل: مقدار تیل × فی، همیشه زنده.</summary>
     public static decimal FuelBardagi(decimal liters, decimal pricePerLiter) => liters * pricePerLiter;

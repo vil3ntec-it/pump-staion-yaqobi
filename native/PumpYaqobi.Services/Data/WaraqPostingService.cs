@@ -120,10 +120,6 @@ public sealed class WaraqPostingService
         //   ۲) ردیف‌هایی که کلیدشان مالِ همین ورق است — یعنی همان‌هایی که این
         //      همگام‌سازی می‌تواند عوض یا پاکشان کند
         //
-        // ⚠️ نتیجه‌اش یک تفاوتِ کوچک با سایت است و عمدی: ردیفِ تازه ته دفتر
-        // اضافه می‌شود، به‌جای آن‌که اولین «ردیفِ کاملاً خالی»ِ دفتر را پر کند
-        // (سایت آن را می‌کرد). برای پیدا کردنِ آن ردیف باید کلِ دفتر خوانده
-        // می‌شد، و همان چیزی است که برنامه را کند می‌کرد.
         var people = await db.Debtors
             .Include(d => d.MainAccount)
             .Include(d => d.SubAccounts)
@@ -137,14 +133,54 @@ public sealed class WaraqPostingService
         foreach (var a in people.SelectMany(p => p.AllAccounts()))
             byAccount[a.Id] = a;
 
-        foreach (var r in mine)
+        // ⚠️ EF خودش رابطه‌ها را وصل می‌کند وقتی هر دو سر ردیابی شوند؛
+        // پس اول می‌پرسیم که ردیف دو بار در دفتر ننشیند.
+        void Attach(DebtRow r)
         {
-            // ⚠️ EF خودش رابطه‌ها را وصل می‌کند وقتی هر دو سر ردیابی شوند؛
-            // پس اول می‌پرسیم که ردیف دو بار در دفتر ننشیند.
             if (r.FuelAccountId is { } f && byAccount.TryGetValue(f, out var fa))
             { if (!fa.FuelRows.Contains(r)) fa.FuelRows.Add(r); }
             else if (r.MoneyAccountId is { } m && byAccount.TryGetValue(m, out var ma))
             { if (!ma.MoneyRows.Contains(r)) ma.MoneyRows.Add(r); }
+        }
+
+        foreach (var r in mine) Attach(r);
+
+        // ══ ردیف‌های خالیِ همان حساب‌هایی که هدفِ این ورق‌اند ════════════════
+        //
+        // گزارشِ صاحب ریپو: «از ورق که اتومات می‌ره تو حسابِ طرف، می‌ره تهِ
+        // جدول، در حالی که کادرِ اولِ جدول خالی است.»
+        //
+        // حق داشت، و این‌جا نوشته بود که عمدی است: برای پیدا کردنِ ردیفِ
+        // خالی باید کلِ دفترِ همهٔ قرض‌داران خوانده می‌شد، و همان برنامه را
+        // کند می‌کرد. ولی راهِ سومی هست که نه کند است نه غلط:
+        //
+        //   ۱) اول فقط **تطبیقِ نام** انجام می‌شود (در حافظه، روی نامِ
+        //      حساب‌هایی که از قبل خوانده‌ایم — رایگان).
+        //   ۲) بعد ردیف‌های خالیِ **فقط همان چند حساب** از دیتابیس می‌آیند.
+        //
+        // یعنی به‌جای «همهٔ ردیف‌های همهٔ قرض‌داران»، فقط ردیف‌های خالیِ
+        // حساب‌هایی خوانده می‌شود که این ورق واقعاً به آن‌ها می‌نویسد — که
+        // در عمل چند ردیف است، نه چند هزار.
+        //
+        // ⚠️ شرطِ خالی بودن این‌جا به SQL می‌رود، پس «تهیِ ساده» سنجیده
+        // می‌شود نه «تهی یا فقط فاصله». ردیفی که فقط فاصله در نامش دارد
+        // از قلم می‌افتد و کار مثلِ قبل می‌شود (ته جدول) — نه غلط، فقط
+        // کم‌سلیقه؛ قاعدهٔ اصلی ‎PostingService.IsBlankRow‎ است.
+        var targets = TargetAccountIds(w, people).ToList();
+        if (targets.Count > 0)
+        {
+            var blanks = await db.DebtRows
+                .Where(r => (r.FuelAccountId != null && targets.Contains(r.FuelAccountId.Value))
+                         || (r.MoneyAccountId != null && targets.Contains(r.MoneyAccountId.Value)))
+                .Where(r => (r.SrcKey == null || r.SrcKey == "")
+                         && (r.Name == null || r.Name == "")
+                         && (r.Hawala == null || r.Hawala == "")
+                         && r.Liters == 0m && r.Bardagi == 0m
+                         && r.Rasid == 0m && r.RasidFuel == 0m)
+                .OrderBy(r => r.SortIndex).ThenBy(r => r.Id)
+                .ToListAsync(ct);
+
+            foreach (var r in blanks) Attach(r);
         }
 
         // مصرف‌های همین ورق — نه همهٔ مصرف‌های ورقیِ تاریخ. مصرفِ دستیِ کاربر
@@ -152,6 +188,26 @@ public sealed class WaraqPostingService
         var expenses = await db.Expenses
             .Where(e => e.SrcKey != null && e.SrcKey.StartsWith(prefix))
             .ToListAsync(ct);
+
+        // ══ مصرف‌های خالیِ همان ماه ══════════════════════════════════════════
+        //
+        // همان خواستهٔ «اول کادرِ خالی، بعد ردیفِ تازه» — این بار برای بخشِ
+        // مصارف، که تا امروز <b>همیشه</b> ته جدول می‌رفت.
+        //
+        // ⛔ <b>فقط همان ماه</b>: دفترِ مصارف ماه‌به‌ماه دیده می‌شود. اگر
+        // ردیفِ خالیِ ماهِ دیگری برداشته می‌شد، با نوشتنِ ماهِ ورق روی آن،
+        // ردیفِ خالیِ کاربر از ماهِ خودش <b>ناپدید</b> می‌شد.
+        var month = Shamsi.MonthKey(w.DateShamsi ?? "");
+        if (month.Length > 0)
+            expenses.AddRange(await db.Expenses
+                .Where(e => e.MonthKey == month
+                         && (e.SrcKey == null || e.SrcKey == "")
+                         && (e.Title == null || e.Title == "")
+                         && e.Amount == 0m
+                         && (e.Note == null || e.Note == "")
+                         && e.SalaryStaffId == null)
+                .OrderBy(e => e.DateKey).ThenBy(e => e.Id)
+                .ToListAsync(ct));
 
         var outcome = Apply(w, people, expenses, _calc);
 
@@ -183,6 +239,51 @@ public sealed class WaraqPostingService
         await db.SaveChangesAsync(ct);
 
         return outcome.Report;
+    }
+
+    /// <summary>
+    /// ══ حساب‌هایی که این ورق در آن‌ها می‌نویسد — <b>پیش از</b> نوشتن ═══════
+    ///
+    /// همان تطبیقِ نامِ ‎One()‎، ولی بی هیچ نوشتنی: فقط می‌گوید «سر و کارِ این
+    /// ورق با کدام حساب‌هاست»، تا ردیف‌های خالیِ همان‌ها از دیتابیس بیاید.
+    ///
+    /// ⛔ <b>قاعدهٔ تطبیق این‌جا دوباره نوشته نشده</b> — همان سه تابعِ
+    /// ‎PostingService‎ است که ‎One()‎ هم می‌زند (‎ExtractHawala‎ ·
+    /// ‎StripFuelWords‎ · ‎FindAccountForText‎ · ‎ResolveAccount‎). دو نسخه از
+    /// این قاعده یعنی روزی ردیف در حسابی بنشیند که ردیف‌های خالی‌اش خوانده
+    /// نشده بود، و همان لحظه دوباره ته جدول می‌رفت.
+    ///
+    /// ⚠️ این‌جا دربارهٔ مبلغ و لیتر چیزی پرسیده نمی‌شود، پس گاهی حسابی در
+    /// فهرست می‌آید که در عملْ ردیفی نمی‌گیرد. زیانش فقط خواندنِ چند ردیفِ
+    /// خالیِ بی‌مصرف است؛ نیامدنِ یک حساب اما یعنی همان باگِ «ته جدول».
+    /// </summary>
+    public static HashSet<long> TargetAccountIds(WaraqEntry w, List<Debtor> people)
+    {
+        var ids = new HashSet<long>();
+        foreach (var kind in new[] { ShiftKind.Day, ShiftKind.Night })
+        {
+            var sd = w.Shifts.FirstOrDefault(s => s.Kind == kind);
+            if (sd is null) continue;
+
+            foreach (var t in sd.Transactions)
+            {
+                if (t.Type == WaraqTxnType.Expense) continue;
+                var name = (t.Name ?? "").Trim();
+                if (name.Length == 0) continue;
+
+                var hw = PostingService.ExtractHawala(t.Name);
+                var display = PostingService.StripFuelWords(
+                    string.IsNullOrWhiteSpace(hw.Clean) ? name : hw.Clean);
+
+                var found = PostingService.FindAccountForText(people, t.Name, display);
+                if (found is null) continue;
+
+                var acct = PostingService.ResolveAccount(
+                    found.Value.Person, t.Name, found.Value.Account);
+                if (acct.Id != 0) ids.Add(acct.Id);
+            }
+        }
+        return ids;
     }
 
     /// <summary>
@@ -343,15 +444,34 @@ public sealed class WaraqPostingService
         { outcome.RemovedExpenses.Add(e); expenses.Remove(e); }
     }
 
+    /// <summary>
+    /// مصرفی که هیچ چیزی در آن نوشته نشده — جای طبیعیِ مصرفِ خودکارِ تازه.
+    ///
+    /// ⛔ ‎SalaryStaffId‎ هم شمرده می‌شود: مصرفی که «پرداختِ معاش» ساخته،
+    /// حتی با مبلغِ صفر، <b>خالی نیست</b> و پر کردنش یعنی گم شدنِ مهرِ معاشِ
+    /// آن کارمند در آن ماه.
+    /// </summary>
+    internal static bool IsBlankExpense(Expense e) =>
+        string.IsNullOrEmpty(e.SrcKey) && string.IsNullOrWhiteSpace(e.Title)
+        && e.Amount == 0m && string.IsNullOrWhiteSpace(e.Note)
+        && e.SalaryStaffId is null;
+
     private static void UpsertExpense(List<Expense> expenses, string srcKey, string date,
                                       string title, decimal amount, WaraqPostOutcome outcome)
     {
         var ex = expenses.FirstOrDefault(e => e.SrcKey == srcKey);
         if (ex is null)
         {
-            ex = new Expense { SrcKey = srcKey };
-            expenses.Add(ex);
-            outcome.AddedExpenses.Add(ex);
+            // نخستین مصرفِ خالیِ همان ماه، از بالا — وگرنه ردیفِ تازه ته جدول
+            ex = expenses.Where(IsBlankExpense)
+                         .OrderBy(e => e.DateKey).ThenBy(e => e.Id).FirstOrDefault();
+            if (ex is null)
+            {
+                ex = new Expense();
+                expenses.Add(ex);
+                outcome.AddedExpenses.Add(ex);      // فقط ردیفِ واقعاً تازه
+            }
+            ex.SrcKey = srcKey;
         }
         ex.DateShamsi = date;
         ex.DateKey = Shamsi.Key(date);
