@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
              xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
              x:Class="PumpYaqobi.App.Views.Sections.DebtReceiptSectionView"
              x:DataType="vm:DebtReceiptSectionViewModel">
 
@@ -26,28 +27,46 @@
           <WrapPanel Orientation="Horizontal">
             <WrapPanel.Styles>
               <Style Selector="StackPanel.q">
-                <Setter Property="Margin" Value="0,0,10,0" />
+                <Setter Property="Margin" Value="0,0,10,8" />
               </Style>
             </WrapPanel.Styles>
 
-            <StackPanel Classes="q" Spacing="3" Width="190">
+            <!-- ⚠️ کادرها عمداً بزرگ‌ترند: «خیلی کادرهاشون کوچیک است» -->
+            <StackPanel Classes="q" Spacing="3" Width="280">
               <TextBlock Text="نام قرض‌دار" Classes="label" />
-              <TextBox x:Name="NameBox" Text="{Binding TypedName}" Watermark="نام…" />
+              <TextBox x:Name="NameBox" Text="{Binding TypedName}" Watermark="نام…"
+                       FontSize="15" Padding="10,8" c:Suggest.Key="debtor" />
             </StackPanel>
 
-            <StackPanel Classes="q" Spacing="3" Width="140">
-              <TextBlock Text="مبلغ رسید" Classes="label" />
-              <TextBox x:Name="AmountBox" Text="{Binding AmountText}" Watermark="0" />
+            <!-- ══ واحدِ رسید ══════════════════════════════════════════════
+                 خواستهٔ صریحِ صاحب ریپو: «واحد ندارد که رسید پول است یا تیلِ
+                 دیزل است یا پطرول». پول ⇄ تیلِ پطرول ⇄ تیلِ دیزل. -->
+            <StackPanel Classes="q" Spacing="3" Width="170">
+              <TextBlock Text="واحد رسید" Classes="label" />
+              <Button Classes="fuelchip" Content="{Binding UnitChipText}"
+                      Command="{Binding ToggleUnitCommand}"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                      FontSize="15" Padding="10,8"
+                      Foreground="{Binding UnitChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                      BorderBrush="{Binding UnitChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                      ToolTip.Tip="زدنش واحدِ رسید را پول ⇄ تیلِ پطرول ⇄ تیلِ دیزل می‌کند" />
             </StackPanel>
 
             <StackPanel Classes="q" Spacing="3" Width="200">
-              <TextBlock Text="توضیحات" Classes="label" />
-              <TextBox Text="{Binding Note}" Watermark="اختیاری" />
+              <TextBlock Text="{Binding AmountLabel}" Classes="label" />
+              <TextBox x:Name="AmountBox" Text="{Binding AmountText}"
+                       Watermark="{Binding AmountWatermark}" FontSize="15" Padding="10,8" />
             </StackPanel>
 
-            <StackPanel Classes="q" Spacing="3" Width="120">
+            <StackPanel Classes="q" Spacing="3" Width="280">
+              <TextBlock Text="توضیحات" Classes="label" />
+              <TextBox Text="{Binding Note}" Watermark="اختیاری" FontSize="15" Padding="10,8" />
+            </StackPanel>
+
+            <StackPanel Classes="q" Spacing="3" Width="160">
               <TextBlock Text="تاریخ" Classes="label" />
-              <TextBox Text="{Binding DateShamsi}" HorizontalContentAlignment="Center" />
+              <TextBox Text="{Binding DateShamsi}" HorizontalContentAlignment="Center"
+                       FontSize="15" Padding="10,8" />
             </StackPanel>
           </WrapPanel>
         </StackPanel>
@@ -67,6 +86,15 @@
               <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
               <DataGridTextColumn Header="نام قرض‌دار" Binding="{Binding Account}" Width="Auto" />
               <DataGridTextColumn Header="توضیحات" Binding="{Binding Note}" Width="Auto" />
+              <DataGridTemplateColumn Header="واحد" Width="Auto">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding UnitText}" FontWeight="Bold" Margin="8,0"
+                               VerticalAlignment="Center"
+                               Foreground="{Binding UnitBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
               <DataGridTextColumn Header="مبلغ رسید" Binding="{Binding AmountText}" Width="Auto" />
               <DataGridTemplateColumn Header="" Width="Auto">
                 <DataGridTemplateColumn.CellTemplate>

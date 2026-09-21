@@ -109,6 +109,9 @@ public sealed partial class MainViewModel : ObservableObject
         var host0 = AppHost.Current;
         Controls.Suggest.Provide("staff", async () => (await host0.Attendance.StaffAsync()).Select(x => x.Name ?? ""));
         Controls.Suggest.Provide("debtor", async () => (await host0.Debtors.ListAsync()).Select(x => x.Name));
+        // ⚠️ و همین حالا یک بار خوانده شوند: کَشِ سرد یعنی نخستین تایپِ
+        // کاربر هیچ پیشنهادی نمی‌گیرد. شرحش بالای ‎Suggest.Warm‎.
+        Controls.Suggest.Warm("staff", "debtor");
         Themes = new ObservableCollection<PumpTheme>(PumpTheme.All);
         _selectedTheme = PumpTheme.ById(_settings.ThemeId);
 

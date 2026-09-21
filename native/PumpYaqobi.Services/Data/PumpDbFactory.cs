@@ -359,6 +359,13 @@ public sealed class PumpDbFactory
             // کیو‌آرِ زنده — رمزِ هر حساب؛ خالی یعنی کیو‌آری ساخته نشده
             ("DebtAccounts", "QrKey", "TEXT"),
             ("TilCompanies", "QrKey", "TEXT"),
+            // واحدِ رسیدِ قرض‌داران — ۲ یعنی ‎LedgerMode.Money‎، پس هر ردیفِ
+            // کهنه بی هیچ کاری همان «پول»ِ درست را می‌گیرد؛ ۱ یعنی پطرول.
+            ("DebtQuickReceipts", "Unit", "INTEGER NOT NULL DEFAULT 2"),
+            ("DebtQuickReceipts", "Fuel", "INTEGER NOT NULL DEFAULT 1"),
+            // نوعِ تیلِ ردیفِ «رسید پارچه‌ها». ⛔ ‎NULL‎پذیر است و پیش‌فرض ندارد:
+            // ‎NULL‎ یعنی «خودکار». با ‎DEFAULT 1‎ هر رسیدِ دیزلیِ ثبت‌شده یک‌شبه پطرول می‌شد.
+            ("ParchaReceipts", "Fuel", "INTEGER"),
         };
 
         foreach (var (table, column, type) in wanted)

@@ -177,7 +177,8 @@ public sealed class ParchaReceiptService
             // از همان متن تشخیص داده شده و در ستونِ خودش می‌نشیند.
             Name = PostingService.StripFuelWords(r.Name),
             Hawala = r.Hawala ?? "",
-            Fuel = PostingService.DetectFuelType(rawText),
+            // ⚠️ انتخابِ صریحِ کاربر جلوتر است؛ ‎null‎ یعنی خودکار — همان تشخیصِ متنیِ همیشگی
+            Fuel = r.Fuel ?? PostingService.DetectFuelType(rawText),
             Liters = r.Liters,
             PricePerLiter = r.PricePerLiter,
             Bardagi = bardagi,

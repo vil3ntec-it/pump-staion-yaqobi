@@ -3,6 +3,7 @@ using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Security;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
+using PumpYaqobi.Domain.Enums;
 using PumpYaqobi.Persistence;
 
 namespace PumpYaqobi.Services.Data;
@@ -81,6 +82,7 @@ public sealed class DebtQuickReceiptService
     /// </summary>
     public async Task<(QuickReceiptResult Result, string PersonName)> AddAsync(
         string? typedName, decimal amount, string? dateShamsi = null, string? note = null,
+        LedgerMode unit = LedgerMode.Money, FuelType fuel = FuelType.Petrol,
         CancellationToken ct = default)
     {
         var name = (typedName ?? "").Trim();
@@ -101,17 +103,32 @@ public sealed class DebtQuickReceiptService
         var text = (note ?? "").Trim();
         var legacyId = "dr" + Guid.NewGuid().ToString("N")[..12];
 
+        // ══ واحدِ رسید ═════════════════════════════════════════════
+        //
+        //   پول  ⇒  ‎Rasid‎ (افغانی) و ‎Albaqi = -amount‎ — مو‌به‌مو همان رفتاری
+        //           که از روزِ اول بود. ⛔ دست نخورد: رسیدهای امروزیِ
+        //           مشتری‌ها همه همین‌اند.
+        //   تیل  ⇒  ‎RasidFuel‎ (لیتر) و ‎Rasid = 0‎ — تیلی که پس داده شده
+        //           بدهیِ پولی را کم نمی‌کند، پس ‎Albaqi‎ صفر می‌ماند.
+        //
+        // ⚠️ هر دو در دفترِ **تیل** می‌نشینند — همان جایی که نسخهٔ وب هم
+        // می‌نشاند (‎placePersonRow‎ بی آرگومانِ ‎unit‎). آن‌چه عوض می‌شود
+        // ستون است، نه دفتر.
+        var isFuel = unit == LedgerMode.Fuel;
+
         var row = new DebtRow
         {
             DateShamsi = date,
             DateKey = Shamsi.Key(date),
             Name = text.Length > 0 ? text : "رسید",
             Hawala = "",
+            Fuel = fuel,
             Liters = 0m,
             PricePerLiter = 0m,
             Bardagi = 0m,
-            Rasid = amount,
-            Albaqi = -amount,
+            Rasid = isFuel ? 0m : amount,
+            RasidFuel = isFuel ? amount : 0m,
+            Albaqi = isFuel ? 0m : -amount,
             Src = "debtQuick",
             SrcKey = "debtQuick|" + legacyId,
         };
@@ -132,6 +149,8 @@ public sealed class DebtQuickReceiptService
             MonthKey = Shamsi.MonthKey(date),
             Account = person.Name,      // نامِ واقعیِ حساب، نه متنی که تایپ شد
             Note = text,
+            Unit = unit,
+            Fuel = fuel,
             Amount = amount,
         });
 
