@@ -329,9 +329,11 @@
                    SubHeader="{Binding ListCountText}">
 
       <c:SectionPage.Toolbar>
-        <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0" Command="{Binding OpenHistoryCommand}" IsVisible="{Binding HasHistory}" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
-        <Button Classes="accent" Content="＋ فاکتور تازه" Command="{Binding CloseListCommand}"
-                ToolTip.Tip="برگشت به برگهٔ فاکتور" />
+        <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+          <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0" Command="{Binding OpenHistoryCommand}" IsVisible="{Binding HasHistory}" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
+          <Button Classes="accent" Content="＋ فاکتور تازه" Command="{Binding CloseListCommand}"
+                  ToolTip.Tip="برگشت به برگهٔ فاکتور" />
+        </WrapPanel>
       </c:SectionPage.Toolbar>
 
       <c:SectionPage.Filters>
