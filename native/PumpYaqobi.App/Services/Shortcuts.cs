@@ -1,6 +1,8 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using PumpYaqobi.App.ViewModels;
 
 namespace PumpYaqobi.App.Services;
@@ -9,21 +11,37 @@ namespace PumpYaqobi.App.Services;
 /// ══ میانبرهای صفحه‌کلید ═══════════════════════════════════════════════════
 /// مو‌به‌مو همان چیزی که کاربر سال‌ها در نسخهٔ وب داشت:
 ///
-///   • ‎Ctrl+Shift+عدد‎ → رفتن به بخشِ شمارهٔ N (به ترتیبِ نوارِ بالا؛ ‎0‎ = دهم)
-///   • ‎Alt+عدد‎         → باز کردنِ کارتِ شمارهٔ N در قرض‌داران / شرکت‌ها
+///   • ‎Alt+عدد‎         → رفتن به بخشِ شمارهٔ N (به ترتیبِ نوارِ بالا؛ ‎0‎ = دهم)
+///   • ‎Ctrl+Shift+عدد‎ → باز کردنِ کارتِ شمارهٔ N در قرض‌داران / شرکت‌ها
 ///   • ‎Ctrl+عدد‎        → افزودنِ N ردیف به جدولِ جلوی کاربر
 ///   • ‎Shift+عدد‎       → برداشتنِ N ردیفِ آخرِ همان جدول
 ///
+///   • ‎Ctrl+S‎         → ذخیرهٔ فوریِ همین‌جا
 ///   • ‎Ctrl+P‎         → پی‌دی‌افِ همان جایی که کاربر داخلش است
+///   • ‎Ctrl+K‎         → ماشین‌حسابِ شناور
+///   • ‎F1‎             → فهرستِ خودِ همین میانبرها
 ///
-/// ‎Ctrl+Z‎/‎Ctrl+X‎ (برگشت و جلو رفتنِ سراسری) هنوز نیست: آن به یک «تاریخچهٔ
-/// عکس‌فوریِ کلِ دیتابیس» نیاز دارد که در نیتیو ساخته نشده. سطلِ زباله
-/// «برگرداندنِ حذف‌شده» را می‌دهد، ولی برگرداندنِ یک ویرایش را نه.
+/// ══ چرا ‎Alt‎ برای بخش‌ها و ‎Ctrl+Shift‎ برای کارت‌ها ═══════════════
+/// تا ۳.۱.۱۴۷ برعکس بود. خواستهٔ صریحِ صاحب ریپو این دو را جابه‌جا کرد:
+/// «‎alt+عدد‎ برود بخش‌هایی که موجود است.» و منطقی هم هست — رفتن به بخش
+/// کارِ هر روزی است و باید یک کلید بخواهد؛ باز کردنِ کارتِ شمارهٔ ۱۴ کارِ
+/// گاه‌به‌گاه است. ⛔ هیچ‌کدام برداشته نشد، فقط جا عوض کردند.
+///
+/// ══ آن‌چه این‌جا <b>نیست</b> و عمداً نیست ══════════════════════
+/// ‎Ctrl+C‎/‎V‎/‎X‎/‎A‎/‎Z‎/‎Y‎ این‌جا گرفته نمی‌شوند. آن‌ها مالِ <b>خودِ جدول</b>
+/// هستند (<see cref="Controls.ExcelGrid"/>) و مالِ <b>کادرِ تایپ</b>، و هر دو
+/// خودشان بلدند. گرفتنشان در این شنوندهٔ تونلی یعنی کادرِ تایپ
+/// دیگر نمی‌تواند متنِ خودش را کپی کند — همان اشتباهی که یک بار با
+/// ‎Shift+عدد‎ شد و نویسه‌ها را خورد.
+///
+/// ⚠️ و برگشت (‎Ctrl+Z‎) فقط «ویرایشِ خانهٔ جدول» را برمی‌گرداند، نه
+/// ساختن و حذفِ ردیف را: آن یکی «تاریخچهٔ عکس‌فوریِ کلِ دیتابیس»
+/// می‌خواهد که ساخته نشده. برای حذف، سطلِ زباله سرِ جایش است.
 ///
 /// ══ چرا «بافر» و چرا «هنگامِ رها کردن» ═════════════════════════════════════
 /// عدد می‌تواند چندرقمی باشد (‎Ctrl+1‎ سپس ‎2‎ یعنی ۱۲، نه دو بار ۱ و ۲). پس
 /// تا وقتی کلیدِ تغییردهنده پایین است فقط رقم‌ها جمع می‌شوند و هیچ کاری
-/// انجام نمی‌گیرد؛ کار دقیقاً لحظه‌ای می‌شود که کلید رها شود. برای «بخش»
+/// انجام نمی‌گیرد؛ کار دقیقاً لحظه‌ای می‌شود که کلید رها شود. برای «کارت»
 /// باید <b>هر دو</b> کلید (Ctrl و Shift) رها شوند، وگرنه با رها شدنِ زودترِ
 /// یکی، عددِ ناقص می‌پرید.
 ///
@@ -87,6 +105,52 @@ public sealed class ShortcutService
             return true;
         }
         return false;
+    }
+
+    /// <summary>نامِ متدی که هر صفحهٔ جدول‌دار برای «همین حالا بنویس» دارد.</summary>
+    public const string FlushMethodName = "FlushAsync";
+
+    /// <summary>
+    /// ‎Ctrl+S‎ — ردیف‌های تغییرکردهٔ همین‌جا را همین حالا می‌نویسد.
+    ///
+    /// ⚠️ همان الگوی بازتابیِ <see cref="PdfOf"/> و به همان دلیل: چند صفحهٔ
+    /// جدول‌دار ‎FlushAsync‎ دارند و هیچ‌کدام واسطِ مشترکی ندارند. افزودنِ واسط
+    /// به همه‌شان چند جای دست‌کاری بود، در حالی که کارِ لازم یک چیز است:
+    /// «اگر این شیء می‌تواند بنویسد، بنویس».
+    ///
+    /// ⛔ ‎FlushAsync‎ی <c>private</c> (مثلِ آن یکی در پیام‌رسان که کارش
+    /// فرستادنِ پیام است، نه ذخیره) پیدا نمی‌شود — ‎GetMethod‎ی پیش‌فرض فقط
+    /// عمومی‌ها را می‌بیند، و این عمدی است.
+    /// </summary>
+    private static Task? FlushOf(object? target) =>
+        target?.GetType()
+              .GetMethod(FlushMethodName, Type.EmptyTypes)?
+              .Invoke(target, null) as Task;
+
+    private async Task SaveNowAsync()
+    {
+        var wrote = false;
+        foreach (var target in new object?[] { _vm.ActiveSection?.ActivePage, _vm.ActiveSection })
+        {
+            if (FlushOf(target) is not { } task) continue;
+            try { await task; wrote = true; } catch { }
+        }
+        AppHost.Current.Toasts.Show(
+            wrote ? "💾 ذخیره شد" : "💾 چیزی برای ذخیره نبود",
+            wrote ? ToastKind.Ok : ToastKind.Info);
+    }
+
+    /// <summary>
+    /// خانهٔ بازِ جدولی که همین حالا فوکوس دارد را می‌نشاند.
+    ///
+    /// ⚠️ از روی **فوکوس** پیدا می‌شود، نه از ویومدل: یک صفحه می‌تواند چند
+    /// جدول داشته باشد (ورق سه تا دارد) و فقط آن یکی که کاربر داخلش است
+    /// ویرایشِ باز دارد.
+    /// </summary>
+    private static void CommitOpenCell(object? sender)
+    {
+        if ((sender as TopLevel)?.FocusManager?.GetFocusedElement() is not Visual v) return;
+        v.FindAncestorOfType<Controls.ExcelGrid>()?.CommitNow();
     }
 
     /// <summary>روی صفحهٔ قفل هیچ میانبری کار نمی‌کند.</summary>
@@ -157,25 +221,57 @@ public sealed class ShortcutService
             return;
         }
 
+        // ══ Ctrl+S → ذخیرهٔ فوریِ همین‌جا ═══════════════════════════════════
+        //
+        // ⚠️ این برنامه از روزِ اول خودکار ذخیره می‌کند (هر خانه ۳۵۰ میلی‌ثانیه
+        // بعد از آخرین تایپ می‌نشیند)، پس ‎Ctrl+S‎ چیزِ تازه‌ای نمی‌سازد —
+        // فقط **همین حالا** می‌نویسد و می‌گوید که نوشت. برای کسی که سال‌ها با
+        // اکسل کار کرده، نبودنِ این کلید یعنی «یعنی ذخیره نشد؟».
+        //
+        // ⛔ اول خانهٔ بازِ جدول بسته می‌شود، وگرنه همان چیزی که کاربر همین
+        // لحظه تایپ کرده هنوز در کادر است و ذخیره نمی‌شد — یعنی ‎Ctrl+S‎ دقیقاً
+        // آن چیزی را جا می‌گذاشت که کاربر برایش زده بود.
+        if (e.Key == Key.S && ctrl && !alt && !shift)
+        {
+            CommitOpenCell(sender);
+            _ = SaveNowAsync();
+            e.Handled = true;
+            return;
+        }
+
+        // ══ F1 → فهرستِ خودِ میانبرها ════════════════════════════════════════
+        // صاحب ریپو: «برای اف ۱ تا ۱۲ نمی‌دانم چی‌ها بزنم لازم است یا نه.»
+        // پس فقط همین یکی ساخته شد و بقیه آزاد ماندند: کلیدی که کاری نکند
+        // بهتر از کلیدی است که کارِ حدسی بکند. ⚠️ ‎F2‎ از قبل مالِ خودِ جدول
+        // است (باز کردنِ ویرایشِ خانه، مثلِ اکسل) و دست نخورد.
+        if (e.Key == Key.F1 && !ctrl && !alt && !shift)
+        {
+            _ = Views.ShortcutsWindow.ShowAsync();
+            e.Handled = true;
+            return;
+        }
+
         var d = Digit(e.Key);
         if (d is null) return;
         var digit = d.Value.ToString();
 
-        // ۱) Ctrl+Shift+عدد → بخش. فقط جمع می‌شود؛ اجرا هنگامِ رها شدنِ هر دو.
+        // ۱) Ctrl+Shift+عدد → باز کردنِ کارت. فقط جمع می‌شود؛ اجرا هنگامِ
+        //    رها شدنِ هر دو کلید.
         if (ctrl && shift && !alt)
         {
             e.Handled = true;
             _addBuf = _delBuf = "";
-            if (_sectionBuf.Length < 2) _sectionBuf += digit;
+            if (_openBuf.Length < 3) _openBuf += digit;
             return;
         }
 
-        // ۲) Alt+عدد → باز کردنِ کارت. Alt چیزی داخلِ کادر تایپ نمی‌کند، پس
-        //    حتی با فوکوس داخلِ جست‌وجو هم بی‌تداخل است.
+        // ۲) Alt+عدد → رفتن به بخش. Alt چیزی داخلِ کادر تایپ نمی‌کند، پس
+        //    حتی با فوکوس داخلِ جست‌وجو هم بی‌تداخل است — و همین بود که
+        //    آن را نامزدِ خوبی برای «هرروزی‌ترین» میانبر کرد.
         if (alt && !ctrl)
         {
             e.Handled = true;
-            if (_openBuf.Length < 3) _openBuf += digit;
+            if (_sectionBuf.Length < 2) _sectionBuf += digit;
             return;
         }
 
@@ -212,11 +308,12 @@ public sealed class ShortcutService
     {
         if (Locked) { ClearBuffers(); return; }
 
-        // ── Alt رها شد → حسابِ شمارهٔ واردشده باز شود ──
+        // ── Alt رها شد → بخشِ شمارهٔ واردشده باز شود ──
         if (e.Key is Key.LeftAlt or Key.RightAlt)
         {
-            var n = ParseBuf(ref _openBuf);
-            if (n > 0) _ = OpenCardAsync(n);
+            var sec = _sectionBuf;
+            _sectionBuf = "";
+            if (sec.Length > 0) GotoSection(sec);
             return;
         }
 
@@ -224,14 +321,14 @@ public sealed class ShortcutService
         var isShift = e.Key is Key.LeftShift or Key.RightShift;
         if (!isCtrl && !isShift) return;
 
-        // ── بخش: فقط وقتی «هر دو» کلید بالا آمدند، تا عددِ چندرقمی کامل خوانده شود ──
-        if (_sectionBuf.Length > 0)
+        // ── کارت: فقط وقتی «هر دو» کلید بالا آمدند، تا عددِ چندرقمی کامل خوانده شود ──
+        if (_openBuf.Length > 0)
         {
             var mods = e.KeyModifiers;
             if (mods.HasFlag(KeyModifiers.Control) || mods.HasFlag(KeyModifiers.Shift)) return;
-            var s = _sectionBuf;
+            var card = ParseBuf(ref _openBuf);
             ClearBuffers();
-            GotoSection(s);
+            if (card > 0) _ = OpenCardAsync(card);
             return;
         }
 
