@@ -201,6 +201,14 @@ public sealed partial class InvRateSectionViewModel : SectionViewModel
         FilterIndex = which switch { "loss" => 1, "gain" => 2, _ => 0 };
 
     protected override Task LoadAsync() => RefreshAsync();
+    /// <summary>
+    /// ⛔ فعال‌سازیِ این بخش فقط دفترِ دیتابیس را دوباره می‌خواند، پس با
+    /// <c>PumpDbContext.Version</c>ِ دست‌نخورده اصلاً صدا زده نمی‌شود —
+    /// ریشهٔ «هر بخش رو باز می‌کنم جدول‌ها یک ثانیه بعد میان» (۱۴۰۵/۰۷/۰۵).
+    /// شرحش بالای <see cref="SectionViewModel.ActivationOnlyReadsDb"/>.
+    /// </summary>
+    public override bool ActivationOnlyReadsDb => true;
+
     public override Task OnActivatedAsync() => RefreshAsync();
     public override bool ActivationRepeatsLoad => true;
 

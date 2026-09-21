@@ -362,6 +362,14 @@ public sealed partial class InvoiceSectionViewModel : SectionViewModel
         ApplyFilter();
     }
 
+    /// <summary>
+    /// ⛔ فعال‌سازیِ این بخش فقط دفترِ دیتابیس را دوباره می‌خواند، پس با
+    /// <c>PumpDbContext.Version</c>ِ دست‌نخورده اصلاً صدا زده نمی‌شود —
+    /// ریشهٔ «هر بخش رو باز می‌کنم جدول‌ها یک ثانیه بعد میان» (۱۴۰۵/۰۷/۰۵).
+    /// شرحش بالای <see cref="SectionViewModel.ActivationOnlyReadsDb"/>.
+    /// </summary>
+    public override bool ActivationOnlyReadsDb => true;
+
     public override Task OnActivatedAsync() => ReloadAsync();
 
     /// <summary>عددِ کارتِ «مقایسهٔ نرخ» از خودِ زیربخشِ همان صفحه می‌آید.</summary>

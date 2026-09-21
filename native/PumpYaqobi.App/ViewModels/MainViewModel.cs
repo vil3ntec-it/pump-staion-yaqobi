@@ -764,7 +764,12 @@ public sealed partial class MainViewModel : ObservableObject
         _settings.SaveSoon();
         // ⚠️ اگر همین حالا خوانده شد و فعال‌سازی همان خواندن است، دوباره نه
         var fresh = await s.EnsureLoadedAsync();
-        if (!(fresh && s.ActivationRepeatsLoad)) await s.OnActivatedAsync();
+        //  ⛔ و اگر فعال‌سازی فقط دفتر را می‌خواند و از آخرین بار **هیچ
+        //  نوشتنی** نشده، اصلاً صدا زده نمی‌شود — شرحش بالای
+        //  `SectionViewModel.ActivationOnlyReadsDb`.
+        if (!(fresh && s.ActivationRepeatsLoad) && !s.ActivationCanBeSkipped)
+            await s.OnActivatedAsync();
+        s.MarkActivationSeen();
         QueueBannerRefresh();
     }
 
@@ -903,7 +908,9 @@ public sealed partial class MainViewModel : ObservableObject
         try
         {
             var fresh = await sub.EnsureLoadedAsync();
-            if (!(fresh && sub.ActivationRepeatsLoad)) await sub.OnActivatedAsync();
+            if (!(fresh && sub.ActivationRepeatsLoad) && !sub.ActivationCanBeSkipped)
+                await sub.OnActivatedAsync();
+            sub.MarkActivationSeen();
         }
         catch (Exception ex) { AppHost.Current.Toast("باز نشد: " + ex.Message, ToastKind.Error); }
     }
