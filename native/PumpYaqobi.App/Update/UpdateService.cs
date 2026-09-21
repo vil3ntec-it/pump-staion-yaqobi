@@ -9,10 +9,33 @@ namespace PumpYaqobi.App.Update;
 /// بستهٔ کوچک است (فقط فایل‌های خودِ برنامه، چند مگابایت) نه بستهٔ کامل.
 /// این را کاربر باید ببیند — همان چیزی که «هر بار از سر دانلود نکنم» یعنی.
 /// </param>
+/// <param name="Problem">
+/// چرا بررسی به جایی نرسید. خالی یعنی جواب گرفتیم (چه تازه‌ای بود چه نبود).
+/// ⛔ این جدا بودن **لازم** است: پیش از این هر شکستی — قطعیِ اینترنت، بسته
+/// بودنِ مسیر، سقفِ نرخِ سرور — همان «برنامه به‌روز است» می‌شد و کاربر
+/// ساعت‌ها دنبالِ نسخه‌ای می‌گشت که برنامه ادعا می‌کرد ندارد. همان «کلکِ
+/// دروغ»ی که برای چراغِ سرور قدغن شد.
+/// </param>
 public sealed record UpdateInfo(
     bool Available, string CurrentVersion, string LatestVersion,
-    string? DownloadUrl, long SizeBytes, string? Notes, bool IsSmallPackage = false)
+    string? DownloadUrl, long SizeBytes, string? Notes, bool IsSmallPackage = false,
+    string Problem = "")
 {
+    /// <summary>بررسی به جایی نرسید — نه «به‌روز است» و نه «تازه‌ای هست».</summary>
+    public bool Failed => Problem.Length > 0;
+
+    /// <summary>
+    /// همان یک جمله‌ای که کاربر می‌خواند. ⛔ تنها جای ساختنِ این جمله همین‌جاست
+    /// تا سه حال هیچ‌وقت با هم قاطی نشوند.
+    /// </summary>
+    public string StatusText =>
+        Failed ? "❌ " + Problem
+        : Available ? "نسخهٔ تازه آماده است: " + LatestVersion
+        : "برنامه به‌روز است — نسخهٔ " + CurrentVersion;
+
+    /// <summary>رنگِ همان جمله: سرخ فقط وقتی بررسی نشده باشد.</summary>
+    public string StatusBrushKey => Failed ? "Pump.Danger" : "Pump.Muted";
+
     /// <summary>«۲٫۱ مگابایت» — اندازهٔ خواندنی.</summary>
     public string SizeText => SizeBytes <= 0
         ? ""
@@ -42,6 +65,28 @@ public sealed class UpdateService
     private const string FeedUrl =
         "https://api.github.com/repos/vil3ntec-it/pump-staion-yaqobi/releases/latest";
 
+    /// <summary>
+    /// برچسبِ چرخشیِ درِ دوم — همیشه روی تازه‌ترین ساخت می‌نشیند، پس نشانیِ
+    /// فایل‌هایش ثابت است و بی هیچ پرس‌وجویی خوانده می‌شود.
+    /// </summary>
+    private const string RollingTag = "desktop-latest";
+
+    /// <summary>
+    /// ══ درِ دوم ═════════════════════════════════════════════════════════════
+    /// نشانیِ یک فایلِ ثابت روی همان انتشارِ چرخشی.
+    ///
+    /// ⚠️ از خودِ <see cref="FeedUrl"/> ساخته می‌شود، نه از یک رشتهٔ دوم: نامِ
+    /// مخزن باید در کلِ برنامه **یک جا** نوشته شود (آزمونِ
+    /// ‎TheUpdateServiceItselfKeepsTheAddressPrivate‎ همین را قفل کرده).
+    /// </summary>
+    private static string FileUrl(string name)
+    {
+        var parts = new Uri(FeedUrl).AbsolutePath
+            .Split('/', StringSplitOptions.RemoveEmptyEntries);   // repos/<owner>/<repo>/releases/latest
+        return "https://github.com/" + parts[1] + "/" + parts[2]
+             + "/releases/download/" + RollingTag + "/" + name;
+    }
+
 
     private static readonly HttpClient Http = CreateClient();
 
@@ -54,21 +99,51 @@ public sealed class UpdateService
         return c;
     }
 
-    /// <summary>آیا نسخهٔ تازه‌ای هست؟ خطای شبکه «نسخهٔ تازه‌ای نیست» می‌شود، نه خرابی.</summary>
+    /// <summary>
+    /// ══ آیا نسخهٔ تازه‌ای هست؟ ══════════════════════════════════════════════
+    /// دو در، به همان ترتیب:
+    ///
+    ///   ۱) فهرستِ انتشار — یادداشت و اندازهٔ دقیق را هم می‌دهد، ولی برای
+    ///      درخواستِ بی‌توکن سقفِ ساعتی دارد و پشتِ یک اینترنتِ مشترک زود
+    ///      تمام می‌شود؛ و بعضی شبکه‌ها همان مسیر را اصلاً باز نمی‌کنند.
+    ///   ۲) یک فایلِ متنیِ کوچک کنارِ خودِ بسته‌ها — بی سقف، بی احراز هویت.
+    ///      یادداشتِ انتشار همراهش نیست، که مهم نیست.
+    ///
+    /// ⛔ **و اگر هر دو بسته بودند، «برنامه به‌روز است» گفته نمی‌شود.** همین
+    /// یک خط بود که کاربر را روی ۳.۱.۱۴۴ نگه داشت در حالی که نسخهٔ تازه
+    /// منتشر شده بود: هر شکستی به «به‌روز است» ترجمه می‌شد. ریپوی خواهر همین
+    /// درس را از اول داشت (‎Updater.fromFile‎)، این یکی نداشت.
+    /// </summary>
     public async Task<UpdateInfo> CheckAsync(CancellationToken ct = default)
     {
         var current = AppVersion.Current;
+
+        var (viaApi, apiWhy) = await FromApiAsync(current, ct);
+        if (viaApi is not null) return viaApi;
+
+        var (viaFile, fileWhy) = await FromFileAsync(current, ct);
+        if (viaFile is not null) return viaFile;
+
+        return Broken(current, apiWhy.Length > 0 ? apiWhy : fileWhy);
+    }
+
+    /// <summary>درِ اول. ‎null‎ یعنی «جواب به کار نیامد، درِ بعدی را بزن».</summary>
+    private async Task<(UpdateInfo? Info, string Why)> FromApiAsync(string current, CancellationToken ct)
+    {
         try
         {
             using var res = await Http.GetAsync(FeedUrl, ct);
-            if (!res.IsSuccessStatusCode) return None(current);
+            if (!res.IsSuccessStatusCode)
+                return (null, "سرورِ به‌روزرسانی پاسخ نداد (کدِ " + (int)res.StatusCode + ")");
 
             using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync(ct));
             var root = doc.RootElement;
 
             var tag = root.TryGetProperty("tag_name", out var t) ? t.GetString() ?? "" : "";
             var latest = NormalizeVersion(tag);
-            if (latest.Length == 0) return None(current);
+            // ⚠️ برچسبِ بی‌شماره (انتشارِ اپِ گوشی، یا هر برچسبِ چرخشی) یعنی
+            // «این جواب مالِ برنامهٔ کامپیوتر نیست» — نه «تازه‌ای نیست».
+            if (latest.Length == 0) return (null, "");
 
             string? url = null, fullUrl = null;
             long size = 0, fullSize = 0;
@@ -112,16 +187,69 @@ public sealed class UpdateService
 
             var notes = root.TryGetProperty("body", out var b) ? b.GetString() : null;
             var newer = Compare(latest, current) > 0;
-            return new UpdateInfo(newer && url is not null, current, latest, url, size, notes, small);
+            if (newer && url is null) return (null, "");   // انتشار فایلی ندارد — درِ دوم
+            return (new UpdateInfo(newer, current, latest, url, size, notes, small), "");
         }
-        catch (Exception)
+        catch (Exception e)
         {
-            // نبودِ اینترنت هرگز نباید به‌صورتِ خطا جلوی کاربر بیاید
-            return None(current);
+            return (null, Why(e));
         }
     }
 
-    private static UpdateInfo None(string current) => new(false, current, current, null, 0, null);
+    /// <summary>
+    /// درِ دوم: ‎version.txt‎ و ‎base.txt‎ی کنارِ بسته‌ها.
+    ///
+    /// ⚠️ اندازه را نمی‌داند و لازم هم ندارد: ‎DownloadAsync‎ اندازه را از
+    /// خودِ پاسخ برمی‌دارد و فایلِ نیمه‌کاره را همان‌جا رد می‌کند.
+    /// </summary>
+    private async Task<(UpdateInfo? Info, string Why)> FromFileAsync(string current, CancellationToken ct)
+    {
+        try
+        {
+            var latest = NormalizeVersion(await TextAsync("version.txt", ct));
+            if (latest.Length == 0) return (null, "شمارهٔ نسخهٔ تازه خوانده نشد");
+
+            if (Compare(latest, current) <= 0)
+                return (new UpdateInfo(false, current, latest, null, 0, null), "");
+
+            // پایهٔ آن‌طرف همان پایهٔ این نصب است؟ آن‌وقت همان چند مگابایت بس است.
+            var remoteBase = (await TextAsync("base.txt", ct)).Trim();
+            var localBase = AppBase.LocalId;
+            var small = remoteBase.Length > 0 && remoteBase == localBase;
+
+            var url = FileUrl(small ? "PumpYaqobi-app-" + remoteBase + ".zip" : "PumpYaqobi-Setup.exe");
+            return (new UpdateInfo(true, current, latest, url, 0, null, small), "");
+        }
+        catch (Exception e)
+        {
+            return (null, Why(e));
+        }
+    }
+
+    /// <summary>یک فایلِ متنیِ کوچک از انتشارِ چرخشی.</summary>
+    private static async Task<string> TextAsync(string name, CancellationToken ct)
+    {
+        using var res = await Http.GetAsync(FileUrl(name), ct);
+        if (!res.IsSuccessStatusCode) return "";
+        var text = await res.Content.ReadAsStringAsync(ct);
+        return text.Split('\n')[0].Trim();
+    }
+
+    /// <summary>
+    /// ⛔ پیامِ خامِ استثنا به کاربر نمی‌رسد — ممکن است نام یا نشانیِ میزبان
+    /// داشته باشد (همان قاعدهٔ چراغِ سرور). فقط **جنسِ** خرابی گفته می‌شود.
+    /// </summary>
+    private static string Why(Exception e) => e switch
+    {
+        TaskCanceledException or TimeoutException => "سرورِ به‌روزرسانی جواب نداد — وقت تمام شد",
+        HttpRequestException => "به سرورِ به‌روزرسانی نرسیدیم — اینترنت یا دسترسی به آن بسته است",
+        _ => "بررسیِ به‌روزرسانی انجام نشد",
+    };
+
+    private static UpdateInfo Broken(string current, string why) =>
+        new(false, current, current, null, 0, null, false,
+            (why.Length > 0 ? why : "بررسیِ به‌روزرسانی انجام نشد")
+            + " — نسخهٔ نصب‌شده " + current + " است و معلوم نشد تازه‌تری هست یا نه");
 
     // ══ پوشهٔ نصب ═══════════════════════════════════════════════════════════
     // کاربر خودش انتخاب می‌کند برنامه کجا نصب شود. اگر جایی را انتخاب کند که
@@ -267,10 +395,16 @@ public sealed class UpdateService
         var path = Path.Combine(dir, name);
         var partial = path + ".part";
 
+        // ⚠️ اندازهٔ مورد انتظار: درِ دوم اندازه را نمی‌داند، پس از خودِ پاسخ
+        // برداشته می‌شود — وگرنه نگهبانِ «فایلِ نیمه‌کاره» آن مسیر را بی‌اثر
+        // رد می‌کرد و یک دانلودِ بریده روی برنامه می‌نشست.
+        long expected = info.SizeBytes;
+
         using (var res = await Http.GetAsync(info.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, ct))
         {
             if (!res.IsSuccessStatusCode) return null;
             var total = res.Content.Headers.ContentLength ?? info.SizeBytes;
+            if (expected <= 0) expected = res.Content.Headers.ContentLength ?? 0;
             await using var src = await res.Content.ReadAsStreamAsync(ct);
             await using var dst = File.Create(partial);
 
@@ -286,7 +420,7 @@ public sealed class UpdateService
         }
 
         // ⚠️ فایلِ نیمه‌کاره هرگز جای فایلِ نهایی را نمی‌گیرد
-        if (info.SizeBytes > 0 && new FileInfo(partial).Length != info.SizeBytes)
+        if (expected > 0 && new FileInfo(partial).Length != expected)
         {
             try { File.Delete(partial); } catch { }
             return null;

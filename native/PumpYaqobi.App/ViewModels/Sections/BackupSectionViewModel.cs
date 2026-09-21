@@ -276,6 +276,12 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
 
     [ObservableProperty] private string _currentVersion;
     [ObservableProperty] private string _updateStatus = "";
+
+    /// <summary>
+    /// رنگِ جملهٔ حالِ به‌روزرسانی. ⛔ «نرسیدیم» باید سرخ باشد و «به‌روز است»
+    /// نه — وگرنه همان دو حال دوباره یکی دیده می‌شوند.
+    /// </summary>
+    [ObservableProperty] private string _updateStatusBrushKey = "Pump.Muted";
     [ObservableProperty] private bool _updateAvailable;
     [ObservableProperty] private bool _checking;
     [ObservableProperty] private bool _downloading;
@@ -292,14 +298,17 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
     {
         Checking = true;
         UpdateStatus = "در حال بررسی…";
+        UpdateStatusBrushKey = "Pump.Muted";
         try
         {
             _info = await _update.CheckAsync();
             UpdateAvailable = _info.Available;
             PackageText = _info.PackageText;
-            UpdateStatus = _info.Available
-                ? $"نسخهٔ تازه آماده است: {_info.LatestVersion}"
-                : "برنامه به‌روز است";
+            // ⛔ جمله در خودِ ‎UpdateInfo‎ ساخته می‌شود — سه حال («تازه هست» ·
+            // «به‌روز است» · «نرسیدیم») یک جا از هم جدا می‌شوند و این‌جا
+            // دوباره نوشته نمی‌شوند.
+            UpdateStatus = _info.StatusText;
+            UpdateStatusBrushKey = _info.StatusBrushKey;
         }
         finally { Checking = false; }
     }

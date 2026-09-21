@@ -172,9 +172,19 @@
   </Style>
 
   <!-- دکمه‌ها -->
+  <!-- ══ سبکِ پایهٔ دکمه ═══════════════════════════════════════════════════
+       ⛔ زمینه‌اش **`Pump.Input`** است، نه `Pump.Card`.
+       گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «دکمهٔ دیدنِ این‌که به‌روزرسانی است را
+       اصلاً نمی‌بینم، آن دکمه‌اش کجا شده؟» — دکمه سرِ جایش بود: در تمِ آبی
+       `Pump.Card` **سفیدِ خالص** است و `Border.panel` هم همان سفید، پس
+       دکمهٔ بی‌کلاس می‌شد سفید روی سفید با یک خطِ ۱ پیکسلیِ کم‌رنگ.
+       دیده نمی‌شد چون هیچ اختلافی نداشت، نه چون نبود.
+       ⚠️ همان قاعدهٔ کلیدهای ماشین‌حساب از ۱۴۰۵/۰۶/۲۵: «کلیدها `Pump.Input`
+       تا از کارت جدا باشند». این‌جا هم همان است، برای هر دکمهٔ بی‌کلاس در
+       کلِ برنامه (۴۵ تا). `accent` و `ghost` و بقیه دست‌نخورده‌اند. -->
   <Style Selector="Button">
     <Setter Property="FontFamily" Value="{StaticResource Pump.Font}" />
-    <Setter Property="Background" Value="{DynamicResource Pump.Card}" />
+    <Setter Property="Background" Value="{DynamicResource Pump.Input}" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
     <Setter Property="BorderThickness" Value="1" />
