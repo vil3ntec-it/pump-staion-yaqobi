@@ -408,6 +408,51 @@ public class SettingsDurabilityTests : IDisposable
         Assert.Equal("asli", AppSettings.Load().CloudDeviceToken);
     }
 
+    /// <summary>
+    /// ⛔ <b>نوشتنِ در صف، نوشتهٔ کسِ دیگری را پاک نمی‌کند.</b>
+    ///
+    /// ‎SaveSoon()‎ یک عکسِ کهنه را ششصد میلی‌ثانیه نگه می‌دارد. اگر در همان
+    /// فاصله کسِ دیگری چیزی روی دیسک بنویسد، نوشتنِ در صف آن را <b>پاک
+    /// می‌کرد</b> — چون کلِ شیء را می‌برد.
+    ///
+    /// و این فرضی نبود: «‹ برگشت به برنامه» ایمیل و نام و نشانِ
+    /// ‎LoginSkipped‎ را می‌نوشت و بعد ‎GoHome()‎ «آخرین بخش» را در صف
+    /// می‌گذاشت؛ ششصد میلی‌ثانیه بعد هر سه از بین می‌رفتند و <b>دیوارِ ورود
+    /// دوباره برمی‌گشت</b>. بندِ ۱۴ی ‎verify‎ همین را گرفت.
+    ///
+    /// ⚠️ و ترتیب عمدی است: نوبت <b>بعد</b> از آن ذخیرهٔ بادوام گذاشته
+    /// می‌شود — همان‌طور که در خودِ برنامه می‌افتد. اگر پیش از آن باشد،
+    /// ‎Save()‎ خودش نوبت را لغو می‌کند و آزمون هیچ چیزی را نمی‌سنجد.
+    /// </summary>
+    [Fact]
+    public void NevashtaneDarSaf_NeveshteyeKaseDigari_RaPakNemikonad()
+    {
+        //  حالِ کهنه‌ای که کسی در دست دارد (مثلِ ‎MainViewModel._settings‎)
+        var kohne = AppSettings.Load();
+        kohne.ThemeId = "gold";
+        kohne.LastSection = "safe";
+
+        //  یک ذخیرهٔ بادوام از جای دیگر — ایمیل و نشانِ «بی حساب ادامه بده»
+        var taze = AppSettings.Load();
+        taze.CloudEmail = "test@gmail.com";
+        taze.CloudName = "هارون یعقوبی";
+        taze.LoginSkipped = true;
+        taze.Save();
+
+        //  و حالا نوبتِ در صف — **بعد** از آن ذخیره
+        kohne.SaveSoon();
+        Thread.Sleep(1200);
+
+        var f = AppSettings.Load();
+        //  ⛔ هیچ‌کدام پاک نشدند
+        Assert.Equal("test@gmail.com", f.CloudEmail);
+        Assert.Equal("هارون یعقوبی", f.CloudName);
+        Assert.True(f.LoginSkipped);
+        //  …و مقدارِ راحتی هم نشست
+        Assert.Equal("gold", f.ThemeId);
+        Assert.Equal("safe", f.LastSection);
+    }
+
     /// <summary>هیچ‌وقت استثنا بیرون نمی‌دهد — حتی وقتی پوشه رفته باشد.</summary>
     [Fact]
     public void Zakhire_Hichvaght_Estesna_Partab_Nemikonad()

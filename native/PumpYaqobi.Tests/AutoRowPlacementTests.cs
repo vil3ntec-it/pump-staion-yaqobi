@@ -341,9 +341,16 @@ public class AutoRowPlacementTests : IDisposable
         Assert.NotEqual(alef.Id, rows[0].CompanyId);
     }
 
-    /// <summary>حذفِ خرید، پولش را در حسابِ شرکت جا نمی‌گذارد.</summary>
+    /// <summary>
+    /// ⛔ حذفِ خرید از مخزن، ردیفِ حسابِ شرکت را <b>نمی‌برد</b> — همان
+    /// چیزی که نسخهٔ وب در پرسشِ پیش از حذف صریح به کاربر می‌گوید.
+    ///
+    /// ⚠️ یک بار برعکسش نوشته شد و سنجهٔ خودِ ریپو گرفتش — دفترِ شرکت
+    /// حسابِ دادوستد است، نه آینهٔ فهرستِ مخزن؛ برداشتنِ خودکارش یعنی
+    /// بدهیِ واقعیِ شرکت بی‌خبر کم شود. راهِ کاربر همان حذفِ دستیِ همان ردیف است.
+    /// </summary>
     [Fact]
-    public async Task DeletingAPurchaseTakesItsCompanyRowWithIt()
+    public async Task DeletingAPurchaseLeavesItsCompanyRowAlone()
     {
         var (_, _, dbf, storage, _) = Host();
         var p = await storage.AddPurchaseAsync(Buy("شرکتِ الف", 10m));
@@ -351,7 +358,7 @@ public class AutoRowPlacementTests : IDisposable
 
         await storage.DeletePurchaseAsync(p.Id);
 
-        Assert.Empty(await CompanyRowsAsync(dbf));
+        Assert.Single(await CompanyRowsAsync(dbf));
     }
 
     /// <summary>عوض شدنِ نوعِ تیل هم ردیف را به دفترِ درست می‌برد.</summary>
