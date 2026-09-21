@@ -322,7 +322,11 @@ public class InstallerTests
         //  حتی وقتی فایل در هیچ انتشاری بالا نرود هم سبز می‌ماند — یعنی
         //  سنجه‌ای که چیزی را نگه نمی‌دارد.
         var uploads = Regex.Matches(
-            w, @"^ {12}rel/SHA256SUMS\.txt$", RegexOptions.Multiline).Count;
+            //  ⚠️ ‎\r?‎ لازم است: روی ویندوز گیت فایل را با CRLF چک‌اوت
+            //  می‌کند و در دات‌نت ‎$‎ با ‎Multiline‎ پیش از ‎\n‎ می‌ایستد، پس
+            //  یک ‎\r‎ بینشان می‌ماند و الگو هیچ‌وقت نمی‌گیرد. بی این، همین
+            //  سنجه روی رانرِ ویندوز «۰ سطر» دید در حالی که فایل درست بود.
+            w, @"^ {12}rel/SHA256SUMS\.txt\r?$", RegexOptions.Multiline).Count;
         Assert.True(uploads == 2,
             $"چک‌سام باید در هر دو انتشار بالا برود — {uploads} سطر دیده شد");
     }
@@ -346,5 +350,58 @@ public class InstallerTests
         var release = w.IndexOf("name: انتشار", StringComparison.Ordinal);
         Assert.True(release > sums,
             "چک‌سام پس از انتشار گرفته می‌شود — فایلش هیچ‌وقت بالا نمی‌رود");
+    }
+
+    // ══ اندازهٔ نصاب ══
+    // گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۸): «نصب نمی‌شود، چند نسخه قبل‌تر
+    // می‌شد.» نصاب از ~۷۹ مگابایت به ~۱۱۰ پریده بود، و ۵۴٪ بارش libvlc
+    // بود — نیمی از آن برای معماری‌ای که این برنامه هرگز اجرا نمی‌کند.
+
+    /// <summary>
+    /// ⛔ ‎libvlc/win-x86‎ نباید در بار باشد. برنامه با
+    /// ‎-r win-x64 --self-contained‎ منتشر می‌شود، پس پروسه همیشه ۶۴بیتی
+    /// است و ‎Core.Initialize()‎ی بی‌مسیر از بیتیِ خودِ پروسه انتخاب
+    /// می‌کند — نسخهٔ ۳۲بیتی هرگز بار نمی‌شود و فقط ۹۴٫۵ مگابایت به
+    /// دانلود و استخراج اضافه می‌کند.
+    /// </summary>
+    [Fact]
+    public void The_unused_vlc_architecture_is_trimmed_before_packing()
+    {
+        var w = Workflow();
+        Assert.Contains("libvlc/win-x86", w);
+        Assert.Contains("Remove-Item", w);
+
+        //  ⛔ ترتیب: انتشار ⇒ چیدن ⇒ بسته‌ها. اگر پس از «بسته‌ها» بدود،
+        //  زیپ و نصاب و شناسهٔ پایه هر سه از درختِ نچیده ساخته می‌شوند و
+        //  این کار هیچ بایتی کم نمی‌کند.
+        //  ⚠️ لنگرِ گامِ ساخت «dotnet publish» است، نه «name: ساخت»:
+        //  خطِ اولِ ورک‌فلو نامِ خودش است («ساخت برنامهٔ نیتیو (ویندوز)»)،
+        //  پس آن الگو صفر برمی‌گرداند و هم ادعای `> 0` سرخ می‌شود و هم
+        //  سنجشِ ترتیب به دلیلِ غلط سبز می‌مانْد. «- name: ساخت» هم
+        //  پیشوندِ «- name: ساختِ نصاب» است. پس لنگرِ یکتا.
+        var build = w.IndexOf("dotnet publish PumpYaqobi.App", StringComparison.Ordinal);
+        var trim = w.IndexOf("name: چیدنِ معماریِ بی‌استفادهٔ VLC", StringComparison.Ordinal);
+        var pack = w.IndexOf("name: بسته‌ها", StringComparison.Ordinal);
+        Assert.True(build > 0 && trim > 0 && pack > 0, "مرحله‌ها پیدا نشدند");
+        Assert.True(build < trim, "چیدن پیش از ساخت — پوشه‌ای برای چیدن نیست");
+        Assert.True(trim < pack, "چیدن پس از بسته‌ها — بار نچیده بسته می‌شود");
+    }
+
+    /// <summary>
+    /// ⚠️ و ۶۴بیتی باید بماند: برداشتنش کارتِ دوربین را بی‌صدا می‌کشد.
+    /// پس ساخت باید همان‌جا بشکند، نه این‌که بی‌صدا رد شود.
+    /// </summary>
+    [Fact]
+    public void The_used_vlc_architecture_is_checked_not_assumed()
+    {
+        var w = Workflow();
+        Assert.Contains("libvlc/win-x64/libvlc.dll", w);
+        Assert.Contains("throw", w);
+
+        //  و کدِ برنامه هم باید همان راهِ «بیتیِ پروسه» را برود، وگرنه
+        //  این چیدن بی‌معنا می‌شود.
+        var feed = File.ReadAllText(
+            Path.Combine(Native, "PumpYaqobi.App", "Services", "VlcVideoFeed.cs"));
+        Assert.Contains("Core.Initialize()", feed);
     }
 }
