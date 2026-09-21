@@ -54,30 +54,105 @@ public sealed class PostingService
         return b.ToString().Trim();
     }
 
-    /// <summary>‎_stripFuelWords‎ — نامِ نمایشی نباید «دیزل/پطرول» داشته باشد.</summary>
+    // ══ نامِ سوخت در دلِ جمله ═══════════════════════════════════════════════
+    //
+    // خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «ستونِ نوعِ تیل از تراکنش‌ها حذف
+    // بشه، ولی اگر توی نام پطرول یا دیزل نوشتم توی حسابِ یارو همان انتخاب
+    // بشه… و اگر «پ» خالی نوشتم پطرول ذخیره بشه و اگر «د» خالی نوشتم دیزل —
+    // هر جای جمله، وسط یا اول یا آخر، فرقی نکنه. و توی نام‌ها و توضیحاتِ
+    // همان حساب دیده نشه.»
+
+    /// <summary>واژه‌های کاملِ سوخت — همان‌های نسخهٔ وب.</summary>
+    private static readonly string[] DieselWords = { "دیزل", "گازوییل", "گازوئیل" };
+    private static readonly string[] PetrolWords = { "پطرول", "پترول", "بنزین" };
+
+    /// <summary>
+    /// نشانهٔ <b>تک‌حرفی</b> — و فقط وقتی خودش یک واژهٔ کامل باشد.
+    ///
+    /// ⛔ زیررشته‌ای سنجیده نمی‌شود و نباید بشود: «د» داخلِ «داوود» و «پ»
+    /// داخلِ «پرویز» است. یعنی با سنجشِ زیررشته‌ای، نامِ نیمِ قرض‌دارها
+    /// «دیزل» خوانده می‌شد و از نامِ نمایشیِ حسابشان هم یک حرف پاک می‌شد.
+    /// </summary>
+    private static bool IsDieselMark(string token) => token == "د";
+    private static bool IsPetrolMark(string token) => token == "پ";
+
+    private static string[] Tokens(string? text) =>
+        NormFa(text).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+    /// <summary>
+    /// ‎_stripFuelWords‎ — نامِ نمایشی نباید «دیزل/پطرول» داشته باشد، و از
+    /// امروز نشانهٔ تک‌حرفی («پ» / «د») را هم ندارد.
+    /// </summary>
     public static string StripFuelWords(string? text)
     {
         var t = text ?? "";
-        foreach (var w in new[] { "دیزل", "گازوییل", "گازوئیل", "پطرول", "پترول", "بنزین" })
-            t = t.Replace(w, " ");
-        return System.Text.RegularExpressions.Regex.Replace(t, @"\s{2,}", " ").Trim();
+        foreach (var w in DieselWords.Concat(PetrolWords)) t = t.Replace(w, " ");
+
+        // و نشانهٔ تک‌حرفی، واژه‌به‌واژه — نه با ‎Replace‎، وگرنه یک حرف از
+        // دلِ نامِ آدم‌ها برداشته می‌شد.
+        var kept = t.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+                    .Where(w => { var n = NormFa(w); return !IsDieselMark(n) && !IsPetrolMark(n); });
+
+        return System.Text.RegularExpressions.Regex
+            .Replace(string.Join(' ', kept), @"\s{2,}", " ").Trim();
     }
 
-    /// <summary>‎_detectFuelType‎ — پیش‌فرض پطرول است.</summary>
+    /// <summary>
+    /// ‎_detectFuelType‎ — پیش‌فرض پطرول است.
+    ///
+    /// ⚠️ ترتیب مهم است: <b>واژهٔ کامل</b> جلوتر از نشانهٔ تک‌حرفی است، پس
+    /// «دیزل پ» دیزل می‌ماند. و دیزل جلوتر از پطرول سنجیده می‌شود — همان
+    /// ترتیبِ نسخهٔ وب، دست‌نخورده.
+    /// </summary>
     public static FuelType DetectFuelType(string? text)
     {
         var n = NormFa(text);
-        return n.Contains("دیزل") || n.Contains("گازوییل") || n.Contains("گازوئیل")
-            ? FuelType.Diesel : FuelType.Petrol;
+        foreach (var w in DieselWords) if (n.Contains(w)) return FuelType.Diesel;
+        foreach (var w in PetrolWords) if (n.Contains(w)) return FuelType.Petrol;
+
+        foreach (var tok in Tokens(text))
+        {
+            if (IsDieselMark(tok)) return FuelType.Diesel;
+            if (IsPetrolMark(tok)) return FuelType.Petrol;
+        }
+        return FuelType.Petrol;
     }
 
-    /// <summary>متن اصلاً نامِ سوختی در خود دارد؟ (پطرول یا دیزل، هر کدام)</summary>
+    /// <summary>متن اصلاً نامِ سوختی در خود دارد؟ (واژهٔ کامل یا نشانهٔ تک‌حرفی)</summary>
     public static bool MentionsFuel(string? text)
     {
         var n = NormFa(text);
-        foreach (var w in new[] { "دیزل", "گازوییل", "گازوئیل", "پطرول", "پترول", "بنزین" })
-            if (n.Contains(w)) return true;
+        foreach (var w in DieselWords.Concat(PetrolWords)) if (n.Contains(w)) return true;
+        foreach (var tok in Tokens(text)) if (IsDieselMark(tok) || IsPetrolMark(tok)) return true;
         return false;
+    }
+
+    // ══ واحدِ حساب: تیل یا پول ═══════════════════════════════════════════════
+
+    /// <summary>
+    /// خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «اسمِ قرض‌دار رو توی نامِ
+    /// تراکنش‌ها می‌نویسم و سیستم اتومات تشخیص بده که واحدِ این حساب تیل است
+    /// یا پول… و اگه هر دو بود — هم واحدِ تیل داشت هم واحدِ پول — این تغییر
+    /// نخوره و میرزا خودش تغییر بده.»
+    /// <para>
+    /// ⛔ <c>null</c> بودنِ حالتِ «هر دو» جانِ این قاعده است: حسابی که در هر
+    /// دو دفتر ردیف دارد، خودش تصمیمِ ردیفِ تازه را نمی‌گوید و حدس زدنش یعنی
+    /// یک قرضِ تیل در دفترِ پول (یا برعکس) — همان «حتی یک عدد هم اشتباه به
+    /// حساب نره».
+    /// </para>
+    /// <para>
+    /// ⚠️ و حسابِ <b>خالی</b> (هیچ ردیفی در هیچ دفتر) واحدِ اعلامیِ خودش را
+    /// می‌دهد (<see cref="DebtAccount.Mode"/>) — چیزی که کاربر هنگامِ ساختنِ
+    /// حساب انتخاب کرده، نه یک پیش‌فرضِ کورکورانه.
+    /// </para>
+    /// </summary>
+    /// <returns>واحدی که باید نشانده شود، یا <c>null</c> یعنی <b>دست نزن</b>.</returns>
+    public static LedgerMode? UnitForAccount(bool hasFuelRows, bool hasMoneyRows, LedgerMode mode)
+    {
+        if (hasFuelRows && hasMoneyRows) return null;
+        if (hasFuelRows) return LedgerMode.Fuel;
+        if (hasMoneyRows) return LedgerMode.Money;
+        return mode;
     }
 
     /// <summary>

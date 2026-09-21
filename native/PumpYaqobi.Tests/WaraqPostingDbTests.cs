@@ -94,6 +94,70 @@ public class WaraqPostingDbTests : IDisposable
         return await db.DebtRows.AsNoTracking().Where(r => r.Src == "waraq").ToListAsync();
     }
 
+    /// <summary>یک حسابِ فرعی روی همان شخص.</summary>
+    private static async Task<DebtAccount> SubAsync(PumpDbFactory dbf, long personId, string name)
+    {
+        await using var db = dbf.Create();
+        var a = new DebtAccount
+        {
+            DebtorId = personId,
+            LegacySubId = "s" + Guid.NewGuid().ToString("N")[..8],
+            Name = name,
+        };
+        db.DebtAccounts.Add(a);
+        await db.SaveChangesAsync();
+        return a;
+    }
+
+    /// <summary>
+    /// ══ نامِ حسابِ فرعی در ورق، در حسابِ خودِ همان فرعی می‌نشیند ═════════════
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «ببین اسمِ حساب‌های فرعی رو توی
+    /// تراکنش‌ها بیاری، می‌ره توی حسابِ یارو یا که نه… حساب‌های فرعی هم یک
+    /// حسابِ اصلی محسوب می‌شن.»
+    ///
+    /// ⚠️ منطقش از قبل بود (‎FindAccountForText‎ حساب‌های فرعی را هم امتیاز
+    /// می‌دهد) ولی <b>هیچ سنجهٔ پایان‌به‌پایانی</b> نداشت — و او صریح خواست که
+    /// دیده شود، نه حدس زده.
+    /// </summary>
+    [Fact]
+    public async Task ASubAccountNameInTheSheetLandsInThatSubAccount()
+    {
+        var (post, data, dbf) = Host();
+        var p = await PersonAsync(dbf, "محمد هارون");
+        var sub = await SubAsync(dbf, p.Id, "دکان هارون");
+        var w = await SheetAsync(data, dbf, "دکان هارون", 10m);
+
+        var report = await post.SyncAsync(w.Id);
+
+        Assert.Equal(1, report.Posted);
+        var row = Assert.Single(await RowsAsync(dbf));
+        Assert.Equal(sub.Id, row.FuelAccountId);          // در فرعی، نه در اصلی
+
+        // ⛔ و قرض‌دارِ تکراری ساخته نشد
+        await using var db = dbf.Create();
+        Assert.Equal(1, await db.Debtors.CountAsync());
+    }
+
+    /// <summary>
+    /// و «د»ی خالی در همان نام، سوختِ ردیف را دیزل می‌کند — بی آن‌که خودش در
+    /// نامِ حساب دیده شود. (۱۴۰۵/۰۷/۰۶، با برداشتنِ ستونِ «نوع تیل»)
+    /// </summary>
+    [Fact]
+    public async Task ABareMarkInTheNameSetsTheFuelAndNeverShowsUpInTheAccount()
+    {
+        var (post, data, dbf) = Host();
+        await PersonAsync(dbf, "محمد هارون");
+        var w = await SheetAsync(data, dbf, "هارون د", 10m);
+
+        await post.SyncAsync(w.Id);
+
+        var row = Assert.Single(await RowsAsync(dbf));
+        Assert.Equal(FuelType.Diesel, row.Fuel);
+        Assert.DoesNotContain("د ", row.Name ?? "");
+        Assert.Equal("هارون", (row.Name ?? "").Trim());
+    }
+
     /// <summary>نامی که در ورق نوشته می‌شود، خودش به حسابِ صاحبش می‌رسد.</summary>
     [Fact]
     public async Task WhatIsTypedInTheSheetReachesTheAccountByItself()

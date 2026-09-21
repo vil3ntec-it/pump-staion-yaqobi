@@ -111,6 +111,52 @@ public sealed partial class HistorySectionViewModel : SectionViewModel
             Cards.Add(new HistoryCardViewModel(k, this));
     }
 
+    // ══ «از کجا آمدم؟» ══════════════════════════════════════════════════════
+    //
+    // گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «تاریخچه‌ها دکمهٔ برگشت به همان بخشی که
+    // از آن رفتم ندارد و می‌رود توی بخشِ تاریخچه‌ها.»
+    //
+    // ⛔ دکمهٔ «برگشت به تاریخچه‌ها» فقط از صفحهٔ یک بخش به فهرستِ کارت‌ها
+    // برمی‌گشت — یعنی کاربری که از «گاوصندوق» آمده بود، در تاریخچه‌ها
+    // می‌مانْد و باید از نوار دنبالِ گاوصندوق می‌گشت.
+
+    /// <summary>شناسهٔ بخشی که از آن آمدیم — خالی یعنی از خودِ نوار آمده‌ایم.</summary>
+    [ObservableProperty] private string _originId = "";
+
+    /// <summary>«برگشت به گاوصندوق» — نامِ همان بخش، نه یک واژهٔ کلی.</summary>
+    [ObservableProperty] private string _originTitle = "";
+
+    public bool HasOrigin => OriginId.Length > 0;
+
+    public string OriginBackText => "‹ برگشت به " + OriginTitle;
+
+    partial void OnOriginIdChanged(string v) => OnPropertyChanged(nameof(HasOrigin));
+    partial void OnOriginTitleChanged(string v) => OnPropertyChanged(nameof(OriginBackText));
+
+    /// <summary>ویومدلِ اصلی پیش از رفتن این را می‌نشاند.</summary>
+    public void SetOrigin(string id, string title)
+    {
+        OriginId = id;
+        OriginTitle = title;
+    }
+
+    /// <summary>
+    /// برگشت به همان بخش.
+    /// ⚠️ مبدأ پاک می‌شود، وگرنه بارِ بعد که کاربر خودش از نوار به
+    /// «تاریخچه‌ها» بیاید، دکمهٔ برگشتِ یک بخشِ بی‌ربط را می‌بیند.
+    /// </summary>
+    [RelayCommand]
+    private async Task BackToOriginAsync()
+    {
+        var id = OriginId;
+        if (id.Length == 0) return;
+        OriginId = ""; OriginTitle = "";
+        IsListVisible = true;
+        IsPageOpen = false;
+        OpenKind = "";
+        if (_host.GoSection is { } go) await go(id);
+    }
+
     /// <summary>باز کردنِ تاریخچهٔ یک بخش — همان ‎openSectionHistory‎.</summary>
     public async Task OpenAsync(string kind)
     {

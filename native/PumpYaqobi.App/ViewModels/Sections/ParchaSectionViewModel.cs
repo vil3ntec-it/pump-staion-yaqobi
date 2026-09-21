@@ -34,9 +34,28 @@ public sealed partial class ShiftFormViewModel : ObservableObject
     public string Title => (IsDay ? "☀️ شیفت روزانه (" : "🌙 شیفت شبانه (") + _owner.FuelLabel + ")";
     public string SaveText => IsDay ? "💾 ذخیره شیفت روز" : "💾 ذخیره شیفت شب";
     public string SavedText => IsDay ? "✅ شیفت روز ذخیره شد" : "✅ شیفت شب ذخیره شد";
-    /// <summary>«← از شب» روی کارتِ روز و «← از روز» روی کارتِ شب.</summary>
-    public string PullText => IsDay ? "← از شب" : "← از روز";
-    public string PushText => IsDay ? "→ به شب" : "→ به روز";
+    /// <summary>
+    /// ══ ⛔ هیچ فلشی روی این دو دکمه نیست — و نباید برگردد ══════════════════
+    ///
+    /// گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «توی بخشِ پارچه‌ها دکمه‌های چپ و راست
+    /// برعکس کار می‌کنن.»
+    ///
+    /// ⚠️ <b>رفتارشان درست بود</b> (‎PullBase‎ ختمِ کارتِ دیگر را در شروعِ
+    /// این می‌نشاند و ‎PushBase‎ برعکس؛ هر دو سنجیده شدند). آن‌چه برعکس بود
+    /// نوشتهٔ رویشان:
+    ///
+    ///   ۱) کارتِ روز ستونِ صفر است و در چیدمانِ راست‌به‌راست‌به‌چپ <b>سمتِ
+    ///      راست</b> رندر می‌شود، پس «از شب» یعنی از چپ به راست — ولی فلشِ
+    ///      ‎←‎ رویش نوشته بود.
+    ///   ۲) و بدتر: ‎←‎ و ‎→‎ هر دو ‎Bidi_Mirrored=Yes‎ هستند، پس در متنِ
+    ///      راست‌به‌چپ خودِ شکل‌دهنده آینه‌شان می‌کند. یعنی هر عددی هم که
+    ///      می‌گذاشتیم، «درست» بودنش به رفتارِ رندرِ متن بند بود.
+    ///
+    /// پس فلش برداشته شد و جایش <b>واژه</b> نشست: ابهامِ جهت با واژه پیش
+    /// نمی‌آید. ⛔ فلش را برنگردانید.
+    /// </summary>
+    public string PullText => IsDay ? "گرفتن از شب" : "گرفتن از روز";
+    public string PushText => IsDay ? "فرستادن به شب" : "فرستادن به روز";
 
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private string _pumpNum = "";
@@ -65,16 +84,28 @@ public sealed partial class ShiftFormViewModel : ObservableObject
     // ⚠️ دکمهٔ «دیدم» فقط **همین یک ذخیره** را عادی می‌کند؛ با عوض شدنِ عدد
     // دوباره سنجیده می‌شود، وگرنه یک بار زدنش هشدار را برای همیشه می‌بُرد.
 
-    /// <summary>هشدارِ کنارِ کادرِ «شروع پایه» — دیده می‌شود تا کاربر «دیدم» را بزند.</summary>
+    /// <summary>هشدارِ کنارِ کادرِ «شروع پایه» — یک خط، همیشه همان‌جا.</summary>
     [ObservableProperty] private bool _lowBase;
     [ObservableProperty] private string _lowBaseText = "";
+
+    /// <summary>
+    /// ⛔ <b>خودِ عدد داخلِ کادرش سرخ می‌شود.</b> خواستهٔ صریحِ صاحب ریپو
+    /// (۱۴۰۵/۰۷/۰۶): «و توی خود همون کادر هم عدد سرخ بشه.» پیش از این تنها
+    /// نشانه یک کادرِ هشدارِ کنارِ فرم بود که با رفتن به کادرِ دیگر از چشم
+    /// می‌افتاد.
+    /// </summary>
+    public string StartBrushKey => LowBase ? "Pump.Danger" : "Pump.Text";
     /// <summary>«دیدم / اوکی» زده شد — پس ردیفِ ورق سرخ نمی‌شود.</summary>
     [ObservableProperty] private bool _lowBaseAcked;
 
     /// <summary>سرخ شدنِ ردیفِ ورق = هشدار هست و «دیدم» زده نشده.</summary>
     public bool LowBaseUnacked => LowBase && !LowBaseAcked;
 
-    partial void OnLowBaseChanged(bool v) => OnPropertyChanged(nameof(LowBaseUnacked));
+    partial void OnLowBaseChanged(bool v)
+    {
+        OnPropertyChanged(nameof(LowBaseUnacked));
+        OnPropertyChanged(nameof(StartBrushKey));
+    }
     partial void OnLowBaseAckedChanged(bool v) => OnPropertyChanged(nameof(LowBaseUnacked));
 
     /// <summary>«✔ دیدم» — سرخی برداشته می‌شود، عدد دست نمی‌خورد.</summary>
@@ -322,6 +353,33 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
 
     [ObservableProperty] private bool _showBaseHistory;
 
+    /// <summary>
+    /// «⛓️ برسیِ زنجیرهٔ پایه‌ها» — کلیدِ همان حالتِ **اختیاریِ** تازه:
+    /// ختمِ هر پایه باید شروعِ پارچهٔ بعدیِ همان پایه باشد. خاموشش که کنید،
+    /// فقط هشدارِ «کمتر است» می‌ماند (که از اول بود و اختیاری نیست).
+    /// </summary>
+    /// ⚠️ پیش‌فرضش همان پیش‌فرضِ تنظیمات است و مقدارِ واقعی در
+    /// <see cref="LoadAsync"/> می‌نشیند، نه در سازنده: سازندهٔ بخش‌ها روی
+    /// مسیرِ **باز شدنِ برنامه** است و خواندنِ ‎settings.json‎ آن‌جا همان
+    /// هزینه‌ای است که قاعدهٔ «باز شدنِ برنامه» قدغنش کرده.
+    [ObservableProperty] private bool _chainCheck = true;
+
+    /// <summary>حین نشاندنِ مقدارِ ذخیره‌شده، ذخیرهٔ دوباره لازم نیست.</summary>
+    private bool _loadingChainCheck;
+
+    partial void OnChainCheckChanged(bool v)
+    {
+        if (!_loadingChainCheck)
+        {
+            var st = AppSettings.Load();
+            st.ParchaChainCheck = v;
+            st.SaveSoon();
+        }
+        // همان لحظه دوباره سنجیده شود — وگرنه کلید تا تایپِ بعدی بی‌اثر است
+        CheckLowBase(Day);
+        CheckLowBase(Night);
+    }
+
     public string BaseHistoryToggleText =>
         ShowBaseHistory ? "🗂️ بستنِ تاریخچهٔ پایه‌ها" : "🗂️ تاریخچهٔ پایه‌ها";
 
@@ -381,6 +439,11 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
 
     protected override async Task LoadAsync()
     {
+        _loadingChainCheck = true;
+        try { ChainCheck = AppSettings.Load().ParchaChainCheck; }
+        catch { }
+        finally { _loadingChainCheck = false; }
+
         await LoadCurrentAsync();
         await ReloadLogAsync();
         if (ShowBaseHistory) await ReloadBaseHistoryAsync();
@@ -413,15 +476,63 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
             return;
         }
 
-        Apply(form, start, prev);
+        Apply(form, start, prev, num);
     }
 
-    private static void Apply(ShiftFormViewModel form, decimal start, decimal prev)
+    /// <summary>
+    /// ══ زنجیرهٔ پایه: «ختمِ این، شروعِ بعدی» ══════════════════════════════════
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «یکی رو رسوندم ۱۰۰۰۰۰ و ختمِ این
+    /// باشه؛ شروعِ اون پارچهٔ جدید باید ۱۰۰۰۰۰ باشه، و اگه مثلاً ۱۰۰۰۰۱ بود
+    /// بگه این مقدار از اون یکی بیشتر زده شده و بررسی باید بشه… و من چندین
+    /// پایه دارم و می‌خوام با پایه‌ها در ارتباط باشن.»
+    ///
+    /// پس سه حال، و هر سه <b>به ازای همان شمارهٔ پایه</b>:
+    /// <list type="bullet">
+    ///   <item>‎start &lt; prev‎ ⇒ «کمتر است» (همان هشدارِ قبلی، دست‌نخورده)</item>
+    ///   <item>‎start &gt; prev‎ ⇒ «بیشتر زده شده» — <b>تازه، و اختیاری</b></item>
+    ///   <item>‎start == prev‎ ⇒ زنجیره سالم است، هیچ نشانه‌ای</item>
+    /// </list>
+    ///
+    /// ⚠️ <b>روز و شبِ یک پایه یک زنجیره‌اند</b>، نه دو تا: شمارندهٔ پایه یکی
+    /// است و شیفتِ شب از همان‌جایی شروع می‌شود که روز تمام کرده. پایهٔ دوم
+    /// زنجیرهٔ خودش را دارد و هیچ‌وقت با پایهٔ اول سنجیده نمی‌شود — همان
+    /// قاعده‌ای که <c>LastBaseAsync</c> و <c>BaseHistoryAsync</c> از قبل
+    /// داشتند (کلید <c>PumpNum</c>).
+    ///
+    /// ⛔ <b>هیچ‌کدام مانع نیست.</b> شمارندهٔ پایه واقعاً عوض می‌شود (تعویضِ
+    /// پایه، صفر شدنِ شمارنده)، پس قفل کردنِ کاربر روی دادهٔ درست بدتر از یک
+    /// هشدار است.
+    ///
+    /// ⚠️ و «بیشتر» فقط با <b>شمارهٔ پایهٔ نوشته‌شده</b> سنجیده می‌شود: بی
+    /// شماره، <c>LastBaseAsync</c> بزرگ‌ترین ختمِ <b>همهٔ</b> پایه‌ها را
+    /// می‌دهد و برابری با آن بی‌معناست — هر پارچهٔ سالمی هشدار می‌گرفت.
+    /// </summary>
+    private void Apply(ShiftFormViewModel form, decimal start, decimal prev, int num)
     {
-        if (prev <= 0m || start >= prev) { form.LowBase = false; form.LowBaseText = ""; return; }
-        form.LowBaseText = "⚠️ این شروع پایه از پایهٔ قبلی (" + Shamsi.Money(prev)
-                         + ") کمتر است — ثبت می‌شود، ولی در ورق سرخ می‌ماند.";
-        form.LowBase = !form.LowBaseAcked;
+        void None() { form.LowBase = false; form.LowBaseText = ""; }
+
+        if (prev <= 0m) { None(); return; }
+
+        if (start < prev)
+        {
+            form.LowBaseText = "⚠️ این شروع پایه از پایهٔ قبلی (" + Shamsi.Money(prev)
+                             + ") کمتر است — ثبت می‌شود، ولی در ورق سرخ می‌ماند.";
+            form.LowBase = !form.LowBaseAcked;
+            return;
+        }
+
+        if (start > prev && ChainCheck && num > 0)
+        {
+            form.LowBaseText = "⚠️ ختمِ پایهٔ " + Shamsi.Money(num) + " روی "
+                             + Shamsi.Money(prev) + " مانده بود؛ این شروع "
+                             + Shamsi.Money(start - prev)
+                             + " لیتر بیشتر زده شده — بررسی شود. ثبت می‌شود.";
+            form.LowBase = !form.LowBaseAcked;
+            return;
+        }
+
+        None();
     }
 
     private async Task FillLastBaseAsync(FuelType fuel, int num, ShiftFormViewModel form)
@@ -430,7 +541,7 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
         {
             var v = await _host.ParchaData.LastBaseAsync(fuel, num);
             _lastBase[(fuel, num)] = v;
-            if (fuel == Fuel) Apply(form, form.StartValue, v);
+            if (fuel == Fuel) Apply(form, form.StartValue, v, num);
         }
         catch { /* هشدار رفاه است، نه اصل — نبودش صفحه را نمی‌شکند */ }
     }
@@ -530,8 +641,10 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
             _host.Toast("🆕 کارمند/شمارهٔ پایه عوض شده بود — پارچهٔ تازه‌ای در "
                         + "همان ورقِ " + PaDate + " باز شد", ToastKind.Info);
 
+        // ⚠️ دو حال دارد (کمتر / بیشتر)، پس پیام نمی‌گوید کدام — همان یک خطِ
+        // کنارِ کادر گفته است. پیامِ ثابتِ «کمتر» برای حالتِ «بیشتر» دروغ بود.
         if (form.LowBaseUnacked)
-            _host.Toast("🔴 شروعِ پایه کمتر از پایهٔ قبلی بود — در ورق سرخ ماند",
+            _host.Toast("🔴 زنجیرهٔ پایه نخواند — ثبت شد و در ورق سرخ ماند",
                         ToastKind.Warn);
 
         // پایهٔ تازه ⇒ کَشِ «بزرگ‌ترین ختم» کهنه شد

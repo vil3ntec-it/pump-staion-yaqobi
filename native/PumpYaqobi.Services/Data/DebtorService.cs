@@ -12,6 +12,16 @@ namespace PumpYaqobi.Services.Data;
 public readonly record struct AccountRollup(long AccountId, bool Money, FuelType Fuel, FuelTotals Totals);
 
 /// <summary>
+/// یک حساب، سبک — فقط آن‌چه برای «این نام مالِ کدام حساب است و واحدش چیست»
+/// لازم است. ⛔ هیچ ردیفی در آن نیست و نباید بیاید: این را صفحهٔ ورق با هر
+/// تایپِ کاربر می‌خواهد و خواندنِ ردیف‌ها یعنی همان کندی‌ای که قاعدهٔ سرعتِ
+/// این ریپو قدغنش کرده.
+/// </summary>
+public readonly record struct AccountUnitRow(
+    long AccountId, long PersonId, string PersonName, string AccountName,
+    bool IsMain, bool HasFuelRows, bool HasMoneyRows, LedgerMode Mode);
+
+/// <summary>
 /// ══ قرض‌داران ══════════════════════════════════════════════════════════════
 /// حساسیت‌های همیشگیِ این بخش که در نسخهٔ نیتیو هم باید سرِ جایشان بمانند:
 ///
@@ -302,6 +312,60 @@ public sealed class DebtorService
     /// ‎withReceipts‎ می‌دهد و همان دفتر را هم — باز هم فقط برای خواندن —
     /// با یک پرس‌وجو می‌گیرد.
     /// </summary>
+    /// <summary>
+    /// ══ «این نام مالِ کدام حساب است، و واحدش تیل است یا پول؟» ═══════════════
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «اسمِ قرض‌دار رو توی نامِ
+    /// تراکنش‌ها می‌نویسم و سیستم اتومات تشخیص بده که واحدِ این حساب تیل است
+    /// یا پول… این‌ها برای حساب‌های فرعی هم صدق بشه.»
+    ///
+    /// ⛔ <b>هیچ ردیفی خوانده نمی‌شود.</b> «این دفتر ردیف دارد یا نه» با دو
+    /// <c>Distinct</c> روی همان دو ایندکسِ <c>FuelAccountId</c> و
+    /// <c>MoneyAccountId</c> درمی‌آید — نه با خواندنِ ردیف‌ها. قاعدهٔ
+    /// همیشگیِ این ریپو: «برای یک جمع، همهٔ ردیف‌ها را نخوان.»
+    ///
+    /// ⚠️ حساب‌های <b>فرعی</b> هم در فهرست‌اند و با همان نامِ خودشان — چون
+    /// «حسابِ فرعی هم یک حسابِ کامل است» و کاربر نامِ فرعی را هم در ورق
+    /// می‌نویسد.
+    ///
+    /// ⚠️ صدا زننده باید نتیجه را با <c>PumpDbContext.Version</c> کَش کند؛
+    /// این تابع خودش کَشی ندارد.
+    /// </summary>
+    public async Task<List<AccountUnitRow>> AccountUnitsAsync(CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+
+        var people = await db.Debtors.AsNoTracking()
+            .Select(d => new { d.Id, d.Name }).ToListAsync(ct);
+        if (people.Count == 0) return new List<AccountUnitRow>();
+
+        var names = people.ToDictionary(p => p.Id, p => p.Name ?? "");
+
+        var accts = await db.DebtAccounts.AsNoTracking()
+            .Select(a => new { a.Id, a.Name, a.Mode, a.MainOfDebtorId, a.DebtorId })
+            .ToListAsync(ct);
+
+        var withFuel = (await db.DebtRows.AsNoTracking()
+            .Where(r => r.FuelAccountId != null).Select(r => r.FuelAccountId!.Value)
+            .Distinct().ToListAsync(ct)).ToHashSet();
+        var withMoney = (await db.DebtRows.AsNoTracking()
+            .Where(r => r.MoneyAccountId != null).Select(r => r.MoneyAccountId!.Value)
+            .Distinct().ToListAsync(ct)).ToHashSet();
+
+        var outp = new List<AccountUnitRow>(accts.Count);
+        foreach (var a in accts)
+        {
+            var pid = a.MainOfDebtorId ?? a.DebtorId ?? 0;
+            if (pid == 0 || !names.TryGetValue(pid, out var pname)) continue;
+            outp.Add(new AccountUnitRow(
+                a.Id, pid, pname, a.Name ?? "",
+                a.MainOfDebtorId != null,
+                withFuel.Contains(a.Id), withMoney.Contains(a.Id), a.Mode));
+        }
+        return outp;
+    }
+
     public async Task<List<Debtor>> LoadAllAsync(bool noInvoice = false,
                                                  CancellationToken ct = default,
                                                  bool withReceipts = false)

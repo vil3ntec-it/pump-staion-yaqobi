@@ -293,24 +293,80 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
     [ObservableProperty] private string _lastFailure = "";
     [ObservableProperty] private string _lastSuccess = "";
 
-    [RelayCommand]
+    /// <summary>
+    /// ══ «بررسیِ به‌روزرسانی» ══════════════════════════════════════════════
+    ///
+    /// ⛔ <b>این دکمه هیچ‌وقت بی‌جواب نمی‌ماند.</b> سه چیز جلوی همان یک کلیک
+    /// را می‌گرفت و هر سه بسته شد:
+    ///
+    ///   ۱) بررسیِ خودکار <c>Checking</c> را روشن می‌کرد و دکمه به
+    ///      <c>!Checking</c> بسته بود. با شبکهٔ کند، تا ۷۵ ثانیه دکمه
+    ///      **خاکستری** بود و کلیکِ کاربر هیچ کاری نمی‌کرد.
+    ///   ۲) هیچ <c>catch</c>ی نبود: یک استثنا از فرمان بیرون می‌زد و صفحه
+    ///      روی «در حال بررسی…» می‌ماند، برای همیشه.
+    ///   ۳) و راهی برای «خودم می‌گیرمش» نبود.
+    ///
+    /// پس: کلیک، بررسیِ در جریان را **لغو** می‌کند و از نو می‌پرسد (نه
+    /// این‌که بی‌صدا رد شود)، و هر شکستی یک جملهٔ سرخ می‌شود.
+    /// </summary>
+    private CancellationTokenSource? _checkCts;
+
+    // ⛔ AllowConcurrentExecutions **مهم‌ترین خطِ این بخش است** و همان
+    // ریشه‌ای است که دکمه را مرده می‌کرد: ‎AsyncRelayCommand‎ی پیش‌فرض تا
+    // پایانِ یک اجرا ‎CanExecute‎ را ‎false‎ می‌کند، و این اجرا **یک درخواستِ
+    // اینترنتی** است — تا ۷۵ ثانیه با دو در. پس کلیکِ اول دکمه را خاکستری
+    // می‌کرد و هر کلیکِ بعدی بی‌صدا بلعیده می‌شد. همان قاعدهٔ
+    // ‎DebtSectionViewModel.OpenAsync‎، این بار برای کارتِ به‌روزرسانی.
+    [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task CheckUpdateAsync()
     {
+        // بررسیِ قبلی (خودکار یا دستی) لغو می‌شود — کلیکِ کاربر جلوتر است
+        var old = _checkCts;
+        var cts = new CancellationTokenSource();
+        _checkCts = cts;
+        if (old is not null) { try { old.Cancel(); } catch { } }
+
         Checking = true;
         UpdateStatus = "در حال بررسی…";
         UpdateStatusBrushKey = "Pump.Muted";
         try
         {
-            _info = await _update.CheckAsync();
-            UpdateAvailable = _info.Available;
-            PackageText = _info.PackageText;
+            var info = await _update.CheckAsync(cts.Token);
+            if (!ReferenceEquals(_checkCts, cts)) return;   // کلیکِ تازه‌تر آمد
+            _info = info;
+            UpdateAvailable = info.Available;
+            PackageText = info.PackageText;
             // ⛔ جمله در خودِ ‎UpdateInfo‎ ساخته می‌شود — سه حال («تازه هست» ·
             // «به‌روز است» · «نرسیدیم») یک جا از هم جدا می‌شوند و این‌جا
             // دوباره نوشته نمی‌شوند.
-            UpdateStatus = _info.StatusText;
-            UpdateStatusBrushKey = _info.StatusBrushKey;
+            UpdateStatus = info.StatusText;
+            UpdateStatusBrushKey = info.StatusBrushKey;
         }
-        finally { Checking = false; }
+        catch (OperationCanceledException) { return; }
+        catch
+        {
+            if (!ReferenceEquals(_checkCts, cts)) return;
+            // ⛔ ساکت نمی‌ماند و «به‌روز است» هم نمی‌گوید
+            UpdateStatus = "❌ بررسیِ به‌روزرسانی انجام نشد — دکمه را دوباره بزنید";
+            UpdateStatusBrushKey = "Pump.Danger";
+        }
+        finally
+        {
+            if (ReferenceEquals(_checkCts, cts)) Checking = false;
+            cts.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// «باز کردنِ صفحهٔ دانلود» — راهِ بیرون وقتی شبکه نمی‌گذارد.
+    /// ⚠️ نشانی در رابط نوشته نمی‌شود؛ فقط به مرورگرِ سیستم سپرده می‌شود
+    /// (ساختنش در <c>UpdateService</c> است، همان یک جا).
+    /// </summary>
+    [RelayCommand]
+    private void OpenDownloadPage()
+    {
+        if (!UpdateService.OpenDownloadPage())
+            _host.Toast("❌ مرورگر باز نشد", ToastKind.Error);
     }
 
     [RelayCommand]
@@ -320,17 +376,26 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         Downloading = true;
         DownloadPercent = 0;
         UpdateStatus = "در حال گرفتنِ نسخهٔ تازه…";
+        UpdateStatusBrushKey = "Pump.Muted";
         try
         {
             var progress = new Progress<double>(p => DownloadPercent = p);
             _downloaded = await _update.DownloadAsync(_info, progress);
             if (_downloaded is null)
             {
-                UpdateStatus = "گرفتنِ نسخهٔ تازه انجام نشد";
+                // ⛔ سرخ، و با راهِ بیرون — «هیچ اتفاقی نیفتاد» باگ است
+                UpdateStatus = "❌ گرفتنِ نسخهٔ تازه انجام نشد — «باز کردنِ صفحهٔ دانلود» را بزنید";
+                UpdateStatusBrushKey = "Pump.Danger";
                 return;
             }
             ReadyToInstall = true;
             UpdateStatus = "نسخهٔ تازه گرفته شد — آمادهٔ نصب";
+            UpdateStatusBrushKey = "Pump.Muted";
+        }
+        catch
+        {
+            UpdateStatus = "❌ گرفتنِ نسخهٔ تازه انجام نشد — «باز کردنِ صفحهٔ دانلود» را بزنید";
+            UpdateStatusBrushKey = "Pump.Danger";
         }
         finally { Downloading = false; }
     }

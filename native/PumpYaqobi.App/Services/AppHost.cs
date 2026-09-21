@@ -190,6 +190,18 @@ public sealed class AppHost
     /// </summary>
     public Func<Task>? GoHome { get; set; }
 
+    /// <summary>
+    /// «برگرد به همان بخشی که از آن آمدم» — با شناسهٔ بخش.
+    ///
+    /// گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «تاریخچه‌ها دکمهٔ برگشت به همان بخشی که
+    /// از آن رفتم ندارد و می‌رود توی بخشِ تاریخچه‌ها.» ⛔ راهِ رفت
+    /// (<see cref="OpenHistory"/>) بود و راهِ برگشت نبود.
+    ///
+    /// ⚠️ <b>قفلِ پلن و قفلِ رمزِ بخش را دور نمی‌زند</b>: ویومدلِ اصلی این را
+    /// به همان <c>GoAsync</c>ی همیشگی می‌بندد، نه به یک مسیرِ دوم.
+    /// </summary>
+    public Func<string, Task>? GoSection { get; set; }
+
     /// <summary>قرض‌های کهنه — «چند روز است هیچ ردیفی ندارد».</summary>
     public AgingService Aging { get; }
 
