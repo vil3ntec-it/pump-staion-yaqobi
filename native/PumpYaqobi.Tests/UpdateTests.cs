@@ -231,8 +231,13 @@ public class UpdateTests
     {
         var vm = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections",
                                                "BackupSectionViewModel.cs"));
-        Assert.Contains("_info.StatusText", vm);
-        Assert.Contains("_info.StatusBrushKey", vm);
+        // ⚠️ بی زیرخط سنجیده می‌شود و این عمدی است: پاسخ در یک متغیرِ محلی
+        // (‎info‎) می‌نشیند تا نگهبانِ «کلیکِ تازه‌تر آمد» بتواند پیش از
+        // نشاندنش رد شود، و فیلدِ ‎_info‎ هم همان را می‌گیرد. قاعده نامِ
+        // متغیر نیست — قاعده این است که جمله **از خودِ ‎UpdateInfo‎** بیاید و
+        // این‌جا دوباره نوشته نشود، که خطِ سومی همان را قدغن کرده.
+        Assert.Contains("info.StatusText", vm);
+        Assert.Contains("info.StatusBrushKey", vm);
         Assert.DoesNotContain("\"برنامه به‌روز است\"", vm);
 
         var view = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections",

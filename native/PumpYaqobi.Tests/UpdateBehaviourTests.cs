@@ -74,6 +74,16 @@ public class UpdateBehaviourTests : IDisposable
 
     private static string LocalBase() => AppBase.LocalId;
 
+    /// <summary>
+    /// درِ اول (فهرستِ انتشار) با درِ دوم (فایلِ ساده) از هم جدا می‌شود.
+    ///
+    /// ⚠️ عمداً با **مسیر** سنجیده می‌شود، نه با نامِ میزبان: قاعدهٔ
+    /// <c>UpdateTests.NoUserFacingFileMentionsTheRepository</c> می‌گوید نشانیِ
+    /// منبع تنها در <c>UpdateService.cs</c> نوشته می‌شود، و همان آزمون این
+    /// فایل را هم می‌گردد (یک بار همین‌جا سرخ شد).
+    /// </summary>
+    private static bool IsFeed(string url) => url.EndsWith("/releases/latest");
+
     // ══ ۱) درِ اول ══════════════════════════════════════════════════════════
 
     [Fact]
@@ -128,7 +138,7 @@ public class UpdateBehaviourTests : IDisposable
         {
             var url = req.RequestUri!.ToString();
             hits.Add(url);
-            if (url.Contains("api.github.com"))
+            if (IsFeed(url))
                 return Task.FromResult(Json("""{"message":"rate limit"}""", HttpStatusCode.Forbidden));
             if (url.EndsWith("version.txt")) return Task.FromResult(Text("99.9.9\n"));
             if (url.EndsWith("base.txt")) return Task.FromResult(Text(LocalBase()));
@@ -169,7 +179,7 @@ public class UpdateBehaviourTests : IDisposable
         UpdateService.TestTransport = (req, _) =>
         {
             var url = req.RequestUri!.ToString();
-            if (url.Contains("api.github.com")) return Task.FromResult(Json(Feed("kar-latest", LocalBase())));
+            if (IsFeed(url)) return Task.FromResult(Json(Feed("kar-latest", LocalBase())));
             if (url.EndsWith("version.txt")) return Task.FromResult(Text("99.9.9"));
             if (url.EndsWith("base.txt")) return Task.FromResult(Text(LocalBase()));
             return Task.FromResult(Text("", HttpStatusCode.NotFound));
