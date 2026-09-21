@@ -118,6 +118,9 @@ public sealed partial class RetailSectionViewModel
     public RetailSectionViewModel(AppHost host)
         : base("chakana", "debtrasid", "چکنه", host.RetailLedger)
     {
+        // ↓ درِ «🕘 تاریخچه»ی همین بخش — شرحش بالای ‎SectionViewModel.HistoryKind‎
+        HistoryKind = "chakana";
+
         Calc = host.Retail;
         // «📝 یادداشت این بخش» — همتای ‎.sec-note-box‎ی سایت. کلیدش همان
         // کلیدِ نسخهٔ وب است تا نوت‌های واردشده سرِ جای خودشان بنشینند.

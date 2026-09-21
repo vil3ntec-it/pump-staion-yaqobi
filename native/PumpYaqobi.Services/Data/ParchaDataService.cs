@@ -14,7 +14,7 @@ public sealed record ShiftSaveRequest(
     FuelType Fuel, ShiftKind Kind, string DateShamsi,
     string Name, int PumpNum, decimal Start, decimal End, decimal Price,
     decimal Debt, decimal BoxProfitPer, decimal AvailMan, string Note,
-    decimal BuyPerLiter, bool ForceNew);
+    decimal BuyPerLiter, bool ForceNew, bool LowBase = false);
 
 /// <summary>نتیجهٔ ذخیره — پیامِ خطا همان پیامِ نسخهٔ وب است.</summary>
 public sealed record ShiftSaveResult(
@@ -123,7 +123,7 @@ public sealed class ParchaDataService
 
         var srcKey = ShiftWaraqSyncService.SrcKeyOf(req.Fuel, rep.Id, req.Kind);
         if (_waraqSync is not null)
-            await _waraqSync.SyncSavedShiftAsync(req.Kind, shift, req.Fuel, srcKey, ct);
+            await _waraqSync.SyncSavedShiftAsync(req.Kind, shift, req.Fuel, srcKey, req.LowBase, ct);
 
         return new ShiftSaveResult(true, null, rep, shift, srcKey);
     }
@@ -184,6 +184,83 @@ public sealed class ParchaDataService
             if (hit is not null) return hit;
         }
         return await AddAsync(FuelType.Diesel, shDate, ct);
+    }
+
+    /// <summary>
+    /// ══ آخرین پایهٔ ثبت‌شدهٔ همین سوخت (و همین شمارهٔ پایه) ═════════════════
+    ///
+    /// بزرگ‌ترین «ختمِ پایه»ی ثبت‌شده. با آن سنجیده می‌شود که شروعِ پایهٔ تازه
+    /// کمتر از پایهٔ قبلی هست یا نه — خواستهٔ صاحب ریپو در ۱۴۰۵/۰۷/۰۶.
+    ///
+    /// ⚠️ شمارهٔ پایه اگر داده شود فقط همان پایه سنجیده می‌شود، چون هر پایه
+    /// شمارندهٔ خودش را دارد و مقایسهٔ پایهٔ ۱ با پایهٔ ۳ بی‌معناست. شمارهٔ صفر
+    /// («هنوز ننوشته») یعنی بزرگ‌ترینِ همان سوخت.
+    ///
+    /// ⚠️ «بزرگ‌ترین»، نه «آخرینِ ثبت‌شده»: کاربر می‌تواند پارچهٔ قدیمی را
+    /// بعداً ویرایش کند و ترتیبِ ثبت با ترتیبِ زمان یکی نیست.
+    /// </summary>
+    public async Task<decimal> LastBaseAsync(FuelType fuel, int pumpNum,
+                                             CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        // ⚠️ دو پرس‌وجوی ساده، نه یک ‎SelectMany‎ روی آرایهٔ دو ناوبری: آن یکی
+        // را EF ترجمه نمی‌کند و همان لحظه به حافظه می‌افتد.
+        var reps = db.Reports.AsNoTracking().Where(r => r.Fuel == fuel);
+        var day = await reps.Where(r => r.DayShift != null
+                                        && (pumpNum <= 0 || r.DayShift!.PumpNum == pumpNum))
+                            .Select(r => r.DayShift!.End).ToListAsync(ct);
+        var night = await reps.Where(r => r.NightShift != null
+                                          && (pumpNum <= 0 || r.NightShift!.PumpNum == pumpNum))
+                              .Select(r => r.NightShift!.End).ToListAsync(ct);
+        var all = day.Concat(night).ToList();
+        return all.Count == 0 ? 0m : all.Max();
+    }
+
+    /// <summary>یک سطر از «تاریخچهٔ پایه‌ها» — شروع و ختمِ یک شیفت.</summary>
+    public sealed record BaseHistoryRow(
+        string DateShamsi, int DateKey, string DayName, int ReportNum, ShiftKind Kind,
+        FuelType Fuel, string Name, int PumpNum, decimal Start, decimal End, bool Low);
+
+    /// <summary>
+    /// ══ تاریخچهٔ پایه‌ها ═══════════════════════════════════════════════════════
+    ///
+    /// خواستهٔ صاحب ریپو: «توی تاریخچهٔ پارچه‌ها همهٔ شروع و ختم‌ها، شب و روز،
+    /// پشتِ سرِ هم ثبت بشود با اسمِ کارمند و تاریخ و شماره و چندشنبه است.»
+    ///
+    /// ⚠️ ترتیب از **قدیم به تازه** است، چون «ختمِ این، شروعِ پارچهٔ دیگر
+    /// می‌شود» فقط در همین ترتیب خوانده می‌شود. و ستونِ ‎Low‎ همان سرخیِ ورق
+    /// است: شروعی که از ختمِ **پایهٔ قبلیِ همان شماره** کمتر باشد.
+    /// </summary>
+    public async Task<List<BaseHistoryRow>> BaseHistoryAsync(FuelType fuel,
+                                                             CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        var reps = await db.Reports.AsNoTracking()
+                           .Include(r => r.DayShift).Include(r => r.NightShift)
+                           .Where(r => r.Fuel == fuel)
+                           .OrderBy(r => r.DateKey).ThenBy(r => r.Id).ToListAsync(ct);
+
+        var seen = new Dictionary<int, decimal>();        // شمارهٔ پایه ⇒ بزرگ‌ترین ختمِ دیده‌شده
+        var outp = new List<BaseHistoryRow>();
+
+        foreach (var r in reps)
+            foreach (var (kind, sh) in new[] { (ShiftKind.Day, r.DayShift), (ShiftKind.Night, r.NightShift) })
+            {
+                if (sh is null) continue;
+                var date = sh.SavedAt ?? r.DateShamsi ?? "";
+                var low = seen.TryGetValue(sh.PumpNum, out var prev) && sh.Start < prev;
+                outp.Add(new BaseHistoryRow(
+                    date, Shamsi.Key(date),
+                    Shamsi.ToDate(date) is DateTime dt ? Shamsi.DayName(dt) : "",
+                    r.ReportNum, kind, fuel, sh.Name ?? "", sh.PumpNum,
+                    sh.Start, sh.End, low));
+                if (!seen.TryGetValue(sh.PumpNum, out var max) || sh.End > max)
+                    seen[sh.PumpNum] = sh.End;
+            }
+
+        return outp;
     }
 
     public async Task<List<ParchaReport>> ListAsync(FuelType fuel, string? monthKey,

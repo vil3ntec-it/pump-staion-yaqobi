@@ -173,7 +173,11 @@ public sealed partial class InvoiceSectionViewModel : SectionViewModel
     private readonly AppHost _host;
 
     public InvoiceSectionViewModel(AppHost host) : base("invoices", "invoices", "ثبت فاکتورها")
-        => _host = host;
+    {
+        _host = host;
+        // درِ «🕘 تاریخچه»ی همین بخش — شرحش بالای ‎SectionViewModel.HistoryKind‎
+        HistoryKind = "invoice";
+    }
 
     /// <summary>
     /// کارتِ «مقایسهٔ نرخ» جای خودش را در ردیفِ آماری دارد (کارتِ سوم)، پس

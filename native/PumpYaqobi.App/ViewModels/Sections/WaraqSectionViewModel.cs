@@ -27,6 +27,7 @@ public sealed partial class WaraqPumpViewModel : RowViewModel
         _num = p.Num; _fuel = p.Fuel; _start = p.Start; _end = p.End;
         _price = p.PricePerLiter; _debt = p.Debt; _note = p.Note ?? "";
         _worker = p.Worker ?? ""; _pumpDate = p.DateShamsi ?? "";
+        _lowBase = p.LowBase;
         Loading = false;
     }
 
@@ -45,6 +46,33 @@ public sealed partial class WaraqPumpViewModel : RowViewModel
 
     /// <summary>ستونِ «تاریخ» — خالی یعنی همان تاریخِ ورق.</summary>
     [ObservableProperty] private string _pumpDate = "";
+
+    // ══ نشانِ «شروعِ این پایه از پایهٔ قبلی کمتر بود» ═══════════════════════
+    //
+    // خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «اگر ثبت را زد و توی ورق برود،
+    // آن عدد سرخ باشد که آدم بفهمد این کمتر است — و با یک دکمه بشود عادی‌اش
+    // کرد.»
+    //
+    // ⚠️ **چرا خودِ عددِ «شروع» سرخ نمی‌شود**: ستونِ «شروع» یک
+    // ‎DataGridTextColumn‎ است و رنگِ هر ردیف را جدا نمی‌گیرد. تبدیلش به
+    // ستونِ قالبی یعنی ‎ExcelGrid.Write‎ (کپی/پیست/‎Delete‎) دیگر مسیرش را
+    // پیدا نمی‌کند — ‎PathOf‎ فقط روی ستونِ متنی جواب می‌دهد. پس نشان یک
+    // ستونِ **کنارِ همان** است: «🔴 کمتر»، درست بغلِ عدد، با راهنما.
+    //
+    // ⛔ و هیچ محاسبه‌ای از این نمی‌گذرد: نه لیتر، نه فروش، نه جمع.
+    [ObservableProperty] private bool _lowBase;
+
+    partial void OnLowBaseChanged(bool v)
+    {
+        Touch();
+        OnPropertyChanged(nameof(LowBaseText));
+    }
+
+    public string LowBaseText => LowBase ? "🔴 کمتر" : "";
+
+    /// <summary>دکمهٔ «عادی شد» — فقط نشان را برمی‌دارد، عدد دست نمی‌خورد.</summary>
+    [RelayCommand]
+    private void ClearLowBase() => LowBase = false;
 
     partial void OnWorkerChanged(string v) => Touch();
     partial void OnPumpDateChanged(string v) => Touch();
@@ -109,7 +137,7 @@ public sealed partial class WaraqPumpViewModel : RowViewModel
     {
         _p.Num = Num; _p.Fuel = Fuel; _p.Start = Start; _p.End = End;
         _p.PricePerLiter = Price; _p.Debt = Debt; _p.Note = Note;
-        _p.Worker = Worker; _p.DateShamsi = PumpDate;
+        _p.Worker = Worker; _p.DateShamsi = PumpDate; _p.LowBase = LowBase;
     }
 
     protected override Task SaveAsync() => _owner.SavePumpAsync(_p);
@@ -741,6 +769,9 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
 
     public WaraqSectionViewModel(AppHost host) : base("waraq", "waraq", "ورق‌های روزانه")
     {
+        // ↓ درِ «🕘 تاریخچه»ی همین بخش — شرحش بالای ‎SectionViewModel.HistoryKind‎
+        HistoryKind = "waraq";
+
         _host = host;
         _month = Shamsi.ThisMonth();
     }
@@ -752,6 +783,103 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
     public ObservableCollection<string> Months { get; } = new();
 
     [ObservableProperty] private string _month;
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ «بخشِ ورق‌ها ماه و سال ندارد» ══════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۶). کشویی بود، ولی چیزی که نشان می‌داد
+    //  کلیدِ خامِ «1405/06» بود — نه نامِ ماه و نه سالِ جدا. با پنج سال داده
+    //  آن کشویی شصت ردیفِ عددی می‌شود و پیدا کردنِ «سنبلهٔ پارسال» در آن
+    //  یعنی شمردن.
+    //
+    //  حالا دو کشویی: **سال**، و **ماهِ همان سال** با نامِ فارسی‌اش.
+    //
+    //  ⛔ ‎Month‎ و ‎Months‎ دست نخوردند و همچنان کلیدِ خام‌اند: هر جای دیگری
+    //  که به آن‌ها بند است (خواندنِ فهرست، گرم کردن، سنجه‌ها) باید همان
+    //  بماند. این دو فقط **نمایش**‌اند و سرِ آخر همان ‎Month‎ را می‌نویسند.
+
+    /// <summary>یک گزینهٔ کشوییِ ماه — «سنبله 1405»، با کلیدِ خامش زیرش.</summary>
+    public sealed record MonthOption(string Key, string Label)
+    {
+        public override string ToString() => Label;
+    }
+
+    /// <summary>سال‌هایی که ورق دارند — تازه‌ترین اول.</summary>
+    public ObservableCollection<string> Years { get; } = new();
+
+    /// <summary>ماه‌های همان سالِ برگزیده.</summary>
+    public ObservableCollection<MonthOption> MonthOptions { get; } = new();
+
+    [ObservableProperty] private string _year = "";
+    [ObservableProperty] private MonthOption? _selectedMonth;
+
+    /// <summary>جلوگیری از حلقه وقتی خودِ کد کشویی‌ها را می‌نشاند.</summary>
+    private bool _pickerWriting;
+
+    partial void OnYearChanged(string? v)
+    {
+        if (_pickerWriting || string.IsNullOrEmpty(v)) return;
+        BuildMonthOptions(v!, preferred: null);
+    }
+
+    partial void OnSelectedMonthChanged(MonthOption? v)
+    {
+        if (_pickerWriting || v is null) return;
+        Month = v.Key;                      // ⇒ ‎OnMonthChanged‎ ⇒ ‎ReloadAsync‎
+    }
+
+    /// <summary>سال‌ها و ماه‌ها را از روی ‎Months‎ی خام می‌سازد.</summary>
+    private void BuildPickers()
+    {
+        _pickerWriting = true;
+        try
+        {
+            Years.Clear();
+            foreach (var y in Months.Select(YearOf).Where(y => y.Length > 0)
+                                    .Distinct().OrderByDescending(y => y))
+                Years.Add(y);
+
+            var cur = YearOf(Month);
+            if (cur.Length == 0 || !Years.Contains(cur)) cur = Years.FirstOrDefault() ?? "";
+            _year = cur;
+            OnPropertyChanged(nameof(Year));
+        }
+        finally { _pickerWriting = false; }
+
+        BuildMonthOptions(Year, preferred: Month);
+    }
+
+    private void BuildMonthOptions(string year, string? preferred)
+    {
+        _pickerWriting = true;
+        MonthOption? pick = null;
+        try
+        {
+            MonthOptions.Clear();
+            foreach (var k in Months.Where(m => YearOf(m) == year).OrderByDescending(m => m))
+            {
+                var o = new MonthOption(k, Shamsi.MonthLabel(k));
+                MonthOptions.Add(o);
+                if (preferred is not null && k == preferred) pick = o;
+            }
+            pick ??= MonthOptions.FirstOrDefault();
+            _selectedMonth = pick;
+            OnPropertyChanged(nameof(SelectedMonth));
+        }
+        finally { _pickerWriting = false; }
+
+        // سالِ دیگری برگزیده شد ⇒ ماهِ همان سال باید واقعاً بار شود
+        if (pick is not null && pick.Key != Month) Month = pick.Key;
+    }
+
+    /// <summary>«1405/06» ⇒ «1405». کلیدِ خراب ⇒ رشتهٔ خالی.</summary>
+    private static string YearOf(string? key)
+    {
+        var k = Shamsi.ToEnDigits(key);
+        var i = k.IndexOf('/');
+        return i == 4 ? k[..4] : "";
+    }
 
     /// <summary>
     /// صفحهٔ ورق — **یکی**، و پس از نخستین باز شدن دیگر دور انداخته نمی‌شود.
@@ -789,6 +917,7 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
         Months.Clear();
         foreach (var m in await _host.WaraqData.MonthsAsync()) Months.Add(m);
         if (!Months.Contains(Month)) Months.Insert(0, Month);
+        BuildPickers();
         _seenVersion = PumpYaqobi.Persistence.PumpDbContext.Version;
         await ReloadAsync();
     }

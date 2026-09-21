@@ -64,6 +64,9 @@ public sealed partial class ExpenseSectionViewModel
     public ExpenseSectionViewModel(AppHost host)
         : base("expenses", "expenses", "مصارف", host.ExpenseLedger)
     {
+        // ↓ درِ «🕘 تاریخچه»ی همین بخش — شرحش بالای ‎SectionViewModel.HistoryKind‎
+        HistoryKind = "expense";
+
         _calc = host.Expenses; _host = host;
         // «📝 یادداشت این بخش» — همتای ‎.sec-note-box‎ی سایت. کلیدش همان
         // کلیدِ نسخهٔ وب است تا نوت‌های واردشده سرِ جای خودشان بنشینند.

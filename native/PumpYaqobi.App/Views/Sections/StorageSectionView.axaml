@@ -9,8 +9,13 @@
 
   <c:SectionPage Header="مخزن">
 
+    <!-- ⚠️ ‎SectionPage.Toolbar‎ یک محتوا می‌گیرد، نه چند تا: دو فرزندِ
+         برهنه ‎AVLN3000‎ می‌دهد. پس هر جا بیش از یکی شد، یک ‎WrapPanel‎. -->
     <c:SectionPage.Toolbar>
-      <Button Content="{Binding FuelToggleText}" Command="{Binding ToggleFuelCommand}" />
+      <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+        <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0" Command="{Binding OpenHistoryCommand}" IsVisible="{Binding HasHistory}" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
+        <Button Content="{Binding FuelToggleText}" Command="{Binding ToggleFuelCommand}" />
+      </WrapPanel>
     </c:SectionPage.Toolbar>
 
           <StackPanel Spacing="14">

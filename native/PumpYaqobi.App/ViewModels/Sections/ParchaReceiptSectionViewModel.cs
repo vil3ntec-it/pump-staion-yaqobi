@@ -6,6 +6,7 @@ using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
+using PumpYaqobi.Domain.Enums;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -32,6 +33,7 @@ public sealed partial class ParchaReceiptRowViewModel : RowViewModel
         _liters = e.Liters;
         _pricePerLiter = e.PricePerLiter;
         _rasid = e.Rasid;
+        _fuel = e.Fuel;
         Loading = false;
     }
 
@@ -47,6 +49,39 @@ public sealed partial class ParchaReceiptRowViewModel : RowViewModel
     [ObservableProperty] private decimal _liters;
     [ObservableProperty] private decimal _pricePerLiter;
     [ObservableProperty] private decimal _rasid;
+
+    /// <summary>
+    /// نوعِ تیلِ همین رسید — ‎null‎ یعنی «خودکار» (از متنِ ردیف خوانده می‌شود).
+    /// شرحِ کامل بالای ‎ParchaReceipt.Fuel‎.
+    /// </summary>
+    [ObservableProperty] private FuelType? _fuel;
+
+    partial void OnFuelChanged(FuelType? v)
+    {
+        Touch();
+        OnPropertyChanged(nameof(FuelChipText));
+        OnPropertyChanged(nameof(FuelChipBrushKey));
+    }
+
+    /// <summary>
+    /// کپسولِ «نوع تیل» — سه‌حالته: خودکار ← پطرول ← دیزل ← خودکار.
+    ///
+    /// ⚠️ کپسول است نه کشویی، مثلِ همهٔ جدول‌های برنامه: ‎ComboBox‎ در هر خانه
+    /// یک ‎Popup‎ و ‎ItemsPresenter‎ِ کامل می‌سازد و ‎waraqperf‎ نشان داد بیشترِ
+    /// وقتِ باز شدنِ جدولِ پُر همان است.
+    /// </summary>
+    public string FuelChipText => Fuel is null ? "؟ خودکار" : Fuel.Value.ToPersian();
+
+    public string FuelChipBrushKey =>
+        Fuel is null ? "Pump.Muted" : Fuel == FuelType.Diesel ? "Pump.Warn" : "Pump.Ok";
+
+    [RelayCommand]
+    private void ToggleFuel() => Fuel = Fuel switch
+    {
+        null => FuelType.Petrol,
+        FuelType.Petrol => FuelType.Diesel,
+        _ => null,
+    };
 
     partial void OnDateShamsiChanged(string v) => Touch();
     partial void OnAccountChanged(string v) => Touch();
@@ -78,6 +113,7 @@ public sealed partial class ParchaReceiptRowViewModel : RowViewModel
     {
         _e.DateShamsi = DateShamsi; _e.Account = Account; _e.Name = Name;
         _e.Hawala = Hawala; _e.Liters = Liters; _e.PricePerLiter = PricePerLiter; _e.Rasid = Rasid;
+        _e.Fuel = Fuel;
     }
 
     protected override Task SaveAsync() => _owner.SaveRowAsync(_e);

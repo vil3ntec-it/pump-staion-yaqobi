@@ -51,7 +51,53 @@ public sealed partial class ShiftFormViewModel : ObservableObject
     /// <summary>جلوگیری از حلقه وقتی خودِ ‎calcShift‎ کادرِ فایده را می‌نویسد.</summary>
     private bool _writingProfitPer;
 
-    partial void OnStartChanged(string v) => Recalc();
+    // ══ «این پایه از پایهٔ قبلی کمتر است» ════════════════════════════════
+    //
+    // خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «اگر پارچهٔ اول ۲۲۳۰۰۰ بود و
+    // چندین پارچه با عددهای بالاتر دادم و بعد یکی پیدا شد که ۲۲۲۰۰۰ باشد،
+    // یک پیام بیاید بغلِ همان کادرِ شروع پایه و بگوید این کمتر است — و
+    // مانعی نباشد.»
+    //
+    // ⛔ **مانع نیست.** ذخیره می‌شود، فقط نشان می‌گذارد. شمارندهٔ پایه واقعاً
+    // می‌تواند عوض شود (تعویضِ پایه، صفر شدنِ شمارنده) و قفل کردنِ کاربر روی
+    // دادهٔ درست بدتر از نشان دادنِ یک هشدار است.
+    //
+    // ⚠️ دکمهٔ «دیدم» فقط **همین یک ذخیره** را عادی می‌کند؛ با عوض شدنِ عدد
+    // دوباره سنجیده می‌شود، وگرنه یک بار زدنش هشدار را برای همیشه می‌بُرد.
+
+    /// <summary>هشدارِ کنارِ کادرِ «شروع پایه» — دیده می‌شود تا کاربر «دیدم» را بزند.</summary>
+    [ObservableProperty] private bool _lowBase;
+    [ObservableProperty] private string _lowBaseText = "";
+    /// <summary>«دیدم / اوکی» زده شد — پس ردیفِ ورق سرخ نمی‌شود.</summary>
+    [ObservableProperty] private bool _lowBaseAcked;
+
+    /// <summary>سرخ شدنِ ردیفِ ورق = هشدار هست و «دیدم» زده نشده.</summary>
+    public bool LowBaseUnacked => LowBase && !LowBaseAcked;
+
+    partial void OnLowBaseChanged(bool v) => OnPropertyChanged(nameof(LowBaseUnacked));
+    partial void OnLowBaseAckedChanged(bool v) => OnPropertyChanged(nameof(LowBaseUnacked));
+
+    /// <summary>«✔ دیدم» — سرخی برداشته می‌شود، عدد دست نمی‌خورد.</summary>
+    [RelayCommand]
+    private void AckLowBase() { LowBaseAcked = true; LowBase = false; }
+
+    /// <summary>
+    /// ⚠️ **حین بار شدنِ کارت سنجیده نمی‌شود** و این لازم است، نه سلیقه:
+    /// «بزرگ‌ترین ختمِ ثبت‌شده» شاملِ ختمِ **خودِ همین شیفت** هم هست، پس هر
+    /// شیفتِ ذخیره‌شده‌ای که باز شود ‎Start &lt; MaxEnd‎ می‌دهد و هشدار برای
+    /// هر پارچهٔ سالمی هم بالا می‌آمد. هشدار مالِ لحظهٔ **تایپ** است.
+    /// </summary>
+    private bool _loading;
+
+    partial void OnPumpNumChanged(string v) { if (!_loading) _owner.CheckLowBase(this); }
+
+    partial void OnStartChanged(string v)
+    {
+        Recalc();
+        if (_loading) return;
+        LowBaseAcked = false;
+        _owner.CheckLowBase(this);
+    }
     partial void OnEndChanged(string v) => Recalc();
     partial void OnDebtChanged(string v) => Recalc();
     partial void OnPriceChanged(string v) => Recalc();
@@ -118,7 +164,9 @@ public sealed partial class ShiftFormViewModel : ObservableObject
 
     public void Load(ShiftData? s)
     {
+        _loading = true;
         Name = s?.Name ?? "";
+        LowBase = false; LowBaseAcked = false; LowBaseText = "";
         PumpNum = s is null || s.PumpNum == 0 ? "" : s.PumpNum.ToString();
         Start = s is null || s.Start == 0m ? "" : Shamsi.Money(s.Start);
         End = s is null || s.End == 0m ? "" : Shamsi.Money(s.End);
@@ -135,6 +183,7 @@ public sealed partial class ShiftFormViewModel : ObservableObject
         if (s is not null && s.Price != 0m) Price = Shamsi.Money(s.Price);
         else ReapplyUnionRate();
 
+        _loading = false;
         Recalc();
     }
 
@@ -148,6 +197,45 @@ public sealed partial class ShiftFormViewModel : ObservableObject
         Price = rate > 0m ? Shamsi.Money(rate) : "";
     }
 
+}
+
+/// <summary>
+/// یک سطر از «تاریخچهٔ پایه‌ها» — شروع و ختمِ یک شیفت، با نامِ کارمند، تاریخ،
+/// شمارهٔ پایه و روزِ هفته. خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۰۶).
+/// </summary>
+public sealed class BaseHistoryRowViewModel
+{
+    public BaseHistoryRowViewModel(ParchaDataService.BaseHistoryRow r, int index)
+    {
+        Index = index;
+        DateShamsi = r.DateShamsi;
+        DayName = r.DayName;
+        ReportText = "#" + r.ReportNum;
+        KindText = r.Kind == ShiftKind.Night ? "🌙 شب" : "☀️ روز";
+        Name = r.Name.Length == 0 ? "—" : r.Name;
+        PumpText = r.PumpNum == 0 ? "—" : Shamsi.Money(r.PumpNum);
+        StartText = Shamsi.Money(r.Start);
+        EndText = Shamsi.Money(r.End);
+        LitersText = Shamsi.Money(r.End - r.Start);
+        Low = r.Low;
+        LowText = r.Low ? "🔴 کمتر" : "";
+    }
+
+    public int Index { get; }
+    public string DateShamsi { get; }
+    public string DayName { get; }
+    public string ReportText { get; }
+    public string KindText { get; }
+    public string Name { get; }
+    public string PumpText { get; }
+    public string StartText { get; }
+    public string EndText { get; }
+    public string LitersText { get; }
+
+    /// <summary>همان سرخیِ ورق — شروعی که از ختمِ پایهٔ قبلیِ همان شماره کمتر است.</summary>
+    public bool Low { get; }
+    public string LowText { get; }
+    public string StartBrushKey => Low ? "Pump.Danger" : "Pump.Text";
 }
 
 /// <summary>یک گزارشِ ۲۴ ساعته در فهرستِ پایینِ صفحه.</summary>
@@ -199,6 +287,9 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
             (m, ok) => host.Toast(m, ok ? ToastKind.Ok : ToastKind.Warn));
         _host = host;
         _paDate = Shamsi.Today();
+        // درِ «🕘 تاریخچه»ی همین بخش — شرحش بالای ‎SectionViewModel.HistoryKind‎
+        HistoryKind = "shift";
+
         Day = new ShiftFormViewModel(ShiftKind.Day, this);
         Night = new ShiftFormViewModel(ShiftKind.Night, this);
     }
@@ -225,6 +316,40 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
 
     public ObservableCollection<ReportCardViewModel> Reports { get; } = new();
 
+    /// <summary>«🗂️ تاریخچهٔ پایه‌ها» — کشویی، پشتِ همان دکمه‌ای که تا امروز
+    /// هیچ فرمانی نداشت.</summary>
+    public BulkRows<BaseHistoryRowViewModel> BaseHistory { get; } = new();
+
+    [ObservableProperty] private bool _showBaseHistory;
+
+    public string BaseHistoryToggleText =>
+        ShowBaseHistory ? "🗂️ بستنِ تاریخچهٔ پایه‌ها" : "🗂️ تاریخچهٔ پایه‌ها";
+
+    partial void OnShowBaseHistoryChanged(bool v)
+    {
+        OnPropertyChanged(nameof(BaseHistoryToggleText));
+        if (v) _ = ReloadBaseHistoryAsync();
+    }
+
+    /// <summary>
+    /// ⚠️ جدولِ داخلِ کادرِ کشویی عمداً ‎ExcelGrid‎ است: کادرِ بسته یعنی جدولِ
+    /// نامرئی و جدولِ نامرئی ردیف‌هایش را پارک می‌کند — همان قاعده‌ای که
+    /// ‎idle‎ قفلش کرده. و تا کاربر بازش نکند، **یک پرس‌وجو هم** زده نمی‌شود.
+    /// </summary>
+    [RelayCommand]
+    private void ToggleBaseHistory() => ShowBaseHistory = !ShowBaseHistory;
+
+    private async Task ReloadBaseHistoryAsync()
+    {
+        var list = await _host.ParchaData.BaseHistoryAsync(Fuel);
+        using (BaseHistory.Batch())
+        {
+            BaseHistory.Clear();
+            var i = 1;
+            foreach (var r in list) BaseHistory.Add(new BaseHistoryRowViewModel(r, i++));
+        }
+    }
+
     [ObservableProperty] private bool _isDiesel;
     [ObservableProperty] private string _paDate;
     [ObservableProperty] private string _reportNumText = "—";
@@ -248,6 +373,7 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
         OnPropertyChanged(nameof(Night));
         OnPropertyChanged(nameof(UnionRate));
         Day.Recalc(); Night.Recalc();
+        OnPropertyChanged(nameof(BaseHistoryToggleText));
         _ = LoadAsync();
     }
 
@@ -257,6 +383,56 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
     {
         await LoadCurrentAsync();
         await ReloadLogAsync();
+        if (ShowBaseHistory) await ReloadBaseHistoryAsync();
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ «این پایه کمتر است» ══════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// بزرگ‌ترین ختمِ پایهٔ ثبت‌شده، به ازای هر شمارهٔ پایه — و ‎0‎ برای
+    /// «هر شماره‌ای».
+    ///
+    /// ⚠️ در حافظه کَش می‌شود و فقط با ذخیره یا عوض شدنِ سوخت دوباره خوانده
+    /// می‌شود: این سنجه با **هر حرفِ تایپ** صدا زده می‌شود و یک پرس‌وجو به
+    /// ازای هر کلید یعنی همان کندی‌ای که قاعدهٔ سرعتِ این ریپو قدغنش کرده.
+    /// </summary>
+    private readonly Dictionary<(FuelType, int), decimal> _lastBase = new();
+
+    internal void CheckLowBase(ShiftFormViewModel form)
+    {
+        var num = (int)Shamsi.Num(form.PumpNum);
+        var start = form.StartValue;
+        if (start <= 0m) { form.LowBase = false; form.LowBaseText = ""; return; }
+
+        if (!_lastBase.TryGetValue((Fuel, num), out var prev))
+        {
+            // هنوز نمی‌دانیم — می‌پرسیم و همان لحظه دوباره می‌سنجیم
+            _ = FillLastBaseAsync(Fuel, num, form);
+            return;
+        }
+
+        Apply(form, start, prev);
+    }
+
+    private static void Apply(ShiftFormViewModel form, decimal start, decimal prev)
+    {
+        if (prev <= 0m || start >= prev) { form.LowBase = false; form.LowBaseText = ""; return; }
+        form.LowBaseText = "⚠️ این شروع پایه از پایهٔ قبلی (" + Shamsi.Money(prev)
+                         + ") کمتر است — ثبت می‌شود، ولی در ورق سرخ می‌ماند.";
+        form.LowBase = !form.LowBaseAcked;
+    }
+
+    private async Task FillLastBaseAsync(FuelType fuel, int num, ShiftFormViewModel form)
+    {
+        try
+        {
+            var v = await _host.ParchaData.LastBaseAsync(fuel, num);
+            _lastBase[(fuel, num)] = v;
+            if (fuel == Fuel) Apply(form, form.StartValue, v);
+        }
+        catch { /* هشدار رفاه است، نه اصل — نبودش صفحه را نمی‌شکند */ }
     }
 
     /// <summary>
@@ -293,6 +469,34 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
         var fuel = Fuel;
         var kind = form.Kind;
 
+        // ══ «ده پارچه با همان تاریخ باید هر ده تا در همان ورق بیایند» ══════
+        //
+        // گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۶). ورق از روزِ اول همین کار را می‌کرد —
+        // هر پارچه با ‎srcKey‎ِ خودش یک ردیفِ جدا در **همان** ورقِ آن تاریخ —
+        // ولی فقط وقتی پارچهٔ تازه‌ای ساخته می‌شد. بی دکمهٔ «پارچهٔ جدید»،
+        // ذخیرهٔ دوم همان پارچه را **بازنویسی** می‌کرد و ردیفِ اول از ورق
+        // می‌رفت: کاربر ده تا پر می‌کرد و یکی می‌دید.
+        //
+        // ⛔ و درست هم همین بود: «ذخیره»ی دوباره یعنی **ویرایشِ** همان پارچه،
+        // نه پارچهٔ تازه. فرقشان یک چیز است: کارمند و شمارهٔ پایه. اگر عوض
+        // شده باشد، این یک پارچهٔ **دیگر** است.
+        //
+        // ⚠️ این تصمیم عمداً این‌جاست، نه در ‎SaveShiftFlowAsync‎: آن تابع
+        // قرارش با نسخهٔ وب است و ‎ShiftParityTests‎ شمارِ پارچه‌هایش را
+        // مو‌به‌مو می‌سنجد. این‌جا لایهٔ رابط است — همان جایی که دکمهٔ
+        // «پارچهٔ جدید» هم پرچمش را می‌گذارد.
+        var force = ForceNew(fuel, kind);
+        var autoNew = false;
+        if (!force && _current is not null
+            && (_current.DateShamsi ?? "").Trim() == (PaDate ?? "").Trim())
+        {
+            var prev = kind == ShiftKind.Day ? _current.DayShift : _current.NightShift;
+            if (prev is not null
+                && (((prev.Name ?? "").Trim() != (form.Name ?? "").Trim())
+                    || prev.PumpNum != (int)Shamsi.Num(form.PumpNum)))
+            { force = true; autoNew = true; }
+        }
+
         var res = await _host.ParchaData.SaveShiftFlowAsync(new ShiftSaveRequest(
             Fuel: fuel,
             Kind: kind,
@@ -307,7 +511,8 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
             AvailMan: 0m,
             Note: form.Note,
             BuyPerLiter: BuyPerLiter,
-            ForceNew: ForceNew(fuel, kind)));
+            ForceNew: force,
+            LowBase: form.LowBaseUnacked));
 
         if (!res.Ok) { _host.Toast(res.Error ?? "", ToastKind.Error); return; }
 
@@ -321,10 +526,23 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
                         : "✅ شیفت " + (form.IsDay ? "روز" : "شب") + " ذخیره شد",
                     ToastKind.Ok);
 
+        if (autoNew)
+            _host.Toast("🆕 کارمند/شمارهٔ پایه عوض شده بود — پارچهٔ تازه‌ای در "
+                        + "همان ورقِ " + PaDate + " باز شد", ToastKind.Info);
+
+        if (form.LowBaseUnacked)
+            _host.Toast("🔴 شروعِ پایه کمتر از پایهٔ قبلی بود — در ورق سرخ ماند",
+                        ToastKind.Warn);
+
+        // پایهٔ تازه ⇒ کَشِ «بزرگ‌ترین ختم» کهنه شد
+        _lastBase.Remove((fuel, (int)Shamsi.Num(form.PumpNum)));
+        _lastBase.Remove((fuel, 0));
+
         // نسخهٔ وب پس از ذخیرهٔ دیزل فرم را خالی می‌کند، پطرول را نه
         if (fuel == FuelType.Diesel) form.Clear();
 
         await ReloadLogAsync();
+        if (ShowBaseHistory) await ReloadBaseHistoryAsync();
     }
 
     partial void OnPaDateChanged(string v) => _ = PaDateChangedAsync((v ?? "").Trim());

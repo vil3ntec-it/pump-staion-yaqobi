@@ -261,4 +261,49 @@ public class DebtReceiptTests : IDisposable
 
         await Assert.ThrowsAnyAsync<Exception>(() => svc.AddAsync("کریم", 100m));
     }
+
+    /// <summary>
+    /// ══ واحدِ رسید: پول یا تیل ═══════════════════════════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «مشکلِ اصلی این است که واحد ندارد — که
+    /// رسید پول است یا تیلِ دیزل است یا پطرول.»
+    ///
+    /// ⛔ **مسیرِ پول یک کاراکتر هم عوض نشد** و پیش‌فرض همان است: بندهای بالا
+    /// بی هیچ آرگومانِ تازه‌ای می‌دوند و همان عددها را می‌خواهند.
+    /// </summary>
+    [Fact]
+    public async Task AFuelReceiptLandsInTheFuelColumn_AndMoneyStaysExactlyAsItWas()
+    {
+        var (svc, _, dbf) = Host();
+        await AddPersonAsync(dbf, "کریم جان");
+
+        await svc.AddAsync("کریم جان", 200m, "1405/06/12", "تیل پس داد",
+                           LedgerMode.Fuel, FuelType.Diesel);
+
+        var row = Assert.Single(await RowsAsync(dbf));
+        Assert.Equal(200m, row.RasidFuel);        // لیتر، در ستونِ خودش
+        Assert.Equal(0m, row.Rasid);              // ⛔ نه در ستونِ پول
+        Assert.Equal(0m, row.Albaqi);             // ⛔ تیل بدهیِ پولی را کم نمی‌کند
+        Assert.Equal(FuelType.Diesel, row.Fuel);
+
+        var rec = Assert.Single(await svc.ListAsync());
+        Assert.Equal(LedgerMode.Fuel, rec.Unit);
+        Assert.Equal(FuelType.Diesel, rec.Fuel);
+        Assert.Equal(200m, rec.Amount);
+    }
+
+    /// <summary>پیش‌فرضِ بی‌آرگومان «پول» است — ردیفِ کهنه و کاربرِ امروزی هر دو.</summary>
+    [Fact]
+    public async Task TheDefaultUnitIsMoney()
+    {
+        var (svc, _, dbf) = Host();
+        await AddPersonAsync(dbf, "احمد");
+        await svc.AddAsync("احمد", 500m, "1405/06/12");
+
+        var rec = Assert.Single(await svc.ListAsync());
+        Assert.Equal(LedgerMode.Money, rec.Unit);
+        var row = Assert.Single(await RowsAsync(dbf));
+        Assert.Equal(500m, row.Rasid);
+        Assert.Equal(0m, row.RasidFuel);
+    }
 }

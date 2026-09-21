@@ -14,16 +14,28 @@
 
       <c:SectionPage.Toolbar>
         <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
-          <Button Classes="ghost" Content="تاریخچهٔ پایه‌ها" Margin="0,0,6,0"
-                  Foreground="{DynamicResource Pump.Ok}" BorderBrush="{DynamicResource Pump.Ok}" />
+          <!-- ⚠️ این دکمه تا امروز «تاریخچهٔ پایه‌ها» نام داشت و **هیچ فرمانی
+               نداشت** — زده می‌شد و هیچ اتفاقی نمی‌افتاد. حالا همان دکمهٔ
+               «🕘 تاریخچه»ی مشترکِ همهٔ بخش‌هاست. (تاریخچهٔ خودِ پایه‌ها، با
+               شروع و ختمِ هر شیفت، در بخشِ «پارچه‌ها» است.) -->
+          <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0"
+                  Command="{Binding OpenHistoryCommand}" IsVisible="{Binding HasHistory}"
+                  ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
           <Button Classes="accent" Content="اضافه کردن" Command="{Binding NewSheetCommand}" />
         </WrapPanel>
       </c:SectionPage.Toolbar>
 
       <c:SectionPage.Filters>
+        <!-- ══ سال و ماه ═══════════════════════════════════════════════════
+             گزارشِ صاحب ریپو: «بخشِ ورق‌ها ماه و سال ندارد.» کشویی بود ولی
+             کلیدِ خامِ «1405/06» را نشان می‌داد. حالا سال جداست و ماه نامِ
+             خودش را دارد. -->
         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <TextBlock Text="سال" Classes="label" VerticalAlignment="Center" />
+          <ComboBox ItemsSource="{Binding Years}" SelectedItem="{Binding Year}" MinWidth="100" />
           <TextBlock Text="ماه" Classes="label" VerticalAlignment="Center" />
-          <ComboBox ItemsSource="{Binding Months}" SelectedItem="{Binding Month}" MinWidth="140" />
+          <ComboBox ItemsSource="{Binding MonthOptions}" SelectedItem="{Binding SelectedMonth}"
+                    MinWidth="150" />
         </StackPanel>
       </c:SectionPage.Filters>
 

@@ -16,6 +16,7 @@
 
       <c:SectionPage.Toolbar>
         <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+          <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0" Command="{Binding OpenHistoryCommand}" IsVisible="{Binding HasHistory}" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
           <TextBox Width="230" Text="{Binding Search}" Watermark="🔍 جستجوی شرکت..." Margin="0,0,8,0" />
           <Button Classes="ghost info" Content="جستجوی خرید" Margin="0,0,8,0"
                   Command="{Binding SearchPurchaseCommand}" />

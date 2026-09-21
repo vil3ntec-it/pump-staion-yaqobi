@@ -9,6 +9,7 @@
 
     <c:SectionPage.Toolbar>
       <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+        <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0" Command="{Binding OpenHistoryCommand}" IsVisible="{Binding HasHistory}" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
         <!-- ⚠️ این دکمه تا امروز **هیچ فرمانی نداشت** — زده می‌شد و هیچ اتفاقی
              نمی‌افتاد. همان «کادرها ماهِ بعد کار نمی‌کند»: فهرستِ ماه‌ها فقط
              ماه‌هایی را دارد که داده دارند، پس ماهِ بعد تا ردیفی نداشته باشد

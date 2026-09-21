@@ -17,6 +17,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer? _clock;
     private readonly ShortcutService? _keys;
     private readonly FieldNavigationService? _fieldNav;
+    private readonly FocusOutService? _focusOut;
 
     public MainWindow()
     {
@@ -29,6 +30,9 @@ public partial class MainWindow : Window
 
         // ناوبریِ اکسل‌مانندِ بینِ کادرهای فرم‌ها (جدول‌ها خودشان دارند)
         _fieldNav = new FieldNavigationService(this);
+
+        // «کلیک روی جای خالی = بیرون آمدن از کادر» — شرحش بالای خودِ سرویس
+        _focusOut = new FocusOutService(this);
 
         _clock = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         var day = DateTime.Now.Date;

@@ -9,8 +9,8 @@
   <!-- ══ حسابِ یک شرکتِ تیل — همان ‎#companyModal‎ی سایت ═══════════════════
        سربرگ: قبلی/بعدی، نامِ شرکت، دیزل/پطرول، تغییر نام، PDF.
        خلاصه: شش کادر (تن، کل دالر، کل افغانی، رسید دالر، رسید افغانی، الباقی).
-       بالای جدول: کادرهای «جدول‌های آرشیو» (فقط اگر آرشیوی هست)، کادرِ کشوییِ
-       «کارها»، دو دکمهٔ «خریدهای پطرول/دیزل» و «جستجوی خرید».
+       بالای جدول: تنها یک کادرِ کشوییِ «کارها» — جدول جدید، خریدهای پطرول و
+       دیزل، جدول‌های آرشیو و جستجوی خرید، همه با شمارندهٔ خودشان.
        ته صفحه، دور از بقیه: «🗑️ حذف این جدول».
        ⚠️ ستونِ «کیلو» عمداً نیست — خواستهٔ صاحب ریپو: خرید به تن است و کیلو اضافه. -->
   <c:SectionPage Header="{Binding Name}" SubHeader="{Binding PosText, StringFormat='شرکت {0} — دفترِ خرید و رسیدِ همین شرکت'}">
@@ -76,26 +76,19 @@
 
     <StackPanel Spacing="10">
 
-      <!-- ── دو کادرِ آرشیو (پطرول / دیزل) — ‎cm-arc-boxes‎: عمداً بالای جدول،
-           چون تهِ صفحه با هر ردیف پایین‌تر می‌رفت و «گم می‌شد» -->
-      <WrapPanel Orientation="Horizontal" IsVisible="{Binding HasArchives}">
-        <Button Classes="tool-link" Content="{Binding ArcPetrolText}" IsVisible="{Binding HasArcPetrol}"
-                Command="{Binding OpenArchiveCommand}" CommandParameter="petrol" Margin="0,0,8,0" MinWidth="220" />
-        <Button Classes="tool-link" Content="{Binding ArcDieselText}" IsVisible="{Binding HasArcDiesel}"
-                Command="{Binding OpenArchiveCommand}" CommandParameter="diesel" MinWidth="220" />
-      </WrapPanel>
+      <!-- ══ «کارها» — یک کادرِ کشویی، و بس ═══════════════════════════════
+           گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «چرا دوتا از هر کدام است؟ خریدهای
+           دیزل و پطرول هم توی کشویی هست هم بیرونش… و کادرِ آرشیو را بیاور
+           توی کادرِ کشویی بگذار که جا خیلی می‌گیرد.»
 
-      <!-- ── کارها (کشویی) + خریدها + جستجو — ‎cm-actions‎ / ‎cm-purchases‎ -->
+           ⛔ پس دو دکمهٔ آرشیو، دو دکمهٔ خرید و دکمهٔ جست‌وجو از این‌جا رفتند
+           و همه‌شان داخلِ همان کشویی نشستند — با همان شمارنده‌ها در نوشتهٔ
+           خودشان، که تنها چیزِ مفیدِ آن دکمه‌ها بود.
+
+           ⚠️ «حذف این جدول» همچنان ته صفحه و دور از بقیه است. -->
       <WrapPanel Orientation="Horizontal">
-        <c:SettingCard Classes="card" MinWidth="260" ItemsSource="{Binding Actions}" SelectedItem="{Binding Action}"
+        <c:SettingCard Classes="card" MinWidth="340" ItemsSource="{Binding Actions}" SelectedItem="{Binding Action}"
                        Margin="0,0,8,6" ToolTip.Tip="همهٔ کارهای این حساب یک‌جا — «حذف این جدول» عمداً ته صفحه است" />
-        <Button Classes="ghost ok" Content="{Binding PetrolBuyText}" Command="{Binding OpenPurchasesCommand}"
-                CommandParameter="petrol" Margin="0,0,8,6" ToolTip.Tip="خریدهای مخزنِ همین شرکت — پطرول" />
-        <Button Classes="ghost" Content="{Binding DieselBuyText}" Command="{Binding OpenPurchasesCommand}"
-                CommandParameter="diesel" Margin="0,0,8,6" Foreground="{DynamicResource Pump.Warn}"
-                BorderBrush="{DynamicResource Pump.Warn}" ToolTip.Tip="خریدهای مخزنِ همین شرکت — دیزل" />
-        <Button Classes="ghost info" Content="🔍 جستجوی خرید" Command="{Binding SearchCommand}" Margin="0,0,8,6"
-                ToolTip.Tip="مقدارِ تن و/یا تاریخ را بزنید و همان لحظه خرید پیدا شود" />
       </WrapPanel>
 
       <!-- ── جدول + ردیفِ «جمله»ی همین دفتر (پطرول و دیزل جدا) ─────────────

@@ -26,9 +26,24 @@
                    IsVisible="{Binding !IsEmpty}">
         <DataGrid.Columns>
           <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
-          <DataGridTextColumn Header="به حساب" Binding="{Binding Account}" Width="Auto" />
-          <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="Auto" />
+          <DataGridTextColumn Header="به حساب" Binding="{Binding Account}" Width="Auto" c:Suggest.Key="debtor" />
+          <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="Auto" c:Suggest.Key="debtor" />
           <DataGridTextColumn Header="نمبر حواله" Binding="{Binding Hawala}" Width="Auto" />
+          <!-- ══ واحد: پطرول یا دیزل ══════════════════════════════════════
+               خواستهٔ صاحب ریپو: «واحد ندارد که تیلِ دیزل است یا پطرول».
+               ⚠️ «؟ خودکار» یعنی از متنِ خودِ ردیف خوانده شود — همان رفتارِ
+               همیشگی، پس هیچ رسیدِ ثبت‌شده‌ای جابه‌جا نمی‌شود. -->
+          <DataGridTemplateColumn Header="نوع تیل" Width="Auto">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <Button Classes="fuelchip celltoggle" Content="{Binding FuelChipText}"
+                        Command="{Binding ToggleFuelCommand}"
+                        Foreground="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                        BorderBrush="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                        ToolTip.Tip="زدنش نوعِ تیلِ همین رسید را خودکار ⇄ پطرول ⇄ دیزل می‌کند" />
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
           <DataGridTextColumn Header="مقدار تیل" Binding="{Binding LitersText}" Width="Auto" />
           <DataGridTextColumn Header="فی لیتر" Binding="{Binding PriceText}" Width="Auto" />
           <DataGridTextColumn Header="بردگی" Binding="{Binding BardagiText}" Width="Auto" IsReadOnly="True" />

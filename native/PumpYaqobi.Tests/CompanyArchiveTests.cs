@@ -188,13 +188,71 @@ public class CompanyArchiveTests : IDisposable
         Assert.Contains("Header=\"خرید (تن)\"", v);
         Assert.Contains("Header=\"📦\"", v);
         Assert.Contains("{Binding Actions}", v);
-        Assert.Contains("OpenPurchasesCommand", v);
-        Assert.Contains("OpenArchiveCommand", v);
-        Assert.Contains("SearchCommand", v);
         Assert.Contains("ClearTableCommand", v);
+
+        // ══ «چرا دوتا از هر کدام است؟» — ۱۴۰۵/۰۷/۰۶ ═══════════════════════
+        //
+        // خریدهای پطرول/دیزل هم در کادرِ کشویی بودند هم بیرونش، و دو کادرِ
+        // آرشیو هم جای زیادی می‌گرفتند. همه به داخلِ همان کشویی رفتند.
+        //
+        // ⛔ ولی **هیچ قابلیتی برداشته نشد** و همین‌جا قفل می‌شود: اگر روزی
+        // کسی یکی از این چهار کار را از فهرستِ کشویی بیندازد، این آزمون
+        // قرمز می‌شود. («حذفش کردم» نباید یعنی «قابلیت را هم بردم».)
+        Assert.DoesNotContain("OpenPurchasesCommand", v);
+        Assert.DoesNotContain("OpenArchiveCommand", v);
+        var vmSrc = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "Sections", "CompanySectionViewModel.cs"));
+        foreach (var act in new[] { "\"buy-petrol\"", "\"buy-diesel\"", "\"arc\"", "\"search\"", "\"new\"" })
+            Assert.Contains("case " + act + ":", vmSrc);
+        Assert.Contains("OpenPurchasesAsync", vmSrc);
+        Assert.Contains("OpenArchiveAsync", vmSrc);
+        Assert.Contains("SearchAsync", vmSrc);
         Assert.Contains("RowAddCommand", File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "Sections", "CompanySectionViewModel.cs")));   // نوارِ ردیف از خودِ SectionPage
         Assert.Contains("PrevCommand", v);
         var s = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "CompanySectionView.axaml"));
         foreach (var t in new[] { "CompanyPurchasesView", "CompanyArchiveView", "CompanySearchView" }) Assert.Contains(t, s);
+    }
+
+    /// <summary>
+    /// ══ آرشیوِ شرکت، به مدلِ آرشیوِ قرض‌داران ═══════════════════════════════
+    ///
+    /// خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «جدول‌های آرشیو عینِ جدولِ اصلی
+    /// نیستند و سربرگ‌های خودشان را هم ندارند… خریدهای مربوطِ همان حساب هم
+    /// رویش نیست… سرچ هم ندارد… کاری کن شبیهِ جدول‌های آرشیوِ قرض‌داران بشود
+    /// که همه یک جا ولی کشویی باز می‌شوند.»
+    /// </summary>
+    [Fact]
+    public void TheCompanyArchiveLooksLikeTheDebtorArchive()
+    {
+        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
+        var v = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "CompanyArchiveView.axaml"));
+
+        // ۱) کشویی — همان نوارِ رنگیِ آرشیوِ قرض‌داران
+        Assert.Contains("Classes=\"arc-bar\"", v);
+        Assert.Contains("ToggleCommand", v);
+        Assert.Contains("OpenArrowConverter", v);
+        Assert.Contains("IsVisible=\"{Binding IsOpen}\"", v);
+
+        // ۲) سربرگِ خودش — همان شش عددِ جدولِ زنده
+        foreach (var t in new[] { "جمله مقدار (تن)", "جمله کل دالر", "جمله کل (افغانی)",
+                                  "رسید دالر", "رسید (افغانی)", "جمله الباقی" })
+            Assert.Contains(t, v);
+
+        // ۳) ستون‌هایش مو‌به‌مو ستون‌های جدولِ اصلی
+        var live = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "CompanyPageView.axaml"));
+        foreach (var h in new[] { "📦", "تاریخ", "نام", "خرید (تن)", "قیمت تن ($)", "کل ($)",
+                                  "نرخ", "کل (افغانی)", "رسید", "واحدِ رسید", "الباقی", "الباقیِ دالر" })
+        {
+            Assert.Contains("Header=\"" + h + "\"", live);
+            Assert.Contains("Header=\"" + h + "\"", v);
+        }
+
+        // ۴) خریدهای مربوطِ همان بازه، و جست‌وجو
+        Assert.Contains("OpenPurchasesCommand", v);
+        Assert.Contains("{Binding Search}", v);
+
+        // ۵) و هر دو تیل یک‌جا — نه یک صفحه برای پطرول و یک صفحه برای دیزل
+        var vm = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "Sections", "CompanyPagesViewModel.cs"));
+        Assert.DoesNotContain("arcs.Where(h => h.Fuel == fuel)", vm);
+        Assert.Contains("arcs.OrderByDescending(h => h.Id)", vm);
     }
 }

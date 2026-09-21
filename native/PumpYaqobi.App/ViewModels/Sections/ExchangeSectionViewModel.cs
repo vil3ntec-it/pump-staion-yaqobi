@@ -150,14 +150,14 @@ public sealed partial class ExchangeSectionViewModel
 {
     private readonly AppHost _host;
 
-    /// <summary>🕘 تاریخچهٔ همین بخش — همان ‎openSectionHistory('sarrafi')‎ی سایت.</summary>
-    [RelayCommand]
-    private Task OpenHistory() => _host.OpenHistory?.Invoke("sarrafi") ?? Task.CompletedTask;
 
     public ExchangeSectionViewModel(AppHost host)
 
         : base("sarrafi", "sarrafi", "صرافی", host.ExchangeLedger)
     {
+        // ↓ درِ «🕘 تاریخچه»ی همین بخش — شرحش بالای ‎SectionViewModel.HistoryKind‎
+        HistoryKind = "sarrafi";
+
         _host = host;
         // «📝 یادداشت این بخش» — همتای ‎.sec-note-box‎ی سایت. کلیدش همان
         // کلیدِ نسخهٔ وب است تا نوت‌های واردشده سرِ جای خودشان بنشینند.

@@ -1,4 +1,5 @@
 using PumpYaqobi.Domain.Entities;
+using PumpYaqobi.Domain.Enums;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 
@@ -31,19 +32,34 @@ public sealed class DebtReceiptReport : ISetupDocument
         DocStyle.Compose(container, "🧾 پمپ یعقوبی — رسید قرض‌داران " + _in.MonthLabel,
                          null, _in.Dates, Body, titleColor: Green, setup: Setup);
 
+    /// <summary>
+    /// ⚠️ **واحد ستونِ خودش را دارد و جمع‌ها از هم جدا هستند.** رسیدِ تیل
+    /// «۲۰۰ افغانی» نیست، «۲۰۰ لیتر» است؛ پیش از این هر دو با پسوندِ
+    /// «افغانی» چاپ می‌شدند و یک جمع می‌خوردند — یعنی ورقِ چاپ‌شده دروغ
+    /// می‌گفت. رسیدِ پول یک کاراکتر هم عوض نشد.
+    /// </summary>
+    private static string Money(DebtQuickReceipt r) =>
+        PersianText.Num(r.Amount) + (r.Unit == LedgerMode.Fuel ? " لیتر" : " افغانی");
+
+    private static string UnitOf(DebtQuickReceipt r) =>
+        r.Unit == LedgerMode.Fuel ? "تیل — " + r.Fuel.ToPersian() : "پول";
+
     private void Body(IContainer c) => c.Column(col =>
     {
-        var total = _in.Rows.Sum(r => r.Amount);
+        var cash = _in.Rows.Where(r => r.Unit != LedgerMode.Fuel).Sum(r => r.Amount);
+        var fuel = _in.Rows.Where(r => r.Unit == LedgerMode.Fuel).Sum(r => r.Amount);
 
         col.Item().Row(row =>
         {
             row.RelativeItem().PaddingLeft(6).Element(x =>
                 DocStyle.SumBox(x, "تعداد رسیدها", PersianText.Num(_in.Rows.Count), DocStyle.FootFg));
+            row.RelativeItem().PaddingLeft(6).Element(x =>
+                DocStyle.SumBox(x, "جمله رسید تیل", PersianText.Num(fuel) + " لیتر", DocStyle.FootFg));
             row.RelativeItem().Element(x =>
-                DocStyle.SumBox(x, "جمله کل رسیدها", PersianText.Num(total) + " افغانی", Green));
+                DocStyle.SumBox(x, "جمله کل رسیدها", PersianText.Num(cash) + " افغانی", Green));
         });
 
-        col.Item().PaddingTop(8).Element(x => Table(x, total));
+        col.Item().PaddingTop(8).Element(x => Table(x, cash));
     });
 
     private void Table(IContainer c, decimal total) => c.Table(t =>
@@ -53,14 +69,15 @@ public sealed class DebtReceiptReport : ISetupDocument
             cd.RelativeColumn(0.6f);   // #
             cd.RelativeColumn(1.5f);   // تاریخ
             cd.RelativeColumn(2.6f);   // نام قرض‌دار
-            cd.RelativeColumn(3.0f);   // توضیحات
+            cd.RelativeColumn(2.4f);   // توضیحات
+            cd.RelativeColumn(1.5f);   // واحد
             cd.RelativeColumn(1.8f);   // مبلغ رسید
         });
 
         DocStyle.Head(t, cell =>
         {
             void Th(string s) => DocStyle.ThText(cell(), s);
-            Th("#"); Th("تاریخ"); Th("نام قرض‌دار"); Th("توضیحات"); Th("مبلغ رسید");
+            Th("#"); Th("تاریخ"); Th("نام قرض‌دار"); Th("توضیحات"); Th("واحد"); Th("مبلغ رسید");
         });
 
         var i = 0;
@@ -74,10 +91,11 @@ public sealed class DebtReceiptReport : ISetupDocument
             Td(DocStyle.Dash(r.DateShamsi), DocStyle.Hawala);
             Td(DocStyle.Dash(r.Account));
             Td(DocStyle.Dash(r.Note), DocStyle.FootFg);
-            Td(PersianText.Num(r.Amount) + " افغانی", Green);
+            Td(UnitOf(r), DocStyle.FootFg);
+            Td(Money(r), Green);
         }
 
-        t.Cell().ColumnSpan(4).Element(x => DocStyle.Tf(x, "جمله کل"));
+        t.Cell().ColumnSpan(5).Element(x => DocStyle.Tf(x, "جمله کل"));
         t.Cell().Element(x => DocStyle.Tf(x, PersianText.Num(total) + " افغانی"));
     });
 }

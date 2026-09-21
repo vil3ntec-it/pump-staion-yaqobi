@@ -6,6 +6,7 @@ using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Domain.Entities;
+using PumpYaqobi.Domain.Enums;
 using PumpYaqobi.Reporting.Pdf;
 using PumpYaqobi.Services.Data;
 
@@ -22,6 +23,10 @@ public sealed class DebtReceiptRowViewModel
         Account = e.Account ?? "";
         Note = e.Note ?? "";
         AmountText = Shamsi.Money(e.Amount);
+        UnitText = DebtReceiptSectionViewModel.UnitLabel(e.Unit, e.Fuel);
+        UnitBrushKey = e.Unit == LedgerMode.Fuel
+            ? (e.Fuel == FuelType.Diesel ? "Pump.Warn" : "Pump.Ok")
+            : "Pump.Info";
     }
 
     public DebtQuickReceipt Entity { get; }
@@ -30,16 +35,29 @@ public sealed class DebtReceiptRowViewModel
     public string Account { get; }
     public string Note { get; }
     public string AmountText { get; }
+
+    /// <summary>«💵 پول» یا «⛽ تیل — دیزل» — خواستهٔ صریحِ صاحب ریپو.</summary>
+    public string UnitText { get; }
+    public string UnitBrushKey { get; }
 }
 
 /// <summary>
 /// ══ بخشِ «رسید قرض‌داران» ═══════════════════════════════════════════════════
-/// پرداختِ نقدیِ مستقیم به حسابِ یک قرض‌دار.
+/// پرداختِ مستقیم به حسابِ یک قرض‌دار.
 ///
 /// ⚠️ **هیچ دکمهٔ «ثبت» ندارد و نباید داشته باشد.** در نسخهٔ وب به‌محضِ کامل
 /// شدنِ نام و مبلغ، ردیف خودش در حسابِ طرف می‌نشیند. این‌جا هم همان: با
 /// بیرون رفتنِ فوکوس از کادرِ مبلغ (یا زدنِ Enter) ثبت می‌شود، کادرها خالی
 /// می‌شوند و فوکوس به «نام» برمی‌گردد تا رسیدِ بعدی نوشته شود.
+///
+/// ══ واحدِ رسید ═════════════════════════════════════════════════════════════
+/// گزارشِ صاحب ریپو: «مشکلِ اصلی واحد ندارد که رسید پول است یا تیلِ دیزل است
+/// یا پطرول.» حق داشت: هر رسیدی مبلغِ افغانی شمرده می‌شد، پس تیلی که مشتری
+/// پس داده بود در دفتر به شکلِ **پول** می‌نشست.
+///
+/// ⛔ پیش‌فرض همان «پول» است و مسیرِ پول **مو‌به‌مو** همان چیزی که بود —
+/// رسیدهای ثبت‌شدهٔ مشتری‌های امروزی یک میلی‌متر هم جابه‌جا نمی‌شوند
+/// (ستونِ دیتابیس هم پیش‌فرضِ «پول» دارد).
 /// </summary>
 public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
 {
@@ -53,6 +71,8 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
             (m, ok) => host.Toast(m, ok ? ToastKind.Ok : ToastKind.Warn));
         _host = host;
         _dateShamsi = Shamsi.Today();
+        // درِ «🕘 تاریخچه»ی همین بخش — شرحش بالای ‎SectionViewModel.HistoryKind‎
+        HistoryKind = "rasid";
     }
 
     /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
@@ -66,6 +86,45 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
     [ObservableProperty] private string _note = "";
     [ObservableProperty] private string _dateShamsi;
 
+    /// <summary>واحدِ رسیدِ بعدی — پول یا تیل. پیش‌فرض «پول».</summary>
+    [ObservableProperty] private LedgerMode _unit = LedgerMode.Money;
+    /// <summary>وقتی واحد «تیل» است، کدام تیل.</summary>
+    [ObservableProperty] private FuelType _fuel = FuelType.Petrol;
+
+    partial void OnUnitChanged(LedgerMode v) => RefreshUnit();
+    partial void OnFuelChanged(FuelType v) => RefreshUnit();
+
+    private void RefreshUnit()
+    {
+        OnPropertyChanged(nameof(UnitChipText));
+        OnPropertyChanged(nameof(UnitChipBrushKey));
+        OnPropertyChanged(nameof(AmountLabel));
+        OnPropertyChanged(nameof(AmountWatermark));
+    }
+
+    /// <summary>برچسبِ واحد — یک جا، پس ردیفِ جدول و کپسولِ فرم هیچ‌وقت دو چیز نمی‌گویند.</summary>
+    public static string UnitLabel(LedgerMode unit, FuelType fuel) =>
+        unit == LedgerMode.Fuel ? "⛽ تیل — " + fuel.ToPersian() : "💵 پول";
+
+    public string UnitChipText => UnitLabel(Unit, Fuel);
+
+    public string UnitChipBrushKey => Unit == LedgerMode.Fuel
+        ? (Fuel == FuelType.Diesel ? "Pump.Warn" : "Pump.Ok")
+        : "Pump.Info";
+
+    /// <summary>⚠️ برچسبِ کادرِ مبلغ با واحد عوض می‌شود — «۲۰۰» لیتر است یا افغانی؟</summary>
+    public string AmountLabel => Unit == LedgerMode.Fuel ? "مقدار رسید (لیتر)" : "مبلغ رسید (افغانی)";
+    public string AmountWatermark => Unit == LedgerMode.Fuel ? "لیتر…" : "افغانی…";
+
+    /// <summary>پول ⇄ تیلِ پطرول ⇄ تیلِ دیزل — همان کپسولِ همیشگیِ برنامه، نه ‎ComboBox‎.</summary>
+    [RelayCommand]
+    private void ToggleUnit()
+    {
+        if (Unit == LedgerMode.Money) { Fuel = FuelType.Petrol; Unit = LedgerMode.Fuel; }
+        else if (Fuel == FuelType.Petrol) Fuel = FuelType.Diesel;
+        else Unit = LedgerMode.Money;
+    }
+
     [ObservableProperty] private string _month = "";
     [ObservableProperty] private string _totalText = "0";
 
@@ -74,9 +133,14 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
     {
         new TotalCell("شمارِ رسیدها", Shamsi.Money(Rows.Count), column: TotalCell.NoColumn),
         new TotalCell("مبلغِ رسید", TotalText, "Pump.Ok", "مبلغ رسید"),
+        new TotalCell("رسیدِ تیل", FuelTotalText, "Pump.Warn", "واحد"),
     };
 
+    /// <summary>جمعِ لیترِ رسیدهای تیلِ همین ماه — جدا از پول، چون دو چیزند.</summary>
+    [ObservableProperty] private string _fuelTotalText = "0";
+
     partial void OnTotalTextChanged(string v) => OnPropertyChanged(nameof(TotalCells));
+    partial void OnFuelTotalTextChanged(string v) => OnPropertyChanged(nameof(TotalCells));
 
     /// <summary>فوکوس باید به کادرِ «نام» برگردد — صفحه به آن گوش می‌دهد.</summary>
     public event Action? FocusNameRequested;
@@ -113,7 +177,8 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
             var i = 1;
             foreach (var r in list) Rows.Add(new DebtReceiptRowViewModel(r, i++));
         }
-        TotalText = Shamsi.Money(list.Sum(r => r.Amount));
+        TotalText = Shamsi.Money(list.Where(r => r.Unit != LedgerMode.Fuel).Sum(r => r.Amount));
+        FuelTotalText = Shamsi.Money(list.Where(r => r.Unit == LedgerMode.Fuel).Sum(r => r.Amount));
     }
 
     /// <summary>
@@ -124,7 +189,7 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
     public async Task SubmitAsync()
     {
         var amount = Shamsi.Num(AmountText);
-        var (res, person) = await _host.DebtReceipts.AddAsync(TypedName, amount, DateShamsi, Note);
+        var (res, person) = await _host.DebtReceipts.AddAsync(TypedName, amount, DateShamsi, Note, Unit, Fuel);
 
         switch (res)
         {
@@ -136,7 +201,7 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
                 return;
         }
 
-        _host.Toast("✅ در حساب " + person + " ثبت شد", ToastKind.Ok);
+        _host.Toast("✅ " + UnitChipText + " در حساب " + person + " ثبت شد", ToastKind.Ok);
         TypedName = ""; AmountText = ""; Note = "";
         await LoadAsync();
         FocusNameRequested?.Invoke();
