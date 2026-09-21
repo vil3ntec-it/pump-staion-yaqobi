@@ -292,6 +292,10 @@ public sealed partial class CloudLink
         {
             //  ۲) ندارد ⇒ بساز. نامِ خالی را خودِ سرور با «پمپ من» پر می‌کند،
             //  ولی نامِ کاربر همیشه بهتر است.
+            //
+            //  ⛔ **فقط نام می‌رود.** لوکیشن هیچ‌وقت در این بدنه نبود و کادرش
+            //  هم در ۱۴۰۵/۰۷/۱۰ از صفحهٔ ورود برداشته شد — «یارو همین که
+            //  اسمِ پمپشو بزنه بسه».
             var body = new { name = (stationName ?? "").Trim() };
             var made = await AccountAsync(HttpMethod.Post, "/api/pump", body, ct);
             if (!made.Ok && made.Code != "already_member")
@@ -300,6 +304,39 @@ public sealed partial class CloudLink
 
         //  ۳) و حالا بند شدن — همان راهِ همیشگی، با همان قفلِ کلیدِ عمومی.
         return await BindAsync(ct);
+    }
+
+    /// <summary>
+    /// ⛔ <b>آیا این حساب پمپ دارد؟</b> — یک پرسشِ ساده از خودِ سرور.
+    ///
+    /// گزارشِ صاحب ریپو با عکس (۱۴۰۵/۰۷/۱۰): «این بخش مانعِ ساختِ حساب
+    /// می‌شود… نمی‌خوام این مشکل پیش بیاد، منو دیوانه نکنی.» و در عکس:
+    /// «❌ خطای داخلی سرور» روی همان گامِ پمپ.
+    ///
+    /// <para>
+    /// ⚠️ آن جمله <b>پیامِ خودِ سرور</b> است (۵۰۰)، نه متنی که برنامه
+    /// ساخته باشد. یعنی خرابی آن‌طرف بود — ولی <b>گیر کردنِ کاربر</b>
+    /// این‌طرف: گامِ پمپ تنها دیوارِ بینِ او و برنامه است و با یک ۵۰۰ی
+    /// گذرا تا ابد بسته می‌مانْد.
+    /// </para>
+    ///
+    /// <para>
+    /// ⛔ <b>و این «پنهان کردنِ خطا» نیست.</b> کارِ گامِ پمپ یک چیز است:
+    /// «این حساب پمپ داشته باشد». اگر <b>دارد</b>، آن کار انجام شده — هر
+    /// چه آن درخواستِ شکست‌خورده گفته باشد. بند شدنِ دستگاه هم گم نمی‌شود:
+    /// حلقهٔ شصت‌ثانیه‌ایِ پس‌زمینه خودش دوباره می‌زندش
+    /// (<c>CloudKeepAsync</c> ⇒ <c>HomeFromAccountAsync</c>).
+    /// </para>
+    /// </summary>
+    public async Task<bool> HasStationAsync(CancellationToken ct = default)
+    {
+        if (!SignedIn) return false;
+        try
+        {
+            var me = await AccountAsync(HttpMethod.Get, "/api/pump/me", null, ct);
+            return me.Ok && StationId(me.Json).Length > 0;
+        }
+        catch { return false; }
     }
 
     /// <summary>

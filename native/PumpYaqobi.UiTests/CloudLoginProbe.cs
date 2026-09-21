@@ -449,7 +449,6 @@ internal static class CloudLoginProbe
         //  پمپ فقط نام و لوکیشن می‌خواهد.
         Console.WriteLine("── ۴) کدِ شش‌رقمیِ غلط در کارتِ اشتراک — هیچ چیزی فعال نمی‌شود");
         account.LoginPump = "پمپ یعقوبی";
-        account.LoginLocation = "هرات، جادهٔ کندهار";
         account.SubCode = "111111";
         Wait(win, account.RedeemSubCommand.ExecuteAsync(null));
         for (var i = 0; i < 20; i++) Pump(win);
@@ -472,9 +471,12 @@ internal static class CloudLoginProbe
         Check("کلیدِ عمومیِ سرور قفل شد", f2.CloudPublicKey == PublicKey);
         Check("مجوزِ امضاشده نشست", f2.CloudLicense.Split('.').Length == 3);
         Check("شناسهٔ پمپ از سرور آمد", f2.CloudStationId == "stn-1", f2.CloudStationId);
-        Check("نام و لوکیشنِ پمپ ذخیره شدند",
-              host.Settings.GetString(SettingsService.StationName) == "پمپ یعقوبی"
-              && host.Settings.GetString(SettingsService.StationAddress) == "هرات، جادهٔ کندهار");
+        //  ⛔ لوکیشن از گامِ پمپ رفت (۱۴۰۵/۰۷/۱۰) — پس فقط نام سنجیده
+        //  می‌شود. آن‌چه این بند نگه می‌داشت («پیش از رفتن به سرور
+        //  می‌نشیند») دست‌نخورده است.
+        Check("نامِ پمپ ذخیره شد",
+              host.Settings.GetString(SettingsService.StationName) == "پمپ یعقوبی",
+              host.Settings.GetString(SettingsService.StationName));
         Check("و نامِ پمپ همراهِ همان درخواست به ابر رفت",
               Seen.Contains("POST /api/pump/device/activate"));
 
@@ -816,7 +818,6 @@ internal static class CloudLoginProbe
         clean.Save();
 
         account.LoginPump = "پمپ تازه";
-        account.LoginLocation = "کابل";
         //  ⚠️ گامِ پمپ از ۱۴۰۵/۰۷/۰۴ اصلاً کادرِ کدی ندارد
         Wait(win, account.FinishPumpCommand.ExecuteAsync(null));
         for (var i = 0; i < 40; i++) Pump(win);

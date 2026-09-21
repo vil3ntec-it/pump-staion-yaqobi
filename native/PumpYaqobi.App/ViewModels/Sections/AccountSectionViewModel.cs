@@ -756,7 +756,6 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
 
     [ObservableProperty] private bool _showTerms;
     [ObservableProperty] private string _loginPump = "";
-    [ObservableProperty] private string _loginLocation = "";
     [ObservableProperty] private string _loginStatus = "";
 
     public bool IsSignIn => !IsSignUp;
@@ -830,7 +829,6 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         if (LoginEmail.Length == 0) LoginEmail = f.CloudEmail;
         if (LoginName.Length == 0) LoginName = f.CloudName;
         if (LoginPump.Length == 0) LoginPump = _host.Settings.GetString(SettingsService.StationName);
-        if (LoginLocation.Length == 0) LoginLocation = _host.Settings.GetString(SettingsService.StationAddress);
 
         var activated = !string.IsNullOrWhiteSpace(f.CloudDeviceToken);
         var hasPump = !string.IsNullOrWhiteSpace(_host.Settings.GetString(SettingsService.StationName));
@@ -1149,7 +1147,6 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     private Task FinishPumpAsync() => CrashGuard.RunAsync("گامِ پمپ", async () =>
     {
         var pump = (LoginPump ?? "").Trim();
-        var where = (LoginLocation ?? "").Trim();
 
         if (pump.Length < 2) { LoginStatus = "❌ نامِ پمپ را بنویسید."; return; }
 
@@ -1158,11 +1155,40 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         try
         {
             _host.Settings.Set(SettingsService.StationName, pump);
-            if (where.Length > 0) _host.Settings.Set(SettingsService.StationAddress, where);
             RefreshAll();
 
             var res = await Cloud.EnsureStationAsync(pump);
-            if (!res.Ok) { LoginStatus = "❌ " + res.Why; return; }
+            if (!res.Ok)
+            {
+                /*
+                 *  ⛔ **این گام نباید دیوار شود.**
+                 *
+                 *  گزارشِ صاحب ریپو با عکس (۱۴۰۵/۰۷/۱۰): «این بخش مانعِ
+                 *  ساختِ حساب می‌شود… نمی‌خوام این مشکل پیش بیاد، منو
+                 *  دیوانه نکنی.» و روی صفحه: «❌ خطای داخلی سرور».
+                 *
+                 *  آن جمله **پیامِ خودِ سرور** است (۵۰۰). خرابی آن‌طرف بود،
+                 *  ولی گیر کردنِ کاربر این‌طرف: تنها دیوارِ بینِ او و
+                 *  برنامه همین گام است.
+                 *
+                 *  ⛔ پس پیش از «نشد»، از سرور می‌پرسیم **پمپ ساخته شد یا
+                 *  نه**. کارِ این گام یک چیز است و اگر انجام شده، انجام
+                 *  شده — هر چه آن یک درخواست گفته باشد. و این پنهان کردنِ
+                 *  خطا نیست: بند شدنِ دستگاه گم نمی‌شود، حلقهٔ
+                 *  شصت‌ثانیه‌ایِ پس‌زمینه خودش دوباره می‌زندش.
+                 */
+                if (await Cloud.HasStationAsync())
+                {
+                    LoginStatus = "";
+                    RefreshAll();
+                    LoginStep = 4;
+                    _host.Toast("✅ پمپِ شما روی حسابتان هست — بقیه‌اش خودکار انجام می‌شود", ToastKind.Ok);
+                    return;
+                }
+
+                LoginStatus = "❌ " + PumpStepWhy(res);
+                return;
+            }
 
             //  نشانیِ سرورِ خانگی و اشتراک را هم همین‌جا برمی‌داریم، وگرنه
             //  کاربر تا تیکِ بعدیِ پس‌زمینه «هنوز وصل نیست» می‌بیند.
@@ -1176,6 +1202,29 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     });
 
     /// <summary>
+    /// ⛔ «خطای داخلی سرور» به‌تنهایی هیچ کاری دستِ کاربر نمی‌دهد.
+    ///
+    /// سرورِ حساب از ۲.۸.۵ روی هر ۵۰۰ یک <b>کدِ پیگیری</b> می‌گذارد
+    /// (<c>error.ref</c>) که همان رشته کنارِ خودِ استثنا در لاگِ سرور چاپ
+    /// می‌شود. پس اگر کد آمده بود، همان را نشان می‌دهیم و می‌گوییم کجا
+    /// دنبالش بگردد؛ و اگر <b>نیامده بود</b>، خودِ همین یعنی سرورِ حساب از
+    /// آن نسخه قدیمی‌تر است — و این را هم می‌گوییم، نه این‌که کاربر را با
+    /// یک جملهٔ بی‌سرنخ رها کنیم.
+    ///
+    /// ⚠️ نامِ هیچ میزبانی در این پیام نمی‌آید — همان قاعدهٔ همیشگی.
+    /// </summary>
+    private static string PumpStepWhy(CloudResult res)
+    {
+        var why = res.Why ?? "";
+        if (!why.Contains("خطای داخلی سرور")) return why;
+        var hasRef = why.Contains("پیگیری");
+        return hasRef
+            ? why + " — این کد را در «سرورِ حساب ← لاگ» بگردید"
+            : why + " — و کدِ پیگیری نداد، یعنی سرورِ حساب کهنه است؛ "
+                      + "فایلِ نصبِ تازه را بگیرید. «بعداً» هم شما را رد می‌کند.";
+    }
+
+    /// <summary>
     /// «بعداً» روی گامِ پمپ: نام و لوکیشن ذخیره می‌شوند و صفحه رد می‌شود.
     /// بی این، پمپی که اینترنت ندارد تا ابد روی همین صفحه می‌ماند.
     /// </summary>
@@ -1183,9 +1232,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     private void SkipPump()
     {
         var pump = (LoginPump ?? "").Trim();
-        var where = (LoginLocation ?? "").Trim();
         if (pump.Length > 0) _host.Settings.Set(SettingsService.StationName, pump);
-        if (where.Length > 0) _host.Settings.Set(SettingsService.StationAddress, where);
 
         var f = AppSettings.Load();
         f.LoginSkipped = true;

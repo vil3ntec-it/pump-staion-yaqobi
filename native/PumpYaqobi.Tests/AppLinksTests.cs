@@ -161,9 +161,15 @@ public class AppLinksTests
         Assert.Contains("SetSignUpCommand", xaml);
         Assert.Contains("AccountStepCommand", xaml);
 
-        //  گامِ پمپ — فقط نام و لوکیشن
+        //  گامِ پمپ — **فقط نام**
+        //
+        //  ⛔ کادرِ «لوکیشنِ پمپ» در ۱۴۰۵/۰۷/۱۰ برداشته شد و برنمی‌گردد:
+        //  «اون لوکیشن رو حذف کن لازم نیست، یارو همین که اسمِ پمپشو بزنه
+        //  بسه.» و به سرور هم هیچ‌وقت نمی‌رفت — `EnsureStationAsync` فقط
+        //  `{ name }` می‌فرستد. هر خانهٔ اضافه روی تنها دیوارِ بینِ کاربر و
+        //  برنامه، هزینه دارد.
         Assert.Contains("Binding LoginPump", xaml);
-        Assert.Contains("Binding LoginLocation", xaml);
+        Assert.DoesNotContain("Binding LoginLocation", xaml);
         Assert.Contains("FinishPumpCommand", xaml);
 
         //  ⛔ **کدِ دومِ شش‌رقمی از گامِ پمپ رفت** (۱۴۰۵/۰۷/۰۴). گزارشِ صاحب

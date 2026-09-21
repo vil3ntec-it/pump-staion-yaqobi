@@ -145,4 +145,48 @@ public class FormAlignTests
         Assert.Contains("Fuel = value == 1 ? FuelType.Diesel : FuelType.Petrol", vm);
         Assert.Contains("AddAsync(TypedName, amount, DateShamsi, Note, Unit, Fuel)", vm);
     }
+
+    /// <summary>
+    /// ⛔ گامِ پمپ دیوار نیست، و لوکیشن نمی‌خواهد.
+    ///
+    /// گزارشِ صاحب ریپو با عکس (۱۴۰۵/۰۷/۱۰): «این بخش مانعِ ساختِ حساب
+    /// می‌شود… این به سرور چه ربطی دارد؟ اون لوکیشن رو حذف کن لازم نیست،
+    /// یارو همین که اسمِ پمپشو بزنه بسه… نمی‌خوام این مشکل پیش بیاد.»
+    /// روی صفحه: «❌ خطای داخلی سرور».
+    /// </summary>
+    [Fact]
+    public void GameParcheyePomp_Divar_Nist_Va_Location_Nemikhahad()
+    {
+        var xaml = Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml");
+        //  ⛔ کادرِ لوکیشن رفت و برنمی‌گردد
+        Assert.DoesNotContain("Binding LoginLocation", xaml);
+        Assert.Contains("Binding LoginPump", xaml);
+
+        var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs");
+        //  ⛔ و در ویومدل هم چیزی از آن نمانده
+        Assert.DoesNotContain("LoginLocation", vm);
+
+        //  ⛔ و ۵۰۰ی سرور دیگر کاربر را پشتِ این گام حبس نمی‌کند: پیش از
+        //  «نشد»، از خودِ سرور پرسیده می‌شود که پمپ ساخته شده یا نه.
+        var step = vm.Split("private Task FinishPumpAsync()")[1].Split("private void SkipPump")[0];
+        Assert.Contains("HasStationAsync()", step);
+        Assert.Contains("LoginStep = 4", step);
+
+        //  ⛔ و پیامِ «خطای داخلی سرور» بی‌سرنخ نمی‌ماند
+        Assert.Contains("PumpStepWhy(res)", step);
+        Assert.Contains("کدِ پیگیری", vm);
+
+        //  ⛔ و خودِ پرسش یک درخواستِ ساده است، نه منطقِ دوم
+        var link = Read("PumpYaqobi.App", "Services", "CloudLink.cs");
+        var has = link.Split("public async Task<bool> HasStationAsync(")[1].Split("\n    }")[0];
+        Assert.Contains("/api/pump/me", has);
+        //  و هیچ چیزی نمی‌سازد و هیچ چیزی را عوض نمی‌کند
+        Assert.DoesNotContain("HttpMethod.Post", has);
+
+        //  ⛔ و به سرور همچنان فقط نام می‌رود — لوکیشن هیچ‌وقت نمی‌رفت
+        var ensure = link.Split("public async Task<CloudResult> EnsureStationAsync(")[1]
+                         .Split("HasStationAsync")[0];
+        Assert.Contains("new { name =", ensure);
+        Assert.DoesNotContain("location", ensure);
+    }
 }
