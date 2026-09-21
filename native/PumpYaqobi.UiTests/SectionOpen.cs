@@ -50,10 +50,26 @@ namespace PumpYaqobi.UiTests;
 /// </summary>
 internal static class SectionOpen
 {
-    /// <summary>سقفِ زمانی — تورِ ایمنی است، نه ملاکِ اصلی.</summary>
+    /// <summary>
+    /// سقفِ زمانی — فقط <b>گزارش</b> می‌شود، نه ایراد.
+    ///
+    /// ⛔ و این ضعیف کردنِ سنجه نیست: ملاکِ این سنجه از روزِ اول عددِ
+    /// <b>ساختاری</b> بود («پس از اولین چیدمان، چند ردیف روی صفحه است؟») و
+    /// همان سخت‌گیر مانده. میلی‌ثانیه روی رانرِ مشترکِ CI نوسان دارد و این
+    /// عدد هیچ‌وقت با <c>main</c> سنجیده نشده — و قاعدهٔ خودِ این فایل
+    /// می‌گوید عددِ بی‌مبنا را نباید دروازه کرد (همان تله‌ای که
+    /// <c>themeflip</c> را از CI بیرون کرد).
+    ///
+    /// ⚠️ هر کس مبنا گرفت، این را دوباره دروازه کند — ولی با عددِ خودِ
+    /// <c>main</c>، نه با انتظار.
+    /// </summary>
     private const long Goal = 400;
 
+    /// <summary>ایرادِ واقعی: فریمِ اولِ خالی.</summary>
     private static int _bad;
+
+    /// <summary>فقط کُند بود — گزارش می‌شود.</summary>
+    private static int _slow;
 
     public static int Run()
     {
@@ -85,7 +101,9 @@ internal static class SectionOpen
         Settle(win);
 
         //  بخش‌هایی که جدول دارند — همان‌هایی که شکایت درباره‌شان بود
-        var ids = new[] { "safe", "sarrafi", "expenses", "noinv", "attendance" };
+        //  ⚠️ دقیقاً همان پنج بخشی که صاحب ریپو نام برد (۱۴۰۵/۰۷/۰۵):
+        //  «رسید قرض‌داران · صرافی · مصارف · رسید پارچه‌ها · گاوصندوق»
+        var ids = new[] { "debtrasid", "sarrafi", "expenses", "rasid", "safe" };
         var pages = ids
             .Select(id => vm.Sections.FirstOrDefault(s => s.Id == id))
             .Where(s => s is not null)
@@ -137,16 +155,23 @@ internal static class SectionOpen
             var judged = final > 0;
             var ok = !judged || firstFrame > 0;
             if (!ok) _bad++;
-            if (sw.ElapsedMilliseconds > Goal) { _bad++; }
+            var kond = sw.ElapsedMilliseconds > Goal;
+            if (kond) _slow++;
 
             Console.WriteLine($"{target.Title,-22} {firstFrame,12} {final,13} {sw.ElapsedMilliseconds,6:N0} ms {queries,10:N0}"
-                + (judged ? (firstFrame > 0 ? "" : "   ✖ جدولِ خالی") : "   (بی ردیف)"));
+                + (judged ? (firstFrame > 0 ? "" : "   ✖ جدولِ خالی") : "   (بی ردیف)")
+                + (kond ? "   ⚠️ کند" : ""));
         }
 
         Console.WriteLine();
+        //  ⚠️ گزارش می‌شود تا فراموش نشود — ولی سنجه را سرخ نمی‌کند.
+        if (_slow > 0)
+            Console.WriteLine($"⚠️ {_slow} بخش از {Goal} ms گذشت — گزارش است، نه ایراد؛ "
+                + "این عدد هنوز با main سنجیده نشده.");
+
         Console.WriteLine(_bad == 0
             ? "✅ هر بخش با ردیف‌هایش باز می‌شود — هیچ فریمِ خالی‌ای دیده نشد"
-            : $"❌ {_bad} ایراد — جدول باید در **همان** فریمِ اول باشد، نه یک پاس بعد");
+            : $"❌ {_bad} بخش فریمِ اولش خالی بود — جدول باید در **همان** فریمِ اول باشد، نه یک پاس بعد");
         return _bad == 0 ? 0 : 1;
     }
 

@@ -95,6 +95,14 @@ public sealed partial class ExpenseSectionViewModel
     /// ورق ممکن است همین حالا اضافه شده باشند (سایت هم با هر ‎showSection‎
     /// دوباره ‎renderExpenses‎ را صدا می‌زد).
     /// </summary>
+    /// <summary>
+    /// ⛔ فعال‌سازیِ این بخش فقط دفترِ دیتابیس را دوباره می‌خواند، پس با
+    /// <c>PumpDbContext.Version</c>ِ دست‌نخورده اصلاً صدا زده نمی‌شود —
+    /// ریشهٔ «هر بخش رو باز می‌کنم جدول‌ها یک ثانیه بعد میان» (۱۴۰۵/۰۷/۰۵).
+    /// شرحش بالای <see cref="SectionViewModel.ActivationOnlyReadsDb"/>.
+    /// </summary>
+    public override bool ActivationOnlyReadsDb => true;
+
     public override async Task OnActivatedAsync()
     {
         if (IsLoaded) await ReloadRowsAsync();

@@ -67,6 +67,58 @@ public class SectionOpenSpeedTests
     }
 
     /// <summary>
+    /// ⛔ <b>فعال‌سازیِ بخش بی ترمزِ <c>Version</c> نمی‌ماند.</b>
+    ///
+    /// گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۵، بارِ دوم): «رسید قرض‌داران · صرافی ·
+    /// مصارف · رسید پارچه‌ها · گاوصندوق — جدول‌هاشون دیر باز میشه.»
+    ///
+    /// ریشه: هجده بخش در <c>OnActivatedAsync</c> خودشان را از نو می‌خواندند
+    /// — و درست هم بود، چون دادهٔ یک بخش را بخشِ دیگری عوض می‌کند. ولی
+    /// <b>بی هیچ ترمزی</b>: با هر رفت‌وآمد یک پرس‌وجوی SQLite، ساختِ دوبارهٔ
+    /// همهٔ ردیف‌ها، یک <c>Reset</c>، و بعد <c>ExcelGrid</c> پهنای ستون‌ها را
+    /// دور می‌ریخت و از نو می‌سنجید — حتی وقتی هیچ چیزی عوض نشده بود.
+    ///
+    /// ⚠️ ترمزش تازه نیست: <c>PumpDbContext.Version</c> همان ترمزی است که
+    /// نوار و داشبورد و <c>StationPublisher</c> و بخشِ ورق از ۱۴۰۵/۰۶/۲۶
+    /// دارند («⛔ هیچ کارِ دوره‌ای بی ترمزِ Version»).
+    ///
+    /// ⛔ و عمداً همگانی نیست: بخشی که در فعال‌سازی چیزی <b>بیرونِ</b> دفتر
+    /// می‌خواند (فایل‌های پشتیبان، حالِ سرورِ حساب، صندوقِ چت، حالِ
+    /// همگام‌سازی) نباید این پرچم را بگیرد — این آزمون همان را هم می‌سنجد.
+    /// </summary>
+    [Fact]
+    public void FaalSaziyeBakhsh_TormozeVersion_Darad()
+    {
+        var sec = Read("PumpYaqobi.App", "ViewModels", "SectionViewModel.cs");
+        Assert.Contains("public virtual bool ActivationOnlyReadsDb => false;", sec);
+        Assert.Contains("PumpYaqobi.Persistence.PumpDbContext.Version", sec);
+        Assert.Contains("public bool ActivationCanBeSkipped", sec);
+
+        //  و مسیرِ ناوبری واقعاً از آن استفاده می‌کند — هر دو در، بخش و زیربخش
+        var vm = Read("PumpYaqobi.App", "ViewModels", "MainViewModel.cs");
+        var code = string.Join("\n", vm.Split('\n').Where(l => !l.TrimStart().StartsWith("//")));
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(code, "ActivationCanBeSkipped").Count);
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(code, "MarkActivationSeen").Count);
+
+        //  ⛔ بخش‌هایی که فقط دفتر را می‌خوانند، پرچم را دارند
+        foreach (var f in new[] { "ExpenseSectionViewModel", "DebtSectionViewModel",
+                                  "DebtSummarySectionViewModel", "OldLoansSectionViewModel",
+                                  "ProfitSectionViewModel", "PriceLossSectionViewModel",
+                                  "RateHistorySectionViewModel", "StaffShortSectionViewModel",
+                                  "InvRateSectionViewModel", "InvoiceSectionViewModel",
+                                  "MonthReportSectionViewModel" })
+            Assert.Contains("public override bool ActivationOnlyReadsDb => true;",
+                            Read("PumpYaqobi.App", "ViewModels", "Sections", f + ".cs"));
+
+        //  ⛔ و بخش‌هایی که بیرونِ دفتر را می‌خوانند، **نباید** داشته باشند
+        foreach (var f in new[] { "BackupSectionViewModel", "AccountSectionViewModel",
+                                  "ChatSectionViewModel", "SyncSectionViewModel",
+                                  "KeysSectionViewModel" })
+            Assert.DoesNotContain("ActivationOnlyReadsDb => true",
+                                  Read("PumpYaqobi.App", "ViewModels", "Sections", f + ".cs"));
+    }
+
+    /// <summary>
     /// ⛔ <b>هیچ شنوندهٔ <c>LayoutUpdated</c>ی بی سنجشِ دیده‌شدن.</b>
     ///
     /// قاعدهٔ ۱۴۰۵/۰۶/۲۶ (نمونه‌بردار نشان داد ۱۳٪ وقتِ نخِ رابط):

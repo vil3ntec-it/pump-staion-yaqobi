@@ -390,7 +390,13 @@ public sealed class AppSettings
         //  را جدا نگه می‌دارد، پس عوض شدنِ این، کلیدِ پوشهٔ دیگری را باطل
         //  نمی‌کند. (پاک کردنِ سراسری همان چیزی بود که سنجه‌های موازی را
         //  گاهی سرخ می‌کرد.)
-        set => _dirOverride = value;
+        //  ⛔ و نوبتِ در صف را هم دور می‌ریزد: `SaveSoon` ششصد میلی‌ثانیه بعد
+        //  می‌نویسد و تا آن لحظه پوشه عوض شده، پس آن نوشتن در پوشهٔ **کسِ
+        //  دیگری** می‌نشست. یک بار همین شد و آزمونِ `FayleGhoflShode_…`
+        //  توکنِ کلاسِ دیگری را در دفترِ خودش دید.
+        //  ⚠️ هر دو کار زیرِ یک قفل‌اند: وگرنه `FlushSoon` می‌توانست پوشه را
+        //  پیش از عوض شدن بخواند و درست بعدش بنویسد.
+        set { lock (SoonGate) { _soonWho = null; _soonDir = null; _dirOverride = value; } }
     }
 
     private static string? _dirOverride;
@@ -589,6 +595,7 @@ public sealed class AppSettings
         lock (SoonGate)
         {
             _soonWho = this;
+            _soonDir = Dir;
             _soonTimer ??= new System.Threading.Timer(
                 _ => FlushSoon(), null,
                 System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
@@ -601,12 +608,26 @@ public sealed class AppSettings
 
     private static readonly object SoonGate = new();
     private static AppSettings? _soonWho;
+
+    /// <summary>
+    /// پوشه‌ای که این نوشتنِ در صف برای آن ثبت شد. ⛔ اگر تا لحظهٔ نوشتن عوض
+    /// شده باشد، نوشته <b>نمی‌شود</b>: مقدارِ راحتیِ یک پوشه هیچ‌وقت نباید
+    /// در دفترِ پوشهٔ دیگری بنشیند.
+    /// </summary>
+    private static string? _soonDir;
     private static System.Threading.Timer? _soonTimer;
 
     private static void FlushSoon()
     {
         AppSettings? who;
-        lock (SoonGate) { who = _soonWho; _soonWho = null; }
+        lock (SoonGate)
+        {
+            //  ⛔ پوشه عوض شده ⇒ این نوشتن دیگر مالِ این‌جا نیست. سنجش زیرِ
+            //  همان قفلی است که `DirOverride` با آن می‌نویسد.
+            who = _soonDir == Dir ? _soonWho : null;
+            _soonWho = null;
+            _soonDir = null;
+        }
         //  ⛔ نشدنش هیچ‌وقت چیزی را نمی‌شکند — این فقط «آخرین بخش» است.
         try { who?.Save(); } catch { }
     }
@@ -617,7 +638,7 @@ public sealed class AppSettings
         if (_blind) return;
 
         //  نوبتِ در صف دیگر لازم نیست: همین نوشتن کلِ شیء را می‌برد.
-        lock (SoonGate) { if (ReferenceEquals(_soonWho, this)) _soonWho = null; }
+        lock (SoonGate) { if (ReferenceEquals(_soonWho, this)) { _soonWho = null; _soonDir = null; } }
 
         lock (FileGate)
         {

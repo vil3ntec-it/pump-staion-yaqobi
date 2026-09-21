@@ -69,6 +69,14 @@ public sealed partial class MonthReportSectionViewModel : SectionViewModel
 
     protected override Task LoadAsync() => ReloadSourceAsync();
 
+    /// <summary>
+    /// ⛔ فعال‌سازیِ این بخش فقط دفترِ دیتابیس را دوباره می‌خواند، پس با
+    /// <c>PumpDbContext.Version</c>ِ دست‌نخورده اصلاً صدا زده نمی‌شود —
+    /// ریشهٔ «هر بخش رو باز می‌کنم جدول‌ها یک ثانیه بعد میان» (۱۴۰۵/۰۷/۰۵).
+    /// شرحش بالای <see cref="SectionViewModel.ActivationOnlyReadsDb"/>.
+    /// </summary>
+    public override bool ActivationOnlyReadsDb => true;
+
     public override Task OnActivatedAsync() => ReloadSourceAsync();
     public override bool ActivationRepeatsLoad => true;
 
