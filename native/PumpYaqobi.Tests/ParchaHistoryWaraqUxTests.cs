@@ -33,8 +33,22 @@ public class ParchaHistoryWaraqUxTests
     // ══ ۱الف) کادرِ نام: بلندتر، نه پهن‌تر ═══════════════════════════════════
 
     /// <summary>
-    /// «طولش بزرگ باشه نه عرضش.» پس پهنای ۲۱۰ همان می‌ماند و بلندی صریح
-    /// می‌شود. ⛔ پهن‌ترش نکنید — همان اشتباهِ بارِ اول بود.
+    /// «طولش بزرگ باشه نه عرضش» (۱۴۰۵/۰۷/۰۶) — و از ۱۴۰۵/۰۷/۱۰ «همه را با
+    /// دقت درست کن و تراز».
+    ///
+    /// ⚠️ <b>این دو خواسته با هم تنظیم شدند، و یکی‌شان بی‌صدا پس گرفته
+    /// نشد.</b> پیش از این «بلند» یعنی ‎MinHeight="48"‎ی دستی روی همین یک
+    /// کادر، و پهنایش ۲۱۰ی ثابت بود — یعنی این کادر از <b>همهٔ</b> ردیف‌های
+    /// دیگر هم کوتاه‌تر بود هم باریک‌تر، و همان «از همه متفاوت‌تر»ی شد که
+    /// گزارشِ بعدی را ساخت.
+    ///
+    /// حالا:
+    ///   • <b>بلند</b> سرِ جایش است، ولی از یک جا می‌آید (‎.wfield‎) و
+    ///     <b>همه</b> همان را دارند — و این سنجه می‌خواهد که واقعاً از
+    ///     پیش‌فرضِ ‎TextBox‎ بلندتر باشد، نه یک عددِ ثابتِ نوشته‌شده.
+    ///   • <b>پهن‌تر نشد</b> به معنای واقعی‌اش: هیچ ‎Width‎ی روی خودش ندارد،
+    ///     پس از ستونِ مشترک پهنا می‌گیرد — نه بیشتر از همسایه‌هایش.
+    /// ⛔ پهنای <b>ثابت</b> برنگردد؛ همان بود که کارت را ناهموار کرد.
     /// </summary>
     [Fact]
     public void TheStaffNameBoxIsTallerNotWider()
@@ -43,12 +57,34 @@ public class ParchaHistoryWaraqUxTests
         var i = x.IndexOf("Watermark=\"نام کارمند\"", StringComparison.Ordinal);
         Assert.True(i > 0, "کادرِ نامِ کارمند پیدا نشد");
 
-        // ستونِ همان کادر همان ۲۱۰ است، نه پهن‌تر و نه «*»
-        Assert.Contains("ColumnDefinitions=\"210,10,Auto,*\"", x);
+        // ⛔ پهنای ثابتِ آن ستون رفت — همهٔ ردیف‌ها یک قالب دارند
+        Assert.DoesNotContain("ColumnDefinitions=\"210", x);
+        Assert.Contains("ColumnDefinitions=\"*,8,106\"", x);
 
         var box = x[Math.Max(0, i - 300)..Math.Min(x.Length, i + 300)];
-        Assert.Contains("MinHeight=\"48\"", box);
+        // بلندی از کلاسِ مشترک می‌آید، نه از عددی که این‌جا نوشته شود
+        Assert.Contains("Classes=\"wfield\"", box);
+        Assert.DoesNotContain("MinHeight=\"", box);
+        // و هیچ پهنای صریحی روی خودِ کادر نیست
         Assert.DoesNotContain("Width=\"", box[..box.IndexOf("Watermark", StringComparison.Ordinal)]);
+
+        // ⛔ و «بلند» واقعاً بلند است: از پیش‌فرضِ خودِ TextBox بیشتر
+        var css = Bare(Read("PumpYaqobi.App", "Themes", "Controls.axaml"));
+        var wfield = Num(css, "Selector=\"TextBox.wfield\"");
+        var basic = Num(css, "<Style Selector=\"TextBox\">");
+        Assert.True(wfield > basic, $"کادرِ فرم ({wfield}) باید از پیش‌فرض ({basic}) بلندتر باشد");
+    }
+
+    /// <summary>نخستین ‎MinHeight‎ِ پس از یک سلکتور — برای سنجشِ «بلندتر».</summary>
+    private static double Num(string css, string selector)
+    {
+        var i = css.IndexOf(selector, StringComparison.Ordinal);
+        Assert.True(i > 0, "سلکتور پیدا نشد: " + selector);
+        var j = css.IndexOf("MinHeight\" Value=\"", i, StringComparison.Ordinal);
+        Assert.True(j > 0, "MinHeight پیدا نشد برای " + selector);
+        j += "MinHeight\" Value=\"".Length;
+        return double.Parse(css[j..css.IndexOf('"', j)],
+                            System.Globalization.CultureInfo.InvariantCulture);
     }
 
     // ══ ۱ب) هشدارِ پایه مانع نیست و چیزی را جابه‌جا نمی‌کند ═════════════════
