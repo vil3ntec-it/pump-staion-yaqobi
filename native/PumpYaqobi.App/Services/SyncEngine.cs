@@ -481,16 +481,42 @@ public sealed class SyncEngine : IAsyncDisposable
             }
 
             _fails = 0;
+            var applyWhy = "";
             if (pull.Ops.Count > 0)
             {
                 var applied = _store.ApplyIncoming(pull.Ops);
-                if (applied.Failed > 0) LastError = "چند تغییرِ رسیده ننشست: " + applied.LastWhy;
+                if (applied.Failed > 0) applyWhy = "چند تغییرِ رسیده ننشست: " + applied.LastWhy;
                 PrimeGot += pull.Ops.Count;
             }
+
+            //  ⛔ **گرفتنِ موفق، خطای دورِ قبل را پاک می‌کند.**
+            //
+            //  باگی که این را لازم کرد، و با عکسِ صاحب ریپو دیده شد
+            //  (۱۴۰۵/۰۷/۱۱): چراغِ نوارِ پایین **سرخِ جاویدان** می‌شد.
+            //  زنجیره‌اش:
+            //    ۱) یک نرسیدنِ گذرا (یک لحظه قطعیِ اینترنت) ⇒ `LastError`
+            //       پر می‌شود؛
+            //    ۲) دورهای بعد صف **خالی** است، پس کلِ بلوکِ فرستادن — و
+            //       با آن تنها جای `LastError = ""` — رد می‌شود؛
+            //    ۳) گرفتن موفق است ولی چیزی را پاک نمی‌کرد؛
+            //    ۴) ته حلقه: صف صفر و خطا پر ⇒ «همگام نشد»ِ سرخ، **برای
+            //       همیشه** — در حالی که همگام‌سازی کاملاً سالم بود.
+            //
+            //  یعنی چراغ دربارهٔ **گذشته** حرف می‌زد، نه دربارهٔ حالا. و
+            //  این همان «کلکِ دروغ»ِ قدغن است، فقط وارونه: می‌گفت خراب
+            //  است در حالی که نبود. برای کسی که می‌خواهد اشتراک بفروشد،
+            //  یک چراغِ سرخِ بی‌دلیل بدترین چیزی است که مشتری می‌بیند.
+            //
+            //  ⚠️ و خطای **واقعیِ** همین دور (ردیفی که ننشست) پاک نمی‌شود
+            //  — فقط خطای دورِ قبل.
+            LastError = applyWhy;
+
             _store.Update(x =>
             {
                 x.Cursor = pull.Cursor;
                 x.LastPullAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                x.LastOkAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                x.LastError = applyWhy;
             });
             LastOkAt = DateTime.Now;
 
