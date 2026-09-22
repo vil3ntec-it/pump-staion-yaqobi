@@ -397,9 +397,35 @@ public sealed partial class CloudLink
         }
         else if (!string.IsNullOrWhiteSpace(serverKey) && serverKey != _settings.CloudPublicKey)
         {
-            return CloudResult.No(
-                "کلیدِ سرور با آن‌چه این برنامه قفل کرده فرق دارد. اگر سرور را واقعاً "
-                + "عوض کرده‌اید، با پشتیبانی تماس بگیرید.", "key_mismatch");
+            //  ══ کلیدی که چیزی را نگه نمی‌دارد، قفل نیست ═══════════════════
+            //
+            //  ⛔ **این استثنا قفلِ ضدِ کرک را ضعیف نمی‌کند** — و دلیلش
+            //  دقیق است: کارِ آن قفل این است که سرورِ **دیگری** نتواند
+            //  برای دستگاهی که **فعال شده** مجوز امضا کند. دستگاهی که نه
+            //  توکن دارد و نه مجوز، چیزی برای محافظت ندارد و آن کلید فقط
+            //  زباله‌ای از یک تلاشِ ناتمام است.
+            //
+            //  ⚠️ و بی این، نصبِ نیمه‌کاره **برای همیشه** می‌مرد: هر بند
+            //  شدنِ بعدی `key_mismatch` می‌گرفت، دستگاه هیچ‌وقت فعال
+            //  نمی‌شد، و دورهٔ آزمایشیِ ۳۰ روزه هم هیچ‌وقت نمی‌رسید —
+            //  همان حلقه‌ای که صاحب ریپو در ۱۴۰۵/۰۷/۱۱ با عکس گزارشش کرد.
+            //  و چون کاربرِ گیرکرده هیچ کاری نمی‌تواند بکند، خودِ برنامه
+            //  باید خودش را آزاد کند.
+            //
+            //  ⚠️ و TOFU همان لحظه از نو بسته می‌شود: کلیدِ تازه می‌نشیند
+            //  و از آن به بعد هر کلیدِ دیگری رد می‌شود.
+            //  ⛔ `ActivateAsync` عمداً این استثنا را **ندارد**: آن‌جا
+            //  کاربر کدِ شش‌رقمی زده و انتظارِ فعال شدن دارد، پس کلیدِ
+            //  ناجور یک هشدارِ واقعی است.
+            var neverActivated = string.IsNullOrWhiteSpace(_settings.CloudDeviceToken)
+                              && string.IsNullOrWhiteSpace(_settings.CloudLicense);
+            if (!neverActivated)
+            {
+                return CloudResult.No(
+                    "کلیدِ سرور با آن‌چه این برنامه قفل کرده فرق دارد. اگر سرور را واقعاً "
+                    + "عوض کرده‌اید، با پشتیبانی تماس بگیرید.", "key_mismatch");
+            }
+            _settings.CloudPublicKey = serverKey;
         }
 
         var token = Str(json, "deviceToken");
@@ -1043,9 +1069,28 @@ public sealed partial class CloudLink
         if (!other) return;
 
         //  بندی هست که باز شود؟ نصبی که هیچ‌وقت فعال نشده چیزی ندارد.
+        //
+        //  ⛔ **و کلیدِ عمومی هم یک بند است.** این خط تا ۱۴۰۵/۰۷/۱۱ سه
+        //  موردِ اول را داشت و کلید را نه — و همان یک قلم، دیوارِ
+        //  نامرئیِ «هر بار می‌روم پروفایل، دوباره اسمِ پمپ را می‌خواهد»
+        //  بود:
+        //
+        //    ۱) نصبی که یک بار با حسابِ الف کلید را قفل کرده ولی هنوز
+        //       توکنِ دستگاه نگرفته بود (bind نیمه‌کاره) ⇒ `bound` دروغ
+        //       می‌شد؛
+        //    ۲) پس ورود با حسابِ ب `ForgetStationAsync` را **صدا نمی‌زد**
+        //       و کلیدِ حسابِ الف سرِ جا می‌ماند؛
+        //    ۳) از آن به بعد هر `BindAsync` با `key_mismatch` رد می‌شد —
+        //       بی هیچ پیامی، چون `HomeFromAccountAsync` نتیجه‌اش را
+        //       می‌بلعد؛
+        //    ۴) پس توکنِ دستگاه هیچ‌وقت نمی‌آمد، «فعال نشده» می‌ماند،
+        //       مجوز و دورهٔ آزمایشیِ ۳۰ روزه هم هیچ‌وقت صادر نمی‌شد.
+        //
+        //  یعنی یک قفلِ ضدِ کرک، به جانِ خودِ مشتری افتاده بود.
         var bound = (_settings.CloudDeviceToken ?? "").Length > 0
                  || (_settings.CloudStationId ?? "").Length > 0
-                 || (_settings.CloudAccessCode ?? "").Length > 0;
+                 || (_settings.CloudAccessCode ?? "").Length > 0
+                 || (_settings.CloudPublicKey ?? "").Length > 0;
 
         AccountSwitched = bound;
         if (bound) await ForgetStationAsync();
@@ -1059,6 +1104,19 @@ public sealed partial class CloudLink
     /// شش‌رقمیِ پمپش را دوباره بزند.
     /// </summary>
     public bool AccountSwitched { get; private set; }
+
+    /// <summary>
+    /// چرا آخرین بند شدنِ دستگاه نشد — خالی یعنی مشکلی نبود.
+    ///
+    /// ⛔ <b>تا ۱۴۰۵/۰۷/۱۱ این دلیل هیچ‌جا نمی‌رفت.</b> حلقهٔ
+    /// شصت‌ثانیه‌ای هر دور <c>BindAsync</c> را می‌زد و نتیجه‌اش را دور
+    /// می‌ریخت، پس یک شکستِ دائمی (مثلِ <c>key_mismatch</c>) برای همیشه
+    /// نامرئی بود و کاربر فقط «سرورِ حساب: فعال نشده» را می‌دید.
+    ///
+    /// ⚠️ ایستا است چون هر درخواست یک <c>CloudLink</c>ِ تازه می‌سازد —
+    /// همان الگوی <see cref="Reach"/>.
+    /// </summary>
+    public static string LastBindWhy { get; private set; } = "";
 
     private async Task<CloudResult> SeatAsync(JsonElement json)
     {
@@ -1617,6 +1675,9 @@ public sealed partial class CloudLink
         _settings.CloudLicense = "";
         _settings.CloudPublicKey = "";
         _settings.CloudAccessCode = "";
+        //  ⛔ حسابِ تازه یعنی گامِ پمپ از نو — وگرنه پمپِ حسابِ قبلی
+        //  «تمام‌شده» حساب می‌شد و کاربر هیچ‌وقت پمپِ خودش را نمی‌ساخت.
+        _settings.PumpStepDone = false;
         _settings.CloudSyncedAt = 0;
         _settings.EntitledUntil = 0;
         _settings.EntitledPlan = "";
@@ -1695,7 +1756,18 @@ public sealed partial class CloudLink
          */
         if (!Activated && acctStation.Length > 0)
         {
-            try { await BindAsync(ct); } catch { /* نشانیِ خانگی مهم‌تر است */ }
+            //  ⛔ **نتیجه‌اش دیگر بلعیده نمی‌شود.** تا دیروز این خط هم
+            //  استثنا را می‌خورد و هم مقدارِ بازگشتی را دور می‌ریخت، پس
+            //  یک `key_mismatch`ِ دائمی هیچ‌جا دیده نمی‌شد و کاربر فقط
+            //  «فعال نشده» را می‌دید بی این‌که بداند چرا.
+            //  ⚠️ همچنان چیزی را نمی‌شکند: نشانیِ خانگی مهم‌تر است و
+            //  مسیر ادامه می‌یابد؛ فقط دلیل ثبت می‌شود.
+            try
+            {
+                var bind = await BindAsync(ct);
+                LastBindWhy = bind.Ok ? "" : (bind.Why ?? "");
+            }
+            catch (Exception ex) { LastBindWhy = ex.GetType().Name; }
         }
 
         /*

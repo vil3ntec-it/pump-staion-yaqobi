@@ -578,6 +578,9 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
     /// <summary>صفحهٔ شرکت — تا باز است، میانبرهای ردیف به آن می‌روند نه به فهرست.</summary>
     public override object? ActivePage => PageOpen ? Page : null;
 
+    /// <summary>دفتر عوض شد ⇒ صفحهٔ بازِ شرکتِ دفترِ قبلی بسته شود.</summary>
+    public override void CloseOpenPage() { PageOpen = false; Overlay = null; }
+
     partial void OnPageOpenChanged(bool v)
     {
         OnPropertyChanged(nameof(IsListVisible));

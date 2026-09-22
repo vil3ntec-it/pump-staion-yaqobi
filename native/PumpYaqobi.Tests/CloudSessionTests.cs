@@ -304,6 +304,10 @@ public class CloudSessionTests : IDisposable
     /// <summary>
     /// ⛔ قفلِ کلیدِ عمومی (TOFU) این‌جا هم هست — وگرنه سرورِ ساختگی با
     /// کلیدِ خودش می‌توانست مجوزِ خودش را امضا کند.
+    ///
+    /// ⚠️ دستگاهِ <b>فعال‌شده</b> سنجیده می‌شود (توکن و مجوز دارد)، چون
+    /// همان چیزی است که این قفل از آن محافظت می‌کند. دستگاهی که هیچ‌کدام
+    /// را ندارد بندِ بعدی را دارد.
     /// </summary>
     [Fact]
     public async Task Bind_KelideDigar_Ra_RadMikonad()
@@ -320,6 +324,8 @@ public class CloudSessionTests : IDisposable
             s.CloudAccountToken = "acc-1";
             s.CloudAccessExpiresAt = InAnHour;
             s.CloudPublicKey = "pk-1";               // از قبل قفل شده
+            s.CloudDeviceToken = "pd_real";          // و دستگاه فعال است
+            s.CloudLicense = "lic.real";
         });
 
         var r = await link.BindAsync();
@@ -328,7 +334,47 @@ public class CloudSessionTests : IDisposable
         Assert.Equal("key_mismatch", r.Code);
         var f = AppSettings.Load();
         Assert.Equal("pk-1", f.CloudPublicKey);
-        Assert.True(string.IsNullOrEmpty(f.CloudDeviceToken));
+        Assert.Equal("pd_real", f.CloudDeviceToken);
+        Assert.Equal("lic.real", f.CloudLicense);
+    }
+
+    /// <summary>
+    /// ⛔ <b>کلیدی که چیزی را نگه نمی‌دارد، قفل نیست</b> — و این تنها
+    /// استثنای TOFU است، فقط در <c>BindAsync</c>.
+    ///
+    /// نصبی که کلید را قفل کرده ولی نه توکنِ دستگاه دارد و نه مجوز، چیزی
+    /// برای محافظت ندارد: آن کلید زباله‌ای از یک تلاشِ ناتمام است. بی این
+    /// استثنا، همان نصب <b>برای همیشه</b> <c>key_mismatch</c> می‌گرفت،
+    /// دستگاه هیچ‌وقت بند نمی‌شد و دورهٔ آزمایشیِ ۳۰ روزه هم هیچ‌وقت
+    /// نمی‌رسید — همان حلقه‌ای که صاحب ریپو در ۱۴۰۵/۰۷/۱۱ با عکس گزارشش
+    /// کرد.
+    ///
+    /// ⚠️ و TOFU همان لحظه از نو بسته می‌شود: کلیدِ تازه می‌نشیند.
+    /// </summary>
+    [Fact]
+    public async Task Bind_DastgaheKhali_KelidRa_DobareGhofl_Mikonad()
+    {
+        Serve((path, _) => path == "/api/pump/device/bind"
+            ? Json(HttpStatusCode.Created, """
+                {"deviceToken":"pd_new","station":{"id":"stn-1"},
+                 "license":"lic.new","publicKey":"pk-2"}
+                """)
+            : Json(HttpStatusCode.NotFound, "{}"));
+
+        var (link, _) = Link(s =>
+        {
+            s.CloudAccountToken = "acc-1";
+            s.CloudAccessExpiresAt = InAnHour;
+            s.CloudPublicKey = "pk-1";   // کلیدِ جامانده، بی توکن و بی مجوز
+        });
+
+        var r = await link.BindAsync();
+
+        Assert.True(r.Ok);
+        var f = AppSettings.Load();
+        Assert.Equal("pk-2", f.CloudPublicKey);      // از نو قفل شد
+        Assert.Equal("pd_new", f.CloudDeviceToken);
+        Assert.Equal("lic.new", f.CloudLicense);
     }
 
     /// <summary>بی حساب، هیچ درخواستی هم زده نمی‌شود.</summary>
@@ -889,13 +935,19 @@ public class CloudSessionTests : IDisposable
             s.CloudAccountToken = "acc-1";
             s.CloudAccessExpiresAt = InAnHour;
             s.CloudPublicKey = "pk-1";
+            //  ⚠️ دستگاهِ **فعال‌شده** — همان چیزی که قفل از آن محافظت
+            //  می‌کند. دستگاهِ خالی استثنای خودش را دارد
+            //  (‎Bind_DastgaheKhali_KelidRa_DobareGhofl_Mikonad‎).
+            s.CloudDeviceToken = "pd_real";
+            s.CloudLicense = "lic.real";
         });
 
         var r = await link.EnsureStationAsync("پمپ");
 
         Assert.False(r.Ok);
         Assert.Equal("key_mismatch", r.Code);
-        Assert.Equal("", AppSettings.Load().CloudDeviceToken);
+        Assert.Equal("pk-1", AppSettings.Load().CloudPublicKey);
+        Assert.Equal("pd_real", AppSettings.Load().CloudDeviceToken);
     }
 
     // ── ۷) قاعده‌های فرم ─────────────────────────────────────────────────

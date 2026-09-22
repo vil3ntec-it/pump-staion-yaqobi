@@ -69,6 +69,20 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     /// <summary>پس از ورود یا هر تغییرِ تنظیمات، همه‌چیز از نو خوانده می‌شود.</summary>
     public void RefreshAll()
     {
+        //  ══ دفترِ همان حسابی که همین حالا وارد است ═══════════════════════
+        //
+        //  ⛔ این تنها قلابِ «حساب عوض شد» در پوستهٔ برنامه است، و عمداً
+        //  همین‌جاست: هر مسیرِ ورود، ثبت‌نام، کدِ ایمیلی و خروج سرِ آخر به
+        //  `RefreshAll` می‌رسد. قلابِ دوم یعنی روزی یکی عوض می‌شود و
+        //  دیگری نه.
+        //
+        //  ⚠️ تا حساب عوض نشده باشد **صفر هزینه** دارد: فقط دو رشته
+        //  مقایسه می‌شوند و برمی‌گردد — نه فایلی خوانده می‌شود، نه دستوری
+        //  به دیتابیس می‌رود. تصمیم و خودِ جابه‌جایی مالِ
+        //  `AppHost.UseLedgerOf` است، نه این‌جا.
+        try { AppHost.Current.UseLedgerOf(AppSettings.Load().CloudUserId); }
+        catch { /* دفترِ فعلی سرِ جایش است؛ صفحهٔ پروفایل نباید بشکند */ }
+
         ShowAccount();
         ShowSubscription();
         ShowAccessCode();
@@ -540,7 +554,17 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         HomeLine = string.IsNullOrWhiteSpace(s.GetString(SettingsService.ServerUrl))
             ? "هنوز پیدا نشده — با روشن شدنِ سرورِ خانگی خودش پیدا می‌شود"
             : "وصل و ثبت‌شده";
-        CloudLine = string.IsNullOrWhiteSpace(f.CloudDeviceToken) ? "فعال نشده" : "فعال — با کدِ شش‌رقمی";
+        //  ⛔ **«فعال نشده» به‌تنهایی هیچ کاری دستِ کاربر نمی‌دهد.**
+        //
+        //  گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۱): حساب ساخته، پمپ ساخته، و باز
+        //  هم «فعال نشده» — بی هیچ سرنخی. دلیلش **بود** ولی هیچ‌جا نمی‌رفت:
+        //  حلقهٔ شصت‌ثانیه‌ای نتیجهٔ `BindAsync` را دور می‌ریخت.
+        //  ⚠️ نامِ هیچ میزبانی در این پیام نمی‌آید — همان قاعدهٔ همیشگی.
+        CloudLine = !string.IsNullOrWhiteSpace(f.CloudDeviceToken)
+            ? "فعال — با کدِ شش‌رقمی"
+            : CloudLink.LastBindWhy is { Length: > 0 } why
+                ? "فعال نشده — " + why
+                : "فعال نشده";
         AppVersionLine = PumpYaqobi.App.Update.AppVersion.Current;
 
         //  دکمهٔ «جدا کردن» فقط وقتی دیده می‌شود که بندی برای باز کردن باشد
@@ -851,7 +875,21 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         //  ⚠️ «تمام» یعنی یا واقعاً همه‌چیز هست، یا کاربر خودش گفته «بعداً»
         //  (`AppSettings.LoginSkipped`) — وگرنه صفحهٔ ورود می‌شد یک دیوار
         //  جلوی دفترِ خودش، و آن خلافِ قاعدهٔ «دفتر گروگان نیست» بود.
-        LoginStep = SignedIn && activated && hasPump ? 4
+        //  ⛔ **«تمام» به بند شدنِ دستگاه بند نیست — و نباید باشد.**
+        //
+        //  گزارشِ صاحب ریپو با عکس (۱۴۰۵/۰۷/۱۱): «همه‌شو تموم کردم، ولی
+        //  هر بار روی پروفایل می‌زنم می‌گه اسمِ پمپ رو انتخاب کن.»
+        //
+        //  بند شدنِ دستگاه کاری نیست که کاربر در این صفحه بتواند انجام
+        //  دهد (کادرِ کد از ۱۴۰۵/۰۷/۰۴ برداشته شده و تنها دکمه‌اش
+        //  «ساختنِ پمپ» است). پس شرط کردنش یعنی گامی که **هیچ راهِ
+        //  خروجی ندارد** — یک دیوارِ نامرئی، همان چیزی که بندِ
+        //  ۱۴۰۵/۰۷/۱۰ برای برداشتنش نوشته شد و از درِ دیگر برگشت.
+        //
+        //  ⚠️ و چیزی پنهان نمی‌شود: تا دستگاه بند نشده، پروفایل همچنان
+        //  «سرورِ حساب: فعال نشده» می‌گوید و حلقهٔ شصت‌ثانیه‌ای خودش
+        //  دوباره می‌زندش.
+        LoginStep = SignedIn && (activated || f.PumpStepDone) && hasPump ? 4
                   : f.LoginSkipped ? 4
                   : !SignedIn ? 1 : 3;
         //  کسی که حساب دارد، پیش‌فرضش «ورود» است نه «ثبت‌نام»
@@ -1194,6 +1232,15 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
                  */
                 if (await Cloud.HasStationAsync())
                 {
+                    //  ⛔ **مهرِ ماندگار، نه فقط یک `LoginStep = 4`.**
+                    //  تا دیروز همین‌جا فقط گام عوض می‌شد؛ بازدیدِ بعدیِ
+                    //  پروفایل دوباره از حالِ واقعی حساب می‌کرد و چون
+                    //  دستگاه بند نشده بود، به همین گام برمی‌گشت — حلقهٔ
+                    //  «هر بار اسمِ پمپ را می‌خواهد».
+                    var f2 = AppSettings.Load();
+                    f2.PumpStepDone = true;
+                    try { f2.Save(); } catch { /* دورِ بعد دوباره */ }
+
                     LoginStatus = "";
                     RefreshAll();
                     LoginStep = 4;
@@ -1204,6 +1251,14 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
                 LoginStatus = "❌ " + PumpStepWhy(res);
                 return;
             }
+
+            //  ⛔ **همان مهرِ ماندگار، در مسیرِ موفق هم.** بی این، اگر
+            //  فردا بند شدنِ دستگاه از کار می‌افتاد (کلیدِ عوض‌شده، سقفِ
+            //  نرخ، سرورِ خاموش)، همین کاربرِ تمام‌شده دوباره در گامِ پمپ
+            //  گیر می‌کرد — حلقه از درِ دیگر برمی‌گشت.
+            var fin = AppSettings.Load();
+            fin.PumpStepDone = true;
+            try { fin.Save(); } catch { /* دورِ بعد دوباره */ }
 
             //  نشانیِ سرورِ خانگی و اشتراک را هم همین‌جا برمی‌داریم، وگرنه
             //  کاربر تا تیکِ بعدیِ پس‌زمینه «هنوز وصل نیست» می‌بیند.

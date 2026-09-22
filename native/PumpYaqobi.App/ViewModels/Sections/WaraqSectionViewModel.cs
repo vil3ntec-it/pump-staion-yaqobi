@@ -1003,6 +1003,9 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
     /// <summary>ورقِ باز — تا باز است، میانبرهای ردیف به آن می‌روند نه به فهرست.</summary>
     public override object? ActivePage => SheetOpen ? Page : null;
 
+    /// <summary>دفتر عوض شد ⇒ ورقِ بازِ دفترِ قبلی بسته شود.</summary>
+    public override void CloseOpenPage() => SheetOpen = false;
+
     partial void OnSheetOpenChanged(bool v)
     {
         OnPropertyChanged(nameof(IsListVisible));
