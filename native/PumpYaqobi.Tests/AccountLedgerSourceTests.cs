@@ -17,10 +17,10 @@ public class AccountLedgerSourceTests
     private static string Src(string rel) =>
         File.ReadAllText(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar)));
 
-    private const string Host = "native/PumpYaqobi.App/Services/AppHost.cs";
-    private const string Ledger = "native/PumpYaqobi.Services/Data/AccountLedger.cs";
-    private const string Main = "native/PumpYaqobi.App/ViewModels/MainViewModel.cs";
-    private const string Engine = "native/PumpYaqobi.App/Services/SyncEngine.cs";
+    private const string Host = "PumpYaqobi.App/Services/AppHost.cs";
+    private const string Ledger = "PumpYaqobi.Services/Data/AccountLedger.cs";
+    private const string Main = "PumpYaqobi.App/ViewModels/MainViewModel.cs";
+    private const string Engine = "PumpYaqobi.App/Services/SyncEngine.cs";
 
     /// <summary>
     /// ⛔ <b>عوض کردنِ حساب هیچ داده‌ای را پاک نمی‌کند.</b> خواستهٔ صریحِ
@@ -53,7 +53,7 @@ public class AccountLedgerSourceTests
     public void Faghat_Yek_Ja_Daftar_Ra_Avaz_Mikonad()
     {
         foreach (var f in new[] { Main, Engine,
-                                  "native/PumpYaqobi.App/ViewModels/Sections/AccountSectionViewModel.cs" })
+                                  "PumpYaqobi.App/ViewModels/Sections/AccountSectionViewModel.cs" })
             Assert.DoesNotContain(".SwitchTo(", Src(f));
 
         var host = Src(Host);
@@ -149,7 +149,7 @@ public class AccountLedgerSourceTests
         foreach (var f in new[] { "DebtSectionViewModel", "CompanySectionViewModel",
                                   "WaraqSectionViewModel", "AmanatSectionViewModel" })
             Assert.Contains("public override void CloseOpenPage()",
-                Src($"native/PumpYaqobi.App/ViewModels/Sections/{f}.cs"));
+                Src($"PumpYaqobi.App/ViewModels/Sections/{f}.cs"));
     }
 
     /// <summary>
