@@ -61,10 +61,21 @@ public class FormAlignTests
         Assert.DoesNotContain("MinHeight=\"48\"", form);
         Assert.DoesNotContain("Width=\"54\"", form);
 
-        //  ⛔ و ستونِ کناری روی **هر** ردیف رزرو شده، حتی ردیفِ بی‌دکمه —
-        //  این تنها چیزی است که لبهٔ همهٔ کادرها را یکی می‌کند.
+        //  ⛔ **هیچ ردیفی ستونِ کناریِ خالی ندارد.** بندِ قبلی («روی هر
+        //  ردیف رزرو می‌شود») در ۱۴۰۵/۰۷/۱۲ با عکسِ صاحب ریپو پس گرفته شد:
+        //  «اون بغل‌ها خالی گذاشته شدن و کادرش به تمامِ ورق نمی‌رسه.»
+        //
+        //  ⚠️ و جایش خالی نماند: همان ادعا از درِ تازه گرفته شد — هر
+        //  ‎Grid‎ی که آن قالب را دارد باید **واقعاً** خانهٔ دوم داشته باشد،
+        //  وگرنه همان نوارِ خالی از درِ دیگر برمی‌گردد.
         var rows = form.Split("ColumnDefinitions=\"*,8,106\"").Length - 1;
-        Assert.True(rows >= 11, $"ردیف‌های هم‌قالب: {rows}");
+        var seconds = form.Split("Grid.Column=\"2\"").Length - 1;
+        Assert.Equal(rows, seconds);
+
+        //  ⛔ و آن قالب فقط جایی است که دکمه یا خانهٔ دومِ واقعی هست:
+        //  ردیفِ نام (برچسب‌ها و کادرها) و دو ردیفِ پایه.
+        Assert.Equal(4, rows);
+        Assert.Equal(2, form.Split("Classes=\"wside\"").Length - 1);
 
         //  ⛔ و هیچ کادری بیرون از آن قالب نمانده: هر TextBox و هر خانهٔ
         //  «خودکار» کلاسِ مشترک را دارد.
@@ -79,6 +90,25 @@ public class FormAlignTests
         Assert.Contains("Selector=\"TextBox.wfield\"", css);
         Assert.Contains("Selector=\"Border.calc.wfield\"", css);
         Assert.Contains("Selector=\"Button.wside\"", css);
+
+        //  ⛔ و دکمهٔ کناری رنگِ شیفتِ خودش را دارد، نه سطحِ کادرِ تایپ:
+        //  «اون‌ها دکمه‌ستن، باید متفاوت باشن.» بی این، سبکِ پایهٔ دکمه
+        //  (‎Pump.Input‎) دقیقاً هم‌رنگِ کادرِ کنارش می‌شد.
+        Assert.Contains("Button.wside.day /template/", css);
+        Assert.Contains("Button.wside.night /template/", css);
+        //  ⚠️ و زیرِ ماوس هم همان می‌ماند — وگرنه به رنگِ پیش‌فرضِ آوالونیا
+        //  برمی‌گشت و همان لحظه دوباره شبیهِ کادر می‌شد.
+        Assert.Contains("Button.wside.day:pointerover /template/", css);
+        Assert.Contains("Button.wside.night:pointerover /template/", css);
+        //  ⚠️ رنگِ تازه‌ای به برنامه اضافه نشد: همان دو رنگِ سربرگِ شیفت.
+        Assert.Contains("#f0952b", css);
+        Assert.Contains("#7c4dbe", css);
+
+        //  ⛔ و خودِ نما کلاسِ روز/شب را روی **هر دو** دکمه می‌گذارد.
+        //  ⚠️ روی ‎form‎ شمرده می‌شود نه کلِ فایل: سربرگِ شیفت و دکمهٔ ذخیره
+        //  هم همان کلاس را دارند و بیرونِ این بازه‌اند.
+        Assert.Equal(2, form.Split("Classes.day=\"{Binding IsDay}\"").Length - 1);
+        Assert.Equal(2, form.Split("Classes.night=\"{Binding IsNight}\"").Length - 1);
     }
 
     /// <summary>

@@ -1306,14 +1306,47 @@
     <Setter Property="MinHeight" Value="44" />
   </Style>
 
-  <!-- دکمهٔ کنارِ خانه («گرفتن از شب» / «فرستادن به روز») — هم‌قدِ خانه و
-       هم‌پهنای ستونِ کناری، وگرنه همان ناهمواری از سمتِ دکمه برمی‌گردد. -->
+  <!-- ══ دکمهٔ کنارِ خانه («گرفتن از شب» / «فرستادن به روز») ═══════════════
+       هم‌قدِ خانه و هم‌پهنای ستونِ کناری، وگرنه همان ناهمواری از سمتِ دکمه
+       برمی‌گردد.
+
+       ⛔ **و رنگِ شیفتِ خودش را دارد، نه سطحِ کادرِ تایپ.** گزارشِ صاحب ریپو
+       با عکس (۱۴۰۵/۰۷/۱۲): «اون دو کادر رو هم رنگ بده — گرفتن از روز و شب
+       — اون‌ها دکمه‌ستن، باید متفاوت باشن.»
+
+       حق داشت و ریشه‌اش همان قاعدهٔ ۱۴۰۵/۰۷/۰۶ بود: سبکِ **پایهٔ** دکمه
+       زمینه‌اش `Pump.Input` است و کادرِ تایپ هم همان — پس این دو دقیقاً
+       هم‌رنگِ کادرهای کنارشان می‌شدند و کسی نمی‌فهمید دکمه‌اند.
+
+       ⚠️ رنگ از خودِ کارت می‌آید (نارنجیِ روز · بنفشِ شب) — همان دو رنگی که
+       سربرگ و دکمهٔ ذخیره دارند، پس هر کارت یک زبانِ رنگی دارد و رنگِ تازه‌ای
+       به برنامه اضافه نشد.
+       ⚠️ و `:pointerover` هم نوشته شده، وگرنه زیرِ ماوس به رنگِ پیش‌فرضِ
+       آوالونیا برمی‌گشت و همان لحظه دوباره شبیهِ کادر می‌شد. -->
   <Style Selector="Button.wside">
     <Setter Property="MinHeight" Value="44" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="Padding" Value="6,0" />
     <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Button.wside.day /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#f0952b" />
+    <Setter Property="TextBlock.Foreground" Value="#1a1102" />
+  </Style>
+  <Style Selector="Button.wside.day:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#ffab4d" />
+    <Setter Property="TextBlock.Foreground" Value="#1a1102" />
+  </Style>
+  <Style Selector="Button.wside.night /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#7c4dbe" />
+    <Setter Property="TextBlock.Foreground" Value="#ffffff" />
+  </Style>
+  <Style Selector="Button.wside.night:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#9468d4" />
+    <Setter Property="TextBlock.Foreground" Value="#ffffff" />
   </Style>
 
   <Style Selector="Border.calc">
