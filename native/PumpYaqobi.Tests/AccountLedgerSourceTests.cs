@@ -168,6 +168,33 @@ public class AccountLedgerSourceTests
         Assert.True(guard > 0 && subs > guard, "شنونده‌ها باید **بعد** از نگهبان باشند");
     }
 
+    /// <summary>
+    /// ⛔ <b>نخستین ورود، دفترِ بی‌حساب را با خودش می‌برد</b> — و ترتیبِ این
+    /// سه خط همان چیزی است که <see cref="AccountFirstLoginCarryTests"/> با
+    /// <b>رفتار</b> می‌سنجد: اول صاحبِ ریشه برداشته می‌شود، بعد مسیر حساب
+    /// می‌شود، و فقط بعدش جابه‌جایی.
+    ///
+    /// ⚠️ برعکسش یعنی مسیر پیش از برداشته شدنِ صاحبِ ریشه حساب می‌شود، و
+    /// آن‌وقت نخستین حساب یک پوشهٔ <b>خالیِ</b> تازه می‌گرفت — کاربر پس از
+    /// ورود دفترِ خالی می‌دید.
+    /// </summary>
+    [Fact]
+    public void Nokhostin_Vorood_Daftare_BiHesab_Ra_Ba_Khodash_Mibarad()
+    {
+        var host = Src(Host);
+        var at = host.IndexOf("public bool UseLedgerOf(", StringComparison.Ordinal);
+        Assert.True(at > 0, "UseLedgerOf پیدا نشد");
+
+        var body = host[at..];
+        var claim = body.IndexOf("AccountLedger.ShouldClaimRoot(", StringComparison.Ordinal);
+        var route = body.IndexOf("AccountLedger.PathFor(", StringComparison.Ordinal);
+        var jump = body.IndexOf("Db.SwitchTo(", StringComparison.Ordinal);
+
+        Assert.True(claim > 0, "صاحبِ دفترِ ریشه اصلاً برداشته نمی‌شود");
+        Assert.True(route > claim, "مسیر باید **پس از** برداشته شدنِ صاحبِ ریشه حساب شود");
+        Assert.True(jump > route, "جابه‌جایی باید **پس از** تصمیمِ مسیر باشد");
+    }
+
     private static int Count(string src, string needle)
     {
         int n = 0, i = 0;
