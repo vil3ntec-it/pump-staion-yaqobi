@@ -372,6 +372,9 @@ public sealed partial class AmanatSectionViewModel : SectionViewModel
 
     /// <summary>حسابِ امانت — تا باز است، میانبرهای ردیف به آن می‌روند نه به فهرست.</summary>
     public override object? ActivePage => Page;
+
+    /// <summary>دفتر عوض شد ⇒ حسابِ بازِ امانتِ دفترِ قبلی بسته شود.</summary>
+    public override void CloseOpenPage() => Page = null;
     public bool IsAll => FuelFilter == "all";
     public bool IsPetrol => FuelFilter == "petrol";
     public bool IsDieselFilter => FuelFilter == "diesel";

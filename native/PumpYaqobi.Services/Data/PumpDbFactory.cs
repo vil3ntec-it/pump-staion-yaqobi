@@ -121,11 +121,53 @@ public sealed class PumpDbFactory
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
     }
 
-    public string DbPath { get; }
+    /// <summary>
+    /// دفتری که همین حالا باز است.
+    ///
+    /// ⚠️ <b>عوض می‌شود</b> — با عوض شدنِ حسابِ کاربر
+    /// (<see cref="SwitchTo"/>). همهٔ سرویس‌های برنامه همین یک کارخانه را
+    /// نگه می‌دارند و مسیر را سرِ <see cref="Create"/> می‌خوانند، پس هیچ‌کدام
+    /// لازم نیست چیزی بداند یا دوباره ساخته شود.
+    /// </summary>
+    public string DbPath { get; private set; }
 
     public static string DefaultPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "PumpYaqobi", "pump.db");
+
+    /// <summary>
+    /// ══ رفتن به دفترِ یک حسابِ دیگر ════════════════════════════════════════
+    ///
+    /// خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۱): «حساب‌ها عوض می‌شه و اطلاعاتِ همون
+    /// حساب نشون داده بشه.» مسیر را <see cref="AccountLedger"/> می‌گوید.
+    ///
+    /// ⛔ <b>هیچ فایلی پاک، کپی یا جابه‌جا نمی‌شود</b> — فقط فایلِ دیگری باز
+    /// می‌شود. دفترِ حسابِ قبلی سرِ جایش، دست‌نخورده، منتظرِ برگشتنِ اوست.
+    ///
+    /// ⚠️ <b>استخرِ اتصال خالی می‌شود</b> و این لازم است، نه تجمل: رشتهٔ
+    /// اتصال <c>Pooling=True</c> دارد، پس اتصال‌های بازِ دفترِ قبلی زنده
+    /// می‌مانند و فایلِ آن (به‌علاوهٔ ‎-wal‎ و ‎-shm‎ش) روی ویندوز قفل
+    /// می‌ماند — یعنی پشتیبان گرفتن و پاک کردنِ همان پوشه شکست می‌خورد.
+    ///
+    /// ⚠️ و <c>EnsureReady</c> دوباره می‌دود، چون دفترِ تازه ممکن است اصلاً
+    /// وجود نداشته باشد یا اسکیمایش کهنه باشد.
+    /// </summary>
+    /// <returns><c>true</c> یعنی واقعاً جابه‌جا شدیم.</returns>
+    public bool SwitchTo(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return false;
+        var want = Path.GetFullPath(path);
+        if (string.Equals(Path.GetFullPath(DbPath), want, StringComparison.OrdinalIgnoreCase)) return false;
+
+        //  ⚠️ پیش از عوض کردنِ مسیر: وگرنه اتصالِ دفترِ قبلی در استخر می‌ماند.
+        try { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); } catch { /* رفاه */ }
+
+        var dir = Path.GetDirectoryName(want);
+        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+        DbPath = want;
+        EnsureReady();
+        return true;
+    }
 
     /// <summary>
     /// ⚠️ **چرا ‎busy_timeout‎ صریح**: سنجیده شد که روی اتصالِ واقعیِ برنامه

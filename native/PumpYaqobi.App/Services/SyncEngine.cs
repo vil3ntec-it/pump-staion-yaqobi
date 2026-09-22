@@ -94,7 +94,13 @@ public sealed class SyncEngine : IAsyncDisposable
     private DateTime _lastBeat = DateTime.MinValue;
     private readonly HashSet<string> _toldNotices = new(StringComparer.Ordinal);
 
-    public SyncEngine(AppHost host) => _store = new SyncStore(host.Db);
+    private readonly AppHost _host;
+
+    public SyncEngine(AppHost host)
+    {
+        _host = host;
+        _store = new SyncStore(host.Db);
+    }
 
     // ── آن‌چه بیرون می‌بیند ────────────────────────────────────────────
 
@@ -165,6 +171,20 @@ public sealed class SyncEngine : IAsyncDisposable
     /// ⚠️ خودش هیچ کاری نمی‌کند جز بیدار کردنِ حلقه؛ مکثِ نیم‌ثانیه‌ای
     /// همان‌جا اعمال می‌شود. پس صد ذخیرهٔ پشتِ سرِ هم یک push می‌شود، نه صد تا.
     /// </summary>
+    private bool _held;
+
+    /// <summary>
+    /// ══ وسطِ عوض شدنِ دفتر، هیچ کاری ═══════════════════════════════════════
+    ///
+    /// <see cref="AppHost.UseLedgerOf"/> پیش از جابه‌جایی راست می‌کند و بعدش
+    /// دروغ. حلقه روی نخِ دیگری می‌دود، پس بی این نگهبان یک دورِ نیمه‌تمام
+    /// می‌توانست opهای دفترِ قبلی را با توکنِ حسابِ تازه بفرستد.
+    ///
+    /// ⚠️ حلقه را نمی‌کُشد و نخی نمی‌سازد — فقط همان یک دور را رد می‌کند و
+    /// دورِ بعد خودش ادامه می‌دهد.
+    /// </summary>
+    public void Hold(bool on) => Volatile.Write(ref _held, on);
+
     public void Nudge()
     {
         try { if (_wake.CurrentCount == 0) _wake.Release(); }
@@ -280,6 +300,11 @@ public sealed class SyncEngine : IAsyncDisposable
     private async Task StepAsync(bool force, CancellationToken ct)
     {
         if (Disabled) return;
+
+        //  ⛔ دفتر همین حالا در حالِ عوض شدن است — دست نزن.
+        //  بی این، opهای دفترِ حسابِ **قبلی** با توکنِ حسابِ **تازه**
+        //  می‌رفتند: دادهٔ یک مشتری در دفترِ ابریِ مشتریِ دیگر.
+        if (Volatile.Read(ref _held)) return;
         var file = AppSettings.Load();
         var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
 
@@ -313,8 +338,21 @@ public sealed class SyncEngine : IAsyncDisposable
         //  چیزی است که اطلاعاتِ بی‌حسابِ کاربر را به حسابِ تازه‌اش می‌برد.
         //  ⚠️ حالِ همگام‌سازی همین‌جا **یک بار** خوانده می‌شود و پایین هم
         //  همین به کار می‌رود — وگرنه هر دور یک `SELECT`ِ اضافه می‌شد.
-        var state = _store.State();
+        //  ⛔ **پیش از هر خواندنی از دفتر**: دفترِ همین حساب باز است؟
+        //
+        //  حساب می‌تواند از هر جایی عوض شود (ورود، کدِ ایمیلی، تازه‌سازیِ
+        //  نشست) و این حلقه روی نخِ دیگری می‌دود — پس ممکن است پیش از
+        //  پوسته بیدار شود. بی این خط، همان یک دور opهای دفترِ حسابِ
+        //  **قبلی** را با توکنِ حسابِ **تازه** می‌فرستاد.
+        //
+        //  ⚠️ تصمیم این‌جا گرفته نمی‌شود — `AppHost.UseLedgerOf` تنها جای
+        //  آن است و تا حساب عوض نشده باشد فقط دو رشته را مقایسه می‌کند.
+        //  جابه‌جا که شد، همین دور رها می‌شود و دورِ بعد روی دفترِ درست
+        //  از نو شروع می‌کند.
         var mine = (file.CloudUserId ?? "").Trim();
+        if (_host.UseLedgerOf(mine)) { _lastVersion = -1; Nudge(); return; }
+
+        var state = _store.State();
         if (mine.Length > 0 && !string.Equals((state.AccountId ?? "").Trim(), mine, StringComparison.Ordinal))
         {
             var bind = _store.BindTo(mine);

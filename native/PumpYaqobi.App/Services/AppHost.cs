@@ -20,6 +20,12 @@ public sealed class AppHost
         // باید کنارِ همان باشد، نه در پوشهٔ واقعیِ کاربر.
         if (dbPath is not null) AppSettings.DirOverride = Path.GetDirectoryName(dbPath);
         Db = new PumpDbFactory(dbPath);
+        //  ⛔ **دفترِ ریشه همانی است که برنامه با آن بالا آمد** — نه
+        //  `PumpDbFactory.DefaultPath`. سنجه‌ها و ابزارِ عکس‌گیری دیتابیسِ
+        //  موقتِ خودشان را می‌دهند؛ با مسیرِ پیش‌فرض، نخستین «حساب عوض شد»
+        //  آن‌ها را به پوشهٔ **واقعیِ** کاربر می‌برد و روی دفترِ خودِ صاحب
+        //  پمپ می‌نوشتند. پوشهٔ `accounts/` هم کنارِ همین می‌نشیند.
+        _rootDb = Db.DbPath;
         Db.EnsureReady();
         Toasts = new ToastService();
         Session = new UserSession();
@@ -127,6 +133,103 @@ public sealed class AppHost
 
     /// <summary>همان موتور، ولی **بی ساختن** — برای چراغِ نوارِ پایین.</summary>
     public SyncEngine? SyncIfStarted => _sync;
+
+
+    // ══ هر حساب، دفترِ خودش ═════════════════════════════════════════════════
+    //
+    //  خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۱۱): «حسابِ اول با حسابِ دوم عوض
+    //  بشه، اطلاعات دست نخوره، توی حساب‌ها بمونن، حساب‌ها عوض می‌شه و
+    //  اطلاعاتِ همون حساب نشون داده بشه — مثلِ برنامه‌های حرفه‌ای.»
+    //
+    //  ⛔ این **تنها جای تصمیم** است. مسیر را `AccountLedger` می‌گوید،
+    //  جابه‌جایی را `PumpDbFactory.SwitchTo` انجام می‌دهد، و پوسته فقط
+    //  `LedgerSwitched` را می‌شنود و صفحه‌ها را از نو می‌خواند. سه جای
+    //  تصمیم یعنی روزی دفتر عوض می‌شود و صفحه عددِ دفترِ قبلی را نشان
+    //  می‌دهد.
+
+    /// <summary>
+    /// دفتری که همین حالا باز است مالِ کدام حساب است — خالی یعنی «هنوز
+    /// حسابی نیست» یا «دفترِ ریشه، بی‌صاحب».
+    /// </summary>
+    public string LedgerAccountId { get; private set; } = "";
+
+    /// <summary>
+    /// دفتر عوض شد. پوسته با این خبر همهٔ بخش‌ها را «کهنه» می‌کند، بخشِ
+    /// جلوی چشم را از نو می‌خواند و قفلِ همان دفترِ تازه را می‌پرسد.
+    /// </summary>
+    public event Action? LedgerSwitched;
+
+    private readonly object _ledgerGate = new();
+
+    /// <summary>دفتری که برنامه با آن بالا آمد — پوشهٔ حساب‌ها کنارِ همین است.</summary>
+    private readonly string _rootDb;
+
+    /// <summary>
+    /// ══ دفترِ این حساب را باز کن ═══════════════════════════════════════════
+    ///
+    /// بی‌ضرر و تکرارپذیر: تا وقتی حساب عوض نشده باشد، فقط دو رشته را
+    /// مقایسه می‌کند و برمی‌گردد — نه فایلی می‌خواند، نه دستوری به دیتابیس
+    /// می‌زند. پس صدا زدنش از هر جایی ارزان است.
+    ///
+    /// ⛔ <b>هیچ داده‌ای پاک نمی‌شود.</b> دفترِ حسابِ قبلی سرِ جایش می‌ماند و
+    /// با برگشتنِ همان حساب، دست‌نخورده برمی‌گردد.
+    ///
+    /// ⚠️ <b>موتورِ همگام‌سازی وسطِ کار نگه داشته می‌شود</b> و این لازم است،
+    /// نه تجمل: آن حلقه روی نخِ دیگری می‌دود و اگر درست وسطِ جابه‌جایی
+    /// opهای دفترِ حسابِ <b>قبلی</b> را برداشته باشد، آن‌ها را با توکنِ
+    /// حسابِ <b>تازه</b> می‌فرستد — یعنی دادهٔ یک مشتری در دفترِ ابریِ
+    /// مشتریِ دیگر. این کندی نیست، خرابیِ داده است.
+    /// </summary>
+    /// <param name="accountId">شناسهٔ حسابِ واردشده؛ خالی یعنی بی‌حساب.</param>
+    /// <returns><c>true</c> یعنی واقعاً دفتر عوض شد.</returns>
+    public bool UseLedgerOf(string? accountId)
+    {
+        var id = (accountId ?? "").Trim();
+        lock (_ledgerGate)
+        {
+            if (string.Equals(id, LedgerAccountId, StringComparison.Ordinal)) return false;
+
+            //  ⛔ **خروج از حساب دفتر را عوض نمی‌کند.** شناسهٔ خالی یعنی
+            //  «نمی‌دانیم کیست»، نه «برگرد به دفترِ ریشه» — و دفترِ ریشه
+            //  مالِ حسابِ **دیگری** است. بی این خط، خروجِ حسابِ دوم دفترِ
+            //  حسابِ اول را جلوی چشمش می‌گذاشت.
+            if (id.Length == 0 && LedgerAccountId.Length > 0) return false;
+
+            var file = AppSettings.Load();
+
+            //  نخستین حساب، دفترِ موجود را برمی‌دارد — همان چیزی که دادهٔ
+            //  «بی‌حساب» را به حسابِ تازه می‌رساند (قاعدهٔ ۱۴۰۵/۰۷/۰۷).
+            //  ⚠️ `Save()`ی بادوام، نه `SaveSoon()`: بالای خودِ خاصیت نوشته چرا.
+            if (AccountLedger.ShouldClaimRoot(id, file.LedgerAccountId))
+            {
+                file.LedgerAccountId = id;
+                try { file.Save(); } catch { /* نشد ⇒ دورِ بعد دوباره */ }
+            }
+
+            var want = AccountLedger.PathFor(_rootDb, id, file.LedgerAccountId);
+
+            //  همان فایل است (حسابِ صاحبِ ریشه، یا هنوز بی‌حساب) ⇒ فقط نامش
+            //  را می‌نویسیم و هیچ چیزی از نو خوانده نمی‌شود.
+            if (string.Equals(Path.GetFullPath(want), Path.GetFullPath(Db.DbPath),
+                              StringComparison.OrdinalIgnoreCase))
+            {
+                LedgerAccountId = id;
+                return false;
+            }
+
+            var sync = _sync;
+            try { sync?.Hold(true); } catch { /* رفاه */ }
+            try
+            {
+                if (!Db.SwitchTo(want)) { LedgerAccountId = id; return false; }
+                LedgerAccountId = id;
+            }
+            finally { try { sync?.Hold(false); } catch { /* رفاه */ } }
+        }
+
+        LedgerSwitched?.Invoke();
+        return true;
+    }
 
     /// <summary>پیامِ کوتاهِ پایینِ صفحه — همان showToastِ نسخهٔ وب.</summary>
     public void Toast(string text, ToastKind kind = ToastKind.Info) => Toasts.Show(text, kind);
@@ -257,7 +360,31 @@ public sealed class AppHost
     /// </summary>
     public static AppHost Start(string? dbPath = null)
     {
-        lock (StartLock) return Current ??= new AppHost(dbPath);
+        lock (StartLock)
+        {
+            if (Current is not null) return Current;
+            Current = new AppHost(dbPath);
+        }
+
+        //  ══ دفترِ همان حسابی که آخرین بار وارد شده بود ════════════════════
+        //
+        //  ⛔ **پیش از هر خواندنی** — قفلِ برنامه، بخشِ اول و نوار همه از
+        //  دفتر می‌خوانند، و اگر این‌جا نباشد نخستین فریمِ برنامه دفترِ
+        //  حسابِ **قبلی** را نشان می‌دهد و یک لحظه بعد عوض می‌شود.
+        //
+        //  ⚠️ و هیچ شنونده‌ای هنوز نیست، پس `LedgerSwitched` به هوا می‌رود
+        //  و هیچ چیزی دو بار خوانده نمی‌شود — عمدی است.
+        //
+        //  ⛔ **با مسیرِ صریح هیچ کاری نمی‌کند**: سنجه‌ها و ابزارِ عکس‌گیری
+        //  دیتابیسِ موقتِ خودشان را می‌دهند و نباید به پوشهٔ حسابِ واقعیِ
+        //  کاربر بروند.
+        if (dbPath is null)
+        {
+            try { Current.UseLedgerOf(AppSettings.Load().CloudUserId); }
+            catch { /* دفترِ ریشه سرِ جایش است؛ برنامه باید بالا بیاید */ }
+        }
+
+        return Current;
     }
 
     private static readonly object StartLock = new();

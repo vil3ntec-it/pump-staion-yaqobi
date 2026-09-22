@@ -202,6 +202,9 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
     /// <summary>حسابِ شخص — تا باز است، میانبرهای ردیف به آن می‌روند نه به فهرست.</summary>
     public override object? ActivePage => PersonOpen ? Person : null;
 
+    /// <summary>دفتر عوض شد ⇒ حسابِ بازِ قرض‌دارِ دفترِ قبلی بسته شود.</summary>
+    public override void CloseOpenPage() { PersonOpen = false; Overlay = null; }
+
     partial void OnPersonOpenChanged(bool v)
     {
         OnPropertyChanged(nameof(IsListVisible));
