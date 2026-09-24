@@ -74,6 +74,30 @@ public class ExcelGrid : DataGrid
     }
 
     /// <summary>
+    /// ══ «دیوار» — ستون‌ها هرگز از کادرِ خودِ جدول بیرون نمی‌زنند ════════════
+    ///
+    /// گزارشِ صاحب ریپو با عکس (۱۴۰۵/۰۷/۱۲): «اون یادداشت و این دو کادرِ نوع و
+    /// واحد رو ببین، از جدول‌ها بیرون نشن… دیوارشونو بزار.»
+    ///
+    /// روشن باشد ⇒ پهنای **ذخیره‌شده** هم اگر در این قاب جا نشد کوچک می‌شود
+    /// (اول ستون‌های نوشته‌ای، عدد تا آخرین چاره نه)، و ستونی که کاربر پهن
+    /// کشید جا را از ستون‌های **دیگر** می‌گیرد، نه از بیرونِ جدول.
+    ///
+    /// ⚠️ فقط ورق این را می‌خواهد. خواستهٔ قدیمیِ «ستونِ کشیده‌شده اگر بزرگ شد
+    /// به چپ و راست اسکرول شود» برای بقیهٔ جدول‌ها سرِ جایش است.
+    /// ⚠️ پهنای ذخیره‌شدهٔ کاربر **روی دیسک دست نمی‌خورد**: فقط در این قاب
+    /// کوچک نشان داده می‌شود، پس روی نمایشگرِ بزرگ‌تر همان پهنای خودش برمی‌گردد.
+    /// </summary>
+    public static readonly StyledProperty<bool> KeepInsideProperty =
+        AvaloniaProperty.Register<ExcelGrid, bool>(nameof(KeepInside));
+
+    public bool KeepInside
+    {
+        get => GetValue(KeepInsideProperty);
+        set => SetValue(KeepInsideProperty, value);
+    }
+
+    /// <summary>
     /// ══ پهنای ستون‌ها یک بار تنظیم شود، همه‌جا بماند ════════════════════════
     ///
     /// گزارشِ صاحب ریپو: «وقتی جدولِ یک ورق را تنظیم می‌کنم، تمامِ جدول‌های
@@ -149,7 +173,7 @@ public class ExcelGrid : DataGrid
         LayoutUpdated += (_, _) =>
         {
             if (!IsEffectivelyVisible) return;
-            SpreadColumns(); PinOnUserResize(); RememberWidths(); Settle(); SyncSticky();
+            SpreadColumns(); PinOnUserResize(); if (!KeepInsideStep()) RememberWidths(); Settle(); SyncSticky();
         };
 
         // ══ دوبار-کلیک روی خطِ ستون = هم‌قدِ محتوا، مثلِ اکسل ═════════════════
@@ -604,7 +628,7 @@ public class ExcelGrid : DataGrid
             if (_starNatural is not null
                 && change.GetOldValue<Rect>().Width is var ow && change.GetNewValue<Rect>().Width is var nw
                 && Math.Abs(ow - nw) >= 1)
-                StarFloors(nw);
+                StarFloors(CellRoom());
             return;
         }
         if (change.Property == WidthScopeProperty)
@@ -1482,7 +1506,12 @@ public class ExcelGrid : DataGrid
         // ‎MeasureOverride‎ — پس این یک پاس هزینه‌ای ندارد.)
         if (!_anyRowLoaded && RowCount() > 0) return;
 
-        var room = Bounds.Width;
+        //  ⛔ جای **خانه‌ها** — قاب منهای ستونِ شمارهٔ ردیف (‎#‎) و دو خطِ لبه.
+        //  تا ۱۴۰۵/۰۷/۱۲ این‌جا خودِ ‎Bounds.Width‎ بود، پس ستون‌ها درست به
+        //  اندازهٔ ستونِ «#» (~۴۰ پیکسل) از کادر بیرون می‌زدند: «یادداشت» و
+        //  کپسول‌های «نوع» و «واحد»ِ ورق نیمه‌بریده دیده می‌شدند (عکسِ صاحب
+        //  ریپو). ‎StarFloors‎ همین را از روزِ اول کم می‌کرد و این یکی نه.
+        var room = CellRoom();
         if (room <= 0) return;
 
         // ══ چرا حتی وقتی جای اضافه نیست هم پهنا سفت می‌شود ═══════════════════
@@ -1516,12 +1545,20 @@ public class ExcelGrid : DataGrid
         // پس نمی‌گیرد: آن دربارهٔ ستونی است که **کاربر** کشیده
         // (‎PinOnUserResize‎، دست‌نخورده). این‌جا فقط بارِ خودکار است، که
         // کاربر انتخابش نکرده و از آن انتظارِ اسکرولِ افقی هم ندارد.
+        var wanted = (double[])natural.Clone();
         if (!spare) natural = FitToRoom(natural, room);
 
         // ══ پهنای ذخیره‌شده مقدم است ═════════════════════════════════════════
         // اگر کاربر یک بار این جدول را تنظیم کرده، همان می‌نشیند — نه پهنای
         // طبیعیِ محتوای امروز. پس ورقِ فردا هم همان‌قدر است.
         var saved = Saved(cols.Count);
+        //  ⛔ «دیوار»: پهنای ذخیره‌شده‌ای که در این قاب جا نمی‌شود کوچک نشان
+        //  داده می‌شود — روی دیسک همان می‌ماند (‎_autoWidths‎ همین عددِ کوچک
+        //  است، پس ‎RememberWidths‎ چیزی نمی‌نویسد).
+        if (saved is not null) wanted = (double[])saved.Clone();
+        if (saved is not null && KeepInside && saved.Sum() > room + 0.5)
+            saved = FitToRoom(saved, room, Numeric(cols));
+        _fullWidths = saved is not null || !spare ? wanted : null;
 
         for (var i = 0; i < cols.Count; i++)
         {
@@ -1655,14 +1692,100 @@ public class ExcelGrid : DataGrid
         //  جای خانه‌ها = قاب منهای ستونِ شماره (‎#‎) و دو خطِ لبه — وگرنه جمعِ
         //  کف‌ها به اندازهٔ همان ستون از قاب بیرون می‌زد و نوارِ لغزشِ افقی
         //  برمی‌گشت (با عکس دیده شد).
-        var head = HeadersVisibility.HasFlag(DataGridHeadersVisibility.Row) && !double.IsNaN(RowHeaderWidth)
-            ? RowHeaderWidth : 0;
-        var fit = FitToRoom(nat, room - head - 4, Numeric(cols));
+        var fit = FitToRoom(nat, room, Numeric(cols));
         for (var i = 0; i < cols.Count; i++)
             if (Math.Abs(cols[i].MinWidth - fit[i]) >= 0.5) cols[i].MinWidth = Math.Max(FloorWidth, fit[i]);
     }
 
     private double[]? _starNatural;
+
+    /// <summary>
+    /// جای خانه‌ها: قابِ جدول منهای ستونِ شمارهٔ ردیف (‎#‎) و دو خطِ لبه.
+    /// ⛔ هر حسابِ «جا می‌شود؟» از همین است — ستونِ «#» هم جا می‌گیرد.
+    /// </summary>
+    private double CellRoom()
+    {
+        var head = HeadersVisibility.HasFlag(DataGridHeadersVisibility.Row) && !double.IsNaN(RowHeaderWidth)
+            ? RowHeaderWidth : 0;
+        return Bounds.Width - head - 4;
+    }
+
+    /// <summary>پهنای ستون‌ها لحظهٔ دست گذاشتن روی سرستون — تا بدانیم کدام کشیده شد.</summary>
+    private double[]? _pressWidths;
+
+    /// <summary>دستِ کاربر هنوز روی سرستون است (وسطِ کشیدن).</summary>
+    private bool _headerDown;
+
+    /// <summary>
+    /// «دیوار» پس از کشیدنِ ستون: ستونی که کاربر پهن کرد همان می‌ماند و جا را
+    /// از ستون‌های **دیگر** می‌گیرد (پهن‌ترها اول)؛ اگر آن‌ها هم به کفِ
+    /// خوانایی رسیدند، خودِ ستونِ کشیده‌شده تا لبهٔ قاب کوتاه می‌شود.
+    /// ⚠️ وسطِ کشیدن کاری نمی‌کند — ستون نباید زیرِ دستِ کاربر بپرد.
+    /// </summary>
+    /// <summary>
+    /// پهنایی که جدول **می‌خواهد** (پهنای طبیعی یا ذخیره‌شدهٔ کاربر) پیش از
+    /// آن‌که برای جا شدن کوچک شود — تا پنجره که بزرگ شد، ستون‌ها دوباره تا
+    /// همان‌جا باز شوند، نه این‌که کوچک بمانند و کنارِ جدول خالی شود.
+    /// </summary>
+    private double[]? _fullWidths;
+
+    /// <returns>پهنایی عوض شد؟ — آن‌وقت ‎RememberWidths‎ همین پاس نمی‌نویسد.</returns>
+    private bool KeepInsideStep()
+    {
+        if (!KeepInside || !_spread || _headerDown) return false;
+        var cols = Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).ToList();
+        if (cols.Count == 0 || cols.Any(c => c.Width.UnitType != DataGridLengthUnitType.Pixel)) return false;
+        var w = cols.Select(c => c.ActualWidth).ToArray();
+        if (w.Any(x => double.IsNaN(x) || x <= 0)) return false;
+        var room = CellRoom();
+        if (room <= 0) return false;
+
+        //  کدام ستون کشیده شد؟ — همانی که از لحظهٔ دست گذاشتن بیشتر پهن شد
+        var grab = -1;
+        if (_pressWidths is { } pw && pw.Length == w.Length)
+        {
+            var best = 1.0;
+            for (var i = 0; i < w.Length; i++)
+                if (w[i] - pw[i] > best) { best = w[i] - pw[i]; grab = i; }
+        }
+        _pressWidths = null;
+
+        //  کاربر خودش چیزی کشید ⇒ از این به بعد همین «خواسته» است
+        var auto = _autoWidths is { } aw && aw.Length == w.Length
+                   && aw.Zip(w, (x, y) => Math.Abs(x - y) < 0.5).All(z => z);
+        if (!auto && grab < 0 && w.Sum() <= room + 1) { _fullWidths = null; return false; }
+
+        double[] fit;
+        if (grab >= 0)
+        {
+            var others = w.Where((_, i) => i != grab).ToArray();
+            var left = Math.Max(0, room - w[grab]);
+            var o = WaterFill(others, left, FloorWidth);
+            fit = new double[w.Length];
+            for (int i = 0, j = 0; i < w.Length; i++) fit[i] = i == grab ? w[i] : o[j++];
+            var over = fit.Sum() - room;
+            if (over > 0) fit[grab] = Math.Max(FloorWidth, fit[grab] - over);
+            _fullWidths = (double[])fit.Clone();
+        }
+        else if (_fullWidths is { } full && full.Length == w.Length && auto)
+            fit = FitToRoom(full, room, Numeric(cols));   // هم کوچک شدن، هم باز شدن تا خواسته
+        else if (w.Sum() > room + 1)
+            fit = FitToRoom(w, room, Numeric(cols));
+        else return false;
+
+        var changed = false;
+        for (var i = 0; i < cols.Count; i++)
+            if (Math.Abs(cols[i].ActualWidth - fit[i]) >= 0.5)
+            {
+                cols[i].Width = new DataGridLength(fit[i], DataGridLengthUnitType.Pixel);
+                changed = true;
+            }
+        //  ⛔ پنجره عوض شد (کسی ستونی نکشید) ⇒ این پهنای **خودکار** است و نباید
+        //  جای پهنای ذخیره‌شدهٔ کاربر روی دیسک بنشیند؛ روی نمایشگرِ بزرگ‌تر همان
+        //  پهنای خودش برمی‌گردد. کشیدنِ واقعیِ کاربر (‎grab‎) مثلِ همیشه ذخیره می‌شود.
+        if (changed && grab < 0) _autoWidths = (double[])fit.Clone();
+        return changed;
+    }
 
     /// <summary>
     /// کدام ستون‌ها عدد نشان می‌دهند؟ — از نوشتهٔ خانه‌های ساخته‌شدهٔ همان
@@ -1679,7 +1802,7 @@ public class ExcelGrid : DataGrid
             int num = 0, seen = 0;
             foreach (var it in items)
             {
-                var t = (cols[i].GetCellContent(it!) as TextBlock)?.Text;
+                var t = IssueTextColumn.TextOf(cols[i].GetCellContent(it!))?.Text;
                 if (string.IsNullOrWhiteSpace(t)) continue;
                 seen++;
                 var digits = t.Count(char.IsDigit);
@@ -2053,23 +2176,32 @@ public class ExcelGrid : DataGrid
         _anyRowLoaded = true;
         e.Row.ContextFlyout = null;
         e.Row.ContextRequested -= OnRowContext;
-        if (RowDeleteCommand is null) return;
+        if (RowDeleteCommand is null && e.Row.DataContext is not IFlaggedRow) return;
         e.Row.ContextRequested += OnRowContext;
     }
 
     private void OnRowContext(object? sender, ContextRequestedEventArgs e)
     {
-        if (sender is not DataGridRow row || RowDeleteCommand is null) return;
+        if (sender is not DataGridRow row) return;
 
-        var item = new MenuItem
-        {
-            Header = "🗑 حذفِ این ردیف",
-            Command = RowDeleteCommand,
-            CommandParameter = row.DataContext,
-        };
-        new MenuFlyout { ItemsSource = new[] { item } }.ShowAt(row, showAtPointer: true);
+        var items = new List<MenuItem>();
+        //  «✔ نشانِ سرخ را بردار» — همان دکمهٔ «عادی شد»ِ ستونِ «هشدار» که
+        //  برداشته شد (خواستهٔ ۱۴۰۵/۰۷/۰۶: «با یک دکمه بشود عادی‌اش کرد»).
+        if (row.DataContext is IFlaggedRow { Flagged: true } f)
+            items.Add(new MenuItem { Header = "✔ نشانِ سرخ را بردار — عدد عوض نمی‌شود", Command = f.ClearFlagCommand });
+        if (RowDeleteCommand is not null)
+            items.Add(new MenuItem
+            {
+                Header = "🗑 حذفِ این ردیف",
+                Command = RowDeleteCommand,
+                CommandParameter = row.DataContext,
+            });
+        if (items.Count == 0) return;
+        new MenuFlyout { ItemsSource = items }.ShowAt(row, showAtPointer: true);
         e.Handled = true;
     }
+
+
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
@@ -2139,6 +2271,15 @@ public class ExcelGrid : DataGrid
         // کشویی را باز می‌کند. ‎Handled‎ هم نمی‌شود تا خانه مثلِ همیشه انتخاب
         // شود.
         AddHandler(PointerPressedEvent, OnPreviewPressed, RoutingStrategies.Tunnel);
+        //  پایانِ کشیدنِ ستون — «دیوار» فقط پس از رها کردن می‌سنجد
+        AddHandler(PointerReleasedEvent, (_, _) =>
+        {
+            if (!_headerDown) return;
+            _headerDown = false;
+            if (KeepInside) InvalidateMeasure();
+        }, RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(PointerCaptureLostEvent, (_, _) => _headerDown = false,
+                   RoutingStrategies.Bubble | RoutingStrategies.Tunnel, handledEventsToo: true);
 
         // ══ فلش در «حالتِ نوشتن» ⇒ ذخیره و خانهٔ بعدی ════════════════════════
         //
@@ -2299,7 +2440,14 @@ public class ExcelGrid : DataGrid
         DataGridRow? row = null;
         for (Visual? x = v; x is not null; x = x.GetVisualParent())
         {
-            if (x is DataGridColumnHeader) { ReleaseStarFloors(); return; }
+            if (x is DataGridColumnHeader)
+            {
+                ReleaseStarFloors();
+                _headerDown = true;
+                _pressWidths = Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex)
+                                      .Select(c => c.ActualWidth).ToArray();
+                return;
+            }
             if (x is DataGridRow r) { row = r; continue; }
             if (x is not ComboBox cb) continue;
             if (!cb.IsEffectivelyEnabled || cb.IsDropDownOpen) return;

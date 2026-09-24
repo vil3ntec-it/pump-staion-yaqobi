@@ -41,8 +41,16 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
 {
     private readonly Func<PageSetup, IDocument> _build;
     private IDocument _doc;
-    private readonly List<Bitmap> _pages = new();
-    private readonly List<byte[]> _png = new();
+    /// <summary>
+    /// تصویرِ **فشردهٔ** هر ورق — نه تصویرِ بازشده.
+    ///
+    /// ⚠️ فقط ورقِ جلوی چشم باز می‌شود (<see cref="Show"/>). ورقِ تیز (۲۰۰ تا
+    /// ۳۰۰ نقطه) بازشده ده‌ها مگابایت است؛ بیست ورقِ بازشده یعنی نیم‌گیگ رم
+    /// برای چیزی که یکی‌اش دیده می‌شود.
+    /// </summary>
+    private readonly List<byte[]> _pages = new();
+    private Bitmap? _shown;
+    private int _shownIdx = -1;
 
     /// <summary>تا وقتی کادرها از روی تنظیمِ ذخیره‌شده پر می‌شوند، چیزی ذخیره نشود.</summary>
     private bool _loading = true;
@@ -79,7 +87,19 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     /// <summary>هر بار که تنظیم عوض شود صدا زده می‌شود تا ذخیره‌اش کند.</summary>
     public Action<PageSetup>? SetupChanged { get; set; }
 
-    public IReadOnlyList<Bitmap> Pages => _pages;
+    /// <summary>ورق‌های همین لحظه با چه dpi تصویر شده‌اند — برای سنجه‌ها.</summary>
+    public int PagesDpi => _pagesDpi;
+
+    /// <summary>
+    /// ضریبِ صفحهٔ نمایشِ پنجره (۱٫۲۵ یعنی ویندوزِ ۱۲۵٪). پنجره می‌نشاندش؛
+    /// ورقِ تیز باید با پیکسلِ **واقعیِ** نمایشگر بسنجد، نه پیکسلِ منطقی.
+    /// </summary>
+    public double RenderScaling
+    {
+        get => _renderScaling;
+        set { _renderScaling = value is > 0.5 and < 8 ? value : 1; QueueSharpen(); }
+    }
+    private double _renderScaling = 1;
 
     [ObservableProperty] private int _pageIndex;
     [ObservableProperty] private Bitmap? _currentPage;
@@ -557,6 +577,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(ZoomLabel));
         OnPropertyChanged(nameof(GuideMargin));
+        QueueSharpen();
     }
 
     private const double MinW = 240, MaxW = 3200, Step = 1.25;
@@ -693,6 +714,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     {
         var gen = ++_renderGen;
         _pagesDpi = PreviewDpi;
+        _sharpDpi = 0;
 
         // ══ حالتِ باز شدنِ پنجره: هیچ انتظاری ═════════════════════════════
         if (background)
@@ -753,9 +775,8 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     {
         void Set()
         {
-            foreach (var b in _pages) b.Dispose();
             _pages.Clear();
-            _png.Clear();
+            _shownIdx = -1;
             AllRendered = false;
             if (first is not null) AddPage(first);
             PageIndex = 0;
@@ -773,12 +794,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         Show();
     }
 
-    private void AddPage(byte[] bytes)
-    {
-        using var ms = new MemoryStream(bytes);
-        _pages.Add(new Bitmap(ms));
-        _png.Add(bytes);
-    }
+    private void AddPage(byte[] bytes) => _pages.Add(bytes);
 
     /// <summary>ساختِ ورق‌ها تمام شد — حالا کادرهایی که به شمارِ ورق بسته‌اند.</summary>
     private void Finish(int gen, bool marshal)
@@ -792,9 +808,105 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
             SyncRangeBoxes();
             RefreshNotes();
             Show();
+            QueueSharpen();
         }
         if (!marshal || Dispatcher.UIThread.CheckAccess()) Set();
         else Dispatcher.UIThread.Invoke(Set);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ ورقِ تیز — «کیفیتش باید عالی باشد، حتی با زوم» ═══════════════════
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «بخشِ پرینت ورق‌ها را خیلی بی‌کیفیت نشان
+    //  می‌دهد و وقتی کمی زوم کنم حتی بدتر و تارتر دیده می‌شود.»
+    //
+    //  ریشه یک عدد بود: ورق با ۹۶ نقطه تصویر می‌شد (۷۹۴ پیکسلِ پهنا برای A4) و
+    //  روی قابِ ۹۰۰ پیکسلی **بزرگ** نشان داده می‌شد — و روی ویندوزِ ۱۲۵٪ یا
+    //  ۱۵۰٪ باز هم بزرگ‌تر. هر زوم همان تصویرِ کوچک را بیشتر کش می‌داد.
+    //
+    //  ⛔ **پاسِ اول همان ۹۶ می‌ماند**: پنجره باید همان لحظه باز شود و ورقِ اول
+    //  زود بیاید (‎printperf‎). ولی همین که همه آمدند، پاسِ دوم با dpiی که
+    //  **پیکسلِ واقعیِ نمایشگر** می‌خواهد (پهنای ورق × ضریبِ صفحه) در
+    //  پس‌زمینه ساخته می‌شود و یک‌جا جای قبلی می‌نشیند. زوم که بالاتر از آن
+    //  رفت، دوباره — با مکثِ کوتاه تا هر پلهٔ زوم یک رندر نشود.
+    //
+    //  ⚠️ **SVG آزموده شد و رد شد**: ‎GenerateSvg‎ی QuestPDF متنِ فارسی را با
+    //  ‎<text>‎ و شمارهٔ گلیف می‌نویسد و روی صفحه خالی درمی‌آید.
+    //  ⚠️ **JPEG با بهترین کیفیت، نه PNG**: سنجیده شد — در ۱۹۲ نقطه PNG هر ورق
+    //  ۲۲۳ms و JPEG ۱۰۲ms؛ فشرده‌سازیِ PNG بیشترِ کار بود، نه رندر.
+    //  ⚠️ چاپ و ذخیره از این مسیر نمی‌گذرند و همان ‎Setup.Dpi‎ را دارند.
+
+    /// <summary>کمترین و بیشترین dpiِ ورقِ تیز. ۳۰۰ همان کیفیتِ چاپ است.</summary>
+    public const int SharpMinDpi = 144, SharpMaxDpi = 300;
+
+    /// <summary>dpiِ پاسِ تیزی که ساخته شده یا در راه است (۰ = هیچ).</summary>
+    private int _sharpDpi;
+    private DispatcherTimer? _sharpTimer;
+
+    /// <summary>برای این زوم و این نمایشگر، ورق چند نقطه لازم دارد؟</summary>
+    public int WantDpi()
+    {
+        if (_pages.Count == 0 || CurrentPage is not { } bmp || bmp.PixelSize.Width <= 0) return 0;
+        var inches = bmp.PixelSize.Width / (double)Math.Clamp(_pagesDpi, 72, 400);
+        if (inches <= 0) return 0;
+        var need = PageWidth * RenderScaling / inches * 1.15;     // کمی جا برای زومِ بعدی
+        var dpi = (int)Math.Ceiling(need / 24.0) * 24;
+        return Math.Clamp(dpi, SharpMinDpi, SharpMaxDpi);
+    }
+
+    private void QueueSharpen()
+    {
+        if (!AllRendered || _pages.Count == 0) return;
+        if (!Dispatcher.UIThread.CheckAccess()) return;
+        var want = WantDpi();
+        if (want <= Math.Max(_pagesDpi, _sharpDpi)) return;
+
+        _sharpTimer ??= new DispatcherTimer(TimeSpan.FromMilliseconds(220), DispatcherPriority.Background,
+                                            (_, _) => { _sharpTimer!.Stop(); Sharpen(); });
+        _sharpTimer.Stop();
+        _sharpTimer.Start();
+    }
+
+    private void Sharpen()
+    {
+        var want = WantDpi();
+        if (want <= Math.Max(_pagesDpi, _sharpDpi)) return;
+        var gen = _renderGen;
+        var doc = _doc;
+        var count = _pages.Count;
+        _sharpDpi = want;
+
+        Task.Run(() =>
+        {
+            List<byte[]>? list = null;
+            try
+            {
+                list = doc.GenerateImages(new ImageGenerationSettings
+                {
+                    ImageFormat = ImageFormat.Jpeg,
+                    ImageCompressionQuality = ImageCompressionQuality.Best,
+                    RasterDpi = want,
+                }).ToList();
+            }
+            catch { /* ورقِ تیز نشد، همان ورقِ قبلی می‌ماند */ }
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (gen != _renderGen) return;
+                if (list is null || list.Count != count || want <= _pagesDpi)
+                {
+                    if (_sharpDpi == want) _sharpDpi = _pagesDpi;
+                    return;
+                }
+                _pages.Clear();
+                _pages.AddRange(list);
+                _pagesDpi = want;
+                _shownIdx = -1;
+                Show();
+                QueueSharpen();      // اگر وسطِ کار باز هم زوم شده بود
+            });
+        });
     }
 
     /// <summary>سند را با تنظیمِ تازه از نو می‌سازد (برای آزمون‌ها و مسیرهای قدیمی).</summary>
@@ -808,7 +920,28 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
 
     private void Show()
     {
-        CurrentPage = _pages.Count == 0 ? null : _pages[Math.Clamp(PageIndex, 0, _pages.Count - 1)];
+        if (_pages.Count == 0)
+        {
+            CurrentPage = null;
+            _shown?.Dispose(); _shown = null; _shownIdx = -1;
+        }
+        else
+        {
+            var i = Math.Clamp(PageIndex, 0, _pages.Count - 1);
+            if (_shown is null || _shownIdx != i)
+            {
+                var old = _shown;
+                try
+                {
+                    using var ms = new MemoryStream(_pages[i]);
+                    _shown = new Bitmap(ms);
+                    _shownIdx = i;
+                }
+                catch { _shown = null; _shownIdx = -1; }
+                CurrentPage = _shown;
+                old?.Dispose();
+            }
+        }
         PageLabel = _pages.Count == 0 ? "—" : $"{PageIndex + 1} از {_pages.Count}";
         OnPropertyChanged(nameof(PageNumberText));
         OnPropertyChanged(nameof(GuideMargin));

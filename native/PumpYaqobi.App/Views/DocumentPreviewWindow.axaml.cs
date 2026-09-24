@@ -38,8 +38,13 @@ public partial class DocumentPreviewWindow : Window
 
             if (fitted) return;
             fitted = true;
+            Vm.RenderScaling = RenderScaling;
             Vm.ZoomPageCommand.Execute(null);
         };
+
+        // ورقِ تیز با پیکسلِ واقعیِ نمایشگر سنجیده می‌شود؛ بردنِ پنجره به
+        // نمایشگرِ دیگر (۱۰۰٪ ⇄ ۱۵۰٪) همان را عوض می‌کند.
+        ScalingChanged += (_, _) => { if (Vm is not null) Vm.RenderScaling = RenderScaling; };
     }
 
     public DocumentPreviewWindow(DocumentPreviewViewModel vm) : this()

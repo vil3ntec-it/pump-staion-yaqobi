@@ -372,6 +372,23 @@
     <Setter Property="Background" Value="{DynamicResource Pump.Hover}" />
   </Style>
 
+  <!-- کپسولِ **قفل‌شده** — همان شکل، ولی دکمه نیست: تیلِ پایه‌ای که از پارچه
+       آمده این‌جا عوض نمی‌شود (۱۴۰۵/۰۷/۱۲). خطِ نقطه‌چین یعنی «فقط دیدنی». -->
+  <Style Selector="Border.fuelchip.locked">
+    <Setter Property="Padding" Value="9,3" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="BorderThickness" Value="1.4" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="MinWidth" Value="62" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.fuelchip.locked TextBlock">
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+  </Style>
+
   <!-- ══ کپسول‌های سربرگ ══════════════════════════════════════════════════
        ‎.role-badge‎ و ‎#lockBtn‎ در نسخهٔ وب هر دو ‎border-radius:999px‎ اند و
        اندازه‌گیری‌شان ۶۳×۳۰ و ۶۵×۴۰ در می‌آید. شعاعِ بزرگ در Avalonia همان
@@ -719,6 +736,9 @@
     <Setter Property="TextWrapping" Value="NoWrap" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
     <Setter Property="MaxLines" Value="1" />
+    <!-- ⚠️ نوشتهٔ فارسیِ بلند با ‎CharacterEllipsis‎ کلاً «…» می‌شد (باگِ آوالونیا
+         ۱۱.۲.۳) — ‎RtlTrim‎ برای همان نوشته‌ها خطِ اول را نشان می‌دهد. -->
+    <Setter Property="c:RtlTrim.Enabled" Value="True" />
   </Style>
   <!-- ══ کادرِ تایپِ داخلِ خانه — ‎.xls-in‎ی سایت ═══════════════════════════
        گزارشِ صاحب ریپو: «توی کادرهای جدول وقتی می‌خوام چیزی بنویسم کادر سفید
@@ -872,6 +892,20 @@
     <Setter Property="RadiusX" Value="0" />
     <Setter Property="RadiusY" Value="0" />
   </Style>
+  <!-- ══ خانهٔ مشکل‌دار: خطِ خودِ خانه سرخ و ضخیم (۱۴۰۵/۰۷/۱۲) ══════════════
+       ‎IssueTextColumn‎ کلاسِ ‎issue‎ را روی خودِ ‎DataGridCell‎ می‌گذارد. ⛔ کادرِ
+       دومی داخلِ خانه نمی‌کشیم — صاحب ریپو با عکس گفت «خودِ خطِ جدول، چهارگوشِ
+       کادرش قرمز شود». ‎CellBorder‎ی قالب ‎BorderBrush‎/‎BorderThickness‎ را از
+       خودِ خانه می‌گیرد، و خطِ عمودیِ کنارِ خانه هم همان رنگ می‌شود. -->
+  <Style Selector="DataGridCell.issue">
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Danger}" />
+    <Setter Property="BorderThickness" Value="2.5" />
+    <Setter Property="Background" Value="#1FE53E3E" />
+  </Style>
+  <Style Selector="DataGridCell.issue /template/ Rectangle#PART_RightGridLine">
+    <Setter Property="Fill" Value="{DynamicResource Pump.Danger}" />
+  </Style>
+
   <!-- مستطیلِ نقطه‌چینِ فوکوس کنارِ آن اضافه است و همان «چهارگوشِ» عکس -->
   <Style Selector="DataGridCell /template/ Rectangle#FocusVisual">
     <Setter Property="IsVisible" Value="False" />

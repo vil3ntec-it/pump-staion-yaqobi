@@ -118,6 +118,10 @@ internal static class Program
         //  «ورق‌ها را پر کردم، بستم، دوباره آمدم — هیچ ورقی نبود»
         if (outDir.Equals("persist", StringComparison.OrdinalIgnoreCase)) return PersistProbe.Run(args);
         if (outDir.Equals("audit11", StringComparison.OrdinalIgnoreCase)) return AuditEleven.Run(args);
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- waraqfit [پوشه]
+        //  ورق با عکسِ صاحب ریپو (۱۴۰۵/۰۷/۱۲): دیوارِ ستون‌ها، قرائتِ پمپ از پارچه،
+        //  جملهٔ شیفت در PDF و کیفیتِ پیش‌نمایشِ چاپ
+        if (outDir.Equals("waraqfit", StringComparison.OrdinalIgnoreCase)) return WaraqFit.Run(args);
         //  «تست بزن ببین لاگین می‌شود، کد بزنی چه می‌شود، حساب ساخته می‌شود یا نه»
         if (outDir.Equals("cloudlogin", StringComparison.OrdinalIgnoreCase)) return CloudLoginProbe.Run();
         //  «تو کادرها + @ # ﷼ ( ) ؟ ؛ : , . نوشته نمی‌شوند»

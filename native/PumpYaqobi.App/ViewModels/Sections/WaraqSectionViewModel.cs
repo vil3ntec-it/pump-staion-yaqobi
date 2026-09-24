@@ -15,7 +15,7 @@ using PumpYaqobi.Services.Data;
 namespace PumpYaqobi.App.ViewModels.Sections;
 
 /// <summary>یک «پایه» (نازل) در ورق.</summary>
-public sealed partial class WaraqPumpViewModel : RowViewModel
+public sealed partial class WaraqPumpViewModel : RowViewModel, IFlaggedRow
 {
     private readonly WaraqPump _p;
     private readonly WaraqPageViewModel _owner;
@@ -66,6 +66,7 @@ public sealed partial class WaraqPumpViewModel : RowViewModel
     {
         Touch();
         OnPropertyChanged(nameof(LowBaseText));
+        RefreshIssues();
     }
 
     public string LowBaseText => LowBase ? "🔴 کمتر" : "";
@@ -73,6 +74,63 @@ public sealed partial class WaraqPumpViewModel : RowViewModel
     /// <summary>دکمهٔ «عادی شد» — فقط نشان را برمی‌دارد، عدد دست نمی‌خورد.</summary>
     [RelayCommand]
     private void ClearLowBase() => LowBase = false;
+
+    // ══ «خودِ همان کادر سرخ شود و بگوید چه شده» (۱۴۰۵/۰۷/۱۲) ════════════════
+    //
+    // ستونِ «هشدار» برداشته شد؛ حالا خانهٔ «شروع» یا «ختم» خودش سرخ می‌شود
+    // (‎IssueTextColumn‎) و پیامش همین دو خاصیت است. خالی = سالم.
+
+    /// <summary>
+    /// ختمِ پایهٔ قبلیِ همین شماره و همین تیل — از پارچه‌ها، پیش از همین
+    /// شیفت. ‎null‎ یعنی هنوز خوانده نشده یا پیدا نشد.
+    /// </summary>
+    private decimal? _prevEnd;
+
+    /// <summary>ورق آن را یک بار (و فقط برای ردیفِ نشان‌دار) از پارچه‌ها می‌خواند.</summary>
+    public void SetPrevEnd(decimal? prev)
+    {
+        _prevEnd = prev is > 0m ? prev : null;
+        RefreshIssues();
+    }
+
+    /// <summary>ردیف از پارچه آمده؟ — آن‌وقت نوعِ تیلش همان‌جا تعیین شده.</summary>
+    public bool FromParcha => !string.IsNullOrWhiteSpace(_p.SrcKey);
+
+    /// <summary>کپسولِ تیل فقط برای ردیفِ دستی زدنی است.</summary>
+    public bool FuelEditable => !FromParcha;
+
+    public string FuelLockTip =>
+        "نوعِ تیلِ این پایه در پارچه تعیین شده و این‌جا عوض نمی‌شود — برای عوض کردنش همان پارچه را درست کنید.";
+
+    /// <summary>
+    /// پیامِ خانهٔ «شروع» — **کوتاه و یک‌خطی**، فقط با ماوس (خواستهٔ صاحب ریپو
+    /// با عکس: «کادرِ سه‌نقطه جلوی نوشته‌های کادرِ بالا را می‌گیرد؛ نباشد…
+    /// موس را که می‌برم دلیل را خلاصه بگوید»). برداشتنِ نشان: راست‌کلیک.
+    /// </summary>
+    public string StartIssue
+    {
+        get
+        {
+            if (!LowBase) return "";
+            if (_prevEnd is not { } prev) return "با ختمِ پایهٔ قبلی جور نیست";
+            var d = Start - prev;
+            return d < 0m ? Shamsi.Money(-d) + " لیتر کمتر از ختمِ قبلی (" + Shamsi.Money(prev) + ")"
+                 : d > 0m ? Shamsi.Money(d) + " لیتر بیشتر از ختمِ قبلی (" + Shamsi.Money(prev) + ")"
+                 : "حالا با ختمِ قبلی جور است";
+        }
+    }
+
+    public string EndIssue =>
+        End > 0m && Start > 0m && End < Start ? "ختم از شروع کمتر است" : "";
+
+    bool IFlaggedRow.Flagged => LowBase;
+    System.Windows.Input.ICommand IFlaggedRow.ClearFlagCommand => ClearLowBaseCommand;
+
+    private void RefreshIssues()
+    {
+        OnPropertyChanged(nameof(StartIssue));
+        OnPropertyChanged(nameof(EndIssue));
+    }
 
     partial void OnWorkerChanged(string v) => Touch();
     partial void OnPumpDateChanged(string v) => Touch();
@@ -84,8 +142,14 @@ public sealed partial class WaraqPumpViewModel : RowViewModel
         OnPropertyChanged(nameof(FuelChipText));
         OnPropertyChanged(nameof(FuelChipBrushKey));
     }
-    partial void OnStartChanged(decimal v) { Touch(); Refresh(); }
-    partial void OnEndChanged(decimal v) { Touch(); Refresh(); }
+    partial void OnStartChanged(decimal v)
+    {
+        Touch(); Refresh();
+        //  شروع درست شد (همان ختمِ قبلی) ⇒ نشان خودش می‌رود؛ دیگر چیزی برای گفتن نیست
+        if (!Loading && LowBase && _prevEnd is { } prev && v == prev) LowBase = false;
+        RefreshIssues();
+    }
+    partial void OnEndChanged(decimal v) { Touch(); Refresh(); RefreshIssues(); }
     partial void OnPriceChanged(decimal v) { Touch(); Refresh(); }
     partial void OnDebtChanged(decimal v) { Touch(); Refresh(); }
     partial void OnNoteChanged(string v) => Touch();
@@ -130,8 +194,12 @@ public sealed partial class WaraqPumpViewModel : RowViewModel
     public string FuelChipBrushKey => Fuel == FuelType.Diesel ? "Pump.Warn" : "Pump.Ok";
 
     [RelayCommand]
-    private void ToggleFuel() =>
+    private void ToggleFuel()
+    {
+        //  ⛔ ردیفِ پارچه: تیلش همان‌جا تعیین شده (خواستهٔ ۱۴۰۵/۰۷/۱۲)
+        if (FromParcha) return;
         Fuel = Fuel == FuelType.Diesel ? FuelType.Petrol : FuelType.Diesel;
+    }
 
     protected override void Apply()
     {
@@ -511,6 +579,20 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         }
         SplitTxns();
         Recalc();
+        _ = LoadPrevEndsAsync();
+    }
+
+    /// <summary>
+    /// «با چه چیزی جور نیست؟» — فقط برای ردیفِ نشان‌دار و فقط یک بار. ورقِ
+    /// سالم هیچ پرس‌وجوی تازه‌ای نمی‌زند (قاعدهٔ سرعتِ این ریپو).
+    /// </summary>
+    private async Task LoadPrevEndsAsync()
+    {
+        foreach (var vm in Pumps.Where(p => p.LowBase && p.FromParcha).ToList())
+        {
+            try { vm.SetPrevEnd(await _host.ParchaData.PrevEndForWaraqAsync(vm.Entity.SrcKey)); }
+            catch { /* پیامِ کلی همان‌جا هست؛ نرسیدنِ عدد چیزی را نمی‌شکند */ }
+        }
     }
 
     public void Recalc()
