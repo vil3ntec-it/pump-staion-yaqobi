@@ -1,0 +1,231 @@
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using PumpYaqobi.App.Update;
+
+namespace PumpYaqobi.Tests;
+
+/// <summary>
+/// ══ ۳۲بیتی و ۶۴بیتی ════════════════════════════════════════════════════════
+/// خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «برنامه رو نمیشه هر سه مدل شد؟ ۳۲ بیت،
+/// ۶۴ بیت و ۸۶ بیت، چون کامپیوتر خیلی نسخه قدیمی است.»
+///
+/// ⚠️ «۸۶ بیت» وجود ندارد — <c>x86</c> همان ۳۲بیتی است. پس دو مدل منتشر
+/// می‌شود، و خطرِ واقعیِ دو مدل این است که نصبِ یکی بستهٔ آن یکی را بگیرد:
+/// کاربر «به‌روزرسانی» می‌زند و برنامه‌ای می‌گیرد که ویندوزش اجرا نمی‌کند.
+/// این فایل همان را می‌بندد — با **رفتار**، نه با خواندنِ رشته.
+///
+/// ⚠️ <c>[Collection]</c> لازم است: <see cref="AppArch.Override"/> و
+/// <c>AppBase.LocalIdOverride</c> و <c>UpdateService.TestTransport</c> هر سه
+/// **استاتیک**‌اند و <c>UpdateBehaviourTests</c> هم همان‌ها را عوض می‌کند.
+/// </summary>
+[Collection(AppHostCollection.Name)]
+public class ThirtyTwoBitTests : IDisposable
+{
+    public ThirtyTwoBitTests() => AppBase.LocalIdOverride = "aaaa1111";
+
+    public void Dispose()
+    {
+        UpdateService.TestTransport = null;
+        AppBase.LocalIdOverride = null;
+        AppArch.Override = null;
+    }
+
+    private static readonly string Native =
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
+
+    private static readonly string Repo = Path.GetFullPath(Path.Combine(Native, ".."));
+
+    private static string Workflow() =>
+        File.ReadAllText(Path.Combine(Repo, ".github", "workflows", "build-native.yml"));
+
+    private static string Iss() =>
+        File.ReadAllText(Path.Combine(Native, "installer", "PumpYaqobi.iss"));
+
+    private static HttpResponseMessage Json(string body) =>
+        new(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
+
+    private static HttpResponseMessage Text(string body) =>
+        new(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "text/plain") };
+
+    /// <summary>
+    /// انتشاری که **هر دو** نصاب را دارد و بستهٔ کوچکش به پایهٔ این نصب
+    /// نمی‌خورد — پس برنامه ناچار است یکی از دو نصاب را برگزیند.
+    /// </summary>
+    private const string BothSetups = """
+        {
+          "tag_name": "v99.9.9",
+          "body": "یادداشت",
+          "assets": [
+            { "name": "PumpYaqobi-app-ffff9999.zip", "size": 6000000,
+              "browser_download_url": "https://x/small-x64.zip" },
+            { "name": "PumpYaqobi-Setup.exe", "size": 88000000,
+              "browser_download_url": "https://x/setup-x64.exe" },
+            { "name": "PumpYaqobi-Setup-x86.exe", "size": 84000000,
+              "browser_download_url": "https://x/setup-x86.exe" }
+          ]
+        }
+        """;
+
+    // ══ ۱) درِ اول: هیچ نصبی نصابِ معماریِ دیگر را برنمی‌دارد ═══════════════
+
+    [Fact]
+    public async Task NasbeSiVaDo_Nasabe_SiVaDo_Ra_Barmidarad()
+    {
+        AppArch.Override = "x86";
+        UpdateService.TestTransport = (_, _) => Task.FromResult(Json(BothSetups));
+
+        var info = await new UpdateService().CheckAsync();
+
+        Assert.True(info.Available);
+        Assert.False(info.IsSmallPackage);
+        Assert.Equal("https://x/setup-x86.exe", info.DownloadUrl);
+    }
+
+    [Fact]
+    public async Task NasbeShastVaChahar_Hargez_Nasabe_SiVaDo_Ra_Nemigirad()
+    {
+        AppArch.Override = "x64";
+        UpdateService.TestTransport = (_, _) => Task.FromResult(Json(BothSetups));
+
+        var info = await new UpdateService().CheckAsync();
+
+        Assert.True(info.Available);
+        Assert.Equal("https://x/setup-x64.exe", info.DownloadUrl);
+        //  ⛔ و این مهم‌ترین ادعای این فایل است: بستهٔ ۳۲بیتی روی نصبِ
+        //  ۶۴بیتی برنامه‌ای می‌دهد که کار می‌کند ولی کندتر است — و ساکت،
+        //  پس هیچ‌کس نمی‌فهمد چرا.
+        Assert.DoesNotContain("x86", info.DownloadUrl!);
+    }
+
+    // ══ ۲) درِ دوم: هر معماری فایلِ پایهٔ خودش ═══════════════════════════════
+
+    [Fact]
+    public async Task DarreDovom_SiVaDo_Az_BaseX86_Mikhanad()
+    {
+        AppArch.Override = "x86";
+        var asked = new List<string>();
+
+        UpdateService.TestTransport = (req, _) =>
+        {
+            var u = req.RequestUri!.ToString();
+            asked.Add(u);
+            if (u.EndsWith("/releases/latest")) throw new HttpRequestException("درِ اول بسته");
+            if (u.EndsWith("/version.txt")) return Task.FromResult(Text("99.9.9"));
+            if (u.EndsWith("/base-x86.txt")) return Task.FromResult(Text("aaaa1111"));
+            //  پایهٔ ۶۴بیتی هم هست و **عمداً همان چیزی است که این نصب دارد** —
+            //  اگر برنامه اشتباهی این را بخواند، سنجه سبزِ دروغ می‌دهد.
+            if (u.EndsWith("/base.txt")) return Task.FromResult(Text("aaaa1111"));
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        };
+
+        var info = await new UpdateService().CheckAsync();
+
+        Assert.True(info.Available);
+        Assert.True(info.IsSmallPackage);
+        Assert.Contains("base-x86.txt", asked);
+        Assert.DoesNotContain(asked, u => u.EndsWith("/base.txt"));
+    }
+
+    [Fact]
+    public async Task DarreDovom_SarvareKohne_BastehyeKuchake_Digar_Ra_Nemigirad()
+    {
+        AppArch.Override = "x86";
+
+        //  سرورِ کهنه فقط `base.txt`ِ ۶۴بیتی دارد. نصبِ ۳۲بیتی نباید از آن
+        //  بستهٔ کوچک بسازد — باید برود سراغِ نصابِ کاملِ ۳۲بیتیِ خودش.
+        UpdateService.TestTransport = (req, _) =>
+        {
+            var u = req.RequestUri!.ToString();
+            if (u.EndsWith("/releases/latest")) throw new HttpRequestException("درِ اول بسته");
+            if (u.EndsWith("/version.txt")) return Task.FromResult(Text("99.9.9"));
+            if (u.EndsWith("/base.txt")) return Task.FromResult(Text("aaaa1111"));
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        };
+
+        var info = await new UpdateService().CheckAsync();
+
+        Assert.True(info.Available);
+        Assert.False(info.IsSmallPackage);
+        Assert.EndsWith("PumpYaqobi-Setup-x86.exe", info.DownloadUrl);
+    }
+
+    // ══ ۳) نام‌ها ════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void NameFayleShastVaChahar_Yek_Harf_Ham_Avaz_Nashod()
+    {
+        AppArch.Override = "x64";
+        //  ⛔ هر نصبی که همین حالا دستِ مشتری است کدِ قدیمی دارد و فقط این
+        //  دو نام را می‌شناسد. عوض کردنشان یعنی همهٔ آن نصب‌ها یک‌شبه از
+        //  به‌روزرسانی می‌افتند.
+        Assert.Equal("PumpYaqobi-Setup.exe", AppArch.SetupName);
+        Assert.Equal("base.txt", AppArch.BaseFileName);
+
+        AppArch.Override = "x86";
+        Assert.Equal("PumpYaqobi-Setup-x86.exe", AppArch.SetupName);
+        Assert.Equal("base-x86.txt", AppArch.BaseFileName);
+    }
+
+    [Fact]
+    public void Owns_Name_BiPasvand_Ra_ShastVaChahar_Mishomarad()
+    {
+        AppArch.Override = "x64";
+        Assert.True(AppArch.Owns("PumpYaqobi-Setup.exe"));
+        Assert.True(AppArch.Owns("PumpYaqobi-Windows.zip"));
+        Assert.False(AppArch.Owns("PumpYaqobi-Setup-x86.exe"));
+        Assert.False(AppArch.Owns("PumpYaqobi-Windows-x86.zip"));
+
+        AppArch.Override = "x86";
+        Assert.True(AppArch.Owns("PumpYaqobi-Setup-x86.exe"));
+        Assert.True(AppArch.Owns("PumpYaqobi-Windows-x86.zip"));
+        Assert.False(AppArch.Owns("PumpYaqobi-Setup.exe"));
+        Assert.False(AppArch.Owns("PumpYaqobi-Windows.zip"));
+    }
+
+    // ══ ۴) سمتِ ساخت ════════════════════════════════════════════════════════
+
+    [Fact]
+    public void Workflow_Har_Do_Memari_Ra_Misazad_Va_Montasher_Mikonad()
+    {
+        var w = Workflow();
+
+        //  هر دو RID ساخته می‌شوند
+        Assert.Contains("win-x64", w);
+        Assert.Contains("win-x86", w);
+        Assert.Contains("dotnet publish PumpYaqobi.App", w);
+
+        //  و هر دو منتشر می‌شوند — نصاب و فایلِ پایه
+        Assert.Contains("rel/PumpYaqobi-Setup.exe", w);
+        Assert.Contains("rel/PumpYaqobi-Setup-x86.exe", w);
+        Assert.Contains("rel/base.txt", w);
+        Assert.Contains("rel/base-x86.txt", w);
+
+        //  ⛔ و دو بستهٔ کوچکِ جدا: شناسهٔ پایهٔ دو معماری هیچ‌وقت یکی
+        //  نمی‌شود، ولی «شدنی نیست» با «سنجیده شد» یکی نیست — خودِ ورک‌فلو
+        //  هم اگر یکی درآمد می‌شکند.
+        Assert.Contains("steps.pack.outputs.baseId86", w);
+        Assert.Contains("شناسهٔ پایهٔ ۳۲ و ۶۴بیتی یکی درآمد", w);
+    }
+
+    [Fact]
+    public void Nasabe_SiVaDo_AppId_Va_Pusheye_Jodagane_Darad()
+    {
+        var s = Iss();
+
+        //  ⛔ AppIdِ ۶۴بیتی یک حرف هم عوض نشد — عوض شدنش یعنی هر نصبِ
+        //  امروزیِ مشتری برای ویندوز «غریبه» می‌شود.
+        Assert.Contains("8E86F349-343C-4FFB-983E-BBDDC5390081", s);
+
+        //  و ۳۲بیتی شناسه و پوشه و نامِ خروجیِ **خودش** را دارد
+        Assert.Contains("#ifndef Arch", s);
+        Assert.Contains("PumpYaqobi-Setup-x86", s);
+        Assert.Contains("PumpYaqobi-32", s);
+        Assert.DoesNotContain("AppId={{8E86F349", s);   // دیگر ثابت نیست
+
+        //  ⛔ و فایلِ ۶۴بیتی روی ویندوزِ ۳۲بیتی همان اول می‌گوید چه باید کرد،
+        //  نه این‌که باری بنشاند که هرگز اجرا نمی‌شود.
+        Assert.Contains("InitializeSetup", s);
+        Assert.Contains("IsWin64", s);
+    }
+}

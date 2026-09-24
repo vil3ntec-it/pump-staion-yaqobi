@@ -288,8 +288,15 @@ public class InstallerTests
     public void The_site_reads_the_same_rolling_tag()
     {
         var pages = File.ReadAllText(Path.Combine(Repo, ".github", "workflows", "deploy-pages.yml"));
-        Assert.Contains("grab('desktop-latest', '.exe', 'PumpYaqobi-Setup.exe')", pages);
+        Assert.Contains("grab('desktop-latest', 'pumpyaqobi-setup.exe', 'PumpYaqobi-Setup.exe')", pages);
         Assert.Contains("grab('desktop-latest', 'version.txt', 'exe-version.txt')", pages);
+
+        //  ⛔ نامِ **دقیق**، نه پسوندِ `.exe`. از ۳.۱.۱۵۸ دو نصاب روی آن
+        //  برچسب است و `grab` تازه‌ترینِ هر پسوند را برمی‌دارد — یعنی
+        //  دکمهٔ دانلودِ ویندوزِ سایت می‌توانست فایلِ ۳۲بیتی بدهد و کاربرِ
+        //  ۶۴بیتی برنامه‌ای بگیرد که کندتر است، یا برعکسش که اصلاً بالا
+        //  نمی‌آید.
+        Assert.DoesNotContain("grab('desktop-latest', '.exe'", pages);
 
         // ⛔ زیپِ آن برچسب بستهٔ کوچکِ به‌روزرسانی است، نه برنامهٔ کامل —
         // کنارِ سایت گذاشتنش یعنی کسی ۶ مگابایت می‌گیرد و برنامه بالا نمی‌آید.
@@ -358,44 +365,58 @@ public class InstallerTests
     // بود — نیمی از آن برای معماری‌ای که این برنامه هرگز اجرا نمی‌کند.
 
     /// <summary>
-    /// ⛔ ‎libvlc/win-x86‎ نباید در بار باشد. برنامه با
-    /// ‎-r win-x64 --self-contained‎ منتشر می‌شود، پس پروسه همیشه ۶۴بیتی
-    /// است و ‎Core.Initialize()‎ی بی‌مسیر از بیتیِ خودِ پروسه انتخاب
-    /// می‌کند — نسخهٔ ۳۲بیتی هرگز بار نمی‌شود و فقط ۹۴٫۵ مگابایت به
-    /// دانلود و استخراج اضافه می‌کند.
+    /// ⛔ بارِ هر معماری فقط <b>کتابخانهٔ خودش</b> را داشته باشد.
+    /// <c>VideoLAN.LibVLC.Windows</c> هر دو را می‌آورد
+    /// (<c>libvlc/win-x64</c> و <c>libvlc/win-x86</c>، روی هم ~۱۹۵ مگابایت)
+    /// و آن‌که به بیتیِ پروسه نمی‌خورد هرگز بار نمی‌شود —
+    /// <c>Core.Initialize()</c>ی بی‌مسیر از بیتیِ خودِ پروسه انتخاب می‌کند.
+    ///
+    /// ⚠️ و از ۳.۱.۱۵۸ این گام <b>وارونه هم</b> می‌شود: در بارِ ۳۲بیتی
+    /// آن‌که باید برود <c>win-x64</c> است. پس عددِ ثابت ممنوع — تصمیم باید
+    /// از روی خودِ RID باشد، وگرنه بارِ ۳۲بیتی همان چیزی را از دست می‌دهد
+    /// که لازم دارد و کارتِ دوربین بی‌صدا می‌میرد.
     /// </summary>
     [Fact]
     public void The_unused_vlc_architecture_is_trimmed_before_packing()
     {
         var w = Workflow();
-        Assert.Contains("libvlc/win-x86", w);
-        Assert.Contains("Remove-Item", w);
+        var trim = w.IndexOf("name: چیدنِ معماریِ بی‌استفادهٔ VLC", StringComparison.Ordinal);
+        Assert.True(trim > 0, "گامِ چیدن پیدا نشد");
+        var step = w[trim..];
+        var end = step.IndexOf("\n      - name:", StringComparison.Ordinal);
+        if (end > 0) step = step[..end];
+
+        Assert.Contains("Remove-Item", step);
+
+        //  ⛔ هر دو معماری باید در تصمیم باشند — نه یکی که همیشه برود.
+        Assert.Contains("win-x64", step);
+        Assert.Contains("win-x86", step);
+
+        //  ⛔ و آن‌چه برداشته می‌شود **متغیر** است، نه یک نامِ ثابت.
+        Assert.Contains("$drop", step);
+        Assert.Contains("$keep", step);
 
         //  ⛔ ترتیب: انتشار ⇒ چیدن ⇒ بسته‌ها. اگر پس از «بسته‌ها» بدود،
-        //  زیپ و نصاب و شناسهٔ پایه هر سه از درختِ نچیده ساخته می‌شوند و
-        //  این کار هیچ بایتی کم نمی‌کند.
+        //  زیپ و نصاب و شناسهٔ پایه هر سه از درختِ نچیده ساخته می‌شوند.
         //  ⚠️ لنگرِ گامِ ساخت «dotnet publish» است، نه «name: ساخت»:
         //  خطِ اولِ ورک‌فلو نامِ خودش است («ساخت برنامهٔ نیتیو (ویندوز)»)،
-        //  پس آن الگو صفر برمی‌گرداند و هم ادعای `> 0` سرخ می‌شود و هم
-        //  سنجشِ ترتیب به دلیلِ غلط سبز می‌مانْد. «- name: ساخت» هم
-        //  پیشوندِ «- name: ساختِ نصاب» است. پس لنگرِ یکتا.
+        //  و «- name: ساخت» هم پیشوندِ «- name: ساختِ نصاب» است.
         var build = w.IndexOf("dotnet publish PumpYaqobi.App", StringComparison.Ordinal);
-        var trim = w.IndexOf("name: چیدنِ معماریِ بی‌استفادهٔ VLC", StringComparison.Ordinal);
         var pack = w.IndexOf("name: بسته‌ها", StringComparison.Ordinal);
-        Assert.True(build > 0 && trim > 0 && pack > 0, "مرحله‌ها پیدا نشدند");
+        Assert.True(build > 0 && pack > 0, "مرحله‌ها پیدا نشدند");
         Assert.True(build < trim, "چیدن پیش از ساخت — پوشه‌ای برای چیدن نیست");
         Assert.True(trim < pack, "چیدن پس از بسته‌ها — بار نچیده بسته می‌شود");
     }
 
     /// <summary>
-    /// ⚠️ و ۶۴بیتی باید بماند: برداشتنش کارتِ دوربین را بی‌صدا می‌کشد.
-    /// پس ساخت باید همان‌جا بشکند، نه این‌که بی‌صدا رد شود.
+    /// ⚠️ و کتابخانهٔ **خودِ همان معماری** باید بماند: برداشتنش کارتِ دوربین
+    /// را بی‌صدا می‌کشد. پس ساخت باید همان‌جا بشکند، نه این‌که رد شود.
     /// </summary>
     [Fact]
     public void The_used_vlc_architecture_is_checked_not_assumed()
     {
         var w = Workflow();
-        Assert.Contains("libvlc/win-x64/libvlc.dll", w);
+        Assert.Contains("libvlc/$keep/libvlc.dll", w);
         Assert.Contains("throw", w);
 
         //  و کدِ برنامه هم باید همان راهِ «بیتیِ پروسه» را برود، وگرنه

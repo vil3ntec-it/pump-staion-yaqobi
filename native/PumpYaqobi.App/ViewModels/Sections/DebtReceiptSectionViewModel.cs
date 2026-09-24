@@ -201,7 +201,7 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
     partial void OnMonthChanged(string? v)
     {
         if (v is null) { Month = ""; return; }
-        _ = ReloadAsync();
+        _ = Services.CrashGuard.RunAsync("خواندنِ رسیدها", ReloadAsync);
     }
 
     protected override async Task LoadAsync()

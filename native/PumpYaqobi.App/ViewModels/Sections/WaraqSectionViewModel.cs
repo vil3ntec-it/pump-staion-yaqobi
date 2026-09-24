@@ -1020,7 +1020,7 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
         else Page.Load(full);
         SheetOpen = true;
     }
-    partial void OnMonthChanged(string v) => _ = ReloadAsync();
+    partial void OnMonthChanged(string v) => _ = Services.CrashGuard.RunAsync("خواندنِ ورق‌ها", ReloadAsync);
 
     protected override async Task LoadAsync()
     {

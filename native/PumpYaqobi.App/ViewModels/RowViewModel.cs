@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using PumpYaqobi.App.Services;
 
 namespace PumpYaqobi.App.ViewModels;
 
@@ -8,7 +9,7 @@ namespace PumpYaqobi.App.ViewModels;
 ///
 /// ذخیره با کمی تأخیر انجام می‌شود تا تایپِ پیاپی ده‌ها نوشتن در دیتابیس نسازد.
 /// </summary>
-public abstract partial class RowViewModel : ObservableObject
+public abstract partial class RowViewModel : ObservableObject, IPendingWrite
 {
     private CancellationTokenSource? _debounce;
 
@@ -47,6 +48,9 @@ public abstract partial class RowViewModel : ObservableObject
     {
         if (Loading) return;
         _dirty = true;
+        //  ⛔ از همین لحظه این ردیف «در صف»ِ نگهبان است: بسته شدنِ برنامه،
+        //  عوض شدنِ دفتر و ‎Ctrl+S‎ همه از همان یک فهرست می‌نویسند.
+        SaveGuard.Track(this);
         Apply();
         Recalculated?.Invoke();
         _debounce?.Cancel();
@@ -61,20 +65,65 @@ public abstract partial class RowViewModel : ObservableObject
         {
             await Task.Delay(350, ct);
             if (ct.IsCancellationRequested) return;
-            await SaveAsync();
-            _dirty = false;
         }
-        catch (TaskCanceledException) { /* تایپِ تازه — ذخیرهٔ پیشین لغو شد */ }
+        catch (TaskCanceledException) { return; }   // تایپِ تازه — این یکی لغو شد
+        await WriteAsync();
     }
 
-    /// <summary>ذخیرهٔ فوری (پیش از بستنِ بخش یا گرفتنِ گزارش).</summary>
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ نوشتنی که شکست بخورد، دوباره تلاش می‌کند و ساکت هم نمی‌ماند ════════
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  ⛔ پیش از این، ذخیره با ‎_ = …‎ رها می‌شد و هر استثنایی «مشاهده‌نشده»
+    //  بود: ردیف تا ابد کثیف می‌ماند، هیچ تلاشِ دوباره‌ای نبود، و کاربر هیچ
+    //  نمی‌دید. یک قفلِ لحظه‌ایِ فایل از سوی ضدِ ویروس = یک ردیفِ گم‌شده، و
+    //  صفحه‌ای که سالم به نظر می‌رسید. همان «کلکِ دروغ»ی که این‌جا قدغن است.
+    //
+    //  ⚠️ سه تلاش با فاصلهٔ فزاینده، و بعد **گفتن**. ردیف کثیف می‌ماند تا
+    //  بسته شدنِ برنامه یا ‎Ctrl+S‎ دوباره امتحانش کند — پاکش نمی‌کنیم.
+    private static readonly int[] Backoff = { 0, 400, 1_500 };
+
+    private int _writing;
+
+    private async Task WriteAsync()
+    {
+        //  دو نوشتنِ هم‌زمانِ یک ردیف یعنی دو تراکنشِ رقیب روی یک سطر.
+        if (Interlocked.Exchange(ref _writing, 1) == 1) return;
+        try
+        {
+            for (var i = 0; i < Backoff.Length; i++)
+            {
+                if (!_dirty) return;
+                if (Backoff[i] > 0)
+                    try { await Task.Delay(Backoff[i]); } catch { }
+                try
+                {
+                    Apply();
+                    await SaveAsync();
+                    _dirty = false;
+                    SaveGuard.ReportSaved();
+                    return;
+                }
+                catch (Exception e)
+                {
+                    if (i == Backoff.Length - 1)
+                        SaveGuard.ReportFailure("یک ردیف ذخیره نشد (" + e.GetType().Name + ")");
+                }
+            }
+        }
+        finally { Interlocked.Exchange(ref _writing, 0); }
+    }
+
+    /// <summary>
+    /// ذخیرهٔ فوری (پیش از بستنِ بخش، بسته شدنِ برنامه، یا گرفتنِ گزارش).
+    /// ⛔ هیچ‌وقت استثنا بیرون نمی‌دهد — وگرنه یک ردیفِ خراب جلوی نوشتنِ
+    /// بقیه را می‌گرفت و بسته شدنِ برنامه هم می‌ماسید.
+    /// </summary>
     public async Task FlushAsync()
     {
         _debounce?.Cancel();
         if (!_dirty) return;          // ردیفِ دست‌نخورده — چیزی برای نوشتن نیست
-        Apply();
-        await SaveAsync();
-        _dirty = false;
+        await WriteAsync();
     }
 
     /// <summary>مقدارهای جدول را در موجودیت می‌نشاند.</summary>

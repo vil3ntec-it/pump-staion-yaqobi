@@ -8,12 +8,25 @@ name: ساخت برنامهٔ نیتیو (ویندوز)
 # «آخرین نسخه» منتشر می‌شود. کاربر فقط یک‌بار دانلود می‌کند؛ از آن به بعد خودِ
 # برنامه (تنظیمات › به‌روزرسانی) نسخهٔ تازه را می‌گیرد و جایگزین می‌کند.
 #
-# ── سه بسته منتشر می‌شود ────────────────────────────────────────────────────
-#   PumpYaqobi-Setup.exe    ← این همانی است که کاربر می‌گیرد. نصبِ واقعی:
-#                             آیکونِ دسکتاپ، فهرستِ برنامه‌ها، و ثبت در
-#                             «برنامه‌ها و قابلیت‌ها» تا بشود حذفش کرد.
-#   PumpYaqobi-app-<id>.zip ← بستهٔ کوچکِ به‌روزرسانی (فقط فایل‌های خودِ برنامه)
-#   PumpYaqobi-Windows.zip  ← بستهٔ بی‌نصب، برای کسی که نمی‌خواهد نصب کند
+# ── دو معماری، نه یکی ───────────────────────────────────────────────────────
+# خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «برنامه رو نمیشه هر سه مدل شد؟ ۳۲ بیت،
+# ۶۴ بیت و ۸۶ بیت، چون کامپیوتر خیلی نسخه قدیمی است.»
+#
+# ⚠️ «۸۶ بیت» وجود ندارد — x86 **همان ۳۲بیتی** است. پس دو مدل است، نه سه:
+#
+#     win-x64   ویندوزِ ۶۴بیتی   ← همان چیزی که تا امروز منتشر می‌شد
+#     win-x86   ویندوزِ ۳۲بیتی   ← تازه، برای کامپیوترِ قدیمی
+#
+# ⛔ و نامِ فایل‌های ۶۴بیتی **یک حرف هم عوض نشد** (`PumpYaqobi-Setup.exe` ·
+#    `base.txt`). هر نصبی که همین حالا دستِ مشتری است کدِ قدیمی دارد و همان
+#    نام‌ها را می‌خواند؛ عوض کردنشان یعنی همهٔ آن نصب‌ها یک‌شبه از
+#    به‌روزرسانی می‌افتند. ۳۲بیتی پسوندِ `-x86` می‌گیرد.
+#
+# ── بسته‌های هر معماری ──────────────────────────────────────────────────────
+#   PumpYaqobi-Setup.exe        ← ۶۴بیتی؛ این همانی است که بیشترِ کاربران می‌گیرند
+#   PumpYaqobi-Setup-x86.exe    ← ۳۲بیتی؛ برای ویندوزِ قدیمیِ ۳۲بیتی
+#   PumpYaqobi-app-<id>.zip     ← بستهٔ کوچکِ به‌روزرسانی (شناسهٔ پایه در نامش)
+#   PumpYaqobi-Windows[-x86].zip← بستهٔ بی‌نصب، برای کسی که نمی‌خواهد نصب کند
 on:
   workflow_dispatch:
   push:
@@ -56,31 +69,44 @@ jobs:
         run: dotnet test PumpYaqobi.Tests -c Release --nologo
 
       # self-contained تا روی ویندوزی که دات‌نت ندارد هم باز شود
+      #
+      # ⚠️ هر معماری پوشهٔ خودش را می‌گیرد (‎publish/win-x64‎ و
+      #    ‎publish/win-x86‎). یک پوشهٔ مشترک یعنی فایل‌های بومیِ دو معماری
+      #    روی هم می‌نشینند و بستهٔ به‌دست‌آمده روی **هیچ‌کدام** بالا نمی‌آید.
       - name: ساخت
         working-directory: native
-        run: >
-          dotnet publish PumpYaqobi.App -c Release -r win-x64 --self-contained true
-          -p:Version=${{ steps.ver.outputs.version }}
-          -p:PublishSingleFile=false
-          -o publish
+        shell: pwsh
+        run: |
+          foreach ($rid in @('win-x64','win-x86')) {
+            dotnet publish PumpYaqobi.App -c Release -r $rid --self-contained true `
+              -p:Version=${{ steps.ver.outputs.version }} `
+              -p:PublishSingleFile=false `
+              -o "publish/$rid"
+            if ($LASTEXITCODE -ne 0) { throw "ساختِ $rid شکست خورد" }
+          }
 
       # ── چیدنِ معماریِ بی‌استفادهٔ VLC ─────────────────────────────────────
       #  گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۸): «نصب نمی‌شود، چند نسخه قبل‌تر
       #  می‌شد.» و نصاب واقعاً از ~۷۹ مگابایت به ~۱۱۰ پریده بود.
       #
       #  ریشه: `VideoLAN.LibVLC.Windows` بارِ بومیِ **هر دو** معماری را
-      #  می‌آورد — `libvlc/win-x64` و `libvlc/win-x86` — و هیچ‌چیز دومی را
+      #  می‌آورد — `libvlc/win-x64` و `libvlc/win-x86` — و هیچ‌چیز آن یکی را
       #  نمی‌چید. اندازه‌گیری روی خودِ بارِ منتشرشده:
       #
       #      libvlc/win-x64   ۴۲۵ فایل   ۱۰۰٫۸ مگابایت
-      #      libvlc/win-x86   ۴۲۵ فایل    ۹۴٫۵ مگابایت   ← هیچ‌وقت بار نمی‌شود
+      #      libvlc/win-x86   ۴۲۵ فایل    ۹۴٫۵ مگابایت
       #      بقیهٔ برنامه     ۲۸۷ فایل   ۱۶۷٫۵ مگابایت
       #
-      #  ⛔ و ۹۴٫۵ مگابایتش **قابلِ استفاده هم نیست**: برنامه با
-      #  `-r win-x64 --self-contained` منتشر می‌شود، پس پروسه همیشه
-      #  ۶۴بیتی است؛ و `VlcVideoFeed` هم `Core.Initialize()` را بی مسیر
-      #  صدا می‌زند، یعنی LibVLCSharp از بیتیِ خودِ پروسه انتخاب می‌کند.
-      #  نسخهٔ ۳۲بیتی در چنین پروسه‌ای هرگز بار نمی‌شود.
+      #  ⛔ و آن یکی **قابلِ استفاده هم نیست**: برنامه با
+      #  `--self-contained` و یک RIDِ مشخص منتشر می‌شود، پس بیتیِ پروسه
+      #  همان بیتیِ ساخت است؛ و `VlcVideoFeed` هم `Core.Initialize()` را بی
+      #  مسیر صدا می‌زند، یعنی LibVLCSharp از بیتیِ خودِ پروسه انتخاب
+      #  می‌کند. معماریِ دیگر در چنین پروسه‌ای هرگز بار نمی‌شود.
+      #
+      #  ⚠️ پس با آمدنِ ساختِ ۳۲بیتی این گام **وارونه** هم می‌شود: در بارِ
+      #  ۳۲بیتی آن‌که باید برود `libvlc/win-x64` است. عددِ ثابت ننویسید —
+      #  از روی خودِ RID تصمیم بگیرید، وگرنه بارِ ۳۲بیتی همان کتابخانه‌ای
+      #  را از دست می‌دهد که لازم دارد و کارتِ دوربین بی‌صدا می‌میرد.
       #
       #  ⚠️ و چرا روی «نصب نمی‌شود» اثر دارد: `SolidCompression=yes` است،
       #  پس کلِ بار یک جریانِ پیوستهٔ فشرده است — هرچه بزرگ‌تر، هم دانلودِ
@@ -90,28 +116,29 @@ jobs:
       #
       #  ⛔ پیش از گامِ «بسته‌ها» می‌دود، وگرنه هم زیپ و هم نصاب و هم
       #  شناسهٔ پایه از روی درختِ نچیده ساخته می‌شوند.
-      #  ⚠️ و شناسهٔ پایه با این کار **عوض می‌شود** — که درست است: پایه
-      #  واقعاً عوض شده. نصبِ قبلیِ کاربر یک بار بستهٔ کامل می‌گیرد و از
-      #  آن به بعد دوباره بستهٔ کوچک.
       - name: چیدنِ معماریِ بی‌استفادهٔ VLC
         shell: pwsh
         working-directory: native
         run: |
-          $x86 = "publish/libvlc/win-x86"
-          if (Test-Path $x86) {
-            $mb = ((Get-ChildItem $x86 -Recurse -File | Measure-Object Length -Sum).Sum)/1MB
-            Remove-Item $x86 -Recurse -Force
-            "برداشته شد: {0:N1} مگابایت ({1})" -f $mb, $x86
-          } else {
-            "libvlc/win-x86 نبود — چیزی برداشته نشد"
-          }
-          #  ⛔ و ۶۴بیتی باید سرِ جایش باشد، وگرنه کارتِ دوربین بی‌صدا
-          #  می‌میرد. نبودش ساخت را می‌خواباند، نه این‌که رد شود.
-          if (-not (Test-Path "publish/libvlc/win-x64/libvlc.dll")) {
-            throw "libvlc/win-x64 نیست — پخشِ دوربین از کار می‌افتد"
+          foreach ($rid in @('win-x64','win-x86')) {
+            $keep = if ($rid -eq 'win-x86') { 'win-x86' } else { 'win-x64' }
+            $drop = if ($rid -eq 'win-x86') { 'win-x64' } else { 'win-x86' }
+            $dead = "publish/$rid/libvlc/$drop"
+            if (Test-Path $dead) {
+              $mb = ((Get-ChildItem $dead -Recurse -File | Measure-Object Length -Sum).Sum)/1MB
+              Remove-Item $dead -Recurse -Force
+              "[$rid] برداشته شد: {0:N1} مگابایت (libvlc/$drop)" -f $mb
+            } else {
+              "[$rid] libvlc/$drop نبود — چیزی برداشته نشد"
+            }
+            #  ⛔ و معماریِ خودش باید سرِ جایش باشد، وگرنه کارتِ دوربین
+            #  بی‌صدا می‌میرد. نبودش ساخت را می‌خواباند، نه این‌که رد شود.
+            if (-not (Test-Path "publish/$rid/libvlc/$keep/libvlc.dll")) {
+              throw "[$rid] libvlc/$keep نیست — پخشِ دوربین از کار می‌افتد"
+            }
           }
 
-      # ── دو بسته، نه یکی ────────────────────────────────────────────────
+      # ── دو بسته برای هر معماری، نه یکی ──────────────────────────────────
       # بستهٔ کامل ~۵۷ مگابایت است ولی از هر ساخت به ساختِ بعدی معمولاً فقط
       # دو مگابایتش عوض می‌شود (خودِ فایل‌های برنامه). پس یک بستهٔ کوچک هم
       # ساخته می‌شود که برنامه در به‌روزرسانی‌های بعدی همان را می‌گیرد — تا
@@ -121,45 +148,73 @@ jobs:
       # می‌شود و در نامِ بستهٔ کوچک می‌نشیند. برنامه فقط وقتی بستهٔ کوچک را
       # می‌گیرد که پایه‌اش دقیقاً همان باشد؛ اگر نسخهٔ کتابخانه‌ها عوض شده
       # باشد شناسه فرق می‌کند و خودبه‌خود بستهٔ کامل گرفته می‌شود.
+      #
+      # ⚠️ و همین شناسه **دو معماری را هم از هم جدا می‌کند**: فایل‌های بومیِ
+      #    ۳۲ و ۶۴بیتی هش و اندازه‌شان فرق دارد، پس شناسهٔ پایه‌شان هرگز یکی
+      #    نمی‌شود و نصبِ ۳۲بیتی نمی‌تواند بستهٔ کوچکِ ۶۴بیتی را بردارد.
+      #    این یک اتفاق نیست، خودِ قاعده است — و آزمون قفلش کرده.
       - name: بسته‌ها
         id: pack
         shell: pwsh
         run: |
-          $pub = "native/publish"
           New-Item -ItemType Directory -Force -Path rel | Out-Null
 
-          # فایل‌های خودِ برنامه در برابر فایل‌های پایه
-          $app  = Get-ChildItem $pub -File | Where-Object { $_.Name -like 'PumpYaqobi*' }
-          $base = Get-ChildItem $pub -Recurse -File | Where-Object { $_.Name -notlike 'PumpYaqobi*' }
+          foreach ($rid in @('win-x64','win-x86')) {
+            $pub = "native/publish/$rid"
+            # ⛔ پسوند فقط برای ۳۲بیتی. نامِ ۶۴بیتی همان است که بوده، وگرنه
+            #    هر نصبِ امروزیِ مشتری از به‌روزرسانی می‌افتد.
+            $sfx = if ($rid -eq 'win-x86') { '-x86' } else { '' }
 
-          $sb = [System.Text.StringBuilder]::new()
-          foreach ($f in ($base | Sort-Object FullName)) {
-            $h = (Get-FileHash $f.FullName -Algorithm SHA256).Hash
-            [void]$sb.AppendLine("$($f.Name):$($f.Length):$h")
+            # فایل‌های خودِ برنامه در برابر فایل‌های پایه
+            $app  = Get-ChildItem $pub -File | Where-Object { $_.Name -like 'PumpYaqobi*' }
+            $base = Get-ChildItem $pub -Recurse -File | Where-Object { $_.Name -notlike 'PumpYaqobi*' }
+
+            $sb = [System.Text.StringBuilder]::new()
+            foreach ($f in ($base | Sort-Object FullName)) {
+              $h = (Get-FileHash $f.FullName -Algorithm SHA256).Hash
+              [void]$sb.AppendLine("$($f.Name):$($f.Length):$h")
+            }
+            $bytes  = [System.Text.Encoding]::UTF8.GetBytes($sb.ToString())
+            $sha    = [System.Security.Cryptography.SHA256]::Create().ComputeHash($bytes)
+            $baseId = -join ($sha[0..3] | ForEach-Object { $_.ToString('x2') })
+
+            # شناسه کنارِ برنامه می‌نشیند تا نصبِ کاربر بداند پایه‌اش کدام است
+            $baseId | Out-File -Encoding ascii -NoNewline "$pub/base.id"
+
+            Compress-Archive -Path "$pub/*" -DestinationPath "rel/PumpYaqobi-Windows$sfx.zip" -Force
+            Compress-Archive -Path $app.FullName -DestinationPath "rel/PumpYaqobi-app-$baseId.zip" -Force
+            # شناسهٔ پایه کنارِ نسخه هم منتشر می‌شود: درِ دومِ به‌روزرسانی هیچ
+            # پرس‌وجویی نمی‌زند، پس باید از روی همین فایل بفهمد نامِ بستهٔ کوچک
+            # چیست و آیا با پایهٔ نصبِ کاربر یکی است یا نه.
+            $baseId | Out-File -Encoding ascii -NoNewline "rel/base$sfx.txt"
+
+            if ($rid -eq 'win-x86') {
+              echo "baseId86=$baseId" >> $env:GITHUB_OUTPUT
+            } else {
+              echo "baseId=$baseId" >> $env:GITHUB_OUTPUT
+            }
+
+            "[$rid] بستهٔ کامل: {0:N1} مگابایت" -f ((Get-Item "rel/PumpYaqobi-Windows$sfx.zip").Length/1MB)
+            "[$rid] بستهٔ کوچک: {0:N1} مگابایت ($baseId)" -f ((Get-Item "rel/PumpYaqobi-app-$baseId.zip").Length/1MB)
           }
-          $bytes  = [System.Text.Encoding]::UTF8.GetBytes($sb.ToString())
-          $sha    = [System.Security.Cryptography.SHA256]::Create().ComputeHash($bytes)
-          $baseId = -join ($sha[0..3] | ForEach-Object { $_.ToString('x2') })
-          echo "baseId=$baseId" >> $env:GITHUB_OUTPUT
 
-          # شناسه کنارِ برنامه می‌نشیند تا نصبِ کاربر بداند پایه‌اش کدام است
-          $baseId | Out-File -Encoding ascii -NoNewline "$pub/base.id"
-
-          Compress-Archive -Path "$pub/*" -DestinationPath rel/PumpYaqobi-Windows.zip -Force
-          Compress-Archive -Path $app.FullName -DestinationPath "rel/PumpYaqobi-app-$baseId.zip" -Force
           "${{ steps.ver.outputs.version }}" | Out-File -Encoding ascii rel/version.txt
-          # شناسهٔ پایه کنارِ نسخه هم منتشر می‌شود: درِ دومِ به‌روزرسانی هیچ
-          # پرس‌وجویی نمی‌زند، پس باید از روی همین فایل بفهمد نامِ بستهٔ کوچک
-          # چیست و آیا با پایهٔ نصبِ کاربر یکی است یا نه.
-          $baseId | Out-File -Encoding ascii -NoNewline rel/base.txt
 
-          "بستهٔ کامل: {0:N1} مگابایت" -f ((Get-Item rel/PumpYaqobi-Windows.zip).Length/1MB)
-          "بستهٔ کوچک: {0:N1} مگابایت" -f ((Get-Item "rel/PumpYaqobi-app-$baseId.zip").Length/1MB)
+          # ⛔ دو شناسهٔ پایهٔ یکسان یعنی نصبِ ۳۲بیتی می‌تواند بستهٔ ۶۴بیتی را
+          #    بردارد و برنامه دیگر بالا نمی‌آید. شدنی نیست، ولی «شدنی نیست»
+          #    با «سنجیده شد» یکی نیست.
+          $a = Get-Content rel/base.txt -Raw
+          $b = Get-Content rel/base-x86.txt -Raw
+          if ($a -eq $b) { throw "شناسهٔ پایهٔ ۳۲ و ۶۴بیتی یکی درآمد — بستهٔ کوچک قاطی می‌شود" }
 
       # ── نصاب ────────────────────────────────────────────────────────────
       # تا امروز فقط زیپ منتشر می‌شد و کاربر باید خودش بازش می‌کرد و دنبالِ
       # exe می‌گشت؛ نه آیکونی روی دسکتاپ می‌آمد نه در فهرستِ برنامه‌ها بود.
       # Inno Setup روی رانرِ ویندوزِ گیت‌هاب از پیش هست.
+      #
+      # ⛔ دو نصابِ جدا با دو AppId جدا: نصبِ ۳۲بیتی نباید روی نصبِ ۶۴بیتی
+      #    بنشیند. Inno فایل‌های کهنه را پاک نمی‌کند، پس نشستنشان روی هم یعنی
+      #    پوشه‌ای با بارِ بومیِ هر دو معماری و ~۱۰۰ مگابایت آشغال.
       - name: ساختِ نصاب
         shell: pwsh
         run: |
@@ -169,11 +224,17 @@ jobs:
             $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           }
           New-Item -ItemType Directory -Force -Path rel | Out-Null
-          & $iscc /Qp `
-            "/DAppVersion=${{ steps.ver.outputs.version }}" `
-            native/installer/PumpYaqobi.iss
-          if ($LASTEXITCODE -ne 0) { throw "ساختِ نصاب شکست خورد" }
-          "نصاب: {0:N1} مگابایت" -f ((Get-Item rel/PumpYaqobi-Setup.exe).Length/1MB)
+          foreach ($arch in @('x64','x86')) {
+            $rid = "win-$arch"
+            & $iscc /Qp `
+              "/DAppVersion=${{ steps.ver.outputs.version }}" `
+              "/DArch=$arch" `
+              "/DSourceDir=..\publish\$rid" `
+              native/installer/PumpYaqobi.iss
+            if ($LASTEXITCODE -ne 0) { throw "ساختِ نصابِ $arch شکست خورد" }
+          }
+          "نصابِ ۶۴بیتی: {0:N1} مگابایت" -f ((Get-Item rel/PumpYaqobi-Setup.exe).Length/1MB)
+          "نصابِ ۳۲بیتی: {0:N1} مگابایت" -f ((Get-Item rel/PumpYaqobi-Setup-x86.exe).Length/1MB)
 
       # ── چک‌سام ──────────────────────────────────────────────────────────
       #  گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۸) با عکس: نصاب وسطِ کار
@@ -197,8 +258,11 @@ jobs:
         run: |
           $names = @(
             'PumpYaqobi-Setup.exe',
+            'PumpYaqobi-Setup-x86.exe',
             'PumpYaqobi-Windows.zip',
-            "PumpYaqobi-app-${{ steps.pack.outputs.baseId }}.zip"
+            'PumpYaqobi-Windows-x86.zip',
+            "PumpYaqobi-app-${{ steps.pack.outputs.baseId }}.zip",
+            "PumpYaqobi-app-${{ steps.pack.outputs.baseId86 }}.zip"
           )
           $lines = foreach ($n in $names) {
             $f = "rel/$n"
@@ -223,9 +287,29 @@ jobs:
           body: |
             برنامهٔ کامپیوتریِ پمپ یعقوبی، نسخهٔ ${{ steps.ver.outputs.version }}.
 
+            ### کدام فایل را بگیرم؟
+
+            | ویندوزِ شما | فایل |
+            |---|---|
+            | ۶۴بیتی (تقریباً همهٔ کامپیوترهای امروزی) | **`PumpYaqobi-Setup.exe`** |
+            | ۳۲بیتی (کامپیوترِ قدیمی) | **`PumpYaqobi-Setup-x86.exe`** |
+
+            بیتیِ ویندوزتان را این‌طور ببینید: کلیدِ **ویندوز + Pause**، یا
+            «تنظیمات › سیستم › درباره» — جلوی «نوع سیستم» نوشته است
+            «۶۴-bit» یا «۳۲-bit».
+
+            ⚠️ نمی‌دانید کدام؟ **`PumpYaqobi-Setup.exe`** را بگیرید. اگر
+            ویندوزتان ۳۲بیتی باشد، ویندوز همان لحظه می‌گوید این برنامه روی
+            این کامپیوتر اجرا نمی‌شود — و آن‌وقت فایلِ `-x86` را بگیرید.
+            برعکسش خرابی نمی‌آورد ولی برنامه کندتر می‌شود، پس روی ویندوزِ
+            ۶۴بیتی همان اولی درست است.
+
+            ⚠️ هر دو **یک برنامهٔ کاملاً یکسان**‌اند؛ فقط برای بیتیِ متفاوتِ
+            ویندوز ساخته شده‌اند. حساب‌ها و دفتر در هر دو یکی است.
+
             ### نصب
 
-            **`PumpYaqobi-Setup.exe`** را بگیرید و بزنید.
+            فایل را بگیرید و بزنید.
 
             وسطِ نصب **خودتان انتخاب می‌کنید فایل‌ها کجا بروند**. پیش‌فرض
             `%LocalAppData%\Programs\PumpYaqobi` است — همان‌جایی که کروم و
@@ -248,17 +332,17 @@ jobs:
             لازم نیست چیزی دانلود کنید. از داخلِ برنامه «تنظیمات ›
             به‌روزرسانی» را بزنید — خودش می‌گیرد، جایگزین می‌کند و دوباره باز
             می‌شود؛ و فقط همان چند مگابایتی که واقعاً عوض شده، نه کلِ بسته.
+            هر نصب، بستهٔ **بیتیِ خودش** را می‌گیرد.
 
             نصبِ دوباره به **همان پوشه‌ای** می‌رود که بارِ اول انتخاب کردید، و
             بعد از باز شدنِ دوباره خودِ برنامه می‌گوید که واقعاً به نسخهٔ تازه
             رسیده یا نه — اگر نرسیده باشد، ساکت نمی‌ماند.
 
             ---
-            `PumpYaqobi-Windows.zip` هم معمولاً هست، برای کسی که نصب
-            نمی‌خواهد و ترجیح می‌دهد خودش جایی بازش کند. آن فایل بزرگ است و
-            گاهی بالا رفتنش نیمه‌کاره می‌ماند؛ اگر در فهرستِ پایین ندیدیدش،
-            همان `PumpYaqobi-Setup.exe` را بگیرید — همان کارِ کامل را
-            می‌کند.
+            `PumpYaqobi-Windows.zip` (و `-x86`ی‌اش) هم معمولاً هست، برای کسی
+            که نصب نمی‌خواهد و ترجیح می‌دهد خودش جایی بازش کند. آن فایل بزرگ
+            است و گاهی بالا رفتنش نیمه‌کاره می‌ماند؛ اگر در فهرستِ پایین
+            ندیدیدش، همان نصاب را بگیرید — همان کارِ کامل را می‌کند.
           #  ⛔ زیپِ ۱۷۰ مگابایتیِ «بی‌نصاب» عمداً این‌جا نیست — گامِ بعدی.
           #
           #  دو بار پشتِ سرِ هم (۱۴۰۵/۰۶/۳۰) همین گام روی همان یک فایل
@@ -270,7 +354,9 @@ jobs:
           #  فایلی که «راحتی» است نباید جلوی فایلی را که «محصول» است بگیرد.
           files: |
             rel/PumpYaqobi-Setup.exe
+            rel/PumpYaqobi-Setup-x86.exe
             rel/PumpYaqobi-app-${{ steps.pack.outputs.baseId }}.zip
+            rel/PumpYaqobi-app-${{ steps.pack.outputs.baseId86 }}.zip
             rel/version.txt
             rel/SHA256SUMS.txt
           make_latest: true
@@ -290,6 +376,10 @@ jobs:
       #  اگر «تازه‌ترین انتشار» شود، برنامه از آن هیچ شماره‌ای درنمی‌آورد و
       #  برای همیشه می‌گوید «به‌روز است». همان تله‌ای که ریپوی سرور یک بار
       #  با انتشارِ اپِ اندروید خورد.
+      #
+      #  ⛔ و `base.txt` همان ۶۴بیتی می‌ماند. نصب‌های امروزیِ مشتری کدِ قدیمی
+      #  دارند و همین یک نام را می‌شناسند؛ ۳۲بیتی `base-x86.txt`ی خودش را
+      #  دارد و کدِ تازه از روی بیتیِ خودش انتخاب می‌کند.
       - name: انتشارِ چرخشی (درِ دومِ به‌روزرسانی)
         continue-on-error: true
         uses: softprops/action-gh-release@v2
@@ -302,13 +392,19 @@ jobs:
 
             برنامه وقتی فهرستِ انتشارها در دسترس نباشد از همین‌جا
             می‌خواند، و دکمهٔ دانلودِ ویندوزِ سایت هم از همین‌جا پر می‌شود.
+
+            `PumpYaqobi-Setup.exe` ۶۴بیتی است و
+            `PumpYaqobi-Setup-x86.exe` ۳۲بیتی.
           prerelease: true
           make_latest: false
           files: |
             rel/PumpYaqobi-Setup.exe
+            rel/PumpYaqobi-Setup-x86.exe
             rel/PumpYaqobi-app-${{ steps.pack.outputs.baseId }}.zip
+            rel/PumpYaqobi-app-${{ steps.pack.outputs.baseId86 }}.zip
             rel/version.txt
             rel/base.txt
+            rel/base-x86.txt
             rel/SHA256SUMS.txt
 
       - name: انتشارِ زیپِ بی‌نصاب (اختیاری)
@@ -316,4 +412,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.ver.outputs.version }}
-          files: rel/PumpYaqobi-Windows.zip
+          files: |
+            rel/PumpYaqobi-Windows.zip
+            rel/PumpYaqobi-Windows-x86.zip

@@ -1,5 +1,6 @@
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 
 namespace PumpYaqobi.App.Update;
@@ -197,6 +198,14 @@ public sealed class UpdateService
                         continue;
                     }
 
+                    // ⛔ بستهٔ کاملِ **معماریِ دیگر** به کارِ این نصب نمی‌آید.
+                    //    از ۳.۱.۱۵۸ دو نصاب منتشر می‌شود (۶۴بیتی و ۳۲بیتی) و
+                    //    بی این خط، نصبِ ۳۲بیتی می‌توانست نصابِ ۶۴بیتی را
+                    //    بگیرد و پس از «به‌روزرسانی» برنامه‌ای داشته باشد که
+                    //    ویندوزش اصلاً اجرایش نمی‌کند. بدترین شکلِ خرابی:
+                    //    کاربر خودش این را خواسته بود.
+                    if (!AppArch.Owns(name)) continue;
+
                     // بستهٔ کامل. نصاب بر زیپ ترجیح دارد: نصاب میان‌برها و
                     // ثبتِ «برنامه‌ها و قابلیت‌ها» را هم تازه می‌کند، ولی زیپ
                     // فقط فایل‌ها را جابه‌جا می‌کند. پس اگر نصاب در انتشار
@@ -239,11 +248,17 @@ public sealed class UpdateService
                 return (new UpdateInfo(false, current, latest, null, 0, null), "");
 
             // پایهٔ آن‌طرف همان پایهٔ این نصب است؟ آن‌وقت همان چند مگابایت بس است.
-            var remoteBase = (await TextAsync("base.txt", ct)).Trim();
+            //
+            // ⚠️ و پایهٔ **هر معماری** فایلِ خودش را دارد: ۶۴بیتی همان
+            //    `base.txt`ِ همیشگی (نصب‌های امروزیِ مشتری کدِ قدیمی دارند و
+            //    فقط همین نام را می‌شناسند) و ۳۲بیتی `base-x86.txt`.
+            //    فایلِ نبوده ⇒ رشتهٔ خالی ⇒ بستهٔ کامل، که **درست** است:
+            //    هیچ‌وقت بستهٔ کوچکِ معماریِ دیگر برداشته نمی‌شود.
+            var remoteBase = (await TextAsync(AppArch.BaseFileName, ct)).Trim();
             var localBase = AppBase.LocalId;
             var small = remoteBase.Length > 0 && remoteBase == localBase;
 
-            var url = FileUrl(small ? "PumpYaqobi-app-" + remoteBase + ".zip" : "PumpYaqobi-Setup.exe");
+            var url = FileUrl(small ? "PumpYaqobi-app-" + remoteBase + ".zip" : AppArch.SetupName);
             return (new UpdateInfo(true, current, latest, url, 0, null, small), "");
         }
         catch (Exception e)
@@ -681,6 +696,62 @@ public static class AppVersion
             var v = typeof(AppVersion).Assembly.GetName().Version;
             return v is null ? "1.0.0" : $"{v.Major}.{v.Minor}.{v.Build}";
         }
+    }
+}
+
+/// <summary>
+/// ══ معماریِ همین نصب ═══════════════════════════════════════════════════════
+/// خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «۳۲ بیت، ۶۴ بیت و ۸۶ بیت، چون کامپیوتر
+/// خیلی نسخه قدیمی است.»
+///
+/// ⚠️ «۸۶ بیت» وجود ندارد — <c>x86</c> **همان ۳۲بیتی** است. پس دو مدل است،
+/// نه سه، و این کلاس فقط می‌گوید همین پروسه کدام‌شان است.
+///
+/// ⛔ <see cref="RuntimeInformation.ProcessArchitecture"/>، نه
+/// <c>OSArchitecture</c>: برنامهٔ ۳۲بیتی روی ویندوزِ ۶۴بیتی هم اجرا می‌شود و
+/// آن‌جا باید بستهٔ **۳۲بیتی** را بگیرد، نه آن‌چه سیستم‌عامل است.
+/// </summary>
+public static class AppArch
+{
+    /// <summary>جای معماری برای آزمون‌ها — همان الگوی <c>AppBase.LocalIdOverride</c>.</summary>
+    public static string? Override { get; set; }
+
+    private static readonly string[] Known = { "x64", "x86", "arm64" };
+
+    /// <summary>«x64» · «x86» · «arm64».</summary>
+    public static string Id => Override ?? (RuntimeInformation.ProcessArchitecture switch
+    {
+        Architecture.X86 => "x86",
+        Architecture.Arm64 => "arm64",
+        _ => "x64",
+    });
+
+    /// <summary>
+    /// ۶۴بیتی، یعنی همان معماری‌ای که نامِ فایل‌هایش **پسوند ندارد**.
+    /// ⛔ نامِ فایل‌های ۶۴بیتی هیچ‌وقت عوض نمی‌شود: هر نصبی که همین حالا دستِ
+    /// مشتری است کدِ قدیمی دارد و فقط <c>PumpYaqobi-Setup.exe</c> و
+    /// <c>base.txt</c> را می‌شناسد.
+    /// </summary>
+    public static bool IsDefault => Id == "x64";
+
+    /// <summary>نامِ نصابِ همین معماری در انتشار.</summary>
+    public static string SetupName =>
+        IsDefault ? "PumpYaqobi-Setup.exe" : "PumpYaqobi-Setup-" + Id + ".exe";
+
+    /// <summary>نامِ فایلِ شناسهٔ پایهٔ همین معماری روی برچسبِ چرخشی.</summary>
+    public static string BaseFileName => IsDefault ? "base.txt" : "base-" + Id + ".txt";
+
+    /// <summary>
+    /// این فایلِ انتشار مالِ همین معماری است؟ پسوندِ معماری در نام تصمیم
+    /// می‌گیرد؛ نامِ بی‌پسوند همان ۶۴بیتیِ همیشگی است.
+    /// </summary>
+    public static bool Owns(string assetName)
+    {
+        var stem = Path.GetFileNameWithoutExtension(assetName);
+        foreach (var a in Known)
+            if (stem.EndsWith("-" + a, StringComparison.OrdinalIgnoreCase))
+                return string.Equals(a, Id, StringComparison.OrdinalIgnoreCase);
+        return IsDefault;
     }
 }
 
