@@ -171,7 +171,23 @@ public sealed partial class CloudLink
     public string DeviceUid => CloudConfig.DeviceUid(_settings);
 
     /// <summary>آخرین وضعیتِ اشتراک که از سرور گرفته شده.</summary>
-    public PumpSubscription Subscription { get; private set; } = PumpSubscription.None;
+    public PumpSubscription Subscription
+    {
+        get => _subscription;
+        private set { _subscription = value; _subscriptionKnown = true; }
+    }
+
+    private PumpSubscription _subscription = PumpSubscription.None;
+
+    /// <summary>
+    /// این نمونه در همین عمرش پاسخِ واقعیِ سرور دربارهٔ اشتراک را دیده؟
+    ///
+    /// ⚠️ بی این، نمونهٔ تازه‌ای که فقط توکنِ دستگاه دارد (حلقهٔ پس‌زمینه
+    /// بی حساب) همیشه «اشتراک: نیست» را کنارِ مجوزِ سالم می‌دید و
+    /// <see cref="KeepLicenseFreshAsync"/> آن را «ناجوری» می‌خواند — یعنی هر
+    /// شصت ثانیه دو درخواستِ بی‌دلیل.
+    /// </summary>
+    private bool _subscriptionKnown;
 
     /// <summary>
     /// حالِ اشتراک برای قفلِ سه چیزِ ابری — همان چیزی که صفحهٔ پروفایل
@@ -179,13 +195,36 @@ public sealed partial class CloudLink
     /// </summary>
     public EntitlementState Entitlement => Entitlements.State(_settings, Subscription);
 
-    /// <summary>سنجشِ مجوزِ ذخیره‌شده — همان چیزی که آفلاین هم کار می‌کند.</summary>
-    public LicenseCheck Verify(long? nowMs = null) => LicenseGuard.Check(
-        _settings.CloudLicense,
-        _settings.CloudPublicKey,
-        DeviceUid,
-        _settings.CloudStationId,
-        nowMs ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+    /// <summary>
+    /// سنجشِ مجوزِ ذخیره‌شده — همان چیزی که آفلاین هم کار می‌کند.
+    /// ⚠️ از <see cref="LicenseGuard.CheckStored"/> می‌رود تا کفِ ساعت و
+    /// اثرِ انگشتِ کامپیوتر هم سنجیده شوند.
+    /// </summary>
+    public LicenseCheck Verify(long? nowMs = null) => LicenseGuard.CheckStored(_settings, nowMs);
+
+    /// <summary>
+    /// «کلیدِ سرور با قفلِ این برنامه نمی‌خورد» — یک جمله برای هر سه راه.
+    /// </summary>
+    private static CloudResult KeyMismatch() => CloudResult.No(
+        "کلیدِ سرور با آن‌چه این برنامه قفل کرده فرق دارد. اگر سرور را واقعاً "
+        + "عوض کرده‌اید، با پشتیبانی تماس بگیرید.", "key_mismatch");
+
+    /// <summary>
+    /// ⛔ با ریشهٔ اعتمادِ داخلِ برنامه (<see cref="CloudConfig.LicenseKeys"/>)
+    /// کلیدِ سرور فقط وقتی پذیرفته می‌شود که داخلِ همان فهرست باشد — و آن
+    /// وقت <b>چرخشِ کلید</b> هم پذیرفته است (کلیدِ تازه‌ای که در فهرست هست
+    /// جای قفلِ قبلی می‌نشیند). نتیجه: <c>null</c> یعنی «ادامه بده».
+    /// فهرستِ خالی ⇒ <c>false</c> برمی‌گردد و راهِ TOFUِ همیشگی می‌رود.
+    /// </summary>
+    private bool TrustRootDecides(string serverKey, out CloudResult? fail)
+    {
+        fail = null;
+        if (CloudConfig.LicenseKeys.Count == 0) return false;
+        if (serverKey.Length == 0) return true;
+        if (!CloudConfig.TrustsKey(serverKey)) { fail = KeyMismatch(); return true; }
+        _settings.CloudPublicKey = serverKey;
+        return true;
+    }
 
     // ── فعال‌سازی ──────────────────────────────────────────────────────
 
@@ -227,7 +266,11 @@ public sealed partial class CloudLink
         //  ⚠️ کلیدِ عمومی فقط همین یک بار قفل می‌شود. اگر از قبل کلیدی
         //  داریم و سرور کلیدِ دیگری داد، نمی‌پذیریم.
         var serverKey = Str(json, "publicKey");
-        if (string.IsNullOrWhiteSpace(_settings.CloudPublicKey))
+        if (TrustRootDecides(serverKey, out var rootFail))
+        {
+            if (rootFail is not null) return rootFail;
+        }
+        else if (string.IsNullOrWhiteSpace(_settings.CloudPublicKey))
         {
             if (string.IsNullOrWhiteSpace(serverKey))
                 return CloudResult.No("سرور کلیدِ عمومی نداد؛ فعال‌سازی نیمه‌کاره ماند");
@@ -235,15 +278,14 @@ public sealed partial class CloudLink
         }
         else if (!string.IsNullOrWhiteSpace(serverKey) && serverKey != _settings.CloudPublicKey)
         {
-            return CloudResult.No(
-                "کلیدِ سرور با آن‌چه این برنامه قفل کرده فرق دارد. اگر سرور را واقعاً "
-                + "عوض کرده‌اید، با پشتیبانی تماس بگیرید.", "key_mismatch");
+            return KeyMismatch();
         }
 
         _settings.CloudDeviceToken = Str(json, "deviceToken");
         _settings.CloudStationId = StationId(json);
         _settings.CloudLicense = Str(json, "license");
         _settings.CloudSyncedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        Seated();
         ReadSubscription(json);
         //  مُهرِ «دیدیم که باز است» — پایهٔ ارفاق (‎Entitlements.Grace‎). بی این،
         //  یک روزِ بی‌اینترنت می‌توانست کیو‌آر و اپِ کارمندانِ مشتریِ پول‌داده
@@ -391,7 +433,11 @@ public sealed partial class CloudLink
 
         //  کلیدِ عمومی فقط یک بار قفل می‌شود — همان قاعدهٔ `ActivateAsync`
         var serverKey = Str(json, "publicKey");
-        if (string.IsNullOrWhiteSpace(_settings.CloudPublicKey))
+        if (TrustRootDecides(serverKey, out var rootFail))
+        {
+            if (rootFail is not null) return rootFail;
+        }
+        else if (string.IsNullOrWhiteSpace(_settings.CloudPublicKey))
         {
             if (!string.IsNullOrWhiteSpace(serverKey)) _settings.CloudPublicKey = serverKey;
         }
@@ -419,12 +465,7 @@ public sealed partial class CloudLink
             //  ناجور یک هشدارِ واقعی است.
             var neverActivated = string.IsNullOrWhiteSpace(_settings.CloudDeviceToken)
                               && string.IsNullOrWhiteSpace(_settings.CloudLicense);
-            if (!neverActivated)
-            {
-                return CloudResult.No(
-                    "کلیدِ سرور با آن‌چه این برنامه قفل کرده فرق دارد. اگر سرور را واقعاً "
-                    + "عوض کرده‌اید، با پشتیبانی تماس بگیرید.", "key_mismatch");
-            }
+            if (!neverActivated) return KeyMismatch();
             _settings.CloudPublicKey = serverKey;
         }
 
@@ -439,10 +480,21 @@ public sealed partial class CloudLink
         //  است، و نگه داشتنِ مجوزِ کهنه یعنی قفلی که باز مانده
         _settings.CloudLicense = Str(json, "license");
         _settings.CloudSyncedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        Seated();
         ReadSubscription(json);
         Entitlements.Remember(_settings, Subscription, Verify());
         await SaveQuiet();
         return CloudResult.Done;
+    }
+
+    /// <summary>
+    /// دستگاه تازه بند شد: پیامِ «جدا شده» دیگر درست نیست، و اثرِ انگشتِ همین
+    /// کامپیوتر اگر هنوز ثبت نشده، همین حالا ثبت می‌شود (TOFU).
+    /// </summary>
+    private void Seated()
+    {
+        DeviceDetachedWhy = "";
+        CloudConfig.RecordMachine(_settings);
     }
 
     /// <summary>تمدید با کدِ تازه — بی فعال‌سازیِ دوباره.</summary>
@@ -456,7 +508,7 @@ public sealed partial class CloudLink
         if (clean.Length != 6) return CloudResult.No("کد باید شش رقم باشد");
 
         var (ok, json, why, errCode) =
-            await PostAsync("/api/pump/device/redeem", new { code = clean }, _settings.CloudDeviceToken, ct);
+            await DevPostAsync("/api/pump/device/redeem", new { code = clean }, ct);
         if (!ok) return CloudResult.No(why, errCode);
 
         _settings.CloudLicense = Str(json, "license");
@@ -482,7 +534,7 @@ public sealed partial class CloudLink
     {
         if (!Activated) return CloudResult.No("این برنامه هنوز فعال نشده است", "not_activated");
 
-        var (ok, me, why, errCode) = await GetAsync("/api/pump/device/me", _settings.CloudDeviceToken, ct);
+        var (ok, me, why, errCode) = await DevGetAsync("/api/pump/device/me", ct);
         if (!ok) return CloudResult.No(why, errCode);
 
         //  ⚠️ **شناسهٔ پمپ هم مثلِ کلیدِ عمومی قفل است.** پیش از این هر چه
@@ -503,16 +555,20 @@ public sealed partial class CloudLink
         //  مجوزِ تازه — جدا، چون ممکن است اشتراک تمام شده باشد و مجوزی
         //  صادر نشود. آن هم یک جوابِ درست است، نه خطا.
         var (licOk, lic, _, _) =
-            await PostAsync("/api/pump/device/license", new { }, _settings.CloudDeviceToken, ct);
+            await DevPostAsync("/api/pump/device/license", new { }, ct);
+        CloudResult? rejected = null;
         if (licOk)
         {
             var token = Str(lic, "license");
-            //  ⚠️ خالی بودن یعنی «اشتراک ندارد» — مجوزِ قبلی را پاک می‌کنیم،
-            //  وگرنه تا ده روز با مجوزِ کهنه باز می‌ماند.
-            _settings.CloudLicense = token;
-            var key = Str(lic, "publicKey");
-            if (!string.IsNullOrWhiteSpace(key) && string.IsNullOrWhiteSpace(_settings.CloudPublicKey))
-                _settings.CloudPublicKey = key;
+            if (token.Length == 0)
+            {
+                //  ⚠️ خالی بودن یعنی «اشتراک ندارد» — جوابِ **قطعیِ** سرور، پس
+                //  مجوزِ قبلی را پاک می‌کنیم، وگرنه تا ده روز با مجوزِ کهنه
+                //  باز می‌ماند. و چون ارفاق فقط از مجوز می‌آید، ارفاق هم همین
+                //  لحظه تمام می‌شود.
+                _settings.CloudLicense = "";
+            }
+            else rejected = AdoptLicense(token, Str(lic, "publicKey"));
         }
 
         _settings.CloudSyncedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -521,7 +577,62 @@ public sealed partial class CloudLink
         //  را خاموش کند.
         Entitlements.Remember(_settings, Subscription, Verify());
         await SaveQuiet();
-        return CloudResult.Done;
+        return rejected ?? CloudResult.Done;
+    }
+
+    /// <summary>
+    /// ══ مجوزِ تازهٔ سرور — <b>پیش از</b> نشستن سنجیده می‌شود ═════════════════
+    ///
+    /// ⛔ تا ۱۴۰۵/۰۷/۱۲ <see cref="RefreshAsync"/> هر رشته‌ای را که سرور
+    /// می‌داد بی هیچ سنجشی روی مجوزِ سالمِ دیروز می‌نشاند — و اگر کلیدی قفل
+    /// نبود، کلیدِ همان پاسخ را هم. یعنی پاسخی جعلی (یا یک باگِ سرور) مجوزِ
+    /// واقعیِ مشتری را با زباله عوض می‌کرد.
+    ///
+    /// حالا: کلید همان قاعدهٔ <see cref="ActivateAsync"/> را دارد (قفل‌شده
+    /// عوض نمی‌شود؛ با ریشهٔ اعتمادِ داخلِ برنامه فقط کلیدِ داخلِ فهرست)، و
+    /// خودِ مجوز با <see cref="LicenseGuard"/> سنجیده می‌شود. امضا یا هویتش
+    /// نخورد ⇒ مجوزِ قبلی <b>دست‌نخورده</b> می‌ماند و دلیلش برمی‌گردد
+    /// (<c>key_mismatch</c> · <c>bad_license</c>).
+    ///
+    /// ⚠️ مجوزِ امضاشده‌ای که همین حالا رسیده، <c>iat</c>ش لنگرِ کفِ ساعت
+    /// است (<see cref="LicenseClock.Anchor"/>) — تنها جایی که کفی که به خاطرِ
+    /// ساعتِ اشتباهاً جلورفته بالا رفته، می‌تواند پایین بیاید.
+    /// </summary>
+    /// <returns><c>null</c> یعنی نشست؛ وگرنه چرا نه.</returns>
+    private CloudResult? AdoptLicense(string token, string serverKey)
+    {
+        var pinned = (_settings.CloudPublicKey ?? "").Trim();
+        var key = pinned;
+        if (CloudConfig.LicenseKeys.Count > 0)
+        {
+            //  کلیدِ روی دیسک این‌جا هیچ اثری ندارد؛ سنجش با خودِ فهرست است
+            if (serverKey.Length > 0 && !CloudConfig.TrustsKey(serverKey)) return KeyMismatch();
+            if (serverKey.Length > 0) key = serverKey;
+        }
+        else if (pinned.Length == 0)
+        {
+            if (serverKey.Length == 0)
+                return CloudResult.No("سرور کلیدِ عمومی نداد؛ مجوزِ تازه سنجیده نشد", "bad_license");
+            key = serverKey;
+        }
+        else if (serverKey.Length > 0 && serverKey != pinned)
+        {
+            return KeyMismatch();
+        }
+
+        //  ⚠️ «حالا» عمداً کفِ ساعت است؛ اگر کف اشتباهاً جلو رفته باشد مجوزِ
+        //  تازه «منقضی» دیده می‌شود ولی امضایش سالم است — و همان لنگر کف را
+        //  درست می‌کند و بعد دوباره سنجیده می‌شود.
+        var check = LicenseGuard.Check(token, key, DeviceUid, _settings.CloudStationId,
+                                       LicenseClock.Now(_settings));
+        if (!check.SignatureOk)
+            return CloudResult.No("مجوزی که سرور داد سنجیده نشد: " + check.Reason, "bad_license");
+
+        LicenseClock.Anchor(_settings, check.IssuedAt, fresh: true);
+        _settings.CloudLicense = token;
+        if (key != pinned) _settings.CloudPublicKey = key;
+        CloudConfig.RecordMachine(_settings);
+        return null;
     }
 
     /// <summary>
@@ -586,7 +697,9 @@ public sealed partial class CloudLink
         //  ⚠️ «مجوز چه می‌گوید» را از خودِ `LicenseGuard` می‌پرسیم، نه از
         //  مُهرِ ارفاق: ارفاق عمداً دیر می‌بندد و این‌جا باید حقیقتِ همین
         //  لحظه را بدانیم، وگرنه برداشتنِ اشتراک دو هفته دیده نمی‌شد.
-        var mismatch = Verify(now).Valid != Subscription.Active;
+        //  ⚠️ فقط اگر این نمونه واقعاً حرفِ سرور را شنیده باشد — وگرنه
+        //  «اشتراک: نیست»ِ پیش‌فرض همیشه با مجوزِ سالم ناجور است.
+        var mismatch = _subscriptionKnown && Verify().Valid != Subscription.Active;
 
         if (!due && !mismatch) return;
         try { await RefreshAsync(ct); }
@@ -607,8 +720,8 @@ public sealed partial class CloudLink
         if (!Activated) return CloudResult.No("فعال نشده", "not_activated");
         if (string.IsNullOrWhiteSpace(homeUrl)) return CloudResult.No("نشانیِ خانگی خالی است");
 
-        var (ok, _, why, code) = await PostAsync("/api/pump/device/home",
-            new { homeUrl, readKey = readKey ?? "" }, _settings.CloudDeviceToken, ct);
+        var (ok, _, why, code) = await DevPostAsync("/api/pump/device/home",
+            new { homeUrl, readKey = readKey ?? "" }, ct);
         return ok ? CloudResult.Done : CloudResult.No(why, code);
     }
 
@@ -622,8 +735,8 @@ public sealed partial class CloudLink
         if (!Activated) return CloudResult.No("فعال نشده", "not_activated");
         if (string.IsNullOrWhiteSpace(name)) return CloudResult.No("نامِ فایل خالی است");
 
-        var (ok, _, why, code) = await PutAsync("/api/pump/device/files/" + Uri.EscapeDataString(name.Trim()),
-            new { data }, _settings.CloudDeviceToken, ct);
+        var (ok, _, why, code) = await DevPutAsync("/api/pump/device/files/" + Uri.EscapeDataString(name.Trim()),
+            new { data }, ct);
         return ok ? CloudResult.Done : CloudResult.No(why, code);
     }
 
@@ -661,8 +774,8 @@ public sealed partial class CloudLink
         var list = events?.ToList() ?? new List<object>();
         if (list.Count == 0) return CloudResult.Done;
 
-        var (ok, _, why, code) = await PostAsync("/api/pump/device/events",
-            new { events = list }, _settings.CloudDeviceToken, ct);
+        var (ok, _, why, code) = await DevPostAsync("/api/pump/device/events",
+            new { events = list }, ct);
         return ok ? CloudResult.Done : CloudResult.No(why, code);
     }
 
@@ -728,7 +841,7 @@ public sealed partial class CloudLink
         BackupListAsync(CancellationToken ct = default)
     {
         if (!Activated) return (false, new(), CloudBackupStats.None, "فعال نشده");
-        var (ok, json, why, _) = await GetAsync("/api/pump/device/backups", _settings.CloudDeviceToken, ct);
+        var (ok, json, why, _) = await DevGetAsync("/api/pump/device/backups", ct);
         if (!ok) return (false, new(), CloudBackupStats.None, why);
 
         var list = new List<CloudBackup>();
@@ -766,8 +879,8 @@ public sealed partial class CloudLink
         SupportThreadAsync(long after = 0, CancellationToken ct = default)
     {
         if (!Activated) return (false, new(), 0, "فعال نشده");
-        var (ok, json, why, _) = await GetAsync(
-            "/api/pump/device/support/thread?after=" + after, _settings.CloudDeviceToken, ct);
+        var (ok, json, why, _) = await DevGetAsync(
+            "/api/pump/device/support/thread?after=" + after, ct);
         if (!ok) return (false, new(), 0, why);
 
         var list = new List<CloudChatMessage>();
@@ -790,8 +903,8 @@ public sealed partial class CloudLink
     {
         if (!Activated) return CloudResult.No("فعال نشده", "not_activated");
         if (string.IsNullOrWhiteSpace(text)) return CloudResult.No("پیام خالی است", "empty_message");
-        var (ok, _, why, code) = await PostAsync("/api/pump/device/support/messages",
-            new { body = text.Trim() }, _settings.CloudDeviceToken, ct);
+        var (ok, _, why, code) = await DevPostAsync("/api/pump/device/support/messages",
+            new { body = text.Trim() }, ct);
         return ok ? CloudResult.Done : CloudResult.No(why, code);
     }
 
@@ -799,8 +912,8 @@ public sealed partial class CloudLink
     public async Task<bool> SupportSeenAsync(CancellationToken ct = default)
     {
         if (!Activated) return false;
-        var (ok, _, _, _) = await PostAsync("/api/pump/device/support/read",
-            new { }, _settings.CloudDeviceToken, ct);
+        var (ok, _, _, _) = await DevPostAsync("/api/pump/device/support/read",
+            new { }, ct);
         return ok;
     }
 
@@ -814,7 +927,7 @@ public sealed partial class CloudLink
     public async Task<(bool Ok, List<CloudChatThread> Threads, string Why)> ChatThreadsAsync(CancellationToken ct = default)
     {
         if (!Activated) return (false, new(), "فعال نشده");
-        var (ok, json, why, _) = await GetAsync("/api/pump/device/chat/threads", _settings.CloudDeviceToken, ct);
+        var (ok, json, why, _) = await DevGetAsync("/api/pump/device/chat/threads", ct);
         if (!ok) return (false, new(), why);
         var list = new List<CloudChatThread>();
         if (json.TryGetProperty("threads", out var arr) && arr.ValueKind == JsonValueKind.Array)
@@ -833,7 +946,7 @@ public sealed partial class CloudLink
     public async Task<(bool Ok, List<CloudChatMessage> Messages, string Why)> ChatInboxAsync(long after, CancellationToken ct = default)
     {
         if (!Activated) return (false, new(), "فعال نشده");
-        var (ok, json, why, _) = await GetAsync("/api/pump/device/chat/inbox?after=" + after, _settings.CloudDeviceToken, ct);
+        var (ok, json, why, _) = await DevGetAsync("/api/pump/device/chat/inbox?after=" + after, ct);
         if (!ok) return (false, new(), why);
         return (true, CloudChatMessage.ParseList(json), "");
     }
@@ -846,7 +959,7 @@ public sealed partial class CloudLink
         object body = string.IsNullOrEmpty(kind)
             ? new { name, text }
             : new { name, kind, mediaId };
-        var (ok, json, why, _) = await PostAsync("/api/pump/device/chat/" + Uri.EscapeDataString(acct), body, _settings.CloudDeviceToken, ct);
+        var (ok, json, why, _) = await DevPostAsync("/api/pump/device/chat/" + Uri.EscapeDataString(acct), body, ct);
         if (!ok) return (false, null, why);
         return (true, json.TryGetProperty("message", out var m) ? CloudChatMessage.Parse(m, acct) : null, "");
     }
@@ -915,8 +1028,8 @@ public sealed partial class CloudLink
     public async Task<bool> ChatSeenAsync(string acct, long seq, CancellationToken ct = default)
     {
         if (!Activated) return false;
-        var (ok, _, _, _) = await PostAsync("/api/pump/device/chat/" + Uri.EscapeDataString(acct) + "/seen",
-            new { seq }, _settings.CloudDeviceToken, ct);
+        var (ok, _, _, _) = await DevPostAsync("/api/pump/device/chat/" + Uri.EscapeDataString(acct) + "/seen",
+            new { seq }, ct);
         return ok;
     }
 
@@ -924,8 +1037,8 @@ public sealed partial class CloudLink
     public async Task<(bool Ok, string Code, string Why)> JoinCodeAsync(CancellationToken ct = default)
     {
         if (!Activated) return (false, "", "این برنامه هنوز فعال نشده است");
-        var (ok, json, why, _) = await PostAsync("/api/pump/device/join-code",
-            new { role = "staff", hours = 24, maxUses = 10 }, _settings.CloudDeviceToken, ct);
+        var (ok, json, why, _) = await DevPostAsync("/api/pump/device/join-code",
+            new { role = "staff", hours = 24, maxUses = 10 }, ct);
         return ok ? (true, Str(json, "code"), "") : (false, "", why);
     }
 
@@ -942,8 +1055,8 @@ public sealed partial class CloudLink
     {
         if (!Activated) return (false, _settings.CloudAccessCode, "این برنامه هنوز فعال نشده است");
         var (ok, json, why, _) = rotate
-            ? await PostAsync("/api/pump/device/access-code/rotate", new { }, _settings.CloudDeviceToken, ct)
-            : await GetAsync("/api/pump/device/access-code", _settings.CloudDeviceToken, ct);
+            ? await DevPostAsync("/api/pump/device/access-code/rotate", new { }, ct)
+            : await DevGetAsync("/api/pump/device/access-code", ct);
         if (!ok) return (false, _settings.CloudAccessCode, why);
         var code = Str(json, "code");
         if (code.Length > 0 && code != _settings.CloudAccessCode)
@@ -1527,8 +1640,26 @@ public sealed partial class CloudLink
     /// </summary>
     private const long RefreshSkewMs = 60_000;
 
-    /// <summary>دو کارِ هم‌زمان نباید دو بار تازه کنند (بندِ «Race Condition»).</summary>
-    private readonly SemaphoreSlim _refreshGate = new(1, 1);
+    /// <summary>
+    /// ══ یک تازه‌سازی در کلِ پروسه، نه در هر نمونه ═══════════════════════════
+    ///
+    /// ⛔ <b>باگِ «گاهی بی‌دلیل از حساب بیرون می‌افتم».</b> این قفل تا
+    /// ۱۴۰۵/۰۷/۱۲ مالِ <b>هر نمونه</b> بود — در حالی که حلقهٔ پس‌زمینه، صفحهٔ
+    /// پروفایل، همگام‌سازی و گزارشِ خطا هر کدام <see cref="CloudLink"/>ِ خودشان
+    /// را با <b>عکسِ جداگانه‌ای</b> از تنظیمات می‌سازند، و سرور توکنِ تازه‌سازی
+    /// را <b>می‌چرخاند</b> (توکنِ کهنه پس از سی ثانیه رد می‌شود). پس:
+    ///
+    ///   ۱) نمونهٔ الف تازه می‌کرد ⇒ توکنِ نو روی دیسک؛
+    ///   ۲) نمونهٔ ب با توکنِ <b>کهنهٔ</b> عکسِ خودش تازه می‌کرد ⇒ ۴۰۱؛
+    ///   ۳) و ب <see cref="ClearSessionAsync"/> را می‌زد ⇒ توکن‌های <b>سالمِ</b>
+    ///      الف هم از دیسک پاک می‌شدند.
+    ///
+    /// حالا قفل ایستا است، و داخلِ قفل تنظیماتِ <b>روی دیسک</b> دوباره خوانده
+    /// می‌شود: اگر کسِ دیگری در همین فاصله چرخانده، همان را برمی‌داریم و
+    /// اصلاً تازه نمی‌کنیم. و نشست فقط وقتی پاک می‌شود که توکنِ ردشده
+    /// <b>هنوز همانی باشد که روی دیسک است</b>.
+    /// </summary>
+    private static readonly SemaphoreSlim RefreshGate = new(1, 1);
 
     /// <summary>توکنِ دسترسی نزدیکِ انقضاست؟</summary>
     private bool AccessNearlyExpired =>
@@ -1536,29 +1667,63 @@ public sealed partial class CloudLink
         && DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + RefreshSkewMs >= _settings.CloudAccessExpiresAt;
 
     /// <summary>
+    /// نشستِ روی دیسک — ⚠️ فقط وقتی چیزی دارد و با عکسِ همین نمونه فرق دارد.
+    /// دیسکِ <b>خالی</b> هیچ‌وقت جای عکسِ پرِ این نمونه نمی‌نشیند: نمونه‌ای
+    /// که عمداً روی دیسک نمی‌نویسد (سنجه‌ها) نباید با آن خالی شود.
+    /// </summary>
+    private bool AdoptDiskSession()
+    {
+        AppSettings disk;
+        try { disk = AppSettings.Load(); }
+        catch { return false; }
+
+        var r = (disk.CloudRefreshToken ?? "").Trim();
+        if (r.Length == 0 || r == (_settings.CloudRefreshToken ?? "").Trim()) return false;
+
+        _settings.CloudRefreshToken = disk.CloudRefreshToken;
+        _settings.CloudAccountToken = disk.CloudAccountToken;
+        _settings.CloudAccessExpiresAt = disk.CloudAccessExpiresAt;
+        return true;
+    }
+
+    /// <summary>
     /// نشستِ تازه از روی <c>refreshToken</c>.
     ///
     /// سه پایان دارد و هر سه مهم‌اند:
     ///  • شد ⇒ توکنِ تازه می‌نشیند.
     ///  • سرور گفت این توکن باطل است (۴۰۱/۴۰۳) ⇒ نشست <b>پاک</b> می‌شود، تا
-    ///    صفحهٔ پروفایل دیگر دروغ نگوید و کاربر دوباره وارد شود.
+    ///    صفحهٔ پروفایل دیگر دروغ نگوید و کاربر دوباره وارد شود — ⛔ ولی
+    ///    فقط اگر همان توکنِ ردشده هنوز روی دیسک است (بالا نوشته چرا).
     ///  • ⚠️ <b>نرسیدیم</b> (بی‌اینترنت، سرورِ خاموش، تایم‌اوت) ⇒ هیچ چیزی
     ///    پاک نمی‌شود. وگرنه یک قطعیِ اینترنت کاربر را از حسابش بیرون
     ///    می‌انداخت — و این برنامه اساساً آفلاین است.
     /// </summary>
     private async Task<bool> RefreshSessionAsync(CancellationToken ct)
     {
-        await _refreshGate.WaitAsync(ct);
+        //  توکنی که این نمونه **پیش از** انتظار داشت — اگر تا نوبتش برسد
+        //  کسِ دیگری چرخانده باشد، همین فرق نشان می‌دهد.
+        var before = (_settings.CloudRefreshToken ?? "").Trim();
+
+        await RefreshGate.WaitAsync(ct);
         try
         {
-            if (string.IsNullOrWhiteSpace(_settings.CloudRefreshToken))
+            //  ⛔ کسِ دیگری در همین فاصله تازه کرد ⇒ همان را برمی‌داریم.
+            if (AdoptDiskSession())
+            {
+                if (!string.IsNullOrWhiteSpace(_settings.CloudAccountToken) && !AccessNearlyExpired
+                    && _settings.CloudRefreshToken.Trim() != before)
+                    return true;
+            }
+
+            var mine = (_settings.CloudRefreshToken ?? "").Trim();
+            if (mine.Length == 0)
             {
                 await ClearSessionAsync();
                 return false;
             }
 
             var res = await SendFull(Build(HttpMethod.Post, "/api/auth/refresh",
-                new { refreshToken = _settings.CloudRefreshToken, device = new { deviceId = DeviceUid } },
+                new { refreshToken = mine, device = new { deviceId = DeviceUid } },
                 null), ct);
 
             if (res.Ok)
@@ -1566,8 +1731,8 @@ public sealed partial class CloudLink
                 var token = Str(res.Json, "accessToken");
                 if (token.Length == 0) return false;
                 _settings.CloudAccountToken = token;
-                //  ⚠️ این مسیر `refreshToken`ِ تازه **نمی‌دهد** — همان قبلی
-                //  می‌ماند و درست هم هست. ولی اگر روزی داد، برمی‌داریم.
+                //  ⚠️ سرور توکنِ تازه‌سازی را **می‌چرخاند**؛ اگر داد، همان
+                //  می‌نشیند و کهنه دیگر به کار نمی‌آید.
                 var again = Str(res.Json, "refreshToken");
                 if (again.Length > 0) _settings.CloudRefreshToken = again;
                 _settings.CloudAccessExpiresAt = Num(res.Json, "accessExpiresAt");
@@ -1575,11 +1740,18 @@ public sealed partial class CloudLink
                 return true;
             }
 
-            if (res.Status is 401 or 403) await ClearSessionAsync();
+            if (res.Status is 401 or 403)
+            {
+                //  ⛔ شاید توکنِ ما همین حالا به دستِ پروسهٔ دیگری چرخانده
+                //  شده: آن‌وقت نشستِ سالمِ روی دیسک را برمی‌داریم، نه این‌که
+                //  پاکش کنیم.
+                if (AdoptDiskSession()) return !string.IsNullOrWhiteSpace(_settings.CloudAccountToken);
+                await ClearSessionAsync();
+            }
             return false;
         }
         catch (OperationCanceledException) { return false; }
-        finally { _refreshGate.Release(); }
+        finally { RefreshGate.Release(); }
     }
 
     /// <summary>
@@ -1630,15 +1802,25 @@ public sealed partial class CloudLink
     /// </summary>
     public async Task SignOutAsync(CancellationToken ct = default)
     {
-        if (SignedIn)
+        //  ⛔ پیش از باطل کردن، نشستِ **روی دیسک** برداشته می‌شود: عکسِ این
+        //  نمونه ممکن است توکنی داشته باشد که پروسهٔ دیگری همین حالا چرخانده
+        //  — آن‌وقت «خروج» توکنِ مرده را باطل می‌کرد و توکنِ زنده روی سرور
+        //  نود روز می‌ماند. زیرِ همان قفلِ تازه‌سازی، تا وسطِ یک چرخش نیفتد.
+        await RefreshGate.WaitAsync(ct);
+        try
         {
-            try
+            AdoptDiskSession();
+            if (SignedIn)
             {
-                await SendFull(Build(HttpMethod.Post, "/api/auth/logout",
-                    new { refreshToken = _settings.CloudRefreshToken }, _settings.CloudAccountToken), ct);
+                try
+                {
+                    await SendFull(Build(HttpMethod.Post, "/api/auth/logout",
+                        new { refreshToken = _settings.CloudRefreshToken }, _settings.CloudAccountToken), ct);
+                }
+                catch { /* خروجِ محلی گروگانِ سرور نیست */ }
             }
-            catch { /* خروجِ محلی گروگانِ سرور نیست */ }
         }
+        finally { RefreshGate.Release(); }
 
         _settings.CloudAccountToken = "";
         _settings.CloudRefreshToken = "";
@@ -1964,6 +2146,57 @@ public sealed partial class CloudLink
     private static Task<(bool, JsonElement, string, string)> GetAsync(
         string path, string? token, CancellationToken ct) =>
         Send(Build(HttpMethod.Get, path, null, token), ct);
+
+    // ── درخواست با توکنِ دستگاه — و «این دستگاه از پمپ جدا شده» ──────────
+    //
+    //  ⛔ تا امروز اگر مدیر یا صاحبِ پمپ این کامپیوتر را از «دستگاه‌ها» جدا
+    //  می‌کرد، هر درخواستِ دستگاه ۴۰۱ می‌گرفت و برنامه **برای همیشه** همان
+    //  توکنِ مرده و مجوزِ کهنه را نگه می‌داشت: پروفایل «فعال» می‌گفت،
+    //  ارفاق جلو می‌رفت و هیچ‌کس نمی‌فهمید چرا هیچ چیزی به سرور نمی‌رسد.
+    //
+    //  ⚠️ **محافظه‌کار است و باید بماند**: فقط با همین دو کدِ صریحِ سرور
+    //  (`device_not_registered` · `device_revoked`)، و فقط توکنِ دستگاه و
+    //  مجوز پاک می‌شوند. ⛔ خطای شبکه، تایم‌اوت، ۵۰۰ و هر ۴۰۱ِ بی‌کد هیچ
+    //  چیزی را پاک نمی‌کنند — بی‌اینترنت نباید کسی را از پمپش جدا کند. و
+    //  ⛔ یک بیت از دفتر، شناسهٔ پمپ و کلیدِ قفل‌شده دست نمی‌خورد: ورودِ
+    //  دوباره یا کدِ تازه همان‌جا را از نو بند می‌کند.
+
+    private static readonly string[] DetachedCodes = { "device_not_registered", "device_revoked" };
+
+    /// <summary>
+    /// چرا این دستگاه دیگر به پمپ بند نیست — خالی یعنی مشکلی نیست. ایستا،
+    /// همان الگوی <see cref="LastBindWhy"/>: هر درخواست نمونهٔ تازه می‌سازد.
+    /// </summary>
+    public static string DeviceDetachedWhy { get; private set; } = "";
+
+    private async Task<(bool, JsonElement, string, string)> DevSendAsync(
+        HttpMethod method, string path, object? body, CancellationToken ct)
+    {
+        var r = await SendFull(Build(method, path, body, _settings.CloudDeviceToken), ct);
+        if (!r.Ok && (r.Status is 401 or 403) && Array.IndexOf(DetachedCodes, r.Code) >= 0 && Activated)
+            await DetachDeviceAsync();
+        return (r.Ok, r.Json, r.Why, r.Code);
+    }
+
+    private Task<(bool, JsonElement, string, string)> DevPostAsync(string path, object body, CancellationToken ct) =>
+        DevSendAsync(HttpMethod.Post, path, body, ct);
+
+    private Task<(bool, JsonElement, string, string)> DevPutAsync(string path, object body, CancellationToken ct) =>
+        DevSendAsync(HttpMethod.Put, path, body, ct);
+
+    private Task<(bool, JsonElement, string, string)> DevGetAsync(string path, CancellationToken ct) =>
+        DevSendAsync(HttpMethod.Get, path, null, ct);
+
+    /// <summary>فقط توکنِ دستگاه و مجوز — شرحش بالای <see cref="DetachedCodes"/>.</summary>
+    private async Task DetachDeviceAsync()
+    {
+        _settings.CloudDeviceToken = "";
+        _settings.CloudLicense = "";
+        Subscription = PumpSubscription.None;
+        DeviceDetachedWhy = "این دستگاه از پمپ جدا شده است — برای وصلِ دوباره وارد حساب شوید "
+                          + "یا از صاحبِ پمپ بخواهید دوباره اجازه‌اش را بدهد.";
+        await SaveQuiet();
+    }
 
     // ── خواندنِ پاسخ ───────────────────────────────────────────────────
 

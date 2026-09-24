@@ -103,17 +103,22 @@ public static class SecretStore
 
         private const int CryptProtectUiForbidden = 0x1;
 
+        //  ⛔ `System32` فقط — همان قاعدهٔ `WaveRecorder`: DLLِ هم‌نامی که کنارِ
+        //  برنامه گذاشته شود نباید به‌جای DPAPIِ خودِ ویندوز رازها را ببیند.
         [DllImport("crypt32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
         private static extern bool CryptProtectData(ref DataBlob pDataIn, string? szDataDescr,
             IntPtr pOptionalEntropy, IntPtr pvReserved, IntPtr pPromptStruct, int dwFlags,
             out DataBlob pDataOut);
 
         [DllImport("crypt32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
         private static extern bool CryptUnprotectData(ref DataBlob pDataIn, IntPtr ppszDataDescr,
             IntPtr pOptionalEntropy, IntPtr pvReserved, IntPtr pPromptStruct, int dwFlags,
             out DataBlob pDataOut);
 
         [DllImport("kernel32.dll")]
+        [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
         private static extern IntPtr LocalFree(IntPtr hMem);
 
         public static byte[] Protect(byte[] raw) => Run(raw, encrypt: true);

@@ -84,19 +84,23 @@ public static class CrashGuard
         }
     }
 
-    /// <summary>کوتاه‌ترین جمله‌ای که به دردِ کاربر می‌خورد.</summary>
-    private static string Friendly(Exception? ex)
-    {
-        var e = ex;
-        while (e is AggregateException a && a.InnerException is not null) e = a.InnerException;
-        return e?.Message is { Length: > 0 } m ? m : "خطای ناشناخته";
-    }
+    /// <summary>
+    /// کوتاه‌ترین جمله‌ای که به دردِ کاربر می‌خورد.
+    /// ⛔ متنِ خامِ استثنا نه — شرحش بالای <see cref="ErrorText"/>. متنِ خام
+    /// فقط در <c>crash.log</c>ِ همین کامپیوتر می‌ماند (<see cref="Write"/>).
+    /// </summary>
+    private static string Friendly(Exception? ex) => ErrorText.Friendly(ex);
 
     /// <summary>
     /// نوشتنِ خطا در ‎crash.log‎. خودش هیچ استثنایی بیرون نمی‌دهد — تورِ ایمنی
     /// که خودش بیفتد، هیچ‌کاره است.
     /// </summary>
-    public static void Write(string where, Exception? ex)
+    /// <param name="report">
+    /// به سرور هم گزارش شود؟ ⚠️ برای خطایی که <b>باگ نیست</b> (ورقی که با
+    /// این تنظیم جا نمی‌شود، دوربینی که خاموش است) <c>false</c>: همان متنِ
+    /// خام فقط در همین کامپیوتر می‌ماند و گزارشِ سرور با آن پر نمی‌شود.
+    /// </param>
+    public static void Write(string where, Exception? ex, bool report = true)
     {
         if (ex is null) return;
         try
@@ -109,7 +113,7 @@ public static class CrashGuard
         }
         catch { }
 
-        Report(where, ex);
+        if (report) Report(where, ex);
     }
 
     // ══ گزارشِ خطا به سرور — بندِ ۲۰٫۸ ═════════════════════════════════════
@@ -142,8 +146,13 @@ public static class CrashGuard
 
             _lastReport = DateTime.UtcNow;
             var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
-            var stack = ex.StackTrace ?? "";
-            _ = Task.Run(() => cloud.ReportErrorAsync(where + ": " + Friendly(ex), stack));
+            //  ⛔ به سرور: نوعِ استثنا و پیامِ خام، ولی **پاک‌شده** — مسیرِ
+            //  پوشهٔ کاربر، نامِ کامپیوتر و نامِ کاربرِ ویندوز جایشان را به
+            //  نشانه‌ای ثابت می‌دهند (`ErrorText.Scrub`). ردپای دات‌نت مسیرِ
+            //  فایل دارد، و مسیرِ پوشهٔ کاربر می‌گفت این پمپ مالِ کیست.
+            var stack = ErrorText.Scrub(ex.StackTrace ?? "");
+            var message = where + ": " + ex.GetType().Name + ": " + ErrorText.Scrub(ex.Message);
+            _ = Task.Run(() => cloud.ReportErrorAsync(message, stack));
         }
         catch { /* گزارشِ خطا هیچ‌وقت خودش خطا نمی‌دهد */ }
     }

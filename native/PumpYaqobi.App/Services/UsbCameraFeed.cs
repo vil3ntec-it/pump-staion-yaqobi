@@ -60,7 +60,7 @@ public sealed class UsbCameraFeed : IDisposable
         }
         catch (Exception e)
         {
-            LastError = e.Message;
+            LastError = ErrorText.Friendly(e);
             return Array.Empty<UsbCamera>();
         }
     }
@@ -127,9 +127,11 @@ public sealed class UsbCameraFeed : IDisposable
         }
         catch (Exception e)
         {
-            LastError = e.Message;
+            //  ⛔ متنِ خام فقط در گزارشِ خطای همین کامپیوتر (`ErrorText`)
+            CrashGuard.Write("دوربینِ USB", e, report: false);
+            LastError = ErrorText.Friendly(e);
             Failed?.Invoke("دوربینِ USB باز نشد — دسترسیِ دوربینِ ویندوز را بررسی کنید ("
-                           + Short(e.Message) + ")");
+                           + Short(LastError) + ")");
         }
     }
 

@@ -40,6 +40,8 @@ public class UpdateBehaviourTests : IDisposable
     public void Dispose()
     {
         UpdateService.TestTransport = null;
+        UpdateService.TestStart = null;
+        UpdateService.UpdateKeyOverride = null;
         AppBase.LocalIdOverride = null;
         // ⚠️ مقدارِ **قبلی** برمی‌گردد، نه null — وگرنه آزمونِ بعدی به
         // تنظیماتِ واقعیِ خودِ کاربر می‌نویسد.
@@ -244,15 +246,39 @@ public class UpdateBehaviourTests : IDisposable
     }
 
     // ══ ۳) دانلود ═══════════════════════════════════════════════════════════
+    //
+    //  ⚠️ (۱۴۰۵/۰۷/۱۲) نشانیِ ساختگیِ این بندها از «https://x/…» به یک نشانیِ
+    //  دانلودِ گیت‌هاب رفت و `SHA256SUMS.txt` هم سرو می‌شود: دانلود حالا فقط
+    //  از میزبانِ شناخته‌شده و فقط با چک‌سامِ منتشرشده پذیرفته می‌شود. خودِ
+    //  ادعاها (کامل می‌نشیند، بریده رد می‌شود، استثنا بیرون نمی‌زند، اندازه
+    //  از پاسخ) دست نخوردند.
+
+    /// <summary>نشانیِ دانلودِ یک فایلِ انتشار — شکلِ واقعیِ گیت‌هاب، بی نامِ مخزن.</summary>
+    private static string Rel(string name) => "https://github.com/o/r/releases/download/v99.9.9/" + name;
+
+    private static string Sha(byte[] b) =>
+        Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(b)).ToLowerInvariant();
+
+    /// <summary>سرورِ ساختگی: فهرستِ چک‌سام (اگر داده شد) و خودِ بسته.</summary>
+    private static void Serve(byte[] body, string? sums, byte[]? sig = null) =>
+        UpdateService.TestTransport = (req, _) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (url.EndsWith("SHA256SUMS.txt.sig"))
+                return Task.FromResult(sig is null ? Text("", HttpStatusCode.NotFound) : Bytes(sig));
+            if (url.EndsWith("SHA256SUMS.txt"))
+                return Task.FromResult(sums is null ? Text("", HttpStatusCode.NotFound) : Text(sums));
+            return Task.FromResult(Bytes(body));
+        };
 
     [Fact]
     public async Task ACompleteDownloadLandsOnDisk()
     {
         var body = new byte[4096];
         Random.Shared.NextBytes(body);
-        UpdateService.TestTransport = (_, _) => Task.FromResult(Bytes(body));
+        Serve(body, Sha(body) + "  small.zip\n");
 
-        var info = new UpdateInfo(true, "1.0.0", "99.9.9", "https://x/small.zip", body.Length, null, true);
+        var info = new UpdateInfo(true, "1.0.0", "99.9.9", Rel("small.zip"), body.Length, null, true);
         var path = await new UpdateService().DownloadAsync(info, null);
 
         Assert.NotNull(path);
@@ -264,10 +290,10 @@ public class UpdateBehaviourTests : IDisposable
     public async Task ATruncatedDownloadIsRejected_AndLeavesNothingBehind()
     {
         var body = new byte[1000];
-        UpdateService.TestTransport = (_, _) => Task.FromResult(Bytes(body));
+        Serve(body, Sha(body) + "  small.zip\n");
 
         // سرور ۱۰۰۰ بایت داد ولی انتشار ۵۰۰۰ گفته بود
-        var info = new UpdateInfo(true, "1.0.0", "99.9.9", "https://x/small.zip", 5000, null, true);
+        var info = new UpdateInfo(true, "1.0.0", "99.9.9", Rel("small.zip"), 5000, null, true);
         var path = await new UpdateService().DownloadAsync(info, null);
 
         Assert.Null(path);
@@ -283,7 +309,7 @@ public class UpdateBehaviourTests : IDisposable
         // کاربر هیچ پیامی نمی‌دید.
         UpdateService.TestTransport = (_, _) => throw new HttpRequestException("cut");
 
-        var info = new UpdateInfo(true, "1.0.0", "99.9.9", "https://x/small.zip", 10, null, true);
+        var info = new UpdateInfo(true, "1.0.0", "99.9.9", Rel("small.zip"), 10, null, true);
         var path = await new UpdateService().DownloadAsync(info, null);
 
         Assert.Null(path);
@@ -295,13 +321,161 @@ public class UpdateBehaviourTests : IDisposable
         // درِ دوم اندازه را نمی‌داند (SizeBytes = 0) و باید باز هم فایلِ
         // کامل را بپذیرد
         var body = new byte[2048];
-        UpdateService.TestTransport = (_, _) => Task.FromResult(Bytes(body));
+        Serve(body, Sha(body) + "  small.zip\n");
 
-        var info = new UpdateInfo(true, "1.0.0", "99.9.9", "https://x/small.zip", 0, null, true);
+        var info = new UpdateInfo(true, "1.0.0", "99.9.9", Rel("small.zip"), 0, null, true);
         var path = await new UpdateService().DownloadAsync(info, null);
 
         Assert.NotNull(path);
         Assert.Equal(body.Length, new FileInfo(path!).Length);
+    }
+
+    // ══ ۳ب) چک‌سام، نشانی و امضا — پیش از اجرای هر بسته ═══════════════════
+
+    /// <summary>⛔ فایلی که با چک‌سامِ منتشرشده نخورد، نمی‌ماند و نصب نمی‌شود.</summary>
+    [Fact]
+    public async Task AHashMismatchIsRefused_AndLeavesNothingBehind()
+    {
+        var body = new byte[3000];
+        Random.Shared.NextBytes(body);
+        Serve(body, new string('a', 64) + "  PumpYaqobi-Setup.exe\n");
+
+        var svc = new UpdateService();
+        var info = new UpdateInfo(true, "1.0.0", "99.9.9", Rel("PumpYaqobi-Setup.exe"), body.Length, null);
+        Assert.Null(await svc.DownloadAsync(info, null));
+        Assert.Contains("چک‌سام", svc.LastProblem, StringComparison.Ordinal);
+        Assert.DoesNotContain("http", svc.LastProblem, StringComparison.OrdinalIgnoreCase);
+        var dir = Path.Combine(AppSettings.Dir, "updates");
+        if (Directory.Exists(dir)) Assert.Empty(Directory.GetFiles(dir, "*.exe*"));
+    }
+
+    /// <summary>⛔ انتشاری که فهرستِ چک‌سام ندارد، یا بسته در فهرستش نیست ⇒ نه.</summary>
+    [Fact]
+    public async Task MissingSumsAreRefused()
+    {
+        var body = new byte[500];
+        var svc = new UpdateService();
+        var info = new UpdateInfo(true, "1.0.0", "99.9.9", Rel("small.zip"), body.Length, null, true);
+
+        Serve(body, null);
+        Assert.Null(await svc.DownloadAsync(info, null));
+        Assert.Contains("چک‌سام", svc.LastProblem, StringComparison.Ordinal);
+
+        Serve(body, Sha(body) + "  some-other-file.zip\n");
+        Assert.Null(await svc.DownloadAsync(info, null));
+        Assert.Contains("فهرستِ چک‌سام", svc.LastProblem, StringComparison.Ordinal);
+    }
+
+    /// <summary>⛔ فقط https و فقط میزبان‌های گیت‌هاب — هیچ درخواستی به جای دیگر نمی‌رود.</summary>
+    [Theory]
+    [InlineData("http://github.com/o/r/releases/download/v1/small.zip")]
+    [InlineData("https://evil.example/small.zip")]
+    [InlineData("https://github.com.evil.example/small.zip")]
+    [InlineData("https://github.com:8443/o/r/small.zip")]
+    [InlineData("file:///C:/Windows/Temp/small.zip")]
+    public async Task AnUnknownHostOrPlainHttpIsRefused(string url)
+    {
+        var hits = 0;
+        UpdateService.TestTransport = (_, _) => { hits++; return Task.FromResult(Bytes(new byte[10])); };
+
+        var svc = new UpdateService();
+        Assert.False(UpdateService.AllowedUrl(url));
+        Assert.Null(await svc.DownloadAsync(new UpdateInfo(true, "1.0.0", "99.9.9", url, 10, null, true), null));
+        Assert.Equal(0, hits);
+        Assert.NotEqual("", svc.LastProblem);
+    }
+
+    /// <summary>
+    /// ⭐ هشِ درست ⇒ نصاب اجرا می‌شود. و ⛔ اگر فایل بینِ دانلود و «نصب» عوض
+    /// شد، دوباره سنجیده می‌شود و اجرا <b>نمی‌شود</b>.
+    /// </summary>
+    [Fact]
+    public async Task AGoodHashLaunches_AndATamperedFileDoesNot()
+    {
+        var body = new byte[2500];
+        Random.Shared.NextBytes(body);
+        Serve(body, "0000000000000000000000000000000000000000000000000000000000000000  x.zip\n"
+                    + Sha(body) + " *PumpYaqobi-Setup.exe\n");
+
+        var started = new List<string>();
+        UpdateService.TestStart = psi => { started.Add(psi.FileName); return true; };
+
+        var info = new UpdateInfo(true, "1.0.0", "99.9.9", Rel("PumpYaqobi-Setup.exe"), body.Length, null);
+        var path = await new UpdateService().DownloadAsync(info, null);
+        Assert.NotNull(path);
+
+        Assert.True(UpdateService.Launch(path!));
+        Assert.Single(started);
+
+        //  کسی بینِ دانلود و نصب یک بایت را عوض کرد
+        var bytes = await File.ReadAllBytesAsync(path!);
+        bytes[0] ^= 0xFF;
+        await File.WriteAllBytesAsync(path!, bytes);
+        Assert.False(UpdateService.Launch(path!));
+        Assert.Single(started);
+
+        //  و فایلی که هیچ هشی کنارش نیست هم هیچ‌وقت اجرا نمی‌شود
+        var loose = Path.Combine(AppSettings.Dir, "updates", "loose.exe");
+        await File.WriteAllBytesAsync(loose, body);
+        Assert.False(UpdateService.Launch(loose));
+        Assert.Single(started);
+    }
+
+    /// <summary>
+    /// با کلیدِ امضا در برنامه، امضای فهرست هم <b>لازم</b> است: نبودنش یا
+    /// امضای کلیدِ دیگر ⇒ نه؛ امضای درست (P1363 یا DER) ⇒ بله.
+    /// </summary>
+    [Fact]
+    public async Task WithAnUpdateKey_TheSumsMustBeSigned()
+    {
+        using var key = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+        using var other = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+        UpdateService.UpdateKeyOverride = Convert.ToBase64String(key.ExportSubjectPublicKeyInfo());
+
+        var body = new byte[800];
+        Random.Shared.NextBytes(body);
+        var sums = Sha(body) + "  small.zip\n";
+        var sumsBytes = Encoding.UTF8.GetBytes(sums);
+        var info = new UpdateInfo(true, "1.0.0", "99.9.9", Rel("small.zip"), body.Length, null, true);
+        var sha = System.Security.Cryptography.HashAlgorithmName.SHA256;
+
+        Serve(body, sums, sig: null);
+        var svc = new UpdateService();
+        Assert.Null(await svc.DownloadAsync(info, null));
+        Assert.Contains("امضا", svc.LastProblem, StringComparison.Ordinal);
+
+        Serve(body, sums, other.SignData(sumsBytes, sha, System.Security.Cryptography.DSASignatureFormat.IeeeP1363FixedFieldConcatenation));
+        Assert.Null(await svc.DownloadAsync(info, null));
+
+        Serve(body, sums, key.SignData(sumsBytes, sha, System.Security.Cryptography.DSASignatureFormat.IeeeP1363FixedFieldConcatenation));
+        Assert.NotNull(await svc.DownloadAsync(info, null));
+
+        Serve(body, sums, key.SignData(sumsBytes, sha, System.Security.Cryptography.DSASignatureFormat.Rfc3279DerSequence));
+        Assert.NotNull(await svc.DownloadAsync(info, null));
+    }
+
+    /// <summary>
+    /// درِ دوم (برچسبِ چرخشی) نشانیِ فهرست را هم از همان برچسب می‌دهد —
+    /// پس هر دو در همان سنجش را دارند.
+    /// </summary>
+    [Fact]
+    public async Task TheSecondDoorAlsoPointsAtItsOwnSums()
+    {
+        UpdateService.TestTransport = (req, _) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (IsFeed(url)) return Task.FromResult(Json("{}", HttpStatusCode.Forbidden));
+            if (url.EndsWith("version.txt")) return Task.FromResult(Text("99.9.9"));
+            if (url.EndsWith("base.txt")) return Task.FromResult(Text(LocalBase()));
+            return Task.FromResult(Text("", HttpStatusCode.NotFound));
+        };
+
+        var info = await new UpdateService().CheckAsync();
+        Assert.True(info.Available);
+        Assert.NotNull(info.SumsUrl);
+        Assert.EndsWith("/desktop-latest/SHA256SUMS.txt", info.SumsUrl);
+        Assert.True(UpdateService.AllowedUrl(info.SumsUrl));
+        Assert.True(UpdateService.AllowedUrl(info.DownloadUrl));
     }
 
     // ══ ۴) لغو ═════════════════════════════════════════════════════════════

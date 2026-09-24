@@ -23,8 +23,11 @@ namespace PumpYaqobi.App.Services;
 ///
 ///   ۱) سرور همین حالا گفته اشتراک فعال است (<c>CloudLink.Subscription</c>)،
 ///   ۲) یا مجوزِ امضاشدهٔ ذخیره‌شده سالم است (<see cref="LicenseGuard"/>)،
-///   ۳) یا از آخرین «باز»ی که به چشمِ خودمان دیدیم، کمتر از
-///      <see cref="Grace"/> گذشته (<c>AppSettings.EntitledUntil</c>).
+///   ۳) یا مجوزِ امضاشدهٔ ذخیره‌شده تازه منقضی شده و از <c>exp</c>ش کمتر از
+///      <see cref="Grace"/> گذشته — ⛔ و آن‌وقت فقط <b>همان پلنِ</b> همان
+///      مجوز باز است. (تا ۱۴۰۵/۰۷/۱۲ این لایه از <c>AppSettings.EntitledUntil</c>ِ
+///      بی‌امضا می‌آمد و هر شش قفل را باز می‌کرد — شرحش بالای
+///      <see cref="State"/>.)
 ///
 /// تنها حالتی که می‌بندد این است که <b>هر سه</b> بگویند نه — یعنی واقعاً
 /// اشتراکی نیست. و حتی آن وقت هم دفتر و پشتیبانی بازند.
@@ -177,41 +180,62 @@ public static class Entitlements
     /// <summary>
     /// حالِ اشتراک، از روی تنظیماتِ روی دیسک و — اگر داشته باشیم — پاسخِ
     /// همین لحظهٔ سرور.
+    ///
+    /// ⛔ <b>ارفاق فقط از مجوزِ امضاشده می‌آید</b> (۱۴۰۵/۰۷/۱۲). تا دیروز
+    /// <c>AppSettings.EntitledUntil</c> — یک عددِ ساده در فایلِ تنظیمات — ارفاق
+    /// را می‌ساخت، و <c>InGrace</c> پیش از فهرستِ پلن جواب می‌داد. یعنی:
+    ///   • نوشتنِ «۲۱۰۰» در همان یک خط ⇒ ارفاقِ همیشگی و همهٔ قفل‌ها باز؛
+    ///   • پلنِ <b>استاندارد</b> در ارفاق ⇒ هر شش قفلِ وی‌آی‌پی باز؛
+    ///   • برداشتنِ اشتراک از پنل ⇒ مُهری که پاسخِ بی‌امضای <c>/me</c> جلو
+    ///     برده بود، ماه‌ها باز نگهش می‌داشت.
+    /// حالا ارفاق = مجوزی که امضا و هویتش سالم است و فقط تازه منقضی شده، تا
+    /// <c>exp + Grace</c> — و در ارفاق همان <b>فهرستِ همان مجوز</b> اعمال
+    /// می‌شود. <c>EntitledUntil</c> دیگر هیچ دری را باز نمی‌کند.
+    ///
+    /// ⚠️ <paramref name="live"/> (پاسخِ بی‌امضای همین لحظه) هنوز می‌تواند
+    /// همین نشست را «باز» نشان دهد — همان «باگِ صدورِ مجوز نباید مشتری را
+    /// ببندد» — ولی ⛔ <b>هیچ چیزی از آن روی دیسک نمی‌نشیند</b>
+    /// (<see cref="Remember"/>).
     /// </summary>
     public static EntitlementState State(AppSettings? file = null, PumpSubscription? live = null)
     {
         var f = file ?? AppSettings.Load();
-        var now = Now();
 
         //  ۱) هنوز با کدِ اشتراک فعال نشده — هیچ‌کدام از این سه کار بی ابر
         //     معنا هم ندارد.
         if (string.IsNullOrWhiteSpace(f.CloudDeviceToken))
-            return new EntitlementState(false, Array.Empty<string>(), "", 0, now, true);
+            return new EntitlementState(false, Array.Empty<string>(), "", 0, Now(), true);
 
-        //  ۲) مجوزِ امضاشده — همان چیزی که آفلاین هم کار می‌کند.
-        var check = LicenseGuard.Check(f.CloudLicense, f.CloudPublicKey,
-                                       CloudConfig.DeviceUid(f), f.CloudStationId, now);
+        //  ۲) مجوزِ امضاشده — همان چیزی که آفلاین هم کار می‌کند. «حالا» از
+        //     کفِ ساعت می‌آید، نه ساعتِ خامِ ویندوز (`LicenseClock`).
+        var now = LicenseClock.Now(f);
+        var check = LicenseGuard.CheckStored(f, now);
 
-        var until = f.EntitledUntil;
+        var until = 0L;
         var plan = f.EntitledPlan;
         var feats = Array.Empty<string>() as IReadOnlyList<string>;
+        var graceEnds = 0L;
 
         //  ⚠️ «فهرست نیامده» ≠ «فهرست خالی». نیامده یعنی مجوزِ نسلِ اول و
         //  پلنِ کامل؛ خالی یعنی پلنِ پایه و هیچ‌کدام. شرحش در
         //  ‎LicenseCheck.HasFeatureList‎.
         var listed = false;
 
-        if (check.Valid)
+        //  ⛔ هم مجوزِ زنده و هم مجوزِ امضاشدهٔ تازه‌منقضی فهرستِ **خودشان** را
+        //  می‌دهند — ارفاق هیچ‌وقت پلن را گشادتر نمی‌کند.
+        if (check.SignatureOk)
         {
             feats = check.Features;
             listed = check.HasFeatureList;
             plan = string.IsNullOrWhiteSpace(check.PlanTitle) ? plan : check.PlanTitle;
-            until = Math.Max(until, Math.Max(check.SubscriptionEndsAt, check.ExpiresAt));
+            until = Math.Max(check.SubscriptionEndsAt, check.ExpiresAt);
+            if (check.Expired && check.ExpiresAt > 0)
+                graceEnds = check.ExpiresAt + (long)Grace.TotalMilliseconds;
         }
 
         //  ۳) و اگر سرور همین حالا «فعال» گفته باشد، همان حرفِ آخر است —
         //     حتی اگر مجوزِ تازه هنوز نرسیده باشد (باگِ صدورِ مجوز نباید
-        //     مشتریِ پول‌داده را ببندد).
+        //     مشتریِ پول‌داده را ببندد). ⚠️ فقط برای همین نشست، در حافظه.
         if (live is { Active: true })
         {
             if (live.Features.Count > 0) { feats = live.Features; listed = true; }
@@ -220,34 +244,30 @@ public static class Entitlements
         }
 
         var open = check.Valid || live is { Active: true };
-        return new EntitlementState(open, feats, plan, until, now, false, listed);
+        return new EntitlementState(open, feats, plan, until, now, false, listed, graceEnds);
     }
 
     /// <summary>
     /// مُهرِ «دیدیم که باز است» را روی دیسک به‌روز می‌کند — از
     /// <see cref="CloudLink.RefreshAsync"/> و فعال‌سازی صدا می‌خورد.
     ///
-    /// ⚠️ فقط جلو می‌رود، هرگز عقب نمی‌آید: عقب بردنش یعنی یک پاسخِ نصفهٔ
-    /// سرور ارفاقِ کسی را بخورد.
+    /// ⛔ <b>فقط از مجوزی که امضایش سنجیده شده.</b> پاسخِ بی‌امضای
+    /// <c>/me</c> (<paramref name="live"/>) دیگر هیچ عددی را جلو نمی‌برد: هر
+    /// چه از آن روی دیسک بنشیند، یک ویرایشگرِ متن هم می‌تواند بنشاند.
+    ///
+    /// ⚠️ <c>EntitledUntil</c> از امروز فقط برای <b>نمایش</b> است (آخرین
+    /// <c>exp</c>/<c>sub_ends</c>ِ امضاشده) و هیچ قفلی را باز نمی‌کند.
+    /// فقط جلو می‌رود، هرگز عقب نمی‌آید.
     /// </summary>
     public static void Remember(AppSettings f, PumpSubscription? live, LicenseCheck? check)
     {
-        var until = f.EntitledUntil;
-        var plan = f.EntitledPlan;
+        _ = live;   // ⛔ عمداً خوانده نمی‌شود — بالا نوشته چرا
+        if (check is not { SignatureOk: true }) return;
 
-        if (check is { Valid: true })
-        {
-            until = Math.Max(until, Math.Max(check.SubscriptionEndsAt, check.ExpiresAt));
-            if (!string.IsNullOrWhiteSpace(check.PlanTitle)) plan = check.PlanTitle;
-        }
-        if (live is { Active: true })
-        {
-            until = Math.Max(until, live.EndsAt > 0 ? live.EndsAt : Now());
-            if (!string.IsNullOrWhiteSpace(live.PlanTitle)) plan = live.PlanTitle;
-        }
-
+        var until = Math.Max(f.EntitledUntil, Math.Max(check.SubscriptionEndsAt, check.ExpiresAt));
         if (until > f.EntitledUntil) f.EntitledUntil = until;
-        if (plan != f.EntitledPlan) f.EntitledPlan = plan;
+        if (!string.IsNullOrWhiteSpace(check.PlanTitle) && check.PlanTitle != f.EntitledPlan)
+            f.EntitledPlan = check.PlanTitle;
     }
 }
 
@@ -264,6 +284,11 @@ public static class Entitlements
 /// <param name="Listed">
 /// پلن فهرستِ کارهایش را صریح گفته. دروغ یعنی مجوزِ نسلِ اول ⇒ پلنِ کامل.
 /// </param>
+/// <param name="GraceEndsAt">
+/// پایانِ ارفاق = <c>exp</c>ِ مجوزِ امضاشدهٔ منقضی + <see cref="Entitlements.Grace"/>.
+/// صفر یعنی ارفاقی در کار نیست (مجوزی نیست، امضایش سالم نیست، یا هنوز
+/// منقضی نشده). ⛔ هیچ عددِ بی‌امضایی این را نمی‌سازد.
+/// </param>
 public sealed record EntitlementState(
     bool Open,
     IReadOnlyList<string> Features,
@@ -271,14 +296,14 @@ public sealed record EntitlementState(
     long EntitledUntil,
     long NowMs,
     bool NotActivated,
-    bool Listed = false)
+    bool Listed = false,
+    long GraceEndsAt = 0)
 {
     /// <summary>ارفاق تا این لحظه ادامه دارد.</summary>
-    public long GraceUntil => EntitledUntil <= 0 ? 0
-        : EntitledUntil + (long)Entitlements.Grace.TotalMilliseconds;
+    public long GraceUntil => GraceEndsAt;
 
     /// <summary>اشتراک تمام شده ولی هنوز در ارفاقیم.</summary>
-    public bool InGrace => !Open && EntitledUntil > 0 && NowMs < GraceUntil;
+    public bool InGrace => !Open && GraceEndsAt > 0 && NowMs < GraceEndsAt;
 
     /// <summary>روزهای ماندهٔ ارفاق — برای نوشتنِ «۹ روز ارفاق».</summary>
     public int GraceDaysLeft => !InGrace ? 0
@@ -293,8 +318,10 @@ public sealed record EntitlementState(
         //  ⏳ بازِ موقت — خواستهٔ ۱۴۰۵/۰۷/۰۲؛ شرحش بالای ‎UnlockedForNow‎.
         if (Entitlements.Unlocked) return true;
         if (NotActivated) return false;
-        if (InGrace) return true;                        // ⚠️ ارفاق: باگ و آفلاین نباید ببندد
-        if (!Open) return false;
+        //  ⚠️ ارفاق: باگ و آفلاین نباید ببندد — ⛔ ولی فقط **همان پلن**. تا
+        //  ۱۴۰۵/۰۷/۱۲ این خط `return true` بود و پلنِ استاندارد در ارفاق
+        //  هر شش قفلِ وی‌آی‌پی را باز می‌دید.
+        if (!Open && !InGrace) return false;
         //  فهرستی نیامده یعنی پلنِ کامل — مجوزهای نسلِ اول ‎feat‎ نداشتند و
         //  نباید یک‌شبه همه‌چیزشان بسته شود. فهرستِ **خالی** ولی یعنی پلنِ
         //  پایه: هیچ‌کدام.
@@ -340,7 +367,7 @@ public sealed record EntitlementState(
     public string Why(string title) =>
         NotActivated
             ? title + " با اشتراک کار می‌کند — کدِ اشتراک را در «پروفایل» بزنید."
-            : !Open && EntitledUntil > 0 && NowMs >= GraceUntil
+            : !Open && GraceEndsAt > 0 && NowMs >= GraceEndsAt
                 ? "اشتراکِ این پمپ تمام شده، پس " + title + " خاموش است. دفترِ خودتان و "
                   + "پشتیبانی باز است."
                 : title + " در پلنِ فعلیِ شما نیست.";

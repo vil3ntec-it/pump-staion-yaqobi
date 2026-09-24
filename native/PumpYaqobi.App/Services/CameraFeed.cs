@@ -93,9 +93,10 @@ public sealed class CameraFeed : IDisposable
         }
     }
 
+    /// <summary>⛔ جملهٔ فارسیِ همان نوعِ خطا، نه متنِ خامش (`ErrorText`).</summary>
     private static string Short(Exception e)
     {
-        var m = e.Message;
+        var m = ErrorText.Friendly(e);
         return m.Length > 80 ? m[..80] : m;
     }
 

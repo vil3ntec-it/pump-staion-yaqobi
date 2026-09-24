@@ -156,12 +156,15 @@ public sealed class WaveRecorder : IDisposable
         public int dwFlags; public int dwLoops; public IntPtr lpNext; public IntPtr reserved;
     }
 
-    [DllImport("winmm.dll")] private static extern int waveInOpen(out IntPtr dev, uint id, ref WaveFormat fmt, WaveInProc cb, IntPtr inst, uint flags);
-    [DllImport("winmm.dll")] private static extern int waveInPrepareHeader(IntPtr dev, IntPtr hdr, int size);
-    [DllImport("winmm.dll")] private static extern int waveInUnprepareHeader(IntPtr dev, IntPtr hdr, int size);
-    [DllImport("winmm.dll")] private static extern int waveInAddBuffer(IntPtr dev, IntPtr hdr, int size);
-    [DllImport("winmm.dll")] private static extern int waveInStart(IntPtr dev);
-    [DllImport("winmm.dll")] private static extern int waveInStop(IntPtr dev);
-    [DllImport("winmm.dll")] private static extern int waveInReset(IntPtr dev);
-    [DllImport("winmm.dll")] private static extern int waveInClose(IntPtr dev);
+    //  ⛔ `System32` فقط: بی آن، ویندوز `winmm.dll` را اول کنارِ خودِ برنامه
+    //  (و در پوشهٔ جاری) می‌گردد — یعنی یک DLLِ هم‌نام که کسی کنارِ فایل‌های
+    //  برنامه گذاشته باشد، با همان دسترسیِ برنامه بالا می‌آمد.
+    [DllImport("winmm.dll"), DefaultDllImportSearchPaths(DllImportSearchPath.System32)] private static extern int waveInOpen(out IntPtr dev, uint id, ref WaveFormat fmt, WaveInProc cb, IntPtr inst, uint flags);
+    [DllImport("winmm.dll"), DefaultDllImportSearchPaths(DllImportSearchPath.System32)] private static extern int waveInPrepareHeader(IntPtr dev, IntPtr hdr, int size);
+    [DllImport("winmm.dll"), DefaultDllImportSearchPaths(DllImportSearchPath.System32)] private static extern int waveInUnprepareHeader(IntPtr dev, IntPtr hdr, int size);
+    [DllImport("winmm.dll"), DefaultDllImportSearchPaths(DllImportSearchPath.System32)] private static extern int waveInAddBuffer(IntPtr dev, IntPtr hdr, int size);
+    [DllImport("winmm.dll"), DefaultDllImportSearchPaths(DllImportSearchPath.System32)] private static extern int waveInStart(IntPtr dev);
+    [DllImport("winmm.dll"), DefaultDllImportSearchPaths(DllImportSearchPath.System32)] private static extern int waveInStop(IntPtr dev);
+    [DllImport("winmm.dll"), DefaultDllImportSearchPaths(DllImportSearchPath.System32)] private static extern int waveInReset(IntPtr dev);
+    [DllImport("winmm.dll"), DefaultDllImportSearchPaths(DllImportSearchPath.System32)] private static extern int waveInClose(IntPtr dev);
 }

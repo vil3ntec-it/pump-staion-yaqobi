@@ -17,10 +17,14 @@ namespace PumpYaqobi.App.Update;
 /// ساعت‌ها دنبالِ نسخه‌ای می‌گشت که برنامه ادعا می‌کرد ندارد. همان «کلکِ
 /// دروغ»ی که برای چراغِ سرور قدغن شد.
 /// </param>
+/// <param name="SumsUrl">
+/// نشانیِ <c>SHA256SUMS.txt</c>ِ همان انتشار. خالی ⇒ کنارِ خودِ بسته (همان
+/// پوشهٔ دانلودِ همان برچسب) — هر دو درِ انتشار آن را دارند.
+/// </param>
 public sealed record UpdateInfo(
     bool Available, string CurrentVersion, string LatestVersion,
     string? DownloadUrl, long SizeBytes, string? Notes, bool IsSmallPackage = false,
-    string Problem = "")
+    string Problem = "", string? SumsUrl = null)
 {
     /// <summary>بررسی به جایی نرسید — نه «به‌روز است» و نه «تازه‌ای هست».</summary>
     public bool Failed => Problem.Length > 0;
@@ -172,7 +176,7 @@ public sealed class UpdateService
             // «این جواب مالِ برنامهٔ کامپیوتر نیست» — نه «تازه‌ای نیست».
             if (latest.Length == 0) return (null, "");
 
-            string? url = null, fullUrl = null;
+            string? url = null, fullUrl = null, sums = null;
             long size = 0, fullSize = 0;
             var fullIsSetup = false;
             var localBase = AppBase.LocalId;
@@ -181,6 +185,11 @@ public sealed class UpdateService
                 foreach (var a in assets.EnumerateArray())
                 {
                     var name = a.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                    if (string.Equals(name, SumsName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        sums = a.TryGetProperty("browser_download_url", out var su) ? su.GetString() : null;
+                        continue;
+                    }
                     if (!name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
                         && !name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) continue;
 
@@ -223,7 +232,7 @@ public sealed class UpdateService
             var notes = root.TryGetProperty("body", out var b) ? b.GetString() : null;
             var newer = Compare(latest, current) > 0;
             if (newer && url is null) return (null, "");   // انتشار فایلی ندارد — درِ دوم
-            return (new UpdateInfo(newer, current, latest, url, size, notes, small), "");
+            return (new UpdateInfo(newer, current, latest, url, size, notes, small, "", sums), "");
         }
         catch (Exception e)
         {
@@ -259,7 +268,7 @@ public sealed class UpdateService
             var small = remoteBase.Length > 0 && remoteBase == localBase;
 
             var url = FileUrl(small ? "PumpYaqobi-app-" + remoteBase + ".zip" : AppArch.SetupName);
-            return (new UpdateInfo(true, current, latest, url, 0, null, small), "");
+            return (new UpdateInfo(true, current, latest, url, 0, null, small, "", FileUrl(SumsName)), "");
         }
         catch (Exception e)
         {
@@ -362,11 +371,7 @@ public sealed class UpdateService
             var parts = new Uri(FeedUrl).AbsolutePath
                 .Split('/', StringSplitOptions.RemoveEmptyEntries);
             var url = "https://github.com/" + parts[1] + "/" + parts[2] + "/releases/latest";
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url)
-            {
-                UseShellExecute = true,
-            });
-            return true;
+            return Services.SafeOpen.Url(url);
         }
         catch { return false; }
     }
@@ -492,6 +497,24 @@ public sealed class UpdateService
     {
         if (!info.Available || info.DownloadUrl is null) return null;
 
+        //  ══ ۱) نشانی از جای شناخته‌شده است؟ ═════════════════════════════════
+        //  ⛔ فایلی که گرفته می‌شود همان لحظه **اجرا** می‌شود. پس فقط https و
+        //  فقط میزبان‌های خودِ گیت‌هاب — یک نشانیِ ساختگی در پاسخِ فهرست
+        //  (یا یک پروکسیِ دست‌کار) نباید برنامه را به هر جای دیگری ببرد.
+        if (!AllowedUrl(info.DownloadUrl))
+        {
+            LastProblem = "نشانیِ بستهٔ به‌روزرسانی از جای شناخته‌شده‌ای نیست — برای امنیت گرفته نشد.";
+            return null;
+        }
+
+        //  ══ ۲) چک‌سامِ منتشرشده — **پیش از** دانلودِ بسته ═════════════════
+        //  ⛔ تا ۱۴۰۵/۰۷/۱۲ فقط اندازه سنجیده می‌شد، و اندازه چیزی را ثابت
+        //  نمی‌کند. CI از قبل `SHA256SUMS.txt` منتشر می‌کرد؛ حالا نبودنش یا
+        //  جور نبودنش یعنی **نصب نمی‌شود** — با یک جملهٔ آدمیزاد، بی نامِ
+        //  هیچ میزبانی.
+        var expectedHash = await ExpectedHashAsync(info, ct);
+        if (expectedHash is null) return null;           // `LastProblem` را خودش نوشته
+
         var dir = Path.Combine(Services.AppSettings.Dir, "updates");
         Directory.CreateDirectory(dir);
         var name = "PumpYaqobi-" + info.LatestVersion + Path.GetExtension(new Uri(info.DownloadUrl).AbsolutePath);
@@ -507,6 +530,13 @@ public sealed class UpdateService
                                         HttpCompletionOption.ResponseHeadersRead, ct))
         {
             if (!res.IsSuccessStatusCode) return null;
+            //  ⚠️ دانلودِ گیت‌هاب به میزبانِ دیگری تغییرِ مسیر می‌دهد؛ جای
+            //  **نهایی** هم باید در همان فهرست باشد.
+            if (res.RequestMessage?.RequestUri is { } landed && !AllowedUrl(landed.ToString()))
+            {
+                LastProblem = "بستهٔ به‌روزرسانی از جای ناشناخته‌ای آمد — برای امنیت کنار گذاشته شد.";
+                return null;
+            }
             var total = res.Content.Headers.ContentLength ?? info.SizeBytes;
             if (expected <= 0) expected = res.Content.Headers.ContentLength ?? 0;
             await using var src = await res.Content.ReadAsStreamAsync(ct);
@@ -530,9 +560,179 @@ public sealed class UpdateService
             return null;
         }
 
+        // ⛔ و فایلِ کامل هم فقط وقتی می‌ماند که چک‌سامش بخورد
+        if (!string.Equals(HashOf(partial), expectedHash, StringComparison.OrdinalIgnoreCase))
+        {
+            try { File.Delete(partial); } catch { }
+            LastProblem = "فایلِ گرفته‌شده با چک‌سامِ منتشرشده جور نیست — دانلود خراب شده یا دست‌کاری شده؛ نصب نمی‌شود.";
+            return null;
+        }
+
         if (File.Exists(path)) File.Delete(path);
         File.Move(partial, path);
+        //  ⚠️ هشِ مورد انتظار کنارِ بسته می‌ماند تا `Launch` درست پیش از اجرا
+        //  **دوباره** بسنجد — بینِ دانلود و نصب ممکن است دقیقه‌ها بگذرد.
+        File.WriteAllText(path + HashSuffix, expectedHash);
         return path;
+    }
+
+    // ══ چک‌سام و امضا ════════════════════════════════════════════════════════
+
+    private const string SumsName = "SHA256SUMS.txt";
+    private const string HashSuffix = ".sha256";
+
+    /// <summary>
+    /// چرا آخرین دانلود نشد — یک جملهٔ فارسیِ آمادهٔ نمایش، بی نامِ هیچ
+    /// میزبانی. خالی یعنی دلیلِ خاصی ثبت نشد.
+    /// </summary>
+    public string LastProblem { get; private set; } = "";
+
+    /// <summary>
+    /// میزبان‌هایی که بستهٔ به‌روزرسانی از آن‌ها پذیرفته می‌شود: خودِ گیت‌هاب
+    /// و دو میزبانی که دانلودِ انتشار به آن‌ها تغییرِ مسیر می‌دهد.
+    /// </summary>
+    private static readonly string[] AllowedHosts =
+    {
+        "github.com",
+        "api.github.com",
+        "objects.githubusercontent.com",
+        "release-assets.githubusercontent.com",
+        "github-releases.githubusercontent.com",
+    };
+
+    /// <summary>فقط https، فقط همان میزبان‌ها، فقط درگاهِ پیش‌فرض.</summary>
+    public static bool AllowedUrl(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var u)
+        && u.Scheme == Uri.UriSchemeHttps
+        && u.IsDefaultPort
+        && string.IsNullOrEmpty(u.UserInfo)
+        && Array.IndexOf(AllowedHosts, u.IdnHost.ToLowerInvariant()) >= 0;
+
+    /// <summary>
+    /// کلیدِ عمومیِ امضای <c>SHA256SUMS.txt</c> (SPKIِ base64، P-256) — از
+    /// <c>[assembly: AssemblyMetadata("UpdateKey")]</c> که ساختِ CI می‌گذارد.
+    /// خالی ⇒ فقط هش (رفتارِ ساختِ بی‌کلید).
+    /// </summary>
+    public static string UpdateKey => UpdateKeyOverride ?? Services.CloudConfig.Metadata("UpdateKey");
+
+    /// <summary>⚠️ فقط برای آزمون — همان الگوی <see cref="TestTransport"/>.</summary>
+    public static string? UpdateKeyOverride { get; set; }
+
+    /// <summary>
+    /// هشِ بسته از فهرستِ منتشرشده — و اگر کلیدِ امضا در برنامه هست، امضای
+    /// همان فهرست هم. <c>null</c> ⇒ نصب نمی‌شود و <see cref="LastProblem"/>
+    /// می‌گوید چرا.
+    /// </summary>
+    private async Task<string?> ExpectedHashAsync(UpdateInfo info, CancellationToken ct)
+    {
+        var sumsUrl = string.IsNullOrWhiteSpace(info.SumsUrl) ? Sibling(info.DownloadUrl!, SumsName) : info.SumsUrl!;
+        if (!AllowedUrl(sumsUrl))
+        {
+            LastProblem = "فهرستِ چک‌سامِ این نسخه از جای شناخته‌شده‌ای نیست — نصب نمی‌شود.";
+            return null;
+        }
+
+        var sums = await BytesAsync(sumsUrl, 256 * 1024, ct);
+        if (sums is null || sums.Length == 0)
+        {
+            LastProblem = "فهرستِ چک‌سامِ این نسخه پیدا نشد — برای امنیت نصب نمی‌شود. "
+                        + "«باز کردنِ صفحهٔ دانلود» را بزنید.";
+            return null;
+        }
+
+        var key = UpdateKey;
+        if (key.Length > 0)
+        {
+            var sig = await BytesAsync(sumsUrl + ".sig", 4096, ct);
+            if (sig is null || !SignatureOk(sums, sig, key))
+            {
+                LastProblem = "امضای فهرستِ چک‌سامِ این نسخه درست نیست — برای امنیت نصب نمی‌شود.";
+                return null;
+            }
+        }
+
+        var asset = Uri.UnescapeDataString(new Uri(info.DownloadUrl!).Segments[^1]);
+        var hash = HashFromSums(System.Text.Encoding.UTF8.GetString(sums), asset);
+        if (hash is null)
+        {
+            LastProblem = "این بسته در فهرستِ چک‌سامِ همان نسخه نیست — برای امنیت نصب نمی‌شود.";
+            return null;
+        }
+        return hash;
+    }
+
+    /// <summary>«…/tag/x.zip» ⇒ «…/tag/<paramref name="name"/>».</summary>
+    private static string Sibling(string url, string name)
+    {
+        var u = new Uri(url);
+        return new Uri(u, name).ToString();
+    }
+
+    /// <summary>بایت‌های یک فایلِ کوچک — <c>null</c> اگر نبود یا بیش از سقف بود.</summary>
+    private static async Task<byte[]?> BytesAsync(string url, int cap, CancellationToken ct)
+    {
+        using var res = await GetAsync(url, ct);
+        if (!res.IsSuccessStatusCode) return null;
+        if (res.RequestMessage?.RequestUri is { } landed && !AllowedUrl(landed.ToString())) return null;
+        var b = await res.Content.ReadAsByteArrayAsync(ct);
+        return b.Length > cap ? null : b;
+    }
+
+    /// <summary>
+    /// خطِ همان فایل در <c>SHA256SUMS.txt</c> — شکلِ <c>sha256sum</c>:
+    /// «<c>hash  name</c>» یا «<c>hash *name</c>».
+    /// </summary>
+    public static string? HashFromSums(string text, string assetName)
+    {
+        foreach (var raw in text.Split('\n'))
+        {
+            var line = raw.Trim().TrimEnd('\r');
+            if (line.Length < 66) continue;
+            var sp = line.IndexOf(' ');
+            if (sp != 64) continue;
+            var hash = line[..64];
+            var name = line[64..].TrimStart(' ', '*').Trim();
+            if (!string.Equals(name, assetName, StringComparison.OrdinalIgnoreCase)) continue;
+            if (!hash.All(Uri.IsHexDigit)) return null;
+            return hash.ToLowerInvariant();
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// ES256 روی بایت‌های <b>دقیقِ</b> فهرست. هم امضای خامِ P1363 (۶۴ بایت) و
+    /// هم DERِ خروجیِ <c>openssl dgst -sign</c> پذیرفته می‌شود.
+    /// </summary>
+    public static bool SignatureOk(byte[] data, byte[] sig, string spkiB64)
+    {
+        try
+        {
+            using var ec = System.Security.Cryptography.ECDsa.Create();
+            ec.ImportSubjectPublicKeyInfo(Convert.FromBase64String(spkiB64), out _);
+            var fmt = sig.Length == 64
+                ? System.Security.Cryptography.DSASignatureFormat.IeeeP1363FixedFieldConcatenation
+                : System.Security.Cryptography.DSASignatureFormat.Rfc3279DerSequence;
+            return ec.VerifyData(data, sig, System.Security.Cryptography.HashAlgorithmName.SHA256, fmt);
+        }
+        catch { return false; }
+    }
+
+    private static string HashOf(string path)
+    {
+        using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(fs)).ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// ⚠️ فقط برای آزمون — به‌جای اجرای واقعیِ نصاب. همان الگوی
+    /// <see cref="TestTransport"/>.
+    /// </summary>
+    public static Func<System.Diagnostics.ProcessStartInfo, bool>? TestStart { get; set; }
+
+    private static void Start(System.Diagnostics.ProcessStartInfo psi)
+    {
+        if (TestStart is { } hook) { if (!hook(psi)) throw new InvalidOperationException(); return; }
+        System.Diagnostics.Process.Start(psi);
     }
 
     /// <summary>
@@ -560,15 +760,29 @@ public sealed class UpdateService
     /// </summary>
     public static bool Launch(string packagePath, string? targetVersion = null)
     {
+        //  ⛔ **درست پیش از اجرا، دوباره** — و فایل تا لحظهٔ شروعِ نصب باز و
+        //  بی‌اجازهٔ نوشتن (`FileShare.Read`) می‌ماند. بینِ دانلود و «نصب»
+        //  ممکن است دقیقه‌ها بگذرد و پوشهٔ `updates` مالِ کاربر است؛ هر چیزی
+        //  که در آن فاصله جایش نشسته باشد، هیچ‌وقت اجرا نمی‌شود.
+        FileStream? held = null;
         try
         {
+            var want = File.Exists(packagePath + HashSuffix)
+                ? File.ReadAllText(packagePath + HashSuffix).Trim()
+                : "";
+            if (want.Length != 64) return false;
+            held = new FileStream(packagePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var got = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(held)).ToLowerInvariant();
+            if (!string.Equals(got, want, StringComparison.OrdinalIgnoreCase)) return false;
+            held.Position = 0;
+
             // ⚠️ پیش از هر کاری: «قرار است به این نسخه برویم». اگر این تلاش
             // بگیرد، دفعهٔ بعد که برنامه باز شود خودش می‌فهمد؛ و اگر نگیرد،
             // به کاربر گفته می‌شود به‌جای آنکه بی‌صدا روی نسخهٔ کهنه بماند.
             if (!string.IsNullOrWhiteSpace(targetVersion)) MarkPending(targetVersion!);
 
             if (packagePath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
-                return LaunchZip(packagePath);
+                return LaunchZip(packagePath, held);
 
             // ── نصاب ──
             // ‎/SILENT‎ تا کاربر وسطِ به‌روزرسانی با پنجرهٔ ویزارد روبه‌رو نشود؛
@@ -595,7 +809,7 @@ public sealed class UpdateService
                 psi.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
             }
 
-            System.Diagnostics.Process.Start(psi);
+            Start(psi);
             return true;
         }
         catch
@@ -603,6 +817,7 @@ public sealed class UpdateService
             // کاربر پنجرهٔ اجازهٔ مدیر را رد کرد، یا نصاب اصلاً بالا نیامد
             return false;
         }
+        finally { held?.Dispose(); }
     }
 
     /// <summary>
@@ -612,7 +827,7 @@ public sealed class UpdateService
     /// گذاشته)، همان دستور با اجازهٔ مدیر اجرا می‌شود. و نتیجه‌اش — چه موفق
     /// چه نه — در فایلی نوشته می‌شود که برنامه هنگامِ باز شدنِ بعدی می‌خواند.
     /// </summary>
-    private static bool LaunchZip(string zipPath)
+    private static bool LaunchZip(string zipPath, Stream verified)
     {
         var exe = Environment.ProcessPath;
         if (exe is null) return false;
@@ -621,7 +836,10 @@ public sealed class UpdateService
         // بسته در یک پوشهٔ کنارِ فایلِ زیپ باز می‌شود، نه روی خودِ برنامه
         var staging = Path.Combine(Path.GetDirectoryName(zipPath)!, "staging");
         if (Directory.Exists(staging)) Directory.Delete(staging, true);
-        System.IO.Compression.ZipFile.ExtractToDirectory(zipPath, staging);
+        //  ⚠️ از **همان** جریانی باز می‌شود که همین حالا سنجیده شد، نه از
+        //  نامِ فایل — تا بایت‌های سنجیده همان بایت‌های بازشده باشند.
+        using (var zip = new System.IO.Compression.ZipArchive(verified, System.IO.Compression.ZipArchiveMode.Read, leaveOpen: true))
+            System.IO.Compression.ZipFileExtensions.ExtractToDirectory(zip, staging);
 
         // بعضی بسته‌ها یک پوشهٔ تکیِ بیرونی دارند — همان پوشه منبع است
         var top = Directory.GetDirectories(staging);
@@ -675,7 +893,7 @@ public sealed class UpdateService
             psi.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
         }
 
-        try { System.Diagnostics.Process.Start(psi); }
+        try { Start(psi); }
         catch
         {
             // کاربر پنجرهٔ اجازهٔ مدیر را رد کرد

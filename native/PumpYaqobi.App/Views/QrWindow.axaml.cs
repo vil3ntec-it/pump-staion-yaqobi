@@ -111,13 +111,8 @@ public partial class QrWindow : Window
     /// </summary>
     private static void Open(string url)
     {
-        if (string.IsNullOrWhiteSpace(url)) return;
-        try
-        {
-            System.Diagnostics.Process.Start(
-                new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
-        }
-        catch { /* مرورگری نبود — کپیِ لینک همیشه هست */ }
+        //  ⛔ فقط نشانیِ وب (`SafeOpen`)؛ مرورگری نبود ⇒ کپیِ لینک همیشه هست.
+        Services.SafeOpen.Url(url);
     }
 
     private void OnClose(object? s, RoutedEventArgs e) => Close();

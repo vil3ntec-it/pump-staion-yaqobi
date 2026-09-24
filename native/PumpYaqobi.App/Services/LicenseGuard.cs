@@ -22,6 +22,18 @@ namespace PumpYaqobi.App.Services;
 /// هر دو در <see cref="Features"/> یک چیز دیده می‌شوند، پس تفاوتشان همین
 /// پرچم است.
 /// </param>
+/// <param name="SignatureOk">
+/// امضا و هر چهار قیدِ هویت (صادرکننده · شنونده · دستگاه · پمپ) سالم‌اند —
+/// چه مجوز زنده باشد چه منقضی. ⛔ <b>ارفاق فقط از همین می‌آید</b>
+/// (<see cref="EntitlementState.InGrace"/>): مجوزی که امضایش سالم است و
+/// تازه منقضی شده، همان مشتریِ پول‌داده‌ای است که چند روز آفلاین مانده.
+/// هیچ عددِ بی‌امضایی در تنظیمات دیگر نمی‌تواند چیزی را باز کند.
+/// </param>
+/// <param name="Expired">امضا سالم است و فقط زمانش گذشته.</param>
+/// <param name="IssuedAt">
+/// <c>iat</c>ِ مجوز — زمانِ <b>امضاشدهٔ</b> سرور، لنگرِ کفِ ساعت
+/// (<see cref="LicenseClock.Anchor"/>).
+/// </param>
 public sealed record LicenseCheck(
     bool Valid,
     string Reason,
@@ -30,7 +42,10 @@ public sealed record LicenseCheck(
     long SubscriptionEndsAt,
     long ExpiresAt,
     string PlanTitle,
-    bool HasFeatureList = false)
+    bool HasFeatureList = false,
+    bool SignatureOk = false,
+    bool Expired = false,
+    long IssuedAt = 0)
 {
     public static LicenseCheck Fail(string why) =>
         new(false, why, Array.Empty<string>(), Array.Empty<string>(), 0, 0, "");
@@ -67,11 +82,16 @@ public sealed record LicenseCheck(
 ///  ۵) <b>پمپ</b> (<c>stn</c>) — کسی که دو پمپ را روی یک کامپیوتر اداره
 ///     می‌کند نمی‌تواند مجوزِ پمپِ اشتراک‌دار را روی پمپِ بی‌اشتراک بگذارد.
 ///
-/// ── و یک چیز که عمداً این‌جا نیست ──────────────────────────────────────────
-/// ساعت. مجوز <c>exp</c> دارد و می‌سنجیمش، ولی اگر کسی ساعتِ ویندوز را عقب
-/// ببرد فقط چند روز جلو می‌افتد — چون مجوز کوتاه‌عمر است و برنامه هر چند روز
-/// از سرور تازه‌اش می‌گیرد. قفلِ اصلی روی سرور است، نه این‌جا: نوشتن روی
-/// پوشهٔ ابری هر بار آن‌جا سنجیده می‌شود.
+/// ── و ساعت ─────────────────────────────────────────────────────────────────
+/// تا ۱۴۰۵/۰۷/۱۲ این‌جا نوشته بود «ساعت عمداً سنجیده نمی‌شود». ⛔ ولی عقب
+/// بردنِ ساعتِ ویندوز مجوزِ منقضی را زنده می‌کرد و ارفاق را هم از نو شروع
+/// می‌کرد. حالا «حالا»ی سنجش از <see cref="LicenseClock"/> می‌آید (کفی که
+/// فقط جلو می‌رود) و ارفاق فقط از خودِ مجوزِ امضاشده
+/// (<see cref="LicenseCheck.SignatureOk"/>). قفلِ اصلی همچنان روی سرور است:
+/// نوشتن روی پوشهٔ ابری هر بار آن‌جا سنجیده می‌شود.
+///
+/// ⚠️ <see cref="Check"/> خودِ برگه را می‌سنجد؛ برای «مجوزِ ذخیره‌شدهٔ این
+/// نصب» همیشه <see cref="CheckStored"/> را بزنید.
 /// </summary>
 public static class LicenseGuard
 {
@@ -90,17 +110,28 @@ public static class LicenseGuard
         string? token, string? pinnedPublicKey, string deviceUid, string stationId, long nowMs)
     {
         if (string.IsNullOrWhiteSpace(token)) return LicenseCheck.Fail("مجوزی ذخیره نشده است");
-        if (string.IsNullOrWhiteSpace(pinnedPublicKey))
+
+        //  ⛔ ریشهٔ اعتماد: اگر کلیدهای داخلِ خودِ برنامه هست
+        //  (<see cref="CloudConfig.LicenseKeys"/>) **همان** است و کلیدِ روی
+        //  دیسک هیچ اثری ندارد — وگرنه یک خطِ ویرایش‌شده در `settings.json`
+        //  کلِ این کلاس را بی‌اثر می‌کرد. خالی بود ⇒ همان TOFUِ همیشگی.
+        var trusted = CloudConfig.LicenseKeys;
+        if (trusted.Count == 0 && string.IsNullOrWhiteSpace(pinnedPublicKey))
             return LicenseCheck.Fail("کلیدِ سرور هنوز قفل نشده — یک بار آنلاین شوید");
 
         var parts = token.Split('.');
         if (parts.Length != 3) return LicenseCheck.Fail("شکلِ مجوز درست نیست");
 
         JsonElement payload;
+        var kid = "";
         try
         {
             using var doc = JsonDocument.Parse(FromB64Url(parts[1]));
             payload = doc.RootElement.Clone();
+            //  ⚠️ `kid` فقط **انتخابِ کلید** است، نه اعتماد: کلیدِ انتخاب‌شده
+            //  باید از قبل در فهرستِ داخلِ برنامه باشد.
+            using var head = JsonDocument.Parse(FromB64Url(parts[0]));
+            kid = Str(head.RootElement, "kid");
         }
         catch { return LicenseCheck.Fail("مجوز خوانده نشد"); }
 
@@ -108,19 +139,36 @@ public static class LicenseGuard
         //  ⚠️ ترتیب مهم است: تا امضا سنجیده نشده، هیچ فیلدی از payload
         //  قابلِ اعتماد نیست. سنجیدنِ اول محتوا و بعد امضا، همان اشتباهی
         //  است که قفل را عملاً برمی‌دارد.
-        try
+        IEnumerable<string> keys;
+        if (trusted.Count == 0) keys = new[] { pinnedPublicKey! };
+        else if (kid.Length > 0)
         {
-            using var ecdsa = ECDsa.Create();
-            ecdsa.ImportSubjectPublicKeyInfo(Convert.FromBase64String(pinnedPublicKey), out _);
-            var signed = Encoding.UTF8.GetBytes($"{parts[0]}.{parts[1]}");
-            //  امضای خام (r||s) نه DER — همان چیزی که سرور می‌سازد
-            if (!ecdsa.VerifyData(signed, FromB64Url(parts[2]), HashAlgorithmName.SHA256,
-                                  DSASignatureFormat.IeeeP1363FixedFieldConcatenation))
-            {
-                return LicenseCheck.Fail("امضای مجوز درست نیست");
-            }
+            if (!trusted.TryGetValue(kid, out var one))
+                return LicenseCheck.Fail("کلیدِ امضای این مجوز برای این برنامه شناخته نیست");
+            keys = new[] { one };
         }
+        else keys = trusted.Values;
+
+        var signed = Encoding.UTF8.GetBytes($"{parts[0]}.{parts[1]}");
+        byte[] sig;
+        try { sig = FromB64Url(parts[2]); }
         catch { return LicenseCheck.Fail("امضای مجوز سنجیده نشد"); }
+
+        var verified = false;
+        foreach (var k in keys)
+        {
+            try
+            {
+                using var ecdsa = ECDsa.Create();
+                ecdsa.ImportSubjectPublicKeyInfo(Convert.FromBase64String(k), out _);
+                //  امضای خام (r||s) نه DER — همان چیزی که سرور می‌سازد
+                if (ecdsa.VerifyData(signed, sig, HashAlgorithmName.SHA256,
+                                     DSASignatureFormat.IeeeP1363FixedFieldConcatenation))
+                { verified = true; break; }
+            }
+            catch { /* کلیدِ خراب ⇒ کلیدِ بعدی */ }
+        }
+        if (!verified) return LicenseCheck.Fail("امضای مجوز درست نیست");
 
         // ── ۲) این مجوز مالِ همین برنامه است؟ ────────────────────────────
         if (Str(payload, "iss") != CloudConfig.Issuer) return LicenseCheck.Fail("صادرکنندهٔ مجوز ناشناس است");
@@ -141,18 +189,51 @@ public static class LicenseGuard
         // ── ۵) هنوز زنده است؟ ───────────────────────────────────────────
         var nbf = Num(payload, "nbf");
         var exp = Num(payload, "exp");
-        if (nbf > 0 && nowMs + SkewMs < nbf) return LicenseCheck.Fail("زمانِ مجوز هنوز نرسیده است");
-        if (exp > 0 && nowMs - SkewMs > exp) return LicenseCheck.Fail("مجوز منقضی شده — یک بار آنلاین شوید");
+        var hasFeat = payload.TryGetProperty("feat", out var featProp)
+                      && featProp.ValueKind == JsonValueKind.Array;
 
-        return new LicenseCheck(
-            true, "",
+        //  ⚠️ از این‌جا به بعد امضا و هویت سالم‌اند؛ پس فهرستِ پلن و زمان‌ها
+        //  **حتی در شکست** پر می‌روند — ارفاق همان فهرستِ همین مجوز را
+        //  اعمال می‌کند و هیچ‌وقت پلن را گشادتر نمی‌کند.
+        LicenseCheck Signed(bool valid, string why, bool expired) => new(
+            valid, why,
             Arr(payload, "feat"),
             Arr(payload, "core"),
             Num(payload, "sub_ends"),
             exp,
             Str(payload, "plan_title"),
-            payload.TryGetProperty("feat", out var featProp)
-                && featProp.ValueKind == JsonValueKind.Array);
+            hasFeat,
+            SignatureOk: true,
+            Expired: expired,
+            IssuedAt: Num(payload, "iat"));
+
+        if (nbf > 0 && nowMs + SkewMs < nbf) return Signed(false, "زمانِ مجوز هنوز نرسیده است", false);
+        if (exp > 0 && nowMs - SkewMs > exp) return Signed(false, "مجوز منقضی شده — یک بار آنلاین شوید", true);
+
+        return Signed(true, "", false);
+    }
+
+    /// <summary>
+    /// ══ سنجشِ مجوزِ <b>ذخیره‌شده</b> — تنها راهِ درستِ پرسیدنِ «مجوز سالم است؟» ═
+    ///
+    /// همان <see cref="Check"/>، به‌علاوهٔ دو قیدی که فقط روی مجوزِ روی دیسک
+    /// معنا دارند:
+    ///
+    ///  • <b>کفِ ساعت</b> (<see cref="LicenseClock"/>) — «حالا» هرگز عقب‌تر از
+    ///    بالاترین زمانی نیست که این نصب دیده، پس عقب بردنِ ساعتِ ویندوز
+    ///    مجوزِ منقضی را زنده نمی‌کند.
+    ///  • <b>اثرِ انگشتِ کامپیوتر</b> (<see cref="CloudConfig.MachineMoved"/>) —
+    ///    تنظیماتی که از کامپیوترِ دیگری کپی شده‌اند مجوزشان را با خودشان
+    ///    نمی‌برند. ⛔ و هیچ چیزی پاک نمی‌شود؛ فقط پذیرفته نمی‌شود.
+    ///
+    /// ⚠️ هر جایی که «مجوزِ این نصب» را می‌سنجد باید از همین در برود، نه از
+    /// <see cref="Check"/>ِ خام — وگرنه یکی از این دو قید جا می‌افتد.
+    /// </summary>
+    public static LicenseCheck CheckStored(AppSettings f, long? nowMs = null)
+    {
+        if (CloudConfig.MachineMoved(f)) return LicenseCheck.Fail(CloudConfig.MachineMovedWhy);
+        return Check(f.CloudLicense, f.CloudPublicKey, CloudConfig.DeviceUid(f), f.CloudStationId,
+                     nowMs ?? LicenseClock.Now(f));
     }
 
     /// <summary>

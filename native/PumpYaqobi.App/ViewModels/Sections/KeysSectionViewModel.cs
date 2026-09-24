@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Services;
+using PumpYaqobi.Application.Security;
 using PumpYaqobi.Services.Security;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
@@ -24,6 +25,13 @@ public sealed partial class SectionLockViewModel : ObservableObject
     public string Id { get; }
     public string Title { get; }
 
+    /// <summary>
+    /// رمزِ <b>فعلیِ</b> همین بخش (یا رمزِ برنامه) — فقط وقتی بخش رمز دارد.
+    /// ⛔ بی آن، هر کسی که پای برنامهٔ باز می‌نشست رمزِ «مفاد» را عوض یا
+    /// برمی‌داشت و خودش می‌دیدش.
+    /// </summary>
+    [ObservableProperty] private string _current = "";
+
     /// <summary>رمزِ تازه — هیچ‌وقت خوانده نمی‌شود، فقط نوشته.</summary>
     [ObservableProperty] private string _password = "";
     [ObservableProperty] private string _confirm = "";
@@ -45,10 +53,18 @@ public sealed partial class SectionLockViewModel : ObservableObject
         if (p.Length < 4) { Error = "رمز دستِ‌کم چهار نویسه باشد."; return; }
         if (p != Confirm.Trim()) { Error = "دو رمز یکی نیستند."; return; }
 
-        try { _locks.SetPassword(Id, p); }
-        catch (Exception ex) { Error = ex.Message; return; }
+        try
+        {
+            if (HasPassword)
+            {
+                if (Current.Length == 0) { Error = "رمزِ فعلیِ این بخش (یا رمزِ برنامه) را بنویسید."; return; }
+                if (!Allowed(_locks.ChangePassword(Id, Current, p, AppPassword))) return;
+            }
+            else _locks.SetPassword(Id, p);
+        }
+        catch (Exception ex) { Error = ErrorText.Friendly(ex); return; }
 
-        Password = ""; Confirm = "";
+        Current = ""; Password = ""; Confirm = "";
         Refresh();
         _host.Toast("🔒 رمزِ «" + Title + "» گذاشته شد", ToastKind.Ok);
     }
@@ -56,12 +72,15 @@ public sealed partial class SectionLockViewModel : ObservableObject
     [RelayCommand]
     private async Task RemoveAsync()
     {
+        Error = "";
         if (!HasPassword) return;
+        if (Current.Length == 0) { Error = "برای برداشتنِ قفل، رمزِ فعلیِ این بخش (یا رمزِ برنامه) را بنویسید."; return; }
         if (!await Dialogs.ConfirmAsync("برداشتنِ قفل",
                 "قفلِ «" + Title + "» برداشته شود؟ از آن پس هر کسی که وارد برنامه شود می‌بیندش."))
             return;
 
-        _locks.ClearPassword(Id);
+        if (!Allowed(_locks.RemovePassword(Id, Current, AppPassword))) return;
+        Current = "";
         Refresh();
         _host.Toast("🔓 قفلِ «" + Title + "» برداشته شد", ToastKind.Warn);
     }
@@ -72,6 +91,29 @@ public sealed partial class SectionLockViewModel : ObservableObject
     {
         _locks.Relock(Id);
         _host.Toast("🔒 «" + Title + "» دوباره قفل شد", ToastKind.Info);
+    }
+
+    /// <summary>رمزِ خودِ برنامه هم کلیدِ همین قفل است — شرحش در <c>SectionLockService.Authorize</c>.</summary>
+    private bool AppPassword(string typed)
+    {
+        var h = _host.Auth.AdminPasswordHash();
+        return !string.IsNullOrEmpty(h) && PasswordHasher.Verify(typed, h);
+    }
+
+    /// <summary>نتیجهٔ سنجش ⇒ جملهٔ کاربر. راست یعنی «ادامه بده».</summary>
+    private bool Allowed(SectionLockService.Check c)
+    {
+        switch (c)
+        {
+            case SectionLockService.Check.Ok: return true;
+            case SectionLockService.Check.Wait:
+                Error = $"چند بار رمزِ نادرست زده شد — {_locks.WaitSeconds(Id)} ثانیهٔ دیگر دوباره امتحان کنید.";
+                return false;
+            default:
+                Current = "";
+                Error = "رمزِ فعلی درست نیست.";
+                return false;
+        }
     }
 
     public void Refresh()
@@ -162,7 +204,7 @@ public sealed partial class KeysSectionViewModel : SectionViewModel
             else _host.Auth.SetFirstPassword(Next.Trim());
         }
         catch (UnauthorizedAccessException) { AppError = "رمزِ فعلی درست نیست."; return; }
-        catch (Exception ex) { AppError = ex.Message; return; }
+        catch (Exception ex) { AppError = ErrorText.Friendly(ex); return; }
 
         Current = ""; Next = ""; Confirm = "";
         AppDone = had
@@ -190,7 +232,7 @@ public sealed partial class KeysSectionViewModel : SectionViewModel
 
         try { _host.Auth.ClearPassword(Current); }
         catch (UnauthorizedAccessException) { AppError = "رمزِ فعلی درست نیست."; return; }
-        catch (Exception ex) { AppError = ex.Message; return; }
+        catch (Exception ex) { AppError = ErrorText.Friendly(ex); return; }
 
         Current = ""; Next = ""; Confirm = "";
         AppDone = "🔓 رمز برداشته شد — برنامه بی رمز باز می‌شود.";

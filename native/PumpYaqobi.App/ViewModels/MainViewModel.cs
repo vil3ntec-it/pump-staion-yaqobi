@@ -1192,13 +1192,24 @@ public sealed partial class MainViewModel : ObservableObject
         var locks = AppHost.Current.Locks;
         if (!locks.NeedsUnlock(s.Id)) return true;
 
+        //  ⛔ ترمزِ حدس زدن — پیش از پرسیدن هم، تا پنجرهٔ رمز بی‌فایده باز نشود
+        if (locks.WaitSeconds(s.Id) is > 0 and var wait)
+        {
+            AppHost.Current.Toast($"⏳ چند بار رمزِ نادرست زده شد — {wait} ثانیهٔ دیگر دوباره امتحان کنید",
+                                  ToastKind.Warn);
+            return false;
+        }
+
         var pw = await Dialogs.PromptAsync("🔒 " + s.Title,
                                            "این بخش رمز دارد. رمزش را بزنید.");
         if (pw is null) return false;
 
         if (!locks.Unlock(s.Id, pw))
         {
-            AppHost.Current.Toast("❌ رمزِ این بخش درست نیست", ToastKind.Error);
+            var left = locks.WaitSeconds(s.Id);
+            AppHost.Current.Toast(left > 0
+                ? $"❌ رمزِ این بخش درست نیست — {left} ثانیه صبر کنید"
+                : "❌ رمزِ این بخش درست نیست", ToastKind.Error);
             return false;
         }
         return true;
@@ -1220,7 +1231,11 @@ public sealed partial class MainViewModel : ObservableObject
                 await sub.OnActivatedAsync();
             sub.MarkActivationSeen();
         }
-        catch (Exception ex) { AppHost.Current.Toast("باز نشد: " + ex.Message, ToastKind.Error); }
+        catch (Exception ex)
+        {
+            CrashGuard.Write("باز کردنِ زیربخش", ex);
+            AppHost.Current.Toast("باز نشد: " + ErrorText.Friendly(ex), ToastKind.Error);
+        }
     }
 
     /// <summary>

@@ -107,7 +107,7 @@ public sealed partial class VipSectionViewModel : SectionViewModel
 
         GraceText = !Entitlements.TestDeny && st.InGrace
             ? "⏳ اشتراک تمام شده — " + Shamsi.Money(st.GraceDaysLeft)
-              + " روز ارفاق. در این مدت همه‌چیز کار می‌کند."
+              + " روز ارفاق. در این مدت همان پلنِ شما کار می‌کند."
             : "";
 
         BuildPlans(st, open);

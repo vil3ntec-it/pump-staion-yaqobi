@@ -175,7 +175,7 @@ public static class StationLink
                 "");
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception e) { return Failed("به سرور نرسیدیم: " + e.Message); }
+        catch (Exception e) { return Failed("به سرور نرسیدیم — " + ErrorText.Friendly(e)); }
     }
 
     private static EnrollReply Failed(string why) => new(false, "", "", "", "", false, why);
@@ -224,11 +224,10 @@ public static class StationLink
         if (serverId.Length > 0) file.ServerId = serverId;
         file.Save();
 
-        try
-        {
-            host.Settings.Set(SettingsService.ServerUrl, url);
-            host.Settings.Set(SettingsService.SyncCode, token);
-        }
+        //  ⛔ **رمز فقط در تنظیماتِ رمزشده** — نه در دیتابیس. `pump.db` داخلِ
+        //  هر پشتیبانی است که به سرور می‌رود (شرحش بالای `HomeLink.Token`).
+        try { host.Settings.Set(SettingsService.ServerUrl, url); }
         catch { /* هنوز وارد نشده — فایل نوشته شد و همان کافی است */ }
+        HomeLink.MigrateDbToken(host);
     }
 }

@@ -90,6 +90,28 @@ public sealed class SettingsService : IUnionRateProvider
         Invalidate();
     }
 
+    /// <summary>
+    /// ردیفِ یک کلید را از دیتابیس <b>برمی‌دارد</b> — فقط برای پاک‌سازیِ
+    /// خودِ برنامه (مثلاً رازی که نباید در دیتابیس می‌ماند)، نه کارِ کاربر.
+    ///
+    /// ⚠️ عمداً اجازه نمی‌خواهد: اگر پاک کردنِ یک راز به نقشِ کاربرِ همان
+    /// لحظه بند بود، رازی که در دیتابیس جا مانده با ورودِ یک کارمند برای
+    /// همیشه همان‌جا می‌ماند — و دیتابیس داخلِ بکاپ به سرور می‌رود.
+    ///
+    /// <para>
+    /// ⛔ <b>حذفِ واقعی، نه نرم</b>: <c>SaveChanges</c>ِ این دیتابیس هر حذفی
+    /// را «نرم» می‌کند (ردیف با <c>DeletedAt</c> می‌ماند) — برای رکوردِ مالی
+    /// درست است، ولی رازی که با همان مقدار در فایل بماند اصلاً پاک نشده.
+    /// پس مستقیم با <c>DELETE</c> می‌رود.
+    /// </para>
+    /// </summary>
+    public void Remove(string key)
+    {
+        using var db = _dbf.Create();
+        db.Settings.IgnoreQueryFilters().Where(s => s.Key == key).ExecuteDelete();
+        Invalidate();
+    }
+
     public void Set(string key, decimal value) =>
         Set(key, value.ToString(CultureInfo.InvariantCulture));
 

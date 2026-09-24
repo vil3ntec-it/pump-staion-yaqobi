@@ -96,8 +96,17 @@ public class PumpStepLoopTests
         var at = src.IndexOf("var neverActivated", StringComparison.Ordinal);
         Assert.Contains("CloudLicense", src[at..Math.Min(src.Length, at + 200)]);
 
-        //  ⛔ و هر دو جا هنوز می‌توانند `key_mismatch` بدهند — قفل برنداشته شد
-        Assert.Equal(2, Count(src, "\"key_mismatch\")"));
+        //  ⛔ و هر دو جا هنوز می‌توانند `key_mismatch` بدهند — قفل برنداشته شد.
+        //  ⚠️ (۱۴۰۵/۰۷/۱۲) جملهٔ `key_mismatch` در یک کمک‌کار (`KeyMismatch()`)
+        //  نشست چون سه راه — فعال‌سازی، بند، و مجوزِ تازهٔ `RefreshAsync` —
+        //  همان را می‌دهند؛ پس ادعا از «دو رشته» به «یک رشته، و هر دو راهِ
+        //  قدیمی هنوز صدایش می‌زنند» رفت. ضعیف نشد: هر دو جا شمرده می‌شوند.
+        Assert.Equal(1, Count(src, "\"key_mismatch\")"));
+        var act = src.IndexOf("public async Task<CloudResult> ActivateAsync", StringComparison.Ordinal);
+        var bind = src.IndexOf("public async Task<CloudResult> BindAsync", StringComparison.Ordinal);
+        var redeem = src.IndexOf("public async Task<CloudResult> RedeemAsync", StringComparison.Ordinal);
+        Assert.Contains("return KeyMismatch();", src[act..bind]);
+        Assert.Contains("return KeyMismatch();", src[bind..redeem]);
 
         //  ⚠️ و رها کردن فقط یک بار نوشته شده (مسیرِ bind)
         Assert.Equal(1, Count(src, "var neverActivated"));

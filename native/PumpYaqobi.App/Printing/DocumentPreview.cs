@@ -412,7 +412,8 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
                 // تنظیمی که سند را نمی‌سازد (کاغذِ خیلی کوچک، حاشیهٔ خیلی بزرگ)
                 // نباید پنجره را ببندد — ورقِ قبلی سرِ جایش می‌ماند.
                 Setup = prev;
-                Status = "این تنظیم روی ورق جا نمی‌شود: " + ex.Message;
+                Services.CrashGuard.Write("پیش‌نمایشِ چاپ", ex, report: false);
+                Status = "این تنظیم روی ورق جا نمی‌شود — کاغذ را بزرگ‌تر یا حاشیه را کمتر کنید.";
                 try
                 {
                     await Task.Run(() => { _doc = BuildSolved(prev); StartPages(); });
@@ -452,7 +453,8 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         {
             Setup = prev;
             PullFromSetup();
-            Status = "این تنظیم روی ورق جا نمی‌شود: " + ex.Message;
+            Services.CrashGuard.Write("پیش‌نمایشِ چاپ", ex, report: false);
+            Status = "این تنظیم روی ورق جا نمی‌شود — کاغذ را بزرگ‌تر یا حاشیه را کمتر کنید.";
             try
             {
                 await Task.Run(() => { _doc = BuildSolved(prev); StartPages(); });
