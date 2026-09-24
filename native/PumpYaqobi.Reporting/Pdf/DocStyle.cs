@@ -337,7 +337,50 @@ public static class DocStyle
     {
         var cell = Td(c, even);
         if (string.IsNullOrEmpty(text)) { cell.Text(string.Empty); return; }
-        cell.Text(text).FontSize(CellSize).SemiBold().FontColor(Paint(color ?? CellFg));
+        cell.Text(Tight(text)).FontSize(CellSize).SemiBold().FontColor(Paint(color ?? CellFg));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ عدد و واحدش یک چیزند و دو خط نمی‌شوند ═══════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «پرینت‌ها و پی‌دی‌اف‌ها خیلی داغون داده
+    //  می‌شوند و اصلاً هیچ‌کدام تراز نیست — می‌بینی دو خط شده تاریخ، یا طولِ
+    //  کادر یکی کوچک یکی بزرگ.»
+    //
+    //  ⛔ یک ریشه‌اش این‌جاست و ربطی به پهنای ستون ندارد: خانه‌ای مثلِ
+    //  ‎«۱۲۳٬۴۵۶ افغانی»‎ یا ‎«$۱۲٫۳۴ دالر»‎ یک فاصلهٔ معمولی دارد، پس موتورِ
+    //  متن حق دارد همان‌جا بشکند. با یک شکست، آن **یک** خانه دو خطی می‌شود و
+    //  چون بلندیِ ردیفِ جدول از بلندترین خانه‌اش می‌آید، **کلِ ردیف** دو برابر
+    //  می‌شود — همان «یکی کوچیک یکی بزرگ».
+    //
+    //  ⚠️ و این فقط زشت نیست: «۱۲۳٬۴۵۶» در یک خط و «افغانی» در خطِ بعد، در
+    //  یک سندِ حساب‌داری یعنی عددی که واحدش معلوم نیست.
+    //
+    //  ⛔ ولی متنِ آزاد (یادداشت، نامِ مشتری، عنوانِ مصرف) باید مثلِ همیشه
+    //  بپیچد، وگرنه از کادر می‌زند بیرون. پس قاعده تنگ و سنجیدنی است:
+    //  **فقط خانه‌ای که رقم دارد و کوتاه است** — یعنی همان «عدد + واحد» و
+    //  تاریخ. نوشتهٔ بی‌رقم و نوشتهٔ بلند دست نمی‌خورند.
+
+    /// <summary>بلندترین خانه‌ای که «یک مقدار» شمرده می‌شود، نه جمله.</summary>
+    private const int TightMax = 24;
+
+    /// <summary>فاصلهٔ نشکن — دیده نمی‌شود، فقط جلوی شکستنِ خط را می‌گیرد.</summary>
+    private const char Nbsp = '\u00a0';
+
+    /// <summary>
+    /// «عدد + واحد» را یک تکه می‌کند. متنِ بی‌رقم یا بلندتر از
+    /// <see cref="TightMax"/> دست‌نخورده برمی‌گردد.
+    /// </summary>
+    public static string Tight(string text)
+    {
+        if (text.Length > TightMax || text.IndexOf(' ') < 0) return text;
+
+        var hasDigit = false;
+        foreach (var ch in text)
+            if (char.IsDigit(ch)) { hasDigit = true; break; }
+
+        return hasDigit ? text.Replace(' ', Nbsp) : text;
     }
 
     /// <summary>ردیفِ «جمله» — همان نوارِ تیرهٔ پایینِ جدول.</summary>
@@ -345,7 +388,7 @@ public static class DocStyle
         c.Background(Paint(HeadBg)).Border(1).BorderColor(Line(HeadLine))
          .PaddingVertical(6).PaddingHorizontal(4)
          .AlignCenter().AlignMiddle()
-         .Text(text).FontSize(HeadSize).Bold().FontColor(Paint(HeadFg));
+         .Text(Tight(text)).FontSize(HeadSize).Bold().FontColor(Paint(HeadFg));
 
     /// <summary>«—» برای خانهٔ خالی — مثلِ خودِ سند، نه صفر.</summary>
     public static string Dash(string? s) => string.IsNullOrWhiteSpace(s) ? "—" : s!;
