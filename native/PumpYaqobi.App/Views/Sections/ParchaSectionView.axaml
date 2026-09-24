@@ -136,7 +136,25 @@
             <StackPanel Spacing="4">
               <TextBlock Text="ختم پایه (لیتر)" Classes="fld" />
               <Grid ColumnDefinitions="*,8,106">
-                <TextBox Grid.Column="0" Classes="wfield" Text="{Binding End}" Watermark="0" />
+                <!-- ══ عددِ «ختم» هم‌پای عددِ «شروع» ═════════════════════════════
+                     خواستهٔ صاحب ریپو با عکس (۱۴۰۵/۰۷/۱۲): «هر دو عدد با هم بروند
+                     یک طرف، و اگر مشکلی نبود هر دو سرِ جایشان.» هشدارِ داخلِ
+                     کادرِ شروع جا می‌گیرد و عددِ وسط‌چینش را کنار می‌برد؛ پس همان
+                     تکه این‌جا هم هست — **نامرئی** و بی‌کلیک — تا عددِ ختم دقیقاً
+                     همان‌قدر برود و دو عدد زیرِ هم بمانند. ⚠️ رونوشتِ مو‌به‌موی
+                     همان تکه است (نه یک فاصلهٔ عددی)، تا پهنایش هر قلم و هر
+                     اندازه‌ای همان باشد. -->
+                <TextBox Grid.Column="0" Classes="wfield" Text="{Binding End}" Watermark="0">
+                  <TextBox.InnerRightContent>
+                    <StackPanel Orientation="Horizontal" Spacing="4" Margin="4,0"
+                                VerticalAlignment="Center" IsVisible="{Binding LowBase}"
+                                Opacity="0" IsHitTestVisible="False" Classes="lowpad">
+                      <TextBlock Text="⚠️" FontSize="14" VerticalAlignment="Center" />
+                      <Button Content="✔ دیدم" Classes="ghost" Padding="7,1" FontSize="11"
+                              VerticalAlignment="Center" Focusable="False" IsTabStop="False" />
+                    </StackPanel>
+                  </TextBox.InnerRightContent>
+                </TextBox>
                 <Button Grid.Column="2" Classes="wside" Classes.day="{Binding IsDay}"
                         Classes.night="{Binding IsNight}"
                         Content="{Binding PushText}"

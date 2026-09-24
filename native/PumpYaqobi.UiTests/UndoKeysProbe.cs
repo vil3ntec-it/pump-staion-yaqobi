@@ -371,6 +371,24 @@ internal static class UndoKeysProbe
             return lt - bb;
         }
 
+        // جای عددِ «شروع» و «ختم» روی صفحه — وسطِ ناحیهٔ نوشتهٔ هر کادر
+        double Mid(string prop)
+        {
+            var b = win.GetVisualDescendants().OfType<TextBox>()
+                .FirstOrDefault(t => t.IsEffectivelyVisible && ReferenceEquals(t.DataContext, parcha.Day)
+                                  && t.GetObservable(TextBox.TextProperty) is not null
+                                  && (t.GetBindingObservable(TextBox.TextProperty) is not null)
+                                  && t.Text == (prop == "Start" ? parcha.Day.Start : parcha.Day.End));
+            var tp = b?.GetVisualDescendants().OfType<Avalonia.Controls.Presenters.TextPresenter>().FirstOrDefault();
+            if (tp is null) return double.NaN;
+            var l = tp.TranslatePoint(new Point(0, 0), win)!.Value.X;
+            var r = tp.TranslatePoint(new Point(tp.Bounds.Width, 0), win)!.Value.X;
+            return (l + r) / 2;
+        }
+        parcha.Day.Start = "300000"; parcha.Day.End = "301420";
+        Settle(win);
+        var calm = Math.Abs(Mid("Start") - Mid("End"));
+
         var before = Gap();
         parcha.Day.LowBaseText = "⚠️ این شروع پایه از پایهٔ قبلی (250,000) کمتر است";
         parcha.Day.LowBase = true;
@@ -390,11 +408,16 @@ internal static class UndoKeysProbe
             : startLbl.TranslatePoint(new Point(0, 0), win)!.Value.Y - name.TranslatePoint(new Point(0, name.Bounds.Height), win)!.Value.Y;
         Check($"فاصلهٔ زیرِ کادرِ شروع همان فاصلهٔ بقیهٔ کادرهاست ({before:F0} ⇐ با هشدار {during:F0}، معمول {normal:F0})",
               Math.Abs(before - normal) < 2 && Math.Abs(during - before) < 1);
+        var warned = Math.Abs(Mid("Start") - Mid("End"));
+        Check($"«شروع» و «ختم» زیرِ هم‌اند — بی هشدار {calm:F1} و با هشدار {warned:F1} پیکسل اختلاف",
+              calm < 1 && warned < 1);
         Shot(win, "parcha-ack-inside.png");
 
         ack?.Command?.Execute(null);
         Settle(win);
         Check("«دیدم» زده شد ⇒ هشدار رفت و کادر سرخ نیست", !parcha.Day.LowBase && parcha.Day.StartBrushKey == "Pump.Text");
+        Check($"و هر دو عدد با هم به وسط برگشتند ({Math.Abs(Mid("Start") - Mid("End")):F1})",
+              Math.Abs(Mid("Start") - Mid("End")) < 1);
     }
 
     private static bool Inside(Control c, Control outer, Window w)
