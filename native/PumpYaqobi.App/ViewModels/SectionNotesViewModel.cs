@@ -51,7 +51,7 @@ public sealed partial class SectionNotesViewModel : ObservableObject
     partial void OnDraftChanged(string v)
     {
         if (_loading) return;
-        _ = _svc.SaveDraftAsync(Key, v);
+        global::PumpYaqobi.App.Services.SaveGuard.Watch(_svc.SaveDraftAsync(Key, v), "یادداشتِ بخش");
     }
 
     [ObservableProperty] private bool _isListOpen;

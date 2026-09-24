@@ -310,8 +310,8 @@
        عددهایی که همان لحظه حساب می‌شوند، و دو دکمه. تا هر چهار عددِ لازم پر
        نشوند، «ذخیره» چیزی ثبت نمی‌کند.
        ══════════════════════════════════════════════════════════════════ -->
-  <Panel IsVisible="{Binding BuyOpen}" Background="#99000000">
-    <Border Width="620" MaxHeight="640" VerticalAlignment="Center" HorizontalAlignment="Center"
+  <Panel x:Name="BuyOverlay" IsVisible="{Binding BuyOpen}" Background="#99000000">
+    <Border x:Name="BuyCard" Width="620" MaxHeight="640" VerticalAlignment="Center" HorizontalAlignment="Center"
             CornerRadius="16" Padding="0" Background="{DynamicResource Pump.Card}"
             BorderBrush="{DynamicResource Pump.Accent}" BorderThickness="1">
       <Grid RowDefinitions="Auto,*,Auto">

@@ -277,7 +277,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     {
         Entity.Mode = v ? LedgerMode.Money : LedgerMode.Fuel;
         BuildRows();
-        _ = _host.Debtors.UpdateAccountAsync(Entity);
+        SaveGuard.Watch(_host.Debtors.UpdateAccountAsync(Entity), "حسابِ قرض‌دار");
         _person.Recalc();
         RefreshTotals();
     }
@@ -633,7 +633,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     {
         var v = Shamsi.Num(text);
         if (v == 0m) { RefreshTotals(); RepaintHeadEdits(); return; }
-        _ = AddHeadReceiptAsync(fuel, v);
+        SaveGuard.Watch(AddHeadReceiptAsync(fuel, v), "رسیدِ سربرگ");
     }
 
     /// <summary>
@@ -960,7 +960,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
 
     private void SaveAccount()
     {
-        _ = _host.Debtors.UpdateAccountAsync(Entity);
+        SaveGuard.Watch(_host.Debtors.UpdateAccountAsync(Entity), "حسابِ قرض‌دار");
         _person.Recalc();
     }
 
@@ -1173,7 +1173,7 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
         {
             var v = (value ?? "").Trim();
             Entity.Phone = v.Length == 0 ? null : v;
-            _ = _host.Debtors.UpdateDebtorAsync(Entity);
+            SaveGuard.Watch(_host.Debtors.UpdateDebtorAsync(Entity), "مشخصاتِ قرض‌دار");
             OnPropertyChanged(nameof(PhoneText));
             OnPropertyChanged(nameof(Phone));
         }
@@ -1186,7 +1186,7 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
         {
             var v = (value ?? "").Trim();
             Entity.BuyFeeNote = v.Length == 0 ? null : v;
-            _ = _host.Debtors.UpdateDebtorAsync(Entity);
+            SaveGuard.Watch(_host.Debtors.UpdateDebtorAsync(Entity), "مشخصاتِ قرض‌دار");
             OnPropertyChanged(nameof(BuyFeeText));
         }
     }

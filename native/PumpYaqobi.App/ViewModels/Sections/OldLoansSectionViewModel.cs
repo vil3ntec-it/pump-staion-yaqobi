@@ -92,7 +92,7 @@ public sealed partial class OldLoansSectionViewModel : SectionViewModel
     {
         foreach (var n in new[] { nameof(IsAll), nameof(IsFuel), nameof(IsMoney) })
             OnPropertyChanged(n);
-        _ = RefreshAsync();
+        _ = Services.CrashGuard.RunAsync("خواندنِ قرض‌های قدیمی", RefreshAsync);
     }
 
     [RelayCommand]

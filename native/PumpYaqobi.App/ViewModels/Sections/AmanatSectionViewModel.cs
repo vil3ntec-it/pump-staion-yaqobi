@@ -206,7 +206,7 @@ public sealed partial class AmanatAccountViewModel : ObservableObject, IRowBatch
         Recalc();
     }
 
-    private void Save() => _ = _host.Amanat.UpdateAccountAsync(Entity);
+    private void Save() => SaveGuard.Watch(_host.Amanat.UpdateAccountAsync(Entity), "حسابِ امانت");
 
     /// <summary>«مدت زمان» اگر دستی نوشته نشده باشد، از تاریخِ ردیف تا امروز.</summary>
     private decimal AutoDaysOf(AmanatRow r) =>

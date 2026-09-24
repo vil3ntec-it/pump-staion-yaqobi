@@ -457,7 +457,9 @@ public sealed class AppSettings
         //  توکنِ کلاسِ دیگری را در دفترِ خودش دید.
         //  ⚠️ هر دو کار زیرِ یک قفل‌اند: وگرنه `FlushSoon` می‌توانست پوشه را
         //  پیش از عوض شدن بخواند و درست بعدش بنویسد.
-        set { lock (SoonGate) { _soonWho = null; _soonDir = null; _dirOverride = value; } }
+        //  ⛔ پهنای در صف هم با پوشه می‌رود: مقدارِ راحتیِ یک دفتر هیچ‌وقت
+        //  نباید در دفترِ دیگری بنشیند (همان قاعدهٔ ‎_soonDir‎).
+        set { lock (SoonGate) { _soonWho = null; _soonDir = null; SoonWidths.Clear(); _dirOverride = value; } }
     }
 
     private static string? _dirOverride;
@@ -567,9 +569,18 @@ public sealed class AppSettings
     }
 
     /// <summary>پهنای دستیِ ستون‌های یک جدول — نبود، ‎null‎.</summary>
-    public static double[]? LoadColumnWidths(string key) =>
-        string.IsNullOrWhiteSpace(key) ? null
-        : Load().ColumnWidths.TryGetValue(key, out var w) ? w : null;
+    /// <summary>
+    /// ⚠️ پهنای <b>در صف</b> هم دیده می‌شود، نه فقط آن‌چه روی دیسک نشسته.
+    /// بی این، جدولی که همین حالا پهنایش را داده و دوباره می‌پرسد، تا ششصد
+    /// میلی‌ثانیه پاسخِ کهنه می‌گرفت — و آزمونِ «پهنا بعد از بستنِ برنامه
+    /// می‌ماند» هم همان‌جا می‌شکست.
+    /// </summary>
+    public static double[]? LoadColumnWidths(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key)) return null;
+        lock (SoonGate) { if (SoonWidths.TryGetValue(key, out var q)) return q; }
+        return Load().ColumnWidths.TryGetValue(key, out var w) ? w : null;
+    }
 
     /// <summary>
     /// پهنای ستون‌های یک جدول را نگه دار و بقیهٔ فایل را دست‌نخورده بگذار —
@@ -578,9 +589,13 @@ public sealed class AppSettings
     public static void SaveColumnWidths(string key, double[] widths)
     {
         if (string.IsNullOrWhiteSpace(key) || widths.Length == 0) return;
-        var a = Load();
-        a.ColumnWidths[key] = widths;
-        a.Save();
+        //  ⛔ نه ‎Load()‎ و نه ‎Save()‎: این مقدارِ راحتی است و از مسیرِ
+        //  **چیدمان** می‌آید، پس می‌تواند ده‌ها بار پشتِ سرِ هم صدا شود. تا
+        //  ۳.۱.۱۵۸ فقط سه جدول به این‌جا می‌رسیدند و یک خواندن + یک
+        //  ‎fsync‎ بی‌خطر بود؛ با کلیدِ خودکار شمارشان ~۳۵ شد و همان مسیر
+        //  صفِ ‎Dispatcher‎ را پر کرد (شرحش در ‎SaveComfortOnly‎).
+        lock (SoonGate) SoonWidths[key] = widths;
+        Soon();
     }
 
     /// <summary>اندازهٔ نوشتهٔ کادرهای یادداشت — یکی برای همهٔ بخش‌ها.</summary>
@@ -664,6 +679,19 @@ public sealed class AppSettings
         }
     }
 
+    /// <summary>نوبت گرفتن بی شیء — برای پهناها که خودشان نقشهٔ جدا دارند.</summary>
+    private static void Soon()
+    {
+        lock (SoonGate)
+        {
+            _soonDir ??= Dir;
+            _soonTimer ??= new System.Threading.Timer(
+                _ => FlushSoon(), null,
+                System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
+            _soonTimer.Change(SoonMs, System.Threading.Timeout.Infinite);
+        }
+    }
+
     /// <summary>مهلتِ جمع شدنِ چند تغییرِ پشتِ سرِ هم در یک نوشتن.</summary>
     private const int SoonMs = 600;
 
@@ -678,19 +706,51 @@ public sealed class AppSettings
     private static string? _soonDir;
     private static System.Threading.Timer? _soonTimer;
 
+    /// <summary>
+    /// ══ پهنای ستون‌های در صف — جدا از «شیءِ در صف» ═════════════════════════
+    ///
+    /// ⛔ چرا جدا: نوبتِ در صف فقط <b>یک</b> شیء نگه می‌دارد. اگر پهنای هر
+    /// جدول را روی یک شیءِ تازه می‌گذاشتیم، جدولِ دوم که پیش از تمام شدنِ
+    /// ششصد میلی‌ثانیه بنویسد، شیءِ اولی را کنار می‌زد — و چون آن هنوز روی
+    /// دیسک ننشسته بود، پهنای جدولِ اول <b>گم می‌شد</b>. یعنی دقیقاً همان
+    /// «اندازه‌ای که دادم ثبت نشد» که این کار برای بستنش نوشته شد.
+    ///
+    /// پس پهناها در یک نقشهٔ ایستا جمع می‌شوند و همه با هم می‌نشینند.
+    /// ⚠️ پوشه هم کنارشان ثبت می‌شود: عوض شدنِ دفتر باید آن‌ها را دور
+    /// بریزد، همان قاعدهٔ <see cref="_soonDir"/>.
+    /// </summary>
+    private static readonly Dictionary<string, double[]> SoonWidths = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// نوبتِ در صف را <b>همین حالا</b> می‌نویسد — از مسیرِ بسته شدنِ برنامه
+    /// و <c>Ctrl+S</c>.
+    ///
+    /// ⛔ بی این، کاربری که ستونی را پهن کند و در همان ششصد میلی‌ثانیه
+    /// برنامه را ببندد، اندازه‌اش را از دست می‌داد — یعنی دقیقاً همان
+    /// «اندازه‌ای که دادم ثبت نشد» که این کار برای بستنش نوشته شد.
+    /// </summary>
+    public static void FlushNow() => FlushSoon();
+
     private static void FlushSoon()
     {
         AppSettings? who;
+        bool hasWidths;
         lock (SoonGate)
         {
             //  ⛔ پوشه عوض شده ⇒ این نوشتن دیگر مالِ این‌جا نیست. سنجش زیرِ
             //  همان قفلی است که `DirOverride` با آن می‌نویسد.
-            who = _soonDir == Dir ? _soonWho : null;
+            var mine = _soonDir == Dir;
+            who = mine ? _soonWho : null;
+            //  پهناها هم اگر مالِ پوشهٔ دیگری‌اند دور ریخته می‌شوند
+            if (!mine) SoonWidths.Clear();
+            hasWidths = SoonWidths.Count > 0;
             _soonWho = null;
             _soonDir = null;
         }
-        //  ⛔ نشدنش هیچ‌وقت چیزی را نمی‌شکند — این فقط «آخرین بخش» است.
-        try { who?.SaveComfortOnly(); } catch { }
+        //  ⛔ نشدنش هیچ‌وقت چیزی را نمی‌شکند — همه‌اش مقدارِ راحتی است.
+        //  ⚠️ پهنای در صف حتی وقتی شیئی در صف نیست باید بنشیند، پس یک
+        //  نمونهٔ تازه همان کار را می‌کند.
+        try { (who ?? (hasWidths ? Load() : null))?.SaveComfortOnly(); } catch { }
     }
 
     /// <summary>
@@ -734,6 +794,22 @@ public sealed class AppSettings
         live.CalcHeight = CalcHeight;
         live.CalcLarge = CalcLarge;
         live.ParchaChainCheck = ParchaChainCheck;
+
+        //  ⛔ پهنای ستون‌ها هم مقدارِ راحتی است و **باید** از همین در برود.
+        //  تا ۳.۱.۱۵۸ فقط سه جدول پهنایشان را ذخیره می‌کردند، پس ‎Save()‎ی
+        //  بادوامِ مستقیم بی‌خطر بود. با کلیدِ خودکار شمارِ جدول‌ها به ~۳۵
+        //  رسید و همان مسیر شد ۳۵ خواندنِ دیسک و ۳۵ ‎fsync‎ روی نخِ رابط —
+        //  که صفِ ‎Dispatcher‎ را پر کرد و پارکِ جدولِ بخشِ پیشین (که با
+        //  ‎DispatcherPriority.Loaded‎ پست می‌شود) دیر رسید. سنجهٔ ‎idle‎
+        //  همان را «ردیفِ زندهٔ بخشِ پنهان» دید و سرخ شد.
+        //  ⚠️ ادغام است نه جایگزینی: کلیدهای تازه روی نسخهٔ دیسک می‌نشینند
+        //  تا جدولِ دیگری که هم‌زمان نوشته پاک نشود.
+        lock (SoonGate)
+        {
+            foreach (var kv in SoonWidths) live.ColumnWidths[kv.Key] = kv.Value;
+            SoonWidths.Clear();
+        }
+
         live.Save();
     }
 

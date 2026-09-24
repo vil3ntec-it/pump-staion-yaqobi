@@ -432,7 +432,7 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
         OnPropertyChanged(nameof(UnionRate));
         Day.Recalc(); Night.Recalc();
         OnPropertyChanged(nameof(BaseHistoryToggleText));
-        _ = LoadAsync();
+        _ = Services.CrashGuard.RunAsync("خواندنِ پارچه‌ها", LoadAsync);
     }
 
     partial void OnDateFilterChanged(string v) => _ = ReloadLogAsync();

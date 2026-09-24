@@ -407,7 +407,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
                                   nameof(MoneyTitle), nameof(AddBuyText), nameof(PdfText),
                                   nameof(FuelToggleText), nameof(BuyTitle) })
             OnPropertyChanged(n);
-        _ = LoadAsync();
+        _ = Services.CrashGuard.RunAsync("خواندنِ مخزن", LoadAsync);
     }
 
     partial void OnCapacityChanged(string v)

@@ -24,7 +24,31 @@
 ;  عمداً آن پوشه را پاک نمی‌کند (پایینِ فایل، توضیحِ UninstallDelete).
 ; ═══════════════════════════════════════════════════════════════════════════
 
-#define AppName "پمپ یعقوبی"
+; ── دو معماری، یک اسکریپت ──────────────────────────────────────────────────
+;  خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «۳۲ بیت و ۶۴ بیت، چون کامپیوتر خیلی نسخه
+;  قدیمی است.» («۸۶ بیت» وجود ندارد — x86 همان ۳۲بیتی است.)
+;
+;  ⛔ AppIdِ ۶۴بیتی **یک حرف هم عوض نشد**. عوض شدنش یعنی هر نصبی که همین
+;     حالا دستِ مشتری است برای ویندوز یک برنامهٔ «غریبه» می‌شود: نصبِ تازه
+;     رویش نمی‌نشیند، پوشهٔ قبلی پیدا نمی‌شود، و کاربر دو ردیف در «برنامه‌ها
+;     و قابلیت‌ها» می‌بیند.
+;  ⛔ و ۳۲بیتی AppIdِ **جدا** و پوشهٔ **جدا** دارد: Inno فایل‌های کهنه را پاک
+;     نمی‌کند، پس نشستنِ ۳۲بیتی روی نصبِ ۶۴بیتی یعنی یک پوشه با بارِ بومیِ هر
+;     دو معماری و ~۱۰۰ مگابایت آشغالِ بی‌مصرف.
+#ifndef Arch
+  #define Arch "x64"
+#endif
+#if Arch == "x86"
+  #define AppName "پمپ یعقوبی (۳۲بیتی)"
+  #define AppGuid "{{1D5B7C42-9E38-4A61-B0F7-2C83A6D41E95}"
+  #define InstallFolder "PumpYaqobi-32"
+  #define OutName "PumpYaqobi-Setup-x86"
+#else
+  #define AppName "پمپ یعقوبی"
+  #define AppGuid "{{8E86F349-343C-4FFB-983E-BBDDC5390081}"
+  #define InstallFolder "PumpYaqobi"
+  #define OutName "PumpYaqobi-Setup"
+#endif
 #define AppExe  "PumpYaqobi.exe"
 #ifndef AppVersion
   #define AppVersion "1.0.0"
@@ -34,7 +58,7 @@
 #endif
 
 [Setup]
-AppId={{8E86F349-343C-4FFB-983E-BBDDC5390081}
+AppId={#AppGuid}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
@@ -44,7 +68,7 @@ VersionInfoVersion={#AppVersion}
 ; نصب برای همین کاربر — بی اجازهٔ مدیر
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
-DefaultDirName={localappdata}\Programs\PumpYaqobi
+DefaultDirName={localappdata}\Programs\{#InstallFolder}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 ; صفحهٔ «انتخابِ پوشه» باز است — خواستهٔ صاحب ریپو: «بشه انتخاب کرد که کجا
@@ -55,7 +79,7 @@ DisableDirPage=no
 UsePreviousAppDir=yes
 
 OutputDir=..\..\rel
-OutputBaseFilename=PumpYaqobi-Setup
+OutputBaseFilename={#OutName}
 SetupIconFile=..\PumpYaqobi.App\Assets\app.ico
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppName}
@@ -140,6 +164,27 @@ begin
   Result := (Pos(Lowercase(ExpandConstant('{commonpf}')), P) = 1)
          or (Pos(Lowercase(ExpandConstant('{commonpf32}')), P) = 1)
          or (Pos(Lowercase(ExpandConstant('{win}')), P) = 1);
+end;
+
+; ── فایلِ ۶۴بیتی روی ویندوزِ ۳۲بیتی ────────────────────────────────────────
+;  خودِ نصاب ۳۲بیتی است، پس روی ویندوزِ ۳۲بیتی **باز می‌شود** و بی این
+;  نگهبان، باری را می‌نشاند که هرگز اجرا نمی‌شود: کاربر آیکون را می‌زند و
+;  ویندوز فقط می‌گوید «این برنامه روی این کامپیوتر اجرا نمی‌شود» — بی این‌که
+;  بگوید چه باید بکند. پس همان اول، با راهِ حل، گفته می‌شود.
+;  ⚠️ `IsWin64` در همهٔ نسخه‌های Inno 6 هست؛ `ArchitecturesAllowed` املایش
+;     بینِ ۶٫۲ و ۶٫۳ عوض شد و به نسخهٔ رانر بند می‌شد.
+function InitializeSetup(): Boolean;
+begin
+  Result := True;
+#if Arch != "x86"
+  if not IsWin64 then
+  begin
+    MsgBox('این فایل برای ویندوزِ ۶۴بیتی ساخته شده و ویندوزِ این کامپیوتر ۳۲بیتی است.' + #13#10 + #13#10 +
+           'فایلِ «PumpYaqobi-Setup-x86.exe» را از همان صفحهٔ دانلود بگیرید —' + #13#10 +
+           'همین برنامه است، برای ویندوزِ ۳۲بیتی.', mbError, MB_OK);
+    Result := False;
+  end;
+#endif
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;

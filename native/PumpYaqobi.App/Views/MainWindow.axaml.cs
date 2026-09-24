@@ -14,6 +14,9 @@ public partial class MainWindow : Window
         if (DataContext is ViewModels.MainViewModel vm) vm.Calculator.Resize(-e.Vector.X, -e.Vector.Y);
     }
 
+    /// <summary>بستن یک بار لغو شد و حالا واقعاً می‌بندیم.</summary>
+    private bool _closing;
+
     private readonly DispatcherTimer? _clock;
     private readonly ShortcutService? _keys;
     private readonly FieldNavigationService? _fieldNav;
@@ -49,6 +52,34 @@ public partial class MainWindow : Window
         };
         _clock.Start();
         vm.Clock = PumpYaqobi.App.Localization.Clock.Now();
+
+        // ══════════════════════════════════════════════════════════════════
+        //  ══ بسته شدنِ برنامه، بی گم شدنِ یک نویسه ═════════════════════════
+        // ══════════════════════════════════════════════════════════════════
+        //
+        //  گزارشِ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «چندین ورق رو پر کردم اما
+        //  همه‌شون پاک شدن و هیچ چیزی ثبت نشده بودن… یارو اگه داشت جمله‌ای
+        //  می‌نوشت از برنامه در جا بره بیرون، همون‌ها باید ثبت شده باشن.»
+        //
+        //  ⛔ ریشه: در کلِ برنامه **یک** شنوندهٔ ‎Closing‎ نبود (گشته شد:
+        //  صفر). پس زدنِ ✕ یعنی:
+        //    ۱) خانه‌ای که در حالِ ویرایش بود هیچ‌وقت ‎Commit‎ نمی‌شد —
+        //       نوشته‌اش حتی به ویومدل هم نمی‌رسید، چه برسد به دیسک؛
+        //    ۲) و هر ردیفی که پشتِ تأخیرِ ۳۵۰ میلی‌ثانیه‌ای بود می‌رفت.
+        //
+        //  ⚠️ بستن یک بار **لغو** می‌شود تا نوشتن تمام شود، و بعد خودمان
+        //  دوباره می‌بندیم. ‎_closing‎ نگهبانِ حلقه است.
+        //  ⚠️ و سقفِ وقت دارد (‎SaveGuard.FlushAllAsync‎): برنامه‌ای که بسته
+        //  نمی‌شود از برنامه‌ای که یک ردیف گم می‌کند بدتر است.
+        Closing += async (_, e) =>
+        {
+            if (_closing) return;
+            e.Cancel = true;
+            _closing = true;
+            try { Controls.ExcelGrid.CommitFocused(this); } catch { }
+            try { await vm.FlushEverythingAsync(); } catch { }
+            Close();
+        };
 
         //  ⚠️ دستگیرهٔ پنجره — تنها چیزی که اعلانِ خودِ ویندوز لازم دارد.
         //  پیش از باز شدنِ پنجره هنوز وجود ندارد، پس همین‌جا سرِ ‎Opened‎

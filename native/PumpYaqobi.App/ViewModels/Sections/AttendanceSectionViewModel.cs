@@ -122,7 +122,7 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
     [ObservableProperty] private string _newName = "";
     [ObservableProperty] private string _newSalary = "";
 
-    partial void OnMonthChanged(string v) => _ = LoadAsync();
+    partial void OnMonthChanged(string v) => _ = Services.CrashGuard.RunAsync("خواندنِ حاضری", LoadAsync);
 
     protected override async Task LoadAsync()
     {

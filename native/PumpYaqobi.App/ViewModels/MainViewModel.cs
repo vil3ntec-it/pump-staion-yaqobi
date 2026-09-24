@@ -873,6 +873,37 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     public SectionViewModel? ActiveSection => Current?.OpenSub ?? Current;
 
+    /// <summary>
+    /// ══ «همه‌اش را همین حالا بنویس» ════════════════════════════════════════
+    /// پیش از بسته شدنِ برنامه و با <c>Ctrl+S</c>.
+    ///
+    /// دو تکه، و هر دو لازم‌اند:
+    ///   • <see cref="Services.SaveGuard"/> — هر ردیفِ کثیفِ کلِ برنامه، حتی
+    ///     در بخشی که کاربر ساعت‌ها پیش تویش بوده.
+    ///   • <c>FlushAsync</c>ِ خودِ بخش و صفحهٔ باز — نوشته‌هایی که ردیفِ جدول
+    ///     نیستند (سربرگ‌ها).
+    ///
+    /// ⛔ هیچ‌وقت استثنا بیرون نمی‌دهد: این روی مسیرِ بسته شدنِ پنجره است و
+    /// یک استثنا یعنی برنامه‌ای که بسته نمی‌شود.
+    /// </summary>
+    public async Task<int> FlushEverythingAsync()
+    {
+        foreach (var target in new object?[] { ActiveSection?.ActivePage, ActiveSection })
+        {
+            var task = target?.GetType()
+                             .GetMethod(Services.ShortcutService.FlushMethodName, Type.EmptyTypes)?
+                             .Invoke(target, null) as Task;
+            if (task is null) continue;
+            try { await task; } catch { /* نگهبانِ پایین دوباره امتحانش می‌کند */ }
+        }
+        //  ⛔ و مقدارهای راحتیِ در صف (پهنای ستون‌ها، تم، آخرین بخش): بی
+        //  این، ستونی که همین حالا پهن شده و برنامه بسته شود گم می‌شود.
+        try { Services.AppSettings.FlushNow(); } catch { }
+
+        try { return await Services.SaveGuard.FlushAllAsync(); }
+        catch { return 0; }
+    }
+
     /// <summary>پیام‌های کوتاهِ پایینِ صفحه.</summary>
     public Services.ToastService Toasts => AppHost.Current.Toasts;
 

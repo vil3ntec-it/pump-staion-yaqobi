@@ -135,9 +135,21 @@ public sealed class ShortcutService
             if (FlushOf(target) is not { } task) continue;
             try { await task; wrote = true; } catch { }
         }
+        //  ⛔ و هر نوشتهٔ در صفِ **کلِ برنامه**، نه فقط بخشِ جلوی چشم:
+        //  کاربر که ‎Ctrl+S‎ می‌زند «همه‌اش را بنویس» می‌خواهد، نه «آن‌چه
+        //  همین حالا می‌بینم».
+        //  ⚠️ «چیزی نوشته شد؟» از **کم شدنِ صف** فهمیده می‌شود، نه از این‌که
+        //  ‎left == 0‎ باشد: صفِ خالی هم ‎۰‎ می‌دهد. نسخهٔ اولِ همین خط با
+        //  ‎left == 0‎ تصمیم می‌گرفت و می‌توانست «ذخیره شد» بگوید در حالی که
+        //  هیچ چیزی نوشته نشده بود — همان «کلکِ دروغ»ی که این‌جا قدغن است.
+        var before = SaveGuard.DirtyCount;
+        var left = await SaveGuard.FlushAllAsync();
+        if (before > left) wrote = true;
+
         AppHost.Current.Toasts.Show(
-            wrote ? "💾 ذخیره شد" : "💾 چیزی برای ذخیره نبود",
-            wrote ? ToastKind.Ok : ToastKind.Info);
+            left > 0 ? "⚠️ " + left + " نوشته ذخیره نشد — دوباره بزنید"
+                     : wrote ? "💾 ذخیره شد" : "💾 چیزی برای ذخیره نبود",
+            left > 0 ? ToastKind.Error : wrote ? ToastKind.Ok : ToastKind.Info);
     }
 
     /// <summary>
@@ -148,10 +160,7 @@ public sealed class ShortcutService
     /// ویرایشِ باز دارد.
     /// </summary>
     private static void CommitOpenCell(object? sender)
-    {
-        if ((sender as TopLevel)?.FocusManager?.GetFocusedElement() is not Visual v) return;
-        v.FindAncestorOfType<Controls.ExcelGrid>()?.CommitNow();
-    }
+        => Controls.ExcelGrid.CommitFocused(sender as TopLevel);
 
     /// <summary>روی صفحهٔ قفل هیچ میانبری کار نمی‌کند.</summary>
     private bool Locked => _vm.IsLocked;

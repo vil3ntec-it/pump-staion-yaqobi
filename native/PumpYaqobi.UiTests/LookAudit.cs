@@ -58,6 +58,33 @@ internal static class LookAudit
     /// <summary>بیشترین جایی که فلشِ کشویی حق دارد در خانهٔ جدول بخورد.</summary>
     private const double MaxGlyph = 6.0;
 
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ نوشته‌ای که خوانده نشود ═════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «یک تم جدید بده که همه نوشته‌ها قابل
+    //  خوندن باشن.»
+    //
+    //  ⛔ و این سنجه تا امروز **فقط سطح‌ها** را می‌سنجید: پلهٔ کارت از بوم و
+    //  دیده شدنِ خطِ لبه. یعنی یک پالت می‌توانست کارت‌های کاملاً واضح داشته
+    //  باشد و نوشتهٔ کم‌رنگش روی نوارِ سرِ جدول محو باشد، و هیچ‌جا قرمز نشود.
+    //  دقیقاً همان چیزی که پیش آمد: بدترین جفتِ تمِ تیره ۵٫۱۵× بود و بدترین
+    //  جفتِ تمِ روشن **۴٫۰۸×** — زیرِ آستانهٔ خوانایی، سبزِ بی‌صدا.
+    //
+    //  آستانه‌ها از WCAG 2.1 هستند، نه از سلیقه:
+
+    /// <summary>کم‌ترین کنتراستِ نوشتهٔ معمولی با سطحِ زیرش (WCAG AA).</summary>
+    private const double MinText = 4.5;
+
+    /// <summary>
+    /// کم‌ترین کنتراستِ نوشتهٔ **درشت و پررنگ** با سطحش (WCAG AA برای متنِ بزرگ).
+    ///
+    /// ⚠️ این ارفاق فقط سه جفت را می‌گیرد و هر سه واقعاً درشت‌اند: نوشتهٔ روی
+    /// دکمهٔ اصلی، نوشتهٔ روی نوارِ سرِ جدول، و عنوانِ سربرگ. ⛔ جفتِ تازه‌ای
+    /// به این فهرست اضافه نکنید تا سبز شود — همان ضعیف کردنِ سنجه است.
+    /// </summary>
+    private const double MinBigText = 3.0;
+
     public static int Run()
     {
         var tmpDb = Path.Combine(Path.GetTempPath(),
@@ -172,8 +199,66 @@ internal static class LookAudit
                     bad.Add($"{t.Title} · طبقه‌ها: بدنه/بوم {s0:0.00}× پنل/بدنه {s1:0.00}× تایپ/پنل {s2:0.00}× "
                           + $"(هر سه کمینه {MinLayer:0.00}×)");
             }
+
+            bad.AddRange(Readable(t));
         }
 
+        return bad;
+    }
+
+    /// <summary>
+    /// هر نوشته روی هر سطحی که واقعاً زیرش می‌نشیند. ⚠️ فهرست **دستی** است و
+    /// باید بماند: «هر رنگ در برابر هر رنگ» صدها جفتِ بی‌معنا می‌سازد (نوشتهٔ
+    /// روی دکمه هیچ‌وقت روی بوم نمی‌نشیند) و سنجه را به نویز می‌کشاند.
+    /// </summary>
+    private static IEnumerable<string> Readable(PumpYaqobi.App.Themes.PumpTheme t)
+    {
+        var bad = new List<string>();
+
+        var surfaces = new[] { "Pump.Dark", "Pump.Section", "Pump.Panel", "Pump.Card", "Pump.Input" };
+        var inks = new[] { ("نوشته", "Pump.Text"), ("کم‌رنگ", "Pump.Muted"), ("برچسب", "Pump.Label") };
+
+        var worst = double.MaxValue;
+        var where = "";
+
+        foreach (var (inkName, inkKey) in inks)
+        {
+            if (Res(inkKey) is not { } ink) continue;
+            foreach (var bgKey in surfaces)
+            {
+                if (Res(bgKey) is not { } bg) continue;
+                var r = Wcag(ink, bg);
+                if (r < worst) { worst = r; where = $"{inkName} روی {bgKey}"; }
+                if (r < MinText)
+                    bad.Add($"{t.Title} · «{inkName}» روی «{bgKey}»: {r:0.00}× (کمینه {MinText:0.00}×)");
+            }
+        }
+
+        // سه جفتِ درشت — دکمهٔ اصلی، نوارِ سرِ جدول، عنوانِ سربرگ
+        foreach (var (name, fg, bgk) in new[]
+                 {
+                     ("نوشتهٔ دکمهٔ اصلی", "Pump.OnAccent", "Pump.Accent"),
+                     ("نوشتهٔ نوارِ سرِ جدول", "Pump.OnHeadBand", "Pump.HeadBand"),
+                 })
+        {
+            if (Res(fg) is not { } f || Res(bgk) is not { } b2) continue;
+            var r = Wcag(f, b2);
+            if (r < MinBigText)
+                bad.Add($"{t.Title} · «{name}»: {r:0.00}× (کمینه {MinBigText:0.00}×)");
+        }
+
+        // ⚠️ «کم‌رنگ» روی نوارِ سرِ جدول هم می‌نشیند و همان بدترین جفتِ
+        //  تمِ تیره بود — پس استثنا نمی‌شود و آستانهٔ کاملِ متن را می‌خواهد.
+        if (Res("Pump.Muted") is { } m && Res("Pump.HeadBand") is { } hb)
+        {
+            var r = Wcag(m, hb);
+            if (r < worst) { worst = r; where = "کم‌رنگ روی Pump.HeadBand"; }
+            if (r < MinText)
+                bad.Add($"{t.Title} · «کم‌رنگ» روی «Pump.HeadBand»: {r:0.00}× (کمینه {MinText:0.00}×)");
+        }
+
+        Console.WriteLine($"{t.Id,-9} {"نوشته",-12} بدترین جفت {worst,6:0.00}×  ({where})"
+                        + $"   {(worst >= MinText ? "✔" : "✖")}");
         return bad;
     }
 
@@ -383,7 +468,17 @@ internal static class LookAudit
         return "";
     }
 
-    /// <summary>نسبتِ کنتراستِ دو رنگ — همان فرمولِ استانداردِ دسترسی‌پذیری.</summary>
+    /// <summary>
+    /// نسبتِ «پله»ی دو سطح — با روشناییِ <b>گاما-دار</b> (همان عددی که از
+    /// بایت‌های رنگ درمی‌آید).
+    ///
+    /// ⚠️ این <b>فرمولِ WCAG نیست</b>، هر چند ضریب‌هایش همان است: آن‌جا
+    /// باید اول هر کانال خطی شود. آستانه‌های این سنجه
+    /// (<see cref="MinStep"/>، <see cref="MinRim"/>، <see cref="MinLayer"/>)
+    /// سال‌ها روی همین مقیاس کالیبره شده‌اند و از روی پالت‌های واقعی
+    /// درآمده‌اند، پس ⛔ عوضش نکنید — عوض کردنش یعنی هر سه آستانه بی‌صدا
+    /// معنای تازه‌ای می‌گیرند. برای خوانایی <see cref="Wcag"/> هست.
+    /// </summary>
     private static double Ratio(Color a, Color b)
     {
         var (x, y) = (Luma(a) + 0.05, Luma(b) + 0.05);
@@ -392,6 +487,35 @@ internal static class LookAudit
 
     private static double Luma(Color c) =>
         (0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B) / 255.0;
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ و برای «خوانده می‌شود؟» فرمولِ واقعیِ WCAG ═══════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  ⛔ نسخهٔ اولِ سنجهٔ خوانایی از ‎Ratio‎ی بالا استفاده کرد و **غلط بود**:
+    //  آستانهٔ ۴٫۵ مالِ مقیاسِ خطیِ WCAG است و روی مقیاسِ گاما-دار عددِ
+    //  دیگری می‌دهد. همان یک اشتباه، پالتی را که واقعاً ۷٫۶۲× بود ۳٫۷۲×
+    //  نشان داد و شانزده ایرادِ دروغ ساخت.
+    //
+    //  ⚠️ و درسش این است: دو فرمولِ هم‌نام روی یک صفحه، با دو آستانهٔ
+    //  متفاوت، تله است. پس این یکی نامِ خودش را دارد و بالای هر دو نوشته
+    //  شده کدام مالِ چیست.
+
+    /// <summary>نسبتِ کنتراستِ WCAG 2.1 — روی روشناییِ <b>خطی‌شده</b>.</summary>
+    private static double Wcag(Color a, Color b)
+    {
+        double x = Rel(a), y = Rel(b);
+        return (Math.Max(x, y) + 0.05) / (Math.Min(x, y) + 0.05);
+    }
+
+    private static double Rel(Color c) =>
+        0.2126 * Chan(c.R) + 0.7152 * Chan(c.G) + 0.0722 * Chan(c.B);
+
+    private static double Chan(byte v)
+    {
+        var u = v / 255.0;
+        return u <= 0.03928 ? u / 12.92 : Math.Pow((u + 0.055) / 1.055, 2.4);
+    }
 
     private static string Hex(Color c) => $"#{c.R:x2}{c.G:x2}{c.B:x2}";
 
