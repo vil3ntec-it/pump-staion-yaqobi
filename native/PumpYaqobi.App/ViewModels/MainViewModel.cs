@@ -896,6 +896,10 @@ public sealed partial class MainViewModel : ObservableObject
             if (task is null) continue;
             try { await task; } catch { /* نگهبانِ پایین دوباره امتحانش می‌کند */ }
         }
+        //  ⛔ و مقدارهای راحتیِ در صف (پهنای ستون‌ها، تم، آخرین بخش): بی
+        //  این، ستونی که همین حالا پهن شده و برنامه بسته شود گم می‌شود.
+        try { Services.AppSettings.FlushNow(); } catch { }
+
         try { return await Services.SaveGuard.FlushAllAsync(); }
         catch { return 0; }
     }

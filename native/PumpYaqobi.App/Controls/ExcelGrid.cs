@@ -1514,8 +1514,15 @@ public class ExcelGrid : DataGrid
         }
 
         //  کلید عوض شد ⇒ عددهای کلیدِ قبلی به کارِ این چیدمان نمی‌آیند.
-        _savedRead = false;
-        _saved = null;
+        //  ⛔ این‌جا کَشِ «پهنای ذخیره‌شده» **باطل نمی‌شود**، هر چند وسوسه‌اش
+        //  هست. این متد از مسیرِ چیدمان صدا زده می‌شود (هم ‎Saved‎ و هم
+        //  ‎RememberWidths‎)، پس هر باطل کردنی یعنی خواندنِ دوبارهٔ
+        //  ‎settings.json‎ از **دیسک** روی نخِ رابط — برای هر جدول، در هر
+        //  پاس. نسخهٔ اولِ همین کار همین را داشت و صفِ ‎Dispatcher‎ را پر
+        //  کرد: پارکِ جدولِ بخشِ پیشین که با ‎DispatcherPriority.Loaded‎
+        //  پست شده بود دیر می‌رسید، و سنجهٔ ‎idle‎ یک «ردیفِ زندهٔ بخشِ
+        //  پنهان» می‌دید. باطل کردن جای خودش را دارد: بلوکِ ‎Reset‎، همان‌جا
+        //  که شمارِ ستون‌ها واقعاً عوض می‌شود.
         _autoKeyFor = visible;
         return _autoKey = host + "." + mine + "#" + visible;
     }
@@ -2017,7 +2024,7 @@ public class ExcelGrid : DataGrid
         CommitEdit(DataGridEditingUnit.Cell, true);
 
         if (e.Key is Key.Up or Key.Down) MoveRow(e.Key == Key.Down ? +1 : -1);
-        else MoveColumnFrom(cols, from, ColumnStep(e.Key));
+        else MoveColumnFrom(cols, from, e.Key == Key.Right ? -1 : +1);
 
         e.Handled = true;
     }
@@ -2308,12 +2315,13 @@ public class ExcelGrid : DataGrid
     //
     //  دو چیزِ جدا زیرش بود:
     //
-    //  ⛔ **جهت عوض نشد و نباید بشود.** نسخهٔ اولِ همین اصلاح آن را از
-    //     ‎FlowDirection‎ خواند و این یک **پس‌رفت** بود: همان راهی است که
-    //     پایین‌تر، بالای ‎case Key.Left‎، به‌صراحت «بارِ اول امتحان شد و
-    //     بی‌صدا برعکس شد» نوشته شده. کلِ پنجره راست‌به‌چپ است و ستونِ صفر
-    //     سمتِ راست می‌نشیند؛ همان قاعدهٔ ثابت سرِ جایش ماند و ‎ColumnStep‎
-    //     فقط **یک جا**یش کرد تا دو مسیر هیچ‌وقت از هم جدا نیفتند.
+    //  ⛔ **جهت یک نویسه هم عوض نشد.** نسخهٔ اولِ همین اصلاح آن را از
+    //     ‎FlowDirection‎ خواند و یک **پس‌رفت** بود: پایین‌تر، بالای
+    //     ‎case Key.Left‎، به‌صراحت نوشته شده که همان راه بارِ اول امتحان
+    //     شد و بی‌صدا برعکس می‌شد — و ‎ArrowKeysFollowWhatTheEyeSees‎ همان
+    //     را قفل کرده بود و همین پس‌رفت را در CI گرفت. حتی تابعِ میانیِ
+    //     «تمیزتر» هم برداشته شد: این خانه سه بار عوض شده و هر بار گران
+    //     تمام شده، پس متنش دست‌نخورده می‌ماند.
     //
     //  ⛔ آن‌چه واقعاً عوض شد، همان «کلیکِ دوم درست می‌شود» است: در حالتِ **نوشتن** اول
     //     ‎CommitEdit‎ زده می‌شد و **بعد** ستونِ جاری خوانده می‌شد. بستنِ
@@ -2321,16 +2329,6 @@ public class ExcelGrid : DataGrid
     //     **تازه** حساب می‌شد و یک خانه پرت می‌افتاد؛ فشارِ بعدی از جای
     //     درست شروع می‌کرد و «درست» به نظر می‌رسید. حالا ستونِ مبدأ **پیش
     //     از** بستنِ ویرایش برداشته می‌شود.
-
-    /// <summary>
-    /// ‎Right‎/‎Left‎ یعنی چند پله در ترتیبِ ستون‌ها.
-    ///
-    /// ⛔ این عدد ثابت است و از ‎FlowDirection‎ خوانده **نمی‌شود** — شرحش
-    /// بالای <c>case Key.Left</c>: آن راه یک بار امتحان شد، به این کنترل
-    /// نمی‌رسید و بی‌صدا برعکس می‌شد. کلِ پنجره راست‌به‌چپ است و ستونِ
-    /// شمارهٔ ۰ سمتِ راست می‌نشیند.
-    /// </summary>
-    private static int ColumnStep(Key key) => key == Key.Right ? -1 : +1;
 
     /// <summary>همان جابه‌جایی، ولی با ستونِ مبدأی که خودِ صدازننده می‌دهد.</summary>
     private bool MoveColumnFrom(List<DataGridColumn> cols, int cur, int step, bool extend = false)
@@ -2928,7 +2926,7 @@ public class ExcelGrid : DataGrid
             //     ‎←‎ خانهٔ سمتِ چپ    ⇒ ایندکسِ بیشتر
             case Key.Left:
             case Key.Right:
-                MoveColumn(ColumnStep(e.Key), shift);
+                MoveColumn(e.Key == Key.Right ? -1 : +1, shift);
                 e.Handled = true;
                 return;
 

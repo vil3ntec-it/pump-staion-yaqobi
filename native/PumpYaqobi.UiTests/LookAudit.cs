@@ -227,7 +227,7 @@ internal static class LookAudit
             foreach (var bgKey in surfaces)
             {
                 if (Res(bgKey) is not { } bg) continue;
-                var r = Ratio(ink, bg);
+                var r = Wcag(ink, bg);
                 if (r < worst) { worst = r; where = $"{inkName} روی {bgKey}"; }
                 if (r < MinText)
                     bad.Add($"{t.Title} · «{inkName}» روی «{bgKey}»: {r:0.00}× (کمینه {MinText:0.00}×)");
@@ -242,7 +242,7 @@ internal static class LookAudit
                  })
         {
             if (Res(fg) is not { } f || Res(bgk) is not { } b2) continue;
-            var r = Ratio(f, b2);
+            var r = Wcag(f, b2);
             if (r < MinBigText)
                 bad.Add($"{t.Title} · «{name}»: {r:0.00}× (کمینه {MinBigText:0.00}×)");
         }
@@ -251,7 +251,7 @@ internal static class LookAudit
         //  تمِ تیره بود — پس استثنا نمی‌شود و آستانهٔ کاملِ متن را می‌خواهد.
         if (Res("Pump.Muted") is { } m && Res("Pump.HeadBand") is { } hb)
         {
-            var r = Ratio(m, hb);
+            var r = Wcag(m, hb);
             if (r < worst) { worst = r; where = "کم‌رنگ روی Pump.HeadBand"; }
             if (r < MinText)
                 bad.Add($"{t.Title} · «کم‌رنگ» روی «Pump.HeadBand»: {r:0.00}× (کمینه {MinText:0.00}×)");
@@ -468,7 +468,17 @@ internal static class LookAudit
         return "";
     }
 
-    /// <summary>نسبتِ کنتراستِ دو رنگ — همان فرمولِ استانداردِ دسترسی‌پذیری.</summary>
+    /// <summary>
+    /// نسبتِ «پله»ی دو سطح — با روشناییِ <b>گاما-دار</b> (همان عددی که از
+    /// بایت‌های رنگ درمی‌آید).
+    ///
+    /// ⚠️ این <b>فرمولِ WCAG نیست</b>، هر چند ضریب‌هایش همان است: آن‌جا
+    /// باید اول هر کانال خطی شود. آستانه‌های این سنجه
+    /// (<see cref="MinStep"/>، <see cref="MinRim"/>، <see cref="MinLayer"/>)
+    /// سال‌ها روی همین مقیاس کالیبره شده‌اند و از روی پالت‌های واقعی
+    /// درآمده‌اند، پس ⛔ عوضش نکنید — عوض کردنش یعنی هر سه آستانه بی‌صدا
+    /// معنای تازه‌ای می‌گیرند. برای خوانایی <see cref="Wcag"/> هست.
+    /// </summary>
     private static double Ratio(Color a, Color b)
     {
         var (x, y) = (Luma(a) + 0.05, Luma(b) + 0.05);
@@ -477,6 +487,35 @@ internal static class LookAudit
 
     private static double Luma(Color c) =>
         (0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B) / 255.0;
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ و برای «خوانده می‌شود؟» فرمولِ واقعیِ WCAG ═══════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  ⛔ نسخهٔ اولِ سنجهٔ خوانایی از ‎Ratio‎ی بالا استفاده کرد و **غلط بود**:
+    //  آستانهٔ ۴٫۵ مالِ مقیاسِ خطیِ WCAG است و روی مقیاسِ گاما-دار عددِ
+    //  دیگری می‌دهد. همان یک اشتباه، پالتی را که واقعاً ۷٫۶۲× بود ۳٫۷۲×
+    //  نشان داد و شانزده ایرادِ دروغ ساخت.
+    //
+    //  ⚠️ و درسش این است: دو فرمولِ هم‌نام روی یک صفحه، با دو آستانهٔ
+    //  متفاوت، تله است. پس این یکی نامِ خودش را دارد و بالای هر دو نوشته
+    //  شده کدام مالِ چیست.
+
+    /// <summary>نسبتِ کنتراستِ WCAG 2.1 — روی روشناییِ <b>خطی‌شده</b>.</summary>
+    private static double Wcag(Color a, Color b)
+    {
+        double x = Rel(a), y = Rel(b);
+        return (Math.Max(x, y) + 0.05) / (Math.Min(x, y) + 0.05);
+    }
+
+    private static double Rel(Color c) =>
+        0.2126 * Chan(c.R) + 0.7152 * Chan(c.G) + 0.0722 * Chan(c.B);
+
+    private static double Chan(byte v)
+    {
+        var u = v / 255.0;
+        return u <= 0.03928 ? u / 12.92 : Math.Pow((u + 0.055) / 1.055, 2.4);
+    }
 
     private static string Hex(Color c) => $"#{c.R:x2}{c.G:x2}{c.B:x2}";
 

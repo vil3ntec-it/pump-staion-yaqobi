@@ -83,32 +83,11 @@ public class GridWidthsTests
         Assert.True(guard > at && read > guard, "نگهبان پس از خواندنِ پهنا است");
     }
 
-    /// <summary>
-    /// ⛔ جهتِ چپ/راست **یک جا** تصمیم گرفته می‌شود — و همان قاعدهٔ ثابتی
-    /// که سه بار به آن رسیدیم، نه چیزِ تازه‌ای.
-    ///
-    /// ⚠️ بالای <c>case Key.Left</c> در خودِ کنترل نوشته شده که خواندنِ
-    /// <c>FlowDirection</c> «بارِ اول امتحان شد، به این کنترل نمی‌رسید و
-    /// بی‌صدا برعکس می‌شد». نسخهٔ اولِ همین اصلاح دقیقاً همان را برگرداند
-    /// و این آزمون برای همان نوشته شد: **جهت را دوباره از
-    /// <c>FlowDirection</c> نخوانید.**
-    /// </summary>
-    [Fact]
-    public void Jahate_Kelid_YekJa_Ast_Va_Az_FlowDirection_Nemikhanad()
-    {
-        var g = Grid();
-        Assert.Contains("private static int ColumnStep(Key key) => key == Key.Right ? -1 : +1;", g);
-
-        //  ⛔ هر دو مسیر (نوشتن و نانوشتن) از همان یک تابع می‌آیند، پس
-        //  هیچ‌وقت از هم جدا نمی‌افتند.
-        Assert.Contains("MoveColumnFrom(cols, from, ColumnStep(e.Key))", g);
-        Assert.Contains("MoveColumn(ColumnStep(e.Key), shift)", g);
-
-        //  ⛔ و جهت از چیدمان پرسیده نمی‌شود — همان پس‌رفتی که یک بار شد.
-        var at = g.IndexOf("private static int ColumnStep", StringComparison.Ordinal);
-        var body = g[at..Math.Min(g.Length, at + 300)];
-        Assert.DoesNotContain("FlowDirection", body);
-    }
+    //  ⚠️ جهتِ چپ/راست این‌جا سنجیده **نمی‌شود** و نباید بشود:
+    //  ‎KeyboardAndZeroTests.ArrowKeysFollowWhatTheEyeSees‎ از پیش قفلش
+    //  کرده و نسخهٔ اولِ همین کار با یک «تمیزکاریِ» بی‌ضرر شکستش. دو
+    //  نگهبان برای یک قاعده یعنی روزی یکی‌شان اجازهٔ چیزی را می‌دهد که
+    //  آن یکی قدغن کرده.
 
     /// <summary>
     /// ⛔ «با کلیکِ دوم درست می‌شود»: در حالتِ نوشتن، ستونِ مبدأ باید
