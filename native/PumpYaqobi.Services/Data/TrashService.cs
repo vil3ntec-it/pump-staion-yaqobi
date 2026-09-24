@@ -152,33 +152,87 @@ public sealed class TrashService
     /// خروجی: ‎null‎ یعنی برگشت؛ وگرنه دلیلِ نبرگشتن — جملهٔ آمادهٔ نمایش.
     /// </summary>
     public async Task<string?> RestoreAsync(long id, CancellationToken ct = default)
+        => (await RestoreTracedAsync(id, ct)).Error;
+
+    /// <summary>
+    /// ══ همان بازگردانی — با ردِ آن‌چه برگشت، برای «دوباره» (‎Ctrl+Y‎) ══════════
+    ///
+    /// ‎Ctrl+Z‎ی یک حذف همین بازگردانی است (<see cref="RestoreAsync"/>)؛ ولی
+    /// ‎Ctrl+Y‎ باید <b>دقیقاً همان</b> رکوردها را دوباره ببرد، نه «هر چه امروز
+    /// مالِ آن حساب است». پس فهرستِ رکوردهای برگشته (پدر و فرزندانِ همان
+    /// مُهر) این‌جا نگه داشته و به <see cref="DeleteAgainAsync"/> داده می‌شود.
+    /// </summary>
+    public async Task<(string? Error, Revived? Trace)> RestoreTracedAsync(long id, CancellationToken ct = default)
     {
         _perm.Require(Permission.EditData);
         await using var db = _dbf.Create();
 
         var item = await db.Trash.FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (item is null) return "این قلم دیگر در سطل نیست";
+        if (item is null) return ("این قلم دیگر در سطل نیست", null);
 
         var rowId = PayloadId(item);
-        if (rowId is null) return "شناسهٔ رکوردِ اصلی در سطل نیست — بازگردانی ممکن نیست";
+        if (rowId is null) return ("شناسهٔ رکوردِ اصلی در سطل نیست — بازگردانی ممکن نیست", null);
 
+        var got = new List<EntityBase>();
         int n;
-        try { n = await ReviveAsync(db, item.Kind, rowId.Value, ct); }
-        catch (NotSupportedException) { return "این نوع رکورد بازگردانی ندارد: " + (item.Kind ?? ""); }
+        try { n = await ReviveAsync(db, item.Kind, rowId.Value, got, ct); }
+        catch (NotSupportedException) { return ("این نوع رکورد بازگردانی ندارد: " + (item.Kind ?? ""), null); }
 
-        if (n == 0) return "رکوردِ اصلی پیدا نشد";
+        if (n == 0) return ("رکوردِ اصلی پیدا نشد", null);
 
+        var trace = new Revived(item.Kind, item.Label, item.PayloadJson, item.DeletedBy,
+                                got.Select(e => (e.GetType(), e.Id)).ToList());
         db.Trash.Remove(item);
         try
         {
             await db.SaveChangesAsync(ct);
-            return null;
+            return (null, trace);
         }
         catch (Exception ex)
         {
             // دلیلِ واقعی معمولاً در استثنای درونی است؛ بی آن، پیام هیچ کمکی نمی‌کند.
-            return "برنگشت: " + (ex.InnerException?.Message ?? ex.Message);
+            return ("برنگشت: " + (ex.InnerException?.Message ?? ex.Message), null);
         }
+    }
+
+    /// <summary>ردِ یک بازگردانی: همان قلمِ سطل و همان رکوردهایی که برگشتند.</summary>
+    public sealed record Revived(string? Kind, string? Label, string? PayloadJson, string? DeletedBy,
+                                 List<(Type Type, long Id)> Rows);
+
+    /// <summary>این نوع از سطل برمی‌گردد؟ — «برگشت» نباید قولی بدهد که نمی‌تواند.</summary>
+    public static bool CanRestore(string? kind) => kind is
+        "debtor" or "debtaccount" or "company" or "amanat" or "waraq" or "parcha"
+        or "debtrow" or "debtQuickReceipt" or "companyrow" or "amanatrow" or "parchaReceipt"
+        or "purchase" or "invoice" or "safe" or "sarrafi" or "expense" or "chakana"
+        or "extraincome" or "staff" or "staffshort" or "tanker" or "tankdip" or "camera";
+
+    /// <summary>
+    /// ‎Ctrl+Y‎ی یک حذفِ برگشته: <b>همان</b> رکوردها دوباره حذفِ نرم می‌شوند و
+    /// <b>همان</b> قلم دوباره در سطل می‌نشیند.
+    ///
+    /// ⚠️ با ‎db.Remove‎، نه با نوشتنِ دستیِ ‎DeletedAt‎: همان راهی که حذفِ اول
+    /// رفت (‎PumpDbContext.Stamp‎ ⇒ حذفِ نرم + opِ همگام‌سازیِ «حذف»)، و همه در
+    /// <b>یک</b> ذخیره تا مُهرِ زمانشان یکی باشد — وگرنه ‎Ctrl+Z‎ی بعدی فرزندان
+    /// را با پدر برنمی‌گرداند.
+    /// خروجی: شناسهٔ تازهٔ قلمِ سطل، یا ‎null‎ اگر چیزی برای حذف نبود.
+    /// </summary>
+    public async Task<long?> DeleteAgainAsync(Revived r, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.DeleteData);
+        await using var db = _dbf.Create();
+        var any = false;
+        foreach (var (type, id) in r.Rows)
+        {
+            if (await db.FindAsync(type, new object[] { id }, ct) is not EntityBase e) continue;
+            if (e.DeletedAt is not null) continue;
+            db.Remove(e);
+            any = true;
+        }
+        if (!any) return null;
+        var t = new TrashItem { Kind = r.Kind, Label = r.Label, PayloadJson = r.PayloadJson, DeletedBy = r.DeletedBy };
+        db.Trash.Add(t);
+        await db.SaveChangesAsync(ct);
+        return t.Id;
     }
 
     /// <summary>کلیدِ رکوردِ اصلی، از همان JSONی که موقعِ حذف نگه داشته شد.</summary>
@@ -195,7 +249,8 @@ public sealed class TrashService
     }
 
     /// <summary>هر نوع، سرِ جای خودش. ‎NotSupportedException‎ یعنی نوعِ ناشناخته.</summary>
-    private static async Task<int> ReviveAsync(PumpDbContext db, string? kind, long id, CancellationToken ct)
+    private static async Task<int> ReviveAsync(PumpDbContext db, string? kind, long id,
+                                               List<EntityBase> got, CancellationToken ct)
     {
         switch (kind)
         {
@@ -204,14 +259,14 @@ public sealed class TrashService
                 var d = await Find(db.Debtors, id, ct);
                 if (d is null) return 0;
                 var when = d.DeletedAt;
-                d.DeletedAt = null;
+                d.DeletedAt = null; got.Add(d);
 
                 var accounts = await db.DebtAccounts.IgnoreQueryFilters()
                     .Where(a => (a.DebtorId == id || a.MainOfDebtorId == id) && a.DeletedAt == when)
                     .ToListAsync(ct);
-                foreach (var a in accounts) a.DeletedAt = null;
+                foreach (var a in accounts) { a.DeletedAt = null; got.Add(a); }
 
-                foreach (var a in accounts) await ReviveAccountRows(db, a.Id, when, ct);
+                foreach (var a in accounts) await ReviveAccountRows(db, a.Id, when, got, ct);
                 return 1;
             }
 
@@ -220,8 +275,8 @@ public sealed class TrashService
                 var a = await Find(db.DebtAccounts, id, ct);
                 if (a is null) return 0;
                 var when = a.DeletedAt;
-                a.DeletedAt = null;
-                await ReviveAccountRows(db, a.Id, when, ct);
+                a.DeletedAt = null; got.Add(a);
+                await ReviveAccountRows(db, a.Id, when, got, ct);
                 return 1;
             }
 
@@ -230,8 +285,8 @@ public sealed class TrashService
                 var c = await Find(db.TilCompanies, id, ct);
                 if (c is null) return 0;
                 var when = c.DeletedAt;
-                c.DeletedAt = null;
-                await ReviveChildren(db.CompanyRows, x => x.CompanyId == id, when, ct);
+                c.DeletedAt = null; got.Add(c);
+                await ReviveChildren(db.CompanyRows, x => x.CompanyId == id, when, got, ct);
                 return 1;
             }
 
@@ -240,8 +295,8 @@ public sealed class TrashService
                 var acc = await Find(db.AmanatAccounts, id, ct);
                 if (acc is null) return 0;
                 var when = acc.DeletedAt;
-                acc.DeletedAt = null;
-                await ReviveChildren(db.AmanatRows, x => x.AccountId == id, when, ct);
+                acc.DeletedAt = null; got.Add(acc);
+                await ReviveChildren(db.AmanatRows, x => x.AccountId == id, when, got, ct);
                 return 1;
             }
 
@@ -250,15 +305,15 @@ public sealed class TrashService
                 var w = await Find(db.WaraqEntries, id, ct);
                 if (w is null) return 0;
                 var when = w.DeletedAt;
-                w.DeletedAt = null;
+                w.DeletedAt = null; got.Add(w);
 
                 var shifts = await db.WaraqShifts.IgnoreQueryFilters()
                     .Where(s => s.WaraqId == id && s.DeletedAt == when).ToListAsync(ct);
-                foreach (var s in shifts) s.DeletedAt = null;
+                foreach (var s in shifts) { s.DeletedAt = null; got.Add(s); }
 
                 var shiftIds = shifts.Select(s => s.Id).ToList();
-                await ReviveChildren(db.WaraqPumps, x => shiftIds.Contains(x.ShiftId), when, ct);
-                await ReviveChildren(db.WaraqTransactions, x => shiftIds.Contains(x.ShiftId), when, ct);
+                await ReviveChildren(db.WaraqPumps, x => shiftIds.Contains(x.ShiftId), when, got, ct);
+                await ReviveChildren(db.WaraqTransactions, x => shiftIds.Contains(x.ShiftId), when, got, ct);
                 return 1;
             }
 
@@ -267,34 +322,34 @@ public sealed class TrashService
                 var r = await Find(db.Reports, id, ct);
                 if (r is null) return 0;
                 var when = r.DeletedAt;
-                r.DeletedAt = null;
+                r.DeletedAt = null; got.Add(r);
 
                 // شیفتِ روز و شب رکوردِ جدا هستند و با همان حذف رفته‌اند.
                 var ids = new List<long>();
                 if (r.DayShiftId is { } dayId) ids.Add(dayId);
                 if (r.NightShiftId is { } nightId) ids.Add(nightId);
                 if (ids.Count > 0)
-                    await ReviveChildren(db.ShiftDataSet, x => ids.Contains(x.Id), when, ct);
+                    await ReviveChildren(db.ShiftDataSet, x => ids.Contains(x.Id), when, got, ct);
                 return 1;
             }
 
-            case "debtrow":          return await ReviveOne(db.DebtRows, id, ct);
-            case "debtQuickReceipt": return await ReviveOne(db.DebtQuickReceipts, id, ct);
-            case "companyrow":       return await ReviveOne(db.CompanyRows, id, ct);
-            case "amanatrow":        return await ReviveOne(db.AmanatRows, id, ct);
-            case "parchaReceipt":    return await ReviveOne(db.ParchaReceipts, id, ct);
-            case "purchase":         return await ReviveOne(db.FuelPurchases, id, ct);
-            case "invoice":          return await ReviveOne(db.Invoices, id, ct);
-            case "safe":             return await ReviveOne(db.SafeEntries, id, ct);
-            case "sarrafi":          return await ReviveOne(db.ExchangeRows, id, ct);
-            case "expense":          return await ReviveOne(db.Expenses, id, ct);
-            case "chakana":          return await ReviveOne(db.RetailRows, id, ct);
-            case "extraincome":      return await ReviveOne(db.ExtraIncomes, id, ct);
-            case "staff":            return await ReviveOne(db.StaffMembers, id, ct);
-            case "staffshort":       return await ReviveOne(db.StaffShortSettles, id, ct);
-            case "tanker":           return await ReviveOne(db.TankerUnloads, id, ct);
-            case "tankdip":          return await ReviveOne(db.TankDips, id, ct);
-            case "camera":           return await ReviveOne(db.Cameras, id, ct);
+            case "debtrow":          return await ReviveOne(db.DebtRows, id, got, ct);
+            case "debtQuickReceipt": return await ReviveOne(db.DebtQuickReceipts, id, got, ct);
+            case "companyrow":       return await ReviveOne(db.CompanyRows, id, got, ct);
+            case "amanatrow":        return await ReviveOne(db.AmanatRows, id, got, ct);
+            case "parchaReceipt":    return await ReviveOne(db.ParchaReceipts, id, got, ct);
+            case "purchase":         return await ReviveOne(db.FuelPurchases, id, got, ct);
+            case "invoice":          return await ReviveOne(db.Invoices, id, got, ct);
+            case "safe":             return await ReviveOne(db.SafeEntries, id, got, ct);
+            case "sarrafi":          return await ReviveOne(db.ExchangeRows, id, got, ct);
+            case "expense":          return await ReviveOne(db.Expenses, id, got, ct);
+            case "chakana":          return await ReviveOne(db.RetailRows, id, got, ct);
+            case "extraincome":      return await ReviveOne(db.ExtraIncomes, id, got, ct);
+            case "staff":            return await ReviveOne(db.StaffMembers, id, got, ct);
+            case "staffshort":       return await ReviveOne(db.StaffShortSettles, id, got, ct);
+            case "tanker":           return await ReviveOne(db.TankerUnloads, id, got, ct);
+            case "tankdip":          return await ReviveOne(db.TankDips, id, got, ct);
+            case "camera":           return await ReviveOne(db.Cameras, id, got, ct);
 
             default: throw new NotSupportedException(kind ?? "");
         }
@@ -302,30 +357,31 @@ public sealed class TrashService
 
     /// <summary>ردیف‌های تیل و پولِ یک حساب — هر دو دفتر، با همان مُهرِ زمان.</summary>
     private static Task ReviveAccountRows(PumpDbContext db, long accountId, DateTime? when,
-                                          CancellationToken ct) =>
+                                          List<EntityBase> got, CancellationToken ct) =>
         ReviveChildren(db.DebtRows,
-                       x => x.FuelAccountId == accountId || x.MoneyAccountId == accountId, when, ct);
+                       x => x.FuelAccountId == accountId || x.MoneyAccountId == accountId, when, got, ct);
 
     private static async Task<T?> Find<T>(DbSet<T> set, long id, CancellationToken ct)
         where T : EntityBase =>
         await set.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == id, ct);
 
-    private static async Task<int> ReviveOne<T>(DbSet<T> set, long id, CancellationToken ct)
+    private static async Task<int> ReviveOne<T>(DbSet<T> set, long id, List<EntityBase> got, CancellationToken ct)
         where T : EntityBase
     {
         var e = await Find(set, id, ct);
         if (e is null) return 0;
         e.DeletedAt = null;
+        got.Add(e);
         return 1;
     }
 
     private static async Task ReviveChildren<T>(DbSet<T> set,
                                                 System.Linq.Expressions.Expression<Func<T, bool>> which,
-                                                DateTime? when, CancellationToken ct)
+                                                DateTime? when, List<EntityBase> got, CancellationToken ct)
         where T : EntityBase
     {
         var rows = await set.IgnoreQueryFilters().Where(which)
                             .Where(x => x.DeletedAt == when).ToListAsync(ct);
-        foreach (var r in rows) r.DeletedAt = null;
+        foreach (var r in rows) { r.DeletedAt = null; got.Add(r); }
     }
 }

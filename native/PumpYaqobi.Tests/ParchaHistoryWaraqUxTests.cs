@@ -92,16 +92,27 @@ public class ParchaHistoryWaraqUxTests
     /// <summary>
     /// ⛔ ریشهٔ «نمی‌گذارد بروم کادرِ پایین» یک <b>جابه‌جاییِ چیدمان</b> بود:
     /// کادرِ هشدار با دکمهٔ «دیدم» داخلِ همان ستون باز می‌شد و «ختم پایه» را
-    /// ~۷۰ پیکسل پایین می‌پراند. حالا ردیفِ هشدار <b>همیشه</b> هست و
-    /// بلندی‌اش ثابت است، پس هیچ چیزی تکان نمی‌خورد.
+    /// ~۷۰ پیکسل پایین می‌پراند. بعد یک ردیفِ همیشه‌حاضرِ ۲۲ پیکسلی شد —
+    /// جابه‌جا نمی‌کرد ولی همیشه یک فاصلهٔ خالی زیرِ کادر می‌گذاشت
+    /// (عکسِ صاحب ریپو، ۱۴۰۵/۰۷/۱۲). حالا ⚠️ و «✔ دیدم» <b>داخلِ خودِ کادرِ
+    /// شروع</b>‌اند (‎TextBox.InnerRightContent‎)، پس نه چیزی تکان می‌خورد و نه
+    /// جایی گرفته می‌شود.
     /// </summary>
     [Fact]
     public void TheLowBaseWarningNeverMovesTheNextBox()
     {
         var x = Bare(Parcha());
-        Assert.Contains("Grid Height=\"22\"", x);
-        // ⛔ و دیگر یک کادرِ بازشو (‎Border‎ با ‎IsVisible=LowBase‎) نیست
+        // ⛔ نه ردیفِ جدا، نه کادرِ بازشو
+        Assert.DoesNotContain("Grid Height=\"22\"", x);
         Assert.DoesNotContain("Border Classes=\"panel\" IsVisible=\"{Binding LowBase}\"", x);
+        // ✅ داخلِ خودِ کادرِ شروع — همان کادری که ‎StartBrushKey‎ سرخش می‌کند
+        var box = x.IndexOf("Text=\"{Binding Start}\"", StringComparison.Ordinal);
+        Assert.True(box > 0, "کادرِ شروعِ پایه پیدا نشد");
+        var inner = x.IndexOf("<TextBox.InnerRightContent>", box, StringComparison.Ordinal);
+        var close = x.IndexOf("</TextBox>", box, StringComparison.Ordinal);
+        Assert.True(inner > box && inner < close, "هشدار باید داخلِ خودِ کادرِ شروع باشد");
+        var ack = x.IndexOf("AckLowBaseCommand", box, StringComparison.Ordinal);
+        Assert.True(ack > inner && ack < close, "«✔ دیدم» باید داخلِ خودِ کادرِ شروع باشد");
     }
 
     /// <summary>و خودِ عدد داخلِ کادرش سرخ می‌شود — «توی خود همون کادر».</summary>

@@ -100,8 +100,29 @@
               <Grid ColumnDefinitions="*,8,106">
                 <!-- ⛔ خودِ عدد سرخ می‌شود («توی خود همون کادر هم عدد سرخ
                      بشه») — پس نشانه با رفتن به کادرِ دیگر از چشم نمی‌افتد. -->
+                <!-- ══ هشدارِ زنجیرهٔ پایه، **داخلِ خودِ کادر** ═══════════════
+                     خواستهٔ صاحب ریپو با عکس (۱۴۰۵/۰۷/۱۲): «این کادرِ دیدم داخلِ
+                     خودِ شروع پایه باشد که پایین جا یا فاصله با کادرِ پایین
+                     نیندازد.» پیش از این یک ردیفِ همیشه‌حاضرِ ۲۲ پیکسلی زیرِ
+                     کادر بود — جابه‌جا نمی‌کرد، ولی همیشه یک فاصلهٔ خالی
+                     می‌گذاشت. حالا ⚠️ و «✔ دیدم» گوشهٔ خودِ کادر می‌نشینند
+                     (‎InnerRightContent‎) و جملهٔ کامل روی خودِ ⚠️ و «دیدم»
+                     (‎ToolTip‎) است. ⛔ پس نه چیزی جابه‌جا می‌شود و نه جایی
+                     گرفته می‌شود؛ و مانعِ ذخیره هم نیست. -->
                 <TextBox Grid.Column="0" Classes="wfield" Text="{Binding Start}" Watermark="0"
-                         Foreground="{Binding StartBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                         Foreground="{Binding StartBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
+                  <TextBox.InnerRightContent>
+                    <StackPanel Orientation="Horizontal" Spacing="4" Margin="4,0"
+                                VerticalAlignment="Center" IsVisible="{Binding LowBase}">
+                      <TextBlock Text="⚠️" FontSize="14" VerticalAlignment="Center"
+                                 ToolTip.Tip="{Binding LowBaseText}" />
+                      <Button Content="✔ دیدم" Classes="ghost lowack" Padding="7,1"
+                              FontSize="11" VerticalAlignment="Center"
+                              ToolTip.Tip="{Binding LowBaseText}"
+                              Command="{Binding AckLowBaseCommand}" />
+                    </StackPanel>
+                  </TextBox.InnerRightContent>
+                </TextBox>
                 <!-- ⚠️ دکمه هم‌قدِ کادر و هم‌پهنای ستون است، وگرنه همان
                      ناهمواری از سمتِ دکمه برمی‌گردد. -->
                 <Button Grid.Column="2" Classes="wside" Classes.day="{Binding IsDay}"
@@ -110,30 +131,30 @@
                         Command="{Binding $parent[UserControl].((vm:ParchaSectionViewModel)DataContext).PullBaseCommand}"
                         CommandParameter="{Binding}" />
               </Grid>
-
-              <!-- ══ هشدارِ زنجیرهٔ پایه ═══════════════════════════════════
-                   ⛔ **یک ردیفِ همیشه‌حاضرِ ۲۲ پیکسلی، نه یک کادرِ بازشو.**
-                   ریشهٔ «نمی‌گذارد بروم کادرِ پایین» همین بود: کادرِ هشدار با
-                   دکمهٔ «دیدم» داخلِ همین ستون باز می‌شد و «ختم پایه» را ~۷۰
-                   پیکسل پایین می‌پراند — کاربر تایپ می‌کرد، کادرِ بعدی از
-                   زیرِ نشانگرش فرار می‌کرد. حالا ردیف همیشه هست (خالی، وقتی
-                   هشداری نیست)، پس **هیچ چیزی جابه‌جا نمی‌شود**.
-                   ⛔ و مانع نیست: ذخیره سرِ جایش است. -->
-              <Grid Height="22" ColumnDefinitions="*,Auto">
-                <TextBlock Grid.Column="0" Text="{Binding LowBaseText}" FontSize="11.5"
-                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                           ToolTip.Tip="{Binding LowBaseText}"
-                           Foreground="{DynamicResource Pump.Danger}" />
-                <Button Grid.Column="1" Content="✔ دیدم" Classes="ghost" Padding="8,1"
-                        FontSize="11" VerticalAlignment="Center"
-                        IsVisible="{Binding LowBase}" Command="{Binding AckLowBaseCommand}" />
-              </Grid>
             </StackPanel>
 
             <StackPanel Spacing="4">
               <TextBlock Text="ختم پایه (لیتر)" Classes="fld" />
               <Grid ColumnDefinitions="*,8,106">
-                <TextBox Grid.Column="0" Classes="wfield" Text="{Binding End}" Watermark="0" />
+                <!-- ══ عددِ «ختم» هم‌پای عددِ «شروع» ═════════════════════════════
+                     خواستهٔ صاحب ریپو با عکس (۱۴۰۵/۰۷/۱۲): «هر دو عدد با هم بروند
+                     یک طرف، و اگر مشکلی نبود هر دو سرِ جایشان.» هشدارِ داخلِ
+                     کادرِ شروع جا می‌گیرد و عددِ وسط‌چینش را کنار می‌برد؛ پس همان
+                     تکه این‌جا هم هست — **نامرئی** و بی‌کلیک — تا عددِ ختم دقیقاً
+                     همان‌قدر برود و دو عدد زیرِ هم بمانند. ⚠️ رونوشتِ مو‌به‌موی
+                     همان تکه است (نه یک فاصلهٔ عددی)، تا پهنایش هر قلم و هر
+                     اندازه‌ای همان باشد. -->
+                <TextBox Grid.Column="0" Classes="wfield" Text="{Binding End}" Watermark="0">
+                  <TextBox.InnerRightContent>
+                    <StackPanel Orientation="Horizontal" Spacing="4" Margin="4,0"
+                                VerticalAlignment="Center" IsVisible="{Binding LowBase}"
+                                Opacity="0" IsHitTestVisible="False" Classes="lowpad">
+                      <TextBlock Text="⚠️" FontSize="14" VerticalAlignment="Center" />
+                      <Button Content="✔ دیدم" Classes="ghost" Padding="7,1" FontSize="11"
+                              VerticalAlignment="Center" Focusable="False" IsTabStop="False" />
+                    </StackPanel>
+                  </TextBox.InnerRightContent>
+                </TextBox>
                 <Button Grid.Column="2" Classes="wside" Classes.day="{Binding IsDay}"
                         Classes.night="{Binding IsNight}"
                         Content="{Binding PushText}"

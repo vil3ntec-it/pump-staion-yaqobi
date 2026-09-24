@@ -1101,6 +1101,9 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         for (var i = 0; i < count; i++) await AddRowAsync();
     }
 
+    public IReadOnlyList<object> LastRows(int count) =>
+        Rows.Skip(Math.Max(0, Rows.Count - count)).Cast<object>().ToList();
+
     public async Task DeleteRowsAsync(int count)
     {
         if (count < 1 || Rows.Count < count) return;
@@ -1236,6 +1239,7 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
     public int RowCount => Current?.RowCount ?? 0;
     public Task AddRowsAsync(int count) => Current?.AddRowsAsync(count) ?? Task.CompletedTask;
     public Task DeleteRowsAsync(int count) => Current?.DeleteRowsAsync(count) ?? Task.CompletedTask;
+    public IReadOnlyList<object> LastRows(int count) => Current?.LastRows(count) ?? Array.Empty<object>();
 
     /// <summary>
     /// ‎pdfPerson()‎ — ورقِ **همان حسابی که باز است**، نه همهٔ حساب‌ها.

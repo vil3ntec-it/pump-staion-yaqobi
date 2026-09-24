@@ -29,6 +29,9 @@ public class ShortcutTests
             return Task.CompletedTask;
         }
 
+        public IReadOnlyList<object> LastRows(int count) =>
+            Rows.Skip(Math.Max(0, Rows.Count - count)).Cast<object>().ToList();
+
         public Task DeleteRowsAsync(int count)
         {
             if (count < 1 || Rows.Count < count) return Task.CompletedTask;

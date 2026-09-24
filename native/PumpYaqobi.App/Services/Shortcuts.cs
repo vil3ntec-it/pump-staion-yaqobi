@@ -4,6 +4,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using PumpYaqobi.App.ViewModels;
+using PumpYaqobi.Application.Localization;
 
 namespace PumpYaqobi.App.Services;
 
@@ -28,15 +29,15 @@ namespace PumpYaqobi.App.Services;
 /// گاه‌به‌گاه است. ⛔ هیچ‌کدام برداشته نشد، فقط جا عوض کردند.
 ///
 /// ══ آن‌چه این‌جا <b>نیست</b> و عمداً نیست ══════════════════════
-/// ‎Ctrl+C‎/‎V‎/‎X‎/‎A‎/‎Z‎/‎Y‎ این‌جا گرفته نمی‌شوند. آن‌ها مالِ <b>خودِ جدول</b>
+/// ‎Ctrl+C‎/‎V‎/‎X‎/‎A‎ این‌جا گرفته نمی‌شوند. آن‌ها مالِ <b>خودِ جدول</b>
 /// هستند (<see cref="Controls.ExcelGrid"/>) و مالِ <b>کادرِ تایپ</b>، و هر دو
 /// خودشان بلدند. گرفتنشان در این شنوندهٔ تونلی یعنی کادرِ تایپ
 /// دیگر نمی‌تواند متنِ خودش را کپی کند — همان اشتباهی که یک بار با
 /// ‎Shift+عدد‎ شد و نویسه‌ها را خورد.
 ///
-/// ⚠️ و برگشت (‎Ctrl+Z‎) فقط «ویرایشِ خانهٔ جدول» را برمی‌گرداند، نه
-/// ساختن و حذفِ ردیف را: آن یکی «تاریخچهٔ عکس‌فوریِ کلِ دیتابیس»
-/// می‌خواهد که ساخته نشده. برای حذف، سطلِ زباله سرِ جایش است.
+/// ⚠️ ولی ‎Ctrl+Z‎/‎Ctrl+Y‎ <b>هست</b> (از ۱۴۰۵/۰۷/۱۲)، بیرونِ کادرِ تایپ و برای
+/// کلِ برنامه: ویرایشِ خانه‌ها <b>و</b> هر حذف (ردیف، حساب، ورق…) — از راهِ
+/// سطلِ زباله. شرحش بالای <see cref="UndoHub"/>.
 ///
 /// ══ چرا «بافر» و چرا «هنگامِ رها کردن» ═════════════════════════════════════
 /// عدد می‌تواند چندرقمی باشد (‎Ctrl+1‎ سپس ‎2‎ یعنی ۱۲، نه دو بار ۱ و ۲). پس
@@ -248,6 +249,23 @@ public sealed class ShortcutService
             return;
         }
 
+        // ══ Ctrl+Z / Ctrl+Y → برگشت و دوباره، برای کلِ برنامه ═══════════════
+        //
+        // گزارشِ صاحب ریپو: «کنترول زد اصلن کار نمیکنه… و کنترول وای هم جلو
+        // نمیره.» پیش از این مالِ هر جدول بود و فقط با فوکوسِ همان جدول کار
+        // می‌کرد؛ حذفِ ردیف و حساب هم اصلاً برنمی‌گشت. حالا یک پشته برای همه
+        // (‎UndoHub‎): ویرایشِ خانه و هر حذف.
+        //
+        // ⛔ **ولی نه داخلِ کادرِ تایپ**: آن‌جا ‎Ctrl+Z‎ حرفِ قبلیِ همان کادر
+        // است، نه کارِ قبلیِ برنامه — همان قاعدهٔ «هیچ میانبری کارِ کادرِ تایپ
+        // را نخورد».
+        if (ctrl && !alt && !TypingInBox(sender) && (e.Key == Key.Y || e.Key == Key.Z))
+        {
+            _ = UndoRedoAsync(redo: e.Key == Key.Y || shift);
+            e.Handled = true;
+            return;
+        }
+
         // ══ F1 → فهرستِ خودِ میانبرها ════════════════════════════════════════
         // صاحب ریپو: «برای اف ۱ تا ۱۲ نمی‌دانم چی‌ها بزنم لازم است یا نه.»
         // پس فقط همین یکی ساخته شد و بقیه آزاد ماندند: کلیدی که کاری نکند
@@ -383,14 +401,57 @@ public sealed class ShortcutService
         AppHost.Current.Toasts.Show($"✅ {n} ردیف افزوده شد", ToastKind.Ok);
     }
 
+    /// <summary>
+    /// ‎Shift+عدد‎ — برداشتنِ ‎n‎ ردیفِ آخر.
+    ///
+    /// خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «اگه جدول یا کادرِ جدول پر بود اون‌جا
+    /// تایید بخواد، اگه خالی بود حذف کنه بدونِ گفتن یا سوال شدن.» پس ردیف‌های
+    /// خالی بی‌صدا می‌روند و فقط وقتی یکی چیزی دارد پرسیده می‌شود
+    /// (<see cref="RowData.HasData"/>). و هر چه رفت، با ‎Ctrl+Z‎ برمی‌گردد —
+    /// همهٔ ‎n‎ ردیف یک قدم‌اند (<see cref="UndoHub.Group"/>).
+    /// </summary>
     private async Task DeleteRowsAsync(int n)
     {
         if (_vm.RowHost is not { } host) return;
+        // خانهٔ باز اول بنشیند، وگرنه «خالی بود» دربارهٔ چیزی گفته می‌شد که
+        // کاربر همین لحظه در آن تایپ کرده
+        CommitOpenCell(_window);
+        if (host.RowCount < n) return;
+
+        var last = host.LastRows(n);
+        var filled = last.Count(RowData.HasData);
+        if (filled > 0)
+        {
+            var ok = await Dialogs.ConfirmAsync("حذفِ ردیف",
+                (n == 1 ? "این ردیف" : Shamsi.Money(n) + " ردیفِ آخر")
+                + (filled == n ? "" : " — " + Shamsi.Money(filled) + " ردیفش")
+                + " چیزی نوشته شده دارد. حذف شود؟\n(با Ctrl+Z برمی‌گردد.)");
+            if (!ok) return;
+        }
+
         var before = host.RowCount;
-        await host.DeleteRowsAsync(n);
+        using (UndoHub.Group(Shamsi.Money(n) + " ردیف"))
+            await host.DeleteRowsAsync(n);
         // ردیفِ کافی نبود → خودِ میزبان هیچ نکرده؛ توستِ دروغ هم نباید بدهیم
         if (host.RowCount == before) return;
-        AppHost.Current.Toasts.Show($"🗑️ {n} ردیف حذف شد", ToastKind.Error);
+        AppHost.Current.Toasts.Show($"🗑️ {n} ردیف حذف شد — Ctrl+Z برمی‌گرداند", ToastKind.Error);
+    }
+
+    private bool _undoing;
+
+    /// <summary>‎Ctrl+Z‎ / ‎Ctrl+Y‎ برای کلِ برنامه — شرحش بالای <see cref="UndoHub"/>.</summary>
+    private async Task UndoRedoAsync(bool redo)
+    {
+        if (_undoing) return;          // برگشتِ حذف کارِ دیسک است؛ دو تا روی هم نه
+        _undoing = true;
+        try
+        {
+            CommitOpenCell(_window);
+            var msg = redo ? await UndoHub.RedoAsync() : await UndoHub.UndoAsync();
+            AppHost.Current.Toasts.Show(msg ?? (redo ? "چیزی برای «دوباره» نیست" : "چیزی برای برگشت نیست"),
+                                        msg is null ? ToastKind.Info : ToastKind.Ok, 2500);
+        }
+        finally { _undoing = false; }
     }
 
     private static string? CalcKey(Key k, bool shift) => k switch

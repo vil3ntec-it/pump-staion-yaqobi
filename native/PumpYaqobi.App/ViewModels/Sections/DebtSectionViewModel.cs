@@ -619,6 +619,17 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
         _host.Toast("✅ شخص افزوده شد", ToastKind.Ok);
     }
 
+    public override async Task AfterUndoAsync()
+    {
+        if (PersonOpen && Person is { } p)
+        {
+            var full = await _host.Debtors.LoadFullAsync(p.Entity.Id);
+            if (full is not null) { p.Load(full); return; }
+            PersonOpen = false;               // خودِ حساب رفت ⇒ برگرد سرِ فهرست
+        }
+        await RefreshAsync();
+    }
+
     [RelayCommand]
     private async Task DeleteDebtorAsync(DebtorCardViewModel? card)
     {
