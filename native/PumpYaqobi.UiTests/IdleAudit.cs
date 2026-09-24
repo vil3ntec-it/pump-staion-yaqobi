@@ -202,9 +202,58 @@ internal static class IdleAudit
     /// دوبارهٔ ورق را ۱٫۲ ثانیه می‌کرد (سنجشِ ‎waraqperf‎). شرحش بالای
     /// ‎ExcelGrid.OnShownChanged‎.
     /// </summary>
+    /// <summary>
+    /// ردیفی که مالِ بخشی است که دیده نمی‌شود.
+    ///
+    /// ⛔ ملاک **خودِ جدول** است، نه خودِ ردیف — و این یک تصحیح است، نه
+    /// نرم کردنِ سنجه. شرحش بالای <see cref="Parked"/>.
+    /// </summary>
     private static int StrayRows(Window w) =>
-        w.GetVisualDescendants().OfType<DataGridRow>()
-         .Count(r => !r.IsEffectivelyVisible && !InTallGrid(r));
+        w.GetVisualDescendants().OfType<DataGridRow>().Count(Parked);
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ «ردیفِ نامرئی» با «ردیفِ بخشِ پنهان» یکی نیست ════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  این سنجه تا امروز هر ‎DataGridRow‎ی را که ‎IsEffectivelyVisible‎ نداشت
+    //  می‌شمرد و پیامش می‌گفت «مالِ بخشی است که دیده نمی‌شود». آن شرط از
+    //  ادعایش **پهن‌تر** بود و یک روز خودش را نشان داد:
+    //
+    //      صفحه SafeSectionView · جدول (بی‌نام) · بخشِ آن «safe» (دیده
+    //      می‌شود: True) · جدول دیده می‌شود: True · فهرست ۱۰ ردیف ·
+    //      بلندیِ ردیف ۰
+    //
+    //  یعنی بخش **باز** بود، جدول **دیده می‌شد**، و آن‌چه شمرده شد یک ظرفِ
+    //  بازیافتیِ خودِ همان جدول بود — ‎DataGrid‎ یکی را در استخرِ بازیافت
+    //  نگه می‌دارد، نامرئی و با بلندیِ صفر. نه ردیفِ زنده‌ای است، نه مالِ
+    //  بخشِ پنهان، و نه هزینه‌ای دارد: ستونِ «کنترلِ نامرئیِ چیده‌شده» —
+    //  که همان هزینهٔ واقعی را می‌سنجد — برایش صفر است.
+    //
+    //  ⛔ پس ملاک به خودِ ادعا برگشت: جدول دیده نمی‌شود، **یا** بخشش باز
+    //  نیست. این از شرطِ قبلی ضعیف‌تر **نیست**: بخشِ پنهان یعنی جدولش هم
+    //  نامرئی است، پس هر ردیفی که قاعدهٔ واقعی می‌خواست بگیرد، هنوز گرفته
+    //  می‌شود. آن‌چه دیگر گرفته نمی‌شود فقط ظرفِ بازیافتِ جدولِ **جلوی
+    //  چشم** است.
+    //
+    //  ⚠️ و ‎IsShown‎ِ ویومدل هم کنارش ماند، نه به‌جایش: ‎ContentPresenter‎ی
+    //  که ‎ItemsControl‎ دورِ هر بخش می‌سازد هیچ‌وقت پنهان نمی‌شود (همان
+    //  تله‌ای که در ‎ExcelGrid.SectionShown‎ نوشته شده)، پس هر دو در را
+    //  می‌بندیم.
+
+    private static bool Parked(DataGridRow r)
+    {
+        if (InTallGrid(r)) return false;
+
+        var grid = r.GetVisualAncestors().OfType<DataGrid>().FirstOrDefault();
+        if (grid is null) return true;                 // جدولی ندارد ⇒ سرگردانِ واقعی
+        if (!grid.IsEffectivelyVisible) return true;   // جدولِ نامرئی، ردیفِ زنده
+
+        var sec = r.GetVisualAncestors().OfType<Control>()
+                   .Select(c => c.DataContext)
+                   .OfType<PumpYaqobi.App.ViewModels.SectionViewModel>()
+                   .FirstOrDefault();
+        return sec is { IsShown: false };
+    }
 
     // ══════════════════════════════════════════════════════════════════════
     //  ══ «کدام جدول» — وگرنه این سنجه فقط می‌گوید «یک جا خراب است» ══════════
@@ -221,8 +270,7 @@ internal static class IdleAudit
     {
         var lines = new List<string>();
 
-        foreach (var r in w.GetVisualDescendants().OfType<DataGridRow>()
-                           .Where(r => !r.IsEffectivelyVisible && !InTallGrid(r)))
+        foreach (var r in w.GetVisualDescendants().OfType<DataGridRow>().Where(Parked))
         {
             var grid = r.GetVisualAncestors().OfType<DataGrid>().FirstOrDefault();
             var page = r.GetVisualAncestors().OfType<UserControl>().FirstOrDefault();
