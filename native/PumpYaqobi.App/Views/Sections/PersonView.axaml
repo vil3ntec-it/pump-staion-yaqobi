@@ -451,6 +451,7 @@
 
       <!-- دفترِ حسابِ باز -->
       <c:ExcelGrid Grid.Row="2" Name="PersonGrid" ItemsSource="{Binding Current.Rows}"
+                   WidthScope="{Binding Current.WidthScope}"
                    GrowsOnEnter="True" x:CompileBindings="False"
                   RowDeleteCommand="{Binding $parent[UserControl].DataContext.Current.DeleteRowCommand}">
         <DataGrid.Columns>

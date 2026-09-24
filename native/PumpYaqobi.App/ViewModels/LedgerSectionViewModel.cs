@@ -113,6 +113,7 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
         Recalc();
         OnPropertyChanged(nameof(TotalCells));
         OnPropertyChanged(nameof(HasTotals));
+        RefreshMonthHint();          // ردیفِ تازه در ماهِ خالی ⇒ نوار برود
     }
 
     /// <summary>فیلترِ جست‌وجو — بخش‌هایی که ستونِ نام دارند بازنویسی‌اش می‌کنند.</summary>
@@ -121,7 +122,8 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
     protected override async Task LoadAsync()
     {
         Months.Clear();
-        foreach (var m in await Service.MonthsAsync()) Months.Add(m);
+        _dataMonths = await Service.MonthsAsync();
+        foreach (var m in _dataMonths) Months.Add(m);
         if (!Months.Contains(Month)) Months.Insert(0, Month);
         Picker.Load(Months, Month);
         await ReloadRowsAsync();
@@ -143,6 +145,42 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
         Rows.ResetTo(list.Select(e => Track(Wrap(e))));
         ApplyFilter();
         RecalcAll();
+    }
+
+    // ══ ماهِ تازه خالی است؛ ماهِ پیش سرِ جایش است ══════════════════════════
+    //
+    // ⛔ این دفترها ماه‌به‌ماه‌اند و ماهِ تازه عمداً خالی شروع می‌شود — ولی
+    // سرِ آغازِ میزان کاربر دید جدول خالی است و گمان کرد «هر چه نوشته بودم پاک
+    // شد». پس ماهِ خالی **می‌گوید** که ردیف‌های ماهِ دیگر هست و یک دکمه به
+    // آن‌جا دارد. شرح در ‎SectionViewModel.MonthHint‎.
+    // ⚠️ ماه خودکار جابه‌جا نمی‌شود: ردیفِ تازه جایش در ماهِ جاری است.
+
+    /// <summary>ماه‌هایی که واقعاً ردیف دارند — تازه‌ترین اول.</summary>
+    private List<string> _dataMonths = new();
+    private string _hintTarget = "";
+
+    private void RefreshMonthHint()
+    {
+        _hintTarget = "";
+        if (Rows.Count == 0 && !YearMonthPicker.IsAll(Month)
+            && _dataMonths.FirstOrDefault(m => m != Month) is { } other)
+        {
+            MonthHint = "«" + Shamsi.MonthLabel(Month) + "» هنوز ردیفی ندارد — ردیف‌های «"
+                      + Shamsi.MonthLabel(other) + "» سرِ جایشان‌اند";
+            MonthHintAction = "نمایشِ «" + Shamsi.MonthLabel(other) + "»";
+            _hintTarget = other;
+        }
+        else { MonthHint = ""; MonthHintAction = ""; }
+    }
+
+    protected override Task OnGoMonthHintAsync()
+    {
+        if (_hintTarget.Length == 0) return Task.CompletedTask;
+        var t = _hintTarget;
+        if (!Months.Contains(t)) Months.Insert(0, t);
+        Picker.Adopt(t);
+        Month = t;
+        return Task.CompletedTask;
     }
 
     /// <summary>ذخیرهٔ یک ردیف — تنها همان ردیف، نه کلِ جدول.</summary>

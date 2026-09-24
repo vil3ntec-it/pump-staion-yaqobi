@@ -63,7 +63,7 @@ public sealed class StaffShortReport : ISetupDocument
         if (_in.Settles.Count > 0)
         {
             col.Item().PaddingTop(10).Text("🧾 رسیدها و پرداخت‌ها")
-               .FontSize(DocStyle.HeadSize + 1).Bold().FontColor(Head);
+               .FontSize(DocStyle.HeadSize + 1).Bold().FontColor(DocStyle.Ink(Head));
             col.Item().PaddingTop(4).Element(Settles);
         }
     });

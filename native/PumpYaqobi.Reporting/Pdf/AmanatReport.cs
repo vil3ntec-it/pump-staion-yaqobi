@@ -73,18 +73,18 @@ public sealed class AmanatReport : ISetupDocument
     {
         var s = _in.Settings;
 
-        col.Item().Border(1).BorderColor(DocStyle.BoxLine).Padding(6).Text(
+        col.Item().Border(1).BorderColor(DocStyle.Edge(DocStyle.BoxLine)).Padding(6).Text(
             "درصد کمبودی — برآورد محاسباتی است و جایگزین اندازه‌گیری واقعی موجودی نمی‌شود. "
             + "پایه: " + F(s.BasePct, 3) + "٪ ماهانه · ضریب پطرول: " + F(s.FPetrol, 3)
             + " · ضریب دیزل: " + F(s.FDiesel, 3)
             + " · حاشیهٔ اطمینانِ فیصدی: " + F(s.SafetyPct, 2) + "٪")
-           .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Sub);
+           .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Ink(DocStyle.Sub));
 
         if (_in.Accounts.Count == 0)
         {
-            col.Item().PaddingTop(8).Border(1).BorderColor(DocStyle.BoxLine).Padding(16)
+            col.Item().PaddingTop(8).Border(1).BorderColor(DocStyle.Edge(DocStyle.BoxLine)).Padding(16)
                .AlignCenter().Text("هیچ حسابی ثبت نشده")
-               .FontSize(DocStyle.CellSize).FontColor(DocStyle.FootFg);
+               .FontSize(DocStyle.CellSize).FontColor(DocStyle.Ink(DocStyle.FootFg));
             return;
         }
 
@@ -100,7 +100,7 @@ public sealed class AmanatReport : ISetupDocument
         {
             col.Item().Text((string.IsNullOrWhiteSpace(a.Name) ? "حسابِ بی‌نام" : a.Name)
                             + " — " + a.FuelLabel)
-               .FontSize(DocStyle.BoxValue).Bold().FontColor(Head);
+               .FontSize(DocStyle.BoxValue).Bold().FontColor(DocStyle.Ink(Head));
 
             col.Item().PaddingTop(2).Text(
                 "رسید کل " + F2(t.Liters) + " لیتر · برده شده " + F2(t.Taken) + " لیتر · کمبودی "
@@ -116,7 +116,7 @@ public sealed class AmanatReport : ISetupDocument
                       + " لیتر · فیصدیِ لازم " + OptPct(t.NeedPct, 3)
                       + " → گِردشده " + OptPct(t.AskPct, 1)
                       + " · با آن بعد از بخار " + Opt2(t.NetIfAsk) + " لیتر برایتان می‌ماند"))
-               .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Sub);
+               .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Ink(DocStyle.Sub));
         }
 
         col.Item().PaddingTop(4).Element(x => Table(x, a));

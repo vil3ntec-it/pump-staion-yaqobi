@@ -114,6 +114,8 @@ internal static class Program
         if (outDir.Equals("rowcost", StringComparison.OrdinalIgnoreCase)) return RowCost.Run();
         if (outDir.Equals("vanish", StringComparison.OrdinalIgnoreCase)) return VanishProbe.Run();
         if (outDir.Equals("verify", StringComparison.OrdinalIgnoreCase)) return VerifyProbe.Run();
+        //  «ورق‌ها را پر کردم، بستم، دوباره آمدم — هیچ ورقی نبود»
+        if (outDir.Equals("persist", StringComparison.OrdinalIgnoreCase)) return PersistProbe.Run(args);
         //  «تست بزن ببین لاگین می‌شود، کد بزنی چه می‌شود، حساب ساخته می‌شود یا نه»
         if (outDir.Equals("cloudlogin", StringComparison.OrdinalIgnoreCase)) return CloudLoginProbe.Run();
         //  «تو کادرها + @ # ﷼ ( ) ؟ ؛ : , . نوشته نمی‌شوند»
@@ -157,6 +159,7 @@ internal static class Program
         // ══ عکسِ صفحهٔ چاپ و «تنظیمِ ورق» با گزارشِ واقعی ══════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- printshot <پوشه>
         if (args.Length > 1 && args[0].Equals("printshot", StringComparison.OrdinalIgnoreCase)) return PrintShot.Run(args[1]);
+        if (args.Length > 1 && args[0].Equals("printpages", StringComparison.OrdinalIgnoreCase)) return PrintPages.Run(args[1]);
         if (args.Length > 1 && args[0].Equals("cellshot", StringComparison.OrdinalIgnoreCase)) return CellShot.Run(args[1]);
         // ══ سه صفحهٔ بخشِ فاکتور، بلند و کامل ═══════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- invshot <پوشه>

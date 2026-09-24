@@ -630,6 +630,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         await PostAsync();
     }
 
+
     /// <summary>
     /// ══ ردیف‌های ورق ⇐ حسابِ قرض‌دار / مصارف ═══════════════════════════════
     ///
@@ -927,12 +928,14 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
     partial void OnYearChanged(string? v)
     {
         if (_pickerWriting || string.IsNullOrEmpty(v)) return;
+        _monthAuto = false;                 // کاربر خودش برگزید
         BuildMonthOptions(v!, preferred: null);
     }
 
     partial void OnSelectedMonthChanged(MonthOption? v)
     {
         if (_pickerWriting || v is null) return;
+        _monthAuto = false;                 // کاربر خودش برگزید
         Month = v.Key;                      // ⇒ ‎OnMonthChanged‎ ⇒ ‎ReloadAsync‎
     }
 
@@ -1025,11 +1028,85 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
     protected override async Task LoadAsync()
     {
         Months.Clear();
-        foreach (var m in await _host.WaraqData.MonthsAsync()) Months.Add(m);
+        _dataMonths = await _host.WaraqData.MonthsAsync();
+        foreach (var m in _dataMonths) Months.Add(m);
+
+        // ══ کدام ماه — «هیچ ورقی نبود» دیگر تکرار نشود ════════════════════
+        //
+        // ⛔ تا وقتی کاربر خودش ماهی برنگزیده، ماهِ **جاری** اگر ورق دارد،
+        // وگرنه **تازه‌ترین ماهی که ورق دارد**. سرِ آغازِ ماه (میزان، دو روز
+        // پس از سنبله) همین بود که کلِ ورق‌ها «ناپدید» به نظر رسیدند.
+        // ⚠️ با ‎_month‎ نوشته می‌شود نه ‎Month‎، وگرنه ‎OnMonthChanged‎ یک
+        // خواندنِ دوم می‌زد. و ماهِ جاری همیشه در کشویی هست تا کاربر
+        // بتواند خودش به آن برود.
+        var now = Shamsi.ThisMonth();
+        if (_monthAuto)
+        {
+            var pick = _dataMonths.Contains(now) || _dataMonths.Count == 0 ? now : _dataMonths[0];
+            if (pick != _month) { _month = pick; OnPropertyChanged(nameof(Month)); }
+        }
+        if (!Months.Contains(now)) Months.Insert(0, now);
         if (!Months.Contains(Month)) Months.Insert(0, Month);
         BuildPickers();
         _seenVersion = PumpYaqobi.Persistence.PumpDbContext.Version;
         await ReloadAsync();
+    }
+
+    /// <summary>ماه‌هایی که واقعاً ورق دارند — تازه‌ترین اول.</summary>
+    private List<string> _dataMonths = new();
+
+    /// <summary>
+    /// ماهِ جلوی چشم را خودِ برنامه گذاشته (نه کاربر). فقط تا وقتی راست
+    /// است، برنامه ماه را خودش جابه‌جا می‌کند — ماهی که کاربر برگزیده هرگز
+    /// زیرِ دستش عوض نمی‌شود.
+    /// </summary>
+    private bool _monthAuto = true;
+
+    /// <summary>نیمه‌شبِ آخرِ ماه: همان تصمیم، از نو.</summary>
+    public override void OnDayChanged()
+    {
+        if (_monthAuto && IsLoaded) _ = Services.CrashGuard.RunAsync("خواندنِ ورق‌ها", LoadAsync);
+    }
+
+    /// <summary>نوشتهٔ جای خالیِ فهرست — راست، نه «هیچ ورقی ثبت نشده» وقتی ثبت شده.</summary>
+    public string EmptyText => _dataMonths.Count == 0
+        ? "هیچ ورقی ثبت نشده — از دکمهٔ بالا ورق جدید اضافه کنید"
+        : "«" + Shamsi.MonthLabel(Month) + "» ورقی ندارد — ماهِ دیگری را از کشوییِ بالا برگزینید";
+
+    /// <summary>ماهی که دکمهٔ نوارِ بالا به آن می‌برد.</summary>
+    private string _hintTarget = "";
+
+    private void RefreshMonthHint()
+    {
+        var now = Shamsi.ThisMonth();
+        _hintTarget = "";
+        if (Cards.Count > 0 && Month != now && !_dataMonths.Contains(now) && _monthAuto)
+        {
+            MonthHint = "«" + Shamsi.MonthLabel(now) + "» هنوز ورقی ندارد — ورق‌های «"
+                      + Shamsi.MonthLabel(Month) + "» نشان داده شده‌اند";
+            MonthHintAction = "رفتن به «" + Shamsi.MonthLabel(now) + "»";
+            _hintTarget = now;
+        }
+        else if (Cards.Count == 0 && _dataMonths.FirstOrDefault(m => m != Month) is { } other)
+        {
+            MonthHint = "«" + Shamsi.MonthLabel(Month) + "» ورقی ندارد — ورق‌های «"
+                      + Shamsi.MonthLabel(other) + "» سرِ جایشان‌اند";
+            MonthHintAction = "نمایشِ «" + Shamsi.MonthLabel(other) + "»";
+            _hintTarget = other;
+        }
+        else { MonthHint = ""; MonthHintAction = ""; }
+        OnPropertyChanged(nameof(EmptyText));
+    }
+
+    protected override Task OnGoMonthHintAsync()
+    {
+        if (_hintTarget.Length == 0) return Task.CompletedTask;
+        _monthAuto = false;
+        var t = _hintTarget;
+        if (!Months.Contains(t)) Months.Insert(0, t);
+        Month = t;
+        BuildPickers();
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -1064,6 +1141,7 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
             Cards.Add(new WaraqCardViewModel(w, _host.Waraq));
         }
         OnPropertyChanged(nameof(IsEmpty));
+        RefreshMonthHint();
     }
 
     /// <summary>
@@ -1240,6 +1318,15 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
     private async Task DeleteSheetAsync(WaraqEntry? w)
     {
         if (w is null) return;
+        // ⛔ «×»ی گوشهٔ کارت کلِ ورق را می‌برد — هر دو شیفت، رسیدِ گاوصندوق،
+        // و ردیف‌هایی که از این ورق در حساب‌ها نشسته‌اند. تا ۱۴۰۵/۰۷/۱۲ بی
+        // هیچ پرسشی می‌رفت؛ یک کلیکِ ناخواسته یعنی یک ورقِ ناپدید. حسابِ
+        // امانت همین پرسش را از اول داشت.
+        if (!await Dialogs.ConfirmAsync("حذفِ ورق",
+                "ورقِ " + (w.DateShamsi ?? "") + " با هر دو شیفت حذف شود؟ "
+              + "ردیف‌هایی که از همین ورق به حساب‌ها و گاوصندوق رفته‌اند هم برداشته می‌شوند. "
+              + "(به سطلِ زباله می‌رود و تا ۱۵ روز برمی‌گردد.)",
+                "حذف شود", "نه")) return;
         await _host.WaraqData.DeleteAsync(w.Id);
         await ReloadAsync();
     }

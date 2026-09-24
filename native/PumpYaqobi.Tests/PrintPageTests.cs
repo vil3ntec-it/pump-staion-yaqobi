@@ -402,10 +402,17 @@ public class PrintPageTests
         // هیچ رنگی مستقیم روی ورق نمی‌نشیند — همه از Paint می‌گذرند
         foreach (var call in new[] { ".FontColor(HeadFg)", ".FontColor(CellFg)", ".Background(HeadBg)", ".Background(RowAlt)" })
             Assert.DoesNotContain(call, d);
-        Assert.Contains("FontColor(Paint(", d);
+        // ⚠️ از ۱۴۰۵/۰۷/۱۲ نوشته از ‎Ink‎ و خط از ‎Edge‎ می‌گذرد — هر دو روی
+        // همان ‎Paint‎ ساخته شده‌اند و فقط در سیاه‌وسفید قاعدهٔ خودشان را دارند
+        // (خطِ روشن سفید نشود، برچسبِ کم‌رنگ ناپدید نشود). رفتارش در
+        // ‎SheetsWidthsPrintTests.SiyahVaSefid_…‎ سنجیده می‌شود.
+        Assert.Contains("FontColor(Ink(", d);
         Assert.Contains("Background(Paint(", d);
+        Assert.DoesNotContain("FontColor(Paint(", d);
+        Assert.DoesNotContain("BorderColor(Paint(", d);
+        Assert.Contains("return Paint(hex);", d);          // رنگی و خاکستری همان Paint
         // و خطِ خانه با «خطوطِ جدول» خاموش، هیچ
-        Assert.Contains("Current.Gridlines ? Paint(hex) : Colors.Transparent", d);
+        Assert.Contains("Current.Gridlines ? Edge(hex) : Colors.Transparent", d);
     }
 
     /// <summary>پنجرهٔ «تنظیمِ ورق» چهار زبانه دارد — همان چهارتای سایت و اکسل.</summary>

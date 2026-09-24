@@ -73,9 +73,9 @@ public sealed class ShiftsReport : ISetupDocument
         var days = ByDate();
         if (days.Count == 0)
         {
-            col.Item().Border(1).BorderColor(Line).Padding(16).AlignCenter()
+            col.Item().Border(1).BorderColor(DocStyle.Edge(Line)).Padding(16).AlignCenter()
                .Text("هیچ گزارشی ثبت نشده")
-               .FontSize(DocStyle.CellSize).FontColor(DocStyle.FootFg);
+               .FontSize(DocStyle.CellSize).FontColor(DocStyle.Ink(DocStyle.FootFg));
             return;
         }
 
@@ -89,7 +89,7 @@ public sealed class ShiftsReport : ISetupDocument
     });
 
     private void Card(IContainer c, string date, List<ParchaReport> reps, int index, int total) =>
-        c.Border(1).BorderColor(Line).Padding(9).Column(card =>
+        c.Border(1).BorderColor(DocStyle.Edge(Line)).Padding(9).Column(card =>
     {
         var petrol = reps.Where(r => r.Fuel != FuelType.Diesel).ToList();
         var diesel = reps.Where(r => r.Fuel == FuelType.Diesel).ToList();
@@ -108,24 +108,24 @@ public sealed class ShiftsReport : ISetupDocument
 
         var head = _in.DieselOnly ? DocStyle.Diesel : Head;
 
-        card.Item().BorderBottom(2).BorderColor(head).PaddingBottom(5).Row(row =>
+        card.Item().BorderBottom(2).BorderColor(DocStyle.Edge(head)).PaddingBottom(5).Row(row =>
         {
             row.RelativeItem().Column(h =>
             {
                 h.Item().Text((_in.DieselOnly ? "🟤" : "⛽") + " پمپ یعقوبی — گزارش "
                               + PersianText.Num(index))
-                 .FontSize(DocStyle.BoxValue).Bold().FontColor(head);
+                 .FontSize(DocStyle.BoxValue).Bold().FontColor(DocStyle.Ink(head));
                 h.Item().Text("📅 " + date + "  |  " + DocStyle.Dash(first.DateMiladi)
                               + "  |  " + DocStyle.Dash(first.DateQamari))
-                 .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Sub);
+                 .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Ink(DocStyle.Sub));
             });
             row.ConstantItem(150).AlignMiddle().Row(s =>
             {
                 s.RelativeItem().AlignLeft().Text(done ? "✅ کامل" : "⏳ ناقص")
-                 .FontSize(DocStyle.BoxLabel).Bold().FontColor(done ? Green : Red);
+                 .FontSize(DocStyle.BoxLabel).Bold().FontColor(DocStyle.Ink(done ? Green : Red));
                 s.ConstantItem(52).AlignLeft()
                  .Text(PersianText.Num(index) + " / " + PersianText.Num(total))
-                 .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Sub);
+                 .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Ink(DocStyle.Sub));
             });
         });
 
@@ -133,7 +133,7 @@ public sealed class ShiftsReport : ISetupDocument
         if (!_in.DieselOnly)
         {
             card.Item().PaddingTop(6).Text("⛽ پطرول")
-                .FontSize(DocStyle.HeadSize).Bold().FontColor(DocStyle.Petrol);
+                .FontSize(DocStyle.HeadSize).Bold().FontColor(DocStyle.Ink(DocStyle.Petrol));
             card.Item().PaddingTop(3).Row(row =>
             {
                 row.RelativeItem().PaddingLeft(5).Element(x => Blocks(x, pDays,
@@ -147,7 +147,7 @@ public sealed class ShiftsReport : ISetupDocument
         if (_in.DieselOnly || dDays.Count > 0 || dNights.Count > 0)
         {
             card.Item().PaddingTop(6).Text("🟤 دیزل")
-                .FontSize(DocStyle.HeadSize).Bold().FontColor(DocStyle.Diesel);
+                .FontSize(DocStyle.HeadSize).Bold().FontColor(DocStyle.Ink(DocStyle.Diesel));
             card.Item().PaddingTop(3).Row(row =>
             {
                 row.RelativeItem().PaddingLeft(5).Element(x => Blocks(x, dDays,
@@ -199,25 +199,25 @@ public sealed class ShiftsReport : ISetupDocument
     }
 
     private void Block(IContainer c, ShiftData? s, string label, bool day) =>
-        c.Border(1).BorderColor(Line).Column(col =>
+        c.Border(1).BorderColor(DocStyle.Edge(Line)).Column(col =>
     {
-        col.Item().Background(day ? DayBg : NightBg).Padding(4).AlignCenter()
+        col.Item().Background(DocStyle.Paint(day ? DayBg : NightBg)).Padding(4).AlignCenter()
            .Text(label).FontSize(DocStyle.BoxLabel).Bold()
-           .FontColor(day ? Amber : DocStyle.Blue);
+           .FontColor(DocStyle.Ink(day ? Amber : DocStyle.Blue));
 
         if (s is null || string.IsNullOrWhiteSpace(s.Name))
         {
             col.Item().Padding(10).AlignCenter().Text("ثبت نشده")
-               .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.FootFg);
+               .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Ink(DocStyle.FootFg));
             return;
         }
 
         void Line2(string l, string v, string? color = null) =>
-            col.Item().BorderTop(1).BorderColor(DocStyle.CellLine).Padding(3).Row(r =>
+            col.Item().BorderTop(1).BorderColor(DocStyle.Edge(DocStyle.CellLine)).Padding(3).Row(r =>
             {
-                r.RelativeItem().Text(l).FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Sub);
+                r.RelativeItem().Text(l).FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Ink(DocStyle.Sub));
                 r.RelativeItem().AlignLeft().Text(v)
-                 .FontSize(DocStyle.BoxLabel).Bold().FontColor(color ?? DocStyle.CellFg);
+                 .FontSize(DocStyle.BoxLabel).Bold().FontColor(DocStyle.Ink(color ?? DocStyle.CellFg));
             });
 
         Line2("کارمند", s.Name + (s.PumpNum > 0 ? " (پایه #" + PersianText.Num(s.PumpNum) + ")" : ""));
@@ -234,24 +234,24 @@ public sealed class ShiftsReport : ISetupDocument
             Line2("💵 پول موجود", N(s.Available) + " افغانی", s.Available < 0m ? Red : Green);
         }
         if (!string.IsNullOrWhiteSpace(s.Note))
-            col.Item().BorderTop(1).BorderColor(DocStyle.CellLine).Padding(3)
-               .Text("📝 " + s.Note).FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Sub);
+            col.Item().BorderTop(1).BorderColor(DocStyle.Edge(DocStyle.CellLine)).Padding(3)
+               .Text("📝 " + s.Note).FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Ink(DocStyle.Sub));
     });
 
     private void SumLine(IContainer c, string title, decimal sale, decimal money,
                          decimal profit, bool grand, string head) =>
-        c.Border(grand ? 1.4f : 1).BorderColor(grand ? head : Line).Padding(5).Row(row =>
+        c.Border(grand ? 1.4f : 1).BorderColor(DocStyle.Edge(grand ? head : Line)).Padding(5).Row(row =>
     {
         row.ConstantItem(120).Text(title)
-           .FontSize(DocStyle.BoxLabel).Bold().FontColor(grand ? head : DocStyle.Sub);
+           .FontSize(DocStyle.BoxLabel).Bold().FontColor(DocStyle.Ink(grand ? head : DocStyle.Sub));
 
         void Cell(string l, string v, string color)
         {
             row.RelativeItem().Row(r =>
             {
-                r.AutoItem().Text(l).FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Sub);
+                r.AutoItem().Text(l).FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Ink(DocStyle.Sub));
                 r.RelativeItem().PaddingRight(4).Text(v)
-                 .FontSize(DocStyle.BoxLabel).Bold().FontColor(color);
+                 .FontSize(DocStyle.BoxLabel).Bold().FontColor(DocStyle.Ink(color));
             });
         }
 

@@ -215,6 +215,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     internal void Load(DebtAccount a)
     {
         Entity = a;
+        OnPropertyChanged(nameof(WidthScope));
         ArchiveCount = 0;
         _rowFilter = "all";      // فیلترِ حسابِ قبلی روی حسابِ تازه نماند
         Adopt(a);
@@ -255,6 +256,10 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     }
 
     public DebtAccount Entity { get; private set; }
+
+    /// <summary>دامنهٔ پهنای ستون‌ها — هر حساب پهنای خودش (‎ExcelGrid.WidthScope‎).</summary>
+    public string WidthScope => "debt-" + Entity.Id;
+
     public DebtCalculationService Calc => _host.Debt;
     public string Title => Entity.MainOfDebtorId != null ? "حسابِ اصلی" : (Entity.Name ?? "حسابِ فرعی");
 
@@ -585,6 +590,9 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     public bool ShowFuelTypeColumn => RowFilter == "all";
 
     /// <summary>جمعِ رسیدهای همین تیل، در دفترِ باز.</summary>
+    /// <summary>همان «رسید قبلی»ِ کادرِ صفحه — برای سندِ چاپی.</summary>
+    internal decimal HeadRasidOf(FuelType fuel) => HeadRasid(fuel);
+
     private decimal HeadRasid(FuelType fuel)
     {
         var t = fuel == FuelType.Diesel ? Totals.Diesel : Totals.Petrol;
@@ -1253,8 +1261,10 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
             Filter: null,
             Rows: rows,
             PercentPetrol: acct.PercentPetrol, PercentDiesel: acct.PercentDiesel,
-            RasidPetrol: money ? acct.RasidMoneyPetrol : acct.RasidFuelPetrol,
-            RasidDiesel: money ? acct.RasidMoneyDiesel : acct.RasidFuelDiesel,
+            //  ⛔ همان «رسید قبلی»ِ کادرِ صفحه، نه فیلدِ کهنهٔ سربرگ — شرحش بالای
+            //  ‎DebtorStatementReport‎.
+            RasidPetrol: acct.HeadRasidOf(FuelType.Petrol),
+            RasidDiesel: acct.HeadRasidOf(FuelType.Diesel),
             BordPetrol: money ? t.Petrol.Bardagi : t.Petrol.Liters,
             BordDiesel: money ? t.Diesel.Bardagi : t.Diesel.Liters,
             RasidRowsPetrol: t.Petrol.Rasid, RasidRowsDiesel: t.Diesel.Rasid,

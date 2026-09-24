@@ -48,8 +48,16 @@ public static class Documents
     /// همان، ولی سند «تنظیمِ ورق» را می‌گیرد — پس با هر بار عوض شدنِ تنظیم
     /// می‌تواند از نو ساخته شود.
     /// </summary>
+    /// <summary>
+    /// ⚠️ فقط برای سنجه‌ها (‎printpages‎): به‌جای باز کردنِ پنجره، سازندهٔ
+    /// همان سندی را که دکمهٔ PDFِ هر بخش می‌سازد برمی‌دارد تا ورق‌هایش تصویر
+    /// و با چشم دیده شوند. در برنامهٔ واقعی همیشه ‎null‎ است.
+    /// </summary>
+    public static Action<Func<PageSetup, IDocument>, string>? CaptureHook { get; set; }
+
     public static async Task ShowAsync(Func<PageSetup, IDocument> build, string title)
     {
+        if (CaptureHook is { } hook) { hook(build, title); return; }
         var owner = Owner;
         if (owner is null) return;
 

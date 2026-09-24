@@ -68,7 +68,7 @@ public sealed class CompanyReport : ISetupDocument
         void Box(RowDescriptor row, string l, string v, string cl, bool last = false)
         {
             var it = last ? row.RelativeItem() : row.RelativeItem().PaddingLeft(6);
-            it.Background(BoxBg).Element(x => DocStyle.SumBox(x, l, v, cl));
+            it.Background(DocStyle.Paint(BoxBg)).Element(x => DocStyle.SumBox(x, l, v, cl));
         }
 
         col.Item().Row(row =>

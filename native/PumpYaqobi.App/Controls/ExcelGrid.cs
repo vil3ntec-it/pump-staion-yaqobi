@@ -96,6 +96,31 @@ public class ExcelGrid : DataGrid
         set => SetValue(WidthKeyProperty, value);
     }
 
+    /// <summary>
+    /// ══ «هر کی برای خودش» — پهنای جدول به ازای هر حساب ═══════════════════
+    ///
+    /// خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «هر جدول باید اندازهٔ خودشو ثبت‌شده
+    /// داشته باشه و رو حساب‌های افرادِ دیگه تأثیر نذاره، هر کی برای خودش.»
+    ///
+    /// ⛔ حسابِ قرض‌دار و صفحهٔ شرکت **یک** جدول‌اند که با هر حساب دادهٔ
+    /// دیگری می‌گیرند (صفحه دور انداخته نمی‌شود — قاعدهٔ ‎enterperf‎)، پس
+    /// کلیدِ خودکارِ پهنا برای همه یکی بود: ستونی که در حسابِ «احمد» کشیده
+    /// شد، در حسابِ «کریم» هم همان‌قدر می‌شد. این دامنه به کلید اضافه می‌شود
+    /// و هر حساب پهنای خودش را دارد.
+    ///
+    /// ⚠️ حسابی که هنوز پهنایی ذخیره نکرده، پهنای **خودکار** می‌گیرد — نه
+    /// پهنای حسابِ دیگری. همان «تأثیر نذاره».
+    /// ⚠️ خالی یعنی دامنه‌ای نیست (بیشترِ جدول‌ها) و کلید همان است که بود.
+    /// </summary>
+    public static readonly StyledProperty<string?> WidthScopeProperty =
+        AvaloniaProperty.Register<ExcelGrid, string?>(nameof(WidthScope));
+
+    public string? WidthScope
+    {
+        get => GetValue(WidthScopeProperty);
+        set => SetValue(WidthScopeProperty, value);
+    }
+
     public event EventHandler? GrowRequested;
 
     public ExcelGrid()
@@ -556,6 +581,19 @@ public class ExcelGrid : DataGrid
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
+        if (change.Property == WidthScopeProperty)
+        {
+            //  حسابِ دیگری در همین جدول نشست ⇒ کلیدِ دیگری، پهنای دیگری.
+            //  همان چیزی که ‎Reset‎ِ فهرست برای «چیدمانِ دیگر» می‌کند.
+            _autoKey = null; _autoKeyFor = -1;
+            _savedRead = false; _saved = null;
+            _spread = false; _pinned = false; _anyRowLoaded = false; _autoWidths = null; _starBase = null;
+            foreach (var c in Columns)
+                c.Width = new DataGridLength(1, DataGridLengthUnitType.Auto);
+            _freshCols = true;
+            InvalidateMeasure();
+            return;
+        }
         if (change.Property != ItemsSourceProperty) return;
         // فهرستِ تازه‌ای از خودِ اتصال رسید ⇒ پارکِ کهنه دیگر معتبر نیست
         if (_parkedAway && ItemsSource is not null) { _parkedAway = false; _parked = null; }
@@ -627,7 +665,7 @@ public class ExcelGrid : DataGrid
 
             if (_saved is null)
             {
-                _spread = false; _pinned = false; _anyRowLoaded = false; _autoWidths = null;
+                _spread = false; _pinned = false; _anyRowLoaded = false; _autoWidths = null; _starBase = null;
                 foreach (var c in Columns)
                     c.Width = new DataGridLength(1, DataGridLengthUnitType.Auto);
 
@@ -1462,6 +1500,17 @@ public class ExcelGrid : DataGrid
         // است و ‎PinOnUserResize‎ نباید دوباره رویش حساب کند.
         if (saved is not null) _pinned = true;
 
+        // ⛔ **خطِ پایهٔ «خودکار»** — همان چیزی که ‎RememberWidths‎ با آن
+        // می‌فهمد پهنایی را کاربر ساخته یا خودِ برنامه. در حالتِ پیکسلی همین
+        // عددهای طبیعی‌اند و در حالتِ ذخیره‌شده همان عددهای ذخیره‌شده. (در
+        // حالتِ ستاره‌ای پهنا به قاب بند است و ‎PinOnUserResize‎ آن را پیش از
+        // نخستین کشیدنِ کاربر می‌گیرد.)
+        // بی این، جدولِ پیکسلی نخستین پهنای خودکارش را «خواستهٔ کاربر» ذخیره
+        // می‌کرد و دفعهٔ بعد همان جای پهنای واقعیِ کاربر می‌نشست.
+        _autoWidths = saved is not null ? (double[])saved.Clone()
+                    : spare ? null : (double[])natural.Clone();
+        _starBase = null;
+
         _spread = true;
     }
 
@@ -1492,8 +1541,10 @@ public class ExcelGrid : DataGrid
     /// <summary>کلیدِ ذخیرهٔ پهنا: دستی اگر داده شده، وگرنه خودکار.</summary>
     private string? EffectiveKey(int visible)
     {
+        var scope = WidthScope;
+        var tail = string.IsNullOrWhiteSpace(scope) ? "" : "@" + scope;
         var k = WidthKey;
-        if (!string.IsNullOrWhiteSpace(k)) return k;
+        if (!string.IsNullOrWhiteSpace(k)) return k + tail;
         if (visible <= 0) return null;
         if (_autoKey is not null && _autoKeyFor == visible) return _autoKey;
 
@@ -1524,7 +1575,7 @@ public class ExcelGrid : DataGrid
         //  پنهان» می‌دید. باطل کردن جای خودش را دارد: بلوکِ ‎Reset‎، همان‌جا
         //  که شمارِ ستون‌ها واقعاً عوض می‌شود.
         _autoKeyFor = visible;
-        return _autoKey = host + "." + mine + "#" + visible;
+        return _autoKey = host + "." + mine + "#" + visible + tail;
     }
 
     private string? _autoKey;
@@ -1601,10 +1652,25 @@ public class ExcelGrid : DataGrid
     /// ⚠️ با تأخیر، نه همان لحظه: کشیدنِ ستون ده‌ها رویدادِ پشتِ سرِ هم
     /// می‌دهد و نوشتنِ فایل در هر کدام، کشیدن را لق می‌کند.
     /// </summary>
+    // ══ «اندازه‌ام ثبت نمی‌شد» — ریشهٔ دوم (۱۴۰۵/۰۷/۱۲) ════════════════
+    //
+    // ⛔ تا جدول پهنایش را خودش نچیده (‎_spread‎)، هیچ چیزی ذخیره
+    // نمی‌شود. سنجهٔ ‎persist widths‎ گرفتش: پس از پر شدنِ دوبارهٔ فهرست
+    // (ماهِ دیگر، حسابِ دیگر، باز شدنِ دوبارهٔ برنامه) ‎SpreadColumns‎
+    // عمداً یک پاس صبر می‌کند (‎_freshCols‎)، ولی همین تابع در **همان**
+    // پاس پهنای ‎Auto‎ را می‌خواند و به‌جای پهنای کاربر روی دیسک
+    // می‌نوشت — و ‎Saved()‎ی پاسِ بعد همان عددِ خودکار را برمی‌گرداند.
+    // یعنی ستونی که کاربر پهن کرده بود، با نخستین باز شدنِ دوباره پاک
+    // می‌شد.
     private void RememberWidths()
     {
+        if (!_spread) return;
+
         var cols = Columns.Where(c => c.IsVisible).ToList();
         if (cols.Count == 0) return;
+
+        //  همهٔ ستون‌ها هنوز ستاره‌ای‌اند ⇒ هیچ‌کدام را کاربر نکشیده.
+        if (!cols.Any(c => c.Width.UnitType == DataGridLengthUnitType.Pixel)) return;
         var key = EffectiveKey(cols.Count);
         if (string.IsNullOrWhiteSpace(key)) return;
         var w = cols.Select(c => c.ActualWidth).ToArray();
@@ -1653,7 +1719,17 @@ public class ExcelGrid : DataGrid
 
         var cols = Columns.Where(c => c.IsVisible).ToList();
         if (cols.Count == 0) return;
-        if (!cols.Any(c => c.Width.UnitType == DataGridLengthUnitType.Pixel)) return;
+
+        // ⛔ همهٔ ستون‌ها هنوز ستاره‌ای‌اند ⇒ کاربر چیزی نکشیده. پهنای همین
+        // لحظه **خطِ پایه** است: همان که کشیدنِ بعدی با آن سنجیده می‌شود.
+        // تا ۱۴۰۵/۰۷/۱۲ خطِ پایه **پس از** کشیدن گرفته می‌شد، پس ستونِ
+        // کشیده‌شده با خودش برابر درمی‌آمد و هیچ‌وقت ذخیره نمی‌شد.
+        if (!cols.Any(c => c.Width.UnitType == DataGridLengthUnitType.Pixel))
+        {
+            if (cols.All(c => !double.IsNaN(c.ActualWidth) && c.ActualWidth > 0))
+                _starBase = cols.Select(c => c.ActualWidth).ToArray();
+            return;
+        }
         if (cols.All(c => c.Width.UnitType == DataGridLengthUnitType.Pixel)) { _pinned = true; return; }
 
         foreach (var c in cols)
@@ -1661,15 +1737,18 @@ public class ExcelGrid : DataGrid
             var w = c.ActualWidth;
             if (double.IsNaN(w) || w <= 0) return;   // هنوز چیده نشده
         }
+        //  ⚠️ ستونی که کاربر کشیده (پیکسلی) همان پهنای خودش را نگه می‌دارد.
         foreach (var c in cols)
-            c.Width = new DataGridLength(c.ActualWidth, DataGridLengthUnitType.Pixel);
+            if (c.Width.UnitType != DataGridLengthUnitType.Pixel)
+                c.Width = new DataGridLength(c.ActualWidth, DataGridLengthUnitType.Pixel);
 
         _pinned = true;
-        // ⚠️ این پهناها را **ذخیره نمی‌کنیم**: خودکارند، نه خواستهٔ کاربر.
-        // همین‌جا نگهشان می‌داریم تا بعداً معلوم شود کاربر ستونی را کشیده
-        // یا نه — شرحش بالای ‎RememberWidths‎.
-        _autoWidths = cols.Select(c => c.ActualWidth).ToArray();
+        // ⚠️ خطِ پایهٔ **پیش از** کشیدن — شرحش بالا و بالای ‎RememberWidths‎.
+        _autoWidths = _starBase is { } b && b.Length == cols.Count ? b : null;
     }
+
+    /// <summary>پهنای ستون‌ها وقتی هنوز همه ستاره‌ای بودند — خطِ پایهٔ «خودکار».</summary>
+    private double[]? _starBase;
 
     private bool _pinned;
 

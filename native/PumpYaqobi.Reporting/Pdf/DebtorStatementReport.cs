@@ -24,11 +24,20 @@ public sealed record DebtorStatementInput(
 /// بازسازیِ مو‌به‌موی ‎pdfPerson()‎ — همان سربرگ، همان دو کادرِ «حساب پطرول» و
 /// «حساب دیزل» با چهار خانه‌شان، همان ده ستون و همان ردیفِ «جمله».
 ///
-/// ⚠️ علامتِ «الباقی» قرینه نوشته می‌شود (‎-rem‎): روی صفحه هم همین‌طور است.
-/// یک‌بار عددِ خام چاپ شد و حسابی که ۸٬۸۷۹ لیتر داشت در ورق «‎-8,944‎» دیده شد.
+/// ══ «ورقِ چاپی همان صفحهٔ حساب است» (۱۴۰۵/۰۷/۱۲) ════════════════════════
 ///
-/// ⚠️ ستونِ «الباقی» در ردیف‌ها عمداً خالی است — در خودِ جدولِ برنامه هم خالی
-/// است («عددِ ردیف‌به‌ردیف جلو نیاید، جمع شود»).
+/// ⛔ سنجهٔ ‎printpages‎ گرفتش: این سند رونوشتِ کهنهٔ ‎pdfPerson‎ی سایت بود و
+/// با صفحهٔ خودِ برنامه **سه جا** فرق داشت — و هر سه روی عددِ پول:
+///   ۱) ستونِ «الباقی»ِ ردیف‌ها **خالی** چاپ می‌شد، در حالی که جدولِ برنامه
+///      برای هر ردیف «بردگی − رسید» را نشان می‌دهد؛
+///   ۲) رسیدِ کادرها از فیلدِ کهنهٔ سربرگ خوانده می‌شد، نه از رسیدهای جدول
+///      (رسیدهای سربرگ از ۱۴۰۵/۰۶/۲۷ ردیفِ جدول‌اند) — پس حسابی که روی صفحه
+///      «رسید قبلی ۴۵ · الباقی ۱۹۵» داشت، در ورق «رسید ۰ · الباقی −۲۴۰» بود؛
+///   ۳) و علامتِ «الباقی» قرینه چاپ می‌شد.
+/// حالا هر عددِ این سند همان است که صفحهٔ حساب نشان می‌دهد و از همان فرمول:
+/// ‎الباقی = برد + فیصدی − رسید‎ (‎PersonViewModel.Remainder‎)، رسید یک‌بار.
+/// ⛔ رسید را خودِ صدا زننده می‌دهد (همان عددِ کادرِ صفحه)؛ این سند دوباره
+/// حسابش نمی‌کند، وگرنه دو جای تصمیم یعنی روزی ورق و صفحه دوباره دو عدد.
 /// </summary>
 public sealed class DebtorStatementReport : ISetupDocument
 {
@@ -40,8 +49,9 @@ public sealed class DebtorStatementReport : ISetupDocument
 
     private bool ShowFuelColumn => _in.Filter is null;
     private string Unit => _in.IsMoneyLedger ? "افغانی" : "لیتر";
-    private string RasidLabel => _in.IsMoneyLedger ? "مقدار رسید پول" : "مقدار رسید تیل";
-    private string RemLabel => _in.IsMoneyLedger ? "الباقی پول" : "الباقی تیل";
+    //  همان برچسب‌های کادرِ صفحهٔ حساب (‎HeadRasidLabel‎ · ‎HeadAlbaqiLabel‎)
+    private string RasidLabel => "رسید قبلی";
+    private string RemLabel => "الباقی";
 
     private static decimal R2(decimal v) => Math.Round(v, 2, MidpointRounding.AwayFromZero);
 
@@ -82,20 +92,17 @@ public sealed class DebtorStatementReport : ISetupDocument
         var pct = petrol ? _in.PercentPetrol : _in.PercentDiesel;
         var rasid = petrol ? _in.RasidPetrol : _in.RasidDiesel;
         var bord = petrol ? _in.BordPetrol : _in.BordDiesel;
-        var rasidRows = petrol ? _in.RasidRowsPetrol : _in.RasidRowsDiesel;
-
         var comm = rasid * pct / 100m;
-        // ‎rem = برد + فیصدی − رسید − رسیدِ ردیف‌ها‎ ، و روی ورق قرینه‌اش نوشته می‌شود
-        var rem = bord + comm - rasid - (_in.IsMoneyLedger ? rasidRows : 0m);
-        var show = -rem;
+        // همان ‎PersonViewModel.Remainder‎: برد + فیصدی − رسید، و همان علامت
+        var show = Math.Round(bord + comm - rasid, 0, MidpointRounding.AwayFromZero);
 
         var line = petrol ? DocStyle.Petrol : DocStyle.Diesel;
 
-        c.Border(1.2f).BorderColor(line).Padding(6).Row(row =>
+        c.Border(1.2f).BorderColor(DocStyle.Edge(line)).Padding(6).Row(row =>
         {
-            row.ConstantItem(112).AlignMiddle().Border(1).BorderColor(line).Padding(5).AlignCenter()
+            row.ConstantItem(112).AlignMiddle().Border(1).BorderColor(DocStyle.Edge(line)).Padding(5).AlignCenter()
                .Text(petrol ? "⛽ حساب پطرول" : "🟤 حساب دیزل")
-               .FontSize(DocStyle.BoxValue).Bold().FontColor(line);
+               .FontSize(DocStyle.BoxValue).Bold().FontColor(DocStyle.Ink(line));
 
             row.RelativeItem().PaddingRight(6).Row(g =>
             {
@@ -158,7 +165,9 @@ public sealed class DebtorStatementReport : ISetupDocument
                 Td(r.Rasid > 0m ? PersianText.Num(r.Rasid) : "—", DocStyle.Money);
             else
                 Td(r.RasidFuel > 0m ? PersianText.Num(r.RasidFuel) + " لیتر" : "—", DocStyle.Fuel);
-            Td("");     // ⚠️ عمداً خالی — مثلِ خودِ جدولِ برنامه
+            //  همان ‎DebtRowViewModel.AlbaqiText‎ی جدولِ برنامه: بردگی − رسید
+            Td(PersianText.Num(Math.Round(bardagi - r.Rasid, 0, MidpointRounding.AwayFromZero)),
+               DocStyle.Blue);
         }
 
         // ── ردیفِ «جمله» ────────────────────────────────────────────────────

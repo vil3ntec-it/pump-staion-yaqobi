@@ -59,11 +59,27 @@ public abstract partial class RowViewModel : ObservableObject, IPendingWrite
         _ = DelayedSaveAsync(cts.Token);
     }
 
+    /// <summary>
+    /// ══ «هر چیزی که می‌نویسم باید درجا ثبت بشه» ═══════════════════════════
+    ///
+    /// خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۲)، حتی «اگر برق یک‌باره برود». سنجهٔ
+    /// ‎persist crash‎ نشان داد متنِ در حالِ تایپ **همان لحظه** به ردیف
+    /// می‌رسد (اتصالِ جدول ‎PropertyChanged‎ است) و تنها فاصله همین مکث
+    /// بود: ۳۵۰ میلی‌ثانیه پس از آخرین کلید. برق که در همان پنجره برود، آن
+    /// چند حرف رفته بود.
+    ///
+    /// ⚠️ صفر نیست، عمداً: صفر یعنی یک تراکنشِ دیتابیس برای هر کلید. ۱۵۰
+    /// کمتر از فاصلهٔ دو کلیدِ تایپِ معمولی است، پس عملاً هر کلمه همان‌جا
+    /// می‌نشیند. سنجه‌های سرعت (‎waraqperf‎، ‎ledgerperf‎، ‎scrollperf‎) با
+    /// همین عدد دویده‌اند.
+    /// </summary>
+    public const int SaveDelayMs = 150;
+
     private async Task DelayedSaveAsync(CancellationToken ct)
     {
         try
         {
-            await Task.Delay(350, ct);
+            await Task.Delay(SaveDelayMs, ct);
             if (ct.IsCancellationRequested) return;
         }
         catch (TaskCanceledException) { return; }   // تایپِ تازه — این یکی لغو شد

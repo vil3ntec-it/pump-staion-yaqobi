@@ -48,7 +48,7 @@ public class WaraqSummaryPlacementTests
 
     /// <summary>هر شش برچسب، با همان نشانه و همان نامِ سایت.</summary>
     [Theory]
-    [InlineData("⛽ جمله بطرول")]
+    [InlineData("⛽ جمله پطرول")]
     [InlineData("🟤 جمله دیزل")]
     [InlineData("🟣 جمله مصرف")]
     [InlineData("💳 جمله قرض")]

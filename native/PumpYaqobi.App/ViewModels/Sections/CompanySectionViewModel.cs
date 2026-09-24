@@ -150,6 +150,7 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
     internal void Load(TilCompany c)
     {
         Entity = c;
+        OnPropertyChanged(nameof(WidthScope));
         _isDiesel = false;                     // هر شرکت با دفترِ پطرول باز می‌شود
         BuildRows();
         Recalc();
@@ -158,6 +159,10 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
     }
 
     public TilCompany Entity { get; private set; }
+
+    /// <summary>دامنهٔ پهنای ستون‌ها — هر شرکت پهنای خودش (‎ExcelGrid.WidthScope‎).</summary>
+    public string WidthScope => "co-" + Entity.Id;
+
     public CompanyService Calc => _host.Company;
     public string Name => Entity.Name ?? "";
 
