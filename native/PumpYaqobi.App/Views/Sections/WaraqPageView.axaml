@@ -41,11 +41,13 @@
 
 
     <Grid RowDefinitions="*,Auto,10,*,Auto">
-      <c:ExcelGrid GrowsToContent="True" WidthKey="waraq.pumps" Grid.Row="0" x:Name="PumpGrid" ItemsSource="{Binding Pumps}" x:CompileBindings="False"
+      <c:ExcelGrid GrowsToContent="True" KeepInside="True" WidthKey="waraq.pumps" Grid.Row="0" x:Name="PumpGrid" ItemsSource="{Binding Pumps}" x:CompileBindings="False"
                   RowDeleteCommand="{Binding $parent[UserControl].DataContext.DeletePumpCommand}">
         <DataGrid.Columns>
           <DataGridTextColumn Header="پایه" Binding="{Binding Num}" Width="Auto" />
-          <DataGridTextColumn Header="تاریخ" Binding="{Binding PumpDate}" Width="Auto" />
+          <!-- ⛔ ستونِ «تاریخ» برداشته شد (۱۴۰۵/۰۷/۱۲) و برنمی‌گردد — خواستهٔ صاحب
+               ریپو: «کادرِ تاریخ رو حذف کن چون بالای پارچه نوشته، بسه.» خودِ
+               ‎PumpDate‎ در داده می‌ماند. -->
           <DataGridTextColumn Header="نام" Binding="{Binding Worker}" Width="Auto" c:Suggest.Key="staff" />
           <DataGridTemplateColumn Header="تیل" Width="Auto">
             <DataGridTemplateColumn.CellTemplate>
@@ -55,32 +57,34 @@
                      نشان داد بیشترِ وقتِ باز شدنِ ورقِ پُر همین است. خواستهٔ صاحب ریپو هم همین
                      بود: «اون فلش فقط جا گرفته» و «با تب یا اینتر عوض بشه». ‎ExcelGrid‎ کلاسِ
                      ‎celltoggle‎ را با ‎Enter‎/‎Tab‎ می‌زند. -->
-                <Button Classes="fuelchip celltoggle" Content="{Binding FuelChipText}"
-                        Command="{Binding ToggleFuelCommand}"
-                        Foreground="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
-                        BorderBrush="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
-                        ToolTip.Tip="زدنش نوعِ تیلِ همین ردیف را پطرول ⇄ دیزل می‌کند" />
+                <!-- ⛔ ردیفی که از پارچه آمده، تیلش همان‌جا تعیین شده و این‌جا عوض
+                     نمی‌شود (خواستهٔ ۱۴۰۵/۰۷/۱۲: «این‌جا قابلِ تغییر نباشه که به مشکل
+                     خورده می‌شه»). کپسول همان است، فقط دکمه نیست. ردیفِ دستیِ
+                     «پایهٔ تازه» همچنان عوضش می‌کند. -->
+                <Panel>
+                  <Button Classes="fuelchip celltoggle" Content="{Binding FuelChipText}"
+                          IsVisible="{Binding FuelEditable}"
+                          Command="{Binding ToggleFuelCommand}"
+                          Foreground="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                          BorderBrush="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                          ToolTip.Tip="زدنش نوعِ تیلِ همین ردیف را پطرول ⇄ دیزل می‌کند" />
+                  <Border Classes="fuelchip locked" IsVisible="{Binding FromParcha}"
+                          BorderBrush="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                          ToolTip.Tip="{Binding FuelLockTip}">
+                    <TextBlock Text="{Binding FuelChipText}"
+                               Foreground="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                  </Border>
+                </Panel>
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
-          <DataGridTextColumn Header="شروع" Binding="{Binding StartText}" Width="Auto" />
-          <!-- ══ «این پایه کمتر از پایهٔ قبلی بود» ═══════════════════════════
-               خواستهٔ صاحب ریپو: عدد سرخ باشد و «با یک دکمه بشود عادی‌اش
-               کرد». ستونِ «شروع» متنی است و رنگِ ردیف‌به‌ردیف نمی‌گیرد؛
-               قالبی کردنش کپی/پیستِ همان ستون را می‌بُرد. پس نشان بغلش
-               می‌نشیند — و زدنش همان دکمهٔ «عادی شد» است. -->
-          <DataGridTemplateColumn Header="هشدار" Width="Auto" IsReadOnly="True">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <Button Classes="ghost" Content="{Binding LowBaseText}" Padding="6,2" FontSize="11.5"
-                        IsVisible="{Binding LowBase}" FontWeight="Bold"
-                        Foreground="{DynamicResource Pump.Danger}"
-                        Command="{Binding ClearLowBaseCommand}"
-                        ToolTip.Tip="شروعِ این پایه از پایهٔ قبلی کمتر بود. زدنِ این دکمه فقط نشان را برمی‌دارد — هیچ عددی عوض نمی‌شود." />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-          <DataGridTextColumn Header="ختم" Binding="{Binding EndText}" Width="Auto" />
+          <!-- ══ «همان کادر سرخ شود» (۱۴۰۵/۰۷/۱۲) ══════════════════════════════
+               ستونِ جداگانهٔ «هشدار» برداشته شد. حالا خودِ خانهٔ «شروع» (شروعی که با
+               ختمِ پایهٔ قبلی جور نیست) یا «ختم» (ختمِ کمتر از شروع) لبهٔ سرخ و یک
+               مثلثِ کوچک می‌گیرد و پیامش بالای خودش می‌آید — ‎IssueTextColumn‎.
+               برداشتنِ نشان: راست‌کلیک روی ردیف ⇐ «نشانِ سرخ را بردار». -->
+          <c:IssueTextColumn Header="شروع" Binding="{Binding StartText}" Width="Auto" IssuePath="StartIssue" />
+          <c:IssueTextColumn Header="ختم" Binding="{Binding EndText}" Width="Auto" IssuePath="EndIssue" />
           <DataGridTextColumn Header="لیتر" Binding="{Binding LitersText}" Width="Auto" IsReadOnly="True" />
           <DataGridTextColumn Header="فی" Binding="{Binding PriceText}" Width="Auto" />
           <DataGridTextColumn Header="فروش" Binding="{Binding SalesText}" Width="Auto" IsReadOnly="True" />
@@ -120,7 +124,7 @@
         <c:LazyBox.Deferred>
           <DataTemplate>
           <Grid ColumnDefinitions="*,8,*">
-            <c:ExcelGrid GrowsToContent="True" WidthKey="waraq.txns" Grid.Column="0" ItemsSource="{Binding TxnsFirst}" x:CompileBindings="False">
+            <c:ExcelGrid GrowsToContent="True" KeepInside="True" WidthKey="waraq.txns" Grid.Column="0" ItemsSource="{Binding TxnsFirst}" x:CompileBindings="False">
               <DataGrid.Columns>
                 <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
                 <!-- ⛔ ستونِ «نوع تیل» برداشته شد (۱۴۰۵/۰۷/۰۶) و برنمی‌گردد.
@@ -170,7 +174,7 @@
               </DataGrid.Columns>
             </c:ExcelGrid>
 
-            <c:ExcelGrid GrowsToContent="True" WidthKey="waraq.txns" Grid.Column="2" ItemsSource="{Binding TxnsSecond}" x:CompileBindings="False">
+            <c:ExcelGrid GrowsToContent="True" KeepInside="True" WidthKey="waraq.txns" Grid.Column="2" ItemsSource="{Binding TxnsSecond}" x:CompileBindings="False">
               <DataGrid.Columns>
                 <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
                 <DataGridTextColumn Header="مقدار تیل" Binding="{Binding LitersText}" Width="Auto" />

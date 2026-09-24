@@ -217,6 +217,48 @@ public sealed class ParchaDataService
         return all.Count == 0 ? 0m : all.Max();
     }
 
+    /// <summary>
+    /// ══ «ختمِ پایهٔ قبلی» برای یک ردیفِ ورق ═════════════════════════════════
+    ///
+    /// ردیفِ ورقی که از پارچه آمده (‎SrcKey‎ = ‎p-&lt;id&gt;-day‎) و نشانِ
+    /// «شروعش جور نیست» دارد، باید بگوید **با چه چیزی** جور نیست. این همان
+    /// زنجیرهٔ ‎BaseHistoryAsync‎ است: بزرگ‌ترین ختمِ همین شمارهٔ پایه و همین
+    /// تیل، در پارچه‌های **پیش از** همین یکی (ترتیبِ تاریخ و بعد شناسه؛ و شبِ
+    /// هر پارچه پس از روزِ همان).
+    ///
+    /// ⚠️ فقط یک ستون خوانده می‌شود و فقط برای ردیفِ نشان‌دار صدا زده می‌شود —
+    /// ورقِ سالم هیچ پرس‌وجوی تازه‌ای ندارد.
+    /// ⛔ مبلغ‌ها متن ذخیره می‌شوند، پس بزرگ‌ترین در C# گرفته می‌شود نه با ‎MAX‎.
+    /// </summary>
+    public async Task<decimal?> PrevEndForWaraqAsync(string? srcKey, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        if (string.IsNullOrWhiteSpace(srcKey)) return null;
+        var parts = srcKey.Split('-');
+        if (parts.Length != 3 || !long.TryParse(parts[1], out var id)) return null;
+        var fuel = parts[0] == "d" ? FuelType.Diesel : FuelType.Petrol;
+        var night = parts[2] == "night";
+
+        await using var db = _dbf.Create();
+        var me = await db.Reports.AsNoTracking()
+                         .Include(r => r.DayShift).Include(r => r.NightShift)
+                         .FirstOrDefaultAsync(r => r.Id == id && r.Fuel == fuel, ct);
+        var mine = night ? me?.NightShift : me?.DayShift;
+        if (me is null || mine is null) return null;
+        var num = mine.PumpNum;
+        var dk = me.DateKey;
+
+        var before = db.Reports.AsNoTracking()
+                       .Where(r => r.Fuel == fuel && r.Id != id && (r.DateKey < dk || (r.DateKey == dk && r.Id < id)));
+        var ends = await before.Where(r => r.DayShift != null && r.DayShift!.PumpNum == num)
+                               .Select(r => r.DayShift!.End).ToListAsync(ct);
+        ends.AddRange(await before.Where(r => r.NightShift != null && r.NightShift!.PumpNum == num)
+                                  .Select(r => r.NightShift!.End).ToListAsync(ct));
+        //  شبِ همین پارچه پس از روزِ همان است
+        if (night && me.DayShift is { } d && d.PumpNum == num) ends.Add(d.End);
+        return ends.Count == 0 ? null : ends.Max();
+    }
+
     /// <summary>یک سطر از «تاریخچهٔ پایه‌ها» — شروع و ختمِ یک شیفت.</summary>
     public sealed record BaseHistoryRow(
         string DateShamsi, int DateKey, string DayName, int ReportNum, ShiftKind Kind,

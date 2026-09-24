@@ -131,7 +131,66 @@ public sealed class WaraqReport : ISetupDocument
             Td(R(amount), Blue);
             Td(Dash0(p.Debt), DocStyle.Danger);
         }
+
+        Footer(t);
     });
+
+    /// <summary>
+    /// ══ «🧮 جمله این شیفت» — ته جدولِ پایه‌ها، مثلِ خودِ صفحهٔ ورق ════════════
+    ///
+    /// گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «داخلِ پی‌دی‌اف جملهٔ این شیفت نیست —
+    /// باید بنویسد دیزل و پطرول همه این‌قدر می‌شوند، یا قرض‌ها یا فروش‌ها.»
+    ///
+    /// پس یک ردیف برای هر تیلی که در این شیفت پایه دارد (لیتر · فروش · قرض،
+    /// هر کدام زیرِ ستونِ خودش) و یک ردیفِ «جمله این شیفت» برای همه.
+    ///
+    /// ⛔ **عددِ تازه‌ای ساخته نشد**: همان قاعدهٔ همین جدول — لیتر
+    /// ‎Math.max(0, ختم − شروع)‎ و فروش = لیتر × فی — روی همان ردیف‌ها. جمعِ
+    /// ردیفِ آخر همان «لیتر / فروش / قرضِ پایه»ی نوارِ «جمله این شیفت»ِ صفحه است.
+    /// ⚠️ روز و شب هرگز با هم جمع نمی‌شوند؛ این سند فقط همین شیفت را دارد.
+    /// </summary>
+    private void Footer(TableDescriptor t)
+    {
+        foreach (var r in ShiftTotalRows(_in.Shift))
+        {
+            t.Cell().ColumnSpan(7).Element(x => DocStyle.Tf(x, r.Label));
+            t.Cell().Element(x => DocStyle.Tf(x, R(r.Liters) + " لیتر"));
+            t.Cell().Element(x => DocStyle.Tf(x, R(r.Sales)));
+            t.Cell().Element(x => DocStyle.Tf(x, Dash0(r.Debt)));
+        }
+    }
+
+    /// <summary>ردیف‌های «جمله»ی ته جدولِ پایه‌ها — جدا تا آزمون‌پذیر باشد.</summary>
+    public static IReadOnlyList<(string Label, decimal Liters, decimal Sales, decimal Debt)> ShiftTotalRows(WaraqShift sd)
+    {
+        var pumps = sd.Pumps.ToList();
+        var rows = new List<(string, decimal, decimal, decimal)>();
+        if (pumps.Count == 0) return rows;
+
+        (decimal L, decimal S, decimal D) Sum(IEnumerable<WaraqPump> ps)
+        {
+            decimal l = 0m, s = 0m, d = 0m;
+            foreach (var p in ps)
+            {
+                var liters = Math.Max(0m, p.End - p.Start);
+                l += liters; s += liters * p.PricePerLiter; d += p.Debt;
+            }
+            return (l, s, d);
+        }
+
+        var fuels = pumps.Select(p => p.Fuel).Distinct().OrderBy(f => f == FuelType.Diesel ? 1 : 0).ToList();
+        if (fuels.Count > 1)
+            foreach (var f in fuels)
+            {
+                var v = Sum(pumps.Where(p => p.Fuel == f));
+                rows.Add((f == FuelType.Diesel ? "🟤 جمله دیزل" : "⛽ جمله پطرول", v.L, v.S, v.D));
+            }
+
+        var all = Sum(pumps);
+        rows.Add(("🧮 جمله این شیفت" + (fuels.Count == 1 ? (fuels[0] == FuelType.Diesel ? " — دیزل" : " — پطرول") : ""),
+                  all.L, all.S, all.D));
+        return rows;
+    }
 
     /// <summary>«قرض/مصرف» — دو ستونِ کنارِ هم، نیمه‌نیمه، مثلِ ورقِ کاغذی.</summary>
     private void Transactions(IContainer c)
