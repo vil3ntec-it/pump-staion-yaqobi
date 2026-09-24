@@ -7,8 +7,9 @@ namespace PumpYaqobi.App.Services;
 ///
 /// نشانیِ سرور در برنامه دو جا نوشته می‌شود و این یک دامِ واقعی است:
 ///
-///   • صفحهٔ «تنظیمات» در <b>دیتابیس</b> می‌نویسد (‎SettingsService.ServerUrl‎
-///     و ‎SyncCode‎) — همان‌جایی که صاحب ریپو واقعاً پُرش می‌کند.
+///   • صفحهٔ «تنظیمات» در <b>دیتابیس</b> می‌نویسد (‎SettingsService.ServerUrl‎)
+///     — همان‌جایی که صاحب ریپو واقعاً پُرش می‌کند. ⛔ رمزِ نوشتن
+///     (‎SyncCode‎) دیگر هرگز آن‌جا نمی‌نشیند (<see cref="Token"/>).
 ///   • بخشِ پیام‌رسان از <b>فایلِ کنارِ برنامه</b> می‌خواند
 ///     (‎AppSettings.ServerUrl‎) — و ثبتِ خودکار هم همان‌جا می‌نویسد، چون
 ///     پیش از ورودِ کاربر اجازهٔ نوشتن در دیتابیس نیست.
@@ -29,9 +30,50 @@ public static class HomeLink
     /// <summary>
     /// رمزِ همین پمپ — همانی که اجازهٔ <b>نوشتن</b> دارد.
     /// ⚠️ این را در کیو‌آرِ کارمند نگذارید؛ آن یکی <see cref="ReadKey"/> است.
+    ///
+    /// ⛔ <b>فقط از <see cref="AppSettings.ServerToken"/></b> — که روی دیسک رمز
+    /// می‌شود (<see cref="SecretStore"/>). تا ۱۴۰۵/۰۷/۱۲ این‌جا اول دیتابیس
+    /// (<c>SettingsService.SyncCode</c>) خوانده می‌شد و ثبتِ خودکار همان رمز
+    /// را <b>خام</b> در <c>pump.db</c> هم می‌نوشت — و <c>pump.db</c> همان
+    /// چیزی است که هر شش ساعت به سرورِ خانگی و ابر پشتیبان می‌شود. یعنی
+    /// رمزِ نوشتنِ پمپ داخلِ هر فایلِ پشتیبان بود.
     /// </summary>
-    public static string Token(AppHost host) =>
-        First(Db(host, SettingsService.SyncCode), AppSettings.Load().ServerToken);
+    public static string Token(AppHost host)
+    {
+        MigrateDbToken(host);
+        return AppSettings.Load().ServerToken.Trim();
+    }
+
+    /// <summary>
+    /// ردیفِ جامانده در دیتابیس ⇒ اگر تنظیمات رمزی ندارند، همان به تنظیماتِ
+    /// رمزشده می‌رود؛ و در هر حال ردیف از دیتابیس <b>پاک</b> می‌شود.
+    ///
+    /// ⚠️ ارزان است و هر بار سنجیده می‌شود: <c>SettingsService</c> جدولش را
+    /// در حافظه نگه می‌دارد، پس «ردیفی نیست» یک خواندنِ دیکشنری است — و
+    /// دفترِ حسابِ دیگری که بعداً باز شود هم پاک‌سازی می‌شود. پیش از ورود
+    /// خواندنِ دیتابیس اجازه ندارد و آن‌جا بارِ بعد امتحان می‌شود.
+    /// </summary>
+    internal static void MigrateDbToken(AppHost host)
+    {
+        try
+        {
+            var legacy = host.Settings.Get(SettingsService.SyncCode);
+            if (legacy is not null)
+            {
+                var file = AppSettings.Load();
+                if (file.ServerToken.Trim().Length == 0 && legacy.Trim().Length > 0)
+                {
+                    file.ServerToken = legacy.Trim();
+                    file.Save();
+                    //  ⛔ اگر نوشتن در تنظیمات نشست (فایلِ قفل)، ردیف پاک نمی‌شود —
+                    //  پاک کردنِ تنها نسخهٔ رمز یعنی پمپی که دیگر به سرورش نمی‌رسد.
+                    if (AppSettings.Load().ServerToken.Trim() != legacy.Trim()) return;
+                }
+                host.Settings.Remove(SettingsService.SyncCode);
+            }
+        }
+        catch { /* پیش از ورود — بارِ بعد */ }
+    }
 
     /// <summary>
     /// رمزِ فقط‌خواندنیِ همین پمپ — همانی که در کیو‌آرِ کارمند و اپِ گوشی

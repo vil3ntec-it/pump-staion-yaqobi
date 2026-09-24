@@ -248,28 +248,36 @@ public class EntitlementsTests : IDisposable
     /// <summary>
     /// مجوز منقضی شده (برنامه دو هفته آفلاین بوده) ⇒ هنوز باز است. این همان
     /// خواستهٔ صریحِ صاحب ریپو است.
+    ///
+    /// ⛔ <b>ولی فقط همان پلن</b> (۱۴۰۵/۰۷/۱۲). این آزمون تا دیروز
+    /// می‌خواست در ارفاق <b>هر شش</b> قفل باز باشد — در حالی که مجوز فقط
+    /// <c>kar</c> را داشت. یعنی رفتارِ ناامنِ «پلنِ استاندارد در ارفاق
+    /// وی‌آی‌پی می‌شود» را قفل کرده بود. ادعا عوض شد، ضعیف نشد: ارفاق
+    /// همچنان باز است، و حالا صریح خواسته می‌شود که پلن گشادتر نشود.
     /// </summary>
     [Fact]
     public void AnExpiredLicenseStillWorksInsideTheGrace()
     {
         var f = Activated(new[] { Entitlements.Kar }, expOffsetMs: -3600_000, subOffsetMs: -3600_000);
-        //  یک ساعت پیش تمام شده و همان لحظه به چشمِ خودمان دیده بودیم
-        f.EntitledUntil = _now - 3600_000;
 
         var st = Entitlements.State(f);
         Assert.False(st.Open);
         Assert.True(st.InGrace);
         Assert.True(st.GraceDaysLeft is >= 13 and <= 14);
-        foreach (var x in Entitlements.Paid) Assert.True(st.Allows(x));
+        Assert.True(st.Allows(Entitlements.Kar));
+        foreach (var x in Entitlements.Paid.Where(x => x != Entitlements.Kar))
+            Assert.False(st.Allows(x), Entitlements.TitleOf(x) + " در پلنِ این مجوز نبود");
     }
 
     [Fact]
     public void AfterTheGraceIsOverItReallyCloses()
     {
-        //  ⚠️ ده دقیقه پیش، نه یک میلی‌ثانیه: ‎LicenseGuard‎ یک دقیقه ارفاقِ
-        //  ساعت دارد، پس «۱ میلی‌ثانیه پیش» هنوز معتبر است (آزمون همین را گرفت).
-        var f = Activated(new[] { Entitlements.Kar }, expOffsetMs: -600_000, subOffsetMs: -600_000);
-        f.EntitledUntil = _now - (long)Entitlements.Grace.TotalMilliseconds - 1;
+        //  ⚠️ ده دقیقه بیشتر از ارفاق، نه یک میلی‌ثانیه: ‎LicenseGuard‎ یک
+        //  دقیقه ارفاقِ ساعت دارد (آزمون همین را گرفت). و ⛔ ارفاق حالا از
+        //  ‎exp‎ِ خودِ مجوز شمرده می‌شود، نه از ‎EntitledUntil‎ِ بی‌امضا — پس
+        //  همان مجوز است که باید پیرتر باشد.
+        var ago = -(long)Entitlements.Grace.TotalMilliseconds - 600_000;
+        var f = Activated(new[] { Entitlements.Kar }, expOffsetMs: ago, subOffsetMs: ago);
 
         var st = Entitlements.State(f);
         Assert.False(st.InGrace);
@@ -294,20 +302,120 @@ public class EntitlementsTests : IDisposable
         Assert.False(st.Allows(Entitlements.Kar));       // پلن همین یکی را داده
     }
 
-    // ── ۵) مُهرِ ارفاق فقط جلو می‌رود ──────────────────────────────────
+    // ── ۵) مُهرِ ارفاق فقط جلو می‌رود — و فقط از مجوزِ امضاشده ───────────
 
+    /// <summary>
+    /// ⛔ تا ۱۴۰۵/۰۷/۱۲ این آزمون می‌خواست پاسخِ <b>بی‌امضای</b> «فعال» مُهر را
+    /// جلو ببرد — همان درزی که «یک عدد در فایل ⇒ ارفاقِ همیشگی» را می‌ساخت.
+    /// حالا وارونه است: حرفِ بی‌امضا هیچ عددی را روی دیسک جلو نمی‌برد، و
+    /// مجوزِ امضاشده جلو می‌برد. «هرگز عقب نمی‌رود» دست‌نخورده ماند.
+    /// </summary>
     [Fact]
     public void TheRememberedStampNeverMovesBackwards()
     {
-        var f = new AppSettings { EntitledUntil = _now + 1_000_000, EntitledPlan = "VIP" };
+        var f = Activated(new[] { Entitlements.Kar });
+        f.EntitledUntil = _now + 1_000_000;
+        f.EntitledPlan = "VIP";
 
         //  پاسخِ نیمهٔ سرور («فعال نیست») نباید مُهر را عقب ببرد
         Entitlements.Remember(f, PumpSubscription.None, null);
         Assert.Equal(_now + 1_000_000, f.EntitledUntil);
 
-        //  ولی اشتراکِ تازه جلو می‌بردش
+        //  ⛔ و «فعال»ِ بی‌امضا هم جلو **نمی‌بردش**
         Entitlements.Remember(f, new PumpSubscription(
             true, "cloud", "VIP", 60, _now + 9_000_000, Array.Empty<string>()), null);
-        Assert.Equal(_now + 9_000_000, f.EntitledUntil);
+        Assert.Equal(_now + 1_000_000, f.EntitledUntil);
+
+        //  ولی مجوزِ امضاشده جلو می‌بردش (sub_ends ۳۰ روز)
+        Entitlements.Remember(f, null, LicenseGuard.CheckStored(f, _now));
+        Assert.Equal(_now + 30L * 24 * 3600 * 1000, f.EntitledUntil);
+    }
+
+    // ── ۶) هیچ عددِ بی‌امضایی قفل باز نمی‌کند ──────────────────────────────
+
+    /// <summary>
+    /// ⭐ <b>همان درزِ اصلی.</b> کسی فایلِ تنظیمات را باز می‌کند و
+    /// <c>EntitledUntil</c> را سالِ ۲۱۰۰ می‌نویسد. تا ۱۴۰۵/۰۷/۱۲ همین یک خط
+    /// ارفاقِ همیشگی و هر شش قفل را باز می‌کرد.
+    /// </summary>
+    [Fact]
+    public void EditingEntitledUntilToTheYear2100OpensNothing()
+    {
+        //  مجوزی که دو ماه پیش تمام شده — و یک عددِ دست‌ساز
+        var ago = -60L * 24 * 3600 * 1000;
+        var f = Activated(Entitlements.Paid, expOffsetMs: ago, subOffsetMs: ago);
+        f.EntitledUntil = new DateTimeOffset(2100, 1, 1, 0, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds();
+
+        var st = Entitlements.State(f);
+        Assert.False(st.Open);
+        Assert.False(st.InGrace);
+        foreach (var x in Entitlements.Paid) Assert.False(st.Allows(x), Entitlements.TitleOf(x));
+
+        //  و بی هیچ مجوزی هم همان
+        var bare = new AppSettings
+        {
+            CloudDeviceUid = Device, CloudDeviceToken = "dev-token", CloudStationId = Station,
+            EntitledUntil = f.EntitledUntil,
+        };
+        var st2 = Entitlements.State(bare);
+        Assert.False(st2.InGrace);
+        foreach (var x in Entitlements.Paid) Assert.False(st2.Allows(x));
+    }
+
+    /// <summary>
+    /// ⛔ پلنِ <b>استاندارد</b> در ارفاق وی‌آی‌پی نمی‌شود — همان فهرستِ
+    /// همان مجوز.
+    /// </summary>
+    [Fact]
+    public void AStandardLicenseInGraceDoesNotOpenAVipOnlyFeature()
+    {
+        var f = Activated(new[] { Entitlements.CloudBackup }, expOffsetMs: -86_400_000, subOffsetMs: -86_400_000);
+
+        var st = Entitlements.State(f);
+        Assert.True(st.InGrace);
+        Assert.True(st.Allows(Entitlements.CloudBackup));
+        Assert.False(st.Allows(Entitlements.QrLive));
+        Assert.False(st.Allows(Entitlements.Kar));
+        Assert.False(st.Allows(Entitlements.Dashboard));
+    }
+
+    /// <summary>ارفاق دقیقاً در <c>exp + Grace</c> تمام می‌شود — از خودِ مجوز.</summary>
+    [Fact]
+    public void GraceEndsExactlyAtExpPlusGrace()
+    {
+        var f = Activated(new[] { Entitlements.Kar }, expOffsetMs: -3_600_000, subOffsetMs: -3_600_000);
+
+        var st = Entitlements.State(f);
+        var exp = _now - 3_600_000;
+        Assert.Equal(exp + (long)Entitlements.Grace.TotalMilliseconds, st.GraceUntil);
+
+        //  یک لحظه پیش از پایان هنوز ارفاق، یک لحظه بعدش نه
+        var inside = st with { NowMs = st.GraceUntil - 1 };
+        var after = st with { NowMs = st.GraceUntil };
+        Assert.True(inside.InGrace);
+        Assert.False(after.InGrace);
+        Assert.False(after.Allows(Entitlements.Kar));
+    }
+
+    /// <summary>
+    /// ⛔ <b>عقب بردنِ ساعتِ ویندوز مجوز را زنده نمی‌کند.</b> مجوز هنوز
+    /// پنج روز «به ساعتِ دیوار» زنده است، ولی این نصب قبلاً ده روز جلوتر را
+    /// دیده (کفِ ساعت) — یعنی ساعت عقب برده شده. پس منقضی دیده می‌شود.
+    /// </summary>
+    [Fact]
+    public void ARolledBackClockDoesNotExtendALicense()
+    {
+        var f = Activated(new[] { Entitlements.Kar }, expOffsetMs: 5L * 24 * 3600 * 1000);
+        Assert.True(Entitlements.State(f).Open);        // ساعتِ دیوار: هنوز زنده
+
+        f.ClockFloorMs = _now + 10L * 24 * 3600 * 1000;  // این نصب ده روز جلوتر را دیده
+        var st = Entitlements.State(f);
+
+        Assert.False(st.Open);
+        Assert.False(LicenseGuard.CheckStored(f).Valid);
+        Assert.True(LicenseClock.Behind(f));
+        //  ارفاق همچنان از exp شمرده می‌شود، نه از ساعتِ عقب‌برده
+        Assert.Equal(_now + 5L * 24 * 3600 * 1000 + (long)Entitlements.Grace.TotalMilliseconds,
+                     st.GraceUntil);
     }
 }

@@ -90,6 +90,24 @@ public sealed class SettingsService : IUnionRateProvider
         Invalidate();
     }
 
+    /// <summary>
+    /// ردیفِ یک کلید را از دیتابیس <b>برمی‌دارد</b> — فقط برای پاک‌سازیِ
+    /// خودِ برنامه (مثلاً رازی که نباید در دیتابیس می‌ماند)، نه کارِ کاربر.
+    ///
+    /// ⚠️ عمداً اجازه نمی‌خواهد: اگر پاک کردنِ یک راز به نقشِ کاربرِ همان
+    /// لحظه بند بود، رازی که در دیتابیس جا مانده با ورودِ یک کارمند برای
+    /// همیشه همان‌جا می‌ماند — و دیتابیس داخلِ بکاپ به سرور می‌رود.
+    /// </summary>
+    public void Remove(string key)
+    {
+        using var db = _dbf.Create();
+        var row = db.Settings.FirstOrDefault(s => s.Key == key);
+        if (row is null) return;
+        db.Settings.Remove(row);
+        db.SaveChanges();
+        Invalidate();
+    }
+
     public void Set(string key, decimal value) =>
         Set(key, value.ToString(CultureInfo.InvariantCulture));
 

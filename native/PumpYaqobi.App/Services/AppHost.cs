@@ -384,6 +384,19 @@ public sealed class AppHost
         {
             try { Current.UseLedgerOf(AppSettings.Load().CloudUserId); }
             catch { /* دفترِ ریشه سرِ جایش است؛ برنامه باید بالا بیاید */ }
+
+            //  ══ اثرِ انگشتِ همین کامپیوتر — بارِ اول، برای نصب‌های امروزی ═══
+            //  ⚠️ TOFU: نصبی که پیش از ۱۴۰۵/۰۷/۱۲ فعال شده این را ندارد و
+            //  همین‌جا ثبتش می‌کند، پس مجوزش سالم می‌ماند؛ از آن به بعد کپیِ
+            //  همین تنظیمات روی کامپیوترِ دیگر پذیرفته نمی‌شود
+            //  (`CloudConfig.MachineMoved`). فقط نصبِ فعال‌شده — نصبِ تازه
+            //  همان لحظهٔ فعال شدن ثبتش می‌کند.
+            try
+            {
+                var f = AppSettings.Load();
+                if (f.CloudDeviceToken.Length > 0 && CloudConfig.RecordMachine(f)) f.Save();
+            }
+            catch { /* ثبت نشدنش هیچ‌وقت نباید جلوی بالا آمدن را بگیرد */ }
         }
 
         return Current;

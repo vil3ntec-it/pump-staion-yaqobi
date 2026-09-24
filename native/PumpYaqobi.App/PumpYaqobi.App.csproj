@@ -43,6 +43,25 @@
     <Version>3.1.1</Version>
   </PropertyGroup>
 
+  <!-- ══ ریشه‌های اعتماد — در زمانِ ساخت، داخلِ خودِ فایلِ برنامه ═══════════
+       ‎LicenseKeys‎: کلیدهای عمومیِ امضای مجوز («kid=SPKI,kid2=SPKI2») ⇒
+       ‎CloudConfig.LicenseKeys‎. ‎UpdateKey‎: کلیدِ عمومیِ امضای ‎SHA256SUMS.txt‎
+       به‌روزرسانی ⇒ ‎UpdateService‎. هر دو را ‎build-native.yml‎ از متغیرهای
+       مخزن می‌دهد (‎-p:LicenseKeys=… -p:UpdateKey=…‎).
+       ⚠️ خالی = رفتارِ دیروز (TOFU برای مجوز، فقط-هش برای به‌روزرسانی)؛ پس
+       ساختِ محلی و آزمون‌ها بی هیچ کلیدی همان‌طور که بودند کار می‌کنند و
+       ساختِ CIای که متغیر را ندارد نمی‌شکند.
+       ⚠️ خطِ فرمانِ MSBuild «;» و «,» را جداکنندهٔ خاصیت‌ها می‌خواند، پس میانِ
+       کلیدها «|» بگذارید (کد همهٔ این‌ها را می‌پذیرد؛ CI خودش جابه‌جا می‌کند). -->
+  <PropertyGroup>
+    <LicenseKeys Condition="'$(LicenseKeys)' == ''"></LicenseKeys>
+    <UpdateKey Condition="'$(UpdateKey)' == ''"></UpdateKey>
+  </PropertyGroup>
+  <ItemGroup>
+    <AssemblyMetadata Include="LicenseKeys" Value="$(LicenseKeys)" />
+    <AssemblyMetadata Include="UpdateKey" Value="$(UpdateKey)" />
+  </ItemGroup>
+
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>

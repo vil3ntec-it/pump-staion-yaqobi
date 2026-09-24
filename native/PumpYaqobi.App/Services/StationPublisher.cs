@@ -508,6 +508,9 @@ public sealed class StationPublisher : IAsyncDisposable
     private static async Task CloudKeepAsync(CancellationToken ct)
     {
         var file = AppSettings.Load();
+        //  کفِ ساعتِ مجوز — هر دقیقه، هم‌پای زمانی که برنامه باز است
+        //  (`LicenseClock`). یک خواندنِ فایل که همین‌جا بود، نه دستورِ دیتابیس.
+        LicenseClock.Tick(file);
         if (!string.IsNullOrWhiteSpace(file.CloudAccountToken))
         {
             var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
@@ -517,6 +520,17 @@ public sealed class StationPublisher : IAsyncDisposable
             //  باز کند. شرحِ کامل بالای `CloudLink.KeepLicenseFreshAsync`.
             await cloud.KeepLicenseFreshAsync(ct);
             return;
+        }
+
+        //  ⛔ دستگاهی که **بی حساب** بند است (با کدِ شش‌رقمی فعال شده، یا
+        //  کاربر از حسابش بیرون آمده) هم مجوزش باید تازه شود — تا
+        //  ۱۴۰۵/۰۷/۱۲ فقط حالتِ بالا تازه می‌شد، پس اشتراکی که مدیر برداشته
+        //  بود روی چنین نصبی تا انقضای خودِ مجوز باز می‌ماند و تمدیدش هم
+        //  هیچ‌وقت نمی‌رسید. (ترمزِ ده‌دقیقه‌ایِ خودِ همان تابع سرِ جایش است.)
+        if (!string.IsNullOrWhiteSpace(file.CloudDeviceToken))
+        {
+            var device = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
+            await device.KeepLicenseFreshAsync(ct);
         }
 
         await CloudLink.CloudHealthAsync(ct);

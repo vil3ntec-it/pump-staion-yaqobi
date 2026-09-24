@@ -165,11 +165,22 @@ public class SettingsPagesTests
         //  می‌شود. (همین آزمون گرفتش.)
         //
         //  و اشتراک باز گذاشته می‌شود چون «مفاد» از ۱۴۰۵/۰۶/۳۰ قفلِ **پلن**
-        //  هم دارد و این آزمون دربارهٔ قفلِ **رمز** است. ارفاق کافی است —
-        //  همان راهی که برنامهٔ بی‌اینترنت هم از آن باز می‌ماند.
+        //  هم دارد و این آزمون دربارهٔ قفلِ **رمز** است.
+        //
+        //  ⛔ تا ۱۴۰۵/۰۷/۱۲ این‌جا فقط `EntitledUntil = +۳۰ روز` نوشته می‌شد و
+        //  «ارفاق» قفلِ پلن را باز می‌کرد — یعنی خودِ این آزمون روی همان درزی
+        //  تکیه داشت که بسته شد (یک عددِ بی‌امضا در فایل ⇒ همه‌چیز باز).
+        //  حالا یک مجوزِ **واقعاً امضاشده** می‌نشیند، همان راهی که مشتریِ
+        //  واقعی دارد. ادعای خودِ آزمون (قفلِ رمز) دست نخورد.
         var file = AppSettings.Load();
-        file.CloudDeviceToken = "pd-test";
-        file.EntitledUntil = DateTimeOffset.UtcNow.AddDays(30).ToUnixTimeMilliseconds();
+        using (var key = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256))
+        {
+            file.CloudDeviceToken = "pd-test";
+            file.CloudDeviceUid = "pc-settings-test";
+            file.CloudStationId = "stn-settings-test";
+            file.CloudPublicKey = Convert.ToBase64String(key.ExportSubjectPublicKeyInfo());
+            file.CloudLicense = SignedLicense(key, file.CloudDeviceUid, file.CloudStationId);
+        }
         file.Save();
 
         var vm = new MainViewModel();
@@ -201,5 +212,27 @@ public class SettingsPagesTests
             Dialogs.PromptHook = null;
             host.Locks.ClearPassword(SectionLockService.Profit);
         }
+    }
+
+    /// <summary>مجوزِ پلنِ کامل، دقیقاً به شکلی که سرور می‌سازد (ES256، P1363).</summary>
+    private static string SignedLicense(System.Security.Cryptography.ECDsa key, string duid, string stn)
+    {
+        static string B64(byte[] b) =>
+            Convert.ToBase64String(b).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var payload = new Dictionary<string, object?>
+        {
+            ["iss"] = "tohid-license-server", ["aud"] = "tohid-pump-app",
+            ["duid"] = duid, ["stn"] = stn,
+            ["iat"] = now, ["nbf"] = now - 60_000, ["exp"] = now + 10L * 24 * 3600 * 1000,
+            ["sub_ends"] = now + 30L * 24 * 3600 * 1000,
+            ["feat"] = Entitlements.Paid, ["core"] = new[] { "debtors" }, ["plan_title"] = "VIP",
+        };
+        var header = B64(System.Text.Encoding.UTF8.GetBytes("""{"alg":"ES256","typ":"TLIC"}"""));
+        var body = B64(System.Text.Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(payload)));
+        var sig = key.SignData(System.Text.Encoding.UTF8.GetBytes($"{header}.{body}"),
+            System.Security.Cryptography.HashAlgorithmName.SHA256,
+            System.Security.Cryptography.DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+        return $"{header}.{body}.{B64(sig)}";
     }
 }

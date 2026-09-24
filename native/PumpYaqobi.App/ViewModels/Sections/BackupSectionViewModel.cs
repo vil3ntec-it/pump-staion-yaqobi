@@ -383,8 +383,11 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             _downloaded = await _update.DownloadAsync(_info, progress);
             if (_downloaded is null)
             {
-                // ⛔ سرخ، و با راهِ بیرون — «هیچ اتفاقی نیفتاد» باگ است
-                UpdateStatus = "❌ گرفتنِ نسخهٔ تازه انجام نشد — «باز کردنِ صفحهٔ دانلود» را بزنید";
+                // ⛔ سرخ، و با راهِ بیرون — «هیچ اتفاقی نیفتاد» باگ است.
+                // ⚠️ اگر چک‌سام یا نشانی رد شد، همان دلیل (بی نامِ میزبان).
+                UpdateStatus = _update.LastProblem.Length > 0
+                    ? "❌ " + _update.LastProblem
+                    : "❌ گرفتنِ نسخهٔ تازه انجام نشد — «باز کردنِ صفحهٔ دانلود» را بزنید";
                 UpdateStatusBrushKey = "Pump.Danger";
                 return;
             }
@@ -407,13 +410,19 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
     /// و جای‌گزینی شکست می‌خورد.
     /// </summary>
     [RelayCommand]
-    private void InstallUpdate()
+    private async Task InstallUpdateAsync()
     {
         if (_downloaded is null) return;
         LastFailure = "";
+        //  ⛔ هر نوشتهٔ در صف همین حالا روی دیسک می‌نشیند — نصاب برنامه را
+        //  می‌بندد و ردیفی که هنوز در مکثِ ذخیره است، با آن می‌رفت.
+        try { await SaveGuard.FlushAllAsync(); } catch { }
         if (!UpdateService.Launch(_downloaded, _info?.LatestVersion))
         {
-            UpdateStatus = "نصبِ نسخهٔ تازه انجام نشد";
+            UpdateStatus = "نصبِ نسخهٔ تازه انجام نشد — فایلِ گرفته‌شده دیگر با چک‌سامش جور نیست یا نصاب بالا نیامد. دوباره «گرفتن» را بزنید.";
+            UpdateStatusBrushKey = "Pump.Danger";
+            ReadyToInstall = false;
+            _downloaded = null;
             return;
         }
 

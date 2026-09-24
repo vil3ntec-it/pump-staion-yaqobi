@@ -293,7 +293,15 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
 
             var s = _host.Settings;
             if (url.Length > 0) s.Set(SettingsService.ServerUrl, url);
-            if (readKey.Length > 0) s.Set(SettingsService.SyncCode, readKey);
+            //  ⛔ رمزِ **خواندن** جای خودش را دارد (`ServerReadKey`). تا
+            //  ۱۴۰۵/۰۷/۱۲ این‌جا در `SyncCode`ِ دیتابیس — همان جای رمزِ
+            //  **نوشتن** — می‌نشست: هم رمزِ نوشتن را می‌پوشاند و هم خام داخلِ
+            //  `pump.db` (و هر پشتیبانش) می‌ماند.
+            if (readKey.Length > 0)
+            {
+                var file = AppSettings.Load();
+                if (file.ServerReadKey != readKey) { file.ServerReadKey = readKey; file.Save(); }
+            }
 
             StationLine = station.Length > 0
                 ? $"⛽ پمپِ وصل‌شده: {station}"
@@ -314,15 +322,15 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     private void ShowSubscription()
     {
         var file = AppSettings.Load();
-        var check = LicenseGuard.Check(
-            file.CloudLicense, file.CloudPublicKey,
-            CloudConfig.DeviceUid(file), file.CloudStationId,
-            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+        //  ⚠️ از همان درِ یگانه (`CheckStored`): کفِ ساعت و اثرِ انگشتِ
+        //  کامپیوتر هم سنجیده می‌شوند — وگرنه پروفایل «فعال» می‌گفت در حالی
+        //  که قفل‌ها بسته بودند.
+        var now = LicenseClock.Now(file);
+        var check = LicenseGuard.CheckStored(file, now);
 
         SubActive = check.Valid;
         VipDays = check.Valid && check.SubscriptionEndsAt > 0
-            ? Math.Max(0, (int)((check.SubscriptionEndsAt - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
-                                / 86_400_000L))
+            ? Math.Max(0, (int)((check.SubscriptionEndsAt - now) / 86_400_000L))
             : 0;
 
         // ⚠️ **پیش از** هر بازگشتِ زودهنگام: تا دیروز روی پمپی که هنوز فعال
@@ -333,6 +341,8 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         if (string.IsNullOrWhiteSpace(file.CloudDeviceToken))
         {
             SubStatus = "هنوز فعال نشده — کدِ شش‌رقمیِ اشتراک را بزنید.";
+            //  ⛔ «جدا شده» با «هنوز فعال نشده» یکی نیست: قفلِ بی‌توضیح باگ است.
+            if (CloudLink.DeviceDetachedWhy.Length > 0) SubStatus = "⚠️ " + CloudLink.DeviceDetachedWhy;
             UpdatePill();
             return;
         }
@@ -345,6 +355,10 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         {
             SubStatus = "⚠️ " + check.Reason;
         }
+        //  ⏰ ساعتِ ویندوز از آخرین زمانی که برنامه دیده عقب‌تر است — مجوز
+        //  با همان کفِ ساعت سنجیده می‌شود، پس به کاربر گفته می‌شود چرا.
+        if (LicenseClock.Behind(file))
+            SubStatus += "\n⏰ ساعتِ این کامپیوتر عقب است — تاریخ و ساعتِ ویندوز را درست کنید.";
         UpdatePill();
     }
 
@@ -620,7 +634,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
 
         GraceText = st.InGrace
             ? "⏳ اشتراک تمام شده — " + Shamsi.Money(st.GraceDaysLeft)
-              + " روز ارفاق. در این مدت همه‌چیز کار می‌کند."
+              + " روز ارفاق. در این مدت همان پلنِ شما کار می‌کند."
             : "";
     }
 

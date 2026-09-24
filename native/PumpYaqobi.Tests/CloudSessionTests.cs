@@ -987,4 +987,121 @@ public class CloudSessionTests : IDisposable
     [InlineData("ramz-1234")]
     [InlineData("haroon2026")]
     public void Ramze_Khoob_Migozarad(string good) => Assert.Null(LoginRules.WeakPassword(good));
+
+    // ── ۹) دو نمونه، یک نشست — تازه‌سازیِ یگانه در کلِ پروسه ───────────────
+
+    /// <summary>
+    /// ⛔ <b>باگِ «گاهی بی‌دلیل از حساب بیرون می‌افتم».</b> حلقهٔ پس‌زمینه و
+    /// صفحهٔ پروفایل هر کدام <see cref="CloudLink"/>ِ خودشان را با عکسِ
+    /// جداگانه‌ای از تنظیمات دارند، و سرور توکنِ تازه‌سازی را <b>می‌چرخاند</b>
+    /// و کهنه را دوباره نمی‌پذیرد. پیش از این، نمونهٔ دوم با توکنِ کهنه ۴۰۱
+    /// می‌گرفت و نشستِ سالمِ نمونهٔ اول را از دیسک پاک می‌کرد.
+    ///
+    /// حالا هر دو با نشستِ <b>زنده</b> تمام می‌کنند و فقط <b>یک</b> تازه‌سازی
+    /// زده می‌شود.
+    /// </summary>
+    [Fact]
+    public async Task DoNemune_BaYekNeshast_HichKodam_DigariRa_BiroonNemiandazad()
+    {
+        var gate = new object();
+        var current = "r0";
+        var used = new HashSet<string>();
+        var valid = new HashSet<string>();
+        var n = 0;
+        var refreshes = 0;
+
+        CloudLink.TestTransport = async (req, _) =>
+        {
+            var path = req.RequestUri!.AbsolutePath;
+            lock (_hits) _hits.Add(path);
+            if (path == "/api/auth/refresh")
+            {
+                var body = await req.Content!.ReadAsStringAsync();
+                var rt = JsonDocument.Parse(body).RootElement.GetProperty("refreshToken").GetString();
+                //  کمی مکث تا دو درخواست واقعاً روی هم بیفتند
+                await Task.Delay(40);
+                lock (gate)
+                {
+                    refreshes++;
+                    if (rt != current || used.Contains(rt!))
+                        return Json(HttpStatusCode.Unauthorized,
+                            """{"error":{"code":"invalid_refresh","message":"نشست منقضی شده است"}}""");
+                    used.Add(rt!);
+                    n++;
+                    current = "r" + n;
+                    valid.Add("a" + n);
+                    return Json(HttpStatusCode.OK,
+                        $$"""{"accessToken":"a{{n}}","refreshToken":"{{current}}","accessExpiresAt":{{InAnHour}}}""");
+                }
+            }
+            if (path == "/api/pump/me")
+            {
+                lock (gate)
+                    return valid.Contains(Bearer(req) ?? "")
+                        ? Json(HttpStatusCode.OK, """{"station":{"id":"stn-9"}}""")
+                        : Json(HttpStatusCode.Unauthorized,
+                               """{"error":{"code":"invalid_token","message":"نشست منقضی شده است"}}""");
+            }
+            return Json(HttpStatusCode.NotFound, "{}");
+        };
+
+        //  هر دو از **یک** دیسک و با توکنِ دسترسیِ منقضی شروع می‌کنند
+        var seed = AppSettings.Load();
+        seed.CloudAccountToken = "a0";
+        seed.CloudRefreshToken = "r0";
+        seed.CloudAccessExpiresAt = AnHourAgo;
+        seed.Save();
+
+        var f1 = AppSettings.Load();
+        var f2 = AppSettings.Load();
+        var one = new CloudLink(f1, () => { f1.Save(); return Task.CompletedTask; });
+        var two = new CloudLink(f2, () => { f2.Save(); return Task.CompletedTask; });
+
+        var results = await Task.WhenAll(one.HasStationAsync(), two.HasStationAsync());
+
+        Assert.True(results[0]);
+        Assert.True(results[1]);
+        Assert.Equal(1, refreshes);                     // یک چرخش، نه دو
+        Assert.True(one.SignedIn);
+        Assert.True(two.SignedIn);
+
+        //  ⛔ و نشستِ روی دیسک زنده است — پاک نشده
+        var disk = AppSettings.Load();
+        Assert.Equal(current, disk.CloudRefreshToken);
+        Assert.Contains(disk.CloudAccountToken, valid);
+    }
+
+    /// <summary>
+    /// ⛔ «خروج» توکنِ <b>روی دیسک</b> را باطل می‌کند، نه عکسِ کهنهٔ همین
+    /// نمونه — وگرنه توکنِ زنده روی سرور نود روز می‌ماند.
+    /// </summary>
+    [Fact]
+    public async Task Khoruj_TokeneRooyeDisk_RaBatelMikonad()
+    {
+        string? revoked = null;
+        Serve((path, req) =>
+        {
+            if (path == "/api/auth/logout")
+                revoked = JsonDocument.Parse(req.Content!.ReadAsStringAsync().Result)
+                                      .RootElement.GetProperty("refreshToken").GetString();
+            return Json(HttpStatusCode.OK, "{}");
+        });
+
+        var stale = AppSettings.Load();
+        stale.CloudAccountToken = "a0";
+        stale.CloudRefreshToken = "r0";
+        stale.Save();
+        var link = new CloudLink(stale, () => { stale.Save(); return Task.CompletedTask; });
+
+        //  نمونهٔ دیگری همین حالا چرخاند
+        var other = AppSettings.Load();
+        other.CloudAccountToken = "a1";
+        other.CloudRefreshToken = "r1";
+        other.Save();
+
+        await link.SignOutAsync();
+
+        Assert.Equal("r1", revoked);
+        Assert.Equal("", AppSettings.Load().CloudRefreshToken);
+    }
 }

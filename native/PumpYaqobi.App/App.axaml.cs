@@ -48,6 +48,11 @@ public partial class App : Avalonia.Application
         {
             desktop.MainWindow = new MainWindow();
 
+            //  نمونهٔ دومی که باز شود فقط همین پنجره را جلو می‌آورد
+            //  (`SingleInstance`) — ⚠️ این‌جا، نه در `Program.Main`: آن نخ به
+            //  دیسپچر پست می‌کند و دیسپچر پیش از آوالونیا نباید لمس شود.
+            Services.SingleInstance.Listen();
+
             // ⚠️ راهِ دومِ بسته شدن: خروج از سمتِ سیستم‌عامل (خاموش شدنِ
             // ویندوز، یا ‎Shutdown()‎ از خودِ برنامه). پنجره شنوندهٔ
             // ‎Closing‎ خودش را دارد؛ این یکی همان کار را برای مسیری

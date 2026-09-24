@@ -73,14 +73,34 @@ jobs:
       # ⚠️ هر معماری پوشهٔ خودش را می‌گیرد (‎publish/win-x64‎ و
       #    ‎publish/win-x86‎). یک پوشهٔ مشترک یعنی فایل‌های بومیِ دو معماری
       #    روی هم می‌نشینند و بستهٔ به‌دست‌آمده روی **هیچ‌کدام** بالا نمی‌آید.
+      #
+      # ══ ریشه‌های اعتماد، داخلِ خودِ فایلِ برنامه ══════════════════════════
+      #  ‎LICENSE_PUBLIC_KEYS‎ (متغیرِ مخزن): کلیدهای عمومیِ امضای مجوز،
+      #  «kid=SPKI;kid2=SPKI2» ⇒ ‎CloudConfig.LicenseKeys‎. با پر بودنش کلیدِ
+      #  ‎settings.json‎ دیگر ریشهٔ اعتماد نیست.
+      #  ‎UPDATE_PUBLIC_KEY‎: کلیدِ عمومیِ P-256 (SPKIِ base64) که امضای
+      #  ‎SHA256SUMS.txt.sig‎ را می‌سنجد ⇒ ‎UpdateService‎.
+      #  ⚠️ هر دو اختیاری‌اند: خالی ⇒ TOFU و فقط-هش، همان رفتارِ دیروز — و
+      #  ساخت **نمی‌شکند**.
+      #  ⚠️ خطِ فرمانِ MSBuild «;» و «,» را جداکنندهٔ خاصیت‌ها می‌خواند، پس
+      #  به «|» برگردانده می‌شوند (کد همه را می‌پذیرد).
       - name: ساخت
         working-directory: native
         shell: pwsh
+        env:
+          LICENSE_PUBLIC_KEYS: ${{ vars.LICENSE_PUBLIC_KEYS }}
+          UPDATE_PUBLIC_KEY: ${{ vars.UPDATE_PUBLIC_KEY }}
         run: |
+          $lk = ("$env:LICENSE_PUBLIC_KEYS" -replace '[;,\s]+', '|').Trim('|')
+          $uk = ("$env:UPDATE_PUBLIC_KEY").Trim()
+          $trust = @()
+          if ($lk) { $trust += "-p:LicenseKeys=$lk" } else { Write-Host "::notice::LICENSE_PUBLIC_KEYS خالی است — مجوز با TOFU سنجیده می‌شود" }
+          if ($uk) { $trust += "-p:UpdateKey=$uk" }   else { Write-Host "::notice::UPDATE_PUBLIC_KEY خالی است — به‌روزرسانی فقط با هش سنجیده می‌شود" }
           foreach ($rid in @('win-x64','win-x86')) {
             dotnet publish PumpYaqobi.App -c Release -r $rid --self-contained true `
               -p:Version=${{ steps.ver.outputs.version }} `
               -p:PublishSingleFile=false `
+              @trust `
               -o "publish/$rid"
             if ($LASTEXITCODE -ne 0) { throw "ساختِ $rid شکست خورد" }
           }
@@ -279,6 +299,46 @@ jobs:
             (New-Object System.Text.UTF8Encoding $false))
           Get-Content rel/SHA256SUMS.txt
 
+      #  ══ امضای فهرستِ چک‌سام (اختیاری) ════════════════════════════════════
+      #  برنامه پیش از نصبِ هر به‌روزرسانی هشِ بسته را با همین فهرست می‌سنجد
+      #  (`UpdateService`). اگر `UPDATE_PUBLIC_KEY` در ساخت نشسته باشد، امضای
+      #  همین فهرست هم **لازم** است — پس کلیدِ خصوصیِ جفتش (رازِ
+      #  `UPDATE_SIGNING_KEY`، PEMِ P-256) همین‌جا `SHA256SUMS.txt.sig` را
+      #  می‌سازد: ES256، خامِ P1363 (۶۴ بایت) روی بایت‌های **دقیقِ** فایل.
+      #  ⚠️ با خودِ دات‌نتِ pwsh امضا می‌شود، نه openssl — همان الگوریتم، بی
+      #  وابستگی به این‌که رانر openssl را در PATH داشته باشد.
+      #  ⚠️ رازِ خالی ⇒ امضایی ساخته نمی‌شود و ساخت **نمی‌شکند** (حالتِ
+      #  فقط-هش). ولی اگر کلیدِ عمومی هست و راز نیست، نسخهٔ منتشرشده به‌روز
+      #  نمی‌شود — پس همین‌جا هشدار می‌دهد.
+      - name: امضای چک‌سام‌ها
+        shell: pwsh
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+          UPDATE_PUBLIC_KEY: ${{ vars.UPDATE_PUBLIC_KEY }}
+        run: |
+          if (-not "$env:UPDATE_SIGNING_KEY".Trim()) {
+            if ("$env:UPDATE_PUBLIC_KEY".Trim()) {
+              Write-Host "::warning::UPDATE_PUBLIC_KEY هست ولی رازِ UPDATE_SIGNING_KEY نیست — این نسخه امضا ندارد و برنامه نصبش نمی‌کند"
+            }
+            exit 0
+          }
+          $ec = [System.Security.Cryptography.ECDsa]::Create()
+          $ec.ImportFromPem($env:UPDATE_SIGNING_KEY)
+          $bytes = [System.IO.File]::ReadAllBytes((Join-Path $PWD 'rel/SHA256SUMS.txt'))
+          $sig = $ec.SignData($bytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256,
+                              [System.Security.Cryptography.DSASignatureFormat]::IeeeP1363FixedFieldConcatenation)
+          [System.IO.File]::WriteAllBytes((Join-Path $PWD 'rel/SHA256SUMS.txt.sig'), $sig)
+          if ("$env:UPDATE_PUBLIC_KEY".Trim()) {
+            $pub = [System.Security.Cryptography.ECDsa]::Create()
+            $read = 0
+            $pub.ImportSubjectPublicKeyInfo([Convert]::FromBase64String("$env:UPDATE_PUBLIC_KEY".Trim()), [ref]$read)
+            if (-not $pub.VerifyData($bytes, $sig, [System.Security.Cryptography.HashAlgorithmName]::SHA256,
+                                     [System.Security.Cryptography.DSASignatureFormat]::IeeeP1363FixedFieldConcatenation)) {
+              throw "امضای SHA256SUMS.txt با UPDATE_PUBLIC_KEY نمی‌خورد — جفتِ کلیدها یکی نیستند"
+            }
+          }
+          Write-Host "SHA256SUMS.txt امضا شد ($($sig.Length) بایت)"
+
       - name: انتشار
         uses: softprops/action-gh-release@v2
         with:
@@ -359,6 +419,7 @@ jobs:
             rel/PumpYaqobi-app-${{ steps.pack.outputs.baseId86 }}.zip
             rel/version.txt
             rel/SHA256SUMS.txt
+            rel/SHA256SUMS.txt.sig
           make_latest: true
 
       #  ⚠️ و زیپِ بزرگ جداگانه و **بی حقِ شکستن**: اگر شبکهٔ گیت‌هاب باز هم
@@ -406,6 +467,7 @@ jobs:
             rel/base.txt
             rel/base-x86.txt
             rel/SHA256SUMS.txt
+            rel/SHA256SUMS.txt.sig
 
       - name: انتشارِ زیپِ بی‌نصاب (اختیاری)
         continue-on-error: true

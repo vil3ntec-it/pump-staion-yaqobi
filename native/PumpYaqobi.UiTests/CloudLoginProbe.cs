@@ -526,9 +526,14 @@ internal static class CloudLoginProbe
         //  ⚠️ نشانیِ سرورِ خانگی در تنظیماتِ **دفتر** می‌نشیند
         //  (`SettingsService`)، نه در `settings.json`ِ ابر — این دو یکی
         //  نیستند و نباید قاطی شوند.
+        //  ⛔ و رمزِ **خواندن** در جای خودش (`ServerReadKey`)، نه در `SyncCode`ِ
+        //  دیتابیس — آن‌جا جای رمزِ نوشتن بود و خام داخلِ هر پشتیبانِ
+        //  `pump.db` به سرور می‌رفت (۱۴۰۵/۰۷/۱۲). ادعا جابه‌جا شد، ضعیف نشد:
+        //  حالا صریح خواسته می‌شود که در دیتابیس **نباشد**.
         Check("و در تنظیماتِ دفتر نشست (نه در تنظیماتِ ابر)",
               host.Settings.GetString(SettingsService.ServerUrl).Contains("192.168.1.50")
-              && host.Settings.GetString(SettingsService.SyncCode) == "read-key",
+              && AppSettings.Load().ServerReadKey == "read-key"
+              && host.Settings.Get(SettingsService.SyncCode) is null,
               host.Settings.GetString(SettingsService.ServerUrl));
         Check("و پمپِ وصل‌شده نشان داده شد", account.StationLine.Contains("yaqobi"),
               account.StationLine);
