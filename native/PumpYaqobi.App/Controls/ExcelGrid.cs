@@ -663,7 +663,16 @@ public class ExcelGrid : DataGrid
                 _savedRead = false; _saved = null;
             }
 
-            if (_saved is null)
+            //  ⚠️ **سنجیده شد (‎bigtable‎، ۱۴۰۵/۰۷/۱۲)**: از-نو-سنجیدنِ ستون‌ها
+            //  پس از هر پر شدنِ دوباره ~۱۰۰ms به باز شدنِ هر دفتر اضافه می‌کرد.
+            //  پیش از این هیچ‌وقت رخ نمی‌داد، ولی فقط به‌خاطرِ یک باگ: پهنای
+            //  خودکار به‌جای پهنای کاربر ذخیره می‌شد و ‎_saved‎ پر می‌ماند. پس
+            //  حالا از نو سنجیده می‌شود **فقط** وقتی سنجشِ قبلی روی جدولِ
+            //  **خالی** بود — همان حالتِ ورقی که با ردیف‌های خالی باز می‌شد
+            //  و این کار برایش نوشته شد. جدولی که با ردیفِ واقعی چیده شده،
+            //  همان پهنا را نگه می‌دارد.
+            var stale = !_spread || _spreadRows == 0;
+            if (_saved is null && stale)
             {
                 _spread = false; _pinned = false; _anyRowLoaded = false; _autoWidths = null; _starBase = null;
                 foreach (var c in Columns)
@@ -1419,6 +1428,9 @@ public class ExcelGrid : DataGrid
     /// <summary>فهرست تازه پر شده و پهناها هنوز کهنه‌اند.</summary>
     private bool _freshCols;
 
+    /// <summary>شمارِ ردیف‌ها وقتی پهنا چیده شد — صفر یعنی روی جدولِ خالی.</summary>
+    private int _spreadRows;
+
     private void SpreadColumns()
     {
         if (_spread || Columns.Count == 0) return;
@@ -1511,6 +1523,7 @@ public class ExcelGrid : DataGrid
                     : spare ? null : (double[])natural.Clone();
         _starBase = null;
 
+        _spreadRows = RowCount();
         _spread = true;
     }
 

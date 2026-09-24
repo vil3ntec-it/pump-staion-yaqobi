@@ -80,7 +80,11 @@ internal static class InputCharsProbe
         for (var i = 0; i < 30; i++) Pump(win);
 
         Console.WriteLine("── کادرِ ایمیلِ صفحهٔ ورود");
-        var email = Boxes(win).FirstOrDefault(b => b.Watermark == "ایمیل");
+        //  ⚠️ از ریمیکِ صفحهٔ ورود (۳.۱.۱۴۰) نوشتهٔ راهنمای کادرها عوض شد و
+        //  این سنجه از آن روز کادر را پیدا نمی‌کرد — روی ‎main‎ هم سرخ بود.
+        //  کادرِ ایمیل تنها کادری است که راهنمایش «@» دارد.
+        var email = Boxes(win).FirstOrDefault(b => (b.Watermark ?? "").Contains('@') && b.IsEffectivelyVisible)
+                 ?? Boxes(win).FirstOrDefault(b => (b.Watermark ?? "").Contains('@'));
         if (email is null)
         {
             Console.WriteLine("  ✖ کادرِ ایمیل پیدا نشد");
@@ -91,7 +95,7 @@ internal static class InputCharsProbe
         Console.WriteLine("── کادرِ نامِ پمپ (گامِ دو)");
         account.BackToPumpCommand.Execute(null);
         for (var i = 0; i < 20; i++) Pump(win);
-        var pump = Boxes(win).FirstOrDefault(b => b.Watermark == "نامِ پمپ");
+        var pump = Boxes(win).FirstOrDefault(b => (b.Watermark ?? "").Contains("پمپ"));
         if (pump is not null) Type(win, pump);
         else Console.WriteLine("  ⚠️ کادرِ نامِ پمپ پیدا نشد");
 
