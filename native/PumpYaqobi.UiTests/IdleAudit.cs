@@ -155,7 +155,8 @@ internal static class IdleAudit
                       + (sample.Count > 0 ? "مثلاً: " + string.Join(" | ", sample) : ""));
             }
             if (strayRows > 0)
-                bad.Add($"«{sec.Id}»: {strayRows} ردیفِ زنده مالِ بخشی است که دیده نمی‌شود");
+                bad.Add($"«{sec.Id}»: {strayRows} ردیفِ زنده مالِ بخشی است که دیده نمی‌شود"
+                      + StrayWho(win));
             if (strayLaid > 0)
                 bad.Add($"«{sec.Id}»: {strayLaid} کنترلِ نامرئی در پاسِ چیدمان شرکت کرده");
         }
@@ -204,6 +205,46 @@ internal static class IdleAudit
     private static int StrayRows(Window w) =>
         w.GetVisualDescendants().OfType<DataGridRow>()
          .Count(r => !r.IsEffectivelyVisible && !InTallGrid(r));
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ «کدام جدول» — وگرنه این سنجه فقط می‌گوید «یک جا خراب است» ══════════
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  ⛔ یک بار همین سنجه سرخ شد و پیدا کردنِ صاحبِ آن **یک** ردیف ساعت‌ها
+    //  حدس گرفت: «۱ ردیفِ زنده» نه می‌گوید کدام جدول، نه کدام صفحه، نه حتی
+    //  این‌که خودِ بخشِ باز است یا ته‌ماندهٔ بخشِ پیشین. قاعدهٔ همین ریپو:
+    //  «سنجه‌ای که دلیلِ اشتباه چاپ کند، فردا کسی را ساعت‌ها دنبالِ باگی
+    //  می‌فرستد که وجود ندارد» — پس از امروز نشانی‌اش را هم می‌دهد.
+
+    /// <summary>نشانیِ هر ردیفِ سرگردان: صفحه، جدول، و حالِ آن جدول.</summary>
+    private static string StrayWho(Window w)
+    {
+        var lines = new List<string>();
+
+        foreach (var r in w.GetVisualDescendants().OfType<DataGridRow>()
+                           .Where(r => !r.IsEffectivelyVisible && !InTallGrid(r)))
+        {
+            var grid = r.GetVisualAncestors().OfType<DataGrid>().FirstOrDefault();
+            var page = r.GetVisualAncestors().OfType<UserControl>().FirstOrDefault();
+            var sec = r.GetVisualAncestors().OfType<Control>()
+                       .Select(c => c.DataContext)
+                       .OfType<PumpYaqobi.App.ViewModels.SectionViewModel>()
+                       .FirstOrDefault();
+
+            var rows = grid?.ItemsSource is System.Collections.ICollection c ? c.Count : -1;
+            var name = grid is ExcelGrid eg
+                ? (string.IsNullOrWhiteSpace(eg.Name) ? "(بی‌نام)" : eg.Name)
+                  + (string.IsNullOrWhiteSpace(eg.WidthKey) ? "" : " key=" + eg.WidthKey)
+                : "(DataGridِ ساده)";
+
+            lines.Add($"\n        ↳ صفحه {page?.GetType().Name ?? "؟"} · جدول {name}"
+                    + $" · بخشِ آن «{sec?.Id ?? "؟"}» (دیده می‌شود: {sec?.IsShown})"
+                    + $" · جدول دیده می‌شود: {grid?.IsEffectivelyVisible}"
+                    + $" · فهرست {rows} ردیف · بلندیِ ردیف {r.Bounds.Height:0.#}");
+        }
+
+        return string.Concat(lines.Distinct());
+    }
 
     private static bool InTallGrid(Visual row) =>
         row.GetVisualAncestors().OfType<ExcelGrid>().FirstOrDefault()?.GrowsToContent == true;
