@@ -337,11 +337,17 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
     [RelayCommand]
     private Task OpenMediaAsync(ChatMessageViewModel? m) => CrashGuard.RunAsync("باز کردنِ رسانه", async () =>
     {
-        if (m is null || m.MediaId is null || Cloud is not { } cloud) return;
-        var got = await cloud.ChatMediaAsync(m.MediaId, _life.Token);
+        if (m is null || !SafeMediaId(m.MediaId) || Cloud is not { } cloud) return;
+        var got = await cloud.ChatMediaAsync(m.MediaId!, _life.Token);
         if (got is null) { _host.Toast("رسانه نرسید", ToastKind.Error); return; }
         var ext = ExtOf(got.Value.Mime);
-        var path = Path.Combine(Path.GetTempPath(), "pump-chat-" + m.MediaId + ext);
+        //  ⛔ پوشهٔ تصادفیِ خودش، نه نامی قابلِ حدس در پوشهٔ موقتِ مشترک:
+        //  وگرنه برنامهٔ دیگری روی همین کامپیوتر می‌توانست پیش از ما همان
+        //  نام را با فایلِ خودش بگذارد و «باز کن» فایلِ او را اجرا کند.
+        var dir = Path.Combine(Path.GetTempPath(), "pump-chat-" + Convert.ToHexString(
+            System.Security.Cryptography.RandomNumberGenerator.GetBytes(12)).ToLowerInvariant());
+        Directory.CreateDirectory(dir);
+        var path = Path.Combine(dir, m.MediaId + ext);
         await File.WriteAllBytesAsync(path, got.Value.Bytes, _life.Token);
         try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); }
         catch { _host.Toast("برنامه‌ای برای باز کردنِ این فایل نیست", ToastKind.Error); }
@@ -574,8 +580,8 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
     {
         try
         {
-            if (Cloud is not { } cloud || m.MediaId is null) return;
-            var got = await cloud.ChatMediaAsync(m.MediaId, _life.Token);
+            if (Cloud is not { } cloud || !SafeMediaId(m.MediaId)) return;
+            var got = await cloud.ChatMediaAsync(m.MediaId!, _life.Token);
             if (got is null) return;
             using var ms = new MemoryStream(got.Value.Bytes);
             var bmp = new Bitmap(ms);
@@ -619,6 +625,15 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
         ".m4a" => "audio/mp4", ".mp3" => "audio/mpeg", ".wav" => "audio/wav", ".ogg" => "audio/ogg",
         _ => "",
     };
+
+    /// <summary>
+    /// ⛔ شناسهٔ رسانه از سرور (و از پیامِ مشتری) می‌آید و در نامِ فایل و
+    /// مسیرِ درخواست می‌نشیند؛ پس فقط حرف و رقم و «_» و «-» — نه «..»، نه
+    /// «/»، نه «:». هر چیزِ دیگری یعنی «این رسانه باز نمی‌شود».
+    /// </summary>
+    public static bool SafeMediaId(string? id) =>
+        id is { Length: > 0 and <= 80 }
+        && System.Text.RegularExpressions.Regex.IsMatch(id, "^[A-Za-z0-9_-]{1,80}$");
 
     private static string ExtOf(string mime) => mime.ToLowerInvariant() switch
     {

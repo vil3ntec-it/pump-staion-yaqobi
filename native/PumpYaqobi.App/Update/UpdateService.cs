@@ -371,11 +371,7 @@ public sealed class UpdateService
             var parts = new Uri(FeedUrl).AbsolutePath
                 .Split('/', StringSplitOptions.RemoveEmptyEntries);
             var url = "https://github.com/" + parts[1] + "/" + parts[2] + "/releases/latest";
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url)
-            {
-                UseShellExecute = true,
-            });
-            return true;
+            return Services.SafeOpen.Url(url);
         }
         catch { return false; }
     }

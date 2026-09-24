@@ -146,7 +146,11 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             _host.Toast("💾 فایلِ بکاپ ساخته شد — جای امن نگهش دارید", ToastKind.Ok);
         }
         catch (PermissionDeniedException) { _host.Toast("❌ بکاپ فقط از مدیر برمی‌آید", ToastKind.Error); }
-        catch (Exception ex) { _host.Toast("❌ بکاپ گرفته نشد: " + ex.Message, ToastKind.Error); }
+        catch (Exception ex)
+        {
+            CrashGuard.Write("بکاپ", ex);
+            _host.Toast("❌ بکاپ گرفته نشد: " + ErrorText.Friendly(ex), ToastKind.Error);
+        }
         finally { Busy = false; }
     }
 
@@ -265,7 +269,11 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
 
             if (res.Ok) _host.Toast("برای دیدنِ حساب‌ها، برنامه را ببندید و باز کنید", ToastKind.Info);
         }
-        catch (Exception ex) { ImportStatus = "❌ " + ex.Message; }
+        catch (Exception ex)
+        {
+            CrashGuard.Write("آوردنِ داده", ex);
+            ImportStatus = "❌ " + ErrorText.Friendly(ex);
+        }
         finally { ImportBusy = false; }
     }
 

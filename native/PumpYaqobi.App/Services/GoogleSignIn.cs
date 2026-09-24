@@ -74,7 +74,8 @@ public static class GoogleSignIn
         }
         catch (Exception ex)
         {
-            return GoogleResult.No("درِ ورود روی این کامپیوتر باز نشد: " + ex.Message);
+            CrashGuard.Write("ورود با گوگل", ex, report: false);
+            return GoogleResult.No("درِ ورود روی این کامپیوتر باز نشد — " + ErrorText.Friendly(ex));
         }
 
         try
@@ -204,8 +205,8 @@ public static class GoogleSignIn
     /// <summary>مرورگرِ خودِ سیستم — نه هیچ پنجرهٔ داخلی.</summary>
     private static void Browser(string url)
     {
-        try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
-        catch { /* اگر باز نشد، پیامِ خطا از مسیرِ انتظار می‌آید */ }
+        //  ⛔ فقط نشانیِ وب (`SafeOpen`)؛ اگر باز نشد، پیامِ خطا از مسیرِ انتظار می‌آید.
+        SafeOpen.Url(url);
     }
 
     private static string Rand(int bytes) => B64Url(RandomNumberGenerator.GetBytes(bytes));

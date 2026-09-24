@@ -474,13 +474,14 @@ public sealed partial class CameraSectionViewModel : SectionViewModel
     public void OpenExternally(string url)
     {
         if (string.IsNullOrWhiteSpace(url)) return;
-        try
+        //  ⛔ فقط نشانیِ دوربین یا وب — این رشته از کیو‌آر یا کادرِ تایپ
+        //  می‌آید، و «باز کن» روی مسیرِ فایل یعنی اجرای همان فایل (`SafeOpen`).
+        if (!SafeOpen.IsAllowed(url))
         {
-            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            _host.Toast("این لینک نشانیِ دوربین یا وب نیست — باز نمی‌شود", ToastKind.Error);
+            return;
         }
-        catch
-        {
+        if (!SafeOpen.Url(url))
             _host.Toast("باز کردنِ این لینک در ویندوز ممکن نشد", ToastKind.Error);
-        }
     }
 }

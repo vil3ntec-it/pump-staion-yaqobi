@@ -115,13 +115,8 @@ public sealed partial class AppsSectionViewModel : SectionViewModel
     [RelayCommand]
     private void Open(string? url)
     {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(url)) return;
-            System.Diagnostics.Process.Start(
-                new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
-        }
-        catch { }
+        //  ⛔ فقط نشانیِ وب (`SafeOpen`) — هیچ مسیرِ فایلی به ویندوز سپرده نمی‌شود.
+        SafeOpen.Url(url);
     }
 
     /// <summary>

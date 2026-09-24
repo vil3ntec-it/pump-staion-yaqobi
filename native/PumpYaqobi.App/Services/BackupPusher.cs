@@ -243,7 +243,7 @@ public sealed class BackupPusher : IAsyncDisposable
         }
         catch (Exception e)
         {
-            LastError = "به سرور نرسید: " + e.Message;
+            LastError = "به سرور نرسید: " + ErrorText.Friendly(e);
             return false;
         }
     }

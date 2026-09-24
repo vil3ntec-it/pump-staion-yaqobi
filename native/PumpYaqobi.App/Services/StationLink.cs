@@ -175,7 +175,7 @@ public static class StationLink
                 "");
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception e) { return Failed("به سرور نرسیدیم: " + e.Message); }
+        catch (Exception e) { return Failed("به سرور نرسیدیم — " + ErrorText.Friendly(e)); }
     }
 
     private static EnrollReply Failed(string why) => new(false, "", "", "", "", false, why);

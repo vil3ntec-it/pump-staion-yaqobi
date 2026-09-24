@@ -97,14 +97,18 @@ public sealed class SettingsService : IUnionRateProvider
     /// ⚠️ عمداً اجازه نمی‌خواهد: اگر پاک کردنِ یک راز به نقشِ کاربرِ همان
     /// لحظه بند بود، رازی که در دیتابیس جا مانده با ورودِ یک کارمند برای
     /// همیشه همان‌جا می‌ماند — و دیتابیس داخلِ بکاپ به سرور می‌رود.
+    ///
+    /// <para>
+    /// ⛔ <b>حذفِ واقعی، نه نرم</b>: <c>SaveChanges</c>ِ این دیتابیس هر حذفی
+    /// را «نرم» می‌کند (ردیف با <c>DeletedAt</c> می‌ماند) — برای رکوردِ مالی
+    /// درست است، ولی رازی که با همان مقدار در فایل بماند اصلاً پاک نشده.
+    /// پس مستقیم با <c>DELETE</c> می‌رود.
+    /// </para>
     /// </summary>
     public void Remove(string key)
     {
         using var db = _dbf.Create();
-        var row = db.Settings.FirstOrDefault(s => s.Key == key);
-        if (row is null) return;
-        db.Settings.Remove(row);
-        db.SaveChanges();
+        db.Settings.IgnoreQueryFilters().Where(s => s.Key == key).ExecuteDelete();
         Invalidate();
     }
 

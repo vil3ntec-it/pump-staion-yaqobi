@@ -75,7 +75,10 @@ public sealed class VlcVideoFeed : IDisposable
                 catch (Exception e)
                 {
                     _vlc = null;
-                    InitError = e.Message;
+                    //  ⛔ متنِ خام فقط در گزارشِ خطای همین کامپیوتر؛ کاربر یک
+                    //  جملهٔ فارسی می‌بیند (`ErrorText`).
+                    CrashGuard.Write("VLC", e, report: false);
+                    InitError = "پخش‌کنندهٔ ویدیو روی این کامپیوتر بالا نیامد";
                 }
                 return _vlc is not null;
             }
@@ -126,7 +129,8 @@ public sealed class VlcVideoFeed : IDisposable
         catch (Exception e)
         {
             Stop();
-            Failed?.Invoke("تصویر نیامد — لینک یا اتصال را بررسی کنید (" + Short(e.Message) + ")");
+            CrashGuard.Write("دوربین", e, report: false);
+            Failed?.Invoke("تصویر نیامد — لینک یا اتصال را بررسی کنید (" + Short(ErrorText.Friendly(e)) + ")");
         }
     }
 

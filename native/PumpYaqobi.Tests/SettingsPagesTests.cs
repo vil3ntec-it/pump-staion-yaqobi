@@ -214,6 +214,102 @@ public class SettingsPagesTests
         }
     }
 
+    /// <summary>
+    /// ⛔ <b>قفلی که هست، بی رمزِ فعلی عوض یا برداشته نمی‌شود</b> (۱۴۰۵/۰۷/۱۲).
+    /// پیش از این هر کسی که پای برنامهٔ باز می‌نشست رمزِ «مفاد» را عوض
+    /// می‌کرد و خودش می‌دیدش. رمزِ فعلیِ بخش <b>یا</b> رمزِ برنامه پذیرفته است.
+    /// </summary>
+    [Fact]
+    public async Task ChangingOrRemovingASectionLockNeedsTheCurrentPassword()
+    {
+        var host = Host();
+        var row = new SectionLockViewModel(host, SectionLockService.Profit)
+        {
+            Password = "1111", Confirm = "1111",
+        };
+        row.SaveCommand.Execute(null);                         // بخشِ بی‌رمز: بی رمزِ فعلی
+        Assert.Equal("", row.Error);
+        Assert.True(host.Locks.HasPassword(SectionLockService.Profit));
+
+        try
+        {
+            //  بی رمزِ فعلی ⇒ نه
+            row.Password = "2222"; row.Confirm = "2222"; row.Current = "";
+            row.SaveCommand.Execute(null);
+            Assert.NotEqual("", row.Error);
+            Assert.True(host.Locks.Unlock(SectionLockService.Profit, "1111"));
+
+            //  رمزِ فعلیِ نادرست ⇒ نه
+            row.Password = "2222"; row.Confirm = "2222"; row.Current = "0000";
+            row.SaveCommand.Execute(null);
+            Assert.Contains("درست نیست", row.Error, StringComparison.Ordinal);
+            Assert.True(host.Locks.Unlock(SectionLockService.Profit, "1111"));
+
+            //  رمزِ فعلیِ درست ⇒ عوض شد
+            row.Password = "2222"; row.Confirm = "2222"; row.Current = "1111";
+            row.SaveCommand.Execute(null);
+            Assert.Equal("", row.Error);
+            Assert.True(host.Locks.Unlock(SectionLockService.Profit, "2222"));
+
+            //  و رمزِ **برنامه** هم کلید است
+            Assert.Equal(SectionLockService.Check.Ok,
+                host.Locks.ChangePassword(SectionLockService.Profit, "1234", "3333",
+                    typed => PumpYaqobi.Application.Security.PasswordHasher.Verify(typed, host.Auth.AdminPasswordHash() ?? "")));
+            Assert.True(host.Locks.Unlock(SectionLockService.Profit, "3333"));
+
+            //  برداشتن: بی رمزِ فعلی نه، با رمزِ فعلی بله
+            row.Current = "";
+            await row.RemoveCommand.ExecuteAsync(null);
+            Assert.True(host.Locks.HasPassword(SectionLockService.Profit));
+            Dialogs.ConfirmHook = (_, _) => true;
+            row.Current = "3333";
+            await row.RemoveCommand.ExecuteAsync(null);
+            Assert.False(host.Locks.HasPassword(SectionLockService.Profit));
+        }
+        finally
+        {
+            Dialogs.ConfirmHook = null;
+            host.Locks.ClearPassword(SectionLockService.Profit);
+        }
+    }
+
+    /// <summary>
+    /// ⛔ ترمزِ حدس زدن: پس از پنج اشتباه سی ثانیه صبر — و در آن فاصله حتی
+    /// رمزِ درست هم باز نمی‌کند. رمزِ درست پس از ترمز شمارنده را صفر می‌کند.
+    /// </summary>
+    [Fact]
+    public void FiveWrongTriesStartABackoff()
+    {
+        var host = Host();
+        var locks = host.Locks;
+        var now = DateTime.UtcNow;
+        locks.Clock = () => now;
+        locks.SetPassword(SectionLockService.PriceLoss, "9999");
+        try
+        {
+            for (var i = 0; i < SectionLockService.FreeTries; i++)
+                Assert.False(locks.Unlock(SectionLockService.PriceLoss, "غلط"));
+
+            Assert.True(locks.WaitSeconds(SectionLockService.PriceLoss) is > 25 and <= 30);
+            Assert.False(locks.Unlock(SectionLockService.PriceLoss, "9999"));     // حتی درست
+            Assert.Equal(SectionLockService.Check.Wait,
+                         locks.Authorize(SectionLockService.PriceLoss, "9999"));
+
+            now = now.AddSeconds(31);
+            Assert.False(locks.Unlock(SectionLockService.PriceLoss, "غلط"));      // ششمی ⇒ دو برابر
+            Assert.True(locks.WaitSeconds(SectionLockService.PriceLoss) is > 55 and <= 60);
+
+            now = now.AddSeconds(61);
+            Assert.True(locks.Unlock(SectionLockService.PriceLoss, "9999"));
+            Assert.Equal(0, locks.WaitSeconds(SectionLockService.PriceLoss));
+        }
+        finally
+        {
+            locks.Clock = () => DateTime.UtcNow;
+            locks.ClearPassword(SectionLockService.PriceLoss);
+        }
+    }
+
     /// <summary>مجوزِ پلنِ کامل، دقیقاً به شکلی که سرور می‌سازد (ES256، P1363).</summary>
     private static string SignedLicense(System.Security.Cryptography.ECDsa key, string duid, string stn)
     {

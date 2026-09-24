@@ -91,6 +91,11 @@
                   <TextBlock Text="{Binding StateText}" />
 
                   <UniformGrid Rows="1" Classes="stats">
+                    <!-- ⛔ رمزِ فعلی برای عوض کردن یا برداشتنِ قفلی که هست -->
+                    <StackPanel Classes="cell" IsVisible="{Binding HasPassword}">
+                      <TextBlock Text="رمزِ فعلی (یا رمزِ برنامه)" Classes="label" />
+                      <TextBox Text="{Binding Current}" PasswordChar="•" />
+                    </StackPanel>
                     <StackPanel Classes="cell">
                       <TextBlock Text="رمزِ تازهٔ این بخش" Classes="label" />
                       <TextBox Text="{Binding Password}" PasswordChar="•" />
