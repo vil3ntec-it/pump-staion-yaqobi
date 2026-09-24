@@ -227,6 +227,8 @@ public sealed class AppHost
             finally { try { sync?.Hold(false); } catch { /* رفاه */ } }
         }
 
+        //  دفترِ دیگر ⇒ ‎Ctrl+Z‎ نباید قلمِ سطلِ دفترِ قبلی را برگرداند
+        UndoHub.Clear();
         LedgerSwitched?.Invoke();
         return true;
     }

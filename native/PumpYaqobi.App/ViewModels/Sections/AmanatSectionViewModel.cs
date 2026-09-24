@@ -179,6 +179,9 @@ public sealed partial class AmanatAccountViewModel : ObservableObject, IRowBatch
         for (var i = 0; i < count; i++) await AddRowAsync();
     }
 
+    public IReadOnlyList<object> LastRows(int count) =>
+        Rows.Skip(Math.Max(0, Rows.Count - count)).Cast<object>().ToList();
+
     public async Task DeleteRowsAsync(int count)
     {
         if (count < 1 || Rows.Count < count) return;
@@ -440,6 +443,13 @@ public sealed partial class AmanatSectionViewModel : SectionViewModel
     {
         if (card is null) return;
         Page = _all.FirstOrDefault(a => a.Entity.Id == card.Entity.Id);
+    }
+
+    public override async Task AfterUndoAsync()
+    {
+        var id = Page?.Entity.Id;
+        await RefreshAsync();
+        if (id is { } i) Page = _all.FirstOrDefault(a => a.Entity.Id == i);
     }
 
     [RelayCommand]

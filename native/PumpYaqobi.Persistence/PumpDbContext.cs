@@ -544,10 +544,38 @@ public sealed class PumpDbContext : DbContext
     }
 
     public override int SaveChanges()
-    { Stamp(); var n = base.SaveChanges(); Bump(); return n; }
+    { Stamp(); var t = NewTrash(); var n = base.SaveChanges(); Bump(); RaiseTrash(t); return n; }
 
     public override async Task<int> SaveChangesAsync(CancellationToken ct = default)
-    { Stamp(); var n = await base.SaveChangesAsync(ct); Bump(); return n; }
+    { Stamp(); var t = NewTrash(); var n = await base.SaveChangesAsync(ct); Bump(); RaiseTrash(t); return n; }
+
+    /// <summary>
+    /// ══ «همین حالا چیزی به سطل رفت» — برای ‎Ctrl+Z‎ی حذف ═══════════════════════
+    ///
+    /// هر حذفی در این برنامه یک قلمِ سطل در <b>همان</b> ذخیره می‌گذارد
+    /// (‎TrashService.RememberAsync‎)، پس «چه چیزی همین حالا حذف شد» را این‌جا
+    /// بی دست زدن به سی‌وچند سرویسِ حذف می‌شود فهمید — همان «یک نقطه»ای که
+    /// دفترِ همگام‌سازی هم دارد. شنونده (‎UndoHub‎ی برنامه) از روی همین
+    /// می‌داند ‎Ctrl+Z‎ چه چیزی را برگرداند.
+    ///
+    /// ⚠️ شناسه‌ها پس از ذخیره معلوم‌اند، پس رویداد <b>پس از</b> ذخیره می‌رود؛
+    /// و شنونده هرگز نباید ذخیره را بشکند.
+    /// </summary>
+    public static event Action<IReadOnlyList<(long Id, string? Kind)>>? TrashAdded;
+
+    private List<TrashItem>? NewTrash()
+    {
+        if (TrashAdded is null) return null;
+        var l = ChangeTracker.Entries<TrashItem>()
+                             .Where(e => e.State == EntityState.Added).Select(e => e.Entity).ToList();
+        return l.Count == 0 ? null : l;
+    }
+
+    private static void RaiseTrash(List<TrashItem>? l)
+    {
+        if (l is null) return;
+        try { TrashAdded?.Invoke(l.Select(t => (t.Id, t.Kind)).ToList()); } catch { }
+    }
 
     private void Stamp()
     {

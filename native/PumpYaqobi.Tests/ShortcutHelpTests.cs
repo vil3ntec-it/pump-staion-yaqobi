@@ -120,23 +120,35 @@ public class ShortcutHelpTests
     }
 
     /// <summary>
-    /// ⛔ کلیپ‌بورد و برگشت مالِ <b>جدول</b> است، نه شنوندهٔ تونلیِ پنجره.
-    /// اگر روزی به ‎Shortcuts.cs‎ برگردند، کادرِ تایپ دیگر نمی‌تواند متنِ خودش
-    /// را کپی یا برگردان کند — همان اشتباهی که یک بار با ‎Shift+عدد‎ شد و
-    /// نویسه‌ها را خورد (۱۴۰۵/۰۶/۲۹).
+    /// ⛔ کلیپ‌بورد مالِ <b>جدول</b> است، نه شنوندهٔ تونلیِ پنجره. اگر روزی به
+    /// ‎Shortcuts.cs‎ برگردد، کادرِ تایپ دیگر نمی‌تواند متنِ خودش را کپی کند —
+    /// همان اشتباهی که یک بار با ‎Shift+عدد‎ شد و نویسه‌ها را خورد (۱۴۰۵/۰۶/۲۹).
+    ///
+    /// ⚠️ ولی ‎Ctrl+Z‎/‎Ctrl+Y‎ از ۱۴۰۵/۰۷/۱۲ مالِ <b>پنجره</b>‌اند: گزارشِ صاحب
+    /// ریپو «کنترول زد اصلن کار نمیکنه» بود، و ریشه همین بود که برگشت فقط با
+    /// فوکوسِ همان جدول کار می‌کرد و حذف‌ها اصلاً در آن نبودند. ⛔ و باز هم
+    /// <b>بیرونِ کادرِ تایپ</b> — داخلِ کادر، ‎Ctrl+Z‎ حرفِ قبلیِ همان کادر است.
     /// </summary>
     [Fact]
     public void Clipboard_Dar_Jadval_Ast_Na_Dar_Shenavandeye_Panjere()
     {
         var g = Grid();
         Assert.Contains("if (ctrl && !alt && !_editing)", g);
-        foreach (var k in new[] { "Key.C", "Key.X", "Key.V", "Key.A", "Key.Z", "Key.Y" })
+        foreach (var k in new[] { "Key.C", "Key.X", "Key.V", "Key.A" })
             Assert.Contains("e.Key == " + k, g);
 
         // و در شنوندهٔ پنجره نیستند
         var s = Service();
-        foreach (var k in new[] { "Key.C", "Key.V", "Key.X", "Key.A", "Key.Z", "Key.Y" })
+        foreach (var k in new[] { "Key.C", "Key.V", "Key.X", "Key.A" })
             Assert.DoesNotContain("e.Key == " + k + " &&", s);
+
+        // برگشت و دوباره: در پنجره، و فقط بیرونِ کادرِ تایپ
+        Assert.Contains("if (ctrl && !alt && !TypingInBox(sender) && (e.Key == Key.Y || e.Key == Key.Z))", s);
+        Assert.Contains("UndoHub.UndoAsync()", s);
+        Assert.Contains("UndoHub.RedoAsync()", s);
+        // و جدول دیگر پشتهٔ جدای خودش را ندارد
+        Assert.DoesNotContain("private bool UndoEdit()", g);
+        Assert.Contains("Services.UndoHub.Push(new CellStep(this, group));", g);
     }
 
     /// <summary>

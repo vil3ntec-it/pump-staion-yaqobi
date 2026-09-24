@@ -183,6 +183,7 @@ public static class Suggest
 
     private static void Detach()
     {
+        Ghostly(false);
         if (_box is { } b)
         {
             b.PropertyChanged -= OnBoxText;
@@ -217,6 +218,7 @@ public static class Suggest
     {
         if (e.Property != TextBox.TextProperty || _busy || _box is null) return;
         _ghost = "";
+        Ghostly(false);
         _typed = _box.Text ?? "";
         if (_erasing) { _erasing = false; return; }
 
@@ -258,6 +260,19 @@ public static class Suggest
         finally { _busy = false; }
         _typed = typed;
         _ghost = hit;
+        Ghostly(true);
+    }
+
+    /// <summary>
+    /// تکمله کم‌رنگ دیده شود، نه هم‌رنگِ نوشتهٔ کاربر (سبکِ ‎TextBox.ghost‎).
+    /// ⚠️ هر جا تکمله برمی‌خیزد (پذیرش، برگشت، تایپِ تازه، رفتنِ فوکوس)
+    /// کلاس هم برمی‌خیزد — وگرنه انتخابِ واقعیِ بعدیِ کاربر هم نامرئی می‌شد.
+    /// </summary>
+    private static void Ghostly(bool on)
+    {
+        if (_box is not { } b) return;
+        if (on) { if (!b.Classes.Contains("ghost")) b.Classes.Add("ghost"); }
+        else b.Classes.Remove("ghost");
     }
 
     /// <summary>Tab/Enter: جمله می‌ماند و انتخاب برداشته می‌شود.</summary>
@@ -274,6 +289,7 @@ public static class Suggest
         finally { _busy = false; }
         _typed = box.Text ?? "";
         _ghost = "";
+        Ghostly(false);
         return true;
     }
 
@@ -290,6 +306,7 @@ public static class Suggest
         }
         finally { _busy = false; }
         _ghost = "";
+        Ghostly(false);
         return true;
     }
 

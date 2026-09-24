@@ -162,6 +162,12 @@ public static class ThemeManager
         Br("Border", t.Border);
         Br("Text", t.Text);
         Br("Muted", t.Muted);
+        // ══ تکملهٔ خودکار («Suggest») — عمداً کم‌رنگ‌تر از ‎Muted‎ ══════════════
+        // گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «پیشنهادی‌ها خیلی تیره‌اند، هم‌رنگِ
+        // نوشته‌های من؛ تشخیص داده نمی‌شه تکمیل است یا پیشنهاد.» تکمله نوشتهٔ
+        // کاربر نیست — شبیهِ نوشتهٔ راهنمای کادر است، پس نیمه‌راهِ کارت و
+        // ‎Muted‎: خوانا، ولی آشکارا «هنوز نوشته نشده».
+        Br("Ghost", Mix(t.Card, t.Muted, 0.55));
         Br("Label", t.Label);
         Br("Accent", t.Accent);
         Br("OnAccent", t.OnAccent);

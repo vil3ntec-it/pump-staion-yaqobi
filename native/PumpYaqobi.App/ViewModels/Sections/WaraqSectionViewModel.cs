@@ -724,6 +724,9 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         for (var i = 0; i < count; i++) await AddTxnAsync();
     }
 
+    public IReadOnlyList<object> LastRows(int count) =>
+        Txns.Skip(Math.Max(0, Txns.Count - count)).Cast<object>().ToList();
+
     public async Task DeleteRowsAsync(int count)
     {
         if (count < 1 || Txns.Count - count < 1) return;
@@ -1016,6 +1019,17 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
         OnPropertyChanged(nameof(IsListVisible));
         // صفحهٔ حساب تمام‌عرض است، مثلِ مودالِ تمام‌صفحهٔ نسخهٔ وب
         IsPageOpen = v;
+    }
+
+    public override async Task AfterUndoAsync()
+    {
+        if (SheetOpen && Page is { } pg)
+        {
+            var full = await _host.WaraqData.LoadAsync(pg.Entity.Id);
+            if (full is not null) { Show(full); return; }
+            SheetOpen = false;
+        }
+        await ReloadAsync();
     }
 
     /// <summary>همان ورق در همان صفحه — یا نخستین‌بار، ساختنش.</summary>

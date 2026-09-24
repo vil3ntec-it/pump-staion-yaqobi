@@ -105,6 +105,7 @@ internal static class Program
         if (outDir.Equals("keys", StringComparison.OrdinalIgnoreCase)) return KeyAudit.Run();
         if (outDir.Equals("look", StringComparison.OrdinalIgnoreCase)) return LookAudit.Run();
         if (outDir.Equals("cells", StringComparison.OrdinalIgnoreCase)) return CellEditAudit.Run();
+        if (outDir.Equals("undokeys", StringComparison.OrdinalIgnoreCase)) return UndoKeysProbe.Run();
         if (outDir.Equals("waraqperf", StringComparison.OrdinalIgnoreCase)) return WaraqPerf.Run();
         // ══ «هر بخش رو باز می‌کنم جدول‌ها یک ثانیه بعد میان» ═══════════════
         //     dotnet run --project PumpYaqobi.UiTests -- sectionopen
@@ -150,7 +151,6 @@ internal static class Program
         // ══ «برنامه چرا دیر باز می‌شود؟» — اجرای سرد، مرحله به مرحله ═════════
         //     dotnet run --project PumpYaqobi.UiTests -- startup
         if (outDir.Equals("startup", StringComparison.OrdinalIgnoreCase)) return StartupAudit.Run();
-        if (outDir.Equals("plprof", StringComparison.OrdinalIgnoreCase)) return YearsAudit.RunPriceLossProfile();
         // ══ «پردهٔ لودینگ کارش را می‌کند؟» ═════════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- warm
         if (outDir.Equals("warm", StringComparison.OrdinalIgnoreCase)) return WarmAudit.Run();
@@ -291,7 +291,7 @@ internal static class Program
             acc.OpenAccountPageCommand.Execute(null);
         }
 
-        // ۴٫۶) صفحهٔ جزئیاتِ «زیان ناشی از افزایش قیمت» — دو جدولِ برداشت‌ها و فاکتورها
+        // ۴٫۶) «زیان ناشی از افزایش قیمت» — کادرِ خالی، منتظرِ فرمولِ تازهٔ صاحب ریپو
         if (vm.Sections.FirstOrDefault(s => s.Id == "debt") is { } debtSec
             && debtSec.SubSections.OfType<PumpYaqobi.App.ViewModels.Sections.PriceLossSectionViewModel>().FirstOrDefault() is { } pl)
         {
@@ -300,12 +300,7 @@ internal static class Program
             Pump(win);
             Dispatcher.UIThread.RunJobs();
             Pump(win);
-            pl.OpenRowCommand.Execute(pl.Rows.FirstOrDefault());
-            Pump(win);
-            Dispatcher.UIThread.RunJobs();
-            Pump(win);
-            Shot(win, Path.Combine(outDir, $"{++n:00}-priceloss-person.png"));
-            pl.ClosePerson();
+            Shot(win, Path.Combine(outDir, $"{++n:00}-priceloss-empty.png"));
             debtSec.OpenSub = null;
         }
 

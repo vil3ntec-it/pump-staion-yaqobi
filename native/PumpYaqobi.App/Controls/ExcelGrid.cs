@@ -164,6 +164,24 @@ public class ExcelGrid : DataGrid
         BeginningEdit += (_, e) =>
         {
             if (e.Row?.DataContext is ViewModels.ILockedRow { IsLocked: true }) { e.Cancel = true; return; }
+
+            // ══ کلیکِ تک فقط «انتخاب» است، نه «ویرایش» — مثلِ اکسل ══════════════
+            //
+            // گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «شیفت با عدد جدولی رو حذف نمیکنه…
+            // کنترول زد کار نمیکنه.» سنجهٔ ‎undokeys‎ با کلیکِ واقعی ریشه را
+            // نشان داد: ‎DataGrid‎ی آوالونیا با کلیکِ **دوم** روی خانهٔ جاری
+            // ویرایش را باز می‌کند، و از آن لحظه فوکوس در کادرِ تایپ است —
+            // پس ‎Shift+عدد‎ نویسه می‌شد (‎) ( ، ٪‎ — عمداً، قاعدهٔ ۱۴۰۵/۰۶/۲۹)،
+            // ‎Delete‎ یک حرف پاک می‌کرد و ‎Ctrl+Z‎ مالِ کادر بود. کاربر فقط دو
+            // بار روی همان خانه زده بود.
+            //
+            // ⛔ پس ویرایش با کلیکِ تک باز نمی‌شود؛ راه‌هایش همان سه راهِ اکسل‌اند:
+            // **تایپ** (جایگزین می‌کند، ‎OnTextInput‎)، **دوبار-کلیک** و **‎F2‎**.
+            // ⚠️ ستونِ تیک استثناست: تیک با یک کلیک باید بخورد.
+            if (e.EditingEventArgs is PointerPressedEventArgs { ClickCount: < 2 }
+                && e.Column is not DataGridCheckBoxColumn)
+            { e.Cancel = true; return; }
+
             SnapEdit(e.Column, e.Row);
         };
     }
@@ -2696,10 +2714,19 @@ public class ExcelGrid : DataGrid
     private readonly record struct Edit(object Item, System.Reflection.PropertyInfo Prop,
                                         string? Before, string? After);
 
-    private const int UndoDepth = 120;
 
-    private readonly List<List<Edit>> _undo = new();
-    private readonly List<List<Edit>> _redo = new();
+    //  ⛔ پشته دیگر مالِ همین جدول نیست — ‎Services.UndoHub‎ی کلِ برنامه است.
+    //  با پشتهٔ جدا، ‎Ctrl+Z‎ فقط وقتی کار می‌کرد که فوکوس همین‌جا بود، و حذفِ
+    //  ردیف و حساب در هیچ تاریخچه‌ای نبودند (سنجهٔ ‎undokeys‎ گرفتش).
+    private sealed class CellStep : Services.UndoHub.IStep
+    {
+        private readonly WeakReference<ExcelGrid> _grid;
+        private readonly List<Edit> _g;
+        public CellStep(ExcelGrid grid, List<Edit> g) { _grid = new(grid); _g = g; }
+        public string What => _g.Count == 1 ? "ویرایشِ خانه" : PumpYaqobi.Application.Localization.Shamsi.Money(_g.Count) + " خانه";
+        public Task<bool> UndoAsync() => Task.FromResult(_grid.TryGetTarget(out var x) && x.Replay(_g, forward: false));
+        public Task<bool> RedoAsync() => Task.FromResult(_grid.TryGetTarget(out var x) && x.Replay(_g, forward: true));
+    }
 
     /// <summary>عکسِ خانه‌ای که همین حالا ویرایشش باز شد (برای ‎Ctrl+Z‎).</summary>
     private (object Item, System.Reflection.PropertyInfo Prop, string? Before)? _snap;
@@ -2710,11 +2737,11 @@ public class ExcelGrid : DataGrid
 
     /// <summary>این ردیف هنوز در همین جدول هست؟</summary>
     private bool Live(object item) =>
-        ItemsSource is System.Collections.IEnumerable src
+        (ItemsSource ?? (_parkedAway ? _parked : null)) is System.Collections.IEnumerable src
         && src.Cast<object>().Any(o => ReferenceEquals(o, item));
 
     /// <summary>فهرستِ تازه ⇒ تاریخچهٔ کهنه دیگر معنا ندارد.</summary>
-    private void ForgetHistory() { _undo.Clear(); _redo.Clear(); _snap = null; }
+    private void ForgetHistory() { _snap = null; }
 
     /// <summary>
     /// کادرِ انتخاب‌شده: ردیف‌ها (به ترتیبِ خودِ جدول، نه ترتیبِ انتخاب) و
@@ -2780,9 +2807,7 @@ public class ExcelGrid : DataGrid
     private void PushUndo(List<Edit> group)
     {
         if (group.Count == 0) return;
-        _undo.Add(group);
-        if (_undo.Count > UndoDepth) _undo.RemoveAt(0);
-        _redo.Clear();            // شاخهٔ تازه ⇒ «دوباره»ی کهنه بی‌معنا شد
+        Services.UndoHub.Push(new CellStep(this, group));
     }
 
     // ── عکسِ پیش و پسِ تایپِ خودِ کاربر ────────────────────────────────────
@@ -2827,34 +2852,6 @@ public class ExcelGrid : DataGrid
             try { ed.Prop.SetValue(ed.Item, forward ? ed.After : ed.Before); any = true; } catch { }
         }
         return any;
-    }
-
-    /// <summary>‎Ctrl+Z‎ — آخرین ویرایشِ خانه را برمی‌گرداند.</summary>
-    private bool UndoEdit()
-    {
-        while (_undo.Count > 0)
-        {
-            var g = _undo[^1];
-            _undo.RemoveAt(_undo.Count - 1);
-            if (!Replay(g, forward: false)) continue;   // ردیفش دیگر نیست ⇒ رد شو
-            _redo.Add(g);
-            return true;
-        }
-        return false;
-    }
-
-    /// <summary>‎Ctrl+Y‎ (یا ‎Ctrl+Shift+Z‎) — همان را دوباره انجام می‌دهد.</summary>
-    private bool RedoEdit()
-    {
-        while (_redo.Count > 0)
-        {
-            var g = _redo[^1];
-            _redo.RemoveAt(_redo.Count - 1);
-            if (!Replay(g, forward: true)) continue;
-            _undo.Add(g);
-            return true;
-        }
-        return false;
     }
 
     // ── کلیپ‌بورد ─────────────────────────────────────────────────────────
@@ -3071,8 +3068,8 @@ public class ExcelGrid : DataGrid
             if (e.Key == Key.X && !IsReadOnly) { _ = CutSelectionAsync(); e.Handled = true; return; }
             if (e.Key == Key.V && !IsReadOnly) { _ = PasteAsync(); e.Handled = true; return; }
             if (e.Key == Key.A) { SelectAllCells(); e.Handled = true; return; }
-            if (e.Key == Key.Z && !shift) { if (UndoEdit()) e.Handled = true; return; }
-            if (e.Key == Key.Y || (e.Key == Key.Z && shift)) { if (RedoEdit()) e.Handled = true; return; }
+            //  ‎Ctrl+Z‎/‎Ctrl+Y‎ دیگر این‌جا گرفته نمی‌شوند: ‎ShortcutService‎ آن‌ها را
+            //  برای کلِ برنامه می‌گیرد (پشتهٔ ‎UndoHub‎)، هر جا که فوکوس باشد.
         }
 
         // ── Esc: در هر حالتی «برگرد سرِ جای اول» ──────────────────────────

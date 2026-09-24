@@ -472,6 +472,13 @@ public abstract partial class SectionViewModel : ObservableObject
     /// </summary>
     public virtual void CloseOpenPage() { }
 
+    /// <summary>
+    /// پس از ‎Ctrl+Z‎/‎Ctrl+Y‎ی یک <b>حذف</b> (‎UndoHub‎): رکوردی از دیسک برگشت یا
+    /// دوباره رفت، پس همان چیزی که جلوی چشم است از نو خوانده شود — و اگر
+    /// صفحه‌ای درونِ بخش باز است (حساب، شرکت، ورق)، <b>همان</b> صفحه.
+    /// </summary>
+    public virtual Task AfterUndoAsync() => ReloadAsync();
+
     /// <summary>بارگیریِ دوباره (پس از واردکردن بکاپ یا هم‌گام‌سازی).</summary>
     public virtual async Task ReloadAsync()
     {

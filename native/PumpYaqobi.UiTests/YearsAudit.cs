@@ -237,51 +237,6 @@ internal static class YearsAudit
         if (Budget.ElapsedMilliseconds > BudgetMs) { _outOfTime = true; Console.WriteLine("⛔ بودجهٔ زمان تمام شد"); }
     }
 
-    /// <summary>
-    /// ══ «زیان ناشی از افزایش قیمت» با پنج سال داده — کجا وقت می‌رود؟ ══════════
-    ///     dotnet run --project PumpYaqobi.UiTests -- plprof
-    /// بی پنجره: خواندنِ قرض‌داران با رسیدها، فاکتورها، تاریخچهٔ نرخ، و خودِ
-    /// ‎Build‎ — هر کدام جدا، سه بار.
-    /// </summary>
-    public static int RunPriceLossProfile()
-    {
-        var dir = Path.Combine(Path.GetTempPath(), "pump-plprof-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(dir);
-        var file = Path.Combine(dir, "pump.db");
-        Seed(file);
-        AppHost.Start(file);
-
-        //  سنجه با نصبِ **پلن‌دار** می‌دود — وگرنه داشبورد و مفاد/ضرر و
-        //  تاریخچه‌ها قفل‌اند و باز نمی‌شوند. شرحش در `FakeLicense`؛ خودِ
-        //  قفل در بندِ ۱۷ی `verify` و در `EntitlementsTests` سنجیده می‌شود.
-        FakeLicense.Grant();
-
-        var host = AppHost.Current;
-        if (host.Auth.NeedsFirstRun()) host.Auth.CreateFirstAdmin("1234");
-        host.Auth.SignIn("admin", "1234");
-
-        var svc = new PumpYaqobi.Application.Services.PriceLossService();
-        for (var round = 1; round <= 3; round++)
-        {
-            Console.WriteLine($"── دورِ {round}");
-            IReadOnlyList<PumpYaqobi.Domain.Entities.Debtor> debtors = Array.Empty<PumpYaqobi.Domain.Entities.Debtor>();
-            IReadOnlyList<PumpYaqobi.Domain.Entities.Invoice> invoices = Array.Empty<PumpYaqobi.Domain.Entities.Invoice>();
-            IReadOnlyList<PumpYaqobi.Domain.Entities.RateHistoryEntry> rates = Array.Empty<PumpYaqobi.Domain.Entities.RateHistoryEntry>();
-            Mark("قرض‌داران با رسیدها (LoadAllAsync withReceipts)", () => debtors = host.Debtors.LoadAllAsync(withReceipts: true).GetAwaiter().GetResult());
-            Mark("فاکتورها (Invoices.ListAsync)", () => invoices = host.Invoices.ListAsync().GetAwaiter().GetResult());
-            Mark("تاریخچهٔ نرخ (RateHistoryAsync)", () => rates = host.Tools.RateHistoryAsync().GetAwaiter().GetResult());
-            PumpYaqobi.Application.Services.PriceLossReport? rep = null;
-            Mark("خودِ گزارش (PriceLossService.Build)", () => rep = svc.Build(debtors, invoices, rates,
-                host.Settings.UnionRate(PumpYaqobi.Domain.Enums.FuelType.Petrol),
-                host.Settings.UnionRate(PumpYaqobi.Domain.Enums.FuelType.Diesel), PumpYaqobi.Application.Localization.Shamsi.Today()));
-            Console.WriteLine($"   قرض‌دار {debtors.Count:N0} · ردیف {debtors.Sum(d => d.AllAccounts().Sum(a => (a.FuelRows?.Count ?? 0) + (a.MoneyRows?.Count ?? 0))):N0} · فاکتور {invoices.Count:N0} · نرخ {rates.Count:N0} · اشخاصِ گزارش {rep?.List.Count ?? 0:N0}");
-            var vm = new PumpYaqobi.App.ViewModels.Sections.PriceLossSectionViewModel(host);
-            Mark("ویومدل کامل (RefreshAsync، بی پنجره)", () => vm.RefreshAsync().GetAwaiter().GetResult());
-            Console.WriteLine($"   ردیف‌های جدول {vm.Rows.Count:N0}");
-        }
-        return 0;
-    }
-
     // ══ ساختنِ پنج سال داده ═══════════════════════════════════════════════════
 
     internal static List<(string, long)> Seed(string file)

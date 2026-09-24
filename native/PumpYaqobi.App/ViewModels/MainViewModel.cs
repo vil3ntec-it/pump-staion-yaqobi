@@ -39,6 +39,15 @@ public sealed partial class MainViewModel : ObservableObject
         _settings = settings ?? AppSettings.Load();
 
         Lock = new LockViewModel(AppHost.Current);
+
+        // ‎Ctrl+Z‎/‎Ctrl+Y‎ی کلِ برنامه — پس از برگرداندنِ یک حذف، صفحهٔ جلوی
+        // چشم (و صفحهٔ بازِ درونش) از نو خوانده می‌شود. شرح: ‎Services/UndoHub.cs‎
+        UndoHub.Wire();
+        UndoHub.AfterDataChange = async () =>
+        {
+            if (ActiveSection is { } s) await s.AfterUndoAsync();
+            if (!ReferenceEquals(ActiveSection, Current) && Current is { } c) await c.AfterUndoAsync();
+        };
         // ⚠️ بخشِ آغازین بعد از ورود بار می‌شود، نه در سازنده. دو دلیل:
         //   ۱) پیش از ورود هیچ اجازه‌ای نداریم و لایهٔ سرویس درست هم رد می‌کند.
         //   ۲) وقتی در سازنده بار می‌شد، عددهای نوارِ بالا و داشبورد روی همان

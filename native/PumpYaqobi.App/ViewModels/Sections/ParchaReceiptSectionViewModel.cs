@@ -235,6 +235,9 @@ public sealed partial class ParchaReceiptSectionViewModel : SectionViewModel, IR
         await RefreshAsync();
     }
 
+    public IReadOnlyList<object> LastRows(int count) =>
+        Rows.Skip(Math.Max(0, Rows.Count - count)).Cast<object>().ToList();
+
     public async Task DeleteRowsAsync(int count)
     {
         if (count < 1 || Rows.Count < count) return;
