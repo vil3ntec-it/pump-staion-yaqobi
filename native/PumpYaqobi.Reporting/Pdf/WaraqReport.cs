@@ -80,7 +80,7 @@ public sealed class WaraqReport : ISetupDocument
             col.Item().PaddingBottom(5).Text(
                 "👷 قرضِ کارمندان:  " + string.Join("   ·   ",
                     perWorker.OrderByDescending(x => x.Debt).Select(x => x.Name + ": " + R(x.Debt))))
-               .FontSize(DocStyle.BoxLabel).Bold().FontColor(DocStyle.Danger);
+               .FontSize(DocStyle.BoxLabel).Bold().FontColor(DocStyle.Ink(DocStyle.Danger));
 
         col.Item().Element(Pumps);
         col.Item().PaddingTop(6).Element(Transactions);
@@ -123,7 +123,7 @@ public sealed class WaraqReport : ISetupDocument
 
             Td(PersianText.Num(p.Num > 0 ? p.Num : i), DocStyle.Index);
             Td(DocStyle.Dash(p.Worker));
-            Td(p.Fuel == FuelType.Diesel ? "دیزل" : "بطرول");
+            Td(p.Fuel == FuelType.Diesel ? "دیزل" : "پطرول");
             Td(DocStyle.Dash(p.Note), DocStyle.Sub);
             Td(R(p.Start)); Td(R(p.End));
             Td(R(p.PricePerLiter));
@@ -210,7 +210,7 @@ public sealed class WaraqReport : ISetupDocument
         var name = DocStyle.Dash(x.Name);
         if (x.Liters == 0m) return name;
 
-        var fuel = x.Fuel == FuelType.Diesel ? "دیزل" : "بطرول";
+        var fuel = x.Fuel == FuelType.Diesel ? "دیزل" : "پطرول";
         return name is "—" or "" ? fuel : name + " · " + fuel;
     }
 
@@ -226,7 +226,7 @@ public sealed class WaraqReport : ISetupDocument
             it.Element(x => DocStyle.SumBox(x, l, v, cl));
         }
 
-        Box("⛽ بطرول", R(t.PetrolLiters) + " لیتر", DocStyle.Petrol);
+        Box("⛽ پطرول", R(t.PetrolLiters) + " لیتر", DocStyle.Petrol);
         Box("🟤 دیزل", R(t.DieselLiters) + " لیتر", DocStyle.Diesel);
         Box("🟣 مصرف", R(t.Expenses), Purple);
         Box("💳 قرض", R(t.Debt), DocStyle.Danger);

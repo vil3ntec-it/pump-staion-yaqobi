@@ -42,29 +42,29 @@ public sealed class ExchangeReport : ISetupDocument
 
         col.Item().Row(row =>
         {
-            row.RelativeItem().PaddingLeft(6).Background(BoxBg).Border(1).BorderColor(DocStyle.CellLine)
+            row.RelativeItem().PaddingLeft(6).Background(DocStyle.Paint(BoxBg)).Border(1).BorderColor(DocStyle.Edge(DocStyle.CellLine))
                .Padding(8).Column(b =>
             {
                 b.Item().AlignCenter().Text("$ جمله دالر این ماه")
-                 .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Sub);
+                 .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Ink(DocStyle.Sub));
                 b.Item().PaddingTop(3).AlignCenter()
                  .Text("$ " + PersianText.Num(Math.Round(s.TotalUsd, 2)))
-                 .FontSize(DocStyle.BoxValue + 2).Bold().FontColor(Blue);
+                 .FontSize(DocStyle.BoxValue + 2).Bold().FontColor(DocStyle.Ink(Blue));
             });
-            row.RelativeItem().Background(BoxBg).Border(1).BorderColor(DocStyle.CellLine)
+            row.RelativeItem().Background(DocStyle.Paint(BoxBg)).Border(1).BorderColor(DocStyle.Edge(DocStyle.CellLine))
                .Padding(8).Column(b =>
             {
                 b.Item().AlignCenter().Text("💵 جمله بردگی این ماه")
-                 .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Sub);
+                 .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Ink(DocStyle.Sub));
                 b.Item().PaddingTop(3).AlignCenter()
                  .Text("$ " + PersianText.Num(Math.Round(s.TotalBardagi, 2)))
-                 .FontSize(DocStyle.BoxValue + 2).Bold().FontColor(DocStyle.Money);
+                 .FontSize(DocStyle.BoxValue + 2).Bold().FontColor(DocStyle.Ink(DocStyle.Money));
             });
         });
 
-        col.Item().PaddingTop(6).Border(1).BorderColor(GreenLine).Padding(9).AlignCenter()
+        col.Item().PaddingTop(6).Border(1).BorderColor(DocStyle.Edge(GreenLine)).Padding(9).AlignCenter()
            .Text("🟢 الباقی صرافی نزد پمپ: $ " + PersianText.Num(Math.Round(s.Baqi, 2)))
-           .FontSize(DocStyle.BoxValue + 1).Bold().FontColor(DocStyle.Money);
+           .FontSize(DocStyle.BoxValue + 1).Bold().FontColor(DocStyle.Ink(DocStyle.Money));
 
         col.Item().PaddingTop(8).Element(Table);
     });

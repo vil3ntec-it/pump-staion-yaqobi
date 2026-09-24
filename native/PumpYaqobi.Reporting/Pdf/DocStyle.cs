@@ -102,7 +102,7 @@ public static class DocStyle
                 // ⚠️ Fallback لازم است: وزیرمتن ایموجی ندارد و بدونِ آن ستونِ
                 // «نوع تیل» و نشانه‌های سربرگ در ورق خالی می‌مانند.
                 page.DefaultTextStyle(t => t.FontFamily(PdfEngine.Font).FontSize(CellSize)
-                                            .SemiBold().FontColor(Paint(CellFg))
+                                            .SemiBold().FontColor(Ink(CellFg))
                                             .Fallback(f => f.FontFamily(PdfEngine.EmojiFont)));
                 page.ContentFromRightToLeft();
 
@@ -203,7 +203,7 @@ public static class DocStyle
 
         box.Text(t =>
         {
-            t.DefaultTextStyle(x => x.FontSize(FootSize).FontColor(Paint(FootFg)));
+            t.DefaultTextStyle(x => x.FontSize(FootSize).FontColor(Ink(FootFg)));
             foreach (var piece in Split(tpl!))
             {
                 if (piece == "&[Page]") t.CurrentPageNumber().Format(Shift);
@@ -251,22 +251,22 @@ public static class DocStyle
     /// </summary>
     private static void Header(IContainer c, string title, string? subtitle, string titleColor)
     {
-        c.BorderBottom(2).BorderColor(Paint(titleColor)).PaddingBottom(6).Column(col =>
+        c.BorderBottom(2).BorderColor(Edge(titleColor)).PaddingBottom(6).Column(col =>
         {
-            col.Item().Text(title).FontSize(TitleSize).Bold().FontColor(Paint(titleColor));
+            col.Item().Text(title).FontSize(TitleSize).Bold().FontColor(Ink(titleColor));
             if (!string.IsNullOrWhiteSpace(subtitle))
-                col.Item().PaddingTop(2).Text(subtitle!).FontSize(SubSize).FontColor(Paint(Sub));
+                col.Item().PaddingTop(2).Text(subtitle!).FontSize(SubSize).FontColor(Ink(Sub));
         });
     }
 
     /// <summary>یک «کادرِ خلاصه» — برچسبِ کوچک بالا، عددِ پررنگ پایین.</summary>
     public static void SumBox(IContainer c, string label, string value, string color)
     {
-        c.Border(1).BorderColor(Paint(CellLine)).Padding(5).Column(col =>
+        c.Border(1).BorderColor(Edge(CellLine)).Padding(5).Column(col =>
         {
-            col.Item().AlignCenter().Text(label).FontSize(BoxLabel).FontColor(Paint(Sub));
+            col.Item().AlignCenter().Text(label).FontSize(BoxLabel).FontColor(Ink(Sub));
             col.Item().PaddingTop(2).AlignCenter().Text(value)
-               .FontSize(BoxValue).Bold().FontColor(Paint(color));
+               .FontSize(BoxValue).Bold().FontColor(Ink(color));
         });
     }
 
@@ -292,8 +292,47 @@ public static class DocStyle
         return $"#{y:x2}{y:x2}{y:x2}";
     }
 
+    // ══ سیاه‌وسفید: نوشته و خط، هر کدام قاعدهٔ خودش ═══════════════════════
+    //
+    // ⛔ سنجهٔ ‎printpages‎ (۱۴۰۵/۰۷/۱۲) نشان داد ‎Paint‎ی تنها برای «سیاه‌وسفید»
+    // کافی نیست: آستانهٔ روشنایی‌اش ۱۴۰ است، پس
+    //   • هر **خطِ** خاکستریِ روشنِ جدول سفید می‌شد — ورقِ سیاه‌وسفید اصلاً
+    //     خطِ خانه نداشت؛
+    //   • و هر **نوشتهٔ** کم‌رنگ (خاکستریِ برچسب، آبیِ روشن) سفید روی سفید
+    //     می‌شد، یعنی ناپدید.
+    // پس در سیاه‌وسفید: نوشته سیاه است مگر خودش سفید باشد (نوشتهٔ روی نوارِ
+    // تیرهٔ سرستون)، و خط همیشه سیاه. رنگی و خاکستری همان ‎Paint‎اند.
+
+    /// <summary>رنگِ **نوشته** — در سیاه‌وسفید هرگز سفید روی سفید نمی‌شود.</summary>
+    public static string Ink(string hex)
+    {
+        if (Current.Color != PrintColor.BlackWhite || hex.Length != 7 || hex[0] != '#') return Paint(hex);
+        var r = Convert.ToInt32(hex.Substring(1, 2), 16);
+        var g = Convert.ToInt32(hex.Substring(3, 2), 16);
+        var b = Convert.ToInt32(hex.Substring(5, 2), 16);
+        var y = (int)Math.Round(0.299 * r + 0.587 * g + 0.114 * b);
+        return y >= 235 ? "#ffffff" : "#000000";
+    }
+
+    /// <summary>
+    /// نوشته روی یک زمینهٔ مشخص — در سیاه‌وسفید، روی زمینهٔ تیره سفید و روی
+    /// زمینهٔ روشن سیاه. سرستون و ردیفِ «جمله» از این می‌خوانند.
+    /// </summary>
+    public static string InkOn(string fg, string bg)
+    {
+        if (Current.Color != PrintColor.BlackWhite) return Paint(fg);
+        return Paint(bg) == "#000000" ? "#ffffff" : "#000000";
+    }
+
+    /// <summary>رنگِ **خط و کادر** — در سیاه‌وسفید همیشه سیاه، تا دیده شود.</summary>
+    public static string Edge(string hex)
+    {
+        if (Current.Color != PrintColor.BlackWhite || hex.Length != 7 || hex[0] != '#') return Paint(hex);
+        return "#000000";
+    }
+
     /// <summary>خطِ خانه — با «خطوطِ جدول» خاموش، هیچ.</summary>
-    private static string Line(string hex) => Current.Gridlines ? Paint(hex) : Colors.Transparent;
+    private static string Line(string hex) => Current.Gridlines ? Edge(hex) : Colors.Transparent;
 
     /// <summary>سرستونِ جدول — نوارِ تیره با نوشتهٔ روشن.</summary>
     public static IContainer Th(IContainer c) =>
@@ -304,7 +343,7 @@ public static class DocStyle
     /// <summary>سرستون — کادر و نوشته با هم. یک‌جا انجام می‌شود تا کادر دوبار
     /// کشیده نشود (یک‌بار همین شد و دورِ هر خانه یک کادرِ اضافه افتاد).</summary>
     public static void ThText(IContainer c, string text) =>
-        Th(c).Text(text).FontSize(HeadSize).Bold().FontColor(Paint(HeadFg));
+        Th(c).Text(text).FontSize(HeadSize).Bold().FontColor(InkOn(HeadFg, HeadBg));
 
     /// <summary>
     /// سرستونِ جدول — فقط در ورقِ اول، مگر «تکرارِ سطرِ عنوان» روشن باشد.
@@ -337,7 +376,26 @@ public static class DocStyle
     {
         var cell = Td(c, even);
         if (string.IsNullOrEmpty(text)) { cell.Text(string.Empty); return; }
-        cell.Text(Tight(text)).FontSize(CellSize).SemiBold().FontColor(Paint(color ?? CellFg));
+        // ⛔ تاریخ و عدد **هرگز دو خط نمی‌شوند** (۱۴۰۵/۰۷/۱۲). ‎Tight‎ فقط فاصله
+        // را نشکن می‌کند، ولی «1405/07/01» فاصله ندارد و در ستونِ باریکِ صرافی
+        // «1405/07/0» + «1» چاپ می‌شد — همان «تاریخ دو خط شده» که صاحب ریپو با
+        // عکس گفت. حالا خانهٔ کوتاهِ عددی اگر جا نشد **کمی کوچک** می‌شود،
+        // نه شکسته. متنِ آزاد (نام، یادداشت) مثلِ همیشه می‌شکند.
+        //  ⚠️ سقفِ بلندیِ یک خط لازم است: بی آن، شکستن به دو خط هم «جا
+        //  شدن» حساب می‌شد و ‎ScaleToFit‎ هیچ‌وقت کوچک نمی‌کرد (سنجیده شد).
+        var box = Compact(text) ? cell.MaxHeight(CellSize * OneLine).ScaleToFit() : cell;
+        box.Text(Tight(text)).FontSize(CellSize).SemiBold().FontColor(Ink(color ?? CellFg));
+    }
+
+    /// <summary>بلندیِ یک خطِ نوشته به نسبتِ اندازهٔ قلم (با قلمِ وزیرمتن).</summary>
+    private const float OneLine = 1.75f;
+
+    /// <summary>خانهٔ کوتاهی که رقم دارد — تاریخ، مبلغ، لیتر.</summary>
+    private static bool Compact(string text)
+    {
+        if (text.Length > TightMax) return false;
+        foreach (var ch in text) if (char.IsDigit(ch)) return true;
+        return false;
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -388,7 +446,8 @@ public static class DocStyle
         c.Background(Paint(HeadBg)).Border(1).BorderColor(Line(HeadLine))
          .PaddingVertical(6).PaddingHorizontal(4)
          .AlignCenter().AlignMiddle()
-         .Text(Tight(text)).FontSize(HeadSize).Bold().FontColor(Paint(HeadFg));
+         .Element(x => Compact(text) ? x.MaxHeight(HeadSize * OneLine).ScaleToFit() : x)
+         .Text(Tight(text)).FontSize(HeadSize).Bold().FontColor(InkOn(HeadFg, HeadBg));
 
     /// <summary>«—» برای خانهٔ خالی — مثلِ خودِ سند، نه صفر.</summary>
     public static string Dash(string? s) => string.IsNullOrWhiteSpace(s) ? "—" : s!;

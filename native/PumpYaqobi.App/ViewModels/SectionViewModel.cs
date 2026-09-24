@@ -400,6 +400,51 @@ public abstract partial class SectionViewModel : ObservableObject
     /// </summary>
     public virtual void OnDayChanged() { }
 
+    // ══ «ورق‌ها را پر کردم، دوباره آمدم — هیچ ورقی نبود» ══════════════════════
+    //
+    // گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۲)، دو روز پس از آغازِ میزان. دیسک سالم بود:
+    // ورق‌ها و ردیف‌ها همه روی دیسک بودند (سنجهٔ ‎persist‎ در دو فرآیندِ جدا
+    // همین را نشان داد)، ولی بخش‌های ماهانه فقط **ماهِ جاری** را نشان
+    // می‌دهند. ماه که عوض شد، جدول خالی شد و صفحهٔ ورق‌ها صریح نوشت «هیچ ورقی
+    // ثبت نشده» — دروغی که کاربر را به «همه پاک شد» رساند. و «پارچه‌ها
+    // سرِ جایشان بودند» چون فهرستِ پارچه ماه‌به‌ماه نیست.
+    //
+    // ⛔ پس هر بخشِ ماهانه‌ای که ماهِ جلوی چشمش خالی است ولی ماهِ دیگری داده
+    // دارد، **همین را می‌گوید** و یک دکمه برای رفتن به همان ماه دارد. یک
+    // جا، در پوستهٔ پنجره، برای همهٔ بخش‌ها — نه یک متنِ جدا در هر نما.
+
+    /// <summary>
+    /// «میزان ۱۴۰۵ هنوز ردیفی ندارد — ردیف‌های سنبله سرِ جایشان‌اند». خالی یعنی
+    /// چیزی برای گفتن نیست و نوار دیده نمی‌شود.
+    /// </summary>
+    [ObservableProperty] private string _monthHint = "";
+
+    /// <summary>متنِ دکمهٔ کنارِ همان نوار — «نمایشِ سنبله ۱۴۰۵».</summary>
+    [ObservableProperty] private string _monthHintAction = "";
+
+    partial void OnMonthHintChanged(string value) => OnPropertyChanged(nameof(HasMonthHint));
+
+    //  «دیده بشه و مزاحمت ایجاد نکنه» (۱۴۰۵/۰۷/۱۲): نوار یک «×» دارد. بستنش
+    //  فقط **همان جمله** را پنهان می‌کند — ماهِ دیگر یا حالِ دیگر جملهٔ
+    //  دیگری است و دوباره دیده می‌شود. در حافظه است، نه روی دیسک: اجرای
+    //  بعدی باز یک بار می‌گوید، که برای «فکر کردم پاک شد» درست است.
+    private string _hintDismissed = "";
+
+    public bool HasMonthHint => !string.IsNullOrEmpty(MonthHint) && MonthHint != _hintDismissed;
+
+    [RelayCommand]
+    private void DismissMonthHint()
+    {
+        _hintDismissed = MonthHint;
+        OnPropertyChanged(nameof(HasMonthHint));
+    }
+
+    /// <summary>دکمهٔ نوار ⇒ ماهی که داده دارد. هر بخش خودش می‌داند کدام.</summary>
+    [RelayCommand]
+    private Task GoMonthHintAsync() => OnGoMonthHintAsync();
+
+    protected virtual Task OnGoMonthHintAsync() => Task.CompletedTask;
+
     /// <summary>
     /// صفحهٔ بازِ درونِ بخش — حسابِ شخص، صفحهٔ شرکت، ورق، حسابِ امانت…
     /// اگر کاربر در فهرستِ کارت‌ها باشد ‎null‎ است.

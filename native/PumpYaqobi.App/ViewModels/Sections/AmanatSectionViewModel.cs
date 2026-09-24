@@ -305,6 +305,7 @@ public sealed partial class AmanatAccountViewModel : ObservableObject, IRowBatch
     private async Task DeleteRowAsync(AmanatRowViewModel? row)
     {
         if (row is null) return;
+        await row.RetireAsync();
         await _host.Amanat.DeleteRowAsync(row.Entity.Id);
         Entity.Rows.Remove(row.Entity);
         Rows.Remove(row);

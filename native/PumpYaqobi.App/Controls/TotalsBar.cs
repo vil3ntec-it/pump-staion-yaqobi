@@ -190,6 +190,24 @@ public class TotalsStrip : Panel
             if (!c.IsVisible) continue;
             h = unchecked(h * 31 + (long)Math.Round(c.ActualWidth) * 8 + c.DisplayIndex);
         }
+        h = unchecked(h * 31 + (long)Math.Round(g.Bounds.Width));
+
+        //  ⛔ **پهنا و جای خودِ سرستون‌ها هم در امضاست** (۱۴۰۵/۰۷/۱۲).
+        //  سنجهٔ ‎persist widths‎ گرفتش: پس از نشستنِ پهنای ذخیره‌شده، نوار
+        //  در همان پاسی چیده شد که ستون‌ها پهنای تازه داشتند ولی سرستون‌ها
+        //  هنوز جای کهنه را — و پاسِ بعد که سرستون‌ها سرِ جایشان نشستند،
+        //  پهنای ستون‌ها دیگر عوض نشده بود و امضا همان ماند. نتیجه: هر جمله
+        //  ~۶۰۰ پیکسل دورتر از ستونش، تا کاربر جدول را تکان دهد. سرستون‌ها
+        //  همان کَشِ ‎Heads‎اند (ده‌تا)، پس این گشتنِ درخت نیست.
+        if (_heads is { Count: > 0 } heads)
+            foreach (var hd in heads.Values)
+            {
+                if (hd.GetVisualRoot() is null) break;
+                h = unchecked(h * 31 + (long)Math.Round(hd.Bounds.Width));
+                if (hd.TranslatePoint(default, this) is { } p)
+                    h = unchecked(h * 31 + (long)Math.Round(p.X));
+            }
+
         return unchecked(h * 31 + (long)Math.Round(HScroll(g)));
     }
 

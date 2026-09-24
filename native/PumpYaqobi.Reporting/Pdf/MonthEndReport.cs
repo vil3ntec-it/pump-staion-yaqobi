@@ -53,12 +53,12 @@ public sealed class MonthEndReport : ISetupDocument
         var ok = cur.Net >= 0m;
         var netColor = _in.ProfitLocked ? DocStyle.FootFg : ok ? "#059669" : "#e11d48";
 
-        col.Item().Border(2).BorderColor(netColor).Padding(14).AlignCenter()
+        col.Item().Border(2).BorderColor(DocStyle.Edge(netColor)).Padding(14).AlignCenter()
            .Text(_in.ProfitLocked
                  ? "🔒 نتیجهٔ خالص — با اجازهٔ «مفاد / ضرر» باز می‌شود"
                  : "نتیجهٔ خالص: " + R(cur.Net) + " افغانی — " + (ok ? "مفاد" : "ضرر")
                    + " (نسبت به ماه قبل: " + G(cur.Net, prev.Net) + ")")
-           .FontSize(DocStyle.BoxValue + 2).Bold().FontColor(netColor);
+           .FontSize(DocStyle.BoxValue + 2).Bold().FontColor(DocStyle.Ink(netColor));
 
         col.Item().PaddingTop(10).Table(t =>
         {

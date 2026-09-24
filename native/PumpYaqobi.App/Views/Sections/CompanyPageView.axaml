@@ -106,6 +106,7 @@
            ردیفِ 📦 از خریدِ مخزن آمده و خانه‌هایش تایپ نمی‌شوند (‎ILockedRow‎). -->
       <Grid RowDefinitions="*,Auto">
         <c:ExcelGrid Grid.Row="0" ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False"
+                     WidthScope="{Binding WidthScope}"
                      RowDeleteCommand="{Binding $parent[UserControl].DataContext.DeleteRowCommand}">
           <DataGrid.Columns>
             <DataGridTextColumn Header="📦" Binding="{Binding LinkMark}" Width="Auto" IsReadOnly="True" />

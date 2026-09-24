@@ -40,7 +40,7 @@
       </c:SectionPage.Filters>
 
               <Panel>
-          <TextBlock Text="هیچ ورقی ثبت نشده — از دکمهٔ بالا ورق جدید اضافه کنید"
+          <TextBlock Text="{Binding EmptyText}"
                      Classes="muted" HorizontalAlignment="Center" Margin="0,40,0,0"
                      IsVisible="{Binding IsEmpty}" />
           <ItemsRepeater ItemsSource="{Binding Cards}">

@@ -214,6 +214,7 @@ public sealed partial class ParchaReceiptSectionViewModel : SectionViewModel, IR
         var hasData = !string.IsNullOrWhiteSpace(e.Account) || !string.IsNullOrWhiteSpace(e.Name)
                       || e.Liters != 0;
         if (hasData && !await Dialogs.ConfirmAsync("حذفِ رسید", "این رسید حذف شود؟")) return;
+        await row.RetireAsync();
         await _host.ParchaReceipts.DeleteAsync(e.Id);
         await RefreshAsync();
     }
@@ -238,7 +239,11 @@ public sealed partial class ParchaReceiptSectionViewModel : SectionViewModel, IR
     {
         if (count < 1 || Rows.Count < count) return;
         for (var i = 0; i < count; i++)
-            await _host.ParchaReceipts.DeleteAsync(Rows[Rows.Count - 1 - i].Entity.Id);
+        {
+            var r = Rows[Rows.Count - 1 - i];
+            await r.RetireAsync();
+            await _host.ParchaReceipts.DeleteAsync(r.Entity.Id);
+        }
         await RefreshAsync();
     }
 

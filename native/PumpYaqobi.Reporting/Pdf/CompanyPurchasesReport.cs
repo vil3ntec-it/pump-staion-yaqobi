@@ -45,8 +45,8 @@ public sealed class CompanyPurchasesReport : ISetupDocument
         if (_in.Fuel != FuelType.Diesel) any |= Section(col, FuelType.Petrol, _in.Petrol, _in.ManualPetrol);
         if (_in.Fuel != FuelType.Petrol) any |= Section(col, FuelType.Diesel, _in.Diesel, _in.ManualDiesel);
         if (!any)
-            col.Item().PaddingTop(8).Border(1).BorderColor(DocStyle.BoxLine).Padding(16)
-               .AlignCenter().Text("هیچ خریدی ثبت نشده").FontSize(DocStyle.CellSize).FontColor(DocStyle.FootFg);
+            col.Item().PaddingTop(8).Border(1).BorderColor(DocStyle.Edge(DocStyle.BoxLine)).Padding(16)
+               .AlignCenter().Text("هیچ خریدی ثبت نشده").FontSize(DocStyle.CellSize).FontColor(DocStyle.Ink(DocStyle.FootFg));
     });
 
     private bool Section(ColumnDescriptor col, FuelType fuel, IReadOnlyList<FuelPurchase> entries, IReadOnlyList<CompanyRow> manual)
@@ -56,7 +56,7 @@ public sealed class CompanyPurchasesReport : ISetupDocument
         var color = fuel == FuelType.Diesel ? DieselColor : Head;
         col.Item().PaddingTop(10).PaddingBottom(4)
            .Text(fuel == FuelType.Diesel ? "🟤 خریدهای دیزل" : "⛽ خریدهای پطرول")
-           .FontSize(DocStyle.BoxValue).Bold().FontColor(DocStyle.Paint(color));
+           .FontSize(DocStyle.BoxValue).Bold().FontColor(DocStyle.Ink(color));
 
         if (entries.Count > 0)
             col.Item().Table(t =>
@@ -104,7 +104,7 @@ public sealed class CompanyPurchasesReport : ISetupDocument
         if (shown.Count > 0)
         {
             col.Item().PaddingTop(8).PaddingBottom(3).Text("ردیف‌های دستی جدول")
-               .FontSize(DocStyle.BoxLabel).Bold().FontColor(DocStyle.Sub);
+               .FontSize(DocStyle.BoxLabel).Bold().FontColor(DocStyle.Ink(DocStyle.Sub));
             col.Item().Table(t =>
             {
                 t.ColumnsDefinition(cd =>

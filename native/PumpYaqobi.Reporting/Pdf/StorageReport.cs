@@ -55,30 +55,30 @@ public sealed class StorageReport : ISetupDocument
         var avg = liters > 0m ? afn / liters : 0m;
 
         // ── کارتِ موجودی ──────────────────────────────────────────────────
-        col.Item().Border(1.5f).BorderColor(Color).Padding(12).Row(row =>
+        col.Item().Border(1.5f).BorderColor(DocStyle.Edge(Color)).Padding(12).Row(row =>
         {
             row.RelativeItem().Column(m =>
             {
                 m.Item().AlignCenter().Text("موجودی فعلی مخزن")
-                 .FontSize(DocStyle.SubSize).FontColor(DocStyle.Sub);
+                 .FontSize(DocStyle.SubSize).FontColor(DocStyle.Ink(DocStyle.Sub));
                 m.Item().AlignCenter().Text(R(t.Display))
-                 .FontSize(26).Bold().FontColor(Color);
+                 .FontSize(26).Bold().FontColor(DocStyle.Ink(Color));
                 m.Item().AlignCenter().Text("لیتر")
-                 .FontSize(DocStyle.SubSize).FontColor(DocStyle.Sub);
+                 .FontSize(DocStyle.SubSize).FontColor(DocStyle.Ink(DocStyle.Sub));
             });
             row.ConstantItem(150).AlignMiddle().Column(m =>
             {
                 m.Item().AlignCenter().Text("جمله ورودی")
-                 .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Sub);
+                 .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Ink(DocStyle.Sub));
                 m.Item().AlignCenter().Text(R(t.In) + " لیتر")
-                 .FontSize(DocStyle.BoxValue).Bold().FontColor("#0f7a4d");
+                 .FontSize(DocStyle.BoxValue).Bold().FontColor(DocStyle.Ink("#0f7a4d"));
             });
             row.ConstantItem(150).AlignMiddle().Column(m =>
             {
                 m.Item().AlignCenter().Text("جمله فروش")
-                 .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Sub);
+                 .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Ink(DocStyle.Sub));
                 m.Item().AlignCenter().Text(R(t.Out) + " لیتر")
-                 .FontSize(DocStyle.BoxValue).Bold().FontColor("#b3261e");
+                 .FontSize(DocStyle.BoxValue).Bold().FontColor(DocStyle.Ink("#b3261e"));
             });
         });
 
@@ -98,13 +98,13 @@ public sealed class StorageReport : ISetupDocument
         });
 
         col.Item().PaddingTop(8).Text("📋 تاریخچه خریدها")
-           .FontSize(DocStyle.HeadSize + 1).Bold().FontColor(Color);
+           .FontSize(DocStyle.HeadSize + 1).Bold().FontColor(DocStyle.Ink(Color));
 
         if (_in.Purchases.Count == 0)
         {
-            col.Item().PaddingTop(6).Border(1).BorderColor(DocStyle.BoxLine).Padding(16)
+            col.Item().PaddingTop(6).Border(1).BorderColor(DocStyle.Edge(DocStyle.BoxLine)).Padding(16)
                .AlignCenter().Text("هیچ خریدی ثبت نشده")
-               .FontSize(DocStyle.CellSize).FontColor(DocStyle.FootFg);
+               .FontSize(DocStyle.CellSize).FontColor(DocStyle.Ink(DocStyle.FootFg));
             return;
         }
 

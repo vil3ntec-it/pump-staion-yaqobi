@@ -215,6 +215,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     internal void Load(DebtAccount a)
     {
         Entity = a;
+        OnPropertyChanged(nameof(WidthScope));
         ArchiveCount = 0;
         _rowFilter = "all";      // فیلترِ حسابِ قبلی روی حسابِ تازه نماند
         Adopt(a);
@@ -255,6 +256,10 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     }
 
     public DebtAccount Entity { get; private set; }
+
+    /// <summary>دامنهٔ پهنای ستون‌ها — هر حساب پهنای خودش (‎ExcelGrid.WidthScope‎).</summary>
+    public string WidthScope => "debt-" + Entity.Id;
+
     public DebtCalculationService Calc => _host.Debt;
     public string Title => Entity.MainOfDebtorId != null ? "حسابِ اصلی" : (Entity.Name ?? "حسابِ فرعی");
 
@@ -585,6 +590,9 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     public bool ShowFuelTypeColumn => RowFilter == "all";
 
     /// <summary>جمعِ رسیدهای همین تیل، در دفترِ باز.</summary>
+    /// <summary>همان «رسید قبلی»ِ کادرِ صفحه — برای سندِ چاپی.</summary>
+    internal decimal HeadRasidOf(FuelType fuel) => HeadRasid(fuel);
+
     private decimal HeadRasid(FuelType fuel)
     {
         var t = fuel == FuelType.Diesel ? Totals.Diesel : Totals.Petrol;
@@ -877,6 +885,9 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
                 "جدولِ فعلی آرشیو می‌شود و جدولِ خالیِ تازه‌ای باز می‌شود. ادامه؟")) return;
 
         await FlushAsync();                       // هرچه نیم‌تایپ مانده، اول ذخیره شود
+        //  ⛔ و بعد هیچ ردیفِ این جدول دیگر حقِ نوشتن ندارد — وگرنه نوشتنی که
+        //  بعد از آرشیو برسد، ردیف را به جدولِ تازه برمی‌گرداند.
+        foreach (var r in Rows.ToList()) await r.RetireAsync();
         await _host.Debtors.ArchiveTableAsync(Entity.Id, Shamsi.Today());
 
         // عکسِ حافظه هم باید با پایگاه یکی شود، وگرنه جدولِ پاک‌شده روی صفحه می‌ماند
@@ -1067,6 +1078,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     private async Task DeleteRowAsync(DebtRowViewModel? row)
     {
         if (row is null) return;
+        await row.RetireAsync();
 
         // ⚠️ یک مسیر، برای هر ردیفی — چه رسید باشد چه نباشد. رسید رکوردِ
         // جداگانه‌ای ندارد که راهِ حذفِ جداگانه بخواهد؛ حذفِ ردیف خودش
@@ -1253,8 +1265,10 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
             Filter: null,
             Rows: rows,
             PercentPetrol: acct.PercentPetrol, PercentDiesel: acct.PercentDiesel,
-            RasidPetrol: money ? acct.RasidMoneyPetrol : acct.RasidFuelPetrol,
-            RasidDiesel: money ? acct.RasidMoneyDiesel : acct.RasidFuelDiesel,
+            //  ⛔ همان «رسید قبلی»ِ کادرِ صفحه، نه فیلدِ کهنهٔ سربرگ — شرحش بالای
+            //  ‎DebtorStatementReport‎.
+            RasidPetrol: acct.HeadRasidOf(FuelType.Petrol),
+            RasidDiesel: acct.HeadRasidOf(FuelType.Diesel),
             BordPetrol: money ? t.Petrol.Bardagi : t.Petrol.Liters,
             BordDiesel: money ? t.Diesel.Bardagi : t.Diesel.Liters,
             RasidRowsPetrol: t.Petrol.Rasid, RasidRowsDiesel: t.Diesel.Rasid,

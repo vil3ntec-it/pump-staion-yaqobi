@@ -25,6 +25,30 @@ public class InstallerTests
     private static string Workflow() =>
         File.ReadAllText(Path.Combine(Repo, ".github", "workflows", "build-native.yml"));
 
+    /// <summary>
+    /// ⛔ نسخهٔ ۳.۱.۱۵۸ به همین یک نویسه منتشر نشد: در ‎[Code]‎ توضیح «//» است،
+    /// نه «;» — ‎ISCC‎ با «'BEGIN' expected» می‌ایستد و چون آن ساخت فقط پس از
+    /// مرج روی ‎main‎ می‌دود، کسی تا نیامدنِ نسخهٔ تازه نفهمید. (سنجهٔ واقعی
+    /// ‎installer-check.yml‎ است که روی ویندوز هر دو نصاب را می‌سازد.)
+    /// </summary>
+    [Fact]
+    public void Code_section_has_no_semicolon_comments()
+    {
+        var iss = Iss().Replace("\r\n", "\n");
+        var i = iss.IndexOf("\n[Code]", StringComparison.Ordinal);
+        Assert.True(i > 0, "بخشِ [Code] نیست");
+        var bad = iss[i..].Split('\n')
+                     .Select((l, n) => (l: l.TrimStart(), n))
+                     .Where(x => x.l.StartsWith(';'))
+                     .Select(x => x.l.Length > 40 ? x.l[..40] : x.l).ToList();
+        Assert.True(bad.Count == 0, "توضیحِ «;» در [Code]: " + string.Join(" | ", bad));
+
+        var wf = File.ReadAllText(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
+        Assert.Contains("pull_request", wf);
+        Assert.Contains("native/installer/PumpYaqobi.iss", wf);
+        Assert.Contains("foreach ($arch in @('x64','x86'))", wf);
+    }
+
     [Fact]
     public void Installer_script_exists()
         => Assert.True(File.Exists(Path.Combine(Native, "installer", "PumpYaqobi.iss")));
