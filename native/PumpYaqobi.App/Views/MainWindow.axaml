@@ -274,6 +274,8 @@
                    FontWeight="Bold" TextWrapping="Wrap" />
         <Button Classes="accent" Content="{Binding Content.MonthHintAction, FallbackValue=''}"
                 Command="{Binding Content.GoMonthHintCommand, FallbackValue={x:Null}}" />
+        <Button Classes="ghost" Content="✕" ToolTip.Tip="بستنِ این نوار"
+                Command="{Binding Content.DismissMonthHintCommand, FallbackValue={x:Null}}" />
       </StackPanel>
     </Border>
 

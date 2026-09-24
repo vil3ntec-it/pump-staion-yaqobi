@@ -61,6 +61,13 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- printpages ${{ runner.temp }}/printpages
 
+      # ══ چهار بندِ فهرستِ یازده‌تایی که تا امروز فقط «درست شد» گفته شده بودند ══
+      # ماه عوض شد ⇒ سرستون‌ها سرِ جایشان (دو تم)، فرمِ خرید درجا و قفل، و
+      # جدولِ پایه‌های ورق روی پنجرهٔ ۱۰۲۴ پیکسلی بی نوارِ افقی و بی عددِ بریده.
+      - name: سنجشِ فهرستِ یازده‌تایی
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- audit11 ${{ runner.temp }}/audit11
+
       # ══ پنجره‌های گفت‌وگو ═════════════════════════════════════════════════
       # گزارشِ صاحب ریپو: «افزودن شخص / ورق / حساب فرعی / جدول جدید / آرشیو
       # هیچ‌کدام کار نمی‌کنند و پیامِ Object reference not set می‌آید.»

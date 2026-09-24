@@ -424,7 +424,20 @@ public abstract partial class SectionViewModel : ObservableObject
 
     partial void OnMonthHintChanged(string value) => OnPropertyChanged(nameof(HasMonthHint));
 
-    public bool HasMonthHint => !string.IsNullOrEmpty(MonthHint);
+    //  «دیده بشه و مزاحمت ایجاد نکنه» (۱۴۰۵/۰۷/۱۲): نوار یک «×» دارد. بستنش
+    //  فقط **همان جمله** را پنهان می‌کند — ماهِ دیگر یا حالِ دیگر جملهٔ
+    //  دیگری است و دوباره دیده می‌شود. در حافظه است، نه روی دیسک: اجرای
+    //  بعدی باز یک بار می‌گوید، که برای «فکر کردم پاک شد» درست است.
+    private string _hintDismissed = "";
+
+    public bool HasMonthHint => !string.IsNullOrEmpty(MonthHint) && MonthHint != _hintDismissed;
+
+    [RelayCommand]
+    private void DismissMonthHint()
+    {
+        _hintDismissed = MonthHint;
+        OnPropertyChanged(nameof(HasMonthHint));
+    }
 
     /// <summary>دکمهٔ نوار ⇒ ماهی که داده دارد. هر بخش خودش می‌داند کدام.</summary>
     [RelayCommand]

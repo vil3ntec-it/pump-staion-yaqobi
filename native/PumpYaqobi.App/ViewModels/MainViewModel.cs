@@ -850,9 +850,28 @@ public sealed partial class MainViewModel : ObservableObject
     /// ⚠️ بخشی که ماه ندارد پیش‌فرضِ خالی می‌گیرد، پس این حلقه برای نوزده
     /// بخش از بیست‌ودو بخش **هیچ** کاری نمی‌کند.
     /// </summary>
+    //  ماهی که پنجره آخرین بار دید — برای خبرِ «ماهِ تازه شروع شد» سرِ نیمه‌شب.
+    private string _seenMonth = Shamsi.ThisMonth();
+
     public void DayChanged()
     {
         OnPropertyChanged(nameof(TodayText));
+        //  «کاری کن ماه که خودکار عوض می‌شه به طرف بفهمونه که ماه عوض شده نه
+        //  حساب‌ها پاک شدن» (۱۴۰۵/۰۷/۱۲). برنامه‌ای که شبِ آخرِ ماه باز مانده،
+        //  صبح جدولِ خالیِ ماهِ تازه را می‌بیند؛ یک توستِ گذرا همین را
+        //  می‌گوید و خودش می‌رود — مزاحمِ کار نیست.
+        var month = Shamsi.ThisMonth();
+        if (month != _seenMonth)
+        {
+            _seenMonth = month;
+            try
+            {
+                AppHost.Current.Toasts.Show("📅 ماهِ «" + Shamsi.MonthLabel(month)
+                    + "» شروع شد — حساب‌های ماهِ پیش پاک نشده‌اند و از کادرِ ماه دیده می‌شوند.",
+                    ToastKind.Info, 9000);
+            }
+            catch { /* خبر رفاه است */ }
+        }
         QueueBannerRefresh();
         foreach (var p in AllPages) p.OnDayChanged();
     }

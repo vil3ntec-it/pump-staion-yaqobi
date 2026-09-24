@@ -1082,15 +1082,16 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
         _hintTarget = "";
         if (Cards.Count > 0 && Month != now && !_dataMonths.Contains(now) && _monthAuto)
         {
-            MonthHint = "«" + Shamsi.MonthLabel(now) + "» هنوز ورقی ندارد — ورق‌های «"
-                      + Shamsi.MonthLabel(Month) + "» نشان داده شده‌اند";
+            MonthHint = "📅 ماهِ «" + Shamsi.MonthLabel(now) + "» شروع شد و هنوز ورقی ندارد — هیچ چیزی پاک نشده؛ ورق‌های «"
+                      + Shamsi.MonthLabel(Month) + "» این‌جا نشان داده شده‌اند";
             MonthHintAction = "رفتن به «" + Shamsi.MonthLabel(now) + "»";
             _hintTarget = now;
         }
         else if (Cards.Count == 0 && _dataMonths.FirstOrDefault(m => m != Month) is { } other)
         {
-            MonthHint = "«" + Shamsi.MonthLabel(Month) + "» ورقی ندارد — ورق‌های «"
-                      + Shamsi.MonthLabel(other) + "» سرِ جایشان‌اند";
+            MonthHint = (Month == now ? "📅 ماهِ «" + Shamsi.MonthLabel(Month) + "» تازه شروع شده"
+                                      : "📅 «" + Shamsi.MonthLabel(Month) + "» ورقی ندارد")
+                      + " — هیچ چیزی پاک نشده؛ ورق‌های «" + Shamsi.MonthLabel(other) + "» سرِ جایشان‌اند";
             MonthHintAction = "نمایشِ «" + Shamsi.MonthLabel(other) + "»";
             _hintTarget = other;
         }

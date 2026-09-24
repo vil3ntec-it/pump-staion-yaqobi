@@ -165,8 +165,10 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
         if (Rows.Count == 0 && !YearMonthPicker.IsAll(Month)
             && _dataMonths.FirstOrDefault(m => m != Month) is { } other)
         {
-            MonthHint = "«" + Shamsi.MonthLabel(Month) + "» هنوز ردیفی ندارد — ردیف‌های «"
-                      + Shamsi.MonthLabel(other) + "» سرِ جایشان‌اند";
+            MonthHint = (Month == Shamsi.ThisMonth()
+                            ? "📅 ماهِ «" + Shamsi.MonthLabel(Month) + "» تازه شروع شده و هنوز ردیفی ندارد"
+                            : "📅 «" + Shamsi.MonthLabel(Month) + "» هنوز ردیفی ندارد")
+                      + " — هیچ چیزی پاک نشده؛ ردیف‌های «" + Shamsi.MonthLabel(other) + "» سرِ جایشان‌اند";
             MonthHintAction = "نمایشِ «" + Shamsi.MonthLabel(other) + "»";
             _hintTarget = other;
         }

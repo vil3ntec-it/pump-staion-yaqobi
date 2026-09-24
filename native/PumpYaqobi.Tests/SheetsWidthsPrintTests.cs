@@ -54,6 +54,27 @@ public class SheetsWidthsPrintTests
     }
 
     [Fact]
+    public void MaheTaze_MigooyadPakNashode_VaMozahemNist()
+    {
+        //  «بفهمونه که ماه عوض شده نه حساب‌ها پاک شدن… دیده بشه و مزاحمت ایجاد نکنه»
+        foreach (var f in new[] { "PumpYaqobi.App/ViewModels/Sections/WaraqSectionViewModel.cs",
+                                  "PumpYaqobi.App/ViewModels/LedgerSectionViewModel.cs" })
+            Assert.Contains("هیچ چیزی پاک نشده", Src(f));
+
+        var baseVm = Src("PumpYaqobi.App/ViewModels/SectionViewModel.cs");
+        Assert.Contains("MonthHint != _hintDismissed", baseVm);
+        Assert.Contains("Content.DismissMonthHintCommand", Src("PumpYaqobi.App/Views/MainWindow.axaml"));
+
+        //  سرِ نیمه‌شبِ آخرِ ماه یک خبرِ گذرا، نه پنجرهٔ پرسش
+        var main = Src("PumpYaqobi.App/ViewModels/MainViewModel.cs");
+        var i = main.IndexOf("public void DayChanged()", StringComparison.Ordinal);
+        var body = main.Substring(i, 1400);
+        Assert.Contains("month != _seenMonth", body);
+        Assert.Contains("Toasts.Show(", body);
+        Assert.DoesNotContain("ConfirmAsync", body);
+    }
+
+    [Fact]
     public void HazfeWaraq_BiPorsesh_Nist()
     {
         var s = Src("PumpYaqobi.App/ViewModels/Sections/WaraqSectionViewModel.cs");

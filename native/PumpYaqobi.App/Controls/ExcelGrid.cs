@@ -581,13 +581,21 @@ public class ExcelGrid : DataGrid
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
+        if (change.Property == BoundsProperty)
+        {
+            if (_starNatural is not null
+                && change.GetOldValue<Rect>().Width is var ow && change.GetNewValue<Rect>().Width is var nw
+                && Math.Abs(ow - nw) >= 1)
+                StarFloors(nw);
+            return;
+        }
         if (change.Property == WidthScopeProperty)
         {
             //  حسابِ دیگری در همین جدول نشست ⇒ کلیدِ دیگری، پهنای دیگری.
             //  همان چیزی که ‎Reset‎ِ فهرست برای «چیدمانِ دیگر» می‌کند.
             _autoKey = null; _autoKeyFor = -1;
             _savedRead = false; _saved = null;
-            _spread = false; _pinned = false; _anyRowLoaded = false; _autoWidths = null; _starBase = null;
+            _spread = false; _pinned = false; _anyRowLoaded = false; _autoWidths = null; _starBase = null; _starNatural = null;
             foreach (var c in Columns)
                 c.Width = new DataGridLength(1, DataGridLengthUnitType.Auto);
             _freshCols = true;
@@ -674,7 +682,7 @@ public class ExcelGrid : DataGrid
             var stale = !_spread || _spreadRows == 0;
             if (_saved is null && stale)
             {
-                _spread = false; _pinned = false; _anyRowLoaded = false; _autoWidths = null; _starBase = null;
+                _spread = false; _pinned = false; _anyRowLoaded = false; _autoWidths = null; _starBase = null; _starNatural = null;
                 foreach (var c in Columns)
                     c.Width = new DataGridLength(1, DataGridLengthUnitType.Auto);
 
@@ -1522,6 +1530,8 @@ public class ExcelGrid : DataGrid
         _autoWidths = saved is not null ? (double[])saved.Clone()
                     : spare ? null : (double[])natural.Clone();
         _starBase = null;
+        _starNatural = saved is null && spare ? (double[])natural.Clone() : null;
+        if (_starNatural is not null) StarFloors(room);
 
         _spreadRows = RowCount();
         _spread = true;
@@ -1606,34 +1616,134 @@ public class ExcelGrid : DataGrid
     }
 
     /// <summary>
-    /// پهناها را به اندازهٔ قاب کوچک می‌کند — به نسبت، و نه زیرِ کفِ خوانایی.
+    /// ══ پنجره کوچک شد و ستون‌ها ستاره‌ای‌اند ═══════════════════════════════
     ///
-    /// ⚠️ ستونی که از قبل روی کف است بیشتر از این کوچک نمی‌شود، و مابقیِ
-    /// کمبود بینِ بقیه پخش می‌شود. اگر حتی با کفِ همه باز هم جا نشد، همان
-    /// بیرون‌زدگی می‌ماند و جدول افقی می‌لغزد — چاره‌ای نیست، ولی دستِ‌کم
-    /// دلیلش «ستونِ بی‌جهت پهن» نیست.
+    /// ستونِ ستاره‌ای با قاب **به نسبت** کوچک می‌شود — یعنی روی پنجرهٔ ۱۱۰۰
+    /// پیکسلی شروع و ختمِ پایه‌ها «۱,۲۳۴,…» می‌شدند در حالی که ستونِ نام و
+    /// یادداشت هنوز جای خالی داشتند (سنجهٔ ‎audit11‎). پس کفِ هر ستون همان
+    /// سهمی است که ‎FitToRoom‎ برای این قاب می‌دهد: تا جای کافی هست کف همان
+    /// پهنای طبیعی است (هیچ خانه‌ای «…» نمی‌شود)، و وقتی نیست فقط ستون‌های
+    /// پهن کوتاه می‌شوند. ستاره‌ها بقیهٔ جا را مثلِ همیشه پخش می‌کنند.
+    ///
+    /// ⚠️ فقط پهنای **خودکار**: جدولی که کاربر ستونش را کشیده (پیکسلی) یا
+    /// پهنای ذخیره‌شده دارد این‌جا نمی‌رسد (‎_starNatural‎ خالی است).
     /// </summary>
-    private static double[] FitToRoom(double[] natural, double room)
+    private void StarFloors(double room)
+    {
+        if (_starNatural is not { } nat || room <= 0) return;
+        var cols = Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).ToList();
+        if (cols.Count != nat.Length
+            || cols.Any(c => c.Width.UnitType != DataGridLengthUnitType.Star)) { _starNatural = null; return; }
+        //  جای خانه‌ها = قاب منهای ستونِ شماره (‎#‎) و دو خطِ لبه — وگرنه جمعِ
+        //  کف‌ها به اندازهٔ همان ستون از قاب بیرون می‌زد و نوارِ لغزشِ افقی
+        //  برمی‌گشت (با عکس دیده شد).
+        var head = HeadersVisibility.HasFlag(DataGridHeadersVisibility.Row) && !double.IsNaN(RowHeaderWidth)
+            ? RowHeaderWidth : 0;
+        var fit = FitToRoom(nat, room - head - 4, Numeric(cols));
+        for (var i = 0; i < cols.Count; i++)
+            if (Math.Abs(cols[i].MinWidth - fit[i]) >= 0.5) cols[i].MinWidth = Math.Max(FloorWidth, fit[i]);
+    }
+
+    private double[]? _starNatural;
+
+    /// <summary>
+    /// کدام ستون‌ها عدد نشان می‌دهند؟ — از نوشتهٔ خانه‌های ساخته‌شدهٔ همان
+    /// ستون (چند ردیفِ اول). عددِ بریده در دفترِ حساب از نامِ بریده بدتر است،
+    /// پس وقتی جا کم است اول نام و یادداشت کوتاه می‌شوند.
+    /// </summary>
+    private bool[] Numeric(List<DataGridColumn> cols)
+    {
+        var flags = new bool[cols.Count];
+        if (ItemsSource is not System.Collections.IEnumerable src) return flags;
+        var items = src.Cast<object?>().Take(6).Where(x => x is not null).ToList();
+        for (var i = 0; i < cols.Count; i++)
+        {
+            int num = 0, seen = 0;
+            foreach (var it in items)
+            {
+                var t = (cols[i].GetCellContent(it!) as TextBlock)?.Text;
+                if (string.IsNullOrWhiteSpace(t)) continue;
+                seen++;
+                var digits = t.Count(char.IsDigit);
+                if (digits > 0 && digits * 2 >= t.Count(ch => !char.IsWhiteSpace(ch))) num++;
+            }
+            flags[i] = seen > 0 && num * 2 >= seen;
+        }
+        return flags;
+    }
+
+    /// <summary>
+    /// کاربر دستش را روی سرستون گذاشت (شاید برای کشیدنِ خطِ ستون) ⇒ کفِ
+    /// «پهنای طبیعی» برداشته می‌شود، وگرنه هیچ ستونی را نمی‌شد باریک‌تر از
+    /// محتوایش کشید. وزنِ ستاره‌ها همان پهنای همین لحظه می‌شود، پس هیچ ستونی
+    /// زیرِ دستِ کاربر نمی‌پرد.
+    /// </summary>
+    private void ReleaseStarFloors()
+    {
+        if (_starNatural is null) return;
+        _starNatural = null;
+        var cols = Columns.Where(c => c.IsVisible).ToList();
+        if (cols.Any(c => double.IsNaN(c.ActualWidth) || c.ActualWidth <= 0)) return;
+        foreach (var c in cols)
+        {
+            if (c.Width.UnitType == DataGridLengthUnitType.Star)
+                c.Width = new DataGridLength(c.ActualWidth, DataGridLengthUnitType.Star);
+            c.MinWidth = FloorWidth;
+        }
+    }
+
+    /// <summary>
+    /// پهناها را به اندازهٔ قاب کوچک می‌کند — **از پهن‌ترین ستون‌ها**، نه به
+    /// نسبت، و نه زیرِ کفِ خوانایی.
+    ///
+    /// ⛔ یک بار «به نسبت» بود و سنجهٔ ‎audit11‎ گرفتش: روی پنجرهٔ ۱۱۰۰
+    /// پیکسلی، ورق جا می‌شد ولی **هر** خانه یک تکه کوتاه می‌شد و شروع و ختمِ
+    /// پایه‌ها «۱,۲۳۴,…» می‌شدند — در یک دفترِ حساب، عددِ بریده از جدولی که
+    /// اسکرول می‌خورد بدتر است. ستون‌های پهن (نام، یادداشت) همان‌هایی‌اند که
+    /// جای اضافه دارند؛ پس یک سقفِ مشترک پیدا می‌شود که فقط **آن‌ها** را
+    /// پایین می‌آورد و ستونِ باریکِ عددی دست‌نخورده می‌ماند.
+    ///
+    /// ⚠️ اگر حتی با کفِ همه باز هم جا نشد، همان بیرون‌زدگی می‌ماند و جدول
+    /// افقی می‌لغزد — چاره‌ای نیست.
+    /// </summary>
+    private static double[] FitToRoom(double[] natural, double room, bool[]? keep = null)
     {
         var sum = natural.Sum();
         if (sum <= room || room <= 0) return natural;
 
-        var w = (double[])natural.Clone();
-        for (var pass = 0; pass < 4 && w.Sum() > room + 0.5; pass++)
+        //  ستونِ عددی تا جایی دست نمی‌خورد که ستون‌های نوشته‌ای (نام، یادداشت)
+        //  جا بدهند — هر کدام تا دو برابرِ کف، نه صفر.
+        if (keep is { } k && k.Length == natural.Length && k.Any(x => x) && k.Any(x => !x))
         {
-            var movable = w.Where(x => x > FloorWidth).Sum() - FloorWidth * w.Count(x => x > FloorWidth);
-            if (movable <= 0.5) break;
-            var need = w.Sum() - room;
-            var take = Math.Min(need, movable);
-            for (var i = 0; i < w.Length; i++)
+            var fixedSum = natural.Where((_, i) => k[i]).Sum();
+            var text = natural.Where((_, i) => !k[i]).ToArray();
+            var textRoom = room - fixedSum;
+            var minText = text.Sum(x => Math.Min(x, FloorWidth * 2));
+            if (textRoom >= minText)
             {
-                var slack = w[i] - FloorWidth;
-                if (slack <= 0) continue;
-                w[i] -= take * (slack / movable);
-                if (w[i] < FloorWidth) w[i] = FloorWidth;
+                var t = WaterFill(text, textRoom, FloorWidth * 2);
+                var r = new double[natural.Length];
+                for (int i = 0, j = 0; i < r.Length; i++) r[i] = k[i] ? natural[i] : t[j++];
+                return r;
             }
         }
-        return w;
+        return WaterFill(natural, room, FloorWidth);
+    }
+
+    private static double[] WaterFill(double[] natural, double room, double floor)
+    {
+        if (natural.Sum() <= room) return natural;
+
+        //  سقفِ c را طوری پیدا کن که Σ min(wᵢ, max(c, کف)) = قاب (جست‌وجوی دودویی)
+        double Fit(double c) => natural.Sum(x => Math.Min(x, Math.Max(c, floor)));
+        if (Fit(floor) > room) return natural.Select(x => Math.Min(x, floor)).ToArray();
+        double lo = floor, hi = natural.Max();
+        for (var k = 0; k < 40; k++)
+        {
+            var mid = (lo + hi) / 2;
+            if (Fit(mid) > room) hi = mid; else lo = mid;
+        }
+        return natural.Select(x => Math.Min(x, lo)).ToArray();
     }
 
     /// <summary>پهنای ذخیره‌شدهٔ همین جدول — اگر بود و شمارِ ستون‌ها هم خورد.</summary>
@@ -2165,7 +2275,7 @@ public class ExcelGrid : DataGrid
         DataGridRow? row = null;
         for (Visual? x = v; x is not null; x = x.GetVisualParent())
         {
-            if (x is DataGridColumnHeader) return;
+            if (x is DataGridColumnHeader) { ReleaseStarFloors(); return; }
             if (x is DataGridRow r) { row = r; continue; }
             if (x is not ComboBox cb) continue;
             if (!cb.IsEffectivelyEnabled || cb.IsDropDownOpen) return;

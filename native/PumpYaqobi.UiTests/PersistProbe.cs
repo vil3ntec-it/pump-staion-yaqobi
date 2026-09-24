@@ -219,7 +219,16 @@ internal static class PersistProbe
         Check("ورق‌های ماهِ پیش در فهرست دیده می‌شوند", wq.Cards.Count > 0, wq.Cards.Count + " کارت");
         Check("نوار می‌گوید این ماه هنوز ورقی ندارد", wq.HasMonthHint, wq.MonthHint);
         Check("«هیچ ورقی ثبت نشده» گفته نمی‌شود", !wq.EmptyText.StartsWith("هیچ ورقی ثبت نشده"));
+        //  «بفهمونه که ماه عوض شده نه حساب‌ها پاک شدن»
+        Check("نوار صریح می‌گوید ماه عوض شده و چیزی پاک نشده",
+              wq.MonthHint.Contains("شروع شد") && wq.MonthHint.Contains("پاک نشده"), wq.MonthHint);
+        Check("نوار در پوستهٔ پنجره واقعاً دیده می‌شود", HintBarShown(win), "");
         Shot(win, dir, "waraq-newmonth");
+        //  «مزاحمت ایجاد نکنه»: یک «×» و همان لحظه می‌رود، و ورق‌ها سرِ جایشان
+        wq.DismissMonthHintCommand.Execute(null);
+        Settle(win);
+        Check("«×» نوار را می‌بندد", !wq.HasMonthHint && !HintBarShown(win), wq.MonthHint);
+        Check("بستنِ نوار ورقی را پنهان نمی‌کند", wq.Cards.Count > 0, wq.Cards.Count + " کارت");
 
         var ex = vm.Sections.First(s => s.Id == "expenses");
         Wait(win, vm.GoAsync(ex));
@@ -236,6 +245,11 @@ internal static class PersistProbe
         Console.WriteLine(_bad == 0 ? "  ✅ همه سرِ جایش بود" : $"  ❌ {_bad} ایراد");
         return _bad == 0 ? 0 : 1;
     }
+
+    private static bool HintBarShown(MainWindow win) =>
+        win.GetVisualDescendants().OfType<Button>()
+           .Any(b => b.IsEffectivelyVisible && Equals(b.Content, "✕")
+                  && Equals(ToolTip.GetTip(b), "بستنِ این نوار"));
 
     // ══ «اندازهٔ جدول ثبت نمی‌شد — و هر کی برای خودش» ══════════════════════
     //

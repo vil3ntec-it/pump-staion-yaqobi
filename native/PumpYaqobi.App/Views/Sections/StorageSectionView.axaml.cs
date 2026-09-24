@@ -1,4 +1,6 @@
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -31,6 +33,16 @@ public partial class StorageSectionView : UserControl
         //  و فوکوس را بگذار روی نخستین کادر تا تایپ همان‌جا شروع شود.
         var overlay = this.FindControl<Panel>("BuyOverlay");
         if (overlay is null) return;
+
+        //  «روی برگهٔ ثبت درجا قفل بشه» — آوردنش جلوی چشم نیمی از کار بود:
+        //  سنجهٔ ‎audit11‎ نشان داد یک چرخِ ماوس (روی خودِ فرم یا روی سایهٔ
+        //  دورش) صفحه را می‌لغزاند و فرم ۶۰۰ پیکسل بالاتر از قاب می‌رفت. تا
+        //  فرم باز است، چرخ مالِ خودِ فرم است: کادرِ لغزانِ داخلش اول
+        //  (حبابی — خودش زودتر می‌گیرد) و هر چه ماند این‌جا بلعیده می‌شود.
+        overlay.AddHandler(PointerWheelChangedEvent, (_, e) =>
+        {
+            if (overlay.IsVisible) e.Handled = true;
+        }, RoutingStrategies.Bubble, handledEventsToo: false);
         overlay.PropertyChanged += (_, e) =>
         {
             if (e.Property != IsVisibleProperty || !Equals(e.NewValue, true)) return;

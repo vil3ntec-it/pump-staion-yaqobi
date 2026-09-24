@@ -116,6 +116,7 @@ internal static class Program
         if (outDir.Equals("verify", StringComparison.OrdinalIgnoreCase)) return VerifyProbe.Run();
         //  «ورق‌ها را پر کردم، بستم، دوباره آمدم — هیچ ورقی نبود»
         if (outDir.Equals("persist", StringComparison.OrdinalIgnoreCase)) return PersistProbe.Run(args);
+        if (outDir.Equals("audit11", StringComparison.OrdinalIgnoreCase)) return AuditEleven.Run(args);
         //  «تست بزن ببین لاگین می‌شود، کد بزنی چه می‌شود، حساب ساخته می‌شود یا نه»
         if (outDir.Equals("cloudlogin", StringComparison.OrdinalIgnoreCase)) return CloudLoginProbe.Run();
         //  «تو کادرها + @ # ﷼ ( ) ؟ ؛ : , . نوشته نمی‌شوند»

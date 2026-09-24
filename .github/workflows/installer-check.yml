@@ -1,0 +1,43 @@
+name: سنجشِ نصاب (ویندوز)
+
+# ══ نصاب پیش از مرج ساخته می‌شود، نه پس از آن ═══════════════════════════════
+#
+# نسخهٔ ۳.۱.۱۵۸ هیچ‌وقت منتشر نشد: در بخشِ ‎[Code]‎ِ فایلِ نصاب توضیح با «;»
+# نوشته شده بود — Pascal آن را نمی‌شناسد («'BEGIN' expected») — و این را فقط
+# ‎build-native.yml‎ می‌دید، که **پس از** مرج روی ‎main‎ می‌دود. یعنی کدِ سالم
+# مرج شد و کاربر هیچ نسخهٔ تازه‌ای نگرفت.
+#
+# این‌جا همان دو نصاب (۶۴ و ۳۲بیتی) با یک بارِ ساختگی ساخته می‌شوند. هیچ چیزی
+# منتشر نمی‌شود و هیچ دسترسیِ نوشتنی لازم نیست.
+on:
+  pull_request:
+    paths:
+      - 'native/installer/**'
+      - '.github/workflows/build-native.yml'
+      - '.github/workflows/installer-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  iscc:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ساختِ هر دو نصاب با بارِ ساختگی
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup --no-progress -y
+            $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          }
+          foreach ($arch in @('x64','x86')) {
+            $src = "fake\win-$arch"
+            New-Item -ItemType Directory -Force -Path $src | Out-Null
+            Set-Content -Path "$src\PumpYaqobi.exe" -Value "stub"
+            & $iscc /Qp "/DAppVersion=0.0.1" "/DArch=$arch" "/DSourceDir=..\..\$src" native/installer/PumpYaqobi.iss
+            if ($LASTEXITCODE -ne 0) { throw "ساختِ نصابِ $arch شکست خورد" }
+          }
+          Get-ChildItem rel | ForEach-Object { "{0}  {1:N0} بایت" -f $_.Name, $_.Length }
