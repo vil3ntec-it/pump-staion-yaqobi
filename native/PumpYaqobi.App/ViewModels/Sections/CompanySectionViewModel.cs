@@ -302,6 +302,10 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
     [RelayCommand]
     private Task SearchAsync() => _section.OpenSearchAsync(Entity.Id);
 
+    /// <summary>کادرِ «🔍 جستجوی خرید» همین صفحه — در همهٔ حساب‌ها، و رفتن سرِ همان خرید.</summary>
+    [ObservableProperty] private string _findText = "";
+    [RelayCommand] private Task FindAsync() => _section.FindInlineAsync(FindText);
+
     /// <summary>
     /// ‎newCompanyTable‎ — فقط جدولِ همان تیلی که باز است نو می‌شود؛ پطرول و دیزل
     /// دو دفترِ جدا هستند.
@@ -638,6 +642,47 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
         var all = await _host.StorageData.AllPurchasesAsync();
         Overlay = new CompanyArchivePageViewModel(_host, full, fuel, arcs, all, this);
     }
+
+    /// <summary>
+    /// ══ «🔍 جستجوی خرید» همان‌جا، بی صفحهٔ جدا (۱۴۰۵/۰۷/۱۳) ═══════════════════
+    ///
+    /// خواستهٔ صاحب ریپو: «جستجوی خرید صفحهٔ جدا باز می‌کند و جزئیات می‌پرسد؛
+    /// می‌خواهم همان‌جا بنویسم و اگر پیدا شد، ببرد سرِ همان خرید در هر حسابی
+    /// که هست.» پس یک کادر: عدد ⇐ مقدار (کیلو یا تن)، تاریخ ⇐ تاریخ.
+    ///   • یک مورد ⇐ همان لحظه می‌رود سرش (‎GoToAsync‎ی همیشگی).
+    ///   • چند مورد ⇐ همان فهرستِ همیشگی با نتیجه‌ها (چون باید یکی را برگزید).
+    ///   • هیچ ⇐ توست، و هیچ صفحه‌ای باز نمی‌شود.
+    /// ⛔ قاعدهٔ یافتن دوباره نوشته نشد — همان ‎CompanyPurchaseService.Search‎.
+    /// ⛔ فقط می‌خواند.
+    /// </summary>
+    public Task FindInlineAsync(string? text) => CrashGuard.RunAsync("جستجوی خرید", async () =>
+    {
+        var raw = Shamsi.ToEnDigits(text ?? "").Trim();
+        if (raw.Length == 0) { _host.Toast("مقدار (کیلو یا تن) یا تاریخِ خرید را بنویسید", ToastKind.Warn); return; }
+        var isDate = raw.Contains('/') || raw.Count(ch => ch == '-') >= 2;
+        decimal? qty = null;
+        if (!isDate && decimal.TryParse(new string(raw.Where(ch => char.IsDigit(ch) || ch == '.').ToArray()),
+                System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var q))
+            qty = q;
+        if (!isDate && qty is null) { _host.Toast("یک عدد (مقدار) یا یک تاریخ بنویسید", ToastKind.Warn); return; }
+
+        var purchases = await _host.StorageData.AllPurchasesAsync();
+        var companies = await _host.Companies.ListAsync();
+        var arcs = (await _host.Companies.AllArchivesAsync())
+                   .Select(h => (h, (IReadOnlyList<CompanyRow>)CompanyDataService.ArchiveRows(h))).ToList();
+        var hits = _host.CompanyPurchases.Search(purchases, companies, arcs, qty, isDate ? raw : "", null, null);
+
+        if (hits.Count == 0) { _host.Toast("پیدا نشد — با «" + raw + "» هیچ خریدی ثبت نشده است", ToastKind.Warn); return; }
+        if (hits.Count == 1) { await GoToAsync(hits[0]); return; }
+
+        var sp = new CompanySearchPageViewModel(_host, null, this);
+        if (isDate) sp.DateText = raw; else sp.QtyText = raw;
+        Overlay = sp;
+        await sp.RunCommand.ExecuteAsync(null);
+    });
+
+    [ObservableProperty] private string _findText = "";
+    [RelayCommand] private Task FindAsync() => FindInlineAsync(FindText);
 
     /// <summary>‎openCmpSearch(companyId)‎ — ‎null‎ یعنی همهٔ شرکت‌ها.</summary>
     public Task OpenSearchAsync(long? companyId)

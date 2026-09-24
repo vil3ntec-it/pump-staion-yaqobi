@@ -63,46 +63,68 @@ public sealed class IssueTextColumn : DataGridTextColumn
         host.Children.Add(inner);
         host.Children.Add(mark);
 
-        //  پیامِ کوتاه با ماوس، بی تأخیر — ⛔ خودکار با انتخابِ خانه باز نمی‌شود (جلوی
-        //  نوشته‌های ردیفِ بالا را می‌گرفت)
-        //  ⚠️ پیام یک ‎TextBlock‎ِ صریح است، نه رشتهٔ خام: رشته در ‎ToolTip‎ با
-        //  همان ‎TextBlock‎ی کشیده می‌شود که سبکِ ‎DataGridCell TextBlock‎ رویش
-        //  می‌نشیند (یک خط، وسط‌چین، «…») — و پیام فقط «…» دیده می‌شد (عکسِ
-        //  ‎waraqfit‎ گرفتش). مقدارهای محلیِ این‌جا بر آن سبک برنده‌اند.
-        host.Bind(ToolTip.TipProperty, new Binding(IssuePath) { Converter = TipOf.Instance });
-        host.GetObservable(ToolTip.TipProperty)
-            .Subscribe(new Watch(v => cell.Classes.Set("issue", v is not null)));
-        ToolTip.SetShowDelay(host, 0);
-        ToolTip.SetPlacement(host, PlacementMode.Top);
-        ToolTip.SetVerticalOffset(host, -4);
+        //  ⛔ پیام روی **خودِ خانه** است، نه روی نوشتهٔ داخلش (۱۴۰۵/۰۷/۱۳، گزارشِ
+        //  صاحب ریپو: «فقط وقتی ماوس روی عدد است پیام می‌آید، نه روی همهٔ کادرِ
+        //  سرخ»). پیش از این ‎ToolTip‎ روی همین ‎host‎ بود و ‎host‎ فقط جای نوشته
+        //  را می‌گیرد — لبه‌ها و فاصلهٔ خانه بیرونش بودند.
+        //  ⚠️ خانه‌ها بازیافت می‌شوند و ‎GenerateElement‎ برای یک خانه چند بار
+        //  صدا می‌خورد (پایانِ ویرایش)؛ پس خانه یک بار سیم‌کشی می‌شود.
+        //  ⛔ خودکار با انتخابِ خانه باز نمی‌شود (جلوی نوشته‌های ردیفِ بالا را می‌گرفت).
+        if (!Wired.TryGetValue(cell, out _))
+        {
+            Wired.Add(cell, this);
+            cell.Bind(ToolTip.TipProperty, new Binding(IssuePath) { Converter = TipOf.Instance });
+            cell.GetObservable(ToolTip.TipProperty)
+                .Subscribe(new Watch(v => cell.Classes.Set("issue", v is not null)));
+            ToolTip.SetShowDelay(cell, 0);
+            ToolTip.SetPlacement(cell, PlacementMode.Top);
+            ToolTip.SetVerticalOffset(cell, -4);
+        }
         return host;
     }
 
-    /// <summary>پیام ⇐ کادرِ پیامِ خوانا؛ پیامِ خالی ⇐ هیچ (یعنی هیچ ‎ToolTip‎ی).</summary>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<DataGridCell, object> Wired = new();
+
+    /// <summary>
+    /// پیام ⇐ کادرِ پیامِ خوانا: خطِ اول **درشت** (چه شده)، خطِ دوم ریزتر (عددها).
+    /// پیامِ خالی ⇐ هیچ (یعنی هیچ ‎ToolTip‎ی).
+    /// ⚠️ هر خط یک ‎TextBlock‎ِ صریح است، نه رشتهٔ خام: رشته زیرِ سبکِ
+    /// ‎DataGridCell TextBlock‎ (یک خط، وسط‌چین، «…») کشیده می‌شد و فقط «…» می‌ماند.
+    /// </summary>
     public sealed class TipOf : IValueConverter
     {
         public static readonly TipOf Instance = new();
-        public object? Convert(object? value, Type t, object? p, System.Globalization.CultureInfo c) =>
-            value is string { Length: > 0 } text
-                ? new TextBlock
+        public object? Convert(object? value, Type t, object? p, System.Globalization.CultureInfo c)
+        {
+            if (value is not string { Length: > 0 } text) return null;
+            var lines = text.Split('\n');
+            var panel = new StackPanel { Spacing = 3, FlowDirection = FlowDirection.RightToLeft };
+            for (var i = 0; i < lines.Length; i++)
+                panel.Children.Add(new TextBlock
                 {
-                    Text = text,
+                    Text = lines[i],
                     TextWrapping = TextWrapping.NoWrap,
                     TextTrimming = TextTrimming.None,
                     TextAlignment = TextAlignment.Right,
                     HorizontalAlignment = HorizontalAlignment.Stretch,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    FontSize = 13,
-                    FontWeight = FontWeight.SemiBold,
+                    FontSize = i == 0 ? 13.5 : 12,
+                    FontWeight = i == 0 ? FontWeight.Bold : FontWeight.Normal,
+                    Opacity = i == 0 ? 1 : 0.85,
                     Margin = new Thickness(0),
                     FlowDirection = FlowDirection.RightToLeft,
-                }
-                : null;
+                });
+            return panel;
+        }
         public object? ConvertBack(object? v, Type t, object? p, System.Globalization.CultureInfo c) => null;
     }
 
-    /// <summary>متنِ پیامِ یک خانه — برای سنجه‌ها.</summary>
-    public static string MessageOf(Control? host) => (ToolTip.GetTip(host!) as TextBlock)?.Text ?? "";
+    /// <summary>متنِ پیامِ یک خانه (یا هر کنترلی با همان ‎ToolTip‎) — برای سنجه‌ها.</summary>
+    public static string MessageOf(Control? host) => ToolTip.GetTip(host!) switch
+    {
+        TextBlock tb => tb.Text ?? "",
+        Panel pn => string.Join("\n", pn.Children.OfType<TextBlock>().Select(x => x.Text)),
+        _ => "",
+    };
 
     private sealed class Watch(Action<object?> on) : IObserver<object?>
     {

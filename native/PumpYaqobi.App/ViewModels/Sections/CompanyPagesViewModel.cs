@@ -249,8 +249,9 @@ public sealed partial class CompanyArchiveViewModel : ObservableObject
     public CompanyArchiveViewModel(CompanyTableArchive h, TilCompany c, CompanyService calc,
                                    IReadOnlyList<FuelPurchase> all, CompanyArchivePageViewModel page)
     {
-        _page = page; Entity = h;
+        _page = page; Entity = h; _company = c; _calc = calc;
         var rows = CompanyDataService.ArchiveRows(h);
+        _rows = rows;
         var s = calc.Summarize(c, rows);
         var rate = s.ConvRate;
         Rows.ResetTo(rows.Select((r, i) => new CompanyArchiveRowViewModel(r, i + 1, calc, rate)));
@@ -302,9 +303,38 @@ public sealed partial class CompanyArchiveViewModel : ObservableObject
         DieselBuyText = "🟤 خریدهای دیزل (" + Shamsi.Money(nD) + ")";
     }
 
+    private readonly TilCompany _company;
+    private readonly CompanyService _calc;
+    private readonly List<CompanyRow> _rows;
+
     public CompanyTableArchive Entity { get; }
     public string Title { get; }
     public BulkRows<CompanyArchiveRowViewModel> Rows { get; } = new();
+    public bool HasRows => _rows.Count > 0;
+    public bool NoRows => _rows.Count == 0;
+
+    /// <summary>
+    /// «🖨️ PDF همین آرشیو» (۱۴۰۵/۰۷/۱۳) — همان سندِ حسابِ شرکت
+    /// (‎CompanyReport‎)، با ردیف‌های همین آرشیو. ⛔ هیچ فرمولِ تازه‌ای نیست.
+    /// </summary>
+    [RelayCommand]
+    private Task Pdf()
+    {
+        var input = new PumpYaqobi.Reporting.Pdf.CompanyReportInput(_company, Entity.Fuel, _rows,
+            "جدولِ آرشیو — " + (Entity.CreatedShamsi ?? "—"));
+        return PumpYaqobi.App.Printing.Documents.ShowAsync(
+            () => new PumpYaqobi.Reporting.Pdf.CompanyReport(input, _calc),
+            (_company.Name ?? "") + " — آرشیوِ " + FuelWord + " — " + (Entity.CreatedShamsi ?? ""));
+    }
+
+    /// <summary>
+    /// نوارِ بسته که باز شد، جدولش همان لحظه برگردد — ⚠️ جدولِ نامرئی
+    /// فهرستش را پارک می‌کند و باز شدنِ یک کشویی «صفحه عوض شد» نیست.
+    /// </summary>
+    partial void OnIsOpenChanged(bool value)
+    {
+        if (value) PumpYaqobi.App.Controls.ExcelGrid.NotifyPagesChanged();
+    }
     public IReadOnlyList<TotalCell> Totals { get; }
     public string PetrolBuyText { get; }
     public string DieselBuyText { get; }
@@ -398,13 +428,19 @@ public sealed partial class CompanyArchivePageViewModel : ObservableObject
         if (first is not null) first.IsOpen = true;
 
         ApplyFilter();
-        EmptyText = "این شرکت هنوز جدولِ آرشیوی ندارد";
     }
 
     public TilCompany Company { get; }
     public FuelType Fuel { get; }
     public string Title { get; }
-    public string EmptyText { get; }
+    /// <summary>بی‌جدول بودن را می‌گوید و راهِ ساختنش را — قفلِ بی‌توضیح باگ است.</summary>
+    public string EmptyText => FuelFilter switch
+    {
+        "diesel" => "این شرکت هنوز جدولِ آرشیوِ دیزل ندارد — در حسابِ شرکت «🟤 دیزل» را باز کنید و «جدول جدید» بزنید.",
+        "petrol" => "این شرکت هنوز جدولِ آرشیوِ پطرول ندارد — در حسابِ شرکت «⛽ پطرول» را باز کنید و «جدول جدید» بزنید.",
+        _ => _every.Count == 0 ? "این شرکت هنوز جدولِ آرشیوی ندارد — «جدول جدید» در حسابِ شرکت جدولِ همان تیل را این‌جا می‌آورد."
+                               : "با این جست‌وجو جدولی پیدا نشد.",
+    };
     public ObservableCollection<CompanyArchiveViewModel> Archives { get; } = new();
     public bool IsEmpty => Archives.Count == 0;
 
@@ -413,13 +449,33 @@ public sealed partial class CompanyArchivePageViewModel : ObservableObject
 
     partial void OnSearchChanged(string v) => ApplyFilter();
 
+    /// <summary>
+    /// «همه · ⛽ پطرول · 🟤 دیزل» (۱۴۰۵/۰۷/۱۳) — گزارشِ صاحب ریپو: «آرشیو فقط
+    /// برای پطرول است، دیزل ندارد.» هر دو تیل از اول این‌جا بودند ولی قاطی؛
+    /// حالا هر تیل کلیدِ خودش را دارد و شمارش روی خودِ کلید نوشته است.
+    /// </summary>
+    [ObservableProperty] private string _fuelFilter = "all";
+    partial void OnFuelFilterChanged(string v) => ApplyFilter();
+    [RelayCommand] private void SetFuelFilter(string? which) => FuelFilter = which is "petrol" or "diesel" ? which : "all";
+    public bool IsAllFuel => FuelFilter == "all";
+    public bool IsPetrolFuel => FuelFilter == "petrol";
+    public bool IsDieselFuel => FuelFilter == "diesel";
+    public string AllFuelText => "همه (" + Shamsi.Money(_every.Count) + ")";
+    public string PetrolFuelText => "⛽ پطرول (" + Shamsi.Money(_every.Count(a => a.Fuel == FuelType.Petrol)) + ")";
+    public string DieselFuelText => "🟤 دیزل (" + Shamsi.Money(_every.Count(a => a.Fuel == FuelType.Diesel)) + ")";
+
     private void ApplyFilter()
     {
         var q = (Search ?? "").Trim();
         Archives.Clear();
-        foreach (var a in _every) if (a.Matches(q)) Archives.Add(a);
-        OnPropertyChanged(nameof(IsEmpty));
-        OnPropertyChanged(nameof(CountText));
+        foreach (var a in _every)
+            if (a.Matches(q) && (FuelFilter == "all"
+                || (FuelFilter == "diesel") == (a.Fuel == FuelType.Diesel)))
+                Archives.Add(a);
+        foreach (var n in new[] { nameof(IsEmpty), nameof(CountText), nameof(EmptyText), nameof(IsAllFuel),
+                                  nameof(IsPetrolFuel), nameof(IsDieselFuel), nameof(AllFuelText),
+                                  nameof(PetrolFuelText), nameof(DieselFuelText) })
+            OnPropertyChanged(n);
     }
 
     public string CountText => Shamsi.Money(Archives.Count) + " جدول از "
@@ -459,9 +515,7 @@ public sealed partial class CompanyArchivePageViewModel : ObservableObject
                 "این جدولِ آرشیو با " + Shamsi.Money(a.Entity.RowCount) + " ردیف حذف شود؟")) return;
         await _host.Companies.DeleteArchiveAsync(a.Entity.Id);
         _every.Remove(a);
-        Archives.Remove(a);
-        OnPropertyChanged(nameof(IsEmpty));
-        OnPropertyChanged(nameof(CountText));
+        ApplyFilter();
         if (_section.Page is { } p) await p.RefreshMetaAsync();
         _host.Toast("🗑️ آرشیو حذف شد", ToastKind.Warn);
     });

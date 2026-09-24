@@ -111,17 +111,25 @@ public sealed partial class WaraqPumpViewModel : RowViewModel, IFlaggedRow
     {
         get
         {
+            //  ⛔ دو خط (۱۴۰۵/۰۷/۱۳، «روشن‌تر و خلاصه‌تر»): خطِ اول چه شده، با فرق —
+            //  خطِ دوم خودِ دو عدد. پیش از این «۱٬۰۰۰ لیتر کمتر از ختمِ قبلی
+            //  (۱۲۰٬۰۰۰)» بود و معلوم نبود عددِ داخلِ پرانتز چیست.
             if (!LowBase) return "";
-            if (_prevEnd is not { } prev) return "با ختمِ پایهٔ قبلی جور نیست";
+            var here = Num > 0 ? "پایهٔ " + Num : "همین پایه";
+            if (_prevEnd is not { } prev)
+                return "⚠️ شروع با ختمِ قبلی جور نیست\nختمِ پارچهٔ قبلیِ " + here + " پیدا نشد";
             var d = Start - prev;
-            return d < 0m ? Shamsi.Money(-d) + " لیتر کمتر از ختمِ قبلی (" + Shamsi.Money(prev) + ")"
-                 : d > 0m ? Shamsi.Money(d) + " لیتر بیشتر از ختمِ قبلی (" + Shamsi.Money(prev) + ")"
-                 : "حالا با ختمِ قبلی جور است";
+            var nums = "ختمِ قبلیِ " + here + ": " + Shamsi.Money(prev) + " · این شروع: " + Shamsi.Money(Start);
+            return d < 0m ? "⚠️ شروع " + Shamsi.Money(-d) + " لیتر کمتر است\n" + nums
+                 : d > 0m ? "⚠️ شروع " + Shamsi.Money(d) + " لیتر بیشتر است\n" + nums
+                 : "✔ حالا با ختمِ قبلی جور است\nبا راست‌کلیک نشانِ سرخ را بردارید";
         }
     }
 
     public string EndIssue =>
-        End > 0m && Start > 0m && End < Start ? "ختم از شروع کمتر است" : "";
+        End > 0m && Start > 0m && End < Start
+            ? "⚠️ ختم از شروع کمتر است\nشروع: " + Shamsi.Money(Start) + " · ختم: " + Shamsi.Money(End)
+            : "";
 
     bool IFlaggedRow.Flagged => LowBase;
     System.Windows.Input.ICommand IFlaggedRow.ClearFlagCommand => ClearLowBaseCommand;

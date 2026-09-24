@@ -183,7 +183,12 @@ internal static class ParchaWaraqAudit
         Wait(win, vm.GoAsync(pa));
         Pump(win);
 
+        //  فهرستِ گزارش‌ها فقط با باز شدنِ صفحهٔ خودش خوانده می‌شود (۱۴۰۵/۰۷/۱۳)
+        pa.ReportsOpen = true;
+        Settle(win);
         var before = pa.Reports.Count;
+        pa.ReportsOpen = false;
+        Pump(win);
 
         Fill(pa.Day, "کارمندِ یک", "100", "300");
         pa.Day.SaveCommand.Execute(null);
@@ -197,8 +202,23 @@ internal static class ParchaWaraqAudit
         pa.Day.SaveCommand.Execute(null);
         Settle(win);
 
+        pa.ReportsOpen = true;
+        Settle(win);
         Check($"دو پارچهٔ جدا ساخته شد ({before} ← {pa.Reports.Count})",
               pa.Reports.Count >= before + 2);
+        Check("صفحهٔ گزارش‌ها ماه‌به‌ماه گروه شده", pa.ReportYears.Count > 0
+              && pa.ReportYears[0].Months.Count > 0, pa.ReportYears.Count + " سال");
+        var first = pa.Reports.FirstOrDefault();
+        pa.ShowReportCommand.Execute(first);
+        Pump(win);
+        Check("کلیک روی گزارش، گزارشِ همان پارچه را نشان می‌دهد",
+              pa.ShowReportDetail && pa.OpenReport == first && first!.Shifts.Count == 2);
+        pa.ReportsBackCommand.Execute(null);
+        Pump(win);
+        Check("«‹ برگشت» به فهرست", pa.ShowReportList);
+        pa.ReportsBackCommand.Execute(null);
+        Pump(win);
+        Check("و دوباره به پارچه‌ها", pa.ShowMain && pa.Reports.Count == 0);
     }
 
     /// <summary>

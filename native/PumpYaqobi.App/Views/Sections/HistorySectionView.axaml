@@ -56,6 +56,29 @@
                   Command="{Binding BackCommand}" />
           <TextBlock Text="📅 ماه:" Classes="label" VerticalAlignment="Center" Margin="0,0,6,0" />
           <ComboBox ItemsSource="{Binding Months}" SelectedItem="{Binding Month}" MinWidth="150" />
+          <!-- ⛔ صافیِ پارچه‌ها (۱۴۰۵/۰۷/۱۳): تیل و شمارهٔ پایه — فقط برای دیدن -->
+          <StackPanel Orientation="Horizontal" Spacing="6" Margin="14,0,0,0"
+                      IsVisible="{Binding HasShiftFilters}">
+            <Button Classes="seg" Content="همه" Command="{Binding PickFuelCommand}"
+                    CommandParameter="all" Classes.on="{Binding IsFuelAll}" />
+            <Button Classes="seg" Content="⛽ پطرول" Command="{Binding PickFuelCommand}"
+                    CommandParameter="petrol" Classes.on="{Binding IsFuelPetrol}" />
+            <Button Classes="seg" Content="🟤 دیزل" Command="{Binding PickFuelCommand}"
+                    CommandParameter="diesel" Classes.on="{Binding IsFuelDiesel}" />
+            <TextBlock Text="پایه:" Classes="label" VerticalAlignment="Center" Margin="10,0,2,0" />
+            <ItemsControl ItemsSource="{Binding Pumps}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="4" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:PumpChip">
+                  <Button Classes="seg" Content="{Binding Text}" MinWidth="34" Padding="8,2"
+                          Command="{Binding PickCommand}" Classes.on="{Binding IsOn}"
+                          ToolTip.Tip="{Binding Tip}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
         </WrapPanel>
       </c:SectionPage.Toolbar>
 

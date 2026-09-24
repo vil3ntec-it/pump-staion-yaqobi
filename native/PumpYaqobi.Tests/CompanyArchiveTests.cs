@@ -186,7 +186,8 @@ public class CompanyArchiveTests : IDisposable
         var v = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "CompanyPageView.axaml"));
         Assert.DoesNotContain("Header=\"کیلو\"", v);
         Assert.Contains("Header=\"خرید (تن)\"", v);
-        Assert.Contains("Header=\"📦\"", v);
+        //  ⛔ ستونِ «📦» به خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۳) برداشته شد و برنمی‌گردد
+        Assert.DoesNotContain("Header=\"📦\"", v);
         Assert.Contains("{Binding Actions}", v);
         Assert.Contains("ClearTableCommand", v);
 
@@ -209,7 +210,9 @@ public class CompanyArchiveTests : IDisposable
         // **جایی** در صفحه باشند. «خریدهای مخزن» و «جدول جدید» داخلِ کشویی،
         // «آرشیو» و «جستجو» کنارش.
         Assert.Contains("OpenArchiveCommand", v);
-        Assert.Contains("SearchCommand", v);
+        //  «جستجو» از ۱۴۰۵/۰۷/۱۳ کادرِ همین صفحه است، نه صفحهٔ جدا — همان کار، درِ تازه
+        Assert.Contains("FindCommand", v);
+        Assert.Contains("{Binding FindText}", v);
         var vmSrc = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "Sections", "CompanySectionViewModel.cs"));
         foreach (var act in new[] { "\"buy-petrol\"", "\"buy-diesel\"", "\"new\"" })
             Assert.Contains("case " + act + ":", vmSrc);
@@ -249,7 +252,9 @@ public class CompanyArchiveTests : IDisposable
 
         // ۳) ستون‌هایش مو‌به‌مو ستون‌های جدولِ اصلی
         var live = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "CompanyPageView.axaml"));
-        foreach (var h in new[] { "📦", "تاریخ", "نام", "خرید (تن)", "قیمت تن ($)", "کل ($)",
+        Assert.DoesNotContain("Header=\"📦\"", live);
+        Assert.DoesNotContain("Header=\"📦\"", v);
+        foreach (var h in new[] { "تاریخ", "نام", "خرید (تن)", "قیمت تن ($)", "کل ($)",
                                   "نرخ", "کل (افغانی)", "رسید", "واحدِ رسید", "الباقی", "الباقیِ دالر" })
         {
             Assert.Contains("Header=\"" + h + "\"", live);

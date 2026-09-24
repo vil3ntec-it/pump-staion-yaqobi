@@ -174,27 +174,36 @@ internal static class WaraqFit
         Check("کپسولِ تیلِ پایه‌های پارچه دکمه نیست (قفل)", chips == 0 && locks == 3, $"دکمه {chips} · قفل {locks}");
 
         var low = fromParcha.FirstOrDefault(p => p.LowBase);
-        Check("پایهٔ کمتر نشان دارد و پیامش کوتاه و یک‌خطی است با عدد (۱٬۰۰۰ لیتر کمتر از ۱۲۰٬۰۰۰)",
-              low is not null && low.StartIssue.Contains("1,000") && low.StartIssue.Contains("120,000")
-              && low.StartIssue.Contains("کمتر") && !low.StartIssue.Contains('\n') && low.StartIssue.Length <= 50,
+        //  ⛔ دو خطِ کوتاه (۱۴۰۵/۰۷/۱۳، «روشن‌تر و خلاصه‌تر»): خطِ اول چه شده با فرق،
+        //  خطِ دوم خودِ دو عدد — هر خط کوتاه، و هیچ خطِ سومی نیست.
+        var lines = low?.StartIssue.Split('\n') ?? Array.Empty<string>();
+        Check("پایهٔ کمتر نشان دارد و پیامش دو خطِ کوتاه است: «شروع ۱٬۰۰۰ لیتر کمتر است» و دو عدد",
+              low is not null && lines.Length == 2 && lines[0].Contains("1,000") && lines[0].Contains("کمتر")
+              && lines[1].Contains("120,000") && lines[1].Contains("119,000") && lines.All(l => l.Length <= 60),
               low?.StartIssue);
         var ok = fromParcha.Where(p => !p.LowBase).ToList();
         Check("پایه‌های سالم هیچ پیامی ندارند", ok.All(p => p.StartIssue == "" && p.EndIssue == ""));
 
         //  خودِ خانه: لبهٔ سرخ و مثلث دیده می‌شوند، و پیامش همان ‎ToolTip‎ است
-        var hosts = grid?.GetVisualDescendants().OfType<Grid>().Where(g => g.Classes.Contains("issuecell")).ToList() ?? new();
-        var red = hosts.Where(g => IssueTextColumn.MessageOf(g).Length > 0).ToList();
+        //  ⛔ پیام روی **خودِ خانه** است (۱۴۰۵/۰۷/۱۳): «فقط روی عدد پیام می‌آید، نه روی همهٔ کادرِ سرخ»
+        var red = grid?.GetVisualDescendants().OfType<DataGridCell>()
+                      .Where(c => IssueTextColumn.MessageOf(c).Length > 0).ToList() ?? new();
         Check("فقط یک خانه سرخ است (شروعِ همان پایه)", red.Count == 1, red.Count.ToString());
-        var redCell = red.FirstOrDefault()?.FindAncestorOfType<DataGridCell>();
+        var redCell = red.FirstOrDefault();
+        var hostIn = redCell?.GetVisualDescendants().OfType<Grid>().FirstOrDefault(g => g.Classes.Contains("issuecell"));
+        Check("پیام روی کلِ خانه است، نه فقط روی نوشتهٔ داخلش",
+              redCell is not null && hostIn is not null && ToolTip.GetTip(hostIn) is null
+              && ToolTip.GetTip(redCell) is not null,
+              $"خانه {redCell?.Bounds.Width:0}×{redCell?.Bounds.Height:0} · نوشته {hostIn?.Bounds.Width:0}×{hostIn?.Bounds.Height:0}");
         Check("خطِ خودِ همان خانه سرخ است (کلاسِ issue روی خودِ خانه، نه کادرِ دوم)",
               redCell?.Classes.Contains("issue") == true && redCell.BorderThickness.Left >= 2);
         Check("هیچ کادرِ دومی داخلِ خانه نیست",
-              red.FirstOrDefault()?.Children.OfType<Border>().Any() == false);
+              hostIn?.Children.OfType<Border>().Any() == false);
         var redCells = grid?.GetVisualDescendants().OfType<DataGridCell>().Count(c => c.Classes.Contains("issue")) ?? -1;
         Check("فقط همان یک خانه خطِ سرخ دارد", redCells == 1, redCells.ToString());
         Check("پیامِ خانه همان پیامِ ردیف است و کامل (نه «…»)",
               red.FirstOrDefault() is { } rm && IssueTextColumn.MessageOf(rm) == low?.StartIssue
-              && ToolTip.GetTip(rm) is TextBlock { TextTrimming: var tt } && tt == Avalonia.Media.TextTrimming.None);
+              && ToolTip.GetTip(rm) is Panel pn && pn.Children.OfType<TextBlock>().All(t => t.TextTrimming == Avalonia.Media.TextTrimming.None));
         Check("پیام درجا (بی تأخیر) و بالای کادر باز می‌شود",
               red.FirstOrDefault() is { } rh && ToolTip.GetShowDelay(rh) == 0 && ToolTip.GetPlacement(rh) == PlacementMode.Top);
 
@@ -224,7 +233,8 @@ internal static class WaraqFit
             manual.StartText = "500"; manual.EndText = "400";
             Settle(win);
             Check("ختمِ کمتر از شروع ⇒ خانهٔ «ختم» سرخ و دلیلش گفته می‌شود",
-                  manual.EndIssue == "ختم از شروع کمتر است" && manual.StartIssue == "", manual.EndIssue);
+                  manual.EndIssue.StartsWith("⚠️ ختم از شروع کمتر است") && manual.EndIssue.Contains("500")
+                  && manual.EndIssue.Contains("400") && manual.StartIssue == "", manual.EndIssue);
             manual.ToggleFuelCommand.Execute(null);
             Check("پایهٔ دستی (نه از پارچه) همچنان تیلش عوض می‌شود", manual.Fuel == FuelType.Diesel);
         }

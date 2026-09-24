@@ -330,6 +330,9 @@
 
       <c:SectionPage.Toolbar>
         <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+          <!-- ⛔ برگشت — خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۳): «در صف و تایید شده دکمهٔ برگشت ندارند» -->
+          <Button Content="‹ برگشت" Margin="0,0,6,0" Command="{Binding BackCommand}"
+                  ToolTip.Tip="برگشت به برگهٔ فاکتور" />
           <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0" Command="{Binding OpenHistoryCommand}" IsVisible="{Binding HasHistory}" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
           <Button Classes="accent" Content="＋ فاکتور تازه" Command="{Binding CloseListCommand}"
                   ToolTip.Tip="برگشت به برگهٔ فاکتور" />
@@ -367,7 +370,10 @@
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:InvoiceRowViewModel">
-            <Border Classes="panel" Padding="14,11" Margin="0,0,0,9">
+            <Border Classes="panel" Padding="14,11" Margin="0,0,0,9"
+                    Cursor="Hand"
+                    PointerReleased="OnCardReleased"
+                    ToolTip.Tip="برای دیدنِ فاکتور کلیک کنید">
               <Grid ColumnDefinitions="Auto,*,Auto">
 
                 <!-- شمارهٔ فاکتور، درشت و سرِ خط — همان چیزی که کاربر با آن
@@ -445,8 +451,9 @@
           <Button Classes="ghost danger" Content="🗑 حذف"
                   Command="{Binding $parent[UserControl].DataContext.DeleteInvoiceCommand}"
                   CommandParameter="{Binding}" />
-          <Button Content="بستن"
-                  Command="{Binding $parent[UserControl].DataContext.CloseListCommand}" />
+          <!-- برگشت به همان فهرستی که فاکتور از آن باز شد (در صف / تایید شده / همه) -->
+          <Button Content="‹ برگشت"
+                  Command="{Binding $parent[UserControl].DataContext.BackCommand}" />
         </StackPanel>
       </c:SectionPage.Toolbar>
 

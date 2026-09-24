@@ -29,6 +29,19 @@ public sealed partial class HistoryCardViewModel : ObservableObject
     private Task Open() => _owner.OpenAsync(Entity.Key);
 }
 
+/// <summary>دکمهٔ کوچکِ «شمارهٔ پایه» در تاریخچهٔ پارچه‌ها — ۰ یعنی همه.</summary>
+public sealed partial class PumpChip : ObservableObject
+{
+    private readonly HistorySectionViewModel _owner;
+    public PumpChip(int n, string text, HistorySectionViewModel owner) { Number = n; Text = text; _owner = owner; }
+    public int Number { get; }
+    public string Text { get; }
+    public string Tip => Number == 0 ? "همهٔ پایه‌ها با هم" : "فقط تاریخچهٔ پایهٔ " + Text;
+    public bool IsOn => _owner.IsPumpPicked(Number);
+    internal void Raise() => OnPropertyChanged(nameof(IsOn));
+    [RelayCommand] private void Pick() => _owner.PickPump(Number);
+}
+
 /// <summary>یک ردیفِ صفحهٔ تاریخچهٔ یک بخش.</summary>
 public sealed class HistoryRowViewModel
 {
@@ -196,8 +209,66 @@ public sealed partial class HistorySectionViewModel : SectionViewModel
                                .Distinct().OrderByDescending(m => m))
             Months.Add(m);
 
+        //  صافیِ پارچه‌ها از خودِ ردیف‌ها: فقط پایه‌هایی که واقعاً ثبت شده‌اند
+        _fuelPick = "all"; _pumpPick = 0;
+        Pumps.Clear();
+        if (kind == "shift")
+        {
+            Pumps.Add(new PumpChip(0, "همه", this));
+            foreach (var n in _feed.Select(r => r.Pump).Where(n => n > 0).Distinct().OrderBy(n => n))
+                Pumps.Add(new PumpChip(n, Shamsi.Money(n), this));
+        }
+        RaiseFilters();
+
         Month = AllMonths;      // خودش ‎Apply‎ را صدا می‌زند
         Apply();
+    }
+
+    // ══ «پطرول / دیزل» و «پایهٔ ۱ ۲ ۳ …» — فقط تاریخچهٔ پارچه‌ها (۱۴۰۵/۰۷/۱۳) ══
+    //
+    // گزارشِ صاحب ریپو: «در تاریخچهٔ پارچه‌ها پطرول و دیزل قاطی‌اند و پایهٔ ۱ و
+    // ۲ و ۳ قاطی‌اند؛ یک کادر برای پطرول، یکی برای دیزل، و دکمه‌های کوچکِ
+    // شمارهٔ پایه که تاریخچهٔ همان پایه را نشان بدهد — یا همه با هم.»
+    // ⛔ فقط صافی است: هیچ پرس‌وجوی تازه‌ای نمی‌زند و هیچ چیزی نمی‌نویسد.
+    partial void OnOpenKindChanged(string value) => OnPropertyChanged(nameof(HasShiftFilters));
+    private string _fuelPick = "all";
+    private int _pumpPick;
+    public ObservableCollection<PumpChip> Pumps { get; } = new();
+    public bool HasShiftFilters => OpenKind == "shift";
+    public bool IsFuelAll => _fuelPick == "all";
+    public bool IsFuelPetrol => _fuelPick == "petrol";
+    public bool IsFuelDiesel => _fuelPick == "diesel";
+
+    [RelayCommand]
+    private void PickFuel(string? which)
+    {
+        _fuelPick = which is "petrol" or "diesel" ? which : "all";
+        RaiseFilters();
+        Apply();
+    }
+
+    internal void PickPump(int n)
+    {
+        _pumpPick = n;
+        RaiseFilters();
+        Apply();
+    }
+
+    internal bool IsPumpPicked(int n) => _pumpPick == n;
+
+    private void RaiseFilters()
+    {
+        foreach (var n in new[] { nameof(HasShiftFilters), nameof(IsFuelAll), nameof(IsFuelPetrol), nameof(IsFuelDiesel) })
+            OnPropertyChanged(n);
+        foreach (var c in Pumps) c.Raise();
+    }
+
+    private bool Keep(HistoryRow r)
+    {
+        if (OpenKind != "shift") return true;
+        if (_fuelPick == "petrol" && r.Fuel != PumpYaqobi.Domain.Enums.FuelType.Petrol) return false;
+        if (_fuelPick == "diesel" && r.Fuel != PumpYaqobi.Domain.Enums.FuelType.Diesel) return false;
+        return _pumpPick == 0 || r.Pump == _pumpPick;
     }
 
     /// <summary>برگشت به کارت‌ها.</summary>
@@ -216,9 +287,9 @@ public sealed partial class HistorySectionViewModel : SectionViewModel
 
     private void Apply()
     {
-        var picked = string.IsNullOrEmpty(Month) || Month == AllMonths
+        var picked = (string.IsNullOrEmpty(Month) || Month == AllMonths
             ? _feed
-            : _feed.Where(r => r.MonthKey == Month).ToList();
+            : _feed.Where(r => r.MonthKey == Month)).Where(Keep).ToList();
 
         using (Rows.Batch())
         {

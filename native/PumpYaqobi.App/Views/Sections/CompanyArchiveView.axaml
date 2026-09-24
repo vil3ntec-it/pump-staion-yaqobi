@@ -22,6 +22,15 @@
 
     <c:SectionPage.Filters>
       <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <!-- هر تیل کلیدِ خودش (۱۴۰۵/۰۷/۱۳) — «آرشیو فقط برای پطرول است» -->
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Button Classes="seg" Content="{Binding AllFuelText}" Command="{Binding SetFuelFilterCommand}"
+                  CommandParameter="all" Classes.on="{Binding IsAllFuel}" />
+          <Button Classes="seg" Content="{Binding PetrolFuelText}" Command="{Binding SetFuelFilterCommand}"
+                  CommandParameter="petrol" Classes.on="{Binding IsPetrolFuel}" />
+          <Button Classes="seg" Content="{Binding DieselFuelText}" Command="{Binding SetFuelFilterCommand}"
+                  CommandParameter="diesel" Classes.on="{Binding IsDieselFuel}" />
+        </StackPanel>
         <TextBox Width="280" Text="{Binding Search}"
                  Watermark="🔍 جستجو — تاریخ، نام، عدد…" />
         <TextBlock Text="{Binding CountText}" Classes="muted" VerticalAlignment="Center" />
@@ -117,7 +126,7 @@
                   <!-- ── جدول: مو‌به‌مو ستون‌های جدولِ اصلی ───────────────── -->
                   <c:ExcelGrid ItemsSource="{Binding Rows}" x:CompileBindings="False" IsReadOnly="True">
                     <DataGrid.Columns>
-                      <DataGridTextColumn Header="📦" Binding="{Binding LinkMark}" Width="Auto" />
+                      <!-- ⛔ ستونِ «📦» برداشته شد (خواستهٔ صاحب ریپو، ۱۴۰۵/۰۷/۱۳). ردیفِ خریدِ مخزن همچنان قفل است (‎ILockedRow‎) و ‎ExcelGrid‎ پیش از ویرایش می‌پرسد. -->
                       <DataGridTextColumn Header="تاریخ" Binding="{Binding DateText}" Width="Auto" MinWidth="110" />
                       <DataGridTextColumn Header="نام" Binding="{Binding NameText}" Width="Auto" MinWidth="150" />
                       <DataGridTextColumn Header="خرید (تن)" Binding="{Binding TonText}" Width="Auto" />
@@ -148,9 +157,16 @@
                     </DataGrid.Columns>
                   </c:ExcelGrid>
 
+                  <TextBlock Text="این جدولِ آرشیو هیچ ردیفی ندارد." Classes="muted"
+                             HorizontalAlignment="Center" IsVisible="{Binding NoRows}" />
                   <c:TotalsBar ItemsSource="{Binding Totals}" />
-                  <Button Classes="ghost danger" Content="🗑️ حذفِ این آرشیو" HorizontalAlignment="Right"
-                          Padding="10,4" FontSize="11" Command="{Binding DeleteCommand}" />
+                  <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                    <!-- 🖨️ PDF/چاپِ همین آرشیو (۱۴۰۵/۰۷/۱۳) -->
+                    <Button Classes="accent" Content="🖨️ PDF / چاپِ همین آرشیو"
+                            Padding="10,4" FontSize="12" Command="{Binding PdfCommand}" />
+                    <Button Classes="ghost danger" Content="🗑️ حذفِ این آرشیو"
+                            Padding="10,4" FontSize="11" Command="{Binding DeleteCommand}" />
+                  </StackPanel>
                 </StackPanel>
               </Border>
             </StackPanel>

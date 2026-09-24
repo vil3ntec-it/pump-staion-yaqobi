@@ -322,6 +322,18 @@ public sealed class ParchaDataService
         return await q.OrderBy(r => r.DateKey).ThenBy(r => r.Id).ToListAsync(ct);
     }
 
+    /// <summary>
+    /// شمارِ پارچه‌های یک سوخت — برای کادرِ کوچکِ «📑 گزارش‌ها» زیرِ پارچه‌ها.
+    /// ⚠️ فقط یک ‎COUNT‎: فهرستِ کامل تنها وقتی خوانده می‌شود که صفحهٔ گزارش‌ها
+    /// باز شود (قاعدهٔ «برای یک عدد، همهٔ ردیف‌ها را نخوان»).
+    /// </summary>
+    public async Task<int> CountAsync(FuelType fuel, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        return await db.Reports.AsNoTracking().CountAsync(r => r.Fuel == fuel, ct);
+    }
+
     public async Task<List<string>> MonthsAsync(FuelType fuel, CancellationToken ct = default)
     {
         _perm.Require(Permission.ViewData);

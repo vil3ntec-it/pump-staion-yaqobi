@@ -521,7 +521,10 @@ public sealed partial class MainViewModel : ObservableObject
         string key, head;
         if (ok == 2)            { key = "Pump.Ok";     head = "✅ هر دو سرور وصل‌اند"; }
         else if (ok == 1 && bad == 1) { key = "Pump.Warn"; head = "⚠️ یکی وصل است و یکی نه"; }
-        else if (ok == 1)       { key = "Pump.Ok";     head = "✅ وصل است"; }
+        //  ⛔ «یکی وصل، دیگری هنوز تنظیم نشده» سبز نیست (۱۴۰۵/۰۷/۱۳): سنجهٔ
+        //  ‎livestack‎ چراغ را سبز دید در حالی که سرورِ خانگی اصلاً وصل نشده بود —
+        //  همان «کلکِ دروغ». زرد است و دلیلش در همان کادر.
+        else if (ok == 1)       { key = "Pump.Warn";   head = "⚠️ یکی وصل است، دیگری هنوز وصل نشده"; }
         else if (bad > 0)       { key = "Pump.Danger"; head = "❌ به سرور وصل نیستیم"; }
         else                    { key = "Pump.Muted";  head = "هنوز سروری تنظیم نشده"; }
 
@@ -846,8 +849,27 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     public bool IsShellVisible => true;
 
-    /// <summary>تاریخِ شمسیِ امروز — خطِ اولِ بلوکِ تاریخِ سربرگ.</summary>
-    public string TodayText => Shamsi.DayName(DateTime.Now) + "، " + Shamsi.Today();
+    /// <summary>
+    /// تاریخِ شمسیِ امروز — «پنج‌شنبه، ۲ میزان ۱۴۰۵».
+    /// ⛔ نامِ ماه کنارِ روز (خواستهٔ صاحب ریپو، ۱۴۰۵/۰۷/۱۳: «نامِ ماه نیست»).
+    /// </summary>
+    public string TodayText => HeaderDate(DateTime.Now);
+
+    public static string HeaderDate(DateTime now)
+    {
+        var p = Shamsi.Of(now).Split('/');
+        if (p.Length != 3 || !int.TryParse(p[1], out var m) || !int.TryParse(p[2], out var d))
+            return Shamsi.DayName(now) + "، " + Shamsi.Of(now);
+        return Shamsi.DayName(now) + "، " + d + " " + Shamsi.MonthName(m) + " " + p[0];
+    }
+
+    /// <summary>کلیک روی تاریخ و ساعتِ سربرگ ⇐ «تاریخ و ساعتِ» خودِ ویندوز.</summary>
+    [RelayCommand]
+    private void OpenClockSettings()
+    {
+        if (!Services.SystemClockSettings.Open())
+            AppHost.Current.Toast("تاریخ و ساعت را از تنظیماتِ خودِ سیستم عوض کنید — برنامه ساعتِ کامپیوتر را می‌خواند", ToastKind.Info);
+    }
 
     /// <summary>
     /// روز عوض شد (نیمه‌شب): تاریخِ سربرگ و عددهای نوار از نو — و بخش‌های

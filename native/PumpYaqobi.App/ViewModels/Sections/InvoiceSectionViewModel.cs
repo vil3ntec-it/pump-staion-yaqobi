@@ -499,8 +499,24 @@ public sealed partial class InvoiceSectionViewModel : SectionViewModel
     private void OpenDetail(InvoiceRowViewModel? row)
     {
         if (row is null) return;
+        _cameFrom = IsList ? Pane : InvoicePane.Form;
         Detail = row;
         Pane = InvoicePane.Detail;
+    }
+
+    /// <summary>فهرستی که فاکتورِ باز از آن آمد — «‹ برگشت» همان‌جا می‌رود.</summary>
+    private InvoicePane _cameFrom = InvoicePane.Form;
+
+    /// <summary>
+    /// «‹ برگشت» (۱۴۰۵/۰۷/۱۳) — از فاکتور به همان فهرست، از فهرست به برگه.
+    /// پیش از این صفحهٔ «در صف» و «تایید شده» هیچ برگشتی نداشتند و «بستن»ِ
+    /// فاکتور هم به برگه می‌رفت، نه به فهرستی که کاربر از آن آمده بود.
+    /// </summary>
+    [RelayCommand]
+    private void Back()
+    {
+        if (IsDetail) { Detail = null; Pane = _cameFrom; return; }
+        CloseList();
     }
 
     // ══ کارهای هر فاکتور ════════════════════════════════════════════════════

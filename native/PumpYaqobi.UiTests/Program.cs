@@ -125,6 +125,12 @@ internal static class Program
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- historyfit [پوشه]
         //  تاریخچه‌ها با خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۲)
         if (outDir.Equals("historyfit", StringComparison.OrdinalIgnoreCase)) return HistoryFit.Run(args);
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- round13 [پوشه]
+        //  فهرستِ نُه‌تاییِ صاحب ریپو (۱۴۰۵/۰۷/۱۳)
+        if (outDir.Equals("round13", StringComparison.OrdinalIgnoreCase)) return Round13Probe.Run(args);
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- livestack <live.json> [پوشه]
+        //  برنامهٔ واقعی با پنلِ خانگیِ واقعی و سرورِ حسابِ واقعی — بی هیچ نشانی
+        if (outDir.Equals("livestack", StringComparison.OrdinalIgnoreCase)) return LiveStackProbe.Run(args);
         //  «تست بزن ببین لاگین می‌شود، کد بزنی چه می‌شود، حساب ساخته می‌شود یا نه»
         if (outDir.Equals("cloudlogin", StringComparison.OrdinalIgnoreCase)) return CloudLoginProbe.Run();
         //  «تو کادرها + @ # ﷼ ( ) ؟ ؛ : , . نوشته نمی‌شوند»

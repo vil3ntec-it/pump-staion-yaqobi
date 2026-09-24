@@ -124,6 +124,10 @@
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
           <!-- تاریخ و ساعت یک‌خطه. دوخطه بود و روی همین پنجرهٔ ۱۴۴۰ تاریخ
                می‌شکست و سربرگ شلوغ می‌شد. -->
+          <!-- ⛔ کلیک ⇐ «تاریخ و ساعتِ» خودِ ویندوز (۱۴۰۵/۰۷/۱۳): برنامه ساعتِ دومی نمی‌سازد -->
+          <Button Classes="ghost" Padding="6,2" Background="Transparent" BorderThickness="0"
+                  Command="{Binding OpenClockSettingsCommand}" Cursor="Hand"
+                  ToolTip.Tip="برای عوض کردنِ تاریخ یا ساعت کلیک کنید — تنظیماتِ تاریخ و ساعتِ ویندوز باز می‌شود">
           <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
             <TextBlock Text="{Binding TodayText}" FontSize="14.5" FontWeight="Bold"
                        VerticalAlignment="Center" TextWrapping="NoWrap"
@@ -134,6 +138,7 @@
                        VerticalAlignment="Center" TextWrapping="NoWrap"
                        Foreground="{DynamicResource Pump.HeaderTitle}" Opacity="0.8" />
           </StackPanel>
+          </Button>
 
           <ComboBox ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}" MinWidth="180">
             <ComboBox.ItemTemplate>
@@ -296,7 +301,14 @@
     <!-- جای خالیِ نوارِ پایین: نوار خودش بیرونِ اسکرول شناور است، پس
          این‌جا به همان بلندی جا باز می‌شود تا تهِ محتوا زیرش پنهان نشود —
          همان کاری که ‎NavGap‎ برای نوارِ بالا می‌کند. -->
-    <Panel Name="StatusGap" Height="30" IsVisible="{Binding IsChromeVisible}" />
+    <Panel Name="StatusGap" Height="30">
+      <Panel.IsVisible>
+        <MultiBinding Converter="{x:Static BoolConverters.And}">
+          <Binding Path="IsChromeVisible" />
+          <Binding Path="HasNotice" />
+        </MultiBinding>
+      </Panel.IsVisible>
+    </Panel>
     </StackPanel>
    </ScrollViewer>
 
@@ -344,21 +356,19 @@
          بخش‌ها، که بالای صفحه می‌ایستد. آوالونیا ‎position:sticky‎ ندارد.
          ⛔ هیچ نام و نشانیِ سروری در آن نیست؛ دلیل فقط در ‎ToolTip‎. -->
     <Border Name="StatusBar" VerticalAlignment="Bottom"
-            IsVisible="{Binding IsChromeVisible}"
             Background="{DynamicResource Pump.NavBg}"
             BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="0,1,0,0"
             Padding="14,4">
+      <!-- ⛔ چراغِ «● همگام‌سازی» از این نوار برداشته شد (خواستهٔ صاحب ریپو،
+           ۱۴۰۵/۰۷/۱۳: «جا می‌گیرد»). حالِ همگام‌سازی سرِ جایش در «تنظیمات ←
+           همگام‌سازی» است. نوار فقط وقتی دیده می‌شود که اعلانی هست. -->
+      <Border.IsVisible>
+        <MultiBinding Converter="{x:Static BoolConverters.And}">
+          <Binding Path="IsChromeVisible" />
+          <Binding Path="HasNotice" />
+        </MultiBinding>
+      </Border.IsVisible>
       <Grid ColumnDefinitions="Auto,*,Auto">
-        <Button Grid.Column="0" Padding="4,2" Background="Transparent" BorderThickness="0"
-                Command="{Binding SyncNowCommand}" ToolTip.Tip="{Binding SyncDotReason}">
-          <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
-            <Border Width="10" Height="10" CornerRadius="5" VerticalAlignment="Center"
-                    Background="{Binding SyncDotBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
-            <TextBlock Text="{Binding SyncDotText}" FontSize="12" VerticalAlignment="Center"
-                       Foreground="{DynamicResource Pump.Muted}" />
-          </StackPanel>
-        </Button>
-
         <!-- بنرِ اعلانِ مدیر و قفلِ نرم — یک جا، نه دو -->
         <TextBlock Grid.Column="1" Text="{Binding NoticeText}" IsVisible="{Binding HasNotice}"
                    FontSize="12" FontWeight="Bold" TextTrimming="CharacterEllipsis"

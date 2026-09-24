@@ -332,11 +332,23 @@ public sealed class CompanyDataService
         return await db.CompanyTableArchives.AsNoTracking().OrderByDescending(x => x.Id).ToListAsync(ct);
     }
 
+    /// <summary>
+    /// ردیف‌های یک جدولِ آرشیو. ⚠️ نام‌ها بی‌حساسیت به بزرگی/کوچکی خوانده
+    /// می‌شوند و عددِ متنی هم پذیرفته می‌شود (۱۴۰۵/۰۷/۱۳، گزارشِ «جدول‌های
+    /// آرشیو خالی‌اند»): آرشیوی که روزی با نسخهٔ دیگری نوشته شده نباید
+    /// ردیف‌های **بی‌نوشته** بدهد — ردیفی که هست ولی هیچ خانه‌اش پر نیست.
+    /// </summary>
     public static List<CompanyRow> ArchiveRows(CompanyTableArchive h)
     {
-        try { return System.Text.Json.JsonSerializer.Deserialize<List<CompanyRow>>(h.RowsJson ?? "[]") ?? new(); }
+        try { return System.Text.Json.JsonSerializer.Deserialize<List<CompanyRow>>(h.RowsJson ?? "[]", ArchiveRead) ?? new(); }
         catch { return new(); }
     }
+
+    private static readonly System.Text.Json.JsonSerializerOptions ArchiveRead = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString,
+    };
 
     public async Task DeleteArchiveAsync(long archiveId, CancellationToken ct = default)
     {
