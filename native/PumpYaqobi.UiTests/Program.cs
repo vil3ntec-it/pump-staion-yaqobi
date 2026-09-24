@@ -122,6 +122,9 @@ internal static class Program
         //  ورق با عکسِ صاحب ریپو (۱۴۰۵/۰۷/۱۲): دیوارِ ستون‌ها، قرائتِ پمپ از پارچه،
         //  جملهٔ شیفت در PDF و کیفیتِ پیش‌نمایشِ چاپ
         if (outDir.Equals("waraqfit", StringComparison.OrdinalIgnoreCase)) return WaraqFit.Run(args);
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- historyfit [پوشه]
+        //  تاریخچه‌ها با خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۲)
+        if (outDir.Equals("historyfit", StringComparison.OrdinalIgnoreCase)) return HistoryFit.Run(args);
         //  «تست بزن ببین لاگین می‌شود، کد بزنی چه می‌شود، حساب ساخته می‌شود یا نه»
         if (outDir.Equals("cloudlogin", StringComparison.OrdinalIgnoreCase)) return CloudLoginProbe.Run();
         //  «تو کادرها + @ # ﷼ ( ) ؟ ؛ : , . نوشته نمی‌شوند»

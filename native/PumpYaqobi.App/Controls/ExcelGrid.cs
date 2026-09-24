@@ -940,19 +940,50 @@ public class ExcelGrid : DataGrid
 
     private double BlindTop()
     {
-        if (_navBar is { } cached && cached.GetVisualRoot() is not null) return cached.Bounds.Height;
+        if (_navBar is { } cached && cached.GetVisualRoot() is not null) return Blind(cached);
         if (Page?.GetVisualRoot() is not Visual root) return 0;
         _navBar = root.GetVisualDescendants().OfType<Border>()
                       .FirstOrDefault(b => b.Name == "NavBar");
-        return _navBar?.Bounds.Height ?? 0;
+        return _navBar is { } nb ? Blind(nb) : 0;
     }
+
+    /// <summary>
+    /// ⛔ نوارِ **پنهان** جایی را کور نمی‌کند. صفحهٔ باز (تاریخچهٔ یک بخش، حسابِ
+    /// قرض‌دار، …) نوارِ بخش‌ها را پنهان می‌کند، ولی ‎Bounds‎ِ کنترلِ پنهان همان
+    /// عددِ آخرش می‌ماند — پس قابِ چسبان ۵۳ پیکسل پایین‌تر از بالای دید
+    /// می‌نشست و بالای سرستون یک **نوارِ سفید** می‌ماند (عکسِ صاحب ریپو از
+    /// تاریخچهٔ مصارف، ۱۴۰۵/۰۷/۱۲).
+    /// </summary>
+    private static double Blind(Control bar) => bar.IsVisible ? bar.Bounds.Height : 0;
+
+    /// <summary>
+    /// سرستون با اسکرول همراهِ دید بماند (مثلِ اکسل)؟ ‎false‎ ⇒ سرستون مثلِ یک
+    /// جدولِ کاغذی بالای جدول می‌ماند و با صفحه بالا می‌رود.
+    ///
+    /// خواستهٔ صاحب ریپو برای تاریخچه‌ها (۱۴۰۵/۰۷/۱۲): «سرِ جدول‌ها توی اسکرول
+    /// تا ته صفحه با من می‌آید.» ⚠️ مجازی‌سازی سرِ جایش است: قاب فقط به اندازهٔ
+    /// بلندیِ سرستون بالاتر می‌نشیند (سرستون بیرونِ دید) و یک سرستون بلندتر است
+    /// تا پایینِ دید خالی نماند. جای هر ردیف همان است که بود، چون ردیف‌ها به
+    /// همان اندازه‌ای می‌لغزند که قاب.
+    /// </summary>
+    public static readonly StyledProperty<bool> HeaderFollowsProperty =
+        AvaloniaProperty.Register<ExcelGrid, bool>(nameof(HeaderFollows), true);
+
+    public bool HeaderFollows
+    {
+        get => GetValue(HeaderFollowsProperty);
+        set => SetValue(HeaderFollowsProperty, value);
+    }
+
+    /// <summary>چقدر قاب بالاتر از بالای دید بنشیند — فقط وقتی سرستون همراه نیست.</summary>
+    private double Lift() => HeaderFollows ? 0 : Math.Max(0, HeaderHeight());
 
     private double _blind;
 
     private Size MeasureSticky(Size availableSize, int rows, double screen)
     {
         var total = WantedHeight(rows);
-        _windowH = Math.Min(screen, total);
+        _windowH = Math.Min(screen + Lift(), total);
         _blind = BlindTop();
         if (!_sticky)
         {
@@ -1008,7 +1039,7 @@ public class ExcelGrid : DataGrid
 
         var span = Math.Max(0, Bounds.Height - _windowH);
         var bar = InnerBar();
-        var want = Math.Clamp(_blind - at.Y, 0, span);
+        var want = Math.Clamp(_blind - at.Y - Lift(), 0, span);
         // ⚠️ سقفِ واقعی را خودِ جدول می‌گوید: اگر بلندیِ حساب‌شدهٔ ما یکی-دو
         // پیکسل با شمارشِ خودِ جدول فرق داشته باشد، بی این، آخرین گام همیشه
         // «هنوز نرسیده» می‌ماند.
