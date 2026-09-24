@@ -288,6 +288,17 @@ public sealed class ReportCardViewModel
 
     public ParchaReport Entity { get; }
     public string Title { get; }
+
+    /// <summary>روزِ هفته و تاریخ — سرِ کارت در صفحهٔ گزارش‌ها.</summary>
+    public string DateLine => Shamsi.ToDate(Entity.DateShamsi) is { } d
+        ? Shamsi.DayName(d) + "، " + Entity.DateShamsi : Entity.DateShamsi ?? "—";
+
+    /// <summary>دو شیفتِ همین پارچه، خواندنی — صفحهٔ «گزارشِ یک پارچه».</summary>
+    public IReadOnlyList<ReportShiftView> Shifts => new[]
+    {
+        new ReportShiftView("☀️ شیفتِ روز", Entity.DayShift),
+        new ReportShiftView("🌙 شیفتِ شب", Entity.NightShift),
+    };
     public string SaleText { get; }
     public string MoneyText { get; }
     public string DebtText { get; }
@@ -295,6 +306,61 @@ public sealed class ReportCardViewModel
     public string ProfitText { get; }
     public string DayName { get; }
     public string NightName { get; }
+}
+
+/// <summary>یک شیفتِ یک پارچه، برای دیدن — ⛔ هیچ چیزی از این‌جا نوشته نمی‌شود.</summary>
+public sealed class ReportShiftView
+{
+    public ReportShiftView(string title, ShiftData? s)
+    {
+        Title = title;
+        Has = s is not null && (s.Start != 0m || s.End != 0m || !string.IsNullOrWhiteSpace(s.Name));
+        var liters = s is null ? 0m : Math.Max(0m, s.End - s.Start);
+        Lines = !Has || s is null ? Array.Empty<(string, string)>() : new (string, string)[]
+        {
+            ("نام کارمند", string.IsNullOrWhiteSpace(s.Name) ? "—" : s.Name!),
+            ("شماره پایه", s.PumpNum > 0 ? s.PumpNum.ToString() : "—"),
+            ("شروع پایه", Shamsi.Money(s.Start)),
+            ("ختم پایه", Shamsi.Money(s.End)),
+            ("لیتر", Shamsi.Money(liters)),
+            ("فی لیتر", Shamsi.Money(s.Price)),
+            ("فروش", Shamsi.Money(s.Sale)),
+            ("جمله قرض", Shamsi.Money(s.Debt)),
+            ("پول موجود", Shamsi.Money(s.Available)),
+            ("فایده", Shamsi.Money(s.Profit)),
+            ("یادداشت", string.IsNullOrWhiteSpace(s.Note) ? "—" : s.Note!),
+        };
+    }
+
+    public string Title { get; }
+    public bool Has { get; }
+    public bool Empty => !Has;
+    public IReadOnlyList<(string Label, string Value)> Lines { get; }
+    public IEnumerable<ReportLine> Items => Lines.Select(l => new ReportLine(l.Label, l.Value));
+}
+
+public sealed record ReportLine(string Label, string Value);
+
+/// <summary>گزارش‌های یک ماه — کشویی در صفحهٔ گزارش‌ها.</summary>
+public sealed partial class ReportMonthGroup : ObservableObject
+{
+    public ReportMonthGroup(string title, IReadOnlyList<ReportCardViewModel> items, bool open)
+    { Title = title; Items = items; _isOpen = open; }
+    public string Title { get; }
+    public IReadOnlyList<ReportCardViewModel> Items { get; }
+    public string CountText => Shamsi.Money(Items.Count) + " گزارش";
+    [ObservableProperty] private bool _isOpen;
+}
+
+/// <summary>گزارش‌های یک سال.</summary>
+public sealed partial class ReportYearGroup : ObservableObject
+{
+    public ReportYearGroup(string title, IReadOnlyList<ReportMonthGroup> months, bool open)
+    { Title = title; Months = months; _isOpen = open; }
+    public string Title { get; }
+    public IReadOnlyList<ReportMonthGroup> Months { get; }
+    public string CountText => Shamsi.Money(Months.Sum(m => m.Items.Count)) + " گزارش";
+    [ObservableProperty] private bool _isOpen;
 }
 
 /// <summary>
@@ -559,14 +625,81 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
         Night.Load(_current?.NightShift);
     }
 
+    /// <summary>
+    /// ══ «📑 گزارش‌های ۲۴ ساعته» — صفحهٔ جدا (۱۴۰۵/۰۷/۱۳) ═══════════════════
+    ///
+    /// خواستهٔ صاحب ریپو: «فهرستِ گزارش‌ها زیرِ پارچه‌هاست؛ یک کادر بگذار که
+    /// صفحهٔ جدا باز کند و همهٔ گزارش‌ها را ماه‌به‌ماه و سال‌به‌سال نشان بدهد،
+    /// با برگشت؛ و روی هر گزارش زدم گزارشِ همان پارچه بیاید — فقط‌خواندنی.»
+    ///
+    /// ⛔ زیرِ پارچه‌ها فقط یک ‎COUNT‎ خوانده می‌شود. پیش از این هر بار که بخش
+    /// باز می‌شد **همهٔ** پارچه‌ها با هر دو شیفت خوانده و کارت می‌شدند — همان
+    /// «همهٔ ردیف‌ها را بخوان». فهرست فقط با باز شدنِ صفحه می‌آید.
+    /// ⛔ این صفحه هیچ چیزی نمی‌نویسد (جز «✕»ی همیشگی، که حالا می‌پرسد).
+    /// </summary>
+    [ObservableProperty] private bool _reportsOpen;
+    [ObservableProperty] private ReportCardViewModel? _openReport;
+    [ObservableProperty] private string _reportsCountText = "";
+
+    public ObservableCollection<ReportYearGroup> ReportYears { get; } = new();
+    public bool ShowReportList => ReportsOpen && OpenReport is null;
+    public bool ShowReportDetail => ReportsOpen && OpenReport is not null;
+    public bool ShowMain => !ReportsOpen;
+    public bool NoReports => ReportsOpen && ReportYears.Count == 0;
+
+    partial void OnReportsOpenChanged(bool v)
+    {
+        foreach (var n in new[] { nameof(ShowReportList), nameof(ShowReportDetail), nameof(ShowMain), nameof(NoReports) })
+            OnPropertyChanged(n);
+        if (v) _ = CrashGuard.RunAsync("خواندنِ گزارش‌ها", ReloadLogAsync);
+        else { OpenReport = null; ReportYears.Clear(); Reports.Clear(); }
+    }
+
+    partial void OnOpenReportChanged(ReportCardViewModel? v)
+    {
+        OnPropertyChanged(nameof(ShowReportList));
+        OnPropertyChanged(nameof(ShowReportDetail));
+    }
+
+    [RelayCommand] private void OpenReports() => ReportsOpen = true;
+
+    /// <summary>«‹ برگشت» — از گزارشِ یک پارچه به فهرست، از فهرست به پارچه‌ها.</summary>
+    [RelayCommand]
+    private void ReportsBack()
+    {
+        if (OpenReport is not null) { OpenReport = null; return; }
+        ReportsOpen = false;
+    }
+
+    [RelayCommand] private void ShowReport(ReportCardViewModel? card) => OpenReport = card;
+
     private async Task ReloadLogAsync()
     {
+        var count = await _host.ParchaData.CountAsync(Fuel);
+        ReportsCountText = count == 0 ? "هنوز گزارشی نیست" : Shamsi.Money(count) + " گزارش — " + FuelLabel;
+        if (!ReportsOpen) return;
+
         var list = await _host.ParchaData.ListAsync(Fuel, null);
         Reports.Clear();
         var f = DateFilter.Trim();
         foreach (var r in list.OrderByDescending(r => r.DateKey).ThenByDescending(r => r.Id))
             if (f.Length == 0 || (r.DateShamsi ?? "").Contains(f))
                 Reports.Add(new ReportCardViewModel(r, Calc));
+
+        ReportYears.Clear();
+        var years = Reports.GroupBy(c => c.Entity.DateKey > 0 ? c.Entity.DateKey / 10000 : 0).ToList();
+        for (var yi = 0; yi < years.Count; yi++)
+        {
+            var y = years[yi];
+            var months = y.GroupBy(c => c.Entity.DateKey / 100 % 100).ToList();
+            var mg = months.Select((m, mi) => new ReportMonthGroup(
+                (Shamsi.MonthName(m.Key) is { Length: > 0 } n ? n : "بی‌تاریخ") + (y.Key > 0 ? " " + y.Key : ""),
+                m.ToList(), open: yi == 0 && mi == 0)).ToList();
+            ReportYears.Add(new ReportYearGroup(y.Key > 0 ? "سالِ " + y.Key : "بی‌تاریخ", mg, open: yi == 0));
+        }
+        OnPropertyChanged(nameof(NoReports));
+        if (OpenReport is not null)
+            OpenReport = Reports.FirstOrDefault(c => c.Entity.Id == OpenReport.Entity.Id);
     }
 
     /// <summary>
@@ -803,6 +936,9 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
     private async Task DeleteReportAsync(ReportCardViewModel? card)
     {
         if (card is null) return;
+        //  ⚠️ حذفِ یک پارچه هر دو شیفت را می‌برد — بی پرسش نه
+        if (!await Dialogs.ConfirmAsync("حذف گزارش", card.Title + " با هر دو شیفتش حذف شود؟")) return;
+        if (OpenReport?.Entity.Id == card.Entity.Id) OpenReport = null;
         await _host.ParchaData.DeleteAsync(card.Entity.Id);
         if (_current?.Id == card.Entity.Id) { _current = null; ReportNumText = "—"; Day.Load(null); Night.Load(null); }
         await ReloadLogAsync();

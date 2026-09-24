@@ -245,7 +245,8 @@
       </StackPanel>
     </c:SectionPage.Toolbar>
 
-    <Grid RowDefinitions="Auto,14,Auto,*">
+    <Panel>
+    <Grid RowDefinitions="Auto,14,Auto,*" IsVisible="{Binding ShowMain}">
 
       <!-- ══ کارتِ «ثبت پارچه فعلی» ══ -->
       <Border Grid.Row="0" Classes="panel" Padding="0">
@@ -345,53 +346,160 @@
         </Grid>
       </Border>
 
-      <!-- ══ گزارش‌های ۲۴ ساعته ══ -->
-      <Border Grid.Row="3" Classes="panel" Padding="0">
-        <Grid RowDefinitions="Auto,*">
-          <Border Grid.Row="0" Classes="card-head">
-            <Grid ColumnDefinitions="Auto,Auto,*">
-              <TextBlock Grid.Column="0" Text="📑 گزارش‌های ۲۴ ساعته" FontWeight="Bold"
-                         Foreground="{DynamicResource Pump.Accent}" VerticalAlignment="Center"
-                         Margin="0,0,12,0" />
-              <TextBox Grid.Column="1" Text="{Binding DateFilter}" Width="140" Watermark="فیلتر تاریخ" />
-            </Grid>
-          </Border>
-
-          <Border Grid.Row="1" Padding="12">
-            <ItemsRepeater ItemsSource="{Binding Reports}">
-              <ItemsRepeater.Layout>
-              <UniformGridLayout MinItemWidth="268" ItemsStretch="Fill"
-                                 MinColumnSpacing="12" MinRowSpacing="12" />
-            </ItemsRepeater.Layout>
-              <ItemsRepeater.ItemTemplate>
-                <DataTemplate x:DataType="vm:ReportCardViewModel">
-                  <Border Classes="card">
-                    <StackPanel Spacing="7">
-                      <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Grid.Column="0" Text="{Binding Title}" FontWeight="Bold" FontSize="13" />
-                        <Button Grid.Column="1" Classes="ghost danger" Content="✕" Padding="7,1" FontSize="11"
-                                Command="{Binding $parent[ItemsRepeater].((vm:ParchaSectionViewModel)DataContext).DeleteReportCommand}"
-                                CommandParameter="{Binding}" />
-                      </Grid>
-                      <TextBlock Text="{Binding DayName, StringFormat=☀️ {0}}" Classes="muted" />
-                      <TextBlock Text="{Binding NightName, StringFormat=🌙 {0}}" Classes="muted" />
-                      <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" Margin="0,4,0,0">
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="فروش" Classes="label" FontSize="11" />
-                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SaleText}" FontWeight="Bold" FontSize="12.5" />
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="پول موجود" Classes="label" FontSize="11" />
-                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AvailableText}" FontWeight="Bold" FontSize="12.5"
-                                   Foreground="{DynamicResource Pump.Ok}" />
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="فایده" Classes="label" FontSize="11" />
-                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ProfitText}" FontWeight="Bold" FontSize="12.5" />
-                      </Grid>
-                    </StackPanel>
-                  </Border>
-                </DataTemplate>
-              </ItemsRepeater.ItemTemplate>
-            </ItemsRepeater>
-          </Border>
+      <!-- ══ گزارش‌های ۲۴ ساعته — فقط یک کادرِ کوچک ═════════════════════════
+           ⛔ فهرستِ کارت‌ها دیگر زیرِ پارچه‌ها نیست (خواستهٔ صاحب ریپو،
+           ۱۴۰۵/۰۷/۱۳): کادر صفحهٔ جدای گزارش‌ها را باز می‌کند. -->
+      <Border Grid.Row="3" Classes="panel" Padding="16,12">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
+            <TextBlock Text="📑 گزارش‌های ۲۴ ساعته" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Accent}" />
+            <TextBlock Text="{Binding ReportsCountText}" Classes="muted" />
+          </StackPanel>
+          <Button Grid.Column="1" Classes="accent" Content="📂 دیدنِ همهٔ گزارش‌ها ›"
+                  Command="{Binding OpenReportsCommand}"
+                  ToolTip.Tip="همهٔ گزارش‌ها، ماه‌به‌ماه و سال‌به‌سال — فقط برای دیدن" />
         </Grid>
       </Border>
     </Grid>
+
+    <!-- ══ صفحهٔ گزارش‌ها — ماه‌به‌ماه و سال‌به‌سال، فقط‌خواندنی ═════════════ -->
+    <StackPanel Spacing="12" IsVisible="{Binding ReportsOpen}">
+      <Border Classes="panel" Padding="14,10">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <Button Grid.Column="0" Content="‹ برگشت" FontWeight="Bold"
+                  Command="{Binding ReportsBackCommand}" />
+          <TextBlock Grid.Column="1" Margin="14,0" VerticalAlignment="Center"
+                     FontWeight="ExtraBold" FontSize="15"
+                     Foreground="{DynamicResource Pump.Accent}"
+                     Text="{Binding ReportsCountText, StringFormat=📑 گزارش‌های ۲۴ ساعته — {0}}" />
+          <TextBox Grid.Column="2" Text="{Binding DateFilter}" Width="160" Watermark="🔍 فیلتر تاریخ"
+                   IsVisible="{Binding ShowReportList}" />
+        </Grid>
+      </Border>
+
+      <TextBlock Text="هنوز گزارشی ثبت نشده است." Classes="muted" HorizontalAlignment="Center"
+                 Margin="0,30" IsVisible="{Binding NoReports}" />
+
+      <!-- سال‌ها ⇐ ماه‌ها ⇐ کارتِ هر گزارش -->
+      <ItemsControl ItemsSource="{Binding ReportYears}" IsVisible="{Binding ShowReportList}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:ReportYearGroup">
+            <Expander IsExpanded="{Binding IsOpen}" HorizontalAlignment="Stretch" Margin="0,0,0,10">
+              <Expander.Header>
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                  <TextBlock Text="{Binding Title}" FontWeight="ExtraBold" FontSize="15" />
+                  <TextBlock Text="{Binding CountText}" Classes="muted" VerticalAlignment="Center" />
+                </StackPanel>
+              </Expander.Header>
+              <ItemsControl ItemsSource="{Binding Months}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ReportMonthGroup">
+                    <Expander IsExpanded="{Binding IsOpen}" HorizontalAlignment="Stretch" Margin="0,0,0,8">
+                      <Expander.Header>
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                          <TextBlock Text="{Binding Title}" FontWeight="Bold"
+                                     Foreground="{DynamicResource Pump.Accent}" />
+                          <TextBlock Text="{Binding CountText}" Classes="muted" VerticalAlignment="Center" />
+                        </StackPanel>
+                      </Expander.Header>
+                      <ItemsRepeater ItemsSource="{Binding Items}">
+                        <ItemsRepeater.Layout>
+                          <UniformGridLayout MinItemWidth="268" ItemsStretch="Fill"
+                                             MinColumnSpacing="12" MinRowSpacing="12" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
+                          <DataTemplate x:DataType="vm:ReportCardViewModel">
+                            <Button Classes="ghost" Padding="0" HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
+                                    ToolTip.Tip="دیدنِ گزارشِ همین پارچه"
+                                    Command="{Binding $parent[UserControl].((vm:ParchaSectionViewModel)DataContext).ShowReportCommand}"
+                                    CommandParameter="{Binding}">
+                              <Border Classes="card">
+                                <StackPanel Spacing="7">
+                                  <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Grid.Column="0" Text="{Binding Title}" FontWeight="Bold" FontSize="13" />
+                                    <Button Grid.Column="1" Classes="ghost danger" Content="✕" Padding="7,1" FontSize="11"
+                                            ToolTip.Tip="حذفِ این گزارش (می‌پرسد)"
+                                            Command="{Binding $parent[UserControl].((vm:ParchaSectionViewModel)DataContext).DeleteReportCommand}"
+                                            CommandParameter="{Binding}" />
+                                  </Grid>
+                                  <TextBlock Text="{Binding DateLine}" Classes="muted" />
+                                  <TextBlock Text="{Binding DayName, StringFormat=☀️ {0}}" Classes="muted" />
+                                  <TextBlock Text="{Binding NightName, StringFormat=🌙 {0}}" Classes="muted" />
+                                  <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" Margin="0,4,0,0">
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="فروش" Classes="label" FontSize="11" />
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SaleText}" FontWeight="Bold" FontSize="12.5" />
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="پول موجود" Classes="label" FontSize="11" />
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AvailableText}" FontWeight="Bold" FontSize="12.5"
+                                               Foreground="{DynamicResource Pump.Ok}" />
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="فایده" Classes="label" FontSize="11" />
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ProfitText}" FontWeight="Bold" FontSize="12.5" />
+                                  </Grid>
+                                </StackPanel>
+                              </Border>
+                            </Button>
+                          </DataTemplate>
+                        </ItemsRepeater.ItemTemplate>
+                      </ItemsRepeater>
+                    </Expander>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Expander>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <!-- گزارشِ یک پارچه — همان دو شیفت، خواندنی -->
+      <StackPanel Spacing="12" IsVisible="{Binding ShowReportDetail}" DataContext="{Binding OpenReport}"
+                  x:CompileBindings="False">
+        <Border Classes="panel" Padding="16,12">
+          <StackPanel Spacing="4">
+            <TextBlock Text="{Binding Title}" FontWeight="ExtraBold" FontSize="16" />
+            <TextBlock Text="{Binding DateLine}" Classes="muted" />
+            <WrapPanel Orientation="Horizontal" Margin="0,6,0,0">
+              <TextBlock Text="{Binding SaleText, StringFormat=فروش: {0}}" FontWeight="Bold" Margin="0,0,18,0" />
+              <TextBlock Text="{Binding DebtText, StringFormat=قرض: {0}}" FontWeight="Bold" Margin="0,0,18,0"
+                         Foreground="{DynamicResource Pump.Danger}" />
+              <TextBlock Text="{Binding AvailableText, StringFormat=پول موجود: {0}}" FontWeight="Bold" Margin="0,0,18,0"
+                         Foreground="{DynamicResource Pump.Ok}" />
+              <TextBlock Text="{Binding ProfitText, StringFormat=فایده: {0}}" FontWeight="Bold" />
+            </WrapPanel>
+          </StackPanel>
+        </Border>
+        <ItemsControl ItemsSource="{Binding Shifts}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Classes="panel" Padding="0" Margin="0,0,12,0">
+                <StackPanel>
+                  <Border Classes="card-head">
+                    <TextBlock Text="{Binding Title}" FontWeight="Bold"
+                               Foreground="{DynamicResource Pump.Accent}" />
+                  </Border>
+                  <TextBlock Text="این شیفت ثبت نشده است." Classes="muted" Margin="16,12"
+                             IsVisible="{Binding Empty}" />
+                  <ItemsControl ItemsSource="{Binding Items}" Margin="16,10">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Grid ColumnDefinitions="130,*" Margin="0,3">
+                          <TextBlock Grid.Column="0" Text="{Binding Label}" Classes="label" />
+                          <TextBlock Grid.Column="1" Text="{Binding Value}" FontWeight="Bold"
+                                     TextWrapping="Wrap" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </StackPanel>
+    </Panel>
   </c:SectionPage>
 </UserControl>

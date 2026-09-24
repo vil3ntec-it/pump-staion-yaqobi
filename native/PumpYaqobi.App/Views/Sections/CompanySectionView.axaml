@@ -18,8 +18,16 @@
         <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
           <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0" Command="{Binding OpenHistoryCommand}" IsVisible="{Binding HasHistory}" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
           <TextBox Width="230" Text="{Binding Search}" Watermark="🔍 جستجوی شرکت..." Margin="0,0,8,0" />
-          <Button Classes="ghost info" Content="جستجوی خرید" Margin="0,0,8,0"
-                  Command="{Binding SearchPurchaseCommand}" />
+          <!-- ⛔ جستجوی خرید همین‌جا (۱۴۰۵/۰۷/۱۳) — نه صفحهٔ جدا -->
+          <TextBox Width="230" Text="{Binding FindText}" Margin="0,0,4,0"
+                   Watermark="🔍 جستجوی خرید — مقدار یا تاریخ"
+                   ToolTip.Tip="مقدار (کیلو یا تن) یا تاریخ را بنویسید و Enter بزنید — اگر پیدا شد، همان خرید در حسابِ خودش باز می‌شود">
+            <TextBox.KeyBindings>
+              <KeyBinding Gesture="Enter" Command="{Binding FindCommand}" />
+            </TextBox.KeyBindings>
+          </TextBox>
+          <Button Classes="ghost info" Content="🔍" Margin="0,0,8,0" Command="{Binding FindCommand}"
+                  ToolTip.Tip="جستجو" />
           <Button Classes="accent" Content="افزودن شرکت"
                   Command="{Binding AddCompanyCommand}" />
         </WrapPanel>

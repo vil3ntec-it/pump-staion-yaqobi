@@ -49,7 +49,7 @@ public sealed partial class PurchaseRowViewModel : RowViewModel
     private void Refresh()
     {
         foreach (var n in new[] { nameof(KgText), nameof(DensityText), nameof(PriceTonText),
-                                  nameof(UsdRateText), nameof(TonText), nameof(LitersText),
+                                  nameof(UsdRateText), nameof(TonText), nameof(KgShowText), nameof(Implausible), nameof(LitersText),
                                   nameof(TotalUsdText), nameof(TotalAfnText), nameof(PerLiterText) })
             OnPropertyChanged(n);
     }
@@ -73,7 +73,13 @@ public sealed partial class PurchaseRowViewModel : RowViewModel
     // ⚠️ شمارِ اعشار **ثابت** است، نه «تا دو رقم»: سایت «۰» را هم «0.0»
     // می‌نویسد. پیش از این فی‌لیتر با دو رقم و بی‌صفرِ انتهایی نوشته می‌شد و
     // عددِ همان خرید در سایت و برنامه یکی دیده نمی‌شد.
-    public string TonText => Shamsi.Money(Math.Round(N.Ton, 3), 3);
+    //  ⛔ تن بی صفرهای بی‌مصرف: «۱٬۰۰۰٫۰۰۰» در چشمِ کاربر یک میلیون خوانده
+    //  می‌شد (گزارشِ ۱۴۰۵/۰۷/۱۳). وزن اول به کیلو، همان عددی که تایپ شده.
+    public string TonText => Shamsi.Money(Math.Round(N.Ton, 3));
+    public string KgShowText => Shamsi.Money(Math.Round(Kg, 3)) + " کیلو";
+
+    /// <summary>بیش از ۳۰۰ تن در یک خرید — در یک پمپ ممکن نیست؛ یعنی کیلو در کادرِ تن نوشته شده بود.</summary>
+    public bool Implausible => Kg >= 300_000m;
     public string LitersText => Shamsi.Money(Math.Round(N.Liters, 0, MidpointRounding.AwayFromZero));
     public string TotalUsdText => Shamsi.Money(Math.Round(N.TotalUsd, 2), 2);
     public string TotalAfnText => Shamsi.Money(Math.Round(N.TotalAfn, 0, MidpointRounding.AwayFromZero));
@@ -289,11 +295,13 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     [ObservableProperty] private string _buyDate = "";
     [ObservableProperty] private string _buySeller = "";
     /// <summary>
-    /// وزن به <b>تن</b> — همان چیزی که کاربر تایپ می‌کند. ⚠️ کیلو دیگر جایی
-    /// در صفحه نیست (خواستهٔ صریحِ صاحب ریپو)؛ ‎Kg‎ی داده از همین ساخته
-    /// می‌شود (تن × ۱۰۰۰) تا فرمول‌ها و رکوردهای کهنه دست نخورند.
+    /// وزن به <b>کیلو</b> — همان ‎pu-kg‎ی سایت و همان چیزی که کاربر واقعاً
+    /// می‌نویسد. ⛔ از ۳.۱.۱۰۶ تا ۳.۱.۱۶۳ این کادر «وزن (تن)» بود و عدد را
+    /// × ۱۰۰۰ می‌کرد؛ کاربر کیلو می‌نوشت و هر خرید هزار برابر ثبت می‌شد
+    /// (گزارشِ صاحب ریپو، ۱۴۰۵/۰۷/۱۳: «وزن ۱۰۰۰ ⇒ ۱٬۰۰۰٫۰۰۰ تن»). تن همان
+    /// لحظه زیرِ فرم نوشته می‌شود.
     /// </summary>
-    [ObservableProperty] private string _buyTon = "";
+    [ObservableProperty] private string _buyKg = "";
     [ObservableProperty] private string _buyDensity = "";
     [ObservableProperty] private string _buyPriceTon = "";
     [ObservableProperty] private string _buyUsdRate = "";
@@ -307,7 +315,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
 
     public string BuyTitle => IsDiesel ? "🟤 ثبت خرید دیزل" : "🛢️ ثبت خرید پطرول";
 
-    partial void OnBuyTonChanged(string v) => CalcBuy();
+    partial void OnBuyKgChanged(string v) => CalcBuy();
     partial void OnBuyDensityChanged(string v) => CalcBuy();
     partial void OnBuyPriceTonChanged(string v) => CalcBuy();
     partial void OnBuyUsdRateChanged(string v) => CalcBuy();
@@ -326,10 +334,10 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     /// </summary>
     private void CalcBuy()
     {
-        var n = Calc.Compute(KgOf(BuyTon), Shamsi.Num(BuyDensity),
+        var n = Calc.Compute(KgOf(BuyKg), Shamsi.Num(BuyDensity),
                              Shamsi.Num(BuyPriceTon), Shamsi.Num(BuyUsdRate));
 
-        BuyTonText = n.Ton == 0m ? "—" : Shamsi.Money(Math.Round(n.Ton, 3), 3) + " تن";
+        BuyTonText = n.Ton == 0m ? "—" : Shamsi.Money(Math.Round(n.Ton, 3)) + " تن";
         BuyLitersText = n.Liters == 0m ? "—"
             : Shamsi.Money(Math.Round(n.Liters, 0, MidpointRounding.AwayFromZero)) + " لیتر";
         BuyUsdText = n.TotalUsd == 0m ? "—" : Shamsi.Money(Math.Round(n.TotalUsd, 2), 2) + " $";
@@ -339,15 +347,15 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
             : Shamsi.Money(Math.Round(n.PerLiter, 1), 1) + " افغانی";
     }
 
-    /// <summary>تن ⇒ کیلو، همان‌طور که داده نگه می‌دارد. سه رقمِ اعشارِ تن یعنی کیلوی درست.</summary>
-    public static decimal KgOf(string ton) => Math.Round(Shamsi.Num(ton) * 1000m, 3);
+    /// <summary>کادرِ وزن ⇒ کیلو. ⛔ ضربی در کار نیست — کادر خودش کیلوست.</summary>
+    public static decimal KgOf(string kg) => Math.Round(Shamsi.Num(kg), 3);
 
     /// <summary>«➕ ثبت خرید …» — ‎openAddPurchase(fuelType)‎: فرم خالی، تاریخِ امروز.</summary>
     [RelayCommand]
     private void OpenBuy()
     {
         BuyDate = Shamsi.Today();
-        BuySeller = ""; BuyTon = ""; BuyDensity = ""; BuyPriceTon = ""; BuyUsdRate = ""; BuyNote = "";
+        BuySeller = ""; BuyKg = ""; BuyDensity = ""; BuyPriceTon = ""; BuyUsdRate = ""; BuyNote = "";
         CalcBuy();
         OnPropertyChanged(nameof(BuyTitle));
         BuyOpen = true;
@@ -366,7 +374,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     [RelayCommand]
     private Task SaveBuyAsync() => CrashGuard.RunAsync("ثبت خرید", async () =>
     {
-        var kg = KgOf(BuyTon);
+        var kg = KgOf(BuyKg);
         var density = Shamsi.Num(BuyDensity);
         var priceTon = Shamsi.Num(BuyPriceTon);
         var usdRate = Shamsi.Num(BuyUsdRate);

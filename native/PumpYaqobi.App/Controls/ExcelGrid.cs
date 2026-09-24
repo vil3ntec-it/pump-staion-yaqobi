@@ -173,7 +173,7 @@ public class ExcelGrid : DataGrid
         LayoutUpdated += (_, _) =>
         {
             if (!IsEffectivelyVisible) return;
-            SpreadColumns(); PinOnUserResize(); if (!KeepInsideStep()) RememberWidths(); Settle(); SyncSticky();
+            SpreadColumns(); PinOnUserResize(); if (!KeepInsideStep() && !FillGapStep()) RememberWidths(); Settle(); SyncSticky();
         };
 
         // ══ دوبار-کلیک روی خطِ ستون = هم‌قدِ محتوا، مثلِ اکسل ═════════════════
@@ -633,6 +633,7 @@ public class ExcelGrid : DataGrid
         }
         if (change.Property == WidthScopeProperty)
         {
+            RememberDeclared();
             //  حسابِ دیگری در همین جدول نشست ⇒ کلیدِ دیگری، پهنای دیگری.
             //  همان چیزی که ‎Reset‎ِ فهرست برای «چیدمانِ دیگر» می‌کند.
             _autoKey = null; _autoKeyFor = -1;
@@ -1514,6 +1515,7 @@ public class ExcelGrid : DataGrid
 
     private void SpreadColumns()
     {
+        RememberDeclared();
         if (_spread || Columns.Count == 0) return;
         if (_freshCols) { _freshCols = false; InvalidateMeasure(); return; }
 
@@ -1761,6 +1763,72 @@ public class ExcelGrid : DataGrid
     private double[]? _fullWidths;
 
     /// <returns>پهنایی عوض شد؟ — آن‌وقت ‎RememberWidths‎ همین پاس نمی‌نویسد.</returns>
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ «جای خالیِ ته ردیف» — ستونِ پهن پرش می‌کند (۱۴۰۵/۰۷/۱۳) ══════════
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  گزارشِ صاحب ریپو با عکس: «آپدیتِ تازه در جدول‌ها یک جای خالی گذاشته —
+    //  نه ستونِ پنهان باشد نه جای خالی.»
+    //
+    //  ⛔ ریشه: از ۳.۱.۱۵۸ هر جدولی پهنای کشیده‌شدهٔ کاربر را یادش می‌ماند، و
+    //  پهنای ذخیره‌شده **پیکسلی** است. در قابِ پهن‌تر (پنجرهٔ بزرگ‌تر، یا
+    //  ستونی که کاربر باریک کرد) جمعِ ستون‌ها از قاب کمتر است و تهِ هر ردیف
+    //  یک نوارِ خالی می‌ماند. با پهنای خودکار این نبود، چون ستاره‌ای بود.
+    //
+    //  حالا همان فاصله به **ستونِ پهنِ خودِ جدول** داده می‌شود — همانی که در
+    //  XAML ستاره‌ای تعریف شده (نام، شرح، یادداشت)، و اگر نبود آخرین ستون.
+    //  ⚠️ فقط برای دیدن: اگر ستون‌ها همان پهنای خودکار/ذخیره‌شده بودند،
+    //  ‎_autoWidths‎ هم با آن جلو می‌رود تا ‎RememberWidths‎ این پُرکردن را
+    //  «خواستهٔ کاربر» روی دیسک ننویسد.
+    //  ⚠️ وسطِ کشیدنِ سرستون کاری نمی‌کند (‎_headerDown‎)، وگرنه ستون زیرِ
+    //  دستِ کاربر می‌پرید.
+
+    /// <summary>ستون‌هایی که در XAML ستاره‌ای تعریف شده‌اند — یک بار، پیش از هر سفت کردن.</summary>
+    private bool[]? _declaredStar;
+
+    private void RememberDeclared()
+    {
+        if (_declaredStar is null && Columns.Count > 0)
+            _declaredStar = Columns.Select(c => c.Width.IsStar).ToArray();
+    }
+
+    private int FillerIndex(List<DataGridColumn> cols)
+    {
+        if (_declaredStar is { } ds)
+        {
+            var best = -1;
+            for (var i = 0; i < cols.Count; i++)
+            {
+                var at = Columns.IndexOf(cols[i]);
+                if (at >= 0 && at < ds.Length && ds[at] && (best < 0 || cols[i].ActualWidth > cols[best].ActualWidth))
+                    best = i;
+            }
+            if (best >= 0) return best;
+        }
+        return cols.Count - 1;
+    }
+
+    private bool FillGapStep()
+    {
+        if (!_spread || _headerDown || !IsEffectivelyVisible) return false;
+        var cols = Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).ToList();
+        if (cols.Count == 0 || cols.Any(c => c.Width.UnitType != DataGridLengthUnitType.Pixel)) return false;
+        var w = cols.Select(c => c.ActualWidth).ToArray();
+        if (w.Any(x => double.IsNaN(x) || x <= 0)) return false;
+        var room = CellRoom();
+        var gap = room - w.Sum();
+        if (room <= 0 || gap < 1.5) return false;
+
+        var auto = _autoWidths is { } aw && aw.Length == w.Length
+                   && aw.Zip(w, (x, y) => Math.Abs(x - y) < 0.5).All(z => z);
+        var f = FillerIndex(cols);
+        w[f] += Math.Floor(gap);
+        cols[f].Width = new DataGridLength(w[f], DataGridLengthUnitType.Pixel);
+        if (auto) _autoWidths = w;
+        if (_fullWidths is { } full && full.Length == w.Length && full.Sum() < room) _fullWidths = (double[])w.Clone();
+        return true;
+    }
+
     private bool KeepInsideStep()
     {
         if (!KeepInside || !_spread || _headerDown) return false;

@@ -83,6 +83,13 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- historyfit ${{ runner.temp }}/historyfit
 
+      # ══ دورِ سیزدهم (۱۴۰۵/۰۷/۱۳) ═════════════════════════════════════════
+      # وزنِ خرید به کیلو، آرشیوِ شرکت با هر دو تیل و PDF، جست‌وجوی خریدِ
+      # درون‌خطی، جدول بی جای خالی در سه پهنای پنجره، و صافیِ تاریخچهٔ پارچه.
+      - name: سنجشِ دورِ سیزدهم
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- round13 ${{ runner.temp }}/round13
+
       # ══ Shift+عدد، Ctrl+Z و Ctrl+Y — با کلید و کلیکِ واقعی ══════════════════
       # گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «شیفت با عدد حذف نمی‌کند… کنترول زد و
       # وای کار نمی‌کنند.» ردیفِ خالی بی‌پرسش، ردیفِ پر با پرسش؛ برگشت و

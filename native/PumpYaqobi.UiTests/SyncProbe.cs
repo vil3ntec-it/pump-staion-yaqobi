@@ -189,11 +189,14 @@ internal static class SyncProbe
               !vm.SyncDotReason.Contains("vill3n") && !vm.SyncDotReason.Contains("http")
               && !vm.SyncDotReason.Contains("://"), vm.SyncDotReason);
 
+        //  ⛔ چراغ از نوارِ پایین برداشته شد (خواستهٔ صاحب ریپو، ۱۴۰۵/۰۷/۱۳: «جا
+        //  می‌گیرد»)؛ حالش در «تنظیمات ← همگام‌سازی» است. نوار فقط با اعلان.
         var bar = win.FindControl<Border>("StatusBar");
         Check("نوارِ وضعیت در پنجره هست", bar is not null);
         Check("و پایینِ پنجره می‌نشیند", bar?.VerticalAlignment == Avalonia.Layout.VerticalAlignment.Bottom);
+        Check("و بی اعلان جا نمی‌گیرد", bar is not null && (bar.IsVisible == vm.HasNotice));
         var gap = win.FindControl<Panel>("StatusGap");
-        Check("و جای خالی‌اش هست تا تهِ محتوا زیرش پنهان نشود", gap is not null);
+        Check("و جای خالی‌اش هم فقط با اعلان", gap is not null && gap.IsVisible == vm.HasNotice);
 
         // ── ۵) صفحهٔ «همگام‌سازی» در تنظیمات ────────────────────────────
         Console.WriteLine("── ۵) تنظیمات ← همگام‌سازی");

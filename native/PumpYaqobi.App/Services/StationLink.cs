@@ -84,6 +84,11 @@ public static class StationLink
     {
         var file = AppSettings.Load();
         var code = HomeLink.StationCode(host);
+        //  ⛔ نصبی که هنوز رمزِ هیچ پوشه‌ای را ندارد با کدِ **یکتای حسابِ خودش**
+        //  ثبت می‌شود، نه با «pump1»ِ مشترکِ همه (۱۴۰۵/۰۷/۱۳). شرحش بالای
+        //  <see cref="UniqueCode"/>.
+        var fresh = HomeLink.Token(host).Length == 0;
+        if (fresh && IsDefault(code) && UniqueCode(file) is { Length: > 0 } mine) code = mine;
         var name = HomeLink.StationName(host);
         var url = HomeLink.Url(host);
         var token = HomeLink.Token(host);
@@ -111,6 +116,24 @@ public static class StationLink
         // ── گام ۲: ثبت ──────────────────────────────────────────────────────
         var result = await EnrollAsync(url, code, name, token, pin, ct);
 
+        //  ⛔ کد گرفته شده و ما هیچ رمزی نداریم ⇒ **هیچ‌وقت گیر نمی‌کنیم**
+        //  (۱۴۰۵/۰۷/۱۳، «آسان وصل شود»). دو پله، هر کدام یک بار:
+        //   ۱) کدِ پیش‌فرضِ مشترک (‎pump1‎) ⇒ کدِ یکتای همین حساب.
+        //   ۲) کدِ حساب هم گرفته است (نصبِ دیگرِ همین حساب، یا رمزی که با عوض
+        //      کردنِ حساب پاک شد) ⇒ کدِ حساب + شناسهٔ همین کامپیوتر، و اگر آن هم
+        //      گرفته بود یک پسوندِ تصادفی: پوشهٔ خودِ این نصب. ⚠️ رمزِ پوشهٔ دیگری گرفته نمی‌شود — سرور بی رمز
+        //      پوشهٔ موجود را به کسی نمی‌دهد و نباید بدهد؛ برای **شریک** شدن در
+        //      همان پوشه راهِ درست همچنان «کدِ جفت‌شدن»ِ پنل است.
+        if (!result.Ok && result.Error == "already_taken" && token.Length == 0 && pin.Trim().Length == 0)
+        {
+            foreach (var alt in Alternatives(file, code))
+            {
+                var again = await EnrollAsync(url, alt, name, token, pin, ct);
+                if (again.Ok) { code = alt; result = again; break; }
+                if (again.Error != "already_taken") break;   // خطای دیگری است، نه برخوردِ کد
+            }
+        }
+
         // نشانیِ دستیِ کهنه — شاید سرور جابه‌جا شده. یک‌بار در شبکه بگرد.
         if (!result.Ok && found is null && file.AutoEnroll)
         {
@@ -131,9 +154,52 @@ public static class StationLink
         return new StationEnrollment(true, url, result.Code, result.Name, result.Created, "");
     }
 
+    /// <summary>
+    /// ══ «برنامه به سرورِ خانگی وصل نمی‌شود» — ریشه (۱۴۰۵/۰۷/۱۳) ════════════
+    ///
+    /// سنجهٔ ‎livestack‎ (پنلِ خانگیِ واقعی + سرورِ حسابِ واقعی) نشانش داد: برنامه
+    /// سرور را با بستهٔ UDP پیدا می‌کرد ولی ثبت نمی‌شد — «این کدِ پمپ روی سرور
+    /// مالِ برنامهٔ دیگری است». همهٔ نصب‌ها با یک کدِ پیش‌فرض (‎pump1‎) ثبت
+    /// می‌شدند؛ هر نصبِ دوباره، هر کامپیوترِ تازه، و هر عوض کردنِ حساب (که رمزِ
+    /// پوشه را پاک می‌کند) یعنی رمزِ آن پوشه دیگر دستِ ما نیست — و از آن به بعد
+    /// هر تلاشِ ثبت برای همیشه ‎already_taken‎ می‌گرفت. چراغ خاکستری/سرخ می‌ماند.
+    ///
+    /// حالا کدِ پیش‌فرض برای نصبی که رمزی ندارد، شناسهٔ پمپِ همان حساب روی سرورِ
+    /// حساب است (‎CloudStationId‎) — یکتا، و برای هر کامپیوترِ همان حساب یکی.
+    /// ⚠️ نصبی که از قبل رمز دارد دست نمی‌خورد: همان کد و همان پوشه.
+    /// </summary>
+    public static string UniqueCode(AppSettings file)
+    {
+        var id = (file.CloudStationId ?? "").Trim().ToLowerInvariant();
+        var safe = new string(id.Select(ch => ch is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '_' or '-' ? ch : '-').ToArray()).Trim('-');
+        return safe.Length > 48 ? safe[..48] : safe;
+    }
+
+    /// <summary>کدهای جایگزین، به ترتیب — هیچ‌کدام برابرِ کدی که همین حالا رد شد نیست.</summary>
+    public static IEnumerable<string> Alternatives(AppSettings file, string taken)
+    {
+        var mine = UniqueCode(file);
+        var dev = new string(CloudConfig.DeviceUid(file).ToLowerInvariant()
+                             .Where(ch => ch is (>= 'a' and <= 'z') or (>= '0' and <= '9')).ToArray());
+        dev = dev.Length > 8 ? dev[^8..] : dev;
+        if (dev.Length == 0) dev = Guid.NewGuid().ToString("N")[..8];
+        var basis = mine.Length > 0 ? mine : HomeLink.DefaultStationCode;
+        var list = new List<string>();
+        if (mine.Length > 0) list.Add(mine);
+        string Cut(string c) => c.Length > 48 ? c[..48] : c;
+        list.Add(Cut(basis[..Math.Min(basis.Length, 39)] + "-" + dev));
+        //  ⚠️ و سوم، تصادفی: همین کامپیوتر هم می‌تواند رمزِ پوشهٔ خودش را گم کرده
+        //  باشد (عوض کردنِ حساب رمز را پاک می‌کند) — آن‌جا کدِ دومی هم گرفته است.
+        list.Add(Cut(basis[..Math.Min(basis.Length, 39)] + "-" + Guid.NewGuid().ToString("N")[..8]));
+        return list.Where(c => !string.Equals(c, taken, StringComparison.OrdinalIgnoreCase)).Distinct();
+    }
+
+    private static bool IsDefault(string code) =>
+        string.Equals(code.Trim(), HomeLink.DefaultStationCode, StringComparison.OrdinalIgnoreCase);
+
     /// <summary>جوابِ خامِ مسیرِ ثبت.</summary>
     private sealed record EnrollReply(bool Ok, string Code, string Name, string Token, string ReadKey,
-                                      bool Created, string Why);
+                                      bool Created, string Why, string Error = "");
 
     private static async Task<EnrollReply> EnrollAsync(
         string url, string code, string name, string token, string pin, CancellationToken ct)
@@ -156,7 +222,7 @@ public static class StationLink
             var res = await Http.PostAsJsonAsync(b + "/api/stations/enroll", body, ct);
             var text = await res.Content.ReadAsStringAsync(ct);
 
-            if (!res.IsSuccessStatusCode) return Failed(WhyOf(text, (int)res.StatusCode));
+            if (!res.IsSuccessStatusCode) return Failed(WhyOf(text, (int)res.StatusCode)) with { Error = ErrorOf(text) };
 
             using var doc = JsonDocument.Parse(text);
             var r = doc.RootElement;
@@ -179,6 +245,17 @@ public static class StationLink
     }
 
     private static EnrollReply Failed(string why) => new(false, "", "", "", "", false, why);
+
+    private static string ErrorOf(string body)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            return doc.RootElement.TryGetProperty("error", out var e) && e.ValueKind == JsonValueKind.String
+                ? e.GetString() ?? "" : "";
+        }
+        catch { return ""; }
+    }
 
     /// <summary>خطای سرور، به زبانی که کاربر بفهمد چه کاری باید بکند.</summary>
     private static string WhyOf(string body, int status)

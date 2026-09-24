@@ -97,9 +97,16 @@
                 Command="{Binding OpenArchiveCommand}"
                 IsVisible="{Binding HasArchives}"
                 ToolTip.Tip="همهٔ جدول‌های آرشیوِ این شرکت — کشویی، هر دو تیل" />
-        <Button Classes="ghost info" Content="🔍 جستجوی خرید" Margin="0,0,8,6"
-                Command="{Binding SearchCommand}"
-                ToolTip.Tip="مقدارِ تن و/یا تاریخ را بزنید و همان لحظه خرید پیدا شود" />
+        <!-- ⛔ جستجوی خرید همین‌جا (۱۴۰۵/۰۷/۱۳): کادر + Enter ⇐ سرِ همان خرید، در هر حسابی که هست -->
+        <TextBox Width="220" Text="{Binding FindText}" Margin="0,0,4,6"
+                 Watermark="🔍 جستجوی خرید — مقدار یا تاریخ"
+                 ToolTip.Tip="مقدار (کیلو یا تن) یا تاریخ را بنویسید و Enter بزنید — اگر پیدا شد، همان خرید در حسابِ خودش باز می‌شود">
+          <TextBox.KeyBindings>
+            <KeyBinding Gesture="Enter" Command="{Binding FindCommand}" />
+          </TextBox.KeyBindings>
+        </TextBox>
+        <Button Classes="ghost info" Content="🔍" Margin="0,0,8,6" Command="{Binding FindCommand}"
+                ToolTip.Tip="جستجو" />
       </WrapPanel>
 
       <!-- ── جدول + ردیفِ «جمله»ی همین دفتر (پطرول و دیزل جدا) ─────────────
@@ -109,7 +116,7 @@
                      WidthScope="{Binding WidthScope}"
                      RowDeleteCommand="{Binding $parent[UserControl].DataContext.DeleteRowCommand}">
           <DataGrid.Columns>
-            <DataGridTextColumn Header="📦" Binding="{Binding LinkMark}" Width="Auto" IsReadOnly="True" />
+            <!-- ⛔ ستونِ «📦» برداشته شد (خواستهٔ صاحب ریپو، ۱۴۰۵/۰۷/۱۳). ردیفِ خریدِ مخزن همچنان قفل است (‎ILockedRow‎) و ‎ExcelGrid‎ پیش از ویرایش می‌پرسد. -->
             <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
             <DataGridTextColumn Header="نام"   Binding="{Binding Name}" Width="Auto" />
             <DataGridTextColumn Header="خرید (تن)" Binding="{Binding TonText}" Width="Auto" />

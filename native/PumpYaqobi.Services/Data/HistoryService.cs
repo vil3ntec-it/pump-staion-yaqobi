@@ -20,7 +20,9 @@ namespace PumpYaqobi.Services.Data;
 public sealed record HistoryRow(
     string Kind, string DateShamsi, int DateKey,
     string Title, string Detail, decimal? Amount, string Unit, string Tone,
-    IReadOnlyList<string>? Cells = null)
+    IReadOnlyList<string>? Cells = null,
+    //  برای صافیِ «پطرول/دیزل» و «پایهٔ ۱، ۲، ۳» در تاریخچهٔ پارچه‌ها (۱۴۰۵/۰۷/۱۳)
+    FuelType? Fuel = null, int Pump = 0)
 {
     public string AmountText => Amount is null ? "" : Shamsi.Money(Amount.Value) + Unit;
 
@@ -745,7 +747,7 @@ public sealed class HistoryService
                         Shamsi.Money(shift.Start), Shamsi.Money(shift.End),
                         Shamsi.Money(Math.Round(shift.Sale)) + " لیتر",
                         Shamsi.Money(Math.Round(shift.Money)) + " افغانی",
-                    }));
+                    }, rep.Fuel, shift.PumpNum));
             }
         }
         return list;

@@ -146,6 +146,14 @@
                     </Grid>
                   </Border>
 
+                  <!-- ⚠️ خریدی که هزار برابر ثبت شده (کادرِ «تن»ِ ۳.۱.۱۰۶ تا ۳.۱.۱۶۳).
+                       ⛔ خودکار درست نمی‌شود — دادهٔ کاربر است؛ فقط گفته می‌شود. -->
+                  <Border IsVisible="{Binding Implausible}" Background="#1FE53E3E"
+                          Padding="14,8" Margin="14,10,14,0" CornerRadius="8">
+                    <TextBlock Text="⚠️ وزنِ این خرید بیش از ۳۰۰ تن است — احتمالاً کیلو در کادرِ «تن»ِ نسخهٔ قبل نوشته شده بود. این خرید را پاک کنید و دوباره ثبت کنید."
+                               TextWrapping="Wrap" Foreground="{DynamicResource Pump.Danger}" FontWeight="SemiBold" />
+                  </Border>
+
                   <!-- ══ ‎.pu-stats‎ — نُه کادرِ خواندنیِ سایت ═══════════════
                        گزارشِ صاحب ریپو: «ببین خریدها را این مدلی نشان می‌دهد با
                        همهٔ جزئیاتش.» در سایت هر خرید یک کارتِ **خواندنی** است،
@@ -158,9 +166,10 @@
                          کهنه دست نخورند. -->
                     <Border Classes="stat" MinHeight="70">
                       <StackPanel Spacing="3">
-                        <TextBlock Text="وزن (تن)" Classes="label" />
-                        <TextBlock Text="{Binding TonText}" FontWeight="ExtraBold"
+                        <TextBlock Text="وزن" Classes="label" />
+                        <TextBlock Text="{Binding KgShowText}" FontWeight="ExtraBold"
                                    Foreground="{DynamicResource Pump.Info}" />
+                        <TextBlock Text="{Binding TonText, StringFormat={}{0} تن}" Classes="muted" />
                       </StackPanel>
                     </Border>
                     <Border Classes="stat" MinHeight="70">
@@ -342,8 +351,9 @@
 
             <Grid ColumnDefinitions="*,12,*">
               <StackPanel Grid.Column="0" Spacing="4">
-                <TextBlock Text="وزن (تن)" Classes="label" />
-                <TextBox Text="{Binding BuyTon}" Watermark="مثلاً 5.32" />
+                <!-- ⛔ کیلو، مثلِ سایت (‎pu-kg‎) — تن زیرِ فرم خودش حساب می‌شود -->
+                <TextBlock Text="وزن (کیلو)" Classes="label" />
+                <TextBox Text="{Binding BuyKg}" Watermark="مثلاً 5320" />
               </StackPanel>
               <StackPanel Grid.Column="2" Spacing="4">
                 <TextBlock Text="ثقلت (چگالی)" Classes="label" />

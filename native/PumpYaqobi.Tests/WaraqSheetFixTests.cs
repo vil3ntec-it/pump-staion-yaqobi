@@ -97,7 +97,12 @@ public class WaraqSheetFixTests
         var a = vm.IndexOf("public string StartIssue", StringComparison.Ordinal);
         var b = vm.IndexOf("bool IFlaggedRow.Flagged", StringComparison.Ordinal);
         Assert.True(a > 0 && b > a);
-        Assert.DoesNotContain("\\n", vm[a..b]);          // یک‌خطی
+        //  ⛔ هر پیام **حداکثر دو خط** (۱۴۰۵/۰۷/۱۳: «روشن‌تر و خلاصه‌تر»): خطِ اول
+        //  چه شده، خطِ دوم عددها — هیچ پیامی سه خط نمی‌شود.
+        foreach (System.Text.RegularExpressions.Match m in
+                 System.Text.RegularExpressions.Regex.Matches(vm[a..b], "\"([^\"]*)\""))
+            Assert.True(m.Groups[1].Value.Split("\\n").Length <= 2, m.Value);
+        Assert.DoesNotContain("\\n\" + nums + \"\\n", vm[a..b]);
     }
 
     [Fact]

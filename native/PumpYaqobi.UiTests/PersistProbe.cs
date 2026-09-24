@@ -153,7 +153,10 @@ internal static class PersistProbe
         var pa = (ParchaSectionViewModel)vm.Sections.First(s => s.Id == "shifts");
 
         Wait(win, vm.GoAsync(pa));
+        pa.ReportsOpen = true;
+        Settle(win);
         Check("پارچه سرِ جایش است", pa.Reports.Count > 0, pa.Reports.Count + " پارچه");
+        pa.ReportsOpen = false;
 
         Wait(win, vm.GoAsync(wq));
         var all = AppHost.Current.WaraqData.ListAsync(null).GetAwaiter().GetResult();
