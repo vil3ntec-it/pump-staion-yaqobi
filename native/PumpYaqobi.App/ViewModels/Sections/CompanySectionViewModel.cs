@@ -314,6 +314,7 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
         if (!await Dialogs.ConfirmAsync("📋 جدول جدید",
                 "جدولِ فعلیِ " + fuelWord + " آرشیو می‌شود و جدولِ خالیِ تازه‌ای باز می‌شود. ادامه؟")) return;
         await FlushAsync();
+        foreach (var r in Rows.ToList()) await r.RetireAsync();   // نوشتنِ دیررس ردیفِ آرشیوشده را برنگرداند
         await _host.Companies.ArchiveTableAsync(Entity.Id, Fuel, Shamsi.Today());
         Entity.Rows.RemoveAll(r => r.Fuel == Fuel);
         var full = await _host.Companies.LoadAsync(Entity.Id);
@@ -489,6 +490,7 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
     private async Task DeleteRowAsync(CompanyRowViewModel? row)
     {
         if (row is null) return;
+        await row.RetireAsync();
         await _host.Companies.DeleteRowAsync(row.Entity.Id);
         Entity.Rows.Remove(row.Entity);
         Rows.Remove(row);

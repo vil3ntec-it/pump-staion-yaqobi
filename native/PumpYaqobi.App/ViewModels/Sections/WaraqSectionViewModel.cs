@@ -677,6 +677,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
     private async Task DeletePumpAsync(WaraqPumpViewModel? row)
     {
         if (row is null) return;
+        await row.RetireAsync();
         await _host.WaraqData.DeletePumpAsync(row.Entity.Id);
         Shift?.Pumps.Remove(row.Entity);
         Pumps.Remove(row);
@@ -704,6 +705,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         if (row is null) return;
         var sd = Shift;
         if (sd is null) return;
+        await row.RetireAsync();
         await _host.WaraqData.DeleteTxnAsync(row.Entity.Id);
         sd.Transactions.Remove(row.Entity);
         Txns.Remove(row);

@@ -46,7 +46,7 @@ public abstract partial class RowViewModel : ObservableObject, IPendingWrite
     /// </summary>
     protected void Touch()
     {
-        if (Loading) return;
+        if (Loading || _retired) return;
         _dirty = true;
         //  ⛔ از همین لحظه این ردیف «در صف»ِ نگهبان است: بسته شدنِ برنامه،
         //  عوض شدنِ دفتر و ‎Ctrl+S‎ همه از همان یک فهرست می‌نویسند.
@@ -99,17 +99,27 @@ public abstract partial class RowViewModel : ObservableObject, IPendingWrite
     //  بسته شدنِ برنامه یا ‎Ctrl+S‎ دوباره امتحانش کند — پاکش نمی‌کنیم.
     private static readonly int[] Backoff = { 0, 400, 1_500 };
 
-    private int _writing;
+    //  ⛔ دو نوشتنِ هم‌زمانِ یک ردیف یعنی دو تراکنشِ رقیب روی یک سطر — ولی
+    //  «دومی رد شود» هم غلط بود: ‎FlushAsync‎ی که وسطِ یک نوشتنِ تأخیری
+    //  می‌رسید **همان لحظه برمی‌گشت**، پیش از آن‌که آن نوشتن تمام شود. پس
+    //  «جدولِ جدید» (فلاش ⇒ آرشیو ⇒ پاک کردنِ ردیف‌ها) ردیف‌ها را پاک می‌کرد
+    //  و نوشتنِ در راه یکی را دوباره روی دیسک برمی‌گرداند — ردیفِ آرشیوشده در
+    //  جدولِ تازه (سنجهٔ ‎person‎ با مکثِ ۱۵۰ میلی‌ثانیه گرفتش). حالا دومی
+    //  **منتظر می‌ماند** و بعد می‌سنجد که هنوز چیزی برای نوشتن هست یا نه.
+    private SemaphoreSlim? _gate;
+
+    private SemaphoreSlim Gate() =>
+        _gate ?? Interlocked.CompareExchange(ref _gate, new SemaphoreSlim(1, 1), null) ?? _gate!;
 
     private async Task WriteAsync()
     {
-        //  دو نوشتنِ هم‌زمانِ یک ردیف یعنی دو تراکنشِ رقیب روی یک سطر.
-        if (Interlocked.Exchange(ref _writing, 1) == 1) return;
+        var gate = Gate();
+        await gate.WaitAsync();
         try
         {
             for (var i = 0; i < Backoff.Length; i++)
             {
-                if (!_dirty) return;
+                if (!_dirty || _retired) return;
                 if (Backoff[i] > 0)
                     try { await Task.Delay(Backoff[i]); } catch { }
                 try
@@ -127,7 +137,7 @@ public abstract partial class RowViewModel : ObservableObject, IPendingWrite
                 }
             }
         }
-        finally { Interlocked.Exchange(ref _writing, 0); }
+        finally { gate.Release(); }
     }
 
     /// <summary>
@@ -140,6 +150,31 @@ public abstract partial class RowViewModel : ObservableObject, IPendingWrite
         _debounce?.Cancel();
         if (!_dirty) return;          // ردیفِ دست‌نخورده — چیزی برای نوشتن نیست
         await WriteAsync();
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ ردیفِ حذف‌شده هرگز دوباره نوشته نمی‌شود ═══════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  ⛔ سنجهٔ ‎person‎ (با مکثِ ۱۵۰ میلی‌ثانیه) گرفتش: رسیدی از سربرگ آمد و
+    //  همان لحظه حذف شد، ولی ذخیرهٔ تأخیریِ خودِ ردیف هنوز در صف بود — و
+    //  کمی بعد همان ردیف را با ‎IsDeleted = false‎ دوباره روی دیسک نوشت. ردیفِ
+    //  حذف‌شده برمی‌گشت؛ این بار با «جدولِ جدید»، و در کارِ واقعی با بستنِ
+    //  برنامه (‎SaveGuard.FlushAllAsync‎ همهٔ ردیف‌های کثیف را می‌نویسد).
+    //
+    //  پس هر مسیرِ حذفِ ردیف **پیش از** پاک کردن این را می‌زند: صفِ تأخیری
+    //  لغو می‌شود، ردیف دیگر کثیف نیست، و نوشتنِ در راه (اگر بود) تمام
+    //  می‌شود پیش از آن‌که حذف به دیسک برسد.
+    private volatile bool _retired;
+
+    public async Task RetireAsync()
+    {
+        _retired = true;
+        _debounce?.Cancel();
+        _dirty = false;
+        var gate = Gate();
+        await gate.WaitAsync();
+        gate.Release();
     }
 
     /// <summary>مقدارهای جدول را در موجودیت می‌نشاند.</summary>

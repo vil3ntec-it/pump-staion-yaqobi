@@ -568,6 +568,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
             if (row is null) return;
             if (!await Dialogs.ConfirmAsync("حذف خرید",
                     "این خرید از مخزن حذف شود؟ (ردیفِ حسابِ شرکت دست نمی‌خورد)")) return;
+            await row.RetireAsync();
             await _host.StorageData.DeletePurchaseAsync(row.Entity.Id);
             Purchases.Remove(row);
             await RecalcAsync();
@@ -615,6 +616,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     private async Task DeleteDipAsync(DipRowViewModel? row)
     {
         if (row is null) return;
+        await row.RetireAsync();
         await _host.Tools.DeleteDipAsync(row.Entity.Id);
         Dips.Remove(row);
         await RecalcAsync();

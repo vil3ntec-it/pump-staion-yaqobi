@@ -1838,6 +1838,12 @@ public class ExcelGrid : DataGrid
     /// </summary>
     private void PinOnUserResize()
     {
+        //  ستونی پیکسلی شد (کشیدن، دوبار-کلیک، یا پهنای ذخیره‌شده) ⇒ کفِ
+        //  «پهنای طبیعی» دیگر خواستهٔ خودکار نیست و باید برود، وگرنه ستون را
+        //  نمی‌شد باریک‌تر از محتوایش کرد (سنجهٔ ‎cells‎ گرفتش: ۳۰ ⇒ ۱۱۶).
+        if (_starNatural is not null
+            && Columns.Any(c => c.IsVisible && c.Width.UnitType == DataGridLengthUnitType.Pixel))
+            ReleaseStarFloors();
         if (!_spread || _pinned) return;
 
         var cols = Columns.Where(c => c.IsVisible).ToList();
