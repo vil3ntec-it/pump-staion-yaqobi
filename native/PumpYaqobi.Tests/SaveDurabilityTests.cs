@@ -163,4 +163,69 @@ public class SaveDurabilityTests
             Assert.True(bare == 0, f + " هنوز فهرستش را بی‌صدا می‌خواند");
         }
     }
+
+    // ══ ۵) نوشتن‌های تکی (سربرگِ ورق، حسابِ قرض‌دار، امانت…) ═════════════════
+    //
+    //  ⛔ گشتنِ دوباره پس از اصلاحِ ردیف‌ها نشان داد نُه نوشتنِ دیگر هنوز با
+    //  ‎_ = …‎ رها می‌شدند — از جمله سربرگِ ورق (نامِ کارمند و قرضِ پارچه).
+    //  بستنِ برنامه منتظرشان نمی‌ماند و شکستشان هیچ‌جا دیده نمی‌شد.
+
+    [Fact]
+    public async Task Bastane_Barname_Montazere_Neveshtane_Taki_Mimanad()
+    {
+        var tcs = new TaskCompletionSource();
+        SaveGuard.Watch(tcs.Task, "آزمونِ نگهبان");
+
+        var flush = SaveGuard.FlushAllAsync(TimeSpan.FromSeconds(8));
+        //  ⚠️ قطعی است نه زمانی: تا این نوشته تمام نشده، ‎FlushAllAsync‎
+        //  نمی‌تواند تمام شود.
+        Assert.False(flush.IsCompleted, "بستنِ برنامه منتظرِ نوشتنِ در جریان نماند");
+
+        tcs.SetResult();
+        await flush;
+        Assert.True(flush.IsCompletedSuccessfully);
+    }
+
+    [Fact]
+    public async Task Neveshtane_Taki_Ke_Nashod_Sedaash_Darmiayad()
+    {
+        var heard = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        void Listen(string w) { if (w.Contains("آزمونِ شکست")) heard.TrySetResult(w); }
+        SaveGuard.Failed += Listen;
+        try
+        {
+            SaveGuard.Watch(Task.FromException(new IOException("دیسک قفل است")), "آزمونِ شکست");
+            var said = await heard.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Contains("ذخیره نشد", said);
+            Assert.Contains("IOException", said);
+        }
+        finally { SaveGuard.Failed -= Listen; }
+    }
+
+    /// <summary>
+    /// ⛔ و هیچ‌کدام از آن نُه جا به ‎_ = …‎ برنمی‌گردد. ⚠️ بی تلاشِ دوباره،
+    /// عمداً: افزودنِ رسید تکرارپذیر نیست و تلاشِ دوباره یعنی رسیدِ دوتایی.
+    /// </summary>
+    [Fact]
+    public void Neveshtanhaye_Taki_Raha_Nemishavand()
+    {
+        var cases = new (string File, string Bare, int Watched)[]
+        {
+            ("WaraqSectionViewModel.cs", "_ = _host.WaraqData.SaveShiftAsync(", 1),
+            ("AmanatSectionViewModel.cs", "_ = _host.Amanat.UpdateAccountAsync(", 1),
+            ("PersonViewModel.cs", "_ = _host.Debtors.Update", 4),
+            ("PersonViewModel.cs", "_ = AddHeadReceiptAsync(", 1),
+            ("DebtArchivePageViewModel.cs", "_ = PersistAsync();", 4),
+        };
+        foreach (var (file, bare, watched) in cases)
+        {
+            var s = Src("ViewModels", "Sections", file);
+            Assert.DoesNotContain(bare, s);
+            Assert.True(Regex.Matches(s, @"SaveGuard\.Watch\(").Count >= watched,
+                file + " نوشتنِ تکی‌اش را به نگهبان نسپرده");
+        }
+        var notes = Src("ViewModels", "SectionNotesViewModel.cs");
+        Assert.DoesNotContain("_ = _svc.SaveDraftAsync(", notes);
+        Assert.Contains("SaveGuard.Watch(_svc.SaveDraftAsync(", notes);
+    }
 }

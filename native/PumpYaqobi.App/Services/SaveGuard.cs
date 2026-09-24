@@ -76,11 +76,48 @@ public static class SaveGuard
     }
 
     /// <summary>چند نوشتهٔ ذخیره‌نشده در صف است؟ (سنجه‌ها و نوارِ پایین)</summary>
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ نوشتنِ تکی — سربرگِ ورق، حسابِ قرض‌دار، رسیدِ سربرگ ════════════════
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  ⛔ نگهبانِ بالا فقط **ردیف‌های جدول** را می‌پوشاند. هفت نوشتنِ دیگر با
+    //  ‎_ = …Async()‎ رها می‌شدند: سربرگِ ورق (نامِ کارمند، قرضِ پارچه)،
+    //  حسابِ قرض‌دار (فیصدی، واحد، رسیدِ سربرگ)، حسابِ امانت، شماره و
+    //  یادداشتِ قرض‌دار، و یادداشتِ بخش. هیچ‌کدام نه منتظر می‌ماندند، نه
+    //  خطایشان دیده می‌شد، و بستنِ برنامه هم منتظرشان نمی‌ماند — یعنی همان
+    //  «چندین ورق را پر کردم و هیچ چیزی ثبت نشده بود».
+    //
+    //  ⚠️ **بی تلاشِ دوباره**، عمداً: افزودنِ رسید تکرارپذیر نیست و تلاشِ
+    //  دوباره یعنی رسیدِ دوتایی در حسابِ مشتری. کارِ این‌جا فقط دو چیز است —
+    //  بسته شدنِ برنامه منتظرش بماند، و شکستش دیده شود. همان متد، همان
+    //  آرگومان، همان لحظه: هیچ منطقی عوض نمی‌شود.
+
+    private static readonly HashSet<Task> InFlight = new();
+
+    /// <summary>یک نوشتنِ در جریان را زیرِ نظر می‌گیرد.</summary>
+    public static void Watch(Task write, string what)
+    {
+        if (write.IsCompletedSuccessfully) return;
+        lock (Gate) InFlight.Add(write);
+        _ = write.ContinueWith(t =>
+        {
+            lock (Gate) InFlight.Remove(t);
+            if (t.IsFaulted)
+                ReportFailure(what + " ذخیره نشد ("
+                              + (t.Exception?.InnerException?.GetType().Name ?? "خطا") + ")");
+        }, TaskScheduler.Default);
+    }
+
+    private static Task[] Running()
+    {
+        lock (Gate) return InFlight.Where(t => !t.IsCompleted).ToArray();
+    }
+
     public static int DirtyCount
     {
         get
         {
-            var n = 0;
+            var n = Running().Length;
             foreach (var w in Snapshot()) if (w.IsDirty) n++;
             return n;
         }
@@ -112,7 +149,8 @@ public static class SaveGuard
     public static async Task<int> FlushAllAsync(TimeSpan? timeout = null)
     {
         var all = Snapshot().Where(w => w.IsDirty).ToList();
-        if (all.Count == 0) return 0;
+        var running = Running();
+        if (all.Count == 0 && running.Length == 0) return 0;
 
         //  ⛔ **یکی‌یکی، نه ‎Task.WhenAll‎.** هر ذخیره اتصالِ SQLiteِ خودش را
         //  باز می‌کند (‎LedgerService‎: ‎await using var db = _dbf.Create()‎)،
@@ -132,7 +170,16 @@ public static class SaveGuard
             catch { /* شکست یا سقفِ وقت — پایین شمرده می‌شود */ }
         }
 
-        var left = all.Count(w => w.IsDirty);
+        //  ⚠️ این‌جا ‎WhenAll‎ بی‌خطر است: کارِ تازه‌ای **شروع** نمی‌کند، فقط
+        //  منتظرِ نوشتن‌هایی می‌ماند که از قبل در جریان‌اند.
+        if (running.Length > 0)
+        {
+            var mandeh2 = cap - clock.Elapsed;
+            if (mandeh2 > TimeSpan.Zero)
+                try { await Task.WhenAll(running).WaitAsync(mandeh2); } catch { }
+        }
+
+        var left = all.Count(w => w.IsDirty) + running.Count(t => !t.IsCompleted);
         if (left > 0)
             ReportFailure(left + " نوشته ذخیره نشد — اینترنت لازم نیست، ولی دیسک باید " +
                           "نوشتنی باشد. برنامه را نبندید و دوباره بزنید.");

@@ -226,9 +226,9 @@ public sealed partial class DebtArchiveViewModel : ObservableObject, IRowBatchHo
     [ObservableProperty] private string _percentPetrolText = "";
     [ObservableProperty] private string _percentDieselText = "";
     [ObservableProperty] private string _noteText = "";
-    partial void OnPercentPetrolTextChanged(string v) { if (_pulling) return; Entity.PercentPetrol = Shamsi.Num(v); RefreshFigures(); _ = PersistAsync(); }
-    partial void OnPercentDieselTextChanged(string v) { if (_pulling) return; Entity.PercentDiesel = Shamsi.Num(v); RefreshFigures(); _ = PersistAsync(); }
-    partial void OnNoteTextChanged(string v) { if (_pulling) return; Entity.Note = v; _ = PersistAsync(); }
+    partial void OnPercentPetrolTextChanged(string v) { if (_pulling) return; Entity.PercentPetrol = Shamsi.Num(v); RefreshFigures(); SaveGuard.Watch(PersistAsync(), "سربرگِ آرشیو"); }
+    partial void OnPercentDieselTextChanged(string v) { if (_pulling) return; Entity.PercentDiesel = Shamsi.Num(v); RefreshFigures(); SaveGuard.Watch(PersistAsync(), "سربرگِ آرشیو"); }
+    partial void OnNoteTextChanged(string v) { if (_pulling) return; Entity.Note = v; SaveGuard.Watch(PersistAsync(), "سربرگِ آرشیو"); }
 
     private decimal Hdr(FuelType f) => IsMoney
         ? (f == FuelType.Diesel ? Entity.RasidMoneyDiesel : Entity.RasidMoneyPetrol)
@@ -271,7 +271,7 @@ public sealed partial class DebtArchiveViewModel : ObservableObject, IRowBatchHo
         if (IsMoney) { if (f == FuelType.Diesel) Entity.RasidMoneyDiesel = hdr; else Entity.RasidMoneyPetrol = hdr; }
         else { if (f == FuelType.Diesel) Entity.RasidFuelDiesel = hdr; else Entity.RasidFuelPetrol = hdr; }
         RefreshFigures();
-        _ = PersistAsync();
+        SaveGuard.Watch(PersistAsync(), "سربرگِ آرشیو");
     }
 
     public string TotalBordText => Shamsi.Money(Figures().Petrol.Bord + Figures().Diesel.Bord) + " " + UnitText;

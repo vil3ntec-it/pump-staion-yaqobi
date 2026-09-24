@@ -481,7 +481,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         if (sd is null) return;
         sd.WorkerName = WorkerName;
         sd.FabricDebt = FabricDebt;
-        _ = _host.WaraqData.SaveShiftAsync(sd);
+        SaveGuard.Watch(_host.WaraqData.SaveShiftAsync(sd), "سربرگِ ورق");
         Recalc();
     }
 
