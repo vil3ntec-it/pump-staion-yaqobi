@@ -615,11 +615,25 @@ public class ExcelGrid : DataGrid
             //
             // ⚠️ نه وقتی کاربر خودش پهنا ذخیره کرده (‎_saved‎) — آن‌جا حرفِ
             // کاربر آخر است، مثلِ اکسل.
+            // ⚠️ چیدمانِ ستون‌ها عوض شد (حسابِ تیل ⇄ حسابِ پول، که ستون‌های
+            // متفاوتی نشان می‌دهند) ⇒ کلیدِ پهنای دیگری و تنظیمِ دیگری.
+            // بی این، عددهای چیده‌شده برای آن یکی چیدمان این‌جا می‌نشستند.
+            var visible = Columns.Count(c => c.IsVisible);
+            if (_autoKeyFor >= 0 && _autoKeyFor != visible)
+            {
+                _autoKey = null; _autoKeyFor = -1;
+                _savedRead = false; _saved = null;
+            }
+
             if (_saved is null)
             {
                 _spread = false; _pinned = false; _anyRowLoaded = false; _autoWidths = null;
                 foreach (var c in Columns)
                     c.Width = new DataGridLength(1, DataGridLengthUnitType.Auto);
+
+                //  ⛔ **یک پاس صبر**، وگرنه پهنای کهنه سفت می‌شود.
+                //  شرحش بالای ‎_freshCols‎.
+                _freshCols = true;
             }
         }
         FixRowHeaderWidth();
@@ -1341,9 +1355,36 @@ public class ExcelGrid : DataGrid
     /// نشود و دسته‌اش پیدا بماند) و سقفی هم در کار نیست. اگر جمعِ ستون‌ها از
     /// قاب بیشتر شد، جدول افقی می‌لغزد — همان ‎overflow-x:auto‎ی سایت.
     /// </summary>
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ «ماه را عوض کردم، همهٔ سربرگ‌ها رفتند کنج» ══════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «خواستم ماه را عوض کنم به ماه قبلی
+    //  بروم، تمام سربرگ‌ها باگ خوردند و رفتند کنجِ سربرگشان.»
+    //
+    //  ⛔ ریشه یک مسابقهٔ یک‌پاسی بود: با عوض شدنِ ماه فهرست ‎Reset‎ می‌شود،
+    //  همان‌جا همهٔ ستون‌ها به ‎Auto‎ برمی‌گردند و ‎_spread‎ باز می‌شود. ولی
+    //  ‎ActualWidth‎ در همان لحظه هنوز **پهنای کهنه** است — آوالونیا هنوز
+    //  ‎Auto‎ را اندازه نگرفته. اگر ‎LayoutUpdated‎ی همان پاس برسد،
+    //  ‎SpreadColumns‎ همان عددهای کهنه را «طبیعی» می‌خواند و برای همیشه
+    //  سفتشان می‌کند: ستون‌ها جمع می‌شوند در یک گوشه و بقیهٔ قاب خالی
+    //  می‌ماند — دقیقاً همان «رفتند کنج».
+    //
+    //  ⚠️ و چرا خودش درست نمی‌شد: ‎_spread‎ از همان پاس ‎true‎ شده و
+    //  ‎SpreadColumns‎ دیگر هیچ‌وقت دوباره نمی‌دود.
+    //
+    //  چاره یک پاس صبر است: نخستین ‎SpreadColumns‎ پس از پر شدنِ دوبارهٔ
+    //  فهرست فقط چیدمان را بی‌اعتبار می‌کند و برمی‌گردد. پاسِ بعدی
+    //  ‎ActualWidth‎ِ واقعیِ ‎Auto‎ را دارد. (هزینه‌اش یک پاسِ چیدمان است،
+    //  همان چیزی که ‎OnRowsChanged‎ هم به‌هرحال می‌خواهد.)
+
+    /// <summary>فهرست تازه پر شده و پهناها هنوز کهنه‌اند.</summary>
+    private bool _freshCols;
+
     private void SpreadColumns()
     {
         if (_spread || Columns.Count == 0) return;
+        if (_freshCols) { _freshCols = false; InvalidateMeasure(); return; }
 
         var cols = Columns.Where(c => c.IsVisible).ToList();
         if (cols.Count == 0) return;
@@ -1384,6 +1425,23 @@ public class ExcelGrid : DataGrid
         // ستون‌ها هم مثلِ قبل کار می‌کند.
         var spare = room - natural.Sum() >= 8;
 
+        // ══ بارِ **خودکار** هیچ‌وقت از قاب بیرون نمی‌زند ═════════════════════
+        //
+        // گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «بالای ورق، همان‌جایی که شروع و ختمِ
+        // پایه‌ها نوشته می‌شود، توی بعضی کامپیوترها خیلی بزرگ است و از کادر
+        // زده بیرون و باید با اسکرولِ چپ و راست بروی تا پیدایش کنی.»
+        //
+        // ⛔ ریشه: پهنای طبیعیِ ستونِ ‎Auto‎ به قلم و DPIِ همان کامپیوتر بند
+        // است. روی نمایشگرِ بزرگ‌تر یا با قلمِ درشت‌ترِ ویندوز، جمعِ همان
+        // ستون‌ها از قاب می‌زند بیرون — و چون همان لحظه پیکسلی سفت می‌شدند،
+        // برای همیشه بیرون می‌ماندند.
+        //
+        // ⚠️ و این خواستهٔ «اگه زیاد بزرگ شد به چپ و راست هم اسکرول بشه» را
+        // پس نمی‌گیرد: آن دربارهٔ ستونی است که **کاربر** کشیده
+        // (‎PinOnUserResize‎، دست‌نخورده). این‌جا فقط بارِ خودکار است، که
+        // کاربر انتخابش نکرده و از آن انتظارِ اسکرولِ افقی هم ندارد.
+        if (!spare) natural = FitToRoom(natural, room);
+
         // ══ پهنای ذخیره‌شده مقدم است ═════════════════════════════════════════
         // اگر کاربر یک بار این جدول را تنظیم کرده، همان می‌نشیند — نه پهنای
         // طبیعیِ محتوای امروز. پس ورقِ فردا هم همان‌قدر است.
@@ -1407,10 +1465,104 @@ public class ExcelGrid : DataGrid
         _spread = true;
     }
 
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ هر جدولی پهنایش را یادش می‌ماند — نه فقط سه جدولِ ورق ══════════════
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «بخش قرض‌داران جدول‌هاشو جوری که خاستم
+    //  اندازه کردم، ولی وقتی از حساب بیرون می‌شم و میام دوباره همون مدلِ اول
+    //  شده و اندازهٔ من خراب شده یا ثبت نشده.»
+    //
+    //  ⛔ ریشه سنجیده شد، نه حدس: در کلِ برنامه **سه** جدول ‎WidthKey‎ داشتند
+    //  (هر سه در ورق). ‎RememberWidths‎ نخستین خطش این است: «کلید نداری؟
+    //  برگرد». پس کشیدنِ ستون در حسابِ قرض‌دار، گاوصندوق، مصارف، صرافی،
+    //  شرکت‌ها و هر جای دیگر **هیچ‌وقت** ذخیره نمی‌شد.
+    //
+    //  ⛔ و راهِ درست «به سی‌وچند فایلِ XAML یک صفت اضافه کن» نبود: فردا
+    //  جدولِ سی‌وپنجم اضافه می‌شود و کسی یادش می‌رود، و همین باگ بی‌صدا
+    //  برمی‌گردد. پس کلید **خودش ساخته می‌شود** و ‎WidthKey‎ فقط وقتی لازم
+    //  است که دو جدول عمداً یک تنظیم را شریک باشند (دو جدولِ تراکنشِ ورق).
+    //
+    //  ⚠️ شمارِ ستونِ **دیده‌شده** داخلِ کلید است: جدولِ حسابِ قرض‌دار در
+    //  دفترِ تیل و دفترِ پول ستون‌های متفاوتی نشان می‌دهد، و یک کلیدِ مشترک
+    //  یعنی عددهایی که برای آن یکی چیده شده‌اند. (‎Saved‎ هم همین را جدا
+    //  می‌سنجد، ولی آن‌جا فقط «رد کن» است؛ این‌جا هر کدام تنظیمِ خودش را
+    //  نگه می‌دارد.)
+
+    /// <summary>کلیدِ ذخیرهٔ پهنا: دستی اگر داده شده، وگرنه خودکار.</summary>
+    private string? EffectiveKey(int visible)
+    {
+        var k = WidthKey;
+        if (!string.IsNullOrWhiteSpace(k)) return k;
+        if (visible <= 0) return null;
+        if (_autoKey is not null && _autoKeyFor == visible) return _autoKey;
+
+        var host = this.FindAncestorOfType<UserControl>()?.GetType().Name ?? "grid";
+        var mine = Name;
+        if (string.IsNullOrWhiteSpace(mine))
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var c in Columns)
+                if (c.IsVisible) sb.Append(c.Header as string ?? "?").Append('|');
+            mine = Fingerprint(sb.ToString());
+        }
+
+        //  کلید عوض شد ⇒ عددهای کلیدِ قبلی به کارِ این چیدمان نمی‌آیند.
+        _savedRead = false;
+        _saved = null;
+        _autoKeyFor = visible;
+        return _autoKey = host + "." + mine + "#" + visible;
+    }
+
+    private string? _autoKey;
+    private int _autoKeyFor = -1;
+
+    /// <summary>هشتِ نویسهٔ پایدار از نامِ سرستون‌ها — برای جدولِ بی‌نام.</summary>
+    private static string Fingerprint(string text)
+    {
+        unchecked
+        {
+            ulong h = 1469598103934665603;
+            foreach (var ch in text) { h ^= ch; h *= 1099511628211; }
+            return h.ToString("x16")[..8];
+        }
+    }
+
+    /// <summary>
+    /// پهناها را به اندازهٔ قاب کوچک می‌کند — به نسبت، و نه زیرِ کفِ خوانایی.
+    ///
+    /// ⚠️ ستونی که از قبل روی کف است بیشتر از این کوچک نمی‌شود، و مابقیِ
+    /// کمبود بینِ بقیه پخش می‌شود. اگر حتی با کفِ همه باز هم جا نشد، همان
+    /// بیرون‌زدگی می‌ماند و جدول افقی می‌لغزد — چاره‌ای نیست، ولی دستِ‌کم
+    /// دلیلش «ستونِ بی‌جهت پهن» نیست.
+    /// </summary>
+    private static double[] FitToRoom(double[] natural, double room)
+    {
+        var sum = natural.Sum();
+        if (sum <= room || room <= 0) return natural;
+
+        var w = (double[])natural.Clone();
+        for (var pass = 0; pass < 4 && w.Sum() > room + 0.5; pass++)
+        {
+            var movable = w.Where(x => x > FloorWidth).Sum() - FloorWidth * w.Count(x => x > FloorWidth);
+            if (movable <= 0.5) break;
+            var need = w.Sum() - room;
+            var take = Math.Min(need, movable);
+            for (var i = 0; i < w.Length; i++)
+            {
+                var slack = w[i] - FloorWidth;
+                if (slack <= 0) continue;
+                w[i] -= take * (slack / movable);
+                if (w[i] < FloorWidth) w[i] = FloorWidth;
+            }
+        }
+        return w;
+    }
+
     /// <summary>پهنای ذخیره‌شدهٔ همین جدول — اگر بود و شمارِ ستون‌ها هم خورد.</summary>
     private double[]? Saved(int count)
     {
-        var key = WidthKey;
+        var key = EffectiveKey(count);
         if (string.IsNullOrWhiteSpace(key)) return null;
 
         // ⚠️ یک بار خوانده می‌شود و همان می‌ماند: این تابع در مسیرِ چیدمان
@@ -1438,10 +1590,10 @@ public class ExcelGrid : DataGrid
     /// </summary>
     private void RememberWidths()
     {
-        if (string.IsNullOrWhiteSpace(WidthKey)) return;
-
         var cols = Columns.Where(c => c.IsVisible).ToList();
         if (cols.Count == 0) return;
+        var key = EffectiveKey(cols.Count);
+        if (string.IsNullOrWhiteSpace(key)) return;
         var w = cols.Select(c => c.ActualWidth).ToArray();
         if (w.Any(x => double.IsNaN(x) || x <= 0)) return;
 
@@ -1463,8 +1615,8 @@ public class ExcelGrid : DataGrid
 
         _saved = w;
         _savedRead = true;
-        var key = WidthKey!;
-        Dispatcher.UIThread.Post(() => Services.AppSettings.SaveColumnWidths(key, w),
+        var name = key!;
+        Dispatcher.UIThread.Post(() => Services.AppSettings.SaveColumnWidths(name, w),
                                  DispatcherPriority.Background);
     }
 
@@ -1850,10 +2002,16 @@ public class ExcelGrid : DataGrid
         if (!_editing || !_typedIn) return;
         if (e.Key is not (Key.Left or Key.Right or Key.Up or Key.Down)) return;
 
+        //  ⛔ **پیش از** بستنِ ویرایش: خودِ ‎CommitEdit‎ می‌تواند خانهٔ جاری را
+        //  جابه‌جا کند و آن‌وقت گام از جای اشتباه حساب می‌شد — همان «کلیکِ
+        //  دوم درست می‌شود».
+        var cols = VisibleCols();
+        var from = CurIndex(cols);
+
         CommitEdit(DataGridEditingUnit.Cell, true);
 
         if (e.Key is Key.Up or Key.Down) MoveRow(e.Key == Key.Down ? +1 : -1);
-        else MoveColumn(e.Key == Key.Right ? -1 : +1);   // آینهٔ راست‌به‌چپ
+        else MoveColumnFrom(cols, from, ColumnStep(e.Key));
 
         e.Handled = true;
     }
@@ -2131,7 +2289,45 @@ public class ExcelGrid : DataGrid
     {
         var cols = VisibleCols();
         if (cols.Count == 0) return false;
-        var cur = CurIndex(cols);
+        return MoveColumnFrom(cols, CurIndex(cols), step, extend);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ «کدام طرف» یک جا تصمیم گرفته می‌شود، و از روی چیدمانِ واقعی ════════
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «وقتی روی یک جدول استم اوکی است؛ وقتی
+    //  توی یک کادرِ جدول می‌نویسم و می‌خواهم بروم کادرِ بعدی، راست به چپ
+    //  می‌رود و با کلیکِ دوم درست می‌شود.»
+    //
+    //  دو چیزِ جدا زیرش بود:
+    //
+    //  ⛔ ۱) جهت **فرض** شده بود، نه پرسیده: هر دو مسیر ‎Right ⇒ -1‎ می‌نوشتند،
+    //     یعنی «این جدول حتماً راست‌به‌چپ است». جدولی که داخلِ یک پنلِ
+    //     چپ‌به‌راست بنشیند (و در همین برنامه هست) وارونه حرکت می‌کرد. حالا
+    //     ‎ColumnStep‎ از ‎FlowDirection‎ِ خودِ جدول می‌پرسد — همان قاعدهٔ
+    //     ۱۴۰۵/۰۷/۱۰: «حدس، دوبار غلط جواب داد؛ اندازه‌گیری یک بار درست».
+    //
+    //  ⛔ ۲) و مهم‌تر، همان «کلیکِ دوم درست می‌شود»: در حالتِ **نوشتن** اول
+    //     ‎CommitEdit‎ زده می‌شد و **بعد** ستونِ جاری خوانده می‌شد. بستنِ
+    //     ویرایش خودش می‌تواند خانهٔ جاری را جابه‌جا کند، پس گام از ستونِ
+    //     **تازه** حساب می‌شد و یک خانه پرت می‌افتاد؛ فشارِ بعدی از جای
+    //     درست شروع می‌کرد و «درست» به نظر می‌رسید. حالا ستونِ مبدأ **پیش
+    //     از** بستنِ ویرایش برداشته می‌شود.
+
+    /// <summary>‎Right‎/‎Left‎ یعنی چند پله در ترتیبِ ستون‌ها.</summary>
+    private int ColumnStep(Key key)
+    {
+        //  ستونِ شمارهٔ صفر در چیدمانِ راست‌به‌چپ سمتِ **راست** رندر می‌شود،
+        //  پس «راست» یعنی عقب رفتن در شماره. در چپ‌به‌راست برعکس.
+        var back = FlowDirection == FlowDirection.RightToLeft;
+        return key == Key.Right ? (back ? -1 : +1) : (back ? +1 : -1);
+    }
+
+    /// <summary>همان جابه‌جایی، ولی با ستونِ مبدأی که خودِ صدازننده می‌دهد.</summary>
+    private bool MoveColumnFrom(List<DataGridColumn> cols, int cur, int step, bool extend = false)
+    {
+        if (cols.Count == 0) return false;
         if (cur < 0) cur = 0;
         var next = Math.Clamp(cur + step, 0, cols.Count - 1);
         if (next == cur && !extend) return false;
@@ -2724,7 +2920,7 @@ public class ExcelGrid : DataGrid
             //     ‎←‎ خانهٔ سمتِ چپ    ⇒ ایندکسِ بیشتر
             case Key.Left:
             case Key.Right:
-                MoveColumn(e.Key == Key.Right ? -1 : +1, shift);
+                MoveColumn(ColumnStep(e.Key), shift);
                 e.Handled = true;
                 return;
 

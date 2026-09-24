@@ -154,6 +154,9 @@
             <c:SettingCard Classes="card" HorizontalAlignment="Stretch" ItemsSource="{Binding MarginChoices}" SelectedItem="{Binding Margin}" />
             <TextBlock Text="{Binding MarginNoteText}" Classes="pn" Margin="4,-4,4,2" />
             <c:SettingCard Classes="card" HorizontalAlignment="Stretch" ItemsSource="{Binding Scales}" SelectedItem="{Binding Scale}" />
+            <!-- «رنگی یا سیاه و سفید» — خواستهٔ صریحِ صاحب ریپو. تنظیمش از
+                 روزِ اول بود ولی فقط در پنجرهٔ «تنظیمِ ورق» دیده می‌شد. -->
+            <c:SettingCard Classes="card" HorizontalAlignment="Stretch" ItemsSource="{Binding Inks}" SelectedItem="{Binding Ink}" />
             <TextBlock Text="{Binding ScaleNote}" Classes="pn" Margin="4,-4,4,2" />
 
             <Button Classes="link" Content="تنظیمِ ورق…" Click="OnSetup" />

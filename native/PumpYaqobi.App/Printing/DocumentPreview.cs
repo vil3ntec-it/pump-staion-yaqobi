@@ -101,12 +101,25 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     public ObservableCollection<SetupOption> MarginChoices { get; } = new();
     public ObservableCollection<SetupOption> Scales { get; } = new();
 
+    // ══ «رنگی باشد یا سیاه و سفید» ══════════════════════════════════════════
+    //
+    // گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «تو بخش پرینت هم دکمه‌ای وجود نداره که
+    // رنگه باشه یا سیاه و سفید.»
+    //
+    // ⛔ و حق داشت: خودِ تنظیم از روزِ اول بود (‎PrintColor‎ و ‎DocStyle.Paint‎)
+    // ولی **فقط داخلِ پنجرهٔ «تنظیمِ ورق»** دیده می‌شد — یعنی دو کلیک آن‌طرف‌تر،
+    // در پنجره‌ای که کاربر برای عوض کردنِ حاشیه بازش می‌کند. کاری که همیشه
+    // لازم است باید همان‌جا باشد که چشم است، کنارِ کاغذ و جهت و مقیاس.
+    public ObservableCollection<SetupOption> Inks { get; } = new();
+
     [ObservableProperty] private SetupOption? _what;
     [ObservableProperty] private SetupOption? _collate;
     [ObservableProperty] private SetupOption? _orientation;
     [ObservableProperty] private SetupOption? _paper;
     [ObservableProperty] private SetupOption? _margin;
     [ObservableProperty] private SetupOption? _scale;
+    /// <summary>رنگی · خاکستری · سیاه و سفید — «مرکّب».</summary>
+    [ObservableProperty] private SetupOption? _ink;
 
     [ObservableProperty] private string _copiesText = "۱";
     [ObservableProperty] private string _fromText = "۱";
@@ -178,6 +191,11 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         MarginChoices.Add(new SetupOption("normal", "حاشیهٔ عادی", MarginNote("normal"), "▭"));
         MarginChoices.Add(new SetupOption("narrow", "حاشیهٔ باریک", MarginNote("narrow"), "▭"));
         MarginChoices.Add(new SetupOption("wide", "حاشیهٔ پهن", MarginNote("wide"), "▭"));
+
+        // ── مرکّب — همان ‎PrintColor‎، حالا کنارِ بقیهٔ کادرها ──────────────
+        Inks.Add(new SetupOption("color", "رنگی", "همان رنگ‌هایی که می‌بینید", "🎨"));
+        Inks.Add(new SetupOption("gray", "خاکستری", "رنگ‌ها به طیفِ خاکستری", "🌫"));
+        Inks.Add(new SetupOption("bw", "سیاه و سفید", "بی هیچ رنگی — کم‌خرج‌ترین", "🖨"));
         MarginChoices.Add(new SetupOption("custom", "حاشیهٔ دلخواه",
             "عددهایش را در «تنظیمِ ورق» بگذارید", "▭"));
 
@@ -237,6 +255,12 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         });
         Paper = Pick(Papers, Setup.Paper);
         Margin = Pick(MarginChoices, Setup.MarginPreset);
+        Ink = Pick(Inks, Setup.Color switch
+        {
+            PrintColor.Gray => "gray",
+            PrintColor.BlackWhite => "bw",
+            _ => "color",
+        });
         Scale = Pick(Scales, Setup.Scale switch
         {
             PrintScale.FitColumns => "fitCols",
@@ -288,6 +312,12 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
             From = (int)Math.Clamp(Shamsi.Num(FromText), 1m, 9999m),
             To = (int)Math.Clamp(Shamsi.Num(ToText), 1m, 9999m),
             PagesText = PagesText ?? "",
+            Color = Ink?.Value switch
+            {
+                "gray" => PrintColor.Gray,
+                "bw" => PrintColor.BlackWhite,
+                _ => PrintColor.Color,
+            },
         };
 
         // کاغذ و حاشیه عددهای همراهشان را هم با خود می‌آورند — مثلِ سایت
@@ -305,6 +335,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     partial void OnPaperChanged(SetupOption? v) => Push();
     partial void OnMarginChanged(SetupOption? v) => Push();
     partial void OnScaleChanged(SetupOption? v) => Push();
+    partial void OnInkChanged(SetupOption? v) => Push();
     partial void OnCopiesTextChanged(string v) => Push();
     /* ⚠️ تایپ کردن در «ورق‌ها: از … تا …» خودش حالت را روی «بازهٔ ورق‌ها»
        می‌گذارد — همان کاری که سایت و اکسل می‌کنند. وگرنه عددها را می‌زدی ولی
