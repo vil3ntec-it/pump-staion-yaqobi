@@ -84,18 +84,30 @@ public class GridWidthsTests
     }
 
     /// <summary>
-    /// ⛔ جهتِ چپ/راست از ‎FlowDirection‎ِ خودِ جدول می‌آید، نه از فرضِ
-    /// «همه‌جا راست‌به‌چپ است».
+    /// ⛔ جهتِ چپ/راست **یک جا** تصمیم گرفته می‌شود — و همان قاعدهٔ ثابتی
+    /// که سه بار به آن رسیدیم، نه چیزِ تازه‌ای.
+    ///
+    /// ⚠️ بالای <c>case Key.Left</c> در خودِ کنترل نوشته شده که خواندنِ
+    /// <c>FlowDirection</c> «بارِ اول امتحان شد، به این کنترل نمی‌رسید و
+    /// بی‌صدا برعکس می‌شد». نسخهٔ اولِ همین اصلاح دقیقاً همان را برگرداند
+    /// و این آزمون برای همان نوشته شد: **جهت را دوباره از
+    /// <c>FlowDirection</c> نخوانید.**
     /// </summary>
     [Fact]
-    public void Jahate_Kelid_Porside_Mishavad_Na_Farz()
+    public void Jahate_Kelid_YekJa_Ast_Va_Az_FlowDirection_Nemikhanad()
     {
         var g = Grid();
-        Assert.Contains("private int ColumnStep(Key key)", g);
-        Assert.Contains("FlowDirection == FlowDirection.RightToLeft", g);
+        Assert.Contains("private static int ColumnStep(Key key) => key == Key.Right ? -1 : +1;", g);
 
-        //  ⛔ و هیچ‌جا دیگر «راست یعنی منفیِ یک» نوشته نشده.
-        Assert.DoesNotContain("e.Key == Key.Right ? -1 : +1", g);
+        //  ⛔ هر دو مسیر (نوشتن و نانوشتن) از همان یک تابع می‌آیند، پس
+        //  هیچ‌وقت از هم جدا نمی‌افتند.
+        Assert.Contains("MoveColumnFrom(cols, from, ColumnStep(e.Key))", g);
+        Assert.Contains("MoveColumn(ColumnStep(e.Key), shift)", g);
+
+        //  ⛔ و جهت از چیدمان پرسیده نمی‌شود — همان پس‌رفتی که یک بار شد.
+        var at = g.IndexOf("private static int ColumnStep", StringComparison.Ordinal);
+        var body = g[at..Math.Min(g.Length, at + 300)];
+        Assert.DoesNotContain("FlowDirection", body);
     }
 
     /// <summary>

@@ -55,7 +55,18 @@ public partial class App : Avalonia.Application
             desktop.ShutdownRequested += (_, _) =>
             {
                 try { Controls.ExcelGrid.CommitFocused(desktop.MainWindow); } catch { }
-                try { Services.SaveGuard.FlushAllAsync(TimeSpan.FromSeconds(3)).Wait(3500); }
+
+                //  ⛔ **‎Task.Run‎، نه صدا زدنِ مستقیم.** این‌جا روی نخِ رابط
+                //  هستیم و باید منتظر بمانیم (وگرنه فرآیند پیش از نوشتن
+                //  می‌رود). ولی ‎await‎های درونِ زنجیرهٔ ذخیره، اگر از همین نخ
+                //  شروع شوند، ادامه‌شان را **به همین نخ** پس می‌دهند — و نخی
+                //  که ‎Wait‎ کرده هیچ‌وقت آزاد نمی‌شود. یعنی قفلِ کامل:
+                //  سه‌ونیم ثانیه معطلی و **صفر بایت** نوشته‌شده، بدتر از
+                //  نداشتنِ این قلاب.
+                //
+                //  ⚠️ همان درسِ ‎idle‎ در ۱۴۰۵/۰۷/۰۱ («خاموش کردنش نباید نخِ
+                //  رابط را ببندد») — این بار سرِ بسته شدنِ برنامه.
+                try { Task.Run(() => Services.SaveGuard.FlushAllAsync(TimeSpan.FromSeconds(3))).Wait(3500); }
                 catch { /* بسته شدن نباید بماسد */ }
             };
         }

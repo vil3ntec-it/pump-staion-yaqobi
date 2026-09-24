@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-
 namespace PumpYaqobi.App.Services;
 
 /// <summary>چیزی که نوشتهٔ ذخیره‌نشده دارد و می‌شود همین حالا نشاندش.</summary>
@@ -116,10 +114,23 @@ public static class SaveGuard
         var all = Snapshot().Where(w => w.IsDirty).ToList();
         if (all.Count == 0) return 0;
 
-        var work = Task.WhenAll(all.Select(w => w.FlushAsync()));
+        //  ⛔ **یکی‌یکی، نه ‎Task.WhenAll‎.** هر ذخیره اتصالِ SQLiteِ خودش را
+        //  باز می‌کند (‎LedgerService‎: ‎await using var db = _dbf.Create()‎)،
+        //  پس صدها نوشتنِ هم‌زمان یعنی صدها تراکنشِ رقیب روی یک فایل. با
+        //  ‎busy_timeout‎ خطا نمی‌دهند ولی پشتِ هم صف می‌کشند — همان کار، با
+        //  هزاران اتصالِ اضافه.
+        //
+        //  ⚠️ و ترتیبِ سریالی است که سقفِ وقت را واقعی می‌کند: وقت که تمام
+        //  شد، آن‌چه نوشته شده واقعاً نوشته شده و بقیه در صف می‌مانند.
         var cap = timeout ?? TimeSpan.FromSeconds(8);
-        try { await work.WaitAsync(cap); }
-        catch { /* سقفِ وقت یا شکست — پایین شمرده می‌شود */ }
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        foreach (var w in all)
+        {
+            var mandeh = cap - clock.Elapsed;
+            if (mandeh <= TimeSpan.Zero) break;
+            try { await w.FlushAsync().WaitAsync(mandeh); }
+            catch { /* شکست یا سقفِ وقت — پایین شمرده می‌شود */ }
+        }
 
         var left = all.Count(w => w.IsDirty);
         if (left > 0)
