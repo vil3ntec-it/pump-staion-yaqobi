@@ -72,7 +72,7 @@ public sealed class AppHost
         Voice = new VoiceDataService(Db, Permissions);
         LegacyImport = new LegacyImportService(Db, Permissions, Settings);
         Backup = new BackupService(Db, Permissions);
-        History = new HistoryService(Db, Permissions, Exchange, Retail, Company, AmanatCalc, Amanat);
+        History = new HistoryService(Db, Permissions, Exchange, Retail, Company, AmanatCalc, Amanat, Waraq);
         SafeLedger = new LedgerService<SafeEntry>(Db, Permissions, Trash, "safe",
             r => (r.Title ?? "") + " — " + Shamsi.Money(r.Amount));
         ExchangeLedger = new LedgerService<ExchangeRow>(Db, Permissions, Trash, "sarrafi",

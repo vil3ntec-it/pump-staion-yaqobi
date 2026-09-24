@@ -38,6 +38,9 @@ public sealed class HistoryRowViewModel
     public int Index { get; }
 
     public string DateText => string.IsNullOrWhiteSpace(Entity.DateShamsi) ? "بی‌تاریخ" : Entity.DateShamsi;
+
+    /// <summary>خانه‌های جدولِ همان بخش — ‎HistoryService.ColumnsOf‎.</summary>
+    public IReadOnlyList<string> Cells => Entity.Cells ?? Array.Empty<string>();
     public string Title => Entity.Title;
     public string Detail => Entity.Detail;
     public string AmountText => Entity.AmountText;
@@ -93,6 +96,23 @@ public sealed partial class HistorySectionViewModel : SectionViewModel
     [ObservableProperty] private string _month = AllMonths;
 
     public bool IsEmpty => Rows.Count == 0;
+
+    /// <summary>ستون‌های جدولِ همین بخش؛ ‎null‎ یعنی جدولِ کلی.</summary>
+    [ObservableProperty] private IReadOnlyList<HistoryCol>? _columns;
+
+    public bool HasColumns => Columns is not null;
+
+    /// <summary>
+    /// ⚠️ فقط یکی از دو جدول ردیف دارد — جدولِ پنهان حق ندارد ردیفِ زنده داشته
+    /// باشد (قاعدهٔ سرعتِ این ریپو).
+    /// </summary>
+    public BulkRows<HistoryRowViewModel>? GenericRows => HasColumns ? null : Rows;
+
+    partial void OnColumnsChanged(IReadOnlyList<HistoryCol>? v)
+    {
+        OnPropertyChanged(nameof(HasColumns));
+        OnPropertyChanged(nameof(GenericRows));
+    }
 
     protected override Task LoadAsync() => RefreshCardsAsync();
 
@@ -161,6 +181,7 @@ public sealed partial class HistorySectionViewModel : SectionViewModel
     public async Task OpenAsync(string kind)
     {
         OpenKind = kind;
+        Columns = HistoryService.ColumnsOf(kind);
         PageTitle = "🕘 تاریخچهٔ " + HistoryService.LabelOf(kind);
         IsListVisible = false;
         IsPageOpen = true;

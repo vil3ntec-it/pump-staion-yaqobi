@@ -13,15 +13,30 @@ namespace PumpYaqobi.Services.Data;
 /// <param name="DateKey">کلیدِ عددیِ تاریخ — برای مرتب‌سازی و فیلترِ ماه.</param>
 /// <param name="Amount">‎null‎ یعنی این ردیف عدد ندارد (ورق، حاضری).</param>
 /// <param name="Tone">‎in‎ سبز · ‎out‎ نارنجی · خالی، بی‌رنگ.</param>
+/// <param name="Cells">
+/// خانه‌های جدولِ همان بخش، به ترتیبِ <see cref="HistoryService.ColumnsOf"/> —
+/// ‎null‎ یعنی این بخش جدولِ کلی (تاریخ · چه بود · توضیح · مبلغ) را دارد.
+/// </param>
 public sealed record HistoryRow(
     string Kind, string DateShamsi, int DateKey,
-    string Title, string Detail, decimal? Amount, string Unit, string Tone)
+    string Title, string Detail, decimal? Amount, string Unit, string Tone,
+    IReadOnlyList<string>? Cells = null)
 {
     public string AmountText => Amount is null ? "" : Shamsi.Money(Amount.Value) + Unit;
 
     /// <summary>«1405/06» — گروهِ ماهِ همین ردیف؛ خالی یعنی بی‌تاریخ.</summary>
     public string MonthKey => DateKey <= 0 ? "" : $"{DateKey / 10000:0000}/{DateKey / 100 % 100:00}";
 }
+
+/// <summary>
+/// یک ستونِ جدولِ تاریخچهٔ یک بخش.
+/// </summary>
+/// <param name="Wide">پهنای ستاره‌ای (نام، توضیح) — بقیه هم‌قدِ محتوا.</param>
+/// <param name="Brush">
+/// رنگِ نوشته: کلیدِ منبعِ تم (‎Pump.Ok‎…)، یا ‎"tone"‎ یعنی رنگِ «آمد/رفت»ِ
+/// همان ردیف، یا خالی یعنی رنگِ معمولی.
+/// </param>
+public sealed record HistoryCol(string Header, bool Wide = false, string Brush = "");
 
 /// <summary>یک کارتِ صفحهٔ «تاریخچه‌ها».</summary>
 public sealed record HistoryKind(string Key, string Label, int Count, string LatestDate);
@@ -59,6 +74,50 @@ public sealed class HistoryService
         ("attend",  "🕒 حاضری"),
     };
 
+    /// <summary>
+    /// ══ ستون‌های هر بخش (۱۴۰۵/۰۷/۱۲) ═════════════════════════════════════════
+    ///
+    /// خواستهٔ صاحب ریپو: تاریخچهٔ هر بخش همان چیزهایی را جدا جدا نشان بدهد که
+    /// آن بخش واقعاً دارد — نه یک ستونِ «توضیح» که همه‌چیز در آن ریخته شده:
+    ///   پارچه‌ها ⇐ کارمند · روز/شب · شمارهٔ پایه · شروع · ختم
+    ///   ورق‌ها   ⇐ جملهٔ هر شیفت: شمار و مبلغِ قرض، شمار و مبلغِ مصرف، فروش
+    ///   صرافی    ⇐ تحویل به صرافی یا بردگیِ پمپ · مبلغ · فی · دالر
+    ///   شرکت‌ها  ⇐ بردگیِ پمپ از شرکت (تیل، دالر) و رسیدِ پمپ = بردگیِ شرکت
+    /// بقیهٔ بخش‌ها همان جدولِ کلی را دارند (‎null‎).
+    ///
+    /// ⛔ **هیچ عددِ تازه‌ای این‌جا ساخته نمی‌شود**: هر خانه از همان سرویسِ
+    /// محاسباتیِ خودِ بخش می‌آید (‎ExchangeService.ToUsd‎ · ‎CompanyService‎ ·
+    /// ‎WaraqService.ShiftTotals‎) — همان عددی که صفحهٔ خودِ بخش نشان می‌دهد.
+    /// </summary>
+    public static IReadOnlyList<HistoryCol>? ColumnsOf(string kind) => kind switch
+    {
+        "shift" => new HistoryCol[]
+        {
+            new("تاریخ"), new("پارچه"), new("تیل"), new("شیفت"), new("کارمند", Wide: true),
+            new("شمارهٔ پایه"), new("شروعِ پایه"), new("ختمِ پایه"),
+            new("لیتر"), new("پول", Brush: "Pump.Ok"),
+        },
+        "waraq" => new HistoryCol[]
+        {
+            new("تاریخ"), new("شیفت"), new("کارمندان", Wide: true),
+            new("شمارِ قرض"), new("جملهٔ قرض", Brush: "Pump.Danger"),
+            new("شمارِ مصرف"), new("جملهٔ مصرف", Brush: "Pump.Purple"),
+            new("لیترِ فروش"), new("جملهٔ فروش", Brush: "Pump.Ok"),
+        },
+        "sarrafi" => new HistoryCol[]
+        {
+            new("تاریخ"), new("چه شد"), new("توضیح", Wide: true),
+            new("مبلغ"), new("واحد"), new("فی"), new("دالر", Brush: "tone"),
+        },
+        "company" => new HistoryCol[]
+        {
+            new("تاریخ"), new("شرکت"), new("تیل"), new("شرح", Wide: true), new("تن"),
+            new("بردگیِ پمپ از شرکت ($)", Brush: "Pump.Accent"), new("به افغانی"),
+            new("رسیدِ پمپ = بردگیِ شرکت", Brush: "Pump.Ok"), new("از کجا"),
+        },
+        _ => null,
+    };
+
     public static string LabelOf(string key)
     {
         foreach (var (k, l) in Kinds) if (k == key) return l;
@@ -72,14 +131,16 @@ public sealed class HistoryService
     private readonly CompanyService _company;
     private readonly AmanatService _amanat;
     private readonly AmanatDataService _amanatData;
+    private readonly WaraqService _waraq;
 
     public HistoryService(PumpDbFactory dbf, PermissionService perm,
                           ExchangeService exchange, RetailService retail,
                           CompanyService company, AmanatService amanat,
-                          AmanatDataService amanatData)
+                          AmanatDataService amanatData, WaraqService? waraq = null)
     {
         _dbf = dbf; _perm = perm; _exchange = exchange; _retail = retail;
         _company = company; _amanat = amanat; _amanatData = amanatData;
+        _waraq = waraq ?? new WaraqService();
     }
 
     /// <summary>
@@ -113,7 +174,9 @@ public sealed class HistoryService
                 "chakana" => await RetailStampsAsync(db, ct),
                 "company" => await CompanyStampsAsync(db, ct),
                 "expense" => await Stamps(db.Expenses.AsNoTracking().Select(e => new Stamp(e.DateShamsi, e.DateKey)), ct),
-                "waraq"   => await Stamps(db.WaraqEntries.AsNoTracking().Select(w => new Stamp(w.DateShamsi, w.DateKey)), ct),
+                "waraq"   => await Stamps(db.WaraqShifts.AsNoTracking()
+                                 .Where(s => s.Pumps.Any() || s.Transactions.Any(t => t.Name != null && t.Name.Trim() != ""))
+                                 .Select(s => new Stamp(s.Waraq!.DateShamsi, s.Waraq!.DateKey)), ct),
                 "invoice" => await Stamps(db.Invoices.AsNoTracking().Select(v => new Stamp(v.DateShamsi, v.DateKey)), ct),
                 "shift"   => await ShiftStampsAsync(db, ct),
                 "attend"  => await Stamps(db.Attendance.AsNoTracking().Select(a => new Stamp(a.DateShamsi, a.DateKey)), ct),
@@ -329,6 +392,7 @@ public sealed class HistoryService
                 && string.IsNullOrWhiteSpace(r.Description)) continue;
 
             var title = string.IsNullOrWhiteSpace(r.Description) ? "صرافی" : r.Description!;
+            var note = string.IsNullOrWhiteSpace(r.Description) ? "—" : r.Description!.Trim();
             var cur = r.Currency switch
             {
                 ExchangeCurrency.Kaldar => "کالدار",
@@ -338,32 +402,46 @@ public sealed class HistoryService
 
             // ══ یک سطرِ صرافی می‌تواند دو ردیفِ تاریخچه بدهد ══════════════
             //
-            // گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۶): «برای صرافی دقیق نیست — نگفته
-            // بردگی یا چند تحویل دادم.»
+            // گزارش‌های صاحب ریپو (۱۴۰۵/۰۷/۰۶ و ۱۴۰۵/۰۷/۱۲): «نشان بده تحویل شده
+            // یا گرفته، مبلغ چقدر بوده، فی چقدر و چند دالر شده بود — و بردگیِ
+            // پمپ یا تحویل به صرافی‌ها هم نوشته باشد، هر چه شده بود دقیق.»
             //
-            // حق داشت: هر دو ردیف عنوانِ یکسانِ «صرافی» (یا توضیحِ خودِ ردیف)
-            // می‌گرفتند و تنها فرقشان یک ایموجیِ کوچک وسطِ متن بود. حالا خودِ
-            // **عنوان** می‌گوید کدام است، و رسید عددِ خامِ ارز و نرخ و معادلِ
-            // دالرش را کنارِ هم می‌گذارد.
-            //
-            // ⛔ هیچ عددی عوض نشد — همان ‎ToUsd‎ و همان ‎Bardagi‎.
+            // همان دو ستونِ خودِ صفحهٔ صرافی: «رسید به صرافی» (مبلغ ÷ فی = دالر)
+            // و «بردگیِ پمپ بنزین ($)». ⛔ هیچ عددی عوض نشد — همان ‎ToUsd‎ و
+            // همان ‎Bardagi‎.
             if (usd != 0m)
                 list.Add(new HistoryRow("sarrafi", r.DateShamsi ?? "", r.DateKey,
-                    "💵 تحویل — " + title,
+                    "💵 تحویل به صرافی — " + title,
                     Shamsi.Money(r.Amount) + " " + cur
-                        + (r.Rate != 0m ? " · نرخ " + Shamsi.Money(r.Rate) : "")
+                        + (r.Rate != 0m ? " · فی " + Shamsi.Money(r.Rate) : "")
                         + " ⇐ " + Shamsi.Money(Math.Round(usd, 2)) + " $",
-                    Math.Round(usd, 2), " $", "in"));
+                    Math.Round(usd, 2), " $", "in",
+                    new[]
+                    {
+                        Date(r.DateShamsi), "💵 تحویل به صرافی", note,
+                        Shamsi.Money(r.Amount), cur, Shamsi.Money(r.Rate),
+                        Shamsi.Money(Math.Round(usd, 2)) + " $",
+                    }));
 
             if (r.Bardagi != 0m)
                 list.Add(new HistoryRow("sarrafi", r.DateShamsi ?? "", r.DateKey,
-                    "📤 بردگی — " + title,
-                    "از صندوقِ صرافی برداشته شد", r.Bardagi, " $", "out"));
+                    "📤 بردگیِ پمپ از صرافی — " + title,
+                    "پمپ از صرافی برد", r.Bardagi, " $", "out",
+                    new[]
+                    {
+                        Date(r.DateShamsi), "📤 بردگیِ پمپ از صرافی", note,
+                        "—", "دالر", "—", Shamsi.Money(r.Bardagi) + " $",
+                    }));
 
             if (usd == 0m && r.Bardagi == 0m && r.Amount != 0m)
                 list.Add(new HistoryRow("sarrafi", r.DateShamsi ?? "", r.DateKey,
-                    "💵 تحویل — " + title,
-                    "نرخ نوشته نشده، پس معادلِ دالری حساب نشد", r.Amount, " " + cur, ""));
+                    "💵 تحویل به صرافی — " + title,
+                    "فی نوشته نشده، پس معادلِ دالری حساب نشد", r.Amount, " " + cur, "",
+                    new[]
+                    {
+                        Date(r.DateShamsi), "💵 تحویل به صرافی", note,
+                        Shamsi.Money(r.Amount), cur, "فی نوشته نشده", "—",
+                    }));
         }
         return list;
     }
@@ -463,6 +541,17 @@ public sealed class HistoryService
         return list;
     }
 
+    /// <summary>
+    /// ══ شرکت‌ها — «بردگی‌های من و بردگی‌های شرکت» (۱۴۰۵/۰۷/۱۲) ═══════════════
+    ///
+    /// هر ردیفِ حسابِ شرکت دو طرف دارد، همان دو طرفِ صفحهٔ خودِ شرکت:
+    ///   • **بردگیِ پمپ از شرکت** — تیلی که پمپ خریده: تن × قیمتِ تن = دالر
+    ///     (و به افغانی با نرخِ همان ردیف)،
+    ///   • **رسیدِ پمپ = بردگیِ شرکت** — پولی که پمپ به شرکت داده، به ارزِ خودش
+    ///     (افغانی یا دالر). «رسیدِ من، بردگیِ او می‌شود.»
+    /// ⚠️ تا امروز ارزِ رسید نوشته نمی‌شد و رسیدِ دالری افغانی خوانده می‌شد.
+    /// ⛔ عددها همان ‎CompanyService.Ton/TotalUsd/TotalAfn‎.
+    /// </summary>
     private async Task<List<HistoryRow>> CompanyAsync(Persistence.PumpDbContext db, CancellationToken ct)
     {
         var names = await db.TilCompanies.AsNoTracking().ToDictionaryAsync(c => c.Id, c => c.Name ?? "", ct);
@@ -472,15 +561,33 @@ public sealed class HistoryService
             var usd = _company.TotalUsd(r);
             if (usd == 0m && r.Poul == 0m) continue;
 
+            var poulCur = r.PoulCurrency == Currency.Usd ? " $" : " افغانی";
             var bits = new List<string>();
-            if (usd != 0m) bits.Add("📦 " + Shamsi.Money(usd, 1) + " $");
-            if (r.Poul != 0m) bits.Add("💵 رسید " + Shamsi.Money(r.Poul));
+            if (usd != 0m) bits.Add("📦 بردگیِ پمپ " + Shamsi.Money(usd, 1) + " $");
+            if (r.Poul != 0m) bits.Add("💵 رسیدِ پمپ " + Shamsi.Money(r.Poul) + poulCur);
 
             var name = names.TryGetValue(r.CompanyId, out var n) ? n : "";
+            var ton = _company.Ton(r);
+            var afn = _company.TotalAfn(r);
+            var from = r.SourcePurchaseId is not null ? "📦 خریدِ مخزن"
+                     : r.SourceExchangeId is not null ? "💱 از صرافی"
+                     : r.SourceReceiptId is not null ? "🏦 از گاوصندوق"
+                     : "✍️ دستی";
             list.Add(new HistoryRow("company", r.DateShamsi ?? "", r.DateKey,
                 name + (string.IsNullOrWhiteSpace(r.Name) ? "" : " — " + r.Name),
-                string.Join(" · ", bits), Math.Round(_company.TotalAfn(r)), " افغانی",
-                usd != 0m ? "out" : "in"));
+                string.Join(" · ", bits), Math.Round(afn), " افغانی",
+                usd != 0m ? "out" : "in",
+                new[]
+                {
+                    Date(r.DateShamsi), name.Length > 0 ? name : "—",
+                    r.Fuel == FuelType.Diesel ? "🟤 دیزل" : "⛽ پطرول",
+                    string.IsNullOrWhiteSpace(r.Name) ? "—" : r.Name!.Trim(),
+                    ton == 0m ? "—" : Shamsi.Money(ton, 3),
+                    usd == 0m ? "—" : Shamsi.Money(usd, 1) + " $",
+                    afn == 0m ? "—" : Shamsi.Money(Math.Round(afn)),
+                    r.Poul == 0m ? "—" : Shamsi.Money(r.Poul) + poulCur,
+                    from,
+                }));
         }
         return list;
     }
@@ -522,7 +629,19 @@ public sealed class HistoryService
         return list;
     }
 
-    private static async Task<List<HistoryRow>> WaraqAsync(Persistence.PumpDbContext db, CancellationToken ct)
+    /// <summary>
+    /// ══ ورق‌ها — جملهٔ هر شیفت، نه ردیف‌به‌ردیف (۱۴۰۵/۰۷/۱۲) ═══════════════════
+    ///
+    /// خواستهٔ صاحب ریپو: «شمارِ قرض، شمارِ مصارف، مقدارِ مصارف، مقدارِ فروش و
+    /// مقدارِ قرض‌ها — همه را جمله نشان بده، نه یکی یکی.» پس یک ردیف برای هر
+    /// **شیفت** (روز و شب هرگز با هم جمع نمی‌شوند — همان قاعدهٔ صفحهٔ ورق).
+    ///
+    /// ⛔ جمع‌ها از ‎WaraqService.ShiftTotals‎ است — همان شش کادرِ «خلاصه شیفت»ِ
+    /// صفحهٔ ورق. شمار: ردیفِ قرضی که نام یا مبلغ دارد، و ردیفِ مصرفی که نام
+    /// دارد — مو‌به‌مو همان ردیف‌هایی که در آن جمع شمرده می‌شوند.
+    /// ⚠️ شیفتی که نه پایه دارد نه ردیفِ نام‌دار نمی‌آید (کارت هم همان را می‌شمارد).
+    /// </summary>
+    private async Task<List<HistoryRow>> WaraqAsync(Persistence.PumpDbContext db, CancellationToken ct)
     {
         var entries = await db.WaraqEntries.AsNoTracking().AsSplitQuery()
             .Include(w => w.Shifts).ThenInclude(s => s.Pumps)
@@ -531,14 +650,34 @@ public sealed class HistoryService
 
         var list = new List<HistoryRow>();
         foreach (var w in entries)
-        {
-            var pumps = w.Shifts.Sum(s => s.Pumps.Count);
-            var txns = w.Shifts.Sum(s => s.Transactions.Count(t => !string.IsNullOrWhiteSpace(t.Name)));
-            list.Add(new HistoryRow("waraq", w.DateShamsi ?? "", w.DateKey,
-                "📝 ورق " + (w.DateShamsi ?? ""),
-                Shamsi.Money(pumps) + " پایه · " + Shamsi.Money(txns) + " تراکنش",
-                null, "", ""));
-        }
+            foreach (var sd in w.Shifts.OrderBy(x => x.Kind == ShiftKind.Night ? 1 : 0))
+            {
+                if (sd.Pumps.Count == 0 && !sd.Transactions.Any(t => !string.IsNullOrWhiteSpace(t.Name))) continue;
+
+                var t = _waraq.ShiftTotals(sd);
+                var debtN = sd.Transactions.Count(x => x.Type == WaraqTxnType.Debt
+                                                 && (!string.IsNullOrWhiteSpace(x.Name) || _waraq.TxnAmount(sd, x) != 0m));
+                var expN = sd.Transactions.Count(x => x.Type != WaraqTxnType.Debt && !string.IsNullOrWhiteSpace(x.Name));
+                var workers = string.Join("، ", sd.Pumps.Select(p => p.Worker?.Trim()).Where(x => !string.IsNullOrEmpty(x)).Distinct());
+                if (workers.Length == 0) workers = string.IsNullOrWhiteSpace(sd.WorkerName) ? "—" : sd.WorkerName!.Trim();
+                var when = sd.Kind == ShiftKind.Night ? "🌙 شب" : "☀️ روز";
+                var liters = t.PetrolLiters + t.DieselLiters;
+                var sales = Math.Round(t.Sales, 0, MidpointRounding.AwayFromZero);
+
+                list.Add(new HistoryRow("waraq", w.DateShamsi ?? "", w.DateKey,
+                    "📝 ورق " + (w.DateShamsi ?? "") + " — " + when,
+                    Shamsi.Money(debtN) + " قرض (" + Shamsi.Money(Math.Round(t.Debt)) + ") · "
+                        + Shamsi.Money(expN) + " مصرف (" + Shamsi.Money(Math.Round(t.Expenses)) + ") · فروش "
+                        + Shamsi.Money(sales),
+                    sales, " افغانی", "in",
+                    new[]
+                    {
+                        Date(w.DateShamsi), when, workers,
+                        Shamsi.Money(debtN), Shamsi.Money(Math.Round(t.Debt, 0, MidpointRounding.AwayFromZero)) + " افغانی",
+                        Shamsi.Money(expN), Shamsi.Money(Math.Round(t.Expenses, 0, MidpointRounding.AwayFromZero)) + " افغانی",
+                        Shamsi.Money(liters) + " لیتر", Shamsi.Money(sales) + " افغانی",
+                    }));
+            }
         return list;
     }
 
@@ -568,6 +707,13 @@ public sealed class HistoryService
         return list;
     }
 
+    /// <summary>
+    /// ══ پارچه‌ها (۱۴۰۵/۰۷/۱۲) ═══════════════════════════════════════════════
+    ///
+    /// «اسمِ کارمند، روز یا شب، شمارهٔ پایه، شروع و ختمِ پایه‌ها را ثبت کند که
+    /// آدم بفهمد چی به چیه.» — هر کدام ستونِ خودش. ⛔ هیچ منطقی دست نخورد: همان
+    /// دو ردیف برای هر پارچه (روز و شب) و همان پول و لیترِ خودِ پارچه.
+    /// </summary>
     private static async Task<List<HistoryRow>> ShiftAsync(Persistence.PumpDbContext db, CancellationToken ct)
     {
         var reports = await db.Reports.AsNoTracking()
@@ -583,11 +729,23 @@ public sealed class HistoryService
                 var bits = new List<string>();
                 if (!string.IsNullOrWhiteSpace(shift.Name)) bits.Add("👤 " + shift.Name);
                 bits.Add(when);
+                if (shift.PumpNum > 0) bits.Add("پایهٔ " + Shamsi.Money(shift.PumpNum));
+                bits.Add("شروع " + Shamsi.Money(shift.Start) + " · ختم " + Shamsi.Money(shift.End));
                 if (shift.Sale != 0m) bits.Add("🛢️ " + Shamsi.Money(Math.Round(shift.Sale)) + " لیتر");
 
+                var fuel = rep.Fuel == FuelType.Diesel ? "🟤 دیزل" : "⛽ پطرول";
                 list.Add(new HistoryRow("shift", rep.DateShamsi ?? "", rep.DateKey,
-                    "📋 پارچه " + (rep.Fuel == FuelType.Diesel ? "🟤 دیزل" : "⛽ پطرول"),
-                    string.Join(" · ", bits), Math.Round(shift.Money), " افغانی", "in"));
+                    "📋 پارچه " + fuel,
+                    string.Join(" · ", bits), Math.Round(shift.Money), " افغانی", "in",
+                    new[]
+                    {
+                        Date(rep.DateShamsi), rep.ReportNum > 0 ? Shamsi.Money(rep.ReportNum) : "—",
+                        fuel, when, string.IsNullOrWhiteSpace(shift.Name) ? "—" : shift.Name!.Trim(),
+                        shift.PumpNum > 0 ? Shamsi.Money(shift.PumpNum) : "—",
+                        Shamsi.Money(shift.Start), Shamsi.Money(shift.End),
+                        Shamsi.Money(Math.Round(shift.Sale)) + " لیتر",
+                        Shamsi.Money(Math.Round(shift.Money)) + " افغانی",
+                    }));
             }
         }
         return list;
@@ -613,6 +771,8 @@ public sealed class HistoryService
     }
 
     // ══ ابزارهای کوچک ══════════════════════════════════════════════════════
+
+    private static string Date(string? shamsi) => string.IsNullOrWhiteSpace(shamsi) ? "بی‌تاریخ" : shamsi!;
 
     /// <summary>تاریخِ شمسیِ نوشته‌شده → میلادیِ واقعی. ‎null‎ یعنی بی‌تاریخ.</summary>
     private static DateTime? DateOf(string? shamsi)

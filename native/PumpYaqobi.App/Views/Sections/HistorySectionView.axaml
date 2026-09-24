@@ -62,8 +62,27 @@
       <StackPanel Spacing="8">
         <TextBlock Text="{Binding Summary}" Classes="muted" HorizontalAlignment="Center" />
 
-        <Border Classes="panel" Padding="0" IsVisible="{Binding !IsEmpty}">
-          <c:ExcelGrid ItemsSource="{Binding Rows}" x:CompileBindings="False"
+        <!-- جدولِ همان بخش، با ستون‌های خودش (پارچه‌ها، ورق‌ها، صرافی، شرکت‌ها) —
+             ستون‌ها در کد ساخته می‌شوند (‎HistorySectionView.axaml.cs‎). -->
+        <Border Classes="panel" Padding="0" Name="KindHost">
+          <Border.IsVisible>
+            <MultiBinding Converter="{x:Static BoolConverters.And}">
+              <Binding Path="!IsEmpty" />
+              <Binding Path="HasColumns" />
+            </MultiBinding>
+          </Border.IsVisible>
+        </Border>
+
+        <Border Classes="panel" Padding="0">
+          <Border.IsVisible>
+            <MultiBinding Converter="{x:Static BoolConverters.And}">
+              <Binding Path="!IsEmpty" />
+              <Binding Path="!HasColumns" />
+            </MultiBinding>
+          </Border.IsVisible>
+          <!-- ⛔ سرستون با اسکرول همراه نمی‌آید (خواستهٔ ۱۴۰۵/۰۷/۱۲: «سرِ جدول‌ها
+               توی اسکرول تا ته صفحه با من می‌آید») — شرحش ‎ExcelGrid.HeaderFollows‎. -->
+          <c:ExcelGrid ItemsSource="{Binding GenericRows}" x:CompileBindings="False" HeaderFollows="False"
                        IsReadOnly="True" BorderThickness="0" CornerRadius="0">
             <DataGrid.Columns>
               <DataGridTextColumn Header="تاریخ" Binding="{Binding DateText}" Width="Auto" />
