@@ -123,7 +123,11 @@ public class ThirtyTwoBitTests : IDisposable
 
         Assert.True(info.Available);
         Assert.True(info.IsSmallPackage);
-        Assert.Contains("base-x86.txt", asked);
+        //  ⚠️ با گزاره، نه با رشته: ‎Assert.Contains(string, List<string>)‎
+        //  اورلودِ **مجموعه** است و برابریِ عنصر می‌خواهد، نه زیررشته —
+        //  و `asked` نشانیِ کامل دارد. همین یک اورلود سنجه را سرخ کرد
+        //  در حالی که کد درست بود.
+        Assert.Contains(asked, u => u.EndsWith("/base-x86.txt", StringComparison.Ordinal));
         Assert.DoesNotContain(asked, u => u.EndsWith("/base.txt"));
     }
 

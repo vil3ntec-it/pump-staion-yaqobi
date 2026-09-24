@@ -100,7 +100,15 @@ public class InstallerTests
     {
         var s = Iss();
         Assert.Contains("PrivilegesRequired=lowest", s);
-        Assert.Contains("{localappdata}\\Programs\\PumpYaqobi", s);
+        Assert.Contains("DefaultDirName={localappdata}\\Programs\\", s);
+
+        //  ⛔ و نامِ پوشهٔ ۶۴بیتی **یک حرف هم عوض نشد**. از ۳.۱.۱۵۸ پوشه از
+        //  ‎InstallFolder‎ می‌آید (چون ۳۲بیتی پوشهٔ جدا دارد)، پس این بند
+        //  دیگر رشتهٔ چسبیده را نمی‌بیند — و همان جایی است که یک تغییرِ
+        //  بی‌دقت می‌توانست هر نصبی را که همین حالا دستِ مشتری است از
+        //  به‌روزرسانی بیندازد. پس هر دو نام صریح خواسته می‌شوند.
+        Assert.Contains("#define InstallFolder \"PumpYaqobi\"", s);
+        Assert.Contains("#define InstallFolder \"PumpYaqobi-32\"", s);
     }
 
     /// <summary>
