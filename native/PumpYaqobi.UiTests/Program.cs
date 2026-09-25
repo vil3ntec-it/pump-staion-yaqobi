@@ -131,6 +131,9 @@ internal static class Program
         //  «مفاد و ضرر: کادرهای برابر + کشوی ماه و سال · مخزن: عنوانِ وسط و کادرِ جمله‌ها» (۱۴۰۵/۰۷/۱۳)
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- plstore [پوشه]
         if (outDir.Equals("plstore", StringComparison.OrdinalIgnoreCase)) return ProfitStorageProbe.Run(args);
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- chatroom [پوشه]
+        if (outDir.Equals("chatroom", StringComparison.OrdinalIgnoreCase)) return ChatProbe.Run(args);
+        if (outDir.Equals("groupchat", StringComparison.OrdinalIgnoreCase)) return GroupChatLive.Run(args);
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- livestack <live.json> [پوشه]
         //  برنامهٔ واقعی با پنلِ خانگیِ واقعی و سرورِ حسابِ واقعی — بی هیچ نشانی
         if (outDir.Equals("livestack", StringComparison.OrdinalIgnoreCase)) return LiveStackProbe.Run(args);

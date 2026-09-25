@@ -80,6 +80,22 @@ public sealed class DebtorService
     }
 
     /// <summary>
+    /// صاحبِ یک حساب (اصلی یا فرعی) — برای ستونِ «مشخصات»ِ پیام‌رسان.
+    /// فقط‌خواندنی؛ یک پرس‌وجوی تک‌ستونه. ‎null‎ یعنی چنین حسابی نیست.
+    /// </summary>
+    public async Task<long?> OwnerOfAccountAsync(long accountId, CancellationToken ct = default)
+    {
+        if (accountId <= 0) return null;
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        var a = await db.DebtAccounts.AsNoTracking()
+                        .Where(x => x.Id == accountId)
+                        .Select(x => new { x.MainOfDebtorId, x.DebtorId })
+                        .FirstOrDefaultAsync(ct);
+        return a is null ? null : a.MainOfDebtorId ?? a.DebtorId;
+    }
+
+    /// <summary>
     /// فقط شمارِ کارت‌های قرض‌دار.
     ///
     /// ⚠️ داشبورد پیش از این ‎ListAsync()‎ می‌زد و بعد ‎.Count‎ می‌گرفت.

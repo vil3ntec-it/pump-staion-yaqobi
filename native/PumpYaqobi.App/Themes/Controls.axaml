@@ -1949,6 +1949,35 @@
     <Setter Property="Background" Value="{DynamicResource Pump.Selected}" />
     <Setter Property="HorizontalAlignment" Value="Right" />
   </Style>
+  <!-- پیامِ سطل — کم‌رنگ، تا با گفت‌وگوی زنده قاطی نشود -->
+  <Style Selector="Border.bubble.trashed">
+    <Setter Property="Opacity" Value="0.72" />
+  </Style>
+  <!-- 🗑ِ حباب فقط زیرِ ماوس — روی هر پیام یک قابِ سرخ شلوغش می‌کرد -->
+  <Style Selector="Button.bubbledel">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Opacity" Value="0" />
+  </Style>
+  <Style Selector="Border.bubble:pointerover Button.bubbledel">
+    <Setter Property="Opacity" Value="0.85" />
+  </Style>
+  <Style Selector="TextBlock.chatval">
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
+  </Style>
+  <Style Selector="TextBlock.chatval.accent">
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Accent}" />
+  </Style>
+  <Style Selector="TextBlock.chatval.muted2">
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
+  </Style>
+  <!-- کادرهای ستونِ مشخصاتِ پیام‌رسان -->
+  <Style Selector="Border.chatinfo">
+    <Setter Property="Background" Value="{DynamicResource Pump.Input}" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="12,10" />
+  </Style>
 
   <!-- ══ کلیدهای ماشین‌حساب ══════════════════════════════════════════════ -->
   <Style Selector="Button.calc">

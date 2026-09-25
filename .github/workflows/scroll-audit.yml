@@ -97,6 +97,13 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- plstore ${{ runner.temp }}/plstore
 
+      # ══ چت‌روم: سه ستون، تمام‌صفحه، گروهِ کارکنان، سطلِ ۱۵+۱۵ روزه ══════════
+      # خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۳). پنجرهٔ واقعی، دفترِ چتِ واقعی روی دیسک
+      # (بی هیچ سرور): فهرست · گفت‌وگو · کارتِ طرف، و پیامِ کهنه در سطل.
+      - name: سنجشِ چت‌روم
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- chatroom ${{ runner.temp }}/chatroom
+
       # ══ Shift+عدد، Ctrl+Z و Ctrl+Y — با کلید و کلیکِ واقعی ══════════════════
       # گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «شیفت با عدد حذف نمی‌کند… کنترول زد و
       # وای کار نمی‌کنند.» ردیفِ خالی بی‌پرسش، ردیفِ پر با پرسش؛ برگشت و
