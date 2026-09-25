@@ -104,6 +104,7 @@ public sealed class StationPublisher : IAsyncDisposable
     private string _lastHash = "";
     private long _lastVersion = -1;
     private DateTime _lastEnrollTry = DateTime.MinValue;
+    private DateTime _lastRepairTry = DateTime.MinValue;
     private bool _inboxWatched;
 
     /// <summary>پیام‌هایی که از سرور دیده‌ایم — تا یک پیام دو بار خبر ندهد.</summary>
@@ -315,7 +316,8 @@ public sealed class StationPublisher : IAsyncDisposable
             var file = AppSettings.Load();
             if (string.IsNullOrWhiteSpace(file.CloudDeviceToken)) return;   // هنوز فعال نشده
 
-            var url = HomeLink.Url(_host);
+            //  ⛔ نشانیِ گوشی‌ها، نه ‎127.0.0.1‎ی خودِ این کامپیوتر
+            var url = HomeLink.ShareUrl(_host);
             if (string.IsNullOrWhiteSpace(url)) return;
 
             _lastHomePush = DateTime.UtcNow;
@@ -373,7 +375,25 @@ public sealed class StationPublisher : IAsyncDisposable
             }
         }
 
-        if (!await _sync.ConnectAsync(ct)) return false;
+        if (!await _sync.ConnectAsync(ct))
+        {
+            //  ⛔ **نشانیِ ذخیره‌شده دیگر جواب نمی‌دهد ⇒ دوباره بگرد** (۱۴۰۵/۰۷/۱۳).
+            //  تا امروز `EnsureAsync` با «نشانی و رمز داریم» همان‌جا برمی‌گشت، پس
+            //  نشانی‌ای که یک بار مُرد (آی‌پیِ تازهٔ مودم، یا نشانیِ کارتِ شبکهٔ
+            //  سروری که فقط روی ‎127.0.0.1‎ گوش می‌داد) برای همیشه می‌ماند و چراغ
+            //  هیچ‌وقت سبز نمی‌شد. حالا با `force` دوباره ثبت می‌شود، و اگر آن
+            //  نشانی نرسید، کشفِ خودکار سرورِ رسیدنی را پیدا می‌کند — با همان رمز.
+            if (!_sync.Configured || !(force || DateTime.UtcNow - _lastRepairTry >= EnrollRetryLost))
+                return false;
+            _lastRepairTry = DateTime.UtcNow;
+            var before = HomeLink.Url(_host);
+            var repaired = await StationLink.EnsureAsync(_host, force: true, ct: ct);
+            if (!repaired.Ok) return false;
+            await _sync.DropAsync();
+            _inboxWatched = false;
+            if (!string.Equals(before, HomeLink.Url(_host), StringComparison.OrdinalIgnoreCase)) _lastHomePush = DateTime.MinValue;
+            if (!await _sync.ConnectAsync(ct)) return false;
+        }
         _everLinked = true;
         LastLinkedAt = DateTime.Now;
         await WatchInboxAsync(ct);

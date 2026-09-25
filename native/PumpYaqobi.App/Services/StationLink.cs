@@ -111,7 +111,7 @@ public static class StationLink
         var found = (FoundServer?)null;
         if (url.Length == 0)
         {
-            found = await ServerFinder.FindFirstAsync(ct: ct);
+            found = await ServerFinder.FindReachableAsync(ct: ct);
             if (found is null)
                 return new StationEnrollment(false, "", code, name, false,
                     "سرورِ خانگی در این شبکه پیدا نشد. مطمئن شوید سرور روشن است و هر دو روی همان وای‌فای‌اند.");
@@ -142,7 +142,7 @@ public static class StationLink
         // نشانیِ دستیِ کهنه — شاید سرور جابه‌جا شده. یک‌بار در شبکه بگرد.
         if (!result.Ok && found is null && file.AutoEnroll)
         {
-            var moved = await ServerFinder.FindFirstAsync(ct: ct);
+            var moved = await ServerFinder.FindReachableAsync(ct: ct);
             if (moved is not null && !string.Equals(moved.Url, url, StringComparison.OrdinalIgnoreCase))
             {
                 found = moved;
@@ -154,7 +154,7 @@ public static class StationLink
         if (!result.Ok) return new StationEnrollment(false, url, code, name, false, result.Why);
 
         // ── گام ۳: هر دو جای تنظیمات ────────────────────────────────────────
-        Save(host, url, result.Token, result.ReadKey, code, found?.Id ?? "", moving);
+        Save(host, url, result.Token, result.ReadKey, code, found?.Id ?? "", moving, found?.LanUrl ?? "");
 
         return new StationEnrollment(true, url, result.Code, result.Name, result.Created, "");
     }
@@ -352,9 +352,13 @@ public static class StationLink
     /// نمی‌نشست و برنامه هر بار از نو ثبت می‌شد.
     /// </summary>
     private static void Save(AppHost host, string url, string token, string readKey, string code,
-                             string serverId, bool moved = false)
+                             string serverId, bool moved = false, string lanUrl = "")
     {
         var file = AppSettings.Load();
+        //  نشانیِ گوشی‌ها فقط وقتی عوض می‌شود که سرور همین حالا گفته باشد؛ و
+        //  نشانیِ غیرِ ‎127.0.0.1‎ خودش همان نشانیِ گوشی‌هاست
+        if (lanUrl.Length > 0) file.ServerLanUrl = lanUrl;
+        else if (!ServerFinder.IsLoopbackUrl(url)) file.ServerLanUrl = url;
         file.ServerUrl = url;
         file.ServerToken = token;
         //  ⚠️ جابه‌جایی ⇒ رمزِ خواندنِ پوشهٔ قبلی هم مالِ همان پوشه بود

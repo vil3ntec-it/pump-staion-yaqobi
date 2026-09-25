@@ -140,6 +140,8 @@ internal static class Program
         if (outDir.Equals("loginart", StringComparison.OrdinalIgnoreCase)) return LoginArtProbe.Run();
         //  «سرور روشن است اما برنامه می‌گوید خاموش»
         if (outDir.Equals("serverdot", StringComparison.OrdinalIgnoreCase)) return ServerDotProbe.Run();
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- lanreach <homelab-panel/server> [پوشه]
+        if (outDir.Equals("lanreach", StringComparison.OrdinalIgnoreCase)) return LanReachProbe.Run(args);
         //  شش خانهٔ کدِ ایمیلی و چراغِ همگام‌سازی در نوارِ پایین (بندهای ۴ و ۱۳)
         if (outDir.Equals("syncui", StringComparison.OrdinalIgnoreCase)) return SyncProbe.Run();
         // ══ «عوض کردنِ تم خط‌ها را کج می‌کند؟» ══════════════════════════════

@@ -1926,6 +1926,7 @@ public sealed partial class CloudLink
         _settings.EntitledPlan = "";
         //  نشانی و رمزهای سرورِ خانگی هم مالِ همان پمپ بودند
         _settings.ServerUrl = "";
+        _settings.ServerLanUrl = "";
         _settings.ServerToken = "";
         _settings.ServerReadKey = "";
         _settings.ServerId = "";
