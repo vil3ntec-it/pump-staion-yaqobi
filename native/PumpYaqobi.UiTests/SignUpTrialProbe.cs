@@ -105,6 +105,17 @@ internal static class SignUpTrialProbe
             CloudLink.TestTransport = null;
             return _bad == 0 ? 0 : 1;
         }
+        //  ⚠️ ‎PUMP_SIGNUP_SKIP=1‎: همان حالِ صاحب ریپو (۱۴۰۵/۰۷/۱۳، عکسِ پروفایل) —
+        //  حساب ساخته شد، گامِ «نامِ پمپ» با «بعداً» رد شد. چراغ و پروفایل چه
+        //  می‌گویند، و آیا از خودِ پروفایل می‌شود پمپ ساخت و سی روز را گرفت؟
+        if (Environment.GetEnvironmentVariable("PUMP_SIGNUP_SKIP") == "1")
+        {
+            SkipThenProfile(win, vm, account, mailCodes, shots);
+            Console.WriteLine("     ⓘ درخواست‌ها: " + string.Join(" · ", seen));
+            CloudLink.TestTransport = null;
+            Console.WriteLine(_bad == 0 ? "✅ حسابِ بی‌پمپ راست گفته شد و از پروفایل پمپ ساخته شد" : $"❌ {_bad} ایراد");
+            return _bad == 0 ? 0 : 1;
+        }
         SignUpOnce(win, vm, account, live2, mailCodes, shots, "");
         //  ⚠️ همان کامپیوتر، حسابِ دوم — همان کاری که صاحبِ پمپ در آزمایش‌هایش کرد
         if (Environment.GetEnvironmentVariable("PUMP_SIGNUP_TWICE") == "1")
@@ -207,6 +218,89 @@ internal static class SignUpTrialProbe
                 File.WriteAllText(Path.Combine(shots, "panel-customers.json"), text);
                 Console.WriteLine($"     ⓘ پنل ⇒ {(int)res.StatusCode} {text[..Math.Min(400, text.Length)]}");
             }
+    }
+
+    private static string CodeFor(Avalonia.Controls.Window win, string mailCodes, string email, long sentAt)
+    {
+        for (var i = 0; i < 120; i++)
+        {
+            Pump(win);
+            if (File.Exists(mailCodes))
+                foreach (var line in File.ReadAllLines(mailCodes).Reverse())
+                {
+                    try
+                    {
+                        var j = JsonDocument.Parse(line).RootElement;
+                        if (j.GetProperty("at").GetInt64() + 2000 < sentAt) continue;
+                        if (!j.GetProperty("to").GetString()!.Contains(email, StringComparison.OrdinalIgnoreCase)) continue;
+                        var c = j.GetProperty("code").GetString() ?? "";
+                        if (c.Length == 6) return c;
+                    }
+                    catch { /* خطِ نیمه‌نوشته */ }
+                }
+            Thread.Sleep(250);
+        }
+        return "";
+    }
+
+    private static void SkipThenProfile(Avalonia.Controls.Window win, MainViewModel vm, AccountSectionViewModel account,
+                                        string mailCodes, string shots)
+    {
+        var email = "nopump-" + Guid.NewGuid().ToString("N")[..10] + "@example.com";
+        const string pass = "Pump!1405trial";
+        Console.WriteLine("── ۱) حساب ساخته می‌شود و گامِ پمپ با «بعداً» رد می‌شود");
+        Wait(win, vm.GoAsync(account));
+        account.SetSignUpCommand.Execute("yes");
+        account.LoginName = "محمد هارون";
+        account.LoginEmail = email;
+        account.LoginPassword = pass;
+        account.LoginPassword2 = pass;
+        account.AcceptTerms = true;
+        var sentAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        Wait(win, account.AccountStepCommand.ExecuteAsync(null));
+        account.EmailCode = CodeFor(win, mailCodes, email, sentAt);
+        Wait(win, account.VerifyEmailCommand.ExecuteAsync(null));
+        Check("حساب ساخته شد و صفحه به گامِ پمپ رسید", account.StepPump, "گام " + account.LoginStep + " · " + account.LoginStatus);
+        account.SkipPumpCommand.Execute(null);
+        Settle(win);
+
+        Console.WriteLine("── ۲) پروفایل و چراغ — همان عکسِ صاحب ریپو");
+        Wait(win, vm.GoAsync(account));
+        //  حلقهٔ شصت‌ثانیه‌ای را جلو بیندازیم: همان «سرورِ حساب تایید کرد»
+        Wait(win, account.RefreshSubCommand.ExecuteAsync(null));
+        Wait(win, vm.GoAsync(account));
+        vm.TickLinkDot();
+        Settle(win);
+        var f = AppSettings.Load();
+        Console.WriteLine($"     ⓘ کدِ پمپ: {account.PumpCodeLine} · سرورِ حساب: {account.CloudLine} · پلن: {account.SubPlanText}");
+        Console.WriteLine($"     ⓘ چراغ: {vm.LinkDotBrushKey} · {vm.LinkDotReason.Replace('\n', ' ')}");
+        Check("پمپی روی سرور نیست (همان حالِ عکس)", string.IsNullOrWhiteSpace(f.CloudStationId));
+        Check("⛔ چراغ «هر دو وصل‌اند» نمی‌گوید وقتی این کامپیوتر به هیچ پمپی ثبت نشده",
+              vm.LinkDotBrushKey != "Pump.Ok" && vm.LinkDotReason.Contains("پمپ"), vm.LinkDotBrushKey + " · " + vm.LinkDotReason);
+        //  ⚠️ با بازتاب، تا همین سنجه روی نسخهٔ پیشین هم کامپایل شود و «پیش از» را نشان دهد
+        bool NeedsPump() => account.GetType().GetProperty("NeedsPump")?.GetValue(account) is true;
+        Check("⛔ پروفایل راهِ ساختنِ پمپ را نشان می‌دهد", NeedsPump(), NeedsPump().ToString());
+        Shot(win, shots, "nopump-1-profile");
+
+        Console.WriteLine("── ۳) از خودِ پروفایل: نامِ پمپ ⇒ ساختن ⇒ سی روز");
+        account.LoginPump = "پمپ دولتی";
+        if (account.GetType().GetProperty("CreatePumpHereCommand")?.GetValue(account)
+            is CommunityToolkit.Mvvm.Input.IAsyncRelayCommand create)
+            Wait(win, create.ExecuteAsync(null));
+        else { Check("دکمهٔ «ساختنِ پمپ» در پروفایل هست", false, "نیست"); return; }
+        Wait(win, vm.GoAsync(account));
+        vm.TickLinkDot();
+        Settle(win);
+        f = AppSettings.Load();
+        Console.WriteLine($"     ⓘ {account.SubPlanText} · {account.SubDaysText} · {account.PillText} · کدِ پمپ: {account.PumpCodeLine}");
+        Console.WriteLine($"     ⓘ چراغ: {vm.LinkDotBrushKey} · {vm.LinkDotReason.Replace('\n', ' ')}");
+        Check("پمپ روی سرور ساخته شد", !string.IsNullOrWhiteSpace(f.CloudStationId), f.CloudStationId);
+        Check("این کامپیوتر بند شد", !string.IsNullOrWhiteSpace(f.CloudDeviceToken), CloudLink.LastBindWhy);
+        Check("سی روزِ آزمایشی فعال شد", account.SubActive && account.VipDays == 30, account.VipDays.ToString());
+        Check("کارتِ «پمپ بسازید» رفت", !NeedsPump());
+        Check("⛔ چراغِ سرورِ حساب حالا سبز است (سرورِ خانگی در این آزمون نیست، پس کلِ چراغ زرد)",
+              vm.CloudDotBrushKey == "Pump.Ok", vm.CloudDotBrushKey + " · " + vm.CloudDotReason);
+        Shot(win, shots, "nopump-2-created");
     }
 
     private static void Shot(Avalonia.Controls.Window win, string dir, string name)

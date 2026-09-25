@@ -139,7 +139,8 @@ public sealed partial class MainViewModel : ObservableObject
         //  مجوزِ تازه‌ای که حلقهٔ پس‌زمینه گرفت (مدیر اشتراک داد، تمدید کرد
         //  یا برداشت) ⇒ سربرگ و پروفایل همان لحظه، بی باز کردنِ دوبارهٔ
         //  پروفایل. شرحش بالای ‎CloudLink.LicenseChanged‎.
-        CloudLink.LicenseChanged += () => Dispatcher.UIThread.Post(() => Account.RefreshAll());
+        CloudLink.LicenseChanged += () => Dispatcher.UIThread.Post(() => { _boundAt = DateTime.MinValue; Account.RefreshAll(); TickLinkDot(); });
+        Account.PumpCreatedHere += () => { _boundAt = DateTime.MinValue; TickLinkDot(); };
         // فهرست‌های نام‌دارِ پیشنهادِ خودکار — همان ‎datalist‎های سایت
         var host0 = AppHost.Current;
         Controls.Suggest.Provide("staff", async () => (await host0.Attendance.StaffAsync()).Select(x => x.Name ?? ""));
@@ -457,11 +458,34 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _cloudDotBrushKey = "Pump.Muted";
     [ObservableProperty] private string _cloudDotReason = "هنوز با سرورِ حساب تماس نگرفته‌ایم";
 
+    //  ⚠️ «این کامپیوتر به پمپی بند است؟» — از تنظیماتِ روی دیسک، ولی **هر ده
+    //  ثانیه یک بار**: این تیک هر ثانیه می‌دود و خواندنِ هر ثانیهٔ فایلِ
+    //  تنظیمات (با رازهای رمزشده) همان کارِ دوره‌ایِ بی‌ترمزی است که قدغن است.
+    private bool _boundCache;
+    private DateTime _boundAt = DateTime.MinValue;
+    private bool DeviceBound()
+    {
+        if (DateTime.UtcNow - _boundAt < TimeSpan.FromSeconds(10)) return _boundCache;
+        _boundAt = DateTime.UtcNow;
+        try { _boundCache = !string.IsNullOrWhiteSpace(Services.AppSettings.Load().CloudDeviceToken); }
+        catch { /* همان مقدارِ قبلی */ }
+        return _boundCache;
+    }
+
     public void TickCloudDot()
     {
         string key, why;
         switch (Services.CloudLink.Reach)
         {
+            case Services.CloudReach.Online when !DeviceBound():
+                //  ⛔ **«وصل» با «ثبت‌شده» یکی نیست** (۱۴۰۵/۰۷/۱۳، عکسِ صاحب ریپو):
+                //  سرورِ حساب جواب می‌داد و چراغ «هر دو سرور وصل‌اند» می‌گفت، در
+                //  حالی که این کامپیوتر به هیچ پمپی ثبت نشده بود — نه اشتراک، نه
+                //  دورهٔ آزمایشی. راست بود، ولی گمراه‌کننده؛ پس زرد، با دلیل.
+                key = "Pump.Warn";
+                why = "سرورِ حساب جواب می‌دهد، ولی این کامپیوتر هنوز به هیچ پمپی ثبت نشده — در «پروفایل» پمپ را بسازید";
+                break;
+
             case Services.CloudReach.Online:
                 key = "Pump.Ok";
                 why = "به سرورِ حساب وصل است"
@@ -523,10 +547,16 @@ public sealed partial class MainViewModel : ObservableObject
         var acct = CloudDotBrushKey;
         var ok = (home == "Pump.Ok" ? 1 : 0) + (acct == "Pump.Ok" ? 1 : 0);
         var bad = (home == "Pump.Danger" ? 1 : 0) + (acct == "Pump.Danger" ? 1 : 0);
+        //  زرد فقط از سرورِ حساب می‌آید: «جواب می‌دهد، ولی این کامپیوتر به پمپی
+        //  ثبت نشده» (‎TickCloudDot‎)
+        var warn = acct == "Pump.Warn" ? 1 : 0;
 
         string key, head;
         if (ok == 2)            { key = "Pump.Ok";     head = "✅ هر دو سرور وصل‌اند"; }
-        else if (ok == 1 && bad == 1) { key = "Pump.Warn"; head = "⚠️ یکی وصل است و یکی نه"; }
+        else if (bad > 0 && ok + warn > 0) { key = "Pump.Warn"; head = "⚠️ یکی وصل است و یکی نه"; }
+        //  ⛔ «سرورِ حساب جواب می‌دهد ولی پمپی نیست» خاکستریِ «سروری تنظیم نشده»
+        //  نیست — همان جمله‌ای است که کاربر باید ببیند (۱۴۰۵/۰۷/۱۳).
+        else if (warn > 0)      { key = "Pump.Warn";   head = "⚠️ این کامپیوتر هنوز به هیچ پمپی ثبت نشده"; }
         //  ⛔ «یکی وصل، دیگری هنوز تنظیم نشده» سبز نیست (۱۴۰۵/۰۷/۱۳): سنجهٔ
         //  ‎livestack‎ چراغ را سبز دید در حالی که سرورِ خانگی اصلاً وصل نشده بود —
         //  همان «کلکِ دروغ». زرد است و دلیلش در همان کادر.
