@@ -533,7 +533,7 @@ public sealed class AppSettings
             //  اول فایلِ اصلی، بعد نسخهٔ سالمِ قبلی
             var locked = false;
             var a = Read(File_, ref locked) ?? Read(Backup_, ref locked);
-            if (a is not null) return a;
+            if (a is not null) { a._home = Dir; return a; }
 
             //  ⛔ **فایل بود ولی قفل بود ⇒ پیش‌فرض ندهیم که ذخیره‌اش کنیم.**
             //  روی ویندوز ضدِ ویروس و نمایه‌سازِ سیستم گاهی یک لحظه دستهٔ
@@ -542,7 +542,7 @@ public sealed class AppSettings
             //  واقعی می‌نوشت: کدِ پمپ به `pump1` برمی‌گشت (نوشتن روی پوشهٔ
             //  اشتباهِ سرور)، قفلِ ضدِ کرک می‌رفت و توکنِ دستگاه هم.
             //  حالا چنین نمونه‌ای **کور** است و هیچ‌وقت نمی‌نویسد.
-            var blind = new AppSettings();
+            var blind = new AppSettings { _home = Dir };
             if (locked) blind._blind = true;
             return blind;
         }
@@ -554,6 +554,27 @@ public sealed class AppSettings
     /// </summary>
     [JsonIgnore]
     private bool _blind;
+
+    /// <summary>
+    /// پوشه‌ای که این نمونه از آن <b>خوانده</b> شد (فقط از <see cref="Load"/>).
+    ///
+    /// ⛔ <b>تنظیماتِ یک پوشه هیچ‌وقت در فایلِ پوشهٔ دیگری نمی‌نشیند.</b>
+    /// <c>_soonDir</c> پوشهٔ لحظهٔ <c>SaveSoon</c> را نگه می‌داشت، نه پوشهٔ
+    /// خودِ شیء؛ پس نمونه‌ای که از پوشهٔ A خوانده شده و پس از عوض شدنِ
+    /// <see cref="DirOverride"/> <c>SaveSoon</c> یا <c>Save</c> می‌زد (کارِ
+    /// دیرهنگامِ ویومدلِ آزمونِ قبلی)، مقدارهای A را در فایلِ B می‌نوشت.
+    /// سنجهٔ <c>NevashtaneDarSaf_DarPushehyeDigari_Nemineshinad</c> همین را در
+    /// بیلدِ ۳.۱.۱۷۰ گرفت، پس از بسته شدنِ حلقهٔ ناشر.
+    ///
+    /// ⚠️ در برنامهٔ واقعی پوشه یک بار سرِ آغاز معلوم می‌شود و عوض نمی‌شود،
+    /// پس این قید فقط جلوی نوشتنِ اشتباه را می‌گیرد. نمونه‌ای که با
+    /// <c>new</c> ساخته شده خانه ندارد و همان رفتارِ همیشگی را دارد.
+    /// </summary>
+    [JsonIgnore]
+    private string? _home;
+
+    /// <summary>این نمونه مالِ پوشهٔ دیگری است؟ (زیرِ <c>SoonGate</c> یا <c>FileGate</c> صدا بزنید.)</summary>
+    private bool Stranger => _home is not null && !string.Equals(_home, Dir, StringComparison.Ordinal);
 
     /// <param name="locked">
     /// اگر فایل **هست** ولی خوانده نشد (قفلِ گذرا)، راست می‌شود. خرابیِ
@@ -713,8 +734,10 @@ public sealed class AppSettings
         if (_blind) return;
         lock (SoonGate)
         {
+            //  ⛔ نمونهٔ پوشهٔ دیگر نوبت نمی‌گیرد — بالای `_home` نوشته چرا.
+            if (Stranger) return;
             _soonWho = this;
-            _soonDir = Dir;
+            _soonDir = _home ?? Dir;
             _soonTimer ??= new System.Threading.Timer(
                 _ => FlushSoon(), null,
                 System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
@@ -866,6 +889,8 @@ public sealed class AppSettings
     {
         //  ⛔ نمونهٔ «کور» هیچ‌وقت نمی‌نویسد — بالا نوشته چرا.
         if (_blind) return;
+        //  ⛔ و نمونهٔ پوشهٔ دیگر هم نه — بالای `_home` نوشته چرا.
+        lock (SoonGate) { if (Stranger) return; }
 
         //  نوبتِ در صف دیگر لازم نیست: همین نوشتن کلِ شیء را می‌برد.
         lock (SoonGate) { if (ReferenceEquals(_soonWho, this)) { _soonWho = null; _soonDir = null; } }
