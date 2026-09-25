@@ -289,6 +289,57 @@ public class LicenseDeliveryTests : IDisposable
     }
 
     /// <summary>
+    /// ⛔ <b>اشتراکی که مدیر به حسابِ «باز» داد همان دقیقه می‌رسد</b>، نه ده
+    /// دقیقه بعد (۱۴۰۵/۰۷/۱۳، سنجهٔ `livestack` با سرورِ واقعی): دورهٔ
+    /// آزمایشی ⇒ وی‌آی‌پی هر دو طرف را «باز» نگه می‌دارد، پس «ناجوری» نمی‌بیندش.
+    /// و نخستین دیدنِ یک مجوز خطِ پایه است، نه «چیزِ تازه».
+    /// </summary>
+    [Fact]
+    public async Task EshterakeTaze_BiEntezar_MajvozMigirad()
+    {
+        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var (link, f) = Bound();
+        var uid = CloudConfig.DeviceUid(f);
+        f.CloudLicense = Sign(uid, now, new[] { "cloudbackup" }, Days(30));
+        f.CloudSyncedAt = now;
+        f.Save();
+
+        var ends = Days(30);
+        Serve(path => path switch
+        {
+            "/api/pump/me" => Json(HttpStatusCode.OK, Me(true, ends)),
+            "/api/pump/device/me" => Json(HttpStatusCode.OK, DeviceMe(true)),
+            "/api/pump/device/license" => Json(HttpStatusCode.OK,
+                JsonSerializer.Serialize(new
+                {
+                    license = Sign(uid, now, new[] { "cloudbackup", "kar" }, Days(365)),
+                    publicKey = PublicKey,
+                })),
+            _ => Json(HttpStatusCode.NotFound, "{}"),
+        });
+
+        //  خطِ پایه: هیچ درخواستی
+        await link.HomeFromAccountAsync();
+        _hits.Clear();
+        await link.KeepLicenseFreshAsync();
+        Assert.Empty(_hits);
+
+        //  مدیر اشتراک داد: پایان جلو رفت ⇒ همین دور مجوزِ تازه
+        ends = Days(365);
+        await link.HomeFromAccountAsync();
+        _hits.Clear();
+        await link.KeepLicenseFreshAsync();
+        Assert.Contains("/api/pump/device/license", _hits);
+        Assert.Contains("kar", link.Verify().Features);
+
+        //  و بارِ بعد، بی تغییر، دوباره رایگان است
+        await link.HomeFromAccountAsync();
+        _hits.Clear();
+        await link.KeepLicenseFreshAsync();
+        Assert.Empty(_hits);
+    }
+
+    /// <summary>
     /// ⚠️ ولی <b>تیکِ ده‌دقیقه‌ای</b> بالاخره می‌رسد — و لازم است: عوض شدنِ
     /// <b>پلن</b> (استاندارد ⇒ وی‌آی‌پی) هر دو طرف را «فعال» نگه می‌دارد،
     /// پس از راهِ «ناجوری» هیچ‌وقت دیده نمی‌شود.

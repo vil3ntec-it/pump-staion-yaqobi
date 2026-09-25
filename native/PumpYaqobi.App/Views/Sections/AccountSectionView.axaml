@@ -937,7 +937,7 @@
         <Border Grid.Column="2" Classes="card" Padding="22,18" VerticalAlignment="Top">
           <StackPanel Spacing="12">
             <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Text="💎 اشتراکِ VIP" Classes="ptitle" VerticalAlignment="Center" />
+              <TextBlock Text="💎 اشتراک" Classes="ptitle" VerticalAlignment="Center" />
               <Border Grid.Column="1" Classes="pill" Padding="10,3" Background="#FFD700"
                       IsVisible="{Binding VipActive}" VerticalAlignment="Center">
                 <TextBlock Text="فعال" FontSize="11" FontWeight="Black" Foreground="#1a1a1a" />

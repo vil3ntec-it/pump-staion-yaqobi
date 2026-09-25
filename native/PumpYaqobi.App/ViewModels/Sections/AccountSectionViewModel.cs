@@ -110,7 +110,13 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     private void UpdatePill()
     {
         VipActive = SubActive;
-        PillText = SubActive ? $"VIP · {VipDays} روز" : "پروفایل";
+        //  ⛔ دکمهٔ سربرگ **نامِ واقعیِ** اشتراک را می‌گوید: دورهٔ آزمایشیِ
+        //  حسابِ تازه «VIP» نیست و پلنِ استاندارد هم نه — تا ۱۴۰۵/۰۷/۱۳ هر
+        //  اشتراکِ بازی «VIP · N روز» خوانده می‌شد و صاحبِ پمپ نمی‌فهمید چه
+        //  دارد (سنجهٔ `livestack` با سرورِ واقعی دیدش).
+        PillText = !SubActive ? "پروفایل"
+            : SubPermanent ? $"{SubKind} · دائمی"
+            : $"{SubKind} · {VipDays} روز";
         PillSub = SignedIn
             ? (AccountName.Trim().Length > 0 ? AccountName.Trim() : AccountEmail.Trim())
             : (SubActive ? "بدون ورود" : "وارد نشده");
@@ -332,6 +338,8 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         VipDays = check.Valid && check.SubscriptionEndsAt > 0
             ? Math.Max(0, (int)((check.SubscriptionEndsAt - now) / 86_400_000L))
             : 0;
+        SubKind = check.Valid ? KindOf(check.PlanTitle) : "";
+        SubPermanent = check.Valid && VipDays > 3650;
 
         // ⚠️ **پیش از** هر بازگشتِ زودهنگام: تا دیروز روی پمپی که هنوز فعال
         // نشده بود (یعنی همان چیزی که صاحب ریپو می‌دید) این چهار خانه خالی
@@ -348,8 +356,11 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         }
         if (check.Valid)
         {
-            var plan = string.IsNullOrWhiteSpace(check.PlanTitle) ? "" : $" ({check.PlanTitle})";
-            SubStatus = $"✅ اشتراکِ VIP فعال است{plan} — {VipDays} روز مانده.";
+            SubStatus = IsTrial(check.PlanTitle)
+                ? $"✅ دورهٔ آزمایشیِ رایگان فعال است — {VipDays} روز مانده."
+                : SubPermanent
+                    ? $"✅ اشتراکِ «{SubKind}» فعال است — دائمی."
+                    : $"✅ اشتراکِ «{SubKind}» فعال است — {VipDays} روز مانده.";
         }
         else
         {
@@ -638,17 +649,40 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
             : "";
     }
 
+    /// <summary>نامِ کوتاهِ اشتراک برای دکمهٔ سربرگ — «آزمایشی» · «استاندارد» · «VIP» · «دائمی».</summary>
+    [ObservableProperty] private string _subKind = "";
+
+    /// <summary>اشتراکِ بی تاریخِ پایان (دائمی) — روز شمرده نمی‌شود.</summary>
+    [ObservableProperty] private bool _subPermanent;
+
+    /// <summary>
+    /// سرور برای دورهٔ آزمایشی «دوره‌ی آزمایشی» می‌فرستد و برای اشتراک
+    /// **کدِ** پلن (`std` · `vip` · `perm`)، نه نامش. پس نام همین‌جا ساخته
+    /// می‌شود؛ هر نامِ دیگری (مثلاً «VIP»ِ مجوزهای کهنه) همان‌طور می‌ماند.
+    /// </summary>
+    public static bool IsTrial(string planTitle) => (planTitle ?? "").Contains("آزمایشی");
+
+    public static string KindOf(string planTitle) => (planTitle ?? "").Trim() switch
+    {
+        "" => "VIP",
+        var t when IsTrial(t) => "آزمایشی",
+        "std" or "standard" => "استاندارد",
+        "vip" => "VIP",
+        "perm" or "permanent" => "دائمی",
+        var t => t,
+    };
+
     private void ShowSubDetails(LicenseCheck check, AppSettings file)
     {
         ShowAccess(file);
         var activated = !string.IsNullOrWhiteSpace(file.CloudDeviceToken);
         SubPlanText = check.Valid
-            ? (string.IsNullOrWhiteSpace(check.PlanTitle) ? "اشتراکِ VIP" : check.PlanTitle)
+            ? (IsTrial(check.PlanTitle) ? "دورهٔ آزمایشیِ رایگان" : KindOf(check.PlanTitle))
             : activated ? "بدونِ اشتراکِ فعال" : "فعال نشده";
         SubEndsText = check.Valid && check.SubscriptionEndsAt > 0
             ? Shamsi.Of(DateTimeOffset.FromUnixTimeMilliseconds(check.SubscriptionEndsAt).LocalDateTime)
             : "—";
-        SubDaysText = check.Valid ? $"{Shamsi.Money(VipDays)} روز" : "—";
+        SubDaysText = !check.Valid ? "—" : SubPermanent ? "دائمی" : $"{Shamsi.Money(VipDays)} روز";
         SubSourceText = check.Valid ? "مجوزِ امضاشدهٔ سرور" : activated ? check.Reason : "کدِ شش‌رقمی را بزنید";
     }
 

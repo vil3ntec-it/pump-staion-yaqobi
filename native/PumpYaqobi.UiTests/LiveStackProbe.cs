@@ -154,6 +154,8 @@ internal static class LiveStackProbe
         Shot(win, shots, "app-server-light");
         if (dot is not null) ToolTip.SetIsOpen(dot, false);
 
+        SubscriptionRoundTrip(win, vm, live, shots, email);
+
         //  برای عکسِ خودِ پنل: برنامه چند ثانیه وصل می‌ماند (‎PUMP_LIVE_HOLD‎، ثانیه)
         if (int.TryParse(Environment.GetEnvironmentVariable("PUMP_LIVE_HOLD"), out var hold) && hold > 0)
         {
@@ -166,6 +168,111 @@ internal static class LiveStackProbe
         Console.WriteLine();
         Console.WriteLine(_bad == 0 ? "✅ برنامه بی هیچ نشانی به هر دو سرورِ واقعی وصل شد" : $"❌ {_bad} ایراد");
         return _bad == 0 ? 0 : 1;
+    }
+
+    /// <summary>
+    /// ══ ۴) اشتراکی که مدیر در پنل می‌دهد و برمی‌دارد — در برنامه ═══════════
+    ///
+    /// خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۳): «ببین با دقت می‌گیرد اشتراک را، توی
+    /// برنامه هم می‌گوید چقدر مانده یا فعال شده یا که نه.»
+    ///
+    /// ⛔ کارِ پنل از **همان دری** زده می‌شود که صاحبِ سامانه در مرورگر می‌زند
+    /// (‎/api/account-admin/…‎ روی پورتِ پنل)، و برنامه از **راهِ خودش** —
+    /// حلقهٔ پس‌زمینهٔ ‎StationPublisher‎ — می‌گیردش؛ هیچ صدا زدنِ دستی‌ای
+    /// در کار نیست. «رسید» یعنی همان چیزی که کاربر روی صفحه می‌بیند.
+    /// </summary>
+    private static void SubscriptionRoundTrip(Window win, MainViewModel vm, JsonElement live, string shots, string email)
+    {
+        if (!live.TryGetProperty("panel", out var pEl) || !live.TryGetProperty("panelToken", out var tEl))
+        {
+            Console.WriteLine("⚠️ نشانی یا توکنِ پنل در live.json نیست — بخشِ اشتراک رد شد.");
+            return;
+        }
+        var panel = pEl.GetString()!.TrimEnd('/');
+        var token = tEl.GetString()!;
+        JsonElement Panel(HttpMethod m, string path, object? body = null)
+        {
+            var req = new HttpRequestMessage(m, panel + path);
+            req.Headers.TryAddWithoutValidation("Authorization", "Bearer " + token);
+            if (body is not null)
+                req.Content = new StringContent(JsonSerializer.Serialize(body), System.Text.Encoding.UTF8, "application/json");
+            var res = Task.Run(() => Http.SendAsync(req)).GetAwaiter().GetResult();
+            var text = Task.Run(() => res.Content.ReadAsStringAsync()).GetAwaiter().GetResult();
+            if (!res.IsSuccessStatusCode) Console.WriteLine($"     ⓘ پنل {m} {path} ⇒ {(int)res.StatusCode} {text[..Math.Min(200, text.Length)]}");
+            try { return JsonDocument.Parse(text).RootElement.Clone(); } catch { return default; }
+        }
+
+        var account = (AccountSectionViewModel)vm.Sections.First(s => s.Id == "account");
+        string Line() => $"{account.SubPlanText} · {account.SubDaysText} · تا {account.SubEndsText} · سربرگ: {account.PillText}";
+
+        /*
+         *  «رسید» فقط با **حلقهٔ خودِ برنامه**: تیکِ ابرش شصت‌ثانیه‌ای است،
+         *  پس تا نود ثانیه صبر می‌کنیم. ⚠️ و خودِ صفحه دوباره فعال **نمی‌شود**
+         *  — سربرگ باید بی باز کردنِ پروفایل تازه شود، وگرنه کاربر عددِ کهنه
+         *  را می‌بیند و گمان می‌کند اشتراک نرسید.
+         */
+        bool WaitFor(Func<bool> ok, int seconds = 95)
+        {
+            var end = DateTime.UtcNow.AddSeconds(seconds);
+            while (DateTime.UtcNow < end)
+            {
+                Pump(win);
+                if (ok()) return true;
+                Thread.Sleep(250);
+            }
+            return ok();
+        }
+
+        Console.WriteLine("── ۴) اشتراک از پنل ⇒ برنامه (با حلقهٔ خودِ برنامه، بی صدا زدنِ دستی)");
+        Wait(win, vm.GoAsync(account));
+        Settle(win);
+        Console.WriteLine("     ⓘ پیش از دادن: " + Line());
+        Check("پیش از هر اشتراک، دورهٔ آزمایشیِ حسابِ تازه دیده می‌شود (نه «فعال نشده»)",
+              account.SubActive && account.SubDaysText != "—", Line());
+        Check("⛔ و «آزمایشی» خوانده می‌شود، نه «VIP»",
+              account.SubKind == "آزمایشی" && account.PillText.StartsWith("آزمایشی"), Line());
+        Shot(win, shots, "app-sub-1-trial");
+
+        var targets = Panel(HttpMethod.Get, "/api/account-admin/grant-targets?app=pump&q=" + Uri.EscapeDataString(email));
+        var tenant = targets.ValueKind == JsonValueKind.Object && targets.TryGetProperty("items", out var it) && it.GetArrayLength() > 0
+            ? it[0].GetProperty("tenantId").GetString() ?? "" : "";
+        Check("پنل پمپِ همین حساب را با ایمیل پیدا کرد", tenant.Length > 0);
+        if (tenant.Length == 0) return;
+
+        //  ── الف) دادنِ وی‌آی‌پی ─────────────────────────────────────────
+        var t0 = DateTime.UtcNow;
+        var g = Panel(HttpMethod.Post, "/api/account-admin/subs/pump/grant", new { tenantId = tenant, plan = "vip" });
+        var subId = g.ValueKind == JsonValueKind.Object && g.TryGetProperty("subscription", out var s) && s.ValueKind == JsonValueKind.Object
+            ? (s.TryGetProperty("id", out var id) ? id.ToString() : "") : "";
+        Check("پنل اشتراکِ وی‌آی‌پی را ثبت کرد", subId.Length > 0, subId);
+        var got = WaitFor(() => account.SubKind == "VIP");
+        Console.WriteLine($"     ⓘ پس از {(DateTime.UtcNow - t0).TotalSeconds:0} ثانیه: " + Line());
+        Check("برنامه خودش وی‌آی‌پی را گرفت (پلن در پروفایل)", got, Line());
+        Check("روزِ مانده نزدیکِ یک سال است", account.VipDays is >= 360 and <= 366, account.VipDays.ToString());
+        Check("سربرگ بی باز کردنِ دوبارهٔ پروفایل تازه شد", account.PillText == $"VIP · {account.VipDays} روز", account.PillText);
+        Check("قفل‌ها باز: فهرستِ قابلیت‌های مجوز از خودِ پلن", Entitlements.State().Features.Count >= 5,
+              string.Join(",", Entitlements.State().Features));
+        Shot(win, shots, "app-sub-2-vip");
+
+        //  ── ب) تمدید یک ماه ─────────────────────────────────────────────
+        var before = account.VipDays;
+        Panel(HttpMethod.Post, $"/api/account-admin/subs/pump/{subId}/extend", new { amount = 1, unit = "month" });
+        got = WaitFor(() => account.VipDays >= before + 27);
+        Check("تمدیدِ یک ماه در برنامه دیده شد", got, $"{before} ⇒ {account.VipDays}");
+        if (account.SubKind != "VIP") { Check("⛔ بی وی‌آی‌پیِ رسیده، لغو سنجیدنی نیست", false); return; }
+
+        //  ── ج) لغو ────────────────────────────────────────────────────
+        t0 = DateTime.UtcNow;
+        Panel(HttpMethod.Post, $"/api/account-admin/subs/pump/{subId}/status", new { status = "cancelled" });
+        got = WaitFor(() => account.SubKind != "VIP");
+        Console.WriteLine($"     ⓘ پس از {(DateTime.UtcNow - t0).TotalSeconds:0} ثانیه: " + Line());
+        Check("لغو در برنامه دیده شد (وی‌آی‌پی رفت)", got, Line());
+        Check("⛔ پس از لغو، «۳۶۵ روز مانده»ی کهنه نمانده", account.VipDays < 300, Line());
+        //  ⛔ و دورهٔ آزمایشی **برنمی‌گردد**: تا ۱۴۰۵/۰۷/۱۳ لغوِ اشتراکِ حسابِ
+        //  تازه برنامه را به «آزمایشی · ۲۹ روز» با همهٔ قابلیت‌ها می‌برد، یعنی
+        //  «حذفِ اشتراک» در ماهِ اول هیچ اثری نداشت.
+        Check("⛔ پس از لغو، دورهٔ آزمایشی برنگشت — اشتراکی نیست", !account.SubActive && account.PillText == "پروفایل", Line());
+        Shot(win, shots, "app-sub-3-cancelled");
     }
 
     private static void Shot(Window win, string dir, string name)

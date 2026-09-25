@@ -71,6 +71,18 @@ public final class Alerts {
   public static final String CHANNEL = "pump-alerts";
   private static final int JOB_ID = 7021;
 
+  /**
+   * همان سرورِ خانگی، از راهِ تونل — نشانیِ قفل‌شدهٔ ‎kar/cloud.js‎.
+   *
+   * ⛔ تا ۱۴۰۵/۰۷/۱۳ کارِ پس‌زمینه فقط نشانیِ خانگی را می‌زد، و آن نشانیِ
+   * **شبکهٔ پمپ** است (‎http://192.168.x.x‎). پس گوشیِ کارمندی که بیرون از
+   * پمپ بود — یا صاحبِ پمپ در خانه‌اش — هیچ‌وقت خبری نمی‌گرفت، و هیچ‌جا هم
+   * گفته نمی‌شد. حالا اگر نشانیِ خانگی جواب نداد، همان مسیر از تونل.
+   * ⚠️ در کد قفل است، نه در تنظیمات: وگرنه هر کسی گوشی را به سرورِ خودش
+   * می‌برد و رمزِ خواندنِ پمپ را برمی‌داشت.
+   */
+  static final String TUNNEL = "https://api.vill3n.top";
+
   /** هر ۱۵ دقیقه — کمترین دوره‌ای که خودِ اندروید برای کارِ دوره‌ای می‌پذیرد. */
   private static final long EVERY_MS = 15L * 60L * 1000L;
 
@@ -104,7 +116,8 @@ public final class Alerts {
     String st = station == null || station.trim().isEmpty() ? "pump1" : station.trim();
 
     prefs(c).edit().putString(K_SERVER, s).putString(K_TOKEN, t).putString(K_STATION, st).apply();
-    if (s.isEmpty()) cancel(c); else schedule(c);
+    //  ⚠️ رمز هست ولی نشانیِ خانگی نه ⇒ هنوز راهِ تونل هست؛ کار نمی‌ماند
+    if (s.isEmpty() && t.isEmpty()) cancel(c); else schedule(c);
   }
 
   public static void schedule(Context c) {
@@ -134,9 +147,14 @@ public final class Alerts {
   public static int runOnce(Context c) {
     SharedPreferences p = prefs(c);
     String server = p.getString(K_SERVER, "");
-    if (server.isEmpty()) return 0;
+    String token = p.getString(K_TOKEN, "");
+    String station = p.getString(K_STATION, "pump1");
+    if (server.isEmpty() && token.isEmpty()) return 0;
 
-    JSONArray alerts = fetch(server, p.getString(K_TOKEN, ""), p.getString(K_STATION, "pump1"));
+    JSONArray alerts = server.isEmpty() ? null : fetch(server, token, station);
+    //  ⚠️ بیرون از شبکهٔ پمپ: همان سرور از راهِ تونل
+    if (alerts == null && (server.isEmpty() || !httpBase(server).equals(TUNNEL)))
+      alerts = fetch(TUNNEL, token, station);
     if (alerts == null) return 0;
 
     Set<String> seen = new HashSet<>(p.getStringSet(K_SEEN, new HashSet<String>()));

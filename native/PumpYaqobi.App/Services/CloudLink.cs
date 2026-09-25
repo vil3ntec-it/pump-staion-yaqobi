@@ -556,6 +556,7 @@ public sealed partial class CloudLink
         //  صادر نشود. آن هم یک جوابِ درست است، نه خطا.
         var (licOk, lic, _, _) =
             await DevPostAsync("/api/pump/device/license", new { }, ct);
+        var licBefore = _settings.CloudLicense ?? "";
         CloudResult? rejected = null;
         if (licOk)
         {
@@ -577,6 +578,10 @@ public sealed partial class CloudLink
         //  را خاموش کند.
         Entitlements.Remember(_settings, Subscription, Verify());
         await SaveQuiet();
+        if ((_settings.CloudLicense ?? "") != licBefore)
+        {
+            try { LicenseChanged?.Invoke(); } catch { /* خبر رفاه است، مجوز اصل */ }
+        }
         return rejected ?? CloudResult.Done;
     }
 
@@ -701,11 +706,58 @@ public sealed partial class CloudLink
         //  «اشتراک: نیست»ِ پیش‌فرض همیشه با مجوزِ سالم ناجور است.
         var mismatch = _subscriptionKnown && Verify().Valid != Subscription.Active;
 
-        if (!due && !mismatch) return;
-        try { await RefreshAsync(ct); }
+        //  ⛔ **«سرور چیزِ تازه‌ای گفت» ⇒ یک بار مجوز.** «باز/بسته» تنها
+        //  ناجوری نیست: دورهٔ آزمایشی ⇒ وی‌آی‌پی، تمدید، و استاندارد ⇒
+        //  وی‌آی‌پی هر دو طرف را «باز» نگه می‌دارند، پس تا ۱۴۰۵/۰۷/۱۳ اشتراکی
+        //  که مدیر به حسابِ **آزمایشی** می‌داد تا ده دقیقه به برنامه
+        //  نمی‌رسید (سنجهٔ `livestack` با سرورِ واقعی گرفتش: نود ثانیه، هنوز
+        //  «دورهٔ آزمایشی · ۲۹ روز»). حالا هر بار که حالِ خوانده‌شده از
+        //  `/api/pump/me` با آخرین حالی که مجوزش را گرفته‌ایم فرق کند، همان
+        //  دور مجوز می‌آید.
+        //  ⚠️ کلید «روزِ مانده» ندارد (هر روز عوض می‌شود) و فقط **یک بار** به
+        //  ازای هر تغییر می‌زند، پس ترمزِ «هیچ چیزی عوض نشد ⇒ صفر درخواست»
+        //  سرِ جایش است.
+        //  ⚠️ «آخرین حال» به **همان مجوزِ روی دیسک** بسته است، نه به حافظهٔ
+        //  خام: مجوزی که این نمونه نگرفته (برنامهٔ تازه‌بازشده، پروفایلی که
+        //  خودش تازه کرد) نخستین دیدنش «خطِ پایه» است، نه «چیزِ تازه» — وگرنه
+        //  هر بالا آمدنِ برنامه یک درخواستِ بی‌دلیل می‌زد.
+        var key = SubKey(Subscription);
+        var lic = _settings.CloudLicense ?? "";
+        var news = false;
+        if (_subscriptionKnown)
+        {
+            if (_lastSub.License != lic) _lastSub = (lic, key);
+            else news = _lastSub.Key != key;
+        }
+
+        if (!due && !mismatch && !news) return;
+        try
+        {
+            var r = await RefreshAsync(ct);
+            //  ⚠️ کلیدِ **پیش از** تازه‌سازی ثبت می‌شود: `RefreshAsync` حال را
+            //  از `device/me` می‌خواند که شکلِ دیگری دارد، و ثبتِ آن یعنی
+            //  دورِ بعد `/api/pump/me` «تازه» دیده می‌شد — یک درخواست هر دقیقه.
+            if (r.Ok) _lastSub = (_settings.CloudLicense ?? "", key);
+        }
         catch (OperationCanceledException) { throw; }
         catch { /* بی‌اینترنت خطا نیست — مجوزِ دیروز سرِ جایش است */ }
     }
+
+    /// <summary>آخرین حالِ اشتراک که مجوزش گرفته شد — کلیدِ «چیزِ تازه‌ای شد؟».</summary>
+    private static (string License, string Key) _lastSub = ("\u0000", "");
+
+    private static string SubKey(PumpSubscription s) =>
+        $"{s.Active}|{s.Source}|{s.PlanTitle}|{s.EndsAt / 3_600_000}|{string.Join(",", s.Features)}";
+
+    /// <summary>
+    /// مجوزِ روی دیسک عوض شد — تنها خبرِ آن. پوستهٔ برنامه با همین سربرگ و
+    /// پروفایل را از نو می‌خواند (<c>MainViewModel</c>).
+    ///
+    /// ⛔ بی این، مجوزی که حلقهٔ پس‌زمینه گرفته بود فقط با **باز کردنِ
+    /// دوبارهٔ پروفایل** دیده می‌شد: دکمهٔ سربرگ همچنان «VIP · ۲۹ روز» ِ
+    /// دیروز را می‌گفت و صاحبِ پمپ گمان می‌کرد اشتراک نرسید.
+    /// </summary>
+    public static event Action? LicenseChanged;
 
     /// <summary>
     /// سپردنِ نشانی و رمزِ فقط‌خواندنیِ سرورِ خانگی به ابر.
