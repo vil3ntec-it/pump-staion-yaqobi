@@ -189,6 +189,48 @@ public sealed class StorageDataService
         // سنجه‌اش: PurchaseCompanyParityTests.DeletingAPurchaseLeavesTheCompanyRowAlone
     }
 
+    /// <summary>جمعِ دو ستونِ شیفت‌ها برای یک تیل — همان چیزی که مخزن و مفاد/ضرر واقعاً می‌خواهند.</summary>
+    public readonly record struct ShiftSums(decimal Sale, decimal Profit);
+
+    /// <summary>
+    /// ══ فقط دو ستون، نه کلِ پارچه ═════════════════════════════════════════
+    ///
+    /// «فروش»ِ مخزن و «مفاد»ِ صفحهٔ مفاد/ضرر هر دو یک جمع‌اند روی
+    /// <see cref="ShiftData.Sale"/> و <see cref="ShiftData.Profit"/>ِ هر دو
+    /// شیفتِ همهٔ پارچه‌های یک تیل. تا ۱۴۰۵/۰۷/۱۳ هر دو صفحه برای همین دو
+    /// عدد <see cref="ReportsAsync"/> را می‌زدند: **همهٔ** پارچه‌های پنج سال
+    /// با هر دو شیفت به شیءِ کامل (سه موجودیت برای هر روز) — با هر فعال‌سازی،
+    /// و در مخزن با هر ویرایشِ هر خرید. و چون SQLite کارِ «async»ش را روی
+    /// همان نخِ صداکننده می‌کند، آن خواندن روی نخِ رابط بود.
+    ///
+    /// این‌جا فقط چهار ستون از هر پارچه خوانده می‌شود (‎LEFT JOIN‎ی که خودِ
+    /// EF برای نویگیشنِ تهی‌پذیر می‌سازد) و جمع در حافظه با ‎decimal‎ است —
+    /// ⚠️ نه ‎SUM‎ و نه ‎CAST‎ به SQLite داده نمی‌شود: مبلغ‌ها متن ذخیره
+    /// می‌شوند (همان قاعدهٔ ‎LedgerService.SumAsync‎).
+    /// </summary>
+    public async Task<ShiftSums> ShiftSumsAsync(FuelType fuel, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        var rows = await db.Reports.AsNoTracking()
+                           .Where(r => r.Fuel == fuel)
+                           .Select(r => new
+                           {
+                               DaySale = (decimal?)r.DayShift!.Sale,
+                               DayProfit = (decimal?)r.DayShift!.Profit,
+                               NightSale = (decimal?)r.NightShift!.Sale,
+                               NightProfit = (decimal?)r.NightShift!.Profit,
+                           })
+                           .ToListAsync(ct);
+        decimal sale = 0, profit = 0;
+        foreach (var r in rows)
+        {
+            sale += (r.DaySale ?? 0m) + (r.NightSale ?? 0m);
+            profit += (r.DayProfit ?? 0m) + (r.NightProfit ?? 0m);
+        }
+        return new ShiftSums(sale, profit);
+    }
+
     // ── میله‌زنی ───────────────────────────────────────────────────────────
     public async Task<List<TankDip>> DipsAsync(FuelType fuel, CancellationToken ct = default)
     {

@@ -114,20 +114,29 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
 
     public async Task RefreshAsync()
     {
-        var petrol = await _host.StorageData.ReportsAsync(FuelType.Petrol);
-        var diesel = await _host.StorageData.ReportsAsync(FuelType.Diesel);
+        // ⛔ «برای یک جمع، همهٔ ردیف‌ها را نخوان» (۱۴۰۵/۰۷/۱۳).
+        //  این صفحه تا امروز با هر فعال‌سازی همهٔ پارچه‌های پنج سال (با هر دو
+        //  شیفت)، همهٔ مصارف، همهٔ درآمدهای اضافی و همهٔ فاکتورها را به شیءِ
+        //  کامل می‌خواند تا پنج عدد جمع بزند — و چون SQLite کارِ «async»ش را
+        //  روی همان نخِ صداکننده می‌کند، آن خواندن روی نخِ رابط بود: همان
+        //  مکثی که کاربر درست سرِ اسکرولِ این صفحه حس می‌کرد.
+        //  حالا هر پنج عدد از همان یکی-دو ستونِ خودشان می‌آیند.
+        var petrol = await _host.StorageData.ShiftSumsAsync(FuelType.Petrol);
+        var diesel = await _host.StorageData.ShiftSumsAsync(FuelType.Diesel);
 
-        // «بی‌فاکتور»ها — بردگی‌شان مستقیم درآمد است
+        // «بی‌فاکتور»ها — بردگی‌شان مستقیم درآمد است (از قبل جمعِ خودِ SQLite بود)
         var noinvAccounts = (await _host.Debtors.CardAccountsAsync(noInvoice: true))
             .Values.SelectMany(x => x).ToList();
 
+        var extraSum = await _host.ExtraIncomeLedger.SumAsync(e => e.Amount);
         _db = new ProfitInput
         {
-            Reports = petrol.Concat(diesel).ToList(),
+            ShiftProfitPetrol = petrol.Profit,
+            ShiftProfitDiesel = diesel.Profit,
             NoInvoiceAccounts = noinvAccounts,
-            ExtraIncomes = await _host.ExtraIncomeLedger.ListAsync(null),
-            Expenses = await _host.ExpenseLedger.ListAsync(null),
-            Invoices = await _host.Invoices.ListAsync(),
+            ExtraIncomeSum = extraSum,
+            ExpenseSum = await _host.ExpenseLedger.SumAsync(e => e.Amount),
+            InvoiceRateDiffSum = ProfitLossService.InvoiceRateDiff(await _host.Invoices.ApprovedRatesAsync()),
         };
 
         _filling = true;
@@ -137,7 +146,7 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         UnionDiesel = d == 0 ? "" : Shamsi.Money(d);
         _filling = false;
 
-        BulkSumText = Money(_db.ExtraIncomes.Sum(e => e.Amount));
+        BulkSumText = Money(extraSum);
         Recalc();
     }
 

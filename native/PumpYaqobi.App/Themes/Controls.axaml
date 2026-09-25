@@ -154,6 +154,21 @@
   <Style Selector="Border.card.section:pointerover">
     <Setter Property="BoxShadow" Value="{DynamicResource Pump.SectionShadow}" />
   </Style>
+  <!-- ══ کارتِ بزرگ (‎.calm‎): همان کارت، سایهٔ **بی‌محو** ═══════════════════════
+       گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۳): «داشبورد و مفاد/ضرر خیلی سنگین اسکرول
+       می‌شوند.» همان قاعدهٔ ‎Border.card.section‎: سایهٔ محو با هر فریمِ اسکرول
+       از نو کشیده می‌شود و هزینه‌اش با **مساحت** بالا می‌رود (‎scrollperf why‎:
+       هر شعاعِ محوی ~۳۰ms برای یک کادرِ صفحه‌قد، همان سایه بی محو صفر).
+       کارت‌های ۹۰۰×۴۴۰ی داشبورد و کارت‌های تمام‌عرضِ مفاد/ضرر «کارتِ کوچک»
+       نیستند — ‎CardShadow‎ی محو فقط برای کارت‌های کوچک (‎.stat‎، پنج کارتِ
+       آماری) می‌ماند. زیرِ ماوس هم همان می‌ماند، وگرنه با ماوسِ روی صفحه —
+       یعنی همیشه — محو برمی‌گشت. -->
+  <Style Selector="Border.card.calm">
+    <Setter Property="BoxShadow" Value="{DynamicResource Pump.SectionShadow}" />
+  </Style>
+  <Style Selector="Border.card.calm:pointerover">
+    <Setter Property="BoxShadow" Value="{DynamicResource Pump.SectionShadow}" />
+  </Style>
 
   <Style Selector="Border.panel">
     <Setter Property="Background" Value="{DynamicResource Pump.Panel}" />
@@ -1239,6 +1254,15 @@
     <Setter Property="Padding" Value="13" />
     <Setter Property="MinWidth" Value="150" />
     <Setter Property="MinHeight" Value="82" />
+  </Style>
+  <!-- ⛔ کادرِ ‎.stat‎ داخلِ یک فهرستِ تکرارشونده سایهٔ **بی‌محو** می‌گیرد.
+       «کارتِ کوچک» یعنی چند تا در یک صفحه، نه هشت تا در هر قلمِ یک فهرست:
+       فهرستِ خریدهای مخزن با هر خرید هشت ‎.stat‎ می‌سازد و خریدهای شرکت هم
+       همین‌طور — یعنی صدها سایهٔ محو در یک درخت، همه با هر فریمِ اسکرول
+       (۱۴۰۵/۰۷/۱۳، گزارشِ «مخزن‌ها لگ داره»). ردیفِ ‎UniformGrid.stats‎ی بالای
+       صفحه در هیچ فهرستی نیست و سایهٔ محوِ خودش را نگه می‌دارد. -->
+  <Style Selector="ItemsControl Border.stat">
+    <Setter Property="BoxShadow" Value="{DynamicResource Pump.SectionShadow}" />
   </Style>
   <!-- فاصلهٔ بینِ کادرهای یک ردیفِ خلاصه. ‎UniformGrid‎ خودش فاصله ندارد، پس
        هر کادر نصفِ فاصله را از هر طرف می‌گیرد و کادرهای دو سر با حاشیهٔ منفیِ
