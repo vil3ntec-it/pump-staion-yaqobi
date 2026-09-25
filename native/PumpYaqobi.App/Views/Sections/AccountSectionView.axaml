@@ -808,6 +808,27 @@
         </Grid>
       </Border>
 
+      <!-- ══ ⛔ وارد شده، ولی پمپی ندارد (۱۴۰۵/۰۷/۱۳، عکسِ صاحب ریپو) ══════════
+           گامِ «نامِ پمپ» با «بعداً» یا «برگشت» رد شده بود و پروفایل فقط «فعال
+           نشده» می‌گفت، بی هیچ راهی. بی پمپ نه بند شدنی هست نه دورهٔ آزمایشی.
+           دکمه همان `FinishPumpAsync`ِ صفحهٔ ورود را می‌زند — راهِ دومی نیست. -->
+      <Border Classes="card" Padding="22,18" IsVisible="{Binding NeedsPump}"
+              BorderBrush="{DynamicResource Pump.Warn}" BorderThickness="2">
+        <StackPanel Spacing="10">
+          <TextBlock Text="⛽ این حساب هنوز پمپی ندارد" Classes="ptitle" />
+          <TextBlock TextWrapping="Wrap" Classes="muted"
+                     Text="تا پمپ ساخته نشود، این کامپیوتر به حسابتان ثبت نمی‌شود و دورهٔ آزمایشیِ رایگان شروع نمی‌شود. نامِ پمپ را بنویسید و «ساختنِ پمپ» را بزنید." />
+          <Grid ColumnDefinitions="*,10,Auto">
+            <TextBox Grid.Column="0" Text="{Binding LoginPump}" Watermark="نامِ پمپ — مثلاً پمپ یعقوبی" MinHeight="40" />
+            <Button Grid.Column="2" Classes="accent" MinHeight="40" Padding="18,0"
+                    Content="ساختنِ پمپ" Command="{Binding CreatePumpHereCommand}"
+                    IsEnabled="{Binding !Busy}" />
+          </Grid>
+          <TextBlock Text="{Binding LoginStatus}" TextWrapping="Wrap"
+                     IsVisible="{Binding LoginStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+      </Border>
+
       <!-- ══ چهار عددِ سرِ دست ═══════════════════════════════════════════════
            آن‌چه صاحبِ پمپ بیشتر از همه نگاهش می‌کند، بی باز کردنِ هیچ کارتی. -->
       <Grid ColumnDefinitions="*,12,*,12,*,12,*">

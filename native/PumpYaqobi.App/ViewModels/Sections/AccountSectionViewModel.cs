@@ -229,6 +229,8 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     /// اپِ کارمندان — هر کدام باشد یعنی بند هست.)
     /// </summary>
     [ObservableProperty] private bool _pumpBound;
+    /// <summary>وارد شده، ولی این حساب هنوز پمپی ندارد — کارتِ «ساختنِ پمپ» در پروفایل.</summary>
+    [ObservableProperty] private bool _needsPump;
 
     /// <summary>
     /// ══ جدا کردنِ این دستگاه از این پمپ ═════════════════════════════════
@@ -584,9 +586,16 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         PumpPhone = Dash(s.GetString(SettingsService.StationPhone));
         PumpAddress = Dash(s.GetString(SettingsService.StationAddress));
         PumpCodeLine = string.IsNullOrWhiteSpace(f.CloudStationId) ? "هنوز روی سرورِ حساب ثبت نشده" : f.CloudStationId;
-        HomeLine = string.IsNullOrWhiteSpace(s.GetString(SettingsService.ServerUrl))
-            ? "هنوز پیدا نشده — با روشن شدنِ سرورِ خانگی خودش پیدا می‌شود"
-            : "وصل و ثبت‌شده";
+        //  ⛔ **همان حقیقتِ چراغِ سربرگ، نه یک خانهٔ دیگر** (۱۴۰۵/۰۷/۱۳): این
+        //  خانه نشانیِ دفترِ **همین حساب** را می‌خواند و با حسابِ تازه (دفترِ
+        //  تازه) خالی بود، در حالی که چراغ اتصالِ زنده را می‌دید و «وصل است»
+        //  می‌گفت — دو جوابِ ضدِ هم روی یک صفحه.
+        var pub = AppHost.Current.PublisherIfStarted;
+        HomeLine = pub is { Configured: true, Connected: true }
+            ? "وصل است"
+            : pub is { Configured: true }
+                ? "پیدا شده ولی همین حالا جواب نمی‌دهد — خودش دوباره می‌گردد"
+                : "هنوز پیدا نشده — با روشن شدنِ سرورِ خانگی خودش پیدا می‌شود";
         //  ⛔ **«فعال نشده» به‌تنهایی هیچ کاری دستِ کاربر نمی‌دهد.**
         //
         //  گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۱): حساب ساخته، پمپ ساخته، و باز
@@ -604,6 +613,13 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         PumpBound = !string.IsNullOrWhiteSpace(f.CloudDeviceToken)
                  || !string.IsNullOrWhiteSpace(f.CloudStationId)
                  || !string.IsNullOrWhiteSpace(f.CloudAccessCode);
+
+        //  ⛔ **وارد شده ولی پمپی ندارد** (۱۴۰۵/۰۷/۱۳، عکسِ صاحب ریپو): گامِ
+        //  «نامِ پمپ» با «بعداً» یا «برگشت» رد شده بود و پروفایل فقط «فعال
+        //  نشده» می‌گفت — بی هیچ راهی. بی پمپ نه بند شدنی هست، نه دورهٔ
+        //  آزمایشی. پس همین‌جا کارتِ «پمپ بسازید» دیده می‌شود.
+        NeedsPump = SignedIn && string.IsNullOrWhiteSpace(f.CloudDeviceToken) && !f.PumpStepDone;
+        if (NeedsPump && string.IsNullOrWhiteSpace(LoginPump) && PumpName != "پمپ یعقوبی") LoginPump = PumpName;
 
         var session = _host.Session;
         UserLine = string.IsNullOrWhiteSpace(session.UserName) ? "کاربرِ برنامه" : session.UserName!;
@@ -1349,6 +1365,26 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
             : why + " — و کدِ پیگیری نداد، یعنی سرورِ حساب کهنه است؛ "
                       + "فایلِ نصبِ تازه را بگیرید. «بعداً» هم شما را رد می‌کند.";
     }
+
+    /// <summary>
+    /// ساختنِ پمپ از خودِ پروفایل — برای کسی که گامِ «نامِ پمپ» را رد کرده.
+    ///
+    /// ⛔ <b>راهِ دومی ساخته نشد</b>: همان <see cref="FinishPumpAsync"/>ِ صفحهٔ
+    /// ورود صدا زده می‌شود (ساختنِ پمپ، بند شدن، مجوز، دورهٔ آزمایشی). و فقط
+    /// با دکمهٔ خودِ کاربر — قاعدهٔ «پمپ بی‌خبر ساخته نمی‌شود» سرِ جایش است.
+    /// </summary>
+    [RelayCommand]
+    private async Task CreatePumpHereAsync()
+    {
+        var f = AppSettings.Load();
+        if (f.LoginSkipped) { f.LoginSkipped = false; try { f.Save(); } catch { /* دورِ بعد */ } }
+        await FinishPumpAsync();
+        RefreshAll();
+        PumpCreatedHere?.Invoke();
+    }
+
+    /// <summary>پمپ از پروفایل ساخته شد — پوسته چراغ را همان لحظه تازه می‌کند.</summary>
+    public event Action? PumpCreatedHere;
 
     /// <summary>
     /// «بعداً» روی گامِ پمپ: نام و لوکیشن ذخیره می‌شوند و صفحه رد می‌شود.

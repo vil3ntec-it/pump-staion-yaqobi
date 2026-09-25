@@ -182,7 +182,24 @@ public class InstallerTests
         var s = Iss();
         var live = string.Join("\n", s.Split('\n').Where(l => !l.TrimStart().StartsWith(";")));
         Assert.DoesNotContain("[UninstallDelete]", live);
-        Assert.DoesNotContain("{userappdata}", live);
+        //  ⛔ هیچ راهی برای **پاک کردنِ** پوشهٔ داده در نصاب نیست.
+        Assert.DoesNotContain("DelTree", live);
+        Assert.DoesNotContain("DeleteFile", live);
+        Assert.DoesNotContain("RemoveDir", live);
+
+        //  ⚠️ {userappdata} فقط یک جا: «شروعِ تازه»ی حذفِ برنامه (۱۴۰۵/۰۷/۱۳) که
+        //  پوشه را **کنار می‌گذارد** (تغییرِ نام)، فقط با «بله»ی صریح، پیش‌فرضِ
+        //  «نه»، و هرگز در حذفِ بی‌صدا (به‌روزرسانی).
+        var code = live[live.IndexOf("[Code]", StringComparison.Ordinal)..];
+        Assert.Equal(1, live.Split("{userappdata}").Length - 1);
+        Assert.Contains("{userappdata}", code);
+        var i = code.IndexOf("procedure CurUninstallStepChanged", StringComparison.Ordinal);
+        Assert.True(i >= 0);
+        var proc = code[i..code.IndexOf("\nend;", i, StringComparison.Ordinal)];
+        Assert.Contains("{userappdata}", proc);
+        Assert.Contains("not UninstallSilent", proc);
+        Assert.Contains("MB_DEFBUTTON2", proc);
+        Assert.Contains("RenameFile(", proc);
     }
 
     /// <summary>برنامهٔ باز باید هنگامِ به‌روزرسانی خودش بسته و باز شود.</summary>

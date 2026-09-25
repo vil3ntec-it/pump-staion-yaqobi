@@ -61,7 +61,15 @@ public class PumpStepLoopTests
         //  هر دو مسیر — موفق و «پمپ از قبل هست» — مهر می‌زنند
         Assert.Equal(2, Count(vm, "PumpStepDone = true;"));
         //  ⛔ و با `Save()`ی بادوام، نه `SaveSoon()`: گم شدنش یعنی برگشتِ حلقه
-        Assert.Equal(2, Count(vm, ".Save(); } catch"));
+        //  (هر مهر، درست پشتِ سرش — شمردنِ کلِ فایل هر ذخیرهٔ دیگری را هم می‌شمرد)
+        var at = 0;
+        while ((at = vm.IndexOf("PumpStepDone = true;", at, StringComparison.Ordinal)) >= 0)
+        {
+            var next = vm.Substring(at, Math.Min(120, vm.Length - at));
+            Assert.Contains(".Save(); } catch", next);
+            Assert.DoesNotContain("SaveSoon", next);
+            at += 20;
+        }
 
         //  ⛔ حسابِ تازه یعنی گامِ پمپ از نو
         Assert.Contains("_settings.PumpStepDone = false;", Src(Cloud));
