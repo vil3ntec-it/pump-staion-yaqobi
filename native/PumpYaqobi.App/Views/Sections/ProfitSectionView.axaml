@@ -13,9 +13,12 @@
                  SubHeader="درآمدها منهای مصارف — نرخِ اتحادیه هم از همین‌جا به پارچه‌ها می‌رود">
           <StackPanel Spacing="12">
 
+      <!-- ⚠️ همهٔ کارت‌های این صفحه تمام‌عرض‌اند و ‎calm‎ (سایهٔ بی‌محو):
+           گزارشِ «مفاد/ضرر خیلی سنگین اسکرول می‌شود» (۱۴۰۵/۰۷/۱۳)؛ شرحش روی
+           ‎Border.card.calm‎ در ‎Controls.axaml‎. -->
       <!-- ══ کادرِ بزرگِ «مفاد / ضرر خالص» ══════════════════════════════════
            همان ‎.pl-result‎: عنوان، عددِ بزرگ، جملهٔ حال و خطِ روند. -->
-      <Border Classes="card" Padding="18,16" MinHeight="180">
+      <Border Classes="card calm" Padding="18,16" MinHeight="180">
         <Grid RowDefinitions="Auto,Auto,Auto,*">
           <TextBlock Grid.Row="0" Text="مفاد / ضرر خالص" Classes="label" FontSize="13" />
           <TextBlock Grid.Row="1" Text="{Binding NetText}" FontWeight="Bold" FontSize="34"
@@ -33,14 +36,14 @@
 
       <!-- ══ درآمدها و مصارف ══ -->
       <Grid ColumnDefinitions="*,12,*">
-        <Border Grid.Column="0" Classes="card" Padding="16,14">
+        <Border Grid.Column="0" Classes="card calm" Padding="16,14">
           <StackPanel Spacing="6">
             <TextBlock Text="{Binding IncomeTitle}" Classes="label" FontSize="13" />
             <TextBlock Text="{Binding IncomeText}" FontWeight="Bold" FontSize="24"
                        Foreground="{Binding IncomeBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
           </StackPanel>
         </Border>
-        <Border Grid.Column="2" Classes="card" Padding="16,14">
+        <Border Grid.Column="2" Classes="card calm" Padding="16,14">
           <StackPanel Spacing="6">
             <TextBlock Text="💸 مصارف" Classes="label" FontSize="13" />
             <TextBlock Text="{Binding ExpenseText}" FontWeight="Bold" FontSize="24"
@@ -56,7 +59,7 @@
            حق داشت و ریشه‌اش یک خط بود: ‎MaxWidth="420" HorizontalAlignment="Right"‎
            — کادرها را هم کوچک می‌کرد و هم به یک لبه می‌چسباند. حالا هر نرخ
            کارتِ خودش را دارد، وسطِ صفحه، با عددِ درشت و واحدِ نوشته‌شده. -->
-      <Border Classes="card" Padding="18,16">
+      <Border Classes="card calm" Padding="18,16">
         <StackPanel Spacing="14">
           <StackPanel Spacing="4" HorizontalAlignment="Center">
             <TextBlock Text="🏛️ نرخ اتحادیه" Classes="h2" TextAlignment="Center" />
@@ -101,7 +104,7 @@
 
            حالا دو ردیفِ روشن: بالا چیزی که تایپ می‌کنی، پایین چیزی که
            برنامه حساب می‌کند — و دکمهٔ ثبت کنارِ همان نتیجه. -->
-      <Border Classes="card" Padding="18,16">
+      <Border Classes="card calm" Padding="18,16">
         <StackPanel Spacing="14">
           <StackPanel Spacing="4" HorizontalAlignment="Center">
             <TextBlock Text="🛒 خرید عمده از مشتریان" Classes="h2" TextAlignment="Center" />
@@ -162,7 +165,7 @@
       </Border>
 
       <!-- ══ درآمد و مصرف اضافی دستی ══ -->
-      <Border Classes="card" Padding="16,14">
+      <Border Classes="card calm" Padding="16,14">
         <StackPanel Spacing="10">
           <TextBlock Text="✍️ درآمد و مصرف اضافی دستی" Classes="h2" TextAlignment="Center" />
           <!-- همان ایرادِ «کوچک و یک‌بغل» را داشت؛ با همان قاعده وسط آمد -->

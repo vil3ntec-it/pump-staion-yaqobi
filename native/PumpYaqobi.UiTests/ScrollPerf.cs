@@ -41,6 +41,20 @@ namespace PumpYaqobi.UiTests;
 ///   • بقیه: ساختنِ ردیف‌های تازه (۱۰ تا ۲۵ میلی‌ثانیه برای هر ردیف) — تکهٔ
 ///     ۱۲۰ ردیفی یک مکثِ ۱٫۳ ثانیه‌ای بود. ⇒ ‎ExcelGrid.GrowMax = 8‎.
 ///
+/// ══ دورِ دوم (۱۴۰۵/۰۷/۱۳): «داشبورد، مفاد/ضرر و مخزن‌ها سنگین اسکرول می‌شوند» ═
+///   تا آن روز این سنجه فقط داشبورد و جدول‌ها را می‌گشت — مفاد/ضرر و مخزن
+///   **اصلاً** در آن نبودند، پس هیچ عددی از آن‌ها نداشتیم. حالا:
+///   • هر دو در سنجه‌اند، و بعدش **همهٔ** بخش‌های نوار (جز چت و حساب که
+///     شبکه می‌خواهند و دوربین که جریانِ تصویر دارد).
+///   • دو ستونِ **ساختاری** به جدول اضافه شد: «سایهٔ محو» = چند کادرِ دیدنی
+///     با سایهٔ محو در درخت است، و «کنترل» = چند کنترلِ دیدنی. عددِ ساختاری
+///     روی ماشینِ CI نوسان ندارد؛ میلی‌ثانیه دارد. سایهٔ محو با هر فریمِ
+///     اسکرول از نو کشیده می‌شود و هزینه‌اش با مساحت بالا می‌رود
+///     (‎scrollperf why‎)، پس بالای ‎BlurBroken‎ سرخ است.
+///   • مخزن یک دروازهٔ ساختاریِ خودش دارد: فهرستِ خریدها پنجره دارد
+///     (‎StorageSectionViewModel.PurchasePage‎) — کارتِ ساخته‌شده باید از خودِ
+///     فهرست کمتر باشد، وگرنه پنج سال خرید یعنی هزار کادرِ زنده.
+///
 ///     dotnet run --project PumpYaqobi.UiTests -c Release -- scrollperf
 ///     … -- scrollperf why     چهار بار همان دفتر، هر بار با یک چیزِ خاموش
 ///     … -- scrollperf trace   فقط یک دفتر، هشت بار — برای ‎dotnet-trace collect‎
@@ -64,8 +78,20 @@ internal static class ScrollPerf
     /// </summary>
     private const long GrowBroken = 600;
 
+    /// <summary>
+    /// سقفِ کادرهای دیدنی با سایهٔ **محو** در یک صفحه. کارتِ کوچک چند تا در
+    /// صفحه است؛ صدها تا یعنی یک فهرستِ تکرارشونده سایهٔ محو گرفته (همان
+    /// ریشهٔ «مخزن لگ داره»: ۱۳۰ خرید × ۸ کادر). بالای ‎BlurWarn‎ فقط گزارش.
+    /// </summary>
+    private const int BlurBroken = 200;
+    private const int BlurWarn = 60;
+
     private static readonly List<(string What, long Max, long P95, long Avg, int Hitches, int Steps, long Chunk, bool Build)> Work = new();
     private static readonly List<(string What, long Max, long Avg)> Paint = new();
+    /// <summary>عددهای ساختاریِ هر صفحه: سایهٔ محو و کنترلِ دیدنی.</summary>
+    private static readonly List<(string What, int Blur, int Visuals)> Shape = new();
+    /// <summary>ایرادهای ساختاری — هر کدام یک خطِ ❌ و کدِ بازگشتِ ۱.</summary>
+    private static readonly List<string> Broke = new();
 
     public static int Run()
     {
@@ -103,8 +129,8 @@ internal static class ScrollPerf
         Settle(win);
 
         Console.WriteLine();
-        Console.WriteLine("صفحه                                   گام‌ها   کار: بیشینه  p95   میانگین  لگ‌ها | نقاشی: بیشینه  میانگین | ردیفِ زنده");
-        Console.WriteLine(new string('-', 118));
+        Console.WriteLine("صفحه                                   گام‌ها   کار: بیشینه  p95   میانگین  لگ‌ها | نقاشی: بیشینه  میانگین | ردیفِ زنده | سایهٔ محو  کنترل");
+        Console.WriteLine(new string('-', 136));
 
         // ══ حالتِ «چرا»: همان دفتر، چهار بار با یک چیزِ خاموش‌شده ═════════════
         if (Why)
@@ -161,6 +187,36 @@ internal static class ScrollPerf
             ScrollThrough(win, page.Title + " (بارِ دوم)");
         }
 
+        // ══ مفاد/ضرر و مخزن — «خیلی سنگین اسکرول می‌شوند» (۱۴۰۵/۰۷/۱۳) ════
+        //  هیچ‌کدام تا آن روز در این سنجه نبودند. مخزن یک دروازهٔ ساختاری هم
+        //  دارد: فهرستِ خریدها پنجره دارد و همهٔ خریدها یک‌جا کارت نمی‌شوند.
+        foreach (var id in new[] { "profit", "storage" })
+        {
+            if (vm.Sections.FirstOrDefault(x => x.Id == id) is not { } page) continue;
+            Wait(win, vm.GoAsync(page)); Settle(win);
+            if (page is StorageSectionViewModel st)
+            {
+                var all = st.Purchases.Count; var cards = st.PurchaseCards.Count;
+                Console.WriteLine($"مخزن: {all} خرید در فهرست، {cards} کارتِ ساخته‌شده (پنجره {StorageSectionViewModel.PurchasePage})");
+                if (all <= StorageSectionViewModel.PurchasePage)
+                    Broke.Add($"مخزن: دادهٔ سنجه فقط {all} خرید دارد — پنجرهٔ کارت‌ها اصلاً به کار نمی‌افتد و سنجه بی‌معناست");
+                else if (cards > StorageSectionViewModel.PurchasePage)
+                    Broke.Add($"مخزن: {cards} کارتِ خرید ساخته شد، سقف {StorageSectionViewModel.PurchasePage} — پنجرهٔ کارت‌ها به کار نیفتاده");
+            }
+            ScrollThrough(win, page.Title, build: true);
+            ScrollThrough(win, page.Title + " (بارِ دوم)");
+            if (page is StorageSectionViewModel st2)
+            {
+                //  «خریدِ قدیمی‌تر» یک پنجرهٔ دیگر می‌آورد — نه همه را
+                var before = st2.PurchaseCards.Count;
+                st2.ShowMorePurchasesCommand.Execute(null); Settle(win);
+                var after = st2.PurchaseCards.Count;
+                if (after <= before || after > before + StorageSectionViewModel.PurchasePage)
+                    Broke.Add($"مخزن: «خریدِ قدیمی‌تر» {before} ⇒ {after} کارت — باید دقیقاً یک پنجره ({StorageSectionViewModel.PurchasePage}) بیاورد");
+                ScrollThrough(win, page.Title + " (یک پنجرهٔ بیشتر)");
+            }
+        }
+
         // ══ دفترِ ماهانه ═══════════════════════════════════════════════════
         //  ⚠️ «رسید قرض‌داران» و «رسید پارچه» هم اضافه شدند: صاحب ریپو هر دو
         //  را نام برد و هیچ‌کدام تا امروز در این سنجه نبودند.
@@ -206,6 +262,26 @@ internal static class ScrollPerf
             ScrollThrough(win, "تاریخچه", build: true);
         }
 
+        // ══ و همهٔ بخش‌های دیگرِ نوار — «تمام برنامه رو هم چک کن» (۱۴۰۵/۰۷/۱۳) ═
+        //  هر بخشی که بالا نام نبرده شده، یک بار ساخته و یک بار ساخته‌شده.
+        //  ⚠️ سه تا عمداً نه: چت و حساب شبکه می‌خواهند و دوربین جریانِ تصویر.
+        var covered = new HashSet<string> { "dashboard", "settings", "profit", "storage", "safe", "expenses",
+                                            "sarrafi", "debtrasid", "rasid", "debt", "waraq", "history",
+                                            "chat", "account", "camera" };
+        foreach (var page in vm.NavSections.Where(x => !covered.Contains(x.Id)).ToList())
+        {
+            try
+            {
+                Wait(win, vm.GoAsync(page)); Settle(win);
+                ScrollThrough(win, page.Title, build: true);
+                ScrollThrough(win, page.Title + " (بارِ دوم)");
+            }
+            catch (Exception ex)
+            {
+                Broke.Add($"{page.Title}: سنجه نتوانست بازش کند — {ex.GetType().Name}: {ex.Message}");
+            }
+        }
+
         Console.WriteLine();
         // صفحهٔ ساخته‌شده با گامِ اسکرول سنجیده می‌شود؛ بارِ اول (ساختنِ ردیف‌ها و
         // کارت‌ها) فقط با گران‌ترین تکهٔ رشدِ جدول — آن‌جا کلِ زنجیرهٔ رشد در یک
@@ -213,8 +289,17 @@ internal static class ScrollPerf
         var bad = Work.Where(w => w.Build ? w.Chunk > GrowBroken : w.Max > Broken).ToList();
         var hitchy = Work.Where(w => w.Hitches > 0).ToList();
         foreach (var w in hitchy) Console.WriteLine($"⚠️ {w.What}: {w.Hitches} گام از {w.Steps} بالای {Hitch} ms (بیشینه {w.Max:N0})");
-        if (bad.Count == 0) { Console.WriteLine($"✅ اسکرولِ جدولِ ساخته‌شده زیرِ {Broken} ms و هر تکهٔ رشد زیرِ {GrowBroken} ms"); return 0; }
+        foreach (var sh in Shape.Where(x => x.Blur > BlurWarn && x.Blur <= BlurBroken))
+            Console.WriteLine($"⚠️ {sh.What}: {sh.Blur} کادرِ دیدنی با سایهٔ محو (بالای {BlurWarn}) — سایهٔ محو با هر فریمِ اسکرول از نو کشیده می‌شود");
+        foreach (var sh in Shape.Where(x => x.Blur > BlurBroken))
+            Broke.Add($"{sh.What}: {sh.Blur} کادرِ دیدنی با سایهٔ محو، سقف {BlurBroken} — یک فهرستِ تکرارشونده سایهٔ محو گرفته؟");
+        if (bad.Count == 0 && Broke.Count == 0)
+        {
+            Console.WriteLine($"✅ اسکرولِ جدولِ ساخته‌شده زیرِ {Broken} ms، هر تکهٔ رشد زیرِ {GrowBroken} ms، سایهٔ محوِ هر صفحه زیرِ {BlurBroken}، و پنجرهٔ کارت‌های مخزن سرِ جایش");
+            return 0;
+        }
         foreach (var w in bad) Console.WriteLine($"❌ {w.What}: {(w.Build ? $"تکهٔ رشد {w.Chunk:N0} ms" : $"بیشینهٔ گام {w.Max:N0} ms")}");
+        foreach (var b in Broke) Console.WriteLine($"❌ {b}");
         return 1;
     }
 
@@ -292,7 +377,9 @@ internal static class ScrollPerf
         if (rounds is not null) foreach (var (b, r) in rounds) b.CornerRadius = r;
         if (totals is not null) foreach (var t in totals) t.IsVisible = true;
 
-        if (work.Count == 0) { Console.WriteLine($"{what,-40} صفحه کوتاه است، اسکرولی نیست"); return; }
+        var (blur, visuals) = Measure(win);
+        Shape.Add((what, blur, visuals));
+        if (work.Count == 0) { Console.WriteLine($"{what,-40} صفحه کوتاه است، اسکرولی نیست {"",44} | {blur,8} {visuals,7}"); return; }
 
         var live = win.GetVisualDescendants().OfType<DataGridRow>().Count(r => r.IsEffectivelyVisible);
         var sorted = work.OrderBy(x => x).ToList();
@@ -300,8 +387,28 @@ internal static class ScrollPerf
         var hitches = work.Count(x => x > Hitch);
         Work.Add((what, work.Max(), p95, (long)work.Average(), hitches, work.Count, ExcelGrid.DiagChunkMaxMs, build));
         Paint.Add((what, paint.Max(), (long)paint.Average()));
-        Console.WriteLine($"{what,-40} {work.Count,4}    {work.Max(),8:N0} {p95,5:N0} {work.Average(),8:N0}  {hitches,4}  | {paint.Max(),8:N0} {paint.Average(),8:N0} | {live,6}  تکهٔ گران: {ExcelGrid.DiagChunkMaxRows} ردیف {ExcelGrid.DiagChunkMaxMs} ms");
+        Console.WriteLine($"{what,-40} {work.Count,4}    {work.Max(),8:N0} {p95,5:N0} {work.Average(),8:N0}  {hitches,4}  | {paint.Max(),8:N0} {paint.Average(),8:N0} | {live,6} | {blur,8} {visuals,7}  تکهٔ گران: {ExcelGrid.DiagChunkMaxRows} ردیف {ExcelGrid.DiagChunkMaxMs} ms");
         ExcelGrid.DiagChunkMaxMs = 0; ExcelGrid.DiagChunkMaxRows = 0;
+    }
+
+    /// <summary>
+    /// دو عددِ ساختاریِ صفحهٔ جلوی چشم: چند کادرِ دیدنی سایهٔ **محو** دارد
+    /// (هر لایه‌ای با ‎Blur > 0‎) و چند کنترلِ دیدنی در درخت است. سایهٔ
+    /// بی‌محو (‎SectionShadow‎) شمرده نمی‌شود — همان است که ‎scrollperf why‎
+    /// «صفر» نشانش داد.
+    /// </summary>
+    private static (int Blur, int Visuals) Measure(Window win)
+    {
+        var blur = 0; var visuals = 0;
+        foreach (var v in win.GetVisualDescendants())
+        {
+            if (v is not Visual { IsEffectivelyVisible: true }) continue;
+            visuals++;
+            if (v is not Border b || b.BoxShadow.Count == 0) continue;
+            for (var i = 0; i < b.BoxShadow.Count; i++)
+                if (b.BoxShadow[i].Blur > 0) { blur++; break; }
+        }
+        return (blur, visuals);
     }
 
     /// <summary>‎scrollperf why‎: کدام کنترل‌ها با هر گام دوباره اندازه می‌گیرند.</summary>

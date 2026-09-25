@@ -79,10 +79,14 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
 
-      <!-- ── ردیف دوم: وضعیت سوخت‌ها | روند فروش | موجودی مخازن ── -->
+      <!-- ── ردیف دوم: وضعیت سوخت‌ها | روند فروش | موجودی مخازن ──
+           ⚠️ شش کارتِ بزرگِ پایین ‎calm‎ هستند (سایهٔ بی‌محو): ۹۰۰×۴۴۰ پیکسل
+           «کارتِ کوچک» نیست و سایهٔ محوش با هر فریمِ اسکرول از نو کشیده
+           می‌شد — شرحش روی ‎Border.card.calm‎ در ‎Controls.axaml‎. پنج کارتِ
+           آماریِ بالا کوچک‌اند و سایهٔ محوِ خودشان را دارند. -->
       <Grid ColumnDefinitions="1*,2*,1*" Height="300">
 
-        <Border Grid.Column="0" Classes="card" Margin="0,0,10,0">
+        <Border Grid.Column="0" Classes="card calm" Margin="0,0,10,0">
           <Grid RowDefinitions="Auto,*">
             <TextBlock Grid.Row="0" Text="وضعیت سوخت‌ها" Classes="h2" Margin="0,0,0,8" />
             <ItemsControl Grid.Row="1" ItemsSource="{Binding FuelStatus}">
@@ -117,7 +121,7 @@
           </Grid>
         </Border>
 
-        <Border Grid.Column="1" Classes="card" Margin="0,0,10,0">
+        <Border Grid.Column="1" Classes="card calm" Margin="0,0,10,0">
           <Grid RowDefinitions="Auto,*">
             <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,6">
               <StackPanel Grid.Column="0">
@@ -142,7 +146,7 @@
           </Grid>
         </Border>
 
-        <Border Grid.Column="2" Classes="card">
+        <Border Grid.Column="2" Classes="card calm">
           <Grid RowDefinitions="Auto,*,Auto">
             <TextBlock Grid.Row="0" Text="موجودی مخازن" Classes="h2" Margin="0,0,0,6" />
             <Grid Grid.Row="1" RowDefinitions="*,Auto">
@@ -181,7 +185,7 @@
       <!-- ── ردیف سوم: آخرین هشدارها | نمودار فروش | آخرین فروش‌ها ── -->
       <Grid ColumnDefinitions="1*,2*,1*" Height="440">
 
-        <Border Grid.Column="0" Classes="card" Margin="0,0,10,0">
+        <Border Grid.Column="0" Classes="card calm" Margin="0,0,10,0">
           <Grid RowDefinitions="Auto,*">
             <TextBlock Grid.Row="0" Text="آخرین هشدارها" Classes="h2" Margin="0,0,0,8" />
             <Panel Grid.Row="1">
@@ -214,7 +218,7 @@
           </Grid>
         </Border>
 
-        <Border Grid.Column="1" Classes="card" Margin="0,0,10,0">
+        <Border Grid.Column="1" Classes="card calm" Margin="0,0,10,0">
           <Grid RowDefinitions="Auto,150,Auto,*">
             <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,6">
               <StackPanel Grid.Column="0">
@@ -296,7 +300,7 @@
           </Grid>
         </Border>
 
-        <Border Grid.Column="2" Classes="card">
+        <Border Grid.Column="2" Classes="card calm">
           <Grid RowDefinitions="Auto,*">
             <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
               <TextBlock Grid.Column="0" Text="آخرین فروش‌ها" Classes="h2" />

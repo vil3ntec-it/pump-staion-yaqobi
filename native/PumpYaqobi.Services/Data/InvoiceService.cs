@@ -60,6 +60,24 @@ public sealed class InvoiceService
         return await q.OrderByDescending(v => v.InvoiceNumber).ToListAsync(ct);
     }
 
+    /// <summary>
+    /// پنج ستونِ فاکتورهای **تاییدشدهٔ تیلی** — همان‌هایی که
+    /// ‎ProfitLossService.InvoiceRateDiff‎ می‌خواند. صفحهٔ مفاد/ضرر تا
+    /// ۱۴۰۵/۰۷/۱۳ برای همین یک عدد شیءِ کاملِ **همهٔ** فاکتورها را می‌خواند؛
+    /// حالا فقط همین ردیف‌ها و همین ستون‌ها. صافیِ «تاییدشده و تیلی» همان
+    /// دو شرطِ اولِ خودِ قاعده است، پس عدد مو‌به‌مو همان می‌ماند.
+    /// </summary>
+    public async Task<List<InvoiceRate>> ApprovedRatesAsync(CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        return await db.Invoices.AsNoTracking()
+                       .Where(v => v.Status == InvoiceStatus.Approved && !v.ByMoney)
+                       .Select(v => new InvoiceRate(v.ByMoney, v.Status, v.Liters, v.PricePerLiter,
+                                                    v.RateOnCreate, v.RateOnApprove))
+                       .ToListAsync(ct);
+    }
+
     /// <summary>شمارهٔ یکتای بعدی — هیچ‌وقت تکراری نمی‌شود.</summary>
     public async Task<int> NextNumberAsync(CancellationToken ct = default)
     {

@@ -58,6 +58,29 @@ public sealed class StorageService
     public TankState Tank(IEnumerable<FuelPurchase> purchases, IEnumerable<ParchaReport> reports,
                           decimal lowThreshold, IEnumerable<TankDip>? dips = null)
     {
+        decimal outL = 0;
+        foreach (var r in reports)
+        {
+            if (r is null) continue;
+            outL += r.DayShift?.Sale ?? 0m;
+            outL += r.NightShift?.Sale ?? 0m;
+        }
+        return Tank(purchases, outL, lowThreshold, dips);
+    }
+
+    /// <summary>
+    /// همان <see cref="Tank(IEnumerable{FuelPurchase}, IEnumerable{ParchaReport}, decimal, IEnumerable{TankDip}?)"/>،
+    /// ولی با «فروش»ِ از-پیش-جمع‌شده.
+    ///
+    /// ⚠️ چرا لازم شد (۱۴۰۵/۰۷/۱۳): بخشِ مخزن برای همین یک عدد **همهٔ**
+    /// پارچه‌های پنج سالِ همان تیل را با هر دو شیفتشان به شیءِ کامل
+    /// می‌خواند — با هر باز شدن و با هر ویرایشِ هر خرید. حالا فقط ستونِ
+    /// ‎Sale‎ خوانده می‌شود (‎StorageDataService.ShiftSumsAsync‎) و این
+    /// نسخه عدد را می‌گیرد. قاعده یک جاست: نسخهٔ بالایی هم به همین می‌رسد.
+    /// </summary>
+    public TankState Tank(IEnumerable<FuelPurchase> purchases, decimal soldLiters,
+                          decimal lowThreshold, IEnumerable<TankDip>? dips = null)
+    {
         decimal inL = 0, usd = 0, afn = 0;
         var any = false;
         foreach (var p in purchases)
@@ -67,13 +90,7 @@ public sealed class StorageService
             inL += p.Liters; usd += p.TotalUsd; afn += p.TotalAfn;
         }
 
-        decimal outL = 0;
-        foreach (var r in reports)
-        {
-            if (r is null) continue;
-            outL += r.DayShift?.Sale ?? 0m;
-            outL += r.NightShift?.Sale ?? 0m;
-        }
+        var outL = soldLiters;
 
         // ── اصلاحِ میله‌زنی ────────────────────────────────────────────────
         // ‎_fuelStock‎ در نسخهٔ وب سه جزء دارد، نه دو:
