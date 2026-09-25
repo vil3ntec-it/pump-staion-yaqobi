@@ -153,16 +153,27 @@ internal static class SyncProbe
         Check("رقم ⇒ پرش به خانهٔ بعد", boxes.Put(0, "9") == 1);
         boxes.Clear();
 
-        boxes.Put(2, "۱۲۳۴۵۶");
-        Check("Paste با ارقامِ فارسی، از خانهٔ اول پخش شد", boxes.Code == "123456", boxes.Code);
+        //  ⛔ ریشهٔ سرخیِ این بند تا ۳.۱.۱۶۴ خودِ سنجه بود، نه برنامه: شش رقمِ
+        //  **درست** چسبانده می‌شد، و پُر شدنِ خانهٔ ششم (به‌درستی) خودش
+        //  می‌فرستد — ابرِ ساختگی هم‌زمان جواب می‌دهد، پس همان لحظه وارد
+        //  می‌شد و بندهای بعدی روی گامِ ۳ می‌افتادند. و «کدِ غلط» با
+        //  `Fill` + یک `Execute`ِ دستی **دو بار** فرستاده می‌شد. پس Paste با
+        //  کدِ **نیمه** سنجیده می‌شود (نمی‌فرستد) و کدِ غلط با **چسباندنِ**
+        //  کامل — همان راهِ کاربر، یک ارسال.
+        boxes.Put(2, "۱۲۳۴۵");
+        Check("Paste با ارقامِ فارسی، از خانهٔ اول پخش شد", boxes.Code == "12345", boxes.Code);
         Check("و خانهٔ اول «۱» شد", boxes.B1 == "1", boxes.B1);
+        Check("و کدِ نیمه چیزی نفرستاد",
+              !seen.Any(p => p.EndsWith("/api/auth/pump/verify", StringComparison.Ordinal)));
 
-        //  کدِ غلط: باید پاک شود و صفحه بماند
+        //  کدِ غلط: چسباندنِ کامل خودش می‌فرستد، پاک می‌شود و صفحه می‌ماند
         boxes.Clear();
-        boxes.Fill("000000");
-        account.VerifyEmailCommand.Execute(null);
+        boxes.Put(0, "۹۹۹۹۹۹");
         for (var i = 0; i < 60 && account.Busy; i++) Pump(win);
         for (var i = 0; i < 10; i++) Pump(win);
+        Check("چسباندنِ شش رقم خودش فرستاد (یک بار)",
+              seen.Count(p => p.EndsWith("/api/auth/pump/verify", StringComparison.Ordinal)) == 1,
+              string.Join(" · ", seen));
         Check("کدِ غلط ⇒ همان گام ماند", account.LoginStep == 2, "گام " + account.LoginStep);
         Check("و خانه‌ها پاک شدند", account.CodeBoxes.Code.Length == 0, account.CodeBoxes.Code);
         Check("و پیامِ خودِ سرور دیده می‌شود", account.LoginStatus.Contains("کد درست نیست"),
