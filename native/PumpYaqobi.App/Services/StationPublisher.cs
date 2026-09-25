@@ -127,9 +127,10 @@ public sealed class StationPublisher : IAsyncDisposable
     /// <summary>‎stations/&lt;کد&gt;-live‎ — مسیرِ سرورهای به‌روزنشده.</summary>
     public static string PathOf(string? stationCode)
     {
+        //  ⛔ کدِ خالی مسیری نمی‌سازد — نه ‎pump1‎ی مشترکِ دیروز. ‎HomeLink‎
+        //  خالی نمی‌دهد، پس این فقط جلوی نوشتن روی پوشهٔ دیگری را می‌گیرد.
         var code = (stationCode ?? "").Trim();
-        if (code.Length == 0) code = HomeLink.DefaultStationCode;
-        return "stations/" + code + "-live";
+        return code.Length == 0 ? "" : "stations/" + code + "-live";
     }
 
     /// <summary>عکسِ همین لحظه، بی فرستادن — برای آزمون و برای دکمهٔ دستی.</summary>
@@ -183,7 +184,7 @@ public sealed class StationPublisher : IAsyncDisposable
             if (ready && (force || hash != _lastHash))
             {
                 var path = _sync.Mode == HomeSyncMode.Station ? LivePath : PathOf(_stationCode());
-                if (await _sync.SetAsync(path, snap, ct))
+                if (path.Length > 0 && await _sync.SetAsync(path, snap, ct))
                 {
                     _lastHash = hash;
                     went = true;
@@ -319,7 +320,7 @@ public sealed class StationPublisher : IAsyncDisposable
 
             _lastHomePush = DateTime.UtcNow;
             var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
-            await cloud.PublishHomeAsync(url, HomeLink.ReadKey(_host), ct);
+            await cloud.PublishHomeAsync(url, HomeLink.ReadKey(_host), ct, HomeLink.StationCode(_host));
         }
         catch (OperationCanceledException) { throw; }
         catch { /* ابر نرسید — کارِ پمپ نباید بایستد */ }
@@ -333,6 +334,28 @@ public sealed class StationPublisher : IAsyncDisposable
     /// </summary>
     private async Task<bool> ReadyAsync(bool force, CancellationToken ct)
     {
+        //  ⛔ پوشهٔ فعلی مالِ این حساب نیست (‎pump1‎ی کهنه، یا کدِ حسابِ دیگر)
+        //  ⇒ پوشهٔ خودِ همین حساب را بگیر (۱۴۰۵/۰۷/۱۳). تا ثبتِ تازه ننشسته،
+        //  اتصالِ فعلی دست نمی‌خورد؛ و با همان ترمزِ ثبتِ همیشگی، نه هر ۵ ثانیه.
+        if (StationLink.NeedsMove(AppSettings.Load())
+            && (force || DateTime.UtcNow - _lastEnrollTry >= EnrollRetryLost))
+        {
+            _lastEnrollTry = DateTime.UtcNow;
+            var moved = await StationLink.EnsureAsync(_host, ct: ct);
+            if (moved.Ok && !StationLink.NeedsMove(AppSettings.Load()))
+            {
+                //  پوشهٔ تازه خالی است ⇒ همه‌چیز از نو برود
+                await _sync.DropAsync();
+                _inboxWatched = false;
+                _lastHash = "";
+                _lastVersion = -1;
+                _lastAcctHash = "";
+                _accts.ForgetHome();
+                //  و سرورِ حساب همان لحظه پوشهٔ تازه را بداند — نه ده دقیقهٔ بعد
+                _lastHomePush = DateTime.MinValue;
+            }
+        }
+
         if (!_sync.Configured || _sync.Mode == HomeSyncMode.None)
         {
             // روی سرورِ خاموش، هر بیست ثانیه نگردیم — ولی اگر یک بار وصل

@@ -170,8 +170,9 @@ public class StationSnapshotTests
     public void ThePublishPathNeverCollidesWithTheOldSiteBranch()
     {
         Assert.Equal("stations/pump1-live", StationPublisher.PathOf("pump1"));
-        Assert.Equal("stations/pump1-live", StationPublisher.PathOf(""));
-        Assert.Equal("stations/pump1-live", StationPublisher.PathOf(null));
+        //  ⛔ کدِ خالی دیگر «pump1»ی مشترک نمی‌شود — هیچ مسیری نمی‌سازد
+        Assert.Equal("", StationPublisher.PathOf(""));
+        Assert.Equal("", StationPublisher.PathOf(null));
         Assert.Equal("stations/kabul-live", StationPublisher.PathOf(" kabul "));
     }
 

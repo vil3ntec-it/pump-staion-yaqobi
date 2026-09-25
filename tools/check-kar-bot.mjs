@@ -158,8 +158,12 @@ ok(!(await bot.verifyPassword('x', 'not-a-hash')), 'رشتهٔ خراب هم ب�
      'شبکهٔ خانگی با ws:// می‌ماند — wss اجباری آن‌جا اصلاً وصل نمی‌شود');
   ok(bot.doorsFor({ srv: 'https://x/' })[1].url === 'wss://x',
      'اسلشِ آخر دو تا نمی‌شود');
-  ok(bot.doorsFor({ srv: 'https://x', tok: 'k' })[0].url.includes('station=pump1'),
-     'کدِ نانوشته یعنی pump1');
+  //  ⛔ کدِ پیش‌فرضِ مشترکی نیست (۱۴۰۵/۰۷/۱۳): کدِ نانوشته به هیچ پمپی نمی‌رود
+  ok(!bot.doorsFor({ srv: 'https://x', tok: 'k' })[0].url.includes('pump1')
+     && !bot.doorsFor({ srv: 'https://x', tok: 'k' })[1].path.includes('pump1'),
+     'کدِ نانوشته دیگر «pump1» نمی‌شود');
+  ok(!/\|\|\s*'pump1'/.test(require('node:fs').readFileSync(path.join(here, '..', 'kar', 'app.js'), 'utf8')),
+     'اپِ کارمندان هیچ «|| pump1»ی ندارد');
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -530,8 +534,10 @@ console.log('\n— خبر به گوشیِ بسته');
   ok(/!hasBackground\(\)/.test(appSrc.slice(appSrc.indexOf('function pushCan'))), 'روی اندروید کارِ پس‌زمینهٔ خودش؛ پوش دوباره نمی‌رود');
   ok(/static final String TUNNEL = "https:\/\/api\.vill3n\.top";/.test(alerts), 'اندروید: نشانیِ تونل در کد قفل است');
   ok(/alerts = fetch\(TUNNEL, token, station\)/.test(alerts), 'اندروید: نشانیِ خانگی جواب نداد ⇒ همان سرور از تونل');
-  ok(/if \(s\.isEmpty\(\) && t\.isEmpty\(\)\) cancel\(c\); else schedule\(c\);/.test(alerts),
+  ok(/if \(\(s\.isEmpty\(\) && t\.isEmpty\(\)\) \|\| st\.isEmpty\(\)\) cancel\(c\); else schedule\(c\);/.test(alerts),
      'اندروید: بی نشانیِ خانگی ولی با رمز، کار چیده می‌ماند');
+  ok(!/"pump1"/.test(alerts) && /if \(station\.isEmpty\(\)\) return 0;/.test(alerts),
+     '⛔ اندروید: کدِ خالی به هیچ پمپی نمی‌رود — دیگر «pump1»ی پیش‌فرض نیست');
 }
 
 console.log(bad ? '\n' + bad + ' آزمون شکست خورد' : '\nهمه درست');
