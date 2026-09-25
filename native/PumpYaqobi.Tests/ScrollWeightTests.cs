@@ -75,12 +75,17 @@ public class ScrollWeightTests : IDisposable
     public void SheshKarteBozorgeDashboard_Calm_And()
     {
         var xaml = NoComments(Read("PumpYaqobi.App", "Views", "Sections", "DashboardSectionView.axaml"));
-        // شش کارتِ دو ردیفِ پایین (وضعیتِ سوخت، روند، مخازن، هشدارها، نمودار، آخرین فروش‌ها)
-        var big = Regex.Matches(xaml, "<Border Grid\\.Column=\"[012]\" Classes=\"card calm\"").Count;
+        // داشبوردِ تازه (۱۴۰۵/۰۷/۱۳): سربرگ · نمودارِ فروش · مخازن · روندِ سوخت · هشدارها · آخرین فروش‌ها
+        // — هر شش کارتِ بزرگ بی‌محو‌اند.
+        var big = Regex.Matches(xaml, "Classes=\"card calm\"").Count;
         Assert.Equal(6, big);
-        // و هیچ کارتِ بزرگی با سایهٔ محو نمانده — فقط پنج کارتِ آماریِ کوچک (داخلِ قالب)
-        var plain = Regex.Matches(xaml, "<Border Grid\\.Column=\"[012]\" Classes=\"card\"").Count;
-        Assert.Equal(0, plain);
+        // و هیچ کارتِ بزرگی با سایهٔ محو نمانده — تنها `card`ِ ساده قالبِ کاشی‌های کوچکِ آماری است
+        var plain = Regex.Matches(xaml, "Classes=\"card\"").Count;
+        Assert.Equal(1, plain);
+        var tile = Regex.Match(xaml, "<ItemsControl ItemsSource=\"\\{Binding Cards\\}\">(.*?)</ItemsControl>", RegexOptions.Singleline);
+        Assert.True(tile.Success, "قالبِ کاشی‌های آماری پیدا نشد");
+        Assert.Contains("Classes=\"card\"", tile.Groups[1].Value);
+        Assert.Equal(0, Regex.Matches(xaml, "<Border Grid\\.Column=\"[012]\" Classes=\"card\"").Count);
     }
 
     [Fact]

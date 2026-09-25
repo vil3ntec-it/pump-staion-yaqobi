@@ -28,6 +28,28 @@ public sealed record CloudChatMessage(string Id, long Seq, string Acct, string F
             m.TryGetProperty("deleted", out var d) && d.ValueKind == JsonValueKind.True);
     }
 
+    /// <summary>
+    /// پیامِ رشتهٔ «پشتیبانیِ برنامه» (‎/api/pump/device/support/thread‎).
+    ///
+    /// ⚠️ شکلش با چتِ مشتری فرق دارد و تا ۱۴۰۵/۰۷/۱۳ با همان ‎Parse‎ خوانده
+    /// می‌شد، پس هر پیام <b>متنِ خالی</b> می‌داد: سرور ‎body‎ · ‎sender‎ ·
+    /// ‎senderName‎ · ‎createdAt‎ می‌فرستد، نه ‎text‎ · ‎from‎ · ‎at‎.
+    /// ‎From‎ = ‎o‎ برای «خودمان» (‎user‎) و ‎a‎ برای مدیرِ سامانه؛ ‎Seq‎ همان
+    /// ‎createdAt‎ است، چون درِ ‎after‎ی سرور با همین کار می‌کند.
+    /// </summary>
+    public static CloudChatMessage? ParseSupport(JsonElement m)
+    {
+        if (m.ValueKind != JsonValueKind.Object) return null;
+        string S(string k) => m.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
+        long N(string k) => m.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt64(out var n) ? n : 0;
+        var id = S("id");
+        var body = S("body");
+        if (id.Length == 0 || body.Length == 0) return null;
+        var at = N("createdAt");
+        return new CloudChatMessage(id, at, "support", S("sender") == "user" ? "o" : "a", S("senderName"),
+            "text", body, null, at, false);
+    }
+
     public static List<CloudChatMessage> ParseList(JsonElement json, string acctFallback = "")
     {
         var list = new List<CloudChatMessage>();
@@ -947,7 +969,7 @@ public sealed partial class CloudLink
         if (json.TryGetProperty("messages", out var arr) && arr.ValueKind == JsonValueKind.Array)
             foreach (var m in arr.EnumerateArray())
             {
-                var parsed = CloudChatMessage.Parse(m, "support");
+                var parsed = CloudChatMessage.ParseSupport(m);
                 if (parsed is not null) list.Add(parsed);
             }
 

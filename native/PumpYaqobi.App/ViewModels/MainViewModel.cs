@@ -132,6 +132,7 @@ public sealed partial class MainViewModel : ObservableObject
         AppHost.Current.OpenHistory = OpenHistoryAsync;
         AppHost.Current.GoHome = OpenStartSectionAsync;
         AppHost.Current.GoSection = GoSectionAsync;
+        AppHost.Current.FindSection = id => AllPages.FirstOrDefault(p => p.Id == id);
         //  دفترِ حساب عوض شد ⇒ همه‌چیز از نو خوانده شود و قفلِ همان دفترِ
         //  تازه پرسیده شود. شرحِ کامل در ‎OnLedgerSwitchedAsync‎.
         AppHost.Current.LedgerSwitched += () =>
@@ -1109,7 +1110,10 @@ public sealed partial class MainViewModel : ObservableObject
         Current = s;                       // نمونه‌ها زنده می‌مانند: هیچ ساختِ دوباره‌ای نیست
         s.PropertyChanged += OnSectionPropertyChanged;
         SyncContent();
-        _settings.LastSection = s.Id;
+        //  ⛔ صفحهٔ تمام‌صفحه (پیام‌رسان، پروفایل) «آخرین بخش» نمی‌شود: «‹ برگشت»ِ
+        //  آن‌ها همان «آخرین بخش» را باز می‌کند و برنامهٔ فردا هم از همان‌جا بالا
+        //  می‌آید — پس هر دو دوباره روی همان صفحه می‌ماندند.
+        if (s.Id is not ("chat" or "account")) _settings.LastSection = s.Id;
         //  ⛔ **نوشتنِ «آخرین بخش» روی نخِ رابط نمی‌ماند.** گزارشِ صاحب ریپو
         //  (۱۴۰۵/۰۷/۰۵): «هر بخش رو باز می‌کنم جدول‌ها یک ثانیه بعد میان.»
         //  ریشه دقیقاً همین خط بود: `Save()` یک نوشتنِ بادوام است

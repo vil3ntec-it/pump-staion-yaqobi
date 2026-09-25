@@ -626,10 +626,15 @@ internal static class VerifyProbe
         Console.WriteLine("── ۱۵) اشتراک و پلن‌ها + کلیدِ آزمایشِ بی‌اشتراک");
         {
             var account = vm.Sections.First(s => s.Id == "account");
+            //  ⚠️ «‹ برگشت به برنامه»ی بندِ ۱۴ به بخشی برمی‌گردد که از آن آمده
+            //  بودیم (پروفایل و چت «آخرین بخش» نمی‌شوند، ۳.۱.۱۷۶)، پس پروفایل
+            //  همان‌طور باز می‌شود که کاربر بازش می‌کند: با دکمهٔ سربرگ.
+            Wait(win, vm.GoAsync(account));
+            for (var i = 0; i < 10; i++) Pump(win);
             var vip = (VipSectionViewModel)account.SubSections.First(s => s.Id == "vip");
             account.ShowSubCommand.Execute(vip);
             for (var i = 0; i < 20; i++) Pump(win);
-            Check("صفحهٔ اشتراک و پلن‌ها باز شد", vm.Content == vip);
+            Check("صفحهٔ اشتراک و پلن‌ها باز شد", vm.Content == vip, (vm.Content as SectionViewModel)?.Id ?? vm.Content?.GetType().Name ?? "null");
             Check("چهار پلن با قیمتِ خالی", vip.Plans.Count == 4
                   && vip.Plans.Count(p => p.Price == "—") == 3, $"{vip.Plans.Count} پلن");
             Check("پشتیبانی همیشه باز است", vip.SupportText.StartsWith("✅"), vip.SupportText);
