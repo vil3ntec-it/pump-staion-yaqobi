@@ -102,7 +102,7 @@ public sealed partial class VipSectionViewModel : SectionViewModel
 
         StateText = Entitlements.TestDeny
             ? "⚠️ فقط آزمایش است — قفل‌ها را همان‌طور که مشتریِ بی‌اشتراک می‌بیند نشان می‌دهد."
-            : st.NotActivated ? "کدِ شش‌رقمی را در «پروفایل» بزنید."
+            : st.NotActivated ? "از «پروفایل ← حساب و ورود» وارد شوید و نامِ پمپ را بزنید؛ دورهٔ آزمایشی خودش می‌آید."
             : open ? "کارهای ابری باز است." : "کارهای ابری بسته است؛ دفتر و پشتیبانی باز.";
 
         GraceText = !Entitlements.TestDeny && st.InGrace

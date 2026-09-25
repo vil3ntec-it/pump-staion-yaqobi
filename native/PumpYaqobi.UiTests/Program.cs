@@ -131,6 +131,9 @@ internal static class Program
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- livestack <live.json> [پوشه]
         //  برنامهٔ واقعی با پنلِ خانگیِ واقعی و سرورِ حسابِ واقعی — بی هیچ نشانی
         if (outDir.Equals("livestack", StringComparison.OrdinalIgnoreCase)) return LiveStackProbe.Run(args);
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- signuptrial <live.json> [پوشه]
+        //  «حساب ساختم و کد را زدم، ولی ۳۰ روزِ آزمایشی را ندادند» — همان راه، از خودِ صفحهٔ ورود
+        if (outDir.Equals("signuptrial", StringComparison.OrdinalIgnoreCase)) return SignUpTrialProbe.Run(args);
         //  «تست بزن ببین لاگین می‌شود، کد بزنی چه می‌شود، حساب ساخته می‌شود یا نه»
         if (outDir.Equals("cloudlogin", StringComparison.OrdinalIgnoreCase)) return CloudLoginProbe.Run();
         //  «تو کادرها + @ # ﷼ ( ) ؟ ؛ : , . نوشته نمی‌شوند»

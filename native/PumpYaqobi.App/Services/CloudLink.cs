@@ -550,7 +550,7 @@ public sealed partial class CloudLink
             && !string.Equals(seen, _settings.CloudStationId, StringComparison.Ordinal))
             return CloudResult.No(
                 "این دستگاه روی پمپِ دیگری ثبت شده است. اگر واقعاً پمپ را عوض کرده‌اید، "
-                + "دوباره با کدِ شش‌رقمیِ همان پمپ فعال کنید.", "station_mismatch");
+                + "از «پروفایل ← جدا کردنِ این دستگاه» جدا کنید و با حسابِ همان پمپ دوباره وارد شوید.", "station_mismatch");
         if (seen.Length > 0) _settings.CloudStationId = seen;
         if (StationCodeOf(me) is { Length: > 0 } seenCode) _settings.CloudStationCode = seenCode;
         ReadSubscription(me);
