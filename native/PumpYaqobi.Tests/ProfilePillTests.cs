@@ -172,4 +172,33 @@ public class ProfilePillTests
         var linked = vm.Split("public void TickLinkDot()")[1].Split("[RelayCommand]")[0];
         Assert.DoesNotContain("http", linked);
     }
+
+    /// <summary>
+    /// ⛔ نامِ اشتراک همان است که واقعاً هست (۱۴۰۵/۰۷/۱۳، با سرورِ واقعی دیده
+    /// شد): دورهٔ آزمایشیِ حسابِ تازه «VIP» نیست و پلنِ استاندارد هم نه. مجوزِ
+    /// سرورِ حساب برای اشتراکِ خریده‌شده **کدِ پلن** را می‌فرستد (`vip`)، نه عنوانش.
+    /// </summary>
+    [Theory]
+    [InlineData("دوره‌ی آزمایشی", "آزمایشی")]
+    [InlineData("std", "استاندارد")]
+    [InlineData("vip", "VIP")]
+    [InlineData("VIP", "VIP")]
+    [InlineData("perm", "دائمی")]
+    [InlineData("", "VIP")]
+    public void NameEshterak_Haman_Ast_Ke_Hast(string planTitle, string kind)
+    {
+        Assert.Equal(kind, PumpYaqobi.App.ViewModels.Sections.AccountSectionViewModel.KindOf(planTitle));
+    }
+
+    [Fact]
+    public void Sarbarg_Va_Profile_HameyeEshterakhara_VIP_Nemikhanand()
+    {
+        var main = Read("PumpYaqobi.App", "Views", "MainWindow.axaml");
+        Assert.DoesNotContain("<TextBlock Text=\"VIP\"", main);
+        var profile = Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml");
+        Assert.DoesNotContain("💎 اشتراکِ VIP", profile);
+        //  و سرورِ حساب هر بار که مجوز عوض شد خبر می‌دهد، نه فقط سرِ باز کردنِ پروفایل
+        var vm = Read("PumpYaqobi.App", "ViewModels", "MainViewModel.cs");
+        Assert.Contains("CloudLink.LicenseChanged +=", vm);
+    }
 }

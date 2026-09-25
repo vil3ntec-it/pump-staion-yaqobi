@@ -13,8 +13,8 @@
 //  وگرنه گوشیِ کارمند نسخهٔ قدیمی را نگه می‌دارد و فایلِ تازه هرگز
 //  نمی‌رسد. cloud.js اضافه شد و جوابِ درخواستِ ناموفق عوض شد، پس v3؛
 //  صفحهٔ «کدِ پمپ» و جداسازیِ هر پمپ، پس v4؛ دو درِ «حساب‌ها/کارمندان»، پس v5؛
-//  update.js اضافه شد، پس v6.
-var CACHE = 'pump-kar-v8';
+//  update.js اضافه شد، پس v6؛ پوشِ خبرها (app.js عوض شد)، پس v9.
+var CACHE = 'pump-kar-v9';
 var SHELL = ['./', './index.html', './app.js', './cloud.js', './update.js', './manifest.json'];
 
 self.addEventListener('install', function (e) {
@@ -70,4 +70,44 @@ self.addEventListener('fetch', function (e) {
       });
     })
   );
+});
+
+/*
+ * ══ پوشِ خبرها — «اپ بسته باشد، پیام برسد» (۱۴۰۵/۰۷/۱۳) ═══════════════════
+ *
+ * سرورِ خانگی با هر خبرِ تازه در عکسِ زندهٔ پمپ پوش می‌فرستد
+ * (‎stations/alert-push.js‎). روی آیفون این تنها راه است: اپِ بسته هیچ کدی
+ * اجرا نمی‌کند جز همین سرویس‌ورکر، و آن هم فقط وقتی پوش برسد.
+ *
+ * ⚠️ ‎userVisibleOnly‎: هر پوشی **باید** اعلان نشان بدهد — وگرنه سافاری
+ * اشتراک را باطل می‌کند. پس حتی بستهٔ خراب هم یک اعلانِ ساده می‌سازد.
+ */
+self.addEventListener('push', function (e) {
+  var d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (err) {
+    try { d = { body: e.data ? e.data.text() : '' }; } catch (err2) { d = {}; }
+  }
+  var title = d.title || 'خبرِ پمپ';
+  var opts = {
+    body: d.body || 'خبرِ تازه‌ای از پمپ رسید.',
+    tag: d.tag || 'pump-alert',
+    renotify: true,
+    dir: 'rtl',
+    lang: 'fa',
+    icon: '../icons/icon-192.png',
+    badge: '../icons/icon-192.png',
+    data: { url: d.url || './' }
+  };
+  e.waitUntil(self.registration.showNotification(title, opts));
+});
+
+self.addEventListener('notificationclick', function (e) {
+  e.notification.close();
+  var target = new URL((e.notification.data && e.notification.data.url) || './', self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].url.indexOf(self.registration.scope) === 0 && 'focus' in list[i]) return list[i].focus();
+    }
+    return self.clients.openWindow ? self.clients.openWindow(target) : null;
+  }));
 });

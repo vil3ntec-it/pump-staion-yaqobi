@@ -452,11 +452,56 @@
     ];
   }
 
+  /*
+   *  ══ پوشِ خبرها — تنها راهِ خبر گرفتنِ آیفونِ بسته (۱۴۰۵/۰۷/۱۳) ══════
+   *
+   *  روی آیفون هیچ کارِ پس‌زمینه‌ای جز پوش نیست، و تا امروز این اپ هیچ جا
+   *  برای پوش ثبت نمی‌شد و سرویس‌ورکرش رویدادِ ‎push‎ نداشت — یعنی اپِ بسته
+   *  هیچ‌وقت هیچ خبری نمی‌گرفت. حالا گوشی با **رمزِ خواندنِ همان پمپ** در
+   *  سرورِ خانگی ثبت می‌شود و خودِ سرور، با هر خبرِ تازه در عکسِ زنده،
+   *  پوش می‌فرستد (‎stations/alert-push.js‎ در ریپوی ‎server‎).
+   *
+   *  ⚠️ دو نشانی به ترتیب: نشانیِ خانگیِ همین پمپ، و بعد همان سرورِ خانگی از
+   *  راهِ تونل — نشانیِ قفل‌شدهٔ ‎cloud.js‎. گوشی‌ای که بیرون از شبکهٔ پمپ است
+   *  هم ثبت می‌شود؛ و بعدِ ثبت، رسیدنِ پوش دیگر به شبکهٔ گوشی بند نیست.
+   *  ⛔ نشانی از تنظیمات یا نوارِ نشانی خوانده نمی‌شود.
+   */
+  var TUNNEL = 'https://api.vill3n.top';
+
+  function httpBaseOf(server) {
+    var b = String(server || '').trim().replace(/\/+$/, '');
+    if (!b) return '';
+    if (/^wss:\/\//i.test(b)) return 'https://' + b.slice(6);
+    if (/^ws:\/\//i.test(b)) return 'http://' + b.slice(5);
+    if (!/^https?:\/\//i.test(b)) return 'https://' + b;
+    return b;
+  }
+
+  /** نشانی‌هایی که ثبتِ پوش امتحان می‌کند — تکراری نه. */
+  function pushBases(c) {
+    var out = [];
+    var home = httpBaseOf(c && c.srv);
+    if (home) out.push(home);
+    if (out.indexOf(TUNNEL) < 0) out.push(TUNNEL);
+    return out;
+  }
+
+  /** ‎base64url‎ ⇒ بایت — همان شکلی که ‎applicationServerKey‎ می‌خواهد. */
+  function b64uBytes(s) {
+    var b = String(s || '').replace(/-/g, '+').replace(/_/g, '/');
+    while (b.length % 4) b += '=';
+    var raw = (typeof atob === 'function') ? atob(b) : Buffer.from(b, 'base64').toString('binary');
+    var out = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+
   if (typeof module !== 'undefined' && module.exports)
     module.exports = {
       answer: answer, askedMonth: askedMonth, monthHit: monthHit,
       norm: norm, num: num, verifyPassword: verifyPassword,
-      wsBaseOf: wsBaseOf, doorsFor: doorsFor, freshAlerts: freshAlerts
+      wsBaseOf: wsBaseOf, doorsFor: doorsFor, freshAlerts: freshAlerts,
+      httpBaseOf: httpBaseOf, pushBases: pushBases, b64uBytes: b64uBytes, TUNNEL: TUNNEL
     };
 
   if (typeof document === 'undefined') return;   // آزمونِ Node این‌جا می‌ایستد
@@ -502,11 +547,16 @@
   function switchStation(stn) {
     var next = String(stn || 'pump1');
     if (cfg.stn === next && data) return;
+    //  ⛔ خبرِ پمپِ قبلی نباید به این گوشی برسد: اشتراکِ پوش **باطل** می‌شود
+    //  (نشانی‌اش برای همیشه می‌میرد، پس سرورِ پمپِ قبلی دیگر راهی ندارد) و
+    //  برای پمپِ تازه از نو ساخته می‌شود.
+    if (cfg.stn && cfg.stn !== next) dropPush(cfg);
     try {
       if (cfg.stn) {
         localStorage.removeItem(stnKey('snap'));
         localStorage.removeItem(stnKey('told'));
         localStorage.removeItem(stnKey('mode'));
+        localStorage.removeItem(stnKey('push'));
       }
       localStorage.removeItem(KEY + '.snap');      // کلیدِ قدیمیِ بی‌پمپ
       localStorage.removeItem(KEY + '.told');
@@ -1315,10 +1365,25 @@
           ? 'برای این‌که وقتی جای دیگری نگاه می‌کنید هم خبر بگیرید، «اعلان روشن شود» را بزنید.'
           : hasBackground()
             ? 'خبرها حتی وقتی برنامه بسته باشد هم می‌آیند.'
-            : 'اعلان روشن است. برای خبر گرفتن وقتی برنامه بسته است، فایلِ نصبِ اندروید را بگذارید.';
+            : pushHint();
     }
 
     pushNew(list);
+  }
+
+  /** نوشتهٔ «برنامهٔ بسته هم خبر می‌گیرد؟» — راستش را می‌گوید، نه امیدش را. */
+  function pushHint() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window))
+      return 'این مرورگر پوش ندارد؛ روی آیفون اپ را با «افزودن به صفحهٔ اصلی» نصب کنید و از همان‌جا باز کنید.';
+    if (pushState === 'ok') return '✅ خبرها حتی وقتی اپ بسته باشد هم روی همین گوشی می‌آیند.';
+    if (pushState === 'fail') return '⚠️ اعلان روشن است ولی ثبتِ خبرِ پس‌زمینه نشد — به سرورِ پمپ نرسیدیم؛ خودش دوباره امتحان می‌کند.';
+    return 'اعلان روشن است؛ ثبتِ خبرِ پس‌زمینه در جریان است…';
+  }
+
+  function renderAlertHint() {
+    var hint = $('alertHint');
+    if (hint && typeof Notification !== 'undefined' && Notification.permission === 'granted' && !hasBackground())
+      hint.textContent = pushHint();
   }
 
   /** روی اپِ اندروید، کارِ پس‌زمینه هست؛ در مرورگر و آیفون نیست. */
@@ -1337,6 +1402,93 @@
     try {
       if (window.PumpAlerts && window.PumpAlerts.setup)
         window.PumpAlerts.setup(cfg.srv || '', cfg.tok || '', cfg.stn || 'pump1');
+    } catch (e) { }
+    registerPush(false);
+  }
+
+  /** روی این دستگاه پوش شدنی است؟ (اندروید کارِ پس‌زمینهٔ خودش را دارد) */
+  function pushCan() {
+    return typeof navigator !== 'undefined' && 'serviceWorker' in navigator
+      && typeof window !== 'undefined' && 'PushManager' in window
+      && typeof Notification !== 'undefined' && Notification.permission === 'granted'
+      && !hasBackground() && !!cfg.tok && !!cfg.stn;
+  }
+
+  var pushBusy = false;
+  var pushState = '';          // برای نوشتهٔ زیرِ کادرِ خبرها
+
+  /**
+   * ثبتِ همین گوشی برای پوشِ خبرهای همین پمپ.
+   *
+   * ⚠️ روزی یک بار بس است (‎stnKey('push')‎)؛ هر بار که تنظیمات عوض شود صدا
+   * زده می‌شود، و بی این ترمز هر عوض شدنِ صفحه یک درخواست می‌زد.
+   */
+  function registerPush(force) {
+    if (!pushCan() || pushBusy) return Promise.resolve(false);
+    var mark = '';
+    try { mark = localStorage.getItem(stnKey('push')) || ''; } catch (e) { }
+    var parts = mark.split('|');
+    if (!force && parts[1] === cfg.tok && Date.now() - Number(parts[0] || 0) < 24 * 3600 * 1000) {
+      pushState = 'ok';
+      return Promise.resolve(true);
+    }
+    pushBusy = true;
+    var stn = cfg.stn, tok = cfg.tok;
+    var bases = pushBases(cfg);
+    return navigator.serviceWorker.ready.then(function (reg) {
+      var i = 0;
+      function next() {
+        if (i >= bases.length) return false;
+        var base = bases[i++];
+        var url = base + '/api/stations/' + encodeURIComponent(stn) + '/push?token=' + encodeURIComponent(tok);
+        return fetch(url, { cache: 'no-store' }).then(function (r) {
+          if (!r.ok) throw new Error('http ' + r.status);
+          return r.json();
+        }).then(function (j) {
+          if (!j || !j.vapidPublicKey) throw new Error('no key');
+          return reg.pushManager.getSubscription().then(function (old) {
+            return old || reg.pushManager.subscribe({
+              userVisibleOnly: true, applicationServerKey: b64uBytes(j.vapidPublicKey)
+            });
+          });
+        }).then(function (sub) {
+          return fetch(url, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subscription: sub.toJSON ? sub.toJSON() : sub, label: 'اپِ کارمندان' })
+          }).then(function (r) {
+            if (!r.ok) throw new Error('http ' + r.status);
+            try { localStorage.setItem(stnKey('push'), Date.now() + '|' + tok); } catch (e) { }
+            pushState = 'ok';
+            return true;
+          });
+        }).catch(function () { return next(); });
+      }
+      return next();
+    }).then(function (ok) {
+      if (!ok) pushState = 'fail';
+      return ok;
+    }).catch(function () { pushState = 'fail'; return false; })
+      .then(function (ok) { pushBusy = false; try { renderAlertHint(); } catch (e) { } return ok; });
+  }
+
+  /** اشتراکِ پوشِ پمپِ قبلی را باطل می‌کند — بهترین تلاش، بی‌صدا. */
+  function dropPush(old) {
+    try {
+      if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+      var stn = old.stn, tok = old.tok, bases = pushBases(old);
+      navigator.serviceWorker.ready.then(function (reg) {
+        return reg.pushManager.getSubscription();
+      }).then(function (sub) {
+        if (!sub) return;
+        var ep = sub.endpoint;
+        bases.forEach(function (base) {
+          try {
+            fetch(base + '/api/stations/' + encodeURIComponent(stn) + '/push?token=' + encodeURIComponent(tok)
+              + '&endpoint=' + encodeURIComponent(ep), { method: 'DELETE' }).catch(function () { });
+          } catch (e) { }
+        });
+        return sub.unsubscribe();
+      }).catch(function () { });
     } catch (e) { }
   }
 
@@ -1512,7 +1664,9 @@
       if (typeof Notification === 'undefined') return;
       // ⚠️ درخواستِ اجازه باید از دلِ یک کلیکِ واقعی بیاید، وگرنه مرورگر
       // بی‌صدا ردش می‌کند و کاربر فکر می‌کند خراب است.
-      try { Notification.requestPermission().then(renderAlerts); } catch (e) { }
+      try {
+        Notification.requestPermission().then(function () { renderAlerts(); registerPush(true); });
+      } catch (e) { }
       try { if (window.PumpAlerts && window.PumpAlerts.checkNow) window.PumpAlerts.checkNow(); } catch (e) { }
     });
 

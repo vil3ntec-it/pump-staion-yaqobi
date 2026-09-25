@@ -157,7 +157,7 @@
                همین‌جا می‌گوید: «VIP · ۴۲ روز» یا «پروفایل». -->
           <Button Classes="pill-btn profile" Padding="13,4"
                   Command="{Binding GoCommand}" CommandParameter="{Binding Account}"
-                  ToolTip.Tip="پروفایل: ورود با گوگل، اشتراکِ VIP و کدِ پمپ برای اپِ کارمندان">
+                  ToolTip.Tip="پروفایل: حساب، اشتراک و کدِ پمپ برای اپِ کارمندان">
             <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
               <TextBlock Text="👤" FontSize="13" VerticalAlignment="Center" />
               <StackPanel VerticalAlignment="Center">
@@ -168,7 +168,7 @@
                            IsVisible="{Binding Account.PillSub, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
               </StackPanel>
               <Border Classes="pill" Background="#FFD700" Padding="6,0" IsVisible="{Binding Account.VipActive}">
-                <TextBlock Text="VIP" FontSize="10" FontWeight="Black" Foreground="#1a1a1a" />
+                <TextBlock Text="فعال" FontSize="10" FontWeight="Black" Foreground="#1a1a1a" />
               </Border>
             </StackPanel>
           </Button>

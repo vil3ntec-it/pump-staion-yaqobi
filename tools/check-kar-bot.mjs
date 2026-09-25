@@ -501,5 +501,38 @@ console.log('\n── به‌روزرسانیِ خودکار ──────�
      'هر پنج فایلِ اپ با هم به‌روز می‌شوند');
 }
 
+// ══ خبر به گوشیِ بسته — پوش (آیفون) و تونل (اندروید) ═══════════════════════
+//  ۱۴۰۵/۰۷/۱۳: تا امروز سرویس‌ورکر رویدادِ ‎push‎ نداشت و هیچ گوشی‌ای جایی
+//  ثبت نمی‌شد، پس آیفونِ بسته هیچ‌وقت خبر نمی‌گرفت؛ و کارِ پس‌زمینهٔ اندروید
+//  فقط نشانیِ شبکهٔ پمپ را می‌زد. سنجهٔ زنده‌اش (سرورِ واقعی + کرومیوم +
+//  بازکردنِ بستهٔ رمزشده) ‎test/station-push.mjs‎ در ریپوی ‎server‎ است.
+console.log('\n— خبر به گوشیِ بسته');
+{
+  const { readFileSync } = await import("node:fs");
+  const appSrc = readFileSync(new URL('../kar/app.js', import.meta.url), 'utf8');
+  const swSrc  = readFileSync(new URL('../kar/sw.js', import.meta.url), 'utf8');
+  const alerts = readFileSync(new URL('../android/app/src/main/java/top/yaqobipump/app/Alerts.java', import.meta.url), 'utf8');
+  const kar = require(path.join(here, '..', 'kar', 'app.js'));
+
+  ok(kar.TUNNEL === 'https://api.vill3n.top', 'نشانیِ تونل همان نشانیِ قفل‌شدهٔ cloud.js است');
+  ok(!/TUNNEL\s*=\s*(localStorage|location|p\.get|cfg)/.test(appSrc), 'نشانیِ تونل از تنظیمات خوانده نمی‌شود');
+  const b = kar.pushBases({ srv: 'ws://192.168.1.9:4701' });
+  ok(b[0] === 'http://192.168.1.9:4701' && b[1] === kar.TUNNEL && b.length === 2, 'ثبتِ پوش اول نشانیِ خانگی، بعد تونل');
+  ok(kar.pushBases({ srv: 'wss://api.vill3n.top' }).length === 1, 'نشانیِ تکراری دو بار امتحان نمی‌شود');
+  ok(kar.pushBases({}).join() === kar.TUNNEL, 'بی نشانیِ خانگی هم (فقط کدِ پمپ) از تونل ثبت می‌شود');
+  ok(kar.b64uBytes('AQID_-8').length === 5 && kar.b64uBytes('AQID_-8')[3] === 0xff, 'کلیدِ VAPID درست به بایت می‌رسد');
+  ok(/self\.addEventListener\('push'/.test(swSrc) && /showNotification/.test(swSrc), 'سرویس‌ورکر رویدادِ push دارد و اعلان نشان می‌دهد');
+  ok(/notificationclick/.test(swSrc), 'زدنِ اعلان اپ را باز می‌کند');
+  ok(!/pump-kar-v8'/.test(swSrc), 'شمارهٔ کشِ سرویس‌ورکر بالا رفته');
+  ok(/\/api\/stations\/' \+ encodeURIComponent\(stn\) \+ '\/push\?token='/.test(appSrc), 'ثبت با رمزِ خواندنِ همان پمپ');
+  ok(/if \(cfg\.stn && cfg\.stn !== next\) dropPush\(cfg\)/.test(appSrc) && /sub\.unsubscribe\(\)/.test(appSrc),
+     '⛔ رفتن به پمپِ دیگر اشتراکِ پوشِ پمپِ قبلی را باطل می‌کند');
+  ok(/!hasBackground\(\)/.test(appSrc.slice(appSrc.indexOf('function pushCan'))), 'روی اندروید کارِ پس‌زمینهٔ خودش؛ پوش دوباره نمی‌رود');
+  ok(/static final String TUNNEL = "https:\/\/api\.vill3n\.top";/.test(alerts), 'اندروید: نشانیِ تونل در کد قفل است');
+  ok(/alerts = fetch\(TUNNEL, token, station\)/.test(alerts), 'اندروید: نشانیِ خانگی جواب نداد ⇒ همان سرور از تونل');
+  ok(/if \(s\.isEmpty\(\) && t\.isEmpty\(\)\) cancel\(c\); else schedule\(c\);/.test(alerts),
+     'اندروید: بی نشانیِ خانگی ولی با رمز، کار چیده می‌ماند');
+}
+
 console.log(bad ? '\n' + bad + ' آزمون شکست خورد' : '\nهمه درست');
 process.exit(bad ? 1 : 0);

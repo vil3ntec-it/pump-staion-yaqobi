@@ -136,6 +136,10 @@ public sealed partial class MainViewModel : ObservableObject
         //  تازه پرسیده شود. شرحِ کامل در ‎OnLedgerSwitchedAsync‎.
         AppHost.Current.LedgerSwitched += () =>
             Dispatcher.UIThread.Post(() => _ = OnLedgerSwitchedAsync());
+        //  مجوزِ تازه‌ای که حلقهٔ پس‌زمینه گرفت (مدیر اشتراک داد، تمدید کرد
+        //  یا برداشت) ⇒ سربرگ و پروفایل همان لحظه، بی باز کردنِ دوبارهٔ
+        //  پروفایل. شرحش بالای ‎CloudLink.LicenseChanged‎.
+        CloudLink.LicenseChanged += () => Dispatcher.UIThread.Post(() => Account.RefreshAll());
         // فهرست‌های نام‌دارِ پیشنهادِ خودکار — همان ‎datalist‎های سایت
         var host0 = AppHost.Current;
         Controls.Suggest.Provide("staff", async () => (await host0.Attendance.StaffAsync()).Select(x => x.Name ?? ""));
