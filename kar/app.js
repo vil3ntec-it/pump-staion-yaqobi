@@ -498,12 +498,50 @@
     return out;
   }
 
+  /*
+   *  ══ گروهِ کارکنانِ همین پمپ (۱۴۰۵/۰۷/۱۳) ═══════════════════════════════
+   *
+   *  خواستهٔ صاحب ریپو: «گروپ چت هم برای کارمندان و مدیر و میرزا استن… نه
+   *  کاربران.» همان گروهی است که برنامهٔ کامپیوتر دارد، روی پوشهٔ **همین پمپ**
+   *  در سرورِ خانگی (‎/api/stations/<کد>/chat‎) — نه موضوعِ سراسریِ قدیم.
+   *
+   *  ⛔ با رمزِ خواندنِ همین پمپ؛ مشتریِ کیو‌آر هیچ‌کدام را ندارد.
+   *  ⛔ همان دو نشانیِ پوش (خانگی، بعد تونل) — نشانی از تنظیمات خوانده نمی‌شود.
+   *  ⚠️ سرور فقط ۱۵ روز نگه می‌دارد؛ گوشی هم بیش از ۱۵ روز نگه نمی‌دارد.
+   */
+  var CHAT_KEEP_DAYS = 15;
+
+  function chatUrl(base, code, since) {
+    var u = base + '/api/stations/' + encodeURIComponent(String(code || '')) + '/chat';
+    if (since != null) u += '?since=' + Math.max(0, Math.floor(Number(since) || 0)) + '&limit=200';
+    return u;
+  }
+
+  /** یکی کردنِ پیام‌ها — یکتا با ‎seq‎ (یا ‎cid‎ برای درراه)، کهنه‌تر از ۱۵ روز بیرون. */
+  function mergeChat(have, incoming, nowMs) {
+    var cut = (nowMs || Date.now()) - CHAT_KEEP_DAYS * 86400000;
+    var byKey = {};
+    function keyOf(m) { return m.seq ? 's' + m.seq : 'c' + (m.cid || ''); }
+    (have || []).concat(incoming || []).forEach(function (m) {
+      if (!m || !m.text) return;
+      if ((m.at || 0) && m.at < cut) return;
+      //  پیامِ خودم که حالا شماره گرفت، جای نسخهٔ درراه را می‌گیرد
+      if (m.seq && m.cid && byKey['c' + m.cid]) delete byKey['c' + m.cid];
+      if (!m.seq && m.cid && Object.keys(byKey).some(function (k) { return byKey[k].cid === m.cid && byKey[k].seq; })) return;
+      byKey[keyOf(m)] = m;
+    });
+    return Object.keys(byKey).map(function (k) { return byKey[k]; })
+      .sort(function (a, b) { return (a.seq || 1e15) - (b.seq || 1e15) || (a.at || 0) - (b.at || 0); })
+      .slice(-300);
+  }
+
   if (typeof module !== 'undefined' && module.exports)
     module.exports = {
       answer: answer, askedMonth: askedMonth, monthHit: monthHit,
       norm: norm, num: num, verifyPassword: verifyPassword,
       wsBaseOf: wsBaseOf, doorsFor: doorsFor, freshAlerts: freshAlerts,
-      httpBaseOf: httpBaseOf, pushBases: pushBases, b64uBytes: b64uBytes, TUNNEL: TUNNEL
+      httpBaseOf: httpBaseOf, pushBases: pushBases, b64uBytes: b64uBytes, TUNNEL: TUNNEL,
+      chatUrl: chatUrl, mergeChat: mergeChat, CHAT_KEEP_DAYS: CHAT_KEEP_DAYS
     };
 
   if (typeof document === 'undefined') return;   // آزمونِ Node این‌جا می‌ایستد
@@ -559,6 +597,7 @@
         localStorage.removeItem(stnKey('told'));
         localStorage.removeItem(stnKey('mode'));
         localStorage.removeItem(stnKey('push'));
+        localStorage.removeItem(stnKey('chat'));
       }
       localStorage.removeItem(KEY + '.snap');      // کلیدِ قدیمیِ بی‌پمپ
       localStorage.removeItem(KEY + '.told');
@@ -566,6 +605,7 @@
     cfg.stn = next;
     data = null;
     toldKeys = {};
+    chatMsgs = null;
     unlocked = false;
     fromCloud = false;
     mode = '';
@@ -599,13 +639,13 @@
   var NAVS = {
     owner: [
       ['paneDash', '🏠 خانه'], ['paneSec', '📚 بخش‌ها'],
-      ['paneDebt', '👥 قرض‌داران'], ['paneTank', '⛽ مخزن'], ['paneBot', '🤖 ربات']
+      ['paneDebt', '👥 قرض‌داران'], ['paneTank', '⛽ مخزن'], ['paneChat', '💬 گروه'], ['paneBot', '🤖 ربات']
     ],
     staff: [
-      ['paneStaff', '🚦 تیل دارد؟'], ['paneTank', '⛽ مخزن'], ['paneBot', '🤖 ربات']
+      ['paneStaff', '🚦 تیل دارد؟'], ['paneTank', '⛽ مخزن'], ['paneChat', '💬 گروه'], ['paneBot', '🤖 ربات']
     ]
   };
-  var ALL_PANES = ['paneHome', 'paneDash', 'paneStaff', 'paneBot', 'paneDebt', 'paneTank', 'paneSec'];
+  var ALL_PANES = ['paneHome', 'paneDash', 'paneStaff', 'paneBot', 'paneDebt', 'paneTank', 'paneSec', 'paneChat'];
 
   function loadMode() {
     try { mode = localStorage.getItem(stnKey('mode')) || ''; } catch (e) { mode = ''; }
@@ -1666,6 +1706,10 @@
       if (b) goPane(b.getAttribute('data-pane'));
     });
 
+    $('inChatName').value = chatName();
+    $('btnChatSend').addEventListener('click', chatSend);
+    $('inChat').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); chatSend(); } });
+
     $('btnNotify').addEventListener('click', function () {
       if (typeof Notification === 'undefined') return;
       // ⚠️ درخواستِ اجازه باید از دلِ یک کلیکِ واقعی بیاید، وگرنه مرورگر
@@ -1724,11 +1768,138 @@
     try { if (window.PumpAndroid && PumpAndroid.boot) PumpAndroid.boot('ready'); } catch (e) { }
   }
 
+  // ══════════════════════════════════════════════════════════════════════
+  //  گروهِ کارکنان
+  // ══════════════════════════════════════════════════════════════════════
+
+  var chatMsgs = null, chatTimer = 0, chatBusy = false;
+
+  function chatLoad() {
+    if (chatMsgs) return chatMsgs;
+    try { chatMsgs = JSON.parse(localStorage.getItem(stnKey('chat')) || '[]'); } catch (e) { chatMsgs = []; }
+    chatMsgs = mergeChat(chatMsgs, [], Date.now());
+    return chatMsgs;
+  }
+
+  function chatSave() { try { localStorage.setItem(stnKey('chat'), JSON.stringify(chatMsgs || [])); } catch (e) { } }
+
+  function chatSince() {
+    return (chatLoad().filter(function (m) { return m.seq; }).map(function (m) { return m.seq; }).pop()) || 0;
+  }
+
+  function chatName() {
+    try { return localStorage.getItem(KEY + '.chatname') || ''; } catch (e) { return ''; }
+  }
+
+  function chatTime(at) {
+    if (!at) return '';
+    var d = new Date(at);
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  function renderChat() {
+    var box = $('chatList');
+    if (!box) return;
+    var me = chatName();
+    var list = chatLoad();
+    box.innerHTML = list.length ? list.map(function (m) {
+      var mine = m.mine || (me && m.from === me);
+      var role = m.role === 'admin' ? 'مدیر' : m.role === 'mirza' ? 'میرزا' : 'کارمند';
+      return '<div class="bub' + (mine ? ' mine' : '') + '">' +
+        (mine ? '' : '<div class="who">' + esc(m.from) + ' <span class="sub">· ' + role + '</span></div>') +
+        '<div>' + esc(m.text) + '</div>' +
+        '<div class="sub">' + chatTime(m.at) + (m.seq ? '' : ' · ⏳ در صف') + '</div></div>';
+    }).join('') : '<div class="sub">هنوز پیامی در گروه نیست. فقط کارمندان، مدیر و میرزای همین پمپ این گروه را می‌بینند.</div>';
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function chatFetch(base, since) {
+    return fetch(chatUrl(base, cfg.stn, since), {
+      headers: { Authorization: 'Bearer ' + cfg.tok }, cache: 'no-store'
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, status: r.status, j: j }; });
+    });
+  }
+
+  /** یک بار پرسیدن — از خانه، وگرنه از تونل. فقط وقتی صفحهٔ گروه جلوی چشم است. */
+  function chatPoll() {
+    if (chatBusy || !cfg.stn || !cfg.tok) return Promise.resolve(false);
+    chatBusy = true;
+    var bases = pushBases(cfg), i = 0, since = chatSince();
+    function next() {
+      if (i >= bases.length) { $('chatState').textContent = 'به سرورِ پمپ نرسیدیم — دوباره امتحان می‌شود'; return false; }
+      var base = bases[i++];
+      return chatFetch(base, since).then(function (r) {
+        if (r.status === 401 || r.status === 404) {
+          $('chatState').textContent = 'گروه روی سرورِ پمپ باز نشد — سرور کهنه است یا کدِ پمپ عوض شده';
+          return false;
+        }
+        if (!r.ok) return next();
+        //  پوشهٔ پمپ روی سرور از نو ساخته شد ⇒ از صفر
+        if (typeof r.j.last === 'number' && r.j.last < since) { since = 0; chatMsgs = []; return chatFetch(base, 0).then(done); }
+        return done(r);
+      }, next);
+    }
+    function done(r) {
+      chatMsgs = mergeChat(chatLoad(), (r.j && r.j.messages) || [], Date.now());
+      chatSave();
+      $('chatState').textContent = 'وصل · پیام‌ها ' + CHAT_KEEP_DAYS + ' روز می‌مانند';
+      renderChat();
+      return true;
+    }
+    return next().then(function (x) { chatBusy = false; return x; }, function () { chatBusy = false; return false; });
+  }
+
+  function chatSend() {
+    var text = String($('inChat').value || '').trim();
+    var from = String($('inChatName').value || '').trim();
+    if (!text) return;
+    if (!from) { $('chatState').textContent = 'اول نامِ خودتان را بنویسید'; $('inChatName').focus(); return; }
+    try { localStorage.setItem(KEY + '.chatname', from); } catch (e) { }
+    var cid = 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    var role = mode === 'owner' ? 'admin' : 'staff';
+    chatMsgs = mergeChat(chatLoad(), [{ cid: cid, from: from, role: role, text: text, at: Date.now(), mine: true }], Date.now());
+    $('inChat').value = '';
+    renderChat();
+    var bases = pushBases(cfg), i = 0;
+    function next() {
+      if (i >= bases.length) { $('chatState').textContent = 'پیام نرفت — با وصل شدن دوباره بفرستید'; return; }
+      var base = bases[i++];
+      fetch(chatUrl(base, cfg.stn), {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + cfg.tok, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cid: cid, from: from, role: role, text: text })
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (!r.ok) {
+            if (r.status >= 500) return next();
+            $('chatState').textContent = (j && j.message) || 'پیام نرفت';
+            return;
+          }
+          if (j.message) { j.message.mine = true; chatMsgs = mergeChat(chatLoad(), [j.message], Date.now()); chatSave(); renderChat(); }
+        });
+      }, next);
+    }
+    next();
+  }
+
+  /** پرسیدنِ دوره‌ای فقط با صفحهٔ باز و جلوی چشم. */
+  function chatWatch(on) {
+    if (chatTimer) { clearInterval(chatTimer); chatTimer = 0; }
+    if (!on) return;
+    renderChat();
+    chatPoll();
+    chatTimer = setInterval(function () {
+      if (document.visibilityState === 'visible') chatPoll();
+    }, 6000);
+  }
+
   function goPane(id) {
     ALL_PANES.forEach(function (p) {
       var el = $(p);
       if (el) el.classList.toggle('hidden', p !== id);
     });
+    chatWatch(id === 'paneChat');
     //  خبرها روی صفحهٔ خانه نه — آن‌جا فقط دو در
     var ac = $('alertCard');
     if (ac && id === 'paneHome') ac.classList.add('hidden');

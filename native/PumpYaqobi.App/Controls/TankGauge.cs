@@ -62,6 +62,13 @@ public class TankGauge : Control
     public static readonly StyledProperty<double?> WaterPercentProperty =
         AvaloniaProperty.Register<TankGauge, double?>(nameof(WaterPercent));
 
+    /// <summary>
+    /// نقشهٔ کوچک (داشبورد): بی نامِ چهار تکه و بی زیرنویسِ آستانه — در
+    /// پهنای کم آن نوشته‌ها زیرِ ۸ پیکسل می‌شدند. خودِ شکل همان است.
+    /// </summary>
+    public static readonly StyledProperty<bool> CompactProperty =
+        AvaloniaProperty.Register<TankGauge, bool>(nameof(Compact));
+
     public static readonly StyledProperty<IBrush?> BodyBrushProperty =
         AvaloniaProperty.Register<TankGauge, IBrush?>(nameof(BodyBrush));
     public static readonly StyledProperty<IBrush?> BodyDeepBrushProperty =
@@ -76,7 +83,7 @@ public class TankGauge : Control
         AvaloniaProperty.Register<TankGauge, IBrush?>(nameof(ThresholdBrush));
 
     static TankGauge() => AffectsRender<TankGauge>(FillPercentProperty, FillTextProperty,
-        ThresholdPercentProperty, CaptionTextProperty, WaterPercentProperty,
+        ThresholdPercentProperty, CaptionTextProperty, WaterPercentProperty, CompactProperty,
         BodyBrushProperty, BodyDeepBrushProperty, RimBrushProperty, LabelBrushProperty,
         TextBrushProperty, ThresholdBrushProperty);
 
@@ -93,6 +100,7 @@ public class TankGauge : Control
 
     /// <summary>عددِ آب واقعی است؟ ‎null‎ یا ناجور ⇒ نه.</summary>
     public static bool HasWaterReading(double? water) => water is double w && double.IsFinite(w);
+    public bool Compact { get => GetValue(CompactProperty); set => SetValue(CompactProperty, value); }
     public IBrush? BodyBrush { get => GetValue(BodyBrushProperty); set => SetValue(BodyBrushProperty, value); }
     public IBrush? BodyDeepBrush { get => GetValue(BodyDeepBrushProperty); set => SetValue(BodyDeepBrushProperty, value); }
     public IBrush? RimBrush { get => GetValue(RimBrushProperty); set => SetValue(RimBrushProperty, value); }
@@ -174,7 +182,8 @@ public class TankGauge : Control
         Centered(ctx, FillCaption, semi, 12.5, lv.OilTop <= capTop ? Brushes.White : text, cx, capTop, 220,
                  shadow: lv.OilTop <= capTop);
 
-        //  ── برچسب‌های چهار تکه، و زیرنویسِ آستانه ──
+        //  ── برچسب‌های چهار تکه، و زیرنویسِ آستانه — نقشهٔ کوچک ندارد ──
+        if (Compact) return;
         Centered(ctx, ProbeLabel, semi, 11, label, ProbeX, 7, 90);
         Centered(ctx, OilFloatLabel, semi, 11, label, FloatX, 7, 110);
         Centered(ctx, PumpLabel, semi, 11, label, PumpX, 5, 120);

@@ -307,6 +307,13 @@ public sealed class AppHost
     /// </summary>
     public Func<string, Task>? GoSection { get; set; }
 
+    /// <summary>
+    /// بخشِ زندهٔ یک شناسه — برای «این حساب را باز کن» از بخشِ دیگر (چت ⇒
+    /// قرض‌داران). ⚠️ فقط پیدا می‌کند؛ رفتن به آن همچنان از <see cref="GoSection"/>
+    /// است تا قفلِ پلن و رمزِ بخش دور زده نشود.
+    /// </summary>
+    public Func<string, object?>? FindSection { get; set; }
+
     /// <summary>قرض‌های کهنه — «چند روز است هیچ ردیفی ندارد».</summary>
     public AgingService Aging { get; }
 

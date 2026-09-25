@@ -73,6 +73,10 @@
   .fig{background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:9px;text-align:center}
   .fig .l{color:var(--muted);font-size:.74rem} .fig .v{font-size:1.1rem;font-weight:800}
   .fig.bad{border-color:var(--red)} .fig.warn{border-color:var(--warn)}
+  .chat{max-height:58vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin:8px 0}
+  .bub{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:6px 10px;max-width:82%;align-self:flex-start}
+  .bub.mine{background:var(--chip);border-color:var(--accent);align-self:flex-end}
+  .bub .who{font-weight:800;color:var(--accent);font-size:.8rem}
   .list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
   .p-card{background:var(--bg);border:1px solid var(--line);border-right-width:5px;
         border-radius:11px;padding:9px 11px;cursor:pointer;text-align:start}
@@ -384,6 +388,20 @@
       <div class="counts" id="staffCounts"></div>
     </div>
     <div class="card"><div id="staffList"></div></div>
+  </section>
+
+  <!-- گروهِ کارکنانِ همین پمپ -->
+  <section id="paneChat" class="hidden">
+    <div class="card">
+      <h2>💬 گروهِ کارکنان</h2>
+      <div class="sub" id="chatState">کارمندان، مدیر و میرزای همین پمپ — مشتری‌ها راهی به این گروه ندارند.</div>
+      <div class="chat" id="chatList"></div>
+      <div class="row">
+        <input id="inChatName" placeholder="نامِ شما" style="width:130px;flex:0 0 130px">
+        <div class="grow"><input id="inChat" placeholder="پیام‌تان را بنویسید…" maxlength="2000"></div>
+        <button class="p" id="btnChatSend">فرستادن</button>
+      </div>
+    </div>
   </section>
 
   <!-- ربات -->

@@ -131,6 +131,9 @@ internal static class Program
         //  «مفاد و ضرر: کادرهای برابر + کشوی ماه و سال · مخزن: عنوانِ وسط و کادرِ جمله‌ها» (۱۴۰۵/۰۷/۱۳)
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- plstore [پوشه]
         if (outDir.Equals("plstore", StringComparison.OrdinalIgnoreCase)) return ProfitStorageProbe.Run(args);
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- chatroom [پوشه]
+        if (outDir.Equals("chatroom", StringComparison.OrdinalIgnoreCase)) return ChatProbe.Run(args);
+        if (outDir.Equals("groupchat", StringComparison.OrdinalIgnoreCase)) return GroupChatLive.Run(args);
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- livestack <live.json> [پوشه]
         //  برنامهٔ واقعی با پنلِ خانگیِ واقعی و سرورِ حسابِ واقعی — بی هیچ نشانی
         if (outDir.Equals("livestack", StringComparison.OrdinalIgnoreCase)) return LiveStackProbe.Run(args);
@@ -478,31 +481,30 @@ internal static class Program
 
         Console.WriteLine("── میانبرهای صفحه‌کلید ──");
 
-        // ── Ctrl+Shift+3 → بخشِ سوم (ورق‌های روزانه) ──
-        win.KeyPressQwerty(PhysicalKey.Digit3, RawInputModifiers.Control | RawInputModifiers.Shift);
-        win.KeyReleaseQwerty(PhysicalKey.Digit3, RawInputModifiers.Control | RawInputModifiers.Shift);
-        win.KeyReleaseQwerty(PhysicalKey.ControlLeft, RawInputModifiers.Shift);
-        win.KeyReleaseQwerty(PhysicalKey.ShiftLeft, RawInputModifiers.None);
-        Pump(win);
-        Check("Ctrl+Shift+3 → " + vm.Current?.Id, vm.Current?.Id == vm.Sections[2].Id);
+        // ⚠️ از ۳.۱.۱۴۵ ‎Alt+عدد‎ بخش است و ‎Ctrl+Shift+عدد‎ کارت (Shortcuts.cs) —
+        //    این سنجه تا ۱۴۰۵/۰۷/۱۳ هنوز کلیدهای وارونهٔ قدیم را می‌زد و سه بار سرخ بود.
+        void AltDigits(params PhysicalKey[] keys)
+        {
+            foreach (var k in keys)
+            {
+                win.KeyPressQwerty(k, RawInputModifiers.Alt);
+                win.KeyReleaseQwerty(k, RawInputModifiers.Alt);
+            }
+            win.KeyReleaseQwerty(PhysicalKey.AltLeft, RawInputModifiers.None);
+            Pump(win);
+        }
 
-        // ── عددِ دو رقمی: Ctrl+Shift+1 سپس 2 → بخشِ دوازدهم ──
-        win.KeyPressQwerty(PhysicalKey.Digit1, RawInputModifiers.Control | RawInputModifiers.Shift);
-        win.KeyReleaseQwerty(PhysicalKey.Digit1, RawInputModifiers.Control | RawInputModifiers.Shift);
-        win.KeyPressQwerty(PhysicalKey.Digit2, RawInputModifiers.Control | RawInputModifiers.Shift);
-        win.KeyReleaseQwerty(PhysicalKey.Digit2, RawInputModifiers.Control | RawInputModifiers.Shift);
-        win.KeyReleaseQwerty(PhysicalKey.ControlLeft, RawInputModifiers.Shift);
-        win.KeyReleaseQwerty(PhysicalKey.ShiftLeft, RawInputModifiers.None);
-        Pump(win);
-        Check("Ctrl+Shift+1,2 → بخشِ ۱۲ (" + vm.Current?.Id + ")", vm.Current?.Id == vm.Sections[11].Id);
+        // ── Alt+3 → بخشِ سوم ──
+        AltDigits(PhysicalKey.Digit3);
+        Check("Alt+3 → " + vm.Current?.Id, vm.Current?.Id == vm.Sections[2].Id);
+
+        // ── عددِ دو رقمی: Alt+1 سپس 2 → بخشِ دوازدهم ──
+        AltDigits(PhysicalKey.Digit1, PhysicalKey.Digit2);
+        Check("Alt+1,2 → بخشِ ۱۲ (" + vm.Current?.Id + ")", vm.Current?.Id == vm.Sections[11].Id);
 
         // ── «۰» یعنی دهمین بخش، نه صفرم ──
-        win.KeyPressQwerty(PhysicalKey.Digit0, RawInputModifiers.Control | RawInputModifiers.Shift);
-        win.KeyReleaseQwerty(PhysicalKey.Digit0, RawInputModifiers.Control | RawInputModifiers.Shift);
-        win.KeyReleaseQwerty(PhysicalKey.ControlLeft, RawInputModifiers.Shift);
-        win.KeyReleaseQwerty(PhysicalKey.ShiftLeft, RawInputModifiers.None);
-        Pump(win);
-        Check("Ctrl+Shift+0 → بخشِ ۱۰ (" + vm.Current?.Id + ")", vm.Current?.Id == vm.Sections[9].Id);
+        AltDigits(PhysicalKey.Digit0);
+        Check("Alt+0 → بخشِ ۱۰ (" + vm.Current?.Id + ")", vm.Current?.Id == vm.Sections[9].Id);
 
         // ── Ctrl+عدد روی یک بخشِ دفتری: ردیف افزوده شود ──
         var exp = vm.Sections.First(x => x.Id == "expenses");
@@ -535,14 +537,19 @@ internal static class Program
         Pump(win); Dispatcher.UIThread.RunJobs(); Pump(win);
         Check($"Shift+99 با ردیفِ ناکافی → دست‌نخورده ({keep})", table.RowCount == keep);
 
-        // ── Alt+عدد: حسابِ شمارهٔ ۱ در قرض‌داران باز شود ──
+        // ── Ctrl+Shift+عدد: حسابِ شمارهٔ ۱ در قرض‌داران باز شود ──
         var debt = vm.Sections.First(x => x.Id == "debt");
         Wait(win, vm.GoAsync(debt));
-        win.KeyPressQwerty(PhysicalKey.Digit1, RawInputModifiers.Alt);
-        win.KeyReleaseQwerty(PhysicalKey.Digit1, RawInputModifiers.Alt);
-        win.KeyReleaseQwerty(PhysicalKey.AltLeft, RawInputModifiers.None);
+        debt.CloseOpenPage();
+        Pump(win);
+        var openBefore = debt.ActivePage is not null;
+        win.KeyPressQwerty(PhysicalKey.Digit1, RawInputModifiers.Control | RawInputModifiers.Shift);
+        win.KeyReleaseQwerty(PhysicalKey.Digit1, RawInputModifiers.Control | RawInputModifiers.Shift);
+        win.KeyReleaseQwerty(PhysicalKey.ControlLeft, RawInputModifiers.Shift);
+        win.KeyReleaseQwerty(PhysicalKey.ShiftLeft, RawInputModifiers.None);
         Pump(win); Dispatcher.UIThread.RunJobs(); Pump(win);
-        Check("Alt+1 → حسابِ کارتِ ۱ باز شد", debt.ActivePage is not null);
+        Check($"Ctrl+Shift+1 → حسابِ کارتِ ۱ باز شد (پیش از کلید باز بود: {openBefore})",
+              !openBefore && debt.ActivePage is not null);
 
         return bad;
     }
