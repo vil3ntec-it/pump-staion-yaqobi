@@ -26,7 +26,9 @@ public class SignedInNoPumpTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Src(string rel) =>
-        File.ReadAllText(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar)));
+        //  ⚠️ روی ویندوز (CI) فایل‌ها با CRLF بیرون می‌آیند؛ سنجه‌های «تا پایانِ متد»
+        //  با `\n` می‌گردند، پس همه‌جا یک‌شکل می‌شوند.
+        File.ReadAllText(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar))).Replace("\r\n", "\n");
 
     private const string Main = "PumpYaqobi.App/ViewModels/MainViewModel.cs";
     private const string Vm = "PumpYaqobi.App/ViewModels/Sections/AccountSectionViewModel.cs";
