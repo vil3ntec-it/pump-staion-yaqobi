@@ -51,6 +51,62 @@ public sealed class ProfitInput
     /// (<see cref="InvoiceRate"/>)، نه از شیءِ کاملِ همهٔ فاکتورها.
     /// </summary>
     public decimal? InvoiceRateDiffSum { get; init; }
+    /// <summary>
+    /// جمعِ بردگیِ «بی‌فاکتور»ها — از خودِ SQLite و فقط برای یک <b>دوره</b>
+    /// (ماه یا سال). پر ⇒ جای <see cref="NoInvoiceAccounts"/> می‌نشیند؛ همان
+    /// قاعدهٔ چهار جمعِ بالا.
+    /// </summary>
+    public decimal? NoInvoiceSum { get; init; }
+}
+
+/// <summary>
+/// ══ دورهٔ مفاد/ضرر — همه، یک سال، یا یک ماه ═══════════════════════════════
+///
+/// خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۳): «بخشِ مفاد و ضرر کادرِ کشوییِ ماه و سال
+/// ندارد… که آدم بفهمد برای ماه یا سال چقدر فایده بوده یا نبوده.»
+///
+/// ⚠️ قاعدهٔ تاریخِ هر منبع همان ‎_plBreakdownData‎ی سایت است: پارچه با
+/// تاریخِ خودش، ردیفِ بی‌فاکتور با تاریخِ ردیف، درآمد و مصرف با تاریخِ خودشان،
+/// و اختلافِ نرخِ فاکتور با <b>روزِ تایید</b> (‎_plInvApproveDateSh‎). «همه» یعنی
+/// همه‌چیز، حتی ردیفِ بی‌تاریخ؛ ماه یا سال ردیفِ بی‌تاریخ را نمی‌شمارد
+/// (‎_plInRange‎). ⛔ فرمول (‎Compute‎) دست نمی‌خورد — فقط ورودی‌ها کوتاه می‌شوند.
+/// </summary>
+public readonly record struct ProfitPeriod(string Year, string Month)
+{
+    /// <summary>همهٔ زمان‌ها.</summary>
+    public static ProfitPeriod All => new("", "");
+
+    public bool IsAll => Year.Length == 0;
+
+    /// <summary>کلیدِ کشویی ⇒ دوره: خالی = همه · «1405/*» = یک سال · «1405/07» = یک ماه.</summary>
+    public static ProfitPeriod FromKey(string? key)
+    {
+        var k = PumpYaqobi.Application.Localization.Shamsi.ToEnDigits(key ?? "").Trim();
+        if (k.Length == 0) return All;
+        var parts = k.Split('/');
+        if (parts.Length != 2 || parts[0].Length != 4 || !parts[0].All(char.IsDigit)) return All;
+        if (parts[1] == "*") return new(parts[0], "");
+        return parts[1].Length == 2 && parts[1].All(char.IsDigit) ? new(parts[0], parts[1]) : All;
+    }
+
+    /// <summary>کمترین و بیشترین ‎DateKey‎ (سال×۱۰۰۰۰+ماه×۱۰۰+روز) — برای «همه» خالی.</summary>
+    public (int Lo, int Hi)? Keys
+    {
+        get
+        {
+            if (IsAll || !int.TryParse(Year, out var y)) return null;
+            if (Month.Length == 0) return (y * 10000 + 101, y * 10000 + 1299);
+            var m = int.Parse(Month);
+            return (y * 10000 + m * 100 + 1, y * 10000 + m * 100 + 99);
+        }
+    }
+
+    /// <summary>همان کلیدی که ‎LedgerService.SumAsync‎ می‌خواهد: «1405/07» · «1405/» · خالی.</summary>
+    public string? MonthFilter => IsAll ? null : Month.Length == 0 ? Year + "/" : Year + "/" + Month;
+
+    /// <summary>این ‎DateKey‎ در دوره است؟ «همه» همه‌چیز را می‌پذیرد، حتی صفر.</summary>
+    public bool Contains(int dateKey) =>
+        Keys is not { } k || (dateKey >= k.Lo && dateKey <= k.Hi);
 }
 
 /// <summary>
@@ -124,6 +180,7 @@ public sealed class ProfitLossService
         decimal noinv = 0;
         foreach (var a in db.NoInvoiceAccounts)
             foreach (var row in a.FuelRows) noinv += row.Bardagi;
+        if (db.NoInvoiceSum is { } ns) noinv = ns;
 
         var extra = db.ExtraIncomeSum ?? db.ExtraIncomes.Sum(e => e.Amount);
         var exp = db.ExpenseSum ?? db.Expenses.Sum(e => e.Amount);

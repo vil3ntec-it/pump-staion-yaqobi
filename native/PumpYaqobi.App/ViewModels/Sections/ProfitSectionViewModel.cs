@@ -23,7 +23,44 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
     private ProfitInput _db = new();
 
     public ProfitSectionViewModel(AppHost host)
-        : base("profit", "profit", "مفاد / ضرر / اتحادیه") => _host = host;
+        : base("profit", "profit", "مفاد / ضرر / اتحادیه")
+    {
+        _host = host;
+        //  «همهٔ ماه‌ها» همان «همهٔ زمان‌ها»ی پیش‌فرض است — عددی که کاربر تا
+        //  امروز می‌دید، بی هیچ تغییری، تا خودش دوره‌ای برگزیند.
+        Picker = new YearMonthPicker(k =>
+        {
+            if (_loadingPicker) return;
+            var p = ProfitPeriod.FromKey(k);
+            if (p == _period) return;
+            _period = p;
+            _ = CrashGuard.RunAsync("مفاد / ضرر", ComputeAsync);
+        }, "همهٔ ماه‌ها");
+    }
+
+    // ══ دوره: همهٔ زمان‌ها · یک سال · یک ماه ═══════════════════════════════════
+    //
+    //  خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۳): «بخشِ مفاد و ضرر کادرِ کشوییِ ماه و سال
+    //  ندارد… که آدم بفهمد برای ماه یا سال چقدر فایده بوده یا نبوده.»
+    //  ⛔ فرمول دست نمی‌خورد (‎ProfitLossService.Compute‎)؛ فقط ورودی‌ها به همان
+    //  دوره کوتاه می‌شوند — قاعدهٔ تاریخِ هر منبع بالای ‎ProfitPeriod‎.
+
+    /// <summary>کشوی سال + ماه — همان کشویی که دفترهای ماهانه دارند.</summary>
+    public YearMonthPicker Picker { get; }
+
+    private ProfitPeriod _period = ProfitPeriod.All;
+    private bool _loadingPicker;
+
+    /// <summary>«همهٔ زمان‌ها» · «سالِ 1405» · «میزان 1405».</summary>
+    [ObservableProperty] private string _periodText = "همهٔ زمان‌ها";
+
+    private static string PeriodKey(ProfitPeriod p) =>
+        p.IsAll ? "" : p.Month.Length == 0 ? p.Year + YearMonthPicker.AllMark : p.Year + "/" + p.Month;
+
+    private static string PeriodLabel(ProfitPeriod p) =>
+        p.IsAll ? "همهٔ زمان‌ها"
+        : p.Month.Length == 0 ? "سالِ " + p.Year
+        : Shamsi.MonthLabel(p.Year + "/" + p.Month);
 
     // ── نتیجه ────────────────────────────────────────────────────────────────
     [ObservableProperty] private string _netText = "0 افغانی";
@@ -114,6 +151,37 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
 
     public async Task RefreshAsync()
     {
+        //  ماه‌هایی که هر کدام از منبع‌ها داده دارند — فقط کلیدها، نه ردیف‌ها
+        var months = new HashSet<string>(StringComparer.Ordinal) { Shamsi.ThisMonth() };
+        foreach (var m in await _host.StorageData.ReportMonthsAsync()) months.Add(m);
+        foreach (var m in await _host.Debtors.NoInvoiceMonthsAsync()) months.Add(m);
+        foreach (var m in await _host.ExpenseLedger.MonthsAsync()) months.Add(m);
+        foreach (var m in await _host.ExtraIncomeLedger.MonthsAsync()) months.Add(m);
+        _rates = await _host.Invoices.ApprovedRatesDatedAsync();
+        foreach (var (_, key) in _rates)
+            if (key > 0) months.Add($"{key / 10000:0000}/{key / 100 % 100:00}");
+
+        _loadingPicker = true;
+        try { Picker.Load(months, PeriodKey(_period)); }
+        finally { _loadingPicker = false; }
+        //  دوره‌ای که دیگر در فهرست نیست ⇒ همان چیزی که کشویی نشان می‌دهد
+        _period = ProfitPeriod.FromKey(Picker.SelectedKey);
+
+        await ComputeAsync();
+    }
+
+    /// <summary>فاکتورهای تاییدشده با روزِ تایید — یک بار در هر تازه‌سازی.</summary>
+    private List<(InvoiceRate Rate, int ApproveKey)> _rates = new();
+
+    /// <summary>
+    /// عددهای همین دوره. «همهٔ زمان‌ها» <b>همان راهِ پیشین</b> است، مو‌به‌مو —
+    /// پس عددی که کاربر تا امروز می‌دید عوض نمی‌شود.
+    /// </summary>
+    private async Task ComputeAsync()
+    {
+        var period = _period;
+        var keys = period.Keys;
+
         // ⛔ «برای یک جمع، همهٔ ردیف‌ها را نخوان» (۱۴۰۵/۰۷/۱۳).
         //  این صفحه تا امروز با هر فعال‌سازی همهٔ پارچه‌های پنج سال (با هر دو
         //  شیفت)، همهٔ مصارف، همهٔ درآمدهای اضافی و همهٔ فاکتورها را به شیءِ
@@ -121,23 +189,48 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         //  روی همان نخِ صداکننده می‌کند، آن خواندن روی نخِ رابط بود: همان
         //  مکثی که کاربر درست سرِ اسکرولِ این صفحه حس می‌کرد.
         //  حالا هر پنج عدد از همان یکی-دو ستونِ خودشان می‌آیند.
-        var petrol = await _host.StorageData.ShiftSumsAsync(FuelType.Petrol);
-        var diesel = await _host.StorageData.ShiftSumsAsync(FuelType.Diesel);
+        var petrol = await _host.StorageData.ShiftSumsAsync(FuelType.Petrol, keys);
+        var diesel = await _host.StorageData.ShiftSumsAsync(FuelType.Diesel, keys);
 
-        // «بی‌فاکتور»ها — بردگی‌شان مستقیم درآمد است (از قبل جمعِ خودِ SQLite بود)
-        var noinvAccounts = (await _host.Debtors.CardAccountsAsync(noInvoice: true))
-            .Values.SelectMany(x => x).ToList();
-
-        var extraSum = await _host.ExtraIncomeLedger.SumAsync(e => e.Amount);
-        _db = new ProfitInput
+        decimal extraSum, expenseSum;
+        ProfitInput input;
+        if (period.IsAll)
         {
-            ShiftProfitPetrol = petrol.Profit,
-            ShiftProfitDiesel = diesel.Profit,
-            NoInvoiceAccounts = noinvAccounts,
-            ExtraIncomeSum = extraSum,
-            ExpenseSum = await _host.ExpenseLedger.SumAsync(e => e.Amount),
-            InvoiceRateDiffSum = ProfitLossService.InvoiceRateDiff(await _host.Invoices.ApprovedRatesAsync()),
-        };
+            extraSum = await _host.ExtraIncomeLedger.SumAsync(e => e.Amount);
+            expenseSum = await _host.ExpenseLedger.SumAsync(e => e.Amount);
+            // «بی‌فاکتور»ها — بردگی‌شان مستقیم درآمد است (از قبل جمعِ خودِ SQLite بود)
+            var noinvAccounts = (await _host.Debtors.CardAccountsAsync(noInvoice: true))
+                .Values.SelectMany(x => x).ToList();
+            input = new ProfitInput
+            {
+                ShiftProfitPetrol = petrol.Profit,
+                ShiftProfitDiesel = diesel.Profit,
+                NoInvoiceAccounts = noinvAccounts,
+                ExtraIncomeSum = extraSum,
+                ExpenseSum = expenseSum,
+                InvoiceRateDiffSum = ProfitLossService.InvoiceRateDiff(await _host.Invoices.ApprovedRatesAsync()),
+            };
+        }
+        else
+        {
+            //  همان یک ستون، فقط ماه یا سالِ همین دوره (‎MonthKey‎ی خودِ ردیف)
+            extraSum = await _host.ExtraIncomeLedger.SumAsync(e => e.Amount, period.MonthFilter);
+            expenseSum = await _host.ExpenseLedger.SumAsync(e => e.Amount, period.MonthFilter);
+            input = new ProfitInput
+            {
+                ShiftProfitPetrol = petrol.Profit,
+                ShiftProfitDiesel = diesel.Profit,
+                NoInvoiceSum = await _host.Debtors.NoInvoiceBardagiAsync(keys),
+                ExtraIncomeSum = extraSum,
+                ExpenseSum = expenseSum,
+                //  ⛔ همان قاعدهٔ اختلافِ نرخ (‎RateDiffOf‎)، فقط فاکتورهایی که روزِ تاییدشان در دوره است
+                InvoiceRateDiffSum = ProfitLossService.InvoiceRateDiff(
+                    _rates.Where(r => period.Contains(r.ApproveKey)).Select(r => r.Rate)),
+            };
+        }
+        //  دوره وسطِ خواندن عوض شد ⇒ این جواب کهنه است
+        if (period != _period) return;
+        _db = input;
 
         _filling = true;
         var p = _host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.UnionRatePetrol);
@@ -146,6 +239,7 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         UnionDiesel = d == 0 ? "" : Shamsi.Money(d);
         _filling = false;
 
+        PeriodText = PeriodLabel(period);
         BulkSumText = Money(extraSum);
         Recalc();
     }

@@ -1002,20 +1002,79 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
     //  که به آن‌ها بند است (خواندنِ فهرست، گرم کردن، سنجه‌ها) باید همان
     //  بماند. این دو فقط **نمایش**‌اند و سرِ آخر همان ‎Month‎ را می‌نویسند.
 
-    /// <summary>یک گزینهٔ کشوییِ ماه — «سنبله 1405»، با کلیدِ خامش زیرش.</summary>
-    public sealed record MonthOption(string Key, string Label)
+    /// <summary>
+    /// یک گزینهٔ کشوییِ ماه — «سنبله 1405»، با کلیدِ خامش زیرش، و نقطهٔ سرخِ
+    /// «ماهی که با عوض شدنِ ماه از جلوی چشم رفت» (‎MonthDot‎).
+    /// </summary>
+    public sealed class MonthOption : YearMonthItem
     {
-        public override string ToString() => Label;
+        public MonthOption(string key, string label) : base(key, label) { }
     }
 
-    /// <summary>سال‌هایی که ورق دارند — تازه‌ترین اول.</summary>
-    public ObservableCollection<string> Years { get; } = new();
+    /// <summary>سال‌هایی که ورق دارند — تازه‌ترین اول. (کلیدِ رشته‌ای همان ‎Year‎ است.)</summary>
+    public ObservableCollection<YearMonthItem> Years { get; } = new();
 
     /// <summary>ماه‌های همان سالِ برگزیده.</summary>
     public ObservableCollection<MonthOption> MonthOptions { get; } = new();
 
     [ObservableProperty] private string _year = "";
     [ObservableProperty] private MonthOption? _selectedMonth;
+
+    /// <summary>
+    /// گزینهٔ برگزیدهٔ کشویِ سال — فقط نمایش. ⚠️ حقیقت همان ‎Year‎ی رشته‌ای
+    /// است؛ این فقط آن را برای کشویی به گزینهٔ نقطه‌دار می‌رساند.
+    /// </summary>
+    [ObservableProperty] private YearMonthItem? _yearItem;
+
+    partial void OnYearItemChanged(YearMonthItem? v)
+    {
+        if (_pickerWriting || v is null || v.Key == Year) return;
+        Year = v.Key;                       // ⇒ ‎OnYearChanged‎، همان راهِ همیشگی
+    }
+
+    // ══ نقطهٔ سرخِ «ماهِ تازه» ═══════════════════════════════════════════════
+    //  شرح و قاعده‌اش بالای ‎MonthDot‎ — همان کاری که ‎YearMonthPicker‎ برای
+    //  دفترها می‌کند. ⛔ هیچ ماهی این‌جا انتخاب یا عوض نمی‌شود.
+
+    /// <summary>ماهی که نقطه دارد — خالی یعنی نقطه‌ای نیست.</summary>
+    private string _dotMonth = "";
+
+    [ObservableProperty] private bool _hasMonthDot;
+    [ObservableProperty] private bool _hasYearDot;
+
+    private void RefreshDot() =>
+        SetDot(MonthDot.MarkOf(_dataMonths, Shamsi.ThisMonth(), MonthDotStore.SeenOf(Id)));
+
+    private void SetDot(string mark)
+    {
+        _dotMonth = mark;
+        RefreshDots();
+    }
+
+    private void RefreshDots()
+    {
+        var mark = _dotMonth;
+        var open = mark.Length > 0 && Month != mark;
+        var inList = open && MonthOptions.Any(o => o.Key == mark);
+        var markYear = YearOf(mark);
+        var otherYear = open && !inList && markYear.Length > 0 && Years.Any(y => y.Key == markYear);
+
+        foreach (var o in MonthOptions) o.Dot = inList && o.Key == mark;
+        foreach (var y in Years) y.Dot = otherYear && y.Key == markYear;
+        HasMonthDot = inList;
+        HasYearDot = otherYear;
+    }
+
+    /// <summary>کاربر <b>خودش</b> به ماهِ نقطه‌دار رفت ⇒ تا ماهِ بعد نقطه‌ای نیست.</summary>
+    private void AfterUserPick()
+    {
+        if (_dotMonth.Length > 0 && Month == _dotMonth)
+        {
+            MonthDotStore.Ack(Id, Shamsi.ThisMonth());
+            _dotMonth = "";
+        }
+        RefreshDots();
+    }
 
     /// <summary>جلوگیری از حلقه وقتی خودِ کد کشویی‌ها را می‌نشاند.</summary>
     private bool _pickerWriting;
@@ -1025,6 +1084,7 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
         if (_pickerWriting || string.IsNullOrEmpty(v)) return;
         _monthAuto = false;                 // کاربر خودش برگزید
         BuildMonthOptions(v!, preferred: null);
+        AfterUserPick();
     }
 
     partial void OnSelectedMonthChanged(MonthOption? v)
@@ -1032,6 +1092,7 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
         if (_pickerWriting || v is null) return;
         _monthAuto = false;                 // کاربر خودش برگزید
         Month = v.Key;                      // ⇒ ‎OnMonthChanged‎ ⇒ ‎ReloadAsync‎
+        AfterUserPick();
     }
 
     /// <summary>سال‌ها و ماه‌ها را از روی ‎Months‎ی خام می‌سازد.</summary>
@@ -1043,12 +1104,13 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
             Years.Clear();
             foreach (var y in Months.Select(YearOf).Where(y => y.Length > 0)
                                     .Distinct().OrderByDescending(y => y))
-                Years.Add(y);
+                Years.Add(new YearMonthItem(y, y));
 
             var cur = YearOf(Month);
-            if (cur.Length == 0 || !Years.Contains(cur)) cur = Years.FirstOrDefault() ?? "";
+            if (cur.Length == 0 || Years.All(y => y.Key != cur)) cur = Years.FirstOrDefault()?.Key ?? "";
             _year = cur;
             OnPropertyChanged(nameof(Year));
+            YearItem = Years.FirstOrDefault(y => y.Key == cur);
         }
         finally { _pickerWriting = false; }
 
@@ -1076,6 +1138,11 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
 
         // سالِ دیگری برگزیده شد ⇒ ماهِ همان سال باید واقعاً بار شود
         if (pick is not null && pick.Key != Month) Month = pick.Key;
+        //  کشویِ سال هم همان سالِ جلوی چشم را نشان بدهد
+        _pickerWriting = true;
+        try { YearItem = Years.FirstOrDefault(y => y.Key == year); }
+        finally { _pickerWriting = false; }
+        RefreshDots();
     }
 
     /// <summary>«1405/06» ⇒ «1405». کلیدِ خراب ⇒ رشتهٔ خالی.</summary>
@@ -1154,6 +1221,7 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
         if (!Months.Contains(now)) Months.Insert(0, now);
         if (!Months.Contains(Month)) Months.Insert(0, Month);
         BuildPickers();
+        RefreshDot();
         _seenVersion = PumpYaqobi.Persistence.PumpDbContext.Version;
         await ReloadAsync();
     }
@@ -1172,49 +1240,15 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
     public override void OnDayChanged()
     {
         if (_monthAuto && IsLoaded) _ = Services.CrashGuard.RunAsync("خواندنِ ورق‌ها", LoadAsync);
+        //  کاربر ماهِ دیگری را برگزیده بود: جابه‌جا نمی‌شود، ولی ماه عوض شد
+        //  و نقطه باید بیاید (‎MonthDot‎).
+        else if (IsLoaded) RefreshDot();
     }
 
     /// <summary>نوشتهٔ جای خالیِ فهرست — راست، نه «هیچ ورقی ثبت نشده» وقتی ثبت شده.</summary>
     public string EmptyText => _dataMonths.Count == 0
         ? "هیچ ورقی ثبت نشده — از دکمهٔ بالا ورق جدید اضافه کنید"
         : "«" + Shamsi.MonthLabel(Month) + "» ورقی ندارد — ماهِ دیگری را از کشوییِ بالا برگزینید";
-
-    /// <summary>ماهی که دکمهٔ نوارِ بالا به آن می‌برد.</summary>
-    private string _hintTarget = "";
-
-    private void RefreshMonthHint()
-    {
-        var now = Shamsi.ThisMonth();
-        _hintTarget = "";
-        if (Cards.Count > 0 && Month != now && !_dataMonths.Contains(now) && _monthAuto)
-        {
-            MonthHint = "📅 ماهِ «" + Shamsi.MonthLabel(now) + "» شروع شد و هنوز ورقی ندارد — هیچ چیزی پاک نشده؛ ورق‌های «"
-                      + Shamsi.MonthLabel(Month) + "» این‌جا نشان داده شده‌اند";
-            MonthHintAction = "رفتن به «" + Shamsi.MonthLabel(now) + "»";
-            _hintTarget = now;
-        }
-        else if (Cards.Count == 0 && _dataMonths.FirstOrDefault(m => m != Month) is { } other)
-        {
-            MonthHint = (Month == now ? "📅 ماهِ «" + Shamsi.MonthLabel(Month) + "» تازه شروع شده"
-                                      : "📅 «" + Shamsi.MonthLabel(Month) + "» ورقی ندارد")
-                      + " — هیچ چیزی پاک نشده؛ ورق‌های «" + Shamsi.MonthLabel(other) + "» سرِ جایشان‌اند";
-            MonthHintAction = "نمایشِ «" + Shamsi.MonthLabel(other) + "»";
-            _hintTarget = other;
-        }
-        else { MonthHint = ""; MonthHintAction = ""; }
-        OnPropertyChanged(nameof(EmptyText));
-    }
-
-    protected override Task OnGoMonthHintAsync()
-    {
-        if (_hintTarget.Length == 0) return Task.CompletedTask;
-        _monthAuto = false;
-        var t = _hintTarget;
-        if (!Months.Contains(t)) Months.Insert(0, t);
-        Month = t;
-        BuildPickers();
-        return Task.CompletedTask;
-    }
 
     /// <summary>
     /// ══ «شیفت را ثبت کردم، ولی در ورق‌ها ورقی ساخته نشد» ═══════════════════
@@ -1248,7 +1282,8 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
             Cards.Add(new WaraqCardViewModel(w, _host.Waraq));
         }
         OnPropertyChanged(nameof(IsEmpty));
-        RefreshMonthHint();
+        OnPropertyChanged(nameof(EmptyText));
+        RefreshDots();
     }
 
     /// <summary>

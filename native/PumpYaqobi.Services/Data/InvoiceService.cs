@@ -78,6 +78,29 @@ public sealed class InvoiceService
                        .ToListAsync(ct);
     }
 
+    /// <summary>
+    /// همان پنج ستون، به‌علاوهٔ <b>روزِ تایید</b> (‎DateKey‎ی شمسی) — برای دورهٔ
+    /// ماه/سالِ مفاد/ضرر. قاعدهٔ ‎_plInvApproveDateSh‎ی سایت: اختلافِ نرخ همان
+    /// روزِ تایید محقق می‌شود؛ فاکتوری که روزِ تایید ندارد با تاریخِ خودش.
+    /// </summary>
+    public async Task<List<(InvoiceRate Rate, int ApproveKey)>> ApprovedRatesDatedAsync(CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        var rows = await db.Invoices.AsNoTracking()
+                           .Where(v => v.Status == InvoiceStatus.Approved && !v.ByMoney)
+                           .Select(v => new
+                           {
+                               Rate = new InvoiceRate(v.ByMoney, v.Status, v.Liters, v.PricePerLiter,
+                                                      v.RateOnCreate, v.RateOnApprove),
+                               v.ApprovedAtUtc, v.DateKey,
+                           })
+                           .ToListAsync(ct);
+        return rows.Select(r => (r.Rate, r.ApprovedAtUtc is { } at
+                                     ? Shamsi.Key(DateTime.SpecifyKind(at, DateTimeKind.Utc).ToLocalTime())
+                                     : r.DateKey)).ToList();
+    }
+
     /// <summary>شمارهٔ یکتای بعدی — هیچ‌وقت تکراری نمی‌شود.</summary>
     public async Task<int> NextNumberAsync(CancellationToken ct = default)
     {

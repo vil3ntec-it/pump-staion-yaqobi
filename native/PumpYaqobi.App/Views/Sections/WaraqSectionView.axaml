@@ -32,10 +32,18 @@
              خودش را دارد. -->
         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
           <TextBlock Text="سال" Classes="label" VerticalAlignment="Center" />
-          <ComboBox ItemsSource="{Binding Years}" SelectedItem="{Binding Year}" MinWidth="100" />
+          <!-- نقطهٔ سرخ روی کشوی سال/ماه و کنارِ ماهِ پیش (‎MonthDot‎) -->
+          <Panel>
+            <ComboBox ItemsSource="{Binding Years}" SelectedItem="{Binding YearItem}"
+                      ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="100" />
+            <Ellipse Classes="monthdot badge" IsVisible="{Binding HasYearDot}" />
+          </Panel>
           <TextBlock Text="ماه" Classes="label" VerticalAlignment="Center" />
-          <ComboBox ItemsSource="{Binding MonthOptions}" SelectedItem="{Binding SelectedMonth}"
-                    MinWidth="150" />
+          <Panel>
+            <ComboBox ItemsSource="{Binding MonthOptions}" SelectedItem="{Binding SelectedMonth}"
+                      ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="150" />
+            <Ellipse Classes="monthdot badge" IsVisible="{Binding HasMonthDot}" />
+          </Panel>
         </StackPanel>
       </c:SectionPage.Filters>
 

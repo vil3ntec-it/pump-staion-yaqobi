@@ -48,6 +48,59 @@ public sealed partial class YearMonthPicker : ObservableObject
     /// <summary>کلیدِ ماهِ انتخاب‌شده — همان چیزی که بخش با آن رندر می‌کند.</summary>
     public string SelectedKey => Selected?.Key ?? "";
 
+    // ══ نقطهٔ سرخِ «ماهِ تازه» ═══════════════════════════════════════════════
+    //
+    //  شرح و قاعده‌اش بالای ‎MonthDot‎. این‌جا فقط نشاندن و برداشتنش است:
+    //  روی خودِ کشویی (‎HasMonthDot‎/‎HasYearDot‎) و کنارِ همان گزینه
+    //  (‎YearMonthItem.Dot‎). ⛔ هیچ ماهی این‌جا انتخاب یا عوض نمی‌شود.
+
+    /// <summary>ماهی که نقطه دارد — خالی یعنی نقطه‌ای نیست.</summary>
+    public string DotMonth { get; private set; } = "";
+
+    /// <summary>نقطه روی کشویِ ماه: ماهِ نقطه‌دار در همین فهرست هست و هنوز دیده نشده.</summary>
+    public bool HasMonthDot { get; private set; }
+
+    /// <summary>نقطه روی کشویِ سال: ماهِ نقطه‌دار در سالِ دیگری است.</summary>
+    public bool HasYearDot { get; private set; }
+
+    /// <summary>
+    /// کاربر <b>خودش</b> به ماهِ نقطه‌دار رفت — بخش ثبتش می‌کند
+    /// (<see cref="MonthDotStore.Ack"/>) و نقطه را برمی‌دارد.
+    /// ⚠️ انتخابِ خودِ برنامه (بار شدن، عوض شدنِ خودکارِ ماه) «دیدم» نیست.
+    /// </summary>
+    public event Action? DotSeen;
+
+    /// <summary>ماهِ نقطه‌دار را بگذار (یا با خالی بردار).</summary>
+    public void SetDot(string? month)
+    {
+        DotMonth = Shamsi.ToEnDigits(month ?? "");
+        RefreshDots();
+    }
+
+    private void RefreshDots()
+    {
+        var mark = DotMonth;
+        var open = mark.Length > 0 && SelectedKey != mark;
+        var inList = open && Months.Any(m => m.Key == mark);
+        var markYear = YearOf(mark);
+        var otherYear = open && !inList && markYear.Length > 0;
+
+        foreach (var m in Months) m.Dot = inList && m.Key == mark;
+        foreach (var y in Years) y.Dot = otherYear && y.Key == markYear;
+
+        HasMonthDot = inList;
+        HasYearDot = otherYear && Years.Any(y => y.Key == markYear);
+        OnPropertyChanged(nameof(HasMonthDot));
+        OnPropertyChanged(nameof(HasYearDot));
+    }
+
+    /// <summary>پس از هر انتخابِ خودِ کاربر: همان ماهِ نقطه‌دار بود؟</summary>
+    private void AfterUserPick()
+    {
+        if (DotMonth.Length > 0 && SelectedKey == DotMonth) DotSeen?.Invoke();
+        RefreshDots();
+    }
+
     /// <summary>
     /// فهرست را از نو بچین. ‎keys‎ همهٔ کلیدهای این بخش است و ‎active‎ کلیدی که
     /// باید انتخاب بماند.
@@ -86,6 +139,7 @@ public sealed partial class YearMonthPicker : ObservableObject
 
         FillMonths(active);
         OnPropertyChanged(nameof(HasYears));
+        RefreshDots();
     }
 
     partial void OnYearChanged(YearMonthItem? v)
@@ -104,12 +158,14 @@ public sealed partial class YearMonthPicker : ObservableObject
             : (inYear.FirstOrDefault(k => MonthOf(k) == curM) ?? inYear.FirstOrDefault() ?? "");
 
         FillMonths(want);
+        AfterUserPick();
     }
 
     partial void OnSelectedChanged(YearMonthItem? v)
     {
         if (_quiet || v is null) return;
         _onMonthPicked(v.Key);
+        AfterUserPick();
     }
 
     private void FillMonths(string? want)
@@ -178,8 +234,23 @@ public sealed partial class YearMonthPicker : ObservableObject
     }
 }
 
-/// <summary>یک گزینهٔ کشویی: کلیدِ واقعی و برچسبی که کاربر می‌بیند.</summary>
-public sealed record YearMonthItem(string Key, string Label)
+/// <summary>
+/// یک گزینهٔ کشویی: کلیدِ واقعی، برچسبی که کاربر می‌بیند، و نقطهٔ سرخِ
+/// «ماهی که با عوض شدنِ ماه از جلوی چشم رفت» (<see cref="MonthDot"/>).
+///
+/// ⚠️ کلاس است نه ‎record‎: نقطه باید بی ساختنِ دوبارهٔ فهرست خاموش شود —
+/// ساختنِ دوبارهٔ ‎Months‎ درست وسطِ رویدادِ انتخابِ همان کشویی، انتخاب را
+/// به‌هم می‌ریخت.
+/// </summary>
+public partial class YearMonthItem : ObservableObject
 {
+    public YearMonthItem(string key, string label) { Key = key; Label = label; }
+
+    public string Key { get; }
+    public string Label { get; }
+
+    /// <summary>نقطهٔ سرخ کنارِ همین گزینه.</summary>
+    [ObservableProperty] private bool _dot;
+
     public override string ToString() => Label;
 }

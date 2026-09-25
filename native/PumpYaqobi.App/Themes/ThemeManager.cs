@@ -200,6 +200,9 @@ public static class ThemeManager
         Br("Danger", danger);
         Br("Info", info);
         Br("Orange", orange);
+        //  نقطهٔ سرخِ «ماهِ تازه» روی کشوی ماه (‎MonthDot‎) — سرخِ روشن‌ترِ یک
+        //  نشانِ اعلان، نه سرخِ تیرهٔ «ضرر» که روی کشویی کوچک گم می‌شد.
+        Br("Dot", t.IsDark ? PumpTheme.C("#f87171") : PumpTheme.C("#ef4444"));
 
         // ⚠️ این دو با تم عوض نمی‌شوند چون در سایت هم نمی‌شوند: ‎--purple‎ در
         // ‎:root‎ی هر دو تم ‎#805ad5‎ است (‎index.html‎ خط ۹۷ و ۱۰۴) و رنگِ

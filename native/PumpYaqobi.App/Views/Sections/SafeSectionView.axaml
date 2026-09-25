@@ -31,10 +31,17 @@
              با انتخابِ هر سال، فقط ماه‌های همان سال در کشویِ ماه می‌آیند.
              ⚠️ آن‌چه دیده می‌شود برچسبِ خوانا است («سنبله ۱۴۰۵»)، نه کلیدِ
              خامِ «1405/06» که تا امروز نشان داده می‌شد. -->
-        <ComboBox ItemsSource="{Binding Picker.Years}" SelectedItem="{Binding Picker.Year}"
-                  IsVisible="{Binding Picker.HasYears}" MinWidth="110" />
-        <ComboBox ItemsSource="{Binding Picker.Months}" SelectedItem="{Binding Picker.Selected}"
-                  MinWidth="140" />
+        <!-- نقطهٔ سرخ روی کشوی سال/ماه و کنارِ ماهِ پیش (‎MonthDot‎) -->
+        <Panel IsVisible="{Binding Picker.HasYears}">
+          <ComboBox ItemsSource="{Binding Picker.Years}" SelectedItem="{Binding Picker.Year}"
+                    ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="110" />
+          <Ellipse Classes="monthdot badge" IsVisible="{Binding Picker.HasYearDot}" />
+        </Panel>
+        <Panel>
+          <ComboBox ItemsSource="{Binding Picker.Months}" SelectedItem="{Binding Picker.Selected}"
+                    ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="140" />
+          <Ellipse Classes="monthdot badge" IsVisible="{Binding Picker.HasMonthDot}" />
+        </Panel>
       </StackPanel>
     </c:SectionPage.Filters>
 

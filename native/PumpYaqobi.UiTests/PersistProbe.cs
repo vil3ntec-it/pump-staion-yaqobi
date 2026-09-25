@@ -51,6 +51,7 @@ internal static class PersistProbe
         if (args.Length >= 2 && args[1] == "probe") return MidEditProbe();
         if (args.Length >= 3 && args[1] == "write") return Write(args[2], args.Length > 3 ? args[3] : "close");
         if (args.Length >= 3 && args[1] == "check") return CheckPhase(args[2], args.Length > 3 ? args[3] : "close");
+        if (args.Length >= 3 && args[1] == "recheck") return RecheckLastMonth(args[2]);
         return Both(args.Length > 1 ? args[1] : null);
     }
 
@@ -66,7 +67,9 @@ internal static class PersistProbe
             Directory.CreateDirectory(dir);
             Console.WriteLine();
             Console.WriteLine($"════ حالتِ «{mode}» ════");
-            foreach (var phase in new[] { "write", "check" })
+            //  ⚠️ «ماهِ تازه» فرآیندِ سوم هم دارد: نقطه‌ای که دیده شد، با بستن و
+            //  باز کردنِ برنامه برنگردد (‎MonthDot‎).
+            foreach (var phase in mode == "newmonth" ? new[] { "write", "check", "recheck" } : new[] { "write", "check" })
             {
                 var psi = new System.Diagnostics.ProcessStartInfo(exe)
                 { UseShellExecute = false };
@@ -74,7 +77,7 @@ internal static class PersistProbe
                 foreach (var a in new[] { "persist", phase, dir, mode }) psi.ArgumentList.Add(a);
                 using var p = System.Diagnostics.Process.Start(psi)!;
                 p.WaitForExit();
-                if (phase == "check" && p.ExitCode != 0) bad++;
+                if (phase is "check" or "recheck" && p.ExitCode != 0) bad++;
                 if (phase == "write" && p.ExitCode != 0 && mode != "crash") bad++;
             }
         }
@@ -220,32 +223,60 @@ internal static class PersistProbe
         Wait(win, vm.GoAsync(wq));
         Console.WriteLine($"  ماهِ جاری {Shamsi.ThisMonth()} · ماهِ ورق‌ها {LastMonth} · کادر: {wq.Month}");
         Check("ورق‌های ماهِ پیش در فهرست دیده می‌شوند", wq.Cards.Count > 0, wq.Cards.Count + " کارت");
-        Check("نوار می‌گوید این ماه هنوز ورقی ندارد", wq.HasMonthHint, wq.MonthHint);
         Check("«هیچ ورقی ثبت نشده» گفته نمی‌شود", !wq.EmptyText.StartsWith("هیچ ورقی ثبت نشده"));
-        //  «بفهمونه که ماه عوض شده نه حساب‌ها پاک شدن»
-        Check("نوار صریح می‌گوید ماه عوض شده و چیزی پاک نشده",
-              wq.MonthHint.Contains("شروع شد") && wq.MonthHint.Contains("پاک نشده"), wq.MonthHint);
-        Check("نوار در پوستهٔ پنجره واقعاً دیده می‌شود", HintBarShown(win), "");
+        //  ⛔ نوارِ «ماهِ فلان شروع شد» دیگر نیست (خواستهٔ ۱۴۰۵/۰۷/۱۳)
+        Check("⛔ هیچ نواری بالای صفحه نیست", !HintBarShown(win));
+        //  ورق‌ها خودش ماهِ دارای ورق را آورده، پس چیزی پنهان نیست که نقطه بخواهد
+        Check("ماهِ پیش همین حالا جلوی چشم است ⇒ نقطه‌ای لازم نیست", !wq.HasMonthDot && !wq.HasYearDot);
         Shot(win, dir, "waraq-newmonth");
-        //  «مزاحمت ایجاد نکنه»: یک «×» و همان لحظه می‌رود، و ورق‌ها سرِ جایشان
-        wq.DismissMonthHintCommand.Execute(null);
-        Settle(win);
-        Check("«×» نوار را می‌بندد", !wq.HasMonthHint && !HintBarShown(win), wq.MonthHint);
-        Check("بستنِ نوار ورقی را پنهان نمی‌کند", wq.Cards.Count > 0, wq.Cards.Count + " کارت");
 
-        var ex = vm.Sections.First(s => s.Id == "expenses");
+        //  ── دفترِ ماهانه: ماهِ تازه خالی، ماهِ پیش پشتِ کشویی ⇒ نقطه ──
+        var ex = (PumpYaqobi.App.ViewModels.Sections.ExpenseSectionViewModel)vm.Sections.First(s => s.Id == "expenses");
         Wait(win, vm.GoAsync(ex));
-        Check("مصارفِ ماهِ تازه خالی است و نوار می‌گوید ماهِ پیش سرِ جایش است",
-              ex.HasMonthHint, ex.MonthHint);
-        Shot(win, dir, "expenses-newmonth-before");
-        ex.GoMonthHintCommand.Execute(null);
+        var pk = ex.Picker;
+        Check("مصارفِ ماهِ تازه خالی است", ex.Rows.Count == 0, ex.Rows.Count + " ردیف");
+        Check("نقطهٔ سرخ روی کشوی ماه", pk.HasMonthDot, $"نقطه: {pk.DotMonth}");
+        Check("⛔ و هیچ نواری بالای صفحه نیست", !HintBarShown(win));
+        var item = pk.Months.FirstOrDefault(m => m.Key == LastMonth);
+        Check("ماهِ پیش کنارش نقطهٔ سرخ دارد", item?.Dot == true, LastMonth);
+        Check("ماهِ جاری نقطه ندارد", pk.Months.Where(m => m.Key != LastMonth).All(m => !m.Dot));
+        Check("نقطه روی کشویی واقعاً دیده می‌شود", BadgeShown(win), "");
+        Shot(win, dir, "expenses-newmonth-dot");
+        //  کشویی باز: گزینهٔ نقطه‌دار دیده شود
+        var combo = win.GetVisualDescendants().OfType<ComboBox>()
+                       .FirstOrDefault(c => c.IsEffectivelyVisible && ReferenceEquals(c.ItemsSource, pk.Months));
+        if (combo is not null) { combo.IsDropDownOpen = true; Settle(win); Shot(win, dir, "expenses-newmonth-open"); combo.IsDropDownOpen = false; Settle(win); }
+
+        //  «وقتی رفت روشون» ⇒ همان ماه دیده می‌شود و نقطه‌ها می‌روند
+        pk.Selected = item;
         Settle(win);
-        var rows = ((dynamic)ex).Rows.Count;
-        Check("دکمهٔ نوار ردیف‌های ماهِ پیش را نشان می‌دهد", rows > 0, rows + " ردیف");
-        Check("نوار پس از رفتن به آن ماه برداشته شد", !ex.HasMonthHint, ex.MonthHint);
+        var rows = ex.Rows.Count;
+        Check("رفتن به ماهِ نقطه‌دار ردیف‌های ماهِ پیش را نشان می‌دهد", rows > 0, rows + " ردیف");
+        Check("نقطه‌ها رفتند", !pk.HasMonthDot && !pk.HasYearDot && pk.Months.All(m => !m.Dot) && !BadgeShown(win));
+        Check("«دیدم» ثبت شد", MonthDotStore.SeenOf("expenses") == Shamsi.ThisMonth(), MonthDotStore.SeenOf("expenses"));
         Shot(win, dir, "expenses-newmonth-after");
 
+        //  برگشت به ماهِ جاری: نقطه برنمی‌گردد
+        pk.Selected = pk.Months.First(m => m.Key == Shamsi.ThisMonth());
+        Settle(win);
+        Check("برگشت به ماهِ جاری نقطه را برنمی‌گرداند", !pk.HasMonthDot);
+
         Console.WriteLine(_bad == 0 ? "  ✅ همه سرِ جایش بود" : $"  ❌ {_bad} ایراد");
+        return _bad == 0 ? 0 : 1;
+    }
+
+    /// <summary>فرآیندِ سوم: همان دفتر، دوباره — نقطه‌ای که دیده شد برنمی‌گردد.</summary>
+    private static int RecheckLastMonth(string dir)
+    {
+        var (win, vm) = Open(dir);
+        var ex = (PumpYaqobi.App.ViewModels.Sections.ExpenseSectionViewModel)vm.Sections.First(s => s.Id == "expenses");
+        Wait(win, vm.GoAsync(ex));
+        Check("پس از بستن و باز کردن، نقطهٔ دیده‌شده برنگشت", !ex.Picker.HasMonthDot && !BadgeShown(win),
+              "دیده: " + MonthDotStore.SeenOf("expenses"));
+        //  بخشِ دیگری که هنوز ندیده، هنوز نقطه دارد — هر کشویی برای خودش
+        var safe = (PumpYaqobi.App.ViewModels.Sections.SafeSectionViewModel)vm.Sections.First(s => s.Id == "safe");
+        Check("گاوصندوقِ بی دادهٔ ماهِ پیش نقطه‌ای ندارد", !safe.Picker.HasMonthDot);
+        Console.WriteLine(_bad == 0 ? "  ✅ نقطه تکرار نشد" : $"  ❌ {_bad} ایراد");
         return _bad == 0 ? 0 : 1;
     }
 
@@ -253,6 +284,10 @@ internal static class PersistProbe
         win.GetVisualDescendants().OfType<Button>()
            .Any(b => b.IsEffectivelyVisible && Equals(b.Content, "✕")
                   && Equals(ToolTip.GetTip(b), "بستنِ این نوار"));
+
+    private static bool BadgeShown(MainWindow win) =>
+        win.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Ellipse>()
+           .Any(e => e.IsEffectivelyVisible && e.Classes.Contains("badge") && e.Classes.Contains("monthdot"));
 
     // ══ «اندازهٔ جدول ثبت نمی‌شد — و هر کی برای خودش» ══════════════════════
     //

@@ -9,8 +9,62 @@
   <!-- این بخش تا امروز بیرونِ قالبِ مشترک بود: نه سربرگِ کادر داشت نه عنوان،
        و محتوایش از لبهٔ پنجره شروع می‌شد. حالا مثلِ هفده بخشِ دیگر داخلِ
        ‎SectionPage‎ است تا خودبه‌خود همان کادر و سربرگ را بگیرد. -->
+  <!-- ══ یک قد، یک قلم، یک ترازِ برای همهٔ کادرهای این صفحه (۱۴۰۵/۰۷/۱۳) ══
+       گزارشِ صاحب ریپو با عکس: «این سه تا خیلی ضایع دیده می‌شوند… مخصوصاً
+       خرید عمده و نرخ بازار؛ هم برابر و تراز نیستند و هم ظاهر خیلی مشکل دارد.»
+
+       ⛔ ریشه یک ویژگی بود، نه سلیقه: هر شبکهٔ ستاره‌ای این صفحه
+       ‎HorizontalAlignment="Center"‎ داشت، و شبکهٔ وسط‌چین ستون‌های ستاره‌ای‌اش را
+       از روی **محتوا** اندازه می‌گیرد — پس «مقدار تیل (لیتر)» پهن‌تر از
+       «نرخ بازار» می‌شد و سه کادر سه پهنا داشتند. و ردیفِ نتیجه‌ها قالبِ
+       ستونیِ دیگری (‎*,*,Auto‎) داشت، پس لبه‌هایش هیچ‌جا زیرِ کادرهای بالا
+       نمی‌افتاد. قدها هم سه تا بود (۴۲ · ۴۶ · ۵۲) و قلم‌ها سه تا (۱۶ · ۲۰ · ۲۲).
+
+       حالا: شبکه‌ها کشیده‌اند با سقفِ پهنا (در آوالونیا کشیده + سقف یعنی وسطِ
+       جا، با پهنای کامل)، و هر کادرِ تایپ ‎plbox‎ است — یک قد و یک قلم.
+       ⚠️ هیچ منطقی عوض نشد: همهٔ اتصال‌ها همان‌اند که بودند. -->
+  <UserControl.Styles>
+    <Style Selector="TextBox.plbox">
+      <Setter Property="MinHeight" Value="48" />
+      <Setter Property="FontSize" Value="18" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="TextAlignment" Value="Center" />
+      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="TextBlock.pllabel">
+      <Setter Property="TextAlignment" Value="Center" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="Border.plresult">
+      <Setter Property="MinHeight" Value="76" />
+      <Setter Property="Padding" Value="12,10" />
+    </Style>
+    <Style Selector="Border.plresult > StackPanel">
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+  </UserControl.Styles>
+
   <c:SectionPage Header="مفاد / ضرر / اتحادیه"
                  SubHeader="درآمدها منهای مصارف — نرخِ اتحادیه هم از همین‌جا به پارچه‌ها می‌رود">
+
+    <!-- ══ دوره: همهٔ زمان‌ها · یک سال · یک ماه ════════════════════════════
+         خواستهٔ صاحب ریپو: «بخشِ مفاد و ضرر کادرِ کشوییِ ماه و سال ندارد… که
+         آدم بفهمد برای ماه یا سال چقدر فایده بوده یا نبوده.» همان کشویِ سال +
+         ماهِ دفترهای ماهانه (‎YearMonthPicker‎)؛ پیش‌فرض «همهٔ ماه‌ها» — یعنی
+         همان عددی که تا امروز دیده می‌شد. -->
+    <c:SectionPage.Filters>
+      <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <TextBlock Text="دوره" Classes="label" VerticalAlignment="Center" />
+        <ComboBox ItemsSource="{Binding Picker.Years}" SelectedItem="{Binding Picker.Year}"
+                  IsVisible="{Binding Picker.HasYears}"
+                  ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="120" />
+        <ComboBox ItemsSource="{Binding Picker.Months}" SelectedItem="{Binding Picker.Selected}"
+                  ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="160" />
+      </StackPanel>
+    </c:SectionPage.Filters>
+
           <StackPanel Spacing="12">
 
       <!-- ⚠️ همهٔ کارت‌های این صفحه تمام‌عرض‌اند و ‎calm‎ (سایهٔ بی‌محو):
@@ -20,7 +74,18 @@
            همان ‎.pl-result‎: عنوان، عددِ بزرگ، جملهٔ حال و خطِ روند. -->
       <Border Classes="card calm" Padding="18,16" MinHeight="180">
         <Grid RowDefinitions="Auto,Auto,Auto,*">
-          <TextBlock Grid.Row="0" Text="مفاد / ضرر خالص" Classes="label" FontSize="13" />
+          <DockPanel Grid.Row="0" LastChildFill="False">
+            <!-- ⚠️ چپ/راست این‌جا منطقی است: در راست‌به‌چپ «Left» یعنی سمتِ راستِ چشم -->
+            <TextBlock DockPanel.Dock="Left" Text="مفاد / ضرر خالص" Classes="label" FontSize="13"
+                       VerticalAlignment="Center" />
+            <!-- کدام دوره: «همهٔ زمان‌ها» · «سالِ 1405» · «میزان 1405» -->
+            <Border DockPanel.Dock="Right" CornerRadius="9" Padding="10,3"
+                    Background="{DynamicResource Pump.Input}"
+                    BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="1">
+              <TextBlock Text="{Binding PeriodText}" FontSize="12" FontWeight="SemiBold"
+                         Foreground="{DynamicResource Pump.Info}" />
+            </Border>
+          </DockPanel>
           <TextBlock Grid.Row="1" Text="{Binding NetText}" FontWeight="Bold" FontSize="34"
                      Margin="0,8,0,0"
                      Foreground="{Binding TrendBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
@@ -68,15 +133,13 @@
                        Text="نرخ روزِ اتحادیه را این‌جا بنویس؛ خودکار در کادر «فی لیتر (افغانی)» بخش پارچه‌ها (روز و شب) قرار می‌گیرد." />
           </StackPanel>
 
-          <Grid ColumnDefinitions="*,16,*" MaxWidth="640" HorizontalAlignment="Center">
+          <Grid ColumnDefinitions="*,16,*" MaxWidth="720">
             <Border Grid.Column="0" Classes="panel" Padding="16,14">
               <StackPanel Spacing="8">
                 <TextBlock Text="⛽ پطرول" FontWeight="ExtraBold" FontSize="14"
                            TextAlignment="Center"
                            Foreground="{DynamicResource Pump.Accent}" />
-                <TextBox Text="{Binding UnionPetrol}" Watermark="0"
-                         FontSize="22" FontWeight="Bold" TextAlignment="Center"
-                         MinHeight="52" Padding="10,8" />
+                <TextBox Classes="plbox" Text="{Binding UnionPetrol}" Watermark="0" />
                 <TextBlock Text="افغانی در هر لیتر" Classes="muted" FontSize="11"
                            TextAlignment="Center" />
               </StackPanel>
@@ -86,9 +149,7 @@
                 <TextBlock Text="🟤 دیزل" FontWeight="ExtraBold" FontSize="14"
                            TextAlignment="Center"
                            Foreground="{DynamicResource Pump.Warn}" />
-                <TextBox Text="{Binding UnionDiesel}" Watermark="0"
-                         FontSize="22" FontWeight="Bold" TextAlignment="Center"
-                         MinHeight="52" Padding="10,8" />
+                <TextBox Classes="plbox" Text="{Binding UnionDiesel}" Watermark="0" />
                 <TextBlock Text="افغانی در هر لیتر" Classes="muted" FontSize="11"
                            TextAlignment="Center" />
               </StackPanel>
@@ -113,46 +174,42 @@
                        Text="یک نفر می‌خواهد تیلش را به تو بفروشد؛ تو عمده می‌گیری. درآمد اضافی = مقدار × (نرخ بازار − فی عمده)." />
           </StackPanel>
 
-          <!-- ورودی‌ها -->
-          <Grid ColumnDefinitions="*,12,*,12,*" MaxWidth="720" HorizontalAlignment="Center">
-            <StackPanel Grid.Column="0" Spacing="5">
-              <TextBlock Text="مقدار تیل (لیتر)" Classes="label" TextAlignment="Center" />
-              <TextBox Text="{Binding BulkQty}" Watermark="0" FontSize="16"
-                       TextAlignment="Center" MinHeight="42" />
-            </StackPanel>
-            <StackPanel Grid.Column="2" Spacing="5">
-              <TextBlock Text="فی خرید عمده" Classes="label" TextAlignment="Center" />
-              <TextBox Text="{Binding BulkBuy}" Watermark="0" FontSize="16"
-                       TextAlignment="Center" MinHeight="42" />
-            </StackPanel>
-            <StackPanel Grid.Column="4" Spacing="5">
-              <TextBlock Text="نرخ بازار" Classes="label" TextAlignment="Center" />
-              <TextBox Text="{Binding BulkMarket}" Watermark="0" FontSize="16"
-                       TextAlignment="Center" MinHeight="42" />
-            </StackPanel>
-          </Grid>
+          <!-- ⛔ ورودی‌ها و نتیجه‌ها **یک** شبکه‌اند با ستون‌های مشترک، پس هر
+               کادرِ نتیجه دقیقاً زیرِ کادرِ تایپِ خودش است و دکمهٔ ثبت هم‌پهنای
+               ستونِ سوم. دو شبکهٔ جدا یعنی دو قالبِ ستون و لبه‌هایی که هیچ‌جا روی
+               هم نمی‌افتند — همان «تراز نیست». -->
+          <Grid ColumnDefinitions="*,16,*,16,*" RowDefinitions="Auto,6,Auto,14,Auto" MaxWidth="720">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="مقدار تیل (لیتر)"
+                       Classes="label pllabel" VerticalAlignment="Bottom" />
+            <TextBlock Grid.Row="0" Grid.Column="2" Text="فی خرید عمده"
+                       Classes="label pllabel" VerticalAlignment="Bottom" />
+            <TextBlock Grid.Row="0" Grid.Column="4" Text="نرخ بازار"
+                       Classes="label pllabel" VerticalAlignment="Bottom" />
 
-          <!-- نتیجه‌ها + ثبت -->
-          <Grid ColumnDefinitions="*,12,*,12,Auto" MaxWidth="720" HorizontalAlignment="Center">
-            <Border Grid.Column="0" Classes="panel" Padding="14,12">
+            <TextBox Grid.Row="2" Grid.Column="0" Classes="plbox" Text="{Binding BulkQty}" Watermark="0" />
+            <TextBox Grid.Row="2" Grid.Column="2" Classes="plbox" Text="{Binding BulkBuy}" Watermark="0" />
+            <TextBox Grid.Row="2" Grid.Column="4" Classes="plbox" Text="{Binding BulkMarket}" Watermark="0" />
+
+            <Border Grid.Row="4" Grid.Column="0" Classes="panel plresult">
               <StackPanel Spacing="4">
-                <TextBlock Text="پول فروشنده (قابل پرداخت)" Classes="label"
-                           TextAlignment="Center" TextWrapping="Wrap" />
-                <TextBlock Text="{Binding BulkSellerText}" FontWeight="ExtraBold" FontSize="20"
+                <TextBlock Text="پول فروشنده (قابل پرداخت)" Classes="label pllabel" />
+                <TextBlock Text="{Binding BulkSellerText}" FontWeight="ExtraBold" FontSize="18"
                            TextAlignment="Center"
                            Foreground="{DynamicResource Pump.Accent}" />
               </StackPanel>
             </Border>
-            <Border Grid.Column="2" Classes="panel" Padding="14,12">
+            <Border Grid.Row="4" Grid.Column="2" Classes="panel plresult">
               <StackPanel Spacing="4">
-                <TextBlock Text="درآمد اضافی" Classes="label" TextAlignment="Center" />
-                <TextBlock Text="{Binding BulkIncomeText}" FontWeight="ExtraBold" FontSize="20"
+                <TextBlock Text="درآمد اضافی" Classes="label pllabel" />
+                <TextBlock Text="{Binding BulkIncomeText}" FontWeight="ExtraBold" FontSize="18"
                            TextAlignment="Center"
                            Foreground="{DynamicResource Pump.Ok}" />
               </StackPanel>
             </Border>
-            <Button Grid.Column="4" Classes="accent" Content="ثبت" MinWidth="96" MinHeight="46"
-                    VerticalAlignment="Center" Command="{Binding AddBulkCommand}" />
+            <Button Grid.Row="4" Grid.Column="4" Classes="accent" Content="➕ ثبت"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                    FontSize="16" MinHeight="76" Command="{Binding AddBulkCommand}" />
           </Grid>
 
           <TextBlock FontSize="12" TextAlignment="Center"
@@ -168,18 +225,12 @@
       <Border Classes="card calm" Padding="16,14">
         <StackPanel Spacing="10">
           <TextBlock Text="✍️ درآمد و مصرف اضافی دستی" Classes="h2" TextAlignment="Center" />
-          <!-- همان ایرادِ «کوچک و یک‌بغل» را داشت؛ با همان قاعده وسط آمد -->
-          <Grid ColumnDefinitions="*,16,*" MaxWidth="640" HorizontalAlignment="Center">
-            <StackPanel Grid.Column="0" Spacing="5">
-              <TextBlock Text="درآمد اضافی دستی" Classes="label" TextAlignment="Center" />
-              <TextBox Text="{Binding ManualIncome}" Watermark="0" FontSize="16"
-                       TextAlignment="Center" MinHeight="42" />
-            </StackPanel>
-            <StackPanel Grid.Column="2" Spacing="5">
-              <TextBlock Text="مصرف اضافی" Classes="label" TextAlignment="Center" />
-              <TextBox Text="{Binding ManualExpense}" Watermark="0" FontSize="16"
-                       TextAlignment="Center" MinHeight="42" />
-            </StackPanel>
+          <!-- همان ایرادِ «کوچک و یک‌بغل» را داشت؛ حالا همان شبکهٔ کشیده با سقف -->
+          <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,6,Auto" MaxWidth="720">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="درآمد اضافی دستی" Classes="label pllabel" />
+            <TextBlock Grid.Row="0" Grid.Column="2" Text="مصرف اضافی" Classes="label pllabel" />
+            <TextBox Grid.Row="2" Grid.Column="0" Classes="plbox" Text="{Binding ManualIncome}" Watermark="0" />
+            <TextBox Grid.Row="2" Grid.Column="2" Classes="plbox" Text="{Binding ManualExpense}" Watermark="0" />
           </Grid>
         </StackPanel>
       </Border>

@@ -252,7 +252,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         var yes = await Dialogs.ConfirmAsync(
             "جدا کردنِ این دستگاه از این پمپ",
             "اشتراک، کدِ اپِ کارمندان و نشانیِ سرورِ خانگیِ این پمپ از این کامپیوتر "
-            + "برداشته می‌شوند و برای وصل شدنِ دوباره باید کدِ شش‌رقمی را بزنید.\n\n"
+            + "برداشته می‌شوند. برای وصل شدنِ دوباره از «حساب و ورود» وارد شوید و نامِ پمپ را بزنید.\n\n"
             + "⛔ دفتر و حساب‌های روی این کامپیوتر دست نمی‌خورند.",
             "جدا کن", "بی‌خیال");
         if (!yes) return;
@@ -263,7 +263,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
 
         StationLine = "";
         RefreshAll();
-        _host.Toast("این دستگاه از پمپ جدا شد. برای وصل شدنِ دوباره کدِ شش‌رقمی را بزنید.");
+        _host.Toast("این دستگاه از پمپ جدا شد. برای وصل شدنِ دوباره از «حساب و ورود» وارد شوید و نامِ پمپ را بزنید.");
     });
 
     /// <summary>
@@ -276,7 +276,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     private string SwitchNote() => Cloud.AccountSwitched
         ? "⚠️ این کامپیوتر پیش از این به حسابِ دیگری وصل بود، پس بندهای پمپِ قبلی "
           + "(اشتراک، کدِ اپِ کارمندان و نشانیِ سرور) برداشته شدند. دفتر دست نخورده است — "
-          + "برای وصل شدن، کدِ شش‌رقمیِ همین پمپ را بزنید."
+          + "با زدنِ نامِ پمپ، این کامپیوتر به پمپِ همین حساب وصل می‌شود."
         : "";
 
     // ── ۲) پروفایل: نشانیِ سرور از حساب می‌آید ──────────────────────────
@@ -335,8 +335,13 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         var check = LicenseGuard.CheckStored(file, now);
 
         SubActive = check.Valid;
-        VipDays = check.Valid && check.SubscriptionEndsAt > 0
-            ? Math.Max(0, (int)((check.SubscriptionEndsAt - now) / 86_400_000L))
+        //  ⚠️ **رو به بالا، مثلِ خودِ سرور** (`daysLeft = Math.ceil(...)`).
+        //  تا ۱۴۰۵/۰۷/۱۳ رو به پایین بود: دورهٔ آزمایشیِ سی‌روزه همان لحظهٔ
+        //  ساختنِ پمپ «۲۹ روز» خوانده می‌شد در حالی که پنلِ مدیر «۳۰ روز
+        //  مانده» می‌گفت — دو حرف از یک اشتراک. همان قاعدهٔ `VipSection`،
+        //  `SoftLock` و `Entitlements.GraceDaysLeft`.
+        VipDays = check.Valid && check.SubscriptionEndsAt > now
+            ? (int)Math.Ceiling((check.SubscriptionEndsAt - now) / 86_400_000d)
             : 0;
         SubKind = check.Valid ? KindOf(check.PlanTitle) : "";
         SubPermanent = check.Valid && VipDays > 3650;
@@ -348,7 +353,10 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
 
         if (string.IsNullOrWhiteSpace(file.CloudDeviceToken))
         {
-            SubStatus = "هنوز فعال نشده — کدِ شش‌رقمیِ اشتراک را بزنید.";
+            //  ⛔ «کدِ شش‌رقمیِ اشتراک را بزنید» دیگر راهِ درست نیست و کاربر را
+            //  دنبالِ کدی می‌فرستاد که ندارد: این کامپیوتر با **ورود به حساب و
+            //  نامِ پمپ** خودش بند می‌شود و دورهٔ آزمایشی هم همان‌جا می‌آید.
+            SubStatus = "هنوز به پمپ وصل نشده — از «حساب و ورود» وارد شوید و نامِ پمپ را بزنید؛ دورهٔ آزمایشی خودش می‌آید.";
             //  ⛔ «جدا شده» با «هنوز فعال نشده» یکی نیست: قفلِ بی‌توضیح باگ است.
             if (CloudLink.DeviceDetachedWhy.Length > 0) SubStatus = "⚠️ " + CloudLink.DeviceDetachedWhy;
             UpdatePill();
@@ -586,7 +594,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         //  حلقهٔ شصت‌ثانیه‌ای نتیجهٔ `BindAsync` را دور می‌ریخت.
         //  ⚠️ نامِ هیچ میزبانی در این پیام نمی‌آید — همان قاعدهٔ همیشگی.
         CloudLine = !string.IsNullOrWhiteSpace(f.CloudDeviceToken)
-            ? "فعال — با کدِ شش‌رقمی"
+            ? "فعال — وصل به پمپِ شما"
             : CloudLink.LastBindWhy is { Length: > 0 } why
                 ? "فعال نشده — " + why
                 : "فعال نشده";
@@ -683,7 +691,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
             ? Shamsi.Of(DateTimeOffset.FromUnixTimeMilliseconds(check.SubscriptionEndsAt).LocalDateTime)
             : "—";
         SubDaysText = !check.Valid ? "—" : SubPermanent ? "دائمی" : $"{Shamsi.Money(VipDays)} روز";
-        SubSourceText = check.Valid ? "مجوزِ امضاشدهٔ سرور" : activated ? check.Reason : "کدِ شش‌رقمی را بزنید";
+        SubSourceText = check.Valid ? "مجوزِ امضاشدهٔ سرور" : activated ? check.Reason : "وارد حساب شوید و نامِ پمپ را بزنید";
     }
 
     // ══ 🪪 ثبت‌نام و ورود — دو گام، و بس ════════════════════════════════════

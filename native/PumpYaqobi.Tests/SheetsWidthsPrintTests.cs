@@ -37,41 +37,38 @@ public class SheetsWidthsPrintTests
         Assert.Contains("{Binding EmptyText}", view);
     }
 
+    /// <summary>
+    /// ⛔ نوارِ «ماهِ فلان شروع شد» و توستِ نیمه‌شب (۱۴۰۵/۰۷/۱۲) به خواستهٔ صریحِ
+    /// صاحب ریپو (۱۴۰۵/۰۷/۱۳) برداشته شدند؛ جایشان نقطهٔ سرخ روی کشوی ماه/سال
+    /// است. رفتارِ خودِ نقطه در ‎MonthDotTests‎ سنجیده می‌شود.
+    /// </summary>
     [Fact]
-    public void DaftarhayeMahane_NavareMaheDigar_Darand()
+    public void DaftarhayeMahane_NavarNadarand_NoghteDarand()
     {
         var baseVm = Src("PumpYaqobi.App/ViewModels/SectionViewModel.cs");
-        Assert.Contains("private string _monthHint", baseVm);
-        Assert.Contains("GoMonthHintAsync", baseVm);
+        Assert.DoesNotContain("private string _monthHint", baseVm);
+        Assert.DoesNotContain("GoMonthHintAsync", baseVm);
+
+        var win = Src("PumpYaqobi.App/Views/MainWindow.axaml");
+        Assert.DoesNotContain("HasMonthHint", win);
+        Assert.DoesNotContain("MonthHint", win);
 
         var ledger = Src("PumpYaqobi.App/ViewModels/LedgerSectionViewModel.cs");
-        Assert.Contains("RefreshMonthHint();", ledger);
-
-        //  یک جا، در پوستهٔ پنجره — نه یک متنِ جدا در هر نما
-        var win = Src("PumpYaqobi.App/Views/MainWindow.axaml");
-        Assert.Contains("Content.HasMonthHint", win);
-        Assert.Contains("Content.GoMonthHintCommand", win);
+        Assert.DoesNotContain("RefreshMonthHint", ledger);
+        Assert.Contains("MonthDot.MarkOf(_dataMonths", ledger);
     }
 
     [Fact]
-    public void MaheTaze_MigooyadPakNashode_VaMozahemNist()
+    public void MaheTaze_TostNadarad_VaHichPorseshiNist()
     {
-        //  «بفهمونه که ماه عوض شده نه حساب‌ها پاک شدن… دیده بشه و مزاحمت ایجاد نکنه»
-        foreach (var f in new[] { "PumpYaqobi.App/ViewModels/Sections/WaraqSectionViewModel.cs",
-                                  "PumpYaqobi.App/ViewModels/LedgerSectionViewModel.cs" })
-            Assert.Contains("هیچ چیزی پاک نشده", Src(f));
-
-        var baseVm = Src("PumpYaqobi.App/ViewModels/SectionViewModel.cs");
-        Assert.Contains("MonthHint != _hintDismissed", baseVm);
-        Assert.Contains("Content.DismissMonthHintCommand", Src("PumpYaqobi.App/Views/MainWindow.axaml"));
-
-        //  سرِ نیمه‌شبِ آخرِ ماه یک خبرِ گذرا، نه پنجرهٔ پرسش
+        //  سرِ نیمه‌شبِ آخرِ ماه نه توست، نه پنجرهٔ پرسش — فقط نقطه (‎OnDayChanged‎ی بخش‌ها)
         var main = Src("PumpYaqobi.App/ViewModels/MainViewModel.cs");
         var i = main.IndexOf("public void DayChanged()", StringComparison.Ordinal);
-        var body = main.Substring(i, 1400);
-        Assert.Contains("month != _seenMonth", body);
-        Assert.Contains("Toasts.Show(", body);
+        var body = main.Substring(i, main.IndexOf("\n    }", i, StringComparison.Ordinal) - i);
+        Assert.DoesNotContain("Toasts.Show(", body);
         Assert.DoesNotContain("ConfirmAsync", body);
+        Assert.DoesNotContain("_seenMonth", main);
+        Assert.Contains("foreach (var p in AllPages) p.OnDayChanged();", body);
     }
 
     [Fact]
