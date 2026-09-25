@@ -31,6 +31,13 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
         // ⚠️ «همهٔ ماه‌ها» هم یک گزینه است، مثلِ سایت — پس کلیدِ خالی/«1405/*»
         // هم باید بنشیند، نه این‌که نادیده گرفته شود.
         Picker = new YearMonthPicker(k => { if (k != Month) Month = k; }, "همهٔ ماه‌ها");
+        //  «وقتی رفت رویشان آن نقطه‌ها بروند و دیگر دیده نشوند، مگر این‌که
+        //  ماهِ دیگر عوض شود» — شرحش بالای ‎MonthDot‎.
+        Picker.DotSeen += () =>
+        {
+            MonthDotStore.Ack(Id, Shamsi.ThisMonth());
+            Picker.SetDot("");
+        };
     }
 
     protected LedgerService<TEntity> Service { get; }
@@ -79,12 +86,24 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
         var now = Shamsi.ThisMonth();
         var roll = MonthRoll.Decide(Month, _autoMonth, now);
         _autoMonth = now;
-        if (!roll) return;
-
-        if (!Months.Contains(now)) Months.Insert(0, now);
-        Picker.Adopt(now);
-        Month = now;                                // خودش ‎ReloadRowsAsync‎ را می‌زند
+        if (roll)
+        {
+            if (!Months.Contains(now)) Months.Insert(0, now);
+            Picker.Adopt(now);
+            Month = now;                            // خودش ‎ReloadRowsAsync‎ را می‌زند
+        }
+        //  ⚠️ حتی بی جابه‌جایی (کاربر ماهِ دیگری را برگزیده بود): ماه عوض شد،
+        //  پس نقطه هم باید بیاید.
+        RefreshDot();
     }
+
+    /// <summary>
+    /// نقطهٔ سرخِ کشوی ماه — از ماه‌هایی که داده دارند و آن‌چه کاربر دیده
+    /// (<see cref="MonthDot.MarkOf"/>). فقط در حافظه و یک فایلِ کوچکِ خوانده‌شده؛
+    /// هیچ دستورِ دیتابیسی نمی‌زند.
+    /// </summary>
+    private void RefreshDot() =>
+        Picker.SetDot(MonthDot.MarkOf(_dataMonths, Shamsi.ThisMonth(), MonthDotStore.SeenOf(Id)));
     partial void OnSearchChanged(string value) => ApplyFilter();
 
     /// <summary>ردیفِ دیتابیس ← ردیفِ جدول.</summary>
@@ -113,7 +132,6 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
         Recalc();
         OnPropertyChanged(nameof(TotalCells));
         OnPropertyChanged(nameof(HasTotals));
-        RefreshMonthHint();          // ردیفِ تازه در ماهِ خالی ⇒ نوار برود
     }
 
     /// <summary>فیلترِ جست‌وجو — بخش‌هایی که ستونِ نام دارند بازنویسی‌اش می‌کنند.</summary>
@@ -126,6 +144,7 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
         foreach (var m in _dataMonths) Months.Add(m);
         if (!Months.Contains(Month)) Months.Insert(0, Month);
         Picker.Load(Months, Month);
+        RefreshDot();
         await ReloadRowsAsync();
     }
 
@@ -149,41 +168,14 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
 
     // ══ ماهِ تازه خالی است؛ ماهِ پیش سرِ جایش است ══════════════════════════
     //
-    // ⛔ این دفترها ماه‌به‌ماه‌اند و ماهِ تازه عمداً خالی شروع می‌شود — ولی
-    // سرِ آغازِ میزان کاربر دید جدول خالی است و گمان کرد «هر چه نوشته بودم پاک
-    // شد». پس ماهِ خالی **می‌گوید** که ردیف‌های ماهِ دیگر هست و یک دکمه به
-    // آن‌جا دارد. شرح در ‎SectionViewModel.MonthHint‎.
+    // ⛔ این دفترها ماه‌به‌ماه‌اند و ماهِ تازه عمداً خالی شروع می‌شود. تا
+    // ۱۴۰۵/۰۷/۱۳ یک نوارِ «ماهِ فلان تازه شروع شده… هیچ چیزی پاک نشده» بالای
+    // صفحه این را می‌گفت؛ صاحب ریپو همان مدل را نخواست و جایش نقطهٔ سرخ روی
+    // کشوی ماه آمد (‎MonthDot‎ و ‎RefreshDot‎ی بالا).
     // ⚠️ ماه خودکار جابه‌جا نمی‌شود: ردیفِ تازه جایش در ماهِ جاری است.
 
     /// <summary>ماه‌هایی که واقعاً ردیف دارند — تازه‌ترین اول.</summary>
     private List<string> _dataMonths = new();
-    private string _hintTarget = "";
-
-    private void RefreshMonthHint()
-    {
-        _hintTarget = "";
-        if (Rows.Count == 0 && !YearMonthPicker.IsAll(Month)
-            && _dataMonths.FirstOrDefault(m => m != Month) is { } other)
-        {
-            MonthHint = (Month == Shamsi.ThisMonth()
-                            ? "📅 ماهِ «" + Shamsi.MonthLabel(Month) + "» تازه شروع شده و هنوز ردیفی ندارد"
-                            : "📅 «" + Shamsi.MonthLabel(Month) + "» هنوز ردیفی ندارد")
-                      + " — هیچ چیزی پاک نشده؛ ردیف‌های «" + Shamsi.MonthLabel(other) + "» سرِ جایشان‌اند";
-            MonthHintAction = "نمایشِ «" + Shamsi.MonthLabel(other) + "»";
-            _hintTarget = other;
-        }
-        else { MonthHint = ""; MonthHintAction = ""; }
-    }
-
-    protected override Task OnGoMonthHintAsync()
-    {
-        if (_hintTarget.Length == 0) return Task.CompletedTask;
-        var t = _hintTarget;
-        if (!Months.Contains(t)) Months.Insert(0, t);
-        Picker.Adopt(t);
-        Month = t;
-        return Task.CompletedTask;
-    }
 
     /// <summary>ذخیرهٔ یک ردیف — تنها همان ردیف، نه کلِ جدول.</summary>
     public virtual async Task SaveEntityAsync(TEntity e)

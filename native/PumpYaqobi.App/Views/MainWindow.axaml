@@ -266,24 +266,6 @@
          آوالونیا کنترلِ نادیدنی را اصلاً اندازه نمی‌گیرد، پس بیست‌ونه صفحهٔ
          پنهان هیچ هزینهٔ چیدمانی ندارند؛ فقط در حافظه‌اند — و به‌هرحال
          بودند، چون ‎ViewLocator‎ همان نمونه‌ها را کش می‌کرد. -->
-    <!-- ══ «این ماه خالی است، ماهِ پیش سرِ جایش است» ═══════════════════════
-         گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «دوباره که آمدم هیچ ورقی نبود» — ماه
-         عوض شده بود و بخش فقط ماهِ جاری را نشان می‌داد. شرحش بالای
-         ‎SectionViewModel.MonthHint‎. یک جا برای همهٔ بخش‌های ماهانه. -->
-    <Border IsVisible="{Binding Content.HasMonthHint, FallbackValue=False}"
-            Background="{DynamicResource Pump.Input}"
-            BorderBrush="{DynamicResource Pump.Warn}" BorderThickness="0,0,0,2"
-            Padding="16,8" HorizontalAlignment="Stretch">
-      <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
-        <TextBlock Text="{Binding Content.MonthHint, FallbackValue=''}" VerticalAlignment="Center"
-                   FontWeight="Bold" TextWrapping="Wrap" />
-        <Button Classes="accent" Content="{Binding Content.MonthHintAction, FallbackValue=''}"
-                Command="{Binding Content.GoMonthHintCommand, FallbackValue={x:Null}}" />
-        <Button Classes="ghost" Content="✕" ToolTip.Tip="بستنِ این نوار"
-                Command="{Binding Content.DismissMonthHintCommand, FallbackValue={x:Null}}" />
-      </StackPanel>
-    </Border>
-
     <ItemsControl ItemsSource="{Binding AllPages}" HorizontalAlignment="Stretch">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate><Panel /></ItemsPanelTemplate>

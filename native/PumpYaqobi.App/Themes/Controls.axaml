@@ -1,8 +1,19 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:c="using:PumpYaqobi.App.Controls"
-        xmlns:th="using:PumpYaqobi.App.Themes">
+        xmlns:th="using:PumpYaqobi.App.Themes"
+        xmlns:vm="using:PumpYaqobi.App.ViewModels">
   <Styles.Resources>
+    <!-- ══ گزینهٔ کشوی ماه/سال با نقطهٔ سرخِ «ماهِ تازه» ════════════════════
+         خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۳): «رویش که زد، همان ماهی که قبلاً بود
+         را با یک نقطهٔ سرخ نشان بدهد.» شرحش بالای ‎MonthDot‎. یک قالب برای
+         همهٔ کشوی‌های ماه و سال، نه یکی در هر نما. -->
+    <DataTemplate x:Key="Pump.MonthDotItem" x:DataType="vm:YearMonthItem">
+      <StackPanel Orientation="Horizontal" Spacing="7">
+        <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+        <Ellipse Classes="monthdot" IsVisible="{Binding Dot}" VerticalAlignment="Center" />
+      </StackPanel>
+    </DataTemplate>
     <!-- فونتِ برنامه + پشتیبانِ ایموجیِ سیستم. Vazirmatn ایموجی ندارد؛ روی
          ویندوز «Segoe UI Emoji» و روی لینوکس «Noto Color Emoji» جایش را پر
          می‌کنند، وگرنه نشانه‌ها (⛽ 🟤 💵) خالی دیده می‌شوند. -->
@@ -1955,4 +1966,23 @@
     <Setter Property="Foreground" Value="{DynamicResource Pump.Accent}" />
   </Style>
 
+  <!-- ══ نقطهٔ سرخِ «ماهِ تازه» ═══════════════════════════════════════════════
+       ‎monthdot‎ کنارِ گزینهٔ ماهِ پیش در فهرست، و ‎monthdot.badge‎ روی گوشهٔ
+       خودِ کشویی. ⚠️ سرخِ خودِ تم (‎Pump.Dot‎) و یک حلقهٔ همرنگِ کارت، تا
+       روی لبهٔ کشویی هم جدا دیده شود. ⛔ هیچ انیمیشنی ندارد. -->
+  <Style Selector="Ellipse.monthdot">
+    <Setter Property="Width" Value="10" />
+    <Setter Property="Height" Value="10" />
+    <Setter Property="Fill" Value="{DynamicResource Pump.Dot}" />
+  </Style>
+  <Style Selector="Ellipse.monthdot.badge">
+    <Setter Property="Width" Value="14" />
+    <Setter Property="Height" Value="14" />
+    <Setter Property="Stroke" Value="{DynamicResource Pump.Card}" />
+    <Setter Property="StrokeThickness" Value="2" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="Margin" Value="-5,-5,0,0" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+  </Style>
 </Styles>
