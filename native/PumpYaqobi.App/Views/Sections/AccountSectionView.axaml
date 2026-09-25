@@ -829,6 +829,21 @@
         </StackPanel>
       </Border>
 
+      <!-- ══ حساب پمپ دارد، این کامپیوتر ثبت نیست (۱۴۰۵/۰۷/۱۳، سنجهٔ linkstates)
+           پمپِ تازه نمی‌خواهد؛ همان دورِ پس‌زمینه همین حالا می‌دود. -->
+      <Border Classes="card" Padding="22,18" IsVisible="{Binding NeedsBind}"
+              BorderBrush="{DynamicResource Pump.Warn}" BorderThickness="2">
+        <StackPanel Spacing="10">
+          <TextBlock Text="🔌 این کامپیوتر هنوز به پمپِ حسابتان ثبت نشده" Classes="ptitle" />
+          <TextBlock Text="{Binding CloudLine}" TextWrapping="Wrap" Classes="muted" />
+          <Button Classes="accent" MinHeight="40" Padding="18,0" HorizontalAlignment="Left"
+                  Content="ثبتِ همین کامپیوتر" Command="{Binding BindHereCommand}"
+                  IsEnabled="{Binding !Busy}" />
+          <TextBlock Text="{Binding LoginStatus}" TextWrapping="Wrap"
+                     IsVisible="{Binding LoginStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+      </Border>
+
       <!-- ══ چهار عددِ سرِ دست ═══════════════════════════════════════════════
            آن‌چه صاحبِ پمپ بیشتر از همه نگاهش می‌کند، بی باز کردنِ هیچ کارتی. -->
       <Grid ColumnDefinitions="*,12,*,12,*,12,*">

@@ -566,6 +566,19 @@ public sealed class StationPublisher : IAsyncDisposable
     /// این تابع صدا زده شده باشد.
     /// </para>
     /// </summary>
+    /// <summary>
+    /// همان دورِ شصت‌ثانیه‌ای — <b>همین حالا</b>. کلیکِ چراغِ سربرگ و دکمهٔ
+    /// «ثبتِ همین کامپیوتر»ِ پروفایل از همین می‌روند، نه از راهِ دومی
+    /// (۱۴۰۵/۰۷/۱۳: کلیکِ چراغ فقط «سرور بالاست؟» را می‌پرسید و هیچ‌وقت این
+    /// کامپیوتر را ثبت نمی‌کرد). هیچ استثنایی بیرون نمی‌دهد.
+    /// ⛔ و مثلِ خودِ حلقه **هیچ پمپی نمی‌سازد** — «هر حساب یک پمپ».
+    /// </summary>
+    public static async Task CloudKeepNowAsync(CancellationToken ct = default)
+    {
+        try { await CloudKeepAsync(ct); }
+        catch { /* بی‌اینترنت خطا نیست — چراغ از `Reach` راست می‌گوید */ }
+    }
+
     private static async Task CloudKeepAsync(CancellationToken ct)
     {
         var file = AppSettings.Load();
@@ -576,6 +589,20 @@ public sealed class StationPublisher : IAsyncDisposable
         {
             var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
             await cloud.HomeFromAccountAsync(ct);
+            //  ⛔ **نشست همین حالا مُرد** (۴۰۱ و تازه‌سازیِ ناموفق) — مثلاً حساب
+            //  از ریشه در پنل حذف شد. سنجهٔ `linkstates` روی پشتهٔ واقعی دید
+            //  که توکنِ دستگاهِ پمپِ حذف‌شده ده دقیقه زنده می‌ماند و چراغ سبز
+            //  «به سرورِ حساب وصل است» و پروفایل «فعال — وصل به پمپِ شما»
+            //  می‌گفتند. پس همین حالا خودِ دستگاه پرسیده می‌شود: سرور اگر
+            //  «device_not_registered» گفت، `DevSendAsync` توکن را برمی‌دارد.
+            //  ⚠️ نشستِ مرده به‌تنهایی دستگاه را پاک **نمی‌کند** — نشستِ
+            //  نودروزه هم طبیعی می‌میرد و دستگاه سالم می‌ماند؛ فقط جوابِ صریحِ
+            //  سرور دربارهٔ خودِ دستگاه.
+            if (!cloud.SignedIn && cloud.Activated)
+            {
+                await cloud.RefreshAsync(ct);
+                return;
+            }
             //  ⛔ و مجوز — وگرنه اشتراکی که مدیر همین حالا روی سرور داد
             //  هیچ‌وقت به این دستگاه نمی‌رسید مگر کاربر صفحهٔ پروفایل را
             //  باز کند. شرحِ کامل بالای `CloudLink.KeepLicenseFreshAsync`.

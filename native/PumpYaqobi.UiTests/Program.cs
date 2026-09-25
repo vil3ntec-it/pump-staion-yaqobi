@@ -137,6 +137,8 @@ internal static class Program
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- signuptrial <live.json> [پوشه]
         //  «حساب ساختم و کد را زدم، ولی ۳۰ روزِ آزمایشی را ندادند» — همان راه، از خودِ صفحهٔ ورود
         if (outDir.Equals("signuptrial", StringComparison.OrdinalIgnoreCase)) return SignUpTrialProbe.Run(args);
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- linkstates <live.json> [پوشه]
+        if (outDir.Equals("linkstates", StringComparison.OrdinalIgnoreCase)) return LinkStatesProbe.Run(args);
         //  «تست بزن ببین لاگین می‌شود، کد بزنی چه می‌شود، حساب ساخته می‌شود یا نه»
         if (outDir.Equals("cloudlogin", StringComparison.OrdinalIgnoreCase)) return CloudLoginProbe.Run();
         //  «تو کادرها + @ # ﷼ ( ) ؟ ؛ : , . نوشته نمی‌شوند»

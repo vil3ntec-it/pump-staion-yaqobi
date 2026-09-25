@@ -345,8 +345,11 @@ public sealed partial class CloudLink
                 return CloudResult.No(made.Why, made.Code);
         }
 
+        AccountHasStation = true;
         //  ۳) و حالا بند شدن — همان راهِ همیشگی، با همان قفلِ کلیدِ عمومی.
-        return await BindAsync(ct);
+        var bindRes = await BindAsync(ct);
+        LastBindWhy = bindRes.Ok ? "" : (bindRes.Why ?? "");
+        return bindRes;
     }
 
     /// <summary>
@@ -377,6 +380,7 @@ public sealed partial class CloudLink
         try
         {
             var me = await AccountAsync(HttpMethod.Get, "/api/pump/me", null, ct);
+            if (me.Ok) AccountHasStation = StationId(me.Json).Length > 0;
             return me.Ok && StationId(me.Json).Length > 0;
         }
         catch { return false; }
@@ -1291,6 +1295,18 @@ public sealed partial class CloudLink
     /// </summary>
     public static string LastBindWhy { get; private set; } = "";
 
+    /// <summary>
+    /// «حسابِ واردشده روی سرور پمپ دارد؟» — از آخرین جوابِ واقعیِ
+    /// <c>/api/pump/me</c>؛ <c>null</c> یعنی هنوز نپرسیده‌ایم.
+    ///
+    /// ⛔ <b>چراغ و پروفایل از همین می‌خوانند، نه از <c>PumpStepDone</c>ِ روی
+    /// دیسک</b> (۱۴۰۵/۰۷/۱۳، سنجهٔ <c>linkstates</c>): آن مُهر می‌گوید «روزی
+    /// پمپ داشت»، نه «همین حالا دارد» — و پمپی که از پنل حذف شده بود با مُهرِ
+    /// کهنه هیچ‌وقت کارتِ «ساختنِ پمپ» را نشان نمی‌داد. ایستا است، همان
+    /// الگوی <see cref="LastBindWhy"/>.
+    /// </summary>
+    public static bool? AccountHasStation { get; set; }
+
     private async Task<CloudResult> SeatAsync(JsonElement json)
     {
         var token = Str(json, "accessToken");
@@ -1847,6 +1863,7 @@ public sealed partial class CloudLink
         _settings.CloudAccountToken = "";
         _settings.CloudRefreshToken = "";
         _settings.CloudAccessExpiresAt = 0;
+        AccountHasStation = null;
         await SaveQuiet();
     }
 
@@ -1908,6 +1925,7 @@ public sealed partial class CloudLink
         _settings.CloudAccountToken = "";
         _settings.CloudRefreshToken = "";
         _settings.CloudAccessExpiresAt = 0;
+        AccountHasStation = null;
         _settings.CloudEmail = "";
         _settings.CloudName = "";
         await SaveQuiet();
@@ -1935,6 +1953,7 @@ public sealed partial class CloudLink
     /// </summary>
     public async Task ForgetStationAsync()
     {
+        AccountHasStation = null;
         _settings.CloudDeviceToken = "";
         _settings.CloudStationId = "";
         _settings.CloudStationCode = "";
@@ -2003,6 +2022,8 @@ public sealed partial class CloudLink
         //  هنجارش کند یا خودش بسازدش)، پس آن مقایسه نصبِ سالم را هم رد
         //  می‌کرد. شناسه همان چیزی است که مجوز (`stn`) هم رویش قفل است.
         var acctStation = StationId(json);
+        AccountHasStation = acctStation.Length > 0;
+        if (acctStation.Length == 0) LastBindWhy = "";
         var locked = (_settings.CloudStationId ?? "").Trim();
         if (locked.Length > 0 && acctStation.Length > 0
             && !string.Equals(acctStation, locked, StringComparison.Ordinal))

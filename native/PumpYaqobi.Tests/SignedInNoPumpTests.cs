@@ -58,7 +58,11 @@ public class SignedInNoPumpTests
     public void Profile_KarteSakhtanePomp_Darad_Va_HamanRahRaMizanad()
     {
         var vm = Src(Vm);
-        Assert.Contains("NeedsPump = SignedIn && string.IsNullOrWhiteSpace(f.CloudDeviceToken) && !f.PumpStepDone", vm);
+        //  ⛔ «پمپ دارد؟» از جوابِ خودِ سرور؛ مُهرِ `PumpStepDone` فقط وقتی هنوز
+        //  نپرسیده‌ایم (۱۴۰۵/۰۷/۱۳، سنجهٔ `linkstates`).
+        Assert.Contains("var unbound = SignedIn && string.IsNullOrWhiteSpace(f.CloudDeviceToken);", vm);
+        Assert.Contains("NeedsPump = unbound && (CloudLink.AccountHasStation == false", vm);
+        Assert.Contains("|| (CloudLink.AccountHasStation is null && !f.PumpStepDone));", vm);
         var i = vm.IndexOf("CreatePumpHereAsync", StringComparison.Ordinal);
         Assert.True(i > 0);
         var body = vm.Substring(i, Math.Min(500, vm.Length - i));
@@ -68,6 +72,63 @@ public class SignedInNoPumpTests
         var v = Src(View);
         Assert.Contains("{Binding NeedsPump}", v);
         Assert.Contains("CreatePumpHereCommand", v);
+    }
+
+    /// <summary>
+    /// ⛔ «ببین الان این وصل نمی‌شه» (۱۴۰۵/۰۷/۱۳، عکسِ چراغ): یک جمله برای سه
+    /// حال گفته می‌شد و کلیکِ چراغ فقط «بالاست؟» را می‌پرسید. سنجهٔ رفتاری:
+    /// `linkstates` روی پشتهٔ واقعی.
+    /// </summary>
+    [Fact]
+    public void HarHal_JomleyeKhodash_Va_KelikeCheragh_SabtMikonad()
+    {
+        var s = Src(Main);
+        Assert.Contains("why = UnboundWhy(_signedInCache);", s);
+        var i = s.IndexOf("private static string UnboundWhy", StringComparison.Ordinal);
+        var body = s[i..s.IndexOf(";\n", i, StringComparison.Ordinal)];
+        Assert.Contains("هنوز وارد حساب نشده‌اید", body);
+        Assert.Contains("AccountHasStation == false", body);
+        Assert.Contains("LastBindWhy", body);
+        //  ⛔ جملهٔ کهنه که بی‌حساب را به «ساختنِ پمپ» می‌فرستاد، برنگشت
+        Assert.DoesNotContain("در «پروفایل» پمپ را بسازید", s);
+
+        //  ⛔ کلیکِ چراغ همان دورِ کامل را می‌زند و اگر کارِ کاربر است، پروفایل را باز می‌کند
+        var c = s.IndexOf("private async Task CheckCloudAsync()", StringComparison.Ordinal);
+        var click = s[c..s.IndexOf("\n    }\n", c, StringComparison.Ordinal)];
+        Assert.Contains("StationPublisher.CloudKeepNowAsync()", click);
+        Assert.Contains("await GoAsync(Account);", click);
+        //  ⛔ و هیچ پمپی بی‌خبر نمی‌سازد — «هر حساب یک پمپ»
+        Assert.DoesNotContain("EnsureStationAsync", click);
+        var pub = Src("PumpYaqobi.App/Services/StationPublisher.cs");
+        Assert.DoesNotContain("EnsureStationAsync", pub);
+    }
+
+    [Fact]
+    public void HesabePompDar_KarteSabteHaminKampyuter_Darad()
+    {
+        var vm = Src(Vm);
+        Assert.Contains("NeedsBind = unbound && !NeedsPump && CloudLink.AccountHasStation == true;", vm);
+        var i = vm.IndexOf("private async Task BindHereAsync()", StringComparison.Ordinal);
+        var body = vm[i..vm.IndexOf("\n    }\n", i, StringComparison.Ordinal)];
+        Assert.Contains("StationPublisher.CloudKeepNowAsync()", body);
+        Assert.DoesNotContain("EnsureStationAsync", body);
+        var v = Src(View);
+        Assert.Contains("{Binding NeedsBind}", v);
+        Assert.Contains("BindHereCommand", v);
+    }
+
+    /// <summary>
+    /// ⛔ حسابِ حذف‌شده: نشست همین حالا مُرد ⇒ خودِ دستگاه پرسیده می‌شود، تا
+    /// توکنِ پمپِ حذف‌شده چراغ را سبز نگه ندارد.
+    /// </summary>
+    [Fact]
+    public void NeshasteMorde_Dastgah_Ra_HaminHala_MiPorsad()
+    {
+        var pub = Src("PumpYaqobi.App/Services/StationPublisher.cs");
+        var i = pub.IndexOf("await cloud.HomeFromAccountAsync(ct);", StringComparison.Ordinal);
+        var after = pub[i..(i + 1400)];
+        Assert.Contains("if (!cloud.SignedIn && cloud.Activated)", after);
+        Assert.Contains("await cloud.RefreshAsync(ct);", after);
     }
 
     [Fact]
