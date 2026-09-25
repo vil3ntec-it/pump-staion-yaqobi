@@ -231,6 +231,71 @@ public sealed class DebtorService
         return map;
     }
 
+    /// <summary>
+    /// «بردگیِ» یک ردیف، همان‌طور که کارت‌ها و مفاد/ضرر می‌شمارند.
+    /// ⛔ یک جا — هم ‎RollupsAsync‎ و هم ‎NoInvoiceBardagiAsync‎ همین را می‌خوانند،
+    /// وگرنه روزی کارتِ شرکت یک عدد می‌گفت و مفادِ همان ماه عددِ دیگر.
+    /// </summary>
+    private const string BardagiSql = @"ROUND(CASE
+                       WHEN r.ByMoney = 1
+                            AND NOT (CAST(r.Bardagi AS REAL) = 0 AND CAST(r.Liters AS REAL) > 0)
+                       THEN CAST(r.Bardagi AS REAL)
+                       WHEN CAST(r.Liters AS REAL) > 0
+                       THEN CAST(r.Liters AS REAL) * COALESCE(CAST(r.PricePerLiter AS REAL), 0)
+                       ELSE 0 END)";
+
+    /// <summary>
+    /// ══ بردگیِ «بی‌فاکتور»ها در یک دوره — برای صفحهٔ مفاد/ضرر ═════════════════
+    ///
+    /// همان عددی که ‎CardAccountsAsync(noInvoice: true)‎ برای «همه» می‌دهد
+    /// (جمعِ دفترِ تیلِ حساب‌های قرض‌دارانِ بی‌فاکتور)، ولی فقط ردیف‌هایی که
+    /// ‎DateKey‎شان در بازه است — قاعدهٔ ‎_plBreakdownData‎ی سایت: ردیف با تاریخِ
+    /// خودش. <paramref name="keys"/>ِ ‎null‎ یعنی همه.
+    /// </summary>
+    public async Task<decimal> NoInvoiceBardagiAsync((int Lo, int Hi)? keys, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        var range = keys is { } k ? $" AND r.DateKey >= {k.Lo} AND r.DateKey <= {k.Hi}" : "";
+        var sql = @"
+            SELECT SUM(Bardagi) FROM (
+              SELECT " + BardagiSql + @" AS Bardagi
+              FROM DebtRows r
+              JOIN DebtAccounts a ON a.Id = r.FuelAccountId
+              JOIN Debtors d ON d.Id = COALESCE(a.MainOfDebtorId, a.DebtorId)
+              WHERE r.DeletedAt IS NULL AND a.DeletedAt IS NULL AND d.DeletedAt IS NULL
+                AND d.IsNoInvoice = 1" + range + @"
+            );";
+        var conn = db.Database.GetDbConnection();
+        var opened = conn.State != System.Data.ConnectionState.Open;
+        if (opened) await conn.OpenAsync(ct);
+        try
+        {
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = sql;
+            var v = await cmd.ExecuteScalarAsync(ct);
+            return v is null || v is DBNull ? 0m : (decimal)Convert.ToDouble(v);
+        }
+        finally { if (opened) await conn.CloseAsync(); }
+    }
+
+    /// <summary>ماه‌هایی که ردیفِ بی‌فاکتور دارند («1405/07») — کشوی دورهٔ مفاد/ضرر.</summary>
+    public async Task<List<string>> NoInvoiceMonthsAsync(CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        var ids = await db.Debtors.AsNoTracking().Where(d => d.IsNoInvoice).Select(d => d.Id).ToListAsync(ct);
+        if (ids.Count == 0) return new();
+        var accts = await db.DebtAccounts.AsNoTracking()
+            .Where(a => (a.MainOfDebtorId != null && ids.Contains(a.MainOfDebtorId.Value))
+                     || (a.DebtorId != null && ids.Contains(a.DebtorId.Value)))
+            .Select(a => a.Id).ToListAsync(ct);
+        var keys = await db.DebtRows.AsNoTracking()
+            .Where(r => r.FuelAccountId != null && accts.Contains(r.FuelAccountId.Value) && r.DateKey > 0)
+            .Select(r => r.DateKey / 100).Distinct().ToListAsync(ct);
+        return keys.Select(k => $"{k / 100:0000}/{k % 100:00}").ToList();
+    }
+
     /// <summary>جمعِ هر (حساب × دفتر × سوخت) — یک‌بار، از خودِ دیتابیس.</summary>
     private static async Task<List<AccountRollup>> RollupsAsync(
         PumpDbContext db, CancellationToken ct)
@@ -251,13 +316,7 @@ public sealed class DebtorService
                      CAST(r.Rasid AS REAL) AS Rasid,
                      CASE WHEN r.FuelAccountId IS NULL THEN 0
                           ELSE CAST(r.RasidFuel AS REAL) END AS RasidFuel,
-                     ROUND(CASE
-                       WHEN r.ByMoney = 1
-                            AND NOT (CAST(r.Bardagi AS REAL) = 0 AND CAST(r.Liters AS REAL) > 0)
-                       THEN CAST(r.Bardagi AS REAL)
-                       WHEN CAST(r.Liters AS REAL) > 0
-                       THEN CAST(r.Liters AS REAL) * COALESCE(CAST(r.PricePerLiter AS REAL), 0)
-                       ELSE 0 END) AS Bardagi
+                     " + BardagiSql + @" AS Bardagi
               FROM DebtRows r
               WHERE r.DeletedAt IS NULL
                 AND (r.FuelAccountId IS NOT NULL OR r.MoneyAccountId IS NOT NULL)

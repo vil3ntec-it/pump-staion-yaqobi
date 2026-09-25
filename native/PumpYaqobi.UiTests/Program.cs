@@ -128,6 +128,9 @@ internal static class Program
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- round13 [پوشه]
         //  فهرستِ نُه‌تاییِ صاحب ریپو (۱۴۰۵/۰۷/۱۳)
         if (outDir.Equals("round13", StringComparison.OrdinalIgnoreCase)) return Round13Probe.Run(args);
+        //  «مفاد و ضرر: کادرهای برابر + کشوی ماه و سال · مخزن: عنوانِ وسط و کادرِ جمله‌ها» (۱۴۰۵/۰۷/۱۳)
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- plstore [پوشه]
+        if (outDir.Equals("plstore", StringComparison.OrdinalIgnoreCase)) return ProfitStorageProbe.Run(args);
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- livestack <live.json> [پوشه]
         //  برنامهٔ واقعی با پنلِ خانگیِ واقعی و سرورِ حسابِ واقعی — بی هیچ نشانی
         if (outDir.Equals("livestack", StringComparison.OrdinalIgnoreCase)) return LiveStackProbe.Run(args);

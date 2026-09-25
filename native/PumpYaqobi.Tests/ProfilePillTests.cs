@@ -116,7 +116,9 @@ public class ProfilePillTests
         var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs");
 
         var fill = vm.IndexOf("ShowSubDetails(check, file);", StringComparison.Ordinal);
-        var bail = vm.IndexOf("SubStatus = \"هنوز فعال نشده", StringComparison.Ordinal);
+        //  متنِ این حالت از ۱۴۰۵/۰۷/۱۳ دیگر به «کدِ شش‌رقمی» نمی‌فرستد (‎TrialDaysTests‎)؛
+        //  قاعدهٔ همین سنجه — پُر شدنِ کارت پیش از بازگشت — همان است.
+        var bail = vm.IndexOf("SubStatus = \"هنوز به پمپ وصل نشده", StringComparison.Ordinal);
         Assert.True(fill > 0, "‎ShowSubDetails‎ صدا زده نمی‌شود");
         Assert.True(bail > 0, "حالتِ «فعال نشده» پیدا نشد");
         Assert.True(fill < bail,

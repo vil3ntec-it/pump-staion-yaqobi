@@ -208,12 +208,21 @@ public sealed class StorageDataService
     /// ⚠️ نه ‎SUM‎ و نه ‎CAST‎ به SQLite داده نمی‌شود: مبلغ‌ها متن ذخیره
     /// می‌شوند (همان قاعدهٔ ‎LedgerService.SumAsync‎).
     /// </summary>
-    public async Task<ShiftSums> ShiftSumsAsync(FuelType fuel, CancellationToken ct = default)
+    public Task<ShiftSums> ShiftSumsAsync(FuelType fuel, CancellationToken ct = default) =>
+        ShiftSumsAsync(fuel, null, ct);
+
+    /// <summary>
+    /// همان جمع، فقط برای پارچه‌هایی که ‎DateKey‎شان در بازهٔ <paramref name="keys"/>
+    /// است — دورهٔ ماه/سالِ صفحهٔ مفاد/ضرر. ‎null‎ یعنی همه (همان بالا).
+    /// </summary>
+    public async Task<ShiftSums> ShiftSumsAsync(FuelType fuel, (int Lo, int Hi)? keys,
+                                                CancellationToken ct = default)
     {
         _perm.Require(Permission.ViewData);
         await using var db = _dbf.Create();
-        var rows = await db.Reports.AsNoTracking()
-                           .Where(r => r.Fuel == fuel)
+        var q = db.Reports.AsNoTracking().Where(r => r.Fuel == fuel);
+        if (keys is { } k) q = q.Where(r => r.DateKey >= k.Lo && r.DateKey <= k.Hi);
+        var rows = await q
                            .Select(r => new
                            {
                                DaySale = (decimal?)r.DayShift!.Sale,
@@ -229,6 +238,16 @@ public sealed class StorageDataService
             profit += (r.DayProfit ?? 0m) + (r.NightProfit ?? 0m);
         }
         return new ShiftSums(sale, profit);
+    }
+
+    /// <summary>ماه‌هایی که پارچه دارند («1405/07») — فقط برای کشوی دورهٔ مفاد/ضرر.</summary>
+    public async Task<List<string>> ReportMonthsAsync(CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        var keys = await db.Reports.AsNoTracking().Where(r => r.DateKey > 0)
+                           .Select(r => r.DateKey / 100).Distinct().ToListAsync(ct);
+        return keys.Select(k => $"{k / 100:0000}/{k % 100:00}").ToList();
     }
 
     // ── میله‌زنی ───────────────────────────────────────────────────────────

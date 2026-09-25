@@ -5,6 +5,19 @@
              xmlns:th="using:PumpYaqobi.App.Themes"
              x:Class="PumpYaqobi.App.Views.Sections.StorageSectionView"
              x:DataType="vm:StorageSectionViewModel">
+  <!-- یک قد برای چهار خانهٔ زیرِ عددِ مخزن — دو کادرِ تایپ و دو کادرِ خواندنی -->
+  <UserControl.Styles>
+    <Style Selector="TextBox.tankbox">
+      <Setter Property="MinHeight" Value="40" />
+      <Setter Property="Height" Value="40" />
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+    <Style Selector="Border.calc.tankbox">
+      <Setter Property="MinHeight" Value="40" />
+      <Setter Property="Height" Value="40" />
+      <Setter Property="Padding" Value="9,0" />
+    </Style>
+  </UserControl.Styles>
   <Panel>
 
   <c:SectionPage Header="مخزن">
@@ -41,12 +54,19 @@
             </Border>
 
             <StackPanel Grid.Column="2" Spacing="6">
-              <TextBlock Text="{Binding TankTitle}" Classes="h2"
+              <!-- ══ عنوان، عددِ درشت و حالِ مخزن — وسطِ کارت (۱۴۰۵/۰۷/۱۳) ══
+                   گزارشِ صاحب ریپو با عکس: «آن نوشته‌اش که وسط نیست». هر چهار
+                   تا به لبهٔ راست چسبیده بودند و سه عددِ زیرشان وسطِ ستون‌هایشان؛
+                   پس چشم دو ترازِ مختلف روی یک کارت می‌دید. حالا همه وسط‌اند. -->
+              <TextBlock Text="{Binding TankTitle}" Classes="h2" TextAlignment="Center"
+                         HorizontalAlignment="Stretch"
                          Foreground="{DynamicResource Pump.Accent}" />
-              <TextBlock Text="{Binding Current}" FontSize="40" FontWeight="Bold"
+              <TextBlock Text="{Binding Current}" FontSize="40" FontWeight="Bold" TextAlignment="Center"
+                         HorizontalAlignment="Stretch"
                          Foreground="{DynamicResource Pump.Accent}" />
-              <TextBlock Text="لیتر باقی‌مانده" Classes="muted" />
-              <Border CornerRadius="9" Padding="10,4" HorizontalAlignment="Right" Margin="0,4,0,0"
+              <TextBlock Text="لیتر باقی‌مانده" Classes="muted" TextAlignment="Center"
+                         HorizontalAlignment="Stretch" />
+              <Border CornerRadius="9" Padding="10,4" HorizontalAlignment="Center" Margin="0,4,0,0"
                       Background="{DynamicResource Pump.Panel}"
                       BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="1">
                 <TextBlock Text="{Binding StateText}" FontSize="12" FontWeight="SemiBold" />
@@ -54,26 +74,44 @@
 
               <!-- سه عددِ مخزن، پخش‌شده در تمامِ عرضِ کارت. پیش از این کنارِ
                    هم و چسبیده به راست بودند و وسطِ کارت خالی می‌ماند. -->
+              <!-- ⛔ چهار خانه، یک شکل (۱۴۰۵/۰۷/۱۳): «جمله ورودی و جمله فروش کادر
+                   ندارند… با ظرفیت مخزن و آستانهٔ هشدار یکی نیستند؛ برای آن‌ها هم
+                   کادر بده، فقط‌خواندنی.» پس دو جملهٔ حساب‌شده هم کادر دارند —
+                   ‎Border.calc‎، همان کادرِ «خودکار»ِ فرمِ پارچه — هم‌قد و هم‌پهنای
+                   دو کادرِ تایپ. ⚠️ فقط‌خواندنی می‌مانند: ‎TextBox‎ نیستند، پس هیچ
+                   تایپی به ‎TotalIn‎/‎TotalOut‎ نمی‌رسد و هیچ منطقی عوض نشد. -->
               <UniformGrid Rows="1" Classes="stats" Margin="0,10,0,0">
-                <StackPanel Spacing="1" Margin="6,0">
-                  <TextBlock Text="جمله ورودی" Classes="label" FontSize="11" />
-                  <TextBlock Text="{Binding TotalIn, StringFormat={}{0} لیتر}" FontWeight="Bold"
-                             Foreground="{DynamicResource Pump.Ok}" />
+                <StackPanel Spacing="4" Margin="6,0">
+                  <TextBlock Text="جمله ورودی" Classes="label" FontSize="11"
+                             TextAlignment="Center" HorizontalAlignment="Stretch" />
+                  <Border Classes="calc tankbox" ToolTip.Tip="حساب‌شده از خریدها — فقط خواندنی">
+                    <TextBlock Text="{Binding TotalIn, StringFormat={}{0} لیتر}" FontWeight="Bold"
+                               TextAlignment="Center" HorizontalAlignment="Stretch"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource Pump.Ok}" />
+                  </Border>
                 </StackPanel>
-                <StackPanel Spacing="1" Margin="6,0">
-                  <TextBlock Text="جمله فروش" Classes="label" FontSize="11" />
-                  <TextBlock Text="{Binding TotalOut, StringFormat={}{0} لیتر}" FontWeight="Bold"
-                             Foreground="{DynamicResource Pump.Danger}" />
+                <StackPanel Spacing="4" Margin="6,0">
+                  <TextBlock Text="جمله فروش" Classes="label" FontSize="11"
+                             TextAlignment="Center" HorizontalAlignment="Stretch" />
+                  <Border Classes="calc tankbox" ToolTip.Tip="حساب‌شده از پارچه‌ها — فقط خواندنی">
+                    <TextBlock Text="{Binding TotalOut, StringFormat={}{0} لیتر}" FontWeight="Bold"
+                               TextAlignment="Center" HorizontalAlignment="Stretch"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource Pump.Danger}" />
+                  </Border>
                 </StackPanel>
-                <StackPanel Spacing="1" Margin="6,0">
-                  <TextBlock Text="ظرفیت مخزن (لیتر)" Classes="label" FontSize="11" />
-                  <TextBox Text="{Binding Capacity}" HorizontalAlignment="Stretch" />
+                <StackPanel Spacing="4" Margin="6,0">
+                  <TextBlock Text="ظرفیت مخزن (لیتر)" Classes="label" FontSize="11"
+                             TextAlignment="Center" HorizontalAlignment="Stretch" />
+                  <TextBox Classes="tankbox" Text="{Binding Capacity}" HorizontalAlignment="Stretch" />
                 </StackPanel>
                 <!-- از «تنظیمات» به این‌جا آمد (۱۴۰۵/۰۶/۲۸) — جای طبیعی‌اش
                      همین‌جاست، کنارِ ظرفیت. -->
-                <StackPanel Spacing="1" Margin="6,0">
-                  <TextBlock Text="آستانهٔ هشدار (لیتر)" Classes="label" FontSize="11" />
-                  <TextBox Text="{Binding LowStock}" HorizontalAlignment="Stretch" />
+                <StackPanel Spacing="4" Margin="6,0">
+                  <TextBlock Text="آستانهٔ هشدار (لیتر)" Classes="label" FontSize="11"
+                             TextAlignment="Center" HorizontalAlignment="Stretch" />
+                  <TextBox Classes="tankbox" Text="{Binding LowStock}" HorizontalAlignment="Stretch" />
                 </StackPanel>
               </UniformGrid>
 
