@@ -181,6 +181,64 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     public ObservableCollection<PurchaseRowViewModel> Purchases { get; } = new();
     public ObservableCollection<DipRowViewModel> Dips { get; } = new();
 
+    // ══ پنجرهٔ کارت‌های خرید — «بی‌نهایت خرید هم باشد نباید افتی داشته باشد» ═════
+    //
+    //  گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۳): «مخزن‌ها هم لگ داره هم باگِ اسکرول.»
+    //  ریشه ساختاری بود، نه سلیقه: هر خرید یک کارت با **هشت** کادرِ ‎.stat‎
+    //  است، و فهرست با ‎ItemsControl‎ **همهٔ** خریدها را می‌ساخت. با یک خرید در
+    //  هفته، پنج سال یعنی ~۱۳۰ کارت برای هر تیل — بیش از هزار کادرِ زنده با
+    //  سایه، همه در درختِ دیداری، همه با هر فریمِ اسکرول. همان چاله‌ای که
+    //  ‎ExcelGrid.StickyRowLimit‎ برای جدول‌ها بست، این‌جا برای کارت‌ها باز بود.
+    //
+    //  ⛔ ‎Purchases‎ همان فهرستِ کامل می‌ماند — موجودی، پول‌ها، PDF و «فی
+    //     لیتر» همه از آن حساب می‌شوند و یک ردیف هم کم نمی‌شود. فقط
+    //     **کارت‌ها** پنجره دارند: تازه‌ترین ‎PurchasePage‎ تا، و دکمهٔ
+    //     «خریدهای قدیمی‌تر» هر بار همان‌قدر دیگر می‌آورد (همان الگوی
+    //     ‎ShowOlder‎ِ بک‌اپ و سطلِ زباله).
+    //  ⛔ عددِ ساختاری‌اش در ‎scrollperf‎ سنجیده می‌شود: کارتِ زنده ≤ ‎PurchasePage‎
+    //     در حالی که خودِ فهرست بزرگ‌تر است.
+    /// <summary>چند کارتِ خرید یک‌جا ساخته می‌شود.</summary>
+    public const int PurchasePage = 12;
+
+    /// <summary>کارت‌هایی که واقعاً روی صفحه‌اند — پیشوندی از <see cref="Purchases"/>.</summary>
+    public ObservableCollection<PurchaseRowViewModel> PurchaseCards { get; } = new();
+
+    private int _purchaseLimit = PurchasePage;
+
+    /// <summary>چند خرید پشتِ دکمهٔ «قدیمی‌تر» مانده.</summary>
+    public int HiddenPurchaseCount => Math.Max(0, Purchases.Count - PurchaseCards.Count);
+    public bool HasHiddenPurchases => HiddenPurchaseCount > 0;
+    public string MorePurchasesText =>
+        "⬇️ " + Shamsi.Money(Math.Min(PurchasePage, HiddenPurchaseCount)) + " خریدِ قدیمی‌تر (" +
+        Shamsi.Money(HiddenPurchaseCount) + " مانده)";
+
+    /// <summary>
+    /// ‎PurchaseCards‎ را با ‎Purchases‎ هم‌گام می‌کند، بی دور ریختنِ کارت‌هایی
+    /// که سرِ جایشان‌اند — ‎Reset‎ یعنی ساختنِ دوبارهٔ همهٔ کارت‌ها از صفر.
+    /// </summary>
+    private void SyncPurchaseCards()
+    {
+        var want = Purchases.Take(_purchaseLimit).ToList();
+        for (var i = 0; i < want.Count; i++)
+        {
+            if (i < PurchaseCards.Count && ReferenceEquals(PurchaseCards[i], want[i])) continue;
+            var at = PurchaseCards.IndexOf(want[i]);
+            if (at >= 0) PurchaseCards.Move(at, i);
+            else PurchaseCards.Insert(i, want[i]);
+        }
+        while (PurchaseCards.Count > want.Count) PurchaseCards.RemoveAt(PurchaseCards.Count - 1);
+        OnPropertyChanged(nameof(HiddenPurchaseCount));
+        OnPropertyChanged(nameof(HasHiddenPurchases));
+        OnPropertyChanged(nameof(MorePurchasesText));
+    }
+
+    [RelayCommand]
+    private void ShowMorePurchases()
+    {
+        _purchaseLimit += PurchasePage;
+        SyncPurchaseCards();
+    }
+
     /// <summary>
     /// ══ میله‌زنی صفحهٔ خودش را دارد ══════════════════════════════════════════
     ///
@@ -494,6 +552,9 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         foreach (var p in buys) Purchases.Add(Track(new PurchaseRowViewModel(p, this)));
 
         for (var i = 0; i < Purchases.Count; i++) Purchases[i].Index = Purchases.Count - i;
+        //  تیلِ دیگر یا خواندنِ دوباره ⇒ پنجره از سر: تازه‌ترین‌ها
+        _purchaseLimit = PurchasePage;
+        SyncPurchaseCards();
 
         var dips = await _host.StorageData.DipsAsync(Fuel);
         Dips.Clear();
@@ -516,11 +577,13 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
 
     private async Task RecalcAsync()
     {
-        var reports = await _host.StorageData.ReportsAsync(Fuel);
+        // ⛔ فقط ستونِ ‎Sale‎ — نه کلِ پارچه‌های پنج سال با هر دو شیفت (۱۴۰۵/۰۷/۱۳).
+        //  این تابع با هر باز شدنِ بخش **و هر ویرایشِ هر خرید** می‌دود.
+        var sold = (await _host.StorageData.ShiftSumsAsync(Fuel)).Sale;
         var threshold = _host.Settings.GetDecimal(
             PumpYaqobi.Services.Data.SettingsService.LowStockThreshold, 1000m);
         // میله‌زنی‌ها هم به موجودی می‌رسند: «برابر کردنِ دفتر با عددِ واقعی»
-        var t = Calc.Tank(Purchases.Select(p => p.Entity), reports, threshold,
+        var t = Calc.Tank(Purchases.Select(p => p.Entity), sold, threshold,
                           Dips.Select(d => d.Entity));
 
         Current = Shamsi.Money(Math.Round(t.Display, 0, MidpointRounding.AwayFromZero));
@@ -579,6 +642,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
             await row.RetireAsync();
             await _host.StorageData.DeletePurchaseAsync(row.Entity.Id);
             Purchases.Remove(row);
+            SyncPurchaseCards();
             await RecalcAsync();
             _host.Toast("🗑️ خرید حذف شد", ToastKind.Warn);
         });

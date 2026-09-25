@@ -125,8 +125,14 @@
           </StackPanel>
         </Border>
 
-        <!-- ══ خریدها — هر خرید یک کارت، مثلِ خودِ برنامه ══ -->
-        <ItemsControl ItemsSource="{Binding Purchases}" IsVisible="{Binding IsBuyListVisible}">
+        <!-- ══ خریدها — هر خرید یک کارت، مثلِ خودِ برنامه ══
+             ⛔ فهرست به ‎PurchaseCards‎ بسته است، نه ‎Purchases‎: فقط تازه‌ترین
+             ‎StorageSectionViewModel.PurchasePage‎ کارت ساخته می‌شود و بقیه پشتِ
+             دکمهٔ «خریدِ قدیمی‌تر» می‌مانند. با ‎Purchases‎ (فهرستِ کامل) پنج سال
+             خرید یعنی صدها کارت و هزار کادرِ زنده در درخت — همان «مخزن لگ
+             داره»ی ۱۴۰۵/۰۷/۱۳. شرحش روی خودِ ‎PurchaseCards‎. -->
+        <StackPanel IsVisible="{Binding IsBuyListVisible}">
+        <ItemsControl ItemsSource="{Binding PurchaseCards}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:PurchaseRowViewModel">
               <Border Classes="panel" Margin="0,0,0,12" Padding="0">
@@ -224,6 +230,12 @@
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
+        <Button Classes="ghost info" HorizontalAlignment="Center" Margin="0,0,0,12" Padding="16,8"
+                IsVisible="{Binding HasHiddenPurchases}"
+                Content="{Binding MorePurchasesText}"
+                Command="{Binding ShowMorePurchasesCommand}"
+                ToolTip.Tip="خریدهای قدیمی‌تر یک‌جا ساخته نمی‌شوند تا صفحه سبک بماند؛ هر بار همین‌قدر دیگر می‌آید" />
+        </StackPanel>
 
         <!-- ══ میله‌زنیِ مخزن — صفحهٔ خودش ══════════════════════════════════
              خواستهٔ صریحِ صاحب ریپو: «اون میله‌زنی چرا تو لیستِ خریدهای دیزل و
