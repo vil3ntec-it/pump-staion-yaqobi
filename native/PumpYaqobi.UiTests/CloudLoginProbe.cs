@@ -293,6 +293,21 @@ internal static class CloudLoginProbe
                 + "\",\"license\":\"" + License(uid, stn) + "\",\"station\":{\"id\":\"" + stn + "\"},"
                 + ent + "}"),
 
+            //  ⛔ **بند شدن با حساب** — این مسیر تا ۳.۱.۱۶۴ در ابرِ ساختگی **نبود**
+            //  و به ۴۰۴ِ «مسیر نیست» می‌افتاد، پس بندِ ۱۸ («توکنِ دستگاه
+            //  نشست — بی هیچ کدی») روی خودِ سنجه سرخ بود، نه روی برنامه.
+            //  شکلش مو‌به‌مو همان `POST /bind`ِ `shop/server/src/routes/pump-device.js`
+            //  است: ۲۰۱ با `deviceToken` · `station` · `entitlement` و مجوزِ
+            //  امضاشده، و حسابِ بی‌پمپ ⇒ ۴۰۴ِ `no_station`.
+            "/api/pump/device/bind" => _noStation
+                ? Json(HttpStatusCode.NotFound,
+                    """{"error":{"message":"برای این حساب پمپی ثبت نشده است","code":"no_station"}}""")
+                : Json(HttpStatusCode.Created,
+                    "{\"ok\":true,\"deviceToken\":\"dev-token\",\"publicKey\":\""
+                    + (_serverKey.Length > 0 ? _serverKey : PublicKey)
+                    + "\",\"license\":\"" + License(uid, stn) + "\",\"station\":{\"id\":\"" + stn + "\"},"
+                    + "\"role\":\"owner\"," + ent + "}"),
+
             "/api/pump/device/redeem" => Json(HttpStatusCode.OK,
                 "{\"license\":\"" + License(CloudConfig.DeviceUid(AppSettings.Load()), stn) + "\"," + ent + "}"),
 
