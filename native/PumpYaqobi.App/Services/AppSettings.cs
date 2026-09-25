@@ -533,7 +533,7 @@ public sealed class AppSettings
             //  اول فایلِ اصلی، بعد نسخهٔ سالمِ قبلی
             var locked = false;
             var a = Read(File_, ref locked) ?? Read(Backup_, ref locked);
-            if (a is not null) { a._home = Dir; return a; }
+            if (a is not null) { a._home = Dir; a._bondBase = a.BondSnapshot(); return a; }
 
             //  ⛔ **فایل بود ولی قفل بود ⇒ پیش‌فرض ندهیم که ذخیره‌اش کنیم.**
             //  روی ویندوز ضدِ ویروس و نمایه‌سازِ سیستم گاهی یک لحظه دستهٔ
@@ -897,6 +897,10 @@ public sealed class AppSettings
 
         lock (FileGate)
         {
+            //  ⛔ بندهای حساب و پمپ ادغام می‌شوند، نه روی‌نویسی — بالای
+            //  `BondFields` نوشته چرا.
+            MergeBondFromDisk();
+
             //  ⛔ نامِ فایلِ موقت **یکتا**ست: دو نمونهٔ برنامه (یا یک ابزارِ
             //  بیرونی) که هم‌زمان همین پوشه را بنویسند، با نامِ ثابت فایلِ
             //  موقتِ هم را می‌بریدند — یکی می‌نوشت، دیگری همان را جابه‌جا
@@ -921,6 +925,8 @@ public sealed class AppSettings
 
                 if (File.Exists(File_)) File.Replace(tmp, File_, Backup_, ignoreMetadataErrors: true);
                 else File.Move(tmp, File_);
+                //  آن‌چه همین حالا نوشته شد، پایهٔ ادغامِ بعدی است
+                if (_bondBase is not null) _bondBase = BondSnapshot();
             }
             catch
             {
@@ -928,6 +934,57 @@ public sealed class AppSettings
                 //  سالمِ قبلی هم دست‌نخورده می‌ماند، نه این‌که نصفه شود.
                 try { if (File.Exists(tmp)) File.Delete(tmp); } catch { }
             }
+        }
+    }
+
+    // ══ بندهای حساب و پمپ: ادغامِ سه‌طرفه، نه روی‌نویسی ═══════════════════
+    //
+    //  ⛔ باگی که `linkstates` روی پشتهٔ واقعی گرفت (۱۴۰۵/۰۷/۱۳): حساب از ریشه
+    //  در پنل حذف شد، سرور به توکنِ دستگاه «device_not_registered» گفت و
+    //  `DetachDeviceAsync` آن توکن را پاک کرد — ولی چند لحظه بعد یک نمونهٔ
+    //  **کهنه** (`CloudLink`ِ ماندگارِ پروفایل که از زمانِ ثبت‌نام زنده بود)
+    //  کلِ شیءِ خودش را نوشت و توکنِ مرده را **برگرداند**. نتیجه: چراغ سبز
+    //  «به سرورِ حساب وصل است» و پروفایل «فعال — وصل به پمپِ شما» برای پمپی
+    //  که دیگر وجود نداشت. همان «کلکِ دروغ»ی که این ریپو قدغن کرده.
+    //
+    //  پس برای همین چند خانه نوشتن **سه‌طرفه** است: مقداری که این نمونه
+    //  هنگامِ خواندن دید (پایه)، مقدارِ خودش، و مقدارِ دیسک. اگر این نمونه
+    //  آن خانه را عوض نکرده ولی دیسک عوض شده، دیسک برنده است — یعنی نمونهٔ
+    //  کهنه دیگر تصمیمِ تازهٔ نمونهٔ دیگر را پس نمی‌گیرد. آن‌چه خودِ این
+    //  نمونه عوض کرده، همان نوشته می‌شود.
+    //
+    //  ⚠️ فقط بندهای حساب و پمپ — نه تم و پهنا و بقیه، که راهِ خودشان را
+    //  دارند (`SaveComfortOnly`). و نمونهٔ `new` (بی پایه) مثلِ همیشه کلِ
+    //  خودش را می‌نویسد.
+
+    private static readonly System.Reflection.PropertyInfo[] BondFields = new[]
+    {
+        nameof(CloudAccountToken), nameof(CloudRefreshToken), nameof(CloudAccessExpiresAt),
+        nameof(CloudDeviceToken), nameof(CloudLicense), nameof(CloudPublicKey),
+        nameof(CloudStationId), nameof(CloudStationCode), nameof(CloudAccessCode),
+        nameof(CloudUserId), nameof(CloudEmail), nameof(CloudName),
+        nameof(PumpStepDone), nameof(LoginSkipped), nameof(EntitledUntil), nameof(EntitledPlan),
+        nameof(ServerUrl), nameof(ServerLanUrl), nameof(ServerToken), nameof(ServerReadKey),
+        nameof(ServerId), nameof(StationCode),
+    }.Select(n => typeof(AppSettings).GetProperty(n)!).ToArray();
+
+    [JsonIgnore] private object?[]? _bondBase;
+
+    private object?[] BondSnapshot() => BondFields.Select(p => p.GetValue(this)).ToArray();
+
+    private void MergeBondFromDisk()
+    {
+        if (_bondBase is null) return;
+        var locked = false;
+        AppSettings? disk;
+        try { disk = Read(File_, ref locked); } catch { return; }
+        if (disk is null) return;
+        for (var i = 0; i < BondFields.Length; i++)
+        {
+            var p = BondFields[i];
+            var mine = p.GetValue(this);
+            var theirs = p.GetValue(disk);
+            if (Equals(mine, _bondBase[i]) && !Equals(theirs, _bondBase[i])) p.SetValue(this, theirs);
         }
     }
 }

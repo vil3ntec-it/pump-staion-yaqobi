@@ -367,8 +367,11 @@ public sealed partial class CloudLink
                 return CloudResult.No(made.Why, made.Code);
         }
 
+        AccountHasStation = true;
         //  ۳) و حالا بند شدن — همان راهِ همیشگی، با همان قفلِ کلیدِ عمومی.
-        return await BindAsync(ct);
+        var bindRes = await BindAsync(ct);
+        LastBindWhy = bindRes.Ok ? "" : (bindRes.Why ?? "");
+        return bindRes;
     }
 
     /// <summary>
@@ -399,6 +402,7 @@ public sealed partial class CloudLink
         try
         {
             var me = await AccountAsync(HttpMethod.Get, "/api/pump/me", null, ct);
+            if (me.Ok) AccountHasStation = StationId(me.Json).Length > 0;
             return me.Ok && StationId(me.Json).Length > 0;
         }
         catch { return false; }
@@ -1313,6 +1317,24 @@ public sealed partial class CloudLink
     /// </summary>
     public static string LastBindWhy { get; private set; } = "";
 
+    /// <summary>
+    /// «حسابِ واردشده روی سرور پمپ دارد؟» — از آخرین جوابِ واقعیِ
+    /// <c>/api/pump/me</c>؛ <c>null</c> یعنی هنوز نپرسیده‌ایم.
+    ///
+    /// ⛔ <b>چراغ و پروفایل از همین می‌خوانند، نه از <c>PumpStepDone</c>ِ روی
+    /// دیسک</b> (۱۴۰۵/۰۷/۱۳، سنجهٔ <c>linkstates</c>): آن مُهر می‌گوید «روزی
+    /// پمپ داشت»، نه «همین حالا دارد» — و پمپی که از پنل حذف شده بود با مُهرِ
+    /// کهنه هیچ‌وقت کارتِ «ساختنِ پمپ» را نشان نمی‌داد. ایستا است، همان
+    /// الگوی <see cref="LastBindWhy"/>.
+    /// </summary>
+    public static bool? AccountHasStation { get; set; }
+
+    /// <summary>آخرین ثبتِ ناموفقِ خودکار — ترمزِ حلقه (بالای `bindDue` نوشته چرا).</summary>
+    private static DateTime _lastBindFailAt = DateTime.MinValue;
+
+    /// <summary>پس از شکستِ ثبت، حلقهٔ پس‌زمینه تا این مدت دوباره نمی‌زند.</summary>
+    public static readonly TimeSpan BindRetryAfterFail = TimeSpan.FromMinutes(10);
+
     private async Task<CloudResult> SeatAsync(JsonElement json)
     {
         var token = Str(json, "accessToken");
@@ -1869,6 +1891,7 @@ public sealed partial class CloudLink
         _settings.CloudAccountToken = "";
         _settings.CloudRefreshToken = "";
         _settings.CloudAccessExpiresAt = 0;
+        AccountHasStation = null;
         await SaveQuiet();
     }
 
@@ -1930,6 +1953,7 @@ public sealed partial class CloudLink
         _settings.CloudAccountToken = "";
         _settings.CloudRefreshToken = "";
         _settings.CloudAccessExpiresAt = 0;
+        AccountHasStation = null;
         _settings.CloudEmail = "";
         _settings.CloudName = "";
         await SaveQuiet();
@@ -1957,6 +1981,7 @@ public sealed partial class CloudLink
     /// </summary>
     public async Task ForgetStationAsync()
     {
+        AccountHasStation = null;
         _settings.CloudDeviceToken = "";
         _settings.CloudStationId = "";
         _settings.CloudStationCode = "";
@@ -1986,7 +2011,7 @@ public sealed partial class CloudLink
     /// برداشت: کاربر هیچ‌کدام را تایپ نمی‌کند، از حسابش می‌آید.
     /// </summary>
     public async Task<(bool Ok, string Url, string ReadKey, string Station, string Why)>
-        HomeFromAccountAsync(CancellationToken ct = default)
+        HomeFromAccountAsync(CancellationToken ct = default, bool forceBind = false)
     {
         if (!SignedIn) return (false, "", "", "", "اول وارد حساب شوید");
 
@@ -2025,6 +2050,8 @@ public sealed partial class CloudLink
         //  هنجارش کند یا خودش بسازدش)، پس آن مقایسه نصبِ سالم را هم رد
         //  می‌کرد. شناسه همان چیزی است که مجوز (`stn`) هم رویش قفل است.
         var acctStation = StationId(json);
+        AccountHasStation = acctStation.Length > 0;
+        if (acctStation.Length == 0) LastBindWhy = "";
         var locked = (_settings.CloudStationId ?? "").Trim();
         if (locked.Length > 0 && acctStation.Length > 0
             && !string.Equals(acctStation, locked, StringComparison.Ordinal))
@@ -2053,7 +2080,16 @@ public sealed partial class CloudLink
          *  ورود با حسابِ پمپِ دیگر همین دستگاه را به آن پمپ می‌بست.
          *  ⚠️ و نشدنش این مسیر را نمی‌شکند: نشانیِ خانگی همان است که بود.
          */
-        if (!Activated && acctStation.Length > 0)
+        //  ⛔ **پس از یک شکست، حلقه هر دقیقه دوباره نمی‌زند** (۱۴۰۵/۰۷/۱۳،
+        //  سنجهٔ `linkstates` روی سرورِ واقعی): `device/bind` سقفِ ده بار در
+        //  ربع ساعت برای هر آی‌پی دارد. کامپیوتری که از پمپ جدا شده
+        //  (`device_revoked`) هر دقیقه همان ۴۰۳ را می‌گرفت و در ده دقیقه سقف
+        //  را پر می‌کرد — از آن به بعد حتی کلیکِ خودِ کاربر پس از برگرداندنش
+        //  «تلاشِ زیاد» می‌دید، و کامپیوترِ دیگرِ همان پمپ پشتِ همان اینترنت
+        //  هم. پس پس از شکست فقط هر ده دقیقه، و کلیکِ کاربر (`forceBind`)
+        //  همیشه همین حالا.
+        var bindDue = forceBind || DateTime.UtcNow - _lastBindFailAt >= BindRetryAfterFail;
+        if (!Activated && acctStation.Length > 0 && bindDue)
         {
             //  ⛔ **نتیجه‌اش دیگر بلعیده نمی‌شود.** تا دیروز این خط هم
             //  استثنا را می‌خورد و هم مقدارِ بازگشتی را دور می‌ریخت، پس
@@ -2065,8 +2101,9 @@ public sealed partial class CloudLink
             {
                 var bind = await BindAsync(ct);
                 LastBindWhy = bind.Ok ? "" : (bind.Why ?? "");
+                _lastBindFailAt = bind.Ok ? DateTime.MinValue : DateTime.UtcNow;
             }
-            catch (Exception ex) { LastBindWhy = ex.GetType().Name; }
+            catch (Exception ex) { LastBindWhy = ex.GetType().Name; _lastBindFailAt = DateTime.UtcNow; }
         }
 
         /*

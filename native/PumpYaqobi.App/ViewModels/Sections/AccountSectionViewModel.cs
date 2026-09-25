@@ -232,6 +232,9 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     /// <summary>وارد شده، ولی این حساب هنوز پمپی ندارد — کارتِ «ساختنِ پمپ» در پروفایل.</summary>
     [ObservableProperty] private bool _needsPump;
 
+    /// <summary>حساب پمپ دارد، این کامپیوتر ثبت نیست — کارتِ «ثبتِ همین کامپیوتر».</summary>
+    [ObservableProperty] private bool _needsBind;
+
     /// <summary>
     /// ══ جدا کردنِ این دستگاه از این پمپ ═════════════════════════════════
     ///
@@ -618,7 +621,16 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         //  «نامِ پمپ» با «بعداً» یا «برگشت» رد شده بود و پروفایل فقط «فعال
         //  نشده» می‌گفت — بی هیچ راهی. بی پمپ نه بند شدنی هست، نه دورهٔ
         //  آزمایشی. پس همین‌جا کارتِ «پمپ بسازید» دیده می‌شود.
-        NeedsPump = SignedIn && string.IsNullOrWhiteSpace(f.CloudDeviceToken) && !f.PumpStepDone;
+        //  ⛔ **«پمپ دارد؟» از جوابِ خودِ سرور، نه از مُهرِ روی دیسک** (۱۴۰۵/۰۷/۱۳،
+        //  سنجهٔ `linkstates`): `PumpStepDone` می‌گوید «روزی پمپ داشت»؛ پمپی
+        //  که بعد از پنل حذف شد با آن مُهر هیچ‌وقت این کارت را نمی‌دید. مُهر
+        //  فقط وقتی به کار می‌رود که هنوز از سرور نپرسیده‌ایم.
+        var unbound = SignedIn && string.IsNullOrWhiteSpace(f.CloudDeviceToken);
+        NeedsPump = unbound && (CloudLink.AccountHasStation == false
+                                || (CloudLink.AccountHasStation is null && !f.PumpStepDone));
+        //  و حسابی که پمپ **دارد** ولی این کامپیوتر ثبت نیست: پمپِ تازه
+        //  نمی‌خواهد، ثبتِ همین کامپیوتر را می‌خواهد — با دلیلِ واقعیِ نشدن.
+        NeedsBind = unbound && !NeedsPump && CloudLink.AccountHasStation == true;
         if (NeedsPump && string.IsNullOrWhiteSpace(LoginPump) && PumpName != "پمپ یعقوبی") LoginPump = PumpName;
 
         var session = _host.Session;
@@ -922,6 +934,32 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         if (v == 4) AppHost.Current.SyncIfStarted?.PrimeNow();
     }
 
+    /// <summary>
+    /// ⛔ <b>پس از ورود، گامِ بعد از حقیقتِ سرور است، نه همیشه «نامِ پمپ»</b>
+    /// (۱۴۰۵/۰۷/۱۳، سنجهٔ <c>linkstates</c> روی سرورِ واقعی). تا امروز هر
+    /// چهار راهِ ورود (رمز، ثبت‌نام، کدِ ایمیلی، بازیابیِ رمز) صاف به گامِ
+    /// «نامِ پمپ» می‌رفتند — یعنی صاحبِ پمپی که برنامه را از نو نصب کرده یا
+    /// رمزش را بازیابی کرده بود، دوباره «نامِ پمپ» می‌دید. حالا: حساب پمپ
+    /// دارد ⇒ همین کامپیوتر همان لحظه ثبت می‌شود (همان دورِ پس‌زمینه، که
+    /// <b>هیچ پمپی نمی‌سازد</b>) و صفحه تمام می‌شود؛ ندارد ⇒ «نامِ پمپ».
+    /// </summary>
+    private async Task NextStepAfterSignInAsync()
+    {
+        bool has;
+        try { has = await Cloud.HasStationAsync(); } catch { has = false; }
+        if (!has) { LoginStep = 3; return; }
+
+        await StationPublisher.CloudKeepNowAsync();
+        var f = AppSettings.Load();
+        f.PumpStepDone = true;
+        try { f.Save(); } catch { /* دورِ بعد دوباره */ }
+        RefreshAll();
+        LoginStep = 4;
+        _host.Toast(string.IsNullOrWhiteSpace(f.CloudDeviceToken)
+            ? "✅ وارد شدید — پمپِ شما روی حسابتان هست؛ ثبتِ این کامپیوتر: " + (CloudLink.LastBindWhy is { Length: > 0 } w ? w : "خودش دوباره امتحان می‌کند")
+            : "✅ وارد شدید و این کامپیوتر به پمپِ شما ثبت است", ToastKind.Ok);
+    }
+
     [RelayCommand]
     private void SetSignUp(string? yes)
     {
@@ -1045,7 +1083,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
             ClearSkipped();
             LoginStatus = SwitchNote();
             RefreshAll();
-            LoginStep = 3;
+            await NextStepAfterSignInAsync();
         }
         finally { Busy = false; }
     });
@@ -1083,7 +1121,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
             ClearSkipped();
             LoginStatus = SwitchNote();
             RefreshAll();
-            LoginStep = 3;
+            await NextStepAfterSignInAsync();
         }
         finally { Busy = false; }
     });
@@ -1123,7 +1161,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
             ClearSkipped();
             LoginStatus = SwitchNote();
             RefreshAll();
-            LoginStep = 3;
+            await NextStepAfterSignInAsync();
         }
         finally { Busy = false; }
     }
@@ -1383,6 +1421,30 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         PumpCreatedHere?.Invoke();
     }
 
+    /// <summary>
+    /// «ثبتِ همین کامپیوتر» — برای حسابی که پمپ دارد ولی این کامپیوتر ثبت نیست.
+    ///
+    /// ⛔ <b>راهِ دومی نیست</b>: همان دورِ پس‌زمینه (<see cref="StationPublisher.CloudKeepNowAsync"/>)
+    /// همین حالا می‌دود — نشست، ثبتِ دستگاه، مجوز. و <b>هیچ پمپی نمی‌سازد</b>.
+    /// </summary>
+    [RelayCommand]
+    private async Task BindHereAsync()
+    {
+        if (Busy) return;
+        Busy = true;
+        LoginStatus = "در حالِ ثبتِ این کامپیوتر…";
+        try
+        {
+            await StationPublisher.CloudKeepNowAsync();
+            var ok = !string.IsNullOrWhiteSpace(AppSettings.Load().CloudDeviceToken);
+            LoginStatus = ok ? "✅ این کامپیوتر به پمپِ شما ثبت شد"
+                : "❌ " + (CloudLink.LastBindWhy is { Length: > 0 } why ? why : "نشد — اینترنت را ببینید و دوباره بزنید");
+        }
+        finally { Busy = false; }
+        RefreshAll();
+        PumpCreatedHere?.Invoke();
+    }
+
     /// <summary>پمپ از پروفایل ساخته شد — پوسته چراغ را همان لحظه تازه می‌کند.</summary>
     public event Action? PumpCreatedHere;
 
@@ -1527,7 +1589,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
             ClearSkipped();
             LoginStatus = "";
             RefreshAll();
-            LoginStep = 3;
+            await NextStepAfterSignInAsync();
         }
         finally { Busy = false; }
     });

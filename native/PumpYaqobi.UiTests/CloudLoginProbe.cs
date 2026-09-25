@@ -387,6 +387,8 @@ internal static class CloudLoginProbe
         Check("گامِ اول، گامِ حساب است", account.StepAccount, "گامِ " + account.LoginStep);
 
         Console.WriteLine("── ۲) «حساب می‌سازم» — سه پله، همان‌طور که سرور می‌خواهد");
+        //  ⚠️ حسابِ تازه هیچ پمپی ندارد — همان سرورِ واقعی (سنجیده در `linkstates`)
+        _noStation = true;
         account.SetSignUpCommand.Execute("yes");
         account.LoginName = "هارون یعقوبی";
         account.LoginEmail = "haroon@gmail.com";
@@ -449,6 +451,10 @@ internal static class CloudLoginProbe
               account.LoginStatus.Contains("ایمیل یا رمز درست نیست"), account.LoginStatus);
         Check("و در گامِ یک ماند", account.StepAccount, "گامِ " + account.LoginStep);
 
+        //  ⚠️ این حساب هنوز پمپی ندارد — وگرنه از ۱۴۰۵/۰۷/۱۳ ورود خودش
+        //  همین کامپیوتر را به پمپِ حساب ثبت می‌کند و گامِ پمپ را رد می‌کند
+        //  (`NextStepAfterSignInAsync`؛ بندِ ۱۲ همان را می‌سنجد).
+        _noStation = true;
         account.LoginPassword = RightPass;
         Wait(win, account.AccountStepCommand.ExecuteAsync(null));
         for (var i = 0; i < 20; i++) Pump(win);
@@ -683,7 +689,10 @@ internal static class CloudLoginProbe
               !File.ReadAllText(SettingsPath()).Contains("ramz-tazeh-1"));
         Check("⛔ و در حافظهٔ صفحه هم نماند",
               account.ResetPass.Length == 0 && account.ResetPass2.Length == 0);
-        Check("رفت به گامِ پمپ", account.LoginStep == 3, "گامِ " + account.LoginStep);
+        //  ⛔ (۱۴۰۵/۰۷/۱۳) حسابی که پمپ دارد پس از بازیابیِ رمز دوباره «نامِ
+        //  پمپ» نمی‌خواهد — تا امروز این بند «رفت به گامِ پمپ» را می‌خواست.
+        Check("⛔ حسابِ پمپ‌دار پس از بازیابی دوباره «نامِ پمپ» نمی‌خواهد", account.LoginStep == 4,
+              "گامِ " + account.LoginStep);
 
         // ══ ۱۳) نشستِ واقعاً مرده ⇒ برنامه اعتراف می‌کند ══════════════════
         //
@@ -803,6 +812,8 @@ internal static class CloudLoginProbe
         account.SetSignUpCommand.Execute("no");
         account.LoginEmail = "digar@gmail.com";
         account.LoginPassword = RightPass;
+        //  حسابِ دیگر هنوز پمپی ندارد (حسابِ تازه)
+        _noStation = true;
         Wait(win, account.AccountStepCommand.ExecuteAsync(null));
         for (var i = 0; i < 20; i++) Pump(win);
 

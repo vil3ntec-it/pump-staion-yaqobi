@@ -58,8 +58,9 @@ public class PumpStepLoopTests
         Assert.Contains("public bool PumpStepDone { get; set; }", Src(Settings));
 
         var vm = Src(Vm);
-        //  هر دو مسیر — موفق و «پمپ از قبل هست» — مهر می‌زنند
-        Assert.Equal(2, Count(vm, "PumpStepDone = true;"));
+        //  هر سه مسیر — موفق، «پمپ از قبل هست»، و ورود با حسابی که پمپ دارد
+        //  (`NextStepAfterSignInAsync`، ۱۴۰۵/۰۷/۱۳) — مهر می‌زنند
+        Assert.Equal(3, Count(vm, "PumpStepDone = true;"));
         //  ⛔ و با `Save()`ی بادوام، نه `SaveSoon()`: گم شدنش یعنی برگشتِ حلقه
         //  (هر مهر، درست پشتِ سرش — شمردنِ کلِ فایل هر ذخیرهٔ دیگری را هم می‌شمرد)
         var at = 0;

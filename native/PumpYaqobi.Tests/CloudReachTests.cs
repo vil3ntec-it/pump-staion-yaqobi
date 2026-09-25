@@ -192,7 +192,7 @@ public class CloudReachTests : IDisposable
 
         Assert.Contains("CloudTick", src);
         Assert.Contains("CloudKeepAsync", src);
-        Assert.Contains("await cloud.HomeFromAccountAsync(ct)", src);
+        Assert.Contains("await cloud.HomeFromAccountAsync(ct, forceBind)", src);
         Assert.Contains("await CloudLink.CloudHealthAsync(ct)", src);
     }
 

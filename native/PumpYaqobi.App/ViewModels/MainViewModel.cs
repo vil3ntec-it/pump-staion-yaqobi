@@ -142,6 +142,15 @@ public sealed partial class MainViewModel : ObservableObject
         //  پروفایل. شرحش بالای ‎CloudLink.LicenseChanged‎.
         CloudLink.LicenseChanged += () => Dispatcher.UIThread.Post(() => { _boundAt = DateTime.MinValue; Account.RefreshAll(); TickLinkDot(); });
         Account.PumpCreatedHere += () => { _boundAt = DateTime.MinValue; TickLinkDot(); };
+        //  ⛔ ورود و خروج همان لحظه در چراغ دیده می‌شود، نه ده ثانیه بعد
+        //  (سنجهٔ `signuptrial`: تازه وارد شده بود و چراغ «هنوز وارد حساب
+        //  نشده‌اید» می‌گفت — کَشِ ده‌ثانیه‌ایِ `DeviceBound`).
+        Account.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(AccountSectionViewModel.SignedIn)
+                or nameof(AccountSectionViewModel.NeedsPump) or nameof(AccountSectionViewModel.NeedsBind))
+            { _boundAt = DateTime.MinValue; TickCloudDot(); TickLinkDot(); }
+        };
         // فهرست‌های نام‌دارِ پیشنهادِ خودکار — همان ‎datalist‎های سایت
         var host0 = AppHost.Current;
         Controls.Suggest.Provide("staff", async () => (await host0.Attendance.StaffAsync()).Select(x => x.Name ?? ""));
@@ -463,15 +472,40 @@ public sealed partial class MainViewModel : ObservableObject
     //  ثانیه یک بار**: این تیک هر ثانیه می‌دود و خواندنِ هر ثانیهٔ فایلِ
     //  تنظیمات (با رازهای رمزشده) همان کارِ دوره‌ایِ بی‌ترمزی است که قدغن است.
     private bool _boundCache;
+    private bool _signedInCache;
     private DateTime _boundAt = DateTime.MinValue;
     private bool DeviceBound()
     {
         if (DateTime.UtcNow - _boundAt < TimeSpan.FromSeconds(10)) return _boundCache;
         _boundAt = DateTime.UtcNow;
-        try { _boundCache = !string.IsNullOrWhiteSpace(Services.AppSettings.Load().CloudDeviceToken); }
+        try
+        {
+            var f = Services.AppSettings.Load();
+            _boundCache = !string.IsNullOrWhiteSpace(f.CloudDeviceToken);
+            _signedInCache = !string.IsNullOrWhiteSpace(f.CloudAccountToken);
+        }
         catch { /* همان مقدارِ قبلی */ }
         return _boundCache;
     }
+
+    /// <summary>
+    /// ⛔ <b>چرا این کامپیوتر ثبت نیست — و کلیک چه می‌کند.</b> تنها جای این جمله.
+    ///
+    /// گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۳، عکسِ چراغ): «ببین الان این وصل نمی‌شه».
+    /// سنجهٔ <c>linkstates</c> روی پشتهٔ واقعی نشان داد که یک جمله برای سه
+    /// حالِ جدا گفته می‌شد — «در پروفایل پمپ را بسازید» — در حالی که:
+    /// نصبِ بی‌حساب اصلاً پمپی نمی‌تواند بسازد (اول باید وارد شود)، و حسابی
+    /// که پمپ دارد پمپِ تازه نمی‌خواهد، ثبتِ همین کامپیوتر را می‌خواهد. هر
+    /// حال حالا جملهٔ خودش را دارد، و کلیکِ چراغ همان کار را **انجام می‌دهد**.
+    /// </summary>
+    private static string UnboundWhy(bool signedIn) =>
+        !signedIn
+            ? "سرورِ حساب جواب می‌دهد، ولی هنوز وارد حساب نشده‌اید — روی چراغ بزنید تا صفحهٔ ورود باز شود"
+            : Services.CloudLink.AccountHasStation == false
+                ? "وارد حساب شده‌اید، ولی این حساب هنوز پمپی ندارد — روی چراغ بزنید و نامِ پمپ را بنویسید"
+                : Services.CloudLink.LastBindWhy is { Length: > 0 } why
+                    ? "ثبتِ این کامپیوتر نشد: " + why + " — روی چراغ بزنید تا دوباره امتحان کند"
+                    : "این کامپیوتر هنوز به پمپِ حسابتان ثبت نشده — خودش هر دقیقه امتحان می‌کند؛ برای همین حالا، روی چراغ بزنید";
 
     public void TickCloudDot()
     {
@@ -484,7 +518,7 @@ public sealed partial class MainViewModel : ObservableObject
                 //  حالی که این کامپیوتر به هیچ پمپی ثبت نشده بود — نه اشتراک، نه
                 //  دورهٔ آزمایشی. راست بود، ولی گمراه‌کننده؛ پس زرد، با دلیل.
                 key = "Pump.Warn";
-                why = "سرورِ حساب جواب می‌دهد، ولی این کامپیوتر هنوز به هیچ پمپی ثبت نشده — در «پروفایل» پمپ را بسازید";
+                why = UnboundWhy(_signedInCache);
                 break;
 
             case Services.CloudReach.Online:
@@ -557,7 +591,7 @@ public sealed partial class MainViewModel : ObservableObject
         else if (bad > 0 && ok + warn > 0) { key = "Pump.Warn"; head = "⚠️ یکی وصل است و یکی نه"; }
         //  ⛔ «سرورِ حساب جواب می‌دهد ولی پمپی نیست» خاکستریِ «سروری تنظیم نشده»
         //  نیست — همان جمله‌ای است که کاربر باید ببیند (۱۴۰۵/۰۷/۱۳).
-        else if (warn > 0)      { key = "Pump.Warn";   head = "⚠️ این کامپیوتر هنوز به هیچ پمپی ثبت نشده"; }
+        else if (warn > 0)      { key = "Pump.Warn";   head = _signedInCache ? "⚠️ این کامپیوتر هنوز به هیچ پمپی ثبت نشده" : "⚠️ هنوز وارد حساب نشده‌اید"; }
         //  ⛔ «یکی وصل، دیگری هنوز تنظیم نشده» سبز نیست (۱۴۰۵/۰۷/۱۳): سنجهٔ
         //  ‎livestack‎ چراغ را سبز دید در حالی که سرورِ خانگی اصلاً وصل نشده بود —
         //  همان «کلکِ دروغ». زرد است و دلیلش در همان کادر.
@@ -754,13 +788,32 @@ public sealed partial class MainViewModel : ObservableObject
     private async Task CheckCloudAsync()
     {
         AppHost.Current.Toast("در حالِ تماس با سرورِ حساب…", ToastKind.Info);
+        //  ⛔ کلیک یعنی «همین حالا وصل شو»، نه فقط «بالاست؟» (۱۴۰۵/۰۷/۱۳،
+        //  سنجهٔ `linkstates`): تا امروز این‌جا فقط `/api/health` پرسیده
+        //  می‌شد، پس کلیکِ چراغِ زرد هیچ‌وقت این کامپیوتر را ثبت نمی‌کرد. حالا
+        //  همان دورِ کاملِ پس‌زمینه (نشست، ثبتِ دستگاه، مجوز) همین حالا می‌دود.
+        await Services.StationPublisher.CloudKeepNowAsync();
         var (up, ver) = await Services.CloudLink.CloudHealthAsync();
+        _boundAt = DateTime.MinValue;
+        var bound = DeviceBound();
         TickCloudDot();
-        var v = ver.Length > 0 ? $" (نسخهٔ {ver})" : "";
-        AppHost.Current.Toast(
-            up ? "✅ سرورِ حساب جواب داد" + v
-               : "❌ به سرورِ حساب نرسیدیم — اینترنت و بالا بودنِ سرور را ببینید",
-            up ? ToastKind.Ok : ToastKind.Error);
+        if (!up)
+        {
+            AppHost.Current.Toast("❌ به سرورِ حساب نرسیدیم — اینترنت و بالا بودنِ سرور را ببینید", ToastKind.Error);
+            return;
+        }
+        if (bound)
+        {
+            Account.RefreshAll();
+            var v = ver.Length > 0 ? $" (نسخهٔ {ver})" : "";
+            AppHost.Current.Toast("✅ سرورِ حساب جواب داد و این کامپیوتر به پمپِ شما ثبت است" + v, ToastKind.Ok);
+            return;
+        }
+        //  هنوز ثبت نیست ⇒ جملهٔ راستِ همان حال، و اگر کارِ کاربر است
+        //  (ورود یا نامِ پمپ)، همان صفحه همین حالا باز می‌شود — بن‌بست نه.
+        AppHost.Current.Toast("⚠️ " + UnboundWhy(_signedInCache).Split(" — ")[0], ToastKind.Warn);
+        if (!_signedInCache || Services.CloudLink.AccountHasStation == false)
+            await GoAsync(Account);
     }
 
     /// <summary>

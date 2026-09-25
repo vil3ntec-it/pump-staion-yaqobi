@@ -431,7 +431,9 @@ public class LicenseDeliveryTests : IDisposable
         var src = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Services", "StationPublisher.cs"));
         var i = src.IndexOf("private static async Task CloudKeepAsync", StringComparison.Ordinal);
         Assert.True(i > 0);
-        var body = src[i..(i + 900)];
+        //  ⚠️ تا خودِ بدنه (پایانِ متد)، نه یک پنجرهٔ ثابتِ نویسه‌ای — توضیحِ
+        //  «نشستِ مرده» (۱۴۰۵/۰۷/۱۳) پنجرهٔ ۹۰۰تایی را پر کرد.
+        var body = src[i..src.IndexOf("\n    }\n", i, StringComparison.Ordinal)];
         Assert.Contains("HomeFromAccountAsync", body);
         Assert.Contains("KeepLicenseFreshAsync", body);
         //  و پس از آن، نه پیش از آن: بی حالِ تازهٔ اشتراک، «ناجوری» معنا ندارد
