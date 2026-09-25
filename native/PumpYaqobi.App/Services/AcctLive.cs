@@ -130,7 +130,7 @@ public static class AcctLive
                 acct.QrKey = NewKey();
                 await host.Debtors.UpdateAccountAsync(acct, ct);
             }
-            return Fragment(HomeLink.StationCode(host), IdOf(acct), acct.QrKey!, NowMs());
+            return Fragment(HomeLink.CloudCode(host), IdOf(acct), acct.QrKey!, NowMs());
         }
         catch { acct.QrKey = null; return ""; }
     }
@@ -145,7 +145,7 @@ public static class AcctLive
                 company.QrKey = NewKey();
                 await host.Companies.UpdateAsync(company, ct);
             }
-            return Fragment(HomeLink.StationCode(host), IdOf(company), company.QrKey!, NowMs());
+            return Fragment(HomeLink.CloudCode(host), IdOf(company), company.QrKey!, NowMs());
         }
         catch { company.QrKey = null; return ""; }
     }
@@ -223,6 +223,12 @@ public sealed class AcctLivePublisher
 {
     private readonly Dictionary<string, string> _home = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _cloud = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// پوشهٔ سرورِ خانگی عوض شد ⇒ هر حساب دوباره به آن‌جا برود. ابر دست
+    /// نمی‌خورد — نشانیِ آن به کدِ پوشهٔ خانگی بند نیست.
+    /// </summary>
+    public void ForgetHome() => _home.Clear();
 
     /// <summary>چند حساب در این دور واقعاً به جایی رفت — برای آزمون و گزارش.</summary>
     public int LastSent { get; private set; }

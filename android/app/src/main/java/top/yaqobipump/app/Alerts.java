@@ -113,11 +113,13 @@ public final class Alerts {
   public static void setup(Context c, String server, String token, String station) {
     String s = server == null ? "" : server.trim();
     String t = token == null ? "" : token.trim();
-    String st = station == null || station.trim().isEmpty() ? "pump1" : station.trim();
+    //  ⛔ هیچ کدِ پیش‌فرضِ مشترکی نیست (۱۴۰۵/۰۷/۱۳) — کدِ خالی یعنی هنوز
+    //  به هیچ پمپی نپیوسته‌ایم و هیچ پرسشی نمی‌رود، نه پرسش از پمپِ «pump1»ِ کسِ دیگر.
+    String st = station == null ? "" : station.trim();
 
     prefs(c).edit().putString(K_SERVER, s).putString(K_TOKEN, t).putString(K_STATION, st).apply();
     //  ⚠️ رمز هست ولی نشانیِ خانگی نه ⇒ هنوز راهِ تونل هست؛ کار نمی‌ماند
-    if (s.isEmpty() && t.isEmpty()) cancel(c); else schedule(c);
+    if ((s.isEmpty() && t.isEmpty()) || st.isEmpty()) cancel(c); else schedule(c);
   }
 
   public static void schedule(Context c) {
@@ -148,8 +150,9 @@ public final class Alerts {
     SharedPreferences p = prefs(c);
     String server = p.getString(K_SERVER, "");
     String token = p.getString(K_TOKEN, "");
-    String station = p.getString(K_STATION, "pump1");
+    String station = p.getString(K_STATION, "").trim();
     if (server.isEmpty() && token.isEmpty()) return 0;
+    if (station.isEmpty()) return 0;
 
     JSONArray alerts = server.isEmpty() ? null : fetch(server, token, station);
     //  ⚠️ بیرون از شبکهٔ پمپ: همان سرور از راهِ تونل

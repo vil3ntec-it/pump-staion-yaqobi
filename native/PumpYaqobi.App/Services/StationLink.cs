@@ -83,16 +83,21 @@ public static class StationLink
         AppHost host, string pin = "", bool force = false, CancellationToken ct = default)
     {
         var file = AppSettings.Load();
-        var code = HomeLink.StationCode(host);
-        //  ⛔ نصبی که هنوز رمزِ هیچ پوشه‌ای را ندارد با کدِ **یکتای حسابِ خودش**
-        //  ثبت می‌شود، نه با «pump1»ِ مشترکِ همه (۱۴۰۵/۰۷/۱۳). شرحش بالای
-        //  <see cref="UniqueCode"/>.
-        var fresh = HomeLink.Token(host).Length == 0;
-        if (fresh && IsDefault(code) && UniqueCode(file) is { Length: > 0 } mine) code = mine;
+        //  ⛔ **هیچ کدِ پیش‌فرضِ مشترکی نیست** (۱۴۰۵/۰۷/۱۳، «pump1 را حذف کن و
+        //  برای هر حساب یک ایدی باشد»). کد از <see cref="CodeFor"/> می‌آید:
+        //  شناسهٔ پمپِ همین حساب روی سرورِ حساب، و بی حساب شناسهٔ همین کامپیوتر.
+        var saved = (file.StationCode ?? "").Trim();
+        var code = CodeFor(file);
         var name = HomeLink.StationName(host);
         var url = HomeLink.Url(host);
         var token = HomeLink.Token(host);
         var readKey = HomeLink.ReadKey(host);
+        //  ⛔ پوشهٔ فعلی مالِ این حساب نیست (‎pump1‎ی کهنه، حسابِ دیگر، یا نصبِ
+        //  بی‌حسابی که حالا حساب دارد) ⇒ **جابه‌جایی**. رمزِ پوشهٔ قبلی مالِ همان
+        //  پوشه است و فرستادنش برای کدِ تازه معنا ندارد. تا ثبتِ تازه نشسته،
+        //  پوشهٔ قبلی و رمزش دست نمی‌خورند — نرسیدن به سرور اتصال را نمی‌بُرد.
+        var moving = token.Length > 0 && !Same(saved, code);
+        if (moving) { token = ""; readKey = ""; }
 
         var complete = url.Length > 0 && token.Length > 0 && readKey.Length > 0;
         if (complete && !force && pin.Trim().Length == 0)
@@ -118,7 +123,7 @@ public static class StationLink
 
         //  ⛔ کد گرفته شده و ما هیچ رمزی نداریم ⇒ **هیچ‌وقت گیر نمی‌کنیم**
         //  (۱۴۰۵/۰۷/۱۳، «آسان وصل شود»). دو پله، هر کدام یک بار:
-        //   ۱) کدِ پیش‌فرضِ مشترک (‎pump1‎) ⇒ کدِ یکتای همین حساب.
+        //   ۱) کدِ همین حساب (اگر کدِ دیگری خواسته شده بود).
         //   ۲) کدِ حساب هم گرفته است (نصبِ دیگرِ همین حساب، یا رمزی که با عوض
         //      کردنِ حساب پاک شد) ⇒ کدِ حساب + شناسهٔ همین کامپیوتر، و اگر آن هم
         //      گرفته بود یک پسوندِ تصادفی: پوشهٔ خودِ این نصب. ⚠️ رمزِ پوشهٔ دیگری گرفته نمی‌شود — سرور بی رمز
@@ -149,28 +154,86 @@ public static class StationLink
         if (!result.Ok) return new StationEnrollment(false, url, code, name, false, result.Why);
 
         // ── گام ۳: هر دو جای تنظیمات ────────────────────────────────────────
-        Save(host, url, result.Token, result.ReadKey, code, found?.Id ?? "");
+        Save(host, url, result.Token, result.ReadKey, code, found?.Id ?? "", moving);
 
         return new StationEnrollment(true, url, result.Code, result.Name, result.Created, "");
     }
 
     /// <summary>
-    /// ══ «برنامه به سرورِ خانگی وصل نمی‌شود» — ریشه (۱۴۰۵/۰۷/۱۳) ════════════
+    /// ══ کدِ هر پمپ = شناسهٔ همان حساب — ⛔ «pump1» دیگر نیست (۱۴۰۵/۰۷/۱۳) ═══
     ///
-    /// سنجهٔ ‎livestack‎ (پنلِ خانگیِ واقعی + سرورِ حسابِ واقعی) نشانش داد: برنامه
-    /// سرور را با بستهٔ UDP پیدا می‌کرد ولی ثبت نمی‌شد — «این کدِ پمپ روی سرور
-    /// مالِ برنامهٔ دیگری است». همهٔ نصب‌ها با یک کدِ پیش‌فرض (‎pump1‎) ثبت
-    /// می‌شدند؛ هر نصبِ دوباره، هر کامپیوترِ تازه، و هر عوض کردنِ حساب (که رمزِ
-    /// پوشه را پاک می‌کند) یعنی رمزِ آن پوشه دیگر دستِ ما نیست — و از آن به بعد
-    /// هر تلاشِ ثبت برای همیشه ‎already_taken‎ می‌گرفت. چراغ خاکستری/سرخ می‌ماند.
+    /// خواستهٔ صریحِ صاحب ریپو: «این pump1 را حذف کن و جای آن برای هر حساب
+    /// کاربری یک ایدی باشد تا قاطی نشود، و برای هر حساب، حسابِ خودشان بیاید.»
     ///
-    /// حالا کدِ پیش‌فرض برای نصبی که رمزی ندارد، شناسهٔ پمپِ همان حساب روی سرورِ
-    /// حساب است (‎CloudStationId‎) — یکتا، و برای هر کامپیوترِ همان حساب یکی.
-    /// ⚠️ نصبی که از قبل رمز دارد دست نمی‌خورد: همان کد و همان پوشه.
+    /// سنجهٔ ‎livestack‎ ریشه را نشان داده بود: همهٔ نصب‌ها با یک کدِ پیش‌فرض
+    /// (‎pump1‎) ثبت می‌شدند، پس نصبِ دوم برای همیشه ‎already_taken‎ می‌گرفت. و
+    /// سه جا — پوشهٔ سرورِ خانگی، کدی که اپِ کارمندان از سرورِ حساب می‌گیرد
+    /// (‎/api/pump/public/join‎ ⇒ ‎station.code‎)، و ‎s‎ی کیو‌آرِ زنده — هر کدام
+    /// کدِ دیگری داشتند. حالا هر سه یکی‌اند: <b>کدِ پمپِ همین حساب روی سرورِ
+    /// حساب</b> (<see cref="AppSettings.CloudStationCode"/>، مثلاً ‎p1a2b3c4d‎) —
+    /// که خودِ سرورِ حساب یکتا ساخته و مالِ یک حساب است.
+    ///
+    /// ترتیب:
+    ///   ۱) حساب داریم ⇒ کدِ همان حساب، و هر کدی که «مالِ این حساب» نیست
+    ///      (‎pump1‎، کدِ حسابِ قبلی، کدِ بی‌حسابِ همین کامپیوتر) جابه‌جا می‌شود.
+    ///   ۲) حساب نداریم ⇒ کدِ ذخیره‌شده، مگر همان ‎pump1‎ی مشترک.
+    ///   ۳) هیچ ⇒ شناسهٔ همین کامپیوتر (<see cref="DeviceCode"/>) — تا دو نصبِ
+    ///      بی‌حساب هم روی یک سرورِ خانگی قاطی نشوند.
     /// </summary>
+    public static string CodeFor(AppSettings file)
+    {
+        var saved = (file.StationCode ?? "").Trim();
+        var mine = UniqueCode(file);
+        if (mine.Length > 0) return Belongs(saved, mine) ? saved : mine;
+        if (saved.Length > 0 && !Same(saved, LegacySharedCode)) return saved;
+        return DeviceCode(file);
+    }
+
+    /// <summary>
+    /// ⛔ تنها جایی که نامِ آن کدِ کهنه نوشته می‌شود — فقط برای شناختنِ نصب‌هایی
+    /// که هنوز روی آن مانده‌اند و باید جابه‌جا شوند. هیچ‌وقت به کسی داده نمی‌شود.
+    /// </summary>
+    internal const string LegacySharedCode = "pump1";
+
+    /// <summary>کدِ همین حساب — خالی یعنی «هنوز حسابی بند نشده».</summary>
     public static string UniqueCode(AppSettings file)
     {
-        var id = (file.CloudStationId ?? "").Trim().ToLowerInvariant();
+        //  ⚠️ اول کدِ خودِ سرورِ حساب (همان که اپِ کارمندان و کیو‌آر می‌شناسند)،
+        //  و فقط اگر هنوز نیامده، شناسه‌اش — هر دو یکتا و مالِ یک حساب.
+        var code = Clean(file.CloudStationCode);
+        return code.Length > 0 ? code : Clean(file.CloudStationId);
+    }
+
+    /// <summary>شناسهٔ همین کامپیوتر — برای نصبی که هنوز حساب ندارد.</summary>
+    public static string DeviceCode(AppSettings file)
+    {
+        var dev = new string(CloudConfig.DeviceUid(file).ToLowerInvariant()
+                             .Where(ch => ch is (>= 'a' and <= 'z') or (>= '0' and <= '9')).ToArray());
+        if (dev.Length == 0) dev = Guid.NewGuid().ToString("N");
+        return "d-" + (dev.Length > 12 ? dev[^12..] : dev);
+    }
+
+    /// <summary>
+    /// ⚠️ ‎true‎ یعنی پوشهٔ فعلیِ این نصب روی سرورِ خانگی مالِ این حساب نیست و
+    /// باید جابه‌جا شود — حلقهٔ اتصال با همین از <see cref="EnsureAsync"/> می‌خواهد
+    /// که پوشهٔ درست را بگیرد.
+    /// </summary>
+    public static bool NeedsMove(AppSettings file) =>
+        (file.ServerToken ?? "").Trim().Length > 0
+        && !Same((file.StationCode ?? "").Trim(), CodeFor(file));
+
+    /// <summary>
+    /// «این کد مالِ این حساب است؟» — خودِ کد، یا یکی از جایگزین‌های
+    /// <see cref="Alternatives"/> که با همان شروع می‌شوند.
+    /// </summary>
+    private static bool Belongs(string code, string mine) =>
+        code.Length > 0 && (Same(code, mine) || code.StartsWith(mine + "-", StringComparison.OrdinalIgnoreCase));
+
+    private static bool Same(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+
+    private static string Clean(string? raw)
+    {
+        var id = (raw ?? "").Trim().ToLowerInvariant();
         var safe = new string(id.Select(ch => ch is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '_' or '-' ? ch : '-').ToArray()).Trim('-');
         return safe.Length > 48 ? safe[..48] : safe;
     }
@@ -183,7 +246,7 @@ public static class StationLink
                              .Where(ch => ch is (>= 'a' and <= 'z') or (>= '0' and <= '9')).ToArray());
         dev = dev.Length > 8 ? dev[^8..] : dev;
         if (dev.Length == 0) dev = Guid.NewGuid().ToString("N")[..8];
-        var basis = mine.Length > 0 ? mine : HomeLink.DefaultStationCode;
+        var basis = mine.Length > 0 ? mine : DeviceCode(file);
         var list = new List<string>();
         if (mine.Length > 0) list.Add(mine);
         string Cut(string c) => c.Length > 48 ? c[..48] : c;
@@ -193,9 +256,6 @@ public static class StationLink
         list.Add(Cut(basis[..Math.Min(basis.Length, 39)] + "-" + Guid.NewGuid().ToString("N")[..8]));
         return list.Where(c => !string.Equals(c, taken, StringComparison.OrdinalIgnoreCase)).Distinct();
     }
-
-    private static bool IsDefault(string code) =>
-        string.Equals(code.Trim(), HomeLink.DefaultStationCode, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>جوابِ خامِ مسیرِ ثبت.</summary>
     private sealed record EnrollReply(bool Ok, string Code, string Name, string Token, string ReadKey,
@@ -291,12 +351,14 @@ public static class StationLink
     /// استثنا می‌دهد. اگر فقط دیتابیس را می‌نوشتیم، ثبتِ خودکار هیچ‌وقت
     /// نمی‌نشست و برنامه هر بار از نو ثبت می‌شد.
     /// </summary>
-    private static void Save(AppHost host, string url, string token, string readKey, string code, string serverId)
+    private static void Save(AppHost host, string url, string token, string readKey, string code,
+                             string serverId, bool moved = false)
     {
         var file = AppSettings.Load();
         file.ServerUrl = url;
         file.ServerToken = token;
-        if (readKey.Length > 0) file.ServerReadKey = readKey;
+        //  ⚠️ جابه‌جایی ⇒ رمزِ خواندنِ پوشهٔ قبلی هم مالِ همان پوشه بود
+        if (readKey.Length > 0 || moved) file.ServerReadKey = readKey;
         file.StationCode = code;
         if (serverId.Length > 0) file.ServerId = serverId;
         file.Save();

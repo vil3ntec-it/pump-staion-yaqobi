@@ -223,7 +223,8 @@ public class AcctLiveTests
         var main = full!.MainAccount;
 
         var live1 = await AcctLive.EnsureAsync(host, main);
-        Assert.StartsWith("s=pump1&a=d" + main.Id + "&k=", live1);
+        //  ⛔ بی حساب، کدِ همین کامپیوتر — نه «pump1»ی مشترکِ همه
+        Assert.Matches("^s=d-[a-z0-9]+&a=d" + main.Id + "&k=", live1);
         var key = main.QrKey!;
         Assert.Matches("^[0-9a-f]{20}$", key);
 
@@ -242,7 +243,7 @@ public class AcctLiveTests
         var co = await host.Companies.AddAsync("شرکتِ الف");
         var coFull = await host.Companies.LoadAsync(co.Id);
         var live2 = await AcctLive.EnsureAsync(host, coFull!);
-        Assert.StartsWith("s=pump1&a=c" + co.Id + "&k=", live2);
+        Assert.Matches("^s=d-[a-z0-9]+&a=c" + co.Id + "&k=", live2);
         Assert.Equal(coFull!.QrKey, (await host.Companies.LoadAsync(co.Id))!.QrKey);
 
         items = await AcctLive.CollectAsync(host);

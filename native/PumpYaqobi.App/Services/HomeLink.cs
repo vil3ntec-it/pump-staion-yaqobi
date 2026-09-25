@@ -20,9 +20,6 @@ namespace PumpYaqobi.App.Services;
 /// </summary>
 public static class HomeLink
 {
-    /// <summary>کدِ پمپی که اگر هیچ‌جا چیزی نوشته نشده باشد به کار می‌رود.</summary>
-    public const string DefaultStationCode = "pump1";
-
     /// <summary>نشانیِ سرورِ داده — خالی یعنی «فقط محلی».</summary>
     public static string Url(AppHost host) =>
         First(Db(host, SettingsService.ServerUrl), AppSettings.Load().ServerUrl);
@@ -81,11 +78,31 @@ public static class HomeLink
     /// </summary>
     public static string ReadKey(AppHost _) => AppSettings.Load().ServerReadKey.Trim();
 
-    /// <summary>کدِ ایستگاه. خالی هرگز برنمی‌گردد.</summary>
+    /// <summary>
+    /// کدِ پوشهٔ همین پمپ. خالی هرگز برنمی‌گردد.
+    ///
+    /// ⛔ **هیچ کدِ پیش‌فرضِ مشترکی نیست** — نه ‎pump1‎ و نه هیچ چیزِ دیگر.
+    /// ⚠️ تا وقتی رمزِ یک پوشه را داریم، همان کد برمی‌گردد (کد و رمز باید با هم
+    /// بخوانند)، حتی اگر مالِ این حساب نباشد: جابه‌جایی کارِ
+    /// <see cref="StationLink.EnsureAsync"/> است و فقط وقتی ثبتِ تازه نشست.
+    /// </summary>
     public static string StationCode(AppHost _)
     {
-        var code = AppSettings.Load().StationCode.Trim();
-        return code.Length == 0 ? DefaultStationCode : code;
+        var file = AppSettings.Load();
+        var saved = file.StationCode.Trim();
+        if (saved.Length > 0 && file.ServerToken.Trim().Length > 0) return saved;
+        return StationLink.CodeFor(file);
+    }
+
+    /// <summary>
+    /// کدی که مشتری و اپِ کارمندان روی <b>سرورِ حساب</b> با آن می‌پرسند (‎s‎ی
+    /// کیو‌آرِ زنده). ⛔ مالِ خودِ همین حساب است، نه پوشهٔ سرورِ خانگی؛ بی
+    /// حساب همان کدِ پوشه (که روی سرورِ حساب هم هیچ پمپِ دیگری نیست).
+    /// </summary>
+    public static string CloudCode(AppHost host)
+    {
+        var mine = AcctLive.CloudCode(AppSettings.Load().CloudStationCode);
+        return mine.Length > 0 ? mine : StationCode(host);
     }
 
     /// <summary>نامِ خواندنیِ پمپ — برای وقتی که خودش را در سرور ثبت می‌کند.</summary>
