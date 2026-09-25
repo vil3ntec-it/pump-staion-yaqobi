@@ -9,19 +9,22 @@ namespace PumpYaqobi.App.Controls;
 
 /// <summary>
 /// نقشهٔ مخزنِ زیرِ زمین — همان تصویری که صاحب ریپو داد (۱۴۰۵/۰۷/۱۳):
-/// مخزنِ افقی، تیل (نارنجی) روی آب (آبی)، پروب، شناورِ تیل و شناورِ آب روی
-/// یک میله، پمپِ غوطه‌ور، و درصدِ پرشدگی وسطِ مخزن.
+/// مخزنِ افقی با تیلِ نارنجی، پروب، شناورِ تیل، پمپِ غوطه‌ور، و درصدِ پرشدگی
+/// وسطِ مخزن — و آب و شناورِ آب **فقط وقتی دستگاه اندازه‌اش را داده باشد**.
 ///
 /// ⛔ جای نوارِ عمودیِ پیشین («۱۰۰٪» روی یک ستونِ آبی) را گرفته و آن نوار
 /// برنمی‌گردد: «اون نشانه‌گرِ مخزن که الان تو برنامه هست رو بردار و این مدلِ
 /// جدید رو براش بزار… این همه ریزکارهاش باید باشن.»
 ///
-/// ⚠️ **فقط یک عدد این‌جا حقیقت است: سطحِ تیل** (‎FillPercent‎ = موجودی ÷
-/// ظرفیت، همان عددی که نوارِ قدیمی داشت) و خطِ آستانهٔ هشدار. پروب، پمپ،
-/// دو شناور و نوارِ آبیِ آب **نقشه‌اند، نه اندازه**: برنامه هیچ‌جا آب را
-/// نمی‌سنجد (میله‌زنی فقط لیترِ تیل می‌گیرد)، پس نوارِ آب همیشه یک نوارِ
-/// باریکِ ثابت است (‎WaterPercent‎) و هیچ عددی کنارش نوشته نمی‌شود. روزی که
-/// میله‌زنی ارتفاعِ آب را هم بگیرد، همین خاصیت به آن بسته می‌شود.
+/// ⚠️ **فقط عددِ واقعی کشیده می‌شود**: سطحِ تیل (‎FillPercent‎ = موجودی ÷
+/// ظرفیت) و خطِ آستانهٔ هشدار. پروب، پمپ و میلهٔ شناور شکلِ دستگاه‌اند.
+///
+/// ⛔ **آب تا دستگاهِ واقعی اندازه نداده دیده نمی‌شود** (خواستهٔ صاحب ریپو،
+/// ۱۴۰۵/۰۷/۱۳: «من نمی‌دونم اصلاً توی مخزن آبی هست یا نه»). ‎WaterPercent‎
+/// پیش‌فرضش ‎null‎ است یعنی «اندازه‌ای نداریم» — نه «صفر آب»: آن وقت نه نوارِ
+/// آبی، نه گویِ شناورِ آب و نه برچسبش کشیده می‌شود و تیل از کفِ مخزن
+/// شمرده می‌شود. روزی که دستگاهِ فیزیکی عدد بدهد، همین خاصیت به آن بسته
+/// می‌شود و آب خودش پیدا می‌شود. ⛔ عددِ حدسی یا نمایشی به آن ندهید.
 ///
 /// ⚠️ همهٔ اندازه‌ها در یک بومِ طراحیِ ثابت (‎DesignW×DesignH‎) نوشته شده‌اند و
 /// کلِ نقشه با یک مقیاس در قابِ واقعی می‌نشیند — پس با هر پهنا و بلندی‌ای
@@ -52,11 +55,12 @@ public class TankGauge : Control
         AvaloniaProperty.Register<TankGauge, string?>(nameof(CaptionText));
 
     /// <summary>
-    /// بلندیِ نوارِ آب به درصدِ بلندیِ داخلِ مخزن — **تزئینِ نقشه**، نه اندازه
-    /// (بالای کلاس). سقفش ۴۰ است تا هیچ‌وقت جای تیل را نگیرد.
+    /// بلندیِ آب به درصدِ بلندیِ داخلِ مخزن، **فقط از دستگاهِ اندازه‌گیر**.
+    /// ‎null‎ (پیش‌فرض) = اندازه‌ای نیست ⇒ هیچ نشانی از آب کشیده نمی‌شود.
+    /// سقفش ۴۰ است تا هیچ‌وقت جای تیل را نگیرد.
     /// </summary>
-    public static readonly StyledProperty<double> WaterPercentProperty =
-        AvaloniaProperty.Register<TankGauge, double>(nameof(WaterPercent), 12);
+    public static readonly StyledProperty<double?> WaterPercentProperty =
+        AvaloniaProperty.Register<TankGauge, double?>(nameof(WaterPercent));
 
     public static readonly StyledProperty<IBrush?> BodyBrushProperty =
         AvaloniaProperty.Register<TankGauge, IBrush?>(nameof(BodyBrush));
@@ -82,7 +86,13 @@ public class TankGauge : Control
     public string? FillText { get => GetValue(FillTextProperty); set => SetValue(FillTextProperty, value); }
     public double ThresholdPercent { get => GetValue(ThresholdPercentProperty); set => SetValue(ThresholdPercentProperty, value); }
     public string? CaptionText { get => GetValue(CaptionTextProperty); set => SetValue(CaptionTextProperty, value); }
-    public double WaterPercent { get => GetValue(WaterPercentProperty); set => SetValue(WaterPercentProperty, value); }
+    public double? WaterPercent { get => GetValue(WaterPercentProperty); set => SetValue(WaterPercentProperty, value); }
+
+    /// <summary>دستگاه اندازهٔ آب را داده است؟ — تنها شرطِ کشیدنِ هر تکهٔ آب.</summary>
+    public bool HasWater => HasWaterReading(WaterPercent);
+
+    /// <summary>عددِ آب واقعی است؟ ‎null‎ یا ناجور ⇒ نه.</summary>
+    public static bool HasWaterReading(double? water) => water is double w && double.IsFinite(w);
     public IBrush? BodyBrush { get => GetValue(BodyBrushProperty); set => SetValue(BodyBrushProperty, value); }
     public IBrush? BodyDeepBrush { get => GetValue(BodyDeepBrushProperty); set => SetValue(BodyDeepBrushProperty, value); }
     public IBrush? RimBrush { get => GetValue(RimBrushProperty); set => SetValue(RimBrushProperty, value); }
@@ -115,10 +125,10 @@ public class TankGauge : Control
     public readonly record struct Levels(double WaterTop, double OilTop, double ThresholdY);
 
     public static Levels LevelsOf(double innerTop, double innerBottom,
-                                  double fillPercent, double waterPercent, double thresholdPercent)
+                                  double fillPercent, double? waterPercent, double thresholdPercent)
     {
         var fill = Math.Clamp(double.IsFinite(fillPercent) ? fillPercent : 0, 0, 100) / 100.0;
-        var water = Math.Clamp(double.IsFinite(waterPercent) ? waterPercent : 0, 0, 40) / 100.0;
+        var water = Math.Clamp(HasWaterReading(waterPercent) ? waterPercent!.Value : 0, 0, 40) / 100.0;
         var thr = Math.Clamp(double.IsFinite(thresholdPercent) ? thresholdPercent : 0, 0, 100) / 100.0;
         var h = innerBottom - innerTop;
         var waterTop = innerBottom - water * h;
@@ -168,7 +178,8 @@ public class TankGauge : Control
         Centered(ctx, ProbeLabel, semi, 11, label, ProbeX, 7, 90);
         Centered(ctx, OilFloatLabel, semi, 11, label, FloatX, 7, 110);
         Centered(ctx, PumpLabel, semi, 11, label, PumpX, 5, 120);
-        Centered(ctx, WaterFloatLabel, semi, 11, label, FloatX, 233, 110);
+        if (HasWater)
+            Centered(ctx, WaterFloatLabel, semi, 11, label, FloatX, 233, 110);
         if (!string.IsNullOrEmpty(CaptionText))
         {
             var ft = new FormattedText(CaptionText!, CultureInfo.CurrentCulture, FlowDirection.RightToLeft,
@@ -252,8 +263,8 @@ public class TankGauge : Control
                 ctx.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromArgb(0x6e, 255, 255, 255)), 2),
                                  WaveLine(left, right, lv.OilTop, 3.2, 0.6));
             }
-            //  آب — نوارِ باریکِ آبی
-            if (lv.WaterTop < Inner.Bottom - 0.5)
+            //  آب — فقط با اندازهٔ واقعیِ دستگاه
+            if (HasWater && lv.WaterTop < Inner.Bottom - 0.5)
             {
                 var water = Vertical((Color.Parse("#4ea3f7"), 0), (Color.Parse("#1f6fd6"), 1));
                 ctx.DrawGeometry(water, null, Wave(left, right, lv.WaterTop, bottom, 2.4, 2.1));
@@ -269,7 +280,7 @@ public class TankGauge : Control
 
     // ── درونِ مخزن: پروب، میلهٔ شناورها، پمپ ─────────────────────────────────
 
-    private static void DrawInternals(DrawingContext ctx, Levels lv)
+    private void DrawInternals(DrawingContext ctx, Levels lv)
     {
         //  پروب — میلهٔ روشن از سرش تا نزدیکِ کف
         ctx.DrawRectangle(new SolidColorBrush(Color.Parse("#e8eef4")),
@@ -286,10 +297,13 @@ public class TankGauge : Control
         var ball = Brushes.White;
         var ballEdge = new Pen(new SolidColorBrush(Color.Parse("#8fa0b3")), 1.2);
         ctx.DrawEllipse(ball, ballEdge, new Point(FloatX, oilBall), 7.5, 7.5);
-        ctx.DrawEllipse(ball, ballEdge, new Point(FloatX, waterBall), 7.5, 7.5);
-        //  خطِ راهنما از کفِ مخزن تا برچسبِ «شناورِ آب»
-        ctx.DrawLine(new Pen(new SolidColorBrush(Color.Parse("#94a3b3")), 1, new DashStyle(new[] { 2.0, 2.0 }, 0)),
-                     new Point(FloatX, Body.Bottom), new Point(FloatX, 232));
+        //  شناورِ آب و خطِ راهنمای برچسبش فقط با اندازهٔ واقعیِ آب
+        if (HasWater)
+        {
+            ctx.DrawEllipse(ball, ballEdge, new Point(FloatX, waterBall), 7.5, 7.5);
+            ctx.DrawLine(new Pen(new SolidColorBrush(Color.Parse("#94a3b3")), 1, new DashStyle(new[] { 2.0, 2.0 }, 0)),
+                         new Point(FloatX, Body.Bottom), new Point(FloatX, 232));
+        }
 
         //  پمپِ غوطه‌ور — میلهٔ سیاه، بدنهٔ سرخ نزدیکِ کف
         ctx.DrawRectangle(new SolidColorBrush(Color.Parse("#1f2937")), null, new Rect(PumpX - 4, 54, 8, 122));

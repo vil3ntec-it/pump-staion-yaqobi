@@ -76,6 +76,29 @@ public class TankGaugeTests
         Assert.Equal(211 - 0.40 * 160, flood.WaterTop, 6);
     }
 
+    [Fact]
+    public void BiAndazeyeDastgah_HichAbi_Nist()
+    {
+        //  خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۳): «نمی‌دونم اصلاً توی مخزن آبی هست یا
+        //  نه» ⇒ تا دستگاهِ فیزیکی عدد نداده، آب نیست و تیل از کف شمرده می‌شود.
+        var none = TankGauge.LevelsOf(51, 211, 50, null, 10);
+        Assert.Equal(211, none.WaterTop, 6);
+        Assert.Equal(131, none.OilTop, 6);                          // ۵۰٪ ⇒ وسطِ کف و سقف
+        Assert.False(TankGauge.HasWaterReading(null));
+        Assert.False(TankGauge.HasWaterReading(double.NaN));
+        Assert.True(TankGauge.HasWaterReading(0));                  // «صفر آب» اندازه است، «نمی‌دانیم» نه
+        Assert.Null(new TankGauge().WaterPercent);                  // پیش‌فرض: اندازه‌ای نیست
+
+        //  و هر سه تکهٔ آب پشتِ همان یک شرط‌اند
+        var src = Gauge();
+        Assert.Contains("if (HasWater && lv.WaterTop < Inner.Bottom - 0.5)", src);
+        Assert.Contains("if (HasWater)\n            Centered(ctx, WaterFloatLabel", src.Replace("\r\n", "\n"));
+        Assert.Matches(@"if \(HasWater\)\s*\{\s*ctx\.DrawEllipse\(ball, ballEdge, new Point\(FloatX, waterBall\)", src);
+        //  ⛔ هیچ عددِ حدسی به آب داده نمی‌شود — نه پیش‌فرض، نه در صفحه
+        Assert.DoesNotContain("nameof(WaterPercent), 12", src);
+        Assert.DoesNotContain("WaterPercent=", Xaml());
+    }
+
     // ══ ۲) خودِ نقشه ═══════════════════════════════════════════════════════
 
     [Fact]
@@ -96,8 +119,8 @@ public class TankGaugeTests
         Assert.Contains("new DashStyle(", src);
         //  ⛔ چپ‌به‌راست — وگرنه در پنجرهٔ راست‌به‌چپ کلِ نقشه آینه می‌شد
         Assert.Contains("FlowDirection = FlowDirection.LeftToRight", src);
-        //  و نوارِ آب صریح «نقشه» خوانده شده، نه اندازه
-        Assert.Contains("نقشه‌اند، نه اندازه", src);
+        //  و آب صریح «فقط از دستگاه» خوانده شده، نه نقشه و نه حدس
+        Assert.Contains("آب تا دستگاهِ واقعی اندازه نداده دیده نمی‌شود", src);
     }
 
     [Fact]
