@@ -25,6 +25,18 @@ public static class HomeLink
         First(Db(host, SettingsService.ServerUrl), AppSettings.Load().ServerUrl);
 
     /// <summary>
+    /// نشانی‌ای که به <b>گوشیِ کارمند</b> داده می‌شود (ابر و کیو‌آر).
+    /// ⛔ هیچ‌وقت ‎127.0.0.1‎ نیست وقتی نشانیِ شبکه را می‌دانیم — آن نشانی روی
+    /// گوشی یعنی «خودِ همین گوشی» و درِ شبکهٔ پمپ هیچ‌وقت باز نمی‌شد.
+    /// </summary>
+    public static string ShareUrl(AppHost host)
+    {
+        var url = Url(host);
+        var lan = AppSettings.Load().ServerLanUrl.Trim();
+        return ServerFinder.IsLoopbackUrl(url) && lan.Length > 0 ? lan : url;
+    }
+
+    /// <summary>
     /// رمزِ همین پمپ — همانی که اجازهٔ <b>نوشتن</b> دارد.
     /// ⚠️ این را در کیو‌آرِ کارمند نگذارید؛ آن یکی <see cref="ReadKey"/> است.
     ///

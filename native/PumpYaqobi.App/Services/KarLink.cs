@@ -137,7 +137,7 @@ public static class KarLink
         var readKey = HomeLink.ReadKey(host);
         return Build(
             host.Settings.GetString(SettingsKeys.ViewerUrl),
-            HomeLink.Url(host),
+            HomeLink.ShareUrl(host),
             readKey.Length > 0 ? readKey : HomeLink.Token(host),
             HomeLink.StationCode(host));
     }

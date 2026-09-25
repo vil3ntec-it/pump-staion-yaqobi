@@ -414,7 +414,9 @@ public sealed partial class MainViewModel : ObservableObject
         if (sync is null || !sync.Configured)
         {
             key = "Pump.Muted";
-            why = "سرورِ خانگی هنوز تنظیم نشده — از پروفایل وارد شوید";
+            //  ⚠️ «از پروفایل وارد شوید» غلط بود: یافتنِ سرورِ خانگی هیچ حسابی
+            //  نمی‌خواهد، و آن جمله کاربر را دنبالِ ورود می‌فرستاد
+            why = "هنوز به سرورِ خانگی وصل نشده — خودش در همین شبکه دنبالش می‌گردد؛ برای همین حالا، روی چراغ بزنید";
         }
         else if (sync.Connected)
         {
@@ -741,9 +743,13 @@ public sealed partial class MainViewModel : ObservableObject
     private async Task CheckServerAsync()
     {
         var sync = AppHost.Current.PublisherIfStarted;
-        if (sync is null || !sync.Configured)
+        //  ⛔ «تنظیم نشده» دیگر بن‌بست نیست (۱۴۰۵/۰۷/۱۳): تا امروز کلیکِ چراغِ
+        //  نصبی که هنوز نشانی نداشت فقط «از پروفایل وارد شوید» می‌گفت و هیچ
+        //  نمی‌گشت — در حالی که یافتنِ سرورِ خانگی هیچ حسابی نمی‌خواهد. حالا
+        //  همان کشفِ خودکار همین حالا می‌دود.
+        if (sync is null)
         {
-            AppHost.Current.Toast("سرورِ خانگی تنظیم نشده — از «پروفایل» وارد شوید", ToastKind.Info);
+            AppHost.Current.Toast("برنامه هنوز بالا نیامده — چند ثانیهٔ دیگر دوباره بزنید", ToastKind.Info);
             return;
         }
 
