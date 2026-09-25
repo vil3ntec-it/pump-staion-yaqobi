@@ -419,6 +419,43 @@ public class SettingsDurabilityTests : IDisposable
     }
 
     /// <summary>
+    /// ⛔ <b>نمونه‌ای که از پوشهٔ دیگری خوانده شده، این‌جا نمی‌نویسد.</b>
+    ///
+    /// بیلدِ ۳.۱.۱۷۰ (پس از بسته شدنِ حلقهٔ ناشر) همان سنجهٔ بالا را باز
+    /// سرخ کرد: ویومدلِ آزمونِ قبلی تنظیماتش را از پوشهٔ خودش خوانده بود و
+    /// پس از عوض شدنِ پوشه <c>SaveSoon</c> می‌زد — و <c>_soonDir</c> پوشهٔ
+    /// <b>همان لحظه</b> را برمی‌داشت، نه پوشهٔ خودِ شیء. <c>Save</c>ی
+    /// دیرهنگام هم همان را می‌کرد.
+    /// </summary>
+    [Fact]
+    public void NemooneyePushehyeDigar_InjaNemineviseh()
+    {
+        new AppSettings { ThemeId = "blue" }.Save();
+        var kohne = AppSettings.Load();
+        kohne.ThemeId = "gold";
+
+        var digar = Path.Combine(Path.GetTempPath(), "pump-dur3-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(digar);
+        try
+        {
+            AppSettings.DirOverride = digar;
+            kohne.SaveSoon();
+            kohne.Save();
+            Thread.Sleep(1000);
+            Assert.False(File.Exists(Path.Combine(digar, "settings.json")));
+        }
+        finally
+        {
+            AppSettings.DirOverride = _dir;
+            try { Directory.Delete(digar, true); } catch { }
+        }
+
+        //  و در پوشهٔ خودش هم با همان نمونه هنوز می‌نویسد
+        kohne.Save();
+        Assert.Equal("gold", AppSettings.Load().ThemeId);
+    }
+
+    /// <summary>
     /// ⛔ <b>نوشتنِ در صف، نوشتهٔ کسِ دیگری را پاک نمی‌کند.</b>
     ///
     /// ‎SaveSoon()‎ یک عکسِ کهنه را ششصد میلی‌ثانیه نگه می‌دارد. اگر در همان
