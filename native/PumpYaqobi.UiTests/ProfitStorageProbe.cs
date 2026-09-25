@@ -356,7 +356,20 @@ internal static class ProfitStorageProbe
                   string.Join("، ", all.Select(r => r.Height.ToString("0.0"))));
             Check("چهار کادر هم‌پهنا", all.Max(r => r.Width) - all.Min(r => r.Width) < 1,
                   string.Join("، ", all.Select(r => r.Width.ToString("0.0"))));
-            Check("و روی یک خط", all.Select(r => Math.Round(r.Y)).Distinct().Count() == 1);
+            //  ══ دو ردیف، دو ستون (۱۴۰۵/۰۷/۱۳) ══
+            //  خواستهٔ صاحب ریپو با کادرِ زرد: «دو کادرِ جمله ورودی و جمله فروش
+            //  برن زیرِ اون دو کادرِ دیگه». پس کادرهای تایپ یک خط، جمله‌ها یک
+            //  خطِ پایین‌تر، و هر جمله دقیقاً زیرِ کادرِ ستونِ خودش.
+            Check("دو کادرِ تایپ روی یک خط", typed.Select(r => Math.Round(r.Y)).Distinct().Count() == 1);
+            Check("دو جمله روی یک خط", calc.Select(r => Math.Round(r.Y)).Distinct().Count() == 1);
+            Check("و جمله‌ها زیرِ کادرهای تایپ‌اند", calc.Min(r => r.Top) >= typed.Max(r => r.Bottom) + 4,
+                  $"تایپ تا {typed.Max(r => r.Bottom):0} · جمله از {calc.Min(r => r.Top):0}");
+            var tx = typed.OrderBy(r => r.X).ToList();
+            var cx = calc.OrderBy(r => r.X).ToList();
+            Check("ستون‌به‌ستون زیرِ هم (هر دو لبه یکی)",
+                  Math.Abs(tx[0].X - cx[0].X) < 1 && Math.Abs(tx[1].X - cx[1].X) < 1
+                  && Math.Abs(tx[0].Right - cx[0].Right) < 1 && Math.Abs(tx[1].Right - cx[1].Right) < 1,
+                  $"{tx[0].X:0}/{cx[0].X:0} · {tx[1].X:0}/{cx[1].X:0}");
         }
         var inText = texts.FirstOrDefault(t => t.Text == $"{st.TotalIn} لیتر");
         Check("جمله ورودی داخلِ کادرش نوشته شده", inText?.GetVisualParent<Border>()?.Classes.Contains("calc") == true,
@@ -364,7 +377,100 @@ internal static class ProfitStorageProbe
         //  ⛔ فقط‌خواندنی — هیچ کادرِ تایپی به این دو بند نیست
         Check("و فقط‌خواندنی است (کادرِ تایپ نیست)",
               view.GetVisualDescendants().OfType<TextBox>().All(b => b.Text != $"{st.TotalIn} لیتر"));
+
+        // ══ نقشهٔ مخزن — به‌جای نوارِ عمودی (۱۴۰۵/۰۷/۱۳) ═════════════════════
+        //  «اون نشانه‌گرِ مخزن که الان تو برنامه هست رو بردار و این مدلِ جدید رو
+        //  براش بزار.» تنها عددِ حقیقیِ نقشه سطحِ تیل است و باید مو‌به‌مو همان
+        //  درصدِ ویومدل باشد؛ بقیه (پروب، پمپ، شناورها، آب) نقشه‌اند.
+        var gauge = view.GetVisualDescendants().OfType<PumpYaqobi.App.Controls.TankGauge>()
+                        .FirstOrDefault(g => g.IsEffectivelyVisible);
+        Check("نقشهٔ مخزن (TankGauge) روی صفحه است", gauge is not null);
+        if (gauge is not null)
+        {
+            Check("سطحِ تیلِ نقشه همان درصدِ ویومدل است",
+                  Math.Abs(gauge.FillPercent - st.FillPercent) < 0.001 && gauge.FillText == st.FillText,
+                  $"{gauge.FillPercent:0.#} / {st.FillPercent:0.#} · «{gauge.FillText}»");
+            Check("خطِ آستانه = آستانه ÷ ظرفیت", Math.Abs(gauge.ThresholdPercent - st.ThresholdPercent) < 0.001
+                                                 && gauge.ThresholdPercent > 0 && gauge.CaptionText == st.ThresholdText,
+                  $"{gauge.ThresholdPercent:0.##}٪ · «{gauge.CaptionText}»");
+            Check("نقشه چپ‌به‌راست کشیده می‌شود (در پنجرهٔ راست‌به‌چپ آینه نمی‌شود)",
+                  gauge.FlowDirection == FlowDirection.LeftToRight);
+            var gr = R(gauge);
+            Check("مخزن افقی است — پهن‌تر از بلندش", gr.Width > gr.Height * 1.4, $"{gr.Width:0}×{gr.Height:0}");
+            if (title is not null)
+            {
+                var col = R(title.GetVisualParent<StackPanel>()!);
+                Check("نقشه کنارِ ستونِ نوشته است، نه رویش", !gr.Intersects(col),
+                      $"نقشه {gr.Left:0}…{gr.Right:0} · ستون {col.Left:0}…{col.Right:0}");
+                Check("و در راست‌به‌چپ سمتِ راستِ ستونِ نوشته", gr.Left >= col.Right - 0.5);
+            }
+        }
+        //  ⛔ نوارِ عمودیِ قدیمی رفته: درصد دیگر یک ‎TextBlock‎ی جدا نیست
+        Check("نوارِ قدیمیِ درصد نیست", texts.All(t => t.Text != st.FillText));
+
+        // ══ دکمه‌های مخزن در سربرگِ «خلاصه پول‌ها» ══════════════════════════
+        //  خواستهٔ صاحب ریپو با کادرِ آبی: «دقیق برن اون‌جا که جا می‌گیرن» —
+        //  سمتِ راستِ سربرگِ کارتِ پول‌ها، و عنوان همچنان وسطِ کلِ سربرگ.
+        var buttons = view.GetVisualDescendants().OfType<Button>().Where(b => b.IsEffectivelyVisible).ToList();
+        var add = buttons.FirstOrDefault(b => Equals(b.Content, st.AddBuyText));
+        var pdf = buttons.FirstOrDefault(b => Equals(b.Content, st.PdfText));
+        var dip = buttons.FirstOrDefault(b => Equals(b.Content, "📏 میله‌زنی"));
+        var head = add?.GetVisualAncestors().OfType<Border>().FirstOrDefault(b => b.Classes.Contains("card-head"));
+        var moneyTitle = head?.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(t => t.Text == st.MoneyTitle);
+        Check("«ثبت خرید» در سربرگِ «خلاصه پول‌ها» است", head is not null && moneyTitle is not null);
+        if (head is not null && moneyTitle is not null && add is not null && pdf is not null && dip is not null)
+        {
+            var hr = R(head);
+            var bs = new[] { add, pdf, dip }.Select(R).ToList();
+            static bool Inside(Rect a, Rect b) =>
+                a.Left >= b.Left - 0.5 && a.Right <= b.Right + 0.5 && a.Top >= b.Top - 0.5 && a.Bottom <= b.Bottom + 0.5;
+            Check("هر سه دکمه (میله‌زنی، PDF، ثبت خرید) داخلِ همان سربرگ‌اند", bs.All(b => Inside(b, hr)),
+                  string.Join(" · ", bs.Select(b => $"{b.Left:0}…{b.Right:0}")) + $" در {hr.Left:0}…{hr.Right:0}");
+            Check("و به لبهٔ راستِ سربرگ چسبیده‌اند (همان کادرِ آبیِ خالی)", hr.Right - bs.Max(b => b.Right) < 30,
+                  $"{hr.Right - bs.Max(b => b.Right):0}px");
+            Check("روی یک خط", bs.Select(b => Math.Round(b.Y)).Distinct().Count() == 1);
+            //  عنوان وسطِ **کلِ** سربرگ — نه وسطِ جای باقی‌مانده کنارِ دکمه‌ها
+            var tw = moneyTitle.TextLayout?.Width ?? 0;
+            var tr = R(moneyTitle);
+            var tc = (tr.Left + tr.Right) / 2;
+            Check("عنوانِ «خلاصه پول‌ها» وسطِ کلِ سربرگ است", Math.Abs(tc - (hr.Left + hr.Right) / 2) < 1.5,
+                  $"{tc - (hr.Left + hr.Right) / 2:0.0}px");
+            Check("و هیچ دکمه‌ای روی نوشتهٔ عنوان نیفتاده", tw > 0 && bs.All(b => b.Right <= tc - tw / 2 - 4 || b.Left >= tc + tw / 2 + 4),
+                  $"عنوان {tc - tw / 2:0}…{tc + tw / 2:0}");
+        }
+        //  ⛔ و در خودِ کارتِ مخزن دیگر دکمه‌ای نیست
+        var tankCard = gauge?.GetVisualAncestors().OfType<Border>().FirstOrDefault(b => b.Classes.Contains("panel"));
+        Check("کارتِ مخزن دیگر ردیفِ دکمه ندارد",
+              tankCard is not null && !tankCard.GetVisualDescendants().OfType<Button>().Any(b => b.IsEffectivelyVisible));
+
         Shot(win, shots, "04-storage");
+        //  و همان صفحه با تمِ تیره — نقشه باید در هر دو تم خوانا باشد
+        PumpYaqobi.App.Themes.ThemeManager.Apply(PumpYaqobi.App.Themes.PumpTheme.Gold);
+        Settle(win);
+        Shot(win, shots, "04b-storage-gold");
+        PumpYaqobi.App.Themes.ThemeManager.Apply(PumpYaqobi.App.Themes.PumpTheme.Blue);
+        Settle(win);
+
+        //  ══ مخزنِ نیمه‌پر — همان حالِ تصویرِ مرجع (۵۸٫۹٪) ══
+        //  ظرفیت را از خودِ کادرِ تایپ بزرگ‌تر می‌کنیم (۲۵٬۰۰۰): موجودیِ ۱۴٬۹۵۰
+        //  می‌شود ۵۹٫۸٪. سطحِ تیل باید پایین بیاید، درصد یک رقمِ اعشار بگیرد،
+        //  و نوشته روی بدنهٔ خالی خوانا بماند (رنگِ تم، نه سفید).
+        if (gauge is not null)
+        {
+            var was = st.Capacity;
+            st.Capacity = "25,000";
+            for (var i = 0; i < 400 && Math.Abs(st.FillPercent - 59.8) > 0.01; i++) { Pump(win); Thread.Sleep(3); }
+            Settle(win);
+            Check("ظرفیتِ بزرگ‌تر ⇒ سطحِ تیل پایین آمد", Math.Abs(gauge.FillPercent - 59.8) < 0.01 && gauge.FillText == "59.8%",
+                  $"{gauge.FillPercent:0.##} · «{gauge.FillText}»");
+            Check("و خطِ آستانه هم روی همان محور جابه‌جا شد", Math.Abs(gauge.ThresholdPercent - 4) < 0.01,
+                  $"{gauge.ThresholdPercent:0.##}٪");
+            Shot(win, shots, "04c-storage-part");
+            st.Capacity = was;
+            for (var i = 0; i < 400 && Math.Abs(st.FillPercent - 100) > 0.01; i++) { Pump(win); Thread.Sleep(3); }
+            Settle(win);
+            Check("و با برگرداندنِ ظرفیت، همان صد درصد", Math.Abs(gauge.FillPercent - 100) < 0.01, gauge.FillText);
+        }
     }
 
     // ── ابزارها ──────────────────────────────────────────────────────────────
