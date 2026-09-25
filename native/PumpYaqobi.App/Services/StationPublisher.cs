@@ -575,11 +575,11 @@ public sealed class StationPublisher : IAsyncDisposable
     /// </summary>
     public static async Task CloudKeepNowAsync(CancellationToken ct = default)
     {
-        try { await CloudKeepAsync(ct); }
+        try { await CloudKeepAsync(ct, forceBind: true); }
         catch { /* بی‌اینترنت خطا نیست — چراغ از `Reach` راست می‌گوید */ }
     }
 
-    private static async Task CloudKeepAsync(CancellationToken ct)
+    private static async Task CloudKeepAsync(CancellationToken ct, bool forceBind = false)
     {
         var file = AppSettings.Load();
         //  کفِ ساعتِ مجوز — هر دقیقه، هم‌پای زمانی که برنامه باز است
@@ -588,7 +588,7 @@ public sealed class StationPublisher : IAsyncDisposable
         if (!string.IsNullOrWhiteSpace(file.CloudAccountToken))
         {
             var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
-            await cloud.HomeFromAccountAsync(ct);
+            await cloud.HomeFromAccountAsync(ct, forceBind);
             //  ⛔ **نشست همین حالا مُرد** (۴۰۱ و تازه‌سازیِ ناموفق) — مثلاً حساب
             //  از ریشه در پنل حذف شد. سنجهٔ `linkstates` روی پشتهٔ واقعی دید
             //  که توکنِ دستگاهِ پمپِ حذف‌شده ده دقیقه زنده می‌ماند و چراغ سبز

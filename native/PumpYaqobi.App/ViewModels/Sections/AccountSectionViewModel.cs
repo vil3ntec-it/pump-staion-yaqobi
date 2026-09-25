@@ -934,6 +934,32 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         if (v == 4) AppHost.Current.SyncIfStarted?.PrimeNow();
     }
 
+    /// <summary>
+    /// ⛔ <b>پس از ورود، گامِ بعد از حقیقتِ سرور است، نه همیشه «نامِ پمپ»</b>
+    /// (۱۴۰۵/۰۷/۱۳، سنجهٔ <c>linkstates</c> روی سرورِ واقعی). تا امروز هر
+    /// چهار راهِ ورود (رمز، ثبت‌نام، کدِ ایمیلی، بازیابیِ رمز) صاف به گامِ
+    /// «نامِ پمپ» می‌رفتند — یعنی صاحبِ پمپی که برنامه را از نو نصب کرده یا
+    /// رمزش را بازیابی کرده بود، دوباره «نامِ پمپ» می‌دید. حالا: حساب پمپ
+    /// دارد ⇒ همین کامپیوتر همان لحظه ثبت می‌شود (همان دورِ پس‌زمینه، که
+    /// <b>هیچ پمپی نمی‌سازد</b>) و صفحه تمام می‌شود؛ ندارد ⇒ «نامِ پمپ».
+    /// </summary>
+    private async Task NextStepAfterSignInAsync()
+    {
+        bool has;
+        try { has = await Cloud.HasStationAsync(); } catch { has = false; }
+        if (!has) { LoginStep = 3; return; }
+
+        await StationPublisher.CloudKeepNowAsync();
+        var f = AppSettings.Load();
+        f.PumpStepDone = true;
+        try { f.Save(); } catch { /* دورِ بعد دوباره */ }
+        RefreshAll();
+        LoginStep = 4;
+        _host.Toast(string.IsNullOrWhiteSpace(f.CloudDeviceToken)
+            ? "✅ وارد شدید — پمپِ شما روی حسابتان هست؛ ثبتِ این کامپیوتر: " + (CloudLink.LastBindWhy is { Length: > 0 } w ? w : "خودش دوباره امتحان می‌کند")
+            : "✅ وارد شدید و این کامپیوتر به پمپِ شما ثبت است", ToastKind.Ok);
+    }
+
     [RelayCommand]
     private void SetSignUp(string? yes)
     {
@@ -1057,7 +1083,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
             ClearSkipped();
             LoginStatus = SwitchNote();
             RefreshAll();
-            LoginStep = 3;
+            await NextStepAfterSignInAsync();
         }
         finally { Busy = false; }
     });
@@ -1095,7 +1121,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
             ClearSkipped();
             LoginStatus = SwitchNote();
             RefreshAll();
-            LoginStep = 3;
+            await NextStepAfterSignInAsync();
         }
         finally { Busy = false; }
     });
@@ -1135,7 +1161,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
             ClearSkipped();
             LoginStatus = SwitchNote();
             RefreshAll();
-            LoginStep = 3;
+            await NextStepAfterSignInAsync();
         }
         finally { Busy = false; }
     }
@@ -1563,7 +1589,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
             ClearSkipped();
             LoginStatus = "";
             RefreshAll();
-            LoginStep = 3;
+            await NextStepAfterSignInAsync();
         }
         finally { Busy = false; }
     });

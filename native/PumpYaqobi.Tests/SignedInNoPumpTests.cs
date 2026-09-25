@@ -103,6 +103,38 @@ public class SignedInNoPumpTests
         Assert.DoesNotContain("EnsureStationAsync", pub);
     }
 
+    /// <summary>
+    /// ⛔ ورود با حسابی که پمپ دارد، دوباره «نامِ پمپ» نمی‌خواهد — و هر چهار
+    /// راهِ ورود از همان یک تصمیم می‌گذرند. سنجهٔ رفتاری: بندهای ز، ح و ط در `linkstates`.
+    /// </summary>
+    [Fact]
+    public void VoroodBaHesabePompDar_NameePompNemikhahad()
+    {
+        var vm = Src(Vm);
+        Assert.Equal(4, vm.Split("await NextStepAfterSignInAsync();").Length - 1);
+        var i = vm.IndexOf("private async Task NextStepAfterSignInAsync()", StringComparison.Ordinal);
+        var body = vm[i..vm.IndexOf("\n    }\n", i, StringComparison.Ordinal)];
+        Assert.Contains("HasStationAsync()", body);
+        Assert.Contains("if (!has) { LoginStep = 3; return; }", body);
+        Assert.Contains("StationPublisher.CloudKeepNowAsync()", body);
+        //  ⛔ هیچ پمپی بی‌خبر ساخته نمی‌شود
+        Assert.DoesNotContain("EnsureStationAsync", body);
+    }
+
+    /// <summary>
+    /// ⛔ پس از شکستِ ثبت، حلقه هر دقیقه دوباره نمی‌زند (سقفِ ده‌تاییِ `device/bind`
+    /// در ربع ساعت)؛ کلیکِ کاربر همیشه همین حالا.
+    /// </summary>
+    [Fact]
+    public void SabteNashode_HalgheHarDagighe_NemiZanad()
+    {
+        var c = Src("PumpYaqobi.App/Services/CloudLink.cs");
+        Assert.Contains("var bindDue = forceBind || DateTime.UtcNow - _lastBindFailAt >= BindRetryAfterFail;", c);
+        Assert.Contains("if (!Activated && acctStation.Length > 0 && bindDue)", c);
+        var pub = Src("PumpYaqobi.App/Services/StationPublisher.cs");
+        Assert.Contains("await CloudKeepAsync(ct, forceBind: true);", pub);
+    }
+
     [Fact]
     public void HesabePompDar_KarteSabteHaminKampyuter_Darad()
     {
@@ -125,7 +157,7 @@ public class SignedInNoPumpTests
     public void NeshasteMorde_Dastgah_Ra_HaminHala_MiPorsad()
     {
         var pub = Src("PumpYaqobi.App/Services/StationPublisher.cs");
-        var i = pub.IndexOf("await cloud.HomeFromAccountAsync(ct);", StringComparison.Ordinal);
+        var i = pub.IndexOf("await cloud.HomeFromAccountAsync(ct, forceBind);", StringComparison.Ordinal);
         var after = pub[i..(i + 1400)];
         Assert.Contains("if (!cloud.SignedIn && cloud.Activated)", after);
         Assert.Contains("await cloud.RefreshAsync(ct);", after);

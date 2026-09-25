@@ -47,6 +47,7 @@ internal static class LinkStatesProbe
     { Timeout = TimeSpan.FromSeconds(30) };
 
     private static string _panel = "", _panelToken = "", _mailCodes = "";
+    private const string Pass = "Pump!1405link";
 
     public static int Run(string[] args)
     {
@@ -170,6 +171,100 @@ internal static class LinkStatesProbe
         Check("⛔ کلیکِ چراغ همین حالا این کامپیوتر را ثبت کرد", f.CloudDeviceToken.Length > 0, CloudLink.LastBindWhy);
         Check("چراغِ سرورِ حساب سبز شد", vm.CloudDotBrushKey == "Pump.Ok", vm.CloudDotReason);
 
+        // ── و) مدیر این کامپیوتر را از پنل جدا کرد، بعد برگرداند ────────────
+        Console.WriteLine("══ و) مدیر کامپیوتر را از پنل جدا کرد (device_revoked) و بعد برگرداند");
+        f = AppSettings.Load();
+        var station = f.CloudStationId;
+        var prof = PanelJson(HttpMethod.Get, "/api/account-admin/pump-accounts/" + station, null);
+        string compId = "";
+        if (prof.TryGetProperty("computers", out var comps))
+            foreach (var c in comps.EnumerateArray())
+                if (c.GetProperty("uid").GetString() == new CloudLink(f, () => Task.CompletedTask).DeviceUid) compId = c.GetProperty("id").GetString() ?? "";
+        Check("پنل همین کامپیوتر را در «کامپیوترهای پمپ» می‌بیند", compId.Length > 0, compId);
+        Console.WriteLine("     ⓘ پنل ⇒ " + PanelSend(HttpMethod.Post, $"/api/account-admin/pump-accounts/{station}/computers/{compId}/revoke", new { }));
+        int Binds() { lock (seen) return seen.Count(x => x.Contains("/device/bind")); }
+        var before = Binds();
+        //  شش دورِ پس‌زمینه (شش دقیقهٔ واقعی) — نخستین دور جدا شدن را می‌فهمد
+        for (var i = 0; i < 6; i++) Keep(win);
+        //  ⚠️ جدا شدن را تیکِ ده‌دقیقه‌ایِ مجوز (`KeepLicenseFreshAsync`) می‌فهمد؛
+        //  به‌جای ده دقیقه صبر، همان تیک «رسیده» می‌شود — همان مسیرِ واقعیِ حلقه.
+        var due = AppSettings.Load(); due.CloudSyncedAt = 0; due.Save();
+        for (var i = 0; i < 6; i++) Keep(win);
+        Report(win, vm, account, shots, "f-revoked");
+        f = AppSettings.Load();
+        var tries = Binds() - before;
+        Check("این کامپیوتر جدا شده دیده شد (توکنِ دستگاه برداشته شد)", f.CloudDeviceToken.Length == 0);
+        Check("⛔ حلقه در دوازده دور حداکثر یک بار ثبت را امتحان کرد (سقفِ نرخِ سرور پر نمی‌شود)", tries <= 1, tries.ToString());
+        Check("⛔ چراغ دلیلِ واقعی را می‌گوید (جدا شده)", vm.CloudDotReason.Contains("جدا شده"), vm.CloudDotReason);
+        Check("پروفایل کارتِ «ثبتِ همین کامپیوتر» را دارد", account.NeedsBind, $"NeedsBind={account.NeedsBind}");
+
+        Console.WriteLine("     ⓘ پنل ⇒ " + PanelSend(HttpMethod.Post, $"/api/account-admin/pump-accounts/{station}/computers/{compId}/restore", new { }));
+        Wait(win, account.BindHereCommand.ExecuteAsync(null));
+        Report(win, vm, account, shots, "f-restored");
+        f = AppSettings.Load();
+        Check("⛔ پس از «برگرداندن» در پنل، دکمهٔ «ثبتِ همین کامپیوتر» همان لحظه ثبت کرد",
+              f.CloudDeviceToken.Length > 0, account.LoginStatus + " · " + CloudLink.LastBindWhy);
+        Check("چراغِ سرورِ حساب سبز شد", vm.CloudDotBrushKey == "Pump.Ok", vm.CloudDotReason);
+
+        // ── ز) بیرون آمدن و ورودِ دوباره با همان حساب (پمپ دارد) ────────────
+        Console.WriteLine("══ ز) خروج از حساب و ورودِ دوباره — حسابی که از قبل پمپ دارد");
+        Wait(win, account.SignOutCommand.ExecuteAsync(null));
+        Settle(win);
+        if (!account.ShowLoginPage) { account.OpenAccountPageCommand.Execute(null); Settle(win); }
+        account.SetSignUpCommand.Execute("no");
+        account.LoginEmail = email;
+        account.LoginPassword = Pass;
+        Wait(win, account.AccountStepCommand.ExecuteAsync(null));
+        Report(win, vm, account, shots, "g-relogin");
+        f = AppSettings.Load();
+        Check("⛔ ورودِ دوباره دوباره «نامِ پمپ» نمی‌خواهد — پمپ از قبل هست", !account.ShowLoginPage && !account.StepPump,
+              "گام " + account.LoginStep + " · " + account.LoginStatus);
+        Check("و این کامپیوتر ثبت ماند/شد", f.CloudDeviceToken.Length > 0, CloudLink.LastBindWhy);
+        Check("⛔ هیچ پمپِ دومی ساخته نشد", f.CloudStationId == station, f.CloudStationId + " ≠ " + station);
+
+        // ── ح) رمز را فراموش کرده ─────────────────────────────────────────
+        Console.WriteLine("══ ح) «رمزم را فراموش کرده‌ام» ⇒ کد ⇒ رمزِ تازه ⇒ ورود");
+        Wait(win, account.SignOutCommand.ExecuteAsync(null));
+        Settle(win);
+        if (!account.ShowLoginPage) { account.OpenAccountPageCommand.Execute(null); Settle(win); }
+        account.LoginEmail = email;
+        account.OpenForgotCommand.Execute(null);
+        var sentAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        Wait(win, account.SendResetCodeCommand.ExecuteAsync(null));
+        Check("کدِ بازیابی فرستاده شد", account.ResetSent, account.LoginStatus);
+        account.ResetCode = CodeFor(win, email, sentAt);
+        Check("کدِ بازیابی به صندوقِ همین ایمیل رسید", account.ResetCode.Length == 6, account.ResetCode);
+        account.ResetPass = "Pump!1405new"; account.ResetPass2 = "Pump!1405new";
+        Wait(win, account.ResetPasswordCommand.ExecuteAsync(null));
+        Report(win, vm, account, shots, "h-reset");
+        f = AppSettings.Load();
+        Check("رمزِ تازه نشست و وارد شد", account.SignedIn, account.LoginStatus);
+        Check("⛔ پس از بازیابی هم «نامِ پمپ» دوباره خواسته نمی‌شود", !account.ShowLoginPage && !account.StepPump,
+              "گام " + account.LoginStep + " · " + account.LoginStatus);
+        Check("و این کامپیوتر ثبت است", f.CloudDeviceToken.Length > 0, CloudLink.LastBindWhy);
+
+        // ── ط) کامپیوترِ تازه (برنامه از نو نصب شد) و ورود با حسابی که پمپ دارد ──
+        Console.WriteLine("══ ط) نصبِ دوباره روی کامپیوتر (هیچ ثبتی نیست) و ورود با حسابی که پمپ دارد");
+        Wait(win, account.SignOutCommand.ExecuteAsync(null));
+        f = AppSettings.Load();
+        f.CloudDeviceToken = ""; f.CloudLicense = ""; f.PumpStepDone = false; f.CloudStationId = "";
+        f.CloudPublicKey = ""; f.LoginSkipped = false; f.Save();
+        CloudLink.AccountHasStation = null;
+        account.RefreshAll();
+        Settle(win);
+        if (!account.ShowLoginPage) { account.OpenAccountPageCommand.Execute(null); Settle(win); }
+        account.SetSignUpCommand.Execute("no");
+        account.LoginEmail = email;
+        account.LoginPassword = "Pump!1405new";
+        Wait(win, account.AccountStepCommand.ExecuteAsync(null));
+        Report(win, vm, account, shots, "i-reinstall-login");
+        f = AppSettings.Load();
+        Check("⛔ «نامِ پمپ» دوباره خواسته نشد — مستقیم تمام شد", !account.ShowLoginPage && !account.StepPump,
+              "گام " + account.LoginStep + " · " + account.LoginStatus);
+        Check("این کامپیوتر همان لحظه به همان پمپ ثبت شد", f.CloudDeviceToken.Length > 0 && f.CloudStationId == station,
+              f.CloudStationId + " · " + CloudLink.LastBindWhy);
+        Check("دورهٔ آزمایشی/اشتراک همان لحظه آمد", account.SubActive, account.SubPlanText);
+
         Console.WriteLine("     ⓘ درخواست‌ها: " + string.Join(" · ", seen.TakeLast(60)));
         CloudLink.TestTransport = null;
         Console.WriteLine(_bad == 0 ? "✅ هر حالِ «ثبت نشده» راست گفته شد و راهِ کارکننده داشت" : $"❌ {_bad} ایراد");
@@ -180,7 +275,7 @@ internal static class LinkStatesProbe
     private static void Keep(Avalonia.Controls.Window win)
     {
         var m = typeof(StationPublisher).GetMethod("CloudKeepAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
-        var t = (Task)m.Invoke(null, new object[] { CancellationToken.None })!;
+        var t = (Task)m.Invoke(null, new object[] { CancellationToken.None, false })!;
         try { Wait(win, t); } catch { }
         if (t.Exception is { } ex) Console.WriteLine("     ⓘ دور خطا داد: " + ex.InnerException?.GetType().Name);
     }
@@ -200,6 +295,17 @@ internal static class LinkStatesProbe
         Shot(win, shots, name);
     }
 
+    private static JsonElement PanelJson(HttpMethod method, string path, object? body)
+    {
+        var req = new HttpRequestMessage(method, _panel + path);
+        req.Headers.TryAddWithoutValidation("Authorization", "Bearer " + _panelToken);
+        if (body is not null)
+            req.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+        var res = Task.Run(() => Http.SendAsync(req)).GetAwaiter().GetResult();
+        var text = Task.Run(() => res.Content.ReadAsStringAsync()).GetAwaiter().GetResult();
+        try { return JsonDocument.Parse(text).RootElement.Clone(); } catch { return default; }
+    }
+
     private static string PanelSend(HttpMethod method, string path, object? body)
     {
         var req = new HttpRequestMessage(method, _panel + path);
@@ -214,7 +320,7 @@ internal static class LinkStatesProbe
     private static void SignUp(Avalonia.Controls.Window win, MainViewModel vm, AccountSectionViewModel account,
                                string email, bool finishPump)
     {
-        const string pass = "Pump!1405link";
+        var pass = Pass;
         Wait(win, vm.GoAsync(account));
         account.SetSignUpCommand.Execute("yes");
         account.LoginName = "صاحبِ پمپ";
