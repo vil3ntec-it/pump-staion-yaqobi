@@ -469,9 +469,27 @@ public sealed class StationPublisher : IAsyncDisposable
         return await _sync.RemoveAsync(InboxPath + "/" + id, ct);
     }
 
+    /// <summary>
+    /// خاموشِ صریح — فقط برای آزمون‌های واحد (<c>PumpYaqobi.Tests</c>).
+    ///
+    /// <para>
+    /// ⛔ <b>چرا لازم شد:</b> هر آزمونی که <c>MainViewModel</c> می‌سازد و وارد
+    /// می‌شود، این حلقه را راه می‌انداخت و هیچ‌کس نمی‌بستش. حلقه هر دقیقه
+    /// <c>LicenseClock.Tick</c> ⇒ <c>SaveSoon()</c> می‌زند و <c>SaveSoon</c>
+    /// پوشهٔ <b>همان لحظه</b> را برمی‌دارد؛ پس اگر آزمونِ بعدی تازه
+    /// <c>AppSettings.DirOverride</c> را عوض کرده بود، تنظیمات در پوشهٔ
+    /// <b>او</b> می‌نشست. <c>NevashtaneDarSaf_DarPushehyeDigari_Nemineshinad</c>
+    /// همین را در یکی از دو اجرای CI دید و در دیگری نه — شکلِ مسابقه.
+    /// </para>
+    /// <para>⚠️ سنجه‌های رابط (<c>serverdot</c> و …) خودِ حلقه را می‌خواهند و این را نمی‌زنند.</para>
+    /// <para>⛔ در برنامهٔ واقعی هیچ‌جا نوشته نمی‌شود — همان قاعدهٔ <c>SyncEngine.Disabled</c>.</para>
+    /// </summary>
+    public static bool Disabled { get; set; }
+
     /// <summary>حلقهٔ پس‌زمینه. صدا زدنش دو بار، یکی بیشتر نمی‌سازد.</summary>
     public void Start()
     {
+        if (Disabled) return;
         if (_loop is not null) return;
         var cts = new CancellationTokenSource();
         _loop = cts;

@@ -378,6 +378,16 @@ public class SettingsDurabilityTests : IDisposable
     /// ⚠️ مقدارِ راحتی (تم، آخرین بخش) گم شدنش اشکالی ندارد؛ نشستنش در دفترِ
     /// اشتباه دارد.
     /// </summary>
+    /// <summary>
+    /// ⛔ حلقهٔ عکسِ ایستگاهِ آزمونِ <b>قبلی</b> هم نباید در پوشهٔ این یکی
+    /// بنویسد. بی این، سنجهٔ پایین گاهی سرخ می‌شد — نه به‌خاطرِ
+    /// <c>SaveSoon</c>ِ خودش، به‌خاطرِ <c>LicenseClock.Tick</c>ِ حلقه‌ای که
+    /// آزمونِ دیگری راه انداخته و نبسته بود.
+    /// </summary>
+    [Fact]
+    public void HalgheyeNasher_DarAzmoonha_Khamoosh_Ast() =>
+        Assert.True(PumpYaqobi.App.Services.StationPublisher.Disabled);
+
     [Fact]
     public void NevashtaneDarSaf_DarPushehyeDigari_Nemineshinad()
     {
