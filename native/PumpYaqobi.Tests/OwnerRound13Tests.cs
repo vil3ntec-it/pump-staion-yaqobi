@@ -179,7 +179,7 @@ public class OwnerRound13Tests
         Assert.Equal("stn_a63ae00d----x-y", code);
         Assert.Matches("^[a-z0-9_-]*$", code);
         Assert.True(PumpYaqobi.App.Services.StationLink.UniqueCode(Settings(new string('a', 90), "pc-1")).Length <= 48);
-        //  حسابِ بی پمپ ⇒ هیچ کدی ساخته نمی‌شود (همان pump1 می‌ماند)
+        //  حسابِ بی پمپ ⇒ کدِ حسابی نیست (کدِ همین کامپیوتر جایش می‌نشیند — ‎StationCodePerAccountTests‎)
         Assert.Equal("", PumpYaqobi.App.Services.StationLink.UniqueCode(Settings("", "pc-1")));
     }
 
@@ -203,9 +203,10 @@ public class OwnerRound13Tests
     public void BarkhordeKod_FaghatBiRamzVaBiPin_JaygozinMigirad()
     {
         var src = Read("PumpYaqobi.App", "Services", "StationLink.cs");
-        //  ⛔ نصبی که رمزِ پوشه‌اش را دارد هیچ‌وقت کدش عوض نمی‌شود
-        Assert.Contains("var fresh = HomeLink.Token(host).Length == 0;", src);
-        Assert.Contains("if (fresh && IsDefault(code)", src);
+        //  ⛔ نصبی که رمزِ پوشهٔ **همین حساب** را دارد هیچ‌وقت کدش عوض نمی‌شود؛
+        //  فقط پوشه‌ای که مالِ این حساب نیست جابه‌جا می‌شود، و رمزش همراه نمی‌رود
+        Assert.Contains("var moving = token.Length > 0 && !Same(saved, code);", src);
+        Assert.Contains("if (moving) { token = \"\"; readKey = \"\"; }", src);
         Assert.Contains("result.Error == \"already_taken\" && token.Length == 0 && pin.Trim().Length == 0", src);
         //  ⛔ خطای دیگری که برخوردِ کد نیست، حلقه را می‌بندد (بی تلاشِ کور)
         Assert.Contains("if (again.Error != \"already_taken\") break;", src);

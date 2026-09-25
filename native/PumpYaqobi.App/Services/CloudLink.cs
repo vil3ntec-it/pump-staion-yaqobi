@@ -283,6 +283,7 @@ public sealed partial class CloudLink
 
         _settings.CloudDeviceToken = Str(json, "deviceToken");
         _settings.CloudStationId = StationId(json);
+        _settings.CloudStationCode = StationCodeOf(json);
         _settings.CloudLicense = Str(json, "license");
         _settings.CloudSyncedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         Seated();
@@ -476,6 +477,7 @@ public sealed partial class CloudLink
         _settings.CloudDeviceToken = token;
         var station = StationId(json);
         if (station.Length > 0) _settings.CloudStationId = station;
+        if (StationCodeOf(json) is { Length: > 0 } bound) _settings.CloudStationCode = bound;
         //  ⚠️ مجوزِ **خالی** هم می‌نشیند: «اشتراک ندارد» یک جوابِ درست
         //  است، و نگه داشتنِ مجوزِ کهنه یعنی قفلی که باز مانده
         _settings.CloudLicense = Str(json, "license");
@@ -550,6 +552,7 @@ public sealed partial class CloudLink
                 "این دستگاه روی پمپِ دیگری ثبت شده است. اگر واقعاً پمپ را عوض کرده‌اید، "
                 + "دوباره با کدِ شش‌رقمیِ همان پمپ فعال کنید.", "station_mismatch");
         if (seen.Length > 0) _settings.CloudStationId = seen;
+        if (StationCodeOf(me) is { Length: > 0 } seenCode) _settings.CloudStationCode = seenCode;
         ReadSubscription(me);
 
         //  مجوزِ تازه — جدا، چون ممکن است اشتراک تمام شده باشد و مجوزی
@@ -767,13 +770,18 @@ public sealed partial class CloudLink
     /// ارزان باشد.
     /// </summary>
     public async Task<CloudResult> PublishHomeAsync(string homeUrl, string readKey,
-        CancellationToken ct = default)
+        CancellationToken ct = default, string station = "")
     {
         if (!Activated) return CloudResult.No("فعال نشده", "not_activated");
         if (string.IsNullOrWhiteSpace(homeUrl)) return CloudResult.No("نشانیِ خانگی خالی است");
 
+        //  ⛔ کدِ پوشهٔ **واقعیِ** همین پمپ روی سرورِ خانگی هم می‌رود (۱۴۰۵/۰۷/۱۳):
+        //  اپِ کارمندان با همین پوشه را می‌پرسد. تا امروز سرورِ حساب کورکورانه
+        //  کدِ خودش را به گوشی می‌داد، و پوشهٔ برنامه («pump1» یا جایگزینِ
+        //  حساب) چیزِ دیگری بود — یعنی درِ شبکهٔ پمپ هیچ‌وقت درست باز نمی‌شد.
+        //  سرورِ حسابِ کهنه این فیلد را نادیده می‌گیرد.
         var (ok, _, why, code) = await DevPostAsync("/api/pump/device/home",
-            new { homeUrl, readKey = readKey ?? "" }, ct);
+            new { homeUrl, readKey = readKey ?? "", station = (station ?? "").Trim() }, ct);
         return ok ? CloudResult.Done : CloudResult.No(why, code);
     }
 
@@ -1906,6 +1914,7 @@ public sealed partial class CloudLink
     {
         _settings.CloudDeviceToken = "";
         _settings.CloudStationId = "";
+        _settings.CloudStationCode = "";
         _settings.CloudLicense = "";
         _settings.CloudPublicKey = "";
         _settings.CloudAccessCode = "";
@@ -1975,6 +1984,16 @@ public sealed partial class CloudLink
             && !string.Equals(acctStation, locked, StringComparison.Ordinal))
             return (false, "", "", "", "این حساب مالِ پمپِ دیگری است. برای جابه‌جایی، "
                 + "این دستگاه را از پمپِ فعلی جدا کنید.");
+
+        //  ⛔ کدِ پمپِ همین حساب همین‌جا می‌نشیند — نصبی که از قبل بند شده
+        //  هیچ‌وقت دوباره ‎bind‎ نمی‌زند، پس بی این خط کدِ حسابش را هیچ‌وقت
+        //  نمی‌گرفت و روی ‎pump1‎ی کهنه می‌ماند.
+        if (StationCodeOf(json) is { Length: > 0 } acctCode
+            && !string.Equals(acctCode, _settings.CloudStationCode, StringComparison.Ordinal))
+        {
+            _settings.CloudStationCode = acctCode;
+            await SaveQuiet();
+        }
 
         /*
          *  ⛔ نصبی که فقط وارد حساب شده، خودش بند می‌شود — بی هیچ کدی.
@@ -2289,6 +2308,17 @@ public sealed partial class CloudLink
         && json.TryGetProperty("station", out var st)
         && st.ValueKind == JsonValueKind.Object
             ? Str(st, "id") : "";
+
+    /// <summary>
+    /// کدِ پمپِ همین حساب — همان ‎station.code‎ی سرورِ حساب. ⛔ از امروز همین
+    /// کدِ پوشهٔ سرورِ خانگی هم هست (‎StationLink.CodeFor‎)، پس «هر حساب،
+    /// پوشهٔ خودش» روی یک عددِ یکتای سرور بند است، نه روی یک پیش‌فرضِ مشترک.
+    /// </summary>
+    private static string StationCodeOf(JsonElement json) =>
+        json.ValueKind == JsonValueKind.Object
+        && json.TryGetProperty("station", out var st)
+        && st.ValueKind == JsonValueKind.Object
+            ? AcctLive.CloudCode(Str(st, "code")) : "";
 
     private static string Str(JsonElement e, string k) =>
         e.ValueKind == JsonValueKind.Object && e.TryGetProperty(k, out var v)

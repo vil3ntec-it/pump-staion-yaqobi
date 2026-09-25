@@ -436,7 +436,9 @@
   /** هر دو در، به ترتیبِ امتحان. ‎{name, url, path}‎ — رشته، نه تابع. */
   function doorsFor(c) {
     var base = wsBaseOf(c && c.srv);
-    var code = String((c && c.stn) || 'pump1').trim() || 'pump1';
+    //  ⛔ هیچ کدِ پیش‌فرضِ مشترکی نیست (۱۴۰۵/۰۷/۱۳، «pump1 را حذف کن») — کد همیشه
+    //  همان است که سرورِ حساب برای همان پمپ داده، یا کاربر در صفحهٔ دستی نوشته.
+    var code = String((c && c.stn) || '').trim();
     var tok = String((c && c.tok) || '');
     return [
       {
@@ -524,7 +526,7 @@
    *  کارمندی که با کدِ پمپِ دیگری وارد شود، حتی یک لحظه هم عکسِ پمپِ
    *  قبلی را نمی‌بیند، و عکسِ پمپِ قبلی پاک می‌شود.
    */
-  function stnKey(suffix) { return KEY + '.' + suffix + '.' + (cfg.stn || 'pump1'); }
+  function stnKey(suffix) { return KEY + '.' + suffix + '.' + (cfg.stn || ''); }
 
   function load() {
     try {
@@ -545,7 +547,7 @@
 
   /** رفتن به پمپِ دیگر: هر چه از پمپِ قبلی در گوشی مانده پاک می‌شود. */
   function switchStation(stn) {
-    var next = String(stn || 'pump1');
+    var next = String(stn || '');
     if (cfg.stn === next && data) return;
     //  ⛔ خبرِ پمپِ قبلی نباید به این گوشی برسد: اشتراکِ پوش **باطل** می‌شود
     //  (نشانی‌اش برای همیشه می‌میرد، پس سرورِ پمپِ قبلی دیگر راهی ندارد) و
@@ -786,7 +788,7 @@
         + 'کامپیوترش هنوز به سرور وصل نشده است. وقتی روشن شد، خودش وصل می‌شود.', true);
       return false;
     }
-    switchStation(home.station || st.code || 'pump1');
+    switchStation(home.station || st.code || '');
     cfg.srv = home.url;
     //  رمزِ فقط‌خواندنی، نه رمزِ برنامه — این همان چیزی است که روی کاغذِ
     //  کیو‌آر می‌رفت، فقط این‌بار از راهِ رمزگذاری‌شده
@@ -913,6 +915,7 @@
     switchStation('');
     cfg.srv = ''; cfg.tok = ''; cfg.code = ''; cfg.name = ''; cfg.stn = '';
     save();
+    //  پاک‌سازیِ کلیدهای جامانده از نسخه‌هایی که هنوز کدِ پیش‌فرض داشتند
     try { localStorage.removeItem(KEY + '.snap.pump1'); localStorage.removeItem(KEY + '.told.pump1'); } catch (e) { }
     syncBackground();
     show('codePane');
@@ -1401,7 +1404,7 @@
   function syncBackground() {
     try {
       if (window.PumpAlerts && window.PumpAlerts.setup)
-        window.PumpAlerts.setup(cfg.srv || '', cfg.tok || '', cfg.stn || 'pump1');
+        window.PumpAlerts.setup(cfg.srv || '', cfg.tok || '', cfg.stn || '');
     } catch (e) { }
     registerPush(false);
   }
@@ -1563,8 +1566,11 @@
 
     $('btnSetup').addEventListener('click', function () {
       var srv = $('inSrv').value.trim();
+      var stn = $('inStn').value.trim();
       if (!srv) return;
-      switchStation($('inStn').value.trim() || 'pump1');
+      //  ⛔ بی کدِ پمپ به هیچ پمپی وصل نمی‌شویم — نه به «pump1»ِ کسِ دیگر
+      if (!stn) { try { $('inStn').focus(); } catch (e) { } return; }
+      switchStation(stn);
       cfg.srv = srv;
       cfg.tok = $('inTok').value.trim();
       cfg.code = '';
@@ -1583,7 +1589,7 @@
     });
 
     $('btnManual').addEventListener('click', function () {
-      $('inSrv').value = cfg.srv; $('inTok').value = cfg.tok; $('inStn').value = cfg.stn || 'pump1';
+      $('inSrv').value = cfg.srv; $('inTok').value = cfg.tok; $('inStn').value = cfg.stn || '';
       show('setupPane');
     });
 

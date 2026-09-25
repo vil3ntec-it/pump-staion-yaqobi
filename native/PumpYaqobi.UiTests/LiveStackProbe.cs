@@ -47,6 +47,114 @@ internal static class LiveStackProbe
     private static readonly HttpClient Http = new(new SocketsHttpHandler { AllowAutoRedirect = false })
     { Timeout = TimeSpan.FromSeconds(30) };
 
+    /// <summary>
+    /// ══ «pump1 را حذف کن؛ برای هر حساب یک ایدی» (۱۴۰۵/۰۷/۱۳) — با سرورهای واقعی ══
+    ///
+    /// ۱) کدِ پوشهٔ سرورِ خانگی همان کدی است که سرورِ حساب برای پمپِ همین حساب
+    ///    ساخته — نه «pump1».
+    /// ۲) نصبِ کهنه‌ای که هنوز روی پوشهٔ «pump1» است، خودش به پوشهٔ حسابش
+    ///    می‌رود و دوباره سبز می‌شود — بی هیچ کاری از کاربر.
+    /// </summary>
+    private static void PerAccountCode(Window win, MainViewModel vm, string homeUrl)
+    {
+        Console.WriteLine("── ۳ب) هر حساب، کدِ خودش — «pump1» دیگر نیست");
+        var f = AppSettings.Load();
+        Check("سرورِ حساب کدِ پمپِ همین حساب را داد", f.CloudStationCode.Length > 0, f.CloudStationCode);
+        Check("⛔ کدِ پوشهٔ سرورِ خانگی همان کدِ حساب است", f.StationCode == f.CloudStationCode,
+              f.StationCode + " / " + f.CloudStationCode);
+        Check("⛔ و «pump1» نیست", !string.Equals(f.StationCode, "pump1", StringComparison.OrdinalIgnoreCase), f.StationCode);
+
+        //  نصبِ کهنه را بسازیم: پوشهٔ «pump1» روی همان سرورِ خانگی، و رمزش روی این نصب
+        var b = StationLink.HttpBase(homeUrl);
+        using var enrollRes = Http.PostAsync(b + "/api/stations/enroll",
+            new StringContent("{\"code\":\"pump1\",\"name\":\"پمپِ کهنه\"}", System.Text.Encoding.UTF8, "application/json"))
+            .GetAwaiter().GetResult();
+        var body = enrollRes.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+        if (!enrollRes.IsSuccessStatusCode)
+        {
+            Console.WriteLine("     ⓘ پوشهٔ pump1 روی این سرور از قبل گرفته است — نصبِ کهنه با رمزِ ساختگی: " + body);
+        }
+        using var doc = JsonDocument.Parse(enrollRes.IsSuccessStatusCode ? body : "{}");
+        string S(string k) => doc.RootElement.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
+        var old = AppSettings.Load();
+        var accountCode = old.CloudStationCode;
+        old.StationCode = "pump1";
+        old.ServerToken = S("token").Length > 0 ? S("token") : "t-legacy-" + Guid.NewGuid().ToString("N")[..8];
+        old.ServerReadKey = S("readKey");
+        old.Save();
+        Check("نصبِ کهنه روی «pump1» ساخته شد", AppSettings.Load().StationCode == "pump1");
+        Check("⇒ برنامه می‌داند باید جابه‌جا شود", StationLink.NeedsMove(AppSettings.Load()));
+
+        var pub = AppHost.Current.PublisherIfStarted;
+        var till = DateTime.UtcNow + TimeSpan.FromSeconds(60);
+        var moved = false;
+        while (DateTime.UtcNow < till)
+        {
+            if (pub is not null) Wait(win, pub.KeepLinkAsync(true));
+            Pump(win);
+            vm.TickServerDot(); vm.TickCloudDot(); vm.TickLinkDot();
+            var now = AppSettings.Load();
+            if (!StationLink.NeedsMove(now) && now.StationCode != "pump1" && vm.ServerDotBrushKey == "Pump.Ok") { moved = true; break; }
+            Thread.Sleep(500);
+        }
+        var after = AppSettings.Load();
+        //  ⚠️ پوشهٔ خودِ حساب را همین نصب در گامِ ۳ ساخته بود و رمزش را ما با رمزِ
+        //  «pump1» جایگزین کردیم، پس سرور درست «گرفته است» می‌گوید و جایگزینِ
+        //  **همان حساب** (‎<کدِ حساب>-<دستگاه>‎) می‌نشیند. ملاک «مالِ همین حساب» است.
+        var mineNow = after.StationCode == accountCode || after.StationCode.StartsWith(accountCode + "-");
+        Check("⛔ خودش به پوشهٔ حسابش رفت — بی هیچ کاری از کاربر", moved && mineNow, after.StationCode);
+        Check("و رمزِ پوشهٔ «pump1» دیگر روی این نصب نیست",
+              after.ServerToken.Length > 0 && after.ServerToken != old.ServerToken);
+        Check("چراغِ سرورِ خانگی دوباره سبز", vm.ServerDotBrushKey == "Pump.Ok", vm.ServerDotBrushKey + " · " + vm.ServerDotReason);
+        //  پوشهٔ همین حساب واقعاً روی سرورِ خانگی هست و عکسِ زنده به آن رسید
+        var liveOk = false;
+        var rk = after.ServerReadKey;
+        var liveTill = DateTime.UtcNow + TimeSpan.FromSeconds(40);
+        while (!liveOk && DateTime.UtcNow < liveTill)
+        {
+            if (pub is not null) Wait(win, pub.PublishOnceAsync(true));
+            var url = StationLink.LiveUrl(homeUrl, after.StationCode, rk);
+            if (url is not null)
+            {
+                using var r = Http.GetAsync(url).GetAwaiter().GetResult();
+                liveOk = r.IsSuccessStatusCode && r.Content.ReadAsStringAsync().GetAwaiter().GetResult().Contains("sections");
+            }
+            if (!liveOk) Thread.Sleep(1000);
+        }
+        Check("⛔ عکسِ زنده در پوشهٔ **همین حساب** روی سرورِ خانگی نشست", liveOk, after.StationCode);
+
+        //  و اپِ کارمندان همان پوشه را از سرورِ حساب می‌گیرد، نه کدِ خام را
+        var joinOk = false; var joinSaw = "";
+        var joinTill = DateTime.UtcNow + TimeSpan.FromSeconds(30);
+        while (!joinOk && DateTime.UtcNow < joinTill)
+        {
+            if (pub is not null) Wait(win, pub.PublishOnceAsync(true));
+            var fs = AppSettings.Load();
+            var cl = new CloudLink(fs, () => { fs.Save(); return Task.CompletedTask; });
+            var ac = Task.Run(() => cl.AccessCodeAsync()).GetAwaiter().GetResult();
+            if (ac.Ok && ac.Code.Length > 0)
+            {
+                var req = new HttpRequestMessage(HttpMethod.Post, new Uri(PubBase, "/api/pump/public/join"))
+                { Content = new StringContent("{\"code\":\"" + ac.Code + "\"}", System.Text.Encoding.UTF8, "application/json") };
+                using var jr = Http.SendAsync(req).GetAwaiter().GetResult();
+                var jt = jr.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                if (jr.IsSuccessStatusCode)
+                {
+                    using var jd = JsonDocument.Parse(jt);
+                    joinSaw = jd.RootElement.GetProperty("home").GetProperty("station").GetString() ?? "";
+                    joinOk = joinSaw == after.StationCode;
+                }
+                else joinSaw = jt;
+            }
+            if (!joinOk) Thread.Sleep(1500);
+        }
+        Check("⛔ گوشیِ کارمند همان پوشه را می‌گیرد که برنامه رویش می‌نویسد", joinOk,
+              joinSaw + " / " + after.StationCode);
+    }
+
+    /// <summary>پورتِ عمومیِ پنل — همان چیزی که تونل می‌بیند.</summary>
+    private static Uri PubBase = null!;
+
     public static int Run(string[] args)
     {
         if (args.Length < 2 || !File.Exists(args[1]))
@@ -57,6 +165,7 @@ internal static class LiveStackProbe
         Console.WriteLine("── سنجهٔ زنده: " + args[1]);
         var live = JsonDocument.Parse(File.ReadAllText(args[1])).RootElement;
         var pub = new Uri(live.GetProperty("public").GetString()!);
+        PubBase = pub;
         var email = live.GetProperty("email").GetString()!;
         var pass = live.GetProperty("password").GetString()!;
         var shots = args.Length > 2 ? args[2] : Path.Combine(Path.GetTempPath(), "pump-livestack");
@@ -144,6 +253,8 @@ internal static class LiveStackProbe
               !vm.LinkDotReason.Contains("127.0.0.1") && !vm.LinkDotReason.Contains("http") && !vm.LinkDotReason.Contains("vill3n"),
               vm.LinkDotReason);
         File.WriteAllText(Path.Combine(shots, "station.txt"), HomeLink.StationCode(AppHost.Current));
+
+        PerAccountCode(win, vm, found?.Url ?? f2.ServerUrl);
 
         //  عکس: سربرگ با کادرِ توضیحِ همان چراغ
         Wait(win, vm.GoAsync(vm.Sections.First(s => s.Id == "safe")));
