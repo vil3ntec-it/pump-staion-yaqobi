@@ -86,6 +86,32 @@
         </StackPanel>
       </Border>
 
+      <!-- ══ باتِ تلگرام ═══════════════════════════════════════════════════
+           هشدارِ قرض‌دار و مخزن در تلگرام. خودِ بات روی سرورِ حساب است؛
+           ⛔ هیچ رمزی در این برنامه نیست. -->
+      <Border Classes="panel" Padding="0">
+        <StackPanel>
+          <Border Classes="card-head">
+            <TextBlock Text="🤖 باتِ تلگرام — هشدارِ قرض‌دار و مخزن" Classes="card-title" />
+          </Border>
+          <StackPanel Margin="14" Spacing="10">
+            <Border Classes="stat" Padding="12,10" IsVisible="{Binding HasBot}">
+              <SelectableTextBlock Text="{Binding BotLink}" FontSize="13.5"
+                                   TextWrapping="Wrap" FlowDirection="LeftToRight" />
+            </Border>
+            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasBot}">
+              <Button Classes="accent" Content="📋 کپیِ لینک" Command="{Binding CopyBotCommand}" />
+              <Button Classes="ghost" Content="🌐 باز کردن" Command="{Binding OpenCommand}"
+                      CommandParameter="{Binding BotLink}" />
+            </StackPanel>
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="در بات «Start» را بزنید و ایمیلِ حسابِ پمپ را بفرستید؛ یک کدِ شش‌رقمی به همان ایمیل می‌رود و با فرستادنش وصل می‌شوید. از آن پس هر وقت حسابِ قرض‌داری تمام شود یا کم بماند، یا مخزن ته بکشد، در تلگرام خبر می‌گیرید — حتی وقتی برنامه بسته است. با «👥 وصل کردنِ گروه» بات به گروهِ کارمندان هم می‌رود." />
+            <TextBlock Text="{Binding BotHint}" Classes="muted" TextWrapping="Wrap"
+                       IsVisible="{Binding BotHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
       <!-- ══ پیامِ آمادهٔ فرستادن ═════════════════════════════════════════ -->
       <Border Classes="panel" Padding="0">
         <StackPanel>

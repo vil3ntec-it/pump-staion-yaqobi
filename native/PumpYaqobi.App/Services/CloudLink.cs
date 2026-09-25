@@ -1603,6 +1603,29 @@ public sealed partial class CloudLink
     }
 
     /// <summary>
+    /// باتِ تلگرامِ پمپ روی سرورِ حساب: هست؟ نشانی‌اش چیست؟ (بی توکن.)
+    /// </summary>
+    /// <remarks>
+    /// ⛔ فقط نشانیِ عمومیِ بات (<c>https://t.me/…</c>) — رمزِ بات فقط روی
+    /// سرور است و هیچ‌وقت به این برنامه نمی‌رسد؛ اگر داخلِ برنامه بود، هر
+    /// کسی از فایلِ برنامه بیرونش می‌کشید و از طرفِ پمپ پیام می‌داد.
+    /// ⚠️ هیچ‌وقت استثنا بیرون نمی‌دهد و هر چیزِ ناجور «نیست» است.
+    /// </remarks>
+    public static async Task<string> TelegramBotUrlAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var r = await SendFull(Build(HttpMethod.Get, "/api/pump/public/telegram", null, null), ct);
+            if (!r.Ok || r.Json.ValueKind != JsonValueKind.Object) return "";
+            if (!r.Json.TryGetProperty("enabled", out var on) || on.ValueKind != JsonValueKind.True) return "";
+            var url = Str(r.Json, "url");
+            return url.StartsWith("https://t.me/", StringComparison.Ordinal) ? url : "";
+        }
+        catch (OperationCanceledException) { throw; }
+        catch { return ""; }
+    }
+
+    /// <summary>
     /// ۴۰۴ی که از یک مسیرِ حساب آمد ⇒ همان جمله‌ای که کاربر با آن می‌داند
     /// چه کار کند.
     /// </summary>

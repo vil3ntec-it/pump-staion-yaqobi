@@ -134,10 +134,54 @@ public sealed partial class AppsSectionViewModel : SectionViewModel
             "کارمند این را اسکن کند یا همین کد را در اپ بزند. هیچ رمزِ سروری در این کد نیست.");
     });
 
+    // ══ باتِ تلگرام ═══════════════════════════════════════════════════════
+    //
+    // خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۳): هشدارِ «حسابِ قرض‌دار تمام شد / کم
+    // مانده» و «مخزن ته کشید» در تلگرام، و وصل کردنِ بات به گروهِ کارمندان.
+    // خودِ بات روی **سرورِ حساب** است (ریپوی `shop`، `lib/telegram.js`)؛ این
+    // برنامه فقط نشانی‌اش را نشان می‌دهد تا کپی شود.
+    //
+    // ⛔ هیچ رمزی این‌جا نیست — نه رمزِ بات، نه چیزِ دیگری.
+    // ⚠️ فهرستِ هشدار همان `StationSnapshot.Alerts` است که از قبل به سرور
+    // می‌رفت (`CloudEvents`)؛ برای بات هیچ چیزی در این برنامه اضافه نشد.
+
+    /// <summary>نشانیِ بات (‎https://t.me/…‎) — خالی یعنی هنوز روشن نشده.</summary>
+    [ObservableProperty] private string _botLink = "";
+
+    /// <summary>چرا دکمه نیست — «هنوز روشن نشده» یا «نرسیدیم».</summary>
+    [ObservableProperty] private string _botHint = "در حالِ پرسیدن از سرورِ حساب…";
+
+    public bool HasBot => BotLink.Length > 0;
+
+    partial void OnBotLinkChanged(string value) => OnPropertyChanged(nameof(HasBot));
+
+    private bool _botAsking;
+
+    /// <summary>فقط می‌خواند — هیچ چیزی نمی‌نویسد و هیچ‌وقت استثنا بیرون نمی‌دهد.</summary>
+    private async Task LoadBotAsync()
+    {
+        if (_botAsking) return;
+        _botAsking = true;
+        try
+        {
+            var url = await CloudLink.TelegramBotUrlAsync();
+            BotLink = url;
+            BotHint = url.Length > 0
+                ? ""
+                : "بات هنوز روی سرورِ حساب روشن نشده است — یا همین حالا به سرورِ حساب نمی‌رسیم.";
+        }
+        catch { BotHint = "همین حالا به سرورِ حساب نمی‌رسیم."; }
+        finally { _botAsking = false; }
+    }
+
+    [RelayCommand]
+    private Task CopyBotAsync() => HasBot ? CopyAsync(BotLink, "لینکِ باتِ تلگرام") : Task.CompletedTask;
+
     public override Task OnActivatedAsync()
     {
         Done = "";
         Show();
-        return Task.CompletedTask;
+        //  ⚠️ صفحه منتظرِ اینترنت نمی‌ماند؛ نشانیِ بات که رسید، خودش می‌نشیند
+        return Task.WhenAny(LoadBotAsync(), Task.CompletedTask);
     }
 }
