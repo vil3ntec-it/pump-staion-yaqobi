@@ -62,6 +62,13 @@ internal static class TestSettingsHome
             //  سنجهٔ خودش (`SyncStoreTests`) موتور را لازم ندارد.
             PumpYaqobi.App.Services.SyncEngine.Disabled = true;
 
+            //  ⛔ **و حلقهٔ عکسِ ایستگاه هم.** هر آزمونی که `MainViewModel`
+            //  می‌سازد آن را راه می‌انداخت و کسی نمی‌بستش؛ هر دقیقه
+            //  `LicenseClock.Tick` ⇒ `SaveSoon()` در پوشهٔ **همان لحظه**
+            //  می‌نوشت — یعنی گاهی در پوشهٔ آزمونِ بعدی (بالای
+            //  `StationPublisher.Disabled` را ببینید).
+            PumpYaqobi.App.Services.StationPublisher.Disabled = true;
+
             //  و گزارشِ خطا هم از آزمون بیرون نمی‌رود
             PumpYaqobi.App.Services.CrashGuard.ReportingOff = true;
         }
