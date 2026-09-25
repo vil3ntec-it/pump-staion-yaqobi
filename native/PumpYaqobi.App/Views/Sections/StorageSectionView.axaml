@@ -33,25 +33,27 @@
 
           <StackPanel Spacing="14">
 
-        <!-- ══ کارتِ مخزن با نوارِ پرشدگی ══ -->
+        <!-- ══ کارتِ مخزن با نقشهٔ مخزن ══ -->
         <Border Classes="panel" Padding="16">
           <Grid ColumnDefinitions="Auto,18,*">
 
-            <!-- نوارِ عمودیِ پرشدگی -->
-            <Border Grid.Column="0" Width="118" Height="196" CornerRadius="12"
-                    Background="{DynamicResource Pump.Dark}"
-                    BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="1"
-                    ClipToBounds="True">
-              <Grid>
-                <Border VerticalAlignment="Bottom" Background="{DynamicResource Pump.AccentGrad}"
-                        Height="{Binding FillPercent, Converter={x:Static vm:PercentToHeightConverter.Instance}}" />
-                <TextBlock Text="{Binding FillText}" HorizontalAlignment="Center" VerticalAlignment="Center"
-                           FontSize="26" FontWeight="Bold" Foreground="{DynamicResource Pump.Text}" />
-                <TextBlock Text="{Binding ThresholdText}" HorizontalAlignment="Center"
-                           VerticalAlignment="Bottom" Margin="0,0,0,7" FontSize="10"
-                           Foreground="{DynamicResource Pump.OnAccent}" Opacity="0.8" />
-              </Grid>
-            </Border>
+            <!-- ══ نقشهٔ مخزن — به‌جای نوارِ عمودیِ پرشدگی (۱۴۰۵/۰۷/۱۳) ══
+                 خواستهٔ صریحِ صاحب ریپو با تصویر: «اون نشانه‌گرِ مخزن که الان تو
+                 برنامه هست رو بردار و این مدلِ جدید رو براش بزار… این همه
+                 ریزکارهاش باید باشن.» مخزنِ افقی با تیل روی آب، پروب، شناورِ
+                 تیل و شناورِ آب، پمپِ غوطه‌ور و درصدِ پرشدگی وسطش — همه داخلِ
+                 ‎c:TankGauge‎، که خودش می‌گوید کدام تکه عدد است و کدام نقشه.
+                 ⛔ نوارِ عمودی (‎PercentToHeightConverter‎) برنمی‌گردد.
+                 ⚠️ رنگِ بدنه و نوشته‌ها از خودِ تم می‌آید؛ تیل و آب رنگِ
+                 خودشان را دارند (نارنجی و آبی) و با تم عوض نمی‌شوند. -->
+            <c:TankGauge Grid.Column="0" Width="400" Height="250" VerticalAlignment="Center"
+                         FillPercent="{Binding FillPercent}" FillText="{Binding FillText}"
+                         ThresholdPercent="{Binding ThresholdPercent}" CaptionText="{Binding ThresholdText}"
+                         BodyBrush="{DynamicResource Pump.Card}" BodyDeepBrush="{DynamicResource Pump.Input}"
+                         RimBrush="{DynamicResource Pump.ChromeBorder}"
+                         LabelBrush="{DynamicResource Pump.Text}" TextBrush="{DynamicResource Pump.Text}"
+                         ThresholdBrush="{DynamicResource Pump.Danger}"
+                         ToolTip.Tip="سطحِ تیل از موجودی ÷ ظرفیت است و خطِ نقطه‌چین آستانهٔ هشدار؛ پروب، پمپ، شناورها و نوارِ آب نقشه‌اند، نه اندازه" />
 
             <StackPanel Grid.Column="2" Spacing="6">
               <!-- ══ عنوان، عددِ درشت و حالِ مخزن — وسطِ کارت (۱۴۰۵/۰۷/۱۳) ══
@@ -80,27 +82,14 @@
                    ‎Border.calc‎، همان کادرِ «خودکار»ِ فرمِ پارچه — هم‌قد و هم‌پهنای
                    دو کادرِ تایپ. ⚠️ فقط‌خواندنی می‌مانند: ‎TextBox‎ نیستند، پس هیچ
                    تایپی به ‎TotalIn‎/‎TotalOut‎ نمی‌رسد و هیچ منطقی عوض نشد. -->
-              <UniformGrid Rows="1" Classes="stats" Margin="0,10,0,0">
-                <StackPanel Spacing="4" Margin="6,0">
-                  <TextBlock Text="جمله ورودی" Classes="label" FontSize="11"
-                             TextAlignment="Center" HorizontalAlignment="Stretch" />
-                  <Border Classes="calc tankbox" ToolTip.Tip="حساب‌شده از خریدها — فقط خواندنی">
-                    <TextBlock Text="{Binding TotalIn, StringFormat={}{0} لیتر}" FontWeight="Bold"
-                               TextAlignment="Center" HorizontalAlignment="Stretch"
-                               VerticalAlignment="Center"
-                               Foreground="{DynamicResource Pump.Ok}" />
-                  </Border>
-                </StackPanel>
-                <StackPanel Spacing="4" Margin="6,0">
-                  <TextBlock Text="جمله فروش" Classes="label" FontSize="11"
-                             TextAlignment="Center" HorizontalAlignment="Stretch" />
-                  <Border Classes="calc tankbox" ToolTip.Tip="حساب‌شده از پارچه‌ها — فقط خواندنی">
-                    <TextBlock Text="{Binding TotalOut, StringFormat={}{0} لیتر}" FontWeight="Bold"
-                               TextAlignment="Center" HorizontalAlignment="Stretch"
-                               VerticalAlignment="Center"
-                               Foreground="{DynamicResource Pump.Danger}" />
-                  </Border>
-                </StackPanel>
+              <!-- ══ دو ردیفِ دوتایی، نه یک ردیفِ چهارتایی (۱۴۰۵/۰۷/۱۳) ══
+                   نقشهٔ مخزن پهن‌تر از نوارِ قدیمی است و ستونِ نوشته تنگ‌تر؛
+                   خواستهٔ صاحب ریپو با کادرِ زرد: «دو کادرِ جمله ورودی و جمله
+                   فروش برن زیرِ اون دو کادرِ دیگه». پس ردیفِ اول ظرفیت و آستانه
+                   (دو کادرِ تایپ)، ردیفِ دوم دو جملهٔ حساب‌شده — هم‌پهنا و
+                   هم‌قد و ستون‌به‌ستون زیرِ هم. ⚠️ ترتیبِ فرزندانِ ‎UniformGrid‎
+                   همان ترتیبِ چیدن است: ردیفِ اول، بعد ردیفِ دوم. -->
+              <UniformGrid Rows="2" Columns="2" Classes="stats" Margin="0,10,0,0">
                 <StackPanel Spacing="4" Margin="6,0">
                   <TextBlock Text="ظرفیت مخزن (لیتر)" Classes="label" FontSize="11"
                              TextAlignment="Center" HorizontalAlignment="Stretch" />
@@ -113,21 +102,27 @@
                              TextAlignment="Center" HorizontalAlignment="Stretch" />
                   <TextBox Classes="tankbox" Text="{Binding LowStock}" HorizontalAlignment="Stretch" />
                 </StackPanel>
+                <StackPanel Spacing="4" Margin="6,10,6,0">
+                  <TextBlock Text="جمله ورودی" Classes="label" FontSize="11"
+                             TextAlignment="Center" HorizontalAlignment="Stretch" />
+                  <Border Classes="calc tankbox" ToolTip.Tip="حساب‌شده از خریدها — فقط خواندنی">
+                    <TextBlock Text="{Binding TotalIn, StringFormat={}{0} لیتر}" FontWeight="Bold"
+                               TextAlignment="Center" HorizontalAlignment="Stretch"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource Pump.Ok}" />
+                  </Border>
+                </StackPanel>
+                <StackPanel Spacing="4" Margin="6,10,6,0">
+                  <TextBlock Text="جمله فروش" Classes="label" FontSize="11"
+                             TextAlignment="Center" HorizontalAlignment="Stretch" />
+                  <Border Classes="calc tankbox" ToolTip.Tip="حساب‌شده از پارچه‌ها — فقط خواندنی">
+                    <TextBlock Text="{Binding TotalOut, StringFormat={}{0} لیتر}" FontWeight="Bold"
+                               TextAlignment="Center" HorizontalAlignment="Stretch"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource Pump.Danger}" />
+                  </Border>
+                </StackPanel>
               </UniformGrid>
-
-              <!-- «🕘 تاریخچهٔ خریدهای مخزن» برداشته شد: هیچ فرمانی نداشت و
-                   خودِ فهرستِ خریدها همین پایین است. «ثبت خرید» حالا پنجرهٔ
-                   کوچکِ سایت را باز می‌کند، نه یک ردیفِ خالی. -->
-              <WrapPanel Orientation="Horizontal" Margin="0,8,0,0">
-                <Button Content="📏 میله‌زنی" Margin="0,0,8,8" Command="{Binding OpenDipCommand}"
-                        IsVisible="{Binding IsBuyListVisible}"
-                        ToolTip.Tip="صفحهٔ میله‌زنیِ مخزن — جدا از فهرستِ خریدها" />
-                <Button Content="← بازگشت به خریدها" Margin="0,0,8,8"
-                        Command="{Binding CloseDipCommand}" IsVisible="{Binding IsDipOpen}" />
-                <Button Content="{Binding PdfText}" Margin="0,0,8,8" Command="{Binding PdfCommand}" />
-                <Button Classes="accent" Content="{Binding AddBuyText}" Margin="0,0,8,8"
-                        Command="{Binding OpenBuyCommand}" />
-              </WrapPanel>
             </StackPanel>
           </Grid>
         </Border>
@@ -135,9 +130,31 @@
         <!-- ══ خلاصه پول‌ها ══ -->
         <Border Classes="panel" Padding="0">
           <StackPanel>
+            <!-- ══ دکمه‌های مخزن در سربرگِ همین کارت (۱۴۰۵/۰۷/۱۳) ══
+                 خواستهٔ صاحب ریپو با کادرِ آبی: «میله‌زنی، PDF و ثبتِ خرید دقیق
+                 برن اون‌جا که جا می‌گیرن» — یعنی سمتِ راستِ سربرگِ «خلاصه
+                 پول‌ها»، که خالی بود. ردیفِ دکمه از زیرِ کادرهای مخزن برداشته
+                 شد و همان چهار دکمه با همان فرمان‌ها این‌جا نشستند.
+                 ⚠️ عنوان همچنان وسطِ **کلِ** سربرگ است: ستونِ سومِ شبکه یک
+                 جای خالی هم‌پهنای دکمه‌هاست، وگرنه عنوان به‌اندازهٔ پهنای
+                 دکمه‌ها به چپ می‌رفت. -->
             <Border Classes="card-head">
-              <TextBlock Text="{Binding MoneyTitle}" FontWeight="Bold"
-                         Foreground="{DynamicResource Pump.Accent}" />
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <WrapPanel x:Name="TankActions" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                  <Button Content="📏 میله‌زنی" Margin="0,2,8,2" Command="{Binding OpenDipCommand}"
+                          IsVisible="{Binding IsBuyListVisible}"
+                          ToolTip.Tip="صفحهٔ میله‌زنیِ مخزن — جدا از فهرستِ خریدها" />
+                  <Button Content="← بازگشت به خریدها" Margin="0,2,8,2"
+                          Command="{Binding CloseDipCommand}" IsVisible="{Binding IsDipOpen}" />
+                  <Button Content="{Binding PdfText}" Margin="0,2,8,2" Command="{Binding PdfCommand}" />
+                  <Button Classes="accent" Content="{Binding AddBuyText}" Margin="0,2,8,2"
+                          Command="{Binding OpenBuyCommand}" />
+                </WrapPanel>
+                <TextBlock Grid.Column="1" Text="{Binding MoneyTitle}" FontWeight="Bold"
+                           TextAlignment="Center" HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                           Foreground="{DynamicResource Pump.Accent}" />
+                <Border Grid.Column="2" Width="{Binding #TankActions.Bounds.Width}" />
+              </Grid>
             </Border>
             <UniformGrid Rows="1" Classes="stats" Margin="14">
               <Border Classes="stat" Margin="0,0,12,0">

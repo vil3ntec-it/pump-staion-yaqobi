@@ -305,6 +305,8 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     [ObservableProperty] private double _fillPercent;
     [ObservableProperty] private string _fillText = "0%";
     [ObservableProperty] private string _thresholdText = "";
+    /// <summary>آستانهٔ هشدار به درصدِ ظرفیت — خطِ سرخِ نقطه‌چینِ روی نقشهٔ مخزن (‎TankGauge‎).</summary>
+    [ObservableProperty] private double _thresholdPercent;
 
     // ── میله‌زنی: محاسبهٔ زنده ─────────────────────────────────────────────
     /// <summary>لیترِ میله‌زنیِ در حالِ تایپ — هنوز ثبت نشده.</summary>
@@ -602,10 +604,12 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
                 : PumpYaqobi.Services.Data.SettingsService.BuyPerLiterPetrol), 1));
         LastBuyDate = last?.DateShamsi ?? "—";
 
-        // نوارِ پرشدگی: نسبتِ موجودی به ظرفیت، سقفِ صد درصد
+        // نقشهٔ مخزن: نسبتِ موجودی به ظرفیت، سقفِ صد درصد — و آستانه روی همان محور
         var cap = Shamsi.Num(Capacity);
         FillPercent = cap > 0m ? (double)Math.Min(100m, Math.Max(0m, t.Display / cap * 100m)) : 0;
-        FillText = Math.Round(FillPercent) + "%";
+        ThresholdPercent = cap > 0m ? (double)Math.Min(100m, Math.Max(0m, threshold / cap * 100m)) : 0;
+        //  یک رقمِ اعشار، مثلِ تصویرِ مرجع («58.9%»)؛ صدِ کامل همان «100%» می‌ماند
+        FillText = FillPercent.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "%";
 
         // موجودیِ دفتری برای میله‌زنی — همان ‎book‎ی ‎__tankInfo‎ که از
         // ‎_fuelStock‎ می‌آید (خرید − فروش + اصلاحِ میله‌زنی‌های پیشین).
