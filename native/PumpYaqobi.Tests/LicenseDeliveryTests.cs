@@ -428,7 +428,8 @@ public class LicenseDeliveryTests : IDisposable
     public void Halgheye_PasZamine_Vagheaan_In_Dar_Ra_Mizanad()
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
-        var src = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Services", "StationPublisher.cs"));
+        //  ⚠️ CRLF روی ویندوزِ CI — «پایانِ متد» با `\n` پیدا می‌شود
+        var src = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Services", "StationPublisher.cs")).Replace("\r\n", "\n");
         var i = src.IndexOf("private static async Task CloudKeepAsync", StringComparison.Ordinal);
         Assert.True(i > 0);
         //  ⚠️ تا خودِ بدنه (پایانِ متد)، نه یک پنجرهٔ ثابتِ نویسه‌ای — توضیحِ
