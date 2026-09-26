@@ -64,13 +64,39 @@ public class DashboardRemakeTests
         foreach (var must in new[]
         {
             "Cards", "Bars", "SelectBarCommand", "SetRangeCommand", "SetFuelCommand",
-            "FuelStatus", "TankLegend", "DonutPercentText", "DonutPetrolShare", "DonutDieselShare",
-            "DonutNote", "Alerts", "Recent", "TrendProfit", "TrendExpense", "AreaValues",
+            "FuelStatus", "DonutPercentText", "Alerts", "Recent", "TrendProfit", "TrendExpense", "AreaValues",
             "AreaLabels", "DetailMoney", "DetailLiters", "DetailCount", "DetailGrowth",
             "Greeting", "DateLine", "BellCommand", "BellCount",
             "GoCommand", "FootNote",
         })
             Assert.True(x.Contains(must, StringComparison.Ordinal), $"«{must}» دیگر روی داشبورد نیست");
+    }
+
+    /// <summary>
+    /// ⛔ کارتِ مخزن‌ها هر عدد را یک بار می‌گوید (۱۴۰۵/۰۷/۱۴): «دو سه جا نوشته
+    /// کم‌بودی… پطرول انقد… اونی که ضربدر کشیدم رو حذف کن و اون دو مخزن رو وسط
+    /// بیار و بزرگشون کن.» حلقه، راهنما، جملهٔ زیرش و موجودی/ظرفیتِ کنارِ هر
+    /// مخزن رفتند؛ دو مخزن وسط و بزرگ‌اند. ویومدل دست نخورد.
+    /// </summary>
+    [Fact]
+    public void Makhzanha_Vasat_Va_Bozorg_BiTekrar()
+    {
+        var x = View();
+        foreach (var gone in new[] { "TankLegend", "DonutNote", "DonutGauge", "CapacityText" })
+            Assert.DoesNotContain(gone, x);
+        var tank = Regex.Match(x, "<c:TankGauge[^>]*Classes=\"dashtank\"[^>]*>", RegexOptions.Singleline);
+        Assert.True(tank.Success, "مخزنِ داشبورد نیست");
+        //  بزرگ تا جایی که کارت جا دارد: کشیده در هر دو سو، بی قدِ ثابت،
+        //  و دو مخزن جای کارت را به تساوی می‌گیرند
+        Assert.Contains("VerticalAlignment=\"Stretch\"", tank.Value);
+        Assert.Contains("HorizontalAlignment=\"Stretch\"", tank.Value);
+        Assert.DoesNotContain(" Height=\"", tank.Value);
+        Assert.DoesNotContain(" Width=\"", tank.Value);
+        Assert.Contains("<UniformGrid Columns=\"1\" />", x);
+        //  منطق دست نخورد: ویومدل همان خاصیت‌ها را هنوز دارد
+        var vm = Vm();
+        foreach (var keep in new[] { "TankLegend", "DonutNote", "DonutPetrolShare" })
+            Assert.Contains(keep, vm);
     }
 
     /// <summary>

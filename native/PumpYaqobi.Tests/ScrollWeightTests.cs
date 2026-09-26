@@ -88,6 +88,26 @@ public class ScrollWeightTests : IDisposable
         Assert.Equal(0, Regex.Matches(xaml, "<Border Grid\\.Column=\"[012]\" Classes=\"card\"").Count);
     }
 
+    /// <summary>
+    /// ⛔ «پروفایل خیلی کند اسکرول می‌شه و لگ می‌زنه» (۱۴۰۵/۰۷/۱۴): کارت‌های بزرگش
+    /// سایهٔ محو داشتند و دو فهرستش اسکرولِ درونیِ قدِ ثابت — که چرخِ ماوس را
+    /// می‌گرفت و صفحه می‌ایستاد. هر دو رفت.
+    /// </summary>
+    [Fact]
+    public void Profile_BiMahv_Va_BiScrollDaruni()
+    {
+        var xaml = NoComments(Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml"));
+        var profile = xaml[xaml.IndexOf("<c:SectionPage Header=\"پروفایل\"", StringComparison.Ordinal)..];
+        Assert.DoesNotContain("Classes=\"card\"", profile);
+        Assert.True(Regex.Matches(profile, "Classes=\"card calm\"").Count >= 7);
+        Assert.DoesNotContain("<ScrollViewer", profile);
+        Assert.DoesNotContain("Height=\"380\"", profile);
+
+        //  و کارتِ هر کارمند در «حاضری و معاش» — فهرستِ تکرارشونده، بی‌محو
+        var att = NoComments(Read("PumpYaqobi.App", "Views", "Sections", "AttendanceSectionView.axaml"));
+        Assert.DoesNotContain("Classes=\"card\"", att);
+    }
+
     [Fact]
     public void HameyeKarthayeProfit_Calm_And()
     {
