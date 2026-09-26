@@ -40,3 +40,22 @@ jobs:
       - name: آزمون‌ها
         working-directory: native
         run: dotnet test PumpYaqobi.Tests -c Release --nologo --no-build
+
+  # ══ همان آزمون‌ها، روی ویندوز — پیش از مرج ════════════════════════════════
+  # ساختِ main ِ ۳.۱.۱۸۶ روی ویندوز در همین گام افتاد، در حالی که کارِ بالا (لینوکس)
+  # سبز بود — و هیچ نسخه‌ای منتشر نشد. ‎build-native.yml‎ آزمون‌ها را فقط پس از
+  # مرج روی ویندوز می‌دواند، پس سرخیِ مخصوصِ ویندوز همیشه دیر دیده می‌شد. همان
+  # قاعدهٔ همیشگیِ این مخزن: «هر چیزی که فقط پس از مرج ساخته می‌شود، سنجهٔ پیش
+  # از مرج می‌خواهد.» مو‌به‌مو همان دستورِ گامِ «آزمون‌ها»ی ‎build-native.yml‎.
+  test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: آزمون‌ها (ویندوز)
+        working-directory: native
+        run: dotnet test PumpYaqobi.Tests -c Release --nologo
