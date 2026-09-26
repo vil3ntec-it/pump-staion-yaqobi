@@ -526,9 +526,12 @@ public class LicenseDeliveryTests : IDisposable
     {
         var vm = File.ReadAllText(Path.Combine(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..")),
             "PumpYaqobi.App", "ViewModels", "MainViewModel.cs"));
-        var i = vm.IndexOf("CloudLink.LicenseChanged +=", StringComparison.Ordinal);
+        //  هندلر یک تابعِ نام‌دار است (`OnLicenseMoved` — مرزِ آفلاینِ مجوز هم
+        //  همان را می‌زند)، پس همان تابع سنجیده می‌شود.
+        Assert.Contains("CloudLink.LicenseChanged += () => Dispatcher.UIThread.Post(OnLicenseMoved);", vm);
+        var i = vm.IndexOf("private void OnLicenseMoved()", StringComparison.Ordinal);
         Assert.True(i > 0);
-        var end = vm.IndexOf("});", i, StringComparison.Ordinal);
+        var end = vm.IndexOf("private void ShowNotice(", i, StringComparison.Ordinal);
         Assert.Contains("NoticeText = SoftLock.Banner()", vm[i..end]);
     }
 }

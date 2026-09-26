@@ -983,6 +983,13 @@
               </Border>
             </StackPanel>
 
+            <!-- 🤖 پیگیرِ اشتراک: حالِ همین حالا و — اگر نرسیده — دلیلِ واقعی.
+                 ⛔ SubStatus ساخته می‌شد و هیچ‌جا دیده نمی‌شد. -->
+            <TextBlock Text="{Binding SubStatus}" FontSize="12" TextWrapping="Wrap" FontWeight="Bold"
+                       IsVisible="{Binding SubStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <TextBlock Text="{Binding WatchLine}" Classes="muted" FontSize="11.5" TextWrapping="Wrap"
+                       IsVisible="{Binding WatchLine, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
             <TextBlock Text="{Binding GraceText}" FontSize="12" TextWrapping="Wrap" FontWeight="Bold"
                        Foreground="{DynamicResource Pump.Ink.Warn}"
                        IsVisible="{Binding GraceText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />

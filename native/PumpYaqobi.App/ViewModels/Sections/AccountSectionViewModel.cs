@@ -328,6 +328,13 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
 
     [ObservableProperty] private string _subCode = "";
     [ObservableProperty] private string _subStatus = "";
+
+    /// <summary>
+    /// 🤖 یک خط از پیگیرِ اشتراک: سرور چه می‌گوید، این کامپیوتر چه دارد، و
+    /// اگر یکی نیستند چرا. ⛔ تا ۱۴۰۵/۰۷/۱۴ دلیلِ «اشتراک نرسید» (`SubStatus`)
+    /// ساخته می‌شد ولی در هیچ صفحه‌ای نشسته نبود — کاربر فقط قفل را می‌دید.
+    /// </summary>
+    [ObservableProperty] private string _watchLine = SubscriptionWatch.Line();
     [ObservableProperty] private string _subMessage = "";
     [ObservableProperty] private bool _subActive;
     [ObservableProperty] private string _joinCode = "";
@@ -357,6 +364,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         // نشده بود (یعنی همان چیزی که صاحب ریپو می‌دید) این چهار خانه خالی
         // می‌ماندند و کارتِ اشتراک «خراب» به نظر می‌رسید.
         ShowSubDetails(check, file);
+        WatchLine = SubscriptionWatch.Line();
 
         if (string.IsNullOrWhiteSpace(file.CloudDeviceToken))
         {
