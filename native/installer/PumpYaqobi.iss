@@ -50,6 +50,8 @@
   #define OutName "PumpYaqobi-Setup"
 #endif
 #define AppExe  "PumpYaqobi.exe"
+; کلیدِ «برنامه‌ها و قابلیت‌ها»ی نسخهٔ ۳۲بیتی — تا نصابِ ۶۴ بفهمد کدام از قبل هست
+#define X86UninstallKey "Software\Microsoft\Windows\CurrentVersion\Uninstall\{1D5B7C42-9E38-4A61-B0F7-2C83A6D41E95}_is1"
 
 ; ── «۳۲ یا ۶۴بیتی؟» — پرسشِ نصبِ تازه (۱۴۰۵/۰۷/۱۴) ─────────────────────────
 ;  خواستهٔ صاحب ریپو: «موقعِ نصبِ برنامه بگه کدوم رو می‌خوای، ۳۲ بیت یا ۶۴
@@ -242,12 +244,14 @@ end;
 
 
 
-// ── «۳۲ یا ۶۴بیتی؟» — فقط نصبِ تازه و دستی ──────────────────────────────────
-//  ⛔ نصبِ بی‌صدا (به‌روزرسانیِ خودِ برنامه) و نصبی که از قبل روی این کامپیوتر
-//     هست این صفحه را نمی‌بینند: پرسیدنِ دوباره یعنی کسی که فقط به‌روز می‌کند
-//     ناخواسته برنامهٔ دوم را کنارِ اولی بنشاند.
-//  پیش‌فرض همان است که ویندوز می‌خواهد (IsWin64)، و روی ویندوزِ ۳۲بیتی
-//  گزینهٔ ۶۴ بسته است — آن فایل آن‌جا اجرا نمی‌شود.
+// ── «۳۲ یا ۶۴بیتی؟» — در هر نصبِ دستی ────────────────────────────────────────
+//  خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۴): «۳۲ و ۶۴ بیت هم موقعِ مراحلِ نصب سؤال
+//  بشه.» تا ۳.۱.۱۸۵ فقط نصبِ تازه می‌پرسید و کسی که روی برنامهٔ موجود نصب
+//  می‌کرد هیچ‌وقت نمی‌دیدش.
+//  ⛔ فقط نصبِ بی‌صدا (به‌روزرسانیِ خودِ برنامه) این صفحه را نمی‌بیند.
+//  ⛔ و پیش‌فرض هیچ‌وقت برنامهٔ دوم کنارِ اولی نمی‌نشاند: اگر همین کامپیوتر
+//     نسخهٔ ۳۲بیتی دارد و ۶۴ نه، ۳۲ برگزیده است؛ وگرنه آن‌چه ویندوز می‌خواهد
+//     (IsWin64). روی ویندوزِ ۳۲بیتی گزینهٔ ۶۴ بسته است.
 #if Arch != "x86"
 #ifdef OtherSha
 var
@@ -265,7 +269,10 @@ begin
     True, False);
   ArchPage.Add('۶۴بیتی — ویندوزِ امروزی (پیشنهادی)');
   ArchPage.Add('۳۲بیتی — ویندوزِ قدیمیِ ۳۲بیتی');
-  if IsWin64 then
+  if IsWin64 and (WizardForm.PrevAppDir = '') and
+     (RegKeyExists(HKCU, '{#X86UninstallKey}') or RegKeyExists(HKLM, '{#X86UninstallKey}')) then
+    ArchPage.SelectedValueIndex := 1
+  else if IsWin64 then
     ArchPage.SelectedValueIndex := 0
   else
   begin
@@ -280,7 +287,7 @@ function ShouldSkipPage(PageID: Integer): Boolean;
 begin
   Result := False;
   if PageID = ArchPage.ID then
-    Result := WizardSilent or (WizardForm.PrevAppDir <> '');
+    Result := WizardSilent;
 end;
 
 procedure CancelButtonClick(CurPageID: Integer; var Cancel, Confirm: Boolean);

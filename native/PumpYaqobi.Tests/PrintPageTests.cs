@@ -138,8 +138,10 @@ public class PrintPageTests
         foreach (var piece in new[]
         {
             "تعدادِ نسخه",                    // Copies
-            "چاپگر", "آماده",                 // Printer ▸ Ready
-            "انتخابِ چاپگر و تنظیماتش…",       // Printer Properties
+            "چاپگر",                          // Printer
+            "{Binding Printers}",             // ▸ EPSON L382 Series · Ready — فهرستِ واقعیِ ویندوز (۱۴۰۵/۰۷/۱۴)
+            "{Binding Line}",                 //   «آماده · پیش‌فرضِ ویندوز» (Printers.StatusOf)
+            "افزودنِ چاپگر / تنظیماتِ ویندوز…", // Add Printer…
             "{Binding Whats}",                // Print Active Sheets
             "ورق‌ها:",                        // Pages: … to …
             "{Binding Collates}",             // Collated

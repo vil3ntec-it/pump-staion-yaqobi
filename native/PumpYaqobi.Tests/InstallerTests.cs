@@ -62,7 +62,12 @@ public class InstallerTests
     {
         var s = Iss();
         Assert.Contains("CreateInputOptionPage(wpWelcome", s);
-        Assert.Contains("WizardSilent or (WizardForm.PrevAppDir <> '')", s);
+        //  ⛔ در هر نصبِ دستی می‌پرسد — فقط به‌روزرسانیِ بی‌صدا نه (۱۴۰۵/۰۷/۱۴)
+        Assert.Contains("Result := WizardSilent;", s);
+        Assert.DoesNotContain("WizardSilent or (WizardForm.PrevAppDir <> '')", s);
+        //  و کامپیوتری که ۳۲بیتی دارد، ۳۲ را از پیش برگزیده می‌بیند
+        Assert.Contains("RegKeyExists(HKCU, '{#X86UninstallKey}')", s);
+        Assert.Contains("{1D5B7C42-9E38-4A61-B0F7-2C83A6D41E95}_is1", s);
         Assert.Contains("#ifdef OtherSha", s);
         Assert.Contains("'{#OtherSha}'", s);                         // هش همراهِ دانلود
         Assert.Contains("/v{#AppVersion}/PumpYaqobi-Setup-x86.exe", s); // همین انتشار، نه latest
