@@ -45,7 +45,7 @@ public class SiteHomeTests
         Assert.DoesNotContain("serviceWorker.register", home);
         //  ⛔ و هیچ نشانیِ مخزن
         Assert.DoesNotContain("github", home, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("vil3ntec-it", home);
+        Assert.DoesNotContain("/releases/", home);
     }
 
     [Fact]
