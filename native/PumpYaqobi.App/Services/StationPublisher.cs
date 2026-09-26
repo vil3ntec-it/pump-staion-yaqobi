@@ -247,6 +247,9 @@ public sealed class StationPublisher : IAsyncDisposable
     private DateTime _lastStatePush = DateTime.MinValue;
     private DateTime _lastDebtorsPush = DateTime.MinValue;
     private long _debtorsRevision = -1;
+    private string _pushedOwe = "";
+    private long _oweVersion = -1;
+    private DateTime _lastOweCheck = DateTime.MinValue;
     private DateTime _stateRetryAt = DateTime.MinValue;
     private DateTime _stateUnsupportedAt = DateTime.MinValue;
     private string _stateStation = "";
@@ -286,6 +289,8 @@ public sealed class StationPublisher : IAsyncDisposable
                 _pushedAlerts = "\u0001";
                 _lastStatePush = DateTime.MinValue;
                 _debtorsRevision = -1;
+                _pushedOwe = "";
+                _oweVersion = -1;
                 _events.Reset();
             }
 
@@ -297,7 +302,25 @@ public sealed class StationPublisher : IAsyncDisposable
             var withDebtors = Entitlements.Allows(Entitlements.Kar)
                               && watch.Revision != _debtorsRevision
                               && now - _lastDebtorsPush >= DebtorsGap;
-            if (!changed && !beat && !withDebtors) return false;
+            //  بدهیِ پمپ به شرکت‌ها — برای «اعلامیه»ی بات. ترمزِ Version و
+            //  همان فاصلهٔ خلاصهٔ قرض‌داران؛ فقط وقتی عوض شد می‌رود.
+            List<object>? owe = null;
+            string oweHash = _pushedOwe;
+            var version = PumpYaqobi.Persistence.PumpDbContext.Version;
+            if (version != _oweVersion && now - _lastOweCheck >= DebtorsGap)
+            {
+                _lastOweCheck = now;
+                try
+                {
+                    owe = await StationSnapshot.OweAsync(_host, ct);
+                    oweHash = System.Text.Json.JsonSerializer.Serialize(owe);
+                    _oweVersion = version;
+                }
+                catch (OperationCanceledException) { throw; }
+                catch { owe = null; }
+            }
+            var withOwe = owe is not null && oweHash != _pushedOwe;
+            if (!changed && !beat && !withDebtors && !withOwe) return false;
 
             var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
 
@@ -310,12 +333,14 @@ public sealed class StationPublisher : IAsyncDisposable
 
             var revision = watch.Revision;
             var res = await cloud.SendStateAsync(
-                alerts.Select(a => (object)new { k = a.Key, n = a.Name, f = a.Fuel, s = a.State, t = a.Text }),
+                alerts.Select(a => (object)new { k = a.Key, n = a.Name, f = a.Fuel, s = a.State, t = a.Text, a = a.Action }),
                 watch.Tank,
-                withDebtors ? Compact(watch.Debtors) : null, ct);
+                withDebtors ? Compact(watch.Debtors) : null, ct,
+                withOwe ? owe : null);
             if (res.Ok)
             {
                 _pushedAlerts = hash;
+                if (withOwe) _pushedOwe = oweHash;
                 _lastStatePush = now;
                 LastStateAlerts = alerts.Count;
                 if (withDebtors) { _debtorsRevision = revision; _lastDebtorsPush = now; }
@@ -341,7 +366,7 @@ public sealed class StationPublisher : IAsyncDisposable
     private static List<object?> AsSnapshot(IReadOnlyList<AlertItem> alerts) =>
         alerts.Select(a => (object?)new Dictionary<string, object?>
         {
-            ["k"] = a.Key, ["n"] = a.Name, ["f"] = a.Fuel, ["s"] = a.State, ["t"] = a.Text,
+            ["k"] = a.Key, ["n"] = a.Name, ["f"] = a.Fuel, ["s"] = a.State, ["t"] = a.Text, ["a"] = a.Action,
         }).ToList();
 
     /// <summary>خلاصهٔ هر قرض‌دار برای بات: نام، حالِ سه دفتر و الباقی — بی جدول.</summary>

@@ -3,7 +3,8 @@ namespace PumpYaqobi.App.Services;
 /// <summary>یک هشدارِ باز — همان شکلی که <see cref="StationSnapshot.Alerts"/> می‌سازد.</summary>
 /// <param name="Key">کلیدِ ثابت، با حال: ‎d7-stP-out‎ · ‎tank-diesel-low‎.</param>
 /// <param name="State">‎out‎ (تمام شد) یا ‎low‎ (کم مانده).</param>
-public sealed record AlertItem(string Key, string Name, string Fuel, string State, string Text)
+/// <param name="Action">دستورِ کار — «به او دیگر تیل ندهید»، «امروز دیزل سفارش بدهید».</param>
+public sealed record AlertItem(string Key, string Name, string Fuel, string State, string Text, string Action = "")
 {
     public bool IsTank => Key.StartsWith("tank-", StringComparison.Ordinal);
     public bool IsOut => State == "out";
@@ -152,7 +153,7 @@ public sealed class AlertWatch
             string S(string k) => d.TryGetValue(k, out var v) ? v as string ?? "" : "";
             var key = S("k");
             if (key.Length == 0) continue;
-            list.Add(new AlertItem(key, S("n"), S("f"), S("s") == "out" ? "out" : "low", S("t")));
+            list.Add(new AlertItem(key, S("n"), S("f"), S("s") == "out" ? "out" : "low", S("t"), S("a")));
         }
         return list;
     }

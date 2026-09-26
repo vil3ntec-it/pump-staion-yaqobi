@@ -880,13 +880,15 @@ public sealed partial class CloudLink
     /// می‌بیند و به <see cref="SendEventsAsync"/> برمی‌گردد.
     /// </para>
     /// </summary>
+    /// <param name="owe">بدهیِ پمپ به شرکت‌ها (‎[{n, afn, usd}]‎) — ‎null‎ ⇒ همان قبلی می‌ماند.</param>
     public async Task<CloudResult> SendStateAsync(
-        IEnumerable<object> alerts, object tank, IEnumerable<object>? debtors, CancellationToken ct = default)
+        IEnumerable<object> alerts, object tank, IEnumerable<object>? debtors, CancellationToken ct = default,
+        IEnumerable<object>? owe = null)
     {
         if (!Activated) return CloudResult.No("فعال نشده", "not_activated");
-        object body = debtors is null
-            ? new { alerts = alerts.ToList(), tank }
-            : new { alerts = alerts.ToList(), tank, debtors = debtors.ToList() };
+        var body = new Dictionary<string, object?> { ["alerts"] = alerts.ToList(), ["tank"] = tank };
+        if (debtors is not null) body["debtors"] = debtors.ToList();
+        if (owe is not null) body["owe"] = owe.ToList();
         var (ok, _, why, code) = await DevPostAsync("/api/pump/device/state", body, ct);
         return ok ? CloudResult.Done : CloudResult.No(why, code);
     }
