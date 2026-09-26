@@ -41,6 +41,10 @@ internal static class OldAccountProbe
     private static readonly HttpClient Http = new(new SocketsHttpHandler { AllowAutoRedirect = false })
     { Timeout = TimeSpan.FromSeconds(30) };
     private static string _panel = "", _panelToken = "", _mailCodes = "", _pub = "";
+    //  ⚠️ «حلقهٔ واقعی»: هیچ دوری با بازتاب صدا زده نمی‌شود — فقط تایمرِ خودِ
+    //  برنامه (StationPublisher) باید کار را برساند، در زمانِ واقعی.
+    private static bool _real;
+    private static Func<bool>? _until;
     private const string Pass = "Pump!1405old";
 
     public static int Run(string[] args)
@@ -57,6 +61,8 @@ internal static class OldAccountProbe
         _panel = live.GetProperty("panel").GetString()!.TrimEnd('/');
         _panelToken = live.GetProperty("panelToken").GetString()!;
         var shots = args.Length > 2 ? args[2] : Path.Combine(Path.GetTempPath(), "pump-oldacct");
+        _real = args.Contains("real") || Environment.GetEnvironmentVariable("PUMP_OLDACCT_REAL") == "1";
+        if (_real) Console.WriteLine("     ⓘ حالتِ حلقهٔ واقعی: فقط تایمرِ خودِ برنامه");
         Directory.CreateDirectory(shots);
 
         var seen = new List<string>();
@@ -84,11 +90,14 @@ internal static class OldAccountProbe
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
             .SetupWithoutStarting();
 
+        var onlyE = Environment.GetEnvironmentVariable("PUMP_OLDACCT_ONLY") == "e";
+        Avalonia.Controls.Window win = null!; MainViewModel vm = null!; AccountSectionViewModel account = null!;
+        if (!onlyE) {
         // ── الف) حسابِ واردشده، بی پمپ ────────────────────────────────────
         Console.WriteLine("══ الف) حسابی که با نسخهٔ پیشین ساخته شد و پمپ ندارد — برنامه به‌روز شد");
         var a = MakeAccount("old-a-" + Guid.NewGuid().ToString("N")[..8] + "@example.com", withStation: false);
         SeatOnDisk(a, loginSkipped: true);
-        var (win, vm, account) = Open();
+        (win, vm, account) = Open();
         Loop(win, 2);
         //  ⚠️ گامِ «حساب آماده» پس از همان مکثِ آرامِ ناشر (۱۲ ثانیه) می‌دود —
         //  پس تا چهل ثانیهٔ واقعی صبر، بی باز کردنِ پروفایل.
@@ -109,6 +118,8 @@ internal static class OldAccountProbe
         var b = MakeAccount("old-b-" + Guid.NewGuid().ToString("N")[..8] + "@example.com", withStation: true);
         SeatOnDisk(b, loginSkipped: false);
         (win, vm, account) = Open();
+        var accB = account;
+        _until = () => { accB.RefreshAll(); return AppSettings.Load().CloudDeviceToken.Length > 0 && accB.SubActive; };
         Loop(win, 2);
         Report(win, vm, account, shots, "b-loop");
         var f = AppSettings.Load();
@@ -120,8 +131,11 @@ internal static class OldAccountProbe
         Console.WriteLine("══ د) مدیر از پنل وی‌آی‌پی داد — برنامه وصل و باز است");
         var gd = Grant(b.Email);
         Check("پنل اشتراک را ثبت کرد", gd.Length > 0, gd);
+        _until = () => { accB.RefreshAll(); return accB.SubKind == "VIP"; };
         Loop(win, 2);
         Report(win, vm, account, shots, "d-vip");
+        Wait(win, vm.GoAsync(account));
+        Report(win, vm, account, shots, "d-vip-profile");
         Check("⛔ وی‌آی‌پی به برنامه رسید", account.SubKind == "VIP", $"{account.SubPlanText} · {account.PillText}");
         win.Close();
 
@@ -132,10 +146,76 @@ internal static class OldAccountProbe
         Check("پنل اشتراک را ثبت کرد", gc.Length > 0, gc);
         SeatOnDisk(c, loginSkipped: false);
         (win, vm, account) = Open();
+        var accC = account;
+        _until = () => { accC.RefreshAll(); return accC.SubKind == "VIP"; };
         Loop(win, 2);
         Report(win, vm, account, shots, "c-vip");
+        Wait(win, vm.GoAsync(account));
+        Report(win, vm, account, shots, "c-vip-profile");
         Check("⛔ وی‌آی‌پی به برنامه رسید", account.SubKind == "VIP", $"{account.SubPlanText} · {account.PillText}");
         win.Close();
+
+        }
+
+        // ── ه/و) نصبی که روزی با کدِ شش‌رقمی فعال شده بود، بعد وارد حساب شد ──
+        foreach (var (tag, withStation) in new[] { ("e", true), ("f", false) })
+        {
+            Console.WriteLine(withStation
+                ? "══ ه) نصبِ قدیمی با کدِ شش‌رقمی فعال شده بود؛ صاحبش وارد حسابش (با پمپ) شد و مدیر به حسابش VIP داد"
+                : "══ و) نصبِ قدیمی با کدِ شش‌رقمی فعال شده بود؛ صاحبش وارد حسابش (بی پمپ) شد، بعد مدیر VIP داد");
+            var fresh = AppSettings.Load();
+            fresh.CloudAccountToken = ""; fresh.CloudRefreshToken = ""; fresh.CloudUserId = ""; fresh.CloudEmail = "";
+            fresh.CloudDeviceToken = ""; fresh.CloudLicense = ""; fresh.CloudStationId = ""; fresh.CloudPublicKey = "";
+            fresh.CloudStationCode = ""; fresh.StationCode = ""; fresh.PumpStepDone = false; fresh.LoginSkipped = true;
+            fresh.Save();
+            CloudLink.AccountHasStation = null;
+            var made = Panel(HttpMethod.Post, "/api/account-admin/vip-codes", new { app = "pump", plan = "std", days = 3 });
+            var code = made.ValueKind == JsonValueKind.Object && made.TryGetProperty("code", out var cc) ? cc.GetString() ?? "" : "";
+            Check("پنل کدِ شش‌رقمی ساخت", code.Length > 0);
+            var dev = AppSettings.Load();
+            var link = new CloudLink(dev, () => { dev.Save(); return Task.CompletedTask; });
+            var act = Task.Run(() => link.ActivateAsync(code, "پمپِ کدی")).GetAwaiter().GetResult();
+            Check("نصبِ قدیمی با کد فعال شد (پمپِ بی‌صاحب)", act.Ok, act.Why);
+            var codeStation = AppSettings.Load().CloudStationId;
+            var e = MakeAccount($"old-{tag}-" + Guid.NewGuid().ToString("N")[..8] + "@example.com", withStation);
+            //  همان چیزی که ورودِ نخستین روی دیسک می‌گذارد: حساب، و دستگاهِ قبلی دست‌نخورده
+            var fe = AppSettings.Load();
+            fe.CloudAccountToken = e.Access; fe.CloudRefreshToken = e.Refresh;
+            fe.CloudUserId = e.UserId; fe.CloudEmail = e.Email; fe.LoginSkipped = false;
+            fe.Save();
+            if (withStation)
+            {
+                var ge = Grant(e.Email);
+                Check("پنل به پمپِ حساب VIP داد", ge.Length > 0, ge);
+            }
+            (win, vm, account) = Open();
+            var accE = account;
+            if (!withStation)
+            {
+                //  حساب باید صاحبِ همان پمپِ کد شود — و بعد مدیر به حسابش VIP بدهد
+                var lastAsk = DateTime.MinValue;
+                _until = () =>
+                {
+                    //  ⚠️ پنل سقفِ نرخ دارد — هر ده ثانیه یک بار بپرس
+                    if (DateTime.UtcNow - lastAsk < TimeSpan.FromSeconds(10)) return false;
+                    lastAsk = DateTime.UtcNow;
+                    return Grant(e.Email, probeOnly: true);
+                };
+                Loop(win, 2);
+                Report(win, vm, account, shots, $"{tag}-claimed");
+                var gf = Grant(e.Email);
+                Check("⛔ پمپِ کد مالِ حساب شد و مدیر با ایمیلِ حساب پیدایش کرد و VIP داد", gf.Length > 0, gf);
+            }
+            _until = () => { accE.RefreshAll(); return accE.SubKind == "VIP"; };
+            Loop(win, 2);
+            Report(win, vm, account, shots, $"{tag}-code-then-account");
+            Wait(win, vm.GoAsync(account));
+            Report(win, vm, account, shots, $"{tag}-code-then-account-profile");
+            Console.WriteLine($"     ⓘ پمپِ کد: {codeStation} · پمپِ حالا: {AppSettings.Load().CloudStationId}");
+            Check("⛔ VIPِ حساب به نصبِ قدیمیِ کددار هم رسید", account.SubKind == "VIP",
+                  $"{account.SubPlanText} · {account.PillText} · {CloudLink.LastBindWhy}");
+            win.Close();
+        }
 
         Console.WriteLine("     ⓘ درخواست‌ها: " + string.Join(" · ", seen.TakeLast(80)));
         CloudLink.TestTransport = null;
@@ -200,6 +280,16 @@ internal static class OldAccountProbe
     /// <summary>همان دورِ شصت‌ثانیه‌ایِ پس‌زمینه، n بار.</summary>
     private static void Loop(Avalonia.Controls.Window win, int n)
     {
+        if (_real)
+        {
+            //  هر «دور» تا ۷۵ ثانیهٔ واقعی؛ زودتر اگر شرطِ بندِ جاری رسید
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            while (sw.Elapsed < TimeSpan.FromSeconds(75 * n) && !(_until?.Invoke() ?? false))
+            { Pump(win); Thread.Sleep(200); }
+            Console.WriteLine($"     ⓘ پس از {sw.Elapsed.TotalSeconds:0} ثانیهٔ واقعی");
+            Settle(win);
+            return;
+        }
         var m = typeof(StationPublisher).GetMethod("CloudKeepAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
         for (var i = 0; i < n; i++)
         {
@@ -210,11 +300,19 @@ internal static class OldAccountProbe
         Settle(win);
     }
 
-    private static string Grant(string email)
+    private static bool Grant(string email, bool probeOnly) =>
+        GrantTarget(email).Length > 0;
+
+    private static string GrantTarget(string email)
     {
         var targets = Panel(HttpMethod.Get, "/api/account-admin/grant-targets?app=pump&q=" + Uri.EscapeDataString(email), null);
-        var tenant = targets.ValueKind == JsonValueKind.Object && targets.TryGetProperty("items", out var it) && it.GetArrayLength() > 0
+        return targets.ValueKind == JsonValueKind.Object && targets.TryGetProperty("items", out var it) && it.GetArrayLength() > 0
             ? it[0].GetProperty("tenantId").ToString() : "";
+    }
+
+    private static string Grant(string email)
+    {
+        var tenant = GrantTarget(email);
         if (tenant.Length == 0) return "";
         var g = Panel(HttpMethod.Post, "/api/account-admin/subs/pump/grant", new { tenantId = tenant, plan = "vip" });
         return g.ValueKind == JsonValueKind.Object && g.TryGetProperty("subscription", out var s) && s.ValueKind == JsonValueKind.Object

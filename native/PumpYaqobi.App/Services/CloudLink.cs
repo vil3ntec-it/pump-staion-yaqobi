@@ -438,25 +438,39 @@ public sealed partial class CloudLink
     /// که سرورِ ساختگی را بی‌اثر می‌کند.
     /// </para>
     /// </summary>
-    public async Task<CloudResult> BindAsync(CancellationToken ct = default)
+    public async Task<CloudResult> BindAsync(CancellationToken ct = default, bool adopt = false)
     {
         if (!SignedIn) return CloudResult.No("اول وارد حساب شوید", "no_account");
 
-        var body = new
+        //  ⛔ `adopt`: این کامپیوتر روی پمپِ دیگری است (روزی با کدِ شش‌رقمی
+        //  فعال شده بود) و حالا صاحبش وارد حسابش شده. توکنِ کنونیِ دستگاه
+        //  مدرک است و **خودِ سرور** تصمیم می‌گیرد: پمپِ بی‌صاحب ⇒ مالِ حساب
+        //  یا دستگاه به پمپِ حساب با روزهای ماندهٔ اشتراکش؛ پمپِ صاحب‌دار ⇒
+        //  `station_mismatch`. شرحش بالای `adoptFromDevice`ِ سرورِ حساب.
+        var adopting = adopt && Activated;
+        var device = new
         {
-            device = new
-            {
-                uid = DeviceUid,
-                name = Environment.MachineName,
-                platform = "windows",
-            },
+            uid = DeviceUid,
+            name = Environment.MachineName,
+            platform = "windows",
         };
+        object body = adopting
+            ? new { device, adopt = true, deviceToken = _settings.CloudDeviceToken }
+            : new { device };
 
         //  ⚠️ از راهِ `AccountAsync` می‌رود، نه `PostAsync`ِ خام: توکنِ
         //  دسترسی یک ساعت عمر دارد و همین‌جا بی‌صدا می‌مرد.
         var res = await AccountAsync(HttpMethod.Post, "/api/pump/device/bind", body, ct);
         if (!res.Ok) return CloudResult.No(res.Why, res.Code);
         var json = res.Json;
+
+        //  ⛔ سرورِ کهنه `adopt` را نمی‌شناسد و بی‌صدا دستگاه را روی پمپِ حساب
+        //  ثبت می‌کند — بی بردنِ روزهای اشتراکِ پمپِ کد. پس بی نشانِ صریحِ
+        //  سرور هیچ چیزی این‌جا عوض نمی‌شود — حتی کلیدِ عمومی.
+        var adopted = Str(json, "adopt");
+        if (adopting && adopted is not ("moved" or "claimed"))
+            return CloudResult.No("سرورِ حساب کهنه است و هنوز نمی‌تواند این کامپیوتر را به پمپِ حسابتان "
+                + "ببرد — سرورِ حساب را از مرکز فرمان به‌روز کنید.", "adopt_unsupported");
 
         //  کلیدِ عمومی فقط یک بار قفل می‌شود — همان قاعدهٔ `ActivateAsync`
         var serverKey = Str(json, "publicKey");
@@ -499,6 +513,8 @@ public sealed partial class CloudLink
         var token = Str(json, "deviceToken");
         if (string.IsNullOrWhiteSpace(token))
             return CloudResult.No("سرور توکنِ دستگاه نداد", "no_device_token");
+
+        if (adopted == "moved") _settings.CloudAccessCode = "";   // کدِ اپِ کارمندانِ پمپِ قبلی
 
         _settings.CloudDeviceToken = token;
         var station = StationId(json);
@@ -1642,6 +1658,10 @@ public sealed partial class CloudLink
         Reach = CloudReach.Online;
         CloudOkAt = DateTime.Now;
         CloudWhy = "";
+        //  ترمزِ «پس از شکستِ ثبت» هم استاتیک است: آزمونی که ثبتِ ناموفق
+        //  می‌سازد نباید ده دقیقه ثبتِ آزمونِ بعدی را ببندد.
+        _lastBindFailAt = DateTime.MinValue;
+        LastBindWhy = "";
     }
 
     private static void NoteOffline(string why)
@@ -2081,10 +2101,54 @@ public sealed partial class CloudLink
         AccountHasStation = acctStation.Length > 0;
         if (acctStation.Length == 0) LastBindWhy = "";
         var locked = (_settings.CloudStationId ?? "").Trim();
-        if (locked.Length > 0 && acctStation.Length > 0
+        var bindDue = forceBind || DateTime.UtcNow - _lastBindFailAt >= BindRetryAfterFail;
+
+        /*
+         *  ⛔ **این کامپیوتر روی پمپی است که مالِ این حساب نیست** — یا حساب
+         *  اصلاً پمپی ندارد. (۱۴۰۵/۰۷/۱۴، بازسازی‌شده با پشتهٔ واقعی و خودِ
+         *  برنامه: نصبی که روزی با کدِ شش‌رقمی فعال شده بود روی پمپِ بی‌صاحبِ
+         *  آن کد ماند؛ صاحبش وارد حسابش شد و مدیر به پمپِ حساب VIP داد — و
+         *  برنامه برای همیشه روی پمپِ کد ماند، بی هیچ پیامی. «نه آزمایشی،
+         *  نه اشتراکی که دادم».)
+         *
+         *  تا دیروز همین‌جا فقط «مالِ پمپِ دیگری است» برمی‌گشت و هیچ‌جا
+         *  دیده نمی‌شد. حالا **سرور** تصمیم می‌گیرد (`BindAsync(adopt)`):
+         *  پمپِ بی‌صاحب مالِ حساب می‌شود یا دستگاه با روزهای اشتراکش به پمپِ
+         *  حساب می‌رود؛ پمپی که صاحبِ دیگری دارد دست نمی‌خورد و دلیلش
+         *  همان‌جا (`LastBindWhy`) گفته می‌شود.
+         */
+        //  ⛔ نصبی که **هنوز فعال نشده** ولی شناسهٔ پمپِ دیگری رویش مانده، مثلِ
+        //  همیشه دست نمی‌خورد: توکنی ندارد که مدرکِ آن پمپ باشد، پس سرور
+        //  چیزی برای سنجیدن ندارد و بستنش به پمپِ حساب یعنی نشاندنِ نشانی و
+        //  رمزِ پمپِ دیگر روی این دفتر.
+        if (!Activated && locked.Length > 0 && acctStation.Length > 0
             && !string.Equals(acctStation, locked, StringComparison.Ordinal))
             return (false, "", "", "", "این حساب مالِ پمپِ دیگری است. برای جابه‌جایی، "
                 + "این دستگاه را از پمپِ فعلی جدا کنید.");
+
+        var elsewhere = Activated && locked.Length > 0
+            && !string.Equals(acctStation, locked, StringComparison.Ordinal);
+        if (elsewhere)
+        {
+            if (!bindDue)
+                return (false, "", "", "", LastBindWhy.Length > 0 ? LastBindWhy
+                    : "این کامپیوتر روی پمپِ دیگری است");
+            CloudResult moved;
+            try { moved = await BindAsync(ct, adopt: true); }
+            catch (Exception ex) { moved = CloudResult.No(ex.GetType().Name); }
+            LastBindWhy = moved.Ok ? ""
+                : (moved.Why ?? "").Contains("پمپِ دیگری") ? moved.Why!
+                : "این کامپیوتر روی پمپِ دیگری است — " + (moved.Why ?? "");
+            _lastBindFailAt = moved.Ok ? DateTime.MinValue : DateTime.UtcNow;
+            if (!moved.Ok) return (false, "", "", "", LastBindWhy);
+            //  حالِ تازهٔ حساب — پمپ حالا همان پمپِ این کامپیوتر است
+            res = await AccountAsync(HttpMethod.Get, "/api/pump/me", null, ct);
+            if (!res.Ok) return (false, "", "", "", res.Why);
+            json = res.Json;
+            ReadSubscription(json);
+            acctStation = StationId(json);
+            AccountHasStation = acctStation.Length > 0;
+        }
 
         //  ⛔ کدِ پمپِ همین حساب همین‌جا می‌نشیند — نصبی که از قبل بند شده
         //  هیچ‌وقت دوباره ‎bind‎ نمی‌زند، پس بی این خط کدِ حسابش را هیچ‌وقت
@@ -2116,7 +2180,6 @@ public sealed partial class CloudLink
         //  «تلاشِ زیاد» می‌دید، و کامپیوترِ دیگرِ همان پمپ پشتِ همان اینترنت
         //  هم. پس پس از شکست فقط هر ده دقیقه، و کلیکِ کاربر (`forceBind`)
         //  همیشه همین حالا.
-        var bindDue = forceBind || DateTime.UtcNow - _lastBindFailAt >= BindRetryAfterFail;
         if (!Activated && acctStation.Length > 0 && bindDue)
         {
             //  ⛔ **نتیجه‌اش دیگر بلعیده نمی‌شود.** تا دیروز این خط هم
@@ -2354,9 +2417,10 @@ public sealed partial class CloudLink
     private async Task<(bool, JsonElement, string, string)> DevSendAsync(
         HttpMethod method, string path, object? body, CancellationToken ct)
     {
-        var r = await SendFull(Build(method, path, body, _settings.CloudDeviceToken), ct);
+        var used = _settings.CloudDeviceToken;
+        var r = await SendFull(Build(method, path, body, used), ct);
         if (!r.Ok && (r.Status is 401 or 403) && Array.IndexOf(DetachedCodes, r.Code) >= 0 && Activated)
-            await DetachDeviceAsync();
+            await DetachDeviceAsync(used);
         return (r.Ok, r.Json, r.Why, r.Code);
     }
 
@@ -2370,8 +2434,29 @@ public sealed partial class CloudLink
         DevSendAsync(HttpMethod.Get, path, null, ct);
 
     /// <summary>فقط توکنِ دستگاه و مجوز — شرحش بالای <see cref="DetachedCodes"/>.</summary>
-    private async Task DetachDeviceAsync()
+    private async Task DetachDeviceAsync(string failed)
     {
+        //  ⛔ **توکنِ کهنه، توکنِ تازه را پاک نکند** (۱۴۰۵/۰۷/۱۴، سنجهٔ `oldacct`
+        //  روی پشتهٔ واقعی): بند شدنِ دوباره (`BindAsync`) توکنِ تازه می‌گیرد و
+        //  سرور همان لحظه توکنِ قبلی را باطل می‌کند. بخشِ دیگری از برنامه که هنوز
+        //  توکنِ قبلی را در دست داشت «ثبت نشده» می‌گرفت و **توکنِ تازه را روی
+        //  دیسک خالی می‌کرد** — یعنی کامپیوتری که همین حالا وصل شده بود دوباره
+        //  «فعال نشده» می‌شد. حالا اگر دیسک توکنِ دیگری دارد، همان برداشته می‌شود.
+        try
+        {
+            var disk = AppSettings.Load();
+            if (!string.IsNullOrWhiteSpace(disk.CloudDeviceToken)
+                && !string.Equals(disk.CloudDeviceToken, failed, StringComparison.Ordinal))
+            {
+                _settings.CloudDeviceToken = disk.CloudDeviceToken;
+                _settings.CloudLicense = disk.CloudLicense;
+                _settings.CloudStationId = disk.CloudStationId;
+                _settings.CloudStationCode = disk.CloudStationCode;
+                return;
+            }
+        }
+        catch { /* خواندنِ دیسک نشد ⇒ همان رفتارِ همیشگی */ }
+
         _settings.CloudDeviceToken = "";
         _settings.CloudLicense = "";
         Subscription = PumpSubscription.None;
