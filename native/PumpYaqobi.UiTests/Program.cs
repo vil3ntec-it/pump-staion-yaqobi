@@ -38,6 +38,21 @@ internal static class Program
         PumpYaqobi.App.Services.SyncEngine.Disabled = true;
         PumpYaqobi.App.Services.CrashGuard.ReportingOff = true;
 
+        // ══ سنجه‌ها به سرورِ حسابِ **زنده** نمی‌روند ══════════════════════════
+        //
+        // ⛔ `FakeLicense.Grant()` توکنِ دستگاهِ ساختگی می‌نشاند. رانرِ CI اینترنت
+        // دارد، پس هر درخواستی که برنامه با آن توکن به سرورِ واقعی می‌زد
+        // `401 device_not_registered` می‌گرفت و برنامه — درست — توکن را پاک
+        // می‌کرد؛ یعنی سنجه‌ای که در سندباکسِ بی‌اینترنت سبز بود، در CI با
+        // قفلِ روشن سرخ می‌شد (۱۴۰۵/۰۷/۱۴، بندهای ۵ و ۱۶ و ۱۷ی `verify`).
+        // پس پیش‌فرض «شبکه نیست» است — همان حالِ کامپیوترِ بی‌اینترنت. هر
+        // سنجه‌ای که ابرِ ساختگیِ خودش یا پشتهٔ محلی را می‌خواهد، مثلِ همیشه
+        // `CloudLink.TestTransport` را خودش می‌گذارد.
+        // ⚠️ `PUMP_VERIFY_CLOUD=1` تنها راهِ رفتن به سرورِ واقعی است.
+        if (Environment.GetEnvironmentVariable("PUMP_VERIFY_CLOUD") != "1")
+            PumpYaqobi.App.Services.CloudLink.TestTransport = (_, _) =>
+                throw new HttpRequestException("سنجه: شبکهٔ بیرونی بسته است");
+
         // ══ حالتِ «سنجشِ اسکرول» ═════════════════════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- scroll
         //
