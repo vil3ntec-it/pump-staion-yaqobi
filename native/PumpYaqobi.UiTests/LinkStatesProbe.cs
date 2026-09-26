@@ -99,7 +99,9 @@ internal static class LinkStatesProbe
         Console.WriteLine("══ الف) نصبِ تازه — هیچ حسابی");
         Keep(win);
         Report(win, vm, account, shots, "a-fresh");
-        Check("چراغ سبز نیست", vm.LinkDotBrushKey != "Pump.Ok", vm.LinkDotReason);
+        //  ⛔ «وقتی حساب هم نداشته باشم، سرور اگر وصل بود باید سبز بشه» (۱۴۰۵/۰۷/۱۳)
+        Check("⛔ بی هیچ حسابی، چراغ سبز است چون سرور جواب می‌دهد", vm.LinkDotBrushKey == "Pump.Ok"
+              && vm.CloudDotBrushKey == "Pump.Ok", vm.LinkDotBrushKey + " · " + vm.LinkDotReason);
         Check("⛔ چراغ کاربر را به «ساختنِ پمپ» نمی‌فرستد وقتی اصلاً وارد حساب نشده",
               !vm.CloudDotReason.Contains("پمپ را بسازید"), vm.CloudDotReason);
         Check("پروفایل صفحهٔ ورود را نشان می‌دهد", account.ShowLoginPage, "گام " + account.LoginStep);
@@ -113,7 +115,7 @@ internal static class LinkStatesProbe
         // ── ب) حساب + پمپ ⇒ ثبت شده ────────────────────────────────────────
         Console.WriteLine("══ ب) حساب ساخته شد و پمپ ساخته شد");
         var email = "link-" + Guid.NewGuid().ToString("N")[..10] + "@example.com";
-        SignUp(win, vm, account, email, finishPump: true);
+        SignUp(win, vm, account, email);
         Keep(win);
         Report(win, vm, account, shots, "b-bound");
         var f = AppSettings.Load();
@@ -130,8 +132,8 @@ internal static class LinkStatesProbe
         f = AppSettings.Load();
         Check("⛔ توکنِ دستگاهِ مرده دیگر «ثبت‌شده» شمرده نمی‌شود", f.CloudDeviceToken.Length == 0 || vm.CloudDotBrushKey != "Pump.Ok",
               $"dev={f.CloudDeviceToken.Length} dot={vm.CloudDotBrushKey}");
-        Check("⛔ پروفایل راهِ ورود/ساختنِ حساب را نشان می‌دهد", account.ShowLoginPage || account.NeedsPump,
-              $"گام {account.LoginStep} · NeedsPump={account.NeedsPump} · SignedIn={account.SignedIn}");
+        Check("⛔ پروفایل راهِ ورود/ساختنِ حساب را نشان می‌دهد", account.ShowLoginPage || account.LinkingNow,
+              $"گام {account.LoginStep} · LinkingNow={account.LinkingNow} · SignedIn={account.SignedIn}");
 
         // ── د) همان ایمیل، حسابِ تازه، روی همین نصب ─────────────────────────
         Console.WriteLine("══ د) دوباره با همان ایمیل حساب ساخته شد (همین نصب)");
@@ -139,7 +141,7 @@ internal static class LinkStatesProbe
         //  عمدی است؛ کاربرِ واقعی هم دقیقه‌ها بعد دوباره ثبت‌نام می‌کند.
         for (var i = 0; i < 62 * 4; i++) { Pump(win); Thread.Sleep(250); }
         if (!account.ShowLoginPage) { account.OpenAccountPageCommand.Execute(null); Settle(win); }
-        SignUp(win, vm, account, email, finishPump: true);
+        SignUp(win, vm, account, email);
         Keep(win);
         Report(win, vm, account, shots, "d-again");
         f = AppSettings.Load();
@@ -156,20 +158,15 @@ internal static class LinkStatesProbe
         vm.GetType().GetField("_boundAt", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(vm, DateTime.MinValue);
         vm.TickLinkDot();
         Settle(win);
-        Report(win, vm, account, shots, "e-before-click");
-        Check("⛔ پروفایل کارتِ «ثبتِ همین کامپیوتر» را نشان می‌دهد (نه «ساختنِ پمپ»)",
-              account.NeedsBind && !account.NeedsPump, $"NeedsBind={account.NeedsBind} NeedsPump={account.NeedsPump}");
-        Check("⛔ چراغ «پمپ بسازید» نمی‌گوید به حسابی که پمپ دارد", !vm.CloudDotReason.Contains("پمپ را بسازید")
-              && !vm.CloudDotReason.Contains("نامِ پمپ"), vm.CloudDotReason);
-        //  همان کاری که کاربر می‌کند: کلیک روی چراغ
-        Wait(win, vm.CheckLinksCommand.ExecuteAsync(null));
-        vm.GetType().GetField("_boundAt", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(vm, DateTime.MinValue);
-        vm.TickLinkDot();
-        Settle(win);
-        Report(win, vm, account, shots, "e-after-click");
+        //  ⛔ کارت و دکمه‌ای نیست؛ باز کردنِ پروفایل خودش همین حالا وصل می‌کند
+        Wait(win, vm.GoAsync(vm.Sections.First(x => x.Id != "account" && x.Id != "chat")));
+        Wait(win, vm.GoAsync(account));
+        for (var i = 0; i < 80 && AppSettings.Load().CloudDeviceToken.Length == 0; i++) { Pump(win); Thread.Sleep(100); }
+        Report(win, vm, account, shots, "e-auto");
         f = AppSettings.Load();
-        Check("⛔ کلیکِ چراغ همین حالا این کامپیوتر را ثبت کرد", f.CloudDeviceToken.Length > 0, CloudLink.LastBindWhy);
-        Check("چراغِ سرورِ حساب سبز شد", vm.CloudDotBrushKey == "Pump.Ok", vm.CloudDotReason);
+        Check("⛔ باز کردنِ پروفایل خودش این کامپیوتر را وصل کرد (بی دکمه)", f.CloudDeviceToken.Length > 0, CloudLink.LastBindWhy);
+        Check("⛔ و هیچ پمپِ دومی ساخته نشد", f.CloudStationId.Length > 0, f.CloudStationId);
+        Check("چراغِ سرورِ حساب سبز است", vm.CloudDotBrushKey == "Pump.Ok", vm.CloudDotReason);
 
         // ── و) مدیر این کامپیوتر را از پنل جدا کرد، بعد برگرداند ────────────
         Console.WriteLine("══ و) مدیر کامپیوتر را از پنل جدا کرد (device_revoked) و بعد برگرداند");
@@ -190,19 +187,19 @@ internal static class LinkStatesProbe
         //  به‌جای ده دقیقه صبر، همان تیک «رسیده» می‌شود — همان مسیرِ واقعیِ حلقه.
         var due = AppSettings.Load(); due.CloudSyncedAt = 0; due.Save();
         for (var i = 0; i < 6; i++) Keep(win);
+        var tries = Binds() - before;
         Report(win, vm, account, shots, "f-revoked");
         f = AppSettings.Load();
-        var tries = Binds() - before;
         Check("این کامپیوتر جدا شده دیده شد (توکنِ دستگاه برداشته شد)", f.CloudDeviceToken.Length == 0);
         Check("⛔ حلقه در دوازده دور حداکثر یک بار ثبت را امتحان کرد (سقفِ نرخِ سرور پر نمی‌شود)", tries <= 1, tries.ToString());
         Check("⛔ چراغ دلیلِ واقعی را می‌گوید (جدا شده)", vm.CloudDotReason.Contains("جدا شده"), vm.CloudDotReason);
-        Check("پروفایل کارتِ «ثبتِ همین کامپیوتر» را دارد", account.NeedsBind, $"NeedsBind={account.NeedsBind}");
+        Check("پروفایل در یک خط می‌گوید چرا وصل نیست", account.LinkingNow && account.LinkingLine.Contains("جدا شده"), account.LinkingLine);
 
         Console.WriteLine("     ⓘ پنل ⇒ " + PanelSend(HttpMethod.Post, $"/api/account-admin/pump-accounts/{station}/computers/{compId}/restore", new { }));
-        Wait(win, account.BindHereCommand.ExecuteAsync(null));
+        Wait(win, vm.CheckLinksCommand.ExecuteAsync(null));
         Report(win, vm, account, shots, "f-restored");
         f = AppSettings.Load();
-        Check("⛔ پس از «برگرداندن» در پنل، دکمهٔ «ثبتِ همین کامپیوتر» همان لحظه ثبت کرد",
+        Check("⛔ پس از «برگرداندن» در پنل، کلیکِ چراغ همان لحظه وصل کرد",
               f.CloudDeviceToken.Length > 0, account.LoginStatus + " · " + CloudLink.LastBindWhy);
         Check("چراغِ سرورِ حساب سبز شد", vm.CloudDotBrushKey == "Pump.Ok", vm.CloudDotReason);
 
@@ -290,7 +287,7 @@ internal static class LinkStatesProbe
         var f = AppSettings.Load();
         Console.WriteLine($"     ⓘ چراغ: {vm.LinkDotBrushKey} · {vm.LinkDotReason.Replace('\n', ' ')}");
         Console.WriteLine($"     ⓘ سرورِ حساب: {vm.CloudDotBrushKey} · {vm.CloudDotReason}");
-        Console.WriteLine($"     ⓘ پروفایل: گام {account.LoginStep} · ورود؟ {account.ShowLoginPage} · SignedIn={account.SignedIn} · NeedsPump={account.NeedsPump} · NeedsBind={account.NeedsBind} · {account.CloudLine}");
+        Console.WriteLine($"     ⓘ پروفایل: گام {account.LoginStep} · ورود؟ {account.ShowLoginPage} · SignedIn={account.SignedIn} · LinkingNow={account.LinkingNow} · {account.LinkingLine} · {account.CloudLine}");
         Console.WriteLine($"     ⓘ دیسک: حساب={f.CloudAccountToken.Length > 0} دستگاه={f.CloudDeviceToken.Length > 0} پمپ={f.CloudStationId} PumpStepDone={f.PumpStepDone} LoginSkipped={f.LoginSkipped} · LastBindWhy={CloudLink.LastBindWhy}");
         Shot(win, shots, name);
     }
@@ -318,7 +315,7 @@ internal static class LinkStatesProbe
     }
 
     private static void SignUp(Avalonia.Controls.Window win, MainViewModel vm, AccountSectionViewModel account,
-                               string email, bool finishPump)
+                               string email)
     {
         var pass = Pass;
         Wait(win, vm.GoAsync(account));
@@ -332,11 +329,10 @@ internal static class LinkStatesProbe
         Wait(win, account.AccountStepCommand.ExecuteAsync(null));
         account.EmailCode = CodeFor(win, email, sentAt);
         Wait(win, account.VerifyEmailCommand.ExecuteAsync(null));
-        Check("حساب ساخته شد و صفحه به گامِ پمپ رسید", account.StepPump, "گام " + account.LoginStep + " · " + account.LoginStatus);
-        if (!finishPump) return;
-        account.LoginPump = "پمپ آزمونِ اتصال";
-        Wait(win, account.FinishPumpCommand.ExecuteAsync(null));
         Settle(win);
+        //  ⛔ «همین که حساب ساخت، تمام» — نه گامِ نامِ پمپ، نه دکمهٔ ثبت
+        Check("⛔ حساب ساخته شد و همان‌جا تمام شد (بی گامِ پمپ)", !account.ShowLoginPage && !account.StepPump,
+              "گام " + account.LoginStep + " · " + account.LoginStatus);
     }
 
     private static string CodeFor(Avalonia.Controls.Window win, string email, long sentAt)

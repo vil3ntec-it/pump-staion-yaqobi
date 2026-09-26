@@ -60,6 +60,9 @@ internal static class CloudLoginProbe
     /// تازه‌ای می‌گوید. بندِ ۱۸ روشنش می‌کند.
     /// </summary>
     private static bool _noStation;
+    //  ⚠️ ساختنِ پمپ روی ابرِ ساختگی بسته است — تا بندهای ۴ و ۵ (کدِ اشتراک روی
+    //  دستگاهی که هنوز بند نیست) سنجیده شوند؛ از ۱۴۰۵/۰۷/۱۳ ورود خودش پمپ می‌سازد.
+    private static bool _noCreate;
 
     /// <summary>یک کارِ جانبی، بعد همان پاسخ — برای `switch`ی که عبارت است.</summary>
     private static HttpResponseMessage Free(Action side, HttpResponseMessage res)
@@ -329,6 +332,8 @@ internal static class CloudLoginProbe
                 + "\"home\":{\"url\":\"http://192.168.1.50:4701\",\"readKey\":\"read-key\",\"station\":\"yaqobi\"}}"),
 
             //  ساختنِ پمپ برای حسابی که ندارد — «هر حساب یک پمپ»
+            "/api/pump" when _noCreate => Json(HttpStatusCode.ServiceUnavailable,
+                """{"error":{"message":"سنجه: ساختنِ پمپ بسته است","code":"test_closed"}}"""),
             "/api/pump" => Free(() => _noStation = false,
                 Json(HttpStatusCode.Created,
                      """{"station":{"id":"stn-1","code":"yaqobi","name":"پمپ یعقوبی"}}""")),
@@ -351,6 +356,7 @@ internal static class CloudLoginProbe
         CloudLink.TestTransport = Cloud;
         _emailTaken = false;
         _noStation = false;
+        _noCreate = false;
         _loginMail = "haroon@gmail.com";
         _slowMs = 0;
 
@@ -389,6 +395,7 @@ internal static class CloudLoginProbe
         Console.WriteLine("── ۲) «حساب می‌سازم» — سه پله، همان‌طور که سرور می‌خواهد");
         //  ⚠️ حسابِ تازه هیچ پمپی ندارد — همان سرورِ واقعی (سنجیده در `linkstates`)
         _noStation = true;
+        _noCreate = true;
         account.SetSignUpCommand.Execute("yes");
         account.LoginName = "هارون یعقوبی";
         account.LoginEmail = "haroon@gmail.com";
@@ -437,11 +444,16 @@ internal static class CloudLoginProbe
         Check("⛔ رمز روی دیسک نماند", !File.ReadAllText(SettingsPath()).Contains(RightPass));
         Check("⛔ و در حافظهٔ صفحه هم نماند",
               account.LoginPassword.Length == 0 && account.LoginPassword2.Length == 0);
-        Check("رفت به گامِ پمپ", account.StepPump, "گامِ " + account.LoginStep);
+        //  ⛔ «همین که حساب ساخت، تمام» (۱۴۰۵/۰۷/۱۳): گامِ «نامِ پمپ» نیست؛
+        //  ساختنِ پمپ خودکار امتحان شد (این‌جا عمداً بسته است) و صفحه تمام شد.
+        Check("⛔ پس از کدِ ایمیل گامِ پمپی نیست — همان‌جا تمام", !account.ShowLoginPage && !account.StepPump,
+              "گامِ " + account.LoginStep);
+        Check("⛔ ساختنِ پمپ خودکار امتحان شد", Seen.Contains("POST /api/pump"), string.Join(" · ", Seen));
         Check("و پروفایل نامِ حساب را نشان می‌دهد", account.AccountEmail == "haroon@gmail.com",
               account.UserLine + " · " + account.AccountEmail);
 
         Console.WriteLine("── ۳) «حساب دارم» — رمزِ غلط رد می‌شود، رمزِ درست وارد");
+        account.OpenAccountPageCommand.Execute(null);
         account.BackToAccountCommand.Execute(null);
         account.SetSignUpCommand.Execute("no");
         account.LoginPassword = "ramze-ghalat";
@@ -458,7 +470,7 @@ internal static class CloudLoginProbe
         account.LoginPassword = RightPass;
         Wait(win, account.AccountStepCommand.ExecuteAsync(null));
         for (var i = 0; i < 20; i++) Pump(win);
-        Check("با رمزِ درست وارد شد", Seen.Contains("POST /api/auth/login") && account.StepPump,
+        Check("با رمزِ درست وارد شد", Seen.Contains("POST /api/auth/login") && !account.ShowLoginPage,
               "گامِ " + account.LoginStep);
         Check("⚠️ و نشست از فیلدِ accessToken خوانده شد (نه token)",
               AppSettings.Load().CloudAccountToken == "acct-token",
@@ -477,13 +489,14 @@ internal static class CloudLoginProbe
               account.SubMessage);
         Check("⛔ و هیچ توکنِ دستگاهی ساخته نشد",
               string.IsNullOrWhiteSpace(AppSettings.Load().CloudDeviceToken));
-        Check("⛔ و گامِ ورود اصلاً تکان نخورد", account.StepPump, "گامِ " + account.LoginStep);
+        Check("⛔ و گامِ ورود اصلاً تکان نخورد", account.StepDone, "گامِ " + account.LoginStep);
 
         Console.WriteLine("── ۵) کدِ درست — فعال‌سازی، اشتراک، و باز شدنِ قفل‌ها");
         account.SubCode = "654321";
         Wait(win, account.RedeemSubCommand.ExecuteAsync(null));
         for (var i = 0; i < 20; i++) Pump(win);
         //  و گامِ پمپ خودش، بی هیچ کدی، تمام می‌شود
+        _noCreate = false;
         Wait(win, account.FinishPumpCommand.ExecuteAsync(null));
         for (var i = 0; i < 40; i++) Pump(win);
         var f2 = AppSettings.Load();
@@ -812,8 +825,10 @@ internal static class CloudLoginProbe
         account.SetSignUpCommand.Execute("no");
         account.LoginEmail = "digar@gmail.com";
         account.LoginPassword = RightPass;
-        //  حسابِ دیگر هنوز پمپی ندارد (حسابِ تازه)
+        //  حسابِ دیگر هنوز پمپی ندارد (حسابِ تازه) — و ساختنش این‌جا بسته است،
+        //  تا «بندهای پمپِ قبلی پاک شد» سنجیده شود، نه بندِ تازه
         _noStation = true;
+        _noCreate = true;
         Wait(win, account.AccountStepCommand.ExecuteAsync(null));
         for (var i = 0; i < 20; i++) Pump(win);
 
@@ -848,6 +863,7 @@ internal static class CloudLoginProbe
         clean.CloudPublicKey = "";
         clean.Save();
 
+        _noCreate = false;
         account.LoginPump = "پمپ تازه";
         //  ⚠️ گامِ پمپ از ۱۴۰۵/۰۷/۰۴ اصلاً کادرِ کدی ندارد
         Wait(win, account.FinishPumpCommand.ExecuteAsync(null));

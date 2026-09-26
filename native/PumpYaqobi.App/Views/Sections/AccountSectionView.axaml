@@ -808,40 +808,13 @@
         </Grid>
       </Border>
 
-      <!-- ══ ⛔ وارد شده، ولی پمپی ندارد (۱۴۰۵/۰۷/۱۳، عکسِ صاحب ریپو) ══════════
-           گامِ «نامِ پمپ» با «بعداً» یا «برگشت» رد شده بود و پروفایل فقط «فعال
-           نشده» می‌گفت، بی هیچ راهی. بی پمپ نه بند شدنی هست نه دورهٔ آزمایشی.
-           دکمه همان `FinishPumpAsync`ِ صفحهٔ ورود را می‌زند — راهِ دومی نیست. -->
-      <Border Classes="card" Padding="22,18" IsVisible="{Binding NeedsPump}"
-              BorderBrush="{DynamicResource Pump.Warn}" BorderThickness="2">
-        <StackPanel Spacing="10">
-          <TextBlock Text="⛽ این حساب هنوز پمپی ندارد" Classes="ptitle" />
-          <TextBlock TextWrapping="Wrap" Classes="muted"
-                     Text="تا پمپ ساخته نشود، این کامپیوتر به حسابتان ثبت نمی‌شود و دورهٔ آزمایشیِ رایگان شروع نمی‌شود. نامِ پمپ را بنویسید و «ساختنِ پمپ» را بزنید." />
-          <Grid ColumnDefinitions="*,10,Auto">
-            <TextBox Grid.Column="0" Text="{Binding LoginPump}" Watermark="نامِ پمپ — مثلاً پمپ یعقوبی" MinHeight="40" />
-            <Button Grid.Column="2" Classes="accent" MinHeight="40" Padding="18,0"
-                    Content="ساختنِ پمپ" Command="{Binding CreatePumpHereCommand}"
-                    IsEnabled="{Binding !Busy}" />
-          </Grid>
-          <TextBlock Text="{Binding LoginStatus}" TextWrapping="Wrap"
-                     IsVisible="{Binding LoginStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-        </StackPanel>
-      </Border>
-
-      <!-- ══ حساب پمپ دارد، این کامپیوتر ثبت نیست (۱۴۰۵/۰۷/۱۳، سنجهٔ linkstates)
-           پمپِ تازه نمی‌خواهد؛ همان دورِ پس‌زمینه همین حالا می‌دود. -->
-      <Border Classes="card" Padding="22,18" IsVisible="{Binding NeedsBind}"
-              BorderBrush="{DynamicResource Pump.Warn}" BorderThickness="2">
-        <StackPanel Spacing="10">
-          <TextBlock Text="🔌 این کامپیوتر هنوز به پمپِ حسابتان ثبت نشده" Classes="ptitle" />
-          <TextBlock Text="{Binding CloudLine}" TextWrapping="Wrap" Classes="muted" />
-          <Button Classes="accent" MinHeight="40" Padding="18,0" HorizontalAlignment="Left"
-                  Content="ثبتِ همین کامپیوتر" Command="{Binding BindHereCommand}"
-                  IsEnabled="{Binding !Busy}" />
-          <TextBlock Text="{Binding LoginStatus}" TextWrapping="Wrap"
-                     IsVisible="{Binding LoginStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-        </StackPanel>
+      <!-- ══ ⛔ وارد شده، هنوز وصل نشده — فقط یک خطِ حال، بی کارت و بی دکمه ══════
+           صاحب ریپو (۱۴۰۵/۰۷/۱۳): «این ثبتِ همین کامپیوتر و ساختِ حساب چیه… همین که
+           یارو حسابِ کاربری برای خودش درست کرد تموم حساب درست شده.» ساختنِ پمپ و
+           وصل کردنِ همین کامپیوتر خودکارند (`EnsureReadyAsync`)؛ این خط فقط می‌گوید
+           کجای کار است — و اگر نشد، چرا. -->
+      <Border Classes="card" Padding="18,12" IsVisible="{Binding LinkingNow}">
+        <TextBlock Text="{Binding LinkingLine}" TextWrapping="Wrap" Classes="muted" />
       </Border>
 
       <!-- ══ چهار عددِ سرِ دست ═══════════════════════════════════════════════
