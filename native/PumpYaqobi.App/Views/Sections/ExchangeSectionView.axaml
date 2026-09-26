@@ -58,26 +58,28 @@
          بداند مثبت یعنی طلب و منفی یعنی بدهی.
          ⚠️ ‎BaqiSentence‎ دست نخورد و در ویومدل سرِ جایش است. -->
     <c:SectionPage.Summary>
+      <!-- ⚠️ هر سه از بالا (‎Top‎): کارتِ سوم زیرنویس دارد و بلندتر است؛ با وسط‌چین
+           عنوان و عددِ دو کارتِ دیگر پایین‌تر از او می‌نشستند (عکسِ ۱۴۰۵/۰۷/۱۴). -->
       <Grid ColumnDefinitions="*,12,*,12,*">
         <Border Grid.Column="0" Classes="stat" HorizontalAlignment="Stretch">
-          <StackPanel Spacing="3">
+          <StackPanel Spacing="3" VerticalAlignment="Top">
             <TextBlock Text="💲 جمله دالر این ماه" Classes="label" />
             <TextBlock Text="{Binding TotalUsd}" Classes="num"
-                       Foreground="{DynamicResource Pump.Info}" />
+                       Foreground="{DynamicResource Pump.Ink.Info}" />
           </StackPanel>
         </Border>
         <Border Grid.Column="2" Classes="stat" HorizontalAlignment="Stretch">
-          <StackPanel Spacing="3">
+          <StackPanel Spacing="3" VerticalAlignment="Top">
             <TextBlock Text="💵 جمله بردگی این ماه" Classes="label" />
             <TextBlock Text="{Binding TotalBardagi}" Classes="num"
-                       Foreground="{DynamicResource Pump.Ok}" />
+                       Foreground="{DynamicResource Pump.Ink.Ok}" />
           </StackPanel>
         </Border>
         <Border Grid.Column="4" Classes="stat" HorizontalAlignment="Stretch">
-          <StackPanel Spacing="3">
+          <StackPanel Spacing="3" VerticalAlignment="Top">
             <TextBlock Text="💱 الباقی ($)" Classes="label" />
             <TextBlock Text="{Binding Baqi}" Classes="num"
-                       Foreground="{Binding BaqiSentenceBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                       Foreground="{Binding BaqiSentenceBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
             <TextBlock Text="{Binding BaqiSentenceNote}" Classes="muted" FontSize="11.5"
                        TextWrapping="Wrap" />
           </StackPanel>
@@ -103,7 +105,7 @@
                       <DataTemplate>
                         <Button Classes="fuelchip celltoggle" Content="{Binding CurrencyText}"
                                 Command="{Binding ToggleCurrencyCommand}"
-                                Foreground="{Binding CurrencyChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                                Foreground="{Binding CurrencyChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
                                 BorderBrush="{Binding CurrencyChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
                                 ToolTip.Tip="هر زدن یکی جلو: افغانی ← تومان ← کلدار" />
                       </DataTemplate>

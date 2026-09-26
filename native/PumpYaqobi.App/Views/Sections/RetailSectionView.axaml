@@ -48,11 +48,11 @@
       <StackPanel Orientation="Horizontal" Spacing="18">
         <TextBlock Text="جمله ماه" FontWeight="Bold" VerticalAlignment="Center" />
         <TextBlock Text="{Binding TotalBardagi, StringFormat=بردگی: {0}}" FontWeight="Bold"
-                   VerticalAlignment="Center" Foreground="{DynamicResource Pump.Accent}" />
+                   VerticalAlignment="Center" Foreground="{DynamicResource Pump.Ink.Accent}" />
         <TextBlock Text="{Binding TotalRasid, StringFormat=رسید: {0}}" FontWeight="Bold"
-                   VerticalAlignment="Center" Foreground="{DynamicResource Pump.Ok}" />
+                   VerticalAlignment="Center" Foreground="{DynamicResource Pump.Ink.Ok}" />
         <TextBlock Text="{Binding TotalAlbaqi, StringFormat=الباقی: {0}}" FontWeight="Bold"
-                   VerticalAlignment="Center" Foreground="{DynamicResource Pump.Danger}" />
+                   VerticalAlignment="Center" Foreground="{DynamicResource Pump.Ink.Danger}" />
       </StackPanel>
     </c:SectionPage.Summary>
 

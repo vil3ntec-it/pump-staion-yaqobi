@@ -155,7 +155,114 @@ public sealed class DebtQuickReceiptService
         });
 
         await db.SaveChangesAsync(ct);
+        LastPerson = person;
         return (QuickReceiptResult.Ok, person.Name);
+    }
+
+    /// <summary>
+    /// قرض‌دارِ آخرین رسیدِ ثبت‌شده، با حساب‌ها و ردیف‌هایش — تا صفحه
+    /// الباقیِ او را همان لحظه نشان بدهد (۱۴۰۵/۰۷/۱۴). ⛔ فقط برای دیدن.
+    /// </summary>
+    public Debtor? LastPerson { get; private set; }
+
+    // ══ رسیدِ چکنه — «اگه چکنه بود، یارو رو با همون اسم پیدا کنه» (۱۴۰۵/۰۷/۱۴) ══
+    //
+    //  چکنه دفترِ ماهانه‌ای از ردیف‌هاست و «حسابِ» هر کس همهٔ ردیف‌های هم‌نامِ
+    //  او. رسید یک ردیفِ تازهٔ همان نام است با ‎Rasid = مبلغ‎ — همان کاری که
+    //  کاربر دستی در جدولِ چکنه می‌کرد. ⛔ نامِ نبوده ساخته نمی‌شود (همان
+    //  قاعدهٔ قرض‌داران: یک غلطِ املایی پول را به حسابِ کسی می‌برد که نیست).
+    //  ⛔ رسیدِ چکنه فقط پول است — دفترِ چکنه ستونِ رسیدِ تیل ندارد.
+    //
+    //  پیوندِ رسید به ردیفِ چکنه از راهِ ‎SyncUid‎ِ همان ردیف است
+    //  (‎LegacyId = "ck:" + SyncUid‎) — بی ستونِ تازه و بی پلهٔ تازهٔ همگام‌سازی.
+
+    /// <summary>پیشوندِ ‎LegacyId‎ِ رسیدِ چکنه.</summary>
+    public const string RetailMark = "ck:";
+
+    /// <summary>این رسید مالِ چکنه است؟</summary>
+    public static bool IsRetail(DebtQuickReceipt r) =>
+        (r.LegacyId ?? "").StartsWith(RetailMark, StringComparison.Ordinal);
+
+    /// <summary>
+    /// نامِ چکنه‌ای که با متنِ تایپ‌شده جور است: اول برابرِ کامل، بعد تنها
+    /// نامی که با همین آغاز می‌شود. دو نام با یک آغاز ⇒ هیچ‌کدام — حدس نمی‌زنیم.
+    /// </summary>
+    public static string? MatchRetailName(IEnumerable<string?> names, string typed)
+    {
+        var q = PostingService.NormFa(typed);
+        if (q.Length == 0) return null;
+        var all = names.Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => n!.Trim())
+                       .Distinct().ToList();
+        var exact = all.FirstOrDefault(n => PostingService.NormFa(n) == q);
+        if (exact is not null) return exact;
+        var starts = all.Where(n => PostingService.NormFa(n).StartsWith(q, StringComparison.Ordinal)).ToList();
+        return starts.Count == 1 ? starts[0] : null;
+    }
+
+    /// <summary>نام‌های حساب‌های چکنه — برای تکمیلِ خودکار و پیدا کردن.</summary>
+    public async Task<List<string>> RetailNamesAsync(CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        var names = await db.RetailRows.AsNoTracking()
+                            .Where(r => r.Name != null && r.Name != "")
+                            .Select(r => r.Name!).Distinct().ToListAsync(ct);
+        return names.Select(n => n.Trim()).Where(n => n.Length > 0).Distinct().OrderBy(n => n).ToList();
+    }
+
+    /// <summary>
+    /// رسیدِ چکنه: یک ردیفِ تازه در دفترِ چکنه با همان نام و ‎Rasid = مبلغ‎.
+    /// نتیجه: نامِ حساب و الباقیِ همهٔ ردیف‌های او پس از این رسید.
+    /// </summary>
+    public async Task<(QuickReceiptResult Result, string Name, decimal Albaqi)> AddRetailAsync(
+        string? typedName, decimal amount, RetailService calc, string? dateShamsi = null,
+        string? note = null, CancellationToken ct = default)
+    {
+        var typed = (typedName ?? "").Trim();
+        if (typed.Length == 0 || amount == 0m) return (QuickReceiptResult.Incomplete, "", 0m);
+        _perm.Require(Permission.EditData);
+
+        await using var db = _dbf.Create();
+        var names = await db.RetailRows.AsNoTracking()
+                            .Where(r => r.Name != null && r.Name != "")
+                            .Select(r => r.Name).Distinct().ToListAsync(ct);
+        var name = MatchRetailName(names, typed);
+        if (name is null) return (QuickReceiptResult.NotFound, "", 0m);
+
+        var date = string.IsNullOrWhiteSpace(dateShamsi) ? Shamsi.Today() : dateShamsi!.Trim();
+        var text = (note ?? "").Trim();
+        var uid = PumpYaqobi.Domain.Ulid.New();
+        db.RetailRows.Add(new RetailRow
+        {
+            SyncUid = uid,
+            DateShamsi = date,
+            DateKey = Shamsi.Key(date),
+            MonthKey = Shamsi.MonthKey(date),
+            Name = name,
+            Fuel = FuelType.Petrol,
+            Rasid = amount,
+            Note = text.Length > 0 ? text : "رسید",
+        });
+        db.DebtQuickReceipts.Add(new DebtQuickReceipt
+        {
+            LegacyId = RetailMark + uid,
+            DateShamsi = date,
+            DateKey = Shamsi.Key(date),
+            MonthKey = Shamsi.MonthKey(date),
+            Account = name,
+            Note = text,
+            Unit = LedgerMode.Money,
+            Fuel = FuelType.Petrol,
+            Amount = amount,
+        });
+        await db.SaveChangesAsync(ct);
+
+        //  الباقیِ همهٔ ردیف‌های هم‌نام — هر ماهی که باشند
+        var key = PostingService.NormFa(name);
+        var mine = (await db.RetailRows.AsNoTracking()
+                            .Where(r => r.Name != null && r.Name != "").ToListAsync(ct))
+                   .Where(r => PostingService.NormFa(r.Name) == key);
+        return (QuickReceiptResult.Ok, name, calc.Summarize(mine).Albaqi);
     }
 
     /// <summary>
@@ -174,9 +281,19 @@ public sealed class DebtQuickReceiptService
         // ⚠️ ردیفِ این رسید مستقیم از روی ‎SrcKey‎ پیدا می‌شود — که ایندکس دارد.
         // پیش‌تر برای همین یک ردیف، همهٔ قرض‌داران با همهٔ ردیف‌هایشان خوانده
         // می‌شدند تا در حافظه بگردیم؛ نتیجه یکی است، هزینه‌اش نه.
-        var srcKey = r.SrcKey;
-        var dead = await db.DebtRows.Where(x => x.SrcKey == srcKey).ToListAsync(ct);
-        db.DebtRows.RemoveRange(dead);
+        if (IsRetail(r))
+        {
+            //  رسیدِ چکنه ⇒ همان یک ردیفِ چکنه (از ‎SyncUid‎ش)
+            var uid = r.LegacyId[RetailMark.Length..];
+            var row = await db.RetailRows.FirstOrDefaultAsync(x => x.SyncUid == uid, ct);
+            if (row is not null) db.RetailRows.Remove(row);
+        }
+        else
+        {
+            var srcKey = r.SrcKey;
+            var dead = await db.DebtRows.Where(x => x.SrcKey == srcKey).ToListAsync(ct);
+            db.DebtRows.RemoveRange(dead);
+        }
 
         await _trash.RememberAsync(db, "debtQuickReceipt",
             (r.Account ?? "") + " — " + Shamsi.Money(r.Amount), r, ct);

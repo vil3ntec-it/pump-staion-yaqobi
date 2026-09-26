@@ -19,7 +19,7 @@
                 ToolTip.Tip="جدولِ ماهِ بعد را باز می‌کند" />
         <Button Classes="ghost" Content="PDF" Margin="0,0,6,0"
                 Command="{Binding PdfCommand}"
-                Foreground="{DynamicResource Pump.Ok}" BorderBrush="{DynamicResource Pump.Ok}" />
+                Foreground="{DynamicResource Pump.Ink.Ok}" BorderBrush="{DynamicResource Pump.Ok}" />
       </WrapPanel>
     </c:SectionPage.Toolbar>
 
@@ -52,7 +52,7 @@
           <StackPanel Spacing="3">
             <TextBlock Text="مصارف امروز" Classes="label" />
             <TextBlock Text="{Binding TodayText, StringFormat={}{0} افغانی}" Classes="num"
-                       Foreground="{DynamicResource Pump.Danger}" />
+                       Foreground="{DynamicResource Pump.Ink.Danger}" />
           </StackPanel>
         </Border>
         <Border Grid.Column="2" Classes="stat" HorizontalAlignment="Stretch">

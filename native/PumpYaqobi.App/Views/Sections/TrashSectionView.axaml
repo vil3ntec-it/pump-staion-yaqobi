@@ -15,7 +15,7 @@
         <StackPanel>
           <Border Classes="card-head">
             <TextBlock Text="🗑️ تازه‌ترین پاک‌شده" FontWeight="Bold"
-                       Foreground="{DynamicResource Pump.Accent}" />
+                       Foreground="{DynamicResource Pump.Ink.Accent}" />
           </Border>
           <StackPanel Margin="14" Spacing="10">
 

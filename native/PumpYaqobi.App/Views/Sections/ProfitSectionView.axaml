@@ -83,14 +83,14 @@
                     Background="{DynamicResource Pump.Input}"
                     BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="1">
               <TextBlock Text="{Binding PeriodText}" FontSize="12" FontWeight="SemiBold"
-                         Foreground="{DynamicResource Pump.Info}" />
+                         Foreground="{DynamicResource Pump.Ink.Info}" />
             </Border>
           </DockPanel>
           <TextBlock Grid.Row="1" Text="{Binding NetText}" FontWeight="Bold" FontSize="34"
                      Margin="0,8,0,0"
-                     Foreground="{Binding TrendBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                     Foreground="{Binding TrendBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
           <TextBlock Grid.Row="2" Text="{Binding NetCaption}" FontSize="13" Margin="0,4,0,0"
-                     Foreground="{Binding TrendBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                     Foreground="{Binding TrendBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
           <c:SparkChart Grid.Row="3" ShowAxis="False" FlowDirection="LeftToRight" MinHeight="80"
                         Margin="0,10,0,0"
                         Values="{Binding TrendValues}"
@@ -105,14 +105,14 @@
           <StackPanel Spacing="6">
             <TextBlock Text="{Binding IncomeTitle}" Classes="label" FontSize="13" />
             <TextBlock Text="{Binding IncomeText}" FontWeight="Bold" FontSize="24"
-                       Foreground="{Binding IncomeBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                       Foreground="{Binding IncomeBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
           </StackPanel>
         </Border>
         <Border Grid.Column="2" Classes="card calm" Padding="16,14">
           <StackPanel Spacing="6">
             <TextBlock Text="💸 مصارف" Classes="label" FontSize="13" />
             <TextBlock Text="{Binding ExpenseText}" FontWeight="Bold" FontSize="24"
-                       Foreground="{DynamicResource Pump.Danger}" />
+                       Foreground="{DynamicResource Pump.Ink.Danger}" />
           </StackPanel>
         </Border>
       </Grid>
@@ -138,7 +138,7 @@
               <StackPanel Spacing="8">
                 <TextBlock Text="⛽ پطرول" FontWeight="ExtraBold" FontSize="14"
                            TextAlignment="Center"
-                           Foreground="{DynamicResource Pump.Accent}" />
+                           Foreground="{DynamicResource Pump.Ink.Accent}" />
                 <TextBox Classes="plbox" Text="{Binding UnionPetrol}" Watermark="0" />
                 <TextBlock Text="افغانی در هر لیتر" Classes="muted" FontSize="11"
                            TextAlignment="Center" />
@@ -148,7 +148,7 @@
               <StackPanel Spacing="8">
                 <TextBlock Text="🟤 دیزل" FontWeight="ExtraBold" FontSize="14"
                            TextAlignment="Center"
-                           Foreground="{DynamicResource Pump.Warn}" />
+                           Foreground="{DynamicResource Pump.Ink.Warn}" />
                 <TextBox Classes="plbox" Text="{Binding UnionDiesel}" Watermark="0" />
                 <TextBlock Text="افغانی در هر لیتر" Classes="muted" FontSize="11"
                            TextAlignment="Center" />
@@ -195,7 +195,7 @@
                 <TextBlock Text="پول فروشنده (قابل پرداخت)" Classes="label pllabel" />
                 <TextBlock Text="{Binding BulkSellerText}" FontWeight="ExtraBold" FontSize="18"
                            TextAlignment="Center"
-                           Foreground="{DynamicResource Pump.Accent}" />
+                           Foreground="{DynamicResource Pump.Ink.Accent}" />
               </StackPanel>
             </Border>
             <Border Grid.Row="4" Grid.Column="2" Classes="panel plresult">
@@ -203,7 +203,7 @@
                 <TextBlock Text="درآمد اضافی" Classes="label pllabel" />
                 <TextBlock Text="{Binding BulkIncomeText}" FontWeight="ExtraBold" FontSize="18"
                            TextAlignment="Center"
-                           Foreground="{DynamicResource Pump.Ok}" />
+                           Foreground="{DynamicResource Pump.Ink.Ok}" />
               </StackPanel>
             </Border>
             <Button Grid.Row="4" Grid.Column="4" Classes="accent" Content="➕ ثبت"
@@ -216,7 +216,7 @@
                      Foreground="{DynamicResource Pump.Muted}">
             <Run Text="جمله درآمد اضافی ثبت‌شده:" />
             <Run Text="{Binding BulkSumText}" FontWeight="Bold"
-                 Foreground="{DynamicResource Pump.Ok}" />
+                 Foreground="{DynamicResource Pump.Ink.Ok}" />
           </TextBlock>
         </StackPanel>
       </Border>

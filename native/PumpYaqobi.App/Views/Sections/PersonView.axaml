@@ -150,7 +150,7 @@
           <Grid ColumnDefinitions="Auto,10,*">
             <Border Grid.Column="0" Classes="fshead"
                     BorderBrush="{DynamicResource Pump.Ok}">
-              <TextBlock Text="⛽ حساب پطرول" Foreground="{DynamicResource Pump.Ok}" />
+              <TextBlock Text="⛽ حساب پطرول" Foreground="{DynamicResource Pump.Ink.Ok}" />
             </Border>
 
             <UniformGrid Grid.Column="2" Rows="1">
@@ -159,7 +159,7 @@
                      setL('pm-p-comm-l', 'فیصدی ما (' + n2fa(rnd(pctP)) + '٪)') -->
                 <TextBlock Text="{Binding HeadPetrolPercentLabel}" Classes="fsl" />
                 <TextBlock Text="{Binding HeadPetrolPercentValue}" Classes="fsv"
-                           Foreground="{DynamicResource Pump.Info}" />
+                           Foreground="{DynamicResource Pump.Ink.Info}" />
               </StackPanel>
               <StackPanel Spacing="2">
                 <TextBlock Text="{Binding HeadRasidLabel}" Classes="fsl" />
@@ -167,17 +167,17 @@
                      دیگری پایین‌تر. پس این خانه خواندنی نیست، نوشتنی است. -->
                 <TextBox Text="{Binding HeadPetrolRasidEdit, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                          Classes="fsv" GotFocus="RasidBoxFocus" LostFocus="RasidBoxLost" KeyDown="RasidBoxKey"
-                         Foreground="{DynamicResource Pump.Ok}" />
+                         Foreground="{DynamicResource Pump.Ink.Ok}" />
               </StackPanel>
               <StackPanel Spacing="2">
                 <TextBlock Text="برد" Classes="fsl" />
                 <TextBlock Text="{Binding HeadPetrolBordText}" Classes="fsv"
-                           Foreground="{DynamicResource Pump.Warn}" />
+                           Foreground="{DynamicResource Pump.Ink.Warn}" />
               </StackPanel>
               <StackPanel Spacing="2">
                 <TextBlock Text="{Binding HeadAlbaqiLabel}" Classes="fsl" />
                 <TextBlock Text="{Binding HeadPetrolAlbaqiText}" Classes="fsv"
-                           Foreground="{Binding HeadPetrolAlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                           Foreground="{Binding HeadPetrolAlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
               </StackPanel>
             </UniformGrid>
           </Grid>
@@ -189,30 +189,30 @@
           <Grid ColumnDefinitions="Auto,10,*">
             <Border Grid.Column="0" Classes="fshead"
                     BorderBrush="{DynamicResource Pump.Warn}">
-              <TextBlock Text="🟤 حساب دیزل" Foreground="{DynamicResource Pump.Warn}" />
+              <TextBlock Text="🟤 حساب دیزل" Foreground="{DynamicResource Pump.Ink.Warn}" />
             </Border>
 
             <UniformGrid Grid.Column="2" Rows="1">
               <StackPanel Spacing="2">
                 <TextBlock Text="{Binding HeadDieselPercentLabel}" Classes="fsl" />
                 <TextBlock Text="{Binding HeadDieselPercentValue}" Classes="fsv"
-                           Foreground="{DynamicResource Pump.Info}" />
+                           Foreground="{DynamicResource Pump.Ink.Info}" />
               </StackPanel>
               <StackPanel Spacing="2">
                 <TextBlock Text="{Binding HeadRasidLabel}" Classes="fsl" />
                 <TextBox Text="{Binding HeadDieselRasidEdit, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                          Classes="fsv" GotFocus="RasidBoxFocus" LostFocus="RasidBoxLost" KeyDown="RasidBoxKey"
-                         Foreground="{DynamicResource Pump.Ok}" />
+                         Foreground="{DynamicResource Pump.Ink.Ok}" />
               </StackPanel>
               <StackPanel Spacing="2">
                 <TextBlock Text="برد" Classes="fsl" />
                 <TextBlock Text="{Binding HeadDieselBordText}" Classes="fsv"
-                           Foreground="{DynamicResource Pump.Warn}" />
+                           Foreground="{DynamicResource Pump.Ink.Warn}" />
               </StackPanel>
               <StackPanel Spacing="2">
                 <TextBlock Text="{Binding HeadAlbaqiLabel}" Classes="fsl" />
                 <TextBlock Text="{Binding HeadDieselAlbaqiText}" Classes="fsv"
-                           Foreground="{Binding HeadDieselAlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                           Foreground="{Binding HeadDieselAlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
               </StackPanel>
             </UniformGrid>
           </Grid>
@@ -380,7 +380,7 @@
                   <TextBlock Grid.Column="4" Text="{Binding FuelText}" />
                   <TextBlock Grid.Column="6" Text="{Binding ValueText}" />
                   <TextBlock Grid.Column="7" Text="{Binding StatusText}" FontWeight="Bold"
-                             Foreground="{Binding StatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                             Foreground="{Binding StatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                 </Grid>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
@@ -427,11 +427,11 @@
           </StackPanel.Styles>
 
           <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock Text="⛽ پطرول" Classes="pl" Foreground="{DynamicResource Pump.Ok}" />
+            <TextBlock Text="⛽ پطرول" Classes="pl" Foreground="{DynamicResource Pump.Ink.Ok}" />
             <TextBox Text="{Binding PercentPetrolText}" Classes="pv" />
           </StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock Text="🟤 دیزل" Classes="pl" Foreground="{DynamicResource Pump.Warn}" />
+            <TextBlock Text="🟤 دیزل" Classes="pl" Foreground="{DynamicResource Pump.Ink.Warn}" />
             <TextBox Text="{Binding PercentDieselText}" Classes="pv" />
           </StackPanel>
           <!-- میان‌بُر: هر عددی این‌جا نوشته شود، همان لحظه روی هر دو تیل
@@ -480,7 +480,7 @@
               <DataTemplate>
                 <Button Classes="fuelchip celltoggle" Content="{Binding FuelChipText}"
                         Command="{Binding ToggleFuelCommand}"
-                        Foreground="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                        Foreground="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
                         BorderBrush="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
                         ToolTip.Tip="زدنش نوعِ تیلِ همین ردیف را پطرول ⇄ دیزل می‌کند" />
               </DataTemplate>

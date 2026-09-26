@@ -12,8 +12,13 @@
     <c:SectionPage.Toolbar>
       <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
         <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0" Command="{Binding OpenHistoryCommand}" IsVisible="{Binding HasHistory}" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
-        <TextBlock Text="📅 ماه:" VerticalAlignment="Center" Classes="label" />
-        <ComboBox ItemsSource="{Binding Months}" SelectedItem="{Binding Month}" MinWidth="130" />
+        <TextBlock Text="ماه" VerticalAlignment="Center" Classes="label" />
+        <!-- کشوی سال + ماه (۱۴۰۵/۰۷/۱۴): «برای بخش‌هایی که ماه کشویی دارن سال کشویی هم اضافه کن» -->
+        <ComboBox ItemsSource="{Binding Picker.Years}" SelectedItem="{Binding Picker.Year}"
+                  IsVisible="{Binding Picker.HasYears}"
+                  ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="90" />
+        <ComboBox ItemsSource="{Binding Picker.Months}" SelectedItem="{Binding Picker.Selected}"
+                  ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="125" />
         <Button Classes="ghost info" Content="PDF" Command="{Binding PdfCommand}" />
       </StackPanel>
     </c:SectionPage.Toolbar>
@@ -25,69 +30,80 @@
         <StackPanel Spacing="8">
           <TextBlock Text="نام قرض‌دار و مبلغ را بنویسید — همان لحظه در حسابش ثبت می‌شود"
                      Classes="label" />
-          <WrapPanel Orientation="Horizontal">
+          <WrapPanel x:Name="QuickForm" Orientation="Horizontal" Classes="qform">
             <WrapPanel.Styles>
               <Style Selector="StackPanel.q">
                 <Setter Property="Margin" Value="0,0,10,8" />
               </Style>
+              <!-- ⛔ همهٔ کادرها و کشویی‌ها یک قد و یک قلم (۱۴۰۵/۰۷/۱۴): «کادرِ واحدِ
+                   رسید و نوعِ تیل هم‌اندازه‌شون نیست، خیلی بزرگ‌ترن». -->
+              <Style Selector="WrapPanel.qform TextBox, WrapPanel.qform ComboBox">
+                <Setter Property="Height" Value="42" />
+                <Setter Property="MinHeight" Value="42" />
+                <Setter Property="FontSize" Value="15" />
+                <Setter Property="Padding" Value="10,0" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+              </Style>
             </WrapPanel.Styles>
 
-            <!-- ⚠️ کادرها عمداً بزرگ‌ترند: «خیلی کادرهاشون کوچیک است» -->
-
-            <!-- ══ ترتیب — تاریخ اولِ اول ═══════════════════════════════════
-                 خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۱۰): «کادرِ تاریخ رو هم
-                 بیار اولِ اول، بغلِ نام سمتِ راست بزار.» در چیدمانِ
-                 راست‌به‌چپ، نخستین فرزندِ ‎WrapPanel‎ همان سمتِ راست است.
-                 ترتیب: تاریخ ← نام ← واحد ← نوعِ تیل ← مقدار ← توضیحات. -->
-            <StackPanel Classes="q" Spacing="3" Width="160">
+            <!-- ══ ترتیب (۱۴۰۵/۰۷/۱۴) ═══════════════════════════════════════
+                 «رسید باید بغلِ نامِ قرض‌دار باشه… واحدِ رسید و نوعِ تیل رو بیار
+                 وسطِ رسید و توضیحات… و یک کشوییِ دیگه بغلِ اون دوتا: چکنه یا
+                 قرض‌دار.» در راست‌به‌چپ نخستین فرزند سمتِ راست است:
+                 تاریخ ← نام ← رسید ← واحد ← نوعِ تیل ← حساب ← توضیحات. -->
+            <StackPanel Classes="q" Spacing="3" Width="150">
               <TextBlock Text="تاریخ" Classes="label" />
-              <TextBox Text="{Binding DateShamsi}" HorizontalContentAlignment="Center"
-                       FontSize="15" Padding="10,8" />
+              <TextBox Text="{Binding DateShamsi}" HorizontalContentAlignment="Center" />
             </StackPanel>
 
-            <StackPanel Classes="q" Spacing="3" Width="280">
-              <TextBlock Text="نام قرض‌دار" Classes="label" />
+            <StackPanel Classes="q" Spacing="3" Width="250">
+              <TextBlock Text="{Binding NameLabel}" Classes="label" />
               <TextBox x:Name="NameBox" Text="{Binding TypedName}" Watermark="نام…"
-                       FontSize="15" Padding="10,8" c:Suggest.Key="debtor" />
+                       c:Suggest.Key="{Binding NameSuggestKey}" />
             </StackPanel>
 
-            <!-- ══ واحدِ رسید — دو کشویی، نه یک دکمهٔ چرخشی ═════════════════
-                 خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۱۰): «چرا اون واحدِ رسید
-                 دکمه‌ای است؟ اون و اپشن‌هاش رو کشویی کن که هر کدوم رو
-                 خواستم انتخاب کنم.»
+            <StackPanel Classes="q" Spacing="3" Width="180">
+              <TextBlock Text="{Binding AmountLabel}" Classes="label" />
+              <TextBox x:Name="AmountBox" Text="{Binding AmountText}"
+                       Watermark="{Binding AmountWatermark}" />
+            </StackPanel>
 
-                 ⛔ دکمهٔ چرخشی گزینه‌ها را **نشان نمی‌داد** و رسیدنِ به
-                 «تیلِ دیزل» از «پول» دو کلیک لازم داشت. و دو تصمیم‌اند، نه
-                 یکی: در دفتر هم ‎Unit‎ و ‎Fuel‎ دو ستونِ جدا هستند. -->
-            <StackPanel Classes="q" Spacing="3" Width="170">
+            <!-- ⛔ دو کشویی، نه یک دکمهٔ چرخشی (۱۴۰۵/۰۷/۱۰): «واحد» و «کدام تیل»
+                 دو ستونِ جدا در دفترند. با «چکنه» واحد روی «پول» بسته می‌شود. -->
+            <StackPanel Classes="q" Spacing="3" Width="140">
               <TextBlock Text="واحد رسید" Classes="label" />
               <ComboBox ItemsSource="{Binding UnitOptions}" SelectedIndex="{Binding UnitIndex}"
-                        HorizontalAlignment="Stretch" FontSize="15" Padding="10,8" />
+                        IsEnabled="{Binding UnitOpen}" ToolTip.Tip="{Binding UnitHint}" />
+              <TextBlock Text="{Binding UnitHint}" FontSize="11"
+                         Foreground="{DynamicResource Pump.Muted}" />
             </StackPanel>
 
-            <!-- ⛔ «رسیدِ پول هیچ‌کدوم لازم نیست، نه پطرول نه دیزل» — پس با
-                 واحدِ پول بسته می‌شود، و برچسبِ زیرش می‌گوید چرا. بسته
-                 می‌شود و **پنهان نه**: پنهان شدنش ردیف را جابه‌جا می‌کند. -->
-            <StackPanel Classes="q" Spacing="3" Width="170">
+            <!-- ⛔ «رسیدِ پول هیچ‌کدوم لازم نیست» — بسته می‌شود، پنهان نه:
+                 پنهان شدنش ردیف را جابه‌جا می‌کرد. -->
+            <StackPanel Classes="q" Spacing="3" Width="140">
               <TextBlock Text="نوع تیل" Classes="label" />
               <ComboBox ItemsSource="{Binding FuelOptions}" SelectedIndex="{Binding FuelIndex}"
-                        IsEnabled="{Binding IsFuel}" HorizontalAlignment="Stretch"
-                        FontSize="15" Padding="10,8" ToolTip.Tip="{Binding FuelHint}" />
+                        IsEnabled="{Binding IsFuel}" ToolTip.Tip="{Binding FuelHint}" />
               <TextBlock Text="{Binding FuelHint}" FontSize="11"
                          Foreground="{DynamicResource Pump.Muted}" />
             </StackPanel>
 
-            <StackPanel Classes="q" Spacing="3" Width="200">
-              <TextBlock Text="{Binding AmountLabel}" Classes="label" />
-              <TextBox x:Name="AmountBox" Text="{Binding AmountText}"
-                       Watermark="{Binding AmountWatermark}" FontSize="15" Padding="10,8" />
+            <StackPanel Classes="q" Spacing="3" Width="140">
+              <TextBlock Text="حساب" Classes="label" />
+              <ComboBox x:Name="TargetBox" ItemsSource="{Binding TargetOptions}"
+                        SelectedIndex="{Binding TargetIndex}"
+                        ToolTip.Tip="قرض‌دار یا چکنه — نام در همان دفتر پیدا می‌شود" />
             </StackPanel>
 
-            <StackPanel Classes="q" Spacing="3" Width="280">
+            <StackPanel Classes="q" Spacing="3" Width="230">
               <TextBlock Text="توضیحات" Classes="label" />
-              <TextBox Text="{Binding Note}" Watermark="اختیاری" FontSize="15" Padding="10,8" />
+              <TextBox Text="{Binding Note}" Watermark="اختیاری" />
             </StackPanel>
           </WrapPanel>
+          <!-- «الباقی معلوم بشه» — حساب و الباقیِ همین حالا، پس از هر رسید -->
+          <TextBlock Text="{Binding LastResult}" FontWeight="SemiBold" TextWrapping="Wrap"
+                     Foreground="{DynamicResource Pump.Ink.Ok}"
+                     IsVisible="{Binding LastResult, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
         </StackPanel>
       </Border>
 
@@ -96,7 +112,7 @@
         <Grid RowDefinitions="Auto,*,Auto">
           <Border Grid.Row="0" Classes="card-head">
             <TextBlock Text="رسیدهای این ماه" FontWeight="Bold"
-                       Foreground="{DynamicResource Pump.Accent}" />
+                       Foreground="{DynamicResource Pump.Ink.Accent}" />
           </Border>
 
           <c:ExcelGrid Grid.Row="1" ItemsSource="{Binding Rows}" x:CompileBindings="False"
@@ -110,7 +126,7 @@
                   <DataTemplate>
                     <TextBlock Text="{Binding UnitText}" FontWeight="Bold" Margin="8,0"
                                VerticalAlignment="Center"
-                               Foreground="{Binding UnitBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                               Foreground="{Binding UnitBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>

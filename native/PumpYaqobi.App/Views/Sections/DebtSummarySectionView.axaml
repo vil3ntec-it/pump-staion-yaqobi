@@ -24,7 +24,7 @@
               <DataTemplate>
                 <TextBlock Text="{Binding AlbaqiText}" FontWeight="Bold"
                            VerticalAlignment="Center"
-                           Foreground="{Binding AlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                           Foreground="{Binding AlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
@@ -33,7 +33,7 @@
               <DataTemplate>
                 <StackPanel VerticalAlignment="Center">
                   <TextBlock Text="{Binding AgeText}" FontWeight="Bold"
-                             Foreground="{Binding AgeBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                             Foreground="{Binding AgeBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                   <TextBlock Text="{Binding FromText}" Classes="muted" FontSize="11"
                              IsVisible="{Binding HasFrom}" />
                 </StackPanel>

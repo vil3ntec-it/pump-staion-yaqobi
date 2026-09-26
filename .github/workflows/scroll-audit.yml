@@ -90,6 +90,11 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- round13 ${{ runner.temp }}/round13
 
+      # ══ دورِ چهاردهم: نوارِ یک‌خطی · فرمِ رسید و چکنه · فهرستِ هشدارها ═════
+      - name: سنجشِ دورِ چهاردهم
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- round14 ${{ runner.temp }}/round14
+
       # ══ مفاد/ضرر: کشوی ماه و سال و کادرهای برابر · مخزن: عنوانِ وسط ═════════
       # گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۳) با عکس. عددِ هر دوره از روی دادهٔ خودِ
       # سنجه حساب می‌شود، و پهنا/قد/لبهٔ هر کادر با پنجرهٔ واقعی سنجیده می‌شود.

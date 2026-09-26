@@ -16,7 +16,7 @@
         <StackPanel>
           <Border Classes="card-head">
             <TextBlock Text="💾 تازه‌ترین بکاپ" FontWeight="Bold"
-                       Foreground="{DynamicResource Pump.Accent}" />
+                       Foreground="{DynamicResource Pump.Ink.Accent}" />
           </Border>
           <StackPanel Margin="14" Spacing="10">
 
@@ -86,7 +86,7 @@
         <StackPanel>
           <Border Classes="card-head">
             <TextBlock Text="⬇️ به‌روزرسانیِ برنامه" FontWeight="Bold"
-                       Foreground="{DynamicResource Pump.Accent}" />
+                       Foreground="{DynamicResource Pump.Ink.Accent}" />
           </Border>
           <StackPanel Margin="14" Spacing="10">
             <TextBlock Text="{Binding CurrentVersion, StringFormat=نسخهٔ فعلی: {0}}" FontWeight="Bold" />
@@ -95,21 +95,21 @@
                        TextWrapping="Wrap" />
             <TextBlock Text="{Binding InstallNote}" Classes="muted" TextWrapping="Wrap"
                        IsVisible="{Binding InstallNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                       Foreground="{DynamicResource Pump.Warn}" />
+                       Foreground="{DynamicResource Pump.Ink.Warn}" />
 
             <TextBlock Text="{Binding UpdateStatus}" TextWrapping="Wrap"
-                       Foreground="{Binding UpdateStatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                       Foreground="{Binding UpdateStatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
                        IsVisible="{Binding UpdateStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
             <TextBlock Text="{Binding PackageText}" FontWeight="Bold"
-                       Foreground="{DynamicResource Pump.Ok}"
+                       Foreground="{DynamicResource Pump.Ink.Ok}"
                        IsVisible="{Binding PackageText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
             <TextBlock Text="{Binding LastSuccess}" TextWrapping="Wrap" FontWeight="Bold"
-                       Foreground="{DynamicResource Pump.Ok}"
+                       Foreground="{DynamicResource Pump.Ink.Ok}"
                        IsVisible="{Binding LastSuccess, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             <TextBlock Text="{Binding LastFailure}" TextWrapping="Wrap"
-                       Foreground="{DynamicResource Pump.Danger}"
+                       Foreground="{DynamicResource Pump.Ink.Danger}"
                        IsVisible="{Binding LastFailure, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
             <ProgressBar Value="{Binding DownloadPercent}" Maximum="100" Height="7"
@@ -143,7 +143,7 @@
         <StackPanel>
           <Border Classes="card-head">
             <TextBlock Text="📥 آوردنِ حساب‌ها از نسخهٔ وب" FontWeight="Bold"
-                       Foreground="{DynamicResource Pump.Accent}" />
+                       Foreground="{DynamicResource Pump.Ink.Accent}" />
           </Border>
           <StackPanel Margin="14" Spacing="9">
             <TextBlock Classes="muted" TextWrapping="Wrap"

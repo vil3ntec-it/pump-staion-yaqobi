@@ -66,7 +66,7 @@
                   <Grid ColumnDefinitions="*,Auto">
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
                       <TextBlock Text="{Binding Name}" FontWeight="Bold"
-                                 Foreground="{DynamicResource Pump.Accent}" />
+                                 Foreground="{DynamicResource Pump.Ink.Accent}" />
                       <Border Classes="pill"><TextBlock Text="{Binding KindText}" /></Border>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">

@@ -103,14 +103,14 @@
   <Style Selector="TextBlock.num">
     <Setter Property="FontSize" Value="24" />
     <Setter Property="FontWeight" Value="Bold" />
-    <Setter Property="Foreground" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Ink.Accent}" />
   </Style>
   <!-- عددِ دوم (دالر کنارِ افغانی): همان وزن، کمی کوچک‌تر — نه ریز و کم‌رنگ.
        گزارشِ صاحب ریپو: «دالر رو تو سربرگ خیلی کوچیک و بی‌اهمیت نشون میده.» -->
   <Style Selector="TextBlock.num2">
     <Setter Property="FontSize" Value="18" />
     <Setter Property="FontWeight" Value="Bold" />
-    <Setter Property="Foreground" Value="{DynamicResource Pump.Info}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Ink.Info}" />
   </Style>
 
   <!-- ══ کارت — ‎.card‎ نسخهٔ وب ══
@@ -246,7 +246,7 @@
     <Setter Property="Background" Value="Transparent" />
   </Style>
   <Style Selector="Button.info">
-    <Setter Property="Foreground" Value="{DynamicResource Pump.Info}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Ink.Info}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.Info}" />
   </Style>
   <!-- کارتی که خودش کلیک‌پذیر است: در نسخهٔ وب ‎card.onclick‎ حساب را باز
@@ -271,7 +271,7 @@
     <Setter Property="Padding" Value="0" />
   </Style>
   <Style Selector="Button.danger">
-    <Setter Property="Foreground" Value="{DynamicResource Pump.Danger}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Ink.Danger}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.Danger}" />
   </Style>
 
@@ -284,7 +284,7 @@
   <Style Selector="Button.tool-link">
     <Setter Property="Background" Value="{DynamicResource Pump.Dark}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.Accent}" />
-    <Setter Property="Foreground" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Ink.Accent}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="11" />
     <Setter Property="MinHeight" Value="44" />
@@ -297,7 +297,7 @@
   <Style Selector="Button.tool-link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource Pump.Hover}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.Accent}" />
-    <Setter Property="TextBlock.Foreground" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="TextBlock.Foreground" Value="{DynamicResource Pump.Ink.Accent}" />
   </Style>
 
   <!-- دکمه‌های ناوبری -->
@@ -323,6 +323,12 @@
   </Style>
   <Style Selector="Button.nav.active /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource Pump.NavActiveBg}" />
+  </Style>
+  <!-- ⚠️ سبکِ سراسریِ ‎TextBlock‎ رنگِ ‎Pump.Text‎ را روی خودِ نوشته می‌گذارد و
+       ‎Foreground‎ِ دکمه به آن نمی‌رسد؛ پس در تمِ تیره نوشتهٔ تبِ فعال سفید روی
+       زرد می‌ماند (گزارشِ ۱۴۰۵/۰۷/۱۴). نوشته خودش ‎NavActiveFg‎ می‌گیرد. -->
+  <Style Selector="Button.nav.active TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource Pump.NavActiveFg}" />
   </Style>
   <!-- نشانِ گردِ پشتِ آیکونِ بخش در نوار (زمینه از ‎IconColorConverter‎، پارامترِ badge) -->
   <Style Selector="Border.icon-badge">
@@ -1087,7 +1093,7 @@
                 <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                   <TextBlock Text="{TemplateBinding Header}" Classes="card-title" />
                   <TextBlock Text="{TemplateBinding SubHeader}" Classes="muted"
-                             TextWrapping="Wrap"
+                             TextWrapping="Wrap" MaxWidth="250"
                              IsVisible="{TemplateBinding SubHeader, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                 </StackPanel>
 
@@ -1108,6 +1114,7 @@
                 </StackPanel>
 
                 <WrapPanel Grid.Column="2" Orientation="Horizontal" Margin="12,0,0,0"
+                           Classes="sec-tools"
                            VerticalAlignment="Center" x:CompileBindings="False">
                   <ContentPresenter Content="{TemplateBinding Toolbar}" VerticalAlignment="Center"
                                     Margin="0,3" />
@@ -1446,7 +1453,7 @@
     <Setter Property="Padding" Value="8,6" />
   </Style>
   <Style Selector="Border.saved-badge TextBlock">
-    <Setter Property="Foreground" Value="{DynamicResource Pump.Ok}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Ink.Ok}" />
     <Setter Property="FontSize" Value="12.5" />
   </Style>
 
@@ -1478,6 +1485,19 @@
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.Border}" />
     <Setter Property="BorderThickness" Value="0,0,0,1" />
     <Setter Property="Padding" Value="18,13" />
+  </Style>
+
+  <!-- ══ نوارِ ابزارِ هر بخش: همه در یک خط و هم‌قد ══════════════════════
+       گزارشِ صاحب ریپو با عکس (۱۴۰۵/۰۷/۱۴): «این‌ها چرا هم‌تراز نیستن؟ خیلی
+       به‌هم ریخته‌اند؛ همه توی یک خط باشن، نه بالا یا پایینِ هم.»
+       ریشه: هر کنترل قدِ خودش را داشت — کارتِ زیربخش ۴۴، دکمه ۳۶، کشویی
+       ۳۴، کادرِ تایپ ۳۶ — پس هر چیز در ارتفاعی دیگر می‌نشست. حالا هر
+       دکمه، کشویی و کادرِ این نوار **۳۸** است و وسطِ خط. (A−/A+/↺ جدا و
+       کوچک‌اند و در ستونِ خودشان.) سنجه‌اش ‎round14‎. -->
+  <Style Selector="WrapPanel.sec-tools Button:not(.seg), WrapPanel.sec-tools ComboBox, WrapPanel.sec-tools TextBox">
+    <Setter Property="MinHeight" Value="38" />
+    <Setter Property="Height" Value="38" />
+    <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
   <Style Selector="Border.chip">
@@ -1548,7 +1568,7 @@
     <Setter Property="CornerRadius" Value="9" />
     <Setter Property="Padding" Value="9,3" />
     <Setter Property="FontSize" Value="13" />
-    <Setter Property="Foreground" Value="{DynamicResource Pump.Danger}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Ink.Danger}" />
   </Style>
   <Style Selector="Button.card-x /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
@@ -1558,7 +1578,7 @@
   <Style Selector="Button.qr">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.Info}" />
-    <Setter Property="Foreground" Value="{DynamicResource Pump.Info}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Ink.Info}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="FontSize" Value="12" />
     <Setter Property="Padding" Value="10,5" />
@@ -1802,7 +1822,7 @@
     <Setter Property="Padding" Value="4,2" />
     <Setter Property="FontSize" Value="12" />
     <Setter Property="FontWeight" Value="Bold" />
-    <Setter Property="Foreground" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Ink.Accent}" />
   </Style>
   <Style Selector="Button.qr-link /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
@@ -1967,7 +1987,7 @@
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
   </Style>
   <Style Selector="TextBlock.chatval.accent">
-    <Setter Property="Foreground" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Ink.Accent}" />
   </Style>
   <Style Selector="TextBlock.chatval.muted2">
     <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
@@ -1992,7 +2012,7 @@
     <Setter Property="BorderBrush" Value="{DynamicResource Pump.Border}" />
   </Style>
   <Style Selector="Button.calc.op">
-    <Setter Property="Foreground" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Ink.Accent}" />
   </Style>
 
   <!-- ══ نقطهٔ سرخِ «ماهِ تازه» ═══════════════════════════════════════════════

@@ -768,7 +768,7 @@
                        TextAlignment="Start" TextWrapping="Wrap" />
             <TextBlock Text="{Binding UserLine}" Classes="muted" FontSize="13" TextAlignment="Start" />
             <TextBlock Text="{Binding AccountEmail}" FontSize="12.5" TextAlignment="Start"
-                       Foreground="{DynamicResource Pump.Info}"
+                       Foreground="{DynamicResource Pump.Ink.Info}"
                        IsVisible="{Binding AccountEmail, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
             <WrapPanel Margin="0,4,0,0">
@@ -830,7 +830,7 @@
           <StackPanel Spacing="3">
             <TextBlock Text="⏳ ماندهٔ اشتراک" Classes="label" />
             <TextBlock Text="{Binding SubDaysText}" Classes="num"
-                       Foreground="{DynamicResource Pump.Ok}" />
+                       Foreground="{DynamicResource Pump.Ink.Ok}" />
           </StackPanel>
         </Border>
         <Border Grid.Column="4" Classes="stat" Padding="16,13">
@@ -905,7 +905,7 @@
                       MinWidth="250" IsVisible="{Binding HasAccessCode}">
                 <SelectableTextBlock Text="{Binding AccessCodeDisplay}" FontSize="32" FontWeight="Black"
                                      FontFamily="Consolas,Menlo,monospace" LetterSpacing="5"
-                                     Foreground="{DynamicResource Pump.Accent}" FlowDirection="LeftToRight" />
+                                     Foreground="{DynamicResource Pump.Ink.Accent}" FlowDirection="LeftToRight" />
               </Border>
 
               <WrapPanel>
@@ -958,7 +958,7 @@
               <StackPanel Spacing="2">
                 <TextBlock Text="ماندهٔ اشتراک" Classes="label" />
                 <TextBlock Text="{Binding SubDaysText}" FontSize="28" FontWeight="Black"
-                           Foreground="{DynamicResource Pump.Ok}" />
+                           Foreground="{DynamicResource Pump.Ink.Ok}" />
               </StackPanel>
             </Border>
 
@@ -984,7 +984,7 @@
             </StackPanel>
 
             <TextBlock Text="{Binding GraceText}" FontSize="12" TextWrapping="Wrap" FontWeight="Bold"
-                       Foreground="{DynamicResource Pump.Warn}"
+                       Foreground="{DynamicResource Pump.Ink.Warn}"
                        IsVisible="{Binding GraceText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
             <Border Height="1" Background="{DynamicResource Pump.Border}" />
@@ -1033,7 +1033,7 @@
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Grid.Column="0" Text="چتِ پشتیبانی" Classes="kvv" />
                   <TextBlock Grid.Column="1" Text="{Binding AccessSupportText}" Classes="kvv"
-                             Foreground="{DynamicResource Pump.Ok}" />
+                             Foreground="{DynamicResource Pump.Ink.Ok}" />
                 </Grid>
               </Border>
             </StackPanel>
@@ -1072,7 +1072,7 @@
                           <StackPanel Grid.Column="1" Spacing="2">
                             <TextBlock Text="{Binding L1}" Classes="kvl" FontSize="11" />
                             <TextBlock Text="{Binding V1}" FontWeight="SemiBold"
-                                       Foreground="{Binding ColorKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                                       Foreground="{Binding ColorKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                           </StackPanel>
                           <StackPanel Grid.Column="2" Spacing="2">
                             <TextBlock Text="{Binding L2}" Classes="kvl" FontSize="11" />

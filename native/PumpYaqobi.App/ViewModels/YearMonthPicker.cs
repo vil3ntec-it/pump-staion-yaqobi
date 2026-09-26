@@ -43,7 +43,12 @@ public sealed partial class YearMonthPicker : ObservableObject
     [ObservableProperty] private YearMonthItem? _year;
     [ObservableProperty] private YearMonthItem? _selected;
 
-    public bool HasYears => Years.Count > 1;
+    /// <summary>
+    /// ⛔ کشوی سال همیشه دیده می‌شود، حتی با یک سال — خواستهٔ صاحب ریپو
+    /// (۱۴۰۵/۰۷/۱۴): «برای بخش‌هایی که ماه کشویی دارن سال کشویی هم اضافه کن.»
+    /// پیش از این با یک سال پنهان می‌شد و کاربر گمان می‌کرد نیست.
+    /// </summary>
+    public bool HasYears => Years.Count > 0;
 
     /// <summary>کلیدِ ماهِ انتخاب‌شده — همان چیزی که بخش با آن رندر می‌کند.</summary>
     public string SelectedKey => Selected?.Key ?? "";

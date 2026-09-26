@@ -190,7 +190,7 @@
               <TextBlock Text="💬 پشتیبانی" FontSize="12.5" FontWeight="ExtraBold" Foreground="White" />
               <Border Classes="pill" Background="White" Padding="6,0" IsVisible="{Binding Chat.HasSupportUnread}">
                 <TextBlock Text="{Binding Chat.SupportUnread}" FontSize="11" FontWeight="ExtraBold"
-                           Foreground="{DynamicResource Pump.Danger}" />
+                           Foreground="{DynamicResource Pump.Ink.Danger}" />
               </Border>
             </StackPanel>
           </Button>
@@ -221,7 +221,7 @@
               <TextBlock Text="{Binding Label}" FontSize="16" FontWeight="ExtraBold"
                          Foreground="{DynamicResource Pump.Muted}" />
               <TextBlock Text="{Binding Value}" FontWeight="ExtraBold" FontSize="16.8"
-                         Foreground="{Binding ColorKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                         Foreground="{Binding ColorKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
             </StackPanel>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
@@ -249,7 +249,7 @@
                 Command="{Binding Current.CloseSubCommand}" />
         <TextBlock Text="{Binding Content.Title}" VerticalAlignment="Center"
                    FontWeight="ExtraBold" FontSize="15"
-                   Foreground="{DynamicResource Pump.Accent}" />
+                   Foreground="{DynamicResource Pump.Ink.Accent}" />
       </StackPanel>
     </Border>
 
@@ -355,7 +355,7 @@
         <TextBlock Grid.Column="1" Text="{Binding NoticeText}" IsVisible="{Binding HasNotice}"
                    FontSize="12" FontWeight="Bold" TextTrimming="CharacterEllipsis"
                    VerticalAlignment="Center" Margin="14,0"
-                   Foreground="{DynamicResource Pump.Info}" />
+                   Foreground="{DynamicResource Pump.Ink.Info}" />
 
         <Button Grid.Column="2" Classes="link" Content="بستن" FontSize="11"
                 IsVisible="{Binding HasNotice}" Command="{Binding CloseNoticeCommand}"
@@ -479,7 +479,7 @@
 
         <TextBlock Text="پمپ یعقوبی" HorizontalAlignment="Center"
                    FontSize="22" FontWeight="ExtraBold"
-                   Foreground="{DynamicResource Pump.Accent}" />
+                   Foreground="{DynamicResource Pump.Ink.Accent}" />
 
         <TextBlock Text="در حالِ آماده‌سازیِ بخش‌ها…" HorizontalAlignment="Center"
                    FontSize="14" Opacity="0.75" />
@@ -490,7 +490,7 @@
                 HorizontalAlignment="Center" ClipToBounds="True">
           <ProgressBar Minimum="0" Maximum="1" Value="{Binding WarmProgress}"
                        Height="8" CornerRadius="999"
-                       Foreground="{DynamicResource Pump.Accent}"
+                       Foreground="{DynamicResource Pump.Ink.Accent}"
                        Background="Transparent" />
         </Border>
 
@@ -499,7 +499,7 @@
              درونِ برنامه هم نباید روی صفحه بیاید. -->
         <TextBlock Text="{Binding WarmPercentText}" FontWeight="Bold" FontSize="13"
                    HorizontalAlignment="Center"
-                   Foreground="{DynamicResource Pump.Accent}" />
+                   Foreground="{DynamicResource Pump.Ink.Accent}" />
       </StackPanel>
     </Border>
 
@@ -524,7 +524,7 @@
 
         <TextBlock Text="آوردنِ اطلاعاتِ حسابِ شما" HorizontalAlignment="Center"
                    FontSize="20" FontWeight="ExtraBold"
-                   Foreground="{DynamicResource Pump.Accent}" />
+                   Foreground="{DynamicResource Pump.Ink.Accent}" />
 
         <!-- ⚠️ جملهٔ خودِ موتور، نه یک نوشتهٔ دومِ این‌جا: دو جای نوشتن یعنی
              روزی پرده یک چیز می‌گوید و چراغ چیزِ دیگر. -->
@@ -536,7 +536,7 @@
                 Background="{DynamicResource Pump.Hover}"
                 HorizontalAlignment="Center" ClipToBounds="True">
           <ProgressBar IsIndeterminate="True" Height="8" CornerRadius="999"
-                       Foreground="{DynamicResource Pump.Accent}"
+                       Foreground="{DynamicResource Pump.Ink.Accent}"
                        Background="Transparent" />
         </Border>
 
@@ -555,7 +555,8 @@
             CornerRadius="10" Padding="18,10" MinWidth="220"
             Background="{DynamicResource Pump.Panel}"
             BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="1">
-      <TextBlock Text="{Binding Text}" HorizontalAlignment="Center" FontWeight="SemiBold" />
+      <TextBlock Text="{Binding Text}" HorizontalAlignment="Center" FontWeight="SemiBold"
+                 TextWrapping="Wrap" MaxWidth="760" LineHeight="24" />
     </Border>
   </Panel>
 </Window>

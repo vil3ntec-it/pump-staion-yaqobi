@@ -55,7 +55,12 @@
           <Button Classes="ghost" Content="برگشت به تاریخچه‌ها" Margin="0,0,10,0"
                   Command="{Binding BackCommand}" />
           <TextBlock Text="📅 ماه:" Classes="label" VerticalAlignment="Center" Margin="0,0,6,0" />
-          <ComboBox ItemsSource="{Binding Months}" SelectedItem="{Binding Month}" MinWidth="150" />
+          <!-- کشوی سال + ماه (۱۴۰۵/۰۷/۱۴): «برای بخش‌هایی که ماه کشویی دارن سال کشویی هم اضافه کن» -->
+          <ComboBox ItemsSource="{Binding Picker.Years}" SelectedItem="{Binding Picker.Year}"
+                    IsVisible="{Binding Picker.HasYears}"
+                    ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="110" Margin="0,0,6,0" />
+          <ComboBox ItemsSource="{Binding Picker.Months}" SelectedItem="{Binding Picker.Selected}"
+                    ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="150" />
           <!-- ⛔ صافیِ پارچه‌ها (۱۴۰۵/۰۷/۱۳): تیل و شمارهٔ پایه — فقط برای دیدن -->
           <StackPanel Orientation="Horizontal" Spacing="6" Margin="14,0,0,0"
                       IsVisible="{Binding HasShiftFilters}">
@@ -117,7 +122,7 @@
                   <DataTemplate>
                     <TextBlock Text="{Binding AmountText}" Margin="8,0" VerticalAlignment="Center"
                                FontWeight="Bold"
-                               Foreground="{Binding AmountBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                               Foreground="{Binding AmountBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>

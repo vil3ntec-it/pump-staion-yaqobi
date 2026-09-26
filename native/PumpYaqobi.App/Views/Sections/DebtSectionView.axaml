@@ -111,7 +111,7 @@
                             CommandParameter="{Binding}" />
                     <TextBlock Grid.Column="2" Text="{Binding MeterText}" FontSize="13" FontWeight="Bold"
                                VerticalAlignment="Center"
-                               Foreground="{Binding MeterBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                               Foreground="{Binding MeterBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                   </Grid>
 
                   <!-- ⚠️ نام درشت و پررنگ: گزارشِ صاحب ریپو «اسم خیلی کوچک است، محتوا دیده نمی‌شود» -->
@@ -120,7 +120,7 @@
 
                   <TextBlock Grid.Row="3" Text="{Binding MoneyText}"
                              FontWeight="ExtraBold" FontSize="26" Margin="11,6,11,0"
-                             Foreground="{Binding StatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                             Foreground="{Binding StatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
 
                   <StackPanel Grid.Row="4" Margin="11,1,11,0" Spacing="5">
                     <TextBlock Text="الباقی · افغانی" FontSize="13" FontWeight="SemiBold"
@@ -131,10 +131,10 @@
                     <StackPanel Orientation="Horizontal" Spacing="9">
                       <TextBlock Text="{Binding MoneyBadge}" FontSize="13" FontWeight="Bold"
                                  IsVisible="{Binding HasMoneyBadge}"
-                                 Foreground="{DynamicResource Pump.Danger}" />
+                                 Foreground="{DynamicResource Pump.Ink.Danger}" />
                       <TextBlock Text="{Binding FuelBadge}" FontSize="13" FontWeight="Bold"
                                  IsVisible="{Binding HasFuelBadge}"
-                                 Foreground="{DynamicResource Pump.Danger}" />
+                                 Foreground="{DynamicResource Pump.Ink.Danger}" />
                     </StackPanel>
                   </StackPanel>
 

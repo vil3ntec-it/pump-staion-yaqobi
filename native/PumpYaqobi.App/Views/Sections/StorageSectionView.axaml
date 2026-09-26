@@ -63,10 +63,10 @@
                    پس چشم دو ترازِ مختلف روی یک کارت می‌دید. حالا همه وسط‌اند. -->
               <TextBlock Text="{Binding TankTitle}" Classes="h2" TextAlignment="Center"
                          HorizontalAlignment="Stretch"
-                         Foreground="{DynamicResource Pump.Accent}" />
+                         Foreground="{DynamicResource Pump.Ink.Accent}" />
               <TextBlock Text="{Binding Current}" FontSize="40" FontWeight="Bold" TextAlignment="Center"
                          HorizontalAlignment="Stretch"
-                         Foreground="{DynamicResource Pump.Accent}" />
+                         Foreground="{DynamicResource Pump.Ink.Accent}" />
               <TextBlock Text="لیتر باقی‌مانده" Classes="muted" TextAlignment="Center"
                          HorizontalAlignment="Stretch" />
               <Border CornerRadius="9" Padding="10,4" HorizontalAlignment="Center" Margin="0,4,0,0"
@@ -110,7 +110,7 @@
                     <TextBlock Text="{Binding TotalIn, StringFormat={}{0} لیتر}" FontWeight="Bold"
                                TextAlignment="Center" HorizontalAlignment="Stretch"
                                VerticalAlignment="Center"
-                               Foreground="{DynamicResource Pump.Ok}" />
+                               Foreground="{DynamicResource Pump.Ink.Ok}" />
                   </Border>
                 </StackPanel>
                 <StackPanel Spacing="4" Margin="6,10,6,0">
@@ -120,7 +120,7 @@
                     <TextBlock Text="{Binding TotalOut, StringFormat={}{0} لیتر}" FontWeight="Bold"
                                TextAlignment="Center" HorizontalAlignment="Stretch"
                                VerticalAlignment="Center"
-                               Foreground="{DynamicResource Pump.Danger}" />
+                               Foreground="{DynamicResource Pump.Ink.Danger}" />
                   </Border>
                 </StackPanel>
               </UniformGrid>
@@ -153,7 +153,7 @@
                 </WrapPanel>
                 <TextBlock Grid.Column="1" Text="{Binding MoneyTitle}" FontWeight="Bold"
                            TextAlignment="Center" HorizontalAlignment="Stretch" VerticalAlignment="Center"
-                           Foreground="{DynamicResource Pump.Accent}" />
+                           Foreground="{DynamicResource Pump.Ink.Accent}" />
                 <Border Grid.Column="2" Width="{Binding #TankActions.Bounds.Width}" />
               </Grid>
             </Border>
@@ -197,10 +197,10 @@
                     <Grid ColumnDefinitions="Auto,*,Auto">
                       <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14">
                         <TextBlock Text="{Binding HeadText}" FontWeight="Bold"
-                                   Foreground="{DynamicResource Pump.Accent}" />
+                                   Foreground="{DynamicResource Pump.Ink.Accent}" />
                         <TextBlock Text="{Binding DateShamsi, StringFormat=📅 {0}}" Classes="muted" />
                         <TextBlock Text="{Binding Seller, StringFormat=👤 {0}}"
-                                   Foreground="{DynamicResource Pump.Info}" />
+                                   Foreground="{DynamicResource Pump.Ink.Info}" />
                       </StackPanel>
                       <Button Grid.Column="2" Classes="ghost danger" Content="🗑" Padding="9,2"
                               Command="{Binding $parent[ItemsControl].((vm:StorageSectionViewModel)DataContext).DeletePurchaseCommand}"
@@ -213,7 +213,7 @@
                   <Border IsVisible="{Binding Implausible}" Background="#1FE53E3E"
                           Padding="14,8" Margin="14,10,14,0" CornerRadius="8">
                     <TextBlock Text="⚠️ وزنِ این خرید بیش از ۳۰۰ تن است — احتمالاً کیلو در کادرِ «تن»ِ نسخهٔ قبل نوشته شده بود. این خرید را پاک کنید و دوباره ثبت کنید."
-                               TextWrapping="Wrap" Foreground="{DynamicResource Pump.Danger}" FontWeight="SemiBold" />
+                               TextWrapping="Wrap" Foreground="{DynamicResource Pump.Ink.Danger}" FontWeight="SemiBold" />
                   </Border>
 
                   <!-- ══ ‎.pu-stats‎ — نُه کادرِ خواندنیِ سایت ═══════════════
@@ -230,7 +230,7 @@
                       <StackPanel Spacing="3">
                         <TextBlock Text="وزن" Classes="label" />
                         <TextBlock Text="{Binding KgShowText}" FontWeight="ExtraBold"
-                                   Foreground="{DynamicResource Pump.Info}" />
+                                   Foreground="{DynamicResource Pump.Ink.Info}" />
                         <TextBlock Text="{Binding TonText, StringFormat={}{0} تن}" Classes="muted" />
                       </StackPanel>
                     </Border>
@@ -244,7 +244,7 @@
                       <StackPanel Spacing="3">
                         <TextBlock Text="لیتر" Classes="label" />
                         <TextBlock Text="{Binding LitersText}" FontWeight="ExtraBold"
-                                   Foreground="{DynamicResource Pump.Ok}" />
+                                   Foreground="{DynamicResource Pump.Ink.Ok}" />
                       </StackPanel>
                     </Border>
                     <Border Classes="stat" MinHeight="70">
@@ -263,21 +263,21 @@
                       <StackPanel Spacing="3">
                         <TextBlock Text="کل (دالر)" Classes="label" />
                         <TextBlock Text="{Binding TotalUsdText, StringFormat={}{0} $}" FontWeight="ExtraBold"
-                                   Foreground="{DynamicResource Pump.Info}" />
+                                   Foreground="{DynamicResource Pump.Ink.Info}" />
                       </StackPanel>
                     </Border>
                     <Border Classes="stat" MinHeight="70">
                       <StackPanel Spacing="3">
                         <TextBlock Text="کل (افغانی)" Classes="label" />
                         <TextBlock Text="{Binding TotalAfnText}" FontWeight="ExtraBold"
-                                   Foreground="{DynamicResource Pump.Accent}" />
+                                   Foreground="{DynamicResource Pump.Ink.Accent}" />
                       </StackPanel>
                     </Border>
                     <Border Classes="stat" MinHeight="70">
                       <StackPanel Spacing="3">
                         <TextBlock Text="فی لیتر (افغانی)" Classes="label" />
                         <TextBlock Text="{Binding PerLiterText}" FontWeight="ExtraBold"
-                                   Foreground="{DynamicResource Pump.Danger}" />
+                                   Foreground="{DynamicResource Pump.Ink.Danger}" />
                       </StackPanel>
                     </Border>
                   </c:AutoFillPanel>
@@ -303,7 +303,7 @@
           <Grid RowDefinitions="Auto,Auto,*,Auto">
             <Border Grid.Row="0" Classes="card-head">
               <TextBlock Text="📏 میله‌زنیِ مخزن" FontWeight="Bold"
-                         Foreground="{DynamicResource Pump.Accent}" />
+                         Foreground="{DynamicResource Pump.Ink.Accent}" />
             </Border>
 
             <!-- ══ محاسبهٔ زنده ══════════════════════════════════════════════
@@ -319,12 +319,12 @@
                 <StackPanel Spacing="3" Width="150" Margin="0,0,10,6">
                   <TextBlock Text="موجودی دفتری" Classes="label" />
                   <TextBlock Text="{Binding TankBookText}" FontWeight="Bold" Margin="0,6,0,0"
-                             Foreground="{DynamicResource Pump.Info}" />
+                             Foreground="{DynamicResource Pump.Ink.Info}" />
                 </StackPanel>
                 <StackPanel Spacing="3" Width="170" Margin="0,0,10,6">
                   <TextBlock Text="ظرفیت کل" Classes="label" />
                   <TextBlock Text="{Binding TankCapacityText}" FontWeight="Bold" Margin="0,6,0,0"
-                             Foreground="{DynamicResource Pump.Accent}" />
+                             Foreground="{DynamicResource Pump.Ink.Accent}" />
                 </StackPanel>
                 <StackPanel Spacing="3" Width="120" Margin="0,0,10,6" IsVisible="{Binding DipHasValue}">
                   <TextBlock Text="درصد پر بودن" Classes="label" />
@@ -337,7 +337,7 @@
                 <StackPanel Spacing="3" Width="150" Margin="0,0,10,6" IsVisible="{Binding DipHasValue}">
                   <TextBlock Text="اختلاف با دفتر" Classes="label" />
                   <TextBlock Text="{Binding DipDiffText}" FontWeight="Bold" Margin="0,6,0,0"
-                             Foreground="{Binding DipDiffBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                             Foreground="{Binding DipDiffBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                 </StackPanel>
                 <StackPanel Spacing="3" Width="190" Margin="0,0,10,6">
                   <TextBlock Text=" " Classes="label" />
@@ -356,7 +356,7 @@
 
               <TextBlock Text="{Binding DipWarnText}" TextWrapping="Wrap" FontWeight="Bold"
                          IsVisible="{Binding DipWarnVisible}"
-                         Foreground="{DynamicResource Pump.Danger}" />
+                         Foreground="{DynamicResource Pump.Ink.Danger}" />
             </StackPanel>
 
             <c:ExcelGrid Grid.Row="2" ItemsSource="{Binding Dips}" x:CompileBindings="False"
@@ -446,27 +446,27 @@
                 <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2" Margin="0,0,0,10">
                   <TextBlock Text="وزن به تن" Classes="label" />
                   <TextBlock Text="{Binding BuyTonText}" FontWeight="ExtraBold"
-                             Foreground="{DynamicResource Pump.Info}" />
+                             Foreground="{DynamicResource Pump.Ink.Info}" />
                 </StackPanel>
                 <StackPanel Grid.Row="0" Grid.Column="2" Spacing="2" Margin="0,0,0,10">
                   <TextBlock Text="مقدار لیتر" Classes="label" />
                   <TextBlock Text="{Binding BuyLitersText}" FontWeight="ExtraBold"
-                             Foreground="{DynamicResource Pump.Ok}" />
+                             Foreground="{DynamicResource Pump.Ink.Ok}" />
                 </StackPanel>
                 <StackPanel Grid.Row="1" Grid.Column="0" Spacing="2" Margin="0,0,0,10">
                   <TextBlock Text="پول کل (دالر)" Classes="label" />
                   <TextBlock Text="{Binding BuyUsdText}" FontWeight="ExtraBold"
-                             Foreground="{DynamicResource Pump.Info}" />
+                             Foreground="{DynamicResource Pump.Ink.Info}" />
                 </StackPanel>
                 <StackPanel Grid.Row="1" Grid.Column="2" Spacing="2" Margin="0,0,0,10">
                   <TextBlock Text="پول کل (افغانی)" Classes="label" />
                   <TextBlock Text="{Binding BuyAfnText}" FontWeight="ExtraBold"
-                             Foreground="{DynamicResource Pump.Accent}" />
+                             Foreground="{DynamicResource Pump.Ink.Accent}" />
                 </StackPanel>
                 <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">
                   <TextBlock Text="قیمت هر لیتر (افغانی)" Classes="label" />
                   <TextBlock Text="{Binding BuyPerLiterText}" FontWeight="ExtraBold"
-                             Foreground="{DynamicResource Pump.Danger}" />
+                             Foreground="{DynamicResource Pump.Ink.Danger}" />
                 </StackPanel>
               </Grid>
             </Border>

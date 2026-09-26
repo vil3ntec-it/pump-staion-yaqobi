@@ -38,7 +38,7 @@
               <DataTemplate>
                 <Button Classes="fuelchip celltoggle" Content="{Binding FuelChipText}"
                         Command="{Binding ToggleFuelCommand}"
-                        Foreground="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                        Foreground="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
                         BorderBrush="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
                         ToolTip.Tip="زدنش نوعِ تیلِ همین رسید را خودکار ⇄ پطرول ⇄ دیزل می‌کند" />
               </DataTemplate>
@@ -53,7 +53,7 @@
               <DataTemplate>
                 <TextBlock Text="{Binding AlbaqiText}" FontWeight="Bold" Margin="8,0"
                            VerticalAlignment="Center"
-                           Foreground="{Binding AlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                           Foreground="{Binding AlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>

@@ -15,7 +15,7 @@
         <StackPanel>
           <Border Classes="card-head">
             <TextBlock Text="🔐 رمزِ ورودِ برنامه" FontWeight="Bold"
-                       Foreground="{DynamicResource Pump.Accent}" />
+                       Foreground="{DynamicResource Pump.Ink.Accent}" />
           </Border>
           <StackPanel Margin="14" Spacing="10">
             <!-- ⛔ حالِ واقعی، نه یک جملهٔ ثابت: بی رمز، این کارت باید بگوید
@@ -48,10 +48,10 @@
             </StackPanel>
 
             <TextBlock Text="{Binding AppError}" TextWrapping="Wrap"
-                       Foreground="{DynamicResource Pump.Danger}"
+                       Foreground="{DynamicResource Pump.Ink.Danger}"
                        IsVisible="{Binding AppError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             <TextBlock Text="{Binding AppDone}" TextWrapping="Wrap" FontWeight="Bold"
-                       Foreground="{DynamicResource Pump.Ok}"
+                       Foreground="{DynamicResource Pump.Ink.Ok}"
                        IsVisible="{Binding AppDone, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           </StackPanel>
         </StackPanel>
@@ -64,7 +64,7 @@
         <StackPanel>
           <Border Classes="card-head">
             <TextBlock Text="📲 کدِ اپِ کارمندان" FontWeight="Bold"
-                       Foreground="{DynamicResource Pump.Accent}" />
+                       Foreground="{DynamicResource Pump.Ink.Accent}" />
           </Border>
           <StackPanel Margin="14" Spacing="6">
             <TextBlock Text="{Binding AccessCode}" Classes="num2" />
@@ -85,7 +85,7 @@
               <StackPanel>
                 <Border Classes="card-head">
                   <TextBlock Text="{Binding Title, StringFormat=🔒 رمزِ بخشِ «{0}»}" FontWeight="Bold"
-                             Foreground="{DynamicResource Pump.Accent}" />
+                             Foreground="{DynamicResource Pump.Ink.Accent}" />
                 </Border>
                 <StackPanel Margin="14" Spacing="10">
                   <TextBlock Text="{Binding StateText}" />
@@ -116,7 +116,7 @@
                   </StackPanel>
 
                   <TextBlock Text="{Binding Error}" TextWrapping="Wrap"
-                             Foreground="{DynamicResource Pump.Danger}"
+                             Foreground="{DynamicResource Pump.Ink.Danger}"
                              IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                 </StackPanel>
               </StackPanel>

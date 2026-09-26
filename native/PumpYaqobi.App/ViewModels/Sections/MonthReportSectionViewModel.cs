@@ -27,7 +27,14 @@ public sealed partial class MonthReportSectionViewModel : SectionViewModel
     private MonthReportSource? _src;
 
     public MonthReportSectionViewModel(AppHost host)
-        : base("monthreport", "profit", "گزارش ماهانه") => _host = host;
+        : base("monthreport", "profit", "گزارش ماهانه")
+    {
+        _host = host;
+        Picker = new YearMonthPicker(k => { if (k.Length > 0 && k != Month) Month = k; });
+    }
+
+    /// <summary>کشوی سال و ماه (۱۴۰۵/۰۷/۱۴). ⛔ ماه همان <see cref="Month"/> است؛ این فقط نما است.</summary>
+    public YearMonthPicker Picker { get; }
 
     public ObservableCollection<string> Months { get; } = new();
 
@@ -90,6 +97,7 @@ public sealed partial class MonthReportSectionViewModel : SectionViewModel
         foreach (var k in keys) Months.Add(k);
 
         Month = keep is not null && keys.Contains(keep) ? keep : keys.FirstOrDefault();
+        Picker.Load(Months, Month);
         Recalc();
     }
 
