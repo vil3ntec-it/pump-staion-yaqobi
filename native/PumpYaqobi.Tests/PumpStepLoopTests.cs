@@ -43,7 +43,8 @@ public class PumpStepLoopTests
     public void Game_Pomp_Digar_Be_Band_Shodane_Dastgah_Band_Nist()
     {
         var vm = Src(Vm);
-        Assert.Contains("LoginStep = SignedIn && (activated || f.PumpStepDone) && hasPump ? 4", vm);
+        //  ⛔ و از ۱۴۰۵/۰۷/۱۳ واردشده همیشه «تمام» است (پمپ و ثبت خودکارند)
+        Assert.Contains("LoginStep = SignedIn || f.LoginSkipped ? 4 : 1;", vm);
         //  ⛔ شرطِ قدیمی برنگردد
         Assert.DoesNotContain("LoginStep = SignedIn && activated && hasPump ? 4", vm);
     }

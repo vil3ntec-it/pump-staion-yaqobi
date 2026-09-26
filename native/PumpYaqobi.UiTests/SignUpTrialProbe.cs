@@ -39,6 +39,7 @@ internal static class SignUpTrialProbe
         if (!ok) _bad++;
     }
 
+    private static Uri? _pub;
     private static readonly HttpClient Http = new(new SocketsHttpHandler { AllowAutoRedirect = false })
     { Timeout = TimeSpan.FromSeconds(30) };
 
@@ -51,6 +52,7 @@ internal static class SignUpTrialProbe
         }
         var live = JsonDocument.Parse(File.ReadAllText(args[1])).RootElement;
         var pub = new Uri(live.GetProperty("public").GetString()!);
+        _pub = pub;
         var mailCodes = live.GetProperty("mailCodes").GetString()!;
         var shots = args.Length > 2 ? args[2] : Path.Combine(Path.GetTempPath(), "pump-signuptrial");
         Directory.CreateDirectory(shots);
@@ -176,23 +178,20 @@ internal static class SignUpTrialProbe
             Check("کدِ شش‌رقمی به صندوقِ همین ایمیل رسید", code.Length == 6, code);
             Shot(win, shots, tag + "signup-2-code");
 
-            Console.WriteLine("── ۲) کدِ ایمیل ⇒ حساب");
+            Console.WriteLine("── ۲) کدِ ایمیل ⇒ حساب — و همین‌جا تمام (پمپ و این کامپیوتر خودکار)");
             account.EmailCode = code;
             Wait(win, account.VerifyEmailCommand.ExecuteAsync(null));
-            Check("کد پذیرفته شد، حساب ساخته شد و صفحه به گامِ پمپ رفت", account.StepPump,
-                  "گام " + account.LoginStep + " · " + account.LoginStatus);
-            Shot(win, shots, tag + "signup-3-pump");
-
-            Console.WriteLine("── ۳) نامِ پمپ ⇒ پمپ روی سرور و بند شدنِ این کامپیوتر");
-            account.LoginPump = "پمپ آزمایشیِ سی‌روزه";
-            Wait(win, account.FinishPumpCommand.ExecuteAsync(null));
             Settle(win);
             var f = AppSettings.Load();
-            Check("گامِ ورود تمام شد", !account.ShowLoginPage, "گام " + account.LoginStep + " · " + account.LoginStatus);
-            Check("پمپ روی سرور ساخته شد", !string.IsNullOrWhiteSpace(f.CloudStationId), f.CloudStationId);
-            Check("این کامپیوتر به پمپ بند شد (توکنِ دستگاه)", !string.IsNullOrWhiteSpace(f.CloudDeviceToken),
+            //  ⛔ «همین که یارو حسابِ کاربری برای خودش درست کرد تموم حساب درست شده» (۱۴۰۵/۰۷/۱۳)
+            Check("⛔ پس از کدِ ایمیل هیچ گامِ دیگری نیست (نه نامِ پمپ، نه ثبتِ کامپیوتر)",
+                  !account.ShowLoginPage && !account.StepPump, "گام " + account.LoginStep + " · " + account.LoginStatus);
+            Check("پمپ خودکار روی سرور ساخته شد", !string.IsNullOrWhiteSpace(f.CloudStationId), f.CloudStationId);
+            Check("این کامپیوتر خودکار به پمپ وصل شد (توکنِ دستگاه)", !string.IsNullOrWhiteSpace(f.CloudDeviceToken),
                   CloudLink.LastBindWhy);
             Check("مجوزِ امضاشده آمد", !string.IsNullOrWhiteSpace(f.CloudLicense));
+            Check("کارتِ «در حالِ وصل شدن» دیده نمی‌شود", !account.LinkingNow, account.LinkingLine);
+            Shot(win, shots, tag + "signup-3-done");
 
             Console.WriteLine("── ۴) پروفایل — همان چیزی که کاربر می‌بیند");
             Wait(win, vm.GoAsync(account));
@@ -243,63 +242,54 @@ internal static class SignUpTrialProbe
         return "";
     }
 
+    /// <summary>
+    /// ⛔ حسابی که **پیش از این** ساخته شده و پمپ ندارد (همان عکسِ صاحب ریپو)
+    /// — ورود با آن ⇒ پمپ و این کامپیوتر خودکار، بی کارت و بی دکمه.
+    /// </summary>
     private static void SkipThenProfile(Avalonia.Controls.Window win, MainViewModel vm, AccountSectionViewModel account,
                                         string mailCodes, string shots)
     {
         var email = "nopump-" + Guid.NewGuid().ToString("N")[..10] + "@example.com";
         const string pass = "Pump!1405trial";
-        Console.WriteLine("── ۱) حساب ساخته می‌شود و گامِ پمپ با «بعداً» رد می‌شود");
+        Console.WriteLine("── ۱) حسابی بی پمپ، بیرون از این برنامه ساخته شده");
+        var baseUrl = _pub!.ToString().TrimEnd('/');
+        string Post(string path, object body)
+        {
+            var req = new HttpRequestMessage(HttpMethod.Post, baseUrl + path)
+            { Content = new StringContent(JsonSerializer.Serialize(body), System.Text.Encoding.UTF8, "application/json") };
+            req.Headers.TryAddWithoutValidation("X-App-Id", "tohid-pump-app");
+            var res = Task.Run(() => Http.SendAsync(req)).GetAwaiter().GetResult();
+            return Task.Run(() => res.Content.ReadAsStringAsync()).GetAwaiter().GetResult();
+        }
+        var sentAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        Post("/api/auth/register/start", new { name = "محمد هارون", email, password = pass, passwordConfirm = pass, app = "pump" });
+        var code = CodeFor(win, mailCodes, email, sentAt);
+        var verify = JsonDocument.Parse(Post("/api/auth/register/verify", new { email, code, app = "pump" })).RootElement;
+        var ticket = verify.TryGetProperty("ticket", out var t) ? t.GetString() : "";
+        var terms = verify.TryGetProperty("terms", out var tv) && tv.TryGetProperty("version", out var tvv) ? tvv.GetString() : "";
+        var done = Post("/api/auth/register/complete", new { ticket, name = "محمد هارون", password = pass,
+            terms = new { accepted = true, version = terms }, app = "pump" });
+        Check("حساب (بی پمپ) ساخته شد", done.Contains("accessToken"), done[..Math.Min(160, done.Length)]);
+
+        Console.WriteLine("── ۲) ورود با همان حساب در برنامه ⇒ همه‌چیز خودکار");
         Wait(win, vm.GoAsync(account));
-        account.SetSignUpCommand.Execute("yes");
-        account.LoginName = "محمد هارون";
+        if (!account.ShowLoginPage) { account.OpenAccountPageCommand.Execute(null); Settle(win); }
+        account.SetSignUpCommand.Execute("no");
         account.LoginEmail = email;
         account.LoginPassword = pass;
-        account.LoginPassword2 = pass;
-        account.AcceptTerms = true;
-        var sentAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         Wait(win, account.AccountStepCommand.ExecuteAsync(null));
-        account.EmailCode = CodeFor(win, mailCodes, email, sentAt);
-        Wait(win, account.VerifyEmailCommand.ExecuteAsync(null));
-        Check("حساب ساخته شد و صفحه به گامِ پمپ رسید", account.StepPump, "گام " + account.LoginStep + " · " + account.LoginStatus);
-        account.SkipPumpCommand.Execute(null);
-        Settle(win);
-
-        Console.WriteLine("── ۲) پروفایل و چراغ — همان عکسِ صاحب ریپو");
-        Wait(win, vm.GoAsync(account));
-        //  حلقهٔ شصت‌ثانیه‌ای را جلو بیندازیم: همان «سرورِ حساب تایید کرد»
-        Wait(win, account.RefreshSubCommand.ExecuteAsync(null));
         Wait(win, vm.GoAsync(account));
         vm.TickLinkDot();
         Settle(win);
         var f = AppSettings.Load();
-        Console.WriteLine($"     ⓘ کدِ پمپ: {account.PumpCodeLine} · سرورِ حساب: {account.CloudLine} · پلن: {account.SubPlanText}");
-        Console.WriteLine($"     ⓘ چراغ: {vm.LinkDotBrushKey} · {vm.LinkDotReason.Replace('\n', ' ')}");
-        Check("پمپی روی سرور نیست (همان حالِ عکس)", string.IsNullOrWhiteSpace(f.CloudStationId));
-        Check("⛔ چراغ «هر دو وصل‌اند» نمی‌گوید وقتی این کامپیوتر به هیچ پمپی ثبت نشده",
-              vm.LinkDotBrushKey != "Pump.Ok" && vm.LinkDotReason.Contains("پمپ"), vm.LinkDotBrushKey + " · " + vm.LinkDotReason);
-        //  ⚠️ با بازتاب، تا همین سنجه روی نسخهٔ پیشین هم کامپایل شود و «پیش از» را نشان دهد
-        bool NeedsPump() => account.GetType().GetProperty("NeedsPump")?.GetValue(account) is true;
-        Check("⛔ پروفایل راهِ ساختنِ پمپ را نشان می‌دهد", NeedsPump(), NeedsPump().ToString());
-        Shot(win, shots, "nopump-1-profile");
-
-        Console.WriteLine("── ۳) از خودِ پروفایل: نامِ پمپ ⇒ ساختن ⇒ سی روز");
-        account.LoginPump = "پمپ دولتی";
-        if (account.GetType().GetProperty("CreatePumpHereCommand")?.GetValue(account)
-            is CommunityToolkit.Mvvm.Input.IAsyncRelayCommand create)
-            Wait(win, create.ExecuteAsync(null));
-        else { Check("دکمهٔ «ساختنِ پمپ» در پروفایل هست", false, "نیست"); return; }
-        Wait(win, vm.GoAsync(account));
-        vm.TickLinkDot();
-        Settle(win);
-        f = AppSettings.Load();
         Console.WriteLine($"     ⓘ {account.SubPlanText} · {account.SubDaysText} · {account.PillText} · کدِ پمپ: {account.PumpCodeLine}");
         Console.WriteLine($"     ⓘ چراغ: {vm.LinkDotBrushKey} · {vm.LinkDotReason.Replace('\n', ' ')}");
-        Check("پمپ روی سرور ساخته شد", !string.IsNullOrWhiteSpace(f.CloudStationId), f.CloudStationId);
-        Check("این کامپیوتر بند شد", !string.IsNullOrWhiteSpace(f.CloudDeviceToken), CloudLink.LastBindWhy);
+        Check("⛔ «نامِ پمپ» خواسته نشد", !account.ShowLoginPage && !account.StepPump, "گام " + account.LoginStep + " · " + account.LoginStatus);
+        Check("پمپ خودکار ساخته شد، با نامِ صاحبِ حساب", !string.IsNullOrWhiteSpace(f.CloudStationId), f.CloudStationId);
+        Check("این کامپیوتر وصل شد", !string.IsNullOrWhiteSpace(f.CloudDeviceToken), CloudLink.LastBindWhy);
         Check("سی روزِ آزمایشی فعال شد", account.SubActive && account.VipDays == 30, account.VipDays.ToString());
-        Check("کارتِ «پمپ بسازید» رفت", !NeedsPump());
-        Check("⛔ چراغِ سرورِ حساب حالا سبز است (سرورِ خانگی در این آزمون نیست، پس کلِ چراغ زرد)",
-              vm.CloudDotBrushKey == "Pump.Ok", vm.CloudDotBrushKey + " · " + vm.CloudDotReason);
+        Check("هیچ کارتِ «ساختن/ثبت» نیست", !account.LinkingNow, account.LinkingLine);
+        Check("⛔ چراغِ سرورِ حساب سبز است", vm.CloudDotBrushKey == "Pump.Ok", vm.CloudDotBrushKey + " · " + vm.CloudDotReason);
         Shot(win, shots, "nopump-2-created");
     }
 

@@ -234,6 +234,8 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
 
     /// <summary>حساب پمپ دارد، این کامپیوتر ثبت نیست — کارتِ «ثبتِ همین کامپیوتر».</summary>
     [ObservableProperty] private bool _needsBind;
+    [ObservableProperty] private bool _linkingNow;
+    [ObservableProperty] private string _linkingLine = "";
 
     /// <summary>
     /// ══ جدا کردنِ این دستگاه از این پمپ ═════════════════════════════════
@@ -632,6 +634,13 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         //  نمی‌خواهد، ثبتِ همین کامپیوتر را می‌خواهد — با دلیلِ واقعیِ نشدن.
         NeedsBind = unbound && !NeedsPump && CloudLink.AccountHasStation == true;
         if (NeedsPump && string.IsNullOrWhiteSpace(LoginPump) && PumpName != "پمپ یعقوبی") LoginPump = PumpName;
+        //  ⛔ بی کارت و بی دکمه: فقط یک خطِ حال (`EnsureReadyAsync` کار را می‌کند)
+        LinkingNow = unbound;
+        LinkingLine = CloudLink.LastBindWhy is { Length: > 0 } lb
+            ? "⏳ وصل کردنِ این کامپیوتر به پمپِ شما هنوز نشد — " + lb + " · خودش دوباره امتحان می‌کند"
+            : NeedsPump
+                ? "⏳ در حالِ آماده کردنِ پمپِ شما روی حساب…"
+                : "⏳ در حالِ وصل کردنِ این کامپیوتر به پمپِ شما…";
 
         var session = _host.Session;
         UserLine = string.IsNullOrWhiteSpace(session.UserName) ? "کاربرِ برنامه" : session.UserName!;
@@ -945,19 +954,82 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     /// </summary>
     private async Task NextStepAfterSignInAsync()
     {
-        bool has;
-        try { has = await Cloud.HasStationAsync(); } catch { has = false; }
-        if (!has) { LoginStep = 3; return; }
-
-        await StationPublisher.CloudKeepNowAsync();
+        //  ⛔ **همین که حساب ساخته شد، تمام است** (۱۴۰۵/۰۷/۱۳، صاحب ریپو با
+        //  عکس: «این ثبتِ همین کامپیوتر و ساختِ حساب چیه… همین که یارو حسابِ
+        //  کاربری برای خودش درست کرد تموم حساب درست شده و این قد پیچیده نکن»).
+        //  پس نه گامِ «نامِ پمپ» هست و نه کارتِ «ساختن/ثبت»: پمپ (اگر نبود)
+        //  و ثبتِ همین کامپیوتر همین‌جا خودکار انجام می‌شوند.
+        //  ⚠️ پیامِ ورود (مثلاً «بندهای پمپِ حسابِ دیگر باز شد») زیرِ پیامِ
+        //  ساختنِ خودکار گم نمی‌شود — قفلِ بی‌توضیح باگ است.
+        var said = LoginStatus ?? "";
+        await EnsureReadyAsync(force: true);
+        if (said.Length > 0 && !(LoginStatus ?? "").Contains(said))
+            LoginStatus = (LoginStatus ?? "").Length > 0 ? said + "\n" + LoginStatus : said;
         var f = AppSettings.Load();
-        f.PumpStepDone = true;
-        try { f.Save(); } catch { /* دورِ بعد دوباره */ }
+        var bound = !string.IsNullOrWhiteSpace(f.CloudDeviceToken);
+        if (bound || CloudLink.AccountHasStation == true)
+        {
+            f.PumpStepDone = true;
+            try { f.Save(); } catch { /* دورِ بعد دوباره */ }
+        }
         RefreshAll();
         LoginStep = 4;
-        _host.Toast(string.IsNullOrWhiteSpace(f.CloudDeviceToken)
-            ? "✅ وارد شدید — پمپِ شما روی حسابتان هست؛ ثبتِ این کامپیوتر: " + (CloudLink.LastBindWhy is { Length: > 0 } w ? w : "خودش دوباره امتحان می‌کند")
-            : "✅ وارد شدید و این کامپیوتر به پمپِ شما ثبت است", ToastKind.Ok);
+        _host.Toast(bound
+            ? "✅ حسابِ شما آماده است و این کامپیوتر به پمپتان وصل شد"
+            : "✅ وارد شدید — وصل شدنِ این کامپیوتر خودکار دوباره امتحان می‌شود"
+              + (CloudLink.LastBindWhy is { Length: > 0 } w ? " (" + w + ")" : ""), ToastKind.Ok);
+    }
+
+    /// <summary>
+    /// ⛔ <b>«حساب آماده»، بی هیچ گامِ دستی</b> — تنها جای این تصمیم.
+    ///
+    /// حسابی که پمپ ندارد ⇒ پمپ با نامِ خودش ساخته می‌شود (همان
+    /// <see cref="FinishPumpAsync"/>)؛ حسابی که دارد ⇒ همین کامپیوتر ثبت
+    /// می‌شود (همان دورِ پس‌زمینه). فقط از کارِ خودِ کاربر صدا زده می‌شود —
+    /// ورود/ثبت‌نام و باز کردنِ پروفایل — نه از حلقهٔ پس‌زمینه: «هر حساب یک
+    /// پمپ» و حلقه هیچ‌وقت بی‌خبر پمپ نمی‌سازد.
+    /// </summary>
+    private bool _ensuring;
+    private DateTime _ensuredAt = DateTime.MinValue;
+    private async Task EnsureReadyAsync(bool force = false)
+    {
+        if (_ensuring || !SignedIn) return;
+        if (!force && DateTime.UtcNow - _ensuredAt < TimeSpan.FromMinutes(2)) return;
+        if (!string.IsNullOrWhiteSpace(AppSettings.Load().CloudDeviceToken)) return;
+        _ensuring = true;
+        _ensuredAt = DateTime.UtcNow;
+        try
+        {
+            bool has;
+            try { has = await Cloud.HasStationAsync(); } catch { has = false; }
+            if (!has)
+            {
+                //  ⚠️ ساختنِ پمپ خودش پیش از ساختن دوباره از سرور می‌پرسد، پس
+                //  یک «نمی‌دانم»ِ شبکه پمپِ دوم نمی‌سازد.
+                LoginPump = AutoPumpName();
+                await FinishPumpAsync();
+            }
+            else await StationPublisher.CloudKeepNowAsync();
+            //  وصل شد ⇒ ترمز برداشته می‌شود؛ ترمز فقط برای «نشد» است (سقفِ نرخِ سرور)
+            if (!string.IsNullOrWhiteSpace(AppSettings.Load().CloudDeviceToken)) _ensuredAt = DateTime.MinValue;
+        }
+        finally { _ensuring = false; }
+        RefreshAll();
+        PumpCreatedHere?.Invoke();
+    }
+
+    private async Task EnsureReadySafeAsync()
+    {
+        try { await EnsureReadyAsync(); } catch { /* دورِ بعد؛ برنامه بی‌اینترنت هم باز است */ }
+    }
+
+    /// <summary>نامِ پمپِ خودکار: آن‌چه کاربر نوشته، وگرنه «پمپِ» + نامِ حساب.</summary>
+    private string AutoPumpName()
+    {
+        var typed = (LoginPump ?? "").Trim();
+        if (typed.Length >= 2 && typed != "پمپ یعقوبی") return typed;
+        var who = (AppSettings.Load().CloudName ?? "").Trim();
+        return who.Length > 0 ? "پمپِ " + who : "پمپ من";
     }
 
     [RelayCommand]
@@ -979,9 +1051,6 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         if (LoginName.Length == 0) LoginName = f.CloudName;
         if (LoginPump.Length == 0) LoginPump = _host.Settings.GetString(SettingsService.StationName);
 
-        var activated = !string.IsNullOrWhiteSpace(f.CloudDeviceToken);
-        var hasPump = !string.IsNullOrWhiteSpace(_host.Settings.GetString(SettingsService.StationName));
-
         //  ⚠️ «تمام» یعنی یا واقعاً همه‌چیز هست، یا کاربر خودش گفته «بعداً»
         //  (`AppSettings.LoginSkipped`) — وگرنه صفحهٔ ورود می‌شد یک دیوار
         //  جلوی دفترِ خودش، و آن خلافِ قاعدهٔ «دفتر گروگان نیست» بود.
@@ -999,9 +1068,9 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         //  ⚠️ و چیزی پنهان نمی‌شود: تا دستگاه بند نشده، پروفایل همچنان
         //  «سرورِ حساب: فعال نشده» می‌گوید و حلقهٔ شصت‌ثانیه‌ای خودش
         //  دوباره می‌زندش.
-        LoginStep = SignedIn && (activated || f.PumpStepDone) && hasPump ? 4
-                  : f.LoginSkipped ? 4
-                  : !SignedIn ? 1 : 3;
+        //  ⛔ و از ۱۴۰۵/۰۷/۱۳ **واردشده همیشه «تمام» است**: گامِ «نامِ پمپ»
+        //  دیگر نیست — پمپ و ثبتِ این کامپیوتر خودکارند (`EnsureReadyAsync`).
+        LoginStep = SignedIn || f.LoginSkipped ? 4 : 1;
         //  کسی که حساب دارد، پیش‌فرضش «ورود» است نه «ثبت‌نام»
         if (SignedIn || f.CloudEmail.Length > 0) IsSignUp = !SignedIn && f.CloudEmail.Length == 0;
 
@@ -1404,47 +1473,6 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
                       + "فایلِ نصبِ تازه را بگیرید. «بعداً» هم شما را رد می‌کند.";
     }
 
-    /// <summary>
-    /// ساختنِ پمپ از خودِ پروفایل — برای کسی که گامِ «نامِ پمپ» را رد کرده.
-    ///
-    /// ⛔ <b>راهِ دومی ساخته نشد</b>: همان <see cref="FinishPumpAsync"/>ِ صفحهٔ
-    /// ورود صدا زده می‌شود (ساختنِ پمپ، بند شدن، مجوز، دورهٔ آزمایشی). و فقط
-    /// با دکمهٔ خودِ کاربر — قاعدهٔ «پمپ بی‌خبر ساخته نمی‌شود» سرِ جایش است.
-    /// </summary>
-    [RelayCommand]
-    private async Task CreatePumpHereAsync()
-    {
-        var f = AppSettings.Load();
-        if (f.LoginSkipped) { f.LoginSkipped = false; try { f.Save(); } catch { /* دورِ بعد */ } }
-        await FinishPumpAsync();
-        RefreshAll();
-        PumpCreatedHere?.Invoke();
-    }
-
-    /// <summary>
-    /// «ثبتِ همین کامپیوتر» — برای حسابی که پمپ دارد ولی این کامپیوتر ثبت نیست.
-    ///
-    /// ⛔ <b>راهِ دومی نیست</b>: همان دورِ پس‌زمینه (<see cref="StationPublisher.CloudKeepNowAsync"/>)
-    /// همین حالا می‌دود — نشست، ثبتِ دستگاه، مجوز. و <b>هیچ پمپی نمی‌سازد</b>.
-    /// </summary>
-    [RelayCommand]
-    private async Task BindHereAsync()
-    {
-        if (Busy) return;
-        Busy = true;
-        LoginStatus = "در حالِ ثبتِ این کامپیوتر…";
-        try
-        {
-            await StationPublisher.CloudKeepNowAsync();
-            var ok = !string.IsNullOrWhiteSpace(AppSettings.Load().CloudDeviceToken);
-            LoginStatus = ok ? "✅ این کامپیوتر به پمپِ شما ثبت شد"
-                : "❌ " + (CloudLink.LastBindWhy is { Length: > 0 } why ? why : "نشد — اینترنت را ببینید و دوباره بزنید");
-        }
-        finally { Busy = false; }
-        RefreshAll();
-        PumpCreatedHere?.Invoke();
-    }
-
     /// <summary>پمپ از پروفایل ساخته شد — پوسته چراغ را همان لحظه تازه می‌کند.</summary>
     public event Action? PumpCreatedHere;
 
@@ -1678,6 +1706,9 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     {
         RefreshAll();
         ShowLogin();
+        //  واردشده ولی هنوز وصل نشده ⇒ خودش همین حالا (بی کارت و بی دکمه).
+        //  ⚠️ صفحه منتظرِ اینترنت نمی‌ماند؛ نتیجه با `RefreshAll` می‌نشیند.
+        if (SignedIn && !Busy) _ = EnsureReadySafeAsync();
 
         //  ⚠️ **آدمک‌ها هیچ‌جا خوانده نمی‌شوند** — نقشهٔ برداری با خودِ
         //  چیدمانِ صفحه کشیده می‌شود، پس نه گامی برایش لازم است و نه بایتی.

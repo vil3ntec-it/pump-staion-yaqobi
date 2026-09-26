@@ -500,31 +500,28 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     private static string UnboundWhy(bool signedIn) =>
         !signedIn
-            ? "سرورِ حساب جواب می‌دهد، ولی هنوز وارد حساب نشده‌اید — روی چراغ بزنید تا صفحهٔ ورود باز شود"
+            ? "هنوز وارد حساب نشده‌اید — برای ورود روی چراغ بزنید"
             : Services.CloudLink.AccountHasStation == false
-                ? "وارد حساب شده‌اید، ولی این حساب هنوز پمپی ندارد — روی چراغ بزنید و نامِ پمپ را بنویسید"
+                ? "پمپِ حسابتان در حالِ آماده شدن است — پروفایل را باز کنید"
                 : Services.CloudLink.LastBindWhy is { Length: > 0 } why
-                    ? "ثبتِ این کامپیوتر نشد: " + why + " — روی چراغ بزنید تا دوباره امتحان کند"
-                    : "این کامپیوتر هنوز به پمپِ حسابتان ثبت نشده — خودش هر دقیقه امتحان می‌کند؛ برای همین حالا، روی چراغ بزنید";
+                    ? "وصل کردنِ این کامپیوتر به پمپ هنوز نشد: " + why + " — خودش دوباره امتحان می‌کند"
+                    : "این کامپیوتر در حالِ وصل شدن به پمپِ حسابتان است";
 
     public void TickCloudDot()
     {
         string key, why;
         switch (Services.CloudLink.Reach)
         {
-            case Services.CloudReach.Online when !DeviceBound():
-                //  ⛔ **«وصل» با «ثبت‌شده» یکی نیست** (۱۴۰۵/۰۷/۱۳، عکسِ صاحب ریپو):
-                //  سرورِ حساب جواب می‌داد و چراغ «هر دو سرور وصل‌اند» می‌گفت، در
-                //  حالی که این کامپیوتر به هیچ پمپی ثبت نشده بود — نه اشتراک، نه
-                //  دورهٔ آزمایشی. راست بود، ولی گمراه‌کننده؛ پس زرد، با دلیل.
-                key = "Pump.Warn";
-                why = UnboundWhy(_signedInCache);
-                break;
-
             case Services.CloudReach.Online:
+                //  ⛔ **جواب داد ⇒ سبز — با حساب یا بی حساب** (۱۴۰۵/۰۷/۱۳، صاحب
+                //  ریپو: «وقتی که حساب هم نداشته باشم اون سرور باید بگه که وصل
+                //  است و اگه وصل بود باید سبز بشه»). این چراغ حالِ **سرور** را
+                //  می‌گوید؛ «این کامپیوتر ثبت است؟» مالِ پروفایل است و این‌جا
+                //  فقط یک خطِ آگاهی زیرِ همان جمله است، نه رنگ.
                 key = "Pump.Ok";
                 why = "به سرورِ حساب وصل است"
-                    + (Services.CloudLink.CloudOkAt is { } at ? $" · آخرین جواب: {at:HH:mm}" : "");
+                    + (Services.CloudLink.CloudOkAt is { } at ? $" · آخرین جواب: {at:HH:mm}" : "")
+                    + (DeviceBound() ? "" : " · " + UnboundWhy(_signedInCache));
                 break;
 
             case Services.CloudReach.Offline:
@@ -582,12 +579,14 @@ public sealed partial class MainViewModel : ObservableObject
         var acct = CloudDotBrushKey;
         var ok = (home == "Pump.Ok" ? 1 : 0) + (acct == "Pump.Ok" ? 1 : 0);
         var bad = (home == "Pump.Danger" ? 1 : 0) + (acct == "Pump.Danger" ? 1 : 0);
-        //  زرد فقط از سرورِ حساب می‌آید: «جواب می‌دهد، ولی این کامپیوتر به پمپی
-        //  ثبت نشده» (‎TickCloudDot‎)
         var warn = acct == "Pump.Warn" ? 1 : 0;
 
         string key, head;
         if (ok == 2)            { key = "Pump.Ok";     head = "✅ هر دو سرور وصل‌اند"; }
+        //  ⛔ سرورِ حساب جواب می‌دهد و سرورِ خانگی **خراب** نیست (فقط هنوز
+        //  پیدا/تنظیم نشده) ⇒ سبز (۱۴۰۵/۰۷/۱۳، صاحب ریپو: «اگه وصل بود باید
+        //  سبز بشه»). خانگیِ پیداشده‌ای که جواب نمی‌دهد همچنان زرد است.
+        else if (acct == "Pump.Ok" && home != "Pump.Danger") { key = "Pump.Ok"; head = "✅ به سرور وصل است"; }
         else if (bad > 0 && ok + warn > 0) { key = "Pump.Warn"; head = "⚠️ یکی وصل است و یکی نه"; }
         //  ⛔ «سرورِ حساب جواب می‌دهد ولی پمپی نیست» خاکستریِ «سروری تنظیم نشده»
         //  نیست — همان جمله‌ای است که کاربر باید ببیند (۱۴۰۵/۰۷/۱۳).
