@@ -114,20 +114,22 @@ public static class StationSnapshot
             var name = d.TryGetValue("name", out var n) ? n as string ?? "" : "";
             var id = d.TryGetValue("id", out var i) ? i : 0;
 
-            foreach (var (key, fuel) in new[] { ("stP", "پطرول"), ("stD", "دیزل"), ("stM", "پول") })
+            foreach (var (key, fuel, unit) in new[] { ("stP", "پطرول", "لیتر"), ("stD", "دیزل", "لیتر"), ("stM", "پول", "افغانی") })
             {
                 var st = d.TryGetValue(key, out var v) ? v as string ?? "" : "";
-                if (st != "out" && st != "low") continue;
+                var use = UseOf(d, key);
+                var level = DebtLevel(st, use);
+                if (level.Length == 0) continue;
 
+                var (text, act) = DebtWords(level, name, fuel, unit, use);
                 outList.Add(new Dictionary<string, object?>
                 {
-                    ["k"] = "d" + id + "-" + key + "-" + st,
+                    ["k"] = "d" + id + "-" + key + "-" + level,
                     ["n"] = name,
                     ["f"] = fuel,
-                    ["s"] = st,
-                    ["t"] = st == "out"
-                        ? name + " — " + fuel + "ِ حسابش تمام شد، اضافه نده"
-                        : name + " — " + fuel + "ِ حسابش کم مانده",
+                    ["s"] = level is "out" or "over" ? "out" : "low",
+                    ["t"] = text,
+                    ["a"] = act,
                 });
             }
         }
@@ -140,19 +142,122 @@ public static class StationSnapshot
             var near = t.TryGetValue("near", out var nr) && nr is true;
             if (!low && !near) continue;
 
+            var show = Num(t.TryGetValue("show", out var sh) ? sh : null);
+            var thr = Num(t.TryGetValue("threshold", out var th) ? th : null);
+            var lim = thr > 0m ? " (حدِ هشدار " + Amount(thr) + " لیتر)" : "";
+            string text, act;
+            if (low && show <= 0m)
+            {
+                text = "مخزنِ " + label + " خالی شد — 0 لیتر مانده";
+                act = "همین حالا " + label + " سفارش بدهید؛ فروشِ " + label + " ایستاده است.";
+            }
+            else if (low)
+            {
+                text = "مخزنِ " + label + " رو به ته کشیدن است — " + Amount(show) + " لیتر مانده" + lim;
+                act = "امروز " + label + " سفارش بدهید تا پمپ خالی نماند.";
+            }
+            else
+            {
+                text = "مخزنِ " + label + " نزدیکِ حدِ هشدار است — " + Amount(show) + " لیتر مانده" + lim;
+                act = "برای خریدِ " + label + " آماده شوید؛ چند روزِ دیگر کم می‌آید.";
+            }
+
             outList.Add(new Dictionary<string, object?>
             {
                 ["k"] = "tank-" + key + (low ? "-out" : "-low"),
                 ["n"] = "مخزنِ " + label,
                 ["f"] = label,
                 ["s"] = low ? "out" : "low",
-                ["t"] = "مخزنِ " + label + (low ? " ته کشید" : " دارد ته می‌کشد")
-                        + " — " + (t.TryGetValue("show", out var sh) ? sh : 0) + " لیتر",
+                ["t"] = text,
+                ["a"] = act,
             });
         }
 
         return outList;
     }
+
+    /// <summary>
+    /// ══ حالِ هشدارِ یک دفتر — ۷۰٪ · ۹۰٪ · تمام شد · اضافه داده شد ════════════
+    ///
+    /// خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۴): «اگه قرض‌داری به ۷۰ فیصد از حسابش
+    /// می‌رسید بگه متوجه باشه، و تا ۹۰، و اگه تموم شد بگه تموم شده، و اگه
+    /// اضافه داد بازپرسی کنه که چرا اضافه دادی.»
+    ///
+    /// ⛔ «تمام شد» هنوز فقط از <c>DebtStatus.Out</c> است (همان رنگِ سرخِ کارت)؛
+    /// درصد و مانده از <c>DebtCalculationService.Usage</c> — همان سنجش‌ها. پس
+    /// کارت و هشدار هرگز دو چیزِ متفاوت نمی‌گویند. حسابِ تسویه‌شده (حالِ ‎ok‎ با
+    /// مصرفِ ۱۰۰٪) هیچ هشداری ندارد.
+    ///
+    /// ⚠️ حال داخلِ کلید است (‎d7-stP-w70‎ ⇒ ‎-w90‎ ⇒ ‎-out‎ ⇒ ‎-over‎)، پس هر
+    /// پله خبرِ تازهٔ خودش را می‌دهد و همان پله دوباره نه.
+    /// </summary>
+    internal static string DebtLevel(string st, (bool Has, decimal Deposit, decimal Used) use)
+    {
+        if (st == "out") return use.Has && use.Used > use.Deposit ? "over" : "out";
+        if (use.Has && use.Deposit > 0m)
+        {
+            var pct = use.Used * 100m / use.Deposit;
+            if (pct >= 100m) return "";          // تسویه‌شده — سرخ نیست، هشدار هم نیست
+            if (pct >= 90m) return "w90";
+            if (pct >= 70m) return "w70";
+            return st == "low" ? "w90" : "";
+        }
+        return st == "low" ? "low" : "";
+    }
+
+    private static (string Text, string Action) DebtWords(string level, string name, string fuel, string unit,
+                                                          (bool Has, decimal Deposit, decimal Used) use)
+    {
+        var money = fuel == "پول";
+        var rem = Amount(Math.Max(0m, use.Deposit - use.Used));
+        var pct = use.Deposit > 0m ? Amount(Math.Floor(use.Used * 100m / use.Deposit)) : "";
+        var give = money ? "قرض" : fuel;
+        return level switch
+        {
+            "w70" => (name + " — " + pct + "٪ِ " + fuel + "ِ حسابش مصرف شد؛ " + rem + " " + unit + " مانده",
+                      "متوجهِ " + name + " باشید؛ کم‌کم رسیدِ تازه بخواهید."),
+            "w90" => (name + " — " + pct + "٪ِ " + fuel + "ِ حسابش رفت؛ فقط " + rem + " " + unit + " مانده",
+                      "به " + name + " بگویید حسابش را پر کند؛ بیشتر از " + rem + " " + unit + " به او ندهید."),
+            "over" => (name + " — " + Amount(use.Used - use.Deposit) + " " + unit + " بیشتر از حسابش " + give
+                       + " داده شده؛ اضافه نده",
+                       "بازپرسی کنید: چه کسی و چرا به " + name + " اضافه داد؟ همین امروز "
+                       + Amount(use.Used - use.Deposit) + " " + unit + " را از او بگیرید."),
+            "out" => (name + " — " + fuel + "ِ حسابش تمام شد، اضافه نده",
+                      "به " + name + " دیگر " + give + " ندهید تا رسیدِ تازه بیاورد."),
+            _ => (name + " — " + fuel + "ِ حسابش کم مانده",
+                  "متوجهِ " + name + " باشید؛ حسابش کم مانده."),
+        };
+    }
+
+    /// <summary>اعتبار و مصرفِ یک دفتر از عکس (‎use.stP = [اعتبار, مصرف]‎).</summary>
+    private static (bool Has, decimal Deposit, decimal Used) UseOf(Dictionary<string, object?> d, string key)
+    {
+        if (!d.TryGetValue("use", out var u) || u is not Dictionary<string, object?> use) return (false, 0m, 0m);
+        if (!use.TryGetValue(key, out var pair) || pair is not double[] v || v.Length < 2) return (false, 0m, 0m);
+        return (true, (decimal)v[0], (decimal)v[1]);
+    }
+
+    /// <summary>اعتبار و مصرفِ سه دفتر — همان <c>DebtCalculationService.Usage</c>.</summary>
+    private static Dictionary<string, object?> Use(DebtUsageInfo u)
+    {
+        var d = new Dictionary<string, object?>();
+        if (u.Petrol.Any) d["stP"] = new[] { D(u.Petrol.Deposit), D(u.Petrol.Used) };
+        if (u.Diesel.Any) d["stD"] = new[] { D(u.Diesel.Deposit), D(u.Diesel.Used) };
+        if (u.Money.Any) d["stM"] = new[] { D(u.Money.Deposit), D(u.Money.Used) };
+        return d;
+    }
+
+    private static decimal Num(object? v) => v switch
+    {
+        double x => (decimal)x,
+        decimal m => m,
+        int i => i,
+        long l => l,
+        float f => (decimal)f,
+        _ => 0m,
+    };
+
+    private static string Amount(decimal v) => Shamsi.Money(Math.Round(v, 0, MidpointRounding.AwayFromZero));
 
     // ══════════════════════════════════════════════════════════════════════
     //  مخزن — «موجودیِ تیل در مخزن» که کارمند باید ببیند
@@ -261,6 +366,7 @@ public static class StationSnapshot
                 {
                     ["id"] = lite.Id,
                     ["name"] = lite.Name,
+                    ["use"] = Use(calc.Usage(accounts)),
                     ["phone"] = lite.Phone ?? "",
                     ["noinv"] = lite.IsNoInvoice,
                     ["status"] = StatusText(st.Worst),
@@ -308,6 +414,7 @@ public static class StationSnapshot
                 {
                     ["id"] = lite.Id,
                     ["name"] = lite.Name,
+                    ["use"] = Use(calc.Usage(accounts)),
                     ["stP"] = StatusText(st.Petrol),
                     ["stD"] = StatusText(st.Diesel),
                     ["stM"] = StatusText(st.Money),
@@ -673,6 +780,31 @@ public static class StationSnapshot
             new[] { "مفاد امروز", M(profit), "ok" },
             new[] { "مصارف امروز", M(expToday), "warn" },
         };
+    }
+
+    /// <summary>
+    /// ══ بدهیِ پمپ به هر شرکت — برای «اعلامیه»ی بات ══════════════════════════
+    ///
+    /// خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۴): «…یا از شرکت این‌قدر قرض‌دار استین.»
+    /// ⛔ همان الباقیِ نوارِ بالای برنامه (<see cref="BannerAsync"/>:
+    /// ‎Summarize(c, c.Rows)‎) — حسابِ تازه‌ای این‌جا نیست. فقط شرکتی که پمپ
+    /// واقعاً به آن بدهکار است.
+    /// </summary>
+    internal static async Task<List<object>> OweAsync(AppHost host, CancellationToken ct)
+    {
+        var list = new List<object>();
+        foreach (var c in await host.Companies.ListAsync(ct))
+        {
+            var sum = host.Company.Summarize(c, c.Rows);
+            if (sum.AlbaqiAfn <= 0m && sum.AlbaqiUsd <= 0m) continue;
+            list.Add(new
+            {
+                n = c.Name ?? "",
+                afn = D(Math.Max(0m, sum.AlbaqiAfn)),
+                usd = D(Math.Max(0m, sum.AlbaqiUsd)),
+            });
+        }
+        return list;
     }
 
     private static async Task<Dictionary<string, object?>> CompaniesAsync(AppHost host, CancellationToken ct)

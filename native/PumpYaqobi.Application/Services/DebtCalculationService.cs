@@ -32,6 +32,19 @@ public enum DebtStatus { None = 0, Ok = 1, Low = 2, Out = 3 }
 
 public readonly record struct DebtStatusInfo(DebtStatus Worst, DebtStatus Petrol, DebtStatus Diesel, DebtStatus Money);
 
+/// <summary>یک دفتر: اعتبار (با فیصدی) و مصرف — همان دو عددِ سنجشِ <c>Status</c>.</summary>
+public readonly record struct DebtUsage(decimal Deposit, decimal Used)
+{
+    /// <summary>آیا این دفتر اصلاً سنجیده شد.</summary>
+    public bool Any => Deposit > 0m || Used > 0m;
+    /// <summary>مانده؛ منفی یعنی بیشتر از حساب داده شده.</summary>
+    public decimal Remaining => Deposit - Used;
+    /// <summary>درصدِ مصرف؛ بی اعتبار و با مصرف ⇒ بی‌نهایت (۱۰۰۰).</summary>
+    public decimal Percent => Deposit > 0m ? Used * 100m / Deposit : (Used > 0m ? 1000m : 0m);
+}
+
+public readonly record struct DebtUsageInfo(DebtUsage Petrol, DebtUsage Diesel, DebtUsage Money);
+
 /// <summary>
 /// ══ منطقِ مالیِ قرض‌داران ══════════════════════════════════════════════════
 /// بندِ ۷ خواستهٔ صاحب ریپو: «هر محاسبه را از HTML استخراج و به یک Service
@@ -280,13 +293,65 @@ public sealed class DebtCalculationService
             if (st > per[kind]) per[kind] = st;
         }
 
+        EachCheck(list, Check);
+
+        // حسابِ تسویه‌شده «تمام‌شده» نیست
+        var b = Balances(list);
+        if (per["petrol"] == DebtStatus.Out && !(b.Petrol > 0m)) per["petrol"] = DebtStatus.Ok;
+        if (per["diesel"] == DebtStatus.Out && !(b.Diesel > 0m)) per["diesel"] = DebtStatus.Ok;
+        if (per["money"]  == DebtStatus.Out && !(b.Money  > 0m)) per["money"]  = DebtStatus.Ok;
+
+        var fuelSt = per["petrol"] >= per["diesel"] ? per["petrol"] : per["diesel"];
+        var worst  = fuelSt >= per["money"] ? fuelSt : per["money"];
+        return new DebtStatusInfo(worst, per["petrol"], per["diesel"], per["money"]);
+    }
+
+    /// <summary>
+    /// ══ چند درصدِ حساب رفته — برای هشدارِ ۷۰٪ و ۹۰٪ و «اضافه داده شد» ══════
+    ///
+    /// خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۴): «اگه قرض‌داری به ۷۰ فیصد از حسابش
+    /// می‌رسید بگه متوجه باشه، و تا ۹۰، و اگه تموم شد بگه تموم شده، و اگه
+    /// اضافه داد بازپرسی کنه.»
+    ///
+    /// ⛔ <b>همان سنجش‌های <see cref="Status"/></b> (<c>EachCheck</c>) — اعتبار با
+    /// فیصدی، دفترِ پول دو بار، و همان حساب‌های مهاجرت‌کرده/نکرده. برای هر
+    /// دفتر، سنجشی برگزیده می‌شود که بیشترین درصد را دارد (همان که
+    /// <see cref="Status"/> را «بدترین» می‌کند). ⚠️ رنگِ کارت و «تمام شد» هنوز
+    /// فقط از <see cref="Status"/> است؛ این فقط درصد و مانده را می‌گوید.
+    /// </summary>
+    public DebtUsageInfo Usage(IEnumerable<DebtAccount> accounts)
+    {
+        var list = accounts.Where(a => a is not null).ToList();
+        var per = new Dictionary<string, DebtUsage>
+            { ["petrol"] = default, ["diesel"] = default, ["money"] = default };
+
+        void Check(decimal deposit, decimal used, string kind)
+        {
+            if (deposit <= 0m && used <= 0m) return;
+            var u = new DebtUsage(deposit, used);
+            var cur = per[kind];
+            if (!cur.Any || u.Percent > cur.Percent
+                || (u.Percent == cur.Percent && u.Remaining < cur.Remaining))
+                per[kind] = u;
+        }
+
+        EachCheck(list, Check);
+        return new DebtUsageInfo(per["petrol"], per["diesel"], per["money"]);
+    }
+
+    /// <summary>
+    /// هر سنجشِ «اعتبار در برابرِ مصرف» — یک جا، برای <see cref="Status"/> و
+    /// <see cref="Usage"/>. ⛔ دو نسخه یعنی روزی کارت سرخ است و هشدار ساکت.
+    /// </summary>
+    private void EachCheck(List<DebtAccount> list, Action<decimal, decimal, string> check)
+    {
         foreach (var a in list)
         {
             var t = AccountTotals(a);
             var effP = 1m - (PercentOf(a, FuelType.Petrol) / 100m);
             var effD = 1m - (PercentOf(a, FuelType.Diesel) / 100m);
-            Check(a.RasidFuelPetrol * effP, t.Petrol.Liters, "petrol");
-            Check(a.RasidFuelDiesel * effD, t.Diesel.Liters, "diesel");
+            check(a.RasidFuelPetrol * effP, t.Petrol.Liters, "petrol");
+            check(a.RasidFuelDiesel * effD, t.Diesel.Liters, "diesel");
             // ⚠️ اعتبارِ پول، یک‌بار — نه دو بار.
             //
             // در نسخهٔ وب رسیدِ سربرگ و رسیدِ جدول دو انبارِ **جدا** بودند، پس
@@ -301,25 +366,15 @@ public sealed class DebtCalculationService
             // برابر شمرده می‌شود.
             if (a.ReceiptsMigrated)
             {
-                Check(t.Petrol.Rasid * effP, t.Petrol.Bardagi, "money");
-                Check(t.Diesel.Rasid * effD, t.Diesel.Bardagi, "money");
+                check(t.Petrol.Rasid * effP, t.Petrol.Bardagi, "money");
+                check(t.Diesel.Rasid * effD, t.Diesel.Bardagi, "money");
             }
             else
             {
-                Check(a.RasidMoneyPetrol * effP + t.Petrol.Rasid, t.Petrol.Bardagi, "money");
-                Check(a.RasidMoneyDiesel * effD + t.Diesel.Rasid, t.Diesel.Bardagi, "money");
+                check(a.RasidMoneyPetrol * effP + t.Petrol.Rasid, t.Petrol.Bardagi, "money");
+                check(a.RasidMoneyDiesel * effD + t.Diesel.Rasid, t.Diesel.Bardagi, "money");
             }
         }
-
-        // حسابِ تسویه‌شده «تمام‌شده» نیست
-        var b = Balances(list);
-        if (per["petrol"] == DebtStatus.Out && !(b.Petrol > 0m)) per["petrol"] = DebtStatus.Ok;
-        if (per["diesel"] == DebtStatus.Out && !(b.Diesel > 0m)) per["diesel"] = DebtStatus.Ok;
-        if (per["money"]  == DebtStatus.Out && !(b.Money  > 0m)) per["money"]  = DebtStatus.Ok;
-
-        var fuelSt = per["petrol"] >= per["diesel"] ? per["petrol"] : per["diesel"];
-        var worst  = fuelSt >= per["money"] ? fuelSt : per["money"];
-        return new DebtStatusInfo(worst, per["petrol"], per["diesel"], per["money"]);
     }
 
     // ══════════════════════════════════════════════════════════════════════
