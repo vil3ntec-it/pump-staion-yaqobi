@@ -600,7 +600,9 @@ public sealed class AppSettings
             {
                 var text = File.ReadAllText(path);
                 if (string.IsNullOrWhiteSpace(text)) return null;
-                return JsonSerializer.Deserialize<AppSettings>(text);
+                var a = JsonSerializer.Deserialize<AppSettings>(text);
+                if (a is not null) a._baseText = text;
+                return a;
             }
             catch (IOException) { Thread.Sleep(15); }
             catch (UnauthorizedAccessException) { Thread.Sleep(15); }
@@ -908,6 +910,8 @@ public sealed class AppSettings
             //  ⛔ بندهای حساب و پمپ ادغام می‌شوند، نه روی‌نویسی — بالای
             //  `BondFields` نوشته چرا.
             MergeBondFromDisk();
+            //  ⛔ و بقیهٔ خانه‌ها هم — پایینِ `MergeRestFromDisk` نوشته چرا.
+            MergeRestFromDisk();
 
             //  ⛔ نامِ فایلِ موقت **یکتا**ست: دو نمونهٔ برنامه (یا یک ابزارِ
             //  بیرونی) که هم‌زمان همین پوشه را بنویسند، با نامِ ثابت فایلِ
@@ -935,6 +939,7 @@ public sealed class AppSettings
                 else File.Move(tmp, File_);
                 //  آن‌چه همین حالا نوشته شد، پایهٔ ادغامِ بعدی است
                 if (_bondBase is not null) _bondBase = BondSnapshot();
+                if (_baseText is not null) _baseText = text;
             }
             catch
             {
@@ -993,6 +998,70 @@ public sealed class AppSettings
             var mine = p.GetValue(this);
             var theirs = p.GetValue(disk);
             if (Equals(mine, _bondBase[i]) && !Equals(theirs, _bondBase[i])) p.SetValue(this, theirs);
+        }
+    }
+
+    // ══ بقیهٔ خانه‌ها: همان ادغامِ سه‌طرفه، با متنِ خوانده‌شده به‌جای عکس ══════
+    //
+    //  ⛔ باگی که `syncui` روی CI گرفت (۱۴۰۵/۰۷/۱۴): کلیدِ «گزارشِ خطا» در
+    //  «تنظیمات ← همگام‌سازی» خاموش شد و همان لحظه دوباره روشن خوانده شد.
+    //  یک نمونهٔ **کهنه** (`CloudLink`ی که از ورود زنده بود) درست پس از آن
+    //  کلِ شیءِ خودش را نوشت و `ReportErrorsOff` را پس گرفت. همان باگِ
+    //  `BondFields`، فقط روی خانه‌ای که در آن فهرست نبود — یعنی **هر**
+    //  تنظیمی که کاربر عوض کند و نمونهٔ دیگری هم‌زمان ذخیره کند، بی‌صدا
+    //  برمی‌گشت.
+    //
+    //  پس همان قاعده برای همهٔ خانه‌ها: آن‌چه این نمونه عوض نکرده ولی دیسک
+    //  عوض شده، از دیسک برداشته می‌شود؛ آن‌چه خودش عوض کرده، همان نوشته
+    //  می‌شود.
+    //
+    //  ⚠️ پایه **متنِ خوانده‌شده** است (`_baseText`)، نه عکسِ هر خانه در
+    //  `Load`: `Load` بسیار صدا زده می‌شود و ساختنِ عکس آن را دو برابر
+    //  می‌کرد؛ این‌جا متن فقط در `Save` (که کم و خودش `fsync` است) باز
+    //  می‌شود. ⚠️ مقایسه با **متنِ JSONِ** هر خانه است، نه `Equals` —
+    //  فهرست‌ها و فرهنگ‌ها (پهنای ستون‌ها) در جا عوض می‌شوند و مرجعشان
+    //  همان می‌ماند.
+    //  ⚠️ نمونهٔ `new` (بی پایه) مثلِ همیشه کلِ خودش را می‌نویسد.
+
+    [JsonIgnore] private string? _baseText;
+
+    private static readonly System.Reflection.PropertyInfo[] RestFields =
+        typeof(AppSettings).GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+            .Where(p => p.CanRead && p.CanWrite
+                        && p.GetIndexParameters().Length == 0
+                        && p.GetSetMethod() is not null
+                        && !BondFields.Contains(p)
+                        //  دوقلوهای رمزی و کهنه از همان خانه‌های بند درمی‌آیند
+                        && !p.Name.EndsWith("Enc", StringComparison.Ordinal)
+                        && !p.Name.StartsWith("Legacy", StringComparison.Ordinal)
+                        && p.GetCustomAttributes(typeof(JsonIgnoreAttribute), true)
+                            .Cast<JsonIgnoreAttribute>()
+                            .All(a => a.Condition != JsonIgnoreCondition.Always))
+            .ToArray();
+
+    private static string Wire(System.Reflection.PropertyInfo p, object? v)
+    {
+        try { return JsonSerializer.Serialize(v, p.PropertyType); }
+        catch { return "\u0000" + Guid.NewGuid(); }   // نشد ⇒ «عوض شده» — مقدارِ خودش می‌ماند
+    }
+
+    private void MergeRestFromDisk()
+    {
+        if (_baseText is null) return;
+        AppSettings? baseline, disk;
+        try
+        {
+            baseline = JsonSerializer.Deserialize<AppSettings>(_baseText);
+            var locked = false;
+            disk = Read(File_, ref locked);
+        }
+        catch { return; }
+        if (baseline is null || disk is null) return;
+        foreach (var p in RestFields)
+        {
+            var b = Wire(p, p.GetValue(baseline));
+            var theirs = p.GetValue(disk);
+            if (Wire(p, p.GetValue(this)) == b && Wire(p, theirs) != b) p.SetValue(this, theirs);
         }
     }
 }

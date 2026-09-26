@@ -77,4 +77,61 @@ public class SettingsBondMergeTests : IDisposable
         new AppSettings { CloudDeviceToken = "" }.Save();
         Assert.Equal("", AppSettings.Load().CloudDeviceToken);
     }
+
+    // ══ بقیهٔ خانه‌ها هم — نه فقط بندهای حساب و پمپ ═══════════════════════════
+    //  `syncui` روی CI (۱۴۰۵/۰۷/۱۴): «گزارشِ خطا» خاموش شد و نمونهٔ کهنه‌ای که
+    //  همان لحظه ذخیره کرد، روشنش کرد.
+
+    [Fact]
+    public void NemooneyeKohne_KelideTanzimat_Ra_PasNemigirad()
+    {
+        new AppSettings { ThemeId = "blue" }.Save();
+
+        var stale = AppSettings.Load();      // مثلِ CloudLinkِ پس از ورود
+        var page = AppSettings.Load();       // مثلِ صفحهٔ «همگام‌سازی»
+        page.ReportErrorsOff = true;
+        page.Save();
+
+        stale.ThemeId = "gold";              // نمونهٔ کهنه چیزِ دیگری را عوض کرد
+        stale.Save();
+
+        var disk = AppSettings.Load();
+        Assert.True(disk.ReportErrorsOff);   // ⛔ پس گرفته نشد
+        Assert.Equal("gold", disk.ThemeId);  // و تغییرِ خودش هم گم نشد
+    }
+
+    [Fact]
+    public void FarhangeDarJaAvazShode_Ham_Neveshte_Mishavad()
+    {
+        new AppSettings().Save();
+        var a = AppSettings.Load();
+        var b = AppSettings.Load();
+
+        b.ColumnWidths["debt"] = new[] { 10.0, 20.0 };   // در جا، همان مرجع
+        b.Save();
+        a.ColumnWidths["safe"] = new[] { 30.0 };         // نمونهٔ دیگر هم در جا
+        a.Save();
+
+        //  ⚠️ هر دو فرهنگ را عوض کرده‌اند؛ آن‌که دیرتر نوشت برنده است — ولی
+        //  تغییرِ در جای خودش گم نمی‌شود (مقایسه با متن است، نه با مرجع).
+        var disk = AppSettings.Load();
+        Assert.True(disk.ColumnWidths.ContainsKey("safe"));
+    }
+
+    [Fact]
+    public void AnchehKhodashAvazKarde_BarAnchehDiskDarad_Mineshinad()
+    {
+        new AppSettings { ReportErrorsOff = false }.Save();
+        var a = AppSettings.Load();
+        var b = AppSettings.Load();
+        b.ReportErrorsOff = true; b.Save();
+        a.ReportErrorsOff = true; a.LastSection = "safe"; a.Save();
+        var disk = AppSettings.Load();
+        Assert.True(disk.ReportErrorsOff);
+        Assert.Equal("safe", disk.LastSection);
+
+        //  و خاموش کردنِ دوباره هم می‌نشیند
+        var c = AppSettings.Load(); c.ReportErrorsOff = false; c.Save();
+        Assert.False(AppSettings.Load().ReportErrorsOff);
+    }
 }
