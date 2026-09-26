@@ -92,14 +92,43 @@ public partial class DocumentPreviewWindow : Window
     // نسخه» را اعمال می‌کند — پس چیزی که چاپ می‌شود دقیقاً همان است که در
     // ستونِ تنظیمات انتخاب شده.
 
-    private void OnPrint(object? sender, RoutedEventArgs e)
+    private bool _printing;
+
+    /// <summary>
+    /// «🖨️ چاپ» — مستقیم به همان چاپگری که در فهرست برگزیده شده (مثلِ اکسل).
+    ///
+    /// ⚠️ راهِ قدیم («PDF را با فعلِ ‎print‎ به ویندوز بده») فقط وقتی می‌ماند
+    /// که ویندوز هیچ چاپگری به ما نشان نداد: آن راه به برنامهٔ PDFخوانِ
+    /// کامپیوتر بند است و روی کامپیوتری که PDF را با اج باز می‌کند بی‌صدا
+    /// هیچ کاری نمی‌کرد — همان «اصلاً نمی‌آید» که صاحب ریپو دید.
+    /// </summary>
+    private async void OnPrint(object? sender, RoutedEventArgs e)
     {
-        if (Vm is null) return;
+        if (Vm is null || _printing) return;
         if (Vm.PickedPages().Count == 0)
         { Vm.Status = "هیچ ورقی در این بازه نیست"; return; }
 
+        if (Vm.Printer is { } printer)
+        {
+            _printing = true;
+            try
+            {
+                Vm.Status = "در حالِ فرستادن به «" + printer.Name + "»…";
+                var err = await Vm.PrintToAsync(printer);
+                Vm.Status = err.Length == 0
+                    ? "✅ به «" + printer.Name + "» فرستاده شد"
+                    : "❌ " + err;
+            }
+            finally { _printing = false; }
+            return;
+        }
+
+        if (Vm.PrintersLoading) { Vm.Status = "فهرستِ چاپگرها هنوز می‌آید — یک لحظه صبر کنید"; return; }
+
         var path = Vm.SaveTo(PrintService.DocsFolder);
-        Vm.Status = PrintService.Print(path) ? "به چاپگر فرستاده شد" : "چاپ انجام نشد";
+        Vm.Status = PrintService.Print(path)
+            ? "به چاپگرِ پیش‌فرضِ ویندوز فرستاده شد"
+            : "ویندوز هیچ چاپگری نشان نداد — «افزودنِ چاپگر…» را بزنید، یا PDF بسازید";
     }
 
     /// <summary>«⬇️ ساختنِ فایلِ PDF» — می‌سازد و پوشه‌اش را باز می‌کند.</summary>
@@ -116,7 +145,7 @@ public partial class DocumentPreviewWindow : Window
         if (reveal) PrintService.Reveal(path);
     }
 
-    /// <summary>«انتخابِ چاپگر و تنظیماتش…» — چاپگرهای خودِ ویندوز.</summary>
+    /// <summary>«افزودنِ چاپگر / تنظیماتِ ویندوز…» — چاپگرهای خودِ ویندوز.</summary>
     private void OnPrinters(object? sender, RoutedEventArgs e)
     {
         if (!PrintService.OpenPrinters() && Vm is not null)

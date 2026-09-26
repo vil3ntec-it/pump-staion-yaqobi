@@ -46,34 +46,61 @@ public class InstallerTests
         var wf = File.ReadAllText(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
         Assert.Contains("pull_request", wf);
         Assert.Contains("native/installer/PumpYaqobi.iss", wf);
-        Assert.Contains("foreach ($arch in @('x86','x64'))", wf);
-        Assert.Contains("/DOtherSha=", wf);
+        Assert.Contains("/DSourceDir64=", wf);
+        Assert.Contains("/DSourceDir86=", wf);
     }
 
     /// <summary>
-    /// ══ «۳۲ یا ۶۴بیتی؟» در نصبِ تازه (۱۴۰۵/۰۷/۱۴) ══
-    /// صاحب ریپو: «موقعِ نصب بگه کدوم رو می‌خوای، ۳۲ بیت یا ۶۴ بیت — توی جایی
-    /// که تازه روی کامپیوتر نصب می‌کنی.» فقط نصابِ اصلی می‌پرسد؛ بی‌صدا و نصبِ
-    /// دوباره هرگز. انتخابِ ۳۲ فقط همان فایلِ همین انتشار را، با هشِ سنجیده،
-    /// اجرا می‌کند — هش در زمانِ ساخت داخلِ نصاب می‌نشیند.
+    /// ══ «۳۲ و ۶۴ توی یک فایل، انتخابی، و کار کند — حدس نباشد» (۱۴۰۵/۰۷/۱۴) ══
+    /// یک نصاب با هر دو بار؛ صفحهٔ انتخاب در هر نصبِ دستی؛ نصبِ بی‌صدا از
+    /// ‎/ARCH‎ و رجیستری. این‌جا فقط سورس سنجیده می‌شود — <b>اجرای واقعی</b>
+    /// در ‎installer-check.yml‎ روی رانرِ ویندوز است (نصب با هر دو معماری و
+    /// سنجشِ فایلی که نشست).
     /// </summary>
     [Fact]
-    public void Nasab_Dar_NasbeTaze_32Ya64_MiPorsad()
+    public void Nasab_Yeki_Ast_Va_HarDoBar_Dakhelesh_Ast()
     {
         var s = Iss();
+        //  هر دو بار داخلِ همین فایل، و هر کدام فقط با Checkِ خودش می‌نشیند
+        Assert.Contains("Source: \"{#SourceDir64}\\*\"; DestDir: \"{app}\"", s);
+        Assert.Contains("Source: \"{#SourceDir86}\\*\"; DestDir: \"{app}\"", s);
+        Assert.Contains("Check: WantX64", s);
+        Assert.Contains("Check: WantX86", s);
+        //  یک AppId، همانِ همیشگی
+        Assert.Contains("{{8E86F349-343C-4FFB-983E-BBDDC5390081}", s);
+        Assert.DoesNotContain("1D5B7C42-9E38-4A61-B0F7-2C83A6D41E95", s);
+        //  یک تصمیم، یک جا
+        Assert.Contains("function PickedArch(): String;", s);
+        Assert.Contains("ExpandConstant('{param:ARCH|}')", s);
+        Assert.Contains("RegQueryStringValue(HKCU, '{#ArchKey}', 'Arch', R)", s);
+        //  صفحه در هر نصبِ دستی؛ فقط بی‌صدا نه
         Assert.Contains("CreateInputOptionPage(wpWelcome", s);
-        Assert.Contains("WizardSilent or (WizardForm.PrevAppDir <> '')", s);
-        Assert.Contains("#ifdef OtherSha", s);
-        Assert.Contains("'{#OtherSha}'", s);                         // هش همراهِ دانلود
-        Assert.Contains("/v{#AppVersion}/PumpYaqobi-Setup-x86.exe", s); // همین انتشار، نه latest
+        Assert.Contains("Result := (PageID = ArchPage.ID) and WizardSilent;", s);
         Assert.Contains("ItemEnabled[0] := False", s);                 // ویندوزِ ۳۲بیتی ⇒ ۶۴ بسته
-        Assert.DoesNotContain("PumpYaqobi-Setup-x86.exe\"; DestDir", s); // بارِ ۳۲ داخلِ نصاب نیست
+        //  عوض شدنِ معماری بارِ کهنهٔ VLC را می‌برد — و هیچ چیزِ دیگری را نه
+        Assert.Contains("Name: \"{app}\\libvlc\\win-x64\"; Check: WantX86", s);
+        Assert.Contains("Name: \"{app}\\libvlc\\win-x86\"; Check: WantX64", s);
+        Assert.DoesNotContain("Name: \"{app}\\*\"", s);
+        //  دیگر هیچ دانلودی وسطِ نصب نیست
+        Assert.DoesNotContain("CreateDownloadPage", s);
+        Assert.DoesNotContain("OtherSha", s);
 
-        //  ⛔ اول ۳۲بیتی ساخته می‌شود تا هشش به ۶۴بیتی برسد
+        //  ورک‌فلو یک نصاب می‌سازد و برنامه با /ARCH بی‌صدا نصبش می‌کند
         var w = Workflow();
-        Assert.Contains("foreach ($arch in @('x86','x64'))", w);
-        Assert.Contains("/DOtherSha=$sha", w);
-        Assert.Contains("Get-FileHash rel/PumpYaqobi-Setup-x86.exe -Algorithm SHA256", w);
+        Assert.Contains("/DSourceDir64=..\\publish\\win-x64", w);
+        Assert.Contains("/DSourceDir86=..\\publish\\win-x86", w);
+        Assert.DoesNotContain("Setup-x86", w);
+        var up = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        Assert.Contains("+ \" \" + AppArch.ArchArg", up);
+
+        //  و installer-check واقعاً نصب می‌کند و بارِ نشسته را می‌سنجد
+        var chk = File.ReadAllText(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
+        Assert.Contains("/ARCH=$archArg", chk);
+        Assert.Contains("Install 'x86'", chk);
+        Assert.Contains("Install 'x64'", chk);
+        Assert.Contains("Install $null", chk);
+        Assert.Contains("/VERYSILENT", chk);
+        Assert.Contains("UninstallString", chk);
     }
 
     [Fact]
@@ -153,13 +180,12 @@ public class InstallerTests
         Assert.Contains("PrivilegesRequired=lowest", s);
         Assert.Contains("DefaultDirName={localappdata}\\Programs\\", s);
 
-        //  ⛔ و نامِ پوشهٔ ۶۴بیتی **یک حرف هم عوض نشد**. از ۳.۱.۱۵۸ پوشه از
-        //  ‎InstallFolder‎ می‌آید (چون ۳۲بیتی پوشهٔ جدا دارد)، پس این بند
-        //  دیگر رشتهٔ چسبیده را نمی‌بیند — و همان جایی است که یک تغییرِ
+        //  ⛔ و نامِ پوشه **یک حرف هم عوض نشد** — همان جایی است که یک تغییرِ
         //  بی‌دقت می‌توانست هر نصبی را که همین حالا دستِ مشتری است از
-        //  به‌روزرسانی بیندازد. پس هر دو نام صریح خواسته می‌شوند.
+        //  به‌روزرسانی بیندازد. از ۱۴۰۵/۰۷/۱۴ هر دو معماری همین یک پوشه را
+        //  دارند (یک نصاب، یک AppId).
         Assert.Contains("#define InstallFolder \"PumpYaqobi\"", s);
-        Assert.Contains("#define InstallFolder \"PumpYaqobi-32\"", s);
+        Assert.DoesNotContain("PumpYaqobi-32", s);
     }
 
     /// <summary>

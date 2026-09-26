@@ -23,8 +23,8 @@ name: ساخت برنامهٔ نیتیو (ویندوز)
 #    به‌روزرسانی می‌افتند. ۳۲بیتی پسوندِ `-x86` می‌گیرد.
 #
 # ── بسته‌های هر معماری ──────────────────────────────────────────────────────
-#   PumpYaqobi-Setup.exe        ← ۶۴بیتی؛ این همانی است که بیشترِ کاربران می‌گیرند
-#   PumpYaqobi-Setup-x86.exe    ← ۳۲بیتی؛ برای ویندوزِ قدیمیِ ۳۲بیتی
+#   PumpYaqobi-Setup.exe        ← **یک** نصاب با هر دو بار: ۳۲ و ۶۴بیتی داخلِ همین
+#                                  فایل، و خودش می‌پرسد کدام (۱۴۰۵/۰۷/۱۴)
 #   PumpYaqobi-app-<id>.zip     ← بستهٔ کوچکِ به‌روزرسانی (شناسهٔ پایه در نامش)
 #   PumpYaqobi-Windows[-x86].zip← بستهٔ بی‌نصب، برای کسی که نمی‌خواهد نصب کند
 on:
@@ -244,48 +244,21 @@ jobs:
             $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           }
           New-Item -ItemType Directory -Force -Path rel | Out-Null
-          #  ⚠️ اول ۳۲بیتی: نصابِ ۶۴بیتی هشِ همان فایل را در خودش دارد تا
-          #  پرسشِ «۳۲ یا ۶۴؟» فقط همان فایلِ همین انتشار را اجرا کند.
-          $sha = ''
-          foreach ($arch in @('x86','x64')) {
-            $rid = "win-$arch"
-            $extra = @()
-            if ($arch -eq 'x64') { $extra = @("/DOtherSha=$sha") }
-            & $iscc /Qp `
-              "/DAppVersion=${{ steps.ver.outputs.version }}" `
-              "/DArch=$arch" `
-              "/DSourceDir=..\publish\$rid" `
-              @extra `
-              native/installer/PumpYaqobi.iss
-            if ($LASTEXITCODE -ne 0) { throw "ساختِ نصابِ $arch شکست خورد" }
-            if ($arch -eq 'x86') { $sha = (Get-FileHash rel/PumpYaqobi-Setup-x86.exe -Algorithm SHA256).Hash.ToLowerInvariant() }
-          }
-          "نصابِ ۶۴بیتی: {0:N1} مگابایت" -f ((Get-Item rel/PumpYaqobi-Setup.exe).Length/1MB)
-          "نصابِ ۳۲بیتی: {0:N1} مگابایت" -f ((Get-Item rel/PumpYaqobi-Setup-x86.exe).Length/1MB)
-
-      # ── چک‌سام ──────────────────────────────────────────────────────────
-      #  گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۰۸) با عکس: نصاب وسطِ کار
-      #  «The source file is corrupted» داد روی
-      #  `System.IO.Compression.Native.dll`، در حالی که اندازهٔ فایلِ
-      #  دانلودشده مو‌به‌مو با اندازهٔ منتشرشده یکی بود.
-      #
-      #  ⛔ و هیچ راهی نبود بفهمیم خرابی از دانلود است یا از خودِ ساخت —
-      #  چون این انتشار هیچ چک‌سامی نداشت. ریپوی `server` از قبل
-      #  `SHA256SUMS.txt` می‌دهد و همان‌جا این پرسش یک دستور است، نه حدس.
-      #
-      #  ⚠️ و چرا مهم است: `SolidCompression=yes` یعنی همهٔ فایل‌ها در یک
-      #  جریانِ پیوستهٔ فشرده‌اند، پس **یک بایتِ خراب** هر فایلی را که بعد
-      #  از آن نقطه بیاید «corrupted» می‌کند. یعنی نامِ فایلِ داخلِ پیام
-      #  جای خرابی را نشان نمی‌دهد و دنبالش گشتن وقت تلف کردن است.
-      #
-      #  ⚠️ پس از ساختِ نصاب می‌دود، نه در گامِ «بسته‌ها»: خودِ نصاب هم
-      #  باید در فهرست باشد.
+          #  ⛔ یک فایل، هر دو بار (۱۴۰۵/۰۷/۱۴): ۳۲ و ۶۴بیتی داخلِ همین نصاب‌اند و
+          #  صفحهٔ «۳۲ یا ۶۴؟» یکی را می‌نشاند. installer-check.yml همین نصاب را
+          #  روی رانرِ ویندوز واقعاً اجرا می‌کند و می‌سنجد کدام بار نشست.
+          & $iscc /Qp `
+            "/DAppVersion=${{ steps.ver.outputs.version }}" `
+            "/DSourceDir64=..\publish\win-x64" `
+            "/DSourceDir86=..\publish\win-x86" `
+            native/installer/PumpYaqobi.iss
+          if ($LASTEXITCODE -ne 0) { throw "ساختِ نصاب شکست خورد" }
+          "نصاب (۳۲ + ۶۴بیتی): {0:N1} مگابایت" -f ((Get-Item rel/PumpYaqobi-Setup.exe).Length/1MB)
       - name: چک‌سام‌ها
         shell: pwsh
         run: |
           $names = @(
             'PumpYaqobi-Setup.exe',
-            'PumpYaqobi-Setup-x86.exe',
             'PumpYaqobi-Windows.zip',
             'PumpYaqobi-Windows-x86.zip',
             "PumpYaqobi-app-${{ steps.pack.outputs.baseId }}.zip",
@@ -356,20 +329,16 @@ jobs:
 
             ### کدام فایل را بگیرم؟
 
-            | ویندوزِ شما | فایل |
-            |---|---|
-            | ۶۴بیتی (تقریباً همهٔ کامپیوترهای امروزی) | **`PumpYaqobi-Setup.exe`** |
-            | ۳۲بیتی (کامپیوترِ قدیمی) | **`PumpYaqobi-Setup-x86.exe`** |
+            **یک فایل برای همه: `PumpYaqobi-Setup.exe`** — نسخهٔ ۳۲بیتی و
+            ۶۴بیتی هر دو داخلِ همین فایل‌اند و وسطِ نصب خودش می‌پرسد کدام.
 
             بیتیِ ویندوزتان را این‌طور ببینید: کلیدِ **ویندوز + Pause**، یا
             «تنظیمات › سیستم › درباره» — جلوی «نوع سیستم» نوشته است
             «۶۴-bit» یا «۳۲-bit».
 
-            ⚠️ نمی‌دانید کدام؟ **`PumpYaqobi-Setup.exe`** را بگیرید. در نصبِ
-            تازه خودش می‌پرسد **۳۲ یا ۶۴بیتی** و گزینهٔ درست را از روی ویندوزِ
-            همان کامپیوتر از پیش انتخاب کرده است؛ اگر ۳۲بیتی را بزنید، نصابِ
-            ۳۲بیتیِ همین نسخه را خودش می‌گیرد (هشش سنجیده می‌شود) و اجرا
-            می‌کند.
+            ⚠️ نمی‌دانید کدام؟ همان گزینه‌ای را که نصاب از پیش انتخاب کرده نگه
+            دارید — از روی ویندوزِ همان کامپیوتر انتخاب شده. روی ویندوزِ
+            ۳۲بیتی فقط ۳۲بیتی باز است.
 
             ⚠️ هر دو **یک برنامهٔ کاملاً یکسان**‌اند؛ فقط برای بیتیِ متفاوتِ
             ویندوز ساخته شده‌اند. حساب‌ها و دفتر در هر دو یکی است.
@@ -406,7 +375,7 @@ jobs:
             رسیده یا نه — اگر نرسیده باشد، ساکت نمی‌ماند.
 
             ---
-            `PumpYaqobi-Windows.zip` (و `-x86`ی‌اش) هم معمولاً هست، برای کسی
+            `PumpYaqobi-Windows.zip` (۶۴بیتی؛ `-x86` برای ۳۲بیتی) هم معمولاً هست، برای کسی
             که نصب نمی‌خواهد و ترجیح می‌دهد خودش جایی بازش کند. آن فایل بزرگ
             است و گاهی بالا رفتنش نیمه‌کاره می‌ماند؛ اگر در فهرستِ پایین
             ندیدیدش، همان نصاب را بگیرید — همان کارِ کامل را می‌کند.
@@ -421,7 +390,6 @@ jobs:
           #  فایلی که «راحتی» است نباید جلوی فایلی را که «محصول» است بگیرد.
           files: |
             rel/PumpYaqobi-Setup.exe
-            rel/PumpYaqobi-Setup-x86.exe
             rel/PumpYaqobi-app-${{ steps.pack.outputs.baseId }}.zip
             rel/PumpYaqobi-app-${{ steps.pack.outputs.baseId86 }}.zip
             rel/version.txt
@@ -461,13 +429,12 @@ jobs:
             برنامه وقتی فهرستِ انتشارها در دسترس نباشد از همین‌جا
             می‌خواند، و دکمهٔ دانلودِ ویندوزِ سایت هم از همین‌جا پر می‌شود.
 
-            `PumpYaqobi-Setup.exe` ۶۴بیتی است و
-            `PumpYaqobi-Setup-x86.exe` ۳۲بیتی.
+            `PumpYaqobi-Setup.exe` هر دو نسخهٔ ۳۲ و ۶۴بیتی را دارد و
+            خودش می‌پرسد کدام.
           prerelease: true
           make_latest: false
           files: |
             rel/PumpYaqobi-Setup.exe
-            rel/PumpYaqobi-Setup-x86.exe
             rel/PumpYaqobi-app-${{ steps.pack.outputs.baseId }}.zip
             rel/PumpYaqobi-app-${{ steps.pack.outputs.baseId86 }}.zip
             rel/version.txt

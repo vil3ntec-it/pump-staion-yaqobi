@@ -77,6 +77,87 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         // می‌نشینند.
         StartPages(marshal: false, background: true);
         _loading = false;
+        LoadPrinters();
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  چاپگرهای واقعیِ ویندوز — «مثلِ اکسل» (۱۴۰۵/۰۷/۱۴، شرح در ‎Printers‎)
+    // ══════════════════════════════════════════════════════════════════════
+
+    /// <summary>چاپگرهای نصب‌شده، پیش‌فرض اول.</summary>
+    public ObservableCollection<PrinterItem> Printers { get; } = new();
+
+    /// <summary>چاپگرِ برگزیده — بارِ اول همانی که بارِ پیش زده شد، وگرنه پیش‌فرضِ ویندوز.</summary>
+    [ObservableProperty] private PrinterItem? _printer;
+
+    /// <summary>فهرست آمد و خالی نبود — وگرنه همان کادرِ «چاپگرِ پیش‌فرضِ ویندوز».</summary>
+    [ObservableProperty] private bool _hasPrinters;
+
+    /// <summary>هنوز فهرست را می‌خوانیم.</summary>
+    [ObservableProperty] private bool _printersLoading = true;
+
+    private bool _pickingPrinter;
+
+    /// <summary>
+    /// فهرست روی نخِ دیگر خوانده می‌شود — ‎EnumPrinters‎ با چاپگرِ شبکه‌ایِ
+    /// خاموش می‌تواند چند ثانیه بماند، و پنجرهٔ چاپ نباید منتظرش بماند.
+    /// </summary>
+    [RelayCommand]
+    private void LoadPrinters()
+    {
+        PrintersLoading = true;
+        Task.Run(() =>
+        {
+            var list = PumpYaqobi.App.Printing.Printers.List();
+            string remembered;
+            try { remembered = Services.AppSettings.Load().LastPrinter; } catch { remembered = ""; }
+            Dispatcher.UIThread.Post(() =>
+            {
+                _pickingPrinter = true;
+                Printers.Clear();
+                foreach (var p in list) Printers.Add(p);
+                Printer = PumpYaqobi.App.Printing.Printers.Pick(list, Printer?.Name ?? remembered);
+                HasPrinters = Printers.Count > 0;
+                PrintersLoading = false;
+                _pickingPrinter = false;
+            });
+        });
+    }
+
+    /// <summary>انتخابِ کاربر یادش می‌ماند — مقدارِ راحتی، پس ‎SaveSoon‎.</summary>
+    partial void OnPrinterChanged(PrinterItem? value)
+    {
+        if (_pickingPrinter || value is null) return;
+        try
+        {
+            var s = Services.AppSettings.Load();
+            if (s.LastPrinter == value.Name) return;
+            s.LastPrinter = value.Name;
+            s.SaveSoon();
+        }
+        catch { }
+    }
+
+    /// <summary>
+    /// ورق‌های انتخاب‌شده (با تعدادِ نسخه و ترتیب) را با کیفیتِ خودِ کاربر
+    /// (‎Setup.Dpi‎) مستقیم به چاپگر می‌فرستد. خالی ⇒ رفت؛ وگرنه جملهٔ خطا.
+    /// </summary>
+    public Task<string> PrintToAsync(PrinterItem printer)
+    {
+        var order = PrintOrder();
+        var dpi = Math.Clamp(Setup.Dpi, 72, 400);
+        var doc = _doc;
+        return Task.Run(() =>
+        {
+            try
+            {
+                var full = doc.GenerateImages(new ImageGenerationSettings
+                { ImageFormat = ImageFormat.Png, RasterDpi = dpi }).ToList();
+                var picked = order.Where(i => i >= 1 && i <= full.Count).Select(i => full[i - 1]);
+                return PumpYaqobi.App.Printing.Printers.Print(printer.Name, picked, dpi, Title);
+            }
+            catch (Exception ex) { return "ورق‌ها ساخته نشدند — " + ex.GetType().Name; }
+        });
     }
 
     public string Title { get; }

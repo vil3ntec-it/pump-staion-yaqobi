@@ -93,16 +93,40 @@
 
             <!-- ── چاپگر ── -->
             <TextBlock Text="چاپگر" Classes="ph" />
-            <Border Classes="prn">
+            <!-- ⛔ فهرستِ چاپگرهای واقعیِ ویندوز، مثلِ اکسل — پیش‌فرض اول و
+                 برگزیده، با حالِ هر کدام. (پیش از ۱۴۰۵/۰۷/۱۴ این‌جا فقط یک کادرِ
+                 ثابتِ «چاپگرِ پیش‌فرضِ ویندوز» بود و هیچ چاپگری دیده نمی‌شد.) -->
+            <ComboBox Classes="prn" HorizontalAlignment="Stretch"
+                      ItemsSource="{Binding Printers}" SelectedItem="{Binding Printer}"
+                      IsVisible="{Binding HasPrinters}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="p:PrinterItem">
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock Text="🖨️" FontSize="22" VerticalAlignment="Center" />
+                    <StackPanel Spacing="1" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="13" />
+                      <TextBlock Text="{Binding Line}" Classes="pn" />
+                    </StackPanel>
+                  </StackPanel>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Border Classes="prn" IsVisible="{Binding !HasPrinters}">
               <StackPanel Orientation="Horizontal" Spacing="10">
                 <TextBlock Text="🖨️" FontSize="22" VerticalAlignment="Center" />
                 <StackPanel Spacing="1" VerticalAlignment="Center">
                   <TextBlock Text="چاپگرِ پیش‌فرضِ ویندوز" FontWeight="Bold" FontSize="13" />
-                  <TextBlock Text="آماده" Classes="pn" />
+                  <TextBlock Text="در حالِ خواندنِ فهرستِ چاپگرها…" Classes="pn"
+                             IsVisible="{Binding PrintersLoading}" />
+                  <TextBlock Text="ویندوز هیچ چاپگری نشان نداد — «افزودنِ چاپگر…» را بزنید"
+                             Classes="pn" IsVisible="{Binding !PrintersLoading}" />
                 </StackPanel>
               </StackPanel>
             </Border>
-            <Button Classes="link" Content="انتخابِ چاپگر و تنظیماتش…" Click="OnPrinters" />
+            <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Right">
+              <Button Classes="link" Content="🔄 تازه کردنِ فهرست" Command="{Binding LoadPrintersCommand}" />
+              <Button Classes="link" Content="افزودنِ چاپگر / تنظیماتِ ویندوز…" Click="OnPrinters" />
+            </StackPanel>
 
             <!-- ── تنظیمات ── -->
             <TextBlock Text="تنظیمات" Classes="ph" />
@@ -296,6 +320,15 @@
     </Style>
 
     <!-- ‎.xprn{border:1px solid #d2d0ce;border-radius:2px;padding:9px}‎ -->
+    <Style Selector="ComboBox.prn">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="BorderBrush" Value="#d2d0ce" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="Padding" Value="9" />
+      <Setter Property="Foreground" Value="#323130" />
+    </Style>
+
     <Style Selector="Border.prn">
       <Setter Property="Background" Value="White" />
       <Setter Property="BorderBrush" Value="#d2d0ce" />
