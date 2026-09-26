@@ -223,6 +223,34 @@ internal static class SignUpTrialProbe
                 Check($"{name} ⇒ پروفایل آزمایشیِ فعال می‌گوید", account.SubActive, account.PillText);
                 Shot(win, shots, "foreign-" + (move ? "b" : "a"));
             }
+
+            //  ⚠️ و دو حالِ دیگرِ «همین پمپ، بی مجوز» که ۳.۱.۱۹۳ هنوز نمی‌گرفت: سرور
+            //  مجوز می‌دهد ولی برنامه نمی‌پذیردش (کلیدِ امضای سرور با کلیدِ قفل‌شده
+            //  روی دیسک یکی نیست؛ یا مجوز برای شناسهٔ دستگاهِ دیگری صادر می‌شود).
+            var stuck = new (string Name, Action<AppSettings> Break)[]
+            {
+                ("کلیدِ سرور با کلیدِ قفل‌شدهٔ روی دیسک یکی نیست، مجوز نیست", s => s.CloudPublicKey = OtherKey()),
+                ("شناسهٔ دستگاهِ روی دیسک با ثبتِ سرور یکی نیست، مجوز نیست", s => s.CloudDeviceUid = "pc-" + new string('0', 24)),
+            };
+            foreach (var (name, brk) in stuck)
+            {
+                var healthy = AppSettings.Load();
+                Check($"پیش از «{name}» حالِ سالم است", LicenseGuard.CheckStored(healthy).Valid,
+                      LicenseGuard.CheckStored(healthy).Reason);
+                var s = AppSettings.Load();
+                s.CloudLicense = "";
+                brk(s);
+                s.Save();
+                LicenseClock.ForgetRunning();
+                for (var i = 0; i < 3; i++) Wait(win, StationPublisher.CloudKeepNowAsync());
+                Wait(win, vm.GoAsync(account));
+                Settle(win);
+                var now = AppSettings.Load();
+                var chk = LicenseGuard.CheckStored(now);
+                Check($"{name} ⇒ مجوزِ پمپِ خودِ حساب آمد", chk.Valid && now.CloudStationId == mine,
+                      $"{chk.Reason} · {account.SubPlanText} · {account.SubStatus}");
+                Shot(win, shots, "stuck-" + Array.FindIndex(stuck, c => c.Name == name));
+            }
         }
         //  ⚠️ همان کامپیوتر، حسابِ دوم — همان کاری که صاحبِ پمپ در آزمایش‌هایش کرد
         if (Environment.GetEnvironmentVariable("PUMP_SIGNUP_TWICE") == "1")

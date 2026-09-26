@@ -377,6 +377,20 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
                     ? $"✅ اشتراکِ «{SubKind}» فعال است — دائمی."
                     : $"✅ اشتراکِ «{SubKind}» فعال است — {VipDays} روز مانده.";
         }
+        else if (Cloud.Subscription.Active)
+        {
+            //  ⛔ سرور می‌گوید فعال است و این‌جا هنوز نرسیده — دلیلِ واقعی، نه
+            //  «مجوزی ذخیره نشده است»ِ خشک که کاربر نمی‌داند یعنی چه.
+            SubStatus = "⏳ اشتراکِ این پمپ روی سرور فعال است و در حالِ رسیدن به این کامپیوتر است — "
+                      + "چند ثانیه بعد «🔄 گرفتنِ دوبارهٔ اطلاعات» را بزنید."
+                      + (CloudLink.LastBindWhy is { Length: > 0 } why ? "\n⚠️ " + why : "");
+        }
+        else if (!SignedIn)
+        {
+            //  ⛔ بی حساب هیچ راهی برای رساندنِ اشتراک نیست — راست گفته شود
+            SubStatus = "⚠️ " + check.Reason
+                      + "\n👉 برای رسیدنِ اشتراک از «حساب و ورود» دوباره وارد حسابتان شوید.";
+        }
         else
         {
             SubStatus = "⚠️ " + check.Reason;
