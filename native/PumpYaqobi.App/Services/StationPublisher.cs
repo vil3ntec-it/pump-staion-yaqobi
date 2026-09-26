@@ -164,13 +164,14 @@ public sealed class StationPublisher : IAsyncDisposable
             var ready = karOk && await ReadyAsync(force, ct);
 
             // ⚠️ بی سرورِ خانگی و بی ابر، عکس گرفتن فقط CPU می‌سوزاند.
-            if (!ready && !(qrOk && CloudActivated)) return false;
+            var cloudOn = CloudActivated;
+            if (!ready && !cloudOn) return false;
 
             // ⚠️ و بی تغییر هم: با پنج سال داده، ساختنِ عکس یک ثانیه است و هر
             // بیست ثانیه یک‌بار یعنی پنج درصدِ CPU برای همیشه («کامپیوتر داغ»).
             // شمارهٔ نسخهٔ داده می‌گوید از دورِ قبل چیزی ذخیره شده یا نه.
             var version = PumpYaqobi.Persistence.PumpDbContext.Version;
-            if (!force && version == _lastVersion && _accts.Pending == 0) return false;
+            if (!force && version == _lastVersion && _accts.Pending == 0 && !_cloudLivePending) return false;
 
             var snap = await StationSnapshot.BuildAsync(_host, ct);
             _lastVersion = version;
@@ -196,6 +197,27 @@ public sealed class StationPublisher : IAsyncDisposable
                 }
             }
 
+            //  ⛔ عکسِ زنده روی سرورِ حساب هم (۱۴۰۵/۰۷/۱۴) — گوشیِ کارمند با کدِ
+            //  هشت‌رقمی **بیرون از شبکهٔ پمپ** هم برنامه را می‌بیند. تا امروز
+            //  این فایل هیچ‌وقت نوشته نمی‌شد (سنجهٔ `check-kar-live` روی پشتهٔ
+            //  واقعی گرفتش): `/api/pump/public/live` همیشه «هنوز چیزی نفرستاده»
+            //  می‌گفت و گوشیِ بیرون از پمپ هیچ نمی‌دید.
+            //  ⚠️ فقط وقتی عکس عوض شده، و دست‌بالا هر `CloudLiveGap` یک بار؛
+            //  نرسید ⇒ دورِ بعد دوباره (ترمزِ `Version` جلویش را نمی‌گیرد).
+            if (karOk && cloudOn && (force || hash != _cloudLiveHash)
+                && DateTime.UtcNow - _cloudLiveAt >= CloudLiveGap)
+            {
+                _cloudLiveAt = DateTime.UtcNow;
+                var file = AppSettings.Load();
+                var link = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
+                var put = await link.PutFileAsync(CloudLiveFile, snap, ct);
+                if (put.Ok) { _cloudLiveHash = hash; _cloudLivePending = false; }
+                //  اشتراک تمام شده یا فایل بیش از حد بزرگ است ⇒ تا عکس عوض نشده دوباره نزن
+                else _cloudLivePending = put.Code is not ("subscription_required" or "too_large");
+                went |= put.Ok;
+            }
+            else if (karOk && cloudOn && hash != _cloudLiveHash) _cloudLivePending = true;
+
             // کیو‌آرِ زنده: حساب‌های کیو‌آردار، فقط وقتی چیزی عوض شده — یا
             // دورِ پیش یکی‌شان نرفته و هنوز طلبکار است.
             if (qrOk && (force || hash != _lastAcctHash || _accts.Pending > 0))
@@ -209,6 +231,16 @@ public sealed class StationPublisher : IAsyncDisposable
         catch (OperationCanceledException) { throw; }
         catch { return false; }
     }
+
+    /// <summary>نامِ فایلِ عکسِ زنده روی سرورِ حساب — همان که `/api/pump/public/live` می‌خواند.</summary>
+    public const string CloudLiveFile = "live.json";
+
+    /// <summary>عکسِ عوض‌شده دست‌بالا هر این‌قدر یک بار به سرورِ حساب می‌رود.</summary>
+    public static readonly TimeSpan CloudLiveGap = TimeSpan.FromSeconds(60);
+
+    private string _cloudLiveHash = "";
+    private DateTime _cloudLiveAt = DateTime.MinValue;
+    private bool _cloudLivePending;
 
     /// <summary>انتشارِ حساب‌های کیو‌آردار — به هر دو مقصد (<see cref="AcctLive"/>).</summary>
     private readonly AcctLivePublisher _accts = new();
@@ -739,6 +771,7 @@ public sealed class StationPublisher : IAsyncDisposable
             //  هیچ‌وقت به این دستگاه نمی‌رسید مگر کاربر صفحهٔ پروفایل را
             //  باز کند. شرحِ کامل بالای `CloudLink.KeepLicenseFreshAsync`.
             await cloud.KeepLicenseFreshAsync(ct);
+            await cloud.KeepAccessCodeAsync(ct);
             return;
         }
 
@@ -751,6 +784,7 @@ public sealed class StationPublisher : IAsyncDisposable
         {
             var device = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
             await device.KeepLicenseFreshAsync(ct);
+            await device.KeepAccessCodeAsync(ct);
         }
 
         await CloudLink.CloudHealthAsync(ct);

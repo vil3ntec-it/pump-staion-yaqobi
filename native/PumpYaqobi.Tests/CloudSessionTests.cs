@@ -573,6 +573,45 @@ public class CloudSessionTests : IDisposable
     }
 
     /// <summary>
+    /// ⛔ کدِ هشت‌رقمیِ اپِ گوشی بی زدنِ دکمه می‌آید (۱۴۰۵/۰۷/۱۴): نصبی که
+    /// کدِ حرفیِ پیشین را نگه داشته، در نخستین دورِ پس‌زمینه کدِ امروزی را
+    /// می‌گیرد — و بعدش دیگر هر دقیقه نمی‌پرسد.
+    /// </summary>
+    [Fact]
+    public async Task KodeHashtRaghami_KhodashMiayad_VaTekrarNemishavad()
+    {
+        Serve((path, _) => path == "/api/pump/device/access-code"
+            ? Json(HttpStatusCode.OK, """{"code":"48291736","display":"4829-1736"}""")
+            : Json(HttpStatusCode.NotFound, "{}"));
+        var (link, s) = Link(x =>
+        {
+            x.CloudDeviceToken = "pd_ok";
+            x.CloudAccessCode = "K7PM3XQ2";      // کدِ حرفیِ نسخه‌های پیشین
+        });
+
+        await link.KeepAccessCodeAsync();
+        await link.KeepAccessCodeAsync();
+        await link.KeepAccessCodeAsync();
+
+        Assert.Equal("48291736", s.CloudAccessCode);
+        Assert.Equal("48291736", AppSettings.Load().CloudAccessCode);
+        Assert.Equal(1, _hits.Count(h => h == "/api/pump/device/access-code"));
+        Assert.Equal("4829-1736", CloudLink.FormatAccessCode(s.CloudAccessCode));
+        Assert.True(CloudLink.IsDigitCode("4829-1736"));
+        Assert.False(CloudLink.IsDigitCode("K7PM3XQ2"));
+    }
+
+    /// <summary>بی دستگاهِ فعال هیچ درخواستی نمی‌رود.</summary>
+    [Fact]
+    public async Task KodeHashtRaghami_BiDastgah_HichDarkhasti_Nist()
+    {
+        Serve((_, _) => Json(HttpStatusCode.OK, """{"code":"48291736"}"""));
+        var (link, _) = Link();
+        await link.KeepAccessCodeAsync();
+        Assert.Empty(_hits);
+    }
+
+    /// <summary>
     /// ⛔ توکنِ کهنه، توکنِ تازهٔ روی دیسک را پاک نکند: نمونه‌ای که هنوز توکنِ
     /// پیش از بند شدنِ دوباره را دارد «ثبت نشده» می‌گیرد و باید تازه را بردارد.
     /// </summary>

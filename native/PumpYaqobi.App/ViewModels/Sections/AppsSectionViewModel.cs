@@ -43,7 +43,7 @@ public sealed partial class AppsSectionViewModel : SectionViewModel
     /// <summary>لینکِ آیفون — همان صفحه در سافاری با «افزودن به صفحهٔ اصلی».</summary>
     [ObservableProperty] private string _iphoneLink = "";
 
-    /// <summary>کدِ پمپ به شکلِ ‎K7PM-3XQ2‎، یا «—» اگر هنوز نیامده.</summary>
+    /// <summary>کدِ پمپ به شکلِ ‎4829-1736‎، یا «—» اگر هنوز نیامده.</summary>
     [ObservableProperty] private string _codeText = "—";
 
     /// <summary>یک جمله دربارهٔ حالِ کد — خالی یعنی همه‌چیز سرِ جایش است.</summary>

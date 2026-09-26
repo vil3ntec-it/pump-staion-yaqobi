@@ -1197,7 +1197,40 @@ public sealed partial class CloudLink
         return (true, code, "");
     }
 
-    /// <summary>برای نمایش: ‎K7PM-3XQ2‎ — همان قاعدهٔ سرور و اپِ گوشی.</summary>
+    /*
+     *  ══ کدِ هشت‌رقمیِ اپِ گوشی، بی زدنِ هیچ دکمه‌ای (۱۴۰۵/۰۷/۱۴) ═══════════
+     *
+     *  خواستهٔ صریحِ صاحب سامانه: «برای هر حساب کاربری یک کد هشت‌رقمی درست
+     *  بشه.» سرورِ حساب (۲.۱۱.۶) کد را همان لحظهٔ ساختنِ پمپ می‌سازد؛ ولی
+     *  برنامه تا امروز فقط با «گرفتنِ کد»ِ پروفایل آن را می‌پرسید، پس پروفایل
+     *  «هنوز گرفته نشده» می‌گفت و نصبی که کدِ حرفیِ پیشین را نگه داشته بود
+     *  هیچ‌وقت کدِ هشت‌رقمی را نمی‌دید.
+     *
+     *  ⛔ حلقهٔ پس‌زمینه حالا خودش می‌پرسد — **یک بار در هر اجرا**، و تا
+     *  کدِ روی دیسک هشت رقم نیست هر ده دقیقه یک بار (یک GETِ سبک). هیچ کدی
+     *  این‌جا ساخته یا عوض نمی‌شود؛ فقط خوانده می‌شود.
+     */
+    private static DateTime _codeCheckedAt = DateTime.MinValue;
+    private static readonly TimeSpan CodeRecheck = TimeSpan.FromMinutes(10);
+
+    /// <summary>کدِ امروزی: هشت رقم.</summary>
+    public static bool IsDigitCode(string? code)
+    {
+        var c = (code ?? "").Replace("-", "").Trim();
+        return c.Length == 8 && c.All(char.IsAsciiDigit);
+    }
+
+    public async Task KeepAccessCodeAsync(CancellationToken ct = default)
+    {
+        if (!Activated) return;
+        var fresh = _codeCheckedAt != DateTime.MinValue && IsDigitCode(_settings.CloudAccessCode);
+        if (fresh || DateTime.UtcNow - _codeCheckedAt < CodeRecheck) return;
+        _codeCheckedAt = DateTime.UtcNow;
+        try { await AccessCodeAsync(false, ct); }
+        catch { /* بی‌اینترنت خطا نیست — کدِ روی دیسک سرِ جایش است */ }
+    }
+
+    /// <summary>برای نمایش: ‎4829-1736‎ — همان قاعدهٔ سرور و اپِ گوشی.</summary>
     public static string FormatAccessCode(string code)
     {
         var c = (code ?? "").Trim().ToUpperInvariant();
@@ -1658,10 +1691,6 @@ public sealed partial class CloudLink
         Reach = CloudReach.Online;
         CloudOkAt = DateTime.Now;
         CloudWhy = "";
-        //  ترمزِ «پس از شکستِ ثبت» هم استاتیک است: آزمونی که ثبتِ ناموفق
-        //  می‌سازد نباید ده دقیقه ثبتِ آزمونِ بعدی را ببندد.
-        _lastBindFailAt = DateTime.MinValue;
-        LastBindWhy = "";
     }
 
     private static void NoteOffline(string why)
@@ -1683,6 +1712,11 @@ public sealed partial class CloudLink
         Reach = CloudReach.Unknown;
         CloudOkAt = null;
         CloudWhy = "";
+        //  ترمزِ «پس از شکستِ ثبت» هم استاتیک است: آزمونی که ثبتِ ناموفق
+        //  می‌سازد نباید ده دقیقه ثبتِ آزمونِ بعدی را ببندد.
+        _lastBindFailAt = DateTime.MinValue;
+        LastBindWhy = "";
+        _codeCheckedAt = DateTime.MinValue;
     }
 
     /// <summary>

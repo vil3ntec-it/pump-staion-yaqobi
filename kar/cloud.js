@@ -285,7 +285,7 @@
   function joinWithCode(code) {
     var clean = normalizeCode(code);
     if (clean.length !== 8) {
-      var e = new Error('کدِ پمپ هشت حرف و رقم است، مثلِ K7PM-3XQ2');
+      var e = new Error('کدِ پمپ هشت رقم است، مثلِ 4829-1736');
       e.code = 'bad_access_code';
       return Promise.reject(e);
     }
@@ -295,7 +295,9 @@
         code: out.station.code,
         name: out.station.name || '',
         role: 'staff',
-        accessCode: clean,
+        //  کدِ امروزیِ پمپ از خودِ سرور — گوشی‌ای که با کدِ حرفیِ پیشین آمده
+        //  از این به بعد همان هشت رقم را نگه می‌دارد
+        accessCode: normalizeCode(out.station.accessCode || '') || clean,
         cloudLiveAt: out.cloudLiveAt || null,
         home: out.home || { url: '', readKey: '', station: out.station.code }
       };
@@ -314,12 +316,18 @@
       });
   }
 
-  /** ‎' k7pm-3xq2 '‎ ⇒ ‎'K7PM3XQ2'‎ — همان قاعدهٔ سرور. */
+  /**
+   * ‎'۴۸۲۹-۱۷۳۶'‎ ⇒ ‎'48291736'‎ — همان قاعدهٔ سرور. رقمِ فارسی و عربی لاتین
+   * می‌شود؛ کدِ حرفیِ پیشین (‎k7pm-3xq2‎ ⇒ ‎K7PM3XQ2‎) هنوز پذیرفته است.
+   */
   function normalizeCode(raw) {
-    return String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return String(raw || '')
+      .replace(/[\u06F0-\u06F9]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); })
+      .replace(/[\u0660-\u0669]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); })
+      .toUpperCase().replace(/[^A-Z0-9]/g, '');
   }
 
-  /** برای نمایش: ‎K7PM-3XQ2‎. */
+  /** برای نمایش: ‎4829-1736‎. */
   function formatCode(raw) {
     var c = normalizeCode(raw);
     return c.length === 8 ? c.slice(0, 4) + '-' + c.slice(4) : c;

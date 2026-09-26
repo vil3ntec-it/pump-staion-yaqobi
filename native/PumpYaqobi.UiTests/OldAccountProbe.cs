@@ -90,6 +90,8 @@ internal static class OldAccountProbe
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
             .SetupWithoutStarting();
 
+        if (args.Contains("karcode")) return KarCode(shots, args.Contains("pass"));
+
         var onlyE = Environment.GetEnvironmentVariable("PUMP_OLDACCT_ONLY") == "e";
         Avalonia.Controls.Window win = null!; MainViewModel vm = null!; AccountSectionViewModel account = null!;
         if (!onlyE) {
@@ -223,6 +225,73 @@ internal static class OldAccountProbe
         return _bad == 0 ? 0 : 1;
     }
 
+    /// <summary>
+    /// ══ کدِ هشت‌رقمیِ اپِ گوشی — نیمهٔ کامپیوتر (۱۴۰۵/۰۷/۱۴) ═════════════
+    ///
+    /// «برای هر حساب کاربری یک کد هشت‌رقمی درست بشه تا به برنامهٔ گوشیِ
+    /// اندروید و آیفون وصل شد و برنامه رو دید.» حسابِ تازه ⇒ خودِ برنامه
+    /// پمپ می‌سازد و وصل می‌شود ⇒ کدِ هشت‌رقمی **بی زدنِ هیچ دکمه‌ای** در
+    /// پروفایل دیده می‌شود ⇒ عکسِ زنده به سرورِ حساب می‌رسد. کد و نامِ پمپ
+    /// در `karcode.json` می‌نشیند تا `tools/check-kar-live.mjs` با اپِ گوشیِ
+    /// واقعی (کرومیوم) همان را بزند.
+    ///
+    ///     oldacct &lt;live.json&gt; &lt;پوشه&gt; karcode [pass] real
+    /// </summary>
+    private static int KarCode(string shots, bool withPass)
+    {
+        Console.WriteLine("══ کدِ هشت‌رقمی: حسابِ تازه، بی زدنِ هیچ دکمه‌ای" + (withPass ? " — با رمزِ برنامه" : " — بی رمز"));
+        var a = MakeAccount("kar-" + Guid.NewGuid().ToString("N")[..8] + "@example.com", withStation: false);
+        SeatOnDisk(a, loginSkipped: false);
+        var host = AppHost.Current;
+        if (withPass && host.Auth.NeedsFirstRun()) host.Auth.CreateFirstAdmin("1405");
+        var (win, vm, account) = Open(withPass ? "1405" : "");
+        //  یک قرض‌دار، تا گوشی چیزی از **همین** پمپ ببیند (پس از ورود — اجازه می‌خواهد)
+        Wait(win, host.Debtors.AddDebtorAsync("هارونِ آزمون", "0700000001", false));
+        var pubLive = false;
+        _until = () =>
+        {
+            var f = AppSettings.Load();
+            if (!CloudLink.IsDigitCode(f.CloudAccessCode)) return false;
+            if (pubLive) return true;
+            //  عکسِ زندهٔ همین پمپ از درِ عمومیِ همان کد — همان راهی که گوشی می‌رود
+            var r = Task.Run(() => Http.GetAsync(_pub + "/api/pump/public/live?code=" + f.CloudAccessCode)).GetAwaiter().GetResult();
+            pubLive = r.IsSuccessStatusCode;
+            return pubLive;
+        };
+        Loop(win, 3);
+        var file = AppSettings.Load();
+        Check("⛔ کدِ هشت‌رقمی خودش آمد (بی زدنِ «گرفتنِ کد»)", CloudLink.IsDigitCode(file.CloudAccessCode), file.CloudAccessCode);
+        Check("عکسِ زندهٔ این پمپ با همان کد از سرورِ حساب خوانده می‌شود", pubLive);
+
+        Wait(win, vm.GoAsync(account));
+        Settle(win);
+        Report(win, vm, account, shots, "k-profile" + (withPass ? "-pass" : ""));
+        Check("پروفایل همان کد را نشان می‌دهد", account.AccessCodeDisplay == CloudLink.FormatAccessCode(file.CloudAccessCode),
+              account.AccessCodeDisplay);
+
+        var settings = vm.Sections.First(x => x.Id == "settings");
+        var apps = (AppsSectionViewModel)settings.SubSections.First(x => x.Id == "apps");
+        Wait(win, vm.GoAsync(settings));
+        settings.ShowSubCommand.Execute(apps);
+        for (var i = 0; i < 40; i++) Pump(win);
+        Settle(win);
+        Check("صفحهٔ «اپِ گوشی» همان کد را دارد", apps.ShareText.Contains(CloudLink.FormatAccessCode(file.CloudAccessCode))
+              || apps.ShareText.Contains(file.CloudAccessCode), apps.ShareText.Replace("\n", " ⏎ "));
+        using (var shot = win.CaptureRenderedFrame()) shot?.Save(Path.Combine(shots, "k-apps" + (withPass ? "-pass" : "") + ".png"));
+        Console.WriteLine("  📷 " + Path.Combine(shots, "k-apps" + (withPass ? "-pass" : "") + ".png"));
+
+        File.WriteAllText(Path.Combine(shots, "karcode" + (withPass ? "-pass" : "") + ".json"), JsonSerializer.Serialize(new
+        {
+            code = file.CloudAccessCode,
+            display = CloudLink.FormatAccessCode(file.CloudAccessCode),
+            pass = withPass ? "1405" : "",
+            debtor = "هارونِ آزمون",
+        }));
+        win.Close();
+        Console.WriteLine(_bad == 0 ? "✅ کدِ هشت‌رقمی آماده است" : $"❌ {_bad} ایراد");
+        return _bad == 0 ? 0 : 1;
+    }
+
     private sealed record Acct(string Email, string UserId, string Access, string Refresh);
 
     /// <summary>حساب با خودِ API سرورِ حساب — نه با برنامه (برنامه آن را نساخته).</summary>
@@ -265,11 +334,12 @@ internal static class OldAccountProbe
         CloudLink.AccountHasStation = null;
     }
 
-    private static (Avalonia.Controls.Window, MainViewModel, AccountSectionViewModel) Open()
+    private static (Avalonia.Controls.Window, MainViewModel, AccountSectionViewModel) Open(string pass = "")
     {
         var win = new MainWindow { Width = 1440, Height = 900 };
         win.Show(); Pump(win);
         var vm = (MainViewModel)win.DataContext!;
+        if (pass.Length > 0) vm.Lock.Password = pass;
         LockIn.Wait(vm.Lock);
         Settle(win);
         //  صفحهٔ اول، نه پروفایل — کاربر فقط برنامه را باز کرده

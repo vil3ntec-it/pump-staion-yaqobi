@@ -67,9 +67,10 @@ await page.route('https://api.vill3n.top/**', async (route) => {
   const url = route.request().url();
   const body = route.request().postDataJSON?.() || {};
   if (url.endsWith('/api/pump/public/join')) {
-    if (body.code === 'K7PM3XQ2')
+    //  کدِ هشت‌رقمیِ امروز و کدِ حرفیِ پیشین هر دو همان پمپ‌اند (سرورِ ۲.۱۱.۶)
+    if (body.code === '48291736' || body.code === 'K7PM3XQ2')
       return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
-        body: JSON.stringify({ ok: true, station: { code: 'ac-one', name: 'پمپِ آزمون' }, home: { url: '', readKey: '', station: 'ac-one' }, cloudLiveAt: 5 }) });
+        body: JSON.stringify({ ok: true, station: { code: 'ac-one', name: 'پمپِ آزمون', accessCode: '4829-1736' }, home: { url: '', readKey: '', station: 'ac-one' }, cloudLiveAt: 5 }) });
     return route.fulfill({ status: 404, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
       body: JSON.stringify({ error: { code: 'bad_access_code', message: 'این کد به هیچ پمپی نمی‌رسد' } }) });
   }
@@ -115,13 +116,13 @@ await page.waitForFunction(() => !document.getElementById('codeErr').classList.c
 ok((await page.textContent('#codeErr')).includes('هیچ پمپی'), 'کدِ غلط پیامِ درست می‌دهد');
 
 // right code (pump without home url ⇒ cloud snapshot)
-await page.fill('#inCode', 'k7pm3xq2');
-ok((await page.inputValue('#inCode')) === 'K7PM-3XQ2', 'خطِ تیره خودکار می‌نشیند');
+await page.fill('#inCode', '۴۸۲۹۱۷۳۶');
+ok((await page.inputValue('#inCode')) === '4829-1736', 'رقمِ فارسی لاتین و خطِ تیره خودکار');
 await page.click('#btnJoin');
 await page.waitForFunction(() => !document.getElementById('lockPane').classList.contains('hidden'));
 ok(await vis('lockPane'), 'بعد از کد، صفحهٔ قفل می‌آید');
 await page.waitForFunction(() => !document.getElementById('btnUnlock').disabled, null, { timeout: 8000 });
-ok((await page.textContent('#lockChip')).includes('K7PM-3XQ2'), 'نشانِ کدِ پمپ روی قفل');
+ok((await page.textContent('#lockChip')).includes('4829-1736'), 'نشانِ کدِ پمپ روی قفل');
 ok((await page.textContent('#lockTitle')).includes('پمپِ آزمون'), 'نامِ پمپ از عکسِ ابری');
 
 await page.fill('#inPass', '0000'); await page.click('#btnUnlock');
@@ -156,13 +157,19 @@ ok(await vis('paneSec') && (await page.textContent('#secBox')).includes('پار�
 const navTxt = await page.textContent('#nav');
 ok(navTxt.includes('بخش‌ها') && navTxt.includes('قرض‌داران'), 'نوارِ حساب‌ها کامل است');
 
-// reload keeps mode & station
+// ⛔ «یک بار زده بشه کافی است»: باز شدنِ دوباره نه کد می‌خواهد نه رمز
 await page.reload();
-await page.waitForFunction(() => !document.getElementById('lockPane').classList.contains('hidden'));
+await page.waitForFunction(() => !document.getElementById('appPane').classList.contains('hidden'), null, { timeout: 8000 });
+ok(await vis('paneDash'), 'باز شدنِ دوباره ⇒ بی کد و بی رمز، همان در (حساب‌ها)');
+
+// 🔒 دستی ⇒ یادِ این گوشی پاک، و بارِ بعد رمز پرسیده می‌شود
+await page.click('#btnLock');
+ok(await vis('lockPane'), '🔒 ⇒ صفحهٔ قفل');
+await page.reload();
 await page.waitForFunction(() => !document.getElementById('btnUnlock').disabled, null, { timeout: 8000 });
+ok(await vis('lockPane'), 'پس از قفلِ دستی، باز شدنِ دوباره رمز می‌خواهد');
 await page.fill('#inPass', '1234'); await page.click('#btnUnlock');
 await page.waitForFunction(() => !document.getElementById('appPane').classList.contains('hidden'));
-ok(await vis('paneDash'), 'بعد از باز شدنِ دوباره، همان در (حساب‌ها)');
 
 // leave pump ⇒ everything forgotten
 await page.click('#btnLock');
