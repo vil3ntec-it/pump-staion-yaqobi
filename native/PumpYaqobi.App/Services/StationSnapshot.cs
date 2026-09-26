@@ -158,18 +158,24 @@ public static class StationSnapshot
     //  مخزن — «موجودیِ تیل در مخزن» که کارمند باید ببیند
     // ══════════════════════════════════════════════════════════════════════
 
-    private static async Task<Dictionary<string, object?>> TankAsync(AppHost host, CancellationToken ct)
+    /// <remarks>
+    /// ⚠️ «فروش» فقط از ستونِ ‎Sale‎ خوانده می‌شود (‎ShiftSumsAsync‎)، نه همهٔ
+    /// پارچه‌های پنج سال به شیءِ کامل — این تابع حالا از <see cref="AlertWatch"/>
+    /// هم صدا زده می‌شود، با هر ذخیرهٔ دفتر. عددها همان‌اند:
+    /// <c>StorageService.Tank(purchases, reports, …)</c> خودش به همین می‌رسد.
+    /// </remarks>
+    internal static async Task<Dictionary<string, object?>> TankAsync(AppHost host, CancellationToken ct)
     {
         var threshold = host.Settings.GetDecimal(SettingsService.LowStockThreshold, 1000m);
         var tank = new Dictionary<string, object?>();
         foreach (var (key, fuel) in new[] { ("petrol", FuelType.Petrol), ("diesel", FuelType.Diesel) })
         {
             var purchases = await host.StorageData.PurchasesAsync(fuel, ct);
-            var reports = await host.StorageData.ReportsAsync(fuel, ct);
+            var sold = await host.StorageData.ShiftSumsAsync(fuel, ct);
             var dips = await host.StorageData.DipsAsync(fuel, ct);
 
             // ⚠️ همان تابعی که خودِ بخشِ مخزن و داشبورد از آن می‌خوانند
-            var t = host.Storage.Tank(purchases, reports, threshold, dips);
+            var t = host.Storage.Tank(purchases, sold.Sale, threshold, dips);
             tank[key] = new Dictionary<string, object?>
             {
                 ["in"] = D(t.In),
@@ -268,6 +274,49 @@ public static class StationSnapshot
                         ["diesel"] = D(bal.Diesel),
                     },
                     ["accounts"] = accounts.Select(a => Account(lite.Name, a, calc, detailed)).ToList(),
+                });
+            }
+        }
+        return people;
+    }
+
+    /// <summary>
+    /// ══ حال و الباقیِ همهٔ قرض‌داران — بی جدول ══════════════════════════════
+    ///
+    /// همان <see cref="DebtorsAsync"/> در حالتِ «خلاصه»، ولی بی حساب‌ها و
+    /// ردیف‌ها: فقط آن‌چه <see cref="Alerts"/> و جست‌وجوی باتِ تلگرام لازم
+    /// دارند. ⚠️ حال و الباقی از همان ‎DebtCalculationService‎ و همان
+    /// ‎CardAccountsAsync‎ است که کارتِ قرض‌دار از آن رنگ می‌گیرد — قاعدهٔ
+    /// تازه‌ای این‌جا نیست. شمارِ کوئری ثابت است (یک ‎GROUP BY‎ برای هر دو
+    /// فهرست)، نه یکی برای هر نفر.
+    /// </summary>
+    internal static async Task<List<object?>> DebtorsLiteAsync(AppHost host, CancellationToken ct)
+    {
+        var calc = host.Debt;
+        var people = new List<object?>();
+        foreach (var noInv in new[] { false, true })
+        {
+            var list = await host.Debtors.ListAsync(noInv, null, ct);
+            var byPerson = await host.Debtors.CardAccountsAsync(noInv, ct);
+            foreach (var lite in list)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (!byPerson.TryGetValue(lite.Id, out var accounts) || accounts.Count == 0) continue;
+                var st = calc.Status(accounts);
+                var bal = calc.Balances(accounts);
+                people.Add(new Dictionary<string, object?>
+                {
+                    ["id"] = lite.Id,
+                    ["name"] = lite.Name,
+                    ["stP"] = StatusText(st.Petrol),
+                    ["stD"] = StatusText(st.Diesel),
+                    ["stM"] = StatusText(st.Money),
+                    ["bal"] = new Dictionary<string, object?>
+                    {
+                        ["money"] = D(bal.Money),
+                        ["petrol"] = D(bal.Petrol),
+                        ["diesel"] = D(bal.Diesel),
+                    },
                 });
             }
         }

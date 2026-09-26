@@ -283,9 +283,17 @@ public class CloudEventsTests : IDisposable
     {
         var src = Src("PumpYaqobi.App", "Services", "StationPublisher.cs");
 
-        //  خبر از همان عکس می‌آید و آخرِ کار فرستاده می‌شود
-        Assert.Contains("PublishAlertsAsync(snap, ct)", src);
-        Assert.Contains("var newsOk = CloudActivated;", src);
+        //  ⛔ از ۱۴۰۵/۰۷/۱۴ خبر از عکس نمی‌رود: هر تیکِ پنج‌ثانیه‌ای، کلِ فهرستِ
+        //  باز به «حالِ زنده» (سرور خودش تازه‌ها را می‌سنجد) — و پشتِ هیچ قفلی نیست.
+        Assert.DoesNotContain("PublishAlertsAsync(snap, ct)", src);
+        Assert.Contains("try { await AlertTickAsync(ct); }", src);
+        var push = src[src.IndexOf("internal async Task<bool> PushStateAsync", StringComparison.Ordinal)..];
+        push = push[..push.IndexOf("private static List<object?> AsSnapshot", StringComparison.Ordinal)];
+        Assert.DoesNotContain("Entitlements.Allows(Entitlements.QrLive)", push);
+        Assert.Contains("SendStateAsync(", push);
+        //  سرورِ کهنه ⇒ همان راهِ قدیمی، نه سکوت
+        Assert.Contains("res.Code == \"not_found\"", push);
+        Assert.Contains("_events.PublishAsync(cloud, AsSnapshot(alerts), ct)", push);
         //  ⛔ و قفلِ عکسِ زنده برداشته نشده
         Assert.Contains("Entitlements.Allows(Entitlements.Kar)", src);
         Assert.Contains("Entitlements.Allows(Entitlements.QrLive)", src);
