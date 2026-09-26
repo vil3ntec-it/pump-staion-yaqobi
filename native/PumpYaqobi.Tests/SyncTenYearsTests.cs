@@ -80,6 +80,25 @@ public class SyncTenYearsTests : IDisposable
         Assert.Equal("pc-1", CloudLink.SyncDeviceFor("", "", "pc-1"));
     }
 
+    /// <summary>
+    /// ⛔ پیوندِ پدر <b>یک پرس‌وجو برای هر جدول در هر دسته</b> است، نه دو تا برای
+    /// هر کلیدِ هر op. نمونه‌بردار روی دفترِ ده‌ساله: ۹۱٪ وقتِ هر دورِ فرستادن
+    /// همان هشتصد جست‌وجوی تکی بود (۳.۱.۱۸۸).
+    /// </summary>
+    [Fact]
+    public void PeyvandePedar_YekPorsojoo_BarayeHarJadval_Ast()
+    {
+        var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.Services", "Data", "SyncStore.cs"));
+        var a = src.IndexOf("private static void AttachParents(", StringComparison.Ordinal);
+        Assert.True(a > 0);
+        var b = src.IndexOf("    /// <summary>", a, StringComparison.Ordinal);
+        var body = src[a..b];
+        Assert.Contains("LEFT JOIN", body);
+        Assert.Contains("IN ({marks})", body);   // WHERE x.\"SyncUid\" IN ($u0, $u1, …)
+        Assert.DoesNotContain("ScalarLong(", body);
+        Assert.DoesNotContain("Scalar(db", body);
+    }
+
     [Fact]
     public void Motor_Hamin_Ghavaed_Ra_Darad()
     {

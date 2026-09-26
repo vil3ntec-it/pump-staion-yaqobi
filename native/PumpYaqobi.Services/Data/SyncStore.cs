@@ -220,45 +220,71 @@ public sealed class SyncStore
     /// ⚠️ مقدار از <b>خودِ ردیفِ روی دیسک</b> خوانده می‌شود، نه از op: ردیفی
     /// که با پدرش در یک ذخیره ساخته شد، سرِ نوشتنِ op هنوز عددِ موقتِ EF را
     /// داشت. فقط در حافظه عوض می‌شود — دفترِ op دست نمی‌خورد.
+    ///
+    /// ⛔ <b>یک پرس‌وجو برای هر جدول در هر دسته</b>، نه دو تا برای هر کلیدِ هر
+    /// op: نمونه‌بردار روی دفترِ ده‌ساله نشان داد ۹۱٪ وقتِ هر دور همین‌جا
+    /// بود (هشتصد پرس‌وجو در هر دسته، هر کدام روی جدولِ ۱۲۸ هزار ردیفی).
+    /// پدر با <c>LEFT JOIN</c> روی <c>Id</c> (کلیدِ اصلی) می‌آید.
     /// </summary>
     private static void AttachParents(PumpDbContext db, List<SyncOp> ops)
     {
         if (ops.Count == 0) return;
         var map = DataTables(db).ToDictionary(x => x.Entity, x => x, StringComparer.Ordinal);
+        var byTable = ops.Where(o => o.OpType != "delete" && map.TryGetValue(o.TableName, out var t) && t.Fks.Count > 0)
+                         .GroupBy(o => o.TableName);
+
         db.Database.OpenConnection();
         try
         {
-            foreach (var op in ops)
+            foreach (var g in byTable)
             {
-                if (op.OpType == "delete" || !map.TryGetValue(op.TableName, out var t) || t.Fks.Count == 0) continue;
-                System.Text.Json.Nodes.JsonObject? node;
-                try { node = System.Text.Json.Nodes.JsonNode.Parse(op.FieldsJson ?? "{}") as System.Text.Json.Nodes.JsonObject; }
-                catch { continue; }
-                if (node is null) continue;
-
-                var changed = false;
-                foreach (var fk in t.Fks)
+                var t = map[g.Key];
+                var nodes = new Dictionary<string, (SyncOp Op, System.Text.Json.Nodes.JsonObject Node)>(StringComparer.Ordinal);
+                foreach (var op in g)
                 {
-                    if (!node.ContainsKey(fk.Property)) continue;
-                    var id = ScalarLong(db, $"SELECT \"{fk.Column}\" FROM \"{t.Table}\" WHERE \"SyncUid\" = $u LIMIT 1;",
-                                        ("$u", op.RowUid));
-                    string? parentUid = null;
-                    if (id is not null)
-                        parentUid = Scalar(db, $"SELECT \"SyncUid\" FROM \"{fk.ParentTable}\" WHERE \"Id\" = {{0}};", id.Value) as string;
-                    node[fk.Property] = id is null ? null : System.Text.Json.Nodes.JsonValue.Create(id.Value);
-                    node[Sidecar(fk.Property)] = string.IsNullOrEmpty(parentUid) ? null : parentUid;
-                    changed = true;
+                    System.Text.Json.Nodes.JsonObject? node;
+                    try { node = System.Text.Json.Nodes.JsonNode.Parse(op.FieldsJson ?? "{}") as System.Text.Json.Nodes.JsonObject; }
+                    catch { continue; }
+                    if (node is not null) nodes[op.RowUid] = (op, node);
                 }
-                if (changed) op.FieldsJson = node.ToJsonString();
+                if (nodes.Count == 0) continue;
+
+                //  SELECT x.SyncUid, x.fk1, p0.SyncUid, x.fk2, p1.SyncUid … FROM t x LEFT JOIN parent p0 … WHERE x.SyncUid IN (…)
+                //  ⚠️ هر ستون نامِ یکتای خودش را می‌گیرد — دو «SyncUid» (خودِ ردیف و
+                //  پدر) در یک نتیجه روی هم می‌نشستند
+                var sel = new System.Text.StringBuilder("SELECT x.\"SyncUid\" AS u");
+                var join = new System.Text.StringBuilder();
+                for (var i = 0; i < t.Fks.Count; i++)
+                {
+                    var fk = t.Fks[i];
+                    sel.Append($", x.\"{fk.Column}\" AS f{i}, p{i}.\"SyncUid\" AS p{i}");
+                    join.Append($" LEFT JOIN \"{fk.ParentTable}\" p{i} ON p{i}.\"Id\" = x.\"{fk.Column}\"");
+                }
+                var keys = nodes.Keys.ToList();
+                var marks = string.Join(", ", keys.Select((_, i) => "$u" + i));
+                var sql = $"{sel} FROM \"{t.Table}\" x{join} WHERE x.\"SyncUid\" IN ({marks});";
+                var rows = ReadRows(db, sql, keys.Select((k, i) => ("$u" + i, (object?)k)).ToArray());
+
+                foreach (var row in rows)
+                {
+                    if (row.GetValueOrDefault("u") is not string uid || !nodes.TryGetValue(uid, out var e)) continue;
+                    for (var i = 0; i < t.Fks.Count; i++)
+                    {
+                        var fk = t.Fks[i];
+                        if (!e.Node.ContainsKey(fk.Property)) continue;
+                        var id = row.GetValueOrDefault("f" + i);
+                        var parentUid = row.GetValueOrDefault("p" + i) as string;
+                        e.Node[fk.Property] = id is long l ? System.Text.Json.Nodes.JsonValue.Create(l)
+                                            : id is null ? null : System.Text.Json.Nodes.JsonValue.Create(Convert.ToInt64(id, CultureInfo.InvariantCulture));
+                        e.Node[Sidecar(fk.Property)] = string.IsNullOrEmpty(parentUid) ? null : parentUid;
+                    }
+                    e.Op.FieldsJson = e.Node.ToJsonString();
+                }
             }
         }
         finally { db.Database.CloseConnection(); }
     }
 
-    /// <summary>
-    /// سقفِ بایتِ یک دسته — زیرِ ‎max_batch_bytes‎ی خودِ سرور (۲۵۶ کیلوبایت،
-    /// ‎lib/sync-v1.js‎) و بسیار زیرِ سقفِ بدنه (۲ مگابایت).
-    /// </summary>
     public const int MaxBatchBytes = 200 * 1024;
 
     /// <summary>کلیدها و شناسه‌های هر op جدا از خودِ ‎fields‎.</summary>
