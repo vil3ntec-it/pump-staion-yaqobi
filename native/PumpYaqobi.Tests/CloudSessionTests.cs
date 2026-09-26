@@ -476,6 +476,168 @@ public class CloudSessionTests : IDisposable
         Assert.True(string.IsNullOrEmpty(AppSettings.Load().CloudDeviceToken));
     }
 
+    // ── نصبِ کدی که صاحبش وارد حسابش شد (۱۴۰۵/۰۷/۱۴) ─────────────────────
+
+    /// <summary>
+    /// ⛔ نصبی که با کدِ شش‌رقمی فعال شده بود روی پمپِ آن کد می‌ماند و اشتراکِ
+    /// حساب هرگز به آن نمی‌رسید. حالا توکنِ خودش مدرک است و <b>سرور</b> تصمیم
+    /// می‌گیرد؛ «moved» ⇒ دستگاه روی پمپِ حساب با توکن و مجوزِ تازه.
+    /// </summary>
+    [Fact]
+    public async Task NasbeKodi_BaHesabeSahebash_BePompeHesab_Miravad()
+    {
+        string? bindBody = null;
+        Serve((path, req) =>
+        {
+            if (path == "/api/pump/device/bind")
+            {
+                bindBody = req.Content!.ReadAsStringAsync().Result;
+                return Json(HttpStatusCode.Created,
+                    """{"deviceToken":"pd_acct","adopt":"moved","station":{"id":"stn-ACCT","code":"pacct"}}""");
+            }
+            return Json(HttpStatusCode.OK, """{"station":{"id":"stn-ACCT","code":"pacct"}}""");
+        });
+        var (link, s) = Link(x =>
+        {
+            x.CloudAccountToken = "acc-1";
+            x.CloudAccessExpiresAt = InAnHour;
+            x.CloudDeviceToken = "pd_code";         // روزی با کدِ شش‌رقمی فعال شد
+            x.CloudStationId = "stn-CODE";
+        });
+
+        await link.HomeFromAccountAsync();
+
+        Assert.NotNull(bindBody);
+        Assert.Contains("\"adopt\":true", bindBody);
+        Assert.Contains("pd_code", bindBody);        // توکنِ کهنه مدرک است
+        Assert.Equal("pd_acct", s.CloudDeviceToken);
+        Assert.Equal("stn-ACCT", s.CloudStationId);
+        Assert.Equal("", CloudLink.LastBindWhy);
+        Assert.Equal("pd_acct", AppSettings.Load().CloudDeviceToken);
+    }
+
+    /// <summary>⛔ سرورِ کهنه «adopt» را نمی‌شناسد ⇒ هیچ چیزی روی دیسک عوض نمی‌شود، و دلیل گفته می‌شود.</summary>
+    [Fact]
+    public async Task NasbeKodi_SarvareKohne_HichChiz_Ra_Avaz_Nemikonad()
+    {
+        Serve((path, _) => path switch
+        {
+            "/api/pump/device/bind" => Json(HttpStatusCode.Created,
+                """{"deviceToken":"pd_wrong","station":{"id":"stn-ACCT"},"publicKey":"KEY-OTHER"}"""),
+            _ => Json(HttpStatusCode.OK, """{"station":{"id":"stn-ACCT"}}"""),
+        });
+        var (link, s) = Link(x =>
+        {
+            x.CloudAccountToken = "acc-1";
+            x.CloudAccessExpiresAt = InAnHour;
+            x.CloudDeviceToken = "pd_code";
+            x.CloudStationId = "stn-CODE";
+            x.CloudPublicKey = "";
+        });
+
+        var (ok, _, _, _, why) = await link.HomeFromAccountAsync();
+
+        Assert.False(ok);
+        Assert.Contains("پمپِ دیگری", why);
+        Assert.Contains("کهنه", why);
+        Assert.Equal("pd_code", s.CloudDeviceToken);
+        Assert.Equal("stn-CODE", s.CloudStationId);
+        Assert.Equal("", s.CloudPublicKey);         // حتی کلید نمی‌نشیند
+        Assert.Equal("pd_code", AppSettings.Load().CloudDeviceToken);
+    }
+
+    /// <summary>⛔ پمپی که صاحبِ دیگری دارد دست نمی‌خورد (۴۰۹ از سرور).</summary>
+    [Fact]
+    public async Task NasbeKodi_PompeSahebDar_DastNamikhorad()
+    {
+        Serve((path, _) => path switch
+        {
+            "/api/pump/device/bind" => Json(HttpStatusCode.Conflict,
+                """{"error":{"code":"station_mismatch","message":"این کامپیوتر به پمپِ دیگری بند است که صاحبِ دیگری دارد."}}"""),
+            _ => Json(HttpStatusCode.OK, """{"station":{"id":"stn-ACCT"}}"""),
+        });
+        var (link, s) = Link(x =>
+        {
+            x.CloudAccountToken = "acc-1";
+            x.CloudAccessExpiresAt = InAnHour;
+            x.CloudDeviceToken = "pd_code";
+            x.CloudStationId = "stn-CODE";
+        });
+
+        var (ok, _, _, _, why) = await link.HomeFromAccountAsync();
+
+        Assert.False(ok);
+        Assert.Contains("پمپِ دیگری", why);
+        Assert.Equal("pd_code", s.CloudDeviceToken);
+        Assert.Equal("stn-CODE", s.CloudStationId);
+    }
+
+    /// <summary>
+    /// ⛔ کدِ هشت‌رقمیِ اپِ گوشی بی زدنِ دکمه می‌آید (۱۴۰۵/۰۷/۱۴): نصبی که
+    /// کدِ حرفیِ پیشین را نگه داشته، در نخستین دورِ پس‌زمینه کدِ امروزی را
+    /// می‌گیرد — و بعدش دیگر هر دقیقه نمی‌پرسد.
+    /// </summary>
+    [Fact]
+    public async Task KodeHashtRaghami_KhodashMiayad_VaTekrarNemishavad()
+    {
+        Serve((path, _) => path == "/api/pump/device/access-code"
+            ? Json(HttpStatusCode.OK, """{"code":"48291736","display":"4829-1736"}""")
+            : Json(HttpStatusCode.NotFound, "{}"));
+        var (link, s) = Link(x =>
+        {
+            x.CloudDeviceToken = "pd_ok";
+            x.CloudAccessCode = "K7PM3XQ2";      // کدِ حرفیِ نسخه‌های پیشین
+        });
+
+        await link.KeepAccessCodeAsync();
+        await link.KeepAccessCodeAsync();
+        await link.KeepAccessCodeAsync();
+
+        Assert.Equal("48291736", s.CloudAccessCode);
+        Assert.Equal("48291736", AppSettings.Load().CloudAccessCode);
+        Assert.Equal(1, _hits.Count(h => h == "/api/pump/device/access-code"));
+        Assert.Equal("4829-1736", CloudLink.FormatAccessCode(s.CloudAccessCode));
+        Assert.True(CloudLink.IsDigitCode("4829-1736"));
+        Assert.False(CloudLink.IsDigitCode("K7PM3XQ2"));
+    }
+
+    /// <summary>بی دستگاهِ فعال هیچ درخواستی نمی‌رود.</summary>
+    [Fact]
+    public async Task KodeHashtRaghami_BiDastgah_HichDarkhasti_Nist()
+    {
+        Serve((_, _) => Json(HttpStatusCode.OK, """{"code":"48291736"}"""));
+        var (link, _) = Link();
+        await link.KeepAccessCodeAsync();
+        Assert.Empty(_hits);
+    }
+
+    /// <summary>
+    /// ⛔ توکنِ کهنه، توکنِ تازهٔ روی دیسک را پاک نکند: نمونه‌ای که هنوز توکنِ
+    /// پیش از بند شدنِ دوباره را دارد «ثبت نشده» می‌گیرد و باید تازه را بردارد.
+    /// </summary>
+    [Fact]
+    public async Task TokeneKohne_TokeneTaze_Ra_Pak_Nemikonad()
+    {
+        Serve((path, _) => Json(HttpStatusCode.Unauthorized,
+            """{"error":{"code":"device_not_registered","message":"این دستگاه ثبت نشده است"}}"""));
+        var (stale, s) = Link(x =>
+        {
+            x.CloudDeviceToken = "pd_old";
+            x.CloudStationId = "stn-A";
+        });
+        //  نمونهٔ دیگری همین حالا بند شد و توکنِ تازه را روی دیسک نوشت
+        var fresh = AppSettings.Load();
+        fresh.CloudDeviceToken = "pd_new";
+        fresh.CloudStationId = "stn-B";
+        fresh.Save();
+
+        await stale.RefreshAsync();
+
+        Assert.Equal("pd_new", s.CloudDeviceToken);
+        Assert.Equal("stn-B", s.CloudStationId);
+        Assert.Equal("pd_new", AppSettings.Load().CloudDeviceToken);
+    }
+
     /// <summary>
     /// دستگاهی که از قبل بند است دوباره بند نمی‌شود — نه درخواستِ اضافه، نه
     /// توکنِ تازه‌ای که توکنِ کهنه را باطل کند.

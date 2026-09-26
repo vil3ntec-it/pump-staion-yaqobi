@@ -74,7 +74,7 @@ public static class KarLink
         return string.Join("\n", lines);
     }
 
-    /// <summary>‎K7PM-3XQ2‎ — همان شکلی که در پروفایل دیده می‌شود.</summary>
+    /// <summary>‎4829-1736‎ — همان شکلی که در پروفایل دیده می‌شود.</summary>
     private static string FormatCode(string clean) =>
         clean.Length > 4 ? clean[..4] + "-" + clean[4..] : clean;
 

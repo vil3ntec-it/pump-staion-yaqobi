@@ -397,10 +397,10 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     //  کد را سرور می‌سازد و برای این پمپ ثابت است. این‌جا فقط نشان داده،
     //  کپی، کیو‌آر و — اگر لازم شد — عوض می‌شود.
 
-    /// <summary>کدِ خام، هشت حرف — همان که در تنظیمات می‌ماند.</summary>
+    /// <summary>کدِ خام، هشت رقم — همان که در تنظیمات می‌ماند.</summary>
     [ObservableProperty] private string _accessCode = "";
 
-    /// <summary>برای نمایش: ‎K7PM-3XQ2‎.</summary>
+    /// <summary>برای نمایش: ‎4829-1736‎.</summary>
     [ObservableProperty] private string _accessCodeDisplay = "";
 
     /// <summary>یک خط دربارهٔ حالِ کد.</summary>

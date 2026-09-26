@@ -598,6 +598,7 @@
         localStorage.removeItem(stnKey('mode'));
         localStorage.removeItem(stnKey('push'));
         localStorage.removeItem(stnKey('chat'));
+        localStorage.removeItem(stnKey('ok'));
       }
       localStorage.removeItem(KEY + '.snap');      // کلیدِ قدیمیِ بی‌پمپ
       localStorage.removeItem(KEY + '.told');
@@ -883,7 +884,7 @@
   function joinWithCode(raw) {
     if (joining || !window.PumpCloud) return;
     var code = PumpCloud.normalizeCode(raw);
-    if (code.length !== 8) { codeMsg('کد هشت حرف و رقم است — مثلِ K7PM-3XQ2.', true); return; }
+    if (code.length !== 8) { codeMsg('کدِ پمپ هشت رقم است — مثلِ 4829-1736.', true); return; }
     joining = true;
     $('btnJoin').disabled = true;
     codeMsg('در حالِ پیدا کردنِ پمپ…');
@@ -900,7 +901,7 @@
           }
           st.home = { url: '', readKey: '', station: st.code };
           switchStation(st.code);
-          cfg.srv = ''; cfg.tok = ''; cfg.code = code; cfg.name = st.name || '';
+          cfg.srv = ''; cfg.tok = ''; cfg.code = st.accessCode || code; cfg.name = st.name || '';
           save();
           chips();
           syncBackground();
@@ -1100,6 +1101,26 @@
 
   // ── قفل ────────────────────────────────────────────────────────────────
 
+  /*
+   *  ══ «یک بار زده بشه کافی است» (۱۴۰۵/۰۷/۱۴) ═══════════════════════════
+   *
+   *  خواستهٔ صریحِ صاحب سامانه: کدِ هشت‌رقمیِ پمپ یک بار زده می‌شود و گوشی
+   *  برنامه را می‌بیند — هر بار که اپ باز می‌شود دوباره چیزی نمی‌پرسد.
+   *
+   *  ⛔ **بی رمز ⇒ خودِ کد کلید است.** برنامهٔ کامپیوتر از ۳.۱.۱۴۹ بی رمز
+   *  نصب می‌شود؛ تا دیروز گوشی این‌جا روی «هنوز رمزی نساخته» گیر می‌ماند و
+   *  هیچ‌وقت چیزی نشان نمی‌داد.
+   *  ⛔ **با رمز ⇒ یک بار در هر گوشی.** رمزِ درست زیرِ کلیدِ همان پمپ به یاد
+   *  می‌ماند (‎stnKey('ok')‎ = همان هشِ منتشرشده، نه خودِ رمز). صاحبِ پمپ که
+   *  رمز را عوض کند، هش عوض می‌شود و همهٔ گوشی‌ها یک بار دیگر می‌پرسند.
+   *  دکمهٔ 🔒 همان یادِ این گوشی را پاک می‌کند.
+   */
+  var lockedByHand = false;
+
+  function rememberedGate() {
+    try { return localStorage.getItem(stnKey('ok')) || ''; } catch (e) { return ''; }
+  }
+
   function gateReady() {
     var b = $('btnUnlock');
     if (b) b.disabled = !(data && data.gate);
@@ -1109,8 +1130,22 @@
       $('stName').textContent = data.station.name;
     }
     chips();
-    if (data && !data.gate)
-      $('lockNote').textContent = 'برنامهٔ کامپیوتر هنوز رمزی نساخته است.';
+    var lb = $('btnLock');
+    if (lb) lb.classList.toggle('hidden', !(data && data.gate));
+    if (!data || unlocked || lockedByHand) return;
+    if (!$('lockPane') || $('lockPane').classList.contains('hidden')) return;
+    if (!data.gate || rememberedGate() === data.gate) openApp();
+  }
+
+  /** همان کاری که رمزِ درست می‌کند — بی پرسیدن، وقتی لازم نیست. */
+  function openApp() {
+    unlocked = true;
+    $('inPass').value = '';
+    show('appPane');
+    loadMode();
+    setMode(mode);          // بی در ⇒ خانه؛ با در ⇒ همان در
+    render();
+    try { if (window.PumpAndroid && PumpAndroid.boot) PumpAndroid.boot('render'); } catch (e) { }
   }
 
   function show(which) {
@@ -1133,13 +1168,9 @@
         err.classList.remove('hidden');
         return;
       }
-      unlocked = true;
-      $('inPass').value = '';
-      show('appPane');
-      loadMode();
-      setMode(mode);          // بی در ⇒ خانه؛ با در ⇒ همان در
-      render();
-      try { if (window.PumpAndroid && PumpAndroid.boot) PumpAndroid.boot('render'); } catch (e) { }
+      try { localStorage.setItem(stnKey('ok'), data.gate); } catch (e) { }
+      lockedByHand = false;
+      openApp();
     } catch (e) {
       err.textContent = 'رمز سنجیده نشد: ' + e;
       err.classList.remove('hidden');
@@ -1586,7 +1617,7 @@
     $('btnJoin').addEventListener('click', function () { joinWithCode($('inCode').value); });
     $('inCode').addEventListener('keydown', function (e) { if (e.key === 'Enter') joinWithCode($('inCode').value); });
     $('inCode').addEventListener('input', function () {
-      //  همان‌طور که تایپ می‌کند خطِ تیره می‌نشیند: ‎K7PM-3XQ2‎
+      //  همان‌طور که تایپ می‌کند خطِ تیره می‌نشیند: ‎4829-1736‎
       var el = $('inCode'), c = (window.PumpCloud ? PumpCloud.normalizeCode(el.value) : el.value).slice(0, 8);
       el.value = c.length > 4 ? c.slice(0, 4) + '-' + c.slice(4) : c;
       codeMsg('');
@@ -1637,7 +1668,12 @@
 
     $('btnUnlock').addEventListener('click', unlock);
     $('inPass').addEventListener('keydown', function (e) { if (e.key === 'Enter') unlock(); });
-    $('btnLock').addEventListener('click', function () { unlocked = false; buildNav(); show('lockPane'); });
+    $('btnLock').addEventListener('click', function () {
+      //  قفلِ دستی یادِ این گوشی را هم پاک می‌کند — بارِ بعد رمز پرسیده می‌شود
+      try { localStorage.removeItem(stnKey('ok')); } catch (e) { }
+      lockedByHand = true;
+      unlocked = false; buildNav(); show('lockPane');
+    });
 
     // ── دو در ──
     $('paneHome').addEventListener('click', function (e) {
