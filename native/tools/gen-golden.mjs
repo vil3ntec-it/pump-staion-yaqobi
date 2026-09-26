@@ -26,7 +26,7 @@ const browser = await chromium.launch(exe ? { executablePath: exe, args: ['--no-
 const page = await browser.newPage();
 const errs = [];
 page.on('pageerror', (e) => errs.push(String(e).slice(0, 200)));
-await page.goto(pathToFileURL(path.join(ROOT, 'index.html')).href, { waitUntil: 'domcontentloaded' });
+await page.goto(pathToFileURL(path.join(ROOT, 'archive', 'old-site', 'index.html')).href, { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(2500);
 
 // ── چکنه ──────────────────────────────────────────────────────────────────

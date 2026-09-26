@@ -48,7 +48,7 @@ const browser = await chromium.launch(
 const page = await browser.newPage();
 const errs = [];
 page.on('pageerror', (e) => errs.push(String(e).slice(0, 200)));
-await page.goto(`${pathToFileURL(path.join(import.meta.dirname, '..', 'index.html')).href}?server=${encodeURIComponent('ws://127.0.0.1:' + PORT)}&token=${encodeURIComponent(token)}`,
+await page.goto(`${pathToFileURL(path.join(import.meta.dirname, '..', 'archive', 'old-site', 'index.html')).href}?server=${encodeURIComponent('ws://127.0.0.1:' + PORT)}&token=${encodeURIComponent(token)}`,
   { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(3500);
 

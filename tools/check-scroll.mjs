@@ -19,7 +19,7 @@ const ROOT = path.join(import.meta.dirname, '..');
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM, args: ['--no-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 860 } });
 const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 200)));
-await page.goto(pathToFileURL(path.join(ROOT, 'index.html')).href, { waitUntil: 'domcontentloaded' });
+await page.goto(pathToFileURL(path.join(ROOT, 'archive', 'old-site', 'index.html')).href, { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(2500);
 await page.evaluate(() => {
   const l = document.getElementById('lockScreen'); if (l) l.style.display = 'none';

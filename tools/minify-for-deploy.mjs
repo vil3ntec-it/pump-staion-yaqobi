@@ -108,7 +108,7 @@ function minifyHtml(file) {
 }
 
 const files = process.argv.slice(2).length ? process.argv.slice(2)
-            : ['index.html', 'payam/index.html'].filter(f => fs.existsSync(f));
+            : ['payam/index.html'].filter(f => fs.existsSync(f));
 let bad = 0;
 for (const f of files) {
   try {
