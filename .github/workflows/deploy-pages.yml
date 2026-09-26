@@ -94,8 +94,9 @@ jobs:
           # فایلِ نصبِ اپِ کارمندان کنارِ سایت هم گذاشته می‌شود تا لینکِ
           # دادنی به کارمند روی دامنهٔ خودِ پمپ باشد (KarLink.ApkUrl).
           grab('kar-latest', '.apk', 'PumpYaqobiKar.apk')
-          grab('android-latest', '.apk', 'PumpYaqobi.apk')
-          grab('android-latest', 'version.txt', 'apk-version.txt')
+          # ⛔ فایلِ نصبِ سایتِ قدیم (android-latest ⇒ PumpYaqobi.apk) دیگر کنارِ
+          # سایت نمی‌رود (۱۴۰۵/۰۷/۱۴): سایتِ قدیم به archive/old-site رفت و
+          # «اپِ اندروید» یعنی فقط PumpYaqobiKar.apk.
           # ⚠️ «desktop-latest» یک برچسبِ چرخشی است که build-native.yml
           # می‌سازد. تا ۱۴۰۵/۰۷/۰۶ ساخته نمی‌شد و هر سه خطِ زیر با یک
           # هشدار رد می‌شدند — یعنی دکمهٔ دانلودِ ویندوزِ سایت ماه‌ها مرده
@@ -119,9 +120,8 @@ jobs:
         run: |
           python3 - <<'PY'
           import json, os, re, time
-          html = open('index.html', encoding='utf-8', errors='ignore').read()
-          m = re.search(r"const\s+APP_VERSION\s*=\s*['\"]([0-9.]+)['\"]", html)
-          ver = m.group(1) if m else '0.0.0'
+          # ⚠️ از ۱۴۰۵/۰۷/۱۴ سایتِ قدیم (و APP_VERSIONش) در archive/old-site است؛
+          # نسخهٔ سایت همان نسخهٔ برنامهٔ کامپیوترِ منتشرشده است.
           def finfo(path):
               if not os.path.isfile(path):
                   return None
@@ -136,12 +136,13 @@ jobs:
                   return open('downloads/' + name, encoding='utf-8').read().strip()
               except Exception:
                   return ''
-          android = finfo('downloads/PumpYaqobi.apk')
-          apk_ver = side_version('apk-version.txt')
+          android = finfo('downloads/PumpYaqobiKar.apk')
+          apk_ver = side_version('kar-apk-version.txt')
           if android and apk_ver:
               android['appVersion'] = apk_ver
           windows = finfo('downloads/PumpYaqobi-Setup.exe')
           exe_ver = side_version('exe-version.txt')
+          ver = exe_ver or '0.0.0'
           if windows and exe_ver:
               windows['appVersion'] = exe_ver
           # ⚠️ نصابِ ۳۲بیتیِ جدا دیگر نیست (۱۴۰۵/۰۷/۱۴): همان یک فایل هر دو
@@ -187,14 +188,12 @@ jobs:
       - name: کوچک‌کردنِ index.html برای انتشار
         continue-on-error: true
         run: |
-          cp index.html /tmp/index.orig.html
           cp payam/index.html /tmp/payam.orig.html
           if npm i --no-save --no-package-lock esbuild@0.28.2; then
             if node tools/minify-for-deploy.mjs; then
               echo "کوچک‌سازی انجام شد"
             else
               echo "::warning::کوچک‌سازی شکست خورد — فایلِ اصلی منتشر می‌شود"
-              cp /tmp/index.orig.html index.html
               cp /tmp/payam.orig.html payam/index.html
             fi
           else
@@ -203,6 +202,12 @@ jobs:
           # node_modules هرگز نباید روی سایت برود
           rm -rf node_modules package.json package-lock.json
           ls -l index.html payam/index.html
+
+      # ⛔ سایتِ قدیم (archive/old-site) فقط در ریپو می‌ماند — انباری، نه سایت.
+      # خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۴): «این مالِ صدها نسخه قبل بود… بزار تو انباری.»
+      # منتشر کردنش خطرناک هم بود: نسخهٔ وبِ قدیم کلِ شاخهٔ پمپ را یک‌جا set می‌کند.
+      - name: سایتِ قدیم منتشر نمی‌شود
+        run: rm -rf archive
 
       # بدون فایل CNAME، گیت‌هاب دامنهٔ اختصاصی را کنار می‌گذارد و سایت با خطای
       # گواهی (ERR_CERT_COMMON_NAME_INVALID) بالا می‌آید. پس اگر نبود، همین‌جا

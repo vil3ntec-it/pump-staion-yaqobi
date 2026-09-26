@@ -58,7 +58,7 @@ jobs:
       - name: گذاشتنِ خودِ برنامه داخلِ فایل نصب
         run: |
           mkdir -p android/app/src/main/assets/www
-          cp index.html sw.js manifest.json favicon.png android/app/src/main/assets/www/
+          cp archive/old-site/index.html archive/old-site/sw.js archive/old-site/manifest.json favicon.png android/app/src/main/assets/www/
           cp -r icons android/app/src/main/assets/www/ || true
           echo "محتوای بسته‌شده:"; ls -la android/app/src/main/assets/www/
 
@@ -77,7 +77,7 @@ jobs:
         run: |
           V=$(python3 - <<'PY'
           import re
-          h = open('index.html', encoding='utf-8', errors='ignore').read()
+          h = open('archive/old-site/index.html', encoding='utf-8', errors='ignore').read()
           m = re.search(r"const\s+APP_VERSION\s*=\s*['\"]([0-9.]+)['\"]", h)
           print(m.group(1) if m else '0.0.1')
           PY

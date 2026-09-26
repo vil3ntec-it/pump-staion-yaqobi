@@ -25,7 +25,7 @@ const browser = await chromium.launch(exe ? { executablePath: exe, args: ['--no-
                                           : { args: ['--no-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 page.on('pageerror', () => {});
-await page.goto(pathToFileURL(path.join(ROOT, 'index.html')).href, { waitUntil: 'domcontentloaded' });
+await page.goto(pathToFileURL(path.join(ROOT, 'archive', 'old-site', 'index.html')).href, { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(3500);
 await page.evaluate(() => {
   const ls = document.getElementById('lockScreen'); if (ls) ls.style.display = 'none';

@@ -28,7 +28,7 @@ const browser = await chromium.launch(
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 page.on('pageerror', () => {});
 
-await page.goto(pathToFileURL(path.join(ROOT, 'index.html')).href,
+await page.goto(pathToFileURL(path.join(ROOT, 'archive', 'old-site', 'index.html')).href,
                 { waitUntil: 'domcontentloaded' });
 // صفحه سنگین است و بخشی از چیدمان بعد از بار شدنِ داده می‌نشیند
 await page.waitForTimeout(4500);

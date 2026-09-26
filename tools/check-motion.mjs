@@ -18,7 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const root = path.join(import.meta.dirname, '..');
-const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'archive', 'old-site', 'index.html'), 'utf8');
 
 let failed = 0;
 const fail = (title, detail) => {

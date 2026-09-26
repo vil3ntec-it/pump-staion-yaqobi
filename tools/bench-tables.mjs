@@ -21,7 +21,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright-core';
 
-const PAGE = pathToFileURL(path.join(import.meta.dirname, '..', 'index.html')).href;
+const PAGE = pathToFileURL(path.join(import.meta.dirname, '..', 'archive', 'old-site', 'index.html')).href;
 const N = Number(process.env.N || 20000);
 
 const browser = await chromium.launch(
