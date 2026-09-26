@@ -661,11 +661,36 @@ public sealed class StationPublisher : IAsyncDisposable
     /// </summary>
     public static bool Disabled { get; set; }
 
+    /// <summary>
+    /// «اینترنت برگشت» — دورِ ابر همان لحظه (اشتراکی که آفلاین تمدید شده بود
+    /// خودش برسد). یک پرچم است، نه یک درخواست: خودِ حلقه در تیکِ بعدیِ
+    /// پنج‌ثانیه‌ای می‌رود، پس لرزشِ شبکه ده درخواست نمی‌سازد.
+    /// </summary>
+    private static int _netBack;
+
+    /// <summary>پیامِ سرور (مثلاً «اشتراک تمدید شد») یا برگشتنِ اینترنت ⇒ دورِ ابر همین حالا.</summary>
+    public static void CloudSoon() => Interlocked.Exchange(ref _netBack, 1);
+
+    private static (long, long, long) ReadBoundaries()
+    {
+        var f = AppSettings.Load();
+        var c = LicenseGuard.CheckStored(f, LicenseClock.Now(f));
+        if (!c.SignatureOk) return (0, 0, 0);
+        var grace = c.ExpiresAt > 0 ? c.ExpiresAt + (long)Entitlements.Grace.TotalMilliseconds : 0;
+        return (c.ExpiresAt, c.SubscriptionEndsAt, grace);
+    }
+
     /// <summary>حلقهٔ پس‌زمینه. صدا زدنش دو بار، یکی بیشتر نمی‌سازد.</summary>
     public void Start()
     {
         if (Disabled) return;
         if (_loop is not null) return;
+        try
+        {
+            System.Net.NetworkInformation.NetworkChange.NetworkAvailabilityChanged += (_, e) => { if (e.IsAvailable) CloudSoon(); };
+            System.Net.NetworkInformation.NetworkChange.NetworkAddressChanged += (_, _) => CloudSoon();
+        }
+        catch { /* سیستمی که خبرِ شبکه نمی‌دهد — همان تیکِ یک‌دقیقه‌ای کافی است */ }
         var cts = new CancellationTokenSource();
         _loop = cts;
         _ = Task.Run(() => LoopAsync(cts.Token), cts.Token);
@@ -706,7 +731,14 @@ public sealed class StationPublisher : IAsyncDisposable
                 catch { /* سرورِ خاموش خطا نیست */ }
             }
 
-            //  ۳) ابر — خودش، بی این‌که کاربر صفحه‌ای را باز کند.
+            //  ۲ب) مرزهای خودِ مجوز — آفلاین هم. تا مرزِ بعدی نرسیده هیچ کاری
+            //      نمی‌کند (نه فایل، نه امضا). شرحش بالای `SubscriptionWatch.LocalTick`.
+            try { SubscriptionWatch.LocalTick(Entitlements.Now, ReadBoundaries); }
+            catch { /* نمایش رفاه است */ }
+
+            //  ۳) ابر — خودش، بی این‌که کاربر صفحه‌ای را باز کند. و «اینترنت
+            //     برگشت» همان لحظه، نه یک دقیقه بعد (`_netBack`).
+            if (Interlocked.Exchange(ref _netBack, 0) == 1) lastCloud = DateTime.MinValue;
             if (DateTime.UtcNow - lastCloud >= CloudTick)
             {
                 lastCloud = DateTime.UtcNow;
@@ -788,6 +820,9 @@ public sealed class StationPublisher : IAsyncDisposable
             //  هیچ‌وقت به این دستگاه نمی‌رسید مگر کاربر صفحهٔ پروفایل را
             //  باز کند. شرحِ کامل بالای `CloudLink.KeepLicenseFreshAsync`.
             await cloud.KeepLicenseFreshAsync(ct);
+            //  🤖 پیگیرِ اشتراک — حرفِ سرور را با مجوزِ این‌جا می‌سنجد؛ یکی
+            //  نبودند ⇒ خودش می‌رساند. شرحش بالای `SubscriptionWatch`.
+            await cloud.WatchSubscriptionAsync(forceBind, ct);
             await cloud.KeepAccessCodeAsync(ct);
             return;
         }
