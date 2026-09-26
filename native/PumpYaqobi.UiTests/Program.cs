@@ -142,6 +142,8 @@ internal static class Program
         if (outDir.Equals("signuptrial", StringComparison.OrdinalIgnoreCase)) return SignUpTrialProbe.Run(args);
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- linkstates <live.json> [پوشه]
         if (outDir.Equals("linkstates", StringComparison.OrdinalIgnoreCase)) return LinkStatesProbe.Run(args);
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- oldacct <live.json> [پوشه]
+        if (outDir.Equals("oldacct", StringComparison.OrdinalIgnoreCase)) return OldAccountProbe.Run(args);
         //  «تست بزن ببین لاگین می‌شود، کد بزنی چه می‌شود، حساب ساخته می‌شود یا نه»
         if (outDir.Equals("cloudlogin", StringComparison.OrdinalIgnoreCase)) return CloudLoginProbe.Run();
         //  «تو کادرها + @ # ﷼ ( ) ؟ ؛ : , . نوشته نمی‌شوند»
