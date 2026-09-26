@@ -1367,7 +1367,13 @@
       list.map(function (m) { return '<option value="' + esc(m) + '">' + esc(m) + '</option>'; }).join('');
     if (list.indexOf(keep) >= 0) sel.value = keep;
 
-    $('secBox').innerHTML = blockHtml(sectionBlock(secTab, sec, sel.value || null));
+    //  ⚠️ عکسی که از راهِ سرورِ حساب آمده زیرِ سقفِ آن سرور بریده شده (‎from‎ =
+    //  نخستین ماهی که آمده)؛ جمع‌ها کامل‌اند و فقط ردیف‌های ماه‌های پیش‌تر نیامده‌اند.
+    var cut = data && data.from
+      ? '<div class="card sub">ردیف‌های پیش از ' + esc(data.from) +
+        ' از راهِ اینترنت نمی‌آیند — در شبکهٔ پمپ همه دیده می‌شوند. جمع‌ها کامل‌اند.</div>'
+      : '';
+    $('secBox').innerHTML = cut + blockHtml(sectionBlock(secTab, sec, sel.value || null));
   }
 
   // ══════════════════════════════════════════════════════════════════════

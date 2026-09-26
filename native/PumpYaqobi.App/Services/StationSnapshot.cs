@@ -871,6 +871,128 @@ public static class StationSnapshot
 
     // ── ابزارِ کوچک ────────────────────────────────────────────────────────
 
+    // ══════════════════════════════════════════════════════════════════════
+    //  نسخهٔ سرورِ حساب — «ده سال داده هم باید برسد»
+    // ══════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// سقفِ عکسی که به سرورِ حساب می‌رود، بایتِ UTF-8.
+    ///
+    /// ⛔ سرورِ حساب هر فایل را تا ۱٫۵ میلیون نویسه می‌پذیرد
+    /// (<c>routes/pump-device.js</c>، <c>too_large</c>) و بدنهٔ هر درخواست را تا ۲
+    /// مگابایت (<c>express.json</c>). سنجهٔ ده‌ساله (۱۴۰۵/۰۷/۱۴) نشان داد عکسِ
+    /// کامل با <b>یک</b> سال داده ۱٫۶۵ میلیون نویسه است و با ده سال ۱۴ مگابایت —
+    /// یعنی گوشیِ بیرون از شبکهٔ پمپ عملاً هیچ‌وقت عکسی نمی‌دید. پس سقف زیرِ هر
+    /// دو است، با جای خالی.
+    /// </summary>
+    public const int CloudBudgetBytes = 1_300_000;
+
+    /// <summary>JSONِ فشرده — نویسهٔ فارسی خودش، نه <c>\uXXXX</c> (سه برابر بزرگ‌تر).</summary>
+    public static readonly System.Text.Json.JsonSerializerOptions Compact = new()
+    {
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+
+    /// <summary>اندازهٔ یک شیء همان‌طور که روی سیم می‌رود.</summary>
+    public static int WireBytes(object? o) =>
+        System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(o, Compact).Length;
+
+    /// <summary>
+    /// ⛔ <b>همان عکس، کوچک‌شده تا زیرِ <paramref name="budget"/></b> — برای سرورِ
+    /// حساب. عکسِ سرورِ خانگی دست نمی‌خورد و همیشه کامل است.
+    ///
+    /// ترتیبِ بریدن از کم‌ارزش به پرارزش، و هر پله فقط اگر پلهٔ قبل بس نبود:
+    /// <list type="number">
+    /// <item>ردیف‌های دفترها از <b>قدیمی‌ترین ماه</b> — تا دو ماهِ آخر.</item>
+    /// <item>ردیف‌های حسابِ قرض‌داران (جمع‌ها، حال و مانده می‌مانند —
+    ///   همان <c>detail = false</c>ی که اپ از قبل می‌شناسد).</item>
+    /// <item>ردیف‌های دفترها تا یک ماه، و بعد هیچ.</item>
+    /// </list>
+    ///
+    /// ⚠️ هیچ عددی حساب نمی‌شود و هیچ جمعی عوض نمی‌شود: <c>sum</c>ِ هر بخش همان
+    /// جمعِ کامل است، هشدارها و مخزن و نوارِ بالا دست‌نخورده‌اند. فقط ردیف‌ها کم
+    /// می‌شوند، و <c>from</c> می‌گوید از کدام ماه به بعد آمده تا اپ بگوید
+    /// ماه‌های پیش‌تر فقط در شبکهٔ پمپ است.
+    /// </summary>
+    public static Dictionary<string, object?> ForCloud(Dictionary<string, object?> snap, int budget = CloudBudgetBytes)
+    {
+        if (WireBytes(snap) <= budget) return snap;
+
+        var copy = new Dictionary<string, object?>(snap);
+        var secs = snap.TryGetValue("sections", out var so) ? so as Dictionary<string, object?> : null;
+        var months = (secs?.Values ?? Enumerable.Empty<object?>())
+            .OfType<Dictionary<string, object?>>()
+            .SelectMany(s => s.TryGetValue("m", out var m) ? m as List<string> ?? new() : new())
+            .Where(m => m.Length > 0).Distinct().OrderByDescending(m => m, StringComparer.Ordinal).ToList();
+
+        //  ‎keep‎ = چند ماهِ آخر بماند (‎-1‎ = همه)
+        Dictionary<string, object?>? Trim(int keep)
+        {
+            if (secs is null) return null;
+            var from = keep < 0 || keep >= months.Count ? "" : keep == 0 ? "~" : months[keep - 1];
+            var outS = new Dictionary<string, object?>();
+            foreach (var (id, v) in secs)
+            {
+                //  بخشی که شکلِ ‎{rows, m}‎ ندارد (شرکت‌ها، امانت) دست نمی‌خورد
+                if (v is not Dictionary<string, object?> sec || from.Length == 0
+                    || !sec.ContainsKey("rows") || !sec.ContainsKey("m")) { outS[id] = v; continue; }
+                var rows = sec.TryGetValue("rows", out var r) ? r as List<string[]> ?? new() : new();
+                var ms = sec.TryGetValue("m", out var mm) ? mm as List<string> ?? new() : new();
+                var nr = new List<string[]>(); var nm = new List<string>();
+                for (var i = 0; i < rows.Count; i++)
+                {
+                    var m = i < ms.Count ? ms[i] : "";
+                    //  ردیفِ بی‌ماه (مثلاً خریدِ بی‌تاریخ) کوچک است و در ماهی نمی‌افتد
+                    if (from != "~" && (m.Length == 0 || string.CompareOrdinal(m, from) >= 0))
+                    { nr.Add(rows[i]); nm.Add(m); }
+                }
+                outS[id] = new Dictionary<string, object?>(sec) { ["rows"] = nr, ["m"] = nm };
+            }
+            copy["from"] = from == "~" ? "" : from;
+            return outS;
+        }
+
+        bool Fits(int keep)
+        {
+            copy["sections"] = Trim(keep);
+            return WireBytes(copy) <= budget;
+        }
+
+        //  بیشترین ماه‌هایی که جا می‌شوند — دست‌کم دو ماه (جست‌وجوی دودویی)
+        bool Most()
+        {
+            int lo = Math.Min(2, months.Count), hi = months.Count;
+            if (Fits(hi)) return true;
+            if (!Fits(lo)) return false;
+            while (lo < hi - 1) { var mid = (lo + hi) / 2; if (Fits(mid)) lo = mid; else hi = mid; }
+            Fits(lo);
+            return true;
+        }
+
+        //  ۱) فقط ماه‌های قدیمیِ دفترها
+        if (Most()) return copy;
+
+        //  ۲) ردیف‌های حسابِ قرض‌داران
+        if (snap.TryGetValue("debtors", out var dO) && dO is List<object?> people)
+        {
+            copy["debtors"] = people.Select(p => p is Dictionary<string, object?> d
+                    && d.TryGetValue("accounts", out var ac) && ac is System.Collections.IEnumerable list
+                ? new Dictionary<string, object?>(d)
+                {
+                    ["accounts"] = list.Cast<object?>().Select(a => a is Dictionary<string, object?> ad
+                        ? new Dictionary<string, object?>(ad) { ["rows"] = new List<string[]>() } : a).ToList(),
+                }
+                : p).ToList();
+            copy["detail"] = false;
+        }
+        if (Most()) return copy;
+
+        //  ۳) یک ماه، و بعد هیچ ردیفی از دفترها
+        if (Fits(Math.Min(1, months.Count))) return copy;
+        Fits(0);
+        return copy;
+    }
+
     private static Dictionary<string, object?> Section(
         string title, IEnumerable<string> head, IEnumerable<string[]> rows,
         IEnumerable<string> months, IEnumerable<string[]> totals) =>

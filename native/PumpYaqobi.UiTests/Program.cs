@@ -37,6 +37,11 @@ internal static class Program
         // حلقه در `PumpYaqobi.Tests` سنجیده می‌شود، بی پنجره و بی شبکه.
         PumpYaqobi.App.Services.SyncEngine.Disabled = true;
         PumpYaqobi.App.Services.CrashGuard.ReportingOff = true;
+        //  ⚠️ همان تورِ خودِ برنامه: خطای ‎Task‎ی که کسی نخوانده (‎_ = DoAsync()‎)
+        //  در ‎crash.log‎ِ پوشهٔ همان سنجه می‌نشیند، نه این‌که بی‌صدا گم شود —
+        //  وگرنه سنجه سبز است و برنامهٔ واقعی همان خطا را می‌خورد. گزارش به
+        //  سرور خاموش است (خطِ بالا).
+        PumpYaqobi.App.Services.CrashGuard.Install();
 
         // ══ حالتِ «سنجشِ اسکرول» ═════════════════════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- scroll
@@ -175,6 +180,7 @@ internal static class Program
             return ThemeFlipAudit.RunDiff(args[1], args.Length > 2 ? args[2] : null);
         // ══ «پنج سال استفاده از اپ» — کندی و باگ با دفترِ پنج‌ساله ═══════════
         //     dotnet run --project PumpYaqobi.UiTests -- years
+        if (outDir.Equals("tensync", StringComparison.OrdinalIgnoreCase)) return TenSyncProbe.Run(args);
         if (outDir.Equals("years", StringComparison.OrdinalIgnoreCase)) return YearsAudit.Run();
         // ══ «برنامه چرا دیر باز می‌شود؟» — اجرای سرد، مرحله به مرحله ═════════
         //     dotnet run --project PumpYaqobi.UiTests -- startup

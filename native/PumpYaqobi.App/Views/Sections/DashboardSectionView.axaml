@@ -386,6 +386,12 @@
                              Classes="muted" FontSize="12.5" TextWrapping="Wrap" VerticalAlignment="Center" />
                 </StackPanel>
               </Border>
+              <DockPanel>
+              <Button Classes="ghost" DockPanel.Dock="Bottom" HorizontalAlignment="Stretch" Margin="0,4,0,0"
+                      IsVisible="{Binding AlertsMore, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                      Command="{Binding GoCommand}" CommandParameter="debt">
+                <TextBlock Text="{Binding AlertsMore}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+              </Button>
               <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <ItemsControl ItemsSource="{Binding Alerts}">
                   <ItemsControl.ItemTemplate>
@@ -413,6 +419,7 @@
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
               </ScrollViewer>
+              </DockPanel>
             </Panel>
           </Grid>
         </Border>

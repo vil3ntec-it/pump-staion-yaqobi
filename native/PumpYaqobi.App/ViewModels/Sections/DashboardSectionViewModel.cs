@@ -236,7 +236,9 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
     {
         var real = Alerts.Where(a => a.IsReal).ToList();
         if (real.Count == 0) { _host.Toast("🔔 اعلان تازه‌ای نیست — همه‌چیز مرتب است", ToastKind.Ok); return; }
-        _host.Toast("🔔 " + string.Join(" · ", real.Select(a => a.Text)), ToastKind.Warn);
+        //  ⚠️ نه همه در یک پیام: با صدها هشدار، توست از صفحه بیرون می‌زد
+        var more = BellCount > 5 ? " · و " + Shamsi.Money(BellCount - 5) + " هشدارِ دیگر" : "";
+        _host.Toast("🔔 " + string.Join(" · ", real.Take(5).Select(a => a.Text)) + more, ToastKind.Warn);
     }
 
     protected override Task LoadAsync() => RefreshAsync();
@@ -517,12 +519,27 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
     /// </summary>
     public void ApplyAlerts() => BuildAlerts();
 
+    /// <summary>
+    /// ⛔ <b>چند هشدار روی داشبورد ساخته شود — نه همه.</b>
+    ///
+    /// سنجهٔ ده‌ساله (۱۴۰۵/۰۷/۱۴) با ششصد قرض‌دار ۱٬۸۰۱ هشدار داشت و این فهرست
+    /// همه را یک‌جا می‌ساخت (‎ItemsControl‎ی بی‌مجازی‌سازی، هر کدام دکمه و
+    /// چهار نوشته): <b>۵٫۵ ثانیه نخِ رابط</b> با هر بار دیده شدنِ داشبورد پس از
+    /// عوض شدنِ فهرست. عدد همان «N مورد» و زنگ است؛ این‌جا فقط تازه‌ترین‌ها.
+    /// </summary>
+    public const int AlertLimit = 12;
+
+    /// <summary>«و ۱٬۷۸۹ هشدارِ دیگر» — خالی یعنی همه دیده می‌شوند.</summary>
+    [ObservableProperty] private string _alertsMore = "";
+
     private void BuildAlerts()
     {
         Alerts.Clear();
+        var all = _host.LiveAlerts.Current;
         //  «تمام شد» اول، بعد «کم مانده»؛ مخزن پیش از قرض‌دار
-        foreach (var a in _host.LiveAlerts.Current
-                     .OrderBy(x => x.IsOut ? 0 : 1).ThenBy(x => x.IsTank ? 0 : 1))
+        foreach (var a in all
+                     .OrderBy(x => x.IsOut ? 0 : 1).ThenBy(x => x.IsTank ? 0 : 1)
+                     .Take(AlertLimit))
         {
             Alerts.Add(new DashAlertViewModel
             {
@@ -534,7 +551,10 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
                 IsReal = true,
             });
         }
-        BellCount = Alerts.Count(a => a.IsReal);
+        BellCount = all.Count;
+        AlertsMore = all.Count > AlertLimit
+            ? "و " + Shamsi.Money(all.Count - AlertLimit) + " هشدارِ دیگر — کارت‌های سرخ و زردِ «قرض‌داران»"
+            : "";
         AlertsCard.Value = BellCount + " مورد";
         AlertsCard.SetDeltaText(BellCount > 0 ? "نیاز به بررسی" : "همه‌چیز مرتب است");
         AlertsCard.Sub = _host.LiveAlerts.Ready ? "برای دیدن فهرست بزنید" : "در حالِ سنجش…";

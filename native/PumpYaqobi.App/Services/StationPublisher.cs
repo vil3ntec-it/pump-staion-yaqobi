@@ -103,6 +103,16 @@ public sealed class StationPublisher : IAsyncDisposable
     private CancellationTokenSource? _loop;
     private string _lastHash = "";
     private long _lastVersion = -1;
+
+    /// <summary>
+    /// ⛔ <b>ساختنِ عکس دست‌بالا پنج درصدِ یک هسته</b>: پس از هر ساختن، دستِ‌کم
+    /// بیست برابرِ همان زمان صبر. سنجهٔ ده‌ساله (۱۴۰۵/۰۷/۱۴): ساختنِ عکس ۳٫۴
+    /// ثانیه بود و با هر ذخیره‌ای هر بیست ثانیه یک بار — هفده درصدِ یک هسته تا
+    /// وقتی کاربر کار می‌کند («کامپیوتر داغ»). دفترِ کوچک همان بیست ثانیه
+    /// می‌ماند؛ دفترِ ده‌ساله هر یک دقیقه و خرده‌ای. ⚠️ هشدارها از این راه
+    /// نمی‌روند (‎AlertTickAsync‎، هر پنج ثانیه)، پس خبرِ «تمام شد» دیر نمی‌رسد.
+    /// </summary>
+    private DateTime _nextBuildAt = DateTime.MinValue;
     private DateTime _lastEnrollTry = DateTime.MinValue;
     private DateTime _lastRepairTry = DateTime.MinValue;
     private bool _inboxWatched;
@@ -172,8 +182,11 @@ public sealed class StationPublisher : IAsyncDisposable
             // شمارهٔ نسخهٔ داده می‌گوید از دورِ قبل چیزی ذخیره شده یا نه.
             var version = PumpYaqobi.Persistence.PumpDbContext.Version;
             if (!force && version == _lastVersion && _accts.Pending == 0 && !_cloudLivePending) return false;
+            if (!force && DateTime.UtcNow < _nextBuildAt) return false;
 
+            var built = System.Diagnostics.Stopwatch.StartNew();
             var snap = await StationSnapshot.BuildAsync(_host, ct);
+            _nextBuildAt = DateTime.UtcNow + built.Elapsed * 19;
             _lastVersion = version;
 
             // ⚠️ ‎seq‎ هر بار عوض می‌شود، پس در محکِ «چیزی عوض شده؟» نمی‌آید —
@@ -210,10 +223,14 @@ public sealed class StationPublisher : IAsyncDisposable
                 _cloudLiveAt = DateTime.UtcNow;
                 var file = AppSettings.Load();
                 var link = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
-                var put = await link.PutFileAsync(CloudLiveFile, snap, ct);
+                //  ⛔ نسخهٔ سرورِ حساب زیرِ سقفِ خودِ سرور بریده می‌شود — شرحش بالای
+                //  ‎StationSnapshot.ForCloud‎. عکسِ سرورِ خانگی کامل می‌ماند.
+                var put = await link.PutFileAsync(CloudLiveFile, StationSnapshot.ForCloud(snap), ct);
                 if (put.Ok) { _cloudLiveHash = hash; _cloudLivePending = false; }
                 //  اشتراک تمام شده یا فایل بیش از حد بزرگ است ⇒ تا عکس عوض نشده دوباره نزن
-                else _cloudLivePending = put.Code is not ("subscription_required" or "too_large");
+                //  ⚠️ «بیش از حد بزرگ» دو کد دارد: سقفِ فایل (‎too_large‎) و سقفِ بدنهٔ
+                //  درخواست (‎body_too_large‎) — هر دو یعنی «تا عکس عوض نشده نزن».
+                else _cloudLivePending = put.Code is not ("subscription_required" or "too_large" or "body_too_large");
                 went |= put.Ok;
             }
             else if (karOk && cloudOn && hash != _cloudLiveHash) _cloudLivePending = true;
