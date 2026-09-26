@@ -121,6 +121,13 @@ public sealed class AppHost
     /// </summary>
     public StationPublisher? PublisherIfStarted => _publisher;
 
+    /// <summary>
+    /// هشدارهای بازِ همین پمپ — تنها جای ساختنِ فهرست برای زنگِ داشبورد، توستِ
+    /// میرزا، و حالی که به سرور و بات می‌رود. شرحش در <see cref="AlertWatch"/>.
+    /// ⚠️ خودش هیچ نخی نمی‌سازد: حلقهٔ ناشر صدایش می‌زند.
+    /// </summary>
+    public AlertWatch LiveAlerts { get; } = new();
+
     private SyncEngine? _sync;
 
     /// <summary>

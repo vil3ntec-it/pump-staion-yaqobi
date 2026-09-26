@@ -89,6 +89,14 @@ public sealed partial class MainViewModel : ObservableObject
             // حلقه بی‌صدا هیچ کاری نمی‌کند.
             AppHost.Current.Publisher.Start();
 
+            // ══ هشدارِ قرض‌دار و مخزن ⇒ میرزا ═══════════════════════════════
+            // گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۴): «برای قرض‌داری که حسابش تموم بشه
+            // یا قرض‌دار بشه، چرا پیامِ هشدار به میرزا نمیاد؟» — حالا همان
+            // لحظه‌ای که فهرست عوض شد: یک توست، و زنگِ داشبورد تازه می‌شود.
+            // ⚠️ فهرست همان است که به سرور و بات می‌رود (`AlertWatch`).
+            AppHost.Current.LiveAlerts.Changed += (opened, initial) =>
+                Dispatcher.UIThread.Post(() => OnAlertsChanged(opened, initial));
+
             // ══ همگام‌سازی با سرورِ حساب (VILL3N Sync v1) ════════════════════
             // بندِ ۳ی پرامپتِ ۲۲. صف در خودِ SQLite است، پس بسته شدنِ برنامه
             // چیزی را نمی‌برد و این حلقه فقط «از همان‌جا ادامه می‌دهد».
@@ -770,6 +778,22 @@ public sealed partial class MainViewModel : ObservableObject
     /// ⚠️ هر دو از <b>یک</b> جا می‌آیند. قاعدهٔ جدا ننویسید، وگرنه روزی
     /// یکی می‌آید و آن یکی نه.
     /// </summary>
+    /// <summary>
+    /// هشدارهای تازه ⇒ توستِ میرزا، و زنگِ داشبورد از همان فهرست.
+    /// ⚠️ «تمام شد» توستِ سرخ است (هشدار)، «کم مانده» زرد.
+    /// </summary>
+    private void OnAlertsChanged(IReadOnlyList<AlertItem> opened, bool initial)
+    {
+        try
+        {
+            foreach (var d in AllPages.OfType<DashboardSectionViewModel>()) d.ApplyAlerts();
+            var text = AlertWatch.ToastText(opened, initial);
+            if (text.Length > 0)
+                AppHost.Current.Toast(text, opened.Any(a => a.IsOut) ? ToastKind.Error : ToastKind.Warn);
+        }
+        catch { /* خبر رفاه است */ }
+    }
+
     private void ShowNotice(CloudNotice n)
     {
         NoticeText = "📣 " + n.Title + (n.Body.Length > 0 ? " — " + n.Body : "");
@@ -1437,6 +1461,8 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     public async Task OnLedgerSwitchedAsync()
     {
+        //  دفترِ دیگر ⇒ هشدارهای دیگر؛ فهرستِ دفترِ قبلی نباید یک لحظه هم بماند
+        AppHost.Current.LiveAlerts.Reset();
         foreach (var s in AllPages)
         {
             try { s.CloseOpenPage(); } catch { /* بستنِ صفحه رفاه است */ }

@@ -865,6 +865,32 @@ public sealed partial class CloudLink
         return ok ? CloudResult.Done : CloudResult.No(why, code);
     }
 
+    /// <summary>
+    /// ══ حالِ زندهٔ پمپ ⇒ سرورِ حساب ⇒ بات ══════════════════════════════════
+    ///
+    /// <para>
+    /// <b>همهٔ</b> هشدارهای بازِ همین حالا (نه فقط تازه‌ها)، موجودیِ دو مخزن،
+    /// و — اگر داده شد — خلاصهٔ حالِ قرض‌داران برای جست‌وجوی بات. سرور خودش
+    /// می‌سنجد چه باز شد و چه بسته شد (<c>lib/pump-state.js</c> در ریپوی
+    /// <c>shop</c>)؛ پس بستن و باز کردنِ برنامه دیگر همان هشدارها را «تازه»
+    /// نمی‌کند — همان «حرف‌های تکراری»ِ بات.
+    /// </para>
+    /// <para>
+    /// ⚠️ سرورِ کهنه این مسیر را ندارد و ‎not_found‎ می‌دهد؛ صدا‌زننده همان را
+    /// می‌بیند و به <see cref="SendEventsAsync"/> برمی‌گردد.
+    /// </para>
+    /// </summary>
+    public async Task<CloudResult> SendStateAsync(
+        IEnumerable<object> alerts, object tank, IEnumerable<object>? debtors, CancellationToken ct = default)
+    {
+        if (!Activated) return CloudResult.No("فعال نشده", "not_activated");
+        object body = debtors is null
+            ? new { alerts = alerts.ToList(), tank }
+            : new { alerts = alerts.ToList(), tank, debtors = debtors.ToList() };
+        var (ok, _, why, code) = await DevPostAsync("/api/pump/device/state", body, ct);
+        return ok ? CloudResult.Done : CloudResult.No(why, code);
+    }
+
     // ══ پشتیبانِ ابری ═══════════════════════════════════════════════════
     //
     // ⛔ چیزی که تا امروز نبود:
