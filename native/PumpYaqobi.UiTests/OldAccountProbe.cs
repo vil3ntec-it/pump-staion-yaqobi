@@ -91,6 +91,7 @@ internal static class OldAccountProbe
             .SetupWithoutStarting();
 
         if (args.Contains("karcode")) return KarCode(shots, args.Contains("pass"));
+        if (args.Contains("subwatch")) return SubWatch(shots, pub);
 
         var onlyE = Environment.GetEnvironmentVariable("PUMP_OLDACCT_ONLY") == "e";
         Avalonia.Controls.Window win = null!; MainViewModel vm = null!; AccountSectionViewModel account = null!;
@@ -289,6 +290,92 @@ internal static class OldAccountProbe
         }));
         win.Close();
         Console.WriteLine(_bad == 0 ? "✅ کدِ هشت‌رقمی آماده است" : $"❌ {_bad} ایراد");
+        return _bad == 0 ? 0 : 1;
+    }
+
+    /// <summary>
+    /// ══ پیگیرِ اشتراک — «به حساب VIP یک‌ساله دادم، برنامه گفت تمدید شد ولی قفل ماند» ══
+    ///
+    /// همان کارِ صاحبِ سامانه، با زمانِ واقعی و فقط تایمرِ خودِ برنامه:
+    /// حسابِ تازه ⇒ آزمایشی ⇒ VIPِ یک‌ساله ⇒ تمدیدِ یک سالِ دیگر ⇒ دائمی ⇒
+    /// لغو ⇒ آفلاین + VIPِ تازه ⇒ آنلاین. هر گام: پلن، روزِ مانده، و این‌که
+    /// شش بخشِ اشتراکی واقعاً باز/بسته‌اند.
+    ///
+    ///     oldacct &lt;live.json&gt; &lt;پوشه&gt; subwatch real
+    /// </summary>
+    private static int SubWatch(string shots, Uri pub)
+    {
+        //  ⚠️ همان برنامهٔ واقعی: موتورِ همگام‌سازی (تپش و پیامِ «تمدید شد») هم روشن
+        if (Environment.GetEnvironmentVariable("PUMP_SW_SYNC") == "1") SyncEngine.Disabled = false;
+        var a = MakeAccount("sw-" + Guid.NewGuid().ToString("N")[..8] + "@example.com", withStation: true);
+        SeatOnDisk(a, loginSkipped: false);
+        var (win, vm, account) = Open();
+        var acc = account;
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+
+        bool Paid() => Entitlements.Paid.All(Entitlements.Allows);
+        bool NonePaid() => !Entitlements.Paid.Any(Entitlements.Allows);
+        void Step(string name, Func<bool> done, string what)
+        {
+            _until = () => { acc.RefreshAll(); return done(); };
+            sw.Restart();
+            Loop(win, 3);
+            Report(win, vm, account, shots, "sw-" + name);
+            Check($"⛔ {what} (پس از {sw.Elapsed.TotalSeconds:0} ثانیه)", done(),
+                  $"{acc.SubPlanText} · {acc.PillText} · باز: {string.Join(",", Entitlements.Paid.Where(Entitlements.Allows))} · {CloudLink.LastBindWhy}");
+        }
+
+        Step("1-trial", () => acc.SubActive && acc.VipDays >= 29 && Paid(), "حسابِ تازه آزمایشی گرفت و شش بخش باز است");
+
+        var tenant = GrantTarget(a.Email);
+        var year = DateTimeOffset.UtcNow.AddDays(365).ToUnixTimeMilliseconds();
+        //  ⛔ همان لحظهٔ دادنِ VIP، سرور یک بار سکسکه می‌کند: گرفتنِ مجوز تا
+        //  هفتاد ثانیه ۵۰۰ می‌دهد (بقیهٔ درها سالم). پیش از پیگیر، برنامه آن
+        //  شکست را «رسید» می‌شمرد و آزمایشیِ کهنه ده دقیقه و بیشتر می‌ماند.
+        var realNet = CloudLink.TestTransport!;
+        var hiccupUntil = DateTime.UtcNow.AddSeconds(70);
+        CloudLink.TestTransport = (req, ct) =>
+            DateTime.UtcNow < hiccupUntil && req.RequestUri!.AbsolutePath == "/api/pump/device/license"
+                ? Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError)
+                  { Content = new StringContent("{\"error\":{\"code\":\"internal\",\"message\":\"خطای داخلی سرور\"}}", Encoding.UTF8, "application/json") })
+                : realNet(req, ct);
+        var g = Panel(HttpMethod.Post, "/api/account-admin/subs/pump/grant", new { tenantId = tenant, plan = "vip", endsAt = year });
+        var subId = g.ValueKind == JsonValueKind.Object && g.TryGetProperty("subscription", out var gs) && gs.ValueKind == JsonValueKind.Object
+            ? gs.GetProperty("id").ToString() : "";
+        Check("پنل VIPِ یک‌ساله داد", subId.Length > 0, g.ToString());
+        Step("2-vip-year", () => acc.SubKind == "VIP" && acc.VipDays >= 364 && Paid(),
+             "VIPِ یک‌ساله با وجودِ سکسکهٔ سرور رسید و روزِ مانده را می‌گوید");
+        Console.WriteLine("     ⓘ " + SubscriptionWatch.Line().Replace("\n", " ⏎ "));
+        CloudLink.TestTransport = realNet;
+
+        Panel(HttpMethod.Post, $"/api/account-admin/subs/pump/{subId}/extend", new { amount = 1, unit = "year" });
+        Step("3-extend", () => acc.SubKind == "VIP" && acc.VipDays >= 729 && Paid(), "تمدیدِ یک سالِ دیگر رسید");
+
+        Panel(HttpMethod.Post, $"/api/account-admin/subs/pump/{subId}/permanent", null);
+        Step("4-permanent", () => acc.SubPermanent && Paid(), "دائمی رسید");
+
+        Panel(HttpMethod.Post, $"/api/account-admin/subs/pump/{subId}/status", new { status = "cancelled" });
+        Step("5-cancelled", NonePaid, "لغو رسید و شش بخش بسته شدند");
+
+        //  آفلاین: مدیر همین حالا VIP می‌دهد ولی این کامپیوتر اینترنت ندارد
+        var online = CloudLink.TestTransport;
+        CloudLink.TestTransport = (_, _) => throw new HttpRequestException("offline");
+        var g2 = Panel(HttpMethod.Post, "/api/account-admin/subs/pump/grant", new { tenantId = tenant, plan = "vip", endsAt = year });
+        Check("پنل در حالِ آفلاینِ برنامه دوباره VIP داد", g2.ValueKind == JsonValueKind.Object);
+        _until = null;
+        sw.Restart();
+        while (sw.Elapsed < TimeSpan.FromSeconds(70)) { Pump(win); Thread.Sleep(200); }
+        acc.RefreshAll();
+        Report(win, vm, account, shots, "sw-6-offline");
+        Check("آفلاین: دفتر باز و بخش‌های اشتراکی همان حالِ پیش (بسته)", NonePaid());
+        CloudLink.TestTransport = online;
+        Step("7-online", () => acc.SubKind == "VIP" && acc.VipDays >= 364 && Paid(), "اینترنت برگشت ⇒ VIP خودش رسید و قفل‌ها باز شدند");
+        Wait(win, vm.GoAsync(account));
+        Report(win, vm, account, shots, "sw-8-profile");
+        Check("پروفایل حرفِ پیگیر را نشان می‌دهد", account.WatchLine.Contains("یکی‌اند"), account.WatchLine);
+
+        win.Close();
+        Console.WriteLine(_bad == 0 ? "✅ پیگیرِ اشتراک: همه رسید" : $"❌ {_bad} ایراد");
         return _bad == 0 ? 0 : 1;
     }
 

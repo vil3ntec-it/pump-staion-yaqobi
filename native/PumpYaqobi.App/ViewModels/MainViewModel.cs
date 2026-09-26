@@ -166,11 +166,12 @@ public sealed partial class MainViewModel : ObservableObject
         //  ⛔ و نوارِ «فقط‌خواندنی» همان لحظه — تا ۱۴۰۵/۰۷/۱۴ فقط سرِ بالا آمدنِ
         //  برنامه خوانده می‌شد، پس مجوزی که درست شده بود تا بستن و باز کردنِ
         //  برنامه هنوز «اشتراک تمام شده» می‌گفت.
-        CloudLink.LicenseChanged += () => Dispatcher.UIThread.Post(() =>
-        {
-            _boundAt = DateTime.MinValue; Account.RefreshAll(); TickLinkDot();
-            NoticeText = SoftLock.Banner();
-        });
+        CloudLink.LicenseChanged += () => Dispatcher.UIThread.Post(OnLicenseMoved);
+        //  🤖 مرزِ خودِ مجوز رد شد (آفلاین هم) — همان کار. شرحش بالای
+        //  ‎SubscriptionWatch.LocalTick‎.
+        SubscriptionWatch.BoundaryCrossed += () => Dispatcher.UIThread.Post(OnLicenseMoved);
+        SubscriptionWatch.Changed += () => Dispatcher.UIThread.Post(() => Account.WatchLine = SubscriptionWatch.Line());
+        _paidOpen = Entitlements.Paid.Where(Entitlements.Allows).ToHashSet();
         Account.PumpCreatedHere += () => { _boundAt = DateTime.MinValue; TickLinkDot(); };
         //  ⛔ ورود و خروج همان لحظه در چراغ دیده می‌شود، نه ده ثانیه بعد
         //  (سنجهٔ `signuptrial`: تازه وارد شده بود و چراغ «هنوز وارد حساب
@@ -817,8 +818,42 @@ public sealed partial class MainViewModel : ObservableObject
         catch { /* خبر رفاه است */ }
     }
 
+    /// <summary>بخش‌های اشتراکیِ باز، در آخرین باری که پرسیدیم.</summary>
+    private HashSet<string> _paidOpen = new();
+
+    /// <summary>
+    /// مجوز عوض شد یا مرزش رد شد ⇒ سربرگ، پروفایل و نوار همین حالا — و
+    /// ⛔ <b>اگر قفل‌ها واقعاً جابه‌جا شدند، به کاربر گفته می‌شود</b>. تا
+    /// ۱۴۰۵/۰۷/۱۴ اشتراکِ تازه بی‌صدا می‌نشست و صاحبِ پمپ نمی‌دانست باز شد.
+    /// و بخشِ اشتراکی‌ای که همین حالا جلوی چشم است و بسته شد، به صفحهٔ اول
+    /// برمی‌گردد — نه این‌که قفل تا کلیکِ بعدی دیده نشود.
+    /// </summary>
+    private void OnLicenseMoved()
+    {
+        _boundAt = DateTime.MinValue; Account.RefreshAll(); TickLinkDot();
+        NoticeText = SoftLock.Banner();
+        SubscriptionWatch.Forget();
+
+        var now = Entitlements.Paid.Where(Entitlements.Allows).ToHashSet();
+        var opened = now.Except(_paidOpen).ToList();
+        var closed = _paidOpen.Except(now).ToList();
+        _paidOpen = now;
+        if (opened.Count > 0)
+            AppHost.Current.Toast("🔓 اشتراک رسید — " + string.Join("، ", opened.Select(Entitlements.TitleOf))
+                + " باز شد" + (Account.PillText is { Length: > 0 } p ? " · " + p : ""), ToastKind.Ok);
+        if (closed.Count > 0)
+        {
+            AppHost.Current.Toast("🔒 " + string.Join("، ", closed.Select(Entitlements.TitleOf))
+                + " بسته شد — دفتر و بقیهٔ برنامه کامل کار می‌کند.", ToastKind.Warn);
+            if (PlanFeatureOf(Current?.Id) is { } f && !Entitlements.Allows(f)) _ = OpenStartSectionAsync();
+        }
+    }
+
     private void ShowNotice(CloudNotice n)
     {
+        //  🤖 پیامِ سرور (مثلاً «اشتراک تمدید شد») ⇒ پیگیرِ اشتراک همین حالا
+        //  می‌پرسد، نه در دورِ بعد — پیام و قفل با هم برسند.
+        StationPublisher.CloudSoon();
         NoticeText = "📣 " + n.Title + (n.Body.Length > 0 ? " — " + n.Body : "");
         AppHost.Current.Toast(NoticeText, ToastKind.Info);
         NativeNotice.Show(n.Title.Length > 0 ? n.Title : "پمپ یعقوبی", n.Body, WindowHandle);

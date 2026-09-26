@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
+using PumpYaqobi.Application.Localization;
 
 namespace PumpYaqobi.App.Services;
 
@@ -126,6 +127,14 @@ public sealed record PumpSubscription(
 {
     public static readonly PumpSubscription None =
         new(false, "none", "", 0, 0, Array.Empty<string>());
+
+    /// <summary>
+    /// وقتی سرور «هیچ» می‌گوید، <b>چرا</b> — از ‎entitlement.trial‎ی خودِ
+    /// سرور: دوره در پنل خاموش است، یا این پمپ دوره‌اش را مصرف کرده. تا
+    /// امروز فقط «اشتراکِ فعالی ندارد» دیده می‌شد و معلوم نبود ایراد از
+    /// تنظیمِ پنل است یا از رسیدن. ⚠️ فقط نوشته است؛ هیچ تصمیمی از آن نیست.
+    /// </summary>
+    public string TrialNote { get; init; } = "";
 }
 
 /// <summary>
@@ -723,7 +732,7 @@ public sealed partial class CloudLink
 
         //  مجوزِ تازه — جدا، چون ممکن است اشتراک تمام شده باشد و مجوزی
         //  صادر نشود. آن هم یک جوابِ درست است، نه خطا.
-        var (licOk, lic, _, _) =
+        var (licOk, lic, licWhy, licCode) =
             await DevPostAsync("/api/pump/device/license", new { }, ct);
         var licBefore = _settings.CloudLicense ?? "";
         CloudResult? rejected = null;
@@ -751,6 +760,11 @@ public sealed partial class CloudLink
         {
             try { LicenseChanged?.Invoke(); } catch { /* خبر رفاه است، مجوز اصل */ }
         }
+        //  ⛔ **گرفتنِ مجوز نشد ⇒ «شد» نگوییم.** تا ۱۴۰۵/۰۷/۱۴ این‌جا `Done`
+        //  برمی‌گشت و `KeepLicenseFreshAsync` همان را «رسید» می‌شمرد: یک خطای
+        //  لحظه‌ایِ سرور درست سرِ دادنِ VIP یعنی مجوزِ کهنهٔ آزمایشی تا ده دقیقه
+        //  و بیشتر سرِ جایش می‌ماند و هیچ‌کس نمی‌فهمید چرا.
+        if (!licOk) return CloudResult.No(licWhy, licCode);
         return rejected ?? CloudResult.Done;
     }
 
@@ -1530,6 +1544,9 @@ public sealed partial class CloudLink
     /// </summary>
     public static bool? AccountHasStation { get; set; }
 
+    /// <summary>پمپِ حساب، همان‌طور که آخرین ‎/api/pump/me‎ی همین نمونه گفت.</summary>
+    private string _acctStationSeen = "";
+
     /// <summary>آخرین ثبتِ ناموفقِ خودکار — ترمزِ حلقه (بالای `bindDue` نوشته چرا).</summary>
     private static DateTime _lastBindFailAt = DateTime.MinValue;
 
@@ -2257,6 +2274,7 @@ public sealed partial class CloudLink
         //  می‌کرد. شناسه همان چیزی است که مجوز (`stn`) هم رویش قفل است.
         var acctStation = StationId(json);
         AccountHasStation = acctStation.Length > 0;
+        _acctStationSeen = acctStation;
         if (acctStation.Length == 0) LastBindWhy = "";
         var locked = (_settings.CloudStationId ?? "").Trim();
         var bindDue = forceBind || DateTime.UtcNow - _lastBindFailAt >= BindRetryAfterFail;
@@ -2341,6 +2359,7 @@ public sealed partial class CloudLink
             ReadSubscription(json);
             acctStation = StationId(json);
             AccountHasStation = acctStation.Length > 0;
+        _acctStationSeen = acctStation;
         }
 
         /*
@@ -2742,7 +2761,26 @@ public sealed partial class CloudLink
         }
 
         Subscription = new PumpSubscription(
-            source is "subscription" or "trial", source, plan, days, endsAt, feats);
+            source is "subscription" or "trial", source, plan, days, endsAt, feats)
+        { TrialNote = TrialNoteOf(source, ent) };
+    }
+
+    /// <summary>
+    /// ‎trial.enabled = false‎ ⇒ «روی سرور خاموش است»؛ ‎used/consumed‎ ⇒ «مصرف
+    /// شده». فقط وقتی سرور هیچ اشتراک و آزمایشی نمی‌گوید.
+    /// </summary>
+    public static string TrialNoteOf(string source, JsonElement ent)
+    {
+        if (source is "subscription" or "trial") return "";
+        if (!ent.TryGetProperty("trial", out var t) || t.ValueKind != JsonValueKind.Object) return "";
+        if (t.TryGetProperty("enabled", out var en) && en.ValueKind == JsonValueKind.False)
+            return "دورهٔ آزمایشی روی سرورِ حساب خاموش است (در پنل: اشتراک‌ها ← پلن‌ها و قیمت‌ها ← «دورهٔ آزمایشیِ حسابِ تازه» صفر است)";
+        var consumed = t.TryGetProperty("consumed", out var c) && c.ValueKind == JsonValueKind.True;
+        if (consumed) return "دورهٔ آزمایشیِ این پمپ با نخستین اشتراکش تمام شده";
+        var ends = Num(t, "endsAt");
+        return ends > 0
+            ? "دورهٔ آزمایشیِ این پمپ " + Shamsi.Of(DateTimeOffset.FromUnixTimeMilliseconds(ends).LocalDateTime) + " تمام شده"
+            : "";
     }
 
     private static string StationId(JsonElement json) =>
