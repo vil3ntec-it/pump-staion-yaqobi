@@ -507,6 +507,61 @@ public sealed partial class CloudLink
         await SaveQuiet();
     }
 
+    /// <summary>
+    /// ══ این کامپیوتر به پمپِ خودِ حساب وصل می‌شود — بی کد، با توکنِ حساب ══
+    ///
+    /// برای دو حالی که تا ۱۴۰۵/۰۷/۱۴ هیچ‌وقت خودشان درست نمی‌شدند (هر دو با
+    /// سرورِ واقعی بازسازی شدند): توکنِ دستگاهِ پمپِ دیگری روی دیسک مانده،
+    /// یا سرور جابه‌جاییِ این کامپیوتر از پمپِ دیگری را رد کرده است.
+    ///
+    /// ⛔ **همان `BindAsync`ِ همیشگی** — نه راهِ تازه. توکن و مجوز کنار
+    /// می‌روند؛ اگر <paramref name="leaveOther"/>، بندهای پمپِ دیگر هم (شناسه،
+    /// کد، کدِ اپِ کارمندان، سرورِ خانگی) — همان خانه‌هایی که
+    /// <see cref="ForgetStationAsync"/> پاک می‌کند، جز کلیدِ عمومی. نشد ⇒ همه
+    /// برمی‌گردند و ده دقیقه بعد دوباره.
+    ///
+    /// ⛔ **یک بیت از دفتر لمس نمی‌شود**، و پمپِ دیگر روی سرور هم دست نمی‌خورد.
+    /// </summary>
+    private async Task<bool> ReseatToAccountPumpAsync(bool leaveOther, CancellationToken ct)
+    {
+        var keep = (_settings.CloudDeviceToken, _settings.CloudLicense, _settings.CloudStationId,
+                    _settings.CloudStationCode, _settings.CloudAccessCode, _settings.ServerUrl,
+                    _settings.ServerLanUrl, _settings.ServerToken, _settings.ServerReadKey, _settings.ServerId);
+        _settings.CloudDeviceToken = "";
+        _settings.CloudLicense = "";
+        if (leaveOther)
+        {
+            _settings.CloudStationId = "";
+            _settings.CloudStationCode = "";
+            _settings.CloudAccessCode = "";
+            _settings.ServerUrl = "";
+            _settings.ServerLanUrl = "";
+            _settings.ServerToken = "";
+            _settings.ServerReadKey = "";
+            _settings.ServerId = "";
+        }
+
+        CloudResult r;
+        try { r = await BindAsync(ct); }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) { r = CloudResult.No(ex.GetType().Name); }
+
+        if (r.Ok)
+        {
+            LastBindWhy = "";
+            _lastBindFailAt = DateTime.MinValue;
+            try { LicenseChanged?.Invoke(); } catch { /* خبر رفاه است */ }
+            return true;
+        }
+        (_settings.CloudDeviceToken, _settings.CloudLicense, _settings.CloudStationId,
+         _settings.CloudStationCode, _settings.CloudAccessCode, _settings.ServerUrl,
+         _settings.ServerLanUrl, _settings.ServerToken, _settings.ServerReadKey, _settings.ServerId) = keep;
+        LastBindWhy = "این کامپیوتر به پمپِ حسابتان وصل نشد — " + (r.Why ?? "");
+        _lastBindFailAt = DateTime.UtcNow;
+        await SaveQuiet();
+        return false;
+    }
+
     public async Task<CloudResult> BindAsync(CancellationToken ct = default, bool adopt = false)
     {
         if (!SignedIn) return CloudResult.No("اول وارد حساب شوید", "no_account");
@@ -2259,6 +2314,21 @@ public sealed partial class CloudLink
             CloudResult moved;
             try { moved = await BindAsync(ct, adopt: true); }
             catch (Exception ex) { moved = CloudResult.No(ex.GetType().Name); }
+            //  ⛔ **سرور جابه‌جایی را رد کرد ⇒ این کامپیوتر به پمپِ خودِ حساب
+            //  وصل می‌شود** (۱۴۰۵/۰۷/۱۴، سنجهٔ `signuptrial` با
+            //  ‎PUMP_SIGNUP_FOREIGN=1‎ روی سرورِ واقعی). پمپِ قبلی صاحبِ دیگری
+            //  دارد (`station_mismatch`) یا سرورِ حساب کهنه است و جابه‌جایی را
+            //  بلد نیست — و تا دیروز این‌جا برای همیشه می‌ایستاد: پنل «آزمایشی ·
+            //  ۳۰ روز»، برنامه بی مجوز. کسی که با حسابِ خودش وارد شده، پمپِ
+            //  خودش را می‌خواهد؛ پمپِ دیگر روی سرور دست نمی‌خورد و دفتر هم نه.
+            //  ⚠️ سرورِ کهنه فقط وقتی کنار گذاشته می‌شود که پمپِ حساب خودش
+            //  اشتراک دارد — وگرنه روزهای پمپِ کدی بی‌صدا از دست می‌رفت.
+            if (!moved.Ok && (moved.Code == "station_mismatch"
+                              || (moved.Code == "adopt_unsupported" && Subscription.Active)))
+            {
+                if (await ReseatToAccountPumpAsync(leaveOther: true, ct))
+                    moved = CloudResult.Done;
+            }
             LastBindWhy = moved.Ok ? ""
                 : (moved.Why ?? "").Contains("پمپِ دیگری") ? moved.Why!
                 : "این کامپیوتر روی پمپِ دیگری است — " + (moved.Why ?? "");
@@ -2271,6 +2341,31 @@ public sealed partial class CloudLink
             ReadSubscription(json);
             acctStation = StationId(json);
             AccountHasStation = acctStation.Length > 0;
+        }
+
+        /*
+         *  ⛔ **شناسهٔ پمپِ روی دیسک همان پمپِ حساب است، ولی توکنِ دستگاه مالِ
+         *  پمپِ دیگری است** — همان عکسِ دومِ صاحب ریپو (۱۴۰۵/۰۷/۱۴): پنل
+         *  «آزمایشی · ۳۰ روز»، برنامه «بدونِ اشتراکِ فعال» و «پروفایل». سنجهٔ
+         *  `signuptrial` با ‎PUMP_SIGNUP_FOREIGN=1‎ دقیقاً همین صفحه را ساخت:
+         *  `RefreshAsync` هر بار ‹station_mismatch› می‌گرفت و پیش از گرفتنِ
+         *  مجوز برمی‌گشت، و چون دستگاه «فعال» بود هیچ‌وقت دوباره بند نمی‌شد.
+         *
+         *  ⚠️ فقط وقتی سرور می‌گوید پمپِ حساب اشتراک یا آزمایشیِ **فعال** دارد
+         *  و مجوزِ روی دیسک آن را نمی‌گوید — پس نصبِ سالم هیچ درخواستِ
+         *  تازه‌ای نمی‌زند. اول همان تازه‌سازیِ همیشگی؛ فقط اگر سرور گفت
+         *  «این دستگاه روی پمپِ دیگری است»، وصلِ دوباره به پمپِ حساب.
+         */
+        if (Activated && bindDue && acctStation.Length > 0 && Subscription.Active
+            && string.Equals(acctStation, (_settings.CloudStationId ?? "").Trim(), StringComparison.Ordinal)
+            && !Verify().Valid)
+        {
+            CloudResult fresh;
+            try { fresh = await RefreshAsync(ct); }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) { fresh = CloudResult.No(ex.GetType().Name); }
+            if (!fresh.Ok && fresh.Code == "station_mismatch")
+                await ReseatToAccountPumpAsync(leaveOther: false, ct);
         }
 
         //  ⛔ کدِ پمپِ همین حساب همین‌جا می‌نشیند — نصبی که از قبل بند شده

@@ -818,6 +818,12 @@ internal static class CloudLoginProbe
                 });
             db.SaveChanges();
         }
+        //  ⚠️ همان **فایلِ** دفترِ پیش از ورود شمرده می‌شود، نه «دفترِ جاری»: اگر
+        //  دفترِ ریشه از قبل مالِ حسابِ قبلی باشد، حسابِ تازه دفترِ خودش را
+        //  می‌گیرد (قاعدهٔ ۱۴۰۵/۰۷/۱۱) و «دفترِ جاری» خالی است — و این سنجه آن
+        //  را «۵ ⇒ ۰» می‌خواند (روی `main` سه از پنج اجرا سرخ، بسته به این‌که
+        //  ادعای دفترِ ریشه پیش از ذخیرهٔ خودِ سنجه روی دیسک نشسته بود یا نه).
+        var ledgerFile = host.Db.DbPath;
         var rowsBefore = Rows(host);
         Check("دفتر برای سنجش پُر است", rowsBefore >= 5, rowsBefore + " ردیف");
 
@@ -840,8 +846,8 @@ internal static class CloudLoginProbe
         Check("⭐ و رمزِ خواندنِ سرورِ خانگیِ قبلی هم", after.ServerReadKey.Length == 0);
         Check("⚠️ و بی‌صدا نبود — به کاربر گفت چه شد",
               account.LoginStatus.Contains("حسابِ دیگری"), account.LoginStatus);
-        Check("⛔ ولی دفتر یک ردیف هم کم و زیاد نشد", Rows(host) == rowsBefore,
-              rowsBefore + " ⇒ " + Rows(host));
+        Check("⛔ ولی دفتر یک ردیف هم کم و زیاد نشد", Rows(ledgerFile) == rowsBefore,
+              rowsBefore + " ⇒ " + Rows(ledgerFile));
 
         //  و «جدا کردنِ دستی» هم هست — همان کاری که برنامه توصیه می‌کرد
         Check("دکمهٔ «جدا کردنِ این دستگاه از این پمپ» هست",
@@ -902,9 +908,13 @@ internal static class CloudLoginProbe
     /// شمارِ ردیف‌های دفتر — همان عددی که ثابت می‌کند جابه‌جاییِ حساب
     /// «یک بیت از دفتر را لمس نمی‌کند».
     /// </summary>
-    private static int Rows(AppHost host)
+    private static int Rows(AppHost host) => Rows(host.Db);
+
+    private static int Rows(string ledgerFile) => Rows(new PumpYaqobi.Services.Data.PumpDbFactory(ledgerFile));
+
+    private static int Rows(PumpYaqobi.Services.Data.PumpDbFactory f)
     {
-        using var db = host.Db.Create();
+        using var db = f.Create();
         return db.DebtAccounts.Count() + db.DebtRows.Count() + db.SafeEntries.Count()
              + db.TilCompanies.Count() + db.CompanyRows.Count();
     }
