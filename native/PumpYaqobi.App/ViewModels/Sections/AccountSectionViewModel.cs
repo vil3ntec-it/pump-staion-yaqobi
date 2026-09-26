@@ -402,6 +402,10 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         else
         {
             SubStatus = "⚠️ " + check.Reason;
+            //  ⛔ سرور خودش گفته چرا آزمایشی نیست (خاموش در پنل / مصرف‌شده) —
+            //  گفته شود، وگرنه کاربر دنبالِ «نرسیدن» می‌گردد.
+            if (Cloud.Subscription.TrialNote is { Length: > 0 } note)
+                SubStatus += "\n🎁 " + note + ".";
         }
         //  ⏰ ساعتِ ویندوز از آخرین زمانی که برنامه دیده عقب‌تر است — مجوز
         //  با همان کفِ ساعت سنجیده می‌شود، پس به کاربر گفته می‌شود چرا.

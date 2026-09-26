@@ -97,6 +97,33 @@ public class SubscriptionWatchTests : IDisposable
             Server(true, "subscription", "vip", 0), Local(true, "vip", Now + 365 * Day), Now).Agree);
     }
 
+    [Fact]
+    public void ServerMiguyadChera_AzmayeshiNist()
+    {
+        //  گزارشِ صاحب ریپو: «حسابِ تازه ۳۰ روز آزمایشی نمی‌گیرد.» با سرورِ واقعی:
+        //  روزِ آزمایشی در پنل صفر ⇒ حسابِ تازه هیچ دوره‌ای ندارد و برنامه فقط
+        //  «مجوزی ذخیره نشده است» می‌گفت. حالا دلیلِ خودِ سرور گفته می‌شود.
+        static System.Text.Json.JsonElement E(string j) => System.Text.Json.JsonDocument.Parse(j).RootElement;
+
+        var off = CloudLink.TrialNoteOf("free", E("""{"trial":{"enabled":false,"active":false}}"""));
+        Assert.Contains("خاموش", off);
+        Assert.Contains("دورهٔ آزمایشیِ حسابِ تازه", off);
+
+        Assert.Contains("اشتراکش تمام شده", CloudLink.TrialNoteOf("free",
+            E("""{"trial":{"enabled":true,"active":false,"consumed":true}}""")));
+        Assert.Contains("تمام شده", CloudLink.TrialNoteOf("free",
+            E("""{"trial":{"enabled":true,"active":false,"endsAt":1700000000000}}""")));
+
+        //  آزمایشی یا اشتراکِ فعال ⇒ هیچ یادداشتی
+        Assert.Equal("", CloudLink.TrialNoteOf("trial", E("""{"trial":{"enabled":true,"active":true}}""")));
+        Assert.Equal("", CloudLink.TrialNoteOf("subscription", E("""{"trial":{"enabled":false}}""")));
+        Assert.Equal("", CloudLink.TrialNoteOf("free", E("""{}""")));
+
+        //  و در خطِ پیگیر هم دیده می‌شود
+        var s = PumpSubscription.None with { TrialNote = off };
+        Assert.Contains("خاموش", SubscriptionWatch.Describe(s));
+    }
+
     // ── دور و ترمز ────────────────────────────────────────────────────
 
     [Fact]

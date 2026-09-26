@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
+using PumpYaqobi.Application.Localization;
 
 namespace PumpYaqobi.App.Services;
 
@@ -126,6 +127,14 @@ public sealed record PumpSubscription(
 {
     public static readonly PumpSubscription None =
         new(false, "none", "", 0, 0, Array.Empty<string>());
+
+    /// <summary>
+    /// وقتی سرور «هیچ» می‌گوید، <b>چرا</b> — از ‎entitlement.trial‎ی خودِ
+    /// سرور: دوره در پنل خاموش است، یا این پمپ دوره‌اش را مصرف کرده. تا
+    /// امروز فقط «اشتراکِ فعالی ندارد» دیده می‌شد و معلوم نبود ایراد از
+    /// تنظیمِ پنل است یا از رسیدن. ⚠️ فقط نوشته است؛ هیچ تصمیمی از آن نیست.
+    /// </summary>
+    public string TrialNote { get; init; } = "";
 }
 
 /// <summary>
@@ -2752,7 +2761,26 @@ public sealed partial class CloudLink
         }
 
         Subscription = new PumpSubscription(
-            source is "subscription" or "trial", source, plan, days, endsAt, feats);
+            source is "subscription" or "trial", source, plan, days, endsAt, feats)
+        { TrialNote = TrialNoteOf(source, ent) };
+    }
+
+    /// <summary>
+    /// ‎trial.enabled = false‎ ⇒ «روی سرور خاموش است»؛ ‎used/consumed‎ ⇒ «مصرف
+    /// شده». فقط وقتی سرور هیچ اشتراک و آزمایشی نمی‌گوید.
+    /// </summary>
+    public static string TrialNoteOf(string source, JsonElement ent)
+    {
+        if (source is "subscription" or "trial") return "";
+        if (!ent.TryGetProperty("trial", out var t) || t.ValueKind != JsonValueKind.Object) return "";
+        if (t.TryGetProperty("enabled", out var en) && en.ValueKind == JsonValueKind.False)
+            return "دورهٔ آزمایشی روی سرورِ حساب خاموش است (در پنل: اشتراک‌ها ← پلن‌ها و قیمت‌ها ← «دورهٔ آزمایشیِ حسابِ تازه» صفر است)";
+        var consumed = t.TryGetProperty("consumed", out var c) && c.ValueKind == JsonValueKind.True;
+        if (consumed) return "دورهٔ آزمایشیِ این پمپ با نخستین اشتراکش تمام شده";
+        var ends = Num(t, "endsAt");
+        return ends > 0
+            ? "دورهٔ آزمایشیِ این پمپ " + Shamsi.Of(DateTimeOffset.FromUnixTimeMilliseconds(ends).LocalDateTime) + " تمام شده"
+            : "";
     }
 
     private static string StationId(JsonElement json) =>

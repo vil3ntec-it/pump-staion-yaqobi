@@ -129,7 +129,7 @@ public static class SubscriptionWatch
     /// <summary>«VIP تا ۱۴۰۶/۰۷/۱۴» — حرفِ سرور.</summary>
     public static string Describe(PumpSubscription s)
     {
-        if (!s.Active) return "اشتراکِ فعالی ندارد";
+        if (!s.Active) return s.TrialNote.Length > 0 ? "اشتراکِ فعالی ندارد — " + s.TrialNote : "اشتراکِ فعالی ندارد";
         var kind = s.Source == "trial" ? "آزمایشی" : KindOf(s.PlanTitle);
         return kind + Until(s.EndsAt);
     }
