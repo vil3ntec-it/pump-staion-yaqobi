@@ -119,6 +119,36 @@ internal static class SignUpTrialProbe
             return _bad == 0 ? 0 : 1;
         }
         SignUpOnce(win, vm, account, live2, mailCodes, shots, "");
+        //  ⚠️ ‎PUMP_SIGNUP_DELETE=1‎: همان عکسِ صاحب ریپو (۱۴۰۵/۰۷/۱۴) — حسابِ اول از
+        //  ریشه در پنل حذف شد، برنامه فهمید، و روی همین کامپیوتر حسابِ تازه ساخته شد.
+        //  پنل «آزمایشی · ۳۰ روز» می‌گفت و برنامه «بدونِ اشتراکِ فعال» و فقط‌خواندنی.
+        if (Environment.GetEnvironmentVariable("PUMP_SIGNUP_DELETE") == "1")
+        {
+            var before = AppSettings.Load();
+            Console.WriteLine($"══ حذفِ حسابِ اول از ریشه ({before.CloudUserId}) و حسابِ تازه روی همین نصب");
+            var del = new HttpRequestMessage(HttpMethod.Delete, live2.GetProperty("panel").GetString()!.TrimEnd('/')
+                + "/api/account-admin/users/" + Uri.EscapeDataString(before.CloudUserId))
+            {
+                Content = new StringContent(JsonSerializer.Serialize(new { confirmEmail = before.CloudEmail }),
+                    System.Text.Encoding.UTF8, "application/json"),
+            };
+            del.Headers.TryAddWithoutValidation("Authorization", "Bearer " + live2.GetProperty("panelToken").GetString());
+            var dres = Task.Run(() => Http.SendAsync(del)).GetAwaiter().GetResult();
+            var dtext = Task.Run(() => dres.Content.ReadAsStringAsync()).GetAwaiter().GetResult();
+            Console.WriteLine($"     ⓘ پنل ⇒ {(int)dres.StatusCode} {dtext[..Math.Min(200, dtext.Length)]}");
+            //  برنامه باز است و حلقهٔ پس‌زمینه‌اش چند دور می‌زند
+            for (var i = 0; i < 3; i++) Wait(win, StationPublisher.CloudKeepNowAsync());
+            var mid = AppSettings.Load();
+            Console.WriteLine($"     ⓘ پس از حذف: کاربر «{mid.CloudUserId}» · نشست {(mid.CloudAccountToken.Length > 0 ? "هست" : "نیست")} · "
+                + $"دستگاه {(mid.CloudDeviceToken.Length > 0 ? "هست" : "نیست")} · پمپ «{mid.CloudStationId}» · "
+                + $"مجوز {(mid.CloudLicense.Length > 0 ? "هست" : "نیست")} · {account.SubSourceText}");
+            account.OpenAccountPageCommand.Execute(null);
+            Settle(win);
+            SignUpOnce(win, vm, account, live2, mailCodes, shots, "d-");
+            var after = AppSettings.Load();
+            Check("قفلِ نرم بسته نیست", !SoftLock.ReadOnly, SoftLock.Banner());
+            Check("مجوزِ روی دیسک سالم است", LicenseGuard.CheckStored(after).Valid, LicenseGuard.CheckStored(after).Reason);
+        }
         //  ⚠️ همان کامپیوتر، حسابِ دوم — همان کاری که صاحبِ پمپ در آزمایش‌هایش کرد
         if (Environment.GetEnvironmentVariable("PUMP_SIGNUP_TWICE") == "1")
         {
