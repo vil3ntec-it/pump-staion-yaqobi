@@ -74,14 +74,22 @@ public class NoWholeAppLockTests
         //  ۱) سرور جابه‌جایی را رد کرد ⇒ به پمپِ خودِ حساب
         Assert.Contains("moved.Code == \"station_mismatch\"", home);
         Assert.Contains("ReseatToAccountPumpAsync(leaveOther: true, ct)", home);
-        //  ۲) همان شناسه روی دیسک، ولی توکنِ پمپِ دیگر ⇒ اول تازه‌سازی، بعد وصلِ دوباره
-        var a = home.IndexOf("fresh.Code == \"station_mismatch\"", StringComparison.Ordinal);
-        Assert.True(a > 0);
-        Assert.Contains("ReseatToAccountPumpAsync(leaveOther: false, ct)", home[a..]);
-        //  ⚠️ فقط وقتی سرور می‌گوید اشتراک فعال است و مجوز نمی‌گوید — نصبِ سالم هیچ درخواستی نمی‌زند
-        var g = home.LastIndexOf("if (Activated && bindDue && acctStation.Length > 0 && Subscription.Active", a, StringComparison.Ordinal);
+        //  ۲) همان پمپ (یا بی شناسه)، سرور می‌گوید فعال، مجوزِ روی دیسک نمی‌خورد ⇒
+        //  اول تازه‌سازی؛ هنوز نه و سرورِ خودمان جواب داد ⇒ وصلِ دوباره — هر دلیلی
+        //  (توکنِ پمپِ دیگر، کلیدِ دیگر، شناسهٔ دستگاهِ دیگر). ملاک کدِ خطا نیست.
+        var g = home.IndexOf("if (Activated && bindDue && acctStation.Length > 0 && Subscription.Active", StringComparison.Ordinal);
         Assert.True(g > 0);
-        Assert.Contains("!Verify().Valid", home[g..a]);
+        var a = home.IndexOf("ReseatToAccountPumpAsync(leaveOther: false, ct)", g, StringComparison.Ordinal);
+        Assert.True(a > 0);
+        var block = home[g..a];
+        //  ⚠️ فقط وقتی سرور می‌گوید اشتراک فعال است و مجوز نمی‌گوید — نصبِ سالم هیچ درخواستی نمی‌زند
+        Assert.Contains("!Verify().Valid", block);
+        Assert.Contains("await RefreshAsync(ct)", block);
+        //  ⛔ نرسیدن به سرور هیچ چیزی را کنار نمی‌گذارد
+        Assert.Contains("Reach == CloudReach.Online", block);
+        Assert.DoesNotContain("fresh.Code == \"station_mismatch\"", block);
+        //  وصل شد ولی مجوز نیامد ⇒ ترمزِ ده‌دقیقه‌ای، نه ثبتِ تازه در هر دقیقه
+        Assert.Contains("_lastBindFailAt = DateTime.UtcNow;", home[a..]);
         //  ⛔ حلقهٔ پس‌زمینه همچنان هیچ پمپی نمی‌سازد
         Assert.DoesNotContain("EnsureStationAsync", home);
     }

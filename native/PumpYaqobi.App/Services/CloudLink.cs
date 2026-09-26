@@ -2356,16 +2356,33 @@ public sealed partial class CloudLink
          *  تازه‌ای نمی‌زند. اول همان تازه‌سازیِ همیشگی؛ فقط اگر سرور گفت
          *  «این دستگاه روی پمپِ دیگری است»، وصلِ دوباره به پمپِ حساب.
          */
+        //
+        //  ⛔ **و هر دلیلِ دیگری که مجوزِ همین پمپ روی دیسک ننشیند** (۱۴۰۵/۰۷/۱۴،
+        //  پس از ۳.۱.۱۹۳ — صاحب ریپو: «آپدیت کردم، هنوز اشتراک نیومده»). سنجهٔ
+        //  `signuptrial` با ‎PUMP_SIGNUP_FOREIGN=1‎ دو حالِ دیگر را یافت که همان
+        //  صفحه را می‌سازند و تازه‌سازی هرگز درستشان نمی‌کرد: کلیدِ امضای سرور با
+        //  کلیدِ قفل‌شدهٔ روی دیسک یکی نیست (`key_mismatch` — سرورِ حسابی که از نو
+        //  نصب شده)، و مجوز برای شناسهٔ دستگاهِ دیگری صادر می‌شود (`bad_license`).
+        //  پس ملاک دیگر **کدِ خطا نیست**: اگر سرورِ خودمان همین حالا جواب داد و
+        //  هنوز مجوزِ معتبری روی دیسک نیست ⇒ وصلِ دوباره با توکنِ حساب. نرسیدن به
+        //  سرور (`Reach != Online`) هیچ چیزی را کنار نمی‌گذارد.
+        //  ⚠️ پذیرفتنِ کلیدِ تازه این‌جا همان استثنای «دستگاهِ خالی»ِ `BindAsync`
+        //  است و از همان نشانیِ قفل‌شده و با توکنِ **حساب** می‌آید — نه راهِ تازه.
+        var here = (_settings.CloudStationId ?? "").Trim();
         if (Activated && bindDue && acctStation.Length > 0 && Subscription.Active
-            && string.Equals(acctStation, (_settings.CloudStationId ?? "").Trim(), StringComparison.Ordinal)
+            && (here.Length == 0 || string.Equals(acctStation, here, StringComparison.Ordinal))
             && !Verify().Valid)
         {
-            CloudResult fresh;
-            try { fresh = await RefreshAsync(ct); }
+            try { await RefreshAsync(ct); }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex) { fresh = CloudResult.No(ex.GetType().Name); }
-            if (!fresh.Ok && fresh.Code == "station_mismatch")
-                await ReseatToAccountPumpAsync(leaveOther: false, ct);
+            catch { /* نرسیدن ⇒ پایین‌تر `Reach` می‌گوید */ }
+            if (Activated && !Verify().Valid && Reach == CloudReach.Online
+                && await ReseatToAccountPumpAsync(leaveOther: false, ct) && !Verify().Valid)
+            {
+                //  وصل شد ولی سرور مجوزی نداد ⇒ ده دقیقه صبر، نه هر دقیقه یک ثبتِ تازه
+                LastBindWhy = "سرورِ حساب اشتراکِ این پمپ را فعال می‌گوید ولی برای این کامپیوتر مجوز نداد";
+                _lastBindFailAt = DateTime.UtcNow;
+            }
         }
 
         //  ⛔ کدِ پمپِ همین حساب همین‌جا می‌نشیند — نصبی که از قبل بند شده
