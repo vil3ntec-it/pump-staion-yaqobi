@@ -617,6 +617,13 @@ public sealed class PumpDbContext : DbContext
         }
 
         // در **همان** تراکنش می‌نشینند: یا داده و دفتر هر دو، یا هیچ‌کدام
+        //  ⚠️ پدر پیش از فرزند (`OpLog.Rank`) — ترتیبِ ChangeTracker فرزندی را
+        //  که با پدرش در یک ذخیره ساخته شده گاهی زودتر می‌آورد
+        if (ops is { Count: > 1 })
+        {
+            var rank = OpLog.Rank(Model);
+            ops = ops.OrderBy(o => rank.GetValueOrDefault(o.TableName)).ToList();
+        }
         if (ops is { Count: > 0 }) SyncOps.AddRange(ops);
     }
 }

@@ -14,7 +14,7 @@
 //  نمی‌رسد. cloud.js اضافه شد و جوابِ درخواستِ ناموفق عوض شد، پس v3؛
 //  صفحهٔ «کدِ پمپ» و جداسازیِ هر پمپ، پس v4؛ دو درِ «حساب‌ها/کارمندان»، پس v5؛
 //  update.js اضافه شد، پس v6؛ پوشِ خبرها (app.js عوض شد)، پس v9.
-var CACHE = 'pump-kar-v12';
+var CACHE = 'pump-kar-v13';
 var SHELL = ['./', './index.html', './app.js', './cloud.js', './update.js', './manifest.json'];
 
 self.addEventListener('install', function (e) {

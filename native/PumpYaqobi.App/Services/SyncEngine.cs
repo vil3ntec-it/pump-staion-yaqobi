@@ -234,6 +234,12 @@ public sealed class SyncEngine : IAsyncDisposable
     public static bool PrimeWanted(Domain.Entities.SyncStateRow s) =>
         s.PrimedAt == 0 && s.Cursor == 0;
 
+    /// <summary>گرفتنِ نخستینِ دفتر در همین اجرا شروع شده و هنوز تمام نشده.</summary>
+    private bool _primeRun;
+
+    /// <summary>پرده یک بار تمام شد (موفق یا نه) — دیگر در این اجرا برنمی‌گردد.</summary>
+    private bool _primeEnded;
+
     private void SetPrime(bool on, string text)
     {
         if (_primeOver) on = false;
@@ -251,7 +257,11 @@ public sealed class SyncEngine : IAsyncDisposable
     /// </summary>
     private void EndPrime(bool ok, string why)
     {
-        if (_primeOver && !Priming) return;
+        //  ⚠️ «ادامه در پس‌زمینه» فقط پرده را می‌برد، نه خبرِ «رسید» را: بخشِ
+        //  جلوی چشم باید پس از رسیدنِ دفتر از نو خوانده شود، دیده یا نادیده.
+        if (_primeEnded) return;
+        _primeEnded = true;
+        _primeRun = false;
         _primeOver = true;
         var got = PrimeGot;
         Priming = false;
@@ -353,6 +363,8 @@ public sealed class SyncEngine : IAsyncDisposable
         if (_host.UseLedgerOf(mine)) { _lastVersion = -1; Nudge(); return; }
 
         var state = _store.State();
+        //  ⛔ شناسهٔ همگام‌سازیِ همین دفتر — شرحش بالای ‎CloudLink.SyncDeviceFor‎
+        cloud.SyncDeviceOverride = CloudLink.SyncDeviceFor(state.DeviceId, state.UidSeed, cloud.DeviceUid);
         if (mine.Length > 0 && !string.Equals((state.AccountId ?? "").Trim(), mine, StringComparison.Ordinal))
         {
             var bind = _store.BindTo(mine);
@@ -376,7 +388,14 @@ public sealed class SyncEngine : IAsyncDisposable
         //  از همین‌جا تا پایانِ نخستین گرفتنِ کامل. `PrimeWanted` هر دو
         //  شرط را با هم می‌سنجد و `SetPrime` خودش `_primeOver` را رعایت
         //  می‌کند، پس هیچ دو-جای-تصمیمی ساخته نمی‌شود.
-        var priming = PrimeWanted(state);
+        //  ⛔ <b>پرده تا پایانِ گرفتن می‌ماند، نه تا پایانِ صفحهٔ اول.</b>
+        //  `PrimeWanted` فقط «شروع کن؟» است و `Cursor == 0` در آن هست — پس
+        //  از نخستین صفحه (۵۰۰ تغییر) دیگر راست نبود: پرده وسطِ آوردنِ دفتر
+        //  می‌رفت، `PrimedAt` هیچ‌وقت مهر نمی‌خورد و `PrimeFinished` (که بخشِ
+        //  جلوی چشم را از نو می‌خواند) هیچ‌وقت شلیک نمی‌شد. سنجهٔ `tensync`
+        //  (۱۴۰۵/۰۷/۱۴، دو کامپیوتر روی سرورِ حسابِ واقعی) گرفتش.
+        var priming = !_primeEnded && (_primeRun || PrimeWanted(state));
+        if (priming) _primeRun = true;
 
         // ── ۱) بارِ اول: ردیف‌هایی که پیش از این نسخه ساخته شده‌اند ──────
         if (state.SeededAt == 0)
@@ -436,13 +455,15 @@ public sealed class SyncEngine : IAsyncDisposable
                 x.LastError = "";
                 x.ServerSchema = res.ServerSchema;
                 x.Holding = false;
-                x.DeviceId = cloud.DeviceUid;
+                x.DeviceId = cloud.SyncDevice;
             });
             LastError = "";
             Queued = _store.Pending();
 
-            //  دسته پر بود ⇒ هنوز چیزی مانده، همین حالا دورِ بعد
-            if (batch.Count >= SyncStore.MaxBatch) Nudge();
+            //  هنوز چیزی مانده ⇒ همین حالا دورِ بعد. ⚠️ نه «دسته پر بود»: دسته
+            //  حالا با بایت هم بسته می‌شود و دستهٔ کوتاه‌تر از دویست هم می‌تواند
+            //  پشتش صفِ بلندی داشته باشد.
+            if (Queued > 0) Nudge();
         }
         else if (state.Holding && pending > 0)
         {

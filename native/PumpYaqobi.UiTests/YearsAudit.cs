@@ -29,13 +29,19 @@ namespace PumpYaqobi.UiTests;
 /// </summary>
 internal static class YearsAudit
 {
-    private const int Years = 5;
+    /// <summary>
+    /// چند سال داده — پیش‌فرض پنج (همانی که CI می‌دواند). ‎PUMP_YEARS=10‎ همان
+    /// دفتر را ده‌ساله می‌سازد: ردیف‌ها با سال‌ها بزرگ می‌شوند، نه فقط تاریخ‌ها
+    /// پخش‌تر (خواستهٔ صاحب ریپو، ۱۴۰۵/۰۷/۱۴: «با ده سال اطلاعات تست کن»).
+    /// </summary>
+    private static readonly int Years =
+        int.TryParse(Environment.GetEnvironmentVariable("PUMP_YEARS"), out var y) && y is >= 1 and <= 20 ? y : 5;
     private const int People = 600;
-    private const int RowsPerPerson = 100;     // ۶۰ هزار ردیفِ قرض‌دار در پنج سال
+    private static readonly int RowsPerPerson = 20 * Years;     // پنج سال ⇒ ۶۰ هزار ردیفِ قرض‌دار
     private const int Companies = 15;
-    private const int CompanyRows = 400;
+    private static readonly int CompanyRows = 80 * Years;
     private const int Amanats = 20;
-    private const int AmanatRows = 300;
+    private static readonly int AmanatRows = 60 * Years;
     private const int Staff = 8;
 
     private const long Slow = 1_000;
@@ -43,7 +49,7 @@ internal static class YearsAudit
 
     private static readonly List<(string What, long Ms)> Marks = new();
     private static readonly Stopwatch Budget = Stopwatch.StartNew();
-    private const long BudgetMs = 600_000;
+    private static readonly long BudgetMs = 120_000L * Years;
     private static bool _outOfTime;
 
     public static int Run()
@@ -55,7 +61,7 @@ internal static class YearsAudit
         var sw = Stopwatch.StartNew();
         var stats = Seed(file);
         sw.Stop();
-        Console.WriteLine($"پنج سال داده ساخته شد در {sw.ElapsedMilliseconds:N0} ms — {new FileInfo(file).Length / 1_048_576.0:0.0} MB");
+        Console.WriteLine($"{Years} سال داده ساخته شد در {sw.ElapsedMilliseconds:N0} ms — {new FileInfo(file).Length / 1_048_576.0:0.0} MB");
         foreach (var (k, v) in stats) Console.WriteLine($"   {k,-28}{v,10:N0}");
 
         AppHost.Start(file);
@@ -140,7 +146,7 @@ internal static class YearsAudit
         {
             Wait(win, vm.GoAsync(debt)); Settle(win);
             Mark("جست‌وجوی نام در فهرستِ کارت‌ها", () => { debt.Search = "بزرگ"; Pump(win); debt.Search = ""; Pump(win); });
-            Mark($"باز کردنِ حسابی با {RowsPerPerson * 5:N0} ردیفِ پنج‌ساله", () => { Wait(win, debt.OpenByNumberAsync(1)); SettleLong(win); });
+            Mark($"باز کردنِ حسابی با {RowsPerPerson * 5:N0} ردیفِ {Years}ساله", () => { Wait(win, debt.OpenByNumberAsync(1)); SettleLong(win); });
             if (debt.Person?.Current is { } acct && acct.Rows.Count > 0)
             {
                 Mark($"ویرایشِ یک خانه در جدولِ {acct.Rows.Count:N0} ردیفی", () => { acct.Rows[0].LitersText = "7"; Pump(win); });
@@ -220,7 +226,7 @@ internal static class YearsAudit
         }
         var bad = Marks.Where(m => m.Ms > Broken).ToList();
         Console.WriteLine();
-        if (bad.Count == 0) { Console.WriteLine($"✅ با پنج سال داده هیچ کاری از {Broken:N0} ms نگذشت"); return 0; }
+        if (bad.Count == 0) { Console.WriteLine($"✅ با {Years} سال داده هیچ کاری از {Broken:N0} ms نگذشت"); return 0; }
         foreach (var (what, ms) in bad) Console.WriteLine($"❌ {what}: {ms:N0} ms");
         return 1;
     }

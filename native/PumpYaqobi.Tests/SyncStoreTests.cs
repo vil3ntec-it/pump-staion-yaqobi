@@ -265,6 +265,38 @@ public class SyncStoreTests : IDisposable
         Assert.Equal(1, report.Applied);
     }
 
+    /// <summary>
+    /// ⛔ <b>ردیفِ رسیده با فیلدِ خالی (null) می‌نشیند</b> — هم ردیفِ تازه، هم
+    /// ویرایش. تا ۱۴۰۵/۰۷/۱۴ هر دو با «no store type mapping for DBNull»ِ
+    /// EF رد می‌شدند و کامپیوترِ دوم دفترِ خالی می‌دید (سنجهٔ `tensync`).
+    /// </summary>
+    [Fact]
+    public void Radife_Reside_Ba_FieldeKhali_Mineshinad()
+    {
+        var report = _store.ApplyIncoming(new[]
+        {
+            new IncomingOp("op-new", nameof(SafeEntry), "uid-null-1", "insert",
+                Json("{\"Title\":\"از کامپیوترِ الف\",\"Amount\":\"125.5\",\"DateKey\":14050703,\"MonthKey\":\"1405/07\",\"Note\":null,\"SrcKey\":null}"), 1),
+        });
+        Assert.Equal(0, report.Failed);
+        Assert.Equal(1, report.Applied);
+
+        var id = AddRow("با یادداشت");
+        using (var db = _dbf.Create()) { var r = db.SafeEntries.Single(x => x.Id == id); r.Note = "پاک می‌شود"; db.SaveChanges(); }
+        var upd = _store.ApplyIncoming(new[]
+        {
+            new IncomingOp("op-clear", nameof(SafeEntry), UidOf(id), "update", Json("{\"Note\":null}"), 2),
+        });
+        Assert.Equal(0, upd.Failed);
+
+        using var read = _dbf.Create();
+        var got = read.SafeEntries.Single(x => x.SyncUid == "uid-null-1");
+        Assert.Equal("از کامپیوترِ الف", got.Title);
+        Assert.Equal(125.5m, got.Amount);
+        Assert.Null(got.Note);
+        Assert.Null(read.SafeEntries.Single(x => x.Id == id).Note);
+    }
+
     // ── Snapshot ──────────────────────────────────────────────────────
 
     /// <summary>

@@ -156,7 +156,13 @@
                     <Button Grid.Column="1" Classes="ghost" Content="✕" Padding="10,2"
                             Command="{Binding CloseAlertsCommand}" ToolTip.Tip="بستن" />
                   </Grid>
-                  <ScrollViewer Grid.Row="1" MaxHeight="520" VerticalScrollBarVisibility="Auto">
+                  <DockPanel Grid.Row="1">
+                  <Button Classes="ghost" DockPanel.Dock="Bottom" HorizontalAlignment="Stretch" Margin="0,4,0,0"
+                          IsVisible="{Binding AlertsMore, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                          Command="{Binding GoCommand}" CommandParameter="debt">
+                    <TextBlock Text="{Binding AlertsMore}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+                  </Button>
+                  <ScrollViewer MaxHeight="520" VerticalScrollBarVisibility="Auto">
                     <ItemsControl x:Name="AlertsList" ItemsSource="{Binding Alerts}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:DashAlertViewModel">
@@ -186,6 +192,7 @@
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
                   </ScrollViewer>
+                  </DockPanel>
                 </Grid>
               </Border>
             </Popup>
@@ -425,6 +432,12 @@
                              Classes="muted" FontSize="12.5" TextWrapping="Wrap" VerticalAlignment="Center" />
                 </StackPanel>
               </Border>
+              <DockPanel>
+              <Button Classes="ghost" DockPanel.Dock="Bottom" HorizontalAlignment="Stretch" Margin="0,4,0,0"
+                      IsVisible="{Binding AlertsMore, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                      Command="{Binding GoCommand}" CommandParameter="debt">
+                <TextBlock Text="{Binding AlertsMore}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+              </Button>
               <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <ItemsControl ItemsSource="{Binding Alerts}">
                   <ItemsControl.ItemTemplate>
@@ -452,6 +465,7 @@
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
               </ScrollViewer>
+              </DockPanel>
             </Panel>
           </Grid>
         </Border>

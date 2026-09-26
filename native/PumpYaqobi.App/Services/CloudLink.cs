@@ -2299,11 +2299,22 @@ public sealed partial class CloudLink
     private static HttpRequestMessage Build(HttpMethod method, string path, object? body, string? token)
     {
         var req = new HttpRequestMessage(method, CloudConfig.Url(path));
-        if (body is not null) req.Content = JsonContent.Create(body);
+        if (body is not null) req.Content = JsonContent.Create(body, options: WireJson);
         if (!string.IsNullOrWhiteSpace(token)) req.Headers.Add("Authorization", $"Bearer {token}");
         Stamp(req);
         return req;
     }
+
+    /// <summary>
+    /// همان پیش‌فرضِ <c>JsonContent</c> (نام‌های camelCase)، فقط نویسهٔ فارسی خودش
+    /// می‌رود نه <c>\uXXXX</c>. ⚠️ معنای JSON یکی است؛ بدنه ولی تا سه برابر کوچک‌تر —
+    /// و سرورِ حساب بدنهٔ بیش از دو مگابایت را رد می‌کند (سنجهٔ ده‌ساله گرفتش).
+    /// </summary>
+    private static readonly System.Text.Json.JsonSerializerOptions WireJson =
+        new(System.Text.Json.JsonSerializerDefaults.Web)
+        {
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        };
 
     private static Task<CloudReply> SendFull(HttpRequestMessage req, CancellationToken ct) =>
         SendOn(Http, req, ct);
