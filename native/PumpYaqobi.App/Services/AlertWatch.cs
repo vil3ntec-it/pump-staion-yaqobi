@@ -162,9 +162,14 @@ public sealed class AlertWatch
     public static string ToastText(IReadOnlyList<AlertItem> opened, bool initial)
     {
         if (opened.Count == 0) return "";
-        var head = initial ? "🔔 " + opened.Count + " هشدارِ باز: " : "🔔 هشدارِ تازه: ";
-        var shown = opened.Take(3).Select(a => a.Text);
-        var more = opened.Count > 3 ? " · و " + (opened.Count - 3) + " هشدارِ دیگر" : "";
-        return head + string.Join(" · ", shown) + more;
+        //  ⛔ یک خط برای هر هشدار (۱۴۰۵/۰۷/۱۴) — پیش از این همه با «·» در یک
+        //  خطِ دراز می‌آمدند و «نه خوانده می‌شد نه جدا جدا بود». فهرستِ کامل
+        //  پشتِ زنگِ داشبورد است.
+        if (opened.Count == 1)
+            return (initial ? "🔔 1 هشدارِ باز: " : "🔔 هشدارِ تازه: ") + opened[0].Text;
+        var head = initial ? "🔔 " + opened.Count + " هشدارِ باز:" : "🔔 هشدارِ تازه:";
+        var shown = opened.Take(3).Select(a => "• " + a.Text);
+        var more = opened.Count > 3 ? "\n• و " + (opened.Count - 3) + " هشدارِ دیگر — فهرستِ کامل پشتِ زنگِ داشبورد" : "";
+        return head + "\n" + string.Join("\n", shown) + more;
     }
 }

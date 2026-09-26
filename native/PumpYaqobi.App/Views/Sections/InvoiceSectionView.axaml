@@ -43,10 +43,10 @@
             <!-- سرِ برگه -->
             <StackPanel Spacing="2" HorizontalAlignment="Center">
               <TextBlock Text="⛽" FontSize="30" HorizontalAlignment="Center"
-                         Foreground="{DynamicResource Pump.Accent}" />
+                         Foreground="{DynamicResource Pump.Ink.Accent}" />
               <TextBlock Text="فاکتور پمپ یعقوبی" FontSize="24" FontWeight="Black"
                          HorizontalAlignment="Center"
-                         Foreground="{DynamicResource Pump.Accent}" />
+                         Foreground="{DynamicResource Pump.Ink.Accent}" />
               <TextBlock Text="برگهٔ رسمی فروش تیل — FUEL INVOICE" Classes="muted"
                          FontSize="12" HorizontalAlignment="Center" />
               <Border Height="2" Margin="0,8,0,0" CornerRadius="1"
@@ -59,7 +59,7 @@
                  و کادرهای پایین برچسب بالا — دو زبانِ متفاوت در یک برگه. -->
             <StackPanel Spacing="8">
               <TextBlock Text="① مشتری" Classes="label" FontWeight="ExtraBold"
-                         Foreground="{DynamicResource Pump.Accent}" />
+                         Foreground="{DynamicResource Pump.Ink.Accent}" />
               <Grid ColumnDefinitions="*,14,*" RowDefinitions="Auto">
                 <StackPanel Grid.Column="0" Spacing="4">
                   <TextBlock Text="👤 نام مشتری" Classes="fld" />
@@ -100,11 +100,11 @@
             <StackPanel Spacing="8">
               <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Grid.Column="0" Text="② پارهٔ تیل" Classes="label" FontWeight="ExtraBold"
-                           Foreground="{DynamicResource Pump.Accent}" />
+                           Foreground="{DynamicResource Pump.Ink.Accent}" />
                 <TextBlock Grid.Column="1" Text="{Binding FFuelPartText, StringFormat={}{0} افغانی}"
                            FontWeight="Black" VerticalAlignment="Center"
                            IsVisible="{Binding HasFuelPart}"
-                           Foreground="{DynamicResource Pump.Ok}" />
+                           Foreground="{DynamicResource Pump.Ink.Ok}" />
               </Grid>
 
               <Grid ColumnDefinitions="Auto,14,*,14,*">
@@ -137,11 +137,11 @@
             <StackPanel Spacing="8">
               <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Grid.Column="0" Text="③ پارهٔ پول (اعتبار)" Classes="label"
-                           FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Accent}" />
+                           FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Ink.Accent}" />
                 <TextBlock Grid.Column="1" Text="{Binding FMoneyPartText, StringFormat={}{0} افغانی}"
                            FontWeight="Black" VerticalAlignment="Center"
                            IsVisible="{Binding HasMoneyPart}"
-                           Foreground="{DynamicResource Pump.Accent}" />
+                           Foreground="{DynamicResource Pump.Ink.Accent}" />
               </Grid>
               <Grid ColumnDefinitions="*,14,*">
                 <StackPanel Grid.Column="0" Spacing="4">
@@ -163,7 +163,7 @@
                  رویشان رد می‌شد تا به کارِ واقعی برسد. -->
             <StackPanel Spacing="8">
               <TextBlock Text="④ شناسهٔ برگه" Classes="label" FontWeight="ExtraBold"
-                         Foreground="{DynamicResource Pump.Accent}" />
+                         Foreground="{DynamicResource Pump.Ink.Accent}" />
               <Grid ColumnDefinitions="*,14,*">
                 <StackPanel Grid.Column="0" Spacing="4">
                   <TextBlock Text="# شماره فاکتور" Classes="fld" />
@@ -192,12 +192,12 @@
                 <Grid ColumnDefinitions="*,Auto">
                   <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="🧮 جمله کل فاکتور" FontWeight="ExtraBold"
-                               Foreground="{DynamicResource Pump.Accent}" />
+                               Foreground="{DynamicResource Pump.Ink.Accent}" />
                     <TextBlock Classes="muted" FontSize="11" Text="پارهٔ تیل + پارهٔ پول" />
                   </StackPanel>
                   <TextBlock Grid.Column="1" Text="{Binding FTotalText}" FontSize="21"
                              FontWeight="Black" VerticalAlignment="Center"
-                             Foreground="{DynamicResource Pump.Accent}" />
+                             Foreground="{DynamicResource Pump.Ink.Accent}" />
                 </Grid>
               </Border>
 
@@ -227,7 +227,7 @@
           <Border Classes="panel" Padding="16,14">
             <StackPanel Spacing="10">
               <TextBlock Text="🎯 سرِ تایید چه می‌شود" FontWeight="ExtraBold"
-                         Foreground="{DynamicResource Pump.Accent}" />
+                         Foreground="{DynamicResource Pump.Ink.Accent}" />
 
               <StackPanel Spacing="3">
                 <TextBlock Text="در حسابِ این نام می‌نشیند" Classes="muted" FontSize="11" />
@@ -239,10 +239,10 @@
 
               <StackPanel Spacing="6">
                 <TextBlock Text="{Binding GoesToFuelText}" TextWrapping="Wrap" FontSize="12"
-                           Foreground="{DynamicResource Pump.Ok}"
+                           Foreground="{DynamicResource Pump.Ink.Ok}"
                            IsVisible="{Binding HasFuelPart}" />
                 <TextBlock Text="{Binding GoesToMoneyText}" TextWrapping="Wrap" FontSize="12"
-                           Foreground="{DynamicResource Pump.Accent}"
+                           Foreground="{DynamicResource Pump.Ink.Accent}"
                            IsVisible="{Binding HasMoneyPart}" />
                 <TextBlock Text="هنوز نه لیتری نوشته شده نه مبلغی" Classes="muted" FontSize="12"
                            TextWrapping="Wrap">
@@ -265,7 +265,7 @@
                     HorizontalAlignment="Stretch" FontWeight="ExtraBold" FontSize="15"
                     IsEnabled="{Binding CanSubmit}" Command="{Binding SubmitCommand}" />
             <TextBlock Text="{Binding SubmitHint}" TextWrapping="Wrap" FontSize="12"
-                       Foreground="{DynamicResource Pump.Warn}"
+                       Foreground="{DynamicResource Pump.Ink.Warn}"
                        IsVisible="{Binding SubmitHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             <Button Content="🔄 پاک کردن فرم" MinHeight="38" HorizontalAlignment="Stretch"
                     Command="{Binding ResetFormCommand}" />
@@ -280,7 +280,7 @@
                 <StackPanel Grid.Column="1" Spacing="1" Margin="10,0" VerticalAlignment="Center">
                   <TextBlock Text="در صف" Classes="label" />
                   <TextBlock Text="{Binding PendingText}" FontSize="21" FontWeight="Black"
-                             Foreground="{DynamicResource Pump.Warn}" />
+                             Foreground="{DynamicResource Pump.Ink.Warn}" />
                 </StackPanel>
                 <TextBlock Grid.Column="2" Text="←" Classes="muted" VerticalAlignment="Center" />
               </Grid>
@@ -295,7 +295,7 @@
                 <StackPanel Grid.Column="1" Spacing="1" Margin="10,0" VerticalAlignment="Center">
                   <TextBlock Text="تایید شده" Classes="label" />
                   <TextBlock Text="{Binding ApprovedText}" FontSize="21" FontWeight="Black"
-                             Foreground="{DynamicResource Pump.Ok}" />
+                             Foreground="{DynamicResource Pump.Ink.Ok}" />
                 </StackPanel>
                 <TextBlock Grid.Column="2" Text="←" Classes="muted" VerticalAlignment="Center" />
               </Grid>
@@ -394,7 +394,7 @@
                     <TextBlock Text="{Binding Customer}" FontWeight="Bold" FontSize="15" />
                     <TextBlock Text="{Binding ChipText}" FontSize="12" FontWeight="Bold"
                                VerticalAlignment="Center"
-                               Foreground="{Binding ChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                               Foreground="{Binding ChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                   </StackPanel>
                   <TextBlock Text="{Binding PartsText}" Classes="muted" FontSize="12"
                              TextWrapping="Wrap" />
@@ -470,10 +470,10 @@
 
           <StackPanel Spacing="2" HorizontalAlignment="Center">
             <TextBlock Text="⛽" FontSize="28" HorizontalAlignment="Center"
-                       Foreground="{DynamicResource Pump.Accent}" />
+                       Foreground="{DynamicResource Pump.Ink.Accent}" />
             <TextBlock Text="فاکتور پمپ یعقوبی" FontSize="24" FontWeight="Black"
                        HorizontalAlignment="Center"
-                       Foreground="{DynamicResource Pump.Accent}" />
+                       Foreground="{DynamicResource Pump.Ink.Accent}" />
             <TextBlock Text="برگهٔ رسمی فروش تیل — FUEL INVOICE" Classes="muted"
                        FontSize="12" HorizontalAlignment="Center" />
             <Border Height="2" Margin="0,8,0,0" CornerRadius="1"
@@ -492,7 +492,7 @@
             <Border Grid.Column="2" Classes="chip"
                     BorderBrush="{Binding ChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
               <TextBlock Text="{Binding ChipText}" FontWeight="Bold"
-                         Foreground="{Binding ChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                         Foreground="{Binding ChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
             </Border>
           </Grid>
 
@@ -502,7 +502,7 @@
                ⚠️ هر خانهٔ خالی اصلاً نوشته نمی‌شود. -->
           <StackPanel Spacing="8">
             <TextBlock Text="① مشتری" Classes="label" FontWeight="ExtraBold"
-                       Foreground="{DynamicResource Pump.Accent}" />
+                       Foreground="{DynamicResource Pump.Ink.Accent}" />
             <!-- ⚠️ ‎TextAlignment="Start"‎ روی مقدارها لازم است: سبکِ
                  سراسریِ ‎TextBlock‎ نوشته را **وسط‌چین** می‌کند (قاعدهٔ
                  جدول‌ها)، پس مقدار وسطِ ستونِ پهن می‌افتاد و بینِ برچسب و
@@ -538,9 +538,9 @@
             <Border Height="1" Background="{DynamicResource Pump.ChromeBorder}" Opacity="0.6" />
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Grid.Column="0" Text="② پارهٔ تیل" Classes="label" FontWeight="ExtraBold"
-                         Foreground="{DynamicResource Pump.Accent}" />
+                         Foreground="{DynamicResource Pump.Ink.Accent}" />
               <TextBlock Grid.Column="1" Text="{Binding FuelPartText, StringFormat={}{0} افغانی}"
-                         FontWeight="Black" Foreground="{DynamicResource Pump.Ok}" />
+                         FontWeight="Black" Foreground="{DynamicResource Pump.Ink.Ok}" />
             </Grid>
             <Grid ColumnDefinitions="190,*">
               <TextBlock Grid.Column="0" Text="💧 مقدار و فی" Classes="fld" />
@@ -554,9 +554,9 @@
             <Border Height="1" Background="{DynamicResource Pump.ChromeBorder}" Opacity="0.6" />
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Grid.Column="0" Text="③ پارهٔ پول (اعتبار)" Classes="label"
-                         FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Accent}" />
+                         FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Ink.Accent}" />
               <TextBlock Grid.Column="1" Text="{Binding AmountText, StringFormat={}{0} افغانی}"
-                         FontWeight="Black" Foreground="{DynamicResource Pump.Accent}" />
+                         FontWeight="Black" Foreground="{DynamicResource Pump.Ink.Accent}" />
             </Grid>
           </StackPanel>
 
@@ -571,13 +571,13 @@
               <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                   <TextBlock Text="🧮 جمله کل فاکتور" FontWeight="ExtraBold"
-                             Foreground="{DynamicResource Pump.Accent}" />
+                             Foreground="{DynamicResource Pump.Ink.Accent}" />
                   <TextBlock Classes="muted" FontSize="11" Text="پارهٔ تیل + پارهٔ پول" />
                 </StackPanel>
                 <TextBlock Grid.Column="1" Text="{Binding TotalText, StringFormat={}{0} افغانی}"
                            FontSize="21" FontWeight="Black" VerticalAlignment="Center"
                            Margin="14,0,0,0"
-                           Foreground="{DynamicResource Pump.Accent}" />
+                           Foreground="{DynamicResource Pump.Ink.Accent}" />
               </Grid>
             </Border>
 

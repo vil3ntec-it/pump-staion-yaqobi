@@ -159,15 +159,27 @@ public class FormAlignTests
         //  ⛔ و قفل بی‌توضیح نیست
         Assert.Contains("Binding FuelHint", form);
 
-        //  ⛔ تاریخ اولِ اول — نخستین فرزندِ WrapPanel، یعنی سمتِ راست
-        var order = new[] { "تاریخ", "نام قرض‌دار", "واحد رسید", "نوع تیل" };
+        //  ⛔ ترتیب (۱۴۰۵/۰۷/۱۴): «رسید بغلِ نام، واحد و نوعِ تیل وسطِ رسید و
+        //  توضیحات، و کشوییِ «حساب» (چکنه/قرض‌دار) بغلِ آن دو» — در
+        //  راست‌به‌چپ نخستین فرزند سمتِ راست است.
+        var order = new[]
+        {
+            "Text=\"تاریخ\"", "Text=\"{Binding NameLabel}\"", "Text=\"{Binding AmountLabel}\"",
+            "Text=\"واحد رسید\"", "Text=\"نوع تیل\"", "Text=\"حساب\"", "Text=\"توضیحات\"",
+        };
         var at = 0;
         foreach (var label in order)
         {
-            var i = form.IndexOf("Text=\"" + label + "\"", System.StringComparison.Ordinal);
+            var i = form.IndexOf(label, System.StringComparison.Ordinal);
             Assert.True(i > at, $"ترتیبِ «{label}» درست نیست");
             at = i;
         }
+        Assert.Contains("Binding TargetOptions", form);
+        Assert.Contains("SelectedIndex=\"{Binding TargetIndex}\"", form);
+        //  ⛔ همهٔ کادرها یک قد — هیچ کادری قد یا قلمِ خودش را ندارد
+        Assert.DoesNotContain("FontSize=\"15\"", form);
+        Assert.DoesNotContain("Padding=\"10,8\"", form);
+        Assert.Contains("WrapPanel.qform TextBox, WrapPanel.qform ComboBox", view);
 
         //  ⛔ و منطق عوض نشد: همان دو خاصیتِ دفتر پشتِ دو کشویی‌اند
         var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "DebtReceiptSectionViewModel.cs");

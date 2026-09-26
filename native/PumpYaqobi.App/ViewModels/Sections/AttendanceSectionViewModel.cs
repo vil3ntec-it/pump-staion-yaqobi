@@ -89,7 +89,13 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
 
         _host = host;
         _month = Shamsi.ThisMonth();
+        //  کشوی سال + ماه — همان ‎YearMonthPicker‎ِ دفترهای ماهانه
+        Picker = new YearMonthPicker(k => { if (k.Length > 0 && k != Month) Month = k; });
+        Picker.Load(Months, _month);
     }
+
+    /// <summary>کشوی سال و ماه (۱۴۰۵/۰۷/۱۴). ⛔ ماه همان <see cref="Month"/> است؛ این فقط نما است.</summary>
+    public YearMonthPicker Picker { get; }
 
     internal AttendanceService Calc => _host.AttendanceCalc;
 

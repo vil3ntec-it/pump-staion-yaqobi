@@ -119,6 +119,8 @@ public static class ThemeManager
         }
 
         Dictionary = _installed[variant].Dict;
+        // رنگ‌هایی که از راهِ کلید آمده‌اند (‎ResourceKeyToBrushConverter‎) با تم برنمی‌گشتند
+        ResourceKeyToBrushConverter.Refresh();
         Changed?.Invoke(t);
     }
 
@@ -181,7 +183,9 @@ public static class ThemeManager
         Br("HeadBand", t.HeadBand);
         Br("OnHeadBand", t.OnHeadBand);
         // نوشتهٔ کم‌رنگِ روی همان نوار (برچسبِ بالای هر عددِ «جمله»)
-        Br("OnHeadBandMuted", Mix(t.HeadBand, t.OnHeadBand, 0.62));
+        // ⚠️ در تیره برچسبِ ریزِ نوارِ «جمله» از ‎Text‎ (سفید) می‌آید نه از زرد: زردِ
+        //  کم‌رنگ‌شده روی نوارِ تیره خوانده نمی‌شد (گزارشِ ۱۴۰۵/۰۷/۱۴).
+        Br("OnHeadBandMuted", Mix(t.HeadBand, t.IsDark ? t.Text : t.OnHeadBand, t.IsDark ? 0.78 : 0.62));
 
         // سطح‌های مشتق‌شده — همان چیزی که در CSS با color-mix ساخته می‌شد
         Br("Hover", Mix(t.Card, t.Accent, t.IsDark ? 0.14 : 0.10));
@@ -223,7 +227,7 @@ public static class ThemeManager
             // سایت)، پس رنگِ «حال» لازم نیست روشن شود تا خوانده گردد — همان
             // رنگِ همیشگیِ خودش روی نوار درست دیده می‌شود. روشن کردنش روی
             // نوارِ روشن، برعکس، کم‌رنگ و ناخوانا می‌کرد.
-            Br("Band." + key, c);
+            Br("Band." + key, t.IsDark ? t.Text : c);
 
         Band("Ok", ok);
         Band("Warn", warn);
@@ -236,6 +240,22 @@ public static class ThemeManager
         Br("Band.Text", t.Text);
         Br("Band.Label", t.OnHeadBand);
         Br("Band.Muted", t.Muted);
+
+        // ══ «جوهر»: رنگِ نوشته، جدا از رنگِ زمینه (۱۴۰۵/۰۷/۱۴) ═════════════
+        // گزارشِ صاحب ریپو: «توی دارک مود هیچ نوشته خونده نمی‌شه، این رنگی‌هاش رو
+        // می‌گم — همه باید سفید باشن.» پس در تمِ تیره هر نوشتهٔ رنگی (سبز،
+        // سرخ، آبی، زرد…) همان سفیدِ نوشتهٔ تم است؛ در تمِ روشن همان رنگِ
+        // همیشگی. ⛔ خودِ ‎Pump.Ok/Danger/…‎ دست نخوردند — زمینهٔ نشان‌ها، دکمه‌ها
+        // و آیکون‌ها همان رنگ را می‌خواهند. فقط ‎Foreground‎ به ‎Pump.Ink.*‎ رفت.
+        Color Ink(Color c) => t.IsDark ? t.Text : c;
+        Br("Ink.Ok", Ink(ok));
+        Br("Ink.Warn", Ink(warn));
+        Br("Ink.Danger", Ink(danger));
+        Br("Ink.Info", Ink(info));
+        Br("Ink.Orange", Ink(orange));
+        Br("Ink.Accent", Ink(t.Accent));
+        Br("Ink.Purple", Ink(PumpTheme.C("#805ad5")));
+        Br("Ink.Diesel", Ink(PumpTheme.C("#b7791f")));
 
         Set("Pump.HeaderBg", Horizontal(t.HeaderBg));
         Set("Pump.BannerBg", Horizontal(t.BannerBg));

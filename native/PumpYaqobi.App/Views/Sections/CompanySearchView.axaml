@@ -36,7 +36,7 @@
       </WrapPanel>
 
       <TextBlock Text="{Binding Message}" Classes="label" TextWrapping="Wrap"
-                 Foreground="{DynamicResource Pump.Danger}" IsVisible="{Binding NotFound}" FontWeight="Bold" />
+                 Foreground="{DynamicResource Pump.Ink.Danger}" IsVisible="{Binding NotFound}" FontWeight="Bold" />
       <TextBlock Text="{Binding Message}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding !NotFound}" />
 
       <ItemsControl ItemsSource="{Binding Results}">
@@ -48,13 +48,13 @@
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="Black" FontSize="15" />
                   <TextBlock Grid.Column="1" Text="{Binding FuelText}" FontWeight="Bold"
-                             Foreground="{Binding FuelBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                             Foreground="{Binding FuelBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                 </Grid>
                 <TextBlock Text="{Binding DateText}" Classes="muted" />
                 <WrapPanel Orientation="Horizontal">
-                  <TextBlock Text="{Binding TonText}" FontWeight="Bold" Foreground="{DynamicResource Pump.Info}" Margin="0,0,16,0" />
-                  <TextBlock Text="{Binding UsdText}" FontWeight="Bold" Foreground="{DynamicResource Pump.Ok}" Margin="0,0,16,0" />
-                  <TextBlock Text="{Binding AfnText}" FontWeight="Bold" Foreground="{DynamicResource Pump.Accent}" />
+                  <TextBlock Text="{Binding TonText}" FontWeight="Bold" Foreground="{DynamicResource Pump.Ink.Info}" Margin="0,0,16,0" />
+                  <TextBlock Text="{Binding UsdText}" FontWeight="Bold" Foreground="{DynamicResource Pump.Ink.Ok}" Margin="0,0,16,0" />
+                  <TextBlock Text="{Binding AfnText}" FontWeight="Bold" Foreground="{DynamicResource Pump.Ink.Accent}" />
                 </WrapPanel>
                 <Button Classes="accent" Content="{Binding GoText}" Command="{Binding GoCommand}"
                         IsVisible="{Binding CanGo}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />

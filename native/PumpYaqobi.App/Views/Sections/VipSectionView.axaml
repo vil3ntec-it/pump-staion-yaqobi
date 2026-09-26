@@ -51,7 +51,7 @@
             <StackPanel Spacing="4">
               <TextBlock Text="⏳ ماندهٔ اشتراک" Classes="label" />
               <TextBlock Text="{Binding DaysText}" FontSize="34" FontWeight="Black"
-                         Foreground="{DynamicResource Pump.Ok}" TextWrapping="Wrap" />
+                         Foreground="{DynamicResource Pump.Ink.Ok}" TextWrapping="Wrap" />
               <TextBlock Text="{Binding StateText}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
@@ -63,7 +63,7 @@
               <TextBlock Text="{Binding PlanText}" FontSize="20" FontWeight="Black" />
             </StackPanel>
             <TextBlock Text="{Binding GraceText}" FontWeight="Bold" TextWrapping="Wrap" FontSize="12.5"
-                       Foreground="{DynamicResource Pump.Warn}"
+                       Foreground="{DynamicResource Pump.Ink.Warn}"
                        IsVisible="{Binding GraceText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
                        Text="دفترِ شما هیچ‌وقت قفل نمی‌شود — قرض‌داران، ورق، مخزن، گاوصندوق، چاپ، سطلِ زباله و بک‌اپِ محلی با تمام شدنِ اشتراک هم سرِ جایشان هستند. و اگر اینترنت نبود یا سرور جواب نداد، دو هفته ارفاق هست تا هیچ‌کس با یک خرابی بی‌کار نماند." />
@@ -98,7 +98,7 @@
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Grid.Column="0" Text="چتِ پشتیبانی" Classes="kvv" />
               <TextBlock Grid.Column="1" Text="{Binding SupportText}" Classes="kvv"
-                         Foreground="{DynamicResource Pump.Ok}" />
+                         Foreground="{DynamicResource Pump.Ink.Ok}" />
             </Grid>
           </Border>
 
@@ -143,7 +143,7 @@
                       </Border>
                     </Grid>
                     <TextBlock Text="{Binding Price}" FontSize="24" FontWeight="Black"
-                               Foreground="{DynamicResource Pump.Info}" />
+                               Foreground="{DynamicResource Pump.Ink.Info}" />
                   </StackPanel>
                 </Border>
 

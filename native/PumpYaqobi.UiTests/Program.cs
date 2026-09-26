@@ -131,6 +131,8 @@ internal static class Program
         //  «مفاد و ضرر: کادرهای برابر + کشوی ماه و سال · مخزن: عنوانِ وسط و کادرِ جمله‌ها» (۱۴۰۵/۰۷/۱۳)
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- plstore [پوشه]
         if (outDir.Equals("plstore", StringComparison.OrdinalIgnoreCase)) return ProfitStorageProbe.Run(args);
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- round14 [پوشه]
+        if (outDir.Equals("round14", StringComparison.OrdinalIgnoreCase)) return Round14Probe.Run(args);
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- chatroom [پوشه]
         if (outDir.Equals("chatroom", StringComparison.OrdinalIgnoreCase)) return ChatProbe.Run(args);
         if (outDir.Equals("groupchat", StringComparison.OrdinalIgnoreCase)) return GroupChatLive.Run(args);

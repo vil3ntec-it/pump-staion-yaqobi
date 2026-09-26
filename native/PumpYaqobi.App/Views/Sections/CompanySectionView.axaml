@@ -82,14 +82,14 @@
                        قاب‌دارِ تمام‌عرض. -->
                   <StackPanel Grid.Row="3">
                     <TextBlock Text="{Binding AlbaqiText}" Classes="cmp-fig"
-                               Foreground="{Binding AlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                               Foreground="{Binding AlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                     <TextBlock Text="الباقی · افغانی" Classes="card-sub" />
                     <Border Classes="card-rule" Margin="11,10,11,0" />
                     <Grid ColumnDefinitions="*,Auto" Margin="11,8,7,9">
                       <TextBlock Grid.Column="0" Text="{Binding UsdText}"
                                  FontWeight="Bold" FontSize="15" TextAlignment="Start"
                                  TextTrimming="CharacterEllipsis"
-                                 Foreground="{DynamicResource Pump.Info}" />
+                                 Foreground="{DynamicResource Pump.Ink.Info}" />
                       <Button Grid.Column="1" Classes="qr-link" Content="کیوآر"
                               Command="{Binding $parent[ItemsRepeater].((vm:CompanySectionViewModel)DataContext).ShowQrCommand}"
                               CommandParameter="{Binding}" />

@@ -23,7 +23,7 @@
         <DataTemplate x:DataType="vm:PurchaseSectionViewModel">
           <StackPanel Spacing="8" Margin="0,0,0,18">
             <TextBlock Text="{Binding Label}" FontSize="16" FontWeight="Black"
-                       Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                       Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
 
             <c:AutoFillPanel MinItemWidth="200" Gap="8" IsVisible="{Binding HasPurchases}">
               <Border Classes="stat"><StackPanel Spacing="3">
@@ -32,15 +32,15 @@
               </StackPanel></Border>
               <Border Classes="stat"><StackPanel Spacing="3">
                 <TextBlock Text="جمله لیتر" Classes="label" />
-                <TextBlock Text="{Binding LitersText}" Classes="num" Foreground="{DynamicResource Pump.Ok}" />
+                <TextBlock Text="{Binding LitersText}" Classes="num" Foreground="{DynamicResource Pump.Ink.Ok}" />
               </StackPanel></Border>
               <Border Classes="stat"><StackPanel Spacing="3">
                 <TextBlock Text="جمله کل دالر" Classes="label" />
-                <TextBlock Text="{Binding UsdText}" Classes="num" Foreground="{DynamicResource Pump.Info}" />
+                <TextBlock Text="{Binding UsdText}" Classes="num" Foreground="{DynamicResource Pump.Ink.Info}" />
               </StackPanel></Border>
               <Border Classes="stat"><StackPanel Spacing="3">
                 <TextBlock Text="جمله کل افغانی" Classes="label" />
-                <TextBlock Text="{Binding AfnText}" Classes="num" Foreground="{DynamicResource Pump.Accent}" />
+                <TextBlock Text="{Binding AfnText}" Classes="num" Foreground="{DynamicResource Pump.Ink.Accent}" />
               </StackPanel></Border>
             </c:AutoFillPanel>
 
@@ -57,10 +57,10 @@
                       <Border Classes="card-head">
                         <StackPanel Orientation="Horizontal" Spacing="14">
                           <TextBlock Text="{Binding IndexText, StringFormat=خرید #{0}}" FontWeight="Bold"
-                                     Foreground="{DynamicResource Pump.Accent}" />
+                                     Foreground="{DynamicResource Pump.Ink.Accent}" />
                           <TextBlock Text="{Binding DateText, StringFormat=📅 {0}}" Classes="muted" />
                           <TextBlock Text="{Binding SellerText, StringFormat=👤 {0}}"
-                                     Foreground="{DynamicResource Pump.Info}" />
+                                     Foreground="{DynamicResource Pump.Ink.Info}" />
                           <TextBlock Text="{Binding NoteText}" Classes="muted"
                                      IsVisible="{Binding NoteText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                         </StackPanel>
@@ -68,7 +68,7 @@
                       <c:AutoFillPanel MinItemWidth="150" Gap="8" Margin="14">
                         <Border Classes="stat" MinHeight="70"><StackPanel Spacing="3">
                           <TextBlock Text="وزن (تن)" Classes="label" />
-                          <TextBlock Text="{Binding TonText}" FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Info}" />
+                          <TextBlock Text="{Binding TonText}" FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Ink.Info}" />
                         </StackPanel></Border>
                         <Border Classes="stat" MinHeight="70"><StackPanel Spacing="3">
                           <TextBlock Text="ثقلت" Classes="label" />
@@ -76,7 +76,7 @@
                         </StackPanel></Border>
                         <Border Classes="stat" MinHeight="70"><StackPanel Spacing="3">
                           <TextBlock Text="لیتر" Classes="label" />
-                          <TextBlock Text="{Binding LitersText}" FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Ok}" />
+                          <TextBlock Text="{Binding LitersText}" FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Ink.Ok}" />
                         </StackPanel></Border>
                         <Border Classes="stat" MinHeight="70"><StackPanel Spacing="3">
                           <TextBlock Text="فی تن ($)" Classes="label" />
@@ -88,15 +88,15 @@
                         </StackPanel></Border>
                         <Border Classes="stat" MinHeight="70"><StackPanel Spacing="3">
                           <TextBlock Text="کل (دالر)" Classes="label" />
-                          <TextBlock Text="{Binding TotalUsdText}" FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Info}" />
+                          <TextBlock Text="{Binding TotalUsdText}" FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Ink.Info}" />
                         </StackPanel></Border>
                         <Border Classes="stat" MinHeight="70"><StackPanel Spacing="3">
                           <TextBlock Text="کل (افغانی)" Classes="label" />
-                          <TextBlock Text="{Binding TotalAfnText}" FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Accent}" />
+                          <TextBlock Text="{Binding TotalAfnText}" FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Ink.Accent}" />
                         </StackPanel></Border>
                         <Border Classes="stat" MinHeight="70"><StackPanel Spacing="3">
                           <TextBlock Text="فی لیتر (افغانی)" Classes="label" />
-                          <TextBlock Text="{Binding PerLiterText}" FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Danger}" />
+                          <TextBlock Text="{Binding PerLiterText}" FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Ink.Danger}" />
                         </StackPanel></Border>
                       </c:AutoFillPanel>
                     </StackPanel>
@@ -118,15 +118,15 @@
                 </StackPanel></Border>
                 <Border Classes="stat"><StackPanel Spacing="3">
                   <TextBlock Text="جمله (تن)" Classes="label" />
-                  <TextBlock Text="{Binding ManualTonText}" Classes="num" Foreground="{DynamicResource Pump.Ok}" />
+                  <TextBlock Text="{Binding ManualTonText}" Classes="num" Foreground="{DynamicResource Pump.Ink.Ok}" />
                 </StackPanel></Border>
                 <Border Classes="stat"><StackPanel Spacing="3">
                   <TextBlock Text="جمله کل دالر" Classes="label" />
-                  <TextBlock Text="{Binding ManualUsdText}" Classes="num" Foreground="{DynamicResource Pump.Info}" />
+                  <TextBlock Text="{Binding ManualUsdText}" Classes="num" Foreground="{DynamicResource Pump.Ink.Info}" />
                 </StackPanel></Border>
                 <Border Classes="stat"><StackPanel Spacing="3">
                   <TextBlock Text="جمله کل افغانی" Classes="label" />
-                  <TextBlock Text="{Binding ManualAfnText}" Classes="num" Foreground="{DynamicResource Pump.Accent}" />
+                  <TextBlock Text="{Binding ManualAfnText}" Classes="num" Foreground="{DynamicResource Pump.Ink.Accent}" />
                 </StackPanel></Border>
               </c:AutoFillPanel>
               <Border Classes="panel" Padding="0">

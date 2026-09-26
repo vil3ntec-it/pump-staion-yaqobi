@@ -92,7 +92,31 @@ public sealed partial class HistorySectionViewModel : SectionViewModel
         // کلیدِ نسخهٔ وب است تا نوت‌های واردشده سرِ جای خودشان بنشینند.
         Notes = new SectionNotesViewModel(Id, host.SectionNotes,
             (m, ok) => host.Toast(m, ok ? ToastKind.Ok : ToastKind.Warn));
+        //  کشوی سال + ماه (۱۴۰۵/۰۷/۱۴). «همهٔ ماه‌ها» کلیدِ خالی است و
+        //  «‎YYYY/*‎» همهٔ ماه‌های همان سال.
+        Picker = new YearMonthPicker(k =>
+        {
+            var want = k.Length == 0 ? AllMonths : k;
+            if (want != Month) Month = want;
+        }, AllMonths);
     }
+
+    /// <summary>کشوی سال و ماه. ⛔ صافی همان <see cref="Month"/> است؛ این فقط نما است.</summary>
+    public YearMonthPicker Picker { get; }
+
+    /// <summary>ماهِ یک ردیف در صافیِ جاری می‌گنجد؟ «همه»، یک سال (‎YYYY/*‎) یا یک ماه.</summary>
+    private bool InMonth(string monthKey)
+    {
+        if (string.IsNullOrEmpty(Month) || Month == AllMonths) return true;
+        if (Month.EndsWith(YearMonthPicker.AllMark, StringComparison.Ordinal))
+            return monthKey.StartsWith(Month[..^YearMonthPicker.AllMark.Length] + "/", StringComparison.Ordinal);
+        return monthKey == Month;
+    }
+
+    /// <summary>برچسبِ صافیِ جاری برای جملهٔ خلاصه.</summary>
+    private string MonthWords => Month.EndsWith(YearMonthPicker.AllMark, StringComparison.Ordinal)
+        ? "سالِ " + Month[..^YearMonthPicker.AllMark.Length]
+        : Shamsi.MonthLabel(Month);
 
     public ObservableCollection<HistoryCardViewModel> Cards { get; } = new();
     /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
@@ -221,6 +245,7 @@ public sealed partial class HistorySectionViewModel : SectionViewModel
         RaiseFilters();
 
         Month = AllMonths;      // خودش ‎Apply‎ را صدا می‌زند
+        Picker.Load(Months.Where(m => m != AllMonths), "");
         Apply();
     }
 
@@ -287,9 +312,7 @@ public sealed partial class HistorySectionViewModel : SectionViewModel
 
     private void Apply()
     {
-        var picked = (string.IsNullOrEmpty(Month) || Month == AllMonths
-            ? _feed
-            : _feed.Where(r => r.MonthKey == Month)).Where(Keep).ToList();
+        var picked = _feed.Where(r => InMonth(r.MonthKey)).Where(Keep).ToList();
 
         using (Rows.Batch())
         {
@@ -301,7 +324,7 @@ public sealed partial class HistorySectionViewModel : SectionViewModel
         Summary = picked.Count == 0
             ? (Month == AllMonths ? "هنوز چیزی در این بخش ثبت نشده" : "در این ماه چیزی ثبت نشده")
             : "مجموعاً " + Shamsi.Money(picked.Count) + " ردیف"
-              + (Month == AllMonths ? "" : " در " + Shamsi.MonthLabel(Month))
+              + (Month == AllMonths ? "" : " در " + MonthWords)
               + " — از تازه به کهنه";
 
         OnPropertyChanged(nameof(IsEmpty));

@@ -24,7 +24,7 @@
              «تنظیمات ← رمزها و کد» رمزی گذاشته باشد. نصبِ تازه بی هیچ صفحهٔ
              قفلی باز می‌شود (AuthService.OpenWithoutPassword). -->
 
-        <TextBlock Text="{Binding Error}" Foreground="{DynamicResource Pump.Danger}"
+        <TextBlock Text="{Binding Error}" Foreground="{DynamicResource Pump.Ink.Danger}"
                    IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                    TextWrapping="Wrap" />
 

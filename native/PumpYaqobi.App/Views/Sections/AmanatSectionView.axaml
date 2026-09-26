@@ -90,7 +90,7 @@
 
             <TextBlock Text="{Binding FormulaText}" Classes="muted" TextWrapping="Wrap" />
 
-            <TextBlock Text="🌡️ تبخیر در هر گرما — با همین تنظیمات" Classes="label" Foreground="{DynamicResource Pump.Ok}" />
+            <TextBlock Text="🌡️ تبخیر در هر گرما — با همین تنظیمات" Classes="label" Foreground="{DynamicResource Pump.Ink.Ok}" />
             <Border Classes="panel" Padding="0">
               <c:ExcelGrid ItemsSource="{Binding TempRows}" x:CompileBindings="False"
                            IsReadOnly="True" BorderThickness="0" CornerRadius="0">
@@ -99,7 +99,7 @@
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate>
                         <TextBlock Text="{Binding TempText}" FontWeight="Bold" VerticalAlignment="Center"
-                                   Foreground="{Binding NearBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                                   Foreground="{Binding NearBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                       </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                   </DataGridTemplateColumn>
@@ -111,7 +111,7 @@
               </c:ExcelGrid>
             </Border>
 
-            <TextBlock Text="📚 این عددها از کجا آمده‌اند" Classes="label" Foreground="{DynamicResource Pump.Ok}" />
+            <TextBlock Text="📚 این عددها از کجا آمده‌اند" Classes="label" Foreground="{DynamicResource Pump.Ink.Ok}" />
             <TextBlock Text="{Binding SourcesText}" Classes="muted" TextWrapping="Wrap" />
 
             <Button Classes="ghost" Content="📚 برگشت به ضریب‌های منبع" HorizontalAlignment="Right"
@@ -169,17 +169,17 @@
                       <!-- همان زبانِ کارتِ قرض‌دار و شرکت‌ها -->
                       <StackPanel Grid.Row="3">
                         <TextBlock Text="{Binding RestText}" Classes="cmp-fig"
-                                   Foreground="{Binding RestBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                                   Foreground="{Binding RestBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                         <TextBlock Text="باقیِ مشتری · لیتر" Classes="card-sub" />
                         <TextBlock Text="{Binding State}" Classes="card-sub"
-                                   Foreground="{Binding StateBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                                   Foreground="{Binding StateBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                         <TextBlock Text="{Binding PctText}" Classes="card-sub" />
                         <Border Classes="card-rule" Margin="11,10,11,0" />
                         <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="11,8,11,9">
                           <TextBlock Grid.Column="0" Text="{Binding LitersText}" FontWeight="Bold" FontSize="12"
                                      Foreground="{DynamicResource Pump.Muted}" />
                           <TextBlock Grid.Column="1" Text="{Binding LossText}" FontWeight="Bold" FontSize="12"
-                                     Margin="12,0,0,0" Foreground="{DynamicResource Pump.Accent}" />
+                                     Margin="12,0,0,0" Foreground="{DynamicResource Pump.Ink.Accent}" />
                           <TextBlock Grid.Column="3" Text="{Binding Index}" FontWeight="Bold" FontSize="11.5"
                                      Foreground="{DynamicResource Pump.Muted}" />
                         </Grid>
@@ -235,7 +235,7 @@
           <StackPanel Spacing="3" Margin="6,0">
             <TextBlock Text="باقیِ تیلِ مشتری" Classes="label" />
             <TextBlock Text="{Binding TotalRest}" FontWeight="Bold" FontSize="15"
-                       Foreground="{DynamicResource Pump.Accent}" Margin="0,4,0,0" />
+                       Foreground="{DynamicResource Pump.Ink.Accent}" Margin="0,4,0,0" />
           </StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom" Margin="0,0,0,4">
             <c:RowAddBar Host="{Binding}" AddRowCommand="{Binding AddRowCommand}" />

@@ -35,38 +35,38 @@
         <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="جمله مقدار (تن)" Classes="label" />
-            <TextBlock Text="{Binding TotalTon}" Classes="num" Foreground="{DynamicResource Pump.Info}" />
+            <TextBlock Text="{Binding TotalTon}" Classes="num" Foreground="{DynamicResource Pump.Ink.Info}" />
           </StackPanel>
         </Border>
         <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="جمله کل دالر" Classes="label" />
-            <TextBlock Text="{Binding TotalUsd, StringFormat={}{0} $}" Classes="num" Foreground="{DynamicResource Pump.Info}" />
+            <TextBlock Text="{Binding TotalUsd, StringFormat={}{0} $}" Classes="num" Foreground="{DynamicResource Pump.Ink.Info}" />
           </StackPanel>
         </Border>
         <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="جمله کل (افغانی)" Classes="label" />
-            <TextBlock Text="{Binding TotalAfn, StringFormat={}{0} افغانی}" Classes="num" Foreground="{DynamicResource Pump.Accent}" />
+            <TextBlock Text="{Binding TotalAfn, StringFormat={}{0} افغانی}" Classes="num" Foreground="{DynamicResource Pump.Ink.Accent}" />
           </StackPanel>
         </Border>
         <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="رسید دالر" Classes="label" />
-            <TextBlock Text="{Binding PaidUsd}" Classes="num" Foreground="{DynamicResource Pump.Ok}" />
+            <TextBlock Text="{Binding PaidUsd}" Classes="num" Foreground="{DynamicResource Pump.Ink.Ok}" />
           </StackPanel>
         </Border>
         <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="رسید (افغانی)" Classes="label" />
-            <TextBlock Text="{Binding PaidAfn, StringFormat={}{0} افغانی}" Classes="num" Foreground="{DynamicResource Pump.Ok}" />
+            <TextBlock Text="{Binding PaidAfn, StringFormat={}{0} افغانی}" Classes="num" Foreground="{DynamicResource Pump.Ink.Ok}" />
           </StackPanel>
         </Border>
         <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="جمله الباقی" Classes="label" />
             <TextBlock Text="{Binding AlbaqiAfn, StringFormat={}{0} AFN}" Classes="num"
-                       Foreground="{Binding AlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                       Foreground="{Binding AlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
             <TextBlock Text="{Binding AlbaqiUsd, StringFormat={}{0} $}" Classes="num2" />
             <TextBlock Text="{Binding AlbaqiStatus}" Classes="muted" FontWeight="Bold" />
           </StackPanel>
@@ -130,7 +130,7 @@
                 <DataTemplate>
                   <Button Classes="fuelchip celltoggle" Content="{Binding PoulCurrencyText}"
                           Command="{Binding TogglePoulCurrencyCommand}"
-                          Foreground="{Binding PoulCurrencyChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                          Foreground="{Binding PoulCurrencyChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
                           BorderBrush="{Binding PoulCurrencyChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
                           ToolTip.Tip="زدنش واحدِ رسید را افغانی ⇄ دالر می‌کند" />
                 </DataTemplate>

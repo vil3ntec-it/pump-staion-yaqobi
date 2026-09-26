@@ -15,15 +15,20 @@
     </c:SectionPage.Toolbar>
 
     <c:SectionPage.Filters>
-      <Grid ColumnDefinitions="Auto,140,24,Auto,200,140,Auto">
-        <TextBlock Grid.Column="0" Text="ماه" Classes="label" VerticalAlignment="Center" Margin="0,0,8,0" />
-        <ComboBox Grid.Column="1" ItemsSource="{Binding Months}" SelectedItem="{Binding Month}" MinWidth="130" />
-        <TextBlock Grid.Column="3" Text="کارمندِ تازه" Classes="label" VerticalAlignment="Center" Margin="0,0,8,0" />
-        <TextBox Grid.Column="4" Text="{Binding NewName}" Watermark="نام" />
-        <TextBox Grid.Column="5" Text="{Binding NewSalary}" Watermark="معاش" Margin="8,0,0,0" />
-        <Button Grid.Column="6" Classes="accent" Content="افزودن" Margin="8,0,0,0"
-                Command="{Binding AddStaffCommand}" />
-      </Grid>
+      <!-- ⛔ یک خط، هم‌قد (۱۴۰۵/۰۷/۱۴): «این‌ها چرا هم‌تراز نیستن… همه توی یک
+           خط باشن». پهناها فشرده شدند تا کنارِ دکمه‌ها جا شوند؛ برچسبِ
+           «کارمندِ تازه» حالا نوشتهٔ راهنمای خودِ کادر است. -->
+      <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+        <TextBlock Text="ماه" Classes="label" VerticalAlignment="Center" />
+        <ComboBox ItemsSource="{Binding Picker.Years}" SelectedItem="{Binding Picker.Year}"
+                  IsVisible="{Binding Picker.HasYears}"
+                  ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="90" />
+        <ComboBox ItemsSource="{Binding Picker.Months}" SelectedItem="{Binding Picker.Selected}"
+                  ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="120" />
+        <TextBox Text="{Binding NewName}" Watermark="نامِ کارمندِ تازه" Width="150" Margin="8,0,0,0" />
+        <TextBox Text="{Binding NewSalary}" Watermark="معاش" Width="90" />
+        <Button Classes="accent" Content="افزودن" Command="{Binding AddStaffCommand}" />
+      </StackPanel>
     </c:SectionPage.Filters>
 
     <Grid RowDefinitions="Auto,12,*,Auto">

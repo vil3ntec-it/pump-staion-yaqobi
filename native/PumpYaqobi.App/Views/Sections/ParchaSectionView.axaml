@@ -110,7 +110,7 @@
                      (‎ToolTip‎) است. ⛔ پس نه چیزی جابه‌جا می‌شود و نه جایی
                      گرفته می‌شود؛ و مانعِ ذخیره هم نیست. -->
                 <TextBox Grid.Column="0" Classes="wfield" Text="{Binding Start}" Watermark="0"
-                         Foreground="{Binding StartBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
+                         Foreground="{Binding StartBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}">
                   <TextBox.InnerRightContent>
                     <StackPanel Orientation="Horizontal" Spacing="4" Margin="4,0"
                                 VerticalAlignment="Center" IsVisible="{Binding LowBase}">
@@ -200,16 +200,16 @@
               <TextBlock Text="فایده — خودکار" Classes="fld" />
               <Border Classes="calc wfield">
                 <TextBlock Text="{Binding ProfitText}" VerticalAlignment="Center"
-                           Foreground="{DynamicResource Pump.Ok}" />
+                           Foreground="{DynamicResource Pump.Ink.Ok}" />
               </Border>
             </StackPanel>
 
             <StackPanel Spacing="4">
               <TextBlock Text="💵 پول موجود افغانی — خودکار" Classes="fld"
-                         Foreground="{DynamicResource Pump.Ok}" FontWeight="Bold" />
+                         Foreground="{DynamicResource Pump.Ink.Ok}" FontWeight="Bold" />
               <Border Classes="calc wfield">
                 <TextBlock Text="{Binding AvailableText}" VerticalAlignment="Center"
-                           Foreground="{Binding AvailableBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                           Foreground="{Binding AvailableBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
                            FontWeight="Bold" FontSize="16" />
               </Border>
             </StackPanel>
@@ -259,7 +259,7 @@
           <Border Grid.Row="0" Classes="card-head">
             <StackPanel Spacing="10">
               <TextBlock Text="{Binding CardTitle}" FontWeight="Bold" FontSize="15"
-                         Foreground="{DynamicResource Pump.Accent}" />
+                         Foreground="{DynamicResource Pump.Ink.Accent}" />
               <WrapPanel Orientation="Horizontal">
                 <TextBlock Text="📅 تاریخ:" Classes="muted" VerticalAlignment="Center"
                            Margin="0,0,7,6" />
@@ -309,7 +309,7 @@
         <Grid RowDefinitions="Auto,Auto">
           <Border Grid.Row="0" Classes="card-head">
             <TextBlock Text="🗂️ تاریخچهٔ پایه‌ها — شروع و ختمِ هر شیفت، از قدیم به تازه"
-                       FontWeight="Bold" Foreground="{DynamicResource Pump.Accent}" />
+                       FontWeight="Bold" Foreground="{DynamicResource Pump.Ink.Accent}" />
           </Border>
           <c:ExcelGrid Grid.Row="1" ItemsSource="{Binding BaseHistory}" x:CompileBindings="False"
                        IsReadOnly="True" BorderThickness="0" CornerRadius="0"
@@ -326,7 +326,7 @@
                   <DataTemplate>
                     <TextBlock Text="{Binding StartText}" Margin="8,0" VerticalAlignment="Center"
                                FontWeight="Bold"
-                               Foreground="{Binding StartBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                               Foreground="{Binding StartBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
@@ -336,7 +336,7 @@
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <TextBlock Text="{Binding LowText}" Margin="8,0" VerticalAlignment="Center"
-                               FontWeight="Bold" Foreground="{DynamicResource Pump.Danger}"
+                               FontWeight="Bold" Foreground="{DynamicResource Pump.Ink.Danger}"
                                ToolTip.Tip="شروعِ این پایه از ختمِ پایهٔ قبلیِ همان شماره کمتر است" />
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
@@ -353,7 +353,7 @@
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
             <TextBlock Text="📑 گزارش‌های ۲۴ ساعته" FontWeight="Bold"
-                       Foreground="{DynamicResource Pump.Accent}" />
+                       Foreground="{DynamicResource Pump.Ink.Accent}" />
             <TextBlock Text="{Binding ReportsCountText}" Classes="muted" />
           </StackPanel>
           <Button Grid.Column="1" Classes="accent" Content="📂 دیدنِ همهٔ گزارش‌ها ›"
@@ -371,7 +371,7 @@
                   Command="{Binding ReportsBackCommand}" />
           <TextBlock Grid.Column="1" Margin="14,0" VerticalAlignment="Center"
                      FontWeight="ExtraBold" FontSize="15"
-                     Foreground="{DynamicResource Pump.Accent}"
+                     Foreground="{DynamicResource Pump.Ink.Accent}"
                      Text="{Binding ReportsCountText, StringFormat=📑 گزارش‌های ۲۴ ساعته — {0}}" />
           <TextBox Grid.Column="2" Text="{Binding DateFilter}" Width="160" Watermark="🔍 فیلتر تاریخ"
                    IsVisible="{Binding ShowReportList}" />
@@ -399,7 +399,7 @@
                       <Expander.Header>
                         <StackPanel Orientation="Horizontal" Spacing="12">
                           <TextBlock Text="{Binding Title}" FontWeight="Bold"
-                                     Foreground="{DynamicResource Pump.Accent}" />
+                                     Foreground="{DynamicResource Pump.Ink.Accent}" />
                           <TextBlock Text="{Binding CountText}" Classes="muted" VerticalAlignment="Center" />
                         </StackPanel>
                       </Expander.Header>
@@ -432,7 +432,7 @@
                                     <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SaleText}" FontWeight="Bold" FontSize="12.5" />
                                     <TextBlock Grid.Row="1" Grid.Column="0" Text="پول موجود" Classes="label" FontSize="11" />
                                     <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AvailableText}" FontWeight="Bold" FontSize="12.5"
-                                               Foreground="{DynamicResource Pump.Ok}" />
+                                               Foreground="{DynamicResource Pump.Ink.Ok}" />
                                     <TextBlock Grid.Row="2" Grid.Column="0" Text="فایده" Classes="label" FontSize="11" />
                                     <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ProfitText}" FontWeight="Bold" FontSize="12.5" />
                                   </Grid>
@@ -461,9 +461,9 @@
             <WrapPanel Orientation="Horizontal" Margin="0,6,0,0">
               <TextBlock Text="{Binding SaleText, StringFormat=فروش: {0}}" FontWeight="Bold" Margin="0,0,18,0" />
               <TextBlock Text="{Binding DebtText, StringFormat=قرض: {0}}" FontWeight="Bold" Margin="0,0,18,0"
-                         Foreground="{DynamicResource Pump.Danger}" />
+                         Foreground="{DynamicResource Pump.Ink.Danger}" />
               <TextBlock Text="{Binding AvailableText, StringFormat=پول موجود: {0}}" FontWeight="Bold" Margin="0,0,18,0"
-                         Foreground="{DynamicResource Pump.Ok}" />
+                         Foreground="{DynamicResource Pump.Ink.Ok}" />
               <TextBlock Text="{Binding ProfitText, StringFormat=فایده: {0}}" FontWeight="Bold" />
             </WrapPanel>
           </StackPanel>
@@ -478,7 +478,7 @@
                 <StackPanel>
                   <Border Classes="card-head">
                     <TextBlock Text="{Binding Title}" FontWeight="Bold"
-                               Foreground="{DynamicResource Pump.Accent}" />
+                               Foreground="{DynamicResource Pump.Ink.Accent}" />
                   </Border>
                   <TextBlock Text="این شیفت ثبت نشده است." Classes="muted" Margin="16,12"
                              IsVisible="{Binding Empty}" />

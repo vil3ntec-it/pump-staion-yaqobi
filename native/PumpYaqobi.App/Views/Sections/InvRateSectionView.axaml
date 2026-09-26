@@ -36,35 +36,35 @@
           <StackPanel Spacing="3">
             <TextBlock Text="فاکتورهای سنجیده‌شده" Classes="label" />
             <TextBlock Text="{Binding CountText}" Classes="num"
-                       Foreground="{DynamicResource Pump.Info}" />
+                       Foreground="{DynamicResource Pump.Ink.Info}" />
           </StackPanel>
         </Border>
         <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="مجموع لیتر" Classes="label" />
             <TextBlock Text="{Binding LitersText}" Classes="num"
-                       Foreground="{DynamicResource Pump.Accent}" />
+                       Foreground="{DynamicResource Pump.Ink.Accent}" />
           </StackPanel>
         </Border>
         <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="زیان اختلاف نرخ" Classes="label" />
             <TextBlock Text="{Binding LossText}" Classes="num"
-                       Foreground="{DynamicResource Pump.Danger}" />
+                       Foreground="{DynamicResource Pump.Ink.Danger}" />
           </StackPanel>
         </Border>
         <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="مفاد اختلاف نرخ" Classes="label" />
             <TextBlock Text="{Binding GainText}" Classes="num"
-                       Foreground="{DynamicResource Pump.Ok}" />
+                       Foreground="{DynamicResource Pump.Ink.Ok}" />
           </StackPanel>
         </Border>
         <Border Classes="stat">
           <StackPanel Spacing="3">
             <TextBlock Text="خالص (زیان − مفاد)" Classes="label" />
             <TextBlock Text="{Binding NetText}" Classes="num"
-                       Foreground="{Binding NetBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                       Foreground="{Binding NetBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
           </StackPanel>
         </Border>
         <Border Classes="stat">
@@ -93,7 +93,7 @@
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate>
                   <TextBlock Text="{Binding DplText}" FontWeight="Bold" VerticalAlignment="Center"
-                             Foreground="{Binding DiffBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                             Foreground="{Binding DiffBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
@@ -101,7 +101,7 @@
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate>
                   <TextBlock Text="{Binding TotalText}" FontWeight="Bold" VerticalAlignment="Center"
-                             Foreground="{Binding DiffBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                             Foreground="{Binding DiffBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>

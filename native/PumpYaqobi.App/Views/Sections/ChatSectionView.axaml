@@ -123,7 +123,7 @@
                         <StackPanel Grid.Column="0" Spacing="4">
                           <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding NotMine}">
                             <TextBlock Text="{Binding Sender}" FontSize="11.5" FontWeight="ExtraBold"
-                                       Foreground="{DynamicResource Pump.Accent}" />
+                                       Foreground="{DynamicResource Pump.Ink.Accent}" />
                             <Border Classes="pill" Padding="6,0" IsVisible="{Binding HasRole}"
                                     Background="{DynamicResource Pump.Input}">
                               <TextBlock Text="{Binding Role}" FontSize="10" />
@@ -145,7 +145,7 @@
                           <StackPanel Orientation="Horizontal" Spacing="6">
                             <TextBlock Text="{Binding Time}" FontSize="10.5" Foreground="{DynamicResource Pump.Muted}" />
                             <TextBlock Text="⏳ در صف" FontSize="10.5" IsVisible="{Binding IsPending}"
-                                       Foreground="{DynamicResource Pump.Warn}" />
+                                       Foreground="{DynamicResource Pump.Ink.Warn}" />
                             <TextBlock Text="{Binding DaysLeft}" FontSize="10.5" Foreground="{DynamicResource Pump.Muted}" />
                           </StackPanel>
                         </StackPanel>

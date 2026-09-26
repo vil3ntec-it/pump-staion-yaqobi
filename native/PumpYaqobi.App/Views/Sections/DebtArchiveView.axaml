@@ -39,27 +39,27 @@
                 <Border Classes="panel" Padding="14,10" IsVisible="{Binding ShowPetrolCard}">
                   <Grid ColumnDefinitions="Auto,10,*">
                     <Border Grid.Column="0" Classes="fshead" BorderBrush="{DynamicResource Pump.Ok}">
-                      <TextBlock Text="⛽ حساب پطرول" Foreground="{DynamicResource Pump.Ok}" />
+                      <TextBlock Text="⛽ حساب پطرول" Foreground="{DynamicResource Pump.Ink.Ok}" />
                     </Border>
                     <UniformGrid Grid.Column="2" Rows="1">
                       <StackPanel Spacing="2">
                         <TextBlock Text="{Binding HeadPetrolPercentValue, StringFormat='فیصدی ما ({0})'}" Classes="fsl" />
-                        <TextBlock Text="{Binding HeadPetrolCommText}" Classes="fsv" Foreground="{DynamicResource Pump.Purple}" />
+                        <TextBlock Text="{Binding HeadPetrolCommText}" Classes="fsv" Foreground="{DynamicResource Pump.Ink.Purple}" />
                       </StackPanel>
                       <StackPanel Spacing="2">
                         <TextBlock Text="{Binding HeadRasidLabel}" Classes="fsl" />
                         <TextBox Text="{Binding HeadPetrolRasidEdit, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                 Classes="fsv" Foreground="{DynamicResource Pump.Ok}"
+                                 Classes="fsv" Foreground="{DynamicResource Pump.Ink.Ok}"
                                  ToolTip.Tip="رسیدِ سربرگ + رسیدهای جدول — نوشتن فقط سهمِ سربرگ را عوض می‌کند" />
                       </StackPanel>
                       <StackPanel Spacing="2">
                         <TextBlock Text="برد" Classes="fsl" />
-                        <TextBlock Text="{Binding HeadPetrolBordText}" Classes="fsv" Foreground="{DynamicResource Pump.Warn}" />
+                        <TextBlock Text="{Binding HeadPetrolBordText}" Classes="fsv" Foreground="{DynamicResource Pump.Ink.Warn}" />
                       </StackPanel>
                       <StackPanel Spacing="2">
                         <TextBlock Text="{Binding HeadAlbaqiLabel}" Classes="fsl" />
                         <TextBlock Text="{Binding HeadPetrolAlbaqiText}" Classes="fsv"
-                                   Foreground="{Binding HeadPetrolAlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                                   Foreground="{Binding HeadPetrolAlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                       </StackPanel>
                     </UniformGrid>
                   </Grid>
@@ -69,27 +69,27 @@
                 <Border Classes="panel" Padding="14,10" IsVisible="{Binding ShowDieselCard}">
                   <Grid ColumnDefinitions="Auto,10,*">
                     <Border Grid.Column="0" Classes="fshead" BorderBrush="{DynamicResource Pump.Warn}">
-                      <TextBlock Text="🟤 حساب دیزل" Foreground="{DynamicResource Pump.Warn}" />
+                      <TextBlock Text="🟤 حساب دیزل" Foreground="{DynamicResource Pump.Ink.Warn}" />
                     </Border>
                     <UniformGrid Grid.Column="2" Rows="1">
                       <StackPanel Spacing="2">
                         <TextBlock Text="{Binding HeadDieselPercentValue, StringFormat='فیصدی ما ({0})'}" Classes="fsl" />
-                        <TextBlock Text="{Binding HeadDieselCommText}" Classes="fsv" Foreground="{DynamicResource Pump.Purple}" />
+                        <TextBlock Text="{Binding HeadDieselCommText}" Classes="fsv" Foreground="{DynamicResource Pump.Ink.Purple}" />
                       </StackPanel>
                       <StackPanel Spacing="2">
                         <TextBlock Text="{Binding HeadRasidLabel}" Classes="fsl" />
                         <TextBox Text="{Binding HeadDieselRasidEdit, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                 Classes="fsv" Foreground="{DynamicResource Pump.Ok}"
+                                 Classes="fsv" Foreground="{DynamicResource Pump.Ink.Ok}"
                                  ToolTip.Tip="رسیدِ سربرگ + رسیدهای جدول — نوشتن فقط سهمِ سربرگ را عوض می‌کند" />
                       </StackPanel>
                       <StackPanel Spacing="2">
                         <TextBlock Text="برد" Classes="fsl" />
-                        <TextBlock Text="{Binding HeadDieselBordText}" Classes="fsv" Foreground="{DynamicResource Pump.Warn}" />
+                        <TextBlock Text="{Binding HeadDieselBordText}" Classes="fsv" Foreground="{DynamicResource Pump.Ink.Warn}" />
                       </StackPanel>
                       <StackPanel Spacing="2">
                         <TextBlock Text="{Binding HeadAlbaqiLabel}" Classes="fsl" />
                         <TextBlock Text="{Binding HeadDieselAlbaqiText}" Classes="fsv"
-                                   Foreground="{Binding HeadDieselAlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                                   Foreground="{Binding HeadDieselAlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                       </StackPanel>
                     </UniformGrid>
                   </Grid>
@@ -105,9 +105,9 @@
                   <TextBlock Text="🟤:" Classes="muted" VerticalAlignment="Center" Margin="0,0,6,4" />
                   <TextBox Width="70" Text="{Binding PercentDieselText}" Margin="0,0,14,4" ToolTip.Tip="فیصدیِ دیزلِ همین آرشیو" />
                   <TextBlock Text="{Binding TotalBordText, StringFormat='جمله برد (پطرول+دیزل): {0}'}" Classes="muted"
-                             FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,14,4" Foreground="{DynamicResource Pump.Warn}" />
+                             FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,14,4" Foreground="{DynamicResource Pump.Ink.Warn}" />
                   <TextBlock Text="{Binding TotalRemText, StringFormat='الباقی کل (پطرول+دیزل): {0}'}" Classes="muted"
-                             FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,0,4" Foreground="{DynamicResource Pump.Info}" />
+                             FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,0,4" Foreground="{DynamicResource Pump.Ink.Info}" />
                 </WrapPanel>
 
                 <!-- ── فیلترِ تیل — همان سه دکمهٔ حسابِ زنده ── -->
@@ -129,7 +129,7 @@
                         <DataTemplate>
                           <Button Classes="fuelchip celltoggle" Content="{Binding FuelChipText}"
                                   Command="{Binding ToggleFuelCommand}"
-                                  Foreground="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                                  Foreground="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
                                   BorderBrush="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
                         </DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
