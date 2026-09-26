@@ -514,6 +514,21 @@ internal static class YearsAudit
         tx.Commit();
         PerfAudit.Exec(conn, "ANALYZE;");
         conn.Close();
+
+        //  ⛔ آمار پس از پر شدنِ SyncUid، نه پیش از آن. ردیف‌های خام SyncUid ندارند
+        //  و `EnsureReady` فقط با عوض شدنِ مهرِ ساخت (که همین ANALYZE با ساختنِ
+        //  sqlite_stat1 عوضش می‌کند) پرشان می‌کند. ANALYZEی پیش از پر شدن به
+        //  SQLite می‌گفت همهٔ SyncUidها یکی‌اند و ایندکسش کنار گذاشته می‌شد —
+        //  هر جست‌وجوی SyncUid روی DebtRows یک اسکنِ کامل (۱۷ms). سنجهٔ `tensync`
+        //  ۶ برابر کند شده بود و مقصر خودِ سنجه بود، نه برنامه.
+        dbf.EnsureReady();
+        using (var again = dbf.Create())
+        {
+            var c2 = again.Database.GetDbConnection();
+            c2.Open();
+            PerfAudit.Exec(c2, "ANALYZE;");
+            c2.Close();
+        }
         return stats;
     }
 
