@@ -80,6 +80,17 @@ internal static class TenSyncProbe
             email = JsonDocument.Parse(File.ReadAllText(outFile)).RootElement.GetProperty("email").GetString()!;
             PumpYaqobi.Services.Data.PumpDbFactory f = new(db);
             f.EnsureReady();
+            //  ⚠️ شماره‌های این کامپیوتر عمداً از الف جدا می‌شوند — وگرنه دو دفترِ
+            //  خالی شماره‌های یکسان می‌دادند و پیوندِ غلط هم «درست» دیده می‌شد
+            using (var c = new SqliteConnection("Data Source=" + db))
+            {
+                c.Open();
+                using var q = c.CreateCommand();
+                q.CommandText = "INSERT OR REPLACE INTO sqlite_sequence(name, seq) " +
+                                "SELECT name, 7000 + (abs(random()) % 900) FROM sqlite_master " +
+                                "WHERE type='table' AND sql LIKE '%AUTOINCREMENT%'";
+                q.ExecuteNonQuery();
+            }
         }
 
         AppHost.Start(db);
@@ -120,9 +131,11 @@ internal static class TenSyncProbe
                 lastPrint = clock.ElapsedMilliseconds;
                 Console.WriteLine($"   {clock.Elapsed.TotalSeconds,6:0}s · دور {rounds} · صف {eng.Queued:N0} · گرفته {eng.PrimeGot:N0} · {eng.Light} {eng.LastError}");
             }
-            var done = st.SeededAt > 0 && eng.Queued == 0 && eng.LastError.Length == 0;
-            if (mode == "down") done = done && st.PrimedAt > 0 || (st.SeededAt > 0 && eng.Queued == 0 && eng.PrimeGot > 0 && !eng.Priming && idle > 2);
+            var done = st.SeededAt > 0 && eng.Queued == 0 && eng.LastError.Length == 0
+                       && (mode == "up" || st.PrimedAt > 0);
             if (done) { if (++idle > 3) break; } else idle = 0;
+            //  ⚠️ صفِ خالی ⇒ مکث، مثلِ حلقهٔ خودِ برنامه — وگرنه سقفِ نرخِ سرور پر می‌شد
+            if (eng.Queued == 0) Thread.Sleep(300);
         }
         Console.WriteLine($"همگام‌سازی: {clock.Elapsed.TotalSeconds:0.0}s · {rounds} دور · صف {eng.Queued} · خطا «{eng.LastError}» · گرفته {eng.PrimeGot:N0}");
 
@@ -132,7 +145,7 @@ internal static class TenSyncProbe
 
         if (mode == "up")
         {
-            File.WriteAllText(outFile, JsonSerializer.Serialize(new { email, counts, seconds = clock.Elapsed.TotalSeconds }));
+            File.WriteAllText(outFile, JsonSerializer.Serialize(new { email, counts, seconds = clock.Elapsed.TotalSeconds, db }));
             return eng.Queued == 0 && eng.LastError.Length == 0 ? 0 : 1;
         }
 
@@ -146,8 +159,59 @@ internal static class TenSyncProbe
             if (!ok || p.Value.GetInt64() > 0)
                 Console.WriteLine($"  {(ok ? "✔" : "✖")} {p.Name,-26}{p.Value.GetInt64(),10:N0} ⇒ {got,10:N0}");
         }
-        Console.WriteLine(bad == 0 ? "✅ کامپیوترِ دوم همهٔ دفتر را گرفت — مو‌به‌مو" : $"❌ {bad} جدول نابرابر");
-        return bad == 0 ? 0 : 1;
+        Console.WriteLine(bad == 0 ? "✅ شمارِ ردیف‌ها مو‌به‌مو" : $"❌ {bad} جدول نابرابر");
+
+        //  ⛔ شمار کافی نیست: هر خانهٔ هر ردیف، و هر کلیدِ خارجی با شناسهٔ سراسریِ پدرش
+        var src = JsonDocument.Parse(File.ReadAllText(outFile)).RootElement;
+        var diff = 0;
+        if (src.TryGetProperty("db", out var srcDb) && File.Exists(srcDb.GetString()))
+        {
+            using var ctx = host.Db.Create();
+            foreach (var t in PumpYaqobi.Services.Data.SyncStore.DataTables(ctx))
+            {
+                var a = Prints(srcDb.GetString()!, t);
+                var b = Prints(db, t);
+                var miss = a.Where(kv => !b.TryGetValue(kv.Key, out var v) || v != kv.Value).ToList();
+                if (miss.Count > 0)
+                {
+                    diff += miss.Count;
+                    var k = miss[0].Key;
+                    Console.WriteLine($"  ✖ {t.Entity}: {miss.Count:N0} ردیفِ ناجور — نمونه:\n     الف {miss[0].Value}\n     ب   {b.GetValueOrDefault(k, "(نیست)")}");
+                }
+            }
+            Console.WriteLine(diff == 0 ? "✅ همهٔ خانه‌ها و همهٔ پیوندهای پدر مو‌به‌مو" : $"❌ {diff:N0} ردیفِ ناجور");
+        }
+        else { Console.WriteLine("⚠️ دفترِ الف پیدا نشد — سنجشِ خانه‌ها نشد"); diff = 1; }
+        return bad == 0 && diff == 0 ? 0 : 1;
+    }
+
+    /// <summary>
+    /// اثرِ هر ردیفِ زنده: همهٔ ستون‌ها جز شماره‌ها و زمانِ ساخت/ویرایش، و هر
+    /// کلیدِ خارجی به‌جای عدد با <c>SyncUid</c>ِ پدرش.
+    /// </summary>
+    private static Dictionary<string, string> Prints(string file, PumpYaqobi.Services.Data.SyncStore.TableInfo t)
+    {
+        var skip = new HashSet<string>(StringComparer.Ordinal) { "Id", "SyncUid", "CreatedAt", "UpdatedAt" };
+        var fk = t.Fks.ToDictionary(x => x.Column, x => x);
+        var cols = t.Columns.Where(c => !skip.Contains(c.Name)).Select(c => c.Column).ToList();
+        var sel = string.Join(", ", cols.Select(c => fk.TryGetValue(c, out var f)
+            ? $"(SELECT p.\"SyncUid\" FROM \"{f.ParentTable}\" p WHERE p.\"Id\" = x.\"{c}\")"
+            : $"x.\"{c}\""));
+        var outD = new Dictionary<string, string>(StringComparer.Ordinal);
+        using var c = new SqliteConnection("Data Source=" + file + ";Mode=ReadOnly");
+        c.Open();
+        using var q = c.CreateCommand();
+        q.CommandText = $"SELECT x.\"SyncUid\"{(cols.Count > 0 ? ", " + sel : "")} FROM \"{t.Table}\" x WHERE x.\"DeletedAt\" IS NULL";
+        using var r = q.ExecuteReader();
+        while (r.Read())
+        {
+            if (r.IsDBNull(0)) continue;
+            var sb = new StringBuilder();
+            for (var i = 1; i < r.FieldCount; i++)
+                sb.Append(cols[i - 1]).Append('=').Append(r.IsDBNull(i) ? "∅" : Convert.ToString(r.GetValue(i), System.Globalization.CultureInfo.InvariantCulture)).Append(" | ");
+            outD[r.GetString(0)] = sb.ToString();
+        }
+        return outD;
     }
 
     /// <summary>ردیف‌های زندهٔ هر جدولِ همگام‌شدنی.</summary>
@@ -168,11 +232,11 @@ internal static class TenSyncProbe
             bool hasDel;
             using (var q = c.CreateCommand())
             {
-                q.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{t}') WHERE name='IsDeleted'";
+                q.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{t}') WHERE name='DeletedAt'";
                 hasDel = Convert.ToInt64(q.ExecuteScalar()) > 0;
             }
             using var q2 = c.CreateCommand();
-            q2.CommandText = $"SELECT COUNT(*) FROM \"{t}\"" + (hasDel ? " WHERE IsDeleted = 0" : "");
+            q2.CommandText = $"SELECT COUNT(*) FROM \"{t}\"" + (hasDel ? " WHERE DeletedAt IS NULL" : "");
             outD[t] = Convert.ToInt64(q2.ExecuteScalar());
         }
         return outD;

@@ -90,6 +90,39 @@ public sealed partial class CloudLink
     // ── Push ───────────────────────────────────────────────────────────
 
     /// <summary>
+    /// شناسهٔ همین <b>دفتر</b> نزدِ همگام‌سازی — <see cref="SyncDeviceFor"/>.
+    /// خالی ⇒ همان <see cref="DeviceUid"/>.
+    /// </summary>
+    public string SyncDeviceOverride { get; set; } = "";
+
+    /// <summary>شناسه‌ای که push و pull و status با آن می‌روند.</summary>
+    public string SyncDevice => SyncDeviceOverride.Length > 0 ? SyncDeviceOverride : DeviceUid;
+
+    /// <summary>
+    /// ⛔ <b>شناسهٔ همگام‌سازی مالِ دفتر است، نه مالِ کامپیوتر.</b>
+    ///
+    /// سرور opهای خودِ همان دستگاه را در pull برنمی‌گرداند (پژواک نشود). و
+    /// <see cref="DeviceUid"/> از نامِ کامپیوتر و کاربر و پوشهٔ نصب ساخته
+    /// می‌شود — پس پس از «از نو و خالی»ِ حذفِ برنامه، یا ویندوزِ تازه روی
+    /// همان کامپیوتر، نصبِ تازه <b>همان شناسه</b> را می‌گرفت و سرور هیچ‌کدام
+    /// از ردیف‌های قبلیِ همین حساب را به او نمی‌داد: دفترِ خالی، برای همیشه.
+    /// سنجهٔ `tensync` (۱۴۰۵/۰۷/۱۴، سرورِ حسابِ واقعی) گرفتش.
+    ///
+    /// ⚠️ نصبی که از قبل همگام شده همان شناسهٔ ثبت‌شده‌اش را نگه می‌دارد
+    /// (<c>SyncState.DeviceId</c>) — عوض شدنش یعنی opهای خودش دوباره
+    /// برمی‌گشتند و می‌توانستند ویرایشِ تازه‌ترِ همین‌جا را بپوشانند. فقط دفترِ
+    /// تازه (که هنوز هیچ‌وقت نفرستاده) شناسهٔ تازه می‌گیرد، از ریشهٔ تصادفیِ
+    /// خودِ همان دفتر (<c>UidSeed</c>).
+    /// </summary>
+    public static string SyncDeviceFor(string stateDeviceId, string uidSeed, string deviceUid)
+    {
+        if (!string.IsNullOrWhiteSpace(stateDeviceId)) return stateDeviceId.Trim();
+        var seed = (uidSeed ?? "").Trim().Trim('-');
+        if (seed.Length < 10) return deviceUid;
+        return deviceUid + "-" + seed[^10..].ToLowerInvariant();
+    }
+
+    /// <summary>
     /// یک دستهٔ opها را می‌فرستد.
     ///
     /// ⚠️ <b>۴۲۶ خطا نیست، یک حالِ واقعی است</b>: نسخهٔ برنامه از سرور
@@ -105,7 +138,7 @@ public sealed partial class CloudLink
 
         var body = new
         {
-            device_id = DeviceUid,
+            device_id = SyncDevice,
             schema_version = PumpYaqobi.Persistence.OpLog.SchemaVersion,
             queued,
             ops = ops.Select(Wire).ToArray(),
@@ -185,7 +218,7 @@ public sealed partial class CloudLink
         var token = SyncToken;
         if (token.Length == 0) return SyncPullResult.No("هنوز به سرورِ حساب بند نشده‌ایم");
 
-        var path = $"{SyncRoot}/pull?device_id={Uri.EscapeDataString(DeviceUid)}&since={since}&limit=500";
+        var path = $"{SyncRoot}/pull?device_id={Uri.EscapeDataString(SyncDevice)}&since={since}&limit=500";
         var res = await SendSync(Build(HttpMethod.Get, path, null, token), ct);
         if (!res.Ok) return SyncPullResult.No(res.Why);
 
@@ -229,7 +262,7 @@ public sealed partial class CloudLink
         var token = SyncToken;
         if (token.Length == 0) return (false, 0, 0, 0, "هنوز به سرورِ حساب بند نشده‌ایم");
 
-        var path = $"{SyncRoot}/status?device_id={Uri.EscapeDataString(DeviceUid)}";
+        var path = $"{SyncRoot}/status?device_id={Uri.EscapeDataString(SyncDevice)}";
         var res = await SendSync(Build(HttpMethod.Get, path, null, token), ct);
         return res.Ok
             ? (true, Num(res.Json, "head"), (int)Num(res.Json, "devices"), (int)Num(res.Json, "conflicts"), "")

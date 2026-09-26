@@ -186,12 +186,83 @@ public sealed class SyncStore
     public IReadOnlyList<SyncOp> Take(int max = MaxBatch)
     {
         using var db = _dbf.Create();
-        return db.SyncOps.AsNoTracking()
-                 .Where(x => !x.Synced)
-                 .OrderBy(x => x.Id)
-                 .Take(Math.Clamp(max, 1, MaxBatch))
-                 .ToList();
+        var list = db.SyncOps.AsNoTracking()
+                     .Where(x => !x.Synced)
+                     .OrderBy(x => x.Id)
+                     .Take(Math.Clamp(max, 1, MaxBatch))
+                     .ToList();
+
+        //  ⛔ <b>دسته با بایت هم بسته می‌شود، نه فقط با شمار.</b> سنجهٔ
+        //  `tensync` (۱۴۰۵/۰۷/۱۴، سرورِ حسابِ واقعی): دویست opِ جدولِ آرشیو
+        //  (هر کدام صدها ردیفِ سریال‌شده) از سقفِ بدنهٔ سرور (۲ مگابایت) گذشت و
+        //  سرور کلِ دسته را «حجم درخواست بیش از حد» رد کرد — و چون همان دسته
+        //  سرِ صف بود، <b>صف برای همیشه ایستاد</b> و هیچ تغییرِ بعدی نرفت.
+        //  ⚠️ دستِ‌کم یک op همیشه می‌رود، هر چقدر بزرگ.
+        var cut = 0; long bytes = 0;
+        foreach (var op in list)
+        {
+            bytes += System.Text.Encoding.UTF8.GetByteCount(op.FieldsJson ?? "") + OpOverheadBytes;
+            if (cut > 0 && bytes > MaxBatchBytes) break;
+            cut++;
+        }
+        var take = cut == list.Count ? list : list.Take(cut).ToList();
+        AttachParents(db, take);
+        return take;
     }
+
+    /// <summary>
+    /// ══ کنارِ هر کلیدِ خارجی، شناسهٔ سراسریِ پدر ══════════════════════════
+    ///
+    /// ⛔ سنجهٔ `tensync` (۱۴۰۵/۰۷/۱۴): حساب‌ها، ردیف‌های قرض‌دار، گزارش‌ها،
+    /// حاضری و ردیف‌های شرکت روی کامپیوترِ دوم <b>هیچ‌کدام</b> نمی‌نشستند،
+    /// چون کلیدِ خارجی عددِ <c>Id</c>ِ این کامپیوتر بود.
+    ///
+    /// ⚠️ مقدار از <b>خودِ ردیفِ روی دیسک</b> خوانده می‌شود، نه از op: ردیفی
+    /// که با پدرش در یک ذخیره ساخته شد، سرِ نوشتنِ op هنوز عددِ موقتِ EF را
+    /// داشت. فقط در حافظه عوض می‌شود — دفترِ op دست نمی‌خورد.
+    /// </summary>
+    private static void AttachParents(PumpDbContext db, List<SyncOp> ops)
+    {
+        if (ops.Count == 0) return;
+        var map = DataTables(db).ToDictionary(x => x.Entity, x => x, StringComparer.Ordinal);
+        db.Database.OpenConnection();
+        try
+        {
+            foreach (var op in ops)
+            {
+                if (op.OpType == "delete" || !map.TryGetValue(op.TableName, out var t) || t.Fks.Count == 0) continue;
+                System.Text.Json.Nodes.JsonObject? node;
+                try { node = System.Text.Json.Nodes.JsonNode.Parse(op.FieldsJson ?? "{}") as System.Text.Json.Nodes.JsonObject; }
+                catch { continue; }
+                if (node is null) continue;
+
+                var changed = false;
+                foreach (var fk in t.Fks)
+                {
+                    if (!node.ContainsKey(fk.Property)) continue;
+                    var id = ScalarLong(db, $"SELECT \"{fk.Column}\" FROM \"{t.Table}\" WHERE \"SyncUid\" = $u LIMIT 1;",
+                                        ("$u", op.RowUid));
+                    string? parentUid = null;
+                    if (id is not null)
+                        parentUid = Scalar(db, $"SELECT \"SyncUid\" FROM \"{fk.ParentTable}\" WHERE \"Id\" = {{0}};", id.Value) as string;
+                    node[fk.Property] = id is null ? null : System.Text.Json.Nodes.JsonValue.Create(id.Value);
+                    node[Sidecar(fk.Property)] = string.IsNullOrEmpty(parentUid) ? null : parentUid;
+                    changed = true;
+                }
+                if (changed) op.FieldsJson = node.ToJsonString();
+            }
+        }
+        finally { db.Database.CloseConnection(); }
+    }
+
+    /// <summary>
+    /// سقفِ بایتِ یک دسته — زیرِ ‎max_batch_bytes‎ی خودِ سرور (۲۵۶ کیلوبایت،
+    /// ‎lib/sync-v1.js‎) و بسیار زیرِ سقفِ بدنه (۲ مگابایت).
+    /// </summary>
+    public const int MaxBatchBytes = 200 * 1024;
+
+    /// <summary>کلیدها و شناسه‌های هر op جدا از خودِ ‎fields‎.</summary>
+    private const int OpOverheadBytes = 200;
 
     /// <summary>
     /// جوابِ سرور برای یک دسته.
@@ -354,19 +425,47 @@ public sealed class SyncStore
         int applied = 0, skipped = 0, failed = 0;
         var why = "";
 
+        //  ⚠️ opی که پدرش هنوز نرسیده کنار گذاشته و پس از بقیهٔ دسته دوباره
+        //  امتحان می‌شود — تا وقتی پیشرفتی هست (عکسِ سرور ترتیبِ جدول ندارد).
+        var pending = new List<(IncomingOp Op, TableInfo T)>();
         foreach (var op in ops)
         {
             if (!map.TryGetValue(Norm(op.Table), out var t) || op.RowUid.Length == 0) { skipped++; continue; }
-            try
+            pending.Add((op, t));
+        }
+
+        var missing = new Dictionary<string, string>(StringComparer.Ordinal);
+        while (pending.Count > 0)
+        {
+            var later = new List<(IncomingOp Op, TableInfo T)>();
+            var progress = false;
+            foreach (var (op, t) in pending)
             {
-                if (ApplyOne(db, t, op, now)) applied++; else skipped++;
+                try
+                {
+                    if (ApplyOne(db, t, op, now)) applied++; else skipped++;
+                    progress = true;
+                }
+                catch (MissingParentException mp)
+                {
+                    later.Add((op, t));
+                    missing[op.OpId + "|" + op.RowUid] = $"{t.Entity}: {mp.Parent} نرسیده";
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    progress = true;
+                    //  ⚠️ پیامِ خام به کاربر نمی‌رسد؛ فقط نوعش، برای «جزئیات»
+                    why = $"{t.Entity}: {ex.GetType().Name}";
+                }
             }
-            catch (Exception ex)
-            {
-                failed++;
-                //  ⚠️ پیامِ خام به کاربر نمی‌رسد؛ فقط نوعش، برای «جزئیات»
-                why = $"{t.Entity}: {ex.GetType().Name}";
-            }
+            if (!progress || later.Count == pending.Count) { pending = later; break; }
+            pending = later;
+        }
+        foreach (var (op, _) in pending)
+        {
+            failed++;
+            why = missing.GetValueOrDefault(op.OpId + "|" + op.RowUid, why);
         }
 
         if (applied > 0) PumpDbContext.Bump();
@@ -385,6 +484,10 @@ public sealed class SyncStore
             return true;
         }
 
+        //  ⛔ کلیدِ خارجی ⇒ عددِ <b>همین</b> کامپیوتر، از شناسهٔ سراسریِ پدر
+        //  (`<ستون>@`). opِ کهنه‌ای که آن را ندارد همان عدد را می‌گیرد.
+        var parents = ResolveParents(db, t, op);
+
         //  فیلدها ⇒ ستون‌های واقعیِ همین جدول. هر نامِ ناشناس نادیده می‌رود.
         var sets = new List<string>();
         var args = new List<object?>();
@@ -395,7 +498,7 @@ public sealed class SyncStore
                 var col = t.Columns.FirstOrDefault(c => string.Equals(c.Name, f.Name, StringComparison.Ordinal));
                 if (col is null || col.Name is "Id" or "SyncUid") continue;
 
-                var value = Value(db, t, col, id, f.Value);
+                var value = parents.TryGetValue(col.Name, out var pid) ? pid : Value(db, t, col, id, f.Value);
                 sets.Add($"\"{col.Column}\" = {{{args.Count}}}");
                 args.Add(value);
             }
@@ -417,7 +520,7 @@ public sealed class SyncStore
                     if (col is null || col.Name is "Id" or "SyncUid" or "CreatedAt" or "UpdatedAt") continue;
                     marks.Add("{" + ins.Count + "}");
                     cols.Add($"\"{col.Column}\"");
-                    ins.Add(Value(db, t, col, null, f.Value));
+                    ins.Add(parents.TryGetValue(col.Name, out var pid) ? pid : Value(db, t, col, null, f.Value));
                 }
             }
 
@@ -453,6 +556,39 @@ public sealed class SyncStore
         Exec(db, $"UPDATE \"{t.Table}\" SET {string.Join(", ", sets)} WHERE \"Id\" = {{{args.Count}}};",
              args.Append((object?)id.Value).ToArray());
         return true;
+    }
+
+    /// <summary>پدرِ یک op هنوز روی این کامپیوتر نیست — بعداً دوباره.</summary>
+    private sealed class MissingParentException(string parent) : Exception(parent)
+    {
+        public string Parent { get; } = parent;
+    }
+
+    /// <summary>
+    /// <c>&lt;ستون&gt;@</c> ⇒ <c>Id</c>ِ پدر روی همین کامپیوتر.
+    /// ⛔ پدری که هنوز نرسیده هیچ‌وقت با عددِ حدسی نمی‌نشیند — ردیفی که به
+    /// حسابِ اشتباه وصل شود از ردیفی که دیرتر برسد بدتر است.
+    /// </summary>
+    private static Dictionary<string, object?> ResolveParents(PumpDbContext db, TableInfo t, IncomingOp op)
+    {
+        var got = new Dictionary<string, object?>(StringComparer.Ordinal);
+        if (t.Fks.Count == 0 || op.Fields.ValueKind != JsonValueKind.Object) return got;
+        foreach (var fk in t.Fks)
+        {
+            if (!op.Fields.TryGetProperty(Sidecar(fk.Property), out var v)) continue;
+            if (v.ValueKind == JsonValueKind.String && v.GetString() is { Length: > 0 } uid)
+            {
+                var pid = ScalarLong(db, $"SELECT \"Id\" FROM \"{fk.ParentTable}\" WHERE \"SyncUid\" = $u LIMIT 1;", ("$u", uid));
+                if (pid is null) throw new MissingParentException(fk.ParentEntity);
+                got[fk.Property] = pid.Value;
+            }
+            //  پدری نداشت (خالی، یا عددی که پدرش دیگر نیست): ستونِ تهی‌پذیر تهی
+            //  می‌شود؛ ستونِ اجباری (مرزِ بازه، ۰) همان عددِ خودش را نگه می‌دارد
+            else if (v.ValueKind == JsonValueKind.Null
+                     && t.Columns.FirstOrDefault(c => c.Name == fk.Property) is { Nullable: true })
+                got[fk.Property] = null;
+        }
+        return got;
     }
 
     /// <summary>
@@ -603,7 +739,24 @@ public sealed class SyncStore
     public sealed record ColumnInfo(string Name, string Column, Type Clr, bool Nullable);
 
     /// <summary>یک جدولِ داده — نامِ موجودیت (که سرور می‌شناسد) و جدولِ واقعی.</summary>
-    public sealed record TableInfo(string Entity, string Table, IReadOnlyList<ColumnInfo> Columns);
+    public sealed record TableInfo(string Entity, string Table, IReadOnlyList<ColumnInfo> Columns)
+    {
+        /// <summary>کلیدهای خارجیِ این جدول به جدول‌های همگام‌شدنیِ دیگر.</summary>
+        public IReadOnlyList<FkInfo> Fks { get; init; } = Array.Empty<FkInfo>();
+    }
+
+    /// <summary>
+    /// یک کلیدِ خارجی: ستونِ این جدول ⇒ <c>Id</c>ِ جدولِ پدر.
+    ///
+    /// ⛔ <b>عددِ <c>Id</c> مالِ همین کامپیوتر است</b> و روی کامپیوترِ دیگر
+    /// به ردیفِ دیگری اشاره می‌کند. پس کنارِ هر کلیدِ خارجی، شناسهٔ سراسریِ
+    /// پدر (<c>SyncUid</c>) با نامِ <c>&lt;ستون&gt;@</c> می‌رود و گیرنده آن را به
+    /// عددِ خودش برمی‌گرداند (<see cref="Sidecar"/>).
+    /// </summary>
+    public sealed record FkInfo(string Property, string Column, string ParentEntity, string ParentTable);
+
+    /// <summary>نامِ فیلدِ همراهِ یک کلیدِ خارجی — شناسهٔ سراسریِ پدر.</summary>
+    public static string Sidecar(string property) => property + "@";
 
     /// <summary>
     /// جدول‌هایی که همگام می‌شوند — همان‌هایی که <see cref="OpLog.Local"/>
@@ -627,9 +780,34 @@ public sealed class SyncStore
                 if (string.IsNullOrEmpty(column)) continue;
                 cols.Add(new ColumnInfo(p.Name, column, p.ClrType, p.IsNullable));
             }
-            list.Add(new TableInfo(name, table, cols));
+
+            var fks = new List<FkInfo>();
+            foreach (var fk in et.GetForeignKeys())
+            {
+                if (fk.Properties.Count != 1) continue;
+                var parent = fk.PrincipalEntityType;
+                if (!typeof(EntityBase).IsAssignableFrom(parent.ClrType) || OpLog.Local.Contains(parent.ClrType.Name)) continue;
+                if (fk.PrincipalKey.Properties.Count != 1 || fk.PrincipalKey.Properties[0].Name != "Id") continue;
+                var ptable = parent.GetTableName();
+                var column = fk.Properties[0].GetColumnName();
+                if (string.IsNullOrEmpty(ptable) || string.IsNullOrEmpty(column)) continue;
+                fks.Add(new FkInfo(fk.Properties[0].Name, column, parent.ClrType.Name, ptable));
+            }
+            foreach (var soft in OpLog.SoftParents)
+            {
+                if (soft.Entity != name || fks.Any(x => x.Property == soft.Property)) continue;
+                var parent = db.Model.GetEntityTypes().FirstOrDefault(x => x.ClrType.Name == soft.Parent);
+                var column = et.FindProperty(soft.Property)?.GetColumnName();
+                var ptable = parent?.GetTableName();
+                if (string.IsNullOrEmpty(column) || string.IsNullOrEmpty(ptable)) continue;
+                fks.Add(new FkInfo(soft.Property, column, soft.Parent, ptable));
+            }
+            list.Add(new TableInfo(name, table, cols) { Fks = fks });
         }
-        return list.OrderBy(x => x.Entity, StringComparer.Ordinal).ToList();
+        //  ⛔ پدر پیش از فرزند (`OpLog.Rank`)، بعد الفبایی — ترتیبِ «بارِ اول»
+        var rank = OpLog.Rank(db.Model);
+        return list.OrderBy(x => rank.GetValueOrDefault(x.Entity))
+                   .ThenBy(x => x.Entity, StringComparer.Ordinal).ToList();
     }
 
     /// <summary>همان قاعدهٔ <c>normName</c>ِ سرور — حروفِ کوچک، بی جداکننده.</summary>
@@ -643,9 +821,27 @@ public sealed class SyncStore
 
     // ── SQLِ خام ───────────────────────────────────────────────────────
 
+    /// <summary>
+    /// ⛔ **از درِ خودِ اتصال، نه `ExecuteSqlRaw`.** EF برای پارامترِ خام نوعِ
+    /// ستون را از نوعِ مقدار می‌سازد و برای <see cref="DBNull"/> هیچ نگاشتی
+    /// ندارد («no store type mapping for DBNull»). یعنی هر ردیفِ رسیده‌ای که
+    /// حتی یک فیلدِ خالی داشت — تقریباً همه — روی کامپیوترِ دوم رد می‌شد و
+    /// دفترِ او خالی می‌ماند. سنجهٔ `tensync` (دو کامپیوتر، سرورِ واقعی) گرفتش.
+    /// </summary>
     private static void Exec(PumpDbContext db, string sql, params object?[] args)
     {
-        db.Database.ExecuteSqlRaw(sql, args.Select(a => a ?? DBNull.Value).ToArray());
+        var text = sql;
+        for (var i = args.Length - 1; i >= 0; i--) text = text.Replace("{" + i + "}", "$a" + i);
+        using var cmd = db.Database.GetDbConnection().CreateCommand();
+        var opened = cmd.Connection!.State != System.Data.ConnectionState.Open;
+        if (opened) cmd.Connection.Open();
+        try
+        {
+            cmd.CommandText = text;
+            for (var i = 0; i < args.Length; i++) Add(cmd, "$a" + i, args[i]);
+            cmd.ExecuteNonQuery();
+        }
+        finally { if (opened) cmd.Connection.Close(); }
     }
 
     private static object? Scalar(PumpDbContext db, string sql, params object?[] args)
