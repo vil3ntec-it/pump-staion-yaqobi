@@ -438,6 +438,75 @@ public sealed partial class CloudLink
     /// که سرورِ ساختگی را بی‌اثر می‌کند.
     /// </para>
     /// </summary>
+    /// <summary>
+    /// ══ مجوزی که مالِ این کامپیوتر نیست ⇒ همین کامپیوتر از نو بند می‌شود ══
+    ///
+    /// گزارشِ صاحب ریپو با عکس (۱۴۰۵/۰۷/۱۴): پنلِ مدیر «آزمایشی · ۳۰ روز»،
+    /// و خودِ برنامه «بدونِ اشتراکِ فعال» و **کلِ برنامه فقط‌خواندنی**.
+    /// سنجهٔ `signuptrial` با ‎PUMP_SIGNUP_CORRUPT=1‎ روی سرورِ حسابِ واقعی
+    /// چهار حال را یافت که هر کدام **دقیقاً همان صفحه** را می‌سازد و هیچ‌وقت
+    /// خودش درست نمی‌شد: شناسهٔ دستگاه (`duid`) ناجور، اثرِ انگشتِ کامپیوتر
+    /// ناجور، کلیدِ عمومیِ دیگر روی دیسک، و شناسهٔ پمپِ دیگر. در هر چهار،
+    /// `RefreshAsync` هر ده دقیقه همان مجوزِ ناجور را دوباره می‌گرفت (یا
+    /// نمی‌پذیرفت)، و چون دستگاه «فعال» بود هیچ‌وقت دوباره بند نمی‌شد.
+    ///
+    /// ⛔ **فقط وقتی امضا یا هویت شکست خورده** (`!SignatureOk`) — نه برای
+    /// مجوزِ منقضی (آن را `RefreshAsync` و `LicenseClock.Anchor` درست
+    /// می‌کنند) و نه برای «مجوز نیست» (اشتراک نداشتن یک جوابِ درست است).
+    ///
+    /// ⛔ **راهش همان `BindAsync`ِ همیشگی است با توکنِ حساب** — نه چیزِ
+    /// تازه‌ای. توکنِ حساب با DPAPI رمز شده، پس پوشهٔ کپی‌شده روی کامپیوترِ
+    /// دیگر اصلاً «واردشده» نیست و به این‌جا نمی‌رسد؛ یعنی قیدِ «کپیِ پوشه
+    /// اشتراک را با خودش نمی‌برد» سرِ جایش است.
+    ///
+    /// ⚠️ **یک بیت از دفتر لمس نمی‌شود** — فقط توکنِ دستگاه و مجوز و (برای
+    /// کامپیوترِ دیگر) شناسه‌های همین کامپیوتر.
+    /// </summary>
+    private async Task ReseatIfForeignLicenseAsync(string acctStation, string locked, bool bindDue,
+                                                   CancellationToken ct)
+    {
+        if (!Activated || !bindDue || acctStation.Length == 0) return;
+        if (!string.Equals(acctStation, locked, StringComparison.Ordinal)) return;
+        if (string.IsNullOrWhiteSpace(_settings.CloudLicense)) return;
+        var check = Verify();
+        if (check.Valid || check.SignatureOk) return;
+
+        var oldUid = _settings.CloudDeviceUid;
+        var oldMachine = _settings.CloudDeviceMachine;
+        //  «از کامپیوترِ دیگری آمده» ⇒ شناسه‌های **همین** کامپیوتر از نو
+        if (CloudConfig.MachineMoved(_settings))
+        {
+            _settings.CloudDeviceMachine = "";
+            _settings.CloudDeviceUid = "";
+        }
+        var oldToken = _settings.CloudDeviceToken;
+        var oldLicense = _settings.CloudLicense;
+        _settings.CloudDeviceToken = "";
+        _settings.CloudLicense = "";
+
+        CloudResult r;
+        try { r = await BindAsync(ct); }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) { r = CloudResult.No(ex.GetType().Name); }
+
+        if (r.Ok)
+        {
+            LastBindWhy = "";
+            _lastBindFailAt = DateTime.MinValue;
+            LicenseChanged?.Invoke();
+            return;
+        }
+        //  ⚠️ نشد ⇒ همان چیزی که بود برمی‌گردد (دستگاه بی‌توکن نمی‌ماند) و
+        //  دورِ بعد، ده دقیقه بعد، دوباره.
+        _settings.CloudDeviceToken = oldToken;
+        _settings.CloudLicense = oldLicense;
+        _settings.CloudDeviceUid = oldUid;
+        _settings.CloudDeviceMachine = oldMachine;
+        LastBindWhy = "مجوزِ این کامپیوتر سنجیده نشد و وصلِ دوباره نشد — " + (r.Why ?? "");
+        _lastBindFailAt = DateTime.UtcNow;
+        await SaveQuiet();
+    }
+
     public async Task<CloudResult> BindAsync(CancellationToken ct = default, bool adopt = false)
     {
         if (!SignedIn) return CloudResult.No("اول وارد حساب شوید", "no_account");
@@ -2159,6 +2228,26 @@ public sealed partial class CloudLink
             && !string.Equals(acctStation, locked, StringComparison.Ordinal))
             return (false, "", "", "", "این حساب مالِ پمپِ دیگری است. برای جابه‌جایی، "
                 + "این دستگاه را از پمپِ فعلی جدا کنید.");
+
+        //  ⛔ **شناسهٔ پمپِ روی دیسک خراب است، ولی مجوزِ امضاشده خودش می‌گوید
+        //  این کامپیوتر روی همان پمپِ حساب است** (۱۴۰۵/۰۷/۱۴، سنجهٔ
+        //  `signuptrial` با ‎PUMP_SIGNUP_CORRUPT=1‎). بی این، راهِ «روی پمپِ
+        //  دیگری است» (`adopt`) می‌رفت و دستگاهِ سالم را از پمپِ خودش جدا
+        //  می‌کرد. امضا مدرک است، نه شناسهٔ روی دیسک.
+        if (Activated && locked.Length > 0 && acctStation.Length > 0
+            && !string.Equals(acctStation, locked, StringComparison.Ordinal)
+            && LicenseGuard.Check(_settings.CloudLicense, _settings.CloudPublicKey, DeviceUid, acctStation,
+                                  LicenseClock.Now(_settings)).SignatureOk)
+        {
+            _settings.CloudStationId = acctStation;
+            locked = acctStation;
+            await SaveQuiet();
+        }
+
+        //  ⛔ **همین پمپ، ولی مجوزِ روی دیسک مالِ این کامپیوتر نیست** —
+        //  همان عکسِ صاحب ریپو (۱۴۰۵/۰۷/۱۴): پنل «آزمایشی · ۳۰ روز»، برنامه
+        //  «بدونِ اشتراکِ فعال» و **کلِ برنامه فقط‌خواندنی**.
+        await ReseatIfForeignLicenseAsync(acctStation, locked, bindDue, ct);
 
         var elsewhere = Activated && locked.Length > 0
             && !string.Equals(acctStation, locked, StringComparison.Ordinal);

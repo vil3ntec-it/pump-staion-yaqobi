@@ -503,7 +503,12 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         try
         {
             var res = await Cloud.RefreshAsync();
-            SubMessage = res.Ok ? "" : "❌ " + res.Why;
+            //  ⛔ همان دورِ کاملِ پس‌زمینه هم، همین حالا — مجوزی که مالِ این
+            //  کامپیوتر نیست فقط از راهِ حساب درست می‌شود، نه با گرفتنِ دوبارهٔ
+            //  همان مجوز (`CloudLink.ReseatIfForeignLicenseAsync`).
+            await StationPublisher.CloudKeepNowAsync();
+            var ok = LicenseGuard.CheckStored(AppSettings.Load()).Valid;
+            SubMessage = res.Ok || ok ? "" : "❌ " + res.Why;
             ShowSubscription();
         }
         finally { Busy = false; }

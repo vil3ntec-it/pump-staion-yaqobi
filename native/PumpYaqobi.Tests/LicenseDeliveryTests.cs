@@ -441,4 +441,89 @@ public class LicenseDeliveryTests : IDisposable
         Assert.True(body.IndexOf("HomeFromAccountAsync", StringComparison.Ordinal)
                   < body.IndexOf("KeepLicenseFreshAsync", StringComparison.Ordinal));
     }
+
+    /// <summary>
+    /// ⛔ <b>مجوزی که مالِ این کامپیوتر نیست ⇒ خودش از نو بند می‌شود</b>
+    /// (۱۴۰۵/۰۷/۱۴، عکسِ صاحب ریپو: پنل «آزمایشی · ۳۰ روز»، برنامه
+    /// «بدونِ اشتراکِ فعال» و کلِ برنامه فقط‌خواندنی). مجوزِ روی دیسک برای
+    /// شناسهٔ دستگاهِ دیگری صادر شده؛ گرفتنِ دوبارهٔ همان مجوز هرگز درستش
+    /// نمی‌کرد و چون دستگاه «فعال» بود، دیگر هیچ‌وقت بند نمی‌شد.
+    /// </summary>
+    [Fact]
+    public async Task MojavezeKamputereDigar_KhodashAzNo_Band_Mishavad()
+    {
+        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var (link, f) = Bound();
+        f.CloudLicense = Sign("pc-someone-else", now, new[] { "cloudbackup" }, Days(30));
+        f.Save();
+        var before = link.Verify();
+        Assert.False(before.Valid);
+        Assert.False(before.SignatureOk);
+
+        var uid = CloudConfig.DeviceUid(f);
+        string? bindBody = null;
+        CloudLink.TestTransport = async (req, _) =>
+        {
+            var path = req.RequestUri!.AbsolutePath;
+            _hits.Add(path);
+            if (path == "/api/pump/device/bind" && req.Content is not null)
+                bindBody = await req.Content.ReadAsStringAsync();
+            return path switch
+            {
+                "/api/pump/me" => Json(HttpStatusCode.OK, Me(true, Days(30))),
+                "/api/pump/device/bind" => Json(HttpStatusCode.Created, JsonSerializer.Serialize(new
+                {
+                    deviceToken = "dev-2",
+                    station = new { id = Station },
+                    publicKey = PublicKey,
+                    license = Sign(uid, now, new[] { "cloudbackup" }, Days(30)),
+                    entitlement = new { source = "subscription" },
+                })),
+                _ => Json(HttpStatusCode.NotFound, "{}"),
+            };
+        };
+
+        //  ⚠️ `forceBind` — ترمزِ ده‌دقیقه‌ایِ «پس از شکستِ بند» استاتیک است و
+        //  آزمونِ موازیِ دیگری می‌تواند پرش کند؛ این همان راهِ `CloudKeepNowAsync` است.
+        await link.HomeFromAccountAsync(forceBind: true);
+
+        var disk = AppSettings.Load();
+        Assert.Contains("/api/pump/device/bind", _hits);
+        //  ⛔ بندِ تازه با **توکنِ حساب** است، نه راهِ «پمپِ دیگری است» (adopt)
+        Assert.NotNull(bindBody);
+        Assert.DoesNotContain("adopt", bindBody!);
+        Assert.Equal("dev-2", disk.CloudDeviceToken);
+        Assert.True(LicenseGuard.CheckStored(disk).Valid);
+        Assert.True(Entitlements.State(disk).Open);
+    }
+
+    /// <summary>
+    /// ⛔ <b>و مجوزِ منقضی یا نبودنِ مجوز این راه را نمی‌زند</b> — آن‌ها را
+    /// گرفتنِ دوبارهٔ مجوز درست می‌کند، و «اشتراک ندارد» یک جوابِ درست است.
+    /// </summary>
+    [Fact]
+    public async Task MojavezeNabude_BandeDobare_Nemizanad()
+    {
+        var (link, _) = Bound();
+        Serve(path => path switch
+        {
+            "/api/pump/me" => Json(HttpStatusCode.OK, Me(true, Days(30))),
+            _ => Json(HttpStatusCode.NotFound, "{}"),
+        });
+        await link.HomeFromAccountAsync();
+        Assert.DoesNotContain("/api/pump/device/bind", _hits);
+        Assert.Equal("dev-1", AppSettings.Load().CloudDeviceToken);
+    }
+
+    /// <summary>سورس: نوارِ فقط‌خواندنی با آمدنِ مجوز همان لحظه تازه می‌شود.</summary>
+    [Fact]
+    public void NavareFaghatKhandani_BaMojaveze_Taze_Taze_Mishavad()
+    {
+        var vm = File.ReadAllText(Path.Combine(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..")),
+            "PumpYaqobi.App", "ViewModels", "MainViewModel.cs"));
+        var i = vm.IndexOf("CloudLink.LicenseChanged +=", StringComparison.Ordinal);
+        Assert.True(i > 0);
+        var end = vm.IndexOf("});", i, StringComparison.Ordinal);
+        Assert.Contains("NoticeText = SoftLock.Banner()", vm[i..end]);
+    }
 }
