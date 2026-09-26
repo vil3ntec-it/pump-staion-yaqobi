@@ -95,16 +95,16 @@
 
                       <StackPanel Grid.Row="4">
                         <TextBlock Text="{Binding SalesText}" Classes="cmp-fig"
-                                   Foreground="{DynamicResource Pump.Danger}" />
+                                   Foreground="{DynamicResource Pump.Ink.Danger}" />
                         <TextBlock Text="فروشِ ورق · افغانی" Classes="card-sub" />
                         <Border Classes="card-rule" Margin="11,10,11,0" />
                         <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="11,8,7,9">
                           <TextBlock Grid.Column="0" Text="{Binding DebtText}" FontWeight="Bold" FontSize="12"
-                                     Foreground="{DynamicResource Pump.Danger}" />
+                                     Foreground="{DynamicResource Pump.Ink.Danger}" />
                           <TextBlock Grid.Column="1" Text="{Binding ExpenseText}" FontWeight="Bold" FontSize="12"
-                                     Margin="12,0,0,0" Foreground="{DynamicResource Pump.Accent}" />
+                                     Margin="12,0,0,0" Foreground="{DynamicResource Pump.Ink.Accent}" />
                           <Button Grid.Column="3" Classes="qr-link" Content="PDF"
-                                  Foreground="{DynamicResource Pump.Ok}"
+                                  Foreground="{DynamicResource Pump.Ink.Ok}"
                                   Command="{Binding $parent[ItemsRepeater].((vm:WaraqSectionViewModel)DataContext).PdfCardCommand}"
                                   CommandParameter="{Binding}" />
                         </Grid>

@@ -68,42 +68,42 @@
                       <StackPanel Spacing="3">
                         <TextBlock Text="جمله مقدار (تن)" Classes="label" />
                         <TextBlock Text="{Binding TotalTonText}" Classes="num"
-                                   Foreground="{DynamicResource Pump.Info}" />
+                                   Foreground="{DynamicResource Pump.Ink.Info}" />
                       </StackPanel>
                     </Border>
                     <Border Classes="stat">
                       <StackPanel Spacing="3">
                         <TextBlock Text="جمله کل دالر" Classes="label" />
                         <TextBlock Text="{Binding TotalUsdText}" Classes="num"
-                                   Foreground="{DynamicResource Pump.Info}" />
+                                   Foreground="{DynamicResource Pump.Ink.Info}" />
                       </StackPanel>
                     </Border>
                     <Border Classes="stat">
                       <StackPanel Spacing="3">
                         <TextBlock Text="جمله کل (افغانی)" Classes="label" />
                         <TextBlock Text="{Binding TotalAfnText}" Classes="num"
-                                   Foreground="{DynamicResource Pump.Accent}" />
+                                   Foreground="{DynamicResource Pump.Ink.Accent}" />
                       </StackPanel>
                     </Border>
                     <Border Classes="stat">
                       <StackPanel Spacing="3">
                         <TextBlock Text="رسید دالر" Classes="label" />
                         <TextBlock Text="{Binding PaidUsdText}" Classes="num"
-                                   Foreground="{DynamicResource Pump.Ok}" />
+                                   Foreground="{DynamicResource Pump.Ink.Ok}" />
                       </StackPanel>
                     </Border>
                     <Border Classes="stat">
                       <StackPanel Spacing="3">
                         <TextBlock Text="رسید (افغانی)" Classes="label" />
                         <TextBlock Text="{Binding PaidAfnText}" Classes="num"
-                                   Foreground="{DynamicResource Pump.Ok}" />
+                                   Foreground="{DynamicResource Pump.Ink.Ok}" />
                       </StackPanel>
                     </Border>
                     <Border Classes="stat">
                       <StackPanel Spacing="3">
                         <TextBlock Text="جمله الباقی" Classes="label" />
                         <TextBlock Text="{Binding AlbaqiAfnText}" Classes="num"
-                                   Foreground="{Binding AlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                                   Foreground="{Binding AlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                         <TextBlock Text="{Binding AlbaqiUsdText}" Classes="num2" />
                         <TextBlock Text="{Binding AlbaqiStatus}" Classes="muted" FontWeight="Bold" />
                       </StackPanel>
@@ -119,7 +119,7 @@
                             ToolTip.Tip="خریدهای مخزنِ همین شرکت در بازهٔ همین جدول — پطرول" />
                     <Button Classes="ghost" Content="{Binding DieselBuyText}" Command="{Binding OpenPurchasesCommand}"
                             CommandParameter="diesel" Margin="0,0,6,4"
-                            Foreground="{DynamicResource Pump.Warn}" BorderBrush="{DynamicResource Pump.Warn}"
+                            Foreground="{DynamicResource Pump.Ink.Warn}" BorderBrush="{DynamicResource Pump.Warn}"
                             ToolTip.Tip="خریدهای مخزنِ همین شرکت در بازهٔ همین جدول — دیزل" />
                   </WrapPanel>
 
@@ -140,7 +140,7 @@
                           <DataTemplate>
                             <TextBlock Text="{Binding PoulCurrencyText}" FontWeight="Bold" Margin="8,0"
                                        VerticalAlignment="Center"
-                                       Foreground="{Binding PoulCurrencyBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                                       Foreground="{Binding PoulCurrencyBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                           </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                       </DataGridTemplateColumn>
@@ -149,7 +149,7 @@
                           <DataTemplate>
                             <TextBlock Text="{Binding AlbaqiText}" FontWeight="Bold" Margin="8,0"
                                        VerticalAlignment="Center"
-                                       Foreground="{Binding AlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                                       Foreground="{Binding AlbaqiBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                           </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                       </DataGridTemplateColumn>

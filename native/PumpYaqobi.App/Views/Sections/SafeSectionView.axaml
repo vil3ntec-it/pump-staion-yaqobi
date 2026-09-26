@@ -51,7 +51,7 @@
           <StackPanel Spacing="3">
             <TextBlock Text="🏛️ جمله ماندگی" Classes="label" />
             <TextBlock Text="{Binding MandagiAfn, StringFormat={}{0} افغانی}" Classes="num"
-                       Foreground="{DynamicResource Pump.Info}" />
+                       Foreground="{DynamicResource Pump.Ink.Info}" />
             <TextBlock Text="{Binding MandagiUsd, StringFormat={}{0} دالر}" Classes="num2" />
           </StackPanel>
         </Border>
@@ -59,7 +59,7 @@
           <StackPanel Spacing="3">
             <TextBlock Text="💵 جمله بردگی" Classes="label" />
             <TextBlock Text="{Binding BardagiAfn, StringFormat={}{0} افغانی}" Classes="num"
-                       Foreground="{DynamicResource Pump.Ok}" />
+                       Foreground="{DynamicResource Pump.Ink.Ok}" />
             <TextBlock Text="{Binding BardagiUsd, StringFormat={}{0} دالر}" Classes="num2" />
           </StackPanel>
         </Border>
@@ -89,7 +89,7 @@
                       <DataTemplate>
                         <Button Classes="fuelchip celltoggle" Content="{Binding KindText}"
                                 Command="{Binding ToggleKindCommand}"
-                                Foreground="{Binding KindChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                                Foreground="{Binding KindChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
                                 BorderBrush="{Binding KindChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
                                 ToolTip.Tip="زدنش این ردیف را بردگی ⇄ ماندگی می‌کند" />
                       </DataTemplate>
@@ -107,7 +107,7 @@
                       <DataTemplate>
                         <Button Classes="fuelchip celltoggle" Content="{Binding CurrencyText}"
                                 Command="{Binding ToggleCurrencyCommand}"
-                                Foreground="{Binding CurrencyChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                                Foreground="{Binding CurrencyChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
                                 BorderBrush="{Binding CurrencyChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
                                 ToolTip.Tip="زدنش واحد را افغانی ⇄ دالر می‌کند" />
                       </DataTemplate>

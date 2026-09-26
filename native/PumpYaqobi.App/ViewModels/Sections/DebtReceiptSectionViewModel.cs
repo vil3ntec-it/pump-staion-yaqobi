@@ -23,7 +23,9 @@ public sealed class DebtReceiptRowViewModel
         Account = e.Account ?? "";
         Note = e.Note ?? "";
         AmountText = Shamsi.Money(e.Amount);
-        UnitText = DebtReceiptSectionViewModel.UnitLabel(e.Unit, e.Fuel);
+        UnitText = DebtQuickReceiptService.IsRetail(e)
+            ? "🛒 چکنه · 💵 پول"
+            : DebtReceiptSectionViewModel.UnitLabel(e.Unit, e.Fuel);
         UnitBrushKey = e.Unit == LedgerMode.Fuel
             ? (e.Fuel == FuelType.Diesel ? "Pump.Warn" : "Pump.Ok")
             : "Pump.Info";
@@ -73,7 +75,11 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
         _dateShamsi = Shamsi.Today();
         // درِ «🕘 تاریخچه»ی همین بخش — شرحش بالای ‎SectionViewModel.HistoryKind‎
         HistoryKind = "rasid";
+        Picker = new YearMonthPicker(k => { if (k.Length > 0 && k != Month) Month = k; });
     }
+
+    /// <summary>کشوی سال و ماه (۱۴۰۵/۰۷/۱۴). ⛔ ماه همان <see cref="Month"/> است؛ این فقط نما است.</summary>
+    public YearMonthPicker Picker { get; }
 
     /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
     /// — وگرنه جدول به ازای هر ردیف یک‌بار از نو چیده می‌شود و بخش می‌ایستد.</summary>
@@ -90,6 +96,51 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
     [ObservableProperty] private LedgerMode _unit = LedgerMode.Money;
     /// <summary>وقتی واحد «تیل» است، کدام تیل.</summary>
     [ObservableProperty] private FuelType _fuel = FuelType.Petrol;
+
+    // ══ حسابِ کجا: قرض‌دار یا چکنه (۱۴۰۵/۰۷/۱۴) ═══════════════════════════
+    //
+    //  خواستهٔ صاحب ریپو: «یک کادرِ کشوییِ دیگه هم بغلِ اون دوتا بزار به
+    //  اسمِ چکنه یا قرض‌دار؛ اگه چکنه بود یارو رو با همون اسم درجا اتومات
+    //  پیدا کنه و رسید بره توی کادرِ اون و الباقی معلوم بشه؛ اگه قرض‌داران
+    //  بودن هم برای قرض‌داران این‌طوری بشه.»
+    //
+    //  ⛔ رسیدِ چکنه فقط پول است (دفترِ چکنه ستونِ رسیدِ تیل ندارد)، پس با
+    //  «چکنه» کشوییِ واحد روی «پول» می‌ایستد و بسته می‌شود — و می‌گوید چرا.
+
+    /// <summary>گزینه‌های کشوییِ حساب — ترتیبشان با <see cref="TargetIndex"/> قفل است.</summary>
+    public string[] TargetOptions { get; } = { "👤 قرض‌دار", "🛒 چکنه" };
+
+    [ObservableProperty] private bool _isRetail;
+
+    public int TargetIndex
+    {
+        get => IsRetail ? 1 : 0;
+        set { if (value >= 0) IsRetail = value == 1; }
+    }
+
+    partial void OnIsRetailChanged(bool v)
+    {
+        if (v) Unit = LedgerMode.Money;
+        OnPropertyChanged(nameof(TargetIndex));
+        OnPropertyChanged(nameof(UnitOpen));
+        OnPropertyChanged(nameof(NameLabel));
+        OnPropertyChanged(nameof(NameSuggestKey));
+        OnPropertyChanged(nameof(UnitHint));
+        RefreshUnit();
+    }
+
+    /// <summary>کشوییِ واحد باز است؟ با «چکنه» نه — فقط پول.</summary>
+    public bool UnitOpen => !IsRetail;
+    public string UnitHint => IsRetail ? "چکنه فقط رسیدِ پول دارد" : "پول یا تیل";
+    public string NameLabel => IsRetail ? "نامِ حسابِ چکنه" : "نام قرض‌دار";
+    /// <summary>تکمیلِ خودکارِ کادرِ نام از نام‌های همان دفتر.</summary>
+    public string NameSuggestKey => IsRetail ? "chakana" : "debtor";
+
+    /// <summary>
+    /// «الباقی معلوم بشه» — پس از هر رسید: حساب و الباقیِ همین حالای او.
+    /// ⛔ هیچ عددی این‌جا ساخته نمی‌شود؛ از همان محاسبه‌های کارتِ قرض‌دار و جملهٔ چکنه.
+    /// </summary>
+    [ObservableProperty] private string _lastResult = "";
 
     partial void OnUnitChanged(LedgerMode v) => RefreshUnit();
     partial void OnFuelChanged(FuelType v) => RefreshUnit();
@@ -152,10 +203,11 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
     /// بعدی از زیرِ دستِ کاربر فرار می‌کند — همان درسی که کادرِ هشدارِ
     /// پارچه داد.
     /// </summary>
-    public bool IsFuel => Unit == LedgerMode.Fuel;
+    public bool IsFuel => Unit == LedgerMode.Fuel && !IsRetail;
 
     /// <summary>و چرا بسته است، نوشته می‌شود — قفلِ بی‌توضیح باگ است.</summary>
-    public string FuelHint => IsFuel ? "پطرول یا دیزل" : "برای رسیدِ پول لازم نیست";
+    public string FuelHint => IsRetail ? "برای چکنه لازم نیست"
+        : IsFuel ? "پطرول یا دیزل" : "برای رسیدِ پول لازم نیست";
 
     /// <summary>برچسبِ واحد — یک جا، پس ردیفِ جدول و کپسولِ فرم هیچ‌وقت دو چیز نمی‌گویند.</summary>
     public static string UnitLabel(LedgerMode unit, FuelType fuel) =>
@@ -212,6 +264,7 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
         if (Month.Length == 0 || !Months.Contains(Month))
             _month = Months.FirstOrDefault() ?? Shamsi.MonthKey(Shamsi.Today());
         OnPropertyChanged(nameof(Month));
+        Picker.Load(Months, Month);
         await ReloadAsync();
     }
 
@@ -236,6 +289,27 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
     public async Task SubmitAsync()
     {
         var amount = Shamsi.Num(AmountText);
+
+        if (IsRetail)
+        {
+            var (r, name, albaqi) = await _host.DebtReceipts.AddRetailAsync(
+                TypedName, amount, _host.Retail, DateShamsi, Note);
+            if (r == QuickReceiptResult.Incomplete) return;
+            if (r == QuickReceiptResult.NotFound)
+            {
+                _host.Toast("⚠️ حسابِ چکنهٔ «" + TypedName.Trim() +
+                            "» پیدا نشد — اول در «حساب‌های چکنه» ردیفی به همین نام بنویسید", ToastKind.Error);
+                return;
+            }
+            LastResult = "🛒 " + name + " — رسیدِ " + Shamsi.Money(amount) + " افغانی ثبت شد · الباقی: "
+                         + Shamsi.Money(albaqi) + " افغانی";
+            _host.Toast("✅ رسیدِ چکنه در حسابِ " + name + " ثبت شد · الباقی " + Shamsi.Money(albaqi), ToastKind.Ok);
+            TypedName = ""; AmountText = ""; Note = "";
+            await LoadAsync();
+            FocusNameRequested?.Invoke();
+            return;
+        }
+
         var (res, person) = await _host.DebtReceipts.AddAsync(TypedName, amount, DateShamsi, Note, Unit, Fuel);
 
         switch (res)
@@ -248,10 +322,23 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
                 return;
         }
 
+        LastResult = "👤 " + person + " — " + UnitChipText + " " + Shamsi.Money(amount) + " ثبت شد · "
+                     + BalanceWords(_host.DebtReceipts.LastPerson);
         _host.Toast("✅ " + UnitChipText + " در حساب " + person + " ثبت شد", ToastKind.Ok);
         TypedName = ""; AmountText = ""; Note = "";
         await LoadAsync();
         FocusNameRequested?.Invoke();
+    }
+
+    /// <summary>الباقیِ یک قرض‌دار به زبانِ آدم — همان ‎Balances‎ی کارتِ قرض‌دار.</summary>
+    private string BalanceWords(Debtor? person)
+    {
+        if (person is null) return "";
+        var b = _host.Debt.Balances(person.AllAccounts());
+        var parts = new List<string> { "الباقیِ پول: " + Shamsi.Money(b.Money) + " افغانی" };
+        if (b.Petrol != 0m) parts.Add("پطرول: " + Shamsi.Money(b.Petrol) + " لیتر");
+        if (b.Diesel != 0m) parts.Add("دیزل: " + Shamsi.Money(b.Diesel) + " لیتر");
+        return string.Join(" · ", parts);
     }
 
     /// <summary>‎pdfDebtRasid(monthKey)‎ — ورقِ رسیدهای همین ماه.</summary>

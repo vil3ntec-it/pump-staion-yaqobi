@@ -178,6 +178,8 @@ public sealed partial class MainViewModel : ObservableObject
         var host0 = AppHost.Current;
         Controls.Suggest.Provide("staff", async () => (await host0.Attendance.StaffAsync()).Select(x => x.Name ?? ""));
         Controls.Suggest.Provide("debtor", async () => (await host0.Debtors.ListAsync()).Select(x => x.Name));
+        //  نام‌های حساب‌های چکنه — کادرِ نامِ «رسید قرض‌داران / چکنه» وقتی «چکنه» برگزیده شده
+        Controls.Suggest.Provide("chakana", async () => await host0.DebtReceipts.RetailNamesAsync());
         // ⚠️ و همین حالا یک بار خوانده شوند: کَشِ سرد یعنی نخستین تایپِ
         // کاربر هیچ پیشنهادی نمی‌گیرد. شرحش بالای ‎Suggest.Warm‎.
         Controls.Suggest.Warm("staff", "debtor");
@@ -1672,7 +1674,7 @@ public sealed partial class MainViewModel : ObservableObject
         SectionViewModel? By(string id) => Sections.FirstOrDefault(s => s.Id == id);
 
         By("invoices")?.AddSub(new InvRateSectionViewModel(host),      "📉 مقایسهٔ نرخ فاکتورها");
-        By("debtrasid")?.AddSub(new RetailSectionViewModel(host),      "🧾 حساب‌های چکنه");
+        By("debtrasid")?.AddSub(new RetailSectionViewModel(host),      "حساب‌های چکنه");
         By("storage")?.AddSub(new TankerSectionViewModel(host),        "🚚 تخلیهٔ تانکر");
         By("attendance")?.AddSub(new StaffShortSectionViewModel(host), "👷 کمبودی کارمندان");
         By("debt")?.AddSub(new OldLoansSectionViewModel(host),         "⏰ قرض‌های کهنه");
@@ -1684,9 +1686,9 @@ public sealed partial class MainViewModel : ObservableObject
         {
             Task Open(long id) => GoAsync(debt).ContinueWith(_ => debt.OpenPersonAsync(id)).Unwrap();
             By("debtrasid")?.AddSub(new DebtSummarySectionViewModel(host, false, Open),
-                                    "⛽ قرض‌های دسته‌جمعی — واحد تیل");
+                                    "دسته‌جمعی — تیل");
             By("debtrasid")?.AddSub(new DebtSummarySectionViewModel(host, true, Open),
-                                    "💵 قرض‌های دسته‌جمعی — واحد پول");
+                                    "دسته‌جمعی — پول");
             // «📉 زیان ناشی از افزایش قیمت» — کارتِ بخشِ قرض‌دارانِ سایت
             // (‎sec-priceloss‎ و ‎sec-plperson‎). تا امروز در برنامه نبود.
             debt.AddSub(new PriceLossSectionViewModel(host, Open), "📉 زیان ناشی از افزایش قیمت");

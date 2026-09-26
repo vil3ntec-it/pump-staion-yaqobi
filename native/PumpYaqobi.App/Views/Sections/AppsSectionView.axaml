@@ -70,7 +70,7 @@
             <Border Classes="stat" Padding="18,10" HorizontalAlignment="Left">
               <SelectableTextBlock Text="{Binding CodeText}" FontSize="30" FontWeight="Black"
                                    FontFamily="Consolas,Menlo,monospace" LetterSpacing="4"
-                                   Foreground="{DynamicResource Pump.Accent}" FlowDirection="LeftToRight" />
+                                   Foreground="{DynamicResource Pump.Ink.Accent}" FlowDirection="LeftToRight" />
             </Border>
             <StackPanel Orientation="Horizontal" Spacing="8">
               <Button Classes="accent" Content="📋 کپیِ کد" Command="{Binding CopyCodeCommand}"
@@ -127,7 +127,7 @@
             <TextBlock Classes="muted" TextWrapping="Wrap"
                        Text="این را در واتساپ بچسبانید؛ هر دو لینک و کدِ پمپ داخلش هست." />
             <TextBlock Text="{Binding Done}" FontWeight="Bold"
-                       Foreground="{DynamicResource Pump.Ok}"
+                       Foreground="{DynamicResource Pump.Ink.Ok}"
                        IsVisible="{Binding Done, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           </StackPanel>
         </StackPanel>

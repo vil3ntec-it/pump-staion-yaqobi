@@ -63,7 +63,7 @@
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate>
                   <TextBlock Text="{Binding IdleText}" FontWeight="Bold" VerticalAlignment="Center"
-                             Foreground="{Binding IdleBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                             Foreground="{Binding IdleBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>

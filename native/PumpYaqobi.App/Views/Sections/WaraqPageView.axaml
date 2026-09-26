@@ -65,14 +65,14 @@
                   <Button Classes="fuelchip celltoggle" Content="{Binding FuelChipText}"
                           IsVisible="{Binding FuelEditable}"
                           Command="{Binding ToggleFuelCommand}"
-                          Foreground="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                          Foreground="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
                           BorderBrush="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
                           ToolTip.Tip="زدنش نوعِ تیلِ همین ردیف را پطرول ⇄ دیزل می‌کند" />
                   <Border Classes="fuelchip locked" IsVisible="{Binding FromParcha}"
                           BorderBrush="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
                           ToolTip.Tip="{Binding FuelLockTip}">
                     <TextBlock Text="{Binding FuelChipText}"
-                               Foreground="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                               Foreground="{Binding FuelChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                   </Border>
                 </Panel>
               </DataTemplate>
@@ -148,7 +148,7 @@
                            ‎celltoggle‎ را با ‎Enter‎/‎Tab‎ می‌زند. -->
                       <Button Classes="fuelchip celltoggle" Content="{Binding TypeText}"
                               Command="{Binding ToggleTypeCommand}"
-                              Foreground="{Binding TypeChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                              Foreground="{Binding TypeChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
                               BorderBrush="{Binding TypeChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
                               ToolTip.Tip="زدنش این ردیف را قرض ⇄ مصرف می‌کند" />
                     </DataTemplate>
@@ -165,7 +165,7 @@
                            ‎celltoggle‎ را با ‎Enter‎/‎Tab‎ می‌زند. -->
                       <Button Classes="fuelchip celltoggle" Content="{Binding UnitText}"
                               Command="{Binding ToggleUnitCommand}"
-                              Foreground="{Binding UnitChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                              Foreground="{Binding UnitChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
                               BorderBrush="{Binding UnitChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
                               ToolTip.Tip="ردیفِ قرض به کدام دفترِ حسابِ قرض‌دار برود: واحد تیل یا واحد پول — زدنش عوضش می‌کند" />
                     </DataTemplate>
@@ -189,7 +189,7 @@
                            ‎celltoggle‎ را با ‎Enter‎/‎Tab‎ می‌زند. -->
                       <Button Classes="fuelchip celltoggle" Content="{Binding TypeText}"
                               Command="{Binding ToggleTypeCommand}"
-                              Foreground="{Binding TypeChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                              Foreground="{Binding TypeChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
                               BorderBrush="{Binding TypeChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
                               ToolTip.Tip="زدنش این ردیف را قرض ⇄ مصرف می‌کند" />
                     </DataTemplate>
@@ -206,7 +206,7 @@
                            ‎celltoggle‎ را با ‎Enter‎/‎Tab‎ می‌زند. -->
                       <Button Classes="fuelchip celltoggle" Content="{Binding UnitText}"
                               Command="{Binding ToggleUnitCommand}"
-                              Foreground="{Binding UnitChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                              Foreground="{Binding UnitChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
                               BorderBrush="{Binding UnitChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
                               ToolTip.Tip="ردیفِ قرض به کدام دفترِ حسابِ قرض‌دار برود: واحد تیل یا واحد پول — زدنش عوضش می‌کند" />
                     </DataTemplate>
@@ -227,48 +227,48 @@
            تا ۴۵۵۶۵) — روز و شب هرگز با هم جمع نمی‌شوند. -->
       <StackPanel Grid.Row="4" Spacing="6" Margin="0,12,0,0">
         <TextBlock Text="{Binding SummaryTitle}" Classes="label" FontWeight="Bold"
-                   Foreground="{DynamicResource Pump.Accent}" />
+                   Foreground="{DynamicResource Pump.Ink.Accent}" />
         <c:AutoFillPanel MinItemWidth="140" Gap="8">
           <Border Classes="stat">
             <StackPanel Spacing="3">
               <TextBlock Text="⛽ جمله پطرول" Classes="label" />
               <TextBlock Text="{Binding SumPetrol}" Classes="num"
-                         Foreground="{DynamicResource Pump.Accent}" />
+                         Foreground="{DynamicResource Pump.Ink.Accent}" />
             </StackPanel>
           </Border>
           <Border Classes="stat">
             <StackPanel Spacing="3">
               <TextBlock Text="🟤 جمله دیزل" Classes="label" />
               <TextBlock Text="{Binding SumDiesel}" Classes="num"
-                         Foreground="{DynamicResource Pump.Diesel}" />
+                         Foreground="{DynamicResource Pump.Ink.Diesel}" />
             </StackPanel>
           </Border>
           <Border Classes="stat">
             <StackPanel Spacing="3">
               <TextBlock Text="🟣 جمله مصرف" Classes="label" />
               <TextBlock Text="{Binding SumExpenses}" Classes="num"
-                         Foreground="{DynamicResource Pump.Purple}" />
+                         Foreground="{DynamicResource Pump.Ink.Purple}" />
             </StackPanel>
           </Border>
           <Border Classes="stat">
             <StackPanel Spacing="3">
               <TextBlock Text="💳 جمله قرض" Classes="label" />
               <TextBlock Text="{Binding SumDebt}" Classes="num"
-                         Foreground="{DynamicResource Pump.Danger}" />
+                         Foreground="{DynamicResource Pump.Ink.Danger}" />
             </StackPanel>
           </Border>
           <Border Classes="stat">
             <StackPanel Spacing="3">
               <TextBlock Text="{Binding ShortageBoxLabel}" Classes="label" />
               <TextBlock Text="{Binding SumShortage}" Classes="num"
-                         Foreground="{Binding ShortageBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                         Foreground="{Binding ShortageBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
             </StackPanel>
           </Border>
           <Border Classes="stat">
             <StackPanel Spacing="3">
               <TextBlock Text="📊 جمله فروش" Classes="label" />
               <TextBlock Text="{Binding SumSales}" Classes="num"
-                         Foreground="{DynamicResource Pump.Ok}" />
+                         Foreground="{DynamicResource Pump.Ink.Ok}" />
             </StackPanel>
           </Border>
         </c:AutoFillPanel>

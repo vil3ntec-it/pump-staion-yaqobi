@@ -141,13 +141,20 @@ public class UpdateTests
     [Fact]
     public void TheSetupPathAlsoElevatesWhenTheFolderNeedsIt()
     {
-        var svc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
-        var i = svc.IndexOf("/SILENT", StringComparison.Ordinal);
+        //  ⚠️ بلوک با **دو لنگر** بریده می‌شود، نه با شمارِ نویسه، و پایانِ خط یکی
+        //  می‌شود: رانرِ ویندوز فایل را CRLF می‌گیرد، پس «۱۲۰۰ نویسه بعد از /SILENT»
+        //  آن‌جا کوتاه‌تر بود و همین سنجه ساختِ main ِ ۳.۱.۱۸۶ را انداخت — روی
+        //  لینوکس سبز، روی ویندوز «runas را ندید»، در حالی که کد درست بود.
+        var svc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"))
+            .Replace("\r\n", "\n");
+        var i = svc.IndexOf("Arguments = \"/SILENT", StringComparison.Ordinal);
         Assert.True(i > 0, "اجرای نصاب پیدا نشد");
-        // در همان بلوکِ نصاب، شرطِ «پوشه اجازه می‌خواهد» باید باشد
-        var block = svc[i..Math.Min(svc.Length, i + 1200)];
+        var end = svc.IndexOf("Start(psi);", i, StringComparison.Ordinal);
+        Assert.True(end > i, "نصاب پس از آرگومان‌هایش اجرا نمی‌شود");
+        // در همان بلوکِ نصاب، و **پیش از** اجرا، شرطِ «پوشه اجازه می‌خواهد» باید باشد
+        var block = svc[i..end];
         Assert.Contains("InstallDirWritable", block);
-        Assert.Contains("runas", block);
+        Assert.Contains("\"runas\"", block);
     }
 
     /// <summary>

@@ -1,14 +1,23 @@
 name: سنجشِ نصاب (ویندوز)
 
-# ══ نصاب پیش از مرج ساخته می‌شود، نه پس از آن ═══════════════════════════════
+# ══ چرا این ورک‌فلو هست ══════════════════════════════════════════════════════
+# نسخهٔ ۳.۱.۱۵۸ هیچ‌وقت منتشر نشد: در ‎[Code]‎ی نصاب یک توضیح با «;» بود و
+# ‎ISCC‎ می‌ایستاد — ولی چون ‎build-native.yml‎ فقط **پس از** مرج می‌دود، کسی
+# نفهمید. هر فایلی که فقط پس از مرج ساخته می‌شود، سنجهٔ **پیش از** مرج
+# می‌خواهد. این‌جا همان نصاب، با همان اسکریپت، روی همان ویندوزِ رانر ساخته
+# می‌شود — با بارِ ساختگی، چون کامپایلِ ‎ISCC‎ به محتوای فایل‌ها کاری ندارد.
 #
-# نسخهٔ ۳.۱.۱۵۸ هیچ‌وقت منتشر نشد: در بخشِ ‎[Code]‎ِ فایلِ نصاب توضیح با «;»
-# نوشته شده بود — Pascal آن را نمی‌شناسد («'BEGIN' expected») — و این را فقط
-# ‎build-native.yml‎ می‌دید، که **پس از** مرج روی ‎main‎ می‌دود. یعنی کدِ سالم
-# مرج شد و کاربر هیچ نسخهٔ تازه‌ای نگرفت.
-#
-# این‌جا همان دو نصاب (۶۴ و ۳۲بیتی) با یک بارِ ساختگی ساخته می‌شوند. هیچ چیزی
-# منتشر نمی‌شود و هیچ دسترسیِ نوشتنی لازم نیست.
+# ── و از ۱۴۰۵/۰۷/۱۴ فقط ساخته نمی‌شود، **اجرا** هم می‌شود ───────────────────
+# خواستهٔ صاحب ریپو: «۳۲ و ۶۴ توی یک فایل باشن، انتخابی باشه و کار هم کنه —
+# حدس نباشه.» پس همان نصابِ ساخته‌شده روی رانر بی‌صدا نصب می‌شود و سنجیده
+# می‌شود که **کدام بار** روی دیسک نشست:
+#   /ARCH=x86  ⇒ فایلِ ۳۲بیتی، پوشهٔ VLCِ ۳۲
+#   /ARCH=x64  ⇒ فایلِ ۶۴بیتی، پوشهٔ VLCِ ۶۴، و پوشهٔ VLCِ ۳۲ برداشته شده
+#   بی /ARCH   ⇒ همان معماریِ نصبِ پیشین (رجیستری)، نه چیزِ دیگر
+#   و حذفِ بی‌صدا فایل‌ها را می‌برد و پوشهٔ داده را دست نمی‌زند.
+# ⚠️ صفحهٔ انتخاب خودش این‌جا دیده نمی‌شود (بی‌صدا)، ولی همان ‎PickedArch‎ که
+# صفحه به آن می‌نویسد این‌جا از ‎/ARCH‎ می‌خواند — یک تصمیم، یک جا.
+
 on:
   pull_request:
     paths:
@@ -25,7 +34,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: ساختِ هر دو نصاب با بارِ ساختگی
+
+      - name: ساختِ نصاب با دو بارِ ساختگی
         shell: pwsh
         run: |
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
@@ -35,9 +45,68 @@ jobs:
           }
           foreach ($arch in @('x64','x86')) {
             $src = "fake\win-$arch"
-            New-Item -ItemType Directory -Force -Path $src | Out-Null
-            Set-Content -Path "$src\PumpYaqobi.exe" -Value "stub"
-            & $iscc /Qp "/DAppVersion=0.0.1" "/DArch=$arch" "/DSourceDir=..\..\$src" native/installer/PumpYaqobi.iss
-            if ($LASTEXITCODE -ne 0) { throw "ساختِ نصابِ $arch شکست خورد" }
+            New-Item -ItemType Directory -Force -Path "$src\libvlc\win-$arch" | Out-Null
+            #  محتوای هر بار نامِ معماری‌اش است — تا بعد از نصب معلوم باشد کدام نشست
+            Set-Content -Path "$src\PumpYaqobi.exe" -Value $arch -NoNewline
+            Set-Content -Path "$src\shared.dll" -Value "shared-$arch" -NoNewline
+            Set-Content -Path "$src\libvlc\win-$arch\libvlc.dll" -Value $arch -NoNewline
           }
+          & $iscc /Qp "/DAppVersion=0.0.1" "/DSourceDir64=..\..\fake\win-x64" "/DSourceDir86=..\..\fake\win-x86" native/installer/PumpYaqobi.iss
+          if ($LASTEXITCODE -ne 0) { throw "ساختِ نصاب شکست خورد" }
           Get-ChildItem rel | ForEach-Object { "{0}  {1:N0} بایت" -f $_.Name, $_.Length }
+
+      - name: اجرای واقعیِ نصاب — ۳۲، بعد ۶۴، بعد بی‌گفتن، بعد حذف
+        shell: pwsh
+        run: |
+          $setup = (Resolve-Path rel\PumpYaqobi-Setup.exe).Path
+          $dir = Join-Path $env:TEMP "pyq-check"
+          $log = Join-Path $env:TEMP "pyq-setup.log"
+          function Install($archArg) {
+            $args = @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=$dir","/LOG=$log")
+            if ($archArg) { $args += "/ARCH=$archArg" }
+            $p = Start-Process -FilePath $setup -ArgumentList $args -Wait -PassThru
+            if ($p.ExitCode -ne 0) { Get-Content $log | Select-Object -Last 40; throw "نصاب با کدِ $($p.ExitCode) بیرون آمد (ARCH=$archArg)" }
+          }
+          function Landed() { Get-Content (Join-Path $dir 'PumpYaqobi.exe') -Raw }
+          function Fail($m) { Get-Content $log | Select-Object -Last 40; throw $m }
+
+          # ۱) ۳۲بیتی
+          Install 'x86'
+          if ((Landed) -ne 'x86') { Fail "با /ARCH=x86 بارِ «$(Landed)» نشست" }
+          if (-not (Test-Path "$dir\libvlc\win-x86\libvlc.dll")) { Fail "پوشهٔ VLCِ ۳۲ نیامد" }
+          if ((Get-Content "$dir\shared.dll" -Raw) -ne 'shared-x86') { Fail "فایلِ هم‌نام از بارِ ۳۲ نیست" }
+          $reg = Get-ItemPropertyValue -Path 'HKCU:\Software\PumpYaqobi' -Name Arch
+          if ($reg -ne 'x86') { Fail "رجیستری «$reg» گفت، نه x86" }
+          "✔ /ARCH=x86 ⇒ بارِ ۳۲بیتی نشست"
+
+          # ۲) بی /ARCH روی نصبِ ۳۲بیتی ⇒ همان ۳۲ می‌ماند (به‌روزرسانیِ بی‌صدا معماری را عوض نمی‌کند)
+          Install $null
+          if ((Landed) -ne 'x86') { Fail "به‌روزرسانیِ بی‌صدا معماری را به «$(Landed)» عوض کرد" }
+          "✔ بی /ARCH ⇒ همان ۳۲بیتیِ پیشین ماند"
+
+          # ۳) ۶۴بیتی روی همان پوشه ⇒ بارِ ۶۴ و پوشهٔ VLCِ ۳۲ برداشته شده
+          Install 'x64'
+          if ((Landed) -ne 'x64') { Fail "با /ARCH=x64 بارِ «$(Landed)» نشست" }
+          if ((Get-Content "$dir\shared.dll" -Raw) -ne 'shared-x64') { Fail "فایلِ هم‌نام روی‌نویسی نشد" }
+          if (-not (Test-Path "$dir\libvlc\win-x64\libvlc.dll")) { Fail "پوشهٔ VLCِ ۶۴ نیامد" }
+          if (Test-Path "$dir\libvlc\win-x86") { Fail "پوشهٔ VLCِ ۳۲ پس از رفتن به ۶۴ ماند" }
+          $reg = Get-ItemPropertyValue -Path 'HKCU:\Software\PumpYaqobi' -Name Arch
+          if ($reg -ne 'x64') { Fail "رجیستری «$reg» گفت، نه x64" }
+          "✔ /ARCH=x64 روی نصبِ ۳۲ ⇒ بارِ ۶۴ نشست و بارِ ۳۲ رفت"
+
+          # ۴) یک ردیف در «برنامه‌ها و قابلیت‌ها»، با همان AppId
+          $unins = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{8E86F349-343C-4FFB-983E-BBDDC5390081}_is1'
+          if (-not (Test-Path $unins)) { Fail "ثبتِ حذف با AppIdِ همیشگی نیست" }
+          $uninsExe = (Get-ItemPropertyValue -Path $unins -Name UninstallString) -replace '"',''
+          "✔ ثبتِ حذف: $uninsExe"
+
+          # ۵) حذفِ بی‌صدا: فایل‌ها می‌روند، پوشهٔ داده دست نمی‌خورد
+          $data = Join-Path $env:APPDATA 'PumpYaqobi'
+          New-Item -ItemType Directory -Force -Path $data | Out-Null
+          Set-Content -Path "$data\pump.db" -Value 'ledger' -NoNewline
+          $p = Start-Process -FilePath $uninsExe -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "حذف با کدِ $($p.ExitCode) بیرون آمد" }
+          if (Test-Path "$dir\PumpYaqobi.exe") { throw "پس از حذف، فایلِ برنامه ماند" }
+          if ((Get-Content "$data\pump.db" -Raw) -ne 'ledger') { throw "حذف به پوشهٔ داده دست زد" }
+          if (Test-Path 'HKCU:\Software\PumpYaqobi') { throw "کلیدِ Arch پس از حذف ماند" }
+          "✔ حذفِ بی‌صدا فایل‌ها را برد و دفتر را دست نزد"

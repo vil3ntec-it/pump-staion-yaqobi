@@ -117,7 +117,10 @@ public class TenYearsTests
         var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections", "DashboardSectionViewModel.cs"));
         Assert.Contains(".Take(AlertLimit)", src);
         Assert.Contains("BellCount = all.Count;", src);         // زنگ همهٔ هشدارها را می‌شمارد
-        Assert.Contains("real.Take(5)", src);                   // پیامِ زنگ هم نه همه
+        //  فهرستِ زنگ (پنجرهٔ بازشو) هم همان دوازده‌تا و «و N دیگر» را دارد
+        var view = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections", "DashboardSectionView.axaml"));
+        var popup = view[view.IndexOf("<Popup x:Name=\"AlertsPopup\"", StringComparison.Ordinal)..view.IndexOf("</Popup>", StringComparison.Ordinal)];
+        Assert.Contains("{Binding AlertsMore}", popup);
         Assert.True(PumpYaqobi.App.ViewModels.Sections.DashboardSectionViewModel.AlertLimit <= 20);
     }
 

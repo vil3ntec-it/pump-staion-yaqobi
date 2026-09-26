@@ -11,8 +11,13 @@
 
     <c:SectionPage.Toolbar>
       <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-        <TextBlock Text="📅 ماه:" VerticalAlignment="Center" Classes="label" />
-        <ComboBox ItemsSource="{Binding Months}" SelectedItem="{Binding Month}" MinWidth="130" />
+        <TextBlock Text="ماه" VerticalAlignment="Center" Classes="label" />
+        <!-- کشوی سال + ماه (۱۴۰۵/۰۷/۱۴): «برای بخش‌هایی که ماه کشویی دارن سال کشویی هم اضافه کن» -->
+        <ComboBox ItemsSource="{Binding Picker.Years}" SelectedItem="{Binding Picker.Year}"
+                  IsVisible="{Binding Picker.HasYears}"
+                  ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="110" />
+        <ComboBox ItemsSource="{Binding Picker.Months}" SelectedItem="{Binding Picker.Selected}"
+                  ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="140" />
         <Button Classes="ghost info" Content="PDF" Command="{Binding PdfCommand}" />
       </StackPanel>
     </c:SectionPage.Toolbar>
@@ -25,7 +30,7 @@
           <TextBlock Classes="label" TextAlignment="Center"
                      Text="{Binding MonthLabel, StringFormat=نتیجهٔ خالص {0} — مفاد + درآمد اضافی − مصارف}" />
           <TextBlock Text="{Binding NetText}" FontSize="26" FontWeight="Bold" TextAlignment="Center"
-                     Foreground="{Binding NetBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                     Foreground="{Binding NetBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
           <TextBlock Text="{Binding NetGrowthText}" Classes="muted" TextAlignment="Center" />
         </StackPanel>
       </Border>

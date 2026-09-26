@@ -50,6 +50,15 @@ internal static class PrintShot
             { DateShamsi = "1405/06/" + ((i % 30) + 1).ToString("00"), Title = "مصرف شمارهٔ " + i, Amount = 1_000m * i });
         var input = new ExpenseReportInput("سنبله 1405", rows, "1405/06/09", "1405/06/09  ·  1448/03/27  ·  2026/09/09");
 
+        //  چاپگرهای ساختگی — ماشینِ سنجه چاپگر ندارد؛ همان سه حالتِ واقعی:
+        //  پیش‌فرضِ آماده (عکسِ صاحب ریپو: EPSON L382)، چاپگرِ PDF، و آفلاین.
+        PumpYaqobi.App.Printing.Printers.ListOverride = () => PumpYaqobi.App.Printing.Printers.Order(new[]
+        {
+            new PumpYaqobi.App.Printing.PrinterItem("Microsoft Print to PDF", false, "آماده", true),
+            new PumpYaqobi.App.Printing.PrinterItem("HP LaserJet (دفتر)", false, "آفلاین — روشن و وصل است؟", false),
+            new PumpYaqobi.App.Printing.PrinterItem("EPSON L382 Series", true, "آماده", true),
+        });
+
         var vm = new DocumentPreviewViewModel(
             s => new ExpenseReport(input) { Setup = s }, "مصارف سنبله 1405", PageSetup.Default);
 
@@ -63,6 +72,23 @@ internal static class PrintShot
         while (!vm.AllRendered && DateTime.UtcNow < ready) { Pump(preview); Thread.Sleep(5); }
         Pump(preview);
         Shot(preview, Path.Combine(outDir, "print-preview.png"));
+
+        //  ⛔ چاپگرها مثلِ اکسل: فهرستِ واقعی، پیش‌فرضِ ویندوز برگزیده
+        var until = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+        while (vm.PrintersLoading && DateTime.UtcNow < until) { Pump(preview); Thread.Sleep(5); }
+        if (!vm.HasPrinters || vm.Printers.Count != 3)
+        { Console.WriteLine("  ✘ فهرستِ چاپگرها نیامد: " + vm.Printers.Count); return 1; }
+        if (vm.Printer?.Name != "EPSON L382 Series")
+        { Console.WriteLine("  ✘ پیش‌فرضِ ویندوز برگزیده نشد: " + vm.Printer?.Name); return 1; }
+        Console.WriteLine("  ✔ چاپگرها آمدند و پیش‌فرضِ ویندوز برگزیده است — " + vm.Printer.Name + " · " + vm.Printer.Line);
+        var combo = preview.GetVisualDescendants().OfType<ComboBox>().FirstOrDefault(c => c.Classes.Contains("prn"));
+        if (combo is null || !combo.IsEffectivelyVisible)
+        { Console.WriteLine("  ✘ کادرِ چاپگرها دیده نمی‌شود"); return 1; }
+        combo.IsDropDownOpen = true;
+        Pump(preview);
+        Shot(preview, Path.Combine(outDir, "print-printers.png"));
+        combo.IsDropDownOpen = false;
+        Pump(preview);
 
         // «ورق‌ها: ۱ تا ۳» همیشه دیده می‌شود و تایپ در آن خودش حالت را بازه می‌کند (مثلِ سایت)
         if (vm.FromText != "1" || vm.ToText != vm.PageCount.ToString())

@@ -43,6 +43,21 @@ internal static class Program
         //  سرور خاموش است (خطِ بالا).
         PumpYaqobi.App.Services.CrashGuard.Install();
 
+        // ══ سنجه‌ها به سرورِ حسابِ **زنده** نمی‌روند ══════════════════════════
+        //
+        // ⛔ `FakeLicense.Grant()` توکنِ دستگاهِ ساختگی می‌نشاند. رانرِ CI اینترنت
+        // دارد، پس هر درخواستی که برنامه با آن توکن به سرورِ واقعی می‌زد
+        // `401 device_not_registered` می‌گرفت و برنامه — درست — توکن را پاک
+        // می‌کرد؛ یعنی سنجه‌ای که در سندباکسِ بی‌اینترنت سبز بود، در CI با
+        // قفلِ روشن سرخ می‌شد (۱۴۰۵/۰۷/۱۴، بندهای ۵ و ۱۶ و ۱۷ی `verify`).
+        // پس پیش‌فرض «شبکه نیست» است — همان حالِ کامپیوترِ بی‌اینترنت. هر
+        // سنجه‌ای که ابرِ ساختگیِ خودش یا پشتهٔ محلی را می‌خواهد، مثلِ همیشه
+        // `CloudLink.TestTransport` را خودش می‌گذارد.
+        // ⚠️ `PUMP_VERIFY_CLOUD=1` تنها راهِ رفتن به سرورِ واقعی است.
+        if (Environment.GetEnvironmentVariable("PUMP_VERIFY_CLOUD") != "1")
+            PumpYaqobi.App.Services.CloudLink.TestTransport = (_, _) =>
+                throw new HttpRequestException("سنجه: شبکهٔ بیرونی بسته است");
+
         // ══ حالتِ «سنجشِ اسکرول» ═════════════════════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- scroll
         //
@@ -136,6 +151,8 @@ internal static class Program
         //  «مفاد و ضرر: کادرهای برابر + کشوی ماه و سال · مخزن: عنوانِ وسط و کادرِ جمله‌ها» (۱۴۰۵/۰۷/۱۳)
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- plstore [پوشه]
         if (outDir.Equals("plstore", StringComparison.OrdinalIgnoreCase)) return ProfitStorageProbe.Run(args);
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- round14 [پوشه]
+        if (outDir.Equals("round14", StringComparison.OrdinalIgnoreCase)) return Round14Probe.Run(args);
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- chatroom [پوشه]
         if (outDir.Equals("chatroom", StringComparison.OrdinalIgnoreCase)) return ChatProbe.Run(args);
         if (outDir.Equals("groupchat", StringComparison.OrdinalIgnoreCase)) return GroupChatLive.Run(args);

@@ -64,6 +64,9 @@ public sealed class DashAlertViewModel
     public required string Icon { get; init; }
     public required string Text { get; init; }
     public required string Sub { get; init; }
+    /// <summary>دستورِ کارِ همان هشدار (‎AlertItem.Action‎) — «به او دیگر پطرول ندهید».</summary>
+    public string Action { get; init; } = "";
+    public bool HasAction => Action.Length > 0;
     public required string ColorKey { get; init; }
     public string? GoSection { get; init; }
     /// <summary>هشدارِ واقعی است (‎cls !== 'ok'‎) و در شمارشِ زنگ می‌آید.</summary>
@@ -226,20 +229,37 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
     /// </summary>
     [RelayCommand] private void Go(string? section)
     {
-        if (string.IsNullOrEmpty(section)) return;
+        //  کاشیِ «هشدارها» بخشِ خودش را ندارد ⇒ همان فهرستِ هشدارها
+        if (string.IsNullOrEmpty(section)) { OpenAlerts(); return; }
+        AlertsOpen = false;
         _ = _main.GoByIdAsync(section);
     }
 
-    /// <summary>زنگِ بالا — همان ‎dashBellClick‎: فهرستِ هشدارها در یک پیام.</summary>
+    /// <summary>
+    /// فهرستِ هشدارها باز است (۱۴۰۵/۰۷/۱۴). ⛔ پیش از این زنگ همهٔ هشدارها را
+    /// با «·» پشتِ سرِ هم در **یک** توست می‌ریخت — «یک خطِ طولانی که نه خوانده
+    /// می‌شود نه جدا جداست». حالا هر هشدار کارتِ خودش را دارد، با دستورِ کارش.
+    /// </summary>
+    [ObservableProperty] private bool _alertsOpen;
+
+    public string AlertsTitle => $"🔔 هشدارها — {BellCount} مورد";
+
+    /// <summary>زنگِ بالا — همان ‎dashBellClick‎، ولی فهرست، نه یک پیامِ یک‌خطی.</summary>
     [RelayCommand]
     private void Bell()
     {
-        var real = Alerts.Where(a => a.IsReal).ToList();
-        if (real.Count == 0) { _host.Toast("🔔 اعلان تازه‌ای نیست — همه‌چیز مرتب است", ToastKind.Ok); return; }
-        //  ⚠️ نه همه در یک پیام: با صدها هشدار، توست از صفحه بیرون می‌زد
-        var more = BellCount > 5 ? " · و " + Shamsi.Money(BellCount - 5) + " هشدارِ دیگر" : "";
-        _host.Toast("🔔 " + string.Join(" · ", real.Take(5).Select(a => a.Text)) + more, ToastKind.Warn);
+        if (AlertsOpen) { AlertsOpen = false; return; }
+        OpenAlerts();
     }
+
+    private void OpenAlerts()
+    {
+        if (!Alerts.Any(a => a.IsReal)) { _host.Toast("🔔 اعلان تازه‌ای نیست — همه‌چیز مرتب است", ToastKind.Ok); return; }
+        OnPropertyChanged(nameof(AlertsTitle));
+        AlertsOpen = true;
+    }
+
+    [RelayCommand] private void CloseAlerts() => AlertsOpen = false;
 
     protected override Task LoadAsync() => RefreshAsync();
 
@@ -546,15 +566,19 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
                 Icon = a.IsTank ? "🛢️" : (a.IsOut ? "⛔" : "⚠️"),
                 Text = a.Text,
                 Sub = a.IsOut ? (a.IsTank ? "همین حالا رسیدگی کنید" : "اضافه ندهید") : "رو به پایان",
+                Action = a.Action ?? "",
                 ColorKey = a.IsOut ? "Pump.Danger" : "Pump.Warn",
                 GoSection = a.Section,
                 IsReal = true,
             });
         }
+        //  ⚠️ زنگ و عنوانِ فهرست **همه** را می‌شمارند؛ فقط `AlertLimit` تا ساخته می‌شوند
         BellCount = all.Count;
         AlertsMore = all.Count > AlertLimit
             ? "و " + Shamsi.Money(all.Count - AlertLimit) + " هشدارِ دیگر — کارت‌های سرخ و زردِ «قرض‌داران»"
             : "";
+        OnPropertyChanged(nameof(AlertsTitle));
+        if (BellCount == 0) AlertsOpen = false;
         AlertsCard.Value = BellCount + " مورد";
         AlertsCard.SetDeltaText(BellCount > 0 ? "نیاز به بررسی" : "همه‌چیز مرتب است");
         AlertsCard.Sub = _host.LiveAlerts.Ready ? "برای دیدن فهرست بزنید" : "در حالِ سنجش…";

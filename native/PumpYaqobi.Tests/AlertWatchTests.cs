@@ -106,6 +106,32 @@ public class AlertWatchTests
         Assert.Equal("", AlertWatch.ToastText(Array.Empty<AlertItem>(), false));
     }
 
+    /// <summary>
+    /// ⛔ «یک خطِ طولانی که نه خوانده می‌شود نه جدا جداست» (۱۴۰۵/۰۷/۱۴): هر
+    /// هشدار خطِ خودش را دارد و هیچ دو هشداری با «·» کنارِ هم نمی‌نشینند.
+    /// </summary>
+    [Fact]
+    public void TosteMirza_HarHoshdar_KhateKhodash()
+    {
+        var three = From(Person(1, "الف", "out"), Person(2, "ب", "out"), Person(3, "ج", "out"));
+        var lines = AlertWatch.ToastText(three, initial: true).Split('\n');
+        Assert.Equal(4, lines.Length);                 // سر + سه هشدار
+        Assert.All(lines.Skip(1), l => Assert.StartsWith("• ", l));
+        Assert.DoesNotContain(" · ", AlertWatch.ToastText(three, initial: false));
+    }
+
+    /// <summary>زنگِ داشبورد فهرست باز می‌کند، نه توستِ یک‌خطی.</summary>
+    [Fact]
+    public void ZangeDashboard_Fehrest_Ast_NaToast()
+    {
+        var vm = Src("PumpYaqobi.App", "ViewModels", "Sections", "DashboardSectionViewModel.cs");
+        Assert.DoesNotContain("string.Join(\" · \", real", vm);
+        Assert.Contains("AlertsOpen = true", vm);
+        var x = Src("PumpYaqobi.App", "Views", "Sections", "DashboardSectionView.axaml");
+        Assert.Contains("x:Name=\"AlertsPopup\"", x);
+        Assert.Contains("{Binding Action", x);
+    }
+
     // ── سیم‌کشی — روی خودِ سورس ────────────────────────────────────────
 
     private static readonly string Root =
