@@ -677,7 +677,37 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     private async Task AddHeadReceiptAsync(FuelType fuel, decimal value)
     {
         var unit = IsMoney ? LedgerMode.Money : LedgerMode.Fuel;
-        var row = _host.Debt.AddReceiptRow(Entity, unit, fuel, value, Shamsi.Today());
+        var acct = Entity;
+        var row = _host.Debt.AddReceiptRow(acct, unit, fuel, value, Shamsi.Today());
+        try { await PlaceHeadReceiptAsync(acct, row, fuel); }
+        catch
+        {
+            //  ⛔ ذخیره نشد (مثلاً فقط‌خواندنی): ردیفِ نیمه‌کاره از حافظهٔ حساب
+            //  برداشته می‌شود و سربرگ جمعِ واقعی را نشان می‌دهد — وگرنه عددِ
+            //  تایپ‌شده روی کادر می‌ماند و روی هر حسابِ دیگر هم دیده می‌شد.
+            if (row.Id == 0)
+            {
+                acct.FuelRows.Remove(row);
+                acct.MoneyRows.Remove(row);
+                _host.Debt.SyncReceiptTotals(acct);
+            }
+            RefreshTotals();
+            RepaintHeadEdits();
+            throw;
+        }
+    }
+
+    private async Task PlaceHeadReceiptAsync(DebtAccount acct, DebtRow row, FuelType fuel)
+    {
+        //  ⛔ اگر وسطِ کار همین ویومدل حسابِ دیگری را گرفت، ردیف فقط در دیتابیسِ
+        //  حسابِ خودش می‌نشیند و در جدولِ حسابِ تازه دیده نمی‌شود.
+        if (!ReferenceEquals(acct, Entity))
+        {
+            await _host.Debtors.SaveRowAsync(row);
+            _host.Debt.SyncReceiptTotals(acct);
+            await _host.Debtors.UpdateAccountAsync(acct);
+            return;
+        }
 
         var blank = Rows.FirstOrDefault(r => IsBlank(r.Entity));
         if (blank is not null)
@@ -719,7 +749,15 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     /// </summary>
     internal async Task SyncReceiptsAsync()
     {
-        if (!_host.Debt.SyncReceiptTotals(Entity)) return;
+        //  ⛔ «عوض نشد» یعنی هم در حافظهٔ حساب و هم در کشِ ویومدل. رسیدِ سربرگ
+        //  کشِ حساب را همان لحظه در حافظه می‌نشاند (‎AddReceiptRow‎)، پس با
+        //  سنجشِ تنهای اولی هیچ‌وقت روی دیسک نمی‌رفت و کارت، مانده و هشدارها
+        //  رسید را نمی‌دیدند.
+        var changed = _host.Debt.SyncReceiptTotals(Entity);
+        if (!changed
+            && RasidFuelPetrol == Entity.RasidFuelPetrol && RasidFuelDiesel == Entity.RasidFuelDiesel
+            && RasidMoneyPetrol == Entity.RasidMoneyPetrol && RasidMoneyDiesel == Entity.RasidMoneyDiesel)
+            return;
         _pullingSums = true;
         RasidFuelPetrol = Entity.RasidFuelPetrol;
         RasidFuelDiesel = Entity.RasidFuelDiesel;
