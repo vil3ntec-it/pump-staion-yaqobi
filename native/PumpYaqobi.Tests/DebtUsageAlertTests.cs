@@ -77,22 +77,22 @@ public class DebtUsageAlertTests
     public void Matn_HaMande_RaMigooyad_VaDastoor_Dard()
     {
         var w70 = One(Person("ok", 200, 150));
-        Assert.Contains("75٪", S(w70, "t"));
-        Assert.Contains("50 لیتر مانده", S(w70, "t"));
-        Assert.Contains("متوجهِ کریم باشید", S(w70, "a"));
+        Assert.Contains("75٪", S(w70, "t"), StringComparison.Ordinal);
+        Assert.Contains("50 لیتر مانده", S(w70, "t"), StringComparison.Ordinal);
+        Assert.Contains("متوجهِ کریم باشید", S(w70, "a"), StringComparison.Ordinal);
 
         var w90 = One(Person("low", 200, 190));
-        Assert.Contains("فقط 10 لیتر مانده", S(w90, "t"));
-        Assert.Contains("بیشتر از 10 لیتر به او ندهید", S(w90, "a"));
+        Assert.Contains("فقط 10 لیتر مانده", S(w90, "t"), StringComparison.Ordinal);
+        Assert.Contains("بیشتر از 10 لیتر به او ندهید", S(w90, "a"), StringComparison.Ordinal);
 
         var out_ = One(Person("out", 200, 200));
-        Assert.Contains("تمام شد", S(out_, "t"));
-        Assert.Contains("دیگر پطرول ندهید", S(out_, "a"));
+        Assert.Contains("تمام شد", S(out_, "t"), StringComparison.Ordinal);
+        Assert.Contains("دیگر پطرول ندهید", S(out_, "a"), StringComparison.Ordinal);
 
         var over = One(Person("out", 200, 225));
-        Assert.Contains("25 لیتر بیشتر از حسابش", S(over, "t"));
-        Assert.Contains("بازپرسی کنید", S(over, "a"));
-        Assert.Contains("چرا", S(over, "a"));
+        Assert.Contains("25 لیتر بیشتر از حسابش", S(over, "t"), StringComparison.Ordinal);
+        Assert.Contains("بازپرسی کنید", S(over, "a"), StringComparison.Ordinal);
+        Assert.Contains("چرا", S(over, "a"), StringComparison.Ordinal);
     }
 
     /// <summary>عکسِ کهنه (بی ‎use‎) همان رفتارِ قبلی را دارد.</summary>
@@ -114,11 +114,11 @@ public class DebtUsageAlertTests
             ["diesel"] = new Dictionary<string, object?> { ["low"] = true, ["show"] = 0.0, ["threshold"] = 1000.0 },
         };
         var list = StationSnapshot.Alerts(null, tank).Cast<Dictionary<string, object?>>().ToList();
-        Assert.Contains("850 لیتر مانده", S(list[0], "t"));
-        Assert.Contains("حدِ هشدار 1,000 لیتر", S(list[0], "t"));
-        Assert.Contains("سفارش بدهید", S(list[0], "a"));
-        Assert.Contains("خالی شد", S(list[1], "t"));
-        Assert.Contains("همین حالا دیزل سفارش بدهید", S(list[1], "a"));
+        Assert.Contains("850 لیتر مانده", S(list[0], "t"), StringComparison.Ordinal);
+        Assert.Contains("حدِ هشدار 1,000 لیتر", S(list[0], "t"), StringComparison.Ordinal);
+        Assert.Contains("سفارش بدهید", S(list[0], "a"), StringComparison.Ordinal);
+        Assert.Contains("خالی شد", S(list[1], "t"), StringComparison.Ordinal);
+        Assert.Contains("همین حالا دیزل سفارش بدهید", S(list[1], "a"), StringComparison.Ordinal);
     }
 
     /// <summary>دستورِ کار تا سرور می‌رود و بدهیِ شرکت‌ها هم.</summary>
@@ -127,10 +127,10 @@ public class DebtUsageAlertTests
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
         var pub = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Services", "StationPublisher.cs"));
-        Assert.Contains("a = a.Action", pub);
-        Assert.Contains("StationSnapshot.OweAsync(", pub);
+        Assert.Contains("a = a.Action", pub, StringComparison.Ordinal);
+        Assert.Contains("StationSnapshot.OweAsync(", pub, StringComparison.Ordinal);
         var link = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Services", "CloudLink.cs"));
-        Assert.Contains("body[\"owe\"]", link);
+        Assert.Contains("body[\"owe\"]", link, StringComparison.Ordinal);
         var item = AlertWatch.FromSnapshot(new List<object?>
         {
             new Dictionary<string, object?> { ["k"] = "d1-stP-w70", ["s"] = "low", ["t"] = "x", ["a"] = "متوجه باشید" },
