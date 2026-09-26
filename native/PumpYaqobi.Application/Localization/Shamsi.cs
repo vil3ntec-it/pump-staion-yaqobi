@@ -176,7 +176,18 @@ public static class Shamsi
     /// <summary>مقدارِ تایپ‌شده → عدد. مثل <c>parseFloat(x)||0</c>ِ نسخهٔ وب.</summary>
     public static decimal Num(string? s)
     {
-        var t = ToEnDigits(s).Replace(",", "").Replace("٬", "").Trim();
+        //  ⛔ نویسه‌های نامرئیِ صفحه‌کلید (‎RLM/LRM/ZWNJ‎، فاصلهٔ نشکن) و «٫»ی
+        //  اعشارِ فارسی، عدد را صفر نکنند — «۷۰۰۰» با یک ‎RLM‎ پیش از این صفر
+        //  خوانده می‌شد و رسیدِ سربرگ بی‌صدا هیچ ردیفی نمی‌ساخت.
+        var sb = new StringBuilder();
+        foreach (var ch in ToEnDigits(s))
+        {
+            if (ch == '٫') { sb.Append('.'); continue; }
+            if (ch is ',' or '٬' || char.IsWhiteSpace(ch)
+                || char.GetUnicodeCategory(ch) == UnicodeCategory.Format) continue;
+            sb.Append(ch);
+        }
+        var t = sb.ToString();
         return decimal.TryParse(t, NumberStyles.Any, CultureInfo.InvariantCulture, out var d) ? d : 0m;
     }
 }

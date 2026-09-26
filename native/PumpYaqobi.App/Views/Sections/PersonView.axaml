@@ -166,7 +166,7 @@
                 <!-- در سایت رسید را همین‌جا در سربرگ می‌نویسند، نه در کادرِ
                      دیگری پایین‌تر. پس این خانه خواندنی نیست، نوشتنی است. -->
                 <TextBox Text="{Binding HeadPetrolRasidEdit, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                         Classes="fsv" GotFocus="RasidBoxFocus" LostFocus="RasidBoxLost" KeyDown="RasidBoxKey"
+                         Classes="fsv" Tag="petrol" GotFocus="RasidBoxFocus" LostFocus="RasidBoxLost" KeyDown="RasidBoxKey"
                          Foreground="{DynamicResource Pump.Ink.Ok}" />
               </StackPanel>
               <StackPanel Spacing="2">
@@ -201,7 +201,7 @@
               <StackPanel Spacing="2">
                 <TextBlock Text="{Binding HeadRasidLabel}" Classes="fsl" />
                 <TextBox Text="{Binding HeadDieselRasidEdit, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                         Classes="fsv" GotFocus="RasidBoxFocus" LostFocus="RasidBoxLost" KeyDown="RasidBoxKey"
+                         Classes="fsv" Tag="diesel" GotFocus="RasidBoxFocus" LostFocus="RasidBoxLost" KeyDown="RasidBoxKey"
                          Foreground="{DynamicResource Pump.Ink.Ok}" />
               </StackPanel>
               <StackPanel Spacing="2">
