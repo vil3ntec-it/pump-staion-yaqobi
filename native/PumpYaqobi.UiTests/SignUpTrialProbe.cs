@@ -188,6 +188,42 @@ internal static class SignUpTrialProbe
                 if (LicenseGuard.CheckStored(healed).Valid) good = healed;
             }
         }
+        //  ⚠️ ‎PUMP_SIGNUP_FOREIGN=1‎ (۱۴۰۵/۰۷/۱۴، دومین عکسِ صاحب ریپو): پنل «آزمایشی»،
+        //  برنامه بی اشتراک — و این بار این کامپیوتر **توکنِ دستگاهِ پمپِ دیگری** را
+        //  دارد (پمپی که صاحبِ دیگری دارد). `RefreshAsync` ‹station_mismatch› می‌گرفت و
+        //  `adopt` رد می‌شد، پس هرگز مجوزِ پمپِ خودِ حساب نمی‌آمد.
+        if (Environment.GetEnvironmentVariable("PUMP_SIGNUP_FOREIGN") == "1")
+        {
+            var good = AppSettings.Load();
+            var mine = good.CloudStationId;
+            var cases = new (string Name, bool MoveStation)[]
+            {
+                ("توکنِ دستگاهِ پمپِ دیگر، شناسهٔ پمپِ خودِ حساب روی دیسک", false),
+                ("توکن و شناسهٔ پمپِ دیگر (پمپِ صاحب‌دار) روی دیسک", true),
+            };
+            foreach (var (name, move) in cases)
+            {
+                var other = OtherPump(live2, mailCodes, win, good.CloudDeviceUid);
+                Console.WriteLine($"     ⓘ پمپِ دیگر: {other.Station} · دستگاه {other.Uid}");
+                var s = AppSettings.Load();
+                s.CloudDeviceToken = other.Token;
+                s.CloudDeviceUid = other.Uid;
+                s.CloudLicense = "";
+                if (move) s.CloudStationId = other.Station;
+                s.Save();
+                LicenseClock.ForgetRunning();
+                Console.WriteLine($"     ⓘ پیش: قفلِ نرم {(SoftLock.ReadOnly ? "بسته" : "باز")} · {LicenseGuard.CheckStored(AppSettings.Load()).Reason}");
+                for (var i = 0; i < 3; i++) Wait(win, StationPublisher.CloudKeepNowAsync());
+                Wait(win, vm.GoAsync(account));
+                Settle(win);
+                var now = AppSettings.Load();
+                var chk = LicenseGuard.CheckStored(now);
+                Check($"{name} ⇒ مجوزِ پمپِ خودِ حساب آمد", chk.Valid && now.CloudStationId == mine,
+                      $"{chk.Reason} · پمپ {now.CloudStationId} · {account.SubPlanText} · {account.SubDaysText} · {account.LinkingLine}");
+                Check($"{name} ⇒ پروفایل آزمایشیِ فعال می‌گوید", account.SubActive, account.PillText);
+                Shot(win, shots, "foreign-" + (move ? "b" : "a"));
+            }
+        }
         //  ⚠️ همان کامپیوتر، حسابِ دوم — همان کاری که صاحبِ پمپ در آزمایش‌هایش کرد
         if (Environment.GetEnvironmentVariable("PUMP_SIGNUP_TWICE") == "1")
         {
@@ -360,6 +396,48 @@ internal static class SignUpTrialProbe
         Check("هیچ کارتِ «ساختن/ثبت» نیست", !account.LinkingNow, account.LinkingLine);
         Check("⛔ چراغِ سرورِ حساب سبز است", vm.CloudDotBrushKey == "Pump.Ok", vm.CloudDotBrushKey + " · " + vm.CloudDotReason);
         Shot(win, shots, "nopump-2-created");
+    }
+
+    /// <summary>
+    /// حسابِ دیگری با پمپِ خودش و یک دستگاهِ بندشده، از راهِ خودِ API سرورِ حساب —
+    /// همان «پمپی که صاحبِ دیگری دارد».
+    /// </summary>
+    private static (string Station, string Token, string Uid) OtherPump(JsonElement live, string mailCodes,
+                                                                       Avalonia.Controls.Window win, string uid)
+    {
+        var email = "other-" + Guid.NewGuid().ToString("N")[..10] + "@example.com";
+        const string pass = "Pump!1405other";
+        JsonElement Post(string path, object body, string? bearer = null)
+        {
+            var req = new HttpRequestMessage(HttpMethod.Post, new Uri(_pub!, path))
+            {
+                Content = new StringContent(JsonSerializer.Serialize(body), System.Text.Encoding.UTF8, "application/json"),
+            };
+            req.Headers.TryAddWithoutValidation("X-App-Id", "tohid-pump-app");
+            if (bearer is not null) req.Headers.TryAddWithoutValidation("Authorization", "Bearer " + bearer);
+            var res = Task.Run(() => Http.SendAsync(req)).GetAwaiter().GetResult();
+            var text = Task.Run(() => res.Content.ReadAsStringAsync()).GetAwaiter().GetResult();
+            if (!res.IsSuccessStatusCode) Console.WriteLine($"     ⓘ {path} ⇒ {(int)res.StatusCode} {text[..Math.Min(200, text.Length)]}");
+            return JsonDocument.Parse(text.Length == 0 ? "{}" : text).RootElement;
+        }
+        var sentAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        Post("/api/auth/register/start", new { name = "دیگری", email, password = pass, passwordConfirm = pass, app = "pump" });
+        var code = CodeFor(win, mailCodes, email, sentAt);
+        var v = Post("/api/auth/register/verify", new { email, code, app = "pump" });
+        var ticket = v.TryGetProperty("ticket", out var t) ? t.GetString() : "";
+        var tv = v.TryGetProperty("terms", out var tt) && tt.ValueKind == JsonValueKind.Object
+                 && tt.TryGetProperty("version", out var ver) ? ver.GetString() : "";
+        var c = Post("/api/auth/register/complete", new
+        {
+            ticket, name = "دیگری", password = pass,
+            terms = new { accepted = true, version = tv },
+            device = new { uid = "pc-other" + Guid.NewGuid().ToString("N")[..20], name = "OTHER", platform = "windows" },
+        });
+        var at = c.TryGetProperty("accessToken", out var a) ? a.GetString()! : "";
+        Post("/api/pump", new { name = "پمپِ دیگری" }, at);
+        var b = Post("/api/pump/device/bind", new { device = new { uid, name = "OTHER", platform = "windows" } }, at);
+        var st = b.TryGetProperty("station", out var so) && so.ValueKind == JsonValueKind.Object ? so.GetProperty("id").GetString()! : "";
+        return (st, b.TryGetProperty("deviceToken", out var dt) ? dt.GetString()! : "", uid);
     }
 
     private static void Shot(Avalonia.Controls.Window win, string dir, string name)

@@ -196,10 +196,15 @@ public class LicenseDeliveryTests : IDisposable
 
         await link.HomeFromAccountAsync();
         Assert.True(link.Subscription.Active);
-        //  پیش از این خط، هیچ مجوزی نیامده بود
-        Assert.False(link.Verify().Valid);
+        //  ⛔ از ۱۴۰۵/۰۷/۱۴ همین خودِ `HomeFromAccountAsync` مجوز را می‌گیرد:
+        //  سرور می‌گوید «فعال» و مجوزِ روی دیسک نمی‌گوید ⇒ همان دور تازه‌سازی
+        //  (پیش از آن فقط `KeepLicenseFreshAsync` می‌گرفت، و اگر دستگاه روی
+        //  پمپِ دیگری بود هرگز). و `KeepLicenseFreshAsync`ِ بعدی دیگر نمی‌زند.
+        Assert.True(link.Verify().Valid);
+        var hits = _hits.Count(h => h == "/api/pump/device/license");
 
         await link.KeepLicenseFreshAsync();
+        Assert.Equal(hits, _hits.Count(h => h == "/api/pump/device/license"));
 
         //  ⛔ مجوز واقعاً گرفته شد و واقعاً معتبر است
         var check = link.Verify();
