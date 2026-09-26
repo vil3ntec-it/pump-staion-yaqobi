@@ -174,4 +174,27 @@ public class SignedInNoPumpTests
         Assert.Contains("PublisherIfStarted", vm);
         Assert.Contains("Connected: true", vm);
     }
+
+    /// <summary>
+    /// ⛔ «حسابی که قبلاً آزمایشی نداشت باز هم نگرفت» (۱۴۰۵/۰۷/۱۳، پس از ۳.۱.۱۷۹).
+    /// حسابِ واردشده‌ای که با نسخهٔ پیشین ساخته شده و پمپ ندارد، بی باز کردنِ
+    /// پروفایل هم آماده می‌شود: یک بار در هر اجرا، پس از مکثِ ناشر، **همان**
+    /// گامِ پروفایل. و حلقهٔ پس‌زمینه همچنان هیچ پمپی نمی‌سازد.
+    /// سنجهٔ رفتاری: `oldacct` روی پشتهٔ واقعی.
+    /// </summary>
+    [Fact]
+    public void HesabeGhadimi_BiBazKardaneProfile_Amade_Mishavad()
+    {
+        var main = Src(Main);
+        var hook = main.IndexOf("_ = Account.EnsureReadyOnOpenAsync()", StringComparison.Ordinal);
+        Assert.True(hook > 0, "گامِ «حساب آماده» پس از باز شدنِ برنامه صدا زده نمی‌شود");
+        //  یک بار در هر اجرا — زیرِ نگهبانِ `_afterSignIn`، نه پیش از آن
+        Assert.True(hook > main.IndexOf("_afterSignIn = true;", StringComparison.Ordinal));
+        Assert.Contains("await Task.Delay(Services.StationPublisher.FirstDelay)", main);
+        var vm = Src(Vm);
+        Assert.Contains("public Task EnsureReadyOnOpenAsync() => EnsureReadySafeAsync();", vm);
+        //  ⛔ نصبِ وصل‌شده هیچ درخواستی نمی‌زند
+        Assert.Contains("if (!string.IsNullOrWhiteSpace(AppSettings.Load().CloudDeviceToken)) return;", vm);
+        Assert.DoesNotContain("EnsureStationAsync", Src("PumpYaqobi.App/Services/StationPublisher.cs"));
+    }
 }

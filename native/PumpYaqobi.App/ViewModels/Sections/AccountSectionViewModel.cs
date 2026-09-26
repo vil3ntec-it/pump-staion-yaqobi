@@ -1023,6 +1023,13 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         try { await EnsureReadyAsync(); } catch { /* دورِ بعد؛ برنامه بی‌اینترنت هم باز است */ }
     }
 
+    /// <summary>
+    /// همان گامِ «حساب آماده»، یک بار پس از باز شدنِ برنامه (<c>MainViewModel</c>).
+    /// حسابِ واردشده‌ای که این کامپیوترش وصل نیست ⇒ پمپ (اگر نبود) و وصل شدن.
+    /// هیچ استثنایی بیرون نمی‌دهد و روی نصبِ وصل‌شده هیچ درخواستی نمی‌زند.
+    /// </summary>
+    public Task EnsureReadyOnOpenAsync() => EnsureReadySafeAsync();
+
     /// <summary>نامِ پمپِ خودکار: آن‌چه کاربر نوشته، وگرنه «پمپِ» + نامِ حساب.</summary>
     private string AutoPumpName()
     {
