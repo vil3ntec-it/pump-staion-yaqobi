@@ -617,6 +617,8 @@
     if (!v || typeof v !== 'object') return false;
     // ⚠️ عکسِ کهنه هرگز جای تازه را نگیرد
     if (data && data.seq && (v.seq || 0) < data.seq) return false;
+    // ⚠️ عکسِ سرورِ حساب با همان شماره جای عکسِ زندهٔ سوکت را نمی‌گیرد
+    if (viaCloud && data && !fromCloud && (v.seq || 0) <= (data.seq || 0)) return false;
     data = v;
     fromCloud = !!viaCloud;
     try { localStorage.setItem(stnKey('snap'), JSON.stringify(data)); } catch (e) { }
@@ -703,11 +705,55 @@
     }
   }
 
-  var door = 0;
+  /*
+   *  ══ وصل شدنِ واقعی — سه در، مهلتِ هر در، و عکسِ سرورِ حساب همان لحظه ══
+   *
+   *  گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۴): «اندروید و آیفون هیچ‌کدام کار نمی‌کنن…
+   *  یا می‌گه وصل است و جواب نمی‌ده، یا وصل است و اطلاعاتِ همون حساب رو نشون
+   *  نمی‌ده.» با سرورهای واقعی بازسازی شد (‎tools/check-kar-real.mjs‎):
+   *
+   *   ۱) صفحهٔ ‎https‎ (آیفون، سافاری) حق ندارد به ‎ws://192.168…‎ وصل شود
+   *      (Mixed Content) — و کرومیوم/وب‌کیت نه خطا می‌دهند نه ‎close‎: سوکت
+   *      تا ابد «در حالِ وصل شدن» می‌ماند.
+   *   ۲) گوشی روی دیتای خودش (بیرون از وای‌فایِ پمپ) به نشانیِ شبکهٔ پمپ
+   *      نمی‌رسد و همان سوکت بی‌پایان آویزان می‌ماند.
+   *   ۳) عکسِ سرورِ حساب فقط «پس از دو بار نشدن» پرسیده می‌شد — و چون سوکت
+   *      هیچ‌وقت نشد نمی‌گفت، هیچ‌وقت.
+   *
+   *  پس: ⛔ هر در مهلت دارد (‎OpenWait‎)؛ ⛔ درِ ‎ws://‎ روی صفحهٔ ‎https‎ اصلاً
+   *  امتحان نمی‌شود؛ ⛔ درِ سوم همان سرورِ خانگی است از راهِ تونلِ قفل‌شده
+   *  (‎TUNNEL‎ — ‎wss://…/station‎، همان مسیر، همان رمزِ خواندن)؛ و ⛔ عکسِ
+   *  سرورِ حساب همان لحظهٔ باز شدن پرسیده می‌شود، هم‌زمان با سوکت.
+   */
+  var door = 0, gen = 0, openTimer = 0, wsLive = false;
+  var OpenWait = 5000;
+
+  /** نشانیِ ‎ws://‎ از صفحهٔ ‎https‎ = Mixed Content (مگر خودِ همین دستگاه). */
+  function blockedDoor(url) {
+    try {
+      if (location.protocol !== 'https:') return false;
+      if (!/^ws:\/\//i.test(url)) return false;
+      var h = url.replace(/^ws:\/\//i, '').split(/[/:?#]/)[0];
+      return h !== 'localhost' && h !== '127.0.0.1';
+    } catch (e) { return false; }
+  }
+
+  /** همهٔ درهای امروز، به ترتیب: شبکهٔ پمپ (دو در) و بعد تونل. */
+  function doors() {
+    var out = [];
+    if (cfg.srv) doorsFor(cfg).forEach(function (d) { if (!blockedDoor(d.url)) out.push(d); });
+    //  درِ تونل فقط با کدِ پمپ و رمزِ خواندن معنا دارد، و فقط درِ تازه
+    //  (‎/station‎) — پورتِ عمومیِ سرورِ خانگی درِ قدیمی را باز نمی‌کند.
+    if (cfg.stn && cfg.tok) {
+      var t = doorsFor({ srv: TUNNEL, stn: cfg.stn, tok: cfg.tok })[0];
+      if (!out.some(function (d) { return d.url === t.url; })) out.push({ name: 'tunnel', url: t.url, path: t.path });
+    }
+    return out;
+  }
 
   /** نشانیِ همان دری که الان امتحان می‌شود. */
-  function wsUrl() { return doorsFor(cfg)[door % 2].url; }
-  function livePath() { return doorsFor(cfg)[door % 2].path; }
+  function wsUrl() { var d = doors(); return d.length ? d[door % d.length].url : ''; }
+  function livePath() { var d = doors(); return d.length ? d[door % d.length].path : 'live'; }
 
   function live(on, text) {
     var dot = $('liveDot'), t = $('liveText');
@@ -717,79 +763,157 @@
     if (st) st.textContent = text;
   }
 
-  function connect() {
-    if (!cfg.srv) return;
-    try { if (ws) ws.close(); } catch (e) { }
-    live(false, 'در حالِ وصل شدن…');
-    try { ws = new WebSocket(wsUrl()); } catch (e) { schedule(); return; }
+  /** حالی که روی صفحه نوشته می‌شود وقتی سوکت هنوز چیزی نداده — راست، نه امید. */
+  function waitingText() {
+    if (data && fromCloud) return cloudText();
+    if (data) return 'آخرین عکسِ ذخیره‌شده — در حالِ وصل شدن…';
+    if (cloudNone) return 'برنامهٔ کامپیوترِ پمپ هنوز هیچ عکسی نفرستاده — روشن و وصل است؟';
+    return 'در حالِ وصل شدن…';
+  }
 
-    ws.onopen = function () {
-      ws.send(JSON.stringify({ op: 'sub', subId: 'live', event: 'value', path: livePath() }));
+  function connect() {
+    var list = doors();
+    clearTimeout(openTimer);
+    try { if (ws) ws.close(); } catch (e) { }
+    ws = null;
+    if (!list.length) { live(false, waitingText()); cloudPoll(true); return; }
+    var my = ++gen, opened = false, d = list[door % list.length];
+    if (!wsLive) { live(false, waitingText()); cloudPoll(true); }
+    var sock;
+    try { sock = new WebSocket(d.url); } catch (e) { nextDoor(my); return; }
+    ws = sock;
+    //  ⛔ سوکتی که در مهلت جواب نداد رها می‌شود — مرورگر خودش هیچ‌وقت نمی‌گوید.
+    openTimer = setTimeout(function () { if (my === gen && !opened) nextDoor(my); }, OpenWait);
+
+    sock.onopen = function () {
+      if (my !== gen) return;
+      sock.send(JSON.stringify({ op: 'sub', subId: 'live', event: 'value', path: d.path }));
     };
-    ws.onmessage = function (ev) {
+    sock.onmessage = function (ev) {
+      if (my !== gen) return;
       var m;
       try { m = JSON.parse(ev.data); } catch (e) { return; }
       if (m.op === 'connected') {
         // این در جواب داد — تا وقتی کار می‌کند همین بماند
+        opened = true;
+        clearTimeout(openTimer);
         retry = 0;
         return;
       }
       if (m.op === 'error') {
         // ⚠️ شاید فقط این در نبود، نه این‌که رمز غلط باشد: سرورِ قدیمی
         // ‎/station‎ ندارد و سرورِ تازه پمپِ ناشناس را نمی‌شناسد. درِ بعدی
-        // را امتحان کن و تنها وقتی «رمز غلط» بگو که هر دو رد کرده باشند.
-        door++;
-        live(false, door % 2 === 0
-          ? 'رمزِ سرور پذیرفته نشد — کیو‌آرِ تازه بگیرید'
-          : 'در حالِ امتحانِ راهِ دیگر…');
-        try { ws.close(); } catch (e) { }
+        // را امتحان کن و تنها وقتی «رمز غلط» بگو که همه رد کرده باشند.
+        rejected++;
+        nextDoor(my);
         return;
       }
       if (m.op === 'event' && m.subId === 'live') {
+        opened = true;
+        clearTimeout(openTimer);
+        rejected = 0;
         if (m.value && typeof m.value === 'object') {
           acceptSnapshot(m.value, false);
-          live(true, 'زنده — تازه‌سازی ' + ((data && data.at) || ''));
+          wsLive = true;
+          cloudPoll(false);
+          live(true, (d.name === 'tunnel' ? 'زنده از راهِ اینترنت' : 'زنده') + ' — تازه‌سازی ' + ((data && data.at) || ''));
         } else {
-          live(true, 'وصل است، ولی برنامهٔ کامپیوتر هنوز چیزی نفرستاده');
+          //  در باز است ولی برنامهٔ کامپیوتر این‌جا چیزی ننوشته ⇒ همان
+          //  عکسِ سرورِ حساب، و راستش را بگو.
+          wsLive = false;
+          cloudPoll(true);
+          live(!!data, data ? waitingText() : 'وصل است، ولی برنامهٔ کامپیوتر هنوز چیزی نفرستاده');
         }
         gateReady();
       }
     };
-    ws.onclose = function () { live(false, 'قطع شد — دوباره وصل می‌شوم'); schedule(); };
-    ws.onerror = function () { try { ws.close(); } catch (e) { } };
+    sock.onclose = function () {
+      if (my !== gen) return;
+      clearTimeout(openTimer);
+      if (!opened) { nextDoor(my); return; }
+      wsLive = false;
+      cloudPoll(true);
+      live(false, data ? waitingText() : 'قطع شد — دوباره وصل می‌شوم');
+      schedule();
+    };
+    sock.onerror = function () { try { sock.close(); } catch (e) { } };
+  }
+
+  var rejected = 0;
+
+  /** این در نشد ⇒ درِ بعدی همین حالا؛ همه را که گشتیم ⇒ با مکث از نو. */
+  function nextDoor(my) {
+    if (my !== gen) return;
+    gen++;
+    clearTimeout(openTimer);
+    try { if (ws) ws.close(); } catch (e) { }
+    ws = null;
+    var n = Math.max(1, doors().length);
+    door++;
+    if (door % n !== 0) { clearTimeout(timer); timer = setTimeout(connect, 150); return; }
+    //  یک دورِ کامل و هیچ دری باز نشد
+    wsLive = false;
+    cloudPoll(true);
+    if (rejected >= n) {
+      live(false, 'رمزِ سرور پذیرفته نشد — کدِ پمپ را دوباره بزنید');
+      rejected = 0;
+    } else {
+      live(!!data, waitingText());
+    }
+    schedule();
   }
 
   function schedule() {
     clearTimeout(timer);
     retry = Math.min(retry + 1, 6);
-    timer = setTimeout(connect, 1000 * retry);
-    //  دو بار پشتِ سرِ هم نشد ⇒ عکسِ ابری، تا کارمندِ دور از پمپ دستِ خالی
-    //  نماند. ‎connect()‎ همچنان تلاش می‌کند و همین که سرورِ خانگی جواب داد،
-    //  عکسِ زنده جای ابری می‌نشیند (‎seq‎ی بزرگ‌تر).
-    if (retry >= 2) cloudFallback();
+    timer = setTimeout(connect, 2000 * retry);
   }
 
-  var cloudBusy = false, cloudLastAt = 0;
+  var cloudBusy = false, cloudLastAt = 0, cloudNone = false, cloudAt = 0, cloudTimer = 0;
+
+  function cloudText() {
+    var when = cloudAt ? new Date(cloudAt).toLocaleString('fa-IR') : '';
+    return 'از سرورِ حساب' + (when ? ' · ' + when : '') + ' — شبکهٔ پمپ از این‌جا در دسترس نیست';
+  }
 
   /**
-   * عکسِ ده‌دقیقه‌ایِ ابر — فقط با کدِ پمپ، فقط همان پمپ.
-   * از هر ۶۰ ثانیه بیشتر نمی‌پرسد؛ برنامهٔ کامپیوتر خودش هر ده دقیقه یک بار
-   * به ابر می‌فرستد، پس تندتر پرسیدن چیزی نمی‌آورد.
+   *  نبضِ آگاهانه: تا وقتی سوکتِ زنده چیزی نمی‌دهد، هر ۶۰ ثانیه عکسِ سرورِ
+   *  حساب پرسیده می‌شود — چون خودِ سرورِ حساب هیچ خبری به این صفحه نمی‌فرستد.
+   *  همین که سوکت زنده شد، خاموش (‎cloudPoll(false)‎).
+   */
+  function cloudPoll(on) {
+    clearTimeout(cloudTimer);
+    if (!on) return;
+    cloudFallback();
+    cloudTimer = setTimeout(function () { if (!wsLive) cloudPoll(true); }, 60000);
+  }
+
+  /**
+   * عکسِ سرورِ حساب — فقط با کدِ پمپ، فقط همان پمپ.
+   * از هر ۲۰ ثانیه بیشتر نمی‌پرسد؛ برنامهٔ کامپیوتر خودش هر دقیقه یک بار
+   * به آن‌جا می‌فرستد، پس تندتر پرسیدن چیزی نمی‌آورد.
    */
   function cloudFallback() {
     if (!cfg.code || !window.PumpCloud || cloudBusy) return;
-    if (Date.now() - cloudLastAt < 60000) return;
+    if (Date.now() - cloudLastAt < 20000) return;
     cloudBusy = true;
     PumpCloud.cloudLive(cfg.code).then(function (r) {
       cloudLastAt = Date.now();
-      if (!r || !r.live) return;
+      if (!r || !r.live) { cloudNone = true; if (!data) live(false, waitingText()); return; }
+      cloudNone = false;
+      cloudAt = r.updatedAt || 0;
       if (acceptSnapshot(r.live, true) || fromCloud) {
-        var when = r.updatedAt ? new Date(r.updatedAt).toLocaleString('fa-IR') : '';
-        live(true, 'از ابر — سرورِ پمپ در دسترس نیست · ' + when);
+        if (!wsLive) live(true, cloudText());
         gateReady();
       }
-    }).catch(function () { cloudLastAt = Date.now(); })
-      .then(function () { cloudBusy = false; });
+    }).catch(function (err) {
+      cloudLastAt = Date.now();
+      //  ۴۰۴ یعنی سرورِ حساب هنوز عکسی از این پمپ ندارد — راستش را بگو
+      if (err && err.status === 404 && /live/.test(err.code || 'live')) {
+        cloudNone = true;
+        if (!data && !wsLive) live(false, waitingText());
+      }
+    }).then(function () { cloudBusy = false; });
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -837,10 +961,17 @@
     if (st.accessCode !== undefined) cfg.code = st.accessCode || '';
     cfg.name = st.name || cfg.name || '';
     save();
-    door = 0;
-    retry = 0;
+    resetLink();
     chips();
     return true;
+  }
+
+  /** پمپِ تازه ⇒ حالِ اتصالِ پمپِ قبلی هیچ اثری نگذارد. */
+  function resetLink() {
+    door = 0; retry = 0; rejected = 0; wsLive = false;
+    cloudNone = false; cloudLastAt = 0; cloudAt = 0;
+    gen++;
+    clearTimeout(openTimer); clearTimeout(cloudTimer); clearTimeout(timer);
   }
 
   /** نشانِ «کدام پمپ» روی صفحهٔ قفل و سربرگ — تا کارمند یک لحظه هم شک نکند. */
@@ -906,9 +1037,8 @@
           chips();
           syncBackground();
           show('lockPane');
-          live(false, 'سرورِ پمپ نشانی ندارد — عکسِ ابری');
-          cloudLastAt = 0;
-          cloudFallback();
+          resetLink();
+          connect();
           return;
         }
         adoptStation(st);
@@ -951,7 +1081,7 @@
   /** خروج از پمپ: همه‌چیزِ همین پمپ از گوشی پاک می‌شود. */
   function forgetAll(note) {
     try { if (ws) ws.close(); } catch (e) { }
-    clearTimeout(timer);
+    resetLink();
     if (window.PumpCloud) PumpCloud.signOut();
     switchStation('');
     cfg.srv = ''; cfg.tok = ''; cfg.code = ''; cfg.name = ''; cfg.stn = '';
@@ -1783,7 +1913,8 @@
     } else if (cfg.srv || cfg.code) {
       show('lockPane');
       gateReady();
-      if (cfg.srv) connect(); else { live(false, 'سرورِ پمپ نشانی ندارد — عکسِ ابری'); cloudFallback(); }
+      //  درِ شبکهٔ پمپ، درِ تونل، و عکسِ سرورِ حساب — هر سه هم‌زمان
+      connect();
       //  نشانیِ تازه‌تر، اگر ابر یکی دارد — بی‌صدا، چون کارِ کارمند نباید
       //  منتظرِ اینترنت بماند. اول با کدِ پمپ، وگرنه با نشستِ گوگل.
       (cfg.code ? resumeCode() : resumeCloud()).then(function (moved) {

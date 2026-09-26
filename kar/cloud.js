@@ -100,11 +100,17 @@
     //  برنامه است، و مسیرهای دیگر هم روزی ممکن است لازمش داشته باشند.
     var headers = { 'Content-Type': 'application/json', 'X-App-Id': APP_ID };
     if (token) headers.Authorization = 'Bearer ' + token;
+    //  ⛔ درخواستی که جواب نمی‌دهد (اینترنتِ نیمه‌جان، تونلِ خوابیده) برای
+    //  همیشه منتظر نمی‌گذارد — مهلت دارد و مثلِ «نرسیدیم» (۰) برمی‌گردد.
+    var ctl = typeof AbortController === 'function' ? new AbortController() : null;
+    var tm = ctl ? setTimeout(function () { try { ctl.abort(); } catch (e) { } }, CallWait) : 0;
     return fetch(CLOUD + path, {
       method: method,
       headers: headers,
-      body: body === undefined ? undefined : JSON.stringify(body)
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: ctl ? ctl.signal : undefined
     }).then(function (res) {
+      clearTimeout(tm);
       return res.text().then(function (text) {
         var json = null;
         try { json = text ? JSON.parse(text) : null; } catch (e) { }
@@ -116,8 +122,16 @@
         }
         return json;
       });
+    }, function (e) {
+      clearTimeout(tm);
+      var err = new Error('به سرور نرسیدیم');
+      err.status = 0;
+      err.code = e && e.name === 'AbortError' ? 'timeout' : 'network';
+      throw err;
     });
   }
+
+  var CallWait = 15000;
 
   /**
    * ورود با حساب گوگل.
