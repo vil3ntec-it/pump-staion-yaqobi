@@ -50,6 +50,23 @@
   #define OutName "PumpYaqobi-Setup"
 #endif
 #define AppExe  "PumpYaqobi.exe"
+
+; ── «۳۲ یا ۶۴بیتی؟» — پرسشِ نصبِ تازه (۱۴۰۵/۰۷/۱۴) ─────────────────────────
+;  خواستهٔ صاحب ریپو: «موقعِ نصبِ برنامه بگه کدوم رو می‌خوای، ۳۲ بیت یا ۶۴
+;  بیت — توی جایی که تازه روی کامپیوتر نصب می‌کنی این مرحله هم باشه.»
+;  فقط نصابِ اصلی (۶۴بیتی، همان فایلی که همه می‌گیرند) می‌پرسد، و فقط وقتی
+;  ساختِ CI هشِ نصابِ ۳۲بیتیِ **همین** انتشار را داده (OtherSha). انتخابِ ۳۲
+;  ⇒ همان فایل از همان انتشار گرفته، هشش سنجیده و اجرا می‌شود.
+;  ⛔ بارِ ۳۲بیتی داخلِ این فایل نیست (۷۸ مگابایت بیشتر برای هر نصب و هر
+;     به‌روزرسانیِ بی‌صدا)؛ و ⛔ فایلی که هشش جور نباشد هرگز اجرا نمی‌شود.
+#ifdef OtherSha
+  #define OtherShaOr OtherSha
+#else
+  #define OtherShaOr ""
+#endif
+#ifndef ReleaseBase
+  #define ReleaseBase "https://github.com/vil3ntec-it/pump-staion-yaqobi/releases/download"
+#endif
 #ifndef AppVersion
   #define AppVersion "1.0.0"
 #endif
@@ -182,7 +199,9 @@ function InitializeSetup(): Boolean;
 begin
   Result := True;
 #if Arch != "x86"
-  if not IsWin64 then
+  //  با پرسشِ «۳۲ یا ۶۴»، ویندوزِ ۳۲بیتی دیگر بن‌بست نیست: همان صفحه فقط
+  //  ۳۲بیتی را پیشنهاد می‌کند. بی‌صدا (به‌روزرسانی) همان نگهبانِ قدیم.
+  if (not IsWin64) and (WizardSilent or ('{#OtherShaOr}' = '')) then
   begin
     MsgBox('این فایل برای ویندوزِ ۶۴بیتی ساخته شده و ویندوزِ این کامپیوتر ۳۲بیتی است.' + #13#10 + #13#10 +
            'فایلِ «PumpYaqobi-Setup-x86.exe» را از همان صفحهٔ دانلود بگیرید —' + #13#10 +
@@ -221,9 +240,98 @@ begin
   end;
 end;
 
+
+
+// ── «۳۲ یا ۶۴بیتی؟» — فقط نصبِ تازه و دستی ──────────────────────────────────
+//  ⛔ نصبِ بی‌صدا (به‌روزرسانیِ خودِ برنامه) و نصبی که از قبل روی این کامپیوتر
+//     هست این صفحه را نمی‌بینند: پرسیدنِ دوباره یعنی کسی که فقط به‌روز می‌کند
+//     ناخواسته برنامهٔ دوم را کنارِ اولی بنشاند.
+//  پیش‌فرض همان است که ویندوز می‌خواهد (IsWin64)، و روی ویندوزِ ۳۲بیتی
+//  گزینهٔ ۶۴ بسته است — آن فایل آن‌جا اجرا نمی‌شود.
+#if Arch != "x86"
+#ifdef OtherSha
+var
+  ArchPage: TInputOptionWizardPage;
+  DownloadPage: TDownloadWizardPage;
+  HandedOff: Boolean;
+
+procedure InitializeWizard();
+begin
+  ArchPage := CreateInputOptionPage(wpWelcome,
+    'نسخهٔ ۳۲ یا ۶۴بیتی',
+    'کدام را روی این کامپیوتر نصب کنیم؟',
+    'هر دو همان برنامه‌اند با همان دفتر و حساب‌ها؛ فقط برای بیتیِ ویندوز فرق دارند.' + #13#10 +
+    'نمی‌دانید؟ همان گزینهٔ انتخاب‌شده را نگه دارید — از روی ویندوزِ همین کامپیوتر انتخاب شده.',
+    True, False);
+  ArchPage.Add('۶۴بیتی — ویندوزِ امروزی (پیشنهادی)');
+  ArchPage.Add('۳۲بیتی — ویندوزِ قدیمیِ ۳۲بیتی');
+  if IsWin64 then
+    ArchPage.SelectedValueIndex := 0
+  else
+  begin
+    ArchPage.SelectedValueIndex := 1;
+    ArchPage.CheckListBox.ItemEnabled[0] := False;
+  end;
+  DownloadPage := CreateDownloadPage('گرفتنِ نسخهٔ ۳۲بیتی',
+    'نصابِ ۳۲بیتیِ همین نسخه گرفته می‌شود…', nil);
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := False;
+  if PageID = ArchPage.ID then
+    Result := WizardSilent or (WizardForm.PrevAppDir <> '');
+end;
+
+procedure CancelButtonClick(CurPageID: Integer; var Cancel, Confirm: Boolean);
+begin
+  if HandedOff then Confirm := False;
+end;
+
+function RunOther(): Boolean;
+var
+  Code: Integer;
+begin
+  Result := False;
+  DownloadPage.Clear;
+  DownloadPage.Add('{#ReleaseBase}/v{#AppVersion}/PumpYaqobi-Setup-x86.exe',
+                   'PumpYaqobi-Setup-x86.exe', '{#OtherSha}');
+  DownloadPage.Show;
+  try
+    try
+      DownloadPage.Download;
+      Result := True;
+    except
+      MsgBox('نصابِ ۳۲بیتی گرفته نشد — اینترنت نیست یا فایل ناقص رسید.' + #13#10 + #13#10 +
+             'فایلِ «PumpYaqobi-Setup-x86.exe» را از همان صفحهٔ دانلود بگیرید و بزنید،' + #13#10 +
+             'یا این‌جا ۶۴بیتی را انتخاب کنید.', mbError, MB_OK);
+    end;
+  finally
+    DownloadPage.Hide;
+  end;
+  if not Result then exit;
+  //  منتظر می‌مانیم تا تمام شود: {tmp} با بسته شدنِ همین نصاب پاک می‌شود.
+  WizardForm.Hide;
+  Exec(ExpandConstant('{tmp}\PumpYaqobi-Setup-x86.exe'), '', '', SW_SHOW, ewWaitUntilTerminated, Code);
+  HandedOff := True;
+  WizardForm.Close;
+end;
+#endif
+#endif
+
 function NextButtonClick(CurPageID: Integer): Boolean;
 begin
   Result := True;
+#if Arch != "x86"
+#ifdef OtherSha
+  if (CurPageID = ArchPage.ID) and (ArchPage.SelectedValueIndex = 1) then
+  begin
+    RunOther();
+    Result := False;
+    exit;
+  end;
+#endif
+#endif
   if (CurPageID = wpSelectDir) and NeedsAdminFolder(WizardDirValue) then
     MsgBox('این پوشه اجازهٔ مدیر می‌خواهد.' + #13#10 + #13#10 +
            'برنامه همان‌جا نصب می‌شود و کار می‌کند، ولی هر بار که خودش را' + #13#10 +

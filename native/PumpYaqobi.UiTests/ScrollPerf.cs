@@ -253,6 +253,19 @@ internal static class ScrollPerf
             }
         }
 
+        // ══ پروفایل — «خیلی کند اسکرول میشه و لگ میزنه» (۱۴۰۵/۰۷/۱۴) ═══════════
+        //  پیش از این عمداً بیرون بود (شبکه می‌خواهد)؛ ولی خودِ صفحهٔ پروفایل
+        //  بی شبکه هم ساخته می‌شود. گامِ ورود کنار گذاشته می‌شود تا خودِ پروفایل
+        //  جلوی چشم باشد، همان چیزی که کاربرِ واردشده می‌بیند.
+        {
+            var acc = vm.Account;
+            Wait(win, vm.GoAsync(acc)); Settle(win);
+            acc.LoginStep = 4; Settle(win);
+            ScrollThrough(win, "پروفایل", build: true);
+            ScrollThrough(win, "پروفایل (بارِ دوم)");
+            ScrollThrough(win, "پروفایل (بی سایه)", noShadow: true);
+        }
+
         // ══ تاریخچه ═════════════════════════════════════════════════════════
         if (vm.Sections.FirstOrDefault(s => s.Id == "history") is HistorySectionViewModel hs)
         {

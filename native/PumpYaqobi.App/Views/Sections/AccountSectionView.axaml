@@ -752,7 +752,7 @@
            پیش از این سه ستونِ هم‌وزن بود («آواتار | مشخصات | اشتراک») و هر سه
            از بالای صفحه شروع می‌شدند، پس هیچ‌کدام سرصفحه نبود و چشم نمی‌دانست
            از کجا شروع کند. حالا یک سرصفحهٔ پهن است و بقیه زیرش. -->
-      <Border Classes="card" Padding="24,20">
+      <Border Classes="card calm" Padding="24,20">
         <Grid ColumnDefinitions="Auto,*,Auto">
 
           <Border Grid.Column="0" Width="104" Height="104" CornerRadius="52"
@@ -813,7 +813,7 @@
            یارو حسابِ کاربری برای خودش درست کرد تموم حساب درست شده.» ساختنِ پمپ و
            وصل کردنِ همین کامپیوتر خودکارند (`EnsureReadyAsync`)؛ این خط فقط می‌گوید
            کجای کار است — و اگر نشد، چرا. -->
-      <Border Classes="card" Padding="18,12" IsVisible="{Binding LinkingNow}">
+      <Border Classes="card calm" Padding="18,12" IsVisible="{Binding LinkingNow}">
         <TextBlock Text="{Binding LinkingLine}" TextWrapping="Wrap" Classes="muted" />
       </Border>
 
@@ -853,7 +853,7 @@
         <StackPanel Grid.Column="0" Spacing="14">
 
           <!-- مشخصاتِ پمپ -->
-          <Border Classes="card" Padding="22,18">
+          <Border Classes="card calm" Padding="22,18">
             <StackPanel Spacing="4">
               <TextBlock Text="🏷️ مشخصاتِ پمپ" Classes="ptitle" Margin="0,0,0,8" />
 
@@ -897,7 +897,7 @@
           </Border>
 
           <!-- کدِ اپِ کارمندان — همان چیزی که هر کارمند در گوشی می‌زند -->
-          <Border Classes="card" Padding="22,18">
+          <Border Classes="card calm" Padding="22,18">
             <StackPanel Spacing="12">
               <TextBlock Text="📲 کدِ پمپ برای اپِ کارمندان" Classes="ptitle" />
 
@@ -943,7 +943,7 @@
         </StackPanel>
 
         <!-- ══ اشتراک ══ -->
-        <Border Grid.Column="2" Classes="card" Padding="22,18" VerticalAlignment="Top">
+        <Border Grid.Column="2" Classes="card calm" Padding="22,18" VerticalAlignment="Top">
           <StackPanel Spacing="12">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Text="💎 اشتراک" Classes="ptitle" VerticalAlignment="Center" />
@@ -1045,8 +1045,13 @@
       </Grid>
 
       <!-- ══ تب‌ها: کارمندان · تاریخچه · پشتیبان‌ها  |  فایل‌های پشتیبان ══ -->
-      <Grid ColumnDefinitions="*,14,380" Height="380">
-        <Border Grid.Column="0" Classes="card" Padding="22,18">
+      <!-- ⛔ نه قدِ ثابت و نه اسکرولِ درونی (۱۴۰۵/۰۷/۱۴): «پروفایل خیلی کند اسکرول
+           می‌شه و لگ می‌زنه». دو `ScrollViewer`ِ داخلِ این دو کارت چرخِ ماوس را
+           می‌گرفتند — ماوس که رویشان می‌رسید صفحه می‌ایستاد و فقط فهرستِ کوچک
+           می‌لغزید. فهرست‌ها کوتاه‌اند (کارمندان، بیست کارتِ تاریخچه، سی پشتیبان)،
+           پس همراهِ خودِ صفحه می‌لغزند. -->
+      <Grid ColumnDefinitions="*,14,380">
+        <Border Grid.Column="0" Classes="card calm" Padding="22,18" VerticalAlignment="Top">
           <DockPanel>
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,14">
               <Button Classes="seg" Classes.active="{Binding TabStaff}" Content="کارمندان"
@@ -1056,8 +1061,7 @@
               <Button Classes="seg" Classes.active="{Binding TabBackups}" Content="پشتیبان‌ها"
                       Command="{Binding SetTabCommand}" CommandParameter="backups" />
             </StackPanel>
-            <ScrollViewer>
-              <StackPanel>
+            <StackPanel>
                 <TextBlock Text="ردیفی نیست." Classes="muted" IsVisible="{Binding !Rows.Count}" />
                 <ItemsControl ItemsSource="{Binding Rows}">
                   <ItemsControl.ItemTemplate>
@@ -1088,20 +1092,18 @@
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
               </StackPanel>
-            </ScrollViewer>
           </DockPanel>
         </Border>
 
         <!-- ══ فایل‌ها: پشتیبان‌ها ══ -->
-        <Border Grid.Column="2" Classes="card" Padding="22,18">
+        <Border Grid.Column="2" Classes="card calm" Padding="22,18" VerticalAlignment="Top">
           <DockPanel>
             <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
               <TextBlock Text="🗄️ فایل‌های پشتیبان" Classes="ptitle" VerticalAlignment="Center" />
               <Button Grid.Column="1" Classes="pill-btn support" Content="باز کردنِ پوشه" FontSize="12" Padding="12,4"
                       Command="{Binding OpenBackupsCommand}" />
             </Grid>
-            <ScrollViewer>
-              <StackPanel>
+            <StackPanel>
                 <TextBlock Text="هنوز پشتیبانی گرفته نشده — هر روز سرِ ورود خودکار گرفته می‌شود." Classes="muted" FontSize="12"
                            TextWrapping="Wrap" IsVisible="{Binding !Backups.Count}" />
                 <ItemsControl ItemsSource="{Binding Backups}">
@@ -1119,7 +1121,6 @@
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
               </StackPanel>
-            </ScrollViewer>
           </DockPanel>
         </Border>
       </Grid>

@@ -322,8 +322,8 @@
 
         <!-- مخزن‌ها — همان نقشهٔ مخزنِ بخشِ مخزن، کوچک، یکی برای هر تیل -->
         <Border Grid.Column="1" Classes="card calm" Padding="18,16">
-          <StackPanel Spacing="10">
-            <Grid ColumnDefinitions="Auto,*,Auto">
+          <Grid RowDefinitions="Auto,10,*">
+            <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
               <Border Grid.Column="0" Classes="dash-mark" />
               <TextBlock Grid.Column="1" Text="مخزن‌ها" Classes="dash-title" />
               <Border Grid.Column="2" Classes="dash-cell" Padding="10,3">
@@ -333,15 +333,31 @@
                 </StackPanel>
               </Border>
             </Grid>
-            <ItemsControl ItemsSource="{Binding FuelStatus}">
+            <!-- ⛔ دو مخزن وسطِ کارت و تا جایی که کادر جا دارد بزرگ (۱۴۰۵/۰۷/۱۴) —
+                 صاحب ریپو با عکس: «دو سه جا نوشته کم‌بودی… پطرول انقد… اونی که
+                 ضربدر کشیدم رو حذف کن و اون دو مخزن رو وسط بیار و بزرگشون کن.»
+                 نوشته‌های کنارِ هر مخزن (موجودی، ظرفیت) و حلقه و راهنما و جملهٔ
+                 زیرشان همان عددها را دوباره می‌گفتند. حالا هر مخزن درصدِ خودش را
+                 روی خودش دارد و زیرش فقط نام و حال — یک بار. ⛔ ویومدل دست نخورد. -->
+            <!-- ⚠️ بلندیِ کارت را نمودارِ کنارش می‌گوید (همان ردیفِ شبکه)؛ مخزن‌ها
+                 جای ماندهٔ همان کارت را به تساوی پر می‌کنند — نه قدِ ثابت که کارت
+                 را از نمودار بلندتر کند. -->
+            <ItemsControl Grid.Row="2" ItemsSource="{Binding FuelStatus}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <UniformGrid Columns="1" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:FuelStatusViewModel">
                   <Button Classes="card-shell" Margin="0,0,0,10" HorizontalAlignment="Stretch"
                           Command="{Binding $parent[ItemsControl].((vm:DashboardSectionViewModel)DataContext).GoCommand}"
-                          CommandParameter="{Binding GoSection}">
+                          CommandParameter="{Binding GoSection}"
+                          ToolTip.Tip="{Binding CurrentText}">
                     <Border Classes="dash-cell" Padding="10,8">
-                      <Grid ColumnDefinitions="150,*">
-                        <c:TankGauge Grid.Column="0" Compact="True" Width="150" Height="94"
+                      <Grid RowDefinitions="*,Auto">
+                        <c:TankGauge Grid.Row="0" Classes="dashtank" Compact="True" MinHeight="120"
+                                     HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                                      FillPercent="{Binding Percent}" FillText="{Binding PercentText}"
                                      BodyBrush="{DynamicResource Pump.Card}"
                                      BodyDeepBrush="{DynamicResource Pump.Input}"
@@ -349,15 +365,12 @@
                                      LabelBrush="{DynamicResource Pump.Text}"
                                      TextBrush="{DynamicResource Pump.Text}"
                                      ThresholdBrush="{DynamicResource Pump.Danger}" />
-                        <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="3">
-                          <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Text="{Binding Icon}" FontSize="14" VerticalAlignment="Center" />
-                            <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" />
-                          </StackPanel>
-                          <TextBlock Text="{Binding State}" FontSize="12" FontWeight="SemiBold"
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center" Margin="0,4,0,0">
+                          <TextBlock Text="{Binding Icon}" FontSize="14" VerticalAlignment="Center" />
+                          <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" />
+                          <TextBlock Text="·" Classes="muted" VerticalAlignment="Center" />
+                          <TextBlock Text="{Binding State}" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
                                      Foreground="{Binding ColorKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
-                          <TextBlock Text="{Binding CurrentText}" Classes="muted" FontSize="11.5" TextWrapping="Wrap" />
-                          <TextBlock Text="{Binding CapacityText}" Classes="muted" FontSize="11.5" TextWrapping="Wrap" />
                         </StackPanel>
                       </Grid>
                     </Border>
@@ -365,30 +378,7 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <!-- سهمِ هر تیل از کلِ ظرفیت — همان حلقهٔ داشبوردِ قبلی، کوچک، کنارِ راهنما -->
-            <Grid ColumnDefinitions="64,*">
-              <c:DonutGauge Grid.Column="0" Width="64" Height="64"
-                            FirstShare="{Binding DonutPetrolShare}"
-                            SecondShare="{Binding DonutDieselShare}"
-                            FirstBrush="{DynamicResource Pump.Ok}"
-                            SecondBrush="{DynamicResource Pump.Warn}"
-                            TrackBrush="{DynamicResource Pump.GridLine}" />
-              <ItemsControl Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center"
-                            ItemsSource="{Binding TankLegend}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:DashTankLegendViewModel">
-                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,3">
-                      <Border Width="9" Height="9" CornerRadius="5" VerticalAlignment="Center"
-                              Background="{Binding ColorKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
-                      <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="11.5" />
-                      <TextBlock Text="{Binding Line}" Classes="muted" FontSize="11" />
-                    </StackPanel>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </Grid>
-            <TextBlock Text="{Binding DonutNote}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
-          </StackPanel>
+          </Grid>
         </Border>
       </Grid>
 

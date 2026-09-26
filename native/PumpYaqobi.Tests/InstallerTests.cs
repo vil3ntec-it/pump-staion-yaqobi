@@ -46,7 +46,34 @@ public class InstallerTests
         var wf = File.ReadAllText(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
         Assert.Contains("pull_request", wf);
         Assert.Contains("native/installer/PumpYaqobi.iss", wf);
-        Assert.Contains("foreach ($arch in @('x64','x86'))", wf);
+        Assert.Contains("foreach ($arch in @('x86','x64'))", wf);
+        Assert.Contains("/DOtherSha=", wf);
+    }
+
+    /// <summary>
+    /// ══ «۳۲ یا ۶۴بیتی؟» در نصبِ تازه (۱۴۰۵/۰۷/۱۴) ══
+    /// صاحب ریپو: «موقعِ نصب بگه کدوم رو می‌خوای، ۳۲ بیت یا ۶۴ بیت — توی جایی
+    /// که تازه روی کامپیوتر نصب می‌کنی.» فقط نصابِ اصلی می‌پرسد؛ بی‌صدا و نصبِ
+    /// دوباره هرگز. انتخابِ ۳۲ فقط همان فایلِ همین انتشار را، با هشِ سنجیده،
+    /// اجرا می‌کند — هش در زمانِ ساخت داخلِ نصاب می‌نشیند.
+    /// </summary>
+    [Fact]
+    public void Nasab_Dar_NasbeTaze_32Ya64_MiPorsad()
+    {
+        var s = Iss();
+        Assert.Contains("CreateInputOptionPage(wpWelcome", s);
+        Assert.Contains("WizardSilent or (WizardForm.PrevAppDir <> '')", s);
+        Assert.Contains("#ifdef OtherSha", s);
+        Assert.Contains("'{#OtherSha}'", s);                         // هش همراهِ دانلود
+        Assert.Contains("/v{#AppVersion}/PumpYaqobi-Setup-x86.exe", s); // همین انتشار، نه latest
+        Assert.Contains("ItemEnabled[0] := False", s);                 // ویندوزِ ۳۲بیتی ⇒ ۶۴ بسته
+        Assert.DoesNotContain("PumpYaqobi-Setup-x86.exe\"; DestDir", s); // بارِ ۳۲ داخلِ نصاب نیست
+
+        //  ⛔ اول ۳۲بیتی ساخته می‌شود تا هشش به ۶۴بیتی برسد
+        var w = Workflow();
+        Assert.Contains("foreach ($arch in @('x86','x64'))", w);
+        Assert.Contains("/DOtherSha=$sha", w);
+        Assert.Contains("Get-FileHash rel/PumpYaqobi-Setup-x86.exe -Algorithm SHA256", w);
     }
 
     [Fact]

@@ -40,7 +40,10 @@
             </ItemsRepeater.Layout>
           <ItemsRepeater.ItemTemplate>
             <DataTemplate x:DataType="vm:StaffViewModel">
-              <Border Classes="card">
+              <!-- ⛔ کارتِ هر کارمند سایهٔ محو ندارد (۱۴۰۵/۰۷/۱۴): یک فهرستِ تکرارشونده
+                   است و `scrollperf` نُه کادرِ محو و گامِ ۷۹ms را همین‌جا دید —
+                   همان قاعدهٔ کارت‌های خریدِ مخزن. -->
+              <Border Classes="card calm">
                 <StackPanel Spacing="7">
                   <TextBlock Text="{Binding Name}" Classes="h2" />
                   <Grid ColumnDefinitions="*,*,*">

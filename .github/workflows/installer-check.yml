@@ -33,11 +33,17 @@ jobs:
             choco install innosetup --no-progress -y
             $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           }
-          foreach ($arch in @('x64','x86')) {
+          #  همان ترتیبِ ساختِ واقعی: ۳۲بیتی اول، و هشش به ۶۴بیتی — پس صفحهٔ
+          #  «۳۲ یا ۶۴؟» هم این‌جا کامپایل و سنجیده می‌شود.
+          $sha = ''
+          foreach ($arch in @('x86','x64')) {
             $src = "fake\win-$arch"
             New-Item -ItemType Directory -Force -Path $src | Out-Null
             Set-Content -Path "$src\PumpYaqobi.exe" -Value "stub"
-            & $iscc /Qp "/DAppVersion=0.0.1" "/DArch=$arch" "/DSourceDir=..\..\$src" native/installer/PumpYaqobi.iss
+            $extra = @()
+            if ($arch -eq 'x64') { $extra = @("/DOtherSha=$sha") }
+            & $iscc /Qp "/DAppVersion=0.0.1" "/DArch=$arch" "/DSourceDir=..\..\$src" @extra native/installer/PumpYaqobi.iss
             if ($LASTEXITCODE -ne 0) { throw "ساختِ نصابِ $arch شکست خورد" }
+            if ($arch -eq 'x86') { $sha = (Get-FileHash rel/PumpYaqobi-Setup-x86.exe -Algorithm SHA256).Hash.ToLowerInvariant() }
           }
           Get-ChildItem rel | ForEach-Object { "{0}  {1:N0} بایت" -f $_.Name, $_.Length }

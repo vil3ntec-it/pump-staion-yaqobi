@@ -244,14 +244,21 @@ jobs:
             $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           }
           New-Item -ItemType Directory -Force -Path rel | Out-Null
-          foreach ($arch in @('x64','x86')) {
+          #  ⚠️ اول ۳۲بیتی: نصابِ ۶۴بیتی هشِ همان فایل را در خودش دارد تا
+          #  پرسشِ «۳۲ یا ۶۴؟» فقط همان فایلِ همین انتشار را اجرا کند.
+          $sha = ''
+          foreach ($arch in @('x86','x64')) {
             $rid = "win-$arch"
+            $extra = @()
+            if ($arch -eq 'x64') { $extra = @("/DOtherSha=$sha") }
             & $iscc /Qp `
               "/DAppVersion=${{ steps.ver.outputs.version }}" `
               "/DArch=$arch" `
               "/DSourceDir=..\publish\$rid" `
+              @extra `
               native/installer/PumpYaqobi.iss
             if ($LASTEXITCODE -ne 0) { throw "ساختِ نصابِ $arch شکست خورد" }
+            if ($arch -eq 'x86') { $sha = (Get-FileHash rel/PumpYaqobi-Setup-x86.exe -Algorithm SHA256).Hash.ToLowerInvariant() }
           }
           "نصابِ ۶۴بیتی: {0:N1} مگابایت" -f ((Get-Item rel/PumpYaqobi-Setup.exe).Length/1MB)
           "نصابِ ۳۲بیتی: {0:N1} مگابایت" -f ((Get-Item rel/PumpYaqobi-Setup-x86.exe).Length/1MB)
@@ -358,11 +365,11 @@ jobs:
             «تنظیمات › سیستم › درباره» — جلوی «نوع سیستم» نوشته است
             «۶۴-bit» یا «۳۲-bit».
 
-            ⚠️ نمی‌دانید کدام؟ **`PumpYaqobi-Setup.exe`** را بگیرید. اگر
-            ویندوزتان ۳۲بیتی باشد، ویندوز همان لحظه می‌گوید این برنامه روی
-            این کامپیوتر اجرا نمی‌شود — و آن‌وقت فایلِ `-x86` را بگیرید.
-            برعکسش خرابی نمی‌آورد ولی برنامه کندتر می‌شود، پس روی ویندوزِ
-            ۶۴بیتی همان اولی درست است.
+            ⚠️ نمی‌دانید کدام؟ **`PumpYaqobi-Setup.exe`** را بگیرید. در نصبِ
+            تازه خودش می‌پرسد **۳۲ یا ۶۴بیتی** و گزینهٔ درست را از روی ویندوزِ
+            همان کامپیوتر از پیش انتخاب کرده است؛ اگر ۳۲بیتی را بزنید، نصابِ
+            ۳۲بیتیِ همین نسخه را خودش می‌گیرد (هشش سنجیده می‌شود) و اجرا
+            می‌کند.
 
             ⚠️ هر دو **یک برنامهٔ کاملاً یکسان**‌اند؛ فقط برای بیتیِ متفاوتِ
             ویندوز ساخته شده‌اند. حساب‌ها و دفتر در هر دو یکی است.
