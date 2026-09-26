@@ -445,8 +445,18 @@ console.log('\n── کدِ پمپ و جداسازیِ پمپ‌ها ───�
      '«پمپِ دیگر» همه‌چیز را پاک می‌کند و به صفحهٔ کد برمی‌گردد');
   ok(/function acceptSnapshot\(/.test(appSrc) && /\(v\.seq \|\| 0\) < data\.seq/.test(appSrc),
      'عکسِ کهنه (چه از ابر چه از خانه) جای تازه را نمی‌گیرد');
-  ok(/function cloudFallback\(/.test(appSrc) && /retry >= 2\) cloudFallback\(\)/.test(appSrc),
-     'اگر سرورِ خانگی جواب نداد، عکسِ ابریِ همان پمپ می‌آید');
+  ok(/function cloudFallback\(/.test(appSrc) && /if \(!wsLive\) \{ live\(false, waitingText\(\)\); cloudPoll\(true\); \}/.test(appSrc),
+     'عکسِ سرورِ حساب هم‌زمان با سوکت پرسیده می‌شود، نه پس از چند شکست');
+  ok(/openTimer = setTimeout\([\s\S]{0,80}nextDoor\(my\)[\s\S]{0,20}OpenWait\)/.test(appSrc),
+     'سوکتی که جواب نمی‌دهد مهلت دارد — مرورگر خودش هیچ‌وقت نمی‌گوید');
+  ok(/function blockedDoor\(/.test(appSrc) && /location\.protocol !== 'https:'/.test(appSrc),
+     'درِ ws:// روی صفحهٔ https امتحان نمی‌شود (Mixed Content)');
+  ok(/name: 'tunnel'/.test(appSrc) && /doorsFor\(\{ srv: TUNNEL/.test(appSrc),
+     'درِ سوم همان سرورِ خانگی از راهِ تونلِ قفل‌شده است');
+  ok(/viaCloud && data && !fromCloud/.test(appSrc),
+     'عکسِ سرورِ حساب جای عکسِ زندهٔ هم‌شماره را نمی‌گیرد');
+  ok(/signal: ctl \? ctl\.signal/.test(cloudSrc) && /CallWait/.test(cloudSrc),
+     'درخواستِ سرورِ حساب مهلت دارد و تا ابد منتظر نمی‌گذارد');
   ok(/status === 404[\s\S]{0,120}forgetAll\(/.test(appSrc), 'کدِ عوض‌شده ⇒ این گوشی بیرون می‌رود');
 
   // ── فایلِ نصبِ اندروید cloud.js را دارد ─────────────────────────────
