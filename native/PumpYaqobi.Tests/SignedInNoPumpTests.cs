@@ -34,46 +34,58 @@ public class SignedInNoPumpTests
     private const string Vm = "PumpYaqobi.App/ViewModels/Sections/AccountSectionViewModel.cs";
     private const string View = "PumpYaqobi.App/Views/Sections/AccountSectionView.axaml";
 
+    /// <summary>
+    /// ⛔ «وقتی که حساب هم نداشته باشم اون سرور باید بگه که وصل است و اگه وصل
+    /// بود باید سبز بشه» (۱۴۰۵/۰۷/۱۳). رنگِ چراغ حالِ <b>سرور</b> است؛ «ثبت
+    /// نشده» فقط یک خطِ آگاهی زیرِ جمله است (و جایش پروفایل).
+    /// </summary>
     [Fact]
-    public void Cheragh_Baraye_DastgaheBandNashode_Sabz_Nist()
+    public void Cheragh_BaJavabeSarvar_Sabz_Ast_BaHesab_YaBiHesab()
     {
         var s = Src(Main);
-        Assert.Contains("Online when !DeviceBound()", s);
-        var i = s.IndexOf("Online when !DeviceBound()", StringComparison.Ordinal);
+        Assert.DoesNotContain("Online when !DeviceBound()", s);
+        var i = s.IndexOf("case Services.CloudReach.Online:", StringComparison.Ordinal);
         var arm = s.Substring(i, s.IndexOf("break;", i, StringComparison.Ordinal) - i);
-        Assert.Contains("Pump.Warn", arm);
-        Assert.DoesNotContain("Pump.Ok", arm);
-        // ⚠️ این شاخه باید پیش از «Online ⇒ سبز» باشد، وگرنه هرگز نمی‌رسد.
-        var ok = s.IndexOf("case Services.CloudReach.Online:", StringComparison.Ordinal);
-        Assert.True(ok > i, "شاخهٔ «بند نشده» باید پیش از سبزِ Online بیاید");
+        Assert.Contains("key = \"Pump.Ok\";", arm);
+        Assert.DoesNotContain("Pump.Warn", arm);
+        Assert.Contains("UnboundWhy(_signedInCache)", arm);
     }
 
     [Fact]
-    public void ChraghYegane_ZardRa_Hesab_Mikonad()
+    public void ChraghYegane_SarvareHesabeSabz_BiKhanegiyeKharab_Sabz_Ast()
     {
         var s = Src(Main);
+        Assert.Contains("else if (acct == \"Pump.Ok\" && home != \"Pump.Danger\") { key = \"Pump.Ok\";", s);
         Assert.Contains("ok + warn > 0", s);
-        Assert.Contains("warn > 0", s);
     }
 
+    /// <summary>
+    /// ⛔ «این ثبتِ همین کامپیوتر و ساختِ حساب چیه… همین که یارو حسابِ کاربری
+    /// برای خودش درست کرد تموم حساب درست شده» (۱۴۰۵/۰۷/۱۳): نه گامِ «نامِ
+    /// پمپ»، نه کارتِ «ساختنِ پمپ»، نه دکمهٔ «ثبتِ همین کامپیوتر».
+    /// </summary>
     [Fact]
-    public void Profile_KarteSakhtanePomp_Darad_Va_HamanRahRaMizanad()
+    public void Profile_HichKarteSakhtanYaSabt_Nadarad_HameKhodkar()
     {
         var vm = Src(Vm);
-        //  ⛔ «پمپ دارد؟» از جوابِ خودِ سرور؛ مُهرِ `PumpStepDone` فقط وقتی هنوز
-        //  نپرسیده‌ایم (۱۴۰۵/۰۷/۱۳، سنجهٔ `linkstates`).
-        Assert.Contains("var unbound = SignedIn && string.IsNullOrWhiteSpace(f.CloudDeviceToken);", vm);
-        Assert.Contains("NeedsPump = unbound && (CloudLink.AccountHasStation == false", vm);
-        Assert.Contains("|| (CloudLink.AccountHasStation is null && !f.PumpStepDone));", vm);
-        var i = vm.IndexOf("CreatePumpHereAsync", StringComparison.Ordinal);
-        Assert.True(i > 0);
-        var body = vm.Substring(i, Math.Min(500, vm.Length - i));
-        Assert.Contains("await FinishPumpAsync();", body);
-        Assert.DoesNotContain("EnsureStationAsync", body);
-
+        Assert.DoesNotContain("CreatePumpHereAsync", vm);
+        Assert.DoesNotContain("BindHereAsync", vm);
         var v = Src(View);
-        Assert.Contains("{Binding NeedsPump}", v);
-        Assert.Contains("CreatePumpHereCommand", v);
+        Assert.DoesNotContain("CreatePumpHereCommand", v);
+        Assert.DoesNotContain("BindHereCommand", v);
+        Assert.DoesNotContain("{Binding NeedsPump}", v);
+        Assert.DoesNotContain("{Binding NeedsBind}", v);
+        Assert.Contains("{Binding LinkingNow}", v);
+        //  ⛔ واردشده همیشه «تمام» است — گامِ ۳ (نامِ پمپ) خودکار رد می‌شود
+        Assert.Contains("LoginStep = SignedIn || f.LoginSkipped ? 4 : 1;", vm);
+        //  و خودِ کار: همان راهِ همیشگی (FinishPumpAsync / CloudKeepNowAsync)، نه راهِ دوم
+        var i = vm.IndexOf("private async Task EnsureReadyAsync(", StringComparison.Ordinal);
+        var body = vm[i..vm.IndexOf("\n    }\n", i, StringComparison.Ordinal)];
+        Assert.Contains("await FinishPumpAsync();", body);
+        Assert.Contains("StationPublisher.CloudKeepNowAsync()", body);
+        Assert.DoesNotContain("EnsureStationAsync", body);
+        //  و باز کردنِ پروفایل منتظرِ اینترنت نمی‌ماند
+        Assert.Contains("if (SignedIn && !Busy) _ = EnsureReadySafeAsync();", vm);
     }
 
     /// <summary>
@@ -85,7 +97,7 @@ public class SignedInNoPumpTests
     public void HarHal_JomleyeKhodash_Va_KelikeCheragh_SabtMikonad()
     {
         var s = Src(Main);
-        Assert.Contains("why = UnboundWhy(_signedInCache);", s);
+        Assert.Contains("UnboundWhy(_signedInCache)", s);
         var i = s.IndexOf("private static string UnboundWhy", StringComparison.Ordinal);
         var body = s[i..s.IndexOf(";\n", i, StringComparison.Ordinal)];
         Assert.Contains("هنوز وارد حساب نشده‌اید", body);
@@ -93,6 +105,7 @@ public class SignedInNoPumpTests
         Assert.Contains("LastBindWhy", body);
         //  ⛔ جملهٔ کهنه که بی‌حساب را به «ساختنِ پمپ» می‌فرستاد، برنگشت
         Assert.DoesNotContain("در «پروفایل» پمپ را بسازید", s);
+        Assert.DoesNotContain("نامِ پمپ را بنویسید", s);
 
         //  ⛔ کلیکِ چراغ همان دورِ کامل را می‌زند و اگر کارِ کاربر است، پروفایل را باز می‌کند
         var c = s.IndexOf("private async Task CheckCloudAsync()", StringComparison.Ordinal);
@@ -116,11 +129,14 @@ public class SignedInNoPumpTests
         Assert.Equal(4, vm.Split("await NextStepAfterSignInAsync();").Length - 1);
         var i = vm.IndexOf("private async Task NextStepAfterSignInAsync()", StringComparison.Ordinal);
         var body = vm[i..vm.IndexOf("\n    }\n", i, StringComparison.Ordinal)];
-        Assert.Contains("HasStationAsync()", body);
-        Assert.Contains("if (!has) { LoginStep = 3; return; }", body);
-        Assert.Contains("StationPublisher.CloudKeepNowAsync()", body);
-        //  ⛔ هیچ پمپی بی‌خبر ساخته نمی‌شود
+        Assert.Contains("await EnsureReadyAsync(force: true);", body);
+        Assert.Contains("LoginStep = 4;", body);
+        Assert.DoesNotContain("LoginStep = 3", body);
+        //  ⛔ هیچ پمپی بی‌خبر ساخته نمی‌شود — فقط از راهِ کارِ خودِ کاربر
         Assert.DoesNotContain("EnsureStationAsync", body);
+        var e = vm.IndexOf("private async Task EnsureReadyAsync(", StringComparison.Ordinal);
+        var eb = vm[e..vm.IndexOf("\n    }\n", e, StringComparison.Ordinal)];
+        Assert.Contains("HasStationAsync()", eb);
     }
 
     /// <summary>
@@ -135,20 +151,6 @@ public class SignedInNoPumpTests
         Assert.Contains("if (!Activated && acctStation.Length > 0 && bindDue)", c);
         var pub = Src("PumpYaqobi.App/Services/StationPublisher.cs");
         Assert.Contains("await CloudKeepAsync(ct, forceBind: true);", pub);
-    }
-
-    [Fact]
-    public void HesabePompDar_KarteSabteHaminKampyuter_Darad()
-    {
-        var vm = Src(Vm);
-        Assert.Contains("NeedsBind = unbound && !NeedsPump && CloudLink.AccountHasStation == true;", vm);
-        var i = vm.IndexOf("private async Task BindHereAsync()", StringComparison.Ordinal);
-        var body = vm[i..vm.IndexOf("\n    }\n", i, StringComparison.Ordinal)];
-        Assert.Contains("StationPublisher.CloudKeepNowAsync()", body);
-        Assert.DoesNotContain("EnsureStationAsync", body);
-        var v = Src(View);
-        Assert.Contains("{Binding NeedsBind}", v);
-        Assert.Contains("BindHereCommand", v);
     }
 
     /// <summary>
