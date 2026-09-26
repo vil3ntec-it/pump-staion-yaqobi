@@ -33,12 +33,19 @@
 
     <Grid RowDefinitions="Auto,12,*,Auto">
       <Panel Grid.Row="0">
-        <ItemsRepeater ItemsSource="{Binding Staff}">
-          <ItemsRepeater.Layout>
-              <UniformGridLayout MinItemWidth="252" ItemsStretch="Fill"
-                                 MinColumnSpacing="12" MinRowSpacing="12" />
-            </ItemsRepeater.Layout>
-          <ItemsRepeater.ItemTemplate>
+        <!-- ⛔ ‎ItemsControl + AutoFillPanel‎، نه ‎ItemsRepeater‎ (۱۴۰۵/۰۷/۱۴): کارت‌ها
+             بالای جدول‌اند و با رسیدن به تهِ صفحه از قاب بیرون می‌روند؛
+             ‎ItemsRepeater‎ آن‌ها را آزاد می‌کرد و بلندیِ تخمینی‌اش درست یک ردیفِ
+             کارت (۲۱۸ پیکسل) با بلندیِ واقعی فرق داشت — پس صفحه ته اسکرول هر
+             فریم ۲۳۳۵ ⇄ ۲۵۵۳ می‌پرید (همان «پرپر») و ‎scrollperf‎ گامِ ۱۲۴–۱۴۳ms
+             می‌دید. شمارِ کارمندان کم است؛ پنلِ بی‌مجازی‌سازی بلندیِ ثابت دارد. -->
+        <ItemsControl ItemsSource="{Binding Staff}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <c:AutoFillPanel MinItemWidth="252" Gap="12" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:StaffViewModel">
               <!-- ⛔ کارتِ هر کارمند سایهٔ محو ندارد (۱۴۰۵/۰۷/۱۴): یک فهرستِ تکرارشونده
                    است و `scrollperf` نُه کادرِ محو و گامِ ۷۹ms را همین‌جا دید —
@@ -64,24 +71,24 @@
                   <TextBlock Text="{Binding ShortageText, StringFormat=کمبودی: {0}}" Classes="muted" />
                   <WrapPanel Orientation="Horizontal">
                     <Button Content="آمدن" Padding="9,3" FontSize="11" Margin="0,0,5,0"
-                            Command="{Binding $parent[ItemsRepeater].((vm:AttendanceSectionViewModel)DataContext).MarkInCommand}"
+                            Command="{Binding $parent[ItemsControl].((vm:AttendanceSectionViewModel)DataContext).MarkInCommand}"
                             CommandParameter="{Binding}" />
                     <Button Content="رفتن" Padding="9,3" FontSize="11" Margin="0,0,5,0"
-                            Command="{Binding $parent[ItemsRepeater].((vm:AttendanceSectionViewModel)DataContext).MarkOutCommand}"
+                            Command="{Binding $parent[ItemsControl].((vm:AttendanceSectionViewModel)DataContext).MarkOutCommand}"
                             CommandParameter="{Binding}" />
                     <Button Classes="accent" Content="پرداختِ معاش" Padding="9,3" FontSize="11" Margin="0,0,5,0"
                             IsVisible="{Binding NotPaid}"
-                            Command="{Binding $parent[ItemsRepeater].((vm:AttendanceSectionViewModel)DataContext).PaySalaryCommand}"
+                            Command="{Binding $parent[ItemsControl].((vm:AttendanceSectionViewModel)DataContext).PaySalaryCommand}"
                             CommandParameter="{Binding}" />
                     <Button Classes="ghost danger" Content="حذف" Padding="9,3" FontSize="11"
-                            Command="{Binding $parent[ItemsRepeater].((vm:AttendanceSectionViewModel)DataContext).DeleteStaffCommand}"
+                            Command="{Binding $parent[ItemsControl].((vm:AttendanceSectionViewModel)DataContext).DeleteStaffCommand}"
                             CommandParameter="{Binding}" />
                   </WrapPanel>
                 </StackPanel>
               </Border>
             </DataTemplate>
-          </ItemsRepeater.ItemTemplate>
-        </ItemsRepeater>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
       </Panel>
 
       <c:ExcelGrid Grid.Row="2" ItemsSource="{Binding Rows}" x:CompileBindings="False">

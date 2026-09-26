@@ -108,6 +108,24 @@ public class ScrollWeightTests : IDisposable
         Assert.DoesNotContain("Classes=\"card\"", att);
     }
 
+    /// <summary>
+    /// کارت‌های کارمندانِ «حاضری و معاش» با ‎ItemsRepeater‎ چیده نمی‌شوند
+    /// (۱۴۰۵/۰۷/۱۴). کارت‌ها بالای جدول‌اند و ته صفحه از قاب بیرون می‌روند؛
+    /// بلندیِ تخمینیِ ‎ItemsRepeater‎ برای کارت‌های آزادشده درست یک ردیف با
+    /// بلندیِ واقعی فرق داشت، پس صفحه ته اسکرول هر فریم ۲۳۳۵ ⇄ ۲۵۵۳ پیکسل
+    /// می‌پرید و ‎scrollperf‎ در CI گامِ ۱۲۴ و ۱۴۳ms می‌دید. فهرست کوتاه است و
+    /// ‎AutoFillPanel‎ی بی‌مجازی‌سازی بلندیِ ثابت دارد.
+    /// </summary>
+    [Fact]
+    public void KartehayeKarmandan_BiItemsRepeater_BolandiyeSabet()
+    {
+        var att = NoComments(Read("PumpYaqobi.App", "Views", "Sections", "AttendanceSectionView.axaml"));
+        Assert.DoesNotContain("<ItemsRepeater", att);
+        Assert.DoesNotContain("$parent[ItemsRepeater]", att);
+        Assert.Contains("<c:AutoFillPanel MinItemWidth=\"252\" Gap=\"12\"", att);
+        Assert.Contains("$parent[ItemsControl]", att);
+    }
+
     [Fact]
     public void HameyeKarthayeProfit_Calm_And()
     {

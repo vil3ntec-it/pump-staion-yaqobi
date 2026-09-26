@@ -163,7 +163,14 @@ public sealed partial class MainViewModel : ObservableObject
         //  مجوزِ تازه‌ای که حلقهٔ پس‌زمینه گرفت (مدیر اشتراک داد، تمدید کرد
         //  یا برداشت) ⇒ سربرگ و پروفایل همان لحظه، بی باز کردنِ دوبارهٔ
         //  پروفایل. شرحش بالای ‎CloudLink.LicenseChanged‎.
-        CloudLink.LicenseChanged += () => Dispatcher.UIThread.Post(() => { _boundAt = DateTime.MinValue; Account.RefreshAll(); TickLinkDot(); });
+        //  ⛔ و نوارِ «فقط‌خواندنی» همان لحظه — تا ۱۴۰۵/۰۷/۱۴ فقط سرِ بالا آمدنِ
+        //  برنامه خوانده می‌شد، پس مجوزی که درست شده بود تا بستن و باز کردنِ
+        //  برنامه هنوز «اشتراک تمام شده» می‌گفت.
+        CloudLink.LicenseChanged += () => Dispatcher.UIThread.Post(() =>
+        {
+            _boundAt = DateTime.MinValue; Account.RefreshAll(); TickLinkDot();
+            NoticeText = SoftLock.Banner();
+        });
         Account.PumpCreatedHere += () => { _boundAt = DateTime.MinValue; TickLinkDot(); };
         //  ⛔ ورود و خروج همان لحظه در چراغ دیده می‌شود، نه ده ثانیه بعد
         //  (سنجهٔ `signuptrial`: تازه وارد شده بود و چراغ «هنوز وارد حساب

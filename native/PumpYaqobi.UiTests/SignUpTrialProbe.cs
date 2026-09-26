@@ -119,6 +119,75 @@ internal static class SignUpTrialProbe
             return _bad == 0 ? 0 : 1;
         }
         SignUpOnce(win, vm, account, live2, mailCodes, shots, "");
+        //  ⚠️ ‎PUMP_SIGNUP_DELETE=1‎: همان عکسِ صاحب ریپو (۱۴۰۵/۰۷/۱۴) — حسابِ اول از
+        //  ریشه در پنل حذف شد، برنامه فهمید، و روی همین کامپیوتر حسابِ تازه ساخته شد.
+        //  پنل «آزمایشی · ۳۰ روز» می‌گفت و برنامه «بدونِ اشتراکِ فعال» و فقط‌خواندنی.
+        if (Environment.GetEnvironmentVariable("PUMP_SIGNUP_DELETE") == "1")
+        {
+            var before = AppSettings.Load();
+            Console.WriteLine($"══ حذفِ حسابِ اول از ریشه ({before.CloudUserId}) و حسابِ تازه روی همین نصب");
+            var del = new HttpRequestMessage(HttpMethod.Delete, live2.GetProperty("panel").GetString()!.TrimEnd('/')
+                + "/api/account-admin/users/" + Uri.EscapeDataString(before.CloudUserId))
+            {
+                Content = new StringContent(JsonSerializer.Serialize(new { confirmEmail = before.CloudEmail }),
+                    System.Text.Encoding.UTF8, "application/json"),
+            };
+            del.Headers.TryAddWithoutValidation("Authorization", "Bearer " + live2.GetProperty("panelToken").GetString());
+            var dres = Task.Run(() => Http.SendAsync(del)).GetAwaiter().GetResult();
+            var dtext = Task.Run(() => dres.Content.ReadAsStringAsync()).GetAwaiter().GetResult();
+            Console.WriteLine($"     ⓘ پنل ⇒ {(int)dres.StatusCode} {dtext[..Math.Min(200, dtext.Length)]}");
+            //  برنامه باز است و حلقهٔ پس‌زمینه‌اش چند دور می‌زند
+            for (var i = 0; i < 3; i++) Wait(win, StationPublisher.CloudKeepNowAsync());
+            var mid = AppSettings.Load();
+            Console.WriteLine($"     ⓘ پس از حذف: کاربر «{mid.CloudUserId}» · نشست {(mid.CloudAccountToken.Length > 0 ? "هست" : "نیست")} · "
+                + $"دستگاه {(mid.CloudDeviceToken.Length > 0 ? "هست" : "نیست")} · پمپ «{mid.CloudStationId}» · "
+                + $"مجوز {(mid.CloudLicense.Length > 0 ? "هست" : "نیست")} · {account.SubSourceText}");
+            account.OpenAccountPageCommand.Execute(null);
+            Settle(win);
+            SignUpOnce(win, vm, account, live2, mailCodes, shots, "d-");
+            var after = AppSettings.Load();
+            Check("قفلِ نرم بسته نیست", !SoftLock.ReadOnly, SoftLock.Banner());
+            Check("مجوزِ روی دیسک سالم است", LicenseGuard.CheckStored(after).Valid, LicenseGuard.CheckStored(after).Reason);
+        }
+        //  ⚠️ ‎PUMP_SIGNUP_CORRUPT=1‎: «سرور آزمایشی می‌گوید، برنامه ‹بدونِ اشتراکِ
+        //  فعال› و فقط‌خواندنی» — هر حالی که مجوزِ روی دیسک را نامعتبر می‌کند یکی‌یکی
+        //  ساخته می‌شود، و برنامهٔ باز (حلقهٔ پس‌زمینه) باید خودش درستش کند.
+        if (Environment.GetEnvironmentVariable("PUMP_SIGNUP_CORRUPT") == "1")
+        {
+            var good = AppSettings.Load();
+            var cases = new (string Name, Action<AppSettings> Break)[]
+            {
+                ("مجوز پاک شد", s => s.CloudLicense = ""),
+                ("شناسهٔ دستگاه عوض شد (duid)", s => s.CloudDeviceUid = "pc-000000000000000000000000"),
+                ("اثرِ انگشتِ کامپیوتر ناجور (از کامپیوترِ دیگر)", s => s.CloudDeviceMachine = "m-00000000000000000000000000000000"),
+                ("کلیدِ عمومیِ دیگر روی دیسک", s => s.CloudPublicKey = OtherKey()),
+                ("کفِ ساعت یک سال جلو", s => s.ClockFloorMs = DateTimeOffset.UtcNow.AddYears(1).ToUnixTimeMilliseconds()),
+                ("شناسهٔ پمپِ دیگر روی دیسک", s => s.CloudStationId = "stn_000000000000000000000000"),
+            };
+            foreach (var (name, brk) in cases)
+            {
+                var s = AppSettings.Load();
+                s.CloudLicense = good.CloudLicense; s.CloudDeviceUid = good.CloudDeviceUid;
+                s.CloudDeviceMachine = good.CloudDeviceMachine; s.CloudPublicKey = good.CloudPublicKey;
+                s.ClockFloorMs = good.ClockFloorMs; s.CloudStationId = good.CloudStationId;
+                s.CloudDeviceToken = good.CloudDeviceToken;
+                brk(s);
+                s.Save();
+                LicenseClock.ForgetRunning();
+                var broke = LicenseGuard.CheckStored(AppSettings.Load());
+                for (var i = 0; i < 3; i++) Wait(win, StationPublisher.CloudKeepNowAsync());
+                Wait(win, vm.GoAsync(account));
+                Settle(win);
+                var now = LicenseGuard.CheckStored(AppSettings.Load());
+                Check($"{name} ⇒ خودش درست شد (پیش: «{broke.Reason}»)", now.Valid && !SoftLock.ReadOnly,
+                      $"{now.Reason} · {account.SubPlanText} · {SoftLock.Banner()}");
+                Shot(win, shots, "corrupt-" + Array.FindIndex(cases, c => c.Name == name));
+                //  ⚠️ وصلِ دوباره توکنِ دستگاه را عوض می‌کند و سرور قبلی را باطل؛
+                //  حالتِ بعد باید از حالِ **سالمِ تازه** شروع شود، نه از توکنِ مرده.
+                var healed = AppSettings.Load();
+                if (LicenseGuard.CheckStored(healed).Valid) good = healed;
+            }
+        }
         //  ⚠️ همان کامپیوتر، حسابِ دوم — همان کاری که صاحبِ پمپ در آزمایش‌هایش کرد
         if (Environment.GetEnvironmentVariable("PUMP_SIGNUP_TWICE") == "1")
         {
@@ -315,5 +384,11 @@ internal static class SignUpTrialProbe
     {
         for (var i = 0; i < 3000 && !t.IsCompleted; i++) { Pump(w); Thread.Sleep(5); }
         Settle(w);
+    }
+
+    private static string OtherKey()
+    {
+        using var k = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+        return Convert.ToBase64String(k.ExportSubjectPublicKeyInfo());
     }
 }
