@@ -504,29 +504,40 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
         }
     }
 
+    /// <summary>
+    /// زنگ و «آخرین هشدارها» — از همان فهرستی که به سرور و باتِ تلگرام می‌رود
+    /// (<see cref="AlertWatch"/>)، نه از قاعدهٔ جداگانه.
+    ///
+    /// <para>
+    /// ⛔ تا ۱۴۰۵/۰۷/۱۴ این‌جا قاعدهٔ خودش را داشت: مخزن با «موجودیِ خام زیرِ حد»
+    /// (حتی مخزنی که هیچ خریدی برایش ثبت نشده) و قرض‌داران <b>اصلاً</b>. پس زنگ
+    /// «۲» می‌گفت و بات «هیچ هشداری نیست»، و قرض‌داری که حسابش تمام شده بود
+    /// هیچ‌جا به میرزا گفته نمی‌شد. حالا یک فهرست است و هر سه همان را می‌گویند.
+    /// </para>
+    /// </summary>
+    public void ApplyAlerts() => BuildAlerts();
+
     private void BuildAlerts()
     {
         Alerts.Clear();
-        foreach (var (t, label, sec) in new[]
-                 { (PetrolTank, "⛽ پطرول", "storage"), (DieselTank, "🟤 دیزل", "storage-diesel") })
+        //  «تمام شد» اول، بعد «کم مانده»؛ مخزن پیش از قرض‌دار
+        foreach (var a in _host.LiveAlerts.Current
+                     .OrderBy(x => x.IsOut ? 0 : 1).ThenBy(x => x.IsTank ? 0 : 1))
         {
-            var st = Math.Round(t.Raw, 0, MidpointRounding.AwayFromZero);
-            if (st > _threshold) continue;
             Alerts.Add(new DashAlertViewModel
             {
-                Icon = "⚠️",
-                Text = st <= 0 ? "مخزن " + label + " تمام شده!"
-                               : "مخزن " + label + " کم است — " + Shamsi.Money(st) + " لیتر",
-                Sub = "همین حالا رسیدگی کنید",
-                ColorKey = "Pump.Danger",
-                GoSection = sec,
+                Icon = a.IsTank ? "🛢️" : (a.IsOut ? "⛔" : "⚠️"),
+                Text = a.Text,
+                Sub = a.IsOut ? (a.IsTank ? "همین حالا رسیدگی کنید" : "اضافه ندهید") : "رو به پایان",
+                ColorKey = a.IsOut ? "Pump.Danger" : "Pump.Warn",
+                GoSection = a.Section,
                 IsReal = true,
             });
         }
         BellCount = Alerts.Count(a => a.IsReal);
         AlertsCard.Value = BellCount + " مورد";
         AlertsCard.SetDeltaText(BellCount > 0 ? "نیاز به بررسی" : "همه‌چیز مرتب است");
-        AlertsCard.Sub = "برای دیدن فهرست بزنید";
+        AlertsCard.Sub = _host.LiveAlerts.Ready ? "برای دیدن فهرست بزنید" : "در حالِ سنجش…";
     }
 
     private void BuildRecent()

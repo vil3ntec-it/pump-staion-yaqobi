@@ -156,17 +156,15 @@ public sealed class StationPublisher : IAsyncDisposable
             var karOk = Entitlements.Allows(Entitlements.Kar);
             var qrOk = Entitlements.Allows(Entitlements.QrLive);
 
-            //  ⚠️ خبرها پشتِ اشتراک نیستند — همان قاعده‌ای که سرور دارد
-            //  (`routes/pump-events.js`): خبر پیام است، نه دادهٔ فروشی، و
-            //  بستنش فقط صاحبِ پمپ را کور می‌کند. کسی که اشتراکش تمام شده
-            //  بیشتر از همه لازم دارد بداند تیلش تمام شده.
-            var newsOk = CloudActivated;
-            if (!karOk && !qrOk && !newsOk) return false;
+            //  ⚠️ خبرها (هشدارِ قرض‌دار و مخزن) دیگر از این عکس نمی‌روند و پشتِ
+            //  اشتراک هم نیستند: حلقه هر پنج ثانیه با `AlertTickAsync` می‌فرستدشان
+            //  — ارزان‌تر (بی ساختنِ عکسِ کامل) و زودتر (نه هر بیست ثانیه).
+            if (!karOk && !qrOk) return false;
 
             var ready = karOk && await ReadyAsync(force, ct);
 
             // ⚠️ بی سرورِ خانگی و بی ابر، عکس گرفتن فقط CPU می‌سوزاند.
-            if (!ready && !((qrOk || newsOk) && CloudActivated)) return false;
+            if (!ready && !(qrOk && CloudActivated)) return false;
 
             // ⚠️ و بی تغییر هم: با پنج سال داده، ساختنِ عکس یک ثانیه است و هر
             // بیست ثانیه یک‌بار یعنی پنج درصدِ CPU برای همیشه («کامپیوتر داغ»).
@@ -206,11 +204,6 @@ public sealed class StationPublisher : IAsyncDisposable
                 await PublishAccountsAsync(ready, ct);
             }
 
-            //  ⚠️ خبرها **آخر** می‌روند و نتیجه‌شان `went` را عوض نمی‌کند:
-            //  `went` یعنی «عکس روی سرورِ خانگی نشست»، و چراغ و سنجه‌ها
-            //  همان را می‌خوانند.
-            if (newsOk) await PublishAlertsAsync(snap, ct);
-
             return went;
         }
         catch (OperationCanceledException) { throw; }
@@ -227,38 +220,146 @@ public sealed class StationPublisher : IAsyncDisposable
     /// <summary>حساب‌های کیو‌آردار در این دور — برای آزمون و گزارشِ صفحهٔ تنظیمات.</summary>
     public int LastAccountsSent => _accts.LastSent;
 
-    /// <summary>خبرهای این پمپ روی ابر — «برنامه بسته هم باشد، خبر برسد».</summary>
+    /// <summary>خبرهای این پمپ روی ابر — فقط برای سرورِ کهنه‌ای که «حالِ زنده» را نمی‌شناسد.</summary>
     private readonly CloudEvents _events = new();
 
-    /// <summary>خبرهایی که آخرین بار به ابر رفت — برای سنجه‌ها.</summary>
+    /// <summary>خبرهایی که آخرین بار از راهِ قدیمی به ابر رفت — برای سنجه‌ها.</summary>
     public int LastEventsSent => _events.LastSent;
 
+    // ══ هشدارها ⇒ میرزا، سرور و بات ══════════════════════════════════════
+    //
+    //  گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۴): «بزار برنامه به سرور و بات بگه و
+    //  سرور به بات دستور بده و بات هم لایو آپدیت توی گروه بره، درجا.»
+    //
+    //  هر پنج ثانیه (همان تیکِ اتصال): `AlertWatch` با ترمزِ `Version`
+    //  می‌سنجد چیزی عوض شده یا نه (نه ⇒ صفر دستورِ دیتابیس)، و اگر فهرستِ
+    //  هشدارها عوض شده باشد همان لحظه **کلِ** فهرست به سرور می‌رود. سرور
+    //  خودش باز و بسته شدن را می‌سنجد، پس بستن و باز کردنِ برنامه همان
+    //  هشدارها را دوباره «تازه» نمی‌کند.
+
+    /// <summary>بی تغییر هم، هر این‌قدر یک بار — تا سرور بداند برنامه روشن است.</summary>
+    public static readonly TimeSpan StateHeartbeat = TimeSpan.FromMinutes(10);
+
+    /// <summary>خلاصهٔ قرض‌داران (برای جست‌وجوی بات) دست‌بالا هر این‌قدر یک بار.</summary>
+    public static readonly TimeSpan DebtorsGap = TimeSpan.FromSeconds(90);
+
+    private string _pushedAlerts = "\u0001";
+    private DateTime _lastStatePush = DateTime.MinValue;
+    private DateTime _lastDebtorsPush = DateTime.MinValue;
+    private long _debtorsRevision = -1;
+    private DateTime _stateRetryAt = DateTime.MinValue;
+    private DateTime _stateUnsupportedAt = DateTime.MinValue;
+    private string _stateStation = "";
+
+    /// <summary>حالِ زنده‌ای که آخرین بار واقعاً به سرور رسید — برای سنجه‌ها.</summary>
+    public int LastStateAlerts { get; private set; } = -1;
+
+    /// <summary>یک تیکِ هشدار: سنجیدن (ارزان) و اگر لازم بود، فرستادن.</summary>
+    private async Task AlertTickAsync(CancellationToken ct)
+    {
+        var watch = _host.LiveAlerts;
+        try { await watch.CheckAsync(_host, false, ct); }
+        catch (OperationCanceledException) { throw; }
+        catch { /* دفتر در دسترس نیست — دورِ بعد */ }
+        if (!watch.Ready) return;
+        await PushStateAsync(watch, ct);
+    }
+
     /// <summary>
-    /// هشدارهای تازهٔ همین عکس ⇒ دفترِ خبرِ ابریِ همین پمپ.
-    ///
-    /// <para>
-    /// ⛔ فهرست از <see cref="StationSnapshot.Alerts"/> می‌آید و جای دیگری
-    /// ساخته نمی‌شود — همان جایی که رنگِ کارتِ قرض‌دار هم از آن می‌آید.
-    /// </para>
-    /// <para>
-    /// ⚠️ و هیچ‌وقت خطا بیرون نمی‌دهد: خبر نرفتن نباید انتشارِ عکس را
-    /// بشکند.
-    /// </para>
+    /// حالِ زنده ⇒ سرورِ حساب. هیچ‌وقت استثنا بیرون نمی‌دهد جز لغو.
+    /// خروجی: آیا واقعاً رفت.
     /// </summary>
-    private async Task PublishAlertsAsync(Dictionary<string, object?> snap, CancellationToken ct)
+    internal async Task<bool> PushStateAsync(AlertWatch watch, CancellationToken ct)
     {
         try
         {
-            var alerts = snap.TryGetValue("alerts", out var a) ? a as List<object?> : null;
-            if (alerts is null || alerts.Count == 0) return;
-
             var file = AppSettings.Load();
-            if (string.IsNullOrWhiteSpace(file.CloudDeviceToken)) return;   // هنوز فعال نشده
+            if (string.IsNullOrWhiteSpace(file.CloudDeviceToken)) return false;   // هنوز به پمپی بند نیست
+            var now = DateTime.UtcNow;
+            if (now < _stateRetryAt) return false;
+
+            //  پمپِ دیگر (جابه‌جاییِ حساب) ⇒ همه‌چیز از نو
+            var station = file.CloudStationId ?? "";
+            if (!string.Equals(station, _stateStation, StringComparison.Ordinal))
+            {
+                _stateStation = station;
+                _pushedAlerts = "\u0001";
+                _lastStatePush = DateTime.MinValue;
+                _debtorsRevision = -1;
+                _events.Reset();
+            }
+
+            var alerts = watch.Current;
+            var hash = string.Join("|", alerts.Select(a => a.Key).OrderBy(k => k, StringComparer.Ordinal));
+            var changed = hash != _pushedAlerts;
+            var beat = now - _lastStatePush >= StateHeartbeat;
+            //  ⚠️ جست‌وجوی بات مالِ «اپِ کارمندان و ربات» است (`kar`)؛ هشدار پشتِ اشتراک نیست
+            var withDebtors = Entitlements.Allows(Entitlements.Kar)
+                              && watch.Revision != _debtorsRevision
+                              && now - _lastDebtorsPush >= DebtorsGap;
+            if (!changed && !beat && !withDebtors) return false;
+
             var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
-            await _events.PublishAsync(cloud, alerts, ct);
+
+            //  سرورِ کهنه: همان راهِ قدیمی (فقط هشدارهای تازه) — ساعتی یک بار دوباره می‌پرسیم
+            if (now - _stateUnsupportedAt < TimeSpan.FromHours(1))
+            {
+                if (changed) { await _events.PublishAsync(cloud, AsSnapshot(alerts), ct); _pushedAlerts = hash; }
+                return false;
+            }
+
+            var revision = watch.Revision;
+            var res = await cloud.SendStateAsync(
+                alerts.Select(a => (object)new { k = a.Key, n = a.Name, f = a.Fuel, s = a.State, t = a.Text }),
+                watch.Tank,
+                withDebtors ? Compact(watch.Debtors) : null, ct);
+            if (res.Ok)
+            {
+                _pushedAlerts = hash;
+                _lastStatePush = now;
+                LastStateAlerts = alerts.Count;
+                if (withDebtors) { _debtorsRevision = revision; _lastDebtorsPush = now; }
+                return true;
+            }
+            if (res.Code == "not_found")
+            {
+                _stateUnsupportedAt = now;
+                if (changed) { await _events.PublishAsync(cloud, AsSnapshot(alerts), ct); _pushedAlerts = hash; }
+            }
+            else
+            {
+                //  نرسید (اینترنت، سرورِ خاموش) ⇒ نیم دقیقه بعد، نه هر پنج ثانیه
+                _stateRetryAt = now + TimeSpan.FromSeconds(30);
+            }
+            return false;
         }
         catch (OperationCanceledException) { throw; }
-        catch { /* خبر رفاه است، دفتر اصل */ }
+        catch { return false; }
+    }
+
+    /// <summary>همان شکلِ <see cref="StationSnapshot.Alerts"/> — برای راهِ قدیمیِ <see cref="CloudEvents"/>.</summary>
+    private static List<object?> AsSnapshot(IReadOnlyList<AlertItem> alerts) =>
+        alerts.Select(a => (object?)new Dictionary<string, object?>
+        {
+            ["k"] = a.Key, ["n"] = a.Name, ["f"] = a.Fuel, ["s"] = a.State, ["t"] = a.Text,
+        }).ToList();
+
+    /// <summary>خلاصهٔ هر قرض‌دار برای بات: نام، حالِ سه دفتر و الباقی — بی جدول.</summary>
+    internal static IEnumerable<object> Compact(List<object?> people)
+    {
+        foreach (var p in people)
+        {
+            if (p is not Dictionary<string, object?> d) continue;
+            string S(string k) => d.TryGetValue(k, out var v) ? v as string ?? "" : "";
+            var bal = d.TryGetValue("bal", out var b) ? b as Dictionary<string, object?> : null;
+            double N(string k) => bal is not null && bal.TryGetValue(k, out var v) && v is double x ? x : 0;
+            yield return new
+            {
+                n = S("name"),
+                sp = S("stP"), sd = S("stD"), sm = S("stM"),
+                p = N("petrol"), d = N("diesel"), m = N("money"),
+            };
+        }
     }
 
     /// <summary>
@@ -514,6 +615,12 @@ public sealed class StationPublisher : IAsyncDisposable
             try { await KeepLinkAsync(false, ct); }
             catch (OperationCanceledException) { return; }
             catch { /* سرورِ خاموش خطا نیست */ }
+
+            //  ۱ب) هشدارها — همین تیکِ پنج‌ثانیه‌ای، با ترمزِ `Version`:
+            //      داده عوض نشده ⇒ صفر دستورِ دیتابیس. شرحش بالای `AlertTickAsync`.
+            try { await AlertTickAsync(ct); }
+            catch (OperationCanceledException) { return; }
+            catch { /* خبر رفاه است، دفتر اصل */ }
 
             //  ۲) انتشار — همان بیست ثانیهٔ همیشگی، نه زودتر: ساختنِ عکس با
             //     پنج سال داده یک ثانیه CPU است.
