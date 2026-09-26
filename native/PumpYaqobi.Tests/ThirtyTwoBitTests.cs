@@ -59,18 +59,22 @@ public class ThirtyTwoBitTests : IDisposable
           "assets": [
             { "name": "PumpYaqobi-app-ffff9999.zip", "size": 6000000,
               "browser_download_url": "https://x/small-x64.zip" },
-            { "name": "PumpYaqobi-Setup.exe", "size": 88000000,
-              "browser_download_url": "https://x/setup-x64.exe" },
-            { "name": "PumpYaqobi-Setup-x86.exe", "size": 84000000,
-              "browser_download_url": "https://x/setup-x86.exe" }
+            { "name": "PumpYaqobi-Setup.exe", "size": 160000000,
+              "browser_download_url": "https://x/setup.exe" },
+            { "name": "PumpYaqobi-Windows.zip", "size": 127000000,
+              "browser_download_url": "https://x/noinstall-x64.zip" },
+            { "name": "PumpYaqobi-Windows-x86.zip", "size": 117000000,
+              "browser_download_url": "https://x/noinstall-x86.zip" }
           ]
         }
         """;
 
-    // ══ ۱) درِ اول: هیچ نصبی نصابِ معماریِ دیگر را برنمی‌دارد ═══════════════
+    // ══ ۱) درِ اول: هر دو نصب همان یک نصاب را می‌گیرند، نه زیپِ معماریِ دیگر ══
+    //  از ۱۴۰۵/۰۷/۱۴ نصاب یکی است و هر دو بار داخلش؛ برنامه با ‎/ARCH‎ بارِ
+    //  خودش را می‌نشاند. زیپ‌های بی‌نصاب همچنان مالِ معماریِ خودشان‌اند.
 
     [Fact]
-    public async Task NasbeSiVaDo_Nasabe_SiVaDo_Ra_Barmidarad()
+    public async Task NasbeSiVaDo_Hamaan_NasabeYegane_Ra_Barmidarad()
     {
         AppArch.Override = "x86";
         UpdateService.TestTransport = (_, _) => Task.FromResult(Json(BothSetups));
@@ -79,11 +83,11 @@ public class ThirtyTwoBitTests : IDisposable
 
         Assert.True(info.Available);
         Assert.False(info.IsSmallPackage);
-        Assert.Equal("https://x/setup-x86.exe", info.DownloadUrl);
+        Assert.Equal("https://x/setup.exe", info.DownloadUrl);
     }
 
     [Fact]
-    public async Task NasbeShastVaChahar_Hargez_Nasabe_SiVaDo_Ra_Nemigirad()
+    public async Task NasbeShastVaChahar_Hargez_Zipe_SiVaDo_Ra_Nemigirad()
     {
         AppArch.Override = "x64";
         UpdateService.TestTransport = (_, _) => Task.FromResult(Json(BothSetups));
@@ -91,11 +95,24 @@ public class ThirtyTwoBitTests : IDisposable
         var info = await new UpdateService().CheckAsync();
 
         Assert.True(info.Available);
-        Assert.Equal("https://x/setup-x64.exe", info.DownloadUrl);
+        Assert.Equal("https://x/setup.exe", info.DownloadUrl);
         //  ⛔ و این مهم‌ترین ادعای این فایل است: بستهٔ ۳۲بیتی روی نصبِ
         //  ۶۴بیتی برنامه‌ای می‌دهد که کار می‌کند ولی کندتر است — و ساکت،
         //  پس هیچ‌کس نمی‌فهمد چرا.
         Assert.DoesNotContain("x86", info.DownloadUrl!);
+    }
+
+    /// <summary>⛔ نصابِ بی‌صدا همیشه با ‎/ARCH‎ی خودش صدا زده می‌شود.</summary>
+    [Fact]
+    public void Nasabe_BiSeda_Ba_ArchE_Khodash_Seda_Zadeh_Mishavad()
+    {
+        AppArch.Override = "x86";
+        Assert.Equal("/ARCH=x86", AppArch.ArchArg);
+        AppArch.Override = "x64";
+        Assert.Equal("/ARCH=x64", AppArch.ArchArg);
+        var up = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        var launch = up.Split("public static bool Launch(")[1].Split("private static bool LaunchZip(")[0];
+        Assert.Contains("AppArch.ArchArg", launch);
     }
 
     // ══ ۲) درِ دوم: هر معماری فایلِ پایهٔ خودش ═══════════════════════════════
@@ -151,7 +168,8 @@ public class ThirtyTwoBitTests : IDisposable
 
         Assert.True(info.Available);
         Assert.False(info.IsSmallPackage);
-        Assert.EndsWith("PumpYaqobi-Setup-x86.exe", info.DownloadUrl);
+        //  یک نصاب برای هر دو معماری (۱۴۰۵/۰۷/۱۴) — بارِ ۳۲ داخلِ همین است
+        Assert.EndsWith("PumpYaqobi-Setup.exe", info.DownloadUrl);
     }
 
     // ══ ۳) نام‌ها ════════════════════════════════════════════════════════════
@@ -166,8 +184,11 @@ public class ThirtyTwoBitTests : IDisposable
         Assert.Equal("PumpYaqobi-Setup.exe", AppArch.SetupName);
         Assert.Equal("base.txt", AppArch.BaseFileName);
 
+        //  ⛔ نصاب یکی است (۱۴۰۵/۰۷/۱۴): ۳۲بیتی هم همان فایل را می‌گیرد و با
+        //  ‎/ARCH=x86‎ بارِ خودش را می‌نشاند؛ فقط فایلِ پایه‌اش جداست.
         AppArch.Override = "x86";
-        Assert.Equal("PumpYaqobi-Setup-x86.exe", AppArch.SetupName);
+        Assert.Equal("PumpYaqobi-Setup.exe", AppArch.SetupName);
+        Assert.Equal("/ARCH=x86", AppArch.ArchArg);
         Assert.Equal("base-x86.txt", AppArch.BaseFileName);
     }
 
@@ -177,13 +198,12 @@ public class ThirtyTwoBitTests : IDisposable
         AppArch.Override = "x64";
         Assert.True(AppArch.Owns("PumpYaqobi-Setup.exe"));
         Assert.True(AppArch.Owns("PumpYaqobi-Windows.zip"));
-        Assert.False(AppArch.Owns("PumpYaqobi-Setup-x86.exe"));
         Assert.False(AppArch.Owns("PumpYaqobi-Windows-x86.zip"));
 
+        //  نصابِ یگانه مالِ هر دو است؛ زیپ‌ها همچنان مالِ معماریِ خودشان
         AppArch.Override = "x86";
-        Assert.True(AppArch.Owns("PumpYaqobi-Setup-x86.exe"));
+        Assert.True(AppArch.Owns("PumpYaqobi-Setup.exe"));
         Assert.True(AppArch.Owns("PumpYaqobi-Windows-x86.zip"));
-        Assert.False(AppArch.Owns("PumpYaqobi-Setup.exe"));
         Assert.False(AppArch.Owns("PumpYaqobi-Windows.zip"));
     }
 
@@ -199,9 +219,11 @@ public class ThirtyTwoBitTests : IDisposable
         Assert.Contains("win-x86", w);
         Assert.Contains("dotnet publish PumpYaqobi.App", w);
 
-        //  و هر دو منتشر می‌شوند — نصاب و فایلِ پایه
+        //  و یک نصاب با هر دو بار منتشر می‌شود، و فایلِ پایهٔ هر معماری جدا
         Assert.Contains("rel/PumpYaqobi-Setup.exe", w);
-        Assert.Contains("rel/PumpYaqobi-Setup-x86.exe", w);
+        Assert.DoesNotContain("rel/PumpYaqobi-Setup-x86.exe", w);
+        Assert.Contains("/DSourceDir64=..\\publish\\win-x64", w);
+        Assert.Contains("/DSourceDir86=..\\publish\\win-x86", w);
         Assert.Contains("rel/base.txt", w);
         Assert.Contains("rel/base-x86.txt", w);
 
@@ -213,23 +235,20 @@ public class ThirtyTwoBitTests : IDisposable
     }
 
     [Fact]
-    public void Nasabe_SiVaDo_AppId_Va_Pusheye_Jodagane_Darad()
+    public void Nasab_Yeki_Ast_Ba_AppIdE_Hamishegi()
     {
         var s = Iss();
 
-        //  ⛔ AppIdِ ۶۴بیتی یک حرف هم عوض نشد — عوض شدنش یعنی هر نصبِ
-        //  امروزیِ مشتری برای ویندوز «غریبه» می‌شود.
-        Assert.Contains("8E86F349-343C-4FFB-983E-BBDDC5390081", s);
+        //  ⛔ AppIdِ همیشگی یک حرف هم عوض نشد — عوض شدنش یعنی هر نصبِ
+        //  امروزیِ مشتری برای ویندوز «غریبه» می‌شود. و از ۱۴۰۵/۰۷/۱۴ هر دو
+        //  معماری همین یک AppId و همین یک پوشه را دارند: یکی جای دیگری.
+        Assert.Contains("AppId={#AppGuid}", s);
+        Assert.Contains("#define AppGuid \"{{8E86F349-343C-4FFB-983E-BBDDC5390081}\"", s);
+        Assert.DoesNotContain("PumpYaqobi-32", s);
+        Assert.DoesNotContain("#ifndef Arch", s);
 
-        //  و ۳۲بیتی شناسه و پوشه و نامِ خروجیِ **خودش** را دارد
-        Assert.Contains("#ifndef Arch", s);
-        Assert.Contains("PumpYaqobi-Setup-x86", s);
-        Assert.Contains("PumpYaqobi-32", s);
-        Assert.DoesNotContain("AppId={{8E86F349", s);   // دیگر ثابت نیست
-
-        //  ⛔ و فایلِ ۶۴بیتی روی ویندوزِ ۳۲بیتی همان اول می‌گوید چه باید کرد،
-        //  نه این‌که باری بنشاند که هرگز اجرا نمی‌شود.
-        Assert.Contains("InitializeSetup", s);
-        Assert.Contains("IsWin64", s);
+        //  ⛔ روی ویندوزِ ۳۲بیتی هر چه باشد ۳۲بیتی می‌نشیند — ۶۴ آن‌جا اجرا نمی‌شود
+        Assert.Contains("if not IsWin64 then Result := 'x86';", s);
+        Assert.Contains("if not IsWin64 then\n    ArchPage.CheckListBox.ItemEnabled[0] := False;", s.Replace("\r\n", "\n"));
     }
 }

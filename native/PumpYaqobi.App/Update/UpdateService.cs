@@ -794,6 +794,7 @@ public sealed class UpdateService
             var psi = new System.Diagnostics.ProcessStartInfo(packagePath)
             {
                 Arguments = "/SILENT /NORESTART /RESTARTAPPLICATIONS"
+                          + " " + AppArch.ArchArg
                           + " /DIR=\"" + InstallDir + "\"",
                 UseShellExecute = true,
             };
@@ -952,9 +953,23 @@ public static class AppArch
     /// </summary>
     public static bool IsDefault => Id == "x64";
 
-    /// <summary>نامِ نصابِ همین معماری در انتشار.</summary>
-    public static string SetupName =>
-        IsDefault ? "PumpYaqobi-Setup.exe" : "PumpYaqobi-Setup-" + Id + ".exe";
+    /// <summary>
+    /// نامِ نصاب در انتشار — <b>یکی برای هر دو معماری</b> (۱۴۰۵/۰۷/۱۴): بارِ
+    /// ۳۲ و ۶۴بیتی هر دو داخلِ همین فایل‌اند و <see cref="ArchArg"/> می‌گوید
+    /// کدام نصب شود. ⛔ این نام هیچ‌وقت عوض نمی‌شود — نصب‌های امروزی همین را
+    /// می‌شناسند.
+    /// </summary>
+    public const string UnifiedSetup = "PumpYaqobi-Setup.exe";
+
+    /// <summary>همان <see cref="UnifiedSetup"/> — برای هر معماری.</summary>
+    public static string SetupName => UnifiedSetup;
+
+    /// <summary>
+    /// آرگومانِ نصابِ بی‌صدا: کدام بار بنشیند. بی این، نصاب از رجیستریِ نصبِ
+    /// پیشین می‌خواند — ولی گفتنِ صریح یعنی به‌روزرسانی هیچ‌وقت معماریِ برنامهٔ
+    /// در حالِ اجرا را عوض نمی‌کند، حتی اگر رجیستری دست خورده باشد.
+    /// </summary>
+    public static string ArchArg => "/ARCH=" + Id;
 
     /// <summary>نامِ فایلِ شناسهٔ پایهٔ همین معماری روی برچسبِ چرخشی.</summary>
     public static string BaseFileName => IsDefault ? "base.txt" : "base-" + Id + ".txt";
@@ -965,6 +980,8 @@ public static class AppArch
     /// </summary>
     public static bool Owns(string assetName)
     {
+        //  یک نصاب، هر دو بار — مالِ همه است
+        if (string.Equals(assetName, UnifiedSetup, StringComparison.OrdinalIgnoreCase)) return true;
         var stem = Path.GetFileNameWithoutExtension(assetName);
         foreach (var a in Known)
             if (stem.EndsWith("-" + a, StringComparison.OrdinalIgnoreCase))

@@ -101,12 +101,10 @@ jobs:
           # هشدار رد می‌شدند — یعنی دکمهٔ دانلودِ ویندوزِ سایت ماه‌ها مرده
           # بود و هیچ‌کس نمی‌فهمید (version.json ستونِ windows را null
           # می‌داد). InstallerTests حالا وجودِ آن برچسب را قفل کرده.
-          # ⛔ نامِ **دقیق**، نه پسوندِ `.exe`: از ۳.۱.۱۵۸ دو نصاب روی آن
-          # برچسب است (۶۴بیتی و ۳۲بیتی) و `grab` تازه‌ترین را برمی‌داشت —
-          # یعنی دکمهٔ دانلودِ ویندوزِ سایت می‌توانست فایلِ ۳۲بیتی بدهد.
-          # (`.lower().endswith(...)`، پس «-x86.exe» به اولی نمی‌خورد.)
+          # ⛔ نامِ **دقیق**، نه پسوندِ `.exe` — روی آن برچسب فایل‌های دیگری هم
+          # هست و `grab` تازه‌ترینِ هر پسوند را برمی‌دارد. از ۱۴۰۵/۰۷/۱۴ یک
+          # نصاب است که ۳۲ و ۶۴بیتی هر دو داخلش‌اند.
           grab('desktop-latest', 'pumpyaqobi-setup.exe', 'PumpYaqobi-Setup.exe')
-          grab('desktop-latest', 'pumpyaqobi-setup-x86.exe', 'PumpYaqobi-Setup-x86.exe')
           grab('desktop-latest', 'version.txt', 'exe-version.txt')
           # ⛔ زیپِ کنارِ همان برچسب **بستهٔ کوچکِ به‌روزرسانی** است، نه
           # برنامهٔ کامل. کنارِ سایت گذاشتنش یعنی کسی ۶ مگابایت می‌گیرد و
@@ -146,11 +144,10 @@ jobs:
           exe_ver = side_version('exe-version.txt')
           if windows and exe_ver:
               windows['appVersion'] = exe_ver
-          # ویندوزِ ۳۲بیتی — همان نسخه، برای کامپیوترِ قدیمی. کنارِ سایت
-          # می‌نشیند تا لینکِ مستقیمش روی دامنهٔ خودِ پمپ باشد.
-          windows32 = finfo('downloads/PumpYaqobi-Setup-x86.exe')
-          if windows32 and exe_ver:
-              windows32['appVersion'] = exe_ver
+          # ⚠️ نصابِ ۳۲بیتیِ جدا دیگر نیست (۱۴۰۵/۰۷/۱۴): همان یک فایل هر دو
+          # بار را دارد. `windows32` برای خواننده‌های کهنهٔ version.json می‌ماند
+          # و به همان فایل اشاره می‌کند.
+          windows32 = windows
           data = {
               'version': ver,
               'buildTime': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
