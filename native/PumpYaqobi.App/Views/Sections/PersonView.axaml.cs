@@ -129,7 +129,23 @@ public partial class PersonView : UserControl
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
             if (string.IsNullOrWhiteSpace(tb.Text) && !tb.IsFocused) tb.Text = was ?? "";
+            //  ⛔ و بعد، همیشه همان جمعی که دفتر دارد. اتصال مقدارِ «عوض‌نشده» را
+            //  دوباره به کادر نمی‌فرستد، پس رسیدی که ننشست (عددِ ناخوانا، یا
+            //  ذخیره‌ای که نشد) روی کادر می‌ماند و با رفتن به هر حسابِ بی‌رسیدِ
+            //  دیگر هم همان‌جا دیده می‌شد — گزارشِ صاحب ریپو: «همان مقدار توی
+            //  همهٔ حساب‌ها سرایت می‌کند». یک نوبتِ دیگر، تا ‎RepaintHeadEdits‎ هم
+            //  رسیده باشد.
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => ShowLedgerSum(tb),
+                Avalonia.Threading.DispatcherPriority.Background);
         }, Avalonia.Threading.DispatcherPriority.Background);
+    }
+
+    /// <summary>کادرِ رسیدِ سربرگ دقیقاً جمعِ دفتر را نشان بدهد (نه متنِ تایپ‌شده).</summary>
+    internal static void ShowLedgerSum(TextBox tb)
+    {
+        if (tb.IsFocused || tb.DataContext is not AccountViewModel a) return;
+        var want = tb.Tag as string == "diesel" ? a.HeadDieselRasidEdit : a.HeadPetrolRasidEdit;
+        if (tb.Text != want) tb.Text = want;
     }
 
     /// <summary>

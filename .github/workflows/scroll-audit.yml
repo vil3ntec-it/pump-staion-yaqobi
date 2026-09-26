@@ -117,6 +117,11 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- undokeys
 
+      # ══ رسیدِ سربرگِ قرض‌دار: ردیف ساخته شود و به حسابِ دیگر سرایت نکند ══
+      - name: سنجشِ رسیدِ سربرگ
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- headrasid
+
       # ══ ورود، کدِ ایمیلی، بند شدن و همگام‌سازی — با ابرِ ساختگیِ درون‌فرآیندی ══
       # تا ۳.۱.۱۶۴ هر دو روی `main` سرخ بودند و در CI نبودند، پس کسی نمی‌دید.
       # ریشهٔ هر دو خودِ سنجه بود (ابرِ ساختگی مسیرِ ‎device/bind‎ را نداشت؛
