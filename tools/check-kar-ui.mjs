@@ -67,7 +67,7 @@ await page.route('https://api.vill3n.top/**', async (route) => {
   const url = route.request().url();
   const body = route.request().postDataJSON?.() || {};
   if (url.endsWith('/api/pump/public/join')) {
-    //  کدِ هشت‌رقمیِ امروز و کدِ حرفیِ پیشین هر دو همان پمپ‌اند (سرورِ ۲.۱۱.۶)
+    //  کدِ هشت‌رقمیِ امروز و کدِ حرفیِ پیشین هر دو همان پمپ‌اند (سرورِ ۲.۱۱.۷)
     if (body.code === '48291736' || body.code === 'K7PM3XQ2')
       return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
         body: JSON.stringify({ ok: true, station: { code: 'ac-one', name: 'پمپِ آزمون', accessCode: '4829-1736' }, home: { url: '', readKey: '', station: 'ac-one' }, cloudLiveAt: 5 }) });
