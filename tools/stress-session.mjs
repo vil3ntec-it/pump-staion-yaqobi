@@ -7,7 +7,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright-core';
 
-const PAGE = pathToFileURL(path.join(import.meta.dirname, '..', 'index.html')).href;
+const PAGE = pathToFileURL(path.join(import.meta.dirname, '..', 'archive', 'old-site', 'index.html')).href;
 const ROUNDS = Number(process.env.ROUNDS || 30);
 
 const SECTIONS = ['dashboard', 'shifts', 'storage', 'tanker', 'debt', 'debtsum', 'chakana',

@@ -26,7 +26,7 @@ public class NavOrderTests
     /// <summary>‎id‎ی هجده دکمهٔ نوارِ سایت، به ترتیبِ خودِ صفحه.</summary>
     private static List<string> SiteNav()
     {
-        var html = File.ReadAllText(Path.Combine(Root, "..", "index.html"));
+        var html = File.ReadAllText(Path.Combine(Root, "..", "archive", "old-site", "index.html"));
 
         // فقط دکمه‌های نوار: ‎<button class="nav-btn" onclick="showSection('x',this)">‎
         //
