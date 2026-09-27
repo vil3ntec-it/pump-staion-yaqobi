@@ -208,7 +208,9 @@ public class DesktopUxTests
         // همان «دیزل و پطرول زیرِ کادر گم شدند».
         Assert.Contains("RowDefinitions=\"Auto,Auto,Auto,Auto,Auto,*,Auto\"", v);
 
-        var m = Regex.Match(v, "MinItemHeight=\"(\\d+)\"");
+        //  ⚠️ از ۱۴۰۵/۰۷/۱۵ کارت‌ها در ‎CardGrid‎اند و قدِ کارت **ثابت** است
+        //  (‎ItemHeight‎) — سخت‌تر از «کمینه»، و همان سقفِ ۱۹۰ روی آن.
+        var m = Regex.Match(v, "(?:MinItemHeight|<c:CardGrid[^>]*ItemHeight)=\"(\\d+)\"");
         Assert.True(m.Success);
         // ⚠️ سقف از ۲۲۴ به ۱۹۰ آمد چون **خودِ کارت** کوتاه‌تر شد، نه چون
         // سخت‌گیری کم شد: دکمهٔ قاب‌دارِ تمام‌عرضِ «📱 کیوآر کد» و شمارهٔ زیرش
