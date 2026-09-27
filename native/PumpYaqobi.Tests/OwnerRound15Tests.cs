@@ -71,6 +71,25 @@ public class OwnerRound15Tests
         Assert.Contains("set { if (value && !SelectedTheme.IsDark) SelectedTheme = PumpTheme.Gold; }", vm);
     }
 
+    /// <summary>
+    /// کلیدِ کپسولیِ «روز/شب» (عکسِ مرجع): همان دو ‎RadioButton‎، و ⛔ هیچ
+    /// قلمِ جدا-برای-هر-تمی روی نوشته، و هیچ انتقالِ رنگی (همان دو ریشهٔ
+    /// «نوشته‌ها در دارک مود چپ‌چین می‌شوند» و عکسِ نیمه‌کارهٔ ‎themeflip‎).
+    /// </summary>
+    [Fact]
+    public void Tem_KelideKapsuli_BiGhalameJodaVaBiTransition()
+    {
+        var w = Bare(Read("PumpYaqobi.App", "Views", "MainWindow.axaml"));
+        Assert.Contains("Classes=\"pill day\"", w);
+        Assert.Contains("Classes=\"pill night\"", w);
+        var styles = w[w.IndexOf("<Style Selector=\"RadioButton.pill\">", StringComparison.Ordinal)..];
+        styles = styles[..styles.IndexOf("Border#WarmLogo", StringComparison.Ordinal)];
+        Assert.DoesNotContain("Transition", styles);
+        //  نوشته فقط سفیدِ ثابت یا قلمِ مشترکِ ‎Pump.Muted‎
+        foreach (var line in styles.Split('\n').Where(l => l.Contains("Property=\"Foreground\"")))
+            Assert.True(line.Contains("#FFFFFF") || line.Contains("Pump.Muted"), line.Trim());
+    }
+
     [Fact]
     public void Tarikh_DarJazireyeRastBeChap_Va_NameMah()
     {

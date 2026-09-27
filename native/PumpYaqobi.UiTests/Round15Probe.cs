@@ -52,12 +52,69 @@ internal static class Round15Probe
         return _bad == 0 ? 0 : 1;
     }
 
+    // ══ ۱الف) دو کلیدِ کپسولیِ «روز/شب» (عکسِ مرجعِ صاحب ریپو، ۱۴۰۵/۰۷/۱۵) ══
+    //  در هر دو تم: یکی و فقط یکی روشن، رنگِ روشن‌شده همان رنگِ ثابتِ خودش
+    //  (نارنجی/بنفش) با نوشتهٔ سفید، خاموش با نوشتهٔ کم‌رنگِ تم، گویِ «روز»
+    //  سمتِ راستِ نوشته و گویِ «شب» سمتِ چپ، و دو کلید روی هم نیفتند.
+    private static void Pills(Window win, MainViewModel vm, List<RadioButton> radios, string shots)
+    {
+        Check("دو کلیدِ کپسولی («روز» و «شب»)", radios.Count == 2
+              && radios.Any(r => r.Classes.Contains("day")) && radios.Any(r => r.Classes.Contains("night")), radios.Count + " کلید");
+        if (radios.Count != 2) return;
+        var day = radios.First(r => r.Classes.Contains("day"));
+        var night = radios.First(r => r.Classes.Contains("night"));
+        var start = vm.SelectedTheme;
+        foreach (var dark in new[] { false, true })
+        {
+            vm.SelectedTheme = dark ? PumpYaqobi.App.Themes.PumpTheme.Gold : PumpYaqobi.App.Themes.PumpTheme.Blue;
+            Round14Probe.Settle(win);
+            var on = dark ? night : day;
+            var off = dark ? day : night;
+            var tag = dark ? "تیره" : "روشن";
+            Check($"[{tag}] فقط کلیدِ «{tag}» روشن است", on.IsChecked == true && off.IsChecked != true);
+            var pill = on.GetVisualDescendants().OfType<Border>().First(b => b.Name == "PART_Pill");
+            Check($"[{tag}] کپسولِ روشن گرادیانِ خودش را دارد", pill.Background is Avalonia.Media.LinearGradientBrush g
+                  && g.GradientStops.Any(x => x.Color == (dark ? Avalonia.Media.Color.Parse("#7C3AED") : Avalonia.Media.Color.Parse("#FFC107"))));
+            var onText = on.GetVisualDescendants().OfType<TextBlock>().First(t => t.Classes.Contains("pilltext"));
+            var offText = off.GetVisualDescendants().OfType<TextBlock>().First(t => t.Classes.Contains("pilltext"));
+            Check($"[{tag}] نوشتهٔ کلیدِ روشن سفید است", onText.Foreground is Avalonia.Media.ISolidColorBrush w && w.Color == Avalonia.Media.Colors.White);
+            Check($"[{tag}] نوشتهٔ کلیدِ خاموش همان «کم‌رنگِ» تم است (قلمِ مشترک)",
+                  offText.Foreground is Avalonia.Media.ISolidColorBrush m && win.TryFindResource("Pump.Muted", win.ActualThemeVariant, out var mm)
+                  && ReferenceEquals(mm, offText.Foreground) && m.Color != Avalonia.Media.Colors.White);
+            foreach (var r in radios)
+            {
+                var t = r.GetVisualDescendants().OfType<TextBlock>().First(x => x.Classes.Contains("pilltext"));
+                Check($"[{tag}] نوشتهٔ «{t.Text}» کامل جا شده", t.Bounds.Width + t.Margin.Left + t.Margin.Right >= t.DesiredSize.Width - 0.5 && t.Bounds.Width > 10,
+                      $"{t.Bounds.Width:0} از {t.DesiredSize.Width:0}");
+            }
+            Rect Screen(Visual v)
+            {
+                var a = v.TranslatePoint(new Point(0, 0), win)!.Value;
+                var b = v.TranslatePoint(new Point(v.Bounds.Width, v.Bounds.Height), win)!.Value;
+                return new Rect(new Point(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y)), new Point(Math.Max(a.X, b.X), Math.Max(a.Y, b.Y)));
+            }
+            var dKnob = Screen(day.GetVisualDescendants().OfType<Border>().First(b => b.Classes.Contains("knob")));
+            var dText = Screen(day.GetVisualDescendants().OfType<TextBlock>().First(x => x.Classes.Contains("pilltext")));
+            var nKnob = Screen(night.GetVisualDescendants().OfType<Border>().First(b => b.Classes.Contains("knob")));
+            var nText = Screen(night.GetVisualDescendants().OfType<TextBlock>().First(x => x.Classes.Contains("pilltext")));
+            Check($"[{tag}] گویِ خورشید سمتِ راستِ «روشن»", dKnob.Left >= dText.Right - 0.5, $"{dKnob.Left:0} / {dText.Right:0}");
+            Check($"[{tag}] گویِ ماه سمتِ چپِ «تیره»", nKnob.Right <= nText.Left + 0.5, $"{nKnob.Right:0} / {nText.Left:0}");
+            Check($"[{tag}] دو کلید روی هم نیفتاده‌اند", !Screen(day).Intersects(Screen(night)));
+            var area = Screen(day).Union(Screen(night)).Inflate(12);
+            Console.WriteLine($"  📐 کلیدها: {area.X:0},{area.Y:0} {area.Width:0}×{area.Height:0}");
+            Round14Probe.Shot(win, shots, "theme-pills-" + (dark ? "dark" : "light"));
+        }
+        vm.SelectedTheme = start;
+        Round14Probe.Settle(win);
+    }
+
     // ══ ۱) سربرگ: تم با دو دکمهٔ رادیویی، تاریخ با نامِ ماه، و ساعتِ خودِ برنامه ══
     private static void Header(Window win, MainViewModel vm, string shots)
     {
         Console.WriteLine();
         Console.WriteLine("════ ۱) سربرگ ════");
-        var radios = win.GetVisualDescendants().OfType<RadioButton>().Where(r => r.Classes.Contains("theme")).ToList();
+        var radios = win.GetVisualDescendants().OfType<RadioButton>().Where(r => r.Classes.Contains("pill")).ToList();
+        Pills(win, vm, radios, shots);
         Check("دو دکمهٔ رادیوییِ تم در سربرگ", radios.Count == 2, radios.Count + " دکمه");
         Check("کشوییِ تم دیگر در سربرگ نیست",
               !win.GetVisualDescendants().OfType<ComboBox>().Any(c => c.ItemsSource == vm.Themes));

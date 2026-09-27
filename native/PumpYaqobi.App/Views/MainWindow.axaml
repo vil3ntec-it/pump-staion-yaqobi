@@ -32,24 +32,104 @@
        همان‌جا استثنا می‌دهد («No animator registered for the property
        RenderTransform»). ‎Opacity‎ انیماتورِ ‎double‎ دارد و همیشه کار می‌کند. -->
   <Window.Styles>
-    <!-- ══ دو دکمهٔ رادیوییِ تم در سربرگ — یک کپسولِ کوچک به‌جای کشوییِ ۱۸۰ پیکسلی ══ -->
-    <Style Selector="Border.theme-radios">
+    <!-- ══ تم: دو کلیدِ کپسولی — «روز» و «شب» (۱۴۰۵/۰۷/۱۵، با عکسِ مرجعِ صاحب ریپو) ══
+         همچنان دو ‎RadioButton‎ی یک گروه‌اند (همان ‎IsLightTheme‎/‎IsDarkTheme‎)؛
+         فقط شکلشان کپسول با گوی است: روشنِ انتخاب‌شده گرادیانِ نارنجی و خورشید،
+         تیرهٔ انتخاب‌شده گرادیانِ بنفش با هالهٔ صورتی و ماه و ستاره.
+         ⛔ حالتِ «انتخاب‌نشده» فقط از قلم‌های **مشترکِ** تم (‎Pump.Input/Muted/ChromeBorder‎)
+         رنگ می‌گیرد و حالتِ «انتخاب‌شده» رنگِ ثابتِ خودش را دارد — هیچ قلمِ
+         جدا-برای-هر-تمی روی نوشته نمی‌نشیند (قاعدهٔ «نوشته‌ها در دارک مود
+         چپ‌چین نشوند»، ‎ThemeManager.Shared‎).
+         ⛔ بی ‎Transition‎ی رنگ: انتقالِ ۰٫۳ ثانیه‌ای همان است که عکسِ ‎themeflip‎ را
+         روی رانرِ کُند وسطِ کار می‌گرفت. -->
+    <Style Selector="RadioButton.pill">
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Margin" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Name="PART_Pill" Height="32" MinWidth="98" CornerRadius="16" Padding="3"
+                  BorderThickness="1.5">
+            <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                              VerticalAlignment="Center" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="RadioButton.pill /template/ Border#PART_Pill">
       <Setter Property="Background" Value="{DynamicResource Pump.Input}" />
       <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="999" />
-      <Setter Property="Padding" Value="8,1" />
     </Style>
-    <Style Selector="RadioButton.theme">
-      <Setter Property="MinHeight" Value="30" />
-      <Setter Property="Padding" Value="4,0,8,0" />
-      <Setter Property="Margin" Value="0" />
-      <Setter Property="VerticalContentAlignment" Value="Center" />
-      <Setter Property="Cursor" Value="Hand" />
+    <Style Selector="RadioButton.pill:pointerover /template/ Border#PART_Pill">
+      <Setter Property="BorderBrush" Value="{DynamicResource Pump.Muted}" />
     </Style>
-    <Style Selector="RadioButton.theme TextBlock">
-      <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
+    <!-- گوی: دایرهٔ سفید با سایهٔ نرم (کوچک است، پس سایهٔ محو مجاز) -->
+    <Style Selector="RadioButton.pill Border.knob">
+      <Setter Property="Width" Value="24" />
+      <Setter Property="Height" Value="24" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Background" Value="#FFFFFF" />
+      <Setter Property="BoxShadow" Value="0 1 3 0 #40000000" />
+      <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
+    <Style Selector="RadioButton.pill Path.icon">
+      <Setter Property="Stroke" Value="#9AA3AF" />
+      <Setter Property="StrokeThickness" Value="1.8" />
+      <Setter Property="StrokeLineCap" Value="Round" />
+      <Setter Property="Stretch" Value="Uniform" />
+      <Setter Property="Width" Value="15" />
+      <Setter Property="Height" Value="15" />
+      <Setter Property="FlowDirection" Value="LeftToRight" />
+    </Style>
+    <Style Selector="RadioButton.pill TextBlock.pilltext">
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Margin" Value="9,0" />
+      <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
+    </Style>
+
+    <!-- «روز» انتخاب‌شده: گرادیانِ نارنجی و خورشیدِ نارنجی -->
+    <Style Selector="RadioButton.pill.day:checked /template/ Border#PART_Pill">
+      <Setter Property="Background">
+        <LinearGradientBrush StartPoint="0%,50%" EndPoint="100%,50%">
+          <GradientStop Offset="0" Color="#FF7A00" />
+          <GradientStop Offset="1" Color="#FFC107" />
+        </LinearGradientBrush>
+      </Setter>
+      <Setter Property="BorderBrush" Value="#FFD27A" />
+      <Setter Property="BoxShadow" Value="0 2 8 0 #55FF8A00" />
+    </Style>
+    <Style Selector="RadioButton.pill.day:checked Path.icon">
+      <Setter Property="Stroke" Value="#FF8A00" />
+    </Style>
+
+    <!-- «شب» انتخاب‌شده: گرادیانِ بنفش، هالهٔ صورتی، ماه و ستارهٔ بنفش -->
+    <Style Selector="RadioButton.pill.night:checked /template/ Border#PART_Pill">
+      <Setter Property="Background">
+        <LinearGradientBrush StartPoint="0%,50%" EndPoint="100%,50%">
+          <GradientStop Offset="0" Color="#2E1065" />
+          <GradientStop Offset="1" Color="#7C3AED" />
+        </LinearGradientBrush>
+      </Setter>
+      <Setter Property="BorderBrush" Value="#E879F9" />
+      <Setter Property="BoxShadow" Value="0 0 10 1 #77D946EF" />
+    </Style>
+    <Style Selector="RadioButton.pill.night:checked Path.icon">
+      <Setter Property="Stroke" Value="#5B21B6" />
+    </Style>
+    <Style Selector="RadioButton.pill.night:checked Path.star">
+      <Setter Property="Fill" Value="#5B21B6" />
+    </Style>
+    <Style Selector="RadioButton.pill:checked TextBlock.pilltext">
+      <Setter Property="Foreground" Value="#FFFFFF" />
+    </Style>
+    <Style Selector="RadioButton.pill Path.star">
+      <Setter Property="Fill" Value="#9AA3AF" />
+      <Setter Property="Stretch" Value="Uniform" />
+      <Setter Property="FlowDirection" Value="LeftToRight" />
+    </Style>
+
     <!-- ⚠️ فقط با کلاسِ ‎pulse‎ که به ‎IsStarting‎ بسته است: انیمیشنِ بی‌پایان روی
          کنترلِ **پنهان** هم می‌چرخد و هر فریم پنجره را از نو می‌کشد — همان
          «کامپیوتر داغ می‌شود»ِ صاحب ریپو، بعد از رمز و تا ابد. -->
@@ -163,24 +243,33 @@
           <!-- ══ تم: دو دکمهٔ رادیویی، نه کشویی (۱۴۰۵/۰۷/۱۵) ══════════════════
                خواستهٔ صاحب ریپو: «کشویی است، به رادیو باتون عوض کن که خیلی جا
                نگیرد.» همان ‎SelectedTheme‎ از دو درِ ‎IsLightTheme‎/‎IsDarkTheme‎. -->
-          <Border Classes="theme-radios" VerticalAlignment="Center">
-            <StackPanel Orientation="Horizontal" Spacing="2">
-              <RadioButton Classes="theme" GroupName="pump-theme" IsChecked="{Binding IsLightTheme}"
-                           ToolTip.Tip="تمِ روشن (آبی)">
-                <StackPanel Orientation="Horizontal" Spacing="5">
-                  <Border Width="11" Height="11" CornerRadius="6" Background="#3B82F6" VerticalAlignment="Center" />
-                  <TextBlock Text="روشن" FontSize="12.5" FontWeight="Bold" VerticalAlignment="Center" />
-                </StackPanel>
-              </RadioButton>
-              <RadioButton Classes="theme" GroupName="pump-theme" IsChecked="{Binding IsDarkTheme}"
-                           ToolTip.Tip="تمِ تیره (مشکی و زرد)">
-                <StackPanel Orientation="Horizontal" Spacing="5">
-                  <Border Width="11" Height="11" CornerRadius="6" Background="#FFD700" VerticalAlignment="Center" />
-                  <TextBlock Text="تیره" FontSize="12.5" FontWeight="Bold" VerticalAlignment="Center" />
-                </StackPanel>
-              </RadioButton>
-            </StackPanel>
-          </Border>
+          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <!-- ⚠️ در راست‌به‌چپ نخستین فرزند سمتِ راست است: گویِ «روز» راست و
+                 گویِ «شب» چپ — مثلِ کلیدی که به دو سو رفته (عکسِ مرجع). -->
+            <RadioButton Classes="pill day" GroupName="pump-theme" IsChecked="{Binding IsLightTheme}"
+                         ToolTip.Tip="تمِ روشن (آبی)">
+              <StackPanel Orientation="Horizontal">
+                <Border Classes="knob">
+                  <Path Classes="icon" Data="M12,7.5 A4.5,4.5 0 1 1 11.99,7.5 Z M12,1.5 V3.5 M12,20.5 V22.5 M4.6,4.6 L6,6 M18,18 L19.4,19.4 M1.5,12 H3.5 M20.5,12 H22.5 M4.6,19.4 L6,18 M18,6 L19.4,4.6" />
+                </Border>
+                <TextBlock Classes="pilltext" Text="روشن" />
+              </StackPanel>
+            </RadioButton>
+            <RadioButton Classes="pill night" GroupName="pump-theme" IsChecked="{Binding IsDarkTheme}"
+                         ToolTip.Tip="تمِ تیره (مشکی و زرد)">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Classes="pilltext" Text="تیره" />
+                <Border Classes="knob">
+                  <Grid Width="16" Height="16">
+                    <Path Classes="icon" Width="13" Height="13" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                          Data="M20,14.5 A8,8 0 1 1 9.5,4 A6.2,6.2 0 0 0 20,14.5 Z" />
+                    <Path Classes="star" Width="5" Height="5" HorizontalAlignment="Right" VerticalAlignment="Top"
+                          Data="M5,0 L6,4 L10,5 L6,6 L5,10 L4,6 L0,5 L4,4 Z" />
+                  </Grid>
+                </Border>
+              </StackPanel>
+            </RadioButton>
+          </StackPanel>
 
           <!-- 👤 پروفایل — بغلِ تم، خواستهٔ صریحِ صاحب ریپو: «یک بخشِ جدید
                بالای صفحه بغلِ تم بگذار به اسمِ پروفایل که آن‌جا هم بتواند
