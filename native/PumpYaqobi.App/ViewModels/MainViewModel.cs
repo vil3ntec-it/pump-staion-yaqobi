@@ -381,8 +381,41 @@ public sealed partial class MainViewModel : ObservableObject
     /// جایشان در <see cref="Sections"/> می‌مانند (نوزدهم و بیستم — ‎NavOrderTests‎)
     /// و با همان دکمه‌های سربرگ باز می‌شوند.
     /// </summary>
-    public IReadOnlyList<SectionViewModel> NavSections =>
+    public IReadOnlyList<SectionViewModel> NavSections
+    {
+        get
+        {
+            var defaults = NavDefaults();
+            var byId = defaults.ToDictionary(s => s.Id);
+            return NavOrder.Arrange(defaults.Select(s => s.Id).ToList(), _settings.NavOrder)
+                           .Select(id => byId[id]).ToList();
+        }
+    }
+
+    private List<SectionViewModel> NavDefaults() =>
         Sections.Where(s => s.Id is not ("chat" or "account")).ToList();
+
+    // ══ جابه‌جا کردنِ بخش در نوار — راست‌کلیک روی هر بخش (۱۴۰۵/۰۷/۱۵) ══
+    //  شرح و قاعده‌ها بالای ‎ViewModels.NavOrder‎. فقط ترتیبِ دیدن عوض می‌شود.
+    [RelayCommand]
+    private void NavReset()
+    {
+        if (_settings.NavOrder.Length == 0) return;
+        _settings.NavOrder = "";
+        _settings.SaveSoon();
+        OnPropertyChanged(nameof(NavSections));
+    }
+
+    public void MoveNav(SectionViewModel? s, NavOrder.Where where)
+    {
+        if (s is null) return;
+        var shown = NavSections.Select(x => x.Id).ToList();
+        var moved = NavOrder.Move(shown, s.Id, where);
+        if (moved.SequenceEqual(shown)) return;
+        _settings.NavOrder = NavOrder.Save(NavDefaults().Select(x => x.Id).ToList(), moved);
+        _settings.SaveSoon();
+        OnPropertyChanged(nameof(NavSections));
+    }
 
     /// <summary>
     /// چهار عددِ نوارِ بالا — همان ‎#topBanner‎: الباقیِ شرکت‌ها، قرضِ کل،
@@ -1034,17 +1067,40 @@ public sealed partial class MainViewModel : ObservableObject
     public static string HeaderDate(DateTime now)
     {
         var p = Shamsi.Of(now).Split('/');
-        if (p.Length != 3 || !int.TryParse(p[1], out var m) || !int.TryParse(p[2], out var d))
-            return Shamsi.DayName(now) + "، " + Shamsi.Of(now);
-        return Shamsi.DayName(now) + "، " + d + " " + Shamsi.MonthName(m) + " " + p[0];
+        var text = p.Length == 3 && int.TryParse(p[1], out var m) && int.TryParse(p[2], out var d)
+            ? Shamsi.DayName(now) + "، " + d + " " + Shamsi.MonthName(m) + " " + p[0]
+            : Shamsi.DayName(now) + "، " + Shamsi.Of(now);
+        //  ⛔ داخلِ یک «جزیرهٔ راست‌به‌چپ» (‎U+2067 … U+2069‎) — گزارشِ صاحب ریپو
+        //  (۱۴۰۵/۰۷/۱۵): «تو زدی ۱۴۰۵.سنبله.۱». عددها و واژه‌ها در یک پاراگرافِ
+        //  چپ‌به‌راست به ترتیبِ دیداری وارونه می‌نشینند (سال اول، روزِ هفته آخر)؛
+        //  جزیره ترتیبِ خودِ این جمله را همیشه «روزِ هفته، روز ماه سال» نگه
+        //  می‌دارد، هر جا که نوشته شود.
+        return "\u2067" + text + "\u2069";
     }
 
-    /// <summary>کلیک روی تاریخ و ساعتِ سربرگ ⇐ «تاریخ و ساعتِ» خودِ ویندوز.</summary>
+    /// <summary>
+    /// کلیک روی تاریخ و ساعتِ سربرگ ⇐ پنجرهٔ «🕘 تاریخ و ساعت»ِ خودِ برنامه
+    /// (۱۴۰۵/۰۷/۱۵ — «برنامهٔ من خودش داشته باشد، نرود از ویندوز باز شود»).
+    /// ⛔ ساعتِ دوم ساخته نمی‌شود؛ «ثبت» همان ساعتِ ویندوز را عوض می‌کند
+    /// (‎Services.ClockService‎).
+    /// </summary>
     [RelayCommand]
-    private void OpenClockSettings()
+    private Task OpenClock() => Views.ClockWindow.ShowAsync();
+
+    /// <summary>
+    /// دو دکمهٔ رادیوییِ تم در سربرگ (۱۴۰۵/۰۷/۱۵ — «کشویی است، به رادیو باتون
+    /// عوض کن که خیلی جا نگیرد»). همان ‎SelectedTheme‎، فقط دو درِ دیگر.
+    /// </summary>
+    public bool IsLightTheme
     {
-        if (!Services.SystemClockSettings.Open())
-            AppHost.Current.Toast("تاریخ و ساعت را از تنظیماتِ خودِ سیستم عوض کنید — برنامه ساعتِ کامپیوتر را می‌خواند", ToastKind.Info);
+        get => !SelectedTheme.IsDark;
+        set { if (value && SelectedTheme.IsDark) SelectedTheme = PumpTheme.Blue; }
+    }
+
+    public bool IsDarkTheme
+    {
+        get => SelectedTheme.IsDark;
+        set { if (value && !SelectedTheme.IsDark) SelectedTheme = PumpTheme.Gold; }
     }
 
     /// <summary>
@@ -1142,6 +1198,8 @@ public sealed partial class MainViewModel : ObservableObject
 
     partial void OnSelectedThemeChanged(PumpTheme value)
     {
+        OnPropertyChanged(nameof(IsLightTheme));
+        OnPropertyChanged(nameof(IsDarkTheme));
         ThemeManager.Apply(value);
         _settings.ThemeId = value.Id;
         //  تعویضِ تم خودش یک خبرِ بزرگ به کلِ درخت است (~۴۰۰ms با پنج سال

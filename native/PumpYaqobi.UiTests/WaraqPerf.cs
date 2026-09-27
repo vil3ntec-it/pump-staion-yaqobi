@@ -226,7 +226,7 @@ internal static class WaraqPerf
 
     // ══ دانه: ورق‌های پُر ═══════════════════════════════════════════════════
 
-    private static void Seed(AppHost host)
+    internal static void Seed(AppHost host)
     {
         // ⚠️ همه در **ماهِ جاری**: فهرستِ ورق‌ها ماه‌به‌ماه فیلتر می‌شود و
         // ورقی در ماهِ دیگر اصلاً در کارت‌ها نمی‌آید — یک بار همین باعث شد

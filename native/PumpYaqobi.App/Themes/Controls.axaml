@@ -1089,13 +1089,21 @@
                    پس نوارِ ابزار، کارت‌های زیربخش و کادرهای فیلتر همه در
                    **یک** نوارِ شکننده کنارِ هم نشستند. جای عمودی‌ای که آزاد
                    می‌شود مالِ خودِ جدول است. -->
-              <Grid ColumnDefinitions="Auto,Auto,*">
+              <!-- ══ توضیحِ زیرِ عنوان: یک خطِ تمام‌پهنا، نه ستونِ ۲۵۰ پیکسلی (۱۴۰۵/۰۷/۱۵) ══
+                   گزارشِ صاحب ریپو با عکسِ «رسید پارچه‌ها»: «بخشِ بالایش خیلی جا
+                   اشغال کرده، نوشته‌ها همه پایینِ هم آمده‌اند.» توضیح در ستونِ
+                   عنوان با ‎MaxWidth="250"‎ می‌شکست — ۲۸۸ نویسه یعنی چهار خط، و
+                   بلندیِ کلِ سربرگ هم‌قدِ همان می‌شد. هفده بخش توضیحِ بلندتر از
+                   صد نویسه داشتند. حالا ردیفِ دوم است و پهنای کاملِ سربرگ را
+                   دارد: عنوان و ابزار یک ردیف، توضیح یک خط زیرشان. -->
+              <Grid ColumnDefinitions="Auto,Auto,*" RowDefinitions="Auto,Auto">
                 <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                   <TextBlock Text="{TemplateBinding Header}" Classes="card-title" />
-                  <TextBlock Text="{TemplateBinding SubHeader}" Classes="muted"
-                             TextWrapping="Wrap" MaxWidth="250"
-                             IsVisible="{TemplateBinding SubHeader, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                 </StackPanel>
+                <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Classes="muted sec-sub"
+                           Text="{TemplateBinding SubHeader}"
+                           TextWrapping="Wrap" TextAlignment="Start" Margin="0,4,0,0"
+                           IsVisible="{TemplateBinding SubHeader, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
                 <!-- ══ ‎A−‎ / ‎A+‎ / ‎↺‎ِ همین بخش ═════════════════════════════
                      همتای ‎.sec-font-ctrl‎ی نسخهٔ وب، که کنارِ عنوانِ **هر**

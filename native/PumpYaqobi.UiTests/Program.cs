@@ -154,6 +154,15 @@ internal static class Program
         if (outDir.Equals("plstore", StringComparison.OrdinalIgnoreCase)) return ProfitStorageProbe.Run(args);
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- round14 [پوشه]
         if (outDir.Equals("round14", StringComparison.OrdinalIgnoreCase)) return Round14Probe.Run(args);
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- layoutcycle [پوشه]
+        //  «در دارک مود نوشته‌ها می‌روند سمتِ چپ» (۱۴۰۵/۰۷/۱۵) — چرخهٔ چیدمان و نوشتهٔ چپ‌چینِ ناخواسته
+        if (outDir.Equals("layoutcycle", StringComparison.OrdinalIgnoreCase)) return LayoutCycleProbe.Run(args);
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- waraqscroll [پوشه]
+        //  «داخلِ ورق اسکرول پرپر می‌شود و گیر می‌کند» (۱۴۰۵/۰۷/۱۵)
+        if (outDir.Equals("waraqscroll", StringComparison.OrdinalIgnoreCase)) return WaraqScrollProbe.Run(args);
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- round15 [پوشه]
+        //  سربرگ (تمِ رادیویی، تاریخ، ساعتِ خودِ برنامه) · ترتیبِ بخش‌ها · رسیدِ پارچه (۱۴۰۵/۰۷/۱۵)
+        if (outDir.Equals("round15", StringComparison.OrdinalIgnoreCase)) return Round15Probe.Run(args);
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- chatroom [پوشه]
         if (outDir.Equals("chatroom", StringComparison.OrdinalIgnoreCase)) return ChatProbe.Run(args);
         if (outDir.Equals("groupchat", StringComparison.OrdinalIgnoreCase)) return GroupChatLive.Run(args);

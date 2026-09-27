@@ -119,9 +119,56 @@ public static class ThemeManager
         }
 
         Dictionary = _installed[variant].Dict;
+        Paint(variant);
         // رنگ‌هایی که از راهِ کلید آمده‌اند (‎ResourceKeyToBrushConverter‎) با تم برنمی‌گشتند
         ResourceKeyToBrushConverter.Refresh();
         Changed?.Invoke(t);
+    }
+
+    /// <summary>
+    /// ══ یک قلم برای هر کلید، نه یکی برای هر تم (۱۴۰۵/۰۷/۱۵) ══════════════════
+    ///
+    /// گزارشِ صاحب ریپو با عکس: «وقتی دارک مود می‌زنم نوشته‌ها یا سربرگ می‌روند
+    /// سمتِ چپ، انگار انگلیسی شده — در همهٔ بخش‌ها.» ریشه در خودِ آوالونیا ۱۱.۲
+    /// خوانده شد:
+    ///   ‎TextBlock‎ با عوض شدنِ ‎Foreground‎ «نااندازه» می‌شود (‎InvalidateMeasure‎)،
+    ///   نوشتهٔ نااندازه **چپ‌چین** کشیده می‌شود
+    ///   (‎IsMeasureValid ? TextAlignment : TextAlignment.Left‎)، و نقاش هر دیداریِ
+    ///   کثیف را می‌کشد حتی اگر بخشش پنهان باشد — که آن‌جا هرگز اندازه گرفته
+    ///   نمی‌شود. سنجهٔ ‎layoutcycle‎: یک تعویضِ تم ⇒ ۱۶۶ نوشتهٔ «مخزن» چپ‌چین.
+    ///
+    /// وقتی دو تم دو قلمِ جدا داشتند، هر تعویض ‎Foreground‎ی **همهٔ** نوشته‌ها را
+    /// عوض می‌کرد. حالا هر دو فرهنگ همان یک قلم را دارند و ‎Apply‎ فقط رنگش را
+    /// عوض می‌کند: هیچ ‎Foreground‎ی عوض نمی‌شود، هیچ نوشته‌ای نااندازه نمی‌شود،
+    /// و نقاش همان چیدمانِ درستِ قبلی را با رنگِ تازه می‌کشد. و تعویضِ تم هم
+    /// دیگر کلِ متن‌های برنامه را از نو اندازه نمی‌گیرد.
+    ///
+    /// ⚠️ فقط قلمِ تک‌رنگ. گرادیان‌ها و سایه‌ها زمینه‌اند، نه نوشته، و همان
+    /// جدا-برای-هر-تم می‌مانند. ⚠️ کلیدِ «…Color» (خودِ رنگ) هم جداست.
+    /// ⚠️ رنگِ فرهنگِ تمِ **غیرفعال** را از قلمش نخوانید (قلم رنگِ تمِ فعال را
+    /// دارد) — از ‎ColorsOf‎ یا کلیدِ «…Color»ِ همان تم.
+    /// </summary>
+    private static readonly Dictionary<string, SolidColorBrush> _shared = new();
+    private static readonly Dictionary<ThemeVariant, Dictionary<string, Color>> _colors = new();
+
+    private static SolidColorBrush Shared(string key, Color c)
+    {
+        if (_shared.TryGetValue(key, out var b)) return b;
+        b = new SolidColorBrush(c);
+        _shared[key] = b;
+        return b;
+    }
+
+    /// <summary>رنگِ هر قلمِ یک تم — برای خواندنِ تمِ غیرفعال (سنجه‌ها).</summary>
+    public static IReadOnlyDictionary<string, Color>? ColorsOf(PumpTheme t)
+        => _colors.TryGetValue(VariantOf(t), out var c) ? c : null;
+
+    /// <summary>قلم‌های مشترک را به رنگِ این گونه درمی‌آورد — بی هیچ خبرِ ‎Foreground‎.</summary>
+    private static void Paint(ThemeVariant variant)
+    {
+        if (!_colors.TryGetValue(variant, out var colors)) return;
+        foreach (var (key, c) in colors)
+            if (_shared.TryGetValue(key, out var b) && b.Color != c) b.Color = c;
     }
 
     /// <summary>همهٔ کلیدهای یک تم در یک فرهنگِ تازه — بی هیچ خبری به درخت.</summary>
@@ -130,7 +177,16 @@ public static class ThemeManager
         var r = new Avalonia.Controls.ResourceDictionary();
 
         void Set(string key, object v) => r[key] = v;
-        void Br(string key, Color c) { r["Pump." + key + "Color"] = c; r["Pump." + key] = new SolidColorBrush(c); }
+        // ⛔ قلمِ رنگی **یکی** است برای هر دو تم (‎Shared‎) و فقط رنگش عوض می‌شود —
+        //  شرحِ کامل بالای ‎Shared‎. رنگِ هر تم جدا نگه داشته می‌شود (‎ColorsOf‎).
+        var colors = new Dictionary<string, Color>();
+        _colors[VariantOf(t)] = colors;
+        void Br(string key, Color c)
+        {
+            r["Pump." + key + "Color"] = c;
+            r["Pump." + key] = Shared("Pump." + key, c);
+            colors["Pump." + key] = c;
+        }
 
         Br("Dark", t.Dark);
         Br("Panel", t.Panel);

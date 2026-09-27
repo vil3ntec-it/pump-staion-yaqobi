@@ -384,8 +384,11 @@ public sealed class ShortcutService
     private void GotoSection(string buf)
     {
         var n = buf == "0" ? 10 : (int.TryParse(buf, out var v) ? v : 0);
-        if (n < 1 || n > _vm.Sections.Count) return;
-        _ = _vm.GoAsync(_vm.Sections[n - 1]);
+        //  ⛔ به ترتیبِ **نوار** (۱۴۰۵/۰۷/۱۵): کاربر بخش‌ها را خودش می‌چیند، پس
+        //  «بخشِ سوم» همان سومی است که می‌بیند (‎ViewModels.NavOrder‎).
+        var nav = _vm.NavSections;
+        if (n < 1 || n > nav.Count) return;
+        _ = _vm.GoAsync(nav[n - 1]);
     }
 
     private async Task OpenCardAsync(int n)

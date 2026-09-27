@@ -119,15 +119,22 @@ public class OwnerRound13Tests
     // ══ ۶) سربرگ: نامِ ماه، و تنظیمِ تاریخ و ساعت ══════════════════════════
 
     [Fact]
-    public void Sarbarg_NameMah_Darad_Va_Saat_BeTanzimeWindows_Miravad()
+    public void Sarbarg_NameMah_Darad_Va_Saat_DarKhodeBarname_Ast()
     {
-        //  ۲۴ سپتامبر ۲۰۲۶ = پنج‌شنبه ۲ میزان ۱۴۰۵
+        //  ۲۴ سپتامبر ۲۰۲۶ = پنج‌شنبه ۲ میزان ۱۴۰۵ — داخلِ جزیرهٔ راست‌به‌چپ (۱۴۰۵/۰۷/۱۵:
+        //  «تو زدی ۱۴۰۵.سنبله.۱» — ترتیبِ دیداری هیچ‌جا وارونه نشود)
         var t = PumpYaqobi.App.ViewModels.MainViewModel.HeaderDate(new DateTime(2026, 9, 24, 10, 0, 0));
-        Assert.Equal("پنج‌شنبه، 2 میزان 1405", t);
+        Assert.Equal("\u2067پنج‌شنبه، 2 میزان 1405\u2069", t);
         var w = Bare(Read("PumpYaqobi.App", "Views", "MainWindow.axaml"));
-        Assert.Contains("OpenClockSettingsCommand", w);
-        var src = Read("PumpYaqobi.App", "Services", "SystemClockSettings.cs");
-        Assert.Contains("\"ms-settings:dateandtime\"", src);
+        //  ⛔ کلیک ⇐ پنجرهٔ خودِ برنامه، نه تنظیماتِ ویندوز (خواستهٔ ۱۴۰۵/۰۷/۱۵)
+        Assert.Contains("OpenClockCommand", w);
+        Assert.DoesNotContain("OpenClockSettingsCommand", w);
+        Assert.False(File.Exists(Path.Combine(Root(), "PumpYaqobi.App", "Services", "SystemClockSettings.cs")));
+        var src = Read("PumpYaqobi.App", "Services", "ClockService.cs");
+        Assert.DoesNotContain("ms-settings", src);
+        //  همان ساعتِ ویندوز عوض می‌شود، با اجازهٔ مدیر — نه یک ساعتِ دوم
+        Assert.Contains("Set-Date", src);
+        Assert.Contains("\"runas\"", src);
         //  ⛔ برنامه ساعتِ دومی نمی‌سازد: هیچ «تاریخِ دستی» در تنظیمات نیست
         var settings = Read("PumpYaqobi.App", "Services", "AppSettings.cs");
         Assert.DoesNotContain("DateOverride", settings);

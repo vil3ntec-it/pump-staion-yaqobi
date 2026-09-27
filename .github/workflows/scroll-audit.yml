@@ -95,6 +95,25 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- round14 ${{ runner.temp }}/round14
 
+      # ══ دورِ پانزدهم (۱۴۰۵/۰۷/۱۵) ═════════════════════════════════════════
+      # «در دارک مود نوشته‌ها می‌روند سمتِ چپ»: یک تعویضِ تم نباید هیچ نوشتهٔ
+      # چیده‌شده‌ای را چپ‌چین بکشد (مقیاسِ ۱۲۵٪ِ ویندوز، همهٔ بخش‌ها، هر دو تم).
+      - name: سنجشِ نوشتهٔ چپ‌چین پس از تم
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- layoutcycle ${{ runner.temp }}/layoutcycle
+
+      # سربرگ (تمِ رادیویی، تاریخ با نامِ ماه، ساعتِ خودِ برنامه) · ترتیبِ
+      # بخش‌ها · سربرگِ جمع‌وجور و جدولِ رسیدِ پارچه که ناپدید نمی‌شود.
+      - name: سنجشِ دورِ پانزدهم
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- round15 ${{ runner.temp }}/round15
+
+      # «داخلِ ورق اسکرول پرپر می‌شود»: چرخِ واقعی روی هر سه جدول، یک فریم پس
+      # از هر گام؛ نه پرش، نه برگشت، نه پهنای لرزان، نه نوشتهٔ کج.
+      - name: سنجشِ لغزیدنِ ورق
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- waraqscroll ${{ runner.temp }}/waraqscroll
+
       # ══ مفاد/ضرر: کشوی ماه و سال و کادرهای برابر · مخزن: عنوانِ وسط ═════════
       # گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۳) با عکس. عددِ هر دوره از روی دادهٔ خودِ
       # سنجه حساب می‌شود، و پهنا/قد/لبهٔ هر کادر با پنجرهٔ واقعی سنجیده می‌شود.

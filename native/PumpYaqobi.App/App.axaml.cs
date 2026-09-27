@@ -21,6 +21,11 @@ public partial class App : Avalonia.Application
         Services.AppHost.Start();
         ThemeManager.Apply(PumpTheme.ById(Services.AppSettings.Load().ThemeId), this);
 
+        // ══ نوشته‌ای که در بخشِ پنهان چپ‌چین کشیده شده، با دیده شدن دوباره کشیده شود ══
+        // گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۵): «در دارک مود نوشته‌ها می‌روند سمتِ چپ».
+        // ریشه و سنجه‌اش بالای ‎Controls.StaleTextGuard‎.
+        Controls.StaleTextGuard.Install();
+
         // ══ نشانگرِ «خانهٔ اکسل» ═════════════════════════════════════════════
         // همتای ‎cursor:cell‎ی سایت. این‌جا ثبت می‌شود، نه در خودِ سبک‌ها، چون
         // کشیدنش به موتورِ رسم نیاز دارد و این‌جا پلتفرم قطعاً بالا آمده است —
