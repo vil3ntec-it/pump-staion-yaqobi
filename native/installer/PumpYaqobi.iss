@@ -128,6 +128,11 @@ fa.DiskSpaceGBLabel=دستِ‌کم [gb] گیگابایت جای خالی لاز
 fa.DiskSpaceMBLabel=دستِ‌کم [mb] مگابایت جای خالی لازم است.
 fa.ButtonBrowse=&انتخابِ پوشه
 fa.DirNotEmpty=پوشهٔ «%1» خالی نیست. باز هم همان‌جا نصب شود؟
+; پیام‌های خودِ Inno برای پوشهٔ نادرست — پیش از NextButtonClick می‌آیند (سنجهٔ ویزارد دید که انگلیسی بودند)
+fa.InvalidDrive=درایوی که انتخاب کردید روی این کامپیوتر پیدا نشد یا در دسترس نیست. درایو یا پوشهٔ دیگری انتخاب کنید.
+fa.InvalidPath=نشانیِ کامل با حرفِ درایو بنویسید، مثلاً:%n%nD:\PumpYaqobi
+fa.DiskSpaceWarningTitle=جای خالی کم است
+fa.DiskSpaceWarning=برای نصب دستِ‌کم %1 کیلوبایت جای خالی لازم است ولی این درایو فقط %2 کیلوبایت دارد.%n%nباز هم ادامه شود؟
 fa.ButtonNext=&بعدی
 fa.ButtonBack=&قبلی
 fa.ButtonInstall=&نصب
