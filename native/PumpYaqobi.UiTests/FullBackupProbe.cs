@@ -145,6 +145,30 @@ internal static class FullBackupProbe
               (disk.CloudDeviceToken, disk.CloudPublicKey, disk.StationCode) == bonds);
         Shot(win, shots, "fb-2-import");
 
+        // ── ۳ب) دوبار-کلیک روی فایل در ویندوز (‎OpenRequest‎) — همان درِ دکمه ──
+        //  «چرا فایلِ برنامه رو که می‌خوام باز کنم، برنامهٔ من پیشنهاد نمی‌شه؟»
+        //  نصاب پسوند را به برنامه می‌سپارد و ویندوز مسیر را می‌دهد؛ این‌جا همان
+        //  مسیر به برنامهٔ باز داده می‌شود و باید با همان سنجش و همان پرسش بیاید.
+        Console.WriteLine("── ۳ب) دوبار-کلیک روی «.pumpyaqobi» ⇒ همان سنجش، همان پرسش، همه برگشت ──");
+        Wait(win, vm.GoAsync(vm.Sections.First(x => x.Id == "dashboard")));
+        using (var db = host.Db.Create())
+            db.Database.ExecuteSqlRaw("DELETE FROM DebtRows; DELETE FROM Debtors WHERE Name = {0};", gone);
+        page.FullStatus = "";
+        string? asked2 = null;
+        Dialogs.ConfirmHook = (_, m) => { asked2 = m; return true; };
+        try
+        {
+            OpenRequest.Add(file);
+            Until(win, () => page.FullStatus.StartsWith("✅") || page.FullStatus.StartsWith("❌") || page.FullStatus.StartsWith("⚠️"));
+        }
+        finally { Dialogs.ConfirmHook = null; }
+        Check("پیش از جایگزینی پرسیده شد", asked2 is not null && asked2.Contains("قرض‌داران"), asked2?.Replace("\n", " ⏎ "));
+        Check("خودش به صفحهٔ «بک‌اپ» رفت", ReferenceEquals(vm.Current, settings) && ReferenceEquals(settings.OpenSub, page),
+              vm.Current?.Id + " / " + settings.OpenSub?.Id);
+        Check("آمد", page.FullStatus.StartsWith("✅"), page.FullStatus.Replace("\n", " ⏎ "));
+        using (var db = host.Db.Create())
+            Check($"حسابِ پاک‌شده دوباره برگشت («{gone}»)", db.Debtors.Any(d => d.Name == gone));
+
         // ── ۴) فایلِ دست‌خورده ────────────────────────────────────────────
         Console.WriteLine("── ۴) فایلِ دست‌خورده ⇒ رد، و یک ردیف هم عوض نشد ──");
         var bad = Path.Combine(root, "bad" + FullBackup.Extension);
@@ -162,7 +186,12 @@ internal static class FullBackupProbe
 
         // ── ۵) فرستادن به سرور، بی سرور ───────────────────────────────────
         Console.WriteLine("── ۵) «📤 فرستادن به سرور» بی هیچ سروری ⇒ راست می‌گوید ──");
-        Click(win, "📤 فرستادنِ بکاپ به سرور — همین حالا");
+        //  ⛔ کنارِ بقیهٔ دکمه‌های «تازه‌ترین بکاپ» (۱۴۰۵/۰۷/۱۵) — نه کارتِ جدا
+        var sendBtn = win.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => (b.Content as string) == "📤 فرستادن به سرور");
+        var saveBtn = win.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => (b.Content as string) == "💾 ذخیرهٔ فایلِ بکاپ");
+        Check("«فرستادن به سرور» کنارِ «ذخیرهٔ فایلِ بکاپ» است",
+              sendBtn is not null && saveBtn is not null && ReferenceEquals(sendBtn.Parent, saveBtn.Parent));
+        Click(win, "📤 فرستادن به سرور");
         Until(win, () => !page.SendingToServer && page.ServerStatus.Length > 0 && !page.ServerStatus.StartsWith("در حالِ"));
         Check("جمله سرخ است و «رفت» نمی‌گوید", page.ServerStatus.StartsWith("❌") && page.ServerStatusBrushKey == "Pump.Danger",
               page.ServerStatus);

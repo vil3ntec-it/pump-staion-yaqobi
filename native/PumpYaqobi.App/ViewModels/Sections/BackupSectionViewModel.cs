@@ -96,8 +96,32 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
     public bool CanRestore => _host.Permissions.Can(Permission.Restore);
 
     public string KeepText =>
-        "برنامه هر روز که باز شود خودش یک عکس می‌گیرد و "
-        + Shamsi.Money(BackupService.KeepSnapshots) + " تای آخر را نگه می‌دارد.";
+        "هر روز خودکار — " + Shamsi.Money(BackupService.KeepSnapshots) + " تای آخر می‌ماند.";
+
+    /// <summary>
+    /// جای اطلاعات، یک خط (۱۴۰۵/۰۷/۱۵): «هرگز توی درایو سی نره». داخلِ پوشهٔ
+    /// برنامه ⇒ همان را می‌گوید؛ وگرنه راست می‌گوید که هنوز جای دیگری است.
+    /// </summary>
+    public string DataHomeText => PumpYaqobi.Services.Data.DataHome.InsideApp
+        ? "📁 همهٔ اطلاعات داخلِ پوشهٔ برنامه است: " + AppSettings.Dir
+        : "📁 اطلاعات: " + AppSettings.Dir;
+
+    /// <summary>«📂 پوشهٔ بکاپ‌ها»</summary>
+    [RelayCommand]
+    private void OpenBackupFolder()
+    {
+        try
+        {
+            var dir = _host.Backup.SnapshotDir;
+            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(dir) { UseShellExecute = true });
+        }
+        catch { _host.Toast("پوشه باز نشد", ToastKind.Warn); }
+    }
+
+    /// <summary>نامِ فایلِ عکسِ ایمنی، نه مسیرِ بلندش — «📂 پوشهٔ بکاپ‌ها» جایش را نشان می‌دهد.</summary>
+    private static string SafetyLine(string? path) =>
+        path is null ? "" : "🛟 بکاپِ ایمنی: " + Path.GetFileName(path);
 
     protected override Task LoadAsync() => RefreshAsync();
     public override Task OnActivatedAsync() => RefreshAsync();
@@ -148,7 +172,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         try
         {
             await Task.Run(() => _host.Backup.WriteSnapshot(target));
-            Status = "آخرین فایلِ بکاپ: " + target;
+            Status = "💾 ذخیره شد: " + Path.GetFileName(target);
             _host.Toast("💾 فایلِ بکاپ ساخته شد — جای امن نگهش دارید", ToastKind.Ok);
         }
         catch (PermissionDeniedException) { _host.Toast("❌ بکاپ فقط از مدیر برمی‌آید", ToastKind.Error); }
@@ -229,7 +253,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
                     outcome.Ok ? ToastKind.Ok : ToastKind.Error);
 
         if (outcome.SafetyCopy is not null)
-            Status = "عکسِ ایمنیِ حالِ قبلی: " + outcome.SafetyCopy;
+            Status = SafetyLine(outcome.SafetyCopy);
 
         if (!outcome.Ok) return;
 
@@ -306,6 +330,21 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         var path = await Dialogs.PickFileAsync("فایلِ کاملِ برنامه را انتخاب کنید",
                                                "فایلِ کاملِ برنامه", new[] { "*" + FullBackup.Extension });
         if (path is null) return;
+        await ImportFullFromAsync(path);
+    }
+
+    /// <summary>
+    /// همان «آوردنِ فایلِ کامل» برای فایلی که از قبل معلوم است — دوبار-کلیک
+    /// روی ‎.pumpyaqobi‎ (‎OpenRequest‎). ⛔ همان سنجش‌ها و همان پرسش؛ هیچ
+    /// راهِ کوتاه‌تری نیست.
+    /// </summary>
+    public async Task ImportFullFromAsync(string path)
+    {
+        if (!CanRestore)
+        {
+            _host.Toast("❌ آوردنِ فایلِ کامل فقط از مدیر برمی‌آید", ToastKind.Error);
+            return;
+        }
 
         Busy = true;
         FullStatus = "در حالِ خواندن و سنجیدنِ فایل…";
@@ -349,7 +388,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
                     return;
                 }
 
-                if (outcome.SafetyCopy is not null) Status = "عکسِ ایمنیِ حالِ قبلی: " + outcome.SafetyCopy;
+                if (outcome.SafetyCopy is not null) Status = SafetyLine(outcome.SafetyCopy);
                 if (!outcome.Ok)
                 {
                     FullStatus = "❌ " + outcome.Message;
@@ -369,7 +408,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
                 if (mismatch is not null)
                 {
                     FullStatus = "⚠️ آمد، ولی سنجشِ پس از آوردن ناجور بود — " + mismatch
-                               + "\nعکسِ ایمنیِ حالِ قبلی: " + (outcome.SafetyCopy ?? "—");
+                               + "\n" + SafetyLine(outcome.SafetyCopy);
                     FullStatusBrushKey = "Pump.Danger";
                     _host.Toast(FullStatus, ToastKind.Error);
                     return;
@@ -378,7 +417,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
                 FullStatus = $"✅ همه آمد و شمرده شد: {Shamsi.Money(info.TotalRows)} ردیف در "
                            + $"{Shamsi.Money(info.Tables.Count)} جدول"
                            + (applied > 0 ? " · تم و تنظیمات هم نشست" : "")
-                           + (outcome.SafetyCopy is null ? "" : "\nعکسِ ایمنیِ حالِ قبلی: " + outcome.SafetyCopy);
+                           + (outcome.SafetyCopy is null ? "" : "\n" + SafetyLine(outcome.SafetyCopy));
                 FullStatusBrushKey = "Pump.Ok";
                 _host.Toast("✅ فایلِ کامل آمد — همهٔ حساب‌ها و تنظیمات", ToastKind.Ok);
             }

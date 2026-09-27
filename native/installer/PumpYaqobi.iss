@@ -107,6 +107,8 @@ DisableWelcomePage=no
 ; به‌روزرسانیِ خودکار، وگرنه فایلِ در حالِ اجرا قفل است و نصب شکست می‌خورد.
 CloseApplications=yes
 RestartApplications=yes
+; پسوندهای ‎.pumpyaqobi‎ و ‎.pumpkey‎ (پایین، [Registry]) — ویندوز باید همان لحظه بفهمد
+ChangesAssociations=yes
 
 [Languages]
 Name: "fa"; MessagesFile: "compiler:Default.isl"
@@ -118,11 +120,11 @@ Name: "fa"; MessagesFile: "compiler:Default.isl"
 fa.SetupAppTitle=نصبِ {#AppName}
 fa.SetupWindowTitle=نصبِ {#AppName}
 fa.WelcomeLabel1=نصبِ [name]
-fa.WelcomeLabel2=[name/ver] روی این کامپیوتر نصب می‌شود.%n%nحساب‌های شما جدا از برنامه نگه داشته می‌شوند، پس به‌روزرسانی و حتی حذفِ برنامه به آن‌ها دست نمی‌زند.
+fa.WelcomeLabel2=[name/ver] روی این کامپیوتر نصب می‌شود.%n%nحساب‌های شما در پوشهٔ «data» داخلِ همین پوشهٔ برنامه نگه داشته می‌شوند — به‌روزرسانی و حذفِ برنامه به آن‌ها دست نمی‌زند، و با عوض کردنِ ویندوز هم از بین نمی‌روند (برنامه را روی درایوی غیر از C نصب کنید).
 fa.ClickNext=برای ادامه «Next» را بزنید.
 fa.WizardSelectDir=پوشهٔ نصب
 fa.SelectDirDesc=[name] کجا نصب شود؟
-fa.SelectDirLabel3=[name] در پوشهٔ زیر نصب می‌شود.
+fa.SelectDirLabel3=[name] در پوشهٔ زیر نصب می‌شود. حساب‌ها هم داخلِ همین پوشه (data) می‌مانند — درایوی غیر از C (مثلاً D) بهتر است تا با عوض کردنِ ویندوز از بین نروند.
 fa.SelectDirBrowseLabel=برای ادامه «Next» را بزنید. برای انتخابِ پوشهٔ دیگر «Browse» را بزنید.
 fa.DiskSpaceGBLabel=دستِ‌کم [gb] گیگابایت جای خالی لازم است.
 fa.DiskSpaceMBLabel=دستِ‌کم [mb] مگابایت جای خالی لازم است.
@@ -156,10 +158,20 @@ fa.LaunchProgram=باز کردنِ {#AppName}
 ; تیک‌خورده به‌صورت پیش‌فرض — خواستهٔ صاحب ریپو این بود که «روی دسکتاپ بیاید»
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "میان‌برها:"
 
+[Dirs]
+; ── جای همهٔ اطلاعات: ‎{app}\data‎ (۱۴۰۵/۰۷/۱۵) ─────────────────────────────
+; «هرگز توی درایو سی نره هیچ اطلاعاتی؛ همه باید توی همون فولدرِ اپ بیان.»
+; اجازهٔ نوشتن برای کاربر — حتی اگر برنامه در Program Files نصب شده باشد — و
+; ⛔ uninsneveruninstall: حذفِ برنامه این پوشه را هرگز برنمی‌دارد.
+Name: "{app}\data"; Permissions: users-modify; Flags: uninsneveruninstall
+
 [Files]
 ; ⛔ هر دو بار داخلِ فایل‌اند؛ فقط یکی می‌نشیند (WantX64 / WantX86).
 Source: "{#SourceDir64}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: WantX64
 Source: "{#SourceDir86}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: WantX86
+; آیکونِ میان‌برها — فایلِ جدا، نه آیکونِ داخلِ exe: ویندوز آیکونِ هر مسیر را کَش
+; می‌کند و exeِ هم‌مسیر آیکونِ کهنه را نشان می‌داد (عکسِ صاحب ریپو، ۱۴۰۵/۰۷/۱۵).
+Source: "..\PumpYaqobi.App\Assets\app.ico"; DestDir: "{app}"; DestName: "PumpYaqobi.ico"; Flags: ignoreversion
 
 [InstallDelete]
 ; نامِ کهنهٔ برنامه (۱۴۰۵/۰۷/۱۵): میان‌برهای «پمپ یعقوبی» برداشته می‌شوند تا کنارِ
@@ -186,16 +198,38 @@ Type: files; Name: "{app}\mscordaccore_amd64_amd64_*.dll"; Check: WantX86
 Root: HKCU; Subkey: "{#ArchKey}"; ValueType: string; ValueName: "Arch"; ValueData: "x64"; Flags: uninsdeletekey; Check: WantX64
 Root: HKCU; Subkey: "{#ArchKey}"; ValueType: string; ValueName: "Arch"; ValueData: "x86"; Flags: uninsdeletekey; Check: WantX86
 
+; ── دوبار-کلیک روی فایل‌های خودِ برنامه (۱۴۰۵/۰۷/۱۵) ─────────────────────────
+; «چرا فایلِ برنامه رو که گرفتم و می‌خوام باز کنم، برنامهٔ من پیشنهاد نمی‌شه؟»
+;   .pumpyaqobi ⇒ «فایلِ کاملِ برنامه»   .pumpkey ⇒ کدِ اشتراکِ آفلاین
+; برنامه خودش پیش از هر کاری می‌سنجد و می‌پرسد (Services/OpenRequest.cs).
+; ⚠️ انتخابِ کهنهٔ ویندوز (UserChoice) برداشته می‌شود — فقط برای همین دو پسوندِ
+; خودمان؛ ساختنش را ویندوز اجازه نمی‌دهد، برداشتنش را می‌دهد.
+Root: HKA; Subkey: "Software\Classes\.pumpyaqobi"; ValueType: string; ValueName: ""; ValueData: "PumpYaqobi.Full"; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\.pumpyaqobi\OpenWithProgids"; ValueType: string; ValueName: "PumpYaqobi.Full"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\PumpYaqobi.Full"; ValueType: string; ValueName: ""; ValueData: "فایلِ کاملِ {#AppName}"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\PumpYaqobi.Full\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\PumpYaqobi.ico"
+Root: HKA; Subkey: "Software\Classes\PumpYaqobi.Full\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"" ""%1"""
+Root: HKA; Subkey: "Software\Classes\.pumpkey"; ValueType: string; ValueName: ""; ValueData: "PumpYaqobi.Key"; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\.pumpkey\OpenWithProgids"; ValueType: string; ValueName: "PumpYaqobi.Key"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\PumpYaqobi.Key"; ValueType: string; ValueName: ""; ValueData: "کدِ اشتراکِ {#AppName}"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\PumpYaqobi.Key\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\PumpYaqobi.ico"
+Root: HKA; Subkey: "Software\Classes\PumpYaqobi.Key\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"" ""%1"""
+Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "{#AppName}"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\SupportedTypes"; ValueType: string; ValueName: ".pumpyaqobi"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\SupportedTypes"; ValueType: string; ValueName: ".pumpkey"; ValueData: ""
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.pumpyaqobi\UserChoice"; ValueType: none; Flags: deletekey
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.pumpkey\UserChoice"; ValueType: none; Flags: deletekey
+
 [Icons]
-Name: "{group}\{#AppName}";              Filename: "{app}\{#AppExe}"
+Name: "{group}\{#AppName}";              Filename: "{app}\{#AppExe}"; IconFilename: "{app}\PumpYaqobi.ico"
 Name: "{group}\حذفِ {#AppName}";          Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#AppName}";        Filename: "{app}\{#AppExe}"; Tasks: desktopicon
+Name: "{autodesktop}\{#AppName}";        Filename: "{app}\{#AppExe}"; IconFilename: "{app}\PumpYaqobi.ico"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram}"; Flags: nowait postinstall skipifsilent
 
 ; ── هیچ [UninstallDelete] ای این‌جا نیست، و عمدی است ────────────────────────
-; حساب‌های کاربر در ‎%AppData%\PumpYaqobi‎ است. حذفِ برنامه نباید به آن دست
+; حساب‌های کاربر در ‎{app}\data‎ است (و در نصب‌های کهنه ‎%AppData%\PumpYaqobi‎). حذفِ برنامه نباید به آن دست
 ; بزند. اگر روزی کسی وسوسه شد این‌جا خطی بنویسد که آن پوشه را پاک کند —
 ; ننویسد: کلِ دفترِ حساب‌ها با یک «حذفِ برنامه» می‌رود.
 ;
@@ -432,28 +466,76 @@ end;
 //  پیش‌فرضِ پرسش «نه» است (MB_DEFBUTTON2)، و حذفِ بی‌صدا (به‌روزرسانی یا
 //  اسکریپت) اصلاً نمی‌پرسد و دست نمی‌زند. «بله» پوشهٔ داده را با نامِ
 //  تاریخ‌دار کنار می‌گذارد؛ برگرداندنش یعنی برگرداندنِ همان نام.
+//  ⚠️ از ۱۴۰۵/۰۷/۱۵ اطلاعات در ‎{app}\data‎ است؛ نصب‌های کهنه هنوز جای قبلی
+//  (‎%AppData%\PumpYaqobi‎) را هم دارند — هر دو کنار گذاشته می‌شوند.
+function SetAside(Data: String): Boolean;
+var
+  Aside: String;
+begin
+  Result := True;
+  if not DirExists(Data) then Exit;
+  Aside := Data + '-kenar-' + GetDateTimeString('yyyymmdd-hhnnss', '-', '-');
+  Result := RenameFile(Data, Aside);
+  if not Result then
+    MsgBox('پوشهٔ اطلاعات کنار گذاشته نشد — شاید برنامه هنوز باز است.' + #13#10 +
+           'برنامه را ببندید و پوشهٔ زیر را خودتان تغییرِ نام دهید:' + #13#10 + Data, mbError, MB_OK);
+end;
+
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
-  Data, Aside: String;
+  InApp, Legacy: String;
 begin
   if (CurUninstallStep = usPostUninstall) and (not UninstallSilent) then
   begin
-    Data := ExpandConstant('{userappdata}\PumpYaqobi');
-    if DirExists(Data) then
+    InApp := ExpandConstant('{app}\data');
+    Legacy := ExpandConstant('{userappdata}\PumpYaqobi');
+    if DirExists(InApp) or DirExists(Legacy) then
       if MsgBox('برنامه حذف شد. اطلاعاتِ این کامپیوتر (دفترِ حساب‌ها، رمز و تنظیمات) هنوز سرِ جایش است.' + #13#10 + #13#10 +
                 'اگر نصبِ بعدی باید از نو و خالی باشد، «بله» را بزنید:' + #13#10 +
                 'پوشهٔ اطلاعات پاک نمی‌شود — با نامِ تاریخ‌دار کنار گذاشته می‌شود و هر وقت خواستید برمی‌گردد.' + #13#10 + #13#10 +
                 'اگر می‌خواهید دوباره نصب کنید و همه‌چیز همان باشد، «نه» را بزنید.',
                 mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
-      begin
-        Aside := Data + '-kenar-' + GetDateTimeString('yyyymmdd-hhnnss', '-', '-');
-        if RenameFile(Data, Aside) then
-          MsgBox('اطلاعات کنار گذاشته شد:' + #13#10 + Aside + #13#10 + #13#10 +
-                 'نصبِ بعدی از نو و خالی شروع می‌شود.', mbInformation, MB_OK)
-        else
-          MsgBox('پوشهٔ اطلاعات کنار گذاشته نشد — شاید برنامه هنوز باز است.' + #13#10 +
-                 'برنامه را ببندید و پوشهٔ زیر را خودتان تغییرِ نام دهید:' + #13#10 + Data, mbError, MB_OK);
-      end;
+        if SetAside(InApp) and SetAside(Legacy) then
+          MsgBox('اطلاعات کنار گذاشته شد. نصبِ بعدی از نو و خالی شروع می‌شود.', mbInformation, MB_OK);
+  end;
+end;
+
+// ── پس از نصب: اطلاعاتِ پوشهٔ قبلی، و آیکونِ تازه (۱۴۰۵/۰۷/۱۵) ─────────────
+//  ۱) نصب در پوشهٔ دیگر ⇒ ‎<قبلی>\data‎ به ‎{app}\data‎ **کپی** می‌شود (robocopy
+//     بی ‎/MIR‎ و بی ‎/MOV‎ — هیچ چیزی پاک یا جابه‌جا نمی‌شود)، فقط اگر پوشهٔ
+//     تازه هنوز دفتر ندارد. نشد؟ خودِ برنامه سرِ اولین اجرا همین را می‌کند.
+//  ۲) ویندوز آیکونِ هر فایل را کَش می‌کند و میان‌برِ تازه آیکونِ کهنه را
+//     نشان می‌داد — ‎ie4uinit‎ همان کَش را تازه می‌کند (ویندوز ۱۰/۱۱: ‎-show‎،
+//     ویندوز ۷/۸: ‎-ClearIconCache‎). هر دو بی‌خطرند؛ نبودنشان هم.
+function HasLedger(Dir: String): Boolean;
+begin
+  Result := FileExists(AddBackslash(Dir) + 'pump.db') or FileExists(AddBackslash(Dir) + 'settings.json');
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  OldDir, NewDir, Tool: String;
+  Code: Integer;
+begin
+  if CurStep <> ssPostInstall then Exit;
+
+  NewDir := ExpandConstant('{app}\data');
+  if (InstalledDir <> '') and (not SameDir(InstalledDir, ExpandConstant('{app}'))) then
+  begin
+    OldDir := AddBackslash(InstalledDir) + 'data';
+    if HasLedger(OldDir) and (not HasLedger(NewDir)) then
+    begin
+      Exec(ExpandConstant('{sys}\robocopy.exe'), '"' + OldDir + '" "' + NewDir + '" /E /R:2 /W:1 /NFL /NDL /NJH /NJS',
+           '', SW_HIDE, ewWaitUntilTerminated, Code);
+      Log('PYDATA copy ' + OldDir + ' => ' + NewDir + ' code=' + IntToStr(Code));
+    end;
+  end;
+
+  Tool := ExpandConstant('{sys}\ie4uinit.exe');
+  if FileExists(Tool) then
+  begin
+    Exec(Tool, '-show', '', SW_HIDE, ewWaitUntilTerminated, Code);
+    Exec(Tool, '-ClearIconCache', '', SW_HIDE, ewWaitUntilTerminated, Code);
   end;
 end;
 
@@ -590,6 +672,10 @@ begin
     Exit;
   end;
   if CurPageID <> wpSelectDir then Exit;
+  //  ⛔ نصبِ بی‌صدا (به‌روزرسانی، اسکریپت) هیچ پنجره‌ای نمی‌بیند: ‎MsgBox‎ با
+  //  ‎/SUPPRESSMSGBOXES‎ پنهان نمی‌شود و نصاب تا ابد منتظرِ کلیک می‌ماند
+  //  (سنجهٔ ‎installer-check‎ با نصبِ بی‌صدا در پوشهٔ دیگر گرفتش، ۱۴۰۵/۰۷/۱۵).
+  if WizardSilent then Exit;
   Dir := WizardDirValue;
 
   //  درایوی که نیست (فلشِ جداشده، درایوِ شبکهٔ قطع) ⇒ «نمی‌توان پوشه ساخت»ِ وسطِ نصب
@@ -621,11 +707,11 @@ begin
   end;
 
   //  نصب از قبل جای دیگری است ⇒ آن‌جا می‌ماند؛ گفته می‌شود تا دو نسخه بی‌خبر نماند.
-  //  ⚠️ دفترِ حساب‌ها در ‎%AppData%‎ است و به هیچ‌کدام از دو پوشه بسته نیست.
+  //  ⚠️ حساب‌ها در ‎<پوشهٔ قبلی>\data‎اند و پس از نصب به پوشهٔ تازه **کپی** می‌شوند
+  //  (CurStepChanged پایین) — پوشهٔ قبلی دست نمی‌خورد.
   if (InstalledDir <> '') and DirExists(InstalledDir) and (not SameDir(InstalledDir, Dir)) then
     if MsgBox('برنامه الان در این پوشه نصب است:' + #13#10 + InstalledDir + #13#10 + #13#10 +
-              'با نصب در پوشهٔ تازه، فایل‌های پوشهٔ قبلی همان‌جا می‌مانند (خواستید، پاکش کنید).' + #13#10 +
-              'حساب‌ها و تنظیمات جدا نگه داشته می‌شوند و در هر دو یکی‌اند.' + #13#10 + #13#10 +
+              'حساب‌ها و تنظیمات به پوشهٔ تازه کپی می‌شوند و پوشهٔ قبلی دست نمی‌خورد.' + #13#10 + #13#10 +
               'در پوشهٔ تازه نصب شود؟', mbConfirmation, MB_YESNO) <> IDYES then
       Result := False;
 end;

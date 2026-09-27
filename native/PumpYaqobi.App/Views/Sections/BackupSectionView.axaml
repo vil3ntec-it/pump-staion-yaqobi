@@ -7,7 +7,7 @@
              x:DataType="vm:BackupSectionViewModel">
 
   <c:SectionPage Header="بک‌اپ و به‌روزرسانی‌ها"
-                 SubHeader="تازه‌ترین بکاپ بالا، بقیه داخلِ کادرِ کشویی">
+                 SubHeader="{Binding DataHomeText}">
 
     <StackPanel Spacing="14" MaxWidth="900">
 
@@ -28,21 +28,37 @@
               <TextBlock Text="{Binding KeepText}" Classes="muted" TextWrapping="Wrap" />
             </StackPanel>
 
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <Button Classes="accent" Content="ذخیرهٔ فایلِ بکاپ"
+            <!-- ⛔ «فرستادن به سرور» همین‌جا، کنارِ بقیهٔ کارهای بکاپ (۱۴۰۵/۰۷/۱۵) -->
+            <WrapPanel Orientation="Horizontal">
+              <WrapPanel.Styles>
+                <Style Selector="WrapPanel > Button">
+                  <Setter Property="Margin" Value="0,0,8,8" />
+                </Style>
+              </WrapPanel.Styles>
+              <Button Classes="accent" Content="💾 ذخیرهٔ فایلِ بکاپ"
                       Command="{Binding SaveBackupCommand}" IsEnabled="{Binding !Busy}" />
-              <Button Classes="ghost" Content="گرفتنِ بکاپِ همین حالا"
+              <Button Classes="ghost" Content="📸 بکاپِ همین حالا"
                       Command="{Binding SnapshotNowCommand}" IsEnabled="{Binding !Busy}" />
-              <Button Classes="ghost danger" Content="بازگرداندنِ همین بکاپ"
+              <Button Classes="accent" Content="📤 فرستادن به سرور"
+                      Command="{Binding SendToServerCommand}" IsEnabled="{Binding !SendingToServer}" />
+              <Button Classes="ghost" Content="📂 پوشهٔ بکاپ‌ها"
+                      Command="{Binding OpenBackupFolderCommand}" />
+              <Button Classes="ghost danger" Content="↩ بازگرداندنِ همین بکاپ"
                       Command="{Binding RestoreNewestCommand}"
                       IsVisible="{Binding CanRestore}" IsEnabled="{Binding !Busy}" />
-              <Button Classes="ghost danger" Content="بازگردانی از فایل"
+              <Button Classes="ghost danger" Content="↩ بازگردانی از فایل"
                       Command="{Binding RestoreFromFileCommand}"
                       IsVisible="{Binding CanRestore}" IsEnabled="{Binding !Busy}" />
-            </StackPanel>
+            </WrapPanel>
+
+            <ProgressBar IsIndeterminate="{Binding SendingToServer}" Height="5"
+                         IsVisible="{Binding SendingToServer}" />
+            <TextBlock Text="{Binding ServerStatus}" TextWrapping="Wrap" FontWeight="Bold"
+                       Foreground="{Binding ServerStatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
+                       IsVisible="{Binding ServerStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
             <TextBlock Classes="muted" TextWrapping="Wrap"
-                       Text="⚠️ بازگردانی همهٔ حساب‌های فعلی را با بکاپ جایگزین می‌کند. پیش از آن، از حالِ فعلی یک عکسِ ایمنی گرفته می‌شود تا راهِ برگشت باشد." />
+                       Text="⚠️ بازگردانی جای حساب‌های فعلی را می‌گیرد؛ پیش از آن یک بکاپِ ایمنی گرفته می‌شود." />
 
             <TextBlock Text="{Binding Status}" Classes="muted" TextWrapping="Wrap"
                        IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
@@ -61,7 +77,7 @@
           </Border>
           <StackPanel Margin="14" Spacing="10">
             <TextBlock Classes="muted" TextWrapping="Wrap"
-                       Text="همهٔ حساب‌ها و دفترها، به‌علاوهٔ تم، ترتیبِ نوار، پهنای ستون‌ها، اندازهٔ نوشته‌ها و تنظیمِ چاپ — همه در یک فایلِ «.pumpyaqobi». هیچ رمزِ سرور یا توکنی داخلش نیست." />
+                       Text="همهٔ حساب‌ها و تنظیمات در یک فایل. روی کامپیوترِ دیگر با دوبار-کلیک باز می‌شود." />
             <StackPanel Orientation="Horizontal" Spacing="8">
               <Button Classes="accent" Content="📦 ساختنِ فایلِ کامل"
                       Command="{Binding ExportFullCommand}" IsEnabled="{Binding !Busy}" />
@@ -70,32 +86,10 @@
                       IsVisible="{Binding CanRestore}" IsEnabled="{Binding !Busy}" />
             </StackPanel>
             <TextBlock Classes="muted" TextWrapping="Wrap"
-                       Text="⚠️ آوردن، اطلاعاتِ این کامپیوتر را با فایل جایگزین می‌کند. پیش از آن فایل کامل سنجیده می‌شود (اگر ناقص یا دست‌خورده باشد هیچ چیزی عوض نمی‌شود)، از حالِ فعلی عکسِ ایمنی گرفته می‌شود، و پس از آوردن شمارِ ردیفِ هر جدول با خودِ فایل دوباره شمرده می‌شود." />
+                       Text="⚠️ آوردن جای اطلاعاتِ فعلی را می‌گیرد؛ فایلِ ناقص رد می‌شود." />
             <TextBlock Text="{Binding FullStatus}" TextWrapping="Wrap" FontWeight="Bold"
                        Foreground="{Binding FullStatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
                        IsVisible="{Binding FullStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-          </StackPanel>
-        </StackPanel>
-      </Border>
-
-      <!-- ══ بکاپ روی سرور — همین حالا، به دستِ خودِ کاربر (۱۴۰۵/۰۷/۱۵) ══ -->
-      <Border Classes="panel" Padding="0">
-        <StackPanel>
-          <Border Classes="card-head">
-            <TextBlock Text="📤 فرستادنِ بکاپ به سرور" FontWeight="Bold"
-                       Foreground="{DynamicResource Pump.Ink.Accent}" />
-          </Border>
-          <StackPanel Margin="14" Spacing="10">
-            <TextBlock Classes="muted" TextWrapping="Wrap"
-                       Text="برنامه خودش هر شش ساعت بکاپ را به سرورِ خانگی و سرورِ حساب می‌فرستد. با این دکمه همین حالا هم می‌رود." />
-            <Button Classes="accent" Content="📤 فرستادنِ بکاپ به سرور — همین حالا"
-                    Command="{Binding SendToServerCommand}" IsEnabled="{Binding !SendingToServer}"
-                    HorizontalAlignment="Right" />
-            <ProgressBar IsIndeterminate="{Binding SendingToServer}" Height="5"
-                         IsVisible="{Binding SendingToServer}" />
-            <TextBlock Text="{Binding ServerStatus}" TextWrapping="Wrap" FontWeight="Bold"
-                       Foreground="{Binding ServerStatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
-                       IsVisible="{Binding ServerStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           </StackPanel>
         </StackPanel>
       </Border>
@@ -141,7 +135,7 @@
           <StackPanel Margin="14" Spacing="10">
             <TextBlock Text="{Binding CurrentVersion, StringFormat=نسخهٔ فعلی: {0}}" FontWeight="Bold" />
 
-            <TextBlock Text="{Binding InstallDir, StringFormat=پوشهٔ نصب: {0}}" Classes="muted"
+            <TextBlock Text="{Binding InstallDir, StringFormat=پوشهٔ برنامه: {0}}" Classes="muted"
                        TextWrapping="Wrap" />
             <TextBlock Text="{Binding InstallNote}" Classes="muted" TextWrapping="Wrap"
                        IsVisible="{Binding InstallNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
@@ -191,7 +185,7 @@
                       Command="{Binding InstallFromFileCommand}" />
             </StackPanel>
             <TextBlock Classes="muted" TextWrapping="Wrap"
-                       Text="فایلِ PumpYaqobi-Setup.exe را از فلش بدهید. فقط نسخهٔ تازه‌تر پذیرفته می‌شود و همین برنامه به‌روز می‌شود — حساب‌ها و تنظیمات دست نمی‌خورند. همان فایل را اگر مستقیم باز کنید هم خودش برنامهٔ نصب‌شده را پیدا و به‌روز می‌کند." />
+                       Text="فایلِ PumpYaqobi-Setup.exe را از فلش بدهید؛ فقط نسخهٔ تازه‌تر پذیرفته می‌شود." />
             <TextBlock Text="{Binding OfflineStatus}" TextWrapping="Wrap" FontWeight="Bold"
                        Foreground="{Binding OfflineStatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
                        IsVisible="{Binding OfflineStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
@@ -208,7 +202,7 @@
           </Border>
           <StackPanel Margin="14" Spacing="9">
             <TextBlock Classes="muted" TextWrapping="Wrap"
-                       Text="فایلِ pump-backup-….json نسخهٔ وب را این‌جا بدهید. پیش از هر نوشتنی یک بکاپِ کامل از دادهٔ فعلی گرفته می‌شود، و اگر شمارشِ رکوردها نخواند هیچ چیزی نوشته نمی‌شود." />
+                       Text="فایلِ pump-backup-….json نسخهٔ وب؛ پیش از نوشتن، بکاپِ ایمنی گرفته می‌شود." />
             <Button Classes="ghost" Content="انتخابِ فایلِ بکاپِ وب"
                     Command="{Binding ImportLegacyCommand}" IsEnabled="{Binding !ImportBusy}"
                     HorizontalAlignment="Right" />

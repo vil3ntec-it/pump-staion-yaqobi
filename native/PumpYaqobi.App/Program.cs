@@ -18,7 +18,16 @@ internal static class Program
         //  دیگری را برمی‌گرداند. پس نمونهٔ دوم فقط پنجرهٔ اولی را جلو می‌آورد
         //  و بیرون می‌رود. ⚠️ این‌جاست و نه در `AppHost.Start`: سنجه‌ها و
         //  آزمون‌ها میزبان را مستقیم می‌سازند و نباید قفل شوند.
-        if (!SingleInstance.Acquire()) return;
+        //  فایلی که با دوبار-کلیک آمده (‎.pumpyaqobi‎ / ‎.pumpkey‎) — ‎OpenRequest‎
+        var opened = OpenRequest.FromArgs(args);
+        if (!SingleInstance.Acquire())
+        {
+            //  برنامه از قبل باز است: فایل به همان می‌رسد، نه به نمونهٔ دوم
+            if (opened is not null) OpenRequest.Hand(opened);
+            SingleInstance.WakeOther();
+            return;
+        }
+        if (opened is not null) OpenRequest.Add(opened);
 
         try
         {

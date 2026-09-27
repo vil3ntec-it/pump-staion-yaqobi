@@ -252,7 +252,55 @@ public class InstallerTests
         Assert.Contains("{userappdata}", proc);
         Assert.Contains("not UninstallSilent", proc);
         Assert.Contains("MB_DEFBUTTON2", proc);
-        Assert.Contains("RenameFile(", proc);
+        //  از ۱۴۰۵/۰۷/۱۵ اطلاعات در ‎{app}\data‎ است — هر دو جا فقط **کنار گذاشته** می‌شوند
+        Assert.Contains("{app}\\data", proc);
+        Assert.Contains("SetAside(", proc);
+        var a = code.IndexOf("function SetAside", StringComparison.Ordinal);
+        Assert.True(a >= 0);
+        var aside = code[a..code.IndexOf("\nend;", a, StringComparison.Ordinal)];
+        Assert.Contains("RenameFile(", aside);
+
+        //  و کپیِ ‎<پوشهٔ قبلی>\data‎ پس از نصب در پوشهٔ دیگر هرگز پاک یا جابه‌جا نمی‌کند
+        var c = code.IndexOf("procedure CurStepChanged", StringComparison.Ordinal);
+        Assert.True(c >= 0);
+        var step = code[c..code.IndexOf("\nend;", c, StringComparison.Ordinal)];
+        Assert.Contains("robocopy.exe", step);
+        foreach (var bad in new[] { "/MIR", "/MOV", "/PURGE" })
+            Assert.DoesNotContain(bad, step, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not HasLedger(NewDir)", step);
+
+        //  ⛔ پوشهٔ ‎{app}\data‎: نوشتنی برای کاربر و هرگز با حذفِ برنامه برداشته نمی‌شود
+        Assert.Contains("Name: \"{app}\\data\"; Permissions: users-modify; Flags: uninsneveruninstall", live);
+    }
+
+    /// <summary>
+    /// ══ دوبار-کلیک روی فایل‌های برنامه، و آیکونِ تازهٔ میان‌بر (۱۴۰۵/۰۷/۱۵) ══
+    /// عکسِ صاحب ریپو: «فایلِ برنامه رو که می‌خوام باز کنم، برنامهٔ من پیشنهاد
+    /// نمی‌شه» و «آیکونِ برنامه تغییر نکرده». ویندوز آیکونِ هر مسیر را کَش
+    /// می‌کند، پس میان‌برها آیکونِ جدا (‎PumpYaqobi.ico‎) دارند و کَش تازه می‌شود.
+    /// </summary>
+    [Fact]
+    public void Nasab_PasvandHa_Va_AykuneTazeyeMianbar()
+    {
+        var s = Iss();
+        Assert.Contains("ChangesAssociations=yes", s);
+        foreach (var (ext, prog) in new[] { (".pumpyaqobi", "PumpYaqobi.Full"), (".pumpkey", "PumpYaqobi.Key") })
+        {
+            Assert.Contains($"Subkey: \"Software\\Classes\\{ext}\"; ValueType: string; ValueName: \"\"; ValueData: \"{prog}\"", s);
+            Assert.Contains($"Subkey: \"Software\\Classes\\{prog}\\shell\\open\\command\"; ValueType: string; ValueName: \"\"; ValueData: \"\"\"{{app}}\\{{#AppExe}}\"\" \"\"%1\"\"\"", s);
+            Assert.Contains($"FileExts\\{ext}\\UserChoice\"; ValueType: none; Flags: deletekey", s);
+        }
+        Assert.Contains("DestName: \"PumpYaqobi.ico\"", s);
+        Assert.Contains("Name: \"{autodesktop}\\{#AppName}\";        Filename: \"{app}\\{#AppExe}\"; IconFilename: \"{app}\\PumpYaqobi.ico\"", s);
+        Assert.Contains("ie4uinit.exe", s);
+
+        //  ⛔ نصبِ بی‌صدا هیچ پرسشی در صفحهٔ پوشه ندارد — ‎MsgBox‎ با ‎/SUPPRESSMSGBOXES‎
+        //  پنهان نمی‌شود و نصاب تا ابد می‌ماند
+        var i = s.IndexOf("if CurPageID <> wpSelectDir then Exit;", StringComparison.Ordinal);
+        Assert.True(i > 0);
+        var j = s.IndexOf("MsgBox(", i, StringComparison.Ordinal);
+        Assert.True(s.IndexOf("if WizardSilent then Exit;", i, StringComparison.Ordinal) is var k && k > 0 && k < j,
+                    "پیش از نخستین پرسشِ صفحهٔ پوشه، نصبِ بی‌صدا بیرون برود");
     }
 
     /// <summary>برنامهٔ باز باید هنگامِ به‌روزرسانی خودش بسته و باز شود.</summary>

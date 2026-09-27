@@ -187,6 +187,12 @@ public sealed partial class VipSectionViewModel : SectionViewModel
     {
         var path = await Dialogs.PickFileAsync("فایلِ کدِ اشتراک را انتخاب کنید", "کدِ اشتراک", new[] { "*.pumpkey" });
         if (path is null) return;
+        await ApplyKeyFileAsync(path);
+    }
+
+    /// <summary>فایلِ ‎.pumpkey‎ — از دکمه یا از دوبار-کلیک (‎OpenRequest‎).</summary>
+    public async Task ApplyKeyFileAsync(string path)
+    {
         string text;
         try
         {

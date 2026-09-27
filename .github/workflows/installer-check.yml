@@ -118,6 +118,23 @@ jobs:
           if ($reg -ne 'x86') { Fail "رجیستری «$reg» گفت، نه x86" }
           "✔ /ARCH=x86 ⇒ بارِ ۳۲بیتی نشست"
 
+          # ۱ب) پوشهٔ اطلاعات، پسوندها و آیکونِ میان‌بر (۱۴۰۵/۰۷/۱۵)
+          if (-not (Test-Path "$dir\data")) { Fail "پوشهٔ ‹data› کنارِ برنامه ساخته نشد" }
+          if (-not (Test-Path "$dir\PumpYaqobi.ico")) { Fail "آیکونِ جدای میان‌برها نیامد" }
+          foreach ($x in @(@('.pumpyaqobi','PumpYaqobi.Full'), @('.pumpkey','PumpYaqobi.Key'))) {
+            $prog = (Get-ItemProperty -Path "HKCU:\Software\Classes\$($x[0])").'(default)'
+            if ($prog -ne $x[1]) { Fail "پسوندِ $($x[0]) به «$prog» سپرده شد، نه $($x[1])" }
+            $cmd = (Get-ItemProperty -Path "HKCU:\Software\Classes\$($x[1])\shell\open\command").'(default)'
+            if ($cmd -ne ('"' + "$dir\PumpYaqobi.exe" + '" "%1"')) { Fail "فرمانِ بازکردنِ $($x[0]) نادرست است: $cmd" }
+          }
+          #  ⚠️ خودِ بایت‌های ‎.lnk‎ خوانده می‌شود، نه ‎WScript.Shell‎: آن شیء در pwsh برای
+          #  نامِ فارسی یک میان‌برِ **خالی** می‌داد («,0») و سنجه را سرخِ دروغ می‌کرد.
+          $lnkPath = Join-Path ([Environment]::GetFolderPath('Desktop')) 'پمپ بنزین.lnk'
+          if (-not (Test-Path -LiteralPath $lnkPath)) { Fail "میان‌برِ دسکتاپ ساخته نشد" }
+          $lnkText = [Text.Encoding]::Unicode.GetString([IO.File]::ReadAllBytes($lnkPath))
+          if (-not $lnkText.Contains('PumpYaqobi.ico')) { Fail "میان‌برِ دسکتاپ آیکونِ جدا (PumpYaqobi.ico) ندارد" }
+          "✔ پوشهٔ data، دو پسوندِ .pumpyaqobi/.pumpkey و آیکونِ جدای میان‌بر"
+
           # ۲) بی /ARCH روی نصبِ ۳۲بیتی ⇒ همان ۳۲ می‌ماند (به‌روزرسانیِ بی‌صدا معماری را عوض نمی‌کند)
           Install $null
           if ((Landed) -ne 'x86') { Fail "به‌روزرسانیِ بی‌صدا معماری را به «$(Landed)» عوض کرد" }
@@ -197,7 +214,22 @@ jobs:
           if ($p.ExitCode -ne 0) { Fail "نصبِ دوبارهٔ همان نسخه با کدِ $($p.ExitCode) بیرون آمد" }
           "✔ همان نسخه دوباره روی همان نصب نشست (تعمیر)"
 
-          # ۵) حذفِ بی‌صدا: فایل‌ها می‌روند، پوشهٔ داده دست نمی‌خورد
+          # ۴ه) نصب در پوشهٔ دیگر ⇒ ‎<قبلی>\data‎ به پوشهٔ تازه **کپی** می‌شود و قبلی دست نمی‌خورد
+          Set-Content -Path "$dir\data\pump.db" -Value 'ledger-in-app' -NoNewline
+          New-Item -ItemType Directory -Force -Path "$dir\data\backups" | Out-Null
+          Set-Content -Path "$dir\data\backups\b1.db" -Value 'b1' -NoNewline
+          $dir2 = Join-Path $env:TEMP 'pyq-check-2'
+          $p = Start-Process -FilePath $newer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=$dir2","/LOG=$log") -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Fail "نصب در پوشهٔ دیگر با کدِ $($p.ExitCode) بیرون آمد" }
+          if ((Get-Content "$dir2\data\pump.db" -Raw) -ne 'ledger-in-app') { Fail "دفتر به پوشهٔ تازه کپی نشد" }
+          if ((Get-Content "$dir2\data\backups\b1.db" -Raw) -ne 'b1') { Fail "بکاپ‌ها به پوشهٔ تازه کپی نشدند" }
+          if ((Get-Content "$dir\data\pump.db" -Raw) -ne 'ledger-in-app') { Fail "پوشهٔ قبلی دست خورد" }
+          Select-String -Path $log -Pattern 'PYDATA' | ForEach-Object { "   " + $_.Line }
+          "✔ نصب در پوشهٔ دیگر: دفتر و بکاپ‌ها کپی شدند و پوشهٔ قبلی دست‌نخورده ماند"
+          $dir = $dir2
+          $uninsExe = (Get-ItemPropertyValue -Path $unins -Name UninstallString) -replace '"',''
+
+          # ۵) حذفِ بی‌صدا: فایل‌ها می‌روند، پوشهٔ داده (هم ‎{app}\data‎ هم جای کهنه) دست نمی‌خورد
           $data = Join-Path $env:APPDATA 'PumpYaqobi'
           New-Item -ItemType Directory -Force -Path $data | Out-Null
           Set-Content -Path "$data\pump.db" -Value 'ledger' -NoNewline
@@ -205,6 +237,8 @@ jobs:
           if ($p.ExitCode -ne 0) { throw "حذف با کدِ $($p.ExitCode) بیرون آمد" }
           if (Test-Path "$dir\PumpYaqobi.exe") { throw "پس از حذف، فایلِ برنامه ماند" }
           if ((Get-Content "$data\pump.db" -Raw) -ne 'ledger') { throw "حذف به پوشهٔ داده دست زد" }
+          if ((Get-Content "$dir\data\pump.db" -Raw) -ne 'ledger-in-app') { throw "حذف به ‹data›ی کنارِ برنامه دست زد" }
+          if (Test-Path 'HKCU:\Software\Classes\PumpYaqobi.Full') { throw "پسوندِ ‹.pumpyaqobi› پس از حذف ماند" }
           if (Test-Path 'HKCU:\Software\PumpYaqobi') { throw "کلیدِ Arch پس از حذف ماند" }
           "✔ حذفِ بی‌صدا فایل‌ها را برد و دفتر را دست نزد"
 
