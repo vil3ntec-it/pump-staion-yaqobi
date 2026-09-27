@@ -279,6 +279,8 @@
         name: out.station.name,
         role: out.role || 'staff',
         entitlement: out.entitlement || null,
+        //  کدِ هشت‌رقمی — تا وقتی نشست پاک شد، گوشی از همین کد عکسِ ابری را بگیرد
+        accessCode: (out.station.accessCode || out.accessCode || undefined),
         home: out.home || { url: '', readKey: '', station: out.station.code }
       };
     });
@@ -347,12 +349,26 @@
     return c.length === 8 ? c.slice(0, 4) + '-' + c.slice(4) : c;
   }
 
-  /** پیامی در صندوقِ ورودیِ پمپ — راهِ برگشتِ داده از گوشیِ کارمند. */
-  function postInbox(data) {
-    return authed('PUT', '/api/pump/files/inbox.json', { data: data });
-  }
-
   function signOut() { saveSession(null); }
+
+  /**
+   * ⛔ **گوشی هیچ نشستِ حسابی نگه نمی‌دارد** (۱۴۰۵/۰۷/۱۵).
+   *
+   * خواستهٔ صاحب ریپو: «این یک واسطه برای دیدن است فقط، و هرچقدر یارو بلد
+   * هم باشد نتواند کاری کند.» نشستِ حساب همان کلیدی است که برنامهٔ کامپیوتر
+   * با آن دفتر را همگام می‌کند (‎/api/sync/v1/push‎)؛ کسی که آن را از حافظهٔ
+   * گوشی بیرون بکشد می‌توانست ردیف در دفترِ پمپ بنشاند. پس ورود با ایمیل یا
+   * گوگل فقط برای گرفتنِ نشانی و رمزِ **فقط‌خواندنی** است و همان لحظه نشست
+   * هم در گوشی پاک می‌شود و هم روی سرور باطل (‎/api/auth/logout‎). نرسیدن به
+   * سرور جلوی پاک شدنِ محلی را نمی‌گیرد.
+   */
+  function dropSession() {
+    var s = loadSession();
+    saveSession(null);
+    if (!s || !s.token) return Promise.resolve(false);
+    return call('POST', '/api/auth/logout', { refreshToken: s.refresh || '' }, s.token)
+      .then(function () { return true; }, function () { return false; });
+  }
 
   function session() { return loadSession(); }
 
@@ -377,8 +393,8 @@
     cloudLive: cloudLive,
     normalizeCode: normalizeCode,
     formatCode: formatCode,
-    postInbox: postInbox,
     signOut: signOut,
+    dropSession: dropSession,
     session: session,
     signedIn: signedIn
   };

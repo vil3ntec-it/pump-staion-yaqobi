@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>حساب من — پمپ یعقوبی</title>
+<title>حسابِ من — پمپ بنزین</title>
 <meta name="theme-color" content="#0f1622">
 <!--
   ══ صفحهٔ «حسابِ من» ═══════════════════════════════════════════════════════
@@ -64,67 +64,105 @@
   جوابِ صاحبِ پمپ با مرورگرِ بسته هم برسد. کیو‌آرِ ایستا چت ندارد.
 -->
 <style>
+  /* ══ ظاهر — «مثلِ خودِ برنامه» (۱۴۰۵/۰۷/۱۵) ═══════════════════════════
+     خواستهٔ صاحب ریپو: «سایتِ کیو‌آر گیج‌کننده است… همه‌چی دقیق باشد، همان
+     مدل که توی برنامه هست.» پس: سربرگِ حساب، الباقیِ درشت (همان عددِ
+     برنامه)، سه عددِ دیگر کنارش، پطرول و دیزل دو کارتِ جدا، و فیلترِ ماه
+     یک کشویی به‌جای ده‌ها دکمه. ⛔ هیچ عددی این‌جا ساخته نمی‌شود — هر عدد
+     همان رشته‌ای است که برنامهٔ کامپیوتر در کیو‌آر گذاشته. */
   :root{
-    --bg:#0f1622; --card:#16202e; --line:#26344a; --txt:#e8eef7;
-    --muted:#93a4bd; --accent:#f6a623; --ok:#38a169; --red:#e53e3e; --chip:#1d2836;
+    --bg:#0b1220; --card:#121b2b; --card2:#172236; --line:#22314a; --txt:#e8eef8;
+    --muted:#94a6c2; --accent:#f59e0b; --on-accent:#1b1200; --ok:#22c55e; --red:#ef4444; --chip:#1a2539;
+    --info:#60a5fa; --info-bg:rgba(96,165,250,.14); --hot-bg:rgba(245,158,11,.12);
   }
   @media (prefers-color-scheme: light){
-    :root{ --bg:#f6f7fb; --card:#fff; --line:#e2e8f0; --txt:#1a202c;
-           --muted:#64748b; --accent:#c97d00; --chip:#eef2f7; }
+    :root{ --bg:#f2f4f8; --card:#fff; --card2:#f7f9fc; --line:#e2e7ef; --txt:#0f172a;
+           --muted:#5b6b84; --accent:#c26a00; --on-accent:#fff; --chip:#eef2f7; --ok:#15803d; --red:#dc2626;
+           --info:#1d4ed8; --info-bg:#eaf1fe; --hot-bg:#fff6e6; }
   }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--txt);
-       font-family:system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;
-       padding:14px 12px 40px;line-height:1.9}
-  .wrap{max-width:900px;margin:0 auto}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--txt);font-size:15px;
+       font-family:Vazirmatn,system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;
+       padding:12px 12px calc(96px + env(safe-area-inset-bottom));line-height:1.6}
+  .wrap{max-width:760px;margin:0 auto}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;
         padding:14px;margin-bottom:12px}
-  h1{font-size:1.15rem;margin:0 0 2px}
-  h2{font-size:.9rem;margin:0 0 9px;color:var(--muted);font-weight:800}
-  .sub{color:var(--muted);font-size:.82rem}
-  .figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:12px}
-  .fig{background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:10px;text-align:center}
-  .fig .l{color:var(--muted);font-size:.76rem}
-  .fig .v{font-size:1.15rem;font-weight:800;margin-top:3px}
-  .fig.hot{border-color:var(--accent)}
-  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  table{border-collapse:collapse;width:100%;min-width:520px;font-size:.85rem}
+  h1{font-size:1.3rem;margin:0;line-height:1.4}
+  h2{font-size:.92rem;margin:0 0 10px;color:var(--txt);font-weight:800;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .sub{color:var(--muted);font-size:.8rem}
+  .v,.big,td,.fig .v{font-variant-numeric:tabular-nums}
+  /* ── سربرگِ حساب ── */
+  .head{display:flex;gap:12px;align-items:center}
+  .av{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;font-weight:900;font-size:1.35rem;
+      background:var(--hot-bg);color:var(--accent);flex:none}
+  .head .t{flex:1;min-width:0}
+  .ro{display:inline-flex;align-items:center;gap:4px;background:var(--info-bg);color:var(--info);
+      border-radius:999px;padding:1px 10px;font-size:.72rem;font-weight:800;white-space:nowrap}
+  /* ── عددها ── */
+  .hero{border-radius:14px;padding:14px;background:var(--hot-bg);border:1px solid var(--accent);margin-top:12px}
+  .hero .l{font-size:.82rem;color:var(--muted);font-weight:700}
+  .hero .big{font-size:2rem;font-weight:900;unicode-bidi:plaintext;text-align:right;line-height:1.3}
+  .hero .big small{font-size:.9rem;color:var(--muted);font-weight:700}
+  .figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-top:10px}
+  .fig{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:9px 11px;min-width:0}
+  .fig .l{color:var(--muted);font-size:.74rem}
+  .fig .v{font-size:1.05rem;font-weight:800;unicode-bidi:plaintext;text-align:right;overflow-wrap:anywhere}
+  .fig .v small{display:block;color:var(--muted);font-size:.7rem;font-weight:700}
+  .fig.hot{border-color:var(--accent);background:var(--hot-bg)}
+  .fuels{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
+  .fuel{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:11px 12px}
+  .fuel b{display:block;margin-bottom:4px}
+  .kv{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px dashed var(--line);font-size:.86rem}
+  .kv:last-child{border-bottom:0}
+  .kv span{color:var(--muted)} .kv strong{unicode-bidi:plaintext;font-variant-numeric:tabular-nums}
+  .kv.hot strong{color:var(--accent);font-size:1rem}
+  /* ── جدول ── */
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px}
+  table{border-collapse:collapse;width:100%;min-width:520px;font-size:.84rem}
   .mini table{min-width:0}
-  th,td{border:1px solid var(--line);padding:7px 6px;text-align:center;white-space:nowrap}
-  th{background:var(--bg);color:var(--muted);font-weight:800}
-  tr:nth-child(even) td{background:rgba(127,127,127,.05)}
-  tfoot td{font-weight:800;background:rgba(246,166,35,.08)}
+  th,td{border-bottom:1px solid var(--line);padding:8px 7px;text-align:center;white-space:nowrap}
+  th{background:var(--card2);color:var(--muted);font-weight:800}
+  tbody tr:nth-child(even) td{background:var(--card2)}
+  tfoot td{font-weight:900;background:var(--hot-bg);border-bottom:0}
+  td:first-child,th:first-child{color:var(--muted)}
   .note{color:var(--muted);font-size:.8rem;margin-top:8px;text-align:center}
   .err{border-color:var(--red);color:var(--red)}
-  .btn{display:inline-block;border:1px solid var(--line);background:var(--bg);color:var(--txt);
-       border-radius:10px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:.85rem}
-  /* ── دکمه‌های فیلتر ─────────────────────────────────────────────────────
-     ⚠️ اینها «ویرایش» نیستند و نباید بشوند: صفحه فقط‌خواندنی است. هر کدام
-     فقط می‌گوید چه چیزی دیده شود. */
-  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
-  .chip{border:1px solid var(--line);background:var(--chip);color:var(--txt);
-        border-radius:999px;padding:6px 13px;font-size:.82rem;font-weight:700;cursor:pointer}
-  .chip.on{background:var(--accent);border-color:var(--accent);color:#17202b}
-  .lbl{color:var(--muted);font-size:.78rem;align-self:center;margin-inline-end:2px}
-  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-  .tab{flex:1 1 120px;border:1px solid var(--line);background:var(--card);color:var(--txt);
-       border-radius:11px;padding:9px 10px;font-weight:800;cursor:pointer;font-size:.9rem}
-  .tab.on{background:var(--accent);border-color:var(--accent);color:#17202b}
-  .ro{display:inline-block;background:var(--chip);border:1px solid var(--line);
-      border-radius:999px;padding:2px 10px;font-size:.72rem;color:var(--muted)}
-  /* ── نشانِ کیو‌آرِ زنده ───────────────────────────────────────────────── */
+  .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card2);color:var(--txt);
+       border-radius:12px;padding:9px 16px;font-weight:700;cursor:pointer;font-size:.88rem;font-family:inherit;min-height:42px}
+  /* ── فیلترها — «ویرایش» نیستند، فقط می‌گویند چه دیده شود ── */
+  .filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+  .filters label{display:block;font-size:.72rem;color:var(--muted);margin-bottom:3px}
+  .seg{display:flex;background:var(--chip);border:1px solid var(--line);border-radius:12px;padding:3px}
+  .chip{flex:1;border:0;background:transparent;color:var(--txt);border-radius:9px;padding:7px 6px;font-size:.82rem;
+        font-weight:700;cursor:pointer;font-family:inherit;min-height:36px}
+  .chip.on{background:var(--accent);color:var(--on-accent)}
+  select{width:100%;background:var(--chip);color:var(--txt);border:1px solid var(--line);border-radius:12px;
+         padding:8px 10px;font-family:inherit;font-size:.86rem;min-height:44px}
+  .count{font-size:.74rem;color:var(--muted);font-weight:700}
+  /* ── تبِ دفترها ── */
+  .tabs{display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px;margin-bottom:12px;
+        position:sticky;top:6px;z-index:5}
+  .tab{flex:1;border:0;background:transparent;color:var(--txt);border-radius:11px;padding:8px 10px;font-weight:800;
+       cursor:pointer;font-size:.92rem;font-family:inherit;line-height:1.35}
+  .tab .sub{font-weight:600}
+  .tab.on{background:var(--accent);color:var(--on-accent)} .tab.on .sub{color:var(--on-accent);opacity:.8}
+  details.arc summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font-weight:800}
+  details.arc summary::-webkit-details-marker{display:none}
+  details.arc summary::after{content:'▾';margin-inline-start:auto;color:var(--muted)}
+  details.arc[open] summary::after{content:'▴'}
+  details.arc[open] summary{margin-bottom:10px}
+  /* ── نشانِ کیو‌آرِ زنده ── */
   .live{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;
-        margin-top:10px;padding:7px 10px;border-radius:10px;border:1px solid var(--line);
-        background:var(--chip);font-size:.8rem}
+        margin-top:12px;padding:6px 6px 6px 10px;border-radius:12px;background:var(--chip);font-size:.8rem}
   .live .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#9aa3ad;
              margin-inline-end:6px;vertical-align:middle}
-  .live.ok .dot{background:#3ddc84;box-shadow:0 0 0 3px rgba(61,220,132,.25)}
+  .live.ok .dot{background:var(--ok);box-shadow:0 0 0 3px rgba(34,197,94,.25)}
   .live.off .dot{background:var(--red)}
-  .live .btn{padding:4px 10px;font-size:.78rem}
+  .live .btn{padding:4px 12px;font-size:.78rem;min-height:34px}
   /* ── چتِ پشتیبانی ───────────────────────────────────────────────────────
      دکمهٔ شناور پایینِ صفحه، و صفحهٔ چت که تمام‌صفحه رویش می‌نشیند. */
-  .fab{position:fixed;bottom:18px;left:18px;z-index:40;border:0;border-radius:999px;
-       background:var(--accent);color:#17202b;font-weight:800;font-size:.95rem;
+  .fab{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));left:16px;z-index:40;border:0;border-radius:999px;
+       background:var(--accent);color:var(--on-accent);font-weight:800;font-size:.95rem;font-family:inherit;
        padding:12px 18px;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer;display:flex;
        align-items:center;gap:8px}
   .fab .n{background:var(--red);color:#fff;border-radius:999px;font-size:.72rem;padding:1px 7px;min-width:20px;text-align:center}
@@ -137,9 +175,9 @@
   .chat-head .t span{display:block;color:var(--muted);font-size:.74rem}
   .chat-body{flex:1;overflow-y:auto;padding:12px 10px;display:flex;flex-direction:column;gap:6px;
              -webkit-overflow-scrolling:touch}
-  .msg{max-width:82%;border-radius:14px;padding:8px 11px;background:var(--card);border:1px solid var(--line);
+  .msg{max-width:82%;border-radius:14px 14px 14px 4px;padding:8px 11px;background:var(--card);border:1px solid var(--line);
        align-self:flex-start;position:relative;font-size:.92rem;word-break:break-word}
-  .msg.me{align-self:flex-end;background:var(--chip);border-color:var(--accent)}
+  .msg.me{align-self:flex-end;background:var(--info-bg);border-color:transparent;border-radius:14px 14px 4px 14px}
   .msg .who{font-size:.72rem;color:var(--accent);font-weight:800}
   .msg .when{font-size:.66rem;color:var(--muted);text-align:left;margin-top:2px}
   .msg .del{position:absolute;top:-8px;left:-8px;border:1px solid var(--line);background:var(--card);
@@ -148,14 +186,14 @@
   .msg.gone{color:var(--muted);font-style:italic;font-size:.8rem}
   .msg img,.msg video{max-width:100%;border-radius:10px;display:block;margin-top:4px}
   .msg audio{width:220px;max-width:100%;margin-top:4px}
-  .chat-foot{display:flex;align-items:center;gap:6px;padding:8px;background:var(--card);border-top:1px solid var(--line)}
+  .chat-foot{display:flex;align-items:center;gap:6px;padding:8px 8px calc(8px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line)}
   .chat-foot input[type=text]{flex:1;min-width:0;border:1px solid var(--line);background:var(--bg);color:var(--txt);
                               border-radius:999px;padding:10px 14px;font-size:.95rem;font-family:inherit}
   .chat-foot .ic{border:1px solid var(--line);background:var(--bg);color:var(--txt);border-radius:999px;
-                 width:40px;height:40px;font-size:1.05rem;cursor:pointer;flex:0 0 auto}
+                 width:42px;height:42px;font-size:1.05rem;cursor:pointer;flex:0 0 auto}
   .chat-foot .ic.on{background:var(--red);color:#fff;border-color:var(--red)}
-  .chat-foot .send{background:var(--accent);color:#17202b;border:0;border-radius:999px;padding:0 16px;height:40px;
-                   font-weight:800;cursor:pointer;flex:0 0 auto}
+  .chat-foot .send{background:var(--accent);color:var(--on-accent);border:0;border-radius:999px;padding:0 16px;height:42px;
+                   font-weight:800;cursor:pointer;flex:0 0 auto;font-family:inherit}
   .chat-name{display:flex;gap:6px;padding:8px;background:var(--card);border-top:1px solid var(--line)}
   .chat-name input{flex:1;border:1px solid var(--line);background:var(--bg);color:var(--txt);border-radius:10px;
                    padding:9px 12px;font-family:inherit}
@@ -165,8 +203,9 @@
   @media print{
     body{background:#fff;color:#000;padding:0}
     .card{border-color:#999}
-    .noprint{display:none}
+    .noprint{display:none!important}
     table{min-width:0}
+    details.arc > *{display:block}
   }
 </style>
 </head>
@@ -245,15 +284,24 @@
   //  تکه‌های صفحه
   // ══════════════════════════════════════════════════════════════════════
 
+  /** «الباقی» درشت و جدا (همان عددِ اصلیِ برنامه)، بقیه کنارِ هم و کوچک. */
   function figsHtml(list, unit, hotLabel) {
     if (!list || !list.length) return '';
-    var h = '<div class="figs">';
+    var u = unit ? ' <small>' + esc(unit) + '</small>' : '';
+    var hot = null, rest = [];
     for (var i = 0; i < list.length; i++) {
-      var f = list[i], hot = hotLabel && f[0] === hotLabel;
-      h += '<div class="fig' + (hot ? ' hot' : '') + '"><div class="l">' + esc(f[0]) + '</div>' +
-           '<div class="v">' + esc(f[1]) + (unit ? ' ' + esc(unit) : '') + '</div></div>';
+      if (!hot && hotLabel && list[i][0] === hotLabel) hot = list[i]; else rest.push(list[i]);
     }
-    return h + '</div>';
+    var h = '';
+    if (hot) h += '<div class="hero"><div class="l">' + esc(hot[0]) + '</div>' +
+                  '<div class="big">' + esc(hot[1]) + u + '</div></div>';
+    if (rest.length) {
+      h += '<div class="figs">';
+      for (var k = 0; k < rest.length; k++)
+        h += '<div class="fig"><div class="l">' + esc(rest[k][0]) + '</div><div class="v">' + esc(rest[k][1]) + u + '</div></div>';
+      h += '</div>';
+    }
+    return h;
   }
 
   function tableHtml(head, rows, opts) {
@@ -314,8 +362,8 @@
     for (var i = 0; i < a.length; i++) { tot[0] += num(a[i][1]); tot[1] += num(a[i][2]); }
 
     var years = yearsOf(a);
-    var h = '<div class="card"><h2>🗂️ آرشیو — هر ماه چقدر برد و چقدر تحویل داد'
-          + (book.u ? ' (' + esc(book.u) + ')' : '') + '</h2>';
+    var h = '<div class="card"><details class="arc"' + (state.arc ? ' open' : '') + '><summary>🗂️ آرشیو — هر ماه چقدر برد و چقدر تحویل داد'
+          + (book.u ? ' (' + esc(book.u) + ')' : '') + ' <span class="count">' + a.length + ' ماه</span></summary>';
     h += tableHtml(head, months, {
       foot: ['جمعِ کل', fmt(tot[0]), fmt(tot[1]), fmt(tot[0] - tot[1])]
     });
@@ -323,28 +371,34 @@
       h += '<h2 style="margin-top:14px">📅 سال‌به‌سال</h2>';
       h += tableHtml(['سال', 'بردگی', 'رسید / پرداخت', 'تفاوت'], years);
     }
-    return h + '</div>';
+    return h + '</details></div>';
   }
 
   // ══════════════════════════════════════════════════════════════════════
   //  یک دفتر
   // ══════════════════════════════════════════════════════════════════════
 
-  var state = { book: 0, fuel: '', month: '' };
+  var state = { book: 0, fuel: '', month: '', arc: false };
 
   function bookCard(book) {
     var h = '';
 
     h += '<div class="card">';
-    h += '<h2>📊 خلاصهٔ ' + esc(book.k || 'حساب') + '</h2>';
+    h += '<h2>📊 خلاصهٔ ' + esc(book.k || 'حساب') + (book.u ? ' <span class="count">(به ' + esc(book.u) + ')</span>' : '') + '</h2>';
     h += figsHtml(book.s, book.u, 'الباقی');
     h += '</div>';
 
-    // ── تفکیکِ تیل ────────────────────────────────────────────────────────
+    // ── تفکیکِ تیل: هر تیل یک کارت، ستون‌ها همان ستون‌های برنامه ─────────────
     if (book.f && book.f.length) {
-      h += '<div class="card"><h2>⛽ پطرول و دیزل — جدا از هم</h2>';
-      h += tableHtml(book.fh || ['تیل', 'بردگی', 'رسید', 'فیصدی', 'الباقی'], book.f, { mini: true });
-      h += '</div>';
+      var fh = book.fh || ['تیل', 'بردگی', 'رسید', 'فیصدی', 'الباقی'];
+      h += '<div class="card"><h2>⛽ پطرول و دیزل — جدا از هم</h2><div class="fuels">';
+      book.f.forEach(function (row) {
+        h += '<div class="fuel"><b>' + (/دیزل/.test(row[0]) ? '🔵 ' : '🟠 ') + esc(row[0]) + '</b>';
+        for (var c = 1; c < row.length; c++)
+          h += '<div class="kv' + (c === row.length - 1 ? ' hot' : '') + '"><span>' + esc(fh[c] || '') + '</span><strong>' + esc(row[c]) + '</strong></div>';
+        h += '</div>';
+      });
+      h += '</div></div>';
     }
 
     h += rowsCard(book);
@@ -367,29 +421,30 @@
   function rowsCard(book) {
     var fc = typeof book.fc === 'number' ? book.fc : -1;
     var dc = typeof book.dc === 'number' ? book.dc : -1;
-    var h = '<div class="card"><h2>📋 ردیف‌ها <span class="ro">فقط خواندنی</span></h2>';
+    var h = '<div class="card"><h2>📋 ردیف‌ها <span class="ro">👁 فقط خواندنی</span></h2>';
 
-    // ── دکمه‌های فیلتر ──────────────────────────────────────────────────
-    if (fc >= 0) {
-      h += '<div class="chips noprint"><span class="lbl">تیل:</span>';
-      ['', 'پطرول', 'دیزل'].forEach(function (f) {
-        h += '<button class="chip' + (state.fuel === f ? ' on' : '') +
-             '" data-act="fuel" data-v="' + esc(f) + '">' + (f || 'هر دو') + '</button>';
-      });
-      h += '</div>';
-    }
-
-    // ماه‌ها از آرشیو می‌آیند، نه از ردیف‌های دیده‌شونده — تا ماهی که ردیفش
-    // در کد جا نشده هم در فهرست باشد و مشتری بداند هست.
+    // ── فیلترها: تیل با سه دکمه، ماه با یک کشویی ─────────────────────────
     var months = (book.g || []).map(function (r) { return r[0]; });
-    if (dc >= 0 && months.length) {
-      h += '<div class="chips noprint"><span class="lbl">ماه:</span>';
-      h += '<button class="chip' + (state.month === '' ? ' on' : '') +
-           '" data-act="month" data-v="">همه</button>';
-      months.forEach(function (m) {
-        h += '<button class="chip' + (state.month === m ? ' on' : '') +
-             '" data-act="month" data-v="' + esc(m) + '">' + esc(monthLabel(m)) + '</button>';
-      });
+    var hasMonth = dc >= 0 && months.length;
+    if (fc >= 0 || hasMonth) {
+      h += '<div class="filters noprint">';
+      if (fc >= 0) {
+        h += '<div><label>تیل</label><div class="seg">';
+        ['', 'پطرول', 'دیزل'].forEach(function (f) {
+          h += '<button class="chip' + (state.fuel === f ? ' on' : '') +
+               '" data-act="fuel" data-v="' + esc(f) + '">' + (f || 'هر دو') + '</button>';
+        });
+        h += '</div></div>';
+      }
+      // ماه‌ها از آرشیو می‌آیند، نه از ردیف‌های دیده‌شونده — تا ماهی که ردیفش
+      // در کد جا نشده هم در فهرست باشد و مشتری بداند هست.
+      if (hasMonth) {
+        h += '<div><label>ماه</label><select data-act="month-sel"><option value="">همهٔ ماه‌ها</option>';
+        months.slice().reverse().forEach(function (m) {
+          h += '<option value="' + esc(m) + '"' + (state.month === m ? ' selected' : '') + '>' + esc(monthLabel(m)) + '</option>';
+        });
+        h += '</select></div>';
+      }
       h += '</div>';
     }
 
@@ -421,9 +476,12 @@
     var h = '';
 
     h += '<div class="card">';
+    h += '<div class="head"><div class="av">' + esc(String(d.n || 'ح').charAt(0)) + '</div><div class="t">';
     h += '<h1>' + esc(d.n || 'حساب') + '</h1>';
     if (d.a) h += '<div class="sub">' + esc(d.a) + '</div>';
-    h += '<div class="sub">' + esc(d.t || '') + (d.d ? ' · ' + esc(d.d) : '') + '</div>';
+    h += '<div class="sub">' + esc(d.t || '') + (d.d ? ' · تا تاریخِ <span dir="ltr">' + esc(d.d) + '</span>' : '') + '</div>';
+    h += '</div></div>';
+    h += '<div style="margin-top:8px"><span class="ro">👁 فقط دیدن — هیچ عددی از این صفحه عوض نمی‌شود</span></div>';
     if (!books) h += figsHtml(d.s, d.u, 'الباقی');
     h += liveHtml();
     h += '</div>';
@@ -451,7 +509,8 @@
 
     h += '<div class="card noprint" style="text-align:center">' +
          '<button class="btn" data-act="print">🖨️ چاپ / ذخیره PDF</button>' +
-         '<div class="note">این صفحه فقط نشان می‌دهد؛ هیچ چیزی از این‌جا عوض نمی‌شود.</div></div>';
+         '<div class="note">این صفحه فقط نشان می‌دهد؛ هیچ چیزی از این‌جا عوض نمی‌شود. ' +
+         'عددها همان عددهای دفترِ پمپ‌اند؛ اگر پرسشی دارید با «💬 پشتیبانی» بپرسید.</div></div>';
 
     if (live) {
       h += '<button class="fab noprint" data-act="chat-open">💬 پشتیبانی' +
@@ -459,7 +518,7 @@
     }
 
     app.innerHTML = h;
-    if (d.n) document.title = d.n + ' — پمپ یعقوبی';
+    if (d.n) document.title = d.n + ' — پمپ بنزین';
     chatRender();
   }
 
@@ -487,6 +546,19 @@
     }
     render();
   });
+
+  // کشوییِ ماه — همان کارِ دکمهٔ «ماه»، فقط یک فیلتر است
+  app.addEventListener('change', function (e) {
+    var t = e.target;
+    if (!t || !t.getAttribute || t.getAttribute('data-act') !== 'month-sel') return;
+    state.month = t.value || '';
+    render();
+  });
+  // باز و بسته بودنِ آرشیو با عوض شدنِ فیلتر از یاد نرود
+  app.addEventListener('toggle', function (e) {
+    var t = e.target;
+    if (t && t.classList && t.classList.contains('arc')) state.arc = !!t.open;
+  }, true);
 
   // ══ کیو‌آرِ زنده ══════════════════════════════════════════════════════
   //
@@ -532,10 +604,10 @@
     var txt;
     switch (liveStatus) {
       case 'ok':   txt = 'زنده — آخرین بررسی ' + liveWhen; break;
-      case 'off':  txt = 'ابر در دسترس نیست — نسخهٔ داخلِ کد'; break;
-      case 'none': txt = 'هنوز نسخهٔ تازه‌تری نیامده — نسخهٔ داخلِ کد'; break;
+      case 'off':  txt = 'به اینترنت نرسید — عددهای داخلِ همین کیو‌آر'; break;
+      case 'none': txt = 'هنوز نسخهٔ تازه‌تری نیامده — عددهای داخلِ همین کیو‌آر'; break;
       case 'wait': txt = 'در حالِ بررسی…'; break;
-      default:     txt = 'نسخهٔ داخلِ کد';
+      default:     txt = 'عددهای داخلِ همین کیو‌آر';
     }
     return '<div class="live noprint' + cls + '"><span><span class="dot"></span>' + esc(txt) +
            '</span><button class="btn" data-act="refresh">🔄 به‌روز کن</button></div>';

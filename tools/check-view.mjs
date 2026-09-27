@@ -204,7 +204,7 @@ ok(older.html.includes('محمد هارون') && !older.html.includes('(تازه
 const off = makePage(liveHash, async () => { throw new Error('network'); });
 await settle();
 ok(off.html.includes('محمد هارون'), 'بی‌اینترنت، دادهٔ داخلِ کد همچنان دیده می‌شود');
-ok(off.html.includes('ابر در دسترس نیست'), '…و صفحه می‌گوید که نتوانست بپرسد');
+ok(off.html.includes('به اینترنت نرسید'), '…و صفحه می‌گوید که نتوانست بپرسد');
 
 const none = makePage(liveHash, async () => okJson({ error: 'not_found' }, 404));
 await settle();
