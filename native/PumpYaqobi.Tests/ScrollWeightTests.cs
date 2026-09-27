@@ -109,6 +109,20 @@ public class ScrollWeightTests : IDisposable
     }
 
     /// <summary>
+    /// «💎 اشتراک و پلن‌ها» — «خیلی به زور اسکرول می‌شه، کند است» (۱۴۰۵/۰۷/۱۶).
+    /// ‎scrollperf vip‎: نُه کادرِ سایه‌محو (سه کارتِ پهن و چهار کارتِ پلن)؛
+    /// بی سایه گامِ اسکرول ۴۲ ⇒ ۲۵ms. همان قاعدهٔ پروفایل: کارتِ بزرگ ‎calm‎.
+    /// </summary>
+    [Fact]
+    public void Eshterak_VaPlanha_BiSayeyeMahv()
+    {
+        var vip = NoComments(Read("PumpYaqobi.App", "Views", "Sections", "VipSectionView.axaml"));
+        Assert.DoesNotContain("Classes=\"card\"", vip);
+        Assert.True(Regex.Matches(vip, "Classes=\"card calm\"").Count >= 4);
+        Assert.DoesNotContain("<ScrollViewer", vip);
+    }
+
+    /// <summary>
     /// کارت‌های کارمندانِ «حاضری و معاش» با ‎ItemsRepeater‎ چیده نمی‌شوند
     /// (۱۴۰۵/۰۷/۱۴). کارت‌ها بالای جدول‌اند و ته صفحه از قاب بیرون می‌روند؛
     /// بلندیِ تخمینیِ ‎ItemsRepeater‎ برای کارت‌های آزادشده درست یک ردیف با

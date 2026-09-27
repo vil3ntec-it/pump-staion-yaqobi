@@ -153,6 +153,13 @@ internal static class ScrollPerf
             return 0;
         }
 
+        if (Vip)
+        {
+            VipPage(win, vm);
+            foreach (var sh in Shape) Console.WriteLine($"   {sh.What}: سایهٔ محو {sh.Blur}");
+            return 0;
+        }
+
         // ══ حالتِ «کارت‌ها»: فقط کارت‌های قرض‌داران، گام‌به‌گام (۱۴۰۵/۰۷/۱۵) ══
         //  هر گام: وقت، بلندیِ صفحه، شمارِ کارتِ زنده و شمارِ کارتِ **تازه‌ساخته**.
         if (Cards)
@@ -277,6 +284,8 @@ internal static class ScrollPerf
             ScrollThrough(win, "پروفایل (بارِ دوم)");
             ScrollThrough(win, "پروفایل (بی سایه)", noShadow: true);
         }
+
+        VipPage(win, vm);
 
         // ══ تاریخچه ═════════════════════════════════════════════════════════
         if (vm.Sections.FirstOrDefault(s => s.Id == "history") is HistorySectionViewModel hs)
@@ -444,6 +453,8 @@ internal static class ScrollPerf
 
     /// <summary>‎scrollperf cards‎: فقط کارت‌های قرض‌داران، گام‌به‌گام.</summary>
     internal static bool Cards;
+    /// <summary>«اشتراک و پلن‌ها» — «خیلی به زور اسکرول می‌شه» (۱۴۰۵/۰۷/۱۶).</summary>
+    internal static bool Vip;
 
     private static void CardSteps(Window win, int pass)
     {
@@ -543,4 +554,24 @@ internal static class ScrollPerf
         { Dispatcher.UIThread.RunJobs(); w.UpdateLayout(); Thread.Sleep(2); }
         Pump(w);
     }
+
+    /// <summary>
+    /// «💎 اشتراک و پلن‌ها»، زیربخشِ پروفایل — «خیلی به زور اسکرول می‌شه، کند
+    /// است» (۱۴۰۵/۰۷/۱۶). بی شبکه هم ساخته می‌شود.
+    /// </summary>
+    private static void VipPage(Window win, MainViewModel vm)
+    {
+        var acc = vm.Account;
+        Wait(win, vm.GoAsync(acc)); Settle(win);
+        acc.LoginStep = 4; Settle(win);
+        if (acc.SubSections.FirstOrDefault(s => s.Id == "vip") is not { } vip) return;
+        acc.OpenSub = vip;
+        if (vm.LastSubOpen is { } t) Wait(win, t);
+        Settle(win);
+        ScrollThrough(win, "اشتراک و پلن‌ها", build: true);
+        ScrollThrough(win, "اشتراک و پلن‌ها (بارِ دوم)");
+        ScrollThrough(win, "اشتراک و پلن‌ها (بی سایه)", noShadow: true);
+        acc.OpenSub = null; Settle(win);
+    }
+
 }

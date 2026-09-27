@@ -7868,3 +7868,10 @@ dotnet run --project PumpYaqobi.UiTests -c Release -- round16 [پوشهٔ عکس
   لحظه. `IsBannerVisible = IsChromeVisible && BannerPref.Show`.
 - ⚠️ `StickNavToTop` بلندیِ نوارِ **پنهان** را صفر می‌شمارد (کنترلِ پنهان
   `Bounds`ِ آخرش را نگه می‌دارد)، وگرنه نوارِ بخش‌ها پایین می‌ماند.
+
+### ۸) «💎 اشتراک و پلن‌ها» — «خیلی به زور اسکرول می‌شه» (همان روز)
+
+`scrollperf vip` (حالتِ تازه، و در اجرای کامل هم هست): نُه کادرِ سایه‌محو — سه
+کارتِ پهن و چهار کارتِ پلن — و بی سایه گامِ اسکرول ۴۲ ⇒ ۲۵ms. همان ریشهٔ پروفایل:
+هر ‎`Border.card`ی این صفحه ‎`card calm`‎ شد (محو ۹ ⇒ ۲). آزمون:
+`ScrollWeightTests.Eshterak_VaPlanha_BiSayeyeMahv`.

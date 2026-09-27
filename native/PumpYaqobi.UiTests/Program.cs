@@ -213,6 +213,7 @@ internal static class Program
             ScrollPerf.Why = args.Length > 1 && args[1].Equals("why", StringComparison.OrdinalIgnoreCase);
             ScrollPerf.Trace = args.Length > 1 && args[1].Equals("trace", StringComparison.OrdinalIgnoreCase);
             ScrollPerf.Cards = args.Length > 1 && args[1].Equals("cards", StringComparison.OrdinalIgnoreCase);
+            ScrollPerf.Vip = args.Length > 1 && args[1].Equals("vip", StringComparison.OrdinalIgnoreCase);
             return ScrollPerf.Run();
         }
         if (args.Length > 1 && args[0].Equals("themediff", StringComparison.OrdinalIgnoreCase))
