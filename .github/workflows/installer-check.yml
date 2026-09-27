@@ -127,8 +127,12 @@ jobs:
             $cmd = (Get-ItemProperty -Path "HKCU:\Software\Classes\$($x[1])\shell\open\command").'(default)'
             if ($cmd -ne ('"' + "$dir\PumpYaqobi.exe" + '" "%1"')) { Fail "فرمانِ بازکردنِ $($x[0]) نادرست است: $cmd" }
           }
-          $lnk = (New-Object -ComObject WScript.Shell).CreateShortcut((Join-Path ([Environment]::GetFolderPath('Desktop')) 'پمپ بنزین.lnk'))
-          if ($lnk.IconLocation -notlike "*PumpYaqobi.ico*") { Fail "میان‌برِ دسکتاپ آیکونِ جدا ندارد: $($lnk.IconLocation)" }
+          #  ⚠️ خودِ بایت‌های ‎.lnk‎ خوانده می‌شود، نه ‎WScript.Shell‎: آن شیء در pwsh برای
+          #  نامِ فارسی یک میان‌برِ **خالی** می‌داد («,0») و سنجه را سرخِ دروغ می‌کرد.
+          $lnkPath = Join-Path ([Environment]::GetFolderPath('Desktop')) 'پمپ بنزین.lnk'
+          if (-not (Test-Path -LiteralPath $lnkPath)) { Fail "میان‌برِ دسکتاپ ساخته نشد" }
+          $lnkText = [Text.Encoding]::Unicode.GetString([IO.File]::ReadAllBytes($lnkPath))
+          if (-not $lnkText.Contains('PumpYaqobi.ico')) { Fail "میان‌برِ دسکتاپ آیکونِ جدا (PumpYaqobi.ico) ندارد" }
           "✔ پوشهٔ data، دو پسوندِ .pumpyaqobi/.pumpkey و آیکونِ جدای میان‌بر"
 
           # ۲) بی /ARCH روی نصبِ ۳۲بیتی ⇒ همان ۳۲ می‌ماند (به‌روزرسانیِ بی‌صدا معماری را عوض نمی‌کند)
