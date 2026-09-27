@@ -159,6 +159,15 @@ Type: filesandordirs; Name: "{autoprograms}\{#OldName}"
 ; کاربر می‌تواند پوشهٔ دلخواه انتخاب کرده باشد.
 Type: filesandordirs; Name: "{app}\libvlc\win-x64"; Check: WantX86
 Type: filesandordirs; Name: "{app}\libvlc\win-x86"; Check: WantX64
+; و سه فایلِ ریزِ ویژهٔ هر معماری که همتای هم‌نام ندارند (۱۴۰۵/۰۷/۱۵ — از
+; مقایسهٔ فهرستِ دو ساختِ واقعیِ v3.1.201). برنامه آن‌ها را بار نمی‌کند (در
+; deps.jsonِ معماریِ دیگر نیستند)، ولی جا ماندنشان یعنی پوشهٔ ناپاک.
+Type: files; Name: "{app}\libgcc_s_dw2-1.dll"; Check: WantX64
+Type: files; Name: "{app}\Microsoft.DiaSymReader.Native.x86.dll"; Check: WantX64
+Type: files; Name: "{app}\mscordaccore_x86_x86_*.dll"; Check: WantX64
+Type: files; Name: "{app}\libgcc_s_seh-1.dll"; Check: WantX86
+Type: files; Name: "{app}\Microsoft.DiaSymReader.Native.amd64.dll"; Check: WantX86
+Type: files; Name: "{app}\mscordaccore_amd64_amd64_*.dll"; Check: WantX86
 
 [Registry]
 ; کدام معماری نشسته — تا به‌روزرسانیِ بی‌صدا همان را نگه دارد

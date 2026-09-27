@@ -52,6 +52,11 @@ jobs:
             Set-Content -Path "$src\shared.dll" -Value "shared-$arch" -NoNewline
             Set-Content -Path "$src\libvlc\win-$arch\libvlc.dll" -Value $arch -NoNewline
           }
+          #  فایل‌های ویژهٔ هر معماری که همتای هم‌نام ندارند — همان نام‌های ساختِ واقعی
+          Set-Content -Path "fake\win-x86\libgcc_s_dw2-1.dll" -Value 'x86' -NoNewline
+          Set-Content -Path "fake\win-x86\mscordaccore_x86_x86_8.0.1.dll" -Value 'x86' -NoNewline
+          Set-Content -Path "fake\win-x64\libgcc_s_seh-1.dll" -Value 'x64' -NoNewline
+          Set-Content -Path "fake\win-x64\mscordaccore_amd64_amd64_8.0.1.dll" -Value 'x64' -NoNewline
           #  دو نسخه از همان نصاب: 0.0.1 (rel) و 0.0.2 (rel-new) — هر کدام با
           #  «ver.txt»ِ خودش تا معلوم باشد کدام روی دیسک نشست.
           foreach ($v in @('0.0.1','0.0.2')) {
@@ -77,6 +82,11 @@ jobs:
           function Landed() { Get-Content (Join-Path $dir 'PumpYaqobi.exe') -Raw }
           function Fail($m) { Get-Content $log | Select-Object -Last 40; throw $m }
 
+          #  دفترِ کاربر پیش از هر نصبی — سوییچِ ۳۲ ⇄ ۶۴ نباید یک بیتش را عوض کند
+          $data0 = Join-Path $env:APPDATA 'PumpYaqobi'
+          New-Item -ItemType Directory -Force -Path $data0 | Out-Null
+          Set-Content -Path "$data0\pump.db" -Value 'ledger' -NoNewline
+
           # ۱) ۳۲بیتی
           Install 'x86'
           if ((Landed) -ne 'x86') { Fail "با /ARCH=x86 بارِ «$(Landed)» نشست" }
@@ -99,7 +109,11 @@ jobs:
           if (Test-Path "$dir\libvlc\win-x86") { Fail "پوشهٔ VLCِ ۳۲ پس از رفتن به ۶۴ ماند" }
           $reg = Get-ItemPropertyValue -Path 'HKCU:\Software\PumpYaqobi' -Name Arch
           if ($reg -ne 'x64') { Fail "رجیستری «$reg» گفت، نه x64" }
-          "✔ /ARCH=x64 روی نصبِ ۳۲ ⇒ بارِ ۶۴ نشست و بارِ ۳۲ رفت"
+          foreach ($f in 'libgcc_s_dw2-1.dll','mscordaccore_x86_x86_8.0.1.dll') {
+            if (Test-Path "$dir\$f") { Fail "فایلِ ویژهٔ ۳۲بیتی «$f» پس از رفتن به ۶۴ ماند" } }
+          if (-not (Test-Path "$dir\libgcc_s_seh-1.dll")) { Fail "فایلِ ویژهٔ ۶۴بیتی نیامد" }
+          if ((Get-Content "$data0\pump.db" -Raw) -ne 'ledger') { Fail "سوییچِ ۳۲ ⇒ ۶۴ به دفترِ کاربر دست زد" }
+          "✔ /ARCH=x64 روی نصبِ ۳۲ ⇒ بارِ ۶۴ نشست، بارِ ۳۲ (با فایل‌های ویژه‌اش) رفت، و دفتر دست‌نخورده"
 
           # ۴) یک ردیف در «برنامه‌ها و قابلیت‌ها»، با همان AppId
           $unins = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{8E86F349-343C-4FFB-983E-BBDDC5390081}_is1'
