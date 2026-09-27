@@ -635,10 +635,8 @@
                                Text="نام و لوکیشنِ پمپ را بنویسید و تمام. اشتراک روی همین حساب می‌نشیند، پس هیچ کدی لازم نیست." />
 
                     <!-- ⛔ کادرِ «کدِ شش‌رقمی — اگر دارید» در ۱۴۰۵/۰۷/۰۴ از
-                         همین‌جا برداشته شد و برنمی‌گردد. خرج کردنِ کدِ
-                         اشتراک همان‌جایی ماند که باید باشد — کارتِ
-                         «اشتراک»ِ خودِ پروفایل (`SubCode` +
-                         `RedeemSubCommand`). -->
+                         همین‌جا برداشته شد و برنمی‌گردد — و از ۱۴۰۵/۰۷/۱۵ از
+                         پروفایل هم: اشتراک فقط از سرور به حساب می‌رسد. -->
                     <TextBlock Text="نامِ پمپ" Classes="lbl" />
                     <TextBox Text="{Binding LoginPump}" Watermark="مثلاً پمپ یعقوبی">
                       <TextBox.KeyBindings>
@@ -996,19 +994,14 @@
 
             <Border Height="1" Background="{DynamicResource Pump.Border}" />
 
-            <!-- ⛔ کدِ اشتراک همین‌جاست و برنمی‌گردد به گامِ ورود: کسی که کد
-                 دارد بعد از ورود این‌جا می‌زندش، و کسی که ندارد کادری
-                 نمی‌بیند که دنبالش بگردد. -->
-            <TextBlock Text="کدِ اشتراک (شش رقم)" Classes="kvl" />
-            <Grid ColumnDefinitions="*,Auto,Auto">
-              <TextBox Grid.Column="0" Text="{Binding SubCode}" MaxLength="6" Watermark="۱۲۳۴۵۶"
-                       TextAlignment="Center" FontSize="16" MinHeight="40" />
-              <Button Grid.Column="1" Classes="accent" Content="فعال کن" Margin="7,0,0,0" MinHeight="40"
-                      Command="{Binding RedeemSubCommand}" IsEnabled="{Binding !Busy}" />
-              <Button Grid.Column="2" Content="🔄" Margin="6,0,0,0" MinHeight="40"
-                      Command="{Binding RefreshSubCommand}" IsEnabled="{Binding !Busy}"
-                      ToolTip.Tip="تازه‌سازی از سرور" />
-            </Grid>
+            <!-- ⛔ **کادرِ «کدِ اشتراک (شش رقم)» برداشته شد** (۱۴۰۵/۰۷/۱۵، صاحب ریپو:
+                 «اینو حذف کن — اشتراک از سرور باید ارسال بشه نه از کد»). اشتراک
+                 را مدیر از پنل به حساب می‌دهد و پیگیرِ اشتراک خودش می‌آوردش.
+                 فقط «🔄 تازه‌سازی از سرور» ماند. -->
+            <Button Classes="accent" Content="🔄 گرفتنِ اشتراک از سرور" MinHeight="40"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Command="{Binding RefreshSubCommand}" IsEnabled="{Binding !Busy}"
+                    ToolTip.Tip="همین حالا از سرورِ حساب بپرس" />
             <TextBlock Text="{Binding SubMessage}" Classes="muted" FontSize="12" TextWrapping="Wrap"
                        IsVisible="{Binding SubMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 

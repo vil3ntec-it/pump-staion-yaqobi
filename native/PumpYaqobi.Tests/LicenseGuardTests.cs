@@ -380,8 +380,9 @@ public class CloudAddressLockTests
 
         //  اشتراک رفت به صفحهٔ «حسابِ من» — همان‌جا باید باشد
         var account = Read("PumpYaqobi.App/Views/Sections/AccountSectionView.axaml");
-        Assert.Contains("SubCode", account);
-        Assert.Contains("RedeemSubCommand", account);
+        Assert.Contains("RefreshSubCommand", account);
+        //  ⛔ کادرِ کدِ اشتراک نیست (۱۴۰۵/۰۷/۱۵): اشتراک فقط از سرور می‌آید
+        Assert.DoesNotContain("RedeemSubCommand", account);
 
         //  …ولی صفحهٔ حساب هم کادرِ نشانی ندارد و نباید داشته باشد
         Assert.DoesNotContain("api.vill3n.top", account);

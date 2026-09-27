@@ -357,6 +357,10 @@ internal static class OldAccountProbe
     {
         //  ⚠️ همان برنامهٔ واقعی: موتورِ همگام‌سازی (تپش و پیامِ «تمدید شد») هم روشن
         if (Environment.GetEnvironmentVariable("PUMP_SW_SYNC") == "1") SyncEngine.Disabled = false;
+        //  ⚠️ «notrial»: همان حالِ گزارشِ صاحب ریپو — روزِ آزمایشی در پنل صفر، پس
+        //  حسابِ تازه **هیچ** مجوزی ندارد، و بعد مدیر VIP می‌دهد.
+        var noTrial = Environment.GetEnvironmentVariable("PUMP_SW_NOTRIAL") == "1";
+        if (noTrial) Panel(HttpMethod.Patch, "/api/account-admin/account-config", new { pump_trial_days = "0" });
         var a = MakeAccount("sw-" + Guid.NewGuid().ToString("N")[..8] + "@example.com", withStation: true);
         SeatOnDisk(a, loginSkipped: false);
         var (win, vm, account) = Open();
@@ -375,7 +379,14 @@ internal static class OldAccountProbe
                   $"{acc.SubPlanText} · {acc.PillText} · باز: {string.Join(",", Entitlements.Paid.Where(Entitlements.Allows))} · {CloudLink.LastBindWhy}");
         }
 
-        Step("1-trial", () => acc.SubActive && acc.VipDays >= 29 && Paid(), "حسابِ تازه آزمایشی گرفت و شش بخش باز است");
+        if (noTrial)
+        {
+            Step("1-notrial", () => !acc.SubActive && NonePaid() && AppSettings.Load().CloudDeviceToken.Length > 0 && acc.SubStatus.Contains("خاموش"),
+                 "آزمایشی در پنل خاموش ⇒ بی مجوز، و پروفایل همین را می‌گوید");
+            Console.WriteLine("     ⓘ " + acc.SubStatus.Replace("\n", " ⏎ "));
+        }
+        else
+            Step("1-trial", () => acc.SubActive && acc.VipDays >= 29 && Paid(), "حسابِ تازه آزمایشی گرفت و شش بخش باز است");
 
         var tenant = GrantTarget(a.Email);
         var year = DateTimeOffset.UtcNow.AddDays(365).ToUnixTimeMilliseconds();
@@ -383,7 +394,7 @@ internal static class OldAccountProbe
         //  هفتاد ثانیه ۵۰۰ می‌دهد (بقیهٔ درها سالم). پیش از پیگیر، برنامه آن
         //  شکست را «رسید» می‌شمرد و آزمایشیِ کهنه ده دقیقه و بیشتر می‌ماند.
         var realNet = CloudLink.TestTransport!;
-        var hiccupUntil = DateTime.UtcNow.AddSeconds(70);
+        var hiccupUntil = noTrial ? DateTime.MinValue : DateTime.UtcNow.AddSeconds(70);
         CloudLink.TestTransport = (req, ct) =>
             DateTime.UtcNow < hiccupUntil && req.RequestUri!.AbsolutePath == "/api/pump/device/license"
                 ? Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError)
@@ -425,6 +436,7 @@ internal static class OldAccountProbe
         Check("پروفایل حرفِ پیگیر را نشان می‌دهد", account.WatchLine.Contains("یکی‌اند"), account.WatchLine);
 
         win.Close();
+        if (noTrial) Panel(HttpMethod.Patch, "/api/account-admin/account-config", new { pump_trial_days = "30" });
         Console.WriteLine(_bad == 0 ? "✅ پیگیرِ اشتراک: همه رسید" : $"❌ {_bad} ایراد");
         return _bad == 0 ? 0 : 1;
     }

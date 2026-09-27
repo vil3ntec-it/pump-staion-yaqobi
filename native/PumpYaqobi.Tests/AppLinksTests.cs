@@ -185,11 +185,11 @@ public class AppLinksTests
                 .Split('\n').Where(l => !l.TrimStart().StartsWith("//")));
         Assert.DoesNotContain("_loginCode", vmCode);
 
-        //  ⚠️ ولی خرج کردنِ کدِ اشتراک **از بین نرفت** — همان‌جایی ماند که
-        //  باید باشد: کارتِ «اشتراک»ِ خودِ پروفایل. بی این دو خط، «حذفش
-        //  کردم» می‌توانست یعنی «قابلیت را هم بردم».
-        Assert.Contains("Binding SubCode", xaml);
-        Assert.Contains("RedeemSubCommand", xaml);
+        //  ⛔ و از ۱۴۰۵/۰۷/۱۵ کادرِ کدِ اشتراک از پروفایل هم رفت (صاحب ریپو:
+        //  «اشتراک از سرور باید ارسال بشه نه از کد») — فقط تازه‌سازی ماند.
+        Assert.DoesNotContain("Binding SubCode", xaml);
+        Assert.DoesNotContain("RedeemSubCommand", xaml);
+        Assert.Contains("RefreshSubCommand", xaml);
         //  ⛔ **نوارِ گام‌ها از صفحه رفت** (۱۴۰۵/۰۷/۰۵): «اون سه مرحله
         //  نباید دیده بشن». ⚠️ ولی خودِ گام‌ها نرفتند — این تفاوت مهم است،
         //  وگرنه «پنهانش کردم» فردا می‌شد «منطقش را بردم».
