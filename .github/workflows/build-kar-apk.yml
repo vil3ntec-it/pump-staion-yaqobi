@@ -106,7 +106,7 @@ jobs:
           ./gradlew assembleRelease --no-daemon \
             -PappVersionName=${{ steps.ver.outputs.version }} \
             -PappId=top.yaqobipump.kar \
-            -PappLabel='کارمندان پمپ یعقوبی'
+            -PappLabel='پمپ بنزین'
 
       - name: نام‌گذاری فایل
         run: |
