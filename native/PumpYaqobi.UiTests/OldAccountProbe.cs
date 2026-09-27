@@ -29,7 +29,7 @@ namespace PumpYaqobi.UiTests;
 ///
 ///     dotnet run --project PumpYaqobi.UiTests -c Release -- oldacct &lt;live.json&gt; [پوشهٔ عکس]
 /// </summary>
-internal static class OldAccountProbe
+internal static partial class OldAccountProbe
 {
     private static int _bad;
     private static void Check(string what, bool ok, string? detail = null)
@@ -92,6 +92,7 @@ internal static class OldAccountProbe
 
         if (args.Contains("karcode")) return KarCode(shots, args.Contains("pass"));
         if (args.Contains("subwatch")) return SubWatch(shots, pub);
+        if (args.Contains("offline")) return OfflineCodes(shots);
 
         var onlyE = Environment.GetEnvironmentVariable("PUMP_OLDACCT_ONLY") == "e";
         Avalonia.Controls.Window win = null!; MainViewModel vm = null!; AccountSectionViewModel account = null!;

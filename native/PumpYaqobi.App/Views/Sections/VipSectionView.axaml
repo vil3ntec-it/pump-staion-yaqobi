@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
              xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
              x:Class="PumpYaqobi.App.Views.Sections.VipSectionView"
              x:DataType="vm:VipSectionViewModel">
 
@@ -114,6 +115,49 @@
                        Margin="12,0,0,0" VerticalAlignment="Center"
                        Text="برای دیدنِ قفل‌ها با چشمِ خودتان. فقط می‌بندد و هیچ‌وقت باز نمی‌کند، و با بسته شدنِ برنامه خودش خاموش می‌شود." />
           </Grid>
+        </StackPanel>
+      </Border>
+
+      <!-- ══ 🔑 کدِ اشتراکِ آفلاین — «بدونِ نت هم اشتراک داده بشه» ══════════════
+           خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۵). کدِ کامپیوتر ⇒ صاحبِ سامانه در پنل
+           کد می‌سازد ⇒ همین‌جا زده می‌شود (یا فایلِ ‎.pumpkey‎) ⇒ قفل‌ها همان
+           لحظه باز، بی اینترنت. سنجش در ‎OfflineKey‎ است، نه این‌جا.
+           ⚠️ این کادرِ کدِ اشتراکِ شش‌رقمیِ قدیم نیست (آن برداشته شد): این کد
+           امضاشده و بسته به همین کامپیوتر است و بی سرور کار می‌کند. -->
+      <Border Classes="card" Padding="22,18">
+        <StackPanel Spacing="10">
+          <TextBlock Text="🔑 کدِ اشتراکِ آفلاین (بی اینترنت)" Classes="card-title" FontSize="16" />
+          <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                     Text="برای کامپیوتری که اینترنت ندارد: کدِ همین کامپیوتر را برای صاحبِ سامانه بفرستید؛ او کدِ اشتراک (استاندارد، وی‌آی‌پی یا دائمی) را می‌فرستد و همین‌جا می‌زنید. روزی که اینترنت و حساب آمد، سرورِ حساب هم همان کد را می‌بیند." />
+
+          <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,4,0,0">
+            <TextBlock Grid.Column="0" Text="کدِ این کامپیوتر:" Classes="kvl" Margin="0,0,10,0" />
+            <SelectableTextBlock Grid.Column="1" Text="{Binding ComputerCode}" FontSize="20" FontWeight="Black"
+                                 FontFamily="Consolas, monospace" VerticalAlignment="Center"
+                                 FlowDirection="LeftToRight" HorizontalAlignment="Right"
+                                 IsVisible="{Binding HasComputerCode}" />
+            <Button Grid.Column="2" Content="📋 کپی" Margin="10,0,0,0" MinHeight="36"
+                    Command="{Binding CopyComputerCommand}" IsVisible="{Binding HasComputerCode}" />
+          </Grid>
+          <TextBlock Text="{Binding ComputerNote}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+
+          <Border Height="1" Background="{DynamicResource Pump.Border}" Margin="0,4" />
+
+          <!-- ⚠️ جهتِ کادر همان صفحه است: کد لاتین است و خودش چپ‌به‌راست می‌ماند،
+               ولی نوشتهٔ راهنمای فارسی در کادرِ LTR وارونه می‌شکست. -->
+          <TextBox Text="{Binding OfflineInput}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="74"
+                   FontFamily="Consolas, monospace" FontSize="13"
+                   Watermark="کدِ اشتراک را این‌جا بچسبانید (XXXXX-XXXXX-…)" />
+          <WrapPanel Classes="sec-tools">
+            <Button Classes="accent" Content="✔ ثبتِ کد" Command="{Binding ApplyOfflineCommand}" Margin="0,0,8,0" />
+            <Button Content="📂 انتخابِ فایلِ ‎.pumpkey‎" Command="{Binding PickOfflineFileCommand}" Margin="0,0,8,0" />
+            <Button Content="🗑 برداشتنِ کد" Command="{Binding RemoveOfflineCommand}"
+                    IsVisible="{Binding HasOfflineCode}" />
+          </WrapPanel>
+          <TextBlock Text="{Binding OfflineStatus}" FontWeight="Bold" TextWrapping="Wrap" FontSize="12.5"
+                     Foreground="{Binding OfflineStatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
+                     IsVisible="{Binding OfflineStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          <TextBlock Text="{Binding OfflineCurrent}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" />
         </StackPanel>
       </Border>
 

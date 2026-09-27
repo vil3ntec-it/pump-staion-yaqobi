@@ -204,8 +204,15 @@ public static class Entitlements
 
         //  ۱) هنوز با کدِ اشتراک فعال نشده — هیچ‌کدام از این سه کار بی ابر
         //     معنا هم ندارد.
+        //  ۰) کدِ اشتراکِ آفلاین (‎OfflineKey‎) — به همین کامپیوتر بسته است و
+        //  امضایش با کلیدِ داخلِ برنامه سنجیده می‌شود، پس **بی هیچ توکنی**
+        //  هم قفل‌ها را باز می‌کند: «بدونِ نت هم اشتراک داده بشه.»
+        var offline = OfflineKey.Stored(f, LicenseClock.Now(f));
+
         if (string.IsNullOrWhiteSpace(f.CloudDeviceToken))
-            return new EntitlementState(false, Array.Empty<string>(), "", 0, Now(), true);
+            return offline.Valid
+                ? FromOffline(offline, LicenseClock.Now(f))
+                : new EntitlementState(false, Array.Empty<string>(), "", 0, Now(), true);
 
         //  ۲) مجوزِ امضاشده — همان چیزی که آفلاین هم کار می‌کند. «حالا» از
         //     کفِ ساعت می‌آید، نه ساعتِ خامِ ویندوز (`LicenseClock`).
@@ -245,8 +252,30 @@ public static class Entitlements
         }
 
         var open = check.Valid || live is { Active: true };
+
+        //  کدِ آفلاین کنارِ اشتراکِ سرور: هر کدام باز است، باز. هیچ‌کدام چیزی
+        //  را از دیگری کم نمی‌کند — فهرستِ قابلیت‌ها اجتماعِ هر دو است.
+        if (offline.Valid)
+        {
+            if (!open)
+            {
+                feats = offline.Features; listed = true;
+                plan = offline.PlanTitle + " (کدِ آفلاین)";
+            }
+            else if (listed)
+                feats = feats.Union(offline.Features).ToArray();
+            until = Math.Max(until, OfflineUntil(offline));
+            open = true;
+        }
         return new EntitlementState(open, feats, plan, until, now, false, listed, graceEnds);
     }
+
+    /// <summary>پایانِ کدِ آفلاین برای نمایش — دائمی ⇒ پنجاه سال، همان سرورِ حساب.</summary>
+    public static long OfflineUntil(OfflineCheck c) =>
+        c.Permanent ? c.IssuedAt + 50L * 365 * 86_400_000 : c.EndsAt;
+
+    private static EntitlementState FromOffline(OfflineCheck c, long now) =>
+        new(true, c.Features, c.PlanTitle + " (کدِ آفلاین)", OfflineUntil(c), now, false, Listed: true);
 
     /// <summary>
     /// مُهرِ «دیدیم که باز است» را روی دیسک به‌روز می‌کند — از

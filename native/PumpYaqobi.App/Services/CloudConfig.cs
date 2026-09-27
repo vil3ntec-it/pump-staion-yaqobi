@@ -132,6 +132,30 @@ public static class CloudConfig
     /// </summary>
     public static IReadOnlyDictionary<string, string> LicenseKeys => TestLicenseKeys ?? Embedded.Value;
 
+    private static readonly AsyncLocal<IReadOnlyDictionary<string, string>?> TestOffline = new();
+
+    /// <summary>⚠️ فقط برای آزمون — روی <see cref="AsyncLocal{T}"/>، مثلِ <see cref="TestLicenseKeys"/>.</summary>
+    public static IReadOnlyDictionary<string, string>? TestOfflineKeys
+    {
+        get => TestOffline.Value;
+        set => TestOffline.Value = value;
+    }
+
+    private static readonly Lazy<IReadOnlyDictionary<string, string>> EmbeddedOffline =
+        new(() => ParseKeys(Metadata("OfflineKeys")));
+
+    /// <summary>
+    /// کلیدِ عمومیِ سرورِ حساب برای **کدِ اشتراکِ آفلاین** (<see cref="OfflineKey"/>)
+    /// — ساختِ CI همان لحظه از <c>/api/license/public-key</c> می‌گیرد و داخلِ
+    /// اسمبلی می‌گذارد (<c>-p:OfflineKeys=…</c>).
+    ///
+    /// ⚠️ چرا جدا از <see cref="LicenseKeys"/>: پر شدنِ آن یکی ریشهٔ اعتمادِ
+    /// **مجوزِ آنلاین** را هم عوض می‌کند و کلیدِ اشتباه همهٔ نصب‌ها را قفل
+    /// می‌کرد. این یکی فقط کدِ آفلاین را می‌سنجد — کامپیوتری که هرگز اینترنت
+    /// ندیده و هیچ کلیدِ TOFUی ندارد، بی این هیچ کدی را نمی‌توانست بپذیرد.
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> OfflineKeys => TestOfflineKeys ?? EmbeddedOffline.Value;
+
     /// <summary>
     /// این کلیدِ عمومی را می‌شود پذیرفت؟ با فهرستِ خالی همیشه «بله» (TOFU
     /// تصمیمِ بعدی را خودش می‌گیرد)؛ با فهرستِ پر فقط اگر داخلِ همان باشد.
