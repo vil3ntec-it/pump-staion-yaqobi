@@ -1,0 +1,170 @@
+name: سنجهٔ پیش از مرج — همین برنامه، نصب و اجرا روی ویندوز
+
+# ══ چرا این ورک‌فلو هست (۱۴۰۵/۰۷/۱۵) ════════════════════════════════════════
+# خواستهٔ صاحب ریپو: «بعد هر تغییر چک بشه باگ یا منطقِ بخشی رندم که دست‌کاری یا
+# خراب که نشده یا نشه… مثلِ نصب و ارور.»
+#
+# سنجه‌های دیگر هر کدام یک تکه را می‌بینند: آزمون‌ها منطق را (لینوکس و ویندوز)،
+# ‎scroll-audit‎ رفتار و کارایی را (پنجرهٔ بی‌سر)، ‎installer-check‎ خودِ نصاب را
+# با **بارِ ساختگی**. ولی هیچ‌کدام پیش از مرج **خودِ برنامهٔ همین PR** را نصب و
+# روی ویندوزِ واقعی باز نمی‌کرد — آن فقط پس از انتشار دیده می‌شد، یعنی دیر.
+#
+# این‌جا همان ساختی که به مشتری می‌رسد (همان ‎dotnet publish‎ و همان ISCC و مُهر)
+# از روی همین PR ساخته می‌شود و روی هر ویندوزی که گیت‌هاب دارد:
+#   ۱) با ویزاردِ واقعی نصب می‌شود (مُهرِ سلامت: ‎PYSEAL state=1‎)
+#   ۲) باز می‌شود و باید ۴۰ ثانیه باز بماند، بی ‎crash.log‎
+#   ۳) اطلاعاتِ جای کهنه (‎%AppData%‎) به ‎{app}\data‎ کپی شده و جای کهنه دست‌نخورده است
+#   ۴) دوبار-کلیک روی ‎.pumpyaqobi‎ خودِ برنامه را باز می‌کند
+#   ۵) نسخهٔ ۳۲بیتی روی همان نصب (به‌روزرسانیِ بی‌صدا) نصب و باز می‌شود
+#   ۶) حذفِ برنامه به ‎{app}\data‎ دست نمی‌زند
+# ⛔ پیش از هر مرجِ ‎native/**‎ باید سبز باشد — همان قاعدهٔ CLAUDE.md.
+
+on:
+  pull_request:
+    paths:
+      - 'native/**'
+      - '.github/workflows/app-smoke.yml'
+      - '.github/workflows/build-native.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: ساختِ همان برنامهٔ انتشار (۶۴ و ۳۲)
+        working-directory: native
+        shell: pwsh
+        run: |
+          foreach ($rid in @('win-x64','win-x86')) {
+            dotnet publish PumpYaqobi.App -c Release -r $rid --self-contained true `
+              -p:Version=9.9.9 -p:PublishSingleFile=false -o "publish/$rid"
+            if ($LASTEXITCODE -ne 0) { throw "ساختِ $rid شکست خورد" }
+            $drop = if ($rid -eq 'win-x86') { 'win-x64' } else { 'win-x86' }
+            Remove-Item "publish/$rid/libvlc/$drop" -Recurse -Force -ErrorAction SilentlyContinue
+          }
+      - name: نصاب و مُهر
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup --no-progress -y }
+          New-Item -ItemType Directory -Force -Path rel | Out-Null
+          & $iscc /Qp "/DAppVersion=9.9.9" "/DSourceDir64=..\publish\win-x64" "/DSourceDir86=..\publish\win-x86" native/installer/PumpYaqobi.iss
+          if ($LASTEXITCODE -ne 0) { throw "ساختِ نصاب شکست خورد" }
+          & native/installer/seal.ps1 -Path rel/PumpYaqobi-Setup.exe
+          & native/installer/seal.ps1 -Path rel/PumpYaqobi-Setup.exe -Check
+          "نصاب: {0:N1} مگابایت" -f ((Get-Item rel/PumpYaqobi-Setup.exe).Length/1MB)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: setup
+          path: rel/PumpYaqobi-Setup.exe
+          retention-days: 3
+
+  smoke:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025, windows-11-arm]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: setup
+          path: rel
+      - name: نصب ⇐ باز کردن ⇐ اطلاعات ⇐ دوبار-کلیک ⇐ ۳۲بیتی ⇐ حذف
+        shell: pwsh
+        run: |
+          $setup = (Resolve-Path rel\PumpYaqobi-Setup.exe).Path
+          $drive = (Resolve-Path native/installer/test/drive-wizard.ps1).Path
+          $X = if (Test-Path 'D:\') { 'D:' } else { 'C:' }
+          $dir = "$X\Pump Smoke\پمپ بنزین"
+          $data = Join-Path $dir 'data'
+          $legacy = Join-Path $env:APPDATA 'PumpYaqobi'
+          $log = Join-Path $env:TEMP 'pyq-smoke.log'
+          $unins = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{8E86F349-343C-4FFB-983E-BBDDC5390081}_is1'
+          $bad = New-Object System.Collections.Generic.List[string]
+          function Check($ok, $what) { if ($ok) { "  ✔ $what" } else { "  ✖ $what"; $bad.Add($what) } }
+          #  ⛔ «کرش» یعنی خطای بی‌صاحب (AppDomain · UI · Startup) — همان‌هایی که برنامه را
+          #  می‌اندازند یا صفحه را نیمه‌کاره می‌گذارند. بقیهٔ ‎crash.log‎ (خطای شبکهٔ گرفته‌شده،
+          #  ‎Task‎ی رهاشده) چاپ می‌شود تا دیده شود، ولی سنجه را سرخ نمی‌کند.
+          function Crash() {
+            $fatal = $false
+            foreach ($d in @($data, $legacy)) {
+              $c = Join-Path $d 'crash.log'
+              if (-not (Test-Path $c)) { continue }
+              #  ⚠️ Write-Host، نه خروجیِ خام: هر خروجیِ تابع جزوِ مقدارِ برگشتی می‌شد
+              Write-Host "── crash.log ($d)"; Get-Content $c -Tail 80 | ForEach-Object { Write-Host $_ }
+              if (Select-String -Path $c -Pattern '· (AppDomain|UI|Startup) ' -Quiet) { $fatal = $true }
+              Remove-Item $c
+            }
+            return $fatal
+          }
+          function RunApp($why, $sec) {
+            $p = Start-Process -FilePath (Join-Path $dir 'PumpYaqobi.exe') -PassThru
+            Start-Sleep -Seconds $sec
+            $alive = -not $p.HasExited
+            Check $alive "$why — برنامه $sec ثانیه باز ماند$(if (-not $alive) { " (کد $($p.ExitCode))" })"
+            if ($alive) { Stop-Process -Id $p.Id -Force; Start-Sleep -Seconds 2 }
+            Check (-not (Crash)) "$why — هیچ کرشی نیست"
+          }
+
+          #  دفترِ «مشتریِ قدیمی» در جای کهنه — باید کپی شود و خودش دست نخورد
+          Remove-Item -Recurse -Force $legacy, "$X\Pump Smoke" -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path "$legacy\backups" | Out-Null
+          Set-Content -Path "$legacy\settings.json" -Value '{"ThemeId":"gold"}' -NoNewline
+          Set-Content -Path "$legacy\backups\old.db" -Value 'old-backup' -NoNewline
+
+          "── ۱) نصب با ویزارد (۶۴بیتی)"
+          $r = & $drive -Setup $setup -SetupArgs @('/ARCH=x64','/CURRENTUSER') -Dirs @($dir) -Log $log -TimeoutSec 600
+          $r | Format-List | Out-String -Width 300
+          Check $r.Finished "ویزارد به «پایان» رسید$(if ($r.Messages.Count) { ' — ' + ($r.Messages -join ' | ') })"
+          Check (Select-String -Path $log -Pattern 'PYSEAL state=1' -Quiet) "مُهرِ سلامت سنجیده شد و سالم بود"
+          Check (Test-Path (Join-Path $dir 'PumpYaqobi.exe')) "فایلِ برنامه نشست"
+
+          "── ۲) باز کردنِ برنامه"
+          RunApp 'بارِ اول' 40
+
+          "── ۳) اطلاعات در پوشهٔ برنامه، جای کهنه دست‌نخورده"
+          Check (Test-Path "$data\settings.json") "تنظیمات در ‹data›ی کنارِ برنامه است"
+          Check ((Get-Content "$data\backups\old.db" -Raw) -eq 'old-backup') "بکاپ‌های قدیمی هم کپی شدند"
+          Check (Test-Path "$data\pump.db") "دفتر در ‹data›ی کنارِ برنامه ساخته شد"
+          Check ((Get-Content "$legacy\settings.json" -Raw) -eq '{"ThemeId":"gold"}') "جای کهنه دست نخورد"
+          Check (@(Get-ChildItem $legacy -Filter '*.txt').Count -ge 1) "در جای کهنه یادداشتِ «کجا رفت» هست"
+
+          "── ۴) دوبار-کلیک روی .pumpyaqobi ⇒ خودِ برنامه"
+          $f = Join-Path $env:TEMP 'smoke-test.pumpyaqobi'
+          Set-Content -Path $f -Value 'not-a-real-file' -NoNewline
+          Start-Process -FilePath $f
+          $seen = $null
+          for ($i = 0; $i -lt 30 -and -not $seen; $i++) { Start-Sleep 1; $seen = Get-Process PumpYaqobi -ErrorAction SilentlyContinue }
+          Check ($null -ne $seen) "ویندوز فایل را به «پمپ بنزین» داد و برنامه باز شد"
+          Start-Sleep -Seconds 10
+          Get-Process PumpYaqobi -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Sleep -Seconds 2
+          Check (-not (Crash)) "فایلِ نادرست برنامه را نینداخت"
+
+          "── ۵) ۳۲بیتی روی همان نصب (به‌روزرسانیِ بی‌صدا)"
+          $p = Start-Process -FilePath $setup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/ARCH=x86',"/DIR=$dir","/LOG=$log") -PassThru
+          $done = $p.WaitForExit(600000)
+          Check ($done -and $p.ExitCode -eq 0) "نصبِ بی‌صدای ۳۲بیتی (کد $(if ($done) { $p.ExitCode } else { 'ماسید' }))"
+          Check (Test-Path "$dir\libvlc\win-x86\libvlc.dll") "بارِ ۳۲بیتی نشست"
+          RunApp '۳۲بیتی' 40
+          Check (Test-Path "$data\pump.db") "همان دفتر سرِ جایش است"
+
+          "── ۶) حذف ⇒ ‹data› دست نمی‌خورد"
+          $u = (Get-ItemPropertyValue -Path $unins -Name UninstallString) -replace '"',''
+          $p = Start-Process -FilePath $u -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -PassThru
+          [void]$p.WaitForExit(300000)
+          Check (-not (Test-Path (Join-Path $dir 'PumpYaqobi.exe'))) "فایل‌های برنامه رفتند"
+          Check (Test-Path "$data\pump.db") "دفترِ ‹data› ماند"
+
+          if ($bad.Count) { "`n✖ $($bad.Count) ایراد:"; $bad; exit 1 }
+          "`n✅ همین برنامه: نصب، باز شدن، اطلاعات، دوبار-کلیک، ۳۲بیتی و حذف — همه سبز"
