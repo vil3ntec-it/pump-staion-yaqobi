@@ -133,8 +133,12 @@ internal static class LayoutCycleProbe
                 Round14Probe.Wait(win, vm.GoAsync(s));
                 Step(win, id + " · باز شد");
                 //  تعویضِ تم در همین بخش — همان کارِ صاحب ریپو
+                //  نوشته‌ای که پیش از تم **از قبل** کج بود، یا متنش همین لحظه عوض شد
+                //  (زنگِ هشدارِ داشبورد وقتی فهرست رسید)، گناهِ تم نیست — آن را بندِ «الف»
+                //  می‌سنجد: با دیده شدن دوباره کشیده شود. این‌جا فقط کجیِ **تازهٔ** تم.
+                var before = Snapshot(win);
                 vm.SelectedTheme = theme == PumpTheme.Blue ? PumpTheme.Gold : PumpTheme.Blue;
-                Frame(win, id + " · فریمِ پس از تم");
+                Frame(win, id + " · فریمِ پس از تم", before);
                 Step(win, id + " · تم عوض شد");
                 if (id is "storage" or "rasid" or "dashboard" or "safe")
                     Round14Probe.Shot(win, shots, $"{id}-{vm.SelectedTheme.Id}");
@@ -177,7 +181,20 @@ internal static class LayoutCycleProbe
     /// یک فریمِ واقعی بی هیچ چیدمانِ اضافه: ویندوز شصت بار در ثانیه می‌کشد و هر
     /// نوشتهٔ «کثیف» را — حتی در بخشِ پنهان — همان لحظه می‌کشد.
     /// </summary>
-    private static void Frame(Window win, string what)
+    /// <summary>پیش از تم: متنِ هر نوشته، و این‌که همین حالا با ترازِ خودش چیده شده یا نه.</summary>
+    private static Dictionary<TextBlock, (string Text, bool Ok)> Snapshot(Window win)
+    {
+        var map = new Dictionary<TextBlock, (string, bool)>();
+        foreach (var tb in win.GetVisualDescendants().OfType<TextBlock>())
+        {
+            var ok = LayoutField?.GetValue(tb) is TextLayout tl && ParaField?.GetValue(tl) is TextParagraphProperties pp
+                     && pp.TextAlignment == tb.TextAlignment;
+            map[tb] = (tb.Text ?? "", ok);
+        }
+        return map;
+    }
+
+    private static void Frame(Window win, string what, Dictionary<TextBlock, (string Text, bool Ok)> before)
     {
         Dispatcher.UIThread.RunJobs();
         using (win.CaptureRenderedFrame()) { }
@@ -189,6 +206,7 @@ internal static class LayoutCycleProbe
             //  نوشته‌ای که هرگز چیده نشده (پنهان از روزِ اول) با نخستین دیده شدن
             //  قاب می‌گیرد و خودش دوباره کشیده می‌شود — آن مالِ این سنجه نیست.
             if (tb.Bounds.Width <= 0) continue;
+            if (!before.TryGetValue(tb, out var b) || !b.Ok || b.Text != (tb.Text ?? "")) continue;
             if (!tb.IsEffectivelyVisible) hidden++;
             left.Add(tb.Text ?? "");
             if (Environment.GetEnvironmentVariable("LC_DEBUG") == "1" && left.Count <= 30)
