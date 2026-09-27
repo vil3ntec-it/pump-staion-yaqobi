@@ -59,7 +59,10 @@ page.on('pageerror', e => errors.push('pageerror: ' + e.message));
 page.on('console', m => {
   //  ⚠️ ۴۰۱ و ۴۰۴ی شبکه خطای جاوااسکریپت نیستند — خودِ همین سنجه یک
   //  ورودِ **عمداً** غلط می‌زند و مرورگر ۴۰۱ را در کنسول می‌نویسد.
-  if (m.type() === 'error' && !/ERR_CERT|401|404/.test(m.text())) errors.push('console: ' + m.text());
+  //  ⚠️ و سرورِ خانگیِ ساختگی (‎wss://home.example‎) عمداً وجود ندارد: روی
+  //  رانرِ گیت‌هاب مرورگر ‎net::ERR_NAME_NOT_RESOLVED‎ را در کنسول می‌نویسد.
+  //  آن خطای شبکه است، نه خطای جاوااسکریپت — `pageerror` هنوز همه را می‌گیرد.
+  if (m.type() === 'error' && !/ERR_CERT|401|404|net::ERR_/.test(m.text())) errors.push('console: ' + m.text());
 });
 
 // mock cloud
