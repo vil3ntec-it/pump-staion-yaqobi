@@ -141,6 +141,11 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- headrasid
 
+      # ══ تیل امانت در حالِ ساخت (رمزِ توسعه) و دوربین‌ها پنهان ══
+      - name: سنجشِ بخش‌های بسته
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- sectiongate
+
       # ══ ساعتِ ویندوز وسطِ کار جلو و عقب: تاریخ، ماه، ردیفِ تازه و اشتراک تکان نخورند ══
       # (۱۴۰۵/۰۷/۱۵ — «وقتی تاریخ رو عوض می‌کنم تمامِ سیستم به هم می‌خوره»)
       - name: سنجشِ جابه‌جاییِ ساعتِ ویندوز

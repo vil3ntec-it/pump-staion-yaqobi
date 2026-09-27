@@ -69,6 +69,10 @@ internal static class TestSettingsHome
             //  `StationPublisher.Disabled` را ببینید).
             PumpYaqobi.App.Services.StationPublisher.Disabled = true;
 
+            //  بخش‌های پنهان و در حالِ ساخت (‎SectionGate‎) در آزمون‌ها بازند؛ قاعدهٔ
+            //  خودشان در ‎SectionGateTests‎ جدا سنجیده می‌شود
+            PumpYaqobi.App.Services.SectionGate.TestOpenAll = true;
+
             //  و گزارشِ خطا هم از آزمون بیرون نمی‌رود
             PumpYaqobi.App.Services.CrashGuard.ReportingOff = true;
         }
