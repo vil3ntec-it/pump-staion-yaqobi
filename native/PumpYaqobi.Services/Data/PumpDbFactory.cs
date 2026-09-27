@@ -131,9 +131,7 @@ public sealed class PumpDbFactory
     /// </summary>
     public string DbPath { get; private set; }
 
-    public static string DefaultPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "PumpYaqobi", "pump.db");
+    public static string DefaultPath => Path.Combine(DataHome.Root, "pump.db");
 
     /// <summary>
     /// ══ رفتن به دفترِ یک حسابِ دیگر ════════════════════════════════════════

@@ -532,8 +532,9 @@ public sealed class AppSettings
 
     private static string? _dirOverride;
 
-    public static string Dir => DirOverride ?? Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PumpYaqobi");
+    //  ⛔ جای اطلاعات یک جا تصمیم گرفته می‌شود: ‎DataHome‎ (پوشهٔ ‎data‎ی خودِ
+    //  برنامه، نه درایوِ C — ۱۴۰۵/۰۷/۱۵).
+    public static string Dir => DirOverride ?? PumpYaqobi.Services.Data.DataHome.Root;
 
     private static string File_ => Path.Combine(Dir, "settings.json");
 

@@ -16,6 +16,16 @@ public static class SingleInstance
     private static System.Threading.Mutex? _mutex;
     private static System.Threading.EventWaitHandle? _wake;
     private static string? _key;
+    private static string? _other;
+
+    /// <summary>
+    /// نمونهٔ دوم پس از گذاشتنِ درخواستِ فایل (‎OpenRequest.Hand‎) نمونهٔ اول
+    /// را بیدار می‌کند — ترتیب مهم است: اول فایل، بعد بیدار.
+    /// </summary>
+    public static void WakeOther()
+    {
+        if (_other is { } k) Wake(k);
+    }
 
     private static string Key()
     {
@@ -44,7 +54,7 @@ public static class SingleInstance
                 try { got = _mutex.WaitOne(0); }
                 //  نمونهٔ قبلی بی بستنِ درست مرده بود — حالا مالِ ماست
                 catch (System.Threading.AbandonedMutexException) { got = true; }
-                if (!got) { Wake(key); return false; }
+                if (!got) { _other = key; return false; }
             }
         }
         catch { return true; /* سیستمی که قفلِ نام‌دار ندارد — برنامه باید بالا بیاید */ }
@@ -89,6 +99,7 @@ public static class SingleInstance
             {
                 try { _wake.WaitOne(); }
                 catch { return; }
+                OpenRequest.CollectInbox();
                 Avalonia.Threading.Dispatcher.UIThread.Post(ShowMain);
             }
         })

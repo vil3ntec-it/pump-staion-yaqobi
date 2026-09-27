@@ -24,7 +24,7 @@
             <StackPanel Grid.Column="2" Spacing="4">
               <TextBlock Text="رمزها و کد" Classes="card-title" />
               <TextBlock Classes="muted" TextWrapping="Wrap"
-                         Text="رمزِ خودِ برنامه را عوض کنید، و برای «مفاد / ضرر» و «زیان ناشی از افزایش قیمت» رمزِ جدا بگذارید." />
+                         Text="رمزِ برنامه و رمزِ بخش‌ها." />
             </StackPanel>
             <TextBlock Grid.Column="3" Text="‹" FontSize="24" Opacity="0.6" VerticalAlignment="Center" />
           </Grid>
@@ -39,7 +39,7 @@
             <StackPanel Grid.Column="2" Spacing="4">
               <TextBlock Text="بک‌اپ و به‌روزرسانی‌ها" Classes="card-title" />
               <TextBlock Classes="muted" TextWrapping="Wrap"
-                         Text="بکاپ‌های گرفته‌شده را ببینید و برگردانید، فایلِ بکاپ بگیرید، و برنامه را به‌روز کنید." />
+                         Text="بکاپ، بازگردانی و به‌روزرسانی." />
             </StackPanel>
             <TextBlock Grid.Column="3" Text="‹" FontSize="24" Opacity="0.6" VerticalAlignment="Center" />
           </Grid>
@@ -54,7 +54,7 @@
             <StackPanel Grid.Column="2" Spacing="4">
               <TextBlock Text="سطل زباله" Classes="card-title" />
               <TextBlock Classes="muted" TextWrapping="Wrap"
-                         Text="هر حسابی که پاک کرده‌اید پانزده روز این‌جا می‌ماند و هر وقت خواستید برمی‌گردد." />
+                         Text="پاک‌شده‌ها ۱۵ روز می‌مانند." />
             </StackPanel>
             <TextBlock Grid.Column="3" Text="‹" FontSize="24" Opacity="0.6" VerticalAlignment="Center" />
           </Grid>
@@ -69,7 +69,7 @@
             <StackPanel Grid.Column="2" Spacing="4">
               <TextBlock Text="اپِ گوشی — لینک و کد" Classes="card-title" />
               <TextBlock Classes="muted" TextWrapping="Wrap"
-                         Text="لینکِ فایلِ نصبِ اندروید، لینکِ آیفون و کدِ همین پمپ — کپی کنید یا در واتساپ برای کارمند و کارفرما بفرستید." />
+                         Text="لینکِ اندروید و آیفون، و کدِ پمپ." />
             </StackPanel>
             <TextBlock Grid.Column="3" Text="‹" FontSize="24" Opacity="0.6" VerticalAlignment="Center" />
           </Grid>
@@ -84,7 +84,7 @@
             <StackPanel Grid.Column="2" Spacing="4">
               <TextBlock Text="همگام‌سازی" Classes="card-title" />
               <TextBlock Classes="muted" TextWrapping="Wrap"
-                         Text="چه چیزی هنوز به سرورِ حساب نرفته، آخرین رفت‌وآمدِ موفق، و دکمهٔ «الان همگام کن». پشتیبانِ رمزشده و بازیابی از سرور هم همان‌جاست." />
+                         Text="حالِ همگام‌سازی با سرورِ حساب." />
             </StackPanel>
             <TextBlock Grid.Column="3" Text="‹" FontSize="24" Opacity="0.6" VerticalAlignment="Center" />
           </Grid>

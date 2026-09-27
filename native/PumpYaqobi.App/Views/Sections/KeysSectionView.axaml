@@ -69,7 +69,7 @@
           <StackPanel Margin="14" Spacing="6">
             <TextBlock Text="{Binding AccessCode}" Classes="num2" />
             <TextBlock Classes="muted" TextWrapping="Wrap"
-                       Text="کارمند این کد را در اپِ گوشی می‌زند و بعد رمزِ بالا را. عوض کردنِ خودِ کد در «پروفایل» است." />
+                       Text="کارمند این کد را در اپِ گوشی می‌زند." />
           </StackPanel>
         </StackPanel>
       </Border>

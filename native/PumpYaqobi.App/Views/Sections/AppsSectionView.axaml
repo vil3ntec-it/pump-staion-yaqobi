@@ -31,7 +31,7 @@
                       CommandParameter="{Binding AndroidLink}" />
             </StackPanel>
             <TextBlock Classes="muted" TextWrapping="Wrap"
-                       Text="همین لینک را به کارمند یا کارفرما بدهید؛ گوشی فایل را می‌گیرد و نصب می‌کند. هر بار که نسخهٔ تازه‌ای منتشر شود، همین لینک تازه‌ترین فایل است." />
+                       Text="این لینک را بفرستید؛ همیشه تازه‌ترین نسخه است." />
           </StackPanel>
         </StackPanel>
       </Border>
@@ -53,7 +53,7 @@
                       CommandParameter="{Binding IphoneLink}" />
             </StackPanel>
             <TextBlock Classes="muted" TextWrapping="Wrap"
-                       Text="آیفون فایلِ نصب ندارد: این لینک را در سافاری باز کند و «افزودن به صفحهٔ اصلی» را بزند — از آن پس مثلِ خودِ اپ باز می‌شود. روی اندروید هم اگر کسی نصب نخواست، همین لینک کار می‌کند." />
+                       Text="در سافاری باز شود ⇐ «افزودن به صفحهٔ اصلی»." />
           </StackPanel>
         </StackPanel>
       </Border>
@@ -79,7 +79,7 @@
                       IsVisible="{Binding HasCode}" />
             </StackPanel>
             <TextBlock Classes="muted" TextWrapping="Wrap"
-                       Text="هر کسی اپ را نصب می‌کند همین کد را می‌زند و فقط حساب‌های همین پمپ را می‌بیند؛ بعدش رمزِ خودِ برنامه را هم می‌خواهد. ساختن و عوض کردنِ کد در «پروفایل» است." />
+                       Text="با این کد، گوشی فقط حساب‌های همین پمپ را می‌بیند." />
             <TextBlock Text="{Binding CodeHint}" Classes="muted" TextWrapping="Wrap"
                        IsVisible="{Binding CodeHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           </StackPanel>
@@ -105,7 +105,7 @@
                       CommandParameter="{Binding BotLink}" />
             </StackPanel>
             <TextBlock Classes="muted" TextWrapping="Wrap"
-                       Text="در بات «Start» را بزنید و ایمیلِ حسابِ پمپ را بفرستید؛ یک کدِ شش‌رقمی به همان ایمیل می‌رود و با فرستادنش وصل می‌شوید. از آن پس هر وقت حسابِ قرض‌داری تمام شود یا کم بماند، یا مخزن ته بکشد، در تلگرام خبر می‌گیرید — حتی وقتی برنامه بسته است. با «👥 وصل کردنِ گروه» بات به گروهِ کارمندان هم می‌رود." />
+                       Text="«Start» ⇐ ایمیلِ حساب ⇐ کدِ ایمیل. هشدارِ قرض‌داران و مخزن در تلگرام می‌آید." />
             <TextBlock Text="{Binding BotHint}" Classes="muted" TextWrapping="Wrap"
                        IsVisible="{Binding BotHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           </StackPanel>

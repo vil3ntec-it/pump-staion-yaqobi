@@ -67,7 +67,7 @@
                        Foreground="{DynamicResource Pump.Ink.Warn}"
                        IsVisible="{Binding GraceText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                       Text="دفترِ شما هیچ‌وقت قفل نمی‌شود — قرض‌داران، ورق، مخزن، گاوصندوق، چاپ، سطلِ زباله و بک‌اپِ محلی با تمام شدنِ اشتراک هم سرِ جایشان هستند. و اگر اینترنت نبود یا سرور جواب نداد، دو هفته ارفاق هست تا هیچ‌کس با یک خرابی بی‌کار نماند." />
+                       Text="دفترِ شما هیچ‌وقت قفل نمی‌شود؛ اشتراک فقط شش بخشِ ابری را باز می‌کند." />
           </StackPanel>
         </Grid>
       </Border>
@@ -113,7 +113,7 @@
                     Command="{Binding ToggleTestCommand}" />
             <TextBlock Grid.Column="1" Classes="muted" FontSize="12" TextWrapping="Wrap"
                        Margin="12,0,0,0" VerticalAlignment="Center"
-                       Text="برای دیدنِ قفل‌ها با چشمِ خودتان. فقط می‌بندد و هیچ‌وقت باز نمی‌کند، و با بسته شدنِ برنامه خودش خاموش می‌شود." />
+                       Text="فقط برای دیدنِ قفل‌ها؛ با بستنِ برنامه خاموش می‌شود." />
           </Grid>
         </StackPanel>
       </Border>
@@ -128,7 +128,7 @@
         <StackPanel Spacing="10">
           <TextBlock Text="🔑 کدِ اشتراکِ آفلاین (بی اینترنت)" Classes="card-title" FontSize="16" />
           <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                     Text="برای کامپیوتری که اینترنت ندارد: کدِ همین کامپیوتر را برای صاحبِ سامانه بفرستید؛ او کدِ اشتراک (استاندارد، وی‌آی‌پی یا دائمی) را می‌فرستد و همین‌جا می‌زنید. روزی که اینترنت و حساب آمد، سرورِ حساب هم همان کد را می‌بیند." />
+                     Text="بی اینترنت: کدِ این کامپیوتر را بفرستید و کدِ اشتراک را این‌جا بزنید." />
 
           <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,4,0,0">
             <TextBlock Grid.Column="0" Text="کدِ این کامپیوتر:" Classes="kvl" Margin="0,0,10,0" />

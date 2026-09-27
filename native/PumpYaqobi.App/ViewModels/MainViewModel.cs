@@ -45,6 +45,7 @@ public sealed partial class MainViewModel : ObservableObject
         };
 
         Lock = new LockViewModel(AppHost.Current);
+        OpenRequest.Arrived += () => Dispatcher.UIThread.Post(() => _ = HandleOpenRequestsAsync());
 
         // ‎Ctrl+Z‎/‎Ctrl+Y‎ی کلِ برنامه — پس از برگرداندنِ یک حذف، صفحهٔ جلوی
         // چشم (و صفحهٔ بازِ درونش) از نو خوانده می‌شود. شرح: ‎Services/UndoHub.cs‎
@@ -1041,6 +1042,48 @@ public sealed partial class MainViewModel : ObservableObject
             OnPropertyChanged(n);
         //  دکمهٔ «پروفایل»ِ سربرگ همان لحظهٔ ورود درست بگوید VIP هست یا نه
         if (v == AppPhase.Ready) Account.RefreshAll();
+        //  فایلی که با دوبار-کلیک آمده، پس از ورود (‎OpenRequest‎)
+        if (v == AppPhase.Ready) Dispatcher.UIThread.Post(() => _ = HandleOpenRequestsAsync());
+        //  اطلاعات از درایوِ C به پوشهٔ برنامه آمد (‎DataHome‎) — یک بار گفته شود
+        if (v == AppPhase.Ready && PumpYaqobi.Services.Data.DataHome.TakeMoved() is { Length: > 0 })
+            AppHost.Current.Toast("📁 همهٔ اطلاعات به پوشهٔ برنامه منتقل شد: " + AppSettings.Dir, ToastKind.Ok);
+    }
+
+    // ══ دوبار-کلیک روی ‎.pumpyaqobi‎ یا ‎.pumpkey‎ (۱۴۰۵/۰۷/۱۵) ═══════════════
+    //  ⛔ هیچ کاری بی پرسش نیست: فایلِ کامل از همان درِ «آوردنِ فایلِ کامل»
+    //  می‌گذرد (سنجش ⇒ خلاصه ⇒ «بله، بیاور»)، و کدِ اشتراک از همان درِ
+    //  «انتخابِ فایل». این‌جا فقط راهِ رسیدن به همان صفحه است.
+    private bool _opening;
+
+    private async Task HandleOpenRequestsAsync()
+    {
+        if (Phase != AppPhase.Ready || _opening) return;
+        _opening = true;
+        try
+        {
+            while (OpenRequest.Take() is { } path)
+            {
+                try { await OpenFileAsync(path); }
+                catch (Exception ex) { CrashGuard.Write("باز کردنِ فایل", ex); }
+            }
+        }
+        finally { _opening = false; }
+    }
+
+    private async Task OpenFileAsync(string path)
+    {
+        var isKey = Path.GetExtension(path).Equals(OpenRequest.KeyExt, StringComparison.OrdinalIgnoreCase);
+        var subId = isKey ? "vip" : "backups";
+        var parent = Sections.FirstOrDefault(s => s.SubSections.Any(x => x.Id == subId));
+        var sub = parent?.SubSections.FirstOrDefault(x => x.Id == subId);
+        if (parent is null || sub is null) return;
+
+        await GoAsync(parent);
+        parent.ShowSub(sub);
+        if (LastSubOpen is { } opening) { try { await opening; } catch { } }
+
+        if (sub is BackupSectionViewModel b) await b.ImportFullFromAsync(path);
+        else if (sub is VipSectionViewModel v) await v.ApplyKeyFileAsync(path);
     }
 
     /// <summary>پردهٔ لودینگِ آغاز — فقط در ‎Starting‎.</summary>

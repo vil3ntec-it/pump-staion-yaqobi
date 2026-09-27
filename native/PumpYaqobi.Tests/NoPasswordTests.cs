@@ -109,18 +109,18 @@ public class NoPasswordTests : IDisposable
     }
 
     /// <summary>
-    /// ⛔ «برای هر کامپیوتر یک حسابِ جدید» — دفتر در پوشهٔ کاربرِ همان
-    /// کامپیوتر است، نه کنارِ فایل‌های نصب. پس نصبِ تازه روی کامپیوترِ تازه
-    /// <b>خالی</b> بالا می‌آید، و بردنِ همان پوشه یعنی بردنِ همان دفتر.
+    /// ⛔ «برای هر کامپیوتر یک حسابِ جدید» — نصبِ تازه <b>خالی</b> بالا می‌آید.
+    /// از ۱۴۰۵/۰۷/۱۵ دفترِ برنامهٔ نصب‌شده در ‎&lt;پوشهٔ برنامه&gt;\data‎ است (خواستهٔ
+    /// صاحب ریپو: «هرگز توی درایو سی نره») — آن را ‎DataHomeTests‎ می‌سنجد. این‌جا
+    /// (آزمون، نه ‎PumpYaqobi.exe‎) همان جای همیشگی می‌ماند: آزمون هیچ‌وقت کنارِ
+    /// فایل‌های خودش دفتر نمی‌سازد.
     /// </summary>
     [Fact]
-    public void Daftar_DarPusheyeKarbar_Ast_NaKenareNasab()
+    public void Daftar_BaraAzmun_KenareFileHayeAzmun_Nist()
     {
         var p = PumpDbFactory.DefaultPath;
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-
-        Assert.StartsWith(appData, p);
         Assert.EndsWith("pump.db", p);
+        Assert.Equal(PumpYaqobi.Services.Data.DataHome.Legacy, Path.GetDirectoryName(p));
         Assert.NotEqual(AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar),
                         Path.GetDirectoryName(p));
     }
