@@ -210,10 +210,15 @@ function NeedsAdminFolder(Path: String): Boolean;
 var
   P: String;
 begin
-  P := Lowercase(Path);
-  Result := (Pos(Lowercase(ExpandConstant('{commonpf}')), P) = 1)
-         or (Pos(Lowercase(ExpandConstant('{commonpf32}')), P) = 1)
-         or (Pos(Lowercase(ExpandConstant('{win}')), P) = 1);
+  P := AddBackslash(Lowercase(Path));
+  //  ⚠️ نصاب ۳۲بیتی است، پس {commonpf} همان «Program Files (x86)» است و
+  //  «C:\Program Files»ِ ویندوزِ ۶۴ را نمی‌گرفت — سنجهٔ ویزارد (۱۴۰۵/۰۷/۱۵) دید
+  //  که آن‌جا بی هیچ هشداری گذشت. {commonpf64} فقط روی ویندوزِ ۶۴ معنا دارد.
+  Result := (Pos(AddBackslash(Lowercase(ExpandConstant('{commonpf}'))), P) = 1)
+         or (Pos(AddBackslash(Lowercase(ExpandConstant('{commonpf32}'))), P) = 1)
+         or (Pos(AddBackslash(Lowercase(ExpandConstant('{win}'))), P) = 1);
+  if IsWin64 and (not Result) then
+    Result := Pos(AddBackslash(Lowercase(ExpandConstant('{commonpf64}'))), P) = 1;
 end;
 
 // ── نصبِ دوباره = به‌روزرسانی · نسخهٔ کهنه‌تر پذیرفته نمی‌شود ─────────────
