@@ -270,6 +270,11 @@ jobs:
             native/installer/PumpYaqobi.iss
           if ($LASTEXITCODE -ne 0) { throw "ساختِ نصاب شکست خورد" }
           "نصاب (۳۲ + ۶۴بیتی): {0:N1} مگابایت" -f ((Get-Item rel/PumpYaqobi-Setup.exe).Length/1MB)
+          #  ⛔ مُهرِ سلامت — **پیش از** چک‌سام‌ها، وگرنه هشِ SHA256SUMS با فایلِ منتشرشده
+          #  نمی‌خورد. ویزارد پیش از نصب همین را می‌سنجد (PumpYaqobi.iss ⇒ SealState):
+          #  کپیِ خراب‌شده روی فلش/دانلود پیش از نوشتنِ هر فایلی با پیامِ فارسی رد می‌شود.
+          & native/installer/seal.ps1 -Path rel/PumpYaqobi-Setup.exe
+          & native/installer/seal.ps1 -Path rel/PumpYaqobi-Setup.exe -Check
       - name: چک‌سام‌ها
         shell: pwsh
         run: |

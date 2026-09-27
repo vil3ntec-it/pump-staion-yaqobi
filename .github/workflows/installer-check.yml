@@ -65,6 +65,12 @@ jobs:
             & $iscc /Qp "/DAppVersion=$v" "/DSourceDir64=..\..\fake\win-x64" "/DSourceDir86=..\..\fake\win-x86" "/O$out" native/installer/PumpYaqobi.iss
             if ($LASTEXITCODE -ne 0) { throw "ساختِ نصابِ $v شکست خورد" }
           }
+          #  همان مُهرِ ساختِ انتشار (build-native.yml) — همهٔ گام‌های پایین روی نصابِ
+          #  مُهرخورده می‌دوند، پس ثابت می‌شود مُهر به خودِ نصب دست نمی‌زند.
+          foreach ($f in @('rel\PumpYaqobi-Setup.exe', 'rel-new\PumpYaqobi-Setup.exe')) {
+            & native/installer/seal.ps1 -Path $f
+            & native/installer/seal.ps1 -Path $f -Check
+          }
           Get-ChildItem rel, rel-new | ForEach-Object { "{0}  {1:N0} بایت" -f $_.FullName, $_.Length }
 
       - name: اجرای واقعیِ نصاب — ۳۲، بعد ۶۴، بعد بی‌گفتن، بعد حذف
@@ -255,9 +261,33 @@ jobs:
           if (-not $r.Finished) { Fail "پس از پوشهٔ مدیر نصب به «پایان» نرسید" }
           "✔ پوشهٔ مدیر گفته شد (رانرِ مدیر: $admin)"
 
+          # ه) همان گلایهٔ دو عکسِ صاحب ریپو: «The source file is corrupted». نصابِ سالم
+          #    مُهرش را خوانده و گذشته است (لاگِ همین اجرا)؛ حالا کپیِ همان نصاب با
+          #    **یک بایتِ عوض‌شده** — مثلِ دانلود یا فلشِ خراب — باید پیش از نوشتنِ هر
+          #    فایلی با پیامِ فارسی رد شود و هیچ چیزی روی دیسک نگذارد.
+          if (-not (Select-String -Path $log -Pattern 'PYSEAL state=1' -Quiet)) { Fail "نصابِ سالم مُهرش را نسنجید (PYSEAL state=1 در لاگ نیست)" }
+          $dC = 'D:\PumpC'
+          Remove-Item -Recurse -Force $dC -ErrorAction SilentlyContinue
+          $broken = Join-Path $env:TEMP 'PumpYaqobi-Setup-broken.exe'
+          Copy-Item $new $broken -Force
+          $bytes = [IO.File]::ReadAllBytes($broken)
+          $at = $bytes.Length - 80 - 8
+          $bytes[$at] = $bytes[$at] -bxor 0x5A
+          [IO.File]::WriteAllBytes($broken, $bytes)
+          $before = Get-ItemPropertyValue -Path $unins -Name 'Inno Setup: App Path'
+          $r = & $drive -Setup $broken -SetupArgs @('/ARCH=x64') -Dirs @($dC) -Log $log -TimeoutSec 120
+          Show 'ه' $r
+          if (-not (Select-String -Path $log -Pattern 'PYSEAL state=2' -Quiet)) { Fail "کپیِ خراب شناخته نشد (PYSEAL state=2 در لاگ نیست)" }
+          if (-not ($r.Messages | Where-Object { $_ -match 'خراب' })) { Fail "کپیِ خراب بی پیامِ فارسی گذشت: $($r.Messages -join ' | ')" }
+          if ($r.Finished) { Fail "کپیِ خراب نصب شد" }
+          if (Test-Path "$dC\PumpYaqobi.exe") { Fail "کپیِ خراب فایل روی دیسک گذاشت" }
+          if ((Get-ItemPropertyValue -Path $unins -Name 'Inno Setup: App Path') -ne $before) { Fail "کپیِ خراب ثبتِ نصب را عوض کرد" }
+          if (Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -like 'PumpYaqobi-Setup-broken*' }) { Fail "نصابِ خراب پس از پیام باز ماند" }
+          "✔ کپیِ یک‌بایت‌خراب پیش از نصب رد شد، با پیامِ فارسی، و هیچ فایلی ننشست"
+
           $uninsExe = (Get-ItemPropertyValue -Path $unins -Name UninstallString) -replace '"',''
           Start-Process -FilePath $uninsExe -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -Wait
-          Remove-Item -Recurse -Force $dA, $dB, $pf -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force $dA, $dB, $pf, $dC -ErrorAction SilentlyContinue
           if (Test-Path $unins) { Fail "حذفِ پایانی انجام نشد" }
 
       # ══ نصابِ منتشرشده، با پنجره، و باز کردنِ خودِ برنامه ═════════════════════
@@ -274,6 +304,20 @@ jobs:
           $setup = Join-Path $env:TEMP 'PumpYaqobi-Setup-real.exe'
           Invoke-WebRequest -Uri 'https://github.com/vil3ntec-it/pump-staion-yaqobi/releases/latest/download/PumpYaqobi-Setup.exe' -OutFile $setup
           "نصابِ منتشرشده: {0:N1} مگابایت" -f ((Get-Item $setup).Length/1MB)
+          #  همان خطای دو عکسِ صاحب ریپو، روی رانر: کپیِ نصابِ منتشرشده با یک بایتِ
+          #  عوض‌شده در میانهٔ داده ⇒ Inno وسطِ استخراج «The source file is corrupted»
+          #  می‌گوید. پس آن پیام یعنی **کپیِ خراب**، نه خرابیِ خودِ نصاب.
+          $bl = Join-Path $env:TEMP 'pyq-broken-real.log'
+          $bc = Join-Path $env:TEMP 'PumpYaqobi-Setup-real-broken.exe'
+          $bb = [IO.File]::ReadAllBytes($setup)
+          $bb[[int]($bb.Length / 2)] = $bb[[int]($bb.Length / 2)] -bxor 0x5A
+          [IO.File]::WriteAllBytes($bc, $bb); $bb = $null
+          $sealed = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($setup), (Get-Item $setup).Length - 8, 8) -eq 'PYSEAL01'
+          $p = Start-Process -FilePath $bc -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/ARCH=x64','/DIR=D:\PumpBroken',"/LOG=$bl") -PassThru
+          if (-not $p.WaitForExit(300000)) { Get-Process | Where-Object { $_.ProcessName -like 'PumpYaqobi-Setup-real-broken*' } | Stop-Process -Force; "⚠️ نصابِ خراب در ۵ دقیقه بیرون نیامد" }
+          "کپیِ یک‌بایت‌خراب (مُهر دارد: $sealed): کدِ بیرون آمدن $($p.ExitCode)"
+          if (Test-Path $bl) { Select-String -Path $bl -Pattern 'corrupt|PYSEAL|Exception|Abort' | Select-Object -First 8 | ForEach-Object { "   " + $_.Line } }
+          Remove-Item -Recurse -Force 'D:\PumpBroken', $bc -ErrorAction SilentlyContinue
           $data = Join-Path $env:APPDATA 'PumpYaqobi'
           Remove-Item -Recurse -Force $data -ErrorAction SilentlyContinue     # دفترِ ساختگیِ گام‌های قبل
           $log = Join-Path $env:TEMP 'pyq-real.log'
