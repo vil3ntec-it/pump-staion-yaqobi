@@ -613,8 +613,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     {
         var s = _host.Settings;
         var f = AppSettings.Load();
-        PumpName = s.GetString(SettingsService.StationName);
-        if (string.IsNullOrWhiteSpace(PumpName)) PumpName = "پمپ یعقوبی";
+        PumpName = PumpYaqobi.Application.Localization.PumpBrand.Of(s.GetString(SettingsService.StationName));
         //  آواتار: تا وارد نشده، حرفِ اولِ نامِ پمپ — نه علامتِ سوال
         if (Initial == "؟") Initial = PumpName.Trim()[..1];
         // ⚠️ خانهٔ خالی «خراب» به نظر می‌رسد — نداشتن با «—» گفته می‌شود، با
@@ -664,7 +663,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         //  و حسابی که پمپ **دارد** ولی این کامپیوتر ثبت نیست: پمپِ تازه
         //  نمی‌خواهد، ثبتِ همین کامپیوتر را می‌خواهد — با دلیلِ واقعیِ نشدن.
         NeedsBind = unbound && !NeedsPump && CloudLink.AccountHasStation == true;
-        if (NeedsPump && string.IsNullOrWhiteSpace(LoginPump) && PumpName != "پمپ یعقوبی") LoginPump = PumpName;
+        if (NeedsPump && string.IsNullOrWhiteSpace(LoginPump) && PumpName != PumpYaqobi.Application.Localization.PumpBrand.Default) LoginPump = PumpName;
         //  ⛔ بی کارت و بی دکمه: فقط یک خطِ حال (`EnsureReadyAsync` کار را می‌کند)
         LinkingNow = unbound;
         LinkingLine = CloudLink.LastBindWhy is { Length: > 0 } lb
@@ -1065,7 +1064,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     private string AutoPumpName()
     {
         var typed = (LoginPump ?? "").Trim();
-        if (typed.Length >= 2 && typed != "پمپ یعقوبی") return typed;
+        if (typed.Length >= 2 && PumpYaqobi.Application.Localization.PumpBrand.Of(typed) != PumpYaqobi.Application.Localization.PumpBrand.Default) return typed;
         var who = (AppSettings.Load().CloudName ?? "").Trim();
         return who.Length > 0 ? "پمپِ " + who : "پمپ من";
     }

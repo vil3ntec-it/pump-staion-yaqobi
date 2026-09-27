@@ -1,3 +1,4 @@
+using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
@@ -40,7 +41,7 @@ public sealed class StorageReport : ISetupDocument
 
     public void Compose(IDocumentContainer container) =>
         DocStyle.Compose(container,
-            "🛢️ پمپ یعقوبی — مخزن " + Label, "گزارش موجودی و تاریخچهٔ خریدها",
+            "🛢️ " + PumpBrand.Name + " — مخزن " + Label, "گزارش موجودی و تاریخچهٔ خریدها",
             _in.Dates, Body, landscape: true, titleColor: Color, setup: Setup);
 
     private static string R(decimal v) =>

@@ -48,7 +48,7 @@ public static class NativeNotice
                 uFlags = NIF_INFO | NIF_ICON | NIF_TIP,
                 //  آیکونِ خودِ پنجره — بی آن، اعلان در ویندوز ۱۰ دیده نمی‌شود
                 hIcon = LoadIcon(IntPtr.Zero, IDI_APPLICATION),
-                szTip = Cut("پمپ یعقوبی", 127),
+                szTip = Cut(PumpYaqobi.Application.Localization.PumpBrand.Name, 127),
                 szInfoTitle = Cut(title, 63),
                 szInfo = Cut(body, 255),
                 dwInfoFlags = NIIF_INFO,

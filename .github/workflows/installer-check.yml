@@ -110,6 +110,12 @@ jobs:
           # ۴ب) نصبِ دوبارهٔ نسخهٔ تازه‌تر **بی /DIR** ⇒ همان نصب را پیدا و به‌روز می‌کند
           #     (خواستهٔ ۱۴۰۵/۰۷/۱۵: «اگر بود همان را آپدیت کند… جدیدها را قبول کند»)
           $newer = (Resolve-Path rel-new\PumpYaqobi-Setup.exe).Path
+          #  میان‌برهای نامِ کهنه («پمپ یعقوبی»، پیش از ۱۴۰۵/۰۷/۱۵) — باید بروند
+          $desk = [Environment]::GetFolderPath('Desktop')
+          $progs = [Environment]::GetFolderPath('Programs')
+          Set-Content -Path (Join-Path $desk 'پمپ یعقوبی.lnk') -Value 'old'
+          New-Item -ItemType Directory -Force -Path (Join-Path $progs 'پمپ یعقوبی') | Out-Null
+          Set-Content -Path (Join-Path $progs 'پمپ یعقوبی\پمپ یعقوبی.lnk') -Value 'old'
           $p = Start-Process -FilePath $newer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/LOG=$log") -Wait -PassThru
           if ($p.ExitCode -ne 0) { Fail "نصابِ تازه‌تر با کدِ $($p.ExitCode) بیرون آمد" }
           if ((Get-Content "$dir\ver.txt" -Raw) -ne '0.0.2') { Fail "نسخهٔ تازه در پوشهٔ نصبِ پیشین ننشست" }
@@ -118,6 +124,11 @@ jobs:
           $dirs = @(Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' | Where-Object { $_.PSChildName -like '*8E86F349*' })
           if ($dirs.Count -ne 1) { Fail "به‌جای به‌روزرسانی، نصبِ دوم ساخته شد ($($dirs.Count))" }
           "✔ نسخهٔ تازه‌تر همان نصب را پیدا کرد و در همان پوشه به‌روز کرد"
+          if (Test-Path (Join-Path $desk 'پمپ یعقوبی.lnk')) { Fail "میان‌برِ کهنهٔ «پمپ یعقوبی» روی دسکتاپ ماند" }
+          if (Test-Path (Join-Path $progs 'پمپ یعقوبی')) { Fail "گروهِ کهنهٔ «پمپ یعقوبی» در منوی شروع ماند" }
+          if (-not (Test-Path (Join-Path $desk 'پمپ بنزین.lnk'))) { Fail "میان‌برِ «پمپ بنزین» روی دسکتاپ نیامد" }
+          if ((Get-ItemPropertyValue -Path $unins -Name DisplayName) -ne 'پمپ بنزین') { Fail "نامِ برنامه در ویندوز «پمپ بنزین» نشد" }
+          "✔ نامِ برنامه «پمپ بنزین» شد و میان‌برهای «پمپ یعقوبی» رفتند"
 
           # ۴ج) نسخهٔ **کهنه‌تر** ⇒ رد می‌شود، کدِ ناصفر، و هیچ چیزی عوض نمی‌شود
           $p = Start-Process -FilePath $setup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/LOG=$log") -Wait -PassThru

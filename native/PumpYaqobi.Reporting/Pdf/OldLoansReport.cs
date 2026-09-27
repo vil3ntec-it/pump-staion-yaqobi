@@ -1,3 +1,4 @@
+using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
@@ -37,7 +38,7 @@ public sealed class OldLoansReport : ISetupDocument
 
     public void Compose(IDocumentContainer container) =>
         DocStyle.Compose(container,
-            (IsMixed ? "📋" : IsMoney ? "💵" : "⏰") + " پمپ یعقوبی — قرض‌های کهنهٔ "
+            (IsMixed ? "📋" : IsMoney ? "💵" : "⏰") + " " + PumpBrand.Name + " — قرض‌های کهنهٔ "
             + (IsMixed ? "همه" : IsMoney ? "پول (واحد پول)" : "تیل (واحد تیل)"),
             "به ترتیبِ «چند روز است هیچ ردیف تازه‌ای ندارند» — بی‌حرکت‌ها اول",
             _in.Dates, Body, titleColor: IsMixed ? DocStyle.Title : Color, setup: Setup);

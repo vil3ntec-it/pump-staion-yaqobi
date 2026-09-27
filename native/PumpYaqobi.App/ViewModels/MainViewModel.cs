@@ -37,6 +37,12 @@ public sealed partial class MainViewModel : ObservableObject
     public MainViewModel(AppSettings? settings = null)
     {
         _settings = settings ?? AppSettings.Load();
+        //  نامِ پمپ که عوض شد (ساختنِ حساب، پروفایل، بازگردانی) ⇒ سربرگ و عنوانِ پنجره همان لحظه
+        PumpBrand.Changed += () =>
+        {
+            if (Dispatcher.UIThread.CheckAccess()) OnPropertyChanged(nameof(BrandName));
+            else Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(BrandName)));
+        };
 
         Lock = new LockViewModel(AppHost.Current);
 
@@ -889,7 +895,7 @@ public sealed partial class MainViewModel : ObservableObject
         StationPublisher.CloudSoon();
         NoticeText = "📣 " + n.Title + (n.Body.Length > 0 ? " — " + n.Body : "");
         AppHost.Current.Toast(NoticeText, ToastKind.Info);
-        NativeNotice.Show(n.Title.Length > 0 ? n.Title : "پمپ یعقوبی", n.Body, WindowHandle);
+        NativeNotice.Show(n.Title.Length > 0 ? n.Title : PumpBrand.Name, n.Body, WindowHandle);
     }
 
     /// <summary>
@@ -1065,6 +1071,12 @@ public sealed partial class MainViewModel : ObservableObject
     /// پیشرو. (نامِ ماه از ۱۴۰۵/۰۷/۱۳ هست: «نامِ ماه نیست».)
     /// </summary>
     public string TodayText => HeaderDate(DateTime.Now);
+
+    /// <summary>
+    /// نامِ برنامه در سربرگ، عنوانِ پنجره و پرده‌ها — نامِ پمپی که کاربر نوشته،
+    /// وگرنه «پمپ بنزین» (‎PumpBrand‎، ۱۴۰۵/۰۷/۱۵).
+    /// </summary>
+    public string BrandName => PumpBrand.Name;
 
     public static string HeaderDate(DateTime now)
     {
@@ -1592,6 +1604,8 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     public async Task ReloadAllAsync()
     {
+        //  ⛔ دفتر عوض شد (بازگردانی / فایلِ کامل) ⇒ تنظیمات و نامِ پمپ هم از دفترِ تازه
+        try { AppHost.Current.RefreshBrand(); } catch { }
         // زیربخش‌ها هم بخش‌اند و دادهٔ خودشان را دارند — اگر این‌جا از قلم
         // بیفتند، «قرض‌های کهنه» بعد از بازگردانیِ بکاپ عددِ دیتابیسِ قبلی را
         // نشان می‌دهد.

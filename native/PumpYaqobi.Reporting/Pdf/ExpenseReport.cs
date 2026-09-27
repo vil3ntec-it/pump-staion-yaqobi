@@ -1,3 +1,4 @@
+using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Domain.Entities;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
@@ -29,7 +30,7 @@ public sealed class ExpenseReport : ISetupDocument
 
     public void Compose(IDocumentContainer container) =>
         DocStyle.Compose(container,
-            "💸 پمپ یعقوبی — مصارف ماه " + _in.MonthLabel, null, _in.Dates, Body,
+            "💸 " + PumpBrand.Name + " — مصارف ماه " + _in.MonthLabel, null, _in.Dates, Body,
             titleColor: DocStyle.Danger, setup: Setup);
 
     private void Body(IContainer c) => c.Column(col =>

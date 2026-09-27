@@ -63,7 +63,7 @@ public static class FullBackup
     /// <summary>نامِ پیشنهادی: «پمپ-یعقوبی-۱۴۰۵-۰۷-۱۵.pumpyaqobi».</summary>
     public static string SuggestedFileName(string? pumpName = null)
     {
-        var name = string.IsNullOrWhiteSpace(pumpName) ? "پمپ یعقوبی" : pumpName.Trim();
+        var name = string.IsNullOrWhiteSpace(pumpName) ? "پمپ-بنزین" : pumpName.Trim();
         //  ⚠️ نویسه‌های ممنوعِ **ویندوز**، نه فقط سیستمِ همین لحظه — فایل روی فلش
         //  به کامپیوترِ دیگر می‌رود.
         foreach (var c in Path.GetInvalidFileNameChars().Concat("<>:\"/\\|?*")) name = name.Replace(c, ' ');

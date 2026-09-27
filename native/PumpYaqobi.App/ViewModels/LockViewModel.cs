@@ -30,7 +30,7 @@ public sealed partial class LockViewModel : ObservableObject
     [ObservableProperty] private string _error = "";
     [ObservableProperty] private bool _busy;
 
-    public string Title => "پمپ یعقوبی";
+    public string Title => PumpYaqobi.Application.Localization.PumpBrand.Name;
     public string ActionText => "ورود";
 
     /// <summary>

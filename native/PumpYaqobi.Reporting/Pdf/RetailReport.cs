@@ -1,3 +1,4 @@
+using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
@@ -33,7 +34,7 @@ public sealed class RetailReport : ISetupDocument
     public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
 
     public void Compose(IDocumentContainer container) =>
-        DocStyle.Compose(container, "🧾 پمپ یعقوبی — حساب‌های چکنه " + _in.MonthLabel,
+        DocStyle.Compose(container, "🧾 " + PumpBrand.Name + " — حساب‌های چکنه " + _in.MonthLabel,
                          null, _in.Dates, Body, titleColor: Purple, setup: Setup);
 
     private static string R(decimal v) =>

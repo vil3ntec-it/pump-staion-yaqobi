@@ -1,3 +1,4 @@
+using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
@@ -36,7 +37,7 @@ public sealed class CompanyPurchasesReport : ISetupDocument
     private static string Ton(decimal v) => PersianText.Num(Math.Round(v, 3), 3);
 
     public void Compose(IDocumentContainer container) =>
-        DocStyle.Compose(container, "📦 پمپ یعقوبی — " + _in.Title, null, _in.Dates, Body,
+        DocStyle.Compose(container, "📦 " + PumpBrand.Name + " — " + _in.Title, null, _in.Dates, Body,
                          landscape: true, titleColor: Head, setup: Setup);
 
     private void Body(IContainer c) => c.Column(col =>

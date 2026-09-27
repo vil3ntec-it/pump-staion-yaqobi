@@ -32,6 +32,9 @@ public sealed class AppHost
         Permissions = new PermissionService(Session);
         Auth = new AuthService(Db, Session);
         Settings = new SettingsService(Db, Permissions);
+        //  ⛔ نامِ برنامه = نامِ پمپِ کاربر (‎PumpBrand‎، ۱۴۰۵/۰۷/۱۵) — همین حالا و با هر نوشتنش
+        SettingsService.Written += (k, v) => { if (k == SettingsService.StationName) PumpBrand.Set(v); };
+        RefreshBrand();
         Locks = new SectionLockService(Settings);
         SectionNotes = new SectionNoteService(Db, Permissions);
         Debt = new DebtCalculationService(Settings);
@@ -234,10 +237,26 @@ public sealed class AppHost
             finally { try { sync?.Hold(false); } catch { /* رفاه */ } }
         }
 
+        //  ⛔ دفترِ دیگر ⇒ تنظیماتِ همان دفتر (نرخ، نامِ پمپ، …) — کَشِ دفترِ قبلی
+        //  تا بستنِ برنامه می‌ماند و نامِ پمپِ حسابِ قبلی روی سربرگِ حسابِ تازه بود
+        RefreshBrand();
         //  دفترِ دیگر ⇒ ‎Ctrl+Z‎ نباید قلمِ سطلِ دفترِ قبلی را برگرداند
         UndoHub.Clear();
         LedgerSwitched?.Invoke();
         return true;
+    }
+
+    /// <summary>
+    /// تنظیمات دوباره از دیسک و نامِ برنامه از نامِ پمپِ همان دفتر — پس از
+    /// عوض شدنِ دفتر، بازگردانیِ بکاپ و آوردنِ «فایلِ کامل». ⛔ کَشِ تنظیمات
+    /// پیش از این هیچ‌وقت باطل نمی‌شد و تا بستنِ برنامه عددهای دفترِ قبلی
+    /// (نرخِ اتحادیه، نامِ پمپ، …) را می‌داد.
+    /// </summary>
+    public void RefreshBrand()
+    {
+        Settings.Invalidate();
+        try { PumpBrand.Set(Settings.GetString(SettingsService.StationName)); }
+        catch { PumpBrand.Set(null); }
     }
 
     /// <summary>پیامِ کوتاهِ پایینِ صفحه — همان showToastِ نسخهٔ وب.</summary>

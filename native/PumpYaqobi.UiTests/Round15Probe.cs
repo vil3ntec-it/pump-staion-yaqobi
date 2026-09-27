@@ -52,6 +52,28 @@ internal static class Round15Probe
         return _bad == 0 ? 0 : 1;
     }
 
+    // ══ ۱ب) نامِ برنامه: «پمپ بنزین»، و پس از نوشتنِ نامِ پمپ همان نام (۱۴۰۵/۰۷/۱۵) ══
+    private static void Brand(Window win, MainViewModel vm)
+    {
+        var host = AppHost.Current;
+        TextBlock? Title() => win.GetVisualDescendants().OfType<TextBlock>()
+            .FirstOrDefault(t => t.FontSize == 21 && t.Text == vm.BrandName);
+        Check("نصبِ تازه: «پمپ بنزین» در سربرگ و عنوانِ پنجره", vm.BrandName == "پمپ بنزین"
+              && Title() is not null && win.Title == "پمپ بنزین", vm.BrandName + " · " + win.Title);
+        Check("«پمپ یعقوبی» هیچ‌جای پنجره نیست",
+              !win.GetVisualDescendants().OfType<TextBlock>().Any(t => (t.Text ?? "").Contains("پمپ یعقوبی")));
+        //  همان کاری که «ساختنِ حساب» با نامِ پمپ می‌کند
+        host.Settings.Set(PumpYaqobi.Services.Data.SettingsService.StationName, "پمپ بنزینِ کریمی");
+        Round14Probe.Settle(win);
+        Check("نامی که کاربر نوشت همان لحظه در سربرگ و عنوانِ پنجره", vm.BrandName == "پمپ بنزینِ کریمی"
+              && Title() is not null && win.Title == "پمپ بنزینِ کریمی", vm.BrandName + " · " + win.Title);
+        Check("و در قفل و گزارش‌ها هم همان نام", vm.Lock.Title == "پمپ بنزینِ کریمی"
+              && PumpYaqobi.Application.Localization.PumpBrand.Name == "پمپ بنزینِ کریمی");
+        host.Settings.Set(PumpYaqobi.Services.Data.SettingsService.StationName, "");
+        Round14Probe.Settle(win);
+        Check("نامِ پاک‌شده ⇒ دوباره «پمپ بنزین»", vm.BrandName == "پمپ بنزین" && win.Title == "پمپ بنزین");
+    }
+
     // ══ ۱الف) یک کلیدِ کپسولی برای هر دو تم (عکسِ مرجعِ صاحب ریپو، ۱۴۰۵/۰۷/۱۵) ══
     //  «هر دو توی یک کادر»: روی روشن ⇒ نارنجی، خورشید، گوی راست؛ روی تیره ⇒
     //  بنفش، ماه، گوی چپ. زدنِ واقعیِ کلید هر دو سو را می‌رود، پهنا ثابت
@@ -116,6 +138,7 @@ internal static class Round15Probe
     {
         Console.WriteLine();
         Console.WriteLine("════ ۱) سربرگ ════");
+        Brand(win, vm);
         Switch(win, vm, shots);
         Check("کشوییِ تم دیگر در سربرگ نیست",
               !win.GetVisualDescendants().OfType<ComboBox>().Any(c => c.ItemsSource == vm.Themes));

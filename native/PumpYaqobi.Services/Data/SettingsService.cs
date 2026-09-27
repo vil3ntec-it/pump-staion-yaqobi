@@ -88,7 +88,14 @@ public sealed class SettingsService : IUnionRateProvider
         else row.Value = value;
         db.SaveChanges();
         Invalidate();
+        Written?.Invoke(key, value);
     }
+
+    /// <summary>
+    /// پس از هر <see cref="Set"/> (کلید، مقدار) — تا چیزی که از یک تنظیم ساخته
+    /// می‌شود (نامِ برنامه از ‎stationName‎) همان لحظه عوض شود، هر کس نوشته باشد.
+    /// </summary>
+    public static event Action<string, string?>? Written;
 
     /// <summary>
     /// ردیفِ یک کلید را از دیتابیس <b>برمی‌دارد</b> — فقط برای پاک‌سازیِ

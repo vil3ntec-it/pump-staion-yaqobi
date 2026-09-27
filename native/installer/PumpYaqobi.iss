@@ -45,7 +45,11 @@
 ;     ویندوز. یعنی به‌روزرسانی هیچ‌وقت معماری را عوض نمی‌کند.
 ;  ⛔ روی ویندوزِ ۳۲بیتی همیشه ۳۲بیتی — گزینهٔ ۶۴ بسته است و بی‌صدا هم ۶۴
 ;     نمی‌نشیند، چون آن فایل آن‌جا اجرا نمی‌شود.
-#define AppName "پمپ یعقوبی"
+; نامِ برنامه در ویندوز (۱۴۰۵/۰۷/۱۵، خواستهٔ صاحب ریپو: «اسمش پمپ یعقوبی نباشد، پمپ
+; بنزین خالی»). ⚠️ فقط نامِ دیدنی عوض شد: AppGuid، PumpYaqobi.exe و پوشه‌ها همان‌اند،
+; پس به‌روزرسانی همان نصب را پیدا می‌کند و دفتر دست نمی‌خورد.
+#define AppName "پمپ بنزین"
+#define OldName "پمپ یعقوبی"
 #define AppGuid "{{8E86F349-343C-4FFB-983E-BBDDC5390081}"
 #define InstallFolder "PumpYaqobi"
 #define OutName "PumpYaqobi-Setup"
@@ -74,6 +78,8 @@ PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 DefaultDirName={localappdata}\Programs\{#InstallFolder}
 DefaultGroupName={#AppName}
+; ⚠️ گروهِ پیشین «پمپ یعقوبی» بود — نامِ تازه، و گروهِ کهنه پایین در [InstallDelete] می‌رود
+UsePreviousGroup=no
 DisableProgramGroupPage=yes
 ; صفحهٔ «انتخابِ پوشه» باز است — خواستهٔ صاحب ریپو: «بشه انتخاب کرد که کجا
 ; فایل‌ها رو ببرم بزارم موقع نصب». پیش‌فرض همان بالاست و اگر جای دیگری
@@ -144,6 +150,10 @@ Source: "{#SourceDir64}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdir
 Source: "{#SourceDir86}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: WantX86
 
 [InstallDelete]
+; نامِ کهنهٔ برنامه (۱۴۰۵/۰۷/۱۵): میان‌برهای «پمپ یعقوبی» برداشته می‌شوند تا کنارِ
+; «پمپ بنزین» دو آیکون نماند. ⛔ فقط همین میان‌برها — هیچ فایلِ داده‌ای.
+Type: files; Name: "{autodesktop}\{#OldName}.lnk"
+Type: filesandordirs; Name: "{autoprograms}\{#OldName}"
 ; عوض شدنِ معماری: پوشهٔ VLCِ معماریِ دیگر برداشته می‌شود (فایل‌های دیگر
 ; هم‌نام‌اند و روی هم نوشته می‌شوند). ⛔ هیچ چیزِ دیگری از {app} پاک نمی‌شود —
 ; کاربر می‌تواند پوشهٔ دلخواه انتخاب کرده باشد.

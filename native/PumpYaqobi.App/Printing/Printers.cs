@@ -159,7 +159,7 @@ public static class Printers
             var doc = new DOCINFO
             {
                 cbSize = Marshal.SizeOf<DOCINFO>(),
-                lpszDocName = string.IsNullOrWhiteSpace(title) ? "پمپ یعقوبی" : title,
+                lpszDocName = string.IsNullOrWhiteSpace(title) ? PumpYaqobi.Application.Localization.PumpBrand.Name : title,
             };
             if (StartDoc(hdc, ref doc) <= 0)
             {

@@ -6,7 +6,7 @@
         xmlns:c="using:PumpYaqobi.App.Controls"
         x:Class="PumpYaqobi.App.Views.MainWindow"
         x:DataType="vm:MainViewModel"
-        Title="پمپ یعقوبی"
+        Title="{Binding BrandName}"
         Icon="avares://PumpYaqobi/Assets/logo.png"
         Width="1440" Height="900" MinWidth="1000" MinHeight="640"
         FlowDirection="RightToLeft">
@@ -196,7 +196,7 @@
           <Border Width="30" Height="30" CornerRadius="8" ClipToBounds="True" VerticalAlignment="Center">
             <Image Source="avares://PumpYaqobi/Assets/logo-mark.png" Stretch="UniformToFill" />
           </Border>
-          <TextBlock Text="پمپ یعقوبی" FontSize="21" FontWeight="Black"
+          <TextBlock Text="{Binding BrandName}" FontSize="21" FontWeight="Black" MaxWidth="260" TextTrimming="CharacterEllipsis"
                      Foreground="{DynamicResource Pump.HeaderTitle}" VerticalAlignment="Center" />
           <!-- ● چراغِ سرور — خواستهٔ صاحب ریپو: «بغلِ اسمِ پمپ یعقوبی یک نقطه
                که سبز یا سرخ شود و دلیلش را بگوید؛ نام و نشانیِ سرور نوشته
@@ -612,7 +612,7 @@
                  Stretch="UniformToFill" />
         </Border>
 
-        <TextBlock Text="پمپ یعقوبی" HorizontalAlignment="Center"
+        <TextBlock Text="{Binding BrandName}" HorizontalAlignment="Center"
                    FontSize="22" FontWeight="ExtraBold"
                    Foreground="{DynamicResource Pump.Ink.Accent}" />
 

@@ -20,7 +20,10 @@ namespace PumpYaqobi.App.Update;
 public static class OfflineInstaller
 {
     /// <summary>همان ‎AppName‎ِ نصاب — ‎VersionInfoProductName‎ پیش‌فرضش همین است.</summary>
-    public const string ProductName = "پمپ یعقوبی";
+    public const string ProductName = "پمپ بنزین";
+
+    /// <summary>نامِ نصاب‌های پیش از ۱۴۰۵/۰۷/۱۵ — آن‌ها هم نصابِ همین برنامه‌اند (کهنه‌تر، پس رد می‌شوند).</summary>
+    public const string OldProductName = "پمپ یعقوبی";
 
     public enum Verdict { Newer, Same, Older, NotOurs, Unreadable }
 
@@ -35,9 +38,10 @@ public static class OfflineInstaller
     /// </summary>
     public static Decision Decide(string? productName, string? fileVersion, string current)
     {
-        if (!string.Equals(productName?.Trim(), ProductName, StringComparison.Ordinal))
+        var pn = productName?.Trim();
+        if (!string.Equals(pn, ProductName, StringComparison.Ordinal) && !string.Equals(pn, OldProductName, StringComparison.Ordinal))
             return new(Verdict.NotOurs, "",
-                "این فایل، فایلِ نصبِ برنامهٔ پمپ یعقوبی نیست — اجرا نشد");
+                "این فایل، فایلِ نصبِ همین برنامه نیست — اجرا نشد");
 
         var ver = Normalize(fileVersion);
         if (ver is null)

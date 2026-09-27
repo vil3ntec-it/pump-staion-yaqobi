@@ -259,7 +259,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         var pump = PumpName();
         var target = await Dialogs.SaveFileAsync("فایلِ کاملِ برنامه کجا ذخیره شود؟ (مثلاً فلش)",
                                                  FullBackup.SuggestedFileName(pump),
-                                                 "فایلِ کاملِ پمپ یعقوبی", new[] { "*" + FullBackup.Extension });
+                                                 "فایلِ کاملِ برنامه", new[] { "*" + FullBackup.Extension });
         if (target is null) return;
         if (!target.EndsWith(FullBackup.Extension, StringComparison.OrdinalIgnoreCase)) target += FullBackup.Extension;
 
@@ -304,7 +304,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
     private async Task ImportFullAsync()
     {
         var path = await Dialogs.PickFileAsync("فایلِ کاملِ برنامه را انتخاب کنید",
-                                               "فایلِ کاملِ پمپ یعقوبی", new[] { "*" + FullBackup.Extension });
+                                               "فایلِ کاملِ برنامه", new[] { "*" + FullBackup.Extension });
         if (path is null) return;
 
         Busy = true;
@@ -465,7 +465,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
     private async Task InstallFromFileAsync()
     {
         var path = await Dialogs.PickFileAsync("فایلِ نصبِ نسخهٔ تازه را انتخاب کنید (PumpYaqobi-Setup.exe)",
-                                               "فایلِ نصبِ پمپ یعقوبی", new[] { "*.exe" });
+                                               "فایلِ نصبِ برنامه", new[] { "*.exe" });
         if (path is null) return;
 
         var d = OfflineInstaller.Inspect(path, AppVersion.Current);
