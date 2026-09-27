@@ -7419,5 +7419,5 @@ dotnet run --project PumpYaqobi.UiTests -c Release -- oldacct live.json <پوش�
   (`libgcc_s_*` · `DiaSymReader.Native.*` · `mscordaccore_*`). بی‌ضرر بودند (در
   `deps.json`ِ معماریِ دیگر نیستند) ولی حالا `[InstallDelete]` برشان می‌دارد.
   ⛔ هیچ حذفِ بی‌قیدی در `{app}` — `Soviche_32_64_…` در `InstallerTests`.
-- `installer-check.yml` روی ویندوزِ واقعی: همان سه فایل پس از رفتن به ۶۴ رفته‌اند و
+- `installer-check.yml` روی ویندوزِ واقعی، **هر دو جهت** (۳۲ ⇒ ۶۴ ⇒ ۳۲ ⇒ ۶۴): فایل‌های ویژهٔ معماریِ دیگر رفته‌اند، یک ثبتِ حذف، و
   `pump.db`ِ کاربر پس از سوییچ بایت‌به‌بایت همان است.
