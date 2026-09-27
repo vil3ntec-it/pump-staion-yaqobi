@@ -20,7 +20,8 @@ public sealed partial class ClockViewModel : ObservableObject
     public ObservableCollection<int> Years { get; } = new();
     public IReadOnlyList<string> Months { get; } = Shamsi.MonthNames;
     public ObservableCollection<int> Days { get; } = new();
-    public IReadOnlyList<string> Hours { get; } = Enumerable.Range(0, 24).Select(h => h.ToString("00")).ToList();
+    //  ⛔ دوازده‌ساعته (خواستهٔ ۱۴۰۵/۰۷/۱۵)؛ شاخص همان ۰ تا ۲۳ است، پس «ثبت» دست نخورد
+    public IReadOnlyList<string> Hours { get; } = Enumerable.Range(0, 24).Select(Localization.Clock.HourLabel).ToList();
     public IReadOnlyList<string> Minutes { get; } = Enumerable.Range(0, 60).Select(m => m.ToString("00")).ToList();
 
     [ObservableProperty] private int _year;
@@ -49,18 +50,18 @@ public sealed partial class ClockViewModel : ObservableObject
     }
 
     /// <summary>ساعتِ کنونیِ کامپیوتر، با همان شکلِ سربرگ.</summary>
-    public void Tick(DateTime now) => NowText = MainViewModel.HeaderDate(now) + " · " + now.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+    public void Tick(DateTime now) => NowText = MainViewModel.HeaderDate(now) + " · " + Localization.Clock.Of(now, seconds: true);
 
     /// <summary>همان لحظه‌ای که روی پنجره چیده شده — به وقتِ محلی.</summary>
     public DateTime Picked => Cal.ToDateTime(Year, MonthIndex + 1, Math.Min(Day, Cal.GetDaysInMonth(Year, MonthIndex + 1)),
                                              HourIndex, MinuteIndex, 0, 0);
 
-    /// <summary>پیش‌نمایشِ همان چیزی که ثبت خواهد شد — «یک‌شنبه، 5 میزان 1405 · 09:30».</summary>
+    /// <summary>پیش‌نمایشِ همان چیزی که ثبت خواهد شد — «یک‌شنبه میزان 1405.7.5 · 09:30 AM».</summary>
     public string PickedText
     {
         get
         {
-            try { return MainViewModel.HeaderDate(Picked) + " · " + Hours[HourIndex] + ":" + Minutes[MinuteIndex]; }
+            try { return MainViewModel.HeaderDate(Picked) + " · " + Localization.Clock.Of(Picked); }
             catch { return ""; }
         }
     }

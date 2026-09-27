@@ -341,7 +341,7 @@
                         Stretch="Uniform" Width="34" Height="34"
                         HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
-                <TextBlock Text="پمپ یعقوبی" FontSize="19" FontWeight="Black"
+                <TextBlock Text="{Binding PumpName}" FontSize="19" FontWeight="Black"
                            HorizontalAlignment="Center" Margin="0,12,0,3" />
                 <TextBlock Text="حسابِ شما، اشتراکِ شما، دفترِ شما — روی سرورِ خودتان"
                            FontSize="12" Foreground="#93a7d6" TextAlignment="Center"
@@ -638,7 +638,7 @@
                          همین‌جا برداشته شد و برنمی‌گردد — و از ۱۴۰۵/۰۷/۱۵ از
                          پروفایل هم: اشتراک فقط از سرور به حساب می‌رسد. -->
                     <TextBlock Text="نامِ پمپ" Classes="lbl" />
-                    <TextBox Text="{Binding LoginPump}" Watermark="مثلاً پمپ یعقوبی">
+                    <TextBox Text="{Binding LoginPump}" Watermark="مثلاً پمپ بنزینِ مرکزی">
                       <TextBox.KeyBindings>
                         <KeyBinding Gesture="Enter" Command="{Binding FinishPumpCommand}" />
                       </TextBox.KeyBindings>

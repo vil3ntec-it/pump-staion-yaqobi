@@ -1,3 +1,4 @@
+using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using QuestPDF.Fluent;
@@ -39,7 +40,7 @@ public sealed class StaffShortReport : ISetupDocument
     private static string Pos(decimal v) => v > 0m ? R(v) : "—";
 
     public void Compose(IDocumentContainer container) =>
-        DocStyle.Compose(container, "👷 پمپ یعقوبی — کمبودی و اضافیِ کارمندان",
+        DocStyle.Compose(container, "👷 " + PumpBrand.Name + " — کمبودی و اضافیِ کارمندان",
                          "از ورق‌های روزانه حساب می‌شود؛ تسویه‌ها فقط از باقی‌مانده کم می‌کنند",
                          _in.Dates, Body, titleColor: Head, setup: Setup);
 

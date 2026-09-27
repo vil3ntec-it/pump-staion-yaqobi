@@ -1,3 +1,4 @@
+using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
@@ -33,7 +34,7 @@ public sealed class MonthEndReport : ISetupDocument
     public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
 
     public void Compose(IDocumentContainer container) =>
-        DocStyle.Compose(container, "🛢️ پمپ یعقوبی — گزارش پایان ماه",
+        DocStyle.Compose(container, "🛢️ " + PumpBrand.Name + " — گزارش پایان ماه",
                          _in.MonthLabel, _in.Dates, Body, setup: Setup);
 
     private static string R(decimal v) =>

@@ -37,6 +37,12 @@ public sealed partial class MainViewModel : ObservableObject
     public MainViewModel(AppSettings? settings = null)
     {
         _settings = settings ?? AppSettings.Load();
+        //  نامِ پمپ که عوض شد (ساختنِ حساب، پروفایل، بازگردانی) ⇒ سربرگ و عنوانِ پنجره همان لحظه
+        PumpBrand.Changed += () =>
+        {
+            if (Dispatcher.UIThread.CheckAccess()) OnPropertyChanged(nameof(BrandName));
+            else Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(BrandName)));
+        };
 
         Lock = new LockViewModel(AppHost.Current);
 
@@ -889,7 +895,7 @@ public sealed partial class MainViewModel : ObservableObject
         StationPublisher.CloudSoon();
         NoticeText = "📣 " + n.Title + (n.Body.Length > 0 ? " — " + n.Body : "");
         AppHost.Current.Toast(NoticeText, ToastKind.Info);
-        NativeNotice.Show(n.Title.Length > 0 ? n.Title : "پمپ یعقوبی", n.Body, WindowHandle);
+        NativeNotice.Show(n.Title.Length > 0 ? n.Title : PumpBrand.Name, n.Body, WindowHandle);
     }
 
     /// <summary>
@@ -1059,21 +1065,29 @@ public sealed partial class MainViewModel : ObservableObject
     public bool IsShellVisible => true;
 
     /// <summary>
-    /// تاریخِ شمسیِ امروز — «پنج‌شنبه، ۲ میزان ۱۴۰۵».
-    /// ⛔ نامِ ماه کنارِ روز (خواستهٔ صاحب ریپو، ۱۴۰۵/۰۷/۱۳: «نامِ ماه نیست»).
+    /// تاریخِ شمسیِ امروز — «یک‌شنبه سنبله 1405.6.5».
+    /// ⛔ شکلش خواستهٔ صریحِ صاحب ریپو است (۱۴۰۵/۰۷/۱۵: «یکشنبه سنبله 1405.6.5
+    /// این مدلی باشه»): روزِ هفته، نامِ ماه، و سال.ماه.روز با نقطه و بی صفرِ
+    /// پیشرو. (نامِ ماه از ۱۴۰۵/۰۷/۱۳ هست: «نامِ ماه نیست».)
     /// </summary>
     public string TodayText => HeaderDate(DateTime.Now);
+
+    /// <summary>
+    /// نامِ برنامه در سربرگ، عنوانِ پنجره و پرده‌ها — نامِ پمپی که کاربر نوشته،
+    /// وگرنه «پمپ بنزین» (‎PumpBrand‎، ۱۴۰۵/۰۷/۱۵).
+    /// </summary>
+    public string BrandName => PumpBrand.Name;
 
     public static string HeaderDate(DateTime now)
     {
         var p = Shamsi.Of(now).Split('/');
         var text = p.Length == 3 && int.TryParse(p[1], out var m) && int.TryParse(p[2], out var d)
-            ? Shamsi.DayName(now) + "، " + d + " " + Shamsi.MonthName(m) + " " + p[0]
+            ? Shamsi.DayName(now) + " " + Shamsi.MonthName(m) + " " + p[0] + "." + m + "." + d
             : Shamsi.DayName(now) + "، " + Shamsi.Of(now);
         //  ⛔ داخلِ یک «جزیرهٔ راست‌به‌چپ» (‎U+2067 … U+2069‎) — گزارشِ صاحب ریپو
         //  (۱۴۰۵/۰۷/۱۵): «تو زدی ۱۴۰۵.سنبله.۱». عددها و واژه‌ها در یک پاراگرافِ
         //  چپ‌به‌راست به ترتیبِ دیداری وارونه می‌نشینند (سال اول، روزِ هفته آخر)؛
-        //  جزیره ترتیبِ خودِ این جمله را همیشه «روزِ هفته، روز ماه سال» نگه
+        //  جزیره ترتیبِ خودِ این جمله را همیشه «روزِ هفته، ماه، سال.ماه.روز» نگه
         //  می‌دارد، هر جا که نوشته شود.
         return "\u2067" + text + "\u2069";
     }
@@ -1101,6 +1115,19 @@ public sealed partial class MainViewModel : ObservableObject
     {
         get => SelectedTheme.IsDark;
         set { if (value && !SelectedTheme.IsDark) SelectedTheme = PumpTheme.Gold; }
+    }
+
+    /// <summary>
+    /// ══ کلیدِ یگانهٔ تم در سربرگ (۱۴۰۵/۰۷/۱۵، دومین خواستهٔ همان روز) ══
+    /// «دارک مود و لایت مود هر دو توی یک کادر باشند» — یک کلید که هر دو سو
+    /// را می‌رود: خاموش = روشن (کپسولِ نارنجی)، روشن = تیره (کپسولِ بنفش).
+    /// همان ‎SelectedTheme‎؛ تنها فرقش با دو درِ بالا این است که «نادرست» هم
+    /// معنا دارد (برگشت به روشن).
+    /// </summary>
+    public bool DarkSwitch
+    {
+        get => SelectedTheme.IsDark;
+        set { if (value != SelectedTheme.IsDark) SelectedTheme = value ? PumpTheme.Gold : PumpTheme.Blue; }
     }
 
     /// <summary>
@@ -1200,6 +1227,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsLightTheme));
         OnPropertyChanged(nameof(IsDarkTheme));
+        OnPropertyChanged(nameof(DarkSwitch));
         ThemeManager.Apply(value);
         _settings.ThemeId = value.Id;
         //  تعویضِ تم خودش یک خبرِ بزرگ به کلِ درخت است (~۴۰۰ms با پنج سال
@@ -1517,6 +1545,52 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(RowHost));
     }
 
+    // ══ «فایلِ کاملِ برنامه» — تنظیماتِ قابلِ بردن (۱۴۰۵/۰۷/۱۵) ════════════
+    //  شرح و فهرستِ سفید بالای ‎Services.PortableSettings‎.
+
+    /// <summary>
+    /// تنظیماتِ قابلِ بردنِ همین حالا — نوبتِ در صف (تمی که همین لحظه عوض شد،
+    /// ستونی که همین حالا کشیده شد) اول روی دیسک می‌نشیند.
+    /// </summary>
+    public string CapturePortableSettings()
+    {
+        AppSettings.FlushNow();
+        return PortableSettings.Capture(AppSettings.Load());
+    }
+
+    /// <summary>
+    /// تنظیماتِ فایل روی دیسک می‌نشیند و <b>همان لحظه</b> روی برنامه: تم، ترتیبِ
+    /// نوار، ظاهرِ جدول‌ها، اندازهٔ نوشته‌ها و ماشین‌حساب. پهنای ستون و تنظیمِ
+    /// ورق با نخستین باز شدنِ همان جدول/پنجرهٔ چاپ خوانده می‌شوند.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ نمونهٔ ماندگارِ همین پنجره (<c>_settings</c>) هم به‌روز می‌شود — وگرنه
+    /// نخستین <c>SaveSoon</c>ِ بعدی تم و ترتیبِ نوارِ کهنه را برمی‌گرداند.
+    /// </remarks>
+    public IReadOnlyList<string> ApplyPortableSettings(string? json)
+    {
+        AppSettings.FlushNow();                 // نوبتِ کهنه بعداً روی تنظیماتِ آورده ننشیند
+        var disk = AppSettings.Load();
+        var done = PortableSettings.ApplyTo(json, disk);
+        if (done.Count == 0) return done;
+        disk.Save();
+        PortableSettings.ApplyTo(json, _settings);
+
+        var theme = PumpTheme.ById(_settings.ThemeId);
+        if (theme.Id != SelectedTheme.Id) SelectedTheme = theme;
+        OnPropertyChanged(nameof(NavSections));
+
+        Calculator.Width = Math.Clamp(_settings.CalcWidth, CalculatorViewModel.MinW, CalculatorViewModel.MaxW);
+        Calculator.Height = Math.Clamp(_settings.CalcHeight, CalculatorViewModel.MinH, CalculatorViewModel.MaxH);
+        Calculator.IsLarge = _settings.CalcLarge;
+
+        try { TableStyle.Apply(disk); } catch { }
+        SectionViewModel.ForgetFontScales();
+        foreach (var s in Sections.Concat(Sections.SelectMany(x => x.SubSections))) s.ReloadFontScale();
+        NoteFontViewModel.Instance.Scale = disk.NoteFontScale;
+        return done;
+    }
+
     /// <summary>
     /// ══ خواندنِ دوبارهٔ همهٔ بخش‌ها ═══════════════════════════════════════════
     /// بعد از کاری که کلِ دیتابیس را عوض می‌کند — بازگردانیِ بکاپ، آوردنِ دادهٔ
@@ -1530,6 +1604,8 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     public async Task ReloadAllAsync()
     {
+        //  ⛔ دفتر عوض شد (بازگردانی / فایلِ کامل) ⇒ تنظیمات و نامِ پمپ هم از دفترِ تازه
+        try { AppHost.Current.RefreshBrand(); } catch { }
         // زیربخش‌ها هم بخش‌اند و دادهٔ خودشان را دارند — اگر این‌جا از قلم
         // بیفتند، «قرض‌های کهنه» بعد از بازگردانیِ بکاپ عددِ دیتابیسِ قبلی را
         // نشان می‌دهد.

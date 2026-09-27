@@ -155,7 +155,7 @@ public static class GoogleSignIn
         var note = ok ? "می‌توانید این صفحه را ببندید و به برنامه برگردید."
                       : "به برنامه برگردید و دوباره امتحان کنید.";
         var html = "<!doctype html><html lang=\"fa\" dir=\"rtl\"><meta charset=\"utf-8\">"
-                 + "<title>پمپ یعقوبی</title><body style=\"margin:0;display:grid;place-items:center;"
+                 + "<title>پمپ بنزین</title><body style=\"margin:0;display:grid;place-items:center;"
                  + "height:100vh;font:16px system-ui,Segoe UI,sans-serif;background:#0f172a;color:#e2e8f0\">"
                  + $"<div style=\"text-align:center\"><h1 style=\"margin:0 0 8px\">{msg}</h1>"
                  + $"<p style=\"margin:0;opacity:.7\">{note}</p></div></body></html>";

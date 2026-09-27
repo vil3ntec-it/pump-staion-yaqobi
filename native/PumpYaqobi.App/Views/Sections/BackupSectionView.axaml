@@ -50,6 +50,56 @@
         </StackPanel>
       </Border>
 
+      <!-- ══ فایلِ کاملِ برنامه — همه‌چیز در یک فایل، برای فلش (۱۴۰۵/۰۷/۱۵) ══
+           «مثلِ اکسل که تمامِ اطلاعات را دارد و یارو خیلی آسان می‌تواند توی
+           فلش ببرد.» شکل و سنجش‌ها: ‎Services.Data.FullBackup‎. -->
+      <Border Classes="panel" Padding="0">
+        <StackPanel>
+          <Border Classes="card-head">
+            <TextBlock Text="📦 فایلِ کاملِ برنامه — برای فلش یا کامپیوترِ دیگر" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Ink.Accent}" />
+          </Border>
+          <StackPanel Margin="14" Spacing="10">
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="همهٔ حساب‌ها و دفترها، به‌علاوهٔ تم، ترتیبِ نوار، پهنای ستون‌ها، اندازهٔ نوشته‌ها و تنظیمِ چاپ — همه در یک فایلِ «.pumpyaqobi». هیچ رمزِ سرور یا توکنی داخلش نیست." />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="accent" Content="📦 ساختنِ فایلِ کامل"
+                      Command="{Binding ExportFullCommand}" IsEnabled="{Binding !Busy}" />
+              <Button Classes="ghost danger" Content="📂 آوردنِ فایلِ کامل"
+                      Command="{Binding ImportFullCommand}"
+                      IsVisible="{Binding CanRestore}" IsEnabled="{Binding !Busy}" />
+            </StackPanel>
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="⚠️ آوردن، اطلاعاتِ این کامپیوتر را با فایل جایگزین می‌کند. پیش از آن فایل کامل سنجیده می‌شود (اگر ناقص یا دست‌خورده باشد هیچ چیزی عوض نمی‌شود)، از حالِ فعلی عکسِ ایمنی گرفته می‌شود، و پس از آوردن شمارِ ردیفِ هر جدول با خودِ فایل دوباره شمرده می‌شود." />
+            <TextBlock Text="{Binding FullStatus}" TextWrapping="Wrap" FontWeight="Bold"
+                       Foreground="{Binding FullStatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
+                       IsVisible="{Binding FullStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- ══ بکاپ روی سرور — همین حالا، به دستِ خودِ کاربر (۱۴۰۵/۰۷/۱۵) ══ -->
+      <Border Classes="panel" Padding="0">
+        <StackPanel>
+          <Border Classes="card-head">
+            <TextBlock Text="📤 فرستادنِ بکاپ به سرور" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Ink.Accent}" />
+          </Border>
+          <StackPanel Margin="14" Spacing="10">
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="برنامه خودش هر شش ساعت بکاپ را به سرورِ خانگی و سرورِ حساب می‌فرستد. با این دکمه همین حالا هم می‌رود." />
+            <Button Classes="accent" Content="📤 فرستادنِ بکاپ به سرور — همین حالا"
+                    Command="{Binding SendToServerCommand}" IsEnabled="{Binding !SendingToServer}"
+                    HorizontalAlignment="Right" />
+            <ProgressBar IsIndeterminate="{Binding SendingToServer}" Height="5"
+                         IsVisible="{Binding SendingToServer}" />
+            <TextBlock Text="{Binding ServerStatus}" TextWrapping="Wrap" FontWeight="Bold"
+                       Foreground="{Binding ServerStatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
+                       IsVisible="{Binding ServerStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
       <!-- ══ بقیهٔ بکاپ‌ها — کشویی ═══════════════════════════════════════
            ⚠️ جدولِ داخلِ کادرِ بسته نامرئی است و ‎ExcelGrid‎ ردیف‌هایش را پارک
            می‌کند. با یک ‎ItemsControl‎ ساده، همهٔ ردیف‌ها تا ابد زنده می‌ماندند
@@ -134,6 +184,17 @@
               <Button Classes="ghost" Content="باز کردنِ صفحهٔ دانلود"
                       Command="{Binding OpenDownloadPageCommand}" />
             </StackPanel>
+
+            <!-- بی اینترنت: فایلِ نصبِ تازه از فلش (۱۴۰۵/۰۷/۱۵) — کهنه‌تر رد می‌شود -->
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="ghost" Content="💿 نصبِ نسخهٔ تازه از فایل (بی اینترنت)"
+                      Command="{Binding InstallFromFileCommand}" />
+            </StackPanel>
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="فایلِ PumpYaqobi-Setup.exe را از فلش بدهید. فقط نسخهٔ تازه‌تر پذیرفته می‌شود و همین برنامه به‌روز می‌شود — حساب‌ها و تنظیمات دست نمی‌خورند. همان فایل را اگر مستقیم باز کنید هم خودش برنامهٔ نصب‌شده را پیدا و به‌روز می‌کند." />
+            <TextBlock Text="{Binding OfflineStatus}" TextWrapping="Wrap" FontWeight="Bold"
+                       Foreground="{Binding OfflineStatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
+                       IsVisible="{Binding OfflineStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           </StackPanel>
         </StackPanel>
       </Border>

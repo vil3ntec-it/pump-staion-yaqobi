@@ -1,3 +1,4 @@
+using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
@@ -62,7 +63,7 @@ public sealed class DebtorStatementReport : ISetupDocument
 
     public void Compose(IDocumentContainer container)
     {
-        var title = "⛽ پمپ یعقوبی — " + _in.AccountTitle;
+        var title = "⛽ " + PumpBrand.Name + " — " + _in.AccountTitle;
         var sub = "حساب قرض‌دار — واحد " + (_in.IsMoneyLedger ? "پول" : "تیل")
                   + _in.Filter switch
                   {

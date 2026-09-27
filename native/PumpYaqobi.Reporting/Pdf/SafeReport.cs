@@ -1,3 +1,4 @@
+using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using QuestPDF.Fluent;
@@ -35,7 +36,7 @@ public sealed class SafeReport : ISetupDocument
 
     public void Compose(IDocumentContainer container) =>
         DocStyle.Compose(container,
-            "🏦 پمپ یعقوبی — گاوصندوق " + _in.MonthLabel, null, _in.Dates, Body,
+            "🏦 " + PumpBrand.Name + " — گاوصندوق " + _in.MonthLabel, null, _in.Dates, Body,
             titleColor: Blue, setup: Setup);
 
     /// <summary>«12,000 افغانی» و «$ 300 دالر» — هر ارز یک خط، هیچ‌کدام صفرِ الکی.</summary>

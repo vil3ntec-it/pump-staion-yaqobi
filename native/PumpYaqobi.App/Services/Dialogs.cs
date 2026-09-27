@@ -27,6 +27,14 @@ public static class Dialogs
     public static Func<string, string, string?>? PromptHook;
     public static Func<string, string, bool>? ConfirmHook;
 
+    /// <summary>
+    /// همان قاعده برای پنجرهٔ انتخاب/ذخیرهٔ فایل (عنوان ⇒ مسیر) — سنجشِ
+    /// «فایلِ کاملِ برنامه» (‎UiTests -- fullbackup‎) از دکمه تا دیسک واقعاً
+    /// می‌دود. در برنامهٔ کاربر ‎null‎.
+    /// </summary>
+    public static Func<string, string?>? PickFileHook;
+    public static Func<string, string?>? SaveFileHook;
+
     private static Window? Owner =>
         Avalonia.Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime d
             ? d.MainWindow : null;
@@ -69,6 +77,7 @@ public static class Dialogs
     /// </summary>
     public static async Task<string?> PickFileAsync(string title, string kind, string[] patterns)
     {
+        if (PickFileHook is { } hook) return hook(title);
         var owner = Owner;
         if (owner is null) return null;
         return await Dispatcher.UIThread.InvokeAsync(async () =>
@@ -97,6 +106,7 @@ public static class Dialogs
     public static async Task<string?> SaveFileAsync(string title, string suggestedName,
                                                     string kind, string[] patterns)
     {
+        if (SaveFileHook is { } hook) return hook(title);
         var owner = Owner;
         if (owner is null) return null;
         return await Dispatcher.UIThread.InvokeAsync(async () =>

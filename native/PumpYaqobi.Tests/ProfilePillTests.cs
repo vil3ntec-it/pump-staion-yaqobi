@@ -26,8 +26,8 @@ public class ProfilePillTests
     public void DokmeyeProfile_BaghaleTem_Ast()
     {
         var xaml = Read("PumpYaqobi.App", "Views", "MainWindow.axaml");
-        //  تم از ۱۴۰۵/۰۷/۱۵ دو دکمهٔ رادیویی است، نه کشویی — همان جای سربرگ
-        var theme = xaml.IndexOf("IsChecked=\"{Binding IsDarkTheme}\"", StringComparison.Ordinal);
+        //  تم از ۱۴۰۵/۰۷/۱۵ یک کلیدِ کپسولی است، نه کشویی — همان جای سربرگ
+        var theme = xaml.IndexOf("IsChecked=\"{Binding DarkSwitch}\"", StringComparison.Ordinal);
         var pill = xaml.IndexOf("Classes=\"pill-btn profile\"", StringComparison.Ordinal);
         Assert.True(theme > 0, "دکمه‌های تم در سربرگ نیستند");
         Assert.DoesNotContain("ItemsSource=\"{Binding Themes}\"", xaml);
@@ -163,7 +163,8 @@ public class ProfilePillTests
         //  ریپو). آن‌چه این بند نگه می‌داشت عوض نشده: چراغ درست بعدِ نامِ
         //  پمپ است و دلیلش فقط در ToolTip می‌آید، بی هیچ نشانی.
         var xaml = Read("PumpYaqobi.App", "Views", "MainWindow.axaml");
-        var title = xaml.IndexOf("Text=\"پمپ یعقوبی\"", StringComparison.Ordinal);
+        //  نامِ پمپ از ۱۴۰۵/۰۷/۱۵ همان نامی است که کاربر نوشته (‎BrandName‎)
+        var title = xaml.IndexOf("Text=\"{Binding BrandName}\" FontSize=\"21\"", StringComparison.Ordinal);
         var dot = xaml.IndexOf("Binding LinkDotBrushKey", StringComparison.Ordinal);
         Assert.True(title > 0 && dot > title, "چراغ باید درست بعد از نامِ پمپ بیاید");
         Assert.Contains("ToolTip.Tip=\"{Binding LinkDotReason}\"", xaml);

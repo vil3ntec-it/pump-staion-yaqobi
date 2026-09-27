@@ -170,6 +170,9 @@ public enum InvoicePane { Form, Pending, Approved, All, Detail }
 /// </summary>
 public sealed partial class InvoiceSectionViewModel : SectionViewModel
 {
+    /// <summary>سرِ برگهٔ فاکتور — «فاکتور» + نامِ پمپِ کاربر (‎PumpBrand‎، ۱۴۰۵/۰۷/۱۵).</summary>
+    public string BrandInvoiceTitle => "فاکتور " + PumpYaqobi.Application.Localization.PumpBrand.Name;
+
     private readonly AppHost _host;
 
     public InvoiceSectionViewModel(AppHost host) : base("invoices", "invoices", "ثبت فاکتورها")

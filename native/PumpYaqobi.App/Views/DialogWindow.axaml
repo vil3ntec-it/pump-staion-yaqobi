@@ -5,7 +5,7 @@
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         FlowDirection="RightToLeft"
         Background="{DynamicResource Pump.Card}"
-        Title="پمپ یعقوبی">
+        Title="پمپ بنزین">
 
   <!-- پنجرهٔ کوچکِ «بپرس/تایید کن» — جانشینِ نیتیوِ prompt/confirm نسخهٔ وب.
        هیچ متنی این‌جا از پیش نوشته نشده؛ همه‌اش را صداکننده می‌دهد. -->

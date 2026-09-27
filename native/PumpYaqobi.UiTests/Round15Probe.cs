@@ -52,28 +52,99 @@ internal static class Round15Probe
         return _bad == 0 ? 0 : 1;
     }
 
+    // ══ ۱ب) نامِ برنامه: «پمپ بنزین»، و پس از نوشتنِ نامِ پمپ همان نام (۱۴۰۵/۰۷/۱۵) ══
+    private static void Brand(Window win, MainViewModel vm)
+    {
+        var host = AppHost.Current;
+        TextBlock? Title() => win.GetVisualDescendants().OfType<TextBlock>()
+            .FirstOrDefault(t => t.FontSize == 21 && t.Text == vm.BrandName);
+        Check("نصبِ تازه: «پمپ بنزین» در سربرگ و عنوانِ پنجره", vm.BrandName == "پمپ بنزین"
+              && Title() is not null && win.Title == "پمپ بنزین", vm.BrandName + " · " + win.Title);
+        Check("«پمپ یعقوبی» هیچ‌جای پنجره نیست",
+              !win.GetVisualDescendants().OfType<TextBlock>().Any(t => (t.Text ?? "").Contains("پمپ یعقوبی")));
+        //  همان کاری که «ساختنِ حساب» با نامِ پمپ می‌کند
+        host.Settings.Set(PumpYaqobi.Services.Data.SettingsService.StationName, "پمپ بنزینِ کریمی");
+        Round14Probe.Settle(win);
+        Check("نامی که کاربر نوشت همان لحظه در سربرگ و عنوانِ پنجره", vm.BrandName == "پمپ بنزینِ کریمی"
+              && Title() is not null && win.Title == "پمپ بنزینِ کریمی", vm.BrandName + " · " + win.Title);
+        Check("و در قفل و گزارش‌ها هم همان نام", vm.Lock.Title == "پمپ بنزینِ کریمی"
+              && PumpYaqobi.Application.Localization.PumpBrand.Name == "پمپ بنزینِ کریمی");
+        host.Settings.Set(PumpYaqobi.Services.Data.SettingsService.StationName, "");
+        Round14Probe.Settle(win);
+        Check("نامِ پاک‌شده ⇒ دوباره «پمپ بنزین»", vm.BrandName == "پمپ بنزین" && win.Title == "پمپ بنزین");
+    }
+
+    // ══ ۱الف) یک کلیدِ کپسولی برای هر دو تم (عکسِ مرجعِ صاحب ریپو، ۱۴۰۵/۰۷/۱۵) ══
+    //  «هر دو توی یک کادر»: روی روشن ⇒ نارنجی، خورشید، گوی راست؛ روی تیره ⇒
+    //  بنفش، ماه، گوی چپ. زدنِ واقعیِ کلید هر دو سو را می‌رود، پهنا ثابت
+    //  می‌ماند (سربرگ جابه‌جا نمی‌شود) و نوشته کامل جا می‌شود.
+    private static void Switch(Window win, MainViewModel vm, string shots)
+    {
+        var sw = win.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.ToggleButton>()
+                    .Where(t => t.Classes.Contains("themeswitch")).ToList();
+        Check("یک کلیدِ تم در سربرگ (نه دو دکمه، نه کشویی)", sw.Count == 1
+              && !win.GetVisualDescendants().OfType<RadioButton>().Any(r => r.GroupName == "pump-theme"), sw.Count + " کلید");
+        if (sw.Count != 1) return;
+        var t = sw[0];
+        var start = vm.SelectedTheme;
+        Rect Screen(Visual v)
+        {
+            var a = v.TranslatePoint(new Point(0, 0), win)!.Value;
+            var b = v.TranslatePoint(new Point(v.Bounds.Width, v.Bounds.Height), win)!.Value;
+            return new Rect(new Point(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y)), new Point(Math.Max(a.X, b.X), Math.Max(a.Y, b.Y)));
+        }
+        Rect? firstBox = null;
+        foreach (var dark in new[] { false, true })
+        {
+            //  زدنِ خودِ کلید (همان کاری که کلیکِ کاربر با ‎IsChecked‎ می‌کند)
+            if (vm.SelectedTheme.IsDark != dark) { t.IsChecked = dark; Round14Probe.Settle(win); }
+            var tag = dark ? "تیره" : "روشن";
+            Check($"[{tag}] کلید و تم یکی‌اند", t.IsChecked == dark && vm.SelectedTheme.IsDark == dark, vm.SelectedTheme.Id);
+            var pill = t.GetVisualDescendants().OfType<Border>().First(b => b.Name == "PART_Pill");
+            Check($"[{tag}] رنگِ کپسول: {(dark ? "بنفش" : "نارنجی")}", pill.Background is Avalonia.Media.LinearGradientBrush g
+                  && g.GradientStops.Any(x => x.Color == Avalonia.Media.Color.Parse(dark ? "#7C3AED" : "#FFC107")));
+            var side = t.GetVisualDescendants().OfType<Grid>().First(x => x.Classes.Contains(dark ? "nightside" : "dayside"));
+            var other = t.GetVisualDescendants().OfType<Grid>().First(x => x.Classes.Contains(dark ? "dayside" : "nightside"));
+            Check($"[{tag}] فقط روی «{tag}» دیده می‌شود", side.IsEffectivelyVisible && !other.IsEffectivelyVisible);
+            var inner = t.GetVisualDescendants().OfType<Avalonia.Controls.Presenters.ContentPresenter>().First(c => c.Name == "SwitchContent");
+            Check($"[{tag}] وسطِ کپسول رنگِ فلوئنت نگرفته (شفاف)", inner.Background is null
+                  || inner.Background is Avalonia.Media.ISolidColorBrush { Color.A: 0 }, inner.Background?.ToString());
+            var text = side.GetVisualDescendants().OfType<TextBlock>().First(x => x.Classes.Contains("switchtext"));
+            var knob = Screen(side.GetVisualDescendants().OfType<Border>().First(b => b.Classes.Contains("knob")));
+            var tb = Screen(text);
+            Check($"[{tag}] نوشتهٔ «{text.Text}» سفید و کامل", text.Foreground is Avalonia.Media.ISolidColorBrush w
+                  && w.Color == Avalonia.Media.Colors.White && text.Bounds.Width >= text.DesiredSize.Width - 0.5, $"{text.Bounds.Width:0}/{text.DesiredSize.Width:0}");
+            Check(dark ? "[تیره] گویِ ماه سمتِ چپ" : "[روشن] گویِ خورشید سمتِ راست",
+                  dark ? knob.Right <= tb.Left + 0.5 : knob.Left >= tb.Right - 0.5, $"گوی {knob.Left:0}–{knob.Right:0} · نوشته {tb.Left:0}–{tb.Right:0}");
+            var box = Screen(t);
+            Check($"[{tag}] نوشته و گوی داخلِ کپسول", box.Contains(knob) && box.Contains(tb));
+            firstBox ??= box;
+            Check($"[{tag}] پهنا و جای کلید ثابت (سربرگ نمی‌پرد)", Math.Abs(box.X - firstBox.Value.X) < 0.5
+                  && Math.Abs(box.Width - firstBox.Value.Width) < 0.5, $"{box.X:0}×{box.Width:0}");
+            Round14Probe.Shot(win, shots, "theme-switch-" + (dark ? "dark" : "light"));
+            Console.WriteLine($"  📐 کلید: {box.X:0},{box.Y:0} {box.Width:0}×{box.Height:0}");
+        }
+        //  و برگشت با همان کلید
+        t.IsChecked = false;
+        Round14Probe.Settle(win);
+        Check("زدنِ دوباره ⇒ برگشت به روشن", !vm.SelectedTheme.IsDark && t.IsChecked == false, vm.SelectedTheme.Id);
+        vm.SelectedTheme = start;
+        Round14Probe.Settle(win);
+        Check("تمی که از جای دیگر عوض شود، کلید هم با آن می‌رود", t.IsChecked == start.IsDark);
+    }
+
     // ══ ۱) سربرگ: تم با دو دکمهٔ رادیویی، تاریخ با نامِ ماه، و ساعتِ خودِ برنامه ══
     private static void Header(Window win, MainViewModel vm, string shots)
     {
         Console.WriteLine();
         Console.WriteLine("════ ۱) سربرگ ════");
-        var radios = win.GetVisualDescendants().OfType<RadioButton>().Where(r => r.Classes.Contains("theme")).ToList();
-        Check("دو دکمهٔ رادیوییِ تم در سربرگ", radios.Count == 2, radios.Count + " دکمه");
+        Brand(win, vm);
+        Switch(win, vm, shots);
         Check("کشوییِ تم دیگر در سربرگ نیست",
               !win.GetVisualDescendants().OfType<ComboBox>().Any(c => c.ItemsSource == vm.Themes));
-        if (radios.Count == 2)
-        {
-            var before = vm.SelectedTheme;
-            var target = radios.First(r => r.IsChecked != true);
-            target.IsChecked = true;
-            Round14Probe.Settle(win);
-            Check("زدنِ دکمهٔ دیگر تم را عوض می‌کند", vm.SelectedTheme != before, before.Id + " ⇒ " + vm.SelectedTheme.Id);
-            Round14Probe.Shot(win, shots, "header-" + vm.SelectedTheme.Id);
-            vm.SelectedTheme = before;
-            Round14Probe.Settle(win);
-            Check("و برگشتن هم دکمه‌ها را درست تیک می‌زند",
-                  radios.Count(r => r.IsChecked == true) == 1 && (radios[0].IsChecked == true) == !before.IsDark);
-        }
+        var clock = win.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(t => t.Text == vm.Clock);
+        Check("ساعتِ سربرگ دوازده‌ساعته با AM/PM", clock is not null && (vm.Clock.Contains(" AM") || vm.Clock.Contains(" PM"))
+              && System.Text.RegularExpressions.Regex.IsMatch(vm.Clock, @"(0[1-9]|1[0-2]):[0-5]\d:[0-5]\d [AP]M"), vm.Clock.Trim('\u200E'));
         var today = MainViewModel.HeaderDate(DateTime.Now);
         var shown = win.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(t => t.Text == today);
         Check("تاریخِ سربرگ: روزِ هفته، روز، نامِ ماه، سال", shown is not null && today.Contains(PumpYaqobi.Application.Localization.Shamsi.MonthName(
@@ -90,7 +161,7 @@ internal static class Round15Probe
         Round14Probe.Settle(cw);
         Check("پنجرهٔ ساعت: سنبله ۳۱ روز دارد، حوت ۲۹ یا ۳۰", cvm.Days.Count == 31
               && new ClockViewModel(new DateTime(2026, 3, 1)) is var h && (h.MonthIndex = 11) == 11 && h.Days.Count is 29 or 30);
-        Check("پنجرهٔ ساعت: پیش‌نمایش نامِ ماه دارد", cvm.PickedText.Contains("سنبله") && cvm.PickedText.Contains("09:05"), cvm.PickedText);
+        Check("پنجرهٔ ساعت: پیش‌نمایش نامِ ماه دارد", cvm.PickedText.Contains("سنبله") && cvm.PickedText.Contains("09:05 AM"), cvm.PickedText);
         using (var f = cw.CaptureRenderedFrame()) f?.Save(Path.Combine(shots, "clock-window.png"));
         cvm.ApplyCommand.Execute(null);
         for (var i = 0; i < 50 && runs.Count == 0; i++) { Round14Probe.Pump(cw); Thread.Sleep(10); }

@@ -44,7 +44,7 @@
             <StackPanel Spacing="2" HorizontalAlignment="Center">
               <TextBlock Text="⛽" FontSize="30" HorizontalAlignment="Center"
                          Foreground="{DynamicResource Pump.Ink.Accent}" />
-              <TextBlock Text="فاکتور پمپ یعقوبی" FontSize="24" FontWeight="Black"
+              <TextBlock Text="{Binding BrandInvoiceTitle}" FontSize="24" FontWeight="Black"
                          HorizontalAlignment="Center"
                          Foreground="{DynamicResource Pump.Ink.Accent}" />
               <TextBlock Text="برگهٔ رسمی فروش تیل — FUEL INVOICE" Classes="muted"
@@ -471,7 +471,7 @@
           <StackPanel Spacing="2" HorizontalAlignment="Center">
             <TextBlock Text="⛽" FontSize="28" HorizontalAlignment="Center"
                        Foreground="{DynamicResource Pump.Ink.Accent}" />
-            <TextBlock Text="فاکتور پمپ یعقوبی" FontSize="24" FontWeight="Black"
+            <TextBlock Text="{Binding BrandInvoiceTitle}" FontSize="24" FontWeight="Black"
                        HorizontalAlignment="Center"
                        Foreground="{DynamicResource Pump.Ink.Accent}" />
             <TextBlock Text="برگهٔ رسمی فروش تیل — FUEL INVOICE" Classes="muted"

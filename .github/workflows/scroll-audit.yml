@@ -141,6 +141,12 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- headrasid
 
+      # ══ «فایلِ کاملِ برنامه»: ساختن ⇒ خرابی ⇒ آوردن ⇒ شمارِ هر جدول، تم و نوار ══
+      # و «فرستادن به سرور» و «نصب از فایل» با دکمه‌های واقعیِ صفحه (۱۴۰۵/۰۷/۱۵).
+      - name: سنجشِ فایلِ کاملِ برنامه
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- fullbackup
+
       # ══ ورود، کدِ ایمیلی، بند شدن و همگام‌سازی — با ابرِ ساختگیِ درون‌فرآیندی ══
       # تا ۳.۱.۱۶۴ هر دو روی `main` سرخ بودند و در CI نبودند، پس کسی نمی‌دید.
       # ریشهٔ هر دو خودِ سنجه بود (ابرِ ساختگی مسیرِ ‎device/bind‎ را نداشت؛

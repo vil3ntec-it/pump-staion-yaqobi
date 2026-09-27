@@ -1,3 +1,4 @@
+using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using QuestPDF.Fluent;
@@ -66,7 +67,7 @@ public sealed class AmanatReport : ISetupDocument
     private static string OptPct(decimal? v, int d) => v is null ? "—" : F(v.Value, d) + "٪";
 
     public void Compose(IDocumentContainer container) =>
-        DocStyle.Compose(container, "🛢️ پمپ یعقوبی — " + _in.Title, null, _in.Dates, Body,
+        DocStyle.Compose(container, "🛢️ " + PumpBrand.Name + " — " + _in.Title, null, _in.Dates, Body,
                          landscape: true, titleColor: Head, setup: Setup);
 
     private void Body(IContainer c) => c.Column(col =>

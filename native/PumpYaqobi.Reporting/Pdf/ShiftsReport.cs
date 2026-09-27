@@ -1,3 +1,4 @@
+using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
 using QuestPDF.Fluent;
@@ -60,7 +61,7 @@ public sealed class ShiftsReport : ISetupDocument
     {
         var days = ByDate();
         DocStyle.Compose(container,
-                         (_in.DieselOnly ? "🟤" : "⛽") + " پمپ یعقوبی — گزارش‌های پارچه"
+                         (_in.DieselOnly ? "🟤" : "⛽") + " " + PumpBrand.Name + " — گزارش‌های پارچه"
                          + (_in.DieselOnly ? " (دیزل)" : ""),
                          PersianText.Num(days.Count) + " روز · "
                          + PersianText.Num(_in.Reports.Count) + " گزارش",
@@ -112,7 +113,7 @@ public sealed class ShiftsReport : ISetupDocument
         {
             row.RelativeItem().Column(h =>
             {
-                h.Item().Text((_in.DieselOnly ? "🟤" : "⛽") + " پمپ یعقوبی — گزارش "
+                h.Item().Text((_in.DieselOnly ? "🟤" : "⛽") + " " + PumpBrand.Name + " — گزارش "
                               + PersianText.Num(index))
                  .FontSize(DocStyle.BoxValue).Bold().FontColor(DocStyle.Ink(head));
                 h.Item().Text("📅 " + date + "  |  " + DocStyle.Dash(first.DateMiladi)

@@ -126,6 +126,12 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         OnPropertyChanged(nameof(NoBackups));
         OnPropertyChanged(nameof(HasOlder));
         OnPropertyChanged(nameof(OlderText));
+        //  ⛔ اجازه با هر دیدار دوباره پرسیده می‌شود: پردهٔ لودینگ این صفحه را
+        //  **پیش از** ورود (پشتِ صفحهٔ قفل) می‌سازد و آن لحظه هنوز کسی وارد
+        //  نشده — پس ‎CanRestore‎ نادرست خوانده می‌شد و دکمه‌های «بازگردانی» و
+        //  «آوردنِ فایلِ کامل» برای مدیر هم تا بستنِ برنامه پنهان می‌ماندند
+        //  (سنجهٔ ‎fullbackup‎ گرفتش).
+        OnPropertyChanged(nameof(CanRestore));
         return Task.CompletedTask;
     }
 
@@ -206,6 +212,10 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             return;
 
         Busy = true;
+        //  ⛔ ردیفی که هنوز در مکثِ ذخیره است اول روی دفترِ **فعلی** بنشیند
+        //  (و با عکسِ ایمنی برود) — وگرنه پس از جایگزینی روی دفترِ تازه
+        //  می‌نشست، با شماره‌ای که آن‌جا مالِ ردیفِ دیگری است.
+        try { await SaveGuard.FlushAllAsync(); } catch { }
         RestoreOutcome outcome;
         try { outcome = await Task.Run(() => _host.Backup.Restore(path)); }
         catch (PermissionDeniedException)
@@ -225,6 +235,263 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
 
         await RefreshAsync();
         await _main.ReloadAllAsync();
+    }
+
+    // ══ «فایلِ کاملِ برنامه» — همه‌چیز در یک فایل، مثلِ اکسل (۱۴۰۵/۰۷/۱۵) ══════
+    //
+    //  خواستهٔ صاحب ریپو: «مثلِ اکسل که تمامِ اطلاعات را دارد و یارو خیلی
+    //  آسان می‌تواند اطلاعاتش را توی فلش ببرد… تمامِ حساب‌ها و تم‌ها و
+    //  تنظیمات… و اگر آن را توی برنامه آوردم، اطلاعاتِ همان فایل همه‌شان
+    //  بیاید — با دقت.» شکلِ فایل و سنجش‌هایش: ‎Services.Data.FullBackup‎.
+
+    [ObservableProperty] private string _fullStatus = "";
+    [ObservableProperty] private string _fullStatusBrushKey = "Pump.Muted";
+
+    private string PumpName()
+    {
+        try { return _host.Settings.GetString(SettingsKeys.StationName); } catch { return ""; }
+    }
+
+    /// <summary>«📦 ساختنِ فایلِ کامل» — دفتر + تم و تنظیمات، در یک فایل.</summary>
+    [RelayCommand]
+    private async Task ExportFullAsync()
+    {
+        var pump = PumpName();
+        var target = await Dialogs.SaveFileAsync("فایلِ کاملِ برنامه کجا ذخیره شود؟ (مثلاً فلش)",
+                                                 FullBackup.SuggestedFileName(pump),
+                                                 "فایلِ کاملِ برنامه", new[] { "*" + FullBackup.Extension });
+        if (target is null) return;
+        if (!target.EndsWith(FullBackup.Extension, StringComparison.OrdinalIgnoreCase)) target += FullBackup.Extension;
+
+        Busy = true;
+        FullStatus = "در حالِ ساختن و سنجیدنِ فایل…";
+        FullStatusBrushKey = "Pump.Muted";
+        try
+        {
+            //  هر نوشتهٔ در صف اول روی دفتر بنشیند — «همین حالا» یعنی همین حالا
+            try { await SaveGuard.FlushAllAsync(); } catch { }
+            var settings = _main.CapturePortableSettings();
+            var info = await Task.Run(() =>
+                FullBackup.Write(_host.Backup, target, AppVersion.Current, settings, pump));
+            FullStatus = $"✅ ساخته و سنجیده شد: {Path.GetFileName(target)}\n"
+                       + $"{Shamsi.Money(info.TotalRows)} ردیف در {Shamsi.Money(info.Tables.Count)} جدول · "
+                       + SizeText(info.FileBytes) + " · با تم و تنظیمات";
+            FullStatusBrushKey = "Pump.Ok";
+            _host.Toast("📦 فایلِ کامل ساخته شد — می‌شود روی فلش برد", ToastKind.Ok);
+        }
+        catch (PermissionDeniedException)
+        {
+            FullStatus = "";
+            _host.Toast("❌ ساختنِ فایل فقط از مدیر برمی‌آید", ToastKind.Error);
+        }
+        catch (Exception ex)
+        {
+            CrashGuard.Write("فایلِ کامل", ex);
+            FullStatus = "❌ فایل ساخته نشد: " + ErrorText.Friendly(ex);
+            FullStatusBrushKey = "Pump.Danger";
+            _host.Toast(FullStatus, ToastKind.Error);
+        }
+        finally { Busy = false; }
+    }
+
+    /// <summary>
+    /// «📂 آوردنِ فایلِ کامل» — پیش از هر نوشتنی همهٔ سنجش‌ها (قالب، نسخه،
+    /// اثرِ انگشت، سلامتِ SQLite، شمارِ هر جدول)؛ بعد پرسش با خلاصهٔ فایل؛
+    /// بعد جایگزینی با عکسِ ایمنی؛ و بعد <b>دوباره</b> شمارِ هر جدول در خودِ
+    /// برنامه با فایل. ⛔ هر مرحله‌ای نشد ⇒ هیچ چیزی عوض نمی‌شود و گفته می‌شود.
+    /// </summary>
+    [RelayCommand]
+    private async Task ImportFullAsync()
+    {
+        var path = await Dialogs.PickFileAsync("فایلِ کاملِ برنامه را انتخاب کنید",
+                                               "فایلِ کاملِ برنامه", new[] { "*" + FullBackup.Extension });
+        if (path is null) return;
+
+        Busy = true;
+        FullStatus = "در حالِ خواندن و سنجیدنِ فایل…";
+        FullStatusBrushKey = "Pump.Muted";
+        FullBackupInfo info;
+        try { info = await Task.Run(() => FullBackup.Read(path, AppVersion.Current)); }
+        finally { Busy = false; }
+
+        using (info)
+        {
+            if (!info.Ok)
+            {
+                FullStatus = "❌ " + info.Why + " — هیچ چیزی عوض نشد";
+                FullStatusBrushKey = "Pump.Danger";
+                _host.Toast(FullStatus, ToastKind.Error);
+                return;
+            }
+
+            //  ⚠️ پیش از پرسیدن، کاربر ببیند چه چیزی جای چه چیزی می‌نشیند
+            var summary = FullSummary(info);
+            if (!await Dialogs.ConfirmAsync("آوردنِ فایلِ کامل",
+                    summary + "\n\nهمهٔ اطلاعاتِ این کامپیوتر با این فایل جایگزین شود؟\n"
+                    + "پیش از این کار، از حالِ فعلی یک عکسِ ایمنی گرفته می‌شود.",
+                    "بله، بیاور"))
+            {
+                FullStatus = "";
+                return;
+            }
+
+            Busy = true;
+            FullStatus = "در حالِ آوردن…";
+            try
+            {
+                try { await SaveGuard.FlushAllAsync(); } catch { }
+                RestoreOutcome outcome;
+                try { outcome = await Task.Run(() => FullBackup.Restore(_host.Backup, info)); }
+                catch (PermissionDeniedException)
+                {
+                    FullStatus = "";
+                    _host.Toast("❌ آوردن فقط از مدیر برمی‌آید", ToastKind.Error);
+                    return;
+                }
+
+                if (outcome.SafetyCopy is not null) Status = "عکسِ ایمنیِ حالِ قبلی: " + outcome.SafetyCopy;
+                if (!outcome.Ok)
+                {
+                    FullStatus = "❌ " + outcome.Message;
+                    FullStatusBrushKey = "Pump.Danger";
+                    _host.Toast(FullStatus, ToastKind.Error);
+                    return;
+                }
+
+                //  ⛔ «آمد» یعنی شمرده شد — هر جدولِ داده در خودِ برنامه با فایل
+                var mismatch = await Task.Run(() => FullBackup.VerifyRestored(_host.Db.DbPath, info));
+
+                var applied = info.SettingsJson is null ? 0 : _main.ApplyPortableSettings(info.SettingsJson).Count;
+
+                await RefreshAsync();
+                await _main.ReloadAllAsync();
+
+                if (mismatch is not null)
+                {
+                    FullStatus = "⚠️ آمد، ولی سنجشِ پس از آوردن ناجور بود — " + mismatch
+                               + "\nعکسِ ایمنیِ حالِ قبلی: " + (outcome.SafetyCopy ?? "—");
+                    FullStatusBrushKey = "Pump.Danger";
+                    _host.Toast(FullStatus, ToastKind.Error);
+                    return;
+                }
+
+                FullStatus = $"✅ همه آمد و شمرده شد: {Shamsi.Money(info.TotalRows)} ردیف در "
+                           + $"{Shamsi.Money(info.Tables.Count)} جدول"
+                           + (applied > 0 ? " · تم و تنظیمات هم نشست" : "")
+                           + (outcome.SafetyCopy is null ? "" : "\nعکسِ ایمنیِ حالِ قبلی: " + outcome.SafetyCopy);
+                FullStatusBrushKey = "Pump.Ok";
+                _host.Toast("✅ فایلِ کامل آمد — همهٔ حساب‌ها و تنظیمات", ToastKind.Ok);
+            }
+            catch (Exception ex)
+            {
+                CrashGuard.Write("آوردنِ فایلِ کامل", ex);
+                FullStatus = "❌ آوردن انجام نشد: " + ErrorText.Friendly(ex);
+                FullStatusBrushKey = "Pump.Danger";
+                _host.Toast(FullStatus, ToastKind.Error);
+            }
+            finally { Busy = false; }
+        }
+    }
+
+    /// <summary>خلاصهٔ فایل برای پرسشِ پیش از آوردن.</summary>
+    public static string FullSummary(FullBackupInfo info)
+    {
+        var who = string.IsNullOrWhiteSpace(info.PumpName) ? "" : $"«{info.PumpName}» · ";
+        var lines = new List<string>
+        {
+            $"{who}ساخته‌شده {info.Shamsi} {info.Time} با نسخهٔ {info.AppVersion}",
+            $"قرض‌داران: {Shamsi.Money(info.Rows("Debtors"))} · ردیف‌های حساب: {Shamsi.Money(info.Rows("DebtRows"))}",
+            $"ورق‌ها: {Shamsi.Money(info.Rows("WaraqEntries"))} · گاوصندوق: {Shamsi.Money(info.Rows("SafeEntries"))} · فاکتورها: {Shamsi.Money(info.Rows("Invoices"))}",
+            $"همه: {Shamsi.Money(info.TotalRows)} ردیف در {Shamsi.Money(info.Tables.Count)} جدول"
+                + (info.SettingsJson is null ? "" : " · به‌علاوهٔ تم و تنظیمات"),
+        };
+        return string.Join("\n", lines);
+    }
+
+    private static string SizeText(long bytes) => bytes >= 1024 * 1024
+        ? $"{bytes / (1024.0 * 1024):0.0} مگابایت"
+        : $"{Math.Max(1, bytes / 1024)} کیلوبایت";
+
+    // ══ «📤 فرستادنِ بکاپ به سرور — همین حالا» (۱۴۰۵/۰۷/۱۵) ═════════════════
+    //  «یارو خودش هم اگر خواست بک‌اپ را به سرور بفرستد بتواند — الان دکمه‌ای
+    //  نداریم.» همان دورِ شش‌ساعته (‎BackupPusher‎)، همین حالا، با نشانِ «دستی».
+
+    [ObservableProperty] private string _serverStatus = "";
+    [ObservableProperty] private string _serverStatusBrushKey = "Pump.Muted";
+    [ObservableProperty] private bool _sendingToServer;
+
+    [RelayCommand]
+    private async Task SendToServerAsync()
+    {
+        if (SendingToServer) return;
+        SendingToServer = true;
+        ServerStatus = "در حالِ فرستادن…";
+        ServerStatusBrushKey = "Pump.Muted";
+        try
+        {
+            try { await SaveGuard.FlushAllAsync(); } catch { }
+            var pusher = _host.BackupToServer;
+            var ok = await pusher.RunOnceAsync(manual: true);
+            (ServerStatus, ServerStatusBrushKey) = ServerResult(ok, pusher.LastHomeOk, pusher.LastCloudOk, pusher.LastError);
+            _host.Toast(ServerStatus, ok ? ToastKind.Ok : ToastKind.Error);
+        }
+        catch (Exception ex)
+        {
+            CrashGuard.Write("فرستادنِ بکاپ", ex);
+            ServerStatus = "❌ فرستاده نشد: " + ErrorText.Friendly(ex);
+            ServerStatusBrushKey = "Pump.Danger";
+        }
+        finally { SendingToServer = false; }
+    }
+
+    /// <summary>جملهٔ نتیجه — هر مقصد جدا گفته می‌شود، راست.</summary>
+    public static (string Text, string Brush) ServerResult(bool ok, bool home, bool cloud, string why)
+    {
+        var at = DateTime.Now.ToString("HH:mm");
+        if (home && cloud) return ($"✅ ساعتِ {at} روی سرورِ خانگی و سرورِ حساب نشست", "Pump.Ok");
+        if (home) return ($"✅ ساعتِ {at} روی سرورِ خانگی نشست · سرورِ حساب نه", "Pump.Ok");
+        if (cloud) return ($"✅ ساعتِ {at} روی سرورِ حساب نشست · سرورِ خانگی نه", "Pump.Ok");
+        return ("❌ به هیچ سروری نرسید" + (string.IsNullOrWhiteSpace(why) ? "" : " — " + why)
+                + " · بکاپِ روی همین کامپیوتر سالم است", "Pump.Danger");
+    }
+
+    // ══ «💿 نصبِ نسخهٔ تازه از فایل» — بی اینترنت (۱۴۰۵/۰۷/۱۵) ═══════════════
+    //  شرح بالای ‎Update.OfflineInstaller‎.
+
+    [ObservableProperty] private string _offlineStatus = "";
+    [ObservableProperty] private string _offlineStatusBrushKey = "Pump.Muted";
+
+    [RelayCommand]
+    private async Task InstallFromFileAsync()
+    {
+        var path = await Dialogs.PickFileAsync("فایلِ نصبِ نسخهٔ تازه را انتخاب کنید (PumpYaqobi-Setup.exe)",
+                                               "فایلِ نصبِ برنامه", new[] { "*.exe" });
+        if (path is null) return;
+
+        var d = OfflineInstaller.Inspect(path, AppVersion.Current);
+        OfflineStatus = (d.CanRun ? "" : "❌ ") + d.Message;
+        OfflineStatusBrushKey = d.CanRun ? "Pump.Muted" : "Pump.Danger";
+        if (!d.CanRun) { _host.Toast(OfflineStatus, ToastKind.Error); return; }
+
+        var ask = d.Kind == OfflineInstaller.Verdict.Same
+            ? $"همین نسخه ({d.Version}) دوباره نصب شود (تعمیر)؟"
+            : $"برنامه از {AppVersion.Current} به {d.Version} به‌روز شود؟";
+        if (!await Dialogs.ConfirmAsync("نصب از فایل",
+                ask + "\nبرنامه بسته می‌شود، نصب انجام می‌شود و دوباره باز می‌شود.\n"
+                + "حساب‌ها، تم و تنظیمات دست نمی‌خورند.", "بله، نصب کن"))
+            return;
+
+        try { await SaveGuard.FlushAllAsync(); } catch { }
+        AppSettings.FlushNow();
+        if (!UpdateService.LaunchOffline(path))
+        {
+            OfflineStatus = "❌ نصاب باز نشد — شاید اجازهٔ ویندوز رد شد";
+            OfflineStatusBrushKey = "Pump.Danger";
+            return;
+        }
+        OfflineStatus = "نصاب باز شد — برنامه را برای نصب می‌بندد";
+        //  ⚠️ برنامه خودش بسته نمی‌شود: نصاب (CloseApplications) می‌پرسد و
+        //  می‌بندد. اگر کاربر ویزارد را لغو کند، برنامه سرِ جایش می‌ماند.
     }
 
     // ══ آوردنِ دادهٔ نسخهٔ وب ══════════════════════════════════════════════════

@@ -678,6 +678,15 @@ public sealed class AppSettings
         Soon();
     }
 
+    /// <summary>
+    /// پهنای ستون‌هایی که هنوز در صفِ ذخیره‌اند — «فایلِ کاملِ برنامه»
+    /// (‎PortableSettings.Capture‎) ستونی را که همین حالا کشیده شده جا نگذارد.
+    /// </summary>
+    public static IReadOnlyDictionary<string, double[]> PendingColumnWidths()
+    {
+        lock (SoonGate) return new Dictionary<string, double[]>(SoonWidths);
+    }
+
     /// <summary>اندازهٔ نوشتهٔ کادرهای یادداشت — یکی برای همهٔ بخش‌ها.</summary>
     public static void SaveNoteFontScale(double scale)
     {

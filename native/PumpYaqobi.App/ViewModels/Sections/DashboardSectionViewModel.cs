@@ -333,7 +333,7 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
 
         _debt = await BuildDebtInfoAsync();
         FootNote = (_host.Settings.GetString(PumpYaqobi.Services.Data.SettingsService.StationName)
-                    is { Length: > 0 } sn ? sn : "سامانه مدیریت پمپ یعقوبی")
+                    is { Length: > 0 } sn ? sn : "سامانهٔ مدیریتِ پمپ بنزین")
                    + " — نسخهٔ " + Update.AppVersion.Current;
         Render();
     }
