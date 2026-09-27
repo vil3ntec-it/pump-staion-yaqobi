@@ -643,5 +643,54 @@ console.log('\n— خبر به گوشیِ بسته');
   ok(!/pump-kar-v15'/.test(read('kar/sw.js')), 'شمارهٔ کشِ سرویس‌ورکر بالا رفته (app.jsِ تازه به گوشی‌ها برسد)');
 }
 
+// ══════════════════════════════════════════════════════════════════════
+//  ⛔ فقط دیدن — اپِ گوشی و صفحهٔ کیو‌آر هیچ راهی به نوشتنِ حساب ندارند
+// ══════════════════════════════════════════════════════════════════════
+//
+// خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۵): «این یک واسطه برای دیدن است فقط؛ هرچقدر
+// یارو بلد هم باشد نتواند کاری کند یا حسابی عوض شود.» هر درخواستی که این دو
+// صفحه می‌زنند این‌جا فهرست شده؛ درخواستِ تازه‌ای که به دفتر برسد سرخ می‌شود.
+console.log('\n══ فقط دیدن — هیچ راهی به نوشتنِ حساب');
+{
+  const { readFileSync } = await import('node:fs');
+  const read = (f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+  const app = read('kar/app.js'), cl = read('kar/cloud.js'), view = read('view/index.html');
+  const code = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+  const A = code(app), C = code(cl), V = code(view);
+  //  هیچ مسیری به دفتر، فایل‌های ابریِ پمپ یا کارهای دستگاه
+  for (const [n, t] of [['kar/app.js', A], ['kar/cloud.js', C], ['view/index.html', V]]) {
+    ok(!/\/api\/sync\//.test(t), n + ': هیچ درخواستی به همگام‌سازیِ دفتر (/api/sync) نیست');
+    ok(!/\/api\/pump\/files|\/api\/pump\/device\//.test(t), n + ': هیچ درخواستی به فایل‌ها یا کارهای دستگاه نیست');
+  }
+  //  نشستِ حساب فقط برای خواندنِ /api/pump/me — هیچ نوشتنی با آن
+  const authedCalls = [...C.matchAll(/authed\('([A-Z]+)',\s*'([^']+)'/g)].map(m => m[1] + ' ' + m[2]);
+  ok(authedCalls.length === 1 && authedCalls[0] === 'GET /api/pump/me',
+     'با نشستِ حساب فقط «/api/pump/me» خوانده می‌شود: ' + JSON.stringify(authedCalls));
+  ok(!/postInbox/.test(C) && !/postInbox/.test(A), 'درِ نوشتنِ صندوقِ ابری (postInbox) نیست');
+  //  ⛔ هر جا نشانیِ پمپ از حساب گرفته شد، همان لحظه نشست پاک می‌شود
+  const myStation = (A.match(/PumpCloud\.myStation\(\)/g) || []).length;
+  const drops = (A.match(/PumpCloud\.dropSession\(\)/g) || []).length;
+  ok(myStation >= 4 && drops >= myStation, 'پس از هر گرفتنِ نشانی از حساب نشست پاک می‌شود (' + drops + '/' + myStation + ')');
+  ok(/function dropSession[\s\S]{0,300}saveSession\(null\)[\s\S]{0,200}\/api\/auth\/logout/.test(C),
+     'پاک کردنِ نشست محلی است و روی سرور هم باطل می‌شود');
+  //  سوکت فقط گوش می‌دهد
+  const sends = [...A.matchAll(/\.send\(([^)]*\))/g)].map(m => m[1]);
+  ok(sends.length === 1 && /op: 'sub'/.test(sends[0]), 'سوکت فقط «sub» می‌فرستد، هیچ «set»ی نه');
+  //  فهرستِ همهٔ نوشتن‌های مستقیم: فقط گروهِ کارکنان و ثبتِ اعلان
+  const kWrites = [...A.matchAll(/method:\s*'(POST|PUT|DELETE|PATCH)'/g)].length;
+  ok(kWrites === 3 && /chatUrl\(base, cfg\.stn\)[\s\S]{0,80}method: 'POST'/.test(A)
+     && /method: 'POST'[\s\S]{0,120}subscription/.test(A) && /&endpoint='[\s\S]{0,120}method: 'DELETE'/.test(A),
+     'اپِ گوشی فقط سه نوشتن دارد — پیامِ گروهِ کارکنان، ثبت و لغوِ اعلان — هیچ‌کدام حساب نیست (' + kWrites + ')');
+  //  کیو‌آرِ مشتری: عکسِ حساب فقط خوانده می‌شود؛ نوشتن‌ها همه زیرِ «/chat»
+  const vWrites = [...V.matchAll(/fetch\((chatUrl\([^)]*\)|liveUrl\(\))\s*(,\s*\{\s*method:\s*'([A-Z]+)')?/g)]
+    .map(m => (m[3] || 'GET') + ' ' + m[1]);
+  ok(vWrites.length >= 5 && vWrites.every(w => w.startsWith('GET liveUrl') || /chatUrl/.test(w)) &&
+     vWrites.filter(w => /liveUrl/.test(w)).every(w => w.startsWith('GET')),
+     'صفحهٔ کیو‌آر حساب را فقط می‌خواند؛ نوشتن‌ها فقط پیامِ پشتیبانی‌اند: ' + JSON.stringify(vWrites));
+  ok(/'\/api\/pump\/public\/' \+ encodeURIComponent\(live\.s\)/.test(V), 'عکسِ حساب از درِ عمومیِ فقط‌خواندنی می‌آید');
+  //  و خودِ صفحه‌ها همین را می‌گویند
+  ok(/👁 فقط دیدن/.test(read('kar/index.html')) && /👁 فقط دیدن/.test(view), 'هر دو صفحه روی خودشان «👁 فقط دیدن» دارند');
+}
+
 console.log(bad ? '\n' + bad + ' آزمون شکست خورد' : '\nهمه درست');
 process.exit(bad ? 1 : 0);

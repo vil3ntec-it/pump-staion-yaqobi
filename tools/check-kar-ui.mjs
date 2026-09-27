@@ -59,10 +59,14 @@ page.on('pageerror', e => errors.push('pageerror: ' + e.message));
 page.on('console', m => {
   //  ⚠️ ۴۰۱ و ۴۰۴ی شبکه خطای جاوااسکریپت نیستند — خودِ همین سنجه یک
   //  ورودِ **عمداً** غلط می‌زند و مرورگر ۴۰۱ را در کنسول می‌نویسد.
-  if (m.type() === 'error' && !/ERR_CERT|401|404/.test(m.text())) errors.push('console: ' + m.text());
+  //  ⚠️ و سرورِ خانگیِ ساختگی (‎wss://home.example‎) عمداً وجود ندارد: روی
+  //  رانرِ گیت‌هاب مرورگر ‎net::ERR_NAME_NOT_RESOLVED‎ را در کنسول می‌نویسد.
+  //  آن خطای شبکه است، نه خطای جاوااسکریپت — `pageerror` هنوز همه را می‌گیرد.
+  if (m.type() === 'error' && !/ERR_CERT|401|404|net::ERR_/.test(m.text())) errors.push('console: ' + m.text());
 });
 
 // mock cloud
+const logoutCalls = [];
 await page.route('https://api.vill3n.top/**', async (route) => {
   const url = route.request().url();
   const body = route.request().postDataJSON?.() || {};
@@ -86,6 +90,11 @@ await page.route('https://api.vill3n.top/**', async (route) => {
     return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
       body: JSON.stringify({ accessToken: 'tok-a', refreshToken: 'tok-r', accessExpiresAt: Date.now() + 3600e3,
                              user: { id: 'u1', name: 'صاحبِ پمپ', email: 'p@example.com' } }) });
+  }
+  //  ⛔ گوشی نشستِ حساب نگه نمی‌دارد: پس از گرفتنِ نشانی، خروج روی سرور
+  if (url.endsWith('/api/auth/logout')) {
+    logoutCalls.push({ auth: route.request().headers()['authorization'] || '', body });
+    return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '{"ok":true}' });
   }
   if (url.endsWith('/api/pump/me'))
     return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
@@ -204,6 +213,13 @@ const adopted = await page.evaluate(() => {
 });
 ok(adopted.srv === 'wss://home.example' && adopted.tok === 'read-k',
    'نشانی و رمزِ فقط‌خواندنیِ سرورِ خانگی از حساب نشست');
+//  ⛔ «فقط دیدن»: هیچ نشستِ حسابی در گوشی نمی‌ماند (کلیدِ همگام‌سازیِ دفتر است)
+const sess = await page.evaluate(() => localStorage.getItem('pumpKar.cloud.v1'));
+ok(sess === null, 'پس از ورود، نشستِ حساب در گوشی نمانده: ' + sess);
+await page.waitForFunction(() => true);
+for (let i = 0; i < 20 && !logoutCalls.length; i++) await page.waitForTimeout(100);
+ok(logoutCalls.length === 1 && logoutCalls[0].auth === 'Bearer tok-a' && logoutCalls[0].body.refreshToken === 'tok-r',
+   'همان نشست روی سرور هم باطل شد (/api/auth/logout)');
 
 //  و راهِ گوگل برداشته نشده
 ok(await vis('gBtn'), 'دکمهٔ گوگل هنوز سرِ جایش است');

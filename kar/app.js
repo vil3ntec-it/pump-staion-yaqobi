@@ -286,7 +286,7 @@
     if (p.phone) kv.push(['تلفن', p.phone]);
     return {
       title: p.name + (p.noinv ? ' (بی‌فاکتور)' : ''), kv: kv,
-      table: null, note: '', person: p
+      table: null, note: '', person: p, who: p
     };
   }
 
@@ -655,6 +655,8 @@
       ['paneStaff', '🚦 تیل دارد؟'], ['paneTank', '⛽ مخزن'], ['paneChat', '💬 گروه'], ['paneBot', '🤖 ربات']
     ]
   };
+  var ALERT_PANES = ['paneDash', 'paneStaff', 'paneTank'];
+  var curPane = '';
   var ALL_PANES = ['paneHome', 'paneDash', 'paneStaff', 'paneBot', 'paneDebt', 'paneTank', 'paneSec', 'paneChat'];
 
   function loadMode() {
@@ -685,7 +687,10 @@
     var nav = $('nav');
     if (!nav) return;
     nav.innerHTML = (NAVS[mode] || []).map(function (n) {
-      return '<button data-pane="' + n[0] + '">' + n[1] + '</button>';
+      //  «🏠 خانه» ⇒ نشانه بالا، نام پایین (فقط ظاهر)
+      var sp = n[1].indexOf(' ');
+      return '<button data-pane="' + n[0] + '"><span class="i">' + n[1].slice(0, sp) + '</span>' +
+        '<span>' + n[1].slice(sp + 1) + '</span></button>';
     }).join('');
     nav.classList.toggle('hidden', !mode || !unlocked);
   }
@@ -1103,7 +1108,9 @@
   /** نشستی که از قبل هست — بی آنکه دوباره از گوگل چیزی خواسته شود. */
   function resumeCloud() {
     if (!window.PumpCloud || !PumpCloud.signedIn()) return Promise.resolve(false);
+    //  نشستِ جامانده از نسخه‌های پیشین: یک بار نشانیِ تازه، بعد پاک
     return PumpCloud.myStation().then(function (st) {
+      PumpCloud.dropSession();
       return adoptStation(st);
     }).catch(function (err) {
       //  ۴۰۱ یعنی نشست واقعاً رفته؛ هر چیز دیگری (نبودِ اینترنت) نباید
@@ -1120,12 +1127,15 @@
     PumpCloud.signInWithGoogle(resp.credential)
       .then(function () { return PumpCloud.myStation(); })
       .then(function (st) {
+        PumpCloud.dropSession();      // ⛔ گوشی نشستِ حساب نگه نمی‌دارد
+
         if (!adoptStation(st)) return;
         syncBackground();
         show('lockPane');
         connect();
       })
       .catch(function (err) {
+        PumpCloud.dropSession();      // شکستِ پس از ورود هم نشستی جا نگذارد
         signinMsg(err && err.message ? err.message : 'ورود نشد', true);
       });
   }
@@ -1148,6 +1158,7 @@
     PumpCloud.signInWithPassword(email, pass)
       .then(function () { return PumpCloud.myStation(); })
       .then(function (st) {
+        PumpCloud.dropSession();      // ⛔ گوشی نشستِ حساب نگه نمی‌دارد
         //  ⚠️ رمز در حافظهٔ صفحه هم نمی‌ماند
         if ($('inPw')) $('inPw').value = '';
         if (!adoptStation(st)) return;
@@ -1156,6 +1167,7 @@
         connect();
       })
       .catch(function (err) {
+        PumpCloud.dropSession();      // شکستِ پس از ورود هم نشستی جا نگذارد
         signinMsg(err && err.message ? err.message : 'ورود نشد', true);
       });
   }
@@ -1191,6 +1203,7 @@
       //  همان‌جا با رمزِ تازه وارد می‌شود.
       if (!s) { signinMsg('رمز عوض شد. حالا با رمزِ تازه وارد شوید.'); return; }
       return PumpCloud.myStation().then(function (st) {
+        PumpCloud.dropSession();      // ⛔ گوشی نشستِ حساب نگه نمی‌دارد
         if (!adoptStation(st)) return;
         syncBackground();
         show('lockPane');
@@ -1320,18 +1333,57 @@
 
   function tableHtml(head, rows) {
     if (!rows || !rows.length) return '<div class="sub">ردیفی نیست.</div>';
-    var h = '<div class="scroll"><table><thead><tr><th>#</th>';
+    //  ‎data-l‎ = نامِ ستون: روی گوشی هر ردیف یک کارت می‌شود و هر خانه نامِ
+    //  ستونش را کنارش دارد، پس هیچ ستونی از صفحه بیرون نمی‌زند (فقط ظاهر).
+    var h = '<div class="scroll cards"><table><thead><tr><th>#</th>';
     for (var c = 0; c < head.length; c++) h += '<th>' + esc(head[c]) + '</th>';
     h += '</tr></thead><tbody>';
     for (var r = 0; r < rows.length; r++) {
-      h += '<tr><td>' + (r + 1) + '</td>';
-      for (var k = 0; k < head.length; k++) h += '<td>' + esc((rows[r] || [])[k]) + '</td>';
+      h += '<tr><td class="rn" data-l="ردیف">' + (r + 1) + '</td>';
+      for (var k = 0; k < head.length; k++) {
+        var cell = (rows[r] || [])[k];
+        var empty = cell === undefined || cell === null || String(cell).trim() === '';
+        h += '<td data-l="' + esc(head[k]) + '"' + (k === 0 ? ' class="t0"' : empty ? ' class="e"' : '') + '>' + esc(cell) + '</td>';
+      }
       h += '</tr>';
     }
     return h + '</tbody></table></div>';
   }
 
+  /** حالِ یک قرض‌دار با یک جمله — همان سه حالِ برنامهٔ کامپیوتر. */
+  function statusWord(s) {
+    return s === 'out' ? 'تمام شده' : s === 'low' ? 'کم مانده' : s === 'ok' ? 'موجودی دارد' : 'ردیفی ندارد';
+  }
+  function statusIcon(s) { return s === 'out' ? '⛔' : s === 'low' ? '⚠️' : s === 'ok' ? '✅' : '•'; }
+
+  /** سه عددِ الباقی (پول · پطرول · دیزل) — همان عددهای عکس، بی هیچ حسابی. */
+  function balMini(b) {
+    b = b || {};
+    return [['پول', b.money, 'افغانی'], ['پطرول', b.petrol, 'لیتر'], ['دیزل', b.diesel, 'لیتر']].map(function (x) {
+      return '<div class="mini"><div class="l">' + x[0] + '</div><div class="v">' + fmt(x[1]) + '</div></div>';
+    }).join('');
+  }
+
+  /** سربرگِ یک شخص: حرفِ اول، نام، و «چه کنم» با رنگِ حالش. */
+  function whoHtml(p, title) {
+    var s = esc(p.status || 'none');
+    var say = p.status === 'out' ? '⛔ تمام شده — تیلِ اضافه ندهید'
+      : p.status === 'low' ? '⚠️ کم مانده — با احتیاط بدهید'
+      : p.status === 'ok' ? '✅ موجودی دارد' : 'هنوز ردیفی ندارد';
+    return '<div class="pwho ' + s + '"><div class="av">' + esc(String(p.name || '؟').charAt(0)) + '</div>' +
+      '<div class="grow"><div class="nm">' + esc(title) + '</div>' +
+      (p.phone ? '<div class="sub">📞 <span class="num">' + esc(p.phone) + '</span></div>' : '') + '</div></div>' +
+      '<div class="say ' + s + '">' + say + '</div>' +
+      '<div class="three" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">' + balMini(p.bal) + '</div>';
+  }
+
   function blockHtml(b) {
+    if (b.who) {
+      var w = '<div class="card ans">' + whoHtml(b.who, b.title);
+      if (b.person) w += personAccountsHtml(b.person);
+      if (b.note) w += '<div class="sub">' + esc(b.note) + '</div>';
+      return w + '</div>';
+    }
     var h = '<div class="card ans"><h2>' + esc(b.title) + '</h2>';
     for (var i = 0; i < (b.kv || []).length; i++)
       h += '<div class="kv"><span class="sub">' + esc(b.kv[i][0]) + '</span><b>' + esc(b.kv[i][1]) + '</b></div>';
@@ -1351,8 +1403,8 @@
   function personAccountsHtml(p) {
     var h = '', detail = !data || data.detail !== false;
     (p.accounts || []).forEach(function (a) {
-      h += '<div style="margin-top:10px"><h2>' +
-        esc(a.title || 'حسابِ اصلی') + ' — ' + (a.unit === 'money' ? 'واحد پول' : 'واحد تیل') + '</h2>';
+      h += '<div class="acct"><h3>' + esc(a.title || 'حسابِ اصلی') +
+        ' <span class="badge">' + (a.unit === 'money' ? '💵 واحد پول' : '⛽ واحد تیل') + '</span></h3>';
       h += '<div class="figs">';
       (a.sum || []).forEach(function (s) {
         h += '<div class="fig"><div class="l">' + esc(s[0]) + '</div><div class="v">' + esc(s[1]) + '</div></div>';
@@ -1376,7 +1428,7 @@
     box.innerHTML = bn.length
       ? bn.map(function (b) {
           return '<div class="bn ' + esc(b[2] || '') + '"><div class="l">' + esc(b[0]) + '</div>' +
-            '<div class="v">' + esc(b[1]) + ' <span class="l">افغانی</span></div></div>';
+            '<div class="v">' + esc(b[1]) + '</div><div class="u">افغانی</div></div>';
         }).join('')
       : '<div class="sub">برنامهٔ کامپیوتر باید به نسخهٔ تازه برسد تا این چهار عدد بیاید.</div>';
     $('dashTank').innerHTML = tankFigs(true);
@@ -1384,8 +1436,8 @@
     $('dashTiles').innerHTML = Object.keys(secs).map(function (id) {
       var sec = secs[id], first = (sec.sum || [])[0];
       return '<button class="tile" data-sec="' + esc(id) + '"><b>' + esc(sec.t) + '</b>' +
-        '<span class="sub">' + fmt((sec.rows || []).length) + ' ردیف' +
-        (first ? ' · ' + esc(first[0]) + ' ' + esc(first[1]) : '') + '</span></button>';
+        '<span class="sub">' + fmt((sec.rows || []).length) + ' ردیف' + (first ? ' · ' + esc(first[0]) : '') + '</span>' +
+        (first ? '<span class="v">' + esc(first[1]) + '</span>' : '') + '</button>';
     }).join('') || '<div class="sub">هنوز بخشی نرسیده.</div>';
   }
 
@@ -1402,7 +1454,7 @@
     $('staffCounts').innerHTML = [['', 'همه'], ['out', '⛔ تمام‌شده'], ['low', '⚠️ کم مانده'], ['ok', '✅ دارد']]
       .map(function (f) {
         return '<button data-f="' + f[0] + '" aria-selected="' + (staffFilter === f[0]) + '">' +
-          f[1] + ' (' + fmt(c[f[0]] || 0) + ')</button>';
+          '<b>' + fmt(c[f[0]] || 0) + '</b>' + f[1] + '</button>';
       }).join('');
 
     //  ⚠️ سرخ اول، بعد زرد، بعد سبز — ‎out‎ صفر است، پس ‎||‎ نه (صفر را ۳ می‌کرد
@@ -1420,42 +1472,34 @@
       var what = p.status === 'out' ? 'تمام شده — تیل ندهید'
         : p.status === 'low' ? 'کم مانده'
         : p.status === 'ok' ? 'موجودی دارد' : 'ردیفی ندارد';
-      var bal = [b.petrol ? 'پطرول ' + fmt(b.petrol) : '', b.diesel ? 'دیزل ' + fmt(b.diesel) : '',
-        b.money ? 'پول ' + fmt(b.money) : ''].filter(Boolean).join(' · ');
+      var bal = [['پطرول', b.petrol], ['دیزل', b.diesel], ['پول', b.money]].filter(function (x) { return x[1]; })
+        .map(function (x) { return '<span class="bal">' + x[0] + ' <b>' + fmt(x[1]) + '</b></span>'; }).join('');
       return '<button class="st-row ' + esc(p.status) + '" data-pid="' + esc(p.id) + '">' +
         '<span class="light"></span><span class="n">' + esc(p.name) + '</span>' +
-        '<span class="b">' + esc(what) + (bal ? ' · ' + esc(bal) : '') + '</span></button>';
+        '<span class="badge ' + esc(p.status) + '">' + esc(what) + '</span>' +
+        (bal ? '<span class="bals">' + bal + '</span>' : '') + '</button>';
     }).join('') || '<div class="sub">کسی پیدا نشد.</div>';
+  }
+
+  /** کارتِ هر تیل: موجودی درشت، حال، و وارد/فروش — همان عددهای عکس. */
+  function tankCard(name, x, compact) {
+    var cls = x.low ? ' bad' : (x.near ? ' warn' : '');
+    var badge = x.low ? '<span class="badge out">⛔ کم آمده</span>'
+      : x.near ? '<span class="badge low">⚠️ نزدیکِ حد</span>' : '<span class="badge ok">✅ کافی</span>';
+    return '<div class="tank' + cls + '"><div class="hd"><b>' + (name === 'پطرول' ? '🟠 ' : '🔵 ') + name + '</b>' + badge + '</div>' +
+      '<div class="sub">موجودی</div><div class="big">' + fmt(x.show) + ' <small>لیتر</small></div>' +
+      (compact ? '' : '<div class="io"><div class="mini"><div class="l">وارد</div><div class="v">' + fmt(x['in']) + '</div></div>' +
+        '<div class="mini"><div class="l">فروش</div><div class="v">' + fmt(x.out) + '</div></div></div>') + '</div>';
   }
 
   function tankFigs(compact) {
     var t = (data && data.tank) || {}, h = '';
-    [['petrol', 'پطرول'], ['diesel', 'دیزل']].forEach(function (p) {
-      var x = t[p[0]] || {};
-      var cls = x.low ? ' bad' : (x.near ? ' warn' : '');
-      h += '<div class="fig' + cls + '"><div class="l">' + p[1] + ' — موجودی</div>' +
-        '<div class="v">' + fmt(x.show) + '</div><div class="l">لیتر' +
-        (x.low ? ' · کم آمده' : (x.near ? ' · نزدیکِ حد' : '')) + '</div></div>';
-      if (!compact) {
-        h += '<div class="fig"><div class="l">' + p[1] + ' — وارد</div><div class="v">' + fmt(x['in']) + '</div></div>';
-        h += '<div class="fig"><div class="l">' + p[1] + ' — فروش</div><div class="v">' + fmt(x.out) + '</div></div>';
-      }
-    });
+    [['petrol', 'پطرول'], ['diesel', 'دیزل']].forEach(function (p) { h += tankCard(p[1], t[p[0]] || {}, compact); });
     return h || '<div class="sub">داده‌ای نیست.</div>';
   }
 
   function renderTank() {
-    var t = (data && data.tank) || {}, h = '';
-    [['petrol', 'پطرول'], ['diesel', 'دیزل']].forEach(function (p) {
-      var x = t[p[0]] || {};
-      var cls = x.low ? ' bad' : (x.near ? ' warn' : '');
-      h += '<div class="fig' + cls + '"><div class="l">' + p[1] + ' — موجودی</div>' +
-        '<div class="v">' + fmt(x.show) + '</div><div class="l">لیتر' +
-        (x.low ? ' · کم آمده' : (x.near ? ' · نزدیکِ حد' : '')) + '</div></div>';
-      h += '<div class="fig"><div class="l">' + p[1] + ' — وارد</div><div class="v">' + fmt(x['in']) + '</div></div>';
-      h += '<div class="fig"><div class="l">' + p[1] + ' — فروش</div><div class="v">' + fmt(x.out) + '</div></div>';
-    });
-    $('tankBox').innerHTML = h || '<div class="sub">داده‌ای نیست.</div>';
+    $('tankBox').innerHTML = tankFigs(false);
 
     var buys = ((data && data.sections) || {}).storage;
     $('buyBox').innerHTML = buys
@@ -1471,13 +1515,9 @@
       if (want && p.status !== want) return;
       if (q && norm(p.name).indexOf(q) < 0) return;
       h += '<button class="p-card ' + esc(p.status) + '" data-pid="' + esc(p.id) + '">' +
-        '<div class="n">' + esc(p.name) + '</div>' +
-        '<div class="sub">پول ' + fmt(p.bal && p.bal.money) +
-        ' · پطرول ' + fmt(p.bal && p.bal.petrol) +
-        ' · دیزل ' + fmt(p.bal && p.bal.diesel) + '</div>' +
-        '<span class="badge ' + esc(p.status) + '">' +
-        (p.status === 'out' ? 'تمام شده' : p.status === 'low' ? 'کم مانده'
-          : p.status === 'ok' ? 'موجودی دارد' : 'ردیف ندارد') + '</span></button>';
+        '<div class="hd"><span class="n">' + esc(p.name) + '</span>' +
+        '<span class="badge ' + esc(p.status) + '">' + statusIcon(p.status) + ' ' + statusWord(p.status) + '</span></div>' +
+        '<div class="three">' + balMini(p.bal) + '</div></button>';
     });
     $('debtList').innerHTML = h || '<div class="sub">کسی پیدا نشد.</div>';
   }
@@ -1564,10 +1604,13 @@
     if (!card) return;
     var list = alertsOf(data);
 
-    card.classList.toggle('hidden', list.length === 0);
+    card.classList.toggle('hidden', list.length === 0 || ALERT_PANES.indexOf(curPane) < 0);
     if (list.length) {
       box.innerHTML = list.map(function (a) {
-        return '<div class="al ' + (a.s === 'out' ? 'out' : 'low') + '">' + esc(a.t || '') + '</div>';
+        var out = a.s === 'out';
+        return '<div class="al ' + (out ? 'out' : 'low') + '"><span class="ic">' + (out ? '⛔' : '⚠️') + '</span>' +
+          '<div><div class="t">' + esc(a.t || '') + '</div>' +
+          (a.a ? '<div class="a">👉 ' + esc(a.a) + '</div>' : '') + '</div></div>';
       }).join('');
     }
 
@@ -1853,9 +1896,10 @@
       if (!p) return;
       //  کارمند حسابِ کامل را نمی‌خواهد؛ فقط حال و الباقی — همان بلوکِ ربات
       var blk = personBlock(p); blk.person = null;
-      $('botOut').innerHTML = blockHtml(blk) +
-        '<button class="back" id="btnBackStaff">‹ برگرد به فهرست</button>';
+      $('botOut').innerHTML = '<button class="back" id="btnBackStaff">› برگرد به فهرست</button>' + blockHtml(blk);
       goPane('paneBot');
+      $('paneBot').classList.add('solo');   // فقط همین شخص، بی کادرِ پرسش
+      navMark('paneStaff');
       $('btnBackStaff').addEventListener('click', function () { goPane('paneStaff'); });
     });
 
@@ -1879,9 +1923,15 @@
       var id = b.getAttribute('data-pid');
       var p = ((data && data.debtors) || []).filter(function (x) { return String(x.id) === id; })[0];
       if (!p) return;
-      $('botOut').innerHTML = blockHtml(personBlock(p));
+      $('botOut').innerHTML = '<button class="back" id="btnBackDebt">› برگرد به قرض‌داران</button>' + blockHtml(personBlock(p));
       goPane('paneBot');
+      $('paneBot').classList.add('solo');
+      $('btnBackDebt').addEventListener('click', function () { goPane('paneDebt'); });
+      navMark('paneDebt');
     });
+
+    var lr = $('liveRow');
+    if (lr) lr.addEventListener('click', function () { lr.classList.toggle('open'); });
 
     $('nav').addEventListener('click', function (e) {
       var b = e.target.closest('button[data-pane]');
@@ -2077,19 +2127,28 @@
     }, 6000);
   }
 
+  /** کدام دکمهٔ نوارِ پایین روشن باشد — صفحهٔ یک شخص زیرِ فهرستِ خودش است. */
+  function navMark(id) {
+    Array.prototype.forEach.call($('nav').querySelectorAll('button'), function (b) {
+      b.setAttribute('aria-selected', String(b.getAttribute('data-pane') === id));
+    });
+  }
+
   function goPane(id) {
     ALL_PANES.forEach(function (p) {
       var el = $(p);
       if (el) el.classList.toggle('hidden', p !== id);
     });
     chatWatch(id === 'paneChat');
-    //  خبرها روی صفحهٔ خانه نه — آن‌جا فقط دو در
+    var pb = $('paneBot');
+    if (pb) pb.classList.remove('solo');
+    //  خبرها فقط جایی که به کار می‌آیند: داشبورد، چراغِ کارمندان و مخزن.
+    //  روی خانه، گروه، ربات و بخش‌ها نه — آن‌جا فقط جلوی کار را می‌گرفتند.
     var ac = $('alertCard');
-    if (ac && id === 'paneHome') ac.classList.add('hidden');
+    curPane = id;
+    if (ac && ALERT_PANES.indexOf(id) < 0) ac.classList.add('hidden');
     else if (ac) renderAlerts();
-    Array.prototype.forEach.call($('nav').querySelectorAll('button'), function (b) {
-      b.setAttribute('aria-selected', String(b.getAttribute('data-pane') === id));
-    });
+    navMark(id);
     window.scrollTo(0, 0);
   }
 
