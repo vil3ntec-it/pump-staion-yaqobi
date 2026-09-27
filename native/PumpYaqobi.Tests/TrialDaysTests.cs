@@ -88,8 +88,8 @@ public class TrialDaysTests
         //  و راهِ درست گفته می‌شود
         Assert.Contains("از «حساب و ورود» وارد شوید و نامِ پمپ را بزنید",
             Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs"));
-        //  ⚠️ خرج کردنِ کدِ اشتراک برداشته نشد — فقط دیگر راهِ اصلی خوانده نمی‌شود
-        Assert.Contains("RedeemSubCommand",
+        //  ⛔ و کادرِ کدِ اشتراک از پروفایل رفت (۱۴۰۵/۰۷/۱۵) — اشتراک فقط از سرور
+        Assert.DoesNotContain("RedeemSubCommand",
             Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml"));
     }
 }

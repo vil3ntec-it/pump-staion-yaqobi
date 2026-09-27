@@ -85,13 +85,13 @@ public class ProfileRemakeTests
                      "OpenAccountPageCommand", "PullHomeCommand", "SignOutCommand",
                      "CopyAccessCodeCommand", "ShowAccessQrCommand", "LoadAccessCodeCommand",
                      "RotateAccessCodeCommand", "ForgetPumpCommand",
-                     "RedeemSubCommand", "RefreshSubCommand",
+                     "RefreshSubCommand",
                      "SetTabCommand", "OpenBackupsCommand",
                  })
             Assert.Contains(cmd, p);
 
-        //  و خرج کردنِ کدِ اشتراک همین‌جا می‌ماند (قاعدهٔ ۱۴۰۵/۰۷/۰۴)
-        Assert.Contains("Binding SubCode", p);
+        //  ⛔ کادرِ کدِ اشتراک رفت (۱۴۰۵/۰۷/۱۵): «اشتراک از سرور، نه از کد»
+        Assert.DoesNotContain("Binding SubCode", p);
     }
 
     /// <summary>شکل واقعاً عوض شد — نه فقط جابه‌جاییِ چند خط.</summary>
