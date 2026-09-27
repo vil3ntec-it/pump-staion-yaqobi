@@ -68,7 +68,7 @@ $proc = Start-Process -FilePath $Setup -ArgumentList $argList -PassThru
 $name = [IO.Path]::GetFileNameWithoutExtension($Setup)
 
 $r = [ordered]@{ DirPage = $false; DirPrefill = ''; DirsUsed = @(); Finished = $false; Messages = @(); Pages = @(); ExitCode = $null }
-$dirIx = 0; $ansIx = 0; $lastPage = ''; $seenAny = $false; $started = Get-Date
+$dirIx = 0; $ansIx = 0; $lastPage = ''; $lastSig = ''; $seenAny = $false; $started = Get-Date
 $deadline = (Get-Date).AddSeconds($TimeoutSec)
 
 function Plain($s) { ($s -replace '&', '').Trim() }
@@ -116,9 +116,13 @@ while ((Get-Date) -lt $deadline) {
     $names = $buttons | ForEach-Object { Plain ([PyqW]::Text($_)) }
 
     #  صفحهٔ پوشه: تنها صفحه‌ای که کادرِ مسیر دارد
-    $edit = $vis | Where-Object { [PyqW]::Cls($_) -eq 'TEdit' -and ([PyqW]::Text($_) -match '^[A-Za-z]:\\|^\\\\') } | Select-Object -First 1
+    #  ⚠️ نامِ کلاسِ کادر در هر نسخهٔ Inno فرق دارد (TEdit/TNewEdit/…) — پس هر
+    #  «…Edit»ی که نوشته‌اش مسیر است. (بارِ اول با TEdit صفحه را نشناخت.)
+    $edit = $vis | Where-Object { [PyqW]::Cls($_) -match 'Edit' -and ([PyqW]::Text($_) -match '^[A-Za-z]:\\|^\\\\') } | Select-Object -First 1
     $page = if ($edit) { 'dir' } elseif ($names -contains 'پایان') { 'finish' } elseif ($names -contains 'نصب') { 'ready' } elseif ($names -contains 'بعدی') { 'next' } else { 'busy' }
-    if ($page -ne $lastPage) { $r.Pages += $page; $lastPage = $page }
+    #  امضای هر صفحه (کلاس‌های دیدنی) برای گزارش — تا اگر صفحه‌ای شناخته نشد، معلوم باشد چه بود
+    $sig = (($vis | ForEach-Object { [PyqW]::Cls($_) } | Sort-Object -Unique) -join ',')
+    if ($page -ne $lastPage -or $sig -ne $lastSig) { $r.Pages += "$page [$sig]"; $lastPage = $page; $lastSig = $sig }
 
     if ($page -eq 'finish') {
       #  نصب تمام است (ثبتِ حذف پیش از این صفحه نوشته شده). «پایان» زده نمی‌شود
