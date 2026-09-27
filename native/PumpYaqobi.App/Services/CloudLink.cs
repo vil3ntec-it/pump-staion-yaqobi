@@ -46,10 +46,13 @@ public sealed record CloudChatMessage(string Id, long Seq, string Acct, string F
         long N(string k) => m.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt64(out var n) ? n : 0;
         var id = S("id");
         var body = S("body");
-        if (id.Length == 0 || body.Length == 0) return null;
+        //  ⛔ ۱۴۰۵/۰۷/۱۶: پیامِ رسانه‌ای (عکس/ویدیو/صدا) متن ندارد — ‎mediaId‎ دارد
+        var media = S("mediaId");
+        var kind = S("kind") is "image" or "video" or "audio" && media.Length > 0 ? S("kind") : "text";
+        if (id.Length == 0 || (body.Length == 0 && kind == "text")) return null;
         var at = N("createdAt");
         return new CloudChatMessage(id, at, "support", S("sender") == "user" ? "o" : "a", S("senderName"),
-            "text", body, null, at, false);
+            kind, body, kind == "text" ? null : media, at, false);
     }
 
     public static List<CloudChatMessage> ParseList(JsonElement json, string acctFallback = "")
@@ -1241,14 +1244,56 @@ public sealed partial class CloudLink
         return (true, list, unread, "");
     }
 
-    /// <summary>پیام به پشتیبانی.</summary>
-    public async Task<CloudResult> SupportSendAsync(string text, CancellationToken ct = default)
+    /// <summary>پیام به پشتیبانی. ‎kind‎ی خالی یعنی متن؛ رسانه با ‎mediaId‎ِ <see cref="SupportUploadAsync"/>.</summary>
+    public async Task<CloudResult> SupportSendAsync(string text, CancellationToken ct = default,
+                                                    string kind = "", string? mediaId = null)
     {
         if (!Activated) return CloudResult.No("فعال نشده", "not_activated");
-        if (string.IsNullOrWhiteSpace(text)) return CloudResult.No("پیام خالی است", "empty_message");
-        var (ok, _, why, code) = await DevPostAsync("/api/pump/device/support/messages",
-            new { body = text.Trim() }, ct);
+        var media = kind is "image" or "video" or "audio";
+        if (!media && string.IsNullOrWhiteSpace(text)) return CloudResult.No("پیام خالی است", "empty_message");
+        object body = media
+            ? new { body = (text ?? "").Trim(), kind, mediaId }
+            : new { body = text.Trim() };
+        var (ok, _, why, code) = await DevPostAsync("/api/pump/device/support/messages", body, ct);
         return ok ? CloudResult.Done : CloudResult.No(why, code);
+    }
+
+    /// <summary>
+    /// عکس/ویدیو/صدا برای پشتیبانی — خام، با نوعش (۱۴۰۵/۰۷/۱۶). ⛔ سرورِ حساب فقط
+    /// رد می‌کند: همین که طرفِ دیگر گرفت پاکش می‌کند؛ نسخهٔ ماندگار روی همین
+    /// کامپیوتر است (‎ChatStore‎).
+    /// </summary>
+    public async Task<(bool Ok, string MediaId, string Why)> SupportUploadAsync(
+        byte[] bytes, string mime, CancellationToken ct = default)
+    {
+        if (!Activated) return (false, "", "فعال نشده");
+        var req = new HttpRequestMessage(HttpMethod.Post, CloudConfig.Url("/api/pump/device/support/media"))
+        {
+            Content = new ByteArrayContent(bytes),
+        };
+        req.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mime);
+        req.Headers.Add("Authorization", $"Bearer {_settings.CloudDeviceToken}");
+        var (ok, json, why, _) = await Send(req, ct);
+        return ok ? (true, Str(json, "mediaId"), "") : (false, "", why);
+    }
+
+    /// <summary>رسانهٔ پشتیبانی — یک بار گرفته و این‌جا نگه داشته می‌شود (سرور پس از آن پاکش می‌کند).</summary>
+    public async Task<(byte[] Bytes, string Mime)?> SupportMediaAsync(string mediaId, CancellationToken ct = default)
+    {
+        if (!Activated || string.IsNullOrWhiteSpace(mediaId)) return null;
+        try
+        {
+            var req = new HttpRequestMessage(HttpMethod.Get,
+                CloudConfig.Url("/api/pump/device/support/media/" + Uri.EscapeDataString(mediaId)));
+            req.Headers.Add("Authorization", $"Bearer {_settings.CloudDeviceToken}");
+            using var res = TestTransport is null
+                ? await Http.SendAsync(req, ct)
+                : await TestTransport(req, ct);
+            if (!res.IsSuccessStatusCode) return null;
+            var bytes = await res.Content.ReadAsByteArrayAsync(ct);
+            return (bytes, res.Content.Headers.ContentType?.MediaType ?? "application/octet-stream");
+        }
+        catch { return null; }
     }
 
     /// <summary>«خواندم» — نقطهٔ قرمز را پاک می‌کند.</summary>

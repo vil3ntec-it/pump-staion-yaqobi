@@ -117,7 +117,7 @@ internal static class MarketingShots
     private static readonly string[] Companies = { "شرکتِ تیلِ آریانا", "شرکتِ نفتِ هرات", "شرکتِ تیلِ بلخ", "ترمینالِ حیرتان" };
     private static readonly string[] Staff = { "احمد", "بصیر", "جاوید", "نوید", "شفیق" };
 
-    private static void Fill(AppHost host)
+    internal static void Fill(AppHost host)
     {
         var month = Shamsi.ThisMonth();
         var rnd = new Random(1405);

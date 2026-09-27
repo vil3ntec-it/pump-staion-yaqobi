@@ -291,6 +291,13 @@ public sealed class CardGrid : Control
             c = ItemTemplate?.Build(item);
             if (c is null) return null;
             BuiltCount++;
+            //  ⛔ داده **پیش از** نشستن در درخت (۱۴۰۵/۰۷/۱۶ — «توی حسابِ قرض‌دار
+            //  نمی‌ره»). وارونه‌اش یعنی کارت یک لحظه ‎DataContext‎ِ خودِ بخش را به
+            //  ارث می‌برد؛ ‎CommandParameter="{Binding}"‎ همان بخش می‌شد،
+            //  ‎RelayCommand<DebtorCardViewModel>.CanExecute‎ با نوعِ غلط استثنا
+            //  می‌داد و اتصالِ ‎Command‎ برای همیشه **خالی** می‌ماند — هیچ کارتی
+            //  باز نمی‌شد (سنجهٔ ‎round16‎ با کلیکِ واقعیِ ماوس، و لاگِ اتصال).
+            c.DataContext = item;
             LogicalChildren.Add(c);
             VisualChildren.Add(c);
         }

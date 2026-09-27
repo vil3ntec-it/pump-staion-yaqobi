@@ -131,15 +131,13 @@ public class OwnerRound13Tests
         Assert.Contains("OpenClockCommand", w);
         Assert.DoesNotContain("OpenClockSettingsCommand", w);
         Assert.False(File.Exists(Path.Combine(Root(), "PumpYaqobi.App", "Services", "SystemClockSettings.cs")));
-        var src = Read("PumpYaqobi.App", "Services", "ClockService.cs");
-        Assert.DoesNotContain("ms-settings", src);
-        //  همان ساعتِ ویندوز عوض می‌شود، با اجازهٔ مدیر — نه یک ساعتِ دوم
-        Assert.Contains("Set-Date", src);
-        Assert.Contains("\"runas\"", src);
-        //  ⛔ برنامه ساعتِ دومی نمی‌سازد: هیچ «تاریخِ دستی» در تنظیمات نیست
-        var settings = Read("PumpYaqobi.App", "Services", "AppSettings.cs");
-        Assert.DoesNotContain("DateOverride", settings);
-        Assert.DoesNotContain("ClockOffset", settings);
+        //  ⛔ از ۱۴۰۵/۰۷/۱۶ تاریخ و ساعتِ این پنجره نمایشی است (‎DisplayClock‎):
+        //  نه ساعتِ ویندوز عوض می‌شود و نه اجازهٔ مدیر خواسته می‌شود
+        Assert.False(File.Exists(Path.Combine(Root(), "PumpYaqobi.App", "Services", "ClockService.cs")));
+        var disp = Read("PumpYaqobi.App", "Services", "DisplayClock.cs");
+        Assert.DoesNotContain("runas", disp);
+        Assert.DoesNotContain("Set-Date", disp);
+        Assert.DoesNotContain("ms-settings", disp);
     }
 
     // ══ ۷) جدول‌ها بی جای خالی · تاریخچهٔ پارچه با صافیِ تیل و پایه ════════

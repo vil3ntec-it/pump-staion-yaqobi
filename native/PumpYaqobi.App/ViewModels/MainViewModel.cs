@@ -45,6 +45,13 @@ public sealed partial class MainViewModel : ObservableObject
             else Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(BrandName)));
         };
 
+        //  نوارِ چهار عدد روشن/خاموش (کلیدِ کوچکِ داشبورد) — روشن شد ⇒ همان لحظه بخوان
+        Services.BannerPref.Changed += () => Dispatcher.UIThread.Post(() =>
+        {
+            OnPropertyChanged(nameof(IsBannerVisible));
+            if (Services.BannerPref.Show && Phase == AppPhase.Ready) QueueBannerRefresh();
+        });
+
         Lock = new LockViewModel(AppHost.Current);
         OpenRequest.Arrived += () => Dispatcher.UIThread.Post(() => _ = HandleOpenRequestsAsync());
 
@@ -96,6 +103,10 @@ public sealed partial class MainViewModel : ObservableObject
             // لایهٔ سرویس درست هم رد می‌کند. اگر سروری تنظیم نشده باشد، این
             // حلقه بی‌صدا هیچ کاری نمی‌کند.
             AppHost.Current.Publisher.Start();
+
+            // ══ به‌روزرسانیِ خودکار (۱۴۰۵/۰۷/۱۶) — خودش می‌بیند و می‌گیرد، و هر
+            // نسخه را یک بار پیشنهاد می‌کند. شرح: ‎Update/AutoUpdate.cs‎
+            Update.AutoUpdate.Start();
 
             // ══ حسابِ واردشده ⇒ آماده، بی باز کردنِ پروفایل (۱۴۰۵/۰۷/۱۳) ═════
             // گزارشِ صاحب ریپو پس از ۳.۱.۱۷۹: «حسابی که قبلاً آزمایشی نداشت،
@@ -419,7 +430,19 @@ public sealed partial class MainViewModel : ObservableObject
     {
         if (s is null) return;
         var shown = NavSections.Select(x => x.Id).ToList();
-        var moved = NavOrder.Move(shown, s.Id, where);
+        StoreNav(shown, NavOrder.Move(shown, s.Id, where));
+    }
+
+    /// <summary>کشیدن و رها کردن در نوار — پیش از خانهٔ ‎index‎ (شرح: ‎NavOrder.MoveTo‎).</summary>
+    public void MoveNavTo(SectionViewModel? s, int index)
+    {
+        if (s is null) return;
+        var shown = NavSections.Select(x => x.Id).ToList();
+        StoreNav(shown, NavOrder.MoveTo(shown, s.Id, index));
+    }
+
+    private void StoreNav(List<string> shown, List<string> moved)
+    {
         if (moved.SequenceEqual(shown)) return;
         _settings.NavOrder = NavOrder.Save(NavDefaults().Select(x => x.Id).ToList(), moved);
         _settings.SaveSoon();
@@ -479,44 +502,26 @@ public sealed partial class MainViewModel : ObservableObject
 
     public bool IsChromeVisible => Content?.IsPageOpen != true;
 
+    /// <summary>
+    /// نوارِ چهار عدد — با پوسته، و فقط اگر کاربر خاموشش نکرده باشد
+    /// (‎BannerPref‎، کلیدِ کوچکِ داشبورد).
+    /// </summary>
+    public bool IsBannerVisible => IsChromeVisible && Services.BannerPref.Show;
+
     /// <summary>نوشتهٔ دکمهٔ برگشت — «‹ برگشت به قرض‌داران».</summary>
     public string BackText => "‹ برگشت به " + (Current?.Title ?? "");
     [ObservableProperty] private PumpTheme _selectedTheme;
     [ObservableProperty] private string _clock = "";
 
     /// <summary>
-    /// «ساعتِ ویندوز درست نیست» — فقط وقتی ساعتِ اینترنت آمده و ویندوز بیش از
-    /// دو دقیقه با آن فرق دارد. برنامه با ساعتِ اینترنت کار می‌کند (‎AppClock‎)؛
-    /// این فقط خبر است، هیچ چیزی را نمی‌بندد.
+    /// راهنمای ساعتِ سربرگ. ⛔ هیچ هشداری دربارهٔ «ساعتِ ویندوز جلو/عقب است» در
+    /// کار نیست (۱۴۰۵/۰۷/۱۶ — «هر دقیقه می‌گه چند دقیقه عقب است، به من چه»).
+    /// تاریخِ سربرگ نمایشی است (‎DisplayClock‎) و هیچ حسابی را عوض نمی‌کند.
     /// </summary>
-    [ObservableProperty] private string _clockNote = "";
+    public string ClockTip => "تاریخ و ساعت — برای عوض کردنِ آن‌چه این‌جا نشان داده می‌شود کلیک کنید";
 
-    /// <summary>راهنمای ساعتِ سربرگ.</summary>
-    [ObservableProperty] private string _clockTip = "تاریخ و ساعت — برای دیدن یا عوض کردن کلیک کنید";
-
-    /// <summary>از تیکِ یک‌ثانیه‌ای — بی هیچ دستورِ دیتابیس.</summary>
-    public void TickClockNote()
-    {
-        var skew = AppClock.WallSkewMs;
-        var off = Math.Abs(skew) > AppClock.SkewWarnMs;
-        ClockNote = off ? "⚠️" : "";
-        ClockTip = off
-            ? "⚠️ ساعتِ ویندوز " + SkewText(skew) + " — برنامه با تاریخ و ساعتِ واقعی (از اینترنت) کار می‌کند "
-              + "و هیچ ماه، اشتراک یا حسابی از ساعتِ ویندوز به هم نمی‌خورد. برای درست کردنِ ساعتِ ویندوز کلیک کنید."
-            : AppClock.Trusted
-                ? "تاریخ و ساعتِ واقعی (از اینترنت سنجیده شد) — برای دیدن یا عوض کردن کلیک کنید"
-                : "تاریخ و ساعت — برای دیدن یا عوض کردن کلیک کنید";
-    }
-
-    /// <summary>«۳ روز جلو است» / «۲ ساعت عقب است».</summary>
-    public static string SkewText(long skewMs)
-    {
-        var a = Math.Abs(skewMs);
-        var amount = a >= 86_400_000L ? Shamsi.Money((decimal)Math.Round(a / 86_400_000d)) + " روز"
-                   : a >= 3_600_000L ? Shamsi.Money((decimal)Math.Round(a / 3_600_000d)) + " ساعت"
-                   : Shamsi.Money((decimal)Math.Round(a / 60_000d)) + " دقیقه";
-        return amount + (skewMs > 0 ? " جلو است" : " عقب است");
-    }
+    /// <summary>تاریخِ سربرگ با تاریخِ نمایشی جلو رفت (نیمه‌شب یا عوض کردنش).</summary>
+    public void DisplayDayChanged() => OnPropertyChanged(nameof(TodayText));
 
     /// <summary>
     /// ══ چراغِ سرور در سربرگ ══════════════════════════════════════════════════
@@ -1162,10 +1167,11 @@ public sealed partial class MainViewModel : ObservableObject
     /// ⛔ شکلش خواستهٔ صریحِ صاحب ریپو است: روزِ هفته، نامِ ماه، و سال/ماه/روز
     /// بی صفرِ پیشرو — ⛔ با <b>اسلش</b>، نه نقطه (۱۴۰۵/۰۷/۱۵ دوم: «تاریخ رو /
     /// بده نه . — باید اسلش باشه وسطشون تا فهمیده بشه»).
-    /// ⛔ «امروز» از <see cref="AppClock"/> است — ساعتِ اینترنت، نه ساعتِ
-    /// ویندوز: عوض کردنِ تاریخِ ویندوز این‌جا را عوض نمی‌کند.
+    /// ⛔ این تاریخ <b>نمایشی</b> است (‎DisplayClock‎، ۱۴۰۵/۰۷/۱۶): کاربر هر
+    /// تاریخی بخواهد از پنجرهٔ «🕘» می‌گذارد و هیچ حسابی عوض نمی‌شود — هر
+    /// تصمیمی همچنان از <see cref="AppClock"/> است.
     /// </summary>
-    public string TodayText => HeaderDate(AppClock.Now);
+    public string TodayText => HeaderDate(Services.DisplayClock.Now);
 
     /// <summary>
     /// نامِ برنامه در سربرگ، عنوانِ پنجره و پرده‌ها — نامِ پمپی که کاربر نوشته،
@@ -1190,8 +1196,8 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>
     /// کلیک روی تاریخ و ساعتِ سربرگ ⇐ پنجرهٔ «🕘 تاریخ و ساعت»ِ خودِ برنامه
     /// (۱۴۰۵/۰۷/۱۵ — «برنامهٔ من خودش داشته باشد، نرود از ویندوز باز شود»).
-    /// ⛔ ساعتِ دوم ساخته نمی‌شود؛ «ثبت» همان ساعتِ ویندوز را عوض می‌کند
-    /// (‎Services.ClockService‎).
+    /// ⛔ «ثبت» فقط تاریخ و ساعتِ <b>نمایشی</b> را عوض می‌کند (‎DisplayClock‎) —
+    /// نه ساعتِ ویندوز و نه هیچ حسابی (۱۴۰۵/۰۷/۱۶).
     /// </summary>
     [RelayCommand]
     private Task OpenClock() => Views.ClockWindow.ShowAsync();
@@ -1505,7 +1511,10 @@ public sealed partial class MainViewModel : ObservableObject
     private void OnContentPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(SectionViewModel.IsPageOpen))
+        {
             OnPropertyChanged(nameof(IsChromeVisible));
+            OnPropertyChanged(nameof(IsBannerVisible));
+        }
 
         // حساب/شرکت/ورقِ باز عوض شد (‎Person‎، ‎Overlay‎، ‎Page‎…) ⇒ همان قاعده:
         // صفحه‌ای که رفت، ردیف‌هایش هم می‌روند.
@@ -1668,6 +1677,7 @@ public sealed partial class MainViewModel : ObservableObject
         Controls.ExcelGrid.NotifyPagesChanged();
 
         OnPropertyChanged(nameof(IsChromeVisible));
+        OnPropertyChanged(nameof(IsBannerVisible));
         OnPropertyChanged(nameof(IsSubOpen));
         OnPropertyChanged(nameof(BackText));
         OnPropertyChanged(nameof(ActiveSection));
@@ -1854,6 +1864,9 @@ public sealed partial class MainViewModel : ObservableObject
 
     public async Task RefreshBannerAsync()
     {
+        //  خاموش ⇒ خوانده نمی‌شود؛ ‎_bannerVersion‎ دست نمی‌خورد تا روشن شدن
+        //  همان لحظه از نو بخواند (‎BannerPref‎)
+        if (!Services.BannerPref.Show) return;
         var host = AppHost.Current;
         var calc = new DashboardService();
 

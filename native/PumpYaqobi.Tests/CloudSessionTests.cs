@@ -1266,4 +1266,62 @@ public class CloudSessionTests : IDisposable
         Assert.Equal("r1", revoked);
         Assert.Equal("", AppSettings.Load().CloudRefreshToken);
     }
+
+    // ══ پشتیبانی: عکس/ویدیو/صدا — سرور فقط رد می‌کند (۱۴۰۵/۰۷/۱۶) ═══════════
+
+    [Fact]
+    public async Task Poshtibani_Resane_BalaMiravad_Va_PayamBaMediaId_MiRavad()
+    {
+        string? mime = null, sent = null;
+        Serve((path, req) =>
+        {
+            if (path == "/api/pump/device/support/media")
+            {
+                mime = req.Content!.Headers.ContentType!.MediaType;
+                return Json(HttpStatusCode.Created, """{"ok":true,"mediaId":"med_abc123"}""");
+            }
+            if (path == "/api/pump/device/support/messages")
+            {
+                sent = req.Content!.ReadAsStringAsync().Result;
+                return Json(HttpStatusCode.Created, """{"message":{"id":"msg_1"}}""");
+            }
+            return Json(HttpStatusCode.NotFound, """{"error":{"code":"not_found"}}""");
+        });
+        var (link, _) = Link(s => s.CloudDeviceToken = "dev-token");
+
+        var up = await link.SupportUploadAsync(new byte[] { 1, 2, 3 }, "image/png");
+        Assert.True(up.Ok);
+        Assert.Equal("med_abc123", up.MediaId);
+        Assert.Equal("image/png", mime);
+
+        var r = await link.SupportSendAsync("", default, "image", up.MediaId);
+        Assert.True(r.Ok);
+        using var doc = JsonDocument.Parse(sent!);
+        Assert.Equal("image", doc.RootElement.GetProperty("kind").GetString());
+        Assert.Equal("med_abc123", doc.RootElement.GetProperty("mediaId").GetString());
+
+        //  متن همچنان همان شکلِ پیشین را دارد
+        await link.SupportSendAsync("سلام");
+        using var t = JsonDocument.Parse(sent!);
+        Assert.False(t.RootElement.TryGetProperty("kind", out _));
+        //  متنِ خالی بی رسانه رد می‌شود
+        Assert.False((await link.SupportSendAsync("  ")).Ok);
+    }
+
+    [Fact]
+    public void Poshtibani_PayameResaneyi_BeMatnKhali_Khande_Mishavad()
+    {
+        using var m = JsonDocument.Parse("""{"id":"msg_9","sender":"admin","senderName":"پشتیبانی","body":"","kind":"audio","mediaId":"med_x","createdAt":5}""");
+        var p = CloudChatMessage.ParseSupport(m.RootElement);
+        Assert.NotNull(p);
+        Assert.Equal("audio", p!.Kind);
+        Assert.Equal("med_x", p.MediaId);
+        Assert.Equal("a", p.From);
+        //  متن بی رسانه همان متن است؛ نوعِ ناشناس متن شمرده می‌شود
+        using var t = JsonDocument.Parse("""{"id":"msg_8","sender":"user","body":"سلام","kind":"text","createdAt":4}""");
+        Assert.Equal("text", CloudChatMessage.ParseSupport(t.RootElement)!.Kind);
+        using var bad = JsonDocument.Parse("""{"id":"msg_7","sender":"user","body":"","kind":"text","createdAt":4}""");
+        Assert.Null(CloudChatMessage.ParseSupport(bad.RootElement));
+    }
+
 }

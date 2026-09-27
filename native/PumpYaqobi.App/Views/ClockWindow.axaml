@@ -9,20 +9,15 @@
         Background="{DynamicResource Pump.Card}"
         Title="تاریخ و ساعت">
 
-  <!-- ══ 🕘 تاریخ و ساعت — مالِ خودِ برنامه (۱۴۰۵/۰۷/۱۵) ══════════════════════
-       خواستهٔ صاحب ریپو: «برنامهٔ من خودش داشته باشد، نرود از ویندوز باز شود.»
-       ⛔ ساعتِ دوم ساخته نمی‌شود: «ثبت» همان ساعتِ ویندوز را عوض می‌کند
-       (‎Services.ClockService‎) — شرحِ چرایی همان‌جا. -->
+  <!-- ══ 🕘 تاریخ و ساعت — مالِ خودِ برنامه ════════════════════════════════
+       ⛔ نمایشی (‎DisplayClock‎، ۱۴۰۵/۰۷/۱۶): «ثبت» فقط تاریخ و ساعتِ سربرگ را
+       عوض می‌کند — نه ساعتِ ویندوز، نه اجازهٔ مدیر، نه هیچ حسابی — و ⛔ هیچ
+       هشدارِ «ساعتِ ویندوز جلو/عقب است» این‌جا نیست. -->
   <StackPanel Margin="22" Spacing="14">
     <TextBlock Classes="h2" Text="🕘 تاریخ و ساعت" TextAlignment="Center" />
 
     <Border Classes="calc" Padding="12,10">
-      <StackPanel Spacing="2">
-        <TextBlock Classes="muted" FontSize="12" Text="تاریخ و ساعتِ برنامه (از اینترنت، وقتی هست)" TextAlignment="Center" />
-        <TextBlock Text="{Binding NowText}" FontSize="17" FontWeight="Bold" TextAlignment="Center" />
-        <TextBlock Text="{Binding WallText}" FontSize="12" TextAlignment="Center" TextWrapping="Wrap"
-                   IsVisible="{Binding WallText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-      </StackPanel>
+      <TextBlock Text="{Binding NowText}" FontSize="17" FontWeight="Bold" TextAlignment="Center" />
     </Border>
 
     <!-- روز · ماه (با نام) · سال — به ترتیبِ خواندنِ فارسی، از راست -->
@@ -51,18 +46,16 @@
                Foreground="{DynamicResource Pump.Ink.Accent}" />
 
     <WrapPanel HorizontalAlignment="Center">
-      <Button Classes="accent" Content="✔ ثبت روی ساعتِ کامپیوتر" Margin="4" Command="{Binding ApplyCommand}"
-              IsEnabled="{Binding !Busy}"
-              ToolTip.Tip="همان ساعتِ ویندوز عوض می‌شود — ویندوز یک بار اجازه می‌خواهد" />
-      <Button Content="🌐 ساعتِ درست از اینترنت" Margin="4" Command="{Binding SyncCommand}"
-              IsEnabled="{Binding !Busy}" />
-      <Button Content="↺ همین حالا" Margin="4" Command="{Binding NowCommand}" />
+      <Button Classes="accent" Content="✔ ثبت" Margin="4" Command="{Binding ApplyCommand}"
+              ToolTip.Tip="فقط تاریخ و ساعتِ نمایشی عوض می‌شود — هیچ حسابی دست نمی‌خورد" />
+      <Button Content="↺ ساعتِ واقعی" Margin="4" Command="{Binding RealCommand}"
+              IsVisible="{Binding Shifted}" />
       <Button Content="بستن" Margin="4" Click="OnClose" />
     </WrapPanel>
 
     <TextBlock Text="{Binding Status}" TextWrapping="Wrap" TextAlignment="Center" FontWeight="SemiBold"
                IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
     <TextBlock Classes="muted" FontSize="11.5" TextWrapping="Wrap" TextAlignment="Center"
-               Text="تاریخِ همهٔ ردیف‌ها و ماهِ دفترها از همین ساعتِ کامپیوتر می‌آید؛ برنامه ساعتِ جدای خودش را نگه نمی‌دارد تا هیچ ردیفی در ماهِ اشتباه ننشیند." />
+               Text="این تاریخ فقط برای دیدن است — حساب‌ها، ماه‌ها و اشتراک با تاریخِ واقعی کار می‌کنند." />
   </StackPanel>
 </Window>

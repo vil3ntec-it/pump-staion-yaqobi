@@ -372,10 +372,21 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
         return new DashDebtInfo(total, persons, invoices, comps);
     }
 
+    /// <summary>
+    /// کلیدِ کوچکِ «نوارِ عددهای بالا» (۱۴۰۵/۰۷/۱۶ — ‎Services.BannerPref‎). ⛔ فقط
+    /// دیدن را عوض می‌کند؛ هیچ عددی این‌جا حساب نمی‌شود.
+    /// </summary>
+    public bool ShowBanner
+    {
+        get => Services.BannerPref.Show;
+        set { Services.BannerPref.Set(value); OnPropertyChanged(); }
+    }
+
     /// <summary>ساعت و تاریخِ نوارِ بالا — هر ثانیه، فقط وقتی داشبورد باز است.</summary>
     public void TickClock()
     {
-        var d = AppClock.Now;
+        //  نمایشی، همان سربرگ (‎DisplayClock‎) — هیچ عددی از این‌جا حساب نمی‌شود
+        var d = Services.DisplayClock.Now;
         Clock = $"{d.Hour:00}:{d.Minute:00}:{d.Second:00}";
         Greeting = d.Hour < 12 ? "صبح بخیر 👋" : d.Hour < 17 ? "چاشت بخیر 👋" : "شب بخیر 👋";
         //  همان شکلِ سربرگ — روزِ هفته، روز، نامِ ماه، سال (۱۴۰۵/۰۷/۱۵)

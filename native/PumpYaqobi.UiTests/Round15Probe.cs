@@ -7,6 +7,7 @@ using PumpYaqobi.App.Services;
 using PumpYaqobi.App.ViewModels;
 using PumpYaqobi.App.ViewModels.Sections;
 using PumpYaqobi.App.Views;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.UiTests;
 
@@ -150,9 +151,7 @@ internal static class Round15Probe
         Check("تاریخِ سربرگ: روزِ هفته، روز، نامِ ماه، سال", shown is not null && today.Contains(PumpYaqobi.Application.Localization.Shamsi.MonthName(
                   int.Parse(PumpYaqobi.Application.Localization.Shamsi.Of(DateTime.Now).Split('/')[1]))), today.Trim('⁧', '⁩'));
 
-        //  پنجرهٔ «🕘 تاریخ و ساعت»ِ خودِ برنامه — نه تنظیماتِ ویندوز
-        var runs = new List<System.Diagnostics.ProcessStartInfo>();
-        ClockService.TestRun = psi => { runs.Add(psi); return ClockService.Result.Done; };
+        //  پنجرهٔ «🕘 تاریخ و ساعت»ِ خودِ برنامه — ⛔ نمایشی (۱۴۰۵/۰۷/۱۶)
         var cw = new ClockWindow { Width = 560, Height = 520 };
         cw.Show();
         Round14Probe.Settle(cw);
@@ -163,19 +162,15 @@ internal static class Round15Probe
               && new ClockViewModel(new DateTime(2026, 3, 1)) is var h && (h.MonthIndex = 11) == 11 && h.Days.Count is 29 or 30);
         Check("پنجرهٔ ساعت: پیش‌نمایش نامِ ماه دارد", cvm.PickedText.Contains("سنبله") && cvm.PickedText.Contains("09:05 AM"), cvm.PickedText);
         using (var f = cw.CaptureRenderedFrame()) f?.Save(Path.Combine(shots, "clock-window.png"));
+        var real = AppClock.Now;
         cvm.ApplyCommand.Execute(null);
-        for (var i = 0; i < 50 && runs.Count == 0; i++) { Round14Probe.Pump(cw); Thread.Sleep(10); }
-        Round14Probe.Settle(cw);
-        Check("«ثبت» همان ساعتِ ویندوز را با اجازهٔ مدیر عوض می‌کند (بی ساعتِ دوم)",
-              runs.Count == 1 && runs[0].Verb == "runas" && runs[0].Arguments.Contains("Set-Date")
-              && runs[0].Arguments.Contains(cvm.Picked.ToString("yyyy-MM-dd'T'HH:mm", System.Globalization.CultureInfo.InvariantCulture)),
-              runs.Count > 0 ? runs[0].Arguments : "هیچ");
-        Check("و نتیجه گفته می‌شود", cvm.Status.Contains("✅"), cvm.Status);
-        ClockService.TestRun = _ => ClockService.Result.Cancelled;
-        cvm.ApplyCommand.Execute(null);
-        for (var i = 0; i < 50 && !cvm.Status.Contains("نه"); i++) { Round14Probe.Pump(cw); Thread.Sleep(10); }
-        Check("«نه»ی ویندوز خطا نیست و گفته می‌شود", cvm.Status.Contains("چیزی عوض نشد"), cvm.Status);
-        ClockService.TestRun = null;
+        Round14Probe.Settle(win);
+        Check("«ثبت» تاریخِ سربرگ را همان لحظه عوض می‌کند", vm.TodayText == MainViewModel.HeaderDate(cvm.Picked), vm.TodayText.Trim('⁧', '⁩'));
+        Check("⛔ و ساعتِ خودِ برنامه دست نخورد", Math.Abs((AppClock.Now - real).TotalSeconds) < 30);
+        cvm.RealCommand.Execute(null);
+        Round14Probe.Settle(win);
+        Check("«ساعتِ واقعی» برمی‌گرداند", !PumpYaqobi.App.Services.DisplayClock.Shifted
+              && vm.TodayText == MainViewModel.HeaderDate(AppClock.Now), vm.TodayText.Trim('⁧', '⁩'));
         cw.Close();
     }
 
@@ -207,8 +202,42 @@ internal static class Round15Probe
         Round14Probe.Settle(win);
         for (var i = 0; i < 150 && AppSettings.Load().NavOrder.Length > 0; i++) { Round14Probe.Pump(win); Thread.Sleep(10); }
         Check("ترتیبِ پیش‌فرض برگشت", AppSettings.Load().NavOrder.Length == 0 && vm.NavSections[0].Id == "dashboard");
+        //  ⛔ ۱۴۰۵/۰۷/۱۶: با ماوسِ واقعی — کشیدنِ صرافی و رها کردن روی خانهٔ اولِ نوار
+        var before = vm.Current;
+        var btns = NavButtons(win);
+        var src = btns.First(b => b.DataContext == sarrafi);
+        var first = btns[0];
+        Point Mid(Button b, double fx) => b.TranslatePoint(new Point(b.Bounds.Width * fx, b.Bounds.Height / 2), win) ?? default;
+        var from = Mid(src, 0.5);
+        //  سمتِ «پیش از» خانهٔ اول — از جای واقعیِ دو خانهٔ اول، نه حدسِ جهت
+        //  (در راست‌به‌چپ مبدأِ محلیِ هر کنترل لبهٔ راستش است)
+        var c0 = Mid(first, 0.5); var c1 = Mid(btns[1], 0.5);
+        var to = new Point(c0.X + (c0.X - c1.X) * 0.3, c0.Y);
+        win.MouseDown(from, Avalonia.Input.MouseButton.Left);
+        win.MouseMove(new Point(from.X + (to.X - from.X) / 2, from.Y));
+        Round14Probe.Pump(win);
+        var drag = ((MainWindow)win).NavDragger;
+        Check("کشیدن شروع شد و خانهٔ مقصد نشان داده می‌شود", drag?.Dragging == true);
+        win.MouseMove(to);
+        Round14Probe.Pump(win);
+        Check("خانهٔ اول قابِ «این‌جا می‌نشیند» گرفت", first.Classes.Contains("drop"));
+        Round14Probe.Shot(win, shots, "nav-dragging");
+        win.MouseUp(to, Avalonia.Input.MouseButton.Left);
+        Round14Probe.Settle(win);
+        Check("کشیدن ⇒ صرافی اولِ نوار", vm.NavSections[0].Id == "sarrafi", string.Join(",", vm.NavSections.Take(3).Select(x => x.Id)));
+        Check("و رها کردن «کلیک» نیست — به صرافی نرفت", ReferenceEquals(vm.Current, before), vm.Current?.Id ?? "");
+        Check("هیچ قابِ کشیدنی جا نماند", NavButtons(win).All(b => !b.Classes.Contains("drop") && !b.Classes.Contains("dragging")));
+        //  کلیکِ کوتاه همان رفتن به بخش است
+        var waraqBtn = NavButtons(win).First(b => b.DataContext is SectionViewModel { Id: "waraq" });
+        var w = Mid(waraqBtn, 0.5);
+        win.MouseDown(w, Avalonia.Input.MouseButton.Left);
+        win.MouseUp(w, Avalonia.Input.MouseButton.Left);
+        Round14Probe.Settle(win);
+        Check("کلیکِ کوتاه همچنان به بخش می‌رود", vm.Current?.Id == "waraq", vm.Current?.Id ?? "");
+        vm.NavResetCommand.Execute(null);
+        Round14Probe.Settle(win);
         var menu = NavButtons(win).FirstOrDefault()?.ContextMenu;
-        Check("راست‌کلیکِ هر بخش منوی جابه‌جایی دارد", menu?.Items.Count >= 5, (menu?.Items.Count ?? 0) + " قلم");
+        Check("راست‌کلیک فقط «ترتیبِ پیش‌فرض» دارد", menu?.Items.Count == 1, (menu?.Items.Count ?? 0) + " قلم");
     }
 
     private static List<Button> NavButtons(Window win)
@@ -228,10 +257,14 @@ internal static class Round15Probe
         var sub = win.GetVisualDescendants().OfType<TextBlock>()
                      .FirstOrDefault(t => t.Classes.Contains("sec-sub") && t.IsEffectivelyVisible);
         var head = sub?.GetVisualAncestors().OfType<Border>().FirstOrDefault(b => b.Classes.Contains("card-head"));
-        Check("توضیحِ زیرِ عنوان یک ردیفِ تمام‌پهناست، نه ستونِ باریک",
-              sub is not null && head is not null && sub.Bounds.Width > head.Bounds.Width * 0.8,
-              $"{sub?.Bounds.Width:0} از {head?.Bounds.Width:0}");
-        Check("و سربرگ کوتاه است (زیرِ ۱۱۰ پیکسل)", head is not null && head.Bounds.Height < 110, $"{head?.Bounds.Height:0} پیکسل");
+        //  ⛔ ۱۴۰۵/۰۷/۱۶: توضیح بغلِ کادرها — همان ردیفِ عنوان، نه ردیفی زیرِ آن
+        var title = head?.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(t => t.Classes.Contains("card-title"));
+        double MidY(Visual v) => v.TranslatePoint(new Point(0, v.Bounds.Height / 2), win)?.Y ?? -1;
+        Check("توضیحِ بخش بغلِ کادرها، در همان ردیفِ عنوان",
+              sub is not null && title is not null && Math.Abs(MidY(sub) - MidY(title)) < 14,
+              $"وسطِ توضیح {MidY(sub!):0} · وسطِ عنوان {MidY(title!):0}");
+        Check("و سربرگ یک ردیف است (زیرِ ۸۰ پیکسل؛ پیش از این ۹۶)", head is not null && head.Bounds.Height < 80, $"{head?.Bounds.Height:0} پیکسل");
+        Round14Probe.Shot(win, shots, "section-sub-inline");
 
         void Ops(string what, Func<Task> op)
         {

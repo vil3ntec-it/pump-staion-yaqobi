@@ -61,6 +61,7 @@ internal static class TestSettingsHome
             //  حلقه واقعاً به `api.vill3n.top` درخواست می‌زد — از رانرِ CI.
             //  سنجهٔ خودش (`SyncStoreTests`) موتور را لازم ندارد.
             PumpYaqobi.App.Services.SyncEngine.Disabled = true;
+            PumpYaqobi.App.Update.AutoUpdate.Disabled = true;
 
             //  ⛔ **و حلقهٔ عکسِ ایستگاه هم.** هر آزمونی که `MainViewModel`
             //  می‌سازد آن را راه می‌انداخت و کسی نمی‌بستش؛ هر دقیقه

@@ -14,6 +14,18 @@ namespace PumpYaqobi.App.ViewModels.Sections;
 /// <summary>یک کارتِ قرض‌دار در فهرست — با نشانِ حالِ هر سه دفتر.</summary>
 public sealed partial class DebtorCardViewModel : ObservableObject
 {
+    /// <summary>
+    /// بخشی که این کارت مالِ آن است — دکمه‌های کارت (باز کردن، ✕، کیو‌آر) فرمانشان
+    /// را از همین می‌گیرند.
+    ///
+    /// ⛔ ۱۴۰۵/۰۷/۱۶ («توی حسابِ قرض‌دار نمی‌ره»): از ۳.۱.۲۰۷ که کارت‌ها با
+    /// ‎CardGrid‎ چیده شدند، اتصالِ ‎$parent[c:CardGrid]‎ هیچ‌وقت نمی‌نشست و فرمانِ
+    /// هر سه دکمه <b>خالی</b> بود (سنجهٔ ‎round16‎ با کلیکِ واقعیِ ماوس گرفتش: زیرِ
+    /// ماوس خودِ کارت بود و فرمان ‎null‎). ارجاعِ مستقیم به هیچ جست‌وجوی درخت
+    /// بند نیست.
+    /// </summary>
+    public DebtSectionViewModel? Owner { get; set; }
+
     public DebtorCardViewModel(Debtor d, IReadOnlyList<DebtAccount> accounts, DebtCalculationService calc)
     {
         Entity = d;
@@ -274,7 +286,7 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
 
         _all = people.Select(d => new DebtorCardViewModel(
             d, accounts.TryGetValue(d.Id, out var a) ? a : new List<DebtAccount>(), _host.Debt)).ToList();
-        for (var i = 0; i < _all.Count; i++) _all[i].Index = i + 1;
+        for (var i = 0; i < _all.Count; i++) { _all[i].Index = i + 1; _all[i].Owner = this; }
         ApplyFilter();
     }
 

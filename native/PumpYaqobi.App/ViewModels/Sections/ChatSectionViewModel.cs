@@ -119,7 +119,8 @@ public sealed partial class ChatThreadViewModel : ObservableObject
     public bool IsSupportDesk => Kind == ChatKind.Support;
 
     /// <summary>عکس و ویدیو و صدا — فقط گفت‌وگوی مشتری روی سرورِ حساب درِ رسانه دارد.</summary>
-    public bool CanAttach => IsCustomer;
+    /// <summary>عکس/ویدیو/صدا — مشتری و (از ۱۴۰۵/۰۷/۱۶) پشتیبانیِ برنامه.</summary>
+    public bool CanAttach => IsCustomer || IsSupportDesk;
 
     [ObservableProperty] private string _title;
     public ObservableCollection<ChatMessageViewModel> Messages { get; } = new();
@@ -501,7 +502,7 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
     [RelayCommand]
     private Task AttachAsync() => CrashGuard.RunAsync("فرستادنِ فایل", async () =>
     {
-        if (Current is not { IsCustomer: true } th) return;
+        if (Current is not { CanAttach: true } th) return;
         var path = await Dialogs.PickFileAsync("عکس یا ویدیو", "عکس و ویدیو",
             new[] { "*.jpg", "*.jpeg", "*.png", "*.webp", "*.gif", "*.mp4", "*.webm", "*.mov", "*.m4a", "*.mp3", "*.wav", "*.ogg" });
         if (string.IsNullOrEmpty(path)) return;
@@ -513,6 +514,7 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
 
     private async Task UploadAndSendAsync(ChatThreadViewModel th, byte[] bytes, string mime)
     {
+        if (th.IsSupportDesk) { await UploadAndSendSupportAsync(th, bytes, mime); return; }
         var cloud = Cloud;
         if (cloud is null || th.Acct is null) { State = "برنامه به سرورِ حساب وصل نیست"; return; }
         var kind = mime.StartsWith("image/") ? "image" : mime.StartsWith("video/") ? "video" : "audio";
@@ -524,10 +526,41 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
         await SendCustomerAsync(th, "", kind, mediaId);
     }
 
+    /// <summary>
+    /// رسانه برای پشتیبانیِ برنامه (۱۴۰۵/۰۷/۱۶). ⛔ نسخهٔ خودمان <b>پیش از</b>
+    /// فرستادن این‌جا می‌نشیند: سرورِ حساب فقط رد می‌کند و همین که مدیر گرفت
+    /// پاکش می‌کند — پس این کامپیوتر هیچ‌وقت آن را دوباره از سرور نمی‌خواهد.
+    /// </summary>
+    private async Task UploadAndSendSupportAsync(ChatThreadViewModel th, byte[] bytes, string mime)
+    {
+        var cloud = Cloud;
+        if (cloud is null)
+        {
+            State = "پشتیبانی وقتی کار می‌کند که این کامپیوتر به حسابِ پمپ وصل باشد (پروفایل)";
+            _host.Toast(State, ToastKind.Warn);
+            return;
+        }
+        var kind = mime.StartsWith("image/") ? "image" : mime.StartsWith("video/") ? "video" : "audio";
+        State = "در حالِ فرستادن…";
+        var (ok, mediaId, why) = await cloud.SupportUploadAsync(bytes, mime, _life.Token);
+        if (!ok || !SafeMediaId(mediaId))
+        {
+            State = "نرفت: " + why;
+            _host.Toast("فایل به پشتیبانی نرفت: " + why, ToastKind.Error);
+            return;
+        }
+        try { _store?.SaveMedia(mediaId, mime, bytes); } catch { }
+        var r = await cloud.SupportSendAsync("", _life.Token, kind, mediaId);
+        if (!r.Ok) { State = "نرفت: " + r.Why; _host.Toast("پیام به پشتیبانی نرفت: " + r.Why, ToastKind.Error); return; }
+        State = "";
+        await PollSupportDeskAsync(cloud, _life.Token);
+        Reload(th);
+    }
+
     [RelayCommand]
     private Task RecordAsync() => CrashGuard.RunAsync("ضبطِ صدا", async () =>
     {
-        if (!CanRecord || Current is not { IsCustomer: true } th) return;
+        if (!CanRecord || Current is not { CanAttach: true } th) return;
         if (_rec is null)
         {
             _rec = new WaveRecorder();
@@ -713,7 +746,13 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
                     _store.Delete(p.Key);
             _store.Upsert(new ChatRow(key, SupportId, m.Seq,
                 mine ? (m.Name.Length > 0 ? m.Name : Me) : "پشتیبانیِ برنامه",
-                m.Text, "text", null, mine, m.At, Anchor: m.At));
+                m.Text, m.Kind, m.MediaId, mine, m.At, Anchor: m.At));
+            //  ⛔ رسانهٔ مدیر همان لحظه این‌جا می‌نشیند — سرور پس از همین گرفتن پاکش می‌کند
+            if (!mine && SafeMediaId(m.MediaId) && _store.MediaPath(m.MediaId!) is null)
+            {
+                var got = await cloud.SupportMediaAsync(m.MediaId!, ct);
+                if (got is { } g) { try { _store.SaveMedia(m.MediaId!, g.Mime, g.Bytes); } catch { } }
+            }
             if (!existed && !mine) fresh.Add(m);
             if (m.Seq > after) after = m.Seq;
         }
@@ -722,7 +761,7 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 if (!(IsActive && Current?.IsSupportDesk == true))
-                    _host.Toast("🛟 پشتیبانی: " + Clip(fresh[^1].Text), ToastKind.Info);
+                    _host.Toast("🛟 پشتیبانی: " + (fresh[^1].Kind == "text" ? Clip(fresh[^1].Text) : Preview(fresh[^1])), ToastKind.Info);
             });
     }
 

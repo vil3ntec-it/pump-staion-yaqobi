@@ -109,13 +109,11 @@ internal static class ClockJumpProbe
         TimeSync.From(req, res, AppClock.MonoSource());
         Tick(win, TimeSpan.FromSeconds(1.5));
         Check("برنامه ساعتِ اینترنت را گرفت", AppClock.Trusted);
-        Check("سربرگ ⚠️ دارد", vm.ClockNote == "⚠️", vm.ClockNote);
-        Check("راهنما می‌گوید ساعتِ ویندوز عقب است", vm.ClockTip.Contains("عقب است"), vm.ClockTip);
+        //  ⛔ ۱۴۰۵/۰۷/۱۶: هیچ هشدارِ «ساعتِ ویندوز جلو/عقب است» — «به من چه»
+        Check("سربرگ هیچ هشداری دربارهٔ ساعتِ ویندوز ندارد", !vm.ClockTip.Contains("عقب") && !vm.ClockTip.Contains("جلو"), vm.ClockTip);
         Check("تاریخ همان تاریخِ واقعی ماند", vm.TodayText == today);
 
         offset = TimeSpan.Zero;
-        Tick(win, TimeSpan.FromSeconds(1.5));
-        Check("ساعتِ ویندوز درست شد ⇒ ⚠️ رفت", vm.ClockNote == "", vm.ClockNote);
 
         Console.WriteLine(_bad == 0 ? "\n✅ همه سبز" : $"\n✖ {_bad} ایراد");
         return _bad == 0 ? 0 : 1;

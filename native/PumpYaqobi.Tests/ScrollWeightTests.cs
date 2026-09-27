@@ -109,6 +109,20 @@ public class ScrollWeightTests : IDisposable
     }
 
     /// <summary>
+    /// «💎 اشتراک و پلن‌ها» — «خیلی به زور اسکرول می‌شه، کند است» (۱۴۰۵/۰۷/۱۶).
+    /// ‎scrollperf vip‎: نُه کادرِ سایه‌محو (سه کارتِ پهن و چهار کارتِ پلن)؛
+    /// بی سایه گامِ اسکرول ۴۲ ⇒ ۲۵ms. همان قاعدهٔ پروفایل: کارتِ بزرگ ‎calm‎.
+    /// </summary>
+    [Fact]
+    public void Eshterak_VaPlanha_BiSayeyeMahv()
+    {
+        var vip = NoComments(Read("PumpYaqobi.App", "Views", "Sections", "VipSectionView.axaml"));
+        Assert.DoesNotContain("Classes=\"card\"", vip);
+        Assert.True(Regex.Matches(vip, "Classes=\"card calm\"").Count >= 4);
+        Assert.DoesNotContain("<ScrollViewer", vip);
+    }
+
+    /// <summary>
     /// کارت‌های کارمندانِ «حاضری و معاش» با ‎ItemsRepeater‎ چیده نمی‌شوند
     /// (۱۴۰۵/۰۷/۱۴). کارت‌ها بالای جدول‌اند و ته صفحه از قاب بیرون می‌روند؛
     /// بلندیِ تخمینیِ ‎ItemsRepeater‎ برای کارت‌های آزادشده درست یک ردیف با
@@ -141,7 +155,10 @@ public class ScrollWeightTests : IDisposable
         Assert.Contains("<c:CardGrid ItemsSource=\"{Binding Cards}\"", v);
         Assert.DoesNotContain("<ItemsRepeater", v);
         Assert.DoesNotContain("$parent[ItemsRepeater]", v);
-        Assert.Contains("$parent[c:CardGrid]", v);
+        //  ⛔ فرمان‌های کارت از خودِ کارت (‎Owner‎)، نه پیمودنِ درخت (۱۴۰۵/۰۷/۱۶)
+        Assert.DoesNotContain("$parent[c:CardGrid]", v);
+        Assert.Contains("Command=\"{Binding Owner.OpenCommand}\"", v);
+        Assert.Contains("_all[i].Owner = this;", Read("PumpYaqobi.App", "ViewModels", "Sections", "DebtSectionViewModel.cs"));
 
         var src = Read("PumpYaqobi.App", "Controls", "CardGrid.cs");
         var code = Regex.Replace(src, "//.*", "");
@@ -156,6 +173,13 @@ public class ScrollWeightTests : IDisposable
         Assert.Contains("e.EffectiveViewport != _viewport) _lastScroll", code);
         //  و دیده نشدن ⇒ هیچ کارتِ زنده‌ای
         Assert.Contains("return (0, -1);", code);
+        //  ⛔ داده پیش از نشستن در درخت — وارونه‌اش هر کارت را مرده می‌کرد
+        //  («توی حسابِ قرض‌دار نمی‌ره»، ۱۴۰۵/۰۷/۱۶).
+        var built = code.IndexOf("BuiltCount++;");
+        Assert.True(built > 0);
+        var dc = code.IndexOf("c.DataContext = item;", built);
+        var attach = code.IndexOf("LogicalChildren.Add(c);", built);
+        Assert.True(dc > 0 && attach > dc, "CardGrid: DataContext باید پیش از LogicalChildren.Add باشد");
     }
 
     [Theory]

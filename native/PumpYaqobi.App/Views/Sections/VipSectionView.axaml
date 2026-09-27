@@ -43,7 +43,7 @@
     <StackPanel Spacing="14" MaxWidth="1040">
 
       <!-- ══ حالِ همین پمپ ═════════════════════════════════════════════════ -->
-      <Border Classes="card" Padding="24,20">
+      <Border Classes="card calm" Padding="24,20">
         <Grid ColumnDefinitions="Auto,*">
 
           <!-- ماندهٔ اشتراک — عددِ اولِ صفحه -->
@@ -73,7 +73,7 @@
       </Border>
 
       <!-- ══ چه چیزی همین حالا باز است ═════════════════════════════════════ -->
-      <Border Classes="card" Padding="22,18">
+      <Border Classes="card calm" Padding="22,18">
         <StackPanel Spacing="4">
           <TextBlock Text="🔑 دسترسی‌های همین حالا" Classes="card-title" FontSize="16" Margin="0,0,0,8" />
 
@@ -124,7 +124,7 @@
            لحظه باز، بی اینترنت. سنجش در ‎OfflineKey‎ است، نه این‌جا.
            ⚠️ این کادرِ کدِ اشتراکِ شش‌رقمیِ قدیم نیست (آن برداشته شد): این کد
            امضاشده و بسته به همین کامپیوتر است و بی سرور کار می‌کند. -->
-      <Border Classes="card" Padding="22,18">
+      <Border Classes="card calm" Padding="22,18">
         <StackPanel Spacing="10">
           <TextBlock Text="🔑 کدِ اشتراکِ آفلاین (بی اینترنت)" Classes="card-title" FontSize="16" />
           <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
@@ -170,7 +170,7 @@
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:PlanCard">
-            <Border Classes="card" Width="244" Margin="0,0,12,12" Padding="0"
+            <Border Classes="card calm" Width="244" Margin="0,0,12,12" Padding="0"
                     VerticalAlignment="Top">
               <StackPanel>
                 <!-- سرِ کارت -->
