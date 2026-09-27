@@ -584,5 +584,31 @@ console.log('\n— خبر به گوشیِ بسته');
   ok(!/pump-kar-v10'/.test(swSrc), 'شمارهٔ کشِ سرویس‌ورکر بالا رفته');
 }
 
+// ══ نام و آیکونِ بیرونِ اپ (۱۴۰۵/۰۷/۱۵) ══════════════════════════════════════
+// «ببین ایکون برنامه تغییر کرده؟ بیرون از برنامه — روی دسکتاپ یا اپ اندروید.»
+// نامِ «پمپ بنزین» و نشانِ VILL3N روی صفحهٔ اصلیِ گوشی (آیفون از manifest و
+// apple-touch-icon، اندروید از mipmapی که build-kar-apk از logo-mark می‌سازد).
+{
+  console.log('\n══ نام و آیکونِ بیرونِ اپ');
+  const { readFileSync, existsSync } = await import('node:fs');
+  const read = (f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+  const man = JSON.parse(read('kar/manifest.json'));
+  const html = read('kar/index.html');
+  const apk = read('.github/workflows/build-kar-apk.yml');
+  const png = (f) => { const b = readFileSync(new URL('../kar/' + f, import.meta.url));
+    return b.readUInt32BE(16) + 'x' + b.readUInt32BE(20); };
+  ok(man.name === 'پمپ بنزین' && man.short_name === 'پمپ بنزین', 'نامِ اپ روی صفحهٔ اصلی «پمپ بنزین» است');
+  ok(!/یعقوبی|دستیار/.test(man.name + man.short_name) && !/<title>[^<]*(یعقوبی|دستیار)/.test(html)
+     && !/apple-mobile-web-app-title" content="[^"]*(یعقوبی|دستیار)/.test(html), 'نامِ کهنه نه در manifest نه در سرِ صفحه');
+  ok(man.icons.every(i => i.src.startsWith('./icons/') && existsSync(new URL('../kar/' + i.src.slice(2), import.meta.url))),
+     'آیکون‌ها مالِ خودِ اپ‌اند (kar/icons)، نه قطرهٔ نارنجیِ سایتِ قدیم');
+  ok(man.icons.some(i => i.purpose === 'maskable'), 'اندرویدِ نصب از مرورگر هم آیکونِ تمام‌قد (maskable) دارد');
+  ok(png('icons/icon-192.png') === '192x192' && png('icons/icon-512.png') === '512x512'
+     && png('icons/icon-maskable-512.png') === '512x512' && png('icons/apple-touch-icon.png') === '180x180', 'اندازهٔ هر آیکون درست است');
+  ok(/rel="apple-touch-icon" href="\.\/icons\/apple-touch-icon\.png"/.test(html), 'آیفون («افزودن به صفحهٔ اصلی») آیکونِ تازه را می‌گیرد');
+  ok(/-PappLabel='پمپ بنزین'/.test(apk) && /logo-mark\.png/.test(apk), 'فایلِ نصبِ اندروید: نامِ «پمپ بنزین» و نشانِ VILL3N');
+  ok(!/pump-kar-v14'/.test(read('kar/sw.js')), 'شمارهٔ کشِ سرویس‌ورکر بالا رفته (manifestِ تازه به گوشی‌ها برسد)');
+}
+
 console.log(bad ? '\n' + bad + ' آزمون شکست خورد' : '\nهمه درست');
 process.exit(bad ? 1 : 0);
