@@ -40,6 +40,13 @@ public sealed class AppSettings
     public string LastPrinter { get; set; } = "";
 
     /// <summary>
+    /// ترتیبِ بخش‌های نوار که کاربر خودش چیده (شناسه‌ها با «,»)؛ خالی یعنی
+    /// پیش‌فرض (۱۴۰۵/۰۷/۱۵ — شرحش بالای ‎ViewModels.NavOrder‎). مقدارِ راحتی،
+    /// پس <c>SaveSoon()</c> و فهرستِ <c>SaveComfortOnly</c>.
+    /// </summary>
+    public string NavOrder { get; set; } = "";
+
+    /// <summary>
     /// نشانیِ سرورِ خانگیِ خودِ صاحب ریپو — پیام‌رسان از همین می‌خواند.
     /// ⚠️ هیچ سرویسِ بیرونی‌ای این‌جا نمی‌آید؛ خالی یعنی پیام‌رسان خاموش.
     /// </summary>
@@ -853,7 +860,7 @@ public sealed class AppSettings
     /// نسخهٔ دیسک خوانده می‌شود و فقط همان پنج مقدارِ راحتی رویش می‌نشیند.
     /// ⛔ فهرستِ این شش‌تا باید با جاهایی که ‎SaveSoon()‎ را صدا می‌زنند یکی
     /// بماند (تم · آخرین بخش · اندازهٔ ماشین‌حساب · برسیِ زنجیرهٔ پایه ·
-    /// کفِ ساعتِ مجوز · چاپگرِ آخر)؛ هر
+    /// کفِ ساعتِ مجوز · چاپگرِ آخر · ترتیبِ نوار)؛ هر
     /// چیزِ دیگری که از دست
     /// رفتنش کاربر را از حسابش بیرون می‌اندازد، ‎Save()‎ی بادوام می‌خواهد.
     /// </summary>
@@ -871,6 +878,7 @@ public sealed class AppSettings
         live.CalcLarge = CalcLarge;
         live.ParchaChainCheck = ParchaChainCheck;
         live.LastPrinter = LastPrinter;
+        live.NavOrder = NavOrder;
         //  ⚠️ کفِ ساعت از این در فقط **جلو** می‌رود: نوبتِ در صف ممکن است
         //  عکسِ کهنه‌ای باشد که کفِ پایین‌تری دارد، و پایین آوردنِ عمدیِ کف
         //  (مجوزِ تازهٔ سرور، `LicenseClock.Anchor`) از راهِ `Save()`ی بادوام

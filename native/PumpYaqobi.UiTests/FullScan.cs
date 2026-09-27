@@ -40,6 +40,8 @@ internal static class FullScan
         ("personperf", "حسابِ بزرگ: ۵۰۰ تا ۵۰٬۰۰۰ ردیف",       false),
         ("scrollperf", "گامِ چرخِ ماوس",                        true),
         ("scrollend",  "ته اسکرول می‌ایستد",                   true),
+        ("layoutcycle","تعویضِ تم: هیچ نوشته‌ای چپ‌چین نشود",   true),
+        ("waraqscroll","لغزیدنِ داخلِ ورق بی پرش",              true),
         ("bigtable",   "جدولِ بزرگ: ردیفِ زنده و درستی",        false),
         ("gridperf",   "یک میلیون ردیف",                       false),
         ("cardperf",   "کارت‌های قرض‌داران",                   true),

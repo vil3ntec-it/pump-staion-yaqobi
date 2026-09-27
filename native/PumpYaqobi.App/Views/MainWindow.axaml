@@ -32,6 +32,24 @@
        همان‌جا استثنا می‌دهد («No animator registered for the property
        RenderTransform»). ‎Opacity‎ انیماتورِ ‎double‎ دارد و همیشه کار می‌کند. -->
   <Window.Styles>
+    <!-- ══ دو دکمهٔ رادیوییِ تم در سربرگ — یک کپسولِ کوچک به‌جای کشوییِ ۱۸۰ پیکسلی ══ -->
+    <Style Selector="Border.theme-radios">
+      <Setter Property="Background" Value="{DynamicResource Pump.Input}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="999" />
+      <Setter Property="Padding" Value="8,1" />
+    </Style>
+    <Style Selector="RadioButton.theme">
+      <Setter Property="MinHeight" Value="30" />
+      <Setter Property="Padding" Value="4,0,8,0" />
+      <Setter Property="Margin" Value="0" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="RadioButton.theme TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
+    </Style>
     <!-- ⚠️ فقط با کلاسِ ‎pulse‎ که به ‎IsStarting‎ بسته است: انیمیشنِ بی‌پایان روی
          کنترلِ **پنهان** هم می‌چرخد و هر فریم پنجره را از نو می‌کشد — همان
          «کامپیوتر داغ می‌شود»ِ صاحب ریپو، بعد از رمز و تا ابد. -->
@@ -124,10 +142,12 @@
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
           <!-- تاریخ و ساعت یک‌خطه. دوخطه بود و روی همین پنجرهٔ ۱۴۴۰ تاریخ
                می‌شکست و سربرگ شلوغ می‌شد. -->
-          <!-- ⛔ کلیک ⇐ «تاریخ و ساعتِ» خودِ ویندوز (۱۴۰۵/۰۷/۱۳): برنامه ساعتِ دومی نمی‌سازد -->
+          <!-- ⛔ کلیک ⇐ پنجرهٔ «🕘 تاریخ و ساعت»ِ خودِ برنامه (۱۴۰۵/۰۷/۱۵) — نه
+               تنظیماتِ ویندوز. برنامه ساعتِ دومی نمی‌سازد: «ثبت» همان ساعتِ
+               ویندوز را عوض می‌کند (‎Services.ClockService‎). -->
           <Button Classes="ghost" Padding="6,2" Background="Transparent" BorderThickness="0"
-                  Command="{Binding OpenClockSettingsCommand}" Cursor="Hand"
-                  ToolTip.Tip="برای عوض کردنِ تاریخ یا ساعت کلیک کنید — تنظیماتِ تاریخ و ساعتِ ویندوز باز می‌شود">
+                  Command="{Binding OpenClockCommand}" Cursor="Hand"
+                  ToolTip.Tip="تاریخ و ساعت — برای دیدن یا عوض کردن کلیک کنید">
           <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
             <TextBlock Text="{Binding TodayText}" FontSize="14.5" FontWeight="Bold"
                        VerticalAlignment="Center" TextWrapping="NoWrap"
@@ -140,16 +160,27 @@
           </StackPanel>
           </Button>
 
-          <ComboBox ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}" MinWidth="180">
-            <ComboBox.ItemTemplate>
-              <DataTemplate x:DataType="th:PumpTheme">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                  <Border Width="14" Height="14" CornerRadius="7" Background="{Binding Accent, Converter={x:Static th:ColorToBrushConverter.Instance}}" />
-                  <TextBlock Text="{Binding Title}" />
+          <!-- ══ تم: دو دکمهٔ رادیویی، نه کشویی (۱۴۰۵/۰۷/۱۵) ══════════════════
+               خواستهٔ صاحب ریپو: «کشویی است، به رادیو باتون عوض کن که خیلی جا
+               نگیرد.» همان ‎SelectedTheme‎ از دو درِ ‎IsLightTheme‎/‎IsDarkTheme‎. -->
+          <Border Classes="theme-radios" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="2">
+              <RadioButton Classes="theme" GroupName="pump-theme" IsChecked="{Binding IsLightTheme}"
+                           ToolTip.Tip="تمِ روشن (آبی)">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <Border Width="11" Height="11" CornerRadius="6" Background="#3B82F6" VerticalAlignment="Center" />
+                  <TextBlock Text="روشن" FontSize="12.5" FontWeight="Bold" VerticalAlignment="Center" />
                 </StackPanel>
-              </DataTemplate>
-            </ComboBox.ItemTemplate>
-          </ComboBox>
+              </RadioButton>
+              <RadioButton Classes="theme" GroupName="pump-theme" IsChecked="{Binding IsDarkTheme}"
+                           ToolTip.Tip="تمِ تیره (مشکی و زرد)">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <Border Width="11" Height="11" CornerRadius="6" Background="#FFD700" VerticalAlignment="Center" />
+                  <TextBlock Text="تیره" FontSize="12.5" FontWeight="Bold" VerticalAlignment="Center" />
+                </StackPanel>
+              </RadioButton>
+            </StackPanel>
+          </Border>
 
           <!-- 👤 پروفایل — بغلِ تم، خواستهٔ صریحِ صاحب ریپو: «یک بخشِ جدید
                بالای صفحه بغلِ تم بگذار به اسمِ پروفایل که آن‌جا هم بتواند
@@ -306,9 +337,22 @@
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:SectionViewModel">
+              <!-- ⛔ راست‌کلیک ⇐ جابه‌جا کردنِ همین بخش در نوار (۱۴۰۵/۰۷/۱۵ — «می‌خواهم
+                   صرافی را بیاورم اول یا آخر»). فقط ترتیبِ دیدن؛ شرح بالای ‎NavOrder‎. -->
               <Button Classes="nav" Margin="3,0"
                       Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).GoCommand}"
-                      CommandParameter="{Binding}">
+                      CommandParameter="{Binding}"
+                      ToolTip.Tip="راست‌کلیک: جابه‌جا کردنِ این بخش در نوار">
+                <Button.ContextMenu>
+                  <ContextMenu>
+                    <MenuItem Header="⏮ اولِ نوار" Tag="first" Click="OnNavMove" />
+                    <MenuItem Header="یک خانه جلوتر" Tag="earlier" Click="OnNavMove" />
+                    <MenuItem Header="یک خانه عقب‌تر" Tag="later" Click="OnNavMove" />
+                    <MenuItem Header="⏭ آخرِ نوار" Tag="last" Click="OnNavMove" />
+                    <Separator />
+                    <MenuItem Header="↺ ترتیبِ پیش‌فرضِ همهٔ بخش‌ها" Tag="reset" Click="OnNavMove" />
+                  </ContextMenu>
+                </Button.ContextMenu>
                 <Classes.active>
                   <Binding Path="IsActive" />
                 </Classes.active>

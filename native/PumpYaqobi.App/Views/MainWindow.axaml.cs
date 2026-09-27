@@ -9,6 +9,25 @@ namespace PumpYaqobi.App.Views;
 public partial class MainWindow : Window
 {
     /// <summary>کشیدنِ گوشهٔ بالا-چپِ ماشین‌حساب: به چپ/بالا = بزرگ‌تر.</summary>
+    /// <summary>
+    /// راست‌کلیک روی بخشِ نوار ⇐ جابه‌جا کردنش (۱۴۰۵/۰۷/۱۵). از کدِ پشت، نه
+    /// اتصالِ ‎$parent[Window]‎: منوی راست‌کلیک در پنجرهٔ بازشوی جدا می‌نشیند و
+    /// آن‌جا ‎Window‎ی بالادستی نیست. ‎DataContext‎ی آیتمِ منو همان بخش است.
+    /// </summary>
+    private void OnNavMove(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: string tag } item || DataContext is not MainViewModel vm) return;
+        if (tag == "reset") { vm.NavResetCommand.Execute(null); return; }
+        var where = tag switch
+        {
+            "first" => NavOrder.Where.First,
+            "earlier" => NavOrder.Where.Earlier,
+            "later" => NavOrder.Where.Later,
+            _ => NavOrder.Where.Last,
+        };
+        vm.MoveNav(item.DataContext as SectionViewModel, where);
+    }
+
     private void OnCalcResize(object? sender, Avalonia.Input.VectorEventArgs e)
     {
         if (DataContext is ViewModels.MainViewModel vm) vm.Calculator.Resize(-e.Vector.X, -e.Vector.Y);

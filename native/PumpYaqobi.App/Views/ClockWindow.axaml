@@ -1,0 +1,66 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PumpYaqobi.App.ViewModels"
+        x:Class="PumpYaqobi.App.Views.ClockWindow"
+        x:DataType="vm:ClockViewModel"
+        Width="560" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        FlowDirection="RightToLeft"
+        Background="{DynamicResource Pump.Card}"
+        Title="تاریخ و ساعت">
+
+  <!-- ══ 🕘 تاریخ و ساعت — مالِ خودِ برنامه (۱۴۰۵/۰۷/۱۵) ══════════════════════
+       خواستهٔ صاحب ریپو: «برنامهٔ من خودش داشته باشد، نرود از ویندوز باز شود.»
+       ⛔ ساعتِ دوم ساخته نمی‌شود: «ثبت» همان ساعتِ ویندوز را عوض می‌کند
+       (‎Services.ClockService‎) — شرحِ چرایی همان‌جا. -->
+  <StackPanel Margin="22" Spacing="14">
+    <TextBlock Classes="h2" Text="🕘 تاریخ و ساعت" TextAlignment="Center" />
+
+    <Border Classes="calc" Padding="12,10">
+      <StackPanel Spacing="2">
+        <TextBlock Classes="muted" FontSize="12" Text="ساعتِ همین حالای کامپیوتر" TextAlignment="Center" />
+        <TextBlock Text="{Binding NowText}" FontSize="17" FontWeight="Bold" TextAlignment="Center" />
+      </StackPanel>
+    </Border>
+
+    <!-- روز · ماه (با نام) · سال — به ترتیبِ خواندنِ فارسی، از راست -->
+    <Grid ColumnDefinitions="*,8,2*,8,*" RowDefinitions="Auto,Auto">
+      <TextBlock Grid.Column="0" Classes="label" FontSize="13" Text="روز" TextAlignment="Center" />
+      <TextBlock Grid.Column="2" Classes="label" FontSize="13" Text="ماه" TextAlignment="Center" />
+      <TextBlock Grid.Column="4" Classes="label" FontSize="13" Text="سال" TextAlignment="Center" />
+      <ComboBox Grid.Row="1" Grid.Column="0" HorizontalAlignment="Stretch" Margin="0,4,0,0"
+                ItemsSource="{Binding Days}" SelectedItem="{Binding Day}" />
+      <ComboBox Grid.Row="1" Grid.Column="2" HorizontalAlignment="Stretch" Margin="0,4,0,0"
+                ItemsSource="{Binding Months}" SelectedIndex="{Binding MonthIndex}" />
+      <ComboBox Grid.Row="1" Grid.Column="4" HorizontalAlignment="Stretch" Margin="0,4,0,0"
+                ItemsSource="{Binding Years}" SelectedItem="{Binding Year}" />
+    </Grid>
+
+    <!-- ساعت : دقیقه — عددها چپ‌به‌راست، همان شکلی که ساعت خوانده می‌شود -->
+    <Grid ColumnDefinitions="*,Auto,*" FlowDirection="LeftToRight" Width="260" HorizontalAlignment="Center">
+      <ComboBox Grid.Column="0" HorizontalAlignment="Stretch"
+                ItemsSource="{Binding Hours}" SelectedIndex="{Binding HourIndex}" />
+      <TextBlock Grid.Column="1" Text=":" FontSize="20" FontWeight="Bold" Margin="8,0" VerticalAlignment="Center" />
+      <ComboBox Grid.Column="2" HorizontalAlignment="Stretch"
+                ItemsSource="{Binding Minutes}" SelectedIndex="{Binding MinuteIndex}" />
+    </Grid>
+
+    <TextBlock Text="{Binding PickedText}" FontSize="15" FontWeight="SemiBold" TextAlignment="Center"
+               Foreground="{DynamicResource Pump.Ink.Accent}" />
+
+    <WrapPanel HorizontalAlignment="Center">
+      <Button Classes="accent" Content="✔ ثبت روی ساعتِ کامپیوتر" Margin="4" Command="{Binding ApplyCommand}"
+              IsEnabled="{Binding !Busy}"
+              ToolTip.Tip="همان ساعتِ ویندوز عوض می‌شود — ویندوز یک بار اجازه می‌خواهد" />
+      <Button Content="🌐 ساعتِ درست از اینترنت" Margin="4" Command="{Binding SyncCommand}"
+              IsEnabled="{Binding !Busy}" />
+      <Button Content="↺ همین حالا" Margin="4" Command="{Binding NowCommand}" />
+      <Button Content="بستن" Margin="4" Click="OnClose" />
+    </WrapPanel>
+
+    <TextBlock Text="{Binding Status}" TextWrapping="Wrap" TextAlignment="Center" FontWeight="SemiBold"
+               IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+    <TextBlock Classes="muted" FontSize="11.5" TextWrapping="Wrap" TextAlignment="Center"
+               Text="تاریخِ همهٔ ردیف‌ها و ماهِ دفترها از همین ساعتِ کامپیوتر می‌آید؛ برنامه ساعتِ جدای خودش را نگه نمی‌دارد تا هیچ ردیفی در ماهِ اشتباه ننشیند." />
+  </StackPanel>
+</Window>

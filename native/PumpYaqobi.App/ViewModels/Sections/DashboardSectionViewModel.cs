@@ -377,7 +377,8 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
         var d = DateTime.Now;
         Clock = $"{d.Hour:00}:{d.Minute:00}:{d.Second:00}";
         Greeting = d.Hour < 12 ? "صبح بخیر 👋" : d.Hour < 17 ? "چاشت بخیر 👋" : "شب بخیر 👋";
-        DateLine = "· " + Shamsi.DayName(d) + " " + Shamsi.Of(d);
+        //  همان شکلِ سربرگ — روزِ هفته، روز، نامِ ماه، سال (۱۴۰۵/۰۷/۱۵)
+        DateLine = "· " + MainViewModel.HeaderDate(d);
     }
 
     // ── رسم ─────────────────────────────────────────────────────────────────

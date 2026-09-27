@@ -40,7 +40,7 @@ internal static class Round14Probe
         // ‎R14_START=gold‎: برنامه از اول با تمِ تیره بالا بیاید — همان حالِ عکسِ صاحب ریپو
         var startGold = Environment.GetEnvironmentVariable("R14_START") == "gold";
         if (startGold) PumpYaqobi.App.Themes.ThemeManager.Apply(PumpYaqobi.App.Themes.PumpTheme.Gold);
-        var win = new MainWindow { Width = 1440, Height = double.TryParse(Environment.GetEnvironmentVariable("R14_H"), out var h14) ? h14 : 900 };
+        var win = new MainWindow { Width = double.TryParse(Environment.GetEnvironmentVariable("R14_W"), out var w14) ? w14 : 1440, Height = double.TryParse(Environment.GetEnvironmentVariable("R14_H"), out var h14) ? h14 : 900 };
         win.Show();
         Pump(win);
         var vm = (MainViewModel)win.DataContext!;
@@ -60,6 +60,9 @@ internal static class Round14Probe
             }
             Wait(win, vm.GoAsync(vm.Sections.First(x => x.Id == "dashboard"))); Settle(win);
             vm.SelectedTheme = startGold ? PumpYaqobi.App.Themes.PumpTheme.Blue : PumpYaqobi.App.Themes.PumpTheme.Gold;
+            // ⚠️ یک فریمِ واقعی، همان‌طور که ویندوز شصت بار در ثانیه می‌کشد: بخش‌های
+            // پنهان هم «کثیف»اند و کشیده می‌شوند — ریشهٔ نوشتهٔ چپ‌چین (۱۴۰۵/۰۷/۱۵)
+            using (win.CaptureRenderedFrame()) { }
             Settle(win);
             foreach (var id in ids)
             {
