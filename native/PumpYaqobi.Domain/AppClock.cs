@@ -52,7 +52,7 @@ public static class AppClock
     private static bool _based;
     private static long _baseMs;      // لنگر (میلی‌ثانیهٔ یونیکس)
     private static long _baseMono;    // شمارنده در لحظهٔ لنگر
-    private static bool _trusted;
+    private static volatile bool _trusted;
     private static long _trustedMono = long.MinValue;
 
     /// <summary>ساعتِ اینترنت (یا لنگری که از آن آمده) این‌جا هست.</summary>
@@ -67,22 +67,41 @@ public static class AppClock
     /// <summary>با یک اتفاق عوض شد (ساعتِ اینترنت آمد، یا کاربر ساعت را درست کرد).</summary>
     public static event Action? Changed;
 
+    /// <summary>
+    /// لنگرِ فعلی — یک شیءِ تغییرناپذیر که بی قفل خوانده می‌شود. ⚡ «حالا» روی
+    /// مسیرِ داغ است (سازندهٔ هر موجودیتی که EF از دیسک می‌خواند) و باید از
+    /// خودِ ‎DateTime.UtcNow‎ ارزان‌تر باشد: یک ‎TickCount64‎ و یک جمع.
+    /// </summary>
+    private sealed record Anchor(long Ms, long Mono);
+
+    private static volatile Anchor? _anchor;
+    private static long _wallCheckedMono = long.MinValue / 2;
+
+    /// <summary>ساعتِ ویندوز هر چند وقت یک بار برای لرزشِ کوچک نگاه شود (پیش از ساعتِ اینترنت).</summary>
+    private const long WallLookMs = 250;
+
     /// <summary>حالا — میلی‌ثانیهٔ یونیکس (UTC). ⛔ جای ‎DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()‎.</summary>
     public static long UnixMs
     {
         get
         {
+            var mono = MonoSource();
+            var a = _anchor;
+            if (a is null)
+            {
+                lock (Gate) { if (!_based) Rebase(WallMs(), mono, trusted: false); a = _anchor!; }
+            }
+            var est = a.Ms + (mono - a.Mono);
+            if (_trusted || mono - Volatile.Read(ref _wallCheckedMono) < WallLookMs) return est;
+
             lock (Gate)
             {
-                var mono = MonoSource();
-                if (!_based) { Rebase(WallMs(), mono, trusted: false); return _baseMs; }
-                var est = _baseMs + (mono - _baseMono);
-                if (!_trusted)
-                {
-                    //  فقط لرزشِ کوچک — جابه‌جاییِ دستی (روزها، ماه‌ها) نادیده
-                    var wall = WallMs();
-                    if (Math.Abs(wall - est) <= FollowMs) { Rebase(wall, mono, false); return wall; }
-                }
+                _wallCheckedMono = mono;
+                if (_trusted) return _baseMs + (mono - _baseMono);
+                est = _baseMs + (mono - _baseMono);
+                //  فقط لرزشِ کوچک — جابه‌جاییِ دستی (روزها، ماه‌ها) نادیده
+                var wall = WallMs();
+                if (Math.Abs(wall - est) <= FollowMs) { Rebase(wall, mono, false); return wall; }
                 return est;
             }
         }
@@ -210,6 +229,7 @@ public static class AppClock
         lock (Gate)
         {
             _based = false; _trusted = false; _trustedMono = long.MinValue; SafeToPurgeOverride = null;
+            _anchor = null; _wallCheckedMono = long.MinValue / 2;
             WallSource = () => DateTime.UtcNow;
             MonoSource = () => Environment.TickCount64;
         }
@@ -225,5 +245,6 @@ public static class AppClock
     {
         _baseMs = ms; _baseMono = mono; _based = true;
         if (trusted) _trusted = true;
+        _anchor = new Anchor(ms, mono);
     }
 }

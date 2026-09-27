@@ -73,7 +73,8 @@ public class AppClockTests : IDisposable
     {
         var start = AppClock.UnixMs;
         _wall = _wall.AddSeconds(40);                  // همگام‌سازیِ خودکارِ ویندوز
-        Assert.Equal(start + 40_000, AppClock.UnixMs);
+        Pass(TimeSpan.FromSeconds(1));                 // ساعتِ ویندوز هر ربع ثانیه نگاه می‌شود
+        Assert.Equal(start + 41_000, AppClock.UnixMs);
 
         //  با ساعتِ اینترنت، ساعتِ ویندوز دیگر هیچ اثری ندارد — حتی لرزشِ کوچک
         AppClock.Accept(new DateTimeOffset(Real).ToUnixTimeMilliseconds(), _mono);
