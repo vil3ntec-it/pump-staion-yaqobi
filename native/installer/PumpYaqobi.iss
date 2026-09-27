@@ -75,7 +75,10 @@ VersionInfoVersion={#AppVersion}
 
 ; نصب برای همین کاربر — بی اجازهٔ مدیر
 PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
+; ⛔ «dialog» نه (۱۴۰۵/۰۷/۱۵): پنجرهٔ انگلیسیِ «برای همه یا فقط من؟» اولِ کار
+; گیج می‌کرد و «برای همه» یک نصبِ دومِ جدا (HKLM) کنارِ نصبِ کاربری می‌ساخت.
+; نصبِ همه‌کاربره هنوز با ‎/ALLUSERS‎ شدنی است.
+PrivilegesRequiredOverridesAllowed=commandline
 DefaultDirName={localappdata}\Programs\{#InstallFolder}
 DefaultGroupName={#AppName}
 ; ⚠️ گروهِ پیشین «پمپ یعقوبی» بود — نامِ تازه، و گروهِ کهنه پایین در [InstallDelete] می‌رود
@@ -125,6 +128,11 @@ fa.DiskSpaceGBLabel=دستِ‌کم [gb] گیگابایت جای خالی لاز
 fa.DiskSpaceMBLabel=دستِ‌کم [mb] مگابایت جای خالی لازم است.
 fa.ButtonBrowse=&انتخابِ پوشه
 fa.DirNotEmpty=پوشهٔ «%1» خالی نیست. باز هم همان‌جا نصب شود؟
+; پیام‌های خودِ Inno برای پوشهٔ نادرست — پیش از NextButtonClick می‌آیند (سنجهٔ ویزارد دید که انگلیسی بودند)
+fa.InvalidDrive=درایوی که انتخاب کردید روی این کامپیوتر پیدا نشد یا در دسترس نیست. درایو یا پوشهٔ دیگری انتخاب کنید.
+fa.InvalidPath=نشانیِ کامل با حرفِ درایو بنویسید، مثلاً:%n%nD:\PumpYaqobi
+fa.DiskSpaceWarningTitle=جای خالی کم است
+fa.DiskSpaceWarning=برای نصب دستِ‌کم %1 کیلوبایت جای خالی لازم است ولی این درایو فقط %2 کیلوبایت دارد.%n%nباز هم ادامه شود؟
 fa.ButtonNext=&بعدی
 fa.ButtonBack=&قبلی
 fa.ButtonInstall=&نصب
@@ -202,10 +210,15 @@ function NeedsAdminFolder(Path: String): Boolean;
 var
   P: String;
 begin
-  P := Lowercase(Path);
-  Result := (Pos(Lowercase(ExpandConstant('{commonpf}')), P) = 1)
-         or (Pos(Lowercase(ExpandConstant('{commonpf32}')), P) = 1)
-         or (Pos(Lowercase(ExpandConstant('{win}')), P) = 1);
+  P := AddBackslash(Lowercase(Path));
+  //  ⚠️ نصاب ۳۲بیتی است، پس {commonpf} همان «Program Files (x86)» است و
+  //  «C:\Program Files»ِ ویندوزِ ۶۴ را نمی‌گرفت — سنجهٔ ویزارد (۱۴۰۵/۰۷/۱۵) دید
+  //  که آن‌جا بی هیچ هشداری گذشت. {commonpf64} فقط روی ویندوزِ ۶۴ معنا دارد.
+  Result := (Pos(AddBackslash(Lowercase(ExpandConstant('{commonpf}'))), P) = 1)
+         or (Pos(AddBackslash(Lowercase(ExpandConstant('{commonpf32}'))), P) = 1)
+         or (Pos(AddBackslash(Lowercase(ExpandConstant('{win}'))), P) = 1);
+  if IsWin64 and (not Result) then
+    Result := Pos(AddBackslash(Lowercase(ExpandConstant('{commonpf64}'))), P) = 1;
 end;
 
 // ── نصبِ دوباره = به‌روزرسانی · نسخهٔ کهنه‌تر پذیرفته نمی‌شود ─────────────
@@ -390,10 +403,25 @@ function ShouldSkipPage(PageID: Integer): Boolean;
 begin
   //  فقط به‌روزرسانیِ بی‌صدا نمی‌پرسد؛ هر نصبِ دستی — تازه یا روی موجود — می‌پرسد.
   Result := (PageID = ArchPage.ID) and WizardSilent;
-  //  به‌روزرسانی ⇒ همان پوشهٔ نصبِ پیشین (UsePreviousAppDir)؛ پرسیدنِ دوباره
-  //  فقط راهِ نصبِ دوم در جای دیگر را باز می‌کرد.
-  if (PageID = wpSelectDir) and (InstalledVer <> '') and (InstalledDir <> '') then
-    Result := True;
+  //  ⛔ صفحهٔ پوشه در هیچ نصبِ دستی رد نمی‌شود (۱۴۰۵/۰۷/۱۵، صاحب ریپو: «نصاب
+  //  انتخابِ فولدر نداشت که بگم کجا یا توی کدوم درایو نصب بشه… ارور داد»).
+  //  تا دیروز روی نصبِ موجود رد می‌شد و اگر پوشهٔ پیشین دیگر نوشتنی نبود
+  //  (Program Files، درایوِ رفته) نصب همان‌جا می‌شکست و راهِ عوض کردنی نبود.
+  //  پیش‌فرضش همان پوشهٔ پیشین است (UsePreviousAppDir)، پس «بعدی» یعنی همان.
+end;
+
+//  نصب از قبل هست ⇒ صفحهٔ پوشه همین را بگوید، نه فقط «کجا نصب شود؟»
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if (CurPageID = wpSelectDir) and (InstalledDir <> '') then
+    WizardForm.SelectDirLabel.Caption :=
+      'برنامه الان در این پوشه نصب است و همان‌جا به‌روز می‌شود:' + #13#10 + InstalledDir + #13#10 + #13#10 +
+      'اگر درایو یا پوشهٔ دیگری می‌خواهید، «انتخابِ پوشه» را بزنید.';
+end;
+
+function SameDir(A, B: String): Boolean;
+begin
+  Result := CompareText(RemoveBackslashUnlessRoot(Trim(A)), RemoveBackslashUnlessRoot(Trim(B))) = 0;
 end;
 
 // ── «از نو و خالی» هنگامِ حذف — کنار گذاشتن، نه پاک کردن ─────────────────
@@ -427,13 +455,51 @@ end;
 
 
 
+// ── پوشه‌ای که نصب در آن نمی‌نشیند، همین‌جا گفته می‌شود — نه وسطِ نصب ─────
+//  ⛔ هر کدام کاربر را روی همین صفحه نگه می‌دارد تا جای دیگری انتخاب کند؛
+//  هیچ‌کدام نصب را نمی‌بندد. و نصبِ بی‌صدا این صفحه را نمی‌بیند (/DIR).
 function NextButtonClick(CurPageID: Integer): Boolean;
+var
+  Dir, Drive: String;
 begin
   Result := True;
-  if (CurPageID = wpSelectDir) and NeedsAdminFolder(WizardDirValue) then
+  if CurPageID <> wpSelectDir then Exit;
+  Dir := WizardDirValue;
+
+  //  درایوی که نیست (فلشِ جداشده، درایوِ شبکهٔ قطع) ⇒ «نمی‌توان پوشه ساخت»ِ وسطِ نصب
+  Drive := ExtractFileDrive(Dir);
+  if (Drive = '') or (not DirExists(AddBackslash(Drive))) then
+  begin
+    MsgBox('درایوِ «' + Drive + '» روی این کامپیوتر پیدا نشد.' + #13#10 + #13#10 +
+           'درایو یا پوشهٔ دیگری انتخاب کنید.', mbError, MB_OK);
+    Result := False;
+    Exit;
+  end;
+
+  if NeedsAdminFolder(Dir) then
+  begin
+    if not IsAdmin then
+    begin
+      //  نصب بی اجازهٔ مدیر اجرا شده ⇒ این‌جا نوشتنی نیست و نصب با «دسترسی رد
+      //  شد» می‌شکست. همین‌جا گفته می‌شود و صفحه می‌ماند.
+      MsgBox('این پوشه بی اجازهٔ مدیرِ ویندوز نوشتنی نیست و نصب در آن انجام نمی‌شود:' + #13#10 + Dir + #13#10 + #13#10 +
+             'پوشهٔ دیگری انتخاب کنید — مثلاً پوشهٔ پیشنهادی، یا پوشه‌ای در درایوِ D.', mbError, MB_OK);
+      Result := False;
+      Exit;
+    end;
     MsgBox('این پوشه اجازهٔ مدیر می‌خواهد.' + #13#10 + #13#10 +
            'برنامه همان‌جا نصب می‌شود و کار می‌کند، ولی هر بار که خودش را' + #13#10 +
            'به‌روز می‌کند ویندوز اجازهٔ مدیر می‌پرسد.' + #13#10 + #13#10 +
            'اگر می‌خواهید به‌روزرسانی بی‌پرسش انجام شود، پوشهٔ پیشنهادی را' + #13#10 +
            'نگه دارید.', mbInformation, MB_OK);
+  end;
+
+  //  نصب از قبل جای دیگری است ⇒ آن‌جا می‌ماند؛ گفته می‌شود تا دو نسخه بی‌خبر نماند.
+  //  ⚠️ دفترِ حساب‌ها در ‎%AppData%‎ است و به هیچ‌کدام از دو پوشه بسته نیست.
+  if (InstalledDir <> '') and DirExists(InstalledDir) and (not SameDir(InstalledDir, Dir)) then
+    if MsgBox('برنامه الان در این پوشه نصب است:' + #13#10 + InstalledDir + #13#10 + #13#10 +
+              'با نصب در پوشهٔ تازه، فایل‌های پوشهٔ قبلی همان‌جا می‌مانند (خواستید، پاکش کنید).' + #13#10 +
+              'حساب‌ها و تنظیمات جدا نگه داشته می‌شوند و در هر دو یکی‌اند.' + #13#10 + #13#10 +
+              'در پوشهٔ تازه نصب شود؟', mbConfirmation, MB_YESNO) <> IDYES then
+      Result := False;
 end;
