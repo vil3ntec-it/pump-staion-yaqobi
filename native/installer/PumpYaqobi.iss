@@ -672,6 +672,10 @@ begin
     Exit;
   end;
   if CurPageID <> wpSelectDir then Exit;
+  //  ⛔ نصبِ بی‌صدا (به‌روزرسانی، اسکریپت) هیچ پنجره‌ای نمی‌بیند: ‎MsgBox‎ با
+  //  ‎/SUPPRESSMSGBOXES‎ پنهان نمی‌شود و نصاب تا ابد منتظرِ کلیک می‌ماند
+  //  (سنجهٔ ‎installer-check‎ با نصبِ بی‌صدا در پوشهٔ دیگر گرفتش، ۱۴۰۵/۰۷/۱۵).
+  if WizardSilent then Exit;
   Dir := WizardDirValue;
 
   //  درایوی که نیست (فلشِ جداشده، درایوِ شبکهٔ قطع) ⇒ «نمی‌توان پوشه ساخت»ِ وسطِ نصب

@@ -293,6 +293,14 @@ public class InstallerTests
         Assert.Contains("DestName: \"PumpYaqobi.ico\"", s);
         Assert.Contains("Name: \"{autodesktop}\\{#AppName}\";        Filename: \"{app}\\{#AppExe}\"; IconFilename: \"{app}\\PumpYaqobi.ico\"", s);
         Assert.Contains("ie4uinit.exe", s);
+
+        //  ⛔ نصبِ بی‌صدا هیچ پرسشی در صفحهٔ پوشه ندارد — ‎MsgBox‎ با ‎/SUPPRESSMSGBOXES‎
+        //  پنهان نمی‌شود و نصاب تا ابد می‌ماند
+        var i = s.IndexOf("if CurPageID <> wpSelectDir then Exit;", StringComparison.Ordinal);
+        Assert.True(i > 0);
+        var j = s.IndexOf("MsgBox(", i, StringComparison.Ordinal);
+        Assert.True(s.IndexOf("if WizardSilent then Exit;", i, StringComparison.Ordinal) is var k && k > 0 && k < j,
+                    "پیش از نخستین پرسشِ صفحهٔ پوشه، نصبِ بی‌صدا بیرون برود");
     }
 
     /// <summary>برنامهٔ باز باید هنگامِ به‌روزرسانی خودش بسته و باز شود.</summary>
