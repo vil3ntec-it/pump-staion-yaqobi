@@ -51,26 +51,15 @@
         </StackPanel>
       </c:SectionPage.Inline>
 
-              <ItemsRepeater ItemsSource="{Binding Cards}">
-          <ItemsRepeater.Layout>
               <!-- ══ کارت‌ها: هم‌اندازه، شش تا هشت تا در هر ردیف ══════════════
-                   گزارشِ صاحب ریپو با عکس: «کادرهایشان برابرِ هم نیستند، یکی
-                   کوچک یکی بزرگ، یا خیلی فاصله دارند … در هر صفحه شش تا هشت تا
-                   جا بشود، نه با فاصلهٔ زیاد، برابر و استاندارد.»
-
-                   دو چیز کم بود:
-                   • ‎MinItemHeight‎ نبود، پس هر کارت به قدِ محتوای خودش بود —
-                     کارتی که «اتمام پول» داشت بلندتر از بقیه می‌شد و ردیف
-                     ناهموار می‌ماند. حالا همه یک قد دارند و کارت هم عمودی
-                     کِش می‌آید تا قابش پر شود.
-                   • ‎MaximumRowsOrColumns‎ نبود، پس روی نمایشگرِ پهن ‎ItemsStretch‎
-                     کارت‌ها را بی‌جهت پهن می‌کرد. حالا سقفِ هشت‌تا دارد و
-                     ‎MinItemWidth‎ی ۲۰۰ روی باریک‌ترین صفحه هم شش‌تا می‌دهد. -->
-              <UniformGridLayout MinItemWidth="210" MinItemHeight="238"
-                                 MaximumRowsOrColumns="8" ItemsStretch="Fill"
-                                 MinColumnSpacing="10" MinRowSpacing="10" />
-            </ItemsRepeater.Layout>
-          <ItemsRepeater.ItemTemplate>
+                   (همان اندازه‌های ‎UniformGridLayout‎ی پیشین: کمینهٔ پهنا ۲۱۰،
+                   قد ۲۳۸، سقفِ هشت ستون، فاصلهٔ ۱۰.)
+                   ⛔ ‎CardGrid‎، نه ‎ItemsRepeater‎ (۱۴۰۵/۰۷/۱۵): بلندیِ صفحه با آن
+                   هر گام یک ردیف می‌پرید و ۷۵ کارت زنده می‌ماند — شرح و عدد در
+                   ‎Controls/CardGrid.cs‎. -->
+              <c:CardGrid ItemsSource="{Binding Cards}" MinItemWidth="210" ItemHeight="238"
+                          MaxColumns="8" Spacing="10">
+          <c:CardGrid.ItemTemplate>
             <DataTemplate x:DataType="vm:DebtorCardViewModel">
 
               <!-- کارتِ قرض‌دار — همان چیدمانِ نسخهٔ وب:
@@ -86,7 +75,7 @@
                    که بخشِ شرکت‌ها از قبل داشت). دکمه‌های درونِ کارت — ✕ و
                    کیو‌آر — کلیکشان را خودشان مصرف می‌کنند و به این نمی‌رسد. -->
               <Button Classes="card-shell" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
-                      Command="{Binding $parent[ItemsRepeater].((vm:DebtSectionViewModel)DataContext).OpenCommand}"
+                      Command="{Binding $parent[c:CardGrid].((vm:DebtSectionViewModel)DataContext).OpenCommand}"
                       CommandParameter="{Binding}">
               <Border Classes="person-card">
                 <!-- ══ چیدمانِ کارت — همان نمونه‌ای که صاحب ریپو پسندید ══════
@@ -107,7 +96,7 @@
 
                   <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" Margin="10,9,10,0">
                     <Button Grid.Column="0" Classes="card-x" Content="✕"
-                            Command="{Binding $parent[ItemsRepeater].((vm:DebtSectionViewModel)DataContext).DeleteDebtorCommand}"
+                            Command="{Binding $parent[c:CardGrid].((vm:DebtSectionViewModel)DataContext).DeleteDebtorCommand}"
                             CommandParameter="{Binding}" />
                     <TextBlock Grid.Column="2" Text="{Binding MeterText}" FontSize="13" FontWeight="Bold"
                                VerticalAlignment="Center"
@@ -148,7 +137,7 @@
                                  FontWeight="Bold" FontSize="13.5" Margin="12,0,0,0"
                                  Foreground="{DynamicResource Pump.Muted}" />
                       <Button Grid.Column="3" Classes="qr-link" Content="کیوآر"
-                              Command="{Binding $parent[ItemsRepeater].((vm:DebtSectionViewModel)DataContext).ShowCardQrCommand}"
+                              Command="{Binding $parent[c:CardGrid].((vm:DebtSectionViewModel)DataContext).ShowCardQrCommand}"
                               CommandParameter="{Binding}" />
                     </Grid>
                   </StackPanel>
@@ -156,8 +145,8 @@
               </Border>
               </Button>
             </DataTemplate>
-          </ItemsRepeater.ItemTemplate>
-        </ItemsRepeater>
+          </c:CardGrid.ItemTemplate>
+        </c:CardGrid>
       
     </c:SectionPage>
 

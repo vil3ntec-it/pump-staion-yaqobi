@@ -126,6 +126,61 @@ public class ScrollWeightTests : IDisposable
         Assert.Contains("$parent[ItemsControl]", att);
     }
 
+    /// <summary>
+    /// ══ کارت‌های قرض‌داران: ‎CardGrid‎، نه ‎ItemsRepeater‎ (۱۴۰۵/۰۷/۱۵) ══
+    ///
+    /// سنجه (‎scrollperf cards‎) پیش از اصلاح: بلندیِ صفحه تقریباً با **هر** گامِ
+    /// چرخ یک ردیف (۲۴۸px) می‌پرید (تخمینِ ‎UniformGridLayout‎)، ۷۵ کارتِ زنده، و
+    /// گام‌های ۱۵۰ تا ۲۸۶ms. پس از آن: صفر پرش، بلندیِ دقیق از روی شمار، و بارِ
+    /// اول هم بی گامِ ساختن — کارت‌های پایینِ قاب در بی‌کاری از پیش زنده‌اند.
+    /// </summary>
+    [Fact]
+    public void KartehayeGharzdaran_CardGrid_BolandiyeDaghigh()
+    {
+        var v = NoComments(Read("PumpYaqobi.App", "Views", "Sections", "DebtSectionView.axaml"));
+        Assert.Contains("<c:CardGrid ItemsSource=\"{Binding Cards}\"", v);
+        Assert.DoesNotContain("<ItemsRepeater", v);
+        Assert.DoesNotContain("$parent[ItemsRepeater]", v);
+        Assert.Contains("$parent[c:CardGrid]", v);
+
+        var src = Read("PumpYaqobi.App", "Controls", "CardGrid.cs");
+        var code = Regex.Replace(src, "//.*", "");
+        //  ⛔ هیچ شنوندهٔ چیدمان (قاعدهٔ همیشگی) و هیچ ‎Post‎ِ پشتِ سرِ هم
+        Assert.DoesNotContain("LayoutUpdated", code);
+        Assert.DoesNotContain("Dispatcher.UIThread.Post", code);
+        Assert.Contains("DispatcherTimer.RunOnce(WarmOne", code);
+        //  ⛔ بخشِ پنهان هیچ کارتی نمی‌سازد، و تا کاربر می‌چرخاند هم نه
+        Assert.Contains("IsEffectivelyVisible && ItemTemplate is not null", code);
+        Assert.Contains("DateTime.UtcNow - _lastScroll < WarmCalm", code);
+        //  ⚠️ «اسکرول» فقط وقتی قاب واقعاً جابه‌جا شده — رویداد با هر پاسِ چیدمان هم می‌آید
+        Assert.Contains("e.EffectiveViewport != _viewport) _lastScroll", code);
+        //  و دیده نشدن ⇒ هیچ کارتِ زنده‌ای
+        Assert.Contains("return (0, -1);", code);
+    }
+
+    [Theory]
+    [InlineData(1406, 6, 226.0)]   // همان پهنای سنجه
+    [InlineData(1280, 5, 248.0)]
+    [InlineData(3000, 8, 366.25)]   // سقفِ هشت ستون
+    [InlineData(150, 1, 150.0)]
+    public void CardGrid_Sotunha(double width, int cols, double itemW)
+    {
+        var (c, w) = PumpYaqobi.App.Controls.CardGrid.Columns(width, 210, 10, 8);
+        Assert.Equal(cols, c);
+        Assert.Equal(itemW, w, 2);
+    }
+
+    [Fact]
+    public void CardGrid_BolandiAzShomar_NaTakhmin()
+    {
+        Assert.Equal(0, PumpYaqobi.App.Controls.CardGrid.TotalHeight(0, 6, 238, 10));
+        Assert.Equal(238, PumpYaqobi.App.Controls.CardGrid.TotalHeight(1, 6, 238, 10));
+        Assert.Equal(238, PumpYaqobi.App.Controls.CardGrid.TotalHeight(6, 6, 238, 10));
+        Assert.Equal(486, PumpYaqobi.App.Controls.CardGrid.TotalHeight(7, 6, 238, 10));
+        //  ۵۷۰ کارت در شش ستون = ۹۵ ردیف — همان ‎23,872‎ی سنجه منهای سربرگ
+        Assert.Equal(95 * 238 + 94 * 10, PumpYaqobi.App.Controls.CardGrid.TotalHeight(570, 6, 238, 10));
+    }
+
     [Fact]
     public void HameyeKarthayeProfit_Calm_And()
     {

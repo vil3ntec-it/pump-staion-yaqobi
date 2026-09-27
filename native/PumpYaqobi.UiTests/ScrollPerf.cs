@@ -153,6 +153,18 @@ internal static class ScrollPerf
             return 0;
         }
 
+        // ══ حالتِ «کارت‌ها»: فقط کارت‌های قرض‌داران، گام‌به‌گام (۱۴۰۵/۰۷/۱۵) ══
+        //  هر گام: وقت، بلندیِ صفحه، شمارِ کارتِ زنده و شمارِ کارتِ **تازه‌ساخته**.
+        if (Cards)
+        {
+            if (vm.Sections.FirstOrDefault(s => s.Id == "debt") is DebtSectionViewModel d0)
+            {
+                Wait(win, vm.GoAsync(d0)); Settle(win);
+                for (var pass = 1; pass <= 3; pass++) CardSteps(win, pass);
+            }
+            return 0;
+        }
+
         // ══ حالتِ پروفایل: فقط گاوصندوق، چند بار — برای ‎dotnet-trace‎ ═══════
         if (Trace)
         {
@@ -429,6 +441,51 @@ internal static class ScrollPerf
 
     /// <summary>‎scrollperf trace‎: فقط یک صفحه، چند بار — تا نمونه‌بردار چیزی برای گرفتن داشته باشد.</summary>
     internal static bool Trace;
+
+    /// <summary>‎scrollperf cards‎: فقط کارت‌های قرض‌داران، گام‌به‌گام.</summary>
+    internal static bool Cards;
+
+    private static void CardSteps(Window win, int pass)
+    {
+        var page = win.GetVisualDescendants().OfType<ScrollViewer>().First(v => v.Name == "PageScroll");
+        var grid = win.GetVisualDescendants().OfType<PumpYaqobi.App.Controls.CardGrid>().First(r => r.IsEffectivelyVisible);
+        page.Offset = new Vector(0, 0); Settle(win);
+        //  همان چند لحظه‌ای که کاربر صفحه را می‌بیند و هنوز نچرخانده — پیش‌ساختنِ کارت‌ها
+        var until = DateTime.UtcNow.AddSeconds(3);
+        //  ⚠️ ‎RunJobs‎ زمان‌سنج‌های سررسیده را فقط وقتی جلو می‌برد که کاری در صف باشد
+        //  (در برنامهٔ واقعی تیکِ ساعتِ سیستم همین را می‌کند) ⇒ یک کارِ تهی در هر دور.
+        while (DateTime.UtcNow < until)
+        {
+            Dispatcher.UIThread.Post(static () => { }, DispatcherPriority.Background);
+            Dispatcher.UIThread.RunJobs(); win.UpdateLayout(); Thread.Sleep(5);
+        }
+        var built0 = grid.BuiltCount;
+        Console.WriteLine($"   پیش از اسکرول: زنده {grid.LiveCount} · آماده در انبار {grid.PooledCount}");
+        Console.WriteLine($"── بارِ {pass} — کارت‌ها {(grid.ItemsSource as System.Collections.ICollection)?.Count} · ساخته‌شده تا این‌جا {built0}");
+        var guard = 0; long worst = 0; var jumps = 0; var steps = new List<long>();
+        while (guard++ < 400)
+        {
+            var max = Math.Max(0, page.Extent.Height - page.Viewport.Height);
+            if (page.Offset.Y >= max - 0.5) break;
+            var ext0 = page.Extent.Height;
+            var b0 = grid.BuiltCount;
+            var g0 = (GC.CollectionCount(0), GC.CollectionCount(1), GC.CollectionCount(2));
+            var j0 = System.Runtime.JitInfo.GetCompiledMethodCount();
+            var sw = Stopwatch.StartNew();
+            page.Offset = new Vector(0, Math.Min(max, page.Offset.Y + Step));
+            win.UpdateLayout(); Dispatcher.UIThread.RunJobs(); win.UpdateLayout();
+            sw.Stop();
+            steps.Add(sw.ElapsedMilliseconds);
+            if (Math.Abs(page.Extent.Height - ext0) > 0.5) jumps++;
+            worst = Math.Max(worst, sw.ElapsedMilliseconds);
+            if (sw.ElapsedMilliseconds > 40 || Math.Abs(page.Extent.Height - ext0) > 0.5 || guard <= 2)
+                Console.WriteLine($"   گام {guard,3}: {sw.ElapsedMilliseconds,4} ms · آفست {page.Offset.Y,7:N0} · بلندی {ext0,7:N0}⇒{page.Extent.Height,7:N0} · زنده {grid.LiveCount,3} · تازه‌ساخته {grid.BuiltCount - b0,3} · GC {GC.CollectionCount(0) - g0.Item1}/{GC.CollectionCount(1) - g0.Item2}/{GC.CollectionCount(2) - g0.Item3} · JIT {System.Runtime.JitInfo.GetCompiledMethodCount() - j0}");
+            using (win.CaptureRenderedFrame()) { }
+        }
+        var sorted = steps.OrderBy(x => x).ToList();
+        var p95 = sorted.Count == 0 ? 0 : sorted[Math.Min(sorted.Count - 1, (int)(sorted.Count * 0.95))];
+        Console.WriteLine($"   بیشینه {worst} ms · p95 {p95} · میانگین {(steps.Count == 0 ? 0 : steps.Average()):N0} در {steps.Count} گام · پرشِ بلندی {jumps} · کارتِ زنده {grid.LiveCount} · ساخته‌شده در این بار {grid.BuiltCount - built0}");
+    }
 
     private static void Census(Window w, string when)
     {

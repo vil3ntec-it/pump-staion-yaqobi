@@ -318,8 +318,18 @@ public class GridBehaviourTests
     public void CardsAreTheSameSizeAndSixToEightPerRow(string view)
     {
         var v = NoComments(View(view));
-        Assert.Contains("MinItemHeight=", v);
-        Assert.Contains("MaximumRowsOrColumns=\"8\"", v);
+        if (v.Contains("<c:CardGrid"))
+        {
+            //  ‎CardGrid‎ (قرض‌داران، ۱۴۰۵/۰۷/۱۵): قدِ کارت ثابت است، نه «کمینه» —
+            //  همهٔ کارت‌ها دقیقاً هم‌قد؛ و همان سقفِ هشت ستون.
+            Assert.Matches("<c:CardGrid[^>]*ItemHeight=\"\\d+\"", v);
+            Assert.Contains("MaxColumns=\"8\"", v);
+        }
+        else
+        {
+            Assert.Contains("MinItemHeight=", v);
+            Assert.Contains("MaximumRowsOrColumns=\"8\"", v);
+        }
 
         var m = Regex.Match(v, "MinItemWidth=\"(\\d+)\"");
         Assert.True(m.Success, "MinItemWidth پیدا نشد");
