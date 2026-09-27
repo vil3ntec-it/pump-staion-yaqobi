@@ -62,7 +62,7 @@ const frag = 's=ac-one&a=d7&k=kk&t=1&d=' + encode(snap);
 
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium/chrome-linux/chrome' }).catch(() => chromium.launch());
 async function run(scheme) {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme });
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: Number(process.env.SHOT_SCALE || 2), colorScheme: scheme });
   const page = await ctx.newPage();
   page.on('pageerror', e => console.log('pageerror: ' + e.message));
   await page.route('https://api.vill3n.top/**', (route) => {
@@ -72,7 +72,7 @@ async function run(scheme) {
     if (u.includes('/acct/')) return route.fulfill({ status: 200, contentType: 'application/json', headers: h, body: JSON.stringify({ at: 2, d: snap }) });
     return route.fulfill({ status: 200, contentType: 'application/json', headers: h, body: '{}' });
   });
-  const shot = async (n) => { await page.waitForTimeout(400); await page.screenshot({ path: path.join(OUT, `${scheme}-${n}.png`), fullPage: true }); };
+  const shot = async (n) => { await page.waitForTimeout(400); await page.screenshot({ path: path.join(OUT, `${scheme}-${n}.png`), fullPage: process.env.SHOT_FULL !== '0' }); };
   await page.goto(base + '#' + frag);
   await page.waitForTimeout(800);
   await shot('01-fuel');

@@ -74,7 +74,7 @@ const snap = {
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium/chrome-linux/chrome' }).catch(() => chromium.launch());
 
 async function run(scheme) {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme });
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: Number(process.env.SHOT_SCALE || 2), colorScheme: scheme });
   const page = await ctx.newPage();
   page.on('pageerror', e => console.log('pageerror: ' + e.message));
   await page.route('https://accounts.google.com/**', r => r.fulfill({ status: 200, body: '' }));
@@ -91,7 +91,7 @@ async function run(scheme) {
   await page.route(/\/kar\/version\.json/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '{"v":"10"}' }));
   const shot = async (name) => {
     await page.waitForTimeout(250);
-    await page.screenshot({ path: path.join(OUT, `${scheme}-${name}.png`), fullPage: true });
+    await page.screenshot({ path: path.join(OUT, `${scheme}-${name}.png`), fullPage: process.env.SHOT_FULL !== '0' });
   };
   const click = (sel) => page.click(sel);
 
@@ -107,8 +107,14 @@ async function run(scheme) {
   await page.waitForSelector('#paneHome:not(.hidden)');
   await shot('04-home');
   await click('.door.staff'); await shot('05-staff');
+  await page.evaluate(() => { const e = document.getElementById('staffCounts'); window.scrollTo(0, e.getBoundingClientRect().top + scrollY - 190); });
+  await shot('05b-staff-list');
+  await page.evaluate(() => window.scrollTo(0, 0));
   await click('#staffList .st-row'); await shot('06-staff-person');
   await click('#modeSeg button[data-mode="owner"]'); await shot('07-dash');
+  await page.evaluate(() => { const e = document.getElementById('bannerBox'); window.scrollTo(0, e.getBoundingClientRect().top + scrollY - 240); });
+  await shot('07b-dash-numbers');
+  await page.evaluate(() => window.scrollTo(0, 0));
   await click('#nav button[data-pane="paneSec"]'); await shot('08-sections');
   await click('#nav button[data-pane="paneDebt"]'); await shot('09-debtors');
   await click('#debtList button[data-pid="2"]'); await shot('10-person');
