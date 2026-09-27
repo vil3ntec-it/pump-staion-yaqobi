@@ -196,6 +196,12 @@ public abstract partial class SectionViewModel : ObservableObject
     /// <summary>آزمون‌ها که پوشهٔ تنظیمات را عوض می‌کنند، حافظهٔ بالا را دور بریزند.</summary>
     public static void ForgetFontScales() => _scales = null;
 
+    /// <summary>
+    /// اندازهٔ نوشتهٔ این بخش دوباره از تنظیمات — پس از آوردنِ «فایلِ کاملِ
+    /// برنامه» (پیش از آن <see cref="ForgetFontScales"/>). ذخیره نمی‌کند.
+    /// </summary>
+    public void ReloadFontScale() => FontScale = Scales.TryGetValue(Id, out var s) ? Clamp(s) : 1;
+
     private static double Clamp(double v) => Math.Round(Math.Clamp(v, FontMin, FontMax), 2);
 
     [ObservableProperty] private double _fontScale = 1;

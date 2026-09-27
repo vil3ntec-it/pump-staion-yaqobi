@@ -189,6 +189,108 @@ begin
          or (Pos(Lowercase(ExpandConstant('{win}')), P) = 1);
 end;
 
+// ── نصبِ دوباره = به‌روزرسانی · نسخهٔ کهنه‌تر پذیرفته نمی‌شود ─────────────
+//  خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۵): «برای کسایی که نت ندارن… نصاب ببیند
+//  برنامه توی کامپیوتر است یا نه؛ اگر بود همان را آپدیت کند، اگر نبود خودش
+//  نصب شود… و مدل‌های قدیمی را قبول نکند و جدیدها را قبول کند.»
+//
+//  ReadInstalled تنها جای «چه نسخه‌ای کجا نصب است» است و از ثبتِ حذفِ همان
+//  AppId می‌خواند (DisplayVersion و مسیرِ نصب) — نصبِ کاربری (HKCU) و نصبِ
+//  مدیر (HKLM، هر دو نمای ۳۲ و ۶۴) هر دو.
+//    نصب نیست       ⇒ نصبِ تازه، مثلِ همیشه
+//    کهنه‌تر نصب است ⇒ همان پوشه به‌روز می‌شود (صفحهٔ پوشه پرسیده نمی‌شود)
+//    همین نسخه      ⇒ همان پوشه دوباره نوشته می‌شود (تعمیر)
+//    تازه‌تر نصب است ⇒ ⛔ هیچ کاری نمی‌شود و گفته می‌شود چرا
+//  ⚠️ دفتر و تنظیمات در ‎%AppData%\PumpYaqobi‎ است و نصب هیچ‌وقت به آن دست نمی‌زند.
+var
+  InstalledVer: String;
+  InstalledDir: String;
+
+function UninstKey(): String;
+begin
+  Result := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\' + ExpandConstant('{#AppGuid}') + '_is1';
+end;
+
+function ReadFrom(Root: Integer; var Ver, Dir: String): Boolean;
+begin
+  Result := RegQueryStringValue(Root, UninstKey(), 'DisplayVersion', Ver) and (Trim(Ver) <> '');
+  if Result then
+    if not RegQueryStringValue(Root, UninstKey(), 'Inno Setup: App Path', Dir) then Dir := '';
+end;
+
+procedure ReadInstalled();
+begin
+  InstalledVer := '';
+  InstalledDir := '';
+  if not ReadFrom(HKCU, InstalledVer, InstalledDir) then
+    if not ReadFrom(HKLM, InstalledVer, InstalledDir) then
+      if IsWin64 then
+        if not ReadFrom(HKLM64, InstalledVer, InstalledDir) then
+          InstalledVer := '';
+  InstalledVer := Trim(InstalledVer);
+end;
+
+//  «3.1.200» ⇒ یک تکهٔ عددی و بقیه. تکهٔ ناخوانا صفر است.
+function NextPart(var S: String): Integer;
+var
+  P: Integer;
+  T: String;
+begin
+  P := Pos('.', S);
+  if P = 0 then
+  begin
+    T := S;
+    S := '';
+  end
+  else
+  begin
+    T := Copy(S, 1, P - 1);
+    S := Copy(S, P + 1, Length(S));
+  end;
+  Result := StrToIntDef(Trim(T), 0);
+end;
+
+//  ‎-1‎ ⇒ A کهنه‌تر · ‎0‎ ⇒ برابر · ‎1‎ ⇒ A تازه‌تر (چهار تکه، مثلِ نسخهٔ ویندوز)
+function CompareVer(A, B: String): Integer;
+var
+  I, X, Y: Integer;
+begin
+  Result := 0;
+  for I := 1 to 4 do
+  begin
+    X := NextPart(A);
+    Y := NextPart(B);
+    if X > Y then
+    begin
+      Result := 1;
+      Exit;
+    end;
+    if X < Y then
+    begin
+      Result := -1;
+      Exit;
+    end;
+  end;
+end;
+
+function InitializeSetup(): Boolean;
+begin
+  Result := True;
+  ReadInstalled();
+  if (InstalledVer <> '') and (CompareVer('{#AppVersion}', InstalledVer) < 0) then
+  begin
+    //  ⛔ کهنه روی تازه نمی‌نشیند — نه با پرسش، نه بی‌صدا. کدِ بیرون آمدن
+    //  ناصفر است تا نصبِ خودکار هم بفهمد که انجام نشد.
+    SuppressibleMsgBox('روی این کامپیوتر نسخهٔ تازه‌ترِ برنامه نصب است.' + #13#10 + #13#10 +
+                       'نصب‌شده: ' + InstalledVer + #13#10 +
+                       'این فایلِ نصب: {#AppVersion}' + #13#10 + #13#10 +
+                       'فایلِ نصبِ کهنه‌تر پذیرفته نمی‌شود و هیچ چیزی عوض نشد.' + #13#10 +
+                       'برای به‌روزرسانی، فایلِ نصبِ نسخهٔ تازه‌تر را بگیرید.',
+                       mbError, MB_OK, IDOK);
+    Result := False;
+  end;
+end;
+
 // ── «۳۲ یا ۶۴بیتی؟» — یک تصمیم، یک جا ──────────────────────────────────────
 //  PickedArch تنها جای تصمیم است و هر Check از همین می‌خواند:
 //    نصبِ دستی  ⇒ صفحهٔ انتخاب (پیش‌فرضش همان قاعدهٔ بی‌صدا)
@@ -250,12 +352,29 @@ begin
     ArchPage.SelectedValueIndex := 0;
   if not IsWin64 then
     ArchPage.CheckListBox.ItemEnabled[0] := False;
+
+  //  نصب از قبل هست ⇒ خوش‌آمد همان را بگوید، نه «نصب می‌شود»
+  if InstalledVer <> '' then
+  begin
+    if CompareVer('{#AppVersion}', InstalledVer) = 0 then
+      WizardForm.WelcomeLabel2.Caption :=
+        'همین نسخه ({#AppVersion}) روی این کامپیوتر نصب است و دوباره روی همان نصب می‌شود (تعمیر).' + #13#10 + #13#10 +
+        'حساب‌ها، تم و تنظیماتِ شما دست نمی‌خورند.'
+    else
+      WizardForm.WelcomeLabel2.Caption :=
+        'برنامه روی این کامپیوتر نصب است (نسخهٔ ' + InstalledVer + ') و همان به نسخهٔ {#AppVersion} به‌روز می‌شود.' + #13#10 + #13#10 +
+        'حساب‌ها، تم و تنظیماتِ شما دست نمی‌خورند.';
+  end;
 end;
 
 function ShouldSkipPage(PageID: Integer): Boolean;
 begin
   //  فقط به‌روزرسانیِ بی‌صدا نمی‌پرسد؛ هر نصبِ دستی — تازه یا روی موجود — می‌پرسد.
   Result := (PageID = ArchPage.ID) and WizardSilent;
+  //  به‌روزرسانی ⇒ همان پوشهٔ نصبِ پیشین (UsePreviousAppDir)؛ پرسیدنِ دوباره
+  //  فقط راهِ نصبِ دوم در جای دیگر را باز می‌کرد.
+  if (PageID = wpSelectDir) and (InstalledVer <> '') and (InstalledDir <> '') then
+    Result := True;
 end;
 
 // ── «از نو و خالی» هنگامِ حذف — کنار گذاشتن، نه پاک کردن ─────────────────

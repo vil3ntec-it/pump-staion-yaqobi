@@ -527,4 +527,44 @@ public class InstallerTests
             Path.Combine(Native, "PumpYaqobi.App", "Services", "VlcVideoFeed.cs"));
         Assert.Contains("Core.Initialize()", feed);
     }
+
+    /// <summary>
+    /// ══ نصبِ دوباره = به‌روزرسانی، و کهنه‌تر پذیرفته نمی‌شود (۱۴۰۵/۰۷/۱۵) ══
+    /// «نصاب ببیند برنامه توی کامپیوتر است یا نه؛ اگر بود همان را آپدیت کند…
+    /// مدل‌های قدیمی را قبول نکند و جدیدها را قبول کند.» سنجهٔ واقعی (نصب،
+    /// به‌روزرسانی، ردِ کهنه‌تر) در ‎installer-check.yml‎ روی ویندوز است.
+    /// </summary>
+    [Fact]
+    public void Nasab_NasbeMojoodRaMibinad_VaKohneRaRadMikonad()
+    {
+        var iss = Iss().Replace("\r\n", "\n");
+        var code = iss[iss.IndexOf("\n[Code]", StringComparison.Ordinal)..];
+
+        //  نسخهٔ نصب‌شده از ثبتِ حذفِ همان AppId — هر سه ریشه
+        Assert.Contains("'DisplayVersion'", code);
+        Assert.Contains("_is1", code);
+        Assert.Contains("ReadFrom(HKCU", code);
+        Assert.Contains("ReadFrom(HKLM,", code);
+        Assert.Contains("ReadFrom(HKLM64", code);
+
+        //  کهنه‌تر ⇒ نصب شروع نمی‌شود (InitializeSetup نادرست ⇒ کدِ بیرون آمدنِ ناصفر)
+        var init = code[code.IndexOf("function InitializeSetup", StringComparison.Ordinal)..];
+        init = init[..init.IndexOf("\nend;", StringComparison.Ordinal)];
+        Assert.Contains("CompareVer('{#AppVersion}', InstalledVer) < 0", init);
+        Assert.Contains("Result := False", init);
+        Assert.Contains("SuppressibleMsgBox", init);          // بی‌صدا هم پنجره‌ای نمی‌ماند
+
+        //  به‌روزرسانی ⇒ پوشهٔ پیشین، بی پرسیدنِ دوباره
+        Assert.Contains("UsePreviousAppDir=yes", iss);
+        Assert.Contains("(PageID = wpSelectDir) and (InstalledVer <> '')", code);
+
+        //  مقایسه عددی است، نه متنی («3.1.99» از «3.1.100» کهنه‌تر است)
+        Assert.Contains("StrToIntDef", code);
+
+        var check = File.ReadAllText(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
+        Assert.Contains("/DAppVersion=$v", check);
+        Assert.Contains("0.0.2", check);
+        Assert.Contains("نصابِ کهنه‌تر (0.0.1) روی 0.0.2 پذیرفته شد", check);
+        Assert.Contains("نصبِ دوم ساخته شد", check);
+    }
 }

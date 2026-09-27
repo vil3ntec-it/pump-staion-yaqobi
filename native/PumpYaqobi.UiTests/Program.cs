@@ -71,6 +71,10 @@ internal static class Program
         // چرایی و کارش در ‎PersonAudit‎ نوشته شده.
         if (outDir.Equals("person", StringComparison.OrdinalIgnoreCase)) return PersonAudit.Run();
         if (outDir.Equals("headrasid", StringComparison.OrdinalIgnoreCase)) return HeadRasidProbe.Run();
+        // ══ «فایلِ کاملِ برنامه» + دکمه‌های «فرستادن به سرور» و «نصب از فایل» (۱۴۰۵/۰۷/۱۵)
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- fullbackup [پوشهٔ عکس]
+        if (outDir.Equals("fullbackup", StringComparison.OrdinalIgnoreCase))
+            return FullBackupProbe.Run(args.Length > 1 ? args[1] : null);
         // ══ حالتِ «سنجشِ پارچه‌ها و ورق‌ها» ═══════════════════════════════
         //     dotnet run --project PumpYaqobi.UiTests -- parcha
         if (outDir.Equals("parcha", StringComparison.OrdinalIgnoreCase)) return ParchaWaraqAudit.Run();

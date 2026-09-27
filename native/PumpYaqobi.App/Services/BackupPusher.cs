@@ -87,8 +87,37 @@ public sealed class BackupPusher : IAsyncDisposable
     /// یک دور: عکسِ تازه بگیر، بفرست، و اگر مدت‌هاست نرفته به مدیر بگو.
     /// خروجی: رفت یا نه.
     /// </summary>
-    public async Task<bool> RunOnceAsync(CancellationToken ct = default)
+    public async Task<bool> RunOnceAsync(CancellationToken ct = default) => await RunOnceAsync(manual: false, ct);
+
+    /// <summary>
+    /// همان دور — و با <paramref name="manual"/> راست، کارِ دکمهٔ «📤 فرستادنِ
+    /// بکاپ به سرور» (۱۴۰۵/۰۷/۱۵: «یارو خودش هم اگر خواست بک‌اپ را به سرور
+    /// بفرستد بتواند»). سرورِ حساب نسخهٔ دستی را جدا از نسخه‌های خودکار نگه
+    /// می‌دارد (<c>manual</c>).
+    /// </summary>
+    /// <remarks>
+    /// ⛔ <b>دو دور هم‌زمان نمی‌دوند</b> (<see cref="_gate"/>): دکمه و حلقهٔ
+    /// شش‌ساعته هر دو همان فایلِ عکسِ امروز را با ‎VACUUM INTO‎ می‌سازند و
+    /// دومی فایلِ نیمه‌کارهٔ اولی را پاک می‌کرد.
+    /// </remarks>
+    public async Task<bool> RunOnceAsync(bool manual, CancellationToken ct = default)
     {
+        await _gate.WaitAsync(ct);
+        try { return await RunCoreAsync(manual, ct); }
+        finally { _gate.Release(); }
+    }
+
+    private readonly SemaphoreSlim _gate = new(1, 1);
+
+    /// <summary>دورِ آخر به سرورِ خانگی رسید؟</summary>
+    public bool LastHomeOk { get; private set; }
+
+    /// <summary>دورِ آخر به سرورِ حساب رسید؟</summary>
+    public bool LastCloudOk { get; private set; }
+
+    private async Task<bool> RunCoreAsync(bool manual, CancellationToken ct)
+    {
+        LastHomeOk = LastCloudOk = false;
         // ══ قفلِ اشتراک ═══════════════════════════════════════════════════
         //  بک‌اپِ خودکارِ روی سرور با اشتراک است. ⚠️ بک‌اپِ **محلی** هرگز قفل
         //  نمی‌شود — نه این‌جا نه جای دیگر: دادهٔ کاربر مالِ خودش است و
@@ -111,6 +140,7 @@ public sealed class BackupPusher : IAsyncDisposable
         }
 
         var sent = await SendAsync(file, ct);
+        LastHomeOk = sent;
 
         /*
          *  ══ و همان فایل، روی ابر ═════════════════════════════════════
@@ -129,7 +159,8 @@ public sealed class BackupPusher : IAsyncDisposable
          *  خانگی‌اش را راه نینداخته، نباید هر شش ساعت هشدارِ «پشتیبان
          *  نرفته» ببیند در حالی که نسخه‌اش روی ابر سالم نشسته.
          */
-        var toCloud = await SendToCloudAsync(file, ct);
+        var toCloud = await SendToCloudAsync(file, manual, ct);
+        LastCloudOk = toCloud;
 
         if (sent || toCloud)
         {
@@ -160,7 +191,7 @@ public sealed class BackupPusher : IAsyncDisposable
     /// <c>InfraTests.Poshtiban_FileRa_YekJa_DarHafeze_Nemikhanad</c> همان
     /// لحظه قرمز شد و درست هم شد: دفترِ چندصد مگابایتی، دو برابر رم.
     /// </remarks>
-    private async Task<bool> SendToCloudAsync(string file, CancellationToken ct)
+    private async Task<bool> SendToCloudAsync(string file, bool manual, CancellationToken ct)
     {
         try
         {
@@ -183,7 +214,7 @@ public sealed class BackupPusher : IAsyncDisposable
             var res = await cloud.BackupUploadAsync(
                 file,
                 label: Shamsi.Today(),
-                manual: false,
+                manual: manual,
                 ext: "db",
                 ct: ct);
             return res.Ok;

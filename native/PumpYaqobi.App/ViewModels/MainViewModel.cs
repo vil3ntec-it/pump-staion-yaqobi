@@ -1517,6 +1517,52 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(RowHost));
     }
 
+    // ══ «فایلِ کاملِ برنامه» — تنظیماتِ قابلِ بردن (۱۴۰۵/۰۷/۱۵) ════════════
+    //  شرح و فهرستِ سفید بالای ‎Services.PortableSettings‎.
+
+    /// <summary>
+    /// تنظیماتِ قابلِ بردنِ همین حالا — نوبتِ در صف (تمی که همین لحظه عوض شد،
+    /// ستونی که همین حالا کشیده شد) اول روی دیسک می‌نشیند.
+    /// </summary>
+    public string CapturePortableSettings()
+    {
+        AppSettings.FlushNow();
+        return PortableSettings.Capture(AppSettings.Load());
+    }
+
+    /// <summary>
+    /// تنظیماتِ فایل روی دیسک می‌نشیند و <b>همان لحظه</b> روی برنامه: تم، ترتیبِ
+    /// نوار، ظاهرِ جدول‌ها، اندازهٔ نوشته‌ها و ماشین‌حساب. پهنای ستون و تنظیمِ
+    /// ورق با نخستین باز شدنِ همان جدول/پنجرهٔ چاپ خوانده می‌شوند.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ نمونهٔ ماندگارِ همین پنجره (<c>_settings</c>) هم به‌روز می‌شود — وگرنه
+    /// نخستین <c>SaveSoon</c>ِ بعدی تم و ترتیبِ نوارِ کهنه را برمی‌گرداند.
+    /// </remarks>
+    public IReadOnlyList<string> ApplyPortableSettings(string? json)
+    {
+        AppSettings.FlushNow();                 // نوبتِ کهنه بعداً روی تنظیماتِ آورده ننشیند
+        var disk = AppSettings.Load();
+        var done = PortableSettings.ApplyTo(json, disk);
+        if (done.Count == 0) return done;
+        disk.Save();
+        PortableSettings.ApplyTo(json, _settings);
+
+        var theme = PumpTheme.ById(_settings.ThemeId);
+        if (theme.Id != SelectedTheme.Id) SelectedTheme = theme;
+        OnPropertyChanged(nameof(NavSections));
+
+        Calculator.Width = Math.Clamp(_settings.CalcWidth, CalculatorViewModel.MinW, CalculatorViewModel.MaxW);
+        Calculator.Height = Math.Clamp(_settings.CalcHeight, CalculatorViewModel.MinH, CalculatorViewModel.MaxH);
+        Calculator.IsLarge = _settings.CalcLarge;
+
+        try { TableStyle.Apply(disk); } catch { }
+        SectionViewModel.ForgetFontScales();
+        foreach (var s in Sections.Concat(Sections.SelectMany(x => x.SubSections))) s.ReloadFontScale();
+        NoteFontViewModel.Instance.Scale = disk.NoteFontScale;
+        return done;
+    }
+
     /// <summary>
     /// ══ خواندنِ دوبارهٔ همهٔ بخش‌ها ═══════════════════════════════════════════
     /// بعد از کاری که کلِ دیتابیس را عوض می‌کند — بازگردانیِ بکاپ، آوردنِ دادهٔ

@@ -822,6 +822,35 @@ public sealed class UpdateService
     }
 
     /// <summary>
+    /// ══ «به‌روزرسانی از فایل» — فایلِ نصبی که کاربر از فلش برگزیده ══════════
+    ///
+    /// برخلافِ <see cref="Launch"/> <b>بی‌صدا نیست</b>: کاربر خودش فایل را
+    /// آورده، پس ویزاردِ نصاب را می‌بیند (خوش‌آمدش می‌گوید «نسخهٔ X نصب است و
+    /// به Y به‌روز می‌شود»). ⛔ و فقط پس از <see cref="OfflineInstaller.Inspect"/>
+    /// صدا زده می‌شود — نصاب خودش هم کهنه‌تر را رد می‌کند.
+    ///
+    /// ⚠️ <c>/DIR</c> همان پوشهٔ همین برنامه است (همان دلیلِ <see cref="Launch"/>:
+    /// نصبی که از زیپ باز شده هیچ ثبتی ندارد و نصاب جای دیگری می‌نشست)، و
+    /// <c>/ARCH</c> همان معماریِ همین برنامه — صفحهٔ انتخاب با همان پیش‌فرض باز
+    /// می‌شود.
+    /// </summary>
+    public static bool LaunchOffline(string setupPath)
+    {
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo(setupPath)
+            {
+                Arguments = AppArch.ArchArg + " /DIR=\"" + InstallDir + "\"",
+                UseShellExecute = true,
+            };
+            if (!InstallDirWritable) psi.Verb = "runas";
+            Start(psi);
+            return true;
+        }
+        catch { return false; }
+    }
+
+    /// <summary>
     /// جای‌گزینیِ فایل‌ها با بستهٔ زیپ.
     ///
     /// اگر پوشهٔ نصب اجازهٔ نوشتن ندهد (کاربر برنامه را در ‎Program Files‎

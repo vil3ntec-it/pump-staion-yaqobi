@@ -15,6 +15,7 @@ name: سنجشِ نصاب (ویندوز)
 #   /ARCH=x64  ⇒ فایلِ ۶۴بیتی، پوشهٔ VLCِ ۶۴، و پوشهٔ VLCِ ۳۲ برداشته شده
 #   بی /ARCH   ⇒ همان معماریِ نصبِ پیشین (رجیستری)، نه چیزِ دیگر
 #   و حذفِ بی‌صدا فایل‌ها را می‌برد و پوشهٔ داده را دست نمی‌زند.
+#   و نصابِ تازه‌تر بی /DIR همان نصب را به‌روز می‌کند و نصابِ کهنه‌تر رد می‌شود.
 # ⚠️ صفحهٔ انتخاب خودش این‌جا دیده نمی‌شود (بی‌صدا)، ولی همان ‎PickedArch‎ که
 # صفحه به آن می‌نویسد این‌جا از ‎/ARCH‎ می‌خواند — یک تصمیم، یک جا.
 
@@ -51,9 +52,15 @@ jobs:
             Set-Content -Path "$src\shared.dll" -Value "shared-$arch" -NoNewline
             Set-Content -Path "$src\libvlc\win-$arch\libvlc.dll" -Value $arch -NoNewline
           }
-          & $iscc /Qp "/DAppVersion=0.0.1" "/DSourceDir64=..\..\fake\win-x64" "/DSourceDir86=..\..\fake\win-x86" native/installer/PumpYaqobi.iss
-          if ($LASTEXITCODE -ne 0) { throw "ساختِ نصاب شکست خورد" }
-          Get-ChildItem rel | ForEach-Object { "{0}  {1:N0} بایت" -f $_.Name, $_.Length }
+          #  دو نسخه از همان نصاب: 0.0.1 (rel) و 0.0.2 (rel-new) — هر کدام با
+          #  «ver.txt»ِ خودش تا معلوم باشد کدام روی دیسک نشست.
+          foreach ($v in @('0.0.1','0.0.2')) {
+            foreach ($arch in @('x64','x86')) { Set-Content -Path "fake\win-$arch\ver.txt" -Value $v -NoNewline }
+            $out = if ($v -eq '0.0.1') { "$PWD\rel" } else { "$PWD\rel-new" }
+            & $iscc /Qp "/DAppVersion=$v" "/DSourceDir64=..\..\fake\win-x64" "/DSourceDir86=..\..\fake\win-x86" "/O$out" native/installer/PumpYaqobi.iss
+            if ($LASTEXITCODE -ne 0) { throw "ساختِ نصابِ $v شکست خورد" }
+          }
+          Get-ChildItem rel, rel-new | ForEach-Object { "{0}  {1:N0} بایت" -f $_.FullName, $_.Length }
 
       - name: اجرای واقعیِ نصاب — ۳۲، بعد ۶۴، بعد بی‌گفتن، بعد حذف
         shell: pwsh
@@ -99,6 +106,30 @@ jobs:
           if (-not (Test-Path $unins)) { Fail "ثبتِ حذف با AppIdِ همیشگی نیست" }
           $uninsExe = (Get-ItemPropertyValue -Path $unins -Name UninstallString) -replace '"',''
           "✔ ثبتِ حذف: $uninsExe"
+
+          # ۴ب) نصبِ دوبارهٔ نسخهٔ تازه‌تر **بی /DIR** ⇒ همان نصب را پیدا و به‌روز می‌کند
+          #     (خواستهٔ ۱۴۰۵/۰۷/۱۵: «اگر بود همان را آپدیت کند… جدیدها را قبول کند»)
+          $newer = (Resolve-Path rel-new\PumpYaqobi-Setup.exe).Path
+          $p = Start-Process -FilePath $newer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/LOG=$log") -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Fail "نصابِ تازه‌تر با کدِ $($p.ExitCode) بیرون آمد" }
+          if ((Get-Content "$dir\ver.txt" -Raw) -ne '0.0.2') { Fail "نسخهٔ تازه در پوشهٔ نصبِ پیشین ننشست" }
+          if ((Get-ItemPropertyValue -Path $unins -Name DisplayVersion) -ne '0.0.2') { Fail "ثبتِ نسخه 0.0.2 نشد" }
+          if ((Landed) -ne 'x64') { Fail "به‌روزرسانی معماری را عوض کرد" }
+          $dirs = @(Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' | Where-Object { $_.PSChildName -like '*8E86F349*' })
+          if ($dirs.Count -ne 1) { Fail "به‌جای به‌روزرسانی، نصبِ دوم ساخته شد ($($dirs.Count))" }
+          "✔ نسخهٔ تازه‌تر همان نصب را پیدا کرد و در همان پوشه به‌روز کرد"
+
+          # ۴ج) نسخهٔ **کهنه‌تر** ⇒ رد می‌شود، کدِ ناصفر، و هیچ چیزی عوض نمی‌شود
+          $p = Start-Process -FilePath $setup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/LOG=$log") -Wait -PassThru
+          if ($p.ExitCode -eq 0) { Fail "نصابِ کهنه‌تر (0.0.1) روی 0.0.2 پذیرفته شد" }
+          if ((Get-Content "$dir\ver.txt" -Raw) -ne '0.0.2') { Fail "نصابِ کهنه‌تر فایل‌ها را عوض کرد" }
+          if ((Get-ItemPropertyValue -Path $unins -Name DisplayVersion) -ne '0.0.2') { Fail "نصابِ کهنه‌تر ثبتِ نسخه را عوض کرد" }
+          "✔ نصابِ کهنه‌تر رد شد (کدِ $($p.ExitCode)) و هیچ چیزی عوض نشد"
+
+          # ۴د) همین نسخه دوباره ⇒ پذیرفته (تعمیر)
+          $p = Start-Process -FilePath $newer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/LOG=$log") -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Fail "نصبِ دوبارهٔ همان نسخه با کدِ $($p.ExitCode) بیرون آمد" }
+          "✔ همان نسخه دوباره روی همان نصب نشست (تعمیر)"
 
           # ۵) حذفِ بی‌صدا: فایل‌ها می‌روند، پوشهٔ داده دست نمی‌خورد
           $data = Join-Path $env:APPDATA 'PumpYaqobi'
