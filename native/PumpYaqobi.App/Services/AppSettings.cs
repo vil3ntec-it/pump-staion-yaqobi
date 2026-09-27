@@ -47,6 +47,28 @@ public sealed class AppSettings
     public string NavOrder { get; set; } = "";
 
     /// <summary>
+    /// ══ تاریخ و ساعتِ <b>نمایشی</b> (۱۴۰۵/۰۷/۱۶) ══════════════════════════
+    /// خواستهٔ صریحِ صاحب ریپو: «تاریخ نمایشی است… هر جور بخواهم می‌گذارم و
+    /// روی برنامه تأثیر نگذارد.» فاصلهٔ ساعتِ سربرگ از ساعتِ واقعیِ برنامه
+    /// (میلی‌ثانیه). ⛔ فقط سربرگ، داشبورد و پنجرهٔ ساعت از آن می‌خوانند
+    /// (‎DisplayClock‎) — هیچ ردیف، ماه، اشتراک یا فاصله‌ای نه.
+    /// مقدارِ راحتی، پس <c>SaveSoon()</c> و فهرستِ <c>SaveComfortOnly</c>.
+    /// </summary>
+    public long ClockShiftMs { get; set; }
+
+    /// <summary>
+    /// نوارِ چهار عددِ بالای پنجره دیده شود؟ (۱۴۰۵/۰۷/۱۶ — ‎BannerPref‎). مقدارِ
+    /// راحتی، پس <c>SaveSoon()</c> و فهرستِ <c>SaveComfortOnly</c>.
+    /// </summary>
+    public bool ShowBanner { get; set; } = true;
+
+    /// <summary>
+    /// آخرین نسخه‌ای که «نصب شود؟» برایش پرسیده شد (‎Update.AutoUpdate‎،
+    /// ۱۴۰۵/۰۷/۱۶ — «هر آپدیت یک بار پیشنهاد شود نه بیشتر»).
+    /// </summary>
+    public string UpdateOfferedVersion { get; set; } = "";
+
+    /// <summary>
     /// نشانیِ سرورِ خانگیِ خودِ صاحب ریپو — پیام‌رسان از همین می‌خواند.
     /// ⚠️ هیچ سرویسِ بیرونی‌ای این‌جا نمی‌آید؛ خالی یعنی پیام‌رسان خاموش.
     /// </summary>
@@ -900,6 +922,8 @@ public sealed class AppSettings
         live.ParchaChainCheck = ParchaChainCheck;
         live.LastPrinter = LastPrinter;
         live.NavOrder = NavOrder;
+        live.ClockShiftMs = ClockShiftMs;
+        live.ShowBanner = ShowBanner;
         //  ⚠️ کفِ ساعت از این در فقط **جلو** می‌رود: نوبتِ در صف ممکن است
         //  عکسِ کهنه‌ای باشد که کفِ پایین‌تری دارد، و پایین آوردنِ عمدیِ کف
         //  (مجوزِ تازهٔ سرور، `LicenseClock.Anchor`) از راهِ `Save()`ی بادوام

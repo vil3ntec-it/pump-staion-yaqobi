@@ -19,7 +19,8 @@ namespace PumpYaqobi.App.Localization;
 /// </summary>
 public static class Clock
 {
-    public static string Now() => Of(AppClock.Now, seconds: true);
+    /// <summary>ساعتِ سربرگ — نمایشی (‎Services.DisplayClock‎، ۱۴۰۵/۰۷/۱۶).</summary>
+    public static string Now() => Of(Services.DisplayClock.Now, seconds: true);
 
     /// <summary>«08:25:42 AM» یا «09:05 PM».</summary>
     public static string Of(DateTime t, bool seconds = false) =>

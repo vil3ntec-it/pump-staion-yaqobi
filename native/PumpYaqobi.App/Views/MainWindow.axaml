@@ -226,16 +226,13 @@
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
           <!-- تاریخ و ساعت یک‌خطه. دوخطه بود و روی همین پنجرهٔ ۱۴۴۰ تاریخ
                می‌شکست و سربرگ شلوغ می‌شد. -->
-          <!-- ⛔ کلیک ⇐ پنجرهٔ «🕘 تاریخ و ساعت»ِ خودِ برنامه (۱۴۰۵/۰۷/۱۵) — نه
-               تنظیماتِ ویندوز. برنامه ساعتِ دومی نمی‌سازد: «ثبت» همان ساعتِ
-               ویندوز را عوض می‌کند (‎Services.ClockService‎). -->
+          <!-- ⛔ کلیک ⇐ پنجرهٔ «🕘 تاریخ و ساعت»ِ خودِ برنامه. تاریخ و ساعتِ این‌جا
+               نمایشی است (‎DisplayClock‎، ۱۴۰۵/۰۷/۱۶): عوض کردنش هیچ حسابی را عوض
+               نمی‌کند، و ⛔ هیچ هشدارِ «ساعتِ ویندوز جلو/عقب است» نیست. -->
           <Button Classes="ghost" Padding="6,2" Background="Transparent" BorderThickness="0"
                   Command="{Binding OpenClockCommand}" Cursor="Hand"
                   ToolTip.Tip="{Binding ClockTip}">
           <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
-            <!-- ⚠️ ساعتِ ویندوز با ساعتِ واقعی (اینترنت) فرق دارد — فقط خبر (‎AppClock‎) -->
-            <TextBlock Text="{Binding ClockNote}" FontSize="14" VerticalAlignment="Center"
-                       IsVisible="{Binding ClockNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             <TextBlock Text="{Binding TodayText}" FontSize="14.5" FontWeight="Bold"
                        VerticalAlignment="Center" TextWrapping="NoWrap"
                        Foreground="{DynamicResource Pump.HeaderTitle}" />
@@ -334,7 +331,7 @@
          قلم <b>دو خطه</b> — برچسب ۱۶ پیکسل وزنِ ۸۰۰ بالا، عدد ۱۶٫۸ وزنِ ۸۰۰
          پایین. تا امروز این‌جا یک خطه و ۱۲ پیکسلی بود، برای همین نوار ۳۰
          پیکسل می‌شد و کنارِ نسخهٔ وب «ریز» دیده می‌شد. -->
-    <Border Name="BannerBlock" IsVisible="{Binding IsChromeVisible}" Background="{DynamicResource Pump.BannerBg}"
+    <Border Name="BannerBlock" IsVisible="{Binding IsBannerVisible}" Background="{DynamicResource Pump.BannerBg}"
             BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="0,0,0,1" Padding="20,8">
       <ItemsControl ItemsSource="{Binding Banner}" HorizontalAlignment="Center">
         <ItemsControl.ItemsPanel>
@@ -425,25 +422,21 @@
             Background="{DynamicResource Pump.NavBg}"
             BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="0,0,0,1">
       <c:NavStrip Name="Nav">
-        <ItemsControl ItemsSource="{Binding NavSections}">
+        <ItemsControl Name="NavItems" ItemsSource="{Binding NavSections}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:SectionViewModel">
-              <!-- ⛔ راست‌کلیک ⇐ جابه‌جا کردنِ همین بخش در نوار (۱۴۰۵/۰۷/۱۵ — «می‌خواهم
-                   صرافی را بیاورم اول یا آخر»). فقط ترتیبِ دیدن؛ شرح بالای ‎NavOrder‎. -->
+              <!-- ⛔ جابه‌جا کردن با کشیدن و رها کردن (۱۴۰۵/۰۷/۱۶ — «با کشیدنشان،
+                   نه کلیکِ راست یا چپ»): ‎Controls.NavDrag‎. فقط ترتیبِ دیدن؛ شرح
+                   بالای ‎NavOrder‎. راست‌کلیک فقط «ترتیبِ پیش‌فرض» را دارد. -->
               <Button Classes="nav" Margin="3,0"
                       Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).GoCommand}"
                       CommandParameter="{Binding}"
-                      ToolTip.Tip="راست‌کلیک: جابه‌جا کردنِ این بخش در نوار">
+                      ToolTip.Tip="برای جابه‌جا کردن، بکشید و جای دیگرِ نوار رها کنید">
                 <Button.ContextMenu>
                   <ContextMenu>
-                    <MenuItem Header="⏮ اولِ نوار" Tag="first" Click="OnNavMove" />
-                    <MenuItem Header="یک خانه جلوتر" Tag="earlier" Click="OnNavMove" />
-                    <MenuItem Header="یک خانه عقب‌تر" Tag="later" Click="OnNavMove" />
-                    <MenuItem Header="⏭ آخرِ نوار" Tag="last" Click="OnNavMove" />
-                    <Separator />
                     <MenuItem Header="↺ ترتیبِ پیش‌فرضِ همهٔ بخش‌ها" Tag="reset" Click="OnNavMove" />
                   </ContextMenu>
                 </Button.ContextMenu>

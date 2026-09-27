@@ -271,53 +271,43 @@
                     Command="{Binding ResetFormCommand}" />
           </StackPanel>
 
-          <!-- ── درهای فهرست ─────────────────────────────────────────────── -->
-          <Button Classes="card-shell" HorizontalAlignment="Stretch"
-                  Command="{Binding OpenListCommand}" CommandParameter="pending">
-            <Border Classes="stat" BorderBrush="{DynamicResource Pump.Warn}" Padding="14,12">
-              <Grid ColumnDefinitions="Auto,*,Auto">
-                <TextBlock Grid.Column="0" Text="🟡" FontSize="22" VerticalAlignment="Center" />
-                <StackPanel Grid.Column="1" Spacing="1" Margin="10,0" VerticalAlignment="Center">
-                  <TextBlock Text="در صف" Classes="label" />
-                  <TextBlock Text="{Binding PendingText}" FontSize="21" FontWeight="Black"
-                             Foreground="{DynamicResource Pump.Ink.Warn}" />
-                </StackPanel>
-                <TextBlock Grid.Column="2" Text="←" Classes="muted" VerticalAlignment="Center" />
-              </Grid>
-            </Border>
-          </Button>
-
-          <Button Classes="card-shell" HorizontalAlignment="Stretch"
-                  Command="{Binding OpenListCommand}" CommandParameter="approved">
-            <Border Classes="stat" BorderBrush="{DynamicResource Pump.Ok}" Padding="14,12">
-              <Grid ColumnDefinitions="Auto,*,Auto">
-                <TextBlock Grid.Column="0" Text="🟢" FontSize="22" VerticalAlignment="Center" />
-                <StackPanel Grid.Column="1" Spacing="1" Margin="10,0" VerticalAlignment="Center">
-                  <TextBlock Text="تایید شده" Classes="label" />
-                  <TextBlock Text="{Binding ApprovedText}" FontSize="21" FontWeight="Black"
-                             Foreground="{DynamicResource Pump.Ink.Ok}" />
-                </StackPanel>
-                <TextBlock Grid.Column="2" Text="←" Classes="muted" VerticalAlignment="Center" />
-              </Grid>
-            </Border>
-          </Button>
-
-          <!-- کارتِ نرخ زیربخشِ «مقایسهٔ نرخ فاکتورها» را باز می‌کند — همان
-               ‎showSection('invrate')‎ی سایت. -->
-          <Button Classes="card-shell" HorizontalAlignment="Stretch"
-                  Command="{Binding ShowSubCommand}"
-                  CommandParameter="{Binding SubSections[0]}">
-            <Border Classes="stat" Padding="14,12">
-              <Grid ColumnDefinitions="Auto,*,Auto">
-                <TextBlock Grid.Column="0" Text="📉" FontSize="22" VerticalAlignment="Center" />
-                <StackPanel Grid.Column="1" Spacing="1" Margin="10,0" VerticalAlignment="Center">
-                  <TextBlock Text="مقایسهٔ نرخ فاکتورها" Classes="label" />
-                  <TextBlock Text="{Binding RateNetText}" FontSize="21" FontWeight="Black" />
-                </StackPanel>
-                <TextBlock Grid.Column="2" Text="←" Classes="muted" VerticalAlignment="Center" />
-              </Grid>
-            </Border>
-          </Button>
+          <!-- ── درهای فهرست ───────────────────────────────────────────────
+               ⛔ ۱۴۰۵/۰۷/۱۶ («در صف و تایید شده خیلی بزرگ و داغون‌اند»): هر در
+               یک خطِ جمع‌وجور است — نشان · نام · عدد · ‹ — نه کارتِ ۸۵ پیکسلی
+               با قابِ رنگیِ پهن. فرمان‌ها و عددها همان‌اند. -->
+          <Border Classes="panel" Padding="4">
+            <StackPanel Spacing="2">
+              <Button Classes="inv-door" Command="{Binding OpenListCommand}" CommandParameter="pending">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                  <TextBlock Grid.Column="0" Text="🟡" FontSize="15" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Text="در صف" FontWeight="SemiBold" Margin="8,0" VerticalAlignment="Center" TextAlignment="Start" />
+                  <TextBlock Grid.Column="2" Text="{Binding PendingText}" FontSize="17" FontWeight="Black"
+                             VerticalAlignment="Center" Foreground="{DynamicResource Pump.Ink.Warn}" />
+                  <TextBlock Grid.Column="3" Text="‹" Classes="muted" FontSize="17" Margin="10,0,0,0" VerticalAlignment="Center" />
+                </Grid>
+              </Button>
+              <Button Classes="inv-door" Command="{Binding OpenListCommand}" CommandParameter="approved">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                  <TextBlock Grid.Column="0" Text="🟢" FontSize="15" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Text="تایید شده" FontWeight="SemiBold" Margin="8,0" VerticalAlignment="Center" TextAlignment="Start" />
+                  <TextBlock Grid.Column="2" Text="{Binding ApprovedText}" FontSize="17" FontWeight="Black"
+                             VerticalAlignment="Center" Foreground="{DynamicResource Pump.Ink.Ok}" />
+                  <TextBlock Grid.Column="3" Text="‹" Classes="muted" FontSize="17" Margin="10,0,0,0" VerticalAlignment="Center" />
+                </Grid>
+              </Button>
+              <!-- کارتِ نرخ زیربخشِ «مقایسهٔ نرخ فاکتورها» را باز می‌کند — همان
+                   ‎showSection('invrate')‎ی سایت. -->
+              <Button Classes="inv-door" Command="{Binding ShowSubCommand}"
+                      CommandParameter="{Binding SubSections[0]}">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                  <TextBlock Grid.Column="0" Text="📉" FontSize="15" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Text="مقایسهٔ نرخ فاکتورها" FontWeight="SemiBold" Margin="8,0" VerticalAlignment="Center" TextAlignment="Start" />
+                  <TextBlock Grid.Column="2" Text="{Binding RateNetText}" FontSize="15" FontWeight="Black" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="3" Text="‹" Classes="muted" FontSize="17" Margin="10,0,0,0" VerticalAlignment="Center" />
+                </Grid>
+              </Button>
+            </StackPanel>
+          </Border>
         </StackPanel>
       </Grid>
     </c:SectionPage>
@@ -370,53 +360,47 @@
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:InvoiceRowViewModel">
-            <Border Classes="panel" Padding="14,11" Margin="0,0,0,9"
+            <!-- ⛔ ۱۴۰۵/۰۷/۱۶: یک ردیفِ جمع‌وجور، نه کارتِ دوطبقه — شماره · مشتری ·
+                 حال · جزئیات (یک خط، کامل در ‎ToolTip‎) · کارها. -->
+            <Border Classes="panel inv-row" Padding="10,6" Margin="0,0,0,6"
                     Cursor="Hand"
                     PointerReleased="OnCardReleased"
                     ToolTip.Tip="برای دیدنِ فاکتور کلیک کنید">
-              <Grid ColumnDefinitions="Auto,*,Auto">
+              <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
 
-                <!-- شمارهٔ فاکتور، درشت و سرِ خط — همان چیزی که کاربر با آن
-                     دنبالِ فاکتور می‌گردد -->
-                <Border Grid.Column="0" Classes="chip" MinWidth="58" Margin="0,0,14,0"
+                <!-- شمارهٔ فاکتور — همان چیزی که کاربر با آن دنبالِ فاکتور می‌گردد -->
+                <Border Grid.Column="0" Classes="chip" MinWidth="46" Padding="8,3" Margin="0,0,12,0"
                         VerticalAlignment="Center"
                         BorderBrush="{Binding ChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
-                  <StackPanel Spacing="0">
-                    <TextBlock Text="#" Classes="muted" FontSize="10"
-                               HorizontalAlignment="Center" />
-                    <TextBlock Text="{Binding Number}" FontWeight="Black" FontSize="16"
-                               HorizontalAlignment="Center" />
-                  </StackPanel>
+                  <TextBlock Text="{Binding Number, StringFormat='#{0}'}" FontWeight="Black" FontSize="14"
+                             HorizontalAlignment="Center" />
                 </Border>
 
-                <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
-                  <StackPanel Orientation="Horizontal" Spacing="8">
-                    <TextBlock Text="{Binding Customer}" FontWeight="Bold" FontSize="15" />
-                    <TextBlock Text="{Binding ChipText}" FontSize="12" FontWeight="Bold"
-                               VerticalAlignment="Center"
-                               Foreground="{Binding ChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
-                  </StackPanel>
-                  <TextBlock Text="{Binding PartsText}" Classes="muted" FontSize="12"
-                             TextWrapping="Wrap" />
-                </StackPanel>
+                <TextBlock Grid.Column="1" Text="{Binding Customer}" FontWeight="Bold" FontSize="14.5"
+                           VerticalAlignment="Center" MaxWidth="260" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="2" Text="{Binding ChipText}" FontSize="12" FontWeight="Bold"
+                           VerticalAlignment="Center" Margin="10,0,0,0"
+                           Foreground="{Binding ChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+                <TextBlock Grid.Column="3" Text="{Binding PartsText}" Classes="muted" FontSize="12"
+                           VerticalAlignment="Center" Margin="14,0,10,0" TextAlignment="Start"
+                           TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding PartsText}" />
 
                 <!-- ⚠️ فقط کارِ همین وضعیت دیده می‌شود: «تایید» برای در صف و
-                     «برگشت به صف» برای تایید شده. پیش از این هر چهار دکمه
-                     جا می‌گرفتند و دو تایشان همیشه پنهان بودند. -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6"
+                     «برگشت به صف» برای تایید شده. -->
+                <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="5"
                             VerticalAlignment="Center">
-                  <Button Content="👁 دیدن" FontSize="12" Padding="11,0"
+                  <Button Classes="inv-act" Content="👁 دیدن"
                           Command="{Binding $parent[ItemsControl].((vm:InvoiceSectionViewModel)DataContext).OpenDetailCommand}"
                           CommandParameter="{Binding}" />
-                  <Button Classes="accent" Content="✅ تایید" FontSize="12" Padding="11,0"
+                  <Button Classes="accent inv-act" Content="✅ تایید"
                           IsVisible="{Binding IsPending}"
                           Command="{Binding $parent[ItemsControl].((vm:InvoiceSectionViewModel)DataContext).ApproveCommand}"
                           CommandParameter="{Binding}" />
-                  <Button Content="↩ برگشت به صف" FontSize="12" Padding="11,0"
+                  <Button Classes="inv-act" Content="↩ برگشت به صف"
                           IsVisible="{Binding IsApproved}"
                           Command="{Binding $parent[ItemsControl].((vm:InvoiceSectionViewModel)DataContext).RevertCommand}"
                           CommandParameter="{Binding}" />
-                  <Button Classes="ghost danger" Content="🗑" FontSize="13" Padding="11,0"
+                  <Button Classes="ghost danger inv-act" Content="🗑"
                           ToolTip.Tip="حذفِ این فاکتور"
                           Command="{Binding $parent[ItemsControl].((vm:InvoiceSectionViewModel)DataContext).DeleteInvoiceCommand}"
                           CommandParameter="{Binding}" />
@@ -457,140 +441,120 @@
         </StackPanel>
       </c:SectionPage.Toolbar>
 
-      <!-- ⚠️ برگه پهنای کاغذی می‌گیرد و وسط می‌نشیند، نه تمامِ پنجره: صفحهٔ
-           فاکتور تمام‌عرض است (‎IsPageOpen‎)، و بی این سقف، برچسب و مقدارِ هر
-           ردیف دو سرِ یک صفحهٔ ۱۴۰۰ پیکسلی می‌افتادند و چشم باید بینشان
-           می‌دوید. یک فاکتور یک **سند** است، نه یک جدول. -->
+      <!-- ══ برگهٔ فاکتور — جمع‌وجور (۱۴۰۵/۰۷/۱۶) ══════════════════════════
+           گزارشِ صاحب ریپو با عکس: «این بخش خیلی بزرگ و داغون است». برگه
+           ۸۲۰ پیکسل بود با آیکونِ درشت، یک خطِ خالی به جای عنوان (⚠️ عنوان به
+           ‎Detail‎ بسته بود و آن‌جا چنین خاصیتی نیست — حالا از خودِ بخش)، و
+           فاصله‌های بزرگ. حالا ۶۴۰ پیکسل: سربرگِ یک‌خطی، ردیف‌های برچسب/مقدارِ
+           نزدیک، جمعِ روشن و مهرِ کوچک. ⛔ فقط ظاهر؛ همان خاصیت‌ها و فرمان‌ها.
+           یک فاکتور یک **سند** است، نه یک جدول — پس وسط و با پهنای کاغذ. -->
       <Border DataContext="{Binding Detail}" x:CompileBindings="False"
-              BorderBrush="{DynamicResource Pump.Accent}" BorderThickness="2"
-              CornerRadius="16" Padding="26,22" Margin="0,0,0,14"
-              MaxWidth="820" HorizontalAlignment="Stretch"
+              BorderBrush="{DynamicResource Pump.Accent}" BorderThickness="1.5"
+              CornerRadius="14" Padding="20,16" Margin="0,0,0,14"
+              MaxWidth="640" HorizontalAlignment="Stretch"
               Background="{DynamicResource Pump.Panel}">
-        <StackPanel Spacing="16">
+        <StackPanel Spacing="10">
 
-          <StackPanel Spacing="2" HorizontalAlignment="Center">
-            <TextBlock Text="⛽" FontSize="28" HorizontalAlignment="Center"
-                       Foreground="{DynamicResource Pump.Ink.Accent}" />
-            <TextBlock Text="{Binding BrandInvoiceTitle}" FontSize="24" FontWeight="Black"
-                       HorizontalAlignment="Center"
-                       Foreground="{DynamicResource Pump.Ink.Accent}" />
-            <TextBlock Text="برگهٔ رسمی فروش تیل — FUEL INVOICE" Classes="muted"
-                       FontSize="12" HorizontalAlignment="Center" />
-            <Border Height="2" Margin="0,8,0,0" CornerRadius="1"
-                    Background="{DynamicResource Pump.Accent}" Opacity="0.35" />
-          </StackPanel>
-
-          <!-- شماره · وضعیت · تاریخ، همه در یک ردیف -->
+          <!-- سربرگ: نام و برگه · تاریخ · شماره و وضعیت — یک ردیف -->
           <Grid ColumnDefinitions="Auto,*,Auto">
-            <Border Grid.Column="0" Classes="chip"
-                    BorderBrush="{Binding ChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
-              <TextBlock Text="{Binding Number, StringFormat=# {0}}" FontWeight="Black" FontSize="16" />
-            </Border>
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <TextBlock Text="⛽" FontSize="20" VerticalAlignment="Center" />
+              <StackPanel Spacing="0" VerticalAlignment="Center">
+                <TextBlock Text="{Binding $parent[UserControl].DataContext.BrandInvoiceTitle}"
+                           FontSize="16" FontWeight="Black" TextAlignment="Start"
+                           Foreground="{DynamicResource Pump.Ink.Accent}" />
+                <TextBlock Text="برگهٔ فروش تیل" Classes="muted" FontSize="11" TextAlignment="Start" />
+              </StackPanel>
+            </StackPanel>
             <TextBlock Grid.Column="1" Text="{Binding DateShamsi, StringFormat=📅 {0}}"
-                       HorizontalAlignment="Center" VerticalAlignment="Center"
-                       FontWeight="Bold" />
-            <Border Grid.Column="2" Classes="chip"
-                    BorderBrush="{Binding ChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
-              <TextBlock Text="{Binding ChipText}" FontWeight="Bold"
-                         Foreground="{Binding ChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
-            </Border>
+                       HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" />
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+              <Border Classes="chip"
+                      BorderBrush="{Binding ChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
+                <TextBlock Text="{Binding Number, StringFormat=#{0}}" FontWeight="Black" />
+              </Border>
+              <Border Classes="chip"
+                      BorderBrush="{Binding ChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
+                <TextBlock Text="{Binding ChipText}" FontWeight="Bold"
+                           Foreground="{Binding ChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+              </Border>
+            </StackPanel>
           </Grid>
 
           <Border Height="1" Background="{DynamicResource Pump.ChromeBorder}" Opacity="0.6" />
 
-          <!-- ── مشتری ─────────────────────────────────────────────────────
-               ⚠️ هر خانهٔ خالی اصلاً نوشته نمی‌شود. -->
-          <StackPanel Spacing="8">
-            <TextBlock Text="① مشتری" Classes="label" FontWeight="ExtraBold"
+          <!-- ── مشتری — ⚠️ هر خانهٔ خالی اصلاً نوشته نمی‌شود.
+               ⚠️ ‎TextAlignment="Start"‎: سبکِ سراسری وسط‌چین است و مقدار از
+               برچسبش دور می‌افتاد؛ ‎Start‎ (نه ‎Right‎) جهتِ نوشته را می‌فهمد. -->
+          <StackPanel Spacing="6">
+            <TextBlock Text="① مشتری" FontSize="13" FontWeight="ExtraBold" TextAlignment="Start"
                        Foreground="{DynamicResource Pump.Ink.Accent}" />
-            <!-- ⚠️ ‎TextAlignment="Start"‎ روی مقدارها لازم است: سبکِ
-                 سراسریِ ‎TextBlock‎ نوشته را **وسط‌چین** می‌کند (قاعدهٔ
-                 جدول‌ها)، پس مقدار وسطِ ستونِ پهن می‌افتاد و بینِ برچسب و
-                 مقدار یک وجب فاصله می‌ماند. با این، مقدار می‌چسبد به برچسبِ
-                 خودش.
-
-                 ⚠️ و ‎Start‎، نه ‎Right‎: ‎HorizontalAlignment‎ در چیدمانِ
-                 راست‌به‌چپ آینه می‌شود و ‎Right‎ مقدار را به لبهٔ **چپ** برد —
-                 همان فاصله، فقط از آن طرف. ‎TextAlignment.Start‎ خودش جهتِ
-                 نوشته را می‌فهمد. -->
-            <Grid ColumnDefinitions="190,*">
-              <TextBlock Grid.Column="0" Text="👤 نام مشتری" Classes="fld" />
-              <TextBlock Grid.Column="1" Text="{Binding Customer}" FontWeight="Bold"
-                         TextAlignment="Start" />
+            <Grid ColumnDefinitions="130,*">
+              <TextBlock Grid.Column="0" Text="👤 نام مشتری" Classes="fld" TextAlignment="Start" />
+              <TextBlock Grid.Column="1" Text="{Binding Customer}" FontWeight="Bold" TextAlignment="Start" />
             </Grid>
-            <Grid ColumnDefinitions="190,*" IsVisible="{Binding HasAlias}">
-              <TextBlock Grid.Column="0" Text="🪪 به نام دیگر" Classes="fld" />
-              <TextBlock Grid.Column="1" Text="{Binding DebtAlias}" FontWeight="Bold"
-                         TextAlignment="Start" />
+            <Grid ColumnDefinitions="130,*" IsVisible="{Binding HasAlias}">
+              <TextBlock Grid.Column="0" Text="🪪 به نام دیگر" Classes="fld" TextAlignment="Start" />
+              <TextBlock Grid.Column="1" Text="{Binding DebtAlias}" FontWeight="Bold" TextAlignment="Start" />
             </Grid>
-            <Grid ColumnDefinitions="190,*" IsVisible="{Binding HasPhone}">
-              <TextBlock Grid.Column="0" Text="📞 شماره تماس" Classes="fld" />
+            <Grid ColumnDefinitions="130,*" IsVisible="{Binding HasPhone}">
+              <TextBlock Grid.Column="0" Text="📞 شماره تماس" Classes="fld" TextAlignment="Start" />
               <TextBlock Grid.Column="1" Text="{Binding Phone}" TextAlignment="Start" />
             </Grid>
-            <Grid ColumnDefinitions="190,*" IsVisible="{Binding HasVehicle}">
-              <TextBlock Grid.Column="0" Text="🚗 نوع ماشین" Classes="fld" />
+            <Grid ColumnDefinitions="130,*" IsVisible="{Binding HasVehicle}">
+              <TextBlock Grid.Column="0" Text="🚗 نوع ماشین" Classes="fld" TextAlignment="Start" />
               <TextBlock Grid.Column="1" Text="{Binding Vehicle}" TextAlignment="Start" />
             </Grid>
           </StackPanel>
 
           <!-- ── پارهٔ تیل ──────────────────────────────────────────────── -->
-          <StackPanel Spacing="8" IsVisible="{Binding HasFuelPart}">
+          <StackPanel Spacing="6" IsVisible="{Binding HasFuelPart}">
             <Border Height="1" Background="{DynamicResource Pump.ChromeBorder}" Opacity="0.6" />
             <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Grid.Column="0" Text="② پارهٔ تیل" Classes="label" FontWeight="ExtraBold"
+              <TextBlock Grid.Column="0" Text="② پارهٔ تیل" FontSize="13" FontWeight="ExtraBold" TextAlignment="Start"
                          Foreground="{DynamicResource Pump.Ink.Accent}" />
               <TextBlock Grid.Column="1" Text="{Binding FuelPartText, StringFormat={}{0} افغانی}"
                          FontWeight="Black" Foreground="{DynamicResource Pump.Ink.Ok}" />
             </Grid>
-            <Grid ColumnDefinitions="190,*">
-              <TextBlock Grid.Column="0" Text="💧 مقدار و فی" Classes="fld" />
-              <TextBlock Grid.Column="1" Text="{Binding FuelLineText}" FontWeight="Bold"
-                         TextAlignment="Start" />
+            <Grid ColumnDefinitions="130,*">
+              <TextBlock Grid.Column="0" Text="💧 مقدار و فی" Classes="fld" TextAlignment="Start" />
+              <TextBlock Grid.Column="1" Text="{Binding FuelLineText}" FontWeight="Bold" TextAlignment="Start" />
             </Grid>
           </StackPanel>
 
           <!-- ── پارهٔ پول ──────────────────────────────────────────────── -->
-          <StackPanel Spacing="8" IsVisible="{Binding HasMoneyPart}">
+          <StackPanel Spacing="6" IsVisible="{Binding HasMoneyPart}">
             <Border Height="1" Background="{DynamicResource Pump.ChromeBorder}" Opacity="0.6" />
             <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Grid.Column="0" Text="③ پارهٔ پول (اعتبار)" Classes="label"
+              <TextBlock Grid.Column="0" Text="③ پارهٔ پول (اعتبار)" FontSize="13" TextAlignment="Start"
                          FontWeight="ExtraBold" Foreground="{DynamicResource Pump.Ink.Accent}" />
               <TextBlock Grid.Column="1" Text="{Binding AmountText, StringFormat={}{0} افغانی}"
                          FontWeight="Black" Foreground="{DynamicResource Pump.Ink.Accent}" />
             </Grid>
           </StackPanel>
 
-          <!-- ── جمع، و زیرش محلِ مهر ─────────────────────────────────────
-               ⚠️ این‌جا عمداً زیرِ هم است و نه کنارِ هم (برخلافِ برگهٔ فرم):
-               برگهٔ سند سقفِ ۸۲۰ پیکسل دارد، و با کپسولِ مهر در همان ردیف،
-               ستونِ ‎*‎ی جمع آن‌قدر تنگ می‌شد که عدد روی نوشته می‌افتاد. -->
-          <StackPanel Spacing="12" Margin="0,4,0,0">
-            <Border Background="{DynamicResource Pump.Dark}"
-                    BorderBrush="{DynamicResource Pump.Accent}" BorderThickness="2"
-                    CornerRadius="12" Padding="16,12">
+          <!-- ── جمع و محلِ مهر — یک ردیف؛ جمع ‎*‎ و مهرِ کوچک ‎Auto‎ -->
+          <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+            <Border Grid.Column="0" Background="{DynamicResource Pump.Input}"
+                    BorderBrush="{DynamicResource Pump.Accent}" BorderThickness="1.5"
+                    CornerRadius="10" Padding="14,9">
               <Grid ColumnDefinitions="*,Auto">
-                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
-                  <TextBlock Text="🧮 جمله کل فاکتور" FontWeight="ExtraBold"
+                <StackPanel Grid.Column="0" Spacing="0" VerticalAlignment="Center">
+                  <TextBlock Text="🧮 جمله کل فاکتور" FontWeight="ExtraBold" TextAlignment="Start"
                              Foreground="{DynamicResource Pump.Ink.Accent}" />
-                  <TextBlock Classes="muted" FontSize="11" Text="پارهٔ تیل + پارهٔ پول" />
+                  <TextBlock Classes="muted" FontSize="10.5" Text="پارهٔ تیل + پارهٔ پول" TextAlignment="Start" />
                 </StackPanel>
                 <TextBlock Grid.Column="1" Text="{Binding TotalText, StringFormat={}{0} افغانی}"
-                           FontSize="21" FontWeight="Black" VerticalAlignment="Center"
-                           Margin="14,0,0,0"
-                           Foreground="{DynamicResource Pump.Ink.Accent}" />
+                           FontSize="19" FontWeight="Black" VerticalAlignment="Center"
+                           Margin="12,0,0,0" Foreground="{DynamicResource Pump.Ink.Accent}" />
               </Grid>
             </Border>
-
-            <Border BorderBrush="{DynamicResource Pump.ChromeBorder}"
-                    BorderThickness="1" CornerRadius="80" Padding="20,14" Width="170"
-                    Opacity="0.7" HorizontalAlignment="Left">
-              <StackPanel Spacing="2">
-                <TextBlock Text="⛽" FontSize="16" HorizontalAlignment="Center" />
-                <TextBlock Text="محل مهر و امضا" Classes="muted" FontSize="10"
-                           HorizontalAlignment="Center" />
-              </StackPanel>
+            <Border Grid.Column="1" BorderBrush="{DynamicResource Pump.ChromeBorder}"
+                    BorderThickness="1" CornerRadius="30" Padding="12,6" Margin="12,0,0,0"
+                    Opacity="0.7" VerticalAlignment="Center">
+              <TextBlock Text="محلِ مهر و امضا" Classes="muted" FontSize="10" />
             </Border>
-          </StackPanel>
+          </Grid>
         </StackPanel>
       </Border>
     </c:SectionPage>

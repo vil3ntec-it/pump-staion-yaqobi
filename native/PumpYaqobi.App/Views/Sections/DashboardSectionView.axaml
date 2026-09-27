@@ -131,6 +131,11 @@
 
           <!-- زنگِ هشدارها -->
           <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+            <!-- ⛔ نوارِ چهار عددِ بالای پنجره: روشن/خاموش (۱۴۰۵/۰۷/۱۶ — ‎BannerPref‎).
+                 فقط دیدن؛ هیچ عددی عوض نمی‌شود. -->
+            <CheckBox IsChecked="{Binding ShowBanner}" VerticalAlignment="Center" FontSize="12.5"
+                      Content="نوارِ عددهای بالا"
+                      ToolTip.Tip="قرضِ کل، مفاد و مصارفِ امروز و الباقیِ شرکت‌ها بالای پنجره نشان داده شود یا نه" />
             <Button x:Name="BellButton" Classes="dash-quick" Margin="0" Command="{Binding BellCommand}" ToolTip.Tip="هشدارها">
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <TextBlock Text="🔔" FontSize="15" VerticalAlignment="Center" />

@@ -15,19 +15,14 @@ public partial class MainWindow : Window
     /// اتصالِ ‎$parent[Window]‎: منوی راست‌کلیک در پنجرهٔ بازشوی جدا می‌نشیند و
     /// آن‌جا ‎Window‎ی بالادستی نیست. ‎DataContext‎ی آیتمِ منو همان بخش است.
     /// </summary>
+    /// <summary>راست‌کلیکِ نوار — فقط «ترتیبِ پیش‌فرض». جابه‌جایی با کشیدن است (‎NavDrag‎).</summary>
     private void OnNavMove(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (sender is not MenuItem { Tag: string tag } item || DataContext is not MainViewModel vm) return;
-        if (tag == "reset") { vm.NavResetCommand.Execute(null); return; }
-        var where = tag switch
-        {
-            "first" => NavOrder.Where.First,
-            "earlier" => NavOrder.Where.Earlier,
-            "later" => NavOrder.Where.Later,
-            _ => NavOrder.Where.Last,
-        };
-        vm.MoveNav(item.DataContext as SectionViewModel, where);
+        if (sender is MenuItem { Tag: "reset" } && DataContext is MainViewModel vm) vm.NavResetCommand.Execute(null);
     }
+
+    /// <summary>کشیدن و رها کردنِ بخش‌های نوار (سنجه‌ها از این می‌خوانند).</summary>
+    public Controls.NavDrag? NavDragger { get; private set; }
 
     private void OnCalcResize(object? sender, Avalonia.Input.VectorEventArgs e)
     {
@@ -57,12 +52,25 @@ public partial class MainWindow : Window
         // «کلیک روی جای خالی = بیرون آمدن از کادر» — شرحش بالای خودِ سرویس
         _focusOut = new FocusOutService(this);
 
+        //  جابه‌جا کردنِ بخش‌های نوار با کشیدن (۱۴۰۵/۰۷/۱۶)
+        if (this.FindControl<ItemsControl>("NavItems") is { } navItems)
+            NavDragger = Controls.NavDrag.Attach(navItems, (item, index) => vm.MoveNavTo(item as SectionViewModel, index));
+
         _clock = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         var day = AppClock.Now.Date;
+        var shownDay = Services.DisplayClock.Now.Date;
+        //  تاریخِ نمایشی (‎DisplayClock‎) همان لحظه — نه یک ثانیه بعد
+        Services.DisplayClock.Changed += () => Dispatcher.UIThread.Post(() =>
+        {
+            vm.Clock = PumpYaqobi.App.Localization.Clock.Now();
+            shownDay = Services.DisplayClock.Now.Date;
+            vm.DisplayDayChanged();
+        });
         _clock.Tick += (_, _) =>
         {
             vm.Clock = PumpYaqobi.App.Localization.Clock.Now();
-            vm.TickClockNote();
+            //  تاریخِ سربرگ نمایشی است و نیمه‌شبِ خودش را دارد؛ ماهِ بخش‌ها نه
+            if (Services.DisplayClock.Now.Date != shownDay) { shownDay = Services.DisplayClock.Now.Date; vm.DisplayDayChanged(); }
             //  یک چراغ در سربرگ — و خودش هر دو تیک را می‌زند
             vm.TickLinkDot();
             // ══ نیمه‌شب: تاریخِ سربرگ و نوار هم عوض شوند ══════════════════
@@ -182,7 +190,10 @@ public partial class MainWindow : Window
                 && nav.Bounds.Height > 0)
                 gap.Height = nav.Bounds.Height;
 
-            var chrome = (header?.Bounds.Height ?? 0) + (banner?.Bounds.Height ?? 0);
+            //  ⚠️ کنترلِ پنهان ‎Bounds‎ِ آخرش را نگه می‌دارد (همان تلهٔ ‎BlindTop‎)؛
+            //  نوارِ خاموش (‎BannerPref‎) صفر است، وگرنه نوارِ بخش‌ها پایین می‌ماند
+            var chrome = (header is { IsVisible: true } ? header.Bounds.Height : 0)
+                       + (banner is { IsVisible: true } ? banner.Bounds.Height : 0);
             var y = Math.Max(0, chrome - scroll.Offset.Y);
             if (Math.Abs(slide.Y - y) > 0.5) slide.Y = y;
         }

@@ -129,17 +129,31 @@ public class OwnerRound15Tests
     }
 
     [Fact]
-    public void Saat_HamanSaateWindows_RaAvazMikonad_BiSaateDovom()
+    public void Saat_Namayeshi_Ast_Va_HichHesabiRa_AvazNemikonad()
     {
-        PumpYaqobi.App.Services.ClockService.TestRun = null;
-        var psi = PumpYaqobi.App.Services.ClockService.Elevated("powershell.exe", "x");
-        Assert.Equal("runas", psi.Verb);
-        Assert.True(psi.UseShellExecute);
-        var src = Read("PumpYaqobi.App", "Services", "ClockService.cs");
-        Assert.Contains("Set-Date -Date '", src);
-        Assert.Contains("CultureInfo.InvariantCulture", src);
-        Assert.Contains("NativeErrorCode == 1223", src);   // «نه»ی کاربر ⇒ لغو، نه خطا
-        Assert.DoesNotContain("ms-settings", src);
+        //  ⛔ ۱۴۰۵/۰۷/۱۶: «من گفتم نمایشی… هر جور بخوام می‌ذارم و روی برنامه
+        //  تأثیر نذاره» — ساعتِ سربرگ جابه‌جا می‌شود، ساعتِ برنامه (‎AppClock‎) نه
+        var before = PumpYaqobi.Domain.AppClock.Now;
+        try
+        {
+            PumpYaqobi.App.Services.DisplayClock.TestSet((long)TimeSpan.FromDays(400).TotalMilliseconds);
+            Assert.True(PumpYaqobi.App.Services.DisplayClock.Now > before.AddDays(399));
+            Assert.True(PumpYaqobi.Domain.AppClock.Now < before.AddDays(1));
+        }
+        finally { PumpYaqobi.App.Services.DisplayClock.TestSet(0); }
+        //  ⛔ فقط سه جا نمایشی می‌خوانند — سربرگ، ساعتِ سربرگ، داشبورد
+        var uses = Directory.GetFiles(Path.Combine(Root(), "PumpYaqobi.App"), "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
+                     && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")
+                     && !f.EndsWith("DisplayClock.cs"))
+            .Where(f => File.ReadAllText(f).Contains("DisplayClock.Now"))
+            .Select(Path.GetFileName).OrderBy(x => x).ToArray();
+        Assert.Equal(new[] { "Clock.cs", "ClockViewModel.cs", "ClockWindow.axaml.cs", "DashboardSectionViewModel.cs", "MainViewModel.cs", "MainWindow.axaml.cs" }, uses);
+        //  ⛔ هیچ هشدارِ «ساعتِ ویندوز جلو/عقب است» در سربرگ
+        var w = Read("PumpYaqobi.App", "Views", "MainWindow.axaml");
+        Assert.DoesNotContain("ClockNote", w);
+        Assert.DoesNotContain("SkewText", Read("PumpYaqobi.App", "ViewModels", "MainViewModel.cs"));
+        Assert.DoesNotContain("WallText", Read("PumpYaqobi.App", "Views", "ClockWindow.axaml"));
     }
 
     // ══ ۳) ترتیبِ بخش‌ها ═══════════════════════════════════════════════════
@@ -194,7 +208,25 @@ public class OwnerRound15Tests
         var st = Read("PumpYaqobi.App", "Services", "AppSettings.cs");
         Assert.Contains("live.NavOrder = NavOrder;", st);
         var w = Bare(Read("PumpYaqobi.App", "Views", "MainWindow.axaml"));
-        Assert.Contains("Click=\"OnNavMove\"", w);
+        //  ⛔ ۱۴۰۵/۰۷/۱۶: جابه‌جایی با کشیدن و رها کردن، نه منوی «اولِ نوار / یک خانه جلوتر»
+        Assert.Contains("Name=\"NavItems\"", w);
+        Assert.DoesNotContain("Tag=\"first\"", w);
+        Assert.DoesNotContain("Tag=\"earlier\"", w);
+        Assert.Contains("NavDrag.Attach(navItems", Read("PumpYaqobi.App", "Views", "MainWindow.axaml.cs"));
+    }
+
+    [Fact]
+    public void KeshidanVaRahaKardan_JayeDorost_MiNeshinad()
+    {
+        //  «پیش از خانهٔ index»ِ فهرستِ پیش از برداشتن
+        Assert.Equal(new[] { "safe", "dashboard", "shifts", "waraq", "debt", "sarrafi" }, NavOrder.MoveTo(D, "safe", 0));
+        Assert.Equal(new[] { "shifts", "waraq", "debt", "sarrafi", "safe", "dashboard" }, NavOrder.MoveTo(D, "dashboard", D.Length));
+        Assert.Equal(new[] { "dashboard", "waraq", "debt", "shifts", "sarrafi", "safe" }, NavOrder.MoveTo(D, "shifts", 4));
+        //  رها کردن روی خودش یا درست پس از خودش هیچ چیزی را عوض نمی‌کند
+        Assert.Equal(D, NavOrder.MoveTo(D, "debt", 3));
+        Assert.Equal(D, NavOrder.MoveTo(D, "debt", 4));
+        Assert.Equal(D, NavOrder.MoveTo(D, "gone", 0));
+        Assert.Equal(new[] { "sarrafi", "dashboard", "shifts", "waraq", "debt", "safe" }, NavOrder.MoveTo(D, "sarrafi", -5));
     }
 
     // ══ ۴) سربرگِ هر بخش: توضیح یک ردیفِ تمام‌پهناست ═══════════════════════
@@ -206,8 +238,11 @@ public class OwnerRound15Tests
         var i = c.IndexOf("Text=\"{TemplateBinding SubHeader}\"", StringComparison.Ordinal);
         Assert.True(i > 0);
         var tag = c[c.LastIndexOf("<TextBlock", i, StringComparison.Ordinal)..c.IndexOf("/>", i, StringComparison.Ordinal)];
-        Assert.Contains("Grid.ColumnSpan=\"3\"", tag);
-        Assert.Contains("Grid.Row=\"1\"", tag);
-        Assert.DoesNotContain("MaxWidth=\"250\"", tag);
+        //  ⛔ ۱۴۰۵/۰۷/۱۶: بغلِ کادرها — آخرین قلمِ نوارِ ابزار، نه ردیفی زیرِ عنوان
+        Assert.DoesNotContain("Grid.Row=\"1\"", tag);
+        Assert.Contains("MaxLines=\"2\"", tag);
+        Assert.Contains("ToolTip.Tip=\"{TemplateBinding SubHeader}\"", tag);
+        var tools = c.LastIndexOf("Classes=\"sec-tools\"", i, StringComparison.Ordinal);
+        Assert.True(tools > 0 && c.IndexOf("</WrapPanel>", tools, StringComparison.Ordinal) > i);
     }
 }

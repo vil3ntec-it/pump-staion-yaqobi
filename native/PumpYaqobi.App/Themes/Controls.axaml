@@ -344,6 +344,44 @@
   <Style Selector="Button.nav.active TextBlock">
     <Setter Property="Foreground" Value="{DynamicResource Pump.NavActiveFg}" />
   </Style>
+  <!-- ══ فاکتورها: درهای فهرست و دکمه‌های ردیف — جمع‌وجور (۱۴۰۵/۰۷/۱۶) ══ -->
+  <Style Selector="Button.inv-door">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.inv-door /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.inv-door:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Pump.Hover}" />
+  </Style>
+  <Style Selector="Button.inv-act">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Padding" Value="10,0" />
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="Height" Value="30" />
+  </Style>
+
+  <!-- ══ کشیدن و رها کردنِ بخش‌ها در نوار (۱۴۰۵/۰۷/۱۶ — ‎Controls.NavDrag‎) ══
+       بخشِ در حالِ کشیدن کم‌رنگ؛ خانه‌ای که بخش جایش می‌نشیند قابِ رنگی. -->
+  <Style Selector="Button.nav.dragging">
+    <Setter Property="Opacity" Value="0.4" />
+  </Style>
+  <Style Selector="Button.nav.drop /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="Background" Value="{DynamicResource Pump.Hover}" />
+  </Style>
+  <Style Selector="Button.nav.drop-end /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
   <!-- نشانِ گردِ پشتِ آیکونِ بخش در نوار (زمینه از ‎IconColorConverter‎، پارامترِ badge) -->
   <Style Selector="Border.icon-badge">
     <Setter Property="Width" Value="27" />
@@ -1110,14 +1148,10 @@
                    بلندیِ کلِ سربرگ هم‌قدِ همان می‌شد. هفده بخش توضیحِ بلندتر از
                    صد نویسه داشتند. حالا ردیفِ دوم است و پهنای کاملِ سربرگ را
                    دارد: عنوان و ابزار یک ردیف، توضیح یک خط زیرشان. -->
-              <Grid ColumnDefinitions="Auto,Auto,*" RowDefinitions="Auto,Auto">
+              <Grid ColumnDefinitions="Auto,Auto,*">
                 <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                   <TextBlock Text="{TemplateBinding Header}" Classes="card-title" />
                 </StackPanel>
-                <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Classes="muted sec-sub"
-                           Text="{TemplateBinding SubHeader}"
-                           TextWrapping="Wrap" TextAlignment="Start" Margin="0,4,0,0"
-                           IsVisible="{TemplateBinding SubHeader, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
                 <!-- ══ ‎A−‎ / ‎A+‎ / ‎↺‎ِ همین بخش ═════════════════════════════
                      همتای ‎.sec-font-ctrl‎ی نسخهٔ وب، که کنارِ عنوانِ **هر**
@@ -1178,6 +1212,19 @@
                   <ContentPresenter Content="{TemplateBinding Filters}" VerticalAlignment="Center"
                                     Margin="10,3,0,3"
                                     IsVisible="{TemplateBinding Filters, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+                  <!-- ══ توضیحِ بخش — بغلِ همین کادرها، نه ردیفی زیرشان (۱۴۰۵/۰۷/۱۶) ══
+                       خواستهٔ صاحب ریپو با عکس: «این نوشته‌ها جا زیاد می‌گیرند…
+                       بگذار بغلِ آن کادرها.» آخرین قلمِ همین نوارِ شکننده است:
+                       هر جا جا باشد کنارِ فیلترها می‌نشیند، دست‌بالا دو خطِ
+                       کوچک، و متنِ کامل در ‎ToolTip‎. -->
+                  <TextBlock Classes="muted sec-sub"
+                             Text="{TemplateBinding SubHeader}"
+                             ToolTip.Tip="{TemplateBinding SubHeader}"
+                             FontSize="12" MaxWidth="440" MaxLines="2"
+                             TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                             VerticalAlignment="Center" Margin="14,3,0,3"
+                             IsVisible="{TemplateBinding SubHeader, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                 </WrapPanel>
               </Grid>
             </Border>

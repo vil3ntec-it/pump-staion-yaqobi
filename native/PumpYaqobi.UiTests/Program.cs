@@ -36,6 +36,7 @@ internal static class Program
         // ⚠️ سنجهٔ خودِ همگام‌سازی (`syncui`) صفحه را می‌سنجد، نه حلقه را؛
         // حلقه در `PumpYaqobi.Tests` سنجیده می‌شود، بی پنجره و بی شبکه.
         PumpYaqobi.App.Services.SyncEngine.Disabled = true;
+        PumpYaqobi.App.Update.AutoUpdate.Disabled = true;   // به‌روزرسانیِ خودکار هیچ‌وقت از سنجه به گیت‌هاب نمی‌رود
         PumpYaqobi.App.Services.SectionGate.TestOpenAll = true;   // سنجه‌ها همان بخش‌های در حالِ ساخت را هم می‌سنجند
         PumpYaqobi.App.Services.CrashGuard.ReportingOff = true;
         //  ⚠️ همان تورِ خودِ برنامه: خطای ‎Task‎ی که کسی نخوانده (‎_ = DoAsync()‎)
@@ -172,6 +173,7 @@ internal static class Program
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- round15 [پوشه]
         //  سربرگ (تمِ رادیویی، تاریخ، ساعتِ خودِ برنامه) · ترتیبِ بخش‌ها · رسیدِ پارچه (۱۴۰۵/۰۷/۱۵)
         if (outDir.Equals("round15", StringComparison.OrdinalIgnoreCase)) return Round15Probe.Run(args);
+        if (outDir.Equals("round16", StringComparison.OrdinalIgnoreCase)) return Round16Probe.Run(args);
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- chatroom [پوشه]
         if (outDir.Equals("chatroom", StringComparison.OrdinalIgnoreCase)) return ChatProbe.Run(args);
         if (outDir.Equals("groupchat", StringComparison.OrdinalIgnoreCase)) return GroupChatLive.Run(args);

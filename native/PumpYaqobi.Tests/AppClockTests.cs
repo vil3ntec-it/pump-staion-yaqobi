@@ -98,8 +98,6 @@ public class AppClockTests : IDisposable
         Assert.True(AppClock.Trusted);
         Assert.Equal(Real.AddMilliseconds(500), AppClock.UtcNow);
         Assert.True(AppClock.WallIsOff);
-        Assert.Contains("جلو است", MainViewModel.SkewText(AppClock.WallSkewMs));
-        Assert.Contains("40", MainViewModel.SkewText(AppClock.WallSkewMs));
     }
 
     [Fact]

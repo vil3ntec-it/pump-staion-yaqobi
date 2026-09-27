@@ -271,6 +271,78 @@ public class UpdateBehaviourTests : IDisposable
             return Task.FromResult(Bytes(body));
         };
 
+    // ══ ۴) به‌روزرسانیِ خودکار: خودش می‌گیرد، هر نسخه را یک بار پیشنهاد می‌کند ══
+    //  (۱۴۰۵/۰۷/۱۶ — «یک بار پیشنهاد شود نه بیشتر، و آپدیتِ دیگر دوباره»)
+
+    private static void ServeRelease(string tag, byte[] body)
+    {
+        var name = "PumpYaqobi-app-" + LocalBase() + ".zip";
+        var feed = $$"""
+            { "tag_name": "{{tag}}", "body": "", "assets": [
+              { "name": "{{name}}", "size": {{body.Length}}, "browser_download_url": "{{Rel(name)}}" },
+              { "name": "SHA256SUMS.txt", "size": 100, "browser_download_url": "{{Rel("SHA256SUMS.txt")}}" } ] }
+            """;
+        UpdateService.TestTransport = (req, _) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (IsFeed(url)) return Task.FromResult(Json(feed));
+            if (url.EndsWith("SHA256SUMS.txt.sig")) return Task.FromResult(Text("", HttpStatusCode.NotFound));
+            if (url.EndsWith("SHA256SUMS.txt")) return Task.FromResult(Text(Sha(body) + "  " + name + "\n"));
+            return Task.FromResult(Bytes(body));
+        };
+    }
+
+    [Fact]
+    public async Task AutoUpdate_KhodashMigirad_VaHarNoskheRaYekBarPishnahadMikonad()
+    {
+        var asked = new List<string>();
+        var installed = new List<string>();
+        var ask0 = AutoUpdate.Ask;
+        AutoUpdate.TestReset();
+        AutoUpdate.OnUi = f => f();
+        AutoUpdate.Ask = i => { asked.Add(i.LatestVersion); return Task.FromResult(false); };   // «بعداً»
+        AutoUpdate.Install = (i, p) => { installed.Add(i.LatestVersion + "|" + p); return Task.CompletedTask; };
+        try
+        {
+            var body = new byte[2048];
+            Random.Shared.NextBytes(body);
+            ServeRelease("v99.9.9", body);
+
+            Assert.True(await AutoUpdate.StepAsync());
+            Assert.Equal(new[] { "99.9.9" }, asked);                 // خودش گرفت و یک بار پرسید
+            Assert.NotNull(AutoUpdate.Ready);
+            Assert.Equal(body, await File.ReadAllBytesAsync(AutoUpdate.Ready!.Value.Path));
+            Assert.Empty(installed);                                  // ⛔ بی «بله» هیچ نصبی
+
+            Assert.True(await AutoUpdate.StepAsync());
+            Assert.True(await AutoUpdate.StepAsync());
+            Assert.Equal(new[] { "99.9.9" }, asked);                 // ⛔ همان نسخه دوباره پرسیده نمی‌شود
+            Assert.Equal("99.9.9", AppSettings.Load().UpdateOfferedVersion);
+
+            ServeRelease("v99.9.10", body);
+            AutoUpdate.Ask = i => { asked.Add(i.LatestVersion); return Task.FromResult(true); };    // «نصب کن»
+            Assert.True(await AutoUpdate.StepAsync());
+            Assert.Equal(new[] { "99.9.9", "99.9.10" }, asked);      // نسخهٔ تازه پرسشِ خودش را دارد
+            Assert.Single(installed);
+            Assert.StartsWith("99.9.10|", installed[0]);
+
+            //  نرسیدن به سرور ⇒ «نشد» (زودتر دوباره)، نه پرسش
+            UpdateService.TestTransport = (_, _) => throw new HttpRequestException("offline");
+            Assert.False(await AutoUpdate.StepAsync());
+            Assert.Equal(2, asked.Count);
+        }
+        finally
+        {
+            AutoUpdate.TestReset();
+            AutoUpdate.OnUi = f => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(f);
+            AutoUpdate.Ask = ask0;
+            AutoUpdate.Install = AutoUpdate.InstallAndExitAsync;
+        }
+        Assert.True(AutoUpdate.ShouldOffer("3.1.212", "3.1.211"));
+        Assert.False(AutoUpdate.ShouldOffer("3.1.212", "3.1.212"));
+        Assert.False(AutoUpdate.ShouldOffer("", ""));
+    }
+
     [Fact]
     public async Task ACompleteDownloadLandsOnDisk()
     {

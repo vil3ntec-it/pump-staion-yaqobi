@@ -60,6 +60,10 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             ? ""
             : "این پوشه اجازهٔ مدیر می‌خواهد؛ هنگامِ به‌روزرسانی ویندوز اجازه می‌پرسد.";
 
+        // نسخه‌ای که به‌روزرسانیِ خودکار از قبل گرفته ⇒ همین‌جا «نصب» آماده است
+        Update.AutoUpdate.ReadyChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(AdoptAutoReady);
+        AdoptAutoReady();
+
         // نتیجهٔ به‌روزرسانیِ گذشته — چه گرفت چه نگرفت، همین حالا گفته شود.
         var last = UpdateService.ConsumeLastResult();
         _lastFailure = last is null || last.Ok ? "" : last.Message;
@@ -682,6 +686,19 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
     {
         if (!UpdateService.OpenDownloadPage())
             _host.Toast("❌ مرورگر باز نشد", ToastKind.Error);
+    }
+
+    /// <summary>فایلی که ‎AutoUpdate‎ گرفته — دوباره گرفته نمی‌شود.</summary>
+    private void AdoptAutoReady()
+    {
+        if (Update.AutoUpdate.Ready is not { } r || Downloading) return;
+        _info = r.Info;
+        _downloaded = r.Path;
+        UpdateAvailable = true;
+        PackageText = r.Info.PackageText;
+        ReadyToInstall = true;
+        UpdateStatus = "نسخهٔ تازه (" + r.Info.LatestVersion + ") گرفته شد — آمادهٔ نصب";
+        UpdateStatusBrushKey = "Pump.Muted";
     }
 
     [RelayCommand]

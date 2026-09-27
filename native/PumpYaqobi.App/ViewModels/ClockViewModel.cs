@@ -10,9 +10,11 @@ namespace PumpYaqobi.App.ViewModels;
 
 /// <summary>
 /// پنجرهٔ «🕘 تاریخ و ساعت» — مالِ خودِ برنامه، شمسی و با نامِ ماه.
-/// ⛔ هیچ ساعتِ دومی نگه نمی‌دارد: «ثبت» ساعتِ خودِ ویندوز را عوض می‌کند
-/// (<see cref="ClockService"/>)، و تا آن نشده برنامه همان ساعتِ کامپیوتر را
-/// می‌خواند. شرحِ چرایی بالای <see cref="ClockService"/>.
+/// ⛔ تاریخ و ساعتی که این‌جا گذاشته می‌شود <b>نمایشی</b> است
+/// (<see cref="DisplayClock"/>، ۱۴۰۵/۰۷/۱۶ — «من گفتم نمایشی… هر جور بخواهم
+/// می‌گذارم و روی برنامه تأثیر نگذارد»): فقط سربرگ و داشبورد عوض می‌شوند؛ نه
+/// ساعتِ ویندوز، نه اجازهٔ مدیر، و نه هیچ ردیف، ماه یا اشتراکی.
+/// ⛔ هیچ هشدارِ «ساعتِ ویندوز جلو/عقب است» در این پنجره نیست.
 /// </summary>
 public sealed partial class ClockViewModel : ObservableObject
 {
@@ -32,10 +34,9 @@ public sealed partial class ClockViewModel : ObservableObject
     [ObservableProperty] private int _hourIndex;
     [ObservableProperty] private int _minuteIndex;
     [ObservableProperty] private string _status = "";
-    [ObservableProperty] private bool _busy;
     [ObservableProperty] private string _nowText = "";
 
-    public ClockViewModel() : this(AppClock.Now) { }
+    public ClockViewModel() : this(DisplayClock.Now) { }
 
     public ClockViewModel(DateTime now)
     {
@@ -50,18 +51,15 @@ public sealed partial class ClockViewModel : ObservableObject
         Tick(now);
     }
 
-    /// <summary>ساعتِ کنونیِ کامپیوتر، با همان شکلِ سربرگ.</summary>
+    /// <summary>همان تاریخ و ساعتِ سربرگ.</summary>
     public void Tick(DateTime now)
     {
         NowText = MainViewModel.HeaderDate(now) + " · " + Localization.Clock.Of(now, seconds: true);
-        var skew = AppClock.WallSkewMs;
-        WallText = Math.Abs(skew) > AppClock.SkewWarnMs
-            ? "⚠️ ساعتِ ویندوز " + MainViewModel.SkewText(skew) + " — برنامه با تاریخ و ساعتِ بالا (از اینترنت) کار می‌کند."
-            : AppClock.Trusted ? "✅ ساعتِ ویندوز با ساعتِ اینترنت یکی است." : "";
+        OnPropertyChanged(nameof(Shifted));
     }
 
-    /// <summary>حالِ ساعتِ ویندوز در برابرِ ساعتِ اینترنت (‎AppClock‎).</summary>
-    [ObservableProperty] private string _wallText = "";
+    /// <summary>کاربر خودش تاریخ و ساعت گذاشته — دکمهٔ «برگشت به ساعتِ واقعی» دیده شود.</summary>
+    public bool Shifted => DisplayClock.Shifted;
 
     /// <summary>همان لحظه‌ای که روی پنجره چیده شده — به وقتِ محلی.</summary>
     public DateTime Picked => Cal.ToDateTime(Year, MonthIndex + 1, Math.Min(Day, Cal.GetDaysInMonth(Year, MonthIndex + 1)),
@@ -95,51 +93,32 @@ public sealed partial class ClockViewModel : ObservableObject
         Day = Math.Clamp(keep, 1, n);
     }
 
+    /// <summary>«✔ ثبت» — فقط نمایش؛ بی اجازهٔ ویندوز و بی اثر روی هیچ حسابی.</summary>
     [RelayCommand]
-    private async Task ApplyAsync()
+    private void Apply()
     {
-        if (Busy) return;
-        Busy = true;
-        Status = "⏳ ویندوز یک بار اجازه می‌خواهد…";
-        try
-        {
-            var r = await ClockService.SetAsync(Picked);
-            Status = ClockService.Why(r);
-            //  ⛔ برنامه خودش با ساعتِ اینترنت کار می‌کند (‎AppClock‎) — ساعتِ ویندوز
-            //  فقط وقتی حرفِ آخر است که ساعتِ اینترنت هنوز نیامده.
-            if (r == ClockService.Result.Done)
-            {
-                AppClock.UserSetWall();
-                if (AppClock.Trusted)
-                    Status += " — برنامه همچنان با تاریخ و ساعتِ واقعی (از اینترنت) کار می‌کند.";
-            }
-        }
-        finally { Busy = false; Tick(AppClock.Now); }
+        DisplayClock.Show(Picked);
+        Status = DisplayClock.Shifted
+            ? "✅ ثبت شد — فقط تاریخ و ساعتِ نمایشی عوض شد؛ هیچ حساب، ماه یا اشتراکی دست نخورد."
+            : "✅ همان تاریخ و ساعتِ واقعی نشان داده می‌شود.";
+        Tick(DisplayClock.Now);
     }
 
+    /// <summary>برگشت به تاریخ و ساعتِ واقعی.</summary>
     [RelayCommand]
-    private async Task SyncAsync()
+    private void Real()
     {
-        if (Busy) return;
-        Busy = true;
-        Status = "⏳ گرفتنِ ساعتِ درست از اینترنت…";
-        try
-        {
-            var r = await ClockService.SyncInternetAsync();
-            //  ساعتِ خودِ برنامه هم — مستقل از ساعتِ ویندوز (‎TimeSync‎)
-            var app = await TimeSync.CheckAsync();
-            Status = r == ClockService.Result.Done ? "✅ ساعتِ کامپیوتر با اینترنت یکی شد"
-                   : app ? ClockService.Why(r) + " — ولی برنامه ساعتِ واقعی را از اینترنت گرفت و با همان کار می‌کند."
-                   : ClockService.Why(r);
-        }
-        finally { Busy = false; Tick(AppClock.Now); }
+        DisplayClock.Reset();
+        Now();
+        Status = "✅ تاریخ و ساعتِ واقعی نشان داده می‌شود.";
+        Tick(DisplayClock.Now);
     }
 
     /// <summary>برگشت به همین حالا — اگر کاربر چیزی را به‌هم زد.</summary>
     [RelayCommand]
     private void Now()
     {
-        var now = AppClock.Now;
+        var now = DisplayClock.Now;
         Year = Cal.GetYear(now); MonthIndex = Cal.GetMonth(now) - 1; Day = Cal.GetDayOfMonth(now);
         HourIndex = now.Hour; MinuteIndex = now.Minute;
         Status = "";

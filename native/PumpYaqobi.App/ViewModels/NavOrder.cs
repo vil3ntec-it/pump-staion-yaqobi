@@ -55,6 +55,23 @@ public static class NavOrder
         return list;
     }
 
+    /// <summary>
+    /// کشیدن و رها کردن (۱۴۰۵/۰۷/۱۶ — «با کشیدنشان، نه کلیکِ راست»): بخش در
+    /// جای ‎index‎ِ فهرستِ <b>پیش از</b> برداشتنش می‌نشیند (همان «پیش از این
+    /// خانه» که زیرِ ماوس دیده می‌شود). ‎index = Count‎ یعنی آخرِ نوار.
+    /// </summary>
+    public static List<string> MoveTo(IReadOnlyList<string> shown, string id, int index)
+    {
+        var list = shown.ToList();
+        var i = list.IndexOf(id);
+        if (i < 0) return list;
+        index = Math.Clamp(index, 0, list.Count);
+        list.RemoveAt(i);
+        if (index > i) index--;
+        list.Insert(index, id);
+        return list;
+    }
+
     /// <summary>ترتیبِ پیش‌فرض ذخیره نمی‌شود (خالی) — تا بخشِ تازهٔ فردا جای درستش را بگیرد.</summary>
     public static string Save(IReadOnlyList<string> defaults, IReadOnlyList<string> shown)
         => shown.SequenceEqual(defaults) ? "" : string.Join(",", shown);
