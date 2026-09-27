@@ -608,6 +608,9 @@
     toldKeys = {};
     chatMsgs = null;
     unlocked = false;
+    //  ⛔ قفلِ دستیِ پمپِ قبلی به پمپِ تازه نمی‌رسد: پمپِ بی‌رمزِ تازه دکمهٔ
+    //  «باز کن» ندارد و گوشی روی صفحهٔ قفل گیر می‌کرد.
+    lockedByHand = false;
     fromCloud = false;
     mode = '';
   }
@@ -1794,6 +1797,9 @@
       //  بنویسد.
       forgetAll('');
     });
+
+    //  همان کار از خودِ برنامه — پمپِ بی‌رمز هیچ‌وقت صفحهٔ قفل را نمی‌بیند
+    $('btnOther').addEventListener('click', function () { forgetAll(''); });
 
     $('btnManual').addEventListener('click', function () {
       $('inSrv').value = cfg.srv; $('inTok').value = cfg.tok; $('inStn').value = cfg.stn || '';

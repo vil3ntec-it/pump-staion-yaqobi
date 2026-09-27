@@ -238,21 +238,66 @@ internal static class OldAccountProbe
     ///
     ///     oldacct &lt;live.json&gt; &lt;پوشه&gt; karcode [pass] real
     /// </summary>
+    /// <summary>عکسِ زندهٔ پوشهٔ <paramref name="code"/> روی سرورِ خانگی (از پورتِ عمومی، با رمزِ خواندن) نشسته است؟</summary>
+    private static bool HomeLiveIn(string code, string readKey)
+    {
+        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(readKey)) return false;
+        try
+        {
+            var r = Task.Run(() => Http.GetAsync(_pub + "/api/stations/" + Uri.EscapeDataString(code) + "/live?token=" + Uri.EscapeDataString(readKey)))
+                .GetAwaiter().GetResult();
+            if (!r.IsSuccessStatusCode) return false;
+            var body = Task.Run(() => r.Content.ReadAsStringAsync()).GetAwaiter().GetResult();
+            return body.Contains("\"sections\"") || body.Contains("\"banner\"");
+        }
+        catch { return false; }
+    }
+
+    /// <summary>پوشهٔ خانگی‌ای که سرورِ حساب برای این کد به گوشی می‌دهد (<c>home.station</c>ِ درِ ‹join›).</summary>
+    private static string JoinHome(string code)
+    {
+        try
+        {
+            var req = new HttpRequestMessage(HttpMethod.Post, _pub + "/api/pump/public/join")
+            { Content = new StringContent(JsonSerializer.Serialize(new { code }), Encoding.UTF8, "application/json") };
+            var r = Task.Run(() => Http.SendAsync(req)).GetAwaiter().GetResult();
+            if (!r.IsSuccessStatusCode) return "";
+            using var d = JsonDocument.Parse(Task.Run(() => r.Content.ReadAsStringAsync()).GetAwaiter().GetResult());
+            return d.RootElement.TryGetProperty("home", out var h) && h.ValueKind == JsonValueKind.Object
+                && h.TryGetProperty("station", out var st) ? st.GetString() ?? "" : "";
+        }
+        catch { return ""; }
+    }
+
     private static int KarCode(string shots, bool withPass)
     {
         Console.WriteLine("══ کدِ هشت‌رقمی: حسابِ تازه، بی زدنِ هیچ دکمه‌ای" + (withPass ? " — با رمزِ برنامه" : " — بی رمز"));
         var a = MakeAccount("kar-" + Guid.NewGuid().ToString("N")[..8] + "@example.com", withStation: false);
         SeatOnDisk(a, loginSkipped: false);
         var host = AppHost.Current;
+        //  PUMP_KAR_TAG: چند حساب پشتِ سرِ هم (tools/check-multi-account.mjs) — هر حساب
+        //  قرض‌دارِ نام‌دارِ خودش و فایلِ خودش، تا قاطی شدن دیده شود.
+        var tag = Environment.GetEnvironmentVariable("PUMP_KAR_TAG") ?? "";
+        var debtor = tag.Length > 0 ? "قرض‌دارِ حسابِ " + tag : "هارونِ آزمون";
         if (withPass && host.Auth.NeedsFirstRun()) host.Auth.CreateFirstAdmin("1405");
+        //  چند حساب ⇒ همگام‌سازیِ واقعی هم روشن، تا دفترِ سرور هم برای قاطی شدن سنجیده شود
+        if (tag.Length > 0) SyncEngine.Disabled = false;
         var (win, vm, account) = Open(withPass ? "1405" : "");
         //  یک قرض‌دار، تا گوشی چیزی از **همین** پمپ ببیند (پس از ورود — اجازه می‌خواهد)
-        Wait(win, host.Debtors.AddDebtorAsync("هارونِ آزمون", "0700000001", false));
+        Wait(win, host.Debtors.AddDebtorAsync(debtor, "0700000001", false));
         var pubLive = false;
         _until = () =>
         {
             var f = AppSettings.Load();
             if (!CloudLink.IsDigitCode(f.CloudAccessCode)) return false;
+            if (tag.Length > 0 && (host.Sync.LastOkAt is null || host.Sync.Queued > 0)) return false;
+            //  و پوشهٔ سرورِ خانگی مالِ **همین حساب** شده باشد، نه کدِ بی‌حسابِ این کامپیوتر
+            if (tag.Length > 0 && (f.ServerToken.Length == 0 || StationLink.NeedsMove(f))) return false;
+            //  ⚠️ «جابه‌جا شد» با «عکسِ زنده در پوشهٔ تازه نشست» یکی نیست: پس از جابه‌جایی
+            //  پوشهٔ تازه خالی است تا دورِ بعدِ ناشر — سنجه باید همان را هم ببیند.
+            if (tag.Length > 0 && !HomeLiveIn(f.StationCode, f.ServerReadKey)) return false;
+            //  و سرورِ حساب هم همان پوشه را به گوشی بگوید — همان «کدِ پمپ ⇒ پوشهٔ خانگی»
+            if (tag.Length > 0 && JoinHome(f.CloudAccessCode) != f.StationCode) return false;
             if (pubLive) return true;
             //  عکسِ زندهٔ همین پمپ از درِ عمومیِ همان کد — همان راهی که گوشی می‌رود
             var r = Task.Run(() => Http.GetAsync(_pub + "/api/pump/public/live?code=" + f.CloudAccessCode)).GetAwaiter().GetResult();
@@ -281,12 +326,17 @@ internal static class OldAccountProbe
         using (var shot = win.CaptureRenderedFrame()) shot?.Save(Path.Combine(shots, "k-apps" + (withPass ? "-pass" : "") + ".png"));
         Console.WriteLine("  📷 " + Path.Combine(shots, "k-apps" + (withPass ? "-pass" : "") + ".png"));
 
-        File.WriteAllText(Path.Combine(shots, "karcode" + (withPass ? "-pass" : "") + ".json"), JsonSerializer.Serialize(new
+        File.WriteAllText(Path.Combine(shots, "karcode" + (withPass ? "-pass" : "") + (tag.Length > 0 ? "-" + tag : "") + ".json"), JsonSerializer.Serialize(new
         {
             code = file.CloudAccessCode,
             display = CloudLink.FormatAccessCode(file.CloudAccessCode),
             pass = withPass ? "1405" : "",
-            debtor = "هارونِ آزمون",
+            debtor,
+            station = file.CloudStationCode,
+            home = file.StationCode,
+            email = a.Email,
+            //  ⚠️ فقط سنجه: توکنِ حسابِ ساختگیِ همین پشتهٔ موقت، برای سنجیدنِ دفترِ همگام‌سازی
+            access = tag.Length > 0 ? a.Access : "",
         }));
         win.Close();
         Console.WriteLine(_bad == 0 ? "✅ کدِ هشت‌رقمی آماده است" : $"❌ {_bad} ایراد");
