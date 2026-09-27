@@ -359,6 +359,27 @@ public class AppClockTests : IDisposable
         Assert.True(bad.Count == 0, "ساعتِ خامِ ویندوز — از AppClock بخوانید:\n" + string.Join("\n", bad));
     }
 
+    /// <summary>
+    /// ⛔ ‎TickCount64‎ی ویندوز فقط هر ~۱۵٫۶ms جلو می‌رود؛ با آن دو کارِ پشتِ سرِ هم
+    /// یک مُهر می‌گرفتند و بازگردانیِ شخص ردیفی را هم برمی‌گرداند که جدا پاک شده
+    /// بود (‎BackupTrashTests‎ روی ویندوزِ CI). شمارنده باید میلی‌ثانیه‌ای و هرگز
+    /// عقب‌رو باشد — روی هر سیستمی.
+    /// </summary>
+    [Fact]
+    public void Shomarande_MiliSaniyei_Ast_Va_HargezAghabNemiravad()
+    {
+        var last = AppClock.HiResMono();
+        for (var i = 0; i < 20; i++)
+        {
+            var a = AppClock.HiResMono();
+            var until = System.Diagnostics.Stopwatch.GetTimestamp() + System.Diagnostics.Stopwatch.Frequency * 3 / 1000;
+            long b;
+            do { b = AppClock.HiResMono(); Assert.True(b >= last); last = b; }
+            while (System.Diagnostics.Stopwatch.GetTimestamp() < until);
+            Assert.True(b - a >= 1, $"سه میلی‌ثانیه گذشت ولی شمارنده {b - a} جلو رفت");
+        }
+    }
+
     private static string Root()
     {
         var d = new DirectoryInfo(AppContext.BaseDirectory);

@@ -37,7 +37,49 @@ public static class AppClock
     public static Func<DateTime> WallSource { get; set; } = () => DateTime.UtcNow;
 
     /// <summary>شمارندهٔ یکنواختِ سیستم (میلی‌ثانیه) — تزریق‌پذیر فقط برای آزمون‌ها.</summary>
-    public static Func<long> MonoSource { get; set; } = () => Environment.TickCount64;
+    public static Func<long> MonoSource { get; set; } = HiResMono;
+
+    /// <summary>
+    /// ⛔ <b>‎TickCount64‎ تنها بس نیست</b>: روی ویندوز فقط هر ~۱۵٫۶ میلی‌ثانیه یک
+    /// پله جلو می‌رود (روی لینوکس ~۴). پس دو کارِ پشتِ سرِ هم (مثلاً پاک کردنِ یک
+    /// ردیف و بلافاصله پاک کردنِ خودِ شخص) یک مُهرِ زمان می‌گرفتند و بازگردانیِ
+    /// شخص ردیفی را هم برمی‌گرداند که کاربر جداگانه پاک کرده بود (آزمونِ ویندوزِ CI
+    /// گرفتش). حالا: پلهٔ ‎TickCount64‎ (که خواب و خاموشیِ موقتِ کامپیوتر را هم
+    /// می‌شمارد) + زمانِ گذشته از آغازِ همان پله با ‎Stopwatch‎ (دقیق)، و هرگز عقب‌تر
+    /// از خواندنِ پیشین.
+    /// </summary>
+    public static long HiResMono()
+    {
+        var sw = System.Diagnostics.Stopwatch.GetTimestamp();
+        var b = _mono;
+        if (b is not null && sw - b.Sw < ResyncTicks && sw >= b.Sw)
+            return b.Ms + (long)((sw - b.Sw) * MsPerTick);
+        return Resync(sw);
+    }
+
+    /// <summary>
+    /// هر ربع ثانیه با ‎TickCount64‎ سنجیده می‌شود: اگر کامپیوتر خوابیده بود
+    /// (‎Stopwatch‎ شاید نشمرده باشد)، همان لحظه جلو می‌پرد. ⛔ هرگز عقب نمی‌رود.
+    /// </summary>
+    private static long Resync(long sw)
+    {
+        lock (MonoGate)
+        {
+            var b = _mono;
+            var est = b is null ? long.MinValue : b.Ms + (long)((sw - b.Sw) * MsPerTick);
+            var tick = Environment.TickCount64;
+            //  پلهٔ درشتِ ‎TickCount64‎ (۱۵٫۶ms) نباید شمارندهٔ دقیق را عقب ببرد
+            var ms = b is null || tick - est > 50 ? tick : Math.Max(est, b.Ms);
+            _mono = new MonoBase(ms, sw);
+            return ms;
+        }
+    }
+
+    private sealed record MonoBase(long Ms, long Sw);
+    private static volatile MonoBase? _mono;
+    private static readonly object MonoGate = new();
+    private static readonly double MsPerTick = 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+    private static readonly long ResyncTicks = System.Diagnostics.Stopwatch.Frequency / 4;
 
     /// <summary>
     /// جابه‌جاییِ کوچک‌تر از این (پیش از آمدنِ ساعتِ اینترنت) دنبال می‌شود:
@@ -231,7 +273,7 @@ public static class AppClock
             _based = false; _trusted = false; _trustedMono = long.MinValue; SafeToPurgeOverride = null;
             _anchor = null; _wallCheckedMono = long.MinValue / 2;
             WallSource = () => DateTime.UtcNow;
-            MonoSource = () => Environment.TickCount64;
+            MonoSource = HiResMono;
         }
     }
 
