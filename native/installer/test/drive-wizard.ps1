@@ -68,7 +68,7 @@ $proc = Start-Process -FilePath $Setup -ArgumentList $argList -PassThru
 $name = [IO.Path]::GetFileNameWithoutExtension($Setup)
 
 $r = [ordered]@{ DirPage = $false; DirPrefill = ''; DirsUsed = @(); Finished = $false; Messages = @(); Pages = @(); ExitCode = $null }
-$dirIx = 0; $ansIx = 0; $lastPage = ''
+$dirIx = 0; $ansIx = 0; $lastPage = ''; $seenAny = $false; $started = Get-Date
 $deadline = (Get-Date).AddSeconds($TimeoutSec)
 
 function Plain($s) { ($s -replace '&', '').Trim() }
@@ -76,7 +76,9 @@ function Plain($s) { ($s -replace '&', '').Trim() }
 while ((Get-Date) -lt $deadline) {
   #  setup.exe خودش یک ‎.tmp‎ هم‌نام می‌سازد که ویزارد مالِ اوست
   $pids = New-Object 'System.Collections.Generic.HashSet[uint32]'
-  Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -eq $name } | ForEach-Object { [void]$pids.Add([uint32]$_.Id) }
+  #  ⚠️ نامِ فرآیندِ ویزارد «PumpYaqobi-Setup.tmp» است، نه «PumpYaqobi-Setup» — دات‌نت
+  #  فقط پسوندِ ‎.exe‎ را برمی‌دارد. بارِ اول همین سنجه را کور کرد.
+  Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -eq $name -or $_.ProcessName -eq "$name.tmp" } | ForEach-Object { [void]$pids.Add([uint32]$_.Id) }
   if ($pids.Count -eq 0) { break }
 
   $acted = $false
@@ -122,7 +124,7 @@ while ((Get-Date) -lt $deadline) {
       #  نصب تمام است (ثبتِ حذف پیش از این صفحه نوشته شده). «پایان» زده نمی‌شود
       #  چون تیکِ «باز کردنِ برنامه» روشن است و سنجه برنامه را خودش باز می‌کند.
       $r.Finished = $true
-      Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -eq $name } | Stop-Process -Force
+      Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -eq $name -or $_.ProcessName -eq "$name.tmp" } | Stop-Process -Force
       break
     }
     if ($page -eq 'dir') {
@@ -137,12 +139,18 @@ while ((Get-Date) -lt $deadline) {
     if ($btn) { [PyqW]::Click($btn); $acted = $true }
     break
   }
+  if (-not $seenAny -and $r.Pages.Count -eq 0 -and ((Get-Date) - $started).TotalSeconds -gt 20) {
+    #  هیچ صفحه‌ای دیده نشد ⇒ نامِ پنجره‌های نصاب ثبت شود تا معلوم شود چرا
+    $seenAny = $true
+    $cl = ([PyqW]::Tops($pids) | ForEach-Object { [PyqW]::Cls($_) + ':' + [PyqW]::Text($_) }) -join ', '
+    $r.Messages += "[راننده] پس از ۲۰ ثانیه هیچ صفحه‌ای؛ پنجره‌ها: $cl"
+  }
   Start-Sleep -Milliseconds $(if ($acted) { 900 } else { 400 })
 }
 
 if (-not $proc.HasExited) {
   if ((Get-Date) -ge $deadline) {
-    Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -eq $name } | Stop-Process -Force
+    Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -eq $name -or $_.ProcessName -eq "$name.tmp" } | Stop-Process -Force
     $r.Messages += '[راننده] وقت تمام شد — ویزارد جلو نرفت'
   }
   $proc.WaitForExit(15000) | Out-Null
