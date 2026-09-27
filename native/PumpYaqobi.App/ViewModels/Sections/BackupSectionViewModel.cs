@@ -6,6 +6,7 @@ using PumpYaqobi.App.Update;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Security;
 using PumpYaqobi.Services.Data;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -486,7 +487,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
     /// <summary>جملهٔ نتیجه — هر مقصد جدا گفته می‌شود، راست.</summary>
     public static (string Text, string Brush) ServerResult(bool ok, bool home, bool cloud, string why)
     {
-        var at = DateTime.Now.ToString("HH:mm");
+        var at = AppClock.Now.ToString("HH:mm");
         if (home && cloud) return ($"✅ ساعتِ {at} روی سرورِ خانگی و سرورِ حساب نشست", "Pump.Ok");
         if (home) return ($"✅ ساعتِ {at} روی سرورِ خانگی نشست · سرورِ حساب نه", "Pump.Ok");
         if (cloud) return ($"✅ ساعتِ {at} روی سرورِ حساب نشست · سرورِ خانگی نه", "Pump.Ok");

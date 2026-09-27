@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Microsoft.Data.Sqlite;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Security;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.Services.Data;
 
@@ -106,9 +107,9 @@ public static class FullBackup
                 ["format"] = FormatName,
                 ["formatVersion"] = FormatVersion,
                 ["appVersion"] = appVersion,
-                ["createdUtc"] = DateTime.UtcNow.ToString("O"),
+                ["createdUtc"] = AppClock.UtcNow.ToString("O"),
                 ["shamsi"] = Shamsi.Today(),
-                ["time"] = DateTime.Now.ToString("HH:mm"),
+                ["time"] = AppClock.Now.ToString("HH:mm"),
                 ["pumpName"] = pumpName ?? "",
                 ["db"] = new JsonObject { ["sha256"] = sha, ["bytes"] = bytes },
                 ["tables"] = ToJson(counts),
@@ -130,7 +131,7 @@ public static class FullBackup
             check.Dispose();
 
             File.Move(partial, target, overwrite: true);
-            return new FullBackupInfo(true, "", appVersion, Shamsi.Today(), DateTime.Now.ToString("HH:mm"),
+            return new FullBackupInfo(true, "", appVersion, Shamsi.Today(), AppClock.Now.ToString("HH:mm"),
                                       pumpName ?? "", counts, new FileInfo(target).Length, settingsJson, null);
         }
         finally

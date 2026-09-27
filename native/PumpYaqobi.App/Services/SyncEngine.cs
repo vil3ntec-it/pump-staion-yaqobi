@@ -4,6 +4,7 @@ using System.Text.Json;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Persistence;
 using PumpYaqobi.Services.Data;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.Services;
 
@@ -331,7 +332,7 @@ public sealed class SyncEngine : IAsyncDisposable
         //  داده عوض نشده، صف خالی است و وقتِ pull هم نرسیده ⇒ هیچ کاری،
         //  حتی یک SELECT.
         var version = PumpDbContext.Version;
-        var pullDue = force || DateTime.UtcNow - _lastPull >= PullTick;
+        var pullDue = force || AppClock.Mono - _lastPull >= PullTick;
         if (!force && version == _lastVersion && Queued == 0 && !pullDue) return;
         _lastVersion = version;
 
@@ -447,10 +448,10 @@ public sealed class SyncEngine : IAsyncDisposable
             _fails = 0;
             _store.MarkResults(res.Results);
             _store.Prune();
-            LastOkAt = DateTime.Now;
+            LastOkAt = AppClock.Now;
             _store.Update(x =>
             {
-                x.LastPushAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                x.LastPushAt = AppClock.UnixMs;
                 x.LastOkAt = x.LastPushAt;
                 x.LastError = "";
                 x.ServerSchema = res.ServerSchema;
@@ -487,7 +488,7 @@ public sealed class SyncEngine : IAsyncDisposable
                     ? $"آوردنِ اطلاعاتِ حساب… ({Shamsi.Money(PrimeGot)} تغییر تا این‌جا)"
                     : "آوردنِ اطلاعاتِ حساب از سرور…");
 
-            _lastPull = DateTime.UtcNow;
+            _lastPull = AppClock.Mono;
             var pull = await cloud.SyncPullAsync(state.Cursor, ct);
             if (!pull.Ok)
             {
@@ -535,11 +536,11 @@ public sealed class SyncEngine : IAsyncDisposable
             _store.Update(x =>
             {
                 x.Cursor = pull.Cursor;
-                x.LastPullAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                x.LastOkAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                x.LastPullAt = AppClock.UnixMs;
+                x.LastOkAt = AppClock.UnixMs;
                 x.LastError = applyWhy;
             });
-            LastOkAt = DateTime.Now;
+            LastOkAt = AppClock.Now;
 
             //  هنوز مانده ⇒ همین حالا دورِ بعد
             if (pull.HasMore) { _lastPull = DateTime.MinValue; Nudge(); }
@@ -548,7 +549,7 @@ public sealed class SyncEngine : IAsyncDisposable
                 //  ⛔ **مهرِ صریح**، نه «مکان‌نما بزرگ‌تر از صفر»: حسابی که
                 //  روی سرور هیچ چیزی ندارد هم همین‌جا تمام می‌شود و پرده‌اش
                 //  دیگر هر سی ثانیه برنمی‌گردد.
-                _store.Update(x => x.PrimedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                _store.Update(x => x.PrimedAt = AppClock.UnixMs);
                 EndPrime(true, "");
             }
         }
@@ -561,9 +562,9 @@ public sealed class SyncEngine : IAsyncDisposable
             "همگام است" + (LastOkAt is { } at ? $" · آخرین رفت‌وآمد: {at:HH:mm}" : ""), 0);
 
         // ── ۵) تپش و اعلان ─────────────────────────────────────────────
-        if (force || DateTime.UtcNow - _lastBeat >= HeartbeatTick)
+        if (force || AppClock.Mono - _lastBeat >= HeartbeatTick)
         {
-            _lastBeat = DateTime.UtcNow;
+            _lastBeat = AppClock.Mono;
             await BeatAsync(cloud, ct);
         }
 
@@ -597,10 +598,23 @@ public sealed class SyncEngine : IAsyncDisposable
         foreach (var n in notices)
         {
             if (n.Read || !_toldNotices.Add(n.Id)) continue;
+            //  ⛔ یک بار، نه با هر باز شدنِ برنامه (۱۴۰۵/۰۷/۱۵ — «هی هر بار میاد
+            //  که می‌گه اشتراکِ شما تمدید شد»): هم این‌جا به یاد می‌ماند و هم
+            //  روی سرور «خوانده شد» می‌شود. نرسیدنِ دومی اولی را نمی‌شکند.
+            if (SeenNotices.Seen(n.Id)) { await MarkReadAsync(cloud, n.Id, ct); continue; }
+            SeenNotices.MarkSeen(n.Id);
             //  ⚠️ بنرِ داخلِ برنامه و اعلانِ سیستم، هر دو از همین یک جا.
             //  قاعدهٔ جدا ننویسید، وگرنه روزی یکی می‌آید و آن یکی نه.
             NoticeArrived?.Invoke(n);
+            await MarkReadAsync(cloud, n.Id, ct);
         }
+    }
+
+    private static async Task MarkReadAsync(CloudLink cloud, string id, CancellationToken ct)
+    {
+        try { await cloud.NoticeReadAsync(id, ct); }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch { /* یادِ محلی کافی است */ }
     }
 
     private void Set(SyncLight light, string reason, int queued)

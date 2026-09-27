@@ -151,7 +151,7 @@ public class ScrollWeightTests : IDisposable
         Assert.Contains("DispatcherTimer.RunOnce(WarmOne", code);
         //  ⛔ بخشِ پنهان هیچ کارتی نمی‌سازد، و تا کاربر می‌چرخاند هم نه
         Assert.Contains("IsEffectivelyVisible && ItemTemplate is not null", code);
-        Assert.Contains("DateTime.UtcNow - _lastScroll < WarmCalm", code);
+        Assert.Contains("AppClock.Mono - _lastScroll < WarmCalm", code);
         //  ⚠️ «اسکرول» فقط وقتی قاب واقعاً جابه‌جا شده — رویداد با هر پاسِ چیدمان هم می‌آید
         Assert.Contains("e.EffectiveViewport != _viewport) _lastScroll", code);
         //  و دیده نشدن ⇒ هیچ کارتِ زنده‌ای

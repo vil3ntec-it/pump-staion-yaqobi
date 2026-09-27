@@ -18,8 +18,10 @@
 
     <Border Classes="calc" Padding="12,10">
       <StackPanel Spacing="2">
-        <TextBlock Classes="muted" FontSize="12" Text="ساعتِ همین حالای کامپیوتر" TextAlignment="Center" />
+        <TextBlock Classes="muted" FontSize="12" Text="تاریخ و ساعتِ برنامه (از اینترنت، وقتی هست)" TextAlignment="Center" />
         <TextBlock Text="{Binding NowText}" FontSize="17" FontWeight="Bold" TextAlignment="Center" />
+        <TextBlock Text="{Binding WallText}" FontSize="12" TextAlignment="Center" TextWrapping="Wrap"
+                   IsVisible="{Binding WallText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
       </StackPanel>
     </Border>
 

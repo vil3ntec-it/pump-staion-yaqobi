@@ -2,6 +2,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using PumpYaqobi.Application.Localization;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.Services;
 
@@ -316,7 +317,7 @@ public sealed partial class CloudLink
         _settings.CloudStationId = StationId(json);
         _settings.CloudStationCode = StationCodeOf(json);
         _settings.CloudLicense = Str(json, "license");
-        _settings.CloudSyncedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        _settings.CloudSyncedAt = AppClock.UnixMs;
         Seated();
         ReadSubscription(json);
         //  مُهرِ «دیدیم که باز است» — پایهٔ ارفاق (‎Entitlements.Grace‎). بی این،
@@ -512,7 +513,7 @@ public sealed partial class CloudLink
         _settings.CloudDeviceUid = oldUid;
         _settings.CloudDeviceMachine = oldMachine;
         LastBindWhy = "مجوزِ این کامپیوتر سنجیده نشد و وصلِ دوباره نشد — " + (r.Why ?? "");
-        _lastBindFailAt = DateTime.UtcNow;
+        _lastBindFailAt = AppClock.Mono;
         await SaveQuiet();
     }
 
@@ -566,7 +567,7 @@ public sealed partial class CloudLink
          _settings.CloudStationCode, _settings.CloudAccessCode, _settings.ServerUrl,
          _settings.ServerLanUrl, _settings.ServerToken, _settings.ServerReadKey, _settings.ServerId) = keep;
         LastBindWhy = "این کامپیوتر به پمپِ حسابتان وصل نشد — " + (r.Why ?? "");
-        _lastBindFailAt = DateTime.UtcNow;
+        _lastBindFailAt = AppClock.Mono;
         await SaveQuiet();
         return false;
     }
@@ -656,7 +657,7 @@ public sealed partial class CloudLink
         //  ⚠️ مجوزِ **خالی** هم می‌نشیند: «اشتراک ندارد» یک جوابِ درست
         //  است، و نگه داشتنِ مجوزِ کهنه یعنی قفلی که باز مانده
         _settings.CloudLicense = Str(json, "license");
-        _settings.CloudSyncedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        _settings.CloudSyncedAt = AppClock.UnixMs;
         Seated();
         ReadSubscription(json);
         Entitlements.Remember(_settings, Subscription, Verify());
@@ -689,7 +690,7 @@ public sealed partial class CloudLink
         if (!ok) return CloudResult.No(why, errCode);
 
         _settings.CloudLicense = Str(json, "license");
-        _settings.CloudSyncedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        _settings.CloudSyncedAt = AppClock.UnixMs;
         ReadSubscription(json);
         //  مُهرِ «دیدیم که باز است» — پایهٔ ارفاق (‎Entitlements.Grace‎). بی این،
         //  یک روزِ بی‌اینترنت می‌توانست کیو‌آر و اپِ کارمندانِ مشتریِ پول‌داده
@@ -750,7 +751,7 @@ public sealed partial class CloudLink
             else rejected = AdoptLicense(token, Str(lic, "publicKey"));
         }
 
-        _settings.CloudSyncedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        _settings.CloudSyncedAt = AppClock.UnixMs;
         //  مُهرِ «دیدیم که باز است» — پایهٔ ارفاق (‎Entitlements.Grace‎). بی این،
         //  یک روزِ بی‌اینترنت می‌توانست کیو‌آر و اپِ کارمندانِ مشتریِ پول‌داده
         //  را خاموش کند.
@@ -878,9 +879,12 @@ public sealed partial class CloudLink
     {
         if (!Activated) return;
 
-        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var now = AppClock.UnixMs;
         var since = now - _settings.CloudSyncedAt;
-        var due = _settings.CloudSyncedAt <= 0 || since >= (long)LicenseTick.TotalMilliseconds;
+        //  ⛔ `since < 0` یعنی مُهرِ روی دیسک از آینده است (ساعتِ ویندوز روزی جلو
+        //  بود) — «هنوز نرسیده» نیست، «همین حالا» است؛ وگرنه تازه‌سازیِ مجوز
+        //  تا رسیدنِ همان آینده خاموش می‌ماند (۱۴۰۵/۰۷/۱۵).
+        var due = _settings.CloudSyncedAt <= 0 || since < 0 || since >= (long)LicenseTick.TotalMilliseconds;
 
         //  ⚠️ «مجوز چه می‌گوید» را از خودِ `LicenseGuard` می‌پرسیم، نه از
         //  مُهرِ ارفاق: ارفاق عمداً دیر می‌بندد و این‌جا باید حقیقتِ همین
@@ -968,7 +972,7 @@ public sealed partial class CloudLink
             if (!chk.Genuine) return CloudResult.Done;
             var mark = chk.Serial + "@" + _settings.CloudStationId;
             if (_settings.OfflineCodeRedeemed.StartsWith(mark, StringComparison.Ordinal)) return CloudResult.Done;
-            if (DateTime.UtcNow < _offlineNextTry) return CloudResult.Done;
+            if (AppClock.Mono < _offlineNextTry) return CloudResult.Done;
 
             var (ok, _, why, code) = await DevPostAsync("/api/pump/device/offline-code",
                 new { code = chk.Canonical, computer = OfflineKey.ComputerCode() }, ct);
@@ -989,7 +993,7 @@ public sealed partial class CloudLink
                     _settings.OfflineCodeRedeemed = mark + "!" + code;
                     await _save();
                 }
-                else _offlineNextTry = DateTime.UtcNow.AddMinutes(10);
+                else _offlineNextTry = AppClock.Mono.AddMinutes(10);
                 return CloudResult.No(why, code);
             }
             _settings.OfflineCodeRedeemed = mark;
@@ -999,7 +1003,7 @@ public sealed partial class CloudLink
         }
         catch (Exception ex)
         {
-            _offlineNextTry = DateTime.UtcNow.AddMinutes(10);
+            _offlineNextTry = AppClock.Mono.AddMinutes(10);
             return CloudResult.No(ErrorText.Friendly(ex), "error");
         }
     }
@@ -1433,8 +1437,8 @@ public sealed partial class CloudLink
     {
         if (!Activated) return;
         var fresh = _codeCheckedAt != DateTime.MinValue && IsDigitCode(_settings.CloudAccessCode);
-        if (fresh || DateTime.UtcNow - _codeCheckedAt < CodeRecheck) return;
-        _codeCheckedAt = DateTime.UtcNow;
+        if (fresh || AppClock.Mono - _codeCheckedAt < CodeRecheck) return;
+        _codeCheckedAt = AppClock.Mono;
         try { await AccessCodeAsync(false, ct); }
         catch { /* بی‌اینترنت خطا نیست — کدِ روی دیسک سرِ جایش است */ }
     }
@@ -1718,14 +1722,14 @@ public sealed partial class CloudLink
     {
         var key = route + "|" + (email ?? "").Trim();
         if (!_lastMail.TryGetValue(key, out var at)) return null;
-        var left = ResendWaitSeconds - (int)((DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - at) / 1000);
+        var left = ResendWaitSeconds - (int)((AppClock.MonoSource() - at) / 1000);
         return left > 0
             ? $"کد همین حالا فرستاده شد — {left} ثانیه صبر کنید و صندوقِ ایمیلتان را ببینید."
             : null;
     }
 
     private void MailSent(string route, string email) =>
-        _lastMail[route + "|" + (email ?? "").Trim()] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        _lastMail[route + "|" + (email ?? "").Trim()] = AppClock.MonoSource();
 
     /// <summary>بلیتِ ثبت‌نام — فقط در حافظه، تا پلهٔ سوم.</summary>
     private string _registerTicket = "";
@@ -1901,7 +1905,7 @@ public sealed partial class CloudLink
     private static void NoteOnline()
     {
         Reach = CloudReach.Online;
-        CloudOkAt = DateTime.Now;
+        CloudOkAt = AppClock.Now;
         CloudWhy = "";
     }
 
@@ -2085,7 +2089,7 @@ public sealed partial class CloudLink
     /// <summary>توکنِ دسترسی نزدیکِ انقضاست؟</summary>
     private bool AccessNearlyExpired =>
         _settings.CloudAccessExpiresAt > 0
-        && DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + RefreshSkewMs >= _settings.CloudAccessExpiresAt;
+        && AppClock.UnixMs + RefreshSkewMs >= _settings.CloudAccessExpiresAt;
 
     /// <summary>
     /// نشستِ روی دیسک — ⚠️ فقط وقتی چیزی دارد و با عکسِ همین نمونه فرق دارد.
@@ -2348,7 +2352,7 @@ public sealed partial class CloudLink
         _acctStationSeen = acctStation;
         if (acctStation.Length == 0) LastBindWhy = "";
         var locked = (_settings.CloudStationId ?? "").Trim();
-        var bindDue = forceBind || DateTime.UtcNow - _lastBindFailAt >= BindRetryAfterFail;
+        var bindDue = forceBind || AppClock.Mono - _lastBindFailAt >= BindRetryAfterFail;
 
         /*
          *  ⛔ **این کامپیوتر روی پمپی است که مالِ این حساب نیست** — یا حساب
@@ -2421,7 +2425,7 @@ public sealed partial class CloudLink
             LastBindWhy = moved.Ok ? ""
                 : (moved.Why ?? "").Contains("پمپِ دیگری") ? moved.Why!
                 : "این کامپیوتر روی پمپِ دیگری است — " + (moved.Why ?? "");
-            _lastBindFailAt = moved.Ok ? DateTime.MinValue : DateTime.UtcNow;
+            _lastBindFailAt = moved.Ok ? DateTime.MinValue : AppClock.Mono;
             if (!moved.Ok) return (false, "", "", "", LastBindWhy);
             //  حالِ تازهٔ حساب — پمپ حالا همان پمپِ این کامپیوتر است
             res = await AccountAsync(HttpMethod.Get, "/api/pump/me", null, ct);
@@ -2471,7 +2475,7 @@ public sealed partial class CloudLink
             {
                 //  وصل شد ولی سرور مجوزی نداد ⇒ ده دقیقه صبر، نه هر دقیقه یک ثبتِ تازه
                 LastBindWhy = "سرورِ حساب اشتراکِ این پمپ را فعال می‌گوید ولی برای این کامپیوتر مجوز نداد";
-                _lastBindFailAt = DateTime.UtcNow;
+                _lastBindFailAt = AppClock.Mono;
             }
         }
 
@@ -2517,9 +2521,9 @@ public sealed partial class CloudLink
             {
                 var bind = await BindAsync(ct);
                 LastBindWhy = bind.Ok ? "" : (bind.Why ?? "");
-                _lastBindFailAt = bind.Ok ? DateTime.MinValue : DateTime.UtcNow;
+                _lastBindFailAt = bind.Ok ? DateTime.MinValue : AppClock.Mono;
             }
-            catch (Exception ex) { LastBindWhy = ex.GetType().Name; _lastBindFailAt = DateTime.UtcNow; }
+            catch (Exception ex) { LastBindWhy = ex.GetType().Name; _lastBindFailAt = AppClock.Mono; }
         }
 
         /*
@@ -2622,9 +2626,12 @@ public sealed partial class CloudLink
         using var _ = req;
         try
         {
+            var sent = PumpYaqobi.Domain.AppClock.MonoSource();
             using var res = TestTransport is null
                 ? await client.SendAsync(req, ct)
                 : await TestTransport(req, ct);
+            //  ⛔ ساعتِ واقعی از همین پاسخ (سرآیندِ Date) — ‎TimeSync‎
+            TimeSync.From(req, res, sent);
             var text = await res.Content.ReadAsStringAsync(ct);
             var status = (int)res.StatusCode;
             JsonElement json = default;

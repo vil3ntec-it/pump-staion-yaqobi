@@ -1,3 +1,4 @@
+using PumpYaqobi.Domain;
 using Microsoft.Data.Sqlite;
 
 namespace PumpYaqobi.App.Services;
@@ -99,7 +100,14 @@ public sealed class ChatStore
     /// یک جارو: پیرها به سطل، پیرهای سطل به حذف — و رسانه‌ای که دیگر هیچ
     /// پیامی به آن اشاره نمی‌کند از دیسک پاک می‌شود.
     /// </summary>
-    public (int Trashed, int Purged) Sweep(long nowMs)
+    public (int Trashed, int Purged) Sweep(long nowMs) => Sweep(nowMs, AppClock.SafeToPurge);
+
+    /// <summary>
+    /// همان، و <paramref name="purge"/> می‌گوید پاکِ همیشگی مجاز است یا نه.
+    /// ⛔ بی ساعتِ مطمئن (‎AppClock.SafeToPurge‎) فقط به سطل می‌رود — که
+    /// برمی‌گردد — و هیچ پیامی برای همیشه پاک نمی‌شود (۱۴۰۵/۰۷/۱۵).
+    /// </summary>
+    public (int Trashed, int Purged) Sweep(long nowMs, bool purge)
     {
         var trashCut = nowMs - ActiveDays * DayMs;
         var purgeCut = nowMs - TrashDays * DayMs;
@@ -116,7 +124,8 @@ public sealed class ChatStore
                 using var r = q.ExecuteReader();
                 while (r.Read()) purgedMedia.Add(r.GetString(0));
             }
-            purged = Run(c, tx, "DELETE FROM Msgs WHERE TrashedAt > 0 AND TrashedAt <= $p", ("$p", purgeCut));
+            purged = purge ? Run(c, tx, "DELETE FROM Msgs WHERE TrashedAt > 0 AND TrashedAt <= $p", ("$p", purgeCut)) : 0;
+            if (!purge) purgedMedia.Clear();
             trashed = Run(c, tx, "UPDATE Msgs SET TrashedAt = $n WHERE TrashedAt = 0 AND Anchor <= $t",
                 ("$n", nowMs), ("$t", trashCut));
             tx.Commit();

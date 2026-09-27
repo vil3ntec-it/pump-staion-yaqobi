@@ -4,6 +4,7 @@ using PumpYaqobi.Application.Security;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.Services.Data;
 
@@ -287,7 +288,7 @@ public sealed class ToolsDataService
         await using var db = _dbf.Create();
         db.StaffShortSettles.Add(new StaffShortSettle
         {
-            LegacyId = "ss" + DateTime.UtcNow.Ticks.ToString("x"),
+            LegacyId = "ss" + AppClock.UniqueTicks().ToString("x"),
             NameKey = row.Key, Name = row.Name, Kind = kind, Amount = amt,
             DateShamsi = today, DateKey = Shamsi.Key(today), MonthKey = Shamsi.MonthKey(today),
         });

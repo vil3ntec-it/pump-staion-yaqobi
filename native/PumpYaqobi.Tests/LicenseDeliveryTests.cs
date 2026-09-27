@@ -532,6 +532,6 @@ public class LicenseDeliveryTests : IDisposable
         var i = vm.IndexOf("private void OnLicenseMoved()", StringComparison.Ordinal);
         Assert.True(i > 0);
         var end = vm.IndexOf("private void ShowNotice(", i, StringComparison.Ordinal);
-        Assert.Contains("NoticeText = SoftLock.Banner()", vm[i..end]);
+        Assert.Contains("NoticeText = SoftLock.VisibleBanner()", vm[i..end]);
     }
 }

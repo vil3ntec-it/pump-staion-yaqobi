@@ -61,7 +61,7 @@ public sealed class ChatRoomTests : IDisposable
         Assert.NotNull(s.MediaPath("m-old"));          // در سطل هنوز هست
 
         // پانزده روزِ سطل تمام شد ⇒ حذفِ کامل، و فایلِ رسانه هم از دیسک
-        (trashed, purged) = s.Sweep(T0 + 16 * Day + 15 * Day);
+        (trashed, purged) = s.Sweep(T0 + 16 * Day + 15 * Day, purge: true);
         Assert.Equal(1, purged);
         Assert.DoesNotContain(s.Rows("group", trash: true), r => r.Key == "old");
         Assert.Null(s.MediaPath("m-old"));

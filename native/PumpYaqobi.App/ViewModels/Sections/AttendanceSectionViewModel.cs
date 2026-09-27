@@ -6,6 +6,7 @@ using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -101,7 +102,7 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
 
     /// <summary>دوازده ماهِ اخیر — کافی است، و فهرست را از دیتابیس نمی‌خواهد.</summary>
     public ObservableCollection<string> Months { get; } = new(
-        Enumerable.Range(0, 12).Select(i => Shamsi.MonthOf(DateTime.Now.AddMonths(-i))));
+        Enumerable.Range(0, 12).Select(i => Shamsi.MonthOf(AppClock.Now.AddMonths(-i))));
 
     public ObservableCollection<StaffViewModel> Staff { get; } = new();
     /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
@@ -179,7 +180,7 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
     private async Task MarkInAsync(StaffViewModel? s)
     {
         if (s is null) return;
-        await _host.Attendance.MarkAsync(s.Entity.Id, arriving: true, DateTime.Now.ToString("HH:mm"));
+        await _host.Attendance.MarkAsync(s.Entity.Id, arriving: true, AppClock.Now.ToString("HH:mm"));
         await LoadAsync();
     }
 
@@ -187,7 +188,7 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
     private async Task MarkOutAsync(StaffViewModel? s)
     {
         if (s is null) return;
-        await _host.Attendance.MarkAsync(s.Entity.Id, arriving: false, DateTime.Now.ToString("HH:mm"));
+        await _host.Attendance.MarkAsync(s.Entity.Id, arriving: false, AppClock.Now.ToString("HH:mm"));
         await LoadAsync();
     }
 

@@ -1,3 +1,4 @@
+using PumpYaqobi.Domain;
 namespace PumpYaqobi.App.Services;
 
 /// <summary>یک هشدارِ باز — همان شکلی که <see cref="StationSnapshot.Alerts"/> می‌سازد.</summary>
@@ -86,8 +87,8 @@ public sealed class AlertWatch
     {
         var version = PumpYaqobi.Persistence.PumpDbContext.Version;
         if (!force && _primed && version == _lastVersion) return false;
-        if (!force && DateTime.UtcNow - _lastRun < MinGap) return false;
-        _lastRun = DateTime.UtcNow;
+        if (!force && AppClock.Mono - _lastRun < MinGap) return false;
+        _lastRun = AppClock.Mono;
         try
         {
             var tank = await StationSnapshot.TankAsync(host, ct);

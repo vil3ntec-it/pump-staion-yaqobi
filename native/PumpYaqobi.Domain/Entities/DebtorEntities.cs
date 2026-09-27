@@ -1,4 +1,5 @@
 using PumpYaqobi.Domain.Enums;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.Domain.Entities;
 
@@ -6,8 +7,8 @@ namespace PumpYaqobi.Domain.Entities;
 public abstract class EntityBase
 {
     public long Id { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = AppClock.UtcNow;
+    public DateTime UpdatedAt { get; set; } = AppClock.UtcNow;
     /// <summary>حذفِ نرم — رکوردِ مالی هیچ‌وقت واقعاً پاک نمی‌شود.</summary>
     public DateTime? DeletedAt { get; set; }
     public bool IsDeleted => DeletedAt.HasValue;

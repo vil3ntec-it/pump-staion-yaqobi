@@ -1,3 +1,4 @@
+using PumpYaqobi.Domain;
 namespace PumpYaqobi.App.Services;
 
 /// <summary>
@@ -147,7 +148,7 @@ public static class Entitlements
 
     /// <summary>حالا — تزریق‌پذیر تا آزمون بتواند زمان را جلو ببرد.</summary>
     public static Func<long> Now { get; set; } =
-        () => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        () => AppClock.UnixMs;
 
     /// <summary>
     /// این کار باز است؟

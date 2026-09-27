@@ -29,6 +29,10 @@ internal static class Program
         }
         if (opened is not null) OpenRequest.Add(opened);
 
+        //  ⛔ ساعتِ خودِ برنامه — پیش از هر «امروز»ی (‎AppClock‎ و ‎TimeSync‎):
+        //  اگر کامپیوتر از آخرین ساعتِ اینترنت خاموش نشده، همان ساعت برمی‌گردد.
+        TimeSync.Restore();
+
         try
         {
             // ══ میزبان روی نخِ دیگر، هم‌زمان با بالا آمدنِ آوالونیا ═══════════

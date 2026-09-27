@@ -3,6 +3,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.App.ViewModels;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.Views;
 
@@ -57,17 +58,18 @@ public partial class MainWindow : Window
         _focusOut = new FocusOutService(this);
 
         _clock = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        var day = DateTime.Now.Date;
+        var day = AppClock.Now.Date;
         _clock.Tick += (_, _) =>
         {
             vm.Clock = PumpYaqobi.App.Localization.Clock.Now();
+            vm.TickClockNote();
             //  یک چراغ در سربرگ — و خودش هر دو تیک را می‌زند
             vm.TickLinkDot();
             // ══ نیمه‌شب: تاریخِ سربرگ و نوار هم عوض شوند ══════════════════
             // چک‌لیستِ تحویل (بندِ ۶۲–۶۴): پیش از این «امروز» فقط یک بار در
             // ساخت خوانده می‌شد و برنامه‌ای که شب باز مانده بود، صبح هنوز
             // تاریخِ دیروز را نشان می‌داد.
-            if (DateTime.Now.Date != day) { day = DateTime.Now.Date; vm.DayChanged(); }
+            if (AppClock.Now.Date != day) { day = AppClock.Now.Date; vm.DayChanged(); }
         };
         _clock.Start();
         vm.Clock = PumpYaqobi.App.Localization.Clock.Now();

@@ -1,6 +1,7 @@
 using System.Globalization;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Domain.Entities;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.Application.Services;
 
@@ -94,7 +95,7 @@ public sealed class MembershipService
     public static int Days(string? fromShamsi, string? todayShamsi)
     {
         var a = Shamsi.ToDate(fromShamsi);
-        var b = Shamsi.ToDate(todayShamsi) ?? DateTime.Today;
+        var b = Shamsi.ToDate(todayShamsi) ?? AppClock.Today;
         if (a is null) return -1;
         return Math.Max(0, (int)(b.Date - a.Value.Date).TotalDays);
     }

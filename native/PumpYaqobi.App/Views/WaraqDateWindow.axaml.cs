@@ -4,6 +4,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using PumpYaqobi.Application.Localization;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.Views;
 
@@ -61,7 +62,7 @@ public partial class WaraqDateWindow : Window
 
     private void Step(int days, int months)
     {
-        var d = Shamsi.ToDate(DateBox.Text) ?? DateTime.Today;
+        var d = Shamsi.ToDate(DateBox.Text) ?? AppClock.Today;
         if (months != 0)
         {
             // ماه در تقویمِ **شمسی** جابه‌جا می‌شود، نه با ۳۰ روزِ سرِ دست

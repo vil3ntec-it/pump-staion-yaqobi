@@ -1,4 +1,5 @@
 using PumpYaqobi.Application.Localization;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.Services;
 
@@ -152,7 +153,7 @@ public static class SubscriptionWatch
     private static string Until(long endsAt)
     {
         if (endsAt <= 0) return "";
-        var left = endsAt - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var left = endsAt - AppClock.UnixMs;
         if (left > 3650L * 86_400_000) return " (دائمی)";
         var d = DateTimeOffset.FromUnixTimeMilliseconds(endsAt).LocalDateTime;
         return " تا " + Shamsi.Of(d);
@@ -163,7 +164,7 @@ public static class SubscriptionWatch
     /// <summary>وقتِ تلاشِ دوباره رسیده؟ (پس از ناهم‌خوانی)</summary>
     public static bool FixDue(bool force)
     {
-        lock (Gate) return force || DateTime.UtcNow >= _nextTry;
+        lock (Gate) return force || AppClock.Mono >= _nextTry;
     }
 
     /// <summary>حرفِ سرور شنیده و سنجیده شد — ثبت، و اگر چیزی عوض شد خبر.</summary>
@@ -171,17 +172,17 @@ public static class SubscriptionWatch
     {
         lock (Gate)
         {
-            LastCheckAt = DateTime.Now;
+            LastCheckAt = AppClock.Now;
             if (v.Agree)
             {
-                if (triedFix || _fails > 0) LastFixAt = DateTime.Now;
+                if (triedFix || _fails > 0) LastFixAt = AppClock.Now;
                 _fails = 0;
                 _nextTry = DateTime.MinValue;
             }
             else if (triedFix)
             {
                 _fails++;
-                _nextTry = DateTime.UtcNow + Backoff[Math.Min(_fails, Backoff.Length - 1)];
+                _nextTry = AppClock.Mono + Backoff[Math.Min(_fails, Backoff.Length - 1)];
             }
             var why = v.Agree || fixWhy.Length == 0 || v.Why.Contains(fixWhy) ? v.Why : v.Why + " — " + fixWhy;
             Last = v with { Why = why };
@@ -198,7 +199,7 @@ public static class SubscriptionWatch
         var at = $"آخرین بررسی {LastCheckAt:HH:mm}";
         if (v.Agree)
             return $"🤖 پیگیرِ اشتراک: سرور و این کامپیوتر یکی‌اند — {v.Server}. {at}"
-                + (LastFixAt != default && (DateTime.Now - LastFixAt).TotalHours < 24 ? $" · خودش رساند {LastFixAt:HH:mm}" : "");
+                + (LastFixAt != default && (AppClock.Now - LastFixAt).TotalHours < 24 ? $" · خودش رساند {LastFixAt:HH:mm}" : "");
         return $"🤖 پیگیرِ اشتراک: {v.Why}.\nسرور: {v.Server} · این کامپیوتر: {v.Local}\n{at} — خودش دوباره امتحان می‌کند.";
     }
 

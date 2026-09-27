@@ -1,4 +1,5 @@
 using Avalonia.Threading;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.Services;
 
@@ -107,7 +108,7 @@ public static class CrashGuard
         {
             var path = Path.Combine(AppSettings.Dir, "crash.log");
             Directory.CreateDirectory(AppSettings.Dir);
-            var line = $"── {DateTime.Now:yyyy-MM-dd HH:mm:ss} · {where} ─────────────{Environment.NewLine}"
+            var line = $"── {AppClock.Now:yyyy-MM-dd HH:mm:ss} · {where} ─────────────{Environment.NewLine}"
                      + ex + Environment.NewLine + Environment.NewLine;
             lock (Lock) File.AppendAllText(path, line);
         }
@@ -138,13 +139,13 @@ public static class CrashGuard
             if (ReportingOff || CloudLink.TestTransport is not null) return;
 
             //  ⚠️ ترمز: یک حلقهٔ خطا نباید هر ثانیه یک درخواست بزند
-            if (DateTime.UtcNow - _lastReport < TimeSpan.FromMinutes(1)) return;
+            if (AppClock.Mono - _lastReport < TimeSpan.FromMinutes(1)) return;
 
             //  انتخابِ خودِ کاربر
             var file = AppSettings.Load();
             if (file.ReportErrorsOff) return;
 
-            _lastReport = DateTime.UtcNow;
+            _lastReport = AppClock.Mono;
             var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
             //  ⛔ به سرور: نوعِ استثنا و پیامِ خام، ولی **پاک‌شده** — مسیرِ
             //  پوشهٔ کاربر، نامِ کامپیوتر و نامِ کاربرِ ویندوز جایشان را به

@@ -1,4 +1,5 @@
 using PumpYaqobi.Domain.Enums;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.Domain.Entities;
 
@@ -387,7 +388,7 @@ public class Invoice : EntityBase
     public decimal Amount { get; set; }
     public bool ByMoney { get; set; }
     public string? Note { get; set; }
-    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAtUtc { get; set; } = AppClock.UtcNow;
     public DateTime? ApprovedAtUtc { get; set; }
 
     /// <summary>نرخِ روزِ ثبت — هرگز جایگزین نمی‌شود.</summary>
@@ -552,7 +553,7 @@ public class TrashItem : EntityBase
     public string? Kind { get; set; }
     public string? Label { get; set; }
     public string? PayloadJson { get; set; }
-    public DateTime DeletedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime DeletedAtUtc { get; set; } = AppClock.UtcNow;
     public string? DeletedBy { get; set; }
 }
 
@@ -578,7 +579,7 @@ public class AppUser : EntityBase
 /// <summary>ردِ کارهای مهم — «تاریخچه‌ها».</summary>
 public class AuditEntry : EntityBase
 {
-    public DateTime AtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime AtUtc { get; set; } = AppClock.UtcNow;
     public string? DateShamsi { get; set; }
     public string? Actor { get; set; }
     public string? Action { get; set; }

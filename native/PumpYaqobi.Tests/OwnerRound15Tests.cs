@@ -96,8 +96,8 @@ public class OwnerRound15Tests
         Assert.StartsWith("\u2067", t);
         Assert.EndsWith("\u2069", t);
         //  ⛔ شکلِ خواستهٔ صاحب ریپو: «یکشنبه سنبله 1405.6.5» — بی صفرِ پیشرو
-        Assert.Equal("یک‌شنبه سنبله 1405.6.1", t.Trim('\u2067', '\u2069'));
-        Assert.Equal("یک‌شنبه میزان 1405.7.5",
+        Assert.Equal("یک‌شنبه سنبله 1405/6/1", t.Trim('\u2067', '\u2069'));
+        Assert.Equal("یک‌شنبه میزان 1405/7/5",
                      MainViewModel.HeaderDate(new DateTime(2026, 9, 27, 9, 0, 0)).Trim('\u2067', '\u2069'));
         //  داشبورد هم همان شکل را دارد، نه ‎1405/07/05‎
         var dash = Read("PumpYaqobi.App", "ViewModels", "Sections", "DashboardSectionViewModel.cs");

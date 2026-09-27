@@ -1,3 +1,4 @@
+using PumpYaqobi.Domain;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -89,7 +90,9 @@ public sealed partial class TrashSectionViewModel : SectionViewModel
     private async Task RefreshAsync()
     {
         // کهنه‌ها اول می‌روند، تا فهرست همانی باشد که واقعاً مانده است.
-        try { await _host.Trash.PruneAsync(); } catch { }
+        //  ⛔ پاکِ **همیشگی** فقط با ساعتِ مطمئن (‎AppClock.SafeToPurge‎): ساعتِ
+        //  ویندوزِ جلورفته سطلِ پانزده‌روزه را همان لحظه خالی می‌کرد (۱۴۰۵/۰۷/۱۵).
+        if (AppClock.SafeToPurge) try { await _host.Trash.PruneAsync(); } catch { }
 
         var all = new List<TrashItem>();
         try { all.AddRange(await _host.Trash.ListAsync()); }

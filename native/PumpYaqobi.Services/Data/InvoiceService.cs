@@ -4,6 +4,7 @@ using PumpYaqobi.Application.Security;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
 using PumpYaqobi.Application.Services;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.Services.Data;
 
@@ -178,7 +179,7 @@ public sealed class InvoiceService
         var account = await EnsureAccountAsync(db, v, ct);
 
         v.Status = InvoiceStatus.Approved;
-        v.ApprovedAtUtc = DateTime.UtcNow;
+        v.ApprovedAtUtc = AppClock.UtcNow;
         v.RateOnCreate ??= v.PricePerLiter;
         v.RateOnApprove = todayRate;
         v.DebtAccountId = account.Id;

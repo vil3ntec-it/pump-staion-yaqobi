@@ -386,7 +386,7 @@ public sealed class SyncStore
             return new SeedReport(false, 0, t.Entity);
         }
 
-        state.SeededAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        state.SeededAt = AppClock.UnixMs;
         state.SeedCursor = "";
         Quiet(db);
         return new SeedReport(true, 0, "");
@@ -401,7 +401,7 @@ public sealed class SyncStore
             $"ORDER BY \"Id\" LIMIT {Math.Clamp(batch, 1, 2000)};",
             ("$t", t.Entity));
 
-        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var now = AppClock.UnixMs;
         var made = 0;
         foreach (var row in rows)
         {
@@ -447,7 +447,7 @@ public sealed class SyncStore
 
         using var db = _dbf.Create();
         var map = DataTables(db).ToDictionary(x => Norm(x.Entity), x => x, StringComparer.Ordinal);
-        var now = DateTime.UtcNow;
+        var now = AppClock.UtcNow;
         int applied = 0, skipped = 0, failed = 0;
         var why = "";
 

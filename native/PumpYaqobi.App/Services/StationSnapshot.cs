@@ -3,6 +3,7 @@ using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
 using PumpYaqobi.Services.Data;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.Services;
 
@@ -52,9 +53,9 @@ public static class StationSnapshot
             ["v"] = Version,
             // ⚠️ ‎_seq‎ باید همیشه بالا برود، وگرنه گیرنده عکسِ کهنه را قبول
             // می‌کند. میلی‌ثانیهٔ یونیکس همیشه صعودی است.
-            ["seq"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            ["seq"] = AppClock.UnixMs,
             ["at"] = Shamsi.Today(),
-            ["atUtc"] = DateTime.UtcNow.ToString("O"),
+            ["atUtc"] = AppClock.UtcNow.ToString("O"),
             ["gate"] = host.Auth.AdminPasswordHash() ?? "",
             ["station"] = new Dictionary<string, object?>
             {

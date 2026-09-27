@@ -579,7 +579,7 @@ public sealed class PumpDbContext : DbContext
 
     private void Stamp()
     {
-        var now = DateTime.UtcNow;
+        var now = AppClock.UtcNow;
         var nowMs = new DateTimeOffset(now, TimeSpan.Zero).ToUnixTimeMilliseconds();
 
         // ⚠️ **فهرست، نه شمارنده**: پایین‌تر ردیف‌های `SyncOp` به همین

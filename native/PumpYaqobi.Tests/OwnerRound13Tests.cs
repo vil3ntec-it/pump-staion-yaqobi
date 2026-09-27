@@ -125,7 +125,7 @@ public class OwnerRound13Tests
         //  «تو زدی ۱۴۰۵.سنبله.۱» — ترتیبِ دیداری هیچ‌جا وارونه نشود)
         var t = PumpYaqobi.App.ViewModels.MainViewModel.HeaderDate(new DateTime(2026, 9, 24, 10, 0, 0));
         //  ⛔ شکلِ ۱۴۰۵/۰۷/۱۵: «یکشنبه سنبله 1405.6.5» — روزِ هفته، نامِ ماه، سال.ماه.روز
-        Assert.Equal("\u2067پنج‌شنبه میزان 1405.7.2\u2069", t);
+        Assert.Equal("\u2067پنج‌شنبه میزان 1405/7/2\u2069", t);
         var w = Bare(Read("PumpYaqobi.App", "Views", "MainWindow.axaml"));
         //  ⛔ کلیک ⇐ پنجرهٔ خودِ برنامه، نه تنظیماتِ ویندوز (خواستهٔ ۱۴۰۵/۰۷/۱۵)
         Assert.Contains("OpenClockCommand", w);

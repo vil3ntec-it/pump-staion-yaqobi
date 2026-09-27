@@ -35,7 +35,7 @@ public static class Ulid
     private static long _lastMs = -1;
 
     /// <summary>یک شناسهٔ تازه — بیست‌وشش نویسه.</summary>
-    public static string New() => New(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+    public static string New() => New(AppClock.UnixMs);
 
     /// <summary>همان، با زمانِ داده‌شده — فقط برای آزمون‌ها.</summary>
     public static string New(long unixMs)

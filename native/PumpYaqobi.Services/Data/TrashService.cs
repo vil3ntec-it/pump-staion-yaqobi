@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PumpYaqobi.Application.Security;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Persistence;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.Services.Data;
 
@@ -71,7 +72,7 @@ public sealed class TrashService
     /// <summary>چند روز دیگر این قلم خودش پاک می‌شود (‎_trashDaysLeft‎).</summary>
     public static int DaysLeft(TrashItem item)
     {
-        var elapsed = (DateTime.UtcNow - item.DeletedAtUtc).TotalDays;
+        var elapsed = (AppClock.UtcNow - item.DeletedAtUtc).TotalDays;
         var left = Math.Ceiling(RetentionDays - elapsed);
         return left < 0 ? 0 : (int)left;
     }
@@ -84,7 +85,7 @@ public sealed class TrashService
     /// </summary>
     public async Task<int> PruneAsync(CancellationToken ct = default)
     {
-        var cutoff = DateTime.UtcNow.AddDays(-RetentionDays);
+        var cutoff = AppClock.UtcNow.AddDays(-RetentionDays);
         await using var db = _dbf.Create();
         var old = await db.Trash.Where(x => x.DeletedAtUtc < cutoff).ToListAsync(ct);
         if (old.Count == 0) return 0;
