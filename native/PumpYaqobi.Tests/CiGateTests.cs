@@ -28,7 +28,7 @@ public class CiGateTests
         Assert.Contains("RunApp 'بارِ اول'", w);
         Assert.Contains("RunApp '۳۲بیتی'", w);
         Assert.Contains("smoke-test.pumpyaqobi", w);
-        Assert.Contains("'/ARCH=x86'", w);
+        Assert.Contains("/ARCH=x86 /DIR=`\"$dir`\"", w);   //  مسیر با گیومه، مثلِ خودِ برنامه
         Assert.Contains("UninstallString", w);
         Assert.Contains("(AppDomain|UI|Startup)", w);
         Assert.Contains("exit 1", w);
