@@ -90,12 +90,28 @@ jobs:
         env:
           LICENSE_PUBLIC_KEYS: ${{ vars.LICENSE_PUBLIC_KEYS }}
           UPDATE_PUBLIC_KEY: ${{ vars.UPDATE_PUBLIC_KEY }}
+          OFFLINE_PUBLIC_KEYS: ${{ vars.OFFLINE_PUBLIC_KEYS }}
         run: |
           $lk = ("$env:LICENSE_PUBLIC_KEYS" -replace '[;,\s]+', '|').Trim('|')
           $uk = ("$env:UPDATE_PUBLIC_KEY").Trim()
           $trust = @()
           if ($lk) { $trust += "-p:LicenseKeys=$lk" } else { Write-Host "::notice::LICENSE_PUBLIC_KEYS خالی است — مجوز با TOFU سنجیده می‌شود" }
           if ($uk) { $trust += "-p:UpdateKey=$uk" }   else { Write-Host "::notice::UPDATE_PUBLIC_KEY خالی است — به‌روزرسانی فقط با هش سنجیده می‌شود" }
+          # ── کلیدِ کدِ اشتراکِ آفلاین (‎CloudConfig.OfflineKeys‎) ──────────────
+          #  کامپیوتری که هرگز اینترنت ندیده هیچ کلیدِ TOFUی ندارد، پس کلیدِ
+          #  سرورِ حساب باید داخلِ خودِ برنامه باشد. اول متغیرِ مخزن
+          #  (‎OFFLINE_PUBLIC_KEYS‎)، وگرنه همین لحظه از خودِ سرورِ حساب — از
+          #  همان نشانیِ قفل‌شدهٔ ‎CloudConfig‎، روی HTTPS. ⚠️ نرسیدن ساخت را
+          #  **نمی‌شکند**: فقط کدِ آفلاین روی کامپیوترِ هرگز‌آنلاین‌نشده پذیرفته
+          #  نمی‌شود (برنامه همین را راست می‌گوید).
+          $ok = ("$env:OFFLINE_PUBLIC_KEYS" -replace '[;,\s]+', '|').Trim('|')
+          if (-not $ok) {
+            try {
+              $pk = (Invoke-RestMethod -Uri 'https://api.vill3n.top/api/license/public-key' -TimeoutSec 20).publicKey
+              if ($pk -match '^[A-Za-z0-9+/]{80,200}={0,2}$') { $ok = $pk } else { Write-Host "::warning::کلیدِ سرورِ حساب شکلِ درستی نداشت" }
+            } catch { Write-Host "::warning::کلیدِ سرورِ حساب گرفته نشد — کدِ آفلاین فقط با کلیدِ TOFU سنجیده می‌شود: $($_.Exception.Message)" }
+          }
+          if ($ok) { $trust += "-p:OfflineKeys=$ok"; Write-Host "کلیدِ کدِ آفلاین: $($ok.Substring(0, [Math]::Min(40, $ok.Length)))…" }
           foreach ($rid in @('win-x64','win-x86')) {
             dotnet publish PumpYaqobi.App -c Release -r $rid --self-contained true `
               -p:Version=${{ steps.ver.outputs.version }} `
@@ -323,9 +339,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.ver.outputs.version }}
-          name: پمپ یعقوبی — نسخهٔ ${{ steps.ver.outputs.version }}
+          name: پمپ بنزین — نسخهٔ ${{ steps.ver.outputs.version }}
           body: |
-            برنامهٔ کامپیوتریِ پمپ یعقوبی، نسخهٔ ${{ steps.ver.outputs.version }}.
+            برنامهٔ کامپیوتریِ پمپ بنزین، نسخهٔ ${{ steps.ver.outputs.version }}.
 
             ### کدام فایل را بگیرم؟
 
@@ -421,7 +437,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: desktop-latest
-          name: پمپ یعقوبی — آخرین نسخهٔ کامپیوتر
+          name: پمپ بنزین — آخرین نسخهٔ کامپیوتر
           body: |
             همیشه روی تازه‌ترین ساخت می‌نشیند — نسخهٔ
             ${{ steps.ver.outputs.version }}.

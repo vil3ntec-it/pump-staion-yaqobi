@@ -675,9 +675,24 @@ public sealed class StationPublisher : IAsyncDisposable
     {
         var f = AppSettings.Load();
         var c = LicenseGuard.CheckStored(f, LicenseClock.Now(f));
-        if (!c.SignatureOk) return (0, 0, 0);
+        //  پایانِ کدِ اشتراکِ آفلاین هم یک مرز است — بی اینترنت، همان لحظه
+        //  قفل‌ها از نو خوانده می‌شوند (‎OfflineKey‎).
+        var off = OfflineKey.Stored(f, LicenseClock.Now(f));
+        var offEnd = off.Valid && !off.Permanent ? off.EndsAt : 0;
+        if (!c.SignatureOk) return (offEnd, 0, 0);
         var grace = c.ExpiresAt > 0 ? c.ExpiresAt + (long)Entitlements.Grace.TotalMilliseconds : 0;
-        return (c.ExpiresAt, c.SubscriptionEndsAt, grace);
+        var now = Entitlements.Now();
+        //  سه خانه بیشتر نیست: مرزِ آفلاین در نخستین خانه‌ای می‌نشیند که
+        //  دیگر آینده نیست — «مرزِ بعدی» همان کمینهٔ آینده‌هاست.
+        long exp = c.ExpiresAt, sub = c.SubscriptionEndsAt;
+        if (offEnd > now)
+        {
+            if (exp <= now) exp = offEnd;
+            else if (sub <= now) sub = offEnd;
+            else if (grace <= now) grace = offEnd;
+            else exp = Math.Min(exp, offEnd);
+        }
+        return (exp, sub, grace);
     }
 
     /// <summary>حلقهٔ پس‌زمینه. صدا زدنش دو بار، یکی بیشتر نمی‌سازد.</summary>
@@ -824,6 +839,8 @@ public sealed class StationPublisher : IAsyncDisposable
             //  نبودند ⇒ خودش می‌رساند. شرحش بالای `SubscriptionWatch`.
             await cloud.WatchSubscriptionAsync(forceBind, ct);
             await cloud.KeepAccessCodeAsync(ct);
+            //  🔑 کدِ اشتراکِ آفلاینِ این کامپیوتر ⇒ «سرور همون کد رو ببینه»
+            await cloud.RedeemOfflineAsync(ct);
             return;
         }
 
@@ -837,6 +854,7 @@ public sealed class StationPublisher : IAsyncDisposable
             var device = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
             await device.KeepLicenseFreshAsync(ct);
             await device.KeepAccessCodeAsync(ct);
+            await device.RedeemOfflineAsync(ct);
         }
 
         await CloudLink.CloudHealthAsync(ct);

@@ -111,6 +111,7 @@ public sealed partial class VipSectionViewModel : SectionViewModel
             : "";
 
         BuildPlans(st, open);
+        ShowOffline(file, LicenseClock.Now(file));
     }
 
     private void BuildPlans(EntitlementState st, bool open)
@@ -148,6 +149,101 @@ public sealed partial class VipSectionViewModel : SectionViewModel
             "یک‌بار پرداخت؛ برنامه مالِ خودِ خریدار می‌شود. آپدیت و بک‌اپِ ابری سالِ اول.",
             new[] { ledger, local, support, kar, qr, cloud, "چند پمپ در یک حساب" },
             Array.Empty<string>(), false));
+    }
+
+    // ══ 🔑 کدِ اشتراکِ آفلاین (‎OfflineKey‎) ═════════════════════════════════
+    //  «یک گیرنده برای برنامه تا کد رو بزنم درجا قفل‌ها باز بشه و بدون نت هم
+    //  اشتراک داده بشه.» سه کار: نشان دادنِ کدِ کامپیوتر (مشتری همان را برای
+    //  صاحبِ سامانه می‌فرستد)، زدنِ کد یا فایلِ ‎.pumpkey‎، و حالِ کدِ فعلی.
+
+    /// <summary>کدِ همین کامپیوتر — «XXXX-XXXX-XXXX-XXXX».</summary>
+    public string ComputerCode { get; } = OfflineKey.ComputerCode();
+
+    public bool HasComputerCode => ComputerCode.Length > 0;
+
+    public string ComputerNote => HasComputerCode
+        ? "این کد را برای صاحبِ سامانه بفرستید؛ کدِ اشتراک فقط روی همین کامپیوتر کار می‌کند."
+        : "این سیستم شناسه‌ای نداد — کدِ آفلاین روی آن ساختنی نیست.";
+
+    [ObservableProperty] private string _offlineInput = "";
+    [ObservableProperty] private string _offlineStatus = "";
+    [ObservableProperty] private string _offlineStatusBrushKey = "Pump.Muted";
+    [ObservableProperty] private string _offlineCurrent = "";
+    [ObservableProperty] private bool _hasOfflineCode;
+
+    [RelayCommand]
+    private async Task CopyComputerAsync()
+    {
+        if (!HasComputerCode) return;
+        var ok = await Dialogs.CopyAsync("کدِ کامپیوترِ من برای اشتراکِ آفلاینِ «" + PumpBrand.Name + "»: " + ComputerCode);
+        _host.Toast(ok ? "📋 کدِ کامپیوتر کپی شد — در واتساپ بچسبانید" : "کپی نشد", ok ? ToastKind.Ok : ToastKind.Warn);
+    }
+
+    [RelayCommand]
+    private void ApplyOffline() => ApplyText(OfflineInput);
+
+    [RelayCommand]
+    private async Task PickOfflineFileAsync()
+    {
+        var path = await Dialogs.PickFileAsync("فایلِ کدِ اشتراک را انتخاب کنید", "کدِ اشتراک", new[] { "*.pumpkey" });
+        if (path is null) return;
+        string text;
+        try
+        {
+            //  فایلِ کوچکی است؛ بزرگ‌تر از این یعنی فایلِ اشتباه
+            if (new FileInfo(path).Length > 16_384) { SetStatus("❌ این فایل، فایلِ کدِ اشتراک نیست", "Pump.Danger"); return; }
+            text = await File.ReadAllTextAsync(path);
+        }
+        catch { SetStatus("❌ این فایل خوانده نشد", "Pump.Danger"); return; }
+        ApplyText(text);
+    }
+
+    [RelayCommand]
+    private async Task RemoveOfflineAsync()
+    {
+        if (!await Dialogs.ConfirmAsync("برداشتنِ کدِ آفلاین",
+                "کدِ اشتراکِ آفلاین از همین کامپیوتر برداشته شود؟ دفتر هیچ تغییری نمی‌کند؛ "
+                + "فقط بخش‌هایی که با این کد باز بودند بسته می‌شوند.")) return;
+        OfflineKey.Remove(AppSettings.Load());
+        OfflineInput = "";
+        SetStatus("کد برداشته شد.", "Pump.Muted");
+        Show();
+    }
+
+    private void ApplyText(string? text)
+    {
+        var f = AppSettings.Load();
+        var c = OfflineKey.Apply(f, text);
+        if (!c.Valid) { SetStatus("❌ " + c.Why, "Pump.Danger"); return; }
+        OfflineInput = "";
+        SetStatus("✅ کدِ اشتراک پذیرفته شد — " + c.PlanTitle + " · "
+                  + (c.Permanent ? "دائمی" : "تا " + OfflineKey.Localize(c.EndsAt))
+                  + ". قفل‌ها همین حالا باز شدند.", "Pump.Ok");
+        _host.Toast("🔓 کدِ اشتراکِ آفلاین پذیرفته شد — " + c.PlanTitle, ToastKind.Ok);
+        Show();
+    }
+
+    private void SetStatus(string text, string brush)
+    {
+        OfflineStatus = text;
+        OfflineStatusBrushKey = brush;
+    }
+
+    private void ShowOffline(AppSettings f, long now)
+    {
+        var c = OfflineKey.Stored(f, now);
+        HasOfflineCode = f.OfflineCode.Length > 0;
+        if (!HasOfflineCode) { OfflineCurrent = "هیچ کدِ آفلاینی روی این کامپیوتر نیست."; return; }
+        if (!c.Genuine) { OfflineCurrent = "⚠️ کدِ روی این کامپیوتر پذیرفته نیست — " + c.Why; return; }
+        var server = f.OfflineCodeRedeemed.StartsWith(c.Serial + "@", StringComparison.Ordinal)
+            ? f.OfflineCodeRedeemed.Contains('!')
+                ? " · سرورِ حساب نپذیرفت"
+                : " · سرورِ حساب هم دید ✅"
+            : " · سرورِ حساب هنوز ندیده (وقتی اینترنت و حساب بود، خودش می‌رود)";
+        OfflineCurrent = c.Valid
+            ? "🔑 " + c.PlanTitle + " · " + (c.Permanent ? "دائمی" : Shamsi.Money(c.DaysLeft(now)) + " روز مانده — تا "
+                  + OfflineKey.Localize(c.EndsAt)) + server
+            : "⌛ " + c.PlanTitle + " — " + c.Why;
     }
 
     public override Task OnActivatedAsync()

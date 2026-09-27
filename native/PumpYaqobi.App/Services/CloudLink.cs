@@ -942,6 +942,77 @@ public sealed partial class CloudLink
     /// </summary>
     public static event Action? LicenseChanged;
 
+    private static DateTime _offlineNextTry = DateTime.MinValue;
+
+    /// <summary>
+    /// ══ کدِ اشتراکِ آفلاین ⇒ سرورِ حساب ═════════════════════════════════════
+    ///
+    /// «اگه یارو اینترنت پیدا کرد… سرور همون کد رو ببینه و بگه آره این حساب
+    /// اشتراک داره.» کامپیوتری که کدِ آفلاین دارد و حالا به پمپی بند است، کد
+    /// و کدِ کامپیوترِ خودش را یک بار به <c>/api/pump/device/offline-code</c>
+    /// می‌برد؛ سرور امضا و کامپیوتر را می‌سنجد و اشتراک روی همان پمپ
+    /// می‌نشیند (کوتاه‌تر کردنِ اشتراکِ بلندترِ موجود هرگز). بعد همان لحظه
+    /// مجوزِ تازه گرفته می‌شود.
+    ///
+    /// ⚡ یک بار برای هر (سریال، پمپ) — نشانش <c>OfflineCodeRedeemed</c> است؛
+    /// پس هر دور هیچ درخواستی نمی‌زند. شکست ⇒ ده دقیقه بعد.
+    /// ⛔ کدِ باطل‌شده روی سرور (۴۱۰) از همین کامپیوتر هم برداشته می‌شود.
+    /// ⛔ هیچ‌وقت استثنا بیرون نمی‌دهد و نرسیدن هیچ چیزی را پاک نمی‌کند.
+    /// </summary>
+    public async Task<CloudResult> RedeemOfflineAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_settings.OfflineCode) || !Activated) return CloudResult.Done;
+            var chk = OfflineKey.Stored(_settings, LicenseClock.Now(_settings));
+            if (!chk.Genuine) return CloudResult.Done;
+            var mark = chk.Serial + "@" + _settings.CloudStationId;
+            if (_settings.OfflineCodeRedeemed.StartsWith(mark, StringComparison.Ordinal)) return CloudResult.Done;
+            if (DateTime.UtcNow < _offlineNextTry) return CloudResult.Done;
+
+            var (ok, _, why, code) = await DevPostAsync("/api/pump/device/offline-code",
+                new { code = chk.Canonical, computer = OfflineKey.ComputerCode() }, ct);
+            if (!ok)
+            {
+                if (code == "code_revoked")
+                {
+                    _settings.OfflineCode = "";
+                    _settings.OfflineCodeRedeemed = "";
+                    await _save();
+                    NotifyLicenseChanged();
+                    return CloudResult.No(why, code);
+                }
+                //  کدی که پمپِ دیگری پیش از این برداشته، یا برای کامپیوترِ دیگر
+                //  است: دوباره زدنش هر دقیقه جوابِ دیگری نمی‌گیرد.
+                if (code is "code_used_elsewhere" or "computer_mismatch" or "bad_offline_code")
+                {
+                    _settings.OfflineCodeRedeemed = mark + "!" + code;
+                    await _save();
+                }
+                else _offlineNextTry = DateTime.UtcNow.AddMinutes(10);
+                return CloudResult.No(why, code);
+            }
+            _settings.OfflineCodeRedeemed = mark;
+            await _save();
+            await RefreshAsync(ct);
+            return CloudResult.Done;
+        }
+        catch (Exception ex)
+        {
+            _offlineNextTry = DateTime.UtcNow.AddMinutes(10);
+            return CloudResult.No(ErrorText.Friendly(ex), "error");
+        }
+    }
+
+    /// <summary>
+    /// همان خبر، از بیرونِ این کلاس — کدِ اشتراکِ آفلاین (‎OfflineKey.Apply‎)
+    /// هم قفل‌ها را جابه‌جا می‌کند و پوسته باید همان کارِ «مجوزِ تازه» را بکند.
+    /// </summary>
+    public static void NotifyLicenseChanged()
+    {
+        try { LicenseChanged?.Invoke(); } catch { /* خبر رفاه است */ }
+    }
+
     /// <summary>
     /// سپردنِ نشانی و رمزِ فقط‌خواندنیِ سرورِ خانگی به ابر.
     ///

@@ -360,6 +360,17 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         SubKind = check.Valid ? KindOf(check.PlanTitle) : "";
         SubPermanent = check.Valid && VipDays > 3650;
 
+        //  🔑 کدِ اشتراکِ آفلاین (‎OfflineKey‎) — کامپیوترِ بی اینترنت هم
+        //  سربرگش باید بگوید چه دارد، نه «وارد نشده». فقط وقتی مجوزِ سرور
+        //  نیست؛ تصمیمِ قفل‌ها همچنان مالِ `Entitlements` است.
+        if (!check.Valid && OfflineKey.Stored(file, now) is { Valid: true } off)
+        {
+            SubActive = true;
+            SubPermanent = off.Permanent;
+            VipDays = off.Permanent ? 0 : off.DaysLeft(now);
+            SubKind = KindOf(off.Plan);
+        }
+
         // ⚠️ **پیش از** هر بازگشتِ زودهنگام: تا دیروز روی پمپی که هنوز فعال
         // نشده بود (یعنی همان چیزی که صاحب ریپو می‌دید) این چهار خانه خالی
         // می‌ماندند و کارتِ اشتراک «خراب» به نظر می‌رسید.
