@@ -567,4 +567,32 @@ public class InstallerTests
         Assert.Contains("نصابِ کهنه‌تر (0.0.1) روی 0.0.2 پذیرفته شد", check);
         Assert.Contains("نصبِ دوم ساخته شد", check);
     }
+
+    /// <summary>
+    /// ۳۲ ⇄ ۶۴ روی همان پوشه (۱۴۰۵/۰۷/۱۵): «اگه روزی ۳۲ بودم و برم سمتِ ۶۴ مشکلی
+    /// ایجاد نمی‌شه؟» — مقایسهٔ فهرستِ دو ساختِ واقعیِ v3.1.201 نشان داد جز پوشهٔ
+    /// VLC فقط سه فایلِ ریز همتای هم‌نام ندارند. هر کدام فقط با معماریِ **دیگر**
+    /// برداشته می‌شود، و فقط از خودِ {app} — هیچ پوشهٔ داده‌ای.
+    /// </summary>
+    [Fact]
+    public void Soviche_32_64_FaylhayeVijeyeMemariyeDigarRa_Barmidarad()
+    {
+        var s = Iss();
+        foreach (var (file, check) in new[]
+        {
+            ("libgcc_s_dw2-1.dll", "WantX64"), ("Microsoft.DiaSymReader.Native.x86.dll", "WantX64"),
+            ("mscordaccore_x86_x86_*.dll", "WantX64"),
+            ("libgcc_s_seh-1.dll", "WantX86"), ("Microsoft.DiaSymReader.Native.amd64.dll", "WantX86"),
+            ("mscordaccore_amd64_amd64_*.dll", "WantX86"),
+        })
+            Assert.Contains($"Type: files; Name: \"{{app}}\\{file}\"; Check: {check}", s);
+
+        //  ⛔ هیچ حذفِ بی‌قیدی در {app} (مثلِ {app}\*): پوشه را کاربر انتخاب کرده
+        var del = s[s.IndexOf("[InstallDelete]", StringComparison.Ordinal)..s.IndexOf("[Registry]", StringComparison.Ordinal)];
+        foreach (var line in del.Split('\n').Select(l => l.Trim()).Where(l => l.StartsWith("Type:") && l.Contains("{app}")))
+        {
+            Assert.Contains("Check: Want", line);
+            Assert.DoesNotContain("{app}\\*", line);
+        }
+    }
 }
