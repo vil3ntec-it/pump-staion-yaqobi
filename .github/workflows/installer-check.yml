@@ -280,9 +280,11 @@ jobs:
           $dir = 'D:\PumpReal'
           $bad = @()
           foreach ($arch in @('x64', 'x86')) {
-            $r = & $drive -Setup $setup -SetupArgs @("/ARCH=$arch") -Dirs @($dir) -Log $log -TimeoutSec 600
+            #  ⚠️ نصابِ ۳.۱.۲۰۲ و پیش از آن اولِ کار پنجرهٔ انگلیسیِ «Select Setup Install
+            #  Mode» داشت (همین سنجه دیدش) — /CURRENTUSER همان «فقط برای من» است.
+            $r = & $drive -Setup $setup -SetupArgs @("/ARCH=$arch", '/CURRENTUSER') -Dirs @($dir) -Log $log -TimeoutSec 600
             "── $arch"; $r | Format-List | Out-String -Width 400
-            if (-not $r.Finished) { $bad += "${arch}: نصب به «پایان» نرسید — $($r.Messages -join ' | ')"; Get-Content $log | Select-Object -Last 60; continue }
+            if (-not $r.Finished) { $bad += "${arch}: نصب به «پایان» نرسید — $($r.Messages -join ' | ')"; if (Test-Path $log) { Get-Content $log | Select-Object -Last 60 }; continue }
             $exe = Join-Path $dir 'PumpYaqobi.exe'
             $p = Start-Process -FilePath $exe -PassThru
             Start-Sleep -Seconds 30
