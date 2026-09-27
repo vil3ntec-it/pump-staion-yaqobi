@@ -235,8 +235,22 @@
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
+  <!-- ⛔ ‎Foreground‎ِ خودِ پرزنتر هم از قلمِ مشترکِ ما (۱۴۰۵/۰۷/۱۵): فلوئنت برای کلاسِ
+       ‎accent‎ رنگِ نوشته را از ‎AccentButtonForeground‎ِ خودش می‌دهد که برای هر تم یک
+       قلمِ **جدا**ست؛ پس هر تعویضِ تم نوشتهٔ همهٔ دکمه‌های تاکیدی را نااندازه می‌کرد
+       و در بخش‌های پنهان چپ‌چین کشیده می‌شد (سنجهٔ ‎layoutcycle‎؛ شرح بالای
+       ‎ThemeManager.Shared‎). -->
   <Style Selector="Button.accent /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource Pump.AccentGrad}" />
+    <Setter Property="Foreground" Value="{DynamicResource Pump.OnAccent}" />
+  </Style>
+  <Style Selector="Button.accent:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource Pump.OnAccent}" />
+    <Setter Property="Opacity" Value="0.6" />
+  </Style>
+  <!-- همان داستان برای کادرِ تیک‌دار: فلوئنت ‎CheckBoxForegroundChecked‎ِ هر تم را می‌دهد -->
+  <Style Selector="CheckBox /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
   </Style>
   <Style Selector="Button.accent:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource Pump.Accent}" />
