@@ -74,6 +74,28 @@ public static class SoftLock
     /// ⚠️ هفت روزِ آخر <b>پیش از</b> بسته شدن هشدار می‌دهد. کاربری که یک
     /// روز صبح برنامه‌اش را قفل ببیند حق دارد فکر کند خراب شده.
     /// </summary>
+    /// <summary>
+    /// نوعِ نوار: «grace» · «closed» · «soon» — خالی یعنی نواری نیست. «بستن»ِ
+    /// کاربر همین را به یاد می‌سپارد (‎SeenNotices.DismissedBanner‎) تا همان نوع
+    /// پیام تا عوض شدنِ حالِ اشتراک برنگردد.
+    /// </summary>
+    public static string BannerKind()
+    {
+        var t = Banner();
+        return t.Length == 0 ? "" : t.StartsWith("🔒") ? "closed" : t.Contains("ارفاق") ? "grace" : "soon";
+    }
+
+    /// <summary>
+    /// همان نوار، مگر کاربر همین نوعش را بسته باشد (۱۴۰۵/۰۷/۱۵: «بسته نمی‌شه و
+    /// با هر بار باز شدنِ برنامه میاد»). حالِ اشتراک خوب شد ⇒ یادِ بستن هم پاک.
+    /// </summary>
+    public static string VisibleBanner()
+    {
+        var kind = BannerKind();
+        if (kind.Length == 0) { if (SeenNotices.DismissedBanner.Length > 0) SeenNotices.DismissedBanner = ""; return ""; }
+        return kind == SeenNotices.DismissedBanner ? "" : Banner();
+    }
+
     public static string Banner()
     {
         if (Entitlements.Unlocked && !Entitlements.TestDeny) return "";

@@ -137,7 +137,7 @@ public sealed partial class MainViewModel : ObservableObject
             //  ⚠️ قفلِ نرم بی‌صدا نباشد: اگر اشتراک تمام شده (یا هفت روز
             //  مانده) کاربر باید بداند چرا نوشتن نمی‌شود، نه این‌که فکر کند
             //  برنامه خراب است. امروز این جمله خالی است، چون قفل‌ها بازند.
-            NoticeText = SoftLock.Banner();
+            NoticeText = SoftLock.VisibleBanner();
 
             // ══ پشتیبانِ هر شش ساعت روی سرورِ خانگی ═════════════════════════
             // خواستهٔ صاحب ریپو: «هر ۶ ساعت بک‌آپ برود به سرور و سه روز بماند؛
@@ -868,8 +868,21 @@ public sealed partial class MainViewModel : ObservableObject
     partial void OnNoticeTextChanged(string v) => OnPropertyChanged(nameof(HasNotice));
 
     /// <summary>بنر را می‌بندد — تا اعلانِ بعدی.</summary>
+    /// ⛔ بستن یعنی بستن (۱۴۰۵/۰۷/۱۵ — «بسته نمی‌شه»): پیش از این همان نوارِ
+    /// «اشتراک فعال نیست» دوباره می‌نشست. حالا نوارِ اشتراک تا عوض شدنِ حالش
+    /// برنمی‌گردد (‎SeenNotices.DismissedBanner‎)، و پیامِ مدیر که بسته شد جایش
+    /// فقط نوارِ اشتراکی می‌آید که کاربر هنوز نبسته.
     [RelayCommand]
-    private void CloseNotice() => NoticeText = SoftLock.Banner();
+    private void CloseNotice()
+    {
+        if (NoticeText.Length > 0 && NoticeText == SoftLock.Banner())
+        {
+            SeenNotices.DismissedBanner = SoftLock.BannerKind();
+            NoticeText = "";
+            return;
+        }
+        NoticeText = SoftLock.VisibleBanner();
+    }
 
     /// <summary>
     /// اعلانِ تازه: هم بنرِ داخلِ برنامه، هم اعلانِ خودِ ویندوز.
@@ -906,7 +919,8 @@ public sealed partial class MainViewModel : ObservableObject
     private void OnLicenseMoved()
     {
         _boundAt = DateTime.MinValue; Account.RefreshAll(); TickLinkDot();
-        NoticeText = SoftLock.Banner();
+        //  ⚠️ پیامِ مدیر که هنوز جلوی چشم است جایش را به نوارِ اشتراک نمی‌دهد
+        if (!NoticeText.StartsWith("📣", StringComparison.Ordinal)) NoticeText = SoftLock.VisibleBanner();
         SubscriptionWatch.Forget();
 
         var now = Entitlements.Paid.Where(Entitlements.Allows).ToHashSet();

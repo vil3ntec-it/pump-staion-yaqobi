@@ -367,3 +367,57 @@ public class AppClockTests : IDisposable
 
     private static string Read(params string[] parts) => File.ReadAllText(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
 }
+
+/// <summary>
+/// ══ «پیامِ رو مخ هر بار میاد و بسته نمی‌شه» (۱۴۰۵/۰۷/۱۵) ═════════════════════
+/// </summary>
+[Collection(AppHostCollection.Name)]
+public class SeenNoticesTests : IDisposable
+{
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "pump-seen-" + Guid.NewGuid().ToString("N")[..8]);
+    private readonly string? _keep = AppSettings.DirOverride;
+
+    public SeenNoticesTests()
+    {
+        Directory.CreateDirectory(_dir);
+        AppSettings.DirOverride = _dir;
+    }
+
+    public void Dispose()
+    {
+        AppSettings.DirOverride = _keep;
+        try { Directory.Delete(_dir, true); } catch { }
+    }
+
+    [Fact]
+    public void PayameModir_YekBar_Na_BaHarBazShodan()
+    {
+        Assert.False(SeenNotices.Seen("ntc_1"));
+        SeenNotices.MarkSeen("ntc_1");
+        Assert.True(SeenNotices.Seen("ntc_1"));      // اجرای بعدیِ برنامه همان فایل را می‌خواند
+
+        var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Services", "SyncEngine.cs"));
+        Assert.Contains("if (SeenNotices.Seen(n.Id)) { await MarkReadAsync(cloud, n.Id, ct); continue; }", src);
+        Assert.Contains("await cloud.NoticeReadAsync(id, ct);", src);
+    }
+
+    [Fact]
+    public void Bastan_YaniBastan_TaHaleEshterakAvazShavad()
+    {
+        SeenNotices.DismissedBanner = "closed";
+        Assert.Equal("closed", SeenNotices.DismissedBanner);
+        var vm = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "MainViewModel.cs"));
+        var i = vm.IndexOf("private void CloseNotice()", StringComparison.Ordinal);
+        var body = vm[i..vm.IndexOf("\n    }", i)];
+        Assert.Contains("SeenNotices.DismissedBanner = SoftLock.BannerKind();", body);
+        Assert.Contains("NoticeText = \"\";", body);
+        Assert.DoesNotContain("NoticeText = SoftLock.Banner()", vm);
+    }
+
+    private static string Root()
+    {
+        var d = new DirectoryInfo(AppContext.BaseDirectory);
+        while (d is not null && !File.Exists(Path.Combine(d.FullName, "PumpYaqobi.sln"))) d = d.Parent;
+        return d!.FullName;
+    }
+}

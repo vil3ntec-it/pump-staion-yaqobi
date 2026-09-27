@@ -598,10 +598,23 @@ public sealed class SyncEngine : IAsyncDisposable
         foreach (var n in notices)
         {
             if (n.Read || !_toldNotices.Add(n.Id)) continue;
+            //  ⛔ یک بار، نه با هر باز شدنِ برنامه (۱۴۰۵/۰۷/۱۵ — «هی هر بار میاد
+            //  که می‌گه اشتراکِ شما تمدید شد»): هم این‌جا به یاد می‌ماند و هم
+            //  روی سرور «خوانده شد» می‌شود. نرسیدنِ دومی اولی را نمی‌شکند.
+            if (SeenNotices.Seen(n.Id)) { await MarkReadAsync(cloud, n.Id, ct); continue; }
+            SeenNotices.MarkSeen(n.Id);
             //  ⚠️ بنرِ داخلِ برنامه و اعلانِ سیستم، هر دو از همین یک جا.
             //  قاعدهٔ جدا ننویسید، وگرنه روزی یکی می‌آید و آن یکی نه.
             NoticeArrived?.Invoke(n);
+            await MarkReadAsync(cloud, n.Id, ct);
         }
+    }
+
+    private static async Task MarkReadAsync(CloudLink cloud, string id, CancellationToken ct)
+    {
+        try { await cloud.NoticeReadAsync(id, ct); }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch { /* یادِ محلی کافی است */ }
     }
 
     private void Set(SyncLight light, string reason, int queued)
