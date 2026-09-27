@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PumpYaqobi.Application.Security;
 using PumpYaqobi.Domain.Entities;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.Services.Data;
 
@@ -73,7 +74,7 @@ public sealed class SectionNoteService
         await using var db = _dbf.Create();
         var n = await db.SectionNotes.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (n is null) return;
-        n.DeletedAt = DateTime.UtcNow;
+        n.DeletedAt = AppClock.UtcNow;
         await db.SaveChangesAsync(ct);
     }
 

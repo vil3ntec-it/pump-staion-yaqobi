@@ -618,10 +618,14 @@
   /** فقط عکسِ همین پمپ پذیرفته می‌شود — چه از سرورِ خانگی چه از ابر. */
   function acceptSnapshot(v, viaCloud) {
     if (!v || typeof v !== 'object') return false;
+    // ⛔ شماره‌ای که از آینده آمده (ساعتِ کامپیوترِ پمپ آن لحظه جلو بود) قفل
+    // نیست — وگرنه هر عکسِ درستِ بعدی تا رسیدنِ همان آینده رد می‌شد و گوشی دیگر
+    // به‌روز نمی‌شد (۱۴۰۵/۰۷/۱۵). ساعتِ گوشی خودش از شبکه می‌آید.
+    var future = !!(data && data.seq && data.seq > Date.now() + 600000);
     // ⚠️ عکسِ کهنه هرگز جای تازه را نگیرد
-    if (data && data.seq && (v.seq || 0) < data.seq) return false;
+    if (!future && data && data.seq && (v.seq || 0) < data.seq) return false;
     // ⚠️ عکسِ سرورِ حساب با همان شماره جای عکسِ زندهٔ سوکت را نمی‌گیرد
-    if (viaCloud && data && !fromCloud && (v.seq || 0) <= (data.seq || 0)) return false;
+    if (!future && viaCloud && data && !fromCloud && (v.seq || 0) <= (data.seq || 0)) return false;
     data = v;
     fromCloud = !!viaCloud;
     try { localStorage.setItem(stnKey('snap'), JSON.stringify(data)); } catch (e) { }

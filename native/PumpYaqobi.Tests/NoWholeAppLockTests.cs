@@ -89,7 +89,7 @@ public class NoWholeAppLockTests
         Assert.Contains("Reach == CloudReach.Online", block);
         Assert.DoesNotContain("fresh.Code == \"station_mismatch\"", block);
         //  وصل شد ولی مجوز نیامد ⇒ ترمزِ ده‌دقیقه‌ای، نه ثبتِ تازه در هر دقیقه
-        Assert.Contains("_lastBindFailAt = DateTime.UtcNow;", home[a..]);
+        Assert.Contains("_lastBindFailAt = AppClock.Mono;", home[a..]);
         //  ⛔ حلقهٔ پس‌زمینه همچنان هیچ پمپی نمی‌سازد
         Assert.DoesNotContain("EnsureStationAsync", home);
     }

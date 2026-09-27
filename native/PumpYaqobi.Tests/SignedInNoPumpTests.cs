@@ -147,7 +147,7 @@ public class SignedInNoPumpTests
     public void SabteNashode_HalgheHarDagighe_NemiZanad()
     {
         var c = Src("PumpYaqobi.App/Services/CloudLink.cs");
-        Assert.Contains("var bindDue = forceBind || DateTime.UtcNow - _lastBindFailAt >= BindRetryAfterFail;", c);
+        Assert.Contains("var bindDue = forceBind || AppClock.Mono - _lastBindFailAt >= BindRetryAfterFail;", c);
         Assert.Contains("if (!Activated && acctStation.Length > 0 && bindDue)", c);
         var pub = Src("PumpYaqobi.App/Services/StationPublisher.cs");
         Assert.Contains("await CloudKeepAsync(ct, forceBind: true);", pub);

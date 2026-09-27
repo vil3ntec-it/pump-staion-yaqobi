@@ -560,7 +560,9 @@
           liveStatus = 'none';
         } else {
           var at = j && typeof j.at === 'number' ? j.at : 0;
-          if (j && j.d && at > liveAt) { data = j.d; liveAt = at; fresh = true; }
+          // ⛔ زمانی که از آینده آمده (ساعتِ کامپیوترِ پمپ آن لحظه جلو بود) قفل نیست —
+          // وگرنه عکسِ درستِ بعدی تا رسیدنِ همان آینده رد می‌شد (۱۴۰۵/۰۷/۱۵).
+          if (j && j.d && (at > liveAt || liveAt > Date.now() + 600000)) { data = j.d; liveAt = at; fresh = true; }
           liveStatus = 'ok';
           liveWhen = clock();
         }
@@ -888,7 +890,8 @@
 
   var hash = (location.hash || '').replace(/^#/, '');
   live = liveParse(hash);
-  if (live) liveAt = live.t;
+  // ⛔ کیو‌آری که با ساعتِ جلورفتهٔ کامپیوترِ پمپ ساخته شده، عکسِ زنده را قفل نکند
+  if (live) liveAt = live.t > Date.now() + 600000 ? 0 : live.t;
   var m = /(?:^|&)d=([^&]+)/.exec(hash);
   if (!m) {
     fail('این نشانی دادهٔ حسابی ندارد.',

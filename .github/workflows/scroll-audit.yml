@@ -141,6 +141,12 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- headrasid
 
+      # ══ ساعتِ ویندوز وسطِ کار جلو و عقب: تاریخ، ماه، ردیفِ تازه و اشتراک تکان نخورند ══
+      # (۱۴۰۵/۰۷/۱۵ — «وقتی تاریخ رو عوض می‌کنم تمامِ سیستم به هم می‌خوره»)
+      - name: سنجشِ جابه‌جاییِ ساعتِ ویندوز
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- clockjump
+
       # ══ «فایلِ کاملِ برنامه»: ساختن ⇒ خرابی ⇒ آوردن ⇒ شمارِ هر جدول، تم و نوار ══
       # و «فرستادن به سرور» و «نصب از فایل» با دکمه‌های واقعیِ صفحه (۱۴۰۵/۰۷/۱۵).
       - name: سنجشِ فایلِ کاملِ برنامه

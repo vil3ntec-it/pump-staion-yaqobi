@@ -1,6 +1,7 @@
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.Application.Services;
 
@@ -64,7 +65,7 @@ public sealed class DashboardService
 {
     private readonly Func<DateTime> _now;
 
-    public DashboardService(Func<DateTime>? now = null) => _now = now ?? (() => DateTime.Now);
+    public DashboardService(Func<DateTime>? now = null) => _now = now ?? (() => AppClock.Now);
 
     // ── تاریخ ────────────────────────────────────────────────────────────────
 

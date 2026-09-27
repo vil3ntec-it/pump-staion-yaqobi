@@ -6,6 +6,7 @@ using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -296,7 +297,7 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
         // ۱) مصارف: ‎ExpQuick‎ بیش از «امروز / هفته / ماه / سال» نمی‌خواهد.
         //    ⚠️ ولی «هفته» می‌تواند از سرِ سال به سالِ پیش برگردد، پس سالِ
         //    پیش هم خوانده می‌شود — دو سال، نه همهٔ سال‌ها.
-        var year = Shamsi.Of(DateTime.Now)[..4];
+        var year = Shamsi.Of(AppClock.Now)[..4];
         var prev = (int.Parse(year) - 1).ToString();
         var expenses = await _host.ExpenseLedger.ListAsync(year + "/");
         expenses = (await _host.ExpenseLedger.ListAsync(prev + "/")).Concat(expenses).ToList();
@@ -374,7 +375,7 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
     /// <summary>ساعت و تاریخِ نوارِ بالا — هر ثانیه، فقط وقتی داشبورد باز است.</summary>
     public void TickClock()
     {
-        var d = DateTime.Now;
+        var d = AppClock.Now;
         Clock = $"{d.Hour:00}:{d.Minute:00}:{d.Second:00}";
         Greeting = d.Hour < 12 ? "صبح بخیر 👋" : d.Hour < 17 ? "چاشت بخیر 👋" : "شب بخیر 👋";
         //  همان شکلِ سربرگ — روزِ هفته، روز، نامِ ماه، سال (۱۴۰۵/۰۷/۱۵)

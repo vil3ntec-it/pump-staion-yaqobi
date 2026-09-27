@@ -1,4 +1,5 @@
 using System.Globalization;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.Reporting.Pdf;
 
@@ -405,7 +406,7 @@ public static class HeaderFooter
         var page = pageNo + off;
         var last = total + off;
 
-        var now = when ?? DateTime.Now;
+        var now = when ?? AppClock.Now;
         var time = now.ToString("HH:mm", CultureInfo.InvariantCulture);
         var sh = DocDates.Shamsi(now);
         var mi = DocDates.Miladi(now);

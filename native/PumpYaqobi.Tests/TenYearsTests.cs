@@ -107,8 +107,8 @@ public class TenYearsTests
         Assert.Contains("PutFileAsync(CloudLiveFile, StationSnapshot.ForCloud(snap), ct)", src);
         Assert.Contains("\"body_too_large\"", src);
         //  ⛔ ساختنِ عکس دست‌بالا پنج درصدِ یک هسته
-        Assert.Contains("if (!force && DateTime.UtcNow < _nextBuildAt) return false;", src);
-        Assert.Contains("_nextBuildAt = DateTime.UtcNow + built.Elapsed * 19;", src);
+        Assert.Contains("if (!force && AppClock.Mono < _nextBuildAt) return false;", src);
+        Assert.Contains("_nextBuildAt = AppClock.Mono + built.Elapsed * 19;", src);
     }
 
     [Fact]

@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.ViewModels;
 
@@ -34,7 +35,7 @@ public sealed partial class ClockViewModel : ObservableObject
     [ObservableProperty] private bool _busy;
     [ObservableProperty] private string _nowText = "";
 
-    public ClockViewModel() : this(DateTime.Now) { }
+    public ClockViewModel() : this(AppClock.Now) { }
 
     public ClockViewModel(DateTime now)
     {
@@ -50,13 +51,23 @@ public sealed partial class ClockViewModel : ObservableObject
     }
 
     /// <summary>ساعتِ کنونیِ کامپیوتر، با همان شکلِ سربرگ.</summary>
-    public void Tick(DateTime now) => NowText = MainViewModel.HeaderDate(now) + " · " + Localization.Clock.Of(now, seconds: true);
+    public void Tick(DateTime now)
+    {
+        NowText = MainViewModel.HeaderDate(now) + " · " + Localization.Clock.Of(now, seconds: true);
+        var skew = AppClock.WallSkewMs;
+        WallText = Math.Abs(skew) > AppClock.SkewWarnMs
+            ? "⚠️ ساعتِ ویندوز " + MainViewModel.SkewText(skew) + " — برنامه با تاریخ و ساعتِ بالا (از اینترنت) کار می‌کند."
+            : AppClock.Trusted ? "✅ ساعتِ ویندوز با ساعتِ اینترنت یکی است." : "";
+    }
+
+    /// <summary>حالِ ساعتِ ویندوز در برابرِ ساعتِ اینترنت (‎AppClock‎).</summary>
+    [ObservableProperty] private string _wallText = "";
 
     /// <summary>همان لحظه‌ای که روی پنجره چیده شده — به وقتِ محلی.</summary>
     public DateTime Picked => Cal.ToDateTime(Year, MonthIndex + 1, Math.Min(Day, Cal.GetDaysInMonth(Year, MonthIndex + 1)),
                                              HourIndex, MinuteIndex, 0, 0);
 
-    /// <summary>پیش‌نمایشِ همان چیزی که ثبت خواهد شد — «یک‌شنبه میزان 1405.7.5 · 09:30 AM».</summary>
+    /// <summary>پیش‌نمایشِ همان چیزی که ثبت خواهد شد — «یک‌شنبه میزان 1405/7/5 · 09:30 AM».</summary>
     public string PickedText
     {
         get
@@ -90,8 +101,20 @@ public sealed partial class ClockViewModel : ObservableObject
         if (Busy) return;
         Busy = true;
         Status = "⏳ ویندوز یک بار اجازه می‌خواهد…";
-        try { Status = ClockService.Why(await ClockService.SetAsync(Picked)); }
-        finally { Busy = false; Tick(DateTime.Now); }
+        try
+        {
+            var r = await ClockService.SetAsync(Picked);
+            Status = ClockService.Why(r);
+            //  ⛔ برنامه خودش با ساعتِ اینترنت کار می‌کند (‎AppClock‎) — ساعتِ ویندوز
+            //  فقط وقتی حرفِ آخر است که ساعتِ اینترنت هنوز نیامده.
+            if (r == ClockService.Result.Done)
+            {
+                AppClock.UserSetWall();
+                if (AppClock.Trusted)
+                    Status += " — برنامه همچنان با تاریخ و ساعتِ واقعی (از اینترنت) کار می‌کند.";
+            }
+        }
+        finally { Busy = false; Tick(AppClock.Now); }
     }
 
     [RelayCommand]
@@ -103,16 +126,20 @@ public sealed partial class ClockViewModel : ObservableObject
         try
         {
             var r = await ClockService.SyncInternetAsync();
-            Status = r == ClockService.Result.Done ? "✅ ساعتِ کامپیوتر با اینترنت یکی شد" : ClockService.Why(r);
+            //  ساعتِ خودِ برنامه هم — مستقل از ساعتِ ویندوز (‎TimeSync‎)
+            var app = await TimeSync.CheckAsync();
+            Status = r == ClockService.Result.Done ? "✅ ساعتِ کامپیوتر با اینترنت یکی شد"
+                   : app ? ClockService.Why(r) + " — ولی برنامه ساعتِ واقعی را از اینترنت گرفت و با همان کار می‌کند."
+                   : ClockService.Why(r);
         }
-        finally { Busy = false; Tick(DateTime.Now); }
+        finally { Busy = false; Tick(AppClock.Now); }
     }
 
     /// <summary>برگشت به همین حالا — اگر کاربر چیزی را به‌هم زد.</summary>
     [RelayCommand]
     private void Now()
     {
-        var now = DateTime.Now;
+        var now = AppClock.Now;
         Year = Cal.GetYear(now); MonthIndex = Cal.GetMonth(now) - 1; Day = Cal.GetDayOfMonth(now);
         HourIndex = now.Hour; MinuteIndex = now.Minute;
         Status = "";

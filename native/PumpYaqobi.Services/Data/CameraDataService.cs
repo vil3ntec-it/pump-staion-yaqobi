@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PumpYaqobi.Application.Security;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.Services.Data;
 
@@ -45,7 +46,7 @@ public sealed class CameraDataService
         var count = await db.Cameras.CountAsync(ct);
         var cam = new Camera
         {
-            LegacyId = "c" + DateTime.UtcNow.Ticks.ToString("x"),
+            LegacyId = "c" + AppClock.UniqueTicks().ToString("x"),
             Name = string.IsNullOrWhiteSpace(name) ? CameraService.DefaultName(count) : name!.Trim(),
             Url = u,
             Note = string.IsNullOrWhiteSpace(note) ? null : note!.Trim(),

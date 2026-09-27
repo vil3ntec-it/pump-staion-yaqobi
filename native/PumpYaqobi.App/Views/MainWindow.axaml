@@ -231,8 +231,11 @@
                ویندوز را عوض می‌کند (‎Services.ClockService‎). -->
           <Button Classes="ghost" Padding="6,2" Background="Transparent" BorderThickness="0"
                   Command="{Binding OpenClockCommand}" Cursor="Hand"
-                  ToolTip.Tip="تاریخ و ساعت — برای دیدن یا عوض کردن کلیک کنید">
+                  ToolTip.Tip="{Binding ClockTip}">
           <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+            <!-- ⚠️ ساعتِ ویندوز با ساعتِ واقعی (اینترنت) فرق دارد — فقط خبر (‎AppClock‎) -->
+            <TextBlock Text="{Binding ClockNote}" FontSize="14" VerticalAlignment="Center"
+                       IsVisible="{Binding ClockNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             <TextBlock Text="{Binding TodayText}" FontSize="14.5" FontWeight="Bold"
                        VerticalAlignment="Center" TextWrapping="NoWrap"
                        Foreground="{DynamicResource Pump.HeaderTitle}" />

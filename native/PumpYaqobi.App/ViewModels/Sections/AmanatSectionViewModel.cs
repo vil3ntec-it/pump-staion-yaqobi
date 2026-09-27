@@ -9,6 +9,7 @@ using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
 using PumpYaqobi.Reporting.Pdf;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -215,7 +216,7 @@ public sealed partial class AmanatAccountViewModel : ObservableObject, IRowBatch
     private decimal AutoDaysOf(AmanatRow r) =>
         AmanatService.AutoDays(ParseDate(r.DateShamsi),
                                r.State == AmanatRowState.Closed ? ParseDate(r.CloseDate) : null,
-                               DateTime.Now);
+                               AppClock.Now);
 
     private static DateTime? ParseDate(string? shamsi)
     {

@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Security;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.Services.Data;
 
@@ -231,7 +232,7 @@ public sealed class BackupService
         try
         {
             if (!File.Exists(_dbf.DbPath)) return null;
-            var stem = "پیش‌از‌بازگردانی-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
+            var stem = "پیش‌از‌بازگردانی-" + AppClock.Now.ToString("yyyyMMdd-HHmmss");
             for (var n = 1; n <= 200; n++)
             {
                 var target = Path.Combine(SnapshotDir, n == 1 ? stem + ".db" : $"{stem}-{n}.db");

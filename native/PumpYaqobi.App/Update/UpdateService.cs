@@ -71,6 +71,19 @@ public sealed class UpdateService
         "https://api.github.com/repos/vil3ntec-it/pump-staion-yaqobi/releases/latest";
 
     /// <summary>
+    /// میزبان‌های گیت‌هاب که سرآیندِ <c>Date</c>شان ساعتِ مطمئن است (‎Services.TimeSync‎)
+    /// — از خودِ <see cref="FeedUrl"/>، تا نشانیِ منبع همین یک‌جا بماند.
+    /// </summary>
+    internal static readonly string[] TimeHosts =
+    {
+        new Uri(FeedUrl).Host, "github.com",
+        "objects.githubusercontent.com", "release-assets.githubusercontent.com",
+    };
+
+    /// <summary>پرسشِ سبکِ ساعت وقتی سرورِ حساب جواب نداد (فقط سرآیند).</summary>
+    internal const string TimeProbeUrl = "https://github.com/";
+
+    /// <summary>
     /// برچسبِ چرخشیِ درِ دوم — همیشه روی تازه‌ترین ساخت می‌نشیند، پس نشانیِ
     /// فایل‌هایش ثابت است و بی هیچ پرس‌وجویی خوانده می‌شود.
     /// </summary>
@@ -122,9 +135,15 @@ public sealed class UpdateService
     /// <summary>تنها جای فرستادنِ درخواست — تا درگاهِ سنجش یک نقطه بماند.</summary>
     private static async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage req, HttpCompletionOption how, CancellationToken ct)
-        => TestTransport is null
+    {
+        var sent = PumpYaqobi.Domain.AppClock.MonoSource();
+        var res = TestTransport is null
             ? await Http.SendAsync(req, how, ct)
             : await TestTransport(req, ct);
+        //  ⛔ ساعتِ واقعی از پاسخِ گیت‌هاب هم (سرآیندِ Date) — ‎TimeSync‎
+        Services.TimeSync.From(req, res, sent);
+        return res;
+    }
 
     private static Task<HttpResponseMessage> GetAsync(string url, CancellationToken ct)
         => SendAsync(new HttpRequestMessage(HttpMethod.Get, url),

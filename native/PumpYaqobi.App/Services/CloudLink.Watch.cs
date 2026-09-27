@@ -1,3 +1,4 @@
+using PumpYaqobi.Domain;
 namespace PumpYaqobi.App.Services;
 
 public sealed partial class CloudLink
@@ -51,7 +52,7 @@ public sealed partial class CloudLink
         if (!v.Agree && (refreshed || SubscriptionWatch.Fails >= 2)
             && Subscription.Active && SignedIn && Reach == CloudReach.Online
             && _acctStationSeen.Length > 0 && (here.Length == 0 || here == _acctStationSeen)
-            && (force || DateTime.UtcNow - _lastBindFailAt >= BindRetryAfterFail))
+            && (force || AppClock.Mono - _lastBindFailAt >= BindRetryAfterFail))
         {
             try
             {
@@ -60,7 +61,7 @@ public sealed partial class CloudLink
             }
             catch (OperationCanceledException) { throw; }
             catch { }
-            if (!v.Agree) _lastBindFailAt = DateTime.UtcNow;
+            if (!v.Agree) _lastBindFailAt = AppClock.Mono;
         }
 
         SubscriptionWatch.Report(v, triedFix: true, fixWhy);

@@ -1,4 +1,5 @@
 using System.Globalization;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.Reporting.Pdf;
 
@@ -18,7 +19,7 @@ public static class DocDates
     /// <summary>«1405/06/15  ·  1448/03/24  ·  2026/09/06»</summary>
     public static string Line(DateTime? when = null)
     {
-        var d = when ?? DateTime.Now;
+        var d = when ?? AppClock.Now;
         return Shamsi(d) + "  ·  " + Qamari(d) + "  ·  " + Miladi(d);
     }
 

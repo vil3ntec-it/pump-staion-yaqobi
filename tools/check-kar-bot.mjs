@@ -610,5 +610,38 @@ console.log('\n— خبر به گوشیِ بسته');
   ok(!/pump-kar-v14'/.test(read('kar/sw.js')), 'شمارهٔ کشِ سرویس‌ورکر بالا رفته (manifestِ تازه به گوشی‌ها برسد)');
 }
 
+// ══ ساعتِ جلورفتهٔ کامپیوترِ پمپ گوشی را قفل نکند (۱۴۰۵/۰۷/۱۵) ═══════════════
+//  گزارشِ صاحب ریپو: «با تغییرِ تاریخ تمامِ سیستم به هم می‌خوره.» عکسی که زیرِ ساعتِ
+//  جلورفته منتشر شده بود شماره‌ای از آینده داشت و گوشی هر عکسِ درستِ بعدی را «کهنه»
+//  می‌دید — تا رسیدنِ همان آینده.
+{
+  console.log('\n— ساعتِ جلورفتهٔ کامپیوتر');
+  const { readFileSync } = await import('node:fs');
+  const read = (f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+  const src = read('kar/app.js');
+  const i = src.indexOf('function acceptSnapshot(');
+  const body = src.slice(i, src.indexOf('\n  }\n', i) + 4);
+  const run = new Function('now', `
+    var data = null, fromCloud = false, shown = 0;
+    function stnKey(k) { return k; }
+    function render() { shown++; }
+    var localStorage = { setItem() {} };
+    var Date = { now: function () { return now; } };
+    ${body}
+    return { accept: acceptSnapshot, get: function () { return data; } };`);
+  const now = 1_790_000_000_000;
+  const a = run(now);
+  ok(a.accept({ seq: now }), 'عکسِ اول می‌نشیند');
+  ok(!a.accept({ seq: now - 5000 }), 'عکسِ کهنه‌تر (با ساعتِ درست) همچنان رد می‌شود');
+  const b = run(now);
+  b.accept({ seq: now + 365 * 86400000 });                  // زیرِ ساعتِ یک سال جلورفته
+  ok(b.accept({ seq: now + 1000 }) && b.get().seq === now + 1000,
+     'پس از درست شدنِ ساعت، عکسِ درست جای عکسِ «آینده» را می‌گیرد');
+  const v = read('view/index.html');
+  ok(/liveAt > Date\.now\(\) \+ 600000/.test(v) && /live\.t > Date\.now\(\) \+ 600000 \? 0 : live\.t/.test(v),
+     'صفحهٔ کیو‌آرِ مشتری هم زمانِ «آینده» را قفل نمی‌کند');
+  ok(!/pump-kar-v15'/.test(read('kar/sw.js')), 'شمارهٔ کشِ سرویس‌ورکر بالا رفته (app.jsِ تازه به گوشی‌ها برسد)');
+}
+
 console.log(bad ? '\n' + bad + ' آزمون شکست خورد' : '\nهمه درست');
 process.exit(bad ? 1 : 0);

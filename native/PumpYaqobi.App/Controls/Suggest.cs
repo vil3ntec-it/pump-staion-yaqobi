@@ -9,6 +9,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.Controls;
 
@@ -78,15 +79,15 @@ public static class Suggest
     {
         if (string.IsNullOrEmpty(key) || !_providers.TryGetValue(key, out var src)) return Array.Empty<string>();
         var hit = _cache.TryGetValue(key, out var c);
-        if (!hit || DateTime.UtcNow - c.At > Ttl)
+        if (!hit || AppClock.Mono - c.At > Ttl)
         {
-            _cache[key] = (DateTime.UtcNow, hit ? c.Items : new List<string>());
+            _cache[key] = (AppClock.Mono, hit ? c.Items : new List<string>());
             _ = Task.Run(async () =>
             {
                 try
                 {
                     var items = (await src()).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().ToList();
-                    _cache[key] = (DateTime.UtcNow, items);
+                    _cache[key] = (AppClock.Mono, items);
                 }
                 catch { /* پیشنهاد رفاه است، نه داده */ }
             });

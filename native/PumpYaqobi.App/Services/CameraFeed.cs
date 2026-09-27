@@ -1,5 +1,6 @@
 using Avalonia.Media.Imaging;
 using PumpYaqobi.Application.Services;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.Services;
 
@@ -102,7 +103,7 @@ public sealed class CameraFeed : IDisposable
 
     private async Task OnceAsync(string url, CancellationToken ct)
     {
-        var target = CameraService.CacheBusted(url, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+        var target = CameraService.CacheBusted(url, AppClock.UnixMs);
         using var req = new HttpRequestMessage(HttpMethod.Get, target);
         using var res = await Http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
         res.EnsureSuccessStatusCode();
@@ -120,7 +121,7 @@ public sealed class CameraFeed : IDisposable
         while (!ct.IsCancellationRequested)
         {
             await Task.Delay(SnapshotIntervalMs, ct);
-            var again = CameraService.CacheBusted(url, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+            var again = CameraService.CacheBusted(url, AppClock.UnixMs);
             Publish(await Http.GetByteArrayAsync(again, ct));
         }
     }

@@ -1,5 +1,6 @@
 using PumpYaqobi.Application.Security;
 using PumpYaqobi.Services.Data;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.Services.Security;
 
@@ -60,7 +61,7 @@ public sealed class SectionLockService
     private readonly Dictionary<string, (int Fails, DateTime Until)> _fails = new();
 
     /// <summary>ساعت — تزریق‌پذیر تا آزمون بی انتظارِ واقعی جلو برود.</summary>
-    public Func<DateTime> Clock { get; set; } = () => DateTime.UtcNow;
+    public Func<DateTime> Clock { get; set; } = () => AppClock.UtcNow;
 
     public SectionLockService(SettingsService settings) => _settings = settings;
 

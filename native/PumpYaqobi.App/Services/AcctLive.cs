@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using PumpYaqobi.Domain.Entities;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.Services;
 
@@ -88,7 +89,7 @@ public static class AcctLive
     }
 
     /// <summary>همین لحظه، به میلی‌ثانیهٔ یونیکس — همان چیزی که ‎t‎ و ‎at‎ می‌گیرند.</summary>
-    public static long NowMs() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    public static long NowMs() => AppClock.UnixMs;
 
     /// <summary>پاکتی که روی سرور می‌نشیند. ‎k‎ همان رمز است و سرور با آن می‌سنجد.</summary>
     public static Dictionary<string, object?> Envelope(string key, AcctSnapshot snap, long? atMs = null) =>

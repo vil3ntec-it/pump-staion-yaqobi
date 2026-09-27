@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PumpYaqobi.Application.Security;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Infrastructure.Migration;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.Services.Data;
 
@@ -65,7 +66,7 @@ public sealed class LegacyImportService
             if (!File.Exists(_dbf.DbPath)) return null;
             var dir = Path.GetDirectoryName(_dbf.DbPath) ?? ".";
             var stem = Path.GetFileNameWithoutExtension(_dbf.DbPath)
-                     + "-پیش‌از‌مهاجرت-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
+                     + "-پیش‌از‌مهاجرت-" + AppClock.Now.ToString("yyyyMMdd-HHmmss");
 
             for (var n = 1; n <= 200; n++)
             {

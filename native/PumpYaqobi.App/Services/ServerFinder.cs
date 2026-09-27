@@ -3,6 +3,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.Services;
 
@@ -77,10 +78,10 @@ public static class ServerFinder
                 catch { /* این کارت شبکه نشد — بقیه را امتحان کن */ }
             }
 
-            var deadline = DateTime.UtcNow + (wait ?? DefaultWait);
+            var deadline = AppClock.Mono + (wait ?? DefaultWait);
             while (!ct.IsCancellationRequested)
             {
-                var left = deadline - DateTime.UtcNow;
+                var left = deadline - AppClock.Mono;
                 if (left <= TimeSpan.Zero) break;
 
                 using var window = CancellationTokenSource.CreateLinkedTokenSource(ct);

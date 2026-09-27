@@ -3,6 +3,7 @@ using PumpYaqobi.Application.Security;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
 using PumpYaqobi.Services.Data;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.Services.Security;
 
@@ -84,7 +85,7 @@ public sealed class AuthService
         }
         else if (!string.IsNullOrEmpty(user.PasswordHash)) return false;
 
-        user.LastLoginUtc = DateTime.UtcNow;
+        user.LastLoginUtc = AppClock.UtcNow;
         db.Audit.Add(new AuditEntry { Actor = user.UserName, Action = "open-no-password" });
         db.SaveChanges();
         _session.SignIn(user.Role, user.UserName);
@@ -144,8 +145,8 @@ public sealed class AuthService
         using var db = _dbf.Create();
 
         var until = GetLockUntil(db);
-        if (until is not null && until > DateTime.UtcNow)
-            return new SignInOutcome(SignInResult.LockedOut, UserRole.Viewer, until - DateTime.UtcNow);
+        if (until is not null && until > AppClock.UtcNow)
+            return new SignInOutcome(SignInResult.LockedOut, UserRole.Viewer, until - AppClock.UtcNow);
 
         var user = db.Users.FirstOrDefault(u => u.UserName == userName && u.IsActive);
         if (user is null)
@@ -162,7 +163,7 @@ public sealed class AuthService
 
         if (PasswordHasher.NeedsRehash(user.PasswordHash))
             user.PasswordHash = PasswordHasher.Hash(password);   // تازه‌سازیِ بی‌صدا
-        user.LastLoginUtc = DateTime.UtcNow;
+        user.LastLoginUtc = AppClock.UtcNow;
         ClearFailures(db);
         db.Audit.Add(new AuditEntry { Actor = userName, Action = "login" });
         db.SaveChanges();
@@ -222,8 +223,15 @@ public sealed class AuthService
         else row.Value = v;
     }
 
+    /// <summary>
+    /// ⛔ قفلی که بیش از <see cref="MaxLock"/> دورتر از «حالا» است، از ساعتِ
+    /// اشتباه آمده (ساعتِ ویندوز آن لحظه جلو بود) و باطل است — وگرنه یک
+    /// رمزِ غلط زیرِ ساعتِ جلورفته، پس از درست شدنِ ساعت کاربر را ماه‌ها از
+    /// برنامهٔ خودش بیرون نگه می‌داشت (۱۴۰۵/۰۷/۱۵).
+    /// </summary>
     private static DateTime? GetLockUntil(Persistence.PumpDbContext db) =>
         DateTime.TryParse(Get(db, UntilKey), null, System.Globalization.DateTimeStyles.RoundtripKind, out var t)
+        && t.ToUniversalTime() - AppClock.UtcNow <= MaxLock
             ? t : null;
 
     private static void RegisterFailure(Persistence.PumpDbContext db)
@@ -233,7 +241,7 @@ public sealed class AuthService
         if (n >= 3)
         {
             var wait = TimeSpan.FromSeconds(Math.Min(MaxLock.TotalSeconds, 5 * Math.Pow(2, n - 3)));
-            Set(db, UntilKey, DateTime.UtcNow.Add(wait).ToString("O"));
+            Set(db, UntilKey, AppClock.UtcNow.Add(wait).ToString("O"));
         }
         db.SaveChanges();
     }

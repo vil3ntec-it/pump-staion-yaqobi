@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using PumpYaqobi.Persistence;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.Services.Data;
 
@@ -59,7 +60,7 @@ public static class SyncBackup
                 db.Database.ExecuteSqlRaw($"VACUUM INTO '{temp.Replace("'", "''")}';");
 
             var name = (label is { Length: > 0 } ? label : "backup")
-                     + "-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + Extension;
+                     + "-" + AppClock.Now.ToString("yyyyMMdd-HHmmss") + Extension;
             var path = target ?? Path.Combine(folder, name);
 
             //  ⚠️ **دفترِ بزرگ در حافظه نمی‌آید.** رمزگذاریِ AES-GCMِ دات‌نت

@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Domain.Enums;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -344,7 +345,7 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
         UpdateUnread();
     }
 
-    private static long Now => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    private static long Now => AppClock.UnixMs;
 
     private string Me => _host.Session.UserName is { Length: > 0 } n ? n : "میرزا";
 
@@ -727,12 +728,12 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
 
     private async Task PollCustomersAsync(CloudLink cloud, CancellationToken ct)
     {
-        if (DateTime.UtcNow - _lastThreads > TimeSpan.FromMinutes(1))
+        if (AppClock.Mono - _lastThreads > TimeSpan.FromMinutes(1))
         {
             var (ok, threads, _) = await cloud.ChatThreadsAsync(ct);
             if (ok)
             {
-                _lastThreads = DateTime.UtcNow;
+                _lastThreads = AppClock.Mono;
                 _support.ApplyThreads(threads);
                 foreach (var t in threads) Keep(t.Last);
             }
@@ -1074,7 +1075,7 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
     {
         if (ms <= 0) return "";
         var local = DateTimeOffset.FromUnixTimeMilliseconds(ms).ToLocalTime();
-        return local.Date == DateTime.Today ? local.ToString("HH:mm") : Shamsi.Of(local.DateTime) + " " + local.ToString("HH:mm");
+        return local.Date == AppClock.Today ? local.ToString("HH:mm") : Shamsi.Of(local.DateTime) + " " + local.ToString("HH:mm");
     }
 
     private static string MimeOf(string path) => Path.GetExtension(path).ToLowerInvariant() switch

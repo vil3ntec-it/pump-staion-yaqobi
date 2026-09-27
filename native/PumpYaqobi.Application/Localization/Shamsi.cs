@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using System.Globalization;
 using System.Text;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.Application.Localization;
 
@@ -19,11 +20,11 @@ public static class Shamsi
     public static string Of(DateTime d) =>
         $"{Cal.GetYear(d):0000}/{Cal.GetMonth(d):00}/{Cal.GetDayOfMonth(d):00}";
 
-    public static string Today() => Of(DateTime.Now);
+    public static string Today() => Of(AppClock.Now);
 
     public static string MonthOf(DateTime d) => $"{Cal.GetYear(d):0000}/{Cal.GetMonth(d):00}";
 
-    public static string ThisMonth() => MonthOf(DateTime.Now);
+    public static string ThisMonth() => MonthOf(AppClock.Now);
 
     /// <summary>ارقامِ فارسی/عربی را به لاتین برمی‌گرداند تا تجزیه شکست نخورد.</summary>
     public static string ToEnDigits(string? s)

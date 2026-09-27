@@ -177,7 +177,7 @@ public class AlertWatchTests
     {
         var w = Src("PumpYaqobi.App", "Services", "AlertWatch.cs");
         Assert.Contains("version == _lastVersion) return false;", w);
-        Assert.Contains("DateTime.UtcNow - _lastRun < MinGap", w);
+        Assert.Contains("AppClock.Mono - _lastRun < MinGap", w);
         var snap = Src("PumpYaqobi.App", "Services", "StationSnapshot.cs");
         var tank = snap[snap.IndexOf("internal static async Task<Dictionary<string, object?>> TankAsync", StringComparison.Ordinal)..];
         tank = tank[..tank.IndexOf("return tank;", StringComparison.Ordinal)];

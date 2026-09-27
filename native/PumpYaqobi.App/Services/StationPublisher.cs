@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.Services;
 
@@ -182,11 +183,11 @@ public sealed class StationPublisher : IAsyncDisposable
             // شمارهٔ نسخهٔ داده می‌گوید از دورِ قبل چیزی ذخیره شده یا نه.
             var version = PumpYaqobi.Persistence.PumpDbContext.Version;
             if (!force && version == _lastVersion && _accts.Pending == 0 && !_cloudLivePending) return false;
-            if (!force && DateTime.UtcNow < _nextBuildAt) return false;
+            if (!force && AppClock.Mono < _nextBuildAt) return false;
 
             var built = System.Diagnostics.Stopwatch.StartNew();
             var snap = await StationSnapshot.BuildAsync(_host, ct);
-            _nextBuildAt = DateTime.UtcNow + built.Elapsed * 19;
+            _nextBuildAt = AppClock.Mono + built.Elapsed * 19;
             _lastVersion = version;
 
             // ⚠️ ‎seq‎ هر بار عوض می‌شود، پس در محکِ «چیزی عوض شده؟» نمی‌آید —
@@ -218,9 +219,9 @@ public sealed class StationPublisher : IAsyncDisposable
             //  ⚠️ فقط وقتی عکس عوض شده، و دست‌بالا هر `CloudLiveGap` یک بار؛
             //  نرسید ⇒ دورِ بعد دوباره (ترمزِ `Version` جلویش را نمی‌گیرد).
             if (karOk && cloudOn && (force || hash != _cloudLiveHash)
-                && DateTime.UtcNow - _cloudLiveAt >= CloudLiveGap)
+                && AppClock.Mono - _cloudLiveAt >= CloudLiveGap)
             {
-                _cloudLiveAt = DateTime.UtcNow;
+                _cloudLiveAt = AppClock.Mono;
                 var file = AppSettings.Load();
                 var link = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
                 //  ⛔ نسخهٔ سرورِ حساب زیرِ سقفِ خودِ سرور بریده می‌شود — شرحش بالای
@@ -327,7 +328,7 @@ public sealed class StationPublisher : IAsyncDisposable
         {
             var file = AppSettings.Load();
             if (string.IsNullOrWhiteSpace(file.CloudDeviceToken)) return false;   // هنوز به پمپی بند نیست
-            var now = DateTime.UtcNow;
+            var now = AppClock.Mono;
             if (now < _stateRetryAt) return false;
 
             //  پمپِ دیگر (جابه‌جاییِ حساب) ⇒ همه‌چیز از نو
@@ -486,7 +487,7 @@ public sealed class StationPublisher : IAsyncDisposable
     {
         try
         {
-            if ((DateTime.UtcNow - _lastHomePush) < TimeSpan.FromMinutes(10)) return;
+            if ((AppClock.Mono - _lastHomePush) < TimeSpan.FromMinutes(10)) return;
 
             var file = AppSettings.Load();
             if (string.IsNullOrWhiteSpace(file.CloudDeviceToken)) return;   // هنوز فعال نشده
@@ -495,7 +496,7 @@ public sealed class StationPublisher : IAsyncDisposable
             var url = HomeLink.ShareUrl(_host);
             if (string.IsNullOrWhiteSpace(url)) return;
 
-            _lastHomePush = DateTime.UtcNow;
+            _lastHomePush = AppClock.Mono;
             var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
             await cloud.PublishHomeAsync(url, HomeLink.ReadKey(_host), ct, HomeLink.StationCode(_host));
         }
@@ -515,9 +516,9 @@ public sealed class StationPublisher : IAsyncDisposable
         //  ⇒ پوشهٔ خودِ همین حساب را بگیر (۱۴۰۵/۰۷/۱۳). تا ثبتِ تازه ننشسته،
         //  اتصالِ فعلی دست نمی‌خورد؛ و با همان ترمزِ ثبتِ همیشگی، نه هر ۵ ثانیه.
         if (StationLink.NeedsMove(AppSettings.Load())
-            && (force || DateTime.UtcNow - _lastEnrollTry >= EnrollRetryLost))
+            && (force || AppClock.Mono - _lastEnrollTry >= EnrollRetryLost))
         {
-            _lastEnrollTry = DateTime.UtcNow;
+            _lastEnrollTry = AppClock.Mono;
             var moved = await StationLink.EnsureAsync(_host, ct: ct);
             if (moved.Ok && !StationLink.NeedsMove(AppSettings.Load()))
             {
@@ -538,10 +539,10 @@ public sealed class StationPublisher : IAsyncDisposable
             // روی سرورِ خاموش، هر بیست ثانیه نگردیم — ولی اگر یک بار وصل
             // بوده‌ایم و قطع شده، زود دوباره بگرد (آی‌پی عوض شده باشد).
             var wait = _everLinked ? EnrollRetryLost : EnrollRetry;
-            var due = DateTime.UtcNow - _lastEnrollTry >= wait;
+            var due = AppClock.Mono - _lastEnrollTry >= wait;
             if (force || due)
             {
-                _lastEnrollTry = DateTime.UtcNow;
+                _lastEnrollTry = AppClock.Mono;
                 await StationLink.EnsureAsync(_host, ct: ct);
             }
             else if (!_sync.Configured)
@@ -558,9 +559,9 @@ public sealed class StationPublisher : IAsyncDisposable
             //  سروری که فقط روی ‎127.0.0.1‎ گوش می‌داد) برای همیشه می‌ماند و چراغ
             //  هیچ‌وقت سبز نمی‌شد. حالا با `force` دوباره ثبت می‌شود، و اگر آن
             //  نشانی نرسید، کشفِ خودکار سرورِ رسیدنی را پیدا می‌کند — با همان رمز.
-            if (!_sync.Configured || !(force || DateTime.UtcNow - _lastRepairTry >= EnrollRetryLost))
+            if (!_sync.Configured || !(force || AppClock.Mono - _lastRepairTry >= EnrollRetryLost))
                 return false;
-            _lastRepairTry = DateTime.UtcNow;
+            _lastRepairTry = AppClock.Mono;
             var before = HomeLink.Url(_host);
             var repaired = await StationLink.EnsureAsync(_host, force: true, ct: ct);
             if (!repaired.Ok) return false;
@@ -570,7 +571,7 @@ public sealed class StationPublisher : IAsyncDisposable
             if (!await _sync.ConnectAsync(ct)) return false;
         }
         _everLinked = true;
-        LastLinkedAt = DateTime.Now;
+        LastLinkedAt = AppClock.Now;
         await WatchInboxAsync(ct);
         return true;
     }
@@ -718,7 +719,14 @@ public sealed class StationPublisher : IAsyncDisposable
     {
         // ⚠️ نه همان لحظهٔ ورود: عکسِ ایستگاه با داده‌ی زیاد یک ثانیه CPU است و
         // درست وقتی می‌رفت که کاربر تازه رمز زده و منتظرِ صفحهٔ اول بود.
-        try { await Task.Delay(FirstDelay, ct); } catch { return; }
+        //  ⛔ ساعتِ واقعی از اینترنت — پیش از هر کارِ دیگر، یک پرسشِ سبکِ فقط‌سرآیند
+        //  (‎TimeSync‎). دو ثانیه صبر تا بالا آمدنِ پنجره بی رقیب بماند.
+        var lastTimeCheck = DateTime.MinValue;
+        try { await Task.Delay(TimeSpan.FromSeconds(2), ct); } catch { return; }
+        try { lastTimeCheck = AppClock.Mono; await TimeSync.CheckAsync(ct); }
+        catch (OperationCanceledException) { return; }
+        catch { /* بی‌اینترنت خطا نیست */ }
+        try { await Task.Delay(FirstDelay - TimeSpan.FromSeconds(2), ct); } catch { return; }
         var lastPublish = DateTime.MinValue;
         //  ⚠️ `MinValue` یعنی همان دورِ اول می‌رود — «در جا وصل شود».
         var lastCloud = DateTime.MinValue;
@@ -738,9 +746,9 @@ public sealed class StationPublisher : IAsyncDisposable
 
             //  ۲) انتشار — همان بیست ثانیهٔ همیشگی، نه زودتر: ساختنِ عکس با
             //     پنج سال داده یک ثانیه CPU است.
-            if (DateTime.UtcNow - lastPublish >= Interval)
+            if (AppClock.Mono - lastPublish >= Interval)
             {
-                lastPublish = DateTime.UtcNow;
+                lastPublish = AppClock.Mono;
                 try { await PublishOnceAsync(false, ct); }
                 catch (OperationCanceledException) { return; }
                 catch { /* سرورِ خاموش خطا نیست */ }
@@ -754,10 +762,23 @@ public sealed class StationPublisher : IAsyncDisposable
             //  ۳) ابر — خودش، بی این‌که کاربر صفحه‌ای را باز کند. و «اینترنت
             //     برگشت» همان لحظه، نه یک دقیقه بعد (`_netBack`).
             if (Interlocked.Exchange(ref _netBack, 0) == 1) lastCloud = DateTime.MinValue;
-            if (DateTime.UtcNow - lastCloud >= CloudTick)
+            if (AppClock.Mono - lastCloud >= CloudTick)
             {
-                lastCloud = DateTime.UtcNow;
+                lastCloud = AppClock.Mono;
                 try { await CloudKeepAsync(ct); }
+                catch (OperationCanceledException) { return; }
+                catch { /* بی‌اینترنت خطا نیست */ }
+            }
+
+            //  ۴) ساعت — هر پاسخِ سرورِ حساب خودش ساعت می‌آورد؛ فقط وقتی شش
+            //     ساعت هیچ ساعتی نیامده (یا هنوز هیچ) یک پرسشِ سبک، و دست‌بالا
+            //     هر ده دقیقه یک بار.
+            var age = AppClock.TrustedAgeMs;
+            if ((age < 0 || age > (long)TimeSync.Recheck.TotalMilliseconds)
+                && AppClock.Mono - lastTimeCheck >= TimeSpan.FromMinutes(10))
+            {
+                lastTimeCheck = AppClock.Mono;
+                try { await TimeSync.CheckAsync(ct); }
                 catch (OperationCanceledException) { return; }
                 catch { /* بی‌اینترنت خطا نیست */ }
             }

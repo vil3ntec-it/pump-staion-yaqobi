@@ -8,6 +8,7 @@ using PumpYaqobi.Application.Security;
 using PumpYaqobi.Domain.Enums;
 using PumpYaqobi.Services.Data;
 using PumpYaqobi.App.Services;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -1035,10 +1036,10 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     private async Task EnsureReadyAsync(bool force = false)
     {
         if (_ensuring || !SignedIn) return;
-        if (!force && DateTime.UtcNow - _ensuredAt < TimeSpan.FromMinutes(2)) return;
+        if (!force && AppClock.Mono - _ensuredAt < TimeSpan.FromMinutes(2)) return;
         if (!string.IsNullOrWhiteSpace(AppSettings.Load().CloudDeviceToken)) return;
         _ensuring = true;
-        _ensuredAt = DateTime.UtcNow;
+        _ensuredAt = AppClock.Mono;
         try
         {
             bool has;

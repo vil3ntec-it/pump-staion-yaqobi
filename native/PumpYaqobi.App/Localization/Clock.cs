@@ -1,4 +1,5 @@
 using System.Globalization;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.Localization;
 
@@ -18,7 +19,7 @@ namespace PumpYaqobi.App.Localization;
 /// </summary>
 public static class Clock
 {
-    public static string Now() => Of(DateTime.Now, seconds: true);
+    public static string Now() => Of(AppClock.Now, seconds: true);
 
     /// <summary>«08:25:42 AM» یا «09:05 PM».</summary>
     public static string Of(DateTime t, bool seconds = false) =>

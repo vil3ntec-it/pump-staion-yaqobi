@@ -1,6 +1,7 @@
 using System.Text.Json;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.Infrastructure.Migration;
 
@@ -470,7 +471,7 @@ public sealed class LegacyOperationsImporter
         DateTime.TryParse(iso, System.Globalization.CultureInfo.InvariantCulture,
                           System.Globalization.DateTimeStyles.AdjustToUniversal
                           | System.Globalization.DateTimeStyles.AssumeUniversal, out var d)
-            ? d : DateTime.UtcNow;
+            ? d : AppClock.UtcNow;
 
     // ── تنظیم‌ها ────────────────────────────────────────────────────────────
     /// <summary>

@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Metadata;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.Controls;
 
@@ -97,7 +98,7 @@ public sealed class CardGrid : Control
             //  ⚠️ این رویداد با هر پاسِ چیدمان هم شلیک می‌شود، حتی بی هیچ جابه‌جایی
             //  (همین که کارتِ پیش‌ساخته به درخت می‌رود). «اسکرول» فقط وقتی است که قاب
             //  واقعاً جابه‌جا شده — وگرنه پیش‌ساختن هرگز آرام نمی‌گرفت.
-            if (_hasViewport && e.EffectiveViewport != _viewport) _lastScroll = DateTime.UtcNow;
+            if (_hasViewport && e.EffectiveViewport != _viewport) _lastScroll = AppClock.Mono;
             _viewport = e.EffectiveViewport;
             _hasViewport = true;
             //  ⛔ فقط اگر بازهٔ ردیف‌ها عوض شد — نه با هر پیکسلِ اسکرول
@@ -273,7 +274,7 @@ public sealed class CardGrid : Control
         _warmQueued = false;
         if (!NeedsWarm()) return;
         //  کاربر همین حالا می‌چرخاند ⇒ بعداً
-        if (DateTime.UtcNow - _lastScroll < WarmCalm) { QueueWarm(); return; }
+        if (AppClock.Mono - _lastScroll < WarmCalm) { QueueWarm(); return; }
         _ahead = _range.Last - _range.First + 2;
         InvalidateMeasure();   // اندازه‌گیریِ بعدی همین یک کارت را زنده می‌کند و دوباره صف می‌گیرد
     }

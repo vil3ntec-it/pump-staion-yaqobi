@@ -4,6 +4,7 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using PumpYaqobi.App.ViewModels;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.Views;
 
@@ -20,7 +21,7 @@ public partial class ClockWindow : Window
         DataContext = vm;
         //  ساعتِ زنده فقط تا پنجره باز است — بسته شد، تیک هم می‌ایستد
         _tick = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        _tick.Tick += (_, _) => vm.Tick(DateTime.Now);
+        _tick.Tick += (_, _) => vm.Tick(AppClock.Now);
         _tick.Start();
         Closed += (_, _) => _tick.Stop();
     }

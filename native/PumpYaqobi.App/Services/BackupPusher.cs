@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Net.Http.Headers;
 using PumpYaqobi.Application.Localization;
+using PumpYaqobi.Domain;
 // ‎Shamsi‎ برای نامِ روزِ فایل
 
 namespace PumpYaqobi.App.Services;
@@ -164,7 +165,7 @@ public sealed class BackupPusher : IAsyncDisposable
 
         if (sent || toCloud)
         {
-            LastSentAt = DateTime.Now;
+            LastSentAt = AppClock.Now;
             LastError = sent && toCloud ? ""
                 : sent ? "روی سرورِ حساب ننشست — فقط سرورِ خانگی"
                 : "روی سرورِ خانگی ننشست — فقط ابر";
@@ -265,7 +266,7 @@ public sealed class BackupPusher : IAsyncDisposable
             // نامِ فایل همان نامِ روزِ عکس + ساعت، تا چهار پشتیبانِ یک روز روی هم نیفتند
             req.Headers.TryAddWithoutValidation(
                 "x-backup-name",
-                "pump-" + Shamsi.Today().Replace('/', '-') + "-" + DateTime.Now.ToString("HHmm") + ".db");
+                "pump-" + Shamsi.Today().Replace('/', '-') + "-" + AppClock.Now.ToString("HHmm") + ".db");
 
             using var res = await http.SendAsync(req, ct);
             if (res.IsSuccessStatusCode) return true;
@@ -285,7 +286,10 @@ public sealed class BackupPusher : IAsyncDisposable
     private void Warn()
     {
         var last = LastSentAt ?? Parse(AppSettings.Load().LastBackupSentAt);
-        if (last is { } when && DateTime.Now - when < WarnAfter) { WarningText = ""; return; }
+        //  ⛔ مُهری از آینده (ساعتِ ویندوز آن لحظه جلو بود) «همین حالا رفت» نیست —
+        //  وگرنه هشدارِ «نرفته» تا رسیدنِ همان آینده هرگز داده نمی‌شد (۱۴۰۵/۰۷/۱۵).
+        if (last is { } when && AppClock.Now - when is var ago && ago >= TimeSpan.FromMinutes(-5) && ago < WarnAfter)
+        { WarningText = ""; return; }
 
         WarningText = last is null
             ? "پشتیبان هنوز روی سرور نرفته — اینترنت/شبکهٔ پمپ را وصل کنید یا از تنظیمات دستی بکاپ بگیرید."

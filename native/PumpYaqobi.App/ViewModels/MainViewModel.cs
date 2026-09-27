@@ -9,6 +9,7 @@ using PumpYaqobi.App.ViewModels.Sections;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Enums;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.ViewModels;
 
@@ -483,6 +484,40 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _clock = "";
 
     /// <summary>
+    /// «ساعتِ ویندوز درست نیست» — فقط وقتی ساعتِ اینترنت آمده و ویندوز بیش از
+    /// دو دقیقه با آن فرق دارد. برنامه با ساعتِ اینترنت کار می‌کند (‎AppClock‎)؛
+    /// این فقط خبر است، هیچ چیزی را نمی‌بندد.
+    /// </summary>
+    [ObservableProperty] private string _clockNote = "";
+
+    /// <summary>راهنمای ساعتِ سربرگ.</summary>
+    [ObservableProperty] private string _clockTip = "تاریخ و ساعت — برای دیدن یا عوض کردن کلیک کنید";
+
+    /// <summary>از تیکِ یک‌ثانیه‌ای — بی هیچ دستورِ دیتابیس.</summary>
+    public void TickClockNote()
+    {
+        var skew = AppClock.WallSkewMs;
+        var off = Math.Abs(skew) > AppClock.SkewWarnMs;
+        ClockNote = off ? "⚠️" : "";
+        ClockTip = off
+            ? "⚠️ ساعتِ ویندوز " + SkewText(skew) + " — برنامه با تاریخ و ساعتِ واقعی (از اینترنت) کار می‌کند "
+              + "و هیچ ماه، اشتراک یا حسابی از ساعتِ ویندوز به هم نمی‌خورد. برای درست کردنِ ساعتِ ویندوز کلیک کنید."
+            : AppClock.Trusted
+                ? "تاریخ و ساعتِ واقعی (از اینترنت سنجیده شد) — برای دیدن یا عوض کردن کلیک کنید"
+                : "تاریخ و ساعت — برای دیدن یا عوض کردن کلیک کنید";
+    }
+
+    /// <summary>«۳ روز جلو است» / «۲ ساعت عقب است».</summary>
+    public static string SkewText(long skewMs)
+    {
+        var a = Math.Abs(skewMs);
+        var amount = a >= 86_400_000L ? Shamsi.Money((decimal)Math.Round(a / 86_400_000d)) + " روز"
+                   : a >= 3_600_000L ? Shamsi.Money((decimal)Math.Round(a / 3_600_000d)) + " ساعت"
+                   : Shamsi.Money((decimal)Math.Round(a / 60_000d)) + " دقیقه";
+        return amount + (skewMs > 0 ? " جلو است" : " عقب است");
+    }
+
+    /// <summary>
     /// ══ چراغِ سرور در سربرگ ══════════════════════════════════════════════════
     /// سبز = به سرورِ خانگی وصل‌ایم؛ سرخ = سرور تنظیم شده ولی جواب نمی‌دهد؛
     /// خاکستری = سروری تنظیم نشده. با تیکِ ساعتِ پنجره تازه می‌شود
@@ -549,8 +584,8 @@ public sealed partial class MainViewModel : ObservableObject
     private DateTime _boundAt = DateTime.MinValue;
     private bool DeviceBound()
     {
-        if (DateTime.UtcNow - _boundAt < TimeSpan.FromSeconds(10)) return _boundCache;
-        _boundAt = DateTime.UtcNow;
+        if (AppClock.Mono - _boundAt < TimeSpan.FromSeconds(10)) return _boundCache;
+        _boundAt = AppClock.Mono;
         try
         {
             var f = Services.AppSettings.Load();
@@ -1108,12 +1143,14 @@ public sealed partial class MainViewModel : ObservableObject
     public bool IsShellVisible => true;
 
     /// <summary>
-    /// تاریخِ شمسیِ امروز — «یک‌شنبه سنبله 1405.6.5».
-    /// ⛔ شکلش خواستهٔ صریحِ صاحب ریپو است (۱۴۰۵/۰۷/۱۵: «یکشنبه سنبله 1405.6.5
-    /// این مدلی باشه»): روزِ هفته، نامِ ماه، و سال.ماه.روز با نقطه و بی صفرِ
-    /// پیشرو. (نامِ ماه از ۱۴۰۵/۰۷/۱۳ هست: «نامِ ماه نیست».)
+    /// تاریخِ شمسیِ امروز — «یک‌شنبه سنبله 1405/6/5».
+    /// ⛔ شکلش خواستهٔ صریحِ صاحب ریپو است: روزِ هفته، نامِ ماه، و سال/ماه/روز
+    /// بی صفرِ پیشرو — ⛔ با <b>اسلش</b>، نه نقطه (۱۴۰۵/۰۷/۱۵ دوم: «تاریخ رو /
+    /// بده نه . — باید اسلش باشه وسطشون تا فهمیده بشه»).
+    /// ⛔ «امروز» از <see cref="AppClock"/> است — ساعتِ اینترنت، نه ساعتِ
+    /// ویندوز: عوض کردنِ تاریخِ ویندوز این‌جا را عوض نمی‌کند.
     /// </summary>
-    public string TodayText => HeaderDate(DateTime.Now);
+    public string TodayText => HeaderDate(AppClock.Now);
 
     /// <summary>
     /// نامِ برنامه در سربرگ، عنوانِ پنجره و پرده‌ها — نامِ پمپی که کاربر نوشته،
@@ -1125,7 +1162,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         var p = Shamsi.Of(now).Split('/');
         var text = p.Length == 3 && int.TryParse(p[1], out var m) && int.TryParse(p[2], out var d)
-            ? Shamsi.DayName(now) + " " + Shamsi.MonthName(m) + " " + p[0] + "." + m + "." + d
+            ? Shamsi.DayName(now) + " " + Shamsi.MonthName(m) + " " + p[0] + "/" + m + "/" + d
             : Shamsi.DayName(now) + "، " + Shamsi.Of(now);
         //  ⛔ داخلِ یک «جزیرهٔ راست‌به‌چپ» (‎U+2067 … U+2069‎) — گزارشِ صاحب ریپو
         //  (۱۴۰۵/۰۷/۱۵): «تو زدی ۱۴۰۵.سنبله.۱». عددها و واژه‌ها در یک پاراگرافِ
@@ -1777,7 +1814,7 @@ public sealed partial class MainViewModel : ObservableObject
         // نشده، عددها همان‌اند.
         // ⚠️ روز هم بخشی از کلید است: «مفادِ امروز» و «مصارفِ امروز» با نیمه‌شب
         // عوض می‌شوند بی آن‌که چیزی ذخیره شده باشد (چک‌لیستِ تحویل، بندِ ۶۲).
-        var version = PumpYaqobi.Persistence.PumpDbContext.Version * 100000L + DateTime.Now.DayOfYear;
+        var version = PumpYaqobi.Persistence.PumpDbContext.Version * 100000L + AppClock.Now.DayOfYear;
         if (version == _bannerVersion) return;
         _bannerVersion = version;
 

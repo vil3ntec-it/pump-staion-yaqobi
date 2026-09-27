@@ -4,6 +4,7 @@ using PumpYaqobi.Application.Security;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.Services.Data;
 
@@ -358,7 +359,7 @@ public sealed class HistoryService
                 var days = AmanatService.AutoDays(
                     DateOf(r.DateShamsi),
                     r.State == AmanatRowState.Closed ? DateOf(r.CloseDate) : null,
-                    DateTime.Now);
+                    AppClock.Now);
                 var c = _amanat.RowCalc(r, acc, settings, days);
                 if (c.Liters == 0m) continue;
 
@@ -517,7 +518,7 @@ public sealed class HistoryService
     private async Task<List<HistoryRow>> RetailAsync(Persistence.PumpDbContext db, CancellationToken ct)
     {
         var list = new List<HistoryRow>();
-        var today = DateTime.Now.Date;
+        var today = AppClock.Now.Date;
         foreach (var e in await db.RetailRows.AsNoTracking().ToListAsync(ct))
         {
             var bord = _retail.Bardagi(e);

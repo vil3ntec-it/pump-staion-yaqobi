@@ -1,3 +1,4 @@
+using PumpYaqobi.Domain;
 namespace PumpYaqobi.App.Services;
 
 /// <summary>
@@ -149,7 +150,7 @@ public sealed class CloudEvents
     {
         LastSent = 0;
         Batch fresh;
-        try { fresh = NewFrom(alerts, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()); }
+        try { fresh = NewFrom(alerts, AppClock.UnixMs); }
         catch { return 0; }
         if (fresh.Count == 0) return 0;
 
