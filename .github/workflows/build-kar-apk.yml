@@ -79,13 +79,14 @@ jobs:
           # کنسول خطا می‌دهد. خودِ فایل‌ها که آفلاین‌اند.
           echo "محتوای بسته‌شده:"; ls -la android/app/src/main/assets/www/
 
+      # نشانِ «V» (۱۴۰۵/۰۷/۱۵): در ۴۸ تا ۱۹۲ پیکسل نوشتهٔ VILL3N خوانا نیست
       - name: ساختِ آیکون‌های برنامه
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick
           for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
             n=${d%%:*}; px=${d##*:}
             mkdir -p android/app/src/main/res/mipmap-$n
-            convert native/PumpYaqobi.App/Assets/logo.png \
+            convert native/PumpYaqobi.App/Assets/logo-mark.png \
                     -resize ${px}x${px} android/app/src/main/res/mipmap-$n/ic_launcher.png
           done
 

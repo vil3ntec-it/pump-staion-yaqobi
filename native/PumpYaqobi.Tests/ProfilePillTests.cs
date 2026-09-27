@@ -26,8 +26,8 @@ public class ProfilePillTests
     public void DokmeyeProfile_BaghaleTem_Ast()
     {
         var xaml = Read("PumpYaqobi.App", "Views", "MainWindow.axaml");
-        //  تم از ۱۴۰۵/۰۷/۱۵ دو دکمهٔ رادیویی است، نه کشویی — همان جای سربرگ
-        var theme = xaml.IndexOf("IsChecked=\"{Binding IsDarkTheme}\"", StringComparison.Ordinal);
+        //  تم از ۱۴۰۵/۰۷/۱۵ یک کلیدِ کپسولی است، نه کشویی — همان جای سربرگ
+        var theme = xaml.IndexOf("IsChecked=\"{Binding DarkSwitch}\"", StringComparison.Ordinal);
         var pill = xaml.IndexOf("Classes=\"pill-btn profile\"", StringComparison.Ordinal);
         Assert.True(theme > 0, "دکمه‌های تم در سربرگ نیستند");
         Assert.DoesNotContain("ItemsSource=\"{Binding Themes}\"", xaml);

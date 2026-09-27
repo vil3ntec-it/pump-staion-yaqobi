@@ -58,36 +58,35 @@ public class OwnerRound15Tests
 
     // ══ ۲) سربرگ ════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// ══ تم: یک کلیدِ کپسولی برای هر دو (۱۴۰۵/۰۷/۱۵) ══
+    /// «کشویی است، که خیلی جا نگیرد» و بعد «هر دو توی یک کادر باشند»: نه
+    /// کشویی و نه دو دکمه — یک کلید که روی «روشن» نارنجی با خورشید است و روی
+    /// «تیره» بنفش با ماه. ⛔ هیچ قلمِ جدا-برای-هر-تمی روی نوشته و هیچ انتقالِ
+    /// رنگی (همان دو ریشهٔ «نوشته‌ها در دارک مود چپ‌چین می‌شوند» و عکسِ
+    /// نیمه‌کارهٔ ‎themeflip‎).
+    /// </summary>
     [Fact]
-    public void Tem_DoDokmeyeRadioyi_Ast_NaKeshoyi()
+    public void Tem_YekKelideKapsuli_BaraHarDo()
     {
         var w = Bare(Read("PumpYaqobi.App", "Views", "MainWindow.axaml"));
         Assert.DoesNotContain("ItemsSource=\"{Binding Themes}\"", w);
-        Assert.Contains("IsChecked=\"{Binding IsLightTheme}\"", w);
-        Assert.Contains("IsChecked=\"{Binding IsDarkTheme}\"", w);
-        var vm = Read("PumpYaqobi.App", "ViewModels", "MainViewModel.cs");
-        //  همان ‎SelectedTheme‎ — دو در، یک حقیقت
-        Assert.Contains("set { if (value && SelectedTheme.IsDark) SelectedTheme = PumpTheme.Blue; }", vm);
-        Assert.Contains("set { if (value && !SelectedTheme.IsDark) SelectedTheme = PumpTheme.Gold; }", vm);
-    }
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(w, "Classes=\"themeswitch\""));
+        Assert.Contains("IsChecked=\"{Binding DarkSwitch}\"", w);
+        Assert.DoesNotContain("GroupName=\"pump-theme\"", w);          // دو دکمه دیگر نیست
+        Assert.Contains("Classes=\"dayside\"", w);
+        Assert.Contains("Classes=\"nightside\"", w);
 
-    /// <summary>
-    /// کلیدِ کپسولیِ «روز/شب» (عکسِ مرجع): همان دو ‎RadioButton‎، و ⛔ هیچ
-    /// قلمِ جدا-برای-هر-تمی روی نوشته، و هیچ انتقالِ رنگی (همان دو ریشهٔ
-    /// «نوشته‌ها در دارک مود چپ‌چین می‌شوند» و عکسِ نیمه‌کارهٔ ‎themeflip‎).
-    /// </summary>
-    [Fact]
-    public void Tem_KelideKapsuli_BiGhalameJodaVaBiTransition()
-    {
-        var w = Bare(Read("PumpYaqobi.App", "Views", "MainWindow.axaml"));
-        Assert.Contains("Classes=\"pill day\"", w);
-        Assert.Contains("Classes=\"pill night\"", w);
-        var styles = w[w.IndexOf("<Style Selector=\"RadioButton.pill\">", StringComparison.Ordinal)..];
+        var styles = w[w.IndexOf("<Style Selector=\"ToggleButton.themeswitch\">", StringComparison.Ordinal)..];
         styles = styles[..styles.IndexOf("Border#WarmLogo", StringComparison.Ordinal)];
         Assert.DoesNotContain("Transition", styles);
-        //  نوشته فقط سفیدِ ثابت یا قلمِ مشترکِ ‎Pump.Muted‎
         foreach (var line in styles.Split('\n').Where(l => l.Contains("Property=\"Foreground\"")))
-            Assert.True(line.Contains("#FFFFFF") || line.Contains("Pump.Muted"), line.Trim());
+            Assert.Contains("#FFFFFF", line);
+
+        var vm = Read("PumpYaqobi.App", "ViewModels", "MainViewModel.cs");
+        //  همان ‎SelectedTheme‎ — یک حقیقت، و «نادرست» یعنی برگشت به روشن
+        Assert.Contains("set { if (value != SelectedTheme.IsDark) SelectedTheme = value ? PumpTheme.Gold : PumpTheme.Blue; }", vm);
+        Assert.Contains("OnPropertyChanged(nameof(DarkSwitch));", vm);
     }
 
     [Fact]
@@ -96,7 +95,10 @@ public class OwnerRound15Tests
         var t = MainViewModel.HeaderDate(new DateTime(2026, 8, 23, 9, 0, 0));   // ۱ سنبله ۱۴۰۵
         Assert.StartsWith("\u2067", t);
         Assert.EndsWith("\u2069", t);
-        Assert.Equal("یک‌شنبه، 1 سنبله 1405", t.Trim('\u2067', '\u2069'));
+        //  ⛔ شکلِ خواستهٔ صاحب ریپو: «یکشنبه سنبله 1405.6.5» — بی صفرِ پیشرو
+        Assert.Equal("یک‌شنبه سنبله 1405.6.1", t.Trim('\u2067', '\u2069'));
+        Assert.Equal("یک‌شنبه میزان 1405.7.5",
+                     MainViewModel.HeaderDate(new DateTime(2026, 9, 27, 9, 0, 0)).Trim('\u2067', '\u2069'));
         //  داشبورد هم همان شکل را دارد، نه ‎1405/07/05‎
         var dash = Read("PumpYaqobi.App", "ViewModels", "Sections", "DashboardSectionViewModel.cs");
         Assert.Contains("DateLine = \"· \" + MainViewModel.HeaderDate(d);", dash);
@@ -115,6 +117,13 @@ public class OwnerRound15Tests
         Assert.Equal(30, vm.Days.Count);
         Assert.Equal(30, vm.Day);
         Assert.Contains("میزان", vm.PickedText);
+        //  ⛔ ساعتِ دوازده‌ساعته با AM/PM (خواستهٔ ۱۴۰۵/۰۷/۱۵)
+        Assert.Contains("09:05 AM", vm.PickedText);
+        Assert.Equal("12 AM", vm.Hours[0]);
+        Assert.Equal("01 PM", vm.Hours[13]);
+        Assert.Equal("12 PM", vm.Hours[12]);
+        Assert.Equal("\u200E09:05:07 PM", PumpYaqobi.App.Localization.Clock.Of(new DateTime(2026, 1, 1, 21, 5, 7), seconds: true));
+        Assert.DoesNotContain("HH:mm", Read("PumpYaqobi.App", "Localization", "Clock.cs"));
         //  همان لحظه به میلادی: ۳۰ میزان ۱۴۰۵ = ۲۲ اکتبر ۲۰۲۶
         Assert.Equal(new DateTime(2026, 10, 22, 9, 5, 0), vm.Picked);
     }
