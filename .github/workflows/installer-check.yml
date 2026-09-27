@@ -115,6 +115,25 @@ jobs:
           if ((Get-Content "$data0\pump.db" -Raw) -ne 'ledger') { Fail "سوییچِ ۳۲ ⇒ ۶۴ به دفترِ کاربر دست زد" }
           "✔ /ARCH=x64 روی نصبِ ۳۲ ⇒ بارِ ۶۴ نشست، بارِ ۳۲ (با فایل‌های ویژه‌اش) رفت، و دفتر دست‌نخورده"
 
+          # ۳ب) برعکس: ۶۴ ⇒ ۳۲ روی همان پوشه، بعد دوباره ۶۴ (برای گام‌های بعد)
+          Install 'x86'
+          if ((Landed) -ne 'x86') { Fail "با /ARCH=x86 روی نصبِ ۶۴ بارِ «$(Landed)» نشست" }
+          if ((Get-Content "$dir\shared.dll" -Raw) -ne 'shared-x86') { Fail "فایلِ هم‌نام به ۳۲ برنگشت" }
+          if (-not (Test-Path "$dir\libvlc\win-x86\libvlc.dll")) { Fail "پوشهٔ VLCِ ۳۲ برنگشت" }
+          if (Test-Path "$dir\libvlc\win-x64") { Fail "پوشهٔ VLCِ ۶۴ پس از رفتن به ۳۲ ماند" }
+          foreach ($f in 'libgcc_s_seh-1.dll','mscordaccore_amd64_amd64_8.0.1.dll') {
+            if (Test-Path "$dir\$f") { Fail "فایلِ ویژهٔ ۶۴بیتی «$f» پس از رفتن به ۳۲ ماند" } }
+          if (-not (Test-Path "$dir\libgcc_s_dw2-1.dll")) { Fail "فایلِ ویژهٔ ۳۲بیتی برنگشت" }
+          if ((Get-ItemPropertyValue -Path 'HKCU:\Software\PumpYaqobi' -Name Arch) -ne 'x86') { Fail "رجیستری پس از ۶۴ ⇒ ۳۲ x86 نشد" }
+          if ((Get-Content "$data0\pump.db" -Raw) -ne 'ledger') { Fail "سوییچِ ۶۴ ⇒ ۳۲ به دفترِ کاربر دست زد" }
+          $u = @(Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' | Where-Object { $_.PSChildName -like '*8E86F349*' })
+          if ($u.Count -ne 1) { Fail "پس از سوییچ دو ثبتِ حذف ساخته شد ($($u.Count))" }
+          "✔ /ARCH=x86 روی نصبِ ۶۴ ⇒ بارِ ۳۲ نشست، بارِ ۶۴ (با فایل‌های ویژه‌اش) رفت، دفتر دست‌نخورده، یک نصب"
+          Install 'x64'
+          if ((Landed) -ne 'x64') { Fail "برگشت به ۶۴ نشد" }
+          if (Test-Path "$dir\libgcc_s_dw2-1.dll") { Fail "بارِ دوم هم فایلِ ویژهٔ ۳۲ ماند" }
+          "✔ و دوباره ۶۴ — رفت‌وبرگشت تمیز"
+
           # ۴) یک ردیف در «برنامه‌ها و قابلیت‌ها»، با همان AppId
           $unins = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{8E86F349-343C-4FFB-983E-BBDDC5390081}_is1'
           if (-not (Test-Path $unins)) { Fail "ثبتِ حذف با AppIdِ همیشگی نیست" }
