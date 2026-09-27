@@ -152,10 +152,15 @@ jobs:
           Check (-not (Crash)) "فایلِ نادرست برنامه را نینداخت"
 
           "── ۵) ۳۲بیتی روی همان نصب (به‌روزرسانیِ بی‌صدا)"
-          $p = Start-Process -FilePath $setup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/ARCH=x86',"/DIR=$dir","/LOG=$log") -PassThru
+          #  ⚠️ یک رشته با گیومه، مثلِ خودِ برنامه (‎UpdateService: /DIR="…"‎): ‎Start-Process‎ آرایه را
+          #  بی گیومه به هم می‌چسباند و پوشهٔ فاصله‌دار («Pump Smoke») نصف می‌شد — بارِ اول همین شد.
+          $p = Start-Process -FilePath $setup -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /ARCH=x86 /DIR=`"$dir`" /LOG=`"$log`"" -PassThru
           $done = $p.WaitForExit(600000)
           Check ($done -and $p.ExitCode -eq 0) "نصبِ بی‌صدای ۳۲بیتی (کد $(if ($done) { $p.ExitCode } else { 'ماسید' }))"
-          Check (Test-Path "$dir\libvlc\win-x86\libvlc.dll") "بارِ ۳۲بیتی نشست"
+          Check (Test-Path "$dir\libvlc\win-x86\libvlc.dll") "بارِ ۳۲بیتی در همان پوشه نشست"
+          Check (-not (Test-Path "$dir\libvlc\win-x64")) "بارِ ۶۴بیتی برداشته شد"
+          $u1 = @(Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' | Where-Object { $_.PSChildName -like '*8E86F349*' })
+          Check ($u1.Count -eq 1 -and (Get-ItemPropertyValue -Path $unins -Name 'Inno Setup: App Path') -eq $dir) "یک نصب، در همان پوشه"
           RunApp '۳۲بیتی' 40
           Check (Test-Path "$data\pump.db") "همان دفتر سرِ جایش است"
 
