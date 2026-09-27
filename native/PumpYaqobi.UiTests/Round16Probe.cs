@@ -40,6 +40,7 @@ public static class Round16Probe
         AppHost.Start(Path.Combine(dir, "pump.db"));
         FakeLicense.Grant();
 
+        if (Environment.GetEnvironmentVariable("R16_DIAG") == "1") Avalonia.Logging.Logger.Sink = new DiagSink();
         AppBuilder.Configure<PumpYaqobi.App.App>().UseSkia()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
             .SetupWithoutStarting();
@@ -52,6 +53,7 @@ public static class Round16Probe
         MarketingShots.Fill(AppHost.Current);
         Round14Probe.Settle(win);
 
+        DebtClick(win, vm, shots);
         Banner(win, vm, shots);
         Invoices(win, vm, shots);
         Subtitles(win, vm, shots);
@@ -228,6 +230,88 @@ public static class Round16Probe
         PumpYaqobi.App.Themes.ThemeManager.Apply(PumpYaqobi.App.Themes.PumpTheme.Blue);
         Round14Probe.Settle(win);
         Check("تمِ تیره: صفحه‌ها بی خطا ساخته شدند", true);
+    }
+
+
+    // ══ «توی حسابِ قرض‌دار نمی‌رود» — کلیکِ واقعیِ ماوس روی کارت ═════════
+    private static void DebtClick(Window win, MainViewModel vm, string shots)
+    {
+        Console.WriteLine();
+        Console.WriteLine("════ ورود به حسابِ قرض‌دار ════");
+        var debt = (DebtSectionViewModel)vm.Sections.First(s => s.Id == "debt");
+        Round14Probe.Wait(win, vm.GoAsync(debt));
+        Round14Probe.Settle(win);
+
+        bool ClickCard(int n, string what)
+        {
+            var shells = win.GetVisualDescendants().OfType<Button>()
+                .Where(b => b.Classes.Contains("card-shell") && b.IsEffectivelyVisible && b.Bounds.Height > 0)
+                .ToList();
+            if (shells.Count <= n) { Check(what + ": کارت پیدا شد", false, shells.Count + " کارت"); return false; }
+            var card = shells[n];
+            var want = (card.DataContext as DebtorCardViewModel)?.Name ?? "";
+            //  وسطِ پایینِ کارت — نه روی ✕ و نه روی کیو‌آر
+            var pt = card.TranslatePoint(new Point(card.Bounds.Width / 2, card.Bounds.Height * 0.45), win)!.Value;
+            if (Environment.GetEnvironmentVariable("R16_DIAG") == "1")
+            {
+                var hit = win.GetVisualsAt(pt).FirstOrDefault();
+                var chain = string.Join(" < ", (hit?.GetSelfAndVisualAncestors() ?? Enumerable.Empty<Visual>()).Take(8)
+                    .Select(v => v.GetType().Name + (v is StyledElement se && se.Classes.Count > 0 ? "." + string.Join(".", se.Classes) : "")));
+                var grid = card.GetVisualAncestors().OfType<PumpYaqobi.App.Controls.CardGrid>().FirstOrDefault();
+                Console.WriteLine($"    · CardGrid.DataContext: {grid?.DataContext?.GetType().Name ?? "null"} · والدِ منطقی: {((Avalonia.LogicalTree.ILogical)card).LogicalParent?.GetType().Name ?? "null"} · DataContextِ کارت: {card.DataContext?.GetType().Name}");
+                Console.WriteLine($"    · فرمان: {(card.Command is null ? "خالی" : "هست")} · CanExecute: {card.Command?.CanExecute(card.CommandParameter)} · زیرِ ماوس: {chain}");
+            }
+            win.MouseDown(pt, Avalonia.Input.MouseButton.Left);
+            win.MouseUp(pt, Avalonia.Input.MouseButton.Left);
+            for (var i = 0; i < 300 && !debt.PersonOpen; i++) { Round14Probe.Pump(win); Thread.Sleep(10); }
+            Round14Probe.Settle(win);
+            var ok = debt.PersonOpen && debt.Person is not null;
+            Check(what + ": کلیک روی کارت ⇒ حسابِ همان شخص باز شد", ok && (debt.Person!.Name ?? "") == want,
+                  $"{want} ⇒ {(ok ? debt.Person!.Name : "باز نشد")}");
+            return ok;
+        }
+
+        if (ClickCard(0, "کارتِ اول"))
+        {
+            Round14Probe.Shot(win, shots, "r16-debt-open");
+            debt.BackCommand.Execute(null);
+            Round14Probe.Settle(win);
+            Check("برگشت ⇒ فهرستِ کارت‌ها", !debt.PersonOpen);
+        }
+        if (ClickCard(3, "کارتِ چهارم"))
+        {
+            debt.BackCommand.Execute(null);
+            Round14Probe.Settle(win);
+        }
+        //  پس از اسکرول: کارت‌ها بازیافت می‌شوند (‎CardGrid‎)
+        var scroll = win.FindControl<ScrollViewer>("PageScroll");
+        if (scroll is not null) { scroll.Offset = new Vector(0, 400); Round14Probe.Settle(win); }
+        if (ClickCard(2, "پس از اسکرول"))
+        {
+            debt.BackCommand.Execute(null);
+            Round14Probe.Settle(win);
+        }
+        if (scroll is not null) { scroll.Offset = default; Round14Probe.Settle(win); }
+        //  بار دوم همان کارت (پس از برگشت)
+        ClickCard(0, "بارِ دوم همان کارت");
+        debt.BackCommand.Execute(null);
+        Round14Probe.Settle(win);
+    }
+
+
+    private sealed class DiagSink : Avalonia.Logging.ILogSink
+    {
+        public bool IsEnabled(Avalonia.Logging.LogEventLevel level, string area) =>
+            level >= Avalonia.Logging.LogEventLevel.Warning && area == Avalonia.Logging.LogArea.Binding;
+        public void Log(Avalonia.Logging.LogEventLevel level, string area, object? source, string messageTemplate) =>
+            Write(source, messageTemplate, Array.Empty<object?>());
+        public void Log(Avalonia.Logging.LogEventLevel level, string area, object? source, string messageTemplate, params object?[] propertyValues) =>
+            Write(source, messageTemplate, propertyValues);
+        private static void Write(object? source, string t, object?[] v)
+        {
+            if (source is not Button b || !b.Classes.Contains("card-shell")) return;
+            Console.WriteLine("    [binding] " + t + " :: " + string.Join(" | ", v.Select(x => x?.ToString())));
+        }
     }
 
 }

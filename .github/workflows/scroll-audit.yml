@@ -114,6 +114,12 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- round16 ${{ runner.temp }}/round16
 
+      # «توی حسابِ قرض‌دار نمی‌ره» (۱۴۰۵/۰۷/۱۶): هر دکمهٔ دیدنیِ کلِ برنامه که
+      # اتصالِ فرمانش خطا داد و فرمانش خالی ماند ⇒ سرخ.
+      - name: سنجشِ دکمه‌های مرده
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- bindsweep
+
       # «داخلِ ورق اسکرول پرپر می‌شود»: چرخِ واقعی روی هر سه جدول، یک فریم پس
       # از هر گام؛ نه پرش، نه برگشت، نه پهنای لرزان، نه نوشتهٔ کج.
       - name: سنجشِ لغزیدنِ ورق

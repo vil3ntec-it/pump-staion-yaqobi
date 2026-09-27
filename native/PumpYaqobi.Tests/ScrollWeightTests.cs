@@ -155,7 +155,10 @@ public class ScrollWeightTests : IDisposable
         Assert.Contains("<c:CardGrid ItemsSource=\"{Binding Cards}\"", v);
         Assert.DoesNotContain("<ItemsRepeater", v);
         Assert.DoesNotContain("$parent[ItemsRepeater]", v);
-        Assert.Contains("$parent[c:CardGrid]", v);
+        //  ⛔ فرمان‌های کارت از خودِ کارت (‎Owner‎)، نه پیمودنِ درخت (۱۴۰۵/۰۷/۱۶)
+        Assert.DoesNotContain("$parent[c:CardGrid]", v);
+        Assert.Contains("Command=\"{Binding Owner.OpenCommand}\"", v);
+        Assert.Contains("_all[i].Owner = this;", Read("PumpYaqobi.App", "ViewModels", "Sections", "DebtSectionViewModel.cs"));
 
         var src = Read("PumpYaqobi.App", "Controls", "CardGrid.cs");
         var code = Regex.Replace(src, "//.*", "");
@@ -170,6 +173,13 @@ public class ScrollWeightTests : IDisposable
         Assert.Contains("e.EffectiveViewport != _viewport) _lastScroll", code);
         //  و دیده نشدن ⇒ هیچ کارتِ زنده‌ای
         Assert.Contains("return (0, -1);", code);
+        //  ⛔ داده پیش از نشستن در درخت — وارونه‌اش هر کارت را مرده می‌کرد
+        //  («توی حسابِ قرض‌دار نمی‌ره»، ۱۴۰۵/۰۷/۱۶).
+        var built = code.IndexOf("BuiltCount++;");
+        Assert.True(built > 0);
+        var dc = code.IndexOf("c.DataContext = item;", built);
+        var attach = code.IndexOf("LogicalChildren.Add(c);", built);
+        Assert.True(dc > 0 && attach > dc, "CardGrid: DataContext باید پیش از LogicalChildren.Add باشد");
     }
 
     [Theory]
