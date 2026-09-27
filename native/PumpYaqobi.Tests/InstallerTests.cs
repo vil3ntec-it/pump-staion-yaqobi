@@ -554,9 +554,9 @@ public class InstallerTests
         Assert.Contains("Result := False", init);
         Assert.Contains("SuppressibleMsgBox", init);          // بی‌صدا هم پنجره‌ای نمی‌ماند
 
-        //  به‌روزرسانی ⇒ پوشهٔ پیشین، بی پرسیدنِ دوباره
+        //  به‌روزرسانی ⇒ پیش‌فرضِ صفحهٔ پوشه همان پوشهٔ پیشین است (نه رد شدنِ صفحه —
+        //  آزمونِ SafheyePooshe_… پایین‌تر)
         Assert.Contains("UsePreviousAppDir=yes", iss);
-        Assert.Contains("(PageID = wpSelectDir) and (InstalledVer <> '')", code);
 
         //  مقایسه عددی است، نه متنی («3.1.99» از «3.1.100» کهنه‌تر است)
         Assert.Contains("StrToIntDef", code);
@@ -566,6 +566,41 @@ public class InstallerTests
         Assert.Contains("0.0.2", check);
         Assert.Contains("نصابِ کهنه‌تر (0.0.1) روی 0.0.2 پذیرفته شد", check);
         Assert.Contains("نصبِ دوم ساخته شد", check);
+    }
+
+    /// <summary>
+    /// صاحب ریپو (۱۴۰۵/۰۷/۱۵): «نصاب ارور داد و نصب نشد، و انتخابِ فولدر نداشت که
+    /// بگم کجا یا توی کدوم درایو نصب بشه.» صفحهٔ پوشه روی نصبِ موجود رد می‌شد و
+    /// پوشهٔ پیشینی که دیگر نوشتنی نبود (Program Files، درایوِ رفته) همان‌جا نصب
+    /// را می‌شکست. حالا صفحه در هیچ نصبِ دستی رد نمی‌شود و پوشه‌ای که نصب در آن
+    /// نمی‌نشیند **پیش از** نصب گفته می‌شود و صفحه می‌ماند. رفتارش با پنجرهٔ واقعی
+    /// در ‎installer-check.yml‎ (drive-wizard.ps1) سنجیده می‌شود.
+    /// </summary>
+    [Fact]
+    public void SafheyePooshe_HargezRadNemishavad_VaPooshehyeNaNeveshtaniRaMigooyad()
+    {
+        var iss = Iss().Replace("\r\n", "\n");
+        var code = iss[iss.IndexOf("\n[Code]", StringComparison.Ordinal)..];
+
+        Assert.Contains("DisableDirPage=no", iss);
+        var skip = code[code.IndexOf("function ShouldSkipPage", StringComparison.Ordinal)..];
+        skip = skip[..skip.IndexOf("\nend;", StringComparison.Ordinal)];
+        Assert.DoesNotContain("wpSelectDir", skip);
+
+        //  پنجرهٔ انگلیسیِ «برای همه یا فقط من؟» نیست — نصبِ دومِ جدا می‌ساخت
+        Assert.Contains("PrivilegesRequiredOverridesAllowed=commandline", iss);
+
+        var next = code[code.IndexOf("function NextButtonClick", StringComparison.Ordinal)..];
+        next = next[..next.IndexOf("\nend;", StringComparison.Ordinal)];
+        Assert.Contains("ExtractFileDrive", next);            // درایوِ نبوده
+        Assert.Contains("not IsAdmin", next);                 // Program Files بی مدیر
+        Assert.Contains("SameDir(InstalledDir, Dir)", next);  // نصبِ پیشین جای دیگر
+        Assert.Contains("Result := False", next);             // صفحه می‌ماند، نصب نمی‌شکند
+
+        var check = File.ReadAllText(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
+        Assert.Contains("drive-wizard.ps1", check);
+        Assert.Contains("روی نصبِ موجود صفحهٔ پوشه رد شد", check);
+        Assert.True(File.Exists(Path.Combine(Repo, "native", "installer", "test", "drive-wizard.ps1")));
     }
 
     /// <summary>

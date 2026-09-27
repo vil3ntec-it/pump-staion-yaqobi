@@ -185,3 +185,116 @@ jobs:
           if ((Get-Content "$data\pump.db" -Raw) -ne 'ledger') { throw "حذف به پوشهٔ داده دست زد" }
           if (Test-Path 'HKCU:\Software\PumpYaqobi') { throw "کلیدِ Arch پس از حذف ماند" }
           "✔ حذفِ بی‌صدا فایل‌ها را برد و دفتر را دست نزد"
+
+      # ══ ویزاردِ واقعی، با پنجره (۱۴۰۵/۰۷/۱۵) ═══════════════════════════════
+      # صاحب ریپو: «نصاب ارور داد و نصب نشد، و انتخابِ فولدر نداشت که بگم کجا یا
+      # توی کدوم درایو». همهٔ گام‌های بالا بی‌صدا‌اند و از صفحه‌ها و پیام‌های
+      # ویزارد رد نمی‌شوند؛ این گام نصاب را با پنجره باز می‌کند و دکمه‌ها را مثلِ
+      # آدم می‌زند (native/installer/test/drive-wizard.ps1).
+      - name: ویزاردِ با پنجره — صفحهٔ پوشه، درایوِ نبوده، درایوِ دیگر، به‌روزرسانی
+        shell: pwsh
+        run: |
+          $drive = (Resolve-Path native/installer/test/drive-wizard.ps1).Path
+          $old = (Resolve-Path rel\PumpYaqobi-Setup.exe).Path
+          $new = (Resolve-Path rel-new\PumpYaqobi-Setup.exe).Path
+          $log = Join-Path $env:TEMP 'pyq-ui.log'
+          $unins = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{8E86F349-343C-4FFB-983E-BBDDC5390081}_is1'
+          function Fail($m) { if (Test-Path $log) { Get-Content $log | Select-Object -Last 80 }; throw $m }
+          function Show($t, $r) { "── $t"; $r | Format-List | Out-String -Width 400 }
+          function Landed($d) { Get-Content (Join-Path $d 'PumpYaqobi.exe') -Raw }
+          function AppPath() { Get-ItemPropertyValue -Path $unins -Name 'Inno Setup: App Path' }
+          if (Test-Path $unins) { Fail "پیش از ویزارد هنوز نصبی مانده" }
+
+          #  درایوی که روی رانر نیست
+          $gone = @('Q','R','S','T','U','V','W','X','Y','Z') | Where-Object { -not (Test-Path "${_}:\") } | Select-Object -First 1
+          $dA = 'D:\Pump Test\برنامهٔ پمپ'
+          $dB = 'D:\PumpB'
+          Remove-Item -Recurse -Force $dA, $dB -ErrorAction SilentlyContinue
+
+          # الف) نصبِ تازه با پنجره: صفحهٔ پوشه هست؛ درایوِ نبوده همان‌جا گفته می‌شود
+          #     و صفحه می‌ماند؛ بعد پوشه‌ای با فاصله و نامِ فارسی روی درایوِ D
+          $r = & $drive -Setup $old -SetupArgs @('/ARCH=x86') -Dirs @("${gone}:\Pump", $dA) -Log $log
+          Show 'الف' $r
+          if (-not $r.DirPage) { Fail "صفحهٔ انتخابِ پوشه در نصبِ تازه دیده نشد" }
+          if ($r.DirPrefill -notlike '*\Programs\PumpYaqobi') { Fail "پیش‌فرضِ پوشه «$($r.DirPrefill)» است" }
+          if (-not ($r.Messages | Where-Object { $_ -match 'درایو' })) { Fail "درایوِ نبوده بی پیام رد شد" }
+          if (-not $r.Finished) { Fail "نصبِ تازه به «پایان» نرسید: $($r.Messages -join ' | ')" }
+          if ((Landed $dA) -ne 'x86') { Fail "در پوشهٔ انتخابی بارِ ۳۲ ننشست" }
+          if ((AppPath) -ne $dA) { Fail "ثبتِ حذف پوشهٔ «$(AppPath)» را می‌گوید" }
+          "✔ نصبِ تازه: صفحهٔ پوشه · درایوِ «${gone}:» رد شد و صفحه ماند · نصب در «$dA»"
+
+          # ب) به‌روزرسانی با پنجره روی همان نصب ⇒ صفحهٔ پوشه **دیده می‌شود** و
+          #    پیش‌فرضش همان پوشهٔ پیشین است؛ «بعدی» ⇒ همان‌جا، ۶۴بیتی
+          $r = & $drive -Setup $new -SetupArgs @('/ARCH=x64') -Log $log
+          Show 'ب' $r
+          if (-not $r.DirPage) { Fail "روی نصبِ موجود صفحهٔ پوشه رد شد — همان گلایهٔ صاحب ریپو" }
+          if ($r.DirPrefill -ne $dA) { Fail "پیش‌فرضِ پوشه روی نصبِ موجود «$($r.DirPrefill)» است، نه «$dA»" }
+          if ($r.Messages.Count) { Fail "به‌روزرسانیِ ساده پیام داد: $($r.Messages -join ' | ')" }
+          if (-not $r.Finished) { Fail "به‌روزرسانی با پنجره به «پایان» نرسید" }
+          if ((Landed $dA) -ne 'x64' -or (Get-Content "$dA\ver.txt" -Raw) -ne '0.0.2') { Fail "به‌روزرسانی در همان پوشه ننشست" }
+          "✔ به‌روزرسانی: صفحهٔ پوشه با پیش‌فرضِ «$dA» · ۶۴بیتی · 0.0.2"
+
+          # ج) همان نسخه، پوشهٔ دیگر: یک بار «نه» ⇒ صفحه می‌ماند؛ بعد «بله» ⇒ نصب در پوشهٔ تازه
+          $r = & $drive -Setup $new -SetupArgs @('/ARCH=x64') -Dirs @($dB, $dB) -Answer @('No', 'Yes') -Log $log
+          Show 'ج' $r
+          $asked = @($r.Messages | Where-Object { $_ -match 'الان در این پوشه نصب است' })
+          if ($asked.Count -ne 2) { Fail "پرسشِ «پوشهٔ پیشین می‌ماند» $($asked.Count) بار آمد، نه ۲" }
+          if (-not $r.Finished) { Fail "نصب در پوشهٔ تازه به «پایان» نرسید" }
+          if ((Landed $dB) -ne 'x64') { Fail "در پوشهٔ تازه ننشست" }
+          if ((AppPath) -ne $dB) { Fail "ثبتِ حذف پوشهٔ تازه را نمی‌گوید" }
+          $u = @(Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' | Where-Object { $_.PSChildName -like '*8E86F349*' })
+          if ($u.Count -ne 1) { Fail "با پوشهٔ تازه دو ثبتِ حذف ساخته شد" }
+          "✔ پوشهٔ دیگر: «نه» صفحه را نگه داشت، «بله» در «$dB» نصب کرد، یک ثبتِ حذف"
+
+          # د) پوشهٔ مدیر (Program Files): رانر یا مدیر است (هشدار و ادامه) یا نیست (رد و ماندن)
+          $pf = Join-Path $env:ProgramFiles 'PumpUiCheck'
+          $admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+          $r = & $drive -Setup $new -SetupArgs @('/ARCH=x64') -Dirs @($pf, $dB) -Log $log
+          Show 'د' $r
+          if (-not ($r.Messages | Where-Object { $_ -match 'اجازهٔ مدیر' })) { Fail "پوشهٔ Program Files بی پیام گذشت" }
+          if (-not $r.Finished) { Fail "پس از پوشهٔ مدیر نصب به «پایان» نرسید" }
+          "✔ پوشهٔ مدیر گفته شد (رانرِ مدیر: $admin)"
+
+          $uninsExe = (Get-ItemPropertyValue -Path $unins -Name UninstallString) -replace '"',''
+          Start-Process -FilePath $uninsExe -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -Wait
+          Remove-Item -Recurse -Force $dA, $dB, $pf -ErrorAction SilentlyContinue
+          if (Test-Path $unins) { Fail "حذفِ پایانی انجام نشد" }
+
+      # ══ نصابِ منتشرشده، با پنجره، و باز کردنِ خودِ برنامه ═════════════════════
+      # همان فایلی که مشتری می‌گیرد (آخرین انتشار) — با بارِ واقعی، نه ساختگی —
+      # هر دو معماری، و بعد برنامهٔ نصب‌شده باز می‌شود و باید باز بماند. «ارور
+      # داد» ممکن است مالِ خودِ برنامه پس از نصب باشد؛ این گام همان را می‌بیند.
+      # ⚠️ نتیجه گزارش می‌شود ولی جلوی مرج را نمی‌گیرد: رانر میزِ کارِ واقعی ندارد
+      # و بسته نبودنِ پنجره آن‌جا همیشه مالِ برنامه نیست.
+      - name: نصابِ منتشرشده با پنجره + باز کردنِ برنامه (گزارشی)
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $drive = (Resolve-Path native/installer/test/drive-wizard.ps1).Path
+          $setup = Join-Path $env:TEMP 'PumpYaqobi-Setup-real.exe'
+          Invoke-WebRequest -Uri 'https://github.com/vil3ntec-it/pump-staion-yaqobi/releases/latest/download/PumpYaqobi-Setup.exe' -OutFile $setup
+          "نصابِ منتشرشده: {0:N1} مگابایت" -f ((Get-Item $setup).Length/1MB)
+          $data = Join-Path $env:APPDATA 'PumpYaqobi'
+          Remove-Item -Recurse -Force $data -ErrorAction SilentlyContinue     # دفترِ ساختگیِ گام‌های قبل
+          $log = Join-Path $env:TEMP 'pyq-real.log'
+          $dir = 'D:\PumpReal'
+          $bad = @()
+          foreach ($arch in @('x64', 'x86')) {
+            $r = & $drive -Setup $setup -SetupArgs @("/ARCH=$arch") -Dirs @($dir) -Log $log -TimeoutSec 600
+            "── $arch"; $r | Format-List | Out-String -Width 400
+            if (-not $r.Finished) { $bad += "${arch}: نصب به «پایان» نرسید — $($r.Messages -join ' | ')"; Get-Content $log | Select-Object -Last 60; continue }
+            $exe = Join-Path $dir 'PumpYaqobi.exe'
+            $p = Start-Process -FilePath $exe -PassThru
+            Start-Sleep -Seconds 30
+            if ($p.HasExited) { $bad += "${arch}: برنامه پس از باز شدن بسته شد (کد $($p.ExitCode))" }
+            else { "✔ ${arch}: برنامه ۳۰ ثانیه باز ماند"; Stop-Process -Id $p.Id -Force }
+            $crash = Join-Path $data 'crash.log'
+            if (Test-Path $crash) { "── crash.log ($arch)"; Get-Content $crash -Tail 60; Remove-Item $crash }
+          }
+          $unins = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{8E86F349-343C-4FFB-983E-BBDDC5390081}_is1'
+          if (Test-Path $unins) {
+            $u = (Get-ItemPropertyValue -Path $unins -Name UninstallString) -replace '"',''
+            Start-Process -FilePath $u -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -Wait
+          }
+          if ($bad.Count) { $bad; throw 'نصابِ منتشرشده ایراد داشت' }
+          "✔ نصابِ منتشرشده: هر دو معماری نصب شدند و برنامه باز ماند"
