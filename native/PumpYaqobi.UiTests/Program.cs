@@ -36,6 +36,7 @@ internal static class Program
         // ⚠️ سنجهٔ خودِ همگام‌سازی (`syncui`) صفحه را می‌سنجد، نه حلقه را؛
         // حلقه در `PumpYaqobi.Tests` سنجیده می‌شود، بی پنجره و بی شبکه.
         PumpYaqobi.App.Services.SyncEngine.Disabled = true;
+        PumpYaqobi.App.Services.SectionGate.TestOpenAll = true;   // سنجه‌ها همان بخش‌های در حالِ ساخت را هم می‌سنجند
         PumpYaqobi.App.Services.CrashGuard.ReportingOff = true;
         //  ⚠️ همان تورِ خودِ برنامه: خطای ‎Task‎ی که کسی نخوانده (‎_ = DoAsync()‎)
         //  در ‎crash.log‎ِ پوشهٔ همان سنجه می‌نشیند، نه این‌که بی‌صدا گم شود —
@@ -71,6 +72,7 @@ internal static class Program
         // چرایی و کارش در ‎PersonAudit‎ نوشته شده.
         if (outDir.Equals("person", StringComparison.OrdinalIgnoreCase)) return PersonAudit.Run();
         if (outDir.Equals("headrasid", StringComparison.OrdinalIgnoreCase)) return HeadRasidProbe.Run();
+        if (outDir.Equals("sectiongate", StringComparison.OrdinalIgnoreCase)) return SectionGateProbe.Run();
         if (outDir.Equals("clockjump", StringComparison.OrdinalIgnoreCase)) return ClockJumpProbe.Run();
         // ══ «فایلِ کاملِ برنامه» + دکمه‌های «فرستادن به سرور» و «نصب از فایل» (۱۴۰۵/۰۷/۱۵)
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- fullbackup [پوشهٔ عکس]

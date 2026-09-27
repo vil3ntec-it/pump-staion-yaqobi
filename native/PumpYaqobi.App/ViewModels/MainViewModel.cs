@@ -375,7 +375,8 @@ public sealed partial class MainViewModel : ObservableObject
         return GoAsync(last);
 
         static bool Blocked(SectionViewModel x) =>
-            AppHost.Current.Locks.NeedsUnlock(x.Id)
+            SectionGate.IsHidden(x.Id) || SectionGate.IsBuilding(x.Id)
+            || AppHost.Current.Locks.NeedsUnlock(x.Id)
             || (PlanFeatureOf(x.Id) is { } f && !Entitlements.Allows(f));
     }
 
@@ -401,7 +402,7 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     private List<SectionViewModel> NavDefaults() =>
-        Sections.Where(s => s.Id is not ("chat" or "account")).ToList();
+        Sections.Where(s => s.Id is not ("chat" or "account") && !SectionGate.IsHidden(s.Id)).ToList();
 
     // ══ جابه‌جا کردنِ بخش در نوار — راست‌کلیک روی هر بخش (۱۴۰۵/۰۷/۱۵) ══
     //  شرح و قاعده‌ها بالای ‎ViewModels.NavOrder‎. فقط ترتیبِ دیدن عوض می‌شود.
@@ -1396,6 +1397,10 @@ public sealed partial class MainViewModel : ObservableObject
     {
         if (s is null) return;
 
+        // ⛔ بخشِ پنهان (دوربین‌ها) و در حالِ ساخت (تیل امانت) — ‎SectionGate‎
+        if (SectionGate.IsHidden(s.Id)) return;
+        if (SectionGate.IsBuilding(s.Id) && !await BuildingTapAsync(s)) return;
+
         // ⛔ بخشِ قفل‌دار (مفاد/ضرر) بی رمز باز نمی‌شود — شرحش در ‎UnlockAsync‎.
         if (!await UnlockAsync(s)) return;
 
@@ -1578,6 +1583,36 @@ public sealed partial class MainViewModel : ObservableObject
                 : "❌ رمزِ این بخش درست نیست", ToastKind.Error);
             return false;
         }
+        return true;
+    }
+
+    /// <summary>
+    /// بخشِ در حالِ ساخت: هر زدن «در حالِ ساخت» می‌گوید؛ سومین زدنِ پشتِ سرِ هم
+    /// رمزِ توسعه را می‌پرسد. درست ⇒ برای همین اجرا باز. شرح در ‎SectionGate‎.
+    /// </summary>
+    private async Task<bool> BuildingTapAsync(SectionViewModel s)
+    {
+        var now = AppClock.Mono;
+        if (SectionGate.Tap(now) < SectionGate.TapsForPin)
+        {
+            AppHost.Current.Toast($"«{s.Title}» — {SectionGate.BuildingText}", ToastKind.Info);
+            return false;
+        }
+        SectionGate.ResetTaps();
+
+        if (SectionGate.WaitSeconds(now) is > 0 and var wait)
+        {
+            AppHost.Current.Toast($"⏳ چند بار رمزِ نادرست زده شد — {wait} ثانیهٔ دیگر", ToastKind.Warn);
+            return false;
+        }
+        var pw = await Dialogs.PromptAsync("🚧 " + s.Title, "رمزِ توسعه را بزنید.");
+        if (pw is null) return false;
+        if (!SectionGate.TryDevUnlock(pw, AppClock.Mono))
+        {
+            AppHost.Current.Toast("❌ رمز درست نیست", ToastKind.Error);
+            return false;
+        }
+        AppHost.Current.Toast($"🔓 «{s.Title}» برای همین اجرا باز شد", ToastKind.Ok);
         return true;
     }
 
