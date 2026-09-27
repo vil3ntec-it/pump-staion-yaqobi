@@ -630,4 +630,51 @@ public class InstallerTests
             Assert.DoesNotContain("{app}\\*", line);
         }
     }
+
+    /// <summary>
+    /// «The source file is corrupted» روی هر دو کامپیوترِ صاحب ریپو (۱۴۰۵/۰۷/۱۵):
+    /// کپیِ خراب (دانلود/فلش) پیش از نوشتنِ هر فایلی گرفته می‌شود. ساخت مُهر می‌زند
+    /// (seal.ps1، پیش از چک‌سام)، ویزارد با «نصب» می‌سنجد (SealState)، و هر دو یک
+    /// شکلِ هش دارند. رفتارش با کپیِ یک‌بایت‌خراب در ‎installer-check.yml‎ (بندِ «ه»).
+    /// </summary>
+    [Fact]
+    public void Nasab_PishAzNasb_SalamatiyeKhodashRaMisanjad()
+    {
+        var iss = Iss();
+        var seal = File.ReadAllText(Path.Combine(Native, "installer", "seal.ps1"));
+        var build = Workflow();
+        var check = File.ReadAllText(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
+
+        // ⚠️ با BOM، مثلِ drive-wizard.ps1 — PowerShell 5.1 بی BOM فارسی را خراب می‌خواند
+        var raw = File.ReadAllBytes(Path.Combine(Native, "installer", "seal.ps1"));
+        Assert.True(raw.Length > 3 && raw[0] == 0xEF && raw[1] == 0xBB && raw[2] == 0xBF, "seal.ps1 بی BOM است");
+
+        // یک شکلِ هش در دو زبان: تکهٔ ۴ مگابایتی، ۸۰ بایت ته فایل، نشانِ PYSEAL01
+        Assert.Contains("SealChunk = 4194304", iss);
+        Assert.Contains("SealLen = 80", iss);
+        Assert.Contains("$Chunk = 4194304", seal);
+        Assert.Contains("'PYSEAL01'", iss);
+        Assert.Contains("'PYSEAL01'", seal);
+        Assert.Contains("GetSHA256OfString(Hexes)", iss);
+
+        // فقط با «نصب»ِ ویزارد، و نصبِ بی‌صدا (به‌روزرسانی با SHA256SUMS) نه
+        Assert.Contains("(CurPageID = wpReady) and (not WizardSilent)", iss);
+        Assert.Contains("Result := SealOk();", iss);
+        // بی مُهر (ساختِ محلی) ⇒ مثلِ پیش؛ خراب ⇒ پیامِ فارسی و بیرون، بی پرسشِ دوباره
+        Assert.Contains("Result := (State = 0) or (State = 1);", iss);
+        Assert.Contains("WizardForm.Close;", iss);
+        Assert.Contains("if SealBroken then Confirm := False;", iss);
+        Assert.Contains("fa.SourceIsCorrupted=", iss);
+
+        // مُهر پیش از چک‌سام — وگرنه SHA256SUMS با فایلِ منتشرشده نمی‌خورد
+        var sealAt = build.IndexOf("seal.ps1 -Path rel/PumpYaqobi-Setup.exe", StringComparison.Ordinal);
+        var sumsAt = build.IndexOf("name: چک‌سام‌ها", StringComparison.Ordinal);
+        Assert.True(sealAt > 0 && sumsAt > sealAt, "مُهر باید پیش از چک‌سام‌ها زده شود");
+        Assert.Contains("seal.ps1 -Path rel/PumpYaqobi-Setup.exe -Check", build);
+
+        // CI: همهٔ نصب‌ها روی نصابِ مُهرخورده، و کپیِ یک‌بایت‌خراب رد می‌شود
+        Assert.Contains("& native/installer/seal.ps1 -Path $f", check);
+        Assert.Contains("PYSEAL state=1", check);
+        Assert.Contains("PYSEAL state=2", check);
+    }
 }

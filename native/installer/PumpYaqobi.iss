@@ -143,6 +143,10 @@ fa.ReadyLabel1=آمادهٔ نصب است.
 fa.FinishedHeadingLabel=نصب تمام شد
 fa.FinishedLabel=[name] روی کامپیوتر نصب شد. با آیکونِ دسکتاپ یا از فهرستِ برنامه‌ها بازش کنید.
 fa.RunEntryExec=باز کردنِ %1
+; ⚠️ همان پیامِ «The source file is corrupted»ِ دو عکسِ صاحب ریپو (۱۴۰۵/۰۷/۱۵).
+; با مُهرِ سلامت، کپیِ خراب پیش از نصب گرفته می‌شود؛ این برای جایی است که فایل
+; سالم بود ولی خواندنش از دیسک/فلشِ همین کامپیوتر وسطِ کار خراب درآمد.
+fa.SourceIsCorrupted=فایلِ نصب هنگامِ خواندن خراب درآمد. «Cancel»/«انصراف» را بزنید، فایل را روی خودِ همین کامپیوتر (مثلاً دسکتاپ) کپی کنید و از همان‌جا اجرا کنید — نه از روی فلش. اگر باز همین شد، دوباره دانلودش کنید.
 
 [CustomMessages]
 fa.CreateDesktopIcon=ساختنِ آیکون روی دسکتاپ
@@ -455,6 +459,123 @@ end;
 
 
 
+// ── فایلِ نصب پیش از نصب خودش را می‌سنجد (۱۴۰۵/۰۷/۱۵) ───────────────────────
+//  روی هر دو کامپیوترِ صاحب ریپو نصاب وسطِ «Extracting files» گفت «The source
+//  file is corrupted»: بایت‌های همان کپی که اجرا شد با آن‌چه ساخته شد یکی نبودند
+//  (فایلِ روی گیت‌هاب سالم است — هشش با SHA256SUMS.txt می‌خورد). Inno این را
+//  فقط وقتی می‌فهمد که به همان تکهٔ خراب برسد: نیمه‌راه، با پیامِ انگلیسی.
+//
+//  ساختِ CI پس از ISCC یک مُهرِ ۸۰ بایتی ته فایل می‌گذارد (native/installer/seal.ps1):
+//    PYSEAL01 + هشِ ۶۴ نویسه‌ای + PYSEAL01
+//  و این‌جا، با زدنِ «نصب» و پیش از نوشتنِ هر فایلی، همان هش دوباره ساخته می‌شود.
+//  ⛔ شکلِ هش مو‌به‌مو همان seal.ps1 است: تکه‌های ۴ مگابایتی ⇒ ‎SHA-256‎ِ هر تکه
+//  (hexِ کوچک) ⇒ همه پشتِ هم ⇒ ‎SHA-256‎ِ همان. (Pascal Script هشِ جریانی ندارد.)
+//  ⚠️ بی مُهر (ساختِ محلی) ⇒ هیچ سنجشی، مثلِ پیش. و نصبِ بی‌صدا (به‌روزرسانیِ
+//  درون‌برنامه) این را نمی‌زند: آن‌جا UpdateService هشِ کلِ فایل را با
+//  SHA256SUMS.txt سنجیده است.
+const
+  SealChunk = 4194304;
+  SealLen = 80;
+
+var
+  SealBroken: Boolean;
+
+//  0 مُهر ندارد · 1 سالم · 2 خراب · 3 خوانده نشد
+function SealState(P: TOutputProgressWizardPage; var Detail: String): Integer;
+var
+  F: TFileStream;
+  Total, Left: Int64;
+  N, Done, Parts: Integer;
+  Buf, Tail, Hexes: AnsiString;
+  Want, Got: String;
+begin
+  Result := 3;
+  Detail := '';
+  F := nil;
+  try
+    //  $40 = fmShareDenyNone — خودِ Setup هم همین فایل را باز نگه داشته است
+    F := TFileStream.Create(ExpandConstant('{srcexe}'), $40);
+    Total := F.Size;
+    Result := 0;
+    if Total > SealLen then
+    begin
+      SetLength(Tail, SealLen);
+      F.Seek(Total - SealLen, 0);
+      F.ReadBuffer(Tail, SealLen);
+      if (Copy(Tail, 1, 8) = 'PYSEAL01') and (Copy(Tail, 73, 8) = 'PYSEAL01') then
+      begin
+        Want := Lowercase(Copy(Tail, 9, 64));
+        Left := Total - SealLen;
+        Parts := (Left + SealChunk - 1) div SealChunk;
+        Done := 0;
+        Hexes := '';
+        F.Seek(0, 0);
+        Result := 3;
+        while Left > 0 do
+        begin
+          if Left > SealChunk then N := SealChunk else N := Left;
+          SetLength(Buf, N);
+          F.ReadBuffer(Buf, N);
+          Hexes := Hexes + Lowercase(GetSHA256OfString(Buf));
+          Left := Left - N;
+          Done := Done + 1;
+          if P <> nil then P.SetProgress(Done, Parts);
+        end;
+        Buf := '';
+        Got := Lowercase(GetSHA256OfString(Hexes));
+        if Got = Want then Result := 1 else Result := 2;
+      end;
+    end;
+  except
+    Detail := GetExceptionMessage;
+    Result := 3;
+  end;
+  if F <> nil then F.Free;
+end;
+
+function SealOk(): Boolean;
+var
+  P: TOutputProgressWizardPage;
+  State: Integer;
+  Detail: String;
+begin
+  P := CreateOutputProgressPage('سنجشِ فایلِ نصب',
+    'پیش از نصب، سالم بودنِ خودِ همین فایل سنجیده می‌شود…');
+  P.SetText('فایلِ نصب خوانده و با مُهرِ سلامتش سنجیده می‌شود.', '');
+  P.SetProgress(0, 1);
+  P.Show;
+  try
+    State := SealState(P, Detail);
+  finally
+    P.Hide;
+  end;
+  //  ⚠️ نوشتهٔ لاگ لاتین است تا سنجهٔ CI با هر کدگذاریِ لاگ پیدایش کند
+  Log('PYSEAL state=' + IntToStr(State) + ' ' + Detail);
+  Result := (State = 0) or (State = 1);
+  if Result then Exit;
+
+  SealBroken := True;
+  if State = 2 then
+    MsgBox('این فایلِ نصب خراب است و نصب انجام نمی‌شود.' + #13#10 + #13#10 +
+           'فایل پس از ساخته شدن عوض شده — معمولاً هنگامِ دانلود یا کپی روی فلش.' + #13#10 +
+           'هیچ چیزی روی این کامپیوتر نوشته نشد و حساب‌های شما دست نخوردند.' + #13#10 + #13#10 +
+           'راهِ درست:' + #13#10 +
+           '۱) فایل را دوباره از لینکِ دانلود بگیرید (اگر دانلودکننده دارید، بی آن).' + #13#10 +
+           '۲) آن را روی خودِ همین کامپیوتر بگذارید (مثلاً دسکتاپ) و از همان‌جا اجرا کنید،' + #13#10 +
+           '   نه مستقیم از روی فلش.', mbError, MB_OK)
+  else
+    MsgBox('این فایلِ نصب خوانده نشد و نصب انجام نمی‌شود:' + #13#10 + Detail + #13#10 + #13#10 +
+           'فایل را روی خودِ همین کامپیوتر کپی کنید (مثلاً دسکتاپ) و از همان‌جا اجرا کنید؛' + #13#10 +
+           'اگر باز همین شد، دوباره دانلودش کنید.', mbError, MB_OK);
+  //  بی پرسشِ «بیرون بروم؟» (CancelButtonClick پایین) — ماندن فایده‌ای ندارد
+  WizardForm.Close;
+end;
+
+procedure CancelButtonClick(CurPageID: Integer; var Cancel, Confirm: Boolean);
+begin
+  if SealBroken then Confirm := False;
+end;
+
 // ── پوشه‌ای که نصب در آن نمی‌نشیند، همین‌جا گفته می‌شود — نه وسطِ نصب ─────
 //  ⛔ هر کدام کاربر را روی همین صفحه نگه می‌دارد تا جای دیگری انتخاب کند؛
 //  هیچ‌کدام نصب را نمی‌بندد. و نصبِ بی‌صدا این صفحه را نمی‌بیند (/DIR).
@@ -463,6 +584,11 @@ var
   Dir, Drive: String;
 begin
   Result := True;
+  if (CurPageID = wpReady) and (not WizardSilent) then
+  begin
+    Result := SealOk();
+    Exit;
+  end;
   if CurPageID <> wpSelectDir then Exit;
   Dir := WizardDirValue;
 
