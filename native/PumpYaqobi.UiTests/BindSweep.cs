@@ -87,11 +87,16 @@ public static class BindSweep
         Round14Probe.Settle(win);
         var scroll = win.FindControl<ScrollViewer>("PageScroll");
 
+        var timings = new List<(string Where, long Ms, long Db)>();
         void Visit(string where, Action? open = null)
         {
             _where = where;
+            var db0 = PumpYaqobi.Services.Data.DbWatch.Count;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             try { open?.Invoke(); } catch (Exception ex) { Errors.TryAdd($"|{where}|سنجه|{ex.GetType().Name}: {Trim(ex.Message)}", 1); }
             Round14Probe.Settle(win);
+            sw.Stop();
+            timings.Add((where, sw.ElapsedMilliseconds, PumpYaqobi.Services.Data.DbWatch.Count - db0));
             CollectDead();
             if (scroll is not null)
             {
@@ -146,6 +151,21 @@ public static class BindSweep
         Round14Probe.Settle(win);
 
         Console.WriteLine();
+        Console.WriteLine("── کندترین باز شدن‌ها (وقت · دستورِ دیتابیس) ──");
+        foreach (var t in timings.OrderByDescending(t => t.Ms).Take(12))
+            Console.WriteLine($"  {t.Ms,6}ms  {t.Db,4} دستور  {t.Where}");
+        var slow = timings.Where(t => t.Ms > 1500).ToList();
+
+        //  خطای بی‌صاحب (‎Task‎ی که کسی نخواند، نخِ رابط) در ‎crash.log‎ِ همین پوشه
+        var crashPath = Path.Combine(AppSettings.Dir, "crash.log");
+        var crash = File.Exists(crashPath) ? File.ReadAllText(crashPath) : "";
+        if (crash.Length > 0)
+        {
+            Console.WriteLine("── crash.log ──");
+            Console.WriteLine(crash.Length > 6000 ? crash[..6000] + "…" : crash);
+        }
+
+        Console.WriteLine();
         var cmd = Errors.Where(e => IsCommand(e.Key.Split('|')[0])).ToList();
         foreach (var e in cmd.Where(e => !Where.ContainsKey(e.Key)))
             Console.WriteLine($"  · (پنهان یا گذرا، نه مرده) ×{e.Value} {e.Key}");
@@ -154,11 +174,15 @@ public static class BindSweep
         Console.WriteLine($"خطاهای اتصالِ دیگر (فقط گزارش): {other.Count} گونه");
         foreach (var e in other.Take(40)) Console.WriteLine($"  · ×{e.Value} {e.Key}");
         Console.WriteLine();
-        if (cmd.Count == 0)
+        var bad = 0;
+        foreach (var t in slow) { Console.WriteLine($"✖ کند: {t.Where} — {t.Ms}ms"); bad++; }
+        if (crash.Length > 0) { Console.WriteLine("✖ crash.log خالی نیست — خطای بی‌صاحب هنگامِ گشتن"); bad++; }
+        if (cmd.Count == 0 && bad == 0)
         {
             Console.WriteLine("✅ هیچ دکمه‌ای در کلِ برنامه فرمانِ خالی/خطادار ندارد");
             return 0;
         }
+        if (cmd.Count == 0) return 1;
         foreach (var e in cmd)
             Console.WriteLine($"✖ ×{e.Value} [{(Where.TryGetValue(e.Key, out var w) ? w : "?")}] {e.Key}");
         Console.WriteLine($"❌ {cmd.Count} گونه دکمهٔ مرده");
