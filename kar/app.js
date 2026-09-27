@@ -1333,12 +1333,18 @@
 
   function tableHtml(head, rows) {
     if (!rows || !rows.length) return '<div class="sub">ردیفی نیست.</div>';
-    var h = '<div class="scroll"><table><thead><tr><th>#</th>';
+    //  ‎data-l‎ = نامِ ستون: روی گوشی هر ردیف یک کارت می‌شود و هر خانه نامِ
+    //  ستونش را کنارش دارد، پس هیچ ستونی از صفحه بیرون نمی‌زند (فقط ظاهر).
+    var h = '<div class="scroll cards"><table><thead><tr><th>#</th>';
     for (var c = 0; c < head.length; c++) h += '<th>' + esc(head[c]) + '</th>';
     h += '</tr></thead><tbody>';
     for (var r = 0; r < rows.length; r++) {
-      h += '<tr><td>' + (r + 1) + '</td>';
-      for (var k = 0; k < head.length; k++) h += '<td>' + esc((rows[r] || [])[k]) + '</td>';
+      h += '<tr><td class="rn" data-l="ردیف">' + (r + 1) + '</td>';
+      for (var k = 0; k < head.length; k++) {
+        var cell = (rows[r] || [])[k];
+        var empty = cell === undefined || cell === null || String(cell).trim() === '';
+        h += '<td data-l="' + esc(head[k]) + '"' + (k === 0 ? ' class="t0"' : empty ? ' class="e"' : '') + '>' + esc(cell) + '</td>';
+      }
       h += '</tr>';
     }
     return h + '</tbody></table></div>';

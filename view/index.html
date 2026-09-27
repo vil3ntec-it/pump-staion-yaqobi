@@ -125,6 +125,27 @@
   tbody tr:nth-child(even) td{background:var(--card2)}
   tfoot td{font-weight:900;background:var(--hot-bg);border-bottom:0}
   td:first-child,th:first-child{color:var(--muted)}
+  /* ── جدول روی گوشی: هر ردیف یک کارت، هر عدد با نامِ ستونش ────────────
+     پیش از این جدول از صفحهٔ گوشی بیرون می‌زد و «رسید» و «الباقی» دیده
+     نمی‌شد مگر با لغزاندنِ افقی. فقط ظاهر است؛ ردیف‌ها و عددها همان‌اند. */
+  @media (max-width:600px){
+    .scroll.cards{overflow:visible;border:0;border-radius:0}
+    .cards table{min-width:0;display:block}
+    .cards thead{display:none}
+    .cards tbody,.cards tfoot{display:grid;gap:8px}
+    .cards tfoot{margin-top:8px}
+    .cards tr{display:grid;grid-template-columns:1fr 1fr;column-gap:14px;border:1px solid var(--line);border-radius:12px;background:var(--card2);padding:4px 12px 6px}
+    .cards tfoot tr{border-color:var(--accent);background:var(--hot-bg,var(--card2))}
+    .cards td{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border:0;
+              border-bottom:1px dashed var(--line);padding:6px 0;white-space:normal;background:transparent!important;
+              text-align:left;unicode-bidi:plaintext;font-weight:700;color:var(--txt)}
+    .cards td::before{content:attr(data-l);color:var(--muted);font-weight:600;font-size:.78rem;text-align:right;flex:none}
+    .cards td.e::after{content:'—';color:var(--muted);font-weight:400}
+    .cards td[data-l="الباقی"]{color:var(--accent);font-weight:900}
+    .cards td.rn{justify-content:flex-start;gap:6px;color:var(--muted);font-size:.8rem}
+    .cards td.rn::before{content:'ردیف'}
+    .cards td.t0{font-weight:900}
+  }
   .note{color:var(--muted);font-size:.8rem;margin-top:8px;text-align:center}
   .err{border-color:var(--red);color:var(--red)}
   .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card2);color:var(--txt);
@@ -309,21 +330,29 @@
     if (!rows || !rows.length) {
       return '<div class="note">' + esc(opts.empty || 'ردیفی نیست.') + '</div>';
     }
-    var h = '<div class="scroll' + (opts.mini ? ' mini' : '') + '"><table><thead><tr>';
+    //  ‎data-l‎ = نامِ ستون: روی گوشی هر ردیف یک کارت است و هر عدد نامِ
+    //  ستونش را کنارش دارد — هیچ ستونی از صفحه بیرون نمی‌زند.
+    var hd = head || [];
+    var h = '<div class="scroll cards' + (opts.mini ? ' mini' : '') + '"><table><thead><tr>';
     if (opts.numbered) h += '<th>#</th>';
-    for (var c = 0; c < (head || []).length; c++) h += '<th>' + esc(head[c]) + '</th>';
+    for (var c = 0; c < hd.length; c++) h += '<th>' + esc(hd[c]) + '</th>';
     h += '</tr></thead><tbody>';
     for (var r = 0; r < rows.length; r++) {
       h += '<tr>';
-      if (opts.numbered) h += '<td>' + (r + 1) + '</td>';
-      for (var k = 0; k < rows[r].length; k++) h += '<td>' + esc(rows[r][k]) + '</td>';
+      if (opts.numbered) h += '<td class="rn" data-l="ردیف">' + (r + 1) + '</td>';
+      for (var k = 0; k < rows[r].length; k++) {
+        var cell = rows[r][k];
+        var empty = cell === undefined || cell === null || String(cell).trim() === '';
+        h += '<td data-l="' + esc(hd[k] || '') + '"' + (k === 0 ? ' class="t0"' : empty ? ' class="e"' : '') + '>' + esc(cell) + '</td>';
+      }
       h += '</tr>';
     }
     h += '</tbody>';
     if (opts.foot && opts.foot.length) {
       h += '<tfoot><tr>';
       if (opts.numbered) h += '<td></td>';
-      for (var f = 0; f < opts.foot.length; f++) h += '<td>' + esc(opts.foot[f]) + '</td>';
+      for (var f = 0; f < opts.foot.length; f++)
+        h += '<td data-l="' + esc(hd[f] || '') + '"' + (f === 0 ? ' class="t0"' : '') + '>' + esc(opts.foot[f]) + '</td>';
       h += '</tr></tfoot>';
     }
     return h + '</table></div>';

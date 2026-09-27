@@ -271,6 +271,27 @@
   .tank .big small{font-size:.8rem;color:var(--muted);font-weight:700}
   .tank .io{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 
+  /* ── جدول روی گوشی: هر ردیف یک کارت، هر عدد با نامِ ستونش ────────────
+     پیش از این جدول از صفحهٔ گوشی بیرون می‌زد و «رسید» و «الباقی» دیده
+     نمی‌شد مگر با لغزاندنِ افقی. فقط ظاهر است؛ ردیف‌ها و عددها همان‌اند. */
+  @media (max-width:600px){
+    .scroll.cards{overflow:visible;border:0;border-radius:0}
+    .cards table{min-width:0;display:block}
+    .cards thead{display:none}
+    .cards tbody,.cards tfoot{display:grid;gap:8px}
+    .cards tfoot{margin-top:8px}
+    .cards tr{display:grid;grid-template-columns:1fr 1fr;column-gap:14px;border:1px solid var(--line);border-radius:12px;background:var(--card2);padding:4px 12px 6px}
+    .cards tfoot tr{border-color:var(--accent);background:var(--hot-bg,var(--card2))}
+    .cards td{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border:0;
+              border-bottom:1px dashed var(--line);padding:6px 0;white-space:normal;background:transparent!important;
+              text-align:left;unicode-bidi:plaintext;font-weight:700;color:var(--txt)}
+    .cards td::before{content:attr(data-l);color:var(--muted);font-weight:600;font-size:.78rem;text-align:right;flex:none}
+    .cards td.e::after{content:'—';color:var(--muted);font-weight:400}
+    .cards td[data-l="الباقی"]{color:var(--accent);font-weight:900}
+    .cards td.rn{justify-content:flex-start;gap:6px;color:var(--muted);font-size:.8rem}
+    .cards td.rn::before{content:'ردیف'}
+    .cards td.t0{font-weight:900}
+  }
   .back{background:transparent;border:0;color:var(--accent);padding:6px 4px;font-size:.9rem;min-height:40px}
   .solo > .card:first-child{display:none}
 
