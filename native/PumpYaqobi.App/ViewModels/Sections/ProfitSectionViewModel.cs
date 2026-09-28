@@ -101,10 +101,16 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
     private void SaveUnion(FuelType fuel, string value)
     {
         if (_filling) return;
+        var rate = Shamsi.Num(value);
         _host.Settings.Set(fuel == FuelType.Diesel
             ? PumpYaqobi.Services.Data.SettingsService.UnionRateDiesel
-            : PumpYaqobi.Services.Data.SettingsService.UnionRatePetrol, Shamsi.Num(value));
+            : PumpYaqobi.Services.Data.SettingsService.UnionRatePetrol, rate);
+        // ⛔ و در «📈 تاریخچهٔ نرخ اتحادیه» — تا ۳.۱.۲۱۳ هیچ‌وقت ثبت نمی‌شد.
+        _rateLog ??= new RateRecorder((f, r) => _host.Tools.RecordRateAsync(f, r));
+        _rateLog.Note(fuel, rate);
     }
+
+    private RateRecorder? _rateLog;
 
     // ── خریدِ عمده از مشتری ───────────────────────────────────────────────────
     [ObservableProperty] private string _bulkQty = "";

@@ -44,6 +44,55 @@ public sealed class ShiftWaraqSyncService
     private static string KindWord(ShiftKind k) => k == ShiftKind.Night ? "night" : "day";
 
     /// <summary>
+    /// هر چهار کلیدی که ردیفِ یک پارچه در ورق می‌تواند داشته باشد (دو تیل × دو شیفت).
+    /// ⛔ از ۱۴۰۵/۰۷/۱۶: حذفِ پارچه پایه‌هایش را با همین کلیدها از ورق برمی‌دارد و
+    /// بازگردانی از سطلِ زباله با همین‌ها برشان می‌گرداند.
+    /// </summary>
+    public static string[] ReportKeys(long reportId) => new[]
+    {
+        SrcKeyOf(FuelType.Petrol, reportId, ShiftKind.Day),
+        SrcKeyOf(FuelType.Petrol, reportId, ShiftKind.Night),
+        SrcKeyOf(FuelType.Diesel, reportId, ShiftKind.Day),
+        SrcKeyOf(FuelType.Diesel, reportId, ShiftKind.Night),
+    };
+
+    /// <summary>
+    /// کلیدهای همان پارچه و همان شیفت با هر دو تیل — ‎"p-12-day"‎ ⇒ ‎p-12-day، d-12-day‎.
+    /// کلیدِ غیرِ پارچه (زنده، دستی) ⇒ خالی.
+    /// </summary>
+    public static string[] SiblingKeys(string? srcKey)
+    {
+        var m = System.Text.RegularExpressions.Regex.Match(srcKey ?? "", @"^[pd]-(\d+)-(day|night)$");
+        if (!m.Success || !long.TryParse(m.Groups[1].Value, out var id)) return Array.Empty<string>();
+        var kind = m.Groups[2].Value == "night" ? ShiftKind.Night : ShiftKind.Day;
+        return new[] { SrcKeyOf(FuelType.Petrol, id, kind), SrcKeyOf(FuelType.Diesel, id, kind) };
+    }
+
+    /// <summary>
+    /// ردیفِ «فروش ورق» در گاوصندوق را برای ورق‌های داده‌شده از نو می‌سازد — پس از
+    /// آن‌که پایه‌ای بی‌آن‌که از خودِ ورق بگذرد رفت یا برگشت (حذف یا بازگردانیِ پارچه).
+    /// ورقِ نبوده یا حذف‌شده نادیده گرفته می‌شود. هیچ‌وقت استثنا بیرون نمی‌دهد.
+    /// </summary>
+    public async Task ResyncSalesAsync(IEnumerable<long> waraqIds, CancellationToken ct = default)
+    {
+        var ids = waraqIds.Where(i => i > 0).Distinct().ToList();
+        if (ids.Count == 0) return;
+        try
+        {
+            await using var db = _dbf.Create();
+            var list = await db.WaraqEntries.AsSplitQuery()
+                               .Include(x => x.Shifts).ThenInclude(s => s.Pumps)
+                               .Include(x => x.Shifts).ThenInclude(s => s.Transactions)
+                               .Where(x => ids.Contains(x.Id))
+                               .ToListAsync(ct);
+            foreach (var w in list) await SyncSalesToSafeAsync(db, w, ct);
+            await db.SaveChangesAsync(ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch { /* گاوصندوق با ذخیرهٔ بعدیِ همان ورق درست می‌شود */ }
+    }
+
+    /// <summary>
     /// ‎syncShiftToWaraq‎ — پس از ذخیرهٔ پارچه. ورقِ آن تاریخ اگر نباشد ساخته
     /// می‌شود (برخلافِ مسیرِ زنده که ورقِ نساخته را رها می‌کند).
     /// </summary>
@@ -132,6 +181,31 @@ public sealed class ShiftWaraqSyncService
             db.WaraqPumps.Add(entry);
         }
 
+        // ⛔ همان پارچه و همان شیفت، ولی در ورقِ دیگر (تاریخِ پارچه عوض شد) یا با
+        // تیلِ دیگر (تیلِ پارچه عوض شد): پایهٔ کهنه برداشته می‌شود — وگرنه همان
+        // شیفت دو بار در دو ورق (یا دو ردیف در یک ورق) شمرده می‌شد.
+        var others = new List<long>();
+        if (createWaraq)
+        {
+            var sibs = SiblingKeys(srcKey);
+            if (sibs.Length > 0)
+            {
+                var stale = await db.WaraqPumps.Include(p => p.Shift)
+                                    .Where(p => sibs.Contains(p.SrcKey!))
+                                    .ToListAsync(ct);
+                foreach (var old in stale)
+                {
+                    if (ReferenceEquals(old, entry)) continue;
+                    if (old.Shift is { } os)
+                    {
+                        os.Pumps.Remove(old);
+                        if (os.WaraqId != w.Id) others.Add(os.WaraqId);
+                    }
+                    db.WaraqPumps.Remove(old);
+                }
+            }
+        }
+
         entry.Num = shift.PumpNum;
         entry.Worker = shift.Name ?? "";
         entry.Start = shift.Start;
@@ -161,6 +235,7 @@ public sealed class ShiftWaraqSyncService
         await db.SaveChangesAsync(ct);
         await SyncSalesToSafeAsync(db, w, ct);
         await db.SaveChangesAsync(ct);
+        if (others.Count > 0) await ResyncSalesAsync(others, ct);
     }
 
     /// <summary>پایهٔ «خالیِ پیش‌فرض» — نه منبعی دارد نه داده‌ای.</summary>

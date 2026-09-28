@@ -124,7 +124,8 @@
                   </WrapPanel>
 
                   <!-- ── جدول: مو‌به‌مو ستون‌های جدولِ اصلی ───────────────── -->
-                  <c:ExcelGrid ItemsSource="{Binding Rows}" x:CompileBindings="False" IsReadOnly="True">
+                  <c:ExcelGrid ItemsSource="{Binding Rows}" x:CompileBindings="False" IsReadOnly="True"
+                               SelectedItem="{Binding SelectedRow}">
                     <DataGrid.Columns>
                       <!-- ⛔ ستونِ «📦» برداشته شد (خواستهٔ صاحب ریپو، ۱۴۰۵/۰۷/۱۳). ردیفِ خریدِ مخزن همچنان قفل است (‎ILockedRow‎) و ‎ExcelGrid‎ پیش از ویرایش می‌پرسد. -->
                       <DataGridTextColumn Header="تاریخ" Binding="{Binding DateText}" Width="Auto" MinWidth="110" />

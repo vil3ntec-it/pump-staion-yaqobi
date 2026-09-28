@@ -6,6 +6,14 @@
              x:Class="PumpYaqobi.App.Views.Sections.CompanyPurchasesView"
              x:DataType="vm:CompanyPurchasesPageViewModel">
 
+  <UserControl.Styles>
+    <!-- خریدی که «جستجوی خرید» به آن فرستاده — ‎HighlightedId‎ -->
+    <Style Selector="Border.panel.hit">
+      <Setter Property="BorderBrush" Value="{DynamicResource Pump.Accent}" />
+      <Setter Property="BorderThickness" Value="3" />
+    </Style>
+  </UserControl.Styles>
+
   <!-- ══ 📦 خریدهای یک شرکت — ‎companyPurchasesModal‎ی سایت ═════════════════
        هر تیل یک بخش: چهار کادرِ خلاصه، جدولِ خریدهای مخزن (📦) و زیرش
        «ردیف‌های دستی جدول». فقط نمایش است — هیچ چیزی نمی‌نویسد. -->
@@ -52,7 +60,7 @@
             <ItemsControl ItemsSource="{Binding Purchases}" IsVisible="{Binding HasPurchases}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:PurchaseItemViewModel">
-                  <Border Classes="panel" Margin="0,0,0,12" Padding="0">
+                  <Border Classes="panel" Classes.hit="{Binding IsHighlighted}" Margin="0,0,0,12" Padding="0">
                     <StackPanel>
                       <Border Classes="card-head">
                         <StackPanel Orientation="Horizontal" Spacing="14">

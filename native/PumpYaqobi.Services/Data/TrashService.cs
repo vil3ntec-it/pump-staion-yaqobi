@@ -30,6 +30,33 @@ public sealed class TrashService
     public TrashService(PumpDbFactory dbf, PermissionService perm, IUserSession session)
     { _dbf = dbf; _perm = perm; _session = session; }
 
+    /// <summary>
+    /// پس از آن‌که پایهٔ ورقی بی گذشتن از خودِ ورق برگشت یا دوباره رفت (بازگردانی یا
+    /// ‎Ctrl+Y‎ی پارچه)، ردیفِ «فروش ورق»ِ گاوصندوقِ همان ورق‌ها از نو ساخته شود.
+    /// <c>AppHost</c> آن را به <c>ShiftWaraqSyncService.ResyncSalesAsync</c> می‌بندد.
+    /// </summary>
+    public Func<IReadOnlyCollection<long>, CancellationToken, Task>? ResyncWaraqSales { get; set; }
+
+    /// <summary>ورق‌هایی که پایه‌هایشان در این رد هستند — فقط برای پارچه.</summary>
+    private async Task AfterPumpsMovedAsync(string? kind, IEnumerable<(Type Type, long Id)> rows,
+                                            CancellationToken ct)
+    {
+        if (kind != "parcha" || ResyncWaraqSales is null) return;
+        var pumpIds = rows.Where(r => r.Type == typeof(WaraqPump)).Select(r => r.Id).ToList();
+        if (pumpIds.Count == 0) return;
+        try
+        {
+            await using var db = _dbf.Create();
+            var waraqIds = await db.WaraqPumps.IgnoreQueryFilters()
+                .Where(p => pumpIds.Contains(p.Id))
+                .Join(db.WaraqShifts.IgnoreQueryFilters(), p => p.ShiftId, s => s.Id, (p, s) => s.WaraqId)
+                .Distinct().ToListAsync(ct);
+            if (waraqIds.Count > 0) await ResyncWaraqSales(waraqIds, ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch { /* گاوصندوق با ذخیرهٔ بعدیِ همان ورق درست می‌شود */ }
+    }
+
     /// <summary>روی همان تراکنشِ حذف نوشته می‌شود تا «حذف شد ولی سطل خالی ماند» ممکن نباشد.</summary>
     public Task RememberAsync<T>(PumpDbContext db, string kind, string label, T payload, CancellationToken ct = default)
     {
@@ -187,6 +214,7 @@ public sealed class TrashService
         try
         {
             await db.SaveChangesAsync(ct);
+            await AfterPumpsMovedAsync(trace.Kind, trace.Rows, ct);
             return (null, trace);
         }
         catch (Exception ex)
@@ -233,6 +261,7 @@ public sealed class TrashService
         var t = new TrashItem { Kind = r.Kind, Label = r.Label, PayloadJson = r.PayloadJson, DeletedBy = r.DeletedBy };
         db.Trash.Add(t);
         await db.SaveChangesAsync(ct);
+        await AfterPumpsMovedAsync(r.Kind, r.Rows, ct);
         return t.Id;
     }
 
@@ -315,6 +344,15 @@ public sealed class TrashService
                 var shiftIds = shifts.Select(s => s.Id).ToList();
                 await ReviveChildren(db.WaraqPumps, x => shiftIds.Contains(x.ShiftId), when, got, ct);
                 await ReviveChildren(db.WaraqTransactions, x => shiftIds.Contains(x.ShiftId), when, got, ct);
+
+                // ⛔ و آن‌چه همین ورق در دفترها نشانده بود و با همان حذف رفت
+                // (‎WaraqDataService.DeleteAsync‎): فروشِ گاوصندوق، ردیف‌های حساب‌ها و
+                // مصرف‌ها. تا ۳.۱.۲۱۳ ورق برمی‌گشت و این‌ها نه.
+                var salesKeys = new[] { "wq-sales-" + w.Id + "-day", "wq-sales-" + w.Id + "-night" };
+                await ReviveChildren(db.SafeEntries, x => x.SrcKey != null && salesKeys.Contains(x.SrcKey), when, got, ct);
+                var prefix = WaraqPostingService.WaraqKey(w) + "|";
+                await ReviveChildren(db.DebtRows, x => x.SrcKey != null && x.SrcKey.StartsWith(prefix), when, got, ct);
+                await ReviveChildren(db.Expenses, x => x.SrcKey != null && x.SrcKey.StartsWith(prefix), when, got, ct);
                 return 1;
             }
 
@@ -331,6 +369,10 @@ public sealed class TrashService
                 if (r.NightShiftId is { } nightId) ids.Add(nightId);
                 if (ids.Count > 0)
                     await ReviveChildren(db.ShiftDataSet, x => ids.Contains(x.Id), when, got, ct);
+
+                // ⛔ و پایه‌هایی که همین پارچه در ورق ساخته بود (با همان حذف رفتند)
+                var keys = ShiftWaraqSyncService.ReportKeys(r.Id);
+                await ReviveChildren(db.WaraqPumps, x => x.SrcKey != null && keys.Contains(x.SrcKey), when, got, ct);
                 return 1;
             }
 

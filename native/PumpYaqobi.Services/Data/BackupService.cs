@@ -218,6 +218,31 @@ public sealed class BackupService
         catch { return -1; }
     }
 
+    /// <summary>
+    /// پشتیبانِ رمزشده (‎.pyq‎) را در یک فایلِ موقتِ کنارِ بکاپ‌ها باز می‌کند تا
+    /// همان راهِ همیشگیِ بازگردانی رویش برود.
+    ///
+    /// ⛔ تا ۱۴۰۵/۰۷/۱۶ هیچ راهی برای برگرداندنِ این فایل‌ها نبود: برنامه پیش از
+    /// هر مهاجرت و هر «بازیابی از سرور» یکی می‌ساخت و می‌گفت «ساخته شد»، ولی
+    /// پنجرهٔ بازگردانی فقط ‎.db‎ را می‌پذیرفت. پشتیبانی که برنمی‌گردد پشتیبان نیست.
+    ///
+    /// ⚠️ موقت کنارِ خودِ بکاپ‌هاست، نه در پوشهٔ موقتِ ویندوز — داده از پوشهٔ
+    /// برنامه بیرون نمی‌رود. نامش با ‎pump-*.db‎ جور نیست، پس در فهرست نمی‌آید.
+    /// </summary>
+    /// <returns>مسیرِ فایلِ باز‌شده، یا <c>null</c> اگر مالِ این کامپیوتر نبود یا دست خورده بود.</returns>
+    public string? DecryptToTemp(string path)
+    {
+        try
+        {
+            Directory.CreateDirectory(SnapshotDir);
+            var tmp = Path.Combine(SnapshotDir, "tmp-restore-" + Guid.NewGuid().ToString("N")[..8] + ".db");
+            if (SyncBackup.Read(path, tmp)) return tmp;
+            try { File.Delete(tmp); } catch { }
+            return null;
+        }
+        catch { return null; }
+    }
+
     // ── برگرداندن ────────────────────────────────────────────────────────────
 
     /// <summary>

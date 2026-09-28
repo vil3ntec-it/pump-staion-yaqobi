@@ -19,8 +19,11 @@ namespace PumpYaqobi.App.ViewModels.Sections;
 // (‎cmpSearchModal‎). هیچ‌کدام چیزی نمی‌نویسند جز حذفِ یک آرشیو.
 
 /// <summary>یک خریدِ مخزن در صفحهٔ خریدها — کارتِ ‎cmp-card‎ی سایت، به شکلِ ردیف.</summary>
-public sealed class PurchaseItemViewModel
+public sealed partial class PurchaseItemViewModel : ObservableObject
 {
+    /// <summary>خریدی که «جستجوی خرید» به آن فرستاده — کارتش لبهٔ پررنگ می‌گیرد و جلوی چشم می‌آید.</summary>
+    [ObservableProperty] private bool _isHighlighted;
+
     public PurchaseItemViewModel(FuelPurchase e, int index)
     {
         Entity = e; Index = index;
@@ -136,6 +139,27 @@ public sealed partial class PurchaseSectionViewModel : CommunityToolkit.Mvvm.Com
         OnPropertyChanged(nameof(HasOlder));
         OnPropertyChanged(nameof(OlderText));
     }
+    /// <summary>
+    /// پنجره را تا همان خرید باز می‌کند — «جستجوی خرید» خریدِ قدیمی‌ای را هم که
+    /// هنوز پشتِ «خریدِ دیگر» پنهان است پیدا می‌کند.
+    /// ⛔ از ۱۴۰۵/۰۷/۱۶: تا امروز پیامِ «در فهرستِ این صفحه نیست» می‌داد، چون فقط
+    /// کارت‌های ساخته‌شده گشته می‌شدند.
+    /// </summary>
+    public bool Reveal(long purchaseId)
+    {
+        foreach (var p in _allItems) p.IsHighlighted = p.Entity.Id == purchaseId;
+        var i = _allItems.FindIndex(p => p.Entity.Id == purchaseId);
+        if (i < 0) return false;
+        if (i >= Purchases.Count)
+        {
+            Purchases.ResetTo(_allItems.Take(i + 1));
+            OnPropertyChanged(nameof(HiddenCount));
+            OnPropertyChanged(nameof(HasOlder));
+            OnPropertyChanged(nameof(OlderText));
+        }
+        return true;
+    }
+
     public bool HasManual => Manual.Count > 0;
     public string CountText { get; }
     public string LitersText { get; }
@@ -201,7 +225,9 @@ public sealed partial class CompanyPurchasesPageViewModel : ObservableObject
     public void Highlight(long purchaseId)
     {
         HighlightedId = purchaseId;
-        if (!Sections.Any(s => s.Purchases.Any(p => p.Entity.Id == purchaseId)))
+        var found = false;
+        foreach (var s in Sections) found |= s.Reveal(purchaseId);
+        if (!found)
             _host.Toast("این خرید در فهرستِ این صفحه نیست", ToastKind.Error);
     }
 
@@ -364,6 +390,15 @@ public sealed partial class CompanyArchiveViewModel : ObservableObject
     public string DieselBuyText { get; }
     [ObservableProperty] private int _highlightedRow = -1;
 
+    /// <summary>
+    /// ردیفی که «جستجوی خرید» به آن فرستاده — انتخاب‌شده در جدول.
+    /// ⛔ تا ۳.۱.۲۱۳ ‎HighlightedRow‎ نوشته می‌شد و هیچ نمایی آن را نمی‌خواند.
+    /// </summary>
+    [ObservableProperty] private CompanyArchiveRowViewModel? _selectedRow;
+
+    partial void OnHighlightedRowChanged(int value) =>
+        SelectedRow = value < 0 ? null : Rows.FirstOrDefault(r => r.Index == value);
+
     // ══ نوارِ کشویی — همان الگوی آرشیوِ قرض‌داران ═══════════════════════════
     //
     // خواستهٔ صریحِ صاحب ریپو: «کاری کن آن جدول‌ها شبیهِ جدول‌های آرشیوِ
@@ -505,15 +540,24 @@ public sealed partial class CompanyArchivePageViewModel : ObservableObject
     public string CountText => Shamsi.Money(Archives.Count) + " جدول از "
                              + Shamsi.Money(_every.Count);
 
+    /// <summary>آرشیوی که «جستجوی خرید» به آن فرستاده — نما جلوی چشم می‌آوردش.</summary>
+    [ObservableProperty] private CompanyArchiveViewModel? _highlightedArchive;
+
     public void Highlight(long archiveId, int rowIndex)
     {
-        foreach (var a in Archives)
+        // ⚠️ از همهٔ آرشیوها، نه فقط آن‌هایی که صافیِ تیل/جست‌وجو نشان می‌دهد؛
+        // آرشیوِ پنهان‌شده با صافی «همه» می‌شود تا کاربر به جای خالی فرستاده نشود.
+        var hit = _every.FirstOrDefault(a => a.Entity.Id == archiveId);
+        if (hit is not null && !Archives.Contains(hit)) { Search = ""; FuelFilter = "all"; }
+        HighlightedArchive = null;
+        foreach (var a in _every)
         {
             a.HighlightedRow = a.Entity.Id == archiveId ? rowIndex : -1;
             // ⚠️ آرشیوی که «برو به همان ردیف» نشانش می‌دهد باید باز باشد،
             // وگرنه کاربر به نوارِ بسته فرستاده می‌شود.
             if (a.Entity.Id == archiveId) a.IsOpen = true;
         }
+        HighlightedArchive = hit;
     }
 
     [RelayCommand] private void Close() => _section.CloseOverlay();

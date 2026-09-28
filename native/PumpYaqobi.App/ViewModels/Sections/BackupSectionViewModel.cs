@@ -226,12 +226,30 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
     private async Task RestoreFromFileAsync()
     {
         var path = await Dialogs.PickFileAsync("فایلِ بکاپ را انتخاب کنید",
-                                               "بکاپِ پمپ", new[] { "*.db" });
+                                               "بکاپِ پمپ", new[] { "*.db", "*" + SyncBackup.Extension });
         if (path is null) return;
         await RestoreFromAsync(path, Path.GetFileName(path));
     }
 
     private async Task RestoreFromAsync(string path, string what)
+    {
+        //  ⛔ پشتیبانِ رمزشده (‎.pyq‎) اول در یک فایلِ موقت باز می‌شود و همان راهِ
+        //  همیشگی رویش می‌رود (سنجش، پرسش، عکسِ ایمنی). پس از کار پاک می‌شود.
+        string? temp = null;
+        if (SyncBackup.IsEncrypted(path))
+        {
+            temp = await Task.Run(() => _host.Backup.DecryptToTemp(path));
+            if (temp is null)
+            {
+                _host.Toast("❌ این پشتیبانِ رمزشده روی این کامپیوتر باز نمی‌شود — یا مالِ کامپیوتر یا کاربرِ دیگری است، یا دست خورده", ToastKind.Error);
+                return;
+            }
+        }
+        try { await RestorePlainAsync(temp ?? path, what); }
+        finally { if (temp is not null) try { File.Delete(temp); } catch { } }
+    }
+
+    private async Task RestorePlainAsync(string path, string what)
     {
         var records = BackupService.Inspect(path);
         if (records < 0)

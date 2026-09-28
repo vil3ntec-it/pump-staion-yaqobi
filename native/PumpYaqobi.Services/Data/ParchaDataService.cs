@@ -410,7 +410,21 @@ public sealed class ParchaDataService
                         .FirstOrDefaultAsync(x => x.Id == id, ct);
         if (r is null) return;
         await _trash.RememberAsync(db, "parcha", $"پارچهٔ {r.ReportNum} — {r.DateShamsi}", r, ct);
+
+        // ⛔ پایه‌هایی که همین پارچه در ورق ساخته با خودش می‌روند — در همان ذخیره،
+        // پس مُهرِ حذفشان یکی است و بازگردانی از سطلِ زباله همه را با هم برمی‌گرداند.
+        // تا ۳.۱.۲۱۳ در ورق جا می‌ماندند و فروشِ آن شیفت در گاوصندوق هم.
+        var keys = ShiftWaraqSyncService.ReportKeys(r.Id);
+        var pumps = await db.WaraqPumps.Include(p => p.Shift)
+                            .Where(p => keys.Contains(p.SrcKey!))
+                            .ToListAsync(ct);
+        var waraqIds = pumps.Where(p => p.Shift is not null)
+                            .Select(p => p.Shift!.WaraqId).Distinct().ToList();
+        db.WaraqPumps.RemoveRange(pumps);
+
         db.Reports.Remove(r);
         await db.SaveChangesAsync(ct);
+        if (_waraqSync is not null && waraqIds.Count > 0)
+            await _waraqSync.ResyncSalesAsync(waraqIds, ct);
     }
 }
