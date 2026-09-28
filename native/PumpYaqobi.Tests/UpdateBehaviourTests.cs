@@ -568,4 +568,78 @@ public class UpdateBehaviourTests : IDisposable
         Assert.True(info.Failed);
         Assert.False(info.Available);
     }
+
+    // ══ مخزنِ عمومیِ «فقط خروجی» — روزِ خصوصی شدنِ مخزنِ کد ═══════════════
+    //
+    // ⚠️ مخزنِ خروجی با **مسیر** شناخته می‌شود («-releases/releases/»)، نه با
+    // نامِ صاحب یا مخزن — همان قاعدهٔ ‎NoUserFacingFileMentionsTheRepository‎.
+
+    private static bool IsOutput(string url) => url.Contains("-releases/releases/");
+
+    [Fact]
+    public async Task MakhzaneKhoroji_HanuzKhali_Ast_MakhzaneGhadimi_Kar_Mikonad()
+    {
+        UpdateService.TestTransport = (req, _) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (IsOutput(url)) return Task.FromResult(Text("", HttpStatusCode.NotFound));
+            return Task.FromResult(Json(Feed("v99.9.9", LocalBase())));
+        };
+
+        var info = await new UpdateService().CheckAsync();
+
+        Assert.False(info.Failed);
+        Assert.True(info.Available);
+        Assert.Equal("99.9.9", info.LatestVersion);
+    }
+
+    [Fact]
+    public async Task MakhzaneKode_Khososi_Shod_MakhzaneKhoroji_Kar_Mikonad()
+    {
+        UpdateService.TestTransport = (req, _) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (!IsOutput(url) && !url.Contains("desktop-latest") && IsFeed(url))
+                return Task.FromResult(Text("", HttpStatusCode.NotFound));   // خصوصی ⇒ ۴۰۴
+            if (!IsOutput(url) && url.Contains("desktop-latest"))
+                return Task.FromResult(Text("", HttpStatusCode.NotFound));
+            if (IsOutput(url) && IsFeed(url)) return Task.FromResult(Json(Feed("v99.9.9", LocalBase())));
+            return Task.FromResult(Text("", HttpStatusCode.NotFound));
+        };
+
+        var info = await new UpdateService().CheckAsync();
+
+        Assert.False(info.Failed);
+        Assert.True(info.Available);
+        Assert.Equal("99.9.9", info.LatestVersion);
+    }
+
+    [Fact]
+    public async Task TazeTar_Barande_Ast_Na_AvvaliKeJavabDad()
+    {
+        // ⛔ مخزنِ خروجی کهنه است (انتشارش جا مانده) و مخزنِ کد تازه‌تر.
+        //    «اولی که جواب داد» برنامه را به‌روز می‌خواند — و برعکسش هم.
+        UpdateService.TestTransport = (req, _) =>
+        {
+            var url = req.RequestUri!.ToString();
+            return Task.FromResult(Json(Feed(IsOutput(url) ? "v99.9.8" : "v99.9.9", LocalBase())));
+        };
+        Assert.Equal("99.9.9", (await new UpdateService().CheckAsync()).LatestVersion);
+
+        UpdateService.TestTransport = (req, _) =>
+        {
+            var url = req.RequestUri!.ToString();
+            return Task.FromResult(Json(Feed(IsOutput(url) ? "v99.9.10" : "v99.9.9", LocalBase())));
+        };
+        Assert.Equal("99.9.10", (await new UpdateService().CheckAsync()).LatestVersion);
+    }
+
+    [Fact]
+    public async Task HarDoMakhzan_Baste_BeRuzAst_Nemigooyad()
+    {
+        UpdateService.TestTransport = (_, _) => Task.FromResult(Text("", HttpStatusCode.NotFound));
+        var info = await new UpdateService().CheckAsync();
+        Assert.True(info.Failed);
+        Assert.DoesNotContain("به‌روز است", info.StatusText);
+    }
 }

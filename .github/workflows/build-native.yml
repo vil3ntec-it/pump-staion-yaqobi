@@ -464,6 +464,68 @@ jobs:
             rel/SHA256SUMS.txt
             rel/SHA256SUMS.txt.sig
 
+      #  ══ مخزنِ عمومیِ «فقط خروجی» (از ۱۴۰۵/۰۷/۱۶) ═══════════════════════
+      #  همان فایل‌ها در `vil3ntec-it/pump-yaqobi-releases` هم می‌نشینند تا روزی
+      #  که مخزنِ کد **خصوصی** شد، به‌روزرسانیِ برنامه نمیرد (برنامه هر دو را
+      #  می‌خواند و تازه‌تر را برمی‌دارد — `UpdateService.Feeds`).
+      #
+      #  ⚠️ `GITHUB_TOKEN` به مخزنِ دیگر نمی‌نویسد، پس رازِ `RELEASES_TOKEN`
+      #  (توکنِ ریزدانه با «Contents: Read and write» فقط روی همان مخزن) لازم
+      #  است. تا نباشد این دو گام **رد می‌شوند**، نه سرخ — ساخت نمی‌شکند.
+      - name: توکنِ مخزنِ خروجی هست؟
+        id: outrepo
+        shell: pwsh
+        env:
+          RELEASES_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+        run: |
+          if ($env:RELEASES_TOKEN) { "ok=true" >> $env:GITHUB_OUTPUT; Write-Host "مخزنِ خروجی: هست" }
+          else { "ok=false" >> $env:GITHUB_OUTPUT; Write-Host "::notice::رازِ RELEASES_TOKEN نیست — انتشار در مخزنِ خروجی رد شد" }
+
+      - name: انتشار در مخزنِ خروجی
+        if: steps.outrepo.outputs.ok == 'true'
+        continue-on-error: true
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: vil3ntec-it/pump-yaqobi-releases
+          token: ${{ secrets.RELEASES_TOKEN }}
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: پمپ بنزین — نسخهٔ ${{ steps.ver.outputs.version }}
+          body: |
+            برنامهٔ کامپیوتریِ پمپ بنزین، نسخهٔ ${{ steps.ver.outputs.version }}.
+            فایلِ نصب: `PumpYaqobi-Setup.exe` (۳۲ و ۶۴بیتی هر دو داخلش).
+
+            © VILL3N — همهٔ حقوق محفوظ است.
+          files: |
+            rel/PumpYaqobi-Setup.exe
+            rel/PumpYaqobi-app-${{ steps.pack.outputs.baseId }}.zip
+            rel/PumpYaqobi-app-${{ steps.pack.outputs.baseId86 }}.zip
+            rel/version.txt
+            rel/SHA256SUMS.txt
+            rel/SHA256SUMS.txt.sig
+          make_latest: true
+
+      - name: انتشارِ چرخشی در مخزنِ خروجی
+        if: steps.outrepo.outputs.ok == 'true'
+        continue-on-error: true
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: vil3ntec-it/pump-yaqobi-releases
+          token: ${{ secrets.RELEASES_TOKEN }}
+          tag_name: desktop-latest
+          name: پمپ بنزین — آخرین نسخهٔ کامپیوتر
+          body: همیشه روی تازه‌ترین ساخت — نسخهٔ ${{ steps.ver.outputs.version }}.
+          prerelease: true
+          make_latest: false
+          files: |
+            rel/PumpYaqobi-Setup.exe
+            rel/PumpYaqobi-app-${{ steps.pack.outputs.baseId }}.zip
+            rel/PumpYaqobi-app-${{ steps.pack.outputs.baseId86 }}.zip
+            rel/version.txt
+            rel/base.txt
+            rel/base-x86.txt
+            rel/SHA256SUMS.txt
+            rel/SHA256SUMS.txt.sig
+
       - name: انتشارِ زیپِ بی‌نصاب (اختیاری)
         continue-on-error: true
         uses: softprops/action-gh-release@v2

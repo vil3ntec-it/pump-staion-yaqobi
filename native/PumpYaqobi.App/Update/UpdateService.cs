@@ -71,6 +71,26 @@ public sealed class UpdateService
         "https://api.github.com/repos/vil3ntec-it/pump-staion-yaqobi/releases/latest";
 
     /// <summary>
+    /// ══ مخزنِ عمومیِ «فقط خروجی» (از ۱۴۰۵/۰۷/۱۶) ═══════════════════════════
+    /// خواستهٔ صاحب ریپو: کدِ برنامه دیده نشود. پس مخزنِ کد روزی **خصوصی**
+    /// می‌شود — و آن روز <see cref="FeedUrl"/> برای هر نصبی ۴۰۴ می‌دهد. این
+    /// مخزن فقط نصاب و بسته‌ها را دارد و عمومی می‌ماند.
+    ///
+    /// ⛔ **هر دو خوانده می‌شوند و تازه‌تر برنده است** (<see cref="CheckAsync"/>)،
+    /// نه «اولی که جواب داد»: تا مخزنِ خروجی ساخته و پر نشده، ۴۰۴ یا کهنه
+    /// است و نباید برنامه را «به‌روز» بخواند. پس ساختنش هیچ نصبی را نمی‌شکند
+    /// و خصوصی شدنِ مخزنِ کد هم — فقط اگر این نسخه پیش از آن رسیده باشد.
+    /// </summary>
+    private const string OutputFeedUrl =
+        "https://api.github.com/repos/vil3ntec-it/pump-yaqobi-releases/releases/latest";
+
+    /// <summary>ترتیبِ پرسیدن: خروجی اول (روزِ خصوصی شدن تنها راه است).</summary>
+    private static readonly string[] Feeds = { OutputFeedUrl, FeedUrl };
+
+    /// <summary>مخزنی که آخرین بررسیِ موفق از آن آمد — برای «صفحهٔ دانلود».</summary>
+    private static string _lastFeed = FeedUrl;
+
+    /// <summary>
     /// میزبان‌های گیت‌هاب که سرآیندِ <c>Date</c>شان ساعتِ مطمئن است (‎Services.TimeSync‎)
     /// — از خودِ <see cref="FeedUrl"/>، تا نشانیِ منبع همین یک‌جا بماند.
     /// </summary>
@@ -97,9 +117,9 @@ public sealed class UpdateService
     /// مخزن باید در کلِ برنامه **یک جا** نوشته شود (آزمونِ
     /// ‎TheUpdateServiceItselfKeepsTheAddressPrivate‎ همین را قفل کرده).
     /// </summary>
-    private static string FileUrl(string name)
+    private static string FileUrl(string feed, string name)
     {
-        var parts = new Uri(FeedUrl).AbsolutePath
+        var parts = new Uri(feed).AbsolutePath
             .Split('/', StringSplitOptions.RemoveEmptyEntries);   // repos/<owner>/<repo>/releases/latest
         return "https://github.com/" + parts[1] + "/" + parts[2]
              + "/releases/download/" + RollingTag + "/" + name;
@@ -168,21 +188,37 @@ public sealed class UpdateService
     {
         var current = AppVersion.Current;
 
-        var (viaApi, apiWhy) = await FromApiAsync(current, ct);
-        if (viaApi is not null) return viaApi;
+        UpdateInfo? best = null;
+        string bestFeed = FeedUrl, firstWhy = "";
+        foreach (var feed in Feeds)
+        {
+            var (info, why) = await FromFeedAsync(feed, current, ct);
+            if (info is null) { if (firstWhy.Length == 0) firstWhy = why; continue; }
+            if (best is null || Compare(info.LatestVersion, best.LatestVersion) > 0)
+            { best = info; bestFeed = feed; }
+        }
+        if (best is not null) { _lastFeed = bestFeed; return best; }
+        return Broken(current, firstWhy);
+    }
 
-        var (viaFile, fileWhy) = await FromFileAsync(current, ct);
-        if (viaFile is not null) return viaFile;
-
-        return Broken(current, apiWhy.Length > 0 ? apiWhy : fileWhy);
+    /// <summary>هر دو درِ یک مخزن: فهرستِ انتشار، و اگر نشد فایلِ متنی.</summary>
+    private async Task<(UpdateInfo? Info, string Why)> FromFeedAsync(
+        string feed, string current, CancellationToken ct)
+    {
+        var (viaApi, apiWhy) = await FromApiAsync(feed, current, ct);
+        if (viaApi is not null) return (viaApi, "");
+        var (viaFile, fileWhy) = await FromFileAsync(feed, current, ct);
+        if (viaFile is not null) return (viaFile, "");
+        return (null, apiWhy.Length > 0 ? apiWhy : fileWhy);
     }
 
     /// <summary>درِ اول. ‎null‎ یعنی «جواب به کار نیامد، درِ بعدی را بزن».</summary>
-    private async Task<(UpdateInfo? Info, string Why)> FromApiAsync(string current, CancellationToken ct)
+    private async Task<(UpdateInfo? Info, string Why)> FromApiAsync(
+        string feed, string current, CancellationToken ct)
     {
         try
         {
-            using var res = await GetAsync(FeedUrl, ct);
+            using var res = await GetAsync(feed, ct);
             if (!res.IsSuccessStatusCode)
                 return (null, "گیت‌هاب این جواب را داد (کدِ " + (int)res.StatusCode + ")");
 
@@ -265,11 +301,12 @@ public sealed class UpdateService
     /// ⚠️ اندازه را نمی‌داند و لازم هم ندارد: ‎DownloadAsync‎ اندازه را از
     /// خودِ پاسخ برمی‌دارد و فایلِ نیمه‌کاره را همان‌جا رد می‌کند.
     /// </summary>
-    private async Task<(UpdateInfo? Info, string Why)> FromFileAsync(string current, CancellationToken ct)
+    private async Task<(UpdateInfo? Info, string Why)> FromFileAsync(
+        string feed, string current, CancellationToken ct)
     {
         try
         {
-            var latest = NormalizeVersion(await TextAsync("version.txt", ct));
+            var latest = NormalizeVersion(await TextAsync(feed, "version.txt", ct));
             if (latest.Length == 0) return (null, "شمارهٔ نسخهٔ تازه خوانده نشد");
 
             if (Compare(latest, current) <= 0)
@@ -282,12 +319,12 @@ public sealed class UpdateService
             //    فقط همین نام را می‌شناسند) و ۳۲بیتی `base-x86.txt`.
             //    فایلِ نبوده ⇒ رشتهٔ خالی ⇒ بستهٔ کامل، که **درست** است:
             //    هیچ‌وقت بستهٔ کوچکِ معماریِ دیگر برداشته نمی‌شود.
-            var remoteBase = (await TextAsync(AppArch.BaseFileName, ct)).Trim();
+            var remoteBase = (await TextAsync(feed, AppArch.BaseFileName, ct)).Trim();
             var localBase = AppBase.LocalId;
             var small = remoteBase.Length > 0 && remoteBase == localBase;
 
-            var url = FileUrl(small ? "PumpYaqobi-app-" + remoteBase + ".zip" : AppArch.SetupName);
-            return (new UpdateInfo(true, current, latest, url, 0, null, small, "", FileUrl(SumsName)), "");
+            var url = FileUrl(feed, small ? "PumpYaqobi-app-" + remoteBase + ".zip" : AppArch.SetupName);
+            return (new UpdateInfo(true, current, latest, url, 0, null, small, "", FileUrl(feed, SumsName)), "");
         }
         catch (Exception e)
         {
@@ -296,9 +333,9 @@ public sealed class UpdateService
     }
 
     /// <summary>یک فایلِ متنیِ کوچک از انتشارِ چرخشی.</summary>
-    private static async Task<string> TextAsync(string name, CancellationToken ct)
+    private static async Task<string> TextAsync(string feed, string name, CancellationToken ct)
     {
-        using var res = await GetAsync(FileUrl(name), ct);
+        using var res = await GetAsync(FileUrl(feed, name), ct);
         if (!res.IsSuccessStatusCode) return "";
         var text = await res.Content.ReadAsStringAsync(ct);
         return text.Split('\n')[0].Trim();
@@ -387,7 +424,7 @@ public sealed class UpdateService
     {
         try
         {
-            var parts = new Uri(FeedUrl).AbsolutePath
+            var parts = new Uri(_lastFeed).AbsolutePath
                 .Split('/', StringSplitOptions.RemoveEmptyEntries);
             var url = "https://github.com/" + parts[1] + "/" + parts[2] + "/releases/latest";
             return Services.SafeOpen.Url(url);
