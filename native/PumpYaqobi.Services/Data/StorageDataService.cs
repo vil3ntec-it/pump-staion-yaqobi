@@ -70,11 +70,25 @@ public sealed class StorageDataService
             await db.SaveChangesAsync(ct);
         }
 
-        _settings.Set(p.Fuel == FuelType.Diesel
-            ? SettingsService.BuyPerLiterDiesel : SettingsService.BuyPerLiterPetrol, p.PerLiter);
+        RememberPerLiter(p);
 
         await LinkToCompanyAsync(p, ct);
         return p;
+    }
+
+    /// <summary>
+    /// «فی لیترِ خرید» (فایدهٔ فی لیترِ پارچه) — فقط از خریدی که قیمت دارد.
+    ///
+    /// ⛔ از ۱۴۰۵/۰۷/۱۶ قیمتِ هر تن و نرخِ دالر اختیاری‌اند (خواستهٔ صاحب ریپو:
+    /// «شاید شرکت نگفته باشد»). خریدِ بی‌قیمت فی‌لیترِ صفر دارد، و نشاندنِ آن
+    /// صفر یعنی فایدهٔ همهٔ پارچه‌های بعدی کلِ فروش خوانده شود. پس صفر هیچ‌وقت
+    /// نمی‌نشیند؛ عددِ پیشین می‌ماند تا قیمت با ✏️ نوشته شود.
+    /// </summary>
+    private void RememberPerLiter(FuelPurchase p)
+    {
+        if (p.PerLiter <= 0m) return;
+        _settings.Set(p.Fuel == FuelType.Diesel
+            ? SettingsService.BuyPerLiterDiesel : SettingsService.BuyPerLiterPetrol, p.PerLiter);
     }
 
     /// <summary>
@@ -166,7 +180,24 @@ public sealed class StorageDataService
             await db.SaveChangesAsync(ct);
         }
 
-        if (!await _companies.HasPurchaseRowAsync(p.LegacyId, ct)) return;
+        //  قیمتِ تازهٔ **تازه‌ترین** خریدِ همین تیل ⇒ فی‌لیترِ خرید هم تازه (همان
+        //  کاری که ثبت می‌کرد)؛ ویرایشِ خریدِ کهنه عددِ امروز را عوض نمی‌کند.
+        await using (var db = _dbf.Create())
+        {
+            var newest = await db.FuelPurchases.AsNoTracking().Where(x => x.Fuel == p.Fuel)
+                                 .OrderByDescending(x => x.Id).Select(x => x.Id).FirstOrDefaultAsync(ct);
+            if (newest == p.Id) RememberPerLiter(p);
+        }
+
+        if (!await _companies.HasPurchaseRowAsync(p.LegacyId, ct))
+        {
+            //  ⛔ فروشنده‌ای که پس از ثبت نوشته شد ⇒ همان لحظه در حسابِ شرکتش —
+            //  مگر کاربر خودش ردیفِ این خرید را از حساب برداشته باشد («دستی جدا شده»).
+            if (string.IsNullOrWhiteSpace(p.Seller) || string.IsNullOrEmpty(p.LegacyId)) return;
+            if ((await _companies.UnlinkedPurchasesAsync(ct)).Contains(p.LegacyId)) return;
+            await LinkToCompanyAsync(p, ct);
+            return;
+        }
         if (string.IsNullOrWhiteSpace(p.Seller)) await _companies.UnlinkPurchaseAsync(p.LegacyId, ct);
         else await LinkToCompanyAsync(p, ct);
     }

@@ -51,7 +51,7 @@ public partial class StorageSectionView : UserControl
             {
                 try
                 {
-                    this.FindControl<Border>("BuyCard")?.BringIntoView();
+                    FitCard();
                     var first = overlay.GetVisualDescendants().OfType<TextBox>()
                                        .FirstOrDefault(t => t.IsEffectivelyVisible && t.IsEffectivelyEnabled);
                     first?.Focus();
@@ -60,5 +60,33 @@ public partial class StorageSectionView : UserControl
                 catch { /* رفاه است، نه شرطِ باز شدنِ پنجره */ }
             }, DispatcherPriority.Background);
         };
+    }
+
+    /// <summary>
+    /// ⛔ پنجرهٔ خرید <b>کامل</b> جلوی چشم — نه «یادداشت نیمه دیده می‌شود»
+    /// (عکسِ صاحب ریپو، ۱۴۰۵/۰۷/۱۶، روی کامپیوتری با پنجرهٔ کوتاه‌تر).
+    ///
+    /// سقفِ ۶۴۰ی قاب از بلندیِ دیدِ صفحه بزرگ‌تر بود، و نوارِ بخش‌ها روی بالای
+    /// همان دید شناور است؛ پس ‎BringIntoView‎ی ساده بالای قاب را زیرِ نوار یا
+    /// پایینش را بیرونِ پنجره می‌گذاشت. حالا قاب هم‌اندازهٔ دیدِ واقعی (منهای
+    /// نوار) می‌شود و درست زیرِ نوار آورده می‌شود؛ باقی را کادرِ لغزانِ خودِ
+    /// قاب نشان می‌دهد.
+    /// </summary>
+    private void FitCard()
+    {
+        var card = this.FindControl<Border>("BuyCard");
+        if (card is null) return;
+        var sv = this.GetVisualAncestors().OfType<ScrollViewer>().FirstOrDefault(s => s.Name == "PageScroll")
+                 ?? this.GetVisualAncestors().OfType<ScrollViewer>().LastOrDefault();
+        var nav = TopLevel.GetTopLevel(this)?.GetVisualDescendants().OfType<Border>()
+                          .FirstOrDefault(b => b.Name == "NavBar");
+        var navH = nav is { IsVisible: true } ? nav.Bounds.Height : 0;
+        const double gap = 12;
+        if (sv is not null && sv.Viewport.Height > 0)
+            card.MaxHeight = Math.Max(320, Math.Min(640, sv.Viewport.Height - navH - gap * 2));
+        card.UpdateLayout();
+        //  بالا تا زیرِ نوار هم باید دیده شود — پس مستطیلِ «به دید بیاور» از بالا بلندتر است
+        card.BringIntoView(new Avalonia.Rect(0, -(navH + gap), card.Bounds.Width,
+                                             card.Bounds.Height + navH + gap * 2));
     }
 }
