@@ -216,10 +216,33 @@ jobs:
         run: |
           test -s CNAME || { echo "::error::فایل CNAME نیست یا خالی است — دامنهٔ اختصاصی پاک می‌شود"; exit 1; }
           echo "دامنهٔ اختصاصی: $(cat CNAME)"
+      # ⛔ فهرستِ سفید، نه «کلِ ریپو منهای چند پوشه» (۱۴۰۵/۰۷/۱۶).
+      # تا امروز خروجی کلِ ریپو بود و کدِ برنامه (native/)، CLAUDE.md، سندِ ممیزیِ
+      # امنیتی، ابزارها و آزمون‌ها همه روی yaqobipump.top خواندنی بودند — یعنی
+      # نقشهٔ کاملِ قفل‌ها برای هر کسی که دنبالِ کرک است. پوشهٔ تازه‌ای که فردا
+      # به ریپو اضافه شود خودبه‌خود منتشر **نمی‌شود**؛ فقط آن‌چه این‌جا نام برده شده.
+      - name: ساختنِ خروجیِ سایت از فهرستِ سفید
+        run: |
+          set -euo pipefail
+          rm -rf _site && mkdir _site
+          for f in index.html sw.js favicon.png robots.txt version.json CNAME; do
+            cp "$f" _site/
+          done
+          for d in icons kar view payam downloads tablighat; do
+            [ -d "$d" ] && cp -r "$d" _site/
+          done
+          # هیچ کدِ برنامه، سند یا رازی نباید در خروجی باشد
+          bad=$(find _site -type f \( -name '*.cs' -o -name '*.md' -o -name '*.axaml' \
+                -o -name '*.csproj' -o -name '*.iss' -o -name '*.mjs' -o -name '*.env' \
+                -o -name '*.pem' -o -name '*.key' -o -name '*.yml' \) | head -20)
+          if [ -n "$bad" ]; then
+            echo "::error::این فایل‌ها نباید روی سایت بروند:"; echo "$bad"; exit 1
+          fi
+          find _site -maxdepth 2 | sort
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: '_site'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

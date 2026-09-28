@@ -72,6 +72,9 @@ AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
 AppPublisher={#AppName}
 VersionInfoVersion={#AppVersion}
+; پروانهٔ اختصاصی — همان LICENSEِ ریشهٔ مخزن
+AppCopyright=© VILL3N — All rights reserved.
+VersionInfoCopyright=© VILL3N — All rights reserved.
 
 ; نصب برای همین کاربر — بی اجازهٔ مدیر
 PrivilegesRequired=lowest
