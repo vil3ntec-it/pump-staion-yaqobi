@@ -30,6 +30,25 @@ public sealed partial class PurchaseRowViewModel : RowViewModel
 
     public FuelPurchase Entity => _p;
 
+    /// <summary>
+    /// پس از ✏️: کارت همان خرید را از ‎Entity‎ دوباره می‌خواند — بی ذخیرهٔ دوباره
+    /// (پشتِ ‎Loading‎) و بی خواندنِ دوبارهٔ کلِ فهرست، تا پنجرهٔ «خریدِ قدیمی‌تر»
+    /// که کاربر باز کرده سرِ جایش بماند.
+    /// </summary>
+    public void Resync()
+    {
+        Loading = true;
+        DateShamsi = _p.DateShamsi ?? ""; Seller = _p.Seller ?? "";
+        Kg = _p.Kg; Density = _p.Density; PriceTon = _p.PriceTon; UsdRate = _p.UsdRate;
+        Note = _p.Note ?? "";
+        Loading = false;
+        Refresh();
+        OnPropertyChanged(nameof(MissingPrice));
+    }
+
+    /// <summary>قیمت یا نرخ هنوز نوشته نشده — روی کارت گفته می‌شود و ✏️ پیدا.</summary>
+    public bool MissingPrice => PriceTon <= 0m || UsdRate <= 0m;
+
     [ObservableProperty] private string _dateShamsi = "";
     [ObservableProperty] private string _seller = "";
     [ObservableProperty] private decimal _kg;
@@ -350,7 +369,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     // تا دیروز دکمهٔ «ثبت خرید» یک ردیفِ خالی به فهرست می‌افزود و کاربر باید
     // همان‌جا میانِ نُه کادر پرش می‌کرد — یعنی خریدِ نصفه‌کاره هم ذخیره شده
     // بود. حالا مثلِ سایت یک پنجرهٔ کوچک باز می‌شود، همان‌جا زنده حساب
-    // می‌کند، و تا همهٔ چهار عددِ لازم پر نشوند چیزی ثبت نمی‌شود.
+    // می‌کند؛ وزن و ثقلت لازم‌اند و قیمت و نرخ از ۱۴۰۵/۰۷/۱۶ اختیاری (بعداً با ✏️).
     [ObservableProperty] private bool _buyOpen;
     [ObservableProperty] private string _buyDate = "";
     [ObservableProperty] private string _buySeller = "";
@@ -373,7 +392,22 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     [ObservableProperty] private string _buyAfnText = "—";
     [ObservableProperty] private string _buyPerLiterText = "—";
 
-    public string BuyTitle => IsDiesel ? "🟤 ثبت خرید دیزل" : "🛢️ ثبت خرید پطرول";
+    /// <summary>
+    /// خریدی که همین حالا در فرم ویرایش می‌شود (✏️)؛ ‎null‎ ⇒ خریدِ تازه.
+    ///
+    /// خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۶): «بعد از ثبت هم بشه ویرایشش کرد… شاید
+    /// همون موقع یادشون نباشه یا شرکت نگفته باشه… پایینش که لیست است یک قلم
+    /// بزار». ⛔ همان فرم، همان حساب — نه فرمِ دوم.
+    /// </summary>
+    private PurchaseRowViewModel? _editing;
+    public bool BuyEditing => _editing is not null;
+
+    public string BuyTitle => _editing is { } e
+        ? "✏️ ویرایش " + e.HeadText + (IsDiesel ? " — دیزل" : " — پطرول")
+        : IsDiesel ? "🟤 ثبت خرید دیزل" : "🛢️ ثبت خرید پطرول";
+
+    /// <summary>کادرهای اختیاری — تا قیمت نوشته نشده، دیده شود که بعداً هم می‌شود.</summary>
+    public const string OptionalHint = "اختیاری — بعداً هم با ✏️ نوشته می‌شود";
 
     partial void OnBuyKgChanged(string v) => CalcBuy();
     partial void OnBuyDensityChanged(string v) => CalcBuy();
@@ -414,42 +448,98 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     [RelayCommand]
     private void OpenBuy()
     {
+        _editing = null;
         BuyDate = Shamsi.Today();
         BuySeller = ""; BuyKg = ""; BuyDensity = ""; BuyPriceTon = ""; BuyUsdRate = ""; BuyNote = "";
         CalcBuy();
         OnPropertyChanged(nameof(BuyTitle));
+        OnPropertyChanged(nameof(BuyEditing));
         BuyOpen = true;
     }
 
+    /// <summary>
+    /// ✏️ روی کارتِ یک خرید ⇒ همان فرم، پر از عددهای همان خرید. خانهٔ صفر
+    /// (قیمت یا نرخی که ننوشته بودند) خالی نشان داده می‌شود تا همان‌جا نوشته شود.
+    /// </summary>
     [RelayCommand]
-    private void CancelBuy() => BuyOpen = false;
+    private void EditPurchase(PurchaseRowViewModel? row)
+    {
+        if (row is null) return;
+        _editing = row;
+        var p = row.Entity;
+        BuyDate = p.DateShamsi ?? "";
+        BuySeller = p.Seller ?? "";
+        BuyKg = Plain(p.Kg); BuyDensity = Plain(p.Density);
+        BuyPriceTon = Plain(p.PriceTon); BuyUsdRate = Plain(p.UsdRate);
+        BuyNote = p.Note ?? "";
+        CalcBuy();
+        OnPropertyChanged(nameof(BuyTitle));
+        OnPropertyChanged(nameof(BuyEditing));
+        BuyOpen = true;
+    }
+
+    /// <summary>عدد برای کادرِ تایپ: بی جداکنندهٔ هزار، صفر ⇒ خالی.</summary>
+    private static string Plain(decimal v) =>
+        v == 0m ? "" : v.ToString("0.#########", System.Globalization.CultureInfo.InvariantCulture);
+
+    [RelayCommand]
+    private void CancelBuy()
+    {
+        BuyOpen = false;
+        _editing = null;
+    }
 
     /// <summary>
-    /// «✔ ذخیره» — ‎confirmAddPurchase()‎.
+    /// «✔ ذخیره» — ‎confirmAddPurchase()‎، و همان برای ویرایش (✏️).
     ///
-    /// ⚠️ همان شرطِ سایت: هر چهار عدد لازم‌اند. بی این، خریدی با ثقلتِ صفر
-    /// ثبت می‌شد که «لیتر» و «فی لیتر»ش صفر می‌ماند و موجودیِ مخزن را خراب
-    /// می‌کرد. ثبتِ خودکار در حسابِ شرکتِ فروشنده کارِ ‎AddPurchaseAsync‎ است.
+    /// ⛔ از ۱۴۰۵/۰۷/۱۶ فقط <b>وزن و ثقلت</b> لازم‌اند — همان دو عددی که لیتر و
+    /// موجودیِ مخزن از آن‌ها می‌آید. قیمتِ هر تن و نرخِ دالر اختیاری‌اند (خواستهٔ
+    /// صاحب ریپو: «اگه کسی نرخ دالر یا قیمت هر تن رو نزد اجباری نباشه… شاید
+    /// شرکت نگفته باشه») و بعداً با ✏️ نوشته می‌شوند؛ ردیفِ حسابِ شرکت همان
+    /// لحظه با آن‌ها به‌روز می‌شود (‎UpdatePurchaseAsync‎).
+    ///
+    /// ⚠️ خریدِ بی‌ثقلت «لیتر»ش صفر است و موجودی را خراب می‌کند؛ برای همین آن
+    /// یکی اختیاری نشد.
     /// </summary>
     [RelayCommand]
     private Task SaveBuyAsync() => CrashGuard.RunAsync("ثبت خرید", async () =>
     {
         var kg = KgOf(BuyKg);
         var density = Shamsi.Num(BuyDensity);
-        var priceTon = Shamsi.Num(BuyPriceTon);
-        var usdRate = Shamsi.Num(BuyUsdRate);
+        var priceTon = Math.Max(0m, Shamsi.Num(BuyPriceTon));
+        var usdRate = Math.Max(0m, Shamsi.Num(BuyUsdRate));
 
-        if (kg <= 0m || density <= 0m || priceTon <= 0m || usdRate <= 0m)
+        if (kg <= 0m || density <= 0m)
         {
-            _host.Toast("لطفاً همه مقادیر را وارد کنید", ToastKind.Error);
+            _host.Toast(kg <= 0m ? "وزن (کیلو) را بنویسید — قیمت و نرخ اختیاری‌اند"
+                                 : "ثقلت را بنویسید — قیمت و نرخ اختیاری‌اند", ToastKind.Error);
             return;
         }
 
         var seller = BuySeller.Trim();
+        var date = BuyDate.Trim().Length > 0 ? BuyDate.Trim() : Shamsi.Today();
+        var missing = priceTon <= 0m || usdRate <= 0m;
+
+        if (_editing is { } row)
+        {
+            var e = row.Entity;
+            e.DateShamsi = date; e.Seller = seller;
+            e.Kg = kg; e.Density = density; e.PriceTon = priceTon; e.UsdRate = usdRate;
+            e.Note = BuyNote.Trim();
+            await _host.StorageData.UpdatePurchaseAsync(e);
+            BuyOpen = false;
+            _editing = null;
+            row.Resync();
+            await RecalcAsync();
+            _host.Toast("✅ خرید ویرایش شد" + (seller.Length > 0 ? " — حسابِ شرکت هم به‌روز شد" : "")
+                        + (missing ? " · قیمت یا نرخ هنوز خالی است" : ""), ToastKind.Ok);
+            return;
+        }
+
         var p = new FuelPurchase
         {
             Fuel = Fuel,
-            DateShamsi = BuyDate.Trim().Length > 0 ? BuyDate.Trim() : Shamsi.Today(),
+            DateShamsi = date,
             Seller = seller,
             Kg = kg, Density = density, PriceTon = priceTon, UsdRate = usdRate,
             Note = BuyNote.Trim(),
@@ -458,9 +548,10 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
 
         BuyOpen = false;
         await ReloadAsync();
-        _host.Toast(seller.Length > 0
-            ? "✅ خرید ثبت شد — در حساب شرکت هم اضافه شد"
-            : "✅ خرید ثبت شد — فایده فی لیتر آپدیت شد", ToastKind.Ok);
+        _host.Toast("✅ خرید ثبت شد"
+            + (seller.Length > 0 ? " — در حساب شرکت هم اضافه شد"
+               : missing ? "" : " — فایده فی لیتر آپدیت شد")
+            + (missing ? " · قیمت یا نرخ را بعداً با ✏️ بنویسید" : ""), ToastKind.Ok);
     });
 
     /// <summary>ظرفیتِ مخزن — تنظیمی است و روی نوارِ پرشدگی اثر می‌گذارد.</summary>

@@ -202,10 +202,24 @@
                         <TextBlock Text="{Binding Seller, StringFormat=👤 {0}}"
                                    Foreground="{DynamicResource Pump.Ink.Info}" />
                       </StackPanel>
-                      <Button Grid.Column="2" Classes="ghost danger" Content="🗑" Padding="9,2"
-                              Command="{Binding $parent[ItemsControl].((vm:StorageSectionViewModel)DataContext).DeletePurchaseCommand}"
-                              CommandParameter="{Binding}" />
+                      <!-- ✏️ «بعد از ثبت هم بشه ویرایشش کرد… یک قلم بزار» (۱۴۰۵/۰۷/۱۶) -->
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                        <Button Classes="ghost" Content="✏️" Padding="9,2"
+                                ToolTip.Tip="ویرایشِ این خرید — قیمت، نرخ یا هر چیزِ دیگر"
+                                Command="{Binding $parent[ItemsControl].((vm:StorageSectionViewModel)DataContext).EditPurchaseCommand}"
+                                CommandParameter="{Binding}" />
+                        <Button Classes="ghost danger" Content="🗑" Padding="9,2"
+                                Command="{Binding $parent[ItemsControl].((vm:StorageSectionViewModel)DataContext).DeletePurchaseCommand}"
+                                CommandParameter="{Binding}" />
+                      </StackPanel>
                     </Grid>
+                  </Border>
+
+                  <!-- قیمت یا نرخ هنوز نوشته نشده — اختیاری است، ولی دیده شود -->
+                  <Border IsVisible="{Binding MissingPrice}" Background="#1FF0952B"
+                          Padding="14,8" Margin="14,10,14,0" CornerRadius="8">
+                    <TextBlock Text="قیمتِ هر تن یا نرخِ دالرِ این خرید هنوز نوشته نشده — با ✏️ بنویسید؛ حسابِ شرکت هم همان لحظه به‌روز می‌شود."
+                               TextWrapping="Wrap" Foreground="{DynamicResource Pump.Ink.Warn}" FontWeight="SemiBold" />
                   </Border>
 
                   <!-- ⚠️ خریدی که هزار برابر ثبت شده (کادرِ «تن»ِ ۳.۱.۱۰۶ تا ۳.۱.۱۶۳).
@@ -219,8 +233,8 @@
                   <!-- ══ ‎.pu-stats‎ — نُه کادرِ خواندنیِ سایت ═══════════════
                        گزارشِ صاحب ریپو: «ببین خریدها را این مدلی نشان می‌دهد با
                        همهٔ جزئیاتش.» در سایت هر خرید یک کارتِ **خواندنی** است،
-                       نه نُه کادرِ تایپی. ویرایشِ خرید هم در سایت نیست: خریدِ
-                       اشتباه پاک می‌شود و دوباره ثبت. -->
+                       نه نُه کادرِ تایپی. ویرایش با ✏️ی سربرگِ کارت است
+                       (همان فرمِ ثبت — ۱۴۰۵/۰۷/۱۶). -->
                   <c:AutoFillPanel MinItemWidth="150" Gap="8" Margin="14">
                     <!-- ⛔ کادرِ «وزن (کگ)» برداشته شد — خواستهٔ صاحب ریپو:
                          «موقعِ خرید دو نوع اندازه است، یکی کیلو یکی تن؛ کیلو نباشد.»
@@ -384,11 +398,16 @@
   <!-- ══════════════════════════════════════════════════════════════════════
        🛢️ پنجرهٔ «ثبت خرید» — ‎#addPurchaseModal‎
        صفحهٔ نسبتاً کوچکی که روی بخش می‌نشیند: بالا کادرهای تایپی، پایین
-       عددهایی که همان لحظه حساب می‌شوند، و دو دکمه. تا هر چهار عددِ لازم پر
-       نشوند، «ذخیره» چیزی ثبت نمی‌کند.
+       عددهایی که همان لحظه حساب می‌شوند، و دو دکمه. فقط وزن و ثقلت لازم‌اند؛
+       قیمت و نرخ اختیاری و بعداً با ✏️ (همین پنجره، ‎EditPurchase‎).
        ══════════════════════════════════════════════════════════════════ -->
   <Panel x:Name="BuyOverlay" IsVisible="{Binding BuyOpen}" Background="#99000000">
-    <Border x:Name="BuyCard" Width="620" MaxHeight="640" VerticalAlignment="Center" HorizontalAlignment="Center"
+    <!-- ⛔ ‎Classes="modal"‎: ناوبریِ کلیدهای جهت‌دار (‎FieldNavigation‎) از این قاب
+         بیرون نمی‌رود، و ‎TabNavigation=Cycle‎ همان برای ‎Tab‎. گزارشِ صاحب ریپو
+         (۱۴۰۵/۰۷/۱۶): «کلیدهای چپ و راست و بالا از داخلِ اون کادر میره بیرون».
+         ‎MaxHeight‎ را کدِ پشت از بلندیِ دید می‌گذارد تا هیچ کادری نیمه نماند. -->
+    <Border x:Name="BuyCard" Classes="modal" KeyboardNavigation.TabNavigation="Cycle"
+            Width="620" MaxHeight="640" VerticalAlignment="Center" HorizontalAlignment="Center"
             CornerRadius="16" Padding="0" Background="{DynamicResource Pump.Card}"
             BorderBrush="{DynamicResource Pump.Accent}" BorderThickness="1">
       <Grid RowDefinitions="Auto,*,Auto">
@@ -402,8 +421,8 @@
           </Grid>
         </Border>
 
-        <ScrollViewer Grid.Row="1" Padding="16">
-          <StackPanel Spacing="12">
+        <ScrollViewer Grid.Row="1" Padding="16,12">
+          <StackPanel Spacing="10">
 
             <Grid ColumnDefinitions="*,12,*">
               <StackPanel Grid.Column="0" Spacing="4">
@@ -429,52 +448,55 @@
               </StackPanel>
             </Grid>
 
+            <!-- ⛔ این دو اختیاری‌اند (۱۴۰۵/۰۷/۱۶): «شاید شرکت نگفته باشه» — بعداً با ✏️ -->
             <Grid ColumnDefinitions="*,12,*">
               <StackPanel Grid.Column="0" Spacing="4">
-                <TextBlock Text="قیمت هر تن (دالر)" Classes="label" />
-                <TextBox Text="{Binding BuyPriceTon}" Watermark="مثلاً 1200" />
+                <TextBlock Text="قیمت هر تن (دالر) — اختیاری" Classes="label" />
+                <TextBox Text="{Binding BuyPriceTon}" Watermark="مثلاً 1200 — بعداً هم می‌شود" />
               </StackPanel>
               <StackPanel Grid.Column="2" Spacing="4">
-                <TextBlock Text="نرخ دالر (افغانی)" Classes="label" />
-                <TextBox Text="{Binding BuyUsdRate}" Watermark="مثلاً 65" />
+                <TextBlock Text="نرخ دالر (افغانی) — اختیاری" Classes="label" />
+                <TextBox Text="{Binding BuyUsdRate}" Watermark="مثلاً 65 — بعداً هم می‌شود" />
               </StackPanel>
             </Grid>
 
+            <!-- ⛔ یادداشت پیش از عددهای خودکار — تهِ قاب «نیمه دیده می‌شد» (۱۴۰۵/۰۷/۱۶) -->
+            <StackPanel Spacing="4">
+              <TextBlock Text="یادداشت" Classes="label" />
+              <TextBox Text="{Binding BuyNote}" Watermark="اختیاری" TextWrapping="Wrap" MinHeight="36" />
+            </StackPanel>
+
             <!-- عددهای خودکار — همان ‎pu-r-*‎ی سایت -->
-            <Border Classes="panel" Padding="14">
-              <Grid ColumnDefinitions="*,12,*" RowDefinitions="Auto,Auto,Auto">
-                <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2" Margin="0,0,0,10">
+            <Border Classes="panel" Padding="12,10">
+              <Grid ColumnDefinitions="*,10,*,10,*" RowDefinitions="Auto,8,Auto">
+                <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
                   <TextBlock Text="وزن به تن" Classes="label" />
                   <TextBlock Text="{Binding BuyTonText}" FontWeight="ExtraBold"
                              Foreground="{DynamicResource Pump.Ink.Info}" />
                 </StackPanel>
-                <StackPanel Grid.Row="0" Grid.Column="2" Spacing="2" Margin="0,0,0,10">
+                <StackPanel Grid.Row="0" Grid.Column="2" Spacing="2">
                   <TextBlock Text="مقدار لیتر" Classes="label" />
                   <TextBlock Text="{Binding BuyLitersText}" FontWeight="ExtraBold"
                              Foreground="{DynamicResource Pump.Ink.Ok}" />
                 </StackPanel>
-                <StackPanel Grid.Row="1" Grid.Column="0" Spacing="2" Margin="0,0,0,10">
-                  <TextBlock Text="پول کل (دالر)" Classes="label" />
-                  <TextBlock Text="{Binding BuyUsdText}" FontWeight="ExtraBold"
-                             Foreground="{DynamicResource Pump.Ink.Info}" />
-                </StackPanel>
-                <StackPanel Grid.Row="1" Grid.Column="2" Spacing="2" Margin="0,0,0,10">
-                  <TextBlock Text="پول کل (افغانی)" Classes="label" />
-                  <TextBlock Text="{Binding BuyAfnText}" FontWeight="ExtraBold"
-                             Foreground="{DynamicResource Pump.Ink.Accent}" />
-                </StackPanel>
-                <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">
+                <StackPanel Grid.Row="0" Grid.Column="4" Spacing="2">
                   <TextBlock Text="قیمت هر لیتر (افغانی)" Classes="label" />
                   <TextBlock Text="{Binding BuyPerLiterText}" FontWeight="ExtraBold"
                              Foreground="{DynamicResource Pump.Ink.Danger}" />
                 </StackPanel>
+                <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">
+                  <TextBlock Text="پول کل (دالر)" Classes="label" />
+                  <TextBlock Text="{Binding BuyUsdText}" FontWeight="ExtraBold"
+                             Foreground="{DynamicResource Pump.Ink.Info}" />
+                </StackPanel>
+                <StackPanel Grid.Row="2" Grid.Column="2" Spacing="2">
+                  <TextBlock Text="پول کل (افغانی)" Classes="label" />
+                  <TextBlock Text="{Binding BuyAfnText}" FontWeight="ExtraBold"
+                             Foreground="{DynamicResource Pump.Ink.Accent}" />
+                </StackPanel>
               </Grid>
             </Border>
 
-            <StackPanel Spacing="4">
-              <TextBlock Text="یادداشت" Classes="label" />
-              <TextBox Text="{Binding BuyNote}" Watermark="..." />
-            </StackPanel>
           </StackPanel>
         </ScrollViewer>
 

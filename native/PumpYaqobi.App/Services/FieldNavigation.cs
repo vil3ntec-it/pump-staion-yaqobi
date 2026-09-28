@@ -189,11 +189,25 @@ public sealed class FieldNavigationService
     /// <summary>
     /// محدودهٔ حرکت: نزدیک‌ترین صفحهٔ بخش. ناوبری هرگز از یک بخش به بخشِ
     /// دیگر یا به نوارِ بالای پنجره نمی‌پرد.
+    ///
+    /// ⛔ <b>پنجرهٔ روی بخش (‎Classes="modal"‎) محدودهٔ خودش است.</b> گزارشِ صاحب
+    /// ریپو (۱۴۰۵/۰۷/۱۶) از «ثبت خرید»ِ مخزن: «کلیدهای چپ و راست و بالا از داخلِ
+    /// اون کادر میره بیرون». محدوده صفحهٔ بخش بود، پس «بالا» از نخستین کادرِ
+    /// پنجره به کادرِ «ظرفیت»ِ زیرِ پرده می‌رفت.
     /// </summary>
     private Control? ScopeOf(Control from) =>
-        from.FindAncestorOfType<Controls.SectionPage>() as Control
+        ModalOf(from)
+        ?? from.FindAncestorOfType<Controls.SectionPage>() as Control
         ?? from.FindAncestorOfType<UserControl>() as Control
         ?? _root as Control;
+
+    /// <summary>نزدیک‌ترین جدِ ‎Classes="modal"‎ — یا ‎null‎.</summary>
+    public static Control? ModalOf(Control from)
+    {
+        for (var v = from.GetVisualParent(); v is not null; v = v.GetVisualParent())
+            if (v is Control c && c.Classes.Contains("modal")) return c;
+        return null;
+    }
 
     private static List<Control> Fields(Control scope) =>
         scope.GetVisualDescendants()
