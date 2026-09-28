@@ -151,6 +151,9 @@ public sealed partial class DebtorCardViewModel : ObservableObject
 /// </summary>
 public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHost
 {
+    /// <summary>کارت‌های زیربخش در کشوییِ «☰ کارها»، نه کنارِ نوار (۱۴۰۵/۰۷/۱۶ — «شلوغ نکند»).</summary>
+    protected override bool SubLinksInMenu => true;
+
     private readonly AppHost _host;
     private readonly bool _noInvoice;
     private List<DebtorCardViewModel> _all = new();

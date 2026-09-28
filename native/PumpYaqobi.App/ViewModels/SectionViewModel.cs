@@ -121,7 +121,15 @@ public abstract partial class SectionViewModel : ObservableObject
     /// </summary>
     protected virtual bool ShowSubLinks => true;
 
-    public bool ShowSubLinkCards => HasSubSections && ShowSubLinks;
+    public bool ShowSubLinkCards => HasSubSections && ShowSubLinks && !SubLinksInMenu;
+
+    /// <summary>
+    /// کارت‌های زیربخش به‌جای ردیفِ دکمه، داخلِ کشوییِ «☰ کارها» بنشینند؟
+    /// (۱۴۰۵/۰۷/۱۶ — «شلوغی می‌سازد»). ⛔ فقط جای دکمه است؛ همان ‎ShowSubCommand‎.
+    /// </summary>
+    protected virtual bool SubLinksInMenu => false;
+
+    public bool ShowSubMenuItems => HasSubSections && ShowSubLinks && SubLinksInMenu;
 
     /// <summary>بخشی که این یکی زیرِ آن نشسته — برای نوشتهٔ دکمهٔ برگشت.</summary>
     public SectionViewModel? ParentSection { get; private set; }
@@ -143,6 +151,7 @@ public abstract partial class SectionViewModel : ObservableObject
         SubSections.Add(sub);
         OnPropertyChanged(nameof(HasSubSections));
         OnPropertyChanged(nameof(ShowSubLinkCards));
+        OnPropertyChanged(nameof(ShowSubMenuItems));
     }
 
     /// <summary>

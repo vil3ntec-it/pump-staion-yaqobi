@@ -63,6 +63,9 @@ public sealed class DebtReceiptRowViewModel
 /// </summary>
 public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
 {
+    /// <summary>کارت‌های زیربخش در کشوییِ «☰ کارها»، نه کنارِ نوار (۱۴۰۵/۰۷/۱۶ — «شلوغ نکند»).</summary>
+    protected override bool SubLinksInMenu => true;
+
     private readonly AppHost _host;
 
     public DebtReceiptSectionViewModel(AppHost host) : base("debtrasid", "debt", "رسید قرض‌داران / چکنه")

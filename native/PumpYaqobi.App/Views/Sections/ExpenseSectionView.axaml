@@ -7,21 +7,15 @@
 
   <c:SectionPage Header="مصارف" SubHeader="مصارفِ ماه — همین جمع در «مفاد / ضرر» هم به کار می‌رود">
 
-    <c:SectionPage.Toolbar>
-      <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
-        <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0" Command="{Binding OpenHistoryCommand}" IsVisible="{Binding HasHistory}" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
-        <!-- ⚠️ این دکمه تا امروز **هیچ فرمانی نداشت** — زده می‌شد و هیچ اتفاقی
-             نمی‌افتاد. همان «کادرها ماهِ بعد کار نمی‌کند»: فهرستِ ماه‌ها فقط
-             ماه‌هایی را دارد که داده دارند، پس ماهِ بعد تا ردیفی نداشته باشد
-             در کشویی نیست. همتای ‎addExpenseMonth()‎ی سایت. -->
-        <Button Classes="ghost info" Content="ماه جدید" Margin="0,0,6,0"
-                Command="{Binding NewMonthCommand}"
-                ToolTip.Tip="جدولِ ماهِ بعد را باز می‌کند" />
-        <Button Classes="ghost" Content="PDF" Margin="0,0,6,0"
-                Command="{Binding PdfCommand}"
-                Foreground="{DynamicResource Pump.Ink.Ok}" BorderBrush="{DynamicResource Pump.Ok}" />
-      </WrapPanel>
-    </c:SectionPage.Toolbar>
+    <!-- ══ «☰ کارها» — کشویی (۱۴۰۵/۰۷/۱۶، خواستهٔ صاحب ریپو: «شلوغ نکند») ══
+         ⛔ فقط جای دکمه‌ها عوض شد؛ هر دکمه همان فرمانِ نوارِ پیشین را دارد. -->
+    <c:SectionPage.More>
+      <StackPanel Spacing="4">
+        <Button Classes="ghost info menu-item" Content="🗓️ ماه جدید" Command="{Binding NewMonthCommand}" ToolTip.Tip="جدولِ ماهِ بعد را باز می‌کند" />
+        <Button Classes="ghost info menu-item" Content="🕘 تاریخچه" Command="{Binding OpenHistoryCommand}" IsVisible="{Binding HasHistory}" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
+        <Button Classes="ghost info menu-item" Content="📄 PDF" Command="{Binding PdfCommand}" />
+      </StackPanel>
+    </c:SectionPage.More>
 
     <c:SectionPage.Filters>
       <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">

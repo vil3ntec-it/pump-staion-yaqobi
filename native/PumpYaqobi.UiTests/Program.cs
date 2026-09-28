@@ -175,6 +175,9 @@ internal static class Program
         //  سربرگ (تمِ رادیویی، تاریخ، ساعتِ خودِ برنامه) · ترتیبِ بخش‌ها · رسیدِ پارچه (۱۴۰۵/۰۷/۱۵)
         if (outDir.Equals("round15", StringComparison.OrdinalIgnoreCase)) return Round15Probe.Run(args);
         if (outDir.Equals("round16", StringComparison.OrdinalIgnoreCase)) return Round16Probe.Run(args);
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- moremenu
+        //  کشوییِ «☰ کارها»ی هفت بخش — باز کردن و زدنِ واقعی (۱۴۰۵/۰۷/۱۶)
+        if (outDir.Equals("moremenu", StringComparison.OrdinalIgnoreCase)) return MoreMenuProbe.Run();
         if (outDir.Equals("bindsweep", StringComparison.OrdinalIgnoreCase)) return BindSweep.Run(args);
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- chatroom [پوشه]
         if (outDir.Equals("chatroom", StringComparison.OrdinalIgnoreCase)) return ChatProbe.Run(args);

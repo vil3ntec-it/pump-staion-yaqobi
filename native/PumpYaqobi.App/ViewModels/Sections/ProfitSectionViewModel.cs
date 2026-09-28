@@ -19,6 +19,9 @@ namespace PumpYaqobi.App.ViewModels.Sections;
 /// </summary>
 public sealed partial class ProfitSectionViewModel : SectionViewModel
 {
+    /// <summary>کارت‌های زیربخش در کشوییِ «☰ کارها»، نه کنارِ نوار (۱۴۰۵/۰۷/۱۶ — «شلوغ نکند»).</summary>
+    protected override bool SubLinksInMenu => true;
+
     private readonly AppHost _host;
     private ProfitInput _db = new();
 
