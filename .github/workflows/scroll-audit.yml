@@ -121,6 +121,12 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- round16 ${{ runner.temp }}/round16
 
+      # کشوییِ «☰ کارها» (۱۴۰۵/۰۷/۱۶): تاریخچه، ماهِ جدید، PDF و زیربخش‌های
+      # هفت بخش — واقعاً باز و زده می‌شود؛ و «تاریخچهٔ پایه‌ها»ی پارچه دیگر نیست.
+      - name: کشوییِ کارهای بخش‌ها
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- moremenu
+
       # «توی حسابِ قرض‌دار نمی‌ره» (۱۴۰۵/۰۷/۱۶): هر دکمهٔ دیدنیِ کلِ برنامه که
       # اتصالِ فرمانش خطا داد و فرمانش خالی ماند ⇒ سرخ.
       - name: سنجشِ دکمه‌های مرده

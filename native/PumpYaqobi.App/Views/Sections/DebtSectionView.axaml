@@ -13,7 +13,6 @@
 
       <c:SectionPage.Toolbar>
         <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
-          <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0" Command="{Binding OpenHistoryCommand}" IsVisible="{Binding HasHistory}" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
           <Button Classes="accent" Content="افزودن شخص" Margin="0,0,8,0"
                   Command="{Binding AddDebtorCommand}" />
           <!-- «قرض‌های کهنه» از این‌جا رفت: حالا کارتِ زیربخشِ همین بخش است و
@@ -29,6 +28,14 @@
                ‎ScanQrCommand‎ سرِ جایشان در ویومدل‌اند. -->
         </WrapPanel>
       </c:SectionPage.Toolbar>
+
+      <!-- ══ «☰ کارها» — کشویی (۱۴۰۵/۰۷/۱۶، خواستهٔ صاحب ریپو: «شلوغ نکند») ══
+           ⛔ فقط جای دکمه‌ها عوض شد؛ هر دکمه همان فرمانِ نوارِ پیشین را دارد. -->
+      <c:SectionPage.More>
+        <StackPanel Spacing="4">
+          <Button Classes="ghost info menu-item" Content="🕘 تاریخچه" Command="{Binding OpenHistoryCommand}" IsVisible="{Binding HasHistory}" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
+        </StackPanel>
+      </c:SectionPage.More>
 
       <!-- ══ جست‌وجو: کوچک و در همان نوار، بغلِ «زیان ناشی از افزایش قیمت» ══
            گزارشِ صاحب ریپو با عکس: «جا اضافه گرفته شده، اون جستجو رو کوچیک کن

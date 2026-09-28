@@ -66,10 +66,13 @@ public class RowAddBarTests
     public void TheToolbarNoLongerCarriesAnAddRowButton(string view)
     {
         var v = View(view);
+        // ⚠️ از ۱۴۰۵/۰۷/۱۶ برخی بخش‌ها نوارِ ابزار ندارند و دکمه‌هایشان در کشوییِ
+        // «☰ کارها» (‎SectionPage.More‎) است — هیچ‌کدام از دو جا نباید «افزودنِ ردیف» داشته باشد.
         var head = v.IndexOf("</c:SectionPage.Toolbar>", StringComparison.Ordinal);
-        Assert.True(head > 0);
-        var toolbar = v[..head];
-        Assert.DoesNotContain("Command=\"{Binding AddRowCommand}\"", toolbar);
+        var more = v.IndexOf("</c:SectionPage.More>", StringComparison.Ordinal);
+        Assert.True(head > 0 || more > 0);
+        var top = v[..Math.Max(head, more)];
+        Assert.DoesNotContain("Command=\"{Binding AddRowCommand}\"", top);
     }
 
     /// <summary>

@@ -256,6 +256,13 @@
     <Setter Property="Background" Value="{DynamicResource Pump.Accent}" />
     <Setter Property="TextBlock.Foreground" Value="{DynamicResource Pump.OnAccent}" />
   </Style>
+  <!-- قلمِ کشوییِ «☰ کارها»: تمام‌پهنا، نوشته از سرِ خط (۱۴۰۵/۰۷/۱۶). -->
+  <Style Selector="Button.menu-item">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="Margin" Value="0" />
+  </Style>
+
   <Style Selector="Button.ghost">
     <Setter Property="Background" Value="Transparent" />
   </Style>
@@ -1174,6 +1181,14 @@
                            VerticalAlignment="Center" x:CompileBindings="False">
                   <ContentPresenter Content="{TemplateBinding Toolbar}" VerticalAlignment="Center"
                                     Margin="0,3" />
+
+                  <!-- ══ «☰ کارها» — کشوییِ کارهای کم‌کاربرد (۱۴۰۵/۰۷/۱۶) ══════
+                       محتوایش در ‎SectionPage.cs‎ ساخته می‌شود (‎More‎ + کارت‌های
+                       زیربخشِ بخشی که ‎SubLinksInMenu‎ دارد). تا چیزی برای نشان
+                       دادن نباشد، پنهان است. -->
+                  <Button x:Name="PART_More" Classes="ghost info" Content="☰ کارها ▾"
+                          IsVisible="False" Margin="6,3,0,3" VerticalAlignment="Center"
+                          ToolTip.Tip="تاریخچه، PDF، ماهِ جدید و صفحه‌های دیگرِ همین بخش" />
 
                   <!-- ══ کارت‌های زیربخش، کنارِ همان دکمه‌ها ═══════════════
                        بخشی که زیربخش دارد (قرض‌داران، مخزن، مفاد/ضرر، …)
