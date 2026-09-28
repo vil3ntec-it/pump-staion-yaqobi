@@ -791,11 +791,15 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
         if (ShowBaseHistory) await ReloadBaseHistoryAsync();
     }
 
-    partial void OnPaDateChanged(string v) => _ = PaDateChangedAsync((v ?? "").Trim());
+    // ⛔ کادرِ تاریخ با ‎LostFocus‎ می‌نشیند (همان ‎onchange‎ی سایت)، نه با هر
+    // کلید: پاک کردنِ یک رقم («1405/07/15» ⇐ «1405/07/1») گزارشِ تازه‌ای
+    // می‌ساخت و فرمِ تایپ‌شده را خالی می‌کرد. و تاریخِ نیمه‌کاره هیچ کاری نمی‌کند.
+    partial void OnPaDateChanged(string v) =>
+        SaveGuard.Watch(PaDateChangedAsync((v ?? "").Trim()), "تاریخِ گزارشِ پارچه");
 
     private async Task PaDateChangedAsync(string newDate)
     {
-        if (newDate.Length == 0) return;
+        if (newDate.Length == 0 || Shamsi.Key(newDate) == 0) return;
 
         if (_current is null)
         {

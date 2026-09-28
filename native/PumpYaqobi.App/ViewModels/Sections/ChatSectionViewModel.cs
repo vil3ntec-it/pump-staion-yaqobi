@@ -650,7 +650,7 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
         while (!_life.IsCancellationRequested)
         {
             try { await PollCloudAsync(_life.Token); }
-            catch (OperationCanceledException) { return; }
+            catch (OperationCanceledException) when (_life.IsCancellationRequested) { return; }
             catch { /* نرسید — دورِ بعد */ }
             try { await _wake.WaitAsync(IsActive ? CloudEvery : CloudEveryIdle, _life.Token); }
             catch { return; }

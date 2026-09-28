@@ -1066,13 +1066,22 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     {
         Directory.CreateDirectory(folder);
         var safe = string.Join("_", Title.Split(Path.GetInvalidFileNameChars()));
-        var path = Path.Combine(folder, safe + ".pdf");
 
         var order = PrintOrder();
-        if (wholeDocument || order.Count == 0 || PrintJob.IsWholeDocument(order, _pages.Count))
-            _doc.GeneratePdf(path);
-        else PagesDocument(order).GeneratePdf(path);
-        return path;
+        var whole = wholeDocument || order.Count == 0 || PrintJob.IsWholeDocument(order, _pages.Count);
+        //  ⛔ همان گزارش که در یک PDFخوان باز است (آکروبات فایل را قفل می‌کند)
+        //  با زدنِ دوبارهٔ «ذخیره» استثنای بی‌صاحب می‌داد. پس نامِ بعدی: «… (2).pdf».
+        for (var n = 1; ; n++)
+        {
+            var path = Path.Combine(folder, safe + (n == 1 ? "" : " (" + n + ")") + ".pdf");
+            try
+            {
+                if (whole) _doc.GeneratePdf(path);
+                else PagesDocument(order).GeneratePdf(path);
+                return path;
+            }
+            catch (IOException) when (n < 20) { /* قفل است — نامِ بعدی */ }
+        }
     }
 
     public byte[] ToPdfBytes()

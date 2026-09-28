@@ -293,7 +293,7 @@ public sealed partial class AmanatAccountViewModel : ObservableObject, IRowBatch
         var r = new AmanatRow
         {
             AccountId = Entity.Id,
-            SortIndex = Entity.Rows.Count,
+            SortIndex = Entity.Rows.Count == 0 ? 0 : Entity.Rows.Max(x => x.SortIndex) + 1,
             DateShamsi = Shamsi.Today(),
             DateKey = Shamsi.Key(Shamsi.Today()),
         };

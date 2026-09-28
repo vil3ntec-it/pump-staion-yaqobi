@@ -1259,7 +1259,7 @@
                      است: داخلِ ControlTemplate نوعِ DataContext معلوم نیست. -->
                 <StackPanel Grid.Row="3" Margin="0,14,0,0" Spacing="8"
                             x:CompileBindings="False"
-                            IsVisible="{Binding Notes, Converter={x:Static ObjectConverters.IsNotNull},
+                            IsVisible="{Binding Converter={x:Static ObjectConverters.IsNotNull},
                                         FallbackValue=False}"
                             DataContext="{Binding Notes}">
                   <!-- ══ سربرگِ کادرِ یادداشت، با ‎A−/A+‎ِ خودش ═══════════════

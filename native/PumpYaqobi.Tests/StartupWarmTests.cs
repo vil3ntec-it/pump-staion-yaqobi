@@ -145,7 +145,9 @@ public class StartupWarmTests
 
         // تنها جایی که بررسی از مسیرِ باز شدنِ صفحه صدا می‌خورد، همان
         // ‎Task.Run‎ی بی‌انتظار است.
-        Assert.Contains("_ = Task.Run(async () => { try { await CheckUpdateAsync(); } catch { } });", s);
+        // ‎Post‎ی نخِ رابط (نه ‎Task.Run‎ — آن خاصیت‌های صفحه را از نخِ دیگر عوض می‌کرد)
+        Assert.Contains("Avalonia.Threading.Dispatcher.UIThread.Post(async () =>", s);
+        Assert.DoesNotContain("Task.Run(async () => { try { await CheckUpdateAsync(); }", s);
 
         var body = s[s.IndexOf("private Task RefreshAsync()", StringComparison.Ordinal)..];
         body = body[..body.IndexOf("\n    }", StringComparison.Ordinal)];

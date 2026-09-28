@@ -424,17 +424,20 @@
       <c:SectionPage.Toolbar>
         <StackPanel Orientation="Horizontal" Spacing="8" DataContext="{Binding Detail}"
                     x:CompileBindings="False">
+          <!-- ⛔ پارامتر از خودِ بخش (‎Detail‎)، نه ‎{Binding}‎: سرِ نشستن در درخت این
+               پنل یک لحظه ‎DataContext‎ِ بخش را به ارث می‌برد و ‎RelayCommand&lt;T&gt;‎ با
+               نوعِ ناجور دکمه را برای همیشه مرده می‌کرد — همان باگِ کارتِ قرض‌دار. -->
           <Button Classes="accent" Content="✅ تایید فاکتور"
                   IsVisible="{Binding IsPending}"
                   Command="{Binding $parent[UserControl].DataContext.ApproveCommand}"
-                  CommandParameter="{Binding}" />
+                  CommandParameter="{Binding $parent[UserControl].DataContext.Detail}" />
           <Button Content="↩ برگشت به صف"
                   IsVisible="{Binding IsApproved}"
                   Command="{Binding $parent[UserControl].DataContext.RevertCommand}"
-                  CommandParameter="{Binding}" />
+                  CommandParameter="{Binding $parent[UserControl].DataContext.Detail}" />
           <Button Classes="ghost danger" Content="🗑 حذف"
                   Command="{Binding $parent[UserControl].DataContext.DeleteInvoiceCommand}"
-                  CommandParameter="{Binding}" />
+                  CommandParameter="{Binding $parent[UserControl].DataContext.Detail}" />
           <!-- برگشت به همان فهرستی که فاکتور از آن باز شد (در صف / تایید شده / همه) -->
           <Button Content="‹ برگشت"
                   Command="{Binding $parent[UserControl].DataContext.BackCommand}" />

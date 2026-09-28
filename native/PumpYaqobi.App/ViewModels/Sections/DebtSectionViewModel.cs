@@ -88,6 +88,15 @@ public sealed partial class DebtorCardViewModel : ObservableObject
     /// <summary>۹۰٪ به بالا: نوار چراغ می‌زند و کارت نشانِ هشدار می‌گیرد.</summary>
     public bool IsAlarm => Meter >= 90d;
 
+    /// <summary>
+    /// ⛔ «چراغ زدنِ» کارتِ ۹۰٪ یک انیمیشنِ بی‌پایان است؛ فقط وقتی فهرستِ
+    /// کارت‌ها واقعاً جلوی چشم است (‎Owner.CardsLive‎). پیش از این در هر بخشِ
+    /// دیگر و زیرِ صفحهٔ حساب هم می‌تپید — CPUِ دائمی (قاعدهٔ ‎INFINITE‎).
+    /// </summary>
+    public bool AlarmLive => IsAlarm && Owner is { CardsLive: true };
+
+    internal void NotifyAlarmLive() { if (IsAlarm) OnPropertyChanged(nameof(AlarmLive)); }
+
     private static string BadgeOf(DebtStatus s, string what) => s switch
     {
         DebtStatus.Out => "⛔ اتمام " + what,
@@ -208,6 +217,21 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
     [ObservableProperty] private bool _personOpen;
 
     public bool IsListVisible => !PersonOpen && Overlay is null;
+
+    /// <summary>فهرستِ کارت‌ها همین حالا دیده می‌شود (بخش باز و هیچ صفحه‌ای رویش نیست).</summary>
+    public bool CardsLive => IsShown && IsListVisible;
+
+    private void RaiseCardsLive()
+    {
+        OnPropertyChanged(nameof(CardsLive));
+        foreach (var c in _all) c.NotifyAlarmLive();
+    }
+
+    protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        if (e.PropertyName == nameof(IsShown)) RaiseCardsLive();
+    }
     public bool IsPersonVisible => PersonOpen && Overlay is null;
     public bool IsOverlayVisible => Overlay is not null;
 
@@ -219,6 +243,7 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
 
     partial void OnPersonOpenChanged(bool v)
     {
+        RaiseCardsLive();
         OnPropertyChanged(nameof(IsListVisible));
         OnPropertyChanged(nameof(IsPersonVisible));
         // صفحهٔ حساب تمام‌عرض است، مثلِ مودالِ تمام‌صفحهٔ نسخهٔ وب
@@ -227,6 +252,7 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
 
     partial void OnOverlayChanged(object? v)
     {
+        RaiseCardsLive();
         OnPropertyChanged(nameof(IsListVisible));
         OnPropertyChanged(nameof(IsPersonVisible));
         OnPropertyChanged(nameof(IsOverlayVisible));
@@ -616,7 +642,8 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
         // ⚠️ حسابِ تکراری ساخته نمی‌شود — عینِ ‎confirmAddPerson‎ی سایت: همان
         // حسابِ قبلی باز می‌شود و کاربر خبردار می‌شود.
         var norm = CompanyDataService.NormalizeName(name);
-        var twin = Cards.FirstOrDefault(c => CompanyDataService.NormalizeName(c.Name) == norm);
+        // ⛔ از ‎_all‎ (همهٔ قرض‌داران)، نه ‎Cards‎ که پس از جست‌وجو فقط بخشی را دارد.
+        var twin = _all.FirstOrDefault(c => CompanyDataService.NormalizeName(c.Name) == norm);
         if (twin is not null)
         {
             NewName = ""; NewPhone = "";
@@ -646,6 +673,12 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
     private async Task DeleteDebtorAsync(DebtorCardViewModel? card)
     {
         if (card is null) return;
+        // ⛔ «✕»ی کارت کلِ حساب را با همهٔ فرعی‌ها و ردیف‌ها می‌برد؛ یک کلیکِ
+        // اشتباه نباید بی پرسش همه‌اش را به سطل بفرستد (شرکت و ورق هم می‌پرسند).
+        if (!await Dialogs.ConfirmAsync("حذفِ قرض‌دار",
+                "حسابِ «" + card.Name + "» با همهٔ حساب‌های فرعی و ردیف‌هایش حذف شود؟\n"
+                + "تا ۱۵ روز از «تنظیمات ← سطل زباله» (یا ‎Ctrl+Z‎) برمی‌گردد.", "🗑 حذف", "نه"))
+            return;
         await _host.Debtors.DeleteDebtorAsync(card.Entity.Id);
         await RefreshAsync();
     }

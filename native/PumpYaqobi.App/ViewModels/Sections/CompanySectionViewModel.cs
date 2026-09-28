@@ -483,7 +483,7 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
         {
             CompanyId = Entity.Id,
             Fuel = Fuel,
-            SortIndex = CompanyService.RowsOf(Entity, Fuel).Count(),
+            SortIndex = CompanyService.RowsOf(Entity, Fuel).Select(x => x.SortIndex).DefaultIfEmpty(-1).Max() + 1,
             DateShamsi = Shamsi.Today(),
             DateKey = Shamsi.Key(Shamsi.Today()),
         };
@@ -724,6 +724,22 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
     partial void OnSearchChanged(string v) => ApplyFilter();
 
     protected override Task LoadAsync() => RefreshAsync();
+
+    /// <summary>
+    /// ⛔ رسیدِ صرافی و خریدِ مخزن در <b>نخستین ردیفِ خالیِ</b> حسابِ شرکت
+    /// می‌نشینند. بی خواندنِ دوباره پس از برگشتن، همان ردیف «خالی» دیده می‌شد و
+    /// تایپ در آن رسید را پاک می‌کرد؛ الباقیِ کارت‌ها هم کهنه می‌ماند. همان راهِ
+    /// ‎AfterUndoAsync‎ (صفحهٔ باز در جای خودش تازه می‌شود). صفحهٔ رویی (خریدها،
+    /// آرشیو، جست‌وجو) دست نمی‌خورد.
+    /// </summary>
+    public override bool ActivationOnlyReadsDb => true;
+
+    public override async Task OnActivatedAsync()
+    {
+        if (!IsLoaded || Overlay is not null) return;
+        if (PageOpen && Page is not null) await Page.FlushAsync();
+        await AfterUndoAsync();
+    }
 
     public async Task RefreshAsync()
     {

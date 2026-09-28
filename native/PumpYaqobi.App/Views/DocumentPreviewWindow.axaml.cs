@@ -125,7 +125,9 @@ public partial class DocumentPreviewWindow : Window
 
         if (Vm.PrintersLoading) { Vm.Status = "فهرستِ چاپگرها هنوز می‌آید — یک لحظه صبر کنید"; return; }
 
-        var path = Vm.SaveTo(PrintService.DocsFolder);
+        string path;
+        try { path = Vm.SaveTo(PrintService.DocsFolder); }
+        catch (Exception ex) { Vm.Status = "❌ فایلِ چاپ ساخته نشد — " + Services.ErrorText.Friendly(ex); return; }
         Vm.Status = PrintService.Print(path)
             ? "به چاپگرِ پیش‌فرضِ ویندوز فرستاده شد"
             : "ویندوز هیچ چاپگری نشان نداد — «افزودنِ چاپگر…» را بزنید، یا PDF بسازید";
@@ -140,7 +142,10 @@ public partial class DocumentPreviewWindow : Window
     private void Save(bool reveal)
     {
         if (Vm is null) return;
-        var path = Vm.SaveTo(PrintService.DocsFolder);
+        string path;
+        //  ⛔ دیسکِ پر، پوشهٔ نانوشتنی: جملهٔ سرخ، نه استثنای بی‌صاحب
+        try { path = Vm.SaveTo(PrintService.DocsFolder); }
+        catch (Exception ex) { Vm.Status = "❌ ذخیره نشد — " + Services.ErrorText.Friendly(ex); return; }
         Vm.Status = "ذخیره شد: " + path;
         if (reveal) PrintService.Reveal(path);
     }

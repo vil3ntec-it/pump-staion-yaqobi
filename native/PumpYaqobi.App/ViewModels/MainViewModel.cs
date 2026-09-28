@@ -1311,13 +1311,16 @@ public sealed partial class MainViewModel : ObservableObject
     /// بی‌صدا رد شویم — دکمه‌ای که زده شود و هیچ اتفاقی نیفتد باگ است.
     /// </summary>
     [RelayCommand]
-    private void SignOut()
+    private async Task SignOut()
     {
         if (!AppHost.Current.Auth.HasPassword())
         {
             AppHost.Current.Toasts.Show("رمزی گذاشته نشده — برای خروج، اول در «تنظیمات ← رمزها و کد» رمز بگذارید.");
             return;
         }
+        // ⛔ اول هر نوشتهٔ در صف: پس از ‎Auth.SignOut()‎ نقش «بیننده» است و ذخیرهٔ
+        // تأخیریِ همان خانه‌ای که همین حالا تایپ شد با «اجازه ندارید» گم می‌شد.
+        await FlushEverythingAsync();
         AppHost.Current.Auth.SignOut();
         // ⚠️ به ‎Locked‎ برمی‌گردیم، نه به ‎Starting‎: لودینگ یک بار در عمرِ
         // اجرای برنامه است و خروج نباید دوباره راهش بیندازد.
@@ -1469,7 +1472,20 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     public async Task GoByIdAsync(string id)
     {
-        if (Sections.FirstOrDefault(x => x.Id == id) is { } top) { await GoAsync(top); return; }
+        //  ⛔ «storage-diesel» / «shifts-diesel» (کارتِ مخزنِ دیزل، هشدارِ مخزنِ
+        //  دیزل، ردیفِ دیزلِ «آخرین ثبت‌ها») هیچ بخشی نیستند و تا امروز کلیک
+        //  رویشان بی‌صدا هیچ کاری نمی‌کرد. پسوند تیل را می‌گوید، نه بخش را.
+        //  و لینکِ بی‌پسوندِ همین دو بخش یعنی پطرول.
+        var diesel = id.EndsWith("-diesel", StringComparison.Ordinal);
+        if (diesel) id = id[..^"-diesel".Length];
+        if (Sections.FirstOrDefault(x => x.Id == id) is { } top)
+        {
+            await GoAsync(top);
+            if (ActiveSection != top) return;
+            if (top is StorageSectionViewModel st) st.IsDiesel = diesel;
+            else if (top is ParchaSectionViewModel pa) pa.IsDiesel = diesel;
+            return;
+        }
 
         foreach (var parent in Sections)
             if (parent.SubSections.FirstOrDefault(x => x.Id == id) is { } sub)
@@ -2002,7 +2018,9 @@ public sealed partial class MainViewModel : ObservableObject
         // حسابِ همان شخص را در بخشِ قرض‌داران باز می‌کند.
         if (By("debt") is DebtSectionViewModel debt)
         {
-            Task Open(long id) => GoAsync(debt).ContinueWith(_ => debt.OpenPersonAsync(id)).Unwrap();
+            // ⛔ ‎ContinueWith‎ی بی زمان‌بند روی نخِ پس‌زمینه می‌دوید و ‎OpenPersonAsync‎
+            // کالکشن‌های رابط را از همان نخ عوض می‌کرد ⇒ «Call from invalid thread».
+            async Task Open(long id) { await GoAsync(debt); await debt.OpenPersonAsync(id); }
             By("debtrasid")?.AddSub(new DebtSummarySectionViewModel(host, false, Open),
                                     "دسته‌جمعی — تیل");
             By("debtrasid")?.AddSub(new DebtSummarySectionViewModel(host, true, Open),

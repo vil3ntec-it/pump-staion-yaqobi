@@ -99,10 +99,13 @@ public class SparkChart : Control
             var x = v / unitDiv;
             var txt = (x >= 10 || x == 0 ? Math.Round(x) : Math.Round(x * 10) / 10)
                       .ToString(System.Globalization.CultureInfo.InvariantCulture);
-            Text(ctx, txt, left - 6, y - 7, labelBrush, 10, TextAlignment.Right, 50);
+            //  ⛔ جعبهٔ ۵۰ پیکسلی **پیش از** ‎left‎ می‌نشیند (در حاشیهٔ چپ)؛ تا
+            //  امروز از ‎left−6‎ شروع می‌شد و عدد ۴۴ پیکسل داخلِ نمودار روی خط‌ها
+            //  و نقطهٔ اول می‌افتاد.
+            Text(ctx, txt, left - 6 - 50, y - 7, labelBrush, 10, TextAlignment.Right, 50);
         }
         if (ShowAxis && unitTxt.Length > 0)
-            Text(ctx, unitTxt + " لیتر", left - 6, 2, labelBrush, 10, TextAlignment.Right, 50);
+            Text(ctx, unitTxt + " لیتر", left - 6 - 50, 2, labelBrush, 10, TextAlignment.Right, 50);
 
         // ── سطحِ زیرِ خط ──
         var fill = new LinearGradientBrush

@@ -106,7 +106,7 @@ public sealed class HomeServer
                     if (Parse(text) is { } m) onMessage(m);
                 }
             }
-            catch (OperationCanceledException) { return; }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
             catch { /* قطعِ شبکه — پایین دوباره وصل می‌شود */ }
 
             try { await Task.Delay(3000, ct); } catch { return; }

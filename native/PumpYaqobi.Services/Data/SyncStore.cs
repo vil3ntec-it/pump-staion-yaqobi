@@ -13,7 +13,15 @@ public sealed record IncomingOp(string OpId, string Table, string RowUid, string
                                 JsonElement Fields, long ServerSeq);
 
 /// <summary>نتیجهٔ اعمالِ یک دسته opِ رسیده.</summary>
-public sealed record ApplyReport(int Applied, int Skipped, int Failed, string LastWhy);
+public sealed record ApplyReport(int Applied, int Skipped, int Failed, string LastWhy)
+{
+    /// <summary>
+    /// opهایی که ننشستند (پدرِ نرسیده یا خطای دیگر). ⛔ مکان‌نما از رویشان رد
+    /// می‌شود، پس اگر کسی نگهشان ندارد برای همیشه گم می‌شوند — ‎SyncEngine‎ آن‌ها
+    /// را کنار می‌گذارد و با گرفتنِ بعدی دوباره امتحان می‌کند.
+    /// </summary>
+    public IReadOnlyList<IncomingOp> FailedOps { get; init; } = Array.Empty<IncomingOp>();
+}
 
 /// <summary>
 /// ══ دفترِ همگام‌سازی روی همین کامپیوتر ══════════════════════════════════
@@ -64,6 +72,24 @@ public sealed class SyncStore
     }
 
     /// <summary>حال را عوض می‌کند — تنها راهِ نوشتنش.</summary>
+    /// <summary>
+    /// ⛔ دفتری که از کامپیوترِ <b>دیگری</b> آمده (فایلِ کاملِ برنامه یا بکاپ
+    /// روی فلش) شناسهٔ همگام‌سازیِ همان کامپیوتر را با خودش می‌آورد. سرور opهای
+    /// «خودِ همان دستگاه» را پس نمی‌دهد، پس دو کامپیوتر با یک شناسه تغییرهای هم
+    /// را هرگز نمی‌دیدند. شناسهٔ ثبت‌شده‌ای که از این کامپیوتر نیست برداشته
+    /// می‌شود تا همین‌جا شناسهٔ خودش را بسازد (‎CloudLink.SyncDeviceFor‎).
+    /// ⚠️ مکان‌نما می‌ماند: دادهٔ پیش از آن در خودِ فایل است. و بازگردانیِ روی
+    /// همان کامپیوتر هیچ چیزی را عوض نمی‌کند. ‎true‎ یعنی برداشته شد.
+    /// </summary>
+    public bool ForgetForeignDevice(string myDeviceUid)
+    {
+        if (string.IsNullOrWhiteSpace(myDeviceUid)) return false;
+        var id = (State().DeviceId ?? "").Trim();
+        if (id.Length == 0 || id.StartsWith(myDeviceUid.Trim(), StringComparison.Ordinal)) return false;
+        Update(x => x.DeviceId = "");
+        return true;
+    }
+
     public void Update(Action<SyncStateRow> edit)
     {
         using var db = _dbf.Create();
@@ -80,9 +106,8 @@ public sealed class SyncStore
     /// </summary>
     private static void Quiet(PumpDbContext db)
     {
-        var was = OpLog.Enabled;
-        OpLog.Enabled = false;
-        try { db.SaveChanges(); } finally { OpLog.Enabled = was; }
+        db.SuppressOps = true;
+        try { db.SaveChanges(); } finally { db.SuppressOps = false; }
     }
 
     // ── حسابِ صاحبِ این دفتر ────────────────────────────────────────────
@@ -461,6 +486,7 @@ public sealed class SyncStore
         }
 
         var missing = new Dictionary<string, string>(StringComparer.Ordinal);
+        var failedOps = new List<IncomingOp>();
         while (pending.Count > 0)
         {
             var later = new List<(IncomingOp Op, TableInfo T)>();
@@ -480,6 +506,7 @@ public sealed class SyncStore
                 catch (Exception ex)
                 {
                     failed++;
+                    failedOps.Add(op);
                     progress = true;
                     //  ⚠️ پیامِ خام به کاربر نمی‌رسد؛ فقط نوعش، برای «جزئیات»
                     why = $"{t.Entity}: {ex.GetType().Name}";
@@ -491,11 +518,12 @@ public sealed class SyncStore
         foreach (var (op, _) in pending)
         {
             failed++;
+            failedOps.Add(op);
             why = missing.GetValueOrDefault(op.OpId + "|" + op.RowUid, why);
         }
 
         if (applied > 0) PumpDbContext.Bump();
-        return new ApplyReport(applied, skipped, failed, why);
+        return new ApplyReport(applied, skipped, failed, why) { FailedOps = failedOps };
     }
 
     private static bool ApplyOne(PumpDbContext db, TableInfo t, IncomingOp op, DateTime now)

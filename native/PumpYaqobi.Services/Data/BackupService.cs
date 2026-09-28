@@ -79,17 +79,41 @@ public sealed class BackupService
     /// یعنی درست همان روزی که بیشتر از همه لازم است. این کار هیچ داده‌ای را
     /// عوض نمی‌کند؛ فقط یک رونوشت در پوشهٔ خودِ برنامه می‌گذارد.
     /// </summary>
+    /// <summary>
+    /// ⛔ عکسِ امروز روی هم نوشته می‌شود، پس سه جا هم‌زمان می‌نوشتندش (باز شدنِ
+    /// برنامه، بکاپِ شش‌ساعته، دکمهٔ کاربر) — یکی فایلِ نیمه‌کارهٔ دیگری را
+    /// پاک می‌کرد. یک قفل برای همه.
+    /// </summary>
+    private static readonly object SnapshotGate = new();
+
     private void WriteSnapshotCore(string target)
     {
         var dir = Path.GetDirectoryName(target);
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-        if (File.Exists(target)) File.Delete(target);
 
-        using var db = _dbf.Create();
-        // نامِ فایل داخلِ رشتهٔ SQL می‌رود، پس تک‌کوتیشن دوتا می‌شود — همان
-        // قاعدهٔ خودِ SQLite. (پارامتر این‌جا پذیرفته نمی‌شود.)
-        var quoted = target.Replace("'", "''");
-        db.Database.ExecuteSqlRaw($"VACUUM INTO '{quoted}';");
+        //  ⛔ اول در یک فایلِ موقت، بعد جابه‌جایی. تا امروز عکسِ سالمِ قبلی
+        //  <b>پیش از</b> ساختنِ تازه پاک می‌شد: دیسکِ پر یا برق که وسطِ کار
+        //  می‌رفت، تنها بکاپِ امروز هم با خودش می‌رفت.
+        var part = target + ".part";
+        lock (SnapshotGate)
+        {
+            try
+            {
+                if (File.Exists(part)) File.Delete(part);
+                using (var db = _dbf.Create())
+                {
+                    // نامِ فایل داخلِ رشتهٔ SQL می‌رود، پس تک‌کوتیشن دوتا می‌شود — همان
+                    // قاعدهٔ خودِ SQLite. (پارامتر این‌جا پذیرفته نمی‌شود.)
+                    var quoted = part.Replace("'", "''");
+                    db.Database.ExecuteSqlRaw($"VACUUM INTO '{quoted}';");
+                }
+                File.Move(part, target, overwrite: true);
+            }
+            finally
+            {
+                try { if (File.Exists(part)) File.Delete(part); } catch { /* دورِ بعد */ }
+            }
+        }
     }
 
     /// <summary>
@@ -206,6 +230,9 @@ public sealed class BackupService
         if (safety is null && File.Exists(_dbf.DbPath))
             return new RestoreOutcome(false, "عکسِ ایمنی گرفته نشد — بازگردانی انجام نشد");
 
+        //  ریشهٔ شناسه‌های دفترِ فعلی — اگر بکاپ خودش ریشه نداشت، همین به ارث
+        //  می‌رسد (شرحش بالای ‎PumpDbFactory.RestoreSeedHint‎).
+        var liveSeed = LiveSeed();
         try
         {
             SqliteConnection.ClearAllPools();
@@ -214,7 +241,9 @@ public sealed class BackupService
             foreach (var side in new[] { _dbf.DbPath + "-wal", _dbf.DbPath + "-shm" })
                 try { if (File.Exists(side)) File.Delete(side); } catch { }
 
-            _dbf.EnsureReady();
+            PumpDbFactory.RestoreSeedHint = liveSeed;
+            try { _dbf.EnsureReady(); }
+            finally { PumpDbFactory.RestoreSeedHint = null; }
         }
         catch (Exception ex)
         {
@@ -224,6 +253,17 @@ public sealed class BackupService
 
         return new RestoreOutcome(true,
             $"✅ بازگردانی شد — {Shamsi.Money(records)} رکورد", safety, records);
+    }
+
+    private string? LiveSeed()
+    {
+        try
+        {
+            using var db = _dbf.Create();
+            var seed = db.SyncState.AsNoTracking().Where(x => x.Id == 1).Select(x => x.UidSeed).FirstOrDefault();
+            return string.IsNullOrWhiteSpace(seed) ? null : seed;
+        }
+        catch { return null; }
     }
 
     /// <summary>عکسی از حالِ فعلی، پیش از بازگردانی. ‎null‎ یعنی نشد.</summary>

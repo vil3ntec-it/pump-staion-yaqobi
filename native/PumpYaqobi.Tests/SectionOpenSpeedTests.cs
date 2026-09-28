@@ -141,6 +141,14 @@ public class SectionOpenSpeedTests
                  })
         {
             var src = Read(parts);
+            //  ⛔ صفحهٔ آرشیو از ۱۴۰۵/۰۷/۱۶ هیچ شنوندهٔ چیدمانی ندارد (هر جدول خودش با
+            //  ‎DataContextChanged‎ خبر می‌دهد) — برگشتنش همان گشتنِ کلِ درخت با هر فریم است.
+            if (file == "DebtArchiveView")
+            {
+                Assert.DoesNotContain("LayoutUpdated +=", src);
+                Assert.Contains("OnArchiveGridContext", src);
+                continue;
+            }
             var at = src.IndexOf("LayoutUpdated +=", System.StringComparison.Ordinal);
             Assert.True(at >= 0, $"{file}: شنوندهٔ چیدمان پیدا نشد.");
             //  نگهبان باید در همان چند خطِ اولِ خودِ شنونده باشد

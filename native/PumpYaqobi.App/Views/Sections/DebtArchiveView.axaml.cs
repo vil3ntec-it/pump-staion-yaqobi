@@ -1,8 +1,6 @@
 using System.ComponentModel;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
-using Avalonia.VisualTree;
 using PumpYaqobi.App.Controls;
 using PumpYaqobi.App.ViewModels.Sections;
 
@@ -16,37 +14,39 @@ namespace PumpYaqobi.App.Views.Sections;
 /// </summary>
 public partial class DebtArchiveView : UserControl
 {
-    public DebtArchiveView()
+    public DebtArchiveView() => AvaloniaXamlLoader.Load(this);
+
+    // ⛔ هیچ شنوندهٔ ‎LayoutUpdated‎ی نیست (۱۴۰۵/۰۷/۱۶): تا امروز این صفحه با هر
+    // چیدمانِ هر جای پنجره — هر فریمِ اسکرول، هر کلید — کلِ درختِ خودش را با
+    // همهٔ ردیف‌ها و خانه‌ها می‌گشت تا جدول‌های تازه را پیدا کند، و هر جدولِ
+    // دیده‌شده (با شنونده‌ای روی ویومدلش) برای همیشه در یک ‎HashSet‎ می‌ماند.
+    // حالا هر جدول خودش خبر می‌دهد (‎DataContextChanged‎ در همان ‎axaml‎) و
+    // شنوندهٔ ویومدلِ قبلی همان‌جا برداشته می‌شود.
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<ExcelGrid, Hook> _hooks = new();
+
+    private sealed class Hook
     {
-        AvaloniaXamlLoader.Load(this);
-        Loaded += (_, _) => WireGrids();
-        //  ⚠️ ‎LayoutUpdated‎ برای **هر** چیدمانِ **هر جای** پنجره شلیک می‌شود
-        //  و این صفحه — مثلِ همهٔ بخش‌ها — همیشه در درخت می‌ماند. بی این
-        //  نگهبان، هر فریمِ اسکرولِ هر بخشِ دیگری یک ‎GetVisualDescendants‎ی
-        //  کاملِ این صفحه را می‌دواند. همان قاعده‌ای که برای ‎ExcelGrid‎ و
-        //  ‎TotalsBar‎ از ۱۴۰۵/۰۶/۲۶ نوشته شده:
-        //  «هیچ شنوندهٔ ‎LayoutUpdated‎ی بی ‎IsEffectivelyVisible‎».
-        LayoutUpdated += (_, _) =>
-        {
-            if (!IsEffectivelyVisible) return;
-            WireGrids();
-        };
+        public INotifyPropertyChanged? Vm;
+        public PropertyChangedEventHandler? Handler;
     }
 
-    private readonly HashSet<ExcelGrid> _wired = new();
-
-    private void WireGrids()
+    private void OnArchiveGridContext(object? sender, EventArgs e)
     {
-        foreach (var g in this.GetVisualDescendants().OfType<ExcelGrid>())
+        if (sender is not ExcelGrid g) return;
+        var hook = _hooks.GetValue(g, _ => new Hook());
+        if (hook.Vm is { } old && hook.Handler is { } h) old.PropertyChanged -= h;
+        hook.Vm = null; hook.Handler = null;
+
+        Apply(g);
+        if (g.DataContext is INotifyPropertyChanged vm)
         {
-            if (!_wired.Add(g)) continue;
-            Apply(g);
-            if (g.DataContext is INotifyPropertyChanged vm)
-                vm.PropertyChanged += (_, e) =>
-                {
-                    if (e.PropertyName is nameof(DebtArchiveViewModel.ShowFuelTypeColumn) or nameof(DebtArchiveViewModel.RowFilter))
-                        Apply(g);
-                };
+            PropertyChangedEventHandler handler = (_, pe) =>
+            {
+                if (pe.PropertyName is nameof(DebtArchiveViewModel.ShowFuelTypeColumn) or nameof(DebtArchiveViewModel.RowFilter))
+                    Apply(g);
+            };
+            vm.PropertyChanged += handler;
+            hook.Vm = vm; hook.Handler = handler;
         }
     }
 

@@ -192,6 +192,26 @@ public class AcctLiveTests
         Assert.Equal("acct/c2", home[^1]);
     }
 
+    /// <summary>
+    /// ⛔ مقصدِ خاموش یک بار در هر دور امتحان می‌شود، نه به ازای هر حساب —
+    /// صدها حساب × مهلتِ هر درخواست حلقهٔ ناشر را دقیقه‌ها نگه می‌داشت. و مهلتِ
+    /// تمام‌شده (‎TaskCanceledException‎ بی لغوِ واقعی) بقیهٔ دور را نمی‌بُرد.
+    /// </summary>
+    [Fact]
+    public async Task ADeadDestinationIsTriedOncePerPass()
+    {
+        var pub = new AcctLivePublisher();
+        var cloudCalls = 0;
+        Task<bool> Home(string p, object v, CancellationToken _) => Task.FromResult(true);
+        Task<bool> Cloud(string p, object v, CancellationToken _)
+        { cloudCalls++; throw new TaskCanceledException("مهلت"); }
+
+        var items = Enumerable.Range(1, 5).Select(i => new AcctLive.Item("d" + i, "k" + i, Snap("ن" + i))).ToList();
+        Assert.Equal(5, await pub.PublishAsync(items, Home, Cloud));   // خانگی همه رفت
+        Assert.Equal(1, cloudCalls);                                   // ابر فقط یک بار
+        Assert.Equal(5, pub.Pending);                                  // و همه طلبکار ماندند
+    }
+
     [Fact]
     public async Task NoHomeDoorMeansCloudOnlyAndTheOtherWayRound()
     {

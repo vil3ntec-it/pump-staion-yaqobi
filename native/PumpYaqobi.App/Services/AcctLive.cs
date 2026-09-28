@@ -258,12 +258,19 @@ public sealed class AcctLivePublisher
 
         var sent = 0;
         var pending = 0;
+        //  ⛔ مقصدی که یک بار در همین دور نرسید، برای بقیهٔ حساب‌های همین دور
+        //  رد می‌شود: سرورِ خاموش با مهلتِ هر درخواست × صدها حساب حلقهٔ ناشر را
+        //  دقیقه‌ها نگه می‌داشت (نه عکسِ زنده، نه چراغ، نه پشتیبان). دورِ بعد
+        //  دوباره امتحان می‌شود.
+        bool homeDown = false, cloudDown = false;
         foreach (var it in items)
         {
             ct.ThrowIfCancellationRequested();
             var hash = AcctLive.HashOf(it.Snap);
             var needHome = homeSet is not null && (!_home.TryGetValue(it.Id, out var h) || h != hash);
             var needCloud = cloudPut is not null && (!_cloud.TryGetValue(it.Id, out var c) || c != hash);
+            if (needHome && homeDown) { pending++; needHome = false; }
+            if (needCloud && cloudDown) { pending++; needCloud = false; }
             if (!needHome && !needCloud) continue;
 
             var env = AcctLive.Envelope(it.Key, it.Snap);
@@ -272,17 +279,17 @@ public sealed class AcctLivePublisher
             {
                 var ok = false;
                 try { ok = await homeSet!(AcctLive.HomeBranch + "/" + it.Id, env, ct); }
-                catch (OperationCanceledException) { throw; }
-                catch { /* سرورِ خانگی خاموش — دورِ بعد */ }
-                if (ok) { _home[it.Id] = hash; went = true; } else pending++;
+                catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+                catch { /* سرورِ خانگی خاموش یا مهلت تمام شد — دورِ بعد */ }
+                if (ok) { _home[it.Id] = hash; went = true; } else { pending++; homeDown = true; }
             }
             if (needCloud)
             {
                 var ok = false;
                 try { ok = await cloudPut!(AcctLive.CloudPrefix + it.Id, env, ct); }
-                catch (OperationCanceledException) { throw; }
-                catch { /* ابر نرسید — دورِ بعد */ }
-                if (ok) { _cloud[it.Id] = hash; went = true; } else pending++;
+                catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+                catch { /* ابر نرسید یا مهلت تمام شد — دورِ بعد */ }
+                if (ok) { _cloud[it.Id] = hash; went = true; } else { pending++; cloudDown = true; }
             }
             if (went) sent++;
         }

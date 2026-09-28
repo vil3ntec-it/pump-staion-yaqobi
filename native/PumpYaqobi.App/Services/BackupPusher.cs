@@ -297,8 +297,11 @@ public sealed class BackupPusher : IAsyncDisposable
         try { _host.Toast(WarningText, ToastKind.Warn); } catch { }
     }
 
+    //  ⛔ نامِ فرهنگِ ویندوز نه: روی ویندوزِ فارسی/دری تقویمِ پیش‌فرض خورشیدی است و
+    //  «2026-09-28T…»ی نوشته‌شده با ‎"O"‎ سالِ خورشیدیِ ۲۰۲۶ خوانده می‌شد.
     private static DateTime? Parse(string raw) =>
-        DateTime.TryParse(raw, out var v) ? v : null;
+        DateTime.TryParse(raw, System.Globalization.CultureInfo.InvariantCulture,
+                          System.Globalization.DateTimeStyles.RoundtripKind, out var v) ? v : null;
 
     public async ValueTask DisposeAsync()
     {

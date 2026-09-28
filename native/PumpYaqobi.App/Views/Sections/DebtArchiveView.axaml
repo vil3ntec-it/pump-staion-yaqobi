@@ -119,7 +119,8 @@
 
                 <!-- ── جدولِ ویرایش‌شدنی — همان ستون‌های ‎#pm-tbl‎ ── -->
                 <c:ExcelGrid ItemsSource="{Binding Rows}" GrowsOnEnter="True" x:CompileBindings="False"
-                             RowDeleteCommand="{Binding DeleteRowCommand}" Classes="archive">
+                             RowDeleteCommand="{Binding DeleteRowCommand}" Classes="archive"
+                             DataContextChanged="OnArchiveGridContext">
                   <DataGrid.Columns>
                     <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
                     <DataGridTextColumn Header="نام"   Binding="{Binding Name}" Width="Auto" />

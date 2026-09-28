@@ -533,6 +533,7 @@ public sealed partial class InvoiceSectionViewModel : SectionViewModel
             var rate = _host.Settings.UnionRate(row.Entity.Fuel);
             await _host.Invoices.ApproveAsync(row.Entity.Id, rate);
             await ReloadAsync();
+            RepickDetail(row);
             _host.Toast("✅ فاکتور تایید شد", ToastKind.Ok);
         });
 
@@ -541,10 +542,25 @@ public sealed partial class InvoiceSectionViewModel : SectionViewModel
         CrashGuard.RunAsync("برگشت فاکتور", async () =>
         {
             if (row is null || !row.IsApproved) return;
+            //  ⛔ ذخیرهٔ در صفِ همین فاکتور اگر پس از برگشت می‌نشست، کلِ ردیفِ
+            //  کهنه (با «تایید شده») را دوباره می‌نوشت و برگشت بی‌صدا پس می‌رفت.
+            await row.FlushAsync();
             await _host.Invoices.RevertAsync(row.Entity.Id);
             await ReloadAsync();
+            RepickDetail(row);
             _host.Toast("↩️ به صف برگشت", ToastKind.Warn);
         });
+
+    /// <summary>
+    /// ⛔ پس از خواندنِ دوباره، صفحهٔ بازِ فاکتور همان شیءِ کهنه را نشان می‌داد:
+    /// پس از «✅ تایید» هنوز «در صف» و دکمهٔ تایید، و زدنِ دوباره پیامِ «تایید
+    /// شد» بی هیچ کاری. نمونهٔ تازهٔ همان فاکتور جایش می‌نشیند.
+    /// </summary>
+    private void RepickDetail(InvoiceRowViewModel row)
+    {
+        if (!ReferenceEquals(Detail, row)) return;
+        Detail = _all.FirstOrDefault(r => r.Entity.Id == row.Entity.Id) ?? Detail;
+    }
 
     [RelayCommand]
     private Task DeleteInvoiceAsync(InvoiceRowViewModel? row) =>

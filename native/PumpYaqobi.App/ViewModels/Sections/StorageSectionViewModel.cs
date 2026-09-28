@@ -571,6 +571,15 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         await RecalcAsync();
     }
 
+    /// <summary>
+    /// ⛔ پارچهٔ تازه موجودیِ مخزن را کم می‌کند؛ بی این، مخزن تا عوض شدنِ تیل
+    /// موجودیِ پیشین را نشان می‌داد. فقط همان جمعِ فروش خوانده می‌شود
+    /// (‎RecalcAsync‎)، با ترمزِ ‎Version‎.
+    /// </summary>
+    public override bool ActivationOnlyReadsDb => true;
+
+    public override Task OnActivatedAsync() => IsLoaded ? RecalcAsync() : Task.CompletedTask;
+
     private PurchaseRowViewModel Track(PurchaseRowViewModel r)
     {
         r.Recalculated += () => _ = RecalcAsync();

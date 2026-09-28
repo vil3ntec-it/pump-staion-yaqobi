@@ -230,7 +230,7 @@ public sealed class AuthService
     /// برنامهٔ خودش بیرون نگه می‌داشت (۱۴۰۵/۰۷/۱۵).
     /// </summary>
     private static DateTime? GetLockUntil(Persistence.PumpDbContext db) =>
-        DateTime.TryParse(Get(db, UntilKey), null, System.Globalization.DateTimeStyles.RoundtripKind, out var t)
+        DateTime.TryParse(Get(db, UntilKey), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out var t)
         && t.ToUniversalTime() - AppClock.UtcNow <= MaxLock
             ? t : null;
 

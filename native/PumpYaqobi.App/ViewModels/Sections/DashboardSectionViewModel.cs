@@ -340,6 +340,7 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
     }
 
     private DashDebtInfo _debt;
+    private (decimal All, decimal Petrol, decimal Diesel) _debtByFuel;
 
     private async Task<DashDebtInfo> BuildDebtInfoAsync()
     {
@@ -349,7 +350,7 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
         // ⚠️ جمع‌ها از دیتابیس، بی خواندنِ ردیف‌ها — داشبورد هم مثلِ نوارِ بالا
         // با هر باز شدن این را می‌خواهد.
         var accounts = await _host.Debtors.CardAccountsAsync();
-        decimal total = 0;
+        decimal all = 0, petrol = 0, diesel = 0;
         foreach (var list in accounts.Values)
         {
             // ⚠️ این‌جا دیگر ‎NormalizeAccount‎ صدا زده نمی‌شود و **نباید** بشود:
@@ -358,13 +359,15 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
             // بردگی‌شان از «لیتر × فی»ی نداشته دوباره حساب می‌شود و صفر
             // می‌گردد — یعنی عددِ داشبورد خراب می‌شود.
             var t = _host.Debt.SumTotals(list);
-            total += Fuel switch
-            {
-                DashFuel.Petrol => t.Petrol.Albaqi,
-                DashFuel.Diesel => t.Diesel.Albaqi,
-                _ => t.All.Albaqi,
-            };
+            //  ⛔ هر سه جمع نگه داشته می‌شود: کلیدِ پطرول/دیزل فقط ‎Render‎ را
+            //  می‌زند (خواندنِ دوباره پشتِ ترمزِ ‎Version‎ است) و تا امروز عددِ
+            //  «همه» زیرِ کلیدِ «دیزل» می‌ماند.
+            all += t.All.Albaqi;
+            petrol += t.Petrol.Albaqi;
+            diesel += t.Diesel.Albaqi;
         }
+        _debtByFuel = (all, petrol, diesel);
+        var total = all;
 
         var companies = await _host.Companies.ListAsync();
         var comps = companies.Count(c => _host.Company.Summarize(c, c.Rows).AlbaqiAfn > 0);
@@ -432,7 +435,13 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
         SalesCard.SetDelta(DashboardService.Growth(cur.Liters, prev.Liters), perWord);
 
         // ۲) قرض‌داران
-        DebtCard.Value = Money(_debt.Total) + " افغانی";
+        var debtTotal = Fuel switch
+        {
+            DashFuel.Petrol => _debtByFuel.Petrol,
+            DashFuel.Diesel => _debtByFuel.Diesel,
+            _ => _debtByFuel.All,
+        };
+        DebtCard.Value = Money(debtTotal) + " افغانی";
         DebtCard.SetDeltaText("👥 " + _debt.Persons + " قرض‌دار");
         DebtCard.Sub = "🧾 " + _debt.Invoices + " فاکتور قرضی · 🏢 " + _debt.Companies + " شرکت";
 

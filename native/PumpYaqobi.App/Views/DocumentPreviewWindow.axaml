@@ -203,7 +203,7 @@
         <Panel Grid.Row="0">
           <ScrollViewer Padding="24" HorizontalScrollBarVisibility="Auto" Name="PreviewScroll">
             <Panel HorizontalAlignment="Center" VerticalAlignment="Center">
-              <Border Background="White" BoxShadow="0 2 12 0 #26000000">
+              <Border Background="White" BoxShadow="0 2 0 1 #26000000">
                 <!-- ⚠️ ‎HighQuality‎: ورقِ تیز بزرگ‌تر از قاب تصویر می‌شود و کوچک
                      کردنِ بی‌کیفیتش خط‌های یک‌پیکسلیِ جدول را پرپر می‌کرد. -->
                 <Image Source="{Binding CurrentPage}" Stretch="Uniform"

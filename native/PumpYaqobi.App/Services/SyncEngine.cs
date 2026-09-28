@@ -92,6 +92,23 @@ public sealed class SyncEngine : IAsyncDisposable
     private long _lastVersion = -1;
     private int _fails;
     private DateTime _lastPull = DateTime.MinValue;
+
+    /// <summary>
+    /// ⛔ یک دور در هر لحظه. دکمهٔ «الان همگام کن» (‎SyncNowAsync‎) تا امروز
+    /// ‎StepAsync‎ را هم‌زمان با حلقه می‌دواند: هر دو همان دسته را می‌گرفتند و
+    /// می‌فرستادند، هر دو همان opهای رسیده را می‌نشاندند — ردیفِ دوتایی.
+    /// </summary>
+    private readonly SemaphoreSlim _stepGate = new(1, 1);
+
+    /// <summary>
+    /// opهای رسیده‌ای که ننشستند (پدرِ نرسیده، خطای یک ردیف). ⛔ مکان‌نما از
+    /// رویشان رد می‌شود، پس تا امروز برای همیشه گم می‌شدند — یعنی کامپیوترِ دوم
+    /// آن ردیف را هیچ‌وقت نمی‌دید. با هر گرفتنِ بعدی پیش از opهای تازه دوباره
+    /// امتحان می‌شوند (حداکثر ‎DeferMaxTries‎ بار؛ فقط در حافظه).
+    /// </summary>
+    private readonly List<IncomingOp> _deferred = new();
+    private readonly Dictionary<string, int> _deferTries = new(StringComparer.Ordinal);
+    public const int DeferMaxTries = 20;
     private DateTime _lastBeat = DateTime.MinValue;
     private readonly HashSet<string> _toldNotices = new(StringComparer.Ordinal);
 
@@ -288,7 +305,7 @@ public sealed class SyncEngine : IAsyncDisposable
         while (!ct.IsCancellationRequested)
         {
             try { await StepAsync(force: false, ct); }
-            catch (OperationCanceledException) { return; }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
             catch { /* هیچ خطایی حلقه را نمی‌کشد */ }
 
             var wait = _fails > 0
@@ -309,6 +326,13 @@ public sealed class SyncEngine : IAsyncDisposable
     // ── یک دور ─────────────────────────────────────────────────────────
 
     private async Task StepAsync(bool force, CancellationToken ct)
+    {
+        await _stepGate.WaitAsync(ct);
+        try { await StepCoreAsync(force, ct); }
+        finally { _stepGate.Release(); }
+    }
+
+    private async Task StepCoreAsync(bool force, CancellationToken ct)
     {
         if (Disabled) return;
 
@@ -361,7 +385,15 @@ public sealed class SyncEngine : IAsyncDisposable
         //  جابه‌جا که شد، همین دور رها می‌شود و دورِ بعد روی دفترِ درست
         //  از نو شروع می‌کند.
         var mine = (file.CloudUserId ?? "").Trim();
-        if (_host.UseLedgerOf(mine)) { _lastVersion = -1; Nudge(); return; }
+        if (_host.UseLedgerOf(mine)) { _lastVersion = -1; _deferred.Clear(); _deferTries.Clear(); Nudge(); return; }
+
+        //  ⛔ دفتر ممکن است <b>وسطِ همین دور</b> عوض شود (ورودِ حسابِ دیگر روی
+        //  نخِ رابط، در حالی که این‌جا منتظرِ شبکه‌ایم). پس از هر ‎await‎ پیش از
+        //  هر نوشتنی می‌سنجیم؛ وگرنه نتیجهٔ opهای حسابِ الف و opهای رسیدهٔ
+        //  حسابِ الف در دفترِ حسابِ ب می‌نشستند.
+        var ledger = _host.Db.DbPath;
+        bool Moved() => Volatile.Read(ref _held)
+                        || !string.Equals(_host.Db.DbPath, ledger, StringComparison.Ordinal);
 
         var state = _store.State();
         //  ⛔ شناسهٔ همگام‌سازیِ همین دفتر — شرحش بالای ‎CloudLink.SyncDeviceFor‎
@@ -372,6 +404,7 @@ public sealed class SyncEngine : IAsyncDisposable
             state = _store.State();
             if (bind.Rebound)
             {
+                _deferred.Clear(); _deferTries.Clear();
                 //  ⚠️ همین‌جا می‌ایستیم و دورِ بعد را همین حالا صدا می‌زنیم:
                 //  وگرنه پیام در همین دور با پیامِ «بارِ اول» عوض می‌شد و
                 //  کاربر هیچ‌وقت نمی‌فهمید چرا کلِ دفترش دوباره می‌رود.
@@ -420,6 +453,7 @@ public sealed class SyncEngine : IAsyncDisposable
                 SetPrime(true, $"فرستادنِ دفترِ این کامپیوتر به حسابِ شما… ({Shamsi.Money(pending)} مانده)");
             var batch = _store.Take();
             var res = await cloud.SyncPushAsync(batch, pending, ct);
+            if (Moved()) { _lastVersion = -1; Nudge(); return; }
 
             if (res.UpgradeRequired)
             {
@@ -434,7 +468,18 @@ public sealed class SyncEngine : IAsyncDisposable
                 return;
             }
 
-            if (!res.Ok)
+            if (!res.Ok && res.TooLarge && batch.Count == 1)
+            {
+                //  ⛔ یک opِ تنها از سقفِ بدنهٔ سرور بزرگ‌تر است: تلاشِ دوباره هرگز
+                //  نمی‌رسد و سرِ صف همهٔ تغییرهای بعدی را برای همیشه نگه می‌داشت.
+                //  «رد شد» علامت می‌خورد (همان کارِ ‎rejected‎ی خودِ سرور) و صف
+                //  جلو می‌رود؛ خودِ ردیف روی همین کامپیوتر دست نمی‌خورد.
+                _store.MarkResults(new Dictionary<string, string> { [batch[0].OpId] = "too_large" });
+                LastError = "یک تغییرِ خیلی بزرگ به سرور نرفت";
+                Queued = _store.Pending();
+                Nudge();
+            }
+            else if (!res.Ok)
             {
                 _fails++;
                 _store.CountAttempt(batch.Select(x => x.OpId));
@@ -444,27 +489,29 @@ public sealed class SyncEngine : IAsyncDisposable
                 if (priming) EndPrime(false, res.Why);
                 return;
             }
-
-            _fails = 0;
-            _store.MarkResults(res.Results);
-            _store.Prune();
-            LastOkAt = AppClock.Now;
-            _store.Update(x =>
+            else
             {
-                x.LastPushAt = AppClock.UnixMs;
-                x.LastOkAt = x.LastPushAt;
-                x.LastError = "";
-                x.ServerSchema = res.ServerSchema;
-                x.Holding = false;
-                x.DeviceId = cloud.SyncDevice;
-            });
-            LastError = "";
-            Queued = _store.Pending();
+                _fails = 0;
+                _store.MarkResults(res.Results);
+                _store.Prune();
+                LastOkAt = AppClock.Now;
+                _store.Update(x =>
+                {
+                    x.LastPushAt = AppClock.UnixMs;
+                    x.LastOkAt = x.LastPushAt;
+                    x.LastError = "";
+                    x.ServerSchema = res.ServerSchema;
+                    x.Holding = false;
+                    x.DeviceId = cloud.SyncDevice;
+                });
+                LastError = "";
+                Queued = _store.Pending();
 
-            //  هنوز چیزی مانده ⇒ همین حالا دورِ بعد. ⚠️ نه «دسته پر بود»: دسته
-            //  حالا با بایت هم بسته می‌شود و دستهٔ کوتاه‌تر از دویست هم می‌تواند
-            //  پشتش صفِ بلندی داشته باشد.
-            if (Queued > 0) Nudge();
+                //  هنوز چیزی مانده ⇒ همین حالا دورِ بعد. ⚠️ نه «دسته پر بود»: دسته
+                //  حالا با بایت هم بسته می‌شود و دستهٔ کوتاه‌تر از دویست هم می‌تواند
+                //  پشتش صفِ بلندی داشته باشد.
+                if (Queued > 0) Nudge();
+            }
         }
         else if (state.Holding && pending > 0)
         {
@@ -472,6 +519,7 @@ public sealed class SyncEngine : IAsyncDisposable
             //  دستهٔ کوچک، نه کلِ صف.
             var probe = _store.Take(1);
             var res = await cloud.SyncPushAsync(probe, pending, ct);
+            if (Moved()) { _lastVersion = -1; Nudge(); return; }
             if (res.Ok)
             {
                 _store.MarkResults(res.Results);
@@ -490,6 +538,7 @@ public sealed class SyncEngine : IAsyncDisposable
 
             _lastPull = AppClock.Mono;
             var pull = await cloud.SyncPullAsync(state.Cursor, ct);
+            if (Moved()) { _lastVersion = -1; Nudge(); return; }
             if (!pull.Ok)
             {
                 _fails++;
@@ -504,9 +553,26 @@ public sealed class SyncEngine : IAsyncDisposable
 
             _fails = 0;
             var applyWhy = "";
-            if (pull.Ops.Count > 0)
+            if (pull.Ops.Count > 0 || _deferred.Count > 0)
             {
-                var applied = _store.ApplyIncoming(pull.Ops);
+                //  کنارگذاشته‌های دورِ قبل اول (قدیمی‌ترند)، بعد رسیده‌های تازه
+                var batch = _deferred.Count == 0 ? pull.Ops : _deferred.Concat(pull.Ops).ToList();
+                var applied = _store.ApplyIncoming(batch);
+                _deferred.Clear();
+                foreach (var op in applied.FailedOps)
+                {
+                    var key = op.OpId + "|" + op.RowUid;
+                    var tries = _deferTries.GetValueOrDefault(key) + 1;
+                    if (tries >= DeferMaxTries) { _deferTries.Remove(key); continue; }
+                    _deferTries[key] = tries;
+                    _deferred.Add(op);
+                }
+                //  آن‌هایی که نشستند از شمارش بیرون می‌روند
+                if (_deferTries.Count > _deferred.Count)
+                {
+                    var keep = _deferred.Select(o => o.OpId + "|" + o.RowUid).ToHashSet(StringComparer.Ordinal);
+                    foreach (var k in _deferTries.Keys.Where(k => !keep.Contains(k)).ToList()) _deferTries.Remove(k);
+                }
                 if (applied.Failed > 0) applyWhy = "چند تغییرِ رسیده ننشست: " + applied.LastWhy;
                 PrimeGot += pull.Ops.Count;
             }
