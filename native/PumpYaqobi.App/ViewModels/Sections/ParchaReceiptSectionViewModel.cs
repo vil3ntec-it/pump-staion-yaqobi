@@ -179,6 +179,11 @@ public sealed partial class ParchaReceiptSectionViewModel : SectionViewModel, IR
 
     public async Task RefreshAsync()
     {
+        // ⛔ اول نوشته‌های در صف: خواندنِ دوباره پیش از نشستنِ آخرین تایپ،
+        // مقدارِ کهنهٔ دیسک را جلوی چشم می‌گذاشت و ویرایشِ بعدیِ همان ردیف
+        // (که کلِ ردیف را می‌نویسد) تایپِ قبلی را پس می‌گرفت.
+        foreach (var r in Rows.ToList())
+            try { await r.FlushAsync(); } catch { /* نگهبانِ ذخیره می‌گوید */ }
         using (Rows.Batch())
         {
             Rows.Clear();

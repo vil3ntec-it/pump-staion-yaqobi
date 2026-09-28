@@ -153,6 +153,14 @@ public sealed partial class HistorySectionViewModel : SectionViewModel
 
     protected override Task LoadAsync() => RefreshCardsAsync();
 
+    /// <summary>
+    /// ⛔ فعال‌سازی فقط دفتر را می‌خواند، پس با ‎Version‎ِ دست‌نخورده رد می‌شود:
+    /// تا امروز هر برگشت به تاریخچه کلِ فهرستِ یک بخش را از نو می‌خواند و
+    /// ماه/تیل/پایه‌ای را که کاربر برگزیده بود به «همه» برمی‌گرداند؛ و دکمهٔ
+    /// «🕘 تاریخچه»ی هر بخش اول فهرستِ بخشِ <b>قبلی</b> را می‌خواند، بعد تازه.
+    /// </summary>
+    public override bool ActivationOnlyReadsDb => true;
+
     public override async Task OnActivatedAsync()
     {
         // تاریخچه خلاصهٔ دفترهای دیگر است، پس هر بار که کاربر وارد می‌شود

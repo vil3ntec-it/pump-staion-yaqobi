@@ -210,7 +210,7 @@ public class NoPasswordSourceTests
     public void Khoroje_BiRamz_BonBast_NemiSazad()
     {
         var mv = Read("PumpYaqobi.App", "ViewModels", "MainViewModel.cs");
-        var i = mv.IndexOf("private void SignOut()");
+        var i = mv.IndexOf("private async Task SignOut()");
         Assert.True(i > 0);
         var body = mv[i..(i + 700)];
         Assert.Contains("Auth.HasPassword()", body);

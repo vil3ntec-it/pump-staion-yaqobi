@@ -27,6 +27,7 @@ namespace PumpYaqobi.Tests;
 /// ورود دفترِ <b>خالی</b> می‌دید — دقیقاً همان چیزی که پرسیده شد. این کلاس
 /// همان شکاف را می‌بندد: <b>یک</b> زنجیره، روی SQLiteِ واقعیِ روی دیسک.
 /// </summary>
+[Collection(OpLogCollection.Name)]
 public class AccountFirstLoginCarryTests : IDisposable
 {
     private readonly string _dir =

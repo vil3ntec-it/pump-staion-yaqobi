@@ -80,8 +80,17 @@ public sealed class ManualRowItemViewModel
 }
 
 /// <summary>یک بخشِ خرید (پطرول یا دیزل) با خلاصه — ‎_companyPurchaseSection‎.</summary>
-public sealed class PurchaseSectionViewModel
+public sealed partial class PurchaseSectionViewModel : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
 {
+    /// <summary>
+    /// ⛔ کارت‌ها پنجره دارند — همان قاعدهٔ «خریدهای مخزن» (‎StorageSectionViewModel.PurchasePage‎).
+    /// شرکتی که هرگز «جدول جدید» نزده سال‌ها خرید دارد و هر کارت هشت کادر؛ همهٔ
+    /// آن‌ها یک‌جا ساخته و با هر فریمِ اسکرول کشیده می‌شدند. جمع‌ها و شمار همچنان
+    /// از <b>همهٔ</b> خریدهاست.
+    /// </summary>
+    public const int Page = 12;
+    private readonly List<PurchaseItemViewModel> _allItems;
+
     public PurchaseSectionViewModel(FuelType fuel, IReadOnlyList<FuelPurchase> entries,
                                     IReadOnlyList<CompanyRow> manual, CompanyService calc)
     {
@@ -89,7 +98,8 @@ public sealed class PurchaseSectionViewModel
         IsDiesel = fuel == FuelType.Diesel;
         Label = IsDiesel ? "🟤 خریدهای دیزل" : "⛽ خریدهای پطرول";
         BrushKey = IsDiesel ? "Pump.Warn" : "Pump.Accent";
-        Purchases.ResetTo(entries.Select((e, i) => new PurchaseItemViewModel(e, i + 1)));
+        _allItems = entries.Select((e, i) => new PurchaseItemViewModel(e, i + 1)).ToList();
+        Purchases.ResetTo(_allItems.Take(Page));
         var manualShown = manual.Where(r => calc.Ton(r) != 0m || calc.TotalUsd(r) != 0m).ToList();
         Manual.ResetTo(manualShown.Select((r, i) => new ManualRowItemViewModel(r, i + 1, calc)));
 
@@ -111,7 +121,21 @@ public sealed class PurchaseSectionViewModel
     public string BrushKey { get; }
     public BulkRows<PurchaseItemViewModel> Purchases { get; } = new();
     public BulkRows<ManualRowItemViewModel> Manual { get; } = new();
-    public bool HasPurchases => Purchases.Count > 0;
+    public bool HasPurchases => _allItems.Count > 0;
+
+    public int HiddenCount => _allItems.Count - Purchases.Count;
+    public bool HasOlder => HiddenCount > 0;
+    public string OlderText =>
+        "⬇️ " + Shamsi.Money(Math.Min(Page, HiddenCount)) + " خریدِ دیگر (" + Shamsi.Money(HiddenCount) + " مانده)";
+
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private void ShowOlder()
+    {
+        Purchases.ResetTo(_allItems.Take(Purchases.Count + Page));
+        OnPropertyChanged(nameof(HiddenCount));
+        OnPropertyChanged(nameof(HasOlder));
+        OnPropertyChanged(nameof(OlderText));
+    }
     public bool HasManual => Manual.Count > 0;
     public string CountText { get; }
     public string LitersText { get; }

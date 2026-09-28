@@ -158,6 +158,11 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
 
     protected async Task ReloadRowsAsync()
     {
+        // ⛔ اول نوشته‌های در صفِ همین جدول: خواندنِ دوباره پیش از نشستنِ
+        // آخرین تایپ، مقدارِ کهنهٔ دیسک را جلوی چشم می‌گذاشت و ویرایشِ بعدیِ
+        // همان ردیف (که کلِ ردیف را می‌نویسد) تایپِ قبلی را پس می‌گرفت.
+        foreach (var r in Rows.ToList())
+            try { await r.FlushAsync(); } catch { /* نگهبانِ ذخیره می‌گوید */ }
         var list = await Service.ListAsync(MonthFilter);
         // یک‌جا، نه ردیف‌به‌ردیف — وگرنه جدول به ازای هر ردیف یک‌بار خودش را
         // از نو می‌چیند و بخش هنگامِ باز شدن می‌ایستد.
@@ -277,9 +282,12 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
             Months.Insert(0, next);
         }
 
+        //  عوض شدنِ ماه خودش ‎ReloadRowsAsync‎ را می‌زند؛ بارِ دوم فقط وقتی
+        //  همان ماه بود (دو بار خواندنِ همان دفتر کندی بود، نه احتیاط).
+        var same = Month == next;
         Month = next;
         Picker.Adopt(next);
-        await ReloadRowsAsync();
+        if (same) await ReloadRowsAsync();
         Toast?.Invoke("✅ جدول ماه " + Shamsi.MonthLabel(next) + " باز شد");
     }
 

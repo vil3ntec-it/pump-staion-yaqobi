@@ -263,7 +263,7 @@
               <WrapPanel Orientation="Horizontal">
                 <TextBlock Text="📅 تاریخ:" Classes="muted" VerticalAlignment="Center"
                            Margin="0,0,7,6" />
-                <TextBox Text="{Binding PaDate}" Width="120" HorizontalContentAlignment="Center"
+                <TextBox Text="{Binding PaDate, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="120" HorizontalContentAlignment="Center"
                          Margin="0,0,8,6" />
                 <Border Classes="chip" Margin="0,0,8,6">
                   <TextBlock Text="{Binding ReportNumText, StringFormat=گزارش #{0}}" />
@@ -415,7 +415,7 @@
                                     ToolTip.Tip="دیدنِ گزارشِ همین پارچه"
                                     Command="{Binding $parent[UserControl].((vm:ParchaSectionViewModel)DataContext).ShowReportCommand}"
                                     CommandParameter="{Binding}">
-                              <Border Classes="card">
+                              <Border Classes="card calm">
                                 <StackPanel Spacing="7">
                                   <Grid ColumnDefinitions="*,Auto">
                                     <TextBlock Grid.Column="0" Text="{Binding Title}" FontWeight="Bold" FontSize="13" />
@@ -452,7 +452,7 @@
       </ItemsControl>
 
       <!-- گزارشِ یک پارچه — همان دو شیفت، خواندنی -->
-      <StackPanel Spacing="12" IsVisible="{Binding ShowReportDetail}" DataContext="{Binding OpenReport}"
+      <StackPanel Spacing="12" IsVisible="{Binding $parent[UserControl].DataContext.ShowReportDetail, FallbackValue=False}" DataContext="{Binding OpenReport}"
                   x:CompileBindings="False">
         <Border Classes="panel" Padding="16,12">
           <StackPanel Spacing="4">

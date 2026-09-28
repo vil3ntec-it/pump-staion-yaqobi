@@ -67,7 +67,16 @@ public partial class QrWindow : Window
         if (_png is not { Length: > 0 }) return;
         var path = await Dialogs.SaveFileAsync("ذخیرهٔ کیو‌آر", _suggested, "عکس", new[] { "*.png" });
         if (string.IsNullOrWhiteSpace(path)) return;
-        await File.WriteAllBytesAsync(path, _png);
+        //  ⛔ پوشهٔ نانوشتنی یا دیسکِ پر: پیامِ آدمیزاد، نه استثنای بی‌صاحب
+        try
+        {
+            await File.WriteAllBytesAsync(path, _png);
+            Services.AppHost.Current.Toast("✅ کیو‌آر ذخیره شد", Services.ToastKind.Ok);
+        }
+        catch (Exception ex)
+        {
+            Services.AppHost.Current.Toast("❌ کیو‌آر ذخیره نشد — " + Services.ErrorText.Friendly(ex), Services.ToastKind.Error);
+        }
     }
 
     // ══ فرستادن ═════════════════════════════════════════════════════════════

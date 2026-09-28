@@ -577,6 +577,16 @@ public sealed class PumpDbContext : DbContext
         try { TrashAdded?.Invoke(l.Select(t => (t.Id, t.Kind)).ToList()); } catch { }
     }
 
+    /// <summary>
+    /// همین یک ذخیره op نسازد (حالِ همگام‌سازی، مهاجرت).
+    ///
+    /// ⛔ **مالِ همین نمونه است، نه سراسری.** پیش از این `OpLog.Enabled`ِ
+    /// ایستا دور و برِ هر ذخیرهٔ حالِ همگام‌سازی (روی نخِ دیگر، صدها بار سرِ
+    /// «بارِ اول») خاموش می‌شد؛ ذخیرهٔ کاربر که همان لحظه می‌رسید هیچ opی
+    /// نمی‌گرفت و به سرور و کامپیوترِ دیگر هرگز نمی‌رسید.
+    /// </summary>
+    public bool SuppressOps { get; set; }
+
     private void Stamp()
     {
         var now = AppClock.UtcNow;
@@ -585,7 +595,7 @@ public sealed class PumpDbContext : DbContext
         // ⚠️ **فهرست، نه شمارنده**: پایین‌تر ردیف‌های `SyncOp` به همین
         // ChangeTracker اضافه می‌شوند و شمارشِ زنده همان‌جا می‌شکست.
         var entries = ChangeTracker.Entries<EntityBase>().ToList();
-        var ops = OpLog.Enabled ? new List<SyncOp>() : null;
+        var ops = OpLog.Enabled && !SuppressOps ? new List<SyncOp>() : null;
 
         foreach (var entry in entries)
         {
@@ -610,9 +620,11 @@ public sealed class PumpDbContext : DbContext
             // ══ دفترِ تغییرات ═══════════════════════════════════════════════
             // همین‌جا و نه جای دیگر: هر سرویسی که چیزی می‌نویسد سرِ آخر به
             // همین `SaveChanges` می‌رسد، پس «یک نقطه»ی بندِ ۲۰٫۱ همین است.
-            if (ops is null) continue;
             if (!OpLog.Tracked(entry)) continue;
+            //  ⚠️ شناسهٔ سراسری حتی وقتی op ساخته نمی‌شود: ردیفِ بی‌SyncUid را
+            //  «بارِ اول» هرگز نمی‌فرستد (`SeedTable`).
             if (string.IsNullOrEmpty(entry.Entity.SyncUid)) entry.Entity.SyncUid = Ulid.New(nowMs);
+            if (ops is null) continue;
             if (OpLog.Build(entry, was, nowMs) is { } op) ops.Add(op);
         }
 

@@ -158,6 +158,9 @@ public sealed class HomeSync : IAsyncDisposable
         finally { _connectGate.Release(); }
     }
 
+    /// <summary>مهلتِ باز شدنِ یک در (وصل شدن و نخستین پیامِ سرور).</summary>
+    public static readonly TimeSpan OpenTimeout = TimeSpan.FromSeconds(12);
+
     /// <summary>یک در را امتحان می‌کند. ‎true‎ یعنی سرور ‎connected‎ گفت.</summary>
     private async Task<bool> TryOpenAsync(string url, CancellationToken ct)
     {
@@ -166,10 +169,15 @@ public sealed class HomeSync : IAsyncDisposable
         try
         {
             ws = new ClientWebSocket();
-            await ws.ConnectAsync(new Uri(url), ct);
+            //  ⛔ مهلت: سروری که درگاه را باز کند ولی هیچ نگوید (پنلِ گیرکرده،
+            //  پروکسیِ نیمه‌باز) تا امروز حلقهٔ ناشر را برای همیشه نگه می‌داشت —
+            //  نه عکسِ زنده، نه چراغِ درست، نه پشتیبان.
+            using var open = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            open.CancelAfter(OpenTimeout);
+            await ws.ConnectAsync(new Uri(url), open.Token);
 
             // سرور اول ‎connected‎ می‌گوید (یا ‎error‎ی با ‎auth_failed‎)
-            var hello = await ReadOneAsync(ws, ct);
+            var hello = await ReadOneAsync(ws, open.Token);
             if (hello is null || Op(hello.Value) != "connected")
             {
                 ws.Dispose();

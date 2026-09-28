@@ -67,6 +67,17 @@ public class LazyBox : ContentControl
     private ScrollViewer? _page;
     private bool _wired;
 
+    public LazyBox()
+    {
+        //  ⚠️ با نگهبانِ «پنهان کاری نکند» (در ‎Check‎)، کادری که بخشش دوباره
+        //  دیده شد باید خودش بفهمد — بی آن تا نخستین اسکرول ساخته نمی‌شد. همان
+        //  رویدادی که ‎CardGrid‎ با آن قابِ دیده‌شده را می‌گیرد.
+        EffectiveViewportChanged += (_, _) =>
+        {
+            if (!_open) Dispatcher.UIThread.Post(Check, DispatcherPriority.Background);
+        };
+    }
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
@@ -84,11 +95,32 @@ public class LazyBox : ContentControl
                     .FirstOrDefault(v => v.Name == "PageScroll");
         if (_page is null) return;
         _wired = true;
-        _page.ScrollChanged += (_, _) => Check();
-        _page.PropertyChanged += (_, a) =>
-        {
-            if (a.Property == BoundsProperty) Check();
-        };
+        _page.ScrollChanged += OnPageScroll;
+        _page.PropertyChanged += OnPageProperty;
+    }
+
+    private void OnPageScroll(object? s, ScrollChangedEventArgs e) => Check();
+    private void OnPageProperty(object? s, AvaloniaPropertyChangedEventArgs a)
+    {
+        if (a.Property == BoundsProperty) Check();
+    }
+
+    /// <summary>
+    /// ⛔ شنونده‌ها روی قابِ همیشگیِ صفحه‌اند؛ پس از باز شدن یا جدا شدن کاری ندارند
+    /// و باید بروند — وگرنه هر کادرِ تنبلی که روزی ساخته شد تا بستنِ برنامه با
+    /// هر فریمِ اسکرولِ هر بخشی صدا زده می‌شد.
+    /// </summary>
+    private void Unwire()
+    {
+        if (_page is { } p) { p.ScrollChanged -= OnPageScroll; p.PropertyChanged -= OnPageProperty; }
+        _page = null;
+        _wired = false;
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        Unwire();
     }
 
     /// <summary>نزدیک شده‌ایم؟ اگر آری، همین حالا و برای همیشه ساخته شود.</summary>
@@ -102,6 +134,9 @@ public class LazyBox : ContentControl
         // دیده نمی‌شود.
         if (_page is null) { Open(); return; }
         if (this.GetVisualRoot() is null) return;
+        //  ⛔ کادرِ بخشِ پنهان از روی مختصاتِ کهنه «نزدیک» دیده می‌شد و جدول‌های
+        //  تنبلِ ورقِ پنهان وسطِ اسکرولِ بخشِ دیگری ساخته می‌شدند.
+        if (!IsEffectivelyVisible) return;
 
         if (this.TranslatePoint(new Point(0, 0), _page) is not { } at) return;
         var top = at.Y;
@@ -114,6 +149,8 @@ public class LazyBox : ContentControl
     {
         if (_open) return;
         _open = true;
+        //  باز شد، و دیگر هیچ‌وقت بسته نمی‌شود — شنوندهٔ قاب کاری ندارد
+        if (_page is not null) Unwire();
         MinHeight = 0;
         ContentTemplate = Deferred;
     }

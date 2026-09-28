@@ -503,12 +503,28 @@ public sealed class PumpDbFactory
     /// ریشهٔ شناسه‌های کهنه. یک بار ساخته و در <c>SyncState</c> نگه داشته
     /// می‌شود؛ بارهای بعد همان برمی‌گردد.
     /// </summary>
+    /// <summary>
+    /// ⛔ ریشهٔ شناسه‌های دفترِ <b>پیشین</b> هنگامِ بازگردانیِ بکاپی که هنوز ریشه
+    /// نداشت (پیش از همگام‌سازی گرفته شده). بی این، همان ردیف‌ها با ریشهٔ
+    /// تازه شناسهٔ تازه می‌گرفتند و روی سرور <b>دو برابر</b> می‌شدند — همان
+    /// «ریشه هیچ‌وقت عوض نمی‌شود»ِ ۱۴۰۵/۰۷/۰۴. فقط ‎BackupService.Restore‎ پرش می‌کند.
+    /// </summary>
+    public static string? RestoreSeedHint { get; set; }
+
     private static string SyncUidSeed(PumpDbContext db)
     {
         try
         {
             var row = db.SyncState.FirstOrDefault(x => x.Id == 1);
             if (row is not null && !string.IsNullOrEmpty(row.UidSeed)) return row.UidSeed;
+            if (RestoreSeedHint is { Length: > 10 } hint)
+            {
+                if (row is null) db.SyncState.Add(new SyncStateRow { Id = 1, UidSeed = hint });
+                else row.UidSeed = hint;
+                db.SuppressOps = true;
+                try { db.SaveChanges(); } finally { db.SuppressOps = false; }
+                return hint;
+            }
 
             //  بیست‌وشش نویسهٔ ULID + یک خطِ تیره ⇒ شناسه‌ای که با ULIDهای
             //  تازه قاطی نمی‌شود و از هشتاد نویسهٔ سقفِ سرور هم نمی‌گذرد.
@@ -517,9 +533,8 @@ public sealed class PumpDbFactory
             else row.UidSeed = seed;
             //  ⚠️ دفترِ تغییرات این‌جا خاموش است: مهاجرت خودش «تغییرِ کاربر»
             //  نیست و صدهزار opِ بی‌مصرف می‌ساخت.
-            var was = OpLog.Enabled;
-            OpLog.Enabled = false;
-            try { db.SaveChanges(); } finally { OpLog.Enabled = was; }
+            db.SuppressOps = true;
+            try { db.SaveChanges(); } finally { db.SuppressOps = false; }
             return seed;
         }
         catch { return ""; }

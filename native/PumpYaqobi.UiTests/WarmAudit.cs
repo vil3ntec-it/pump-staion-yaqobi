@@ -192,7 +192,7 @@ internal static class WarmAudit
         vm.Lock.Password = "1234";
         LockIn.Wait(vm.Lock);      // رمز را می‌سازد
         Pump(win);
-        vm.SignOutCommand.Execute(null);
+        { var so = vm.SignOutCommand.ExecuteAsync(null); for (var i = 0; i < 200 && !so.IsCompleted; i++) Pump(win); }
         Pump(win);
 
         vm.Lock.Password = "9999";
@@ -255,7 +255,7 @@ internal static class WarmAudit
 
         // ── ۵) خروج و ورودِ دوباره ────────────────────────────────────────
         var warmedBefore = vm.Warm.Warmed;
-        vm.SignOutCommand.Execute(null);
+        { var so = vm.SignOutCommand.ExecuteAsync(null); for (var i = 0; i < 200 && !so.IsCompleted; i++) Pump(win); }
         Pump(win);
         var lockedAfterSignOut = vm.Phase == MainViewModel.AppPhase.Locked;
 

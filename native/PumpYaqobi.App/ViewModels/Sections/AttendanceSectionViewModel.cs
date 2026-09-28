@@ -131,8 +131,20 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
 
     partial void OnMonthChanged(string v) => _ = Services.CrashGuard.RunAsync("خواندنِ حاضری", LoadAsync);
 
+    /// <summary>
+    /// ⛔ پیش از هر کارِ دیتابیسیِ این صفحه: ذخیرهٔ تأخیریِ ردیفی که همین حالا
+    /// تایپ شد، اگر <b>پس از</b> «ورود/خروج» می‌نشست، کلِ ردیفِ کهنه را روی
+    /// ساعتِ تازه می‌نوشت و آن را پاک می‌کرد.
+    /// </summary>
+    private async Task FlushRowsAsync()
+    {
+        foreach (var r in Rows.ToList())
+            try { await r.FlushAsync(); } catch { /* نگهبانِ ذخیره می‌گوید */ }
+    }
+
     protected override async Task LoadAsync()
     {
+        await FlushRowsAsync();
         var staff = await _host.Attendance.StaffAsync();
         var rows = await _host.Attendance.RowsAsync(Month);
         var pays = await _host.Attendance.PaymentsAsync();
@@ -163,6 +175,7 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
     {
         var n = NewName.Trim();
         if (n.Length == 0) return;
+        await FlushRowsAsync();
         await _host.Attendance.AddStaffAsync(n, Shamsi.Num(NewSalary));
         NewName = ""; NewSalary = "";
         await LoadAsync();
@@ -172,6 +185,7 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
     private async Task DeleteStaffAsync(StaffViewModel? s)
     {
         if (s is null) return;
+        await FlushRowsAsync();
         await _host.Attendance.DeleteStaffAsync(s.Entity.Id);
         await LoadAsync();
     }
@@ -180,6 +194,7 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
     private async Task MarkInAsync(StaffViewModel? s)
     {
         if (s is null) return;
+        await FlushRowsAsync();
         await _host.Attendance.MarkAsync(s.Entity.Id, arriving: true, AppClock.Now.ToString("HH:mm"));
         await LoadAsync();
     }
@@ -188,6 +203,7 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
     private async Task MarkOutAsync(StaffViewModel? s)
     {
         if (s is null) return;
+        await FlushRowsAsync();
         await _host.Attendance.MarkAsync(s.Entity.Id, arriving: false, AppClock.Now.ToString("HH:mm"));
         await LoadAsync();
     }
@@ -196,7 +212,13 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
     private async Task PaySalaryAsync(StaffViewModel? s)
     {
         if (s is null) return;
-        await _host.Attendance.PaySalaryAsync(s.Entity.Id, Month, s.Entity.Salary);
+        await FlushRowsAsync();
+        //  ⛔ نتیجه دور ریخته نمی‌شود: پرداختِ دوباره در همان ماه رد می‌شود و
+        //  دکمه‌ای که هیچ نگوید، در چشمِ کاربر باگ است.
+        var paid = await _host.Attendance.PaySalaryAsync(s.Entity.Id, Month, s.Entity.Salary);
+        _host.Toast(paid ? "✅ معاشِ " + s.Entity.Name + " پرداخت شد"
+                         : "معاشِ " + s.Entity.Name + " برای همین ماه از قبل پرداخت شده است",
+                    paid ? ToastKind.Ok : ToastKind.Warn);
         await LoadAsync();
     }
 }

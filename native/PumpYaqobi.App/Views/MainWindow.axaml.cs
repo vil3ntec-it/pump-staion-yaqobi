@@ -60,12 +60,16 @@ public partial class MainWindow : Window
         var day = AppClock.Now.Date;
         var shownDay = Services.DisplayClock.Now.Date;
         //  تاریخِ نمایشی (‎DisplayClock‎) همان لحظه — نه یک ثانیه بعد
-        Services.DisplayClock.Changed += () => Dispatcher.UIThread.Post(() =>
+        Action onDisplay = () => Dispatcher.UIThread.Post(() =>
         {
             vm.Clock = PumpYaqobi.App.Localization.Clock.Now();
             shownDay = Services.DisplayClock.Now.Date;
             vm.DisplayDayChanged();
         });
+        Services.DisplayClock.Changed += onDisplay;
+        //  ⚠️ رویدادِ ایستا و زمان‌سنج با بسته شدنِ پنجره رها می‌شوند — وگرنه
+        //  پنجرهٔ بسته (و ویومدلش) زنده می‌ماند و هر ثانیه کار می‌کرد.
+        Closed += (_, _) => { Services.DisplayClock.Changed -= onDisplay; _clock?.Stop(); };
         _clock.Tick += (_, _) =>
         {
             vm.Clock = PumpYaqobi.App.Localization.Clock.Now();

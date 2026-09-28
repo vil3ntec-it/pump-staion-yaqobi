@@ -91,7 +91,7 @@
                   <!-- نوارِ زنده: پرشدنش الباقی÷بردگی است و رنگش چهار پله دارد -->
                   <ProgressBar Grid.Row="0" Classes="meter" Minimum="0" Maximum="100"
                                Value="{Binding Meter}"
-                               Classes.alarm="{Binding IsAlarm}"
+                               Classes.alarm="{Binding AlarmLive}"
                                Foreground="{Binding MeterBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
 
                   <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" Margin="10,9,10,0">

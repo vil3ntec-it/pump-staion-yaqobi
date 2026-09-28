@@ -83,7 +83,7 @@ public sealed class CameraFeed : IDisposable
             {
                 await OnceAsync(url, ct);
             }
-            catch (OperationCanceledException) { return; }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
             catch (Exception e)
             {
                 Failed?.Invoke("تصویر نیامد — لینک یا اتصال را بررسی کنید (" + Short(e) + ")");

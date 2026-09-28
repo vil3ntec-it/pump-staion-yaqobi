@@ -18,6 +18,7 @@ namespace PumpYaqobi.Tests;
 ///   • حذف در برابر ویرایش ⇒ ویرایشِ بعد از حذف ردیف را زنده می‌کند
 ///   • گوشیِ نو ⇒ Snapshot و ادامه از همان‌جا
 /// </summary>
+[Collection(OpLogCollection.Name)]
 public class SyncStoreTests : IDisposable
 {
     private readonly string _file = Path.Combine(Path.GetTempPath(), $"pump-sync-{Guid.NewGuid():N}.db");

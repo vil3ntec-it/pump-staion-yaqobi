@@ -23,6 +23,7 @@ namespace PumpYaqobi.Tests;
 /// ⚠️ روی SQLiteِ <b>واقعیِ روی دیسک</b>، نه درون‌حافظه‌ای — چیزی که باید
 /// ثابت شود همان رفتارِ فایلِ واقعی است.
 /// </summary>
+[Collection(OpLogCollection.Name)]
 public class SyncOpLogTests : IDisposable
 {
     private readonly string _file = Path.Combine(Path.GetTempPath(), $"pump-oplog-{Guid.NewGuid():N}.db");

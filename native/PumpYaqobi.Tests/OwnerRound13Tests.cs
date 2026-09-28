@@ -111,7 +111,7 @@ public class OwnerRound13Tests
         //  ⛔ حذفِ گزارش می‌پرسد
         Assert.Contains("Dialogs.ConfirmAsync(\"حذف گزارش\"", vm);
         //  ⛔ صفحهٔ گزارشِ یک پارچه هیچ کادرِ تایپی ندارد
-        var j = v.IndexOf("IsVisible=\"{Binding ShowReportDetail}\"", StringComparison.Ordinal);
+        var j = v.IndexOf("DataContext.ShowReportDetail", StringComparison.Ordinal);
         Assert.True(j > 0);
         Assert.DoesNotContain("<TextBox", v.Substring(j));
     }

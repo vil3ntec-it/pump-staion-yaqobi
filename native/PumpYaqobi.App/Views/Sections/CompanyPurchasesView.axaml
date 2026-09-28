@@ -104,6 +104,9 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+            <!-- ⛔ پنجره: تازه‌ترین‌ها اول، بقیه با همین دکمه (‎PurchaseSectionViewModel.Page‎) -->
+            <Button Content="{Binding OlderText}" Command="{Binding ShowOlderCommand}"
+                    IsVisible="{Binding HasOlder}" HorizontalAlignment="Center" Margin="0,0,0,12" />
             <Border Classes="panel" IsVisible="{Binding !HasPurchases}" Opacity="0.75">
               <TextBlock Text="{Binding EmptyText}" Classes="muted" HorizontalAlignment="Center" />
             </Border>

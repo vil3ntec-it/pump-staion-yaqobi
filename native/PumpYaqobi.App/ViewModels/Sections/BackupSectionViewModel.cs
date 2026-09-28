@@ -143,7 +143,14 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         if (!_autoChecked)
         {
             _autoChecked = true;
-            _ = Task.Run(async () => { try { await CheckUpdateAsync(); } catch { } });
+            //  ⛔ نه ‎Task.Run‎: ‎CheckUpdateAsync‎ خاصیت‌های بسته‌شده به صفحه را عوض
+            //  می‌کند و روی نخِ پس‌زمینه همان «Call from invalid thread» بود (و با
+            //  کلیکِ هم‌زمان روی ‎_checkCts‎ مسابقه می‌داد). ‎Post‎ روی نخِ رابط
+            //  منتظرِ شبکه نمی‌ماند — درخواست خودش ناهم‌زمان است.
+            Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
+            {
+                try { await CheckUpdateAsync(); } catch { }
+            });
         }
 
         Older.Clear();
@@ -261,9 +268,21 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             Status = SafetyLine(outcome.SafetyCopy);
 
         if (!outcome.Ok) return;
+        ForgetForeignSyncDevice();
 
         await RefreshAsync();
         await _main.ReloadAllAsync();
+    }
+
+    /// <summary>دفترِ آمده از کامپیوترِ دیگر شناسهٔ همگام‌سازیِ آن‌جا را نبرد — ‎SyncStore.ForgetForeignDevice‎.</summary>
+    private void ForgetForeignSyncDevice()
+    {
+        try
+        {
+            var mine = CloudConfig.DeviceUid(AppSettings.Load());
+            new SyncStore(_host.Db).ForgetForeignDevice(mine);
+        }
+        catch { /* همگام‌سازی رفاه است؛ آوردنِ دفتر اصل */ }
     }
 
     // ══ «فایلِ کاملِ برنامه» — همه‌چیز در یک فایل، مثلِ اکسل (۱۴۰۵/۰۷/۱۵) ══════
@@ -401,6 +420,8 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
                     _host.Toast(FullStatus, ToastKind.Error);
                     return;
                 }
+
+                ForgetForeignSyncDevice();
 
                 //  ⛔ «آمد» یعنی شمرده شد — هر جدولِ داده در خودِ برنامه با فایل
                 var mismatch = await Task.Run(() => FullBackup.VerifyRestored(_host.Db.DbPath, info));
@@ -661,7 +682,9 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             UpdateStatus = info.StatusText;
             UpdateStatusBrushKey = info.StatusBrushKey;
         }
-        catch (OperationCanceledException) { return; }
+        //  ⚠️ فقط لغوِ واقعی (کلیکِ تازه‌تر) ساکت است؛ مهلتِ تمام‌شدهٔ شبکه هم
+        //  ‎OperationCanceledException‎ است و صفحه را روی «در حال بررسی…» جا می‌گذاشت.
+        catch (OperationCanceledException) when (cts.IsCancellationRequested) { return; }
         catch
         {
             if (!ReferenceEquals(_checkCts, cts)) return;

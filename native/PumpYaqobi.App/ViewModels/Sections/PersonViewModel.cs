@@ -1028,7 +1028,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         // حالا نشان هم با همان ردیف‌ها در یک ‎SaveChanges‎ می‌نشیند.
         var firstTime = !Entity.ReceiptsMigrated;
         var moved = _host.Debt.MigrateReceiptsToRows(Entity, Shamsi.Today());
-        if (firstTime) _ = PersistMigratedAsync(moved);
+        if (firstTime) SaveGuard.Watch(PersistMigratedAsync(moved), "مهاجرتِ رسیدهای حساب");
 
         // خوددرمانیِ دادهٔ کهنه پیش از کشیدنِ جدول — همان کاری که renderPersonRows
         // می‌کرد. اگر چیزی عوض شد، همان‌جا ذخیره می‌شود تا دوباره لازم نشود.
@@ -1037,7 +1037,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         // حسابی با صدهزار ردیف یعنی صدهزار نوشتن در دیتابیس.
         var healed = Entity.FuelRows.Concat(Entity.MoneyRows)
                            .Where(r => _host.Debt.NormalizeRow(r)).ToList();
-        if (healed.Count > 0) _ = PersistHealedAsync(healed);
+        if (healed.Count > 0) SaveGuard.Watch(PersistHealedAsync(healed), "درمانِ ردیف‌های حساب");
 
         // ⚠️ فیلتر فقط روی «دیده شدن» است. ردیف‌های تیلِ دیگر سرِ جایشان‌اند و
         // در دیتابیس دست نمی‌خورند؛ فقط این‌بار ساخته نمی‌شوند.
@@ -1096,8 +1096,13 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         {
             DateShamsi = Shamsi.Today(),
             DateKey = Shamsi.Key(Shamsi.Today()),
-            SortIndex = Entity.ActiveRows().Count,
+            // ⛔ بیشینه + ۱، نه شمار: پس از حذف، ‎Count‎ با ردیفِ موجود برخورد
+            // می‌کرد و ردیفِ تازه با باز شدنِ دوباره جای دیگری می‌نشست.
+            SortIndex = Entity.ActiveRows().Count == 0 ? 0 : Entity.ActiveRows().Max(x => x.SortIndex) + 1,
             ByMoney = IsMoney,
+            // ⛔ در فیلترِ «دیزل» ستونِ نوعِ تیل پنهان است؛ ردیفِ تازه باید دیزل
+            // باشد، وگرنه لیترش در دفترِ پطرول حساب می‌شد و از جلوی چشم می‌رفت.
+            Fuel = RowFilter == "diesel" ? FuelType.Diesel : FuelType.Petrol,
         };
         if (IsMoney) { r.MoneyAccountId = Entity.Id; Entity.MoneyRows.Add(r); }
         else { r.FuelAccountId = Entity.Id; Entity.FuelRows.Add(r); }

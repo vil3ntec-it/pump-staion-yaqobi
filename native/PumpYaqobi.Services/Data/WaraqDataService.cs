@@ -38,6 +38,18 @@ public sealed class WaraqDataService
         return await q.OrderByDescending(w => w.DateKey).ToListAsync(ct);
     }
 
+    /// <summary>
+    /// تاریخِ همهٔ ورق‌ها — فقط همان یک ستون. ⛔ برای «کدام روز ورق دارد»
+    /// همهٔ ورق‌ها با شیفت‌ها، پایه‌ها و تراکنش‌هایشان خوانده نشود (ده سال یعنی
+    /// ده‌ها هزار ردیف روی نخِ رابط، فقط برای یک فهرستِ تاریخ).
+    /// </summary>
+    public async Task<List<string>> DatesAsync(CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        return await db.WaraqEntries.AsNoTracking().Select(w => w.DateShamsi ?? "").ToListAsync(ct);
+    }
+
     public async Task<List<string>> MonthsAsync(CancellationToken ct = default)
     {
         _perm.Require(Permission.ViewData);

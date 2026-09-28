@@ -23,6 +23,7 @@ namespace PumpYaqobi.Tests;
 ///   ۳) opهای نرفتهٔ حسابِ قبلی به دفترِ حسابِ تازه <b>نمی‌روند</b> —
 ///      ولی همان ردیف‌ها دوباره، این بار برای حسابِ تازه، فرستاده می‌شوند.
 /// </summary>
+[Collection(OpLogCollection.Name)]
 public class AccountDataCarryTests : IDisposable
 {
     private readonly string _file =

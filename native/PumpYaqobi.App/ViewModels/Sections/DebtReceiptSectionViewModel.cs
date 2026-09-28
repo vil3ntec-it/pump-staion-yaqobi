@@ -256,6 +256,14 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
         _ = Services.CrashGuard.RunAsync("خواندنِ رسیدها", ReloadAsync);
     }
 
+    /// <summary>
+    /// ⛔ رسیدِ سربرگِ حساب و رسیدِ ورق همین‌جا فهرست می‌شوند؛ بی خواندنِ دوباره
+    /// پس از برگشتن، فهرست تا بستنِ برنامه کهنه می‌ماند. با ترمزِ ‎Version‎.
+    /// </summary>
+    public override bool ActivationOnlyReadsDb => true;
+
+    public override Task OnActivatedAsync() => IsLoaded ? LoadAsync() : Task.CompletedTask;
+
     protected override async Task LoadAsync()
     {
         var months = await _host.DebtReceipts.MonthsAsync();

@@ -724,7 +724,7 @@ public sealed class StationPublisher : IAsyncDisposable
         var lastTimeCheck = DateTime.MinValue;
         try { await Task.Delay(TimeSpan.FromSeconds(2), ct); } catch { return; }
         try { lastTimeCheck = AppClock.Mono; await TimeSync.CheckAsync(ct); }
-        catch (OperationCanceledException) { return; }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
         catch { /* بی‌اینترنت خطا نیست */ }
         try { await Task.Delay(FirstDelay - TimeSpan.FromSeconds(2), ct); } catch { return; }
         var lastPublish = DateTime.MinValue;
@@ -735,13 +735,13 @@ public sealed class StationPublisher : IAsyncDisposable
             //  ۱) اتصال — هر پنج ثانیه، بی هیچ هزینه‌ای (وصل باشیم، همین
             //     بی‌درنگ برمی‌گردد). چراغِ سربرگ از همین حرف می‌زند.
             try { await KeepLinkAsync(false, ct); }
-            catch (OperationCanceledException) { return; }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
             catch { /* سرورِ خاموش خطا نیست */ }
 
             //  ۱ب) هشدارها — همین تیکِ پنج‌ثانیه‌ای، با ترمزِ `Version`:
             //      داده عوض نشده ⇒ صفر دستورِ دیتابیس. شرحش بالای `AlertTickAsync`.
             try { await AlertTickAsync(ct); }
-            catch (OperationCanceledException) { return; }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
             catch { /* خبر رفاه است، دفتر اصل */ }
 
             //  ۲) انتشار — همان بیست ثانیهٔ همیشگی، نه زودتر: ساختنِ عکس با
@@ -750,7 +750,7 @@ public sealed class StationPublisher : IAsyncDisposable
             {
                 lastPublish = AppClock.Mono;
                 try { await PublishOnceAsync(false, ct); }
-                catch (OperationCanceledException) { return; }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
                 catch { /* سرورِ خاموش خطا نیست */ }
             }
 
@@ -766,7 +766,7 @@ public sealed class StationPublisher : IAsyncDisposable
             {
                 lastCloud = AppClock.Mono;
                 try { await CloudKeepAsync(ct); }
-                catch (OperationCanceledException) { return; }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
                 catch { /* بی‌اینترنت خطا نیست */ }
             }
 
@@ -779,7 +779,7 @@ public sealed class StationPublisher : IAsyncDisposable
             {
                 lastTimeCheck = AppClock.Mono;
                 try { await TimeSync.CheckAsync(ct); }
-                catch (OperationCanceledException) { return; }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
                 catch { /* بی‌اینترنت خطا نیست */ }
             }
 

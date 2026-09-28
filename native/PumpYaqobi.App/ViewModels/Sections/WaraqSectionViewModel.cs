@@ -751,7 +751,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         var p = new WaraqPump
         {
             ShiftId = sd.Id,
-            SortIndex = sd.Pumps.Count,
+            SortIndex = sd.Pumps.Count == 0 ? 0 : sd.Pumps.Max(x => x.SortIndex) + 1,
             Num = sd.Pumps.Count + 1,
             PricePerLiter = sd.PricePerLiter,
         };
@@ -779,7 +779,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
     {
         var sd = Shift;
         if (sd is null) return;
-        var t = new WaraqTransaction { ShiftId = sd.Id, SortIndex = sd.Transactions.Count };
+        var t = new WaraqTransaction { ShiftId = sd.Id, SortIndex = sd.Transactions.Count == 0 ? 0 : sd.Transactions.Max(x => x.SortIndex) + 1 };
         await _host.WaraqData.SaveTxnAsync(t);
         sd.Transactions.Add(t);
         var vm = new WaraqTxnViewModel(t, this);
@@ -1407,8 +1407,8 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
         // فردا که پارچه پر شود در همان می‌نشیند — نه در یک ورقِ تازه.
         // ⚠️ همهٔ ورق‌ها، نه فقط ماهِ جلوی چشم — وگرنه تاریخی از ماهِ دیگر
         // «تازه» معرفی می‌شد در حالی که ورقش هست.
-        var keys = (await _host.WaraqData.ListAsync(null))
-                   .Select(x => Shamsi.Key(x.DateShamsi)).Where(k => k > 0).ToHashSet();
+        var keys = (await _host.WaraqData.DatesAsync())
+                   .Select(Shamsi.Key).Where(k => k > 0).ToHashSet();
         var pick = await Dialogs.PickWaraqDateAsync(keys);
         if (string.IsNullOrWhiteSpace(pick)) return;
 
@@ -1420,7 +1420,9 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
                     known ? ToastKind.Warn : ToastKind.Ok);
         var mk = Shamsi.MonthKey(w.DateShamsi);
         if (!Months.Contains(mk)) Months.Insert(0, mk);
-        Month = mk;
+        //  با ‎_month‎ (نه ‎Month‎): ‎OnMonthChanged‎ یک خواندنِ دوم می‌زد، پیش از
+        //  این یکی و بی انتظار. یک خواندن، همین‌جا.
+        if (_month != mk) { _month = mk; OnPropertyChanged(nameof(Month)); }
         await ReloadAsync();
         var full = await _host.WaraqData.LoadAsync(w.Id);
         if (full is not null) Show(full);

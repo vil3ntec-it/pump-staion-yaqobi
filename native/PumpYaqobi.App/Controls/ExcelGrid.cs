@@ -774,15 +774,45 @@ public class ExcelGrid : DataGrid
 
     private void OnPageScroll(object? sender, ScrollChangedEventArgs e)
     {
+        //  ⛔ جدولِ پنهان (صفحهٔ بستهٔ حسابی که بخشش هنوز باز است، پس پارک
+        //  نشده) با هر گامِ چرخِ فهرستِ کارت‌ها اسکرولِ درونی و بازیافتِ
+        //  ردیف‌هایش را می‌دواند. ‎LayoutUpdated‎ با دیده شدنِ دوباره همگامش می‌کند.
+        if (!IsEffectivelyVisible) return;
         if (_sticky) { SyncSticky(); return; }
         var rows = RowCount();
         if (!_spread || _growQueued || rows < 0 || rows > GrowRowLimit || _shown >= rows) return;
         if (NearViewport(Math.Max(_shown, 1))) QueueGrow(rows, Math.Max(_shown, 1));
     }
 
+    // ══ «کلیکِ بیرون» ویرایش را می‌بندد — بسته به پنجره، و باز با جدا شدن ══════
+    //
+    // ⛔ تا امروز یک بار در عمرِ هر جدول به پنجره بسته می‌شد و هرگز باز نمی‌شد:
+    // هر جدولی که ساخته و دور ریخته شد (تاریخچهٔ هر بخش، صفحه‌های آرشیو) در
+    // فهرستِ شنونده‌های پنجره تا بستنِ برنامه زنده می‌ماند و با <b>هر کلیک</b>
+    // کار می‌کرد — و جدولِ مرده‌ای که وسطِ ویرایش جدا شده بود با هر کلیک
+    // ‎CommitEdit‎ می‌زد.
+    private TopLevel? _outsideTop;
+
+    private void HookOutside()
+    {
+        var top = TopLevel.GetTopLevel(this);
+        if (ReferenceEquals(top, _outsideTop)) return;
+        UnhookOutside();
+        if (top is null) return;
+        top.AddHandler(PointerPressedEvent, OnOutsidePressed, RoutingStrategies.Tunnel);
+        _outsideTop = top;
+    }
+
+    private void UnhookOutside()
+    {
+        _outsideTop?.RemoveHandler(PointerPressedEvent, OnOutsidePressed);
+        _outsideTop = null;
+    }
+
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
+        UnhookOutside();
         PagesChanged -= OnPagesChanged;
         PagesShown -= OnPagesShown;
         if (_pageHooked && _page is { } page) page.ScrollChanged -= OnPageScroll;
@@ -2311,6 +2341,7 @@ public class ExcelGrid : DataGrid
         //  و جهتِ «برگرد»، که هم‌زمان است و نه با یک پاس تأخیر
         PagesShown -= OnPagesShown;
         PagesShown += OnPagesShown;
+        HookOutside();
         if (_wired) return;
         _wired = true;
         // تنها منبعِ درستِ «الان در حال ویرایشیم» — خودِ جدول می‌گوید.
@@ -2402,8 +2433,7 @@ public class ExcelGrid : DataGrid
         // گزینه از کشویی همان لحظه ویرایش را می‌بندد و انتخاب از دست می‌رود.
         // پس فقط وقتی تمام می‌شود که فشار در درختِ بصریِ همین پنجره باشد و
         // هیچ جدّی از آن، این جدول یا یک ‎Popup‎ نباشد.
-        if (TopLevel.GetTopLevel(this) is { } top)
-            top.AddHandler(PointerPressedEvent, OnOutsidePressed, RoutingStrategies.Tunnel);
+        //  (بستنش به پنجره در ‎HookOutside‎ است، بیرون از ‎_wired‎ — پایین.)
 
         // ══ ستونِ «#» — شمارهٔ ردیف ══════════════════════════════════════════
         //

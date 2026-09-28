@@ -19,6 +19,9 @@ public sealed record SyncPushResult(bool Ok, int Applied, long Cursor,
 {
     public static SyncPushResult No(string why, bool upgradeRequired = false) =>
         new(false, 0, 0, new Dictionary<string, string>(), 0, false, upgradeRequired, why);
+
+    /// <summary>سرور بدنه را «بیش از حد بزرگ» (۴۱۳) رد کرد — تلاشِ دوباره هرگز نمی‌رسد.</summary>
+    public bool TooLarge { get; init; }
 }
 
 /// <summary>پاسخِ <c>GET /api/sync/v1/pull</c>.</summary>
@@ -149,7 +152,7 @@ public sealed partial class CloudLink
         {
             //  سرور صریح گفته «برنامه جلوتر است»
             if (res.Status == 426) return SyncPushResult.No(res.Why, upgradeRequired: true);
-            return SyncPushResult.No(res.Why);
+            return SyncPushResult.No(res.Why) with { TooLarge = res.Status == 413 };
         }
 
         var map = new Dictionary<string, string>(StringComparer.Ordinal);

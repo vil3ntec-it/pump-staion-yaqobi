@@ -46,10 +46,15 @@ public partial class DebtReceiptSectionView : UserControl
                 Avalonia.Interactivity.RoutingStrategies.Bubble);
         }
 
+        //  ⚠️ شنوندهٔ ویومدلِ قبلی برداشته می‌شود — وگرنه با هر عوض شدنِ
+        //  ‎DataContext‎ یک شنوندهٔ دیگر روی هم می‌نشست.
+        DebtReceiptSectionViewModel? hooked = null;
+        void Focus() => name?.Focus();
         DataContextChanged += (_, _) =>
         {
-            if (DataContext is DebtReceiptSectionViewModel vm)
-                vm.FocusNameRequested += () => name?.Focus();
+            if (hooked is not null) hooked.FocusNameRequested -= Focus;
+            hooked = DataContext as DebtReceiptSectionViewModel;
+            if (hooked is not null) hooked.FocusNameRequested += Focus;
         };
     }
 

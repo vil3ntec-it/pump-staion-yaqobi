@@ -149,6 +149,20 @@ public sealed partial class SafeSectionViewModel : LedgerSectionViewModel<SafeRo
         OnPropertyChanged(nameof(NetAfn)); OnPropertyChanged(nameof(NetUsd));
     }
 
+    /// <summary>
+    /// ⛔ فروشِ ورق/پارچه در <b>نخستین ردیفِ خالیِ همین ماه</b>ِ گاوصندوق می‌نشیند
+    /// (‎ShiftWaraqSyncService.SyncSalesToSafeAsync‎). بی خواندنِ دوباره، همان
+    /// ردیف هنوز «خالی» دیده می‌شد، کاربر در آن تایپ می‌کرد و ذخیره (که کلِ ردیف
+    /// را می‌نویسد) فروشِ ورق را پاک می‌کرد. همان قاعدهٔ مصارف؛ و با ترمزِ
+    /// ‎Version‎، دفترِ دست‌نخورده هیچ خواندنی ندارد.
+    /// </summary>
+    public override bool ActivationOnlyReadsDb => true;
+
+    public override async Task OnActivatedAsync()
+    {
+        if (IsLoaded) await ReloadRowsAsync();
+    }
+
     protected override SafeRowViewModel Wrap(SafeEntry e) => new(e, this);
     protected override long EntityIdOf(SafeRowViewModel r) => r.Entity.Id;
     protected override SafeEntry EntityOf(SafeRowViewModel r) => r.Entity;
