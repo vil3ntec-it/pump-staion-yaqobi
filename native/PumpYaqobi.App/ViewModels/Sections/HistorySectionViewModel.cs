@@ -166,7 +166,7 @@ public sealed partial class HistorySectionViewModel : SectionViewModel
         // تاریخچه خلاصهٔ دفترهای دیگر است، پس هر بار که کاربر وارد می‌شود
         // باید تازه شود — وگرنه عددها روی لحظهٔ ورودِ اول می‌مانند.
         if (IsListVisible) await RefreshCardsAsync();
-        else await OpenAsync(OpenKind);
+        else await OpenAsync(OpenKind, keepFilters: true);
     }
 
     private async Task RefreshCardsAsync()
@@ -223,8 +223,16 @@ public sealed partial class HistorySectionViewModel : SectionViewModel
     }
 
     /// <summary>باز کردنِ تاریخچهٔ یک بخش — همان ‎openSectionHistory‎.</summary>
-    public async Task OpenAsync(string kind)
+    /// <param name="keepFilters">
+    /// ⛔ از ۱۴۰۵/۰۷/۱۶: خواندنِ دوبارهٔ <b>همان</b> بخش (برگشت به تاریخچه‌ها پس از
+    /// آن‌که دفتر عوض شد) ماه، تیل و پایه‌ای را که کاربر برگزیده بود نگه می‌دارد —
+    /// تا امروز هر بار به «همه» برمی‌گشت. صافی‌ای که دیگر معنا ندارد (ماه یا
+    /// پایه‌ای که ردیفی ندارد) به «همه» برمی‌گردد.
+    /// </param>
+    public async Task OpenAsync(string kind, bool keepFilters = false)
     {
+        var keep = keepFilters && IsPageOpen && kind == OpenKind;
+        var (month, fuel, pump) = (Month, _fuelPick, _pumpPick);
         OpenKind = kind;
         Columns = HistoryService.ColumnsOf(kind);
         PageTitle = "🕘 تاریخچهٔ " + HistoryService.LabelOf(kind);
@@ -242,7 +250,8 @@ public sealed partial class HistorySectionViewModel : SectionViewModel
             Months.Add(m);
 
         //  صافیِ پارچه‌ها از خودِ ردیف‌ها: فقط پایه‌هایی که واقعاً ثبت شده‌اند
-        _fuelPick = "all"; _pumpPick = 0;
+        _fuelPick = keep ? fuel : "all";
+        _pumpPick = keep && _feed.Any(r => r.Pump == pump) ? pump : 0;
         Pumps.Clear();
         if (kind == "shift")
         {
@@ -252,8 +261,17 @@ public sealed partial class HistorySectionViewModel : SectionViewModel
         }
         RaiseFilters();
 
-        Month = AllMonths;      // خودش ‎Apply‎ را صدا می‌زند
-        Picker.Load(Months.Where(m => m != AllMonths), "");
+        var want = AllMonths;
+        if (keep && month != AllMonths)
+        {
+            var year = month.EndsWith(YearMonthPicker.AllMark, StringComparison.Ordinal)
+                ? month[..^YearMonthPicker.AllMark.Length] : null;
+            if (year is not null ? Months.Any(m => m.StartsWith(year + "/", StringComparison.Ordinal))
+                                 : Months.Contains(month))
+                want = month;
+        }
+        Month = want;           // خودش ‎Apply‎ را صدا می‌زند
+        Picker.Load(Months.Where(m => m != AllMonths), want == AllMonths ? "" : want);
         Apply();
     }
 

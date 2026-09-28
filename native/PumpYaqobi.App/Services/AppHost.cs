@@ -60,6 +60,7 @@ public sealed class AppHost
         Companies = new CompanyDataService(Db, Permissions, Trash);
         WaraqData = new WaraqDataService(Db, Permissions, Trash);
         ShiftWaraqSync = new ShiftWaraqSyncService(Db, Permissions, Waraq, Settings);
+        Trash.ResyncWaraqSales = ShiftWaraqSync.ResyncSalesAsync;
         WaraqPosting = new WaraqPostingService(Db, Permissions, Waraq, ShiftWaraqSync);
         ParchaData = new ParchaDataService(Db, Permissions, Trash, Parcha, ShiftWaraqSync);
         StorageData = new StorageDataService(Db, Permissions, Trash, Storage, Settings, Companies);

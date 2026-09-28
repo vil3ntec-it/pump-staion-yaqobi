@@ -21,7 +21,7 @@ namespace PumpYaqobi.Services.Data;
 /// ── کلید ──────────────────────────────────────────────────────────────
 /// ⚠️ کلید <b>ذخیره نمی‌شود</b>: از همان چیزهایی ساخته می‌شود که
 /// <c>CloudConfig.DeviceUid</c> از آن‌ها شناسهٔ دستگاه می‌سازد (نامِ ماشین،
-/// نامِ کاربر، مسیرِ نصب) به‌علاوهٔ یک نمک. پس فایل روی <b>همین</b>
+/// نامِ کاربر) به‌علاوهٔ یک نمک — ⛔ از ۱۴۰۵/۰۷/۱۶ بی مسیرِ نصب. پس فایل روی <b>همین</b>
 /// کامپیوتر باز می‌شود و روی کامپیوترِ دیگری نه.
 /// ⛔ و هیچ رمزی در کد نوشته نشده — نمک یک رشتهٔ ثابتِ بی‌راز است و به
 /// تنهایی هیچ دری باز نمی‌کند.
@@ -32,7 +32,15 @@ namespace PumpYaqobi.Services.Data;
 public static class SyncBackup
 {
     /// <summary>سرآیندِ فایل — تا نسخهٔ فردا بداند با چه چیزی طرف است.</summary>
-    private static readonly byte[] Magic = Encoding.ASCII.GetBytes("PYQB1\0\0\0");
+    private static readonly byte[] Magic = Encoding.ASCII.GetBytes("PYQB2\0\0\0");
+
+    /// <summary>
+    /// سرآیندِ نسخهٔ پیشین — کلیدش مسیرِ نصب را هم داشت.
+    /// ⛔ از ۱۴۰۵/۰۷/۱۶ دیگر نوشته نمی‌شود: با آمدنِ دفتر به پوشهٔ برنامه، نصب
+    /// در پوشهٔ دیگر (یا ۳۲ ⇄ ۶۴) کلید را عوض می‌کرد و همهٔ پشتیبان‌های رمزشده
+    /// برای همیشه باز‌نشدنی می‌شدند. هنوز خوانده می‌شود.
+    /// </summary>
+    private static readonly byte[] MagicV1 = Encoding.ASCII.GetBytes("PYQB1\0\0\0");
 
     /// <summary>پسوندِ فایلِ رمزشده.</summary>
     public const string Extension = ".pyq";
@@ -104,13 +112,16 @@ public static class SyncBackup
         {
             var raw = File.ReadAllBytes(source);
             if (raw.Length < Magic.Length + 12 + 16) return false;
-            for (var i = 0; i < Magic.Length; i++) if (raw[i] != Magic[i]) return false;
+            byte[] key;
+            if (Starts(raw, Magic)) key = Key();
+            else if (Starts(raw, MagicV1)) key = KeyV1();
+            else return false;
 
             var nonce = raw.AsSpan(Magic.Length, 12).ToArray();
             var tag = raw.AsSpan(Magic.Length + 12, 16).ToArray();
             var cipher = raw.AsSpan(Magic.Length + 28).ToArray();
             var plain = new byte[cipher.Length];
-            using (var aes = new AesGcm(Key(), 16)) aes.Decrypt(nonce, cipher, tag, plain);
+            using (var aes = new AesGcm(key, 16)) aes.Decrypt(nonce, cipher, tag, plain);
 
             File.WriteAllBytes(target, plain);
             return true;
@@ -118,7 +129,37 @@ public static class SyncBackup
         catch { return false; }
     }
 
+    /// <summary>این فایل پشتیبانِ رمزشدهٔ همین برنامه است؟ (فقط سرآیند — رمز را نمی‌سنجد.)</summary>
+    public static bool IsEncrypted(string path)
+    {
+        try
+        {
+            using var f = File.OpenRead(path);
+            var head = new byte[Magic.Length];
+            if (f.Read(head, 0, head.Length) != head.Length) return false;
+            return Starts(head, Magic) || Starts(head, MagicV1);
+        }
+        catch { return false; }
+    }
+
+    private static bool Starts(byte[] raw, byte[] magic)
+    {
+        if (raw.Length < magic.Length) return false;
+        for (var i = 0; i < magic.Length; i++) if (raw[i] != magic[i]) return false;
+        return true;
+    }
+
+    /// <summary>کلید: همین کامپیوتر و همین کاربرِ ویندوز — نه پوشهٔ نصب.</summary>
     private static byte[] Key()
+    {
+        var seed = string.Join('|',
+            "pump-yaqobi-backup-v2",
+            Environment.MachineName,
+            Environment.UserName);
+        return SHA256.HashData(Encoding.UTF8.GetBytes(seed));
+    }
+
+    private static byte[] KeyV1()
     {
         var seed = string.Join('|',
             "pump-yaqobi-backup-v1",
