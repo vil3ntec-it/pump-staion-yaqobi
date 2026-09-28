@@ -99,6 +99,8 @@ public sealed class DebtQuickReceiptService
         var person = found.Value.Person;
         // حالا که صاحبِ رسید معلوم شد، فقط ردیف‌های **او** خوانده می‌شوند
         await FillRowsAsync(db, person, ct);
+        //  ⛔ پیش از افزودنِ ردیفِ رسید — رسیدِ کهنهٔ حسابِ مهاجرت‌نکرده گم نشود
+        foreach (var a in person.AllAccounts()) await ReceiptSync.MigrateAsync(db, a, ct);
         var date = string.IsNullOrWhiteSpace(dateShamsi) ? Shamsi.Today() : dateShamsi!.Trim();
         var text = (note ?? "").Trim();
         var legacyId = "dr" + Guid.NewGuid().ToString("N")[..12];
@@ -155,6 +157,16 @@ public sealed class DebtQuickReceiptService
         });
 
         await db.SaveChangesAsync(ct);
+
+        //  ⛔ کشِ رسیدِ حساب همان لحظه (۱۴۰۵/۰۷/۱۶): «مانده»، کارت و هشدار رسیدِ تیل را
+        //  فقط از کشِ حساب می‌خوانند؛ تا امروز رسیدِ سریعِ تیل تا باز شدنِ حساب دیده نمی‌شد.
+        var acctId = placed.FuelAccountId ?? placed.MoneyAccountId;
+        if (person.AllAccounts().FirstOrDefault(a => a.Id == acctId) is { } acct)
+        {
+            await ReceiptSync.FromRowsAsync(db, acct, ct);
+            await db.SaveChangesAsync(ct);
+        }
+
         LastPerson = person;
         return (QuickReceiptResult.Ok, person.Name);
     }
@@ -277,6 +289,7 @@ public sealed class DebtQuickReceiptService
         await using var db = _dbf.Create();
         var r = await db.DebtQuickReceipts.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (r is null) return false;
+        var touched = new HashSet<long>();
 
         // ⚠️ ردیفِ این رسید مستقیم از روی ‎SrcKey‎ پیدا می‌شود — که ایندکس دارد.
         // پیش‌تر برای همین یک ردیف، همهٔ قرض‌داران با همهٔ ردیف‌هایشان خوانده
@@ -293,12 +306,20 @@ public sealed class DebtQuickReceiptService
             var srcKey = r.SrcKey;
             var dead = await db.DebtRows.Where(x => x.SrcKey == srcKey).ToListAsync(ct);
             db.DebtRows.RemoveRange(dead);
+            foreach (var aid in dead.Select(x => x.FuelAccountId ?? x.MoneyAccountId).Where(x => x is not null).Distinct())
+                touched.Add(aid!.Value);
         }
 
         await _trash.RememberAsync(db, "debtQuickReceipt",
             (r.Account ?? "") + " — " + Shamsi.Money(r.Amount), r, ct);
         db.DebtQuickReceipts.Remove(r);
         await db.SaveChangesAsync(ct);
+
+        //  کشِ رسیدِ همان حساب — برگرداندن هم همان لحظه دیده شود
+        foreach (var aid in touched)
+            if (await db.DebtAccounts.FirstOrDefaultAsync(a => a.Id == aid, ct) is { } acc)
+                await ReceiptSync.FromRowsAsync(db, acc, ct);
+        if (touched.Count > 0) await db.SaveChangesAsync(ct);
         return true;
     }
 

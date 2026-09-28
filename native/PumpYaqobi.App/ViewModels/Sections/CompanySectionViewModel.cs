@@ -657,7 +657,8 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
     /// </summary>
     public Task FindInlineAsync(string? text) => CrashGuard.RunAsync("جستجوی خرید", async () =>
     {
-        var raw = Shamsi.ToEnDigits(text ?? "").Trim();
+        //  «٫» ممیزِ فارسی است (۱۴۰۵/۰۷/۱۶) — پیش از این «۱٫۵» عددِ ۱۵ خوانده می‌شد
+        var raw = Shamsi.ToEnDigits(text ?? "").Trim().Replace('٫', '.');
         if (raw.Length == 0) { _host.Toast("مقدار (کیلو یا تن) یا تاریخِ خرید را بنویسید", ToastKind.Warn); return; }
         var isDate = raw.Contains('/') || raw.Count(ch => ch == '-') >= 2;
         decimal? qty = null;

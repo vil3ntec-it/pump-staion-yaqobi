@@ -427,6 +427,15 @@ public class MainActivity extends Activity {
     return ASSET_URL;
   }
 
+  /**
+   * کمینهٔ اندازهٔ هر فایلِ آپدیت. ⛔ ‎version.json‎ فقط ‎{"v":"1234"}‎ است (~۱۲ بایت)؛
+   * با کفِ ۲۰۰ بایتیِ یکسان، همان فایل رد می‌شد و **هیچ** آپدیتِ وبی نمی‌نشست
+   * (از ۱۴۰۵/۰۶/۲۶ تا ۱۴۰۵/۰۷/۱۶). بقیه همان ۲۰۰ — جلوی صفحهٔ خطای بریده.
+   */
+  static long minBytes(String name) {
+    return "version.json".equals(name) ? 5 : 200;
+  }
+
   /** همهٔ فایل‌هایی که ‎.files‎ می‌گوید، هستند و خالی نیستند؟ */
   private boolean multiComplete() {
     try {
@@ -435,7 +444,7 @@ public class MainActivity extends Activity {
         name = name.trim();
         if (name.isEmpty()) continue;
         File x = new File(updateDir(), name);
-        if (!x.exists() || x.length() < 200) return false;
+        if (!x.exists() || x.length() < minBytes(name)) return false;
       }
       return true;
     } catch (Throwable t) {
@@ -565,7 +574,7 @@ public class MainActivity extends Activity {
         closeQuietly();
         File part = new File(updateDir(), currentName + ".part");
         File dest = new File(updateDir(), currentName + ".new");
-        if (!part.exists() || part.length() < 200) { part.delete(); return false; }
+        if (!part.exists() || part.length() < minBytes(currentName)) { part.delete(); return false; }
         if (dest.exists() && !dest.delete()) { part.delete(); return false; }
         if (!part.renameTo(dest)) { part.delete(); return false; }
         pendingFiles.add(currentName);

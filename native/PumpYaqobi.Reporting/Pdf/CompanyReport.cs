@@ -128,8 +128,9 @@ public sealed class CompanyReport : ISetupDocument
             var afn = _calc.TotalAfn(r);
             var alb = _calc.AlbaqiAfn(r, s.ConvRate);
             var albUsd = _calc.AlbaqiUsd(r, s.ConvRate);
-            // عددِ کیلو همان چیزی است که کاربر نوشته؛ ردیف‌های کهنه فقط «تن» دارند
-            var kg = r.Kg != 0m ? r.Kg : ton * 1000m;
+            // ⛔ کیلو از همان تنی است که دالر و افغانی و «جمله» با آن حساب می‌شوند (۱۴۰۵/۰۷/۱۶) —
+            // ‎Kg‎ِ کهنهٔ داده (ستونش از صفحه رفته) عددی جدا از مبلغِ همان ردیف چاپ می‌کرد.
+            var kg = ton * 1000m;
             var diesel = r.Fuel == FuelType.Diesel;
 
             void Td(string s2, string? cl = null) => DocStyle.TdText(t.Cell(), even, s2, cl);

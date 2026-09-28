@@ -618,9 +618,9 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
 
         var sh = Calc.Shortage(t);
         if (sh.Shortage > 0)
-        { ShortageLabel = "کمبودی"; _shortageAmount = Math.Round(sh.Shortage); Shortage = Shamsi.Money(_shortageAmount); }
+        { ShortageLabel = "کمبودی"; _shortageAmount = Math.Round(sh.Shortage, 0, MidpointRounding.AwayFromZero); Shortage = Shamsi.Money(_shortageAmount); }
         else if (sh.Excess > 0)
-        { ShortageLabel = "اضافی"; _shortageAmount = Math.Round(sh.Excess); Shortage = Shamsi.Money(_shortageAmount); }
+        { ShortageLabel = "اضافی"; _shortageAmount = Math.Round(sh.Excess, 0, MidpointRounding.AwayFromZero); Shortage = Shamsi.Money(_shortageAmount); }
         else
         { ShortageLabel = "کمبودی"; _shortageAmount = 0m; Shortage = "0"; }
 

@@ -624,7 +624,8 @@ public sealed partial class CompanySearchPageViewModel : ObservableObject
     [RelayCommand]
     private Task RunAsync() => CrashGuard.RunAsync("جستجوی خرید", async () =>
     {
-        var raw = Shamsi.ToEnDigits(QtyText).Trim();
+        //  «٫» ممیزِ فارسی است (۱۴۰۵/۰۷/۱۶) — پیش از این «۱٫۵» عددِ ۱۵ خوانده می‌شد
+        var raw = Shamsi.ToEnDigits(QtyText).Trim().Replace('٫', '.');
         decimal? qty = decimal.TryParse(new string(raw.Where(ch => char.IsDigit(ch) || ch == '.' || ch == '-').ToArray()),
                                         System.Globalization.NumberStyles.Float,
                                         System.Globalization.CultureInfo.InvariantCulture, out var q) ? q : null;

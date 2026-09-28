@@ -177,6 +177,8 @@ public sealed class InvoiceService
         if (v is null || v.Status == InvoiceStatus.Approved) return;
 
         var account = await EnsureAccountAsync(db, v, ct);
+        //  ⛔ پیش از افزودنِ ردیفِ فاکتور — وگرنه رسیدِ کهنهٔ حساب گم می‌شد (‎ReceiptSync.MigrateAsync‎)
+        await ReceiptSync.MigrateAsync(db, account, ct);
 
         v.Status = InvoiceStatus.Approved;
         v.ApprovedAtUtc = AppClock.UtcNow;
@@ -263,6 +265,11 @@ public sealed class InvoiceService
         var v = await db.Invoices.FirstOrDefaultAsync(x => x.Id == invoiceId, ct);
         if (v is null) return;
         await UnpostAsync(db, v, ct);
+        //  ⛔ اثرش از حساب رفته، پس «تایید شده» نیست (۱۴۰۵/۰۷/۱۶): بازگردانی از سطل
+        //  تا امروز فاکتورِ «تاییدشده» ولی بی هیچ ردیفی در حساب برمی‌گرداند، و
+        //  ‎ApproveAsync‎ همان را رد می‌کرد — راهی برای دوباره تایید کردنش نبود.
+        v.Status = InvoiceStatus.Pending;
+        v.ApprovedAtUtc = null;
         await _trash.RememberAsync(db, "invoice", "فاکتور شماره " + v.InvoiceNumber, v, ct);
         db.Invoices.Remove(v);
         await db.SaveChangesAsync(ct);
@@ -342,7 +349,8 @@ public sealed class InvoiceService
                 if (s is not null && CompanyDataService.NormalizeName(s.Name) == key && key.Length > 0)
                     return s;
 
-        var acc = new DebtAccount { Mode = LedgerMode.Fuel };
+        //  حسابِ تازه هیچ رسیدِ کهنه‌ای ندارد ⇒ از همان اول «مهاجرت‌کرده»
+        var acc = new DebtAccount { Mode = LedgerMode.Fuel, ReceiptsMigrated = true };
         var fresh = new Debtor
         {
             Name = name.Length == 0 ? "مشتریِ فاکتور" : name,

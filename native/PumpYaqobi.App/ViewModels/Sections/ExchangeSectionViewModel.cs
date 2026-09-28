@@ -228,8 +228,12 @@ public sealed partial class ExchangeSectionViewModel
     protected override IReadOnlyList<TotalCell> BuildTotals() => new[]
     {
         new TotalCell("دالر", TotalUsd),
-        new TotalCell("رسید به صرافی", TotalBardagi, "Pump.Ok"),
-        new TotalCell("بردگی پمپ ($)", TotalBardagiUsd, "Pump.Warn", column: "بردگی پمپ بنزین ($)"),
+        //  ⛔ هر جمله زیرِ ستونِ خودش (۱۴۰۵/۰۷/۱۶): «رسید به صرافی»ِ هر ردیف همان دالرِ
+        //  شکسته است (‎RasidText => UsdText‎)، پس جمعش ‎TotalUsd‎؛ و «بردگی» خودش دالر
+        //  است، پس جمعش ‎TotalBardagi‎. تا امروز زیرِ رسید بردگی می‌نشست و زیرِ بردگی
+        //  «بردگی ÷ فی» — عددی بی‌معنا (۹۰۰ دالر بردگی با فیِ ۷۰ ⇒ «۱۲٫۸۶»).
+        new TotalCell("رسید به صرافی", TotalUsd, "Pump.Ok"),
+        new TotalCell("بردگی پمپ ($)", TotalBardagi, "Pump.Warn", column: "بردگی پمپ بنزین ($)"),
         new TotalCell("الباقی ($)", Baqi, Summary.Baqi >= 0m ? "Pump.Ok" : "Pump.Danger"),
     };
 

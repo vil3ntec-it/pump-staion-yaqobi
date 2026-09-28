@@ -588,7 +588,9 @@ public sealed class DebtorService
             Phone = phone,
             IsNoInvoice = noInvoice,
             LegacyId = "d" + Guid.NewGuid().ToString("N")[..10],
-            MainAccount = new DebtAccount { Mode = LedgerMode.Fuel },
+            //  حسابِ تازه هیچ رسیدِ کهنه‌ای ندارد ⇒ از همان اول «مهاجرت‌کرده» (۱۴۰۵/۰۷/۱۶) —
+            //  وگرنه رسیدِ پولیِ ردیف‌ها در کارت دو بار شمرده می‌شد (کش + ردیف)
+            MainAccount = new DebtAccount { Mode = LedgerMode.Fuel, ReceiptsMigrated = true },
         };
         db.Debtors.Add(d);
         await db.SaveChangesAsync(ct);
@@ -612,6 +614,7 @@ public sealed class DebtorService
             Name = string.IsNullOrWhiteSpace(title) ? $"حسابِ فرعیِ {n + 1}" : title.Trim(),
             LegacySubId = "s" + Guid.NewGuid().ToString("N")[..8],
             Mode = LedgerMode.Fuel,
+            ReceiptsMigrated = true,
         };
         db.DebtAccounts.Add(a);
         await db.SaveChangesAsync(ct);

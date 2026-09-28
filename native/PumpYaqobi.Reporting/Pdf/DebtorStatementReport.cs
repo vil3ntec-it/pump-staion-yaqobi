@@ -161,7 +161,9 @@ public sealed class DebtorStatementReport : ISetupDocument
             if (ShowFuelColumn) Td(r.Fuel == FuelType.Diesel ? "🟤 دیزل" : "⛽ پطرول");
             Td(r.Liters > 0m ? PersianText.Num(r.Liters) : "—", DocStyle.Fuel);
             Td((r.PricePerLiter ?? 0m) > 0m ? PersianText.Num(r.PricePerLiter!.Value) : "—");
-            Td(PersianText.Num(Math.Round(bardagi)), DocStyle.Hawala);
+            //  ⛔ گردِ «دور از صفر» مثلِ الباقیِ همین ردیف و خودِ برنامه — ‎Math.Round‎ِ بی‌پارامتر
+            //  بانکی است و ۱۰۱۲٫۵ را ۱۰۱۲ چاپ می‌کرد در حالی که الباقیِ همان ردیف ۱۰۱۳ بود.
+            Td(PersianText.Num(Math.Round(bardagi, 0, MidpointRounding.AwayFromZero)), DocStyle.Hawala);
             if (_in.IsMoneyLedger)
                 Td(r.Rasid > 0m ? PersianText.Num(r.Rasid) : "—", DocStyle.Money);
             else

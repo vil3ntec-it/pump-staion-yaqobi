@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using PumpYaqobi.Application.Localization;
+using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
 using PumpYaqobi.Persistence;
@@ -20,6 +22,38 @@ namespace PumpYaqobi.Services.Data;
 /// </summary>
 public static class ReceiptSync
 {
+    private sealed class NoRates : IUnionRateProvider
+    {
+        public static readonly NoRates Instance = new();
+        public decimal UnionRate(FuelType fuel) => 0m;
+    }
+
+    /// <summary>
+    /// ⛔ حسابِ «مهاجرت‌نکرده» پیش از هر نوشتنِ خودکاری مهاجرت می‌کند (۱۴۰۵/۰۷/۱۶).
+    ///
+    /// حسابی که از نسخهٔ وب آمده و هنوز در برنامه باز نشده، رسیدش فقط در چهار
+    /// عددِ کش است (بی ردیف). تا امروز تاییدِ فاکتور همان کش را از روی ردیف‌ها
+    /// **بازنویسی** می‌کرد ⇒ رسیدِ کهنه (مثلاً ۳۰۰ لیتر) برای همیشه گم می‌شد؛ و
+    /// رسیدِ پولی در کارت دو بار شمرده می‌شد (یک بار از کش، یک بار از ردیف).
+    ///
+    /// همان ‎MigrateReceiptsToRows‎ِ صفحهٔ حساب است — قاعدهٔ دوم ساخته نشد — فقط
+    /// این بار روی ردیف‌های دیتابیس و <b>پیش از</b> افزودنِ ردیفِ تازه، تا «فاصلهٔ
+    /// کش با ردیف‌ها» درست همان رسیدِ کهنه باشد.
+    /// </summary>
+    public static async Task MigrateAsync(PumpDbContext db, DebtAccount acc, CancellationToken ct = default)
+    {
+        if (acc is null || acc.ReceiptsMigrated) return;
+        if (acc.Id == 0) { acc.ReceiptsMigrated = true; return; }
+        var e = db.Entry(acc);
+        await e.Collection(x => x.FuelRows).LoadAsync(ct);
+        await e.Collection(x => x.MoneyRows).LoadAsync(ct);
+        await e.Collection(x => x.RasidLog).LoadAsync(ct);
+        var old = acc.RasidLog.ToList();
+        var made = new DebtCalculationService(NoRates.Instance).MigrateReceiptsToRows(acc, Shamsi.Today());
+        foreach (var r in made) r.DateKey = Shamsi.Key(r.DateShamsi);
+        if (old.Count > 0) db.RasidEntries.RemoveRange(old);
+    }
+
     /// <summary>
     /// چهار عددِ حساب را از روی ردیف‌های خودش در دیتابیس از نو حساب می‌کند.
     ///

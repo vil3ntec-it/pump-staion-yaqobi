@@ -335,7 +335,27 @@ public sealed class TrashService
             }
 
             case "debtrow":          return await ReviveOne(db.DebtRows, id, got, ct);
-            case "debtQuickReceipt": return await ReviveOne(db.DebtQuickReceipts, id, got, ct);
+            case "debtQuickReceipt":
+            {
+                //  ⛔ رسید و ردیفِ حسابش با هم برمی‌گردند (۱۴۰۵/۰۷/۱۶) — تا امروز فقط
+                //  فهرستِ رسید برمی‌گشت و پولِ رسید از حسابِ قرض‌دار (یا چکنه) غایب می‌ماند.
+                var q = await Find(db.DebtQuickReceipts, id, ct);
+                if (q is null) return 0;
+                var when = q.DeletedAt;
+                q.DeletedAt = null; got.Add(q);
+                var lid = q.LegacyId ?? "";
+                if (lid.StartsWith(DebtQuickReceiptService.RetailMark, StringComparison.Ordinal))
+                {
+                    var uid = lid[DebtQuickReceiptService.RetailMark.Length..];
+                    await ReviveChildren(db.RetailRows, x => x.SyncUid == uid, when, got, ct);
+                }
+                else if (lid.Length > 0)
+                {
+                    var key = "debtQuick|" + lid;
+                    await ReviveChildren(db.DebtRows, x => x.SrcKey == key, when, got, ct);
+                }
+                return 1;
+            }
             case "companyrow":       return await ReviveOne(db.CompanyRows, id, got, ct);
             case "amanatrow":        return await ReviveOne(db.AmanatRows, id, got, ct);
             case "parchaReceipt":    return await ReviveOne(db.ParchaReceipts, id, got, ct);

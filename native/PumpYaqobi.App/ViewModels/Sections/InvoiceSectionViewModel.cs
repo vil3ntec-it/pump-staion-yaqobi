@@ -101,9 +101,14 @@ public sealed partial class InvoiceRowViewModel : RowViewModel
     public string ChipText => IsApproved ? "🟢 تایید شده" : "🟡 در صف";
     public string ChipBrushKey => IsApproved ? "Pump.Ok" : "Pump.Warn";
 
-    /// <summary>جمعِ کل: فاکتورِ «فقط مبلغ» همان مبلغ، وگرنه فی × لیتر.</summary>
+    /// <summary>
+    /// جمعِ کل = پارهٔ تیل + پارهٔ پول — همان ‎FTotalText‎ِ فرمِ ثبت. ⛔ تا
+    /// ۱۴۰۵/۰۷/۱۶ فاکتورِ دوبخشی (تیل + پول) فقط پارهٔ تیل را نشان می‌داد، زیرِ
+    /// برچسبی که خودش «پارهٔ تیل + پارهٔ پول» است. در فاکتورِ «فقط مبلغ» فی × لیتر
+    /// صفر است، پس همان مبلغ می‌ماند.
+    /// </summary>
     public string TotalText =>
-        Shamsi.Money(InvoiceService.IsMoneyOnly(_v) ? Amount : Liters * Price);
+        Shamsi.Money(Math.Round((InvoiceService.IsMoneyOnly(_v) ? 0m : Liters * Price) + Amount, 0, MidpointRounding.AwayFromZero));
 
     // ══ برای صفحهٔ خودِ فاکتور ═══════════════════════════════════════════════
     //

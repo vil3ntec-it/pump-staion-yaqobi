@@ -117,7 +117,11 @@ public final class Alerts {
     //  به هیچ پمپی نپیوسته‌ایم و هیچ پرسشی نمی‌رود، نه پرسش از پمپِ «pump1»ِ کسِ دیگر.
     String st = station == null ? "" : station.trim();
 
-    prefs(c).edit().putString(K_SERVER, s).putString(K_TOKEN, t).putString(K_STATION, st).apply();
+    SharedPreferences.Editor ed = prefs(c).edit();
+    //  ⛔ پمپِ دیگر ⇒ «گفته‌شده»های پمپِ قبلی پاک (۱۴۰۵/۰۷/۱۶): همان کلیدِ
+    //  ‎d7-stP-out‎ در پمپِ تازه مالِ حسابِ دیگری است و بی این ساکت می‌ماند.
+    if (!st.equals(prefs(c).getString(K_STATION, ""))) ed.remove(K_SEEN);
+    ed.putString(K_SERVER, s).putString(K_TOKEN, t).putString(K_STATION, st).apply();
     //  ⚠️ رمز هست ولی نشانیِ خانگی نه ⇒ هنوز راهِ تونل هست؛ کار نمی‌ماند
     if ((s.isEmpty() && t.isEmpty()) || st.isEmpty()) cancel(c); else schedule(c);
   }

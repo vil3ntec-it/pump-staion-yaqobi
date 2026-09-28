@@ -61,6 +61,17 @@ ok(bot.askedMonth('مصارف ماه ۱۴۰۵/۰۶') === '1405/06', 'رقمِ ف
 ok(bot.askedMonth('مصارف سنبله') === '/06', 'نامِ ماهِ افغانی («سنبله») خوانده می‌شود');
 ok(bot.askedMonth('مصارف شهریور ۱۴۰۵') === '1405/06', 'نامِ ماهِ ایرانی هم، با سال');
 ok(bot.askedMonth('مصارف ماه ۶') === '/06', '«ماه ۶» یعنی ماهِ ششم');
+//  ⛔ ۱۴۰۵/۰۷/۱۶: نامِ ماه باید واژهٔ کامل باشد — «دی» داخلِ «دیزل»، «مهر» داخلِ «مهرداد» ماه نیستند
+ok(bot.askedMonth('دیزل احمد') === null, '«دیزل» ماهِ جدی خوانده نمی‌شود');
+ok(bot.askedMonth('حساب مهرداد') === null && bot.askedMonth('اسدالله') === null, 'نامِ «مهرداد» و «اسدالله» ماه نیستند');
+ok(bot.askedMonth('مصارف ماه دی ۱۴۰۴') === '1404/10', '«دی»ی تنها همچنان ماهِ دهم است');
+{
+  const d = { debtors: [{ name: 'کلیم', status: 'ok', bal: {} }], sections: {}, tank: {} };
+  ok(bot.answer('کلیم', d)[0].title === 'کلیم', '⛔ «کلیم» حسابِ کلیم است، نه «کل»ِ خلاصهٔ ایستگاه');
+  ok(bot.answer('گزارش کل', d)[0].title === 'خلاصهٔ ایستگاه', '«کل»ی تنها همچنان خلاصه است');
+  ok(!bot.anyWord(bot.norm('قبل'), ['بل']) && bot.anyWord(bot.norm('بل ها'), ['بل']), 'واژهٔ دوحرفی فقط به‌تنهایی («بل» نه در «قبل»)');
+  ok(bot.anyWord(bot.norm('پارچه‌ها'), ['پارچه']) && bot.anyWord(bot.norm('کارمندان'), ['کارمند']), 'واژهٔ بلند از سرِ واژه («پارچه‌ها»، «کارمندان»)');
+}
 ok(bot.askedMonth('سال ۱۴۰۵') === '1405/', 'سالِ تنها یعنی همهٔ ماه‌های آن سال');
 ok(bot.askedMonth('حساب هارون') === null, 'جمله‌ای که ماه ندارد، ماه نمی‌سازد');
 ok(bot.monthHit('1405/06', '/06') && !bot.monthHit('1404/06', '1405/06'), 'محکِ ماه درست می‌سنجد');
@@ -514,6 +525,14 @@ console.log('\n── به‌روزرسانیِ خودکار ──────�
   for (const m of ['updateFileBegin', 'updateFileCommit', 'updateFinish', 'openUrl', 'multiComplete'])
     ok(javaSrc.includes(m + '('), 'پوسته ' + m + ' دارد');
   ok(javaSrc.includes('www/version.json'), 'پوسته نسخهٔ همراهِ نصب را از version.json می‌خواند');
+  //  ⛔ ۱۴۰۵/۰۷/۱۶: کفِ ۲۰۰ بایتیِ یکسان version.json را (~۱۲ بایت) رد می‌کرد و هیچ آپدیتِ وبی نمی‌نشست
+  ok(/static long minBytes\(String name\)\s*\{\s*return "version\.json"\.equals\(name\) \? 5 : 200;/.test(javaSrc)
+     && /part\.length\(\) < minBytes\(currentName\)/.test(javaSrc) && /x\.length\(\) < minBytes\(name\)/.test(javaSrc)
+     && !/length\(\) < 200\)/.test(javaSrc),
+     '⛔ پوسته version.json ِ چندبایتی را رد نمی‌کند (کفِ اندازه برای هر فایل)');
+  ok(JSON.stringify({ v: '1234' }).length >= 5 && JSON.stringify({ v: '1234' }).length < 200, 'version.json واقعاً زیرِ ۲۰۰ بایت است');
+  ok(/if \(v > runningV && v > staged\)/.test(updSrc) && /staged = v;/.test(updSrc),
+     '⛔ نسخه‌ای که همین اجرا نوشته، دوباره گرفته نمی‌شود');
   ok(upd.verCmp('1.0.12', '1.0.8') === 1 && upd.verCmp('1.0.8', '1.0.8') === 0 && upd.num('1234') === 1234, 'مقایسهٔ نسخه درست است');
   ok(JSON.stringify(upd.FILES) === JSON.stringify(['index.html', 'app.js', 'cloud.js', 'update.js', 'manifest.json']),
      'هر پنج فایلِ اپ با هم به‌روز می‌شوند');
@@ -552,6 +571,34 @@ console.log('\n— خبر به گوشیِ بسته');
      'اندروید: بی نشانیِ خانگی ولی با رمز، کار چیده می‌ماند');
   ok(!/"pump1"/.test(alerts) && /if \(station\.isEmpty\(\)\) return 0;/.test(alerts),
      '⛔ اندروید: کدِ خالی به هیچ پمپی نمی‌رود — دیگر «pump1»ی پیش‌فرض نیست');
+}
+
+// ══ بازبینیِ دومِ ۱۴۰۵/۰۷/۱۶ — پنج باگِ اپِ گوشی ═════════════════════════════
+console.log('\n— بازبینیِ دوم (۱۴۰۵/۰۷/۱۶)');
+{
+  const { readFileSync } = await import("node:fs");
+  const appSrc = readFileSync(new URL('../kar/app.js', import.meta.url), 'utf8');
+  const alerts = readFileSync(new URL('../android/app/src/main/java/top/yaqobipump/app/Alerts.java', import.meta.url), 'utf8');
+  const loadFn = appSrc.slice(appSrc.indexOf('function load()'), appSrc.indexOf('function save()'));
+  ok(/toldKeys = JSON\.parse\(localStorage\.getItem\(stnKey\('told'\)\)/.test(loadFn),
+     '⛔ «خبرهای گفته‌شده» پس از خواندنِ کدِ پمپ خوانده می‌شوند (وگرنه هر باز شدن دوباره اعلان)');
+  ok(!/^\s*try \{ toldKeys = JSON\.parse\(localStorage\.getItem\(TOLD\(\)\)/m.test(appSrc),
+     'خواندنِ پیش از ‎load()‎ (با کلیدِ خالی) دیگر نیست');
+  const cf = appSrc.slice(appSrc.indexOf('function cloudFallback'), appSrc.indexOf('ورود با گوگل'));
+  ok(/var my = \+\+cloudGen, asked = cfg\.code;/.test(cf) && (cf.match(/my !== cloudGen \|\| asked !== cfg\.code/g) || []).length === 2,
+     '⛔ جوابِ دیررسِ سرورِ حساب برای پمپِ قبلی روی پمپِ تازه نمی‌نشیند');
+  const rl = appSrc.slice(appSrc.indexOf('function resetLink'), appSrc.indexOf('function chips'));
+  ok(/cloudGen\+\+; cloudBusy = false;/.test(rl), 'پمپِ تازه درخواستِ ابرِ قبلی را بی‌اثر می‌کند و منتظرش نمی‌ماند');
+  const nd = appSrc.slice(appSrc.indexOf('function nextDoor'), appSrc.indexOf('function schedule'));
+  ok(/\}\s*[\s\S]*rejected = 0;\s*schedule\(\);/.test(nd) && nd.indexOf('rejected = 0;') > nd.indexOf('} else {'),
+     '⛔ شمارِ ردِ درها مالِ همان دور است («رمز پذیرفته نشد»ِ دروغ نیست)');
+  const ad = appSrc.slice(appSrc.indexOf('function adoptStation'), appSrc.indexOf('function resetLink'));
+  ok(/var moved = nextStn !== cfg\.stn;/.test(ad) && /if \(moved && \$\('appPane'\)[\s\S]*show\('lockPane'\); gateReady\(\);/.test(ad),
+     '⛔ پوشهٔ پمپ عوض شد وقتی اپ باز است ⇒ برمی‌گردد به در، نه اپِ یخ‌زده روی عکسِ قبلی');
+  const sh = appSrc.slice(appSrc.indexOf('function show(which)'), appSrc.indexOf('function show(which)') + 600);
+  ok(/if \(which !== 'appPane'\) chatWatch\(false\);/.test(sh), '⛔ گروهِ کارکنان پشتِ قفل پرسیده نمی‌شود');
+  ok(/if \(!st\.equals\(prefs\(c\)\.getString\(K_STATION, ""\)\)\) ed\.remove\(K_SEEN\);/.test(alerts),
+     '⛔ اندروید: پمپِ دیگر ⇒ «گفته‌شده»های پمپِ قبلی پاک');
 }
 
 // ══ گروهِ کارکنانِ همین پمپ (۱۴۰۵/۰۷/۱۳) ══════════════════════════════════
