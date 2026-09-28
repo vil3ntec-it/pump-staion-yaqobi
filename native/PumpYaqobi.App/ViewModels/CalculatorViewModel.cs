@@ -107,7 +107,11 @@ public sealed partial class CalculatorViewModel : ObservableObject
         else if (Display.Length < 18) Display += k;
     }
 
-    private decimal Current => decimal.TryParse(Display, out var v) ? v : 0m;
+    //  ⛔ با فرهنگِ ثابت (۱۴۰۵/۰۷/۱۶): ‎Display‎ با ‎Shamsi.Money‎ (فرهنگِ ثابت، «1,234.5»)
+    //  ساخته می‌شود، ولی ‎TryParse‎ِ بی‌فرهنگ روی ویندوزِ فارسی/پشتو «٫» را ممیز می‌داند و
+    //  «12.5»، «1,234» و «-5» همه صفر خوانده می‌شدند — «× ۲ =» صفر می‌داد.
+    private decimal Current => decimal.TryParse(Display, System.Globalization.NumberStyles.Number,
+                                                System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : 0m;
 
     private void Clear()
     {

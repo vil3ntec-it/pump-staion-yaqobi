@@ -88,6 +88,13 @@ public sealed partial class LockViewModel : ObservableObject
             //  وسطِ کار کادر را عوض کرد، همان چیزی سنجیده شود که زد.
             var pass = Password;
             var r = await Task.Run(() => _host.Auth.SignIn("admin", pass));
+            //  ⛔ رمز در «رمزها و کد» بی فاصلهٔ سر و ته ذخیره می‌شود (‎Trim‎) — پس «1234 »ی
+            //  که دقیقاً همان‌طور تایپ شود هم باید باز کند (۱۴۰۵/۰۷/۱۶). فقط وقتی فاصله‌ای هست.
+            if (r.Result == SignInResult.WrongPassword && pass.Trim() != pass && pass.Trim().Length > 0)
+            {
+                var trimmed = pass.Trim();
+                r = await Task.Run(() => _host.Auth.SignIn("admin", trimmed));
+            }
             switch (r.Result)
             {
                 case SignInResult.Ok:

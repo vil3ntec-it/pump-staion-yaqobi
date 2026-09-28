@@ -287,7 +287,11 @@
 
   // «1405/06/23» ⇒ «1405/06» · «1405/06» ⇒ خودش
   function monthOf(s) {
-    var m = /^\s*(\d{4})\s*\/\s*(\d{1,2})/.exec(String(s || ''));
+    //  ⛔ تاریخی که با رقمِ فارسی یا «-»/«.» نوشته شده هم ماه دارد (۱۴۰۵/۰۷/۱۶) —
+    //  پیش از این با صافیِ ماه ناپدید می‌شد.
+    var t = String(s || '').replace(/[۰-۹]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); })
+                           .replace(/[٠-٩]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); });
+    var m = /^\s*(\d{4})\s*[\/\-.]\s*(\d{1,2})/.exec(t);
     return m ? m[1] + '/' + (m[2].length < 2 ? '0' + m[2] : m[2]) : '';
   }
   function yearOf(s) { var m = monthOf(s); return m ? m.slice(0, 4) : ''; }
@@ -875,7 +879,10 @@
           return false;
         }
         var m = out.j.message;
-        chatMsgs.push(m);
+        //  ⛔ اگر پرسشِ دوره‌ای همین پیام را زودتر آورده بود، دوتا نشود (۱۴۰۵/۰۷/۱۶)
+        var had = false;
+        for (var k = 0; k < chatMsgs.length; k++) if (chatMsgs[k].id === m.id) { chatMsgs[k] = m; had = true; break; }
+        if (!had) chatMsgs.push(m);
         if (m.seq > chatSeq) chatSeq = m.seq;
         chatRender();
         return true;

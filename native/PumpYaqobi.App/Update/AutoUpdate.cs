@@ -102,7 +102,9 @@ public static class AutoUpdate
         if (!ShouldOffer(info.LatestVersion)) return true;
         MarkOffered(info.LatestVersion);
         var yes = await OnUi(() => Ask(info));
-        if (yes && Ready is { } r) await Install(r.Info, r.Path);
+        //  ⛔ نصب (و فلاشِ نوشته‌های در صف) روی نخِ رابط (۱۴۰۵/۰۷/۱۶) — این حلقه روی نخِ
+        //  پس‌زمینه است و ‎SaveGuard.FlushAllAsync‎ هم‌زمان با تایپِ کاربر ردیف‌ها را می‌نوشت.
+        if (yes && Ready is { } r) await OnUi(async () => { await Install(r.Info, r.Path); return true; });
         return true;
     }
 

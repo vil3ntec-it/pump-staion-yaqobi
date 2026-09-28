@@ -213,12 +213,13 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
 
     private readonly AppHost _host;
     private readonly CancellationTokenSource _life = new();
-    private readonly SupportState _support = new();
+    private SupportState _support = new();
     private readonly StationChat _group;
     private readonly SemaphoreSlim _tick = new(1, 1);
     private readonly SemaphoreSlim _wake = new(0, 1);
     private ChatStore? _store;
     private CloudLink? _cloud;
+    private string? _cloudToken;
     private DateTime _lastThreads = DateTime.MinValue;
     private WaveRecorder? _rec;
 
@@ -235,7 +236,18 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
         Threads.Add(new ChatThreadViewModel(SupportId, "پشتیبانیِ برنامه", ChatKind.Support));
         Current = Threads[0];
 
-        host.LedgerSwitched += () => Dispatcher.UIThread.Post(OpenStore);
+        host.LedgerSwitched += () => Dispatcher.UIThread.Post(() =>
+        {
+            //  ⛔ حسابِ دیگر ⇒ نشست و حالِ سرورِ حسابِ قبلی هم می‌رود (۱۴۰۵/۰۷/۱۶) — وگرنه
+            //  گفت‌وگوهای مشتریانِ پمپِ قبلی در فهرستِ این حساب می‌نشستند و جوابِ این
+            //  حساب به مشتریِ پمپِ قبلی می‌رفت.
+            _cloud = null; _cloudToken = null;
+            _support = new SupportState();
+            _lastThreads = DateTime.MinValue;
+            for (var i = Threads.Count - 1; i >= 0; i--)
+                if (Threads[i].Kind == ChatKind.Customer) Threads.RemoveAt(i);
+            OpenStore();
+        });
         OpenStore();
         _ = LoopAsync();
     }
@@ -364,7 +376,10 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
         {
             var file = AppSettings.Load();
             if (string.IsNullOrWhiteSpace(file.CloudDeviceToken)) return null;
-            return _cloud ??= new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
+            //  توکنِ دستگاه عوض شد (پمپِ دیگر، ثبتِ دوباره) ⇒ نمونهٔ تازه، نه نشستِ کهنه
+            if (_cloud is not null && _cloudToken == file.CloudDeviceToken) return _cloud;
+            _cloudToken = file.CloudDeviceToken;
+            return _cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
         }
     }
 
@@ -668,6 +683,8 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
     /// <summary>یک دور: گروه، پشتیبانی و صندوقِ مشتری‌ها.</summary>
     public async Task PollCloudAsync(CancellationToken ct = default)
     {
+        //  ⛔ پشتِ صفحهٔ قفل هیچ پیامی نه پرسیده می‌شود نه توست (۱۴۰۵/۰۷/۱۶)
+        if (!_host.Unlocked) return;
         if (!await _tick.WaitAsync(0, ct)) return;
         try
         {

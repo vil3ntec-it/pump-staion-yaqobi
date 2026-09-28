@@ -71,15 +71,13 @@ public sealed class LegacyImportService
             for (var n = 1; n <= 200; n++)
             {
                 var target = Path.Combine(dir, n == 1 ? stem + ".db" : $"{stem}-{n}.db");
-                try
-                {
-                    File.Copy(_dbf.DbPath, target, overwrite: false);
-                    return target;
-                }
-                catch (IOException) when (File.Exists(target))
-                {
-                    // همان ثانیه، بکاپی از پیش هست — شمارهٔ بعدی
-                }
+                if (File.Exists(target)) continue;      // همان ثانیه، بکاپی از پیش هست — شمارهٔ بعدی
+                //  ⛔ ‎VACUUM INTO‎، نه ‎File.Copy‎ (۱۴۰۵/۰۷/۱۶): دفتر در حالتِ WAL است و
+                //  تراکنش‌های تازه تا نقطهٔ ذخیره فقط در ‎-wal‎اند؛ کپیِ خودِ ‎pump.db‎ تنها
+                //  نسخهٔ ایمنیِ پیش از «جایگزینیِ همهٔ حساب‌ها» را بی آخرین نوشته‌ها می‌ساخت.
+                using (var db = _dbf.Create())
+                    db.Database.ExecuteSqlRaw($"VACUUM INTO '{target.Replace("'", "''")}';");
+                return target;
             }
             return null;
         }

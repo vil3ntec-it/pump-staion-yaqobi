@@ -480,6 +480,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
 
     partial void OnCapacityChanged(string v)
     {
+        if (!_ready) return;
         _host.Settings.Set(CapacityKey, Shamsi.Num(v));
         _ = RecalcAsync();
     }
@@ -563,8 +564,11 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         foreach (var d in dips) Dips.Add(new DipRowViewModel(d, this));
         RefreshDipTotals();
 
-        Capacity = Shamsi.Money(_host.Settings.GetDecimal(CapacityKey, 10000m));
+        //  ⛔ پر کردنِ کادرها چیزی روی تنظیمات نمی‌نویسد (۱۴۰۵/۰۷/۱۶) — پیش از این
+        //  نخستین باز شدنِ «مخزن» ظرفیتِ پیش‌فرضِ ۱۰٬۰۰۰ را ذخیره می‌کرد (و اجازهٔ
+        //  تنظیمات می‌خواست)، پس ظرفیتی که داشبورد از موجودی می‌سازد دیگر هرگز به کار نمی‌رفت.
         _ready = false;
+        Capacity = Shamsi.Money(_host.Settings.GetDecimal(CapacityKey, 10000m));
         LowStock = Shamsi.Money(_host.Settings.GetDecimal(
             PumpYaqobi.Services.Data.SettingsService.LowStockThreshold, 1000m));
         _ready = true;
@@ -652,8 +656,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
             if (row is null) return;
             if (!await Dialogs.ConfirmAsync("حذف خرید",
                     "این خرید از مخزن حذف شود؟ (ردیفِ حسابِ شرکت دست نمی‌خورد)")) return;
-            await row.RetireAsync();
-            await _host.StorageData.DeletePurchaseAsync(row.Entity.Id);
+            await row.RetireWhileAsync(() => _host.StorageData.DeletePurchaseAsync(row.Entity.Id));
             Purchases.Remove(row);
             SyncPurchaseCards();
             await RecalcAsync();
@@ -701,8 +704,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     private async Task DeleteDipAsync(DipRowViewModel? row)
     {
         if (row is null) return;
-        await row.RetireAsync();
-        await _host.Tools.DeleteDipAsync(row.Entity.Id);
+        await row.RetireWhileAsync(() => _host.Tools.DeleteDipAsync(row.Entity.Id));
         Dips.Remove(row);
         await RecalcAsync();
     }

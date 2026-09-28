@@ -143,7 +143,9 @@ public sealed partial class SyncSectionViewModel : SectionViewModel
         Busy = true;
         try
         {
-            var copy = SyncBackup.Write(_host.Db, label: "pre-restore");
+            //  ⛔ هر سه کارِ سنگین روی نخِ دیگر (۱۴۰۵/۰۷/۱۶) — ‎VACUUM‎ و رمزنگاریِ کلِ دفتر و
+            //  نشاندنِ صدها هزار ردیف روی نخِ رابط پنجره را «پاسخ نمی‌دهد» می‌کرد.
+            var copy = await Task.Run(() => SyncBackup.Write(_host.Db, label: "pre-restore"));
             if (copy is null)
             {
                 _host.Toast("❌ پشتیبانِ پیش از بازیابی گرفته نشد — بازیابی انجام نشد", ToastKind.Error);
@@ -159,7 +161,10 @@ public sealed partial class SyncSectionViewModel : SectionViewModel
                 return;
             }
 
-            var report = new SyncStore(_host.Db).RestoreSnapshot(json);
+            //  و هم‌زمان با حلقهٔ همگام‌سازی نه — مکان‌نما را هر دو می‌نویسند
+            SyncStore.RestoreReport report;
+            using (_host.SyncIfStarted is { } se ? await se.PauseAsync() : null)
+                report = await Task.Run(() => new SyncStore(_host.Db).RestoreSnapshot(json));
             Refresh();
             _host.Toast($"✅ {report.Applied} ردیف از سرور نشست"
                         + (report.Failed > 0 ? $" · {report.Failed} ننشست" : ""),
@@ -170,9 +175,9 @@ public sealed partial class SyncSectionViewModel : SectionViewModel
 
     /// <summary>یک پشتیبانِ رمزشدهٔ محلی — بندِ ۹، «با یک کلیک».</summary>
     [RelayCommand]
-    private void BackupNow()
+    private async Task BackupNowAsync()
     {
-        var path = SyncBackup.Write(_host.Db, label: "manual");
+        var path = await Task.Run(() => SyncBackup.Write(_host.Db, label: "manual"));
         _host.Toast(path is null ? "❌ پشتیبان گرفته نشد" : "✅ پشتیبانِ رمزشده ساخته شد",
                     path is null ? ToastKind.Error : ToastKind.Ok);
     }

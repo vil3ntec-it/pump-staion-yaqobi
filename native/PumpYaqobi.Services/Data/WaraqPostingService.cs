@@ -209,7 +209,7 @@ public sealed class WaraqPostingService
                 .OrderBy(e => e.DateKey).ThenBy(e => e.Id)
                 .ToListAsync(ct));
 
-        var outcome = Apply(w, people, expenses, _calc);
+        var outcome = Apply(w, people, expenses, _calc, await ArchivedKeysAsync(db, prefix, ct));
 
         db.Expenses.RemoveRange(outcome.RemovedExpenses.Where(e => e.Id != 0));
         db.Expenses.AddRange(outcome.AddedExpenses);
@@ -294,7 +294,8 @@ public sealed class WaraqPostingService
     /// برمی‌گردد.
     /// </summary>
     public static WaraqPostOutcome Apply(WaraqEntry w, List<Debtor> people,
-                                         List<Expense> expenses, WaraqService calc)
+                                         List<Expense> expenses, WaraqService calc,
+                                         IReadOnlySet<string>? archived = null)
     {
         var outcome = new WaraqPostOutcome();
         var date = w.DateShamsi ?? "";
@@ -311,7 +312,7 @@ public sealed class WaraqPostingService
 
             var txns = sd.Transactions.OrderBy(t => t.SortIndex).ThenBy(t => t.Id).ToList();
             for (var i = 0; i < txns.Count; i++)
-                One(w, kind, sd, txns[i], i, people, expenses, calc, date, outcome);
+                One(w, kind, sd, txns[i], i, people, expenses, calc, date, outcome, archived);
 
             Sweep(w, kind, txns.Count, people, expenses, outcome);
         }
@@ -320,9 +321,18 @@ public sealed class WaraqPostingService
 
     private static void One(WaraqEntry w, ShiftKind kind, WaraqShift sd, WaraqTransaction t,
                             int index, List<Debtor> people, List<Expense> expenses,
-                            WaraqService calc, string date, WaraqPostOutcome outcome)
+                            WaraqService calc, string date, WaraqPostOutcome outcome,
+                            IReadOnlySet<string>? archived = null)
     {
         var srcKey = SrcKeyOf(w, kind, index);
+
+        // ⛔ ردیفی که با «جدول جدید» به آرشیوِ حساب رفته دوباره ساخته نمی‌شود
+        // (۱۴۰۵/۰۷/۱۶): آرشیو ردیف را از جدولِ زنده برمی‌دارد، پس هر ویرایشِ بعدیِ
+        // همان ورقِ قدیمی آن قرض را **دوباره** در جدولِ نو می‌نشاند — یک قرض، دو
+        // بار شمرده. ردیفِ زنده با همان کلید (بازگردانده از سطل) مثلِ همیشه.
+        if (archived is not null && archived.Contains(srcKey)
+            && t.Type != WaraqTxnType.Expense && !HasLiveRow(people, srcKey))
+            return;
         var name = (t.Name ?? "").Trim();
         var amount = Round0(calc.TxnAmount(sd, t));
         var liters = t.Liters;
@@ -368,7 +378,10 @@ public sealed class WaraqPostingService
         var person = found.Value.Person;
         decimal fuel = liters, priceper;
         var byMoney = false;
-        if (fuel > 0) priceper = Math.Round(amount / fuel, 2, MidpointRounding.AwayFromZero);
+        //  ⛔ شش رقمِ اعشار، نه دو (۱۴۰۵/۰۷/۱۶): حساب بردگی را «لیتر × فی» حساب می‌کند،
+        //  پس فیِ دورقمی مبلغِ دستیِ ورق را عوض می‌کرد (۱٬۰۰۰ لیتر × ۶۰٫۰۱ = ۶۰٬۰۱۰
+        //  به‌جای ۶۰٬۰۰۵). با شش رقم خطا زیرِ نیم افغانی می‌ماند و گردِ صفر آن را می‌برد.
+        if (fuel > 0) priceper = Math.Round(amount / fuel, 6, MidpointRounding.AwayFromZero);
         else { fuel = 0; priceper = 0; byMoney = true; }
         if (t.Unit == LedgerMode.Money) byMoney = true;
 
@@ -427,8 +440,8 @@ public sealed class WaraqPostingService
             foreach (var a in p.AllAccounts())
                 foreach (var list in new[] { a.FuelRows, a.MoneyRows })
                 {
-                    outcome.RemovedRows.AddRange(list.Where(r => Orphan(r.SrcKey)));
-                    list.RemoveAll(r => Orphan(r.SrcKey));
+                    foreach (var r in list.Where(r => Orphan(r.SrcKey)).ToList())
+                        Retire(list, r, outcome);
                 }
 
         foreach (var e in expenses.Where(e => Orphan(e.SrcKey)).ToList())
@@ -436,7 +449,79 @@ public sealed class WaraqPostingService
     }
 
     private static void DropRows(IEnumerable<Debtor> people, string srcKey, WaraqPostOutcome outcome)
-        => outcome.RemovedRows.AddRange(PostingService.RemoveRowsBySrcKey(people, srcKey));
+    {
+        if (string.IsNullOrEmpty(srcKey)) return;
+        foreach (var p in people)
+        {
+            if (p is null) continue;
+            foreach (var a in p.AllAccounts())
+                foreach (var list in new[] { a.FuelRows, a.MoneyRows })
+                    foreach (var r in list.Where(r => r.SrcKey == srcKey).ToList())
+                        Retire(list, r, outcome);
+        }
+    }
+
+    /// <summary>
+    /// ردیفی که دیگر مالِ این ورق نیست. ⛔ اگر کاربر رویش <b>رسید</b> نوشته
+    /// (۱۴۰۵/۰۷/۱۶)، رسید نمی‌رود: ردیف فقط از ورق جدا می‌شود و یک ردیفِ
+    /// رسیدِ تنها می‌ماند. پیش از این حذفِ یک تراکنشِ وسطِ ورق شماره‌ها را جلو
+    /// می‌آورد، ردیفِ آخر «یتیم» می‌شد و با همان رسیدی که مشتری داده بود پاک
+    /// می‌شد — پولِ گرفته‌شده از حساب ناپدید.
+    /// </summary>
+    private static void Retire(ICollection<DebtRow> list, DebtRow r, WaraqPostOutcome outcome)
+    {
+        if (r.Rasid != 0m || r.RasidFuel != 0m)
+        {
+            r.SrcKey = null;
+            r.Src = null;
+            r.Liters = 0m;
+            r.PricePerLiter = 0m;
+            r.Bardagi = 0m;
+            r.ByMoney = true;
+            r.Albaqi = Round0(-r.Rasid);
+            return;
+        }
+        outcome.RemovedRows.Add(r);
+        list.Remove(r);
+    }
+
+    private static bool HasLiveRow(IEnumerable<Debtor> people, string srcKey) =>
+        people.Where(p => p is not null).SelectMany(p => p.AllAccounts())
+              .Any(a => a.FuelRows.Any(r => r.SrcKey == srcKey) || a.MoneyRows.Any(r => r.SrcKey == srcKey));
+
+    /// <summary>
+    /// کلیدهای همین ورق که در یک جدولِ آرشیوِ قرض‌دار نشسته‌اند. ⚡ فقط
+    /// آرشیوهایی خوانده می‌شوند که متنشان پیشوندِ همین ورق را دارد (یک ‎instr‎ی
+    /// خودِ SQLite)، نه همهٔ آرشیوها.
+    /// </summary>
+    private static async Task<HashSet<string>> ArchivedKeysAsync(PumpDbContext db,
+                                                                 string prefix, CancellationToken ct)
+    {
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+        //  نامِ کلید در ‎RowsJson‎ همان است که ‎JsonSerializer‎ نوشته — ممکن است
+        //  نویسه‌ای را با ‎\uXXXX‎ نوشته باشد، پس هر دو شکل پرسیده می‌شود.
+        var escaped = System.Text.Json.JsonSerializer.Serialize(prefix).Trim('"');
+        var hits = await db.DebtTableArchives
+            .Where(x => x.RowsJson != null && (x.RowsJson.Contains(prefix) || x.RowsJson.Contains(escaped)))
+            .Select(x => x.RowsJson)
+            .ToListAsync(ct);
+        foreach (var json in hits)
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(json!);
+                if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Array) continue;
+                foreach (var el in doc.RootElement.EnumerateArray())
+                    if (el.ValueKind == System.Text.Json.JsonValueKind.Object
+                        && el.TryGetProperty("SrcKey", out var k)
+                        && k.ValueKind == System.Text.Json.JsonValueKind.String
+                        && k.GetString() is { } key && key.StartsWith(prefix, StringComparison.Ordinal))
+                        keys.Add(key);
+            }
+            catch (System.Text.Json.JsonException) { /* آرشیوِ خراب — نادیده */ }
+        }
+        return keys;
+    }
 
     private static void DropExpense(List<Expense> expenses, string srcKey, WaraqPostOutcome outcome)
     {

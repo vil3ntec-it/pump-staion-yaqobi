@@ -254,7 +254,7 @@ public sealed class BackupPusher : IAsyncDisposable
             //  چندساله همان‌قدر رم می‌خواست، یک‌جا، هر شش ساعت. حالا هرچه
             //  دفتر بزرگ‌تر شود، حافظهٔ این کار همان اندازه می‌ماند.
             await using var stream = new FileStream(
-                file, FileMode.Open, FileAccess.Read, FileShare.Read,
+                file, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete,   // ⛔ «📸 عکسِ همین حالا» وسطِ ارسال جایش را بگیرد (۱۴۰۵/۰۷/۱۶)
                 bufferSize: 64 * 1024, useAsync: true);
             using var body = new StreamContent(stream, 64 * 1024);
             body.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");

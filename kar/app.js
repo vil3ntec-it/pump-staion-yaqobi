@@ -91,7 +91,7 @@
     var idx = -1;
     for (var i = 0; i < MONTHS.length && idx < 0; i++)
       for (var k = 0; k < MONTHS[i].length; k++)
-        if (t.indexOf(norm(MONTHS[i][k])) >= 0) { idx = i; break; }
+        if (wholeWord(t, norm(MONTHS[i][k]))) { idx = i; break; }
 
     // «ماه ۶» / «ماه 6»
     if (idx < 0) {
@@ -218,8 +218,23 @@
     return { fresh: fresh, told: now };
   }
 
+  /**
+   * ⛔ واژه باید **واژه** باشد، نه تکه‌ای از واژهٔ دیگر (۱۴۰۵/۰۷/۱۶): با سنجشِ
+   * زیررشته‌ای «دی» داخلِ «دیزل» ماهِ جدی بود، «مهر» داخلِ «مهرداد» ماهِ میزان،
+   * و «کل» داخلِ «کلیم» کلِ خلاصهٔ ایستگاه را به جای حسابِ کلیم می‌داد.
+   *   ‎wholeWord‎ — دقیقاً همان واژه (نامِ ماه، و واژه‌های دوحرفی).
+   *   ‎anyWord‎ — واژهٔ سه‌حرفی به بالا از **سرِ** یک واژه («پارچه‌ها»، «کارمندان»).
+   */
+  function wholeWord(t, w) {
+    return !!w && (' ' + t + ' ').indexOf(' ' + w + ' ') >= 0;
+  }
+
   function anyWord(t, words) {
-    for (var i = 0; i < words.length; i++) if (t.indexOf(norm(words[i])) >= 0) return true;
+    for (var i = 0; i < words.length; i++) {
+      var w = norm(words[i]);
+      if (!w) continue;
+      if (w.length <= 2 ? wholeWord(t, w) : (' ' + t).indexOf(' ' + w) >= 0) return true;
+    }
     return false;
   }
 
@@ -537,7 +552,7 @@
 
   if (typeof module !== 'undefined' && module.exports)
     module.exports = {
-      answer: answer, askedMonth: askedMonth, monthHit: monthHit,
+      answer: answer, askedMonth: askedMonth, monthHit: monthHit, anyWord: anyWord,
       norm: norm, num: num, verifyPassword: verifyPassword,
       wsBaseOf: wsBaseOf, doorsFor: doorsFor, freshAlerts: freshAlerts,
       httpBaseOf: httpBaseOf, pushBases: pushBases, b64uBytes: b64uBytes, TUNNEL: TUNNEL,
@@ -579,6 +594,7 @@
       var cached = localStorage.getItem(stnKey('snap'));
       if (cached) data = JSON.parse(cached);      // تا بی‌اینترنت هم چیزی باشد
     } catch (e) { }
+    try { toldKeys = JSON.parse(localStorage.getItem(stnKey('told')) || '{}') || {}; } catch (e) { toldKeys = {}; }
   }
 
   function save() { try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch (e) { } }
@@ -868,10 +884,12 @@
     cloudPoll(true);
     if (rejected >= n) {
       live(false, 'رمزِ سرور پذیرفته نشد — کدِ پمپ را دوباره بزنید');
-      rejected = 0;
     } else {
       live(!!data, waitingText());
     }
+    //  ⛔ شمارِ ردها مالِ **همین** دور است (۱۴۰۵/۰۷/۱۶): پیش از این یک ردِ دورِ
+    //  اول و یکی در دورِ دوم «همهٔ درها رد کردند»ِ دروغ می‌ساخت.
+    rejected = 0;
     schedule();
   }
 
@@ -881,7 +899,7 @@
     timer = setTimeout(connect, 2000 * retry);
   }
 
-  var cloudBusy = false, cloudLastAt = 0, cloudNone = false, cloudAt = 0, cloudTimer = 0;
+  var cloudBusy = false, cloudLastAt = 0, cloudNone = false, cloudAt = 0, cloudTimer = 0, cloudGen = 0;
 
   function cloudText() {
     var when = cloudAt ? new Date(cloudAt).toLocaleString('fa-IR') : '';
@@ -909,7 +927,11 @@
     if (!cfg.code || !window.PumpCloud || cloudBusy) return;
     if (Date.now() - cloudLastAt < 20000) return;
     cloudBusy = true;
-    PumpCloud.cloudLive(cfg.code).then(function (r) {
+    //  ⛔ جوابِ دیررسِ پمپِ قبلی روی پمپِ تازه نمی‌نشیند (۱۴۰۵/۰۷/۱۶): «پمپِ
+    //  دیگر» وسطِ این درخواست، عکسِ پمپِ الف را زیرِ کلیدِ پمپِ ب ذخیره می‌کرد.
+    var my = ++cloudGen, asked = cfg.code;
+    PumpCloud.cloudLive(asked).then(function (r) {
+      if (my !== cloudGen || asked !== cfg.code) return;
       cloudLastAt = Date.now();
       if (!r || !r.live) { cloudNone = true; if (!data) live(false, waitingText()); return; }
       cloudNone = false;
@@ -919,13 +941,14 @@
         gateReady();
       }
     }).catch(function (err) {
+      if (my !== cloudGen || asked !== cfg.code) return;
       cloudLastAt = Date.now();
       //  ۴۰۴ یعنی سرورِ حساب هنوز عکسی از این پمپ ندارد — راستش را بگو
       if (err && err.status === 404 && /live/.test(err.code || 'live')) {
         cloudNone = true;
         if (!data && !wsLive) live(false, waitingText());
       }
-    }).then(function () { cloudBusy = false; });
+    }).then(function () { if (my === cloudGen) cloudBusy = false; });
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -965,7 +988,9 @@
         + 'کامپیوترش هنوز به سرور وصل نشده است. وقتی روشن شد، خودش وصل می‌شود.', true);
       return false;
     }
-    switchStation(home.station || st.code || '');
+    var nextStn = String(home.station || st.code || '');
+    var moved = nextStn !== cfg.stn;
+    switchStation(nextStn);
     cfg.srv = home.url;
     //  رمزِ فقط‌خواندنی، نه رمزِ برنامه — این همان چیزی است که روی کاغذِ
     //  کیو‌آر می‌رفت، فقط این‌بار از راهِ رمزگذاری‌شده
@@ -975,6 +1000,10 @@
     save();
     resetLink();
     chips();
+    //  ⛔ پمپ (پوشه) عوض شد در حالی که اپ باز است (۱۴۰۵/۰۷/۱۶): ‎switchStation‎
+    //  داده و «باز» را پاک کرده؛ ماندن روی همان صفحه یعنی اپی یخ‌زده روی عکسِ
+    //  پمپِ قبلی. برگرد به درِ ورود تا عکسِ پمپِ تازه برسد.
+    if (moved && $('appPane') && !$('appPane').classList.contains('hidden')) { show('lockPane'); gateReady(); }
     return true;
   }
 
@@ -982,6 +1011,7 @@
   function resetLink() {
     door = 0; retry = 0; rejected = 0; wsLive = false;
     cloudNone = false; cloudLastAt = 0; cloudAt = 0;
+    cloudGen++; cloudBusy = false;      // درخواستِ ابرِ پمپِ قبلی بی‌اثر، و راه برای پمپِ تازه باز
     gen++;
     clearTimeout(openTimer); clearTimeout(cloudTimer); clearTimeout(timer);
   }
@@ -1302,6 +1332,8 @@
     ['codePane', 'signinPane', 'setupPane', 'lockPane', 'appPane'].forEach(function (id) {
       $(id).classList.toggle('hidden', id !== which);
     });
+    //  ⛔ گروهِ کارکنان پشتِ قفل یا پس از «پمپِ دیگر» پرسیده نمی‌شود (۱۴۰۵/۰۷/۱۶)
+    if (which !== 'appPane') chatWatch(false);
     $('nav').classList.toggle('hidden', which !== 'appPane' || !mode);
   }
 
@@ -1575,7 +1607,9 @@
   //  ⚠️ کلیدِ هر پمپ جداست (‎stnKey‎): خبرِ «گفته‌شده»ی پمپِ قبلی نباید
   //  خبرِ پمپِ تازه را ساکت کند.
   function TOLD() { return stnKey('told'); }
-  try { toldKeys = JSON.parse(localStorage.getItem(TOLD()) || '{}') || {}; } catch (e) { }
+  //  ⛔ خوانده شدنش در ‎load()‎ است، نه این‌جا (۱۴۰۵/۰۷/۱۶): این خط پیش از
+  //  ‎load()‎ می‌دوید، ‎cfg.stn‎ هنوز خالی بود و کلیدِ غلط خوانده می‌شد — پس با
+  //  هر باز شدنِ اپ همهٔ خبرهای باز دوباره اعلان می‌شدند.
 
   function alertsOf(d) {
     var a = (d && d.alerts) || [];

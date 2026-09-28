@@ -126,7 +126,8 @@ public partial class DocumentPreviewWindow : Window
         if (Vm.PrintersLoading) { Vm.Status = "فهرستِ چاپگرها هنوز می‌آید — یک لحظه صبر کنید"; return; }
 
         string path;
-        try { path = Vm.SaveTo(PrintService.DocsFolder); }
+        var vm = Vm;
+        try { path = await Task.Run(() => vm.SaveTo(PrintService.DocsFolder)); }
         catch (Exception ex) { Vm.Status = "❌ فایلِ چاپ ساخته نشد — " + Services.ErrorText.Friendly(ex); return; }
         Vm.Status = PrintService.Print(path)
             ? "به چاپگرِ پیش‌فرضِ ویندوز فرستاده شد"
@@ -139,14 +140,25 @@ public partial class DocumentPreviewWindow : Window
     /// <summary>«⬇️ ذخیرهٔ فایلِ گزارش» — همان، بی باز کردنِ پوشه.</summary>
     private void OnSave(object? sender, RoutedEventArgs e) => Save(reveal: false);
 
-    private void Save(bool reveal)
+    private bool _saving;
+
+    //  ⛔ ساختنِ PDF روی نخِ دیگر (۱۴۰۵/۰۷/۱۶): «فقط این ورق‌ها» و چند نسخه کلِ گزارش
+    //  را با کیفیتِ چاپ دوباره تصویر می‌کنند و پنجره چند ثانیه «پاسخ نمی‌داد».
+    private async void Save(bool reveal)
     {
-        if (Vm is null) return;
+        if (Vm is null || _saving) return;
+        _saving = true;
+        var vm = Vm;
         string path;
-        //  ⛔ دیسکِ پر، پوشهٔ نانوشتنی: جملهٔ سرخ، نه استثنای بی‌صاحب
-        try { path = Vm.SaveTo(PrintService.DocsFolder); }
-        catch (Exception ex) { Vm.Status = "❌ ذخیره نشد — " + Services.ErrorText.Friendly(ex); return; }
-        Vm.Status = "ذخیره شد: " + path;
+        try
+        {
+            vm.Status = "در حالِ ساختنِ فایل…";
+            //  ⛔ دیسکِ پر، پوشهٔ نانوشتنی: جملهٔ سرخ، نه استثنای بی‌صاحب
+            try { path = await Task.Run(() => vm.SaveTo(PrintService.DocsFolder)); }
+            catch (Exception ex) { vm.Status = "❌ ذخیره نشد — " + Services.ErrorText.Friendly(ex); return; }
+        }
+        finally { _saving = false; }
+        vm.Status = "ذخیره شد: " + path;
         if (reveal) PrintService.Reveal(path);
     }
 

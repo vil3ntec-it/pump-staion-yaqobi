@@ -104,6 +104,9 @@ internal static class SectionOpen
         //  ⚠️ دقیقاً همان پنج بخشی که صاحب ریپو نام برد (۱۴۰۵/۰۷/۰۵):
         //  «رسید قرض‌داران · صرافی · مصارف · رسید پارچه‌ها · گاوصندوق»
         var ids = new[] { "debtrasid", "sarrafi", "expenses", "rasid", "safe" };
+        //  ‎SO_IDS=attendance,staff‎ ⇒ همین سنجه برای بخش‌های دیگر (فقط دستی)
+        if (Environment.GetEnvironmentVariable("SO_IDS") is { Length: > 0 } only)
+            ids = only.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var pages = ids
             .Select(id => vm.Sections.FirstOrDefault(s => s.Id == id))
             .Where(s => s is not null)
@@ -124,13 +127,15 @@ internal static class SectionOpen
         Console.WriteLine(new string('-', 78));
 
         //  ══ بازدیدِ دوم — همان کاری که کاربر می‌کند ══
-        for (var i = 0; i < pages.Count; i++)
+        //  ‎SO_ROUNDS=3‎ ⇒ چند دور، تا گرم شدنِ نخستین دور از عددِ پایدار جدا شود
+        var rounds = int.TryParse(Environment.GetEnvironmentVariable("SO_ROUNDS"), out var r) && r > 1 ? r : 1;
+        for (var i = 0; i < pages.Count * rounds; i++)
         {
             //  از بخشِ دیگری می‌آییم، وگرنه ‎GoAsync‎ مسیرِ «همین بخش» را می‌رود
             var other = pages[(i + 1) % pages.Count];
+            var target = pages[i % pages.Count];
             Wait(win, vm.GoAsync(other)); Settle(win);
 
-            var target = pages[i];
             var q0 = PumpYaqobi.Services.Data.DbWatch.Count;
             var sw = Stopwatch.StartNew();
 
@@ -141,6 +146,7 @@ internal static class SectionOpen
             var task = vm.GoAsync(target);
             Dispatcher.UIThread.RunJobs(DispatcherPriority.Render);
             win.UpdateLayout();
+            var firstMs = sw.ElapsedMilliseconds;
             var firstFrame = LiveRows(win);
 
             Wait(win, task);
@@ -158,7 +164,7 @@ internal static class SectionOpen
             var kond = sw.ElapsedMilliseconds > Goal;
             if (kond) _slow++;
 
-            Console.WriteLine($"{target.Title,-22} {firstFrame,12} {final,13} {sw.ElapsedMilliseconds,6:N0} ms {queries,10:N0}"
+            Console.WriteLine($"{target.Title,-22} {firstFrame,12} {final,13} {sw.ElapsedMilliseconds,6:N0} ms {queries,10:N0}   فریمِ اول {firstMs:N0} ms"
                 + (judged ? (firstFrame > 0 ? "" : "   ✖ جدولِ خالی") : "   (بی ردیف)")
                 + (kond ? "   ⚠️ کند" : ""));
         }

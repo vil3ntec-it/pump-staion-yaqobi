@@ -70,6 +70,6 @@ public class RowAddBar : TemplatedControl
         // عددِ بی‌معنی هیچ کاری نمی‌کند — نه خطا، نه ردیفِ ناخواسته
         var n = Math.Clamp(Count, 0, MaxRows);
         if (n < 1) return;
-        if (Host is IRowBatchHost h) _ = h.AddRowsAsync(n);
+        if (Host is IRowBatchHost h) _ = Services.CrashGuard.RunAsync("افزودنِ ردیف", () => h.AddRowsAsync(n));
     }
 }

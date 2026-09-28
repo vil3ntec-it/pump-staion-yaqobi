@@ -296,7 +296,15 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
 
     public override async Task OnActivatedAsync()
     {
-        if (IsLoaded && !PersonOpen) await RefreshAsync();
+        if (!IsLoaded) return;
+        if (!PersonOpen) { await RefreshAsync(); return; }
+        //  ⛔ حسابِ باز هم از نو خوانده می‌شود (۱۴۰۵/۰۷/۱۶) — تنها وقتی دفتر جای دیگری
+        //  عوض شده (ترمزِ ‎Version‎). ورقی که در همین فاصله در ردیفِ خالیِ این حساب
+        //  نشست، در عکسِ کهنهٔ صفحه هنوز «خالی» دیده می‌شد؛ رسیدِ سربرگ یا تایپ در همان
+        //  ردیف کلِ ردیف را می‌نوشت و قرضِ ورق پاک می‌شد. اول نوشته‌های در صفِ خودِ صفحه.
+        if (Overlay is not null || Person is not { } p) return;
+        await p.FlushAsync();
+        await AfterUndoAsync();
     }
 
     public async Task RefreshAsync()

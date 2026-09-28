@@ -309,5 +309,20 @@ console.log('\n۱۱) چتِ پشتیبانی — «داخلِ کیو‌آر یک
   ok(!st.html.includes('chat-open') && st.chat === null, 'کیو‌آرِ ایستا (بی رمز) چت ندارد');
 }
 
+console.log('\n۱۲) سه باگِ ۱۴۰۵/۰۷/۱۶');
+{
+  const { readFileSync: rf } = await import('node:fs');
+  const html = rf(new URL('../view/index.html', import.meta.url), 'utf8');
+  const sw = rf(new URL('../view/sw.js', import.meta.url), 'utf8');
+  const fn = html.slice(html.indexOf('function monthOf'), html.indexOf('function yearOf'));
+  const monthOf = new Function(fn + '; return monthOf;')();
+  ok(monthOf('1405/06/12') === '1405/06' && monthOf('۱۴۰۵/۰۶/۱۲') === '1405/06' && monthOf('1405-6-3') === '1405/06',
+     'تاریخِ با رقمِ فارسی یا «-» هم ماه دارد (با صافیِ ماه ناپدید نمی‌شود)');
+  ok(!/split\('#'\)/.test(sw) && /list\[i\]\.url === url\) return list\[i\]\.focus\(\)/.test(sw),
+     'زدنِ اعلان پنجرهٔ **همان** حساب را جلو می‌آورد، نه کیو‌آرِ دیگری');
+  ok(/if \(chatMsgs\[k\]\.id === m\.id\) \{ chatMsgs\[k\] = m; had = true;/.test(html),
+     'پیامِ فرستاده‌شده دوتا نمی‌شود اگر پرسشِ دوره‌ای زودتر آورده بود');
+}
+
 console.log(bad === 0 ? '\n✅ صفحهٔ view/ سالم است\n' : `\n❌ ${bad} ایراد\n`);
 process.exit(bad === 0 ? 0 : 1);

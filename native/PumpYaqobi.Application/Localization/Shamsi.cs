@@ -184,7 +184,8 @@ public static class Shamsi
         foreach (var ch in ToEnDigits(s))
         {
             if (ch == '٫') { sb.Append('.'); continue; }
-            if (ch is ',' or '٬' || char.IsWhiteSpace(ch)
+            //  «،» (U+060C) هم جداکنندهٔ هزارهاست — «۱۲،۵۰۰» تا ۱۴۰۵/۰۷/۱۶ صفر می‌شد
+            if (ch is ',' or '٬' or '،' || char.IsWhiteSpace(ch)
                 || char.GetUnicodeCategory(ch) == UnicodeCategory.Format) continue;
             sb.Append(ch);
         }

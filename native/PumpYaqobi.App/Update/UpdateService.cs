@@ -918,13 +918,16 @@ public sealed class UpdateService
             start "" "{exe}"
             rmdir /s /q "{staging}" >nul 2>&1
             exit /b 0
-            """, System.Text.Encoding.UTF8);
+            """, new System.Text.UTF8Encoding(false));      // ⛔ بی BOM — وگرنه خطِ اول «@echo off» خطا می‌داد
 
         var writable = IsWritable(appDir);
         var psi = new System.Diagnostics.ProcessStartInfo
         {
             FileName = "cmd.exe",
-            Arguments = "/c \"" + script + "\"",
+            //  ⛔ ‎/s‎ و گیومهٔ دوتایی (۱۴۰۵/۰۷/۱۶): بی آن، پوشه‌ای با «( ) & @ ^» (مثلاً
+            //  نامِ کاربرِ «Ali (Work)» در مسیرِ نصب) گیومه را می‌شکست و به‌روزرسانی
+            //  برنامه را می‌بست و هیچ فایلی جا به جا نمی‌کرد.
+            Arguments = "/s /c \"\"" + script + "\"\"",
             WorkingDirectory = appDir,
         };
 

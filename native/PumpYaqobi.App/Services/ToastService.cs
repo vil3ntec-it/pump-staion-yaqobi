@@ -18,8 +18,16 @@ public sealed partial class ToastService : ObservableObject
 
     public void Show(string text, ToastKind kind = ToastKind.Info, int ms = 2600)
     {
+        //  ⛔ همیشه روی نخِ رابط (۱۴۰۵/۰۷/۱۶): ناشر، پشتیبان‌گیر و به‌روزرسانیِ خودکار از
+        //  نخِ پس‌زمینه صدا می‌زنند؛ ‎_hide‎ی بی‌قفل آن‌جا توستِ تازه‌تر را زود پنهان می‌کرد.
+        if (!Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => Show(text, kind, ms));
+            return;
+        }
         Text = text; Kind = kind; Visible = true;
         _hide?.Cancel();
+        _hide?.Dispose();
         var cts = new CancellationTokenSource();
         _hide = cts;
         _ = HideLaterAsync(ms, cts.Token);

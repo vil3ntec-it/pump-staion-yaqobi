@@ -925,8 +925,8 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         await FlushAsync();                       // هرچه نیم‌تایپ مانده، اول ذخیره شود
         //  ⛔ و بعد هیچ ردیفِ این جدول دیگر حقِ نوشتن ندارد — وگرنه نوشتنی که
         //  بعد از آرشیو برسد، ردیف را به جدولِ تازه برمی‌گرداند.
-        foreach (var r in Rows.ToList()) await r.RetireAsync();
-        await _host.Debtors.ArchiveTableAsync(Entity.Id, Shamsi.Today());
+        await RowViewModel.RetireAllWhileAsync(Rows,
+            () => _host.Debtors.ArchiveTableAsync(Entity.Id, Shamsi.Today()));
 
         // عکسِ حافظه هم باید با پایگاه یکی شود، وگرنه جدولِ پاک‌شده روی صفحه می‌ماند
         Entity.ActiveRows().Clear();
@@ -1121,12 +1121,10 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     private async Task DeleteRowAsync(DebtRowViewModel? row)
     {
         if (row is null) return;
-        await row.RetireAsync();
-
         // ⚠️ یک مسیر، برای هر ردیفی — چه رسید باشد چه نباشد. رسید رکوردِ
         // جداگانه‌ای ندارد که راهِ حذفِ جداگانه بخواهد؛ حذفِ ردیف خودش
         // رسیدش را هم می‌برد و جمع‌ها از نو حساب می‌شوند.
-        await _host.Debtors.DeleteRowAsync(row.Entity.Id);
+        await row.RetireWhileAsync(() => _host.Debtors.DeleteRowAsync(row.Entity.Id));
         Entity.FuelRows.Remove(row.Entity);
         Entity.MoneyRows.Remove(row.Entity);
         Rows.Remove(row);

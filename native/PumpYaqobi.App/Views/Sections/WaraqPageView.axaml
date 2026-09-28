@@ -124,7 +124,8 @@
         <c:LazyBox.Deferred>
           <DataTemplate>
           <Grid ColumnDefinitions="*,8,*">
-            <c:ExcelGrid GrowsToContent="True" KeepInside="True" WidthKey="waraq.txns" Grid.Column="0" ItemsSource="{Binding TxnsFirst}" x:CompileBindings="False">
+            <c:ExcelGrid GrowsToContent="True" KeepInside="True" WidthKey="waraq.txns" Grid.Column="0" ItemsSource="{Binding TxnsFirst}" x:CompileBindings="False"
+                         RowDeleteCommand="{Binding $parent[UserControl].DataContext.DeleteTxnCommand}">
               <DataGrid.Columns>
                 <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
                 <!-- ⛔ ستونِ «نوع تیل» برداشته شد (۱۴۰۵/۰۷/۰۶) و برنمی‌گردد.
@@ -174,7 +175,8 @@
               </DataGrid.Columns>
             </c:ExcelGrid>
 
-            <c:ExcelGrid GrowsToContent="True" KeepInside="True" WidthKey="waraq.txns" Grid.Column="2" ItemsSource="{Binding TxnsSecond}" x:CompileBindings="False">
+            <c:ExcelGrid GrowsToContent="True" KeepInside="True" WidthKey="waraq.txns" Grid.Column="2" ItemsSource="{Binding TxnsSecond}" x:CompileBindings="False"
+                         RowDeleteCommand="{Binding $parent[UserControl].DataContext.DeleteTxnCommand}">
               <DataGrid.Columns>
                 <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" />
                 <DataGridTextColumn Header="مقدار تیل" Binding="{Binding LitersText}" Width="Auto" />

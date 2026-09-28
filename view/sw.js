@@ -28,10 +28,10 @@ self.addEventListener('notificationclick', function (e) {
   e.notification.close();
   var url = (e.notification.data && e.notification.data.url) || '';
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
+    //  ⛔ نشانیِ کامل، با ‎#d=…‎ (۱۴۰۵/۰۷/۱۶): همهٔ کیو‌آرها یک مسیرند و حساب
+    //  داخلِ ‎#‎ است؛ برابریِ بی ‎#‎ پنجرهٔ حسابِ دیگری را جلو می‌آورد.
     for (var i = 0; i < list.length; i++) {
-      if (!url || list[i].url === url || list[i].url.split('#')[0] === url.split('#')[0]) {
-        return list[i].focus();
-      }
+      if (!url || list[i].url === url) return list[i].focus();
     }
     return url ? self.clients.openWindow(url) : null;
   }));

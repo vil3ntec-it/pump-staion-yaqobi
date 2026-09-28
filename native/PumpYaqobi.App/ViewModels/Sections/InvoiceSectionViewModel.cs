@@ -101,9 +101,14 @@ public sealed partial class InvoiceRowViewModel : RowViewModel
     public string ChipText => IsApproved ? "🟢 تایید شده" : "🟡 در صف";
     public string ChipBrushKey => IsApproved ? "Pump.Ok" : "Pump.Warn";
 
-    /// <summary>جمعِ کل: فاکتورِ «فقط مبلغ» همان مبلغ، وگرنه فی × لیتر.</summary>
+    /// <summary>
+    /// جمعِ کل = پارهٔ تیل + پارهٔ پول — همان ‎FTotalText‎ِ فرمِ ثبت. ⛔ تا
+    /// ۱۴۰۵/۰۷/۱۶ فاکتورِ دوبخشی (تیل + پول) فقط پارهٔ تیل را نشان می‌داد، زیرِ
+    /// برچسبی که خودش «پارهٔ تیل + پارهٔ پول» است. در فاکتورِ «فقط مبلغ» فی × لیتر
+    /// صفر است، پس همان مبلغ می‌ماند.
+    /// </summary>
     public string TotalText =>
-        Shamsi.Money(InvoiceService.IsMoneyOnly(_v) ? Amount : Liters * Price);
+        Shamsi.Money(Math.Round((InvoiceService.IsMoneyOnly(_v) ? 0m : Liters * Price) + Amount, 0, MidpointRounding.AwayFromZero));
 
     // ══ برای صفحهٔ خودِ فاکتور ═══════════════════════════════════════════════
     //
@@ -427,6 +432,12 @@ public sealed partial class InvoiceSectionViewModel : SectionViewModel
         var price = Shamsi.Num(FPrice);
         var liters = Shamsi.Num(FLiters);
         var amount = Shamsi.Num(FAmount);
+        //  ⛔ هیچ عددِ منفی‌ای (۱۴۰۵/۰۷/۱۶) — لیترِ منفی با مبلغِ مثبت پذیرفته می‌شد
+        if (price < 0m || liters < 0m || amount < 0m)
+        {
+            _host.Toast("لیتر، فی و مبلغ منفی نمی‌شوند", ToastKind.Error);
+            return;
+        }
         if (liters <= 0m && amount <= 0m)
         {
             _host.Toast("یا لیتر و فی را بنویسید، یا «مبلغ بدون تیل» را", ToastKind.Error);
@@ -569,7 +580,8 @@ public sealed partial class InvoiceSectionViewModel : SectionViewModel
             if (row is null) return;
             if (!await Dialogs.ConfirmAsync("حذف فاکتور",
                     "فاکتور شماره " + Shamsi.Money(row.Number) + " حذف شود؟")) return;
-            await _host.Invoices.DeleteAsync(row.Entity.Id);
+            //  ⛔ نوشتنِ دیررسِ همین فاکتور آن را از سطل برنگرداند (قاعدهٔ ‎RowViewModel‎)
+            await row.RetireWhileAsync(() => _host.Invoices.DeleteAsync(row.Entity.Id));
             if (ReferenceEquals(Detail, row)) { Detail = null; Pane = InvoicePane.Form; }
             await ReloadAsync();
             _host.Toast("🗑️ حذف شد", ToastKind.Warn);
