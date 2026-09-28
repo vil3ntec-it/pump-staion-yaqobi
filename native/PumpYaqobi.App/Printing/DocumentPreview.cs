@@ -1068,6 +1068,10 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
         var safe = string.Join("_", Title.Split(Path.GetInvalidFileNameChars()));
 
         var order = PrintOrder();
+        //  ⛔ «ورق‌های دلخواه» بی هیچ ورقِ درستی کلِ گزارش نیست (۱۴۰۵/۰۷/۱۶) — همان
+        //  چیزی که چاپ می‌گوید («هیچ ورقی برای چاپ نبود»)، ذخیره هم می‌گوید.
+        if (!wholeDocument && order.Count == 0 && Setup.What == PrintWhat.Pages)
+            throw new InvalidOperationException("هیچ ورقی انتخاب نشده — شمارهٔ ورق‌ها را درست بنویسید.");
         var whole = wholeDocument || order.Count == 0 || PrintJob.IsWholeDocument(order, _pages.Count);
         //  ⛔ همان گزارش که در یک PDFخوان باز است (آکروبات فایل را قفل می‌کند)
         //  با زدنِ دوبارهٔ «ذخیره» استثنای بی‌صاحب می‌داد. پس نامِ بعدی: «… (2).pdf».
@@ -1142,7 +1146,9 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
             try
             {
                 using var ms = new MemoryStream(png);
-                var bmp = new Bitmap(ms);
+                //  ⛔ ‎using‎ (۱۴۰۵/۰۷/۱۶): هر ورقِ ۴۰۰ نقطه‌ای ~۶۰ مگابایت حافظهٔ بومی است و تا
+                //  اجرای ‎finalizer‎ آزاد نمی‌شد — بیست ورق روی نسخهٔ ۳۲بیتی یعنی کمبودِ حافظه.
+                using var bmp = new Bitmap(ms);
                 return (bmp.PixelSize.Width / (float)_dpi * 72f,
                         bmp.PixelSize.Height / (float)_dpi * 72f);
             }

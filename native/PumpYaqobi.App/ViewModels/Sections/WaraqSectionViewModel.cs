@@ -767,11 +767,12 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
     private async Task DeletePumpAsync(WaraqPumpViewModel? row)
     {
         if (row is null) return;
-        await row.RetireAsync();
-        await _host.WaraqData.DeletePumpAsync(row.Entity.Id);
+        await row.RetireWhileAsync(() => _host.WaraqData.DeletePumpAsync(row.Entity.Id));
         Shift?.Pumps.Remove(row.Entity);
         Pumps.Remove(row);
         Recalc();
+        //  ⛔ فروشِ این پایه از «ماندگی»ِ گاوصندوق هم برود (۱۴۰۵/۰۷/۱۶) — مثلِ حذفِ تراکنش
+        await PostAsync();
     }
 
     [RelayCommand]
@@ -795,8 +796,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         if (row is null) return;
         var sd = Shift;
         if (sd is null) return;
-        await row.RetireAsync();
-        await _host.WaraqData.DeleteTxnAsync(row.Entity.Id);
+        await row.RetireWhileAsync(() => _host.WaraqData.DeleteTxnAsync(row.Entity.Id));
         sd.Transactions.Remove(row.Entity);
         Txns.Remove(row);
         SplitTxns();
@@ -1264,10 +1264,20 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
     /// نشده ⇒ هیچ پرس‌وجویی. ماه‌ها هم از نو خوانده می‌شوند، وگرنه ورقی که
     /// در ماهِ تازه‌ای نشسته حتی در کشویی هم پیدا نمی‌شد.
     /// </summary>
-    public override Task OnActivatedAsync()
+    public override async Task OnActivatedAsync()
     {
-        if (_seenVersion == PumpYaqobi.Persistence.PumpDbContext.Version) return Task.CompletedTask;
-        return LoadAsync();
+        if (_seenVersion == PumpYaqobi.Persistence.PumpDbContext.Version) return;
+        //  ⛔ ورقِ باز هم از نو خوانده می‌شود (۱۴۰۵/۰۷/۱۶): پارچه‌ای که در همین فاصله
+        //  ختمِ پایه را درست کرد ردیفِ پایهٔ ورق را سرِ جایش به‌روز می‌کند؛ صفحهٔ کهنه
+        //  همان عددِ قبلی را نشان می‌داد و ویرایشِ بعدیِ همان ردیف اصلاحِ پارچه را پس
+        //  می‌گرفت. اول نوشته‌های در صفِ خودِ صفحه.
+        if (SheetOpen && Page is { } pg)
+        {
+            await pg.FlushAsync();
+            var full = await _host.WaraqData.LoadAsync(pg.Entity.Id);
+            if (full is not null) Show(full); else SheetOpen = false;
+        }
+        await LoadAsync();
     }
 
     private long _seenVersion = -1;
@@ -1422,7 +1432,16 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
         if (!Months.Contains(mk)) Months.Insert(0, mk);
         //  با ‎_month‎ (نه ‎Month‎): ‎OnMonthChanged‎ یک خواندنِ دوم می‌زد، پیش از
         //  این یکی و بی انتظار. یک خواندن، همین‌جا.
-        if (_month != mk) { _month = mk; OnPropertyChanged(nameof(Month)); }
+        if (_month != mk)
+        {
+            _month = mk; OnPropertyChanged(nameof(Month));
+            //  ⛔ کشوی ماه و سال هم همان ماه را نشان بدهد (۱۴۰۵/۰۷/۱۶) — پیش از این فهرست
+            //  ماهِ تازه بود و کشویی ماهِ قبلی، و زدنِ همان ماهِ قبلی هیچ کاری نمی‌کرد.
+            //  و این ماه را کاربر خودش برگزید: برنامه دیگر زیرِ دستش عوضش نکند.
+            _monthAuto = false;
+            if (!_dataMonths.Contains(mk)) _dataMonths.Insert(0, mk);
+            BuildPickers();
+        }
         await ReloadAsync();
         var full = await _host.WaraqData.LoadAsync(w.Id);
         if (full is not null) Show(full);

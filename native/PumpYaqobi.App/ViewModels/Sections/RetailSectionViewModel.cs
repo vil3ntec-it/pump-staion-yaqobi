@@ -115,6 +115,19 @@ public sealed partial class RetailRowViewModel : RowViewModel
 public sealed partial class RetailSectionViewModel
     : LedgerSectionViewModel<RetailRowViewModel, RetailRow>
 {
+
+    /// <summary>
+    /// ⛔ برگشتن به این بخش دفترِ دیتابیس را دوباره می‌خواند (۱۴۰۵/۰۷/۱۶) — با ترمزِ
+    /// ‎PumpDbContext.Version‎، پس بی تغییر هیچ پرس‌وجویی. پیش از این تا بستنِ برنامه
+    /// همان عکسِ اول می‌ماند: رسیدی که از جای دیگر (رسیدِ چکنه، سطلِ زباله) آمد یا رفت
+    /// دیده نمی‌شد، و تایپ در ردیفِ کهنه رسیدِ برگشته را دوباره زنده می‌کرد.
+    /// </summary>
+    public override bool ActivationOnlyReadsDb => true;
+
+    public override async Task OnActivatedAsync()
+    {
+        if (IsLoaded) await ReloadRowsAsync();
+    }
     public RetailSectionViewModel(AppHost host)
         : base("chakana", "debtrasid", "چکنه", host.RetailLedger)
     {

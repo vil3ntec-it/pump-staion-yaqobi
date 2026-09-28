@@ -31,6 +31,7 @@ public partial class MainWindow : Window
 
     /// <summary>بستن یک بار لغو شد و حالا واقعاً می‌بندیم.</summary>
     private bool _closing;
+    private bool _flushed;
 
     private readonly DispatcherTimer? _clock;
     private readonly ShortcutService? _keys;
@@ -104,13 +105,18 @@ public partial class MainWindow : Window
         //  دوباره می‌بندیم. ‎_closing‎ نگهبانِ حلقه است.
         //  ⚠️ و سقفِ وقت دارد (‎SaveGuard.FlushAllAsync‎): برنامه‌ای که بسته
         //  نمی‌شود از برنامه‌ای که یک ردیف گم می‌کند بدتر است.
+        //  ⛔ ✕ِ دوم وسطِ نوشتن هم بستن را لغو می‌کند (۱۴۰۵/۰۷/۱۶) — پیش از این ‎_closing‎
+        //  آن را بی ‎Cancel‎ رها می‌کرد، پنجره همان لحظه بسته می‌شد و ردیفی که با دیسکِ
+        //  قفل دوباره تلاش می‌کرد گم می‌شد. فقط ‎Close()‎ِ خودمان پس از نوشتن رد می‌شود.
         Closing += async (_, e) =>
         {
-            if (_closing) return;
+            if (_flushed) return;
             e.Cancel = true;
+            if (_closing) return;
             _closing = true;
             try { Controls.ExcelGrid.CommitFocused(this); } catch { }
             try { await vm.FlushEverythingAsync(); } catch { }
+            _flushed = true;
             Close();
         };
 

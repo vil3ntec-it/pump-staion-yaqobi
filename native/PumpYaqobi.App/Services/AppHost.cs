@@ -192,6 +192,13 @@ public sealed class AppHost
     /// </summary>
     /// <param name="accountId">شناسهٔ حسابِ واردشده؛ خالی یعنی بی‌حساب.</param>
     /// <returns><c>true</c> یعنی واقعاً دفتر عوض شد.</returns>
+    /// <summary>
+    /// ⛔ برنامه باز است (پس از صفحهٔ قفل) — ۱۴۰۵/۰۷/۱۶. کارهای پس‌زمینه‌ای که چیزی از
+    /// دفتر یا پیام‌ها **نشان می‌دهند** (توستِ پیامِ مشتری و کارمند) تا این راست نشده
+    /// هیچ نمی‌کنند؛ وگرنه متنِ پیام روی صفحهٔ قفل دیده می‌شد.
+    /// </summary>
+    public volatile bool Unlocked;
+
     public bool UseLedgerOf(string? accountId)
     {
         var id = (accountId ?? "").Trim();
@@ -233,6 +240,7 @@ public sealed class AppHost
             {
                 if (!Db.SwitchTo(want)) { LedgerAccountId = id; return false; }
                 LedgerAccountId = id;
+                ViewModels.RowViewModel.NewLedger();      // ⛔ ردیف‌های دفترِ قبلی دیگر نمی‌نویسند
             }
             finally { try { sync?.Hold(false); } catch { /* رفاه */ } }
         }

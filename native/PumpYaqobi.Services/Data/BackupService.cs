@@ -144,8 +144,23 @@ public sealed class BackupService
             var extra = List().Skip(KeepSnapshots).ToList();
             foreach (var f in extra)
                 try { File.Delete(f.Path); } catch { }
+            //  ⛔ بقیهٔ نسخه‌ها هم سقف دارند (۱۴۰۵/۰۷/۱۶): «پیش‌از‌بازگردانی» با هر
+            //  بازگردانی و هر آوردنِ «فایلِ کامل» یک دفترِ کامل می‌ساخت و ‎.pyq‎های
+            //  رمزشده هم، و هیچ‌کدام هرگز پاک نمی‌شدند — پوشه بی‌سقف بزرگ می‌شد.
+            PruneByName("پیش‌از‌بازگردانی-*.db", KeepSafety);
+            PruneByName("*" + SyncBackup.Extension, KeepEncrypted);
         }
         catch { }
+    }
+
+    public const int KeepSafety = 5, KeepEncrypted = 10;
+
+    private void PruneByName(string pattern, int keep)
+    {
+        if (!Directory.Exists(SnapshotDir)) return;
+        var old = Directory.EnumerateFiles(SnapshotDir, pattern)
+            .Select(p => new FileInfo(p)).OrderByDescending(f => f.LastWriteTimeUtc).Skip(keep).ToList();
+        foreach (var f in old) try { f.Delete(); } catch { }
     }
 
     /// <summary>عکس‌های موجود، از تازه به کهنه.</summary>

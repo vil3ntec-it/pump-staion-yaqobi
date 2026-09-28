@@ -185,6 +185,10 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
     private async Task DeleteStaffAsync(StaffViewModel? s)
     {
         if (s is null) return;
+        //  ⛔ پیش از حذف می‌پرسد (۱۴۰۵/۰۷/۱۶) — کارمند با همهٔ حاضری‌هایش می‌رود
+        if (!await Dialogs.ConfirmAsync("حذفِ کارمند",
+                "«" + s.Entity.Name + "» با همهٔ حاضری‌هایش به سطلِ زباله برود؟ (تا پانزده روز برمی‌گردد)"))
+            return;
         await FlushRowsAsync();
         await _host.Attendance.DeleteStaffAsync(s.Entity.Id);
         await LoadAsync();

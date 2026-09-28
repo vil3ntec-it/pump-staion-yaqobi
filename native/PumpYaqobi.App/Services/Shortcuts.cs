@@ -244,7 +244,7 @@ public sealed class ShortcutService
         if (e.Key == Key.S && ctrl && !alt && !shift)
         {
             CommitOpenCell(sender);
-            _ = SaveNowAsync();
+            _ = CrashGuard.RunAsync("ذخیره", SaveNowAsync);
             e.Handled = true;
             return;
         }
@@ -261,7 +261,8 @@ public sealed class ShortcutService
         // را نخورد».
         if (ctrl && !alt && !TypingInBox(sender) && (e.Key == Key.Y || e.Key == Key.Z))
         {
-            _ = UndoRedoAsync(redo: e.Key == Key.Y || shift);
+            var redo = e.Key == Key.Y || shift;
+            _ = CrashGuard.RunAsync("برگشت", () => UndoRedoAsync(redo));
             e.Handled = true;
             return;
         }
@@ -355,19 +356,19 @@ public sealed class ShortcutService
             if (mods.HasFlag(KeyModifiers.Control) || mods.HasFlag(KeyModifiers.Shift)) return;
             var card = ParseBuf(ref _openBuf);
             ClearBuffers();
-            if (card > 0) _ = OpenCardAsync(card);
+            if (card > 0) _ = CrashGuard.RunAsync("باز کردنِ کارت", () => OpenCardAsync(card));
             return;
         }
 
         if (isCtrl)
         {
             var n = ParseBuf(ref _addBuf);
-            if (n > 0) _ = AddRowsAsync(n);
+            if (n > 0) _ = CrashGuard.RunAsync("افزودنِ ردیف", () => AddRowsAsync(n));
         }
         else
         {
             var n = ParseBuf(ref _delBuf);
-            if (n > 0) _ = DeleteRowsAsync(n);
+            if (n > 0) _ = CrashGuard.RunAsync("حذفِ ردیف", () => DeleteRowsAsync(n));
         }
     }
 
@@ -388,7 +389,8 @@ public sealed class ShortcutService
         //  «بخشِ سوم» همان سومی است که می‌بیند (‎ViewModels.NavOrder‎).
         var nav = _vm.NavSections;
         if (n < 1 || n > nav.Count) return;
-        _ = _vm.GoAsync(nav[n - 1]);
+        var target = nav[n - 1];
+        _ = CrashGuard.RunAsync("رفتن به بخش", () => _vm.GoAsync(target));
     }
 
     private async Task OpenCardAsync(int n)

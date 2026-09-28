@@ -366,7 +366,15 @@ public sealed class TrashService
             case "expense":          return await ReviveOne(db.Expenses, id, got, ct);
             case "chakana":          return await ReviveOne(db.RetailRows, id, got, ct);
             case "extraincome":      return await ReviveOne(db.ExtraIncomes, id, got, ct);
-            case "staff":            return await ReviveOne(db.StaffMembers, id, got, ct);
+            case "staff":
+            {
+                var st = await Find(db.StaffMembers, id, ct);
+                if (st is null) return 0;
+                var when = st.DeletedAt;
+                st.DeletedAt = null; got.Add(st);
+                await ReviveChildren(db.Attendance, x => x.StaffId == id, when, got, ct);
+                return 1;
+            }
             case "staffshort":       return await ReviveOne(db.StaffShortSettles, id, got, ct);
             case "tanker":           return await ReviveOne(db.TankerUnloads, id, got, ct);
             case "tankdip":          return await ReviveOne(db.TankDips, id, got, ct);

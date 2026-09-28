@@ -297,6 +297,13 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
     public async Task SubmitAsync()
     {
         var amount = Shamsi.Num(AmountText);
+        //  ⛔ رسیدِ منفی نیست (۱۴۰۵/۰۷/۱۶): «-500»، «500-» و «(500)» همه ۵۰۰− خوانده
+        //  می‌شدند و رسیدِ منفی بدهیِ مشتری را بی‌صدا **بالا** می‌برد.
+        if (amount < 0m)
+        {
+            _host.Toast("⚠️ مبلغِ رسید منفی نمی‌شود — عدد را بی «−» بنویسید", ToastKind.Warn);
+            return;
+        }
 
         if (IsRetail)
         {

@@ -203,6 +203,31 @@ public sealed class SyncEngine : IAsyncDisposable
     /// </summary>
     public void Hold(bool on) => Volatile.Write(ref _held, on);
 
+    /// <summary>
+    /// ⛔ برای بازگردانیِ بکاپ و آوردنِ «فایلِ کامل» (۱۴۰۵/۰۷/۱۶): نه فقط دورِ تازه نمی‌دود،
+    /// دورِ <b>در جریان</b> هم تمام می‌شود تا هیچ اتصالی به فایلِ دفتر باز نماند — وگرنه
+    /// ‎-wal‎ِ دفترِ قبلی روی فایلِ تازه بازپخش می‌شد یا مکان‌نمای کهنه در دفترِ تازه می‌نشست.
+    /// </summary>
+    public async Task<IDisposable> PauseAsync()
+    {
+        Hold(true);
+        await _stepGate.WaitAsync();
+        return new Resume(this);
+    }
+
+    private sealed class Resume : IDisposable
+    {
+        private SyncEngine? _e;
+        public Resume(SyncEngine e) => _e = e;
+        public void Dispose()
+        {
+            var e = Interlocked.Exchange(ref _e, null);
+            if (e is null) return;
+            e._stepGate.Release();
+            e.Hold(false);
+        }
+    }
+
     public void Nudge()
     {
         try { if (_wake.CurrentCount == 0) _wake.Release(); }
@@ -292,7 +317,9 @@ public sealed class SyncEngine : IAsyncDisposable
     public async Task<bool> SyncNowAsync(CancellationToken ct = default)
     {
         _fails = 0;
-        await StepAsync(force: true, ct);
+        //  ⛔ روی نخِ دیگر، مثلِ خودِ حلقه (۱۴۰۵/۰۷/۱۶) — «بارِ اول» و نشاندنِ یک صفحهٔ
+        //  کامل روی نخِ رابط پنجره را می‌خشکاند. شنونده‌ها از قبل برای نخِ حلقه نوشته شده‌اند.
+        await Task.Run(() => StepAsync(force: true, ct), ct);
         return Light == SyncLight.Synced;
     }
 

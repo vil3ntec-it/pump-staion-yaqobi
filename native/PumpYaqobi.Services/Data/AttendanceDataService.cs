@@ -76,7 +76,11 @@ public sealed class AttendanceDataService
         var s = await db.StaffMembers.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (s is null) return;
         await _trash.RememberAsync(db, "staff", s.Name ?? "", s, ct);
-        db.StaffMembers.Remove(s);      // حاضری‌هایش با کلیدِ خارجی می‌روند
+        db.StaffMembers.Remove(s);
+        //  ⛔ حاضری‌هایش هم (۱۴۰۵/۰۷/۱۶): حذف نرم است و هیچ آبشاری رخ نمی‌داد — ردیف‌های
+        //  حاضریِ کارمندِ رفته با نامِ خالی در جدول و در جمعِ ساعت می‌ماندند. در همان
+        //  ذخیره، پس مُهرِ زمانشان یکی است و بازگردانی از سطل هر دو را با هم برمی‌گرداند.
+        db.Attendance.RemoveRange(await db.Attendance.Where(r => r.StaffId == id).ToListAsync(ct));
         await db.SaveChangesAsync(ct);
     }
 

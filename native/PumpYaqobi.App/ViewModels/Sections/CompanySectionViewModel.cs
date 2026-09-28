@@ -318,8 +318,9 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
         if (!await Dialogs.ConfirmAsync("📋 جدول جدید",
                 "جدولِ فعلیِ " + fuelWord + " آرشیو می‌شود و جدولِ خالیِ تازه‌ای باز می‌شود. ادامه؟")) return;
         await FlushAsync();
-        foreach (var r in Rows.ToList()) await r.RetireAsync();   // نوشتنِ دیررس ردیفِ آرشیوشده را برنگرداند
-        await _host.Companies.ArchiveTableAsync(Entity.Id, Fuel, Shamsi.Today());
+        // نوشتنِ دیررس ردیفِ آرشیوشده را برنگرداند — و اگر آرشیو نشد، ردیف‌ها دوباره زنده
+        await RowViewModel.RetireAllWhileAsync(Rows,
+            () => _host.Companies.ArchiveTableAsync(Entity.Id, Fuel, Shamsi.Today()));
         Entity.Rows.RemoveAll(r => r.Fuel == Fuel);
         var full = await _host.Companies.LoadAsync(Entity.Id);
         if (full is not null)
@@ -342,7 +343,8 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
                 "جدولِ فعلیِ " + fuelWord + " حسابِ «" + Name + "» با " + Shamsi.Money(Rows.Count)
                 + " ردیف پاک شود؟\n\nجدول‌های آرشیو دست نمی‌خورند.")) return;
         await FlushAsync();
-        await _host.Companies.ClearTableAsync(Entity.Id, Fuel);
+        //  ⛔ نوشتنِ دیررسِ یک ردیف، جدولِ پاک‌شده را برنگرداند — و اگر پاک نشد، ردیف‌ها زنده
+        await RowViewModel.RetireAllWhileAsync(Rows, () => _host.Companies.ClearTableAsync(Entity.Id, Fuel));
         Entity.Rows.RemoveAll(r => r.Fuel == Fuel);
         BuildRows();
         Recalc();
@@ -497,8 +499,7 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
     private async Task DeleteRowAsync(CompanyRowViewModel? row)
     {
         if (row is null) return;
-        await row.RetireAsync();
-        await _host.Companies.DeleteRowAsync(row.Entity.Id);
+        await row.RetireWhileAsync(() => _host.Companies.DeleteRowAsync(row.Entity.Id));
         Entity.Rows.Remove(row.Entity);
         Rows.Remove(row);
         Recalc();

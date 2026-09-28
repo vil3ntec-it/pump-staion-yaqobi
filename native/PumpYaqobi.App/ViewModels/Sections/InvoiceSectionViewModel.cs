@@ -432,6 +432,12 @@ public sealed partial class InvoiceSectionViewModel : SectionViewModel
         var price = Shamsi.Num(FPrice);
         var liters = Shamsi.Num(FLiters);
         var amount = Shamsi.Num(FAmount);
+        //  ⛔ هیچ عددِ منفی‌ای (۱۴۰۵/۰۷/۱۶) — لیترِ منفی با مبلغِ مثبت پذیرفته می‌شد
+        if (price < 0m || liters < 0m || amount < 0m)
+        {
+            _host.Toast("لیتر، فی و مبلغ منفی نمی‌شوند", ToastKind.Error);
+            return;
+        }
         if (liters <= 0m && amount <= 0m)
         {
             _host.Toast("یا لیتر و فی را بنویسید، یا «مبلغ بدون تیل» را", ToastKind.Error);
@@ -574,7 +580,8 @@ public sealed partial class InvoiceSectionViewModel : SectionViewModel
             if (row is null) return;
             if (!await Dialogs.ConfirmAsync("حذف فاکتور",
                     "فاکتور شماره " + Shamsi.Money(row.Number) + " حذف شود؟")) return;
-            await _host.Invoices.DeleteAsync(row.Entity.Id);
+            //  ⛔ نوشتنِ دیررسِ همین فاکتور آن را از سطل برنگرداند (قاعدهٔ ‎RowViewModel‎)
+            await row.RetireWhileAsync(() => _host.Invoices.DeleteAsync(row.Entity.Id));
             if (ReferenceEquals(Detail, row)) { Detail = null; Pane = InvoicePane.Form; }
             await ReloadAsync();
             _host.Toast("🗑️ حذف شد", ToastKind.Warn);

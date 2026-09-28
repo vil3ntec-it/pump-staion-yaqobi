@@ -1091,6 +1091,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     partial void OnPhaseChanged(AppPhase v)
     {
+        AppHost.Current.Unlocked = v == AppPhase.Ready;
         foreach (var n in new[] { nameof(IsStarting), nameof(IsLockVisible),
                                   nameof(IsShellVisible), nameof(IsLocked),
                                   nameof(RoleText), nameof(RoleBrushKey) })

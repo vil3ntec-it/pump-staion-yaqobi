@@ -292,7 +292,9 @@ public class BugHunt16Tests : IDisposable
         var p = App("Printing", "DocumentPreview.cs");
         Assert.Contains("catch (IOException) when (n < 20)", p);
         var w = App("Views", "DocumentPreviewWindow.axaml.cs");
-        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(w, "try \\{ path = Vm.SaveTo\\(PrintService.DocsFolder\\); \\}").Count);
+        //  ۱۴۰۵/۰۷/۱۶: ساختنِ فایل روی نخِ دیگر رفت — هر دو جا هنوز پشتِ ‎try‎
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(w, "try \\{ path = await Task.Run\\(\\(\\) => vm.SaveTo\\(PrintService.DocsFolder\\)\\); \\}").Count);
+        Assert.DoesNotContain("path = Vm.SaveTo(", w);
         Assert.Contains("❌ کیو‌آر ذخیره نشد", App("Views", "QrWindow.axaml.cs"));
         Assert.DoesNotContain("BoxShadow=\"0 2 12 0", App("Views", "DocumentPreviewWindow.axaml"));
     }

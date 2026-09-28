@@ -108,7 +108,7 @@ public class ShortcutHelpTests
         Assert.Contains("if (e.Key == Key.S && ctrl && !alt && !shift)", s);
         // ⛔ ترتیب مهم است: اول نشاندنِ خانه، بعد ذخیره
         var i = s.IndexOf("CommitOpenCell(sender);", StringComparison.Ordinal);
-        var j = s.IndexOf("_ = SaveNowAsync();", StringComparison.Ordinal);
+        var j = s.IndexOf("CrashGuard.RunAsync(\"ذخیره\", SaveNowAsync);", StringComparison.Ordinal);
         Assert.True(i > 0 && j > i);
     }
 

@@ -153,6 +153,20 @@ internal static class ScrollPerf
             return 0;
         }
 
+        //  فقط چند بخشِ دفتری (‎SP_IDS=sarrafi,safe‎) — برای ریشه‌یابیِ یک بخش
+        if (Environment.GetEnvironmentVariable("SP_IDS") is { Length: > 0 } only)
+        {
+            foreach (var id in only.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (vm.Sections.FirstOrDefault(x => x.Id == id) is not { } s1) continue;
+                Wait(win, vm.GoAsync(s1)); Settle(win);
+                ScrollThrough(win, "دفترِ " + s1.Title, build: true);
+                ScrollThrough(win, "دفترِ " + s1.Title + " (بارِ دوم، ساخته‌شده)");
+                ScrollThrough(win, "دفترِ " + s1.Title + " (بی سایه)", noShadow: true);
+            }
+            return 0;
+        }
+
         if (Vip)
         {
             VipPage(win, vm);

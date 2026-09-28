@@ -253,6 +253,8 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         //  می‌نشست، با شماره‌ای که آن‌جا مالِ ردیفِ دیگری است.
         try { await SaveGuard.FlushAllAsync(); } catch { }
         RestoreOutcome outcome;
+        //  ⛔ همگام‌سازی تا پایانِ جایگزینی می‌ایستد — هیچ اتصالی به دفتر باز نماند
+        using var paused = _host.SyncIfStarted is { } se ? await se.PauseAsync() : null;
         try { outcome = await Task.Run(() => _host.Backup.Restore(path)); }
         catch (PermissionDeniedException)
         {
@@ -268,6 +270,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             Status = SafetyLine(outcome.SafetyCopy);
 
         if (!outcome.Ok) return;
+        RowViewModel.NewLedger();                 // ⛔ ردیف‌های دفترِ پیش از بازگردانی دیگر نمی‌نویسند
         ForgetForeignSyncDevice();
 
         await RefreshAsync();
@@ -404,6 +407,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             {
                 try { await SaveGuard.FlushAllAsync(); } catch { }
                 RestoreOutcome outcome;
+                using var paused = _host.SyncIfStarted is { } se ? await se.PauseAsync() : null;
                 try { outcome = await Task.Run(() => FullBackup.Restore(_host.Backup, info)); }
                 catch (PermissionDeniedException)
                 {
@@ -420,6 +424,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
                     _host.Toast(FullStatus, ToastKind.Error);
                     return;
                 }
+                RowViewModel.NewLedger();         // ⛔ ردیف‌های دفترِ پیش از آوردن دیگر نمی‌نویسند
 
                 ForgetForeignSyncDevice();
 
@@ -496,7 +501,9 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         {
             try { await SaveGuard.FlushAllAsync(); } catch { }
             var pusher = _host.BackupToServer;
-            var ok = await pusher.RunOnceAsync(manual: true);
+            //  ⛔ روی نخِ دیگر (۱۴۰۵/۰۷/۱۶): ‎VACUUM INTO‎ِ کلِ دفتر پیش از نخستین ‎await‎ِ واقعی
+            //  روی نخِ رابط می‌دوید و پنجره چند ثانیه «پاسخ نمی‌داد».
+            var ok = await Task.Run(() => pusher.RunOnceAsync(manual: true));
             (ServerStatus, ServerStatusBrushKey) = ServerResult(ok, pusher.LastHomeOk, pusher.LastCloudOk, pusher.LastError);
             _host.Toast(ServerStatus, ok ? ToastKind.Ok : ToastKind.Error);
         }

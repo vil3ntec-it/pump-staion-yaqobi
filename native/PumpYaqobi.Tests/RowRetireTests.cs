@@ -85,6 +85,33 @@ public class RowRetireTests
             "PumpYaqobi.App/ViewModels/Sections/ParchaReceiptSectionViewModel.cs",
             "PumpYaqobi.App/ViewModels/Sections/StorageSectionViewModel.cs",
         })
-            Assert.Contains("RetireAsync()", Src(f));
+            Assert.Matches(@"RetireWhileAsync\(|RetireAllWhileAsync\(", Src(f));
+    }
+
+    //  ⛔ ۱۴۰۵/۰۷/۱۶: حذفی که شکست خورد، ردیف را برای همیشه «بازنشسته» می‌گذاشت —
+    //  هر ویرایشِ بعدی‌اش دیده می‌شد و هیچ‌وقت ذخیره نمی‌شد.
+    [Fact]
+    public async Task HazfeNashode_Radif_DobareZende_Va_TaghirashZakhireMishavad()
+    {
+        var r = new Probe();
+        r.Edit();                                               // تایپِ در صف
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            r.RetireWhileAsync(() => throw new InvalidOperationException("قفل")));
+        await Task.Delay(RowViewModel.SaveDelayMs * 4);
+        Assert.Equal(1, r.Saves);                               // تایپِ در صف گم نشد
+        r.Edit();                                               // و ویرایشِ بعدی هم
+        await r.FlushAsync();
+        Assert.Equal(2, r.Saves);
+    }
+
+    [Fact]
+    public async Task HazfeShode_DigarNeveshteNemishavad()
+    {
+        var r = new Probe();
+        r.Edit();
+        await r.RetireWhileAsync(() => Task.CompletedTask);
+        r.Edit();
+        await r.FlushAsync();
+        Assert.Equal(0, r.Saves);
     }
 }

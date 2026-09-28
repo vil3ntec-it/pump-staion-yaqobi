@@ -299,9 +299,11 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
     protected async Task DeleteRowAsync(TRow? row)
     {
         if (row is null) return;
-        await row.RetireAsync();
-        await BeforeDeleteAsync(EntityOf(row));
-        await Service.DeleteAsync(EntityIdOf(row));
+        await row.RetireWhileAsync(async () =>
+        {
+            await BeforeDeleteAsync(EntityOf(row));
+            await Service.DeleteAsync(EntityIdOf(row));
+        });
         Rows.Remove(row);
         RecalcAll();
     }

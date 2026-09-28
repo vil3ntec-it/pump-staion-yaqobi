@@ -13,6 +13,18 @@ public abstract partial class RowViewModel : ObservableObject, IPendingWrite
 {
     private CancellationTokenSource? _debounce;
 
+    /// <summary>
+    /// ⛔ شمارهٔ «کدام دفتر» (۱۴۰۵/۰۷/۱۶). عوض شدنِ حساب (دفترِ دیگر) یا بازگردانیِ بکاپ
+    /// یکی بالایش می‌برد؛ ردیفی که با شمارهٔ کهنه ساخته شده دیگر **هیچ‌جا** نمی‌نویسد.
+    /// پیش از این ردیفِ در صفِ حسابِ الف، پس از ورودِ حسابِ ب در دفترِ ب نوشته می‌شد —
+    /// روی ردیفی با همان شماره (شماره‌ها در هر دفتر از ۱ شروع می‌شوند) و با شناسهٔ
+    /// همگام‌سازیِ الف، یعنی دادهٔ یک حساب در دفترِ حسابِ دیگر.
+    /// </summary>
+    private static int _ledgerGen;
+    public static int LedgerGeneration => Volatile.Read(ref _ledgerGen);
+    public static void NewLedger() => Interlocked.Increment(ref _ledgerGen);
+    private readonly int _gen = Volatile.Read(ref _ledgerGen);
+
     /// <summary>وقتی true باشد، تغییرِ خانه‌ها ذخیره نمی‌شود (هنگامِ پر کردنِ اولیه).</summary>
     protected bool Loading { get; set; }
 
@@ -120,6 +132,13 @@ public abstract partial class RowViewModel : ObservableObject, IPendingWrite
             for (var i = 0; i < Backoff.Length; i++)
             {
                 if (!_dirty || _retired) return;
+                if (_gen != LedgerGeneration)
+                {
+                    //  دفترِ این ردیف دیگر دفترِ جلوی چشم نیست — نوشتن یعنی خرابیِ دفترِ دیگر
+                    _dirty = false;
+                    SaveGuard.ReportFailure("یک ردیف پیش از عوض شدنِ دفتر ذخیره نشد");
+                    return;
+                }
                 if (Backoff[i] > 0)
                     try { await Task.Delay(Backoff[i]); } catch { }
                 try
@@ -169,12 +188,47 @@ public abstract partial class RowViewModel : ObservableObject, IPendingWrite
 
     public async Task RetireAsync()
     {
+        _wasDirty = _dirty;
         _retired = true;
         _debounce?.Cancel();
         _dirty = false;
         var gate = Gate();
         await gate.WaitAsync();
         gate.Release();
+    }
+
+    private bool _wasDirty;
+
+    /// <summary>
+    /// ⛔ حذف نشد (دیتابیسِ قفل، بی‌اجازه، دیسکِ پر) ⇒ ردیف دوباره «زنده» (۱۴۰۵/۰۷/۱۶).
+    /// پیش از این ردیفِ بازنشسته روی صفحه می‌ماند و هر ویرایشِ بعدی‌اش دیده می‌شد ولی
+    /// هیچ‌وقت ذخیره نمی‌شد — برای «جدولِ جدید» یعنی کلِ جدول.
+    /// </summary>
+    public void Unretire()
+    {
+        if (!_retired) return;
+        _retired = false;
+        if (!_wasDirty) return;
+        _dirty = true;
+        SaveGuard.Track(this);
+        _ = WriteAsync();
+    }
+
+    /// <summary>بازنشسته کن، پاک کن، و اگر پاک نشد برگردان — تنها راهِ حذفِ یک ردیف.</summary>
+    public async Task RetireWhileAsync(Func<Task> delete)
+    {
+        await RetireAsync();
+        try { await delete(); }
+        catch { Unretire(); throw; }
+    }
+
+    /// <summary>همان، برای چند ردیف با یک کار (آرشیوِ کلِ جدول).</summary>
+    public static async Task RetireAllWhileAsync(IEnumerable<RowViewModel> rows, Func<Task> work)
+    {
+        var list = rows.ToList();
+        foreach (var r in list) await r.RetireAsync();
+        try { await work(); }
+        catch { foreach (var r in list) r.Unretire(); throw; }
     }
 
     /// <summary>مقدارهای جدول را در موجودیت می‌نشاند.</summary>

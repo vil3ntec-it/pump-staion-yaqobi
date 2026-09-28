@@ -26,7 +26,11 @@ public sealed class WaveRecorder : IDisposable
     private readonly List<byte> _data = new();
     private readonly List<(IntPtr Hdr, IntPtr Buf)> _bufs = new();
     private GCHandle _self;
-    private bool _running;
+    // ⛔ ‎volatile‎ + شمارِ بازگشت‌های در راه (۱۴۰۵/۰۷/۱۶): ‎winmm‎ بازگشت را روی نخِ خودش صدا
+    //  می‌زند. پیش از این «ایست» بافرها را آزاد می‌کرد در حالی که همان لحظه بازگشتی داشت
+    //  همان بافر را به دستگاه پس می‌داد — نوشتن روی حافظهٔ آزادشده، یعنی کرشِ برنامه.
+    private volatile bool _running;
+    private int _inCallback;
 
     public bool IsRecording => _running;
 
@@ -43,7 +47,9 @@ public sealed class WaveRecorder : IDisposable
         if (!_running) return Array.Empty<byte>();
         _running = false;
         if (Available) StopWindows();
-        return Wav(_data.ToArray());
+        byte[] pcm;
+        lock (_data) pcm = _data.ToArray();
+        return Wav(pcm);
     }
 
     [SupportedOSPlatform("windows")]
@@ -58,10 +64,10 @@ public sealed class WaveRecorder : IDisposable
         _callback = Callback;
         var r = waveInOpen(out _dev, unchecked((uint)-1), ref fmt, _callback, IntPtr.Zero, 0x00030000 /* CALLBACK_FUNCTION */);
         if (r != 0) { _self.Free(); return false; }
-        for (var i = 0; i < 4; i++) AddBuffer();
-        if (waveInStart(_dev) != 0) { StopWindows(); return false; }
+        lock (_data) _data.Clear();
         _running = true;
-        _data.Clear();
+        for (var i = 0; i < 4; i++) AddBuffer();
+        if (waveInStart(_dev) != 0) { _running = false; StopWindows(); return false; }
         return true;
     }
 
@@ -84,8 +90,13 @@ public sealed class WaveRecorder : IDisposable
         {
             if (_dev != IntPtr.Zero)
             {
+                // ⛔ بی قفل: ‎waveInReset‎ منتظرِ بازگشت‌هاست و قفلِ مشترک یعنی بن‌بست.
+                //  ‎_running‎ از قبل ‎false‎ است، پس هیچ بازگشتی بافری پس نمی‌دهد؛
+                //  فقط صبر می‌کنیم آن‌هایی که همین حالا وسطِ کارند تمام شوند.
+                WaitCallbacks();
                 waveInStop(_dev);
                 waveInReset(_dev);
+                WaitCallbacks();
                 foreach (var (hdr, buf) in _bufs)
                 {
                     waveInUnprepareHeader(_dev, hdr, Marshal.SizeOf<WaveHdr>());
@@ -103,12 +114,21 @@ public sealed class WaveRecorder : IDisposable
 
     private WaveInProc? _callback;
 
+    /// <summary>تا بازگشتِ در راهی هست، صبر (دست‌بالا یک ثانیه — دستگاهِ مرده نگهمان ندارد).</summary>
+    private void WaitCallbacks()
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (Volatile.Read(ref _inCallback) > 0 && sw.ElapsedMilliseconds < 1000) Thread.Sleep(1);
+    }
+
     [SupportedOSPlatform("windows")]
     private void Callback(IntPtr dev, uint msg, IntPtr inst, IntPtr param1, IntPtr param2)
     {
-        if (msg != 0x3C0 /* MM_WIM_DATA */ || !_running) return;
+        if (msg != 0x3C0 /* MM_WIM_DATA */) return;
+        Interlocked.Increment(ref _inCallback);
         try
         {
+            if (!_running) return;
             var h = Marshal.PtrToStructure<WaveHdr>(param1);
             if (h.dwBytesRecorded > 0)
             {
@@ -116,9 +136,10 @@ public sealed class WaveRecorder : IDisposable
                 Marshal.Copy(h.lpData, chunk, 0, chunk.Length);
                 lock (_data) _data.AddRange(chunk);
             }
-            waveInAddBuffer(dev, param1, Marshal.SizeOf<WaveHdr>());
+            if (_running) waveInAddBuffer(dev, param1, Marshal.SizeOf<WaveHdr>());
         }
         catch { /* بافرِ خراب — این تکه می‌افتد، ضبط ادامه دارد */ }
+        finally { Interlocked.Decrement(ref _inCallback); }
     }
 
     /// <summary>سربرگِ WAV روی نمونه‌های خام.</summary>
