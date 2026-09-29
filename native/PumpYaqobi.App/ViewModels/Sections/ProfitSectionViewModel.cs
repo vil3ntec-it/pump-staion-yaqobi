@@ -45,6 +45,32 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
             if (id == SectionLockService.Profit)
                 Avalonia.Threading.Dispatcher.UIThread.Post(RaiseVeil);
         };
+        //  🏷️ نرخی که از تلگرام آمد (‎StationPublisher.RateTickAsync‎) همان لحظه
+        //  در کادرِ «نرخ اتحادیه» دیده می‌شود — بی رفتن و برگشتن به بخش.
+        PumpYaqobi.Services.Data.SettingsService.Written += (k, _) =>
+        {
+            if (k != PumpYaqobi.Services.Data.SettingsService.UnionRatePetrol
+                && k != PumpYaqobi.Services.Data.SettingsService.UnionRateDiesel) return;
+            Avalonia.Threading.Dispatcher.UIThread.Post(RefillUnion);
+        };
+    }
+
+    /// <summary>
+    /// کادرهای نرخ از روی تنظیمات — فقط اگر واقعاً فرق دارند، تا تایپِ همین
+    /// لحظهٔ کاربر («۸» ⇒ «۸۰») زیرِ دستش بازنویسی نشود.
+    /// </summary>
+    internal void RefillUnion()
+    {
+        var p = _host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.UnionRatePetrol);
+        var d = _host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.UnionRateDiesel);
+        if (Shamsi.Num(UnionPetrol) == p && Shamsi.Num(UnionDiesel) == d) return;
+        _filling = true;
+        try
+        {
+            UnionPetrol = p == 0 ? "" : Shamsi.Money(p);
+            UnionDiesel = d == 0 ? "" : Shamsi.Money(d);
+        }
+        finally { _filling = false; }
     }
 
     // ══ پرده — «بخش آزاد، عددها تار» (۱۴۰۵/۰۷/۱۶) ════════════════════════════
