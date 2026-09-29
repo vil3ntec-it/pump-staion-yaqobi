@@ -93,6 +93,11 @@ public sealed partial class DebtorCardViewModel : ObservableObject
     /// <summary>«بی‌هشدار» — حسابِ خودِ صاحبِ پمپ (🔕 روی کارت).</summary>
     public bool Muted { get; }
 
+    /// <summary>نوشتهٔ منوی راست‌کلیکِ کارت — همان کلیدِ «بی‌هشدار».</summary>
+    public string MuteMenuText => Muted
+        ? "🔔 هشدارهای این حساب دوباره روشن شود"
+        : "🔕 بی‌هشدار — از این حساب هیچ هشداری نیاید";
+
     /// <summary>
     /// ⛔ «چراغ زدنِ» کارتِ ۹۰٪ یک انیمیشنِ بی‌پایان است؛ فقط وقتی فهرستِ
     /// کارت‌ها واقعاً جلوی چشم است (‎Owner.CardsLive‎). پیش از این در هر بخشِ
@@ -682,6 +687,25 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
             if (full is not null) { p.Load(full); return; }
             PersonOpen = false;               // خودِ حساب رفت ⇒ برگرد سرِ فهرست
         }
+        await RefreshAsync();
+    }
+
+    /// <summary>
+    /// ══ 🔕 «بی‌هشدار» از منوی راست‌کلیکِ کارت (۱۴۰۵/۰۷/۱۸) ══════════════════
+    /// خواستهٔ صاحب ریپو: «بیرون از حساب، روی هدرِ قرض‌دار راست‌کلیک کنیم بیاد».
+    /// کلید از نوارِ داخلِ حساب برداشته شد؛ این تنها درِ آن است. هیچ عددی عوض
+    /// نمی‌شود — فقط هشدارها (زنگ، توست، سرور، تلگرام) از همان
+    /// ‎StationSnapshot.Alerts‎ ساکت می‌شوند.
+    /// </summary>
+    [RelayCommand]
+    private async Task ToggleMuteAsync(DebtorCardViewModel? card)
+    {
+        if (card is null) return;
+        var on = !card.Muted;
+        await _host.Debtors.SetNoAlertsAsync(card.Entity.Id, on);
+        _host.Toast(on
+            ? "🔕 «" + card.Name + "» بی‌هشدار شد — از این حساب هیچ هشداری نمی‌آید."
+            : "🔔 هشدارهای «" + card.Name + "» دوباره روشن شد.");
         await RefreshAsync();
     }
 

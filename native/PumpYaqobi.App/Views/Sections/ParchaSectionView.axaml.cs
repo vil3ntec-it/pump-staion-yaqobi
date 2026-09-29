@@ -28,8 +28,8 @@ public partial class ParchaSectionView : UserControl
     /// زدنِ تب نوعِ تیل رو عوض کنه و به کادرها کاری نداشته باشه؛ کادرها با
     /// چهار کلید درست کار می‌کنن، به اون‌ها دست نمی‌زنی.»
     ///
-    ///   Enter (داخلِ کادرهای کارتِ شیفت) ⇒ همان دکمهٔ «💾 ذخیره شیفت …»ِ همان کارت
-    ///   Tab (هر جای صفحهٔ پارچه)          ⇒ همان دکمهٔ «⛽/🟤»ِ تعویضِ تیل
+    ///   Enter (هر کادرِ کارتِ روز یا شب) ⇒ هر کارتِ پر ذخیره + پارچهٔ جدید (۱۴۰۵/۰۷/۱۸)
+    ///   Tab و Ctrl+Tab (هر جای صفحهٔ پارچه) ⇒ همان دکمهٔ «⛽/🟤»ِ تعویضِ تیل
     ///
     /// ⛔ هیچ منطقِ تازه‌ای نیست — دو فرمانِ موجود. کلیدهای جهت دست نخوردند.
     /// ⛔ تکملهٔ باز (نامِ کارمند) اول می‌آید: Enter/Tab همان را می‌پذیرند.
@@ -39,20 +39,14 @@ public partial class ParchaSectionView : UserControl
         if (DataContext is not ParchaSectionViewModel vm || !vm.ShowMain) return;
         var focused = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() as Control;
 
-        //  ══ Ctrl+Tab ⇒ کارتِ روز ⇄ کارتِ شب (۱۴۰۵/۰۷/۱۷، دوم) ══════════════
-        //  همان لحظهٔ فشار؛ Ctrl نگه‌داشته و هر Tab یک بار — به‌جای Ctrl+۱/۲ که با
-        //  رها کردنِ کلید کار می‌کرد. ⛔ هیچ داده‌ای عوض نمی‌شود، فقط جای نوشتن.
+        //  ══ Ctrl+Tab ⇒ پطرول ⇄ دیزل (۱۴۰۵/۰۷/۱۸) ════════════════════════════
+        //  خواستهٔ صاحب ریپو: «با کنترول تب هم بشه دیزل و پطرول رو زود عوض کرد.»
+        //  همان دکمهٔ «⛽/🟤» (‎ToggleFuelCommand‎)، روی هر فشار — Ctrl نگه‌داشته و
+        //  هر Tab یک بار. (رفتنِ روز ⇄ شبِ ۱۴۰۵/۰۷/۱۷ پس گرفته شد؛ ورق همان روز/شب است.)
         if (e.Key == Key.Tab && e.KeyModifiers.HasFlag(KeyModifiers.Control)
             && !e.KeyModifiers.HasFlag(KeyModifiers.Alt))
         {
-            bool In(string card) => focused is not null && this.FindControl<ContentControl>(card) is { } c
-                                    && (ReferenceEquals(focused, c) || focused.GetVisualAncestors().Contains(c));
-            //  در روز ⇒ شب · در شب ⇒ روز · هیچ‌کدام ⇒ روز
-            var target = this.FindControl<ContentControl>(In("DayCard") ? "NightCard" : "DayCard");
-            var box = target?.GetVisualDescendants().OfType<TextBox>()
-                             .FirstOrDefault(t => t.IsEffectivelyVisible && t.IsEnabled && !t.IsReadOnly);
-            box?.Focus(NavigationMethod.Tab);
-            box?.SelectAll();
+            if (vm.ToggleFuelCommand.CanExecute(null)) vm.ToggleFuelCommand.Execute(null);
             e.Handled = true;
             return;
         }
@@ -67,12 +61,27 @@ public partial class ParchaSectionView : UserControl
             return;
         }
 
+        //  ══ Enter ⇒ هر کارتی که پر است ذخیره، و پارچهٔ جدید (۱۴۰۵/۰۷/۱۸) ══════
+        //  از هر کادرِ دو کارت (روز یا شب) — نه فقط کارتی که پر است. کادرِ دیگرِ
+        //  صفحه (تاریخ، جست‌وجو) و دکمه‌ها Enterِ خودشان را دارند و دست نمی‌خورند.
         if (e.Key == Key.Enter && focused is TextBox { AcceptsReturn: false } tb
-            && tb.DataContext is ShiftFormViewModel form)
+            && tb.DataContext is ShiftFormViewModel)
         {
-            //  کادرِ فعلی اول بنشیند (کادرهای کارت با هر حرف می‌نشینند؛ این فقط احتیاط است)
-            if (form.SaveCommand.CanExecute(null)) form.SaveCommand.Execute(null);
+            if (!_saving)
+            {
+                _saving = true;
+                _ = SaveAllAsync(vm);
+            }
             e.Handled = true;
         }
+    }
+
+    private bool _saving;
+
+    private async System.Threading.Tasks.Task SaveAllAsync(ParchaSectionViewModel vm)
+    {
+        try { await vm.SaveFilledAndNewAsync(); }
+        catch (System.Exception ex) { Services.CrashGuard.Write("Enter ⇒ ذخیرهٔ پارچه", ex); }
+        finally { _saving = false; }
     }
 }

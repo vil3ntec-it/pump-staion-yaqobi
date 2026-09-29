@@ -387,6 +387,20 @@ public static class DocStyle
         box.Text(Tight(text)).FontSize(CellSize).SemiBold().FontColor(Ink(color ?? CellFg));
     }
 
+    /// <summary>
+    /// خانه‌ای که <b>همیشه یک خط</b> است — نامِ ردیفِ ورق (۱۴۰۵/۰۷/۱۸). گزارشِ
+    /// صاحب ریپو: «طولِ جدول‌ها توی پرینت خیلی بزرگ شده» — نامِ بلند دو-سه خط
+    /// می‌شد و بلندیِ هر ردیف با بلندترین خانه‌اش بالا می‌رفت. حالا جا نشد ⇒
+    /// کمی کوچک، نه شکسته. (همان سقفِ یک‌خطیِ خانهٔ عددی.)
+    /// </summary>
+    public static void TdOneLine(IContainer c, bool even, string text, string? color = null)
+    {
+        var cell = Td(c, even);
+        if (string.IsNullOrEmpty(text)) { cell.Text(string.Empty); return; }
+        cell.MaxHeight(CellSize * OneLine).ScaleToFit()
+            .Text(text).FontSize(CellSize).SemiBold().FontColor(Ink(color ?? CellFg));
+    }
+
     /// <summary>بلندیِ یک خطِ نوشته به نسبتِ اندازهٔ قلم (با قلمِ وزیرمتن).</summary>
     private const float OneLine = 1.75f;
 

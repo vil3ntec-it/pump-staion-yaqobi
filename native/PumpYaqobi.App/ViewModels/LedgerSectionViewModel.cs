@@ -216,6 +216,11 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
     protected async Task AddRowAsync()
     {
         var e = NewEntity();
+        //  ⛔ ماهِ جلوی چشم ≠ ماهِ جاری ⇒ ردیف مالِ همان ماه است، نه امروز
+        //  (۱۴۰۵/۰۷/۱۸ — «هر ماه حساب‌های جدای خودش را دارد»). «همهٔ ماه‌ها» همان امروز.
+        if (!YearMonthPicker.IsAll(Month) && Month != Shamsi.ThisMonth()
+            && Shamsi.MonthKey(e.DateShamsi) != Month)
+            e.DateShamsi = Shamsi.DateInMonth(Month);
         await Service.AddAsync(e);
         var mk = Shamsi.MonthKey(e.DateShamsi);
         // ردیفِ تازه در نمایی که جلوی چشم است می‌گنجد؟ («همهٔ ماه‌های ۱۴۰۵»

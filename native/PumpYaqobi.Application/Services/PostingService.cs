@@ -363,6 +363,47 @@ public sealed class PostingService
         return new WaraqNameMatch(FindAccountForText(people, name, display), display, hw, name, false);
     }
 
+    // ══ «/چکنه» — ردیفِ ورق به دفترِ چکنه (۱۴۰۵/۰۷/۱۸) ═════════════════════
+    //
+    // خواستهٔ صاحب ریپو: «وقتی توی ورق /چکنه می‌نویسم اون حساب بیاد تو چکنه، و
+    // اگه اسلش نزدم ‹چکنه› تو بخشِ چکنه نره.» پس فقط وقتی نخستین واژهٔ پس از
+    // خط‌کج دقیقاً «چکنه» است. نامِ حسابِ چکنه = باقیِ متن (پیش و پس از آن).
+
+    /// <summary>واژه‌ای که ردیفِ ورق را به دفترِ چکنه می‌برد.</summary>
+    public const string RetailWord = "چکنه";
+
+    /// <summary>
+    /// ‎«احمد /چکنه»‎ ⇒ «احمد». ‎null‎ یعنی این ردیف مالِ چکنه نیست. نامِ خالی
+    /// («/چکنه» تنها) ⇒ «چکنه»، تا ردیفِ بی‌نام ساخته نشود.
+    /// </summary>
+    public static string? RetailName(string? rawName)
+    {
+        if (SplitSlash(rawName) is not { } sp) return null;
+        var words = sp.After.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length == 0 || NormFa(words[0]) != RetailWord) return null;
+        var rest = (sp.Before + " " + string.Join(' ', words.Skip(1))).Trim();
+        rest = StripFuelWords(rest).Trim();
+        return rest.Length > 0 ? rest : RetailWord;
+    }
+
+    /// <summary>
+    /// نامی که از یک ردیفِ ورق در جای دیگر (مصارف، چکنه، چاپ) نوشته می‌شود —
+    /// «/هارون» فقط راهنمای حساب است و خودش هیچ‌جا دیده نمی‌شود.
+    /// ⚠️ حسابِ خورده ⇒ همان ‎Display‎ِ ‎MatchWaraqName‎؛ نخورده ⇒ فقط خودِ
+    /// خط‌کج و واژهٔ پس از آن می‌رود (حدس نمی‌زنیم نامِ حساب چند واژه بود).
+    /// </summary>
+    public static string CleanWaraqName(IEnumerable<Debtor> people, string? rawName)
+    {
+        var name = (rawName ?? "").Trim();
+        if (SplitSlash(name) is not { } sp) return name;
+        if (RetailName(name) is { } rn) return rn;
+        var m = MatchWaraqName(people, name);
+        if (m.Found is not null) return m.Display;
+        var after = sp.After.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var rest = (sp.Before + " " + string.Join(' ', after.Skip(1))).Trim();
+        return rest.Length > 0 ? rest : name.Replace("/", "").Trim();
+    }
+
     /// <summary>‎_subForText‎ — اگر نامِ یک حسابِ فرعی داخلِ متن باشد، همان.</summary>
     public static DebtAccount? SubForText(Debtor person, string? text)
     {

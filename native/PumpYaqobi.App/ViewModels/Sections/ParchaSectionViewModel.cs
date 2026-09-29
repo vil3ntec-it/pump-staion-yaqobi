@@ -239,6 +239,13 @@ public sealed partial class ShiftFormViewModel : ObservableObject
     /// <summary>شیفتی که الان در کارت است (۰ = کارتِ خالی).</summary>
     public long LoadedId => _loadedId;
 
+    /// <summary>
+    /// کاربر در این کارت چیزی نوشته که هنوز ثبت نشده؟ (برای Enterِ «ذخیرهٔ همه»)
+    /// ⚠️ فی به‌تنهایی «پر» نیست — نرخِ اتحادیه خودش در کارتِ خالی می‌نشیند.
+    /// </summary>
+    public bool HasUnsavedInput => IsEdited
+        && new[] { Name, PumpNum, Start, End, Debt, Note }.Any(x => (x ?? "").Trim().Length > 0);
+
     /// <summary>همین حالا ذخیره شد — آن‌چه روی کارت است همان شیفتِ ثبت‌شده است.</summary>
     public void MarkSaved(long shiftId) { _loadedPrint = Print(); _loadedId = shiftId; }
 
@@ -769,7 +776,7 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
     /// آزمونِ برابری با نسخهٔ وب آن را می‌سنجد. این‌جا فقط کادرها خوانده و
     /// نتیجه نشان داده می‌شود.
     /// </summary>
-    internal async Task SaveShiftAsync(ShiftFormViewModel form)
+    internal async Task<bool> SaveShiftAsync(ShiftFormViewModel form)
     {
         var fuel = Fuel;
         var kind = form.Kind;
@@ -819,7 +826,7 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
             ForceNew: force,
             LowBase: form.LowBaseUnacked));
 
-        if (!res.Ok) { _host.Toast(res.Error ?? "", ToastKind.Error); return; }
+        if (!res.Ok) { _host.Toast(res.Error ?? "", ToastKind.Error); return false; }
 
         SetForceNew(fuel, kind, false);
         _current = res.Report;
@@ -852,6 +859,42 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
 
         await ReloadLogAsync();
         if (ShowBaseHistory) await ReloadBaseHistoryAsync();
+        return true;
+    }
+
+    // ══ Enter ⇒ «هر کارتی که پر است ذخیره، و پارچهٔ جدید» (۱۴۰۵/۰۷/۱۸) ════════
+    //
+    // خواستهٔ صاحب ریپو: «هر کدوم پر بود یا هر دو که پر بودن با اینتر هر دو ذخیره
+    // و پارچه جدید ساخته بشه اتومات.» ⛔ ذخیره همان ‎SaveShiftAsync‎ِ دکمه‌هاست؛
+    // و «پارچهٔ جدید» همان ‎NewParcha‎ (پرچم + کارتِ خالی) — هیچ رکوردی ساخته
+    // نمی‌شود تا کاربر کارتِ تازه را ذخیره کند.
+    // ⚠️ روز و شبِ یک Enter در **همان** پارچه می‌نشینند: پرچمِ «پارچهٔ جدید»ِ
+    // کارتِ دوم پس از ذخیرهٔ اولی برداشته می‌شود، وگرنه شب پارچهٔ جدای خودش را می‌ساخت.
+    // ⚠️ اگر یکی ننشست، هیچ کارتی خالی نمی‌شود — نوشتهٔ کاربر گم نمی‌شود.
+    internal async Task<int> SaveFilledAndNewAsync()
+    {
+        var forms = new[] { Day, Night }.Where(f => f.HasUnsavedInput).ToList();
+        if (forms.Count == 0)
+        {
+            _host.Toast("هیچ کارتی پر نیست — اول روز یا شب را پر کنید", ToastKind.Info);
+            return 0;
+        }
+        var fuel = Fuel;
+        var saved = 0;
+        foreach (var f in forms)
+        {
+            if (!await SaveShiftAsync(f)) return saved;
+            saved++;
+            SetForceNew(fuel, f.IsDay ? ShiftKind.Night : ShiftKind.Day, false);
+        }
+        if (Fuel != fuel) return saved;
+        SetForceNew(fuel, ShiftKind.Day, true);
+        SetForceNew(fuel, ShiftKind.Night, true);
+        Day.Clear(); Night.Clear();
+        _host.Toast("🆕 " + (saved == 2 ? "روز و شب" : forms[0].IsDay ? "روز" : "شب")
+                    + " ذخیره شد — پارچهٔ " + (fuel == FuelType.Diesel ? "دیزلِ " : "")
+                    + "جدید آماده است", ToastKind.Ok);
+        return saved;
     }
 
     // ⛔ کادرِ تاریخ با ‎LostFocus‎ می‌نشیند (همان ‎onchange‎ی سایت)، نه با هر

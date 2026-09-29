@@ -629,6 +629,22 @@ public sealed class DebtorService
         await db.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// «🔕 بی‌هشدار» — فقط همان یک ستون، از منوی راست‌کلیکِ کارتِ قرض‌دار.
+    /// ⚠️ کارتِ فهرست بارگذاریِ سبک دارد؛ نوشتنِ کلِ موجودیتِ کارت (‎MarkOnly‎)
+    /// ممکن بود ستونی را که در کارت خوانده نشده خالی کند، پس این‌جا خودِ ردیف
+    /// خوانده و فقط ‎NoAlerts‎ش عوض می‌شود.
+    /// </summary>
+    public async Task SetNoAlertsAsync(long debtorId, bool value, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.EditData);
+        await using var db = _dbf.Create();
+        var d = await db.Debtors.FirstOrDefaultAsync(x => x.Id == debtorId, ct);
+        if (d is null || d.NoAlerts == value) return;
+        d.NoAlerts = value;
+        await db.SaveChangesAsync(ct);
+    }
+
     public async Task UpdateAccountAsync(DebtAccount a, CancellationToken ct = default)
     {
         _perm.Require(Permission.EditData);
