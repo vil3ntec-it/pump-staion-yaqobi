@@ -49,7 +49,9 @@ const frag = 's=ac-one&a=d7&k=kk&t=1&d=' + encode(snap);
 
 const log = [];
 let seq = 1;
-const msgs = [{ id: 'm1', seq: 1, from: 'o', name: 'پمپ', kind: 'text', text: 'سلام', at: Date.now() - 60000 }];
+const msgs = [{ id: 'm1', seq: 1, from: 'o', name: 'پمپ', kind: 'text', text: 'سلام', at: Date.now() - 60000 },
+  { id: 'm0', seq: 1, from: 'o', name: 'پمپ', kind: 'image', mediaId: 'mo1', at: Date.now() - 50000 }];
+const mediaGets = {};   // ⛔ سرورِ ساختگی مثلِ واقعی: رسانهٔ پمپ فقط یک بار، بعد ۴۰۴ِ media_gone
 const browser = await chromium.launch({
   executablePath: fs.existsSync('/opt/pw-browsers/chromium/chrome-linux/chrome') ? '/opt/pw-browsers/chromium/chrome-linux/chrome' : undefined,
   args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
@@ -64,6 +66,10 @@ await page.route('https://api.vill3n.top/**', async (route) => {
   log.push(r.method() + ' ' + u.pathname);
   const json = (b, s = 200) => route.fulfill({ status: s, contentType: 'application/json', headers: h, body: JSON.stringify(b) });
   if (/\/chat\/media$/.test(u.pathname) && r.method() === 'POST') return json({ ok: true, mediaId: 'md' + (++seq) });
+  if (/\/chat\/media\//.test(u.pathname)) {
+    const id = u.pathname.split('/').pop(); mediaGets[id] = (mediaGets[id] || 0) + 1;
+    if (mediaGets[id] > 1 || id.startsWith('md')) return json({ error: { code: 'media_gone' } }, 404);
+  }
   if (/\/chat\/media\//.test(u.pathname)) return route.fulfill({ status: 200, contentType: 'image/png', headers: h, body: Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360000002000154a24f5d0000000049454e44ae426082', 'hex') });
   if (/\/chat\/seen$/.test(u.pathname)) return json({ ok: true });
   if (/\/chat\/push$/.test(u.pathname)) return json({ ok: true });
@@ -166,6 +172,19 @@ if (rec) {
   ok(log.filter(l => l.endsWith('/chat/media')).length > nMedia, 'صدای ضبط‌شده بالا رفت');
   ok(!!(await page.$('.chat audio')), 'پیامِ صوتی در گفت‌وگو پخش‌شدنی است');
 }
+
+// ⛔ رسانه روی همین گوشی: رسانهٔ پمپ یک بار گرفته شد و پس از رفتنش از سرور هم دیده می‌شود
+await page.waitForFunction(() => [...document.querySelectorAll('.chat img')].some(i => i.src.startsWith('blob:') && i.naturalWidth > 0), null, { timeout: 4000 }).catch(() => {});
+ok(await page.$$eval('.chat img', l => l.filter(i => i.src.startsWith('blob:')).length) >= 2, 'عکسِ پمپ و عکسِ خودم هر دو از حافظهٔ گوشی (blob) نشان داده می‌شوند');
+ok(mediaGets.mo1 === 1, 'رسانهٔ پمپ فقط یک بار از سرور گرفته شد: ' + mediaGets.mo1);
+ok(!Object.keys(mediaGets).some(k => k.startsWith('md')), 'رسانهٔ خودم هیچ‌وقت از سرور خوانده نشد (پیش از رفتن روی گوشی نشست)');
+await page.reload();
+await page.waitForSelector('[data-act="refresh"]');
+await page.click('.live [data-act="chat-open"]');
+await page.waitForFunction(() => [...document.querySelectorAll('.chat img')].filter(i => i.src.startsWith('blob:') && i.naturalWidth > 0).length >= 2, null, { timeout: 4000 }).catch(() => {});
+ok(await page.$$eval('.chat img', l => l.filter(i => i.src.startsWith('blob:') && i.naturalWidth > 0).length) >= 2, 'پس از بستن و باز کردنِ صفحه، رسانه‌ها از حافظهٔ گوشی می‌آیند');
+ok(mediaGets.mo1 === 1, 'و سرور دوباره پرسیده نشد: ' + mediaGets.mo1);
+ok(!(await page.textContent('.chat')).includes('سرور هم آن را نگه نمی‌دارد'), 'هیچ رسانه‌ای «گم‌شده» نشان داده نشد');
 
 await page.click('[data-act="chat-close"]');
 ok(await page.$eval('.chat', e => e.classList.contains('hidden')).catch(() => true), 'بستنِ چت');

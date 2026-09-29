@@ -210,6 +210,7 @@
             text-align:center;cursor:pointer;padding:0}
   .msg.gone{color:var(--muted);font-style:italic;font-size:.8rem}
   .msg img,.msg video{max-width:100%;border-radius:10px;display:block;margin-top:4px}
+  .msg .dim{font-size:.8rem;color:var(--muted)}
   .msg audio{width:220px;max-width:100%;margin-top:4px}
   .chat-foot{display:flex;align-items:center;gap:6px;padding:8px 8px calc(8px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line)}
   .chat-foot input[type=text]{flex:1;min-width:0;border:1px solid var(--line);background:var(--bg);color:var(--txt);
@@ -772,14 +773,91 @@
     catch (e) { var n = new Date(ms); return n.getHours() + ':' + (n.getMinutes() < 10 ? '0' : '') + n.getMinutes(); }
   }
 
+  // ══ رسانه روی همین گوشی ══════════════════════════════════════════════
+  //
+  // ⛔ سرور رسانه را فقط می‌رساند: همین که طرفِ دیگر آن را گرفت، از سرور
+  // پاک می‌شود. پس نسخهٔ ماندگار این‌جاست — IndexedDBِ همین مرورگر — و هر
+  // رسانه **یک بار** از سرور خوانده می‌شود. رسانه‌ای که خودمان فرستادیم
+  // پیش از رفتن همین‌جا می‌نشیند. نبودِ IndexedDB یا ‎createObjectURL‎ (آزمون،
+  // مرورگرِ کهنه) یعنی همان نشانیِ مستقیمِ قدیمی.
+  var MEDIA_DB = 'pump-view-media', MEDIA_KEEP_MS = 180 * 86400000;
+  var mediaUrls = {}, mediaGone = {}, mediaBusy = {}, mediaDbP = null;
+  function mediaLocal() {
+    try { return typeof indexedDB !== 'undefined' && indexedDB && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function'; }
+    catch (e) { return false; }
+  }
+  function mediaDb() {
+    if (mediaDbP) return mediaDbP;
+    mediaDbP = new Promise(function (ok, no) {
+      var r = indexedDB.open(MEDIA_DB, 1);
+      r.onupgradeneeded = function () { r.result.createObjectStore('m'); };
+      r.onsuccess = function () { ok(r.result); };
+      r.onerror = function () { no(r.error); };
+    });
+    mediaDbP.then(mediaPrune, function () {});
+    return mediaDbP;
+  }
+  function mediaTx(mode, fn) {
+    return mediaDb().then(function (db) {
+      return new Promise(function (ok, no) {
+        var tx = db.transaction('m', mode), st = tx.objectStore('m'), out = fn(st);
+        tx.oncomplete = function () { ok(out && 'result' in out ? out.result : undefined); };
+        tx.onerror = function () { no(tx.error); };
+      });
+    });
+  }
+  function mediaPrune(db) {
+    try {
+      var tx = db.transaction('m', 'readwrite'), cut = Date.now() - MEDIA_KEEP_MS;
+      tx.objectStore('m').openCursor().onsuccess = function (e) {
+        var c = e.target.result; if (!c) return;
+        if (!c.value || (c.value.at || 0) < cut) c.delete();
+        c.continue();
+      };
+    } catch (e) { /* رفاه */ }
+  }
+  function mediaKeep(id, blob) {
+    if (!id || !blob || !mediaLocal()) return Promise.resolve();
+    try { mediaUrls[id] = URL.createObjectURL(blob); } catch (e) {}
+    return mediaTx('readwrite', function (st) { return st.put({ blob: blob, at: Date.now() }, id); }).catch(function () {});
+  }
+  function mediaFetch(id) {
+    if (mediaBusy[id] || mediaUrls[id] || mediaGone[id]) return;
+    mediaBusy[id] = true;
+    mediaTx('readonly', function (st) { return st.get(id); })
+      .catch(function () { return null; })
+      .then(function (row) {
+        if (row && row.blob) return row.blob;
+        return fetch(chatUrl('/media/' + encodeURIComponent(id))).then(function (r) {
+          if (r.status === 404) { mediaGone[id] = true; return null; }
+          return r.ok ? r.blob() : null;
+        }).then(function (b) { if (b) mediaKeep(id, b); return b; });
+      })
+      .then(function (b) {
+        if (b && !mediaUrls[id]) { try { mediaUrls[id] = URL.createObjectURL(b); } catch (e) {} }
+        mediaBusy[id] = false; chatRender();
+      }, function () { mediaBusy[id] = false; });
+  }
+  function mediaHtml(m) {
+    var id = m.mediaId || '';
+    var src = mediaUrls[id];
+    if (!src) {
+      if (!mediaLocal()) src = chatUrl('/media/' + encodeURIComponent(id));
+      else if (mediaGone[id]) return '<span class="dim">📎 این فایل روی گوشیِ شما نیست و سرور هم آن را نگه نمی‌دارد</span>';
+      else { mediaFetch(id); return '<span class="dim">⏳ در حالِ آوردن…</span>'; }
+    }
+    src = esc(src);
+    if (m.kind === 'image') return '<img src="' + src + '" alt="عکس" loading="lazy">';
+    if (m.kind === 'video') return '<video controls preload="metadata" src="' + src + '"></video>';
+    return '🎤 <audio controls preload="metadata" src="' + src + '"></audio>';
+  }
+
   function bubble(m) {
     var me = m.from === 'c';
     var h = '<div class="msg' + (me ? ' me' : '') + (m.deleted ? ' gone' : '') + '" data-id="' + esc(m.id) + '">';
     if (!me) h += '<div class="who">' + esc(m.name || 'پمپ') + '</div>';
     if (m.deleted) h += '🚫 این پیام پاک شد';
-    else if (m.kind === 'image') h += '<img src="' + chatUrl('/media/' + encodeURIComponent(m.mediaId)) + '" alt="عکس" loading="lazy">';
-    else if (m.kind === 'video') h += '<video controls preload="metadata" src="' + chatUrl('/media/' + encodeURIComponent(m.mediaId)) + '"></video>';
-    else if (m.kind === 'audio') h += '🎤 <audio controls preload="metadata" src="' + chatUrl('/media/' + encodeURIComponent(m.mediaId)) + '"></audio>';
+    else if (m.kind === 'image' || m.kind === 'video' || m.kind === 'audio') h += mediaHtml(m);
     else h += esc(m.text);
     h += '<div class="when">' + esc(timeOf(m.at)) + '</div>';
     if (me && !m.deleted) h += '<button class="del" data-act="chat-del" data-v="' + esc(m.id) + '" title="پاک کردن">✕</button>';
@@ -932,7 +1010,11 @@
     chatBusy = true; chatRender();
     return fetch(chatUrl('/media'), { method: 'POST', headers: { 'Content-Type': mime }, body: blob })
       .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
-      .then(function (j) { chatBusy = false; return chatPost({ name: chatName, kind: kind, mediaId: j.mediaId }); })
+      .then(function (j) {
+        chatBusy = false;
+        // ⛔ نسخهٔ خودمان پیش از رفتنِ پیام روی همین گوشی می‌نشیند
+        return mediaKeep(j.mediaId, blob).then(function () { return chatPost({ name: chatName, kind: kind, mediaId: j.mediaId }); });
+      })
       .catch(function (e) { chatBusy = false; chatRender(); alertSafe(e === 413 || e === 400 ? 'فایل بزرگ است یا پذیرفته نشد' : 'فرستاده نشد'); return false; });
   }
 

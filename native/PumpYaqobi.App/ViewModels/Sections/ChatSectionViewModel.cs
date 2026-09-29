@@ -943,7 +943,7 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
         foreach (var m in msgs) Keep(m);
         _store?.SetMeta("cloud.lastSeq", Math.Max(after, _support.LastSeq).ToString());
 
-        //  ⛔ رسانه همان لحظه این‌جا می‌نشیند — سرور فقط ۱۵ روز نگهش می‌دارد
+        //  ⛔ رسانه همان لحظه این‌جا می‌نشیند — سرورِ حساب پس از همین گرفتن پاکش می‌کند
         foreach (var m in msgs.Where(x => !x.Deleted && SafeMediaId(x.MediaId)))
             await EnsureMediaAsync(m.MediaId!);
 
