@@ -736,11 +736,18 @@ console.log('\n══ فقط دیدن — هیچ راهی به نوشتنِ حس
   //  سوکت فقط گوش می‌دهد
   const sends = [...A.matchAll(/\.send\(([^)]*\))/g)].map(m => m[1]);
   ok(sends.length === 1 && /op: 'sub'/.test(sends[0]), 'سوکت فقط «sub» می‌فرستد، هیچ «set»ی نه');
-  //  فهرستِ همهٔ نوشتن‌های مستقیم: فقط گروهِ کارکنان و ثبتِ اعلان
-  const kWrites = [...A.matchAll(/method:\s*'(POST|PUT|DELETE|PATCH)'/g)].length;
-  ok(kWrites === 3 && /chatUrl\(base, cfg\.stn\)[\s\S]{0,80}method: 'POST'/.test(A)
+  //  فهرستِ همهٔ نوشتن‌های مستقیم: فقط گروهِ کارکنان (پیام و رسانه) و ثبتِ اعلان
+  //  ⛔ نشانیِ هر نوشتن از خودِ ‎fetch(…)‎ پیشِ آن خوانده می‌شود، نه شمرده
+  const kWriteUrls = [...A.matchAll(/method:\s*'(POST|PUT|DELETE|PATCH)'/g)].map((m) => {
+    const back = A.slice(Math.max(0, m.index - 260), m.index);
+    const f = back.lastIndexOf('fetch(');
+    return m[1] + ' ' + (f < 0 ? '?' : back.slice(f + 6).split(',\n')[0].split(', {')[0].trim());
+  });
+  const chatWrites = kWriteUrls.filter((u) => /^POST chatUrl\(base, cfg\.stn\)( \+ '\/media')?$/.test(u));
+  ok(kWriteUrls.length === 5 && chatWrites.length === 3
+     && kWriteUrls.filter((u) => u === "POST chatUrl(base, cfg.stn) + '/media'").length === 1
      && /method: 'POST'[\s\S]{0,120}subscription/.test(A) && /&endpoint='[\s\S]{0,120}method: 'DELETE'/.test(A),
-     'اپِ گوشی فقط سه نوشتن دارد — پیامِ گروهِ کارکنان، ثبت و لغوِ اعلان — هیچ‌کدام حساب نیست (' + kWrites + ')');
+     'اپِ گوشی فقط این نوشتن‌ها را دارد: پیام و رسانهٔ گروهِ کارکنان، ثبت و لغوِ اعلان — هیچ‌کدام حساب نیست: ' + JSON.stringify(kWriteUrls));
   //  کیو‌آرِ مشتری: عکسِ حساب فقط خوانده می‌شود؛ نوشتن‌ها همه زیرِ «/chat»
   const vWrites = [...V.matchAll(/fetch\((chatUrl\([^)]*\)|liveUrl\(\))\s*(,\s*\{\s*method:\s*'([A-Z]+)')?/g)]
     .map(m => (m[3] || 'GET') + ' ' + m[1]);

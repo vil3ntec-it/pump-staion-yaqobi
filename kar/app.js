@@ -538,7 +538,7 @@
     var byKey = {};
     function keyOf(m) { return m.seq ? 's' + m.seq : 'c' + (m.cid || ''); }
     (have || []).concat(incoming || []).forEach(function (m) {
-      if (!m || !m.text) return;
+      if (!m || (!m.text && !m.mediaId)) return;
       if ((m.at || 0) && m.at < cut) return;
       //  پیامِ خودم که حالا شماره گرفت، جای نسخهٔ درراه را می‌گیرد
       if (m.seq && m.cid && byKey['c' + m.cid]) delete byKey['c' + m.cid];
@@ -615,6 +615,8 @@
         localStorage.removeItem(stnKey('push'));
         localStorage.removeItem(stnKey('chat'));
         localStorage.removeItem(stnKey('ok'));
+        //  ⛔ رسانهٔ گروهِ پمپِ قبلی هم از این گوشی می‌رود
+        if (cfg.stn !== next) kmDrop();
       }
       localStorage.removeItem(KEY + '.snap');      // کلیدِ قدیمیِ بی‌پمپ
       localStorage.removeItem(KEY + '.told');
@@ -1464,7 +1466,8 @@
    */
   function personAccountsHtml(p, staff) {
     var h = '', detail = !data || data.detail !== false;
-    (p.accounts || []).forEach(function (a) {
+    (p.accounts || []).forEach(function (a, i) {
+      a.__pid = p.id; a.__i = i;
       h += acctCard(a, staff, detail);
     });
     return h;
@@ -1528,6 +1531,8 @@
     });
     if (!staff) {
       var rows = a.rows || [];
+      if (detail && rows.length && a.__pid != null)
+        h += '<button class="pbtn" data-print-acct="' + esc(a.__pid) + '|' + esc(a.__i) + '">🖨 PDF / چاپ — همان ورقِ برنامهٔ کامپیوتر</button>';
       if (detail && rows.length)
         h += '<details class="arows"><summary>📋 جدولِ ردیف‌ها (' + fmt(rows.length) + ')</summary>' +
           tableHtml(a.head || [], rows.slice(-40)) + '</details>';
@@ -1537,6 +1542,178 @@
           + 'ردیف‌ها را در خودِ برنامهٔ کامپیوتر ببینید.</div>';
     }
     return h + '</div>';
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  //  🖨 PDF و چاپ — همان ورقِ برنامهٔ کامپیوتر
+  // ══════════════════════════════════════════════════════════════════════
+  //
+  //  خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۶): «PDF یا پرینت همان مدلِ برنامهٔ
+  //  کامپیوتر بیاید… این‌جا متفاوت نشان می‌دهد مشکلی نیست، ولی مدلِ PDF و
+  //  پرینت همان باشد.» پس این ورق رونوشتِ ‎DocStyle‎ و ‎DebtorStatementReport‎ِ
+  //  ‎PumpYaqobi.Reporting‎ است: همان رنگ‌ها (‎#b45309‎ عنوان، ‎#2d3748‎ سرستون و
+  //  «جمله»، ردیفِ زوجِ ‎#fafbfc‎)، همان اندازه‌ها به پوینت، همان دو کادرِ «حساب
+  //  پطرول» و «حساب دیزل» با چهار خانه، و همان پاورقیِ «ورق N از M» و تاریخ‌ها.
+  //  ⛔ هیچ عددی این‌جا ساخته نمی‌شود — هر خانه همان رشتهٔ عکسِ برنامه است.
+  //  ⛔ یک در برای هر دو دستگاه: اندروید با ‎PumpAndroid.printHtml‎ (PrintManagerِ
+  //  خودِ اندروید)، بقیه با ‎window.print()‎ی خودِ مرورگر («ذخیره به PDF»).
+  var PDOC = {
+    title: '#b45309', sub: '#5b6472', headBg: '#2d3748', headFg: '#e2e8f0', headLine: '#4a5568',
+    cellLine: '#e3e6eb', cellFg: '#1f2430', rowAlt: '#fafbfc', foot: '#7b8494', footLine: '#d6dae1',
+    index: '#718096', hawala: '#c07700', fuel: '#2b6cb0', money: '#276749', danger: '#e53e3e',
+    blue: '#2b6cb0', petrol: '#b45309', diesel: '#8a5a2b'
+  };
+
+  /** نامِ ستون‌های عکسِ گوشی ⇒ همان سرستونِ ورقِ برنامه (‎DebtorStatementReport‎). */
+  var PDOC_HEAD = { 'تیل': 'نوع تیل', 'فی': 'فی لیتر', 'بردگی': 'مقدار بردگی' };
+
+  /** رنگِ هر ستون از نامِ خودش — همان ‎Td(…, DocStyle.X)‎ی گزارش‌ها. */
+  function pdocColColor(h) {
+    h = String(h || '');
+    if (h === '#') return PDOC.index;
+    if (/حواله|بردگی|^برد$/.test(h)) return PDOC.hawala;
+    if (/رسید تیل|مقدار تیل|لیتر/.test(h)) return PDOC.fuel;
+    if (/رسید|پول|افغانی|دالر/.test(h)) return PDOC.money;
+    if (/الباقی|خالص/.test(h)) return PDOC.blue;
+    if (/فیصدی/.test(h)) return PDOC.danger;
+    return '';
+  }
+
+  /**
+   * ‎doc‎: ‎{ title, sub, dates, boxes:[{ diesel, pct, unit, comm, rasid, bord, alb }],
+   *          head:[…], rows:[[…]], total:[…]|null }‎ ⇒ یک سندِ HTMLِ کامل.
+   */
+  function printDocHtml(doc) {
+    var P = PDOC, e = esc;
+    var css =
+      '@page{size:A4;margin:14mm 12mm 16mm;' +
+        '@bottom-center{content:"ورق " counter(page, persian) " از " counter(pages, persian);font:8.9pt Vazirmatn,Tahoma,sans-serif;color:' + P.foot + '}' +
+        '@bottom-right{content:"' + String(doc.dates || '').replace(/["\\]/g, '') + '";font:8.9pt Vazirmatn,Tahoma,sans-serif;color:' + P.foot + '}}' +
+      '*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+      'body{margin:0;background:#fff;color:' + P.cellFg + ';font:600 10.1pt Vazirmatn,Tahoma,"Segoe UI",sans-serif;direction:rtl}' +
+      '.pd-h{border-bottom:2pt solid ' + P.title + ';padding-bottom:6pt;margin-bottom:8pt}' +
+      '.pd-t{font-size:14.2pt;font-weight:800;color:' + P.title + '}' +
+      '.pd-s{font-size:9.7pt;color:' + P.sub + ';margin-top:2pt;font-weight:500}' +
+      '.pd-box{display:flex;gap:6pt;border:1.2pt solid;padding:6pt;margin-bottom:6pt;break-inside:avoid}' +
+      '.pd-box .nm{width:112pt;flex:none;white-space:nowrap;display:flex;align-items:center;justify-content:center;border:1pt solid;font-size:10.5pt;font-weight:800;padding:5pt}' +
+      '.pd-box .sb{flex:1;border:1pt solid ' + P.cellLine + ';padding:5pt;text-align:center}' +
+      '.pd-box .sb .l{font-size:7.8pt;color:' + P.sub + ';font-weight:500}' +
+      '.pd-box .sb .v{font-size:10.5pt;font-weight:800;white-space:nowrap}' +
+      'table{width:100%;border-collapse:collapse;margin-top:4pt}' +
+      'thead{display:table-header-group}tr{break-inside:avoid}' +
+      'th,.tf{background:' + P.headBg + ';color:' + P.headFg + ';border:1pt solid ' + P.headLine + ';font-size:9.5pt;font-weight:800;padding:5pt 4pt;text-align:center}' +
+      'td{border:1pt solid ' + P.cellLine + ';padding:5pt 4pt;text-align:center;font-size:10.1pt;white-space:nowrap}' +
+      'td.w{white-space:normal}tbody tr:nth-child(even) td{background:' + P.rowAlt + '}';
+    var h = '<div class="pd-h"><div class="pd-t">' + e(doc.title || '') + '</div>' +
+      (doc.sub ? '<div class="pd-s">' + e(doc.sub) + '</div>' : '') + '</div>';
+    (doc.boxes || []).forEach(function (b) {
+      var line = b.diesel ? P.diesel : P.petrol, u = b.unit ? ' ' + e(b.unit) : '';
+      function sb(label, val, color) {
+        return '<div class="sb"><div class="l">' + e(label) + '</div><div class="v" style="color:' + color + '">' + e(val || '0') + u + '</div></div>';
+      }
+      h += '<div class="pd-box" style="border-color:' + line + '"><div class="nm" style="border-color:' + line + ';color:' + line + '">' +
+        (b.diesel ? '🟤 حساب دیزل' : '⛽ حساب پطرول') + '</div>' +
+        sb('فیصدی ما' + (b.pct ? ' (' + b.pct + '٪)' : ''), b.comm, P.danger) +
+        sb('رسید قبلی', b.rasid, P.money) + sb('برد', b.bord, P.hawala) + sb('الباقی', b.alb, P.blue) + '</div>';
+    });
+    var head = ['#'].concat((doc.head || []).map(function (x) { return PDOC_HEAD[x] || x; }));
+    var fuelCol = head.indexOf('نوع تیل');
+    if ((doc.rows || []).length) {
+      h += '<table><thead><tr>' + head.map(function (x) { return '<th>' + e(x) + '</th>'; }).join('') + '</tr></thead><tbody>';
+      (doc.rows || []).forEach(function (r, i) {
+        var cells = [fmt(i + 1)].concat(r);
+        if (fuelCol > 0) cells[fuelCol] = cells[fuelCol] === 'دیزل' ? '🟤 دیزل' : cells[fuelCol] === 'پطرول' ? '⛽ پطرول' : cells[fuelCol];
+        h += '<tr>' + cells.map(function (c, j) {
+          var col = pdocColColor(head[j]), wide = /نام|شرح|توضیح|یادداشت/.test(head[j] || '');
+          return '<td' + (wide ? ' class="w"' : '') + (col ? ' style="color:' + col + '"' : '') + '>' +
+            (c === '' || c == null ? '—' : e(c)) + '</td>';
+        }).join('') + '</tr>';
+      });
+      h += '</tbody>';
+      if (doc.total && doc.total.length) {
+        //  «جمله» مثلِ برنامه ستون‌های پیش از نخستین عدد را می‌گیرد
+        //  ‎tot[k]‎ زیرِ ستونِ ‎head[k + 1]‎ است؛ «جمله» ستونِ «#» و خانه‌های خالیِ اول را می‌گیرد
+        var tot = doc.total.slice(0, head.length - 1), first = 0;
+        while (first < tot.length && (tot[first] == null || tot[first] === '')) first++;
+        if (fuelCol > 0) first = Math.min(first, fuelCol);
+        h += '<tfoot><tr><td class="tf" colspan="' + (first + 1) + '">جمله</td>' + tot.slice(first).map(function (c) {
+          return '<td class="tf">' + e(c == null || c === '' ? '—' : c) + '</td>';
+        }).join('') + '</tr></tfoot>';
+      }
+      h += '</table>';
+    }
+    return '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>' + e(doc.title || '') +
+      '</title><style>' + css + '</style></head><body>' + h + '</body></html>';
+  }
+
+  /** پاورقیِ تاریخ — همان ‎DocDates‎ی برنامه: شمسی · قمری · میلادیِ امروز. */
+  function pdocDates() {
+    function part(cal) {
+      try {
+        var f = new Intl.DateTimeFormat('en-US-u-ca-' + cal, { year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+        var g = {}; f.forEach(function (x) { g[x.type] = x.value; });
+        return String(g.year || '').replace(/\D/g, '') + '/' + g.month + '/' + g.day;
+      } catch (e) { return ''; }
+    }
+    var d = new Date(), pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    return [part('persian'), part('islamic-umalqura'), d.getFullYear() + '/' + pad(d.getMonth() + 1) + '/' + pad(d.getDate())]
+      .filter(Boolean).join(' · ');
+  }
+
+  /** سندِ یک حسابِ قرض‌دار — همان ‎DebtorStatementReport‎. */
+  function acctDoc(p, a) {
+    var money = a.unit === 'money', unit = money ? 'افغانی' : 'لیتر';
+    var pump = (data && data.station && data.station.name) || cfg.name || 'پمپ بنزین';
+    var boxes = (a.fuels || []).filter(function (f) {
+      return [1, 2, 3, 4].some(function (i) { return num(f[i]) !== 0; });
+    }).map(function (f) {
+      return { diesel: /دیزل/.test(f[0]), pct: pctOf(f[0]), unit: unit, bord: f[1], rasid: f[2], comm: f[3], alb: f[4] };
+    });
+    var head = a.head || [], rows = a.rows || [], total = null;
+    var sum = {};
+    (a.sum || []).forEach(function (x) { sum[x[0]] = x[1]; });
+    if (rows.length) {
+      total = head.map(function (hh) {
+        if (hh === 'بردگی') return sum['جمله بردگی'] || '';
+        if (/^رسید/.test(hh)) return sum['جمله رسید'] || '';
+        return '';
+      });
+    }
+    return {
+      title: '⛽ ' + pump + ' — ' + p.name + (a.title ? ' — ' + a.title : ''),
+      sub: 'حساب قرض‌دار — واحد ' + (money ? 'پول' : 'تیل'),
+      dates: pdocDates(), boxes: boxes, head: head, rows: rows, total: total
+    };
+  }
+
+  /** سندِ یک بخش (گاوصندوق، مصارف، …) با همان صافیِ ماه که روی صفحه است. */
+  function sectionDoc(sec, month) {
+    var pump = (data && data.station && data.station.name) || cfg.name || 'پمپ بنزین';
+    var rows = [];
+    (sec.rows || []).forEach(function (r, i) { if (!month || (sec.m || [])[i] === month) rows.push(r); });
+    return {
+      title: '⛽ ' + pump + ' — ' + (sec.t || ''),
+      sub: (month ? 'ماهِ ' + month : 'همهٔ ماه‌ها') +
+        ((sec.sum || []).length ? ' · ' + sec.sum.map(function (x) { return x[0] + ': ' + x[1]; }).join(' · ') : ''),
+      dates: pdocDates(), boxes: [], head: sec.head || [], rows: rows, total: null
+    };
+  }
+
+  function runPrint(doc) {
+    var html = printDocHtml(doc);
+    try {
+      if (window.PumpAndroid && typeof PumpAndroid.printHtml === 'function') { PumpAndroid.printHtml(html, doc.title || ''); return; }
+    } catch (e) { }
+    //  مرورگر و آیفون: ورق داخلِ همین صفحه، فقط برای چاپ دیده می‌شود
+    var root = $('printRoot');
+    if (!root) { root = document.createElement('div'); root.id = 'printRoot'; document.body.appendChild(root); }
+    var st = /<style>([\s\S]*)<\/style>/.exec(html)[1];
+    var body = /<body>([\s\S]*)<\/body>/.exec(html)[1];
+    root.innerHTML = '<style>@media print{' + st.replace(/body\{/, '#printRoot{') + '}</style>' + body;
+    document.body.classList.add('printing');
+    var done = function () { document.body.classList.remove('printing'); root.innerHTML = ''; window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    try { window.print(); } catch (e) { done(); }
   }
 
   /**
@@ -1698,7 +1875,9 @@
       ? '<div class="card sub">ردیف‌های پیش از ' + esc(data.from) +
         ' از راهِ اینترنت نمی‌آیند — در شبکهٔ پمپ همه دیده می‌شوند. جمع‌ها کامل‌اند.</div>'
       : '';
-    $('secBox').innerHTML = cut + blockHtml(sectionBlock(secTab, sec, sel.value || null));
+    $('secBox').innerHTML = cut +
+      ((sec.rows || []).length ? '<button class="pbtn" data-print-sec="' + esc(secTab) + '">🖨 PDF / چاپ — همان ورقِ برنامهٔ کامپیوتر</button>' : '') +
+      blockHtml(sectionBlock(secTab, sec, sel.value || null));
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -2151,6 +2330,18 @@
       navMark('paneDebt');
     });
 
+    //  🖨 یک شنونده برای همهٔ دکمه‌های چاپ — کارت‌ها با هر عکس از نو ساخته می‌شوند
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-print-acct],[data-print-sec]');
+      if (!b || !data) return;
+      var sid = b.getAttribute('data-print-sec');
+      if (sid) { if (data.sections && data.sections[sid]) runPrint(sectionDoc(data.sections[sid], $('selMonth').value || null)); return; }
+      var k = String(b.getAttribute('data-print-acct')).split('|');
+      var p = (data.debtors || []).filter(function (x) { return String(x.id) === k[0]; })[0];
+      var a = p && (p.accounts || [])[Number(k[1])];
+      if (a) runPrint(acctDoc(p, a));
+    });
+
     var lr = $('liveRow');
     if (lr) lr.addEventListener('click', function () { lr.classList.toggle('open'); });
 
@@ -2161,6 +2352,8 @@
 
     $('inChatName').value = chatName();
     $('btnChatSend').addEventListener('click', chatSend);
+    $('btnChatAttach').addEventListener('click', chatAttach);
+    $('btnChatRec').addEventListener('click', chatRecord);
     $('inChat').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); chatSend(); } });
 
     $('btnNotify').addEventListener('click', function () {
@@ -2276,7 +2469,8 @@
       if (day && day !== lastDay) { sep = '<div class="cday"><span>' + esc(day) + '</span></div>'; lastDay = day; }
       return sep + '<div class="bub' + (mine ? ' mine' : '') + '">' +
         (mine ? '' : '<div class="who">' + esc(m.from) + ' <span class="sub">· ' + role + '</span></div>') +
-        '<div>' + esc(m.text) + '</div>' +
+        (m.mediaId ? '<div>' + kmHtml(m) + '</div>' : '') +
+        (m.text ? '<div>' + esc(m.text) + '</div>' : '') +
         '<div class="sub">' + chatTime(m.at) + (m.seq ? '' : ' · ⏳ در صف') + '</div></div>';
     }).join('') : '<div class="sub">هنوز پیامی در گروه نیست. فقط کارمندان، مدیر و میرزای همین پمپ این گروه را می‌بینند.</div>';
     box.scrollTop = box.scrollHeight;
@@ -2350,6 +2544,150 @@
       }, next);
     }
     next();
+  }
+
+  // ── رسانهٔ گروه: عکس، ویدیو، پیامِ صوتی ──────────────────────────────
+  //
+  //  ⛔ سرورِ خانگی رسانه را فقط ۴۸ ساعت نگه می‌دارد؛ نسخهٔ ماندگار روی همین
+  //  گوشی است (IndexedDB). هر رسانه **یک بار** از سرور گرفته می‌شود و رسانهٔ
+  //  خودمان پیش از رفتن همین‌جا می‌نشیند. رفتن به پمپِ دیگر همه را پاک می‌کند.
+  var KM_DB = 'pump-kar-media', kmUrls = {}, kmGone = {}, kmBusy = {}, kmDbP = null, kmRec = null;
+  function kmOk() {
+    try { return typeof indexedDB !== 'undefined' && !!indexedDB && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function'; }
+    catch (e) { return false; }
+  }
+  function kmDb() {
+    if (kmDbP) return kmDbP;
+    kmDbP = new Promise(function (ok, no) {
+      var r = indexedDB.open(KM_DB, 1);
+      r.onupgradeneeded = function () { r.result.createObjectStore('m'); };
+      r.onsuccess = function () { ok(r.result); };
+      r.onerror = function () { no(r.error); };
+    });
+    return kmDbP;
+  }
+  function kmTx(mode, fn) {
+    return kmDb().then(function (db) {
+      return new Promise(function (ok, no) {
+        var tx = db.transaction('m', mode), out = fn(tx.objectStore('m'));
+        tx.oncomplete = function () { ok(out && 'result' in out ? out.result : undefined); };
+        tx.onerror = function () { no(tx.error); };
+      });
+    });
+  }
+  function kmKey(id) { return String(cfg.stn || '') + '|' + id; }
+  function kmKeep(id, blob) {
+    if (!id || !blob || !kmOk()) return Promise.resolve();
+    try { kmUrls[id] = URL.createObjectURL(blob); } catch (e) { }
+    return kmTx('readwrite', function (st) { return st.put({ blob: blob, at: Date.now() }, kmKey(id)); }).catch(function () { });
+  }
+  function kmDrop() {
+    Object.keys(kmUrls).forEach(function (k) { try { URL.revokeObjectURL(kmUrls[k]); } catch (e) { } });
+    kmUrls = {}; kmGone = {}; kmBusy = {};
+    if (kmOk()) kmTx('readwrite', function (st) { return st.clear(); }).catch(function () { });
+  }
+  function kmFetch(id) {
+    if (kmBusy[id] || kmUrls[id] || kmGone[id]) return;
+    kmBusy[id] = true;
+    var bases = pushBases(cfg), i = 0;
+    function net() {
+      if (i >= bases.length) return null;
+      var base = bases[i++];
+      return fetch(chatUrl(base, cfg.stn) + '/media/' + encodeURIComponent(id), { headers: { Authorization: 'Bearer ' + cfg.tok }, cache: 'no-store' })
+        .then(function (r) {
+          if (r.status === 404) { kmGone[id] = true; return null; }
+          return r.ok ? r.blob() : net();
+        }, net);
+    }
+    kmTx('readonly', function (st) { return st.get(kmKey(id)); }).catch(function () { return null; })
+      .then(function (row) { return row && row.blob ? row.blob : Promise.resolve(net()).then(function (b) { if (b) kmKeep(id, b); return b; }); })
+      .then(function (b) {
+        if (b && !kmUrls[id]) { try { kmUrls[id] = URL.createObjectURL(b); } catch (e) { } }
+        kmBusy[id] = false; renderChat();
+      }, function () { kmBusy[id] = false; });
+  }
+  function kmHtml(m) {
+    var id = m.mediaId, src = kmUrls[id];
+    if (!src) {
+      if (!kmOk()) return '📎 رسانه';
+      if (kmGone[id]) return '<span class="sub">📎 این فایل روی گوشیِ شما نیست و سرور فقط ۴۸ ساعت نگهش می‌دارد</span>';
+      kmFetch(id);
+      return '<span class="sub">⏳ در حالِ آوردن…</span>';
+    }
+    src = esc(src);
+    if (m.kind === 'image') return '<img class="cmedia" src="' + src + '" alt="عکس">';
+    if (m.kind === 'video') return '<video class="cmedia" controls preload="metadata" src="' + src + '"></video>';
+    return '🎤 <audio controls preload="metadata" src="' + src + '"></audio>';
+  }
+
+  /** یک فایل ⇒ بالا (خانه، وگرنه تونل) ⇒ روی گوشی ⇒ پیامِ رسانه. */
+  function chatSendMedia(blob) {
+    var mime = String((blob && blob.type) || '').split(';')[0];
+    var kind = /^image\//.test(mime) ? 'image' : /^video\//.test(mime) ? 'video' : /^audio\//.test(mime) ? 'audio' : '';
+    if (!kind) { $('chatState').textContent = 'فقط عکس، ویدیو یا صدا'; return; }
+    if (blob.size > 25 * 1024 * 1024) { $('chatState').textContent = 'فایل بزرگ‌تر از ۲۵ مگابایت است'; return; }
+    var from = String($('inChatName').value || '').trim();
+    if (!from) { $('chatState').textContent = 'اول نامِ خودتان را بنویسید'; $('inChatName').focus(); return; }
+    try { localStorage.setItem(KEY + '.chatname', from); } catch (e) { }
+    var cid = 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    var role = mode === 'owner' ? 'admin' : 'staff';
+    $('chatState').textContent = 'در حالِ فرستادن…';
+    var bases = pushBases(cfg), i = 0;
+    function next() {
+      if (i >= bases.length) { $('chatState').textContent = 'فایل نرفت — با وصل شدن دوباره بفرستید'; return; }
+      var base = bases[i++];
+      fetch(chatUrl(base, cfg.stn) + '/media', { method: 'POST', headers: { Authorization: 'Bearer ' + cfg.tok, 'Content-Type': blob.type || mime }, body: blob })
+        .then(function (r) {
+          return r.json().catch(function () { return {}; }).then(function (j) {
+            if (!r.ok) { if (r.status >= 500) return next(); $('chatState').textContent = (j && j.message) || 'فایل نرفت'; return; }
+            return kmKeep(j.mediaId, blob).then(function () {
+              chatMsgs = mergeChat(chatLoad(), [{ cid: cid, from: from, role: role, text: '', kind: kind, mediaId: j.mediaId, at: Date.now(), mine: true }], Date.now());
+              chatSave(); renderChat();
+              return fetch(chatUrl(base, cfg.stn), {
+                method: 'POST',
+                headers: { Authorization: 'Bearer ' + cfg.tok, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cid: cid, from: from, role: role, kind: kind, mediaId: j.mediaId })
+              }).then(function (r2) {
+                return r2.json().catch(function () { return {}; }).then(function (j2) {
+                  if (!r2.ok) { $('chatState').textContent = (j2 && j2.message) || 'پیام نرفت'; return; }
+                  if (j2.message) { j2.message.mine = true; chatMsgs = mergeChat(chatLoad(), [j2.message], Date.now()); chatSave(); renderChat(); }
+                  $('chatState').textContent = 'وصل · رسانه فقط روی گوشی‌ها می‌ماند';
+                });
+              });
+            });
+          });
+        }, next);
+    }
+    next();
+  }
+
+  function chatAttach() {
+    var inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*,video/*';
+    inp.addEventListener('change', function () { if (inp.files && inp.files[0]) chatSendMedia(inp.files[0]); });
+    inp.click();
+  }
+
+  function chatRecord() {
+    var btn = $('btnChatRec');
+    if (kmRec) { try { kmRec.stop(); } catch (e) { } return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
+      $('chatState').textContent = 'این گوشی ضبطِ صدا در برنامه را پشتیبانی نمی‌کند'; return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      var parts = [], rec = new MediaRecorder(stream);
+      kmRec = rec;
+      rec.ondataavailable = function (e) { if (e.data && e.data.size) parts.push(e.data); };
+      rec.onstop = function () {
+        kmRec = null; btn.textContent = '🎤'; btn.classList.remove('rec');
+        stream.getTracks().forEach(function (t) { t.stop(); });
+        var b = new Blob(parts, { type: (rec.mimeType || 'audio/webm').split(';')[0] });
+        if (b.size) chatSendMedia(b);
+      };
+      rec.start();
+      btn.textContent = '⏹'; btn.classList.add('rec');
+      $('chatState').textContent = '🎤 در حالِ ضبط — برای فرستادن دوباره بزنید';
+    }, function () { $('chatState').textContent = 'اجازهٔ میکروفون داده نشد'; });
   }
 
   /** پرسیدنِ دوره‌ای فقط با صفحهٔ باز و جلوی چشم. */

@@ -136,7 +136,7 @@ public sealed partial class ChatThreadViewModel : ObservableObject
 
     /// <summary>عکس و ویدیو و صدا — فقط گفت‌وگوی مشتری روی سرورِ حساب درِ رسانه دارد.</summary>
     /// <summary>عکس/ویدیو/صدا — مشتری و (از ۱۴۰۵/۰۷/۱۶) پشتیبانیِ برنامه.</summary>
-    public bool CanAttach => IsCustomer || IsSupportDesk;
+    public bool CanAttach => IsCustomer || IsSupportDesk || IsGroup;
 
     [ObservableProperty] private string _title;
     public ObservableCollection<ChatMessageViewModel> Messages { get; } = new();
@@ -611,14 +611,14 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
         {
             var cid = r.Key["grp:cid:".Length..];
             var role = _store.Meta("pending." + cid, MyRole);
-            var (ok, msg, _) = await _group.PostAsync(cid, r.Sender, role, r.Text, ct);
+            var (ok, msg, _) = await _group.PostAsync(cid, r.Sender, role, r.Text, ct, r.Kind, r.MediaId);
             if (!ok || msg is null) return;
             _store.Rekey(r.Key, GroupRow(msg, mine: true));
         }
     }
 
     private static ChatRow GroupRow(GroupMessage m, bool mine) =>
-        new("grp:" + m.Seq, GroupId, m.Seq, m.From, m.Text, "text", null, mine, m.At > 0 ? m.At : Now,
+        new("grp:" + m.Seq, GroupId, m.Seq, m.From, m.Text, m.Kind, m.MediaId, mine, m.At > 0 ? m.At : Now,
             Anchor: m.At > 0 ? m.At : Now) { };
 
     private async Task SendSupportDeskAsync(ChatThreadViewModel th, string text)
@@ -671,15 +671,39 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
     private async Task UploadAndSendAsync(ChatThreadViewModel th, byte[] bytes, string mime)
     {
         if (th.IsSupportDesk) { await UploadAndSendSupportAsync(th, bytes, mime); return; }
+        if (th.IsGroup) { await UploadAndSendGroupAsync(th, bytes, mime); return; }
         var cloud = Cloud;
         if (cloud is null || th.Acct is null) { State = "برنامه به سرورِ حساب وصل نیست"; return; }
         var kind = mime.StartsWith("image/") ? "image" : mime.StartsWith("video/") ? "video" : "audio";
         State = "در حالِ بالا بردن…";
         var (ok, mediaId, why) = await cloud.ChatUploadAsync(th.Acct, bytes, mime, _life.Token);
         if (!ok) { State = "نرفت: " + why; _host.Toast("فایل بالا نرفت: " + why, ToastKind.Error); return; }
-        //  ⛔ نسخهٔ خودمان همان لحظه این‌جا می‌نشیند — سرور ۱۵ روز بعد پاکش می‌کند
+        //  ⛔ نسخهٔ خودمان همان لحظه این‌جا می‌نشیند — سرورِ حساب پس از رسیدن پاکش می‌کند
         try { _store?.SaveMedia(mediaId, mime, bytes); } catch { }
         await SendCustomerAsync(th, "", kind, mediaId);
+    }
+
+    /// <summary>
+    /// رسانه برای گروهِ کارکنان (۱۴۰۵/۰۷/۱۶). ⛔ نسخهٔ خودمان <b>پیش از</b> فرستادن
+    /// این‌جا می‌نشیند؛ سرورِ خانگی فقط ۴۸ ساعت نگهش می‌دارد تا گوشی‌ها برسند.
+    /// پیامی که نرفت «در صف» می‌ماند و با دورِ بعد دوباره می‌رود.
+    /// </summary>
+    private async Task UploadAndSendGroupAsync(ChatThreadViewModel th, byte[] bytes, string mime)
+    {
+        var kind = mime.StartsWith("image/") ? "image" : mime.StartsWith("video/") ? "video" : "audio";
+        State = "در حالِ فرستادن…";
+        var (ok, mediaId, why) = await _group.UploadAsync(bytes, mime, _life.Token);
+        if (!ok) { State = "نرفت: " + why; _host.Toast("فایل به گروه نرفت: " + why, ToastKind.Error); return; }
+        try { _store?.SaveMedia(mediaId, mime, bytes); } catch { }
+        var cid = Guid.NewGuid().ToString("N");
+        var key = "grp:cid:" + cid;
+        _store!.Upsert(new ChatRow(key, GroupId, 0, Me, "", kind, mediaId, true, Now, Pending: true));
+        _store.SetMeta("pending." + cid, MyRole);
+        Reload(th);
+        var (ok2, msg, why2) = await _group.PostAsync(cid, Me, MyRole, "", _life.Token, kind, mediaId);
+        if (ok2 && msg is not null) { _store.Rekey(key, GroupRow(msg, mine: true)); State = ""; }
+        else State = "در صف — " + why2;
+        Reload(th);
     }
 
     /// <summary>
@@ -873,6 +897,12 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
             if (mine) _store.Delete(pendingKey);
             var existed = _store.Rows(GroupId).Any(r => r.Key == "grp:" + m.Seq);
             _store.Upsert(GroupRow(m, mine));
+            //  ⛔ رسانهٔ دیگران همان لحظه این‌جا می‌نشیند — سرورِ خانگی فقط ۴۸ ساعت دارد
+            if (!mine && SafeMediaId(m.MediaId) && _store.MediaPath(m.MediaId!) is null
+                && await _group.MediaAsync(m.MediaId!, ct) is { } gm)
+            {
+                try { _store.SaveMedia(m.MediaId!, gm.Mime, gm.Bytes); } catch { }
+            }
             if (!existed && !mine) fresh.Add(m);
             if (m.Seq > since) since = m.Seq;
         }
@@ -974,6 +1004,13 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
     {
         if (_store is null) return null;
         if (_store.MediaPath(mediaId) is { } have) return have;
+        if (Current?.IsGroup == true)
+        {
+            var g = await _group.MediaAsync(mediaId, _life.Token);
+            if (g is null) return null;
+            try { return _store.SaveMedia(mediaId, g.Value.Mime, g.Value.Bytes); }
+            catch { return null; }
+        }
         if (Cloud is not { } cloud) return null;
         var got = await cloud.ChatMediaAsync(mediaId, _life.Token);
         if (got is null) return null;

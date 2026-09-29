@@ -5,7 +5,8 @@ using System.Text.Json;
 namespace PumpYaqobi.App.Services;
 
 /// <summary>یک پیامِ گروهِ کارکنان — شکلِ پاسخِ سرورِ خانگی.</summary>
-public sealed record GroupMessage(long Seq, string Cid, string From, string Role, string Text, long At)
+public sealed record GroupMessage(long Seq, string Cid, string From, string Role, string Text, long At,
+    string Kind = "text", string? MediaId = null)
 {
     /// <summary>برچسبِ نقش برای کنارِ نام.</summary>
     public string RoleText => Role switch
@@ -20,8 +21,12 @@ public sealed record GroupMessage(long Seq, string Cid, string From, string Role
         long N(string k) => m.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt64(out var n) ? n : 0;
         var seq = N("seq");
         var text = S("text");
-        if (seq <= 0 || text.Length == 0) return null;
-        return new GroupMessage(seq, S("cid"), S("from"), S("role").Length > 0 ? S("role") : "staff", text, N("at"));
+        var kind = S("kind") is "image" or "video" or "audio" ? S("kind") : "text";
+        var mediaId = kind == "text" ? null : S("mediaId");
+        if (kind != "text" && !ChatStore.SafeId(mediaId)) { kind = "text"; mediaId = null; }
+        if (seq <= 0 || (text.Length == 0 && mediaId is null)) return null;
+        return new GroupMessage(seq, S("cid"), S("from"), S("role").Length > 0 ? S("role") : "staff", text, N("at"),
+            kind, mediaId);
     }
 }
 
@@ -110,17 +115,62 @@ public sealed class StationChat
 
     /// <summary>فرستادن. ‎cid‎ همان پیام را در تلاشِ دوباره یکی نگه می‌دارد.</summary>
     public async Task<(bool Ok, GroupMessage? Message, string Why)> PostAsync(
-        string cid, string from, string role, string text, CancellationToken ct = default)
+        string cid, string from, string role, string text, CancellationToken ct = default,
+        string kind = "text", string? mediaId = null)
     {
         if (!Ready) return (false, null, "این پمپ هنوز به سرورِ خانگی وصل نشده");
-        var (ok, json, why) = await SendAsync(HttpMethod.Post, Route(),
-            new { cid, from, role, text }, ct);
+        object body = kind == "text" || mediaId is null
+            ? new { cid, from, role, text }
+            : new { cid, from, role, text, kind, mediaId };
+        var (ok, json, why) = await SendAsync(HttpMethod.Post, Route(), body, ct);
         if (!ok) return (false, null, why);
         return (true, json.TryGetProperty("message", out var m) ? GroupMessage.Parse(m) : null, "");
     }
 
+    /// <summary>
+    /// 📎 عکس، ویدیو یا صدا برای گروه. ⛔ سرورِ خانگی فقط ۴۸ ساعت نگهش می‌دارد؛
+    /// صداکننده نسخهٔ خودش را <b>پیش از</b> فرستادنِ پیام در ‎ChatStore‎ می‌نشاند.
+    /// </summary>
+    public async Task<(bool Ok, string MediaId, string Why)> UploadAsync(byte[] bytes, string mime, CancellationToken ct = default)
+    {
+        if (!Ready) return (false, "", "این پمپ هنوز به سرورِ خانگی وصل نشده");
+        var (ok, json, why) = await SendAsync(HttpMethod.Post, Route("/media"), null, ct, () =>
+        {
+            var c = new ByteArrayContent(bytes);
+            c.Headers.TryAddWithoutValidation("Content-Type", mime);
+            return c;
+        });
+        if (!ok) return (false, "", json.ValueKind == JsonValueKind.Object && json.TryGetProperty("message", out var m)
+            && m.ValueKind == JsonValueKind.String ? m.GetString() ?? why : why);
+        var id = json.TryGetProperty("mediaId", out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
+        return ChatStore.SafeId(id) ? (true, id, "") : (false, "", "پاسخِ سرورِ خانگی درست نبود");
+    }
+
+    /// <summary>رسانهٔ یک پیامِ گروه — یک بار؛ نبود (۴۸ ساعت گذشت) ⇒ ‎null‎.</summary>
+    public async Task<(byte[] Bytes, string Mime)?> MediaAsync(string mediaId, CancellationToken ct = default)
+    {
+        if (!Ready || !ChatStore.SafeId(mediaId)) return null;
+        foreach (var url in Doors(Route("/media/" + Uri.EscapeDataString(mediaId))))
+        {
+            try
+            {
+                using var req = new HttpRequestMessage(HttpMethod.Get, url);
+                req.Headers.Add("Authorization", "Bearer " + _settings().ServerToken.Trim());
+                using var res = TestTransport is null ? await Http.SendAsync(req, ct) : await TestTransport(req, ct);
+                if ((int)res.StatusCode == 404) return null;
+                if (!res.IsSuccessStatusCode) continue;
+                var bytes = await res.Content.ReadAsByteArrayAsync(ct);
+                var mime = res.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
+                return bytes.Length > 0 ? (bytes, mime) : null;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+            catch { /* درِ بعدی */ }
+        }
+        return null;
+    }
+
     private async Task<(bool Ok, JsonElement Json, string Why)> SendAsync(
-        HttpMethod method, string path, object? body, CancellationToken ct)
+        HttpMethod method, string path, object? body, CancellationToken ct, Func<HttpContent>? raw = null)
     {
         var why = "به سرورِ خانگی نرسیدیم";
         foreach (var url in Doors(path))
@@ -129,7 +179,8 @@ public sealed class StationChat
             {
                 using var req = new HttpRequestMessage(method, url);
                 req.Headers.Add("Authorization", "Bearer " + _settings().ServerToken.Trim());
-                if (body is not null) req.Content = JsonContent.Create(body);
+                if (raw is not null) req.Content = raw();
+                else if (body is not null) req.Content = JsonContent.Create(body);
                 using var res = TestTransport is null ? await Http.SendAsync(req, ct) : await TestTransport(req, ct);
                 var text = await res.Content.ReadAsStringAsync(ct);
                 JsonElement json = default;

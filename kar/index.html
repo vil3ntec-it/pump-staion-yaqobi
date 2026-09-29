@@ -232,6 +232,13 @@
   .cday span{display:inline-block;background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:2px 12px;font-size:.75rem;font-weight:700;color:var(--muted)}
   .chatbar{display:grid;grid-template-columns:1fr auto;gap:8px}
   .chatbar #inChatName{grid-column:1 / -1}
+  .chatbtns{display:flex;gap:6px}
+  .chatbtns .rec{background:var(--danger,#c0392b);color:#fff}
+  .bub .cmedia{max-width:100%;border-radius:10px;display:block;margin-top:4px}
+  .bub audio{max-width:100%}
+  .pbtn{display:block;width:100%;margin:6px 0;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--text);font-weight:700}
+  #printRoot{display:none}
+  @media print{body.printing > *:not(#printRoot){display:none!important}body.printing #printRoot{display:block}body.printing{background:#fff}}
 
   /* ── صفحه‌های ورود: کدِ پمپ، گوگل، کیو‌آر ─────────────────────────────── */
   .gate{max-width:440px;margin:0 auto;padding-top:5vh}
@@ -694,7 +701,11 @@
       <div class="chatbar">
         <input id="inChatName" placeholder="نامِ شما (یک بار)">
         <input id="inChat" placeholder="پیام‌تان را بنویسید…" maxlength="2000">
-        <button class="p" id="btnChatSend">فرستادن</button>
+        <div class="chatbtns">
+          <button id="btnChatAttach" title="عکس یا ویدیو">📎</button>
+          <button id="btnChatRec" title="پیامِ صوتی">🎤</button>
+          <button class="p" id="btnChatSend">فرستادن</button>
+        </div>
       </div>
     </div>
   </section>
