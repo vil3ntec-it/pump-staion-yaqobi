@@ -768,6 +768,10 @@ public sealed class StationPublisher : IAsyncDisposable
                 try { await CloudKeepAsync(ct); }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
                 catch { /* بی‌اینترنت خطا نیست */ }
+                //  🏷️ نرخِ اتحادیه‌ای که صاحبِ پمپ در تلگرام نوشت — همین پمپ، همین حالا
+                try { await RateTickAsync(ct); }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
+                catch { /* بی‌اینترنت خطا نیست */ }
             }
 
             //  ۴) ساعت — هر پاسخِ سرورِ حساب خودش ساعت می‌آورد؛ فقط وقتی شش
@@ -826,6 +830,49 @@ public sealed class StationPublisher : IAsyncDisposable
     {
         try { await CloudKeepAsync(ct, forceBind: true); }
         catch { /* بی‌اینترنت خطا نیست — چراغ از `Reach` راست می‌گوید */ }
+    }
+
+    /// <summary>
+    /// ══ نرخِ اتحادیه از تلگرام ⇒ همین برنامه ═════════════════════════════
+    ///
+    /// هر دقیقه (همان تیکِ ابر) با توکنِ دستگاهِ همین پمپ می‌پرسد؛ فرمانی بود ⇒
+    /// همان راهی که کادرِ «نرخ اتحادیه»ی مفاد/ضرر می‌نشاند (تنظیمات +
+    /// «📈 تاریخچهٔ نرخ») و بعد «نشست» به سرور، تا بات به صاحبِ پمپ بگوید.
+    /// <para>
+    /// ⛔ هیچ حسابی این‌جا حساب نمی‌شود و هیچ ردیفی عوض نمی‌شود — فقط همان
+    /// دو تنظیم. صفحهٔ باز با <c>SettingsService.Written</c> همان لحظه تازه
+    /// می‌شود (<c>ProfitSectionViewModel</c>).
+    /// </para>
+    /// <para>
+    /// ⚠️ این پرسش همان «برنامه روشن است»ِ سرورِ حساب هم هست: تا برنامه باز است،
+    /// پیامِ مشتری‌های کیو‌آر به «چت‌های میرزا»ی تلگرام نمی‌رود.
+    /// </para>
+    /// </summary>
+    private async Task RateTickAsync(CancellationToken ct)
+    {
+        var file = AppSettings.Load();
+        if (string.IsNullOrWhiteSpace(file.CloudDeviceToken)) return;
+        var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
+        var cmd = await cloud.RateCommandAsync(ct);
+        if (cmd is null) return;
+
+        var note = "";
+        var applied = false;
+        try
+        {
+            await UnionRateApply.ApplyAsync(_host, cmd.Petrol, cmd.Diesel);
+            applied = true;
+        }
+        catch (Exception e)
+        {
+            //  کاربرِ واردشده اجازهٔ تنظیمات ندارد (بیننده)، یا دیتابیس قفل بود
+            note = e is PumpYaqobi.Application.Security.PermissionDeniedException
+                ? "کاربری که در برنامه وارد است اجازهٔ عوض کردنِ نرخ را ندارد"
+                : "برنامه نتوانست بنویسد";
+        }
+        await cloud.RateAckAsync(cmd.Id, applied, note, ct);
+        if (applied)
+            _host.Toast("🏷️ نرخِ اتحادیه از تلگرام نشست: " + CloudLink.RateLine(cmd), ToastKind.Ok);
     }
 
     private static async Task CloudKeepAsync(CancellationToken ct, bool forceBind = false)
