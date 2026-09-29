@@ -581,6 +581,7 @@
       localStorage.removeItem(KEY + '.told');
     } catch (e) { }
     cfg.stn = next;
+    ownerPassed = '';
     data = null;
     toldKeys = {};
     unlocked = false;
@@ -1256,17 +1257,20 @@
    *  ⛔ تا «حساب‌ها» باز نشده، هیچ عددی از آن بخش حتی در صفحهٔ پنهان هم
    *  نوشته نمی‌شود (‎render‎)، و ربات در درِ کارمندان فقط قرض‌داران و مخزن
    *  را می‌بیند (‎staffView‎).
-   *  ⚠️ بی رمز (برنامهٔ کامپیوتر رمزی نگذاشته) ⇒ خودِ کد کلید است.
+   *
+   *  ⛔ پس گرفته شد (۱۴۰۵/۰۷/۱۶، صاحب ریپو: «بخشِ حساب هم قفلِ برنامهٔ
+   *  کامپیوتر رو بخواد که نمی‌خواد»): رمز دیگر در گوشی به یاد نمی‌ماند —
+   *  **هر بار که اپ باز می‌شود** یک بار پرسیده می‌شود (‎ownerPassed‎ فقط در
+   *  حافظه). و ⛔ بی رمز «حساب‌ها» **باز نمی‌شود**: برنامهٔ کامپیوتری که رمز
+   *  نگذاشته هیچ کلیدی ندارد، پس گوشی می‌گوید رمز را کجا بگذارند.
+   *  ⚠️ «⛽ کارمندان» همچنان بی هیچ رمزی باز است.
    */
   var pendingOwner = false;
+  var ownerPassed = '';   // هشِ رمزی که در همین اجرا درست زده شد — نه روی دیسک
 
-  function rememberedGate() {
-    try { return localStorage.getItem(stnKey('ok')) || ''; } catch (e) { return ''; }
-  }
-
-  /** درِ «حساب‌ها» باز است؟ (عکس رسیده و رمز ندارد یا در این گوشی زده شده.) */
+  /** درِ «حساب‌ها» باز است؟ فقط با رمزِ درستِ همین اجرا. */
   function ownerOk() {
-    return !!data && (!data.gate || rememberedGate() === data.gate);
+    return !!data && !!data.gate && ownerPassed === data.gate;
   }
 
   function gateReady() {
@@ -1279,8 +1283,11 @@
     chips();
     lockButton();
     var st = $('lockState');
-    if (st) st.textContent = data ? (data.gate ? '' : 'این پمپ رمزی ندارد — باز می‌شود…')
+    if (st) st.textContent = data ? (data.gate ? '' : '⛔ برنامهٔ کامپیوترِ این پمپ هنوز رمزی ندارد، پس «حساب‌ها» روی گوشی باز نمی‌شود. '
+                                    + 'در برنامهٔ کامپیوتر: تنظیمات ← 🔑 رمزها و کد ← رمزِ برنامه را بگذارید.')
                                   : 'در حالِ گرفتنِ اطلاعات از پمپ…';
+    var ip = $('inPass');
+    if (ip) ip.disabled = !(data && data.gate);
     if (!pendingOwner || !$('lockPane') || $('lockPane').classList.contains('hidden')) return;
     if (ownerOk()) enterOwner();
   }
@@ -1288,7 +1295,7 @@
   /** 🔒 فقط وقتی معنا دارد که رمز هست و همین حالا در «حساب‌ها» هستیم. */
   function lockButton() {
     var lb = $('btnLock');
-    if (lb) lb.classList.toggle('hidden', !(data && data.gate && mode === 'owner'));
+    if (lb) lb.classList.toggle('hidden', mode !== 'owner');
   }
 
   /** اپ باز می‌شود — بی هیچ پرسشی؛ فقط درِ «حساب‌ها» پرسش دارد. */
@@ -1319,6 +1326,34 @@
     setMode('owner');
   }
 
+  /** پنجرهٔ تایید — ‎window.confirm‎ در وب‌ویوی اندروید همیشه دیده نمی‌شود. */
+  function askSure(title, text, okLabel) {
+    return new Promise(function (resolve) {
+      var d = $('dlg');
+      if (!d) { resolve(window.confirm(title + '\n' + text)); return; }
+      $('dlgTitle').textContent = title;
+      $('dlgText').textContent = text;
+      $('dlgOk').textContent = okLabel || 'بله';
+      d.classList.remove('hidden');
+      function done(v) {
+        d.classList.add('hidden');
+        $('dlgOk').onclick = $('dlgNo').onclick = d.onclick = null;
+        resolve(v);
+      }
+      $('dlgOk').onclick = function () { done(true); };
+      $('dlgNo').onclick = function () { done(false); };
+      d.onclick = function (e) { if (e.target === d) done(false); };
+    });
+  }
+
+  function askLeave() {
+    var nm = (data && data.station && data.station.name) || cfg.name || 'این پمپ';
+    askSure('خروج از «' + nm + '»؟',
+      'کدِ پمپ و هر چه از این پمپ در این گوشی مانده پاک می‌شود. برای برگشتن باید کدِ هشت‌رقمی را دوباره بزنید. '
+      + 'هیچ چیزی از دفترِ پمپ پاک نمی‌شود.', 'بله، خارج شو')
+      .then(function (yes) { if (yes) forgetAll(''); });
+  }
+
   function show(which) {
     ['codePane', 'signinPane', 'setupPane', 'lockPane', 'appPane'].forEach(function (id) {
       $(id).classList.toggle('hidden', id !== which);
@@ -1339,7 +1374,7 @@
         err.classList.remove('hidden');
         return;
       }
-      try { localStorage.setItem(stnKey('ok'), data.gate); } catch (e) { }
+      ownerPassed = data.gate;
       enterOwner();
     } catch (e) {
       err.textContent = 'رمز سنجیده نشد: ' + e;
@@ -1385,7 +1420,7 @@
   }
 
   /** سربرگِ یک شخص: حرفِ اول، نام، و «چه کنم» با رنگِ حالش. */
-  function whoHtml(p, title) {
+  function whoHtml(p, title, withAccounts) {
     var s = esc(p.status || 'none');
     var say = p.status === 'out' ? '⛔ تمام شده — تیلِ اضافه ندهید'
       : p.status === 'low' ? '⚠️ کم مانده — با احتیاط بدهید'
@@ -1394,12 +1429,14 @@
       '<div class="grow"><div class="nm">' + esc(title) + '</div>' +
       (p.phone ? '<div class="sub">📞 <span class="num">' + esc(p.phone) + '</span></div>' : '') + '</div></div>' +
       '<div class="say ' + s + '">' + say + '</div>' +
-      '<div class="three" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">' + balMini(p.bal) + '</div>';
+      //  ⛔ کارت‌های حساب زیرش هستند ⇒ سه عددِ پول/پطرول/دیزل این‌جا تکرار نمی‌شوند
+      //  («سربرگ‌های هر دو داخلِ هم‌اند»)؛ هر عدد در دفترِ خودش است.
+      (withAccounts ? '' : '<div class="three" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">' + balMini(p.bal) + '</div>');
   }
 
   function blockHtml(b) {
     if (b.who) {
-      var w = '<div class="card ans">' + whoHtml(b.who, b.title);
+      var w = '<div class="card ans">' + whoHtml(b.who, b.title, !!(b.person && (b.person.accounts || []).length));
       if (b.person) w += personAccountsHtml(b.person, b.staff);
       if (b.note) w += '<div class="sub">' + esc(b.note) + '</div>';
       return w + '</div>';
@@ -1448,21 +1485,66 @@
    * ⛔ درِ کارمندان (‎staff‎) فیصدیِ پمپ و جدولِ ردیف‌ها را نمی‌بیند.
    * جدولِ ردیف‌ها پشتِ یک دکمه است تا یک حساب کلِ صفحه را نگیرد.
    */
+  /**
+   * ══ دو دفترِ هر حساب — «واحد تیل» و «واحد پول» ══════════════════════════
+   *
+   * صاحب ریپو (۱۴۰۵/۰۷/۱۶، با عکس): «نمی‌شود واحدِ تیل یا پول را عوض کرد و
+   * سربرگ‌های هر دو داخلِ هم‌اند.» هر حساب در برنامهٔ کامپیوتر دو دفترِ کاملاً
+   * جدا دارد و گوشی فقط دفترِ فعال را می‌گرفت. حالا ‎a.books‎ هر دو را دارد و
+   * دو دکمهٔ بالای کارت یکی را نشان می‌دهند — سربرگ، جدول و PDF همه از همان
+   * یک دفتر. ⛔ هیچ عددی این‌جا ساخته نمی‌شود.
+   * ⚠️ برنامهٔ کامپیوترِ کهنه‌تر ‎books‎ نمی‌فرستد ⇒ فقط دفترِ فعال، و دکمهٔ دیگر
+   * می‌گوید چرا خالی است.
+   */
+  var bookSel = {};      // ‎«pid|i» ⇒ 'fuel' | 'money'‎ — فقط در حافظه
+  var acctReg = {};      // ‎«pid|i» ⇒ {a, staff, detail}‎ برای کشیدنِ دوبارهٔ همان کارت
+
+  function booksOf(a) {
+    if (a.books && a.books.length) return a.books.map(function (b) {
+      return { money: !!b.money, on: !!b.on, sum: b.s || [], fuels: b.f || [], head: b.h || [], rows: b.r || [] };
+    });
+    return [{ money: a.unit === 'money', on: true, sum: a.sum || [], fuels: a.fuels || [],
+              head: a.head || [], rows: a.rows || [], legacy: true }];
+  }
+
+  function bookOf(a) {
+    var bs = booksOf(a), want = bookSel[a.__pid + '|' + a.__i];
+    if (want) {
+      var m = want === 'money';
+      for (var i = 0; i < bs.length; i++) if (bs[i].money === m) return bs[i];
+      return { money: m, on: false, sum: [], fuels: [], head: [], rows: [], empty: true, legacy: !a.books };
+    }
+    for (var j = 0; j < bs.length; j++) if (bs[j].on) return bs[j];
+    return bs[0];
+  }
+
   function acctCard(a, staff, detail) {
     var st = esc(a.st || 'none');
-    var money = a.unit === 'money';
-    var h = '<div class="acard ' + st + '"><div class="ahd">' +
+    var bk = bookOf(a), money = bk.money;
+    var key = a.__pid + '|' + a.__i;
+    acctReg[key] = { a: a, staff: staff, detail: detail };
+    var active = a.unit === 'money';
+    function tab(m) {
+      return '<button class="btab ' + (m ? 'money' : 'fuel') + (m === money ? ' on' : '') + '" data-book="' + esc(key) + '|' +
+        (m ? 'money' : 'fuel') + '">' + (m ? '💵 واحد پول' : '⛽ واحد تیل') + (m === active ? ' <small>•فعال</small>' : '') + '</button>';
+    }
+    var h = '<div class="acard ' + st + '" data-acct="' + esc(key) + '" data-staff="' + (staff ? 1 : 0) + '"><div class="ahd">' +
       '<span class="an">📒 ' + esc(a.title || 'حسابِ اصلی') + '</span>' +
-      '<span class="unit ' + (money ? 'money' : 'fuel') + '">' + (money ? '💵 واحد پول' : '⛽ واحد تیل') + '</span>' +
-      '<span class="badge ' + st + '">' + statusIcon(a.st) + ' ' + statusWord(a.st) + '</span></div>';
-    var fuels = (a.fuels || []).filter(function (f) {
+      '<span class="badge ' + st + '">' + statusIcon(a.st) + ' ' + statusWord(a.st) + '</span></div>' +
+      '<div class="btabs">' + tab(false) + tab(true) + '</div>';
+    if (bk.empty) {
+      return h + '<div class="sub" style="padding:10px 12px">' + (bk.legacy
+        ? 'این دفتر هنوز به گوشی نیامده — برنامهٔ کامپیوترِ پمپ را به‌روز کنید تا هر دو دفتر بیاید.'
+        : 'این حساب در «' + (money ? 'واحد پول' : 'واحد تیل') + '» هنوز هیچ ردیفی ندارد.') + '</div></div>';
+    }
+    var fuels = (bk.fuels || []).filter(function (f) {
       return [1, 2, 3, 4].some(function (i) { return num(f[i]) !== 0; });
     });
-    if (!fuels.length) fuels = a.fuels || [];
+    if (!fuels.length) fuels = bk.fuels || [];
     //  برنامهٔ کامپیوترِ کهنه‌تر ‎fuels‎ نمی‌فرستد ⇒ همان چهار عددِ جمعِ دفتر
-    if (!fuels.length && (a.sum || []).length) {
+    if (!fuels.length && (bk.sum || []).length) {
       h += '<div class="figs" style="padding:9px 11px">';
-      (a.sum || []).forEach(function (x) {
+      (bk.sum || []).forEach(function (x) {
         if (staff && /فیصدی/.test(x[0])) return;
         h += '<div class="fig"><div class="l">' + esc(x[0]) + '</div><div class="v">' + esc(x[1]) + '</div></div>';
       });
@@ -1486,12 +1568,12 @@
         '</div></div>';
     });
     if (!staff) {
-      var rows = a.rows || [];
+      var rows = bk.rows || [];
       if (detail && rows.length && a.__pid != null)
         h += '<button class="pbtn" data-print-acct="' + esc(a.__pid) + '|' + esc(a.__i) + '">🖨 PDF / چاپ — همان ورقِ برنامهٔ کامپیوتر</button>';
       if (detail && rows.length)
         h += '<details class="arows"><summary>📋 جدولِ ردیف‌ها (' + fmt(rows.length) + ')</summary>' +
-          tableHtml(a.head || [], rows.slice(-40)) + '</details>';
+          tableHtml(bk.head || [], rows.slice(-40)) + '</details>';
       else if (!detail)
         h += '<div class="sub">جمع‌ها درست‌اند، ولی ردیف‌های این حساب در این عکس '
           + 'نیامده‌اند — دفترِ پمپ بزرگ‌تر از آن است که همه‌اش به گوشی بیاید. '
@@ -1618,16 +1700,18 @@
 
   /** سندِ یک حسابِ قرض‌دار — همان ‎DebtorStatementReport‎. */
   function acctDoc(p, a) {
-    var money = a.unit === 'money', unit = money ? 'افغانی' : 'لیتر';
+    //  ⛔ همان دفتری که روی صفحه است (تیل یا پول)، نه همیشه دفترِ فعال
+    var bk = bookOf(a);
+    var money = bk.money, unit = money ? 'افغانی' : 'لیتر';
     var pump = (data && data.station && data.station.name) || cfg.name || 'پمپ بنزین';
-    var boxes = (a.fuels || []).filter(function (f) {
+    var boxes = (bk.fuels || []).filter(function (f) {
       return [1, 2, 3, 4].some(function (i) { return num(f[i]) !== 0; });
     }).map(function (f) {
       return { diesel: /دیزل/.test(f[0]), pct: pctOf(f[0]), unit: unit, bord: f[1], rasid: f[2], comm: f[3], alb: f[4] };
     });
-    var head = a.head || [], rows = a.rows || [], total = null;
+    var head = bk.head || [], rows = bk.rows || [], total = null;
     var sum = {};
-    (a.sum || []).forEach(function (x) { sum[x[0]] = x[1]; });
+    (bk.sum || []).forEach(function (x) { sum[x[0]] = x[1]; });
     if (rows.length) {
       total = head.map(function (hh) {
         if (hh === 'بردگی') return sum['جمله بردگی'] || '';
@@ -2179,11 +2263,14 @@
       //  «پمپِ دیگر»: هر چه از این پمپ در گوشی مانده پاک می‌شود و از کد
       //  شروع می‌کنیم — نشانی چیزی است که سرور می‌دهد، نه چیزی که کارمند
       //  بنویسد.
-      forgetAll('');
+      askLeave();
     });
 
     //  همان کار از خودِ برنامه — پمپِ بی‌رمز هیچ‌وقت صفحهٔ قفل را نمی‌بیند
-    $('btnOther').addEventListener('click', function () { forgetAll(''); });
+    //  ⛔ پیش از بیرون رفتن می‌پرسد (صاحب ریپو، ۱۴۰۵/۰۷/۱۶: «می‌زنم بیرون
+    //  می‌شود و تایید نمی‌آید»). بیرون رفتن کدِ پمپ و هر چه از آن در گوشی
+    //  مانده را پاک می‌کند و برگشتن یعنی زدنِ دوبارهٔ کد.
+    $('btnOther').addEventListener('click', askLeave);
 
     $('btnManual').addEventListener('click', function () {
       $('inSrv').value = cfg.srv; $('inTok').value = cfg.tok; $('inStn').value = cfg.stn || '';
@@ -2195,9 +2282,9 @@
     $('btnUnlock').addEventListener('click', unlock);
     $('inPass').addEventListener('keydown', function (e) { if (e.key === 'Enter') unlock(); });
     $('btnLock').addEventListener('click', function () {
-      //  🔒 = «حساب‌ها» دوباره قفل؛ یادِ رمز در این گوشی هم پاک می‌شود.
+      //  🔒 = «حساب‌ها» دوباره قفل.
       //  ⛔ کارمندان قفل نمی‌شوند — از همان صفحه یک دکمه تا آن‌جاست.
-      try { localStorage.removeItem(stnKey('ok')); } catch (e) { }
+      ownerPassed = '';
       clearOwnerPanes();
       mode = '';
       try { localStorage.removeItem(stnKey('mode')); } catch (e) { }
@@ -2288,6 +2375,15 @@
 
     //  🖨 یک شنونده برای همهٔ دکمه‌های چاپ — کارت‌ها با هر عکس از نو ساخته می‌شوند
     document.addEventListener('click', function (e) {
+      var bt = e.target.closest && e.target.closest('[data-book]');
+      if (bt) {
+        var kk = String(bt.getAttribute('data-book')).split('|');
+        var rk = kk[0] + '|' + kk[1], reg = acctReg[rk], card = bt.closest('.acard');
+        bookSel[rk] = kk[2];
+        //  ⚠️ درِ کارمندان فیصدی و جدول نمی‌بیند — همان کارت با همان در کشیده می‌شود
+        if (reg && card) card.outerHTML = acctCard(reg.a, card.getAttribute('data-staff') === '1', reg.detail);
+        return;
+      }
       var b = e.target.closest && e.target.closest('[data-print-acct],[data-print-sec]');
       if (!b || !data) return;
       var sid = b.getAttribute('data-print-sec');
@@ -2311,6 +2407,8 @@
     try {
       Object.keys(localStorage).forEach(function (k) {
         if (k.indexOf(KEY + '.chat') === 0) localStorage.removeItem(k);
+        //  رمزِ «حساب‌ها» دیگر در گوشی به یاد نمی‌ماند — یادِ نسخه‌های پیشین هم برود
+        if (k.indexOf(KEY + '.ok.') === 0) localStorage.removeItem(k);
       });
       if (typeof indexedDB !== 'undefined' && indexedDB.deleteDatabase) indexedDB.deleteDatabase('pump-kar-media');
     } catch (e) { }

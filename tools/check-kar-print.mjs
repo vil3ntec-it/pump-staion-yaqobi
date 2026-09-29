@@ -50,6 +50,17 @@ const debtors = names.map((n, i) => ({
     sum: [['جمله بردگی', '12,400'], ['جمله رسید', '8,000'], ['الباقی', '4,400']],
     st: st[i] === 'over' ? 'out' : st[i],
     fuels: [['پطرول (٪2)', '8,400', '5,000', '168', '3,568'], ['دیزل (٪1.5)', '4,000', '3,000', '60', '1,060']],
+    //  ⛔ هر دو دفتر (برنامهٔ ۳.۱.۲۲۱ به بعد) — نفرِ دوم دفترِ تیل هم دارد
+    books: i === 1 ? [
+      { money: true, on: true, s: [['جمله بردگی', '12,400'], ['جمله رسید', '8,000'], ['فیصدی ما', '228'], ['الباقی', '4,400']],
+        f: [['پطرول (٪2)', '8,400', '5,000', '168', '3,568'], ['دیزل (٪1.5)', '4,000', '3,000', '60', '1,060']],
+        h: ['تاریخ', 'نام', 'حواله', 'تیل', 'مقدار (افغانی)', 'فی', 'بردگی', 'رسید'],
+        r: Array.from({ length: 6 }, (_, r) => [`1405/07/0${r + 1}`, n, '', r % 2 ? 'دیزل' : 'پطرول', String(100 + r * 20), '68', String((100 + r * 20) * 68), r % 2 ? '5,000' : '']) },
+      { money: false, on: false, s: [['جمله بردگی', '10,220'], ['جمله رسید', '0'], ['فیصدی ما', '0'], ['الباقی', '10,220']],
+        f: [['پطرول (٪2)', '10,220', '0', '0', '10,220'], ['دیزل (٪1.5)', '0', '0', '0', '0']],
+        h: ['تاریخ', 'نام', 'حواله', 'تیل', 'مقدار تیل', 'فی', 'بردگی', 'رسید تیل'],
+        r: [['1405/07/03', n, '555', 'پطرول', '10,220', '', '10,220', '']] },
+    ] : undefined,
   }].concat(i === 1 ? [{
     title: 'دکان', unit: 'fuel', st: 'ok', head: [], rows: [], sum: [],
     fuels: [['پطرول', '600', '600', '0', '0'], ['دیزل', '0', '0', '0', '0']],
@@ -127,9 +138,36 @@ ok(doc.includes('counter(page, persian)') && doc.includes('counter(pages, persia
 ok(/<td class="tf" colspan="\d+">جمله<\/td>/.test(doc) && doc.includes('12,400'), 'ردیفِ «جمله» با جمعِ بردگیِ خودِ برنامه');
 ok(!/body\{margin/.test(doc) || doc.includes('#printRoot{'), 'سبکِ ورق فقط روی ورقِ چاپ می‌نشیند، نه روی کلِ اپ');
 
+console.log('۱ب) دو دفترِ هر حساب — «واحد تیل» و «واحد پول»');
+{
+  const card = '#botOut .acard[data-acct="2|0"]';
+  ok(await page.$$eval(card + ' .btab', b => b.length) === 2, 'دو دکمهٔ «واحد تیل / واحد پول» روی کارت');
+  ok((await page.textContent(card + ' .btab.on')).includes('واحد پول'), 'اول همان دفترِ فعالِ کامپیوتر (پول) دیده می‌شود');
+  ok(!(await page.$('#botOut .three')), '⛔ سه عددِ پول/پطرول/دیزل بالای کارت‌ها تکرار نشده');
+  await page.click(card + ' .btab.fuel');
+  ok((await page.textContent(card + ' .btab.on')).includes('واحد تیل'), 'زدنِ «واحد تیل» ⇒ همان دفتر');
+  const txt = await page.textContent(card);
+  ok(txt.includes('10,220') && !txt.includes('3,568'), 'سربرگ و عددها فقط از دفترِ تیل — نه قاطیِ دفترِ پول');
+  await page.click(card + ' [data-print-acct]');
+  const fdoc = (await page.evaluate(() => window.__printed)).slice(-1)[0] || '';
+  ok(fdoc.includes('حساب قرض‌دار — واحد تیل') && fdoc.includes('10,220') && fdoc.includes('<th>مقدار تیل</th>'), 'PDF همان دفترِ روی صفحه (تیل)');
+  await page.click(card + ' .btab.money');
+  ok((await page.textContent(card)).includes('3,568'), 'برگشت به «واحد پول»');
+  //  نفرِ اول برنامهٔ کهنه دارد (‎books‎ ندارد) ⇒ دکمهٔ دیگر می‌گوید چرا خالی است
+}
+await page.evaluate(() => { window.__printed = []; });
+await page.click('#btnBackDebt');
+await page.click('#debtList button[data-pid="1"]');
+await page.click('#botOut .acard[data-acct="1|0"] .btab.money');
+ok((await page.textContent('#botOut .acard[data-acct="1|0"]')).includes('به‌روز کنید'), 'برنامهٔ کامپیوترِ کهنه ⇒ دفترِ دیگر می‌گوید چرا نیامده');
+await page.click('#btnBackDebt');
+await page.click('#debtList button[data-pid="2"]');
+
 console.log('۲) PDF / چاپِ یک بخش');
 await page.click('#nav button[data-pane="paneSec"]');
 await page.click('#secTabs button[data-sec="expense"]');
+await page.click('[data-print-sec]');
+await page.evaluate(() => { window.__printed = ['']; });
 await page.click('[data-print-sec]');
 const sdoc = (await page.evaluate(() => window.__printed))[1] || '';
 ok(sdoc.includes('— مصارف') && sdoc.includes('برق') && sdoc.includes('جمله مصارف'), 'ورقِ «مصارف» با ردیف‌ها و جمعش');

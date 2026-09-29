@@ -81,6 +81,7 @@
   }
 
   function showBar(kind, title, note, v) {
+    if (kind === 'web') pending = { kind: kind, v: v };   // سوار شدنِ خودکار به نوار بند نیست
     if (snoozed(kind, v)) return;
     var bar = $('updBar');
     if (!bar) return;
@@ -94,6 +95,7 @@
   function hideBar() { var b = $('updBar'); if (b) b.classList.add('hidden'); }
 
   function later() {
+    //  ⚠️ «بعداً» فقط نوار را می‌خواباند؛ سوار شدنِ خودکار با برگشتنِ بعدی سرِ جایش است
     if (pending) {
       try { localStorage.setItem('pumpKar.upd.snooze', JSON.stringify({ kind: pending.kind, v: pending.v, at: Date.now() })); } catch (e) { }
     }
@@ -178,12 +180,12 @@
           return applyWeb(v).then(function (ok) {
             if (!ok) return;
             staged = v;
-            showBar('web', 'نسخهٔ تازه آماده است', 'همین حالا سوار شود؟ (وگرنه با باز شدنِ بعدی خودش می‌آید)', v);
+            showBar('web', 'نسخهٔ تازه آماده است', 'همین حالا سوار شود؟ وگرنه با برگشتنِ بعدی به اپ خودش سوار می‌شود.', v);
           });
         }
         return;
       }
-      if (v > runningV) showBar('web', 'نسخهٔ تازه آماده است', 'یک لحظه صفحه از نو بار می‌شود.', v);
+      if (v > runningV) showBar('web', 'نسخهٔ تازه آماده است', 'همین حالا، یا با برگشتنِ بعدی به اپ خودش سوار می‌شود.', v);
     }).catch(function () { /* اینترنت نبود — بعداً */ });
   }
 
@@ -199,6 +201,32 @@
     else reloadFresh();
   }
 
+  /**
+   * ⛔ سوار شدنِ خودکار (صاحب ریپو، ۱۴۰۵/۰۷/۱۶: «برنامه از داخلِ خودش آپدیت
+   * بشه»). نسخهٔ تازه که آماده شد، همین که کاربر اپ را کنار گذاشت (رفت به
+   * برنامهٔ دیگر یا صفحه خاموش شد) و برگشت، خودش با نسخهٔ تازه بالا می‌آید —
+   * بی هیچ دکمه‌ای. ⚠️ هیچ‌وقت وسطِ کارِ جلوی چشم عوض نمی‌شود؛ نوار هم برای
+   * «همین حالا» سرِ جایش است. فایلِ نصبِ اندروید (‎apk‎) این‌جا نیست: نصبش
+   * اجازهٔ خودِ کاربر را می‌خواهد.
+   */
+  var wentAway = false;
+  function readyToSwap() {
+    if (!pending || pending.kind !== 'web') return false;
+    return android() ? staged > runningV : true;
+  }
+  function onVisibility() {
+    if (document.visibilityState === 'hidden') { wentAway = readyToSwap(); return; }
+    if (wentAway && readyToSwap()) {
+      wentAway = false;
+      hideBar();
+      if (android()) { try { root.PumpAndroid.restart(); return; } catch (e) { } location.reload(); }
+      else reloadFresh();
+      return;
+    }
+    wentAway = false;
+    check(false);
+  }
+
   function boot() {
     if (android()) readShell();
     var g = $('updGo'), l = $('updLater');
@@ -206,12 +234,10 @@
     if (l) l.addEventListener('click', later);
     setTimeout(function () { check(true); }, 4000);
     setInterval(function () { check(false); }, CHECK_MS);
-    document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'visible') check(false);
-    });
+    document.addEventListener('visibilitychange', onVisibility);
   }
 
-  root.PumpUpdate = { check: check, verCmp: verCmp, num: num, SITE: SITE, FILES: FILES,
+  root.PumpUpdate = { check: check, verCmp: verCmp, num: num, SITE: SITE, FILES: FILES, readyToSwap: readyToSwap,
     _state: function () { return { runningV: runningV, pending: pending, shell: shellInfo }; } };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PumpUpdate;

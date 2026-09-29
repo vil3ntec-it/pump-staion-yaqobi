@@ -460,6 +460,20 @@ public static class StationSnapshot
             ["st"] = StatusText(calc.Status(new List<DebtAccount> { a }).Worst),
             ["head"] = snap.Head,
             ["rows"] = withRows ? snap.Rows : new List<string[]>(),
+            //  ⛔ هر دو دفتر — «واحد تیل» و «واحد پول» (صاحب ریپو، ۱۴۰۵/۰۷/۱۶: «نمی‌شود
+            //  واحدِ تیل یا پول را عوض کرد»). تا امروز فقط دفترِ فعال می‌رفت و گوشی
+            //  دفترِ دیگر را هیچ‌وقت نمی‌دید. همان ‎AcctSnapshots‎ی کیو‌آر، پس هیچ
+            //  عددِ تازه‌ای ساخته نمی‌شود. ‎money‎: کدام دفتر است؛ ‎on‎: همان که روی
+            //  کامپیوتر فعال است.
+            ["books"] = snap.Books.Select(b => new Dictionary<string, object?>
+            {
+                ["money"] = b.Unit == "افغانی",
+                ["on"] = (b.Unit == "افغانی") == a.Mode.IsMoney(),
+                ["s"] = b.Summary,
+                ["f"] = b.Fuels,
+                ["h"] = b.Head,
+                ["r"] = withRows ? b.Rows : new List<string[]>(),
+            }).ToList(),
         };
     }
 
@@ -986,7 +1000,14 @@ public static class StationSnapshot
                 ? new Dictionary<string, object?>(d)
                 {
                     ["accounts"] = list.Cast<object?>().Select(a => a is Dictionary<string, object?> ad
-                        ? new Dictionary<string, object?>(ad) { ["rows"] = new List<string[]>() } : a).ToList(),
+                        ? new Dictionary<string, object?>(ad)
+                        {
+                            ["rows"] = new List<string[]>(),
+                            //  ⛔ ردیف‌های هر دو دفتر هم — وگرنه همان بار از درِ ‎books‎ برمی‌گشت
+                            ["books"] = ad.TryGetValue("books", out var bo) && bo is List<Dictionary<string, object?>> bl
+                                ? bl.Select(b => new Dictionary<string, object?>(b) { ["r"] = new List<string[]>() }).ToList()
+                                : bo,
+                        } : a).ToList(),
                 }
                 : p).ToList();
             copy["detail"] = false;

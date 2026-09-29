@@ -127,7 +127,6 @@ async function run(scheme) {
   await click('#nav button[data-pane="paneDebt"]'); await shot('09-debtors');
   await click('#debtList button[data-pid="2"]'); await shot('10-person');
   await click('#nav button[data-pane="paneTank"]'); await shot('11-tank');
-  await click('#nav button[data-pane="paneChat"]'); await shot('12-chat');
   await click('#nav button[data-pane="paneBot"]');
   await page.fill('#inAsk', 'مخزن'); await click('#btnAsk'); await shot('13-bot');
   await ctx.close();
