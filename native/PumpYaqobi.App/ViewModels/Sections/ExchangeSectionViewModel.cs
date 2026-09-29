@@ -160,7 +160,7 @@ public sealed partial class ExchangeSectionViewModel
 
     public override async Task OnActivatedAsync()
     {
-        if (IsLoaded) await ReloadRowsAsync();
+        if (IsLoaded) await ReloadWithMonthsAsync();
     }
 
 

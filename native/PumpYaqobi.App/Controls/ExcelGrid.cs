@@ -83,13 +83,16 @@ public class ExcelGrid : DataGrid
     /// (اول ستون‌های نوشته‌ای، عدد تا آخرین چاره نه)، و ستونی که کاربر پهن
     /// کشید جا را از ستون‌های **دیگر** می‌گیرد، نه از بیرونِ جدول.
     ///
-    /// ⚠️ فقط ورق این را می‌خواهد. خواستهٔ قدیمیِ «ستونِ کشیده‌شده اگر بزرگ شد
-    /// به چپ و راست اسکرول شود» برای بقیهٔ جدول‌ها سرِ جایش است.
+    /// ⛔ **از ۱۴۰۵/۰۷/۱۶ برای همهٔ جدول‌ها پیش‌فرض است.** خواستهٔ صریحِ صاحب ریپو:
+    /// «بعضی بخش‌ها کادرِ جدولشان خیلی بزرگ می‌شود… هیچ کادری نباید از جدول‌ها
+    /// کاربر را به چپ یا راست هدایت کند.» پس خواستهٔ قدیمیِ «ستونِ کشیده‌شده اگر
+    /// بزرگ شد به چپ و راست اسکرول شود» پس گرفته شد: ستونی که کاربر پهن کشید جا
+    /// را از ستون‌های دیگرِ همان جدول می‌گیرد. ⛔ به ‎false‎ برنگردانید.
     /// ⚠️ پهنای ذخیره‌شدهٔ کاربر **روی دیسک دست نمی‌خورد**: فقط در این قاب
     /// کوچک نشان داده می‌شود، پس روی نمایشگرِ بزرگ‌تر همان پهنای خودش برمی‌گردد.
     /// </summary>
     public static readonly StyledProperty<bool> KeepInsideProperty =
-        AvaloniaProperty.Register<ExcelGrid, bool>(nameof(KeepInside));
+        AvaloniaProperty.Register<ExcelGrid, bool>(nameof(KeepInside), defaultValue: true);
 
     public bool KeepInside
     {
@@ -1877,6 +1880,16 @@ public class ExcelGrid : DataGrid
         var room = CellRoom();
         if (room <= 0) return false;
 
+        //  ⚡ همان ورودی‌هایی که بارِ پیش به «چیزی عوض نمی‌شود» رسیدند ⇒ هیچ
+        //  کاری. این تابع با **هر** پاسِ چیدمان (هر گامِ چرخ) صدا می‌خورد و از
+        //  ۱۴۰۵/۰۷/۱۷ روی همهٔ جدول‌هاست؛ ‎Numeric‎ خانه‌ها را می‌خواند — بی این
+        //  ترمز، گامِ چرخ روی جدولِ ۵۰ ردیفی از ۱۲۰ms گذشت (‎bigtable‎ گرفتش).
+        if (_pressWidths is null && _kiLast is { } kl && kl.Length == w.Length
+            && Math.Abs(_kiRoom - room) < 0.5
+            && ReferenceEquals(_kiFull, _fullWidths) && ReferenceEquals(_kiAuto, _autoWidths)
+            && kl.Zip(w, (x, y) => Math.Abs(x - y) < 0.5).All(z => z))
+            return false;
+
         //  کدام ستون کشیده شد؟ — همانی که از لحظهٔ دست گذاشتن بیشتر پهن شد
         var grab = -1;
         if (_pressWidths is { } pw && pw.Length == w.Length)
@@ -1890,7 +1903,7 @@ public class ExcelGrid : DataGrid
         //  کاربر خودش چیزی کشید ⇒ از این به بعد همین «خواسته» است
         var auto = _autoWidths is { } aw && aw.Length == w.Length
                    && aw.Zip(w, (x, y) => Math.Abs(x - y) < 0.5).All(z => z);
-        if (!auto && grab < 0 && w.Sum() <= room + 1) { _fullWidths = null; return false; }
+        if (!auto && grab < 0 && w.Sum() <= room + 1) { _fullWidths = null; Remember(room, w); return false; }
 
         double[] fit;
         if (grab >= 0)
@@ -1908,7 +1921,7 @@ public class ExcelGrid : DataGrid
             fit = FitToRoom(full, room, Numeric(cols));   // هم کوچک شدن، هم باز شدن تا خواسته
         else if (w.Sum() > room + 1)
             fit = FitToRoom(w, room, Numeric(cols));
-        else return false;
+        else { Remember(room, w); return false; }
 
         var changed = false;
         for (var i = 0; i < cols.Count; i++)
@@ -1921,7 +1934,20 @@ public class ExcelGrid : DataGrid
         //  جای پهنای ذخیره‌شدهٔ کاربر روی دیسک بنشیند؛ روی نمایشگرِ بزرگ‌تر همان
         //  پهنای خودش برمی‌گردد. کشیدنِ واقعیِ کاربر (‎grab‎) مثلِ همیشه ذخیره می‌شود.
         if (changed && grab < 0) _autoWidths = (double[])fit.Clone();
+        Remember(room, changed ? null : w);
         return changed;
+    }
+
+    //  ترمزِ ‎KeepInsideStep‎: آخرین ورودی‌ای که «هیچ تغییری» داد.
+    private double _kiRoom = -1;
+    private double[]? _kiLast, _kiFull, _kiAuto;
+
+    private void Remember(double room, double[]? widths)
+    {
+        _kiRoom = room;
+        _kiLast = widths;
+        _kiFull = _fullWidths;
+        _kiAuto = _autoWidths;
     }
 
     /// <summary>

@@ -126,7 +126,7 @@ public sealed partial class RetailSectionViewModel
 
     public override async Task OnActivatedAsync()
     {
-        if (IsLoaded) await ReloadRowsAsync();
+        if (IsLoaded) await ReloadWithMonthsAsync();
     }
     public RetailSectionViewModel(AppHost host)
         : base("chakana", "debtrasid", "چکنه", host.RetailLedger)

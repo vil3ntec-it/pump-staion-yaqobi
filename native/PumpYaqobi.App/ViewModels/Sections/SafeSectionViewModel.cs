@@ -160,7 +160,7 @@ public sealed partial class SafeSectionViewModel : LedgerSectionViewModel<SafeRo
 
     public override async Task OnActivatedAsync()
     {
-        if (IsLoaded) await ReloadRowsAsync();
+        if (IsLoaded) await ReloadWithMonthsAsync();
     }
 
     protected override SafeRowViewModel Wrap(SafeEntry e) => new(e, this);
