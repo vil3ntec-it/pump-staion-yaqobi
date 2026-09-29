@@ -25,6 +25,8 @@ public sealed partial class ShiftFormViewModel : ObservableObject
     public ShiftFormViewModel(ShiftKind kind, ParchaSectionViewModel owner)
     {
         Kind = kind; _owner = owner;
+        //  ⛔ «فایده» پشتِ رمزِ «مفاد/ضرر» است (‎ProfitVeil‎) — باز/بسته شد ⇒ همان لحظه
+        ProfitVeil.Changed += () => Avalonia.Threading.Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(ProfitText)));
     }
 
     public ShiftKind Kind { get; }
@@ -167,7 +169,7 @@ public sealed partial class ShiftFormViewModel : ObservableObject
     // برابری همان چیزی را بسنجد که این‌جا نشان داده می‌شود.
     public string SaleText => N.SaleText;
     public string MoneyText => N.MoneyText;
-    public string ProfitText => N.ProfitText;
+    public string ProfitText => ProfitVeil.Show(N.ProfitText);
     public string AvailableText => N.AvailableText;
     public string BuyPerLabel => N.BuyPerLabel;
 
@@ -281,7 +283,7 @@ public sealed class ReportCardViewModel
         MoneyText = Shamsi.Money(t.Money);
         DebtText = Shamsi.Money(t.Debt);
         AvailableText = Shamsi.Money(t.Available);
-        ProfitText = Shamsi.Money(t.Profit);
+        _profit = Shamsi.Money(t.Profit);
         DayName = r.DayShift?.Name ?? "—";
         NightName = r.NightShift?.Name ?? "—";
     }
@@ -303,7 +305,9 @@ public sealed class ReportCardViewModel
     public string MoneyText { get; }
     public string DebtText { get; }
     public string AvailableText { get; }
-    public string ProfitText { get; }
+    private readonly string _profit;
+    /// <summary>⛔ پشتِ رمزِ «مفاد/ضرر» (‎ProfitVeil‎) — در هر بار دیده شدن سنجیده می‌شود.</summary>
+    public string ProfitText => ProfitVeil.Show(_profit);
     public string DayName { get; }
     public string NightName { get; }
 }
@@ -327,7 +331,7 @@ public sealed class ReportShiftView
             ("فروش", Shamsi.Money(s.Sale)),
             ("جمله قرض", Shamsi.Money(s.Debt)),
             ("پول موجود", Shamsi.Money(s.Available)),
-            ("فایده", Shamsi.Money(s.Profit)),
+            ("فایده", ProfitVeil.Show(Shamsi.Money(s.Profit))),
             ("یادداشت", string.IsNullOrWhiteSpace(s.Note) ? "—" : s.Note!),
         };
     }
@@ -928,7 +932,7 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
 
         all = all.OrderBy(r => r.DateKey).ThenBy(r => r.Id).ToList();
 
-        var input = new ShiftsReportInput(all, DocDates.Line(), IsDiesel);
+        var input = new ShiftsReportInput(all, DocDates.Line(), IsDiesel, HideProfit: ProfitVeil.Hidden);
         await Documents.ShowAsync(() => new ShiftsReport(input),
                                   "گزارش‌های پارچه — " + FuelLabel);
     }

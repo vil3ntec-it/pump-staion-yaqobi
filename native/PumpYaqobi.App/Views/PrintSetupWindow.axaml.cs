@@ -38,8 +38,15 @@ public partial class PrintSetupWindow : Window
             vm.LastBox = n;
     }
 
-    private void OnOk(object? sender, RoutedEventArgs e) =>
-        Close((DataContext as PrintSetupViewModel)?.Build());
+    private void OnOk(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not PrintSetupViewModel vm) { Close(null); return; }
+        //  ⛔ تنظیمِ بی‌جا بی‌صدا دور ریخته نمی‌شود — گفته می‌شود و پنجره می‌ماند
+        var why = vm.Problem();
+        if (why is not null) { vm.Error = "⚠️ " + why; return; }
+        vm.Error = "";
+        Close(vm.Build());
+    }
 
     private void OnCancel(object? sender, RoutedEventArgs e) => Close(null);
 

@@ -209,6 +209,8 @@
         <Button Grid.Column="0" Classes="ok" Content="تایید" Click="OnOk" MinWidth="96" Margin="0,0,8,0" />
         <Button Grid.Column="1" Content="انصراف" Click="OnCancel" MinWidth="96" />
         <Button Grid.Column="3" Classes="link" Content="برگرداندن به پیش‌فرض" Command="{Binding ResetCommand}" />
+        <TextBlock Grid.Column="2" Text="{Binding Error}" Foreground="#c53030" FontWeight="Bold"
+                   TextWrapping="Wrap" VerticalAlignment="Center" Margin="8,0" />
       </Grid>
     </Border>
   </Grid>

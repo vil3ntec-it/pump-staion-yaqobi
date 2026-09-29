@@ -30,6 +30,7 @@ public sealed partial class MonthReportSectionViewModel : SectionViewModel
         : base("monthreport", "profit", "گزارش ماهانه")
     {
         _host = host;
+        ProfitVeil.Changed += () => Avalonia.Threading.Dispatcher.UIThread.Post(Recalc);
         Picker = new YearMonthPicker(k => { if (k.Length > 0 && k != Month) Month = k; });
     }
 
@@ -64,7 +65,11 @@ public sealed partial class MonthReportSectionViewModel : SectionViewModel
     [ObservableProperty] private string _tankerSubText = "";
 
     /// <summary>بی اجازهٔ «مفاد/ضرر»، مفاد و نتیجهٔ خالص قفل می‌مانند.</summary>
-    public bool ProfitLocked => !_host.Permissions.Can(Permission.ViewProfit);
+    /// <summary>
+    /// نقشِ بی اجازه، **یا** رمزِ «مفاد/ضرر» هنوز زده نشده (‎ProfitVeil‎) —
+    /// همان پرده‌ای که داشبورد، نوارِ بالا و پارچه دارند؛ PDFِ همین گزارش هم.
+    /// </summary>
+    public bool ProfitLocked => !_host.Permissions.Can(Permission.ViewProfit) || ProfitVeil.Hidden;
 
     public string MonthLabel => Label(Month);
 

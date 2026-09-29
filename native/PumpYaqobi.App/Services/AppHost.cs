@@ -36,6 +36,7 @@ public sealed class AppHost
         SettingsService.Written += (k, v) => { if (k == SettingsService.StationName) PumpBrand.Set(v); };
         RefreshBrand();
         Locks = new SectionLockService(Settings);
+        ProfitVeil.Hook(Locks);
         SectionNotes = new SectionNoteService(Db, Permissions);
         Debt = new DebtCalculationService(Settings);
         Safe = new SafeService();

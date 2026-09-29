@@ -45,6 +45,9 @@ public sealed partial class MainViewModel : ObservableObject
             else Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(BrandName)));
         };
 
+        //  رمزِ «مفاد/ضرر» زده یا دوباره قفل شد ⇒ «مفاد امروز» همان لحظه
+        ProfitVeil.Changed += () => Dispatcher.UIThread.Post(() => Banner[2].Value = ProfitVeil.Show(_bannerProfit));
+
         //  نوارِ چهار عدد روشن/خاموش (کلیدِ کوچکِ داشبورد) — روشن شد ⇒ همان لحظه بخوان
         Services.BannerPref.Changed += () => Dispatcher.UIThread.Post(() =>
         {
@@ -453,6 +456,8 @@ public sealed partial class MainViewModel : ObservableObject
     /// چهار عددِ نوارِ بالا — همان ‎#topBanner‎: الباقیِ شرکت‌ها، قرضِ کل،
     /// مفادِ امروز و مصارفِ امروز. با هر بار عوض کردنِ بخش تازه می‌شوند.
     /// </summary>
+    private string _bannerProfit = "0";
+
     public ObservableCollection<BannerItemViewModel> Banner { get; } = new()
     {
         new BannerItemViewModel("شرکت ها تیل (الباقی)", "Pump.Accent"),
@@ -1942,7 +1947,9 @@ public sealed partial class MainViewModel : ObservableObject
         //  ⛔ «مفاد و ضرر هم یک نوع اس تو صفحهٔ اصلی است و دیده نمیشه» —
         //  جملهٔ خودِ صاحب ریپو دربارهٔ پلنِ استاندارد. عدد **حساب می‌شود**
         //  (چون بقیهٔ برنامه به آن نیاز دارد) ولی روی نوار «•••» می‌نشیند.
-        Banner[2].Value = Entitlements.Allows(Entitlements.Profit) ? M(profit) : "•••";
+        _bannerProfit = Entitlements.Allows(Entitlements.Profit) ? M(profit) : "•••";
+        //  ⛔ رمزِ «مفاد/ضرر» این‌جا هم (۱۴۰۵/۰۷/۱۶) — ‎ProfitVeil‎ تنها جای تصمیم
+        Banner[2].Value = ProfitVeil.Show(_bannerProfit);
         Banner[3].Value = M(expToday);
     }
 
