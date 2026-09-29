@@ -17,7 +17,8 @@ namespace PumpYaqobi.Reporting.Pdf;
 public sealed record ShiftsReportInput(
     IReadOnlyList<ParchaReport> Reports,
     string Dates,
-    bool DieselOnly = false);
+    bool DieselOnly = false,
+    bool HideProfit = false);   // ⛔ رمزِ «مفاد/ضرر» هنوز زده نشده ⇒ فایده روی ورق هم نه
 
 /// <summary>
 /// ══ سندِ پارچه‌ها ═══════════════════════════════════════════════════════════
@@ -226,9 +227,9 @@ public sealed class ShiftsReport : ISetupDocument
         Line2("فروش", N(s.Sale) + " لیتر", DocStyle.Blue);
         Line2("فی فروش", N(s.Price) + " ؋", Amber);
         Line2("فی خرید", s.BuyPerLiter > 0m ? PersianText.Num(s.BuyPerLiter, 1) + " ؋" : "—", Red);
-        Line2("فایده / لیتر", N(s.ProfitPer) + " ؋", Green);
+        Line2("فایده / لیتر", _in.HideProfit ? "🔒" : N(s.ProfitPer) + " ؋", Green);
         Line2("پول کل", N(s.Money) + " افغانی", Amber);
-        Line2("فایده کل", N(s.Profit) + " افغانی", Green);
+        Line2("فایده کل", _in.HideProfit ? "🔒" : N(s.Profit) + " افغانی", Green);
         if (s.Debt > 0m)
         {
             Line2("جمله قرض", N(s.Debt) + " افغانی", Red);
@@ -258,6 +259,6 @@ public sealed class ShiftsReport : ISetupDocument
 
         Cell("فروش: ", N(sale) + " لیتر", DocStyle.Blue);
         Cell("پول: ", N(money) + " افغانی", Amber);
-        Cell("فایده: ", N(profit) + " افغانی", Green);
+        Cell("فایده: ", _in.HideProfit ? "🔒" : N(profit) + " افغانی", Green);
     });
 }

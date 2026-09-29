@@ -179,11 +179,15 @@ ok(await vis('paneSec') && (await page.textContent('#secBox')).includes('پار�
 const navTxt = await page.textContent('#nav');
 ok(navTxt.includes('بخش‌ها') && navTxt.includes('قرض‌داران'), 'نوارِ حساب‌ها کامل است');
 
-// ⛔ «یک بار زده بشه کافی است»: باز شدنِ دوباره نه کد می‌خواهد نه رمز
+// ⛔ کد «یک بار زده بشه کافی است»، ولی رمزِ «حساب‌ها» هر بار (صاحب ریپو، ۱۴۰۵/۰۷/۱۶:
+//  «بخشِ حساب قفلِ برنامهٔ کامپیوتر رو بخواد که نمی‌خواد»)
 await page.reload();
-await page.waitForFunction(() => !document.getElementById('appPane').classList.contains('hidden'), null, { timeout: 8000 });
+await page.waitForFunction(() => !document.getElementById('lockPane').classList.contains('hidden'), null, { timeout: 8000 });
+ok(await vis('lockPane') && !(await vis('codePane')), 'باز شدنِ دوباره ⇒ بی کد، ولی «حساب‌ها» دوباره رمز می‌خواهد');
+ok(!(await page.evaluate(() => Object.keys(localStorage).some(k => k.startsWith('pumpKar.v1.ok.')))), '⛔ رمز یا نشانِ رمز روی گوشی نمانده');
+await page.fill('#inPass', '1234'); await page.click('#btnUnlock');
 await page.waitForFunction(() => !document.getElementById('paneDash').classList.contains('hidden'), null, { timeout: 8000 });
-ok(await vis('paneDash'), 'باز شدنِ دوباره ⇒ بی کد و بی رمز، همان در (حساب‌ها)');
+ok(await vis('paneDash'), 'رمزِ درست ⇒ همان در (حساب‌ها)');
 
 // تم: کلید تمِ دیگر را می‌گذارد و در همین گوشی می‌ماند
 const th0 = await page.evaluate(() => document.documentElement.getAttribute('data-theme') || '');
@@ -213,9 +217,14 @@ ok(await vis('lockPane'), 'پس از 🔒، حساب‌ها دوباره رمز 
 await page.fill('#inPass', '1234'); await page.click('#btnUnlock');
 await page.waitForFunction(() => !document.getElementById('paneDash').classList.contains('hidden'));
 
-// leave pump ⇒ everything forgotten
+// leave pump ⇒ ⛔ اول می‌پرسد («می‌زنم بیرون می‌شود و تایید نمی‌آید»)
 await page.click('#btnOther');
-ok(await vis('codePane'), '«پمپِ دیگر» ⇒ صفحهٔ کد');
+ok(await vis('dlg') && !(await vis('codePane')), '⇄ ⇒ پنجرهٔ تایید، نه خروجِ بی‌پرسش');
+await page.click('#dlgNo');
+ok(!(await vis('dlg')) && await vis('appPane'), '«نه، بمان» ⇒ همان‌جا، هیچ چیزی پاک نشد');
+await page.click('#btnOther');
+await page.click('#dlgOk');
+ok(await vis('codePane'), '«بله» ⇒ صفحهٔ کد');
 const left = await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('pumpKar.v1.')));
 ok(left.length === 0, 'هیچ چیزی از پمپ در گوشی نماند: ' + JSON.stringify(left));
 
@@ -274,6 +283,19 @@ ok(!(await vis('updBar')), '«بعداً» نوار را می‌بندد');
 await page.evaluate(() => window.PumpUpdate.check(true));
 await page.waitForTimeout(300);
 ok(!(await vis('updBar')), 'همان نسخه دوباره نوار نمی‌آورد (خواب)');
+//  ⛔ «برنامه از داخلِ خودش آپدیت بشه»: کنار گذاشتنِ اپ و برگشتن ⇒ خودش سوار می‌شود
+ok(await page.evaluate(() => window.PumpUpdate.readyToSwap()), '«بعداً» سوار شدنِ خودکار را نمی‌بندد');
+{
+  const nav0 = await page.evaluate(() => performance.timeOrigin);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.waitForFunction(t => performance.timeOrigin !== t, nav0, { timeout: 8000 }).catch(() => {});
+  ok(await page.evaluate(t => performance.timeOrigin !== t, nav0), 'برگشتن به اپ ⇒ صفحه خودش با نسخهٔ تازه بار شد');
+}
 
 ok(errors.length === 0, 'بی خطای جاوااسکریپت' + (errors.length ? ': ' + errors.join(' | ') : ''));
 await browser.close(); srv.close();

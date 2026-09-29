@@ -240,12 +240,13 @@
                          «موقعِ خرید دو نوع اندازه است، یکی کیلو یکی تن؛ کیلو نباشد.»
                          ‎Kg‎ در داده می‌ماند (تن × ۱۰۰۰) تا فرمول‌ها و فایل‌های
                          کهنه دست نخورند. -->
+                    <!-- ⛔ هم‌قدِ هفت کادرِ دیگر (صاحب ریپو، ۱۴۰۵/۰۷/۱۶): تن کنارِ برچسب
+                         است، نه یک خطِ سوم که فقط این کادر را بلندتر می‌کرد. -->
                     <Border Classes="stat" MinHeight="70">
                       <StackPanel Spacing="3">
-                        <TextBlock Text="وزن" Classes="label" />
+                        <TextBlock Text="{Binding TonText, StringFormat=وزن · {0} تن}" Classes="label" />
                         <TextBlock Text="{Binding KgShowText}" FontWeight="ExtraBold"
                                    Foreground="{DynamicResource Pump.Ink.Info}" />
-                        <TextBlock Text="{Binding TonText, StringFormat={}{0} تن}" Classes="muted" />
                       </StackPanel>
                     </Border>
                     <Border Classes="stat" MinHeight="70">

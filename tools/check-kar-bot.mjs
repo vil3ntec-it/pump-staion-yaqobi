@@ -452,8 +452,25 @@ console.log('\n── کدِ پمپ و جداسازیِ پمپ‌ها ───�
   ok(!/localStorage\.setItem\(KEY \+ '\.snap'/.test(appSrc), 'کلیدِ مشترکِ قدیمیِ عکس دیگر نوشته نمی‌شود');
   ok(/function switchStation\(stn\)[\s\S]{0,600}removeItem\(stnKey\('snap'\)\)/.test(appSrc),
      'رفتن به پمپِ دیگر عکسِ پمپِ قبلی را پاک می‌کند');
-  ok(/function forgetAll\(/.test(appSrc) && /btnForget[\s\S]{0,300}forgetAll\(/.test(appSrc),
-     '«پمپِ دیگر» همه‌چیز را پاک می‌کند و به صفحهٔ کد برمی‌گردد');
+  ok(/function forgetAll\(/.test(appSrc) && /function askLeave\(\)[\s\S]{0,600}askSure\([\s\S]{0,400}if \(yes\) forgetAll\(''\)/.test(appSrc),
+     '«پمپِ دیگر» همه‌چیز را پاک می‌کند و به صفحهٔ کد برمی‌گردد — فقط پس از «بله»');
+  //  ⛔ صاحب ریپو (۱۴۰۵/۰۷/۱۶): «⇄ را می‌زنم بیرون می‌شود و تایید نمی‌آید»
+  ok(/btnForget[\s\S]{0,300}askLeave\(\)/.test(appSrc) && /\$\('btnOther'\)\.addEventListener\('click', askLeave\)/.test(appSrc)
+     && !/addEventListener\('click', function \(\) \{ forgetAll\(''\); \}\)/.test(appSrc),
+     '⛔ هر دو درِ خروج (⇄ و صفحهٔ قفل) پیش از پاک کردن تایید می‌خواهند');
+  //  ⛔ «حساب‌ها» رمزِ برنامهٔ کامپیوتر را هر بار می‌خواهد؛ بی رمز باز نمی‌شود
+  ok(/function ownerOk\(\) \{\s*return !!data && !!data\.gate && ownerPassed === data\.gate;/.test(appSrc)
+     && !/localStorage\.setItem\(stnKey\('ok'\)/.test(appSrc),
+     '⛔ «حساب‌ها» فقط با رمزِ درستِ همین اجرا باز است؛ بی رمزِ برنامه باز نمی‌شود و رمز روی گوشی نمی‌ماند');
+  //  ⛔ نشانِ برنامه داخلِ صفحه است — پوشهٔ icons در فایلِ نصبِ اندروید نیست
+  {
+    const html = readFileSync(new URL('../kar/index.html', import.meta.url), 'utf8');
+    ok(!/<img[^>]+icons\//.test(html) && /--logo:url\(data:image\/png;base64,/.test(html),
+       '⛔ نشانِ سربرگ و صفحهٔ کد از خودِ صفحه است، نه ./icons (در اندروید شکسته دیده می‌شد)');
+  }
+  //  ⛔ هر حساب دو دفتر دارد و گوشی هر دو را نشان می‌دهد
+  ok(/function bookOf\(a\)/.test(appSrc) && /data-book=/.test(appSrc) && /var bk = bookOf\(a\);\s*var money = bk\.money/.test(appSrc),
+     '⛔ کارتِ حساب دو دکمهٔ «واحد تیل / واحد پول» دارد و PDF همان دفترِ روی صفحه است');
   ok(/function acceptSnapshot\(/.test(appSrc) && /\(v\.seq \|\| 0\) < data\.seq/.test(appSrc),
      'عکسِ کهنه (چه از ابر چه از خانه) جای تازه را نمی‌گیرد');
   ok(/function cloudFallback\(/.test(appSrc) && /if \(!wsLive\) \{ live\(false, waitingText\(\)\); cloudPoll\(true\); \}/.test(appSrc),

@@ -127,7 +127,22 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
 
     public DashboardSectionViewModel(AppHost host, MainViewModel main)
         : base("dashboard", "dashboard", "داشبورد")
-    { _host = host; _main = main; }
+    {
+        _host = host; _main = main;
+        //  ⛔ رمزِ «مفاد/ضرر» خطِ مفادِ نمودار و «مفاد»ِ هر ستون را هم می‌پوشاند
+        ProfitVeil.Changed += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            OnPropertyChanged(nameof(TrendProfitShown));
+            OnPropertyChanged(nameof(ProfitVeiled));
+            if (_disp.Count > 0) BuildBars(_barSel);
+        });
+    }
+
+    /// <summary>خطِ «مفاد» — تا رمزِ مفاد زده نشده خالی (‎ProfitVeil‎).</summary>
+    public IReadOnlyList<double> TrendProfitShown => ProfitVeil.Hidden ? Array.Empty<double>() : TrendProfit;
+    public bool ProfitVeiled => ProfitVeil.Hidden;
+    partial void OnTrendProfitChanged(IReadOnlyList<double> value) => OnPropertyChanged(nameof(TrendProfitShown));
+    private int _barSel;
 
     // ── کارت‌های بالا ────────────────────────────────────────────────────────
     public DashCardViewModel AlertsCard { get; } = new("هشدارها", "Pump.Danger", null);
@@ -635,6 +650,7 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
 
     private void BuildBars(int sel)
     {
+        _barSel = sel;
         var vals = _disp.Select(b => DashboardService.Pick(b, Fuel)).ToList();
         var maxA = Math.Max(1m, vals.Count == 0 ? 1m : vals.Max(v => v.Afn));
         Bars.Clear();
@@ -649,7 +665,7 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
                 Label = b.Label,
                 Height = Math.Max(2, h),
                 Tip = $"📅 {b.Full} — 💰 {Money(v.Afn)} افغانی · 🛢️ {Money(v.Liters)} لیتر · "
-                    + $"📈 {Money(v.Profit)} مفاد · 🧾 {v.Count} ثبت",
+                    + $"📈 {ProfitVeil.Show(Money(v.Profit))} مفاد · 🧾 {v.Count} ثبت",
                 IsSelected = i == sel,
             });
         }

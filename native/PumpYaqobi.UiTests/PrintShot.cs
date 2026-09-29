@@ -128,6 +128,87 @@ internal static class PrintShot
             Shot(setup, Path.Combine(outDir, $"print-setup-{i + 1}-{names[i]}.png"));
         }
         setup.Close();
+
+        //  ══ حاشیهٔ دلخواه (گزارشِ صاحب ریپو، ۱۴۰۵/۰۷/۱۶): «حاشیه‌های ورق را تنظیم
+        //  می‌کنم، ذخیره یا اعمال نمی‌شود همان چیزی که نوشته بودم.» پنجره با کادرهای
+        //  واقعی پر می‌شود، تایید، و بعد روی **خودِ تصویرِ ورق** سنجیده می‌شود که
+        //  نوشته از همان‌جا شروع شده، و بعد که پنجرهٔ تازه همان عدد را می‌خواند.
+        {
+            var fails = 0;
+            var saved = (PageSetup?)null;
+            vm.SetupChanged = s2 => saved = s2;
+            var svm = new PrintSetupViewModel(vm.Setup);
+            var sw = new PrintSetupWindow(svm);
+            sw.Show(preview);
+            Pump(sw);
+            if (tabs is not null) { }
+            var st = sw.GetVisualDescendants().OfType<TabControl>().First();
+            st.SelectedIndex = 1;
+            Pump(sw);
+            var nums = sw.GetVisualDescendants().OfType<TextBox>().Where(t => t.Classes.Contains("num") && t.IsEffectivelyVisible).ToList();
+            //  به ترتیبِ چیدمان: بالا · سربرگ · چپ · راست · پایین · پاورقی
+            foreach (var (tb, text) in nums.Take(6).Zip(new[] { "40", "7", "35", "12", "30", "7" }))
+            {
+                tb.Focus(); tb.SelectAll(); tb.Text = text;
+                Pump(sw);
+            }
+            var built = svm.Build();
+            sw.Close();
+            Console.WriteLine($"  … پنجره: بالا {built.MarginTop} · چپ {built.MarginLeft} · راست {built.MarginRight} · پایین {built.MarginBottom} ({built.MarginPreset})");
+            var t0 = vm.ApplyFromDialogAsync(built);
+            var until2 = DateTime.UtcNow + TimeSpan.FromMinutes(2);
+            while ((!t0.IsCompleted || !vm.AllRendered) && DateTime.UtcNow < until2) { Pump(preview); Thread.Sleep(5); }
+            Pump(preview);
+            Shot(preview, Path.Combine(outDir, "print-margins-custom.png"));
+            var m = vm.Setup.Margins();
+            if (m.Top != 40m || m.Left != 35m || m.Right != 12m || m.Bottom != 30m)
+            { Console.WriteLine($"  ✘ حاشیهٔ نوشته‌شده روی سند ننشست: {m}"); fails++; }
+            if (saved is null || saved.Margins() != m)
+            { Console.WriteLine("  ✘ حاشیهٔ تازه ذخیره نشد: " + saved?.Margins()); fails++; }
+            else
+            {
+                var re = new PrintSetupViewModel(saved);
+                if (re.Top != "40" || re.Left != "35" || re.Right != "12" || re.Bottom != "30")
+                { Console.WriteLine($"  ✘ بازکردنِ دوبارهٔ پنجره عددِ دیگری نشان داد: {re.Top}/{re.Left}/{re.Right}/{re.Bottom}"); fails++; }
+            }
+            //  روی خودِ تصویر: نخستین پیکسلِ نوشته از چپ، راست و بالا
+            if (vm.CurrentPage is { } bmp)
+            {
+                var w = bmp.PixelSize.Width; var h = bmp.PixelSize.Height;
+                var buf = new byte[w * h * 4];
+                var mem = System.Runtime.InteropServices.Marshal.AllocHGlobal(buf.Length);
+                try
+                {
+                    bmp.CopyPixels(new PixelRect(0, 0, w, h), mem, buf.Length, w * 4);
+                    System.Runtime.InteropServices.Marshal.Copy(mem, buf, 0, buf.Length);
+                }
+                finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(mem); }
+                bool Ink(int x, int y) { var i = (y * w + x) * 4; return buf[i] < 200 || buf[i + 1] < 200 || buf[i + 2] < 200; }
+                int left = w, right = 0, top = h;
+                for (var y = 0; y < h; y++) for (var x = 0; x < w; x++)
+                    if (Ink(x, y)) { if (x < left) left = x; if (x > right) right = x; if (y < top) top = y; }
+                var (pw, _) = vm.Setup.SizeMm(w > h);
+                var mmPx = (double)pw / w;
+                double L = left * mmPx, R = (w - 1 - right) * mmPx, T = top * mmPx;
+                Console.WriteLine($"  … روی ورق: چپ {L:0.0} · راست {R:0.0} · بالا {T:0.0} میلی‌متر (خواسته: ۳۵ · ۱۲ · ۴۰)");
+                if (Math.Abs(L - 35) > 2.5 || Math.Abs(T - 40) > 2.5 || R < 12 - 2.5)
+                { Console.WriteLine("  ✘ نوشتهٔ ورق از جای حاشیهٔ نوشته‌شده شروع نشد"); fails++; }
+            }
+            //  «,» ممیز است، نه جداکنندهٔ هزار — «۱۲,۵» دوازده و نیم است، نه ۱۲۵
+            var c = new PrintSetupViewModel(vm.Setup) { Left = "۱۲,۵" };
+            if (c.Build().MarginLeft != 12.5m) { Console.WriteLine("  ✘ «۱۲,۵» دوازده و نیم خوانده نشد: " + c.Build().MarginLeft); fails++; }
+            //  حاشیهٔ بی‌جا ⇒ پنجره می‌گوید، نه برگشتِ بی‌صدا
+            var big = new PrintSetupViewModel(vm.Setup) { Left = "120", Right = "120" };
+            if (big.Problem() is null) { Console.WriteLine("  ✘ حاشیهٔ ۲۴۰ میلی‌متری روی A4 هیچ پیامی نداد"); fails++; }
+            //  کشوی کناری: «حاشیهٔ پهن» ⇒ روی سند و ذخیره
+            vm.Margin = vm.MarginChoices.First(x => x.Value == "wide");
+            var until3 = DateTime.UtcNow + TimeSpan.FromMinutes(2);
+            while ((saved?.MarginPreset != "wide" || !vm.AllRendered) && DateTime.UtcNow < until3) { Pump(preview); Thread.Sleep(5); }
+            if (saved?.MarginPreset != "wide" || saved.Margins().Left != 25.4m)
+            { Console.WriteLine("  ✘ «حاشیهٔ پهن»ِ کشوی کناری ذخیره نشد: " + saved?.MarginPreset); fails++; }
+            if (fails > 0) return 1;
+            Console.WriteLine("  ✔ حاشیهٔ دلخواه روی ورق نشست، ذخیره شد و بارِ بعد همان خوانده شد؛ «,» ممیز است؛ حاشیهٔ بی‌جا پیام دارد؛ کشوی کناری هم ذخیره می‌کند");
+        }
         preview.Close();
         Console.WriteLine("✅ عکس‌های چاپ گرفته شد: " + outDir);
         return 0;

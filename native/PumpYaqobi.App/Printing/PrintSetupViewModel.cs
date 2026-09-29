@@ -352,5 +352,36 @@ public sealed partial class PrintSetupViewModel : ObservableObject
         return v > 0m ? v : fallback;
     }
 
-    private static decimal NonNeg(string s) => Math.Max(0m, Shamsi.Num(s));
+    /// <summary>
+    /// ⛔ عددِ حاشیه — «,» و «،» این‌جا **ممیز**اند، نه جداکنندهٔ هزار (صاحب ریپو،
+    /// ۱۴۰۵/۰۷/۱۶: «حاشیه را تنظیم می‌کنم، اعمال نمی‌شود»). حاشیهٔ هزار میلی‌متری
+    /// معنا ندارد، و ‎Shamsi.Num‎ «۱۰,۵» را ۱۰۵ می‌خواند — ورق جا نمی‌شد و پیش‌نمایش
+    /// بی‌صدا به تنظیمِ قبلی برمی‌گشت.
+    /// </summary>
+    private static decimal NonNeg(string s)
+    {
+        var t = (s ?? "").Replace('،', '.').Replace(',', '.');
+        return Math.Max(0m, Shamsi.Num(t));
+    }
+
+    /// <summary>
+    /// پیش از بستنِ پنجره: تنظیمی که ورق را بی‌جا می‌کند همین‌جا گفته می‌شود و
+    /// پنجره باز می‌ماند — نه این‌که پیش‌نمایش بی‌صدا به تنظیمِ قبلی برگردد.
+    /// ‎null‎ یعنی درست است.
+    /// </summary>
+    public string? Problem()
+    {
+        var (w, h) = Sheet();
+        decimal top = NonNeg(Top), bottom = NonNeg(Bottom), left = NonNeg(Left), right = NonNeg(Right);
+        if (left + right > w - 40m)
+            return "چپ + راست (" + Shamsi.Money(left + right) + " میلی‌متر) برای این ورق زیاد است — دست‌بالا "
+                   + Shamsi.Money(w - 40m) + " میلی‌متر، تا جدول جا شود.";
+        if (top + bottom > h - 40m)
+            return "بالا + پایین (" + Shamsi.Money(top + bottom) + " میلی‌متر) برای این ورق زیاد است — دست‌بالا "
+                   + Shamsi.Money(h - 40m) + " میلی‌متر.";
+        return null;
+    }
+
+    /// <summary>پیامِ «این تنظیم جا نمی‌شود» — زیرِ دکمه‌ها.</summary>
+    [ObservableProperty] private string _error = "";
 }
