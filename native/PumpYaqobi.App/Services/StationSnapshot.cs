@@ -453,6 +453,11 @@ public static class StationSnapshot
             ["pctP"] = D(calc.PercentOf(a, FuelType.Petrol)),
             ["pctD"] = D(calc.PercentOf(a, FuelType.Diesel)),
             ["sum"] = snap.Summary,
+            //  ⛔ سربرگِ مربعیِ هر تیل (۱۴۰۵/۰۷/۱۶) — همان چهار کادرِ صفحهٔ حسابِ
+            //  برنامه: [تیل (٪فیصدی), بردگی, رسید, فیصدی, الباقی]. از همان
+            //  ‎AcctSnapshots‎ی کیو‌آر، پس هیچ عددِ تازه‌ای ساخته نمی‌شود.
+            ["fuels"] = snap.Books.Count > 0 ? snap.Books[0].Fuels : new List<string[]>(),
+            ["st"] = StatusText(calc.Status(new List<DebtAccount> { a }).Worst),
             ["head"] = snap.Head,
             ["rows"] = withRows ? snap.Rows : new List<string[]>(),
         };

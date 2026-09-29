@@ -116,6 +116,16 @@ public class StationSnapshotTests
         var albaqi = a.GetProperty("sum").EnumerateArray()
                       .Single(b => b[0].GetString() == "الباقی")[1].GetString();
         Assert.Equal(200m, PumpYaqobi.Application.Localization.Shamsi.Num(albaqi));
+
+        // سربرگِ مربعیِ هر تیل (۱۴۰۵/۰۷/۱۶): [تیل، بردگی، رسید، فیصدی، الباقی] —
+        // جمعِ الباقیِ تیل‌ها همان الباقیِ دفتر است، پس عددِ تازه‌ای ساخته نشده.
+        var fuels = a.GetProperty("fuels").EnumerateArray().ToList();
+        Assert.Equal(2, fuels.Count);
+        Assert.StartsWith("پطرول", fuels[0][0].GetString());
+        Assert.Equal(300m, PumpYaqobi.Application.Localization.Shamsi.Num(fuels[0][1].GetString()));
+        Assert.Equal(100m, PumpYaqobi.Application.Localization.Shamsi.Num(fuels[0][2].GetString()));
+        Assert.Equal(200m, fuels.Sum(f => PumpYaqobi.Application.Localization.Shamsi.Num(f[4].GetString())));
+        Assert.Contains(a.GetProperty("st").GetString(), new[] { "ok", "low", "out", "none" });
     }
 
     /// <summary>مخزن: همان عددی که بخشِ مخزن و داشبورد نشان می‌دهند.</summary>

@@ -1442,7 +1442,7 @@
   function blockHtml(b) {
     if (b.who) {
       var w = '<div class="card ans">' + whoHtml(b.who, b.title);
-      if (b.person) w += personAccountsHtml(b.person);
+      if (b.person) w += personAccountsHtml(b.person, b.staff);
       if (b.note) w += '<div class="sub">' + esc(b.note) + '</div>';
       return w + '</div>';
     }
@@ -1462,24 +1462,109 @@
    * (‎detail === false‎)، به‌جای یک جدولِ خالی صریح گفته می‌شود چرا — وگرنه
    * کارمند خیال می‌کند حساب خالی است.
    */
-  function personAccountsHtml(p) {
+  function personAccountsHtml(p, staff) {
     var h = '', detail = !data || data.detail !== false;
     (p.accounts || []).forEach(function (a) {
-      h += '<div class="acct"><h3>' + esc(a.title || 'حسابِ اصلی') +
-        ' <span class="badge">' + (a.unit === 'money' ? '💵 واحد پول' : '⛽ واحد تیل') + '</span></h3>';
-      h += '<div class="figs">';
-      (a.sum || []).forEach(function (s) {
-        h += '<div class="fig"><div class="l">' + esc(s[0]) + '</div><div class="v">' + esc(s[1]) + '</div></div>';
-      });
-      h += '</div>';
-      h += detail
-        ? tableHtml(a.head || [], (a.rows || []).slice(-40))
-        : '<div class="sub">جمع‌ها درست‌اند، ولی ردیف‌های این حساب در این عکس '
-          + 'نیامده‌اند — دفترِ پمپ بزرگ‌تر از آن است که همه‌اش به گوشی بیاید. '
-          + 'ردیف‌ها را در خودِ برنامهٔ کامپیوتر ببینید.</div>';
-      h += '</div>';
+      h += acctCard(a, staff, detail);
     });
     return h;
+  }
+
+  /** «٪۵» از نامِ «پطرول (٪5)» — فیصدی داخلِ برچسب، همان سربرگِ برنامه. */
+  function pctOf(name) {
+    var m = /\(٪?([^)]*)\)/.exec(String(name || ''));
+    return m ? m[1] : '';
+  }
+
+  /**
+   * ══ کارتِ هر حساب — همان سربرگِ صفحهٔ حسابِ برنامهٔ کامپیوتر ══════════════
+   *
+   * خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۶): «هر قرض باید دقیق حسابش معلوم شه، نه این‌که
+   * همهٔ صفحه را آن قرض‌دار گرفته باشد؛ مثلِ بخشِ قرض که هر حساب هدرِ مربعی
+   * دارد… رنگِ کادر و کادرِ واحدها هم همان مدل.»
+   *
+   * هر تیل یک ردیف: کادرِ مربعیِ رنگی (⛽ پطرول سبز · 🟤 دیزل نارنجی) و چهار
+   * کادر — فیصدی ما (آبی) · رسید (سبز) · برد (نارنجی) · الباقی (رنگِ حال).
+   * ⛔ هیچ عددی این‌جا ساخته نمی‌شود: ‎a.fuels‎ همان ‎AcctSnapshots‎ی برنامه است.
+   * ⛔ درِ کارمندان (‎staff‎) فیصدیِ پمپ و جدولِ ردیف‌ها را نمی‌بیند.
+   * جدولِ ردیف‌ها پشتِ یک دکمه است تا یک حساب کلِ صفحه را نگیرد.
+   */
+  function acctCard(a, staff, detail) {
+    var st = esc(a.st || 'none');
+    var money = a.unit === 'money';
+    var h = '<div class="acard ' + st + '"><div class="ahd">' +
+      '<span class="an">📒 ' + esc(a.title || 'حسابِ اصلی') + '</span>' +
+      '<span class="unit ' + (money ? 'money' : 'fuel') + '">' + (money ? '💵 واحد پول' : '⛽ واحد تیل') + '</span>' +
+      '<span class="badge ' + st + '">' + statusIcon(a.st) + ' ' + statusWord(a.st) + '</span></div>';
+    var fuels = (a.fuels || []).filter(function (f) {
+      return [1, 2, 3, 4].some(function (i) { return num(f[i]) !== 0; });
+    });
+    if (!fuels.length) fuels = a.fuels || [];
+    //  برنامهٔ کامپیوترِ کهنه‌تر ‎fuels‎ نمی‌فرستد ⇒ همان چهار عددِ جمعِ دفتر
+    if (!fuels.length && (a.sum || []).length) {
+      h += '<div class="figs" style="padding:9px 11px">';
+      (a.sum || []).forEach(function (x) {
+        if (staff && /فیصدی/.test(x[0])) return;
+        h += '<div class="fig"><div class="l">' + esc(x[0]) + '</div><div class="v">' + esc(x[1]) + '</div></div>';
+      });
+      h += '</div>';
+    }
+    var unitWord = money ? 'افغانی' : 'لیتر';
+    fuels.forEach(function (f) {
+      var diesel = /دیزل/.test(f[0]);
+      var alb = num(f[4]);
+      h += '<div class="frow">' +
+        '<div class="fsq ' + (diesel ? 'diesel' : 'petrol') + '">' + (diesel ? '🟤' : '⛽') +
+          '<b>' + (diesel ? 'دیزل' : 'پطرول') + '</b>' +
+          (!staff && pctOf(f[0]) ? '<small>٪' + esc(pctOf(f[0])) + '</small>' : '') + '</div>' +
+        '<div class="fbx">' +
+          (staff ? '' : '<div class="fb pct"><span class="l">فیصدی' +
+            '</span><span class="v">' + esc(f[3]) + '</span></div>') +
+          '<div class="fb rasid"><span class="l">رسید</span><span class="v">' + esc(f[2]) + '</span></div>' +
+          '<div class="fb bord"><span class="l">برد</span><span class="v">' + esc(f[1]) + '</span></div>' +
+          '<div class="fb alb ' + (alb > 0 ? 'owe' : alb < 0 ? 'cred' : '') + '" title="' + unitWord + '"><span class="l">الباقی' +
+            '</span><span class="v">' + esc(f[4]) + '</span></div>' +
+        '</div></div>';
+    });
+    if (!staff) {
+      var rows = a.rows || [];
+      if (detail && rows.length)
+        h += '<details class="arows"><summary>📋 جدولِ ردیف‌ها (' + fmt(rows.length) + ')</summary>' +
+          tableHtml(a.head || [], rows.slice(-40)) + '</details>';
+      else if (!detail)
+        h += '<div class="sub">جمع‌ها درست‌اند، ولی ردیف‌های این حساب در این عکس '
+          + 'نیامده‌اند — دفترِ پمپ بزرگ‌تر از آن است که همه‌اش به گوشی بیاید. '
+          + 'ردیف‌ها را در خودِ برنامهٔ کامپیوتر ببینید.</div>';
+    }
+    return h + '</div>';
+  }
+
+  /**
+   * کارتِ مربعیِ یک قرض‌دار — همان کارتِ بخشِ «قرض‌داران»ِ برنامهٔ کامپیوتر:
+   * نوارِ زنده بالا، نام درشت، الباقیِ پول درشت، نشانِ «اتمام تیل/پول» و خطِ
+   * پایینِ ⛽/🟤. رنگِ لبه از حالِ حساب.
+   */
+  function debtCard(p, extra) {
+    var b = p.bal || {}, u = p.use || {};
+    var pct = -1;
+    ['stP', 'stD', 'stM'].forEach(function (k) {
+      var x = u[k];
+      if (x && Number(x[0]) > 0) pct = Math.max(pct, Math.round(Number(x[1]) / Number(x[0]) * 100));
+    });
+    var bar = pct >= 0 ? Math.max(0, Math.min(100, pct)) : 0;
+    var fuelOut = p.stP === 'out' || p.stD === 'out', moneyOut = p.stM === 'out';
+    var nAc = (p.accounts || []).length;
+    return '<button class="dcard ' + (extra ? extra + ' ' : '') + esc(p.status || 'none') + '" data-pid="' + esc(p.id) + '">' +
+      '<span class="meter"><i style="width:' + bar + '%"></i></span>' +
+      '<span class="top"><span class="badge ' + esc(p.status || 'none') + '">' + statusIcon(p.status) + ' ' + statusWord(p.status) + '</span>' +
+        (pct >= 0 ? '<span class="pc">٪' + fmt(pct) + '</span>' : '') + '</span>' +
+      '<span class="n">' + esc(p.name) + '</span>' +
+      '<span class="big">' + fmt(b.money) + '</span>' +
+      '<span class="lbl">الباقی · افغانی</span>' +
+      '<span class="flags">' + (fuelOut ? '<em>⛔ اتمام تیل</em>' : '') + (moneyOut ? '<em>⛔ اتمام پول</em>' : '') +
+        (nAc > 1 ? '<i>📒 ' + fmt(nAc) + ' حساب</i>' : '') + '</span>' +
+      '<span class="foot"><span>⛽ ' + fmt(b.petrol) + '</span><span>🟤 ' + fmt(b.diesel) + '</span></span>' +
+      '</button>';
   }
 
   /** چهار عددِ نوارِ بالای برنامهٔ کامپیوتر + مخزن + کاشیِ بخش‌ها — درِ «حساب‌ها». */
@@ -1537,18 +1622,10 @@
     }).sort(function (a, b) {
       return rank(a) - rank(b) || String(a.name).localeCompare(String(b.name), 'fa');
     });
-    list.innerHTML = rows.map(function (p) {
-      var b = p.bal || {};
-      var what = p.status === 'out' ? 'تمام شده — تیل ندهید'
-        : p.status === 'low' ? 'کم مانده'
-        : p.status === 'ok' ? 'موجودی دارد' : 'ردیفی ندارد';
-      var bal = [['پطرول', b.petrol], ['دیزل', b.diesel], ['پول', b.money]].filter(function (x) { return x[1]; })
-        .map(function (x) { return '<span class="bal">' + x[0] + ' <b>' + fmt(x[1]) + '</b></span>'; }).join('');
-      return '<button class="st-row ' + esc(p.status) + '" data-pid="' + esc(p.id) + '">' +
-        '<span class="light"></span><span class="n">' + esc(p.name) + '</span>' +
-        '<span class="badge ' + esc(p.status) + '">' + esc(what) + '</span>' +
-        (bal ? '<span class="bals">' + bal + '</span>' : '') + '</button>';
-    }).join('') || '<div class="sub">کسی پیدا نشد.</div>';
+    //  ⛔ همان کارتِ مربعیِ «قرض‌داران» (۱۴۰۵/۰۷/۱۶) — خواستهٔ صاحب ریپو:
+    //  «برای صفحهٔ کارمندان همون مدل باشه». کلاسِ ‎st-row‎ برای آزمون‌ها می‌ماند.
+    list.innerHTML = rows.map(function (p) { return debtCard(p, 'st-row'); }).join('')
+      || '<div class="sub">کسی پیدا نشد.</div>';
   }
 
   /** کارتِ هر تیل: موجودی درشت، حال، و وارد/فروش — همان عددهای عکس. */
@@ -1588,15 +1665,7 @@
     people.forEach(function (p) {
       if (want && p.status !== want) return;
       if (q && norm(p.name).indexOf(q) < 0) return;
-      var nAc = (p.accounts || []).length;
-      h += '<button class="p-card ' + esc(p.status) + '" data-pid="' + esc(p.id) + '">' +
-        '<div class="hd"><span class="n">' + esc(p.name) + '</span>' +
-        '<span class="badge ' + esc(p.status) + '">' + statusIcon(p.status) + ' ' + statusWord(p.status) + '</span></div>' +
-        '<div class="three">' + balMini(p.bal) + '</div>' +
-        '<div class="meta">' +
-          (nAc > 1 ? '<span class="bal">📒 <b>' + fmt(nAc) + '</b> حساب</span>' : '') +
-          (p.phone ? '<span class="bal">📞 <b>' + esc(p.phone) + '</b></span>' : '') +
-        '</div></button>';
+      h += debtCard(p, '');
     });
     $('debtList').innerHTML = h || '<div class="sub">کسی پیدا نشد.</div>';
   }
@@ -1880,7 +1949,18 @@
     return {
       station: d.station, tank: d.tank, alerts: d.alerts, seq: d.seq,
       debtors: (d.debtors || []).map(function (p) {
-        return { id: p.id, name: p.name, status: p.status, bal: p.bal, phone: p.phone, accounts: [] };
+        return {
+          id: p.id, name: p.name, status: p.status, bal: p.bal, phone: p.phone,
+          stP: p.stP, stD: p.stD, stM: p.stM, use: p.use,
+          //  فقط سربرگِ حساب: عنوان، واحد، حال و بردگی/رسید/الباقیِ هر تیل —
+          //  ⛔ نه فیصدیِ پمپ، نه ردیف‌ها، نه جمع‌های دفتر.
+          accounts: (p.accounts || []).map(function (a) {
+            return {
+              title: a.title, unit: a.unit, st: a.st,
+              fuels: (a.fuels || []).map(function (f) { return [String(f[0]).replace(/\s*\(.*\)\s*$/, ''), f[1], f[2], '', f[4]]; })
+            };
+          })
+        };
       }),
       sections: {}
     };
@@ -2035,7 +2115,8 @@
       var p = ((data && data.debtors) || []).filter(function (x) { return String(x.id) === id; })[0];
       if (!p) return;
       //  کارمند حسابِ کامل را نمی‌خواهد؛ فقط حال و الباقی — همان بلوکِ ربات
-      var blk = personBlock(p); blk.person = null;
+      //  ⛔ همان سربرگِ مربعیِ هر حساب، ولی بی فیصدیِ پمپ و بی جدول (‎staff‎)
+      var blk = personBlock(p); blk.staff = true;
       $('botOut').innerHTML = '<button class="back" id="btnBackStaff">› برگرد به فهرست</button>' + blockHtml(blk);
       goPane('paneBot');
       $('paneBot').classList.add('solo');   // فقط همین شخص، بی کادرِ پرسش
