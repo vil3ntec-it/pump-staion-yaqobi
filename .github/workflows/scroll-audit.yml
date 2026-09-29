@@ -75,6 +75,12 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- latemonths
 
+      # ══ کشیدنِ خطِ ستون با ماوسِ واقعی (۱۴۰۵/۰۷/۱۷) ═════════════════════
+      # وسطِ کشیدن نه ستونی از قاب بیرون می‌زند نه جای خالی می‌ماند.
+      - name: کشیدنِ ستون داخلِ قابِ جدول
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- coldrag
+
       # ══ فرمِ «ثبت خرید»ِ مخزن (۱۴۰۵/۰۷/۱۶) ═══════════════════════════════
       # کلیدهای جهت‌دار از فرم بیرون نمی‌روند، یادداشت کامل، قیمت و نرخ
       # اختیاری، و ✏️ برای ویرایش پس از ثبت — با حسابِ شرکت.

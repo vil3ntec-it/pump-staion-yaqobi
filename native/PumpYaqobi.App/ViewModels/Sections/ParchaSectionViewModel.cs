@@ -397,7 +397,7 @@ public sealed partial class ReportYearGroup : ObservableObject
 /// چهار عددِ خودکار (فروش، جملهٔ موجودی، فایده، پولِ موجود) از سرویسی می‌آیند
 /// که با ۴۰۰ شیفتِ گرفته‌شده از خودِ نسخهٔ وب آزموده شده.
 /// </summary>
-public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlDigitHost
+public sealed partial class ParchaSectionViewModel : SectionViewModel
 {
     private readonly AppHost _host;
     private ParchaReport? _current;
@@ -916,18 +916,6 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlDigi
     /// دیتابیس می‌ساخت و چون کارتِ دیگر هم از همان پارچهٔ تازه بار می‌شد،
     /// دادهٔ شیفتِ دیگر از جلوی چشم می‌رفت. نسخهٔ وب چنین نمی‌کند.
     /// </summary>
-    /// <summary>
-    /// ‎Ctrl+1‎ ⇒ «🆕 پارچهٔ جدید روز» · ‎Ctrl+2‎ ⇒ «… شب» (۱۴۰۵/۰۷/۱۷) — همان دو
-    /// دکمه. ⛔ فقط وقتی عدد زده شود؛ بی عدد هیچ کاری نمی‌کند.
-    /// </summary>
-    public bool CtrlDigit(int n)
-    {
-        if (!ShowMain) return false;
-        if (n == 1) { NewParcha(ShiftKind.Day); return true; }
-        if (n == 2) { NewParcha(ShiftKind.Night); return true; }
-        return false;
-    }
-
     [RelayCommand]
     private void NewParchaDay() => NewParcha(ShiftKind.Day);
 

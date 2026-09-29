@@ -46,6 +46,14 @@ public class Debtor : EntityBase
     public string? BuyFeeNote { get; set; }
     public bool IsNoInvoice { get; set; }
 
+    /// <summary>
+    /// ⛔ «بی‌هشدار» — حسابِ خودِ صاحبِ پمپ (۱۴۰۵/۰۷/۱۷): «من خودم صاحب پمپم… نمی‌خوام
+    /// روی حسابم هشداری بیاد». هیچ هشداری (زنگِ داشبورد، توست، سرور، باتِ تلگرام،
+    /// گوشیِ کارمند) از این قرض‌دار ساخته نمی‌شود و کارتش چراغ نمی‌زند.
+    /// ⚠️ فقط هشدار — هیچ عدد، حال یا حسابی عوض نمی‌شود.
+    /// </summary>
+    public bool NoAlerts { get; set; }
+
     /// <summary>حسابِ اصلی — در HTML خودِ شیءِ شخص، حسابِ اصلی هم بود.</summary>
     public DebtAccount MainAccount { get; set; } = new();
     /// <summary>حساب‌های فرعی (person.subs). هر کدام دفترِ کاملاً مستقل.</summary>

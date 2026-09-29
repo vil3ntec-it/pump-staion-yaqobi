@@ -181,6 +181,61 @@ public class WaraqPostingDbTests : IDisposable
         Assert.Equal(main.Id, row.FuelAccountId);
     }
 
+    /// <summary>
+    /// ⛔ گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۷): «/هارون بابت نان» نه به حساب رفت، نه نوشته، نه عدد —
+    /// چون نامِ حساب «محمد هارون» بود و فقط تطبیقِ دقیق سنجیده می‌شد.
+    /// </summary>
+    [Theory]
+    [InlineData("/هارون بابت نان", "محمد هارون", "بابت نان")]
+    [InlineData("/هارون بابت نان", "هارون", "بابت نان")]
+    [InlineData("/\u200Fهارون نضخهشیخ", "هارون", "نضخهشیخ")]
+    [InlineData("/ هارون بابت نان", "هارون خان", "بابت نان")]
+    [InlineData("\\\\هارون بابت نان", "هارون", "بابت نان")]
+    [InlineData("احمد /هارون", "محمد هارون", "احمد")]
+    public async Task Slash_NameKamelTar_HamRaMigirad(string typed, string debtor, string shown)
+    {
+        var (post, data, dbf) = Host();
+        var p = await PersonAsync(dbf, debtor);
+        await PersonAsync(dbf, "نان");               // ⛔ «بابت نان» نباید به «نان» برود
+        var w = await SheetAsync(data, dbf, System.Text.RegularExpressions.Regex.Unescape(typed), 10m);
+
+        var report = await post.SyncAsync(w.Id);
+
+        Assert.Equal(1, report.Posted);
+        var row = Assert.Single(await RowsAsync(dbf));
+        Assert.Equal(shown, row.Name);
+        Assert.DoesNotContain("هارون", row.Name);
+        Assert.Equal(500m, row.Bardagi);
+        await using var db = dbf.Create();
+        var main = await db.DebtAccounts.AsNoTracking().SingleAsync(a => a.MainOfDebtorId == p.Id);
+        Assert.Equal(main.Id, row.FuelAccountId);
+    }
+
+    /// <summary>بی خط‌کج: همان نام با همهٔ جزئیاتش در حساب می‌نشیند.</summary>
+    [Fact]
+    public async Task BiSlash_NameBaJozeiat()
+    {
+        var (post, data, dbf) = Host();
+        await PersonAsync(dbf, "هارون");
+        var w = await SheetAsync(data, dbf, "هارون بابت نان", 10m);
+        await post.SyncAsync(w.Id);
+        var row = Assert.Single(await RowsAsync(dbf));
+        Assert.Equal("هارون بابت نان", row.Name);
+    }
+
+    /// <summary>⛔ دو قرض‌دار که هر دو «هارون» دارند ⇒ حدس زده نمی‌شود.</summary>
+    [Fact]
+    public async Task Slash_DoHarun_HadsNemizanad()
+    {
+        var (post, data, dbf) = Host();
+        await PersonAsync(dbf, "محمد هارون");
+        await PersonAsync(dbf, "احمد هارون");
+        var w = await SheetAsync(data, dbf, "/هارون بابت نان", 10m);
+        var report = await post.SyncAsync(w.Id);
+        Assert.Equal(0, report.Posted);
+        Assert.Empty(await RowsAsync(dbf));
+    }
+
     [Fact]
     public async Task Slash_Farei_DarHamanFarei()
     {

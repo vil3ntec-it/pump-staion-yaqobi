@@ -131,6 +131,10 @@
                       <TextBlock Text="{Binding FuelBadge}" FontSize="13" FontWeight="Bold"
                                  IsVisible="{Binding HasFuelBadge}"
                                  Foreground="{DynamicResource Pump.Ink.Danger}" />
+                      <!-- حسابِ خودِ صاحبِ پمپ: هیچ هشداری از آن نمی‌آید -->
+                      <TextBlock Text="🔕 بی‌هشدار" FontSize="13" FontWeight="Bold"
+                                 IsVisible="{Binding Muted}"
+                                 Foreground="{DynamicResource Pump.Muted}" />
                     </StackPanel>
                   </StackPanel>
 

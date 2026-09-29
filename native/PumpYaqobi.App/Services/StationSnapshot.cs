@@ -112,6 +112,8 @@ public static class StationSnapshot
         foreach (var p in people ?? new List<object?>())
         {
             if (p is not Dictionary<string, object?> d) continue;
+            //  ⛔ «بی‌هشدار» — حسابِ خودِ صاحبِ پمپ: هیچ هشداری از آن ساخته نمی‌شود
+            if (d.TryGetValue("mute", out var mute) && mute is true) continue;
             var name = d.TryGetValue("name", out var n) ? n as string ?? "" : "";
             var id = d.TryGetValue("id", out var i) ? i : 0;
 
@@ -367,6 +369,7 @@ public static class StationSnapshot
                 {
                     ["id"] = lite.Id,
                     ["name"] = lite.Name,
+                    ["mute"] = lite.NoAlerts,
                     ["use"] = Use(calc.Usage(accounts)),
                     ["phone"] = lite.Phone ?? "",
                     ["noinv"] = lite.IsNoInvoice,
@@ -415,6 +418,7 @@ public static class StationSnapshot
                 {
                     ["id"] = lite.Id,
                     ["name"] = lite.Name,
+                    ["mute"] = lite.NoAlerts,
                     ["use"] = Use(calc.Usage(accounts)),
                     ["stP"] = StatusText(st.Petrol),
                     ["stD"] = StatusText(st.Diesel),

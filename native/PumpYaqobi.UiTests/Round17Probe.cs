@@ -22,8 +22,8 @@ namespace PumpYaqobi.UiTests;
 ///
 ///   ۱) ویرایشِ پایهٔ ورق ⇒ پارچه و تاریخچه · ویرایش از خودِ تاریخچه ⇒ ورق
 ///   ۲) «ابراهیم /ها» ⇒ تکمله «/هارون» ⇒ ردیف در حسابِ هارون با نامِ «ابراهیم»
-///   ۳) پارچه: Enter ذخیره · Tab تیل · Ctrl+1/Ctrl+2 پارچهٔ جدیدِ روز/شب
-///   ۴) ورق: Ctrl+1/Ctrl+2 روز/شب
+///   ۳) پارچه: Enter ذخیره · Tab تیل · Ctrl+Tab کارتِ روز ⇄ شب
+///   ۴) ورق: Ctrl+Tab روز ⇄ شب
 ///
 ///     dotnet run --project PumpYaqobi.UiTests -c Release -- keys17
 /// </summary>
@@ -85,7 +85,7 @@ internal static class Round17Probe
     private static void ParchaKeys(Window win, MainViewModel vm, AppHost h)
     {
         Console.WriteLine();
-        Console.WriteLine("── ۳) پارچه: Enter · Tab · Ctrl+1/2 ──");
+        Console.WriteLine("── ۳) پارچه: Enter · Tab · Ctrl+Tab ──");
         var parcha = (ParchaSectionViewModel)vm.Sections.First(s => s.Id == "shifts");
         Wait(win, vm.GoAsync(parcha));
         Settle(win);
@@ -140,22 +140,41 @@ internal static class Round17Probe
             Settle(win);
         }
 
-        //  Ctrl+1 / Ctrl+2
+        //  Ctrl+Tab ⇒ کارتِ روز ⇄ شب — Ctrl نگه‌داشته، هر Tab یک بار، بی رها کردن
+        parcha.Day.Name = "علی";
         parcha.Night.Name = "محمود";
         Settle(win);
-        Ctrl(win, PhysicalKey.Digit1);
-        Settle(win);
-        Check($"Ctrl+1 ⇒ پارچهٔ جدیدِ روز: کارتِ روز خالی («{parcha.Day.Name}»)، شب دست‌نخورده («{parcha.Night.Name}»)",
-              parcha.Day.Name == "" && parcha.Night.Name == "محمود");
-        Ctrl(win, PhysicalKey.Digit2);
-        Settle(win);
-        Check($"Ctrl+2 ⇒ پارچهٔ جدیدِ شب: کارتِ شب خالی («{parcha.Night.Name}»)", parcha.Night.Name == "");
-        //  Ctrl تنها ⇒ هیچ
-        parcha.Day.Name = "علی";
+        var fuelBefore = parcha.IsDiesel;
         win.KeyPressQwerty(PhysicalKey.ControlLeft, RawInputModifiers.None);
+        var seq = new List<string>();
+        for (var k = 0; k < 3; k++)
+        {
+            win.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.Control);
+            Dispatcher.UIThread.RunJobs();
+            seq.Add(CardOf(win));
+            win.KeyReleaseQwerty(PhysicalKey.Tab, RawInputModifiers.Control);
+        }
         win.KeyReleaseQwerty(PhysicalKey.ControlLeft, RawInputModifiers.None);
         Settle(win);
-        Check("Ctrl بی عدد ⇒ هیچ کاری", parcha.Day.Name == "علی");
+        Check($"Ctrl+Tab (Ctrl نگه‌داشته) ⇒ هر فشار کارتِ دیگر ({string.Join(" · ", seq)})",
+              seq.SequenceEqual(new[] { "روز", "شب", "روز" }) || seq.SequenceEqual(new[] { "شب", "روز", "شب" }));
+        Check($"Ctrl+Tab نامِ کارت‌ها را دست نزد («{parcha.Day.Name}» · «{parcha.Night.Name}»)",
+              parcha.Day.Name == "علی" && parcha.Night.Name == "محمود");
+        Check($"Ctrl+Tab تیل را عوض نکرد ({parcha.FuelLabel})", parcha.IsDiesel == fuelBefore);
+        //  Ctrl+۱ دیگر پارچهٔ جدید نمی‌سازد
+        Ctrl(win, PhysicalKey.Digit1);
+        Settle(win);
+        Check($"Ctrl+1 دیگر کارتِ روز را خالی نمی‌کند («{parcha.Day.Name}»)", parcha.Day.Name == "علی");
+    }
+
+    private static string CardOf(Window win)
+    {
+        var f = TopLevel.GetTopLevel(win)?.FocusManager?.GetFocusedElement() as Control;
+        if (f is null) return "هیچ";
+        foreach (var a in f.GetVisualAncestors())
+            if (a is ContentControl { Name: "DayCard" }) return "روز";
+            else if (a is ContentControl { Name: "NightCard" }) return "شب";
+        return "بیرون";
     }
 
     private static int CountReports(PumpDbFactory dbf)
@@ -206,13 +225,22 @@ internal static class Round17Probe
         Settle(win);
         var page = wq.Page!;
 
-        //  ۴) Ctrl+2 / Ctrl+1
-        Ctrl(win, PhysicalKey.Digit2);
+        //  ۴) Ctrl+Tab ⇒ روز ⇄ شب، روی همان فشار
+        win.KeyPressQwerty(PhysicalKey.ControlLeft, RawInputModifiers.None);
+        var wseq = new List<bool>();
+        for (var k = 0; k < 3; k++)
+        {
+            win.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.Control);
+            Dispatcher.UIThread.RunJobs();
+            wseq.Add(page.IsNight);
+            win.KeyReleaseQwerty(PhysicalKey.Tab, RawInputModifiers.Control);
+        }
+        win.KeyReleaseQwerty(PhysicalKey.ControlLeft, RawInputModifiers.None);
         Settle(win);
-        Check($"ورق: Ctrl+2 ⇒ شب ({(page.IsNight ? "شب" : "روز")})", page.IsNight);
-        Ctrl(win, PhysicalKey.Digit1);
+        Check($"ورق: Ctrl+Tab سه بار ⇒ شب · روز · شب ({string.Join(" · ", wseq.Select(b => b ? "شب" : "روز"))})",
+              wseq.SequenceEqual(new[] { true, false, true }));
+        page.IsNight = false;
         Settle(win);
-        Check($"ورق: Ctrl+1 ⇒ روز ({(page.IsNight ? "شب" : "روز")})", !page.IsNight);
 
         //  ۱) قرضِ پایهٔ ورق ⇒ پارچه
         var pump = page.Pumps.FirstOrDefault(p => p.Entity.SrcKey == saved.SrcKey);

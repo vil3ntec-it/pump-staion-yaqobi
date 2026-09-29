@@ -229,6 +229,29 @@ internal static class Owner17bProbe
             Check($"«{name}» ته قاب دیده می‌شود (پایینش {p?.Y:0} از {win.Bounds.Height:0})",
                   b is { IsEffectivelyVisible: true } && p is { } q && q.Y <= win.Bounds.Height);
         }
+        //  ⛔ پنج عدد — یک اندازه و یک ظاهر (۱۴۰۵/۰۷/۱۷، دوم)
+        var sums = win.GetVisualDescendants().OfType<Border>()
+                      .Where(x => x.Classes.Contains("buysum") && x.IsEffectivelyVisible).ToList();
+        var sizes = sums.Select(x => $"{x.Bounds.Width:0}×{x.Bounds.Height:0}").ToList();
+        Check($"پنج کادرِ عدد ({sums.Count}) هم‌اندازه‌اند ({string.Join(" · ", sizes)})",
+              sums.Count == 5 && sums.All(x => Math.Abs(x.Bounds.Width - sums[0].Bounds.Width) < 1
+                                            && Math.Abs(x.Bounds.Height - sums[0].Bounds.Height) < 1));
+        var vals = sums.Select(x => x.GetVisualDescendants().OfType<TextBlock>().Last()).ToList();
+        Check("و هم‌ظاهر: همان قلم، همان رنگ، همان لبه",
+              vals.All(v => v.FontSize == vals[0].FontSize && Equals(v.Foreground, vals[0].Foreground))
+              && sums.All(x => Equals(x.BorderBrush, sums[0].BorderBrush) && x.BorderThickness == sums[0].BorderThickness));
+        Check("هیچ عددی بریده نیست (هر عدد کامل داخلِ کادرِ خودش)", sums.Zip(vals).All(z =>
+        {
+            var (bx, v) = z;
+            var tl = v.TranslatePoint(default, bx); var br = v.TranslatePoint(new Point(v.Bounds.Width, v.Bounds.Height), bx);
+            if (tl is null || br is null) return false;
+            var l = Math.Min(tl.Value.X, br.Value.X); var r = Math.Max(tl.Value.X, br.Value.X);
+            var full = new Avalonia.Media.FormattedText(v.Text ?? "", System.Globalization.CultureInfo.CurrentCulture,
+                Avalonia.Media.FlowDirection.RightToLeft, new Avalonia.Media.Typeface(v.FontFamily, v.FontStyle, v.FontWeight), v.FontSize, null).Width;
+            return l >= -0.5 && r <= bx.Bounds.Width + 0.5 && v.Bounds.Width + 0.5 >= full && !string.IsNullOrWhiteSpace(v.Text);
+        }));
+        if (Environment.GetEnvironmentVariable("O17B_SHOT") is { Length: > 0 } shot)
+            win.CaptureRenderedFrame()?.Save(shot);
         var usd = win.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(t => t.Text == st.BuyUsdText && t.IsEffectivelyVisible);
         Check($"«پول کل» درشت است (قلم {usd?.FontSize})", usd is { FontSize: >= 20 });
         st.CancelBuyCommand.Execute(null);

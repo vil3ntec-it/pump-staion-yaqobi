@@ -422,8 +422,10 @@
           </Grid>
         </Border>
 
-        <ScrollViewer Grid.Row="1" Padding="16,12">
-          <StackPanel Spacing="10">
+        <!-- ⚠️ فاصله روی خودِ محتواست، نه ‎Padding‎ِ کادرِ لغزان: با ‎Padding‎ بلندیِ
+             محتوا ۲۴ پیکسل کم شمرده می‌شد و تهِ «یادداشت» زیرِ پا می‌رفت. -->
+        <ScrollViewer Grid.Row="1">
+          <StackPanel Spacing="10" Margin="16,12">
 
             <Grid ColumnDefinitions="*,12,*">
               <StackPanel Grid.Column="0" Spacing="4">
@@ -469,54 +471,79 @@
               <TextBox Text="{Binding BuyNote}" Watermark="اختیاری" TextWrapping="Wrap" MinHeight="36" />
             </StackPanel>
 
-            <!-- عددهای خودکار — همان ‎pu-r-*‎ی سایت -->
-            <Border Classes="panel" Padding="12,10">
-              <Grid ColumnDefinitions="*,10,*,10,*">
-                <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
-                  <TextBlock Text="وزن به تن" Classes="label" />
-                  <TextBlock Text="{Binding BuyTonText}" FontWeight="ExtraBold"
-                             Foreground="{DynamicResource Pump.Ink.Info}" />
-                </StackPanel>
-                <StackPanel Grid.Row="0" Grid.Column="2" Spacing="2">
-                  <TextBlock Text="مقدار لیتر" Classes="label" />
-                  <TextBlock Text="{Binding BuyLitersText}" FontWeight="ExtraBold"
-                             Foreground="{DynamicResource Pump.Ink.Ok}" />
-                </StackPanel>
-                <StackPanel Grid.Row="0" Grid.Column="4" Spacing="2">
-                  <TextBlock Text="قیمت هر لیتر (افغانی)" Classes="label" />
-                  <TextBlock Text="{Binding BuyPerLiterText}" FontWeight="ExtraBold"
-                             Foreground="{DynamicResource Pump.Ink.Danger}" />
-                </StackPanel>
-              </Grid>
-            </Border>
-
           </StackPanel>
         </ScrollViewer>
 
         <!-- ⛔ «پول کل» دالر و افغانی ته قاب، درشت و همیشه پیدا (۱۴۰۵/۰۷/۱۷):
              «اون پایین پول کل دالر و افغانی کمی بهتر دیده بشن». بیرونِ کادرِ لغزان
              است، پس با پایین رفتنِ فرم هم از چشم نمی‌افتد. -->
-        <Border Grid.Row="2" Padding="16,12" BorderThickness="0,1,0,0"
+        <Border Grid.Row="2" Padding="16,8" BorderThickness="0,1,0,0"
                 BorderBrush="{DynamicResource Pump.ChromeBorder}">
-          <StackPanel Spacing="10">
-            <Grid ColumnDefinitions="*,12,*">
-              <Border Grid.Column="0" Name="BuyUsdBox" Classes="panel" Padding="12,8"
-                      BorderBrush="{DynamicResource Pump.Info}" BorderThickness="2">
+          <StackPanel Spacing="8">
+            <!-- ⛔ پنج عددِ خودکار — یک اندازه و یک ظاهر (۱۴۰۵/۰۷/۱۷، دوم): «این‌ها همه همین
+                 اندازه و هم ظاهر باشن، تفاوت نکنن». همه ته قاب، بیرونِ کادرِ لغزان. -->
+            <UniformGrid Name="BuySums" Columns="5">
+              <Border Classes="panel buysum" Margin="4,0" Padding="6,4" BorderThickness="2"
+                      BorderBrush="{DynamicResource Pump.Info}">
                 <StackPanel Spacing="2">
-                  <TextBlock Text="💵 پول کل (دالر)" Classes="label" FontSize="13" FontWeight="Bold" />
-                  <TextBlock Text="{Binding BuyUsdText}" FontWeight="Black" FontSize="22"
-                             Foreground="{DynamicResource Pump.Ink.Info}" />
+                  <TextBlock Text="وزن به تن" Classes="label" FontSize="12.5" FontWeight="Bold"
+                             TextAlignment="Center" TextTrimming="None" />
+                  <!-- عددِ بلند کوچک می‌شود، بریده نمی‌شود -->
+                  <Viewbox Stretch="Uniform" StretchDirection="DownOnly" Height="28">
+                    <TextBlock Text="{Binding BuyTonText}" FontWeight="Black" FontSize="20"
+                               Foreground="{DynamicResource Pump.Ink.Info}" />
+                  </Viewbox>
                 </StackPanel>
               </Border>
-              <Border Grid.Column="2" Name="BuyAfnBox" Classes="panel" Padding="12,8"
-                      BorderBrush="{DynamicResource Pump.Accent}" BorderThickness="2">
+              <Border Classes="panel buysum" Margin="4,0" Padding="6,4" BorderThickness="2"
+                      BorderBrush="{DynamicResource Pump.Info}">
                 <StackPanel Spacing="2">
-                  <TextBlock Text="💰 پول کل (افغانی)" Classes="label" FontSize="13" FontWeight="Bold" />
-                  <TextBlock Text="{Binding BuyAfnText}" FontWeight="Black" FontSize="22"
-                             Foreground="{DynamicResource Pump.Ink.Accent}" />
+                  <TextBlock Text="مقدار لیتر" Classes="label" FontSize="12.5" FontWeight="Bold"
+                             TextAlignment="Center" TextTrimming="None" />
+                  <!-- عددِ بلند کوچک می‌شود، بریده نمی‌شود -->
+                  <Viewbox Stretch="Uniform" StretchDirection="DownOnly" Height="28">
+                    <TextBlock Text="{Binding BuyLitersText}" FontWeight="Black" FontSize="20"
+                               Foreground="{DynamicResource Pump.Ink.Info}" />
+                  </Viewbox>
                 </StackPanel>
               </Border>
-            </Grid>
+              <Border Classes="panel buysum" Margin="4,0" Padding="6,4" BorderThickness="2"
+                      BorderBrush="{DynamicResource Pump.Info}">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="فی لیتر (افغانی)" Classes="label" FontSize="12.5" FontWeight="Bold"
+                             TextAlignment="Center" TextTrimming="None" />
+                  <!-- عددِ بلند کوچک می‌شود، بریده نمی‌شود -->
+                  <Viewbox Stretch="Uniform" StretchDirection="DownOnly" Height="28">
+                    <TextBlock Text="{Binding BuyPerLiterText}" FontWeight="Black" FontSize="20"
+                               Foreground="{DynamicResource Pump.Ink.Info}" />
+                  </Viewbox>
+                </StackPanel>
+              </Border>
+              <Border Name="BuyUsdBox" Classes="panel buysum" Margin="4,0" Padding="6,4" BorderThickness="2"
+                      BorderBrush="{DynamicResource Pump.Info}">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="پول کل (دالر)" Classes="label" FontSize="12.5" FontWeight="Bold"
+                             TextAlignment="Center" TextTrimming="None" />
+                  <!-- عددِ بلند کوچک می‌شود، بریده نمی‌شود -->
+                  <Viewbox Stretch="Uniform" StretchDirection="DownOnly" Height="28">
+                    <TextBlock Text="{Binding BuyUsdText}" FontWeight="Black" FontSize="20"
+                               Foreground="{DynamicResource Pump.Ink.Info}" />
+                  </Viewbox>
+                </StackPanel>
+              </Border>
+              <Border Name="BuyAfnBox" Classes="panel buysum" Margin="4,0" Padding="6,4" BorderThickness="2"
+                      BorderBrush="{DynamicResource Pump.Info}">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="پول کل (افغانی)" Classes="label" FontSize="12.5" FontWeight="Bold"
+                             TextAlignment="Center" TextTrimming="None" />
+                  <!-- عددِ بلند کوچک می‌شود، بریده نمی‌شود -->
+                  <Viewbox Stretch="Uniform" StretchDirection="DownOnly" Height="28">
+                    <TextBlock Text="{Binding BuyAfnText}" FontWeight="Black" FontSize="20"
+                               Foreground="{DynamicResource Pump.Ink.Info}" />
+                  </Viewbox>
+                </StackPanel>
+              </Border>
+            </UniformGrid>
             <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
               <Button Classes="accent" Content="ذخیره" MinWidth="120"
                       Command="{Binding SaveBuyCommand}" />

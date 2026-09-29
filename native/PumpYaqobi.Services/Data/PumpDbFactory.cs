@@ -401,6 +401,8 @@ public sealed class PumpDbFactory
             // شماره و «فیِ خرید»ِ هر حسابِ فرعی — دیگر با حسابِ اصلی مشترک نیست
             ("DebtAccounts", "Phone", "TEXT"),
             ("DebtAccounts", "BuyFeeNote", "TEXT"),
+            // «بی‌هشدار» — حسابِ خودِ صاحبِ پمپ؛ پیش‌فرض ۰ یعنی همه مثلِ همیشه
+            ("Debtors", "NoAlerts", "INTEGER NOT NULL DEFAULT 0"),
             ("TilCompanies", "QrKey", "TEXT"),
             // واحدِ رسیدِ قرض‌داران — ۲ یعنی ‎LedgerMode.Money‎، پس هر ردیفِ
             // کهنه بی هیچ کاری همان «پول»ِ درست را می‌گیرد؛ ۱ یعنی پطرول.
