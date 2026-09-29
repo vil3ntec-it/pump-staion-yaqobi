@@ -149,6 +149,8 @@ internal static class Program
         //  «ورق‌ها را پر کردم، بستم، دوباره آمدم — هیچ ورقی نبود»
         if (outDir.Equals("persist", StringComparison.OrdinalIgnoreCase)) return PersistProbe.Run(args);
         if (outDir.Equals("audit11", StringComparison.OrdinalIgnoreCase)) return AuditEleven.Run(args);
+        //  «حساب‌های دیر رسیده» و «هیچ جدولی کاربر را به چپ و راست نبرد» (۱۴۰۵/۰۷/۱۶)
+        if (outDir.Equals("latemonths", StringComparison.OrdinalIgnoreCase)) return LateMonthProbe.Run(args);
         if (outDir.Equals("buyform", StringComparison.OrdinalIgnoreCase)) return BuyFormProbe.Run(args);
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- waraqfit [پوشه]
         //  ورق با عکسِ صاحب ریپو (۱۴۰۵/۰۷/۱۲): دیوارِ ستون‌ها، قرائتِ پمپ از پارچه،

@@ -289,8 +289,8 @@ internal static class CellEditAudit
     // به چپ و راست هم اسکرول بشه.»
     //
     // پس هر ستون تا تهِ کوچکی و تا تهِ بزرگی کشیده می‌شود و دیده می‌شود که
-    // واقعاً همان‌قدر شد. و بعد: جدولی که از قابش پهن‌تر شده باید نوارِ لغزشِ
-    // افقی داشته باشد.
+    // واقعاً همان‌قدر شد. ⛔ و از ۱۴۰۵/۰۷/۱۷ جدول با آن هیچ‌وقت از قابش بیرون
+    // نمی‌زند و هیچ نوارِ لغزشِ افقی نمی‌گیرد (جمله‌های «اسکرول شود» پس گرفته شد).
 
     private static IEnumerable<string> Resize(Window win, DataGrid grid)
     {
@@ -317,35 +317,23 @@ internal static class CellEditAudit
                 bad.Add($"ستونِ «{col.Header}» به {want:0} نرفت و {got:0} ماند — هنوز محدودیت دارد");
         }
 
-        // ── جدولِ پهن‌تر از قاب، افقی می‌لغزد؟ ──────────────────────────────
+        // ── ⛔ ولی هیچ جدولی کاربر را به چپ و راست نمی‌برد (۱۴۰۵/۰۷/۱۷) ──────
+        // خواستهٔ صریحِ صاحب ریپو: «هیچ کادر نباید از جدول‌ها به چپ یا راست
+        // کاربر رو هدایت کنه». خواستهٔ پیشینِ «اگر بزرگ شد به چپ و راست اسکرول
+        // شود» پس گرفته شد: ستونِ کشیده‌شده جا را از ستون‌های دیگر می‌گیرد
+        // (‎ExcelGrid.KeepInside‎) و کلِ جدول در قابش می‌ماند.
         var bar = grid.GetVisualDescendants().OfType<ScrollBar>()
                       .FirstOrDefault(b => b.Orientation == Avalonia.Layout.Orientation.Horizontal);
-        var slides = bar is { IsVisible: true } && bar.Maximum > 0;
+        var slides = bar is { IsVisible: true } && bar.Maximum > 0.5;
         Console.WriteLine($"{Pad("نوارِ لغزشِ افقی وقتی پهن شد", 30)} "
-                        + $"{Pad(slides ? "هست" : "نیست", 20)} {(slides ? "✔" : "✖")}");
-        if (!slides) bad.Add("جدول از قابش پهن‌تر شد ولی افقی نمی‌لغزد");
+                        + $"{Pad(slides ? "هست" : "نیست", 20)} {(slides ? "✖" : "✔")}");
+        if (slides) bad.Add("ستونِ پهن‌شده جدول را از قابش بیرون زد و افقی می‌لغزد");
 
-        // ── و با ‎Shift+چرخ‎ واقعاً می‌لغزد؟ ────────────────────────────────
-        // این را باید سنجید چون همین را به صاحب ریپو می‌گوییم که بزند.
-        if (bar is not null)
-        {
-            var before = bar.Value;
-            // ⚠️ به سمتِ **راستِ** جدول، نه چپ: سرِ جدول ایستاده‌ایم و
-            // چرخاندن به عقب همان‌جا می‌ماند (لبه است) — یک بار همین سنجش را
-            // بی‌دلیل قرمز کرد.
-            for (var i = 0; i < 6; i++)
-            {
-                grid.RaiseEvent(new PointerWheelEventArgs(
-                    grid, null!, grid.GetVisualRoot() as Visual ?? grid, default,
-                    0, Avalonia.Input.PointerPointProperties.None,
-                    KeyModifiers.Shift, new Vector(0, 1)));
-                Pump(win);
-            }
-            var moved = Math.Abs(bar.Value - before) > 0.5;
-            Console.WriteLine($"{Pad("Shift+چرخ افقی می‌برد", 30)} "
-                            + $"{Pad($"{before:0} ← {bar.Value:0}", 20)} {(moved ? "✔" : "✖")}");
-            if (!moved) bad.Add("‎Shift+چرخ‎ جدول را افقی نمی‌برد");
-        }
+        var sum = grid.Columns.Where(c => c.IsVisible).Sum(c => c.ActualWidth);
+        var fits = sum <= grid.Bounds.Width + 2;
+        Console.WriteLine($"{Pad("جمعِ ستون‌ها در قاب", 30)} "
+                        + $"{Pad($"{sum:0} / {grid.Bounds.Width:0}", 20)} {(fits ? "✔" : "✖")}");
+        if (!fits) bad.Add($"جمعِ ستون‌ها {sum:0} از قابِ {grid.Bounds.Width:0} پهن‌تر است");
 
         col.Width = back;
         Pump(win);

@@ -108,7 +108,7 @@ public sealed partial class ExpenseSectionViewModel
 
     public override async Task OnActivatedAsync()
     {
-        if (IsLoaded) await ReloadRowsAsync();
+        if (IsLoaded) await ReloadWithMonthsAsync();
     }
 
     protected override ExpenseRowViewModel Wrap(Expense e) => new(e, this);
