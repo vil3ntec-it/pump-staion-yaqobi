@@ -59,9 +59,11 @@ public class OwnerNoAlertsTests
         var owner = await Make("صاحبِ پمپ");
         var other = await Make("کریم");
 
-        owner.NoAlerts = true;
-        await host.Debtors.UpdateDebtorAsync(owner);
-        Assert.True((await host.Debtors.LoadFullAsync(owner.Id))!.NoAlerts);
+        //  همان درِ منوی راست‌کلیکِ کارت — فقط همین ستون
+        await host.Debtors.SetNoAlertsAsync(owner.Id, true);
+        var back = (await host.Debtors.LoadFullAsync(owner.Id))!;
+        Assert.True(back.NoAlerts);
+        Assert.Equal("صاحبِ پمپ", back.Name);                                // چیزِ دیگری دست نخورد
 
         var snap = await StationSnapshot.BuildAsync(host);
         var j = JsonDocument.Parse(JsonSerializer.Serialize(snap)).RootElement;
@@ -73,5 +75,20 @@ public class OwnerNoAlertsTests
         var keys = j.GetProperty("alerts").EnumerateArray().Select(a => a.GetProperty("k").GetString()!).ToList();
         Assert.Contains(keys, k => k.StartsWith("d" + other.Id + "-"));      // سنجه دندان دارد
         Assert.DoesNotContain(keys, k => k.StartsWith("d" + owner.Id + "-"));
+    }
+
+    /// <summary>
+    /// ۱۴۰۵/۰۷/۱۸: «بی‌هشدار» بیرون از حساب، با راست‌کلیک روی کارتِ قرض‌دار —
+    /// و دیگر در نوارِ داخلِ حساب نیست.
+    /// </summary>
+    [Fact]
+    public void BiHoshdar_BaRastKlikeKart_NaDarNavareHesab()
+    {
+        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../PumpYaqobi.App"));
+        var card = File.ReadAllText(Path.Combine(root, "Views/Sections/DebtSectionView.axaml"));
+        var person = File.ReadAllText(Path.Combine(root, "Views/Sections/PersonView.axaml"));
+        Assert.Contains("<Button.ContextMenu>", card);
+        Assert.Contains("Owner.ToggleMuteCommand", card);
+        Assert.DoesNotContain("IsChecked=\"{Binding NoAlerts}\"", person);
     }
 }

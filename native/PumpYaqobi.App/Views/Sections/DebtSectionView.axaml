@@ -84,6 +84,16 @@
               <Button Classes="card-shell" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
                       Command="{Binding Owner.OpenCommand}"
                       CommandParameter="{Binding}">
+              <!-- ══ 🔕 «بی‌هشدار» — راست‌کلیک روی کارت (۱۴۰۵/۰۷/۱۸) ══════════
+                   خواستهٔ صاحب ریپو: «بیرون از حساب، روی هدرِ قرض‌دار». کلید
+                   از نوارِ داخلِ حساب برداشته شد؛ این تنها درِ آن است. -->
+              <Button.ContextMenu>
+                <ContextMenu>
+                  <MenuItem Header="{Binding MuteMenuText}"
+                            Command="{Binding Owner.ToggleMuteCommand}"
+                            CommandParameter="{Binding}" />
+                </ContextMenu>
+              </Button.ContextMenu>
               <Border Classes="person-card">
                 <!-- ══ چیدمانِ کارت — همان نمونه‌ای که صاحب ریپو پسندید ══════
                      نوارِ زنده بالا، بعد نام، عددِ درشت، واحد، حالِ حساب، و در

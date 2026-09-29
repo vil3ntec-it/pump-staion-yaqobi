@@ -22,7 +22,7 @@ namespace PumpYaqobi.UiTests;
 ///
 ///   ۱) ویرایشِ پایهٔ ورق ⇒ پارچه و تاریخچه · ویرایش از خودِ تاریخچه ⇒ ورق
 ///   ۲) «ابراهیم /ها» ⇒ تکمله «/هارون» ⇒ ردیف در حسابِ هارون با نامِ «ابراهیم»
-///   ۳) پارچه: Enter ذخیره · Tab تیل · Ctrl+Tab کارتِ روز ⇄ شب
+///   ۳) پارچه: Enter هر کارتِ پر ذخیره + پارچهٔ جدید · Tab و Ctrl+Tab تیل
 ///   ۴) ورق: Ctrl+Tab روز ⇄ شب
 ///
 ///     dotnet run --project PumpYaqobi.UiTests -c Release -- keys17
@@ -91,12 +91,19 @@ internal static class Round17Probe
         Settle(win);
         if (parcha.IsDiesel) { parcha.ToggleFuelCommand.Execute(null); Settle(win); }
 
+        //  ══ Enter ⇒ هر کارتِ پر ذخیره + پارچهٔ جدید (۱۴۰۵/۰۷/۱۸) ══════════
         parcha.Day.Name = "کریم";
         parcha.Day.PumpNum = "1";
         parcha.Day.Start = "1000";
         parcha.Day.End = "1100";
         parcha.Day.Price = "60";
         parcha.Day.Debt = "500";
+        parcha.Night.Name = "محمود";
+        parcha.Night.PumpNum = "1";
+        parcha.Night.Start = "1100";
+        parcha.Night.End = "1250";
+        parcha.Night.Price = "60";
+        parcha.Night.Debt = "300";
         Settle(win);
 
         var end = DayBox(win, parcha, nameof(ShiftFormViewModel.End));
@@ -105,11 +112,39 @@ internal static class Round17Probe
         Settle(win);
         var before = CountReports(h.Db);
         Tap(win, PhysicalKey.Enter);
-        Settle(win);
+        WaitFor(win, () => parcha.Day.Name == "" && parcha.Night.Name == "");
         var cur = h.ParchaData.CurrentAsync(FuelType.Petrol).GetAwaiter().GetResult();
-        Check($"Enter داخلِ کادر ⇒ شیفتِ روز ذخیره شد (پارچه‌ها {before} ⇒ {CountReports(h.Db)}، قرض {cur?.DayShift?.Debt})",
-              cur?.DayShift is { Debt: 500m, End: 1100m });
+        Check($"Enter (در کارتِ روز) ⇒ روز و شب هر دو در یک پارچه ذخیره شدند (پارچه‌ها {before} ⇒ {CountReports(h.Db)}، قرض {cur?.DayShift?.Debt}/{cur?.NightShift?.Debt})",
+              cur?.DayShift is { Debt: 500m, End: 1100m } && cur.NightShift is { Debt: 300m, End: 1250m }
+              && CountReports(h.Db) == before + 1);
+        Check($"و پارچهٔ جدید آماده شد — هر دو کارت خالی («{parcha.Day.Name}» · «{parcha.Night.Name}»)",
+              parcha.Day.Name == "" && parcha.Night.Name == "" && parcha.Day.End == "" && parcha.Night.End == "");
         Check("و فوکوس همان‌جا ماند — Enter کادرِ بعدی را نگرفت", ReferenceEquals(win.FocusManager?.GetFocusedElement(), end));
+
+        //  فقط شب پر، فوکوس در کارتِ روزِ خالی ⇒ شب در پارچهٔ **تازه**
+        parcha.Night.Name = "رحیم";
+        parcha.Night.PumpNum = "2";
+        parcha.Night.Start = "2000";
+        parcha.Night.End = "2100";
+        parcha.Night.Debt = "40";
+        Settle(win);
+        end.Focus();
+        Settle(win);
+        var before2 = CountReports(h.Db);
+        var firstId = cur?.Id;
+        Tap(win, PhysicalKey.Enter);
+        WaitFor(win, () => parcha.Night.Name == "");
+        var cur2 = h.ParchaData.CurrentAsync(FuelType.Petrol).GetAwaiter().GetResult();
+        Check($"Enter از کارتِ روزِ خالی ⇒ فقط شب، در پارچهٔ تازه (پارچه‌ها {before2} ⇒ {CountReports(h.Db)}، شب «{cur2?.NightShift?.Name}»، روز {(cur2?.DayShift is null ? "خالی" : "پر")})",
+              CountReports(h.Db) == before2 + 1 && cur2 is not null && cur2.Id != firstId
+              && cur2.NightShift is { Name: "رحیم", Debt: 40m } && cur2.DayShift is null);
+
+        //  هیچ کارتی پر نیست ⇒ هیچ پارچه‌ای ساخته نمی‌شود
+        var before3 = CountReports(h.Db);
+        Tap(win, PhysicalKey.Enter);
+        Settle(win);
+        Check($"Enter با کارت‌های خالی ⇒ هیچ پارچه‌ای ساخته نشد ({before3} ⇒ {CountReports(h.Db)})",
+              CountReports(h.Db) == before3);
 
         //  Tab ⇒ تیل
         Tap(win, PhysicalKey.Tab);
@@ -140,27 +175,24 @@ internal static class Round17Probe
             Settle(win);
         }
 
-        //  Ctrl+Tab ⇒ کارتِ روز ⇄ شب — Ctrl نگه‌داشته، هر Tab یک بار، بی رها کردن
-        parcha.Day.Name = "علی";
-        parcha.Night.Name = "محمود";
-        Settle(win);
+        //  Ctrl+Tab ⇒ پطرول ⇄ دیزل — Ctrl نگه‌داشته، هر Tab یک بار (۱۴۰۵/۰۷/۱۸)
         var fuelBefore = parcha.IsDiesel;
         win.KeyPressQwerty(PhysicalKey.ControlLeft, RawInputModifiers.None);
-        var seq = new List<string>();
+        var seq = new List<bool>();
         for (var k = 0; k < 3; k++)
         {
             win.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.Control);
             Dispatcher.UIThread.RunJobs();
-            seq.Add(CardOf(win));
+            seq.Add(parcha.IsDiesel);
             win.KeyReleaseQwerty(PhysicalKey.Tab, RawInputModifiers.Control);
         }
         win.KeyReleaseQwerty(PhysicalKey.ControlLeft, RawInputModifiers.None);
         Settle(win);
-        Check($"Ctrl+Tab (Ctrl نگه‌داشته) ⇒ هر فشار کارتِ دیگر ({string.Join(" · ", seq)})",
-              seq.SequenceEqual(new[] { "روز", "شب", "روز" }) || seq.SequenceEqual(new[] { "شب", "روز", "شب" }));
-        Check($"Ctrl+Tab نامِ کارت‌ها را دست نزد («{parcha.Day.Name}» · «{parcha.Night.Name}»)",
-              parcha.Day.Name == "علی" && parcha.Night.Name == "محمود");
-        Check($"Ctrl+Tab تیل را عوض نکرد ({parcha.FuelLabel})", parcha.IsDiesel == fuelBefore);
+        Check($"Ctrl+Tab (Ctrl نگه‌داشته) ⇒ هر فشار تیلِ دیگر ({string.Join(" · ", seq.Select(d => d ? "دیزل" : "پطرول"))})",
+              seq.SequenceEqual(new[] { !fuelBefore, fuelBefore, !fuelBefore }));
+        if (parcha.IsDiesel != fuelBefore) { parcha.ToggleFuelCommand.Execute(null); Settle(win); }
+        parcha.Day.Name = "علی";
+        Settle(win);
         //  Ctrl+۱ دیگر پارچهٔ جدید نمی‌سازد
         Ctrl(win, PhysicalKey.Digit1);
         Settle(win);
@@ -376,6 +408,12 @@ internal static class Round17Probe
         if (p is null) return;
         win.MouseDown(p.Value, MouseButton.Left);
         win.MouseUp(p.Value, MouseButton.Left);
+        Settle(win);
+    }
+
+    private static void WaitFor(Window win, Func<bool> ok)
+    {
+        for (var i = 0; i < 200 && !ok(); i++) { Settle(win); Thread.Sleep(20); }
         Settle(win);
     }
 

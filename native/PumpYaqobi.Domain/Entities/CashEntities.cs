@@ -102,4 +102,9 @@ public class RetailRow : EntityBase, ILedgerRow
     /// <summary>بردگیِ دستی؛ فقط وقتی <see cref="ByMoney"/> روشن است معنا دارد.</summary>
     public decimal Bardagi { get; set; }
     public string? Note { get; set; }
+    /// <summary>
+    /// ردیفی که ورق با «/چکنه» ساخته — همان کلیدِ ‎&lt;ورق&gt;|&lt;شیفت&gt;|&lt;ردیف&gt;‎ِ
+    /// ردیف‌های قرض و مصرف. خالی یعنی ردیفِ دستیِ خودِ کاربر.
+    /// </summary>
+    public string? SrcKey { get; set; }
 }

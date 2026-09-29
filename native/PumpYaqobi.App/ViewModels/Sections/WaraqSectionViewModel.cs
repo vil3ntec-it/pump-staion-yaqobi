@@ -701,17 +701,18 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
     /// در نسخهٔ وب هم دقیقاً همین است: ‎sd = isNight ? w.night : w.day‎.
     /// </summary>
     [RelayCommand]
-    private Task PdfAsync()
+    private async Task PdfAsync()
     {
         var sd = Shift;
-        if (sd is null) return Task.CompletedTask;
+        if (sd is null) return;
 
         var input = new WaraqReportInput(
             Entity.Station ?? "", Entity.DateShamsi ?? "",
-            IsNight ? ShiftKind.Night : ShiftKind.Day, sd, DocDates.Line());
+            IsNight ? ShiftKind.Night : ShiftKind.Day, sd, DocDates.Line(),
+            await _section.NameCleanerAsync());
 
-        return Documents.ShowAsync(() => new WaraqReport(input, Calc),
-                                   (IsNight ? "ورق شب " : "ورق روز ") + (Entity.DateShamsi ?? ""));
+        await Documents.ShowAsync(() => new WaraqReport(input, Calc),
+                                  (IsNight ? "ورق شب " : "ورق روز ") + (Entity.DateShamsi ?? ""));
     }
 
     public async Task SavePumpAsync(WaraqPump p)
@@ -945,6 +946,17 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
             if (want is not null) row.IsMoney = want.Value == LedgerMode.Money;
         }
         catch { /* راحتی است، نه اصل */ }
+    }
+
+    /// <summary>
+    /// نامِ ردیف برای چاپ — بی «/هارون» (فقط راهنمای حساب است). همان
+    /// ‎PostingService.CleanWaraqName‎ که مصارف و چکنه هم از آن می‌گیرند.
+    /// </summary>
+    internal async Task<Func<string?, string>> NameCleanerAsync()
+    {
+        try { await EnsureUnitsAsync(); } catch { /* بی حساب‌ها هم خط‌کج می‌رود */ }
+        var people = _unitPeople ?? new List<Debtor>();
+        return n => PostingService.CleanWaraqName(people, n);
     }
 
     private async Task EnsureUnitsAsync()
@@ -1393,7 +1405,7 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
         if (sd is null) return;
 
         var input = new WaraqReportInput(full.Station ?? "", full.DateShamsi ?? "",
-                                         kind, sd, DocDates.Line());
+                                         kind, sd, DocDates.Line(), await NameCleanerAsync());
         await Documents.ShowAsync(() => new WaraqReport(input, _host.Waraq),
                                   (kind == ShiftKind.Night ? "ورق شب " : "ورق روز ")
                                   + (full.DateShamsi ?? ""));

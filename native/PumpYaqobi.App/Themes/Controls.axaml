@@ -784,6 +784,8 @@
   <Style Selector="DataGridColumnHeader TextBlock">
     <Setter Property="TextAlignment" Value="Center" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <!-- ⛔ سرستونی که با عدد تمام می‌شود («جمله 2») هم وسط بماند — ‎RtlTrim.CenterFix‎ -->
+    <Setter Property="c:RtlTrim.Center" Value="True" />
   </Style>
   <Style Selector="DataGridCell">
     <!-- ══ چرا افقی صفر است ═══════════════════════════════════════════════════

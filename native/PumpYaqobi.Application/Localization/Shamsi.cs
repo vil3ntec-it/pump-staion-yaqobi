@@ -26,6 +26,28 @@ public static class Shamsi
 
     public static string ThisMonth() => MonthOf(AppClock.Now);
 
+    /// <summary>
+    /// تاریخِ ردیفِ تازه در ماهی که کاربر جلوی چشم دارد (۱۴۰۵/۰۷/۱۸): ماهِ جاری ⇒
+    /// امروز؛ ماهِ دیگر ⇒ همان روزِ امروز در آن ماه (روزِ ۳۱ در ماهِ ۳۰روزه ⇒ ۳۰).
+    /// کلیدِ خراب ⇒ امروز. گزارشِ صاحب ریپو: «توی ماه‌های قبل نمی‌شه جدول اضافه
+    /// کرد… می‌ره همون ماهی که فعلاً داخلش بودم» — ردیف با تاریخِ امروز ساخته
+    /// می‌شد و به ماهِ جاری می‌پرید.
+    /// </summary>
+    public static string DateInMonth(string? monthKey)
+    {
+        var today = Today();
+        var m = Regex.Match(ToEnDigits(monthKey ?? ""), @"^(\d{4})/(\d{1,2})$");
+        if (!m.Success) return today;
+        var y = int.Parse(m.Groups[1].Value);
+        var mo = int.Parse(m.Groups[2].Value);
+        if (y < 1 || mo is < 1 or > 12) return today;
+        if ($"{y:0000}/{mo:00}" == ThisMonth()) return today;
+        int days;
+        try { days = Cal.GetDaysInMonth(y, mo); } catch { return today; }
+        var d = Math.Min(Cal.GetDayOfMonth(AppClock.Now), days);
+        return $"{y:0000}/{mo:00}/{d:00}";
+    }
+
     /// <summary>ارقامِ فارسی/عربی را به لاتین برمی‌گرداند تا تجزیه شکست نخورد.</summary>
     public static string ToEnDigits(string? s)
     {

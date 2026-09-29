@@ -364,8 +364,8 @@ public class ReportSuiteTests
         var src = File.ReadAllText(Path.Combine(
             d!.FullName, "PumpYaqobi.Reporting", "Pdf", "WaraqReport.cs"));
 
-        Assert.Contains("private static string NameWithFuel(WaraqTransaction x)", src);
-        Assert.Contains("Td(NameWithFuel(x));", src);
+        Assert.Contains("private string NameWithFuel(WaraqTransaction x)", src);
+        Assert.Contains("DocStyle.TdOneLine(t.Cell(), even, NameWithFuel(x));", src);
 
         // ردیفِ بی‌لیتر نباید نوعِ بی‌معنا بگیرد
         Assert.Contains("if (x.Liters == 0m) return name;", src);

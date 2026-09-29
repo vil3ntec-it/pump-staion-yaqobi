@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Security;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
@@ -209,6 +210,78 @@ public class WaraqPostingDbTests : IDisposable
         await using var db = dbf.Create();
         var main = await db.DebtAccounts.AsNoTracking().SingleAsync(a => a.MainOfDebtorId == p.Id);
         Assert.Equal(main.Id, row.FuelAccountId);
+    }
+
+    /// <summary>
+    /// ══ «/چکنه» ⇒ دفترِ چکنه (۱۴۰۵/۰۷/۱۸) ══════════════════════════════════
+    /// خواستهٔ صاحب ریپو: «وقتی توی ورق /چکنه می‌نویسم اون حساب بیاد تو چکنه، و
+    /// اگه اسلش نزدم ‹چکنه› تو بخشِ چکنه نره.» ویرایش و خالی کردنِ همان ردیفِ
+    /// ورق همان ردیفِ چکنه را عوض یا برمی‌دارد — دو بار نوشته نمی‌شود.
+    /// </summary>
+    [Fact]
+    public async Task SlashChakana_BeDaftareChakanaMiravad_VaVirayeshMishavad()
+    {
+        var (post, data, dbf) = Host();
+        await PersonAsync(dbf, "علی");                // ⛔ «علی» قرض‌دار است، ولی «/چکنه» مالِ چکنه است
+        var w = await SheetAsync(data, dbf, "علی /چکنه", 10m);
+        var report = await post.SyncAsync(w.Id);
+
+        Assert.Equal(1, report.Posted);
+        Assert.Empty(await RowsAsync(dbf));           // هیچ ردیفی در حسابِ قرض‌دار نیست
+        await using (var db = dbf.Create())
+        {
+            var r = Assert.Single(await db.RetailRows.AsNoTracking().ToListAsync());
+            Assert.Equal("علی", r.Name);
+            Assert.DoesNotContain("چکنه", r.Name);
+            Assert.Equal(500m, new RetailService().Bardagi(r), 2);
+            Assert.Equal(10m, r.Liters);
+            Assert.Equal(Shamsi.MonthKey("1405/06/18"), r.MonthKey);
+        }
+
+        //  ویرایشِ همان ردیف ⇒ همان ردیفِ چکنه، نه ردیفِ دوم
+        await SheetAsync(data, dbf, "علی /چکنه", 20m);
+        await post.SyncAsync(w.Id);
+        await using (var db = dbf.Create())
+            Assert.Equal(1000m, new RetailService().Bardagi(Assert.Single(await db.RetailRows.AsNoTracking().ToListAsync())), 2);
+
+        //  «/» برداشته شد ⇒ از چکنه می‌رود و به حسابِ قرض‌دار می‌رسد
+        await SheetAsync(data, dbf, "علی", 20m);
+        await post.SyncAsync(w.Id);
+        await using (var db = dbf.Create())
+            Assert.Empty(await db.RetailRows.AsNoTracking().ToListAsync());
+        Assert.Single(await RowsAsync(dbf));
+    }
+
+    /// <summary>بی خط‌کج واژهٔ «چکنه» هیچ ردیفی در دفترِ چکنه نمی‌سازد.</summary>
+    [Fact]
+    public async Task BiSlash_Chakana_BeChakanaNemiravad()
+    {
+        var (post, data, dbf) = Host();
+        var w = await SheetAsync(data, dbf, "علی چکنه", 10m);
+        await post.SyncAsync(w.Id);
+        await using var db = dbf.Create();
+        Assert.Empty(await db.RetailRows.AsNoTracking().ToListAsync());
+    }
+
+    /// <summary>⛔ «/هارون» در عنوانِ مصرف هم دیده نمی‌شود — فقط راهنمای حساب است.</summary>
+    [Fact]
+    public async Task Slash_DarMasraf_NameHesabNemiayad()
+    {
+        var (post, data, dbf) = Host();
+        await PersonAsync(dbf, "هارون صفی");
+        var w = await SheetAsync(data, dbf, "/هارون صفی بابت نان و غیره", 10m);
+        await using (var db = dbf.Create())
+        {
+            var t = await db.WaraqTransactions.FirstAsync(x => x.Name == "/هارون صفی بابت نان و غیره");
+            t.Type = WaraqTxnType.Expense;
+            await db.SaveChangesAsync();
+        }
+        await post.SyncAsync(w.Id);
+        await using (var db = dbf.Create())
+        {
+            var e = Assert.Single(await db.Expenses.AsNoTracking().Where(x => x.SrcKey != null).ToListAsync());
+            Assert.Equal("بابت نان و غیره", e.Title);
+        }
     }
 
     /// <summary>بی خط‌کج: همان نام با همهٔ جزئیاتش در حساب می‌نشیند.</summary>

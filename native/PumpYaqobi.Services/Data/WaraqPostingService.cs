@@ -24,6 +24,9 @@ public sealed class WaraqPostOutcome
     public List<DebtRow> PlacedRows { get; } = new();
     public List<Expense> RemovedExpenses { get; } = new();
     public List<Expense> AddedExpenses { get; } = new();
+    /// <summary>ردیف‌های چکنه‌ای که «/چکنه» ساخت یا برداشت.</summary>
+    public List<RetailRow> AddedRetail { get; } = new();
+    public List<RetailRow> RemovedRetail { get; } = new();
 
     public WaraqPostReport Report => new(Posted, Expenses, Unmatched);
 }
@@ -209,7 +212,25 @@ public sealed class WaraqPostingService
                 .OrderBy(e => e.DateKey).ThenBy(e => e.Id)
                 .ToListAsync(ct));
 
-        var outcome = Apply(w, people, expenses, _calc, await ArchivedKeysAsync(db, prefix, ct));
+        //  «/چکنه» — ردیف‌های چکنهٔ همین ورق، و ردیف‌های خالیِ چکنهٔ همان ماه
+        //  (همان قاعدهٔ «اول کادرِ خالی، بعد ردیفِ تازه»)
+        var retail = await db.RetailRows
+            .Where(r => r.SrcKey != null && r.SrcKey.StartsWith(prefix))
+            .ToListAsync(ct);
+        if (month.Length > 0)
+            retail.AddRange(await db.RetailRows
+                .Where(r => r.MonthKey == month
+                         && (r.SrcKey == null || r.SrcKey == "")
+                         && (r.Name == null || r.Name == "")
+                         && r.Liters == 0m && r.Bardagi == 0m && r.Rasid == 0m
+                         && (r.Note == null || r.Note == ""))
+                .OrderBy(r => r.DateKey).ThenBy(r => r.Id)
+                .ToListAsync(ct));
+
+        var outcome = Apply(w, people, expenses, _calc, await ArchivedKeysAsync(db, prefix, ct), retail);
+
+        db.RetailRows.RemoveRange(outcome.RemovedRetail.Where(r => r.Id != 0));
+        db.RetailRows.AddRange(outcome.AddedRetail);
 
         db.Expenses.RemoveRange(outcome.RemovedExpenses.Where(e => e.Id != 0));
         db.Expenses.AddRange(outcome.AddedExpenses);
@@ -270,6 +291,7 @@ public sealed class WaraqPostingService
                 if (t.Type == WaraqTxnType.Expense) continue;
                 var name = (t.Name ?? "").Trim();
                 if (name.Length == 0) continue;
+                if (PostingService.RetailName(name) is not null) continue;   // «/چکنه»
 
                 var m = PostingService.MatchWaraqName(people, t.Name);
                 if (m.Found is not { } found) continue;
@@ -290,9 +312,11 @@ public sealed class WaraqPostingService
     /// </summary>
     public static WaraqPostOutcome Apply(WaraqEntry w, List<Debtor> people,
                                          List<Expense> expenses, WaraqService calc,
-                                         IReadOnlySet<string>? archived = null)
+                                         IReadOnlySet<string>? archived = null,
+                                         List<RetailRow>? retail = null)
     {
         var outcome = new WaraqPostOutcome();
+        retail ??= new List<RetailRow>();
         var date = w.DateShamsi ?? "";
 
         foreach (var kind in new[] { ShiftKind.Day, ShiftKind.Night })
@@ -307,9 +331,9 @@ public sealed class WaraqPostingService
 
             var txns = sd.Transactions.OrderBy(t => t.SortIndex).ThenBy(t => t.Id).ToList();
             for (var i = 0; i < txns.Count; i++)
-                One(w, kind, sd, txns[i], i, people, expenses, calc, date, outcome, archived);
+                One(w, kind, sd, txns[i], i, people, expenses, calc, date, outcome, archived, retail);
 
-            Sweep(w, kind, txns.Count, people, expenses, outcome);
+            Sweep(w, kind, txns.Count, people, expenses, outcome, retail);
         }
         return outcome;
     }
@@ -317,8 +341,10 @@ public sealed class WaraqPostingService
     private static void One(WaraqEntry w, ShiftKind kind, WaraqShift sd, WaraqTransaction t,
                             int index, List<Debtor> people, List<Expense> expenses,
                             WaraqService calc, string date, WaraqPostOutcome outcome,
-                            IReadOnlySet<string>? archived = null)
+                            IReadOnlySet<string>? archived = null,
+                            List<RetailRow>? retail = null)
     {
+        retail ??= new List<RetailRow>();
         var srcKey = SrcKeyOf(w, kind, index);
 
         // ⛔ ردیفی که با «جدول جدید» به آرشیوِ حساب رفته دوباره ساخته نمی‌شود
@@ -343,18 +369,34 @@ public sealed class WaraqPostingService
         {
             DropExpense(expenses, srcKey, outcome);
             DropRows(people, srcKey, outcome);
+            DropRetail(retail, srcKey, outcome);
             return;
         }
 
         if (t.Type == WaraqTxnType.Expense)
         {
             DropRows(people, srcKey, outcome);                 // اگر قبلاً قرض بوده
-            UpsertExpense(expenses, srcKey, date, name, amount, outcome);
+            DropRetail(retail, srcKey, outcome);
+            //  ⛔ «/هارون» فقط راهنمای حساب است — در عنوانِ مصرف هم دیده نمی‌شود
+            UpsertExpense(expenses, srcKey, date, PostingService.CleanWaraqName(people, name),
+                          amount, outcome);
             outcome.Expenses++;
             return;
         }
 
         DropExpense(expenses, srcKey, outcome);                // اگر قبلاً مصرف بوده
+
+        //  ══ «/چکنه» ⇒ دفترِ چکنه (۱۴۰۵/۰۷/۱۸) — نه حسابِ قرض‌دار ══════════
+        if (PostingService.RetailName(name) is { } retailName)
+        {
+            DropRows(people, srcKey, outcome);
+            UpsertRetail(retail, srcKey, date, retailName,
+                         PostingService.FuelTypeFromText(t.Name, t.Fuel),
+                         liters, amount, t.Unit == LedgerMode.Money, outcome);
+            outcome.Posted++;
+            return;
+        }
+        DropRetail(retail, srcKey, outcome);                   // اگر قبلاً چکنه بوده
 
         //  ⛔ «/هارون»: حساب از پسِ خط‌کج، نامِ ردیف بی نامِ حساب (۱۴۰۵/۰۷/۱۷) —
         //  تنها جای این تصمیم ‎PostingService.MatchWaraqName‎ است.
@@ -426,7 +468,7 @@ public sealed class WaraqPostingService
     /// </summary>
     private static void Sweep(WaraqEntry w, ShiftKind kind, int count,
                               List<Debtor> people, List<Expense> expenses,
-                              WaraqPostOutcome outcome)
+                              WaraqPostOutcome outcome, List<RetailRow>? retail = null)
     {
         var prefix = PrefixOf(w, kind);
         bool Orphan(string? key) =>
@@ -443,6 +485,10 @@ public sealed class WaraqPostingService
 
         foreach (var e in expenses.Where(e => Orphan(e.SrcKey)).ToList())
         { outcome.RemovedExpenses.Add(e); expenses.Remove(e); }
+
+        if (retail is not null)
+            foreach (var r in retail.Where(r => Orphan(r.SrcKey)).ToList())
+                RetireRetail(retail, r, outcome);
     }
 
     private static void DropRows(IEnumerable<Debtor> people, string srcKey, WaraqPostOutcome outcome)
@@ -561,6 +607,76 @@ public sealed class WaraqPostingService
         ex.Title = title;
         ex.Amount = amount;
         ex.Note = "";
+    }
+
+    private static void DropRetail(List<RetailRow> retail, string srcKey, WaraqPostOutcome outcome)
+    {
+        foreach (var r in retail.Where(r => r.SrcKey == srcKey).ToList())
+            RetireRetail(retail, r, outcome);
+    }
+
+    /// <summary>
+    /// ردیفِ چکنه‌ای که دیگر مالِ این ورق نیست. ⛔ اگر کاربر رویش رسید نوشته،
+    /// رسید نمی‌رود — همان قاعدهٔ ‎Retire‎ِ ردیفِ قرض‌دار.
+    /// </summary>
+    private static void RetireRetail(List<RetailRow> retail, RetailRow r, WaraqPostOutcome outcome)
+    {
+        if (r.Rasid != 0m)
+        {
+            r.SrcKey = null;
+            r.Liters = 0m;
+            r.PricePerLiter = 0m;
+            r.Bardagi = 0m;
+            r.ByMoney = true;
+            return;
+        }
+        outcome.RemovedRetail.Add(r);
+        retail.Remove(r);
+    }
+
+    internal static bool IsBlankRetail(RetailRow r) =>
+        string.IsNullOrEmpty(r.SrcKey) && string.IsNullOrWhiteSpace(r.Name)
+        && r.Liters == 0m && r.Bardagi == 0m && r.Rasid == 0m
+        && string.IsNullOrWhiteSpace(r.Note);
+
+    private static void UpsertRetail(List<RetailRow> retail, string srcKey, string date, string name,
+                                     FuelType fuel, decimal liters, decimal amount, bool money,
+                                     WaraqPostOutcome outcome)
+    {
+        var r = retail.FirstOrDefault(x => x.SrcKey == srcKey);
+        if (r is null)
+        {
+            r = retail.Where(IsBlankRetail).OrderBy(x => x.DateKey).ThenBy(x => x.Id).FirstOrDefault();
+            if (r is null)
+            {
+                r = new RetailRow();
+                retail.Add(r);
+                outcome.AddedRetail.Add(r);
+            }
+            r.SrcKey = srcKey;
+        }
+        r.DateShamsi = date;
+        r.DateKey = Shamsi.Key(date);
+        r.MonthKey = Shamsi.MonthKey(date);
+        r.Name = name;
+        r.Fuel = fuel;
+        r.Note = "ورق";
+        //  همان قاعدهٔ ردیفِ قرض‌دار: واحدِ پول یا بی‌لیتر ⇒ بردگی همان مبلغ؛
+        //  وگرنه لیتر × فیِ شش‌رقمی، تا مبلغِ ورق عوض نشود.
+        if (money || liters <= 0m)
+        {
+            r.ByMoney = true;
+            r.Liters = money ? 0m : liters;
+            r.PricePerLiter = 0m;
+            r.Bardagi = amount;
+        }
+        else
+        {
+            r.ByMoney = false;
+            r.Liters = liters;
+            r.PricePerLiter = Math.Round(amount / liters, 6, MidpointRounding.AwayFromZero);
+            r.Bardagi = amount;
+        }
     }
 
     private static decimal Round0(decimal v) => Math.Round(v, 0, MidpointRounding.AwayFromZero);

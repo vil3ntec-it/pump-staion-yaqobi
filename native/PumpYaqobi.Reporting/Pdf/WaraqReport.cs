@@ -11,7 +11,8 @@ public sealed record WaraqReportInput(
     string DateShamsi,
     ShiftKind Kind,
     WaraqShift Shift,
-    string Dates);
+    string Dates,
+    Func<string?, string>? CleanName = null);
 
 /// <summary>
 /// ══ ورقِ روزانه ════════════════════════════════════════════════════════════
@@ -243,7 +244,7 @@ public sealed class WaraqReport : ISetupDocument
             void Td(string s, string? cl = null) => DocStyle.TdText(t.Cell(), even, s, cl);
 
             Td(PersianText.Num(n), DocStyle.Index);
-            Td(NameWithFuel(x));
+            DocStyle.TdOneLine(t.Cell(), even, NameWithFuel(x));   // ⛔ یک خط — جدول بلند نشود
             Td(Dash0(x.Liters), DocStyle.Fuel);
             Td(Dash0(_calc.TxnAmount(_in.Shift, x)), debt ? DocStyle.Danger : Purple);
             Td(debt ? "قرض" : "مصرف", DocStyle.Sub);
@@ -264,9 +265,10 @@ public sealed class WaraqReport : ISetupDocument
     /// ⚠️ فقط وقتی که ردیف واقعاً تیل داشته باشد: ردیفِ مصرفِ نقدیِ بی‌لیتر،
     /// «پطرول»ِ بی‌معنا نگیرد.
     /// </summary>
-    private static string NameWithFuel(WaraqTransaction x)
+    private string NameWithFuel(WaraqTransaction x)
     {
-        var name = DocStyle.Dash(x.Name);
+        //  ⛔ «/هارون» فقط راهنمای حساب است — در ورقِ چاپی دیده نمی‌شود (۱۴۰۵/۰۷/۱۸)
+        var name = DocStyle.Dash(_in.CleanName is { } clean ? clean(x.Name) : x.Name);
         if (x.Liters == 0m) return name;
 
         var fuel = x.Fuel == FuelType.Diesel ? "دیزل" : "پطرول";
