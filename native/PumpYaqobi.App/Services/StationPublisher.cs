@@ -772,6 +772,10 @@ public sealed class StationPublisher : IAsyncDisposable
                 try { await RateTickAsync(ct); }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
                 catch { /* بی‌اینترنت خطا نیست */ }
+                //  ⚙️ «تنظیماتِ زنده» — فقط وقتی نسخه روی همان پاسخِ بالا عوض شده باشد
+                try { await LiveConfigTickAsync(ct); }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
+                catch { /* بی‌اینترنت خطا نیست */ }
             }
 
             //  ۴) ساعت — هر پاسخِ سرورِ حساب خودش ساعت می‌آورد؛ فقط وقتی شش
@@ -873,6 +877,19 @@ public sealed class StationPublisher : IAsyncDisposable
         await cloud.RateAckAsync(cmd.Id, applied, note, ct);
         if (applied)
             _host.Toast("🏷️ نرخِ اتحادیه از تلگرام نشست: " + CloudLink.RateLine(cmd), ToastKind.Ok);
+    }
+
+    /// <summary>
+    /// «تنظیماتِ زنده» (<see cref="LiveConfig"/>): تا سرور نسخهٔ تازه‌ای نگفته، هیچ
+    /// درخواستی نمی‌رود. ⛔ امروز هیچ بخشی از برنامه از آن نمی‌خواند — فقط در است.
+    /// </summary>
+    private static async Task LiveConfigTickAsync(CancellationToken ct)
+    {
+        if (!LiveConfig.NeedsFetch) return;
+        var file = AppSettings.Load();
+        if (string.IsNullOrWhiteSpace(file.CloudDeviceToken)) return;
+        var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
+        await cloud.LiveConfigTickAsync(ct);
     }
 
     private static async Task CloudKeepAsync(CancellationToken ct, bool forceBind = false)

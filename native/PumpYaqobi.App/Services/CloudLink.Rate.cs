@@ -26,6 +26,8 @@ public sealed partial class CloudLink
         if (!Activated) return null;
         var (ok, json, _, _) = await DevGetAsync("/api/pump/device/rate", ct);
         if (!ok || json.ValueKind != JsonValueKind.Object) return null;
+        //  نسخهٔ «تنظیماتِ زنده» روی همین پاسخ می‌آید — درخواستِ جدایی نیست
+        LiveConfig.NoteServerVersion(json);
         return ParseRateCommand(json);
     }
 
