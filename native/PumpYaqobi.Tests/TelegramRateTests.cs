@@ -70,6 +70,39 @@ public class TelegramRateTests : IDisposable
     }
 
     [Fact]
+    public async Task Darja_PorseshBaz_Mimanad_VaSarvareKohne_HamanDaghighe()
+    {
+        var paths = new List<string>();
+        var body = """{"ok":true,"cmd":null,"waitMax":15}""";
+        CloudLink.TestTransport = (req, _) =>
+        {
+            paths.Add(req.RequestUri!.PathAndQuery);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            { Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json") });
+        };
+        var cloud = new CloudLink(new AppSettings { CloudDeviceToken = "pd_test_device" }, () => Task.CompletedTask);
+
+        var poll = await cloud.RatePollAsync(StationPublisher.RateWait);
+        Assert.Equal("/api/pump/device/rate?wait=" + StationPublisher.RateWait, paths[^1]);
+        Assert.True(poll.Ok);
+        Assert.Equal(15, poll.WaitMax);
+        //  ⛔ مهلتِ پرسشِ باز کمتر از مهلتِ HttpClient (۲۰ث) و سقفِ سرور
+        Assert.InRange(StationPublisher.RateWait, 1, 15);
+        Assert.Equal(StationPublisher.RateGap, StationPublisher.RateNextDelay(poll));
+
+        //  سرورِ حسابِ کهنه: waitMax ندارد ⇒ همان یک دقیقه، نه حلقهٔ داغ
+        body = """{"ok":true,"cmd":null}""";
+        var old = await cloud.RatePollAsync(StationPublisher.RateWait);
+        Assert.Equal(0, old.WaitMax);
+        Assert.Equal(StationPublisher.CloudTick, StationPublisher.RateNextDelay(old));
+        //  نرسیدیم ⇒ ده ثانیه
+        Assert.Equal(StationPublisher.RateRetry, StationPublisher.RateNextDelay(RatePoll.None));
+        //  و RateCommandAsyncِ قدیمی بی wait
+        await cloud.RateCommandAsync();
+        Assert.Equal("/api/pump/device/rate", paths[^1]);
+    }
+
+    [Fact]
     public async Task BiDastgah_HichDarkhasti_Nemiravad()
     {
         var n = 0;
@@ -110,9 +143,9 @@ public class TelegramRateTests : IDisposable
     {
         string R(params string[] p) => File.ReadAllText(Path.Combine(new[] { Root() }.Concat(p).ToArray()));
         var pub = R("PumpYaqobi.App", "Services", "StationPublisher.cs");
-        Assert.Contains("await RateTickAsync(ct);", pub);
-        Assert.True(pub.IndexOf("await CloudKeepAsync(ct);", StringComparison.Ordinal)
-                    < pub.IndexOf("await RateTickAsync(ct);", StringComparison.Ordinal));
+        //  «درجا»: حلقهٔ خودش، با همان توقفِ حلقهٔ اصلی
+        Assert.Contains("Task.Run(() => RateWatchLoopAsync(cts.Token), cts.Token)", pub);
+        Assert.Contains("await RateTickAsync(RateWait, ct);", pub);
         Assert.Contains("UnionRateApply.ApplyAsync(_host, cmd.Petrol, cmd.Diesel)", pub);
         Assert.Contains("RateAckAsync(cmd.Id, applied, note, ct)", pub);
         var profit = R("PumpYaqobi.App", "ViewModels", "Sections", "ProfitSectionViewModel.cs");

@@ -8,6 +8,15 @@ namespace PumpYaqobi.App.Services;
 public sealed record RateCommand(string Id, decimal? Petrol, decimal? Diesel, string By);
 
 /// <summary>
+/// یک پرسشِ <c>/rate</c>: رسید؟ فرمان؟ و <c>WaitMax</c> — سقفِ «درجا»ی سرور؛
+/// صفر یعنی سرورِ حسابِ کهنه که پرسشِ باز را نمی‌شناسد.
+/// </summary>
+public sealed record RatePoll(bool Ok, RateCommand? Cmd, int WaitMax)
+{
+    public static readonly RatePoll None = new(false, null, 0);
+}
+
+/// <summary>
 /// ══ نرخِ اتحادیه از تلگرام ═══════════════════════════════════════════════
 ///
 /// خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۶): «نرخِ اتحادیه رو توی تلگرام بنویسم —
@@ -21,14 +30,25 @@ public sealed record RateCommand(string Id, decimal? Petrol, decimal? Diesel, st
 public sealed partial class CloudLink
 {
     /// <summary>فرمانِ در صفِ همین پمپ — یا ‎null‎. هیچ‌وقت استثنا بیرون نمی‌دهد.</summary>
-    public async Task<RateCommand?> RateCommandAsync(CancellationToken ct = default)
+    public async Task<RateCommand?> RateCommandAsync(CancellationToken ct = default) =>
+        (await RatePollAsync(0, ct)).Cmd;
+
+    /// <summary>
+    /// «درجا»: با <paramref name="waitSeconds"/> بزرگ‌تر از صفر پرسش باز می‌ماند و
+    /// سرور همان لحظه‌ای که بات فرمان ساخت جواب می‌دهد. ⚠️ باید کمتر از مهلتِ
+    /// ۲۰ ثانیه‌ایِ <c>Http</c> بماند. هیچ‌وقت استثنا بیرون نمی‌دهد.
+    /// </summary>
+    public async Task<RatePoll> RatePollAsync(int waitSeconds, CancellationToken ct = default)
     {
-        if (!Activated) return null;
-        var (ok, json, _, _) = await DevGetAsync("/api/pump/device/rate", ct);
-        if (!ok || json.ValueKind != JsonValueKind.Object) return null;
+        if (!Activated) return RatePoll.None;
+        var path = "/api/pump/device/rate" + (waitSeconds > 0 ? "?wait=" + waitSeconds : "");
+        var (ok, json, _, _) = await DevGetAsync(path, ct);
+        if (!ok || json.ValueKind != JsonValueKind.Object) return RatePoll.None;
         //  نسخهٔ «تنظیماتِ زنده» روی همین پاسخ می‌آید — درخواستِ جدایی نیست
         LiveConfig.NoteServerVersion(json);
-        return ParseRateCommand(json);
+        var max = json.TryGetProperty("waitMax", out var w) && w.ValueKind == JsonValueKind.Number
+                  && w.TryGetInt32(out var n) ? Math.Max(0, n) : 0;
+        return new RatePoll(true, ParseRateCommand(json), max);
     }
 
     /// <summary>‎{cmd: {id, petrol, diesel, by}}‎ ⇒ فرمان. خالص — آزمون دارد.</summary>

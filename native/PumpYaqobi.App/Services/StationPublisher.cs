@@ -710,6 +710,7 @@ public sealed class StationPublisher : IAsyncDisposable
         var cts = new CancellationTokenSource();
         _loop = cts;
         _ = Task.Run(() => LoopAsync(cts.Token), cts.Token);
+        _ = Task.Run(() => RateWatchLoopAsync(cts.Token), cts.Token);
     }
 
     /// <summary>پیش از اولین انتشار — تا ورود و اولین صفحه بی رقیب بمانند.</summary>
@@ -768,10 +769,7 @@ public sealed class StationPublisher : IAsyncDisposable
                 try { await CloudKeepAsync(ct); }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
                 catch { /* بی‌اینترنت خطا نیست */ }
-                //  🏷️ نرخِ اتحادیه‌ای که صاحبِ پمپ در تلگرام نوشت — همین پمپ، همین حالا
-                try { await RateTickAsync(ct); }
-                catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
-                catch { /* بی‌اینترنت خطا نیست */ }
+                //  🏷️ نرخِ اتحادیه از تلگرام حلقهٔ «درجا»ی خودش را دارد (`RateWatchLoopAsync`)
                 //  ⚙️ «تنظیماتِ زنده» — فقط وقتی نسخه روی همان پاسخِ بالا عوض شده باشد
                 try { await LiveConfigTickAsync(ct); }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
@@ -839,7 +837,7 @@ public sealed class StationPublisher : IAsyncDisposable
     /// <summary>
     /// ══ نرخِ اتحادیه از تلگرام ⇒ همین برنامه ═════════════════════════════
     ///
-    /// هر دقیقه (همان تیکِ ابر) با توکنِ دستگاهِ همین پمپ می‌پرسد؛ فرمانی بود ⇒
+    /// با پرسشِ بازِ «درجا» (‎RateWatchLoopAsync‎) و توکنِ دستگاهِ همین پمپ می‌پرسد؛ فرمانی بود ⇒
     /// همان راهی که کادرِ «نرخ اتحادیه»ی مفاد/ضرر می‌نشاند (تنظیمات +
     /// «📈 تاریخچهٔ نرخ») و بعد «نشست» به سرور، تا بات به صاحبِ پمپ بگوید.
     /// <para>
@@ -852,13 +850,21 @@ public sealed class StationPublisher : IAsyncDisposable
     /// پیامِ مشتری‌های کیو‌آر به «چت‌های میرزا»ی تلگرام نمی‌رود.
     /// </para>
     /// </summary>
-    private async Task RateTickAsync(CancellationToken ct)
+    private async Task<RatePoll> RateTickAsync(int wait, CancellationToken ct)
     {
         var file = AppSettings.Load();
-        if (string.IsNullOrWhiteSpace(file.CloudDeviceToken)) return;
+        if (string.IsNullOrWhiteSpace(file.CloudDeviceToken)) return RatePoll.None;
         var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
-        var cmd = await cloud.RateCommandAsync(ct);
-        if (cmd is null) return;
+        var poll = await cloud.RatePollAsync(wait, ct);
+        var cmd = poll.Cmd;
+        if (cmd is null) return poll;
+        //  ⛔ همان فرمان دوباره (یعنی «نشست» به سرور نرسید) ⇒ فقط دوباره «نشست» —
+        //  نه نشاندنِ دوباره و ردیفِ تکراری در «📈 تاریخچهٔ نرخ».
+        if (string.Equals(cmd.Id, _rateApplied, StringComparison.Ordinal))
+        {
+            await cloud.RateAckAsync(cmd.Id, true, "", ct);
+            return poll;
+        }
 
         var note = "";
         var applied = false;
@@ -866,6 +872,7 @@ public sealed class StationPublisher : IAsyncDisposable
         {
             await UnionRateApply.ApplyAsync(_host, cmd.Petrol, cmd.Diesel);
             applied = true;
+            _rateApplied = cmd.Id;
         }
         catch (Exception e)
         {
@@ -877,7 +884,56 @@ public sealed class StationPublisher : IAsyncDisposable
         await cloud.RateAckAsync(cmd.Id, applied, note, ct);
         if (applied)
             _host.Toast("🏷️ نرخِ اتحادیه از تلگرام نشست: " + CloudLink.RateLine(cmd), ToastKind.Ok);
+        return poll;
     }
+
+    /// <summary>آخرین فرمانی که همین‌جا نشست — تا تکرارش دوباره نشانده نشود.</summary>
+    private string _rateApplied = "";
+
+    /// <summary>
+    /// «درجا»: چند ثانیه پرسش باز می‌ماند. ⚠️ کمتر از مهلتِ ۲۰ ثانیه‌ایِ
+    /// <c>CloudLink.Http</c> و کمتر از سقفِ سرور (۱۵).
+    /// </summary>
+    public const int RateWait = 12;
+
+    /// <summary>بینِ دو پرسشِ باز — فقط تا حلقه داغ نشود.</summary>
+    public static readonly TimeSpan RateGap = TimeSpan.FromSeconds(1);
+
+    /// <summary>بی‌اینترنت یا هنوز بی دستگاه — دوباره پس از این.</summary>
+    public static readonly TimeSpan RateRetry = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    /// ══ نرخِ اتحادیه «درجا» ══════════════════════════════════════════════
+    ///
+    /// صاحب ریپو (۱۴۰۵/۰۷/۱۷): «روی سرور فشار بیاد برام مهم نیست — باید درجا
+    /// نرخِ اتحادیه عوض بشه.» تا این نسخه نرخ با تیکِ شصت‌ثانیه‌ایِ ابر می‌آمد؛
+    /// حالا پرسشِ <c>/rate?wait=</c> باز می‌ماند و سرور همان لحظه‌ای که بات فرمان
+    /// ساخت جواب می‌دهد، و بلافاصله پرسشِ بعدی باز می‌شود.
+    /// <para>
+    /// ⚠️ سرورِ حسابِ کهنه (بی <c>waitMax</c>) همان لحظه جواب می‌دهد ⇒ همان
+    /// فاصلهٔ شصت‌ثانیه‌ایِ قبلی، نه حلقهٔ داغ.
+    /// </para>
+    /// </summary>
+    private async Task RateWatchLoopAsync(CancellationToken ct)
+    {
+        try { await Task.Delay(FirstDelay, ct); } catch { return; }
+        while (!ct.IsCancellationRequested)
+        {
+            TimeSpan next;
+            try
+            {
+                var poll = await RateTickAsync(RateWait, ct);
+                next = RateNextDelay(poll);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
+            catch { next = RateRetry; }
+            try { await Task.Delay(next, ct); } catch { return; }
+        }
+    }
+
+    /// <summary>فاصله تا پرسشِ بعدی. خالص — آزمون دارد.</summary>
+    public static TimeSpan RateNextDelay(RatePoll poll) =>
+        !poll.Ok ? RateRetry : poll.WaitMax > 0 ? RateGap : CloudTick;
 
     /// <summary>
     /// «تنظیماتِ زنده» (<see cref="LiveConfig"/>): تا سرور نسخهٔ تازه‌ای نگفته، هیچ
