@@ -68,6 +68,113 @@ public sealed class ShiftWaraqSyncService
         return new[] { SrcKeyOf(FuelType.Petrol, id, kind), SrcKeyOf(FuelType.Diesel, id, kind) };
     }
 
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ ویرایشِ دوطرفه: ورق ⇄ پارچه (۱۴۰۵/۰۷/۱۷) ══════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  گزارشِ صاحب ریپو: «قرض رو اشتباه نوشتم و خاستم تغییر بدم؛ از ورق تغییر
+    //  می‌خوره اما توی گزارشِ پارچه‌ها و تاریخچه‌ها تغییر نمی‌کنه… و ویرایشِ
+    //  تاریخچه هم بزار.»
+    //
+    //  پیش از این راه یک‌طرفه بود: پارچه ⇐ ورق. پایهٔ ورقی که از پارچه آمده
+    //  (‎SrcKey‎ی «p-12-day») حالا شیفتِ همان پارچه را هم به‌روز می‌کند، و
+    //  ویرایشِ همان شیفت از تاریخچه پایهٔ ورقش را. تاریخچه‌ها هر بار از خودِ
+    //  دفتر ساخته می‌شوند، پس همان لحظه همان عدد را نشان می‌دهند.
+    //
+    //  ⛔ **هیچ فرمولِ تازه‌ای نیست**: فروش، پول، فایده و «رسیده» از همان
+    //  ‎ParchaService.CalcShift‎ی ذخیرهٔ پارچه، با همان فیِ خرید و همان فایدهٔ
+    //  فی‌لیترِ ذخیره‌شده در خودِ شیفت. عددِ کهنه همان می‌ماند که آن روز بود.
+    //
+    //  ⛔ **فقط شش خانه** دو طرف را به هم می‌بندد: نامِ کارمند، شمارهٔ پایه،
+    //  شروع، ختم، فی و قرض. تاریخ، تیل، یادداشت و «پول موجودِ» پارچه دست
+    //  نمی‌خورند — تیل و تاریخ کلیدِ خودِ پیوندند.
+
+    /// <summary>
+    /// ‎"p-12-day"‎ ⇒ پارچهٔ ۱۲، شیفتِ روز. کلیدِ زنده («p-live-day») و ردیفِ دستی ⇒ نه.
+    /// </summary>
+    public static bool TryParseKey(string? srcKey, out long reportId, out ShiftKind kind)
+    {
+        reportId = 0; kind = ShiftKind.Day;
+        var m = System.Text.RegularExpressions.Regex.Match(srcKey ?? "", @"^[pd]-(\d+)-(day|night)$");
+        if (!m.Success || !long.TryParse(m.Groups[1].Value, out reportId) || reportId <= 0) return false;
+        kind = m.Groups[2].Value == "night" ? ShiftKind.Night : ShiftKind.Day;
+        return true;
+    }
+
+    /// <summary>
+    /// شش خانهٔ پیوند را روی شیفتِ پارچه می‌نشاند و عددهای حساب‌شده را با همان
+    /// ‎CalcShift‎ی ذخیره از نو می‌سازد. برمی‌گرداند که چیزی واقعاً عوض شد یا نه.
+    /// ⚠️ نامِ خالی نامِ کارمندِ پارچه را پاک نمی‌کند.
+    /// </summary>
+    public static bool ApplyToShift(ShiftData s, string? name, int pumpNum, decimal start,
+                                    decimal end, decimal price, decimal debt)
+    {
+        if (s is null) return false;
+        var nm = (name ?? "").Trim();
+        var newName = nm.Length > 0 ? nm : s.Name;
+        if (s.Name == newName && s.PumpNum == pumpNum && s.Start == start && s.End == end
+            && s.Price == price && s.Debt == debt)
+            return false;
+
+        s.Name = newName;
+        s.PumpNum = pumpNum;
+        s.Start = start;
+        s.End = end;
+        s.Price = price;
+        s.Debt = debt;
+
+        var n = new ParchaService().CalcShift(start, end, price, debt, s.BuyPerLiter, s.ProfitPer);
+        s.ProfitPer = n.ProfitPerBox;
+        s.Sale = n.Sale;
+        s.Money = n.Money;
+        s.Available = n.Available;
+        s.Profit = n.Sale * n.ProfitPerBox;
+        return true;
+    }
+
+    /// <summary>
+    /// پایهٔ ورق ⇒ شیفتِ پارچه‌اش، در همان ‎db‎ (ذخیره با صداکننده).
+    /// پایهٔ دستی، کلیدِ زنده و پارچهٔ پاک‌شده ⇒ هیچ کاری.
+    /// </summary>
+    public static async Task<bool> PushPumpToShiftAsync(Persistence.PumpDbContext db, WaraqPump p,
+                                                         CancellationToken ct = default)
+    {
+        if (p is null || !TryParseKey(p.SrcKey, out var id, out var kind)) return false;
+        var rep = await db.Reports.Include(r => r.DayShift).Include(r => r.NightShift)
+                          .FirstOrDefaultAsync(r => r.Id == id, ct);
+        var s = rep is null ? null : kind == ShiftKind.Night ? rep.NightShift : rep.DayShift;
+        if (s is null) return false;
+        return ApplyToShift(s, p.Worker, p.Num, p.Start, p.End, p.PricePerLiter, p.Debt);
+    }
+
+    /// <summary>
+    /// شیفتِ پارچه ⇒ پایهٔ ورقش (اگر در ورق هست)، و بعد گاوصندوقِ همان ورق.
+    /// ⚠️ ورقِ تازه نمی‌سازد و «پول موجود»ِ ورق را دست نمی‌زند — این ویرایش
+    /// است، نه ذخیرهٔ تازهٔ پارچه.
+    /// </summary>
+    /// <returns>شناسهٔ ورق‌هایی که پایه‌شان عوض شد — صداکننده حساب‌هایشان را تازه می‌کند.</returns>
+    public async Task<List<long>> PushShiftToWaraqAsync(Persistence.PumpDbContext db, string srcKey,
+                                                        ShiftData s, CancellationToken ct = default)
+    {
+        var pumps = await db.WaraqPumps.Include(p => p.Shift)
+                            .Where(p => p.SrcKey == srcKey).ToListAsync(ct);
+        if (pumps.Count == 0) return new List<long>();
+        var waraqIds = new List<long>();
+        foreach (var p in pumps)
+        {
+            p.Num = s.PumpNum;
+            if (!string.IsNullOrWhiteSpace(s.Name)) p.Worker = s.Name;
+            p.Start = s.Start;
+            p.End = s.End;
+            p.PricePerLiter = s.Price;
+            p.Debt = s.Debt;
+            if (p.Shift is { } sh) waraqIds.Add(sh.WaraqId);
+        }
+        await db.SaveChangesAsync(ct);
+        await ResyncSalesAsync(waraqIds, ct);
+        return waraqIds.Distinct().ToList();
+    }
+
     /// <summary>
     /// ردیفِ «فروش ورق» در گاوصندوق را برای ورق‌های داده‌شده از نو می‌سازد — پس از
     /// آن‌که پایه‌ای بی‌آن‌که از خودِ ورق بگذرد رفت یا برگشت (حذف یا بازگردانیِ پارچه).

@@ -305,6 +305,15 @@ public sealed class ParchaDataService
         return outp;
     }
 
+    /// <summary>یک پارچه با هر دو شیفتش — بی ردیابی.</summary>
+    public async Task<ParchaReport?> LoadReportAsync(long id, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        return await db.Reports.AsNoTracking().Include(r => r.DayShift).Include(r => r.NightShift)
+                       .FirstOrDefaultAsync(r => r.Id == id, ct);
+    }
+
     public async Task<List<ParchaReport>> ListAsync(FuelType fuel, string? monthKey,
                                                     CancellationToken ct = default)
     {
@@ -388,6 +397,47 @@ public sealed class ParchaDataService
         rep.DateShamsi = report.DateShamsi;
         rep.DateKey = Shamsi.Key(report.DateShamsi);
         await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>نتیجهٔ ویرایشِ یک شیفت از تاریخچه.</summary>
+    public sealed record ShiftEditResult(bool Ok, string? Error, IReadOnlyList<long> WaraqIds);
+
+    /// <summary>
+    /// ══ ویرایشِ یک شیفتِ ذخیره‌شده — از «تاریخچه‌ها» (۱۴۰۵/۰۷/۱۷) ══════════════
+    ///
+    /// همان شش خانهٔ پیوندِ ورق (<see cref="ShiftWaraqSyncService.ApplyToShift"/>)
+    /// روی شیفت می‌نشیند، عددها با همان ‎CalcShift‎ی ذخیره از نو ساخته می‌شوند، و
+    /// پایهٔ همان شیفت در ورق (اگر هست) و فروشِ گاوصندوقش با آن عوض می‌شوند.
+    ///
+    /// ⛔ همان قاعدهٔ ذخیرهٔ پارچه: ختم کمتر از شروع پذیرفته نمی‌شود — هیچ چیزی
+    /// نوشته نمی‌شود و پیام همان پیامِ ذخیره است.
+    /// ⚠️ تاریخ، تیل و «پول موجود» دست نمی‌خورند؛ ورقِ تازه ساخته نمی‌شود.
+    /// </summary>
+    public async Task<ShiftEditResult> EditShiftAsync(long reportId, ShiftKind kind, string? name,
+                                                      int pumpNum, decimal start, decimal end,
+                                                      decimal price, decimal debt,
+                                                      CancellationToken ct = default)
+    {
+        if (end < start)
+            return new ShiftEditResult(false, "ختم پایه نمی‌تواند کمتر از شروع باشد", Array.Empty<long>());
+        _perm.Require(Permission.EditData);
+
+        await using var db = _dbf.Create();
+        var rep = await db.Reports.Include(r => r.DayShift).Include(r => r.NightShift)
+                          .FirstOrDefaultAsync(r => r.Id == reportId, ct);
+        var s = rep is null ? null : kind == ShiftKind.Night ? rep.NightShift : rep.DayShift;
+        if (rep is null || s is null)
+            return new ShiftEditResult(false, "این پارچه دیگر نیست", Array.Empty<long>());
+
+        if (!ShiftWaraqSyncService.ApplyToShift(s, name, pumpNum, start, end, price, debt))
+            return new ShiftEditResult(true, null, Array.Empty<long>());
+        await db.SaveChangesAsync(ct);
+
+        IReadOnlyList<long> ids = Array.Empty<long>();
+        if (_waraqSync is not null)
+            ids = await _waraqSync.PushShiftToWaraqAsync(db,
+                ShiftWaraqSyncService.SrcKeyOf(rep.Fuel, rep.Id, kind), s, ct);
+        return new ShiftEditResult(true, null, ids);
     }
 
     public async Task SaveReportAsync(ParchaReport r, CancellationToken ct = default)

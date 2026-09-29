@@ -23,7 +23,9 @@ public sealed record HistoryRow(
     string Title, string Detail, decimal? Amount, string Unit, string Tone,
     IReadOnlyList<string>? Cells = null,
     //  برای صافیِ «پطرول/دیزل» و «پایهٔ ۱، ۲، ۳» در تاریخچهٔ پارچه‌ها (۱۴۰۵/۰۷/۱۳)
-    FuelType? Fuel = null, int Pump = 0)
+    FuelType? Fuel = null, int Pump = 0,
+    //  ردیفِ پارچه: کدام شیفتِ کدام پارچه — برای ویرایش از خودِ تاریخچه (۱۴۰۵/۰۷/۱۷)
+    HistoryShiftRef? ShiftRef = null)
 {
     public string AmountText => Amount is null ? "" : Shamsi.Money(Amount.Value) + Unit;
 
@@ -39,7 +41,18 @@ public sealed record HistoryRow(
 /// رنگِ نوشته: کلیدِ منبعِ تم (‎Pump.Ok‎…)، یا ‎"tone"‎ یعنی رنگِ «آمد/رفت»ِ
 /// همان ردیف، یا خالی یعنی رنگِ معمولی.
 /// </param>
-public sealed record HistoryCol(string Header, bool Wide = false, string Brush = "");
+/// <param name="Path">
+/// خاصیتِ ردیف به‌جای ‎Cells[i]‎ — خالی یعنی همان خانهٔ ثابت.
+/// </param>
+/// <param name="Edit">خانه در خودِ تاریخچه ویرایش می‌شود (فقط با <paramref name="Path"/>).</param>
+public sealed record HistoryCol(string Header, bool Wide = false, string Brush = "",
+                                string Path = "", bool Edit = false);
+
+/// <summary>
+/// ردیفِ تاریخچهٔ پارچه‌ها ⇒ همان شیفت، با شش خانه‌ای که ویرایش می‌شوند.
+/// </summary>
+public sealed record HistoryShiftRef(long ReportId, ShiftKind Kind, string Name, int PumpNum,
+                                     decimal Start, decimal End, decimal Price, decimal Debt);
 
 /// <summary>یک کارتِ صفحهٔ «تاریخچه‌ها».</summary>
 public sealed record HistoryKind(string Key, string Label, int Count, string LatestDate);
@@ -94,11 +107,19 @@ public sealed class HistoryService
     /// </summary>
     public static IReadOnlyList<HistoryCol>? ColumnsOf(string kind) => kind switch
     {
+        //  ⛔ از ۱۴۰۵/۰۷/۱۷ شش خانه ویرایش می‌شوند (نام · پایه · شروع · ختم · فی ·
+        //  قرض) و همان لحظه در خودِ پارچه و پایهٔ ورقش می‌نشینند؛ لیتر و پول از
+        //  همان عددها حساب می‌شوند. ترتیبِ ستون‌های «تاریخ … کارمند» همان قبلی است.
         "shift" => new HistoryCol[]
         {
-            new("تاریخ"), new("پارچه"), new("تیل"), new("شیفت"), new("کارمند", Wide: true),
-            new("شمارهٔ پایه"), new("شروعِ پایه"), new("ختمِ پایه"),
-            new("لیتر"), new("پول", Brush: "Pump.Ok"),
+            new("تاریخ"), new("پارچه"), new("تیل"), new("شیفت"),
+            new("کارمند", Wide: true, Path: "EditName", Edit: true),
+            new("شمارهٔ پایه", Path: "EditPump", Edit: true),
+            new("شروعِ پایه", Path: "EditStart", Edit: true),
+            new("ختمِ پایه", Path: "EditEnd", Edit: true),
+            new("فی", Path: "EditPrice", Edit: true),
+            new("قرض", Path: "EditDebt", Edit: true),
+            new("لیتر", Path: "LitersCell"), new("پول", Brush: "Pump.Ok", Path: "MoneyCell"),
         },
         "waraq" => new HistoryCol[]
         {
@@ -746,9 +767,13 @@ public sealed class HistoryService
                         fuel, when, string.IsNullOrWhiteSpace(shift.Name) ? "—" : shift.Name!.Trim(),
                         shift.PumpNum > 0 ? Shamsi.Money(shift.PumpNum) : "—",
                         Shamsi.Money(shift.Start), Shamsi.Money(shift.End),
+                        Shamsi.Money(shift.Price), Shamsi.Money(shift.Debt),
                         Shamsi.Money(Math.Round(shift.Sale)) + " لیتر",
                         Shamsi.Money(Math.Round(shift.Money)) + " افغانی",
-                    }, rep.Fuel, shift.PumpNum));
+                    }, rep.Fuel, shift.PumpNum,
+                    new HistoryShiftRef(rep.Id, when == "🌙 شب" ? ShiftKind.Night : ShiftKind.Day,
+                                        shift.Name ?? "", shift.PumpNum, shift.Start, shift.End,
+                                        shift.Price, shift.Debt)));
             }
         }
         return list;

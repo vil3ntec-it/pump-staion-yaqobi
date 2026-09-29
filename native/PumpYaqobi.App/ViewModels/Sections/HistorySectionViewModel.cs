@@ -43,9 +43,20 @@ public sealed partial class PumpChip : ObservableObject
 }
 
 /// <summary>یک ردیفِ صفحهٔ تاریخچهٔ یک بخش.</summary>
-public sealed class HistoryRowViewModel
+public sealed partial class HistoryRowViewModel : ObservableObject
 {
-    public HistoryRowViewModel(HistoryRow r, int index) { Entity = r; Index = index; }
+    private readonly Func<HistoryRowViewModel, Task>? _saveShift;
+
+    public HistoryRowViewModel(HistoryRow r, int index,
+                               Func<HistoryRowViewModel, Task>? saveShift = null)
+    {
+        Entity = r; Index = index; _saveShift = saveShift;
+        if (r.ShiftRef is { } x)
+        {
+            _name = x.Name; _pump = x.PumpNum; _start = x.Start; _end = x.End;
+            _price = x.Price; _debt = x.Debt;
+        }
+    }
 
     public HistoryRow Entity { get; }
     public int Index { get; }
@@ -65,6 +76,95 @@ public sealed class HistoryRowViewModel
         "out" => "Pump.Accent",
         _ => "Pump.Text",
     };
+
+    // ══ ویرایشِ پارچه از خودِ تاریخچه (۱۴۰۵/۰۷/۱۷) ═══════════════════════════
+    //
+    // «ویرایشِ تاریخچه هم بزار که اگه خاستم از خودِ تاریخچه‌ها بتونم تغییر بدم.»
+    // شش خانه به همین ردیف بسته‌اند؛ هر خانه که بسته شود همان لحظه به
+    // ‎ParchaDataService.EditShiftAsync‎ می‌رود (پارچه + پایهٔ ورق + گاوصندوق).
+    // ⛔ نشد (ختم کمتر از شروع، پارچهٔ پاک‌شده) ⇒ خانه به عددِ ثبت‌شده برمی‌گردد.
+
+    private string _name = "";
+    private int _pump;
+    private decimal _start, _end, _price, _debt;
+
+    /// <summary>این ردیف ویرایش می‌شود؟ (فقط پارچه‌ها)</summary>
+    public bool CanEdit => Entity.ShiftRef is not null && _saveShift is not null;
+
+    public string ShiftName => _name;
+    public int ShiftPump => _pump;
+    public decimal ShiftStart => _start;
+    public decimal ShiftEnd => _end;
+    public decimal ShiftPrice => _price;
+    public decimal ShiftDebt => _debt;
+
+    public string EditName
+    {
+        get => _name.Length == 0 ? "—" : _name;
+        set { var v = (value ?? "").Trim(); if (v == "—") v = ""; if (v.Length == 0 || v == _name) { Raise(); return; } Set(() => _name = v); }
+    }
+    public string EditPump
+    {
+        get => _pump > 0 ? Shamsi.Money(_pump) : "—";
+        set { var v = (int)Shamsi.Num(value); if (v == _pump) { Raise(); return; } Set(() => _pump = v); }
+    }
+    public string EditStart
+    {
+        get => Shamsi.Money(_start);
+        set { var v = Shamsi.Num(value); if (v == _start) { Raise(); return; } Set(() => _start = v); }
+    }
+    public string EditEnd
+    {
+        get => Shamsi.Money(_end);
+        set { var v = Shamsi.Num(value); if (v == _end) { Raise(); return; } Set(() => _end = v); }
+    }
+    public string EditPrice
+    {
+        get => Shamsi.Money(_price);
+        set { var v = Shamsi.Num(value); if (v == _price) { Raise(); return; } Set(() => _price = v); }
+    }
+    public string EditDebt
+    {
+        get => Shamsi.Money(_debt);
+        set { var v = Shamsi.Num(value); if (v == _debt) { Raise(); return; } Set(() => _debt = v); }
+    }
+
+    /// <summary>لیتر و پول از همان عددها — همان «فروش × فی»ِ پارچه.</summary>
+    public string LitersCell => Entity.ShiftRef is null
+        ? (Cells.Count > 10 ? Cells[10] : "")
+        : Shamsi.Money(Math.Round(_end - _start)) + " لیتر";
+    public string MoneyCell => Entity.ShiftRef is null
+        ? (Cells.Count > 11 ? Cells[11] : "")
+        : Shamsi.Money(Math.Round((_end - _start) * _price)) + " افغانی";
+
+    private (string, int, decimal, decimal, decimal, decimal)? _undo;
+
+    private void Set(Action change)
+    {
+        if (!CanEdit) { Raise(); return; }
+        _undo ??= (_name, _pump, _start, _end, _price, _debt);
+        change();
+        Raise();
+        SaveGuard.Watch(_saveShift!(this), "ویرایشِ پارچه از تاریخچه");
+    }
+
+    /// <summary>ذخیره نشد ⇒ خانه‌ها به همان عددِ ثبت‌شده برمی‌گردند.</summary>
+    internal void Revert()
+    {
+        if (_undo is { } u) (_name, _pump, _start, _end, _price, _debt) = u;
+        _undo = null;
+        Raise();
+    }
+
+    /// <summary>ذخیره شد ⇒ این عددها «ثبت‌شده»‌اند.</summary>
+    internal void Committed() => _undo = null;
+
+    private void Raise()
+    {
+        foreach (var n in new[] { nameof(EditName), nameof(EditPump), nameof(EditStart), nameof(EditEnd),
+                                  nameof(EditPrice), nameof(EditDebt), nameof(LitersCell), nameof(MoneyCell) })
+            OnPropertyChanged(n);
+    }
 }
 
 /// <summary>
@@ -285,6 +385,39 @@ public sealed partial class HistorySectionViewModel : SectionViewModel
     private string _fuelPick = "all";
     private int _pumpPick;
     public ObservableCollection<PumpChip> Pumps { get; } = new();
+    /// <summary>
+    /// ══ ویرایشِ یک پارچه از خودِ تاریخچه (۱۴۰۵/۰۷/۱۷) ══════════════════════
+    /// همان ‎EditShiftAsync‎: شیفتِ پارچه، پایهٔ همان شیفت در ورق، فروشِ
+    /// گاوصندوق، و بعد حساب‌های همان ورق (فی که عوض شود مبلغِ خودکارِ ردیف‌ها
+    /// هم عوض می‌شود). نشد ⇒ خانه برمی‌گردد و می‌گوید چرا.
+    /// </summary>
+    internal async Task SaveShiftEditAsync(HistoryRowViewModel row)
+    {
+        if (row.Entity.ShiftRef is not { } r) return;
+        try
+        {
+            var res = await _host.ParchaData.EditShiftAsync(r.ReportId, r.Kind, row.ShiftName,
+                row.ShiftPump, row.ShiftStart, row.ShiftEnd, row.ShiftPrice, row.ShiftDebt);
+            if (!res.Ok)
+            {
+                row.Revert();
+                _host.Toast("⚠️ " + (res.Error ?? "ذخیره نشد"), ToastKind.Warn);
+                return;
+            }
+            row.Committed();
+            foreach (var id in res.WaraqIds)
+            {
+                try { await _host.WaraqPosting.SyncAsync(id); }
+                catch { /* ورق ذخیره شد؛ حساب‌ها با ذخیرهٔ بعدیِ همان ورق درست می‌شوند */ }
+            }
+        }
+        catch
+        {
+            row.Revert();
+            throw;   // ⛔ نگهبانِ ذخیره می‌گوید — بی‌صدا نیست
+        }
+    }
+
     public bool HasShiftFilters => OpenKind == "shift";
     public bool IsFuelAll => _fuelPick == "all";
     public bool IsFuelPetrol => _fuelPick == "petrol";
@@ -344,7 +477,7 @@ public sealed partial class HistorySectionViewModel : SectionViewModel
         {
             Rows.Clear();
             var i = 0;
-            foreach (var r in picked) Rows.Add(new HistoryRowViewModel(r, ++i));
+            foreach (var r in picked) Rows.Add(new HistoryRowViewModel(r, ++i, r.ShiftRef is null ? null : SaveShiftEditAsync));
         }
 
         Summary = picked.Count == 0

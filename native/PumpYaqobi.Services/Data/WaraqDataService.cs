@@ -103,6 +103,9 @@ public sealed class WaraqDataService
         await using var db = _dbf.Create();
         if (p.Id == 0) db.WaraqPumps.Add(p);
         else { db.WaraqPumps.Attach(p); db.Entry(p).State = EntityState.Modified; }
+        //  ⛔ پایه‌ای که از پارچه آمده، همان شیفتِ پارچه را هم به‌روز می‌کند —
+        //  در همان ذخیره، تا گزارشِ پارچه و تاریخچه هرگز عددِ دیگری نگویند (۱۴۰۵/۰۷/۱۷).
+        await ShiftWaraqSyncService.PushPumpToShiftAsync(db, p, ct);
         await db.SaveChangesAsync(ct);
     }
 

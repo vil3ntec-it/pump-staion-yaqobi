@@ -155,7 +155,7 @@ public class OwnerRound13Tests
         Assert.Contains("x:DataType=\"vm:PumpChip\"", h);
         Assert.Contains("IsVisible=\"{Binding HasShiftFilters}\"", h);
         var svc = Read("PumpYaqobi.Services", "Data", "HistoryService.cs");
-        Assert.Contains("}, rep.Fuel, shift.PumpNum));", svc);
+        Assert.Contains("}, rep.Fuel, shift.PumpNum,", svc);
     }
 
     // ══ ۸) ورق: پیام روی کلِ خانه، دو خطِ روشن، کارتِ بلندتر ═══════════════

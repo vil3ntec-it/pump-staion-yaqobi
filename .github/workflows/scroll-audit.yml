@@ -168,6 +168,11 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- undokeys
 
+      # ══ ۱۴۰۵/۰۷/۱۷: ورق ⇄ پارچه ⇄ تاریخچه، «/هارون»، و کلیدهای پارچه و ورق ══
+      - name: سنجشِ ویرایشِ دوطرفه و کلیدهای پارچه/ورق
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- keys17
+
       # ══ رسیدِ سربرگِ قرض‌دار: ردیف ساخته شود و به حسابِ دیگر سرایت نکند ══
       - name: سنجشِ رسیدِ سربرگ
         working-directory: native

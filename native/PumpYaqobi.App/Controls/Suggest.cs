@@ -42,6 +42,18 @@ public static class Suggest
     public static string? GetKey(AvaloniaObject o) => o.GetValue(KeyProperty);
     public static void SetKey(AvaloniaObject o, string? v) => o.SetValue(KeyProperty, v);
 
+    /// <summary>
+    /// ══ «/هارون» — فهرستِ پس از خط‌کج (۱۴۰۵/۰۷/۱۷) ═══════════════════════════
+    /// ستونی که این را دارد، پس از «/» نامِ حساب را از همین فهرست تکمیل می‌کند
+    /// («/ها» ⇒ «/هارون»، با Tab یا Enter). ⛔ همان تکملهٔ درون‌خطی، همان قاعدهٔ
+    /// «پذیرفته‌نشده ذخیره نمی‌شود».
+    /// </summary>
+    public static readonly AttachedProperty<string?> SlashKeyProperty =
+        AvaloniaProperty.RegisterAttached<AvaloniaObject, string?>("SlashKey", typeof(Suggest));
+
+    public static string? GetSlashKey(AvaloniaObject o) => o.GetValue(SlashKeyProperty);
+    public static void SetSlashKey(AvaloniaObject o, string? v) => o.SetValue(SlashKeyProperty, v);
+
     // ══ منبع‌های نام‌دار ═══════════════════════════════════════════════════
     private static readonly ConcurrentDictionary<string, Func<Task<IEnumerable<string>>>> _providers = new();
     private static readonly ConcurrentDictionary<string, (DateTime At, List<string> Items)> _cache = new();
@@ -66,6 +78,9 @@ public static class Suggest
     /// حالا همان لحظهٔ ثبتِ منبع یک بار خوانده می‌شود، پس تا کاربر به کادر
     /// برسد فهرست آماده است.
     /// </summary>
+    /// <summary>کَشِ یک کلید را دور بریز تا نخستین خواندنِ بعدی از نو بپرسد (سنجه‌ها).</summary>
+    public static void Forget(string key) => _cache.TryRemove(key, out _);
+
     public static void Warm(params string[] keys)
     {
         foreach (var k in keys) Of(k);
@@ -138,6 +153,8 @@ public static class Suggest
 
     private static TextBox? _box;
     private static List<string> _all = new();
+    /// <summary>نام‌های حساب برای پسِ «/» — خالی یعنی این کادر «/» ندارد.</summary>
+    private static List<string> _slash = new();
 
     /// <summary>آن‌چه کاربر واقعاً تایپ کرده — تکیه‌گاهِ برگشت.</summary>
     private static string _typed = "";
@@ -164,7 +181,8 @@ public static class Suggest
     public static int Active => _ghost.Length > 0 ? 0 : -1;
 
     /// <summary>به یک کادرِ تایپ وصل می‌شود: نام‌دار + آموخته‌ها.</summary>
-    public static void Attach(TextBox box, IReadOnlyList<string> named, IReadOnlyList<string> learned)
+    public static void Attach(TextBox box, IReadOnlyList<string> named, IReadOnlyList<string> learned,
+                              IReadOnlyList<string>? slash = null)
     {
         Detach();
         _all = named.Concat(learned).Where(s => !string.IsNullOrWhiteSpace(s))
@@ -172,7 +190,11 @@ public static class Suggest
                     // کوتاه‌ترین اول: تکمله‌ای که زودتر تمام شود کم‌آزارتر است
                     .OrderBy(s => s.Length).ThenBy(s => s, StringComparer.OrdinalIgnoreCase)
                     .ToList();
-        if (_all.Count == 0) return;
+        _slash = (slash ?? Array.Empty<string>()).Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Select(s => s.Trim()).Distinct()
+                    .OrderBy(s => s.Length).ThenBy(s => s, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+        if (_all.Count == 0 && _slash.Count == 0) return;
 
         _box = box;
         _typed = box.Text ?? "";
@@ -243,8 +265,9 @@ public static class Suggest
         // فقط وقتی مکان‌نما تهِ متن است؛ ویرایشِ وسطِ جمله تکمیل نمی‌خواهد
         if (box.CaretIndex < typed.Length) return;
 
-        var hit = _all.FirstOrDefault(v => v.Length > typed.Length
-                                        && v.StartsWith(typed, StringComparison.CurrentCultureIgnoreCase));
+        var hit = SlashHit(typed)
+                  ?? _all.FirstOrDefault(v => v.Length > typed.Length
+                                           && v.StartsWith(typed, StringComparison.CurrentCultureIgnoreCase));
         if (hit is null) return;
 
         _busy = true;
@@ -262,6 +285,24 @@ public static class Suggest
         _typed = typed;
         _ghost = hit;
         Ghostly(true);
+    }
+
+    /// <summary>
+    /// «ابراهیم /ها» ⇒ «ابراهیم /هارون». فقط تکهٔ پسِ آخرین «/»، و فقط وقتی
+    /// دستِ‌کم یک حرف پس از آن تایپ شده. ⚠️ رقم پس از «/» (تاریخ، «12/3») نه.
+    /// </summary>
+    public static string? SlashHit(string typed) => SlashHit(typed, _slash);
+
+    public static string? SlashHit(string typed, IReadOnlyList<string> names)
+    {
+        if (names.Count == 0) return null;
+        var i = typed.LastIndexOf('/');
+        if (i < 0) return null;
+        var seg = typed[(i + 1)..].TrimStart();
+        if (seg.Length == 0 || !char.IsLetter(seg[0])) return null;
+        var name = names.FirstOrDefault(v => v.Length > seg.Length
+                                          && v.StartsWith(seg, StringComparison.CurrentCultureIgnoreCase));
+        return name is null ? null : typed + name[seg.Length..];
     }
 
     /// <summary>

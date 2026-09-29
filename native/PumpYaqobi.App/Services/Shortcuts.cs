@@ -363,6 +363,11 @@ public sealed class ShortcutService
         if (isCtrl)
         {
             var n = ParseBuf(ref _addBuf);
+            //  ⛔ بخشی که Ctrl+۱/۲ را خودش می‌خواهد (پارچه: پارچهٔ جدید · ورق: روز/شب)
+            //  اول پرسیده می‌شود؛ نخواست ⇒ همان «افزودنِ n ردیف».
+            if (n > 0 && (_vm.ActiveSection?.ActivePage as ICtrlDigitHost
+                          ?? _vm.ActiveSection as ICtrlDigitHost) is { } own && own.CtrlDigit(n))
+                return;
             if (n > 0) _ = CrashGuard.RunAsync("افزودنِ ردیف", () => AddRowsAsync(n));
         }
         else
