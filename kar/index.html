@@ -46,19 +46,36 @@
      شده، منطق رو دست نزن.» هیچ شناسه‌ای (‎id‎) عوض نشده؛ هر رفتار همان است.
      ⛔ این اپ فقط «دیدن» است و ظاهرش هم همین را می‌گوید (نشانِ «فقط دیدن»):
      هیچ دکمه‌ای شبیهِ «ویرایش» یا «ذخیره» روی هیچ حسابی ساخته نمی‌شود.  */
+  /* ══ رنگ‌ها = همان دو تمِ برنامهٔ کامپیوتر (۱۴۰۵/۰۷/۱۶) ══════════════
+     خواستهٔ صاحب ریپو: «برنامه یک درصد هم شبیهِ برنامهٔ ویندوز نیست.»
+     پس همان دو پالت: «آبیِ روشن» (#1E3A8A · #3B82F6 · #60A5FA · #E0F2FE ·
+     سفید) و «مشکی و زرد» (#0B0B0F · #1A1A1F · #FFD700 · #E6C800 · #FFF3C4).
+     پیش‌فرض همان تمِ گوشی است؛ کلیدِ ☀️/🌙 سربرگ فقط در همین گوشی می‌ماند. */
   :root{
-    --bg:#0b1220; --card:#121b2b; --card2:#172236; --line:#22314a; --txt:#e8eef8; --muted:#94a6c2;
-    --accent:#f59e0b; --accent2:#fbbf24; --on-accent:#1b1200;
-    --ok:#22c55e; --warn:#eab308; --red:#ef4444; --info:#60a5fa; --chip:#1a2539;
-    --ok-bg:rgba(34,197,94,.14); --warn-bg:rgba(234,179,8,.14); --red-bg:rgba(239,68,68,.14); --info-bg:rgba(96,165,250,.14);
-    --shadow:0 1px 2px rgba(0,0,0,.35); --radius:16px;
+    --bg:#d6e0ee; --card:#fff; --card2:#e8eff9; --line:#b9d3f5; --txt:#0f1f3d; --muted:#51627f;
+    --accent:#1E3A8A; --accent2:#3B82F6; --glow:#60A5FA; --on-accent:#fff; --chip:#E0F2FE;
+    --ok:#15803d; --warn:#a16207; --red:#dc2626; --info:#1d4ed8;
+    --ok-bg:#e8f7ee; --warn-bg:#fdf6e3; --red-bg:#fdecec; --info-bg:#eaf1fe;
+    --shadow:0 0 0 1px rgba(59,130,246,.10),0 6px 18px -8px rgba(30,58,138,.28); --radius:16px;
+    --bar:linear-gradient(135deg,#1E3A8A,#3B82F6);
   }
-  @media (prefers-color-scheme: light){
-    :root{ --bg:#f2f4f8; --card:#fff; --card2:#f7f9fc; --line:#e2e7ef; --txt:#0f172a; --muted:#5b6b84;
-           --accent:#c26a00; --accent2:#e08a00; --on-accent:#fff; --chip:#eef2f7;
-           --ok:#15803d; --warn:#a16207; --red:#dc2626; --info:#1d4ed8;
-           --ok-bg:#e8f7ee; --warn-bg:#fdf6e3; --red-bg:#fdecec; --info-bg:#eaf1fe;
-           --shadow:0 1px 2px rgba(15,23,42,.06),0 1px 1px rgba(15,23,42,.04); }
+  :root[data-theme="dark"]{
+    --bg:#0B0B0F; --card:#1A1A1F; --card2:#212127; --line:#2e2e36; --txt:#f4f4f6; --muted:#a8a8b3;
+    --accent:#FFD700; --accent2:#E6C800; --glow:#FFF3C4; --on-accent:#111; --chip:#26262d;
+    --ok:#4ade80; --warn:#facc15; --red:#f87171; --info:#FFF3C4;
+    --ok-bg:rgba(74,222,128,.13); --warn-bg:rgba(250,204,21,.13); --red-bg:rgba(248,113,113,.14); --info-bg:rgba(255,243,196,.10);
+    --shadow:inset 0 1px 0 rgba(255,255,255,.05),0 0 0 1px rgba(255,215,0,.10),0 8px 22px -10px rgba(0,0,0,.8);
+    --bar:linear-gradient(135deg,#1A1A1F,#26262d);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0B0B0F; --card:#1A1A1F; --card2:#212127; --line:#2e2e36; --txt:#f4f4f6; --muted:#a8a8b3;
+      --accent:#FFD700; --accent2:#E6C800; --glow:#FFF3C4; --on-accent:#111; --chip:#26262d;
+      --ok:#4ade80; --warn:#facc15; --red:#f87171; --info:#FFF3C4;
+      --ok-bg:rgba(74,222,128,.13); --warn-bg:rgba(250,204,21,.13); --red-bg:rgba(248,113,113,.14); --info-bg:rgba(255,243,196,.10);
+      --shadow:inset 0 1px 0 rgba(255,255,255,.05),0 0 0 1px rgba(255,215,0,.10),0 8px 22px -10px rgba(0,0,0,.8);
+      --bar:linear-gradient(135deg,#1A1A1F,#26262d);
+    }
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0}
@@ -76,7 +93,7 @@
   input,select,button,textarea{font:inherit;font-family:inherit}
   input,select{width:100%;background:var(--card2);color:var(--txt);border:1px solid var(--line);
         border-radius:12px;padding:11px 13px;min-height:46px}
-  input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(245,158,11,.2)}
+  input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--chip)}
   button{background:var(--chip);color:var(--txt);border:1px solid var(--line);
         border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;min-height:44px}
   button:active{transform:scale(.98)}
@@ -210,6 +227,9 @@
   .bub{background:var(--card2);border:1px solid var(--line);border-radius:14px 14px 14px 4px;padding:7px 11px;max-width:82%;align-self:flex-start}
   .bub.mine{background:var(--info-bg);border-color:transparent;align-self:flex-end;border-radius:14px 14px 4px 14px}
   .bub .who{display:block;font-weight:800;color:var(--accent);font-size:.8rem;margin:0}
+  .bub > div:nth-last-child(2){white-space:pre-wrap;overflow-wrap:anywhere}
+  .cday{align-self:center;margin:6px 0 2px}
+  .cday span{display:inline-block;background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:2px 12px;font-size:.75rem;font-weight:700;color:var(--muted)}
   .chatbar{display:grid;grid-template-columns:1fr auto;gap:8px}
   .chatbar #inChatName{grid-column:1 / -1}
 
@@ -217,8 +237,9 @@
   .gate{max-width:440px;margin:0 auto;padding-top:5vh}
   .hero{text-align:center;padding:18px 12px 14px}
   .hero .logo{width:76px;height:76px;border-radius:24px;margin:0 auto 12px;display:grid;place-items:center;
-        background:linear-gradient(135deg,var(--accent),var(--accent2));color:#1a1a1a;font-size:2.1rem;
-        box-shadow:0 12px 30px rgba(245,158,11,.28)}
+        background:var(--bar);color:#fff;font-size:2.1rem;overflow:hidden;
+        box-shadow:0 12px 30px -8px rgba(30,58,138,.45)}
+  .hero .logo img{width:100%;height:100%;object-fit:cover;display:block}
   .hero h1{font-size:1.4rem;margin:0 0 6px}
   .hero .sub{font-size:.86rem}
   .code-in{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:1.6rem;
@@ -302,7 +323,79 @@
   .upd .t{flex:1;min-width:0;font-size:.86rem} .upd .t b{display:block}
   .upd button{padding:8px 12px}
   @media (max-width:420px){ .wrap{padding:10px 10px calc(92px + env(safe-area-inset-bottom))} .appbar{margin:-10px -10px 12px} .gate{padding-top:2vh} }
+  /* ══ ظاهرِ «برنامهٔ کامپیوتر» روی گوشی (۱۴۰۵/۰۷/۱۶) ══════════════════════
+     همان زبانِ ظاهری: سربرگ با نشانِ برنامه و نامِ پمپ، کارت‌های سفید روی
+     بومِ آبیِ روشن (یا زغالی با لبهٔ طلایی در تمِ تیره)، کارتِ قرض‌دار با
+     نامِ درشت و الباقیِ درشت‌تر، و کاشیِ هر بخش با نشانهٔ خودش.
+     ⛔ فقط ظاهر: هیچ عددی این‌جا ساخته نمی‌شود. */
+  body{background:var(--bg)}
+  button.p,button.p.big{background:linear-gradient(135deg,var(--accent),var(--accent2));border:0;color:var(--on-accent);
+        box-shadow:0 6px 16px -8px var(--accent2)}
+  .card{border-color:transparent;box-shadow:var(--shadow);border-radius:18px}
+  .appbar{background:var(--card);border-bottom:0;box-shadow:var(--shadow)}
+  .appbar .brand{width:40px;height:40px;border-radius:12px;overflow:hidden;flex:none;background:var(--bar);
+        display:grid;place-items:center;color:#fff;font-weight:900}
+  .appbar .brand img{width:100%;height:100%;object-fit:cover;display:block}
+  .appbar h1{font-size:1.18rem;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .appbar .icb{width:40px;height:40px}
+  .appbar .icb{background:var(--chip);border:0}
+  .appbar .seg{background:var(--card2);border:0}
+  .seg button[aria-selected="true"],.tabs button[aria-selected="true"]{background:linear-gradient(135deg,var(--accent),var(--accent2));
+        color:var(--on-accent);box-shadow:0 4px 12px -6px var(--accent2)}
+  .ro{color:var(--accent);background:var(--chip)}
+
+  .door{border:0;box-shadow:var(--shadow);border-radius:20px;padding:20px 16px}
+  .door .ic{width:60px;height:60px;border-radius:18px;font-size:1.7rem}
+  .door.owner .ic{background:var(--bar);color:#fff}
+  .door.staff .ic{background:linear-gradient(135deg,#16a34a,#4ade80);color:#fff}
+  .door .tag{display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:.72rem;font-weight:800;
+        border-radius:999px;padding:1px 10px;background:var(--chip);color:var(--accent)}
+  .door.staff .tag{background:var(--ok-bg);color:var(--ok)}
+
+  .bn{background:var(--card);border:0;border-top:0;border-inline-start:5px solid var(--muted);box-shadow:var(--shadow)}
+  .bn.accent{border-inline-start-color:var(--accent2)} .bn.danger{border-inline-start-color:var(--red)}
+  .bn.ok{border-inline-start-color:var(--ok)} .bn.warn{border-inline-start-color:var(--warn)}
+  .bn .v{font-size:1.3rem}
+
+  .tiles{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+  .tile{background:var(--card);border:0;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:2px;padding:12px}
+  .tile .ti{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:1.25rem;
+        background:var(--chip);margin-bottom:6px}
+
+  .list{grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+  .p-card{background:var(--card);border:0;border-top:5px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:12px 14px}
+  .p-card.ok{border-top-color:var(--ok)} .p-card.low{border-top-color:var(--warn)} .p-card.out{border-top-color:var(--red)}
+  .p-card .n{font-size:1.12rem;font-weight:900}
+  .p-card .main{font-size:1.45rem;font-weight:900;unicode-bidi:plaintext;text-align:right;font-variant-numeric:tabular-nums;margin:2px 0 6px}
+  .p-card .main small{font-size:.74rem;color:var(--muted);font-weight:700}
+  .p-card .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .mini{background:var(--card2);border:0}
+
+  .st-row{background:var(--card);border:0;box-shadow:var(--shadow)}
+  .st-row.out{box-shadow:0 0 0 2px var(--red-bg),var(--shadow)}
+  .counts button{background:var(--card);border:0;box-shadow:var(--shadow)}
+  .counts button[aria-selected="true"]{background:var(--chip);color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent2)}
+
+  .tank{background:var(--card);border:0;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .tank .gauge{height:10px;border-radius:999px;background:var(--card2);overflow:hidden;margin:6px 0 10px}
+  .tank .gauge i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#f59e0b,#f97316)}
+  .tank.diesel .gauge i{background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  .tank.bad{box-shadow:0 0 0 2px var(--red),var(--shadow);background:var(--card)}
+  .tank.warn{box-shadow:0 0 0 2px var(--warn),var(--shadow);background:var(--card)}
+
+  .nav{background:var(--card);border-top:0;box-shadow:0 -6px 20px -10px rgba(0,0,0,.35)}
+  .nav button[aria-selected="true"]{color:var(--accent);background:var(--chip);font-weight:900}
+
+  /* ── قفلِ بخشِ حساب‌ها ── */
+  .lockhero{text-align:center;padding:10px 6px 4px}
+  .lockhero .big{font-size:2.4rem;line-height:1}
+  .skeleton{height:64px;border-radius:14px;background:linear-gradient(90deg,var(--card2),var(--chip),var(--card2));
+        background-size:200% 100%;animation:sk 1.2s linear infinite}
+  @keyframes sk{to{background-position:-200% 0}}
+  @media (prefers-reduced-motion: reduce){ .skeleton,.spin{animation:none} }
 </style>
+<!-- تمِ برگزیدهٔ همین گوشی — پیش از کشیدنِ صفحه، تا یک لحظه تمِ دیگر دیده نشود -->
+<script>try{var t=localStorage.getItem('pumpKar.theme');if(t=='dark'||t=='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
 </head>
 <body>
 
@@ -317,7 +410,7 @@
      را می‌گیرد — بعدش همان دو درِ سرورِ خانگی، مثلِ همیشه.              -->
 <div class="wrap gate hidden" id="codePane">
   <div class="hero">
-    <div class="logo">⛽</div>
+    <div class="logo"><img src="./icons/icon-192.png" alt=""></div>
     <h1>دستیارِ پمپ</h1>
     <div class="sub">کدِ هشت‌رقمیِ پمپِ خودتان را بزنید — فقط یک بار. این کد را
       صاحبِ پمپ در برنامهٔ کامپیوتر، بخشِ «پروفایل»، می‌بیند.</div>
@@ -336,7 +429,8 @@
   <div class="card">
     <div class="steps">
       <div>فقط حساب‌های همین پمپ دیده می‌شود — هیچ پمپِ دیگری نه.</div>
-      <div>بعد از کد، رمزِ برنامهٔ کامپیوتر را هم می‌خواهد.</div>
+      <div>بخشِ «کارمندان» آزاد است؛ بخشِ «حساب‌ها» رمزِ برنامهٔ کامپیوتر را می‌خواهد — همان که میرزا گذاشته.</div>
+      <div>کد فقط یک بار زده می‌شود؛ گوشی به یاد می‌سپارد و بی اینترنت هم باز می‌شود.</div>
       <div>هیچ‌کس از داخلِ گوشی چیزی را عوض نمی‌کند؛ فقط می‌بیند.</div>
     </div>
     <div class="links">
@@ -432,24 +526,31 @@
   </div>
 </div>
 
-<!-- ══ ۲) قفل — همان رمزِ برنامهٔ کامپیوتر ══ -->
+<!-- ══ ۲) قفلِ «حساب‌های پمپ» — همان رمزِ برنامهٔ کامپیوتر ══════════════
+     خواستهٔ صریحِ صاحب ریپو (۱۴۰۵/۰۷/۱۶): «بخشِ کارمندان آزاد، و بخشِ
+     حساب‌هاش رمزِ برنامه رو بخواد — همونی که میرزا گذاشته.» پس این صفحه
+     دیگر درِ کلِ اپ نیست؛ فقط پیش از «📒 حساب‌ها» می‌آید. رمزِ درست یک بار
+     در این گوشی به یاد می‌ماند (همان هشِ منتشرشده، نه خودِ رمز). -->
 <div class="wrap gate hidden" id="lockPane">
-  <div class="card" style="text-align:center">
-    <h1 id="lockTitle">پمپ یعقوبی</h1>
-    <div class="sub" id="lockNote">رمزِ برنامهٔ کامپیوتر را بزنید.</div>
+  <div class="card lockhero">
+    <div class="big">🔒</div>
+    <h1 id="lockTitle">حساب‌های پمپ</h1>
+    <div class="sub" id="lockNote">بخشِ حساب‌ها رمزِ برنامهٔ کامپیوتر را می‌خواهد — همان رمزی که میرزا گذاشته. فقط یک بار در این گوشی.</div>
     <div style="height:6px"></div>
     <span class="chip" id="lockChip"></span>
   </div>
   <div class="card">
-    <input id="inPass" type="password" inputmode="numeric" placeholder="رمز"
+    <input id="inPass" type="password" inputmode="numeric" placeholder="رمزِ برنامه"
            autocomplete="current-password">
     <div style="height:10px"></div>
-    <button class="p" id="btnUnlock" style="width:100%">باز کن</button>
+    <button class="p big" id="btnUnlock">باز کن</button>
     <div style="height:8px"></div>
     <div class="sub err hidden" id="lockErr"></div>
     <div class="sub" id="lockState">در حالِ وصل شدن…</div>
   </div>
   <div class="card">
+    <button id="btnLockBack" style="width:100%">⛽ برگرد به بخشِ کارمندان (بی رمز)</button>
+    <div style="height:8px"></div>
     <button id="btnForget" style="width:100%">پمپِ دیگر / خروج از این پمپ</button>
   </div>
 </div>
@@ -467,13 +568,16 @@
 <div class="wrap hidden" id="appPane">
   <header class="appbar">
     <div class="top">
+      <span class="brand"><img src="./icons/icon-192.png" alt=""></span>
       <div class="ttl">
-        <h1 id="stName">پمپ یعقوبی</h1>
+        <h1 id="stName">پمپ بنزین</h1>
         <div class="live" id="liveRow" title="حالِ اتصال — بزنید تا کامل خوانده شود">
           <span class="dot" id="liveDot"></span><span id="liveText">…</span>
         </div>
       </div>
-      <button id="btnLock" class="icb" title="قفل">🔒</button>
+      <button id="btnTheme" class="icb" title="روشن / تیره">🌙</button>
+      <!-- 🔒 فقط بخشِ حساب‌ها را دوباره قفل می‌کند؛ کارمندان همیشه آزادند -->
+      <button id="btnLock" class="icb" title="قفلِ دوبارهٔ حساب‌ها">🔒</button>
       <!-- ⛔ همیشه دیده می‌شود: پمپِ بی‌رمز صفحهٔ قفل ندارد، پس «پمپِ دیگر»ِ آن‌جا
            هیچ‌وقت در دسترس نبود و گوشی برای همیشه به پمپِ اول می‌چسبید. -->
       <button id="btnOther" class="icb" title="پمپِ دیگر / خروج از این پمپ">⇄</button>
@@ -495,15 +599,17 @@
       <button class="door owner" data-mode="owner">
         <span class="ic">📒</span>
         <span class="grow"><b>حساب‌های پمپ</b>
-          <span class="sub">همهٔ بخش‌های برنامهٔ کامپیوتر: قرض‌داران، پارچه، ورق، گاوصندوق، صرافی، مصارف، شرکت‌ها، فاکتورها و رباتِ جست‌وجو.</span></span>
+          <span class="sub">همهٔ بخش‌های برنامهٔ کامپیوتر: قرض‌داران با همهٔ حساب‌ها، پارچه، ورق، گاوصندوق، صرافی، مصارف، شرکت‌ها، فاکتورها و رباتِ جست‌وجو.</span>
+          <span class="tag">🔒 با رمزِ برنامهٔ کامپیوتر</span></span>
       </button>
       <button class="door staff" data-mode="staff">
         <span class="ic">⛽</span>
         <span class="grow"><b>کارمندان</b>
-          <span class="sub">کی تیل دارد و کی ندارد — با یک نگاه، و موجودیِ مخزن. برای سرِ پمپ.</span></span>
+          <span class="sub">کی تیل دارد و کی ندارد — با یک نگاه، و موجودیِ مخزن. برای سرِ پمپ.</span>
+          <span class="tag">🔓 آزاد — بی رمز</span></span>
       </button>
     </div>
-    <div class="card" style="margin-top:12px"><div class="sub">هر دو فقط می‌خوانند؛ هیچ حسابی از گوشی عوض نمی‌شود. بعداً با دکمه‌های بالای صفحه می‌توانید جابه‌جا شوید.</div></div>
+    <div class="card" style="margin-top:12px"><div class="sub">هر دو فقط می‌خوانند؛ هیچ حسابی از گوشی عوض نمی‌شود. بی اینترنت هم آخرین عکس دیده می‌شود.</div></div>
   </section>
 
   <!-- ══ هشدارها — بالای همه‌چیز، در هر دو در ══ -->

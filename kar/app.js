@@ -624,9 +624,7 @@
     toldKeys = {};
     chatMsgs = null;
     unlocked = false;
-    //  ⛔ قفلِ دستیِ پمپِ قبلی به پمپِ تازه نمی‌رسد: پمپِ بی‌رمزِ تازه دکمهٔ
-    //  «باز کن» ندارد و گوشی روی صفحهٔ قفل گیر می‌کرد.
-    lockedByHand = false;
+    pendingOwner = false;
     fromCloud = false;
     mode = '';
   }
@@ -681,6 +679,8 @@
   }
 
   function setMode(m) {
+    //  ⛔ «📒 حساب‌ها» فقط با رمزِ برنامه (یا پمپِ بی‌رمز) — کارمندان آزاد
+    if (m === 'owner' && !ownerOk()) { askOwner(); return; }
     mode = m === 'staff' ? 'staff' : (m === 'owner' ? 'owner' : '');
     try {
       if (mode) localStorage.setItem(stnKey('mode'), mode);
@@ -694,6 +694,7 @@
         b.setAttribute('aria-selected', String(b.getAttribute('data-mode') === mode));
       });
     }
+    lockButton();
     if (!mode) { goPane('paneHome'); return; }
     goPane(NAVS[mode][0][0]);
     render();
@@ -1003,7 +1004,7 @@
     //  ⛔ پمپ (پوشه) عوض شد در حالی که اپ باز است (۱۴۰۵/۰۷/۱۶): ‎switchStation‎
     //  داده و «باز» را پاک کرده؛ ماندن روی همان صفحه یعنی اپی یخ‌زده روی عکسِ
     //  پمپِ قبلی. برگرد به درِ ورود تا عکسِ پمپِ تازه برسد.
-    if (moved && $('appPane') && !$('appPane').classList.contains('hidden')) { show('lockPane'); gateReady(); }
+    if (moved && $('appPane') && !$('appPane').classList.contains('hidden')) openApp();
     return true;
   }
 
@@ -1078,7 +1079,7 @@
           save();
           chips();
           syncBackground();
-          show('lockPane');
+          openApp();
           resetLink();
           connect();
           return;
@@ -1087,8 +1088,7 @@
         codeMsg('');
         $('inCode').value = '';
         syncBackground();
-        show('lockPane');
-        gateReady();
+        openApp();
         connect();
       })
       .catch(function (err) {
@@ -1161,7 +1161,7 @@
 
         if (!adoptStation(st)) return;
         syncBackground();
-        show('lockPane');
+        openApp();
         connect();
       })
       .catch(function (err) {
@@ -1193,7 +1193,7 @@
         if ($('inPw')) $('inPw').value = '';
         if (!adoptStation(st)) return;
         syncBackground();
-        show('lockPane');
+        openApp();
         connect();
       })
       .catch(function (err) {
@@ -1236,7 +1236,7 @@
         PumpCloud.dropSession();      // ⛔ گوشی نشستِ حساب نگه نمی‌دارد
         if (!adoptStation(st)) return;
         syncBackground();
-        show('lockPane');
+        openApp();
         connect();
       });
     }).catch(function (err) {
@@ -1282,23 +1282,31 @@
   // ── قفل ────────────────────────────────────────────────────────────────
 
   /*
-   *  ══ «یک بار زده بشه کافی است» (۱۴۰۵/۰۷/۱۴) ═══════════════════════════
+   *  ══ «کارمندان آزاد، حساب‌ها با رمزِ برنامه» (۱۴۰۵/۰۷/۱۶) ═══════════════
    *
-   *  خواستهٔ صریحِ صاحب سامانه: کدِ هشت‌رقمیِ پمپ یک بار زده می‌شود و گوشی
-   *  برنامه را می‌بیند — هر بار که اپ باز می‌شود دوباره چیزی نمی‌پرسد.
+   *  خواستهٔ صریحِ صاحب ریپو: «بخشِ کارمندان آزاد، و بخشِ حساب‌هاش رمزِ
+   *  برنامه رو بخواد — همونی که میرزا گذاشته.»
    *
-   *  ⛔ **بی رمز ⇒ خودِ کد کلید است.** برنامهٔ کامپیوتر از ۳.۱.۱۴۹ بی رمز
-   *  نصب می‌شود؛ تا دیروز گوشی این‌جا روی «هنوز رمزی نساخته» گیر می‌ماند و
-   *  هیچ‌وقت چیزی نشان نمی‌داد.
-   *  ⛔ **با رمز ⇒ یک بار در هر گوشی.** رمزِ درست زیرِ کلیدِ همان پمپ به یاد
-   *  می‌ماند (‎stnKey('ok')‎ = همان هشِ منتشرشده، نه خودِ رمز). صاحبِ پمپ که
-   *  رمز را عوض کند، هش عوض می‌شود و همهٔ گوشی‌ها یک بار دیگر می‌پرسند.
-   *  دکمهٔ 🔒 همان یادِ این گوشی را پاک می‌کند.
+   *  ⛔ کدِ هشت‌رقمی یک بار زده می‌شود و گوشی مستقیم باز می‌شود — هیچ رمزی
+   *  پیش از «⛽ کارمندان» پرسیده نمی‌شود.
+   *  ⛔ «📒 حساب‌ها» رمزِ برنامهٔ کامپیوتر را می‌خواهد (هشِ ‎data.gate‎)، و
+   *  رمزِ درست **یک بار در هر گوشی** به یاد می‌ماند (‎stnKey('ok')‎ = همان
+   *  هشِ منتشرشده، نه خودِ رمز). صاحبِ پمپ که رمز را عوض کند، هش عوض می‌شود
+   *  و همهٔ گوشی‌ها یک بار دیگر می‌پرسند. 🔒 همان یاد را پاک می‌کند.
+   *  ⛔ تا «حساب‌ها» باز نشده، هیچ عددی از آن بخش حتی در صفحهٔ پنهان هم
+   *  نوشته نمی‌شود (‎render‎)، و ربات در درِ کارمندان فقط قرض‌داران و مخزن
+   *  را می‌بیند (‎staffView‎).
+   *  ⚠️ بی رمز (برنامهٔ کامپیوتر رمزی نگذاشته) ⇒ خودِ کد کلید است.
    */
-  var lockedByHand = false;
+  var pendingOwner = false;
 
   function rememberedGate() {
     try { return localStorage.getItem(stnKey('ok')) || ''; } catch (e) { return ''; }
+  }
+
+  /** درِ «حساب‌ها» باز است؟ (عکس رسیده و رمز ندارد یا در این گوشی زده شده.) */
+  function ownerOk() {
+    return !!data && (!data.gate || rememberedGate() === data.gate);
   }
 
   function gateReady() {
@@ -1306,26 +1314,49 @@
     if (b) b.disabled = !(data && data.gate);
     if (data && data.station && data.station.name) {
       cfg.name = data.station.name;
-      $('lockTitle').textContent = data.station.name;
       $('stName').textContent = data.station.name;
     }
     chips();
-    var lb = $('btnLock');
-    if (lb) lb.classList.toggle('hidden', !(data && data.gate));
-    if (!data || unlocked || lockedByHand) return;
-    if (!$('lockPane') || $('lockPane').classList.contains('hidden')) return;
-    if (!data.gate || rememberedGate() === data.gate) openApp();
+    lockButton();
+    var st = $('lockState');
+    if (st) st.textContent = data ? (data.gate ? '' : 'این پمپ رمزی ندارد — باز می‌شود…')
+                                  : 'در حالِ گرفتنِ اطلاعات از پمپ…';
+    if (!pendingOwner || !$('lockPane') || $('lockPane').classList.contains('hidden')) return;
+    if (ownerOk()) enterOwner();
   }
 
-  /** همان کاری که رمزِ درست می‌کند — بی پرسیدن، وقتی لازم نیست. */
+  /** 🔒 فقط وقتی معنا دارد که رمز هست و همین حالا در «حساب‌ها» هستیم. */
+  function lockButton() {
+    var lb = $('btnLock');
+    if (lb) lb.classList.toggle('hidden', !(data && data.gate && mode === 'owner'));
+  }
+
+  /** اپ باز می‌شود — بی هیچ پرسشی؛ فقط درِ «حساب‌ها» پرسش دارد. */
   function openApp() {
     unlocked = true;
+    pendingOwner = false;
     $('inPass').value = '';
     show('appPane');
     loadMode();
-    setMode(mode);          // بی در ⇒ خانه؛ با در ⇒ همان در
+    setMode(mode);          // بی در ⇒ خانه؛ با در ⇒ همان در (حساب‌ها ⇒ شاید رمز)
     render();
     try { if (window.PumpAndroid && PumpAndroid.boot) PumpAndroid.boot('render'); } catch (e) { }
+  }
+
+  /** زدنِ «📒 حساب‌ها» بی رمزِ به‌یادمانده ⇒ صفحهٔ رمز. */
+  function askOwner() {
+    pendingOwner = true;
+    $('lockErr').classList.add('hidden');
+    show('lockPane');
+    gateReady();
+    try { $('inPass').focus(); } catch (e) { }
+  }
+
+  function enterOwner() {
+    pendingOwner = false;
+    $('inPass').value = '';
+    show('appPane');
+    setMode('owner');
   }
 
   function show(which) {
@@ -1351,8 +1382,7 @@
         return;
       }
       try { localStorage.setItem(stnKey('ok'), data.gate); } catch (e) { }
-      lockedByHand = false;
-      openApp();
+      enterOwner();
     } catch (e) {
       err.textContent = 'رمز سنجیده نشد: ' + e;
       err.classList.remove('hidden');
@@ -1467,11 +1497,19 @@
     var secs = (data && data.sections) || {};
     $('dashTiles').innerHTML = Object.keys(secs).map(function (id) {
       var sec = secs[id], first = (sec.sum || [])[0];
-      return '<button class="tile" data-sec="' + esc(id) + '"><b>' + esc(sec.t) + '</b>' +
+      return '<button class="tile" data-sec="' + esc(id) + '"><span class="ti">' + secIcon(id) + '</span><b>' + esc(sec.t) + '</b>' +
         '<span class="sub">' + fmt((sec.rows || []).length) + ' ردیف' + (first ? ' · ' + esc(first[0]) : '') + '</span>' +
         (first ? '<span class="v">' + esc(first[1]) + '</span>' : '') + '</button>';
     }).join('') || '<div class="sub">هنوز بخشی نرسیده.</div>';
   }
+
+  /** نشانهٔ هر بخش — همان نشانه‌های نوارِ برنامهٔ کامپیوتر (فقط ظاهر). */
+  var SEC_ICONS = {
+    safe: '🔐', sarrafi: '💱', expense: '💸', chakana: '🛒', extraincome: '📈', invoice: '🧾',
+    storage: '🛢️', staff: '🧑‍💼', parcha: '🧵', waraq: '📄', debtrasid: '📥', parcharasid: '🧾',
+    attendance: '🕘', company: '🏭', amanat: '🤝', debt: '👥'
+  };
+  function secIcon(id) { return SEC_ICONS[id] || '📁'; }
 
   var staffFilter = '';
 
@@ -1518,8 +1556,12 @@
     var cls = x.low ? ' bad' : (x.near ? ' warn' : '');
     var badge = x.low ? '<span class="badge out">⛔ کم آمده</span>'
       : x.near ? '<span class="badge low">⚠️ نزدیکِ حد</span>' : '<span class="badge ok">✅ کافی</span>';
-    return '<div class="tank' + cls + '"><div class="hd"><b>' + (name === 'پطرول' ? '🟠 ' : '🔵 ') + name + '</b>' + badge + '</div>' +
+    //  نوارِ پرشدگی: موجودی نسبت به کلِ واردشده — فقط وقتی هر دو عدد هست
+    var inL = Number(x['in']) || 0, showL = Number(x.show) || 0;
+    var pct = inL > 0 ? Math.max(0, Math.min(100, Math.round(showL / inL * 100))) : -1;
+    return '<div class="tank' + cls + (name === 'دیزل' ? ' diesel' : '') + '"><div class="hd"><b>' + (name === 'پطرول' ? '🟠 ' : '🔵 ') + name + '</b>' + badge + '</div>' +
       '<div class="sub">موجودی</div><div class="big">' + fmt(x.show) + ' <small>لیتر</small></div>' +
+      (pct >= 0 ? '<div class="gauge" title="' + pct + '٪ از واردشده"><i style="width:' + pct + '%"></i></div>' : '') +
       (compact ? '' : '<div class="io"><div class="mini"><div class="l">وارد</div><div class="v">' + fmt(x['in']) + '</div></div>' +
         '<div class="mini"><div class="l">فروش</div><div class="v">' + fmt(x.out) + '</div></div></div>') + '</div>';
   }
@@ -1546,10 +1588,15 @@
     people.forEach(function (p) {
       if (want && p.status !== want) return;
       if (q && norm(p.name).indexOf(q) < 0) return;
+      var nAc = (p.accounts || []).length;
       h += '<button class="p-card ' + esc(p.status) + '" data-pid="' + esc(p.id) + '">' +
         '<div class="hd"><span class="n">' + esc(p.name) + '</span>' +
         '<span class="badge ' + esc(p.status) + '">' + statusIcon(p.status) + ' ' + statusWord(p.status) + '</span></div>' +
-        '<div class="three">' + balMini(p.bal) + '</div></button>';
+        '<div class="three">' + balMini(p.bal) + '</div>' +
+        '<div class="meta">' +
+          (nAc > 1 ? '<span class="bal">📒 <b>' + fmt(nAc) + '</b> حساب</span>' : '') +
+          (p.phone ? '<span class="bal">📞 <b>' + esc(p.phone) + '</b></span>' : '') +
+        '</div></button>';
     });
     $('debtList').innerHTML = h || '<div class="sub">کسی پیدا نشد.</div>';
   }
@@ -1564,7 +1611,7 @@
 
     $('secTabs').innerHTML = ids.map(function (id) {
       return '<button data-sec="' + esc(id) + '" aria-selected="' + (id === secTab) + '">' +
-        esc(secs[id].t) + '</button>';
+        secIcon(id) + ' ' + esc(secs[id].t) + '</button>';
     }).join('');
 
     var sec = secs[secTab];
@@ -1790,12 +1837,53 @@
     if (!unlocked) return;
     if (data && data.station && data.station.name) $('stName').textContent = data.station.name;
     chips();
+    lockButton();
     renderAlerts();
     renderTank();
-    renderDebtors();
-    renderSections();
-    renderDash();
     renderStaff();
+    //  ⛔ دادهٔ «حساب‌ها» فقط وقتی به صفحه می‌رسد که همان در باز باشد — حتی
+    //  در صفحهٔ پنهان هم نه، تا کارمند با ابزارِ مرورگر هم نبیند.
+    if (mode === 'owner' && ownerOk()) {
+      renderDebtors();
+      renderSections();
+      renderDash();
+    } else clearOwnerPanes();
+  }
+
+  /** همهٔ نوشته‌های درِ «حساب‌ها» پاک — پس از 🔒 یا در درِ کارمندان. */
+  function clearOwnerPanes() {
+    ['bannerBox', 'dashTank', 'dashTiles', 'debtList', 'secTabs', 'secBox'].forEach(function (id) {
+      var el = $(id); if (el) el.innerHTML = '';
+    });
+    var bo = $('botOut'); if (bo && mode !== 'owner') bo.innerHTML = '';
+  }
+
+  /** دکمهٔ تم همیشه تمِ **دیگر** را نشان می‌دهد. */
+  function themeIcon() {
+    var b = $('btnTheme');
+    if (!b) return;
+    var cur = document.documentElement.getAttribute('data-theme')
+      || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    b.textContent = cur === 'dark' ? '☀️' : '🌙';
+    //  نوارِ وضعیتِ گوشی هم‌رنگِ سربرگ
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.setAttribute('content', cur === 'dark' ? '#1A1A1F' : '#ffffff');
+    try { if (window.PumpAndroid && PumpAndroid.bars) PumpAndroid.bars(cur === 'dark' ? '#1A1A1F' : '#ffffff', cur !== 'dark'); } catch (e) { }
+  }
+
+  /**
+   *  ربات در درِ کارمندان فقط همان چیزی را می‌بیند که آن در نشان می‌دهد:
+   *  حالِ هر قرض‌دار (بی دفترِ حساب)، و مخزن. هیچ بخشِ دیگری.
+   */
+  function staffView(d) {
+    if (!d) return d;
+    return {
+      station: d.station, tank: d.tank, alerts: d.alerts, seq: d.seq,
+      debtors: (d.debtors || []).map(function (p) {
+        return { id: p.id, name: p.name, status: p.status, bal: p.bal, phone: p.phone, accounts: [] };
+      }),
+      sections: {}
+    };
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -1804,7 +1892,7 @@
 
   function ask() {
     var q = $('inAsk').value;
-    var blocks = answer(q, data);
+    var blocks = answer(q, mode === 'owner' && ownerOk() ? data : staffView(data));
     $('botOut').innerHTML = blocks.map(blockHtml).join('');
   }
 
@@ -1868,7 +1956,7 @@
       save();
       chips();
       syncBackground();
-      show('lockPane');
+      openApp();
       connect();
     });
 
@@ -1892,11 +1980,29 @@
     $('btnUnlock').addEventListener('click', unlock);
     $('inPass').addEventListener('keydown', function (e) { if (e.key === 'Enter') unlock(); });
     $('btnLock').addEventListener('click', function () {
-      //  قفلِ دستی یادِ این گوشی را هم پاک می‌کند — بارِ بعد رمز پرسیده می‌شود
+      //  🔒 = «حساب‌ها» دوباره قفل؛ یادِ رمز در این گوشی هم پاک می‌شود.
+      //  ⛔ کارمندان قفل نمی‌شوند — از همان صفحه یک دکمه تا آن‌جاست.
       try { localStorage.removeItem(stnKey('ok')); } catch (e) { }
-      lockedByHand = true;
-      unlocked = false; buildNav(); show('lockPane');
+      clearOwnerPanes();
+      mode = '';
+      try { localStorage.removeItem(stnKey('mode')); } catch (e) { }
+      buildNav();
+      askOwner();
     });
+    $('btnLockBack').addEventListener('click', function () {
+      pendingOwner = false;
+      show('appPane');
+      setMode('staff');
+    });
+    $('btnTheme').addEventListener('click', function () {
+      var cur = document.documentElement.getAttribute('data-theme')
+        || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      var next = cur === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      try { localStorage.setItem('pumpKar.theme', next); } catch (e) { }
+      themeIcon();
+    });
+    themeIcon();
 
     // ── دو در ──
     $('paneHome').addEventListener('click', function (e) {
@@ -2005,8 +2111,7 @@
       $('inCode').value = window.PumpCloud ? PumpCloud.formatCode(pendingCode) : pendingCode;
       joinWithCode(pendingCode);
     } else if (cfg.srv || cfg.code) {
-      show('lockPane');
-      gateReady();
+      openApp();
       //  درِ شبکهٔ پمپ، درِ تونل، و عکسِ سرورِ حساب — هر سه هم‌زمان
       connect();
       //  نشانیِ تازه‌تر، اگر ابر یکی دارد — بی‌صدا، چون کارِ کارمند نباید
@@ -2022,7 +2127,7 @@
       //  شاید نشستِ گوگلی از قبل هست (صاحبِ پمپ) و فقط نشانی پاک شده
       resumeCloud().then(function (ok) {
         if (!ok) return;
-        show('lockPane');
+        openApp();
         connect();
       });
     }
@@ -2064,15 +2169,31 @@
     return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
   }
 
+  /** «امروز» · «دیروز» · تاریخِ شمسی — فقط بالای نخستین پیامِ هر روز. */
+  function chatDay(at) {
+    if (!at) return '';
+    var d = new Date(at), t = new Date();
+    var key = function (x) { return x.getFullYear() + '-' + x.getMonth() + '-' + x.getDate(); };
+    if (key(d) === key(t)) return 'امروز';
+    var y = new Date(t.getTime() - 86400000);
+    if (key(d) === key(y)) return 'دیروز';
+    try { return d.toLocaleDateString('fa-IR-u-ca-persian', { weekday: 'long', day: 'numeric', month: 'long' }); }
+    catch (e) { return d.toLocaleDateString(); }
+  }
+
   function renderChat() {
     var box = $('chatList');
     if (!box) return;
     var me = chatName();
     var list = chatLoad();
+    var lastDay = '';
     box.innerHTML = list.length ? list.map(function (m) {
       var mine = m.mine || (me && m.from === me);
       var role = m.role === 'admin' ? 'مدیر' : m.role === 'mirza' ? 'میرزا' : 'کارمند';
-      return '<div class="bub' + (mine ? ' mine' : '') + '">' +
+      //  جداکنندهٔ روز — همان «امروز / دیروز / تاریخ»ِ پیام‌رسانِ برنامهٔ کامپیوتر
+      var day = chatDay(m.at), sep = '';
+      if (day && day !== lastDay) { sep = '<div class="cday"><span>' + esc(day) + '</span></div>'; lastDay = day; }
+      return sep + '<div class="bub' + (mine ? ' mine' : '') + '">' +
         (mine ? '' : '<div class="who">' + esc(m.from) + ' <span class="sub">· ' + role + '</span></div>') +
         '<div>' + esc(m.text) + '</div>' +
         '<div class="sub">' + chatTime(m.at) + (m.seq ? '' : ' · ⏳ در صف') + '</div></div>';

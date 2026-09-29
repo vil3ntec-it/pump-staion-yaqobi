@@ -128,23 +128,18 @@ ok((await page.textContent('#codeErr')).includes('هیچ پمپی'), 'کدِ غ�
 await page.fill('#inCode', '۴۸۲۹۱۷۳۶');
 ok((await page.inputValue('#inCode')) === '4829-1736', 'رقمِ فارسی لاتین و خطِ تیره خودکار');
 await page.click('#btnJoin');
-await page.waitForFunction(() => !document.getElementById('lockPane').classList.contains('hidden'));
-ok(await vis('lockPane'), 'بعد از کد، صفحهٔ قفل می‌آید');
-await page.waitForFunction(() => !document.getElementById('btnUnlock').disabled, null, { timeout: 8000 });
-ok((await page.textContent('#lockChip')).includes('4829-1736'), 'نشانِ کدِ پمپ روی قفل');
-ok((await page.textContent('#lockTitle')).includes('پمپِ آزمون'), 'نامِ پمپ از عکسِ ابری');
-
-await page.fill('#inPass', '0000'); await page.click('#btnUnlock');
-await page.waitForFunction(() => !document.getElementById('lockErr').classList.contains('hidden'));
-ok(true, 'رمزِ غلط رد شد');
-await page.fill('#inPass', '1234'); await page.click('#btnUnlock');
-await page.waitForFunction(() => !document.getElementById('appPane').classList.contains('hidden'));
-ok(await vis('paneHome'), 'بعد از رمز، خانه با دو در');
+//  ⛔ از ۱۴۰۵/۰۷/۱۶: کد ⇒ مستقیم اپ؛ «کارمندان» آزاد، «حساب‌ها» با رمزِ برنامه
+await page.waitForFunction(() => !document.getElementById('appPane').classList.contains('hidden'), null, { timeout: 8000 });
+ok(await vis('paneHome'), 'بعد از کد، بی هیچ رمزی خانه با دو در');
+ok(!(await vis('lockPane')), 'صفحهٔ قفل پیش از کارمندان نمی‌آید');
 ok(!(await vis('nav')), 'روی خانه نوارِ پایین نیست');
+await page.waitForFunction(() => (document.getElementById('stName').textContent || '').includes('پمپِ آزمون'), null, { timeout: 8000 });
+ok(true, 'نامِ پمپ از عکسِ ابری روی سربرگ');
 
 await page.click('.door.staff');
-ok(await vis('paneStaff'), 'درِ کارمندان باز شد');
+ok(await vis('paneStaff'), 'درِ کارمندان بی رمز باز شد');
 ok(await vis('nav'), 'نوارِ پایین آمد');
+await page.waitForFunction(() => document.querySelectorAll('#staffList .st-row').length === 3, null, { timeout: 8000 });
 const rows = await page.$$eval('#staffList .st-row', els => els.map(e => e.className + '|' + e.querySelector('.n').textContent));
 ok(rows.length === 3 && rows[0].includes('out') && rows[0].includes('محمد'), 'چراغِ سرخ اول می‌آید: ' + rows.join(' , '));
 await page.click('#staffCounts button[data-f="ok"]');
@@ -157,8 +152,26 @@ await page.click('#btnBackStaff');
 ok(await vis('paneStaff'), 'برگشت به فهرست');
 ok(await vis('alertCard') && (await page.textContent('#alertBox')).includes('اضافه برد'), 'خبرها روی درِ کارمندان');
 
+// ⛔ در درِ کارمندان هیچ عددی از «حساب‌ها» به صفحه نرسیده — حتی پنهان
+const leaked = await page.evaluate(() => ['bannerBox', 'dashTiles', 'debtList', 'secBox']
+  .map(id => (document.getElementById(id).innerHTML || '').length).reduce((a, b) => a + b, 0));
+ok(leaked === 0, 'دادهٔ حساب‌ها پیش از رمز در صفحه نیست');
+await page.click('#nav button[data-pane="paneBot"]');
+await page.fill('#inAsk', 'پارچه'); await page.click('#btnAsk');
+ok(!(await page.textContent('#botOut')).includes('ردیف'), 'ربات در درِ کارمندان بخش‌ها را نشان نمی‌دهد');
+await page.click('#nav button[data-pane="paneStaff"]');
+
+// «📒 حساب‌ها» ⇒ رمزِ برنامه
 await page.click('#modeSeg button[data-mode="owner"]');
-ok(await vis('paneDash'), 'درِ حساب‌ها ⇒ داشبورد');
+ok(await vis('lockPane'), 'درِ حساب‌ها ⇒ رمزِ برنامه');
+await page.waitForFunction(() => !document.getElementById('btnUnlock').disabled, null, { timeout: 8000 });
+ok((await page.textContent('#lockChip')).includes('4829-1736'), 'نشانِ کدِ پمپ روی قفل');
+await page.fill('#inPass', '0000'); await page.click('#btnUnlock');
+await page.waitForFunction(() => !document.getElementById('lockErr').classList.contains('hidden'));
+ok(true, 'رمزِ غلط رد شد');
+await page.fill('#inPass', '1234'); await page.click('#btnUnlock');
+await page.waitForFunction(() => !document.getElementById('appPane').classList.contains('hidden'));
+ok(await vis('paneDash'), 'رمزِ درست ⇒ داشبوردِ حساب‌ها');
 ok((await page.$$('#bannerBox .bn')).length === 4, 'چهار عددِ نوار');
 ok((await page.textContent('#dashTank')).includes('7,500'), 'مخزن در داشبورد');
 await page.click('#dashTiles button[data-sec="parcha"]');
@@ -169,20 +182,39 @@ ok(navTxt.includes('بخش‌ها') && navTxt.includes('قرض‌داران'), '
 // ⛔ «یک بار زده بشه کافی است»: باز شدنِ دوباره نه کد می‌خواهد نه رمز
 await page.reload();
 await page.waitForFunction(() => !document.getElementById('appPane').classList.contains('hidden'), null, { timeout: 8000 });
+await page.waitForFunction(() => !document.getElementById('paneDash').classList.contains('hidden'), null, { timeout: 8000 });
 ok(await vis('paneDash'), 'باز شدنِ دوباره ⇒ بی کد و بی رمز، همان در (حساب‌ها)');
 
-// 🔒 دستی ⇒ یادِ این گوشی پاک، و بارِ بعد رمز پرسیده می‌شود
+// تم: کلید تمِ دیگر را می‌گذارد و در همین گوشی می‌ماند
+const th0 = await page.evaluate(() => document.documentElement.getAttribute('data-theme') || '');
+await page.click('#btnTheme');
+const th1 = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+ok(th1 && th1 !== th0, 'کلیدِ تم کار می‌کند: ' + th0 + ' ⇒ ' + th1);
+
+// 🔒 ⇒ فقط حساب‌ها قفل؛ کارمندان همچنان آزاد
 await page.click('#btnLock');
-ok(await vis('lockPane'), '🔒 ⇒ صفحهٔ قفل');
+ok(await vis('lockPane'), '🔒 ⇒ صفحهٔ رمزِ حساب‌ها');
+await page.click('#btnLockBack');
+ok(await vis('paneStaff'), 'از صفحهٔ رمز، کارمندان بی رمز');
 await page.reload();
+await page.waitForFunction(() => !document.getElementById('appPane').classList.contains('hidden'), null, { timeout: 8000 });
+ok(await vis('paneStaff'), 'باز شدنِ دوباره ⇒ کارمندان، بی رمز');
+
+// ⛔ «بدونِ اینترنت هم باز بشه»: پوسته از سرویس‌ورکر، آخرین عکس از خودِ گوشی
+await page.waitForFunction(() => navigator.serviceWorker && navigator.serviceWorker.controller, null, { timeout: 8000 }).catch(() => {});
+await page.context().setOffline(true);
+await page.reload().catch(() => {});
+await page.waitForFunction(() => !document.getElementById('appPane').classList.contains('hidden'), null, { timeout: 8000 }).catch(() => {});
+ok(await vis('paneStaff') && (await page.$$('#staffList .st-row')).length === 3, 'بی اینترنت ⇒ همان اپ و همان سه نفر از حافظهٔ گوشی');
+await page.context().setOffline(false);
+await page.click('#modeSeg button[data-mode="owner"]');
 await page.waitForFunction(() => !document.getElementById('btnUnlock').disabled, null, { timeout: 8000 });
-ok(await vis('lockPane'), 'پس از قفلِ دستی، باز شدنِ دوباره رمز می‌خواهد');
+ok(await vis('lockPane'), 'پس از 🔒، حساب‌ها دوباره رمز می‌خواهد');
 await page.fill('#inPass', '1234'); await page.click('#btnUnlock');
-await page.waitForFunction(() => !document.getElementById('appPane').classList.contains('hidden'));
+await page.waitForFunction(() => !document.getElementById('paneDash').classList.contains('hidden'));
 
 // leave pump ⇒ everything forgotten
-await page.click('#btnLock');
-await page.click('#btnForget');
+await page.click('#btnOther');
 ok(await vis('codePane'), '«پمپِ دیگر» ⇒ صفحهٔ کد');
 const left = await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('pumpKar.v1.')));
 ok(left.length === 0, 'هیچ چیزی از پمپ در گوشی نماند: ' + JSON.stringify(left));
@@ -205,8 +237,8 @@ ok(await vis('signinPane'), 'با رمزِ غلط هیچ‌جا نمی‌رود'
 
 await page.fill('#inPw', 'Salam12345');
 await page.click('#btnPassIn');
-await page.waitForFunction(() => !document.getElementById('lockPane').classList.contains('hidden'), null, { timeout: 8000 });
-ok(await vis('lockPane'), 'رمزِ درست ⇒ نشانیِ پمپ از حساب آمد و صفحهٔ قفل باز شد');
+await page.waitForFunction(() => !document.getElementById('appPane').classList.contains('hidden'), null, { timeout: 8000 });
+ok(await vis('appPane'), 'رمزِ درست ⇒ نشانیِ پمپ از حساب آمد و اپ باز شد');
 ok((await page.inputValue('#inPw')) === '', 'رمز در کادر نمی‌ماند');
 const adopted = await page.evaluate(() => {
   try { return JSON.parse(localStorage.getItem('pumpKar.v1') || '{}'); } catch { return {}; }

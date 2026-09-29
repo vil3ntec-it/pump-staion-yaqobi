@@ -20,9 +20,9 @@ namespace PumpYaqobi.UiTests;
 ///
 /// خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۵): «اگر آن را توی برنامه آوردم، اطلاعاتِ همان
 /// فایل همه‌شان بیاید… با دقت، اطلاعات است و خیلی مهم.» پس:
-///   ۱) دفتر و تم و ترتیبِ نوار و اندازهٔ نوشته‌ها عوض می‌شوند ⇒ «📦 ساختن»
+///   ۱) دفتر و تم و ترتیبِ نوار و اندازهٔ نوشته‌ها عوض می‌شوند ⇒ «💾 ذخیرهٔ فایلِ بکاپ»
 ///   ۲) همه‌چیز خراب می‌شود (حساب پاک، ردیف اضافه، تم و نوار برگشته)
-///   ۳) «📂 آوردن» ⇒ شمارِ <b>هر</b> جدول با پیش از خرابی، نامِ حسابِ پاک‌شده
+///   ۳) «↩ بازگردانی از فایل» ⇒ شمارِ <b>هر</b> جدول با پیش از خرابی، نامِ حسابِ پاک‌شده
 ///      برگشته، و تم و نوار و نوشته‌ها همان لحظه روی پنجره
 ///   ۴) فایلِ دست‌خورده ⇒ رد، و یک ردیف هم عوض نشد
 ///   ۵) «📤 فرستادن به سرور» بی سرور ⇒ جملهٔ سرخِ راست، نه «رفت»
@@ -64,7 +64,7 @@ internal static class FullBackupProbe
         var host = AppHost.Current;
 
         // ── ۱) حالِ «کاربر»: تم، نوار، نوشته‌ها ─────────────────────────────
-        Console.WriteLine("── ۱) تم، ترتیبِ نوار و اندازهٔ نوشته‌ها عوض می‌شوند، بعد «📦 ساختن» ──");
+        Console.WriteLine("── ۱) تم، ترتیبِ نوار و اندازهٔ نوشته‌ها عوض می‌شوند، بعد «💾 ذخیرهٔ فایلِ بکاپ» ──");
         var safe = vm.Sections.First(s => s.Id == "safe");
         vm.SelectedTheme = PumpTheme.Gold;
         vm.MoveNav(safe, PumpYaqobi.App.ViewModels.NavOrder.Where.First);
@@ -81,7 +81,7 @@ internal static class FullBackupProbe
 
         var file = Path.Combine(root, "flash", "همه" + FullBackup.Extension);
         Dialogs.SaveFileHook = _ => file;
-        try { Click(win, "📦 ساختنِ فایلِ کامل"); Until(win, () => page.FullStatus.StartsWith("✅") || page.FullStatus.StartsWith("❌")); }
+        try { Click(win, "💾 ذخیرهٔ فایلِ بکاپ"); Until(win, () => page.FullStatus.StartsWith("✅") || page.FullStatus.StartsWith("❌")); }
         finally { Dialogs.SaveFileHook = null; }
         Check("فایلِ کامل ساخته شد", File.Exists(file), page.FullStatus.Replace("\n", " ⏎ "));
         Check("جمله سبز و راست است", page.FullStatus.StartsWith("✅"));
@@ -111,13 +111,13 @@ internal static class FullBackupProbe
         Check("خرابی واقعاً دفتر را عوض کرد", broken["DebtRows"] == 0 && broken["Expenses"] != want["Expenses"]);
 
         // ── ۳) آوردن ────────────────────────────────────────────────────────
-        Console.WriteLine("── ۳) «📂 آوردن» ⇒ همه برگشت ──");
+        Console.WriteLine("── ۳) «↩ بازگردانی از فایل» ⇒ همه برگشت ──");
         var pre = AppSettings.Load();
         var bonds = (pre.CloudDeviceToken, pre.CloudPublicKey, pre.StationCode);
         string? asked = null;
         Dialogs.PickFileHook = _ => file;
         Dialogs.ConfirmHook = (_, m) => { asked = m; return true; };
-        try { Click(win, "📂 آوردنِ فایلِ کامل"); Until(win, () => page.FullStatus.StartsWith("✅") || page.FullStatus.StartsWith("❌") || page.FullStatus.StartsWith("⚠️")); }
+        try { Click(win, "↩ بازگردانی از فایل"); Until(win, () => page.FullStatus.StartsWith("✅") || page.FullStatus.StartsWith("❌") || page.FullStatus.StartsWith("⚠️")); }
         finally { Dialogs.PickFileHook = null; Dialogs.ConfirmHook = null; }
         Check("پیش از جایگزینی پرسیده شد، با خلاصهٔ فایل", asked is not null && asked.Contains("قرض‌داران") && asked.Contains("عکسِ ایمنی"),
               asked?.Replace("\n", " ⏎ "));
@@ -177,7 +177,7 @@ internal static class FullBackupProbe
         var before = FullBackup.CountRows(host.Db.DbPath)!;
         Dialogs.PickFileHook = _ => bad;
         Dialogs.ConfirmHook = (_, _) => true;
-        try { Click(win, "📂 آوردنِ فایلِ کامل"); Until(win, () => page.FullStatus.StartsWith("❌")); }
+        try { Click(win, "↩ بازگردانی از فایل"); Until(win, () => page.FullStatus.StartsWith("❌")); }
         finally { Dialogs.PickFileHook = null; Dialogs.ConfirmHook = null; }
         Check("رد شد، با جملهٔ سرخ", page.FullStatus.StartsWith("❌") && page.FullStatus.Contains("هیچ چیزی عوض نشد"), page.FullStatus);
         SqliteClear();

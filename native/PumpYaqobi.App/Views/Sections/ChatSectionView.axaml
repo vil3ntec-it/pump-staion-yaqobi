@@ -19,7 +19,7 @@
 
       <!-- ══ ۱) فهرستِ گفت‌وگوها ════════════════════════════════════════════ -->
       <Border Grid.Column="0" Classes="panel chatcol" Margin="0,0,12,0" Padding="0">
-        <Grid RowDefinitions="Auto,Auto,*,Auto">
+        <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
 
           <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="14,12,14,6">
             <StackPanel Grid.Column="0" Spacing="1" VerticalAlignment="Center">
@@ -27,15 +27,44 @@
               <TextBlock Text="{Binding State}" FontSize="11" TextAlignment="Start"
                          TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Pump.Muted}" />
             </StackPanel>
-            <Button Grid.Column="1" Classes="ghost" Content="‹ برگشت" Padding="12,5"
-                    Command="{Binding BackCommand}" VerticalAlignment="Center"
-                    ToolTip.Tip="برگشت به برنامه" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+              <Button Classes="ghost" Content="✓✓" Padding="9,5"
+                      Command="{Binding MarkAllReadCommand}" IsVisible="{Binding HasSupportUnread}"
+                      ToolTip.Tip="همهٔ پیام‌ها خوانده شد" />
+              <Button Classes="ghost" Content="‹ برگشت" Padding="12,5"
+                      Command="{Binding BackCommand}" ToolTip.Tip="برگشت به برنامه" />
+            </StackPanel>
           </Grid>
 
           <TextBox Grid.Row="1" Margin="12,4,12,8" Text="{Binding Search}"
                    Watermark="🔍 جست‌وجوی نام…" MinHeight="38" VerticalContentAlignment="Center" />
 
-          <ListBox Grid.Row="2" ItemsSource="{Binding Shown}" SelectedItem="{Binding Current}"
+          <!-- صافیِ فهرست — همه · گروه · مشتری‌ها · پشتیبانی · نخوانده (۱۴۰۵/۰۷/۱۶) -->
+          <WrapPanel Grid.Row="2" Margin="10,0,10,6" Orientation="Horizontal">
+            <WrapPanel.Styles>
+              <Style Selector="WrapPanel > Button.seg">
+                <Setter Property="Margin" Value="0,0,5,5" />
+                <Setter Property="Padding" Value="10,3" />
+                <Setter Property="FontSize" Value="12" />
+              </Style>
+            </WrapPanel.Styles>
+            <Button Classes="seg" Content="همه" Classes.on="{Binding IsFilterAll}"
+                    Command="{Binding SetFilterCommand}" CommandParameter="all" />
+            <Button Classes="seg" Content="👥 گروه" Classes.on="{Binding IsFilterGroup}"
+                    Command="{Binding SetFilterCommand}" CommandParameter="group" />
+            <Button Classes="seg" Content="{Binding CustomerTabText}" Classes.on="{Binding IsFilterCustomer}"
+                    Command="{Binding SetFilterCommand}" CommandParameter="customer" />
+            <Button Classes="seg" Content="🛟 پشتیبانی" Classes.on="{Binding IsFilterSupport}"
+                    Command="{Binding SetFilterCommand}" CommandParameter="support" />
+            <Button Classes="seg" Content="{Binding UnreadTabText}" Classes.on="{Binding IsFilterUnread}"
+                    Command="{Binding SetFilterCommand}" CommandParameter="unread" />
+          </WrapPanel>
+
+          <TextBlock Grid.Row="3" Text="{Binding ListEmptyText}" FontSize="12.5" Margin="0,24,0,0"
+                     HorizontalAlignment="Center" VerticalAlignment="Top"
+                     Foreground="{DynamicResource Pump.Muted}" IsVisible="{Binding IsListEmpty}" />
+
+          <ListBox Grid.Row="3" ItemsSource="{Binding Shown}" SelectedItem="{Binding Current}"
                    Background="Transparent" BorderThickness="0" Padding="6,0">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:ChatThreadViewModel">
@@ -70,7 +99,7 @@
             </ListBox.ItemTemplate>
           </ListBox>
 
-          <TextBlock Grid.Row="3" Margin="14,8,14,12" FontSize="10.5" TextWrapping="Wrap"
+          <TextBlock Grid.Row="4" Margin="14,8,14,12" FontSize="10.5" TextWrapping="Wrap"
                      TextAlignment="Start" Foreground="{DynamicResource Pump.Muted}"
                      Text="{Binding RetentionText}" />
         </Grid>
@@ -78,11 +107,11 @@
 
       <!-- ══ ۲) خودِ گفت‌وگو ════════════════════════════════════════════════ -->
       <Border Grid.Column="1" Classes="panel chatcol" Padding="0">
-        <Grid RowDefinitions="Auto,*,Auto">
+        <Grid RowDefinitions="Auto,Auto,*,Auto">
 
           <Border Grid.Row="0" Padding="14,10" BorderBrush="{DynamicResource Pump.Border}"
                   BorderThickness="0,0,0,1">
-            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
               <Border Grid.Column="0" Width="42" Height="42" CornerRadius="21" Margin="0,0,12,0"
                       VerticalAlignment="Center"
                       Background="{Binding Current.AvatarKey, FallbackValue=Pump.Accent, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
@@ -95,10 +124,13 @@
                 <TextBlock Text="{Binding Current.Subtitle}" FontSize="11.5" TextAlignment="Start"
                            TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Pump.Muted}" />
               </StackPanel>
-              <Button Grid.Column="2" Classes="ghost" Content="{Binding TrashText}" Padding="12,5"
+              <Button Grid.Column="2" Classes="ghost" Content="🔍" Padding="10,5" Margin="0,0,8,0"
+                      Command="{Binding ToggleMessageSearchCommand}" VerticalAlignment="Center"
+                      Classes.on="{Binding ShowMessageSearch}" ToolTip.Tip="جست‌وجو در همین گفت‌وگو" />
+              <Button Grid.Column="3" Classes="ghost" Content="{Binding TrashText}" Padding="12,5"
                       Command="{Binding ToggleTrashCommand}" VerticalAlignment="Center"
                       ToolTip.Tip="پیام‌های سطل ۱۵ روز می‌مانند و بعد کامل حذف می‌شوند" />
-              <Button Grid.Column="3" Classes="ghost danger" Content="{Binding Current.BlockText}"
+              <Button Grid.Column="4" Classes="ghost danger" Content="{Binding Current.BlockText}"
                       Command="{Binding ToggleBlockCommand}" Padding="12,5" Margin="8,0,0,0"
                       VerticalAlignment="Center"
                       IsVisible="{Binding Current.IsCustomer, FallbackValue=False}"
@@ -106,7 +138,18 @@
             </Grid>
           </Border>
 
-          <Panel Grid.Row="1">
+          <Border Grid.Row="1" Padding="14,8" IsVisible="{Binding ShowMessageSearch}"
+                  BorderBrush="{DynamicResource Pump.Border}" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBox x:Name="MessageSearchBox" Text="{Binding MessageSearch}"
+                       Watermark="🔍 جست‌وجو در پیام‌های همین گفت‌وگو…"
+                       MinHeight="36" VerticalContentAlignment="Center" />
+              <TextBlock Grid.Column="1" Text="{Binding MessageSearchText}" Margin="10,0,0,0"
+                         VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Pump.Muted}" />
+            </Grid>
+          </Border>
+
+          <Panel Grid.Row="2">
             <StackPanel Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center"
                         MaxWidth="440" IsVisible="{Binding IsEmpty}">
               <TextBlock Text="💬" FontSize="44" TextAlignment="Center" />
@@ -118,7 +161,13 @@
               <ItemsControl ItemsSource="{Binding Current.Messages}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:ChatMessageViewModel">
-                    <Border Classes="bubble" Classes.mine="{Binding Mine}" Classes.trashed="{Binding Trashed}">
+                    <StackPanel>
+                    <!-- جداکنندهٔ روز — «امروز» · «دیروز» · تاریخ -->
+                    <Border Classes="chatday" IsVisible="{Binding ShowDay}">
+                      <TextBlock Text="{Binding DayLabel}" FontSize="11" FontWeight="Bold" />
+                    </Border>
+                    <Border Classes="bubble" Classes.mine="{Binding Mine}" Classes.trashed="{Binding Trashed}"
+                            Classes.hit="{Binding Hit}">
                       <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Grid.Column="0" Spacing="4">
                           <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding NotMine}">
@@ -150,6 +199,10 @@
                           </StackPanel>
                         </StackPanel>
                         <StackPanel Grid.Column="1" VerticalAlignment="Top" Spacing="2" Margin="6,0,0,0">
+                          <Button Classes="bubbledel" Content="📋" Padding="4,0" FontSize="12"
+                                  IsVisible="{Binding CanCopy}" ToolTip.Tip="کپیِ متن"
+                                  Command="{Binding $parent[ItemsControl].((vm:ChatSectionViewModel)DataContext).CopyMessageCommand}"
+                                  CommandParameter="{Binding}" />
                           <Button Classes="bubbledel" Content="🗑" Padding="4,0" FontSize="12"
                                   IsVisible="{Binding CanDelete}" ToolTip.Tip="پاک کردن"
                                   Command="{Binding $parent[ItemsControl].((vm:ChatSectionViewModel)DataContext).DeleteMessageCommand}"
@@ -161,13 +214,14 @@
                         </StackPanel>
                       </Grid>
                     </Border>
+                    </StackPanel>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
             </ScrollViewer>
           </Panel>
 
-          <Border Grid.Row="2" Padding="12,10" BorderBrush="{DynamicResource Pump.Border}"
+          <Border Grid.Row="3" Padding="12,10" BorderBrush="{DynamicResource Pump.Border}"
                   BorderThickness="0,1,0,0" IsVisible="{Binding !ShowTrash}">
             <Grid ColumnDefinitions="Auto,Auto,*,Auto">
               <Button Grid.Column="0" Classes="ghost" Content="📎" Padding="11,5" FontSize="15"
@@ -183,11 +237,14 @@
                   </MultiBinding>
                 </Button.IsVisible>
               </Button>
-              <TextBox Grid.Column="2" Text="{Binding Draft}" Watermark="پیام‌تان را بنویسید…"
-                       Margin="7,0,0,0" MinHeight="44" VerticalContentAlignment="Center"
-                       AcceptsReturn="False" />
+              <!-- ⛔ Enter می‌فرستد و Shift+Enter خطِ تازه (ChatSectionView.axaml.cs) -->
+              <TextBox x:Name="DraftBox" Grid.Column="2" Text="{Binding Draft}"
+                       Watermark="پیام‌تان را بنویسید…"
+                       ToolTip.Tip="Enter فرستادن · Shift+Enter خطِ تازه"
+                       Margin="7,0,0,0" MinHeight="44" MaxHeight="140" VerticalContentAlignment="Center"
+                       AcceptsReturn="True" TextWrapping="Wrap" />
               <Button Grid.Column="3" Classes="accent" Content="فرستادن ➤" Margin="9,0,0,0"
-                      MinWidth="112" MinHeight="44" Command="{Binding SendCommand}" IsDefault="True" />
+                      MinWidth="112" MinHeight="44" Command="{Binding SendCommand}" VerticalAlignment="Bottom" />
             </Grid>
           </Border>
         </Grid>

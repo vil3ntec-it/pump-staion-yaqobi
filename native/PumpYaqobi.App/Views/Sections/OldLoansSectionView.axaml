@@ -11,8 +11,6 @@
 
     <c:SectionPage.Toolbar>
       <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-        <Button Classes="seg" Content="همه" Command="{Binding SetFilterCommand}"
-                CommandParameter="all" Classes.on="{Binding IsAll}" />
         <Button Classes="seg" Content="⛽ واحد تیل" Command="{Binding SetFilterCommand}"
                 CommandParameter="fuel" Classes.on="{Binding IsFuel}" />
         <Button Classes="seg" Content="واحد پول" Command="{Binding SetFilterCommand}"
@@ -35,8 +33,6 @@
           <StackPanel Spacing="3">
             <TextBlock Text="جمله الباقی" Classes="label" />
             <TextBlock Text="{Binding TotalText}" Classes="num" />
-            <TextBlock Text="در حالتِ «همه» جمع نشان داده نمی‌شود — لیتر و افغانی جمع نمی‌شوند"
-                       Classes="muted" TextWrapping="Wrap" IsVisible="{Binding IsAll}" />
           </StackPanel>
         </Border>
         <Border Classes="stat">

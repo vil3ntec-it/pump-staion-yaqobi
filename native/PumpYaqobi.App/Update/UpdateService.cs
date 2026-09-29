@@ -87,9 +87,6 @@ public sealed class UpdateService
     /// <summary>ترتیبِ پرسیدن: خروجی اول (روزِ خصوصی شدن تنها راه است).</summary>
     private static readonly string[] Feeds = { OutputFeedUrl, FeedUrl };
 
-    /// <summary>مخزنی که آخرین بررسیِ موفق از آن آمد — برای «صفحهٔ دانلود».</summary>
-    private static string _lastFeed = FeedUrl;
-
     /// <summary>
     /// میزبان‌های گیت‌هاب که سرآیندِ <c>Date</c>شان ساعتِ مطمئن است (‎Services.TimeSync‎)
     /// — از خودِ <see cref="FeedUrl"/>، تا نشانیِ منبع همین یک‌جا بماند.
@@ -197,7 +194,7 @@ public sealed class UpdateService
             if (best is null || Compare(info.LatestVersion, best.LatestVersion) > 0)
             { best = info; bestFeed = feed; }
         }
-        if (best is not null) { _lastFeed = bestFeed; return best; }
+        if (best is not null) return best;
         return Broken(current, firstWhy);
     }
 
@@ -378,7 +375,7 @@ public sealed class UpdateService
             (why.Length > 0 ? why : "بررسیِ به‌روزرسانی انجام نشد")
             + " — نسخهٔ نصب‌شده " + current + " است و معلوم نشد تازه‌تری هست یا نه."
             + "\n⚠️ به‌روزرسانی مستقیم از گیت‌هاب می‌آید و به سرورِ خانگیِ پمپ ربطی ندارد."
-            + " اگر اینترنتِ این کامپیوتر باز است، «باز کردنِ صفحهٔ دانلود» را بزنید.");
+            + " بی اینترنت، «نصبِ نسخهٔ تازه از فایل» راهِ دیگر است.");
 
     // ══ پوشهٔ نصب ═══════════════════════════════════════════════════════════
     // کاربر خودش انتخاب می‌کند برنامه کجا نصب شود. اگر جایی را انتخاب کند که
@@ -408,29 +405,9 @@ public sealed class UpdateService
         catch { return false; }
     }
 
-    /// <summary>
-    /// ══ راهِ بیرون ═══════════════════════════════════════════════════════════
-    /// صفحهٔ انتشار در مرورگرِ خودِ سیستم باز می‌شود.
-    ///
-    /// ⛔ چرا لازم است: هر بررسی و هر دانلودی می‌تواند به شبکه بخورد، و وقتی
-    /// خورد کاربر باید **یک راه** داشته باشد، نه یک کارتِ بسته. خواستهٔ
-    /// خودش هم همین بود: «بده لینک دانلود مستقیم».
-    ///
-    /// ⚠️ نشانی همچنان در **رابط کاربری نوشته نمی‌شود** — فقط به مرورگر
-    /// سپرده می‌شود، و ساخته شدنش این‌جا است، نه در ویومدل، تا قاعدهٔ
-    /// «نامِ مخزن فقط در همین فایل» دست‌نخورده بماند.
-    /// </summary>
-    public static bool OpenDownloadPage()
-    {
-        try
-        {
-            var parts = new Uri(_lastFeed).AbsolutePath
-                .Split('/', StringSplitOptions.RemoveEmptyEntries);
-            var url = "https://github.com/" + parts[1] + "/" + parts[2] + "/releases/latest";
-            return Services.SafeOpen.Url(url);
-        }
-        catch { return false; }
-    }
+    //  ⛔ «باز کردنِ صفحهٔ دانلود» برداشته شد (۱۴۰۵/۰۷/۱۶، خواستهٔ صاحب ریپو):
+    //  کاربر را مستقیم به صفحهٔ مخزن در گیت‌هاب می‌برد — «هیچ کس ادرس رو
+    //  نبینه». راهِ بیرونِ بی‌اینترنت همان «نصب از فایل» است. برنگردانیدش.
 
     /// <summary>مسیرِ فایلی که نتیجهٔ آخرین جای‌گزینی در آن نوشته می‌شود.</summary>
     private static string ResultFile =>
@@ -692,7 +669,7 @@ public sealed class UpdateService
         if (sums is null || sums.Length == 0)
         {
             LastProblem = "فهرستِ چک‌سامِ این نسخه پیدا نشد — برای امنیت نصب نمی‌شود. "
-                        + "«باز کردنِ صفحهٔ دانلود» را بزنید.";
+                        + "کمی بعد دوباره «بررسی» را بزنید.";
             return null;
         }
 

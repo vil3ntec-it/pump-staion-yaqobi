@@ -593,8 +593,21 @@ console.log('\n— بازبینیِ دوم (۱۴۰۵/۰۷/۱۶)');
   ok(/\}\s*[\s\S]*rejected = 0;\s*schedule\(\);/.test(nd) && nd.indexOf('rejected = 0;') > nd.indexOf('} else {'),
      '⛔ شمارِ ردِ درها مالِ همان دور است («رمز پذیرفته نشد»ِ دروغ نیست)');
   const ad = appSrc.slice(appSrc.indexOf('function adoptStation'), appSrc.indexOf('function resetLink'));
-  ok(/var moved = nextStn !== cfg\.stn;/.test(ad) && /if \(moved && \$\('appPane'\)[\s\S]*show\('lockPane'\); gateReady\(\);/.test(ad),
-     '⛔ پوشهٔ پمپ عوض شد وقتی اپ باز است ⇒ برمی‌گردد به در، نه اپِ یخ‌زده روی عکسِ قبلی');
+  ok(/var moved = nextStn !== cfg\.stn;/.test(ad) && /if \(moved && \$\('appPane'\)[\s\S]*\) openApp\(\);/.test(ad),
+     '⛔ پوشهٔ پمپ عوض شد وقتی اپ باز است ⇒ اپ از نو برای پمپِ تازه، نه اپِ یخ‌زده روی عکسِ قبلی');
+
+  //  ⛔ «کارمندان آزاد، حساب‌ها با رمزِ برنامه» (۱۴۰۵/۰۷/۱۶)
+  const sm = appSrc.slice(appSrc.indexOf('function setMode'), appSrc.indexOf('function buildNav'));
+  ok(/if \(m === 'owner' && !ownerOk\(\)\) \{ askOwner\(\); return; \}/.test(sm),
+     '⛔ درِ «حساب‌ها» بی رمزِ برنامه باز نمی‌شود');
+  ok(!/staff'[^\n]*askOwner/.test(sm), 'درِ «کارمندان» هیچ رمزی نمی‌پرسد');
+  const rd = appSrc.slice(appSrc.indexOf('  function render() {'), appSrc.indexOf('function clearOwnerPanes'));
+  ok(/if \(mode === 'owner' && ownerOk\(\)\) \{\s*renderDebtors\(\);\s*renderSections\(\);\s*renderDash\(\);\s*\} else clearOwnerPanes\(\);/.test(rd),
+     '⛔ دادهٔ «حساب‌ها» پیش از رمز حتی در صفحهٔ پنهان هم نوشته نمی‌شود');
+  ok(/answer\(q, mode === 'owner' && ownerOk\(\) \? data : staffView\(data\)\)/.test(appSrc),
+     '⛔ ربات در درِ کارمندان فقط قرض‌داران و مخزن را می‌بیند');
+  ok(appSrc.indexOf("show('lockPane')") === appSrc.lastIndexOf("show('lockPane')") && /function askOwner/.test(appSrc),
+     'صفحهٔ رمز فقط از یک در باز می‌شود (‎askOwner‎)');
   const sh = appSrc.slice(appSrc.indexOf('function show(which)'), appSrc.indexOf('function show(which)') + 600);
   ok(/if \(which !== 'appPane'\) chatWatch\(false\);/.test(sh), '⛔ گروهِ کارکنان پشتِ قفل پرسیده نمی‌شود');
   ok(/if \(!st\.equals\(prefs\(c\)\.getString\(K_STATION, ""\)\)\) ed\.remove\(K_SEEN\);/.test(alerts),

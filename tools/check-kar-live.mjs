@@ -75,24 +75,30 @@ ok((await page.inputValue('#inCode')) === kc.display, 'رقمِ فارسی تا�
 await shot(withPass ? 'kar-1-code-pass' : 'kar-1-code');
 await page.click('#btnJoin');
 
-if (withPass) {
-  await page.waitForFunction(() => !document.getElementById('btnUnlock').disabled, null, { timeout: 60000 });
-  ok(await vis('lockPane'), 'پمپِ رمزدار ⇒ یک بار رمزِ برنامه');
-  await page.fill('#inPass', '0000'); await page.click('#btnUnlock');
-  await page.waitForFunction(() => !document.getElementById('lockErr').classList.contains('hidden'));
-  ok(true, 'رمزِ غلط رد شد');
-  await page.fill('#inPass', kc.pass); await page.click('#btnUnlock');
-}
+//  ⛔ از ۱۴۰۵/۰۷/۱۶: کد ⇒ مستقیم اپ؛ «کارمندان» آزاد، «حساب‌ها» با رمزِ برنامه
 await page.waitForFunction(() => !document.getElementById('appPane').classList.contains('hidden'), null, { timeout: 60000 })
   .catch(() => {});
-ok(await vis('appPane'), withPass ? 'رمزِ درست ⇒ برنامه' : '⛔ بی‌رمز ⇒ همان لحظه برنامه، بی هیچ پرسشی');
+ok(await vis('appPane'), '⛔ کد ⇒ همان لحظه برنامه، بی هیچ پرسشی');
 await shot(withPass ? 'kar-2-home-pass' : 'kar-2-home');
 
 await page.click('.door.staff').catch(() => {});
 await page.waitForFunction((n) => (document.getElementById('staffList') || {}).textContent?.includes(n), kc.debtor, { timeout: 20000 })
   .catch(() => {});
-ok(((await page.textContent('#staffList')) || '').includes(kc.debtor), 'قرض‌دارِ همین پمپ دیده می‌شود: ' + kc.debtor);
+ok(((await page.textContent('#staffList')) || '').includes(kc.debtor), 'قرض‌دارِ همین پمپ دیده می‌شود (کارمندان، بی رمز): ' + kc.debtor);
 await shot(withPass ? 'kar-3-staff-pass' : 'kar-3-staff');
+
+await page.click('#modeSeg button[data-mode="owner"]');
+if (withPass) {
+  await page.waitForFunction(() => !document.getElementById('btnUnlock').disabled, null, { timeout: 60000 });
+  ok(await vis('lockPane'), 'پمپِ رمزدار ⇒ «حساب‌ها» یک بار رمزِ برنامه');
+  await page.fill('#inPass', '0000'); await page.click('#btnUnlock');
+  await page.waitForFunction(() => !document.getElementById('lockErr').classList.contains('hidden'));
+  ok(true, 'رمزِ غلط رد شد');
+  await page.fill('#inPass', kc.pass); await page.click('#btnUnlock');
+}
+await page.waitForFunction(() => !document.getElementById('paneDash').classList.contains('hidden'), null, { timeout: 60000 })
+  .catch(() => {});
+ok(await vis('paneDash'), withPass ? 'رمزِ درست ⇒ حساب‌ها' : 'پمپِ بی‌رمز ⇒ حساب‌ها بی پرسش');
 
 //  ⛔ «یک بار زده بشه کافی است»: باز شدنِ دوباره — نه کد، نه رمز
 await page.reload();

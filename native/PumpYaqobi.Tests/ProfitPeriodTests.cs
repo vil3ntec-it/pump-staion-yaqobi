@@ -266,9 +266,14 @@ public class ProfitPeriodTests : IDisposable
             Assert.Contains(bind, bulk.Groups[1].Value);
         Assert.Single(Regex.Matches(xaml, "ColumnDefinitions=\"\\*,16,\\*,16,\\*\""));
 
-        //  ⛔ هیچ منطقی عوض نشد: همان اتصال‌ها
-        foreach (var bind in new[] { "UnionPetrol", "UnionDiesel", "ManualIncome", "ManualExpense", "NetText", "IncomeText", "ExpenseText" })
+        //  ⛔ هیچ منطقی عوض نشد: همان اتصال‌ها. سه عددِ حساس از ۱۴۰۵/۰۷/۱۶ از
+        //  درِ پرده («…Shown») می‌آیند که بی پرده همان عددِ واقعی است.
+        foreach (var bind in new[] { "UnionPetrol", "UnionDiesel", "ManualIncome", "ManualExpense", "NetShown", "IncomeShown", "ExpenseShown" })
             Assert.Contains("{Binding " + bind + "}", xaml);
+        var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "ProfitSectionViewModel.cs");
+        Assert.Contains("public string NetShown => Veiled ? VeilMoney : NetText;", vm);
+        Assert.Contains("public string IncomeShown => Veiled ? VeilMoney : IncomeText;", vm);
+        Assert.Contains("public string ExpenseShown => Veiled ? VeilMoney : ExpenseText;", vm);
 
         var css = NoComments(Read("PumpYaqobi.App", "Views", "Sections", "ProfitSectionView.axaml"));
         var style = Regex.Match(css, "<Style Selector=\"TextBox\\.plbox\">(.*?)</Style>", RegexOptions.Singleline);

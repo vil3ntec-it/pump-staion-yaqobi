@@ -2053,6 +2053,19 @@
     <Setter Property="Background" Value="{DynamicResource Pump.Selected}" />
     <Setter Property="HorizontalAlignment" Value="Right" />
   </Style>
+  <!-- جورِ جست‌وجوی داخلِ گفت‌وگو — لبهٔ تاکیدی -->
+  <Style Selector="Border.bubble.hit">
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+  <!-- جداکنندهٔ روز بالای نخستین پیامِ هر روز -->
+  <Style Selector="Border.chatday">
+    <Setter Property="Background" Value="{DynamicResource Pump.Input}" />
+    <Setter Property="CornerRadius" Value="999" />
+    <Setter Property="Padding" Value="12,3" />
+    <Setter Property="Margin" Value="0,6,0,10" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+  </Style>
   <!-- پیامِ سطل — کم‌رنگ، تا با گفت‌وگوی زنده قاطی نشود -->
   <Style Selector="Border.bubble.trashed">
     <Setter Property="Opacity" Value="0.72" />

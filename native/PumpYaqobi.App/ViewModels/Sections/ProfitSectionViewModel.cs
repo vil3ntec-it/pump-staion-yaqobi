@@ -5,6 +5,7 @@ using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
+using PumpYaqobi.Services.Security;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
 
@@ -39,6 +40,80 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
             _period = p;
             _ = CrashGuard.RunAsync("مفاد / ضرر", ComputeAsync);
         }, "همهٔ ماه‌ها");
+        host.Locks.Changed += id =>
+        {
+            if (id == SectionLockService.Profit)
+                Avalonia.Threading.Dispatcher.UIThread.Post(RaiseVeil);
+        };
+    }
+
+    // ══ پرده — «بخش آزاد، عددها تار» (۱۴۰۵/۰۷/۱۶) ════════════════════════════
+    //
+    //  خواستهٔ صاحب ریپو: «رمز مفاد و ضرر نباید بخش شو بگیره… بخش باید آزاد
+    //  باشه؛ اون چارت و فایده و مصارف باید تار بشن و دیده نشن، و وقتی یارو
+    //  روی اون بزنه رمز رو بخاد… و کاری کن که دوباره هم قفل بشه.»
+    //
+    //  ⛔ تار شدن فقط ظاهر نیست: تا پرده هست، عددِ واقعی **اصلاً به صفحه
+    //  نمی‌رسد** — جای هر عدد یک عددِ ساختگیِ هم‌شکل می‌نشیند و نمودار صاف
+    //  است. پس نه با بزرگ‌نمایی، نه با عکس، نه با ابزارِ دسترسی‌پذیری چیزی
+    //  لو نمی‌رود. رنگِ سبز/سرخ هم نمی‌ماند (خودش می‌گفت مفاد است یا ضرر).
+    //  ⛔ رمز همان رمزِ همین بخش است (یا رمزِ برنامه) و با همان ترمزِ حدس،
+    //  از همان یک تابع (‎MainViewModel.AskSectionPasswordAsync‎).
+    //  ⚠️ با رفتن از بخش دوباره قفل می‌شود (‎OnDeactivated‎)، و دکمهٔ «🔒» هم.
+
+    /// <summary>عددها پشتِ پرده‌اند؟ (رمز دارد و هنوز زده نشده.)</summary>
+    public bool Veiled => _host.Locks.NeedsUnlock(SectionLockService.Profit);
+
+    /// <summary>دکمهٔ «🔒 دوباره قفل کن» — فقط وقتی رمز هست و باز است.</summary>
+    public bool CanRelock => _host.Locks.HasPassword(SectionLockService.Profit) && !Veiled;
+
+    private const string VeilMoney = "88,888,888 افغانی";
+    private static readonly double[] VeilTrend = { 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30 };
+
+    public string NetShown => Veiled ? VeilMoney : NetText;
+    public string NetCaptionShown => Veiled ? "🔒 پنهان — برای دیدن رمز بزنید" : NetCaption;
+    public string IncomeTitleShown => Veiled ? "📈 درآمدها" : IncomeTitle;
+    public string IncomeShown => Veiled ? VeilMoney : IncomeText;
+    public string ExpenseShown => Veiled ? VeilMoney : ExpenseText;
+    public IReadOnlyList<double> TrendShown => Veiled ? VeilTrend : TrendValues;
+    public string TrendBrushShown => Veiled ? "Pump.Muted" : TrendBrushKey;
+    public string IncomeBrushShown => Veiled ? "Pump.Muted" : IncomeBrushKey;
+    public string ExpenseBrushShown => Veiled ? "Pump.Muted" : "Pump.Danger";
+
+    private void RaiseVeil()
+    {
+        foreach (var n in new[]
+                 {
+                     nameof(Veiled), nameof(CanRelock), nameof(NetShown), nameof(NetCaptionShown),
+                     nameof(IncomeTitleShown), nameof(IncomeShown), nameof(ExpenseShown), nameof(TrendShown),
+                     nameof(TrendBrushShown), nameof(IncomeBrushShown), nameof(ExpenseBrushShown),
+                 })
+            OnPropertyChanged(n);
+    }
+
+    /// <summary>زدن روی پرده ⇒ رمز. درست ⇒ همان لحظه عددها پیدا.</summary>
+    [RelayCommand]
+    private async Task RevealAsync()
+    {
+        if (!Veiled) return;
+        await MainViewModel.AskSectionPasswordAsync(SectionLockService.Profit, Title);
+        RaiseVeil();
+    }
+
+    /// <summary>«🔒 دوباره قفل کن» — بی رمز، همین حالا.</summary>
+    [RelayCommand]
+    private void Relock()
+    {
+        _host.Locks.Relock(SectionLockService.Profit);
+        RaiseVeil();
+    }
+
+    /// <summary>رفتن از بخش ⇒ دوباره پشتِ پرده، تا کسی که بعد می‌آید نبیند.</summary>
+    public override void OnDeactivated()
+    {
+        base.OnDeactivated();
+        _host.Locks.Relock(SectionLockService.Profit);
+        RaiseVeil();
     }
 
     // ══ دوره: همهٔ زمان‌ها · یک سال · یک ماه ═══════════════════════════════════
@@ -85,7 +160,16 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
     {
         OnPropertyChanged(nameof(TrendValues));
         OnPropertyChanged(nameof(TrendBrushKey));
+        OnPropertyChanged(nameof(TrendShown));
+        OnPropertyChanged(nameof(TrendBrushShown));
     }
+
+    partial void OnNetTextChanged(string value) => OnPropertyChanged(nameof(NetShown));
+    partial void OnNetCaptionChanged(string value) => OnPropertyChanged(nameof(NetCaptionShown));
+    partial void OnIncomeTitleChanged(string value) => OnPropertyChanged(nameof(IncomeTitleShown));
+    partial void OnIncomeTextChanged(string value) => OnPropertyChanged(nameof(IncomeShown));
+    partial void OnIncomeBrushKeyChanged(string value) => OnPropertyChanged(nameof(IncomeBrushShown));
+    partial void OnExpenseTextChanged(string value) => OnPropertyChanged(nameof(ExpenseShown));
 
     // ── نرخِ اتحادیه ─────────────────────────────────────────────────────────
     [ObservableProperty] private string _unionPetrol = "";

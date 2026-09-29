@@ -171,31 +171,6 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         return Task.CompletedTask;
     }
 
-    /// <summary>«💾 ذخیرهٔ فایلِ بکاپ» — همان ‎downloadBackupNow‎ی نسخهٔ وب.</summary>
-    [RelayCommand]
-    private async Task SaveBackupAsync()
-    {
-        var target = await Dialogs.SaveFileAsync("فایلِ بکاپ کجا ذخیره شود؟",
-                                                 BackupService.SuggestedFileName(),
-                                                 "بکاپِ پمپ", new[] { "*.db" });
-        if (target is null) return;
-
-        Busy = true;
-        try
-        {
-            await Task.Run(() => _host.Backup.WriteSnapshot(target));
-            Status = "💾 ذخیره شد: " + Path.GetFileName(target);
-            _host.Toast("💾 فایلِ بکاپ ساخته شد — جای امن نگهش دارید", ToastKind.Ok);
-        }
-        catch (PermissionDeniedException) { _host.Toast("❌ بکاپ فقط از مدیر برمی‌آید", ToastKind.Error); }
-        catch (Exception ex)
-        {
-            CrashGuard.Write("بکاپ", ex);
-            _host.Toast("❌ بکاپ گرفته نشد: " + ErrorText.Friendly(ex), ToastKind.Error);
-        }
-        finally { Busy = false; }
-    }
-
     [RelayCommand]
     private async Task SnapshotNowAsync()
     {
@@ -226,8 +201,16 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
     private async Task RestoreFromFileAsync()
     {
         var path = await Dialogs.PickFileAsync("فایلِ بکاپ را انتخاب کنید",
-                                               "بکاپِ پمپ", new[] { "*.db", "*" + SyncBackup.Extension });
+                                               "بکاپِ پمپ",
+                                               new[] { "*" + FullBackup.Extension, "*.db", "*" + SyncBackup.Extension });
         if (path is null) return;
+        //  ⛔ فایلِ کامل (‎.pumpyaqobi‎) از همان راهِ سنجیده‌اش می‌آید — بکاپ و
+        //  «فایلِ کامل» از ۱۴۰۵/۰۷/۱۶ یک درند.
+        if (path.EndsWith(FullBackup.Extension, StringComparison.OrdinalIgnoreCase))
+        {
+            await ImportFullFromAsync(path);
+            return;
+        }
         await RestoreFromAsync(path, Path.GetFileName(path));
     }
 
@@ -321,12 +304,12 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         try { return _host.Settings.GetString(SettingsKeys.StationName); } catch { return ""; }
     }
 
-    /// <summary>«📦 ساختنِ فایلِ کامل» — دفتر + تم و تنظیمات، در یک فایل.</summary>
+    /// <summary>«💾 ذخیرهٔ فایلِ بکاپ» — دفتر + تم و تنظیمات، در یک فایل (‎.pumpyaqobi‎).</summary>
     [RelayCommand]
     private async Task ExportFullAsync()
     {
         var pump = PumpName();
-        var target = await Dialogs.SaveFileAsync("فایلِ کاملِ برنامه کجا ذخیره شود؟ (مثلاً فلش)",
+        var target = await Dialogs.SaveFileAsync("فایلِ بکاپ کجا ذخیره شود؟ (مثلاً فلش)",
                                                  FullBackup.SuggestedFileName(pump),
                                                  "فایلِ کاملِ برنامه", new[] { "*" + FullBackup.Extension });
         if (target is null) return;
@@ -361,21 +344,6 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             _host.Toast(FullStatus, ToastKind.Error);
         }
         finally { Busy = false; }
-    }
-
-    /// <summary>
-    /// «📂 آوردنِ فایلِ کامل» — پیش از هر نوشتنی همهٔ سنجش‌ها (قالب، نسخه،
-    /// اثرِ انگشت، سلامتِ SQLite، شمارِ هر جدول)؛ بعد پرسش با خلاصهٔ فایل؛
-    /// بعد جایگزینی با عکسِ ایمنی؛ و بعد <b>دوباره</b> شمارِ هر جدول در خودِ
-    /// برنامه با فایل. ⛔ هر مرحله‌ای نشد ⇒ هیچ چیزی عوض نمی‌شود و گفته می‌شود.
-    /// </summary>
-    [RelayCommand]
-    private async Task ImportFullAsync()
-    {
-        var path = await Dialogs.PickFileAsync("فایلِ کاملِ برنامه را انتخاب کنید",
-                                               "فایلِ کاملِ برنامه", new[] { "*" + FullBackup.Extension });
-        if (path is null) return;
-        await ImportFullFromAsync(path);
     }
 
     /// <summary>
@@ -584,55 +552,8 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         //  می‌بندد. اگر کاربر ویزارد را لغو کند، برنامه سرِ جایش می‌ماند.
     }
 
-    // ══ آوردنِ دادهٔ نسخهٔ وب ══════════════════════════════════════════════════
-    //
-    // این‌جا ماند چون کارش همان کارِ بکاپ است: یک فایلِ بیرونی که جای
-    // حساب‌های فعلی را می‌گیرد، با همان عکسِ ایمنیِ پیش از نوشتن.
-
-    [ObservableProperty] private bool _importBusy;
-    [ObservableProperty] private string _importStatus = "";
-
-    [RelayCommand]
-    private async Task ImportLegacyAsync()
-    {
-        var path = await Dialogs.PickJsonAsync();
-        if (path is null) return;
-
-        ImportBusy = true;
-        ImportStatus = "در حال خواندنِ فایل…";
-        try
-        {
-            var json = await File.ReadAllTextAsync(path);
-            var res = await _host.LegacyImport.ImportAsync(json);
-
-            if (!res.Ok && res.Message.Contains("خالی نیست"))
-            {
-                var yes = await Dialogs.ConfirmAsync(
-                    "جایگزینیِ همهٔ حساب‌ها",
-                    $"این فایل {res.SourceRecords} رکورد دارد و جای همهٔ حساب‌های فعلی را می‌گیرد. "
-                    + "پیش از جایگزینی، یک بکاپِ کامل از دادهٔ فعلی گرفته می‌شود. ادامه؟",
-                    "بله، جایگزین کن");
-                if (!yes) { ImportStatus = "انصراف داده شد — چیزی عوض نشد"; return; }
-                res = await _host.LegacyImport.ImportAsync(json, replaceExisting: true);
-            }
-
-            ImportStatus = res.Message
-                + (res.BackupPath is not null
-                    ? Environment.NewLine + "📦 بکاپِ پیش از مهاجرت: " + res.BackupPath : "")
-                + (res.Warnings.Count > 0
-                    ? Environment.NewLine + "⚠️ " + string.Join(" · ", res.Warnings.Take(5)) : "");
-            _host.Toast(res.Ok ? res.Message : "❌ " + res.Message,
-                        res.Ok ? ToastKind.Ok : ToastKind.Error);
-
-            if (res.Ok) _host.Toast("برای دیدنِ حساب‌ها، برنامه را ببندید و باز کنید", ToastKind.Info);
-        }
-        catch (Exception ex)
-        {
-            CrashGuard.Write("آوردنِ داده", ex);
-            ImportStatus = "❌ " + ErrorText.Friendly(ex);
-        }
-        finally { ImportBusy = false; }
-    }
+    //  ⛔ «آوردنِ حساب‌ها از نسخهٔ وب» از صفحه برداشته شد (۱۴۰۵/۰۷/۱۶، خواستهٔ
+    //  صاحب ریپو). ‎LegacyImportService‎ و آزمون‌هایش سرِ جایشان‌اند.
 
     // ══ به‌روزرسانیِ برنامه ════════════════════════════════════════════════════
     //
@@ -724,18 +645,6 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         }
     }
 
-    /// <summary>
-    /// «باز کردنِ صفحهٔ دانلود» — راهِ بیرون وقتی شبکه نمی‌گذارد.
-    /// ⚠️ نشانی در رابط نوشته نمی‌شود؛ فقط به مرورگرِ سیستم سپرده می‌شود
-    /// (ساختنش در <c>UpdateService</c> است، همان یک جا).
-    /// </summary>
-    [RelayCommand]
-    private void OpenDownloadPage()
-    {
-        if (!UpdateService.OpenDownloadPage())
-            _host.Toast("❌ مرورگر باز نشد", ToastKind.Error);
-    }
-
     /// <summary>فایلی که ‎AutoUpdate‎ گرفته — دوباره گرفته نمی‌شود.</summary>
     private void AdoptAutoReady()
     {
@@ -767,7 +676,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
                 // ⚠️ اگر چک‌سام یا نشانی رد شد، همان دلیل (بی نامِ میزبان).
                 UpdateStatus = _update.LastProblem.Length > 0
                     ? "❌ " + _update.LastProblem
-                    : "❌ گرفتنِ نسخهٔ تازه انجام نشد — «باز کردنِ صفحهٔ دانلود» را بزنید";
+                    : "❌ گرفتنِ نسخهٔ تازه انجام نشد — کمی بعد دوباره بزنید، یا «نصب از فایل»";
                 UpdateStatusBrushKey = "Pump.Danger";
                 return;
             }
@@ -777,7 +686,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         }
         catch
         {
-            UpdateStatus = "❌ گرفتنِ نسخهٔ تازه انجام نشد — «باز کردنِ صفحهٔ دانلود» را بزنید";
+            UpdateStatus = "❌ گرفتنِ نسخهٔ تازه انجام نشد — کمی بعد دوباره بزنید، یا «نصب از فایل»";
             UpdateStatusBrushKey = "Pump.Danger";
         }
         finally { Downloading = false; }
