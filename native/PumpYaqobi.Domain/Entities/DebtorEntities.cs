@@ -79,6 +79,19 @@ public class DebtAccount : EntityBase
     public string? Name { get; set; }
     public string? Note { get; set; }
 
+    /// <summary>
+    /// شمارهٔ تماسِ همین حسابِ <b>فرعی</b> — و «فیِ خرید»ِ همان.
+    ///
+    /// ⛔ گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۷): «حسابِ فرعی و اصلی هر دو یک شماره
+    /// تماس دارند… نباید هیچ چیزی بینشان مشترک باشد.» پیش از این هر دو
+    /// کادر روی خودِ شخص (<see cref="Debtor.Phone"/>) می‌نشستند.
+    /// ⚠️ حسابِ <b>اصلی</b> همچنان از <see cref="Debtor.Phone"/> و
+    /// <see cref="Debtor.BuyFeeNote"/> می‌خواند و این دو را خالی نگه
+    /// می‌دارد — کارت، جست‌وجو و «قرض‌های کهنه» از آن‌جا می‌خوانند.
+    /// </summary>
+    public string? Phone { get; set; }
+    public string? BuyFeeNote { get; set; }
+
     /// <summary>واحدِ همین حساب — مالِ حساب است نه مالِ شخص.</summary>
     public LedgerMode Mode { get; set; } = LedgerMode.Fuel;
 

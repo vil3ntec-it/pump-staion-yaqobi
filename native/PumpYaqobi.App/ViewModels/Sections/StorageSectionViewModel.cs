@@ -74,7 +74,7 @@ public sealed partial class PurchaseRowViewModel : RowViewModel
     }
 
     public string KgText { get => Shamsi.MoneyOrBlank(Kg); set => Kg = Shamsi.Num(value); }
-    public string DensityText { get => Shamsi.MoneyOrBlank(Density); set => Density = Shamsi.Num(value); }
+    public string DensityText { get => Shamsi.MoneyOrBlank(Density); set => Density = DensityInput.Parse(value); }
     public string PriceTonText { get => Shamsi.MoneyOrBlank(PriceTon); set => PriceTon = Shamsi.Num(value); }
     public string UsdRateText { get => Shamsi.MoneyOrBlank(UsdRate); set => UsdRate = Shamsi.Num(value); }
 
@@ -428,7 +428,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     /// </summary>
     private void CalcBuy()
     {
-        var n = Calc.Compute(KgOf(BuyKg), Shamsi.Num(BuyDensity),
+        var n = Calc.Compute(KgOf(BuyKg), DensityInput.Parse(BuyDensity),
                              Shamsi.Num(BuyPriceTon), Shamsi.Num(BuyUsdRate));
 
         BuyTonText = n.Ton == 0m ? "—" : Shamsi.Money(Math.Round(n.Ton, 3)) + " تن";
@@ -505,7 +505,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     private Task SaveBuyAsync() => CrashGuard.RunAsync("ثبت خرید", async () =>
     {
         var kg = KgOf(BuyKg);
-        var density = Shamsi.Num(BuyDensity);
+        var density = DensityInput.Parse(BuyDensity);   //  «0730» ⇐ ۰٫۷۳۰ (۱۴۰۵/۰۷/۱۷)
         var priceTon = Math.Max(0m, Shamsi.Num(BuyPriceTon));
         var usdRate = Math.Max(0m, Shamsi.Num(BuyUsdRate));
 

@@ -398,6 +398,9 @@ public sealed class PumpDbFactory
             ("TilCompanies", "PurchaseCheckpointDiesel", "INTEGER NOT NULL DEFAULT 0"),
             // کیو‌آرِ زنده — رمزِ هر حساب؛ خالی یعنی کیو‌آری ساخته نشده
             ("DebtAccounts", "QrKey", "TEXT"),
+            // شماره و «فیِ خرید»ِ هر حسابِ فرعی — دیگر با حسابِ اصلی مشترک نیست
+            ("DebtAccounts", "Phone", "TEXT"),
+            ("DebtAccounts", "BuyFeeNote", "TEXT"),
             ("TilCompanies", "QrKey", "TEXT"),
             // واحدِ رسیدِ قرض‌داران — ۲ یعنی ‎LedgerMode.Money‎، پس هر ردیفِ
             // کهنه بی هیچ کاری همان «پول»ِ درست را می‌گیرد؛ ۱ یعنی پطرول.

@@ -15,14 +15,24 @@
     </c:SectionPage.Toolbar>
 
     <StackPanel Spacing="10">
+      <!-- ⛔ سربرگِ راهنما (۱۴۰۵/۰۷/۱۷): «روی جستجو که می‌زنم هدری باز شود که بگوید
+           فلان فلان را وارد کن». -->
+      <Border Classes="panel" Name="SearchGuide" BorderBrush="{DynamicResource Pump.Info}" BorderThickness="2">
+        <TextBlock Text="{Binding GuideText}" TextWrapping="Wrap" FontSize="14" LineHeight="24" FontWeight="SemiBold" />
+      </Border>
       <WrapPanel Orientation="Horizontal">
         <StackPanel Spacing="3" Margin="0,0,10,6">
           <TextBlock Text="مقدار (کیلو یا تن)" Classes="muted" />
-          <TextBox Width="200" Text="{Binding QtyText}" Watermark="مثلاً 12300 یا 12.3" />
+          <!-- ⚠️ ‎IsDefault‎ فقط در پنجرهٔ واقعی کار می‌کند؛ این صفحه روپوشِ بخش است، پس Enter صریح -->
+          <TextBox Name="QtyBox" Width="200" Text="{Binding QtyText}" Watermark="مثلاً 12300 یا 12.3">
+            <TextBox.KeyBindings><KeyBinding Gesture="Enter" Command="{Binding RunCommand}" /></TextBox.KeyBindings>
+          </TextBox>
         </StackPanel>
         <StackPanel Spacing="3" Margin="0,0,10,6">
           <TextBlock Text="تاریخ" Classes="muted" />
-          <TextBox Width="170" Text="{Binding DateText}" Watermark="مثلاً 1405/5/12" />
+          <TextBox Width="170" Text="{Binding DateText}" Watermark="مثلاً 1405/5/12">
+            <TextBox.KeyBindings><KeyBinding Gesture="Enter" Command="{Binding RunCommand}" /></TextBox.KeyBindings>
+          </TextBox>
         </StackPanel>
         <StackPanel Spacing="3" Margin="0,0,10,6">
           <TextBlock Text="نوع تیل" Classes="muted" />
@@ -50,7 +60,11 @@
                   <TextBlock Grid.Column="1" Text="{Binding FuelText}" FontWeight="Bold"
                              Foreground="{Binding FuelBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                 </Grid>
-                <TextBlock Text="{Binding DateText}" Classes="muted" />
+                <WrapPanel Orientation="Horizontal">
+                  <TextBlock Text="{Binding DateText}" FontWeight="Bold" FontSize="14" Margin="0,0,16,0" />
+                  <TextBlock Text="{Binding CompanyText}" FontWeight="Bold" FontSize="14" Margin="0,0,16,0" />
+                  <TextBlock Text="{Binding WhereText}" Classes="muted" />
+                </WrapPanel>
                 <WrapPanel Orientation="Horizontal">
                   <TextBlock Text="{Binding TonText}" FontWeight="Bold" Foreground="{DynamicResource Pump.Ink.Info}" Margin="0,0,16,0" />
                   <TextBlock Text="{Binding UsdText}" FontWeight="Bold" Foreground="{DynamicResource Pump.Ink.Ok}" Margin="0,0,16,0" />

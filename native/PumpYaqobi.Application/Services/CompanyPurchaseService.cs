@@ -9,7 +9,8 @@ namespace PumpYaqobi.Application.Services;
 /// <param name="ArchiveId">صفر یعنی جدولِ فعلی؛ وگرنه شناسهٔ جدولِ آرشیو.</param>
 public sealed record PurchaseHit(
     bool IsPurchase, long PurchaseId, long CompanyId, long ArchiveId, int RowIndex,
-    string Name, FuelType Fuel, string Date, decimal Ton, decimal Usd, decimal Afn, string Where);
+    string Name, FuelType Fuel, string Date, decimal Ton, decimal Usd, decimal Afn, string Where,
+    string CompanyName = "");
 
 /// <summary>
 /// ══ خریدهای مخزنِ یک شرکت، و «جستجوی خرید» ═══════════════════════════════
@@ -69,8 +70,28 @@ public sealed class CompanyPurchaseService
         return string.Join("/", parts);
     }
 
-    public static bool DateOk(string dateQuery, string? d) =>
-        dateQuery.Length == 0 || DateNorm(d).Contains(dateQuery, StringComparison.Ordinal);
+    /// <summary>
+    /// ⛔ تاریخ خانه‌به‌خانه سنجیده می‌شود، نه «زیررشته» (۱۴۰۵/۰۷/۱۷). پیش از
+    /// این «1405/5/1» با «1405/5/12» و «1405/5/13» هم جور بود و «5» با تقریباً
+    /// همه‌چیز — همان «با دقت نیست»ِ صاحب ریپو.
+    ///   • سه بخش (1405/5/12) ⇐ همان روز.
+    ///   • دو بخش ⇐ «سال/ماه» (1405/5) — یا اگر بخشِ اول سال نیست، «ماه/روز» (5/12).
+    ///   • یک بخش ⇐ سال (1405)، یا اگر کوتاه است، همان روز.
+    /// </summary>
+    public static bool DateOk(string dateQuery, string? d)
+    {
+        if (dateQuery.Length == 0) return true;
+        var q = dateQuery.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var x = DateNorm(d).Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (x.Length < 3 || q.Length == 0 || q.Length > 3) return false;
+        var yearFirst = q[0].Length >= 3;
+        return q.Length switch
+        {
+            3 => q[0] == x[0] && q[1] == x[1] && q[2] == x[2],
+            2 => yearFirst ? q[0] == x[0] && q[1] == x[1] : q[0] == x[1] && q[1] == x[2],
+            _ => yearFirst ? q[0] == x[0] : q[0] == x[2],
+        };
+    }
 
     /// <summary>
     /// ‎runCmpSearch‎ — مقدار (کیلو یا تن) و/یا تاریخ، با فیلترِ تیل، در خریدهای
@@ -101,7 +122,8 @@ public sealed class CompanyPurchaseService
             if (e.LegacyId is { Length: > 0 } lid) seen.Add(lid);
             var c = companies.FirstOrDefault(x => SameName(x.Name, e.Seller));
             items.Add(new PurchaseHit(true, e.Id, c?.Id ?? 0, 0, 0, string.IsNullOrWhiteSpace(e.Seller) ? "—" : e.Seller!,
-                                      e.Fuel, e.DateShamsi ?? "", ton, e.TotalUsd, e.TotalAfn, "📦 خرید مخزن"));
+                                      e.Fuel, e.DateShamsi ?? "", ton, e.TotalUsd, e.TotalAfn, "📦 خرید مخزن",
+                                      c?.Name ?? ""));
         }
 
         // ۲) ردیف‌های جدولِ حسابِ شرکت — جدولِ فعلی و جدول‌های آرشیو
@@ -119,7 +141,8 @@ public sealed class CompanyPurchaseService
                 if (!DateOk(dq, r.DateShamsi)) continue;
                 if (!QtyOk(qty, ton)) continue;
                 items.Add(new PurchaseHit(false, 0, c.Id, archiveId, i, nm.Length > 0 ? nm : c.Name ?? "—",
-                                          fu, r.DateShamsi ?? "", ton, _calc.TotalUsd(r), _calc.TotalAfn(r), where));
+                                          fu, r.DateShamsi ?? "", ton, _calc.TotalUsd(r), _calc.TotalAfn(r), where,
+                                          c.Name ?? ""));
             }
         }
         var arcList = archives.ToList();

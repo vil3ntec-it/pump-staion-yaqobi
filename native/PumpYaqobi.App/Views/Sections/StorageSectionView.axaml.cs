@@ -31,6 +31,20 @@ public partial class StorageSectionView : UserControl
         //  صفحه است و شناور کردنش یعنی یک لایهٔ تازهٔ چیدمان برای یک پنجره.
         //  کاری که واقعاً لازم است یک چیز است: **همان لحظه ببرش جلوی چشم**،
         //  و فوکوس را بگذار روی نخستین کادر تا تایپ همان‌جا شروع شود.
+        //  ⛔ «0730» ⇐ «0.730» همان لحظهٔ تایپ (۱۴۰۵/۰۷/۱۷). قاعده فقط در
+        //  ‎DensityInput.Typed‎ است؛ این‌جا فقط کادر را همان‌طور نشان می‌دهد و
+        //  مکان‌نما را ته متن می‌گذارد. حسابِ ویومدل با ‎DensityInput.Parse‎ همین
+        //  را جدا هم می‌خواند، پس متنِ چسبانده هم درست است.
+        if (this.FindControl<TextBox>("BuyDensityBox") is { } dens)
+            dens.TextChanged += (_, _) =>
+            {
+                var cur = dens.Text ?? "";
+                var want = PumpYaqobi.Application.Services.DensityInput.Typed(cur);
+                if (want == cur) return;
+                dens.Text = want;
+                dens.CaretIndex = want.Length;
+            };
+
         var overlay = this.FindControl<Panel>("BuyOverlay");
         if (overlay is null) return;
 
@@ -83,7 +97,7 @@ public partial class StorageSectionView : UserControl
         var navH = nav is { IsVisible: true } ? nav.Bounds.Height : 0;
         const double gap = 12;
         if (sv is not null && sv.Viewport.Height > 0)
-            card.MaxHeight = Math.Max(320, Math.Min(640, sv.Viewport.Height - navH - gap * 2));
+            card.MaxHeight = Math.Max(320, Math.Min(760, sv.Viewport.Height - navH - gap * 2));
         card.UpdateLayout();
         //  بالا تا زیرِ نوار هم باید دیده شود — پس مستطیلِ «به دید بیاور» از بالا بلندتر است
         card.BringIntoView(new Avalonia.Rect(0, -(navH + gap), card.Bounds.Width,

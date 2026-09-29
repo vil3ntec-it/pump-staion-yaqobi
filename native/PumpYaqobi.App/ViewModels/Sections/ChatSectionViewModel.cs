@@ -1274,7 +1274,7 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
                 if (a is null) return;
                 snap = AcctSnapshots.ForDebtAccount(person.Name, a.IsMain ? null : a.Name, a, _host.Debt);
                 if (!ReferenceEquals(Current, th)) return;
-                InfoPhone = person.Phone ?? "";
+                InfoPhone = (a.IsMain ? person.Phone : a.Phone) ?? "";
                 foreach (var other in person.AllAccounts().Where(x => x.Id > 0))
                     InfoAccounts.Add(new ChatInfoLine(
                         other.IsMain ? "حسابِ اصلی" : (other.Name ?? "حسابِ فرعی"),
