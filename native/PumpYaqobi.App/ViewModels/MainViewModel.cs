@@ -208,11 +208,14 @@ public sealed partial class MainViewModel : ObservableObject
         var host0 = AppHost.Current;
         Controls.Suggest.Provide("staff", async () => (await host0.Attendance.StaffAsync()).Select(x => x.Name ?? ""));
         Controls.Suggest.Provide("debtor", async () => (await host0.Debtors.ListAsync()).Select(x => x.Name));
+        //  «/هارون» در نامِ ورق: نامِ هر حساب و هر فرعی («هارون دکان») — فقط نام‌ها (۱۴۰۵/۰۷/۱۷)
+        Controls.Suggest.Provide("debtor-acct", async () => (await host0.Debtors.AccountUnitsAsync())
+            .Select(a => a.IsMain ? a.PersonName : (a.PersonName + " " + a.AccountName).Trim()));
         //  نام‌های حساب‌های چکنه — کادرِ نامِ «رسید قرض‌داران / چکنه» وقتی «چکنه» برگزیده شده
         Controls.Suggest.Provide("chakana", async () => await host0.DebtReceipts.RetailNamesAsync());
         // ⚠️ و همین حالا یک بار خوانده شوند: کَشِ سرد یعنی نخستین تایپِ
         // کاربر هیچ پیشنهادی نمی‌گیرد. شرحش بالای ‎Suggest.Warm‎.
-        Controls.Suggest.Warm("staff", "debtor");
+        Controls.Suggest.Warm("staff", "debtor", "debtor-acct");
         Themes = new ObservableCollection<PumpTheme>(PumpTheme.All);
         _selectedTheme = PumpTheme.ById(_settings.ThemeId);
 

@@ -53,9 +53,12 @@ public partial class HistorySectionView : UserControl
         if (ReferenceEquals(_builtFor, cols) && host.Child is not null) return;
         _builtFor = cols;
 
+        //  ⛔ فقط تاریخچهٔ پارچه‌ها خانهٔ ویرایشی دارد (۱۴۰۵/۰۷/۱۷)؛ بقیه همان
+        //  دفترچهٔ فقط‌خواندنی‌اند. ستونِ بی ‎Edit‎ حتی در آن جدول هم خواندنی است.
+        var editable = cols.Any(c => c.Edit);
         var g = new ExcelGrid
         {
-            IsReadOnly = true,
+            IsReadOnly = !editable,
             BorderThickness = new Avalonia.Thickness(0),
             CornerRadius = new Avalonia.CornerRadius(0),
             //  ⛔ سرستون با اسکرول همراه نمی‌آید — همان جدولِ کلی (‎HeaderFollows‎)
@@ -70,15 +73,24 @@ public partial class HistorySectionView : UserControl
     private static DataGridColumn Column(HistoryCol c, int i)
     {
         var width = c.Wide ? new DataGridLength(1, DataGridLengthUnitType.Star) : DataGridLength.Auto;
-        var path = "Cells[" + i + "]";
+        var path = string.IsNullOrEmpty(c.Path) ? "Cells[" + i + "]" : c.Path;
+        //  خانهٔ ویرایشی: یک خاصیتِ رشته‌ایِ ساده، همان شکلی که ‎ExcelGrid.Write‎
+        //  (کپی/پیست/‎Delete‎) و برگشت (‎Ctrl+Z‎) می‌شناسند.
+        if (c.Edit)
+            return new DataGridTextColumn
+            {
+                Header = c.Header, Width = width,
+                Binding = new Binding(path) { Mode = BindingMode.TwoWay },
+            };
         if (string.IsNullOrEmpty(c.Brush))
-            return new DataGridTextColumn { Header = c.Header, Binding = new Binding(path), Width = width };
+            return new DataGridTextColumn { Header = c.Header, Binding = new Binding(path), Width = width, IsReadOnly = true };
 
         //  ستونِ رنگی — همان کاری که ستونِ «مبلغ»ِ جدولِ کلی می‌کند
         return new DataGridTemplateColumn
         {
             Header = c.Header,
             Width = width,
+            IsReadOnly = true,
             CellTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<HistoryRowViewModel>((_, _) =>
             {
                 var t = new TextBlock

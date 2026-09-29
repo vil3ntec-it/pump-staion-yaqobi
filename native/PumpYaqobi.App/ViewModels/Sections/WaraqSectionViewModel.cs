@@ -417,7 +417,7 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
 }
 
 /// <summary>صفحهٔ یک ورق — شیفتِ روز و شب، پایه‌ها و ردیف‌های قرض/مصرف.</summary>
-public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
+public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost, ICtrlDigitHost
 {
     private readonly AppHost _host;
     private readonly WaraqSectionViewModel _section;
@@ -453,6 +453,17 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
     /// <summary>روز/شب با دو دکمهٔ رادیویی — نه کلیدِ لغزان.</summary>
     [RelayCommand]
     private void SetNight(string? which) => IsNight = which == "night";
+
+    /// <summary>
+    /// ‎Ctrl+1‎ ⇒ ورقِ روز · ‎Ctrl+2‎ ⇒ ورقِ شب (۱۴۰۵/۰۷/۱۷) — همان دو دکمهٔ «روز/شب».
+    /// عددِ دیگر همان «افزودنِ n ردیف» می‌ماند.
+    /// </summary>
+    public bool CtrlDigit(int n)
+    {
+        if (n == 1) { IsNight = false; return true; }
+        if (n == 2) { IsNight = true; return true; }
+        return false;
+    }
 
     public void Load(WaraqEntry w)
     {
@@ -926,12 +937,8 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
             if (_unitPeople is null || _unitById is null) return;
             if ((row.Name ?? "") != text) return;      // کاربر ادامه داد — نتیجه کهنه است
 
-            var hw = PostingService.ExtractHawala(text);
-            var display = PostingService.StripFuelWords(
-                string.IsNullOrWhiteSpace(hw.Clean) ? text : hw.Clean);
-
-            // ⛔ همان یک تطبیق‌کنندهٔ همیشگی — حساب‌های فرعی را هم می‌بیند.
-            var m = PostingService.FindAccountForText(_unitPeople, text, display);
+            // ⛔ همان یک تطبیق‌کنندهٔ همیشگی — حساب‌های فرعی و «/هارون» را هم می‌بیند.
+            var m = PostingService.MatchWaraqName(_unitPeople, text).Found;
             if (m is null) return;
             if (!_unitById.TryGetValue(m.Value.Account.Id, out var info)) return;
 

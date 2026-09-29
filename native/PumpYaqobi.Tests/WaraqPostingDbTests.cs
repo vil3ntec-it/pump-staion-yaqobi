@@ -158,6 +158,44 @@ public class WaraqPostingDbTests : IDisposable
         Assert.Equal("هارون", (row.Name ?? "").Trim());
     }
 
+    /// <summary>
+    /// ══ «/هارون» — در حسابِ هارون، بی نامِ هارون (۱۴۰۵/۰۷/۱۷) ══════════════
+    /// «پسرِ همون یارو اومده بردگی کرده… ‹/هارون› که زدم توی همون حساب بره
+    /// ولی اسمِ هارون نباشه… برای فرعی‌ها هم همین‌طور.»
+    /// </summary>
+    [Fact]
+    public async Task Slash_HesabRaMigirad_NamRaNemineviseh()
+    {
+        var (post, data, dbf) = Host();
+        var p = await PersonAsync(dbf, "هارون");
+        await PersonAsync(dbf, "ابراهیم");          // ⛔ «ابراهیم» حسابِ دیگری است و نباید بگیرد
+        var w = await SheetAsync(data, dbf, "ابراهیم بردگی /هارون", 10m);
+
+        var report = await post.SyncAsync(w.Id);
+
+        Assert.Equal(1, report.Posted);
+        var row = Assert.Single(await RowsAsync(dbf));
+        Assert.Equal("ابراهیم بردگی", row.Name);
+        await using var db = dbf.Create();
+        var main = await db.DebtAccounts.AsNoTracking().SingleAsync(a => a.MainOfDebtorId == p.Id);
+        Assert.Equal(main.Id, row.FuelAccountId);
+    }
+
+    [Fact]
+    public async Task Slash_Farei_DarHamanFarei()
+    {
+        var (post, data, dbf) = Host();
+        var p = await PersonAsync(dbf, "هارون");
+        var sub = await SubAsync(dbf, p.Id, "دکان");
+        var w = await SheetAsync(data, dbf, "/هارون دکان احمد", 10m);
+
+        await post.SyncAsync(w.Id);
+
+        var row = Assert.Single(await RowsAsync(dbf));
+        Assert.Equal(sub.Id, row.FuelAccountId);
+        Assert.Equal("احمد", row.Name);
+    }
+
     /// <summary>نامی که در ورق نوشته می‌شود، خودش به حسابِ صاحبش می‌رسد.</summary>
     [Fact]
     public async Task WhatIsTypedInTheSheetReachesTheAccountByItself()

@@ -218,7 +218,29 @@ public sealed partial class ShiftFormViewModel : ObservableObject
 
         _loading = false;
         Recalc();
+        _loadedPrint = Print();
+        _loadedId = s?.Id ?? 0;
     }
+
+    // ══ «کاربر در این کارت چیزی نوشته که هنوز ذخیره نکرده؟» (۱۴۰۵/۰۷/۱۷) ════
+    //
+    // پایهٔ ورق و تاریخچه حالا شیفتِ پارچه را هم عوض می‌کنند. کارتی که همان
+    // شیفت را نشان می‌دهد با برگشتن به بخش باید عددِ تازه را بگیرد — وگرنه
+    // «ذخیره»ی بعدی عددِ کهنه را برمی‌گرداند. ⛔ ولی کارتی که کاربر در آن
+    // تایپ کرده هرگز زیرِ دستش عوض نمی‌شود.
+    private string _loadedPrint = "";
+    private long _loadedId;
+
+    private string Print() => string.Join("|", Name, PumpNum, Start, End, Debt, Price, Note);
+
+    /// <summary>از آخرین بار شدن، کاربر چیزی را عوض کرده؟</summary>
+    public bool IsEdited => Print() != _loadedPrint;
+
+    /// <summary>شیفتی که الان در کارت است (۰ = کارتِ خالی).</summary>
+    public long LoadedId => _loadedId;
+
+    /// <summary>همین حالا ذخیره شد — آن‌چه روی کارت است همان شیفتِ ثبت‌شده است.</summary>
+    public void MarkSaved(long shiftId) { _loadedPrint = Print(); _loadedId = shiftId; }
 
     /// <summary>
     /// ‎reapplyUnionRateToPrefix(p)‎ — نرخِ اتحادیهٔ **همین سوخت** در کادرِ فی.
@@ -375,7 +397,7 @@ public sealed partial class ReportYearGroup : ObservableObject
 /// چهار عددِ خودکار (فروش، جملهٔ موجودی، فایده، پولِ موجود) از سرویسی می‌آیند
 /// که با ۴۰۰ شیفتِ گرفته‌شده از خودِ نسخهٔ وب آزموده شده.
 /// </summary>
-public sealed partial class ParchaSectionViewModel : SectionViewModel
+public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlDigitHost
 {
     private readonly AppHost _host;
     private ParchaReport? _current;
@@ -506,6 +528,41 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
     }
 
     partial void OnDateFilterChanged(string v) => _ = ReloadLogAsync();
+
+    /// <summary>
+    /// کارِ فعال‌سازی فقط خواندنِ همین دفتر است — با ترمزِ ‎Version‎ (۱۴۰۵/۰۷/۱۷).
+    /// </summary>
+    public override bool ActivationOnlyReadsDb => true;
+
+    /// <summary>
+    /// برگشتن به پارچه‌ها ⇒ پارچهٔ جاری دوباره خوانده می‌شود، تا ویرایشی که در
+    /// ورق یا تاریخچه شد این‌جا هم دیده شود. ⛔ کارتی که کاربر در آن چیزی نوشته
+    /// و هنوز ذخیره نکرده دست نمی‌خورد.
+    /// </summary>
+    public override async Task OnActivatedAsync()
+    {
+        //  ⛔ فقط کارتی که همین حالا یک شیفتِ ذخیره‌شده را نشان می‌دهد و کاربر در
+        //  آن چیزی ننوشته، با نسخهٔ تازهٔ **همان** شیفت پر می‌شود. کارتِ خالی
+        //  («پارچهٔ جدید»، دیزلِ پس از ذخیره) و کارتِ تایپ‌شده دست نمی‌خورند.
+        if (_current is not null && (Day.LoadedId != 0 || Night.LoadedId != 0))
+        {
+            var fresh = await _host.ParchaData.LoadReportAsync(_current.Id);
+            if (fresh is not null)
+            {
+                Refresh(Day, fresh.DayShift);
+                Refresh(Night, fresh.NightShift);
+                if (Day.LoadedId == fresh.DayShiftId) _current.DayShift = fresh.DayShift;
+                if (Night.LoadedId == fresh.NightShiftId) _current.NightShift = fresh.NightShift;
+            }
+        }
+        await ReloadLogAsync();
+
+        static void Refresh(ShiftFormViewModel f, ShiftData? s)
+        {
+            if (s is null || f.LoadedId == 0 || f.LoadedId != s.Id || f.IsEdited) return;
+            f.Load(s);
+        }
+    }
 
     protected override async Task LoadAsync()
     {
@@ -769,6 +826,8 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
         if (res.Report is not null) ReportNumText = res.Report.ReportNum.ToString();
 
         form.Saved = true;
+        //  آن‌چه روی کارت است همان است که ثبت شد (برای تازه شدن با برگشت به بخش)
+        if (res.Shift is not null) form.MarkSaved(res.Shift.Id);
         _host.Toast(fuel == FuelType.Diesel
                         ? "✅ پارچه دیزل ذخیره شد"
                         : "✅ شیفت " + (form.IsDay ? "روز" : "شب") + " ذخیره شد",
@@ -857,6 +916,18 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
     /// دیتابیس می‌ساخت و چون کارتِ دیگر هم از همان پارچهٔ تازه بار می‌شد،
     /// دادهٔ شیفتِ دیگر از جلوی چشم می‌رفت. نسخهٔ وب چنین نمی‌کند.
     /// </summary>
+    /// <summary>
+    /// ‎Ctrl+1‎ ⇒ «🆕 پارچهٔ جدید روز» · ‎Ctrl+2‎ ⇒ «… شب» (۱۴۰۵/۰۷/۱۷) — همان دو
+    /// دکمه. ⛔ فقط وقتی عدد زده شود؛ بی عدد هیچ کاری نمی‌کند.
+    /// </summary>
+    public bool CtrlDigit(int n)
+    {
+        if (!ShowMain) return false;
+        if (n == 1) { NewParcha(ShiftKind.Day); return true; }
+        if (n == 2) { NewParcha(ShiftKind.Night); return true; }
+        return false;
+    }
+
     [RelayCommand]
     private void NewParchaDay() => NewParcha(ShiftKind.Day);
 

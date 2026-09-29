@@ -2387,7 +2387,9 @@ public class ExcelGrid : DataGrid
             {
                 var named = Suggest.Of(Suggest.GetKey(e.Column));
                 var learned = Suggest.ColumnValues(ItemsSource, e.Column);
-                if (named.Count + learned.Count > 0) Suggest.Attach(tb, named, learned);
+                //  «/هارون» — نامِ حساب پس از خط‌کج (ستونِ نامِ ورق)
+                var slash = Suggest.Of(Suggest.GetSlashKey(e.Column));
+                if (named.Count + learned.Count + slash.Count > 0) Suggest.Attach(tb, named, learned, slash);
             }
         };
         // ⚠️ پیش از نشستنِ مقدار در ردیف: تکملهٔ پذیرفته‌نشدهٔ پیشنهادِ خودکار

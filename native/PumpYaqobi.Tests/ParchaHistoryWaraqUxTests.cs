@@ -241,7 +241,7 @@ public class ParchaHistoryWaraqUxTests
         Assert.Contains("_owner.AutoFromName(this)", vm);
         Assert.Contains("PostingService.MentionsFuel(text)", vm);
         Assert.Contains("PostingService.DetectFuelType(text)", vm);
-        Assert.Contains("PostingService.FindAccountForText(_unitPeople", vm);
+        Assert.Contains("PostingService.MatchWaraqName(_unitPeople", vm);
         Assert.Contains("PostingService.UnitForAccount(", vm);
 
         // ⛔ و با ترمزِ ‎Version‎ — وگرنه یک پرس‌وجو به ازای هر کلید

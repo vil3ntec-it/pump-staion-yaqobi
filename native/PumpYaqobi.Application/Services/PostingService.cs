@@ -212,6 +212,117 @@ public sealed class PostingService
         return best;
     }
 
+    // ══ «/هارون» — حساب با خط‌کج، نام بی حساب (۱۴۰۵/۰۷/۱۷) ══════════════════
+    //
+    // خواستهٔ صاحب ریپو: «نمی‌خوام روی هر بردگی دقیقاً اسمِ یارو رو بزنم… پسرِ
+    // همون یارو اومده بردگی کرده — ‹ابراهیم بردگی› — و اسمِ قرض هم با اون یک‌جا
+    // می‌شه. ‹/هارون› که توی نام زدم توی همون حساب بره ولی اسمِ هارون نباشه…
+    // برای فرعی‌ها هم همین‌طور.»
+    //
+    //   «ابراهیم بردگی /هارون»      ⇒ حسابِ هارون، نامِ ردیف «ابراهیم بردگی»
+    //   «/هارون ابراهیم»            ⇒ همان
+    //   «/هارون دکان احمد»          ⇒ فرعیِ «دکان»ِ هارون، نامِ ردیف «احمد»
+    //
+    // ⛔ فقط وقتی پشتِ خط‌کج حرف است («1405/07/10» و «12/3» خط‌کجِ حساب نیستند).
+    // ⛔ بی خط‌کج رفتار دقیقاً همان قبلی است — همان ‎FindAccountForText‎.
+
+    /// <summary>
+    /// نتیجهٔ خواندنِ نامِ یک ردیفِ ورق: حساب، نامی که در حساب نوشته می‌شود،
+    /// حواله، و متنی که «کدام فرعی» از آن پرسیده می‌شود.
+    /// </summary>
+    public readonly record struct WaraqNameMatch(AccountMatch? Found, string Display,
+                                                 HawalaText Hawala, string AccountText,
+                                                 bool Slashed);
+
+    private static readonly System.Text.RegularExpressions.Regex SlashRx =
+        new(@"/(?=\s*\p{L})", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>
+    /// متنِ پس از آخرین «/»ِ حساب و متنِ پیش از آن — ‎null‎ یعنی خط‌کجی نیست.
+    /// </summary>
+    public static (string Before, string After)? SplitSlash(string? text)
+    {
+        var t = text ?? "";
+        var ms = SlashRx.Matches(t);
+        if (ms.Count == 0) return null;
+        var i = ms[^1].Index;
+        return (t[..i].Trim(), t[(i + 1)..].Trim());
+    }
+
+    /// <summary>
+    /// ‎«/…»‎ ⇒ حساب: بلندترین آغازِ متنِ پس از خط‌کج که دقیقاً نامِ یک حساب است
+    /// («هارون»، «دکان»ی فرعی، یا «هارون دکان»)؛ نبود ⇒ همان تطبیقِ همیشگی روی
+    /// کلِ متنِ پس از خط‌کج. برمی‌گرداند: حساب، و تکه‌ای از متن که نامِ حساب بود.
+    /// </summary>
+    public static (AccountMatch Match, string Used)? FindAccountAfterSlash(IEnumerable<Debtor> people,
+                                                                           string after)
+    {
+        var tokens = NormFa(after).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (tokens.Length == 0) return null;
+        var list = people.Where(p => p is not null).ToList();
+
+        for (var n = tokens.Length; n >= 1; n--)
+        {
+            var key = string.Join(' ', tokens.Take(n));
+            AccountMatch? hit = null;
+            foreach (var p in list)
+            {
+                var pn = NormFa(p.Name);
+                foreach (var s in p.SubAccounts)
+                {
+                    if (s is null) continue;
+                    var sn = NormFa(s.Name);
+                    if (sn.Length == 0) continue;
+                    if (key == sn || key == pn + " " + sn) { hit = new AccountMatch(p, s); break; }
+                }
+                if (hit is not null) break;
+                if (pn.Length > 0 && key == pn) { hit = new AccountMatch(p, p.MainAccount); break; }
+            }
+            if (hit is { } h) return (h, string.Join(' ', tokens.Take(n)));
+        }
+
+        var fuzzy = FindAccountForText(list, after, after);
+        return fuzzy is { } f ? (f, NormFa(after)) : null;
+    }
+
+    /// <summary>
+    /// ══ نامِ یک ردیفِ ورق ⇒ حساب و نامِ ردیف — تنها جای این تصمیم ═══════════
+    /// همگام‌سازیِ ورق، «کدام حساب‌ها» و پیشنهادِ واحدِ رابط همه از همین.
+    /// </summary>
+    public static WaraqNameMatch MatchWaraqName(IEnumerable<Debtor> people, string? rawName)
+    {
+        var name = (rawName ?? "").Trim();
+        var split = SplitSlash(name);
+        if (split is { } sp)
+        {
+            var hit = FindAccountAfterSlash(people, sp.After);
+            if (hit is { } h)
+            {
+                //  آن‌چه از متنِ پس از خط‌کج نامِ حساب نبود، به نامِ ردیف برمی‌گردد
+                var afterTokens = NormFa(sp.After).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                var usedN = h.Used.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+                var restAfter = usedN < afterTokens.Length
+                    ? string.Join(' ', sp.After.Split(' ', StringSplitOptions.RemoveEmptyEntries).Skip(usedN))
+                    : "";
+                var rest = (sp.Before + " " + restAfter).Trim();
+                var hwR = ExtractHawala(rest);
+                var disp = StripFuelWords(string.IsNullOrWhiteSpace(hwR.Clean) ? rest : hwR.Clean);
+                //  هیچ نامی جز حساب نیامده ⇒ همان نامِ حساب (ردیفِ بی‌نام نمی‌سازیم)
+                if (disp.Trim().Length == 0)
+                    disp = h.Match.Account is { } a && !ReferenceEquals(a, h.Match.Person.MainAccount)
+                        ? (a.Name ?? h.Match.Person.Name ?? "") : (h.Match.Person.Name ?? "");
+                return new WaraqNameMatch(h.Match, disp, hwR, h.Used, true);
+            }
+            //  خط‌کج هست ولی حسابی نخورد ⇒ هیچ حسابی (حدس زدن از نامِ پیش از آن غلط است)
+            var hwN = ExtractHawala(name);
+            return new WaraqNameMatch(null, StripFuelWords(hwN.Clean), hwN, name, true);
+        }
+
+        var hw = ExtractHawala(name);
+        var display = StripFuelWords(string.IsNullOrWhiteSpace(hw.Clean) ? name : hw.Clean);
+        return new WaraqNameMatch(FindAccountForText(people, name, display), display, hw, name, false);
+    }
+
     /// <summary>‎_subForText‎ — اگر نامِ یک حسابِ فرعی داخلِ متن باشد، همان.</summary>
     public static DebtAccount? SubForText(Debtor person, string? text)
     {

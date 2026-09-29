@@ -271,15 +271,10 @@ public sealed class WaraqPostingService
                 var name = (t.Name ?? "").Trim();
                 if (name.Length == 0) continue;
 
-                var hw = PostingService.ExtractHawala(t.Name);
-                var display = PostingService.StripFuelWords(
-                    string.IsNullOrWhiteSpace(hw.Clean) ? name : hw.Clean);
+                var m = PostingService.MatchWaraqName(people, t.Name);
+                if (m.Found is not { } found) continue;
 
-                var found = PostingService.FindAccountForText(people, t.Name, display);
-                if (found is null) continue;
-
-                var acct = PostingService.ResolveAccount(
-                    found.Value.Person, t.Name, found.Value.Account);
+                var acct = PostingService.ResolveAccount(found.Person, m.AccountText, found.Account);
                 if (acct.Id != 0) ids.Add(acct.Id);
             }
         }
@@ -361,12 +356,14 @@ public sealed class WaraqPostingService
 
         DropExpense(expenses, srcKey, outcome);                // اگر قبلاً مصرف بوده
 
-        var hw = PostingService.ExtractHawala(t.Name);
-        var display = PostingService.StripFuelWords(
-            string.IsNullOrWhiteSpace(hw.Clean) ? name : hw.Clean);
+        //  ⛔ «/هارون»: حساب از پسِ خط‌کج، نامِ ردیف بی نامِ حساب (۱۴۰۵/۰۷/۱۷) —
+        //  تنها جای این تصمیم ‎PostingService.MatchWaraqName‎ است.
+        var match = PostingService.MatchWaraqName(people, t.Name);
+        var hw = match.Hawala;
+        var display = match.Display;
         var fuelType = PostingService.FuelTypeFromText(t.Name, t.Fuel);
 
-        var found = PostingService.FindAccountForText(people, t.Name, display);
+        var found = match.Found;
         if (found is null)
         {
             // حسابِ تازه ساخته نمی‌شود — فقط ثبتِ قبلیِ همین ردیف برداشته می‌شود.
@@ -406,7 +403,7 @@ public sealed class WaraqPostingService
         };
 
         var money = t.Unit == LedgerMode.Money;
-        var placed = PostingService.PlaceRow(person, row, t.Name, found.Value.Account, money);
+        var placed = PostingService.PlaceRow(person, row, match.AccountText, found.Value.Account, money);
 
         // ردیفِ تازه باید کلیدِ دفترش را داشته باشد تا بداند کجا بنشیند
         var acct = found.Value.Account;

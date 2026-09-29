@@ -137,6 +137,7 @@ internal static class Program
         if (outDir.Equals("look", StringComparison.OrdinalIgnoreCase)) return LookAudit.Run();
         if (outDir.Equals("cells", StringComparison.OrdinalIgnoreCase)) return CellEditAudit.Run();
         if (outDir.Equals("undokeys", StringComparison.OrdinalIgnoreCase)) return UndoKeysProbe.Run();
+        if (outDir.Equals("keys17", StringComparison.OrdinalIgnoreCase)) return Round17Probe.Run();
         if (outDir.Equals("waraqperf", StringComparison.OrdinalIgnoreCase)) return WaraqPerf.Run();
         // ══ «هر بخش رو باز می‌کنم جدول‌ها یک ثانیه بعد میان» ═══════════════
         //     dotnet run --project PumpYaqobi.UiTests -- sectionopen
