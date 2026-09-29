@@ -27,16 +27,31 @@ public sealed partial class ChatMessageViewModel : ObservableObject
 {
     public ChatMessageViewModel(string sender, string text, string time, bool mine, bool pending = false,
                                 string id = "", string kind = "text", string? mediaId = null, bool deleted = false,
-                                string key = "", string role = "", bool trashed = false, string daysLeft = "")
+                                string key = "", string role = "", bool trashed = false, string daysLeft = "",
+                                long at = 0)
     {
         Sender = sender; Text = text; Time = time; Mine = mine; Id = id; Kind = kind; MediaId = mediaId;
-        Key = key; Role = role; Trashed = trashed; DaysLeft = daysLeft;
+        Key = key; Role = role; Trashed = trashed; DaysLeft = daysLeft; At = at;
         _isPending = pending;
         _deleted = deleted;
     }
 
     /// <summary>کلیدِ همین پیام در ‎ChatStore‎.</summary>
     public string Key { get; }
+
+    /// <summary>زمانِ پیام (میلی‌ثانیه) — برای جداکنندهٔ روز.</summary>
+    public long At { get; }
+
+    /// <summary>جداکنندهٔ «امروز / دیروز / ۵ میزان» بالای نخستین پیامِ هر روز.</summary>
+    [ObservableProperty] private string _dayLabel = "";
+    public bool ShowDay => DayLabel.Length > 0;
+    partial void OnDayLabelChanged(string v) => OnPropertyChanged(nameof(ShowDay));
+
+    /// <summary>با جست‌وجوی داخلِ گفت‌وگو جور است — حبابش برجسته می‌شود.</summary>
+    [ObservableProperty] private bool _hit;
+
+    /// <summary>فرستنده در گروه — حرفِ اولِ نام، کنارِ حباب.</summary>
+    public string SenderInitial => Sender.TrimStart() is { Length: > 0 } t ? t[..1] : "؟";
 
     /// <summary>شناسهٔ سرورِ حساب — خالی برای گروه و پشتیبانی.</summary>
     public string Id { get; }
@@ -76,6 +91,7 @@ public sealed partial class ChatMessageViewModel : ObservableObject
     public bool IsImage => Kind == "image" && !Deleted && !Gone;
     public bool IsMedia => (Kind == "video" || Kind == "audio") && !Deleted && !Gone;
     public bool CanDelete => Id.Length > 0 && !Deleted && !Trashed;
+    public bool CanCopy => Kind == "text" && !Deleted && Text.Length > 0;
     public string MediaLabel => Kind == "video" ? "🎥 ویدیو — باز کردن" : Kind == "audio" ? "🎤 پیامِ صوتی — پخش" : "";
 
     partial void OnDeletedChanged(bool v) => Changed();
@@ -261,6 +277,14 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
     [ObservableProperty] private string _draft = "";
     [ObservableProperty] private string _search = "";
 
+    /// <summary>صافیِ فهرست: all · group · customer · support · unread.</summary>
+    [ObservableProperty] private string _filter = "all";
+
+    /// <summary>جست‌وجو داخلِ همین گفت‌وگو — حباب‌های جور برجسته می‌شوند.</summary>
+    [ObservableProperty] private string _messageSearch = "";
+    [ObservableProperty] private string _messageSearchText = "";
+    [ObservableProperty] private bool _showMessageSearch;
+
     /// <summary>حالِ اتصال — همان چیزی که کاربر باید ببیند، نه پنهان بماند.</summary>
     [ObservableProperty] private string _state = "";
 
@@ -325,9 +349,96 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
     partial void OnTrashCountChanged(int v) => OnPropertyChanged(nameof(TrashText));
     partial void OnInfoPhoneChanged(string v) => OnPropertyChanged(nameof(HasInfoPhone));
     partial void OnSearchChanged(string v) => RebuildShown();
+    partial void OnFilterChanged(string v)
+    {
+        foreach (var n in new[] { nameof(IsFilterAll), nameof(IsFilterGroup), nameof(IsFilterCustomer),
+                                  nameof(IsFilterSupport), nameof(IsFilterUnread), nameof(ListEmptyText) })
+            OnPropertyChanged(n);
+        RebuildShown();
+    }
+    partial void OnMessageSearchChanged(string v) => MarkHits();
+
+    public bool IsFilterAll => Filter == "all";
+    public bool IsFilterGroup => Filter == "group";
+    public bool IsFilterCustomer => Filter == "customer";
+    public bool IsFilterSupport => Filter == "support";
+    public bool IsFilterUnread => Filter == "unread";
+    public bool IsListEmpty => Shown.Count == 0;
+    public string ListEmptyText => Filter == "unread" ? "پیامِ نخوانده‌ای نیست ✓" : "گفت‌وگویی پیدا نشد";
+
+    /// <summary>شمارِ گفت‌وگوهای هر دسته — کنارِ نامِ صافی.</summary>
+    public string CustomerTabText => "مشتری‌ها" + CountTag(Threads.Count(t => t.IsCustomer));
+    public string UnreadTabText => "نخوانده" + CountTag(Threads.Count(t => t.HasUnread));
+    private static string CountTag(int n) => n > 0 ? " " + Shamsi.Money(n) : "";
+
+    [RelayCommand]
+    private void SetFilter(string? f) => Filter = f is "group" or "customer" or "support" or "unread" ? f : "all";
+
+    [RelayCommand]
+    private void ToggleMessageSearch()
+    {
+        ShowMessageSearch = !ShowMessageSearch;
+        if (!ShowMessageSearch) MessageSearch = "";
+    }
+
+    /// <summary>همهٔ گفت‌وگوها خوانده شد — همان ‎MarkSeen‎ی هر گفت‌وگو، یکی‌یکی.</summary>
+    [RelayCommand]
+    private void MarkAllRead()
+    {
+        foreach (var t in Threads.ToList()) MarkSeen(t);
+        OnPropertyChanged(nameof(UnreadTabText));
+        if (Filter == "unread") RebuildShown();
+    }
+
+    /// <summary>کپیِ متنِ یک پیام — از منوی راست‌کلیکِ حباب.</summary>
+    [RelayCommand]
+    private Task CopyMessageAsync(ChatMessageViewModel? m) => CrashGuard.RunAsync("کپیِ پیام", async () =>
+    {
+        if (m is null || !m.CanCopy) return;
+        if (await Dialogs.CopyAsync(m.Text)) _host.Toast("📋 متنِ پیام کپی شد");
+    });
+
+    /// <summary>برجسته کردنِ حباب‌های جور با جست‌وجو — هیچ حبابی پنهان نمی‌شود.</summary>
+    private void MarkHits()
+    {
+        var q = (MessageSearch ?? "").Trim();
+        var n = 0;
+        if (Current is { } th)
+            foreach (var m in th.Messages)
+            {
+                var hit = q.Length > 0 && m.Text.Contains(q, StringComparison.OrdinalIgnoreCase);
+                m.Hit = hit;
+                if (hit) n++;
+            }
+        MessageSearchText = q.Length == 0 ? "" : n == 0 ? "چیزی پیدا نشد" : Shamsi.Money(n) + " پیام";
+    }
+
+    /// <summary>«امروز» · «دیروز» · «پنج‌شنبه ۵ میزان» — فقط بالای نخستین پیامِ هر روز.</summary>
+    private static void MarkDays(ChatThreadViewModel th)
+    {
+        DateTime? prev = null;
+        foreach (var m in th.Messages)
+        {
+            if (m.At <= 0) { m.DayLabel = ""; continue; }
+            var day = DateTimeOffset.FromUnixTimeMilliseconds(m.At).ToLocalTime().Date;
+            m.DayLabel = prev == day ? "" : DayName(day);
+            prev = day;
+        }
+    }
+
+    public static string DayName(DateTime day)
+    {
+        var today = AppClock.Today;
+        if (day == today) return "امروز";
+        if (day == today.AddDays(-1)) return "دیروز";
+        return Shamsi.Of(day);
+    }
+
+    private bool _rebuilding;
 
     partial void OnCurrentChanged(ChatThreadViewModel? v)
     {
+        if (_rebuilding && v is null) return;
         OnPropertyChanged(nameof(HasCurrent));
         OnPropertyChanged(nameof(EmptyText));
         ShowTrash = false;
@@ -413,7 +524,16 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
     private void RebuildShown()
     {
         var q = (Search ?? "").Trim();
+        var f = Filter;
         var list = Threads
+            .Where(t => f switch
+            {
+                "group" => t.IsGroup,
+                "customer" => t.IsCustomer,
+                "support" => t.IsSupportDesk,
+                "unread" => t.HasUnread || ReferenceEquals(t, Current),
+                _ => true,
+            })
             .Where(t => q.Length == 0 || t.Title.Contains(q, StringComparison.OrdinalIgnoreCase)
                                       || t.Who.Contains(q, StringComparison.OrdinalIgnoreCase))
             .OrderBy(t => t.Kind == ChatKind.Customer ? 1 : 0)
@@ -421,9 +541,30 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
             .ThenByDescending(t => t.LastAt)
             .ToList();
         //  ⚠️ فقط اگر واقعاً عوض شد — ساختنِ دوبارهٔ فهرست انتخاب را می‌پراند
+        OnPropertyChanged(nameof(CustomerTabText));
+        OnPropertyChanged(nameof(UnreadTabText));
         if (list.SequenceEqual(Shown)) return;
-        Shown.Clear();
-        foreach (var t in list) Shown.Add(t);
+
+        //  ⛔ خالی کردنِ فهرست ‎SelectedItem‎ی ‎ListBox‎ را ‎null‎ می‌کند و گفت‌وگوی
+        //  باز بی‌صدا بسته می‌شد (سنجهٔ ‎chatroom‎ با صافی گرفتش). پس ‎null‎ِ وسطِ
+        //  بازسازی نادیده گرفته می‌شود و گفت‌وگو برمی‌گردد؛ اگر صافیِ تازه آن را
+        //  ندارد، نخستین گفت‌وگوی همان صافی باز می‌شود.
+        var keep = Current;
+        _rebuilding = true;
+        try
+        {
+            Shown.Clear();
+            foreach (var t in list) Shown.Add(t);
+        }
+        finally { _rebuilding = false; }
+        OnPropertyChanged(nameof(IsListEmpty));
+
+        if (keep is not null && Shown.Contains(keep))
+        {
+            if (!ReferenceEquals(Current, keep)) { _current = keep; OnPropertyChanged(nameof(Current)); }
+        }
+        else if (Shown.Count > 0) Current = Shown[0];
+        else if (keep is not null && !ReferenceEquals(Current, keep)) { _current = keep; OnPropertyChanged(nameof(Current)); }
     }
 
     // ══ فرستادن ═════════════════════════════════════════════════════════════════
@@ -905,7 +1046,8 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
                 id: r.Key.StartsWith("cloud:", StringComparison.Ordinal) ? r.Key[6..] : "",
                 kind: r.Kind, mediaId: r.MediaId, deleted: r.Deleted, key: r.Key,
                 role: th.IsGroup ? RoleOf(r) : "", trashed: r.TrashedAt > 0,
-                daysLeft: Shamsi.Money(ChatStore.DaysLeft(r.Anchor, r.TrashedAt, now)) + " روز مانده");
+                daysLeft: Shamsi.Money(ChatStore.DaysLeft(r.Anchor, r.TrashedAt, now)) + " روز مانده",
+                at: r.At);
             if (vm is not null)
             {
                 var at = th.Messages.IndexOf(vm);
@@ -922,7 +1064,8 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
             if (bubble.IsImage) _ = LoadImageAsync(bubble);
         }
         OnPropertyChanged(nameof(IsEmpty));
-        if (ReferenceEquals(th, Current)) CountMedia(th);
+        MarkDays(th);
+        if (ReferenceEquals(th, Current)) { CountMedia(th); MarkHits(); }
     }
 
     private string RoleOf(ChatRow r)
@@ -958,7 +1101,11 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
         UpdateUnread();
     }
 
-    private void UpdateUnread() => SupportUnread = Threads.Sum(t => t.Unread);
+    private void UpdateUnread()
+    {
+        SupportUnread = Threads.Sum(t => t.Unread);
+        OnPropertyChanged(nameof(UnreadTabText));
+    }
 
     private void CountMedia(ChatThreadViewModel th)
     {

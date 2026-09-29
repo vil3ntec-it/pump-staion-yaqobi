@@ -93,6 +93,38 @@ internal static class ChatProbe
         Check("گروه: اعضا در ستونِ مشخصات", chat.HasMembers);
         Shot(win, Path.Combine(shots, "chat-group.png"));
 
+        // ۱۴۰۵/۰۷/۱۶ — جداکنندهٔ روز، جست‌وجوی داخلِ گفت‌وگو، صافیِ فهرست
+        Check("گروه: جداکنندهٔ روز بالای نخستین پیام", chat.Current.Messages[0].ShowDay,
+              chat.Current.Messages[0].DayLabel);
+        Check("گروه: هر روز فقط یک جداکننده",
+              chat.Current.Messages.Where(m => m.ShowDay).Select(m => m.DayLabel).Distinct().Count()
+              == chat.Current.Messages.Count(m => m.ShowDay));
+        var word = chat.Current.Messages.First(m => m.IsText).Text.Split(' ')[0];
+        chat.ToggleMessageSearchCommand.Execute(null);
+        chat.MessageSearch = word;
+        Settle(win);
+        Check("جست‌وجو در گفت‌وگو: پیامِ جور برجسته شد", chat.Current.Messages.Any(m => m.Hit), chat.MessageSearchText);
+        Check("جست‌وجو در گفت‌وگو: هیچ پیامی پنهان نشد", chat.Current.Messages.Count == 3);
+        Shot(win, Path.Combine(shots, "chat-search.png"));
+        chat.ToggleMessageSearchCommand.Execute(null);
+        Settle(win);
+        Check("بستنِ جست‌وجو برجستگی را برمی‌دارد", !chat.Current.Messages.Any(m => m.Hit));
+
+        var all = chat.Shown.Count;
+        chat.SetFilterCommand.Execute("support");
+        Settle(win);
+        Check("صافیِ «پشتیبانی» فقط پشتیبانی را نشان می‌دهد", chat.Shown.All(t => t.IsSupportDesk) && chat.Shown.Count == 1,
+              chat.Shown.Count.ToString());
+        chat.SetFilterCommand.Execute("customer");
+        Settle(win);
+        Check("صافیِ «مشتری‌ها» فقط مشتری‌ها", chat.Shown.Count > 0 && chat.Shown.All(t => t.IsCustomer));
+        chat.SetFilterCommand.Execute("all");
+        Settle(win);
+        Check("صافیِ «همه» همه را برمی‌گرداند", chat.Shown.Count == all, $"{chat.Shown.Count} از {all}");
+        Check("صافی گفت‌وگوی باز را خالی نمی‌گذارد", chat.Current is not null);
+        chat.Current = chat.Threads.First(t => t.IsGroup);
+        Settle(win);
+
         chat.ToggleTrashCommand.Execute(null);
         Settle(win);
         Check("سطل: پیامِ پیر با «روز مانده»", chat.Current!.Messages.Count == 1 && chat.Current.Messages[0].Trashed);
@@ -128,6 +160,10 @@ internal static class ChatProbe
             ThemeManager.Apply(PumpTheme.Blue);
             Settle(win);
         }
+
+        chat.MarkAllReadCommand.Execute(null);
+        Settle(win);
+        Check("«همه خوانده شد» هیچ نخوانده‌ای نمی‌گذارد", chat.SupportUnread == 0, chat.SupportUnread.ToString());
 
         Wait(win, chat.BackCommand.ExecuteAsync(null));
         Check("‹ برگشت پوسته را برمی‌گرداند", vm.IsChromeVisible);

@@ -2169,15 +2169,31 @@
     return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
   }
 
+  /** «امروز» · «دیروز» · تاریخِ شمسی — فقط بالای نخستین پیامِ هر روز. */
+  function chatDay(at) {
+    if (!at) return '';
+    var d = new Date(at), t = new Date();
+    var key = function (x) { return x.getFullYear() + '-' + x.getMonth() + '-' + x.getDate(); };
+    if (key(d) === key(t)) return 'امروز';
+    var y = new Date(t.getTime() - 86400000);
+    if (key(d) === key(y)) return 'دیروز';
+    try { return d.toLocaleDateString('fa-IR-u-ca-persian', { weekday: 'long', day: 'numeric', month: 'long' }); }
+    catch (e) { return d.toLocaleDateString(); }
+  }
+
   function renderChat() {
     var box = $('chatList');
     if (!box) return;
     var me = chatName();
     var list = chatLoad();
+    var lastDay = '';
     box.innerHTML = list.length ? list.map(function (m) {
       var mine = m.mine || (me && m.from === me);
       var role = m.role === 'admin' ? 'مدیر' : m.role === 'mirza' ? 'میرزا' : 'کارمند';
-      return '<div class="bub' + (mine ? ' mine' : '') + '">' +
+      //  جداکنندهٔ روز — همان «امروز / دیروز / تاریخ»ِ پیام‌رسانِ برنامهٔ کامپیوتر
+      var day = chatDay(m.at), sep = '';
+      if (day && day !== lastDay) { sep = '<div class="cday"><span>' + esc(day) + '</span></div>'; lastDay = day; }
+      return sep + '<div class="bub' + (mine ? ' mine' : '') + '">' +
         (mine ? '' : '<div class="who">' + esc(m.from) + ' <span class="sub">· ' + role + '</span></div>') +
         '<div>' + esc(m.text) + '</div>' +
         '<div class="sub">' + chatTime(m.at) + (m.seq ? '' : ' · ⏳ در صف') + '</div></div>';

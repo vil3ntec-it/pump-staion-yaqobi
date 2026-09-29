@@ -188,14 +188,14 @@ public sealed class ToolsDataService
     /// می‌خواند — ده‌ها هزار شیء — در حالی که از آن‌ها فقط یک چیز می‌خواهد:
     /// قدیمی‌ترین تاریخ.
     ///
-    /// حالا همان را خودِ دیتابیس می‌دهد: یک ‎MIN(DateKey)‎ به ازای هر حساب.
+    /// حالا فقط سه ستون خوانده می‌شود و کمینه به ازای هر حساب همین‌جا گرفته می‌شود.
     ///
     /// ⚠️ چرا نتیجه مو‌به‌مو همان است:
     ///   • ‎MembershipService.Row‎ از شخص فقط ‎FirstDate(p)‎ را می‌خواهد و
     ///     ‎FirstDate‎ کمینهٔ ‎Shamsi.Key‎ی ردیف‌هاست — و کمینهٔ یک مجموعه
     ///     برابرِ کمینهٔ کمینه‌های زیرمجموعه‌هایش است.
-    ///   • ‎DateKey‎ی ستون همان ‎Shamsi.Key(DateShamsi)‎ است (هنگام ذخیره
-    ///     نوشته می‌شود)، پس ترتیبشان یکی است.
+    ///   • کلید از ‎Shamsi.Key(DateShamsi)‎ی خودِ ردیف است — همان که مرجع
+    ///     می‌زند — نه از ستونِ ‎DateKey‎ که در ردیف‌های کهنه صفر است.
     ///   • و متنِ تاریخ از همان کلید بازساخته می‌شود («۱۴۰۵۰۶۱۸» ⇒ «1405/6/18»)،
     ///     که هم ‎Shamsi.Key‎ و هم ‎Shamsi.ToDate‎ همان جواب را می‌دهند.
     ///
@@ -223,16 +223,30 @@ public sealed class ToolsDataService
         // ‎LoadSummarisedAsync‎ توضیح داده شد (‎GroupBy‎ روی SQLite با این
         // شکلِ کلیدِ دوتایی ترجمه نمی‌شود). ولی خواندنِ **دو ستون** به‌جای
         // رکوردِ کاملِ ردیف، خودش بیشترِ هزینه را برمی‌دارد.
+        // ⛔ تاریخ از ‎DateShamsi‎ی خودِ ردیف حساب می‌شود، نه از ستونِ ‎DateKey‎
+        // (۱۴۰۵/۰۷/۱۶): ردیف‌هایی که پیش از آمدنِ آن ستون ساخته شده‌اند (یا
+        // راهی که کلید را ننوشته) ‎DateKey = 0‎ دارند و با صافیِ ‎DateKey > 0‎
+        // بی‌صدا کنار می‌رفتند — همان «بعضی را حساب می‌کند و بعضی را نه».
+        // مرجع (‎MembershipService.FirstDate‎) هم ‎Shamsi.Key(DateShamsi)‎ است.
+        // ⛔ و ردیفی که هم حسابِ تیل دارد هم حسابِ پول در **هر دو** شمرده
+        // می‌شود — ‎LoadFullAsync‎ هم آن را در هر دو دفتر می‌گذارد.
         var dates = await db.DebtRows.AsNoTracking()
-            .Where(r => r.DateKey > 0)
-            .Select(r => new { r.FuelAccountId, r.MoneyAccountId, r.DateKey })
+            .Where(r => r.DateShamsi != null && r.DateShamsi != "")
+            .Select(r => new { r.FuelAccountId, r.MoneyAccountId, r.DateShamsi })
             .ToListAsync(ct);
 
         var firsts = new Dictionary<long, int>();
         foreach (var d in dates)
         {
-            if ((d.FuelAccountId ?? d.MoneyAccountId) is not { } id) continue;
-            if (!firsts.TryGetValue(id, out var cur) || d.DateKey < cur) firsts[id] = d.DateKey;
+            var k = Shamsi.Key(d.DateShamsi);
+            if (k == 0) continue;
+            if (d.FuelAccountId is { } f) Keep(f, k);
+            if (d.MoneyAccountId is { } m && m != d.FuelAccountId) Keep(m, k);
+        }
+
+        void Keep(long id, int k)
+        {
+            if (!firsts.TryGetValue(id, out var cur) || k < cur) firsts[id] = k;
         }
 
         foreach (var (id, key) in firsts)

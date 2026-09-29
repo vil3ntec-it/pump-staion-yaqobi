@@ -544,10 +544,37 @@ public sealed class PumpDbContext : DbContext
     }
 
     public override int SaveChanges()
-    { Stamp(); var t = NewTrash(); var n = base.SaveChanges(); Bump(); RaiseTrash(t); return n; }
+    {
+        var book = OnlyBookkeeping(); Stamp(); var t = NewTrash();
+        var n = base.SaveChanges(); if (!book) Bump(); RaiseTrash(t); return n;
+    }
 
     public override async Task<int> SaveChangesAsync(CancellationToken ct = default)
-    { Stamp(); var t = NewTrash(); var n = await base.SaveChangesAsync(ct); Bump(); RaiseTrash(t); return n; }
+    {
+        var book = OnlyBookkeeping(); Stamp(); var t = NewTrash();
+        var n = await base.SaveChangesAsync(ct); if (!book) Bump(); RaiseTrash(t); return n;
+    }
+
+    /// <summary>
+    /// ⛔ ذخیره‌ای که فقط حالِ همگام‌سازی را می‌نویسد (‎SyncState‎ و ‎SyncOps‎)
+    /// شمارهٔ نسخهٔ داده را بالا نمی‌برد (۱۴۰۵/۰۷/۱۶). آن دو دادهٔ کاربر نیستند،
+    /// ولی هر دورِ سی‌ثانیه‌ایِ همگام‌سازی ‎Version‎ را جلو می‌برد و هر ترمزِ
+    /// «داده عوض نشده؟» (بازگشت به بخش، نوار، داشبورد، هشدارها) را می‌شکست —
+    /// پس با هر بار رفتن به «صرافی» کلِ جدول از نو خوانده و ساخته می‌شد.
+    /// سنجه‌ها همگام‌سازی را خاموش دارند و هیچ‌وقت این را نمی‌دیدند.
+    /// </summary>
+    private bool OnlyBookkeeping()
+    {
+        if (!SuppressOps) return false;
+        var any = false;
+        foreach (var e in ChangeTracker.Entries())
+        {
+            if (e.State is EntityState.Unchanged or EntityState.Detached) continue;
+            if (e.Entity is not (SyncStateRow or SyncOp)) return false;
+            any = true;
+        }
+        return any;
+    }
 
     /// <summary>
     /// ══ «همین حالا چیزی به سطل رفت» — برای ‎Ctrl+Z‎ی حذف ═══════════════════════

@@ -57,7 +57,10 @@ public sealed partial class OldLoansSectionViewModel : SectionViewModel
     public BulkRows<OldLoanRowViewModel> Rows { get; } = new();
 
     /// <summary>۰ همه · ۱ فقط واحد تیل · ۲ فقط واحد پول.</summary>
-    [ObservableProperty] private int _filterIndex;
+    /// <remarks>⛔ دکمهٔ «همه» از صفحه برداشته شد (۱۴۰۵/۰۷/۱۶، خواستهٔ صاحب ریپو)؛
+    /// پس صفحه با «واحد تیل» باز می‌شود. خودِ حالتِ «همه» در منطق مانده
+    /// (‎AgingFilter.All‎ و گزارشِ آن) و دست نخورده است.</remarks>
+    [ObservableProperty] private int _filterIndex = 1;
 
     [ObservableProperty] private string _totalText = "—";
     [ObservableProperty] private string _stale30 = "0";

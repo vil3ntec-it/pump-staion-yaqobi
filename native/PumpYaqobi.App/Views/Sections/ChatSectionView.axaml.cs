@@ -2,6 +2,8 @@ using System;
 using System.Collections.Specialized;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
 using PumpYaqobi.App.ViewModels.Sections;
 
@@ -23,7 +25,22 @@ public partial class ChatSectionView : UserControl
     private TopLevel? _top;
     private ChatThreadViewModel? _watched;
 
-    public ChatSectionView() => InitializeComponent();
+    public ChatSectionView()
+    {
+        InitializeComponent();
+        //  ⛔ Enter می‌فرستد، Shift+Enter خطِ تازه — تونلی، پیش از خودِ کادر
+        //  (کادر ‎AcceptsReturn‎ دارد و Enter را خودش می‌بلعید).
+        DraftBox.AddHandler(KeyDownEvent, OnDraftKey, RoutingStrategies.Tunnel);
+    }
+
+    private void OnDraftKey(object? sender, KeyEventArgs e)
+    {
+        if (e.Key is not (Key.Enter or Key.Return)) return;
+        if ((e.KeyModifiers & (KeyModifiers.Shift | KeyModifiers.Control | KeyModifiers.Alt)) != 0) return;
+        e.Handled = true;
+        if (DataContext is ChatSectionViewModel vm && vm.SendCommand.CanExecute(null))
+            vm.SendCommand.Execute(null);
+    }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
