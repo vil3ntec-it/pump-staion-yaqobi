@@ -16,6 +16,8 @@ on:
       - 'tools/check-kar-bot.mjs'
       - 'tools/check-kar-ui.mjs'
       - 'tools/check-view.mjs'
+      - 'tools/check-view-buttons.mjs'
+      - 'tools/check-kar-print.mjs'
       - '.github/workflows/test-kar.yml'
   push:
     branches-ignore:
@@ -26,6 +28,8 @@ on:
       - 'tools/check-kar-bot.mjs'
       - 'tools/check-kar-ui.mjs'
       - 'tools/check-view.mjs'
+      - 'tools/check-view-buttons.mjs'
+      - 'tools/check-kar-print.mjs'
       - '.github/workflows/test-kar.yml'
 
 jobs:
@@ -47,3 +51,8 @@ jobs:
           npm i -g playwright@1
           node "$(npm root -g)/playwright/cli.js" install --with-deps chromium
           node tools/check-kar-ui.mjs
+      # هر دکمهٔ صفحهٔ کیو‌آر با کلیکِ واقعی — چت، پیوست، ضبطِ صدا، فیلترها، چاپ
+      - name: دکمه‌های صفحهٔ کیو‌آر
+        run: node tools/check-view-buttons.mjs
+      - name: PDF و چاپِ اپِ گوشی — همان ورقِ برنامهٔ کامپیوتر
+        run: node tools/check-kar-print.mjs

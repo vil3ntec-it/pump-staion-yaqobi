@@ -213,6 +213,82 @@ public sealed class ChatRoomTests : IDisposable
         Assert.Equal(4, sent.Message!.Seq);
     }
 
+    /// <summary>
+    /// 📎 عکس/ویدیو/صدا در گروه (۱۴۰۵/۰۷/۱۶): بالا رفتنِ خام با نوعِ فایل، پیامِ
+    /// رسانه با شناسه، و گرفتنِ یک‌باره. ⛔ ۴۰۴ (۴۸ ساعت گذشت) یعنی «نیست»، نه
+    /// امتحانِ درِ دیگر.
+    /// </summary>
+    [Fact]
+    public async Task Gorooh_Resane_BalaMiravad_VaPayamBaShenase_VaYekBarGerefteMishavad()
+    {
+        var seen = new List<(HttpMethod M, string Path, string? Type, string Body)>();
+        var png = new byte[] { 0x89, 0x50, 0x4e, 0x47, 1, 2, 3 };
+        var gets = 0;
+        StationChat.TestTransport = async (req, ct) =>
+        {
+            var body = req.Content is null ? "" : await req.Content.ReadAsStringAsync(ct);
+            seen.Add((req.Method, req.RequestUri!.AbsolutePath, req.Content?.Headers.ContentType?.MediaType, body));
+            var path = req.RequestUri!.AbsolutePath;
+            if (req.Method == HttpMethod.Post && path.EndsWith("/chat/media"))
+                return Json(HttpStatusCode.Created, """{"ok":true,"mediaId":"mABCDEFGHIJK12345","kind":"image","keepHours":48}""");
+            if (req.Method == HttpMethod.Get && path.Contains("/chat/media/"))
+            {
+                if (++gets > 1) return Json(HttpStatusCode.NotFound, """{"error":"media_gone"}""");
+                var r = new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(png) };
+                r.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
+                return r;
+            }
+            return Json(HttpStatusCode.OK, """
+                {"ok":true,"message":{"seq":7,"cid":"c7","from":"مدیر","role":"admin","text":"","at":7,"kind":"image","mediaId":"mABCDEFGHIJK12345"}}
+                """);
+        };
+        var chat = new StationChat(() => Station());
+
+        var up = await chat.UploadAsync(png, "image/png");
+        Assert.True(up.Ok, up.Why);
+        Assert.Equal("mABCDEFGHIJK12345", up.MediaId);
+        Assert.Equal("/api/stations/p1b5feb57/chat/media", seen[0].Path);
+        Assert.Equal("image/png", seen[0].Type);
+
+        var sent = await chat.PostAsync("c7", "مدیر", "admin", "", default, "image", up.MediaId);
+        Assert.True(sent.Ok, sent.Why);
+        Assert.Contains("\"kind\":\"image\"", seen[1].Body);
+        Assert.Contains("\"mediaId\":\"mABCDEFGHIJK12345\"", seen[1].Body);
+        Assert.Equal("image", sent.Message!.Kind);
+        Assert.Equal("mABCDEFGHIJK12345", sent.Message.MediaId);
+
+        var got = await chat.MediaAsync(up.MediaId);
+        Assert.NotNull(got);
+        Assert.Equal(png, got!.Value.Bytes);
+        Assert.Equal("image/png", got.Value.Mime);
+        var before = seen.Count;
+        Assert.Null(await chat.MediaAsync(up.MediaId));          // ۴۸ ساعت گذشت ⇒ نیست
+        Assert.Equal(before + 1, seen.Count);                     // درِ دوم امتحان نشد
+        Assert.Null(await chat.MediaAsync("../chat.json"));       // شناسهٔ ساختگی به سرور نمی‌رود
+        Assert.Equal(before + 1, seen.Count);
+
+        //  پیامِ متنی همان شکلِ قبلی را دارد — کلیدِ kind نمی‌رود
+        await chat.PostAsync("c8", "مدیر", "admin", "سلام");
+        Assert.DoesNotContain("kind", seen[^1].Body);
+    }
+
+    [Fact]
+    public void Gorooh_PayameResane_BiMatn_PazirofteAst_VaShenaseyeBad_Na()
+    {
+        static JsonElement J(string s) => JsonDocument.Parse(s).RootElement;
+        var img = GroupMessage.Parse(J("""{"seq":1,"cid":"a","from":"x","text":"","kind":"image","mediaId":"mABCDEFGHIJK12345","at":1}"""));
+        Assert.NotNull(img);
+        Assert.Equal("image", img!.Kind);
+        Assert.Null(GroupMessage.Parse(J("""{"seq":2,"from":"x","text":"","kind":"image","mediaId":"../x"}""")));
+        Assert.Equal("text", GroupMessage.Parse(J("""{"seq":3,"from":"x","text":"hi","kind":"exe","mediaId":"mABCDEFGHIJK12345"}"""))!.Kind);
+        var src = File.ReadAllText(Path.Combine(SrcRoot(), "PumpYaqobi.App", "ViewModels", "Sections", "ChatSectionViewModel.cs"));
+        Assert.Contains("CanAttach => IsCustomer || IsSupportDesk || IsGroup", src);
+        //  ⛔ نسخهٔ خودمان پیش از فرستادنِ پیام روی همین کامپیوتر
+        var i = src.IndexOf("private async Task UploadAndSendGroupAsync", StringComparison.Ordinal);
+        var body = src[i..src.IndexOf("_group.PostAsync", i, StringComparison.Ordinal)];
+        Assert.Contains("SaveMedia(mediaId, mime, bytes)", body);
+    }
+
     [Fact]
     public async Task Gorooh_404eServer_MiguyadServerKohneAst_VaDareDovomRaNemizanad()
     {
@@ -285,5 +361,24 @@ public sealed class ChatRoomTests : IDisposable
         Assert.Contains("ClientSizeProperty", cs);
         // سه ستونِ صفحه‌قد «panel»اند (سایهٔ بی‌محو)، نه «card»ِ محو
         Assert.DoesNotContain("Classes=\"card\"", xaml);
+    }
+    [Fact]
+    public void Resid_DideShod_VaPishnevisBarMigardad()
+    {
+        var root = SrcRoot();
+        var vm = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "Sections", "ChatSectionViewModel.cs"));
+        var cloud = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Services", "CloudLink.cs"));
+        var state = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Services", "SupportState.cs"));
+        var ctl = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Themes", "Controls.axaml"));
+        var xaml = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "ChatSectionView.axaml"));
+        // ✓✓ از «دیده‌شدهٔ مشتری»ی خودِ سرور است، نه حدس
+        Assert.Contains("Num(t, \"custSeenSeq\")", cloud);
+        Assert.Contains("CustSeenSeq", state);
+        Assert.Contains("\"✓✓ دیده شد\"", vm);
+        Assert.Contains("r.Seq <= st.CustSeenSeq", vm);
+        // پیامی که نرفت، متنش در کادر برمی‌گردد
+        Assert.Contains("if (string.IsNullOrEmpty(Draft)) Draft = text;", vm);
+        Assert.Contains("TextBlock.receipt", ctl);
+        Assert.Contains("Classes=\"receipt\"", xaml);
     }
 }

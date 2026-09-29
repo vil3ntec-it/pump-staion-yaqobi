@@ -609,39 +609,25 @@ console.log('\n— بازبینیِ دوم (۱۴۰۵/۰۷/۱۶)');
   ok(appSrc.indexOf("show('lockPane')") === appSrc.lastIndexOf("show('lockPane')") && /function askOwner/.test(appSrc),
      'صفحهٔ رمز فقط از یک در باز می‌شود (‎askOwner‎)');
   const sh = appSrc.slice(appSrc.indexOf('function show(which)'), appSrc.indexOf('function show(which)') + 600);
-  ok(/if \(which !== 'appPane'\) chatWatch\(false\);/.test(sh), '⛔ گروهِ کارکنان پشتِ قفل پرسیده نمی‌شود');
   ok(/if \(!st\.equals\(prefs\(c\)\.getString\(K_STATION, ""\)\)\) ed\.remove\(K_SEEN\);/.test(alerts),
      '⛔ اندروید: پمپِ دیگر ⇒ «گفته‌شده»های پمپِ قبلی پاک');
 }
 
-// ══ گروهِ کارکنانِ همین پمپ (۱۴۰۵/۰۷/۱۳) ══════════════════════════════════
+// ══ ⛔ اپِ گوشی پیام‌رسان ندارد (۱۴۰۵/۰۷/۱۶) ═══════════════════════════════
+// خواستهٔ صاحب ریپو: «پیام‌رسان‌های برنامهٔ اندروید و آیفون را بردار، لازمشان
+// ندارم؛ ولی از سایتِ کیو‌آر و خودِ برنامهٔ کامپیوتر باشند.»
 {
+  console.log('\n══ اپِ گوشی پیام‌رسان ندارد');
   const { readFileSync } = await import("node:fs");
   const appSrc = readFileSync(new URL('../kar/app.js', import.meta.url), 'utf8');
   const html = readFileSync(new URL('../kar/index.html', import.meta.url), 'utf8');
-  const swSrc = readFileSync(new URL('../kar/sw.js', import.meta.url), 'utf8');
   const kar = require(path.join(here, '..', 'kar', 'app.js'));
-  const now = 1_760_000_000_000, day = 86_400_000;
-
-  ok(kar.chatUrl('http://h:1', 'p1b5', 7) === 'http://h:1/api/stations/p1b5/chat?since=7&limit=200',
-     'گروه به پوشهٔ همان پمپ بسته است (نه موضوعِ سراسریِ staff)');
-  ok(kar.chatUrl('http://h:1', 'a/b') === 'http://h:1/api/stations/a%2Fb/chat', 'کدِ پمپ رمزنگاری‌شده در نشانی می‌رود');
-  ok(!/\/api\/notify/.test(appSrc.slice(appSrc.indexOf('var CHAT_KEEP_DAYS'))), 'گروه هیچ راهی به پیام‌رسانِ سراسری ندارد');
-
-  const merged = kar.mergeChat(
-    [{ cid: 'k1', from: 'من', text: 'سلام', at: now, mine: true }, { seq: 1, text: 'اول', at: now - day }],
-    [{ seq: 2, cid: 'k1', from: 'من', text: 'سلام', at: now }, { seq: 1, text: 'اول', at: now - day },
-     { seq: 3, text: '', at: now }, { seq: 4, text: 'کهنه', at: now - 16 * day }], now);
-  ok(merged.map(m => m.seq).join() === '1,2', 'یکتا با شماره، درراه با شمارهٔ واقعی جایگزین، خالی و کهنهٔ ۱۵روزه بیرون');
-  ok(kar.CHAT_KEEP_DAYS === 15, 'گوشی هم بیش از ۱۵ روز نگه نمی‌دارد');
-  ok(/'paneChat', '💬 گروه'/.test(appSrc) && (appSrc.match(/'paneChat', '💬 گروه'/g) || []).length === 2,
-     'درِ «گروه» هم در «حساب‌ها» هست هم در «کارمندان»');
-  ok(/id="paneChat"/.test(html) && /id="btnChatSend"/.test(html), 'صفحهٔ گروه در اپ هست');
-  ok(/localStorage\.removeItem\(stnKey\('chat'\)\)/.test(appSrc), '⛔ رفتن به پمپِ دیگر پیام‌های گروهِ پمپِ قبلی را پاک می‌کند');
-  ok(/chatWatch\(id === 'paneChat'\)/.test(appSrc) && /clearInterval\(chatTimer\)/.test(appSrc),
-     'فقط با صفحهٔ گروهِ باز پرسیده می‌شود، و با رفتن می‌ایستد');
-  ok(/Authorization: 'Bearer ' \+ cfg\.tok/.test(appSrc), 'با رمزِ خواندنِ همان پمپ، در سرآیند — نه در نشانی');
-  ok(!/pump-kar-v10'/.test(swSrc), 'شمارهٔ کشِ سرویس‌ورکر بالا رفته');
+  const code = appSrc.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+  ok(!/paneChat|chatUrl|chatSend|mergeChat|\/chat\b/.test(code), 'در کدِ اپ هیچ گفت‌وگو و هیچ درخواستی به «/chat» نیست');
+  ok(!/paneChat|btnChat|chatList/.test(html), 'در صفحه هیچ درِ «گروه» و کادرِ پیامی نیست');
+  ok(kar.chatUrl === undefined && kar.mergeChat === undefined, 'تابع‌های گفت‌وگو صادر نمی‌شوند');
+  ok(/indexOf\(KEY \+ '\.chat'\) === 0\) localStorage\.removeItem/.test(appSrc) && /deleteDatabase\('pump-kar-media'\)/.test(appSrc),
+     'پیام‌ها و رسانهٔ گروهِ نسخه‌های پیشین از گوشی پاک می‌شوند');
 }
 
 // ══ نام و آیکونِ بیرونِ اپ (۱۴۰۵/۰۷/۱۵) ══════════════════════════════════════
@@ -736,11 +722,15 @@ console.log('\n══ فقط دیدن — هیچ راهی به نوشتنِ حس
   //  سوکت فقط گوش می‌دهد
   const sends = [...A.matchAll(/\.send\(([^)]*\))/g)].map(m => m[1]);
   ok(sends.length === 1 && /op: 'sub'/.test(sends[0]), 'سوکت فقط «sub» می‌فرستد، هیچ «set»ی نه');
-  //  فهرستِ همهٔ نوشتن‌های مستقیم: فقط گروهِ کارکنان و ثبتِ اعلان
-  const kWrites = [...A.matchAll(/method:\s*'(POST|PUT|DELETE|PATCH)'/g)].length;
-  ok(kWrites === 3 && /chatUrl\(base, cfg\.stn\)[\s\S]{0,80}method: 'POST'/.test(A)
-     && /method: 'POST'[\s\S]{0,120}subscription/.test(A) && /&endpoint='[\s\S]{0,120}method: 'DELETE'/.test(A),
-     'اپِ گوشی فقط سه نوشتن دارد — پیامِ گروهِ کارکنان، ثبت و لغوِ اعلان — هیچ‌کدام حساب نیست (' + kWrites + ')');
+  //  فهرستِ همهٔ نوشتن‌های مستقیم: فقط ثبت و لغوِ اعلان — اپ پیام‌رسان ندارد
+  //  ⛔ نشانیِ هر نوشتن از خودِ ‎fetch(…)‎ پیشِ آن خوانده می‌شود، نه شمرده
+  const kWriteUrls = [...A.matchAll(/method:\s*'(POST|PUT|DELETE|PATCH)'/g)].map((m) => {
+    const back = A.slice(Math.max(0, m.index - 260), m.index);
+    const f = back.lastIndexOf('fetch(');
+    return m[1] + ' ' + (f < 0 ? '?' : back.slice(f + 6).split(',\n')[0].split(', {')[0].trim());
+  });
+  ok(kWriteUrls.length === 2 && /method: 'POST'[\s\S]{0,120}subscription/.test(A) && /&endpoint='[\s\S]{0,120}method: 'DELETE'/.test(A),
+     'اپِ گوشی فقط دو نوشتن دارد: ثبت و لغوِ اعلان — هیچ‌کدام حساب یا پیام نیست: ' + JSON.stringify(kWriteUrls));
   //  کیو‌آرِ مشتری: عکسِ حساب فقط خوانده می‌شود؛ نوشتن‌ها همه زیرِ «/chat»
   const vWrites = [...V.matchAll(/fetch\((chatUrl\([^)]*\)|liveUrl\(\))\s*(,\s*\{\s*method:\s*'([A-Z]+)')?/g)]
     .map(m => (m[3] || 'GET') + ' ' + m[1]);

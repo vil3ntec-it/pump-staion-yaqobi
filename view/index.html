@@ -183,10 +183,13 @@
   .live .btn{padding:4px 12px;font-size:.78rem;min-height:34px}
   /* ── چتِ پشتیبانی ───────────────────────────────────────────────────────
      دکمهٔ شناور پایینِ صفحه، و صفحهٔ چت که تمام‌صفحه رویش می‌نشیند. */
+  .pump{font-weight:900;color:var(--accent);font-size:.95rem;margin-bottom:8px}
   .fab{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));left:16px;z-index:40;border:0;border-radius:999px;
        background:var(--accent);color:var(--on-accent);font-weight:800;font-size:.95rem;font-family:inherit;
-       padding:12px 18px;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer;display:flex;
-       align-items:center;gap:8px}
+       padding:8px 12px;box-shadow:0 6px 16px rgba(0,0,0,.22);cursor:pointer;display:flex;
+       align-items:center;gap:6px;opacity:.92}
+  .live .lbtns{display:flex;gap:6px;flex-wrap:wrap}
+  .live .n{background:var(--red);color:#fff;border-radius:999px;font-size:.7rem;padding:0 6px}
   .fab .n{background:var(--red);color:#fff;border-radius:999px;font-size:.72rem;padding:1px 7px;min-width:20px;text-align:center}
   .chat{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column}
   .chat.hidden{display:none}
@@ -207,6 +210,7 @@
             text-align:center;cursor:pointer;padding:0}
   .msg.gone{color:var(--muted);font-style:italic;font-size:.8rem}
   .msg img,.msg video{max-width:100%;border-radius:10px;display:block;margin-top:4px}
+  .msg .dim{font-size:.8rem;color:var(--muted)}
   .msg audio{width:220px;max-width:100%;margin-top:4px}
   .chat-foot{display:flex;align-items:center;gap:6px;padding:8px 8px calc(8px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line)}
   .chat-foot input[type=text]{flex:1;min-width:0;border:1px solid var(--line);background:var(--bg);color:var(--txt);
@@ -220,6 +224,20 @@
   .chat-name input{flex:1;border:1px solid var(--line);background:var(--bg);color:var(--txt);border-radius:10px;
                    padding:9px 12px;font-family:inherit}
   .chat-note{text-align:center;color:var(--muted);font-size:.78rem;padding:6px}
+  .msg .tick{font-size:.66rem;color:var(--muted);margin-inline-start:4px}
+  .msg .tick.seen{color:var(--accent);font-weight:800}
+  .msg img{cursor:zoom-in}
+  .chat-day{align-self:center;background:var(--card);border:1px solid var(--line);color:var(--muted);
+            font-size:.72rem;border-radius:999px;padding:2px 10px;margin:4px 0}
+  .chat-new{position:absolute;left:50%;transform:translateX(-50%);bottom:74px;z-index:2;border:0;border-radius:999px;
+            background:var(--accent);color:var(--on-accent);font:inherit;font-size:.8rem;font-weight:800;padding:6px 14px;
+            box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer}
+  .chat-rec{color:var(--red);font-size:.8rem;font-weight:800;white-space:nowrap}
+  .chat-err{background:rgba(229,62,62,.12);color:var(--red);text-align:center;padding:6px;font-size:.8rem}
+  .chat-lb{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center}
+  .chat-lb img{max-width:96vw;max-height:88vh;border-radius:8px}
+  .chat-lb button{position:absolute;top:12px;right:12px;border:0;border-radius:999px;width:40px;height:40px;
+                  background:#fff;color:#000;font-size:1.1rem;cursor:pointer}
   .chat-blocked{background:rgba(229,62,62,.12);color:var(--red);text-align:center;padding:8px;font-size:.85rem}
   @media print{.fab,.chat{display:none!important}}
   @media print{
@@ -510,6 +528,8 @@
     var h = '';
 
     h += '<div class="card">';
+    //  ⛔ نامِ خودِ پمپ (‎p‎، از ۱۴۰۵/۰۷/۱۶) — کیو‌آرِ کهنه‌تر آن را ندارد
+    if (d.p) h += '<div class="pump">⛽ ' + esc(d.p) + '</div>';
     h += '<div class="head"><div class="av">' + esc(String(d.n || 'ح').charAt(0)) + '</div><div class="t">';
     h += '<h1>' + esc(d.n || 'حساب') + '</h1>';
     if (d.a) h += '<div class="sub">' + esc(d.a) + '</div>';
@@ -544,19 +564,24 @@
     h += '<div class="card noprint" style="text-align:center">' +
          '<button class="btn" data-act="print">🖨️ چاپ / ذخیره PDF</button>' +
          '<div class="note">این صفحه فقط نشان می‌دهد؛ هیچ چیزی از این‌جا عوض نمی‌شود. ' +
-         'عددها همان عددهای دفترِ پمپ‌اند؛ اگر پرسشی دارید با «💬 پشتیبانی» بپرسید.</div></div>';
+         'عددها همان عددهای دفترِ پمپ‌اند؛ اگر پرسشی دارید با «💬 پیام» بپرسید.</div></div>';
 
-    if (live) {
-      h += '<button class="fab noprint" data-act="chat-open">💬 پشتیبانی' +
-           (chatUnread > 0 ? '<span class="n">' + chatUnread + '</span>' : '') + '</button>';
+    //  دکمهٔ شناور فقط وقتی پیامِ نخوانده هست — و کوچک، فقط نشانه و شمار
+    if (live && chatUnread > 0) {
+      h += '<button class="fab noprint" data-act="chat-open" aria-label="پیامِ تازه">💬' +
+           '<span class="n">' + chatUnread + '</span></button>';
     }
 
     app.innerHTML = h;
-    if (d.n) document.title = d.n + ' — پمپ بنزین';
+    if (d.n) document.title = d.n + ' — ' + (d.p || 'پمپ بنزین');
     chatRender();
   }
 
-  app.addEventListener('click', function (e) {
+  //  ⛔ یک شنونده برای صفحه و برای چت (۱۴۰۵/۰۷/۱۶): چت بیرونِ ‎app‎ می‌نشیند
+  //  (‎document.body‎) و تا امروز هیچ‌کدام از دکمه‌هایش — «ادامه»، ▶، 📎، 🎤، ✕،
+  //  → و 🔔 — شنونده‌ای نداشتند؛ فقط Enter کار می‌کرد.
+  app.addEventListener('click', onAct);
+  function onAct(e) {
     var t = e.target.closest('[data-act]');
     if (!t) return;
     var v = t.getAttribute('data-v');
@@ -571,6 +596,9 @@
       case 'chat-push': chatPush(); return;
       case 'chat-attach': chatAttach(); return;
       case 'chat-rec': chatRecord(); return;
+      case 'chat-img': chatZoom(v); return;
+      case 'chat-zoom-close': chatZoom(''); return;
+      case 'chat-down': chatDown(); return;
       // ⚠️ با عوض شدنِ دفتر، فیلترها صفر می‌شوند: ماهِ دفترِ تیل ممکن است در
       // دفترِ پول اصلاً نباشد و مشتری جدولی خالی می‌دید بی این‌که بفهمد چرا.
       case 'book': state.book = parseInt(v, 10) || 0; state.fuel = ''; state.month = ''; break;
@@ -579,7 +607,7 @@
       default: return;
     }
     render();
-  });
+  }
 
   // کشوییِ ماه — همان کارِ دکمهٔ «ماه»، فقط یک فیلتر است
   app.addEventListener('change', function (e) {
@@ -643,8 +671,12 @@
       case 'wait': txt = 'در حالِ بررسی…'; break;
       default:     txt = 'عددهای داخلِ همین کیو‌آر';
     }
+    //  ⛔ درِ چت کنارِ «به‌روز کن» است، کوچک — نه دکمهٔ شناورِ بزرگی که روی
+    //  عددهای حساب می‌نشست (۱۴۰۵/۰۷/۱۶: «پیام‌رسان این‌قدر جا گرفته»).
     return '<div class="live noprint' + cls + '"><span><span class="dot"></span>' + esc(txt) +
-           '</span><button class="btn" data-act="refresh">🔄 به‌روز کن</button></div>';
+           '</span><span class="lbtns"><button class="btn" data-act="chat-open">💬 پیام' +
+           (chatUnread > 0 ? ' <span class="n">' + chatUnread + '</span>' : '') + '</button>' +
+           '<button class="btn" data-act="refresh">🔄 به‌روز کن</button></span></div>';
   }
 
   // یک بار بپرس. اگر عکسِ ابر تازه‌تر از چیزی بود که روی صفحه است، جایش
@@ -717,6 +749,11 @@
   var chatVapid = '';
   var chatTimer = null;
   var chatRecorder = null;
+  var chatOwnerSeen = 0;                         // تا کجا صاحبِ پمپ خوانده (برای ✓✓)
+  var chatDraftBack = '';                        // متنی که نرفت — به کادر برمی‌گردد
+  var chatErr = '';                              // چرا نرفت، یک خط
+  var chatRecAt = 0, chatRecTick = null;         // زمانِ ضبط
+  var chatShown = 0;                             // چند پیام پیش از این دیده شد (برای «↓ پیام تازه»)
 
   function store(key, val) {
     try {
@@ -743,6 +780,7 @@
       el.setAttribute('id', 'chat');
       document.body.appendChild(el);
       if (typeof el.addEventListener === 'function') {
+        el.addEventListener('click', onAct);
         el.addEventListener('keydown', function (e) {
           if (e.key === 'Enter' && e.target && e.target.id === 'chatText') { e.preventDefault(); chatSendText(); }
           if (e.key === 'Enter' && e.target && e.target.id === 'chatNameIn') { e.preventDefault(); chatSetName(); }
@@ -757,18 +795,137 @@
     catch (e) { var n = new Date(ms); return n.getHours() + ':' + (n.getMinutes() < 10 ? '0' : '') + n.getMinutes(); }
   }
 
+  // ══ رسانه روی همین گوشی ══════════════════════════════════════════════
+  //
+  // ⛔ سرور رسانه را فقط می‌رساند: همین که طرفِ دیگر آن را گرفت، از سرور
+  // پاک می‌شود. پس نسخهٔ ماندگار این‌جاست — IndexedDBِ همین مرورگر — و هر
+  // رسانه **یک بار** از سرور خوانده می‌شود. رسانه‌ای که خودمان فرستادیم
+  // پیش از رفتن همین‌جا می‌نشیند. نبودِ IndexedDB یا ‎createObjectURL‎ (آزمون،
+  // مرورگرِ کهنه) یعنی همان نشانیِ مستقیمِ قدیمی.
+  var MEDIA_DB = 'pump-view-media', MEDIA_KEEP_MS = 180 * 86400000;
+  var mediaUrls = {}, mediaGone = {}, mediaBusy = {}, mediaDbP = null;
+  function mediaLocal() {
+    try { return typeof indexedDB !== 'undefined' && indexedDB && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function'; }
+    catch (e) { return false; }
+  }
+  function mediaDb() {
+    if (mediaDbP) return mediaDbP;
+    mediaDbP = new Promise(function (ok, no) {
+      var r = indexedDB.open(MEDIA_DB, 1);
+      r.onupgradeneeded = function () { r.result.createObjectStore('m'); };
+      r.onsuccess = function () { ok(r.result); };
+      r.onerror = function () { no(r.error); };
+    });
+    mediaDbP.then(mediaPrune, function () {});
+    return mediaDbP;
+  }
+  function mediaTx(mode, fn) {
+    return mediaDb().then(function (db) {
+      return new Promise(function (ok, no) {
+        var tx = db.transaction('m', mode), st = tx.objectStore('m'), out = fn(st);
+        tx.oncomplete = function () { ok(out && 'result' in out ? out.result : undefined); };
+        tx.onerror = function () { no(tx.error); };
+      });
+    });
+  }
+  function mediaPrune(db) {
+    try {
+      var tx = db.transaction('m', 'readwrite'), cut = Date.now() - MEDIA_KEEP_MS;
+      tx.objectStore('m').openCursor().onsuccess = function (e) {
+        var c = e.target.result; if (!c) return;
+        if (!c.value || (c.value.at || 0) < cut) c.delete();
+        c.continue();
+      };
+    } catch (e) { /* رفاه */ }
+  }
+  function mediaKeep(id, blob) {
+    if (!id || !blob || !mediaLocal()) return Promise.resolve();
+    try { mediaUrls[id] = URL.createObjectURL(blob); } catch (e) {}
+    return mediaTx('readwrite', function (st) { return st.put({ blob: blob, at: Date.now() }, id); }).catch(function () {});
+  }
+  function mediaFetch(id) {
+    if (mediaBusy[id] || mediaUrls[id] || mediaGone[id]) return;
+    mediaBusy[id] = true;
+    mediaTx('readonly', function (st) { return st.get(id); })
+      .catch(function () { return null; })
+      .then(function (row) {
+        if (row && row.blob) return row.blob;
+        return fetch(chatUrl('/media/' + encodeURIComponent(id))).then(function (r) {
+          if (r.status === 404) { mediaGone[id] = true; return null; }
+          return r.ok ? r.blob() : null;
+        }).then(function (b) { if (b) mediaKeep(id, b); return b; });
+      })
+      .then(function (b) {
+        if (b && !mediaUrls[id]) { try { mediaUrls[id] = URL.createObjectURL(b); } catch (e) {} }
+        mediaBusy[id] = false; chatRender();
+      }, function () { mediaBusy[id] = false; });
+  }
+  function mediaHtml(m) {
+    var id = m.mediaId || '';
+    var src = mediaUrls[id];
+    if (!src) {
+      if (!mediaLocal()) src = chatUrl('/media/' + encodeURIComponent(id));
+      else if (mediaGone[id]) return '<span class="dim">📎 این فایل روی گوشیِ شما نیست و سرور هم آن را نگه نمی‌دارد</span>';
+      else { mediaFetch(id); return '<span class="dim">⏳ در حالِ آوردن…</span>'; }
+    }
+    src = esc(src);
+    if (m.kind === 'image') return '<img src="' + src + '" alt="عکس" loading="lazy" data-act="chat-img" data-v="' + src + '">';
+    if (m.kind === 'video') return '<video controls preload="metadata" src="' + src + '"></video>';
+    return '🎤 <audio controls preload="metadata" src="' + src + '"></audio>';
+  }
+
   function bubble(m) {
     var me = m.from === 'c';
     var h = '<div class="msg' + (me ? ' me' : '') + (m.deleted ? ' gone' : '') + '" data-id="' + esc(m.id) + '">';
     if (!me) h += '<div class="who">' + esc(m.name || 'پمپ') + '</div>';
     if (m.deleted) h += '🚫 این پیام پاک شد';
-    else if (m.kind === 'image') h += '<img src="' + chatUrl('/media/' + encodeURIComponent(m.mediaId)) + '" alt="عکس" loading="lazy">';
-    else if (m.kind === 'video') h += '<video controls preload="metadata" src="' + chatUrl('/media/' + encodeURIComponent(m.mediaId)) + '"></video>';
-    else if (m.kind === 'audio') h += '🎤 <audio controls preload="metadata" src="' + chatUrl('/media/' + encodeURIComponent(m.mediaId)) + '"></audio>';
+    else if (m.kind === 'image' || m.kind === 'video' || m.kind === 'audio') h += mediaHtml(m);
     else h += esc(m.text);
-    h += '<div class="when">' + esc(timeOf(m.at)) + '</div>';
+    h += '<div class="when">' + esc(timeOf(m.at)) + (me && !m.deleted ? tickOf(m) : '') + '</div>';
     if (me && !m.deleted) h += '<button class="del" data-act="chat-del" data-v="' + esc(m.id) + '" title="پاک کردن">✕</button>';
     return h + '</div>';
+  }
+
+  // ✓ رسید · ✓✓ دیده شد — از ‎ownerSeenSeqِ‎ خودِ سرور، نه حدس
+  function tickOf(m) {
+    var seen = m.seq > 0 && m.seq <= chatOwnerSeen;
+    return '<span class="tick' + (seen ? ' seen' : '') + '">' + (seen ? '✓✓ دیده شد' : '✓ رسید') + '</span>';
+  }
+
+  // «امروز / دیروز / تاریخ» — جداکنندهٔ روز
+  function dayKey(ms) { var d = new Date(ms); return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); }
+  function dayLabel(ms) {
+    var now = new Date(), k = dayKey(ms);
+    if (k === dayKey(now.getTime())) return 'امروز';
+    if (k === dayKey(now.getTime() - 86400000)) return 'دیروز';
+    try { return new Date(ms).toLocaleDateString('fa-AF', { day: 'numeric', month: 'long', year: 'numeric' }); }
+    catch (e) { var d = new Date(ms); return d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate(); }
+  }
+
+  function recClock() {
+    var s = Math.max(0, Math.floor((Date.now() - chatRecAt) / 1000));
+    return Math.floor(s / 60) + ':' + (s % 60 < 10 ? '0' : '') + (s % 60);
+  }
+
+  // عکس بزرگ — روی همان صفحه، بی رفتن به جایی
+  function chatZoom(src) {
+    var old = document.getElementById && document.getElementById('chatLb');
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+    if (!src || !chatEl) return;
+    var lb = document.createElement('div');
+    lb.className = 'chat-lb';
+    lb.setAttribute('id', 'chatLb');
+    lb.setAttribute('data-act', 'chat-zoom-close');
+    lb.innerHTML = '<img src="' + esc(src) + '" alt="عکس"><button data-act="chat-zoom-close" title="بستن">✕</button>';
+    chatEl.appendChild(lb);
+  }
+
+  function chatDown() {
+    var body = chatEl && chatEl.querySelector('#chatBody');
+    if (body) body.scrollTop = 1e9;
+    chatShown = chatMsgs.length;
+    var pill = chatEl && chatEl.querySelector('#chatNew');
+    if (pill && pill.parentNode) pill.parentNode.removeChild(pill);
   }
 
   // صفحهٔ چت — هر بار از نو؛ کوتاه و ساده‌تر از نگه داشتنِ حالت.
@@ -779,17 +936,31 @@
     var draft = '';
     var old = chatEl.querySelector('#chatText');
     if (old) draft = old.value;
+    if (!draft && chatDraftBack) { draft = chatDraftBack; }
+    chatDraftBack = '';
+    //  ⚠️ کسی که بالا رفته تا پیامِ کهنه بخواند، با آمدنِ پیامِ تازه پایین پرت نمی‌شود
+    var oldBody = chatEl.querySelector('#chatBody');
+    var atEnd = !oldBody || (oldBody.scrollHeight - oldBody.scrollTop - oldBody.clientHeight) < 60;
+    var keepTop = oldBody ? oldBody.scrollTop : 0;
 
     var h = '<div class="chat-head"><button class="btn" data-act="chat-close">→</button>' +
-            '<div class="t"><b>پشتیبانی — ' + esc((data && data.n) || 'حسابِ من') + '</b>' +
+            '<div class="t"><b>پیام به ' + esc((data && data.p) || 'پمپ') + '</b>' +
             '<span>' + (chatBlocked ? 'گفت‌وگو بسته شده' : chatBusy ? 'در حالِ فرستادن…' : 'پیام‌تان مستقیم به صاحبِ پمپ می‌رسد') + '</span></div>';
     if (canPush()) h += '<button class="btn" data-act="chat-push" title="با مرورگرِ بسته هم خبر بدهد">🔔 خبرم کن</button>';
     h += '</div>';
 
     h += '<div class="chat-body" id="chatBody">';
     if (!chatMsgs.length) h += '<div class="chat-note">هنوز پیامی نیست. سلام کنید 👋</div>';
-    for (var i = 0; i < chatMsgs.length; i++) h += bubble(chatMsgs[i]);
+    var lastDay = '';
+    for (var i = 0; i < chatMsgs.length; i++) {
+      var dk = chatMsgs[i].at ? dayKey(chatMsgs[i].at) : '';
+      if (dk && dk !== lastDay) { h += '<div class="chat-day">' + esc(dayLabel(chatMsgs[i].at)) + '</div>'; lastDay = dk; }
+      h += bubble(chatMsgs[i]);
+    }
     h += '</div>';
+    var fresh = !atEnd && chatMsgs.length > chatShown;
+    if (fresh) h += '<button class="chat-new" id="chatNew" data-act="chat-down">↓ پیامِ تازه</button>';
+    if (chatErr) h += '<div class="chat-err">' + esc(chatErr) + '</div>';
 
     if (chatBlocked) {
       h += '<div class="chat-blocked">صاحبِ پمپ این گفت‌وگو را بسته است؛ فقط می‌توانید بخوانید.</div>';
@@ -800,14 +971,19 @@
     } else {
       h += '<div class="chat-foot">' +
            '<button class="ic" data-act="chat-attach" title="عکس یا ویدیو">📎</button>' +
-           (canRecord() ? '<button class="ic' + (chatRecorder ? ' on' : '') + '" data-act="chat-rec" title="ضبطِ صدا">🎤</button>' : '') +
+           (canRecord() ? '<button class="ic' + (chatRecorder ? ' on' : '') + '" data-act="chat-rec" title="' +
+              (chatRecorder ? 'پایان و فرستادن' : 'ضبطِ صدا') + '">' + (chatRecorder ? '⏹' : '🎤') + '</button>' : '') +
+           (chatRecorder ? '<span class="chat-rec" id="chatRecT">● ' + recClock() + '</span>' : '') +
            '<input type="text" id="chatText" placeholder="پیام…" value="' + esc(draft) + '" maxlength="4000">' +
            '<button class="send" data-act="chat-send">▶</button></div>';
     }
     chatEl.innerHTML = h;
     var body = chatEl.querySelector('#chatBody');
-    if (body && typeof body.scrollTo === 'function') body.scrollTo(0, 1e9);
-    else if (body) body.scrollTop = 1e9;
+    if (atEnd) {
+      if (body && typeof body.scrollTo === 'function') body.scrollTo(0, 1e9);
+      else if (body) body.scrollTop = 1e9;
+      chatShown = chatMsgs.length;
+    } else if (body) body.scrollTop = keepTop;
   }
 
   function chatOpen() {
@@ -843,6 +1019,7 @@
       .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
       .then(function (j) {
         chatBlocked = !!j.blocked;
+        if (typeof j.ownerSeenSeq === 'number' && j.ownerSeenSeq > chatOwnerSeen) chatOwnerSeen = j.ownerSeenSeq;
         if (j.vapid) chatVapid = j.vapid;
         if (j.name && !chatName) { chatName = j.name; store('chat-name-' + live.a, chatName); }
         var fresh = j.messages || [];
@@ -868,7 +1045,7 @@
   }
 
   function chatPost(body) {
-    chatBusy = true; chatRender();
+    chatBusy = true; chatErr = ''; chatRender();
     return fetch(chatUrl(''), { method: 'POST', headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(body) })
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, status: r.status, j: j }; }); })
@@ -876,6 +1053,8 @@
         chatBusy = false;
         if (!out.ok) {
           if (out.status === 403) chatBlocked = true;
+          else chatErr = out.status === 429 ? 'پیام‌ها زیاد شد — کمی صبر کنید' : 'پیام نرفت — دوباره بفرستید';
+          if (body.text) chatDraftBack = body.text;
           chatRender();
           return false;
         }
@@ -888,7 +1067,12 @@
         chatRender();
         return true;
       })
-      .catch(function () { chatBusy = false; chatRender(); return false; });
+      .catch(function () {
+        chatBusy = false;
+        chatErr = 'به اینترنت نرسید — متنِ شما در کادر ماند';
+        if (body.text) chatDraftBack = body.text;
+        chatRender(); return false;
+      });
   }
 
   function chatSendText() {
@@ -917,7 +1101,11 @@
     chatBusy = true; chatRender();
     return fetch(chatUrl('/media'), { method: 'POST', headers: { 'Content-Type': mime }, body: blob })
       .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
-      .then(function (j) { chatBusy = false; return chatPost({ name: chatName, kind: kind, mediaId: j.mediaId }); })
+      .then(function (j) {
+        chatBusy = false;
+        // ⛔ نسخهٔ خودمان پیش از رفتنِ پیام روی همین گوشی می‌نشیند
+        return mediaKeep(j.mediaId, blob).then(function () { return chatPost({ name: chatName, kind: kind, mediaId: j.mediaId }); });
+      })
       .catch(function (e) { chatBusy = false; chatRender(); alertSafe(e === 413 || e === 400 ? 'فایل بزرگ است یا پذیرفته نشد' : 'فرستاده نشد'); return false; });
   }
 
@@ -945,6 +1133,7 @@
     if (!canRecord()) return;
     if (chatRecorder) {
       var rec = chatRecorder; chatRecorder = null;
+      if (chatRecTick && typeof clearInterval === 'function') { clearInterval(chatRecTick); chatRecTick = null; }
       try { rec.stop(); } catch (e) {}
       chatRender();
       return;
@@ -963,7 +1152,13 @@
       };
       rec.start();
       chatRecorder = rec;
+      chatRecAt = Date.now();
       chatRender();
+      //  ⚠️ فقط همان یک برچسب عوض می‌شود — بازسازیِ کلِ چت هر ثانیه کادرِ تایپ را از دست می‌انداخت
+      if (typeof setInterval === 'function') chatRecTick = setInterval(function () {
+        var t = chatEl && chatEl.querySelector('#chatRecT');
+        if (t) t.textContent = '● ' + recClock();
+      }, 1000);
     }).catch(function () { alertSafe('دسترسی به میکروفون داده نشد'); });
   }
 

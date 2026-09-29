@@ -513,50 +513,12 @@
     return out;
   }
 
-  /*
-   *  ══ گروهِ کارکنانِ همین پمپ (۱۴۰۵/۰۷/۱۳) ═══════════════════════════════
-   *
-   *  خواستهٔ صاحب ریپو: «گروپ چت هم برای کارمندان و مدیر و میرزا استن… نه
-   *  کاربران.» همان گروهی است که برنامهٔ کامپیوتر دارد، روی پوشهٔ **همین پمپ**
-   *  در سرورِ خانگی (‎/api/stations/<کد>/chat‎) — نه موضوعِ سراسریِ قدیم.
-   *
-   *  ⛔ با رمزِ خواندنِ همین پمپ؛ مشتریِ کیو‌آر هیچ‌کدام را ندارد.
-   *  ⛔ همان دو نشانیِ پوش (خانگی، بعد تونل) — نشانی از تنظیمات خوانده نمی‌شود.
-   *  ⚠️ سرور فقط ۱۵ روز نگه می‌دارد؛ گوشی هم بیش از ۱۵ روز نگه نمی‌دارد.
-   */
-  var CHAT_KEEP_DAYS = 15;
-
-  function chatUrl(base, code, since) {
-    var u = base + '/api/stations/' + encodeURIComponent(String(code || '')) + '/chat';
-    if (since != null) u += '?since=' + Math.max(0, Math.floor(Number(since) || 0)) + '&limit=200';
-    return u;
-  }
-
-  /** یکی کردنِ پیام‌ها — یکتا با ‎seq‎ (یا ‎cid‎ برای درراه)، کهنه‌تر از ۱۵ روز بیرون. */
-  function mergeChat(have, incoming, nowMs) {
-    var cut = (nowMs || Date.now()) - CHAT_KEEP_DAYS * 86400000;
-    var byKey = {};
-    function keyOf(m) { return m.seq ? 's' + m.seq : 'c' + (m.cid || ''); }
-    (have || []).concat(incoming || []).forEach(function (m) {
-      if (!m || !m.text) return;
-      if ((m.at || 0) && m.at < cut) return;
-      //  پیامِ خودم که حالا شماره گرفت، جای نسخهٔ درراه را می‌گیرد
-      if (m.seq && m.cid && byKey['c' + m.cid]) delete byKey['c' + m.cid];
-      if (!m.seq && m.cid && Object.keys(byKey).some(function (k) { return byKey[k].cid === m.cid && byKey[k].seq; })) return;
-      byKey[keyOf(m)] = m;
-    });
-    return Object.keys(byKey).map(function (k) { return byKey[k]; })
-      .sort(function (a, b) { return (a.seq || 1e15) - (b.seq || 1e15) || (a.at || 0) - (b.at || 0); })
-      .slice(-300);
-  }
-
   if (typeof module !== 'undefined' && module.exports)
     module.exports = {
       answer: answer, askedMonth: askedMonth, monthHit: monthHit, anyWord: anyWord,
       norm: norm, num: num, verifyPassword: verifyPassword,
       wsBaseOf: wsBaseOf, doorsFor: doorsFor, freshAlerts: freshAlerts,
-      httpBaseOf: httpBaseOf, pushBases: pushBases, b64uBytes: b64uBytes, TUNNEL: TUNNEL,
-      chatUrl: chatUrl, mergeChat: mergeChat, CHAT_KEEP_DAYS: CHAT_KEEP_DAYS
+      httpBaseOf: httpBaseOf, pushBases: pushBases, b64uBytes: b64uBytes, TUNNEL: TUNNEL
     };
 
   if (typeof document === 'undefined') return;   // آزمونِ Node این‌جا می‌ایستد
@@ -613,7 +575,6 @@
         localStorage.removeItem(stnKey('told'));
         localStorage.removeItem(stnKey('mode'));
         localStorage.removeItem(stnKey('push'));
-        localStorage.removeItem(stnKey('chat'));
         localStorage.removeItem(stnKey('ok'));
       }
       localStorage.removeItem(KEY + '.snap');      // کلیدِ قدیمیِ بی‌پمپ
@@ -622,7 +583,6 @@
     cfg.stn = next;
     data = null;
     toldKeys = {};
-    chatMsgs = null;
     unlocked = false;
     pendingOwner = false;
     fromCloud = false;
@@ -663,15 +623,15 @@
   var NAVS = {
     owner: [
       ['paneDash', '🏠 خانه'], ['paneSec', '📚 بخش‌ها'],
-      ['paneDebt', '👥 قرض‌داران'], ['paneTank', '⛽ مخزن'], ['paneChat', '💬 گروه'], ['paneBot', '🤖 ربات']
+      ['paneDebt', '👥 قرض‌داران'], ['paneTank', '⛽ مخزن'], ['paneBot', '🤖 ربات']
     ],
     staff: [
-      ['paneStaff', '🚦 تیل دارد؟'], ['paneTank', '⛽ مخزن'], ['paneChat', '💬 گروه'], ['paneBot', '🤖 ربات']
+      ['paneStaff', '🚦 تیل دارد؟'], ['paneTank', '⛽ مخزن'], ['paneBot', '🤖 ربات']
     ]
   };
   var ALERT_PANES = ['paneDash', 'paneStaff', 'paneTank'];
   var curPane = '';
-  var ALL_PANES = ['paneHome', 'paneDash', 'paneStaff', 'paneBot', 'paneDebt', 'paneTank', 'paneSec', 'paneChat'];
+  var ALL_PANES = ['paneHome', 'paneDash', 'paneStaff', 'paneBot', 'paneDebt', 'paneTank', 'paneSec'];
 
   function loadMode() {
     try { mode = localStorage.getItem(stnKey('mode')) || ''; } catch (e) { mode = ''; }
@@ -1363,8 +1323,6 @@
     ['codePane', 'signinPane', 'setupPane', 'lockPane', 'appPane'].forEach(function (id) {
       $(id).classList.toggle('hidden', id !== which);
     });
-    //  ⛔ گروهِ کارکنان پشتِ قفل یا پس از «پمپِ دیگر» پرسیده نمی‌شود (۱۴۰۵/۰۷/۱۶)
-    if (which !== 'appPane') chatWatch(false);
     $('nav').classList.toggle('hidden', which !== 'appPane' || !mode);
   }
 
@@ -1442,7 +1400,7 @@
   function blockHtml(b) {
     if (b.who) {
       var w = '<div class="card ans">' + whoHtml(b.who, b.title);
-      if (b.person) w += personAccountsHtml(b.person);
+      if (b.person) w += personAccountsHtml(b.person, b.staff);
       if (b.note) w += '<div class="sub">' + esc(b.note) + '</div>';
       return w + '</div>';
     }
@@ -1462,24 +1420,284 @@
    * (‎detail === false‎)، به‌جای یک جدولِ خالی صریح گفته می‌شود چرا — وگرنه
    * کارمند خیال می‌کند حساب خالی است.
    */
-  function personAccountsHtml(p) {
+  function personAccountsHtml(p, staff) {
     var h = '', detail = !data || data.detail !== false;
-    (p.accounts || []).forEach(function (a) {
-      h += '<div class="acct"><h3>' + esc(a.title || 'حسابِ اصلی') +
-        ' <span class="badge">' + (a.unit === 'money' ? '💵 واحد پول' : '⛽ واحد تیل') + '</span></h3>';
-      h += '<div class="figs">';
-      (a.sum || []).forEach(function (s) {
-        h += '<div class="fig"><div class="l">' + esc(s[0]) + '</div><div class="v">' + esc(s[1]) + '</div></div>';
-      });
-      h += '</div>';
-      h += detail
-        ? tableHtml(a.head || [], (a.rows || []).slice(-40))
-        : '<div class="sub">جمع‌ها درست‌اند، ولی ردیف‌های این حساب در این عکس '
-          + 'نیامده‌اند — دفترِ پمپ بزرگ‌تر از آن است که همه‌اش به گوشی بیاید. '
-          + 'ردیف‌ها را در خودِ برنامهٔ کامپیوتر ببینید.</div>';
-      h += '</div>';
+    (p.accounts || []).forEach(function (a, i) {
+      a.__pid = p.id; a.__i = i;
+      h += acctCard(a, staff, detail);
     });
     return h;
+  }
+
+  /** «٪۵» از نامِ «پطرول (٪5)» — فیصدی داخلِ برچسب، همان سربرگِ برنامه. */
+  function pctOf(name) {
+    var m = /\(٪?([^)]*)\)/.exec(String(name || ''));
+    return m ? m[1] : '';
+  }
+
+  /**
+   * ══ کارتِ هر حساب — همان سربرگِ صفحهٔ حسابِ برنامهٔ کامپیوتر ══════════════
+   *
+   * خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۶): «هر قرض باید دقیق حسابش معلوم شه، نه این‌که
+   * همهٔ صفحه را آن قرض‌دار گرفته باشد؛ مثلِ بخشِ قرض که هر حساب هدرِ مربعی
+   * دارد… رنگِ کادر و کادرِ واحدها هم همان مدل.»
+   *
+   * هر تیل یک ردیف: کادرِ مربعیِ رنگی (⛽ پطرول سبز · 🟤 دیزل نارنجی) و چهار
+   * کادر — فیصدی ما (آبی) · رسید (سبز) · برد (نارنجی) · الباقی (رنگِ حال).
+   * ⛔ هیچ عددی این‌جا ساخته نمی‌شود: ‎a.fuels‎ همان ‎AcctSnapshots‎ی برنامه است.
+   * ⛔ درِ کارمندان (‎staff‎) فیصدیِ پمپ و جدولِ ردیف‌ها را نمی‌بیند.
+   * جدولِ ردیف‌ها پشتِ یک دکمه است تا یک حساب کلِ صفحه را نگیرد.
+   */
+  function acctCard(a, staff, detail) {
+    var st = esc(a.st || 'none');
+    var money = a.unit === 'money';
+    var h = '<div class="acard ' + st + '"><div class="ahd">' +
+      '<span class="an">📒 ' + esc(a.title || 'حسابِ اصلی') + '</span>' +
+      '<span class="unit ' + (money ? 'money' : 'fuel') + '">' + (money ? '💵 واحد پول' : '⛽ واحد تیل') + '</span>' +
+      '<span class="badge ' + st + '">' + statusIcon(a.st) + ' ' + statusWord(a.st) + '</span></div>';
+    var fuels = (a.fuels || []).filter(function (f) {
+      return [1, 2, 3, 4].some(function (i) { return num(f[i]) !== 0; });
+    });
+    if (!fuels.length) fuels = a.fuels || [];
+    //  برنامهٔ کامپیوترِ کهنه‌تر ‎fuels‎ نمی‌فرستد ⇒ همان چهار عددِ جمعِ دفتر
+    if (!fuels.length && (a.sum || []).length) {
+      h += '<div class="figs" style="padding:9px 11px">';
+      (a.sum || []).forEach(function (x) {
+        if (staff && /فیصدی/.test(x[0])) return;
+        h += '<div class="fig"><div class="l">' + esc(x[0]) + '</div><div class="v">' + esc(x[1]) + '</div></div>';
+      });
+      h += '</div>';
+    }
+    var unitWord = money ? 'افغانی' : 'لیتر';
+    fuels.forEach(function (f) {
+      var diesel = /دیزل/.test(f[0]);
+      var alb = num(f[4]);
+      h += '<div class="frow">' +
+        '<div class="fsq ' + (diesel ? 'diesel' : 'petrol') + '">' + (diesel ? '🟤' : '⛽') +
+          '<b>' + (diesel ? 'دیزل' : 'پطرول') + '</b>' +
+          (!staff && pctOf(f[0]) ? '<small>٪' + esc(pctOf(f[0])) + '</small>' : '') + '</div>' +
+        '<div class="fbx">' +
+          (staff ? '' : '<div class="fb pct"><span class="l">فیصدی' +
+            '</span><span class="v">' + esc(f[3]) + '</span></div>') +
+          '<div class="fb rasid"><span class="l">رسید</span><span class="v">' + esc(f[2]) + '</span></div>' +
+          '<div class="fb bord"><span class="l">برد</span><span class="v">' + esc(f[1]) + '</span></div>' +
+          '<div class="fb alb ' + (alb > 0 ? 'owe' : alb < 0 ? 'cred' : '') + '" title="' + unitWord + '"><span class="l">الباقی' +
+            '</span><span class="v">' + esc(f[4]) + '</span></div>' +
+        '</div></div>';
+    });
+    if (!staff) {
+      var rows = a.rows || [];
+      if (detail && rows.length && a.__pid != null)
+        h += '<button class="pbtn" data-print-acct="' + esc(a.__pid) + '|' + esc(a.__i) + '">🖨 PDF / چاپ — همان ورقِ برنامهٔ کامپیوتر</button>';
+      if (detail && rows.length)
+        h += '<details class="arows"><summary>📋 جدولِ ردیف‌ها (' + fmt(rows.length) + ')</summary>' +
+          tableHtml(a.head || [], rows.slice(-40)) + '</details>';
+      else if (!detail)
+        h += '<div class="sub">جمع‌ها درست‌اند، ولی ردیف‌های این حساب در این عکس '
+          + 'نیامده‌اند — دفترِ پمپ بزرگ‌تر از آن است که همه‌اش به گوشی بیاید. '
+          + 'ردیف‌ها را در خودِ برنامهٔ کامپیوتر ببینید.</div>';
+    }
+    return h + '</div>';
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  //  🖨 PDF و چاپ — همان ورقِ برنامهٔ کامپیوتر
+  // ══════════════════════════════════════════════════════════════════════
+  //
+  //  خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۶): «PDF یا پرینت همان مدلِ برنامهٔ
+  //  کامپیوتر بیاید… این‌جا متفاوت نشان می‌دهد مشکلی نیست، ولی مدلِ PDF و
+  //  پرینت همان باشد.» پس این ورق رونوشتِ ‎DocStyle‎ و ‎DebtorStatementReport‎ِ
+  //  ‎PumpYaqobi.Reporting‎ است: همان رنگ‌ها (‎#b45309‎ عنوان، ‎#2d3748‎ سرستون و
+  //  «جمله»، ردیفِ زوجِ ‎#fafbfc‎)، همان اندازه‌ها به پوینت، همان دو کادرِ «حساب
+  //  پطرول» و «حساب دیزل» با چهار خانه، و همان پاورقیِ «ورق N از M» و تاریخ‌ها.
+  //  ⛔ هیچ عددی این‌جا ساخته نمی‌شود — هر خانه همان رشتهٔ عکسِ برنامه است.
+  //  ⛔ یک در برای هر دو دستگاه: اندروید با ‎PumpAndroid.printHtml‎ (PrintManagerِ
+  //  خودِ اندروید)، بقیه با ‎window.print()‎ی خودِ مرورگر («ذخیره به PDF»).
+  var PDOC = {
+    title: '#b45309', sub: '#5b6472', headBg: '#2d3748', headFg: '#e2e8f0', headLine: '#4a5568',
+    cellLine: '#e3e6eb', cellFg: '#1f2430', rowAlt: '#fafbfc', foot: '#7b8494', footLine: '#d6dae1',
+    index: '#718096', hawala: '#c07700', fuel: '#2b6cb0', money: '#276749', danger: '#e53e3e',
+    blue: '#2b6cb0', petrol: '#b45309', diesel: '#8a5a2b'
+  };
+
+  /** نامِ ستون‌های عکسِ گوشی ⇒ همان سرستونِ ورقِ برنامه (‎DebtorStatementReport‎). */
+  var PDOC_HEAD = { 'تیل': 'نوع تیل', 'فی': 'فی لیتر', 'بردگی': 'مقدار بردگی' };
+
+  /** رنگِ هر ستون از نامِ خودش — همان ‎Td(…, DocStyle.X)‎ی گزارش‌ها. */
+  function pdocColColor(h) {
+    h = String(h || '');
+    if (h === '#') return PDOC.index;
+    if (/حواله|بردگی|^برد$/.test(h)) return PDOC.hawala;
+    if (/رسید تیل|مقدار تیل|لیتر/.test(h)) return PDOC.fuel;
+    if (/رسید|پول|افغانی|دالر/.test(h)) return PDOC.money;
+    if (/الباقی|خالص/.test(h)) return PDOC.blue;
+    if (/فیصدی/.test(h)) return PDOC.danger;
+    return '';
+  }
+
+  /**
+   * ‎doc‎: ‎{ title, sub, dates, boxes:[{ diesel, pct, unit, comm, rasid, bord, alb }],
+   *          head:[…], rows:[[…]], total:[…]|null }‎ ⇒ یک سندِ HTMLِ کامل.
+   */
+  function printDocHtml(doc) {
+    var P = PDOC, e = esc;
+    var css =
+      '@page{size:A4;margin:14mm 12mm 16mm;' +
+        '@bottom-center{content:"ورق " counter(page, persian) " از " counter(pages, persian);font:8.9pt Vazirmatn,Tahoma,sans-serif;color:' + P.foot + '}' +
+        '@bottom-right{content:"' + String(doc.dates || '').replace(/["\\]/g, '') + '";font:8.9pt Vazirmatn,Tahoma,sans-serif;color:' + P.foot + '}}' +
+      '*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+      'body{margin:0;background:#fff;color:' + P.cellFg + ';font:600 10.1pt Vazirmatn,Tahoma,"Segoe UI",sans-serif;direction:rtl}' +
+      '.pd-h{border-bottom:2pt solid ' + P.title + ';padding-bottom:6pt;margin-bottom:8pt}' +
+      '.pd-t{font-size:14.2pt;font-weight:800;color:' + P.title + '}' +
+      '.pd-s{font-size:9.7pt;color:' + P.sub + ';margin-top:2pt;font-weight:500}' +
+      '.pd-box{display:flex;gap:6pt;border:1.2pt solid;padding:6pt;margin-bottom:6pt;break-inside:avoid}' +
+      '.pd-box .nm{width:112pt;flex:none;white-space:nowrap;display:flex;align-items:center;justify-content:center;border:1pt solid;font-size:10.5pt;font-weight:800;padding:5pt}' +
+      '.pd-box .sb{flex:1;border:1pt solid ' + P.cellLine + ';padding:5pt;text-align:center}' +
+      '.pd-box .sb .l{font-size:7.8pt;color:' + P.sub + ';font-weight:500}' +
+      '.pd-box .sb .v{font-size:10.5pt;font-weight:800;white-space:nowrap}' +
+      'table{width:100%;border-collapse:collapse;margin-top:4pt}' +
+      'thead{display:table-header-group}tr{break-inside:avoid}' +
+      'th,.tf{background:' + P.headBg + ';color:' + P.headFg + ';border:1pt solid ' + P.headLine + ';font-size:9.5pt;font-weight:800;padding:5pt 4pt;text-align:center}' +
+      'td{border:1pt solid ' + P.cellLine + ';padding:5pt 4pt;text-align:center;font-size:10.1pt;white-space:nowrap}' +
+      'td.w{white-space:normal}tbody tr:nth-child(even) td{background:' + P.rowAlt + '}';
+    var h = '<div class="pd-h"><div class="pd-t">' + e(doc.title || '') + '</div>' +
+      (doc.sub ? '<div class="pd-s">' + e(doc.sub) + '</div>' : '') + '</div>';
+    (doc.boxes || []).forEach(function (b) {
+      var line = b.diesel ? P.diesel : P.petrol, u = b.unit ? ' ' + e(b.unit) : '';
+      function sb(label, val, color) {
+        return '<div class="sb"><div class="l">' + e(label) + '</div><div class="v" style="color:' + color + '">' + e(val || '0') + u + '</div></div>';
+      }
+      h += '<div class="pd-box" style="border-color:' + line + '"><div class="nm" style="border-color:' + line + ';color:' + line + '">' +
+        (b.diesel ? '🟤 حساب دیزل' : '⛽ حساب پطرول') + '</div>' +
+        sb('فیصدی ما' + (b.pct ? ' (' + b.pct + '٪)' : ''), b.comm, P.danger) +
+        sb('رسید قبلی', b.rasid, P.money) + sb('برد', b.bord, P.hawala) + sb('الباقی', b.alb, P.blue) + '</div>';
+    });
+    var head = ['#'].concat((doc.head || []).map(function (x) { return PDOC_HEAD[x] || x; }));
+    var fuelCol = head.indexOf('نوع تیل');
+    if ((doc.rows || []).length) {
+      h += '<table><thead><tr>' + head.map(function (x) { return '<th>' + e(x) + '</th>'; }).join('') + '</tr></thead><tbody>';
+      (doc.rows || []).forEach(function (r, i) {
+        var cells = [fmt(i + 1)].concat(r);
+        if (fuelCol > 0) cells[fuelCol] = cells[fuelCol] === 'دیزل' ? '🟤 دیزل' : cells[fuelCol] === 'پطرول' ? '⛽ پطرول' : cells[fuelCol];
+        h += '<tr>' + cells.map(function (c, j) {
+          var col = pdocColColor(head[j]), wide = /نام|شرح|توضیح|یادداشت/.test(head[j] || '');
+          return '<td' + (wide ? ' class="w"' : '') + (col ? ' style="color:' + col + '"' : '') + '>' +
+            (c === '' || c == null ? '—' : e(c)) + '</td>';
+        }).join('') + '</tr>';
+      });
+      h += '</tbody>';
+      if (doc.total && doc.total.length) {
+        //  «جمله» مثلِ برنامه ستون‌های پیش از نخستین عدد را می‌گیرد
+        //  ‎tot[k]‎ زیرِ ستونِ ‎head[k + 1]‎ است؛ «جمله» ستونِ «#» و خانه‌های خالیِ اول را می‌گیرد
+        var tot = doc.total.slice(0, head.length - 1), first = 0;
+        while (first < tot.length && (tot[first] == null || tot[first] === '')) first++;
+        if (fuelCol > 0) first = Math.min(first, fuelCol);
+        h += '<tfoot><tr><td class="tf" colspan="' + (first + 1) + '">جمله</td>' + tot.slice(first).map(function (c) {
+          return '<td class="tf">' + e(c == null || c === '' ? '—' : c) + '</td>';
+        }).join('') + '</tr></tfoot>';
+      }
+      h += '</table>';
+    }
+    return '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>' + e(doc.title || '') +
+      '</title><style>' + css + '</style></head><body>' + h + '</body></html>';
+  }
+
+  /** پاورقیِ تاریخ — همان ‎DocDates‎ی برنامه: شمسی · قمری · میلادیِ امروز. */
+  function pdocDates() {
+    function part(cal) {
+      try {
+        var f = new Intl.DateTimeFormat('en-US-u-ca-' + cal, { year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+        var g = {}; f.forEach(function (x) { g[x.type] = x.value; });
+        return String(g.year || '').replace(/\D/g, '') + '/' + g.month + '/' + g.day;
+      } catch (e) { return ''; }
+    }
+    var d = new Date(), pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    return [part('persian'), part('islamic-umalqura'), d.getFullYear() + '/' + pad(d.getMonth() + 1) + '/' + pad(d.getDate())]
+      .filter(Boolean).join(' · ');
+  }
+
+  /** سندِ یک حسابِ قرض‌دار — همان ‎DebtorStatementReport‎. */
+  function acctDoc(p, a) {
+    var money = a.unit === 'money', unit = money ? 'افغانی' : 'لیتر';
+    var pump = (data && data.station && data.station.name) || cfg.name || 'پمپ بنزین';
+    var boxes = (a.fuels || []).filter(function (f) {
+      return [1, 2, 3, 4].some(function (i) { return num(f[i]) !== 0; });
+    }).map(function (f) {
+      return { diesel: /دیزل/.test(f[0]), pct: pctOf(f[0]), unit: unit, bord: f[1], rasid: f[2], comm: f[3], alb: f[4] };
+    });
+    var head = a.head || [], rows = a.rows || [], total = null;
+    var sum = {};
+    (a.sum || []).forEach(function (x) { sum[x[0]] = x[1]; });
+    if (rows.length) {
+      total = head.map(function (hh) {
+        if (hh === 'بردگی') return sum['جمله بردگی'] || '';
+        if (/^رسید/.test(hh)) return sum['جمله رسید'] || '';
+        return '';
+      });
+    }
+    return {
+      title: '⛽ ' + pump + ' — ' + p.name + (a.title ? ' — ' + a.title : ''),
+      sub: 'حساب قرض‌دار — واحد ' + (money ? 'پول' : 'تیل'),
+      dates: pdocDates(), boxes: boxes, head: head, rows: rows, total: total
+    };
+  }
+
+  /** سندِ یک بخش (گاوصندوق، مصارف، …) با همان صافیِ ماه که روی صفحه است. */
+  function sectionDoc(sec, month) {
+    var pump = (data && data.station && data.station.name) || cfg.name || 'پمپ بنزین';
+    var rows = [];
+    (sec.rows || []).forEach(function (r, i) { if (!month || (sec.m || [])[i] === month) rows.push(r); });
+    return {
+      title: '⛽ ' + pump + ' — ' + (sec.t || ''),
+      sub: (month ? 'ماهِ ' + month : 'همهٔ ماه‌ها') +
+        ((sec.sum || []).length ? ' · ' + sec.sum.map(function (x) { return x[0] + ': ' + x[1]; }).join(' · ') : ''),
+      dates: pdocDates(), boxes: [], head: sec.head || [], rows: rows, total: null
+    };
+  }
+
+  function runPrint(doc) {
+    var html = printDocHtml(doc);
+    try {
+      if (window.PumpAndroid && typeof PumpAndroid.printHtml === 'function') { PumpAndroid.printHtml(html, doc.title || ''); return; }
+    } catch (e) { }
+    //  مرورگر و آیفون: ورق داخلِ همین صفحه، فقط برای چاپ دیده می‌شود
+    var root = $('printRoot');
+    if (!root) { root = document.createElement('div'); root.id = 'printRoot'; document.body.appendChild(root); }
+    var st = /<style>([\s\S]*)<\/style>/.exec(html)[1];
+    var body = /<body>([\s\S]*)<\/body>/.exec(html)[1];
+    root.innerHTML = '<style>@media print{' + st.replace(/body\{/, '#printRoot{') + '}</style>' + body;
+    document.body.classList.add('printing');
+    var done = function () { document.body.classList.remove('printing'); root.innerHTML = ''; window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    try { window.print(); } catch (e) { done(); }
+  }
+
+  /**
+   * کارتِ مربعیِ یک قرض‌دار — همان کارتِ بخشِ «قرض‌داران»ِ برنامهٔ کامپیوتر:
+   * نوارِ زنده بالا، نام درشت، الباقیِ پول درشت، نشانِ «اتمام تیل/پول» و خطِ
+   * پایینِ ⛽/🟤. رنگِ لبه از حالِ حساب.
+   */
+  function debtCard(p, extra) {
+    var b = p.bal || {}, u = p.use || {};
+    var pct = -1;
+    ['stP', 'stD', 'stM'].forEach(function (k) {
+      var x = u[k];
+      if (x && Number(x[0]) > 0) pct = Math.max(pct, Math.round(Number(x[1]) / Number(x[0]) * 100));
+    });
+    var bar = pct >= 0 ? Math.max(0, Math.min(100, pct)) : 0;
+    var fuelOut = p.stP === 'out' || p.stD === 'out', moneyOut = p.stM === 'out';
+    var nAc = (p.accounts || []).length;
+    return '<button class="dcard ' + (extra ? extra + ' ' : '') + esc(p.status || 'none') + '" data-pid="' + esc(p.id) + '">' +
+      '<span class="meter"><i style="width:' + bar + '%"></i></span>' +
+      '<span class="top"><span class="badge ' + esc(p.status || 'none') + '">' + statusIcon(p.status) + ' ' + statusWord(p.status) + '</span>' +
+        (pct >= 0 ? '<span class="pc">٪' + fmt(pct) + '</span>' : '') + '</span>' +
+      '<span class="n">' + esc(p.name) + '</span>' +
+      '<span class="big">' + fmt(b.money) + '</span>' +
+      '<span class="lbl">الباقی · افغانی</span>' +
+      '<span class="flags">' + (fuelOut ? '<em>⛔ اتمام تیل</em>' : '') + (moneyOut ? '<em>⛔ اتمام پول</em>' : '') +
+        (nAc > 1 ? '<i>📒 ' + fmt(nAc) + ' حساب</i>' : '') + '</span>' +
+      '<span class="foot"><span>⛽ ' + fmt(b.petrol) + '</span><span>🟤 ' + fmt(b.diesel) + '</span></span>' +
+      '</button>';
   }
 
   /** چهار عددِ نوارِ بالای برنامهٔ کامپیوتر + مخزن + کاشیِ بخش‌ها — درِ «حساب‌ها». */
@@ -1537,18 +1755,10 @@
     }).sort(function (a, b) {
       return rank(a) - rank(b) || String(a.name).localeCompare(String(b.name), 'fa');
     });
-    list.innerHTML = rows.map(function (p) {
-      var b = p.bal || {};
-      var what = p.status === 'out' ? 'تمام شده — تیل ندهید'
-        : p.status === 'low' ? 'کم مانده'
-        : p.status === 'ok' ? 'موجودی دارد' : 'ردیفی ندارد';
-      var bal = [['پطرول', b.petrol], ['دیزل', b.diesel], ['پول', b.money]].filter(function (x) { return x[1]; })
-        .map(function (x) { return '<span class="bal">' + x[0] + ' <b>' + fmt(x[1]) + '</b></span>'; }).join('');
-      return '<button class="st-row ' + esc(p.status) + '" data-pid="' + esc(p.id) + '">' +
-        '<span class="light"></span><span class="n">' + esc(p.name) + '</span>' +
-        '<span class="badge ' + esc(p.status) + '">' + esc(what) + '</span>' +
-        (bal ? '<span class="bals">' + bal + '</span>' : '') + '</button>';
-    }).join('') || '<div class="sub">کسی پیدا نشد.</div>';
+    //  ⛔ همان کارتِ مربعیِ «قرض‌داران» (۱۴۰۵/۰۷/۱۶) — خواستهٔ صاحب ریپو:
+    //  «برای صفحهٔ کارمندان همون مدل باشه». کلاسِ ‎st-row‎ برای آزمون‌ها می‌ماند.
+    list.innerHTML = rows.map(function (p) { return debtCard(p, 'st-row'); }).join('')
+      || '<div class="sub">کسی پیدا نشد.</div>';
   }
 
   /** کارتِ هر تیل: موجودی درشت، حال، و وارد/فروش — همان عددهای عکس. */
@@ -1588,15 +1798,7 @@
     people.forEach(function (p) {
       if (want && p.status !== want) return;
       if (q && norm(p.name).indexOf(q) < 0) return;
-      var nAc = (p.accounts || []).length;
-      h += '<button class="p-card ' + esc(p.status) + '" data-pid="' + esc(p.id) + '">' +
-        '<div class="hd"><span class="n">' + esc(p.name) + '</span>' +
-        '<span class="badge ' + esc(p.status) + '">' + statusIcon(p.status) + ' ' + statusWord(p.status) + '</span></div>' +
-        '<div class="three">' + balMini(p.bal) + '</div>' +
-        '<div class="meta">' +
-          (nAc > 1 ? '<span class="bal">📒 <b>' + fmt(nAc) + '</b> حساب</span>' : '') +
-          (p.phone ? '<span class="bal">📞 <b>' + esc(p.phone) + '</b></span>' : '') +
-        '</div></button>';
+      h += debtCard(p, '');
     });
     $('debtList').innerHTML = h || '<div class="sub">کسی پیدا نشد.</div>';
   }
@@ -1629,7 +1831,9 @@
       ? '<div class="card sub">ردیف‌های پیش از ' + esc(data.from) +
         ' از راهِ اینترنت نمی‌آیند — در شبکهٔ پمپ همه دیده می‌شوند. جمع‌ها کامل‌اند.</div>'
       : '';
-    $('secBox').innerHTML = cut + blockHtml(sectionBlock(secTab, sec, sel.value || null));
+    $('secBox').innerHTML = cut +
+      ((sec.rows || []).length ? '<button class="pbtn" data-print-sec="' + esc(secTab) + '">🖨 PDF / چاپ — همان ورقِ برنامهٔ کامپیوتر</button>' : '') +
+      blockHtml(sectionBlock(secTab, sec, sel.value || null));
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -1880,7 +2084,18 @@
     return {
       station: d.station, tank: d.tank, alerts: d.alerts, seq: d.seq,
       debtors: (d.debtors || []).map(function (p) {
-        return { id: p.id, name: p.name, status: p.status, bal: p.bal, phone: p.phone, accounts: [] };
+        return {
+          id: p.id, name: p.name, status: p.status, bal: p.bal, phone: p.phone,
+          stP: p.stP, stD: p.stD, stM: p.stM, use: p.use,
+          //  فقط سربرگِ حساب: عنوان، واحد، حال و بردگی/رسید/الباقیِ هر تیل —
+          //  ⛔ نه فیصدیِ پمپ، نه ردیف‌ها، نه جمع‌های دفتر.
+          accounts: (p.accounts || []).map(function (a) {
+            return {
+              title: a.title, unit: a.unit, st: a.st,
+              fuels: (a.fuels || []).map(function (f) { return [String(f[0]).replace(/\s*\(.*\)\s*$/, ''), f[1], f[2], '', f[4]]; })
+            };
+          })
+        };
       }),
       sections: {}
     };
@@ -2035,7 +2250,8 @@
       var p = ((data && data.debtors) || []).filter(function (x) { return String(x.id) === id; })[0];
       if (!p) return;
       //  کارمند حسابِ کامل را نمی‌خواهد؛ فقط حال و الباقی — همان بلوکِ ربات
-      var blk = personBlock(p); blk.person = null;
+      //  ⛔ همان سربرگِ مربعیِ هر حساب، ولی بی فیصدیِ پمپ و بی جدول (‎staff‎)
+      var blk = personBlock(p); blk.staff = true;
       $('botOut').innerHTML = '<button class="back" id="btnBackStaff">› برگرد به فهرست</button>' + blockHtml(blk);
       goPane('paneBot');
       $('paneBot').classList.add('solo');   // فقط همین شخص، بی کادرِ پرسش
@@ -2070,6 +2286,18 @@
       navMark('paneDebt');
     });
 
+    //  🖨 یک شنونده برای همهٔ دکمه‌های چاپ — کارت‌ها با هر عکس از نو ساخته می‌شوند
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-print-acct],[data-print-sec]');
+      if (!b || !data) return;
+      var sid = b.getAttribute('data-print-sec');
+      if (sid) { if (data.sections && data.sections[sid]) runPrint(sectionDoc(data.sections[sid], $('selMonth').value || null)); return; }
+      var k = String(b.getAttribute('data-print-acct')).split('|');
+      var p = (data.debtors || []).filter(function (x) { return String(x.id) === k[0]; })[0];
+      var a = p && (p.accounts || [])[Number(k[1])];
+      if (a) runPrint(acctDoc(p, a));
+    });
+
     var lr = $('liveRow');
     if (lr) lr.addEventListener('click', function () { lr.classList.toggle('open'); });
 
@@ -2078,9 +2306,14 @@
       if (b) goPane(b.getAttribute('data-pane'));
     });
 
-    $('inChatName').value = chatName();
-    $('btnChatSend').addEventListener('click', chatSend);
-    $('inChat').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); chatSend(); } });
+    //  ⛔ اپِ گوشی پیام‌رسان ندارد (خواستهٔ صاحب ریپو، ۱۴۰۵/۰۷/۱۶): پیام‌رسان فقط در
+    //  برنامهٔ کامپیوتر و صفحهٔ کیو‌آر است. ردِ گروهِ نسخه‌های پیشین از گوشی پاک می‌شود.
+    try {
+      Object.keys(localStorage).forEach(function (k) {
+        if (k.indexOf(KEY + '.chat') === 0) localStorage.removeItem(k);
+      });
+      if (typeof indexedDB !== 'undefined' && indexedDB.deleteDatabase) indexedDB.deleteDatabase('pump-kar-media');
+    } catch (e) { }
 
     $('btnNotify').addEventListener('click', function () {
       if (typeof Notification === 'undefined') return;
@@ -2140,148 +2373,6 @@
     try { if (window.PumpAndroid && PumpAndroid.boot) PumpAndroid.boot('ready'); } catch (e) { }
   }
 
-  // ══════════════════════════════════════════════════════════════════════
-  //  گروهِ کارکنان
-  // ══════════════════════════════════════════════════════════════════════
-
-  var chatMsgs = null, chatTimer = 0, chatBusy = false;
-
-  function chatLoad() {
-    if (chatMsgs) return chatMsgs;
-    try { chatMsgs = JSON.parse(localStorage.getItem(stnKey('chat')) || '[]'); } catch (e) { chatMsgs = []; }
-    chatMsgs = mergeChat(chatMsgs, [], Date.now());
-    return chatMsgs;
-  }
-
-  function chatSave() { try { localStorage.setItem(stnKey('chat'), JSON.stringify(chatMsgs || [])); } catch (e) { } }
-
-  function chatSince() {
-    return (chatLoad().filter(function (m) { return m.seq; }).map(function (m) { return m.seq; }).pop()) || 0;
-  }
-
-  function chatName() {
-    try { return localStorage.getItem(KEY + '.chatname') || ''; } catch (e) { return ''; }
-  }
-
-  function chatTime(at) {
-    if (!at) return '';
-    var d = new Date(at);
-    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-  }
-
-  /** «امروز» · «دیروز» · تاریخِ شمسی — فقط بالای نخستین پیامِ هر روز. */
-  function chatDay(at) {
-    if (!at) return '';
-    var d = new Date(at), t = new Date();
-    var key = function (x) { return x.getFullYear() + '-' + x.getMonth() + '-' + x.getDate(); };
-    if (key(d) === key(t)) return 'امروز';
-    var y = new Date(t.getTime() - 86400000);
-    if (key(d) === key(y)) return 'دیروز';
-    try { return d.toLocaleDateString('fa-IR-u-ca-persian', { weekday: 'long', day: 'numeric', month: 'long' }); }
-    catch (e) { return d.toLocaleDateString(); }
-  }
-
-  function renderChat() {
-    var box = $('chatList');
-    if (!box) return;
-    var me = chatName();
-    var list = chatLoad();
-    var lastDay = '';
-    box.innerHTML = list.length ? list.map(function (m) {
-      var mine = m.mine || (me && m.from === me);
-      var role = m.role === 'admin' ? 'مدیر' : m.role === 'mirza' ? 'میرزا' : 'کارمند';
-      //  جداکنندهٔ روز — همان «امروز / دیروز / تاریخ»ِ پیام‌رسانِ برنامهٔ کامپیوتر
-      var day = chatDay(m.at), sep = '';
-      if (day && day !== lastDay) { sep = '<div class="cday"><span>' + esc(day) + '</span></div>'; lastDay = day; }
-      return sep + '<div class="bub' + (mine ? ' mine' : '') + '">' +
-        (mine ? '' : '<div class="who">' + esc(m.from) + ' <span class="sub">· ' + role + '</span></div>') +
-        '<div>' + esc(m.text) + '</div>' +
-        '<div class="sub">' + chatTime(m.at) + (m.seq ? '' : ' · ⏳ در صف') + '</div></div>';
-    }).join('') : '<div class="sub">هنوز پیامی در گروه نیست. فقط کارمندان، مدیر و میرزای همین پمپ این گروه را می‌بینند.</div>';
-    box.scrollTop = box.scrollHeight;
-  }
-
-  function chatFetch(base, since) {
-    return fetch(chatUrl(base, cfg.stn, since), {
-      headers: { Authorization: 'Bearer ' + cfg.tok }, cache: 'no-store'
-    }).then(function (r) {
-      return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, status: r.status, j: j }; });
-    });
-  }
-
-  /** یک بار پرسیدن — از خانه، وگرنه از تونل. فقط وقتی صفحهٔ گروه جلوی چشم است. */
-  function chatPoll() {
-    if (chatBusy || !cfg.stn || !cfg.tok) return Promise.resolve(false);
-    chatBusy = true;
-    var bases = pushBases(cfg), i = 0, since = chatSince();
-    function next() {
-      if (i >= bases.length) { $('chatState').textContent = 'به سرورِ پمپ نرسیدیم — دوباره امتحان می‌شود'; return false; }
-      var base = bases[i++];
-      return chatFetch(base, since).then(function (r) {
-        if (r.status === 401 || r.status === 404) {
-          $('chatState').textContent = 'گروه روی سرورِ پمپ باز نشد — سرور کهنه است یا کدِ پمپ عوض شده';
-          return false;
-        }
-        if (!r.ok) return next();
-        //  پوشهٔ پمپ روی سرور از نو ساخته شد ⇒ از صفر
-        if (typeof r.j.last === 'number' && r.j.last < since) { since = 0; chatMsgs = []; return chatFetch(base, 0).then(done); }
-        return done(r);
-      }, next);
-    }
-    function done(r) {
-      chatMsgs = mergeChat(chatLoad(), (r.j && r.j.messages) || [], Date.now());
-      chatSave();
-      $('chatState').textContent = 'وصل · پیام‌ها ' + CHAT_KEEP_DAYS + ' روز می‌مانند';
-      renderChat();
-      return true;
-    }
-    return next().then(function (x) { chatBusy = false; return x; }, function () { chatBusy = false; return false; });
-  }
-
-  function chatSend() {
-    var text = String($('inChat').value || '').trim();
-    var from = String($('inChatName').value || '').trim();
-    if (!text) return;
-    if (!from) { $('chatState').textContent = 'اول نامِ خودتان را بنویسید'; $('inChatName').focus(); return; }
-    try { localStorage.setItem(KEY + '.chatname', from); } catch (e) { }
-    var cid = 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-    var role = mode === 'owner' ? 'admin' : 'staff';
-    chatMsgs = mergeChat(chatLoad(), [{ cid: cid, from: from, role: role, text: text, at: Date.now(), mine: true }], Date.now());
-    $('inChat').value = '';
-    renderChat();
-    var bases = pushBases(cfg), i = 0;
-    function next() {
-      if (i >= bases.length) { $('chatState').textContent = 'پیام نرفت — با وصل شدن دوباره بفرستید'; return; }
-      var base = bases[i++];
-      fetch(chatUrl(base, cfg.stn), {
-        method: 'POST',
-        headers: { Authorization: 'Bearer ' + cfg.tok, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cid: cid, from: from, role: role, text: text })
-      }).then(function (r) {
-        return r.json().catch(function () { return {}; }).then(function (j) {
-          if (!r.ok) {
-            if (r.status >= 500) return next();
-            $('chatState').textContent = (j && j.message) || 'پیام نرفت';
-            return;
-          }
-          if (j.message) { j.message.mine = true; chatMsgs = mergeChat(chatLoad(), [j.message], Date.now()); chatSave(); renderChat(); }
-        });
-      }, next);
-    }
-    next();
-  }
-
-  /** پرسیدنِ دوره‌ای فقط با صفحهٔ باز و جلوی چشم. */
-  function chatWatch(on) {
-    if (chatTimer) { clearInterval(chatTimer); chatTimer = 0; }
-    if (!on) return;
-    renderChat();
-    chatPoll();
-    chatTimer = setInterval(function () {
-      if (document.visibilityState === 'visible') chatPoll();
-    }, 6000);
-  }
-
   /** کدام دکمهٔ نوارِ پایین روشن باشد — صفحهٔ یک شخص زیرِ فهرستِ خودش است. */
   function navMark(id) {
     Array.prototype.forEach.call($('nav').querySelectorAll('button'), function (b) {
@@ -2294,7 +2385,6 @@
       var el = $(p);
       if (el) el.classList.toggle('hidden', p !== id);
     });
-    chatWatch(id === 'paneChat');
     var pb = $('paneBot');
     if (pb) pb.classList.remove('solo');
     //  خبرها فقط جایی که به کار می‌آیند: داشبورد، چراغِ کارمندان و مخزن.

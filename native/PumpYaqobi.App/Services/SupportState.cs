@@ -21,6 +21,8 @@ public sealed class SupportState
         public string Name { get; set; } = "";
         public bool Blocked { get; set; }
         public long OwnerSeenSeq { get; set; }
+        /// <summary>✓✓ — مشتری تا کدام پیام را در صفحهٔ کیو‌آر دیده است (فقط جلو می‌رود).</summary>
+        public long CustSeenSeq { get; set; }
         public List<CloudChatMessage> Messages { get; } = new();
 
         /// <summary>پیام‌های مشتری که بعد از آخرین «خوانده شد» آمده‌اند و پاک نشده‌اند.</summary>
@@ -53,6 +55,7 @@ public sealed class SupportState
             var t = Get(c.Acct);
             if (c.Name.Length > 0) t.Name = c.Name;
             t.Blocked = c.Blocked;
+            if (c.CustSeenSeq > t.CustSeenSeq) t.CustSeenSeq = c.CustSeenSeq;
             if (c.Last is { } last) Merge(new[] { last });
             // نخوانده‌های ابر همان پیام‌های بعد از ‎owner_seen_seq‎اند؛ اگر ابر
             // می‌گوید صفر، یعنی تا آخرین پیام خوانده شده.

@@ -136,6 +136,9 @@ public class MainActivity extends Activity {
     web.postDelayed(this::hideSplash, SPLASH_MAX_MS);
   }
 
+  /** وب‌ویوی ورقِ چاپ — تا پایانِ چاپ زنده بماند، وگرنه ورق نیمه‌کاره گم می‌شود. */
+  private WebView printWeb;
+
   /**
    * صفحهٔ لودینگ — بدونِ فایلِ layout ساخته می‌شود تا هیچ وابستگیِ تازه‌ای به
    * پروژه اضافه نشود. نوارش «تعیین‌شده» است، نه چرخانِ بی‌پایان: عددش همان
@@ -501,6 +504,35 @@ public class MainActivity extends Activity {
 
   private class Bridge {
     private Writer out;
+
+    /**
+     * 🖨 ورقِ چاپ/PDF — همان ورقِ برنامهٔ کامپیوتر (‎printDocHtml‎ در ‎app.js‎).
+     * وب‌ویو ‎window.print()‎ ندارد، پس ورق در یک وب‌ویوی جدا (بی جاوااسکریپت،
+     * بی دسترسی به فایل) بار و به ‎PrintManager‎ِ خودِ اندروید داده می‌شود —
+     * همان‌جا «ذخیره به PDF» هم هست. بی هیچ کتابخانه.
+     */
+    @JavascriptInterface
+    public void printHtml(final String html, final String title) {
+      if (html == null || html.length() > 8_000_000) return;
+      runOnUiThread(() -> {
+        final WebView pw = new WebView(MainActivity.this);
+        printWeb = pw;
+        pw.getSettings().setJavaScriptEnabled(false);
+        pw.getSettings().setAllowFileAccess(false);
+        pw.setWebViewClient(new WebViewClient() {
+          private boolean sent;
+          @Override
+          public void onPageFinished(WebView v, String url) {
+            if (sent) return;
+            sent = true;
+            String name = title == null || title.trim().isEmpty() ? "پمپ بنزین" : title.trim();
+            android.print.PrintManager pm = (android.print.PrintManager) getSystemService(Context.PRINT_SERVICE);
+            if (pm != null) pm.print(name, v.createPrintDocumentAdapter(name), new android.print.PrintAttributes.Builder().build());
+          }
+        });
+        pw.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
+      });
+    }
 
     @JavascriptInterface
     public String platform() { return "android"; }

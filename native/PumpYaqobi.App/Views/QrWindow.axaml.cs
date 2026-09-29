@@ -89,7 +89,7 @@ public partial class QrWindow : Window
     /// ‎KarLink.ShareText‎.
     /// </summary>
     private string ShareText() =>
-        (_name.Trim().Length > 0 ? "حسابِ «" + _name.Trim() + "»\n\n" : "")
+        (_name.Trim().Length > 0 ? "حسابِ «" + _name.Trim() + "» — " + PumpYaqobi.Application.Localization.PumpBrand.Name + "\n\n" : "")
         + _link
         + "\n\nبا باز کردنِ این نشانی، حسابتان را می‌بینید.";
 

@@ -2080,6 +2080,12 @@
   <Style Selector="Border.bubble:pointerover Button.bubbledel">
     <Setter Property="Opacity" Value="0.85" />
   </Style>
+  <Style Selector="TextBlock.receipt">
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
+  </Style>
+  <Style Selector="TextBlock.receipt.seen">
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Ink.Info}" />
+  </Style>
   <Style Selector="TextBlock.chatval">
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
   </Style>

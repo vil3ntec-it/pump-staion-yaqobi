@@ -68,7 +68,7 @@ public sealed record CloudChatMessage(string Id, long Seq, string Acct, string F
 
 /// <summary>یک گفت‌وگوی پشتیبانی از دیدِ صاحبِ پمپ.</summary>
 public sealed record CloudChatThread(string Acct, string Name, bool Blocked, int Unread, long UpdatedAt,
-                                     CloudChatMessage? Last);
+                                     CloudChatMessage? Last, long CustSeenSeq = 0);
 
 /// <summary>یک نسخهٔ پشتیبان روی پوشهٔ ابریِ این پمپ.</summary>
 /// <remarks>
@@ -1325,7 +1325,7 @@ public sealed partial class CloudLink
                     ? CloudChatMessage.Parse(l, Str(t, "acct")) : null;
                 list.Add(new CloudChatThread(Str(t, "acct"), Str(t, "name"),
                     t.TryGetProperty("blocked", out var b) && b.ValueKind == JsonValueKind.True,
-                    (int)Num(t, "unread"), Num(t, "updatedAt"), last));
+                    (int)Num(t, "unread"), Num(t, "updatedAt"), last, Num(t, "custSeenSeq")));
             }
         return (true, list, "");
     }
