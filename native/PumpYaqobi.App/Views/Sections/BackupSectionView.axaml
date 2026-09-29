@@ -35,8 +35,10 @@
                   <Setter Property="Margin" Value="0,0,8,8" />
                 </Style>
               </WrapPanel.Styles>
+              <!-- ⛔ بکاپ و «فایلِ کامل» یکی شدند (۱۴۰۵/۰۷/۱۶): فایلِ بکاپ همان
+                   ‎.pumpyaqobi‎ است — دفتر + تم و تنظیمات، سنجیده، برای فلش. -->
               <Button Classes="accent" Content="💾 ذخیرهٔ فایلِ بکاپ"
-                      Command="{Binding SaveBackupCommand}" IsEnabled="{Binding !Busy}" />
+                      Command="{Binding ExportFullCommand}" IsEnabled="{Binding !Busy}" />
               <Button Classes="ghost" Content="📸 بکاپِ همین حالا"
                       Command="{Binding SnapshotNowCommand}" IsEnabled="{Binding !Busy}" />
               <Button Classes="accent" Content="📤 فرستادن به سرور"
@@ -57,39 +59,15 @@
                        Foreground="{Binding ServerStatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
                        IsVisible="{Binding ServerStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
-            <TextBlock Classes="muted" TextWrapping="Wrap"
-                       Text="⚠️ بازگردانی جای حساب‌های فعلی را می‌گیرد؛ پیش از آن یک بکاپِ ایمنی گرفته می‌شود." />
-
-            <TextBlock Text="{Binding Status}" Classes="muted" TextWrapping="Wrap"
-                       IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-          </StackPanel>
-        </StackPanel>
-      </Border>
-
-      <!-- ══ فایلِ کاملِ برنامه — همه‌چیز در یک فایل، برای فلش (۱۴۰۵/۰۷/۱۵) ══
-           «مثلِ اکسل که تمامِ اطلاعات را دارد و یارو خیلی آسان می‌تواند توی
-           فلش ببرد.» شکل و سنجش‌ها: ‎Services.Data.FullBackup‎. -->
-      <Border Classes="panel" Padding="0">
-        <StackPanel>
-          <Border Classes="card-head">
-            <TextBlock Text="📦 فایلِ کاملِ برنامه — برای فلش یا کامپیوترِ دیگر" FontWeight="Bold"
-                       Foreground="{DynamicResource Pump.Ink.Accent}" />
-          </Border>
-          <StackPanel Margin="14" Spacing="10">
-            <TextBlock Classes="muted" TextWrapping="Wrap"
-                       Text="همهٔ حساب‌ها و تنظیمات در یک فایل. روی کامپیوترِ دیگر با دوبار-کلیک باز می‌شود." />
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <Button Classes="accent" Content="📦 ساختنِ فایلِ کامل"
-                      Command="{Binding ExportFullCommand}" IsEnabled="{Binding !Busy}" />
-              <Button Classes="ghost danger" Content="📂 آوردنِ فایلِ کامل"
-                      Command="{Binding ImportFullCommand}"
-                      IsVisible="{Binding CanRestore}" IsEnabled="{Binding !Busy}" />
-            </StackPanel>
-            <TextBlock Classes="muted" TextWrapping="Wrap"
-                       Text="⚠️ آوردن جای اطلاعاتِ فعلی را می‌گیرد؛ فایلِ ناقص رد می‌شود." />
             <TextBlock Text="{Binding FullStatus}" TextWrapping="Wrap" FontWeight="Bold"
                        Foreground="{Binding FullStatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
                        IsVisible="{Binding FullStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="فایلِ بکاپ همهٔ حساب‌ها و تنظیمات را دارد و روی فلش یا کامپیوترِ دیگر با دوبار-کلیک باز می‌شود. بازگردانی جای حساب‌های فعلی را می‌گیرد؛ پیش از آن یک بکاپِ ایمنی گرفته می‌شود." />
+
+            <TextBlock Text="{Binding Status}" Classes="muted" TextWrapping="Wrap"
+                       IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           </StackPanel>
         </StackPanel>
       </Border>
@@ -174,9 +152,6 @@
               <Button Classes="accent" Content="نصب و راه‌اندازیِ دوباره"
                       Command="{Binding InstallUpdateCommand}"
                       IsVisible="{Binding ReadyToInstall}" />
-              <!-- راهِ بیرون: شبکه که نگذاشت، کاربر نباید در بست بماند -->
-              <Button Classes="ghost" Content="باز کردنِ صفحهٔ دانلود"
-                      Command="{Binding OpenDownloadPageCommand}" />
             </StackPanel>
 
             <!-- بی اینترنت: فایلِ نصبِ تازه از فلش (۱۴۰۵/۰۷/۱۵) — کهنه‌تر رد می‌شود -->
@@ -189,25 +164,6 @@
             <TextBlock Text="{Binding OfflineStatus}" TextWrapping="Wrap" FontWeight="Bold"
                        Foreground="{Binding OfflineStatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
                        IsVisible="{Binding OfflineStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-          </StackPanel>
-        </StackPanel>
-      </Border>
-
-      <!-- ══ آوردنِ دادهٔ نسخهٔ وب ══════════════════════════════════════════ -->
-      <Border Classes="panel" Padding="0">
-        <StackPanel>
-          <Border Classes="card-head">
-            <TextBlock Text="📥 آوردنِ حساب‌ها از نسخهٔ وب" FontWeight="Bold"
-                       Foreground="{DynamicResource Pump.Ink.Accent}" />
-          </Border>
-          <StackPanel Margin="14" Spacing="9">
-            <TextBlock Classes="muted" TextWrapping="Wrap"
-                       Text="فایلِ pump-backup-….json نسخهٔ وب؛ پیش از نوشتن، بکاپِ ایمنی گرفته می‌شود." />
-            <Button Classes="ghost" Content="انتخابِ فایلِ بکاپِ وب"
-                    Command="{Binding ImportLegacyCommand}" IsEnabled="{Binding !ImportBusy}"
-                    HorizontalAlignment="Right" />
-            <TextBlock Text="{Binding ImportStatus}" TextWrapping="Wrap" Classes="muted"
-                       IsVisible="{Binding ImportStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           </StackPanel>
         </StackPanel>
       </Border>

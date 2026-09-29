@@ -151,8 +151,8 @@ public class SettingsPagesTests
     }
 
     /// <summary>
-    /// بخشِ قفل‌دار بی رمز باز نمی‌شود — و چون کاربر انصراف می‌دهد، صفحهٔ
-    /// پیشین سرِ جایش می‌ماند.
+    /// «مفاد/ضرر» آزاد باز می‌شود؛ نمودار، مفاد و مصارف پشتِ پرده‌اند تا رمز
+    /// زده شود — و با «دوباره قفل کن» یا رفتن از بخش دوباره پشتِ پرده.
     /// </summary>
     [Fact]
     public async Task ALockedSectionDoesNotOpenWithoutThePassword()
@@ -193,19 +193,40 @@ public class SettingsPagesTests
         await vm.GoAsync(dash);
         host.Locks.SetPassword(SectionLockService.Profit, "9999");
 
+        //  ⛔ از ۱۴۰۵/۰۷/۱۶ «مفاد/ضرر» خودِ بخش را نمی‌بندد — آزاد باز می‌شود و
+        //  فقط نمودار، مفاد و مصارف پشتِ پرده‌اند. رمز با زدن روی پرده.
+        var pl = (PumpYaqobi.App.ViewModels.Sections.ProfitSectionViewModel)profit;
         try
         {
-            Dialogs.PromptHook = (_, _) => null;             // «انصراف»
-            await vm.GoAsync(profit);
-            Assert.Same(dash, vm.Current);
-
-            Dialogs.PromptHook = (_, _) => "غلط";
-            await vm.GoAsync(profit);
-            Assert.Same(dash, vm.Current);
-
-            Dialogs.PromptHook = (_, _) => "9999";
+            Dialogs.PromptHook = (_, _) => throw new InvalidOperationException("ورود به بخش نباید رمز بپرسد");
             await vm.GoAsync(profit);
             Assert.Same(profit, vm.Current);
+            Assert.True(pl.Veiled);
+            Assert.Equal("88,888,888 افغانی", pl.NetShown);        // عددِ واقعی به صفحه نمی‌رسد
+            Assert.Equal("88,888,888 افغانی", pl.ExpenseShown);
+            Assert.Equal("Pump.Muted", pl.TrendBrushShown);
+
+            Dialogs.PromptHook = (_, _) => null;             // «انصراف»
+            await pl.RevealCommand.ExecuteAsync(null);
+            Assert.True(pl.Veiled);
+
+            Dialogs.PromptHook = (_, _) => "غلط";
+            await pl.RevealCommand.ExecuteAsync(null);
+            Assert.True(pl.Veiled);
+
+            Dialogs.PromptHook = (_, _) => "9999";
+            await pl.RevealCommand.ExecuteAsync(null);
+            Assert.False(pl.Veiled);
+            Assert.Equal(pl.NetText, pl.NetShown);
+            Assert.True(pl.CanRelock);
+
+            pl.RelockCommand.Execute(null);                  // «🔒 دوباره قفل کن»
+            Assert.True(pl.Veiled);
+
+            await pl.RevealCommand.ExecuteAsync(null);
+            Assert.False(pl.Veiled);
+            await vm.GoAsync(dash);                          // رفتن ⇒ دوباره پشتِ پرده
+            Assert.True(pl.Veiled);
         }
         finally
         {

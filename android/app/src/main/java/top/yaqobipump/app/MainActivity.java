@@ -145,21 +145,21 @@ public class MainActivity extends Activity {
     LinearLayout box = new LinearLayout(this);
     box.setOrientation(LinearLayout.VERTICAL);
     box.setGravity(Gravity.CENTER);
-    box.setBackgroundColor(0xFF0B0F17);
+    box.setBackgroundColor(0xFF0B0B0F);
     box.setClickable(true);              // لمس به صفحهٔ زیرش نرسد
     int pad = (int) (24 * getResources().getDisplayMetrics().density);
     box.setPadding(pad, pad, pad, pad);
 
     TextView title = new TextView(this);
-    title.setText("پمپ یعقوبی");
-    title.setTextColor(0xFFFFB300);
+    title.setText("پمپ بنزین");
+    title.setTextColor(0xFFFFD700);
     title.setTextSize(22);
     title.setGravity(Gravity.CENTER);
     box.addView(title);
 
     TextView sub = new TextView(this);
     sub.setText("نرم‌افزار مدیریت پمپ بنزین");
-    sub.setTextColor(0xFF9FB0C7);
+    sub.setTextColor(0xFFA8A8B3);
     sub.setTextSize(12);
     sub.setGravity(Gravity.CENTER);
     sub.setPadding(0, (int) (6 * getResources().getDisplayMetrics().density), 0, 0);
@@ -231,7 +231,7 @@ public class MainActivity extends Activity {
     try { s.setLoadsImagesAutomatically(true); } catch (Throwable ignored) { }
     try { s.setBlockNetworkImage(false); } catch (Throwable ignored) { }
     try { web.setOverScrollMode(View.OVER_SCROLL_NEVER); } catch (Throwable ignored) { }
-    try { web.setBackgroundColor(0xFF0B0F17); } catch (Throwable ignored) { }
+    try { web.setBackgroundColor(0xFF0B0B0F); } catch (Throwable ignored) { }
   }
 
   /**
@@ -504,6 +504,30 @@ public class MainActivity extends Activity {
 
     @JavascriptInterface
     public String platform() { return "android"; }
+
+    /**
+     * نوارِ وضعیت و نوارِ پایینِ خودِ اندروید هم‌رنگِ سربرگِ برنامه — تا اپ
+     * «نیتیو» حس شود، نه صفحه‌ای داخلِ یک قاب. فقط رنگِ «#rrggbb» پذیرفته است.
+     */
+    @JavascriptInterface
+    public void bars(final String hex, final boolean light) {
+      if (hex == null || !hex.matches("#[0-9a-fA-F]{6}")) return;
+      runOnUiThread(() -> {
+        try {
+          int c = android.graphics.Color.parseColor(hex);
+          getWindow().setStatusBarColor(c);
+          getWindow().setNavigationBarColor(c);
+          if (Build.VERSION.SDK_INT >= 23) {
+            View d = getWindow().getDecorView();
+            int f = d.getSystemUiVisibility();
+            f = light ? (f | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR) : (f & ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+            if (Build.VERSION.SDK_INT >= 26)
+              f = light ? (f | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR) : (f & ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+            d.setSystemUiVisibility(f);
+          }
+        } catch (Throwable ignored) { }
+      });
+    }
 
     /** مرحله‌های واقعیِ بالا آمدن — خودِ برنامه در همان لحظه صدایشان می‌زند */
     @JavascriptInterface

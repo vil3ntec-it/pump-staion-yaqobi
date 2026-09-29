@@ -44,6 +44,24 @@ public sealed class SectionLockService
     private readonly SettingsService _settings;
     private readonly HashSet<string> _open = new();
 
+    /// <summary>
+    /// ⛔ «مفاد/ضرر» کلِ بخش را نمی‌بندد (۱۴۰۵/۰۷/۱۶، خواستهٔ صاحب ریپو): بخش
+    /// آزاد است و فقط نمودار، مفاد و مصارفش تار می‌مانند تا رمز زده شود.
+    /// بقیهٔ بخش‌های قفل‌دار (زیانِ افزایشِ قیمت) مثلِ همیشه دری بسته‌اند.
+    /// </summary>
+    public static bool VeilsInstead(string? id) => id == Profit;
+
+    /// <summary>پیش از نشان دادنِ این بخش باید رمز پرسیده شود؟</summary>
+    public bool GatesSection(string id) => NeedsUnlock(id) && !VeilsInstead(id);
+
+    /// <summary>رمز گذاشته، برداشته، باز یا دوباره قفل شد — تا پرده‌ها تازه شوند.</summary>
+    public event Action<string>? Changed;
+
+    private void Raise(string id)
+    {
+        try { Changed?.Invoke(id); } catch { /* پرده رفاه است؛ قفل اصل */ }
+    }
+
     // ══ ترمزِ حدس زدن ═══════════════════════════════════════════════════════
     //
     //  ⛔ تا ۱۴۰۵/۰۷/۱۲ رمزِ بخش را می‌شد بی‌نهایت بار پشتِ سرِ هم امتحان
@@ -157,6 +175,7 @@ public sealed class SectionLockService
         if (!Lockable(id)) throw new InvalidOperationException("این بخش قفل نمی‌پذیرد: " + id);
         _settings.Set(Prefix + id, PasswordHasher.Hash(password));
         _open.Remove(id);
+        Raise(id);
     }
 
     public void ClearPassword(string id)
@@ -164,6 +183,7 @@ public sealed class SectionLockService
         if (!Lockable(id)) return;
         _settings.Set(Prefix + id, "");
         _open.Remove(id);
+        Raise(id);
     }
 
     /// <summary>
@@ -179,9 +199,13 @@ public sealed class SectionLockService
         if (!PasswordHasher.Verify(password, h)) { Failed(id); return false; }
         Succeeded(id);
         _open.Add(id);
+        Raise(id);
         return true;
     }
 
     /// <summary>بی رمز زدن هم می‌شود بست — برای «همین حالا دوباره قفل کن».</summary>
-    public void Relock(string id) => _open.Remove(id);
+    public void Relock(string id)
+    {
+        if (_open.Remove(id)) Raise(id);
+    }
 }

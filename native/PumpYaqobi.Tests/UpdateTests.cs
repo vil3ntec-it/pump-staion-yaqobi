@@ -414,7 +414,7 @@ public class UpdateTests
                                                "BackupSectionViewModel.cs"));
 
         var i = vm.IndexOf("private async Task CheckUpdateAsync", StringComparison.Ordinal);
-        var j = vm.IndexOf("private void OpenDownloadPage", StringComparison.Ordinal);
+        var j = vm.IndexOf("private void AdoptAutoReady", StringComparison.Ordinal);
         Assert.True(i > 0 && j > i, "بدنهٔ بررسی پیدا نشد");
         var check = vm[i..j];
         Assert.Contains("catch", check);
@@ -458,26 +458,26 @@ public class UpdateTests
     }
 
     /// <summary>
-    /// ⛔ و یک راهِ بیرون که به شبکه بند نیست: صفحهٔ دانلود در مرورگرِ خودِ
-    /// سیستم. دکمه‌ای که زده شود و هیچ اتفاقی نیفتد در چشمِ کاربر باگ است.
-    ///
-    /// ⚠️ نشانی همچنان در رابط نوشته نمی‌شود — ساختنش داخلِ
-    /// <c>UpdateService</c> است، همان یک جا
-    /// (<see cref="TheUpdateServiceItselfKeepsTheAddressPrivate"/>).
+    /// ⛔ «باز کردنِ صفحهٔ دانلود» برداشته شد و برنمی‌گردد (۱۴۰۵/۰۷/۱۶): کاربر را
+    /// مستقیم به صفحهٔ مخزن در گیت‌هاب می‌برد — «هیچ کس ادرس رو نبینه». راهِ
+    /// بیرونِ بی‌اینترنت «نصب از فایل» است و باید بماند.
     /// </summary>
     [Fact]
-    public void ThereIsAWayOutThatDoesNotDependOnTheNetwork()
+    public void NoButtonOpensTheRepositoryPage()
     {
         var svc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
-        Assert.Contains("public static bool OpenDownloadPage()", svc);
+        Assert.DoesNotContain("OpenDownloadPage", svc);
 
         var vm = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections",
                                                "BackupSectionViewModel.cs"));
-        Assert.Contains("UpdateService.OpenDownloadPage()", vm);
+        Assert.DoesNotContain("OpenDownloadPage", vm);
+        Assert.DoesNotContain("صفحهٔ دانلود", vm);
 
         var view = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections",
                                                  "BackupSectionView.axaml"));
-        Assert.Contains("OpenDownloadPageCommand", view);
+        Assert.DoesNotContain("OpenDownloadPageCommand", view);
+        Assert.DoesNotContain("صفحهٔ دانلود", view);
+        Assert.Contains("InstallFromFileCommand", view);
     }
 
     /// <summary>

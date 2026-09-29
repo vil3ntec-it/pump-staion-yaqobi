@@ -387,7 +387,7 @@ public sealed partial class MainViewModel : ObservableObject
 
         static bool Blocked(SectionViewModel x) =>
             SectionGate.IsHidden(x.Id) || SectionGate.IsBuilding(x.Id)
-            || AppHost.Current.Locks.NeedsUnlock(x.Id)
+            || AppHost.Current.Locks.GatesSection(x.Id)
             || (PlanFeatureOf(x.Id) is { } f && !Entitlements.Allows(f));
     }
 
@@ -1508,7 +1508,7 @@ public sealed partial class MainViewModel : ObservableObject
         // ⛔ زیربخشِ قفل‌دار («زیان ناشی از افزایش قیمت») اول بسته می‌ماند و
         // بعد از رمزِ درست خودش باز می‌شود. اگر همین‌جا نشان داده می‌شد،
         // رمز پرسیدن پس از دیده شدنِ داده بی‌معنا بود.
-        if (Current?.OpenSub is { } locked && AppHost.Current.Locks.NeedsUnlock(locked.Id))
+        if (Current?.OpenSub is { } locked && AppHost.Current.Locks.GatesSection(locked.Id))
         {
             Current.OpenSub = null;
             LastSubOpen = UnlockThenShowAsync(Current, locked);
@@ -1586,24 +1586,35 @@ public sealed partial class MainViewModel : ObservableObject
     {
         if (!PlanAllows(s)) return false;
 
+        //  ⛔ «مفاد/ضرر» بخش را نمی‌بندد، فقط عددهایش تار است (‎VeilsInstead‎)
+        if (!AppHost.Current.Locks.GatesSection(s.Id)) return true;
+        return await AskSectionPasswordAsync(s.Id, s.Title);
+    }
+
+    /// <summary>
+    /// پرسیدنِ رمزِ یک بخش — با ترمزِ حدس زدن. تنها جای این پرسش است: هم درِ
+    /// بخشِ قفل‌دار و هم پردهٔ «مفاد/ضرر» از همین می‌گذرند.
+    /// </summary>
+    public static async Task<bool> AskSectionPasswordAsync(string id, string title)
+    {
         var locks = AppHost.Current.Locks;
-        if (!locks.NeedsUnlock(s.Id)) return true;
+        if (!locks.NeedsUnlock(id)) return true;
 
         //  ⛔ ترمزِ حدس زدن — پیش از پرسیدن هم، تا پنجرهٔ رمز بی‌فایده باز نشود
-        if (locks.WaitSeconds(s.Id) is > 0 and var wait)
+        if (locks.WaitSeconds(id) is > 0 and var wait)
         {
             AppHost.Current.Toast($"⏳ چند بار رمزِ نادرست زده شد — {wait} ثانیهٔ دیگر دوباره امتحان کنید",
                                   ToastKind.Warn);
             return false;
         }
 
-        var pw = await Dialogs.PromptAsync("🔒 " + s.Title,
+        var pw = await Dialogs.PromptAsync("🔒 " + title,
                                            "این بخش رمز دارد. رمزش را بزنید.");
         if (pw is null) return false;
 
-        if (!locks.Unlock(s.Id, pw))
+        if (!locks.Unlock(id, pw))
         {
-            var left = locks.WaitSeconds(s.Id);
+            var left = locks.WaitSeconds(id);
             AppHost.Current.Toast(left > 0
                 ? $"❌ رمزِ این بخش درست نیست — {left} ثانیه صبر کنید"
                 : "❌ رمزِ این بخش درست نیست", ToastKind.Error);

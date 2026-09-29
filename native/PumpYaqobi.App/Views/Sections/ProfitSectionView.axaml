@@ -44,6 +44,28 @@
     <Style Selector="Border.plresult > StackPanel">
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
+    <!-- ══ پرده: «بخش آزاد، عددها تار» (۱۴۰۵/۰۷/۱۶) ══════════════════════
+         ⚠️ محو فقط وقتی پرده هست؛ بازش که شد هیچ اثری روی اسکرول ندارد.
+         ⛔ و عددِ زیرِ پرده عددِ ساختگی است (‎NetShown‎…) — تار شدن تنها
+         نگهبان نیست. -->
+    <Style Selector="Panel.veilable > StackPanel.veiled">
+      <Setter Property="Effect">
+        <BlurEffect Radius="16" />
+      </Setter>
+      <Setter Property="IsHitTestVisible" Value="False" />
+    </Style>
+    <Style Selector="Button.veil">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="VerticalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="Button.veil:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
   </UserControl.Styles>
 
   <c:SectionPage Header="مفاد / ضرر / اتحادیه"
@@ -70,52 +92,69 @@
       <!-- ⚠️ همهٔ کارت‌های این صفحه تمام‌عرض‌اند و ‎calm‎ (سایهٔ بی‌محو):
            گزارشِ «مفاد/ضرر خیلی سنگین اسکرول می‌شود» (۱۴۰۵/۰۷/۱۳)؛ شرحش روی
            ‎Border.card.calm‎ در ‎Controls.axaml‎. -->
+      <!-- ⛔ نمودار، مفاد و مصارف پشتِ یک پرده‌اند؛ زدن روی پرده رمز می‌خواهد -->
+      <Panel Classes="veilable">
+        <StackPanel Spacing="12" Classes.veiled="{Binding Veiled}">
       <!-- ══ کادرِ بزرگِ «مفاد / ضرر خالص» ══════════════════════════════════
-           همان ‎.pl-result‎: عنوان، عددِ بزرگ، جملهٔ حال و خطِ روند. -->
-      <Border Classes="card calm" Padding="18,16" MinHeight="180">
-        <Grid RowDefinitions="Auto,Auto,Auto,*">
-          <DockPanel Grid.Row="0" LastChildFill="False">
-            <!-- ⚠️ چپ/راست این‌جا منطقی است: در راست‌به‌چپ «Left» یعنی سمتِ راستِ چشم -->
-            <TextBlock DockPanel.Dock="Left" Text="مفاد / ضرر خالص" Classes="label" FontSize="13"
-                       VerticalAlignment="Center" />
-            <!-- کدام دوره: «همهٔ زمان‌ها» · «سالِ 1405» · «میزان 1405» -->
-            <Border DockPanel.Dock="Right" CornerRadius="9" Padding="10,3"
-                    Background="{DynamicResource Pump.Input}"
-                    BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="1">
-              <TextBlock Text="{Binding PeriodText}" FontSize="12" FontWeight="SemiBold"
-                         Foreground="{DynamicResource Pump.Ink.Info}" />
-            </Border>
-          </DockPanel>
-          <TextBlock Grid.Row="1" Text="{Binding NetText}" FontWeight="Bold" FontSize="34"
-                     Margin="0,8,0,0"
-                     Foreground="{Binding TrendBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
-          <TextBlock Grid.Row="2" Text="{Binding NetCaption}" FontSize="13" Margin="0,4,0,0"
-                     Foreground="{Binding TrendBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
-          <c:SparkChart Grid.Row="3" ShowAxis="False" FlowDirection="LeftToRight" MinHeight="80"
-                        Margin="0,10,0,0"
-                        Values="{Binding TrendValues}"
-                        LineBrush="{Binding TrendBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
-                        GridBrush="{DynamicResource Pump.GridLine}" />
-        </Grid>
-      </Border>
+               همان ‎.pl-result‎: عنوان، عددِ بزرگ، جملهٔ حال و خطِ روند. -->
+          <Border Classes="card calm" Padding="18,16" MinHeight="180">
+            <Grid RowDefinitions="Auto,Auto,Auto,*">
+              <DockPanel Grid.Row="0" LastChildFill="False">
+                <!-- ⚠️ چپ/راست این‌جا منطقی است: در راست‌به‌چپ «Left» یعنی سمتِ راستِ چشم -->
+                <TextBlock DockPanel.Dock="Left" Text="مفاد / ضرر خالص" Classes="label" FontSize="13"
+                           VerticalAlignment="Center" />
+                <!-- کدام دوره: «همهٔ زمان‌ها» · «سالِ 1405» · «میزان 1405» -->
+                <Border DockPanel.Dock="Right" CornerRadius="9" Padding="10,3"
+                        Background="{DynamicResource Pump.Input}"
+                        BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="1">
+                  <TextBlock Text="{Binding PeriodText}" FontSize="12" FontWeight="SemiBold"
+                             Foreground="{DynamicResource Pump.Ink.Info}" />
+                </Border>
+              </DockPanel>
+              <TextBlock Grid.Row="1" Text="{Binding NetShown}" FontWeight="Bold" FontSize="34"
+                         Margin="0,8,0,0"
+                         Foreground="{Binding TrendBrushShown, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+              <TextBlock Grid.Row="2" Text="{Binding NetCaptionShown}" FontSize="13" Margin="0,4,0,0"
+                         Foreground="{Binding TrendBrushShown, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+              <c:SparkChart Grid.Row="3" ShowAxis="False" FlowDirection="LeftToRight" MinHeight="80"
+                            Margin="0,10,0,0"
+                            Values="{Binding TrendShown}"
+                            LineBrush="{Binding TrendBrushShown, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                            GridBrush="{DynamicResource Pump.GridLine}" />
+            </Grid>
+          </Border>
 
-      <!-- ══ درآمدها و مصارف ══ -->
-      <Grid ColumnDefinitions="*,12,*">
-        <Border Grid.Column="0" Classes="card calm" Padding="16,14">
-          <StackPanel Spacing="6">
-            <TextBlock Text="{Binding IncomeTitle}" Classes="label" FontSize="13" />
-            <TextBlock Text="{Binding IncomeText}" FontWeight="Bold" FontSize="24"
-                       Foreground="{Binding IncomeBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
-          </StackPanel>
-        </Border>
-        <Border Grid.Column="2" Classes="card calm" Padding="16,14">
-          <StackPanel Spacing="6">
-            <TextBlock Text="💸 مصارف" Classes="label" FontSize="13" />
-            <TextBlock Text="{Binding ExpenseText}" FontWeight="Bold" FontSize="24"
-                       Foreground="{DynamicResource Pump.Ink.Danger}" />
-          </StackPanel>
-        </Border>
-      </Grid>
+          <!-- ══ درآمدها و مصارف ══ -->
+          <Grid ColumnDefinitions="*,12,*">
+            <Border Grid.Column="0" Classes="card calm" Padding="16,14">
+              <StackPanel Spacing="6">
+                <TextBlock Text="{Binding IncomeTitleShown}" Classes="label" FontSize="13" />
+                <TextBlock Text="{Binding IncomeShown}" FontWeight="Bold" FontSize="24"
+                           Foreground="{Binding IncomeBrushShown, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+              </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Classes="card calm" Padding="16,14">
+              <StackPanel Spacing="6">
+                <TextBlock Text="💸 مصارف" Classes="label" FontSize="13" />
+                <TextBlock Text="{Binding ExpenseShown}" FontWeight="Bold" FontSize="24"
+                           Foreground="{Binding ExpenseBrushShown, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+              </StackPanel>
+            </Border>
+          </Grid>
+        </StackPanel>
+        <Button Classes="veil" IsVisible="{Binding Veiled}" Command="{Binding RevealCommand}"
+                ToolTip.Tip="برای دیدنِ مفاد و مصارف رمز بزنید">
+          <Border CornerRadius="14" Padding="18,10"
+                  Background="{DynamicResource Pump.Card}"
+                  BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="1">
+            <TextBlock Text="🔒 برای دیدنِ مفاد، مصارف و نمودار رمز بزنید"
+                       FontSize="15" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Ink.Accent}" />
+          </Border>
+        </Button>
+      </Panel>
+      <Button Classes="ghost" HorizontalAlignment="Center" Content="🔒 دوباره قفل کن"
+              IsVisible="{Binding CanRelock}" Command="{Binding RelockCommand}" />
 
       <!-- ══ نرخ اتحادیه ══════════════════════════════════════════════════
            گزارشِ صاحب ریپو: «دو کادرِ نرخ اتحادیه هم خیلی کوچک‌اند و هم رفتن
