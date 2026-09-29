@@ -183,10 +183,13 @@
   .live .btn{padding:4px 12px;font-size:.78rem;min-height:34px}
   /* ── چتِ پشتیبانی ───────────────────────────────────────────────────────
      دکمهٔ شناور پایینِ صفحه، و صفحهٔ چت که تمام‌صفحه رویش می‌نشیند. */
+  .pump{font-weight:900;color:var(--accent);font-size:.95rem;margin-bottom:8px}
   .fab{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));left:16px;z-index:40;border:0;border-radius:999px;
        background:var(--accent);color:var(--on-accent);font-weight:800;font-size:.95rem;font-family:inherit;
-       padding:12px 18px;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer;display:flex;
-       align-items:center;gap:8px}
+       padding:8px 12px;box-shadow:0 6px 16px rgba(0,0,0,.22);cursor:pointer;display:flex;
+       align-items:center;gap:6px;opacity:.92}
+  .live .lbtns{display:flex;gap:6px;flex-wrap:wrap}
+  .live .n{background:var(--red);color:#fff;border-radius:999px;font-size:.7rem;padding:0 6px}
   .fab .n{background:var(--red);color:#fff;border-radius:999px;font-size:.72rem;padding:1px 7px;min-width:20px;text-align:center}
   .chat{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column}
   .chat.hidden{display:none}
@@ -510,6 +513,8 @@
     var h = '';
 
     h += '<div class="card">';
+    //  ⛔ نامِ خودِ پمپ (‎p‎، از ۱۴۰۵/۰۷/۱۶) — کیو‌آرِ کهنه‌تر آن را ندارد
+    if (d.p) h += '<div class="pump">⛽ ' + esc(d.p) + '</div>';
     h += '<div class="head"><div class="av">' + esc(String(d.n || 'ح').charAt(0)) + '</div><div class="t">';
     h += '<h1>' + esc(d.n || 'حساب') + '</h1>';
     if (d.a) h += '<div class="sub">' + esc(d.a) + '</div>';
@@ -544,19 +549,24 @@
     h += '<div class="card noprint" style="text-align:center">' +
          '<button class="btn" data-act="print">🖨️ چاپ / ذخیره PDF</button>' +
          '<div class="note">این صفحه فقط نشان می‌دهد؛ هیچ چیزی از این‌جا عوض نمی‌شود. ' +
-         'عددها همان عددهای دفترِ پمپ‌اند؛ اگر پرسشی دارید با «💬 پشتیبانی» بپرسید.</div></div>';
+         'عددها همان عددهای دفترِ پمپ‌اند؛ اگر پرسشی دارید با «💬 پیام» بپرسید.</div></div>';
 
-    if (live) {
-      h += '<button class="fab noprint" data-act="chat-open">💬 پشتیبانی' +
-           (chatUnread > 0 ? '<span class="n">' + chatUnread + '</span>' : '') + '</button>';
+    //  دکمهٔ شناور فقط وقتی پیامِ نخوانده هست — و کوچک، فقط نشانه و شمار
+    if (live && chatUnread > 0) {
+      h += '<button class="fab noprint" data-act="chat-open" aria-label="پیامِ تازه">💬' +
+           '<span class="n">' + chatUnread + '</span></button>';
     }
 
     app.innerHTML = h;
-    if (d.n) document.title = d.n + ' — پمپ بنزین';
+    if (d.n) document.title = d.n + ' — ' + (d.p || 'پمپ بنزین');
     chatRender();
   }
 
-  app.addEventListener('click', function (e) {
+  //  ⛔ یک شنونده برای صفحه و برای چت (۱۴۰۵/۰۷/۱۶): چت بیرونِ ‎app‎ می‌نشیند
+  //  (‎document.body‎) و تا امروز هیچ‌کدام از دکمه‌هایش — «ادامه»، ▶، 📎، 🎤، ✕،
+  //  → و 🔔 — شنونده‌ای نداشتند؛ فقط Enter کار می‌کرد.
+  app.addEventListener('click', onAct);
+  function onAct(e) {
     var t = e.target.closest('[data-act]');
     if (!t) return;
     var v = t.getAttribute('data-v');
@@ -579,7 +589,7 @@
       default: return;
     }
     render();
-  });
+  }
 
   // کشوییِ ماه — همان کارِ دکمهٔ «ماه»، فقط یک فیلتر است
   app.addEventListener('change', function (e) {
@@ -643,8 +653,12 @@
       case 'wait': txt = 'در حالِ بررسی…'; break;
       default:     txt = 'عددهای داخلِ همین کیو‌آر';
     }
+    //  ⛔ درِ چت کنارِ «به‌روز کن» است، کوچک — نه دکمهٔ شناورِ بزرگی که روی
+    //  عددهای حساب می‌نشست (۱۴۰۵/۰۷/۱۶: «پیام‌رسان این‌قدر جا گرفته»).
     return '<div class="live noprint' + cls + '"><span><span class="dot"></span>' + esc(txt) +
-           '</span><button class="btn" data-act="refresh">🔄 به‌روز کن</button></div>';
+           '</span><span class="lbtns"><button class="btn" data-act="chat-open">💬 پیام' +
+           (chatUnread > 0 ? ' <span class="n">' + chatUnread + '</span>' : '') + '</button>' +
+           '<button class="btn" data-act="refresh">🔄 به‌روز کن</button></span></div>';
   }
 
   // یک بار بپرس. اگر عکسِ ابر تازه‌تر از چیزی بود که روی صفحه است، جایش
@@ -743,6 +757,7 @@
       el.setAttribute('id', 'chat');
       document.body.appendChild(el);
       if (typeof el.addEventListener === 'function') {
+        el.addEventListener('click', onAct);
         el.addEventListener('keydown', function (e) {
           if (e.key === 'Enter' && e.target && e.target.id === 'chatText') { e.preventDefault(); chatSendText(); }
           if (e.key === 'Enter' && e.target && e.target.id === 'chatNameIn') { e.preventDefault(); chatSetName(); }
@@ -781,7 +796,7 @@
     if (old) draft = old.value;
 
     var h = '<div class="chat-head"><button class="btn" data-act="chat-close">→</button>' +
-            '<div class="t"><b>پشتیبانی — ' + esc((data && data.n) || 'حسابِ من') + '</b>' +
+            '<div class="t"><b>پیام به ' + esc((data && data.p) || 'پمپ') + '</b>' +
             '<span>' + (chatBlocked ? 'گفت‌وگو بسته شده' : chatBusy ? 'در حالِ فرستادن…' : 'پیام‌تان مستقیم به صاحبِ پمپ می‌رسد') + '</span></div>';
     if (canPush()) h += '<button class="btn" data-act="chat-push" title="با مرورگرِ بسته هم خبر بدهد">🔔 خبرم کن</button>';
     h += '</div>';

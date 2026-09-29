@@ -30,6 +30,9 @@ public sealed class AcctSnapshot
     /// <summary>نامِ صاحبِ حساب.</summary>
     [JsonPropertyName("n")] public string Name { get; set; } = "";
 
+    /// <summary>نامِ خودِ پمپ (۱۴۰۵/۰۷/۱۶) — سربرگِ صفحهٔ کیو‌آر؛ خالی ⇒ کیو‌آرِ کهنه.</summary>
+    [JsonPropertyName("p")] public string Pump { get; set; } = "";
+
     /// <summary>عنوانِ همین حساب (حسابِ فرعی و مانندِ آن) — خالی یعنی حسابِ اصلی.</summary>
     [JsonPropertyName("a")] public string Account { get; set; } = "";
 

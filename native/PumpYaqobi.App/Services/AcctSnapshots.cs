@@ -67,6 +67,7 @@ public static class AcctSnapshots
             Account = accountTitle ?? "",
             Unit = money ? "افغانی" : "لیتر",
             Date = Shamsi.Today(),
+            Pump = PumpBrand.Name,
         };
 
         // ⚠️ ترتیب مهم است: دفترِ **فعال** اول می‌آید، تا صفحه که تبِ اول را
@@ -307,6 +308,7 @@ public static class AcctSnapshots
             Name = name,
             Unit = "افغانی",
             Date = Shamsi.Today(),
+            Pump = PumpBrand.Name,
         };
         snap.Books.Add(book);
         snap.Summary.AddRange(book.Summary);
