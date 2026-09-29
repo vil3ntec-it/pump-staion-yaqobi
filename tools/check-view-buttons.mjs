@@ -185,6 +185,12 @@ await page.waitForFunction(() => [...document.querySelectorAll('.chat img')].fil
 ok(await page.$$eval('.chat img', l => l.filter(i => i.src.startsWith('blob:') && i.naturalWidth > 0).length) >= 2, 'پس از بستن و باز کردنِ صفحه، رسانه‌ها از حافظهٔ گوشی می‌آیند');
 ok(mediaGets.mo1 === 1, 'و سرور دوباره پرسیده نشد: ' + mediaGets.mo1);
 ok(!(await page.textContent('.chat')).includes('سرور هم آن را نگه نمی‌دارد'), 'هیچ رسانه‌ای «گم‌شده» نشان داده نشد');
+await page.click('.chat img[data-act="chat-img"]');
+await page.waitForTimeout(200);
+ok(!!(await page.$('#chatLb img')), 'ضربه روی عکس، آن را بزرگ روی صفحه باز می‌کند');
+await page.click('#chatLb button');
+await page.waitForTimeout(150);
+ok(!(await page.$('#chatLb')), 'و ✕ آن را می‌بندد');
 
 await page.click('[data-act="chat-close"]');
 ok(await page.$eval('.chat', e => e.classList.contains('hidden')).catch(() => true), 'بستنِ چت');

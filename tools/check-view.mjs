@@ -225,6 +225,7 @@ console.log('\n۱۱) چتِ پشتیبانی — «داخلِ کیو‌آر یک
   const calls = [];
   let seq = 0;
   const serverMsgs = [];
+  let ownerSeen = 0, postFail = false;
   const fetchChat = async (url, opt = {}) => {
     calls.push({ url, method: opt.method || 'GET', body: opt.body, headers: opt.headers || {} });
     const u = String(url);
@@ -239,6 +240,7 @@ console.log('\n۱۱) چتِ پشتیبانی — «داخلِ کیو‌آر یک
       return okJson({ ok: true, message: m });
     }
     if (u.includes('/chat?k=') && opt.method === 'POST') {
+      if (postFail) return okJson({ error: 'server' }, 500);
       const b = JSON.parse(opt.body);
       const m = { id: 'msg' + (++seq), seq, from: 'c', name: b.name, kind: b.kind || 'text', text: b.text || '',
                   mediaId: b.mediaId || null, at: 1700000000000, deleted: false };
@@ -247,7 +249,7 @@ console.log('\n۱۱) چتِ پشتیبانی — «داخلِ کیو‌آر یک
     }
     if (u.includes('/chat?k=')) {
       const after = parseInt((/after=(\d+)/.exec(u) || [0, 0])[1], 10) || 0;
-      return okJson({ ok: true, blocked: false, name: '', vapid: 'BAbc', messages: serverMsgs.filter((m) => m.seq > after) });
+      return okJson({ ok: true, blocked: false, name: '', vapid: 'BAbc', ownerSeenSeq: ownerSeen, messages: serverMsgs.filter((m) => m.seq > after) });
     }
     return okJson({}, 404);
   };
@@ -286,6 +288,23 @@ console.log('\n۱۱) چتِ پشتیبانی — «داخلِ کیو‌آر یک
   ok(pg.chat.innerHTML.includes('حسابم درست است؟') && pg.chat.innerHTML.includes('class="msg me"'),
      'حبابِ خودش سمتِ خودش می‌نشیند');
   ok(pg.chat.innerHTML.includes('data-act="chat-del"'), 'پیامِ خودش دکمهٔ پاک کردن دارد');
+  ok(pg.chat.innerHTML.includes('✓ رسید') && !pg.chat.innerHTML.includes('✓✓'), 'پیامِ رفته «✓ رسید» دارد، نه «دیده شد»');
+  ok(pg.chat.innerHTML.includes('class="chat-day"'), 'جداکنندهٔ روز بالای پیام‌ها هست');
+
+  // صاحبِ پمپ خواند ⇒ ✓✓ از خودِ ‎ownerSeenSeq‎ِ سرور
+  ownerSeen = seq;
+  pg.click('chat-close'); await settle();
+  pg.click('chat-open'); await settle();
+  ok(pg.chat.innerHTML.includes('✓✓ دیده شد'), 'وقتی صاحبِ پمپ خواند، «✓✓ دیده شد» می‌آید');
+
+  // پیامی که نرفت ⇒ متن در کادر می‌ماند و گفته می‌شود
+  postFail = true;
+  pg.chat.querySelector('#chatText').value = 'این نرود';
+  pg.click('chat-send'); await settle();
+  ok(pg.chat.innerHTML.includes('value="این نرود"'), 'متنِ پیامی که نرفت در کادر برمی‌گردد');
+  ok(pg.chat.innerHTML.includes('class="chat-err"'), 'نرفتن بی‌صدا نیست');
+  postFail = false;
+  pg.chat.querySelector('#chatText').value = '';
 
   pg.click('chat-del', 'msg2');
   await settle();
@@ -300,6 +319,7 @@ console.log('\n۱۱) چتِ پشتیبانی — «داخلِ کیو‌آر یک
   pg.click('chat-open'); await settle();
   ok(pg.chat.innerHTML.includes('/chat/media/medX?k=abc123') && pg.chat.innerHTML.includes('<img'),
      'عکسِ پمپ از همان درِ رمزدار نشان داده می‌شود');
+  ok(/<img[^>]*data-act="chat-img"/.test(pg.chat.innerHTML), 'عکس با ضربه بزرگ می‌شود (چت-img)');
   ok(!calls.some((c) => c.url.includes('LIVE_API') || !c.url.startsWith('https://api.vill3n.top/')),
      'همهٔ درخواست‌ها به نشانیِ قفل‌شدهٔ ابر می‌روند');
 

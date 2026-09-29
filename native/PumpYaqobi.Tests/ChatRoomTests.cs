@@ -362,4 +362,23 @@ public sealed class ChatRoomTests : IDisposable
         // سه ستونِ صفحه‌قد «panel»اند (سایهٔ بی‌محو)، نه «card»ِ محو
         Assert.DoesNotContain("Classes=\"card\"", xaml);
     }
+    [Fact]
+    public void Resid_DideShod_VaPishnevisBarMigardad()
+    {
+        var root = SrcRoot();
+        var vm = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "Sections", "ChatSectionViewModel.cs"));
+        var cloud = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Services", "CloudLink.cs"));
+        var state = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Services", "SupportState.cs"));
+        var ctl = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Themes", "Controls.axaml"));
+        var xaml = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "ChatSectionView.axaml"));
+        // ✓✓ از «دیده‌شدهٔ مشتری»ی خودِ سرور است، نه حدس
+        Assert.Contains("Num(t, \"custSeenSeq\")", cloud);
+        Assert.Contains("CustSeenSeq", state);
+        Assert.Contains("\"✓✓ دیده شد\"", vm);
+        Assert.Contains("r.Seq <= st.CustSeenSeq", vm);
+        // پیامی که نرفت، متنش در کادر برمی‌گردد
+        Assert.Contains("if (string.IsNullOrEmpty(Draft)) Draft = text;", vm);
+        Assert.Contains("TextBlock.receipt", ctl);
+        Assert.Contains("Classes=\"receipt\"", xaml);
+    }
 }

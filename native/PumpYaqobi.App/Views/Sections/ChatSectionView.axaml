@@ -184,10 +184,14 @@
                                      Foreground="{DynamicResource Pump.Muted}" IsVisible="{Binding Deleted}" />
                           <TextBlock Text="🗃 این رسانه روی سرور منقضی شده بود" FontSize="12" FontStyle="Italic"
                                      Foreground="{DynamicResource Pump.Muted}" IsVisible="{Binding Gone}" />
-                          <Border CornerRadius="10" ClipToBounds="True" IsVisible="{Binding IsImage}"
-                                  HorizontalAlignment="Left">
-                            <Image Source="{Binding Image}" MaxWidth="320" MaxHeight="320" Stretch="Uniform" />
-                          </Border>
+                          <Button Classes="ghost" Padding="0" IsVisible="{Binding IsImage}" HorizontalAlignment="Left"
+                                  ToolTip.Tip="باز کردنِ عکس در اندازهٔ کامل"
+                                  Command="{Binding $parent[ItemsControl].((vm:ChatSectionViewModel)DataContext).OpenMediaCommand}"
+                                  CommandParameter="{Binding}">
+                            <Border CornerRadius="10" ClipToBounds="True">
+                              <Image Source="{Binding Image}" MaxWidth="320" MaxHeight="320" Stretch="Uniform" />
+                            </Border>
+                          </Button>
                           <Button Classes="ghost" Content="{Binding MediaLabel}" IsVisible="{Binding IsMedia}"
                                   Command="{Binding $parent[ItemsControl].((vm:ChatSectionViewModel)DataContext).OpenMediaCommand}"
                                   CommandParameter="{Binding}" Padding="10,4" HorizontalAlignment="Left" />
@@ -196,6 +200,8 @@
                             <TextBlock Text="⏳ در صف" FontSize="10.5" IsVisible="{Binding IsPending}"
                                        Foreground="{DynamicResource Pump.Ink.Warn}" />
                             <TextBlock Text="{Binding DaysLeft}" FontSize="10.5" Foreground="{DynamicResource Pump.Muted}" />
+                            <TextBlock Text="{Binding Receipt}" FontSize="10.5" IsVisible="{Binding HasReceipt}"
+                                       Classes.seen="{Binding Seen}" Classes="receipt" />
                           </StackPanel>
                         </StackPanel>
                         <StackPanel Grid.Column="1" VerticalAlignment="Top" Spacing="2" Margin="6,0,0,0">

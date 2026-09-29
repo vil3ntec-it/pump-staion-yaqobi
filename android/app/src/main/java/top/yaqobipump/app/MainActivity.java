@@ -16,7 +16,6 @@ import android.webkit.JavascriptInterface;
 import android.webkit.MimeTypeMap;
 import android.webkit.URLUtil;
 import android.webkit.PermissionRequest;
-import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -122,23 +121,6 @@ public class MainActivity extends Activity {
       public void onPermissionRequest(final PermissionRequest request) {
         runOnUiThread(() -> request.grant(request.getResources()));
       }
-      /**
-       * 📎 پیوستِ گروهِ کارکنان: ‎<input type=file>‎ در وب‌ویو بی این هیچ پنجره‌ای
-       * باز نمی‌کرد. همان گزینش‌گرِ خودِ اندروید (عکس و ویدیو)، بی هیچ کتابخانه.
-       */
-      @Override
-      public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> cb, FileChooserParams params) {
-        if (fileCb != null) fileCb.onReceiveValue(null);
-        fileCb = cb;
-        try {
-          startActivityForResult(params.createIntent(), FILE_REQ);
-        } catch (Exception e) {
-          fileCb = null;
-          cb.onReceiveValue(null);
-          return false;
-        }
-        return true;
-      }
       /** درصدِ واقعیِ بار شدنِ صفحه — تا ۸۵٪ِ نوار، بقیه‌اش دستِ خودِ برنامه است */
       @Override
       public void onProgressChanged(WebView v, int p) {
@@ -154,27 +136,14 @@ public class MainActivity extends Activity {
     web.postDelayed(this::hideSplash, SPLASH_MAX_MS);
   }
 
+  /** وب‌ویوی ورقِ چاپ — تا پایانِ چاپ زنده بماند، وگرنه ورق نیمه‌کاره گم می‌شود. */
+  private WebView printWeb;
+
   /**
    * صفحهٔ لودینگ — بدونِ فایلِ layout ساخته می‌شود تا هیچ وابستگیِ تازه‌ای به
    * پروژه اضافه نشود. نوارش «تعیین‌شده» است، نه چرخانِ بی‌پایان: عددش همان
    * چیزی است که واقعاً بار شده.
    */
-  private static final int FILE_REQ = 7102;
-  /** وب‌ویوی ورقِ چاپ — تا پایانِ چاپ زنده بماند، وگرنه ورق نیمه‌کاره گم می‌شود. */
-  private WebView printWeb;
-  private ValueCallback<Uri[]> fileCb;
-
-  @Override
-  protected void onActivityResult(int req, int res, Intent data) {
-    if (req == FILE_REQ) {
-      ValueCallback<Uri[]> cb = fileCb;
-      fileCb = null;
-      if (cb != null) cb.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(res, data));
-      return;
-    }
-    super.onActivityResult(req, res, data);
-  }
-
   private View buildSplash() {
     LinearLayout box = new LinearLayout(this);
     box.setOrientation(LinearLayout.VERTICAL);

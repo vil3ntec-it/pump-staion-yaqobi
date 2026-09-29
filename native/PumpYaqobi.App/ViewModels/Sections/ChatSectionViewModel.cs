@@ -28,16 +28,24 @@ public sealed partial class ChatMessageViewModel : ObservableObject
     public ChatMessageViewModel(string sender, string text, string time, bool mine, bool pending = false,
                                 string id = "", string kind = "text", string? mediaId = null, bool deleted = false,
                                 string key = "", string role = "", bool trashed = false, string daysLeft = "",
-                                long at = 0)
+                                long at = 0, string receipt = "")
     {
         Sender = sender; Text = text; Time = time; Mine = mine; Id = id; Kind = kind; MediaId = mediaId;
-        Key = key; Role = role; Trashed = trashed; DaysLeft = daysLeft; At = at;
+        Key = key; Role = role; Trashed = trashed; DaysLeft = daysLeft; At = at; Receipt = receipt;
         _isPending = pending;
         _deleted = deleted;
     }
 
     /// <summary>کلیدِ همین پیام در ‎ChatStore‎.</summary>
     public string Key { get; }
+
+    /// <summary>
+    /// «✓ رسید» یا «✓✓ دیده شد» — فقط زیرِ پیامِ خودم به مشتریِ کیو‌آر، از روی
+    /// ‎cust_seen_seq‎ی خودِ سرورِ حساب. گروه و پشتیبانی خالی.
+    /// </summary>
+    public string Receipt { get; }
+    public bool HasReceipt => Receipt.Length > 0;
+    public bool Seen => Receipt.StartsWith("✓✓", StringComparison.Ordinal);
 
     /// <summary>زمانِ پیام (میلی‌ثانیه) — برای جداکنندهٔ روز.</summary>
     public long At { get; }
@@ -311,8 +319,24 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
     [ObservableProperty] private int _audioCount;
 
     public bool CanRecord => WaveRecorder.Available;
-    public string RecordText => Recording ? "⏹ پایان و فرستادن" : "🎤";
-    partial void OnRecordingChanged(bool v) => OnPropertyChanged(nameof(RecordText));
+    /// <summary>«⏹ ۰:۰۷ — پایان و فرستادن» — ساعتِ ضبط هر ثانیه جلو می‌رود.</summary>
+    public string RecordText => Recording
+        ? "⏹ " + (int)_recWatch.Elapsed.TotalMinutes + ":" + _recWatch.Elapsed.Seconds.ToString("00") + " — پایان و فرستادن"
+        : "🎤";
+    private readonly Stopwatch _recWatch = new();
+    private DispatcherTimer? _recTick;
+    partial void OnRecordingChanged(bool v)
+    {
+        if (v)
+        {
+            _recWatch.Restart();
+            _recTick ??= new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background,
+                (_, _) => OnPropertyChanged(nameof(RecordText)));
+            _recTick.Start();
+        }
+        else { _recWatch.Stop(); _recTick?.Stop(); }
+        OnPropertyChanged(nameof(RecordText));
+    }
 
     public bool HasSupportUnread => SupportUnread > 0;
     partial void OnSupportUnreadChanged(int v) => OnPropertyChanged(nameof(HasSupportUnread));
@@ -634,7 +658,13 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
         _store!.Upsert(new ChatRow(key, SupportId, 0, Me, text, "text", null, true, Now, Pending: true));
         Reload(th);
         var r = await cloud.SupportSendAsync(text, _life.Token);
-        if (!r.Ok) { State = "نرفت: " + r.Why; _host.Toast("پیام به پشتیبانی نرفت: " + r.Why, ToastKind.Error); return; }
+        if (!r.Ok)
+        {
+            _store.Delete(key);
+            if (string.IsNullOrEmpty(Draft)) Draft = text;      // ⛔ متنِ نرفته گم نمی‌شود
+            Reload(th);
+            State = "نرفت: " + r.Why; _host.Toast("پیام به پشتیبانی نرفت: " + r.Why, ToastKind.Error); return;
+        }
         _store.Delete(key);
         State = "";
         await PollSupportDeskAsync(cloud, _life.Token);
@@ -647,7 +677,12 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
         if (cloud is null || th.Acct is null) { State = "برنامه به سرورِ حساب وصل نیست"; return; }
         State = "در حالِ فرستادن…";
         var (ok, msg, why) = await cloud.ChatSendAsync(th.Acct, OwnerName, text, kind, mediaId, _life.Token);
-        if (!ok || msg is null) { State = "نرفت: " + why; _host.Toast("پیام فرستاده نشد: " + why, ToastKind.Error); return; }
+        if (!ok || msg is null)
+        {
+            //  ⛔ متنِ نرفته گم نمی‌شود — به کادرِ نوشتن برمی‌گردد تا دوباره بفرستید
+            if (kind.Length == 0 && text.Length > 0 && string.IsNullOrEmpty(Draft)) Draft = text;
+            State = "نرفت: " + why; _host.Toast("پیام فرستاده نشد: " + why, ToastKind.Error); return;
+        }
         State = "";
         _support.Merge(new[] { msg });
         Keep(msg);
@@ -1076,15 +1111,16 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
         for (var i = 0; i < rows.Count; i++)
         {
             var r = rows[i];
+            var receipt = ReceiptOf(th, r);
             if (byKey.TryGetValue(r.Key, out var vm) && vm.Deleted == r.Deleted && vm.IsPending == r.Pending
-                && vm.Text == r.Text)
+                && vm.Text == r.Text && vm.Receipt == receipt)
                 continue;
             var bubble = new ChatMessageViewModel(r.Sender, r.Deleted ? "" : r.Text, TimeOf(r.At), r.Mine, r.Pending,
                 id: r.Key.StartsWith("cloud:", StringComparison.Ordinal) ? r.Key[6..] : "",
                 kind: r.Kind, mediaId: r.MediaId, deleted: r.Deleted, key: r.Key,
                 role: th.IsGroup ? RoleOf(r) : "", trashed: r.TrashedAt > 0,
                 daysLeft: Shamsi.Money(ChatStore.DaysLeft(r.Anchor, r.TrashedAt, now)) + " روز مانده",
-                at: r.At);
+                at: r.At, receipt: receipt);
             if (vm is not null)
             {
                 var at = th.Messages.IndexOf(vm);
@@ -1109,6 +1145,13 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
     {
         if (r.Mine) return new GroupMessage(0, "", "", MyRole, "x", 0).RoleText;
         return "";
+    }
+
+    /// <summary>✓/✓✓ زیرِ پیامِ خودم به مشتری — از ‎cust_seen_seq‎ی سرور، نه حدس.</summary>
+    private string ReceiptOf(ChatThreadViewModel th, ChatRow r)
+    {
+        if (!th.IsCustomer || th.Acct is null || !r.Mine || r.Pending || r.Deleted || r.Seq <= 0) return "";
+        return _support.TryGet(th.Acct, out var st) && r.Seq <= st.CustSeenSeq ? "✓✓ دیده شد" : "✓ رسید";
     }
 
     private int UnreadOf(ChatThreadViewModel th, List<ChatRow> rows)

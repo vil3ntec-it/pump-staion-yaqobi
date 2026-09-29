@@ -17,7 +17,6 @@ on:
       - 'tools/check-kar-ui.mjs'
       - 'tools/check-view.mjs'
       - 'tools/check-view-buttons.mjs'
-      - 'tools/check-kar-group-media.mjs'
       - 'tools/check-kar-print.mjs'
       - '.github/workflows/test-kar.yml'
   push:
@@ -30,7 +29,6 @@ on:
       - 'tools/check-kar-ui.mjs'
       - 'tools/check-view.mjs'
       - 'tools/check-view-buttons.mjs'
-      - 'tools/check-kar-group-media.mjs'
       - 'tools/check-kar-print.mjs'
       - '.github/workflows/test-kar.yml'
 
@@ -56,7 +54,5 @@ jobs:
       # هر دکمهٔ صفحهٔ کیو‌آر با کلیکِ واقعی — چت، پیوست، ضبطِ صدا، فیلترها، چاپ
       - name: دکمه‌های صفحهٔ کیو‌آر
         run: node tools/check-view-buttons.mjs
-      - name: رسانهٔ گروهِ کارکنان در اپِ گوشی (کرومیوم)
-        run: node tools/check-kar-group-media.mjs
       - name: PDF و چاپِ اپِ گوشی — همان ورقِ برنامهٔ کامپیوتر
         run: node tools/check-kar-print.mjs
