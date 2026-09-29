@@ -249,8 +249,22 @@ public sealed partial class CompanyPageViewModel : ObservableObject, IRowBatchHo
                 case "buy-petrol": _ = OpenPurchasesAsync("petrol"); break;
                 case "buy-diesel": _ = OpenPurchasesAsync("diesel"); break;
             }
-            Action = Actions[0];      // ‎this.selectedIndex = 0‎ی سایت
         }
+        finally { _actionBusy = false; }
+        // ⛔ برگشت به «☰ کارها» یک تیک بعد (۱۴۰۵/۰۷/۱۷). نوشتنِ همین خاصیت
+        // داخلِ خبرِ عوض شدنِ خودش را کادرِ کشویی نمی‌گیرد (وسطِ نشاندنِ
+        // انتخابِ خودش است)، پس «📋 جدول جدید» روی کادر انتخاب‌شده می‌ماند و
+        // اگر پرسش «نه» می‌گرفت، زدنِ دوباره‌اش هیچ خبری نمی‌ساخت — همان
+        // «دوباره نمی‌آورد». ‎this.selectedIndex = 0‎ی سایت همین است.
+        Avalonia.Threading.Dispatcher.UIThread.Post(ResetAction);
+    }
+
+    /// <summary>کادرِ «کارها» را به «☰ کارها — انتخاب کنید…» برمی‌گرداند.</summary>
+    internal void ResetAction()
+    {
+        if (Actions.Count == 0 || ReferenceEquals(Action, Actions[0])) return;
+        _actionBusy = true;
+        try { Action = Actions[0]; }
         finally { _actionBusy = false; }
     }
 
@@ -650,36 +664,25 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
     /// خواستهٔ صاحب ریپو: «جستجوی خرید صفحهٔ جدا باز می‌کند و جزئیات می‌پرسد؛
     /// می‌خواهم همان‌جا بنویسم و اگر پیدا شد، ببرد سرِ همان خرید در هر حسابی
     /// که هست.» پس یک کادر: عدد ⇐ مقدار (کیلو یا تن)، تاریخ ⇐ تاریخ.
-    ///   • یک مورد ⇐ همان لحظه می‌رود سرش (‎GoToAsync‎ی همیشگی).
-    ///   • چند مورد ⇐ همان فهرستِ همیشگی با نتیجه‌ها (چون باید یکی را برگزید).
-    ///   • هیچ ⇐ توست، و هیچ صفحه‌ای باز نمی‌شود.
+    ///   ⛔ از ۱۴۰۵/۰۷/۱۷ نتیجه‌ها همیشه در صفحهٔ جستجو فهرست می‌شوند (با تاریخ،
+    ///   تن و نامِ شرکت) و کادرِ خالی همان صفحه را با سربرگِ راهنما باز می‌کند.
+    ///   «رفتن» روی هر نتیجه همان ‎GoToAsync‎ی همیشگی است.
     /// ⛔ قاعدهٔ یافتن دوباره نوشته نشد — همان ‎CompanyPurchaseService.Search‎.
     /// ⛔ فقط می‌خواند.
     /// </summary>
     public Task FindInlineAsync(string? text) => CrashGuard.RunAsync("جستجوی خرید", async () =>
     {
-        //  «٫» ممیزِ فارسی است (۱۴۰۵/۰۷/۱۶) — پیش از این «۱٫۵» عددِ ۱۵ خوانده می‌شد
+        //  ⛔ همیشه صفحهٔ جستجو باز می‌شود، با سربرگِ راهنما و فهرستِ نتیجه‌ها
+        //  (۱۴۰۵/۰۷/۱۷). پیش از این یک نتیجه همان لحظه به حسابی می‌پرید و کاربر
+        //  نمی‌دید «تاریخ کی بود، چند تن بود یا مالِ کدام شرکت بود». ⛔ قاعدهٔ
+        //  یافتن دوباره نوشته نشد — همان ‎CompanyPurchaseService.Search‎. فقط می‌خواند.
+        //  «٫» ممیزِ فارسی است (۱۴۰۵/۰۷/۱۶).
         var raw = Shamsi.ToEnDigits(text ?? "").Trim().Replace('٫', '.');
-        if (raw.Length == 0) { _host.Toast("مقدار (کیلو یا تن) یا تاریخِ خرید را بنویسید", ToastKind.Warn); return; }
-        var isDate = raw.Contains('/') || raw.Count(ch => ch == '-') >= 2;
-        decimal? qty = null;
-        if (!isDate && decimal.TryParse(new string(raw.Where(ch => char.IsDigit(ch) || ch == '.').ToArray()),
-                System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var q))
-            qty = q;
-        if (!isDate && qty is null) { _host.Toast("یک عدد (مقدار) یا یک تاریخ بنویسید", ToastKind.Warn); return; }
-
-        var purchases = await _host.StorageData.AllPurchasesAsync();
-        var companies = await _host.Companies.ListAsync();
-        var arcs = (await _host.Companies.AllArchivesAsync())
-                   .Select(h => (h, (IReadOnlyList<CompanyRow>)CompanyDataService.ArchiveRows(h))).ToList();
-        var hits = _host.CompanyPurchases.Search(purchases, companies, arcs, qty, isDate ? raw : "", null, null);
-
-        if (hits.Count == 0) { _host.Toast("پیدا نشد — با «" + raw + "» هیچ خریدی ثبت نشده است", ToastKind.Warn); return; }
-        if (hits.Count == 1) { await GoToAsync(hits[0]); return; }
-
         var sp = new CompanySearchPageViewModel(_host, null, this);
-        if (isDate) sp.DateText = raw; else sp.QtyText = raw;
         Overlay = sp;
+        if (raw.Length == 0) return;
+        var isDate = raw.Contains('/') || raw.Count(ch => ch == '-') >= 2;
+        if (isDate) sp.DateText = raw; else sp.QtyText = raw;
         await sp.RunCommand.ExecuteAsync(null);
     });
 

@@ -173,6 +173,11 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- keys17
 
+      # ══ حسابِ فرعی · «جدول جدید» پس از «نه» · جستجوی خرید · ثقلت ══
+      - name: سنجشِ حسابِ فرعی، کشوییِ کارها، جستجوی خرید و فرمِ خرید
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- owner17b
+
       # ══ رسیدِ سربرگِ قرض‌دار: ردیف ساخته شود و به حسابِ دیگر سرایت نکند ══
       - name: سنجشِ رسیدِ سربرگ
         working-directory: native

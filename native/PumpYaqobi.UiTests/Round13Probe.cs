@@ -159,7 +159,14 @@ internal static class Round13Probe
         cs.FindText = "1000";
         Wait(win, cs.FindCommand.ExecuteAsync(null));
         Settle(win);
-        Check("«۱۰۰۰» ⇐ همان لحظه حسابِ «شرکتِ آزمون» باز شد", cs.Page?.Name == "شرکتِ آزمون", cs.Page?.Name ?? "—");
+        //  ⛔ از ۱۴۰۵/۰۷/۱۷ نتیجه‌ها فهرست می‌شوند (تاریخ، تن، شرکت) و «رفتن» سرش می‌برد
+        var sp = cs.Overlay as CompanySearchPageViewModel;
+        var hit = sp?.Results.FirstOrDefault(r => r.CompanyText.Contains("شرکتِ آزمون"));
+        Check("«۱۰۰۰» ⇐ صفحهٔ جستجو با نتیجهٔ «شرکتِ آزمون»، تاریخ و تن", hit is not null
+              && hit.TonText.Contains("1,000 کیلو") && hit.DateText.Contains("تاریخ"),
+              hit is null ? (cs.Overlay?.GetType().Name ?? "—") : hit.CompanyText + " · " + hit.TonText + " · " + hit.DateText);
+        if (hit is not null) { Wait(win, hit.GoCommand.ExecuteAsync(null)); Settle(win); }
+        Check("«رفتن» ⇐ حسابِ «شرکتِ آزمون»", cs.Page?.Name == "شرکتِ آزمون", cs.Page?.Name ?? "—");
         Check("و صفحهٔ خریدهای همان حساب، با همان خرید", cs.Overlay is CompanyPurchasesPageViewModel,
               cs.Overlay?.GetType().Name ?? "—");
         Shot(win, shots, "05b-company-find");

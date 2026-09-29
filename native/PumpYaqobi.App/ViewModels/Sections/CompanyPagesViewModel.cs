@@ -598,9 +598,14 @@ public sealed partial class PurchaseHitViewModel : ObservableObject
         _page = page; Hit = h;
         FuelText = h.Fuel == FuelType.Diesel ? "🟤 دیزل" : "⛽ پطرول";
         FuelBrushKey = h.Fuel == FuelType.Diesel ? "Pump.Warn" : "Pump.Ok";
-        DateText = "📅 " + (h.Date.Length > 0 ? h.Date : "—") + " · " + h.Where;
+        //  ⛔ هر نتیجه سه چیز را صریح می‌گوید (۱۴۰۵/۰۷/۱۷): کی (تاریخ)، چقدر (تن و
+        //  کیلو) و مالِ کدام شرکت — «نمی‌گوید تاریخ کی بود یا چند تن بود یا برای
+        //  کدام شرکت بود».
+        DateText = "📅 تاریخ: " + (h.Date.Length > 0 ? h.Date : "—");
+        WhereText = h.Where;
+        CompanyText = "🏢 شرکت: " + (h.CompanyName.Length > 0 ? h.CompanyName : "— به حسابِ هیچ شرکتی وصل نیست");
         var kg = Math.Round(h.Ton * 1000m, 0, MidpointRounding.AwayFromZero);
-        TonText = Shamsi.Money(kg / 1000m, 3) + " تن";
+        TonText = "⚖️ " + Shamsi.Money(kg / 1000m, 3) + " تن · " + Shamsi.Money(kg) + " کیلو";
         UsdText = Shamsi.Money(Math.Round(h.Usd, 0, MidpointRounding.AwayFromZero)) + " $";
         AfnText = Shamsi.Money(Math.Round(h.Afn, 0, MidpointRounding.AwayFromZero)) + " افغانی";
         GoText = h.IsPurchase ? "↗ رفتن به خریدهای " + (h.Fuel == FuelType.Diesel ? "دیزل" : "پطرول") : "↗ رفتن به این جدول";
@@ -611,6 +616,8 @@ public sealed partial class PurchaseHitViewModel : ObservableObject
     public string FuelText { get; }
     public string FuelBrushKey { get; }
     public string DateText { get; }
+    public string WhereText { get; }
+    public string CompanyText { get; }
     public string TonText { get; }
     public string UsdText { get; }
     public string AfnText { get; }
@@ -644,6 +651,15 @@ public sealed partial class CompanySearchPageViewModel : ObservableObject
         var c = await _host.Companies.LoadAsync(_companyId.Value);
         if (c is not null) ScopeText = "در خریدها و جدول‌های «" + c.Name + "»";
     }
+
+    /// <summary>
+    /// سربرگِ راهنما — «روی جستجو که می‌زنم هدری باز شود که بگوید فلان را وارد کن».
+    /// </summary>
+    public string GuideText =>
+        "📝 برای پیدا کردنِ یک خرید، دستِ‌کم یکی را بنویسید:\n"
+        + "   ⚖️ مقدار — به کیلو (مثلاً 12300) یا به تن (مثلاً 12.3)\n"
+        + "   📅 تاریخ — روزِ کامل (1405/5/12)، یا فقط سال و ماه (1405/5)\n"
+        + "هر نتیجه می‌گوید کی بوده، چند تن بوده و مالِ کدام شرکت است.";
 
     [ObservableProperty] private string _scopeText = "";
     [ObservableProperty] private string _qtyText = "";

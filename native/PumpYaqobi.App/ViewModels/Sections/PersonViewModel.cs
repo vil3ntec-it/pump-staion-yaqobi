@@ -990,6 +990,57 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         }
     }
 
+    // ══ شماره تماس و «فیِ خرید» — مالِ همین حساب (۱۴۰۵/۰۷/۱۷) ═════════════
+    //
+    // ⛔ «حسابِ فرعی و اصلی نباید هیچ چیزی مشترک داشته باشند.» حسابِ اصلی از
+    // ‎Debtor.Phone‎ی خودِ شخص می‌خواند (همان که کارت، جست‌وجو و «قرض‌های
+    // کهنه» نشان می‌دهند) و هر فرعی از ستونِ خودش. هیچ‌کدام روی دیگری
+    // نمی‌نویسد.
+
+    public string PhoneText
+    {
+        get => (Entity.IsMain ? _person.Entity.Phone : Entity.Phone) ?? "";
+        set
+        {
+            var v = (value ?? "").Trim();
+            var n = v.Length == 0 ? null : v;
+            if (Entity.IsMain)
+            {
+                _person.Entity.Phone = n;
+                SaveGuard.Watch(_host.Debtors.UpdateDebtorAsync(_person.Entity), "مشخصاتِ قرض‌دار");
+            }
+            else
+            {
+                Entity.Phone = n;
+                SaveGuard.Watch(_host.Debtors.UpdateAccountAsync(Entity), "حسابِ قرض‌دار");
+            }
+            OnPropertyChanged(nameof(PhoneText));
+            _person.AccountInfoChanged(this);
+        }
+    }
+
+    public string BuyFeeText
+    {
+        get => (Entity.IsMain ? _person.Entity.BuyFeeNote : Entity.BuyFeeNote) ?? "";
+        set
+        {
+            var v = (value ?? "").Trim();
+            var n = v.Length == 0 ? null : v;
+            if (Entity.IsMain)
+            {
+                _person.Entity.BuyFeeNote = n;
+                SaveGuard.Watch(_host.Debtors.UpdateDebtorAsync(_person.Entity), "مشخصاتِ قرض‌دار");
+            }
+            else
+            {
+                Entity.BuyFeeNote = n;
+                SaveGuard.Watch(_host.Debtors.UpdateAccountAsync(Entity), "حسابِ قرض‌دار");
+            }
+            OnPropertyChanged(nameof(BuyFeeText));
+            _person.AccountInfoChanged(this);
+        }
+    }
+
     /// <summary>سپردهٔ پولِ همین حساب — خالی یعنی چیزی نوشته نشده.</summary>
     public string MoneyDepositText
     {
@@ -1210,46 +1261,46 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
 
     public Debtor Entity { get; private set; }
     public string Name => Entity.Name ?? "";
-    public string Phone => Entity.Phone ?? "";
+    /// <summary>شمارهٔ تماسِ حسابِ جلوی چشم — نه شمارهٔ شخص (۱۴۰۵/۰۷/۱۷).</summary>
+    public string Phone => Current?.PhoneText ?? Entity.Phone ?? "";
 
     // ══ «📞 شماره تماس» و «📝 فیِ خرید» — دو کادرِ نوارِ حساب ═══════════════
     //
-    // هر دو در سایت داخلِ ‎.pm-acct-bar‎اند (‎#pm-phone‎ و ‎#pm-buyfee‎) و هر دو
-    // در برنامهٔ نیتیو فقط خوانده می‌شدند: شماره زیرِ نامِ شخص چاپ می‌شد و
-    // «فیِ خرید» با آن‌که ‎Debtor.BuyFeeNote‎ از اول در دیتابیس بود، هیچ‌جا
-    // دیده و نوشته نمی‌شد.
-    //
-    // ⚠️ «فیِ خرید» فقط یادداشت است — در هیچ محاسبه‌ای نیست. همان جمله‌ای که
-    // خودِ سایت روی ‎title‎ی این کادر نوشته.
+    // ⛔ مالِ همان حسابی‌اند که جلوی چشم است (<see cref="AccountViewModel.PhoneText"/>)،
+    // نه مالِ شخص: حسابِ اصلی و فرعی دیگر هیچ کادری را با هم شریک نیستند.
+    // ⚠️ «فیِ خرید» فقط یادداشت است — در هیچ محاسبه‌ای نیست.
 
     public string PhoneText
     {
-        get => Entity.Phone ?? "";
-        set
-        {
-            var v = (value ?? "").Trim();
-            Entity.Phone = v.Length == 0 ? null : v;
-            SaveGuard.Watch(_host.Debtors.UpdateDebtorAsync(Entity), "مشخصاتِ قرض‌دار");
-            OnPropertyChanged(nameof(PhoneText));
-            OnPropertyChanged(nameof(Phone));
-        }
+        get => Current?.PhoneText ?? "";
+        set { if (Current is { } c) c.PhoneText = value; }
     }
 
     public string BuyFeeText
     {
-        get => Entity.BuyFeeNote ?? "";
-        set
-        {
-            var v = (value ?? "").Trim();
-            Entity.BuyFeeNote = v.Length == 0 ? null : v;
-            SaveGuard.Watch(_host.Debtors.UpdateDebtorAsync(Entity), "مشخصاتِ قرض‌دار");
-            OnPropertyChanged(nameof(BuyFeeText));
-        }
+        get => Current?.BuyFeeText ?? "";
+        set { if (Current is { } c) c.BuyFeeText = value; }
+    }
+
+    internal void AccountInfoChanged(AccountViewModel a)
+    {
+        if (!ReferenceEquals(a, Current)) return;
+        OnPropertyChanged(nameof(PhoneText));
+        OnPropertyChanged(nameof(BuyFeeText));
+        OnPropertyChanged(nameof(Phone));
     }
 
     public ObservableCollection<AccountViewModel> Accounts { get; } = new();
 
     [ObservableProperty] private AccountViewModel? _current;
+
+    // حسابِ دیگر ⇒ شماره و «فیِ خرید»ِ همان حساب
+    partial void OnCurrentChanged(AccountViewModel? value)
+    {
+        OnPropertyChanged(nameof(PhoneText));
+        OnPropertyChanged(nameof(BuyFeeText));
+        OnPropertyChanged(nameof(Phone));
+    }
     [ObservableProperty] private string _moneyText = "";
     [ObservableProperty] private string _petrolText = "";
     [ObservableProperty] private string _dieselText = "";
