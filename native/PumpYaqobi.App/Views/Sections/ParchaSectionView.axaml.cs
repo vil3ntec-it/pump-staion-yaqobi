@@ -2,6 +2,8 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.VisualTree;
+using System.Linq;
 using PumpYaqobi.App.Controls;
 using PumpYaqobi.App.ViewModels.Sections;
 
@@ -35,10 +37,28 @@ public partial class ParchaSectionView : UserControl
     private void OnKeys(object? sender, KeyEventArgs e)
     {
         if (DataContext is not ParchaSectionViewModel vm || !vm.ShowMain) return;
+        var focused = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() as Control;
+
+        //  ══ Ctrl+Tab ⇒ کارتِ روز ⇄ کارتِ شب (۱۴۰۵/۰۷/۱۷، دوم) ══════════════
+        //  همان لحظهٔ فشار؛ Ctrl نگه‌داشته و هر Tab یک بار — به‌جای Ctrl+۱/۲ که با
+        //  رها کردنِ کلید کار می‌کرد. ⛔ هیچ داده‌ای عوض نمی‌شود، فقط جای نوشتن.
+        if (e.Key == Key.Tab && e.KeyModifiers.HasFlag(KeyModifiers.Control)
+            && !e.KeyModifiers.HasFlag(KeyModifiers.Alt))
+        {
+            bool In(string card) => focused is not null && this.FindControl<ContentControl>(card) is { } c
+                                    && (ReferenceEquals(focused, c) || focused.GetVisualAncestors().Contains(c));
+            //  در روز ⇒ شب · در شب ⇒ روز · هیچ‌کدام ⇒ روز
+            var target = this.FindControl<ContentControl>(In("DayCard") ? "NightCard" : "DayCard");
+            var box = target?.GetVisualDescendants().OfType<TextBox>()
+                             .FirstOrDefault(t => t.IsEffectivelyVisible && t.IsEnabled && !t.IsReadOnly);
+            box?.Focus(NavigationMethod.Tab);
+            box?.SelectAll();
+            e.Handled = true;
+            return;
+        }
+
         if (e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Alt)) return;
         if (Suggest.Showing > 0) return;
-
-        var focused = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() as Control;
 
         if (e.Key == Key.Tab)
         {

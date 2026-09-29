@@ -1254,12 +1254,33 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
         Current = Accounts.FirstOrDefault();
         foreach (var a in Accounts) { _ = a.LoadArchiveCountAsync(); _ = a.LoadInvoicesAsync(); }
 
-        foreach (var n in new[] { nameof(Name), nameof(Phone), nameof(PhoneText), nameof(BuyFeeText) })
+        foreach (var n in new[] { nameof(Name), nameof(Phone), nameof(PhoneText), nameof(BuyFeeText), nameof(NoAlerts) })
             OnPropertyChanged(n);
         Recalc();
     }
 
     public Debtor Entity { get; private set; }
+
+    /// <summary>
+    /// ══ 🔕 «بی‌هشدار» — حسابِ خودِ صاحبِ پمپ (۱۴۰۵/۰۷/۱۷) ══════════════════════
+    /// «من خودم صاحب پمپم و پول می‌گیرم… نمی‌خوام روی حسابم هشداری بیاد… کاری کن
+    /// معافیت داشته باشه، و ربات تلگرام و هشدار دیوانه‌ام نکنه.» مالِ خودِ شخص
+    /// است (همهٔ حساب‌هایش)، و فقط <see cref="StationSnapshot.Alerts"/> را می‌بندد —
+    /// هیچ عدد و حسابی عوض نمی‌شود.
+    /// </summary>
+    public bool NoAlerts
+    {
+        get => Entity.NoAlerts;
+        set
+        {
+            if (Entity.NoAlerts == value) return;
+            Entity.NoAlerts = value;
+            OnPropertyChanged();
+            SaveGuard.Watch(_host.Debtors.UpdateDebtorAsync(Entity), "بی‌هشدار");
+            _host.Toast(value ? "🔕 از این حساب دیگر هیچ هشداری نمی‌آید — نه زنگ، نه تلگرام"
+                              : "🔔 هشدارهای این حساب دوباره روشن شد", ToastKind.Info);
+        }
+    }
     public string Name => Entity.Name ?? "";
     /// <summary>شمارهٔ تماسِ حسابِ جلوی چشم — نه شمارهٔ شخص (۱۴۰۵/۰۷/۱۷).</summary>
     public string Phone => Current?.PhoneText ?? Entity.Phone ?? "";

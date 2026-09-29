@@ -204,6 +204,11 @@ internal static class BuyFormProbe
 
         //  «یادداشت» — همان لحظهٔ باز شدن، بی لغزاندنِ قاب، کامل دیده شود
         var inner = card.GetVisualDescendants().OfType<ScrollViewer>().First();
+        if (Environment.GetEnvironmentVariable("BUY_DBG") is { Length: > 0 })
+        {
+            var gridKids = ((Grid)card.Child!).Children.Select(c => $"{c.GetType().Name}:{c.Bounds.Height:0}");
+            Console.WriteLine($"      DBG card {card.Bounds.Height:0}/max {card.MaxHeight:0} · rows {string.Join(",", gridKids)} · extent {inner.Extent.Height:0} vp {inner.Viewport.Height:0}");
+        }
         var note = card.GetVisualDescendants().OfType<TextBox>()
                        .First(t => t.Watermark as string == "اختیاری");
         var nTop = note.TranslatePoint(default, inner)!.Value.Y;

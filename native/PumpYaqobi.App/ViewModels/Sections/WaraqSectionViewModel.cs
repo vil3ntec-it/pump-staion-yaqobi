@@ -417,7 +417,7 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
 }
 
 /// <summary>صفحهٔ یک ورق — شیفتِ روز و شب، پایه‌ها و ردیف‌های قرض/مصرف.</summary>
-public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost, ICtrlDigitHost
+public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost, ICtrlTabHost
 {
     private readonly AppHost _host;
     private readonly WaraqSectionViewModel _section;
@@ -455,14 +455,13 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
     private void SetNight(string? which) => IsNight = which == "night";
 
     /// <summary>
-    /// ‎Ctrl+1‎ ⇒ ورقِ روز · ‎Ctrl+2‎ ⇒ ورقِ شب (۱۴۰۵/۰۷/۱۷) — همان دو دکمهٔ «روز/شب».
-    /// عددِ دیگر همان «افزودنِ n ردیف» می‌ماند.
+    /// ‎Ctrl+Tab‎ ⇒ روز ⇄ شب (۱۴۰۵/۰۷/۱۷، دوم) — همان دو دکمهٔ «روز/شب»، هر فشار یک بار.
+    /// ‎Ctrl+عدد‎ دوباره همان «افزودنِ n ردیف» است.
     /// </summary>
-    public bool CtrlDigit(int n)
+    public bool CtrlTab()
     {
-        if (n == 1) { IsNight = false; return true; }
-        if (n == 2) { IsNight = true; return true; }
-        return false;
+        IsNight = !IsNight;
+        return true;
     }
 
     public void Load(WaraqEntry w)

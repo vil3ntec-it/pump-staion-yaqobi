@@ -221,6 +221,17 @@ public sealed class ShortcutService
             return;
         }
 
+        // ══ Ctrl+Tab → روز ⇄ شب (ورق) — همان لحظهٔ فشار، نه با رها کردن ═══════
+        // هر فشارِ Tab با Ctrl نگه‌داشته یک بار جابه‌جا می‌کند. صفحه‌ای که این
+        // قرارداد را ندارد (پارچه‌ها خودش در نمایش می‌گیرد) کلید را رد می‌کند.
+        if (e.Key == Key.Tab && ctrl && !alt)
+        {
+            if ((_vm.ActiveSection?.ActivePage as ICtrlTabHost
+                 ?? _vm.ActiveSection as ICtrlTabHost) is { } tabHost && tabHost.CtrlTab())
+                e.Handled = true;
+            return;
+        }
+
         // ══ Ctrl+P → پی‌دی‌افِ همین‌جا ══════════════════════════════════════
         // همان ترتیبِ اولویتِ ‎_kbPdfAction‎ی نسخهٔ وب: اول صفحهٔ بازِ درونِ بخش
         // (حسابِ شخص، صفحهٔ شرکت…) و اگر نبود، خودِ بخش. جایی که پی‌دی‌اف
@@ -363,11 +374,6 @@ public sealed class ShortcutService
         if (isCtrl)
         {
             var n = ParseBuf(ref _addBuf);
-            //  ⛔ بخشی که Ctrl+۱/۲ را خودش می‌خواهد (پارچه: پارچهٔ جدید · ورق: روز/شب)
-            //  اول پرسیده می‌شود؛ نخواست ⇒ همان «افزودنِ n ردیف».
-            if (n > 0 && (_vm.ActiveSection?.ActivePage as ICtrlDigitHost
-                          ?? _vm.ActiveSection as ICtrlDigitHost) is { } own && own.CtrlDigit(n))
-                return;
             if (n > 0) _ = CrashGuard.RunAsync("افزودنِ ردیف", () => AddRowsAsync(n));
         }
         else

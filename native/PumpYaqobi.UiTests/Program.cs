@@ -153,6 +153,7 @@ internal static class Program
         if (outDir.Equals("audit11", StringComparison.OrdinalIgnoreCase)) return AuditEleven.Run(args);
         //  «حساب‌های دیر رسیده» و «هیچ جدولی کاربر را به چپ و راست نبرد» (۱۴۰۵/۰۷/۱۶)
         if (outDir.Equals("latemonths", StringComparison.OrdinalIgnoreCase)) return LateMonthProbe.Run(args);
+        if (outDir.Equals("coldrag", StringComparison.OrdinalIgnoreCase)) return ColDragProbe.Run(args);
         if (outDir.Equals("buyform", StringComparison.OrdinalIgnoreCase)) return BuyFormProbe.Run(args);
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- waraqfit [پوشه]
         //  ورق با عکسِ صاحب ریپو (۱۴۰۵/۰۷/۱۲): دیوارِ ستون‌ها، قرائتِ پمپ از پارچه،

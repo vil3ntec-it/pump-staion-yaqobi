@@ -43,6 +43,9 @@ public sealed class PostingService
         {
             // اعرابِ عربی و نیم‌فاصله (‎[‌ً-ْ]‎ در نسخهٔ وب) کنار گذاشته می‌شوند
             if (c == '‌' || (c >= 'ً' && c <= 'ْ')) continue;
+            //  ⛔ نشانه‌های نامرئیِ جهت (‎RLM/LRM‎ و خانواده) که صفحه‌کلیدِ فارسیِ ویندوز
+            //  خودش می‌گذارد (۱۴۰۵/۰۷/۱۷): «هارون» با یک ‎RLM‎ دیگر «هارون» نبود.
+            if (IsBidiMark(c)) continue;
             if (char.IsWhiteSpace(c))
             {
                 if (!lastSpace) { b.Append(' '); lastSpace = true; }
@@ -53,6 +56,11 @@ public sealed class PostingService
         }
         return b.ToString().Trim();
     }
+
+    /// <summary>نشانهٔ نامرئیِ جهتِ متن — در هیچ تطبیقی شمرده نمی‌شود.</summary>
+    public static bool IsBidiMark(char c) =>
+        c is '\u200E' or '\u200F' or '\u061C' or '\uFEFF'
+          || (c >= '\u202A' && c <= '\u202E') || (c >= '\u2066' && c <= '\u2069');
 
     // ══ نامِ سوخت در دلِ جمله ═══════════════════════════════════════════════
     //
@@ -235,7 +243,8 @@ public sealed class PostingService
                                                  bool Slashed);
 
     private static readonly System.Text.RegularExpressions.Regex SlashRx =
-        new(@"/(?=\s*\p{L})", System.Text.RegularExpressions.RegexOptions.Compiled);
+        new(@"[/\\／∕⁄](?=[\s\u200E\u200F\u061C\u202A-\u202E\u2066-\u2069]*\p{L})",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
 
     /// <summary>
     /// متنِ پس از آخرین «/»ِ حساب و متنِ پیش از آن — ‎null‎ یعنی خط‌کجی نیست.
@@ -281,8 +290,39 @@ public sealed class PostingService
             if (hit is { } h) return (h, string.Join(' ', tokens.Take(n)));
         }
 
-        var fuzzy = FindAccountForText(list, after, after);
-        return fuzzy is { } f ? (f, NormFa(after)) : null;
+        //  ⛔ نامِ حساب کامل‌تر از آن‌چه تایپ شده (۱۴۰۵/۰۷/۱۷) — «/هارون بابت نان» و
+        //  قرض‌دار «محمد هارون»: تا امروز فقط کلِ متنِ پس از خط‌کج با تطبیقِ همیشگی
+        //  سنجیده می‌شد، و «بابت نان» آن را می‌انداخت ⇒ هیچ حسابی، هیچ ردیفی. حالا
+        //  بلندترین <b>آغازِ</b> متن که همهٔ واژه‌هایش در نامِ یک حساب هست حساب را
+        //  می‌گوید، و باقیِ متن نامِ ردیف می‌ماند.
+        //  ⚠️ فقط «نامِ حساب ⊇ آن‌چه تایپ شد» — نه برعکس: «/هارون بابت نان» نباید
+        //  به قرض‌داری به نامِ «نان» برود.
+        //  ⛔ دو قرض‌دارِ جدا با همان اندازه ⇒ هیچ‌کدام: حدس زدن یعنی قرضِ یکی
+        //  در حسابِ دیگری. همان ردیف بی‌حساب می‌ماند و صفحه می‌گوید.
+        for (var n = tokens.Length; n >= 1; n--)
+        {
+            var key = tokens.Take(n).ToArray();
+            AccountMatch? best = null;
+            var bestLen = int.MaxValue;
+            var tie = false;
+            void Try(Debtor p, DebtAccount a, string full)
+            {
+                var at = NormFa(full).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (at.Length == 0 || !key.All(at.Contains)) return;
+                if (at.Length < bestLen) { best = new AccountMatch(p, a); bestLen = at.Length; tie = false; }
+                else if (at.Length == bestLen && best is { } b && !ReferenceEquals(b.Person, p)) tie = true;
+            }
+            foreach (var p in list)
+            {
+                Try(p, p.MainAccount, p.Name ?? "");
+                foreach (var sub in p.SubAccounts)
+                    if (sub is not null && NormFa(sub.Name).Length > 0)
+                        Try(p, sub, (p.Name ?? "") + " " + sub.Name);
+            }
+            if (best is { } hit2 && !tie) return (hit2, string.Join(' ', key));
+            if (tie) return null;
+        }
+        return null;
     }
 
     /// <summary>

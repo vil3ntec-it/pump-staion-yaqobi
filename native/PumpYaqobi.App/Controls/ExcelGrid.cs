@@ -176,7 +176,7 @@ public class ExcelGrid : DataGrid
         LayoutUpdated += (_, _) =>
         {
             if (!IsEffectivelyVisible) return;
-            SpreadColumns(); PinOnUserResize(); if (!KeepInsideStep() && !FillGapStep()) RememberWidths(); Settle(); SyncSticky();
+            SpreadColumns(); PinOnUserResize(); DragStep(); if (!KeepInsideStep() && !FillGapStep()) RememberWidths(); Settle(); SyncSticky();
         };
 
         // ══ دوبار-کلیک روی خطِ ستون = هم‌قدِ محتوا، مثلِ اکسل ═════════════════
@@ -1870,6 +1870,65 @@ public class ExcelGrid : DataGrid
         return true;
     }
 
+    /// <summary>
+    /// ══ کشیدنِ خطِ ستون = جابه‌جا کردنِ مرزِ دو ستون (۱۴۰۵/۰۷/۱۷، دوم) ══════
+    ///
+    /// گزارشِ صاحب ریپو با عکس: «بزرگ یا کوچک کردن این مدل باشه که نه جای خالی
+    /// به وجود بیاد نه اون طرف بره که دیده نشن… توی همون کادرشون همون اندازه که
+    /// دیده میشه کوچیک و بزرگ بشن.» تا امروز «دیوار» فقط <b>پس از</b> رها کردن
+    /// می‌سنجید؛ وسطِ کشیدن ستون‌های آن‌طرف از کادر بیرون می‌زدند (پهن کردن) یا
+    /// کنارِ جدول خالی می‌ماند (باریک کردن).
+    ///
+    /// حالا وسطِ کشیدن هم: هر چه ستونِ کشیده‌شده پهن‌تر شود، <b>ستونِ همسایه‌اش</b>
+    /// (همان‌که آن‌طرفِ خط است) به همان اندازه باریک‌تر می‌شود و برعکس — پس
+    /// جمعِ پهناها همان است که لحظهٔ دست گذاشتن بود. همسایه که به کفِ خوانایی
+    /// رسید، ستونِ کشیده‌شده دیگر پهن‌تر نمی‌شود. ستون‌های دیگر دست نمی‌خورند.
+    /// ⚠️ فقط وقتی همهٔ ستون‌ها پیکسلی‌اند (پس از سنجاق شدن) — همان شرطِ دیوار.
+    /// </summary>
+    private void DragStep()
+    {
+        if (!KeepInside || !_headerDown || _pressWidths is not { } pw) return;
+        var cols = Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).ToList();
+        if (cols.Count < 2 || pw.Length != cols.Count
+            || cols.Any(c => c.Width.UnitType != DataGridLengthUnitType.Pixel)) return;
+        var w = cols.Select(c => c.Width.Value).ToArray();
+        if (w.Any(x => double.IsNaN(x) || x <= 0) || pw.Any(x => double.IsNaN(x) || x <= 0)) return;
+
+        //  کدام ستون زیرِ دست است؟ — همانی که بیشترین فاصله را با لحظهٔ دست گذاشتن دارد
+        //  و همسایه‌اش را خودمان عوض نکرده‌ایم.
+        var grab = -1;
+        var most = 0.5;
+        for (var i = 0; i < w.Length; i++)
+        {
+            if (i == _dragNeighbor) continue;
+            var d = Math.Abs(w[i] - pw[i]);
+            if (d > most) { most = d; grab = i; }
+        }
+        if (grab < 0) return;
+        var nb = _dragGrab == grab && _dragNeighbor >= 0 ? _dragNeighbor
+               : grab + 1 < w.Length ? grab + 1 : grab - 1;
+        _dragGrab = grab; _dragNeighbor = nb;
+
+        var pair = pw[grab] + pw[nb];
+        var g = Math.Clamp(w[grab], FloorWidth, pair - FloorWidth);
+        var n = pair - g;
+        var changed = false;
+        void Set(int i, double v)
+        {
+            if (Math.Abs(cols[i].Width.Value - v) < 0.5) return;
+            cols[i].Width = new DataGridLength(v, DataGridLengthUnitType.Pixel);
+            changed = true;
+        }
+        Set(grab, g);
+        Set(nb, n);
+        for (var i = 0; i < w.Length; i++)
+            if (i != grab && i != nb) Set(i, pw[i]);
+        if (changed) InvalidateMeasure();
+    }
+
+    //  جفتِ ستونی که همین کشیدن جابه‌جا می‌کند — با هر دست گذاشتنِ تازه صفر می‌شود.
+    private int _dragGrab = -1, _dragNeighbor = -1;
+
     private bool KeepInsideStep()
     {
         if (!KeepInside || !_spread || _headerDown) return false;
@@ -2609,6 +2668,7 @@ public class ExcelGrid : DataGrid
             {
                 ReleaseStarFloors();
                 _headerDown = true;
+                _dragGrab = -1; _dragNeighbor = -1;
                 _pressWidths = Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex)
                                       .Select(c => c.ActualWidth).ToArray();
                 return;

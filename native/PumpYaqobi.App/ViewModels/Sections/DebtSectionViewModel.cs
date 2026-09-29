@@ -47,8 +47,10 @@ public sealed partial class DebtorCardViewModel : ObservableObject
         var fuelSt = st.Petrol >= st.Diesel ? st.Petrol : st.Diesel;
         FuelBadge = BadgeOf(fuelSt, "تیل");
         MoneyBadge = BadgeOf(st.Money, "پول");
-        HasFuelBadge = fuelSt is DebtStatus.Out or DebtStatus.Low;
-        HasMoneyBadge = st.Money is DebtStatus.Out or DebtStatus.Low;
+        //  ⛔ «بی‌هشدار» (حسابِ خودِ صاحبِ پمپ) ⇒ نه نشانِ اتمام، نه چراغ — عددها همان
+        Muted = d.NoAlerts;
+        HasFuelBadge = !Muted && (fuelSt is DebtStatus.Out or DebtStatus.Low);
+        HasMoneyBadge = !Muted && (st.Money is DebtStatus.Out or DebtStatus.Low);
         FuelBadgeIsOut = fuelSt == DebtStatus.Out;
         MoneyBadgeIsOut = st.Money == DebtStatus.Out;
 
@@ -86,7 +88,10 @@ public sealed partial class DebtorCardViewModel : ObservableObject
     };
 
     /// <summary>۹۰٪ به بالا: نوار چراغ می‌زند و کارت نشانِ هشدار می‌گیرد.</summary>
-    public bool IsAlarm => Meter >= 90d;
+    public bool IsAlarm => !Muted && Meter >= 90d;
+
+    /// <summary>«بی‌هشدار» — حسابِ خودِ صاحبِ پمپ (🔕 روی کارت).</summary>
+    public bool Muted { get; }
 
     /// <summary>
     /// ⛔ «چراغ زدنِ» کارتِ ۹۰٪ یک انیمیشنِ بی‌پایان است؛ فقط وقتی فهرستِ
