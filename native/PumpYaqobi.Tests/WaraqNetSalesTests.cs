@@ -104,7 +104,20 @@ public class WaraqNetSalesTests : IDisposable
         }
 
         await Old(6000m);                                  // همان‌که نسخهٔ پیشین رسانده بود
+        //  ⛔ ردیفِ کهنه‌ای که ‎AmountAuto‎ ندارد — نباید نوشته شود (هزاران ‎UPDATE‎)
+        await using (var db = h.Db.Create())
+        {
+            foreach (var t in db.WaraqTransactions) t.AmountAuto = null;
+            await db.SaveChangesAsync();
+        }
+        long opsBefore;
+        await using (var db = h.Db.Create()) opsBefore = await db.SyncOps.CountAsync(o => o.TableName != "SafeEntry");
         Assert.Equal(1, await h.Sync.FixOldSalesOnceAsync());
+        await using (var db = h.Db.Create())
+        {
+            Assert.Equal(opsBefore, await db.SyncOps.CountAsync(o => o.TableName != "SafeEntry"));
+            Assert.All(db.WaraqTransactions.ToList(), t => Assert.Null(t.AmountAuto));
+        }
         Assert.Equal(4000m, await SafeSales(h.Db));
 
         await Old(6000m);                                  // بارِ دوم: هیچ کاری — فقط یک بار

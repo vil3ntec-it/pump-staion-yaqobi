@@ -213,6 +213,19 @@ public sealed class ShiftWaraqSyncService
     /// </summary>
     public const string NetSalesKey = "waraq.sales.net.v1";
 
+    /// <summary>کارِ در جریانِ <see cref="StartFixOldSales"/> — سنجه‌ها منتظرش می‌مانند.</summary>
+    public Task<int>? FixOldSalesTask { get; private set; }
+
+    /// <summary>روی نخِ دیگر، و یک بار در هر لحظه (دو ورودِ پشتِ سرِ هم دو بار نمی‌دوانند).</summary>
+    public Task<int> StartFixOldSales()
+    {
+        lock (this)
+        {
+            if (FixOldSalesTask is { IsCompleted: false } running) return running;
+            return FixOldSalesTask = Task.Run(() => FixOldSalesOnceAsync());
+        }
+    }
+
     public async Task<int> FixOldSalesOnceAsync(CancellationToken ct = default)
     {
         try
@@ -226,7 +239,10 @@ public sealed class ShiftWaraqSyncService
             foreach (var chunk in ids.Chunk(100))
             {
                 await using var db = _dbf.Create();
-                var list = await db.WaraqEntries.AsSplitQuery()
+                //  ⛔ ‎AsNoTracking‎: ‎ShiftTotals‎ ⇒ ‎NormalizeTxns‎ ‎AmountAuto‎ِ ردیف‌های کهنه را در
+                //  حافظه پر می‌کند؛ با ورقِ ردیابی‌شده همان هزاران ‎UPDATE‎ و هزاران opِ
+                //  همگام‌سازی می‌شد (سنجهٔ ‎idle‎ گرفتش). فقط ردیف‌های گاوصندوق نوشته می‌شوند.
+                var list = await db.WaraqEntries.AsNoTracking().AsSplitQuery()
                                    .Include(x => x.Shifts).ThenInclude(s => s.Pumps)
                                    .Include(x => x.Shifts).ThenInclude(s => s.Transactions)
                                    .Where(x => chunk.Contains(x.Id))

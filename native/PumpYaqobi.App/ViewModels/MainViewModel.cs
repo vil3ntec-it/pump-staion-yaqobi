@@ -90,7 +90,7 @@ public sealed partial class MainViewModel : ObservableObject
             //  دو بار صدا زدن را یکی می‌کنند؛ مشکل شنونده‌ها بودند.
             //  ⛔ «فروش ورق»های قدیمیِ گاوصندوق منهای قرض (یک بار برای هر دفتر، ۱۴۰۵/۰۷/۱۸) —
             //  پیش از نگهبانِ یک‌بارمصرف، چون دفترِ تازه (حسابِ دیگر) مهرِ خودش را می‌خواهد.
-            _ = Task.Run(() => AppHost.Current.ShiftWaraqSync.FixOldSalesOnceAsync());
+            _ = AppHost.Current.ShiftWaraqSync.StartFixOldSales();
 
             if (_afterSignIn) return;
             _afterSignIn = true;

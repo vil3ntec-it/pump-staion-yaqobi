@@ -8772,7 +8772,7 @@ dotnet run --project PumpYaqobi.UiTests -c Release -- oldpost [پوشهٔ عکس
     (`PumpSales`) و برابری با سایت و PDF به همان بند است.
   - ⛔ **مصرف کم نمی‌شود** — به «مصارف» می‌رود و از همان‌جا از گاوصندوق کم
     می‌شود؛ کم کردنِ دوباره یعنی دو بار.
-- ⛔ **ردیف‌های قدیمی یک بار برای هر دفتر** (`ShiftWaraqSyncService.FixOldSalesOnceAsync`،
+- ⛔ **ردیف‌های قدیمی یک بار برای هر دفتر** (`ShiftWaraqSyncService.StartFixOldSales`، ورق‌ها `AsNoTracking` — وگرنه هزاران `UPDATE`ِ `AmountAuto` و opِ همگام‌سازی؛ `idle` گرفتش؛
   پس از ورود، روی نخِ دیگر): همان `SyncSalesToSafeAsync`، مهرِ `waraq.sales.net.v1`
   در جدولِ تنظیماتِ همان دفتر. فقط ردیف‌های `wq-sales-*` دست می‌خورند. نشد ⇒ مهر
   نمی‌خورد و بارِ بعد دوباره.
