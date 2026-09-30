@@ -8,6 +8,7 @@ using PumpYaqobi.App.Services;
 using PumpYaqobi.App.ViewModels;
 using PumpYaqobi.App.ViewModels.Sections;
 using PumpYaqobi.App.Views;
+using PumpYaqobi.Application.Localization;
 
 namespace PumpYaqobi.UiTests;
 
@@ -63,6 +64,7 @@ internal static class UndoKeysProbe
         TypingStillTypes(win, vm);
         GhostIsGrey(win, vm);
         AckInsideTheBox(win, vm);
+        DayAndNightTogether(win, vm);
         PriceLossIsEmpty(win, vm);
         Console.WriteLine();
         Console.WriteLine("عکس‌ها: " + ShotDir);
@@ -418,6 +420,52 @@ internal static class UndoKeysProbe
         Check("«دیدم» زده شد ⇒ هشدار رفت و کادر سرخ نیست", !parcha.Day.LowBase && parcha.Day.StartBrushKey == "Pump.Text");
         Check($"و هر دو عدد با هم به وسط برگشتند ({Math.Abs(Mid("Start") - Mid("End")):F1})",
               Math.Abs(Mid("Start") - Mid("End")) < 1);
+    }
+
+    // ══ روز و شب یک‌جا: شروعِ شب با ختمِ «تایپ‌شده»ی روز سنجیده می‌شود ═══════
+    //   گزارشِ ۱۴۰۵/۰۷/۱۸: «ختم توی روز نوشته شده فقط ذخیره نشده» ⇒ هشدار نیاید.
+
+    private static void DayAndNightTogether(Window win, MainViewModel vm)
+    {
+        Console.WriteLine();
+        Console.WriteLine("── روز و شب یک‌جا، پیش از ذخیره ──");
+        var sec = vm.Sections.First(s => s.Id == "shifts");
+        Wait(win, vm.GoAsync(sec));
+        Settle(win);
+        if (sec is not ParchaSectionViewModel p) { Fail("بخشِ پارچه‌ها نبود"); return; }
+        var d = p.Day; var n = p.Night;
+        foreach (var f in new[] { d, n }) { f.Start = ""; f.End = ""; f.PumpNum = ""; }
+        Settle(win);
+
+        d.PumpNum = "1"; d.Start = "700000"; d.End = "701500";
+        n.PumpNum = "1"; n.Start = "701500";
+        Settle(win);
+        Check($"شبِ همان پایه از ختمِ نوشته‌شدهٔ روز شروع شد ⇒ هیچ هشداری («{n.LowBaseText}»)",
+              !n.LowBase && n.LowBaseText == "");
+
+        n.Start = "701400";
+        Settle(win);
+        Check($"شروعِ شب کمتر از ختمِ روز ⇒ «کمتر است» با همان ختم ({n.LowBaseText})",
+              n.LowBase && n.LowBaseText.Contains("کمتر") && n.LowBaseText.Contains(Shamsi.Money(701500m)));
+
+        n.Start = "701600";
+        Settle(win);
+        Check($"شروعِ شب بیشتر از ختمِ روز ⇒ «بیشتر زده شده» ({n.LowBaseText})",
+              n.LowBase && n.LowBaseText.Contains("بیشتر"));
+
+        d.End = "701600";
+        Settle(win);
+        Check("ختمِ روز عوض شد ⇒ هشدارِ شب همان لحظه رفت", !n.LowBase && n.LowBaseText == "");
+        Shot(win, "parcha-day-night-together.png");
+
+        d.End = "701500";
+        Settle(win);
+        Check("و دوباره عوض شد ⇒ همان لحظه برگشت", n.LowBase && n.LowBaseText.Contains("بیشتر"));
+
+        Check("روز هیچ‌وقت با شب سنجیده نمی‌شود", !d.LowBase || !d.LowBaseText.Contains(Shamsi.Money(701600m)));
+
+        foreach (var f in new[] { d, n }) { f.Start = ""; f.End = ""; f.PumpNum = ""; }
+        Settle(win);
     }
 
     private static bool Inside(Control c, Control outer, Window w)

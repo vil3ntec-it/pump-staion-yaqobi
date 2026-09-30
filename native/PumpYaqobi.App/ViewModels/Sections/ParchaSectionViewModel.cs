@@ -122,7 +122,12 @@ public sealed partial class ShiftFormViewModel : ObservableObject
     /// </summary>
     private bool _loading;
 
-    partial void OnPumpNumChanged(string v) { if (!_loading) _owner.CheckLowBase(this); }
+    partial void OnPumpNumChanged(string v)
+    {
+        if (_loading) return;
+        _owner.CheckLowBase(this);
+        _owner.RecheckSibling(this);
+    }
 
     partial void OnStartChanged(string v)
     {
@@ -131,7 +136,11 @@ public sealed partial class ShiftFormViewModel : ObservableObject
         LowBaseAcked = false;
         _owner.CheckLowBase(this);
     }
-    partial void OnEndChanged(string v) => Recalc();
+    partial void OnEndChanged(string v)
+    {
+        Recalc();
+        if (!_loading) _owner.RecheckSibling(this);
+    }
     partial void OnDebtChanged(string v) => Recalc();
     partial void OnPriceChanged(string v) => Recalc();
 
@@ -627,6 +636,9 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
         var start = form.StartValue;
         if (start <= 0m) { form.LowBase = false; form.LowBaseText = ""; return; }
 
+        // ⛔ ختمِ روزِ همین کارت (حتی ذخیره‌نشده) جلوتر از دیسک است
+        if (DayEndFor(form) is decimal typed) { Apply(form, start, typed, num); return; }
+
         if (!_lastBase.TryGetValue((Fuel, num), out var prev))
         {
             // هنوز نمی‌دانیم — می‌پرسیم و همان لحظه دوباره می‌سنجیم
@@ -635,6 +647,35 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
         }
 
         Apply(form, start, prev, num);
+    }
+
+    /// <summary>
+    /// ══ روز و شب یک‌جا — «ختم توی روز نوشته شده، فقط ذخیره نشده» ══════════
+    ///
+    /// گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۸): شروع و ختمِ روز را نوشت و خواست شب را هم
+    /// همان‌جا بنویسد و یک‌جا ذخیره کند، ولی هشدارِ «کمتر از پایهٔ قبلی» آمد —
+    /// چون شروعِ شب با آخرین ختمِ <b>روی دیسک</b> سنجیده می‌شد، نه با ختمی که
+    /// همین حالا در کارتِ روز است.
+    ///
+    /// پس برای کارتِ <b>شب</b>: اگر کارتِ روز ختمی دارد و شمارهٔ پایه‌اش همان
+    /// است (هر دو خالی هم «همان» است)، مرجع همان ختمِ تایپ‌شده است. سه حالِ
+    /// <see cref="Apply"/> دست نخورد؛ فقط «قبلی» درست‌تر شد.
+    /// ⚠️ روز هیچ‌وقت با شب سنجیده نمی‌شود — شب بعد از روز است، نه پیش از آن.
+    /// </summary>
+    private decimal? DayEndFor(ShiftFormViewModel form)
+    {
+        if (!form.IsNight) return null;
+        var end = Day.EndValue;
+        if (end <= 0m) return null;
+        if ((int)Shamsi.Num(Day.PumpNum) != (int)Shamsi.Num(form.PumpNum)) return null;
+        return end;
+    }
+
+    /// <summary>ختم یا شمارهٔ پایهٔ روز عوض شد ⇒ هشدارِ شب همان لحظه از نو.</summary>
+    internal void RecheckSibling(ShiftFormViewModel changed)
+    {
+        if (!changed.IsDay || Night.StartValue <= 0m) return;
+        CheckLowBase(Night);
     }
 
     /// <summary>
@@ -699,7 +740,8 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
         {
             var v = await _host.ParchaData.LastBaseAsync(fuel, num);
             _lastBase[(fuel, num)] = v;
-            if (fuel == Fuel) Apply(form, form.StartValue, v, num);
+            if (fuel == Fuel && form.StartValue > 0m)
+                Apply(form, form.StartValue, DayEndFor(form) ?? v, num);
         }
         catch { /* هشدار رفاه است، نه اصل — نبودش صفحه را نمی‌شکند */ }
     }
