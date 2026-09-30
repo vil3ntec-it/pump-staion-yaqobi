@@ -292,6 +292,6 @@ public sealed class WaraqReport : ISetupDocument
         Box("🟣 مصرف", R(t.Expenses), Purple);
         Box("💳 قرض", R(t.Debt), DocStyle.Danger);
         Box(label, R(value), color);
-        Box("📊 فروش", R(t.Sales), Blue, last: true);
+        Box("📊 فروش (منهای قرض)", R(t.Net), Blue, last: true);
     });
 }

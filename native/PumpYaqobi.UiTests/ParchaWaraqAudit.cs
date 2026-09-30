@@ -510,7 +510,7 @@ internal static class ParchaWaraqAudit
         var sales = safeList.Result
             .Where(e => (e.SrcKey ?? "").StartsWith("wq-sales-", StringComparison.Ordinal)).ToList();
         var want = page.Shift is null ? 0m
-                 : Math.Round(host.Waraq.ShiftTotals(page.Shift).Sales, 0, MidpointRounding.AwayFromZero);
+                 : Math.Round(host.Waraq.ShiftTotals(page.Shift).Net, 0, MidpointRounding.AwayFromZero);
         Check("«جمله فروش»ِ همین شیفت خودش در گاوصندوق نشست",
               want <= 0m ? sales.Count == 0 : sales.Any(e => e.Amount == want),
               "فروش " + want + " · " + sales.Count + " ردیف");
@@ -631,7 +631,7 @@ internal static class ParchaWaraqAudit
         string[] labels =
         {
             "⛽ جمله پطرول", "🟤 جمله دیزل", "🟣 جمله مصرف",
-            "💳 جمله قرض", "📊 جمله فروش",
+            "💳 جمله قرض", "📊 جمله فروش (منهای قرض)",
         };
 
         var texts = win.GetVisualDescendants().OfType<TextBlock>().ToList();

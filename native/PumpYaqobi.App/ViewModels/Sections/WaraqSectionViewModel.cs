@@ -530,6 +530,8 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
 
     /// <summary>جمعِ ستونِ «جمله قرض»ِ پایه‌ها — خانهٔ ‎#wq-total-debt‎ی سایت.</summary>
     [ObservableProperty] private string _pumpDebt = "";
+    /// <summary>جمعِ ستونِ «فروش»ِ جدولِ پایه‌ها (لیتر × فی) — «جمله فروش»ِ خلاصه منهای قرض است.</summary>
+    [ObservableProperty] private string _pumpSales = "";
 
     /// <summary>عددِ خامِ کمبودی/اضافی — فقط برای رنگِ کادرِ ششم.</summary>
     private decimal _shortageAmount;
@@ -620,7 +622,8 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         var t = Calc.ShiftTotals(sd);
         PetrolLiters = Shamsi.Money(t.PetrolLiters);
         DieselLiters = Shamsi.Money(t.DieselLiters);
-        Sales = Shamsi.Money(Math.Round(t.Sales, 0, MidpointRounding.AwayFromZero));
+        Sales = Shamsi.Money(Math.Round(t.Net, 0, MidpointRounding.AwayFromZero));   // ⛔ منهای قرض‌ها
+        PumpSales = Shamsi.Money(Math.Round(t.Sales, 0, MidpointRounding.AwayFromZero)) + " افغانی";
         Debt = Shamsi.Money(Math.Round(t.Debt, 0, MidpointRounding.AwayFromZero));
         Expenses = Shamsi.Money(Math.Round(t.Expenses, 0, MidpointRounding.AwayFromZero));
         PumpLiters = Shamsi.Money(t.PetrolLiters + t.DieselLiters) + " لیتر";
@@ -692,7 +695,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
     public IReadOnlyList<TotalCell> TotalCells => new[]
     {
         new TotalCell("لیتر", PumpLiters),
-        new TotalCell("فروش", SumSales, "Pump.Ok"),
+        new TotalCell("فروش", PumpSales, "Pump.Ok"),   // جمعِ همین ستون (لیتر × فی)
         new TotalCell("قرضِ پایه", PumpDebt, "Pump.Danger"),
     };
 
@@ -882,7 +885,7 @@ public sealed class WaraqCardViewModel
         SubText = (w.Station ?? "") + (workers.Length > 0 ? " — " + string.Join(" / ", workers) : "");
 
         // عددِ ساده — «فروشِ ورق · افغانی» زیرش در کارت می‌آید
-        SalesText = Money(d.Sales + n.Sales);
+        SalesText = Money(d.Net + n.Net);   // ⛔ منهای قرض‌ها
         DebtText = "قرض: " + Money(d.Debt + n.Debt);
         ExpenseText = "مصرف: " + Money(d.Expenses + n.Expenses);
     }

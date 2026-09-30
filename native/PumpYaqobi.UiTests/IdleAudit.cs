@@ -109,6 +109,18 @@ internal static class IdleAudit
         //  کاری بماند که فقط خودش می‌تواند انجام دهد (همان تلهٔ `DisposeAsync`).
         SyncEngine.Disabled = true;
 
+        //  ══ درست کردنِ یک‌بارهٔ «فروش ورق»های قدیمی (۱۴۰۵/۰۷/۱۸) ═════════════
+        //  کارِ یک‌بارهٔ پس از ورود است، نه مصرفِ یک بخش — تا تمام شود صبر می‌کنیم.
+        //  ⚠️ هزینهٔ خودش سنجیده شد: پیش از ‎AsNoTracking‎ هزاران ‎UPDATE‎ می‌زد
+        //  (همین سنجه گرفتش)؛ آزمونِ ‎WaraqNetSalesTests‎ می‌سنجد که هیچ ردیفِ ورقی ننویسد.
+        if (host.ShiftWaraqSync.FixOldSalesTask is { } fix)
+        {
+            var until = DateTime.UtcNow + TimeSpan.FromSeconds(120);
+            while (!fix.IsCompleted && DateTime.UtcNow < until)
+            { Dispatcher.UIThread.RunJobs(); Thread.Sleep(5); }
+            Settle(win);
+        }
+
         if (host.PublisherIfStarted is { } pub)
         {
             var stop = Task.Run(() => pub.DisposeAsync().AsTask());

@@ -268,7 +268,7 @@
           </Border>
           <Border Classes="stat">
             <StackPanel Spacing="3">
-              <TextBlock Text="📊 جمله فروش" Classes="label" />
+              <TextBlock Text="📊 جمله فروش (منهای قرض)" Classes="label" />
               <TextBlock Text="{Binding SumSales}" Classes="num"
                          Foreground="{DynamicResource Pump.Ink.Ok}" />
             </StackPanel>

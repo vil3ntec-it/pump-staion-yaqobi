@@ -20,7 +20,9 @@ internal static class Program
         //  آزمون‌ها میزبان را مستقیم می‌سازند و نباید قفل شوند.
         //  فایلی که با دوبار-کلیک آمده (‎.pumpyaqobi‎ / ‎.pumpkey‎) — ‎OpenRequest‎
         var opened = OpenRequest.FromArgs(args);
-        if (!SingleInstance.Acquire())
+        //  ⛔ پس از به‌روزرسانی، نمونهٔ کهنه شاید هنوز در حالِ بسته شدن باشد — صبر کن، بیرون نرو
+        var afterUpdate = args.Any(a => a == "--after-update");
+        if (!SingleInstance.Acquire(afterUpdate ? TimeSpan.FromSeconds(60) : TimeSpan.Zero))
         {
             //  برنامه از قبل باز است: فایل به همان می‌رسد، نه به نمونهٔ دوم
             if (opened is not null) OpenRequest.Hand(opened);

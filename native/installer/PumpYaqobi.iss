@@ -230,6 +230,12 @@ Name: "{autodesktop}\{#AppName}";        Filename: "{app}\{#AppExe}"; IconFilena
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram}"; Flags: nowait postinstall skipifsilent
+; ⛔ به‌روزرسانیِ درون‌برنامه (بی‌صدا، با ‎/RELAUNCH=1‎) ⇒ برنامه دوباره باز می‌شود (۱۴۰۵/۰۷/۱۸).
+; خطِ بالا ‎skipifsilent‎ است و ‎RestartApplications‎ فقط برنامه‌ای را برمی‌گرداند که خودش
+; در Restart Manager ثبت کرده — برنامهٔ ما خودش بسته می‌شود و ثبت نکرده. پس روی هر
+; کامپیوتری که به‌روزرسانی از راهِ نصاب رفت، برنامه بسته می‌ماند.
+; ‎runasoriginaluser‎: نصابِ بالابرده برنامه را با کاربرِ خودش باز کند، نه با مدیر.
+Filename: "{app}\{#AppExe}"; Parameters: "--after-update"; Flags: nowait skipifnotsilent runasoriginaluser; Check: WantRelaunch
 
 ; ── هیچ [UninstallDelete] ای این‌جا نیست، و عمدی است ────────────────────────
 ; حساب‌های کاربر در ‎{app}\data‎ است (و در نصب‌های کهنه ‎%AppData%\PumpYaqobi‎). حذفِ برنامه نباید به آن دست
@@ -445,6 +451,12 @@ begin
   end
   else
     Result := DefaultArch();
+end;
+
+// فقط وقتی خودِ برنامه با ‎/RELAUNCH=1‎ صدا زده (به‌روزرسانیِ درون‌برنامه)
+function WantRelaunch(): Boolean;
+begin
+  Result := ExpandConstant('{param:RELAUNCH|0}') = '1';
 end;
 
 function WantX64(): Boolean;
