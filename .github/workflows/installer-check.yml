@@ -214,6 +214,20 @@ jobs:
           if ($p.ExitCode -ne 0) { Fail "نصبِ دوبارهٔ همان نسخه با کدِ $($p.ExitCode) بیرون آمد" }
           "✔ همان نسخه دوباره روی همان نصب نشست (تعمیر)"
 
+          # ۴د۲) به‌روزرسانیِ درون‌برنامه (/RELAUNCH=1) ⇒ نصاب برنامه را دوباره باز می‌کند؛
+          #      بی آن (نصبِ بی‌صدای دیگر) نه. برنامهٔ ساختگی متن است و اجرا نمی‌شود، پس
+          #      سنجه لاگِ خودِ Inno است: «Run entry» با ‎--after-update‎ و با کاربرِ اصلی.
+          Remove-Item $log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath $newer -ArgumentList @('/SILENT','/SUPPRESSMSGBOXES','/NORESTART','/RELAUNCH=1',"/LOG=$log") -Wait -PassThru
+          $runs = Select-String -Path $log -Pattern 'Parameters: --after-update' -SimpleMatch
+          if (-not $runs) { Fail "با /RELAUNCH=1 نصاب برنامه را دوباره باز نکرد (هیچ Run entryِ --after-update در لاگ نیست)" }
+          if (-not (Select-String -Path $log -Pattern 'Run as: Original user' -SimpleMatch)) { Fail "برنامه با کاربرِ اصلی باز نشد" }
+          Select-String -Path $log -Pattern 'Run entry|Run as|Parameters: --after' | ForEach-Object { "   " + $_.Line }
+          Remove-Item $log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath $newer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/LOG=$log") -Wait -PassThru
+          if (Select-String -Path $log -Pattern 'Parameters: --after-update' -SimpleMatch) { Fail "بی /RELAUNCH هم برنامه باز شد" }
+          "✔ به‌روزرسانیِ درون‌برنامه برنامه را دوباره باز می‌کند (با کاربرِ خودش)، و نصبِ بی‌صدای دیگر نه"
+
           # ۴ه) نصب در پوشهٔ دیگر ⇒ ‎<قبلی>\data‎ به پوشهٔ تازه **کپی** می‌شود و قبلی دست نمی‌خورد
           Set-Content -Path "$dir\data\pump.db" -Value 'ledger-in-app' -NoNewline
           New-Item -ItemType Directory -Force -Path "$dir\data\backups" | Out-Null

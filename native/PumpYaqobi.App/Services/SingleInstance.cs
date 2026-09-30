@@ -39,7 +39,13 @@ public static class SingleInstance
     /// آن خبر داده شد و این نمونه باید بیرون برود. هر خطایی ⇒ <c>true</c>:
     /// قفلی که خودش جلوی بالا آمدن را بگیرد، از نبودنش بدتر است.
     /// </summary>
-    public static bool Acquire()
+    public static bool Acquire() => Acquire(TimeSpan.Zero);
+
+    /// <summary>
+    /// با <paramref name="wait"/>: نمونهٔ دیگری در حالِ بسته شدن است (پس از
+    /// به‌روزرسانی، <c>--after-update</c>) ⇒ تا این‌قدر صبر کن، بعد قفل را بگیر.
+    /// </summary>
+    public static bool Acquire(TimeSpan wait)
     {
         string key;
         try { key = Key(); }
@@ -51,7 +57,7 @@ public static class SingleInstance
             if (!mine)
             {
                 bool got;
-                try { got = _mutex.WaitOne(0); }
+                try { got = _mutex.WaitOne(wait); }
                 //  نمونهٔ قبلی بی بستنِ درست مرده بود — حالا مالِ ماست
                 catch (System.Threading.AbandonedMutexException) { got = true; }
                 if (!got) { _other = key; return false; }

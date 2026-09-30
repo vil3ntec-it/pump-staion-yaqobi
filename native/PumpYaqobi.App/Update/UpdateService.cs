@@ -826,7 +826,9 @@ public sealed class UpdateService
             // ⛔ ‎/DIR‎ لازم است — شرحش بالای همین متد.
             var psi = new System.Diagnostics.ProcessStartInfo(packagePath)
             {
-                Arguments = "/SILENT /NORESTART /RESTARTAPPLICATIONS"
+                //  ⛔ ‎/RELAUNCH=1‎ — تنها چیزی که نصاب را وامی‌دارد پس از نصبِ بی‌صدا
+                //  برنامه را دوباره باز کند (‎WantRelaunch‎ در ‎PumpYaqobi.iss‎).
+                Arguments = "/SILENT /NORESTART /RESTARTAPPLICATIONS /RELAUNCH=1"
                           + " " + AppArch.ArchArg
                           + " /DIR=\"" + InstallDir + "\"",
                 UseShellExecute = true,
@@ -890,6 +892,22 @@ public sealed class UpdateService
     /// گذاشته)، همان دستور با اجازهٔ مدیر اجرا می‌شود. و نتیجه‌اش — چه موفق
     /// چه نه — در فایلی نوشته می‌شود که برنامه هنگامِ باز شدنِ بعدی می‌خواند.
     /// </summary>
+    /// <summary>
+    /// ══ «پس از به‌روزرسانی دوباره باز نمی‌شود» — ۱۴۰۵/۰۷/۱۸ ══════════════════
+    ///
+    /// ⛔ <c>--after-update</c>: برنامهٔ تازه تا ۶۰ ثانیه منتظرِ بسته شدنِ کاملِ
+    /// نمونهٔ کهنه می‌ماند (<see cref="SingleInstance.Acquire(TimeSpan)"/>)، نه این‌که
+    /// قفل را گرفته ببیند و همان لحظه بیرون برود — همان چیزی که روی کامپیوترِ کند
+    /// (یا جایی که ‎tasklist‎ کار نمی‌کند) برنامه را بسته می‌گذاشت.
+    /// ⛔ اسکریپتِ بالابرده (پوشهٔ ‎Program Files‎) برنامه را با ‎explorer.exe‎ باز
+    /// می‌کند تا با <b>کاربرِ خودش</b> بالا بیاید، نه با مدیر؛ و ‎/D‎ پوشهٔ کار را
+    /// درست می‌گذارد (با ‎runas‎ پوشهٔ کار ‎System32‎ است).
+    /// </summary>
+    internal static string RelaunchLine(string exe, string appDir, bool elevated) =>
+        elevated
+            ? $"explorer.exe \"{exe}\""
+            : $"start \"\" /D \"{appDir}\" \"{exe}\" --after-update";
+
     private static bool LaunchZip(string zipPath, Stream verified)
     {
         var exe = Environment.ProcessPath;
@@ -910,6 +928,8 @@ public sealed class UpdateService
 
         var pid = Environment.ProcessId;
         var script = Path.Combine(Path.GetDirectoryName(zipPath)!, "apply-update.cmd");
+        var writable = IsWritable(appDir);
+        var relaunch = RelaunchLine(exe, appDir, elevated: !writable);
         var result = ResultFile;
         Directory.CreateDirectory(Path.GetDirectoryName(result)!);
         // نشانهٔ کهنه پاک شود تا نتیجهٔ همین بار خوانده شود، نه نتیجهٔ دفعهٔ پیش
@@ -920,21 +940,25 @@ public sealed class UpdateService
         File.WriteAllText(script, $"""
             @echo off
             chcp 65001 >nul
+            set N=0
             :wait
-            tasklist /FI "PID eq {pid}" | find "{pid}" >nul
+            tasklist /FI "PID eq {pid}" 2>nul | find "{pid}" >nul
             if not errorlevel 1 (
+              set /a N+=1
+              if %N% GEQ 120 goto go
               timeout /t 1 /nobreak >nul
               goto wait
             )
-            robocopy "{src}" "{appDir}" /E /IS /IT /R:3 /W:2 >nul
+            :go
+            timeout /t 1 /nobreak >nul
+            robocopy "{src}" "{appDir}" /E /IS /IT /R:10 /W:2 >nul
             set RC=%ERRORLEVEL%
             if %RC% GEQ 8 (>"{result}" echo %RC%) else (del "{result}" >nul 2>&1)
-            start "" "{exe}"
+            {relaunch}
             rmdir /s /q "{staging}" >nul 2>&1
             exit /b 0
             """, new System.Text.UTF8Encoding(false));      // ⛔ بی BOM — وگرنه خطِ اول «@echo off» خطا می‌داد
 
-        var writable = IsWritable(appDir);
         var psi = new System.Diagnostics.ProcessStartInfo
         {
             FileName = "cmd.exe",

@@ -8777,3 +8777,22 @@ dotnet run --project PumpYaqobi.UiTests -c Release -- oldpost [پوشهٔ عکس
   در جدولِ تنظیماتِ همان دفتر. فقط ردیف‌های `wq-sales-*` دست می‌خورند. نشد ⇒ مهر
   نمی‌خورد و بارِ بعد دوباره.
 - آزمون: `WaraqNetSalesTests` (سه بند، دو‌تایش روی SQLiteِ واقعی).
+
+## 🔁 «موقعِ آپدیت برنامه بسته می‌شود و دوباره باز نمی‌شود» (از ۱۴۰۵/۰۷/۱۸، نسخه 3.1.231)
+
+- ⛔ **ریشه**: روی هر کامپیوتری که به‌روزرسانی از راهِ **نصاب** رفت (پایهٔ ناجور،
+  ۳۲⇄۶۴، …)، تنها خطِ `[Run]` `skipifsilent` بود و `RestartApplications` فقط
+  برنامه‌ای را برمی‌گرداند که در Restart Manager ثبت کرده — برنامهٔ ما خودش بسته
+  می‌شود و ثبت نکرده. پس برنامه بسته می‌ماند.
+- ⛔ `UpdateService.Launch` ⇒ `/RELAUNCH=1`، و در `PumpYaqobi.iss` خطِ دوم:
+  `--after-update` · `skipifnotsilent runasoriginaluser` · `Check: WantRelaunch`.
+  نصبِ بی‌صدای دیگر (آزمون‌ها، ‎/FRESH‎) برنامه را باز نمی‌کند. ⚠️ `runasoriginaluser`:
+  نصابِ بالابرده برنامه را با کاربرِ خودش باز کند، نه مدیر.
+- ⛔ **مسیرِ زیپ**: `start "" /D "<پوشه>" "<exe>" --after-update`؛ اسکریپتِ بالابرده
+  (Program Files) با `explorer.exe` تا با کاربرِ خودش باز شود. انتظارِ ‎tasklist‎
+  سقفِ ۱۲۰ ثانیه دارد (‎tasklist‎ِ خراب اسکریپت را تا ابد نگه نمی‌داشت ولی
+  بی‌انتظار جلو می‌رفت).
+- ⛔ **`--after-update` ⇒ `SingleInstance.Acquire(60s)`**: برنامهٔ تازه منتظرِ بسته
+  شدنِ کاملِ نمونهٔ کهنه می‌ماند، نه این‌که قفل را گرفته ببیند و بیرون برود.
+- آزمون: `RelaunchAfterUpdateTests` و بندِ «۴د۲» در `installer-check.yml` (لاگِ
+  خودِ Inno روی ویندوزِ واقعی).
