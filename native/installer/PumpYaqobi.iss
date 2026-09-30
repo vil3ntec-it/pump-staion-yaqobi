@@ -371,6 +371,49 @@ end;
 //  و روی ویندوزِ ۳۲بیتی هر چه باشد، ۳۲بیتی — ۶۴ آن‌جا اجرا نمی‌شود.
 var
   ArchPage: TInputOptionWizardPage;
+  FreshPage: TInputOptionWizardPage;
+
+// ── «نصبِ خالی» (۱۴۰۵/۰۷/۱۸) ────────────────────────────────────────────────
+//  خواستهٔ صاحب ریپو: «وقتی نسخهٔ جدید را می‌دهی بی رمز و اطلاعات باشد.» خودِ
+//  فایلِ نصب هیچ اطلاعاتی ندارد؛ آن‌چه دیده می‌شد اطلاعاتِ همین کامپیوتر بود
+//  که برنامه عمداً پیدا و کپی می‌کند (DataHome: ‎{app}\data‎ ⇐ جای آخرِ
+//  ثبت‌شده در رجیستری ⇐ ‎%AppData%\PumpYaqobi‎). پس «خالی» یعنی **همهٔ** آن
+//  جاها کنار گذاشته شوند، وگرنه برنامه سرِ اولین اجرا همان را برمی‌گرداند.
+//  ⛔ هیچ چیزی پاک نمی‌شود — فقط نامِ تاریخ‌دار. پیش‌فرض «نگه دار» است، و
+//  به‌روزرسانیِ بی‌صدا این را هرگز نمی‌بیند (فقط ‎/FRESH=1‎ی آزمون).
+function DataCandidates(): TArrayOfString;
+var
+  R: String;
+  N: Integer;
+begin
+  SetArrayLength(Result, 4);
+  N := 0;
+  if InstalledDir <> '' then begin Result[N] := AddBackslash(InstalledDir) + 'data'; N := N + 1; end;
+  Result[N] := ExpandConstant('{userappdata}\PumpYaqobi'); N := N + 1;
+  if RegQueryStringValue(HKCU, 'Software\PumpYaqobi', 'DataDir', R) and (Trim(R) <> '') then
+  begin Result[N] := R; N := N + 1; end;
+  SetArrayLength(Result, N);
+end;
+
+function AnyOldData(): Boolean;
+var
+  D: TArrayOfString;
+  I: Integer;
+begin
+  Result := False;
+  D := DataCandidates();
+  for I := 0 to GetArrayLength(D) - 1 do
+    if FileExists(AddBackslash(D[I]) + 'pump.db') or FileExists(AddBackslash(D[I]) + 'settings.json') then
+      Result := True;
+end;
+
+function FreshChosen(): Boolean;
+begin
+  if WizardSilent then
+    Result := Trim(ExpandConstant('{param:FRESH|}')) = '1'
+  else
+    Result := (FreshPage <> nil) and (FreshPage.SelectedValueIndex = 1);
+end;
 
 function DefaultArch(): String;
 var
@@ -426,6 +469,19 @@ begin
   if not IsWin64 then
     ArchPage.CheckListBox.ItemEnabled[0] := False;
 
+  if AnyOldData() then
+  begin
+    FreshPage := CreateInputOptionPage(ArchPage.ID,
+      'اطلاعاتِ قبلیِ همین کامپیوتر',
+      'روی این کامپیوتر از قبل حساب، رمز و تنظیمات هست. با آن‌ها چه کنیم؟',
+      'خودِ فایلِ نصب هیچ اطلاعاتی ندارد؛ این‌ها مالِ نصبِ قبلیِ همین کامپیوترند.' + #13#10 +
+      '«نصبِ خالی» هیچ چیزی را پاک نمی‌کند — پوشهٔ اطلاعات با نامِ تاریخ‌دار کنار گذاشته می‌شود و هر وقت خواستید برمی‌گردد.',
+      True, False);
+    FreshPage.Add('نگه داشتنِ حساب‌ها، رمز و تنظیمات (پیشنهادی)');
+    FreshPage.Add('نصبِ خالی — بی رمز و بی اطلاعات (اطلاعاتِ قبلی کنار گذاشته می‌شود)');
+    FreshPage.SelectedValueIndex := 0;
+  end;
+
   //  نصب از قبل هست ⇒ خوش‌آمد همان را بگوید، نه «نصب می‌شود»
   if InstalledVer <> '' then
   begin
@@ -444,6 +500,7 @@ function ShouldSkipPage(PageID: Integer): Boolean;
 begin
   //  فقط به‌روزرسانیِ بی‌صدا نمی‌پرسد؛ هر نصبِ دستی — تازه یا روی موجود — می‌پرسد.
   Result := (PageID = ArchPage.ID) and WizardSilent;
+  if (FreshPage <> nil) and (PageID = FreshPage.ID) and WizardSilent then Result := True;
   //  ⛔ صفحهٔ پوشه در هیچ نصبِ دستی رد نمی‌شود (۱۴۰۵/۰۷/۱۵، صاحب ریپو: «نصاب
   //  انتخابِ فولدر نداشت که بگم کجا یا توی کدوم درایو نصب بشه… ارور داد»).
   //  تا دیروز روی نصبِ موجود رد می‌شد و اگر پوشهٔ پیشین دیگر نوشتنی نبود
@@ -518,12 +575,24 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   OldDir, NewDir, Tool: String;
-  Code: Integer;
+  Code, I: Integer;
+  D: TArrayOfString;
 begin
+  if (CurStep = ssInstall) and FreshChosen() then
+  begin
+    D := DataCandidates();
+    if not SetAside(ExpandConstant('{app}\data')) then Log('PYFRESH app data not set aside');
+    for I := 0 to GetArrayLength(D) - 1 do
+      if not SameDir(D[I], ExpandConstant('{app}\data')) then
+        if not SetAside(D[I]) then Log('PYFRESH not set aside: ' + D[I]);
+    RegDeleteValue(HKCU, 'Software\PumpYaqobi', 'DataDir');
+    Log('PYFRESH set aside');
+    Exit;
+  end;
   if CurStep <> ssPostInstall then Exit;
 
   NewDir := ExpandConstant('{app}\data');
-  if (InstalledDir <> '') and (not SameDir(InstalledDir, ExpandConstant('{app}'))) then
+  if (not FreshChosen()) and (InstalledDir <> '') and (not SameDir(InstalledDir, ExpandConstant('{app}'))) then
   begin
     OldDir := AddBackslash(InstalledDir) + 'data';
     if HasLedger(OldDir) and (not HasLedger(NewDir)) then
@@ -672,6 +741,13 @@ begin
   if (CurPageID = wpReady) and (not WizardSilent) then
   begin
     Result := SealOk();
+    Exit;
+  end;
+  if (FreshPage <> nil) and (CurPageID = FreshPage.ID) and (not WizardSilent) and (FreshPage.SelectedValueIndex = 1) then
+  begin
+    Result := MsgBox('نصبِ خالی: حساب‌ها، رمز و تنظیماتِ این کامپیوتر در برنامه دیده نمی‌شوند.' + #13#10 +
+                     'پاک نمی‌شوند — با نامِ تاریخ‌دار کنار گذاشته می‌شوند.' + #13#10 + #13#10 +
+                     'همین را می‌خواهید؟', mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES;
     Exit;
   end;
   if CurPageID <> wpSelectDir then Exit;

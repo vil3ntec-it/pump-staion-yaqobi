@@ -229,6 +229,30 @@ jobs:
           $dir = $dir2
           $uninsExe = (Get-ItemPropertyValue -Path $unins -Name UninstallString) -replace '"',''
 
+          # ۴و) «نصبِ خالی» (/FRESH=1، همان گزینهٔ ویزارد) ⇒ هیچ اطلاعاتی در برنامه نمی‌ماند،
+          #     و هیچ چیزی هم پاک نمی‌شود: {app}\data و جای کهنه با نامِ تاریخ‌دار کنار می‌روند
+          $legacy = Join-Path $env:APPDATA 'PumpYaqobi'
+          New-Item -ItemType Directory -Force -Path $legacy | Out-Null
+          Set-Content -Path "$legacy\pump.db" -Value 'ledger-legacy' -NoNewline
+          $p = Start-Process -FilePath $newer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/FRESH=1',"/DIR=$dir","/LOG=$log") -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Fail "نصبِ خالی با کدِ $($p.ExitCode) بیرون آمد" }
+          if (Test-Path "$dir\data\pump.db") { Fail "نصبِ خالی: دفترِ قبلی هنوز در ‹data› است" }
+          if (Test-Path "$legacy\pump.db") { Fail "نصبِ خالی: دفترِ جای کهنه هنوز سرِ جایش است (برنامه دوباره کپی‌اش می‌کرد)" }
+          $asideApp = Get-ChildItem -Path $dir -Directory -Filter 'data-kenar-*' | Select-Object -First 1
+          $asideOld = Get-ChildItem -Path $env:APPDATA -Directory -Filter 'PumpYaqobi-kenar-*' | Select-Object -First 1
+          if (-not $asideApp -or (Get-Content "$($asideApp.FullName)\pump.db" -Raw) -ne 'ledger-in-app') { Fail "نصبِ خالی: ‹data›ی قبلی کنار گذاشته نشد — یا گم شد" }
+          if (-not $asideOld -or (Get-Content "$($asideOld.FullName)\pump.db" -Raw) -ne 'ledger-legacy') { Fail "نصبِ خالی: جای کهنه کنار گذاشته نشد — یا گم شد" }
+          Select-String -Path $log -Pattern 'PYFRESH' | ForEach-Object { "   " + $_.Line }
+          "✔ نصبِ خالی: برنامه بی اطلاعات، و اطلاعاتِ قبلی دست‌نخورده کنار رفت"
+          #  برای بندِ ۵: همان حالِ پیشین برمی‌گردد
+          Remove-Item -Recurse -Force "$dir\data" -ErrorAction SilentlyContinue
+          Rename-Item -Path $asideApp.FullName -NewName 'data'
+          Remove-Item -Recurse -Force $asideOld.FullName
+          # ۴ز) بی /FRESH هیچ چیزی کنار نمی‌رود (به‌روزرسانیِ همیشگی)
+          $p = Start-Process -FilePath $newer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=$dir","/LOG=$log") -Wait -PassThru
+          if ((Get-Content "$dir\data\pump.db" -Raw) -ne 'ledger-in-app') { Fail "نصبِ معمولی به دفتر دست زد" }
+          "✔ نصبِ معمولی (به‌روزرسانی) دفتر را نگه داشت"
+
           # ۵) حذفِ بی‌صدا: فایل‌ها می‌روند، پوشهٔ داده (هم ‎{app}\data‎ هم جای کهنه) دست نمی‌خورد
           $data = Join-Path $env:APPDATA 'PumpYaqobi'
           New-Item -ItemType Directory -Force -Path $data | Out-Null

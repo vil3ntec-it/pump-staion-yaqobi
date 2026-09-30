@@ -86,12 +86,6 @@ public static class RtlTrim
         var tl = t.TextLayout;
         if (tl is null || tl.TextLines.Count != 1) return 0;
         var line = tl.TextLines[0];
-        //  ⛔ خطِ اول از خودِ کادر پهن‌تر (یک واژهٔ بلند در ستونِ باریک): وسط‌چینی هر
-        //  دو سرِ آن را می‌بُرد و «نوشته» می‌شد «وشته» — آغازِ جمله گم. پس آغازش به
-        //  لبهٔ آغازِ کادر (راست) می‌چسبد و فقط تهش بریده می‌شود (۱۴۰۵/۰۷/۱۸).
-        var inner = t.Bounds.Width - t.Padding.Left - t.Padding.Right;
-        if (GetEnabled(t) && IsRtl(t.Text) && inner > 0 && line.WidthIncludingTrailingWhitespace > inner + 0.5)
-            return -(line.WidthIncludingTrailingWhitespace - inner) / 2;
         //  خطِ بریده (نوشتهٔ بلندِ ‎Wrap‎) فاصلهٔ پایانیِ واقعی دارد
         if (line.FirstTextSourceIndex + line.Length < t.Text.Length) return 0;
         var gap = line.WidthIncludingTrailingWhitespace - line.Width;
