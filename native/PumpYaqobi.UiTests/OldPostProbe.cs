@@ -114,6 +114,10 @@ internal static class OldPostProbe
         Console.WriteLine("── ۴ و ۵) پارچه: کارتِ خالی‌شده خالی می‌ماند · Ctrl+Tab بی فوکوس ──");
         Parcha(win, vm, h);
 
+        Console.WriteLine("── ۶) نوشتن در خانه ردیف را به تهِ جدول نمی‌برد ──");
+        foreach (var id in new[] { "expenses", "safe", "sarrafi", "chakana" })
+            NoJump(win, vm, id);
+
         Console.WriteLine();
         Console.WriteLine(_bad == 0 ? "✅ همه سرِ جایش بود" : $"❌ {_bad} ایراد");
         return _bad == 0 ? 0 : 1;
@@ -252,6 +256,82 @@ internal static class OldPostProbe
         var focused = win.FocusManager?.GetFocusedElement();
         Check($"Ctrl+Tab بی فوکوس (فوکوس: {focused?.GetType().Name ?? "هیچ"}) ⇒ تیل عوض شد و دوباره برگشت",
               once != before && twice == before);
+    }
+
+    /// <summary>
+    /// کلیکِ واقعی روی سرستون (همان کلیکِ تصادفیِ کاربر)، بعد تایپِ واقعی در خانهٔ
+    /// یک ردیفِ وسط: ردیف باید سرِ جایش بماند — در جدول و پس از رفتن و برگشتن.
+    /// </summary>
+    private static void NoJump(MainWindow win, MainViewModel vm, string id)
+    {
+        var s = (SectionViewModel)Go(win, vm, id);
+        dynamic d = s;
+        d.Month = Shamsi.ThisMonth(); Settle(win);
+        var add = (System.Windows.Input.ICommand)d.AddRowCommand;
+        for (var i = 0; i < 4; i++) { add.Execute(null); Settle(win); }
+        var g = win.GetVisualDescendants().OfType<DataGrid>()
+                   .FirstOrDefault(x => x.IsEffectivelyVisible && x.Columns.Any(c => c.IsVisible));
+        if (g is null) { Check($"{s.Title}: جدول", false); return; }
+        var rows = ((System.Collections.IEnumerable)d.Rows).Cast<object>().ToList();
+        if (rows.Count < 3) { Check($"{s.Title}: ردیف کافی", false, rows.Count.ToString()); return; }
+
+        //  یک کلیکِ ساده روی وسطِ یک سرستونِ نوشته‌ای
+        var root = TopLevel.GetTopLevel(g)!;
+        var textHeads = g.Columns.Where(c => c is DataGridTextColumn && !c.IsReadOnly && c.IsVisible)
+                         .Select(c => c.Header).ToList();
+        var head = g.GetVisualDescendants().OfType<DataGridColumnHeader>()
+                    .Where(h => h.IsEffectivelyVisible && h.Bounds.Width > 40 && h.Content is string
+                                && textHeads.Any(t => Equals(t, h.Content)))
+                    .OrderByDescending(h => h.Bounds.Width).First();
+        var hp = head.TranslatePoint(new Point(head.Bounds.Width / 2, head.Bounds.Height / 2), root)!.Value;
+        win.MouseDown(hp, MouseButton.Left); win.MouseUp(hp, MouseButton.Left);
+        Settle(win);
+
+        //  کلیکِ واقعی روی خانهٔ یک ردیفِ **دیدنی** (وسطِ آن‌چه جلوی چشم است)، در همان ستون
+        var col = g.Columns.First(c => Equals(c.Header, head.Content));
+        var visRows = g.GetVisualDescendants().OfType<DataGridRow>()
+            .Where(r => r.IsEffectivelyVisible && r.DataContext is not null)
+            .Where(r => { var y = r.TranslatePoint(default, root)!.Value.Y; return y > hp.Y + 20 && y < root.Bounds.Height - 60; })
+            .OrderBy(r => r.TranslatePoint(default, g)!.Value.Y).ToList();
+        if (visRows.Count == 0) { Check($"{s.Title}: ردیفِ دیدنی", false); return; }
+        var rowCtl = visRows[visRows.Count / 2];
+        var target = rowCtl.DataContext!;
+        var cell = rowCtl.GetVisualDescendants().OfType<DataGridCell>()
+            .First(c => c.IsEffectivelyVisible && Math.Abs(c.TranslatePoint(default, root)!.Value.X - head.TranslatePoint(default, root)!.Value.X) < 3);
+        var cp = cell.TranslatePoint(new Point(cell.Bounds.Width / 2, cell.Bounds.Height / 2), root)!.Value;
+        win.MouseDown(cp, MouseButton.Left); win.MouseUp(cp, MouseButton.Left);
+        Settle(win);
+        win.KeyTextInput("73519");
+        Pump(win);
+        if (Environment.GetEnvironmentVariable("OP_DEBUG") == "1")
+        {
+            var ed = win.FocusManager?.GetFocusedElement() as TextBox;
+            Console.WriteLine($"      · پیش از Enter: فوکوس {win.FocusManager?.GetFocusedElement()?.GetType().Name} · متن «{ed?.Text}» · ویرایش؟ {g.GetVisualDescendants().OfType<TextBox>().Any(t => t.IsFocused)}");
+        }
+        win.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+        win.KeyReleaseQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+        Settle(win);
+        Wait(win, SaveGuard.FlushAllAsync());
+
+        List<object> Order() => g.CollectionView is System.Collections.IEnumerable cv
+            ? cv.Cast<object>().ToList() : new List<object>();
+        var vis = Order();
+        var wantAt = rows.IndexOf(target);
+        var nowAt = vis.IndexOf(target);
+        var sorted = g.CollectionView?.SortDescriptions.Count > 0;
+        if (Environment.GetEnvironmentVariable("OP_DEBUG") == "1")
+        {
+            var who = ((System.Collections.IEnumerable)d.Rows).Cast<object>().Select((r, i) => (r, i))
+                .Where(x => x.r.GetType().GetProperties().Any(pp => { try { return pp.GetValue(x.r)?.ToString()?.Contains("73519") == true; } catch { return false; } }))
+                .Select(x => x.i).ToList();
+            Console.WriteLine($"      · هدف {rows.IndexOf(target)} · نوشته در ردیف‌های [{string.Join(",", who)}] · ستونِ جاری «{g.CurrentColumn?.Header}» · فوکوس {win.FocusManager?.GetFocusedElement()?.GetType().Name}");
+        }
+        var texts = target.GetType().GetProperties()
+            .Select(pp => { try { return pp.GetValue(target)?.ToString(); } catch { return null; } });
+        Check($"{s.Title}: نوشتهٔ تایپ‌شده در همان ردیف نشست (ستونِ «{head.Content}»)",
+              texts.Any(t => t is not null && Shamsi.ToEnDigits(t).Replace(",", "").Contains("73519")));
+        Check($"{s.Title}: پس از کلیک روی سرستونِ «{head.Content}» و تایپ، ردیف سرِ جایش ماند ({wantAt} ⇒ {nowAt}){(sorted ? " · جدول مرتب شد!" : "")}",
+              nowAt == wantAt && !sorted);
     }
 
     // ══ سنجشِ پیکسلی ═══════════════════════════════════════════════════════

@@ -156,7 +156,12 @@ public class ExcelGrid : DataGrid
         SelectionMode = DataGridSelectionMode.Extended;
         CanUserReorderColumns = true;
         CanUserResizeColumns = true;
-        CanUserSortColumns = true;
+        //  ⛔ مرتب‌سازی با کلیکِ سرستون خاموش است (۱۴۰۵/۰۷/۱۸، دوم). گزارشِ صاحب
+        //  ریپو: «هر نوشته‌ای که تو هر جدول باشه میاد آخرِ جدول.» سنجهٔ ‎oldpost‎
+        //  (بندِ ۶) با کلیک و تایپِ واقعی گرفتش: یک کلیکِ تصادفی روی سرستون جدول
+        //  را مرتب می‌کرد و از آن به بعد هر ردیفی که در آن نوشته می‌شد به جای
+        //  مرتبش می‌پرید — دفترِ حساب ترتیبِ خودش را دارد، مثلِ اکسل.
+        CanUserSortColumns = false;
         AutoGenerateColumns = false;
         IsReadOnly = false;
         HeadersVisibility = DataGridHeadersVisibility.Column;
