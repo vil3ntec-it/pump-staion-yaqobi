@@ -35,4 +35,16 @@ public class ParchaEnterTests
         Assert.Contains("ToggleFuelCommand", body);
         Assert.DoesNotContain("NightCard", view);
     }
+    /// <summary>۱۴۰۵/۰۷/۱۸: شروعِ شب با ختمِ «تایپ‌شده»ی روزِ همان پایه سنجیده می‌شود. رفتار: ‎undokeys‎.</summary>
+    [Fact]
+    public void ShoruyeShab_BaKhatmeNeveshteShodeyeRuz_Sanjide_Mishavad()
+    {
+        var vm = Src("ViewModels/Sections/ParchaSectionViewModel.cs");
+        Assert.Contains("if (DayEndFor(form) is decimal typed) { Apply(form, start, typed, num); return; }", vm);
+        Assert.Contains("Apply(form, form.StartValue, DayEndFor(form) ?? v, num);", vm);
+        Assert.Contains("if (!form.IsNight) return null;", vm);
+        //  ختم یا شمارهٔ پایهٔ روز عوض شد ⇒ شب از نو
+        Assert.Contains("if (!_loading) _owner.RecheckSibling(this);", vm);
+        Assert.Contains("_owner.RecheckSibling(this);", vm[vm.IndexOf("partial void OnPumpNumChanged", StringComparison.Ordinal)..]);
+    }
 }
