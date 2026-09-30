@@ -5,7 +5,20 @@ namespace PumpYaqobi.Application.Services;
 
 public readonly record struct WaraqShiftTotals(
     decimal PetrolLiters, decimal DieselLiters, decimal Sales,
-    decimal Debt, decimal Expenses, decimal DeclaredDebt);
+    decimal Debt, decimal Expenses, decimal DeclaredDebt)
+{
+    /// <summary>
+    /// ══ «جمله فروش» = فروشِ پایه‌ها منهای قرض‌های همین ورق ═════════════════
+    /// خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۸): «قرض‌ها از جمله فروش کم نمی‌شود».
+    /// قرض پولی است که به دستِ پمپ نرسیده و در حسابِ قرض‌دار نشسته، پس آن‌چه
+    /// به گاوصندوق می‌رود و در کادرِ «فروش» دیده می‌شود همین است.
+    /// ⚠️ <see cref="Sales"/> (لیتر × فی) دست نخورد: جمعِ ستونِ «فروش»ِ جدولِ
+    /// پایه‌هاست و برابری با سایت و PDF به همان بند است.
+    /// ⚠️ مصرف این‌جا کم نمی‌شود — مصرف‌ها به «مصارف» می‌روند و از همان‌جا
+    /// از گاوصندوق کم می‌شوند؛ کم کردنِ دوباره‌شان یعنی دو بار.
+    /// </summary>
+    public decimal Net => Sales - Debt;
+}
 
 public readonly record struct WaraqShortage(
     decimal Shortage, decimal Excess, decimal Declared, decimal Covered);

@@ -99,8 +99,8 @@ public class HistoryColumnsTests : IDisposable
 
         var rows = await h.FeedAsync("waraq");
         var r = Assert.Single(rows);
-        Assert.Equal(new[] { "1405/07/02", "☀️ روز", "هارون", "2", "800 افغانی", "1", "200 افغانی", "100 لیتر", "8,000 افغانی" },
-                     r.Cells!);
+        Assert.Equal(new[] { "1405/07/02", "☀️ روز", "هارون", "2", "800 افغانی", "1", "200 افغانی", "100 لیتر", "7,200 افغانی" },
+                     r.Cells!);   // ⛔ فروش منهای قرض (۸۰۰۰ − ۸۰۰)
         //  کارت همان شمار را دارد
         var card = (await h.CardsAsync()).Single(c => c.Key == "waraq");
         Assert.Equal(1, card.Count);

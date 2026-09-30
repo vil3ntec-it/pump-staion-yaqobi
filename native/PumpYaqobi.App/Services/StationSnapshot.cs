@@ -698,12 +698,12 @@ public static class StationSnapshot
             {
                 var t = host.Waraq.ShiftTotals(sh);
                 var sc = host.Waraq.Shortage(t);
-                wPetrol += t.PetrolLiters; wDiesel += t.DieselLiters; wSales += t.Sales;
+                wPetrol += t.PetrolLiters; wDiesel += t.DieselLiters; wSales += t.Net;
                 wDebt += t.Debt; wExp += t.Expenses; wShort += sc.Shortage;
                 waraqRows.Add(new[]
                 {
                     w.DateShamsi ?? "", sh.Kind == ShiftKind.Night ? "شب" : "روز", sh.WorkerName ?? "",
-                    Shamsi.Money(t.PetrolLiters), Shamsi.Money(t.DieselLiters), Shamsi.Money(t.Sales),
+                    Shamsi.Money(t.PetrolLiters), Shamsi.Money(t.DieselLiters), Shamsi.Money(t.Net),
                     Shamsi.Money(t.Debt), Shamsi.Money(t.Expenses),
                     sc.Shortage > 0 ? Shamsi.Money(sc.Shortage) : (sc.Excess > 0 ? "+" + Shamsi.Money(sc.Excess) : "0"),
                 });

@@ -126,7 +126,7 @@ public sealed class HistoryService
             new("تاریخ"), new("شیفت"), new("کارمندان", Wide: true),
             new("شمارِ قرض"), new("جملهٔ قرض", Brush: "Pump.Danger"),
             new("شمارِ مصرف"), new("جملهٔ مصرف", Brush: "Pump.Purple"),
-            new("لیترِ فروش"), new("جملهٔ فروش", Brush: "Pump.Ok"),
+            new("لیترِ فروش"), new("جملهٔ فروش (منهای قرض)", Brush: "Pump.Ok"),
         },
         "sarrafi" => new HistoryCol[]
         {
@@ -686,7 +686,7 @@ public sealed class HistoryService
                 if (workers.Length == 0) workers = string.IsNullOrWhiteSpace(sd.WorkerName) ? "—" : sd.WorkerName!.Trim();
                 var when = sd.Kind == ShiftKind.Night ? "🌙 شب" : "☀️ روز";
                 var liters = t.PetrolLiters + t.DieselLiters;
-                var sales = Math.Round(t.Sales, 0, MidpointRounding.AwayFromZero);
+                var sales = Math.Round(t.Net, 0, MidpointRounding.AwayFromZero);   // ⛔ منهای قرض‌ها
 
                 list.Add(new HistoryRow("waraq", w.DateShamsi ?? "", w.DateKey,
                     "📝 ورق " + (w.DateShamsi ?? "") + " — " + when,

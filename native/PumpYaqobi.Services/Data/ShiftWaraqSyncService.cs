@@ -200,6 +200,52 @@ public sealed class ShiftWaraqSyncService
     }
 
     /// <summary>
+    /// ══ یک بار برای هر دفتر: «فروش ورق»های قدیمیِ گاوصندوق منهای قرض ══════
+    ///
+    /// خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۸): «آن‌هایی که از قدیم رسانده بودم هم با
+    /// آپدیت درست شوند.» تا این نسخه فروشِ ورق بی کم شدنِ قرض‌ها به گاوصندوق
+    /// می‌رفت؛ پس هر ردیفِ «فروش ورق» همین‌جا از نو ساخته می‌شود — با همان
+    /// ‎SyncSalesToSafeAsync‎ که ذخیرهٔ هر ورق می‌زند، نه قاعدهٔ دوم.
+    ///
+    /// ⛔ فقط ردیف‌های ‎wq-sales-*‎ دست می‌خورند؛ هیچ ورق، پایه، قرض یا حسابی نه.
+    /// ⚠️ مهرش در جدولِ تنظیماتِ **همان دفتر** است (همگام نمی‌شود)، پس هر حساب
+    /// و هر دفتر یک بار. نشد ⇒ مهر نمی‌خورد و بارِ بعد دوباره.
+    /// </summary>
+    public const string NetSalesKey = "waraq.sales.net.v1";
+
+    public async Task<int> FixOldSalesOnceAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            List<long> ids;
+            await using (var db = _dbf.Create())
+            {
+                if (await db.Settings.AnyAsync(x => x.Key == NetSalesKey, ct)) return 0;
+                ids = await db.WaraqEntries.AsNoTracking().Select(w => w.Id).ToListAsync(ct);
+            }
+            foreach (var chunk in ids.Chunk(100))
+            {
+                await using var db = _dbf.Create();
+                var list = await db.WaraqEntries.AsSplitQuery()
+                                   .Include(x => x.Shifts).ThenInclude(s => s.Pumps)
+                                   .Include(x => x.Shifts).ThenInclude(s => s.Transactions)
+                                   .Where(x => chunk.Contains(x.Id))
+                                   .ToListAsync(ct);
+                foreach (var w in list) await SyncSalesToSafeAsync(db, w, ct);
+                await db.SaveChangesAsync(ct);
+            }
+            await using (var db = _dbf.Create())
+            {
+                db.Settings.Add(new Setting { Key = NetSalesKey, Value = "1" });
+                await db.SaveChangesAsync(ct);
+            }
+            return ids.Count;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch { return -1; }   // بارِ بعد دوباره
+    }
+
+    /// <summary>
     /// ‎syncShiftToWaraq‎ — پس از ذخیرهٔ پارچه. ورقِ آن تاریخ اگر نباشد ساخته
     /// می‌شود (برخلافِ مسیرِ زنده که ورقِ نساخته را رها می‌کند).
     /// </summary>
@@ -365,7 +411,7 @@ public sealed class ShiftWaraqSyncService
             var sd = w.Shifts.FirstOrDefault(s => s.Kind == kind);
             if (sd is null) continue;
 
-            var sales = Math.Round(_waraq.ShiftTotals(sd).Sales, 0, MidpointRounding.AwayFromZero);
+            var sales = Math.Round(_waraq.ShiftTotals(sd).Net, 0, MidpointRounding.AwayFromZero);   // ⛔ منهای قرض‌ها
             var srcKey = "wq-sales-" + w.Id + "-" + KindWord(kind);
             var row = await db.SafeEntries.FirstOrDefaultAsync(e => e.SrcKey == srcKey, ct);
 
