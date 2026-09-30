@@ -38,6 +38,25 @@ public static class RtlTrim
     public static bool GetEnabled(TextBlock t) => t.GetValue(EnabledProperty);
     public static void SetEnabled(TextBlock t, bool v) => t.SetValue(EnabledProperty, v);
 
+    /// <summary>
+    /// تصحیحی که همین کلاس گذاشته — تا ‎RenderTransform‎ی که کسِ دیگری گذاشته
+    /// هرگز برداشته نشود.
+    /// </summary>
+    private static readonly AttachedProperty<bool> OwnedProperty =
+        AvaloniaProperty.RegisterAttached<TextBlock, bool>("Owned", typeof(RtlTrim));
+
+    /// <summary>
+    /// ⛔ هر نوشتهٔ وسط‌چینِ برنامه، نه فقط جدول (۱۴۰۵/۰۷/۱۸، دوم). گزارشِ صاحب
+    /// ریپو: «همه نوشته‌ها و همه حساب‌ها و سربرگ‌ها تو همه بخش‌ها… چپ یا راست
+    /// رفتن.» سنجهٔ ‎oldpost‎ با پیکسلِ واقعی نشان داد: نامِ کارتِ قرض‌دار
+    /// («مشتریِ 2») و شرکت، عنوانِ هر کارتِ جمع که با ایموجی شروع می‌شود
+    /// («⛽ جمله پطرول»، «🏛️ جمله ماندگی»)، سربرگِ خلاصهٔ ورق — ۹ تا ۲۰ پیکسل
+    /// کج، همان باگِ آوالونیا (تکهٔ عدد/ایموجی در سرِ چپِ خطِ راست‌به‌چپ «فاصلهٔ
+    /// پایانی» شمرده می‌شود). تصحیح فقط روی خانه‌های جدول بود.
+    /// </summary>
+    private static bool Wants(TextBlock t) =>
+        GetEnabled(t) || GetCenter(t) || t.TextAlignment == TextAlignment.Center || t.GetValue(OwnedProperty);
+
     static RtlTrim()
     {
         EnabledProperty.Changed.AddClassHandler<TextBlock>((t, e) =>
@@ -46,16 +65,22 @@ public static class RtlTrim
         });
         TextBlock.TextProperty.Changed.AddClassHandler<TextBlock>((t, _) =>
         {
-            if (!GetEnabled(t) && !GetCenter(t)) return;
+            if (!Wants(t)) return;
             if (GetEnabled(t)) Apply(t);
             //  جای خطِ تازه پس از چیدمانِ همین فریم معلوم است
             Avalonia.Threading.Dispatcher.UIThread.Post(() => Recenter(t),
                 Avalonia.Threading.DispatcherPriority.Loaded);
         });
+        TextBlock.TextAlignmentProperty.Changed.AddClassHandler<TextBlock>((t, _) =>
+        {
+            if (Wants(t))
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => Recenter(t),
+                    Avalonia.Threading.DispatcherPriority.Loaded);
+        });
         //  ⚡ پس از هر چیدمان (نه ‎LayoutUpdated‎ی سراسری): فقط همین نوشته
         Visual.BoundsProperty.Changed.AddClassHandler<TextBlock>((t, _) =>
         {
-            if (GetEnabled(t) || GetCenter(t)) Recenter(t);
+            if (Wants(t)) Recenter(t);
         });
     }
 
@@ -90,6 +115,9 @@ public static class RtlTrim
         if (line.FirstTextSourceIndex + line.Length < t.Text.Length) return 0;
         var gap = line.WidthIncludingTrailingWhitespace - line.Width;
         if (gap < 0.5) return 0;
+        //  نوشته‌ای که هم‌قدِ خودش است (کنارِ نشانه در یک ردیف) آوالونیا اصلاً وسط
+        //  نمی‌برد (‎Start = 0‎) و درست کشیده می‌شود — سنجیده شد: تصحیحش ۵px کج می‌کرد
+        if (line.Start < 0.5) return 0;
         //  خطِ راست‌به‌چپ آن تکه را سمتِ چپ می‌کشد ⇒ نوشته به چپ افتاده
         return gap / 2;
     }
@@ -97,15 +125,23 @@ public static class RtlTrim
     private static void Recenter(TextBlock t)
     {
         var dx = CenterFix(t);
+        var owned = t.GetValue(OwnedProperty);
+        //  ⛔ جابه‌جاییِ کسِ دیگر دست نمی‌خورد
+        if (!owned && t.RenderTransform is not null) return;
         var cur = t.RenderTransform as TranslateTransform;
         if (dx == 0)
         {
-            if (cur is { X: not 0 }) t.RenderTransform = null;
+            if (owned)
+            {
+                t.RenderTransform = null;
+                t.SetValue(OwnedProperty, false);
+            }
             return;
         }
         //  ⚠️ در پنجرهٔ راست‌به‌چپ مختصاتِ محلی آینه است؛ «راست» منفی می‌شود
         var x = t.FlowDirection == FlowDirection.RightToLeft ? -dx : dx;
         if (cur is not null && Math.Abs(cur.X - x) < 0.25) return;
+        t.SetValue(OwnedProperty, true);
         t.RenderTransform = new TranslateTransform(x, 0);
     }
 

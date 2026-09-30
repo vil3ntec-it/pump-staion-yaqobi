@@ -154,6 +154,7 @@ internal static class Program
         //  «حساب‌های دیر رسیده» و «هیچ جدولی کاربر را به چپ و راست نبرد» (۱۴۰۵/۰۷/۱۶)
         if (outDir.Equals("latemonths", StringComparison.OrdinalIgnoreCase)) return LateMonthProbe.Run(args);
         if (outDir.Equals("oldmonths", StringComparison.OrdinalIgnoreCase)) return OldMonthProbe.Run(args);
+        if (outDir.Equals("oldpost", StringComparison.OrdinalIgnoreCase)) return OldPostProbe.Run(args);
         if (outDir.Equals("coldrag", StringComparison.OrdinalIgnoreCase)) return ColDragProbe.Run(args);
         if (outDir.Equals("buyform", StringComparison.OrdinalIgnoreCase)) return BuyFormProbe.Run(args);
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- waraqfit [پوشه]

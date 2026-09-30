@@ -220,7 +220,14 @@ public abstract partial class LedgerSectionViewModel<TRow, TEntity> : SectionVie
         //  (۱۴۰۵/۰۷/۱۸ — «هر ماه حساب‌های جدای خودش را دارد»). «همهٔ ماه‌ها» همان امروز.
         if (!YearMonthPicker.IsAll(Month) && Month != Shamsi.ThisMonth()
             && Shamsi.MonthKey(e.DateShamsi) != Month)
-            e.DateShamsi = Shamsi.DateInMonth(Month);
+        {
+            //  «روزِ بعد از آخرین ردیفِ همان ماه» (۱۴۰۵/۰۷/۱۸، دوم) — تاریخ‌ها از
+            //  دیسک، پس از نشستنِ تایپِ در صف، تا تاریخِ همین حالا ویرایش‌شده هم شمرده شود.
+            foreach (var r in Rows.ToList())
+                try { await r.FlushAsync(); } catch { }
+            var dates = (await Service.ListAsync(Month)).Select(x => x.DateShamsi);
+            e.DateShamsi = Shamsi.NextInMonth(Month, dates);
+        }
         await Service.AddAsync(e);
         var mk = Shamsi.MonthKey(e.DateShamsi);
         // ردیفِ تازه در نمایی که جلوی چشم است می‌گنجد؟ («همهٔ ماه‌های ۱۴۰۵»

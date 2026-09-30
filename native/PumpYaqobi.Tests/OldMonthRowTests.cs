@@ -37,6 +37,28 @@ public class OldMonthRowTests
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
         var src = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "LedgerSectionViewModel.cs"));
-        Assert.Contains("e.DateShamsi = Shamsi.DateInMonth(Month);", src);
+        Assert.Contains("e.DateShamsi = Shamsi.NextInMonth(Month, dates);", src);
     }
+
+    // ══ «ادامهٔ تاریخِ همون ماه» (۱۴۰۵/۰۷/۱۸، دوم) ══════════════════════════
+    [Fact]
+    public void RoozeBaadAzAkharinRadif() =>
+        Assert.Equal("1405/06/11", Shamsi.NextInMonth("1405/06",
+            new[] { "1405/06/02", "1405/06/10", "1405/06/05", null, "1405/05/30" }));
+
+    [Fact]
+    public void MaheKhali_RoozeAval() =>
+        Assert.Equal("1405/06/01", Shamsi.NextInMonth("1405/06", new[] { "1405/05/20" }));
+
+    [Fact]
+    public void AkharinRooz_AzMahBiroonNemiravad() =>
+        Assert.Equal("1404/06/31", Shamsi.NextInMonth("1404/06", new[] { "1404/06/31" }));
+
+    [Fact]
+    public void RaghameFarsi() =>
+        Assert.Equal("1405/06/11", Shamsi.NextInMonth("۱۴۰۵/۰۶", new[] { "۱۴۰۵/۰۶/۱۰" }));
+
+    [Fact]
+    public void MaheJari_Emruz() =>
+        Assert.Equal(Shamsi.Today(), Shamsi.NextInMonth(Shamsi.ThisMonth(), new[] { "1300/01/01" }));
 }

@@ -48,6 +48,32 @@ public static class Shamsi
         return $"{y:0000}/{mo:00}/{d:00}";
     }
 
+    /// <summary>
+    /// تاریخِ ردیفِ تازه در ماهِ **گذشته** = روزِ بعد از آخرین ردیفِ همان ماه (۱۴۰۵/۰۷/۱۸، دوم).
+    /// گزارشِ صاحب ریپو: «ادامهٔ تاریخِ همون ماه باشه — ۶/۱۰ اگه بود از ۶/۱۱ شروع بشه»؛
+    /// پیش از این همان روزِ امروز در آن ماه بود (۷/۸ ⇐ ۶/۰۸) و وسطِ جدول می‌نشست.
+    /// ماهِ بی‌ردیف ⇒ روزِ اول؛ آخرین روزِ ماه پر است ⇒ همان روزِ آخر (از ماه بیرون نمی‌رود).
+    /// ماهِ جاری و کلیدِ خراب همان رفتارِ ‎DateInMonth‎ (امروز).
+    /// </summary>
+    public static string NextInMonth(string? monthKey, IEnumerable<string?> dates)
+    {
+        var baseDate = DateInMonth(monthKey);
+        var mk = MonthKey(baseDate);
+        if (baseDate == Today() || mk != MonthKey(ToEnDigits(monthKey ?? "") + "/01")) return baseDate;
+        var y = int.Parse(mk[..4]);
+        var mo = int.Parse(mk[5..]);
+        int days;
+        try { days = Cal.GetDaysInMonth(y, mo); } catch { return baseDate; }
+        var last = 0;
+        foreach (var d in dates)
+        {
+            var k = Key(d);
+            if (k != 0 && $"{k / 10000:0000}/{k / 100 % 100:00}" == mk) last = Math.Max(last, k % 100);
+        }
+        var day = last == 0 ? 1 : Math.Min(last + 1, days);
+        return $"{y:0000}/{mo:00}/{day:00}";
+    }
+
     /// <summary>ارقامِ فارسی/عربی را به لاتین برمی‌گرداند تا تجزیه شکست نخورد.</summary>
     public static string ToEnDigits(string? s)
     {
