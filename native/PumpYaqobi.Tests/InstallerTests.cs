@@ -246,6 +246,11 @@ public class InstallerTests
         //  پیش‌فرض «نگه دار»، و بی‌صدا فقط با ‎/FRESH=1‎ — به‌روزرسانی هرگز
         Assert.Contains("FreshPage.SelectedValueIndex := 0;", code);
         Assert.Contains("{param:FRESH|}", code);
+        //  ⛔ برنامه نصب است ⇒ فقط به‌روزرسانی: نه صفحه، نه ‎/FRESH=1‎
+        var f = code.IndexOf("function FreshChosen", StringComparison.Ordinal);
+        var fresh = code[f..code.IndexOf("\nend;", f, StringComparison.Ordinal)];
+        Assert.Contains("if InstalledVer <> '' then", fresh);
+        Assert.Contains("(InstalledVer = '') and AnyOldData()", code);
         //  و فقط کنار گذاشتن
         var c = code.IndexOf("procedure CurStepChanged", StringComparison.Ordinal);
         var step = code[c..code.IndexOf("\nend;", c, StringComparison.Ordinal)];

@@ -409,7 +409,12 @@ end;
 
 function FreshChosen(): Boolean;
 begin
-  if WizardSilent then
+  //  ⛔ برنامه نصب است ⇒ فقط به‌روزرسانی، هرگز «خالی» — حتی با ‎/FRESH=1‎
+  //  (خواستهٔ صاحب ریپو: «اگه حسابی توی کامپیوتر نصب بود فقط برنامه رو
+  //  بروز رسانی کنه و کار اشتباهی سر نخوره»).
+  if InstalledVer <> '' then
+    Result := False
+  else if WizardSilent then
     Result := Trim(ExpandConstant('{param:FRESH|}')) = '1'
   else
     Result := (FreshPage <> nil) and (FreshPage.SelectedValueIndex = 1);
@@ -469,7 +474,8 @@ begin
   if not IsWin64 then
     ArchPage.CheckListBox.ItemEnabled[0] := False;
 
-  if AnyOldData() then
+  //  فقط وقتی برنامه نصب نیست ولی اطلاعاتش مانده (حذف شده، یا پوشه جابه‌جا شده)
+  if (InstalledVer = '') and AnyOldData() then
   begin
     FreshPage := CreateInputOptionPage(ArchPage.ID,
       'اطلاعاتِ قبلیِ همین کامپیوتر',
