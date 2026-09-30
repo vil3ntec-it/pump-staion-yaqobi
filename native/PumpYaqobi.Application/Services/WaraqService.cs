@@ -216,6 +216,32 @@ public sealed class WaraqService
     }
 
     /// <summary>
+    /// ══ لیترِ ردیف‌های قرض/مصرف، به تفکیکِ تیل (۱۴۰۵/۰۷/۱۸) ════════════════
+    /// گزارشِ صاحب ریپو: «وقتی توی نام دیزل می‌نویسم، توی جمله دیزل اون مقدار
+    /// لیتر نوشته نمی‌شه… پیش‌فرض پطرول است، اما دیزل باید توی جمله دیزل‌ها
+    /// هم نوشته بشه.»
+    /// <para>
+    /// ⛔ این عدد به <see cref="WaraqShiftTotals.PetrolLiters"/>/‎DieselLiters‎
+    /// <b>اضافه نمی‌شود</b>: آن دو قرائتِ پایه‌هاست و لیترِ قرض از همان پایه
+    /// رفته؛ جمع کردنشان یعنی یک لیتر دو بار، و «کمبودی» و «فروش» غلط می‌شد.
+    /// پس جدا گفته می‌شود — زیرِ همان کادرِ پطرول/دیزل.
+    /// </para>
+    /// سوخت همان <see cref="WaraqTransaction.Fuel"/>ِ ردیف است که از نامش
+    /// (‎PostingService.DetectFuelType‎) پر می‌شود. ردیفِ بی‌نام شمرده نمی‌شود.
+    /// </summary>
+    public (decimal Petrol, decimal Diesel) TxnLiters(WaraqShift sd)
+    {
+        if (sd is null) return (0m, 0m);
+        decimal petrol = 0, diesel = 0;
+        foreach (var t in sd.Transactions)
+        {
+            if (t.Liters <= 0m || string.IsNullOrWhiteSpace(t.Name)) continue;
+            if (t.Fuel == FuelType.Diesel) diesel += t.Liters; else petrol += t.Liters;
+        }
+        return (petrol, diesel);
+    }
+
+    /// <summary>
     /// ‎computeWaraqShortage‎ — کمبودی = قرضِ نوشته‌شده در پارچه منهای
     /// قرض‌ها و مصرف‌هایی که در همین ورق ثبت شده‌اند. منفی یعنی «اضافی».
     /// </summary>

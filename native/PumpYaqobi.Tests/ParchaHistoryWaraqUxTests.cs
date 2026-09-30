@@ -239,8 +239,9 @@ public class ParchaHistoryWaraqUxTests
     {
         var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "WaraqSectionViewModel.cs");
         Assert.Contains("_owner.AutoFromName(this)", vm);
-        Assert.Contains("PostingService.MentionsFuel(text)", vm);
-        Assert.Contains("PostingService.DetectFuelType(text)", vm);
+        //  ⛔ از ۱۴۰۵/۰۷/۱۸ نام تنها درِ تیل است: بی «دیزل/د» همان پیش‌فرضِ پطرول
+        //  (پیش از این فقط با ‎MentionsFuel‎ عوض می‌شد و دیزلِ پاک‌شده می‌ماند).
+        Assert.Contains("var fuel = PostingService.DetectFuelType(text);", vm);
         Assert.Contains("PostingService.MatchWaraqName(_unitPeople", vm);
         Assert.Contains("PostingService.UnitForAccount(", vm);
 

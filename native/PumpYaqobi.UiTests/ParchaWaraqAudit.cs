@@ -300,8 +300,8 @@ internal static class ParchaWaraqAudit
         // همین حالا تایپ کرده عمداً ستون را پهن نمی‌کند (قاعدهٔ «تایپ نباید
         // عرضِ ستون را عوض کند»).
         var sheet = wq.Sheets.FirstOrDefault();
-        wq.BackCommand.Execute(null); Settle(win);
-        wq.OpenCommand.Execute(sheet); Settle(win);
+        Wait(win, wq.BackCommand.ExecuteAsync(null)); Settle(win);
+        Wait(win, wq.OpenCommand.ExecuteAsync(wq.Sheets.FirstOrDefault(x => x.Id == sheet?.Id) ?? sheet)); Settle(win);
         var cells = win.GetVisualDescendants().OfType<DataGridCell>()
                        .Where(c => c.IsEffectivelyVisible).ToList();
         var bad = new List<string>();
@@ -378,6 +378,22 @@ internal static class ParchaWaraqAudit
 
         while (page.Txns.Count < 5) { page.AddTxnCommand.Execute(null); Settle(win); }
 
+        // ⛔ «➕ ردیف» هیچ ردیفی را از جدولی به جدولِ دیگر نمی‌برد (۱۴۰۵/۰۷/۱۸)
+        var firstBefore = page.TxnsFirst.ToList();
+        var secondBefore = page.TxnsSecond.ToList();
+        page.AddTxnCommand.Execute(null); Settle(win);
+        Check("ردیفِ تازه هیچ ردیفی را جابه‌جا نکرد",
+              page.TxnsFirst.SequenceEqual(firstBefore)
+              && page.TxnsSecond.Take(secondBefore.Count).SequenceEqual(secondBefore)
+              && page.TxnsSecond.Count == secondBefore.Count + 1,
+              page.TxnsFirst.Count + " و " + page.TxnsSecond.Count);
+
+        // تقسیمِ نیمه‌به‌نیمه فقط سرِ باز شدنِ ورق است
+        var sheet = wq.Sheets.FirstOrDefault();
+        Wait(win, wq.BackCommand.ExecuteAsync(null)); Settle(win);
+        Wait(win, wq.OpenCommand.ExecuteAsync(wq.Sheets.FirstOrDefault(x => x.Id == sheet?.Id) ?? sheet)); Settle(win);
+        page = wq.Page!;
+
         var mid = (int)Math.Ceiling(page.Txns.Count / 2.0);
         Check($"{page.Txns.Count} ردیف ⇒ {mid} و {page.Txns.Count - mid}",
               page.TxnsFirst.Count == mid && page.TxnsSecond.Count == page.Txns.Count - mid,
@@ -414,25 +430,37 @@ internal static class ParchaWaraqAudit
     /// </summary>
     private static void GrowsWithRows(Window win, WaraqPageViewModel page, List<DataGrid> grids)
     {
-        var grid = grids.FirstOrDefault(g => ReferenceEquals(g.ItemsSource, page.TxnsFirst));
-        if (grid is null) { Check("جدولِ اولِ تراکنش‌ها پیدا شد", false); return; }
+        //  ⛔ ردیفِ تازه تهِ جدولِ **دوم** می‌نشیند (۱۴۰۵/۰۷/۱۸) — جدولِ اول تکان نمی‌خورد
+        var grid = grids.FirstOrDefault(g => ReferenceEquals(g.ItemsSource, page.TxnsSecond));
+        if (grid is null) { Check("جدولِ دومِ تراکنش‌ها پیدا شد", false); return; }
 
         var before = grid.Bounds.Height;
-        var rowsBefore = page.TxnsFirst.Count;
+        var rowsBefore = page.TxnsSecond.Count;
+        var firstBefore = page.TxnsFirst.Count;
 
         var need = 50 - page.Txns.Count;
         if (need > 0) Wait(win, page.AddRowsAsync(need));
         Settle(win);
 
         var after = grid.Bounds.Height;
-        var added = page.TxnsFirst.Count - rowsBefore;
+        var added = page.TxnsSecond.Count - rowsBefore;
 
-        Check($"ردیف‌های جدولِ اول {rowsBefore} ⇒ {page.TxnsFirst.Count}",
-              added > 0, added + " ردیفِ تازه");
+        Check($"ردیف‌های جدولِ دوم {rowsBefore} ⇒ {page.TxnsSecond.Count} و جدولِ اول همان {firstBefore}",
+              added > 0 && page.TxnsFirst.Count == firstBefore, added + " ردیفِ تازه");
         Check("و جدول به همان اندازه بلندتر شد (نه کادرِ ثابت)",
               added <= 0 || after > before + added * 20,
               $"{before:0} ⇒ {after:0} پیکسل");
 
+        //  رشدِ تدریجی: تکه‌ها با پایین آمدنِ صفحه ساخته می‌شوند — تا ته برو و بگذار بنشیند
+        ScrollViewer? sv = grid.GetVisualAncestors().OfType<ScrollViewer>().LastOrDefault();
+        for (var i = 0; i < 40; i++)
+        {
+            if (sv is not null) sv.Offset = new Avalonia.Vector(sv.Offset.X, sv.Extent.Height);
+            Settle(win);
+            var b = grid.GetVisualDescendants().OfType<ScrollBar>()
+                        .FirstOrDefault(x => x.Orientation == Orientation.Vertical);
+            if (b is null || b.Maximum <= 1) break;
+        }
         var vbar = grid.GetVisualDescendants().OfType<ScrollBar>()
                        .FirstOrDefault(b => b.Orientation == Orientation.Vertical);
         Check("و داخلِ خودش اسکرول نمی‌شود",

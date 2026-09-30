@@ -501,17 +501,51 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
     public ObservableCollection<WaraqTxnViewModel> TxnsFirst { get; } = new();
     public ObservableCollection<WaraqTxnViewModel> TxnsSecond { get; } = new();
 
-    /// <summary>‎mid = ceil(n/2)‎ — مو‌به‌مو همان تقسیمِ سایت.</summary>
+    /// <summary>‎mid = ceil(n/2)‎ — مو‌به‌مو همان تقسیمِ سایت، ولی **فقط سرِ باز شدن**.</summary>
+    //
+    // ⛔ ══ ردیف‌ها زیرِ دستِ کاربر جابه‌جا نمی‌شوند (۱۴۰۵/۰۷/۱۸) ════════════
+    // گزارشِ صاحب ریپو: «توی جدول‌ها حساب رو می‌رسونم، جدول‌ها اتومات می‌رن
+    // بالا یا پایین… و جملاتی که می‌نویسم پاک می‌شن.» ریشه همین‌جا بود: با
+    // **هر** «➕ ردیف» هر دو فهرست خالی و از نو پر می‌شدند، پس ‎mid‎ عوض می‌شد و
+    // ردیفِ اولِ جدولِ دوم به تهِ جدولِ اول می‌پرید (همهٔ ردیف‌های جدولِ دوم یک
+    // خانه بالا می‌رفتند)، و ‎Reset‎ِ هر دو جدول خانه‌ای را که در حالِ نوشتن
+    // بود می‌بست.
+    //
+    // حالا تقسیمِ نیمه‌به‌نیمه فقط وقتی است که ورق (یا شیفتِ دیگرش) باز
+    // می‌شود (‎Build‎). ردیفِ تازه همیشه **تهِ** جدولِ دوم می‌نشیند — همان
+    // جایی که شماره‌اش می‌گوید — و حذف فقط همان ردیف را برمی‌دارد. هیچ ردیفِ
+    // دیگری تکان نمی‌خورد.
     private void SplitTxns()
     {
         TxnsFirst.Clear();
         TxnsSecond.Clear();
         var mid = (int)Math.Ceiling(Txns.Count / 2.0);
         for (var i = 0; i < Txns.Count; i++)
-        {
-            Txns[i].Index = Shamsi.Money(i + 1);
             (i < mid ? TxnsFirst : TxnsSecond).Add(Txns[i]);
-        }
+        Renumber();
+    }
+
+    /// <summary>ردیفِ تازه به تهِ جدولِ دوم — مگر جدولِ دوم هنوز خالی و جدولِ اول هم خالی است.</summary>
+    private void PlaceNewTxn(WaraqTxnViewModel vm)
+    {
+        if (TxnsFirst.Count == 0 && TxnsSecond.Count == 0) TxnsFirst.Add(vm);
+        else TxnsSecond.Add(vm);
+        Renumber();
+    }
+
+    /// <summary>ردیفِ رفته فقط از جدولِ خودش برداشته می‌شود.</summary>
+    private void RemoveTxnRow(WaraqTxnViewModel vm)
+    {
+        if (!TxnsFirst.Remove(vm)) TxnsSecond.Remove(vm);
+        Renumber();
+    }
+
+    /// <summary>ستونِ «#» — شمارهٔ هر ردیف در کلِ شیفت، به ترتیبِ دیدن.</summary>
+    private void Renumber()
+    {
+        var i = 0;
+        foreach (var r in TxnsFirst) r.Index = Shamsi.Money(++i);
+        foreach (var r in TxnsSecond) r.Index = Shamsi.Money(++i);
     }
 
     [ObservableProperty] private bool _isNight;
@@ -628,6 +662,9 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         Expenses = Shamsi.Money(Math.Round(t.Expenses, 0, MidpointRounding.AwayFromZero));
         PumpLiters = Shamsi.Money(t.PetrolLiters + t.DieselLiters) + " لیتر";
         PumpDebt = Shamsi.Money(Math.Round(t.DeclaredDebt, 0, MidpointRounding.AwayFromZero));
+        var tl = Calc.TxnLiters(sd);
+        TxnPetrolLiters = "📋 در ردیف‌ها: " + Shamsi.Money(tl.Petrol) + " لیتر";
+        TxnDieselLiters = "📋 در ردیف‌ها: " + Shamsi.Money(tl.Diesel) + " لیتر";
 
         var sh = Calc.Shortage(t);
         if (sh.Shortage > 0)
@@ -668,6 +705,10 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
 
     public string SumPetrol => PetrolLiters + " لیتر";
     public string SumDiesel => DieselLiters + " لیتر";
+
+    /// <summary>لیترِ ردیف‌های قرض/مصرفِ همان تیل — زیرِ کادرِ پطرول و دیزل (‎WaraqService.TxnLiters‎).</summary>
+    [ObservableProperty] private string _txnPetrolLiters = "";
+    [ObservableProperty] private string _txnDieselLiters = "";
     public string SumExpenses => Expenses + " افغانی";
     public string SumDebt => Debt + " افغانی";
     public string SumSales => Sales + " افغانی";
@@ -800,7 +841,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         var vm = new WaraqTxnViewModel(t, this);
         vm.Recalculated += Recalc;
         Txns.Add(vm);
-        SplitTxns();
+        PlaceNewTxn(vm);      // ⛔ نه تقسیمِ دوباره — هیچ ردیفِ دیگری جابه‌جا نمی‌شود
         Recalc();
     }
 
@@ -813,7 +854,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         await row.RetireWhileAsync(() => _host.WaraqData.DeleteTxnAsync(row.Entity.Id));
         sd.Transactions.Remove(row.Entity);
         Txns.Remove(row);
-        SplitTxns();
+        RemoveTxnRow(row);    // ⛔ نه تقسیمِ دوباره
         Recalc();
         // ردیف که رفت، ثبتش در حسابِ قرض‌دار یا مصارف هم باید برود
         await PostAsync();
@@ -931,9 +972,12 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
             var text = row.Name ?? "";
             if (text.Trim().Length == 0) return;
 
-            // ۱) سوخت: «پطرول» · «دیزل» · «پ» · «د» — هر جای جمله
-            if (PostingService.MentionsFuel(text))
-                row.Fuel = PostingService.DetectFuelType(text);
+            // ۱) سوخت: «پطرول» · «دیزل» · «پ» · «د» — هر جای جمله؛ بی هیچ‌کدام
+            //    همان پیش‌فرضِ پطرول (۱۴۰۵/۰۷/۱۸). پیش از این «دیزل» که از نام
+            //    پاک می‌شد، ردیف برای همیشه دیزل می‌ماند. نام تنها درِ تیلِ ردیف
+            //    است (ستونش از ۱۴۰۵/۰۷/۰۶ برداشته شده).
+            var fuel = PostingService.DetectFuelType(text);
+            if (row.Fuel != fuel) row.Fuel = fuel;
 
             // ۲) واحد: تیل یا پول، از روی حسابی که نامش خورده
             await EnsureUnitsAsync();
