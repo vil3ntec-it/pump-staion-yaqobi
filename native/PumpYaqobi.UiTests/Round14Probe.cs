@@ -222,6 +222,17 @@ internal static class Round14Probe
     private static void AlertsList(Window win, MainViewModel vm, string shots)
     {
         Console.WriteLine("۴) فهرستِ هشدارهای داشبورد");
+        //  ⛔ حلقهٔ خودِ برنامه هر پنج ثانیه فهرستِ واقعی را می‌سازد و روی فهرستِ
+        //  نمونهٔ این سنجه می‌نشاند — گاهی پیش از سنجش، گاهی نه (روی ‎main‎ هم
+        //  یک در چند اجرا سرخ بود). این بند نمایشِ فهرست را می‌سنجد، نه حلقه را؛
+        //  پس حلقه بسته می‌شود — بی مسدود کردنِ نخِ رابط (تلهٔ ‎idle‎).
+        if (AppHost.Current.PublisherIfStarted is { } pub)
+        {
+            var stop = Task.Run(() => pub.DisposeAsync().AsTask());
+            var until = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+            while (!stop.IsCompleted && DateTime.UtcNow < until)
+            { Avalonia.Threading.Dispatcher.UIThread.RunJobs(); Thread.Sleep(5); }
+        }
         var items = new List<AlertItem>
         {
             new("tank-petrol", "مخزنِ پطرول", "petrol", "out", "مخزنِ پطرول تمام شد — ۰ لیتر مانده (حدِ هشدار ۲٬۰۰۰)", "امروز پطرول سفارش بدهید"),

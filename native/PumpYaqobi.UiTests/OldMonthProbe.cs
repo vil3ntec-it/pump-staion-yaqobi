@@ -52,8 +52,12 @@ internal static class OldMonthProbe
             .UseSkia()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
             .SetupWithoutStarting();
-        var win = new MainWindow { Width = 1440, Height = 900 };
+        static double Env(string k, double d) => double.TryParse(Environment.GetEnvironmentVariable(k),
+            System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : d;
+        var win = new MainWindow { Width = Env("OM_W", 1440), Height = Env("OM_H", 900) };
+        LayoutCycleProbe.SetScaling(win, Env("OM_SCALE", 1));
         win.Show();
+        Console.WriteLine($"پنجره {win.Width}×{win.Height} · مقیاس {win.RenderScaling}");
         Pump(win);
         var vm = (MainViewModel)win.DataContext!;
         LockIn.Wait(vm.Lock);
@@ -81,6 +85,16 @@ internal static class OldMonthProbe
         h.SafeLedger.AddAsync(new SafeEntry { DateShamsi = d, Title = "فروش ورق — روز (محمد هارون) — " + d, Amount = 88000m }).GetAwaiter().GetResult();
         h.ExchangeLedger.AddAsync(new ExchangeRow { DateShamsi = d, Description = longText, Amount = 100m, Rate = 1m }).GetAwaiter().GetResult();
         h.RetailLedger.AddAsync(new RetailRow { DateShamsi = d, Name = "علی احمدی", Liters = 10m, PricePerLiter = 60m }).GetAwaiter().GetResult();
+        //  جدولِ بلند (پنجرهٔ چسبان) — مثلِ ماهِ واقعیِ یک پمپ
+        if (Environment.GetEnvironmentVariable("OM_MANY") != "1") return;
+        for (var i = 1; i <= 70; i++)
+        {
+            var di = Old + "/" + (1 + i % 28).ToString("00");
+            h.ExpenseLedger.AddAsync(new Expense { DateShamsi = di, Title = "مصرفِ شمارهٔ " + i, Amount = 100m * i }).GetAwaiter().GetResult();
+            h.SafeLedger.AddAsync(new SafeEntry { DateShamsi = di, Title = "فروش ورق — روز " + i, Amount = 1000m * i }).GetAwaiter().GetResult();
+            h.ExchangeLedger.AddAsync(new ExchangeRow { DateShamsi = di, Description = "حوالهٔ " + i, Amount = 10m * i, Rate = 1m }).GetAwaiter().GetResult();
+            h.RetailLedger.AddAsync(new RetailRow { DateShamsi = di, Name = "مشتری " + i, Liters = i, PricePerLiter = 60m }).GetAwaiter().GetResult();
+        }
     }
 
     private static SectionViewModel Open(MainWindow win, MainViewModel vm, string id)
@@ -107,6 +121,7 @@ internal static class OldMonthProbe
         Settle(win);
         Check($"{s.Title}: ماهِ {Old} باز شد", (string)d.Month == Old, (string)d.Month);
         Centered(win, $"{s.Title} ({Old})");
+        Scrolled(win, s.Title);
 
         int before = ((System.Collections.ICollection)d.Rows).Count;
         var cmd = (System.Windows.Input.ICommand)d.AddRowCommand;
@@ -140,6 +155,49 @@ internal static class OldMonthProbe
         Centered(win, $"{s.Title} (پس از بخشِ دیگر و تعویضِ تم)");
         d.Month = shown; Settle(win);
         Centered(win, $"{s.Title} (برگشت به {shown})");
+
+        //  کارهای خودِ کاربر: نوشتن در خانه، حذفِ ردیف، کوچک و بزرگ کردنِ پنجره
+        d.Month = Old; Settle(win);
+        var rows = (System.Collections.IList)d.Rows;
+        if (rows.Count > 0)
+        {
+            var r0 = rows[0]!;
+            foreach (var pn in new[] { "Title", "Name", "Description", "Note" })
+                if (r0.GetType().GetProperty(pn) is { CanWrite: true } pi)
+                { pi.SetValue(r0, "نوشتهٔ تازهٔ کاربر 12"); break; }
+            Settle(win);
+            Centered(win, $"{s.Title} (پس از نوشتن در خانه)");
+        }
+        if (rows.Count > 1 && s is PumpYaqobi.App.ViewModels.IRowBatchHost bh)
+        {
+            Wait(win, bh.DeleteRowsAsync(1));
+            Centered(win, $"{s.Title} (پس از حذفِ ردیف)");
+        }
+        var (w0, h0) = (win.Width, win.Height);
+        win.Width = w0 * 0.75; Settle(win);
+        Centered(win, $"{s.Title} (پنجرهٔ کوچک‌تر)");
+        win.Width = w0; win.Height = h0; Settle(win);
+        Centered(win, $"{s.Title} (پنجره دوباره بزرگ)");
+        d.Month = shown; Settle(win);
+    }
+
+    /// <summary>با چرخِ صفحه پایین و بالا — در هر جا، هم فریمِ همان لحظه هم پس از ته‌نشینی.</summary>
+    private static void Scrolled(Window win, string title)
+    {
+        var sv = win.GetVisualDescendants().OfType<ScrollViewer>()
+                    .Where(v => v.IsEffectivelyVisible && v.Extent.Height > v.Viewport.Height + 50)
+                    .OrderByDescending(v => v.Extent.Height).FirstOrDefault();
+        if (sv is null) return;
+        foreach (var f in new[] { 0.3, 0.6, 1.0, 0.0 })
+        {
+            sv.Offset = new Vector(sv.Offset.X, (sv.Extent.Height - sv.Viewport.Height) * f);
+            Pump(win);
+            if (!Measure(win, "", report: false))
+            {
+                Settle(win);
+                Measure(win, $"{title} (اسکرول {f:0.#})", report: true);
+            }
+        }
     }
 
     private static string LastAdded(string id)
@@ -254,14 +312,21 @@ internal static class OldMonthProbe
         var inner = tb.Bounds.Width - tb.Padding.Left - tb.Padding.Right;
         if (tl.TextLines[0].Width >= inner - 1) return null;       // پر از کادر
         var root = TopLevel.GetTopLevel(tb)!;
+        //  ⚠️ قابِ پنجره به پیکسل است، نه به واحدِ چیدمان: در ۱۲۵٪ هر واحد ۱٫۲۵ پیکسل
+        var k = root.RenderScaling;
         (double L, double R, double T, double B) Rect(Visual v)
         {
-            var a = v.TranslatePoint(default, root)!.Value;
-            var b = v.TranslatePoint(new Point(v.Bounds.Width, v.Bounds.Height), root)!.Value;
+            var a = v.TranslatePoint(default, root)!.Value * k;
+            var b = v.TranslatePoint(new Point(v.Bounds.Width, v.Bounds.Height), root)!.Value * k;
             return (Math.Min(a.X, b.X), Math.Max(a.X, b.X), Math.Min(a.Y, b.Y), Math.Max(a.Y, b.Y));
         }
         var bx = Rect(box);
         var tr = Rect(tb);
+        //  زیرِ نوارِ شناورِ بخش‌ها یا بیرونِ قاب ⇒ دیده نمی‌شود، سنجیدنی نیست
+        var navBottom = root.GetVisualDescendants().OfType<Control>()
+            .Where(c => c.Name == "NavItems" && c.IsEffectivelyVisible)
+            .Select(c => Rect(c).B).DefaultIfEmpty(0).Max();
+        if (tr.T < navBottom + 2 || tr.B > frame.Height - 2) return null;
         int x0 = (int)Math.Ceiling(bx.L) + 3, x1 = (int)Math.Floor(bx.R) - 3;
         int y0 = (int)Math.Ceiling(tr.T) + 1, y1 = (int)Math.Floor(tr.B) - 1;
         if (x1 <= x0 || y1 <= y0 || x1 >= frame.Width || y1 >= frame.Height) return null;
@@ -275,7 +340,7 @@ internal static class OldMonthProbe
                 { if (lo < 0) lo = x; hi = x; break; }
             }
         if (lo < 0) return null;
-        var off = Math.Abs((lo + hi + 1) / 2.0 - (bx.L + bx.R) / 2);
+        var off = Math.Abs((lo + hi + 1) / 2.0 - (bx.L + bx.R) / 2) / k;
         if (Environment.GetEnvironmentVariable("OM_DEBUG") == "1" && off > 3)
             Console.WriteLine($"      · «{tb.Text}» ink={lo}..{hi} box={bx.L:0}..{bx.R:0} tb={tr.L:0}..{tr.R:0} w={tl.TextLines[0].Width:0.#} wt={tl.TextLines[0].WidthIncludingTrailingWhitespace:0.#} start={tl.TextLines[0].Start:0.#} wrap={tb.TextWrapping} rt={(tb.RenderTransform as Avalonia.Media.TranslateTransform)?.X} fix={PumpYaqobi.App.Controls.RtlTrim.CenterFix(tb):0.#} mv={tb.IsMeasureValid} av={tb.IsArrangeValid}");
         return off;

@@ -230,6 +230,39 @@ public class InstallerTests
     /// کلِ دفترِ حساب‌ها را می‌برد.
     /// </summary>
     [Fact]
+    public void NasbeKhali_KenarMigozarad_PakNemikonad_VaPishfarzashNegahDashtan_Ast()
+    {
+        var s = Iss();
+        var live = string.Join("\n", s.Split('\n').Where(l => !l.TrimStart().StartsWith(";")));
+        var code = live[live.IndexOf("[Code]", StringComparison.Ordinal)..];
+        //  همهٔ جاهایی که برنامه از آن‌ها اطلاعات برمی‌دارد (DataHome): ‎{app}\data‎،
+        //  پوشهٔ نصبِ قبلی، جای کهنه و جای ثبت‌شده در رجیستری
+        var d = code.IndexOf("function DataCandidates", StringComparison.Ordinal);
+        Assert.True(d >= 0);
+        var cand = code[d..code.IndexOf("\nend;", d, StringComparison.Ordinal)];
+        Assert.Contains("InstalledDir", cand);
+        Assert.Contains("{userappdata}", cand);
+        Assert.Contains("'DataDir'", cand);
+        //  پیش‌فرض «نگه دار»، و بی‌صدا فقط با ‎/FRESH=1‎ — به‌روزرسانی هرگز
+        Assert.Contains("FreshPage.SelectedValueIndex := 0;", code);
+        Assert.Contains("{param:FRESH|}", code);
+        //  ⛔ برنامه نصب است ⇒ فقط به‌روزرسانی: نه صفحه، نه ‎/FRESH=1‎
+        var f = code.IndexOf("function FreshChosen", StringComparison.Ordinal);
+        var fresh = code[f..code.IndexOf("\nend;", f, StringComparison.Ordinal)];
+        Assert.Contains("if InstalledVer <> '' then", fresh);
+        Assert.Contains("(InstalledVer = '') and AnyOldData()", code);
+        //  و فقط کنار گذاشتن
+        var c = code.IndexOf("procedure CurStepChanged", StringComparison.Ordinal);
+        var step = code[c..code.IndexOf("\nend;", c, StringComparison.Ordinal)];
+        Assert.Contains("FreshChosen()", step);
+        Assert.Contains("SetAside(", step);
+        Assert.Contains("(not FreshChosen())", step);
+        //  ⛔ برنامه ‎--fresh‎ یا چیزی مانند آن را به نصاب نمی‌دهد
+        var upd = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        Assert.DoesNotContain("FRESH", upd, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Uninstalling_never_touches_the_users_data()
     {
         var s = Iss();
@@ -244,7 +277,8 @@ public class InstallerTests
         //  پوشه را **کنار می‌گذارد** (تغییرِ نام)، فقط با «بله»ی صریح، پیش‌فرضِ
         //  «نه»، و هرگز در حذفِ بی‌صدا (به‌روزرسانی).
         var code = live[live.IndexOf("[Code]", StringComparison.Ordinal)..];
-        Assert.Equal(1, live.Split("{userappdata}").Length - 1);
+        //  و دومی «نصبِ خالی» (۱۴۰۵/۰۷/۱۸): همان کنار گذاشتن، فقط با انتخابِ صریح
+        Assert.Equal(2, live.Split("{userappdata}").Length - 1);
         Assert.Contains("{userappdata}", code);
         var i = code.IndexOf("procedure CurUninstallStepChanged", StringComparison.Ordinal);
         Assert.True(i >= 0);
