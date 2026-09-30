@@ -236,6 +236,7 @@
               <TextBlock Text="⛽ جمله پطرول" Classes="label" />
               <TextBlock Text="{Binding SumPetrol}" Classes="num"
                          Foreground="{DynamicResource Pump.Ink.Accent}" />
+              <TextBlock Text="{Binding TxnPetrolLiters}" Classes="muted" FontSize="12" />
             </StackPanel>
           </Border>
           <Border Classes="stat">
@@ -243,6 +244,7 @@
               <TextBlock Text="🟤 جمله دیزل" Classes="label" />
               <TextBlock Text="{Binding SumDiesel}" Classes="num"
                          Foreground="{DynamicResource Pump.Ink.Diesel}" />
+              <TextBlock Text="{Binding TxnDieselLiters}" Classes="muted" FontSize="12" />
             </StackPanel>
           </Border>
           <Border Classes="stat">

@@ -60,6 +60,7 @@ internal static class Round17Probe
 
         ParchaKeys(win, vm, h);
         WaraqAndHistory(win, vm, h);
+        WaraqTyping(win, vm, h);
 
         Console.WriteLine();
         if (Bad.Count == 0) { Console.WriteLine("✅ ورق ⇄ پارچه ⇄ تاریخچه، «/هارون» و کلیدهای پارچه و ورق — همه با کلیدِ واقعی"); return 0; }
@@ -372,6 +373,86 @@ internal static class Round17Probe
                   r is not null && r.FuelAccountId == haroun.MainAccount.Id && r.Name == "ابراهیم");
             Check("و هیچ ردیفی در حسابِ ابراهیم نیست", rows.All(x => x.FuelAccountId != ebrahim.MainAccount.Id));
         }
+    }
+
+    // ══ ۵) ورق (۱۴۰۵/۰۷/۱۸): ردیف تکان نمی‌خورد · نوشته اصلاح نمی‌شود · دیزل ══
+
+    private static void WaraqTyping(Window win, MainViewModel vm, AppHost h)
+    {
+        Console.WriteLine();
+        Console.WriteLine("── ۵) ورق: ردیف‌ها سرِ جا · نوشته دست‌نخورده · دیزل در جمله‌اش ──");
+        var wq = (WaraqSectionViewModel)vm.Sections.First(s => s.Id == "waraq");
+        Wait(win, vm.GoAsync(wq));
+        Settle(win);
+        Wait(win, wq.ReloadAsync());
+        Wait(win, wq.OpenCommand.ExecuteAsync(wq.Sheets.First()));
+        Settle(win);
+        var page = wq.Page!;
+        if (page.IsNight) { page.IsNight = false; Settle(win); }
+        while (page.Txns.Count < 14) { Wait(win, page.AddTxnCommand.ExecuteAsync(null)); Settle(win); }
+        Wait(win, wq.BackCommand.ExecuteAsync(null)); Settle(win);
+        Wait(win, wq.OpenCommand.ExecuteAsync(wq.Sheets.First())); Settle(win);
+        page = wq.Page!;
+
+        var g2 = win.GetVisualDescendants().OfType<ExcelGrid>()
+            .FirstOrDefault(g => g.IsEffectivelyVisible && ReferenceEquals(g.ItemsSource, page.TxnsSecond));
+        if (g2 is null) { Fail("جدولِ دومِ تراکنش‌ها پیدا نشد"); return; }
+
+        var first = page.TxnsFirst.ToList();
+        var second = page.TxnsSecond.ToList();
+        var r0 = second[0];
+
+        //  الف) نوشتن در جدولِ دوم، بعد «➕ ردیف» — هیچ ردیفی جابه‌جا نشود
+        ClickCell(win, g2, 0, 0);
+        win.KeyTextInput("کریم دیزل");
+        Settle(win);
+        Tap(win, PhysicalKey.Enter);
+        Settle(win);
+        Check($"نامِ نوشته‌شده همان ماند («{r0.Name}»)", r0.Name == "کریم دیزل");
+        Wait(win, page.AddTxnCommand.ExecuteAsync(null));
+        Settle(win);
+        Check($"«➕ ردیف» هیچ ردیفی را جابه‌جا نکرد (جدولِ اول {page.TxnsFirst.Count}، دوم {page.TxnsSecond.Count})",
+              page.TxnsFirst.SequenceEqual(first)
+              && page.TxnsSecond.Take(second.Count).SequenceEqual(second)
+              && page.TxnsSecond.Count == second.Count + 1
+              && ReferenceEquals(page.TxnsSecond[0], r0));
+        Check($"شمارهٔ ردیف‌ها پیوسته ({page.TxnsSecond[^1].Index})",
+              page.TxnsSecond[^1].Index == Shamsi.Money(page.Txns.Count));
+
+        //  ب) «دیزل» در نام ⇒ لیترش زیرِ «جمله دیزل»
+        ClickCell(win, g2, 0, 1);
+        win.KeyTextInput("40");
+        Tap(win, PhysicalKey.Enter);
+        Settle(win);
+        Wait(win, SaveGuard.FlushAllAsync());
+        Settle(win);
+        Check($"تیلِ ردیف از نام دیزل شد ({r0.Fuel})", r0.Fuel == FuelType.Diesel);
+        Check($"لیترش زیرِ جمله دیزل آمد («{page.TxnDieselLiters}»)", page.TxnDieselLiters.Contains(Shamsi.Money(40m)));
+        Check($"و زیرِ پطرول نیامد («{page.TxnPetrolLiters}»)", !page.TxnPetrolLiters.Contains(Shamsi.Money(40m)));
+        //  «دیزل» از نام برداشته شد ⇒ همان پیش‌فرضِ پطرول
+        r0.Name = "کریم";
+        Settle(win);
+        Wait(win, SaveGuard.FlushAllAsync());
+        Settle(win);
+        Check($"بی «دیزل» پطرول شد ({r0.Fuel}، «{page.TxnPetrolLiters}»)",
+              r0.Fuel == FuelType.Petrol && page.TxnPetrolLiters.Contains(Shamsi.Money(50m)) && page.TxnDieselLiters.Contains(" 0 "));
+
+        //  ج) تکمله فقط با Tab/Enter؛ فلش آن را نمی‌پذیرد
+        var r1 = page.TxnsSecond[1];
+        ClickCell(win, g2, 1, 0);
+        win.KeyTextInput("کر");
+        Settle(win);
+        var ghost = Suggest.Ghost;
+        Check($"تکمله کم‌رنگ پیشنهاد شد («{ghost}»)", ghost == "کریم");
+        Tap(win, PhysicalKey.ArrowLeft);
+        Settle(win);
+        Tap(win, PhysicalKey.Enter);
+        Settle(win);
+        Wait(win, SaveGuard.FlushAllAsync());
+        Settle(win);
+        Check($"تکمله («{ghost}») با فلش پذیرفته نشد — نام «{r1.Name}»", r1.Name == "کر");
+        Check("و ردیف‌ها هنوز سرِ جایشان‌اند",
+              page.TxnsFirst.SequenceEqual(first) && ReferenceEquals(page.TxnsSecond[0], r0));
     }
 
     private static ShiftData? ShiftOf(PumpDbFactory dbf, long reportId)
