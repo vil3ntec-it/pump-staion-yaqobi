@@ -79,6 +79,12 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- oldmonths
 
+      # ══ رساندن به ماهِ گذشته + هر بخش در همان ماه (۱۴۰۵/۰۷/۱۸، دوم) ═══════
+      # هر نوشتهٔ وسط‌چینِ برنامه با پیکسلِ واقعی؛ پارچهٔ خالی‌شده؛ Ctrl+Tab بی فوکوس.
+      - name: رساندن به ماهِ گذشته و ترازِ همهٔ نوشته‌ها
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- oldpost
+
       # ══ کشیدنِ خطِ ستون با ماوسِ واقعی (۱۴۰۵/۰۷/۱۷) ═════════════════════
       # وسطِ کشیدن نه ستونی از قاب بیرون می‌زند نه جای خالی می‌ماند.
       - name: کشیدنِ ستون داخلِ قابِ جدول

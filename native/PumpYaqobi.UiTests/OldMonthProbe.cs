@@ -305,7 +305,7 @@ internal static class OldMonthProbe
     /// ⚠️ از روی قابِ واقعیِ پنجره، نه ‎TextLine.Start‎: در راست‌به‌چپ با عدد و
     /// فاصلهٔ پایانی گمراه می‌کرد (سنجیده شد).
     /// </summary>
-    private static double? Off(TextBlock tb, Visual box, SkiaSharp.SKBitmap frame)
+    internal static double? Off(TextBlock tb, Visual box, SkiaSharp.SKBitmap frame)
     {
         var tl = tb.TextLayout;
         if (tl is null || tl.TextLines.Count == 0) return null;

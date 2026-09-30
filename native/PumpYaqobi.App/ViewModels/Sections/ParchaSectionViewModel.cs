@@ -404,7 +404,7 @@ public sealed partial class ReportYearGroup : ObservableObject
 /// چهار عددِ خودکار (فروش، جملهٔ موجودی، فایده، پولِ موجود) از سرویسی می‌آیند
 /// که با ۴۰۰ شیفتِ گرفته‌شده از خودِ نسخهٔ وب آزموده شده.
 /// </summary>
-public sealed partial class ParchaSectionViewModel : SectionViewModel
+public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabHost
 {
     private readonly AppHost _host;
     private ParchaReport? _current;
@@ -437,6 +437,30 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
         _forceNew.TryGetValue((f, k), out var v) && v;
 
     private void SetForceNew(FuelType f, ShiftKind k, bool v) => _forceNew[(f, k)] = v;
+
+    /// <summary>
+    /// ══ کارتی که خالی شد، خالی می‌ماند (۱۴۰۵/۰۷/۱۸) ════════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «پارچه رو به دیزل و بعد دوباره پطرول کنم، اون پارچه که
+    /// قبلاً ذخیره شده بود میاد پارچه رو پر نشون میده.» ریشه: ‎LoadCurrentAsync‎
+    /// با هر عوض شدنِ تیل آخرین پارچه را در **هر دو** کارت می‌نشاند — حتی کارتی
+    /// که پس از ذخیره خالی شده بود (Enter، «پارچهٔ جدید»، ذخیرهٔ دیزل).
+    /// ⛔ پس «خالی شد پس از ذخیره» به ازای هر (تیل، شیفت) به یاد می‌ماند و بار
+    /// شدنِ دوباره آن کارت را پر نمی‌کند. ذخیرهٔ بعدی همان کارت پاکش می‌کند.
+    /// ⚠️ هیچ داده‌ای عوض نمی‌شود — فقط آن‌چه کارت نشان می‌دهد.
+    /// </summary>
+    private readonly HashSet<(FuelType, ShiftKind)> _blank = new();
+
+    private void MarkBlank(FuelType f, ShiftKind k) => _blank.Add((f, k));
+    internal bool IsBlankCard(FuelType f, ShiftKind k) => ForceNew(f, k) || _blank.Contains((f, k));
+
+    /// <summary>‎Ctrl+Tab‎ ⇒ پطرول ⇄ دیزل از **هر** جای بخش، نه فقط وقتی کادری فوکوس دارد (۱۴۰۵/۰۷/۱۸).</summary>
+    public bool CtrlTab()
+    {
+        if (!ShowMain) return false;
+        IsDiesel = !IsDiesel;
+        return true;
+    }
 
     /// <summary>نرخِ اتحادیهٔ همین سوخت — ‎DB.unionRatePetrol‎ / ‎unionRateDiesel‎.</summary>
     internal decimal UnionRate => _host.Settings.UnionRate(Fuel);
@@ -689,8 +713,14 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
     {
         _current = await _host.ParchaData.CurrentAsync(Fuel);
         ReportNumText = _current is null ? "—" : _current.ReportNum.ToString();
-        Day.Load(_current?.DayShift);
-        Night.Load(_current?.NightShift);
+        LoadCard(Day, ShiftKind.Day, _current?.DayShift);
+        LoadCard(Night, ShiftKind.Night, _current?.NightShift);
+    }
+
+    private void LoadCard(ShiftFormViewModel form, ShiftKind kind, ShiftData? s)
+    {
+        if (IsBlankCard(Fuel, kind)) form.Clear();
+        else form.Load(s);
     }
 
     /// <summary>
@@ -829,6 +859,7 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
         if (!res.Ok) { _host.Toast(res.Error ?? "", ToastKind.Error); return false; }
 
         SetForceNew(fuel, kind, false);
+        _blank.Remove((fuel, kind));
         _current = res.Report;
         if (res.Report is not null) ReportNumText = res.Report.ReportNum.ToString();
 
@@ -855,7 +886,7 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
         _lastBase.Remove((fuel, 0));
 
         // نسخهٔ وب پس از ذخیرهٔ دیزل فرم را خالی می‌کند، پطرول را نه
-        if (fuel == FuelType.Diesel) form.Clear();
+        if (fuel == FuelType.Diesel) { form.Clear(); MarkBlank(fuel, kind); }
 
         await ReloadLogAsync();
         if (ShowBaseHistory) await ReloadBaseHistoryAsync();
@@ -890,6 +921,7 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel
         if (Fuel != fuel) return saved;
         SetForceNew(fuel, ShiftKind.Day, true);
         SetForceNew(fuel, ShiftKind.Night, true);
+        MarkBlank(fuel, ShiftKind.Day); MarkBlank(fuel, ShiftKind.Night);
         Day.Clear(); Night.Clear();
         _host.Toast("🆕 " + (saved == 2 ? "روز و شب" : forms[0].IsDay ? "روز" : "شب")
                     + " ذخیره شد — پارچهٔ " + (fuel == FuelType.Diesel ? "دیزلِ " : "")

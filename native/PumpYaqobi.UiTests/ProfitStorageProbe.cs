@@ -431,7 +431,12 @@ internal static class ProfitStorageProbe
             Check("روی یک خط", bs.Select(b => Math.Round(b.Y)).Distinct().Count() == 1);
             //  عنوان وسطِ **کلِ** سربرگ — نه وسطِ جای باقی‌مانده کنارِ دکمه‌ها
             var tw = moneyTitle.TextLayout?.Width ?? 0;
+            //  ⚠️ جای **چیدمانِ** عنوان، بی جابه‌جاییِ ‎RtlTrim‎ (که فقط جوهر را به وسط
+            //  برمی‌گرداند؛ ۱۴۰۵/۰۷/۱۸). جوهرِ هر نوشتهٔ وسط‌چین را ‎oldpost‎ با پیکسل می‌سنجد.
+            var saved = moneyTitle.RenderTransform;
+            moneyTitle.RenderTransform = null;
             var tr = R(moneyTitle);
+            moneyTitle.RenderTransform = saved;
             var tc = (tr.Left + tr.Right) / 2;
             Check("عنوانِ «خلاصه پول‌ها» وسطِ کلِ سربرگ است", Math.Abs(tc - (hr.Left + hr.Right) / 2) < 1.5,
                   $"{tc - (hr.Left + hr.Right) / 2:0.0}px");
