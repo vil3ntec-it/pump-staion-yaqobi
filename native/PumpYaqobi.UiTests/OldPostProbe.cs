@@ -401,7 +401,7 @@ internal static class OldPostProbe
             for (var y = y0; y <= y1; y++)
             {
                 var c = frame.GetPixel(x, y);
-                if (Math.Abs(c.Red - bg.Red) + Math.Abs(c.Green - bg.Green) + Math.Abs(c.Blue - bg.Blue) > 150)
+                if (Math.Abs(c.Red - bg.Red) + Math.Abs(c.Green - bg.Green) + Math.Abs(c.Blue - bg.Blue) > InkDiff)
                 { if (lo < 0) lo = x; hi = x; break; }
             }
         if (lo < 0) return null;
@@ -431,6 +431,14 @@ internal static class OldPostProbe
     }
 
     private static string Short(string? s) => s is null ? "" : s.Length > 30 ? s[..30] + "…" : s;
+
+    /// <summary>
+    /// کمینهٔ اختلافِ رنگ با زمینه که «جوهر» شمرده می‌شود. ⚠️ ۱۵۰ ایموجیِ قهوه‌ایِ
+    /// «🟤» را روی زمینهٔ تیره (اختلاف ۱۰۳ تا ۱۱۳ روی ویندوز) نمی‌دید و نوشته را بی
+    /// آن می‌سنجید — «۱۲ پیکسل کج»ِ دروغ (‎align-windows‎، نیمرخِ جوهر). زمینهٔ کادر
+    /// یکدست است و نیمرخ زیرِ ۴۰ هیچ لرزشی نشان نداد، پس ۸۰ امن است.
+    /// </summary>
+    internal const int InkDiff = 80;
 
     private static void Pump(Window w)
     {

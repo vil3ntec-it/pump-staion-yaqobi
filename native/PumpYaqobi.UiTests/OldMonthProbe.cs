@@ -390,7 +390,7 @@ internal static class OldMonthProbe
             for (var y = y0; y <= y1; y++)
             {
                 var c = frame.GetPixel(x, y);
-                if (Math.Abs(c.Red - bg.Red) + Math.Abs(c.Green - bg.Green) + Math.Abs(c.Blue - bg.Blue) > 150)
+                if (Math.Abs(c.Red - bg.Red) + Math.Abs(c.Green - bg.Green) + Math.Abs(c.Blue - bg.Blue) > InkDiff)
                 { if (lo < 0) lo = x; hi = x; break; }
             }
         if (lo < 0) return null;
@@ -399,6 +399,14 @@ internal static class OldMonthProbe
             Console.WriteLine($"      · «{tb.Text}» ink={lo}..{hi} box={bx.L:0}..{bx.R:0} tb={tr.L:0}..{tr.R:0} w={tl.TextLines[0].Width:0.#} wt={tl.TextLines[0].WidthIncludingTrailingWhitespace:0.#} start={tl.TextLines[0].Start:0.#} wrap={tb.TextWrapping} rt={(tb.RenderTransform as Avalonia.Media.TranslateTransform)?.X} fix={PumpYaqobi.App.Controls.RtlTrim.CenterFix(tb):0.#} mv={tb.IsMeasureValid} av={tb.IsArrangeValid}");
         return off;
     }
+
+    /// <summary>
+    /// کمینهٔ اختلافِ رنگ با زمینه که «جوهر» شمرده می‌شود. ⚠️ ۱۵۰ ایموجیِ قهوه‌ایِ
+    /// «🟤» را روی زمینهٔ تیره (اختلاف ۱۰۳ تا ۱۱۳ روی ویندوز) نمی‌دید و نوشته را بی
+    /// آن می‌سنجید — «۱۲ پیکسل کج»ِ دروغ (‎align-windows‎، نیمرخِ جوهر). زمینهٔ کادر
+    /// یکدست است و نیمرخ زیرِ ۴۰ هیچ لرزشی نشان نداد، پس ۸۰ امن است.
+    /// </summary>
+    internal const int InkDiff = 80;
 
     private static void Pump(Window w)
     {
