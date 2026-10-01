@@ -419,6 +419,41 @@ public class SettingsDurabilityTests : IDisposable
     }
 
     /// <summary>
+    /// ⛔ <b>دو شیء در صف ⇒ هر دو می‌نشینند، و کهنه تازه را پس نمی‌گیرد.</b>
+    /// (۱۴۰۵/۰۷/۱۹) — `verify` گاهی سرخ می‌شد و روی `main` هم: شیءِ دوم (تیکِ
+    /// ساعتِ مجوز) جای اولی را در صف می‌گرفت و اندازهٔ کهنهٔ ماشین‌حساب را
+    /// روی اندازهٔ تازهٔ کاربر می‌نوشت.
+    /// </summary>
+    [Fact]
+    public void DoShey_DarSaf_HarDo_Mineshinand_VaKohne_TazeRaPasNemigirad()
+    {
+        new AppSettings { CalcWidth = 286, CalcHeight = 430, ThemeId = "blue" }.Save();
+        var ui = AppSettings.Load();          // ویومدلِ پنجره
+        var tick = AppSettings.Load();        // نمونهٔ دیگری که همان لحظه خوانده شد
+
+        ui.CalcWidth = 333; ui.CalcHeight = 444;
+        ui.SaveSoon();
+        tick.ThemeId = "gold";
+        tick.SaveSoon();                      // ⛔ بی اصلاح، این جای `ui` را می‌گرفت
+
+        AppSettings.FlushNow();
+        var disk = AppSettings.Load();
+        Assert.Equal(333, disk.CalcWidth);
+        Assert.Equal(444, disk.CalcHeight);
+        Assert.Equal("gold", disk.ThemeId);
+
+        //  ترتیبِ وارونه هم — شیءِ کهنه پس از تازه
+        var a = AppSettings.Load(); var b = AppSettings.Load();
+        a.CalcWidth = 350; a.SaveSoon();
+        b.LastSection = "safe"; b.SaveSoon();
+        AppSettings.FlushNow();
+        disk = AppSettings.Load();
+        Assert.Equal(350, disk.CalcWidth);
+        Assert.Equal("safe", disk.LastSection);
+        Assert.Equal("gold", disk.ThemeId);
+    }
+
+    /// <summary>
     /// ⛔ <b>نمونه‌ای که از پوشهٔ دیگری خوانده شده، این‌جا نمی‌نویسد.</b>
     ///
     /// بیلدِ ۳.۱.۱۷۰ (پس از بسته شدنِ حلقهٔ ناشر) همان سنجهٔ بالا را باز

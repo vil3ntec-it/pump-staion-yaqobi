@@ -409,6 +409,22 @@ internal static class OldPostProbe
         if (off > 3 && Environment.GetEnvironmentVariable("OP_DEBUG") == "1")
         {
             var ln = tl.TextLines[0];
+            //  نیمرخِ ستون‌ها: هر تکهٔ پیوسته با بیشینهٔ اختلافِ رنگش — جوهرِ کم‌رنگ هم دیده شود
+            var segs = new List<string>();
+            int s0 = -1, mx = 0;
+            for (var x = x0; x <= x1 + 1; x++)
+            {
+                var m = 0;
+                if (x <= x1)
+                    for (var y = y0; y <= y1; y++)
+                    {
+                        var c = frame.GetPixel(x, y);
+                        m = Math.Max(m, Math.Abs(c.Red - bg.Red) + Math.Abs(c.Green - bg.Green) + Math.Abs(c.Blue - bg.Blue));
+                    }
+                if (m > 40) { if (s0 < 0) { s0 = x; mx = 0; } mx = Math.Max(mx, m); }
+                else if (s0 >= 0) { segs.Add($"{s0}..{x - 1}:{mx}"); s0 = -1; }
+            }
+            Console.WriteLine($"      · نیمرخ «{tb.Text}» bg=({bg.Red},{bg.Green},{bg.Blue}) {string.Join(" ", segs)}");
             Console.WriteLine($"      · «{tb.Text}» ink={lo}..{hi} box={L:0}..{R:0} w={ln.Width:0.#} wt={ln.WidthIncludingTrailingWhitespace:0.#} start={ln.Start:0.#} fd={tb.FlowDirection} rt={(tb.RenderTransform as TranslateTransform)?.X} font={tb.FontFamily} fix={PumpYaqobi.App.Controls.RtlTrim.CenterFix(tb):0.#} maxW={tl.MaxWidth:0.#} tbW={tb.Bounds.Width:0.#} lines={tl.TextLines.Count} ha={tb.HorizontalAlignment} trim={tb.TextTrimming} wrapm={tb.TextWrapping} cps={string.Join(",", tb.Text!.Take(4).Select(c => ((int)c).ToString("X")))}");
         }
         return off;

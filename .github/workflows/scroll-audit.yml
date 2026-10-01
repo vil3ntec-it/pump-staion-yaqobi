@@ -355,6 +355,8 @@ jobs:
       - name: رساندن به ماهِ گذشته (ویندوز)
         if: ${{ !cancelled() }}
         working-directory: native
+        env:
+          OP_DEBUG: '1'
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- oldpost ${{ runner.temp }}/oldpost
       - uses: actions/upload-artifact@v4
         if: always()

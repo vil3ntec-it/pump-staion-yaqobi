@@ -549,7 +549,7 @@ public sealed class AppSettings
         //  پیش از عوض شدن بخواند و درست بعدش بنویسد.
         //  ⛔ پهنای در صف هم با پوشه می‌رود: مقدارِ راحتیِ یک دفتر هیچ‌وقت
         //  نباید در دفترِ دیگری بنشیند (همان قاعدهٔ ‎_soonDir‎).
-        set { lock (SoonGate) { _soonWho = null; _soonDir = null; SoonWidths.Clear(); _dirOverride = value; } }
+        set { lock (SoonGate) { SoonWho.Clear(); _soonDir = null; SoonWidths.Clear(); _dirOverride = value; } }
     }
 
     private static string? _dirOverride;
@@ -581,7 +581,7 @@ public sealed class AppSettings
             //  اول فایلِ اصلی، بعد نسخهٔ سالمِ قبلی
             var locked = false;
             var a = Read(File_, ref locked) ?? Read(Backup_, ref locked);
-            if (a is not null) { a._home = Dir; a._bondBase = a.BondSnapshot(); return a; }
+            if (a is not null) { a._home = Dir; a._bondBase = a.BondSnapshot(); a._comfortBase = a.ComfortSnap(); return a; }
 
             //  ⛔ **فایل بود ولی قفل بود ⇒ پیش‌فرض ندهیم که ذخیره‌اش کنیم.**
             //  روی ویندوز ضدِ ویروس و نمایه‌سازِ سیستم گاهی یک لحظه دستهٔ
@@ -795,7 +795,8 @@ public sealed class AppSettings
         {
             //  ⛔ نمونهٔ پوشهٔ دیگر نوبت نمی‌گیرد — بالای `_home` نوشته چرا.
             if (Stranger) return;
-            _soonWho = this;
+            //  ⛔ همهٔ شیءهای در صف می‌مانند، نه فقط آخری — پایینِ `SoonWho` نوشته چرا
+            if (!SoonWho.Any(x => ReferenceEquals(x, this))) SoonWho.Add(this);
             _soonDir = _home ?? Dir;
             _soonTimer ??= new System.Threading.Timer(
                 _ => FlushSoon(), null,
@@ -821,7 +822,17 @@ public sealed class AppSettings
     private const int SoonMs = 600;
 
     private static readonly object SoonGate = new();
-    private static AppSettings? _soonWho;
+    /// <summary>
+    /// ══ شیءهای در صف — همه، نه فقط آخری (۱۴۰۵/۰۷/۱۹) ═════════════════════
+    ///
+    /// ⛔ تا امروز یک «خانه» بود: شیءِ دومی که در همان ششصد میلی‌ثانیه
+    /// `SaveSoon` می‌زد (تیکِ ساعتِ مجوز، ناشر) جای اولی را می‌گرفت، و چون
+    /// `SaveComfortOnly` <b>همهٔ</b> مقدارهای راحتی را می‌برد، اندازهٔ کهنهٔ
+    /// ماشین‌حساب (۲۸۶×۴۳۰) روی اندازهٔ تازهٔ کاربر می‌نشست — `verify` گاهی
+    /// سرخ می‌شد و روی `main` هم. حالا همه در صف‌اند و هر کدام فقط مقدارهایی
+    /// را می‌برد که <b>خودش</b> عوض کرده (`_comfortBase`).
+    /// </summary>
+    private static readonly List<AppSettings> SoonWho = new();
 
     /// <summary>
     /// پوشه‌ای که این نوشتنِ در صف برای آن ثبت شد. ⛔ اگر تا لحظهٔ نوشتن عوض
@@ -858,24 +869,26 @@ public sealed class AppSettings
 
     private static void FlushSoon()
     {
-        AppSettings? who;
+        AppSettings[] who;
         bool hasWidths;
         lock (SoonGate)
         {
             //  ⛔ پوشه عوض شده ⇒ این نوشتن دیگر مالِ این‌جا نیست. سنجش زیرِ
             //  همان قفلی است که `DirOverride` با آن می‌نویسد.
             var mine = _soonDir == Dir;
-            who = mine ? _soonWho : null;
+            who = mine ? SoonWho.ToArray() : Array.Empty<AppSettings>();
             //  پهناها هم اگر مالِ پوشهٔ دیگری‌اند دور ریخته می‌شوند
             if (!mine) SoonWidths.Clear();
             hasWidths = SoonWidths.Count > 0;
-            _soonWho = null;
+            SoonWho.Clear();
             _soonDir = null;
         }
         //  ⛔ نشدنش هیچ‌وقت چیزی را نمی‌شکند — همه‌اش مقدارِ راحتی است.
         //  ⚠️ پهنای در صف حتی وقتی شیئی در صف نیست باید بنشیند، پس یک
         //  نمونهٔ تازه همان کار را می‌کند.
-        try { (who ?? (hasWidths ? Load() : null))?.SaveComfortOnly(); } catch { }
+        if (who.Length == 0 && hasWidths) who = new[] { Load() };
+        foreach (var w in who)
+            try { w.SaveComfortOnly(); } catch { }
     }
 
     /// <summary>
@@ -914,16 +927,19 @@ public sealed class AppSettings
         var live = Load();
         if (live._blind) return;          // فایل قفل بود — دفعهٔ بعد
 
-        live.ThemeId = ThemeId;
-        live.LastSection = LastSection;
-        live.CalcWidth = CalcWidth;
-        live.CalcHeight = CalcHeight;
-        live.CalcLarge = CalcLarge;
-        live.ParchaChainCheck = ParchaChainCheck;
-        live.LastPrinter = LastPrinter;
-        live.NavOrder = NavOrder;
-        live.ClockShiftMs = ClockShiftMs;
-        live.ShowBanner = ShowBanner;
+        //  ⛔ فقط آن‌چه همین شیء عوض کرده — شیءِ کهنه مقدارِ تازهٔ دیگری را پس نگیرد
+        var b = _comfortBase;
+        if (b is null || ThemeId != b.Value.ThemeId) live.ThemeId = ThemeId;
+        if (b is null || LastSection != b.Value.LastSection) live.LastSection = LastSection;
+        if (b is null || CalcWidth != b.Value.CalcWidth) live.CalcWidth = CalcWidth;
+        if (b is null || CalcHeight != b.Value.CalcHeight) live.CalcHeight = CalcHeight;
+        if (b is null || CalcLarge != b.Value.CalcLarge) live.CalcLarge = CalcLarge;
+        if (b is null || ParchaChainCheck != b.Value.ParchaChainCheck) live.ParchaChainCheck = ParchaChainCheck;
+        if (b is null || LastPrinter != b.Value.LastPrinter) live.LastPrinter = LastPrinter;
+        if (b is null || NavOrder != b.Value.NavOrder) live.NavOrder = NavOrder;
+        if (b is null || ClockShiftMs != b.Value.ClockShiftMs) live.ClockShiftMs = ClockShiftMs;
+        if (b is null || ShowBanner != b.Value.ShowBanner) live.ShowBanner = ShowBanner;
+        _comfortBase = ComfortSnap();
         //  ⚠️ کفِ ساعت از این در فقط **جلو** می‌رود: نوبتِ در صف ممکن است
         //  عکسِ کهنه‌ای باشد که کفِ پایین‌تری دارد، و پایین آوردنِ عمدیِ کف
         //  (مجوزِ تازهٔ سرور، `LicenseClock.Anchor`) از راهِ `Save()`ی بادوام
@@ -956,7 +972,12 @@ public sealed class AppSettings
         lock (SoonGate) { if (Stranger) return; }
 
         //  نوبتِ در صف دیگر لازم نیست: همین نوشتن کلِ شیء را می‌برد.
-        lock (SoonGate) { if (ReferenceEquals(_soonWho, this)) { _soonWho = null; _soonDir = null; } }
+        lock (SoonGate)
+        {
+            SoonWho.RemoveAll(x => ReferenceEquals(x, this));
+            if (SoonWho.Count == 0 && SoonWidths.Count == 0) _soonDir = null;
+        }
+        _comfortBase = ComfortSnap();
 
         lock (FileGate)
         {
@@ -1077,6 +1098,13 @@ public sealed class AppSettings
     //  ⚠️ نمونهٔ `new` (بی پایه) مثلِ همیشه کلِ خودش را می‌نویسد.
 
     [JsonIgnore] private string? _baseText;
+
+    /// <summary>مقدارهای راحتیِ این شیء هنگامِ خواندن یا آخرین نوشتنش — پایینِ `SoonWho`.</summary>
+    [JsonIgnore] private (string ThemeId, string LastSection, double CalcWidth, double CalcHeight, bool CalcLarge,
+        bool ParchaChainCheck, string LastPrinter, string NavOrder, long ClockShiftMs, bool ShowBanner)? _comfortBase;
+
+    private (string, string, double, double, bool, bool, string, string, long, bool) ComfortSnap() =>
+        (ThemeId, LastSection, CalcWidth, CalcHeight, CalcLarge, ParchaChainCheck, LastPrinter, NavOrder, ClockShiftMs, ShowBanner);
 
     private static readonly System.Reflection.PropertyInfo[] RestFields =
         typeof(AppSettings).GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
