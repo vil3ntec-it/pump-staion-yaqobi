@@ -127,7 +127,11 @@ internal static class OldMonthProbe
         dynamic d = s;
         var shown = (string)d.Month;
         d.Month = Old;
+        //  ⛔ همان لحظه، نه پس از ته‌نشینی (۱۴۰۵/۰۷/۱۹): «به محضِ این‌که بیام ماهِ قبل همه‌چی می‌ره چپ»
+        for (var k = 0; k < 3; k++) { Dispatcher.UIThread.RunJobs(); win.UpdateLayout(); }
+        WholeWindow(win, $"{s.Title} ({Old}، همان لحظه)");
         Settle(win);
+        WholeWindow(win, $"{s.Title} ({Old}، پس از ته‌نشینی)");
         Check($"{s.Title}: ماهِ {Old} باز شد", (string)d.Month == Old, (string)d.Month);
         Centered(win, $"{s.Title} ({Old})");
         Scrolled(win, s.Title);
@@ -222,6 +226,39 @@ internal static class OldMonthProbe
         };
     }
 
+    /// <summary>
+    /// هر نوشتهٔ وسط‌چینِ <b>کلِ پنجره</b> (سربرگ، کارت، نوارِ جمله، جدول) — جوهرش
+    /// وسطِ کادرِ خودِ نوشته است؟ از قابِ واقعیِ پنجره.
+    /// </summary>
+    private static void WholeWindow(Window win, string what)
+    {
+        AppHost.Current.Toasts.Visible = false;
+        win.CaptureRenderedFrame()?.Dispose();
+        for (var k = 0; k < 2; k++) { Dispatcher.UIThread.RunJobs(); win.UpdateLayout(); }
+        using var shot = win.CaptureRenderedFrame()!;
+        using var ms = new MemoryStream();
+        shot.Save(ms);
+        ms.Position = 0;
+        using var frame = SkiaSharp.SKBitmap.Decode(ms);
+        var bad = new List<string>();
+        var n = 0;
+        foreach (var tb in win.GetVisualDescendants().OfType<TextBlock>()
+                    .Where(t => t.IsEffectivelyVisible && !string.IsNullOrWhiteSpace(t.Text)
+                                && t.TextAlignment == Avalonia.Media.TextAlignment.Center && t.Bounds.Width > 8))
+        {
+            n++;
+            if (Off(tb, tb, frame, slot: true) is { } o && o > 3) bad.Add($"«{tb.Text}» {o:0}px");
+        }
+        if (bad.Count > 0 && Environment.GetEnvironmentVariable("OM_SHOTS") is { Length: > 0 } od)
+        {
+            Directory.CreateDirectory(od);
+            File.WriteAllBytes(Path.Combine(od, "omw-" + (++_shot) + ".png"), ms.ToArray());
+            Console.WriteLine("      📷 omw-" + _shot + ".png · " + what);
+        }
+        Check($"{what}: {n} نوشتهٔ وسط‌چینِ پنجره وسط‌اند", bad.Count == 0,
+              bad.Count == 0 ? null : bad.Count + " کج: " + string.Join("، ", bad.Take(8)));
+    }
+
     private static IEnumerable<DataGrid> Grids(Window win) =>
         win.GetVisualDescendants().OfType<DataGrid>()
            .Where(g => g.IsEffectivelyVisible && g.Bounds.Width > 50 && g.Columns.Any(c => c.IsVisible));
@@ -314,7 +351,7 @@ internal static class OldMonthProbe
     /// ⚠️ از روی قابِ واقعیِ پنجره، نه ‎TextLine.Start‎: در راست‌به‌چپ با عدد و
     /// فاصلهٔ پایانی گمراه می‌کرد (سنجیده شد).
     /// </summary>
-    internal static double? Off(TextBlock tb, Visual box, SkiaSharp.SKBitmap frame)
+    internal static double? Off(TextBlock tb, Visual box, SkiaSharp.SKBitmap frame, bool slot = false)
     {
         var tl = tb.TextLayout;
         if (tl is null || tl.TextLines.Count == 0) return null;
@@ -329,7 +366,15 @@ internal static class OldMonthProbe
             var b = v.TranslatePoint(new Point(v.Bounds.Width, v.Bounds.Height), root)!.Value * k;
             return (Math.Min(a.X, b.X), Math.Max(a.X, b.X), Math.Min(a.Y, b.Y), Math.Max(a.Y, b.Y));
         }
-        var bx = Rect(box);
+        //  ⚠️ کادرِ خودِ نوشته بی جابه‌جاییِ کشیدنِ خودش (‎RenderTransform‎ِ تصحیح) — جای چیدمانش در پدر
+        var bx = slot && tb.GetVisualParent() is Visual par
+            ? RectIn(par, tb.Bounds) : Rect(box);
+        (double L, double R, double T, double B) RectIn(Visual p, Rect r)
+        {
+            var a = p.TranslatePoint(r.TopLeft, root)!.Value * k;
+            var b = p.TranslatePoint(r.BottomRight, root)!.Value * k;
+            return (Math.Min(a.X, b.X), Math.Max(a.X, b.X), Math.Min(a.Y, b.Y), Math.Max(a.Y, b.Y));
+        }
         var tr = Rect(tb);
         //  زیرِ نوارِ شناورِ بخش‌ها یا بیرونِ قاب ⇒ دیده نمی‌شود، سنجیدنی نیست
         var navBottom = root.GetVisualDescendants().OfType<Control>()

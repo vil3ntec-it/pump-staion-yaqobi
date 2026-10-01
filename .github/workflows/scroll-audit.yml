@@ -309,3 +309,37 @@ jobs:
       - name: سنجشِ بازگشت به صفحهٔ اصلی
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- dashperf
+
+  # ══ وسط‌چینی روی خودِ ویندوز (۱۴۰۵/۰۷/۱۹) ═════════════════════════════════
+  # گزارشِ صاحب ریپو: «به محضِ این‌که بیام ماهِ قبل همه‌چی می‌ره چپ» — در حالی که
+  # همین سنجه‌ها روی لینوکس سبز بودند. قلم‌ها و شکل‌دهنده روی ویندوز فرق دارند،
+  # پس همان سنجه‌های پیکسلی این‌جا هم می‌دوند.
+  align-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: آزمایشگاهِ وسط‌چینی (ویندوز)
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- centerlab ${{ runner.temp }}/clab
+      - name: ماه‌های قبل (ویندوز)
+        working-directory: native
+        env:
+          OM_MANY: '1'
+          OM_DEBUG: '1'
+          OM_SHOTS: ${{ runner.temp }}/om
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- oldmonths
+      - name: رساندن به ماهِ گذشته (ویندوز)
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- oldpost ${{ runner.temp }}/oldpost
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: align-windows
+          path: |
+            ${{ runner.temp }}/clab
+            ${{ runner.temp }}/om
+            ${{ runner.temp }}/oldpost
+          if-no-files-found: ignore

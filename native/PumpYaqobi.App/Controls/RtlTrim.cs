@@ -158,9 +158,10 @@ public static class RtlTrim
         char.IsWhiteSpace(c) || c is '\u200b' or '\u200c' or '\u200d' or '\u200e' or '\u200f'
             or '\u061c' or '\ufeff' or (>= '\u202a' and <= '\u202e') or (>= '\u2066' and <= '\u2069');
 
+    public static bool XOff = Environment.GetEnvironmentVariable("XOFF") == "1";
     private static void Recenter(TextBlock t)
     {
-        var dx = CenterFix(t);
+        var dx = XOff ? 0 : CenterFix(t);
         var owned = t.GetValue(OwnedProperty);
         //  ⛔ جابه‌جاییِ کسِ دیگر دست نمی‌خورد
         if (!owned && t.RenderTransform is not null) return;
