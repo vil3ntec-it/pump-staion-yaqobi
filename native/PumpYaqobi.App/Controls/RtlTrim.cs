@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Media.TextFormatting;
 
 namespace PumpYaqobi.App.Controls;
 
@@ -133,6 +134,13 @@ public static class RtlTrim
         //  راست‌به‌چپی که چند تکه دارد (نیم‌فاصله، ایموجی، «/») فقط <b>تکهٔ اول</b> را
         //  می‌دهد — «ورق‌های روزانه» ۳۵ پیکسل به کنار می‌رفت (‎oldpost‎ گرفتش).
         double lo = double.MaxValue, hi = double.MinValue;
+        //  ══ جوهرِ واقعیِ گلیف‌ها (۱۴۰۵/۰۷/۱۹، ویندوز) ══
+        //  پهنای نویسه با جوهرش یکی نیست: ایموجیِ «🟤» روی ویندوز از قلمِ دیگری
+        //  کشیده می‌شود و جوهرش از جای خالیِ خودش کوچک‌تر است (یا اصلاً کشیده
+        //  نمی‌شود) — «🟤 جمله دیزل» ۱۳ پیکسل کج بود (‎align-windows‎). پس اول
+        //  ‎InkBounds‎ِ خودِ هر تکهٔ شکل‌گرفته خوانده می‌شود؛ نشد ⇒ همان نویسه‌به‌نویسه.
+        if (InkOf(tl, line, text) is { } ink) { lo = ink.lo; hi = ink.hi; }
+        else
         for (var i = a; i <= b; i++)
         {
             if (Blank(text[i])) continue;
@@ -153,15 +161,52 @@ public static class RtlTrim
         return Math.Abs(dx) < 0.5 ? 0 : dx;
     }
 
+    /// <summary>
+    /// جوهرِ واقعیِ خطِ اول از روی ‎GlyphRun.InkBounds‎ِ هر تکه؛ جای هر تکه در خط
+    /// از ‎HitTest‎ِ همان بازه. ‎null‎ ⇒ نشد، راهِ نویسه‌به‌نویسه.
+    /// </summary>
+    private static (double lo, double hi)? InkOf(TextLayout tl, TextLine line, string text)
+    {
+        try
+        {
+            double lo = double.MaxValue, hi = double.MinValue;
+            var any = false;
+            foreach (var run in line.TextRuns)
+            {
+                if (run is not ShapedTextRun sr) continue;
+                if (!System.Runtime.InteropServices.MemoryMarshal.TryGetString(sr.Text, out var src, out var start, out var len)
+                    || !ReferenceEquals(src, text) && src != text) return null;
+                if (len <= 0) continue;
+                var ib = sr.GlyphRun.InkBounds;
+                if (ib.Width <= 0) continue;                       // فقط فاصله
+                //  جای تکه در خط: کناره‌های همهٔ نویسه‌هایش (یک‌جا گاهی فقط تکهٔ اول را می‌دهد)
+                double rl = double.MaxValue, rr = double.MinValue;
+                for (var i = start; i < start + len; i++)
+                    foreach (var r in tl.HitTestTextRange(i, 1))
+                    {
+                        if (r.Width <= 0) continue;
+                        rl = Math.Min(rl, r.Left); rr = Math.Max(rr, r.Right);
+                    }
+                if (rr <= rl) return null;
+                //  پهنای تکه با جمعِ پیش‌روی گلیف‌ها نخواند ⇒ نمی‌دانیم کجاست
+                if (Math.Abs(rr - rl - sr.GlyphRun.Bounds.Width) > 1) return null;
+                lo = Math.Min(lo, rl + ib.Left);
+                hi = Math.Max(hi, rl + ib.Right);
+                any = true;
+            }
+            return any && hi > lo ? (lo, hi) : null;
+        }
+        catch { return null; }
+    }
+
     /// <summary>نویسه‌ای که هیچ جوهری ندارد.</summary>
     private static bool Blank(char c) =>
         char.IsWhiteSpace(c) || c is '\u200b' or '\u200c' or '\u200d' or '\u200e' or '\u200f'
             or '\u061c' or '\ufeff' or (>= '\u202a' and <= '\u202e') or (>= '\u2066' and <= '\u2069');
 
-    public static bool XOff = Environment.GetEnvironmentVariable("XOFF") == "1";
     private static void Recenter(TextBlock t)
     {
-        var dx = XOff ? 0 : CenterFix(t);
+        var dx = CenterFix(t);
         var owned = t.GetValue(OwnedProperty);
         //  ⛔ جابه‌جاییِ کسِ دیگر دست نمی‌خورد
         if (!owned && t.RenderTransform is not null) return;
