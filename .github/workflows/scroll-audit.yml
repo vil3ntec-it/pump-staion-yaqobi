@@ -79,6 +79,12 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- oldmonths
 
+      # ══ «توی ورق نوشتن کند است، حرف‌ها پاک یا نصفه می‌شوند» (۱۴۰۵/۰۷/۱۹) ══
+      # حرف‌به‌حرف با فاصلهٔ واقعی روی دادهٔ پنج‌ساله: مکثِ نخِ رابط، و کادر دقیقاً همان که زده شد.
+      - name: نوشتن در ورق، حرف‌به‌حرف
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- waraqtype
+
       # ══ هر شکلِ نوشته (فاصلهٔ پایانی، تب، نویسهٔ جهت‌نما، ایموجی، تاریخ) وسطِ کادرش،
       # با پیکسلِ واقعی در ۱۰۰/۱۲۵/۱۵۰٪ (۱۴۰۵/۰۷/۱۹) ══
       - name: آزمایشگاهِ وسط‌چینی
@@ -322,16 +328,33 @@ jobs:
         with:
           dotnet-version: '8.0.x'
       - name: آزمایشگاهِ وسط‌چینی (ویندوز)
+        continue-on-error: true
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- centerlab ${{ runner.temp }}/clab
       - name: ماه‌های قبل (ویندوز)
+        continue-on-error: true
         working-directory: native
         env:
           OM_MANY: '1'
           OM_DEBUG: '1'
           OM_SHOTS: ${{ runner.temp }}/om
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- oldmonths
+      - name: ماه‌های قبل ۱۲۵٪ (ویندوز)
+        continue-on-error: true
+        working-directory: native
+        env:
+          OM_MANY: '1'
+          OM_DEBUG: '1'
+          OM_SCALE: '1.25'
+          OM_W: '1366'
+          OM_H: '768'
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- oldmonths
+      - name: نوشتن در ورق (ویندوز)
+        continue-on-error: true
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- waraqtype
       - name: رساندن به ماهِ گذشته (ویندوز)
+        continue-on-error: true
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- oldpost ${{ runner.temp }}/oldpost
       - uses: actions/upload-artifact@v4

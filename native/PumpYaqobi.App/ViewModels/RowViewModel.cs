@@ -25,6 +25,57 @@ public abstract partial class RowViewModel : ObservableObject, IPendingWrite
     public static void NewLedger() => Interlocked.Increment(ref _ledgerGen);
     private readonly int _gen = Volatile.Read(ref _ledgerGen);
 
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ خانه‌ای که در حالِ نوشتن است، زیرِ دستِ کاربر عوض نمی‌شود (۱۴۰۵/۰۷/۱۹) ══
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  گزارشِ صاحب ریپو: «چندین جمله یا عدد رو که می‌زنم… خودبه‌خود پاک می‌شه یا
+    //  نصفه.» سنجهٔ ‎waraqtype‎ گرفتش: کادرِ عدد با هر حرف به ردیف می‌رسد،
+    //  ردیف عدد را قالب می‌زند («1250» ⇒ «1,250») و همان را <b>به خودِ کادرِ در
+    //  حالِ نوشتن</b> پس می‌فرستاد — کاما وسطِ تایپ می‌نشست و مکان‌نما جا
+    //  می‌ماند، پس حرفِ بعدی یا پاک‌کن جای دیگری می‌خورد.
+    //
+    //  ⛔ تا خانه باز است، خبرِ «همین ستون عوض شد» به جدول نمی‌رود؛ با بسته شدنِ
+    //  خانه یک بار می‌رود و نوشتهٔ قالب‌خورده می‌نشیند. مقدار همان لحظه در ردیف
+    //  است — ذخیره، جمع‌ها و حساب‌ها هیچ تأخیری ندارند. ستون‌های دیگرِ همان ردیف
+    //  هم مثلِ همیشه خبر می‌گیرند. ‎ExcelGrid‎ تنها جایی است که این را می‌گذارد.
+    private string? _editingProp;
+
+    /// <summary>خانهٔ این ستون باز شد (‎ExcelGrid‎).</summary>
+    public void BeginCellEdit(string? property) { _editingProp = property; _editRaw = null; }
+
+    /// <summary>خانه بسته شد — نوشتهٔ قالب‌خورده یک بار به جدول برود.</summary>
+    public void EndCellEdit()
+    {
+        var p = _editingProp;
+        _editingProp = null;
+        _editRaw = null;
+        if (p is not null) OnPropertyChanged(p);
+    }
+
+    /// <summary>آخرین نوشتهٔ خامِ کاربر در خانهٔ باز — همان را پس می‌دهیم، نه قالب‌خورده‌اش.</summary>
+    private string? _editRaw;
+
+    /// <summary>
+    /// گیرندهٔ ستونِ نوشتنی: تا خانه‌اش باز است همان چیزی که کاربر نوشته، وگرنه قالب‌خورده.
+    /// ⚠️ اتصالِ آوالونیا پس از نوشتن در ردیف خودِ خاصیت را دوباره می‌خواند و به کادر
+    /// پس می‌دهد — پس جلوگیری از خبرِ «عوض شد» به‌تنهایی کافی نبود (‎waraqtype‎ گرفتش).
+    /// </summary>
+    protected string Shown(string property, string formatted) =>
+        _editingProp == property && _editRaw is not null ? _editRaw : formatted;
+
+    /// <summary>نویسندهٔ ستونِ نوشتنی — نوشتهٔ خام را برای همان خانهٔ باز نگه می‌دارد.</summary>
+    protected void Typed(string property, string? raw)
+    {
+        if (_editingProp == property) _editRaw = raw ?? "";
+    }
+
+    protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (_editingProp is not null && e.PropertyName == _editingProp) return;
+        base.OnPropertyChanged(e);
+    }
+
     /// <summary>وقتی true باشد، تغییرِ خانه‌ها ذخیره نمی‌شود (هنگامِ پر کردنِ اولیه).</summary>
     protected bool Loading { get; set; }
 
@@ -164,7 +215,7 @@ public abstract partial class RowViewModel : ObservableObject, IPendingWrite
     /// ⛔ هیچ‌وقت استثنا بیرون نمی‌دهد — وگرنه یک ردیفِ خراب جلوی نوشتنِ
     /// بقیه را می‌گرفت و بسته شدنِ برنامه هم می‌ماسید.
     /// </summary>
-    public async Task FlushAsync()
+    public virtual async Task FlushAsync()
     {
         _debounce?.Cancel();
         if (!_dirty) return;          // ردیفِ دست‌نخورده — چیزی برای نوشتن نیست

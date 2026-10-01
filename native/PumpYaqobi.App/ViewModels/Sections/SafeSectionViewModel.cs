@@ -51,8 +51,8 @@ public sealed partial class SafeRowViewModel : RowViewModel
     /// هنگامِ تایپ، هم رقمِ فارسی می‌پذیرد هم لاتین هم کاما.</summary>
     public string AmountText
     {
-        get => Shamsi.Money(Amount);
-        set => Amount = Shamsi.Num(value);
+        get => Shown(nameof(AmountText), Shamsi.Money(Amount));
+        set { Typed(nameof(AmountText), value); Amount = Shamsi.Num(value); }
     }
 
     /// <summary>گزینه‌های کشویی — رشته، نه ‎ComboBoxItem‎ (باگِ ‎SelectedItem‎).</summary>

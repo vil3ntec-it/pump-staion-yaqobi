@@ -78,11 +78,11 @@ public sealed partial class DebtRowViewModel : RowViewModel
         _owner.RefreshTotals();
     }
 
-    public string LitersText { get => Shamsi.MoneyOrBlank(Liters); set => Liters = Shamsi.Num(value); }
-    public string PriceText { get => Shamsi.MoneyOrBlank(Price); set => Price = Shamsi.Num(value); }
-    public string ManualBardagiText { get => Shamsi.MoneyOrBlank(ManualBardagi); set => ManualBardagi = Shamsi.Num(value); }
-    public string RasidText { get => Shamsi.MoneyOrBlank(Rasid); set => Rasid = Shamsi.Num(value); }
-    public string RasidFuelText { get => Shamsi.MoneyOrBlank(RasidFuel); set => RasidFuel = Shamsi.Num(value); }
+    public string LitersText { get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters)); set { Typed(nameof(LitersText), value); Liters = Shamsi.Num(value); } }
+    public string PriceText { get => Shown(nameof(PriceText), Shamsi.MoneyOrBlank(Price)); set { Typed(nameof(PriceText), value); Price = Shamsi.Num(value); } }
+    public string ManualBardagiText { get => Shown(nameof(ManualBardagiText), Shamsi.MoneyOrBlank(ManualBardagi)); set { Typed(nameof(ManualBardagiText), value); ManualBardagi = Shamsi.Num(value); } }
+    public string RasidText { get => Shown(nameof(RasidText), Shamsi.MoneyOrBlank(Rasid)); set { Typed(nameof(RasidText), value); Rasid = Shamsi.Num(value); } }
+    public string RasidFuelText { get => Shown(nameof(RasidFuelText), Shamsi.MoneyOrBlank(RasidFuel)); set { Typed(nameof(RasidFuelText), value); RasidFuel = Shamsi.Num(value); } }
 
     /// <summary>بردگیِ پولیِ همین ردیف — از همان سرویسِ آزموده، نه حسابِ دستی.</summary>
     /// <summary>
@@ -97,8 +97,8 @@ public sealed partial class DebtRowViewModel : RowViewModel
     /// </summary>
     public string BardagiText
     {
-        get => Shamsi.MoneyOrBlank(_owner.Calc.RowBardagi(_r));
-        set { ManualBardagi = Shamsi.Num(value); _r.ByMoney = true; Touch(); Refresh(); }
+        get => Shown(nameof(BardagiText), Shamsi.MoneyOrBlank(_owner.Calc.RowBardagi(_r)));
+        set { Typed(nameof(BardagiText), value); ManualBardagi = Shamsi.Num(value); _r.ByMoney = true; Touch(); Refresh(); }
     }
 
     /// <summary>

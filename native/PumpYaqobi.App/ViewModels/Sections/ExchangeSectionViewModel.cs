@@ -55,9 +55,9 @@ public sealed partial class ExchangeRowViewModel : RowViewModel
         OnPropertyChanged(nameof(RasidText));
     }
 
-    public string AmountText  { get => Shamsi.MoneyOrBlank(Amount);  set => Amount = Shamsi.Num(value); }
-    public string RateText    { get => Shamsi.MoneyOrBlank(Rate);    set => Rate = Shamsi.Num(value); }
-    public string BardagiText { get => Shamsi.MoneyOrBlank(Bardagi); set => Bardagi = Shamsi.Num(value); }
+    public string AmountText  { get => Shown(nameof(AmountText), Shamsi.MoneyOrBlank(Amount)); set { Typed(nameof(AmountText), value); Amount = Shamsi.Num(value); } }
+    public string RateText    { get => Shown(nameof(RateText), Shamsi.MoneyOrBlank(Rate));     set { Typed(nameof(RateText), value); Rate = Shamsi.Num(value); } }
+    public string BardagiText { get => Shown(nameof(BardagiText), Shamsi.MoneyOrBlank(Bardagi)); set { Typed(nameof(BardagiText), value); Bardagi = Shamsi.Num(value); } }
 
     /// <summary>دالرِ شکسته — مبلغ ÷ فی.</summary>
     public string UsdText => Shamsi.Money(Math.Round(_owner.Calc.ToUsd(_e), 2));

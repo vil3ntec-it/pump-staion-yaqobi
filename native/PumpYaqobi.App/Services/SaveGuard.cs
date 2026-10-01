@@ -162,13 +162,22 @@ public static class SaveGuard
         //  شد، آن‌چه نوشته شده واقعاً نوشته شده و بقیه در صف می‌مانند.
         var cap = timeout ?? TimeSpan.FromSeconds(8);
         var clock = System.Diagnostics.Stopwatch.StartNew();
-        foreach (var w in all)
+        //  ⚠️ دو دور: نوشتنِ یک ردیف می‌تواند کارِ تازه‌ای در صف بگذارد (ردیفِ ورق ⇒
+        //  ثبت به حساب‌ها، ۱۴۰۵/۰۷/۱۹) — آن هم همین‌جا نوشته می‌شود، نه پس از بسته شدن.
+        var done = new HashSet<IPendingWrite>(ReferenceEqualityComparer.Instance);
+        for (var pass = 0; pass < 3 && all.Count > 0; pass++)
         {
-            var mandeh = cap - clock.Elapsed;
-            if (mandeh <= TimeSpan.Zero) break;
-            try { await w.FlushAsync().WaitAsync(mandeh); }
-            catch { /* شکست یا سقفِ وقت — پایین شمرده می‌شود */ }
+            foreach (var w in all)
+            {
+                done.Add(w);
+                var mandeh = cap - clock.Elapsed;
+                if (mandeh <= TimeSpan.Zero) break;
+                try { await w.FlushAsync().WaitAsync(mandeh); }
+                catch { /* شکست یا سقفِ وقت — پایین شمرده می‌شود */ }
+            }
+            all = Snapshot().Where(w => w.IsDirty && !done.Contains(w)).ToList();
         }
+        all = done.ToList();
 
         //  ⚠️ این‌جا ‎WhenAll‎ بی‌خطر است: کارِ تازه‌ای **شروع** نمی‌کند، فقط
         //  منتظرِ نوشتن‌هایی می‌ماند که از قبل در جریان‌اند.
