@@ -955,13 +955,20 @@ public sealed class AppSettings
         //  همان را «ردیفِ زندهٔ بخشِ پنهان» دید و سرخ شد.
         //  ⚠️ ادغام است نه جایگزینی: کلیدهای تازه روی نسخهٔ دیسک می‌نشینند
         //  تا جدولِ دیگری که هم‌زمان نوشته پاک نشود.
-        lock (SoonGate)
-        {
-            foreach (var kv in SoonWidths) live.ColumnWidths[kv.Key] = kv.Value;
-            SoonWidths.Clear();
-        }
+        //  ⛔ اول نوشتن، بعد برداشتن از صف — تا امروز برعکس بود و خوانده‌ای که
+        //  درست در آن فاصله می‌رسید پهنا را **نه در صف و نه روی دیسک** می‌دید
+        //  (`WidthsSurviveClosingTheApp` در CI گرفتش). و فقط همان‌هایی برداشته
+        //  می‌شوند که نوشته شدند؛ پهنای تازه‌تری که در این فاصله آمد می‌ماند.
+        KeyValuePair<string, double[]>[] sent;
+        lock (SoonGate) sent = SoonWidths.ToArray();
+        foreach (var kv in sent) live.ColumnWidths[kv.Key] = kv.Value;
 
         live.Save();
+
+        lock (SoonGate)
+            foreach (var kv in sent)
+                if (SoonWidths.TryGetValue(kv.Key, out var now) && ReferenceEquals(now, kv.Value))
+                    SoonWidths.Remove(kv.Key);
     }
 
     public void Save()

@@ -8923,3 +8923,6 @@ dotnet run --project PumpYaqobi.UiTests -c Release -- waraqtype     حرف‌ب�
 (۲۸۶×۴۳۰) را می‌نوشت. حالا `SoonWho` همه را نگه می‌دارد و هر شیء فقط مقدارهای راحتی‌ای را
 می‌برد که نسبت به `_comfortBase` (هنگامِ خواندن یا آخرین نوشتن) عوض کرده. آزمون:
 `DoShey_DarSaf_HarDo_Mineshinand_VaKohne_TazeRaPasNemigirad` (بی اصلاح: «۲۸۶»).
+⛔ و پهنای ستون‌های در صف **اول نوشته و بعد از صف برداشته** می‌شوند (فقط همان‌هایی که
+نوشته شدند) — برعکسش پنجره‌ای داشت که پهنا نه در صف بود نه روی دیسک
+(`WidthsSurviveClosingTheApp` در CI یک بار سرخ شد).
