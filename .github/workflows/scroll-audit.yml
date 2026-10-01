@@ -79,6 +79,12 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- oldmonths
 
+      # ══ هر شکلِ نوشته (فاصلهٔ پایانی، تب، نویسهٔ جهت‌نما، ایموجی، تاریخ) وسطِ کادرش،
+      # با پیکسلِ واقعی در ۱۰۰/۱۲۵/۱۵۰٪ (۱۴۰۵/۰۷/۱۹) ══
+      - name: آزمایشگاهِ وسط‌چینی
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- centerlab
+
       # ══ رساندن به ماهِ گذشته + هر بخش در همان ماه (۱۴۰۵/۰۷/۱۸، دوم) ═══════
       # هر نوشتهٔ وسط‌چینِ برنامه با پیکسلِ واقعی؛ پارچهٔ خالی‌شده؛ Ctrl+Tab بی فوکوس.
       - name: رساندن به ماهِ گذشته و ترازِ همهٔ نوشته‌ها

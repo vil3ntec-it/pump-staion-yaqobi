@@ -409,7 +409,7 @@ internal static class OldPostProbe
         if (off > 3 && Environment.GetEnvironmentVariable("OP_DEBUG") == "1")
         {
             var ln = tl.TextLines[0];
-            Console.WriteLine($"      · «{tb.Text}» ink={lo}..{hi} box={L:0}..{R:0} w={ln.Width:0.#} wt={ln.WidthIncludingTrailingWhitespace:0.#} start={ln.Start:0.#} fd={tb.FlowDirection} rt={(tb.RenderTransform as TranslateTransform)?.X} font={tb.FontFamily} fix={PumpYaqobi.App.Controls.RtlTrim.CenterFix(tb):0.#} cps={string.Join(",", tb.Text!.Take(4).Select(c => ((int)c).ToString("X")))}");
+            Console.WriteLine($"      · «{tb.Text}» ink={lo}..{hi} box={L:0}..{R:0} w={ln.Width:0.#} wt={ln.WidthIncludingTrailingWhitespace:0.#} start={ln.Start:0.#} fd={tb.FlowDirection} rt={(tb.RenderTransform as TranslateTransform)?.X} font={tb.FontFamily} fix={PumpYaqobi.App.Controls.RtlTrim.CenterFix(tb):0.#} maxW={tl.MaxWidth:0.#} tbW={tb.Bounds.Width:0.#} lines={tl.TextLines.Count} ha={tb.HorizontalAlignment} trim={tb.TextTrimming} wrapm={tb.TextWrapping} cps={string.Join(",", tb.Text!.Take(4).Select(c => ((int)c).ToString("X")))}");
         }
         return off;
     }

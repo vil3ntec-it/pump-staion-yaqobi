@@ -85,6 +85,15 @@ internal static class OldMonthProbe
         h.SafeLedger.AddAsync(new SafeEntry { DateShamsi = d, Title = "فروش ورق — روز (محمد هارون) — " + d, Amount = 88000m }).GetAwaiter().GetResult();
         h.ExchangeLedger.AddAsync(new ExchangeRow { DateShamsi = d, Description = longText, Amount = 100m, Rate = 1m }).GetAwaiter().GetResult();
         h.RetailLedger.AddAsync(new RetailRow { DateShamsi = d, Name = "علی احمدی", Liters = 10m, PricePerLiter = 60m }).GetAwaiter().GetResult();
+        //  ══ دادهٔ قدیمیِ واقعی (۱۴۰۵/۰۷/۱۹): فاصلهٔ پایانی، تب، نویسهٔ جهت‌نما ══
+        //  «آن‌هایی که قدیم رسانده بودم باید پاکشان کنم» — همین‌ها ۲٫۵ تا ۱۰ پیکسل کج بودند.
+        foreach (var t in new[] { "کریم ", "\t هارون \t", "\u200fمحمد", "نان\u200c", "حوالهٔ 12 ", "500 افغانی " })
+        {
+            h.ExpenseLedger.AddAsync(new Expense { DateShamsi = d, Title = t, Amount = 500m }).GetAwaiter().GetResult();
+            h.SafeLedger.AddAsync(new SafeEntry { DateShamsi = d, Title = t, Amount = 700m }).GetAwaiter().GetResult();
+            h.ExchangeLedger.AddAsync(new ExchangeRow { DateShamsi = d, Description = t, Amount = 5m, Rate = 1m }).GetAwaiter().GetResult();
+            h.RetailLedger.AddAsync(new RetailRow { DateShamsi = d, Name = t, Liters = 2m, PricePerLiter = 60m }).GetAwaiter().GetResult();
+        }
         //  جدولِ بلند (پنجرهٔ چسبان) — مثلِ ماهِ واقعیِ یک پمپ
         if (Environment.GetEnvironmentVariable("OM_MANY") != "1") return;
         for (var i = 1; i <= 70; i++)
