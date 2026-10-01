@@ -596,6 +596,8 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
             }
         }
         await ReloadLogAsync();
+        //  پارچه‌ای در تاریخچه یا ورق حذف/ویرایش شد ⇒ هشدارِ کارت‌ها با دفترِ امروز
+        RecheckBothCards();
 
         static void Refresh(ShiftFormViewModel f, ShiftData? s)
         {
@@ -630,8 +632,39 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
     /// </summary>
     private readonly Dictionary<(FuelType, int), decimal> _lastBase = new();
 
+    /// <summary>
+    /// ⛔ <b>کَش به شمارهٔ دفتر بسته است</b> (۱۴۰۵/۰۷/۱۹). گزارشِ صاحب ریپو: «شروعِ
+    /// پایه را اشتباه زدم و از گزارش‌ها پاک کردم؛ حالا عددِ درست را قبول نمی‌کند و
+    /// سرِ خود صد هزار را می‌آورد.» کَش فقط با ذخیرهٔ همین صفحه پاک می‌شد، پس
+    /// پارچهٔ حذف‌شده (از فهرستِ گزارش‌ها، تاریخچه، ‎Ctrl+Z‎ یا ویرایش در ورق) تا
+    /// بستنِ برنامه «پایهٔ قبلی» می‌ماند. حالا هر نوشتنی در دفتر کَش را می‌برد —
+    /// یک پرس‌وجو به ازای هر تغییرِ دفتر، نه به ازای هر حرف.
+    /// </summary>
+    private long _lastBaseVer = -1;
+
+    private void DropStaleLastBase()
+    {
+        var ver = PumpYaqobi.Persistence.PumpDbContext.Version;
+        if (ver == _lastBaseVer) return;
+        _lastBase.Clear();
+        _lastBaseVer = ver;
+    }
+
+    /// <summary>
+    /// دفتر عوض شد (حذف، برگشت…) ⇒ هشدارِ <b>نشان‌داده‌شده</b> همین حالا از نو.
+    /// ⚠️ فقط کارتی که همین حالا هشدار دارد: کارتی که از پارچهٔ ذخیره‌شده پر شده
+    /// نباید با ختمِ خودش سنجیده شود و هشدارِ تازه‌ای بگیرد.
+    /// </summary>
+    private void RecheckBothCards()
+    {
+        DropStaleLastBase();
+        foreach (var f in new[] { Day, Night })
+            if (f.LowBaseText.Length > 0 && f.StartValue > 0m) CheckLowBase(f);
+    }
+
     internal void CheckLowBase(ShiftFormViewModel form)
     {
+        DropStaleLastBase();
         var num = (int)Shamsi.Num(form.PumpNum);
         var start = form.StartValue;
         if (start <= 0m) { form.LowBase = false; form.LowBaseText = ""; return; }
@@ -738,8 +771,11 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
     {
         try
         {
+            var ver = PumpYaqobi.Persistence.PumpDbContext.Version;
             var v = await _host.ParchaData.LastBaseAsync(fuel, num);
-            _lastBase[(fuel, num)] = v;
+            //  ⚠️ دفتر وسطِ پرسش عوض شد ⇒ این جوابِ کهنه در کَش نمی‌نشیند
+            if (ver == PumpYaqobi.Persistence.PumpDbContext.Version && ver == _lastBaseVer)
+                _lastBase[(fuel, num)] = v;
             if (fuel == Fuel && form.StartValue > 0m)
                 Apply(form, form.StartValue, DayEndFor(form) ?? v, num);
         }
@@ -1125,6 +1161,8 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
         if (OpenReport?.Entity.Id == card.Entity.Id) OpenReport = null;
         await _host.ParchaData.DeleteAsync(card.Entity.Id);
         if (_current?.Id == card.Entity.Id) { _current = null; ReportNumText = "—"; Day.Load(null); Night.Load(null); }
+        //  ⛔ «پایهٔ قبلی»ِ پارچهٔ پاک‌شده همین حالا از هشدارها می‌رود
+        RecheckBothCards();
         await ReloadLogAsync();
     }
 }

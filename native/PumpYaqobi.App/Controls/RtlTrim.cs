@@ -95,32 +95,68 @@ public static class RtlTrim
     // یک سو می‌افتد، با ‎Wrap‎ یا بی آن.
     //
     // ⛔ چاره ‎RenderTransform‎ است، نه ‎Padding‎ یا ‎Margin‎: جابه‌جاییِ کشیدن هیچ
-    // پاسِ چیدمانی نمی‌سازد، پس نه چرخهٔ چیدمان دارد نه هزینه. و فقط وقتی که
-    // نوشته <b>واقعاً</b> با فاصله تمام نمی‌شود — فاصلهٔ پایانیِ واقعی را آوالونیا
-    // درست کنار می‌گذارد.
+    // پاسِ چیدمانی نمی‌سازد، پس نه چرخهٔ چیدمان دارد نه هزینه.
+    //
+    // ⛔ <b>از ۱۴۰۵/۰۷/۱۹ حدس نیست، اندازه است</b>: «فاصلهٔ پایانیِ واقعی را
+    // آوالونیا درست کنار می‌گذارد» غلط بود — دادهٔ قدیمی («کریم »، تب، نویسهٔ
+    // جهت‌نما) ۲٫۵ تا ۱۰ پیکسل کج می‌ماند و صاحب ریپو باید آن ردیف‌ها را پاک
+    // می‌کرد. حالا جای جوهرِ نخستین تا آخرین نویسهٔ دیدنی از خودِ ‎TextLayout‎
+    // (‎HitTestTextRange‎) خوانده می‌شود و همان وسط می‌رود — هر علتی که داشته
+    // باشد. ⛔ متنِ کاربر دست نمی‌خورد. سنجه: ‎centerlab‎.
 
     /// <summary>
-    /// نیمِ همان پهنای گم‌شده — با جهتی که نوشته را به وسط برمی‌گرداند.
+    /// چند واحد نوشته باید جابه‌جا شود تا جوهرش وسطِ خودش باشد (مثبت ⇒ به راست).
     /// ۰ یعنی نوشته از قبل وسط است.
     /// </summary>
     public static double CenterFix(TextBlock t)
     {
         if (t.TextAlignment != TextAlignment.Center || string.IsNullOrEmpty(t.Text)) return 0;
-        if (char.IsWhiteSpace(t.Text[^1])) return 0;               // فاصلهٔ پایانیِ واقعی
         if (!t.IsMeasureValid || !t.IsArrangeValid) return 0;      // ⛔ چیدمانِ کهنه را نخوان
+        var text = t.Text;
+        //  ══ جوهر، نه نویسه (۱۴۰۵/۰۷/۱۹) ══
+        //  فاصله، تب، نویسهٔ جهت‌نما و نیم‌فاصلهٔ دو سرِ نوشته هیچ جوهری ندارند ولی
+        //  آوالونیا با آن‌ها وسط می‌برد — «کریم »ِ دادهٔ قدیمی ۲٫۵ تا ۱۰ پیکسل کج بود
+        //  (‎centerlab‎). پس وسطِ <b>نخستین تا آخرین نویسهٔ دیدنی</b> سنجیده می‌شود.
         var tl = t.TextLayout;
-        if (tl is null || tl.TextLines.Count != 1) return 0;
+        if (tl is null || tl.TextLines.Count == 0) return 0;
+        //  ⚠️ نوشتهٔ بلندِ ‎Wrap+MaxLines=1‎ فقط خطِ اولش دیده می‌شود — همان تکهٔ دیدنی
+        //  وسط می‌رود («500 » از «500 افغانی» در ستونِ باریک ۳px کج بود)
         var line = tl.TextLines[0];
-        //  خطِ بریده (نوشتهٔ بلندِ ‎Wrap‎) فاصلهٔ پایانیِ واقعی دارد
-        if (line.FirstTextSourceIndex + line.Length < t.Text.Length) return 0;
-        var gap = line.WidthIncludingTrailingWhitespace - line.Width;
-        if (gap < 0.5) return 0;
-        //  نوشته‌ای که هم‌قدِ خودش است (کنارِ نشانه در یک ردیف) آوالونیا اصلاً وسط
-        //  نمی‌برد (‎Start = 0‎) و درست کشیده می‌شود — سنجیده شد: تصحیحش ۵px کج می‌کرد
-        if (line.Start < 0.5) return 0;
-        //  خطِ راست‌به‌چپ آن تکه را سمتِ چپ می‌کشد ⇒ نوشته به چپ افتاده
-        return gap / 2;
+        int a = line.FirstTextSourceIndex, b = Math.Min(text.Length, a + line.Length) - 1;
+        var whole = tl.TextLines.Count == 1 && a == 0 && b == text.Length - 1;
+        while (a <= b && Blank(text[a])) a++;
+        while (b >= a && Blank(text[b])) b--;
+        if (a > b) return 0;
+        //  ⚡ نوشتهٔ لاتین/عددیِ کامل و بی فاصلهٔ دو سر را آوالونیا درست وسط می‌برد
+        if (whole && a == 0 && b == text.Length - 1 && !IsRtl(text)) return 0;
+        //  ⚠️ نویسه‌به‌نویسه، نه یک‌جا: ‎HitTestTextRange‎ِ آوالونیا ۱۱.۲.۳ روی خطِ
+        //  راست‌به‌چپی که چند تکه دارد (نیم‌فاصله، ایموجی، «/») فقط <b>تکهٔ اول</b> را
+        //  می‌دهد — «ورق‌های روزانه» ۳۵ پیکسل به کنار می‌رفت (‎oldpost‎ گرفتش).
+        double lo = double.MaxValue, hi = double.MinValue;
+        for (var i = a; i <= b; i++)
+        {
+            if (Blank(text[i])) continue;
+            var n = char.IsHighSurrogate(text[i]) && i < b ? 2 : 1;
+            foreach (var r in tl.HitTestTextRange(i, n))
+            {
+                if (r.Width <= 0) continue;
+                lo = Math.Min(lo, r.Left);
+                hi = Math.Max(hi, r.Right);
+            }
+            i += n - 1;
+        }
+        if (hi <= lo) return 0;
+        var inner = t.Bounds.Width - t.Padding.Left - t.Padding.Right;
+        if (inner <= 0 || hi - lo >= inner - 1) return 0;           // پر از کادر
+        //  مثبت ⇒ جوهر باید به راست برود
+        var dx = inner / 2 - (lo + hi) / 2;
+        return Math.Abs(dx) < 0.5 ? 0 : dx;
     }
+
+    /// <summary>نویسه‌ای که هیچ جوهری ندارد.</summary>
+    private static bool Blank(char c) =>
+        char.IsWhiteSpace(c) || c is '\u200b' or '\u200c' or '\u200d' or '\u200e' or '\u200f'
+            or '\u061c' or '\ufeff' or (>= '\u202a' and <= '\u202e') or (>= '\u2066' and <= '\u2069');
 
     private static void Recenter(TextBlock t)
     {

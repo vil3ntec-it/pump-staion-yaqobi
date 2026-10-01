@@ -65,6 +65,7 @@ internal static class UndoKeysProbe
         GhostIsGrey(win, vm);
         AckInsideTheBox(win, vm);
         DayAndNightTogether(win, vm);
+        WrongBaseDeleted(win, vm);
         PriceLossIsEmpty(win, vm);
         Console.WriteLine();
         Console.WriteLine("عکس‌ها: " + ShotDir);
@@ -465,6 +466,63 @@ internal static class UndoKeysProbe
         Check("روز هیچ‌وقت با شب سنجیده نمی‌شود", !d.LowBase || !d.LowBaseText.Contains(Shamsi.Money(701600m)));
 
         foreach (var f in new[] { d, n }) { f.Start = ""; f.End = ""; f.PumpNum = ""; }
+        Settle(win);
+    }
+
+    // ══ «شروعِ پایه را اشتباه زدم و پاک کردم؛ عددِ درست را قبول نمی‌کند» (۱۴۰۵/۰۷/۱۹) ══
+    //   همان کارِ صاحب ریپو: پارچه با ختمِ غلطِ ۱۰۰٬۰۰۰ ⇒ از «گزارش‌ها» پاک ⇒ شروعِ درست.
+
+    private static void WrongBaseDeleted(Window win, MainViewModel vm)
+    {
+        Console.WriteLine();
+        Console.WriteLine("── پارچهٔ غلطِ پاک‌شده دیگر «پایهٔ قبلی» نیست ──");
+        var sec = vm.Sections.First(s => s.Id == "shifts");
+        Wait(win, vm.GoAsync(sec));
+        Settle(win);
+        if (sec is not ParchaSectionViewModel p) { Fail("بخشِ پارچه‌ها نبود"); return; }
+        if (p.IsDiesel) { p.IsDiesel = false; Settle(win); }
+        var d = p.Day;
+
+        Wait(win, p.StartNewReportCommand.ExecuteAsync(null));
+        d.Name = "کارمندِ آزمون"; d.PumpNum = "9"; d.Start = "90000"; d.End = "100000";
+        Settle(win);
+        Wait(win, d.SaveCommand.ExecuteAsync(null));
+        Settle(win);
+
+        Wait(win, p.StartNewReportCommand.ExecuteAsync(null));
+        d.Name = "کارمندِ آزمون"; d.PumpNum = "9"; d.Start = "2000"; d.End = "2500";
+        Settle(win);
+        Check($"پیش از پاک کردن: «کمتر از ۱۰۰٬۰۰۰» درست است ({d.LowBaseText})",
+              d.LowBase && d.LowBaseText.Contains(Shamsi.Money(100000m)));
+
+        p.ReportsOpen = true;
+        Settle(win);
+        var card = p.Reports.FirstOrDefault(c => c.Entity.DayShift is { PumpNum: 9, End: 100000m });
+        if (card is null) { Fail("پارچهٔ غلط در گزارش‌ها نبود"); p.ReportsOpen = false; return; }
+        var hook = Dialogs.ConfirmHook;
+        Dialogs.ConfirmHook = (_, _) => true;
+        try { Wait(win, p.DeleteReportCommand.ExecuteAsync(card)); }
+        finally { Dialogs.ConfirmHook = hook; }
+        p.ReportsOpen = false;
+        Settle(win);
+
+        Check($"پس از پاک کردن، هشدارِ ۱۰۰٬۰۰۰ همان لحظه رفت («{d.LowBaseText}»)",
+              !d.LowBase && !d.LowBaseText.Contains(Shamsi.Money(100000m)));
+        d.Start = "2001";
+        Settle(win);
+        Check($"شروعِ درست را بی هشدار و دست‌نخورده می‌پذیرد («{d.Start}» · «{d.LowBaseText}»)",
+              !d.LowBase && d.LowBaseText == "" && Shamsi.Num(d.Start) == 2001m);
+
+        Wait(win, d.SaveCommand.ExecuteAsync(null));
+        Settle(win);
+        using (var db = AppHost.Current.Db.Create())
+        {
+            var sh = db.ShiftDataSet.Where(x => x.PumpNum == 9).OrderByDescending(x => x.Id).FirstOrDefault();
+            Check($"ذخیره شد همان «2,001»، نه ۱۰۰٬۰۰۰ ({sh?.Start})", sh is { Start: 2001m });
+            var wp = db.WaraqPumps.Where(x => x.Num == 9).OrderByDescending(x => x.Id).FirstOrDefault();
+            Check($"و در ورق بی نشانِ سرخ ({wp?.Start} · سرخ؟ {wp?.LowBase})", wp is { Start: 2001m, LowBase: false });
+        }
+        foreach (var f in new[] { p.Day, p.Night }) { f.Start = ""; f.End = ""; f.PumpNum = ""; }
         Settle(win);
     }
 
