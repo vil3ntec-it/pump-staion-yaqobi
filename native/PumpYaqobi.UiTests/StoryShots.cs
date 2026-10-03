@@ -8,6 +8,7 @@ using PumpYaqobi.App.ViewModels;
 using PumpYaqobi.App.ViewModels.Sections;
 using PumpYaqobi.App.Views;
 using PumpYaqobi.Domain;
+using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
 
