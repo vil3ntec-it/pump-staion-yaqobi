@@ -116,18 +116,53 @@ internal static class StoryShots
             Settle(win);
         });
 
-        // ۱) پیش از نوشتن
-        ShotWaraq("s01-waraq-before");
-        ShotAccount("s03-account-before");
-        ShotSection("safe", "s05-safe-before");
-        ShotDash("s09-dash-before", false);
+        //  ۰) پیش از هر چیز
+        ShotWaraq("a00-waraq-before");
+        ShotSection("expenses", "a00-expenses-before");
+        ShotSection("safe", "a00-safe-before");
+        ShotSection("storage", "a00-storage-before");
+        ShotDash("a00-dash-before", false);
 
-        // ۲) قرض در ورق نوشته می‌شود — همان کاری که کاربر می‌کند
+        // ۱) پارچه: شروع و ختمِ پایه — همان فرمِ برنامه، پارچهٔ جدیدِ روز
+        Try("parcha", () =>
+        {
+            if (By("shifts") is not ParchaSectionViewModel ps) return;
+            Away();
+            Wait(win, vm.GoAsync(ps));
+            ps.IsDiesel = false;
+            Settle(win);
+            ps.NewParchaDayCommand.Execute(null);
+            Settle(win);
+            var start = host.ParchaData.LastBaseAsync(FuelType.Petrol, 1).GetAwaiter().GetResult();
+            ps.Day.Name = "احمد رحیمی";
+            ps.Day.PumpNum = "1";
+            ps.Day.Price = "68";
+            Settle(win);
+            Shot(win, Path.Combine(outDir, "b01-parcha-empty.png"));
+            ps.Day.Start = ((long)start).ToString();
+            Settle(win);
+            Shot(win, Path.Combine(outDir, "b02-parcha-start.png"));
+            ps.Day.End = ((long)start + 4200).ToString();
+            Settle(win);
+            Shot(win, Path.Combine(outDir, "b03-parcha-end.png"));
+            Wait(win, ps.Day.SaveCommand.ExecuteAsync(null));
+            Shot(win, Path.Combine(outDir, "b04-parcha-saved.png"));
+            Console.WriteLine("  پارچه: " + start + " ⇒ " + (start + 4200));
+        });
+
+        // ۲) همان پایه در ورق آمد
+        Try("post1", () => host.WaraqPosting.SyncAsync(waraq.Id).GetAwaiter().GetResult());
+        ShotWaraq("c01-waraq-pump");
+
+        // ۳) قرض و مصرف در ورق نوشته می‌شوند
         Try("write", () =>
         {
             var w = host.WaraqData.LoadAsync(waraq.Id).GetAwaiter().GetResult()!;
             var day = w.Shifts.First(x => x.Kind == ShiftKind.Day);
-            var t = day.Transactions.OrderBy(x => x.SortIndex).Skip(5).First();
+            var rows = day.Transactions.OrderBy(x => x.SortIndex).ToList();
+            var free = rows.Where(x => string.IsNullOrWhiteSpace(x.Name) && x.Amount == 0 && x.Liters == 0).ToList();
+            Console.WriteLine("  ردیف‌های خالی: " + string.Join(",", free.Select(x => rows.IndexOf(x))));
+            var t = free[0];
             t.Name = "سید جلال هاشمی";
             t.Liters = 150;
             t.Amount = 150 * 68;
@@ -135,15 +170,26 @@ internal static class StoryShots
             t.Fuel = FuelType.Petrol;
             t.AmountAuto = true;
             host.WaraqData.SaveTxnAsync(t).GetAwaiter().GetResult();
+            var e = free[1];
+            e.Name = "روغنِ جنراتور";
+            e.Liters = 0;
+            e.Amount = 3500;
+            e.Type = WaraqTxnType.Expense;
+            e.Fuel = FuelType.Petrol;
+            e.AmountAuto = false;
+            host.WaraqData.SaveTxnAsync(e).GetAwaiter().GetResult();
             var rep = host.WaraqPosting.SyncAsync(waraq.Id).GetAwaiter().GetResult();
-            Console.WriteLine("  ثبت به حساب‌ها: " + rep);
+            Console.WriteLine("  ثبت به حساب‌ها: " + rep + " ردیفِ قرض " + rows.IndexOf(t) + " · مصرف " + rows.IndexOf(e));
         });
-        ShotWaraq("s02-waraq-after");
-        ShotAccount("s04-account-after");
-        ShotSection("safe", "s06-safe-after");
+        ShotWaraq("c02-waraq-txns");
 
-        // ۳) پارچهٔ شب: تیل فروخته می‌شود، مخزن کم می‌شود
-        ShotSection("storage", "s08-storage-00");
+        // ۴) مصارف · ۵) گاوصندوق · حسابِ قرض‌دار
+        ShotSection("expenses", "d01-expenses-after");
+        ShotSection("safe", "e01-safe-after");
+        ShotAccount("f01-account-after");
+
+        // ۶) مخزن: پس از پارچه، و بعد تخلیه تا هشدار
+        ShotSection("storage", "g00-storage");
         Try("drain", () =>
         {
             var start = host.ParchaData.LastBaseAsync(FuelType.Petrol, 1).GetAwaiter().GetResult();
@@ -155,13 +201,12 @@ internal static class StoryShots
                 host.ParchaData.SaveShiftAsync(rep, ShiftKind.Night, shift).GetAwaiter().GetResult();
                 Away();
                 Go("storage");
-                Shot(win, Path.Combine(outDir, $"s08-storage-{k:00}.png"));
+                Shot(win, Path.Combine(outDir, $"g{k:00}-storage.png"));
             }
         });
-        ShotSection("shifts", "s07-parcha");
 
-        // ۴) هشدار
-        ShotDash("s09-dash-after", true);
+        // ۷) هشدار
+        ShotDash("h01-dash-after", true);
 
         Console.WriteLine("عکس‌ها در " + outDir);
         return 0;

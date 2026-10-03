@@ -27,11 +27,11 @@ jobs:
       - name: عکسِ برنامه
         working-directory: native
         run: |
-          dotnet run --project PumpYaqobi.UiTests -c Release -- story "$GITHUB_WORKSPACE/promo/story"
+          dotnet run --project PumpYaqobi.UiTests -c Release -- story "$GITHUB_WORKSPACE/promo/story2"
       - name: نوشتن در شاخه
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add promo/story
+          git add promo/story2
           git commit -m "عکس‌های ویدیوی تبلیغاتی [skip ci]" || exit 0
           git push
