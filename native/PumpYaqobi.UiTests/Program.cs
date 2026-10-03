@@ -81,6 +81,7 @@ internal static class Program
         if (outDir.Equals("promo", StringComparison.OrdinalIgnoreCase)) return PromoShots.Run(args.Length > 1 ? args[1] : null);
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- story [پوشه]   داستانِ ویدیو: ورق ⇒ حساب ⇒ گاوصندوق ⇒ مخزن ⇒ هشدار
         if (outDir.Equals("story", StringComparison.OrdinalIgnoreCase)) return StoryShots.Run(args.Length > 1 ? args[1] : null);
+        if (outDir.Equals("story3", StringComparison.OrdinalIgnoreCase)) return Story3Shots.Run(args.Length > 1 ? args[1] : null);
         // ══ «فایلِ کاملِ برنامه» + دکمه‌های «فرستادن به سرور» و «نصب از فایل» (۱۴۰۵/۰۷/۱۵)
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- fullbackup [پوشهٔ عکس]
         if (outDir.Equals("fullbackup", StringComparison.OrdinalIgnoreCase))

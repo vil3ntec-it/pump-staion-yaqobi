@@ -12,6 +12,7 @@ on:
       - '.github/workflows/promo-shots.yml'
       - 'native/PumpYaqobi.UiTests/PromoShots.cs'
       - 'native/PumpYaqobi.UiTests/StoryShots.cs'
+      - 'native/PumpYaqobi.UiTests/Story3Shots.cs'
 
 permissions:
   contents: write
@@ -27,11 +28,11 @@ jobs:
       - name: عکسِ برنامه
         working-directory: native
         run: |
-          dotnet run --project PumpYaqobi.UiTests -c Release -- story "$GITHUB_WORKSPACE/promo/story2"
+          dotnet run --project PumpYaqobi.UiTests -c Release -- story3 "$GITHUB_WORKSPACE/promo/story3"
       - name: نوشتن در شاخه
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add promo/story2
+          git add promo/story3
           git commit -m "عکس‌های ویدیوی تبلیغاتی [skip ci]" || exit 0
           git push
