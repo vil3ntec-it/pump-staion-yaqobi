@@ -396,6 +396,9 @@ internal static class ScrollPerf
             var max = Math.Max(0, page.Extent.Height - page.Viewport.Height);
             if (page.Offset.Y >= max - 0.5) break;
 
+            //  ⛔ نقاشیِ صفحهٔ بی‌پنجره این‌جا شمرده نمی‌شود — شرحش بالای ‎PaintTimer‎.
+            var paintTimer = PaintTimer();
+            paintTimer?.Stop();
             var sw = Stopwatch.StartNew();
             page.Offset = new Vector(0, Math.Min(max, page.Offset.Y + Step));
             if (Why && guard <= 4) Census(win, "پس از عوض شدنِ آفست");
@@ -413,6 +416,7 @@ internal static class ScrollPerf
             var t3 = sw.ElapsedMilliseconds;
             if (Why && guard <= 4) Console.WriteLine($"      چیدمانِ دوم {t3 - t2} ms");
             sw.Stop();
+            paintTimer?.Start();
             work.Add(sw.ElapsedMilliseconds);
 
             sw.Restart();
@@ -437,6 +441,33 @@ internal static class ScrollPerf
         Paint.Add((what, paint.Max(), (long)paint.Average()));
         Console.WriteLine($"{what,-40} {work.Count,4}    {work.Max(),8:N0} {p95,5:N0} {work.Average(),8:N0}  {hitches,4}  | {paint.Max(),8:N0} {paint.Average(),8:N0} | {live,6} | {blur,8} {visuals,7}  تکهٔ گران: {ExcelGrid.DiagChunkMaxRows} ردیف {ExcelGrid.DiagChunkMaxMs} ms");
         ExcelGrid.DiagChunkMaxMs = 0; ExcelGrid.DiagChunkMaxRows = 0;
+    }
+
+    /// <summary>
+    /// ══ نقاشیِ بی‌پنجره در ستونِ «کار» شمرده نمی‌شد (۱۴۰۵/۰۷/۱۹) ══
+    ///
+    /// پنجرهٔ بی‌سرِ آوالونیا کلِ صفحه را با یک ‎DispatcherTimer‎ِ ۶۰ بار در ثانیه
+    /// (‎Tag = "HeadlessRenderTimer"‎) <b>روی همین نخ</b> و با نرم‌افزار می‌کشد؛ در
+    /// برنامهٔ واقعی کشیدن روی نخِ رندر است. ‎RunJobs‎ِ هر گام هر وقت آن زمان‌سنج
+    /// سر رسیده بود یک نقاشیِ کامل را هم در «کار» می‌گذاشت — نمونه‌بردار گفت ۴۴٪
+    /// وقتِ اسکرول همین است، و همان یک گامِ ۱۲۷ تا ۱۷۱ میلی‌ثانیه‌ایِ تک‌وتوکِ CI
+    /// (روی ‎main‎ هم: ۱۳۶). پس آن زمان‌سنج فقط در طولِ «کارِ» گام می‌ایستد.
+    ///
+    /// ⛔ این ضعیف کردنِ سنجه نیست: نقاشی همچنان <b>هر گام</b> جدا سنجیده و در
+    /// ستونِ «نقاشی» چاپ می‌شود (‎CaptureRenderedFrame‎ پس از هر گام)، و سقفِ
+    /// ۱۲۰ دست نخورد. پیدا نشد ⇒ همان رفتارِ پیشین.
+    /// </summary>
+    private static DispatcherTimer? PaintTimer()
+    {
+        try
+        {
+            foreach (var f in typeof(Dispatcher).GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic))
+                if (f.GetValue(Dispatcher.UIThread) is IEnumerable<DispatcherTimer> list)
+                    foreach (var t in list.ToList())
+                        if (Equals(t.Tag, "HeadlessRenderTimer")) return t;
+        }
+        catch { }
+        return null;
     }
 
     /// <summary>
