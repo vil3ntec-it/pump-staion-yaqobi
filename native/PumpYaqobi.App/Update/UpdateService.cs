@@ -208,9 +208,17 @@ public sealed class UpdateService
         string serverWhy = "";
         if (!string.IsNullOrEmpty(server))
         {
+            _lastStatus = 0;
             var (viaServer, why) = await FromApiAsync(server, current, ct);
             if (viaServer is not null) return viaServer;
             serverWhy = why;
+
+            //  🚦 «آپدیت روی سرور باشد ولی تا خودم نخواهم به هیچ برنامه‌ای نرود»
+            //  (۱۴۰۵/۰۷/۱۹). نرسیدن به سرور (قطعی، تایم‌اوت، ۵۰۰) دیگر راهِ
+            //  گیت‌هاب را باز نمی‌کند — وگرنه پخشِ خاموشِ مدیر با یک قطعیِ
+            //  کوتاه دور می‌خورد. فقط سرورِ کهنه‌ای که این مسیر را ندارد
+            //  (۴۰۴) یا هنوز هیچ نسخه‌ای نگرفته (۵۰۳) سراغِ گیت‌هاب می‌فرستد.
+            if (!FallbackAllowed(_lastStatus)) return Broken(current, serverWhy);
         }
 
         UpdateInfo? best = null;
@@ -225,6 +233,15 @@ public sealed class UpdateService
         if (best is not null) return best;
         return Broken(current, serverWhy.Length > 0 ? serverWhy : firstWhy);
     }
+
+    private int _lastStatus;
+
+    /// <summary>
+    /// جوابِ سرورِ پمپ اجازهٔ رفتن به راهِ دوم را می‌دهد؟ فقط ۴۰۴ (سرورِ کهنه که
+    /// این مسیر را ندارد) و ۵۰۳ (هنوز هیچ نسخه‌ای نگرفته). ‎0‎ یعنی «اصلاً
+    /// نرسیدیم» — و آن **نه**.
+    /// </summary>
+    internal static bool FallbackAllowed(int status) => status is 404 or 503;
 
     /// <summary>هر دو درِ یک مخزن: فهرستِ انتشار، و اگر نشد فایلِ متنی.</summary>
     private async Task<(UpdateInfo? Info, string Why)> FromFeedAsync(
@@ -244,6 +261,7 @@ public sealed class UpdateService
         try
         {
             using var res = await GetAsync(feed, ct);
+            _lastStatus = (int)res.StatusCode;
             if (!res.IsSuccessStatusCode)
                 return (null, "سرورِ به‌روزرسانی این جواب را داد (کدِ " + (int)res.StatusCode + ")");
 

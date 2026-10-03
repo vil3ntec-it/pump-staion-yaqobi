@@ -691,19 +691,58 @@ public class UpdateBehaviourTests : IDisposable
     }
 
     [Fact]
-    public async Task Server_Naresid_PoshtibanKarMikonad()
+    public async Task Server_Naresid_BeGithubNemiravad()
     {
+        //  🚦 پخشِ خاموشِ مدیر با یک قطعیِ کوتاه دور نمی‌خورد
+        var asked = new List<string>();
         UpdateService.ServerFeed = () => Srv;
         UpdateService.TestTransport = (req, _) =>
         {
             var url = req.RequestUri!.ToString();
+            asked.Add(url);
             if (url == Srv) throw new HttpRequestException("server down");
             return Task.FromResult(Json(Feed("v99.9.9", LocalBase())));
         };
 
         var info = await new UpdateService().CheckAsync();
 
+        Assert.True(info.Failed);
+        Assert.False(info.Available);
+        Assert.Equal(new[] { Srv }, asked);
+    }
+
+    [Fact]
+    public async Task Server_PakhsheKhamush_HichNoskheiNemiravad()
+    {
+        //  سرورِ نگه‌داشته‌ای که هنوز چیزی منتشر نکرده: «تازه‌ای نیست»، نه خطا
+        var asked = new List<string>();
+        UpdateService.ServerFeed = () => Srv;
+        UpdateService.TestTransport = (req, _) =>
+        {
+            asked.Add(req.RequestUri!.ToString());
+            return Task.FromResult(Json("""{"tag_name":"v0.0.0","name":"held","held":true,"assets":[]}"""));
+        };
+
+        var info = await new UpdateService().CheckAsync();
+
         Assert.False(info.Failed);
+        Assert.False(info.Available);
+        Assert.Equal(new[] { Srv }, asked);
+    }
+
+    [Fact]
+    public async Task ServereKohne_404_PoshtibanKarMikonad()
+    {
+        UpdateService.ServerFeed = () => Srv;
+        UpdateService.TestTransport = (req, _) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (url == Srv) return Task.FromResult(Json("""{"error":"not_found"}""", HttpStatusCode.NotFound));
+            return Task.FromResult(Json(Feed("v99.9.9", LocalBase())));
+        };
+
+        var info = await new UpdateService().CheckAsync();
+
         Assert.True(info.Available);
         Assert.Equal("99.9.9", info.LatestVersion);
     }
