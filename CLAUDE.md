@@ -9051,3 +9051,16 @@ SyncStore.ImportPortable                 ⇒ همان ApplyIncoming ⇒ op بر�
 - سمتِ سرور: ریپوی `server` ⇒ `src/pumpupdates/mirror.js`. سرتاسری:
   `node test/pump-mirror-stack.mjs <live.json>` آن‌جا، و این‌جا
   `dotnet run --project PumpYaqobi.UiTests -c Release -- pumpmirror <pub> <version>`.
+
+## 🚦 پخشِ خاموشِ سرور دور نمی‌خورد — نرسیدن به سرور ≠ گیت‌هاب (از ۱۴۰۵/۰۷/۱۹، نسخه 3.1.237)
+
+صاحب ریپو: «سرور یک دکمه داشته باشه که اپدیت بره یا نه… تا به هیچ حساب یا برنامه‌ای
+نره مگه خودم بخام.» دکمه روی سرورِ خانگی است (ریپوی `server` ۱.۵۰.۳۱، «به‌روزرسانی ←
+پخش به برنامه‌ها»). سهمِ برنامه یک قاعده است:
+
+- ⛔ **`UpdateService.FallbackAllowed`**: فقط ۴۰۴ (سرورِ کهنه بی این مسیر) و ۵۰۳ (هنوز
+  هیچ نسخه‌ای نگرفته) سراغِ گیت‌هاب می‌فرستند. نرسیدن (قطعی، تایم‌اوت، ۵۰۰) ⇒ «سرورِ
+  به‌روزرسانی نرسید»، **نه** گیت‌هاب — وگرنه یک قطعیِ کوتاه پخشِ خاموشِ مدیر را دور می‌زد.
+- ⚠️ پخشِ خاموش و هیچ نسخهٔ منتشرشده ⇒ سرور `v0.0.0` می‌دهد ⇒ «برنامه به‌روز است».
+- آزمون: `Server_Naresid_BeGithubNemiravad` · `Server_PakhsheKhamush_HichNoskheiNemiravad`
+  · `ServereKohne_404_PoshtibanKarMikonad`؛ سرتاسری `pumpmirror <pub> <نسخه> held`.

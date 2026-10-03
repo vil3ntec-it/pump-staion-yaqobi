@@ -23,11 +23,12 @@ public static class PumpMirrorProbe
 {
     public static int Run(string[] args)
     {
-        if (args.Length < 3) { Console.WriteLine("pumpmirror <public-base> <version>"); return 2; }
-        return RunAsync(args[1].TrimEnd('/'), args[2]).GetAwaiter().GetResult();
+        if (args.Length < 3) { Console.WriteLine("pumpmirror <public-base> <version> [held]"); return 2; }
+        var held = args.Length > 3 && args[3] == "held";
+        return RunAsync(args[1].TrimEnd('/'), args[2], held).GetAwaiter().GetResult();
     }
 
-    private static async Task<int> RunAsync(string local, string version)
+    private static async Task<int> RunAsync(string local, string version, bool held)
     {
         int ok = 0, bad = 0;
         void Check(string name, bool pass, string extra = "")
@@ -58,6 +59,18 @@ public static class PumpMirrorProbe
 
         var svc = new UpdateService();
         var info = await svc.CheckAsync();
+        if (held)
+        {
+            //  🚦 پخش در پنل خاموش است: نسخه روی سرور هست ولی به برنامه نمی‌رسد
+            Check("پخش خاموش ⇒ برنامه نسخهٔ نگه‌داشته را نمی‌بیند", !info.Available && info.LatestVersion != version,
+                  info.LatestVersion + " · " + info.StatusText);
+            Check("خطا هم نیست (راهِ دیگری باز نمی‌شود)", !info.Failed, info.StatusText);
+            Check("هیچ درخواستی جز سرورِ پمپ نرفت", asked.TrueForAll(u => u.StartsWith(serverBase, StringComparison.Ordinal)),
+                  string.Join(" | ", asked));
+            Console.WriteLine($"\n{ok} موفق، {bad} ناموفق");
+            try { Directory.Delete(dir, true); } catch { }
+            return bad == 0 ? 0 : 1;
+        }
         Check("نسخهٔ تازه از سرورِ پمپ آمد", info.Available && info.LatestVersion == version,
               info.LatestVersion + " · " + info.StatusText);
         Check("بسته از همان سرور", info.DownloadUrl?.StartsWith(serverBase + "/api/pump-updates/files/") == true,
