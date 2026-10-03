@@ -8,6 +8,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using PumpYaqobi.App.ViewModels;
 using PumpYaqobi.App.Services;
 
 namespace PumpYaqobi.App.Controls;
@@ -2430,6 +2431,16 @@ public class ExcelGrid : DataGrid
 
 
 
+    /// <summary>ردیفی که یکی از خانه‌هایش همین حالا باز است.</summary>
+    private RowViewModel? _editRow;
+
+    private void EndRowEdit()
+    {
+        var r = _editRow;
+        _editRow = null;
+        r?.EndCellEdit();
+    }
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
@@ -2446,6 +2457,15 @@ public class ExcelGrid : DataGrid
         PreparingCellForEdit += (_, e) =>
         {
             _editing = true; AutoDirection(e.EditingElement);
+            //  ⛔ قالبِ ردیف به کادرِ در حالِ نوشتن پس فرستاده نشود — شرحش بالای ‎RowViewModel.BeginCellEdit‎
+            if (e.Row?.DataContext is RowViewModel rv && PathOf(e.Column) is { Length: > 0 } path
+                && !path.Contains('.') && !path.Contains('['))
+            {
+                rv.BeginCellEdit(path);
+                _editRow = rv;
+                if (e.EditingElement is { } ed)
+                    ed.DetachedFromVisualTree += (_, _) => { if (ReferenceEquals(_editRow, rv)) EndRowEdit(); };
+            }
             // پیشنهادِ خودکار: فهرستِ نام‌دارِ ستون (اگر داشت) + مقدارهای همان ستون
             if (e.EditingElement is TextBox tb || (e.EditingElement?.GetVisualDescendants().OfType<TextBox>().FirstOrDefault() is { } tb2 && (tb = tb2) is not null))
             {
@@ -2461,6 +2481,7 @@ public class ExcelGrid : DataGrid
         CellEditEnding += (_, _) => Suggest.Settle();
         CellEditEnded += (_, _) =>
         {
+            EndRowEdit();
             _editing = false; _typedIn = false; CaptureEdit();
             // ⛔ خانه‌ای که بسته شد، همان لحظه روی دیسک می‌نشیند — شرحش بالای ‎FlushDirtyRows‎
             FlushDirtyRows();

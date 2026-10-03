@@ -169,10 +169,10 @@ public sealed partial class WaraqPumpViewModel : RowViewModel, IFlaggedRow
             OnPropertyChanged(n);
     }
 
-    public string StartText { get => Shamsi.MoneyOrBlank(Start); set => Start = Shamsi.Num(value); }
-    public string EndText { get => Shamsi.MoneyOrBlank(End); set => End = Shamsi.Num(value); }
-    public string PriceText { get => Shamsi.MoneyOrBlank(Price); set => Price = Shamsi.Num(value); }
-    public string DebtText { get => Shamsi.MoneyOrBlank(Debt); set => Debt = Shamsi.Num(value); }
+    public string StartText { get => Shown(nameof(StartText), Shamsi.MoneyOrBlank(Start)); set { Typed(nameof(StartText), value); Start = Shamsi.Num(value); } }
+    public string EndText { get => Shown(nameof(EndText), Shamsi.MoneyOrBlank(End)); set { Typed(nameof(EndText), value); End = Shamsi.Num(value); } }
+    public string PriceText { get => Shown(nameof(PriceText), Shamsi.MoneyOrBlank(Price)); set { Typed(nameof(PriceText), value); Price = Shamsi.Num(value); } }
+    public string DebtText { get => Shown(nameof(DebtText), Shamsi.MoneyOrBlank(Debt)); set { Typed(nameof(DebtText), value); Debt = Shamsi.Num(value); } }
 
     /// <summary>لیترِ منفی وجود ندارد — ‎Math.max(0, end−start)‎.</summary>
     public decimal Liters => Math.Max(0m, End - Start);
@@ -217,6 +217,13 @@ public sealed partial class WaraqPumpViewModel : RowViewModel, IFlaggedRow
     }
 
     protected override Task SaveAsync() => _owner.SavePumpAsync(_p);
+
+    /// <summary>خانه بسته شد (یا ‎Ctrl+S‎) ⇒ ثبت به حساب‌ها همین حالا، نه ۱٫۲ ثانیه بعد.</summary>
+    public override async Task FlushAsync()
+    {
+        await base.FlushAsync();
+        await _owner.PostPendingAsync();
+    }
 }
 
 /// <summary>یک ردیفِ «قرض/مصرف» در ورق.</summary>
@@ -298,8 +305,8 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
         OnPropertyChanged(nameof(EffectiveAmountText));
     }
 
-    public string LitersText { get => Shamsi.MoneyOrBlank(Liters); set => Liters = Shamsi.Num(value); }
-    public string AmountText { get => Shamsi.MoneyOrBlank(Amount); set => Amount = Shamsi.Num(value); }
+    public string LitersText { get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters)); set { Typed(nameof(LitersText), value); Liters = Shamsi.Num(value); } }
+    public string AmountText { get => Shown(nameof(AmountText), Shamsi.MoneyOrBlank(Amount)); set { Typed(nameof(AmountText), value); Amount = Shamsi.Num(value); } }
 
     /// <summary>مبلغی که واقعاً در جمع‌ها شمرده می‌شود.</summary>
     public string EffectiveAmountText => Shamsi.Money(_owner.Calc.TxnAmount(_owner.Shift!, _t));
@@ -414,6 +421,13 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
     }
 
     protected override Task SaveAsync() => _owner.SaveTxnAsync(_t);
+
+    /// <summary>خانه بسته شد (یا ‎Ctrl+S‎) ⇒ ثبت به حساب‌ها همین حالا، نه ۱٫۲ ثانیه بعد.</summary>
+    public override async Task FlushAsync()
+    {
+        await base.FlushAsync();
+        await _owner.PostPendingAsync();
+    }
 }
 
 /// <summary>صفحهٔ یک ورق — شیفتِ روز و شب، پایه‌ها و ردیف‌های قرض/مصرف.</summary>
@@ -428,6 +442,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
     public WaraqPageViewModel(AppHost host, WaraqEntry w, WaraqSectionViewModel section)
     {
         _host = host; _section = section; Entity = w;
+        _pending = new PendingPost(this);
         _isNight = w.ActiveShift == ShiftKind.Night;
         Build();
     }
@@ -764,15 +779,72 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         await _host.WaraqData.SavePumpAsync(p);
         Recalc();
         // فیِ پایه که عوض شود، مبلغِ خودکارِ ردیف‌ها هم عوض می‌شود — پس حساب‌ها
-        // باید همان لحظه تازه شوند، نه بعداً.
-        await PostAsync();
+        // هم تازه می‌شوند (شرحِ «کمی بعد» بالای ‎PostSoon‎).
+        PostSoon();
     }
 
     public async Task SaveTxnAsync(WaraqTransaction t)
     {
         await _host.WaraqData.SaveTxnAsync(t);
         Recalc();
+        PostSoon();
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ «توی ورق نوشتن خیلی کند است… یک دفعه نوشته می‌شه» (۱۴۰۵/۰۷/۱۹) ══
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  سنجهٔ ‎waraqtype‎ (حرف‌به‌حرف، با مکثِ میانِ واژه‌ها، روی دادهٔ پنج‌ساله)
+    //  ریشه را نشان داد: هر ذخیرهٔ ردیف — یعنی هر مکثِ ۱۵۰ میلی‌ثانیه‌ای وسطِ
+    //  تایپ — کلِ ثبتِ ورق به حساب‌ها و گاوصندوق و مصارف را **روی نخِ رابط**
+    //  می‌دواند: ۶۰۰ تا ۹۰۰ میلی‌ثانیه که هیچ کلیدی نوشته نمی‌شد، و صدها
+    //  دستورِ دیتابیس. و بدتر: نامِ **نیمه‌تایپ‌شده** («کر») همان لحظه به حسابِ
+    //  کسی ثبت می‌شد و چند ثانیه بعد جابه‌جا.
+    //
+    //  ⛔ ذخیرهٔ خودِ ردیف همان «درجا» است که بود (قاعدهٔ ۱۴۰۵/۰۷/۱۲). فقط ثبت به
+    //  حساب‌ها <b>کمی بعد</b> است — پس از آخرین تغییر، و هر بار فقط یکی — و
+    //  <b>روی نخِ دیگر</b>. ⛔ و هیچ‌وقت گم نمی‌شود: نوبتِ در صف در نگهبانِ ذخیره
+    //  (‎SaveGuard‎) است، پس بستنِ برنامه، ‎Ctrl+S‎ و برگشت از ورق همان لحظه
+    //  ثبتش می‌کنند.
+    public const int PostDelayMs = 1_200;
+
+    private CancellationTokenSource? _postCts;
+    private readonly SemaphoreSlim _postGate = new(1, 1);
+    private readonly PendingPost _pending;
+    private readonly HashSet<long> _toPost = new();
+
+    private void PostSoon()
+    {
+        _postCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _postCts = cts;
+        //  ⚠️ همین صفحه ورقِ دیگری را هم بار می‌کند (‎Load‎) — پس شناسهٔ همان ورق، نه ‎Entity‎ِ آن لحظه
+        lock (_toPost) _toPost.Add(Entity.Id);
+        _pending.Mark();
+        _ = PostLaterAsync(cts.Token);
+    }
+
+    private async Task PostLaterAsync(CancellationToken ct)
+    {
+        try { await Task.Delay(PostDelayMs, ct); }
+        catch (OperationCanceledException) { return; }
+        if (ct.IsCancellationRequested) return;
         await PostAsync();
+    }
+
+    /// <summary>اگر ثبتی در صف است، همین حالا.</summary>
+    public Task PostPendingAsync() => _pending.IsDirty ? PostAsync() : Task.CompletedTask;
+
+    /// <summary>نوبتِ «ثبت به حساب‌ها»ی در صف — همان فهرستِ نگهبانِ ذخیره.</summary>
+    private sealed class PendingPost : IPendingWrite
+    {
+        private readonly WaraqPageViewModel _o;
+        private volatile bool _dirty;
+        public PendingPost(WaraqPageViewModel o) => _o = o;
+        public bool IsDirty => _dirty;
+        public void Mark() { _dirty = true; SaveGuard.Track(this); }
+        public void Clear() => _dirty = false;
+        public Task FlushAsync() => _dirty ? _o.PostAsync() : Task.CompletedTask;
     }
 
 
@@ -791,8 +863,26 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
     /// </summary>
     private async Task PostAsync()
     {
-        try { LastPost = await _host.WaraqPosting.SyncAsync(Entity.Id); }
-        catch { /* ورق ذخیره شده؛ همگام‌سازی دفعهٔ بعد دوباره تلاش می‌کند */ }
+        _postCts?.Cancel();
+        _pending.Clear();
+        long[] ids;
+        lock (_toPost) { _toPost.Add(Entity.Id); ids = _toPost.ToArray(); _toPost.Clear(); }
+        //  ⛔ یکی در هر لحظه، و روی نخِ دیگر — دیتابیسِ ‎SQLite‎ کارِ «async»ش را روی
+        //  همان نخِ صداکننده انجام می‌دهد، پس بی ‎Task.Run‎ همان ۶۰۰ میلی‌ثانیه روی رابط بود.
+        await _postGate.WaitAsync();
+        try
+        {
+            foreach (var id in ids)
+            {
+                try
+                {
+                    var r = await Task.Run(() => _host.WaraqPosting.SyncAsync(id));
+                    if (id == Entity.Id) LastPost = r;
+                }
+                catch { /* ورق ذخیره شده؛ همگام‌سازی دفعهٔ بعد دوباره تلاش می‌کند */ }
+            }
+        }
+        finally { _postGate.Release(); }
     }
 
     /// <summary>آخرین گزارشِ همگام‌سازی — برای آزمون و برای نوارِ وضعیت.</summary>
@@ -955,6 +1045,7 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
     private Dictionary<long, AccountUnitRow>? _unitById;
     private List<Debtor>? _unitPeople;
     private long _unitsVersion = -1;
+    private Task<List<AccountUnitRow>>? _unitsLoad;
 
     /// <summary>
     /// نام که عوض شد: سوخت از خودِ متن، و واحد از حسابی که نامش خورده.
@@ -1011,7 +1102,12 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
         var v = PumpYaqobi.Persistence.PumpDbContext.Version;
         if (_units is not null && _unitsVersion == v) return;
 
-        var rows = await _host.Debtors.AccountUnitsAsync();
+        //  ⚡ روی نخِ دیگر و یکی در هر لحظه — این با هر حرفِ تایپ صدا زده می‌شود (۱۴۰۵/۰۷/۱۹)
+        var load = _unitsLoad ??= Task.Run(() => _host.Debtors.AccountUnitsAsync());
+        List<AccountUnitRow> rows;
+        try { rows = await load; }
+        finally { if (ReferenceEquals(_unitsLoad, load)) _unitsLoad = null; }
+        if (_units is not null && _unitsVersion == v) return;
 
         // گرافِ سبکِ «شخص ⇒ حساب‌ها» تا همان ‎FindAccountForText‎ی همیشگی
         // بتواند رویش کار کند. ⛔ هیچ ردیفی در این گراف نیست.

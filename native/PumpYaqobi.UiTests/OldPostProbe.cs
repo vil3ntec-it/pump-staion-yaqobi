@@ -395,26 +395,58 @@ internal static class OldPostProbe
         int x0 = (int)Math.Ceiling(L) + 1, x1 = (int)Math.Floor(R) - 1;
         int y0 = (int)Math.Ceiling(T) + 1, y1 = (int)Math.Floor(B) - 1;
         if (x1 <= x0 || y1 <= y0 || x1 >= frame.Width || y1 >= frame.Height) return null;
-        var bg = frame.GetPixel(x0, y0);
+        var bg = OldMonthProbe.Bg(frame, x0, x1, y0, y1);
         int lo = -1, hi = -1;
+        //  ⛔ ستونی که از بالا تا پایین «جوهر» است خطِ کادر است، نه گلیف — با آستانهٔ ۸۰
+        //  خطِ آبیِ کمرنگِ جدول هم دیده می‌شد (‎centerlab grid‎: «4» ۱۸۶ پیکسلِ دروغ)
+        var tall = (y1 - y0 + 1) * 0.97;
         for (var x = x0; x <= x1; x++)
+        {
+            var ink = 0;
             for (var y = y0; y <= y1; y++)
             {
                 var c = frame.GetPixel(x, y);
-                if (Math.Abs(c.Red - bg.Red) + Math.Abs(c.Green - bg.Green) + Math.Abs(c.Blue - bg.Blue) > 150)
-                { if (lo < 0) lo = x; hi = x; break; }
+                if (Math.Abs(c.Red - bg.Red) + Math.Abs(c.Green - bg.Green) + Math.Abs(c.Blue - bg.Blue) > OldMonthProbe.InkDiff) ink++;
             }
+            if (ink == 0 || ink >= tall) continue;
+            if (lo < 0) lo = x;
+            hi = x;
+        }
         if (lo < 0) return null;
         var off = Math.Abs((lo + hi + 1) / 2.0 - (L + R) / 2) / k;
         if (off > 3 && Environment.GetEnvironmentVariable("OP_DEBUG") == "1")
         {
             var ln = tl.TextLines[0];
+            //  نیمرخِ ستون‌ها: هر تکهٔ پیوسته با بیشینهٔ اختلافِ رنگش — جوهرِ کم‌رنگ هم دیده شود
+            var segs = new List<string>();
+            int s0 = -1, mx = 0;
+            for (var x = x0; x <= x1 + 1; x++)
+            {
+                var m = 0;
+                if (x <= x1)
+                    for (var y = y0; y <= y1; y++)
+                    {
+                        var c = frame.GetPixel(x, y);
+                        m = Math.Max(m, Math.Abs(c.Red - bg.Red) + Math.Abs(c.Green - bg.Green) + Math.Abs(c.Blue - bg.Blue));
+                    }
+                if (m > 40) { if (s0 < 0) { s0 = x; mx = 0; } mx = Math.Max(mx, m); }
+                else if (s0 >= 0) { segs.Add($"{s0}..{x - 1}:{mx}"); s0 = -1; }
+            }
+            Console.WriteLine($"      · نیمرخ «{tb.Text}» bg=({bg.Red},{bg.Green},{bg.Blue}) {string.Join(" ", segs)}");
             Console.WriteLine($"      · «{tb.Text}» ink={lo}..{hi} box={L:0}..{R:0} w={ln.Width:0.#} wt={ln.WidthIncludingTrailingWhitespace:0.#} start={ln.Start:0.#} fd={tb.FlowDirection} rt={(tb.RenderTransform as TranslateTransform)?.X} font={tb.FontFamily} fix={PumpYaqobi.App.Controls.RtlTrim.CenterFix(tb):0.#} maxW={tl.MaxWidth:0.#} tbW={tb.Bounds.Width:0.#} lines={tl.TextLines.Count} ha={tb.HorizontalAlignment} trim={tb.TextTrimming} wrapm={tb.TextWrapping} cps={string.Join(",", tb.Text!.Take(4).Select(c => ((int)c).ToString("X")))}");
         }
         return off;
     }
 
     private static string Short(string? s) => s is null ? "" : s.Length > 30 ? s[..30] + "…" : s;
+
+    /// <summary>
+    /// کمینهٔ اختلافِ رنگ با زمینه که «جوهر» شمرده می‌شود. ⚠️ ۱۵۰ ایموجیِ قهوه‌ایِ
+    /// «🟤» را روی زمینهٔ تیره (اختلاف ۱۰۳ تا ۱۱۳ روی ویندوز) نمی‌دید و نوشته را بی
+    /// آن می‌سنجید — «۱۲ پیکسل کج»ِ دروغ (‎align-windows‎، نیمرخِ جوهر). زمینهٔ کادر
+    /// یکدست است و نیمرخ زیرِ ۴۰ هیچ لرزشی نشان نداد، پس ۸۰ امن است.
+    /// </summary>
+    internal const int InkDiff = 80;
 
     private static void Pump(Window w)
     {

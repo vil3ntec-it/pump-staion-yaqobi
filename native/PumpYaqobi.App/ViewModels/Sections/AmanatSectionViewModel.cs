@@ -64,11 +64,11 @@ public sealed partial class AmanatRowViewModel : RowViewModel
 
     public void RefreshAll() => Refresh();
 
-    public string LitersText { get => Shamsi.MoneyOrBlank(Liters); set => Liters = Shamsi.Num(value); }
-    public string TakenText { get => Shamsi.MoneyOrBlank(Taken); set => Taken = Shamsi.Num(value); }
-    public string DaysText { get => Shamsi.MoneyOrBlank(Days); set => Days = Shamsi.Num(value); }
-    public string TempText { get => Shamsi.MoneyOrBlank(Temp); set => Temp = Shamsi.Num(value); }
-    public string ActualText { get => Shamsi.MoneyOrBlank(Actual); set => Actual = Shamsi.Num(value); }
+    public string LitersText { get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters)); set { Typed(nameof(LitersText), value); Liters = Shamsi.Num(value); } }
+    public string TakenText { get => Shown(nameof(TakenText), Shamsi.MoneyOrBlank(Taken)); set { Typed(nameof(TakenText), value); Taken = Shamsi.Num(value); } }
+    public string DaysText { get => Shown(nameof(DaysText), Shamsi.MoneyOrBlank(Days)); set { Typed(nameof(DaysText), value); Days = Shamsi.Num(value); } }
+    public string TempText { get => Shown(nameof(TempText), Shamsi.MoneyOrBlank(Temp)); set { Typed(nameof(TempText), value); Temp = Shamsi.Num(value); } }
+    public string ActualText { get => Shown(nameof(ActualText), Shamsi.MoneyOrBlank(Actual)); set { Typed(nameof(ActualText), value); Actual = Shamsi.Num(value); } }
 
     private AmanatRowCalc C => _owner.CalcOf(_r);
 

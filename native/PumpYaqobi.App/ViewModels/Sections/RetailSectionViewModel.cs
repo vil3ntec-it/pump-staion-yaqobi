@@ -69,10 +69,10 @@ public sealed partial class RetailRowViewModel : RowViewModel
         OnPropertyChanged(nameof(BardagiText)); OnPropertyChanged(nameof(AlbaqiText));
     }
 
-    public string LitersText { get => Shamsi.MoneyOrBlank(Liters); set => Liters = Shamsi.Num(value); }
-    public string PriceText { get => Shamsi.MoneyOrBlank(PricePerLiter); set => PricePerLiter = Shamsi.Num(value); }
-    public string ManualBardagiText { get => Shamsi.MoneyOrBlank(ManualBardagi); set => ManualBardagi = Shamsi.Num(value); }
-    public string RasidText { get => Shamsi.MoneyOrBlank(Rasid); set => Rasid = Shamsi.Num(value); }
+    public string LitersText { get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters)); set { Typed(nameof(LitersText), value); Liters = Shamsi.Num(value); } }
+    public string PriceText { get => Shown(nameof(PriceText), Shamsi.MoneyOrBlank(PricePerLiter)); set { Typed(nameof(PriceText), value); PricePerLiter = Shamsi.Num(value); } }
+    public string ManualBardagiText { get => Shown(nameof(ManualBardagiText), Shamsi.MoneyOrBlank(ManualBardagi)); set { Typed(nameof(ManualBardagiText), value); ManualBardagi = Shamsi.Num(value); } }
+    public string RasidText { get => Shown(nameof(RasidText), Shamsi.MoneyOrBlank(Rasid)); set { Typed(nameof(RasidText), value); Rasid = Shamsi.Num(value); } }
 
     /// <summary>
     /// «مقدار بردگی» — یک خانهٔ ویرایش‌پذیر، درست مثلِ نسخهٔ وب: خوانده‌شدنش
@@ -80,8 +80,8 @@ public sealed partial class RetailRowViewModel : RowViewModel
     /// </summary>
     public string BardagiText
     {
-        get => Shamsi.Money(_owner.Calc.Bardagi(_e));
-        set { ManualBardagi = Shamsi.Num(value); ByMoney = true; }
+        get => Shown(nameof(BardagiText), Shamsi.Money(_owner.Calc.Bardagi(_e)));
+        set { Typed(nameof(BardagiText), value); ManualBardagi = Shamsi.Num(value); ByMoney = true; }
     }
     public string AlbaqiText => Shamsi.Money(_owner.Calc.Albaqi(_e));
 

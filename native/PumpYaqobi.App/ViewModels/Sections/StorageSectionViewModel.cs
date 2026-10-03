@@ -73,10 +73,10 @@ public sealed partial class PurchaseRowViewModel : RowViewModel
             OnPropertyChanged(n);
     }
 
-    public string KgText { get => Shamsi.MoneyOrBlank(Kg); set => Kg = Shamsi.Num(value); }
-    public string DensityText { get => Shamsi.MoneyOrBlank(Density); set => Density = DensityInput.Parse(value); }
-    public string PriceTonText { get => Shamsi.MoneyOrBlank(PriceTon); set => PriceTon = Shamsi.Num(value); }
-    public string UsdRateText { get => Shamsi.MoneyOrBlank(UsdRate); set => UsdRate = Shamsi.Num(value); }
+    public string KgText { get => Shown(nameof(KgText), Shamsi.MoneyOrBlank(Kg)); set { Typed(nameof(KgText), value); Kg = Shamsi.Num(value); } }
+    public string DensityText { get => Shown(nameof(DensityText), Shamsi.MoneyOrBlank(Density)); set { Typed(nameof(DensityText), value); Density = DensityInput.Parse(value); } }
+    public string PriceTonText { get => Shown(nameof(PriceTonText), Shamsi.MoneyOrBlank(PriceTon)); set { Typed(nameof(PriceTonText), value); PriceTon = Shamsi.Num(value); } }
+    public string UsdRateText { get => Shown(nameof(UsdRateText), Shamsi.MoneyOrBlank(UsdRate)); set { Typed(nameof(UsdRateText), value); UsdRate = Shamsi.Num(value); } }
 
     private PurchaseNumbers N => _owner.Calc.Compute(Kg, Density, PriceTon, UsdRate);
 
@@ -158,8 +158,8 @@ public sealed partial class DipRowViewModel : RowViewModel
     /// <summary>چقدر از این میله‌زنی واقعاً به دفتر رفت — صفر یعنی هیچ.</summary>
     public string BookAdjustText => ApplyToBook ? Shamsi.Money(Measured - Expected) : "—";
 
-    public string MeasuredText { get => Shamsi.MoneyOrBlank(Measured); set => Measured = Shamsi.Num(value); }
-    public string ExpectedText { get => Shamsi.MoneyOrBlank(Expected); set => Expected = Shamsi.Num(value); }
+    public string MeasuredText { get => Shown(nameof(MeasuredText), Shamsi.MoneyOrBlank(Measured)); set { Typed(nameof(MeasuredText), value); Measured = Shamsi.Num(value); } }
+    public string ExpectedText { get => Shown(nameof(ExpectedText), Shamsi.MoneyOrBlank(Expected)); set { Typed(nameof(ExpectedText), value); Expected = Shamsi.Num(value); } }
 
     /// <summary>مثبت یعنی مخزن بیشتر از دفتر دارد.</summary>
     public string DiffText => Shamsi.Money(Measured - Expected);

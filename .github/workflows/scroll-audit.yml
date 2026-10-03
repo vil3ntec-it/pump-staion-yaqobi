@@ -79,6 +79,12 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- oldmonths
 
+      # ══ «توی ورق نوشتن کند است، حرف‌ها پاک یا نصفه می‌شوند» (۱۴۰۵/۰۷/۱۹) ══
+      # حرف‌به‌حرف با فاصلهٔ واقعی روی دادهٔ پنج‌ساله: مکثِ نخِ رابط، و کادر دقیقاً همان که زده شد.
+      - name: نوشتن در ورق، حرف‌به‌حرف
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- waraqtype
+
       # ══ هر شکلِ نوشته (فاصلهٔ پایانی، تب، نویسهٔ جهت‌نما، ایموجی، تاریخ) وسطِ کادرش،
       # با پیکسلِ واقعی در ۱۰۰/۱۲۵/۱۵۰٪ (۱۴۰۵/۰۷/۱۹) ══
       - name: آزمایشگاهِ وسط‌چینی
@@ -309,3 +315,55 @@ jobs:
       - name: سنجشِ بازگشت به صفحهٔ اصلی
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- dashperf
+
+  # ══ وسط‌چینی روی خودِ ویندوز (۱۴۰۵/۰۷/۱۹) ═════════════════════════════════
+  # گزارشِ صاحب ریپو: «به محضِ این‌که بیام ماهِ قبل همه‌چی می‌ره چپ» — در حالی که
+  # همین سنجه‌ها روی لینوکس سبز بودند. قلم‌ها و شکل‌دهنده روی ویندوز فرق دارند،
+  # پس همان سنجه‌های پیکسلی این‌جا هم می‌دوند.
+  align-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: آزمایشگاهِ وسط‌چینی (ویندوز)
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- centerlab ${{ runner.temp }}/clab
+      - name: ماه‌های قبل (ویندوز)
+        if: ${{ !cancelled() }}
+        working-directory: native
+        env:
+          OM_MANY: '1'
+          OM_DEBUG: '1'
+          OM_SHOTS: ${{ runner.temp }}/om
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- oldmonths
+      - name: ماه‌های قبل ۱۲۵٪ (ویندوز)
+        if: ${{ !cancelled() }}
+        working-directory: native
+        env:
+          OM_MANY: '1'
+          OM_DEBUG: '1'
+          OM_SCALE: '1.25'
+          OM_W: '1366'
+          OM_H: '768'
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- oldmonths
+      - name: نوشتن در ورق (ویندوز)
+        if: ${{ !cancelled() }}
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- waraqtype
+      - name: رساندن به ماهِ گذشته (ویندوز)
+        if: ${{ !cancelled() }}
+        working-directory: native
+        env:
+          OP_DEBUG: '1'
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- oldpost ${{ runner.temp }}/oldpost
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: align-windows
+          path: |
+            ${{ runner.temp }}/clab
+            ${{ runner.temp }}/om
+            ${{ runner.temp }}/oldpost
+          if-no-files-found: ignore

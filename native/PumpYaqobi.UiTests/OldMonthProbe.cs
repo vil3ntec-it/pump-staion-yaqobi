@@ -127,7 +127,11 @@ internal static class OldMonthProbe
         dynamic d = s;
         var shown = (string)d.Month;
         d.Month = Old;
+        //  ⛔ همان لحظه، نه پس از ته‌نشینی (۱۴۰۵/۰۷/۱۹): «به محضِ این‌که بیام ماهِ قبل همه‌چی می‌ره چپ»
+        for (var k = 0; k < 3; k++) { Dispatcher.UIThread.RunJobs(); win.UpdateLayout(); }
+        WholeWindow(win, $"{s.Title} ({Old}، همان لحظه)");
         Settle(win);
+        WholeWindow(win, $"{s.Title} ({Old}، پس از ته‌نشینی)");
         Check($"{s.Title}: ماهِ {Old} باز شد", (string)d.Month == Old, (string)d.Month);
         Centered(win, $"{s.Title} ({Old})");
         Scrolled(win, s.Title);
@@ -222,6 +226,39 @@ internal static class OldMonthProbe
         };
     }
 
+    /// <summary>
+    /// هر نوشتهٔ وسط‌چینِ <b>کلِ پنجره</b> (سربرگ، کارت، نوارِ جمله، جدول) — جوهرش
+    /// وسطِ کادرِ خودِ نوشته است؟ از قابِ واقعیِ پنجره.
+    /// </summary>
+    private static void WholeWindow(Window win, string what)
+    {
+        AppHost.Current.Toasts.Visible = false;
+        win.CaptureRenderedFrame()?.Dispose();
+        for (var k = 0; k < 2; k++) { Dispatcher.UIThread.RunJobs(); win.UpdateLayout(); }
+        using var shot = win.CaptureRenderedFrame()!;
+        using var ms = new MemoryStream();
+        shot.Save(ms);
+        ms.Position = 0;
+        using var frame = SkiaSharp.SKBitmap.Decode(ms);
+        var bad = new List<string>();
+        var n = 0;
+        foreach (var tb in win.GetVisualDescendants().OfType<TextBlock>()
+                    .Where(t => t.IsEffectivelyVisible && !string.IsNullOrWhiteSpace(t.Text)
+                                && t.TextAlignment == Avalonia.Media.TextAlignment.Center && t.Bounds.Width > 8))
+        {
+            n++;
+            if (Off(tb, tb, frame, slot: true) is { } o && o > 3) bad.Add($"«{tb.Text}» {o:0}px");
+        }
+        if (bad.Count > 0 && Environment.GetEnvironmentVariable("OM_SHOTS") is { Length: > 0 } od)
+        {
+            Directory.CreateDirectory(od);
+            File.WriteAllBytes(Path.Combine(od, "omw-" + (++_shot) + ".png"), ms.ToArray());
+            Console.WriteLine("      📷 omw-" + _shot + ".png · " + what);
+        }
+        Check($"{what}: {n} نوشتهٔ وسط‌چینِ پنجره وسط‌اند", bad.Count == 0,
+              bad.Count == 0 ? null : bad.Count + " کج: " + string.Join("، ", bad.Take(8)));
+    }
+
     private static IEnumerable<DataGrid> Grids(Window win) =>
         win.GetVisualDescendants().OfType<DataGrid>()
            .Where(g => g.IsEffectivelyVisible && g.Bounds.Width > 50 && g.Columns.Any(c => c.IsVisible));
@@ -314,7 +351,7 @@ internal static class OldMonthProbe
     /// ⚠️ از روی قابِ واقعیِ پنجره، نه ‎TextLine.Start‎: در راست‌به‌چپ با عدد و
     /// فاصلهٔ پایانی گمراه می‌کرد (سنجیده شد).
     /// </summary>
-    internal static double? Off(TextBlock tb, Visual box, SkiaSharp.SKBitmap frame)
+    internal static double? Off(TextBlock tb, Visual box, SkiaSharp.SKBitmap frame, bool slot = false)
     {
         var tl = tb.TextLayout;
         if (tl is null || tl.TextLines.Count == 0) return null;
@@ -329,30 +366,71 @@ internal static class OldMonthProbe
             var b = v.TranslatePoint(new Point(v.Bounds.Width, v.Bounds.Height), root)!.Value * k;
             return (Math.Min(a.X, b.X), Math.Max(a.X, b.X), Math.Min(a.Y, b.Y), Math.Max(a.Y, b.Y));
         }
-        var bx = Rect(box);
+        //  ⚠️ کادرِ خودِ نوشته بی جابه‌جاییِ کشیدنِ خودش (‎RenderTransform‎ِ تصحیح) — جای چیدمانش در پدر
+        var bx = slot && tb.GetVisualParent() is Visual par
+            ? RectIn(par, tb.Bounds) : Rect(box);
+        (double L, double R, double T, double B) RectIn(Visual p, Rect r)
+        {
+            var a = p.TranslatePoint(r.TopLeft, root)!.Value * k;
+            var b = p.TranslatePoint(r.BottomRight, root)!.Value * k;
+            return (Math.Min(a.X, b.X), Math.Max(a.X, b.X), Math.Min(a.Y, b.Y), Math.Max(a.Y, b.Y));
+        }
         var tr = Rect(tb);
         //  زیرِ نوارِ شناورِ بخش‌ها یا بیرونِ قاب ⇒ دیده نمی‌شود، سنجیدنی نیست
         var navBottom = root.GetVisualDescendants().OfType<Control>()
             .Where(c => c.Name == "NavItems" && c.IsEffectivelyVisible)
             .Select(c => Rect(c).B).DefaultIfEmpty(0).Max();
         if (tr.T < navBottom + 2 || tr.B > frame.Height - 2) return null;
-        int x0 = (int)Math.Ceiling(bx.L) + 3, x1 = (int)Math.Floor(bx.R) - 3;
+        int x0 = (int)Math.Ceiling(bx.L) + 6, x1 = (int)Math.Floor(bx.R) - 6;   // لبهٔ کادر: خط و گوشهٔ گردِ جدول
         int y0 = (int)Math.Ceiling(tr.T) + 1, y1 = (int)Math.Floor(tr.B) - 1;
         if (x1 <= x0 || y1 <= y0 || x1 >= frame.Width || y1 >= frame.Height) return null;
-        var bg = frame.GetPixel(x0, y0);
+        var bg = Bg(frame, x0, x1, y0, y1);
         int lo = -1, hi = -1;
+        //  ⛔ ستونی که از بالا تا پایین «جوهر» است خطِ کادر است، نه گلیف — با آستانهٔ ۸۰
+        //  خطِ آبیِ کمرنگِ جدول هم دیده می‌شد (‎centerlab grid‎: «4» ۱۸۶ پیکسلِ دروغ)
+        var tall = (y1 - y0 + 1) * 0.97;
         for (var x = x0; x <= x1; x++)
+        {
+            var ink = 0;
             for (var y = y0; y <= y1; y++)
             {
                 var c = frame.GetPixel(x, y);
-                if (Math.Abs(c.Red - bg.Red) + Math.Abs(c.Green - bg.Green) + Math.Abs(c.Blue - bg.Blue) > 150)
-                { if (lo < 0) lo = x; hi = x; break; }
+                if (Math.Abs(c.Red - bg.Red) + Math.Abs(c.Green - bg.Green) + Math.Abs(c.Blue - bg.Blue) > InkDiff) ink++;
             }
+            if (ink == 0 || ink >= tall) continue;
+            if (lo < 0) lo = x;
+            hi = x;
+        }
         if (lo < 0) return null;
         var off = Math.Abs((lo + hi + 1) / 2.0 - (bx.L + bx.R) / 2) / k;
         if (Environment.GetEnvironmentVariable("OM_DEBUG") == "1" && off > 3)
             Console.WriteLine($"      · «{tb.Text}» ink={lo}..{hi} box={bx.L:0}..{bx.R:0} tb={tr.L:0}..{tr.R:0} w={tl.TextLines[0].Width:0.#} wt={tl.TextLines[0].WidthIncludingTrailingWhitespace:0.#} start={tl.TextLines[0].Start:0.#} wrap={tb.TextWrapping} rt={(tb.RenderTransform as Avalonia.Media.TranslateTransform)?.X} fix={PumpYaqobi.App.Controls.RtlTrim.CenterFix(tb):0.#} mv={tb.IsMeasureValid} av={tb.IsArrangeValid}");
         return off;
+    }
+
+    /// <summary>
+    /// کمینهٔ اختلافِ رنگ با زمینه که «جوهر» شمرده می‌شود. ⚠️ ۱۵۰ ایموجیِ قهوه‌ایِ
+    /// «🟤» را روی زمینهٔ تیره (اختلاف ۱۰۳ تا ۱۱۳ روی ویندوز) نمی‌دید و نوشته را بی
+    /// آن می‌سنجید — «۱۲ پیکسل کج»ِ دروغ (‎align-windows‎، نیمرخِ جوهر). زمینهٔ کادر
+    /// یکدست است و نیمرخ زیرِ ۴۰ هیچ لرزشی نشان نداد، پس ۸۰ امن است.
+    /// </summary>
+    internal const int InkDiff = 80;
+
+    /// <summary>
+    /// رنگِ زمینهٔ کادر = پرتکرارترین رنگِ آن، نه یک پیکسلِ گوشه. ⚠️ گوشه گاهی روی
+    /// خطِ خانه می‌افتاد و با آستانهٔ ۸۰ کلِ زمینهٔ خانه «جوهر» شمرده می‌شد
+    /// (‎centerlab grid ×1.5‎: «4» ۱۸۶ پیکسلِ دروغ).
+    /// </summary>
+    internal static SkiaSharp.SKColor Bg(SkiaSharp.SKBitmap f, int x0, int x1, int y0, int y1)
+    {
+        var count = new Dictionary<uint, int>();
+        for (var y = y0; y <= y1; y += 2)
+            for (var x = x0; x <= x1; x += 2)
+            {
+                var c = (uint)f.GetPixel(x, y);
+                count[c] = count.TryGetValue(c, out var k) ? k + 1 : 1;
+            }
+        return new SkiaSharp.SKColor(count.MaxBy(kv => kv.Value).Key);
     }
 
     private static void Pump(Window w)
