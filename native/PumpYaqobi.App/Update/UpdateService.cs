@@ -88,6 +88,24 @@ public sealed class UpdateService
     private static readonly string[] Feeds = { OutputFeedUrl, FeedUrl };
 
     /// <summary>
+    /// ══ درِ اصلی: سرورِ خودِ پمپ (از ۱۴۰۵/۰۷/۱۹) ═══════════════════════════
+    /// خواستهٔ صاحب سامانه: «از سرور آپدیت بگیره برنامه، و سرور هم از گیت‌هاب
+    /// نسخه‌های جدید رو بگیره.» سرورِ خانگی هر دو دقیقه نسخهٔ تازه را می‌گیرد،
+    /// با چک‌سام می‌سنجد و همین‌جا سرو می‌کند (ریپوی server ⇒
+    /// ‎src/pumpupdates/mirror.js‎). نشانی از ‎CloudConfig.Url‎ است — همان یک جای
+    /// ساختنِ نشانیِ سرور.
+    ///
+    /// ⛔ سرور جواب داد ⇒ همان، و هیچ درخواستی به جای دیگر نمی‌رود. فقط اگر
+    /// سرور نرسید، دو درِ قبلی (پشتیبان) امتحان می‌شوند — تا روزی که سرور خاموش
+    /// است هیچ مشتری‌ای از به‌روزرسانی جا نماند.
+    /// ⚠️ تزریق‌پذیر فقط برای آزمون؛ <c>null</c> یعنی «سرور نیست».
+    /// </summary>
+    public static Func<string?> ServerFeed { get; set; } = () => ServerFeedUrl;
+
+    /// <summary>نشانیِ درِ اصلی — همیشه از ‎CloudConfig.Url‎.</summary>
+    public static string ServerFeedUrl => Services.CloudConfig.Url("/api/pump-updates/latest");
+
+    /// <summary>
     /// میزبان‌های گیت‌هاب که سرآیندِ <c>Date</c>شان ساعتِ مطمئن است (‎Services.TimeSync‎)
     /// — از خودِ <see cref="FeedUrl"/>، تا نشانیِ منبع همین یک‌جا بماند.
     /// </summary>
@@ -185,6 +203,16 @@ public sealed class UpdateService
     {
         var current = AppVersion.Current;
 
+        //  ⛔ اول سرورِ خودِ پمپ — جواب داد، همان.
+        var server = ServerFeed();
+        string serverWhy = "";
+        if (!string.IsNullOrEmpty(server))
+        {
+            var (viaServer, why) = await FromApiAsync(server, current, ct);
+            if (viaServer is not null) return viaServer;
+            serverWhy = why;
+        }
+
         UpdateInfo? best = null;
         string bestFeed = FeedUrl, firstWhy = "";
         foreach (var feed in Feeds)
@@ -195,7 +223,7 @@ public sealed class UpdateService
             { best = info; bestFeed = feed; }
         }
         if (best is not null) return best;
-        return Broken(current, firstWhy);
+        return Broken(current, serverWhy.Length > 0 ? serverWhy : firstWhy);
     }
 
     /// <summary>هر دو درِ یک مخزن: فهرستِ انتشار، و اگر نشد فایلِ متنی.</summary>
@@ -217,7 +245,7 @@ public sealed class UpdateService
         {
             using var res = await GetAsync(feed, ct);
             if (!res.IsSuccessStatusCode)
-                return (null, "گیت‌هاب این جواب را داد (کدِ " + (int)res.StatusCode + ")");
+                return (null, "سرورِ به‌روزرسانی این جواب را داد (کدِ " + (int)res.StatusCode + ")");
 
             using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync(ct));
             var root = doc.RootElement;
@@ -239,13 +267,13 @@ public sealed class UpdateService
                     var name = a.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
                     if (string.Equals(name, SumsName, StringComparison.OrdinalIgnoreCase))
                     {
-                        sums = a.TryGetProperty("browser_download_url", out var su) ? su.GetString() : null;
+                        sums = Resolve(feed, a.TryGetProperty("browser_download_url", out var su) ? su.GetString() : null);
                         continue;
                     }
                     if (!name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
                         && !name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) continue;
 
-                    var u = a.TryGetProperty("browser_download_url", out var uu) ? uu.GetString() : null;
+                    var u = Resolve(feed, a.TryGetProperty("browser_download_url", out var uu) ? uu.GetString() : null);
                     var s = a.TryGetProperty("size", out var ss) ? ss.GetInt64() : 0;
                     if (u is null) continue;
 
@@ -290,6 +318,20 @@ public sealed class UpdateService
         {
             return (null, Why(e));
         }
+    }
+
+    /// <summary>
+    /// نشانیِ نسبیِ سرورِ پمپ («/api/pump-updates/files/…») روی همان نشانی‌ای
+    /// می‌نشیند که فهرست از آن آمد؛ نشانیِ کامل دست نمی‌خورد.
+    /// </summary>
+    private static string? Resolve(string feed, string? url)
+    {
+        if (string.IsNullOrEmpty(url)) return url;
+        //  ⚠️ «/…» را اول بسنج: روی لینوکس ‎Uri.TryCreate(Absolute)‎ آن را نشانیِ
+        //  فایل (file://) می‌خواند.
+        if (url.StartsWith('/') && !url.StartsWith("//"))
+            return Uri.TryCreate(new Uri(feed), url, out var r) ? r.ToString() : null;
+        return url;
     }
 
     /// <summary>
@@ -358,8 +400,8 @@ public sealed class UpdateService
     /// </summary>
     private static string Why(Exception e) => e switch
     {
-        TaskCanceledException or TimeoutException => "گیت‌هاب جواب نداد — وقت تمام شد",
-        HttpRequestException => "به گیت‌هاب نرسیدیم — اینترنت وصل نیست یا راهش بسته است",
+        TaskCanceledException or TimeoutException => "سرورِ به‌روزرسانی جواب نداد — وقت تمام شد",
+        HttpRequestException => "به سرورِ به‌روزرسانی نرسیدیم — اینترنت وصل نیست یا سرور خاموش است",
         _ => "بررسیِ به‌روزرسانی انجام نشد",
     };
 
@@ -374,7 +416,7 @@ public sealed class UpdateService
         new(false, current, current, null, 0, null, false,
             (why.Length > 0 ? why : "بررسیِ به‌روزرسانی انجام نشد")
             + " — نسخهٔ نصب‌شده " + current + " است و معلوم نشد تازه‌تری هست یا نه."
-            + "\n⚠️ به‌روزرسانی مستقیم از گیت‌هاب می‌آید و به سرورِ خانگیِ پمپ ربطی ندارد."
+            + "\n⚠️ به‌روزرسانی از سرورِ پمپ می‌آید؛ اگر نرسید، اینترنت و روشن بودنِ سرور را ببینید."
             + " بی اینترنت، «نصبِ نسخهٔ تازه از فایل» راهِ دیگر است.");
 
     // ══ پوشهٔ نصب ═══════════════════════════════════════════════════════════
@@ -639,7 +681,11 @@ public sealed class UpdateService
         && u.Scheme == Uri.UriSchemeHttps
         && u.IsDefaultPort
         && string.IsNullOrEmpty(u.UserInfo)
-        && Array.IndexOf(AllowedHosts, u.IdnHost.ToLowerInvariant()) >= 0;
+        && (Array.IndexOf(AllowedHosts, u.IdnHost.ToLowerInvariant()) >= 0
+            //  ⛔ و سرورِ خودِ پمپ — همان یک نشانیِ قفل‌شدهٔ ‎CloudConfig‎
+            || string.Equals(u.IdnHost, ServerHost, StringComparison.OrdinalIgnoreCase));
+
+    private static readonly string ServerHost = new Uri(Services.CloudConfig.Url("/")).IdnHost;
 
     /// <summary>
     /// کلیدِ عمومیِ امضای <c>SHA256SUMS.txt</c> (SPKIِ base64، P-256) — از

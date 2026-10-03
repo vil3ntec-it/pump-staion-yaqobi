@@ -35,11 +35,14 @@ public class UpdateBehaviourTests : IDisposable
         Directory.CreateDirectory(_dir);
         AppSettings.DirOverride = _dir;
         AppBase.LocalIdOverride = "abc12345";
+        //  آزمون‌های گیت‌هاب‌ـمحورِ پایین مسیرِ «سرور نرسید» را می‌سنجند
+        UpdateService.ServerFeed = () => null;
     }
 
     public void Dispose()
     {
         UpdateService.TestTransport = null;
+        UpdateService.ServerFeed = () => UpdateService.ServerFeedUrl;
         UpdateService.TestStart = null;
         UpdateService.UpdateKeyOverride = null;
         AppBase.LocalIdOverride = null;
@@ -205,12 +208,12 @@ public class UpdateBehaviourTests : IDisposable
         Assert.False(info.Available);
         Assert.Equal("Pump.Danger", info.StatusBrushKey);
 
-        //  ⛔ واژه‌ای که کاربر را دنبالِ سرورِ خانگی فرستاد
-        Assert.DoesNotContain("سرورِ به‌روزرسانی", info.StatusText);
-        //  ⛔ و خواستهٔ صریحِ صاحب سامانه: «اپدیت از گیت‌هاب بگیره نه سرور»
-        Assert.Contains("گیت‌هاب", info.StatusText);
-        //  ⛔ و صریح می‌گوید به سرورِ خانگیِ پمپ ربطی ندارد
-        Assert.Contains("ربطی ندارد", info.StatusText);
+        //  ⛔ خواستهٔ صاحب سامانه (۱۴۰۵/۰۷/۱۹): «از سرور آپدیت بگیره» و «هیچ ردی
+        //  از گیت‌هاب در برنامه نباشه». پس جمله می‌گوید به‌روزرسانی از سرورِ پمپ
+        //  می‌آید — و حالا واقعاً همان است — و هیچ نامِ بیرونی‌ای نمی‌برد.
+        Assert.Contains("سرور", info.StatusText);
+        Assert.DoesNotContain("گیت‌هاب", info.StatusText);
+        Assert.DoesNotContain("github", info.StatusText, StringComparison.OrdinalIgnoreCase);
 
         //  ادعای قدیمی، دست‌نخورده
         Assert.DoesNotContain("برنامه به‌روز است", info.StatusText);
@@ -641,5 +644,95 @@ public class UpdateBehaviourTests : IDisposable
         var info = await new UpdateService().CheckAsync();
         Assert.True(info.Failed);
         Assert.DoesNotContain("به‌روز است", info.StatusText);
+    }
+    // ══ درِ اصلی: سرورِ خودِ پمپ (۱۴۰۵/۰۷/۱۹) ══════════════════════════════
+
+    private const string Srv = "https://pump-server.test/api/pump-updates/latest";
+
+    /// <summary>همان شکلِ پاسخِ سرور: نشانیِ فایل‌ها نسبی است.</summary>
+    private static string ServerFeedJson(string tag, string baseId) => $$"""
+        {
+          "tag_name": "{{tag}}",
+          "body": "یادداشت",
+          "assets": [
+            { "name": "PumpYaqobi-app-{{baseId}}.zip", "size": 100,
+              "browser_download_url": "/api/pump-updates/files/99.9.9/PumpYaqobi-app-{{baseId}}.zip" },
+            { "name": "PumpYaqobi-Setup.exe", "size": 200,
+              "browser_download_url": "/api/pump-updates/files/99.9.9/PumpYaqobi-Setup.exe" },
+            { "name": "SHA256SUMS.txt", "size": 10,
+              "browser_download_url": "/api/pump-updates/files/99.9.9/SHA256SUMS.txt" }
+          ]
+        }
+        """;
+
+    [Fact]
+    public async Task Server_JavabDad_HichDarkhastiBeJayeDigarNemiravad()
+    {
+        UpdateService.ServerFeed = () => Srv;
+        var asked = new List<string>();
+        UpdateService.TestTransport = (req, _) =>
+        {
+            asked.Add(req.RequestUri!.ToString());
+            return Task.FromResult(Json(ServerFeedJson("v99.9.9", LocalBase())));
+        };
+
+        var info = await new UpdateService().CheckAsync();
+
+        Assert.True(info.Available);
+        Assert.Equal("99.9.9", info.LatestVersion);
+        Assert.True(info.IsSmallPackage);
+        //  ⛔ فقط همان یک پرسش، به سرورِ پمپ
+        Assert.Single(asked);
+        Assert.Equal(Srv, asked[0]);
+        //  ⛔ نشانیِ نسبی روی همان سرور نشست — نه file:// و نه جای دیگر
+        Assert.Equal("https://pump-server.test/api/pump-updates/files/99.9.9/PumpYaqobi-app-" + LocalBase() + ".zip",
+                     info.DownloadUrl);
+        Assert.StartsWith("https://pump-server.test/", info.SumsUrl);
+    }
+
+    [Fact]
+    public async Task Server_Naresid_PoshtibanKarMikonad()
+    {
+        UpdateService.ServerFeed = () => Srv;
+        UpdateService.TestTransport = (req, _) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (url == Srv) throw new HttpRequestException("server down");
+            return Task.FromResult(Json(Feed("v99.9.9", LocalBase())));
+        };
+
+        var info = await new UpdateService().CheckAsync();
+
+        Assert.False(info.Failed);
+        Assert.True(info.Available);
+        Assert.Equal("99.9.9", info.LatestVersion);
+    }
+
+    [Fact]
+    public async Task Server_HanuzNoskheiNadarad_PoshtibanKarMikonad()
+    {
+        UpdateService.ServerFeed = () => Srv;
+        UpdateService.TestTransport = (req, _) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (url == Srv) return Task.FromResult(Json("""{"error":"not_ready"}""", HttpStatusCode.ServiceUnavailable));
+            return Task.FromResult(Json(Feed("v99.9.9", LocalBase())));
+        };
+
+        var info = await new UpdateService().CheckAsync();
+
+        Assert.True(info.Available);
+        Assert.Equal("99.9.9", info.LatestVersion);
+    }
+
+    [Fact]
+    public void NeshaniyeServer_AzCloudConfig_Ast_VaPazirofteMishavad()
+    {
+        var real = CloudConfig.Url("/api/pump-updates/latest");
+        Assert.Equal(real, UpdateService.ServerFeedUrl);
+        Assert.True(UpdateService.AllowedUrl(CloudConfig.Url("/api/pump-updates/files/1.2.3/PumpYaqobi-Setup.exe")));
+        //  ⛔ میزبانِ دیگر و http همچنان رد
+        Assert.False(UpdateService.AllowedUrl("https://evil.example/api/pump-updates/files/1/x.exe"));
+        Assert.False(UpdateService.AllowedUrl(CloudConfig.Url("/x").Replace("https://", "http://")));
     }
 }
