@@ -218,6 +218,57 @@ public sealed class ParchaDataService
     }
 
     /// <summary>
+    /// ══ «ختمِ شیفتِ قبلی» — زنجیرهٔ پایه به ترتیبِ زمان (۱۴۰۵/۰۷/۱۹) ═══════════
+    ///
+    /// گزارشِ صاحب ریپو: «اختلافِ شروع و ختم یک عددِ رندم نشان می‌دهد… پارچهٔ
+    /// پاک‌شده… شروعِ بعدی باید از آخرین ختمِ معتبرِ <b>پیش از خودش</b> باشد.»
+    ///
+    /// ‎LastBaseAsync‎ <b>بزرگ‌ترین</b> ختمِ همهٔ پارچه‌ها را می‌داد — یعنی
+    ///   • کارتی که پارچهٔ ذخیره‌شده‌اش دوباره باز شده با <b>ختمِ خودش</b> سنجیده
+    ///     می‌شد («شروع از پایهٔ قبلی کمتر است»، در حالی که قبلی خودش بود)؛
+    ///   • پارچهٔ تاریخِ گذشته با ختمِ <b>فردایش</b> سنجیده می‌شد؛
+    ///   • یک ختمِ اشتباهِ بزرگ (تایپِ یک صفرِ اضافه) برای همیشه «پایهٔ قبلی» می‌ماند؛
+    ///   • بی شمارهٔ پایه، ختمِ <b>پایهٔ دیگر</b> مرجع می‌شد.
+    ///
+    /// ⛔ حالا: همان شمارهٔ پایه (بی شماره ⇒ فقط شیفت‌های بی‌شماره)، و همان شیفتی
+    /// که به ترتیبِ زمان <b>درست پیش از</b> این یکی است — ترتیب: تاریخ، بعد
+    /// پارچه، و شبِ هر پارچه پس از روزِ همان. شیفتِ خودش هیچ‌وقت شمرده نمی‌شود،
+    /// پارچهٔ پاک‌شده هم (صافیِ حذفِ نرم)، و ختمِ صفر (هنوز ننوشته) هم.
+    /// </summary>
+    /// <param name="reportId">پارچهٔ همین کارت؛ کارتِ تازه ⇒ ‎long.MaxValue‎ (پس از همهٔ پارچه‌های آن روز).</param>
+    /// <param name="selfShiftId">شیفتِ خودِ کارت، اگر ذخیره شده — هرگز «قبلی» نیست.</param>
+    public async Task<decimal?> PrevEndAsync(FuelType fuel, int pumpNum, int dateKey, long reportId,
+                                             bool night, long selfShiftId = 0, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        var reps = db.Reports.AsNoTracking().Where(r => r.Fuel == fuel && r.DateKey <= dateKey);
+        var num = Math.Max(0, pumpNum);
+        var day = await reps.Where(r => r.DayShift != null
+                                        && (num > 0 ? r.DayShift!.PumpNum == num : r.DayShift!.PumpNum <= 0))
+                            .Select(r => new { r.DateKey, r.Id, Sid = r.DayShift!.Id, r.DayShift!.End })
+                            .ToListAsync(ct);
+        var nig = await reps.Where(r => r.NightShift != null
+                                        && (num > 0 ? r.NightShift!.PumpNum == num : r.NightShift!.PumpNum <= 0))
+                            .Select(r => new { r.DateKey, r.Id, Sid = r.NightShift!.Id, r.NightShift!.End })
+                            .ToListAsync(ct);
+        var me = (dateKey, reportId, night ? 1 : 0);
+        static int Cmp((int, long, int) a, (int, long, int) b) =>
+            a.Item1 != b.Item1 ? a.Item1.CompareTo(b.Item1)
+            : a.Item2 != b.Item2 ? a.Item2.CompareTo(b.Item2) : a.Item3.CompareTo(b.Item3);
+
+        (int, long, int)? best = null;
+        decimal end = 0m;
+        foreach (var (k, sid, e) in day.Select(x => ((x.DateKey, x.Id, 0), x.Sid, x.End))
+                                       .Concat(nig.Select(x => ((x.DateKey, x.Id, 1), x.Sid, x.End))))
+        {
+            if (e <= 0m || sid == selfShiftId || Cmp(k, me) >= 0) continue;
+            if (best is null || Cmp(k, best.Value) > 0) { best = k; end = e; }
+        }
+        return best is null ? null : end;
+    }
+
+    /// <summary>
     /// ══ «ختمِ پایهٔ قبلی» برای یک ردیفِ ورق ═════════════════════════════════
     ///
     /// ردیفِ ورقی که از پارچه آمده (‎SrcKey‎ = ‎p-&lt;id&gt;-day‎) و نشانِ
@@ -248,15 +299,9 @@ public sealed class ParchaDataService
         var num = mine.PumpNum;
         var dk = me.DateKey;
 
-        var before = db.Reports.AsNoTracking()
-                       .Where(r => r.Fuel == fuel && r.Id != id && (r.DateKey < dk || (r.DateKey == dk && r.Id < id)));
-        var ends = await before.Where(r => r.DayShift != null && r.DayShift!.PumpNum == num)
-                               .Select(r => r.DayShift!.End).ToListAsync(ct);
-        ends.AddRange(await before.Where(r => r.NightShift != null && r.NightShift!.PumpNum == num)
-                                  .Select(r => r.NightShift!.End).ToListAsync(ct));
-        //  شبِ همین پارچه پس از روزِ همان است
-        if (night && me.DayShift is { } d && d.PumpNum == num) ends.Add(d.End);
-        return ends.Count == 0 ? null : ends.Max();
+        //  ⛔ همان زنجیرهٔ ‎PrevEndAsync‎ِ کارتِ پارچه — دو قاعده یعنی روزی پارچه سبز است و ورق سرخ
+        await db.DisposeAsync();
+        return await PrevEndAsync(fuel, num, dk, id, night, mine.Id, ct);
     }
 
     /// <summary>یک سطر از «تاریخچهٔ پایه‌ها» — شروع و ختمِ یک شیفت.</summary>
@@ -284,7 +329,7 @@ public sealed class ParchaDataService
                            .Where(r => r.Fuel == fuel)
                            .OrderBy(r => r.DateKey).ThenBy(r => r.Id).ToListAsync(ct);
 
-        var seen = new Dictionary<int, decimal>();        // شمارهٔ پایه ⇒ بزرگ‌ترین ختمِ دیده‌شده
+        var seen = new Dictionary<int, decimal>();        // شمارهٔ پایه ⇒ ختمِ شیفتِ پیشین (به ترتیبِ زمان)
         var outp = new List<BaseHistoryRow>();
 
         foreach (var r in reps)
@@ -298,8 +343,8 @@ public sealed class ParchaDataService
                     Shamsi.ToDate(date) is DateTime dt ? Shamsi.DayName(dt) : "",
                     r.ReportNum, kind, fuel, sh.Name ?? "", sh.PumpNum,
                     sh.Start, sh.End, low));
-                if (!seen.TryGetValue(sh.PumpNum, out var max) || sh.End > max)
-                    seen[sh.PumpNum] = sh.End;
+                //  ⛔ ختمِ همین شیفت، نه بزرگ‌ترینِ تا این‌جا — همان ‎PrevEndAsync‎
+                if (sh.End > 0m) seen[sh.PumpNum] = sh.End;
             }
 
         return outp;

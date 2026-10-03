@@ -2456,7 +2456,14 @@ public class ExcelGrid : DataGrid
         // تنها منبعِ درستِ «الان در حال ویرایشیم» — خودِ جدول می‌گوید.
         PreparingCellForEdit += (_, e) =>
         {
-            _editing = true; AutoDirection(e.EditingElement);
+            _editing = true;
+            //  ⛔ حرف‌هایی که پیش از آماده شدنِ کادر زده شدند — شرحش بالای ‎_typeBuf‎.
+            //  ⚠️ در **تهِ** همین شنونده می‌نشینند، پس از وصل شدنِ تکمیلِ خودکار
+            //  (‎Suggest.Attach‎) — وگرنه تکمیل تغییرِ متن را نمی‌دید و «/ها» هیچ
+            //  تکمله‌ای نمی‌گرفت (‎keys17‎ گرفتش).
+            var pendingTyped = _typeBuf;
+            _typeBuf = null;
+            AutoDirection(e.EditingElement);
             //  ⛔ قالبِ ردیف به کادرِ در حالِ نوشتن پس فرستاده نشود — شرحش بالای ‎RowViewModel.BeginCellEdit‎
             if (e.Row?.DataContext is RowViewModel rv && PathOf(e.Column) is { Length: > 0 } path
                 && !path.Contains('.') && !path.Contains('['))
@@ -2475,6 +2482,14 @@ public class ExcelGrid : DataGrid
                 var slash = Suggest.Of(Suggest.GetSlashKey(e.Column));
                 if (named.Count + learned.Count + slash.Count > 0) Suggest.Attach(tb, named, learned, slash);
             }
+            if (pendingTyped is { } typed
+                && (e.EditingElement as TextBox ?? e.EditingElement?.GetVisualDescendants().OfType<TextBox>().FirstOrDefault()) is { } ready)
+            {
+                ready.Text = typed;
+                ready.CaretIndex = typed.Length;
+                ready.SelectionStart = ready.SelectionEnd = typed.Length;
+                ready.Focus();
+            }
         };
         // ⚠️ پیش از نشستنِ مقدار در ردیف: تکملهٔ پذیرفته‌نشدهٔ پیشنهادِ خودکار
         // برداشته شود، وگرنه «س»ی کاربر «سلام من هارون هستم» ذخیره می‌شد.
@@ -2482,6 +2497,7 @@ public class ExcelGrid : DataGrid
         CellEditEnded += (_, _) =>
         {
             EndRowEdit();
+            _typeBuf = null;
             _editing = false; _typedIn = false; CaptureEdit();
             // ⛔ خانه‌ای که بسته شد، همان لحظه روی دیسک می‌نشیند — شرحش بالای ‎FlushDirtyRows‎
             FlushDirtyRows();
@@ -3633,23 +3649,55 @@ public class ExcelGrid : DataGrid
     /// </summary>
     protected override void OnTextInput(TextInputEventArgs e)
     {
+        //  حرفِ دوم و سوم پیش از آماده شدنِ کادر — پشتِ همان حرفِ اول، به ترتیب
+        if (_typeBuf is not null && _editing && !string.IsNullOrEmpty(e.Text) && !char.IsControl(e.Text[0]))
+        {
+            _typeBuf += e.Text;
+            if (CurrentEditor() is { } b)
+            {
+                b.Text = _typeBuf;
+                b.CaretIndex = _typeBuf.Length;
+                b.SelectionStart = b.SelectionEnd = _typeBuf.Length;
+                b.Focus();
+            }
+            e.Handled = true;
+            return;
+        }
         if (IsReadOnly || _editing || string.IsNullOrEmpty(e.Text) || char.IsControl(e.Text[0]))
         {
             base.OnTextInput(e);
             return;
         }
 
+        _typeBuf = e.Text;
         BeginEdit();
         _typedIn = true;   // با تایپ آمدیم ⇒ فلش‌ها ناوبری‌اند، نه کُرسر
 
         var box = CurrentEditor();
-        if (box is null) { base.OnTextInput(e); return; }
+        if (box is null) { if (!_editing) _typeBuf = null; e.Handled = _editing; if (!_editing) base.OnTextInput(e); return; }
 
-        box.Text = e.Text;
-        box.CaretIndex = e.Text.Length;
+        var t = _typeBuf ?? e.Text;
+        box.Text = t;
+        box.CaretIndex = t.Length;
+        box.SelectionStart = box.SelectionEnd = t.Length;
         box.Focus();
         e.Handled = true;
     }
+
+    /// <summary>
+    /// ══ «12960» نه «2960»، نه «12906» (۱۴۰۵/۰۷/۱۹) ══════════════════════════════
+    ///
+    /// تایپ روی خانهٔ انتخاب‌شده ویرایش را باز می‌کند، ولی کادرِ ویرایش <b>یک پاسِ
+    /// چیدمان بعد</b> آماده می‌شود و همان لحظه ستونِ ‎DataGridTextColumn‎ کلِ متنِ
+    /// کادر را <b>انتخاب</b> می‌کند (‎PrepareCellForEdit‎، چون ویرایش با ‎F2‎ باز
+    /// نشده). پس اگر کاربر تند بزند، حرف‌هایی که تا آن لحظه نشسته‌اند برجسته
+    /// می‌شوند و حرفِ بعدی <b>جایشان را می‌گیرد</b> — ‎typeall‎ با تایپِ تند همین را
+    /// گرفت: «12960» ⇒ «2960». و اگر مکان‌نما جا می‌ماند، حرف وسطِ عدد می‌نشست.
+    ///
+    /// ⛔ پس هر چه از حرفِ اول تا آماده شدنِ کادر زده شد این‌جا جمع می‌شود و همان
+    /// لحظهٔ آماده شدن، <b>بی انتخاب</b> و با مکان‌نما ته متن در کادر می‌نشیند.
+    /// </summary>
+    private string? _typeBuf;
 
     /// <summary>کادرِ تایپِ خانه‌ای که همین حالا در حالِ ویرایش است.</summary>
     private TextBox? CurrentEditor() =>

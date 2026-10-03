@@ -116,6 +116,7 @@ public partial class MainWindow : Window
             _closing = true;
             try { Controls.ExcelGrid.CommitFocused(this); } catch { }
             try { await vm.FlushEverythingAsync(); } catch { }
+            try { await vm.OfferBackupBeforeExitAsync(); } catch { }
             _flushed = true;
             Close();
         };

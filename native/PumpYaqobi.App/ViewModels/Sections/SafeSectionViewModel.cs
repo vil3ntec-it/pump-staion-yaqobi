@@ -163,6 +163,21 @@ public sealed partial class SafeSectionViewModel : LedgerSectionViewModel<SafeRo
         if (IsLoaded) await ReloadWithMonthsAsync();
     }
 
+    /// <summary>
+    /// ⛔ بردگی به نامِ یک شرکت ⇒ رسید در حسابِ همان شرکت، با همان ارز
+    /// (‎SafeCompanySyncService‎). نامِ ناشناس هیچ حسابی نمی‌سازد.
+    /// </summary>
+    public override async Task SaveEntityAsync(SafeEntry e)
+    {
+        await base.SaveEntityAsync(e);
+        var res = await _host.SafeSync.SyncAsync(e);
+        if (res == PumpYaqobi.Services.Data.ExchangeLinkResult.Linked && _linkedOnce.Add(e.Id))
+            _host.Toast("✅ رسید در حسابِ شرکت ثبت شد", ToastKind.Ok);
+    }
+    private readonly HashSet<long> _linkedOnce = new();
+
+    protected override async Task BeforeDeleteAsync(SafeEntry e) => await _host.SafeSync.UnlinkAsync(e);
+
     protected override SafeRowViewModel Wrap(SafeEntry e) => new(e, this);
     protected override long EntityIdOf(SafeRowViewModel r) => r.Entity.Id;
     protected override SafeEntry EntityOf(SafeRowViewModel r) => r.Entity;

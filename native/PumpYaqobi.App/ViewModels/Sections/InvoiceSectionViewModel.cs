@@ -513,6 +513,7 @@ public sealed partial class InvoiceSectionViewModel : SectionViewModel
     private void OpenDetail(InvoiceRowViewModel? row)
     {
         if (row is null) return;
+        _returnTo = null;
         _cameFrom = IsList ? Pane : InvoicePane.Form;
         Detail = row;
         Pane = InvoicePane.Detail;
@@ -520,6 +521,25 @@ public sealed partial class InvoiceSectionViewModel : SectionViewModel
 
     /// <summary>فهرستی که فاکتورِ باز از آن آمد — «‹ برگشت» همان‌جا می‌رود.</summary>
     private InvoicePane _cameFrom = InvoicePane.Form;
+
+    /// <summary>فاکتور از حسابِ قرض‌دار باز شد ⇒ «‹ برگشت» به همان حساب.</summary>
+    private Func<Task>? _returnTo;
+    public bool CameFromAccount => _returnTo is not null;
+
+    /// <summary>
+    /// همان فاکتور (همان رکورد) از حسابِ قرض‌دار — ‎AccountViewModel.OpenInvoiceAsync‎.
+    /// </summary>
+    public async Task OpenByIdAsync(long id, Func<Task>? back = null)
+    {
+        await ReloadAsync();
+        var row = _all.FirstOrDefault(r => r.Entity.Id == id);
+        if (row is null) { _host.Toast("این فاکتور دیگر نیست", ToastKind.Warn); if (back is not null) await back(); return; }
+        _cameFrom = InvoicePane.Form;
+        _returnTo = back;
+        OnPropertyChanged(nameof(CameFromAccount));
+        Detail = row;
+        Pane = InvoicePane.Detail;
+    }
 
     /// <summary>
     /// «‹ برگشت» (۱۴۰۵/۰۷/۱۳) — از فاکتور به همان فهرست، از فهرست به برگه.
@@ -529,6 +549,14 @@ public sealed partial class InvoiceSectionViewModel : SectionViewModel
     [RelayCommand]
     private void Back()
     {
+        if (IsDetail && _returnTo is { } r)
+        {
+            _returnTo = null;
+            OnPropertyChanged(nameof(CameFromAccount));
+            Detail = null; Pane = InvoicePane.Form;
+            SaveGuard.Watch(r(), "برگشت به حسابِ قرض‌دار");
+            return;
+        }
         if (IsDetail) { Detail = null; Pane = _cameFrom; return; }
         CloseList();
     }

@@ -36,6 +36,7 @@ internal static class Program
         // ⚠️ سنجهٔ خودِ همگام‌سازی (`syncui`) صفحه را می‌سنجد، نه حلقه را؛
         // حلقه در `PumpYaqobi.Tests` سنجیده می‌شود، بی پنجره و بی شبکه.
         PumpYaqobi.App.Services.SyncEngine.Disabled = true;
+        PumpYaqobi.App.Services.ExitBackup.Disabled = true;    // پرسشِ پیش از بستن هیچ سنجه‌ای را نگه نمی‌دارد
         PumpYaqobi.App.Update.AutoUpdate.Disabled = true;   // به‌روزرسانیِ خودکار هیچ‌وقت از سنجه به گیت‌هاب نمی‌رود
         PumpYaqobi.App.Services.SectionGate.TestOpenAll = true;   // سنجه‌ها همان بخش‌های در حالِ ساخت را هم می‌سنجند
         PumpYaqobi.App.Services.CrashGuard.ReportingOff = true;
@@ -155,6 +156,8 @@ internal static class Program
         if (outDir.Equals("latemonths", StringComparison.OrdinalIgnoreCase)) return LateMonthProbe.Run(args);
         if (outDir.Equals("oldmonths", StringComparison.OrdinalIgnoreCase)) return OldMonthProbe.Run(args);
         if (outDir.Equals("waraqtype", StringComparison.OrdinalIgnoreCase)) return WaraqTypeProbe.Run();
+        if (outDir.Equals("typeall", StringComparison.OrdinalIgnoreCase)) return TypeAllProbe.Run(args);
+        if (outDir.Equals("reportedit", StringComparison.OrdinalIgnoreCase)) return ReportEditProbe.Run();
         if (outDir.Equals("centerlab", StringComparison.OrdinalIgnoreCase)) return CenterLabProbe.Run(args);
         if (outDir.Equals("oldpost", StringComparison.OrdinalIgnoreCase)) return OldPostProbe.Run(args);
         if (outDir.Equals("coldrag", StringComparison.OrdinalIgnoreCase)) return ColDragProbe.Run(args);

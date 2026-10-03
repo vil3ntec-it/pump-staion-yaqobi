@@ -110,10 +110,15 @@ public class OwnerRound13Tests
         Assert.True(body.IndexOf("if (!ReportsOpen) return;", StringComparison.Ordinal) < body.IndexOf("ListAsync", StringComparison.Ordinal));
         //  ⛔ حذفِ گزارش می‌پرسد
         Assert.Contains("Dialogs.ConfirmAsync(\"حذف گزارش\"", vm);
-        //  ⛔ صفحهٔ گزارشِ یک پارچه هیچ کادرِ تایپی ندارد
+        //  ⛔ صفحهٔ گزارشِ یک پارچه جز کادرهای «✏️ ویرایشِ این شیفت» هیچ کادرِ تایپی ندارد
+        //  (۱۴۰۵/۰۷/۱۹ — خواستهٔ صاحب ریپو: «گزارش‌های پارچه ویرایشی باشند»). آن کادرها
+        //  فقط با زدنِ «ویرایش» دیده می‌شوند و از همان ‎EditShiftAsync‎ می‌گذرند.
         var j = v.IndexOf("DataContext.ShowReportDetail", StringComparison.Ordinal);
         Assert.True(j > 0);
-        Assert.DoesNotContain("<TextBox", v.Substring(j));
+        var tail = v.Substring(j);
+        var boxes = System.Text.RegularExpressions.Regex.Matches(tail, "<TextBox[^>]*>");
+        Assert.All(boxes, m => Assert.Contains("Classes=\"rsedit\"", m.Value));
+        Assert.Contains("BeginCommand", tail);
     }
 
     // ══ ۶) سربرگ: نامِ ماه، و تنظیمِ تاریخ و ساعت ══════════════════════════
