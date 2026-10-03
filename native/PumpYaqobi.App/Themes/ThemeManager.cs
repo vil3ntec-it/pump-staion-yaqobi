@@ -215,6 +215,17 @@ public static class ThemeManager
         Br("ChartLine", t.IsDark ? PumpTheme.C("#ffd700") : PumpTheme.C("#3b82f6"));
         Br("ChartPoint", t.IsDark ? PumpTheme.C("#fff3c4") : PumpTheme.C("#60a5fa"));
         Br("ChartBarSel", t.IsDark ? PumpTheme.C("#fff3c4") : PumpTheme.C("#1e3a8a"));
+        //  ستونِ مدرنِ نمودارِ فروش (۱۴۰۵/۰۷/۱۹): گرادیانِ عمودی (روشن ⇐ پررنگ)، ستونِ
+        //  انتخاب‌شده پررنگ‌تر، و یک «ریلِ» بسیار کم‌رنگ پشتِ هر ستون. ⛔ زمینه‌اند، نه
+        //  نوشته — پس قلمِ جدا برای هر تم بی‌خطر است (قاعدهٔ ‎Shared‎ مالِ ‎Foreground‎ است).
+        Set("Pump.ChartBarFill", t.IsDark
+            ? Vertical(PumpTheme.C("#ffe36a"), PumpTheme.C("#d4a800"))
+            : Vertical(PumpTheme.C("#7cb6fb"), PumpTheme.C("#2563eb")));
+        Set("Pump.ChartBarSelFill", t.IsDark
+            ? Vertical(PumpTheme.C("#fff8d6"), PumpTheme.C("#ffd700"))
+            : Vertical(PumpTheme.C("#3b82f6"), PumpTheme.C("#1e3a8a")));
+        Set("Pump.ChartTrack", new SolidColorBrush(t.IsDark ? Color.FromArgb(0x1c, 0xff, 0xd7, 0x00)
+                                                             : Color.FromArgb(0x16, 0x3b, 0x82, 0xf6)));
         Br("IconFg", t.IsDark ? PumpTheme.C("#ffd700") : PumpTheme.C("#3b82f6"));
         Br("IconBadge", t.IsDark ? Color.FromArgb(0x2e, 0xff, 0xd7, 0x00) : PumpTheme.C("#e0f2fe"));
         Br("Border", t.Border);

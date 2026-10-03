@@ -111,7 +111,7 @@
                      (‎ToolTip‎) است. ⛔ پس نه چیزی جابه‌جا می‌شود و نه جایی
                      گرفته می‌شود؛ و مانعِ ذخیره هم نیست. -->
                 <TextBox Grid.Column="0" Classes="wfield" Text="{Binding Start}" Watermark="0"
-                         Foreground="{Binding StartBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}">
+                         Foreground="{Binding StartBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" c:LiveFormat.Kind="number">
                   <TextBox.InnerRightContent>
                     <StackPanel Orientation="Horizontal" Spacing="4" Margin="4,0"
                                 VerticalAlignment="Center" IsVisible="{Binding LowBase}">
@@ -145,7 +145,7 @@
                      همان‌قدر برود و دو عدد زیرِ هم بمانند. ⚠️ رونوشتِ مو‌به‌موی
                      همان تکه است (نه یک فاصلهٔ عددی)، تا پهنایش هر قلم و هر
                      اندازه‌ای همان باشد. -->
-                <TextBox Grid.Column="0" Classes="wfield" Text="{Binding End}" Watermark="0">
+                <TextBox Grid.Column="0" Classes="wfield" Text="{Binding End}" Watermark="0" c:LiveFormat.Kind="number">
                   <TextBox.InnerRightContent>
                     <StackPanel Orientation="Horizontal" Spacing="4" Margin="4,0"
                                 VerticalAlignment="Center" IsVisible="{Binding LowBase}"
@@ -166,19 +166,19 @@
 
             <StackPanel Spacing="4">
               <TextBlock Text="جمله قرض (افغانی)" Classes="fld" />
-              <TextBox Classes="wfield" Text="{Binding Debt}" Watermark="0" />
+              <TextBox Classes="wfield" Text="{Binding Debt}" Watermark="0" c:LiveFormat.Kind="number" />
             </StackPanel>
 
             <StackPanel Spacing="4">
               <TextBlock Text="فی لیتر (افغانی)" Classes="fld" />
-              <TextBox Classes="wfield" Text="{Binding Price}" Watermark="0" />
+              <TextBox Classes="wfield" Text="{Binding Price}" Watermark="0" c:LiveFormat.Kind="number" />
             </StackPanel>
 
             <!-- فایدهٔ فیِ لیتر — و زیرش همان جملهٔ کج‌نوشتهٔ «فی خرید…» سایت -->
             <StackPanel Spacing="4">
               <TextBlock Text="فایده فی لیتر (افغانی) — اتومات از مخزن" Classes="fld" />
               <TextBox Classes="wfield" Text="{Binding ProfitPer}"
-                       Watermark="اتومات پر می‌شه" />
+                       Watermark="اتومات پر می‌شه" c:LiveFormat.Kind="number" />
               <TextBlock Text="{Binding BuyPerLabel}" FontSize="11" FontStyle="Italic"
                          Foreground="{DynamicResource Pump.Muted}" />
             </StackPanel>
@@ -264,7 +264,7 @@
                 <TextBlock Text="📅 تاریخ:" Classes="muted" VerticalAlignment="Center"
                            Margin="0,0,7,6" />
                 <TextBox Text="{Binding PaDate, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="120" HorizontalContentAlignment="Center"
-                         Margin="0,0,8,6" />
+                         Margin="0,0,8,6" c:LiveFormat.Kind="date" />
                 <Border Classes="chip" Margin="0,0,8,6">
                   <TextBlock Text="{Binding ReportNumText, StringFormat=گزارش #{0}}" />
                 </Border>
@@ -274,12 +274,6 @@
                         Command="{Binding NewParchaDayCommand}" />
                 <Button Content="پارچهٔ جدید شب" Margin="0,0,8,6"
                         Command="{Binding NewParchaNightCommand}" />
-                <!-- ⛔ حالتِ **اختیاریِ** تازه (۱۴۰۵/۰۷/۰۶): ختمِ هر پایه باید
-                     شروعِ پارچهٔ بعدیِ همان پایه باشد. خاموش که شود، فقط
-                     هشدارِ «کمتر است» می‌ماند. -->
-                <CheckBox Content="⛓️ برسیِ زنجیرهٔ پایه‌ها" Margin="0,0,0,6"
-                          IsChecked="{Binding ChainCheck}"
-                          ToolTip.Tip="ختمِ هر پایه باید با شروعِ پارچهٔ بعدیِ همان پایه یکی باشد؛ روز و شبِ یک پایه یک زنجیره‌اند و هر پایه زنجیرهٔ خودش را دارد." />
               </WrapPanel>
             </StackPanel>
           </Border>
@@ -323,7 +317,7 @@
                      Foreground="{DynamicResource Pump.Ink.Accent}"
                      Text="{Binding ReportsCountText, StringFormat=📑 گزارش‌های ۲۴ ساعته — {0}}" />
           <TextBox Grid.Column="2" Text="{Binding DateFilter}" Width="160" Watermark="🔍 فیلتر تاریخ"
-                   IsVisible="{Binding ShowReportList}" />
+                   IsVisible="{Binding ShowReportList}" c:LiveFormat.Kind="date" />
         </Grid>
       </Border>
 
@@ -455,13 +449,13 @@
                     <TextBlock Grid.Row="1" Text="شماره پایه" Classes="label" VerticalAlignment="Center" />
                     <TextBox Grid.Row="1" Grid.Column="1" Classes="rsedit" Text="{Binding PumpNum}" />
                     <TextBlock Grid.Row="2" Text="شروع پایه" Classes="label" VerticalAlignment="Center" />
-                    <TextBox Grid.Row="2" Grid.Column="1" Classes="rsedit" Text="{Binding Start}" />
+                    <TextBox Grid.Row="2" Grid.Column="1" Classes="rsedit" Text="{Binding Start}" c:LiveFormat.Kind="number" />
                     <TextBlock Grid.Row="3" Text="ختم پایه" Classes="label" VerticalAlignment="Center" />
-                    <TextBox Grid.Row="3" Grid.Column="1" Classes="rsedit" Text="{Binding End}" />
+                    <TextBox Grid.Row="3" Grid.Column="1" Classes="rsedit" Text="{Binding End}" c:LiveFormat.Kind="number" />
                     <TextBlock Grid.Row="4" Text="فی لیتر" Classes="label" VerticalAlignment="Center" />
-                    <TextBox Grid.Row="4" Grid.Column="1" Classes="rsedit" Text="{Binding Price}" />
+                    <TextBox Grid.Row="4" Grid.Column="1" Classes="rsedit" Text="{Binding Price}" c:LiveFormat.Kind="number" />
                     <TextBlock Grid.Row="5" Text="جمله قرض" Classes="label" VerticalAlignment="Center" />
-                    <TextBox Grid.Row="5" Grid.Column="1" Classes="rsedit" Text="{Binding Debt}" />
+                    <TextBox Grid.Row="5" Grid.Column="1" Classes="rsedit" Text="{Binding Debt}" c:LiveFormat.Kind="number" />
                     <TextBlock Grid.Row="6" Grid.ColumnSpan="2" Text="{Binding Error}" Foreground="{DynamicResource Pump.Ink.Danger}"
                                TextWrapping="Wrap" IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                     <StackPanel Grid.Row="7" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">

@@ -186,7 +186,7 @@
            عنوان ۲۱٫۱ پیکسل وزنِ ۹۰۰ · تاریخ ۱۵٫۷ وزنِ ۷۰۰
            ‎#lockBtn‎ ۶۵×۴۰ ، ‎.role-badge‎ ۶۳×۳۰ ، هر دو کپسولی (‎r:999‎)
          پیش از این سربرگِ نیتیو ۵۵ پیکسل بود و نه قفل داشت نه نشانِ نقش. -->
-    <Border Name="HeaderBlock" IsVisible="{Binding IsChromeVisible}" Background="{DynamicResource Pump.HeaderBg}"
+    <Border Name="HeaderBlock" IsVisible="{Binding IsHeaderVisible}" Background="{DynamicResource Pump.HeaderBg}"
             BorderBrush="{DynamicResource Pump.Accent}" BorderThickness="0,0,0,2" Padding="20,12">
       <Grid ColumnDefinitions="Auto,*,Auto">
         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">

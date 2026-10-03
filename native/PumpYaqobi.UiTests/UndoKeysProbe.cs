@@ -465,6 +465,21 @@ internal static class UndoKeysProbe
 
         Check("روز هیچ‌وقت با شب سنجیده نمی‌شود", !d.LowBase || !d.LowBaseText.Contains(Shamsi.Money(701600m)));
 
+        //  ⛔ دقیق، بی تلورانس (۱۴۰۵/۰۷/۱۹) — نمونه‌های خودِ صاحب ریپو، با پایهٔ
+        //  بی‌شماره هم (پیش از این «بیشتر» بی شمارهٔ پایه هیچ‌وقت گفته نمی‌شد)
+        foreach (var num in new[] { "1", "" })
+        {
+            d.PumpNum = num; n.PumpNum = num; d.Start = "799000"; d.End = "800,000";
+            foreach (var (start, warn) in new[] { ("800000", false), ("800,000", false), ("800001", true),
+                                                  ("799999", true), ("80000", true), ("8000000", true) })
+            {
+                n.Start = start;
+                Settle(win);
+                Check($"پایهٔ «{num}»: ختم ۸۰۰٬۰۰۰ ⇒ شروع {start} ⇒ {(warn ? "هشدار" : "بی هشدار")} («{n.LowBaseText}»)",
+                      warn ? n.LowBase && n.LowBaseText.Contains(Shamsi.Money(800000m)) : !n.LowBase && n.LowBaseText == "");
+            }
+        }
+
         foreach (var f in new[] { d, n }) { f.Start = ""; f.End = ""; f.PumpNum = ""; }
         Settle(win);
     }

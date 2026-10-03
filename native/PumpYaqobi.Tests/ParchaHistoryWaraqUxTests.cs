@@ -143,22 +143,17 @@ public class ParchaHistoryWaraqUxTests
     /// باید بشه… و من چندین پایه دارم و می‌خوام با پایه‌ها در ارتباط باشن.»
     /// </summary>
     [Fact]
-    public void TheChainCheckIsPerBaseAndOptional()
+    public void TheChainCheckIsExactAndAlwaysOn()
     {
         var vm = ParchaVm();
         // هر دو حال: کمتر و بیشتر
         Assert.Contains("کمتر است", vm);
         Assert.Contains("بیشتر زده شده", vm);
-        // ⛔ «بیشتر» فقط با شمارهٔ پایهٔ نوشته‌شده سنجیده می‌شود
-        Assert.Contains("ChainCheck && num > 0", vm);
-        // و کلیدش اختیاری است و می‌نشیند
-        Assert.Contains("ParchaChainCheck", vm);
-        Assert.Contains("IsChecked=\"{Binding ChainCheck}\"", Bare(Parcha()));
-
-        var st = Read("PumpYaqobi.App", "Services", "AppSettings.cs");
-        Assert.Contains("public bool ParchaChainCheck { get; set; } = true;", st);
-        // ⛔ فهرستِ «مقدارهای راحتی» باید با آن یکی بماند
-        Assert.Contains("live.ParchaChainCheck = ParchaChainCheck;", st);
+        // ⛔ برابریِ کامل، بی کلید و بی قیدِ شمارهٔ پایه (۱۴۰۵/۰۷/۱۹)
+        Assert.Contains("if (start == prev) { None(); return; }", vm);
+        Assert.DoesNotContain("ChainCheck", vm);
+        Assert.DoesNotContain("num > 0)", vm.Substring(vm.IndexOf("private void Apply(", StringComparison.Ordinal), 900));
+        Assert.DoesNotContain("{Binding ChainCheck}", Bare(Parcha()));
     }
 
     // ══ ۱د) دکمه‌های انتقالِ پایه: بی فلش ═══════════════════════════════════

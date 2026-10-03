@@ -178,7 +178,7 @@
                 <TextBlock Text="⛽ پطرول" FontWeight="ExtraBold" FontSize="14"
                            TextAlignment="Center"
                            Foreground="{DynamicResource Pump.Ink.Accent}" />
-                <TextBox Classes="plbox" Text="{Binding UnionPetrol}" Watermark="0" />
+                <TextBox Classes="plbox" Text="{Binding UnionPetrol}" Watermark="0" c:LiveFormat.Kind="number" />
                 <TextBlock Text="افغانی در هر لیتر" Classes="muted" FontSize="11"
                            TextAlignment="Center" />
               </StackPanel>
@@ -188,7 +188,7 @@
                 <TextBlock Text="🟤 دیزل" FontWeight="ExtraBold" FontSize="14"
                            TextAlignment="Center"
                            Foreground="{DynamicResource Pump.Ink.Warn}" />
-                <TextBox Classes="plbox" Text="{Binding UnionDiesel}" Watermark="0" />
+                <TextBox Classes="plbox" Text="{Binding UnionDiesel}" Watermark="0" c:LiveFormat.Kind="number" />
                 <TextBlock Text="افغانی در هر لیتر" Classes="muted" FontSize="11"
                            TextAlignment="Center" />
               </StackPanel>
@@ -225,9 +225,9 @@
             <TextBlock Grid.Row="0" Grid.Column="4" Text="نرخ بازار"
                        Classes="label pllabel" VerticalAlignment="Bottom" />
 
-            <TextBox Grid.Row="2" Grid.Column="0" Classes="plbox" Text="{Binding BulkQty}" Watermark="0" />
-            <TextBox Grid.Row="2" Grid.Column="2" Classes="plbox" Text="{Binding BulkBuy}" Watermark="0" />
-            <TextBox Grid.Row="2" Grid.Column="4" Classes="plbox" Text="{Binding BulkMarket}" Watermark="0" />
+            <TextBox Grid.Row="2" Grid.Column="0" Classes="plbox" Text="{Binding BulkQty}" Watermark="0" c:LiveFormat.Kind="number" />
+            <TextBox Grid.Row="2" Grid.Column="2" Classes="plbox" Text="{Binding BulkBuy}" Watermark="0" c:LiveFormat.Kind="number" />
+            <TextBox Grid.Row="2" Grid.Column="4" Classes="plbox" Text="{Binding BulkMarket}" Watermark="0" c:LiveFormat.Kind="number" />
 
             <Border Grid.Row="4" Grid.Column="0" Classes="panel plresult">
               <StackPanel Spacing="4">
@@ -268,8 +268,8 @@
           <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,6,Auto" MaxWidth="720">
             <TextBlock Grid.Row="0" Grid.Column="0" Text="درآمد اضافی دستی" Classes="label pllabel" />
             <TextBlock Grid.Row="0" Grid.Column="2" Text="مصرف اضافی" Classes="label pllabel" />
-            <TextBox Grid.Row="2" Grid.Column="0" Classes="plbox" Text="{Binding ManualIncome}" Watermark="0" />
-            <TextBox Grid.Row="2" Grid.Column="2" Classes="plbox" Text="{Binding ManualExpense}" Watermark="0" />
+            <TextBox Grid.Row="2" Grid.Column="0" Classes="plbox" Text="{Binding ManualIncome}" Watermark="0" c:LiveFormat.Kind="number" />
+            <TextBox Grid.Row="2" Grid.Column="2" Classes="plbox" Text="{Binding ManualExpense}" Watermark="0" c:LiveFormat.Kind="number" />
           </Grid>
         </StackPanel>
       </Border>

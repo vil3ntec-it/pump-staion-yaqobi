@@ -2482,12 +2482,22 @@ public class ExcelGrid : DataGrid
                 var slash = Suggest.Of(Suggest.GetSlashKey(e.Column));
                 if (named.Count + learned.Count + slash.Count > 0) Suggest.Attach(tb, named, learned, slash);
             }
+            //  ⛔ قالبِ زندهٔ عدد («5,000») و تاریخ («1405/07/19») — ۱۴۰۵/۰۷/۱۹. شرح: ‎LiveFormat‎
+            if ((e.EditingElement as TextBox ?? e.EditingElement?.GetVisualDescendants().OfType<TextBox>().FirstOrDefault()) is { } fbox)
+            {
+                var p = PathOf(e.Column);
+                LiveFormat.Attach(fbox, p is "DateShamsi" ? "date"
+                                      : RowViewModel.IsNumberColumn(p) ? "number" : null);
+            }
             if (pendingTyped is { } typed
                 && (e.EditingElement as TextBox ?? e.EditingElement?.GetVisualDescendants().OfType<TextBox>().FirstOrDefault()) is { } ready)
             {
+                LiveFormat.MarkUser(ready);
                 ready.Text = typed;
-                ready.CaretIndex = typed.Length;
-                ready.SelectionStart = ready.SelectionEnd = typed.Length;
+                //  ⚠️ پس از قالبِ زنده متن ممکن است بلندتر از نوشتهٔ خام باشد («5,000»)
+                var end = (ready.Text ?? "").Length;
+                ready.CaretIndex = end;
+                ready.SelectionStart = ready.SelectionEnd = end;
                 ready.Focus();
             }
         };
@@ -2917,9 +2927,14 @@ public class ExcelGrid : DataGrid
                       .FirstOrDefault(r => ReferenceEquals(r.DataContext, SelectedItem));
         if (row is null) return null;
 
-        var cells = row.GetVisualDescendants().OfType<DataGridCell>().ToList();
-        var idx = VisibleCols().IndexOf(col);
-        if (idx < 0 || idx >= cells.Count) return null;
+        //  ⛔ خانه را با <b>خودِ ستونش</b> پیدا کن، نه با شمارهٔ ترتیبی (۱۴۰۵/۰۷/۱۹). ترتیبِ
+        //  خانه‌ها در درختِ دیداری ترتیبِ ساختِ ستون‌هاست و ‎VisibleCols‎ ترتیبِ دیدنِ
+        //  آن‌ها (‎DisplayIndex‎)؛ با یک جابه‌جاییِ ستون (کشیدنِ سربرگ — گاوصندوق دارد)
+        //  یا ستونِ پنهان، این دو از هم جدا می‌شدند و ‎Enter‎/‎Tab‎ کپسولِ «نوع» را
+        //  پیدا نمی‌کردند: به‌جای عوض کردنِ نوع، ردیف عوض می‌شد.
+        var cell = row.GetVisualDescendants().OfType<DataGridCell>()
+                      .FirstOrDefault(c => ReferenceEquals(ColumnOfCell(c), col));
+        if (cell is null) return null;
 
         // ⚠️ ‎Button.celltoggle‎ هم شمرده می‌شود، نه فقط کشویی و رادیویی.
         //
@@ -2927,7 +2942,7 @@ public class ExcelGrid : DataGrid
         // نمی‌شه.» حق داشت و کارِ خودم بود: ستونِ «نوع تیل» تا دیروز دو دکمهٔ
         // رادیویی داشت و این‌جا شناخته می‌شد؛ وقتی به یک کپسول تبدیلش کردم،
         // از این فهرست افتاد و ‎Tab‎/‎Enter‎ دیگر کاری نمی‌کرد.
-        return cells[idx].GetVisualDescendants()
+        return cell.GetVisualDescendants()
                          .FirstOrDefault(x => x is ComboBox or RadioButton
                                            || (x is Button b && b.Classes.Contains("celltoggle")))
                          as Control;
@@ -3655,9 +3670,11 @@ public class ExcelGrid : DataGrid
             _typeBuf += e.Text;
             if (CurrentEditor() is { } b)
             {
+                LiveFormat.MarkUser(b);
                 b.Text = _typeBuf;
-                b.CaretIndex = _typeBuf.Length;
-                b.SelectionStart = b.SelectionEnd = _typeBuf.Length;
+                var end = (b.Text ?? "").Length;   // قالبِ زنده ممکن است کاما گذاشته باشد
+                b.CaretIndex = end;
+                b.SelectionStart = b.SelectionEnd = end;
                 b.Focus();
             }
             e.Handled = true;
@@ -3677,9 +3694,11 @@ public class ExcelGrid : DataGrid
         if (box is null) { if (!_editing) _typeBuf = null; e.Handled = _editing; if (!_editing) base.OnTextInput(e); return; }
 
         var t = _typeBuf ?? e.Text;
+        LiveFormat.MarkUser(box);
         box.Text = t;
-        box.CaretIndex = t.Length;
-        box.SelectionStart = box.SelectionEnd = t.Length;
+        var tEnd = (box.Text ?? "").Length;
+        box.CaretIndex = tEnd;
+        box.SelectionStart = box.SelectionEnd = tEnd;
         box.Focus();
         e.Handled = true;
     }

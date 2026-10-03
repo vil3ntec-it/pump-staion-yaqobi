@@ -24,13 +24,13 @@
         <StackPanel Spacing="3" Margin="0,0,10,6">
           <TextBlock Text="مقدار (کیلو یا تن)" Classes="muted" />
           <!-- ⚠️ ‎IsDefault‎ فقط در پنجرهٔ واقعی کار می‌کند؛ این صفحه روپوشِ بخش است، پس Enter صریح -->
-          <TextBox Name="QtyBox" Width="200" Text="{Binding QtyText}" Watermark="مثلاً 12300 یا 12.3">
+          <TextBox Name="QtyBox" Width="200" Text="{Binding QtyText}" Watermark="مثلاً 12300 یا 12.3" c:LiveFormat.Kind="number">
             <TextBox.KeyBindings><KeyBinding Gesture="Enter" Command="{Binding RunCommand}" /></TextBox.KeyBindings>
           </TextBox>
         </StackPanel>
         <StackPanel Spacing="3" Margin="0,0,10,6">
           <TextBlock Text="تاریخ" Classes="muted" />
-          <TextBox Width="170" Text="{Binding DateText}" Watermark="مثلاً 1405/5/12">
+          <TextBox Width="170" Text="{Binding DateText}" Watermark="مثلاً 1405/5/12" c:LiveFormat.Kind="date">
             <TextBox.KeyBindings><KeyBinding Gesture="Enter" Command="{Binding RunCommand}" /></TextBox.KeyBindings>
           </TextBox>
         </StackPanel>

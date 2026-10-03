@@ -167,7 +167,7 @@
                      دیگری پایین‌تر. پس این خانه خواندنی نیست، نوشتنی است. -->
                 <TextBox Text="{Binding HeadPetrolRasidEdit, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                          Classes="fsv" Tag="petrol" GotFocus="RasidBoxFocus" LostFocus="RasidBoxLost" KeyDown="RasidBoxKey"
-                         Foreground="{DynamicResource Pump.Ink.Ok}" />
+                         Foreground="{DynamicResource Pump.Ink.Ok}" c:LiveFormat.Kind="number" />
               </StackPanel>
               <StackPanel Spacing="2">
                 <TextBlock Text="برد" Classes="fsl" />
@@ -202,7 +202,7 @@
                 <TextBlock Text="{Binding HeadRasidLabel}" Classes="fsl" />
                 <TextBox Text="{Binding HeadDieselRasidEdit, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                          Classes="fsv" Tag="diesel" GotFocus="RasidBoxFocus" LostFocus="RasidBoxLost" KeyDown="RasidBoxKey"
-                         Foreground="{DynamicResource Pump.Ink.Ok}" />
+                         Foreground="{DynamicResource Pump.Ink.Ok}" c:LiveFormat.Kind="number" />
               </StackPanel>
               <StackPanel Spacing="2">
                 <TextBlock Text="برد" Classes="fsl" />
@@ -452,7 +452,7 @@
           <StackPanel Orientation="Horizontal" Spacing="8"
                       IsVisible="{Binding IsMoney}">
             <TextBlock Text="سپردهٔ پول" Classes="pl" />
-            <TextBox Text="{Binding MoneyDepositText}" Classes="pv" />
+            <TextBox Text="{Binding MoneyDepositText}" Classes="pv" c:LiveFormat.Kind="number" />
           </StackPanel>
         </StackPanel>
       </Border>

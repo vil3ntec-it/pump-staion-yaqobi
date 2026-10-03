@@ -94,14 +94,14 @@
                 <StackPanel Spacing="4" Margin="6,0">
                   <TextBlock Text="ظرفیت مخزن (لیتر)" Classes="label" FontSize="11"
                              TextAlignment="Center" HorizontalAlignment="Stretch" />
-                  <TextBox Classes="tankbox" Text="{Binding Capacity}" HorizontalAlignment="Stretch" />
+                  <TextBox Classes="tankbox" Text="{Binding Capacity}" HorizontalAlignment="Stretch" c:LiveFormat.Kind="number" />
                 </StackPanel>
                 <!-- از «تنظیمات» به این‌جا آمد (۱۴۰۵/۰۶/۲۸) — جای طبیعی‌اش
                      همین‌جاست، کنارِ ظرفیت. -->
                 <StackPanel Spacing="4" Margin="6,0">
                   <TextBlock Text="آستانهٔ هشدار (لیتر)" Classes="label" FontSize="11"
                              TextAlignment="Center" HorizontalAlignment="Stretch" />
-                  <TextBox Classes="tankbox" Text="{Binding LowStock}" HorizontalAlignment="Stretch" />
+                  <TextBox Classes="tankbox" Text="{Binding LowStock}" HorizontalAlignment="Stretch" c:LiveFormat.Kind="number" />
                 </StackPanel>
                 <StackPanel Spacing="4" Margin="6,10,6,0">
                   <TextBlock Text="جمله ورودی" Classes="label" FontSize="11"
@@ -329,7 +329,7 @@
               <WrapPanel Orientation="Horizontal">
                 <StackPanel Spacing="3" Width="150" Margin="0,0,10,6">
                   <TextBlock Text="لیترِ میله‌زنی" Classes="label" />
-                  <TextBox Text="{Binding DipMeasured}" Watermark="0" />
+                  <TextBox Text="{Binding DipMeasured}" Watermark="0" c:LiveFormat.Kind="number" />
                 </StackPanel>
                 <StackPanel Spacing="3" Width="150" Margin="0,0,10,6">
                   <TextBlock Text="موجودی دفتری" Classes="label" />
@@ -430,7 +430,7 @@
             <Grid ColumnDefinitions="*,12,*">
               <StackPanel Grid.Column="0" Spacing="4">
                 <TextBlock Text="تاریخ" Classes="label" />
-                <TextBox Text="{Binding BuyDate}" />
+                <TextBox Text="{Binding BuyDate}" c:LiveFormat.Kind="date" />
               </StackPanel>
               <StackPanel Grid.Column="2" Spacing="4">
                 <TextBlock Text="نام فروشنده" Classes="label" />
@@ -443,7 +443,7 @@
               <StackPanel Grid.Column="0" Spacing="4">
                 <!-- ⛔ کیلو، مثلِ سایت (‎pu-kg‎) — تن زیرِ فرم خودش حساب می‌شود -->
                 <TextBlock Text="وزن (کیلو)" Classes="label" />
-                <TextBox Text="{Binding BuyKg}" Watermark="مثلاً 5320" />
+                <TextBox Text="{Binding BuyKg}" Watermark="مثلاً 5320" c:LiveFormat.Kind="number" />
               </StackPanel>
               <StackPanel Grid.Column="2" Spacing="4">
                 <TextBlock Text="ثقلت (چگالی)" Classes="label" />
@@ -457,11 +457,11 @@
             <Grid ColumnDefinitions="*,12,*">
               <StackPanel Grid.Column="0" Spacing="4">
                 <TextBlock Text="قیمت هر تن (دالر) — اختیاری" Classes="label" />
-                <TextBox Text="{Binding BuyPriceTon}" Watermark="مثلاً 1200 — بعداً هم می‌شود" />
+                <TextBox Text="{Binding BuyPriceTon}" Watermark="مثلاً 1200 — بعداً هم می‌شود" c:LiveFormat.Kind="number" />
               </StackPanel>
               <StackPanel Grid.Column="2" Spacing="4">
                 <TextBlock Text="نرخ دالر (افغانی) — اختیاری" Classes="label" />
-                <TextBox Text="{Binding BuyUsdRate}" Watermark="مثلاً 65 — بعداً هم می‌شود" />
+                <TextBox Text="{Binding BuyUsdRate}" Watermark="مثلاً 65 — بعداً هم می‌شود" c:LiveFormat.Kind="number" />
               </StackPanel>
             </Grid>
 

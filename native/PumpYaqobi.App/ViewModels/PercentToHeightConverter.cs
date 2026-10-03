@@ -8,8 +8,11 @@ public sealed class PercentToHeightConverter : IValueConverter
 {
     public static readonly PercentToHeightConverter Instance = new(194);
 
-    /// <summary>ستون‌های نمودارِ فروشِ داشبورد — کادرشان ۱۴۰ پیکسل است.</summary>
-    public static readonly PercentToHeightConverter Bar = new(140);
+    /// <summary>
+    /// ستون‌های نمودارِ فروشِ داشبورد — کادرشان ۲۰۸ پیکسل است (۱۴۰۵/۰۷/۱۹: «روندِ مفاد
+    /// و مصارف» از زیرش به کارتِ روند رفت و جایش به خودِ ستون‌ها رسید).
+    /// </summary>
+    public static readonly PercentToHeightConverter Bar = new(208);
 
     private readonly double _full;
 

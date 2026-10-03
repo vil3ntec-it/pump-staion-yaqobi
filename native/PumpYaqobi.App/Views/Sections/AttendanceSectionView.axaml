@@ -26,7 +26,7 @@
         <ComboBox ItemsSource="{Binding Picker.Months}" SelectedItem="{Binding Picker.Selected}"
                   ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="120" />
         <TextBox Text="{Binding NewName}" Watermark="نامِ کارمندِ تازه" Width="150" Margin="8,0,0,0" />
-        <TextBox Text="{Binding NewSalary}" Watermark="معاش" Width="90" />
+        <TextBox Text="{Binding NewSalary}" Watermark="معاش" Width="90" c:LiveFormat.Kind="number" />
         <Button Classes="accent" Content="افزودن" Command="{Binding AddStaffCommand}" />
       </StackPanel>
     </c:SectionPage.Filters>

@@ -163,7 +163,7 @@ internal static class ReportEditProbe
             if (phys != PhysicalKey.None) w.KeyReleaseQwerty(phys, RawInputModifiers.None);
         }
         Round14Probe.Settle(w);
-        Check($"کادر «{text}» را دارد («{b.Text}»)", b.Text == text);
+        Check($"کادر «{text}» را دارد («{b.Text}»)", b.Text == text || (b.Text ?? "").Replace(",", "") == text);   // کامای قالبِ زنده
     }
 
     private static void Check(string what, bool ok)
