@@ -13,7 +13,7 @@ namespace PumpYaqobi.Services.Data;
 /// <param name="ToKey">کلیدِ تاریخِ پایان، خودش هم شمرده می‌شود؛ ۰ یعنی تا آخر.</param>
 public sealed record PortablePick(string Kind, long Id = 0, int FromKey = 0, int ToKey = 0);
 
-/// <summary>یک جدول برای دیدن در اکسل — ستون ⇒ مقدار.</summary>
+/// <summary>یک جدولِ خروجی — ستون ⇒ مقدار (برای شمارش و نمایشِ خلاصه).</summary>
 public sealed record PortableTable(string Entity, IReadOnlyList<string> Columns,
                                    IReadOnlyList<IReadOnlyList<object?>> Rows);
 
@@ -44,7 +44,7 @@ public sealed partial class SyncStore
 {
     public const string PortableFormat = "pumpyaqobi.part";
 
-    /// <summary>ستون‌هایی که مالِ همین کامپیوترند یا فقط دفترداری‌اند — نه در فایل، نه در اکسل.</summary>
+    /// <summary>ستون‌هایی که مالِ همین کامپیوترند یا فقط دفترداری‌اند — نه در فایل.</summary>
     private static readonly HashSet<string> NotPortable = new(StringComparer.Ordinal)
         { "Id", "SyncUid", "CreatedAt", "UpdatedAt", "DeletedAt" };
 
@@ -184,8 +184,8 @@ public sealed partial class SyncStore
     }
 
     /// <summary>
-    /// مقدارِ برگهٔ دیدنیِ اکسل با نوعِ واقعیِ ستون: مبلغ‌ها متن ذخیره می‌شوند
-    /// («12960.0»)، پس به عدد برمی‌گردند تا اکسل عدد ببیند و جمع بزند؛ نوعِ شمارشی
+    /// مقدارِ جدولِ خروجی با نوعِ واقعیِ ستون: مبلغ‌ها متن ذخیره می‌شوند
+    /// («12960.0»)، پس به عدد برمی‌گردند تا عدد بماند و جمع زده شود؛ نوعِ شمارشی
     /// همان شمارش. ⛔ فقط برای دیدن است — برگهٔ پنهان همان مقدارِ خامِ دفتر را دارد.
     /// </summary>
     private static object? Typed(object? v, Type clr)

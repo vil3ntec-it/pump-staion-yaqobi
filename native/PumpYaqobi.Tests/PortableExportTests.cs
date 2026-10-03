@@ -9,7 +9,7 @@ namespace PumpYaqobi.Tests;
 /// <summary>
 /// ══ خروجیِ یک حساب یا بخش برای بازهٔ ماه/سال، و آوردنِ دوباره‌اش (۱۴۰۵/۰۷/۱۹) ══
 /// «فایلِ خروجی دوباره وارد شود بدونِ خراب شدن». هر سناریو روی SQLiteِ واقعی و
-/// از راهِ همان فایلِ اکسل (‎PortableXlsx‎) — نه فقط از JSONِ درونِ حافظه.
+/// از راهِ همان «فایلِ حساب» (‎PortableFile‎) — نه فقط از JSONِ درونِ حافظه.
 /// </summary>
 public class PortableExportTests : IDisposable
 {
@@ -40,14 +40,14 @@ public class PortableExportTests : IDisposable
     private string RoundTripFile(PumpDbFactory from, PortablePick pick, out PortableExport ex)
     {
         ex = new SyncStore(from).ExportPortable(pick);
-        var path = Path.Combine(_dir, $"part-{Guid.NewGuid():N}{PortableXlsx.Extension}");
-        PortableXlsx.Write(path, "آزمون", ex);
+        var path = Path.Combine(_dir, $"part-{Guid.NewGuid():N}{PortableFile.Extension}");
+        PortableFile.Write(path, "آزمون", ex);
         return path;
     }
 
     private static PortableImport Import(PumpDbFactory to, string path)
     {
-        var json = PortableXlsx.ReadSnapshot(path);
+        var json = PortableFile.ReadSnapshot(path);
         Assert.NotNull(json);
         using var doc = JsonDocument.Parse(json!);
         return new SyncStore(to).ImportPortable(doc.RootElement);
@@ -122,9 +122,9 @@ public class PortableExportTests : IDisposable
         var b = Db("b");
         using var doc = JsonDocument.Parse("{\"format\":\"x\",\"tables\":{}}");
         Assert.Throws<InvalidDataException>(() => new SyncStore(b).ImportPortable(doc.RootElement));
-        var junk = Path.Combine(_dir, "junk.xlsx");
+        var junk = Path.Combine(_dir, "junk" + PortableFile.Extension);
         File.WriteAllText(junk, "not a zip");
-        Assert.Null(PortableXlsx.ReadSnapshot(junk));
+        Assert.Null(PortableFile.ReadSnapshot(junk));
     }
 
     [Fact]
@@ -147,20 +147,59 @@ public class PortableExportTests : IDisposable
     }
 
     [Fact]
-    public void BargeyeDidani_AdadRaHamanTaypShode_NeshanMidahad()
+    public void FayleHesab_MaleKhodeBarname_Ast_NaEksel_VaDastKhordeRaRadMikonad()
     {
+        //  «مثلِ اکسل، نه خودِ اکسل — اسمِ اکسل را بردار» (۱۴۰۵/۰۷/۱۹)
+        Assert.Equal(".pumphesab", PortableFile.Extension);
         var a = Db("a");
         var id = SeedDebtor(a);
-        var path = RoundTripFile(a, new PortablePick("debtor", id), out _);
-        using var zip = System.IO.Compression.ZipFile.OpenRead(path);
-        var all = string.Concat(zip.Entries.Where(e => e.FullName.StartsWith("xl/worksheets/"))
-            .Select(e => new StreamReader(e.Open()).ReadToEnd()));
-        Assert.Contains("<v>12960</v>", all);
-        Assert.Contains("<v>60.14</v>", all);
-        Assert.DoesNotContain("12960.0<", all);
-        Assert.Contains("حوالهٔ 7 نان", all);
-        Assert.Equal("12960", PortableXlsx.Plain(12960.0m));
-        Assert.Equal("60.14", PortableXlsx.Plain(60.140m));
+        var path = RoundTripFile(a, new PortablePick("debtor", id), out var ex);
+        using (var zip = System.IO.Compression.ZipFile.OpenRead(path))
+        {
+            Assert.Equal(new[] { "manifest.json", "part.json" }, zip.Entries.Select(e => e.FullName).OrderBy(x => x));
+            Assert.DoesNotContain(zip.Entries, e => e.FullName.StartsWith("xl/"));
+        }
+        Assert.Equal(ex.SnapshotJson, PortableFile.ReadSnapshot(path));
+
+        //  ⛔ یک بایتِ دست‌خورده در عکس ⇒ هیچ چیزی خوانده نمی‌شود (هش)
+        var bad = Path.Combine(_dir, "bad" + PortableFile.Extension);
+        File.Copy(path, bad);
+        using (var zip = System.IO.Compression.ZipFile.Open(bad, System.IO.Compression.ZipArchiveMode.Update))
+        {
+            var e = zip.GetEntry("part.json")!;
+            string text;
+            using (var r = new StreamReader(e.Open())) text = r.ReadToEnd();
+            e.Delete();
+            using var w = new StreamWriter(zip.CreateEntry("part.json").Open());
+            w.Write(text.Replace("12960", "12906"));
+        }
+        Assert.Null(PortableFile.ReadSnapshot(bad));
+
+        //  و در کلِ سورسِ این راه هیچ «اکسل»ی نیست
+        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../"));
+        foreach (var f in new[] { "PumpYaqobi.Services/Data/PortableFile.cs", "PumpYaqobi.App/Views/Sections/BackupSectionView.axaml" })
+        {
+            var src = File.ReadAllText(Path.Combine(root, f));
+            Assert.DoesNotContain(".xlsx", src);
+            Assert.DoesNotContain("فایلِ اکسل", src);
+        }
+    }
+
+    [Fact]
+    public void YekMah_FaghatHamanMah()
+    {
+        var a = Db("a");
+        using (var db = a.Create())
+        {
+            db.Expenses.Add(new Expense { Title = "سنبله", Amount = 100, DateShamsi = "1405/06/05", DateKey = 14050605, MonthKey = "1405/06" });
+            db.Expenses.Add(new Expense { Title = "میزان", Amount = 200, DateShamsi = "1405/07/05", DateKey = 14050705, MonthKey = "1405/07" });
+            db.SaveChanges();
+        }
+        var path = RoundTripFile(a, new PortablePick("expenses", 0, 14050601, 14050631), out _);
+        var b = Db("b");
+        Import(b, path);
+        using var read = b.Create();
+        Assert.Equal("سنبله", read.Expenses.AsNoTracking().Single().Title);
     }
 
     [Theory]

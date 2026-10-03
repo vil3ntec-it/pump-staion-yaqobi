@@ -210,8 +210,8 @@ internal static class FullBackupProbe
         Check("هیچ چیزی اجرا نشد", !launched);
         Shot(win, shots, "fb-3-page");
 
-        // ── ۷) خروجیِ یک حساب (اکسل) و آوردنِ دوباره — ۱۴۰۵/۰۷/۱۹ ─────────────
-        Console.WriteLine("── ۷) «📤 خروجیِ یک حساب» ⇒ اکسل ⇒ خرابی ⇒ «📥 آوردن» ⇒ همان عدد؛ دوباره ⇒ همان فایل به‌روز ──");
+        // ── ۷) خروجیِ یک حساب (فایلِ حساب) و آوردنِ دوباره — ۱۴۰۵/۰۷/۱۹ ─────────────
+        Console.WriteLine("── ۷) «📤 خروجیِ یک حساب» ⇒ فایلِ حساب ⇒ خرابی ⇒ «📥 آوردن» ⇒ همان عدد؛ دوباره ⇒ همان فایل به‌روز ──");
         SqliteClear();
         long rowId; string rowLit; long debtorId;
         using (var db = host.Db.Create())
@@ -225,12 +225,12 @@ internal static class FullBackupProbe
         Until(win, () => page.PortableTargets.Any(t => t.Id == debtorId));
         page.PortableTarget = page.PortableTargets.First(t => t.Id == debtorId);
         Pump(win, 10);
-        var xls = Path.Combine(root, "flash", "حساب" + PortableXlsx.Extension);
+        var xls = Path.Combine(root, "flash", "حساب" + PortableFile.Extension);
         var saveAsked = 0;
         Dialogs.SaveFileHook = _ => { saveAsked++; return xls; };
-        try { Click(win, "📤 ساختنِ فایلِ اکسل"); Until(win, () => page.PortableStatus.StartsWith("✅") || page.PortableStatus.StartsWith("❌")); }
+        try { Click(win, "📤 ساختنِ فایلِ حساب"); Until(win, () => page.PortableStatus.StartsWith("✅") || page.PortableStatus.StartsWith("❌")); }
         finally { Dialogs.SaveFileHook = null; }
-        Check("فایلِ اکسلِ حساب ساخته شد", File.Exists(xls) && PortableXlsx.ReadSnapshot(xls) is not null, page.PortableStatus);
+        Check("فایلِ حساب ساخته شد", File.Exists(xls) && PortableFile.ReadSnapshot(xls) is not null, page.PortableStatus);
         Shot(win, shots, "fb-7-portable");
 
         SqliteClear();
@@ -240,7 +240,7 @@ internal static class FullBackupProbe
         string? impAsk = null;
         Dialogs.ConfirmHook = (_, m) => { impAsk = m; return true; };
         page.PortableStatus = "";
-        try { Click(win, "📥 آوردن از فایلِ اکسل"); Until(win, () => page.PortableStatus.StartsWith("✅") || page.PortableStatus.StartsWith("❌") || page.PortableStatus.StartsWith("⚠️")); }
+        try { Click(win, "📥 آوردن از فایلِ حساب"); Until(win, () => page.PortableStatus.StartsWith("✅") || page.PortableStatus.StartsWith("❌") || page.PortableStatus.StartsWith("⚠️")); }
         finally { Dialogs.PickFileHook = null; Dialogs.ConfirmHook = null; }
         Check("پیش از آوردن پرسید و گفت چیزی پاک نمی‌شود", impAsk?.Contains("پاک نمی‌شود") == true);
         SqliteClear();
@@ -256,7 +256,7 @@ internal static class FullBackupProbe
         Dialogs.ConfirmHook = (_, m) => { oldAsk = m; return true; };
         Dialogs.SaveFileHook = _ => { saveAsked++; return null; };
         page.PortableStatus = "";
-        try { Click(win, "📤 ساختنِ فایلِ اکسل"); Until(win, () => page.PortableStatus.StartsWith("✅") || page.PortableStatus.StartsWith("❌")); }
+        try { Click(win, "📤 ساختنِ فایلِ حساب"); Until(win, () => page.PortableStatus.StartsWith("✅") || page.PortableStatus.StartsWith("❌")); }
         finally { Dialogs.SaveFileHook = null; Dialogs.ConfirmHook = null; }
         Check("بارِ دوم مسیرِ قبلی را پیشنهاد کرد", oldAsk?.Contains(Path.GetFileName(xls)) == true);
         Check("«به‌روز کردنِ فایلِ قبلی» همان فایل را نوشت، بی پرسیدنِ مسیرِ تازه",

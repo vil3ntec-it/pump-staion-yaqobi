@@ -21,10 +21,12 @@ public sealed record PortableChoice(string Key, string Label, long Id = 0)
 ///
 /// خواستهٔ صاحب ریپو: «خروجی گرفتن از یک حساب یا بخش… برای بازهٔ ماه/سالِ
 /// انتخابی… فایلِ خروجی دوباره وارد شود بی خراب شدن… فایلِ بکاپ به‌روز شود،
-/// ترجیحاً اکسل… مسیرِ قبلی پیشنهاد شود، با ‹به‌روز کردنِ فایلِ قبلی› یا ‹تازه›.»
+/// مسیرِ قبلی پیشنهاد شود، با ‹به‌روز کردنِ فایلِ قبلی› یا ‹تازه›.» و بعدش: «مثلِ
+/// اکسل، نه خودِ اکسل — اسمِ اکسل را بردار.» پس فایل، فایلِ خودِ برنامه است
+/// (‎PortableFile‎، ‎.pumphesab‎).
 ///
 /// ⛔ هیچ قاعدهٔ دومی این‌جا نیست: ساختن ‎SyncStore.ExportPortable‎، نوشتن
-/// ‎PortableXlsx‎ و آوردن ‎SyncStore.ImportPortable‎ — همان راهِ آزمودهٔ
+/// ‎PortableFile‎ و آوردن ‎SyncStore.ImportPortable‎ — همان راهِ آزمودهٔ
 /// همگام‌سازی (پدر پیش از فرزند، شناسهٔ سراسری، هیچ پاک کردنی).
 /// </summary>
 public sealed partial class BackupSectionViewModel
@@ -114,7 +116,8 @@ public sealed partial class BackupSectionViewModel
             return;
         }
         var from = MonthKeyOf(PortableFrom, false);
-        var to = MonthKeyOf(PortableTo, true);
+        //  ⛔ فقط «از ماه» نوشته شد ⇒ همان یک ماه (یا همان یک سال) — «یک ماه از مصارف»
+        var to = MonthKeyOf(string.IsNullOrWhiteSpace(PortableTo) ? PortableFrom : PortableTo, true);
         if (from < 0 || to < 0 || (from > 0 && to > 0 && from > to))
         {
             PortableStatus = "❌ بازهٔ ماه درست نیست — مثلاً «1405/01» تا «1405/06»، یا خالی برای همه";
@@ -124,7 +127,7 @@ public sealed partial class BackupSectionViewModel
 
         var title = kind.Label.Substring(kind.Label.IndexOf(' ') + 1)
                   + (PortableNeedsTarget ? " — " + PortableTarget!.Label : "")
-                  + (from > 0 || to > 0 ? $" ({PortableFrom}{(to > 0 ? " تا " + PortableTo : "")})" : "");
+                  + (from > 0 || to > 0 ? $" ({PortableFrom}{(string.IsNullOrWhiteSpace(PortableTo) ? "" : " تا " + PortableTo)})" : "");
 
         //  ⛔ مسیرِ قبلی پیشنهاد می‌شود: «به‌روز کردنِ همان فایل» یا «فایلِ تازه»
         var settings = AppSettings.Load();
@@ -135,10 +138,10 @@ public sealed partial class BackupSectionViewModel
                    $"این بخش پیش‌تر در «{Path.GetFileName(last)}» ذخیره شده بود.\n"
                    + "همان فایل با اطلاعاتِ تازه به‌روز شود؟", "به‌روز کردنِ فایلِ قبلی", "فایلِ تازه"))
             target = last;
-        target ??= await Dialogs.SaveFileAsync("فایلِ اکسل کجا ذخیره شود؟",
-                       SafeName(title) + PortableXlsx.Extension, "اکسل", new[] { "*" + PortableXlsx.Extension });
+        target ??= await Dialogs.SaveFileAsync("فایلِ حساب کجا ذخیره شود؟",
+                       SafeName(title) + PortableFile.Extension, "فایلِ حسابِ پمپ", new[] { "*" + PortableFile.Extension });
         if (target is null) return;
-        if (!target.EndsWith(PortableXlsx.Extension, StringComparison.OrdinalIgnoreCase)) target += PortableXlsx.Extension;
+        if (!target.EndsWith(PortableFile.Extension, StringComparison.OrdinalIgnoreCase)) target += PortableFile.Extension;
 
         Busy = true;
         PortableStatus = "در حالِ ساختنِ فایل…";
@@ -150,9 +153,9 @@ public sealed partial class BackupSectionViewModel
             var ex = await Task.Run(() =>
             {
                 var e = new SyncStore(_host.Db).ExportPortable(pick);
-                PortableXlsx.Write(target, title, e);
+                PortableFile.Write(target, title, e);
                 //  ⛔ «ساخته شد» یعنی «خوانده می‌شود»
-                if (PortableXlsx.ReadSnapshot(target) != e.SnapshotJson)
+                if (PortableFile.ReadSnapshot(target) != e.SnapshotJson)
                     throw new IOException("فایلِ ساخته‌شده دوباره خوانده نشد");
                 return e;
             });
@@ -160,9 +163,9 @@ public sealed partial class BackupSectionViewModel
             settings.PortablePaths[key] = target;
             settings.Save();
             PortableStatus = $"✅ ساخته شد: {Path.GetFileName(target)} · {Shamsi.Money(ex.RowCount)} ردیف در "
-                           + $"{Shamsi.Money(ex.Tables.Count)} برگه";
+                           + $"{Shamsi.Money(ex.Tables.Count)} جدول";
             PortableStatusBrushKey = "Pump.Ok";
-            _host.Toast("📤 فایلِ اکسل ساخته شد", ToastKind.Ok);
+            _host.Toast("📤 فایلِ حساب ساخته شد", ToastKind.Ok);
         }
         catch (Exception ex)
         {
@@ -176,8 +179,8 @@ public sealed partial class BackupSectionViewModel
     [RelayCommand]
     private async Task ImportPortableAsync()
     {
-        var path = await Dialogs.PickFileAsync("فایلِ اکسلِ همین برنامه را انتخاب کنید", "اکسل",
-                                               new[] { "*" + PortableXlsx.Extension });
+        var path = await Dialogs.PickFileAsync("فایلِ حسابِ همین برنامه را انتخاب کنید", "فایلِ حسابِ پمپ",
+                                               new[] { "*" + PortableFile.Extension });
         if (path is not null) await ImportPortableFromAsync(path);
     }
 
@@ -185,7 +188,7 @@ public sealed partial class BackupSectionViewModel
     public async Task ImportPortableFromAsync(string path)
     {
         if (!CanRestore) { _host.Toast("❌ آوردن فقط از مدیر برمی‌آید", ToastKind.Error); return; }
-        var json = await Task.Run(() => PortableXlsx.ReadSnapshot(path));
+        var json = await Task.Run(() => PortableFile.ReadSnapshot(path));
         if (json is null)
         {
             PortableStatus = "❌ این فایل، خروجیِ بخشِ همین برنامه نیست — هیچ چیزی عوض نشد";

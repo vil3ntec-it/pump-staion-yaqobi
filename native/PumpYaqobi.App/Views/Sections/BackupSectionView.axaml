@@ -102,12 +102,12 @@
         </Border>
       </StackPanel>
 
-      <!-- ══ خروجیِ یک حساب یا بخش (اکسل) — ۱۴۰۵/۰۷/۱۹ ══════════════════════
+      <!-- ══ خروجیِ یک حساب یا بخش — فایلِ خودِ برنامه (‎.pumphesab‎)، ۱۴۰۵/۰۷/۱۹ ══════════════════════
            ⛔ همان راهِ همگام‌سازی: هیچ پاک کردنی، و پاک‌شده‌ای زنده نمی‌شود. -->
       <Border Classes="panel" Padding="0">
         <StackPanel>
           <Border Classes="card-head">
-            <TextBlock Text="📤 خروجیِ یک حساب یا بخش (اکسل)" FontWeight="Bold"
+            <TextBlock Text="📤 خروجیِ یک حساب یا بخش" FontWeight="Bold"
                        Foreground="{DynamicResource Pump.Ink.Accent}" />
           </Border>
           <StackPanel Margin="14" Spacing="10">
@@ -124,7 +124,7 @@
                         IsVisible="{Binding PortableNeedsTarget}" />
               <TextBox Name="PortableFromBox" Width="130" Watermark="از ماه — 1405/01"
                        Text="{Binding PortableFrom, Mode=TwoWay}" />
-              <TextBox Name="PortableToBox" Width="130" Watermark="تا ماه — 1405/06"
+              <TextBox Name="PortableToBox" Width="130" Watermark="تا ماه — خالی: همان یک ماه"
                        Text="{Binding PortableTo, Mode=TwoWay}" />
             </WrapPanel>
             <WrapPanel Orientation="Horizontal">
@@ -133,10 +133,10 @@
                   <Setter Property="Margin" Value="0,0,8,8" />
                 </Style>
               </WrapPanel.Styles>
-              <Button Classes="accent" Content="📤 ساختنِ فایلِ اکسل"
+              <Button Classes="accent" Content="📤 ساختنِ فایلِ حساب"
                       Command="{Binding ExportPortableCommand}"
                       IsVisible="{Binding CanRestore}" IsEnabled="{Binding !Busy}" />
-              <Button Classes="ghost" Content="📥 آوردن از فایلِ اکسل"
+              <Button Classes="ghost" Content="📥 آوردن از فایلِ حساب"
                       Command="{Binding ImportPortableCommand}"
                       IsVisible="{Binding CanRestore}" IsEnabled="{Binding !Busy}" />
             </WrapPanel>
@@ -144,7 +144,7 @@
                        Foreground="{Binding PortableStatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
                        IsVisible="{Binding PortableStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             <TextBlock Classes="muted" TextWrapping="Wrap"
-                       Text="ماه را خالی بگذارید یعنی همه. فایل در اکسل خوانده می‌شود و دوباره همین‌جا می‌آید: ردیف‌ها می‌نشینند یا به‌روز می‌شوند، هیچ ردیفی پاک نمی‌شود." />
+                       Text="یک نفر، یک شرکت یا یک بخش؛ فقط «از ماه» = همان یک ماه، هر دو خالی = همه. همین فایل دوباره همین‌جا می‌آید: ردیف‌ها می‌نشینند یا به‌روز می‌شوند، هیچ ردیفی پاک نمی‌شود." />
             <CheckBox Content="پیش از بستنِ برنامه، اگر چیزی نوشته شده و بکاپ نگرفته‌ام، بپرسد"
                       IsChecked="{Binding AskBackupOnExit, Mode=TwoWay}" />
           </StackPanel>
