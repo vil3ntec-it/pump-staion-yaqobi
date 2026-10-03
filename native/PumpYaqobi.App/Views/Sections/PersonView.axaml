@@ -367,7 +367,7 @@
           <Button Classes="ghost" Content="{Binding Current.InvoicesToggleText}"
                   Command="{Binding Current.ToggleInvoicesCommand}"
                   IsVisible="{Binding Current.HasInvoices, FallbackValue=False}"
-                  ToolTip.Tip="فاکتورهای همین مشتری — در صف و تاییدشده. فقط دیدنی است؛ تایید در بخشِ فاکتورها" />
+                  ToolTip.Tip="فاکتورهای همین مشتری — در صف و تاییدشده. روی هر کدام بزنید تا ببینید و تایید کنید" />
 
         </WrapPanel>
 
@@ -377,7 +377,11 @@
           <ItemsControl ItemsSource="{Binding Current.Invoices}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:AcctInvoiceViewModel">
-                <Grid ColumnDefinitions="Auto,12,Auto,12,Auto,12,*,Auto" Margin="0,3">
+                <!-- ⛔ کلیک ⇒ همان فاکتورِ بخشِ فاکتورها، با تایید و برگشت (۱۴۰۵/۰۷/۱۹) -->
+                <Button Classes="ghost acct-inv" Command="{Binding Open}" HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch" Padding="8,6" Margin="0,2"
+                        ToolTip.Tip="دیدن، تایید یا برگشتِ همین فاکتور">
+                <Grid ColumnDefinitions="Auto,12,Auto,12,Auto,12,*,Auto">
                   <TextBlock Grid.Column="0" Text="{Binding NumberText}" FontWeight="Bold" />
                   <TextBlock Grid.Column="2" Text="{Binding DateText}" Classes="muted" />
                   <TextBlock Grid.Column="4" Text="{Binding FuelText}" />
@@ -385,6 +389,7 @@
                   <TextBlock Grid.Column="7" Text="{Binding StatusText}" FontWeight="Bold"
                              Foreground="{Binding StatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                 </Grid>
+                </Button>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>

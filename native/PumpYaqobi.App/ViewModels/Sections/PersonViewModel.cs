@@ -879,7 +879,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
             var name = Entity.MainOfDebtorId != null ? _person.Name : (Entity.Name ?? _person.Name);
             var list = await _host.Invoices.ForAccountAsync(Entity.Id, name);
             Invoices.Clear();
-            foreach (var v in list) Invoices.Add(new AcctInvoiceViewModel(v));
+            foreach (var v in list) Invoices.Add(new AcctInvoiceViewModel(v, OpenInvoiceAsync));
             var pend = list.Count(v => v.Status != InvoiceStatus.Approved);
             InvoicesText = list.Count == 0 ? ""
                 : "🧾 فاکتورها " + Shamsi.Money(list.Count)
@@ -888,6 +888,24 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         catch { /* فاکتور رفاه است، نه حساب */ }
         OnPropertyChanged(nameof(HasInvoices));
         OnPropertyChanged(nameof(InvoicesToggleText));
+    }
+
+    /// <summary>
+    /// ══ فاکتورِ همین حساب ⇒ همان فاکتور، با تایید و برگشت (۱۴۰۵/۰۷/۱۹) ══════════
+    /// «فاکتورِ قرض‌دار در حسابِ خودش دیده شود و با کلیک بشود دید و تایید کرد —
+    /// یک فاکتور، نه دو.» ⛔ هیچ نسخهٔ دومی ساخته نمی‌شود: همان ردیفِ بخشِ
+    /// فاکتورها (‎InvoiceSectionViewModel.OpenByIdAsync‎) باز می‌شود و «‹ برگشت»
+    /// همین حساب را با فهرستِ تازه‌اش برمی‌گرداند.
+    /// </summary>
+    private async Task OpenInvoiceAsync(long id)
+    {
+        if (_host.GoSection is not { } go || _host.FindSection?.Invoke("invoices") is not InvoiceSectionViewModel inv) return;
+        await go("invoices");
+        await inv.OpenByIdAsync(id, async () =>
+        {
+            await go("debt");
+            await LoadInvoicesAsync();
+        });
     }
 
     public async Task LoadArchiveCountAsync()
@@ -1523,13 +1541,15 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
 }
 
 /// <summary>
-/// یک فاکتورِ همین حساب، فقط برای دیدن — شماره، تاریخ، تیل، مقدار و حال.
-/// هیچ فرمانی ندارد و در هیچ جمعی نیست.
+/// یک فاکتورِ همین حساب — شماره، تاریخ، تیل، مقدار و حال. در هیچ جمعی نیست؛
+/// کلیک همان فاکتورِ بخشِ فاکتورها را باز می‌کند (‎Open‎).
 /// </summary>
 public sealed class AcctInvoiceViewModel
 {
-    public AcctInvoiceViewModel(Invoice v)
+    public AcctInvoiceViewModel(Invoice v, Func<long, Task>? open = null)
     {
+        Id = v.Id;
+        Open = new CommunityToolkit.Mvvm.Input.AsyncRelayCommand(() => open?.Invoke(Id) ?? Task.CompletedTask);
         Number = v.InvoiceNumber;
         DateShamsi = v.DateShamsi ?? "";
         Approved = v.Status == InvoiceStatus.Approved;
@@ -1538,6 +1558,9 @@ public sealed class AcctInvoiceViewModel
         Amount = v.Amount;
     }
 
+    public long Id { get; }
+    /// <summary>کلیک ⇒ همان فاکتور در بخشِ فاکتورها، با تایید/برگشت.</summary>
+    public System.Windows.Input.ICommand Open { get; }
     public int Number { get; }
     public string DateShamsi { get; }
     public bool Approved { get; }

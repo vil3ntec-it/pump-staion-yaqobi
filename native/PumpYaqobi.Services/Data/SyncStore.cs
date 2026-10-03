@@ -40,7 +40,7 @@ public sealed record ApplyReport(int Applied, int Skipped, int Failed, string La
 /// ⚠️ در عوض <see cref="PumpDbContext.Bump"/> دستی زده می‌شود، همان قاعدهٔ
 /// همیشگیِ نوشتنِ خام.
 /// </summary>
-public sealed class SyncStore
+public sealed partial class SyncStore
 {
     private readonly PumpDbFactory _dbf;
 

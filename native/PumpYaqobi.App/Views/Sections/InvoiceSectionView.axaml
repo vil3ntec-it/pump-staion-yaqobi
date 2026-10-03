@@ -362,26 +362,26 @@
           <DataTemplate x:DataType="vm:InvoiceRowViewModel">
             <!-- ⛔ ۱۴۰۵/۰۷/۱۶: یک ردیفِ جمع‌وجور، نه کارتِ دوطبقه — شماره · مشتری ·
                  حال · جزئیات (یک خط، کامل در ‎ToolTip‎) · کارها. -->
-            <Border Classes="panel inv-row" Padding="10,6" Margin="0,0,0,6"
+            <Border Classes="panel inv-row" Padding="14,10" Margin="0,0,0,8" MinHeight="58"
                     Cursor="Hand"
                     PointerReleased="OnCardReleased"
                     ToolTip.Tip="برای دیدنِ فاکتور کلیک کنید">
               <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
 
                 <!-- شمارهٔ فاکتور — همان چیزی که کاربر با آن دنبالِ فاکتور می‌گردد -->
-                <Border Grid.Column="0" Classes="chip" MinWidth="46" Padding="8,3" Margin="0,0,12,0"
+                <Border Grid.Column="0" Classes="chip" MinWidth="54" Padding="10,5" Margin="0,0,12,0"
                         VerticalAlignment="Center"
                         BorderBrush="{Binding ChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
-                  <TextBlock Text="{Binding Number, StringFormat='#{0}'}" FontWeight="Black" FontSize="14"
+                  <TextBlock Text="{Binding Number, StringFormat='#{0}'}" FontWeight="Black" FontSize="16"
                              HorizontalAlignment="Center" />
                 </Border>
 
-                <TextBlock Grid.Column="1" Text="{Binding Customer}" FontWeight="Bold" FontSize="14.5"
+                <TextBlock Grid.Column="1" Text="{Binding Customer}" FontWeight="Bold" FontSize="16.5"
                            VerticalAlignment="Center" MaxWidth="260" TextTrimming="CharacterEllipsis" />
-                <TextBlock Grid.Column="2" Text="{Binding ChipText}" FontSize="12" FontWeight="Bold"
+                <TextBlock Grid.Column="2" Text="{Binding ChipText}" FontSize="13.5" FontWeight="Bold"
                            VerticalAlignment="Center" Margin="10,0,0,0"
                            Foreground="{Binding ChipBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
-                <TextBlock Grid.Column="3" Text="{Binding PartsText}" Classes="muted" FontSize="12"
+                <TextBlock Grid.Column="3" Text="{Binding PartsText}" Classes="muted" FontSize="13.5"
                            VerticalAlignment="Center" Margin="14,0,10,0" TextAlignment="Start"
                            TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding PartsText}" />
 

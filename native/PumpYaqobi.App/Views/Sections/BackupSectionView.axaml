@@ -102,6 +102,55 @@
         </Border>
       </StackPanel>
 
+      <!-- ══ خروجیِ یک حساب یا بخش (اکسل) — ۱۴۰۵/۰۷/۱۹ ══════════════════════
+           ⛔ همان راهِ همگام‌سازی: هیچ پاک کردنی، و پاک‌شده‌ای زنده نمی‌شود. -->
+      <Border Classes="panel" Padding="0">
+        <StackPanel>
+          <Border Classes="card-head">
+            <TextBlock Text="📤 خروجیِ یک حساب یا بخش (اکسل)" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Ink.Accent}" />
+          </Border>
+          <StackPanel Margin="14" Spacing="10">
+            <WrapPanel Orientation="Horizontal">
+              <WrapPanel.Styles>
+                <Style Selector="WrapPanel > :is(Control)">
+                  <Setter Property="Margin" Value="0,0,8,8" />
+                </Style>
+              </WrapPanel.Styles>
+              <ComboBox Name="PortableKindBox" MinWidth="200" ItemsSource="{x:Static vm:BackupSectionViewModel.PortableKinds}"
+                        SelectedItem="{Binding PortableKind, Mode=TwoWay}" />
+              <ComboBox Name="PortableTargetBox" MinWidth="220" ItemsSource="{Binding PortableTargets}"
+                        SelectedItem="{Binding PortableTarget, Mode=TwoWay}"
+                        IsVisible="{Binding PortableNeedsTarget}" />
+              <TextBox Name="PortableFromBox" Width="130" Watermark="از ماه — 1405/01"
+                       Text="{Binding PortableFrom, Mode=TwoWay}" />
+              <TextBox Name="PortableToBox" Width="130" Watermark="تا ماه — 1405/06"
+                       Text="{Binding PortableTo, Mode=TwoWay}" />
+            </WrapPanel>
+            <WrapPanel Orientation="Horizontal">
+              <WrapPanel.Styles>
+                <Style Selector="WrapPanel > Button">
+                  <Setter Property="Margin" Value="0,0,8,8" />
+                </Style>
+              </WrapPanel.Styles>
+              <Button Classes="accent" Content="📤 ساختنِ فایلِ اکسل"
+                      Command="{Binding ExportPortableCommand}"
+                      IsVisible="{Binding CanRestore}" IsEnabled="{Binding !Busy}" />
+              <Button Classes="ghost" Content="📥 آوردن از فایلِ اکسل"
+                      Command="{Binding ImportPortableCommand}"
+                      IsVisible="{Binding CanRestore}" IsEnabled="{Binding !Busy}" />
+            </WrapPanel>
+            <TextBlock Text="{Binding PortableStatus}" TextWrapping="Wrap" FontWeight="Bold"
+                       Foreground="{Binding PortableStatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
+                       IsVisible="{Binding PortableStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="ماه را خالی بگذارید یعنی همه. فایل در اکسل خوانده می‌شود و دوباره همین‌جا می‌آید: ردیف‌ها می‌نشینند یا به‌روز می‌شوند، هیچ ردیفی پاک نمی‌شود." />
+            <CheckBox Content="پیش از بستنِ برنامه، اگر چیزی نوشته شده و بکاپ نگرفته‌ام، بپرسد"
+                      IsChecked="{Binding AskBackupOnExit, Mode=TwoWay}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
       <!-- ══ به‌روزرسانیِ برنامه ══════════════════════════════════════════
            ⚠️ عمداً هیچ نشانی یا نامِ منبعی نوشته نمی‌شود — فقط نسخه و دکمه. -->
       <Border Classes="panel" Padding="0">

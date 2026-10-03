@@ -75,6 +75,7 @@ public sealed partial class MainViewModel : ObservableObject
             // ⚠️ ترتیب مهم است: اول بخشِ آغازین بار می‌شود، بعد پرده کنار
             // می‌رود. وگرنه کاربر یک لحظه پوستهٔ خالی را می‌بیند.
             Phase = AppPhase.Ready;
+            ExitBackup.Mark();         // «پیش از بستن بکاپ؟» از همین لحظه می‌شمارد
             _ = OpenStartSectionAsync();
 
             //  ⛔ **از این‌جا به پایین فقط یک بار در عمرِ برنامه.**
@@ -1281,6 +1282,25 @@ public sealed partial class MainViewModel : ObservableObject
     /// خودِ بخش. میانبرها و «جدولِ فعال» باید همین را ببینند، نه بخشِ پشتِ آن.
     /// </summary>
     public SectionViewModel? ActiveSection => Current?.OpenSub ?? Current;
+
+    /// <summary>
+    /// ══ پیش از بستن: «بکاپ بگیرم؟» — فقط وقتی لازم است (۱۴۰۵/۰۷/۱۹) ══
+    /// قاعده در ‎ExitBackup‎. «بله» ⇒ اگر فایلِ بکاپِ قبلی هنوز همان‌جاست، همان
+    /// به‌روز می‌شود؛ وگرنه عکسِ امروزِ همین کامپیوتر. ⛔ «نه» همان بستنِ همیشگی است.
+    /// </summary>
+    public async Task OfferBackupBeforeExitAsync()
+    {
+        if (Phase != AppPhase.Ready || !ExitBackup.Needed(AppSettings.Load().AskBackupOnExit)) return;
+        var last = BackupSectionViewModel.LastFullPath();
+        var where = last is null ? "روی همین کامپیوتر (عکسِ امروز)" : $"در فایلِ قبلی «{Path.GetFileName(last)}»";
+        if (!await Dialogs.ConfirmAsync("پیش از بستن",
+                "در این اجرا چیزهایی نوشته شده و هنوز بکاپ نگرفته‌اید.\n"
+                + $"بکاپ {where} گرفته شود؟", "بله، بکاپ بگیر", "بستن بی بکاپ"))
+            return;
+        var backup = Sections.SelectMany(s => s.SubSections).OfType<BackupSectionViewModel>().FirstOrDefault();
+        if (last is not null && backup is not null && await backup.WriteFullAsync(last)) return;
+        try { if (await Task.Run(() => AppHost.Current.Backup.SnapshotToday()) is not null) ExitBackup.Mark(); } catch { }
+    }
 
     /// <summary>
     /// ══ «همه‌اش را همین حالا بنویس» ════════════════════════════════════════

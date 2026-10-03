@@ -41,7 +41,7 @@ public class ParchaEnterTests
     {
         var vm = Src("ViewModels/Sections/ParchaSectionViewModel.cs");
         Assert.Contains("if (DayEndFor(form) is decimal typed) { Apply(form, start, typed, num); return; }", vm);
-        Assert.Contains("Apply(form, form.StartValue, DayEndFor(form) ?? v, num);", vm);
+        Assert.Contains("Apply(form, form.StartValue, DayEndFor(form) ?? v ?? 0m, key.Num);", vm);
         Assert.Contains("if (!form.IsNight) return null;", vm);
         //  ختم یا شمارهٔ پایهٔ روز عوض شد ⇒ شب از نو
         Assert.Contains("if (!_loading) _owner.RecheckSibling(this);", vm);

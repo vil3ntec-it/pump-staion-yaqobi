@@ -168,7 +168,9 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         //  «آوردنِ فایلِ کامل» برای مدیر هم تا بستنِ برنامه پنهان می‌ماندند
         //  (سنجهٔ ‎fullbackup‎ گرفتش).
         OnPropertyChanged(nameof(CanRestore));
-        return Task.CompletedTask;
+        //  نامِ قرض‌دارها و شرکت‌ها برای «خروجیِ یک حساب» — فقط دو ستون
+        try { AskBackupOnExit = AppSettings.Load().AskBackupOnExit; } catch { }
+        return FillTargetsAsync();
     }
 
     [RelayCommand]
@@ -178,6 +180,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         try
         {
             var path = await Task.Run(() => _host.Backup.SnapshotToday());
+            if (path is not null) ExitBackup.Mark();
             _host.Toast(path is null ? "❌ عکس گرفته نشد" : "📸 عکسِ امروز تازه شد",
                         path is null ? ToastKind.Error : ToastKind.Ok);
             await RefreshAsync();
@@ -309,11 +312,35 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
     private async Task ExportFullAsync()
     {
         var pump = PumpName();
-        var target = await Dialogs.SaveFileAsync("فایلِ بکاپ کجا ذخیره شود؟ (مثلاً فلش)",
-                                                 FullBackup.SuggestedFileName(pump),
-                                                 "فایلِ کاملِ برنامه", new[] { "*" + FullBackup.Extension });
+        //  ⛔ مسیرِ قبلی پیشنهاد می‌شود (۱۴۰۵/۰۷/۱۹): «به‌روز کردنِ فایلِ قبلی» یا «تازه»
+        string? target = null;
+        if (LastFullPath() is { } last
+            && await Dialogs.ConfirmAsync("فایلِ بکاپِ قبلی",
+                   $"بکاپِ پیشین در «{last}» است.\nهمان فایل به‌روز شود؟",
+                   "به‌روز کردنِ فایلِ قبلی", "فایلِ تازه"))
+            target = last;
+        target ??= await Dialogs.SaveFileAsync("فایلِ بکاپ کجا ذخیره شود؟ (مثلاً فلش)",
+                                               FullBackup.SuggestedFileName(pump),
+                                               "فایلِ کاملِ برنامه", new[] { "*" + FullBackup.Extension });
         if (target is null) return;
         if (!target.EndsWith(FullBackup.Extension, StringComparison.OrdinalIgnoreCase)) target += FullBackup.Extension;
+        await WriteFullAsync(target, pump);
+    }
+
+    /// <summary>مسیرِ آخرین فایلِ بکاپ، اگر هنوز همان‌جاست (فلشِ جداشده ⇒ ‎null‎).</summary>
+    public static string? LastFullPath()
+    {
+        try
+        {
+            return AppSettings.Load().PortablePaths.TryGetValue("full", out var p) && File.Exists(p) ? p : null;
+        }
+        catch { return null; }
+    }
+
+    /// <summary>نوشتنِ فایلِ کامل در یک مسیرِ معلوم — دکمه و پرسشِ پیش از بستن.</summary>
+    public async Task<bool> WriteFullAsync(string target, string? pump = null)
+    {
+        pump ??= PumpName();
 
         Busy = true;
         FullStatus = "در حالِ ساختن و سنجیدنِ فایل…";
@@ -330,6 +357,9 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
                        + SizeText(info.FileBytes) + " · با تم و تنظیمات";
             FullStatusBrushKey = "Pump.Ok";
             _host.Toast("📦 فایلِ کامل ساخته شد — می‌شود روی فلش برد", ToastKind.Ok);
+            try { var st = AppSettings.Load(); st.PortablePaths["full"] = target; st.Save(); } catch { }
+            ExitBackup.Mark();
+            return true;
         }
         catch (PermissionDeniedException)
         {
@@ -344,6 +374,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             _host.Toast(FullStatus, ToastKind.Error);
         }
         finally { Busy = false; }
+        return false;
     }
 
     /// <summary>

@@ -70,6 +70,7 @@ public sealed class AppHost
         ParchaReceipts = new ParchaReceiptService(Db, Permissions, Trash, Debtors);
         DebtReceipts = new DebtQuickReceiptService(Db, Permissions, Trash);
         ExchangeSync = new ExchangeCompanySyncService(Db, Permissions);
+        SafeSync = new SafeCompanySyncService(Db, Permissions, Companies);
         Attendance = new AttendanceDataService(Db, Permissions, Trash);
         Tools = new ToolsDataService(Db, Permissions, Trash, Aging, StaffShort, MonthReport,
                                      Membership, DebtSummary);
@@ -314,6 +315,8 @@ public sealed class AppHost
 
     /// <summary>صرافی ← حسابِ شرکت — بردگیِ دالریِ هر سطر.</summary>
     public ExchangeCompanySyncService ExchangeSync { get; }
+    /// <summary>بردگیِ گاوصندوق به نامِ شرکت ⇒ رسید در حسابِ همان شرکت، با همان ارز.</summary>
+    public SafeCompanySyncService SafeSync { get; }
     public AttendanceService AttendanceCalc { get; }
     public AttendanceDataService Attendance { get; }
 

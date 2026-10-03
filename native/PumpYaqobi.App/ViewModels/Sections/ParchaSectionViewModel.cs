@@ -312,9 +312,15 @@ public sealed class BaseHistoryRowViewModel
 /// <summary>یک گزارشِ ۲۴ ساعته در فهرستِ پایینِ صفحه.</summary>
 public sealed class ReportCardViewModel
 {
-    public ReportCardViewModel(ParchaReport r, ParchaService calc)
+    public ReportCardViewModel(ParchaReport r, ParchaService calc,
+                               Func<long, ShiftKind, ReportShiftEditor, Task>? save = null)
     {
         Entity = r;
+        _shifts = new[]
+        {
+            new ReportShiftView("☀️ شیفتِ روز", r.DayShift, r.Id, ShiftKind.Day, save),
+            new ReportShiftView("🌙 شیفتِ شب", r.NightShift, r.Id, ShiftKind.Night, save),
+        };
         Title = $"گزارش #{r.ReportNum} — {r.DateShamsi}";
         var t = calc.Summarize(new[] { r });
         SaleText = Shamsi.Money(t.Sale);
@@ -333,12 +339,9 @@ public sealed class ReportCardViewModel
     public string DateLine => Shamsi.ToDate(Entity.DateShamsi) is { } d
         ? Shamsi.DayName(d) + "، " + Entity.DateShamsi : Entity.DateShamsi ?? "—";
 
-    /// <summary>دو شیفتِ همین پارچه، خواندنی — صفحهٔ «گزارشِ یک پارچه».</summary>
-    public IReadOnlyList<ReportShiftView> Shifts => new[]
-    {
-        new ReportShiftView("☀️ شیفتِ روز", Entity.DayShift),
-        new ReportShiftView("🌙 شیفتِ شب", Entity.NightShift),
-    };
+    /// <summary>دو شیفتِ همین پارچه — صفحهٔ «گزارشِ یک پارچه»، با «✏️ ویرایش».</summary>
+    public IReadOnlyList<ReportShiftView> Shifts => _shifts;
+    private readonly ReportShiftView[] _shifts;
     public string SaleText { get; }
     public string MoneyText { get; }
     public string DebtText { get; }
@@ -350,11 +353,18 @@ public sealed class ReportCardViewModel
     public string NightName { get; }
 }
 
-/// <summary>یک شیفتِ یک پارچه، برای دیدن — ⛔ هیچ چیزی از این‌جا نوشته نمی‌شود.</summary>
+/// <summary>
+/// یک شیفتِ یک پارچه. دیدنی، و با «✏️ ویرایش» نوشتنی (۱۴۰۵/۰۷/۱۹ — «گزارش‌ها
+/// ویرایشی باشند، نه فقط دیدنی»). ⛔ نوشتن فقط از ‎ReportShiftEditor.Save‎ و
+/// همان ‎ParchaDataService.EditShiftAsync‎ِ تاریخچه — پارچه، پایهٔ ورق، فروشِ
+/// گاوصندوق و حساب‌های همان ورق با هم؛ راهِ دومی ساخته نشد.
+/// </summary>
 public sealed class ReportShiftView
 {
-    public ReportShiftView(string title, ShiftData? s)
+    public ReportShiftView(string title, ShiftData? s, long reportId = 0, ShiftKind kind = ShiftKind.Day,
+                           Func<long, ShiftKind, ReportShiftEditor, Task>? save = null)
     {
+        Editor = s is null || save is null ? null : new ReportShiftEditor(s, reportId, kind, save);
         Title = title;
         Has = s is not null && (s.Start != 0m || s.End != 0m || !string.IsNullOrWhiteSpace(s.Name));
         var liters = s is null ? 0m : Math.Max(0m, s.End - s.Start);
@@ -377,11 +387,66 @@ public sealed class ReportShiftView
     public string Title { get; }
     public bool Has { get; }
     public bool Empty => !Has;
+    public ReportShiftEditor? Editor { get; }
+    public bool CanEdit => Has && Editor is not null;
     public IReadOnlyList<(string Label, string Value)> Lines { get; }
     public IEnumerable<ReportLine> Items => Lines.Select(l => new ReportLine(l.Label, l.Value));
 }
 
 public sealed record ReportLine(string Label, string Value);
+
+/// <summary>کادرهای ویرایشِ یک شیفت در صفحهٔ گزارش — نوشته همان است که کاربر زده.</summary>
+public sealed partial class ReportShiftEditor : ObservableObject
+{
+    private readonly Func<long, ShiftKind, ReportShiftEditor, Task> _save;
+    private readonly ShiftData _s;
+    public long ReportId { get; }
+    public ShiftKind Kind { get; }
+
+    public ReportShiftEditor(ShiftData s, long reportId, ShiftKind kind, Func<long, ShiftKind, ReportShiftEditor, Task> save)
+    {
+        _s = s; ReportId = reportId; Kind = kind; _save = save;
+        Reset();
+    }
+
+    [ObservableProperty] private bool _editing;
+    [ObservableProperty] private bool _busy;
+    [ObservableProperty] private string _name = "";
+    [ObservableProperty] private string _pumpNum = "";
+    [ObservableProperty] private string _start = "";
+    [ObservableProperty] private string _end = "";
+    [ObservableProperty] private string _price = "";
+    [ObservableProperty] private string _debt = "";
+    [ObservableProperty] private string _error = "";
+
+    public decimal StartValue => Shamsi.Num(Start);
+    public decimal EndValue => Shamsi.Num(End);
+    public decimal PriceValue => Shamsi.Num(Price);
+    public decimal DebtValue => Shamsi.Num(Debt);
+    public int PumpValue => (int)Shamsi.Num(PumpNum);
+
+    private static string Raw(decimal v) => v == 0m ? "" : v.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    private void Reset()
+    {
+        Name = _s.Name ?? "";
+        PumpNum = _s.PumpNum > 0 ? _s.PumpNum.ToString() : "";
+        Start = Raw(_s.Start); End = Raw(_s.End); Price = Raw(_s.Price); Debt = Raw(_s.Debt);
+        Error = "";
+    }
+
+    [RelayCommand] private void Begin() { Reset(); Editing = true; }
+    [RelayCommand] private void Cancel() { Reset(); Editing = false; }
+
+    [RelayCommand]
+    private async Task Save()
+    {
+        if (EndValue < StartValue) { Error = "⚠️ ختم پایه نمی‌تواند کمتر از شروع باشد"; return; }
+        Busy = true; Error = "";
+        try { await _save(ReportId, Kind, this); }
+        finally { Busy = false; }
+    }
+}
 
 /// <summary>گزارش‌های یک ماه — کشویی در صفحهٔ گزارش‌ها.</summary>
 public sealed partial class ReportMonthGroup : ObservableObject
@@ -630,7 +695,24 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
     /// می‌شود: این سنجه با **هر حرفِ تایپ** صدا زده می‌شود و یک پرس‌وجو به
     /// ازای هر کلید یعنی همان کندی‌ای که قاعدهٔ سرعتِ این ریپو قدغنش کرده.
     /// </summary>
-    private readonly Dictionary<(FuelType, int), decimal> _lastBase = new();
+    private readonly Dictionary<(FuelType Fuel, int Num, int DateKey, long Report, bool Night, long Self), decimal?> _lastBase = new();
+
+    /// <summary>
+    /// جای این کارت در زنجیرهٔ زمان — شرحش بالای ‎ParchaDataService.PrevEndAsync‎.
+    /// کارتی که شیفتِ ذخیره‌شده‌ای از ‎_current‎ را نشان می‌دهد همان‌جای خودش است؛
+    /// کارتِ تازه پس از همهٔ پارچه‌های همان تاریخ.
+    /// </summary>
+    private (FuelType, int, int, long, bool, long) ChainKey(ShiftFormViewModel form)
+    {
+        var num = (int)Shamsi.Num(form.PumpNum);
+        var sid = form.LoadedId;
+        var mine = sid != 0 && _current is { } c
+                   && (form.IsNight ? c.NightShift?.Id == sid || c.NightShiftId == sid
+                                    : c.DayShift?.Id == sid || c.DayShiftId == sid);
+        var dk = mine ? _current!.DateKey : Shamsi.Key(PaDate);
+        if (dk <= 0) dk = int.MaxValue;
+        return (Fuel, num, dk, mine ? _current!.Id : long.MaxValue, form.IsNight, sid);
+    }
 
     /// <summary>
     /// ⛔ <b>کَش به شمارهٔ دفتر بسته است</b> (۱۴۰۵/۰۷/۱۹). گزارشِ صاحب ریپو: «شروعِ
@@ -672,14 +754,15 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
         // ⛔ ختمِ روزِ همین کارت (حتی ذخیره‌نشده) جلوتر از دیسک است
         if (DayEndFor(form) is decimal typed) { Apply(form, start, typed, num); return; }
 
-        if (!_lastBase.TryGetValue((Fuel, num), out var prev))
+        var key = ChainKey(form);
+        if (!_lastBase.TryGetValue(key, out var prev))
         {
             // هنوز نمی‌دانیم — می‌پرسیم و همان لحظه دوباره می‌سنجیم
-            _ = FillLastBaseAsync(Fuel, num, form);
+            _ = FillLastBaseAsync(key, form);
             return;
         }
 
-        Apply(form, start, prev, num);
+        Apply(form, start, prev ?? 0m, num);
     }
 
     /// <summary>
@@ -767,17 +850,19 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
         None();
     }
 
-    private async Task FillLastBaseAsync(FuelType fuel, int num, ShiftFormViewModel form)
+    private async Task FillLastBaseAsync((FuelType Fuel, int Num, int DateKey, long Report, bool Night, long Self) key,
+                                         ShiftFormViewModel form)
     {
         try
         {
             var ver = PumpYaqobi.Persistence.PumpDbContext.Version;
-            var v = await _host.ParchaData.LastBaseAsync(fuel, num);
+            var v = await _host.ParchaData.PrevEndAsync(key.Fuel, key.Num, key.DateKey, key.Report, key.Night, key.Self);
             //  ⚠️ دفتر وسطِ پرسش عوض شد ⇒ این جوابِ کهنه در کَش نمی‌نشیند
             if (ver == PumpYaqobi.Persistence.PumpDbContext.Version && ver == _lastBaseVer)
-                _lastBase[(fuel, num)] = v;
-            if (fuel == Fuel && form.StartValue > 0m)
-                Apply(form, form.StartValue, DayEndFor(form) ?? v, num);
+                _lastBase[key] = v;
+            //  ⚠️ فقط اگر کارت هنوز همان‌جاست (تاریخ/پایه وسطِ پرسش عوض نشده)
+            if (key.Fuel == Fuel && form.StartValue > 0m && ChainKey(form) == key)
+                Apply(form, form.StartValue, DayEndFor(form) ?? v ?? 0m, key.Num);
         }
         catch { /* هشدار رفاه است، نه اصل — نبودش صفحه را نمی‌شکند */ }
     }
@@ -849,6 +934,29 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
 
     [RelayCommand] private void ShowReport(ReportCardViewModel? card) => OpenReport = card;
 
+    /// <summary>
+    /// «✏️ ویرایش»ِ صفحهٔ گزارش — همان ‎EditShiftAsync‎ِ تاریخچه، بعد حساب‌های ورق‌هایی
+    /// که این شیفت در آن‌ها پایه دارد، بعد همین صفحه با دادهٔ تازه. نشد ⇒ کادرها می‌مانند
+    /// و دلیل همان‌جا گفته می‌شود؛ هیچ چیزی نیمه‌کاره نوشته نمی‌شود.
+    /// </summary>
+    internal async Task SaveReportShiftAsync(long reportId, ShiftKind kind, ReportShiftEditor ed)
+    {
+        var res = await _host.ParchaData.EditShiftAsync(reportId, kind, ed.Name, ed.PumpValue,
+                                                        ed.StartValue, ed.EndValue, ed.PriceValue, ed.DebtValue);
+        if (!res.Ok) { ed.Error = "⚠️ " + (res.Error ?? "ذخیره نشد"); return; }
+        foreach (var id in res.WaraqIds)
+        {
+            try { await _host.WaraqPosting.SyncAsync(id); }
+            catch { /* ورق ذخیره شد؛ حساب‌ها با ذخیرهٔ بعدیِ همان ورق درست می‌شوند */ }
+        }
+        ed.Editing = false;
+        _host.Toast("✅ گزارش ویرایش شد — ورق و گاوصندوق هم به‌روز شدند", ToastKind.Ok);
+        _lastBase.Clear();
+        await ReloadLogAsync();
+        //  کارتِ بالای صفحه همان پارچه است؟ دادهٔ تازه‌اش بنشیند (اگر دست‌نخورده است)
+        if (_current?.Id == reportId && !Day.IsEdited && !Night.IsEdited) await LoadCurrentAsync();
+    }
+
     private async Task ReloadLogAsync()
     {
         var count = await _host.ParchaData.CountAsync(Fuel);
@@ -860,7 +968,7 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
         var f = DateFilter.Trim();
         foreach (var r in list.OrderByDescending(r => r.DateKey).ThenByDescending(r => r.Id))
             if (f.Length == 0 || (r.DateShamsi ?? "").Contains(f))
-                Reports.Add(new ReportCardViewModel(r, Calc));
+                Reports.Add(new ReportCardViewModel(r, Calc, SaveReportShiftAsync));
 
         ReportYears.Clear();
         var years = Reports.GroupBy(c => c.Entity.DateKey > 0 ? c.Entity.DateKey / 10000 : 0).ToList();
@@ -960,8 +1068,7 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
                         ToastKind.Warn);
 
         // پایهٔ تازه ⇒ کَشِ «بزرگ‌ترین ختم» کهنه شد
-        _lastBase.Remove((fuel, (int)Shamsi.Num(form.PumpNum)));
-        _lastBase.Remove((fuel, 0));
+        _lastBase.Clear();
 
         // نسخهٔ وب پس از ذخیرهٔ دیزل فرم را خالی می‌کند، پطرول را نه
         if (fuel == FuelType.Diesel) { form.Clear(); MarkBlank(fuel, kind); }

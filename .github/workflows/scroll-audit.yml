@@ -85,6 +85,24 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- waraqtype
 
+      # ══ «12960 نباید 12906 یا 2960 شود، 60.14 همان 60.14» — همهٔ برنامه (۱۴۰۵/۰۷/۱۹) ══
+      # هر خانهٔ هر جدول و هر کادرِ تایپِ هر بخش، حرف‌به‌حرف با کلیدِ واقعی؛ و همان با
+      # تایپِ مستقیمِ اکسل‌گونه (بی F2) و تند، که حرفِ اول را می‌خورد.
+      - name: هر کادر و هر خانه همان که زده شد
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- typeall
+      - name: هر کادر و هر خانه — تایپِ مستقیم و تند
+        working-directory: native
+        env:
+          TA_DIRECT: '1'
+          TA_FAST: '1'
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- typeall
+
+      # ══ گزارشِ پارچه ویرایشی، و فاکتور از خودِ حسابِ قرض‌دار (۱۴۰۵/۰۷/۱۹) ══
+      - name: ویرایشِ گزارشِ پارچه و تاییدِ فاکتور از حساب
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- reportedit
+
       # ══ هر شکلِ نوشته (فاصلهٔ پایانی، تب، نویسهٔ جهت‌نما، ایموجی، تاریخ) وسطِ کادرش،
       # با پیکسلِ واقعی در ۱۰۰/۱۲۵/۱۵۰٪ (۱۴۰۵/۰۷/۱۹) ══
       - name: آزمایشگاهِ وسط‌چینی
@@ -352,6 +370,13 @@ jobs:
         if: ${{ !cancelled() }}
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- waraqtype
+      - name: هر کادر و هر خانه — تایپِ مستقیم و تند (ویندوز)
+        if: ${{ !cancelled() }}
+        working-directory: native
+        env:
+          TA_DIRECT: '1'
+          TA_FAST: '1'
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- typeall
       - name: رساندن به ماهِ گذشته (ویندوز)
         if: ${{ !cancelled() }}
         working-directory: native
