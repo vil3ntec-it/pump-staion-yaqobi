@@ -1,0 +1,37 @@
+name: عکس‌های ویدیوی تبلیغاتی
+
+# خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۹): «ویدیوی تبلیغاتی، همه‌چی از خودِ برنامه».
+# عکسِ برنامهٔ کامپیوتر ‎dotnet‎ می‌خواهد و سندباکسِ Claude آن را ندارد؛ این‌جا
+# ‎PumpYaqobi.UiTests -- promo‎ (۱۶۰۰×۹۰۰، دو برابر) و ‎chatroom‎ می‌دوند و
+# عکس‌ها در ‎promo/shots/‎ِ همان شاخه نوشته می‌شوند. فقط دستی یا با پوشِ همین دو فایل.
+on:
+  workflow_dispatch:
+  push:
+    branches: ['ccr-*']
+    paths:
+      - '.github/workflows/promo-shots.yml'
+      - 'native/PumpYaqobi.UiTests/PromoShots.cs'
+
+permissions:
+  contents: write
+
+jobs:
+  shots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: عکسِ برنامه
+        working-directory: native
+        run: |
+          dotnet run --project PumpYaqobi.UiTests -c Release -- promo "$GITHUB_WORKSPACE/promo/shots"
+          dotnet run --project PumpYaqobi.UiTests -c Release -- chatroom "$GITHUB_WORKSPACE/promo/shots/chat" || true
+      - name: نوشتن در شاخه
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add promo/shots
+          git commit -m "عکس‌های ویدیوی تبلیغاتی [skip ci]" || exit 0
+          git push

@@ -77,6 +77,8 @@ internal static class Program
         if (outDir.Equals("clockjump", StringComparison.OrdinalIgnoreCase)) return ClockJumpProbe.Run();
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- marketing [پوشه]   عکس‌های تبلیغاتی، ۲ برابر
         if (outDir.Equals("marketing", StringComparison.OrdinalIgnoreCase)) return MarketingShots.Run(args.Length > 1 ? args[1] : null);
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- promo [پوشه]   عکس‌های ویدیوی تبلیغاتی، ۱۶:۹
+        if (outDir.Equals("promo", StringComparison.OrdinalIgnoreCase)) return PromoShots.Run(args.Length > 1 ? args[1] : null);
         // ══ «فایلِ کاملِ برنامه» + دکمه‌های «فرستادن به سرور» و «نصب از فایل» (۱۴۰۵/۰۷/۱۵)
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- fullbackup [پوشهٔ عکس]
         if (outDir.Equals("fullbackup", StringComparison.OrdinalIgnoreCase))
