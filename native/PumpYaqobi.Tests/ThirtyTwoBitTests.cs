@@ -22,11 +22,17 @@ namespace PumpYaqobi.Tests;
 [Collection(AppHostCollection.Name)]
 public class ThirtyTwoBitTests : IDisposable
 {
-    public ThirtyTwoBitTests() => AppBase.LocalIdOverride = "aaaa1111";
+
+    public ThirtyTwoBitTests()
+    {
+        AppBase.LocalIdOverride = "aaaa1111";
+        UpdateService.ServerFeed = () => null;
+    }
 
     public void Dispose()
     {
         UpdateService.TestTransport = null;
+        UpdateService.ServerFeed = () => UpdateService.ServerFeedUrl;
         AppBase.LocalIdOverride = null;
         AppArch.Override = null;
     }

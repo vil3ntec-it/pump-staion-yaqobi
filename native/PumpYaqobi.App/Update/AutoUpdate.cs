@@ -26,7 +26,9 @@ namespace PumpYaqobi.App.Update;
 public static class AutoUpdate
 {
     public static readonly TimeSpan FirstDelay = TimeSpan.FromSeconds(90);
-    public static readonly TimeSpan Every = TimeSpan.FromHours(6);
+    //  ⚠️ پانزده دقیقه، نه شش ساعت (۱۴۰۵/۰۷/۱۹): پرسش حالا از سرورِ خودِ پمپ
+    //  است — یک پاسخِ کوچک، بی سقفِ نرخ — و «درجا که گذاشتم برسد».
+    public static readonly TimeSpan Every = TimeSpan.FromMinutes(15);
     public static readonly TimeSpan RetryOffline = TimeSpan.FromMinutes(30);
 
     /// <summary>در آزمون‌ها و سنجه‌ها خاموش — همان قاعدهٔ ‎SyncEngine.Disabled‎.</summary>
