@@ -498,7 +498,7 @@ CloudLink، SyncEngine، StationPublisher، BackupPusher، LicenseGuard، TimeSy
 ⛔ قیمت را از خودش پر نکند.
 ```
 
-#### چ۳ — نماینده‌های فروش  ⏳
+#### چ۳ — نماینده‌های فروش  ✅ شد (سرورِ حساب ۲.۱۱.۱۸: `sales_reps` + کدِ تخفیفِ هر نماینده + `/api/rep/me` فقط فروش‌های خودش، درصد فقط از پنل و بی پیش‌فرض — `test/sales-reps.test.js` و `test/portal-rep.mjs`ِ ریپوی shop؛ پنل ۱.۵۰.۳۴ زبانهٔ «نماینده‌ها» — `account-admin.mjs`ِ ریپوی server)
 
 ```
 نقشِ «نماینده» در سرورِ حساب و پنل: کدِ تخفیفِ هر نماینده، فروش‌های او، و
