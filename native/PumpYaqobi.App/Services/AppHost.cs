@@ -80,6 +80,7 @@ public sealed class AppHost
         Backup = new BackupService(Db, Permissions);
         Health = new LedgerHealthService(Db);
         Parity = new LedgerParityService(Db, Debt);
+        Drill = new RestoreDrill(Db, Backup);
         History = new HistoryService(Db, Permissions, Exchange, Retail, Company, AmanatCalc, Amanat, Waraq);
         SafeLedger = new LedgerService<SafeEntry>(Db, Permissions, Trash, "safe",
             r => (r.Title ?? "") + " — " + Shamsi.Money(r.Amount));
@@ -381,6 +382,8 @@ public sealed class AppHost
 
     /// <summary>«سنجهٔ برابری» — عددهای مشتقِ ذخیره‌شده با ردیف‌ها (روزی یک بار).</summary>
     public LedgerParityService Parity { get; }
+    /// <summary>⛔ شورا ب۵: آزمونِ بازیابیِ ماهانه.</summary>
+    public RestoreDrill Drill { get; }
 
     /// <summary>دفترِ دوربین‌های مداربسته — افزودن و حذفش پشتِ اجازهٔ مدیر.</summary>
     public CameraDataService Cameras { get; }

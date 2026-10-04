@@ -152,7 +152,9 @@ public class TilCompany : EntityBase
     /// این را می‌شمارد تا مثل خودِ جدول از صفر شروع کند؛ خریدهای قدیم در
     /// آرشیو می‌مانند و خودِ خریدِ مخزن هیچ‌وقت پاک نمی‌شود.
     /// </summary>
+    [SyncParent(typeof(FuelPurchase))]
     public long PurchaseCheckpointPetrol { get; set; }
+    [SyncParent(typeof(FuelPurchase))]
     public long PurchaseCheckpointDiesel { get; set; }
 
     /// <summary>رمزِ کیو‌آرِ زنده — همان قاعدهٔ ‎DebtAccount.QrKey‎.</summary>
@@ -166,13 +168,16 @@ public class TilCompany : EntityBase
 /// </summary>
 public class CompanyTableArchive : EntityBase
 {
+    [SyncParent(typeof(TilCompany))]
     public long CompanyId { get; set; }
     public FuelType Fuel { get; set; } = FuelType.Petrol;
     public string? CreatedShamsi { get; set; }
     public string RowsJson { get; set; } = "[]";
     public int RowCount { get; set; }
     /// <summary>بازهٔ خریدهای مخزنِ همین جدول: ‎purchasesAfter < Id ≤ purchasesBefore‎.</summary>
+    [SyncParent(typeof(FuelPurchase))]
     public long PurchasesAfter { get; set; }
+    [SyncParent(typeof(FuelPurchase))]
     public long PurchasesBefore { get; set; }
 }
 
@@ -397,6 +402,7 @@ public class Invoice : EntityBase
     public decimal? RateOnApprove { get; set; }
 
     /// <summary>حسابِ قرض‌داری که فاکتور رویش نشسته.</summary>
+    [SyncParent(typeof(DebtAccount))]
     public long? DebtAccountId { get; set; }
     /// <summary>
     /// لیترِ «رسیدِ تیل»ی که با تاییدِ این فاکتور به حساب اضافه شد.
@@ -446,6 +452,7 @@ public class SalaryPayment : EntityBase
 /// <summary>کمبودیِ کارمند — کسریِ پولِ شیفت.</summary>
 public class StaffShortage : EntityBase
 {
+    [SyncParent(typeof(StaffMember))]
     public long? StaffId { get; set; }
     public string? Name { get; set; }
     public string? DateShamsi { get; set; }

@@ -170,6 +170,9 @@ public sealed class SyncEngine : IAsyncDisposable
     /// <summary>اعلانِ تازه‌ای رسید (از راهِ تپش یا WSS).</summary>
     public event Action<CloudNotice>? NoticeArrived;
 
+    /// <summary>⛔ شورا ب۱: این دور N تعارض دید — بی‌صدا نماند.</summary>
+    public event Action<int>? ConflictsFound;
+
     // ── راه انداختن ────────────────────────────────────────────────────
 
     /// <summary>حلقه را روشن می‌کند. دو بار صدا زدنش یکی بیشتر نمی‌سازد.</summary>
@@ -356,7 +359,7 @@ public sealed class SyncEngine : IAsyncDisposable
     {
         await _stepGate.WaitAsync(ct);
         try { await StepCoreAsync(force, ct); }
-        finally { _stepGate.Release(); }
+        finally { _store.ClearPushed(); _stepGate.Release(); }
     }
 
     private async Task StepCoreAsync(bool force, CancellationToken ct)
@@ -520,6 +523,8 @@ public sealed class SyncEngine : IAsyncDisposable
             {
                 _fails = 0;
                 _store.MarkResults(res.Results);
+                //  ⛔ شورا ب۱: «همین حالا رفته» — گرفتنِ همین دور مالِ ما را با opِ کهنه‌تر نمی‌پوشاند
+                _store.NotePushed(batch, res.Seqs);
                 _store.Prune();
                 LastOkAt = AppClock.Now;
                 _store.Update(x =>
@@ -585,6 +590,7 @@ public sealed class SyncEngine : IAsyncDisposable
                 //  کنارگذاشته‌های دورِ قبل اول (قدیمی‌ترند)، بعد رسیده‌های تازه
                 var batch = _deferred.Count == 0 ? pull.Ops : _deferred.Concat(pull.Ops).ToList();
                 var applied = _store.ApplyIncoming(batch);
+                if (applied.Conflicts > 0) ConflictsFound?.Invoke(applied.Conflicts);
                 _deferred.Clear();
                 foreach (var op in applied.FailedOps)
                 {

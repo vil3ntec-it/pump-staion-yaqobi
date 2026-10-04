@@ -61,6 +61,7 @@ internal static class TestSettingsHome
             //  حلقه واقعاً به `api.vill3n.top` درخواست می‌زد — از رانرِ CI.
             //  سنجهٔ خودش (`SyncStoreTests`) موتور را لازم ندارد.
             PumpYaqobi.App.Services.SyncEngine.Disabled = true;
+            PumpYaqobi.App.ViewModels.MainViewModel.RestoreDrillDisabled = true;
             PumpYaqobi.App.Services.ExitBackup.Disabled = true;
             PumpYaqobi.App.Update.AutoUpdate.Disabled = true;
 

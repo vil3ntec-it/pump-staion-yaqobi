@@ -128,21 +128,27 @@ public static class OpLog
     /// کلیدِ خارجی ترجمه می‌شوند (<c>SyncStore.DataTables</c>).
     /// ⛔ ستونِ تازه‌ای که شمارهٔ ردیفِ جدولِ دیگری را نگه دارد، این‌جا هم.
     /// </summary>
-    public static readonly IReadOnlyList<(string Entity, string Property, string Parent)> SoftParents = new[]
+    public static readonly IReadOnlyList<(string Entity, string Property, string Parent)> SoftParents = ReadSoftParents();
+
+    /// <summary>
+    /// ⛔ شورا، ب۳ — از <see cref="SyncParentAttribute"/>ِ خودِ موجودیت‌ها، نه فهرستِ دستی.
+    /// ستونِ تازه‌ای که شمارهٔ ردیفِ جدولِ دیگری را نگه دارد فقط آن ویژگی را می‌خواهد.
+    /// </summary>
+    private static IReadOnlyList<(string Entity, string Property, string Parent)> ReadSoftParents()
     {
-        (nameof(Expense), nameof(Expense.SalaryStaffId), nameof(StaffMember)),
-        (nameof(RasidEntry), nameof(RasidEntry.InvoiceId), nameof(Invoice)),
-        (nameof(DebtRow), nameof(DebtRow.InvoiceId), nameof(Invoice)),
-        (nameof(DebtTableArchive), nameof(DebtTableArchive.AccountId), nameof(DebtAccount)),
-        (nameof(CompanyTableArchive), nameof(CompanyTableArchive.CompanyId), nameof(TilCompany)),
-        (nameof(Invoice), nameof(Invoice.DebtAccountId), nameof(DebtAccount)),
-        (nameof(StaffShortage), nameof(StaffShortage.StaffId), nameof(StaffMember)),
-        //  مرزِ بازهٔ خریدهای آرشیوشده — شمارهٔ خرید، نه شمارش
-        (nameof(TilCompany), nameof(TilCompany.PurchaseCheckpointPetrol), nameof(FuelPurchase)),
-        (nameof(TilCompany), nameof(TilCompany.PurchaseCheckpointDiesel), nameof(FuelPurchase)),
-        (nameof(CompanyTableArchive), nameof(CompanyTableArchive.PurchasesAfter), nameof(FuelPurchase)),
-        (nameof(CompanyTableArchive), nameof(CompanyTableArchive.PurchasesBefore), nameof(FuelPurchase)),
-    };
+        var list = new List<(string, string, string)>();
+        foreach (var t in typeof(EntityBase).Assembly.GetTypes())
+        {
+            if (!t.IsClass || t.IsAbstract || !typeof(EntityBase).IsAssignableFrom(t)) continue;
+            foreach (var pr in t.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+            {
+                var a = (SyncParentAttribute?)Attribute.GetCustomAttribute(pr, typeof(SyncParentAttribute), true);
+                if (a is not null) list.Add((t.Name, pr.Name, a.Parent.Name));
+            }
+        }
+        list.Sort((x, y) => string.CompareOrdinal(x.Item1 + "." + x.Item2, y.Item1 + "." + y.Item2));
+        return list;
+    }
 
     private static readonly object RankLock = new();
     private static Microsoft.EntityFrameworkCore.Metadata.IModel? _rankFor;

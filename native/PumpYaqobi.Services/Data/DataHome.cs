@@ -101,6 +101,9 @@ public static class DataHome
     public static Outcome Settle(string target, string? remembered, string legacy)
     {
         if (!CanWrite(target)) return new(legacy, "");
+        //  ⛔ شورا، ب۴: جابه‌جاییِ نیمه‌کاره (برق وسطِ کار رفت) «اطلاعات دارد» نیست —
+        //  آن‌چه نشست کنار می‌رود (پاک نه) و از منبع دوباره کپی می‌شود.
+        if (File.Exists(Path.Combine(target, Incomplete))) SetPartialAside(target);
         if (HasData(target)) return new(target, "");
 
         foreach (var src in new[] { remembered, legacy })
@@ -146,8 +149,32 @@ public static class DataHome
     /// بعد جابه‌جا. ⛔ دفتر و تنظیمات <b>آخر</b> جابه‌جا می‌شوند — پس اگر وسطِ
     /// کار برق رفت، مقصد هنوز «بی اطلاعات» است و بارِ بعد از نو کپی می‌شود.
     /// </summary>
+    /// <summary>نشانِ «جابه‌جایی هنوز تمام نشده» — پیش از نخستین جابه‌جایی نوشته و پس از آخرین برداشته می‌شود.</summary>
+    public const string Incomplete = ".copy-incomplete";
+
+    /// <summary>فقط برای آزمون: پس از هر گامِ جابه‌جایی صدا زده می‌شود (رفتنِ برق را می‌سازد).</summary>
+    public static Action<string>? StepHook;
+
+    /// <summary>استثنایی که آزمون برای «برق رفت» می‌اندازد — پاک‌سازیِ پایانی را هم نمی‌کند.</summary>
+    public sealed class PowerCut : Exception { }
+
+    /// <summary>آن‌چه از جابه‌جاییِ نیمه‌کاره نشست، با نامِ تاریخ‌دار کنار می‌رود — هرگز پاک نمی‌شود.</summary>
+    private static void SetPartialAside(string target)
+    {
+        var aside = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(target).TrimEnd('\\', '/'))!,
+                                 ".data-partial-" + PumpYaqobi.Domain.AppClock.UtcNow.ToString("yyyyMMddHHmmss") + "-" + Guid.NewGuid().ToString("N")[..6]);
+        Directory.CreateDirectory(aside);
+        foreach (var f in Directory.GetFiles(target))
+            if (!string.Equals(Path.GetFileName(f), Incomplete, StringComparison.Ordinal))
+                File.Move(f, Path.Combine(aside, Path.GetFileName(f)));
+        foreach (var d in Directory.GetDirectories(target))
+            Directory.Move(d, Path.Combine(aside, Path.GetFileName(d)));
+        File.Delete(Path.Combine(target, Incomplete));
+    }
+
     public static bool CopyTree(string src, string target)
     {
+        var cut = false;
         var parent = Path.GetDirectoryName(Path.GetFullPath(target).TrimEnd('\\', '/'))!;
         var stage = Path.Combine(parent, ".data-incoming-" + Guid.NewGuid().ToString("N")[..8]);
         try
@@ -163,11 +190,14 @@ public static class DataHome
             }
 
             Directory.CreateDirectory(target);
+            File.WriteAllText(Path.Combine(target, Incomplete), src);
+            StepHook?.Invoke("marker");
             //  اول همه جز دفتر و تنظیمات
             foreach (var d in Directory.GetDirectories(stage))
             {
                 var to = Path.Combine(target, Path.GetFileName(d));
                 if (!Directory.Exists(to)) Directory.Move(d, to);
+                StepHook?.Invoke("dir:" + Path.GetFileName(d));
             }
             var last = new[] { "pump.db", "settings.json" };
             foreach (var f in Directory.GetFiles(stage))
@@ -175,18 +205,22 @@ public static class DataHome
                 if (last.Contains(Path.GetFileName(f), StringComparer.OrdinalIgnoreCase)) continue;
                 var to = Path.Combine(target, Path.GetFileName(f));
                 if (!File.Exists(to)) File.Move(f, to);
+                StepHook?.Invoke("file:" + Path.GetFileName(f));
             }
             foreach (var name in last)
             {
                 var f = Path.Combine(stage, name);
                 if (File.Exists(f)) File.Move(f, Path.Combine(target, name));
+                StepHook?.Invoke("last:" + name);
             }
+            File.Delete(Path.Combine(target, Incomplete));
             return true;
         }
+        catch (PowerCut) { cut = true; throw; }
         catch { return false; }
         finally
         {
-            try { if (Directory.Exists(stage)) Directory.Delete(stage, true); } catch { }
+            if (!cut) try { if (Directory.Exists(stage)) Directory.Delete(stage, true); } catch { }
         }
     }
 

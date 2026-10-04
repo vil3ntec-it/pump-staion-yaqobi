@@ -97,7 +97,7 @@ public class Round3FixTests : IDisposable
             rep.DayShift!.SavedAt = "1405/07/11";
             await db.SaveChangesAsync();
             await h.Sync.SyncSavedShiftAsync(ShiftKind.Day, rep.DayShift, FuelType.Petrol,
-                ShiftWaraqSyncService.SrcKeyOf(FuelType.Petrol, rep.Id, ShiftKind.Day));
+                ShiftWaraqSyncService.SrcKeyOf(FuelType.Petrol, rep, ShiftKind.Day));
         }
 
         await using var check = h.Db.Create();

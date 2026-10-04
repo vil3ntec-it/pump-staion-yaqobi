@@ -1104,6 +1104,8 @@
                       Command="{Binding OpenBackupsCommand}" />
             </Grid>
             <StackPanel>
+                <TextBlock Text="{Binding DrillText}" TextWrapping="Wrap" FontWeight="Bold" FontSize="12.5" Margin="0,0,0,10"
+                           Foreground="{Binding DrillBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                 <TextBlock Text="هنوز پشتیبانی گرفته نشده — هر روز سرِ ورود خودکار گرفته می‌شود." Classes="muted" FontSize="12"
                            TextWrapping="Wrap" IsVisible="{Binding !Backups.Count}" />
                 <ItemsControl ItemsSource="{Binding Backups}">

@@ -73,8 +73,7 @@ public sealed class WaraqPostingService
     { _dbf = dbf; _perm = perm; _calc = calc; _safe = safe; }
 
     /// <summary>شناسهٔ ورق در کلید — ورقی که از سایت آمده با شناسهٔ خودِ سایت.</summary>
-    public static string WaraqKey(WaraqEntry w) =>
-        string.IsNullOrWhiteSpace(w.LegacyId) ? "id" + w.Id : w.LegacyId!;
+    public static string WaraqKey(WaraqEntry w) => SrcKeys.Waraq(w);   // ⛔ شورا ب۲: شناسهٔ سراسری، نه شمارهٔ محلی
 
     /// <summary>‎w.id + '|' + shift + '|' + i‎ — مو‌به‌مو کلیدِ سایت.</summary>
     public static string SrcKeyOf(WaraqEntry w, ShiftKind kind, int index) =>

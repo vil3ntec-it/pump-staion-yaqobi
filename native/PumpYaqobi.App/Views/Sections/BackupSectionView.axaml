@@ -56,6 +56,62 @@
                       IsVisible="{Binding CanRestore}" IsEnabled="{Binding !Busy}" />
             </WrapPanel>
 
+            <!-- ⛔ شورا ب۵: بکاپی که فقط روی همین دیسک است، با یک دیسکِ سوخته می‌رود -->
+            <Border Classes="card calm" Padding="12" IsVisible="{Binding OnlyLocal}">
+              <StackPanel Spacing="8">
+                <TextBlock Text="⚠️ بکاپ فقط روی همین کامپیوتر است" FontWeight="Bold"
+                           Foreground="{DynamicResource Pump.Ink.Warn}" />
+                <TextBlock Classes="muted" TextWrapping="Wrap"
+                           Text="اگر این دیسک خراب شود یا کامپیوتر برود، بکاپ‌ها هم با آن می‌روند. یکی از این دو کافی است: فایلِ بکاپ روی فلش (ماهی یک بار)، یا فرستادن به سرور (هر هفته خودکار)." />
+                <WrapPanel>
+                  <Button Classes="accent" Content="💾 فایلِ بکاپ روی فلش" Margin="0,0,8,0"
+                          Command="{Binding ExportFullCommand}" IsEnabled="{Binding !Busy}" />
+                  <Button Classes="accent" Content="📤 فرستادن به سرور"
+                          Command="{Binding SendToServerCommand}" IsEnabled="{Binding !SendingToServer}" />
+                </WrapPanel>
+              </StackPanel>
+            </Border>
+
+            <!-- ⛔ شورا ب۵: آزمونِ بازیابی — ماهی یک بار خودکار، و همین حالا با یک دکمه -->
+            <WrapPanel>
+              <Button Classes="ghost" Content="🧪 آزمونِ بازیابی — همین حالا" Margin="0,0,8,0"
+                      Command="{Binding DrillNowCommand}" IsEnabled="{Binding !Busy}" />
+              <TextBlock Text="{Binding DrillText}" TextWrapping="Wrap" FontWeight="Bold" VerticalAlignment="Center"
+                         Foreground="{Binding DrillBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
+                         IsVisible="{Binding DrillText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </WrapPanel>
+
+            <!-- ⛔ شورا ب۱: تعارضِ دو کامپیوتر دیده می‌شود، نه بی‌صدا -->
+            <Border Classes="card calm" Padding="12" IsVisible="{Binding HasConflicts}">
+              <StackPanel Spacing="8">
+                <TextBlock Text="{Binding ConflictsTitle}" FontWeight="Bold" TextWrapping="Wrap"
+                           Foreground="{DynamicResource Pump.Ink.Warn}" />
+                <TextBlock Classes="muted" TextWrapping="Wrap"
+                           Text="هیچ مقداری گم نشده: یکی در دفتر است و دیگری همین‌جا. «همین بماند» فقط این یادداشت را می‌بندد؛ «آن یکی را برگردان» مقدارِ دیگر را می‌نشاند و به کامپیوترهای دیگر هم می‌فرستد." />
+                <ItemsControl ItemsSource="{Binding Conflicts}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ConflictRowViewModel">
+                      <Grid ColumnDefinitions="*,Auto" Margin="0,4">
+                        <StackPanel Spacing="2">
+                          <TextBlock Text="{Binding Title}" FontWeight="Bold" />
+                          <TextBlock Text="{Binding Detail}" TextWrapping="Wrap" />
+                          <TextBlock Text="{Binding When}" Classes="muted" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                          <Button Classes="ghost" Content="✔ همین بماند"
+                                  Command="{Binding Owner.KeepConflictCommand}"
+                                  CommandParameter="{Binding}" />
+                          <Button Classes="accent" Content="↩ آن یکی را برگردان"
+                                  Command="{Binding Owner.RestoreConflictCommand}"
+                                  CommandParameter="{Binding}" />
+                        </StackPanel>
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
+
             <TextBlock Text="{Binding HealthText}" TextWrapping="Wrap" FontWeight="Bold"
                        Foreground="{Binding HealthBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
                        IsVisible="{Binding HealthText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />

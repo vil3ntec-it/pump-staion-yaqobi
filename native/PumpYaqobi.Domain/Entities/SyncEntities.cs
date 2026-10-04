@@ -137,3 +137,33 @@ public class SyncStateRow
     /// </summary>
     public string AccountId { get; set; } = string.Empty;
 }
+
+/// <summary>
+/// ══ شورا، ب۱ — تعارضِ دو کامپیوتر، با ردپا ═══════════════════════════════
+///
+/// یک فیلد که هم این‌جا عوض شده و هنوز نرفته (یا همین حالا رفته) و هم از
+/// دستگاهِ دیگر مقدارِ دیگری رسیده. هیچ‌کدام بی‌صدا گم نمی‌شود: آن‌که در
+/// دفتر نماند، این‌جا می‌ماند و «مقدارِ من را برگردان» با یک opِ تازه برش
+/// می‌گرداند.
+/// ⚠️ مثلِ <see cref="SyncOp"/> خودش <see cref="EntityBase"/> نیست: همگام نمی‌شود
+/// و op نمی‌سازد — ردپای همین کامپیوتر است.
+/// </summary>
+public class SyncConflict
+{
+    public long Id { get; set; }
+    /// <summary>نامِ موجودیت (مثلِ <c>SafeEntry</c>).</summary>
+    public string TableName { get; set; } = string.Empty;
+    public string RowUid { get; set; } = string.Empty;
+    public string Field { get; set; } = string.Empty;
+    /// <summary>مقدارِ همین کامپیوتر، به شکلِ fieldsِ یک op (با ‎"F@"‎ اگر بود).</summary>
+    public string LocalJson { get; set; } = "{}";
+    /// <summary>مقدارِ رسیده (خامِ JSON).</summary>
+    public string RemoteJson { get; set; } = "null";
+    /// <summary>کدام در دفتر ماند: ‎"remote"‎ (سرور جلوتر بود) یا ‎"local"‎ (مالِ ما بعد از آن رفته بود).</summary>
+    public string Winner { get; set; } = "remote";
+    public string RemoteOpId { get; set; } = string.Empty;
+    /// <summary>زمانِ دیدن (میلی‌ثانیهٔ یونیکس).</summary>
+    public long At { get; set; }
+    /// <summary>۰ باز · ۱ «همین بماند» · ۲ «مقدارِ دیگر برگشت».</summary>
+    public int State { get; set; }
+}

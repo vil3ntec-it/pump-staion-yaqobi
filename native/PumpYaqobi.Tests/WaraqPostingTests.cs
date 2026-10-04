@@ -214,9 +214,10 @@ public class WaraqPostingTests
     [Fact]
     public void The_source_key_is_the_same_one_the_site_used()
     {
-        var w = new WaraqEntry { Id = 7 };
-        Assert.Equal("id7|day|0", WaraqPostingService.SrcKeyOf(w, ShiftKind.Day, 0));
-        Assert.Equal("id7|night|3", WaraqPostingService.SrcKeyOf(w, ShiftKind.Night, 3));
+        //  ⛔ شورا ب۲: شناسهٔ سراسری، نه شمارهٔ محلی — روی کامپیوترِ دوم همان کلید
+        var w = new WaraqEntry { Id = 7, SyncUid = "01HXYZ" };
+        Assert.Equal("u01HXYZ|day|0", WaraqPostingService.SrcKeyOf(w, ShiftKind.Day, 0));
+        Assert.Equal("u01HXYZ|night|3", WaraqPostingService.SrcKeyOf(w, ShiftKind.Night, 3));
 
         w.LegacyId = "wq1758";
         Assert.Equal("wq1758|day|2", WaraqPostingService.SrcKeyOf(w, ShiftKind.Day, 2));

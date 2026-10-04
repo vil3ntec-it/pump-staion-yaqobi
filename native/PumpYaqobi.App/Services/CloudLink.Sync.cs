@@ -22,6 +22,9 @@ public sealed record SyncPushResult(bool Ok, int Applied, long Cursor,
 
     /// <summary>سرور بدنه را «بیش از حد بزرگ» (۴۱۳) رد کرد — تلاشِ دوباره هرگز نمی‌رسد.</summary>
     public bool TooLarge { get; init; }
+
+    /// <summary>‎op_id ⇒ server_seq‎ِ همان op (شورا ب۱).</summary>
+    public IReadOnlyDictionary<string, long> Seqs { get; init; } = new Dictionary<string, long>();
 }
 
 /// <summary>پاسخِ <c>GET /api/sync/v1/pull</c>.</summary>
@@ -156,11 +159,14 @@ public sealed partial class CloudLink
         }
 
         var map = new Dictionary<string, string>(StringComparer.Ordinal);
+        var seqs = new Dictionary<string, long>(StringComparer.Ordinal);
         if (res.Json.TryGetProperty("results", out var arr) && arr.ValueKind == JsonValueKind.Array)
             foreach (var r in arr.EnumerateArray())
             {
                 var id = Str(r, "op_id");
                 if (id.Length == 0) continue;
+                //  ⛔ شورا ب۱: جای همین op در ترتیبِ سرور — گرفتنِ همین دور با آن سنجیده می‌شود
+                if (Num(r, "server_seq") is > 0 and var sq) seqs[id] = sq;
                 var status = Str(r, "status");
                 //  دلیلِ رد مهم‌تر از خودِ «rejected» است: همان در «جزئیات» دیده می‌شود
                 map[id] = status == "rejected" ? (Str(r, "reason") is { Length: > 0 } why ? why : "rejected") : status;
@@ -174,7 +180,7 @@ public sealed partial class CloudLink
             (int)Num(res.Json, "schema_version"),
             res.Json.TryGetProperty("upgrade_available", out var up) && up.ValueKind == JsonValueKind.True,
             false,
-            "");
+            "") { Seqs = seqs };
     }
 
     /// <summary>

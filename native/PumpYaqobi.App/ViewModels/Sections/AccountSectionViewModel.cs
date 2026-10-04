@@ -1716,6 +1716,9 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     //  سنجه: `dotnet run --project PumpYaqobi.UiTests -c Release -- loginart`.
 
     /// <summary>ردیف‌های تب‌ها — کارمندان، تاریخچهٔ بخش‌ها، پشتیبان‌ها.</summary>
+    [ObservableProperty] private string _drillText = "";
+    [ObservableProperty] private string _drillBrushKey = "Pump.Muted";
+
     private async Task LoadRowsAsync()
     {
         try
@@ -1747,6 +1750,11 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
             foreach (var r in _backupRows.Take(6)) Backups.Add(r);
         }
         catch { _backupRows = new(); }
+
+        //  ⛔ شورا ب۵: نتیجهٔ آزمونِ بازیابیِ ماهانه، همین‌جا کنارِ پشتیبان‌ها
+        var drill = _host.Drill.Last();
+        DrillText = drill?.Text ?? "🧪 آزمونِ بازیابی هنوز نرفته — ماهی یک بار پس از ورود خودش می‌رود.";
+        DrillBrushKey = drill is { Ok: false } ? "Pump.Danger" : drill is null ? "Pump.Muted" : "Pump.Ok";
 
         FillRows();
     }

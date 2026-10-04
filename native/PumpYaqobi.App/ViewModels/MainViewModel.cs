@@ -33,6 +33,11 @@ public sealed partial class BannerItemViewModel : ObservableObject
 /// </summary>
 public sealed partial class MainViewModel : ObservableObject
 {
+    /// <summary>⛔ شورا ب۵: آزمونِ بازیابیِ ماهانه در سنجه‌ها خاموش است (هر سنجه دفترِ تازه دارد و
+    /// عکس و رونوشتِ اضافه فقط شمارِ دستورهای دیتابیس را در ‎idle‎ به‌هم می‌زد). خودِ آزمون را
+    /// ‎RestoreDrillTests‎ می‌سنجد.</summary>
+    public static bool RestoreDrillDisabled { get; set; }
+
     private readonly AppSettings _settings;
 
     public MainViewModel(AppSettings? settings = null)
@@ -108,7 +113,16 @@ public sealed partial class MainViewModel : ObservableObject
             // همان ‎_autoDailyBackup‎ی نسخهٔ وب، ولی از فایلِ دیتابیس. روی نخِ
             // دیگر می‌رود تا باز شدنِ برنامه معطلِ آن نماند، و خودش هیچ استثنایی
             // بیرون نمی‌دهد — بکاپِ خودکار نباید ورودِ کاربر را بشکند.
-            _ = Task.Run(() => AppHost.Current.Backup.SnapshotToday());
+            //  ⛔ شورا ب۵: و ماهی یک بار همان عکس در پوشهٔ موقت باز و با دفتر سنجیده می‌شود
+            //  (پشتِ سرِ عکس، نه هم‌زمان با آن). سرخ شد ⇒ یک توست، و نتیجه در پروفایل.
+            _ = Task.Run(() =>
+            {
+                AppHost.Current.Backup.SnapshotToday();
+                if (RestoreDrillDisabled) return;
+                var d = AppHost.Current.Drill.MonthlyOnce();
+                if (d is { Ok: false })
+                    Dispatcher.UIThread.Post(() => AppHost.Current.Toast(d.Text, ToastKind.Error));
+            });
 
             // ══ خوراکِ اپِ کارمندان و ربات ═══════════════════════════════════
             // خواستهٔ صاحب ریپو: «هر تغییری که در اپ انجام می‌شود توی ربات هم
@@ -156,6 +170,9 @@ public sealed partial class MainViewModel : ObservableObject
             var sync = AppHost.Current.Sync;
             sync.Changed += () => Dispatcher.UIThread.Post(() => { TickSyncDot(); TickSyncPrime(); });
             sync.NoticeArrived += n => Dispatcher.UIThread.Post(() => ShowNotice(n));
+            sync.ConflictsFound += n => Dispatcher.UIThread.Post(() => AppHost.Current.Toast(
+                $"⚠️ {n} خانه هم این‌جا و هم روی کامپیوترِ دیگر عوض شده بود — هیچ‌کدام گم نشد؛ "
+                + "در «تنظیمات ← بک‌اپ ← تعارض‌ها» ببینید و انتخاب کنید", ToastKind.Warn));
             sync.PrimeFinished += (okPrime, why, got) =>
                 Dispatcher.UIThread.Post(() => _ = OnPrimeFinishedAsync(okPrime, why, got));
             sync.Start();

@@ -175,7 +175,7 @@ public sealed class WaraqDataService
         if (w is null) return;
         await _trash.RememberAsync(db, "waraq", "ورقِ " + w.DateShamsi, w, ct);
 
-        var salesKeys = new[] { "wq-sales-" + w.Id + "-day", "wq-sales-" + w.Id + "-night" };
+        var salesKeys = new[] { SrcKeys.WaraqSales(w, ShiftKind.Day), SrcKeys.WaraqSales(w, ShiftKind.Night) };
         db.SafeEntries.RemoveRange(
             await db.SafeEntries.Where(e => e.SrcKey != null && salesKeys.Contains(e.SrcKey))
                                 .ToListAsync(ct));

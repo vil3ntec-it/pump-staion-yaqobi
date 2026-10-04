@@ -348,7 +348,7 @@ public sealed class TrashService
                 // ⛔ و آن‌چه همین ورق در دفترها نشانده بود و با همان حذف رفت
                 // (‎WaraqDataService.DeleteAsync‎): فروشِ گاوصندوق، ردیف‌های حساب‌ها و
                 // مصرف‌ها. تا ۳.۱.۲۱۳ ورق برمی‌گشت و این‌ها نه.
-                var salesKeys = new[] { "wq-sales-" + w.Id + "-day", "wq-sales-" + w.Id + "-night" };
+                var salesKeys = new[] { SrcKeys.WaraqSales(w, ShiftKind.Day), SrcKeys.WaraqSales(w, ShiftKind.Night) };
                 await ReviveChildren(db.SafeEntries, x => x.SrcKey != null && salesKeys.Contains(x.SrcKey), when, got, ct);
                 var prefix = WaraqPostingService.WaraqKey(w) + "|";
                 await ReviveChildren(db.DebtRows, x => x.SrcKey != null && x.SrcKey.StartsWith(prefix), when, got, ct);
@@ -371,7 +371,7 @@ public sealed class TrashService
                     await ReviveChildren(db.ShiftDataSet, x => ids.Contains(x.Id), when, got, ct);
 
                 // ⛔ و پایه‌هایی که همین پارچه در ورق ساخته بود (با همان حذف رفتند)
-                var keys = ShiftWaraqSyncService.ReportKeys(r.Id);
+                var keys = ShiftWaraqSyncService.ReportKeys(r);
                 await ReviveChildren(db.WaraqPumps, x => x.SrcKey != null && keys.Contains(x.SrcKey), when, got, ct);
                 return 1;
             }

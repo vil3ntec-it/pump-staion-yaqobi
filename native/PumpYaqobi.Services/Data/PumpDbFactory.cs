@@ -213,14 +213,152 @@ public sealed class PumpDbFactory
         // دلیل) افتاده باشد شمار را عوض می‌کند و وصله دوباره می‌رود.
         var stamp = typeof(PumpDbFactory).Assembly.ManifestModule.ModuleVersionId.ToString("N")
                     + ":" + SchemaObjects(db);
-        if (ReadStamp(db) == stamp) return;
+        if (ReadStamp(db) == stamp) { MigrateSrcKeys(db); return; }
 
         PatchTables(db);
         PatchColumns(db);
         PatchSyncUid(db);
         PatchIndexes(db);
+        MigrateSrcKeys(db);
         WriteStamp(db, typeof(PumpDbFactory).Assembly.ManifestModule.ModuleVersionId.ToString("N")
                        + ":" + SchemaObjects(db));
+    }
+
+    /// <summary>نشانِ «کلیدهای منبعِ این دفتر شناسهٔ سراسری دارند» (شورا ب۲).</summary>
+    public const string SrcKeysFlag = "srckey.v2";
+
+    /// <summary>
+    /// ══ شورا، ب۲ — مهاجرتِ یک‌بارهٔ کلیدهای منبع به شناسهٔ سراسری ══════════
+    ///
+    /// هر ‎SrcKey‎ی که هنوز شمارهٔ محلی دارد (<see cref="SrcKeys.IsLocal"/>) با
+    /// <see cref="SrcKeys.Migrate"/> ترجمه می‌شود — در پنج دفتر و داخلِ ‎RowsJson‎ِ
+    /// جدول‌های آرشیوِ قرض‌داران، و ردیف‌های پاک‌شده هم (سطلِ زباله با همین
+    /// کلیدها برمی‌گرداند).
+    ///
+    /// ⛔ <b>با SQLِ خام و بی op</b>: هر کامپیوتر ردیف‌های خودش را با همان
+    /// قاعده ترجمه می‌کند و چون شناسهٔ سراسری بینِ دو کامپیوتر یکی است، نتیجه
+    /// هم یکی است — بی آن‌که صدها هزار op به سرور برود.
+    /// ⛔ پیش از نوشتن یک عکسِ ایمنیِ رمزشده (‎pre-srckey‎)، و همه در یک تراکنش.
+    /// منبعی که دیگر نیست ⇒ کلید دست نمی‌خورد. هیچ عدد و هیچ ردیفی عوض نمی‌شود.
+    /// </summary>
+    private void MigrateSrcKeys(PumpDbContext db)
+    {
+        try
+        {
+            if (!TableExists(db, "Settings")) return;
+            if (db.Settings.AsNoTracking().Any(x => x.Key == SrcKeysFlag)) return;
+
+            var conn = db.Database.GetDbConnection();
+            var opened = conn.State != System.Data.ConnectionState.Open;
+            if (opened) conn.Open();
+            try
+            {
+                var maps = new Dictionary<string, Dictionary<long, string>>(StringComparer.Ordinal);
+                foreach (var t in new[] { "WaraqEntries", "Reports", "ParchaReceipts" })
+                {
+                    var m = new Dictionary<long, string>();
+                    if (TableExists(db, t) && ColumnExists(db, t, "SyncUid"))
+                    {
+                        using var cmd = conn.CreateCommand();
+                        cmd.CommandText = $"SELECT Id, SyncUid FROM \"{t}\" WHERE SyncUid IS NOT NULL AND SyncUid <> ''";
+                        using var r = cmd.ExecuteReader();
+                        while (r.Read()) m[r.GetInt64(0)] = r.GetString(1);
+                    }
+                    maps[t] = m;
+                }
+                string? UidOf(string t, long id) => maps.TryGetValue(t, out var m) && m.TryGetValue(id, out var u) ? u : null;
+
+                var changes = new List<(string Table, long Id, string Key)>();
+                foreach (var t in new[] { "DebtRows", "Expenses", "RetailRows", "SafeEntries", "WaraqPumps" })
+                {
+                    if (!TableExists(db, t) || !ColumnExists(db, t, "SrcKey")) continue;
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = $"SELECT Id, SrcKey FROM \"{t}\" WHERE SrcKey IS NOT NULL AND SrcKey <> ''";
+                    using var r = cmd.ExecuteReader();
+                    while (r.Read())
+                    {
+                        var key = r.GetString(1);
+                        if (!SrcKeys.IsLocal(key)) continue;
+                        var nk = SrcKeys.Migrate(key, UidOf);
+                        if (nk != key) changes.Add((t, r.GetInt64(0), nk));
+                    }
+                }
+
+                var archives = new List<(long Id, string Json)>();
+                if (TableExists(db, "DebtTableArchives"))
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = "SELECT Id, RowsJson FROM \"DebtTableArchives\" WHERE RowsJson LIKE '%SrcKey%'";
+                    using var r = cmd.ExecuteReader();
+                    while (r.Read())
+                    {
+                        if (r.IsDBNull(1)) continue;
+                        var json = r.GetString(1);
+                        if (MigrateRowsJson(json, UidOf) is { } nj) archives.Add((r.GetInt64(0), nj));
+                    }
+                }
+
+                if (changes.Count > 0 || archives.Count > 0)
+                {
+                    SyncBackup.Write(this, label: "pre-srckey");
+                    using var tx = conn.BeginTransaction();
+                    foreach (var (t, id, key) in changes)
+                    {
+                        using var u = conn.CreateCommand();
+                        u.Transaction = tx;
+                        u.CommandText = $"UPDATE \"{t}\" SET SrcKey = $k WHERE Id = $i";
+                        AddParam(u, "$k", key); AddParam(u, "$i", id);
+                        u.ExecuteNonQuery();
+                    }
+                    foreach (var (id, json) in archives)
+                    {
+                        using var u = conn.CreateCommand();
+                        u.Transaction = tx;
+                        u.CommandText = "UPDATE \"DebtTableArchives\" SET RowsJson = $j WHERE Id = $i";
+                        AddParam(u, "$j", json); AddParam(u, "$i", id);
+                        u.ExecuteNonQuery();
+                    }
+                    tx.Commit();
+                }
+                //  نشان پس از تراکنش: اگر برق میانشان رفت، دوباره می‌رود و کاری نمی‌کند
+                //  (کلیدِ ترجمه‌شده دیگر «محلی» نیست).
+                db.Settings.Add(new Setting { Key = SrcKeysFlag, Value = "1" });
+                db.SaveChanges();
+                SrcKeysMigrated = changes.Count + archives.Count;
+            }
+            finally { if (opened) conn.Close(); }
+        }
+        catch { /* نشد ⇒ نشان نمی‌خورد و بارِ بعد دوباره؛ کلیدِ کهنه هنوز خوانده می‌شود */ }
+    }
+
+    /// <summary>شمارِ ردیف‌ها/آرشیوهایی که آخرین مهاجرتِ ب۲ عوض کرد (برای سنجه).</summary>
+    public int SrcKeysMigrated { get; private set; }
+
+    private static void AddParam(System.Data.Common.DbCommand c, string name, object v)
+    {
+        var p = c.CreateParameter(); p.ParameterName = name; p.Value = v; c.Parameters.Add(p);
+    }
+
+    /// <summary>‎SrcKey‎ِ ردیف‌های یک جدولِ آرشیو؛ چیزی عوض نشد ⇒ ‎null‎.</summary>
+    public static string? MigrateRowsJson(string json, Func<string, long, string?> uidOf)
+    {
+        try
+        {
+            var node = System.Text.Json.Nodes.JsonNode.Parse(json);
+            if (node is not System.Text.Json.Nodes.JsonArray arr) return null;
+            var changed = false;
+            foreach (var el in arr)
+            {
+                if (el is not System.Text.Json.Nodes.JsonObject o) continue;
+                if (o["SrcKey"] is not System.Text.Json.Nodes.JsonValue v || !v.TryGetValue<string>(out var key)) continue;
+                if (!SrcKeys.IsLocal(key)) continue;
+                var nk = SrcKeys.Migrate(key, uidOf);
+                if (nk == key) continue;
+                o["SrcKey"] = nk; changed = true;
+            }
+            return changed ? arr.ToJsonString() : null;
+        }
+        catch (System.Text.Json.JsonException) { return null; }
     }
 
     /// <summary>شمارِ جدول‌ها و ایندکس‌های فایل — بخشِ دومِ مهر.</summary>
@@ -434,6 +572,85 @@ public sealed class PumpDbFactory
             if (ColumnExists(db, table, column)) continue;
             db.Database.ExecuteSqlRaw($"ALTER TABLE \"{table}\" ADD COLUMN \"{column}\" {type};");
         }
+
+        //  ══ شورا، ب۳ — هر ستونِ دیگرِ مدل، بی فهرستِ دستی ══════════════════
+        //  فهرستِ بالا فقط جایی است که پیش‌فرضِ «غیرِ صفر» معنا دارد (مثلِ
+        //  ‎Unit DEFAULT 2‎) و همان‌جا می‌ماند. هر ستونِ دیگری که در مدلِ EF هست
+        //  و در فایل نیست، از خودِ مدل ساخته می‌شود — پس ستونِ تازه‌ای که
+        //  فردا اضافه شود، بی دست زدن به هیچ فهرستی روی دیتابیسِ مشتری می‌نشیند.
+        foreach (var (table, column, type) in ModelColumns(db.Model))
+        {
+            if (!TableExists(db, table)) continue;
+            if (ColumnExists(db, table, column)) continue;
+            var sql = $"ALTER TABLE \"{table}\" ADD COLUMN \"{column}\" {type};";
+            try { db.Database.ExecuteSqlRaw(sql); }
+            catch (Exception ex) { throw new InvalidOperationException("ستون از مدل ساخته نشد: " + sql, ex); }
+        }
+    }
+
+    /// <summary>
+    /// همهٔ ستون‌های مدلِ EF با نوع و پیش‌فرضی که <c>ADD COLUMN</c> می‌خواهد.
+    /// ستونِ تهی‌پذیر بی پیش‌فرض؛ ستونِ غیرِتهی با پیش‌فرضِ مدل اگر هست، وگرنه
+    /// «صفرِ» همان نوع (<see cref="ZeroOf"/>). کلیدِ اصلی بیرون است — جدولِ
+    /// بی کلید هرگز «ستونِ تازه» نمی‌گیرد، <c>EnsureCreated</c> آن را می‌سازد.
+    /// </summary>
+    public static IEnumerable<(string Table, string Column, string Type)> ModelColumns(
+        Microsoft.EntityFrameworkCore.Metadata.IModel model)
+    {
+        foreach (var e in model.GetEntityTypes())
+        {
+            var table = e.GetTableName();
+            if (string.IsNullOrEmpty(table)) continue;
+            var store = Microsoft.EntityFrameworkCore.Metadata.StoreObjectIdentifier.Table(table, e.GetSchema());
+            foreach (var p in e.GetProperties())
+            {
+                if (p.IsPrimaryKey()) continue;
+                var col = p.GetColumnName(store);
+                if (string.IsNullOrEmpty(col)) continue;
+                var sqlType = p.GetColumnType();
+                if (p.IsNullable) { yield return (table, col, sqlType); continue; }
+                var def = DefaultOf(p) ?? ZeroOf(p);
+                if (def is null) continue;        // نوعِ ناشناس — آزمونِ ب۳ همین را سرخ می‌کند
+                yield return (table, col, $"{sqlType} NOT NULL DEFAULT {def}");
+            }
+        }
+    }
+
+    private static string? DefaultOf(Microsoft.EntityFrameworkCore.Metadata.IProperty p)
+    {
+        var sql = p.GetDefaultValueSql();
+        if (!string.IsNullOrEmpty(sql)) return "(" + sql + ")";
+        var v = p.GetDefaultValue();
+        if (v is null) return null;
+        //  EF «صفرِ» نوع را هم پیش‌فرض می‌خواند — آن کارِ ‎ZeroOf‎ است، با قالبِ درستِ SQLite
+        if (v.GetType().IsValueType && v.Equals(Activator.CreateInstance(v.GetType()))) return null;
+        return v switch
+        {
+            DateTime dt => "'" + dt.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture) + "'",
+            string s => "'" + s.Replace("'", "''") + "'",
+            bool b => b ? "1" : "0",
+            Enum en => Convert.ToInt64(en).ToString(System.Globalization.CultureInfo.InvariantCulture),
+            decimal d => "'" + d.ToString(System.Globalization.CultureInfo.InvariantCulture) + "'",
+            IFormattable f => f.ToString(null, System.Globalization.CultureInfo.InvariantCulture),
+            _ => null,
+        };
+    }
+
+    /// <summary>«صفرِ» هر نوعِ ذخیره — همان چیزی که ردیفِ کهنه بی هیچ کاری می‌گیرد.</summary>
+    public static string? ZeroOf(Microsoft.EntityFrameworkCore.Metadata.IProperty p)
+    {
+        var clr = Nullable.GetUnderlyingType(p.ClrType) ?? p.ClrType;
+        var provider = p.GetTypeMapping().Converter?.ProviderClrType ?? clr;
+        provider = Nullable.GetUnderlyingType(provider) ?? provider;
+        if (provider == typeof(string)) return "''";
+        if (provider == typeof(decimal)) return "'0'";
+        if (provider == typeof(DateTime) || provider == typeof(DateTimeOffset)) return "'0001-01-01 00:00:00'";
+        if (provider == typeof(byte[])) return "X''";
+        if (provider == typeof(Guid)) return "'00000000-0000-0000-0000-000000000000'";
+        if (provider.IsEnum || provider == typeof(bool) || provider == typeof(int) || provider == typeof(long)
+            || provider == typeof(short) || provider == typeof(byte) || provider == typeof(double)
+            || provider == typeof(float)) return "0";
+        return null;
     }
 
     /// <summary>
