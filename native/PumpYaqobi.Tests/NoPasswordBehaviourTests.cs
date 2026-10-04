@@ -124,4 +124,21 @@ public class NoPasswordBehaviourTests : IDisposable
             host.Auth.SignIn("admin", "1234");
         }
     }
+
+    /// <summary>
+    /// ⛔ و صفحه به همان ویومدل بسته است — دکمهٔ برداشتن، حالِ قفل، و کادرِ
+    /// «رمزِ فعلی» که بی رمز دیده نمی‌شود. (بازبینیِ ۱۴۰۵/۰۷/۲۰: این سه خط از
+    /// آزمونِ پیشین افتاده بود؛ رفتارِ ویومدل جای سیم‌کشیِ صفحه را نمی‌گیرد.)
+    /// </summary>
+    [Fact]
+    public void SafheyeRamzha_BeHamanVM_Baste_Ast()
+    {
+        var xaml = SrcText.Read(Path.Combine(Native(), "PumpYaqobi.App", "Views", "Sections", "KeysSectionView.axaml"));
+        Assert.Contains("RemoveAppPasswordCommand", xaml);
+        Assert.Contains("AppLockStateText", xaml);
+        Assert.Contains("IsVisible=\"{Binding HasAppPassword}\"", xaml);
+    }
+
+    private static string Native([System.Runtime.CompilerServices.CallerFilePath] string here = "") =>
+        Path.GetFullPath(Path.Combine(Path.GetDirectoryName(here)!, ".."));
 }

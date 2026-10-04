@@ -156,4 +156,40 @@ public class SyncPrimeBehaviourTests : IDisposable
         Assert.Equal(1, r.Curtain.Count(x => x));
         Assert.True(PrimedAt(r.Host) > 0);
     }
+
+    /// <summary>
+    /// ⛔ <b>شکستِ «فرستادن» هم پرده را می‌برد</b>، نه فقط شکستِ «گرفتن». دفترِ
+    /// نصبی که پیش از ورود نوشته شده اول فرستاده می‌شود؛ اگر سرور آن را نپذیرد
+    /// و پرده بماند، کاربر پشتِ «آوردنِ اطلاعات…» گیر می‌کند. (بازبینیِ
+    /// ۱۴۰۵/۰۷/۲۰: جانشینِ رفتاریِ آزمونِ سورسِ قدیم فقط «گرفتن» را می‌سنجید.)
+    /// </summary>
+    [Fact]
+    public async Task ShekasteFerestadan_Parde_RaMibarad()
+    {
+        var pushes = 0;
+        CloudLink.TestTransport = (req, _) => Task.FromResult(req.RequestUri!.AbsolutePath switch
+        {
+            "/api/sync/v1/push" => Json(HttpStatusCode.ServiceUnavailable,
+                """{"error":{"code":"account_server_down","message":"سرورِ حساب روشن نیست"}}""").Also(() => pushes++),
+            "/api/sync/v1/pull" => Json(HttpStatusCode.OK, """{"ops":[],"cursor":0,"has_more":true}"""),
+            _ => Json(HttpStatusCode.NotFound, "{}"),
+        });
+        var r = Bound();
+        if (r.Host.Auth.NeedsFirstRun()) r.Host.Auth.CreateFirstAdmin("1234");
+        if (r.Host.Auth.HasPassword()) r.Host.Auth.SignIn("admin", "1234"); else r.Host.Auth.OpenWithoutPassword();
+        await r.Host.Debtors.AddDebtorAsync("پیش از ورود", "", false);
+
+        for (var i = 0; i < 100 && r.Finished.Count == 0; i++) await r.Engine.SyncNowAsync();
+
+        Assert.True(pushes > 0, "دفترِ پیش از ورود اصلاً فرستاده نشد");
+        Assert.Equal(new[] { false }, r.Finished);
+        Assert.Contains(true, r.Curtain);
+        Assert.False(r.Engine.Priming);
+        Assert.Equal(0, PrimedAt(r.Host));
+    }
+}
+
+internal static class HttpResponseAlso
+{
+    public static HttpResponseMessage Also(this HttpResponseMessage m, Action a) { a(); return m; }
 }

@@ -215,6 +215,17 @@ public class PumpBindBehaviourTests : IDisposable
         Assert.Contains("سقفِ کامپیوترهای این پمپ پر است", CloudLink.LastBindWhy);
         Assert.Equal("", AppSettings.Load().CloudDeviceToken);
 
+        //  ⛔ و چراغ همان دلیل را می‌گوید (بازبینیِ ۱۴۰۵/۰۷/۲۰: آزمونِ سورسِ قدیم
+        //  این را داشت و جانشینِ رفتاری‌اش نداشت)
+        var hadStation = CloudLink.AccountHasStation;
+        try
+        {
+            CloudLink.AccountHasStation = true;
+            Assert.Contains("سقفِ کامپیوترهای این پمپ پر است",
+                PumpYaqobi.App.ViewModels.MainViewModel.UnboundWhy(true));
+        }
+        finally { CloudLink.AccountHasStation = hadStation; }
+
         //  کلیکِ کاربر (ترمزِ ده‌دقیقه‌ای را نمی‌خورد) پس از رفعِ مشکل
         bindOk = true;
         CloudLink.ResetReach();
@@ -222,4 +233,44 @@ public class PumpBindBehaviourTests : IDisposable
         Assert.Equal("", CloudLink.LastBindWhy);
         Assert.Equal("pd_ok", AppSettings.Load().CloudDeviceToken);
     }
+
+    /// <summary>
+    /// ⛔ <b>«کلیدِ بی‌مصرف» یعنی نه توکن و نه مجوز.</b> نصبی که مجوز دارد
+    /// (حتی بی توکنِ دستگاه) کلیدش قفل است و کلیدِ ناجورِ سرور را رد می‌کند —
+    /// بی این، یک سرورِ ساختگی مجوزِ خودش را جای مجوزِ امضاشده می‌نشاند.
+    /// (بازبینیِ ۱۴۰۵/۰۷/۲۰: شرطِ ‎CloudLicense‎ دیگر هیچ آزمونی نداشت.)
+    /// </summary>
+    [Fact]
+    public async Task KelideNajur_BaMajvozeTanha_RahaNemishavad()
+    {
+        Serve((path, _) => path switch
+        {
+            "/api/pump/me" => Json(HttpStatusCode.OK, """{"station":{"id":"stn-9","code":"yaqobi"}}"""),
+            "/api/pump/device/bind" => Json(HttpStatusCode.Created,
+                """{"deviceToken":"pd_x","station":{"id":"stn-9"},"license":"lic.y","publicKey":"pk-2"}"""),
+            _ => Json(HttpStatusCode.NotFound, "{}"),
+        });
+        var (link, _) = Link(s =>
+        {
+            s.CloudAccountToken = "acc-1"; s.CloudAccessExpiresAt = InAnHour;
+            s.CloudPublicKey = "pk-1"; s.CloudLicense = "lic.x"; s.CloudDeviceToken = "";
+        });
+
+        var r = await link.BindAsync();
+
+        Assert.False(r.Ok);
+        Assert.Equal("key_mismatch", r.Code);
+        var disk = AppSettings.Load();
+        Assert.Equal("pk-1", disk.CloudPublicKey);
+        Assert.Equal("", disk.CloudDeviceToken);
+    }
+
+    /// <summary>پروفایل هم همان دلیل را نشان می‌دهد — همان خطِ آزمونِ پیشین.</summary>
+    [Fact]
+    public void Profile_HamanDalil_RaNeshanMidahad() =>
+        Assert.Contains("CloudLink.LastBindWhy", SrcText.Read(Path.Combine(Native(), "PumpYaqobi.App",
+            "ViewModels", "Sections", "AccountSectionViewModel.cs")));
+
+    private static string Native([System.Runtime.CompilerServices.CallerFilePath] string here = "") =>
+        Path.GetFullPath(Path.Combine(Path.GetDirectoryName(here)!, ".."));
 }

@@ -97,4 +97,23 @@ public class PersonAccountBehaviourTests
         Assert.Equal(Shamsi.Money(620m), acct.HeadPetrolAlbaqiText);
         Assert.Equal(Shamsi.Money(20m), acct.HeadPetrolCommText);
     }
+
+    /// <summary>
+    /// ⛔ <b>دفترِ پول رسیدِ پول را می‌شمارد، دفترِ تیل رسیدِ تیل را</b> — هر کدام
+    /// فقط خودش. (بازبینیِ ۱۴۰۵/۰۷/۲۰: جانشینِ رفتاری فقط دفترِ تیل را داشت.)
+    /// </summary>
+    [Fact]
+    public async Task RasideSarbarg_DarDaftarePool_RasidePool_Ast()
+    {
+        var (_, acct) = await Open();
+        acct.IsMoney = true;
+        await acct.AddRowCommand.ExecuteAsync(null);
+        await acct.AddRowCommand.ExecuteAsync(null);
+        acct.Rows[0].ManualBardagiText = "8000";
+        acct.Rows[1].RasidText = "3000";
+        acct.Rows[1].RasidFuelText = "7";
+
+        Assert.Equal(Shamsi.Money(3000m), acct.HeadPetrolRasidText);
+        Assert.Equal(Shamsi.Money(5000m), acct.HeadPetrolAlbaqiText);    //  ۸۰۰۰ − ۳۰۰۰
+    }
 }

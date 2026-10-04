@@ -54,6 +54,38 @@ public class KarBooksTests
         Assert.All(Books(snap), b => Assert.NotEqual(0, b.GetProperty("r").GetArrayLength()));
     }
 
+    /// <summary>
+    /// ⛔ <b>«on» از حالتِ خودِ حساب است</b>، نه همیشه دفترِ تیل: حسابِ پولی دفترِ
+    /// پول را روشن نشان می‌دهد. (بازبینیِ ۱۴۰۵/۰۷/۲۰: فقط حسابِ تیلی سنجیده می‌شد.)
+    /// </summary>
+    [Fact]
+    public async Task Aks_HesabePooli_DaftarePool_Roshan_Ast()
+    {
+        var host = new AppHost(Path.Combine(Path.GetTempPath(),
+            "pump-books-" + Guid.NewGuid().ToString("N"), "pump.db"));
+        if (host.Auth.NeedsFirstRun()) host.Auth.CreateFirstAdmin("1234");
+        host.Auth.SignIn("admin", "1234");
+        var d = await host.Debtors.AddDebtorAsync("رحیم", "", false);
+        var full = (await host.Debtors.LoadFullAsync(d.Id))!;
+        var a = full.MainAccount;
+        a.Mode = PumpYaqobi.Domain.Enums.LedgerMode.Money;
+        await host.Debtors.UpdateAccountAsync(a);
+        Assert.True((await host.Debtors.LoadFullAsync(d.Id))!.MainAccount.Mode.IsMoney());
+        await host.Debtors.SaveRowAsync(new DebtRow
+        {
+            FuelAccountId = a.Id, Fuel = FuelType.Petrol, Liters = 120m, DateShamsi = "1405/07/10",
+        });
+        await host.Debtors.SaveRowAsync(new DebtRow
+        {
+            MoneyAccountId = a.Id, ByMoney = true, Fuel = FuelType.Petrol, Liters = 50m, PricePerLiter = 80m, Bardagi = 4000m,
+            DateShamsi = "1405/07/11",
+        });
+
+        var books = Books(await StationSnapshot.BuildAsync(host));
+        Assert.True(books.Single(b => b.GetProperty("money").GetBoolean()).GetProperty("on").GetBoolean());
+        Assert.False(books.Single(b => !b.GetProperty("money").GetBoolean()).GetProperty("on").GetBoolean());
+    }
+
     private static List<JsonElement> Books(Dictionary<string, object?> snap) =>
         JsonDocument.Parse(JsonSerializer.Serialize(snap)).RootElement
             .GetProperty("debtors").EnumerateArray().Single()
