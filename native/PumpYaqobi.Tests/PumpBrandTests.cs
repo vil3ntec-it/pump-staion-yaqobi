@@ -59,7 +59,8 @@ public class PumpBrandTests
     {
         var root = Path.GetFullPath(Path.Combine(Native, ".."));
         var files = new List<string> { Path.Combine(root, "index.html"), Path.Combine(root, "sw.js") };
-        foreach (var dir in new[] { "kar", "view" })
+        //  شورا، د۷: «پیام‌رسان» (‎payam/‎) هم — تا ۱۴۰۵/۰۷/۲۰ هنوز «یعقوبی» نشان می‌داد
+        foreach (var dir in new[] { "kar", "view", "payam" })
             files.AddRange(Directory.EnumerateFiles(Path.Combine(root, dir), "*.*", SearchOption.TopDirectoryOnly)
                 .Where(f => f.EndsWith(".html") || f.EndsWith(".js") || f.EndsWith(".json")));
         var bad = new List<string>();
@@ -77,7 +78,7 @@ public class PumpBrandTests
                     continue;
                 }
                 if (t.StartsWith("//") || t.StartsWith("*")) continue;
-                if (line.Contains("پمپ یعقوبی") || line.Contains("پمپِ یعقوبی")) bad.Add(Path.GetFileName(f) + ":" + n);
+                if (line.Contains("یعقوبی")) bad.Add(Path.GetFileName(f) + ":" + n);
             }
         }
         Assert.True(files.Count > 5, "فایل‌های وب پیدا نشدند");

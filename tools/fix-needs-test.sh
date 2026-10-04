@@ -17,7 +17,16 @@
 set -euo pipefail
 BASE="$1"; HEAD="$2"; TITLE="$3"; LABELS="${4:-}"; BODY="${5:-}"
 
-if ! printf '%s' "$TITLE" | grep -Eq 'اصلاح|باگ|درست'; then
+#  شورا، د۷: واژهٔ کامل — «درستی»، «نادرست» و «بادرستی» رفعِ باگ نیستند. «اصلاح…» و
+#  «باگ…» از سرِ واژه (اصلاحات، باگ‌ها)، «درست» فقط تنها یا با نیم‌فاصله (درست‌شد).
+#  ‎FIX_TITLE_ONLY=1‎ ⇒ فقط «fix» یا «nofix» چاپ می‌شود (آزمونِ همین قاعده).
+is_fix() {
+  printf '%s' "$1" | LC_ALL=C.UTF-8 grep -Pq '(?<!\p{L})(اصلاح|باگ)|(?<!\p{L})درست(?!\p{L})'
+}
+if [ "${FIX_TITLE_ONLY:-0}" = 1 ]; then
+  if is_fix "$TITLE"; then echo fix; else echo nofix; fi; exit 0
+fi
+if ! is_fix "$TITLE"; then
   echo "عنوان رفعِ باگ نیست — این سنجه کاری ندارد."; exit 0
 fi
 if printf '%s' "$LABELS" | grep -Eqw 'no-test'; then
