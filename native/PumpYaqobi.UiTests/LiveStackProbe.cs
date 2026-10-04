@@ -211,7 +211,8 @@ internal static class LiveStackProbe
         account.LoginPassword = pass;
         Wait(win, account.AccountStepCommand.ExecuteAsync(null));
         Settle(win);
-        Check("سرورِ حسابِ واقعی رمز را پذیرفت و به گامِ پمپ رفت", account.StepPump,
+        //  ⚠️ از ۳.۱.۱۷۹ گامِ «نامِ پمپ» نیست: ورود ⇒ «تمام» و پمپ خودش ساخته می‌شود
+        Check("سرورِ حسابِ واقعی رمز را پذیرفت و ورود تمام شد (بی گامِ پمپ)", account.LoginStep == 4 && !account.StepPump,
               "گام " + account.LoginStep + " · " + account.LoginStatus);
         Check("درخواست به همان مسیرِ واقعی رفت", seen.Contains("POST /api/auth/login"), string.Join(" · ", seen));
 

@@ -78,6 +78,20 @@ public sealed class AppSettings
     public string UpdateOfferedVersion { get; set; } = "";
 
     /// <summary>
+    /// 🛤️ کانالِ به‌روزرسانی (شورا، ت۱): «stable» (پیش‌فرض — هفته‌ای حداکثر یک
+    /// نسخه، پس از هفت روز بی کرش) یا «testing» (هر نسخهٔ تازه همان روز). فقط
+    /// <c>Update.UpdateService.TestingChannel</c> آن را می‌خواند و می‌نویسد.
+    /// </summary>
+    public string UpdateChannel { get; set; } = "stable";
+
+    /// <summary>
+    /// شورا، ث۶ — «حالتِ ساده» برای میرزا: نوار فقط پارچه، ورق، قرض‌داران،
+    /// گاوصندوق و رسید؛ بقیه پشتِ «☰ همه». یادِ <b>همین کامپیوتر</b>.
+    /// ⛔ هیچ بخشی حذف نمی‌شود؛ فقط کدام‌ها در نوار دیده شوند.
+    /// </summary>
+    public bool SimpleMode { get; set; }
+
+    /// <summary>
     /// ══ مسیرِ آخرین فایلِ هر خروجی (۱۴۰۵/۰۷/۱۹) ══════════════════════════════
     /// «مسیرِ قبلی پیشنهاد شود، با ‹به‌روز کردنِ فایلِ قبلی› یا ‹تازه›.» کلید
     /// «نوع:شناسه» است (مثلاً «debtor:12» یا «safe»)؛ و «full» برای فایلِ کاملِ
@@ -967,6 +981,7 @@ public sealed class AppSettings
         if (b is null || ClockShiftMs != b.Value.ClockShiftMs) live.ClockShiftMs = ClockShiftMs;
         if (b is null || ShowBanner != b.Value.ShowBanner) live.ShowBanner = ShowBanner;
         if (b is null || ShowHeader != b.Value.ShowHeader) live.ShowHeader = ShowHeader;
+        if (b is null || SimpleMode != b.Value.SimpleMode) live.SimpleMode = SimpleMode;
         _comfortBase = ComfortSnap();
         //  ⚠️ کفِ ساعت از این در فقط **جلو** می‌رود: نوبتِ در صف ممکن است
         //  عکسِ کهنه‌ای باشد که کفِ پایین‌تری دارد، و پایین آوردنِ عمدیِ کف
@@ -1136,10 +1151,10 @@ public sealed class AppSettings
 
     /// <summary>مقدارهای راحتیِ این شیء هنگامِ خواندن یا آخرین نوشتنش — پایینِ `SoonWho`.</summary>
     [JsonIgnore] private (string ThemeId, string LastSection, double CalcWidth, double CalcHeight, bool CalcLarge,
-        bool ParchaChainCheck, string LastPrinter, string NavOrder, long ClockShiftMs, bool ShowBanner, bool ShowHeader)? _comfortBase;
+        bool ParchaChainCheck, string LastPrinter, string NavOrder, long ClockShiftMs, bool ShowBanner, bool ShowHeader, bool SimpleMode)? _comfortBase;
 
-    private (string, string, double, double, bool, bool, string, string, long, bool, bool) ComfortSnap() =>
-        (ThemeId, LastSection, CalcWidth, CalcHeight, CalcLarge, ParchaChainCheck, LastPrinter, NavOrder, ClockShiftMs, ShowBanner, ShowHeader);
+    private (string, string, double, double, bool, bool, string, string, long, bool, bool, bool) ComfortSnap() =>
+        (ThemeId, LastSection, CalcWidth, CalcHeight, CalcLarge, ParchaChainCheck, LastPrinter, NavOrder, ClockShiftMs, ShowBanner, ShowHeader, SimpleMode);
 
     private static readonly System.Reflection.PropertyInfo[] RestFields =
         typeof(AppSettings).GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)

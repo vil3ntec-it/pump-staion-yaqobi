@@ -1170,7 +1170,8 @@
                    دارد: عنوان و ابزار یک ردیف، توضیح یک خط زیرشان. -->
               <Grid ColumnDefinitions="Auto,Auto,*">
                 <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
-                  <TextBlock Text="{TemplateBinding Header}" Classes="card-title" />
+                  <TextBlock Text="{TemplateBinding Header}" Classes="card-title"
+                             ToolTip.Tip="{Binding Header, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static th:GlossaryTipConverter.Instance}}" />
                 </StackPanel>
 
                 <!-- ══ ‎A−‎ / ‎A+‎ / ‎↺‎ِ همین بخش ═════════════════════════════
@@ -1990,12 +1991,21 @@
        «چندتایی». جایش هم همان‌جاست که سایت گذاشته — پایینِ جدول، نه در سربرگ:
        «تا سربرگ شلوغ نباشد و دستِ آدم موقعِ کار به آن‌ها نخورد».
        خودِ کنترل در ‎Controls/RowAddBar.cs‎ است. -->
+  <Style Selector="c|HintStrip">
+    <Setter Property="Background" Value="{DynamicResource Pump.Input}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Border}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="c|HintStrip TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Muted}" />
+  </Style>
+
   <Style Selector="c|RowAddBar">
     <Setter Property="HorizontalAlignment" Value="Left" />
     <Setter Property="Template">
       <ControlTemplate>
         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-          <Button Classes="accent" Content="➕ ردیف"
+          <Button Name="PART_Add" Classes="accent" Content="➕ ردیف"
                   Command="{TemplateBinding AddRowCommand}" />
           <Border Classes="panel" Padding="7,4">
             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
@@ -2006,6 +2016,8 @@
                       ToolTip.Tip="همین تعداد ردیفِ خالی یک‌جا باز می‌شود (بیشترین ۵۰)" />
             </StackPanel>
           </Border>
+          <!-- شورا، ث۲: میانبرهای همین جدول — بسته‌شدنی، یادِ همین کامپیوتر -->
+          <c:HintStrip HintKey="rows" Margin="0" MaxWidth="620" VerticalAlignment="Center" />
         </StackPanel>
       </ControlTemplate>
     </Setter>

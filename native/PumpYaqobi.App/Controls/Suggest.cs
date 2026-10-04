@@ -54,6 +54,16 @@ public static class Suggest
     public static string? GetSlashKey(AvaloniaObject o) => o.GetValue(SlashKeyProperty);
     public static void SetSlashKey(AvaloniaObject o, string? v) => o.SetValue(SlashKeyProperty, v);
 
+    /// <summary>
+    /// شورا، ث۲ — کلیدِ راهنمای ستون (<c>Services.Hints</c>): نوشتهٔ کم‌رنگِ کادرِ خالی
+    /// و یک «💡 می‌دانستید؟» برای نخستین بار. ⛔ هیچ رفتاری عوض نمی‌شود.
+    /// </summary>
+    public static readonly AttachedProperty<string?> HintProperty =
+        AvaloniaProperty.RegisterAttached<AvaloniaObject, string?>("Hint", typeof(Suggest));
+
+    public static string? GetHint(AvaloniaObject o) => o.GetValue(HintProperty);
+    public static void SetHint(AvaloniaObject o, string? v) => o.SetValue(HintProperty, v);
+
     // ══ منبع‌های نام‌دار ═══════════════════════════════════════════════════
     private static readonly ConcurrentDictionary<string, Func<Task<IEnumerable<string>>>> _providers = new();
     private static readonly ConcurrentDictionary<string, (DateTime At, List<string> Items)> _cache = new();

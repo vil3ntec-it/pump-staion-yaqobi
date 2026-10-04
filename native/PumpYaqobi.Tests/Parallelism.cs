@@ -64,6 +64,7 @@ internal static class TestSettingsHome
             PumpYaqobi.App.ViewModels.MainViewModel.RestoreDrillDisabled = true;
             PumpYaqobi.App.Services.ExitBackup.Disabled = true;
             PumpYaqobi.App.Update.AutoUpdate.Disabled = true;
+            PumpYaqobi.App.Services.Hints.Quiet = true;
 
             //  ⛔ **و حلقهٔ عکسِ ایستگاه هم.** هر آزمونی که `MainViewModel`
             //  می‌سازد آن را راه می‌انداخت و کسی نمی‌بستش؛ هر دقیقه

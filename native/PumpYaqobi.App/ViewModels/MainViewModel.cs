@@ -43,6 +43,7 @@ public sealed partial class MainViewModel : ObservableObject
     public MainViewModel(AppSettings? settings = null)
     {
         _settings = settings ?? AppSettings.Load();
+        _simpleMode = _settings.SimpleMode;
         //  نامِ پمپ که عوض شد (ساختنِ حساب، پروفایل، بازگردانی) ⇒ سربرگ و عنوانِ پنجره همان لحظه
         PumpBrand.Changed += () =>
         {
@@ -108,6 +109,7 @@ public sealed partial class MainViewModel : ObservableObject
 
             if (_afterSignIn) return;
             _afterSignIn = true;
+            Services.Hints.Show = t => AppHost.Current.Toasts.Show(t);
 
             // ══ عکسِ روزانه (بندِ ۲۳) ══════════════════════════════════════════
             // همان ‎_autoDailyBackup‎ی نسخهٔ وب، ولی از فایلِ دیتابیس. روی نخِ
@@ -444,10 +446,47 @@ public sealed partial class MainViewModel : ObservableObject
         {
             var defaults = NavDefaults();
             var byId = defaults.ToDictionary(s => s.Id);
-            return NavOrder.Arrange(defaults.Select(s => s.Id).ToList(), _settings.NavOrder)
-                           .Select(id => byId[id]).ToList();
+            var all = NavOrder.Arrange(defaults.Select(s => s.Id).ToList(), _settings.NavOrder)
+                              .Select(id => byId[id]).ToList();
+            //  شورا، ث۶ — حالتِ ساده: همان ترتیبِ دیدنی، فقط پنج بخشِ روزانه
+            return SimpleMode && !ShowAllNav ? all.Where(x => SimpleIds.Contains(x.Id)).ToList() : all;
         }
     }
+
+    // ══ شورا، ث۶ — «حالتِ ساده» ════════════════════════════════════════════
+    //  «۲۰ بخش و ۳۳ دکمه برای کسی که فقط پارچه و ورق می‌زند زیاد است.»
+    //  ⛔ هیچ بخشی حذف نمی‌شود: فقط نوار کوتاه می‌شود، «☰ همه» بقیه را نشان
+    //  می‌دهد، و رفتن از جای دیگر (تاریخچه، هشدار، چت…) همان ‎GoAsync‎ است.
+    //  ⛔ ‎Alt+عدد‎ همان ترتیبِ دیدنی را می‌رود (از ‎NavSections‎ می‌خواند).
+
+    /// <summary>پنج بخشِ روزانهٔ میرزا.</summary>
+    public static readonly string[] SimpleIds = { "shifts", "waraq", "debt", "safe", "debtrasid" };
+
+    [ObservableProperty] private bool _simpleMode;
+    [ObservableProperty] private bool _showAllNav;
+
+    partial void OnSimpleModeChanged(bool value)
+    {
+        if (_settings.SimpleMode != value)
+        {
+            _settings.SimpleMode = value;
+            _settings.SaveSoon();         // مقدارِ راحتی — نه ‎fsync‎ روی نخِ رابط
+        }
+        ShowAllNav = false;
+        OnPropertyChanged(nameof(NavSections));
+        OnPropertyChanged(nameof(AllNavText));
+    }
+
+    partial void OnShowAllNavChanged(bool value)
+    {
+        OnPropertyChanged(nameof(NavSections));
+        OnPropertyChanged(nameof(AllNavText));
+    }
+
+    public string AllNavText => ShowAllNav ? "‹ فقط بخش‌های روزانه" : $"☰ همه ({NavDefaults().Count})";
+
+    [RelayCommand]
+    private void ToggleAllNav() => ShowAllNav = !ShowAllNav;
 
     private List<SectionViewModel> NavDefaults() =>
         Sections.Where(s => s.Id is not ("chat" or "account") && !SectionGate.IsHidden(s.Id)).ToList();
@@ -779,6 +818,20 @@ public sealed partial class MainViewModel : ObservableObject
         await CheckCloudAsync();
         TickLinkDot();
     }
+
+    // ══ شورا، ث۴ — «یک چراغ که آدم بفهمد» ═════════════════════════════════
+    //  کلیکِ چراغ یک کادرِ کوچکِ سه‌ردیفی هم باز می‌کند: سرورِ حساب، سرورِ
+    //  خانگی، همگام‌سازی — هر کدام جملهٔ آدمیزادِ خودش (همان ‎…DotReason‎ها،
+    //  ⛔ بی هیچ نام و نشانیِ سروری) و یک دکمهٔ کار. ⛔ هیچ تصمیمِ تازه‌ای:
+    //  هر دکمه همان تابعِ موجود را می‌زند.
+
+    /// <summary>ردیفِ «سرورِ حساب» ⇒ «همین حالا بپرس».</summary>
+    [RelayCommand]
+    private async Task AskAccountNowAsync() { await CheckCloudAsync(); TickLinkDot(); }
+
+    /// <summary>ردیفِ «سرورِ خانگی» ⇒ «بگرد».</summary>
+    [RelayCommand]
+    private async Task FindHomeNowAsync() { await CheckServerAsync(); TickLinkDot(); }
 
     // ══ ● چراغِ سوم: همگام‌سازی — در نوارِ **پایینِ** پنجره ═══════════════
     //

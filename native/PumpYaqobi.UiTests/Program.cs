@@ -38,6 +38,7 @@ internal static class Program
         PumpYaqobi.App.Services.SyncEngine.Disabled = true;
         PumpYaqobi.App.ViewModels.MainViewModel.RestoreDrillDisabled = true;   // شورا ب۵: فقط در ‎RestoreDrillTests‎
         PumpYaqobi.App.Services.ExitBackup.Disabled = true;    // پرسشِ پیش از بستن هیچ سنجه‌ای را نگه نمی‌دارد
+        PumpYaqobi.App.Services.Hints.Quiet = true;   // «💡 می‌دانستید؟» هیچ توستی وسطِ سنجه نمی‌گذارد (شورا، ث۲)
         PumpYaqobi.App.Update.AutoUpdate.Disabled = true;   // به‌روزرسانیِ خودکار هیچ‌وقت از سنجه به گیت‌هاب نمی‌رود
         PumpYaqobi.App.Services.SectionGate.TestOpenAll = true;   // سنجه‌ها همان بخش‌های در حالِ ساخت را هم می‌سنجند
         PumpYaqobi.App.Services.CrashGuard.ReportingOff = true;
@@ -76,6 +77,7 @@ internal static class Program
         if (outDir.Equals("person", StringComparison.OrdinalIgnoreCase)) return PersonAudit.Run();
         if (outDir.Equals("headrasid", StringComparison.OrdinalIgnoreCase)) return HeadRasidProbe.Run();
         if (outDir.Equals("sectiongate", StringComparison.OrdinalIgnoreCase)) return SectionGateProbe.Run();
+        if (outDir.Equals("ux", StringComparison.OrdinalIgnoreCase)) return UxProbe.Run(args);
         if (outDir.Equals("clockjump", StringComparison.OrdinalIgnoreCase)) return ClockJumpProbe.Run();
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- marketing [پوشه]   عکس‌های تبلیغاتی، ۲ برابر
         if (outDir.Equals("marketing", StringComparison.OrdinalIgnoreCase)) return MarketingShots.Run(args.Length > 1 ? args[1] : null);

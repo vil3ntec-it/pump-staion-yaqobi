@@ -156,7 +156,7 @@ public class LiveInputTests
         //  مقدارِ راحتی ⇒ هر دو فهرست
         var s = R("PumpYaqobi.App", "Services", "AppSettings.cs");
         Assert.Contains("live.ShowHeader = ShowHeader;", s);
-        Assert.Contains("ShowBanner, ShowHeader);", s);
+        Assert.Contains("ShowBanner, ShowHeader, SimpleMode);", s);   // ComfortSnap (شورا، ث۶ هم)
         //  جای نوارِ بخش‌ها: سربرگِ پنهان صفر شمرده می‌شود
         Assert.Contains("header is { IsVisible: true } ? header.Bounds.Height : 0",
                         R("PumpYaqobi.App", "Views", "MainWindow.axaml.cs"));

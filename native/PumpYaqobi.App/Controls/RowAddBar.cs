@@ -56,6 +56,7 @@ public class RowAddBar : TemplatedControl
     public int Count { get => GetValue(CountProperty); set => SetValue(CountProperty, value); }
 
     private Button? _many;
+    private Button? _add;
 
     protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
     {
@@ -63,13 +64,20 @@ public class RowAddBar : TemplatedControl
         if (_many is not null) _many.Click -= OnMany;
         _many = e.NameScope.Find<Button>("PART_Many");
         if (_many is not null) _many.Click += OnMany;
+        //  شورا، ث۲: نخستین ردیفی که با ماوس افزوده شد ⇒ «💡 می‌دانستید؟ Ctrl+عدد…»
+        if (_add is not null) _add.Click -= OnAddTip;
+        _add = e.NameScope.Find<Button>("PART_Add");
+        if (_add is not null) _add.Click += OnAddTip;
     }
+
+    private static void OnAddTip(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Services.Hints.DidYouKnow("rows");
 
     private void OnMany(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         // عددِ بی‌معنی هیچ کاری نمی‌کند — نه خطا، نه ردیفِ ناخواسته
         var n = Math.Clamp(Count, 0, MaxRows);
         if (n < 1) return;
+        Services.Hints.DidYouKnow("rows");
         if (Host is IRowBatchHost h) _ = Services.CrashGuard.RunAsync("افزودنِ ردیف", () => h.AddRowsAsync(n));
     }
 }

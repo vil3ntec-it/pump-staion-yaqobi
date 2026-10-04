@@ -132,6 +132,15 @@ public static class CrashGuard
 
     private static DateTime _lastReport = DateTime.MinValue;
 
+    /// <summary>
+    /// گزارشی که از یک استثنا نیامده (مثلاً سنجشِ یکپارچگیِ فایل‌ها) — همان راه،
+    /// همان اجازهٔ کاربر، همان ترمز.
+    /// </summary>
+    public static void Notice(string where, string message)
+    {
+        try { Write(where, new InvalidDataException(message)); } catch { }
+    }
+
     private static void Report(string where, Exception ex)
     {
         try

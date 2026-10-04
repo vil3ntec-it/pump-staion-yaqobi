@@ -1,0 +1,63 @@
+name: سنجه‌های زنده (برنامه ⇄ پنل ⇄ سرورِ حساب)
+
+# ══ شورا، ت۴ ════════════════════════════════════════════════════════════════
+# signup-stack · linkstates · oldacct · pumpmirror · livestack تا امروز فقط دستی
+# می‌دویدند، پس شکستنِ قراردادِ برنامه و سرور پس از مرج دیده می‌شد. این‌جا روی
+# هر PRی که به پیوندِ سرور دست می‌زند، پنلِ واقعی (ریپوی server) و سرورِ حسابِ
+# واقعی (ریپوی shop، PGlite + صندوقِ ایمیلِ ساختگی) بالا می‌آیند و خودِ برنامه
+# با آن‌ها حرف می‌زند. هر دو ریپو عمومی‌اند؛ هیچ رازی لازم نیست.
+# ⚠️ هر سنجه پشتهٔ تازهٔ خودش را می‌گیرد (tools/live-stack.sh) — سقفِ نرخِ
+# ‎device/bind‎ِ سرورِ حساب سنجه‌ها را به هم نمی‌بندد.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'native/PumpYaqobi.App/Services/CloudLink*.cs'
+      - 'native/PumpYaqobi.App/Services/StationPublisher*.cs'
+      - 'native/PumpYaqobi.App/Services/StationLink*.cs'
+      - 'native/PumpYaqobi.App/Services/HomeSync*.cs'
+      - 'native/PumpYaqobi.App/Services/Entitlements.cs'
+      - 'native/PumpYaqobi.App/Services/LicenseGuard*.cs'
+      - 'native/PumpYaqobi.App/Update/**'
+      - 'native/PumpYaqobi.App/ViewModels/Sections/AccountSectionViewModel.cs'
+      - 'native/PumpYaqobi.UiTests/**'
+      - 'tools/live-stack.sh'
+      - '.github/workflows/live-stack.yml'
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: پنلِ خانگی و سرورِ حساب — از ریپوهای خواهر
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/vil3ntec-it/server.git /tmp/server
+          git clone --depth 1 https://github.com/vil3ntec-it/shop.git /tmp/shop
+          (cd /tmp/server/homelab-panel/server && npm ci)
+          (cd /tmp/shop/server && npm ci --omit=dev)
+
+      - name: ساختِ سنجه‌ها
+        working-directory: native
+        run: dotnet build PumpYaqobi.UiTests -c Release
+
+      - name: سنجه‌ها
+        env:
+          LIVE_OUT: ${{ runner.temp }}/live
+        run: bash tools/live-stack.sh /tmp/server/homelab-panel/server /tmp/shop/server
+
+      - name: عکس‌ها و لاگ‌ها
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-stack
+          path: ${{ runner.temp }}/live
+          if-no-files-found: ignore

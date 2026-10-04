@@ -39,7 +39,11 @@ public class GoldenChainTests : IDisposable
                               int editDay, decimal editExtraLiters, decimal editSafeDelta,
                               int deleteDay, decimal deleteSafeDelta, decimal companyTon, decimal companyUsd,
                               decimal karimMoneyReceiptPerDay, decimal karimMainMoneyAlbaqi, decimal karimRasidMoneyPetrol,
-                              decimal karimMoneyInvoice, decimal rahimFuelInvoiceLiters, decimal rahimRasidFuelPetrol);
+                              decimal karimMoneyInvoice, decimal rahimFuelInvoiceLiters, decimal rahimRasidFuelPetrol,
+                              decimal companyDensity, decimal companyRate, decimal exchangeUsd,
+                              decimal companyAlbaqiUsd, decimal companyAlbaqiAfn,
+                              decimal petrolSoldLiters, decimal petrolTankStock,
+                              decimal petrolShiftProfit, decimal dieselShiftProfit);
 
     private static Ref Load()
     {
@@ -49,7 +53,8 @@ public class GoldenChainTests : IDisposable
 
     private sealed record H(PumpDbFactory Db, ParchaDataService Parcha, ShiftWaraqSyncService Sync,
                             WaraqPostingService Post, TrashService Trash, StorageDataService Storage,
-                            DebtQuickReceiptService Quick, InvoiceService Invoices);
+                            DebtQuickReceiptService Quick, InvoiceService Invoices,
+                            ExchangeCompanySyncService Exchange);
 
     private H Make()
     {
@@ -68,7 +73,8 @@ public class GoldenChainTests : IDisposable
                      new WaraqPostingService(dbf, perm, calc, sync), trash,
                      new StorageDataService(dbf, perm, trash, new StorageService(), settings, companies),
                      new DebtQuickReceiptService(dbf, perm, trash),
-                     new InvoiceService(dbf, perm, trash, new DebtorService(dbf, perm, trash)));
+                     new InvoiceService(dbf, perm, trash, new DebtorService(dbf, perm, trash)),
+                     new ExchangeCompanySyncService(dbf, perm));
     }
 
     private static string Date(int d) => $"1405/06/{d:00}";
@@ -158,7 +164,12 @@ public class GoldenChainTests : IDisposable
 
         //  ── یک خریدِ مخزن ⇐ حسابِ شرکت
         await h.Storage.AddPurchaseAsync(new FuelPurchase { Fuel = FuelType.Petrol, DateShamsi = Date(5),
-            Seller = "شرکتِ الف", Kg = R.companyTon * 1000m, Density = 0.74m, PriceTon = R.companyUsd, UsdRate = 70m });
+            Seller = "شرکتِ الف", Kg = R.companyTon * 1000m, Density = R.companyDensity, PriceTon = R.companyUsd, UsdRate = R.companyRate });
+
+        //  ── صرافی: بردگیِ دالری به نامِ همان شرکت ⇐ رسید در حسابِ شرکت
+        var xrow = new ExchangeRow { DateShamsi = Date(12), Description = "شرکتِ الف", Bardagi = R.exchangeUsd };
+        await using (var db = h.Db.Create()) { db.ExchangeRows.Add(xrow); await db.SaveChangesAsync(); }
+        Assert.Equal(ExchangeLinkResult.Linked, await h.Exchange.SyncAsync(xrow));
 
         //  ── دو فاکتورِ تاییدشده
         var vm = await h.Invoices.AddAsync(new Invoice { CustomerName = "کریم", Amount = R.karimMoneyInvoice, DateShamsi = Date(9) });
@@ -187,9 +198,27 @@ public class GoldenChainTests : IDisposable
             Assert.All(shopNames, n => Assert.Equal("بابت نان", n));
             var co = await db.CompanyRows.AsNoTracking().SingleAsync(c => c.SourcePurchaseId != null);
             Assert.Equal((R.companyTon, R.companyUsd), (co.Ton, co.Usd));
+            //  الباقیِ شرکت: خرید منهای رسیدِ صرافی، دالری و افغانی
+            var company = await db.TilCompanies.Include(c => c.Rows).AsNoTracking().FirstAsync(c => c.Name == "شرکتِ الف");
+            var sum = new CompanyService().Summarize(company, company.Rows);
+            Assert.True(R.companyAlbaqiUsd == sum.AlbaqiUsd, $"{when}: الباقیِ دالرِ شرکت {sum.AlbaqiUsd}");
+            Assert.True(R.companyAlbaqiAfn == sum.AlbaqiAfn, $"{when}: الباقیِ افغانیِ شرکت {sum.AlbaqiAfn}");
+        }
+
+        //  موجودیِ مخزن و فایدهٔ شیفت‌ها — همان راهِ بخشِ مخزن و مفاد/ضرر
+        async Task AssertStock(decimal sold, decimal stock, decimal petrolProfit, string when)
+        {
+            var ps = await h.Storage.ShiftSumsAsync(FuelType.Petrol);
+            var ds = await h.Storage.ShiftSumsAsync(FuelType.Diesel);
+            Assert.True(sold == ps.Sale, $"{when}: فروشِ پطرول {ps.Sale} ≠ {sold}");
+            var tank = new StorageService().Tank(await h.Storage.PurchasesAsync(FuelType.Petrol), ps.Sale, 0m);
+            Assert.True(stock == tank.Current, $"{when}: موجودیِ مخزن {tank.Current} ≠ {stock}");
+            Assert.True(petrolProfit == ps.Profit, $"{when}: فایدهٔ پطرول {ps.Profit} ≠ {petrolProfit}");
+            Assert.True(R.dieselShiftProfit == ds.Profit, $"{when}: فایدهٔ دیزل {ds.Profit}");
         }
 
         await AssertAll(R.safeSales, "پس از سی روز");
+        await AssertStock(R.petrolSoldLiters, R.petrolTankStock, R.petrolShiftProfit, "پس از سی روز");
 
         //  ── ویرایشِ پایهٔ روزِ ۱۵ (ختم +۱۰ لیتر) از راهِ همان ویرایشِ گزارش
         await using (var db = h.Db.Create())
@@ -200,6 +229,8 @@ public class GoldenChainTests : IDisposable
             Assert.True(res.Ok, res.Error);
         }
         await AssertAll(R.safeSales + R.editSafeDelta, "پس از ویرایش");
+        var tenL = R.editExtraLiters;
+        await AssertStock(R.petrolSoldLiters + tenL, R.petrolTankStock - tenL, R.petrolShiftProfit + tenL * 10m, "پس از ویرایش");
 
         //  ── حذفِ پارچهٔ پطرولِ روزِ ۳۰، بعد برگشت از سطل (همان Ctrl+Z)
         await h.Parcha.DeleteAsync(reports[R.deleteDay]);
@@ -208,6 +239,7 @@ public class GoldenChainTests : IDisposable
         var (err, _) = await h.Trash.RestoreTracedAsync(item.Id);
         Assert.Null(err);
         await AssertAll(R.safeSales + R.editSafeDelta, "پس از برگشت");
+        await AssertStock(R.petrolSoldLiters + tenL, R.petrolTankStock - tenL, R.petrolShiftProfit + tenL * 10m, "پس از برگشت");
 
         //  چهار رسیدِ ذخیره‌شدهٔ حساب و هر عددِ مشتق با ردیف‌ها می‌خوانند (الف۳)
         await using (var db = h.Db.Create())

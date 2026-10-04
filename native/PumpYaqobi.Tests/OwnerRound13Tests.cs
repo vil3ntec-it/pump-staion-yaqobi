@@ -63,10 +63,15 @@ public class OwnerRound13Tests
     public void CheraghHamgamSazi_DarNavarePayin_Nist()
     {
         var w = Bare(Read("PumpYaqobi.App", "Views", "MainWindow.axaml"));
-        Assert.DoesNotContain("{Binding SyncDotText}", w);
-        Assert.DoesNotContain("SyncNowCommand", w);
         var i = w.IndexOf("Name=\"StatusBar\"", StringComparison.Ordinal);
         Assert.True(i > 0);
+        //  ⛔ نوارِ پایین (خودِ ‎StatusBar‎) حالِ همگام‌سازی ندارد. حالش در
+        //  پنجرهٔ چراغِ یگانهٔ سربرگ است (شورا، ث۴) — همان «چراغِ سربرگ».
+        var bar = w.Substring(i);         // از نوارِ پایین تا تهِ پنجره
+        Assert.DoesNotContain("{Binding SyncDotText}", bar);
+        Assert.DoesNotContain("SyncNowCommand", bar);
+        var head = w.Substring(0, i);
+        Assert.Contains("LinkPanel", head);
         Assert.Contains("<Binding Path=\"HasNotice\" />", w.Substring(i, 900));
         //  حالش همچنان در «تنظیمات ← همگام‌سازی» دیده می‌شود
         Assert.True(File.Exists(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections", "SyncSectionView.axaml")));

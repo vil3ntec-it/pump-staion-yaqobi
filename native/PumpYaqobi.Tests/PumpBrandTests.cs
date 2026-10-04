@@ -50,6 +50,40 @@ public class PumpBrandTests
         Assert.Empty(bad);
     }
 
+    /// <summary>
+    /// ⛔ شورا، ث۷ — همین قاعده برای صفحه‌های بیرونِ برنامه: صفحهٔ دانلود، اپِ
+    /// گوشی و صفحهٔ کیو‌آر. فقط نوشتهٔ دیدنی؛ توضیحِ کد (نقلِ گفتهٔ صاحب ریپو) نه.
+    /// </summary>
+    [Fact]
+    public void SafheyeDanlod_AppeGooshi_VaQr_HamPompBenzin()
+    {
+        var root = Path.GetFullPath(Path.Combine(Native, ".."));
+        var files = new List<string> { Path.Combine(root, "index.html"), Path.Combine(root, "sw.js") };
+        foreach (var dir in new[] { "kar", "view" })
+            files.AddRange(Directory.EnumerateFiles(Path.Combine(root, dir), "*.*", SearchOption.TopDirectoryOnly)
+                .Where(f => f.EndsWith(".html") || f.EndsWith(".js") || f.EndsWith(".json")));
+        var bad = new List<string>();
+        foreach (var f in files)
+        {
+            var inBlock = false; var n = 0;
+            foreach (var line in File.ReadLines(f))
+            {
+                n++;
+                var t = line.TrimStart();
+                if (inBlock) { if (t.Contains("*/") || t.Contains("-->")) inBlock = false; continue; }
+                if (t.StartsWith("/*") || t.StartsWith("<!--"))
+                {
+                    if (!(t.Contains("*/") || t.Contains("-->"))) inBlock = true;
+                    continue;
+                }
+                if (t.StartsWith("//") || t.StartsWith("*")) continue;
+                if (line.Contains("پمپ یعقوبی") || line.Contains("پمپِ یعقوبی")) bad.Add(Path.GetFileName(f) + ":" + n);
+            }
+        }
+        Assert.True(files.Count > 5, "فایل‌های وب پیدا نشدند");
+        Assert.Empty(bad);
+    }
+
     [Fact]
     public void SarbargVaPanjare_AzHamanNam_MiKhanand()
     {

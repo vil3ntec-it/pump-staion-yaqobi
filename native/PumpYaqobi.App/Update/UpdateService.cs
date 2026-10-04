@@ -102,8 +102,45 @@ public sealed class UpdateService
     /// </summary>
     public static Func<string?> ServerFeed { get; set; } = () => ServerFeedUrl;
 
-    /// <summary>نشانیِ درِ اصلی — همیشه از ‎CloudConfig.Url‎.</summary>
-    public static string ServerFeedUrl => Services.CloudConfig.Url("/api/pump-updates/latest");
+    /// <summary>
+    /// نشانیِ درِ اصلی — همیشه از ‎CloudConfig.Url‎. کانالِ آزمایشی
+    /// <c>?channel=testing</c> می‌گیرد؛ پایدار (پیش‌فرض) هیچ پارامتری ندارد، پس
+    /// سرورِ کهنه‌ای که کانال نمی‌شناسد همان پاسخِ همیشگی را می‌دهد.
+    /// </summary>
+    public static string ServerFeedUrl =>
+        Services.CloudConfig.Url("/api/pump-updates/latest") + (TestingChannel ? "?channel=testing" : "");
+
+    private static bool? _testing;
+
+    /// <summary>
+    /// 🛤️ شورا، ت۱ — «پایدار» (پیش‌فرض) یا «آزمایشی». تنها جای خواندن و نوشتنِ
+    /// <see cref="Services.AppSettings.UpdateChannel"/>. ⛔ کانال فقط می‌گوید <b>کدام</b>
+    /// نسخه از سرور پرسیده شود؛ چک‌سام، امضا و «فقط به جلو» همان‌اند.
+    /// </summary>
+    public static bool TestingChannel
+    {
+        get
+        {
+            if (_testing is bool b) return b;
+            try { _testing = Services.AppSettings.Load().UpdateChannel == "testing"; }
+            catch { _testing = false; }
+            return _testing.Value;
+        }
+        set
+        {
+            _testing = value;
+            try
+            {
+                var s = Services.AppSettings.Load();
+                s.UpdateChannel = value ? "testing" : "stable";
+                s.Save();
+            }
+            catch { /* نشد ⇒ فقط همین اجرا */ }
+        }
+    }
+
+    /// <summary>فقط آزمون: کانال را بی نوشتن روی دیسک فراموش می‌کند.</summary>
+    public static void ForgetChannel() => _testing = null;
 
     /// <summary>
     /// میزبان‌های گیت‌هاب که سرآیندِ <c>Date</c>شان ساعتِ مطمئن است (‎Services.TimeSync‎)

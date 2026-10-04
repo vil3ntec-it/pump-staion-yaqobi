@@ -988,6 +988,13 @@
             <TextBlock Text="{Binding WatchLine}" Classes="muted" FontSize="11.5" TextWrapping="Wrap"
                        IsVisible="{Binding WatchLine, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
+            <!-- 🛤️ شورا، ت۱: کانالِ به‌روزرسانی (پیش‌فرض: پایدار) -->
+            <TextBlock Text="{Binding ChannelText}" Classes="muted" FontSize="11.5" TextWrapping="Wrap" />
+            <CheckBox IsChecked="{Binding TestingChannel}" Content="نسخه‌های تازه را زودتر بگیر (کانالِ آزمایشی)" />
+            <!-- شورا، ث۶: حالتِ ساده — یادِ همین کامپیوتر -->
+            <CheckBox IsChecked="{Binding $parent[Window].DataContext.SimpleMode}" x:CompileBindings="False"
+                      Content="حالتِ ساده — نوار فقط پارچه، ورق، قرض‌داران، گاوصندوق و رسید (بقیه پشتِ «☰ همه»)" />
+
             <TextBlock Text="{Binding GraceText}" FontSize="12" TextWrapping="Wrap" FontWeight="Bold"
                        Foreground="{DynamicResource Pump.Ink.Warn}"
                        IsVisible="{Binding GraceText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />

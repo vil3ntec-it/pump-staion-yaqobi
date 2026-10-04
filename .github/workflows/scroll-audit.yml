@@ -180,6 +180,12 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- moremenu
 
+      # شورا، ث۲/ث۴/ث۶: نوارِ میانبرها و «💡»، کادرِ چراغ، و حالتِ ساده —
+      # با کلیک و پنجرهٔ واقعی.
+      - name: تجربهٔ کاربر (شورا، ث)
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- ux ${{ runner.temp }}/ux
+
       # «توی حسابِ قرض‌دار نمی‌ره» (۱۴۰۵/۰۷/۱۶): هر دکمهٔ دیدنیِ کلِ برنامه که
       # اتصالِ فرمانش خطا داد و فرمانش خالی ماند ⇒ سرخ.
       - name: سنجشِ دکمه‌های مرده

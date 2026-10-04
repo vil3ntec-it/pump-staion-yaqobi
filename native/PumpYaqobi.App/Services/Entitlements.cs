@@ -159,6 +159,8 @@ public static class Entitlements
     public static bool Allows(string feature)
     {
         if (Array.IndexOf(Paid, feature) < 0) return true;   // پشتیبانی و هر چیزِ دیگر
+        //  ⛔ شورا، پ۲: فایلِ دست‌خوردهٔ برنامه فقط همین شش بخش را می‌بندد — دفتر هرگز
+        if (Integrity.Tampered) return false;
         return State().Allows(feature);
     }
 
@@ -177,7 +179,10 @@ public static class Entitlements
 
     /// <summary>چرا بسته است — یک جملهٔ آمادهٔ نمایش. خالی یعنی باز است.</summary>
     public static string Why(string feature) =>
-        Allows(feature) ? "" : State().Why(TitleOf(feature));
+        Allows(feature) ? ""
+        : Integrity.Tampered && Array.IndexOf(Paid, feature) >= 0
+            ? $"«{TitleOf(feature)}» بسته است: فایل‌های برنامه دست خورده‌اند — برنامه را از نصابِ رسمی دوباره نصب کنید (دفتر دست نمی‌خورد)."
+            : State().Why(TitleOf(feature));
 
     /// <summary>
     /// حالِ اشتراک، از روی تنظیماتِ روی دیسک و — اگر داشته باشیم — پاسخِ

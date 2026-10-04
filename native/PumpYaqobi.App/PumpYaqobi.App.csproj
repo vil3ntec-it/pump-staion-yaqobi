@@ -57,10 +57,13 @@
     <LicenseKeys Condition="'$(LicenseKeys)' == ''"></LicenseKeys>
     <UpdateKey Condition="'$(UpdateKey)' == ''"></UpdateKey>
     <OfflineKeys Condition="'$(OfflineKeys)' == ''"></OfflineKeys>
+    <IntegrityKey Condition="'$(IntegrityKey)' == ''"></IntegrityKey>
   </PropertyGroup>
   <ItemGroup>
     <AssemblyMetadata Include="LicenseKeys" Value="$(LicenseKeys)" />
     <AssemblyMetadata Include="UpdateKey" Value="$(UpdateKey)" />
+    <!-- شورا، پ۲: کلیدِ عمومیِ یک‌بارمصرفِ یکپارچگی ⇒ Integrity.BuildKey -->
+    <AssemblyMetadata Include="IntegrityKey" Value="$(IntegrityKey)" />
     <!-- کلیدِ سرورِ حساب برای کدِ اشتراکِ آفلاین ⇒ CloudConfig.OfflineKeys -->
     <AssemblyMetadata Include="OfflineKeys" Value="$(OfflineKeys)" />
   </ItemGroup>

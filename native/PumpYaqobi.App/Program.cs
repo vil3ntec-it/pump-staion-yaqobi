@@ -12,6 +12,9 @@ internal static class Program
         // بی‌ردّ‌ونشان برنامه را می‌بندد.
         CrashGuard.Install();
 
+        //  ══ شورا، پ۲: سنجهٔ CI — «فایل‌های برنامه سالم‌اند؟» و بیرون، بی پنجره
+        if (args.Any(a => a == "--integrity")) { Environment.Exit(Integrity.SelfTestExitCode()); return; }
+
         //  ══ فقط یک نمونه روی هر پوشهٔ تنظیمات ═════════════════════════════
         //  ⛔ دو نمونهٔ هم‌زمان روی یک دفتر یعنی دو حلقهٔ همگام‌سازی، دو
         //  چرخشِ توکن و دو نوشتنِ `settings.json` روی هم — هر کدام عکسِ کهنهٔ
@@ -30,6 +33,9 @@ internal static class Program
             return;
         }
         if (opened is not null) OpenRequest.Add(opened);
+
+        //  هشِ فایل‌های برنامه روی نخِ دیگر — نخستین «این بخش باز است؟» منتظرش نماند
+        Integrity.Warm();
 
         //  ⛔ ساعتِ خودِ برنامه — پیش از هر «امروز»ی (‎AppClock‎ و ‎TimeSync‎):
         //  اگر کامپیوتر از آخرین ساعتِ اینترنت خاموش نشده، همان ساعت برمی‌گردد.

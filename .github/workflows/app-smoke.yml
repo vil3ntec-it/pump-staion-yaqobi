@@ -42,13 +42,23 @@ jobs:
         working-directory: native
         shell: pwsh
         run: |
+          # ⛔ شورا، پ۲: همان کلید و همان امضای ‎build-native‎ — پیش از مرج
+          $ik = & installer/integrity-sign.ps1 -Key
           foreach ($rid in @('win-x64','win-x86')) {
             dotnet publish PumpYaqobi.App -c Release -r $rid --self-contained true `
-              -p:Version=9.9.9 -p:PublishSingleFile=false -o "publish/$rid"
+              -p:Version=9.9.9 -p:PublishSingleFile=false "-p:IntegrityKey=$ik" -o "publish/$rid"
             if ($LASTEXITCODE -ne 0) { throw "ساختِ $rid شکست خورد" }
+            & installer/integrity-sign.ps1 -Sign "publish/$rid"
             $drop = if ($rid -eq 'win-x86') { 'win-x64' } else { 'win-x86' }
             Remove-Item "publish/$rid/libvlc/$drop" -Recurse -Force -ErrorAction SilentlyContinue
           }
+      # ── شورا، پ۲: دست‌کاریِ یک DLL ⇒ شش بخشِ اشتراکی بسته (‎--integrity‎) ──
+      - name: سنجشِ یکپارچگی (دست‌کاری ⇒ بسته)
+        shell: pwsh
+        working-directory: native
+        run: |
+          foreach ($rid in @('win-x64','win-x86')) { & installer/integrity-check.ps1 -Dir "publish/$rid" }
+
       - name: نصاب و مُهر
         shell: pwsh
         run: |

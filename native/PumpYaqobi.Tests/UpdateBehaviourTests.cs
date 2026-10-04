@@ -765,6 +765,30 @@ public class UpdateBehaviourTests : IDisposable
     }
 
     [Fact]
+    public void Kanal_PishFarzPaydar_VaAzmayeshiPorsesheKhodashRaDarad()
+    {
+        var real = CloudConfig.Url("/api/pump-updates/latest");
+        try
+        {
+            UpdateService.ForgetChannel();
+            //  ⛔ پیش‌فرض پایدار، بی هیچ پارامتری (سرورِ کهنه همان پاسخِ همیشگی)
+            Assert.False(UpdateService.TestingChannel);
+            Assert.Equal(real, UpdateService.ServerFeedUrl);
+            UpdateService.TestingChannel = true;
+            Assert.Equal(real + "?channel=testing", UpdateService.ServerFeedUrl);
+            Assert.Equal("testing", AppSettings.Load().UpdateChannel);
+            UpdateService.ForgetChannel();
+            Assert.True(UpdateService.TestingChannel);          // از دیسک برگشت
+            Assert.True(UpdateService.AllowedUrl(UpdateService.ServerFeedUrl));
+        }
+        finally
+        {
+            UpdateService.TestingChannel = false;
+        }
+        Assert.Equal(real, UpdateService.ServerFeedUrl);
+    }
+
+    [Fact]
     public void NeshaniyeServer_AzCloudConfig_Ast_VaPazirofteMishavad()
     {
         var real = CloudConfig.Url("/api/pump-updates/latest");

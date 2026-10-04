@@ -1,0 +1,30 @@
+name: رفعِ باگ با آزمونِ اول سرخ
+
+# ══ شورا، ت۲ ════════════════════════════════════════════════════════════════
+# PRی که عنوانش «اصلاح/باگ/درست» دارد باید آزمونی بیفزاید که روی base سرخ و
+# روی خودِ PR سبز است (دو اجرا). استثنا: برچسبِ «no-test» و «دلیل» در متنِ PR.
+# منطق در ‎tools/fix-needs-test.sh‎ است تا محلی هم سنجیدنی باشد.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  fix-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: سنجش
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ' ') }}
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s' "$BODY" > "$RUNNER_TEMP/pr-body.txt"
+          tools/fix-needs-test.sh "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" "$TITLE" "$LABELS" "$RUNNER_TEMP/pr-body.txt"
