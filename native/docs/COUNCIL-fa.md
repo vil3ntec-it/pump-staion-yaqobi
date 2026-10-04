@@ -462,7 +462,7 @@ CloudLink، SyncEngine، StationPublisher، BackupPusher، LicenseGuard، TimeSy
 ⛔ هر گام با همهٔ سنجه‌ها و idle/years سبز.
 ```
 
-#### ج۶ — تاریخ یک شکلِ کانونی  ⏳
+#### ج۶ — تاریخ یک شکلِ کانونی  ✅ شد (`DateKeys` تنها قاعده؛ `PumpDbContext.DeriveDateKeys` با هر ذخیره؛ برابریِ روزانهٔ `CheckDatesAsync` — `DateKeyCanonTests` ۱۱ سبز — نسخه 3.1.243)
 
 ```
 هر ردیف DateShamsi (متنِ کاربر) + DateKey + MonthKey دارد. کار: DateKey منبعِ

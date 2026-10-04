@@ -137,6 +137,78 @@ public sealed class LedgerParityService
     }
 
     /// <summary>کارِ در جریان — سنجه‌ها منتظرش می‌مانند.</summary>
+    /// <summary>
+    /// ══ شورا، ج۶ — برابریِ کلیدهای تاریخ ═══════════════════════════════════════
+    ///
+    /// هر جدولی که <c>DateShamsi</c> و <c>DateKey</c> دارد: کلید (و ماه، اگر هست)
+    /// باید همان باشد که از متنِ خودِ ردیف درمی‌آید (<see cref="PumpYaqobi.Domain.DateKeys"/>
+    /// — همان قاعدهٔ ذخیره). ردیف‌های کهنه‌ای که راهی کلیدشان را ننوشته بود
+    /// (<c>DateKey = 0</c>) یا ماهِ کهنه دارند، این‌جا درست می‌شوند.
+    ///
+    /// ⚠️ متنِ خالی یا ناخوانا دست نمی‌خورد، و <b>متنِ کاربر هرگز نوشته نمی‌شود</b> —
+    /// فقط دو ستونِ مشتق. هر جدولِ درست‌شده یک ردیفِ ممیزی.
+    /// </summary>
+    public async Task<int> CheckDatesAsync(bool fix, CancellationToken ct = default)
+    {
+        var found = 0;
+        await using var db = _dbf.Create();
+        var tables = db.Model.GetEntityTypes()
+            .Where(t => t.FindProperty("DateShamsi") is not null
+                        && t.FindProperty("DateKey") is { } k && k.ClrType == typeof(int)
+                        && t.GetTableName() is not null)
+            .Select(t => (Table: t.GetTableName()!, HasMonth: t.FindProperty("MonthKey") is not null))
+            .Distinct().ToList();
+
+        var conn = db.Database.GetDbConnection();
+        var opened = conn.State != System.Data.ConnectionState.Open;
+        if (opened) await conn.OpenAsync(ct);
+        try
+        {
+            foreach (var (table, hasMonth) in tables)
+            {
+                var bad = new List<(long Id, int Key, string Month)>();
+                await using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = $"SELECT \"Id\", \"DateShamsi\", \"DateKey\"{(hasMonth ? ", \"MonthKey\"" : "")} FROM \"{table}\"";
+                    await using var rd = await cmd.ExecuteReaderAsync(ct);
+                    while (await rd.ReadAsync(ct))
+                    {
+                        var k = PumpYaqobi.Domain.DateKeys.Key(rd.IsDBNull(1) ? null : rd.GetString(1));
+                        if (k == 0) continue;
+                        var m = PumpYaqobi.Domain.DateKeys.Month(k);
+                        var storedK = rd.IsDBNull(2) ? 0 : rd.GetInt32(2);
+                        var storedM = hasMonth && !rd.IsDBNull(3) ? rd.GetString(3) : "";
+                        if (storedK != k || (hasMonth && storedM != m)) bad.Add((rd.GetInt64(0), k, m));
+                    }
+                }
+                found += bad.Count;
+                if (!fix || bad.Count == 0) continue;
+
+                await using var tx = await conn.BeginTransactionAsync(ct);
+                foreach (var (id, k, m) in bad)
+                {
+                    await using var up = conn.CreateCommand();
+                    up.Transaction = tx;
+                    up.CommandText = $"UPDATE \"{table}\" SET \"DateKey\" = $k{(hasMonth ? ", \"MonthKey\" = $m" : "")} WHERE \"Id\" = $id";
+                    var pk = up.CreateParameter(); pk.ParameterName = "$k"; pk.Value = k; up.Parameters.Add(pk);
+                    var pi = up.CreateParameter(); pi.ParameterName = "$id"; pi.Value = id; up.Parameters.Add(pi);
+                    if (hasMonth) { var pm = up.CreateParameter(); pm.ParameterName = "$m"; pm.Value = m; up.Parameters.Add(pm); }
+                    await up.ExecuteNonQueryAsync(ct);
+                }
+                await tx.CommitAsync(ct);
+                db.Audit.Add(new AuditEntry
+                {
+                    Actor = "system", Action = "parity.dates", Target = table,
+                    DateShamsi = Shamsi.Today(),
+                    Detail = $"{bad.Count} کلیدِ تاریخ از روی متنِ همان ردیف درست شد",
+                });
+            }
+        }
+        finally { if (opened) await conn.CloseAsync(); }
+        if (fix && found > 0) await db.SaveChangesAsync(ct);
+        return found;
+    }
+
     public Task<int>? DailyTask { get; private set; }
 
     /// <summary>یک بار در روز برای هر دفتر، روی نخِ دیگر؛ دو صدا زدنِ هم‌زمان یکی می‌شوند.</summary>
@@ -156,7 +228,8 @@ public sealed class LedgerParityService
             var today = Shamsi.Today();
             await using (var db = _dbf.Create())
                 if (await db.Settings.AnyAsync(x => x.Key == DayKey && x.Value == today, ct)) return 0;
-            var fixedCount = (await CheckAsync(fix: true, ct)).Count;
+            var fixedCount = (await CheckAsync(fix: true, ct)).Count
+                           + await CheckDatesAsync(fix: true, ct);      //  شورا ج۶
             await using (var db = _dbf.Create())
             {
                 var s = await db.Settings.FirstOrDefaultAsync(x => x.Key == DayKey, ct);

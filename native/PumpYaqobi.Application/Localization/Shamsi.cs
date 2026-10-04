@@ -105,18 +105,7 @@ public static class Shamsi
     }
 
     /// <summary>«1404/06/15» → 14040615. رشتهٔ ناقص یا خراب → صفر.</summary>
-    public static int Key(string? shamsi)
-    {
-        var s = ToEnDigits(shamsi).Trim();
-        if (s.Length == 0) return 0;
-        var parts = s.Split('/', '-', '.');
-        if (parts.Length < 3) return 0;
-        if (!int.TryParse(parts[0], out var y) ||
-            !int.TryParse(parts[1], out var m) ||
-            !int.TryParse(parts[2], out var d)) return 0;
-        if (y is < 1000 or > 9999 || m is < 1 or > 12 || d is < 1 or > 31) return 0;
-        return y * 10000 + m * 100 + d;
-    }
+    public static int Key(string? shamsi) => PumpYaqobi.Domain.DateKeys.Key(shamsi);   //  ⛔ شورا ج۶: یک قاعده
 
     public static int Key(DateTime d) =>
         Cal.GetYear(d) * 10000 + Cal.GetMonth(d) * 100 + Cal.GetDayOfMonth(d);
@@ -144,11 +133,7 @@ public static class Shamsi
     private static readonly Regex DayKeyRx = new(@"(\d{4})\D+(\d{1,2})\D+(\d{1,2})");
 
     /// <summary>«1404/06/15» → «1404/06». رشتهٔ خراب → رشتهٔ خالی.</summary>
-    public static string MonthKey(string? shamsi)
-    {
-        var k = Key(shamsi);
-        return k == 0 ? "" : $"{k / 10000:0000}/{k / 100 % 100:00}";
-    }
+    public static string MonthKey(string? shamsi) => PumpYaqobi.Domain.DateKeys.Month(Key(shamsi));
 
     private static readonly string[] DayNames =
         { "یک‌شنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنج‌شنبه", "جمعه", "شنبه" };
