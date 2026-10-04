@@ -22,6 +22,8 @@ public class GiantFileTests
     {
         new object[] { "PumpYaqobi.App/Controls", "ExcelGrid" },
         new object[] { "PumpYaqobi.App/ViewModels", "MainViewModel" },
+        //  شورا، د۵: ‎CloudLink.cs‎ (۲٬۹۵۷ خط) هم شکست.
+        new object[] { "PumpYaqobi.Shell/Services", "CloudLink" },
     };
 
     [Theory, MemberData(nameof(Classes))]

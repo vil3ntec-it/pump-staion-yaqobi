@@ -36,7 +36,7 @@ public sealed class ExpenseReport : ISetupDocument
     private void Body(IContainer c) => c.Column(col =>
     {
         var total = _in.Rows.Sum(e => e.Amount);
-        var today = _in.Rows.Where(e => e.DateShamsi == _in.TodayShamsi).Sum(e => e.Amount);
+        var today = _in.Rows.Where(e => PumpYaqobi.Application.Localization.Shamsi.SameDay(e.DateShamsi, _in.TodayShamsi)).Sum(e => e.Amount);
 
         col.Item().Row(row =>
         {

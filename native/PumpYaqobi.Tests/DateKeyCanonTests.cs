@@ -151,4 +151,37 @@ public class DateKeyCanonTests
         Assert.NotNull(salary.FindProperty("MonthKey"));
         Assert.Null(salary.FindProperty("DateKey"));
     }
+
+    /// <summary>⛔ شورا د۴ — «امروز» با کلید: رقمِ فارسی و صفرِ جاافتاده همان روزند.</summary>
+    [Fact]
+    public void Emruz_BaKelid_NaBaMatn()
+    {
+        Assert.True(PumpYaqobi.Application.Localization.Shamsi.SameDay("۱۴۰۵/۰۷/۲۰", "1405/07/20"));
+        Assert.True(PumpYaqobi.Application.Localization.Shamsi.SameDay("1405/7/20", "1405/07/20"));
+        Assert.False(PumpYaqobi.Application.Localization.Shamsi.SameDay("1405/07/21", "1405/07/20"));
+        Assert.False(PumpYaqobi.Application.Localization.Shamsi.SameDay("خراب", "خراب"));
+        Assert.False(PumpYaqobi.Application.Localization.Shamsi.SameDay(null, null));
+
+        //  رفتار: «مصارف امروز»ِ PDF ردیفِ رقم‌فارسی را می‌شمارد
+        var rows = new[]
+        {
+            new Expense { DateShamsi = "۱۴۰۵/۰۷/۲۰", Amount = 300m },
+            new Expense { DateShamsi = "1405/07/20", Amount = 200m },
+            new Expense { DateShamsi = "1405/07/19", Amount = 999m },
+        };
+        Assert.Equal(500m, rows.Where(e => PumpYaqobi.Application.Localization.Shamsi.SameDay(e.DateShamsi, "1405/07/20")).Sum(e => e.Amount));
+
+        //  ⛔ ممنوعه — رفتارش بالاست: هیچ «امروز»ی با برابریِ متن
+        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        while (root is not null && !File.Exists(Path.Combine(root.FullName, "PumpYaqobi.App", "PumpYaqobi.App.csproj"))) root = root.Parent;
+        foreach (var f in new[] { "PumpYaqobi.App/ViewModels/Sections/ExpenseSectionViewModel.cs",
+                                  "PumpYaqobi.App/ViewModels/MainViewModel.Ledger.cs",
+                                  "PumpYaqobi.Shell/Services/StationSnapshot.cs",
+                                  "PumpYaqobi.Reporting/Pdf/ExpenseReport.cs" })
+        {
+            var src = File.ReadAllText(Path.Combine(root!.FullName, f));
+            Assert.DoesNotContain("DateShamsi == today", src);
+            Assert.DoesNotContain("DateShamsi == _in.TodayShamsi", src);
+        }
+    }
 }

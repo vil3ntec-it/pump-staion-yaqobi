@@ -63,7 +63,7 @@ public class ModulesTests : IDisposable
             Assert.False(Modules.Alive(id), id + " باید خاموش مانده باشد");
 
         //  و ماژول‌های دوره‌ای هم، هر کدام سرِ دورِ خودش
-        foreach (var id in new[] { "alerts", "rate", "liveconfig" })
+        foreach (var id in new[] { "alerts", "rate", "liveconfig", "chat" })
             await Modules.Run(id, () => Task.CompletedTask, default);
         Assert.Equal(Modules.All.Count, Modules.Failed.Count);
         Modules.BreakHook = null;
@@ -80,5 +80,19 @@ public class ModulesTests : IDisposable
         var acct = (AccountSectionViewModel)vm.Sections.Single(s => s.Id == "account");
         await acct.OnActivatedAsync();
         foreach (var m in Modules.All) Assert.Contains(m.Title, acct.ModulesLine);
+    }
+
+    /// <summary>⛔ شورا د۵ — حلقهٔ گرفتنِ پیام از درِ ‎Modules‎ می‌گذرد، نه با ‎catch {}‎ِ خالیِ خودش.</summary>
+    [Fact]
+    public void PayamResan_AzDareModules()
+    {
+        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        while (root is not null && !File.Exists(Path.Combine(root.FullName, "PumpYaqobi.App", "PumpYaqobi.App.csproj"))) root = root.Parent;
+        var src = File.ReadAllText(Path.Combine(root!.FullName, "PumpYaqobi.App/ViewModels/Sections/ChatSectionViewModel.cs"));
+        var loop = src[src.IndexOf("private async Task LoopAsync()", StringComparison.Ordinal)..];
+        loop = loop[..loop.IndexOf("public override Task OnActivatedAsync()", StringComparison.Ordinal)];
+        Assert.Contains("Modules.Run(\"chat\"", loop);
+        Assert.DoesNotContain("catch { /* نرسید", loop);
+        Assert.Contains(Modules.All, m => m.Id == "chat");
     }
 }

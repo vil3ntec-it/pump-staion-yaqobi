@@ -30,6 +30,8 @@ public static class Modules
         new Info("liveconfig", "تنظیماتِ زنده"),
         new Info("autoupdate", "به‌روزرسانیِ خودکار"),
         new Info("backup-push", "پشتیبانِ سرور"),
+        //  ⛔ شورا د۵ — پیام‌رسان هم حاشیه است: باگِ گرفتنِ پیام فقط خودش را خاموش می‌کند
+        new Info("chat", "گرفتنِ پیام‌های پیام‌رسان"),
     };
 
     private static readonly object Gate = new();

@@ -864,9 +864,11 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
         try { await Task.Delay(TimeSpan.FromSeconds(8), _life.Token); } catch { return; }
         while (!_life.IsCancellationRequested)
         {
-            try { await PollCloudAsync(_life.Token); }
+            //  ⛔ شورا د۵ — از درِ ‎Modules‎: نرسیدن (شبکه) همان «دورِ بعد»ِ همیشه است؛
+            //  خطای واقعی فقط همین ماژول را خاموش می‌کند و پروفایل می‌گوید — نه این‌که
+            //  هر شصت ثانیه بی‌صدا همان خطا را تکرار کند.
+            try { await Modules.Run("chat", () => PollCloudAsync(_life.Token), _life.Token); }
             catch (OperationCanceledException) when (_life.IsCancellationRequested) { return; }
-            catch { /* نرسید — دورِ بعد */ }
             try { await _wake.WaitAsync(IsActive ? CloudEvery : CloudEveryIdle, _life.Token); }
             catch { return; }
         }

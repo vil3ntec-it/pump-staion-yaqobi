@@ -1,3 +1,4 @@
+using PumpYaqobi.Application.Services;
 using System.Data.Common;
 using System.Globalization;
 using System.Text.Json;
@@ -469,7 +470,12 @@ public sealed partial class SyncStore
     /// شمرده می‌شود. وگرنه یک ردیفِ ناجور، همگام‌سازی را برای همیشه
     /// می‌ایستاند.
     /// </summary>
-    public ApplyReport ApplyIncoming(IReadOnlyList<IncomingOp> ops)
+    /// <param name="cursor">
+    /// مکان‌نمای گرفتن <b>پیش از</b> همین دسته. ⛔ شورا د۱: opِ رفته‌ای که شماره‌اش از این
+    /// بزرگ‌تر است هنوز «همین حالا رفته» شمرده می‌شود — هر چند دور یا بسته و باز شدن
+    /// گذشته باشد. پیش‌فرض (‎long.MaxValue‎) یعنی «هیچ»، همان رفتارِ آوردنِ فایل.
+    /// </param>
+    public ApplyReport ApplyIncoming(IReadOnlyList<IncomingOp> ops, long cursor = long.MaxValue)
     {
         if (ops.Count == 0) return new ApplyReport(0, 0, 0, "");
 
@@ -489,10 +495,11 @@ public sealed partial class SyncStore
         }
 
         //  ⛔ شورا ب۱ — تعارض‌ها دیده و نگه داشته می‌شوند، نه «آخرین نوشتن» بی‌صدا
-        var cx = new ConflictCtx(db, pending.Select(p => (p.T.Entity, p.Op.RowUid)), _justPushed, now);
+        var cx = new ConflictCtx(db, pending.Select(p => (p.T.Entity, p.Op.RowUid)), cursor, now);
 
         var missing = new Dictionary<string, string>(StringComparer.Ordinal);
         var failedOps = new List<IncomingOp>();
+        var touchedDebt = new HashSet<string>(StringComparer.Ordinal);
         while (pending.Count > 0)
         {
             var later = new List<(IncomingOp Op, TableInfo T)>();
@@ -501,7 +508,12 @@ public sealed partial class SyncStore
             {
                 try
                 {
-                    if (ApplyOne(db, t, op, now, cx)) applied++; else skipped++;
+                    if (ApplyOne(db, t, op, now, cx))
+                    {
+                        applied++;
+                        if (t.Entity == nameof(DebtRow) && op.Type != "delete") touchedDebt.Add(op.RowUid);
+                    }
+                    else skipped++;
                     progress = true;
                 }
                 catch (MissingParentException mp)
@@ -530,8 +542,28 @@ public sealed partial class SyncStore
 
         cx.Save();
         Conflicts += cx.Made;
+        RenormalizeDebtRows(touchedDebt);
         if (applied > 0) PumpDbContext.Bump();
         return new ApplyReport(applied, skipped, failed, why) { FailedOps = failedOps, Conflicts = cx.Made };
+    }
+
+    /// <summary>
+    /// ⛔ شورا د۲ — «برد» و «الباقی»ِ ردیفی که op به آن رسید، از روی خودِ ردیف (همان
+    /// <see cref="DebtCalculationService.Normalize"/>ِ صفحهٔ حساب). وقتی یک فیلدِ ورودی
+    /// (مثلاً «رسید») از کامپیوترِ دیگر برنده می‌شود و عددِ مشتقِ همان op از رسیدِ ما
+    /// حساب شده بود، دو کامپیوتر تا دورِ شبانهٔ برابری دو «الباقی» داشتند. عددِ مشتق
+    /// تابعِ ورودی‌هاست، پس هر کامپیوتر خودش آن را از ورودی‌های نشسته می‌سازد — بی op،
+    /// چون هر کامپیوتر همین کار را می‌کند. ورودی‌ها (لیتر، فی، رسید) دست نمی‌خورند.
+    /// </summary>
+    private void RenormalizeDebtRows(IReadOnlyCollection<string> uids)
+    {
+        if (uids.Count == 0) return;
+        using var db = _dbf.Create();
+        var any = false;
+        foreach (var chunk in uids.Chunk(500))
+            foreach (var r in db.DebtRows.Where(x => x.SyncUid != null && chunk.Contains(x.SyncUid)).ToList())
+                any |= DebtCalculationService.Normalize(r);
+        if (any) Quiet(db);
     }
 
     private static bool ApplyOne(PumpDbContext db, TableInfo t, IncomingOp op, DateTime now, ConflictCtx? cx = null)

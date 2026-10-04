@@ -119,7 +119,7 @@ public sealed partial class ExpenseSectionViewModel
     {
         Total = _calc.Total(Rows.Select(r => r.Entity));
         var today = Shamsi.Today();
-        TodayTotal = _calc.Total(Rows.Select(r => r.Entity).Where(e => e.DateShamsi == today));
+        TodayTotal = _calc.Total(Rows.Select(r => r.Entity).Where(e => Shamsi.SameDay(e.DateShamsi, today)));
         _ = RefreshGrandAsync();
     }
 

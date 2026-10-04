@@ -3,7 +3,7 @@ namespace PumpYaqobi.Tests;
 /// <summary>
 /// ══ شورا، ج۴ — خواندنِ سورسِ کلاسی که چند فایل شد ══════════════════════════════
 ///
-/// <c>ExcelGrid</c> و <c>MainViewModel</c> به چند فایلِ <c>partial</c> شکستند (بی
+/// <c>ExcelGrid</c>، <c>MainViewModel</c> و <c>CloudLink</c> (شورا، د۵) به چند فایلِ <c>partial</c> شکستند (بی
 /// تغییرِ یک رفتار). آزمون‌هایی که متنِ «ExcelGrid.cs» یا «MainViewModel.cs» را
 /// می‌خوانند همان کلاس را می‌خواهند، پس این‌جا همهٔ تکه‌ها <b>به همان ترتیبِ فایلِ
 /// پیشین</b> پشتِ هم برمی‌گردند — متنی که آزمون می‌بیند همان فایلِ دیروز است
@@ -18,6 +18,12 @@ internal static class SrcText
                                    "ExcelGrid.Keys.cs", "ExcelGrid.Clipboard.cs", "ExcelGrid.Commit.cs" },
         ["MainViewModel.cs"] = new[] { "MainViewModel.cs", "MainViewModel.Lights.cs", "MainViewModel.Notices.cs",
                                        "MainViewModel.Lifecycle.cs", "MainViewModel.Navigation.cs", "MainViewModel.Ledger.cs" },
+        //  شورا، د۵: پنج تکهٔ اول همان فایلِ پیشین‌اند، به همان ترتیب؛ چهار تای آخر از
+        //  پیش تکهٔ جدا بودند و آزمون‌هایشان همچنان نامِ خودشان را هم می‌خوانند.
+        ["CloudLink.cs"] = new[] { "CloudLink.cs", "CloudLink.License.cs", "CloudLink.Support.cs",
+                                   "CloudLink.Account.cs", "CloudLink.Session.cs", "CloudLink.Wire.cs",
+                                   "CloudLink.Sync.cs", "CloudLink.Rate.cs", "CloudLink.Watch.cs",
+                                   "CloudLink.LiveConfig.cs" },
     };
 
     public static string Read(string path)

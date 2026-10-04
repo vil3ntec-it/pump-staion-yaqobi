@@ -250,7 +250,7 @@ public sealed partial class MainViewModel
         var today = Shamsi.Today();
         var reports = (await host.StorageData.ReportsAsync(FuelType.Petrol))
             .Concat(await host.StorageData.ReportsAsync(FuelType.Diesel))
-            .Where(r => r.DateShamsi == today);
+            .Where(r => Shamsi.SameDay(r.DateShamsi, today));
         var profit = reports.Sum(r => (r.DayShift?.Profit ?? 0) + (r.NightShift?.Profit ?? 0));
 
         // ۴) مصارفِ امروز — فقط ماهِ جاری، نه همهٔ مصارفِ تاریخ. «امروز» همیشه

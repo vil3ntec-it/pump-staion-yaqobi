@@ -107,6 +107,16 @@ public static class Shamsi
     /// <summary>«1404/06/15» → 14040615. رشتهٔ ناقص یا خراب → صفر.</summary>
     public static int Key(string? shamsi) => PumpYaqobi.Domain.DateKeys.Key(shamsi);   //  ⛔ شورا ج۶: یک قاعده
 
+    /// <summary>
+    /// ⛔ شورا د۴ — «همان روز»، با کلیدِ کانونی، نه با متن: «۱۴۰۵/۰۷/۲۰» (رقمِ فارسی)،
+    /// «1405/7/20» و «1405/07/20» یک روزند. متنِ ناخوانا هیچ روزی نیست.
+    /// </summary>
+    public static bool SameDay(string? a, string? b)
+    {
+        var k = Key(a);
+        return k != 0 && k == Key(b);
+    }
+
     public static int Key(DateTime d) =>
         Cal.GetYear(d) * 10000 + Cal.GetMonth(d) * 100 + Cal.GetDayOfMonth(d);
 

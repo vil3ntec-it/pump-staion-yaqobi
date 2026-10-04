@@ -367,7 +367,7 @@ public sealed class SyncEngine : IAsyncDisposable
     {
         await _stepGate.WaitAsync(ct);
         try { await StepCoreAsync(force, ct); }
-        finally { _store.ClearPushed(); _stepGate.Release(); }
+        finally { _stepGate.Release(); }
     }
 
     private async Task StepCoreAsync(bool force, CancellationToken ct)
@@ -597,7 +597,7 @@ public sealed class SyncEngine : IAsyncDisposable
             {
                 //  کنارگذاشته‌های دورِ قبل اول (قدیمی‌ترند)، بعد رسیده‌های تازه
                 var batch = _deferred.Count == 0 ? pull.Ops : _deferred.Concat(pull.Ops).ToList();
-                var applied = _store.ApplyIncoming(batch);
+                var applied = _store.ApplyIncoming(batch, state.Cursor);
                 if (applied.Conflicts > 0) ConflictsFound?.Invoke(applied.Conflicts);
                 _deferred.Clear();
                 foreach (var op in applied.FailedOps)

@@ -790,7 +790,7 @@ public static class StationSnapshot
         var today = Shamsi.Today();
         var reports = (await host.StorageData.ReportsAsync(FuelType.Petrol, ct))
             .Concat(await host.StorageData.ReportsAsync(FuelType.Diesel, ct))
-            .Where(r => r.DateShamsi == today);
+            .Where(r => Shamsi.SameDay(r.DateShamsi, today));
         var profit = reports.Sum(r => (r.DayShift?.Profit ?? 0) + (r.NightShift?.Profit ?? 0));
 
         var expToday = new PumpYaqobi.Application.Services.DashboardService()
