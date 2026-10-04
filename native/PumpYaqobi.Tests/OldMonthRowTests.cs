@@ -32,12 +32,27 @@ public class OldMonthRowTests
     [InlineData("1404/13")]
     public void KelideKharab_Emruz(string? month) => Assert.Equal(Shamsi.Today(), Shamsi.DateInMonth(month));
 
+    /// <summary>
+    /// ⛔ شورا ت۳ — رفتاری، با بخشِ «مصارف» و دفترِ واقعی: در ماهِ گذشته ردیفِ
+    /// تازه مالِ <b>همان ماه</b> است و «روزِ بعد از آخرین ردیف» را می‌گیرد.
+    /// </summary>
     [Fact]
-    public void Sorce_AddRow_MaheJoloyeCheshm()
+    public async Task Masaref_DarMaheGhabl_RadifeHamanMah_Misazad()
     {
-        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
-        var src = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "LedgerSectionViewModel.cs"));
-        Assert.Contains("e.DateShamsi = Shamsi.NextInMonth(Month, dates);", src);
+        var host = new PumpYaqobi.App.Services.AppHost(
+            Path.Combine(Path.GetTempPath(), "pump-omr-" + Guid.NewGuid().ToString("N"), "pump.db"));
+        if (host.Auth.NeedsFirstRun()) host.Auth.CreateFirstAdmin("1234");
+        host.Auth.SignIn("admin", "1234");
+        var sec = new PumpYaqobi.App.ViewModels.Sections.ExpenseSectionViewModel(host);
+        await sec.EnsureLoadedAsync();
+        sec.Month = "1404/03";
+
+        await sec.AddRowCommand.ExecuteAsync(null);
+        await sec.AddRowCommand.ExecuteAsync(null);
+
+        //  از دیسک، نه از جدولِ صفحه (بارگذاریِ دوبارهٔ ماه ناهمگام است)
+        var dates = (await host.ExpenseLedger.ListAsync("1404/03")).Select(e => e.DateShamsi).OrderBy(d => d).ToList();
+        Assert.Equal(new[] { "1404/03/01", "1404/03/02" }, dates);
     }
 
     // ══ «ادامهٔ تاریخِ همون ماه» (۱۴۰۵/۰۷/۱۸، دوم) ══════════════════════════

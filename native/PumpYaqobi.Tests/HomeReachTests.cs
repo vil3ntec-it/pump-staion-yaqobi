@@ -83,11 +83,9 @@ public class HomeReachTests
     }
 
     [Fact]
-    public void BeGooshi_Hargez127_DadeNemishavad()
+    public void Nasher_HamanNeshaniyeGooshi_Ra_Miferestad()
     {
-        var home = Read("PumpYaqobi.App", "Services", "HomeLink.cs");
-        Assert.Contains("public static string ShareUrl(AppHost host)", home);
-        Assert.Contains("HomeLink.ShareUrl(host),", Read("PumpYaqobi.App", "Services", "KarLink.cs"));
+        //  ⛔ قاعدهٔ خودش رفتاری است (HomeAndWireBehaviourTests)؛ این فقط می‌گوید ناشر هم از همان در می‌رود
         Assert.Contains("var url = HomeLink.ShareUrl(_host);", Read("PumpYaqobi.App", "Services", "StationPublisher.cs"));
     }
 

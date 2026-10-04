@@ -405,6 +405,32 @@ public class UpdateBehaviourTests : IDisposable
         Assert.Equal(body.Length, new FileInfo(path!).Length);
     }
 
+    /// <summary>
+    /// ⛔ <b>و فایلِ بریده روی درِ دوم هم رد می‌شود</b> — حتی وقتی چک‌سام با همان
+    /// تکهٔ رسیده جور است. درِ دوم اندازه را از قبل نمی‌داند، پس نگهبان آن را از
+    /// خودِ پاسخ برمی‌دارد (شورا ت۳: تا امروز فقط با دو خطِ سورس قفل بود).
+    /// </summary>
+    [Fact]
+    public async Task TheSecondDoorRejectsACutDownloadEvenIfTheSumMatches()
+    {
+        var part = new byte[1000];
+        Random.Shared.NextBytes(part);
+        UpdateService.TestTransport = (req, _) =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (url.EndsWith("SHA256SUMS.txt.sig")) return Task.FromResult(Text("", HttpStatusCode.NotFound));
+            if (url.EndsWith("SHA256SUMS.txt")) return Task.FromResult(Text(Sha(part) + "  small.zip\n"));
+            var res = Bytes(part);
+            res.Content.Headers.ContentLength = 5000;      // سرور ۵۰۰۰ گفت، ۱۰۰۰ رسید
+            return Task.FromResult(res);
+        };
+
+        var info = new UpdateInfo(true, "1.0.0", "99.9.9", Rel("small.zip"), 0, null, true);
+        var path = await new UpdateService().DownloadAsync(info, null);
+
+        Assert.Null(path);
+    }
+
     // ══ ۳ب) چک‌سام، نشانی و امضا — پیش از اجرای هر بسته ═══════════════════
 
     /// <summary>⛔ فایلی که با چک‌سامِ منتشرشده نخورد، نمی‌ماند و نصب نمی‌شود.</summary>

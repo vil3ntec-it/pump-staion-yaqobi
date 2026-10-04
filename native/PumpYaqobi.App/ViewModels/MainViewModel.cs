@@ -696,7 +696,7 @@ public sealed partial class MainViewModel : ObservableObject
     /// که پمپ دارد پمپِ تازه نمی‌خواهد، ثبتِ همین کامپیوتر را می‌خواهد. هر
     /// حال حالا جملهٔ خودش را دارد، و کلیکِ چراغ همان کار را **انجام می‌دهد**.
     /// </summary>
-    private static string UnboundWhy(bool signedIn) =>
+    public static string UnboundWhy(bool signedIn) =>
         !signedIn
             ? "هنوز وارد حساب نشده‌اید — برای ورود روی چراغ بزنید"
             : Services.CloudLink.AccountHasStation == false

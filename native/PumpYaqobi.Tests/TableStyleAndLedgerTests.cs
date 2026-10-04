@@ -142,10 +142,8 @@ public class TableStyleAndLedgerTests
     [Fact]
     public void TheHeaderReadsFromTheRows()
     {
+        //  رسیدِ ردیف ⇒ عددِ سربرگ: رفتاری در PersonAccountBehaviourTests (شورا، ت۳)
         var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "PersonViewModel.cs");
-        Assert.Contains("private decimal HeadRasid(FuelType fuel)", vm);
-        Assert.Contains("return IsMoney ? t.Rasid : t.RasidFuel;", vm);
-        Assert.Contains("get => Shamsi.MoneyOrBlank(HeadRasid(FuelType.Petrol));", vm);
         Assert.Contains("set => AddHeadReceipt(FuelType.Petrol, value);", vm);
 
         // و ردیفِ نمایشیِ نسخهٔ پیشین دیگر نیست
@@ -156,11 +154,5 @@ public class TableStyleAndLedgerTests
     /// «الباقی»ِ سربرگ فرمولِ خودِ سایت است — برد + فیصدی − رسید — نه جمعِ
     /// سادهٔ ستونِ الباقی.
     /// </summary>
-    [Fact]
-    public void TheHeaderRemainderUsesTheSiteFormula()
-    {
-        var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "PersonViewModel.cs");
-        Assert.Contains("var comm = rasid * pct / 100m;", vm);
-        Assert.Contains("Round0(bord + comm - rasid)", vm);
-    }
+    //  «الباقیِ سربرگ = فرمولِ سایت» ⇒ رفتاری: PersonAccountBehaviourTests (شورا، ت۳)
 }

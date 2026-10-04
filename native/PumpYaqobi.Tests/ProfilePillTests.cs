@@ -113,25 +113,7 @@ public class ProfilePillTests
     ///
     /// این آزمون همان ترتیب را روی سورس قفل می‌کند، و «—»ی مشخصاتِ پمپ را هم.
     /// </summary>
-    [Fact]
-    public void KarteEshterak_RoyePompeFaalNashode_KhaliNemimanad()
-    {
-        var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs");
-
-        var fill = vm.IndexOf("ShowSubDetails(check, file);", StringComparison.Ordinal);
-        //  متنِ این حالت از ۱۴۰۵/۰۷/۱۳ دیگر به «کدِ شش‌رقمی» نمی‌فرستد (‎TrialDaysTests‎)؛
-        //  قاعدهٔ همین سنجه — پُر شدنِ کارت پیش از بازگشت — همان است.
-        var bail = vm.IndexOf("SubStatus = \"هنوز به پمپ وصل نشده", StringComparison.Ordinal);
-        Assert.True(fill > 0, "‎ShowSubDetails‎ صدا زده نمی‌شود");
-        Assert.True(bail > 0, "حالتِ «فعال نشده» پیدا نشد");
-        Assert.True(fill < bail,
-            "‎ShowSubDetails‎ باید **پیش از** بازگشتِ «هنوز فعال نشده» بدود، وگرنه "
-            + "روی نصبِ تازه چهار خانهٔ کارتِ اشتراک خالی می‌مانند");
-
-        //  تلفن و نشانیِ نداشته «—» می‌شوند، نه هیچ
-        Assert.Contains("PumpPhone = Dash(", vm);
-        Assert.Contains("PumpAddress = Dash(", vm);
-    }
+    //  «کارتِ اشتراک روی پمپِ فعال‌نشده خالی نمی‌ماند» ⇒ رفتاری: AccountStepBehaviourTests (شورا، ت۳)
 
     /// <summary>
     /// ⛔ «پیام‌رسان» و «پروفایل» دو جا نباشند — خواستهٔ صریحِ صاحب ریپو

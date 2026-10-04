@@ -175,10 +175,7 @@ public class InfraTests : IDisposable
 
         foreach (var forbidden in new[] { "Db", "Debtors", "db.", "SaveChanges", "Delete", "Remove" })
             Assert.DoesNotContain(forbidden, body);
-
-        //  و آن‌چه باید باشد: فقط تنظیمات، و ذخیره‌اش
-        Assert.Contains("_settings.CloudDeviceToken = \"\"", body);
-        Assert.Contains("SaveQuiet", body);
+        //  رفتارش (بند باز می‌شود، دفتر دست نمی‌خورد): PumpBindBehaviourTests (شورا، ت۳)
     }
 
     // ── ۴) حسابِ پمپِ دیگر، نشانیِ پمپِ دیگر را نمی‌نشاند ───────────────

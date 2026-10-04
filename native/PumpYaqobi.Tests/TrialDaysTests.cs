@@ -1,3 +1,4 @@
+using PumpYaqobi.App.Services;
 using Xunit;
 
 namespace PumpYaqobi.Tests;
@@ -28,19 +29,30 @@ public class TrialDaysTests
     /// (<c>daysLeft = Math.ceil(...)</c>). رو به پایین بود و دورهٔ سی‌روزه
     /// همان لحظهٔ ساختنِ پمپ «۲۹ روز» خوانده می‌شد.
     /// </summary>
-    [Fact]
-    public void RoozeMande_RooBeBala_MesleSarvar()
+    [Theory]
+    [InlineData(30 * 86_400_000L, 30)]          // دورهٔ سی‌روزهٔ تازه ⇒ ۳۰، نه ۲۹
+    [InlineData(30 * 86_400_000L - 1, 30)]
+    [InlineData(29 * 86_400_000L + 1, 30)]
+    [InlineData(29 * 86_400_000L, 29)]
+    [InlineData(1L, 1)]                         // یک میلی‌ثانیه ⇒ «۱ روز»، نه «تمام شد»
+    [InlineData(0L, 0)]
+    [InlineData(-86_400_000L, 0)]               // گذشته ⇒ صفر، هرگز منفی
+    public void RoozeMande_RooBeBala_MesleSarvar(long left, int days)
     {
-        var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs");
-        var at = vm.IndexOf("VipDays = check.Valid", StringComparison.Ordinal);
-        Assert.True(at > 0, "محاسبهٔ روزِ مانده پیدا نشد");
-        var line = vm[at..vm.IndexOf(';', at)];
-        Assert.Contains("Math.Ceiling", line);
-        Assert.DoesNotContain("86_400_000L)", line);
+        const long now = 1_760_000_000_000L;
+        Assert.Equal(days, Entitlements.DaysLeft(now + left, now));
+    }
 
-        //  همان قاعده‌ای که بقیهٔ برنامه از قبل داشت
-        Assert.Contains("Math.Ceiling((st.EntitledUntil - st.NowMs) / 86_400_000d)",
-            Read("PumpYaqobi.App", "ViewModels", "Sections", "VipSectionViewModel.cs"));
+    /// <summary>⛔ و پروفایل و «اشتراک و پلن‌ها» دوباره شمارشِ خودشان را نمی‌سازند.</summary>
+    [Fact]
+    public void RoozeMande_YekJa_Ast()
+    {
+        foreach (var f in new[] { "AccountSectionViewModel.cs", "VipSectionViewModel.cs" })
+        {
+            var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", f);
+            Assert.Contains("Entitlements.DaysLeft(", vm);
+            Assert.DoesNotContain("86_400_000L)", vm);
+        }
     }
 
     /// <summary>

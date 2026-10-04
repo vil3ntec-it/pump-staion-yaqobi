@@ -314,7 +314,7 @@ DataHome.CopyTree دو rename پشتِ سرِ هم دارد؛ رفتنِ برق 
 سرخ و روی PR سبز باشد (دو اجرا). استثنا با برچسبِ «no-test» و دلیل در PR.
 ```
 
-#### ت۳ — آزمونِ رفتاری به‌جای «متن در سورس هست»  ⏳
+#### ت۳ — آزمونِ رفتاری به‌جای «متن در سورس هست»  ✅ شد (۴۸ آزمونِ رفتاریِ تازه، هر کدام با سنجشِ دندان — `PersonAccountBehaviourTests` · `WaraqPageBehaviourTests` · `StorageBuyBehaviourTests` · `DebtorListBehaviourTests` · `KarBooksTests` · `DashboardAlertsBehaviourTests` · `CloudLoginBehaviourTests` · `AccountStepBehaviourTests` · `PumpBindBehaviourTests` · `AccountLedgerBehaviourTests` · `SyncPrimeBehaviourTests` · `NoPasswordBehaviourTests` · `HomeAndWireBehaviourTests`؛ آزمونِ فقط‌سورس ۴۳۴ ⇐ ۴۱۰ — نسخه 3.1.243)
 
 ```
 بخشِ بزرگی از آزمون‌ها Assert.Contains روی متنِ فایل‌اند. کار: ۵۰ تا از مهم‌ترینِ
@@ -364,7 +364,7 @@ shop/server و پنلِ server را کلون کند، پشته را بالا ب�
 نشود.
 ```
 
-#### ث۳ — یک مسیرِ ورود، یک نامِ روشن برای هر کد  ✅ شد در برنامه و اپِ گوشی (`CodeNamesTests` · بخشِ «ث۳»ِ سنجهٔ `quickstart` — نسخه 3.1.245) · 👤 پنل، بات و نامهٔ ایمیل: پرسیده شد، بی پاسخ عوض نشد
+#### ث۳ — یک مسیرِ ورود، یک نامِ روشن برای هر کد  ✅ شد در برنامه و اپِ گوشی (`CodeNamesTests` · بخشِ «ث۳»ِ سنجهٔ `quickstart` — نسخه 3.1.243) · 👤 پنل، بات و نامهٔ ایمیل: پرسیده شد، بی پاسخ عوض نشد
 
 ```
 سه «کد» هست: کدِ ایمیل، کدِ هشت‌رقمیِ پمپ، کدِ اشتراکِ آفلاین. کار: هر جا که

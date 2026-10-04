@@ -166,18 +166,13 @@ public class NoPasswordSourceTests
     [Fact]
     public void SafheyeGhofl_DigarRamz_Nemisazad()
     {
+        //  رفتارش در NoPasswordBehaviourTests است؛ این‌جا فقط «برنگردد».
         var vm = Read("PumpYaqobi.App", "ViewModels", "LockViewModel.cs");
         Assert.DoesNotContain("IsFirstRun", vm);
         Assert.DoesNotContain("CreateFirstAdmin", vm);
-        Assert.Contains("OpenIfNoPasswordAsync", vm);
-        Assert.Contains("HasPassword()", vm);
-
-        var xaml = Read("PumpYaqobi.App", "Views", "LockView.axaml");
-        //  ⚠️ کامنت‌ها اول برداشته می‌شوند: نامِ چیزِ برداشته‌شده در توضیحِ
-        //  «این برداشته شد» هست و باید هم باشد.
         var code = System.Text.RegularExpressions.Regex.Replace(
-            xaml, "<!--.*?-->", "", System.Text.RegularExpressions.RegexOptions.Singleline);
-        Assert.DoesNotContain("IsFirstRun", code);
+            Read("PumpYaqobi.App", "Views", "LockView.axaml"), "<!--.*?-->", "",
+            System.Text.RegularExpressions.RegexOptions.Singleline);
         Assert.DoesNotContain("Binding Confirm", code);
     }
 
@@ -202,36 +197,5 @@ public class NoPasswordSourceTests
         Assert.Contains("Lock.OpenIfNoPasswordAsync()", mv);
     }
 
-    /// <summary>
-    /// ⛔ بی رمز، «خروج» یک بن‌بست است: صفحهٔ قفلی که رمزی برای زدن ندارد.
-    /// پس انجام نمی‌شود — و بی‌صدا هم رد نمی‌شود.
-    /// </summary>
-    [Fact]
-    public void Khoroje_BiRamz_BonBast_NemiSazad()
-    {
-        var mv = Read("PumpYaqobi.App", "ViewModels", "MainViewModel.cs");
-        var i = mv.IndexOf("private async Task SignOut()");
-        Assert.True(i > 0);
-        var body = mv[i..(i + 700)];
-        Assert.Contains("Auth.HasPassword()", body);
-        Assert.Contains("Toasts.Show", body);
-    }
 
-    /// <summary>
-    /// ⛔ رمزِ برنامه تنها از «تنظیمات ← رمزها و کد» ساخته و برداشته می‌شود.
-    /// </summary>
-    [Fact]
-    public void RamzeBarname_FaghatDarTanzimat_SakhteMishavad()
-    {
-        var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "KeysSectionViewModel.cs");
-        Assert.Contains("SetFirstPassword", vm);
-        Assert.Contains("ClearPassword", vm);
-        Assert.Contains("HasAppPassword", vm);
-
-        var xaml = Read("PumpYaqobi.App", "Views", "Sections", "KeysSectionView.axaml");
-        Assert.Contains("RemoveAppPasswordCommand", xaml);
-        Assert.Contains("AppLockStateText", xaml);
-        //  کادرِ «رمزِ فعلی» بی رمز دیده نمی‌شود
-        Assert.Contains("IsVisible=\"{Binding HasAppPassword}\"", xaml);
-    }
 }

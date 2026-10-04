@@ -71,8 +71,7 @@ public class WaraqSheetFixTests
         var x = Page();
         Assert.Contains("IsVisible=\"{Binding FuelEditable}\"", x);
         Assert.Contains("Classes=\"fuelchip locked\" IsVisible=\"{Binding FromParcha}\"", x);
-        var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "WaraqSectionViewModel.cs");
-        Assert.Contains("if (FromParcha) return;", vm);
+        //  «تیلِ پارچه در ورق عوض نمی‌شود» ⇒ رفتاری: WaraqPageBehaviourTests (شورا، ت۳)
     }
 
     [Fact]

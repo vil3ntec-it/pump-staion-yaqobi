@@ -119,8 +119,7 @@ public class StorageBuyEditTests : IDisposable
     {
         var root = FindRoot();
         var vm = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App/ViewModels/Sections/StorageSectionViewModel.cs"));
-        Assert.DoesNotContain("priceTon <= 0m || usdRate <= 0m)\n        {\n            _host.Toast(\"لطفاً همه مقادیر", vm);
-        Assert.Contains("if (kg <= 0m || density <= 0m)", vm);
+        //  «فقط وزن و ثقلت لازم‌اند» ⇒ رفتاری: StorageBuyBehaviourTests (شورا، ت۳)
         Assert.Contains("private void EditPurchase(PurchaseRowViewModel? row)", vm);
 
         var view = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App/Views/Sections/StorageSectionView.axaml"));

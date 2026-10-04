@@ -414,9 +414,7 @@ public class LicenseHardeningTests : IDisposable
         var i = src.IndexOf("private static async Task CloudKeepAsync", StringComparison.Ordinal);
         var end = src.IndexOf("public static string HashOf", i, StringComparison.Ordinal);
         var body = src[i..end];
-        var afterAccount = body[body.IndexOf("return;", StringComparison.Ordinal)..];
-        Assert.Contains("CloudDeviceToken", afterAccount);
-        Assert.Contains("KeepLicenseFreshAsync", afterAccount);
+        //  «دستگاهِ بی‌حساب هم تازه می‌شود» ⇒ رفتاری: LicenseDeliveryTests (شورا، ت۳)
         Assert.Contains("LicenseClock.Tick", body);
     }
 }

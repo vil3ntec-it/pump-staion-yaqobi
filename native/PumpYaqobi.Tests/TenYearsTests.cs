@@ -90,15 +90,7 @@ public class TenYearsTests
         Assert.Equal(120 * 400, ((List<string[]>)((Dictionary<string, object?>)((Dictionary<string, object?>)s["sections"]!)["safe"]!)["rows"]!).Count);
     }
 
-    [Fact]
-    public void BadaneyeDarkhast_FarsiRa_Farar_Nemidahad()
-    {
-        //  ⚠️ ‎\uXXXX‎ سه برابرِ UTF-8 است و سرور بدنهٔ بیش از دو مگابایت را رد می‌کند
-        var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Services", "CloudLink.cs"));
-        Assert.Contains("JsonContent.Create(body, options: WireJson)", src);
-        Assert.Contains("UnsafeRelaxedJsonEscaping", src);
-        Assert.Contains("JsonSerializerDefaults.Web", src);   // نام‌های camelCase همان می‌مانند
-    }
+    //  «بدنهٔ درخواست فارسی را فرار نمی‌دهد» ⇒ رفتاری: HomeAndWireBehaviourTests (شورا، ت۳)
 
     [Fact]
     public void Nasher_NoskheyeSarvar_Ra_Miferestad()

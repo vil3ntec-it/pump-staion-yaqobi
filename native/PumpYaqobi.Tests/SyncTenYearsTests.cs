@@ -106,8 +106,6 @@ public class SyncTenYearsTests : IDisposable
         Assert.Contains("cloud.SyncDeviceOverride = CloudLink.SyncDeviceFor(state.DeviceId, state.UidSeed, cloud.DeviceUid);", src);
         Assert.Contains("x.DeviceId = cloud.SyncDevice;", src);
         Assert.Contains("if (Queued > 0) Nudge();", src);
-        //  پرده تا آخرین صفحه
-        Assert.Contains("var priming = !_primeEnded && (_primeRun || PrimeWanted(state));", src);
     }
 
     private static string Root()

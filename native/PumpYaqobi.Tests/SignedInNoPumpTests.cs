@@ -98,11 +98,7 @@ public class SignedInNoPumpTests
     {
         var s = Src(Main);
         Assert.Contains("UnboundWhy(_signedInCache)", s);
-        var i = s.IndexOf("private static string UnboundWhy", StringComparison.Ordinal);
-        var body = s[i..s.IndexOf(";\n", i, StringComparison.Ordinal)];
-        Assert.Contains("هنوز وارد حساب نشده‌اید", body);
-        Assert.Contains("AccountHasStation == false", body);
-        Assert.Contains("LastBindWhy", body);
+        //  «هر حال جملهٔ خودش» ⇒ رفتاری: AccountStepBehaviourTests (شورا، ت۳)
         //  ⛔ جملهٔ کهنه که بی‌حساب را به «ساختنِ پمپ» می‌فرستاد، برنگشت
         Assert.DoesNotContain("در «پروفایل» پمپ را بسازید", s);
         Assert.DoesNotContain("نامِ پمپ را بنویسید", s);

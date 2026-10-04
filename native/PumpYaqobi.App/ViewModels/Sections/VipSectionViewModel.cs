@@ -95,9 +95,7 @@ public sealed partial class VipSectionViewModel : SectionViewModel
             : string.IsNullOrWhiteSpace(st.PlanTitle) ? (st.Open ? "اشتراکِ فعال" : "بدونِ اشتراکِ فعال")
             : st.PlanTitle;
 
-        var days = st.EntitledUntil > st.NowMs
-            ? (int)Math.Ceiling((st.EntitledUntil - st.NowMs) / 86_400_000d)
-            : 0;
+        var days = Entitlements.DaysLeft(st.EntitledUntil, st.NowMs);
         DaysText = st.Open && days > 0 ? Shamsi.Money(days) + " روز" : "—";
 
         StateText = Entitlements.TestDeny

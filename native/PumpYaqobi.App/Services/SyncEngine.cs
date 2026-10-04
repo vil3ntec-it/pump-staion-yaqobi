@@ -81,6 +81,14 @@ public sealed class SyncEngine : IAsyncDisposable
     /// </summary>
     public static bool Disabled { get; set; }
 
+    /// <summary>
+    /// ⛔ شورا ت۳ — فقط برای آزمونِ <b>رفتاری</b>ِ همین موتور: یک نمونهٔ
+    /// صریح (نه <c>host.Sync</c>) که با «الان همگام کن» یک دور می‌دود، در
+    /// حالی که <see cref="Disabled"/> برای بقیهٔ آزمون‌ها روشن می‌ماند.
+    /// حلقهٔ پس‌زمینه را راه نمی‌اندازد و در برنامهٔ واقعی هیچ‌جا نوشته نمی‌شود.
+    /// </summary>
+    public bool RunWhenDisabled { get; init; }
+
     private readonly SyncStore _store;
     private readonly SemaphoreSlim _wake = new(0, 1);
     /// <summary>«مکثِ نخست را رد کن» — فقط از <see cref="PrimeNow"/>.</summary>
@@ -364,7 +372,7 @@ public sealed class SyncEngine : IAsyncDisposable
 
     private async Task StepCoreAsync(bool force, CancellationToken ct)
     {
-        if (Disabled) return;
+        if (Disabled && !RunWhenDisabled) return;
 
         //  ⛔ دفتر همین حالا در حالِ عوض شدن است — دست نزن.
         //  بی این، opهای دفترِ حسابِ **قبلی** با توکنِ حسابِ **تازه**

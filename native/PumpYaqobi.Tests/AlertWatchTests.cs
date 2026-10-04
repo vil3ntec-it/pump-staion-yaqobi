@@ -151,7 +151,7 @@ public class AlertWatchTests
         var dash = Src("PumpYaqobi.App", "ViewModels", "Sections", "DashboardSectionViewModel.cs");
         var build = dash[dash.IndexOf("private void BuildAlerts()", StringComparison.Ordinal)..];
         build = build[..build.IndexOf("private void BuildRecent()", StringComparison.Ordinal)];
-        Assert.Contains("_host.LiveAlerts.Current", build);
+        //  «زنگ از همان فهرست» ⇒ رفتاری: DashboardAlertsBehaviourTests (شورا، ت۳). این‌جا فقط ممنوعه‌ها.
         Assert.DoesNotContain("_threshold", build);
         Assert.DoesNotContain("t.Raw", build);
     }

@@ -271,12 +271,7 @@ public class AppClockTests : IDisposable
         Assert.Equal(real - 5_000, f.ClockFloorMs);
     }
 
-    [Fact]
-    public void MohreAyandeh_TazeSaziyeMajvozRaKhamushNemikonad()
-    {
-        var src = Read("PumpYaqobi.App", "Services", "CloudLink.cs");
-        Assert.Contains("var due = _settings.CloudSyncedAt <= 0 || since < 0 || since >= (long)LicenseTick.TotalMilliseconds;", src);
-    }
+    //  «مُهرِ آینده تازه‌سازی را خاموش نمی‌کند» ⇒ رفتاری: CloudLoginBehaviourTests (شورا، ت۳)
 
     // ── ۵) هیچ پاکِ همیشگی‌ای با ساعتِ نامطمئن ─────────────────────────
 

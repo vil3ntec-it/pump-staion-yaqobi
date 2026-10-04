@@ -75,6 +75,15 @@ public static class Entitlements
     /// <summary>چتِ پشتیبانی — «یکی از واجبات است»، پس هرگز قفل نمی‌شود.</summary>
     public const string Support = "support";
 
+    /// <summary>
+    /// روزهای مانده تا <paramref name="untilMs"/> — <b>رو به بالا، مثلِ خودِ سرور</b>
+    /// (<c>daysLeft = Math.ceil(...)</c>)؛ گذشته یا همین لحظه ⇒ صفر. تنها جای
+    /// این قاعده برای پروفایل و «اشتراک و پلن‌ها» (شورا ت۳، آزمون: <c>TrialDaysTests</c>).
+    /// تا ۱۴۰۵/۰۷/۱۳ رو به پایین بود و دورهٔ سی‌روزه همان لحظه «۲۹» خوانده می‌شد.
+    /// </summary>
+    public static int DaysLeft(long untilMs, long nowMs) =>
+        untilMs > nowMs ? (int)Math.Ceiling((untilMs - nowMs) / 86_400_000d) : 0;
+
     /// <summary>همهٔ چیزهایی که اشتراک می‌خواهند — بی ترتیبِ خاص.</summary>
     public static readonly string[] Paid =
         { Kar, QrLive, CloudBackup, Profit, History, Dashboard };

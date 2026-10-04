@@ -36,7 +36,10 @@ public sealed class AppHost
         SettingsService.Written += (k, v) => { if (k == SettingsService.StationName) PumpBrand.Set(v); };
         RefreshBrand();
         Locks = new SectionLockService(Settings);
-        ProfitVeil.Hook(Locks);
+        //  ⚠️ «مفاد پنهان است؟» از ‎AppHost.Current‎ خوانده می‌شود، پس خبرش هم فقط از
+        //  قفلِ همان میزبان — ‎Hook‎ در ‎Start‎ است. میزبانِ جدا (آزمون‌ها) قلاب را
+        //  از میزبانِ اصلی نمی‌دزدد.
+        if (Current is null || ReferenceEquals(Current, this)) ProfitVeil.Hook(Locks);
         SectionNotes = new SectionNoteService(Db, Permissions);
         Debt = new DebtCalculationService(Settings);
         Safe = new SafeService();
@@ -423,6 +426,7 @@ public sealed class AppHost
         {
             if (Current is not null) return Current;
             Current = new AppHost(dbPath);
+            ProfitVeil.Hook(Current.Locks);
         }
 
         //  ══ دفترِ همان حسابی که آخرین بار وارد شده بود ════════════════════

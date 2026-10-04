@@ -173,15 +173,7 @@ public class StationCodePerAccountTests
         Assert.Contains("_settings.CloudStationCode = \"\";", forget[..forget.IndexOf("await SaveQuiet();", StringComparison.Ordinal)]);
     }
 
-    [Fact]
-    public void KiuAreZende_BaKodeHamanHesab_Ast()
-    {
-        var home = Code(Read("PumpYaqobi.App", "Services", "HomeLink.cs"));
-        Assert.Contains("public static string CloudCode(AppHost host)", home);
-        var acct = Code(Read("PumpYaqobi.App", "Services", "AcctLive.cs"));
-        Assert.Contains("return Fragment(HomeLink.CloudCode(host), IdOf(acct)", acct);
-        Assert.Contains("return Fragment(HomeLink.CloudCode(host), IdOf(company)", acct);
-    }
+    //  «کیو‌آرِ زنده با کدِ همان حساب» ⇒ رفتاری: CloudLoginBehaviourTests (شورا، ت۳)
 
     [Fact]
     public void JabeJayi_PoosheyeTaze_Migirad_VaHameChiz_AzNo_Miravad()

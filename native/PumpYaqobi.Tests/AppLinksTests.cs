@@ -262,11 +262,8 @@ public class AppLinksTests
         Assert.DoesNotContain("Password", settings);
 
         var link = Read("PumpYaqobi.App", "Services", "CloudLink.cs");
-        //  رمز فقط در بدنهٔ همان دو درخواست است
-        Assert.Contains("\"/api/auth/login\"", link);
         Assert.DoesNotContain("_settings.CloudPassword", link);
-        //  و اگر سرور این راه را نداشت، «رمز غلط» نمی‌گوید
-        Assert.Contains("no_route", link);
+        //  «رمز روی هیچ فایلی نمی‌نشیند» رفتاری است: CloudLoginBehaviourTests (شورا، ت۳)
     }
 
     /// <summary>
@@ -786,14 +783,5 @@ public class AppLinksTests
         Assert.Contains("متنِ شرایط فعلاً در دسترس نیست.", vm);
     }
 
-    /// <summary>
-    /// ۴۲۹ («تلاشِ زیاد») همیشه پیامِ آدمیزاد می‌دهد، نه «سرور جواب نداد».
-    /// </summary>
-    [Fact]
-    public void ChaharSadBistONoh_Hamishe_Payame_Adamizad_Midahad()
-    {
-        var link = Read("PumpYaqobi.App", "Services", "CloudLink.cs");
-        Assert.Contains("if (status == 429)", link);
-        Assert.Contains("تلاشِ زیاد — چند دقیقه صبر کنید و دوباره بزنید", link);
-    }
+    //  «۴۲۹ ⇒ جملهٔ آدمیزاد» ⇒ رفتاری: CloudLoginBehaviourTests (شورا، ت۳)
 }

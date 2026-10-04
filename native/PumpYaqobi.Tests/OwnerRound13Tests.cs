@@ -51,8 +51,7 @@ public class OwnerRound13Tests
         Assert.DoesNotContain("{Binding BuyTon}", v);
         Assert.Contains("{Binding Implausible}", v);
         var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "StorageSectionViewModel.cs");
-        //  ⛔ ضربِ × ۱۰۰۰ برنگردد
-        Assert.DoesNotContain("Shamsi.Num(ton) * 1000m", vm);
+        //  «کیلو همان کیلو، نه × ۱۰۰۰» ⇒ رفتاری: StorageBuyBehaviourTests (شورا، ت۳)
         //  ⛔ «۱٬۰۰۰٫۰۰۰» — تن بی صفرهای بی‌مصرف
         Assert.DoesNotContain("Math.Round(n.Ton, 3), 3)", vm);
     }

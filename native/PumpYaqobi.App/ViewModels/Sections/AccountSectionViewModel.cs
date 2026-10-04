@@ -368,9 +368,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         //  ساختنِ پمپ «۲۹ روز» خوانده می‌شد در حالی که پنلِ مدیر «۳۰ روز
         //  مانده» می‌گفت — دو حرف از یک اشتراک. همان قاعدهٔ `VipSection`،
         //  `SoftLock` و `Entitlements.GraceDaysLeft`.
-        VipDays = check.Valid && check.SubscriptionEndsAt > now
-            ? (int)Math.Ceiling((check.SubscriptionEndsAt - now) / 86_400_000d)
-            : 0;
+        VipDays = check.Valid ? Entitlements.DaysLeft(check.SubscriptionEndsAt, now) : 0;
         SubKind = check.Valid ? KindOf(check.PlanTitle) : "";
         SubPermanent = check.Valid && VipDays > 3650;
 
