@@ -98,7 +98,7 @@
       <Border Classes="panel" Padding="12,10">
         <StackPanel Orientation="Horizontal" Spacing="8">
           <TextBlock Text="مبلغ:" Classes="label" VerticalAlignment="Center" />
-          <TextBox Text="{Binding Amount}" Width="130" HorizontalContentAlignment="Center" />
+          <TextBox Text="{Binding Amount}" Width="130" HorizontalContentAlignment="Center" c:LiveFormat.Kind="number" />
           <Button Classes="danger" Content="رسید کمبودی گرفتم"
                   Command="{Binding SettleShortCommand}" />
           <Button Classes="accent" Content="اضافی را پرداخت کردم"

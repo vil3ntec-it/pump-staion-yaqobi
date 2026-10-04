@@ -60,7 +60,7 @@
                  تاریخ ← نام ← رسید ← واحد ← نوعِ تیل ← حساب ← توضیحات. -->
             <StackPanel Classes="q" Spacing="3" Width="150">
               <TextBlock Text="تاریخ" Classes="label" />
-              <TextBox Text="{Binding DateShamsi}" HorizontalContentAlignment="Center" />
+              <TextBox Text="{Binding DateShamsi}" HorizontalContentAlignment="Center" c:LiveFormat.Kind="date" />
             </StackPanel>
 
             <StackPanel Classes="q" Spacing="3" Width="250">
@@ -72,7 +72,7 @@
             <StackPanel Classes="q" Spacing="3" Width="180">
               <TextBlock Text="{Binding AmountLabel}" Classes="label" />
               <TextBox x:Name="AmountBox" Text="{Binding AmountText}"
-                       Watermark="{Binding AmountWatermark}" />
+                       Watermark="{Binding AmountWatermark}" c:LiveFormat.Kind="number" />
             </StackPanel>
 
             <!-- ⛔ دو کشویی، نه یک دکمهٔ چرخشی (۱۴۰۵/۰۷/۱۰): «واحد» و «کدام تیل»

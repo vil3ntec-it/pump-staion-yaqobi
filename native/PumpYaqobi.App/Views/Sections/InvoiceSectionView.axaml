@@ -119,12 +119,12 @@
                 </StackPanel>
                 <StackPanel Grid.Column="2" Spacing="4">
                   <TextBlock Text="💧 مقدار خرید (لیتر)" Classes="fld" />
-                  <TextBox Text="{Binding FLiters}" Watermark="0" />
+                  <TextBox Text="{Binding FLiters}" Watermark="0" c:LiveFormat.Kind="number" />
                 </StackPanel>
                 <StackPanel Grid.Column="4" Spacing="4">
                   <TextBlock Text="🏷️ فی خرید هر لیتر" Classes="fld" />
                   <TextBox Text="{Binding FPrice}" Watermark="0"
-                           ToolTip.Tip="با عوض شدنِ نوعِ تیل، نرخِ اتحادیهٔ همان تیل خودش می‌نشیند" />
+                           ToolTip.Tip="با عوض شدنِ نوعِ تیل، نرخِ اتحادیهٔ همان تیل خودش می‌نشیند" c:LiveFormat.Kind="number" />
                 </StackPanel>
               </Grid>
             </StackPanel>
@@ -147,7 +147,7 @@
                 <StackPanel Grid.Column="0" Spacing="4">
                   <TextBlock Text="💵 مبلغ بدون تیل" Classes="fld" />
                   <TextBox Text="{Binding FAmount}" Watermark="0"
-                           ToolTip.Tip="اگر مشتری فقط پول داده و تیل نبرده، فقط همین کادر را پر کنید" />
+                           ToolTip.Tip="اگر مشتری فقط پول داده و تیل نبرده، فقط همین کادر را پر کنید" c:LiveFormat.Kind="number" />
                 </StackPanel>
                 <TextBlock Grid.Column="2" VerticalAlignment="Bottom" Margin="0,0,0,9"
                            Classes="muted" FontSize="11" TextWrapping="Wrap"
@@ -174,7 +174,7 @@
                 </StackPanel>
                 <StackPanel Grid.Column="2" Spacing="4">
                   <TextBlock Text="📅 تاریخ ثبت" Classes="fld" />
-                  <TextBox Text="{Binding FDate}" Watermark="تاریخ امروز" />
+                  <TextBox Text="{Binding FDate}" Watermark="تاریخ امروز" c:LiveFormat.Kind="date" />
                   <TextBlock Text="(خودکار — قابل تغییر)" Classes="muted" FontSize="11" />
                 </StackPanel>
               </Grid>

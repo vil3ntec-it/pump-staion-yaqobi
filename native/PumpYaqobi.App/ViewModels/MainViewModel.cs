@@ -55,6 +55,9 @@ public sealed partial class MainViewModel : ObservableObject
             if (Services.BannerPref.Show && Phase == AppPhase.Ready) QueueBannerRefresh();
         });
 
+        //  سربرگِ بالا روشن/خاموش (همان کلیدِ داشبورد، ۱۴۰۵/۰۷/۱۹ — ‎HeaderPref‎)
+        Services.HeaderPref.Changed += () => Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(IsHeaderVisible)));
+
         Lock = new LockViewModel(AppHost.Current);
         OpenRequest.Arrived += () => Dispatcher.UIThread.Post(() => _ = HandleOpenRequestsAsync());
 
@@ -521,6 +524,12 @@ public sealed partial class MainViewModel : ObservableObject
     /// (‎BannerPref‎، کلیدِ کوچکِ داشبورد).
     /// </summary>
     public bool IsBannerVisible => IsChromeVisible && Services.BannerPref.Show;
+
+    /// <summary>
+    /// سربرگِ بالا (نام، چراغ، تاریخ، تم، پروفایل، پشتیبانی…) — با پوسته، و فقط
+    /// اگر کاربر خاموشش نکرده باشد (‎HeaderPref‎، کلیدِ کوچکِ داشبورد).
+    /// </summary>
+    public bool IsHeaderVisible => IsChromeVisible && Services.HeaderPref.Show;
 
     /// <summary>نوشتهٔ دکمهٔ برگشت — «‹ برگشت به قرض‌داران».</summary>
     public string BackText => "‹ برگشت به " + (Current?.Title ?? "");
@@ -1564,6 +1573,7 @@ public sealed partial class MainViewModel : ObservableObject
         {
             OnPropertyChanged(nameof(IsChromeVisible));
             OnPropertyChanged(nameof(IsBannerVisible));
+            OnPropertyChanged(nameof(IsHeaderVisible));
         }
 
         // حساب/شرکت/ورقِ باز عوض شد (‎Person‎، ‎Overlay‎، ‎Page‎…) ⇒ همان قاعده:
@@ -1739,6 +1749,7 @@ public sealed partial class MainViewModel : ObservableObject
 
         OnPropertyChanged(nameof(IsChromeVisible));
         OnPropertyChanged(nameof(IsBannerVisible));
+        OnPropertyChanged(nameof(IsHeaderVisible));
         OnPropertyChanged(nameof(IsSubOpen));
         OnPropertyChanged(nameof(BackText));
         OnPropertyChanged(nameof(ActiveSection));

@@ -550,33 +550,6 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
 
     [ObservableProperty] private bool _showBaseHistory;
 
-    /// <summary>
-    /// «⛓️ برسیِ زنجیرهٔ پایه‌ها» — کلیدِ همان حالتِ **اختیاریِ** تازه:
-    /// ختمِ هر پایه باید شروعِ پارچهٔ بعدیِ همان پایه باشد. خاموشش که کنید،
-    /// فقط هشدارِ «کمتر است» می‌ماند (که از اول بود و اختیاری نیست).
-    /// </summary>
-    /// ⚠️ پیش‌فرضش همان پیش‌فرضِ تنظیمات است و مقدارِ واقعی در
-    /// <see cref="LoadAsync"/> می‌نشیند، نه در سازنده: سازندهٔ بخش‌ها روی
-    /// مسیرِ **باز شدنِ برنامه** است و خواندنِ ‎settings.json‎ آن‌جا همان
-    /// هزینه‌ای است که قاعدهٔ «باز شدنِ برنامه» قدغنش کرده.
-    [ObservableProperty] private bool _chainCheck = true;
-
-    /// <summary>حین نشاندنِ مقدارِ ذخیره‌شده، ذخیرهٔ دوباره لازم نیست.</summary>
-    private bool _loadingChainCheck;
-
-    partial void OnChainCheckChanged(bool v)
-    {
-        if (!_loadingChainCheck)
-        {
-            var st = AppSettings.Load();
-            st.ParchaChainCheck = v;
-            st.SaveSoon();
-        }
-        // همان لحظه دوباره سنجیده شود — وگرنه کلید تا تایپِ بعدی بی‌اثر است
-        CheckLowBase(Day);
-        CheckLowBase(Night);
-    }
-
     public string BaseHistoryToggleText =>
         ShowBaseHistory ? "🗂️ بستنِ تاریخچهٔ پایه‌ها" : "🗂️ تاریخچهٔ پایه‌ها";
 
@@ -673,11 +646,6 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
 
     protected override async Task LoadAsync()
     {
-        _loadingChainCheck = true;
-        try { ChainCheck = AppSettings.Load().ParchaChainCheck; }
-        catch { }
-        finally { _loadingChainCheck = false; }
-
         await LoadCurrentAsync();
         await ReloadLogAsync();
         if (ShowBaseHistory) await ReloadBaseHistoryAsync();
@@ -804,8 +772,8 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
     ///
     /// پس سه حال، و هر سه <b>به ازای همان شمارهٔ پایه</b>:
     /// <list type="bullet">
-    ///   <item>‎start &lt; prev‎ ⇒ «کمتر است» (همان هشدارِ قبلی، دست‌نخورده)</item>
-    ///   <item>‎start &gt; prev‎ ⇒ «بیشتر زده شده» — <b>تازه، و اختیاری</b></item>
+    ///   <item>‎start &lt; prev‎ ⇒ «کمتر است»</item>
+    ///   <item>‎start &gt; prev‎ ⇒ «بیشتر زده شده»</item>
     ///   <item>‎start == prev‎ ⇒ زنجیره سالم است، هیچ نشانه‌ای</item>
     /// </list>
     ///
@@ -819,35 +787,31 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
     /// پایه، صفر شدنِ شمارنده)، پس قفل کردنِ کاربر روی دادهٔ درست بدتر از یک
     /// هشدار است.
     ///
-    /// ⚠️ و «بیشتر» فقط با <b>شمارهٔ پایهٔ نوشته‌شده</b> سنجیده می‌شود: بی
-    /// شماره، <c>LastBaseAsync</c> بزرگ‌ترین ختمِ <b>همهٔ</b> پایه‌ها را
-    /// می‌دهد و برابری با آن بی‌معناست — هر پارچهٔ سالمی هشدار می‌گرفت.
+    /// ⛔ <b>دقیق، بی هیچ تلورانس</b> (۱۴۰۵/۰۷/۱۹، خواستهٔ صریحِ صاحب ریپو):
+    /// «۸۰۰۰۰۰ ⇒ ۸۰۰۰۰۰ ✅ · ۸۰۰۰۰۱ ❌ · ۷۹۹۹۹۹ ❌ · ۸۰۰۰۰ ❌ — هیچ محدوده،
+    /// گردکردن یا اختلافِ مجاز نباشد.» پس هر اختلافی، در هر دو سو، هشدار است و
+    /// مقایسه روی عددِ کامل است (کاما و رقمِ فارسی را ‎Shamsi.Num‎ از قبل
+    /// می‌خواند). کلیدِ پیشینِ «⛓️ برسیِ زنجیره» و قیدِ «بیشتر فقط با شمارهٔ
+    /// پایه» برداشته شدند: مرجع حالا ختمِ <b>همان</b> پایه به ترتیبِ زمان است
+    /// (‎PrevEndAsync‎؛ بی‌شماره فقط با بی‌شماره)، نه بزرگ‌ترین ختمِ همه.
     /// </summary>
     private void Apply(ShiftFormViewModel form, decimal start, decimal prev, int num)
     {
         void None() { form.LowBase = false; form.LowBaseText = ""; }
 
+        //  زنجیره‌ای نیست (نخستین پارچهٔ این پایه) ⇒ با چیزی سنجیده نمی‌شود
         if (prev <= 0m) { None(); return; }
 
-        if (start < prev)
-        {
-            form.LowBaseText = "⚠️ این شروع پایه از پایهٔ قبلی (" + Shamsi.Money(prev)
-                             + ") کمتر است — ثبت می‌شود، ولی در ورق سرخ می‌ماند.";
-            form.LowBase = !form.LowBaseAcked;
-            return;
-        }
+        //  ⛔ برابریِ <b>کاملِ</b> عدد — هیچ محدوده، تلورانس یا گردکردنی
+        if (start == prev) { None(); return; }
 
-        if (start > prev && ChainCheck && num > 0)
-        {
-            form.LowBaseText = "⚠️ ختمِ پایهٔ " + Shamsi.Money(num) + " روی "
-                             + Shamsi.Money(prev) + " مانده بود؛ این شروع "
-                             + Shamsi.Money(start - prev)
-                             + " لیتر بیشتر زده شده — بررسی شود. ثبت می‌شود.";
-            form.LowBase = !form.LowBaseAcked;
-            return;
-        }
-
-        None();
+        var pump = num > 0 ? "پایهٔ " + Shamsi.Money(num) : "پایه";
+        form.LowBaseText = start < prev
+            ? "⚠️ ختمِ " + pump + " " + Shamsi.Money(prev) + " بود؛ این شروع "
+              + Shamsi.Money(prev - start) + " لیتر کمتر است — ثبت می‌شود، ولی در ورق سرخ می‌ماند."
+            : "⚠️ ختمِ " + pump + " " + Shamsi.Money(prev) + " بود؛ این شروع "
+              + Shamsi.Money(start - prev) + " لیتر بیشتر زده شده — بررسی شود. ثبت می‌شود.";
+        form.LowBase = !form.LowBaseAcked;
     }
 
     private async Task FillLastBaseAsync((FuelType Fuel, int Num, int DateKey, long Report, bool Night, long Self) key,

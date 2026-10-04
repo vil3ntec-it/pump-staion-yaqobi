@@ -216,7 +216,7 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
 
     partial void OnFuelChanged(DashFuel v)
     {
-        foreach (var n in new[] { nameof(IsFuelAll), nameof(IsFuelPetrol), nameof(IsFuelDiesel) })
+        foreach (var n in new[] { nameof(IsFuelAll), nameof(IsFuelPetrol), nameof(IsFuelDiesel), nameof(TrendSub) })
             OnPropertyChanged(n);
         Render();
     }
@@ -230,6 +230,26 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
     {
         "petrol" => DashFuel.Petrol, "diesel" => DashFuel.Diesel, _ => DashFuel.All,
     };
+
+    // ══ دو تبِ کارتِ روند (۱۴۰۵/۰۷/۱۹) ══════════════════════════════════════
+    //  خواستهٔ صاحب ریپو: «روندِ مفاد و مصارف را از زیرِ نمودارِ فروش جدا کن… یک
+    //  کادر/تبِ جداگانه که با انتخابش روندِ مفاد و مصارف نمایش داده شود و با
+    //  انتخابِ روندِ فروشِ تیل، نمودارِ فروشِ تیل دوباره.» ⛔ فقط کدام نمودار
+    //  دیده شود؛ هر دو از همان ‎_disp‎ ساخته می‌شوند و هیچ عددی عوض نمی‌شود.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsTrendSale), nameof(IsTrendProfit), nameof(TrendTitle), nameof(TrendSub))]
+    private bool _showProfitTrend;
+
+    public bool IsTrendSale => !ShowProfitTrend;
+    public bool IsTrendProfit => ShowProfitTrend;
+    public string TrendTitle => ShowProfitTrend ? "روندِ مفاد و مصارف" : "روندِ فروشِ تیل";
+    public string TrendSub => ShowProfitTrend
+        ? "مفاد (" + DashboardService.FuelWord(Fuel) + ") و مصارف، در همان بازه‌های نمودارِ فروش"
+        : AreaSub;
+
+    partial void OnAreaSubChanged(string value) => OnPropertyChanged(nameof(TrendSub));
+
+    [RelayCommand] private void SetTrendTab(string t) => ShowProfitTrend = t == "profit";
 
     [RelayCommand] private void SelectBar(DashBarViewModel? b)
     {
@@ -398,6 +418,16 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
     {
         get => Services.BannerPref.Show;
         set { Services.BannerPref.Set(value); OnPropertyChanged(); }
+    }
+
+    /// <summary>
+    /// کلیدِ کوچکِ «سربرگِ بالا» (۱۴۰۵/۰۷/۱۹ — ‎Services.HeaderPref‎): پروفایل،
+    /// پشتیبانی، تم و … ⛔ فقط دیدن.
+    /// </summary>
+    public bool ShowHeader
+    {
+        get => Services.HeaderPref.Show;
+        set { Services.HeaderPref.Set(value); OnPropertyChanged(); }
     }
 
     /// <summary>ساعت و تاریخِ نوارِ بالا — هر ثانیه، فقط وقتی داشبورد باز است.</summary>

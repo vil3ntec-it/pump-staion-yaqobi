@@ -157,6 +157,8 @@ internal static class TypeAllProbe
     {
         var s = Clean(shown);
         if (s == typed) return null;
+        //  قالبِ زندهٔ ۱۴۰۵/۰۷/۱۹: کامای عدد و «/»ی تاریخ جزوِ نوشتهٔ کاربر نیستند
+        if (Bare(s, typed) == typed) return null;
         var digitsOnly = typed.All(c => char.IsDigit(c) || c == '.');
         if (digitsOnly)
         {
@@ -172,6 +174,13 @@ internal static class TypeAllProbe
         if (!s.Any(char.IsLetter)) return null;
         return "نوشته عوض شد";
     }
+
+    /// <summary>
+    /// نوشته بی جداکننده‌ها و «/»هایی که قالبِ زنده گذاشته (فقط وقتی خودِ کاربر چنین
+    /// نویسه‌ای نزده). ⛔ رقمِ گم‌شده یا جابه‌جا همچنان سرخ است.
+    /// </summary>
+    private static string Bare(string s, string typed) =>
+        typed.IndexOfAny(new[] { ',', '/' }) >= 0 ? s : s.Replace(",", "").Replace("/", "");
 
     private static string Clean(string s) =>
         new(s.Where(c => char.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.Format).ToArray());
@@ -201,7 +210,7 @@ internal static class TypeAllProbe
                 Console.WriteLine($"      «{text[i]}» ⇒ فوکوس {fe?.GetType().Name} «{box?.Text}» caret {box?.CaretIndex}");
             var t = Typed(box);
             var want = text[..(i + 1)];
-            if (Clean(t) != want) return $"پس از «{want}» کادر «{t}» نشان داد";
+            if (Bare(Clean(t), want) != want) return $"پس از «{want}» کادر «{t}» نشان داد";
         }
         return null;
     }

@@ -30,6 +30,8 @@ public sealed class AppSettings
     /// <c>SaveComfortOnly</c> هم هست (قاعدهٔ همان‌جا: این دو فهرست باید یکی
     /// بمانند).
     /// </summary>
+    /// ⛔ از ۱۴۰۵/۰۷/۱۹ خوانده نمی‌شود — زنجیرهٔ پایه همیشه دقیق سنجیده می‌شود.
+    /// خانه می‌ماند تا فایلِ تنظیمات و «فایلِ کامل»ِ کهنه بی‌خطا بخوانند.
     public bool ParchaChainCheck { get; set; } = true;
 
     /// <summary>
@@ -61,6 +63,13 @@ public sealed class AppSettings
     /// راحتی، پس <c>SaveSoon()</c> و فهرستِ <c>SaveComfortOnly</c>.
     /// </summary>
     public bool ShowBanner { get; set; } = true;
+
+    /// <summary>
+    /// سربرگِ بالای پنجره (نام، چراغ، تاریخ، تم، پروفایل، پشتیبانی، ماشین‌حساب)
+    /// دیده شود؟ (۱۴۰۵/۰۷/۱۹ — ‎HeaderPref‎، همان کلیدِ کوچکِ داشبورد). مقدارِ
+    /// راحتی، پس <c>SaveSoon()</c> و فهرستِ <c>SaveComfortOnly</c>.
+    /// </summary>
+    public bool ShowHeader { get; set; } = true;
 
     /// <summary>
     /// آخرین نسخه‌ای که «نصب شود؟» برایش پرسیده شد (‎Update.AutoUpdate‎،
@@ -954,6 +963,7 @@ public sealed class AppSettings
         if (b is null || NavOrder != b.Value.NavOrder) live.NavOrder = NavOrder;
         if (b is null || ClockShiftMs != b.Value.ClockShiftMs) live.ClockShiftMs = ClockShiftMs;
         if (b is null || ShowBanner != b.Value.ShowBanner) live.ShowBanner = ShowBanner;
+        if (b is null || ShowHeader != b.Value.ShowHeader) live.ShowHeader = ShowHeader;
         _comfortBase = ComfortSnap();
         //  ⚠️ کفِ ساعت از این در فقط **جلو** می‌رود: نوبتِ در صف ممکن است
         //  عکسِ کهنه‌ای باشد که کفِ پایین‌تری دارد، و پایین آوردنِ عمدیِ کف
@@ -1123,10 +1133,10 @@ public sealed class AppSettings
 
     /// <summary>مقدارهای راحتیِ این شیء هنگامِ خواندن یا آخرین نوشتنش — پایینِ `SoonWho`.</summary>
     [JsonIgnore] private (string ThemeId, string LastSection, double CalcWidth, double CalcHeight, bool CalcLarge,
-        bool ParchaChainCheck, string LastPrinter, string NavOrder, long ClockShiftMs, bool ShowBanner)? _comfortBase;
+        bool ParchaChainCheck, string LastPrinter, string NavOrder, long ClockShiftMs, bool ShowBanner, bool ShowHeader)? _comfortBase;
 
-    private (string, string, double, double, bool, bool, string, string, long, bool) ComfortSnap() =>
-        (ThemeId, LastSection, CalcWidth, CalcHeight, CalcLarge, ParchaChainCheck, LastPrinter, NavOrder, ClockShiftMs, ShowBanner);
+    private (string, string, double, double, bool, bool, string, string, long, bool, bool) ComfortSnap() =>
+        (ThemeId, LastSection, CalcWidth, CalcHeight, CalcLarge, ParchaChainCheck, LastPrinter, NavOrder, ClockShiftMs, ShowBanner, ShowHeader);
 
     private static readonly System.Reflection.PropertyInfo[] RestFields =
         typeof(AppSettings).GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)

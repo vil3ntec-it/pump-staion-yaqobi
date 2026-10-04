@@ -136,6 +136,10 @@
             <CheckBox IsChecked="{Binding ShowBanner}" VerticalAlignment="Center" FontSize="12.5"
                       Content="نوارِ عددهای بالا"
                       ToolTip.Tip="قرضِ کل، مفاد و مصارفِ امروز و الباقیِ شرکت‌ها بالای پنجره نشان داده شود یا نه" />
+            <!-- ⛔ سربرگِ بالا (پروفایل، پشتیبانی، تم، ساعت…): روشن/خاموش (۱۴۰۵/۰۷/۱۹ — ‎HeaderPref‎). -->
+            <CheckBox IsChecked="{Binding ShowHeader}" VerticalAlignment="Center" FontSize="12.5"
+                      Content="سربرگِ بالا"
+                      ToolTip.Tip="سربرگِ بالای پنجره (پروفایل، پشتیبانی، تم، ساعت و ماشین‌حساب) نشان داده شود یا نه" />
             <Button x:Name="BellButton" Classes="dash-quick" Margin="0" Command="{Binding BellCommand}" ToolTip.Tip="هشدارها">
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <TextBlock Text="🔔" FontSize="15" VerticalAlignment="Center" />
@@ -254,7 +258,7 @@
       <Grid ColumnDefinitions="2*,1*">
 
         <Border Grid.Column="0" Classes="card calm" Margin="0,0,14,0" Padding="18,16">
-          <Grid RowDefinitions="Auto,170,Auto,Auto,110">
+          <Grid RowDefinitions="Auto,236,Auto">
             <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,12">
               <Border Grid.Column="0" Classes="dash-mark" />
               <StackPanel Grid.Column="1">
@@ -273,23 +277,29 @@
               </StackPanel>
             </Grid>
 
-            <!-- ستون‌های فروش: هر دوره یک ستون -->
-            <ItemsControl Grid.Row="1" ItemsSource="{Binding Bars}" VerticalAlignment="Stretch">
+            <!-- ستون‌های فروش: هر دوره یک ستون.
+                 ⛔ از چپ به راست، مثلِ «روندِ فروشِ تیل» (۱۴۰۵/۰۷/۱۹ — «از راست به چپ حرکت
+                 می‌کند، اشتباه است»): همان ‎_disp‎ با همان ترتیب؛ نقطهٔ ۰ هر دو نمودار چپ است.
+                 نوشتهٔ زیرِ هر ستون خودش راست‌به‌چپ می‌ماند. -->
+            <ItemsControl Grid.Row="1" ItemsSource="{Binding Bars}" VerticalAlignment="Stretch" FlowDirection="LeftToRight">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:DashBarViewModel">
-                  <Button Classes="card-shell" Margin="4,0"
+                  <Button Classes="card-shell" Margin="3,0"
                           ToolTip.Tip="{Binding Tip}"
                           Command="{Binding $parent[ItemsControl].((vm:DashboardSectionViewModel)DataContext).SelectBarCommand}"
                           CommandParameter="{Binding}">
                     <Grid RowDefinitions="*,Auto">
-                      <Border Grid.Row="0" VerticalAlignment="Bottom" CornerRadius="8,8,3,3"
+                      <!-- ریلِ کم‌رنگِ پشتِ ستون — جای «صد درصد» را نشان می‌دهد -->
+                      <Border Grid.Row="0" Classes="db-track" MaxWidth="46" HorizontalAlignment="Stretch" />
+                      <Border Grid.Row="0" VerticalAlignment="Bottom" MaxWidth="46" HorizontalAlignment="Stretch"
                               Classes="db-bar" Classes.sel="{Binding IsSelected}"
                               Height="{Binding Height, Converter={x:Static vm:PercentToHeightConverter.Bar}}" />
                       <TextBlock Grid.Row="1" Text="{Binding Label}" Classes="muted" FontSize="10.5"
-                                 HorizontalAlignment="Center" Margin="0,5,0,0"
+                                 FlowDirection="RightToLeft"
+                                 HorizontalAlignment="Center" Margin="0,6,0,0"
                                  TextTrimming="CharacterEllipsis" />
                     </Grid>
                   </Button>
@@ -310,27 +320,6 @@
               </WrapPanel>
             </Border>
 
-            <!-- روندِ مفاد و مصارف -->
-            <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="14" Margin="0,12,0,4">
-              <TextBlock Text="روندِ مفاد و مصارف" FontWeight="Bold" FontSize="12.5" />
-              <StackPanel Orientation="Horizontal" Spacing="5">
-                <Border Width="10" Height="10" CornerRadius="5" VerticalAlignment="Center"
-                        Background="{DynamicResource Pump.Ok}" />
-                <TextBlock Text="مفاد" Classes="muted" FontSize="11.5" />
-                <TextBlock Text="🔒" FontSize="11.5" IsVisible="{Binding ProfitVeiled}"
-                           ToolTip.Tip="مفاد پشتِ رمزِ «مفاد/ضرر» است — در همان بخش رمز بزنید تا همه‌جا دیده شود" />
-              </StackPanel>
-              <StackPanel Orientation="Horizontal" Spacing="5">
-                <Border Width="10" Height="10" CornerRadius="5" VerticalAlignment="Center"
-                        Background="{DynamicResource Pump.Warn}" />
-                <TextBlock Text="مصارف" Classes="muted" FontSize="11.5" />
-              </StackPanel>
-            </StackPanel>
-            <c:SparkChart Grid.Row="4" ShowAxis="False" FlowDirection="LeftToRight"
-                          Values="{Binding TrendProfitShown}" SecondValues="{Binding TrendExpense}"
-                          LineBrush="{DynamicResource Pump.Ok}"
-                          SecondLineBrush="{DynamicResource Pump.Warn}"
-                          GridBrush="{DynamicResource Pump.GridLine}" />
           </Grid>
         </Border>
 
@@ -404,8 +393,15 @@
             <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,10">
               <Border Grid.Column="0" Classes="dash-mark" />
               <StackPanel Grid.Column="1">
-                <TextBlock Text="روندِ فروشِ تیل" Classes="dash-title" />
-                <TextBlock Text="{Binding AreaSub}" Classes="muted" FontSize="11.5" TextTrimming="CharacterEllipsis" />
+                <!-- ⛔ دو تب، یک کارت (۱۴۰۵/۰۷/۱۹): «روندِ فروشِ تیل» و «روندِ مفاد و مصارف».
+                     با زدنِ هر کدام همان نمودار دیده می‌شود؛ هر دو همان بازه‌ها را دارند. -->
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Button Classes="seg trendtab" Classes.on="{Binding IsTrendSale}" Content="📈 روندِ فروشِ تیل"
+                          Command="{Binding SetTrendTabCommand}" CommandParameter="sale" />
+                  <Button Classes="seg trendtab" Classes.on="{Binding IsTrendProfit}" Content="💹 روندِ مفاد و مصارف"
+                          Command="{Binding SetTrendTabCommand}" CommandParameter="profit" />
+                </StackPanel>
+                <TextBlock Text="{Binding TrendSub}" Classes="muted" FontSize="11.5" Margin="0,6,0,0" TextTrimming="CharacterEllipsis" />
               </StackPanel>
               <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
                 <Button Classes="seg" Classes.on="{Binding IsFuelAll}" Content="همه"
@@ -416,12 +412,36 @@
                         Command="{Binding SetFuelCommand}" CommandParameter="diesel" />
               </StackPanel>
             </Grid>
-            <c:SparkChart Grid.Row="1" FlowDirection="LeftToRight"
+            <c:SparkChart Grid.Row="1" FlowDirection="LeftToRight" IsVisible="{Binding IsTrendSale}"
                           Values="{Binding AreaValues}" Labels="{Binding AreaLabels}"
                           LineBrush="{DynamicResource Pump.ChartLine}"
                           PointBrush="{DynamicResource Pump.ChartPoint}"
                           GridBrush="{DynamicResource Pump.GridLine}"
                           LabelBrush="{DynamicResource Pump.Muted}" />
+            <!-- روندِ مفاد و مصارف — تبِ دوم (پیش از ۱۴۰۵/۰۷/۱۹ زیرِ نمودارِ فروش بود) -->
+            <Grid Grid.Row="1" RowDefinitions="Auto,*" IsVisible="{Binding IsTrendProfit}">
+              <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="14" Margin="0,0,0,4" HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <Border Width="10" Height="10" CornerRadius="5" VerticalAlignment="Center"
+                          Background="{DynamicResource Pump.Ok}" />
+                  <TextBlock Text="مفاد" Classes="muted" FontSize="11.5" />
+                  <TextBlock Text="🔒" FontSize="11.5" IsVisible="{Binding ProfitVeiled}"
+                             ToolTip.Tip="مفاد پشتِ رمزِ «مفاد/ضرر» است — در همان بخش رمز بزنید تا همه‌جا دیده شود" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <Border Width="10" Height="10" CornerRadius="5" VerticalAlignment="Center"
+                          Background="{DynamicResource Pump.Warn}" />
+                  <TextBlock Text="مصارف" Classes="muted" FontSize="11.5" />
+                </StackPanel>
+              </StackPanel>
+              <c:SparkChart Grid.Row="1" FlowDirection="LeftToRight" Unit="افغانی"
+                            Values="{Binding TrendProfitShown}" SecondValues="{Binding TrendExpense}"
+                            Labels="{Binding AreaLabels}"
+                            LineBrush="{DynamicResource Pump.Ok}"
+                            SecondLineBrush="{DynamicResource Pump.Warn}"
+                            GridBrush="{DynamicResource Pump.GridLine}"
+                            LabelBrush="{DynamicResource Pump.Muted}" />
+            </Grid>
           </Grid>
         </Border>
 

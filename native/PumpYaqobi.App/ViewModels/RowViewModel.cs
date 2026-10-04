@@ -61,8 +61,32 @@ public abstract partial class RowViewModel : ObservableObject, IPendingWrite
     /// ⚠️ اتصالِ آوالونیا پس از نوشتن در ردیف خودِ خاصیت را دوباره می‌خواند و به کادر
     /// پس می‌دهد — پس جلوگیری از خبرِ «عوض شد» به‌تنهایی کافی نبود (‎waraqtype‎ گرفتش).
     /// </summary>
-    protected string Shown(string property, string formatted) =>
-        _editingProp == property && _editRaw is not null ? _editRaw : formatted;
+    protected string Shown(string property, string formatted)
+    {
+        if (!_numberCols.Contains(property)) NoteNumberColumn(property);
+        return _editingProp == property && _editRaw is not null ? _editRaw : formatted;
+    }
+
+    //  ══ کدام ستون‌ها عدد‌ند؟ (۱۴۰۵/۰۷/۱۹ — قالبِ زندهٔ «5,000») ══════════════
+    //  هر ستونی که از ‎Shown‎ می‌گذرد عددِ قالب‌خورده است (‎Shamsi.Money*‎)؛ پس
+    //  ‎ExcelGrid‎ همان را می‌پرسد و کادرِ آن خانه کاما را همان لحظهٔ تایپ می‌گیرد.
+    //  ⛔ «ثقلت» نه — قاعدهٔ خودش را دارد («0730» ⇐ «0.730»، ‎DensityInput‎).
+    //  ⚡ نسخه‌برداری هنگامِ نوشتن: خواندن (هر گیرنده) بی‌قفل است.
+    private static volatile HashSet<string> _numberCols = new(StringComparer.Ordinal);
+    private static readonly object _numberLock = new();
+
+    private static void NoteNumberColumn(string property)
+    {
+        lock (_numberLock)
+        {
+            if (_numberCols.Contains(property)) return;
+            _numberCols = new HashSet<string>(_numberCols, StringComparer.Ordinal) { property };
+        }
+    }
+
+    /// <summary>ستونِ عددیِ جدول (همان که از ‎Shown‎ می‌گذرد)، جز «ثقلت».</summary>
+    public static bool IsNumberColumn(string? path) =>
+        path is { Length: > 0 } && path != "DensityText" && _numberCols.Contains(path);
 
     /// <summary>نویسندهٔ ستونِ نوشتنی — نوشتهٔ خام را برای همان خانهٔ باز نگه می‌دارد.</summary>
     protected void Typed(string property, string? raw)

@@ -1828,13 +1828,23 @@
   </Style>
 
   <!-- ستونِ نمودارِ فروشِ داشبورد -->
+  <!-- ستونِ نمودارِ فروش — نرم و گرد، با گرادیان (۱۴۰۵/۰۷/۱۹: «مربع و گوشه‌دار و قدیمی است»).
+       ⚠️ بی سایهٔ محو: کارتِ بزرگ است و قاعدهٔ سرعت محو را فقط برای کارتِ کوچک می‌خواهد. -->
   <Style Selector="Border.db-bar">
-    <Setter Property="Background" Value="{DynamicResource Pump.ChartLine}" />
-    <Setter Property="Opacity" Value="0.62" />
+    <Setter Property="Background" Value="{DynamicResource Pump.ChartBarFill}" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Opacity" Value="0.78" />
   </Style>
   <Style Selector="Border.db-bar.sel">
-    <Setter Property="Background" Value="{DynamicResource Pump.ChartBarSel}" />
+    <Setter Property="Background" Value="{DynamicResource Pump.ChartBarSelFill}" />
     <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="Button.card-shell:pointerover Border.db-bar">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="Border.db-track">
+    <Setter Property="Background" Value="{DynamicResource Pump.ChartTrack}" />
+    <Setter Property="CornerRadius" Value="9" />
   </Style>
 
   <!-- خانهٔ کارتِ خرید — برچسب بالا، مقدار پایین -->

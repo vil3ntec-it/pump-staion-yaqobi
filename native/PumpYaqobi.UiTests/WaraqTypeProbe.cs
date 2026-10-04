@@ -133,7 +133,8 @@ internal static class WaraqTypeProbe
             var box = win.FocusManager?.GetFocusedElement() as TextBox;
             var shown = Typed(box);
             var want = text[..(i + 1)];
-            if (shown != want) lost.Add($"پس از «{want}» کادر «{shown}»");
+            //  کامای قالبِ زنده (۱۴۰۵/۰۷/۱۹) جزوِ نوشته نیست — رقمِ گم‌شده همچنان سرخ است
+            if (shown != want && shown.Replace(",", "") != want) lost.Add($"پس از «{want}» کادر «{shown}»");
         }
         var db = DbWatch.Count - dbBefore;
         if (DbWatch.Recording)

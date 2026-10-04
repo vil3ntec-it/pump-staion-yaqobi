@@ -139,6 +139,12 @@ internal static class Program
         if (outDir.Equals("cells", StringComparison.OrdinalIgnoreCase)) return CellEditAudit.Run();
         if (outDir.Equals("undokeys", StringComparison.OrdinalIgnoreCase)) return UndoKeysProbe.Run();
         if (outDir.Equals("keys17", StringComparison.OrdinalIgnoreCase)) return Round17Probe.Run();
+        // ══ عدد با کاما و تاریخ با «/» همان لحظهٔ تایپ (۱۴۰۵/۰۷/۱۹) ══
+        if (outDir.Equals("liveformat", StringComparison.OrdinalIgnoreCase))
+        {
+            if (args.Length > 2 && args[1] == "shots") LiveFormatProbe.ShotDir = args[2];
+            return LiveFormatProbe.Run();
+        }
         if (outDir.Equals("owner17b", StringComparison.OrdinalIgnoreCase)) return Owner17bProbe.Run();
         if (outDir.Equals("waraqperf", StringComparison.OrdinalIgnoreCase)) return WaraqPerf.Run();
         // ══ «هر بخش رو باز می‌کنم جدول‌ها یک ثانیه بعد میان» ═══════════════

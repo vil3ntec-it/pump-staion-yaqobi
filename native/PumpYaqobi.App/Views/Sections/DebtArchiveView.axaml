@@ -50,7 +50,7 @@
                         <TextBlock Text="{Binding HeadRasidLabel}" Classes="fsl" />
                         <TextBox Text="{Binding HeadPetrolRasidEdit, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                                  Classes="fsv" Foreground="{DynamicResource Pump.Ink.Ok}"
-                                 ToolTip.Tip="رسیدِ سربرگ + رسیدهای جدول — نوشتن فقط سهمِ سربرگ را عوض می‌کند" />
+                                 ToolTip.Tip="رسیدِ سربرگ + رسیدهای جدول — نوشتن فقط سهمِ سربرگ را عوض می‌کند" c:LiveFormat.Kind="number" />
                       </StackPanel>
                       <StackPanel Spacing="2">
                         <TextBlock Text="برد" Classes="fsl" />
@@ -80,7 +80,7 @@
                         <TextBlock Text="{Binding HeadRasidLabel}" Classes="fsl" />
                         <TextBox Text="{Binding HeadDieselRasidEdit, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                                  Classes="fsv" Foreground="{DynamicResource Pump.Ink.Ok}"
-                                 ToolTip.Tip="رسیدِ سربرگ + رسیدهای جدول — نوشتن فقط سهمِ سربرگ را عوض می‌کند" />
+                                 ToolTip.Tip="رسیدِ سربرگ + رسیدهای جدول — نوشتن فقط سهمِ سربرگ را عوض می‌کند" c:LiveFormat.Kind="number" />
                       </StackPanel>
                       <StackPanel Spacing="2">
                         <TextBlock Text="برد" Classes="fsl" />
