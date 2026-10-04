@@ -2492,6 +2492,8 @@ public class ExcelGrid : DataGrid
         PagesShown -= OnPagesShown;
         PagesShown += OnPagesShown;
         HookOutside();
+        //  شورا، ث۵ — سرستونی که واژهٔ برنامه است معنایش را می‌گوید؛ تنبل، زیرِ ماوس
+        Themes.GlossaryTips.Install();
         if (_wired) return;
         _wired = true;
         // تنها منبعِ درستِ «الان در حال ویرایشیم» — خودِ جدول می‌گوید.
@@ -2522,6 +2524,12 @@ public class ExcelGrid : DataGrid
                 //  «/هارون» — نامِ حساب پس از خط‌کج (ستونِ نامِ ورق)
                 var slash = Suggest.Of(Suggest.GetSlashKey(e.Column));
                 if (named.Count + learned.Count + slash.Count > 0) Suggest.Attach(tb, named, learned, slash);
+                //  شورا، ث۲: راهنمای کم‌رنگ و «می‌دانستید؟»ِ نخستین بار
+                if (Suggest.GetHint(e.Column) is { Length: > 0 } hk)
+                {
+                    if (Services.Hints.Watermark.TryGetValue(hk, out var wm)) tb.Watermark = wm;
+                    Services.Hints.DidYouKnow(hk);
+                }
             }
             //  ⛔ قالبِ زندهٔ عدد («5,000») و تاریخ («1405/07/19») — ۱۴۰۵/۰۷/۱۹. شرح: ‎LiveFormat‎
             if ((e.EditingElement as TextBox ?? e.EditingElement?.GetVisualDescendants().OfType<TextBox>().FirstOrDefault()) is { } fbox)

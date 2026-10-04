@@ -76,9 +76,10 @@ public class ScrollWeightTests : IDisposable
     {
         var xaml = NoComments(Read("PumpYaqobi.App", "Views", "Sections", "DashboardSectionView.axaml"));
         // داشبوردِ تازه (۱۴۰۵/۰۷/۱۳): سربرگ · نمودارِ فروش · مخازن · روندِ سوخت · هشدارها · آخرین فروش‌ها
-        // — هر شش کارتِ بزرگ بی‌محو‌اند؛ و هفتمی پنجرهٔ فهرستِ هشدارهاست (۱۴۰۵/۰۷/۱۴).
+        // — هر شش کارتِ بزرگ بی‌محو‌اند؛ هفتمی پنجرهٔ فهرستِ هشدارهاست (۱۴۰۵/۰۷/۱۴)
+        // و هشتمی چک‌لیستِ «شروعِ سریع» (شورا، ث۱).
         var big = Regex.Matches(xaml, "Classes=\"card calm\"").Count;
-        Assert.Equal(7, big);
+        Assert.Equal(8, big);
         // و هیچ کارتِ بزرگی با سایهٔ محو نمانده — تنها `card`ِ ساده قالبِ کاشی‌های کوچکِ آماری است
         var plain = Regex.Matches(xaml, "Classes=\"card\"").Count;
         Assert.Equal(1, plain);

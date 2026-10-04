@@ -3,6 +3,7 @@
              xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
              xmlns:c="using:PumpYaqobi.App.Controls"
              xmlns:th="using:PumpYaqobi.App.Themes"
+             xmlns:sv="using:PumpYaqobi.App.Services"
              x:Class="PumpYaqobi.App.Views.Sections.DashboardSectionView"
              x:DataType="vm:DashboardSectionViewModel">
 
@@ -140,6 +141,9 @@
             <CheckBox IsChecked="{Binding ShowHeader}" VerticalAlignment="Center" FontSize="12.5"
                       Content="سربرگِ بالا"
                       ToolTip.Tip="سربرگِ بالای پنجره (پروفایل، پشتیبانی، تم، ساعت و ماشین‌حساب) نشان داده شود یا نه" />
+            <!-- 🚀 شورا، ث۱: چک‌لیستِ «شروعِ سریع» حتی پس از تمام شدن از همین‌جا برمی‌گردد. -->
+            <Button x:Name="QuickStartButton" Classes="dash-quick" Margin="0" Content="🚀 راهنمای شروع"
+                    Command="{Binding OpenQuickStartCommand}" ToolTip.Tip="چک‌لیستِ پنج‌گامهٔ شروع و برگهٔ «یک شیفت در ۵ دقیقه»" />
             <Button x:Name="BellButton" Classes="dash-quick" Margin="0" Command="{Binding BellCommand}" ToolTip.Tip="هشدارها">
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <TextBlock Text="🔔" FontSize="15" VerticalAlignment="Center" />
@@ -207,6 +211,37 @@
             </Popup>
           </StackPanel>
         </Grid>
+      </Border>
+
+      <!-- ══ ۱ب) شروعِ سریع (شورا، ث۱) ══════════════════════════════════════
+           پنج گام برای پمپ‌دارِ تازه؛ هر «✅» از حقیقتِ همان لحظه است. «نشانم بده»
+           همان بخش را باز و کادرِ درست را برجسته می‌کند. ⛔ هیچ چیزی نمی‌نویسد. -->
+      <Border Name="QuickStartCard" Classes="card calm" Padding="18,14" IsVisible="{Binding ShowQuickStart}">
+        <StackPanel Spacing="8">
+          <Grid ColumnDefinitions="*,Auto,Auto">
+            <TextBlock Grid.Column="0" Text="{Binding QuickStartTitle}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Margin="0,0,8,0" Content="📄 یک شیفت در ۵ دقیقه (PDF)"
+                    Command="{Binding QuickStartPdfCommand}" ToolTip.Tip="برگهٔ یک‌صفحه‌ای برای میرزا" />
+            <Button Grid.Column="2" Classes="ghost" Content="✕ بستن" Command="{Binding HideQuickStartCommand}"
+                    ToolTip.Tip="از «🚀 راهنمای شروع» برمی‌گردد" />
+          </Grid>
+          <ItemsControl Name="QuickStartSteps" ItemsSource="{Binding QuickSteps}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="sv:QuickStep">
+                <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,3">
+                  <TextBlock Grid.Column="0" Text="{Binding Mark}" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center" />
+                  <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                    <TextBlock Text="{Binding Title}" FontWeight="Bold" />
+                    <TextBlock Text="{Binding Hint}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+                  </StackPanel>
+                  <Button Grid.Column="2" Content="👉 نشانم بده" IsVisible="{Binding !Done}"
+                          Command="{Binding $parent[ItemsControl].((vm:DashboardSectionViewModel)DataContext).ShowStepCommand}"
+                          CommandParameter="{Binding}" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
       </Border>
 
       <!-- ══ ۲) پنج کاشیِ عدد ══ -->

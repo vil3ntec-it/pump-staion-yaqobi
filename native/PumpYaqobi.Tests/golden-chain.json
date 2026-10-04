@@ -18,5 +18,14 @@
  "karimRasidMoneyPetrol": 5000,
  "karimMoneyInvoice": 5000,
  "rahimFuelInvoiceLiters": 100,
- "rahimRasidFuelPetrol": 100
+ "rahimRasidFuelPetrol": 100,
+ "companyDensity": 0.8,
+ "companyRate": 70,
+ "exchangeUsd": 5000,
+ "companyAlbaqiUsd": 13000,
+ "companyAlbaqiAfn": 910000,
+ "petrolSoldLiters": 15930,
+ "petrolTankStock": 9070,
+ "petrolShiftProfit": 159300,
+ "dieselShiftProfit": 49650
 }

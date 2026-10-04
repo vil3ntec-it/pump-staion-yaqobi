@@ -48,12 +48,21 @@ public sealed class LedgerParityService
 
         foreach (var chunk in ids.Chunk(200))
         {
-            await using var db = _dbf.Create();
-            var q = db.DebtAccounts.Where(a => chunk.Contains(a.Id));
-            var accounts = fix ? await q.ToListAsync(ct) : await q.AsNoTracking().ToListAsync(ct);
-            var rq = db.DebtRows.Where(r => (r.FuelAccountId != null && chunk.Contains(r.FuelAccountId.Value))
-                                         || (r.MoneyAccountId != null && chunk.Contains(r.MoneyAccountId.Value)));
-            var rows = fix ? await rq.ToListAsync(ct) : await rq.AsNoTracking().ToListAsync(ct);
+            //  ⚡ همیشه بی ردیابی: این کار روزی یک بار درست پس از ورود همهٔ ردیف‌ها را
+            //  می‌خواند. با ردیابی (برای درست کردن) هر ردیف یک عکسِ «مقدارِ اصلی» هم
+            //  می‌ساخت و زبالهٔ همان، مکثِ GCِ نخِ رابط را وسطِ نوشتنِ کاربر می‌انداخت
+            //  (‎waraqtype‎ روی ویندوز ۴۴۷ms). فقط ردیفِ ناجور پایین‌تر نوشته می‌شود.
+            List<DebtAccount> accounts; List<DebtRow> rows;
+            await using (var rdb = _dbf.Create())
+            {
+                accounts = await rdb.DebtAccounts.AsNoTracking().Where(a => chunk.Contains(a.Id)).ToListAsync(ct);
+                rows = await rdb.DebtRows.AsNoTracking()
+                    .Where(r => (r.FuelAccountId != null && chunk.Contains(r.FuelAccountId.Value))
+                             || (r.MoneyAccountId != null && chunk.Contains(r.MoneyAccountId.Value)))
+                    .ToListAsync(ct);
+            }
+            var fixRows = new Dictionary<long, (DebtRow Row, HashSet<string> Fields)>();
+            var fixAccts = new Dictionary<long, (DebtAccount Acct, HashSet<string> Fields)>();
 
             var byFuel = rows.Where(r => r.FuelAccountId != null).ToLookup(r => r.FuelAccountId!.Value);
             var byMoney = rows.Where(r => r.MoneyAccountId != null).ToLookup(r => r.MoneyAccountId!.Value);
@@ -69,7 +78,12 @@ public sealed class LedgerParityService
                     if (b0 != r.Bardagi) found.Add(new(a.Id, r.Id, "Bardagi", b0, r.Bardagi));
                     if (al0 != r.Albaqi) found.Add(new(a.Id, r.Id, "Albaqi", al0, r.Albaqi));
                     if (m0 != r.ByMoney) found.Add(new(a.Id, r.Id, "ByMoney", m0 ? 1 : 0, r.ByMoney ? 1 : 0));
-                    if (!fix) (r.Bardagi, r.Albaqi, r.ByMoney) = (b0, al0, m0);
+                    if (!fix) { (r.Bardagi, r.Albaqi, r.ByMoney) = (b0, al0, m0); continue; }
+                    var changed = new HashSet<string>();
+                    if (b0 != r.Bardagi) changed.Add(nameof(DebtRow.Bardagi));
+                    if (al0 != r.Albaqi) changed.Add(nameof(DebtRow.Albaqi));
+                    if (m0 != r.ByMoney) changed.Add(nameof(DebtRow.ByMoney));
+                    if (changed.Count > 0) fixRows[r.Id] = (r, changed);
                 }
                 if (a.ReceiptsMigrated)
                 {
@@ -86,7 +100,10 @@ public sealed class LedgerParityService
                     {
                         if (t.Stored == t.Truth) continue;
                         found.Add(new(a.Id, null, t.F, t.Stored, t.Truth));
-                        if (fix) t.Set(t.Truth);
+                        if (!fix) continue;
+                        t.Set(t.Truth);
+                        if (!fixAccts.TryGetValue(a.Id, out var fa)) fixAccts[a.Id] = fa = (a, new HashSet<string>());
+                        fa.Fields.Add(t.F);
                     }
                 }
                 if (found.Count > before) fixedAccounts[a.Id] = found.Count - before;
@@ -94,6 +111,18 @@ public sealed class LedgerParityService
 
             if (fix && fixedAccounts.Count > 0)
             {
+                //  فقط همان ردیف‌ها و همان خانه‌ها — op هم فقط همان فیلدها را می‌برد
+                await using var db = _dbf.Create();
+                foreach (var (r, fields) in fixRows.Values)
+                {
+                    db.DebtRows.Attach(r);
+                    foreach (var f in fields) db.Entry(r).Property(f).IsModified = true;
+                }
+                foreach (var (a, fields) in fixAccts.Values)
+                {
+                    db.DebtAccounts.Attach(a);
+                    foreach (var f in fields) db.Entry(a).Property(f).IsModified = true;
+                }
                 foreach (var (id, n) in fixedAccounts)
                     db.Audit.Add(new AuditEntry
                     {

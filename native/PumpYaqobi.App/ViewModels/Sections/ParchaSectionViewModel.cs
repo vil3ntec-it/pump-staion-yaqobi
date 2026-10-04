@@ -629,6 +629,7 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
     /// </summary>
     public override async Task OnActivatedAsync()
     {
+        Services.Hints.DidYouKnow("parcha");                 // شورا، ث۲ — فقط بارِ اول
         //  ⛔ فقط کارتی که همین حالا یک شیفتِ ذخیره‌شده را نشان می‌دهد و کاربر در
         //  آن چیزی ننوشته، با نسخهٔ تازهٔ **همان** شیفت پر می‌شود. کارتِ خالی
         //  («پارچهٔ جدید»، دیزلِ پس از ذخیره) و کارتِ تایپ‌شده دست نمی‌خورند.

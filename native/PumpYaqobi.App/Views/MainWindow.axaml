@@ -210,11 +210,53 @@
                دو حقیقت (سرورِ خانگی و سرورِ حساب) سرِ جایشان‌اند و هر دو
                در ‎ToolTip‎ نوشته می‌شوند؛ فقط چراغ یکی شد. زرد یعنی «یکی
                وصل است و یکی نه» — سبز کردنش دروغ بود و سرخ کردنش هم. -->
-          <Button Padding="4" Margin="2,2,0,0" VerticalAlignment="Center" Background="Transparent"
+          <Button Name="LinkDotBtn" Padding="4" Margin="2,2,0,0" VerticalAlignment="Center" Background="Transparent"
                   BorderThickness="0" Command="{Binding CheckLinksCommand}"
                   ToolTip.Tip="{Binding LinkDotReason}">
             <Border Width="12" Height="12" CornerRadius="6"
                     Background="{Binding LinkDotBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+            <!-- شورا، ث۴: کلیک ⇒ سه ردیف با جملهٔ آدمیزاد و یک دکمهٔ کار برای هر کدام.
+                 ⛔ هیچ نام یا نشانیِ سروری — متن همان ‎…DotReason‎هاست. -->
+            <Button.Flyout>
+              <Flyout Placement="BottomEdgeAlignedLeft">
+                <StackPanel Name="LinkPanel" Width="380" Spacing="10" Margin="4"
+                            DataContext="{Binding #LinkDotBtn.DataContext}" x:CompileBindings="False">
+                  <TextBlock Text="وضعِ اتصال" FontWeight="Bold" />
+                  <Grid ColumnDefinitions="Auto,*,Auto">
+                    <Border Width="10" Height="10" CornerRadius="5" Margin="0,4,8,0" VerticalAlignment="Top"
+                            Background="{Binding CloudDotBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                    <StackPanel Grid.Column="1" Spacing="2">
+                      <TextBlock Text="سرورِ حساب" FontWeight="Bold" FontSize="12.5" />
+                      <TextBlock Text="{Binding CloudDotReason}" TextWrapping="Wrap" FontSize="12" Classes="muted" />
+                    </StackPanel>
+                    <Button Grid.Column="2" Content="بپرس" Margin="8,0,0,0" VerticalAlignment="Top"
+                            Command="{Binding AskAccountNowCommand}" />
+                  </Grid>
+                  <Grid ColumnDefinitions="Auto,*,Auto">
+                    <Border Width="10" Height="10" CornerRadius="5" Margin="0,4,8,0" VerticalAlignment="Top"
+                            Background="{Binding ServerDotBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                    <StackPanel Grid.Column="1" Spacing="2">
+                      <TextBlock Text="سرورِ خانگی" FontWeight="Bold" FontSize="12.5" />
+                      <TextBlock Text="{Binding ServerDotReason}" TextWrapping="Wrap" FontSize="12" Classes="muted" />
+                    </StackPanel>
+                    <Button Grid.Column="2" Content="بگرد" Margin="8,0,0,0" VerticalAlignment="Top"
+                            Command="{Binding FindHomeNowCommand}" />
+                  </Grid>
+                  <Grid ColumnDefinitions="Auto,*,Auto">
+                    <Border Width="10" Height="10" CornerRadius="5" Margin="0,4,8,0" VerticalAlignment="Top"
+                            Background="{Binding SyncDotBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+                    <StackPanel Grid.Column="1" Spacing="2">
+                      <TextBlock FontWeight="Bold" FontSize="12.5">
+                        <Run Text="همگام‌سازی · " /><Run Text="{Binding SyncDotText}" />
+                      </TextBlock>
+                      <TextBlock Text="{Binding SyncDotReason}" TextWrapping="Wrap" FontSize="12" Classes="muted" />
+                    </StackPanel>
+                    <Button Grid.Column="2" Content="همگام کن" Margin="8,0,0,0" VerticalAlignment="Top"
+                            Command="{Binding SyncNowCommand}" />
+                  </Grid>
+                </StackPanel>
+              </Flyout>
+            </Button.Flyout>
           </Button>
         </StackPanel>
 
@@ -249,6 +291,11 @@
                توی یک کادر باشند». همان ‎SelectedTheme‎ از درِ ‎DarkSwitch‎. -->
           <!-- ⚠️ در راست‌به‌چپ ستونِ صفر سمتِ راست است: روی «روشن» گوی در ستونِ صفر
                (راست)، روی «تیره» در ستونِ دوم (چپ) — مثلِ کلیدی که به سوی دیگر رفته. -->
+          <!-- شورا، ث۶: حالتِ ساده ⇒ «☰ همه» بقیهٔ بخش‌ها را نشان می‌دهد -->
+          <Button Classes="pill-btn" VerticalAlignment="Center" Margin="0,0,6,0"
+                  IsVisible="{Binding SimpleMode}" Content="{Binding AllNavText}"
+                  Command="{Binding ToggleAllNavCommand}"
+                  ToolTip.Tip="حالتِ ساده روشن است — بقیهٔ بخش‌ها این‌جا؛ خاموش کردنش در «پروفایل»" />
           <ToggleButton Classes="themeswitch" VerticalAlignment="Center"
                         IsChecked="{Binding DarkSwitch}"
                         ToolTip.Tip="تم: زدن ⇒ روشن ⇄ تیره">

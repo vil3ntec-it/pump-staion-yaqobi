@@ -297,10 +297,75 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
 
     [RelayCommand] private void CloseAlerts() => AlertsOpen = false;
 
-    protected override Task LoadAsync() => RefreshAsync();
+    // ══ شروعِ سریع (شورا، ث۱) ═══════════════════════════════════════════════
+    //  پنج گام برای پمپ‌دارِ تازه. ⛔ هر «شد» از حقیقتِ همان لحظه است و این‌جا
+    //  هیچ چیزی نوشته نمی‌شود. پارچه و ورق فقط تا «هنوز نیست» پرسیده می‌شوند —
+    //  همین که یک بار «هست» شد، دیگر هیچ دستورِ دیتابیسی برایش زده نمی‌شود.
+    public ObservableCollection<QuickStep> QuickSteps { get; } = new();
+    [ObservableProperty] private bool _showQuickStart;
+    [ObservableProperty] private string _quickStartTitle = "";
+    private bool _qsParcha, _qsWaraq, _qsForced;
+    private const string QsHiddenKey = "quickstart:hidden";
+
+    /// <summary>دوباره بسنج و چک‌لیست را بچین.</summary>
+    public async Task RefreshQuickStartAsync()
+    {
+        try
+        {
+            if (!_qsParcha || !_qsWaraq)
+            {
+                await using var db = _host.Db.Create();
+                if (!_qsParcha) _qsParcha = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.AnyAsync(db.ShiftDataSet);
+                if (!_qsWaraq) _qsWaraq = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.AnyAsync(System.Linq.Queryable.Where(db.WaraqTransactions, t => t.Name != null && t.Name != ""));
+            }
+            var cap = _host.Settings.GetString("tankCapacity_petrol").Length > 0
+                   || _host.Settings.GetString("tankCapacity_diesel").Length > 0;
+            var steps = QuickStart.Steps(
+                account: !string.IsNullOrWhiteSpace(AppSettings.Load().CloudAccountToken),
+                pumpName: QuickStart.HasPumpName(_host.Settings.GetString(PumpYaqobi.Services.Data.SettingsService.StationName)),
+                capacity: cap, parcha: _qsParcha, waraq: _qsWaraq);
+            QuickSteps.Clear();
+            foreach (var st in steps) QuickSteps.Add(st);
+            var done = steps.Count(x => x.Done);
+            QuickStartTitle = $"🚀 شروعِ سریع — {done} از {steps.Count}";
+            ShowQuickStart = _qsForced || (!QuickStart.AllDone(steps) && !Hints.IsSeen(QsHiddenKey));
+        }
+        catch { /* چک‌لیست رفاه است؛ داشبورد نباید به‌خاطرش بشکند */ }
+    }
+
+    /// <summary>«نشانم بده» — همان بخش، و کادرِ درست برجسته.</summary>
+    [RelayCommand]
+    private async Task ShowStepAsync(QuickStep? step)
+    {
+        if (step is null) return;
+        await _main.GoByIdAsync(step.Section);
+        //  نامِ پمپ کادرش در گامِ «پمپ»ِ صفحهٔ حساب است — همان دکمهٔ «‹ برگشت به گامِ پمپ»
+        if (step.Id == QuickStart.PumpName && _main.Account.SignedIn) _main.Account.BackToPumpCommand.Execute(null);
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            var root = PumpYaqobi.App.Controls.Spot.Root;
+            if (root is null || PumpYaqobi.App.Controls.Spot.Show(root, step.Spot) is null)
+                _host.Toast("👉 " + step.Title + " — " + step.Hint, ToastKind.Info);
+        }, Avalonia.Threading.DispatcherPriority.Background);
+    }
+
+    /// <summary>«بستن» — تا همیشه روی همین کامپیوتر؛ از «🚀 راهنمای شروع» برمی‌گردد.</summary>
+    [RelayCommand]
+    private void HideQuickStart() { Hints.Mark(QsHiddenKey); _qsForced = false; ShowQuickStart = false; }
+
+    /// <summary>«🚀 راهنمای شروع» — حتی اگر همه شده باشد.</summary>
+    [RelayCommand]
+    private async Task OpenQuickStartAsync() { _qsForced = true; await RefreshQuickStartAsync(); }
+
+    /// <summary>برگهٔ یک‌صفحه‌ایِ «یک شیفت در ۵ دقیقه».</summary>
+    [RelayCommand]
+    private Task QuickStartPdfAsync() =>
+        PumpYaqobi.App.Printing.Documents.ShowAsync(() => new PumpYaqobi.Reporting.Pdf.QuickStartReport(), "یک شیفت در ۵ دقیقه");
+
+    protected override async Task LoadAsync() { await RefreshQuickStartAsync(); await RefreshAsync(); }
 
     /// <summary>داشبورد خلاصهٔ بقیهٔ بخش‌هاست، پس هر بارِ ورود از نو خوانده می‌شود.</summary>
-    public override Task OnActivatedAsync() => RefreshAsync();
+    public override async Task OnActivatedAsync() { await RefreshQuickStartAsync(); await RefreshAsync(); }
     public override bool ActivationRepeatsLoad => true;
 
     /// <summary>خواندنِ دوبارهٔ همهٔ منبع‌ها و رسمِ صفحه.</summary>

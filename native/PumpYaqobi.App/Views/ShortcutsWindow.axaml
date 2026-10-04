@@ -27,8 +27,18 @@
     <Button DockPanel.Dock="Bottom" Classes="accent" Content="بستن" Click="OnClose"
             HorizontalAlignment="Center" MinWidth="120" Margin="0,14,0,0" />
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-      <StackPanel x:Name="Rows" Spacing="3" />
-    </ScrollViewer>
+    <!-- شورا، ث۵: زبانهٔ دوم «📖 واژه‌نامه» — متن از ‎Glossary.All‎ -->
+    <TabControl>
+      <TabItem Header="⌨️ میانبرها">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel x:Name="Rows" Spacing="3" />
+        </ScrollViewer>
+      </TabItem>
+      <TabItem Header="📖 واژه‌نامه">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel x:Name="Words" Spacing="3" />
+        </ScrollViewer>
+      </TabItem>
+    </TabControl>
   </DockPanel>
 </Window>

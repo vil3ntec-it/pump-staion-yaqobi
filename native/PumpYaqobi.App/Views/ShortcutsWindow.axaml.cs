@@ -57,7 +57,7 @@ public partial class ShortcutsWindow : Window
         new("Ctrl + Y", "دوباره انجام دادنِ همان (یا Ctrl + Shift + Z)"),
 
         new("", "پارچه‌ها و ورق"),
-        new("Ctrl + Tab",         "روز ⇄ شب — ورق: ورقِ روز/شب · پارچه‌ها: کارتِ روز/شب؛ Ctrl را نگه دار و هر Tab یک بار"),
+        new("Ctrl + Tab",         "ورق: روز ⇄ شب · پارچه‌ها: تیلِ دیگر (پطرول ⇄ دیزل)؛ Ctrl را نگه دار و هر Tab یک بار"),
         new("Enter (پارچه‌ها)",    "ذخیرهٔ همان شیفتی که داخلِ کادرهایش هستی — بی ماوس و اسکرول"),
         new("Tab (پارچه‌ها)",      "عوض کردنِ نوعِ تیل: پطرول ⇄ دیزل"),
         new("/نام (نامِ ورق)",     "«ابراهیم /هارون» ⇒ در حسابِ هارون، با نامِ «ابراهیم» — پس از «/» پیشنهاد می‌آید، Tab یا Enter می‌پذیرد"),
@@ -73,6 +73,7 @@ public partial class ShortcutsWindow : Window
     {
         InitializeComponent();
         foreach (var r in All) Rows.Children.Add(Build(r));
+        foreach (var t in PumpYaqobi.Application.Localization.Glossary.All) Words.Children.Add(Build(new Row(t.Word, t.Meaning)));
         KeyDown += (_, e) => { if (e.Key == Key.Escape) Close(); };
     }
 

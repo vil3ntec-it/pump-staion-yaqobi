@@ -127,7 +127,7 @@
             <c:ExcelGrid GrowsToContent="True" KeepInside="True" WidthKey="waraq.txns" Grid.Column="0" ItemsSource="{Binding TxnsFirst}" x:CompileBindings="False"
                          RowDeleteCommand="{Binding $parent[UserControl].DataContext.DeleteTxnCommand}">
               <DataGrid.Columns>
-                <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" c:Suggest.SlashKey="debtor-acct" />
+                <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" c:Suggest.SlashKey="debtor-acct" c:Suggest.Hint="waraq-name" />
                 <!-- ⛔ ستونِ «نوع تیل» برداشته شد (۱۴۰۵/۰۷/۰۶) و برنمی‌گردد.
                      خواستهٔ صریحِ صاحب ریپو: «از داخلِ بخشِ ورق‌ها از تراکنش‌ها
                      نوعِ تیل رو حذف کن… ولی اگر توی نام پطرول یا دیزل نوشتم،
@@ -178,7 +178,7 @@
             <c:ExcelGrid GrowsToContent="True" KeepInside="True" WidthKey="waraq.txns" Grid.Column="2" ItemsSource="{Binding TxnsSecond}" x:CompileBindings="False"
                          RowDeleteCommand="{Binding $parent[UserControl].DataContext.DeleteTxnCommand}">
               <DataGrid.Columns>
-                <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" c:Suggest.SlashKey="debtor-acct" />
+                <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="*" c:Suggest.SlashKey="debtor-acct" c:Suggest.Hint="waraq-name" />
                 <DataGridTextColumn Header="مقدار تیل" Binding="{Binding LitersText}" Width="Auto" />
                 <DataGridTextColumn Header="مبلغ" Binding="{Binding AmountText}" Width="Auto" />
                 <DataGridTemplateColumn Header="نوع" Width="Auto">
@@ -228,6 +228,8 @@
            همان‌جا برداشته شده‌اند (‎index.html‎ خط ۱۹۹۷۴ تا ۱۹۹۸۱ و خط ۴۵۵۴۴
            تا ۴۵۵۶۵) — روز و شب هرگز با هم جمع نمی‌شوند. -->
       <StackPanel Grid.Row="4" Spacing="6" Margin="0,12,0,0">
+        <!-- شورا، ث۲: قاعده‌های پنهانِ ورق — بسته‌شدنی، یادِ همین کامپیوتر -->
+        <c:HintStrip HintKey="waraq" Margin="0" />
         <TextBlock Text="{Binding SummaryTitle}" Classes="label" FontWeight="Bold"
                    Foreground="{DynamicResource Pump.Ink.Accent}" />
         <c:AutoFillPanel MinItemWidth="140" Gap="8">

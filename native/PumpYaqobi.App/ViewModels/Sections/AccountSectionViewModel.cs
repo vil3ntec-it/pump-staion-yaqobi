@@ -336,6 +336,19 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     /// ساخته می‌شد ولی در هیچ صفحه‌ای نشسته نبود — کاربر فقط قفل را می‌دید.
     /// </summary>
     [ObservableProperty] private string _watchLine = SubscriptionWatch.Line();
+
+    /// <summary>🛤️ شورا، ت۱ — کانالِ به‌روزرسانیِ همین کامپیوتر.</summary>
+    [ObservableProperty] private bool _testingChannel = Update.UpdateService.TestingChannel;
+
+    partial void OnTestingChannelChanged(bool value)
+    {
+        Update.UpdateService.TestingChannel = value;
+        OnPropertyChanged(nameof(ChannelText));
+    }
+
+    public string ChannelText => TestingChannel
+        ? "🧪 کانالِ آزمایشی — هر نسخهٔ تازه همان روز می‌رسد؛ شاید ایرادی هم با آن بیاید."
+        : "🛤️ کانالِ پایدار — نسخه‌ای که هفت روز روی پمپ‌های آزمایشی بی کرش ماند، هفته‌ای حداکثر یک بار.";
     [ObservableProperty] private string _subMessage = "";
     [ObservableProperty] private bool _subActive;
     [ObservableProperty] private string _joinCode = "";
