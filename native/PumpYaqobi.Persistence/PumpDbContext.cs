@@ -70,6 +70,7 @@ public sealed class PumpDbContext : DbContext
 
     /// <summary>دفترِ تغییرات — بندِ ۲۰٫۱. شرحش در <see cref="OpLog"/>.</summary>
     public DbSet<SyncOp> SyncOps => Set<SyncOp>();
+    public DbSet<SyncConflict> SyncConflicts => Set<SyncConflict>();
 
     /// <summary>حالِ همگام‌سازی — همیشه یک ردیف.</summary>
     public DbSet<SyncStateRow> SyncState => Set<SyncStateRow>();
@@ -488,6 +489,12 @@ public sealed class PumpDbContext : DbContext
             e.Property(x => x.SectionKey).IsRequired();
             // هر بخش فقط یک پیش‌نویس دارد — همان ‎_noteDrafts()[key]‎ی نسخهٔ وب
             e.HasIndex(x => x.SectionKey).IsUnique();
+        });
+
+        b.Entity<SyncConflict>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.State);
         });
 
         b.Entity<SyncOp>(e =>

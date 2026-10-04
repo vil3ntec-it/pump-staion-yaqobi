@@ -146,8 +146,10 @@ public class ParchaWaraqEditTests : IDisposable
     [Fact]
     public void Kelid_FaghatKelideParcha()
     {
-        Assert.True(ShiftWaraqSyncService.TryParseKey("p-12-day", out var id, out var k));
-        Assert.Equal(12, id); Assert.Equal(ShiftKind.Day, k);
+        Assert.True(ShiftWaraqSyncService.TryParseKey("p-12-day", out var id, out var k));   // کلیدِ کهنه هنوز خوانده می‌شود
+        Assert.Equal("12", id); Assert.Equal(ShiftKind.Day, k);
+        Assert.True(ShiftWaraqSyncService.TryParseKey("p-u01HXYZ-day", out var uid, out _));    // ⛔ شورا ب۲
+        Assert.Equal("u01HXYZ", uid);
         Assert.True(ShiftWaraqSyncService.TryParseKey("d-3-night", out _, out var k2));
         Assert.Equal(ShiftKind.Night, k2);
         Assert.False(ShiftWaraqSyncService.TryParseKey("p-live-day", out _, out _));

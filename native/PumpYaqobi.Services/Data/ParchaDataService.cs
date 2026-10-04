@@ -121,7 +121,7 @@ public sealed class ParchaDataService
         await SaveShiftAsync(rep, req.Kind, shift, ct);
         if (req.Kind == ShiftKind.Day) rep.DayShift = shift; else rep.NightShift = shift;
 
-        var srcKey = ShiftWaraqSyncService.SrcKeyOf(req.Fuel, rep.Id, req.Kind);
+        var srcKey = ShiftWaraqSyncService.SrcKeyOf(req.Fuel, rep, req.Kind);
         if (_waraqSync is not null)
             await _waraqSync.SyncSavedShiftAsync(req.Kind, shift, req.Fuel, srcKey, req.LowBase, ct);
 
@@ -285,15 +285,15 @@ public sealed class ParchaDataService
     {
         _perm.Require(Permission.ViewData);
         if (string.IsNullOrWhiteSpace(srcKey)) return null;
-        var parts = srcKey.Split('-');
-        if (parts.Length != 3 || !long.TryParse(parts[1], out var id)) return null;
-        var fuel = parts[0] == "d" ? FuelType.Diesel : FuelType.Petrol;
-        var night = parts[2] == "night";
+        if (!SrcKeys.TryParseShift(srcKey, out var fuel, out var tok, out var night)) return null;
+        var uid = tok.StartsWith('u') ? tok[1..] : null;
+        long.TryParse(tok, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var byId);
+        if (uid is null && byId == 0) return null;
 
         await using var db = _dbf.Create();
         var me = await db.Reports.AsNoTracking()
                          .Include(r => r.DayShift).Include(r => r.NightShift)
-                         .FirstOrDefaultAsync(r => r.Id == id && r.Fuel == fuel, ct);
+                         .FirstOrDefaultAsync(r => (uid != null ? r.SyncUid == uid : r.Id == byId) && r.Fuel == fuel, ct);
         var mine = night ? me?.NightShift : me?.DayShift;
         if (me is null || mine is null) return null;
         var num = mine.PumpNum;
@@ -301,7 +301,7 @@ public sealed class ParchaDataService
 
         //  ⛔ همان زنجیرهٔ ‎PrevEndAsync‎ِ کارتِ پارچه — دو قاعده یعنی روزی پارچه سبز است و ورق سرخ
         await db.DisposeAsync();
-        return await PrevEndAsync(fuel, num, dk, id, night, mine.Id, ct);
+        return await PrevEndAsync(fuel, num, dk, me.Id, night, mine.Id, ct);
     }
 
     /// <summary>یک سطر از «تاریخچهٔ پایه‌ها» — شروع و ختمِ یک شیفت.</summary>
@@ -438,6 +438,8 @@ public sealed class ParchaDataService
 
         var rep = await db.Reports.FirstOrDefaultAsync(x => x.Id == report.Id, ct);
         if (rep is null) return;
+        //  ⛔ شورا ب۲: کلیدِ پایهٔ ورق از شناسهٔ سراسریِ همین پارچه ساخته می‌شود
+        if (string.IsNullOrEmpty(report.SyncUid)) report.SyncUid = rep.SyncUid;
         if (kind == ShiftKind.Day) rep.DayShiftId = shift.Id; else rep.NightShiftId = shift.Id;
         rep.DateShamsi = report.DateShamsi;
         rep.DateKey = Shamsi.Key(report.DateShamsi);
@@ -481,7 +483,7 @@ public sealed class ParchaDataService
         IReadOnlyList<long> ids = Array.Empty<long>();
         if (_waraqSync is not null)
             ids = await _waraqSync.PushShiftToWaraqAsync(db,
-                ShiftWaraqSyncService.SrcKeyOf(rep.Fuel, rep.Id, kind), s, ct);
+                ShiftWaraqSyncService.SrcKeyOf(rep.Fuel, rep, kind), s, ct);
         return new ShiftEditResult(true, null, ids);
     }
 
@@ -509,7 +511,7 @@ public sealed class ParchaDataService
         // ⛔ پایه‌هایی که همین پارچه در ورق ساخته با خودش می‌روند — در همان ذخیره،
         // پس مُهرِ حذفشان یکی است و بازگردانی از سطلِ زباله همه را با هم برمی‌گرداند.
         // تا ۳.۱.۲۱۳ در ورق جا می‌ماندند و فروشِ آن شیفت در گاوصندوق هم.
-        var keys = ShiftWaraqSyncService.ReportKeys(r.Id);
+        var keys = ShiftWaraqSyncService.ReportKeys(r);
         var pumps = await db.WaraqPumps.Include(p => p.Shift)
                             .Where(p => keys.Contains(p.SrcKey!))
                             .ToListAsync(ct);

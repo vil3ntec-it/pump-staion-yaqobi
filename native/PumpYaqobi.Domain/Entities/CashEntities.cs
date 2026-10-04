@@ -72,6 +72,7 @@ public class Expense : EntityBase, ILedgerRow
     /// ⚠️ کارشان فقط جلوگیری از دوباره‌نویسی است: معاشِ یک ماهِ یک کارمند
     /// باید دقیقاً یک مصرف داشته باشد، حتی اگر دکمه دو بار زده شود.
     /// </summary>
+    [SyncParent(typeof(StaffMember))]
     public long? SalaryStaffId { get; set; }
     public string? SalaryMonth { get; set; }
 

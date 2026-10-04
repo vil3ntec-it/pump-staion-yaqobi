@@ -168,6 +168,8 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         //  «آوردنِ فایلِ کامل» برای مدیر هم تا بستنِ برنامه پنهان می‌ماندند
         //  (سنجهٔ ‎fullbackup‎ گرفتش).
         OnPropertyChanged(nameof(CanRestore));
+        LoadConflicts();
+        LoadOffsite();
         //  نامِ قرض‌دارها و شرکت‌ها برای «خروجیِ یک حساب» — فقط دو ستون
         try { AskBackupOnExit = AppSettings.Load().AskBackupOnExit; } catch { }
         return FillTargetsAsync();
@@ -381,7 +383,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
                        + SizeText(info.FileBytes) + " · با تم و تنظیمات";
             FullStatusBrushKey = "Pump.Ok";
             _host.Toast("📦 فایلِ کامل ساخته شد — می‌شود روی فلش برد", ToastKind.Ok);
-            try { var st = AppSettings.Load(); st.PortablePaths["full"] = target; st.Save(); } catch { }
+            try { var st = AppSettings.Load(); st.PortablePaths["full"] = target; st.LastFullExportAt = AppClock.UtcNow.ToString("O"); st.Save(); } catch { }
             ExitBackup.Mark();
             return true;
         }

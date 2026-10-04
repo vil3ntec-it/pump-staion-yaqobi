@@ -207,6 +207,7 @@ public class RasidEntry : EntityBase
     /// برگرداندنِ تایید دقیقاً همین رکورد را برمی‌دارد — نه کم کردنِ یک عدد
     /// از جمع، که با رسیدهای دستیِ کاربر قاطی می‌شد.
     /// </summary>
+    [SyncParent(typeof(Invoice))]
     public long? InvoiceId { get; set; }
 
     public int SortIndex { get; set; }
@@ -260,6 +261,7 @@ public class DebtRow : EntityBase
     /// اگر این ردیف را یک فاکتور ساخته باشد، شناسهٔ همان فاکتور.
     /// با برگشت یا حذفِ فاکتور، دقیقاً همین ردیف برداشته می‌شود — نه ردیفِ دیگری.
     /// </summary>
+    [SyncParent(typeof(Invoice))]
     public long? InvoiceId { get; set; }
 }
 
@@ -324,6 +326,7 @@ public class DebtQuickReceipt : EntityBase
 public class DebtTableArchive : EntityBase
 {
     /// <summary>حسابی که این جدول از آن آرشیو شده.</summary>
+    [SyncParent(typeof(DebtAccount))]
     public long AccountId { get; set; }
 
     /// <summary>تاریخِ شمسیِ آرشیو شدن (‎h.createdAt‎).</summary>

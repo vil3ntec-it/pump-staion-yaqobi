@@ -185,7 +185,7 @@ public sealed class ParchaReceiptService
             Rasid = r.Rasid,
             Albaqi = bardagi - r.Rasid,
             Src = "parcha",
-            SrcKey = "parcha|" + (r.LegacyId is { Length: > 0 } ? r.LegacyId : "id" + r.Id),
+            SrcKey = SrcKeys.ParchaReceipt(r),   // ⛔ شورا ب۲
         };
 
         var placed = PostingService.PlaceRow(person, row, rawText, found.Value.Account);

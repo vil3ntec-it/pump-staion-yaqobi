@@ -21,6 +21,9 @@ public sealed record ApplyReport(int Applied, int Skipped, int Failed, string La
     /// را کنار می‌گذارد و با گرفتنِ بعدی دوباره امتحان می‌کند.
     /// </summary>
     public IReadOnlyList<IncomingOp> FailedOps { get; init; } = Array.Empty<IncomingOp>();
+
+    /// <summary>شمارِ تعارض‌هایی که همین دسته ساخت (شورا ب۱).</summary>
+    public int Conflicts { get; init; }
 }
 
 /// <summary>
@@ -485,6 +488,9 @@ public sealed partial class SyncStore
             pending.Add((op, t));
         }
 
+        //  ⛔ شورا ب۱ — تعارض‌ها دیده و نگه داشته می‌شوند، نه «آخرین نوشتن» بی‌صدا
+        var cx = new ConflictCtx(db, pending.Select(p => (p.T.Entity, p.Op.RowUid)), _justPushed, now);
+
         var missing = new Dictionary<string, string>(StringComparer.Ordinal);
         var failedOps = new List<IncomingOp>();
         while (pending.Count > 0)
@@ -495,7 +501,7 @@ public sealed partial class SyncStore
             {
                 try
                 {
-                    if (ApplyOne(db, t, op, now)) applied++; else skipped++;
+                    if (ApplyOne(db, t, op, now, cx)) applied++; else skipped++;
                     progress = true;
                 }
                 catch (MissingParentException mp)
@@ -522,11 +528,13 @@ public sealed partial class SyncStore
             why = missing.GetValueOrDefault(op.OpId + "|" + op.RowUid, why);
         }
 
+        cx.Save();
+        Conflicts += cx.Made;
         if (applied > 0) PumpDbContext.Bump();
-        return new ApplyReport(applied, skipped, failed, why) { FailedOps = failedOps };
+        return new ApplyReport(applied, skipped, failed, why) { FailedOps = failedOps, Conflicts = cx.Made };
     }
 
-    private static bool ApplyOne(PumpDbContext db, TableInfo t, IncomingOp op, DateTime now)
+    private static bool ApplyOne(PumpDbContext db, TableInfo t, IncomingOp op, DateTime now, ConflictCtx? cx = null)
     {
         var id = ScalarLong(db, $"SELECT \"Id\" FROM \"{t.Table}\" WHERE \"SyncUid\" = $u LIMIT 1;", ("$u", op.RowUid));
 
@@ -551,6 +559,8 @@ public sealed partial class SyncStore
             {
                 var col = t.Columns.FirstOrDefault(c => string.Equals(c.Name, f.Name, StringComparison.Ordinal));
                 if (col is null || col.Name is "Id" or "SyncUid") continue;
+                //  ⛔ شورا ب۱: مالِ ما پس از این op به سرور رفته ⇒ همین‌جا می‌ماند (ردپا نگه داشته می‌شود)
+                if (id is not null && cx is not null && !cx.TakeRemote(t.Entity, op, col.Name, f.Value)) continue;
 
                 var value = parents.TryGetValue(col.Name, out var pid) ? pid : Value(db, t, col, id, f.Value);
                 sets.Add($"\"{col.Column}\" = {{{args.Count}}}");

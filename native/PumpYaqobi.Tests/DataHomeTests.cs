@@ -123,3 +123,67 @@ public class DataHomeTests : IDisposable
         Assert.DoesNotContain("Move(src", settle);
     }
 }
+
+/// <summary>
+/// ══ شورا، ب۴ — جابه‌جاییِ اتمی: برق در هر گام برود، هیچ چیزی نیمه نمی‌ماند ══
+/// پس از هر گامِ جابه‌جایی «برق می‌رود» (کارِ نیمه‌تمام و پوشهٔ موقت سرِ جا)؛ اجرای
+/// بعد باید از منبع دوباره کپی کند، هر دو فایلِ دفتر و تنظیمات کامل باشند، و آن‌چه
+/// نیمه نشسته بود کنار برود (پاک نه).
+/// </summary>
+[Collection("DataHomeStepHook")]
+public class DataHomeAtomicTests : IDisposable
+{
+    private readonly string _root = Path.Combine(Path.GetTempPath(), "pyq-atomic-" + Guid.NewGuid().ToString("N")[..8]);
+
+    public void Dispose()
+    {
+        DataHome.StepHook = null;
+        try { Directory.Delete(_root, true); } catch { }
+    }
+
+    [Fact]
+    public void BarghDarHarGam_Beravad_BaardeBaad_Kamel_Ast()
+    {
+        //  گام‌ها را یک بار بی برق‌رفتن بشمار
+        var steps = new List<string>();
+        string Legacy(string tag)
+        {
+            var d = Path.Combine(_root, tag, "appdata");
+            Directory.CreateDirectory(Path.Combine(d, "backups"));
+            File.WriteAllText(Path.Combine(d, "pump.db"), "ledger");
+            File.WriteAllText(Path.Combine(d, "settings.json"), "{\"x\":1}");
+            File.WriteAllText(Path.Combine(d, "chat.db"), "chat");
+            File.WriteAllText(Path.Combine(d, "backups", "b.db"), "b");
+            return d;
+        }
+        DataHome.StepHook = s => steps.Add(s);
+        var dry = Path.Combine(_root, "dry", "app", DataHome.SubDir);
+        DataHome.Settle(dry, null, Legacy("dry"));
+        DataHome.StepHook = null;
+        Assert.Contains("marker", steps);
+        Assert.Contains("last:settings.json", steps);
+        Assert.False(File.Exists(Path.Combine(dry, DataHome.Incomplete)));
+
+        for (var cutAt = 0; cutAt < steps.Count; cutAt++)
+        {
+            var tag = "cut" + cutAt;
+            var legacy = Legacy(tag);
+            var target = Path.Combine(_root, tag, "app", DataHome.SubDir);
+            var n = 0;
+            DataHome.StepHook = _ => { if (n++ == cutAt) throw new DataHome.PowerCut(); };
+            Assert.Throws<DataHome.PowerCut>(() => DataHome.Settle(target, null, legacy));
+            DataHome.StepHook = null;
+
+            //  اجرای بعد
+            var r = DataHome.Settle(target, null, legacy);
+            Assert.Equal(target, r.Root);
+            Assert.Equal("ledger", File.ReadAllText(Path.Combine(target, "pump.db")));
+            Assert.Equal("{\"x\":1}", File.ReadAllText(Path.Combine(target, "settings.json")));
+            Assert.Equal("chat", File.ReadAllText(Path.Combine(target, "chat.db")));
+            Assert.Equal("b", File.ReadAllText(Path.Combine(target, "backups", "b.db")));
+            Assert.False(File.Exists(Path.Combine(target, DataHome.Incomplete)), $"گام {cutAt} ({steps[cutAt]}): نشان ماند");
+            //  ⛔ جای کهنه دست‌نخورده
+            Assert.Equal("ledger", File.ReadAllText(Path.Combine(legacy, "pump.db")));
+        }
+    }
+}

@@ -34,8 +34,8 @@ public sealed class ShiftWaraqSyncService
     { _dbf = dbf; _perm = perm; _waraq = waraq; _settings = settings; }
 
     /// <summary>‎'p-&lt;id&gt;-day'‎ · ‎'d-&lt;id&gt;-night'‎ — همان صورتِ نسخهٔ وب.</summary>
-    public static string SrcKeyOf(FuelType fuel, long recordId, ShiftKind kind) =>
-        (fuel == FuelType.Diesel ? "d-" : "p-") + recordId + "-" + KindWord(kind);
+    public static string SrcKeyOf(FuelType fuel, ParchaReport rep, ShiftKind kind) =>
+        SrcKeys.Shift(fuel, rep, kind);   // ⛔ شورا ب۲: ‎"p-u&lt;SyncUid&gt;-day"‎
 
     /// <summary>‎'p-live-day'‎ — ردیفِ موقتِ پیش از ذخیره.</summary>
     public static string LiveKeyOf(FuelType fuel, ShiftKind kind) =>
@@ -48,12 +48,12 @@ public sealed class ShiftWaraqSyncService
     /// ⛔ از ۱۴۰۵/۰۷/۱۶: حذفِ پارچه پایه‌هایش را با همین کلیدها از ورق برمی‌دارد و
     /// بازگردانی از سطلِ زباله با همین‌ها برشان می‌گرداند.
     /// </summary>
-    public static string[] ReportKeys(long reportId) => new[]
+    public static string[] ReportKeys(ParchaReport rep) => new[]
     {
-        SrcKeyOf(FuelType.Petrol, reportId, ShiftKind.Day),
-        SrcKeyOf(FuelType.Petrol, reportId, ShiftKind.Night),
-        SrcKeyOf(FuelType.Diesel, reportId, ShiftKind.Day),
-        SrcKeyOf(FuelType.Diesel, reportId, ShiftKind.Night),
+        SrcKeyOf(FuelType.Petrol, rep, ShiftKind.Day),
+        SrcKeyOf(FuelType.Petrol, rep, ShiftKind.Night),
+        SrcKeyOf(FuelType.Diesel, rep, ShiftKind.Day),
+        SrcKeyOf(FuelType.Diesel, rep, ShiftKind.Night),
     };
 
     /// <summary>
@@ -62,10 +62,9 @@ public sealed class ShiftWaraqSyncService
     /// </summary>
     public static string[] SiblingKeys(string? srcKey)
     {
-        var m = System.Text.RegularExpressions.Regex.Match(srcKey ?? "", @"^[pd]-(\d+)-(day|night)$");
-        if (!m.Success || !long.TryParse(m.Groups[1].Value, out var id)) return Array.Empty<string>();
-        var kind = m.Groups[2].Value == "night" ? ShiftKind.Night : ShiftKind.Day;
-        return new[] { SrcKeyOf(FuelType.Petrol, id, kind), SrcKeyOf(FuelType.Diesel, id, kind) };
+        if (!SrcKeys.TryParseShift(srcKey, out _, out var tok, out var night)) return Array.Empty<string>();
+        var k = night ? "-night" : "-day";
+        return new[] { "p-" + tok + k, "d-" + tok + k };
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -90,15 +89,25 @@ public sealed class ShiftWaraqSyncService
     //  نمی‌خورند — تیل و تاریخ کلیدِ خودِ پیوندند.
 
     /// <summary>
-    /// ‎"p-12-day"‎ ⇒ پارچهٔ ۱۲، شیفتِ روز. کلیدِ زنده («p-live-day») و ردیفِ دستی ⇒ نه.
+    /// ‎"p-u…-day"‎ ⇒ نشانهٔ پارچه (‎"u&lt;SyncUid&gt;"‎، یا شمارهٔ کهنه) و شیفتِ روز.
+    /// کلیدِ زنده («p-live-day») و ردیفِ دستی ⇒ نه.
     /// </summary>
-    public static bool TryParseKey(string? srcKey, out long reportId, out ShiftKind kind)
+    public static bool TryParseKey(string? srcKey, out string tok, out ShiftKind kind)
     {
-        reportId = 0; kind = ShiftKind.Day;
-        var m = System.Text.RegularExpressions.Regex.Match(srcKey ?? "", @"^[pd]-(\d+)-(day|night)$");
-        if (!m.Success || !long.TryParse(m.Groups[1].Value, out reportId) || reportId <= 0) return false;
-        kind = m.Groups[2].Value == "night" ? ShiftKind.Night : ShiftKind.Day;
+        kind = ShiftKind.Day;
+        if (!SrcKeys.TryParseShift(srcKey, out _, out tok, out var night)) return false;
+        if (!tok.StartsWith('u') && !(long.TryParse(tok, System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture, out var n) && n > 0)) return false;
+        kind = night ? ShiftKind.Night : ShiftKind.Day;
         return true;
+    }
+
+    /// <summary>پارچهٔ نشانه — با شناسهٔ سراسری، یا (کلیدِ کهنه) با شمارهٔ محلی.</summary>
+    public static IQueryable<ParchaReport> ByTok(IQueryable<ParchaReport> q, string tok)
+    {
+        if (tok.StartsWith('u')) { var uid = tok[1..]; return q.Where(r => r.SyncUid == uid); }
+        var id = long.Parse(tok, System.Globalization.CultureInfo.InvariantCulture);
+        return q.Where(r => r.Id == id);
     }
 
     /// <summary>
@@ -139,9 +148,9 @@ public sealed class ShiftWaraqSyncService
     public static async Task<bool> PushPumpToShiftAsync(Persistence.PumpDbContext db, WaraqPump p,
                                                          CancellationToken ct = default)
     {
-        if (p is null || !TryParseKey(p.SrcKey, out var id, out var kind)) return false;
-        var rep = await db.Reports.Include(r => r.DayShift).Include(r => r.NightShift)
-                          .FirstOrDefaultAsync(r => r.Id == id, ct);
+        if (p is null || !TryParseKey(p.SrcKey, out var tok, out var kind)) return false;
+        var rep = await ByTok(db.Reports.Include(r => r.DayShift).Include(r => r.NightShift), tok)
+                          .FirstOrDefaultAsync(ct);
         var s = rep is null ? null : kind == ShiftKind.Night ? rep.NightShift : rep.DayShift;
         if (s is null) return false;
         return ApplyToShift(s, p.Worker, p.Num, p.Start, p.End, p.PricePerLiter, p.Debt);
@@ -428,7 +437,7 @@ public sealed class ShiftWaraqSyncService
             if (sd is null) continue;
 
             var sales = Math.Round(_waraq.ShiftTotals(sd).Net, 0, MidpointRounding.AwayFromZero);   // ⛔ منهای قرض‌ها
-            var srcKey = "wq-sales-" + w.Id + "-" + KindWord(kind);
+            var srcKey = SrcKeys.WaraqSales(w, kind);
             var row = await db.SafeEntries.FirstOrDefaultAsync(e => e.SrcKey == srcKey, ct);
 
             if (sales <= 0m)

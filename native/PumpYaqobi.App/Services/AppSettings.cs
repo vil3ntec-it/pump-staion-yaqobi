@@ -138,6 +138,9 @@ public sealed class AppSettings
     /// </summary>
     public string LastBackupSentAt { get; set; } = "";
 
+    /// <summary>⛔ شورا ب۵: آخرین «💾 ذخیرهٔ فایلِ بکاپ» (فلش/جای دیگر) — ‎ISO‎؛ خالی یعنی هرگز.</summary>
+    public string LastFullExportAt { get; set; } = "";
+
     /// <summary>
     /// ثبتِ خودکار در سرورِ خانگی روشن باشد؟
     ///

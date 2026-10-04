@@ -36,6 +36,7 @@ internal static class Program
         // ⚠️ سنجهٔ خودِ همگام‌سازی (`syncui`) صفحه را می‌سنجد، نه حلقه را؛
         // حلقه در `PumpYaqobi.Tests` سنجیده می‌شود، بی پنجره و بی شبکه.
         PumpYaqobi.App.Services.SyncEngine.Disabled = true;
+        PumpYaqobi.App.ViewModels.MainViewModel.RestoreDrillDisabled = true;   // شورا ب۵: فقط در ‎RestoreDrillTests‎
         PumpYaqobi.App.Services.ExitBackup.Disabled = true;    // پرسشِ پیش از بستن هیچ سنجه‌ای را نگه نمی‌دارد
         PumpYaqobi.App.Update.AutoUpdate.Disabled = true;   // به‌روزرسانیِ خودکار هیچ‌وقت از سنجه به گیت‌هاب نمی‌رود
         PumpYaqobi.App.Services.SectionGate.TestOpenAll = true;   // سنجه‌ها همان بخش‌های در حالِ ساخت را هم می‌سنجند

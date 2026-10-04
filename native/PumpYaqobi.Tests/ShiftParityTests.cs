@@ -182,7 +182,7 @@ public class ShiftParityTests : IDisposable
             // می‌شناسد: «p-<گزارش>-day» و «d-<پارچه>-night». شکلش را از خودِ
             // نسخهٔ وب گرفته‌ایم؛ شمارهٔ داخلش هر بار فرق می‌کند و مهم نیست.
             var shape = System.Text.RegularExpressions.Regex.Replace(
-                res.SrcKey ?? "", @"^([dp])-\d+-(day|night)$", "$1-<id>-$2");
+                res.SrcKey ?? "", @"^([dp])-(?:u.+|\d+)-(day|night)$", "$1-<id>-$2");
             Assert.Equal((fuel == FuelType.Diesel ? "d" : "p") + "-<id>-" + c.type, shape);
             Assert.All(c.pumps, p => Assert.Equal(
                 (p.fuel == "diesel" ? "d" : "p") + "-<id>-" + (p.srcKeyShape.EndsWith("night") ? "night" : "day"),

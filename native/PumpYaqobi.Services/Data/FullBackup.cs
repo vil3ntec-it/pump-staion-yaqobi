@@ -312,7 +312,7 @@ public static class FullBackup
         catch { return null; }
     }
 
-    private static bool IntegrityOk(string dbPath)
+    public static bool IntegrityOk(string dbPath)
     {
         try
         {
