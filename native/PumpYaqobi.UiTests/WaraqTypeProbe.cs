@@ -85,6 +85,15 @@ internal static class WaraqTypeProbe
 
         Console.WriteLine($"ورقِ {page.Entity.DateShamsi} — {page.Txns.Count} ردیف");
 
+        Console.WriteLine($"کارِ روزانهٔ برابری (الف۳): {AppHost.Current.Parity.DailyTask?.Status}");
+        //  ‎WQT_OVERLAP=1‎: همان کارِ روزانهٔ برابری هم‌زمان با نوشتن — همان بدترین حالِ پس از ورود
+        if (Environment.GetEnvironmentVariable("WQT_OVERLAP") == "1")
+            _ = Task.Run(async () =>
+            {
+                var sw = Stopwatch.StartNew();
+                var r = await AppHost.Current.Parity.CheckAsync(fix: true);
+                Console.WriteLine($"   (برابریِ هم‌زمان: {sw.ElapsedMilliseconds}ms، {r.Count} ناجور)");
+            });
         TypeInto(win, grid, ri, Col("نام"), "کریم احمدی بابت نان و چای", () => row.Name);
         TypeInto(win, grid, ri, Col("مقدار تیل"), "12500", () => row.LitersText.Replace(",", "").Replace("٬", ""));
 
@@ -109,7 +118,7 @@ internal static class WaraqTypeProbe
         Console.WriteLine();
         Console.WriteLine($"── نوشتنِ «{text}» حرف‌به‌حرف (هر {GapMs}ms) ──");
         ClickCell(win, g, row, col);
-        var worst = 0L;
+        var worst = 0L; var worstAt = -1; var worstGc = 0.0;
         var lost = new List<string>();
         var dbBefore = DbWatch.Count;
         DbWatch.Recording = Environment.GetEnvironmentVariable("WQT_SQL") == "1";
@@ -123,11 +132,14 @@ internal static class WaraqTypeProbe
             var gap = text[i] == ' ' ? 450 : GapMs;
             while (until.ElapsedMilliseconds < gap)
             {
+                var gc0 = GC.GetTotalPauseDuration();
                 var sw = Stopwatch.StartNew();
                 Dispatcher.UIThread.RunJobs();
                 win.UpdateLayout();
                 sw.Stop();
-                worst = Math.Max(worst, sw.ElapsedMilliseconds);
+                //  مکثِ GC در همان برش جدا گفته می‌شود — «کندی» با «زباله‌روبی» یکی نیست
+                if (sw.ElapsedMilliseconds > worst)
+                { worst = sw.ElapsedMilliseconds; worstAt = i; worstGc = (GC.GetTotalPauseDuration() - gc0).TotalMilliseconds; }
                 Thread.Sleep(3);
             }
             var box = win.FocusManager?.GetFocusedElement() as TextBox;
@@ -141,7 +153,8 @@ internal static class WaraqTypeProbe
             foreach (var grp in DbWatch.Log.GroupBy(x => x[..Math.Min(90, x.Length)]).OrderByDescending(x => x.Count()).Take(12))
                 Console.WriteLine($"      {grp.Count(),5} × {grp.Key.Replace('\n', ' ')}");
         DbWatch.Recording = false;
-        Check($"بلندترین مکثِ نخِ رابط بینِ دو حرف {worst}ms (هدف ≤ {StallGoal}) · {db} دستورِ دیتابیس در حینِ نوشتن",
+        Check($"بلندترین مکثِ نخِ رابط بینِ دو حرف {worst}ms (هدف ≤ {StallGoal}) · {db} دستورِ دیتابیس در حینِ نوشتن"
+              + (worstAt >= 0 ? $" · پس از حرفِ {worstAt + 1}، مکثِ GC در همان برش {worstGc:0}ms" : ""),
               worst <= StallGoal);
         Check(lost.Count == 0 ? "هیچ حرفی گم، پاک یا نصفه نشد" : $"{lost.Count} بار کادر چیزِ دیگری نشان داد: " + string.Join(" · ", lost.Take(4)),
               lost.Count == 0);

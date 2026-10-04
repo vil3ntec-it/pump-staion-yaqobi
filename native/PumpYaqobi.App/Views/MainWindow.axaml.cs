@@ -41,6 +41,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        PumpYaqobi.App.Controls.Spot.Root = this;   // «نشانم بده»ِ شروعِ سریع در همین پنجره می‌گردد
         var vm = new MainViewModel();
         DataContext = vm;
 

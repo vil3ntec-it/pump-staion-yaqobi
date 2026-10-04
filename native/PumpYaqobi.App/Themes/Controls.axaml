@@ -905,6 +905,15 @@
     <Setter Property="Foreground" Value="{DynamicResource Pump.Ink.Danger}" />
     <Setter Property="ToolTip.Tip" Value="این عدد خوانده نشد — درستش کنید یا Esc بزنید" />
   </Style>
+  <!-- ══ «نشانم بده»ِ شروعِ سریع (شورا، ث۱) — چهار ثانیه لبهٔ پررنگِ تاکید ══ -->
+  <Style Selector="TextBox.spot /template/ Border#PART_BorderElement">
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="BorderThickness" Value="3" />
+  </Style>
+  <Style Selector="Button.spot">
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Accent}" />
+    <Setter Property="BorderThickness" Value="3" />
+  </Style>
   <Style Selector="TextBox.ghost">
     <Setter Property="SelectionBrush" Value="Transparent" />
     <Setter Property="SelectionForegroundBrush" Value="{DynamicResource Pump.Ghost}" />

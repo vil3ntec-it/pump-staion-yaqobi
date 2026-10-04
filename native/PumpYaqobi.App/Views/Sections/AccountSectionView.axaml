@@ -417,7 +417,7 @@
 
                     <StackPanel Margin="0,0,0,13">
                       <TextBlock Text="ایمیل" Classes="lbl" />
-                      <TextBox Text="{Binding LoginEmail}" Watermark="you@example.com"
+                      <TextBox Text="{Binding LoginEmail}" Watermark="you@example.com" c:Spot.Id="login-email"
                                FlowDirection="LeftToRight">
                         <TextBox.KeyBindings>
                           <KeyBinding Gesture="Enter" Command="{Binding AccountStepCommand}" />
@@ -516,7 +516,7 @@
                                Text="ایمیلتان را بنویسید تا یک کدِ شش‌رقمی برایش بفرستیم، بعد رمزِ تازه را بگذارید." />
 
                     <TextBlock Text="ایمیل" Classes="lbl" />
-                    <TextBox Text="{Binding LoginEmail}" Watermark="you@example.com"
+                    <TextBox Text="{Binding LoginEmail}" Watermark="you@example.com" c:Spot.Id="login-email"
                              FlowDirection="LeftToRight">
                       <TextBox.KeyBindings>
                         <KeyBinding Gesture="Enter" Command="{Binding SendResetCodeCommand}" />
@@ -638,7 +638,7 @@
                          همین‌جا برداشته شد و برنمی‌گردد — و از ۱۴۰۵/۰۷/۱۵ از
                          پروفایل هم: اشتراک فقط از سرور به حساب می‌رسد. -->
                     <TextBlock Text="نامِ پمپ" Classes="lbl" />
-                    <TextBox Text="{Binding LoginPump}" Watermark="مثلاً پمپ بنزینِ مرکزی">
+                    <TextBox Text="{Binding LoginPump}" Watermark="مثلاً پمپ بنزینِ مرکزی" c:Spot.Id="pump-name">
                       <TextBox.KeyBindings>
                         <KeyBinding Gesture="Enter" Command="{Binding FinishPumpCommand}" />
                       </TextBox.KeyBindings>

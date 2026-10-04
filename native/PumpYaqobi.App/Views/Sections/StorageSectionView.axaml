@@ -94,7 +94,7 @@
                 <StackPanel Spacing="4" Margin="6,0">
                   <TextBlock Text="ظرفیت مخزن (لیتر)" Classes="label" FontSize="11"
                              TextAlignment="Center" HorizontalAlignment="Stretch" />
-                  <TextBox Classes="tankbox" Text="{Binding Capacity}" HorizontalAlignment="Stretch" c:LiveFormat.Kind="number" />
+                  <TextBox Classes="tankbox" Text="{Binding Capacity}" HorizontalAlignment="Stretch" c:LiveFormat.Kind="number" c:Spot.Id="tank-capacity" />
                 </StackPanel>
                 <!-- از «تنظیمات» به این‌جا آمد (۱۴۰۵/۰۶/۲۸) — جای طبیعی‌اش
                      همین‌جاست، کنارِ ظرفیت. -->

@@ -281,7 +281,7 @@
           <!-- دو کارتِ شیفت، کنارِ هم -->
           <StackPanel Grid.Row="1" Margin="14">
             <Grid ColumnDefinitions="*,14,*">
-              <ContentControl Name="DayCard" Grid.Column="0" Content="{Binding Day}"
+              <ContentControl Name="DayCard" Grid.Column="0" Content="{Binding Day}" c:Spot.Id="parcha-day"
                               ContentTemplate="{StaticResource ShiftCard}" />
               <ContentControl Name="NightCard" Grid.Column="2" Content="{Binding Night}"
                               ContentTemplate="{StaticResource ShiftCard}" />

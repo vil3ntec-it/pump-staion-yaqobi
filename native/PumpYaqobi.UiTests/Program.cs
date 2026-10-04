@@ -78,6 +78,7 @@ internal static class Program
         if (outDir.Equals("headrasid", StringComparison.OrdinalIgnoreCase)) return HeadRasidProbe.Run();
         if (outDir.Equals("sectiongate", StringComparison.OrdinalIgnoreCase)) return SectionGateProbe.Run();
         if (outDir.Equals("ux", StringComparison.OrdinalIgnoreCase)) return UxProbe.Run(args);
+        if (outDir.Equals("quickstart", StringComparison.OrdinalIgnoreCase)) return QuickStartProbe.Run(args);
         if (outDir.Equals("clockjump", StringComparison.OrdinalIgnoreCase)) return ClockJumpProbe.Run();
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- marketing [پوشه]   عکس‌های تبلیغاتی، ۲ برابر
         if (outDir.Equals("marketing", StringComparison.OrdinalIgnoreCase)) return MarketingShots.Run(args.Length > 1 ? args[1] : null);

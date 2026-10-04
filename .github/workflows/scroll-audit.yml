@@ -186,6 +186,12 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- ux ${{ runner.temp }}/ux
 
+      # شورا، ث۱: پمپ‌دارِ تازه با فقط چک‌لیستِ «شروعِ سریع» تا نخستین ورق —
+      # «👉 نشانم بده»، کادرِ برجسته، کلیک و کلیدِ واقعی؛ و برگهٔ PDFِ یک‌صفحه‌ای.
+      - name: شروعِ سریع (شورا، ث۱)
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- quickstart ${{ runner.temp }}/quickstart
+
       # «توی حسابِ قرض‌دار نمی‌ره» (۱۴۰۵/۰۷/۱۶): هر دکمهٔ دیدنیِ کلِ برنامه که
       # اتصالِ فرمانش خطا داد و فرمانش خالی ماند ⇒ سرخ.
       - name: سنجشِ دکمه‌های مرده
