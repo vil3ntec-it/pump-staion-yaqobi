@@ -49,13 +49,13 @@ public class RestoreDrillTests : IDisposable
     public void BackupeSalem_Sabz_VaHarJadvalSanjideMishavad()
     {
         var (db, _, drill) = Host();
-        var before = File.ReadAllBytes(db.DbPath).Length;
+        var before = new FileInfo(db.DbPath).Length;   // ⚠️ نه ReadAllBytes: روی ویندوز اتصالِ استخر فایل را باز دارد
         var r = drill.RunNow();
         Assert.True(r.Ok, r.Text);
         Assert.True(r.Tables > 20, "جدول‌ها: " + r.Tables);
         Assert.StartsWith("✅", drill.Last()!.Text);
         Assert.Empty(Directory.EnumerateFiles(Path.Combine(_dir, "backups"), "tmp-drill-*"));   // رونوشتِ موقت پاک شد
-        Assert.True(File.Exists(db.DbPath) && File.ReadAllBytes(db.DbPath).Length >= before);
+        Assert.True(File.Exists(db.DbPath) && new FileInfo(db.DbPath).Length >= before);
     }
 
     [Fact]
