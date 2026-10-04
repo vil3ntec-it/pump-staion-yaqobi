@@ -22,7 +22,7 @@ public class ParchaHistoryWaraqUxTests
     }
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
 
     private static string Bare(string x) => System.Text.RegularExpressions.Regex.Replace(
         x, "<!--.*?-->", "", System.Text.RegularExpressions.RegexOptions.Singleline);
@@ -241,7 +241,7 @@ public class ParchaHistoryWaraqUxTests
         Assert.Contains("PostingService.UnitForAccount(", vm);
 
         // ⛔ و با ترمزِ ‎Version‎ — وگرنه یک پرس‌وجو به ازای هر کلید
-        Assert.Contains("PumpDbContext.Version", vm);
+        Assert.Contains("var v = PumpYaqobi.Services.Data.DataVersion.Current;", vm);
         Assert.Contains("_unitsVersion == v", vm);
 
         // ⛔ و هیچ ردیفی برای این کار خوانده نمی‌شود

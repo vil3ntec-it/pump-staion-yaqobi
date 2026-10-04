@@ -72,7 +72,7 @@ public class PrinterTests
     {
         var d = new DirectoryInfo(Directory.GetCurrentDirectory());
         while (d is not null && !Directory.Exists(Path.Combine(d.FullName, "PumpYaqobi.App"))) d = d.Parent;
-        return File.ReadAllText(Path.Combine(d!.FullName, Path.Combine(parts)));
+        return SrcText.Read(Path.Combine(d!.FullName, Path.Combine(parts)));
     }
 
     /// <summary>⛔ دکمهٔ چاپ اول به چاپگرِ برگزیده می‌رود؛ فعلِ ‎print‎ فقط وقتی فهرست خالی است.</summary>
@@ -92,7 +92,7 @@ public class PrinterTests
         Assert.Contains("LoadPrintersCommand", ax);
 
         //  انتخابِ چاپگر مقدارِ راحتی است — در هر دو فهرستِ ‎SaveSoon‎
-        var st = Src("PumpYaqobi.App", "Services", "AppSettings.cs");
+        var st = Src("PumpYaqobi.Shell", "Services", "AppSettings.cs");
         Assert.Contains("live.LastPrinter = LastPrinter;", st);
     }
 }

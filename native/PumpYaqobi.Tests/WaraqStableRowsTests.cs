@@ -17,7 +17,7 @@ public class WaraqStableRowsTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Src(string rel) =>
-        File.ReadAllText(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar)));
+        SrcText.Read(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar)));
 
     private const string Vm = "PumpYaqobi.App/ViewModels/Sections/WaraqSectionViewModel.cs";
 
@@ -38,16 +38,10 @@ public class WaraqStableRowsTests
     [Fact]
     public void RadifeTaze_VaHazf_HichRadifeDigariRa_JabejaNemikonad()
     {
+        //  رفتارش: WaraqPageBehaviourTests (شورا، ت۳). این‌جا فقط ممنوعه — تقسیمِ دوباره برنگردد.
         var s = Src(Vm);
-        //  ⛔ تقسیمِ نیمه‌به‌نیمه فقط سرِ باز شدن (‎Build‎)، نه با افزودن و حذف
         Assert.DoesNotContain("SplitTxns", Body(s, "private async Task AddTxnAsync()"));
         Assert.DoesNotContain("SplitTxns", Body(s, "private async Task DeleteTxnAsync("));
-        Assert.Contains("PlaceNewTxn(vm)", Body(s, "private async Task AddTxnAsync()"));
-        Assert.Contains("RemoveTxnRow(row)", Body(s, "private async Task DeleteTxnAsync("));
-        //  ردیفِ تازه تهِ جدولِ دوم — همان‌جا که شماره‌اش می‌گوید
-        Assert.Contains("TxnsSecond.Add(vm)", Body(s, "private void PlaceNewTxn("));
-        Assert.DoesNotContain("Clear()", Body(s, "private void PlaceNewTxn("));
-        Assert.DoesNotContain("Clear()", Body(s, "private void RemoveTxnRow("));
     }
 
     [Fact]

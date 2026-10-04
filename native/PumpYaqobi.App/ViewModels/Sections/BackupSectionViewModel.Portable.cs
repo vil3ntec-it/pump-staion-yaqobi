@@ -76,12 +76,8 @@ public sealed partial class BackupSectionViewModel
         if (kind is not ("debtor" or "company")) { PortableTargets.Clear(); PortableTarget = null; return; }
         var list = await Task.Run(() =>
         {
-            using var db = _host.Db.Create();
-            return kind == "debtor"
-                ? db.Debtors.AsNoTracking().Where(d => d.DeletedAt == null).OrderBy(d => d.Name)
-                    .Select(d => new PortableChoice("debtor", d.Name, d.Id)).ToList()
-                : db.TilCompanies.AsNoTracking().Where(c => c.DeletedAt == null).OrderBy(c => c.Name)
-                    .Select(c => new PortableChoice("company", c.Name ?? "", c.Id)).ToList();
+            return (kind == "debtor" ? _host.Debtors.NameList() : _host.Companies.NameList())
+                .Select(x => new PortableChoice(kind, x.Name, x.Id)).ToList();
         });
         if (PortableKind?.Key != kind) return;
         PortableTargets.Clear();
@@ -152,7 +148,7 @@ public sealed partial class BackupSectionViewModel
             var pick = new PortablePick(kind.Key, PortableTarget?.Id ?? 0, from, to);
             var ex = await Task.Run(() =>
             {
-                var e = new SyncStore(_host.Db).ExportPortable(pick);
+                var e = _host.Store.ExportPortable(pick);
                 PortableFile.Write(target, title, e);
                 //  ⛔ «ساخته شد» یعنی «خوانده می‌شود»
                 if (PortableFile.ReadSnapshot(target) != e.SnapshotJson)
@@ -213,7 +209,7 @@ public sealed partial class BackupSectionViewModel
             try { await SaveGuard.FlushAllAsync(); } catch { }
             using var paused = _host.SyncIfStarted is { } se ? await se.PauseAsync() : null;
             var safety = await Task.Run(() => _host.Backup.SafetyCopy());
-            var rep = await Task.Run(() => new SyncStore(_host.Db).ImportPortable(doc.RootElement));
+            var rep = await Task.Run(() => _host.Store.ImportPortable(doc.RootElement));
             await RefreshAsync();
             await _main.ReloadAllAsync();
             PortableStatus = $"✅ {Shamsi.Money(rep.Added)} ردیفِ تازه · {Shamsi.Money(rep.Updated)} به‌روز"

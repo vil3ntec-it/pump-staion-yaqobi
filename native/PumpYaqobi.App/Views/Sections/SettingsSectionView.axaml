@@ -69,7 +69,7 @@
             <StackPanel Grid.Column="2" Spacing="4">
               <TextBlock Text="اپِ گوشی — لینک و کد" Classes="card-title" />
               <TextBlock Classes="muted" TextWrapping="Wrap"
-                         Text="لینکِ اندروید و آیفون، و کدِ پمپ." />
+                         Text="لینکِ اندروید و آیفون، و کدِ اپِ گوشی." />
             </StackPanel>
             <TextBlock Grid.Column="3" Text="‹" FontSize="24" Opacity="0.6" VerticalAlignment="Center" />
           </Grid>

@@ -20,10 +20,10 @@ public class InstallerTests
     private static readonly string Repo = Path.GetFullPath(Path.Combine(Native, ".."));
 
     private static string Iss() =>
-        File.ReadAllText(Path.Combine(Native, "installer", "PumpYaqobi.iss"));
+        SrcText.Read(Path.Combine(Native, "installer", "PumpYaqobi.iss"));
 
     private static string Workflow() =>
-        File.ReadAllText(Path.Combine(Repo, ".github", "workflows", "build-native.yml"));
+        SrcText.Read(Path.Combine(Repo, ".github", "workflows", "build-native.yml"));
 
     /// <summary>
     /// ⛔ نسخهٔ ۳.۱.۱۵۸ به همین یک نویسه منتشر نشد: در ‎[Code]‎ توضیح «//» است،
@@ -43,7 +43,7 @@ public class InstallerTests
                      .Select(x => x.l.Length > 40 ? x.l[..40] : x.l).ToList();
         Assert.True(bad.Count == 0, "توضیحِ «;» در [Code]: " + string.Join(" | ", bad));
 
-        var wf = File.ReadAllText(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
+        var wf = SrcText.Read(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
         Assert.Contains("pull_request", wf);
         Assert.Contains("native/installer/PumpYaqobi.iss", wf);
         Assert.Contains("/DSourceDir64=", wf);
@@ -90,11 +90,11 @@ public class InstallerTests
         Assert.Contains("/DSourceDir64=..\\publish\\win-x64", w);
         Assert.Contains("/DSourceDir86=..\\publish\\win-x86", w);
         Assert.DoesNotContain("Setup-x86", w);
-        var up = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        var up = SrcText.Read(Path.Combine(Native, "PumpYaqobi.App", "Update", "UpdateService.cs"));
         Assert.Contains("+ \" \" + AppArch.ArchArg", up);
 
         //  و installer-check واقعاً نصب می‌کند و بارِ نشسته را می‌سنجد
-        var chk = File.ReadAllText(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
+        var chk = SrcText.Read(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
         Assert.Contains("/ARCH=$archArg", chk);
         Assert.Contains("Install 'x86'", chk);
         Assert.Contains("Install 'x64'", chk);
@@ -130,7 +130,7 @@ public class InstallerTests
     [Fact]
     public void Csproj_points_at_the_icon()
     {
-        var proj = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.App", "PumpYaqobi.App.csproj"));
+        var proj = SrcText.Read(Path.Combine(Native, "PumpYaqobi.App", "PumpYaqobi.App.csproj"));
         Assert.Contains("<ApplicationIcon>", proj);
         Assert.Contains("app.ico", proj);
     }
@@ -258,7 +258,7 @@ public class InstallerTests
         Assert.Contains("SetAside(", step);
         Assert.Contains("(not FreshChosen())", step);
         //  ⛔ برنامه ‎--fresh‎ یا چیزی مانند آن را به نصاب نمی‌دهد
-        var upd = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        var upd = SrcText.Read(Path.Combine(Native, "PumpYaqobi.App", "Update", "UpdateService.cs"));
         Assert.DoesNotContain("FRESH", upd, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -376,7 +376,7 @@ public class InstallerTests
     [Fact]
     public void Auto_update_runs_the_installer_silently()
     {
-        var svc = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        var svc = SrcText.Read(Path.Combine(Native, "PumpYaqobi.App", "Update", "UpdateService.cs"));
         Assert.Contains("/SILENT", svc);
     }
 
@@ -437,7 +437,7 @@ public class InstallerTests
     [Fact]
     public void The_project_file_carries_the_same_starting_version()
     {
-        var proj = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.App", "PumpYaqobi.App.csproj"));
+        var proj = SrcText.Read(Path.Combine(Native, "PumpYaqobi.App", "PumpYaqobi.App.csproj"));
         Assert.Contains("<Version>3.1.1</Version>", proj);
     }
 
@@ -471,7 +471,7 @@ public class InstallerTests
     [Fact]
     public void The_site_reads_the_same_rolling_tag()
     {
-        var pages = File.ReadAllText(Path.Combine(Repo, ".github", "workflows", "deploy-pages.yml"));
+        var pages = SrcText.Read(Path.Combine(Repo, ".github", "workflows", "deploy-pages.yml"));
         Assert.Contains("grab('desktop-latest', 'pumpyaqobi-setup.exe', 'PumpYaqobi-Setup.exe')", pages);
         Assert.Contains("grab('desktop-latest', 'version.txt', 'exe-version.txt')", pages);
 
@@ -608,7 +608,7 @@ public class InstallerTests
 
         //  و کدِ برنامه هم باید همان راهِ «بیتیِ پروسه» را برود، وگرنه
         //  این چیدن بی‌معنا می‌شود.
-        var feed = File.ReadAllText(
+        var feed = SrcText.Read(
             Path.Combine(Native, "PumpYaqobi.App", "Services", "VlcVideoFeed.cs"));
         Assert.Contains("Core.Initialize()", feed);
     }
@@ -646,7 +646,7 @@ public class InstallerTests
         //  مقایسه عددی است، نه متنی («3.1.99» از «3.1.100» کهنه‌تر است)
         Assert.Contains("StrToIntDef", code);
 
-        var check = File.ReadAllText(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
+        var check = SrcText.Read(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
         Assert.Contains("/DAppVersion=$v", check);
         Assert.Contains("0.0.2", check);
         Assert.Contains("نصابِ کهنه‌تر (0.0.1) روی 0.0.2 پذیرفته شد", check);
@@ -682,7 +682,7 @@ public class InstallerTests
         Assert.Contains("SameDir(InstalledDir, Dir)", next);  // نصبِ پیشین جای دیگر
         Assert.Contains("Result := False", next);             // صفحه می‌ماند، نصب نمی‌شکند
 
-        var check = File.ReadAllText(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
+        var check = SrcText.Read(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
         Assert.Contains("drive-wizard.ps1", check);
         Assert.Contains("روی نصبِ موجود صفحهٔ پوشه رد شد", check);
         Assert.True(File.Exists(Path.Combine(Repo, "native", "installer", "test", "drive-wizard.ps1")));
@@ -726,9 +726,9 @@ public class InstallerTests
     public void Nasab_PishAzNasb_SalamatiyeKhodashRaMisanjad()
     {
         var iss = Iss();
-        var seal = File.ReadAllText(Path.Combine(Native, "installer", "seal.ps1"));
+        var seal = SrcText.Read(Path.Combine(Native, "installer", "seal.ps1"));
         var build = Workflow();
-        var check = File.ReadAllText(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
+        var check = SrcText.Read(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
 
         // ⚠️ با BOM، مثلِ drive-wizard.ps1 — PowerShell 5.1 بی BOM فارسی را خراب می‌خواند
         var raw = File.ReadAllBytes(Path.Combine(Native, "installer", "seal.ps1"));

@@ -314,9 +314,8 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
         {
             if (!_qsParcha || !_qsWaraq)
             {
-                await using var db = _host.Db.Create();
-                if (!_qsParcha) _qsParcha = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.AnyAsync(db.ShiftDataSet);
-                if (!_qsWaraq) _qsWaraq = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.AnyAsync(System.Linq.Queryable.Where(db.WaraqTransactions, t => t.Name != null && t.Name != ""));
+                if (!_qsParcha) _qsParcha = await _host.ParchaData.AnyShiftAsync();
+                if (!_qsWaraq) _qsWaraq = await _host.WaraqData.AnyNamedTxnAsync();
             }
             var cap = _host.Settings.GetString("tankCapacity_petrol").Length > 0
                    || _host.Settings.GetString("tankCapacity_diesel").Length > 0;
@@ -377,7 +376,7 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
         // «بازگشت به صفحهٔ اصلی» با پنج سال داده ۱٫۴ ثانیه بود — هر بار همهٔ
         // گزارش‌ها و دو سال مصرف از نو. تا چیزی ذخیره نشده و روز عوض نشده،
         // همان عددهای قبلی درست‌اند.
-        var stamp = (PumpYaqobi.Persistence.PumpDbContext.Version, Shamsi.Today());
+        var stamp = (PumpYaqobi.Services.Data.DataVersion.Current, Shamsi.Today());
         if (stamp == _shownFor) return;
         _shownFor = stamp;
 

@@ -313,7 +313,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         try
         {
             var mine = CloudConfig.DeviceUid(AppSettings.Load());
-            new SyncStore(_host.Db).ForgetForeignDevice(mine);
+            _host.Store.ForgetForeignDevice(mine);
         }
         catch { /* همگام‌سازی رفاه است؛ آوردنِ دفتر اصل */ }
     }
@@ -472,7 +472,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
                 ForgetForeignSyncDevice();
 
                 //  ⛔ «آمد» یعنی شمرده شد — هر جدولِ داده در خودِ برنامه با فایل
-                var mismatch = await Task.Run(() => FullBackup.VerifyRestored(_host.Db.DbPath, info));
+                var mismatch = await Task.Run(() => FullBackup.VerifyRestored(_host.DbPath, info));
 
                 var applied = info.SettingsJson is null ? 0 : _main.ApplyPortableSettings(info.SettingsJson).Count;
 

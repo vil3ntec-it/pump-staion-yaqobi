@@ -330,7 +330,7 @@ public abstract partial class SectionViewModel : ObservableObject
     /// </summary>
     public bool ActivationCanBeSkipped =>
         IsLoaded && ActivationOnlyReadsDb
-        && _seenVersion == PumpYaqobi.Persistence.PumpDbContext.Version;
+        && _seenVersion == PumpYaqobi.Services.Data.DataVersion.Current;
 
     /// <summary>
     /// «دفتر را تا همین شماره دیده‌ام.»
@@ -339,7 +339,7 @@ public abstract partial class SectionViewModel : ObservableObject
     /// آغاز، دورِ بعد بی‌جهت «عوض شد» دیده می‌شد.
     /// </summary>
     public void MarkActivationSeen() =>
-        _seenVersion = PumpYaqobi.Persistence.PumpDbContext.Version;
+        _seenVersion = PumpYaqobi.Services.Data.DataVersion.Current;
 
     protected virtual Task LoadAsync() => Task.CompletedTask;
 

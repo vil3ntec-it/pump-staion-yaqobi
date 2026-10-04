@@ -426,25 +426,74 @@ public class LicenseDeliveryTests : IDisposable
     }
 
     /// <summary>
-    /// ⛔ حلقهٔ پس‌زمینه واقعاً از این در رد می‌شود — وگرنه همهٔ سنجه‌های
-    /// بالا سبز می‌مانند و در برنامه هیچ اتفاقی نمی‌افتد.
+    /// ⛔ <b>حلقهٔ پس‌زمینه واقعاً از این در رد می‌شود</b> — وگرنه همهٔ سنجه‌های
+    /// بالا سبز می‌مانند و در برنامه هیچ اتفاقی نمی‌افتد. (شورا ت۳: تا امروز
+    /// فقط ترتیبِ دو نام در سورسِ <c>StationPublisher.cs</c> سنجیده می‌شد.)
+    ///
+    /// عوض شدنِ <b>پلن</b> (استاندارد ⇒ وی‌آی‌پی) هر دو طرف را «فعال» نگه
+    /// می‌دارد و تاریخِ پایان هم همان است، پس فقط تیکِ ده‌دقیقه‌ایِ
+    /// <c>KeepLicenseFreshAsync</c> می‌بیندش — و این‌جا خودِ دورِ واقعیِ حلقه
+    /// (<see cref="StationPublisher.CloudKeepNowAsync"/>) می‌دود، نه تابعی جدا.
     /// </summary>
     [Fact]
-    public void Halgheye_PasZamine_Vagheaan_In_Dar_Ra_Mizanad()
+    public async Task Halgheye_PasZamine_PlaneTaze_Ra_MiAvarad()
     {
-        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
-        //  ⚠️ CRLF روی ویندوزِ CI — «پایانِ متد» با `\n` پیدا می‌شود
-        var src = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Services", "StationPublisher.cs")).Replace("\r\n", "\n");
-        var i = src.IndexOf("private static async Task CloudKeepAsync", StringComparison.Ordinal);
-        Assert.True(i > 0);
-        //  ⚠️ تا خودِ بدنه (پایانِ متد)، نه یک پنجرهٔ ثابتِ نویسه‌ای — توضیحِ
-        //  «نشستِ مرده» (۱۴۰۵/۰۷/۱۳) پنجرهٔ ۹۰۰تایی را پر کرد.
-        var body = src[i..src.IndexOf("\n    }\n", i, StringComparison.Ordinal)];
-        Assert.Contains("HomeFromAccountAsync", body);
-        Assert.Contains("KeepLicenseFreshAsync", body);
-        //  و پس از آن، نه پیش از آن: بی حالِ تازهٔ اشتراک، «ناجوری» معنا ندارد
-        Assert.True(body.IndexOf("HomeFromAccountAsync", StringComparison.Ordinal)
-                  < body.IndexOf("KeepLicenseFreshAsync", StringComparison.Ordinal));
+        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var ends = Days(30);
+        var (_, f) = Bound();
+        var uid = CloudConfig.DeviceUid(f);
+        f.CloudLicense = Sign(uid, now, new[] { "cloudbackup" }, ends);
+        f.CloudSyncedAt = now - 11 * 60_000;        // تیکِ ده‌دقیقه‌ای رسیده
+        f.Save();
+
+        Serve(path => path switch
+        {
+            "/api/pump/me" => Json(HttpStatusCode.OK, Me(true, ends)),
+            "/api/pump/device/me" => Json(HttpStatusCode.OK, DeviceMe(true)),
+            "/api/pump/device/license" => Json(HttpStatusCode.OK,
+                JsonSerializer.Serialize(new
+                {
+                    license = Sign(uid, now, new[] { "cloudbackup", "kar" }, ends),
+                    publicKey = PublicKey,
+                })),
+            _ => Json(HttpStatusCode.NotFound, "{}"),
+        });
+
+        await StationPublisher.CloudKeepNowAsync();
+
+        var state = Entitlements.State(AppSettings.Load());
+        Assert.True(state.Listed);
+        Assert.Contains(Entitlements.Kar, state.Features);
+        Assert.True(_hits.IndexOf("/api/pump/me") < _hits.IndexOf("/api/pump/device/license"),
+            "مجوز پیش از پرسیدنِ حالِ اشتراک گرفته شد");
+    }
+
+    /// <summary>
+    /// ⛔ <b>و دستگاهی که بی حساب بند است هم</b> (با کد فعال شده، یا کاربر از
+    /// حسابش بیرون آمده) — تا ۱۴۰۵/۰۷/۱۲ فقط شاخهٔ «با حساب» تازه می‌شد و
+    /// اشتراکِ برداشته‌شده روی چنین نصبی تا انقضای خودِ مجوز باز می‌ماند.
+    /// </summary>
+    [Fact]
+    public async Task Halgheye_PasZamine_DastgaheBiHesab_RaHam_TazeMikonad()
+    {
+        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var (_, f) = Bound(s => { s.CloudAccountToken = ""; s.CloudAccessExpiresAt = 0; });
+        var uid = CloudConfig.DeviceUid(f);
+        f.CloudLicense = Sign(uid, now, new[] { "cloudbackup" }, Days(30));
+        f.CloudSyncedAt = now - 11 * 60_000;
+        f.Save();
+
+        Serve(path => path switch
+        {
+            "/api/pump/device/me" => Json(HttpStatusCode.OK, DeviceMe(false)),
+            "/api/pump/device/license" => Json(HttpStatusCode.OK, """{"license":""}"""),
+            _ => Json(HttpStatusCode.NotFound, "{}"),
+        });
+
+        await StationPublisher.CloudKeepNowAsync();
+
+        Assert.Contains("/api/pump/device/license", _hits);
+        Assert.Equal("", AppSettings.Load().CloudLicense);
     }
 
     /// <summary>
@@ -524,7 +573,7 @@ public class LicenseDeliveryTests : IDisposable
     [Fact]
     public void NavareFaghatKhandani_BaMojaveze_Taze_Taze_Mishavad()
     {
-        var vm = File.ReadAllText(Path.Combine(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..")),
+        var vm = SrcText.Read(Path.Combine(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..")),
             "PumpYaqobi.App", "ViewModels", "MainViewModel.cs"));
         //  هندلر یک تابعِ نام‌دار است (`OnLicenseMoved` — مرزِ آفلاینِ مجوز هم
         //  همان را می‌زند)، پس همان تابع سنجیده می‌شود.

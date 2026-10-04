@@ -26,7 +26,7 @@ public class SectionOpenSpeedTests
     }
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
 
     /// <summary>
     /// ⛔ <b>«آخرین بخش» هیچ‌وقت روی نخِ رابط روی دیسک نمی‌نشیند.</b>
@@ -57,7 +57,7 @@ public class SectionOpenSpeedTests
         Assert.DoesNotContain("_settings.Save();", code);
 
         //  و خودِ `SaveSoon` واقعاً تأخیری و بیرونِ نخِ رابط است
-        var st = Read("PumpYaqobi.App", "Services", "AppSettings.cs");
+        var st = Read("PumpYaqobi.Shell", "Services", "AppSettings.cs");
         Assert.Contains("public void SaveSoon()", st);
         Assert.Contains("System.Threading.Timer", st);
         //  ⛔ و نوشتنِ بادوام دست‌نخورده ماند — این سنجه دربارهٔ **کجا**ست،
@@ -91,7 +91,7 @@ public class SectionOpenSpeedTests
     {
         var sec = Read("PumpYaqobi.App", "ViewModels", "SectionViewModel.cs");
         Assert.Contains("public virtual bool ActivationOnlyReadsDb => false;", sec);
-        Assert.Contains("PumpYaqobi.Persistence.PumpDbContext.Version", sec);
+        Assert.Contains("PumpYaqobi.Services.Data.DataVersion.Current", sec);   //  همان ترمز؛ از ج۵ از درِ DataVersion
         Assert.Contains("public bool ActivationCanBeSkipped", sec);
 
         //  و مسیرِ ناوبری واقعاً از آن استفاده می‌کند — هر دو در، بخش و زیربخش

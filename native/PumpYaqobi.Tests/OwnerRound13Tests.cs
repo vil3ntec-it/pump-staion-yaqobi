@@ -20,7 +20,7 @@ public class OwnerRound13Tests
     }
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
 
     private static string Bare(string x) => System.Text.RegularExpressions.Regex.Replace(
         x, "<!--.*?-->", "", System.Text.RegularExpressions.RegexOptions.Singleline);
@@ -51,8 +51,7 @@ public class OwnerRound13Tests
         Assert.DoesNotContain("{Binding BuyTon}", v);
         Assert.Contains("{Binding Implausible}", v);
         var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "StorageSectionViewModel.cs");
-        //  ⛔ ضربِ × ۱۰۰۰ برنگردد
-        Assert.DoesNotContain("Shamsi.Num(ton) * 1000m", vm);
+        //  «کیلو همان کیلو، نه × ۱۰۰۰» ⇒ رفتاری: StorageBuyBehaviourTests (شورا، ت۳)
         //  ⛔ «۱٬۰۰۰٫۰۰۰» — تن بی صفرهای بی‌مصرف
         Assert.DoesNotContain("Math.Round(n.Ton, 3), 3)", vm);
     }
@@ -218,7 +217,7 @@ public class OwnerRound13Tests
     [Fact]
     public void BarkhordeKod_FaghatBiRamzVaBiPin_JaygozinMigirad()
     {
-        var src = Read("PumpYaqobi.App", "Services", "StationLink.cs");
+        var src = Read("PumpYaqobi.Shell", "Services", "StationLink.cs");
         //  ⛔ نصبی که رمزِ پوشهٔ **همین حساب** را دارد هیچ‌وقت کدش عوض نمی‌شود؛
         //  فقط پوشه‌ای که مالِ این حساب نیست جابه‌جا می‌شود، و رمزش همراه نمی‌رود
         Assert.Contains("var moving = token.Length > 0 && !Same(saved, code);", src);

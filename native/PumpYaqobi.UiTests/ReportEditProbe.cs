@@ -87,7 +87,10 @@ internal static class ReportEditProbe
             var liters = sh.End - sh.Start;
             Check($"لیترِ فروش {sh.Sale} = ختم − شروع", sh.Sale == liters);
             Check($"پول = لیتر × فی دقیقاً ({liters} × 60.14 = {liters * 60.14m} ⇐ {sh.Money})", sh.Money == liters * 60.14m);
-            var pump = db.Set<WaraqPump>().AsNoTracking().FirstOrDefault(p => p.SrcKey != null && p.SrcKey.Contains(saved.Report.Id.ToString()));
+            // ⛔ با کلیدِ منبعی که خودِ ذخیره برگرداند — نه با شمارهٔ گزارش: کلید از ب۲
+            // یک ULIDِ تصادفی است و «Contains(Id)» فقط وقتی سبز می‌شد که آن رشته شانسی
+            // همان رقم را داشت.
+            var pump = db.Set<WaraqPump>().AsNoTracking().FirstOrDefault(p => p.SrcKey == saved.SrcKey);
             Check($"پایهٔ ورق همان را گرفت (ختم {pump?.End} · فی {pump?.PricePerLiter})",
                   pump is not null && pump.End == 12960m && pump.PricePerLiter == 60.14m);
         }

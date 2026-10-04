@@ -167,18 +167,15 @@ public class InfraTests : IDisposable
         //  خودِ بدنهٔ تابع است: جز `_settings`ِ در حافظه و ذخیرهٔ همان،
         //  هیچ سرویس و هیچ دیتابیسی در کار نیست.
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
-            "..", "..", "..", "..", "PumpYaqobi.App", "Services"));
-        var src = File.ReadAllText(Path.Combine(root, "CloudLink.cs"));
+            "..", "..", "..", "..", "PumpYaqobi.Shell", "Services"));
+        var src = SrcText.Read(Path.Combine(root, "CloudLink.cs"));
         var i = src.IndexOf("public async Task ForgetStationAsync()", StringComparison.Ordinal);
         Assert.True(i > 0, "ForgetStationAsync پیدا نشد.");
         var body = src[i..src.IndexOf("\n    }", i, StringComparison.Ordinal)];
 
         foreach (var forbidden in new[] { "Db", "Debtors", "db.", "SaveChanges", "Delete", "Remove" })
             Assert.DoesNotContain(forbidden, body);
-
-        //  و آن‌چه باید باشد: فقط تنظیمات، و ذخیره‌اش
-        Assert.Contains("_settings.CloudDeviceToken = \"\"", body);
-        Assert.Contains("SaveQuiet", body);
+        //  رفتارش (بند باز می‌شود، دفتر دست نمی‌خورد): PumpBindBehaviourTests (شورا، ت۳)
     }
 
     // ── ۴) حسابِ پمپِ دیگر، نشانیِ پمپِ دیگر را نمی‌نشاند ───────────────
@@ -266,8 +263,8 @@ public class InfraTests : IDisposable
     public void Poshtiban_FileRa_YekJa_DarHafeze_Nemikhanad()
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
-            "..", "..", "..", "..", "PumpYaqobi.App", "Services"));
-        var src = File.ReadAllText(Path.Combine(root, "BackupPusher.cs"));
+            "..", "..", "..", "..", "PumpYaqobi.Shell", "Services"));
+        var src = SrcText.Read(Path.Combine(root, "BackupPusher.cs"));
         //  ⚠️ روی خودِ **کد** می‌گردیم، نه توضیحات: نامِ قدیمی در کامنتِ
         //  «پیش از این چه بود» هست و باید هم باشد.
         var code = string.Join("\n", src.Split('\n')

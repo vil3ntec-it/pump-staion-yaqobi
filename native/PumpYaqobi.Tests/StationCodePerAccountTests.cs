@@ -37,7 +37,7 @@ public class StationCodePerAccountTests
     }
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
 
     /// <summary>کد را بی توضیح‌ها برمی‌گرداند — نامِ ‎pump1‎ در توضیح‌ها هست و باید باشد.</summary>
     private static string Code(string src) =>
@@ -147,21 +147,21 @@ public class StationCodePerAccountTests
         var files = Directory.GetFiles(Path.Combine(Root(), "PumpYaqobi.App"), "*.cs", SearchOption.AllDirectories);
         foreach (var f in files)
         {
-            var code = Code(File.ReadAllText(f));
+            var code = Code(SrcText.Read(f));
             if (!code.Contains("\"pump1\"")) continue;
             //  ⛔ تنها جای مجاز: نامِ کدِ کهنه برای **شناختنِ** نصب‌هایی که باید جابه‌جا شوند
             Assert.EndsWith("StationLink.cs", f);
             Assert.Single(System.Text.RegularExpressions.Regex.Matches(code, "\"pump1\""));
             Assert.Contains("internal const string LegacySharedCode = \"pump1\";", code);
         }
-        Assert.DoesNotContain("DefaultStationCode", Code(Read("PumpYaqobi.App", "Services", "HomeLink.cs")));
-        Assert.DoesNotContain("DefaultStationCode", Code(Read("PumpYaqobi.App", "Services", "StationPublisher.cs")));
+        Assert.DoesNotContain("DefaultStationCode", Code(Read("PumpYaqobi.Shell", "Services", "HomeLink.cs")));
+        Assert.DoesNotContain("DefaultStationCode", Code(Read("PumpYaqobi.Shell", "Services", "StationPublisher.cs")));
     }
 
     [Fact]
     public void KodeHesab_AzSarvareHesab_Mineshinad_VaBaJodaShodan_Mirvad()
     {
-        var src = Code(Read("PumpYaqobi.App", "Services", "CloudLink.cs"));
+        var src = Code(Read("PumpYaqobi.Shell", "Services", "CloudLink.cs"));
         //  هر سه جایی که شناسهٔ پمپ می‌نشیند، کدش هم می‌نشیند
         Assert.Contains("_settings.CloudStationCode = StationCodeOf(json);", src);
         Assert.Contains("_settings.CloudStationCode = bound;", src);
@@ -173,20 +173,12 @@ public class StationCodePerAccountTests
         Assert.Contains("_settings.CloudStationCode = \"\";", forget[..forget.IndexOf("await SaveQuiet();", StringComparison.Ordinal)]);
     }
 
-    [Fact]
-    public void KiuAreZende_BaKodeHamanHesab_Ast()
-    {
-        var home = Code(Read("PumpYaqobi.App", "Services", "HomeLink.cs"));
-        Assert.Contains("public static string CloudCode(AppHost host)", home);
-        var acct = Code(Read("PumpYaqobi.App", "Services", "AcctLive.cs"));
-        Assert.Contains("return Fragment(HomeLink.CloudCode(host), IdOf(acct)", acct);
-        Assert.Contains("return Fragment(HomeLink.CloudCode(host), IdOf(company)", acct);
-    }
+    //  «کیو‌آرِ زنده با کدِ همان حساب» ⇒ رفتاری: CloudLoginBehaviourTests (شورا، ت۳)
 
     [Fact]
     public void JabeJayi_PoosheyeTaze_Migirad_VaHameChiz_AzNo_Miravad()
     {
-        var pub = Code(Read("PumpYaqobi.App", "Services", "StationPublisher.cs"));
+        var pub = Code(Read("PumpYaqobi.Shell", "Services", "StationPublisher.cs"));
         Assert.Contains("if (StationLink.NeedsMove(AppSettings.Load())", pub);
         var at = pub.IndexOf("if (StationLink.NeedsMove(AppSettings.Load())", StringComparison.Ordinal);
         var body = pub[at..(at + 900)];

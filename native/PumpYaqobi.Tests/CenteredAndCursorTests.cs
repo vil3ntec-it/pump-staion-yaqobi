@@ -31,7 +31,7 @@ public class CenteredAndCursorTests
     }
 
     private static string Theme() =>
-        File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Themes", "Controls.axaml"));
+        SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Themes", "Controls.axaml"));
 
     /// <summary>پیش‌فرضِ هر نوشته وسط است، نه راست.</summary>
     [Fact]
@@ -94,10 +94,10 @@ public class CenteredAndCursorTests
     public void TheCellCursorIsActuallyRegistered()
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
-        var app = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "App.axaml.cs"));
+        var app = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "App.axaml.cs"));
         Assert.Contains("Resources[\"Pump.CellCursor\"]", app);
 
-        var cur = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Controls", "ExcelCursor.cs"));
+        var cur = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "Controls", "ExcelCursor.cs"));
         Assert.Contains("StandardCursorType.Cross", cur);   // پشتیبان
     }
 
@@ -114,7 +114,7 @@ public class CenteredAndCursorTests
 
         foreach (var f in Directory.EnumerateFiles(views, "*.axaml", SearchOption.AllDirectories))
         {
-            var text = File.ReadAllText(f);
+            var text = SrcText.Read(f);
             foreach (Match m in Regex.Matches(text, @"<TextBlock\b[^>]*>", RegexOptions.Singleline))
                 if (m.Value.Contains("HorizontalAlignment=\"Right\"") ||
                     m.Value.Contains("TextAlignment=\"Right\""))

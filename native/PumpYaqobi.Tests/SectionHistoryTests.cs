@@ -33,7 +33,7 @@ public class SectionHistoryTests
         var dir = Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections");
         var found = new List<(string, string)>();
         foreach (var f in Directory.GetFiles(dir, "*.cs"))
-            foreach (Match m in KeyRx.Matches(File.ReadAllText(f)))
+            foreach (Match m in KeyRx.Matches(SrcText.Read(f)))
                 foreach (Match k in StrRx.Matches(m.Value))
                     found.Add((Path.GetFileName(f), k.Groups[1].Value));
         return found;
@@ -67,7 +67,7 @@ public class SectionHistoryTests
     {
         var dir = Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections");
         var n = Directory.GetFiles(dir, "*.axaml")
-                         .Count(f => File.ReadAllText(f).Contains("OpenHistoryCommand"));
+                         .Count(f => SrcText.Read(f).Contains("OpenHistoryCommand"));
         Assert.True(n >= HistoryService.Kinds.Length,
                     "فقط " + n + " صفحه دکمهٔ تاریخچه دارد، و دفترها " + HistoryService.Kinds.Length + " تا هستند");
     }
@@ -80,11 +80,11 @@ public class SectionHistoryTests
     [Fact]
     public void TheCommandLivesInExactlyOnePlace()
     {
-        var baseSrc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "SectionViewModel.cs"));
+        var baseSrc = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "SectionViewModel.cs"));
         Assert.Contains("private Task OpenHistory()", baseSrc);
 
         var dir = Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections");
         foreach (var f in Directory.GetFiles(dir, "*.cs"))
-            Assert.DoesNotContain("private Task OpenHistory()", File.ReadAllText(f));
+            Assert.DoesNotContain("private Task OpenHistory()", SrcText.Read(f));
     }
 }

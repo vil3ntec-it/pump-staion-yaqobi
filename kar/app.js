@@ -513,12 +513,64 @@
     return out;
   }
 
+  /*
+   *  ══ شورا، چ۴ — «پمپ‌هایم»: یک گوشی، چند پمپ، هیچ قاطی ════════════════════
+   *
+   *  فهرستِ پمپ‌های این گوشی فقط **کد و نام** است (‎pumpKar.v1.pumps‎) — همان
+   *  کدِ هشت‌رقمی که از قبل در ‎cfg.code‎ می‌ماند. ⛔ هیچ عکس، هیچ رمز و هیچ
+   *  عددی از پمپی که باز نیست روی گوشی نمی‌نشیند: نمای «همهٔ پمپ‌ها» عکسِ هر
+   *  پمپ را جدا با **کدِ خودِ همان پمپ** از سرورِ حساب می‌خواند و فقط در
+   *  حافظهٔ همان صفحه نگه می‌دارد. ⛔ عددهای «حساب‌ها» (چهار عددِ برنامهٔ
+   *  کامپیوتر) فقط برای پمپی که رمزش در **همین اجرا** درست زده شده — رمزِ
+   *  یک پمپ هیچ پمپِ دیگری را باز نمی‌کند (هشِ همان پمپ، ‎pumpSummary‎).
+   */
+  function pumpListAdd(list, p) {
+    var out = (Array.isArray(list) ? list : []).filter(function (x) { return x && x.code; });
+    if (!p || !p.code) return out;
+    var key = String(p.stn || p.code);
+    var i = -1;
+    out.forEach(function (x, j) { if (String(x.stn || x.code) === key || x.code === p.code) i = j; });
+    var row = { code: String(p.code), stn: String(p.stn || ''), name: String(p.name || '') };
+    if (i >= 0) { if (!row.name) row.name = out[i].name || ''; out[i] = row; } else out.push(row);
+    return out;
+  }
+
+  function pumpListDrop(list, key) {
+    key = String(key || '');
+    return (Array.isArray(list) ? list : []).filter(function (x) {
+      return x && x.code && String(x.stn || x.code) !== key && x.code !== key;
+    });
+  }
+
+  /**
+   *  خلاصهٔ یک پمپ برای کارتِ «همهٔ پمپ‌ها». ‎ownedGate‎ = هشی که رمزش در همین
+   *  اجرا برای **همین** پمپ درست زده شده؛ فقط اگر با ‎gate‎ِ همین عکس یکی باشد،
+   *  چهار عددِ «حساب‌ها» برمی‌گردد. نام‌های قرض‌داران هیچ‌وقت — فقط شمار.
+   */
+  function pumpSummary(snap, ownedGate) {
+    if (!snap || typeof snap !== 'object') return null;
+    var t = snap.tank || {}, people = snap.debtors || [];
+    var c = { out: 0, low: 0, ok: 0 };
+    people.forEach(function (p) { if (p && c[p.status] !== undefined) c[p.status]++; });
+    function tk(x) { x = x || {}; return { show: num(x.show), low: !!x.low, near: !!x.near }; }
+    var owned = !!snap.gate && !!ownedGate && ownedGate === snap.gate;
+    return {
+      name: (snap.station && snap.station.name) || '',
+      at: snap.at || '',
+      tank: { petrol: tk(t.petrol), diesel: tk(t.diesel) },
+      counts: c, people: people.length,
+      hasGate: !!snap.gate,
+      banner: owned ? (snap.banner || []).map(function (b) { return [String(b[0] || ''), String(b[1] || ''), String(b[2] || '')]; }) : null
+    };
+  }
+
   if (typeof module !== 'undefined' && module.exports)
     module.exports = {
       answer: answer, askedMonth: askedMonth, monthHit: monthHit, anyWord: anyWord,
       norm: norm, num: num, verifyPassword: verifyPassword,
       wsBaseOf: wsBaseOf, doorsFor: doorsFor, freshAlerts: freshAlerts,
-      httpBaseOf: httpBaseOf, pushBases: pushBases, b64uBytes: b64uBytes, TUNNEL: TUNNEL
+      httpBaseOf: httpBaseOf, pushBases: pushBases, b64uBytes: b64uBytes, TUNNEL: TUNNEL,
+      pumpListAdd: pumpListAdd, pumpListDrop: pumpListDrop, pumpSummary: pumpSummary
     };
 
   if (typeof document === 'undefined') return;   // آزمونِ Node این‌جا می‌ایستد
@@ -559,7 +611,23 @@
     try { toldKeys = JSON.parse(localStorage.getItem(stnKey('told')) || '{}') || {}; } catch (e) { toldKeys = {}; }
   }
 
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch (e) { } }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch (e) { }
+    //  شورا چ۴: پمپی که باز است در «پمپ‌هایم» هم هست — فقط کد و نام
+    if (cfg.code && cfg.stn) savePumps(pumpListAdd(loadPumps(), { code: cfg.code, stn: cfg.stn, name: cfg.name }));
+  }
+
+  function loadPumps() {
+    try { return pumpListAdd(JSON.parse(localStorage.getItem(KEY + '.pumps') || '[]'), null); } catch (e) { return []; }
+  }
+  function savePumps(list) {
+    //  ⛔ فهرستِ خالی یعنی هیچ کلیدی — «خروج از تنها پمپ» هیچ ردی در گوشی نمی‌گذارد
+    try {
+      if (list.length) localStorage.setItem(KEY + '.pumps', JSON.stringify(list));
+      else localStorage.removeItem(KEY + '.pumps');
+    } catch (e) { }
+    pumpsButtons();
+  }
 
   /** رفتن به پمپِ دیگر: هر چه از پمپِ قبلی در گوشی مانده پاک می‌شود. */
   function switchStation(stn) {
@@ -845,7 +913,7 @@
     wsLive = false;
     cloudPoll(true);
     if (rejected >= n) {
-      live(false, 'رمزِ سرور پذیرفته نشد — کدِ پمپ را دوباره بزنید');
+      live(false, 'رمزِ سرور پذیرفته نشد — کدِ اپِ گوشی را دوباره بزنید');
     } else {
       live(!!data, waitingText());
     }
@@ -1019,7 +1087,7 @@
   function joinWithCode(raw) {
     if (joining || !window.PumpCloud) return;
     var code = PumpCloud.normalizeCode(raw);
-    if (code.length !== 8) { codeMsg('کدِ پمپ هشت رقم است — مثلِ 4829-1736.', true); return; }
+    if (code.length !== 8) { codeMsg('کدِ اپِ گوشی هشت رقم است — مثلِ 4829-1736.', true); return; }
     joining = true;
     $('btnJoin').disabled = true;
     codeMsg('در حالِ پیدا کردنِ پمپ…');
@@ -1083,6 +1151,8 @@
 
   /** خروج از پمپ: همه‌چیزِ همین پمپ از گوشی پاک می‌شود. */
   function forgetAll(note) {
+    //  شورا چ۴: «خروج از این پمپ» یعنی از «پمپ‌هایم» هم بیرون
+    if (cfg.stn || cfg.code) savePumps(pumpListDrop(pumpListDrop(loadPumps(), cfg.stn), cfg.code));
     try { if (ws) ws.close(); } catch (e) { }
     resetLink();
     if (window.PumpCloud) PumpCloud.signOut();
@@ -1349,16 +1419,115 @@
   function askLeave() {
     var nm = (data && data.station && data.station.name) || cfg.name || 'این پمپ';
     askSure('خروج از «' + nm + '»؟',
-      'کدِ پمپ و هر چه از این پمپ در این گوشی مانده پاک می‌شود. برای برگشتن باید کدِ هشت‌رقمی را دوباره بزنید. '
+      'کدِ اپِ گوشی و هر چه از این پمپ در این گوشی مانده پاک می‌شود. برای برگشتن باید کدِ اپِ گوشی را دوباره بزنید. '
       + 'هیچ چیزی از دفترِ پمپ پاک نمی‌شود.', 'بله، خارج شو')
       .then(function (yes) { if (yes) forgetAll(''); });
   }
 
   function show(which) {
-    ['codePane', 'signinPane', 'setupPane', 'lockPane', 'appPane'].forEach(function (id) {
+    ['codePane', 'signinPane', 'setupPane', 'lockPane', 'appPane', 'pumpsPane'].forEach(function (id) {
       $(id).classList.toggle('hidden', id !== which);
     });
     $('nav').classList.toggle('hidden', which !== 'appPane' || !mode);
+    if (which === 'codePane') pumpsButtons();
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  //  شورا، چ۴ — «پمپ‌هایم»
+  // ══════════════════════════════════════════════════════════════════════
+  //
+  //  ⛔ عکسِ هر پمپ فقط در حافظهٔ همین صفحه (‎pumpsSnap‎) و با کدِ **خودِ
+  //  همان پمپ** خوانده می‌شود؛ هیچ‌چیزش روی دیسک نمی‌نشیند و با رفتن از صفحه
+  //  دور ریخته می‌شود. ⛔ رمزِ هر پمپ جدا و فقط در همین اجرا (‎pumpsOwned‎).
+  var pumpsSnap = {}, pumpsOwned = {}, pumpsGen = 0;
+
+  function pumpsButtons() {
+    var n = loadPumps().length;
+    var b = $('btnPumps');
+    if (b) { b.classList.toggle('hidden', n < 2); b.querySelector('b').textContent = '📊 همهٔ پمپ‌هایم (' + fmt(n) + ')'; }
+    var back = $('btnCodePumps');
+    if (back) back.classList.toggle('hidden', n < 1);
+  }
+
+  /** ➕ پمپِ دیگر — پمپِ امروز در فهرست می‌ماند. */
+  function addPump() {
+    show('codePane');
+    codeMsg('«کدِ اپِ گوشی»ِ پمپِ دیگر را بزنید — «' + (cfg.name || cfg.stn || '') + '» در «پمپ‌هایم» می‌ماند.');
+  }
+
+  function pumpCard(p, sum, err) {
+    var key = String(p.stn || p.code);
+    var h = '<div class="card pump-card" data-key="' + esc(key) + '">'
+      + '<div class="row" style="justify-content:space-between"><h2>' + esc((sum && sum.name) || p.name || p.stn || '') + '</h2>'
+      + '<span class="chip">' + esc(window.PumpCloud ? PumpCloud.formatCode(p.code) : p.code) + '</span></div>';
+    if (err) h += '<div class="sub err">' + esc(err) + '</div>';
+    else if (!sum) h += '<div class="sub"><span class="spin"></span>در حالِ خواندن…</div>';
+    else {
+      h += '<div class="sub">آخرین عکس: ' + esc(sum.at || '—') + '</div><div class="figs">';
+      [['petrol', 'پطرول'], ['diesel', 'دیزل']].forEach(function (f) {
+        var x = sum.tank[f[0]];
+        h += '<div class="fig' + (x.low ? ' bad' : x.near ? ' warn' : '') + '"><div class="l">🛢️ ' + f[1] + ' (لیتر)</div><div class="v">' + fmt(x.show) + '</div></div>';
+      });
+      h += '</div><div class="sub pump-counts" style="margin-top:6px">قرض‌داران: ⛔ ' + fmt(sum.counts.out) + ' تمام‌شده · ⚠️ '
+        + fmt(sum.counts.low) + ' کم مانده · ✅ ' + fmt(sum.counts.ok) + ' دارد</div>';
+      if (sum.banner) {
+        h += '<div style="height:8px"></div><div class="banner pump-banner">' + sum.banner.map(function (b) {
+          return '<div class="bn ' + esc(b[2]) + '"><div class="l">' + esc(b[0]) + '</div><div class="v">' + esc(b[1]) + '</div></div>';
+        }).join('') + '</div>';
+      } else if (sum.hasGate) {
+        h += '<div style="height:8px"></div><div class="row pump-pass"><input type="password" placeholder="رمزِ برنامهٔ کامپیوترِ همین پمپ" autocomplete="off">'
+          + '<button data-act="pass">🔓 عددهای حساب‌ها</button></div><div class="sub err hidden pump-err"></div>';
+      }
+    }
+    h += '<div style="height:8px"></div><button class="p" data-act="open">باز کردنِ همین پمپ</button></div>';
+    return h;
+  }
+
+  function renderPumps() {
+    var list = loadPumps();
+    $('pumpsList').innerHTML = list.length
+      ? list.map(function (p) {
+          var k = String(p.stn || p.code), got = pumpsSnap[k];
+          return pumpCard(p, got && got.live ? pumpSummary(got.live, pumpsOwned[k]) : null, got && got.err);
+        }).join('')
+      : '<div class="card"><div class="sub">هنوز پمپی در این گوشی نیست.</div></div>';
+  }
+
+  function openPumps() {
+    pumpsSnap = {};
+    var my = ++pumpsGen;
+    show('pumpsPane');
+    renderPumps();
+    loadPumps().forEach(function (p) {
+      var k = String(p.stn || p.code);
+      if (!window.PumpCloud) { pumpsSnap[k] = { err: 'به سرور نرسیدیم.' }; return; }
+      PumpCloud.cloudLive(p.code).then(function (r) {
+        if (my !== pumpsGen) return;              // ⛔ جوابِ دیررسِ دورِ قبل
+        pumpsSnap[k] = r && r.live ? { live: r.live } : { err: 'این پمپ هنوز عکسی به سرور نفرستاده.' };
+        renderPumps();
+      }).catch(function (err) {
+        if (my !== pumpsGen) return;
+        pumpsSnap[k] = { err: err && err.status === 404 ? 'این پمپ هنوز عکسی به سرور نفرستاده (یا کدش عوض شده).'
+                                                      : 'به سرور نرسیدیم — اینترنت را بررسی کنید.' };
+        renderPumps();
+      });
+    });
+  }
+
+  function closePumps() {
+    pumpsGen++; pumpsSnap = {};                  // ⛔ هیچ عددی پس از بستن نمی‌ماند
+    if (cfg.stn) openApp(); else show('codePane');
+  }
+
+  async function pumpPass(card) {
+    var k = card.getAttribute('data-key'), got = pumpsSnap[k];
+    var inp = card.querySelector('input'), er = card.querySelector('.pump-err');
+    if (!got || !got.live || !got.live.gate || !inp) return;
+    var ok = false;
+    try { ok = await verifyPassword(inp.value, got.live.gate); } catch (e) { ok = false; }
+    if (!ok) { if (er) { er.textContent = 'رمز درست نیست.'; er.classList.remove('hidden'); } return; }
+    pumpsOwned[k] = got.live.gate;               // فقط همین پمپ، فقط همین اجرا
+    renderPumps();
   }
 
   async function unlock() {
@@ -2271,6 +2440,26 @@
     //  می‌شود و تایید نمی‌آید»). بیرون رفتن کدِ پمپ و هر چه از آن در گوشی
     //  مانده را پاک می‌کند و برگشتن یعنی زدنِ دوبارهٔ کد.
     $('btnOther').addEventListener('click', askLeave);
+    // ── شورا چ۴: پمپ‌هایم ──
+    $('btnAddPump').addEventListener('click', addPump);
+    $('btnPumps').addEventListener('click', openPumps);
+    $('btnPumpsTop').addEventListener('click', openPumps);
+    $('btnCodePumps').addEventListener('click', openPumps);
+    $('btnPumpsBack').addEventListener('click', closePumps);
+    $('btnPumpsAdd').addEventListener('click', function () { pumpsGen++; pumpsSnap = {}; addPump(); });
+    $('pumpsList').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-act]'), card = e.target.closest('.pump-card');
+      if (!b || !card) return;
+      var k = card.getAttribute('data-key');
+      if (b.getAttribute('data-act') === 'pass') { pumpPass(card); return; }
+      var p = loadPumps().filter(function (x) { return String(x.stn || x.code) === k; })[0];
+      if (!p) return;
+      pumpsGen++; pumpsSnap = {};
+      if (String(cfg.stn) === String(p.stn) && cfg.stn) { openApp(); return; }
+      show('codePane');
+      joinWithCode(p.code);
+    });
+    pumpsButtons();
 
     $('btnManual').addEventListener('click', function () {
       $('inSrv').value = cfg.srv; $('inTok').value = cfg.tok; $('inStn').value = cfg.stn || '';

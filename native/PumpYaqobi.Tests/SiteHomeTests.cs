@@ -21,7 +21,7 @@ public class SiteHomeTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Repo }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Repo }.Concat(parts).ToArray()));
 
     [Fact]
     public void SayteGhadim_DarAnbari_Ast()

@@ -39,7 +39,7 @@ public class VoiceParityTests
         if (_g is not null) return _g;
         var p = Path.Combine(AppContext.BaseDirectory, "golden-voice.json");
         if (!File.Exists(p)) p = "golden-voice.json";
-        return _g = JsonSerializer.Deserialize<Golden>(File.ReadAllText(p))!;
+        return _g = JsonSerializer.Deserialize<Golden>(SrcText.Read(p))!;
     }
 
     /// <summary>نمونه‌های ۱۶بیتی → اعشار، دقیقاً همان‌طور که هارنسِ طلایی می‌کند.</summary>

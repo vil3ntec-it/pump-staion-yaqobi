@@ -88,7 +88,7 @@ public class SyncTenYearsTests : IDisposable
     [Fact]
     public void PeyvandePedar_YekPorsojoo_BarayeHarJadval_Ast()
     {
-        var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.Services", "Data", "SyncStore.cs"));
+        var src = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.Services", "Data", "SyncStore.cs"));
         var a = src.IndexOf("private static void AttachParents(", StringComparison.Ordinal);
         Assert.True(a > 0);
         var b = src.IndexOf("    /// <summary>", a, StringComparison.Ordinal);
@@ -102,12 +102,10 @@ public class SyncTenYearsTests : IDisposable
     [Fact]
     public void Motor_Hamin_Ghavaed_Ra_Darad()
     {
-        var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Services", "SyncEngine.cs"));
+        var src = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.Shell", "Services", "SyncEngine.cs"));
         Assert.Contains("cloud.SyncDeviceOverride = CloudLink.SyncDeviceFor(state.DeviceId, state.UidSeed, cloud.DeviceUid);", src);
         Assert.Contains("x.DeviceId = cloud.SyncDevice;", src);
         Assert.Contains("if (Queued > 0) Nudge();", src);
-        //  پرده تا آخرین صفحه
-        Assert.Contains("var priming = !_primeEnded && (_primeRun || PrimeWanted(state));", src);
     }
 
     private static string Root()

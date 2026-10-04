@@ -105,7 +105,7 @@
                       CommandParameter="{Binding BotLink}" />
             </StackPanel>
             <TextBlock Classes="muted" TextWrapping="Wrap"
-                       Text="«Start» ⇐ ایمیلِ حساب ⇐ کدِ ایمیل. هشدارِ قرض‌داران و مخزن در تلگرام می‌آید." />
+                       Text="«Start» ⇐ ایمیلِ حساب ⇐ کدِ تأییدِ ایمیل. هشدارِ قرض‌داران و مخزن در تلگرام می‌آید." />
             <TextBlock Text="{Binding BotHint}" Classes="muted" TextWrapping="Wrap"
                        IsVisible="{Binding BotHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           </StackPanel>
@@ -125,7 +125,7 @@
             <Button Classes="accent" Content="📋 کپیِ پیام" Command="{Binding CopyShareCommand}"
                     HorizontalAlignment="Left" />
             <TextBlock Classes="muted" TextWrapping="Wrap"
-                       Text="این را در واتساپ بچسبانید؛ هر دو لینک و کدِ پمپ داخلش هست." />
+                       Text="این را در واتساپ بچسبانید؛ هر دو لینک و کدِ اپِ گوشی داخلش هست." />
             <TextBlock Text="{Binding Done}" FontWeight="Bold"
                        Foreground="{DynamicResource Pump.Ink.Ok}"
                        IsVisible="{Binding Done, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />

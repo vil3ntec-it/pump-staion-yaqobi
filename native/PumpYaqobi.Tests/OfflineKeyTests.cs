@@ -1,3 +1,4 @@
+using PumpYaqobi.Application.Localization;
 using PumpYaqobi.App.Services;
 using Xunit;
 
@@ -150,7 +151,7 @@ public class OfflineKeyTests : IDisposable
         Assert.True(after.Listed);
         Assert.Contains("kar_app", after.Features);
         Assert.Contains("dashboard", after.Features);
-        Assert.Contains("کدِ آفلاین", after.PlanTitle);
+        Assert.Contains(CodeNames.OfflineKey, after.PlanTitle);
         Assert.True(after.EntitledUntil > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 
         //  برداشتن ⇒ همان حالِ پیشین
@@ -209,13 +210,13 @@ public class OfflineKeyTests : IDisposable
     [Fact]
     public void SakhteCI_KelideKodeAfline_Ra_DakheleBarname_Migozarad()
     {
-        var wf = File.ReadAllText(Path.Combine(Native, "..", ".github", "workflows", "build-native.yml"));
+        var wf = SrcText.Read(Path.Combine(Native, "..", ".github", "workflows", "build-native.yml"));
         Assert.Contains("-p:OfflineKeys=", wf);
         Assert.Contains("/api/license/public-key", wf);
         Assert.Contains("vars.OFFLINE_PUBLIC_KEYS", wf);
-        var csproj = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.App", "PumpYaqobi.App.csproj"));
+        var csproj = SrcText.Read(Path.Combine(Native, "PumpYaqobi.App", "PumpYaqobi.App.csproj"));
         Assert.Contains("<AssemblyMetadata Include=\"OfflineKeys\" Value=\"$(OfflineKeys)\" />", csproj);
-        var cfg = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.App", "Services", "CloudConfig.cs"));
+        var cfg = SrcText.Read(Path.Combine(Native, "PumpYaqobi.Shell", "Services", "CloudConfig.cs"));
         Assert.Contains("Metadata(\"OfflineKeys\")", cfg);
         //  ⛔ نشانیِ دریافتِ کلید همان نشانیِ قفل‌شدهٔ برنامه است، نه نشانیِ دیگری
         Assert.Contains("https://api.vill3n.top/api/license/public-key", wf);
@@ -225,10 +226,10 @@ public class OfflineKeyTests : IDisposable
     [Fact]
     public void HalgheyePasZamine_KodRa_BeSarvar_Mibarad()
     {
-        var pub = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.App", "Services", "StationPublisher.cs"));
+        var pub = SrcText.Read(Path.Combine(Native, "PumpYaqobi.Shell", "Services", "StationPublisher.cs"));
         Assert.Contains("await cloud.RedeemOfflineAsync(ct);", pub);
         Assert.Contains("await device.RedeemOfflineAsync(ct);", pub);
-        var link = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.App", "Services", "CloudLink.cs"));
+        var link = SrcText.Read(Path.Combine(Native, "PumpYaqobi.Shell", "Services", "CloudLink.cs"));
         Assert.Contains("\"/api/pump/device/offline-code\"", link);
         Assert.Contains("code == \"code_revoked\"", link);
     }

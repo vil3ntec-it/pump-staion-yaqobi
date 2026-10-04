@@ -35,9 +35,13 @@ public class BugHunt16Tests : IDisposable
     }
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
 
-    private static string App(params string[] parts) => Read(new[] { "PumpYaqobi.App" }.Concat(parts).ToArray());
+    //  ⚠️ شورا ج۵: پل‌های بیرونی به ‎PumpYaqobi.Shell‎ رفتند (همان فضای نام) — اول برنامه، بعد پوسته
+    private static string App(params string[] parts) =>
+        File.Exists(Path.Combine(new[] { Root(), "PumpYaqobi.App" }.Concat(parts).ToArray()))
+            ? Read(new[] { "PumpYaqobi.App" }.Concat(parts).ToArray())
+            : Read(new[] { "PumpYaqobi.Shell" }.Concat(parts).ToArray());
 
     // ══ همگام‌سازی ═════════════════════════════════════════════════════════
 
@@ -207,22 +211,14 @@ public class BugHunt16Tests : IDisposable
     [Fact]
     public void RadifeTaze_JayeDorost_Va_TileDorost()
     {
+        //  حسابِ قرض‌دار رفتاری است (PersonAccountBehaviourTests، شورا ت۳)؛ این‌جا فقط بقیهٔ بخش‌ها و ممنوعه
         var p = App("ViewModels", "Sections", "PersonViewModel.cs");
-        Assert.Contains("Fuel = RowFilter == \"diesel\" ? FuelType.Diesel : FuelType.Petrol,", p);
-        Assert.Contains("Entity.ActiveRows().Max(x => x.SortIndex) + 1", p);
         foreach (var f in new[] { "AmanatSectionViewModel", "CompanySectionViewModel", "WaraqSectionViewModel" })
             Assert.Contains(".Max(", App("ViewModels", "Sections", f + ".cs"));
         Assert.DoesNotContain("SortIndex = Entity.ActiveRows().Count,", p);
     }
 
-    [Fact]
-    public void Gharzdar_HazfMiporsad_Va_TekrariRaAzHameMisanjad()
-    {
-        var d = App("ViewModels", "Sections", "DebtSectionViewModel.cs");
-        Assert.Contains("var twin = _all.FirstOrDefault(", d);
-        var i = d.IndexOf("private async Task DeleteDebtorAsync", StringComparison.Ordinal);
-        Assert.Contains("Dialogs.ConfirmAsync(\"حذفِ قرض‌دار\"", d[i..]);
-    }
+    //  «حذف می‌پرسد و تکراری از همه سنجیده می‌شود» ⇒ رفتاری: DebtorListBehaviourTests (شورا، ت۳)
 
     [Fact]
     public void TarikheParcha_BaHarKelid_GozaresheTaze_NemiSazad()

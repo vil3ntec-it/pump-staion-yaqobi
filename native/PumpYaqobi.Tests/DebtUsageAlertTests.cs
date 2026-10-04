@@ -126,10 +126,10 @@ public class DebtUsageAlertTests
     public void DastoorVaBedehi_BeServer_Miravand()
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
-        var pub = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Services", "StationPublisher.cs"));
+        var pub = SrcText.Read(Path.Combine(root, "PumpYaqobi.Shell", "Services", "StationPublisher.cs"));
         Assert.Contains("a = a.Action", pub, StringComparison.Ordinal);
         Assert.Contains("StationSnapshot.OweAsync(", pub, StringComparison.Ordinal);
-        var link = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Services", "CloudLink.cs"));
+        var link = SrcText.Read(Path.Combine(root, "PumpYaqobi.Shell", "Services", "CloudLink.cs"));
         Assert.Contains("body[\"owe\"]", link, StringComparison.Ordinal);
         var item = AlertWatch.FromSnapshot(new List<object?>
         {

@@ -189,14 +189,14 @@ public class Round3FixTests : IDisposable
     public void Sors_HarPanjBand()
     {
         var root = FindRoot();
-        string R(string p) => File.ReadAllText(Path.Combine(root, p));
+        string R(string p) => SrcText.Read(Path.Combine(root, p));
 
         Assert.Contains("RecordRateAsync", R("PumpYaqobi.App/ViewModels/Sections/ProfitSectionViewModel.cs"));
         Assert.Contains("keepFilters: true", R("PumpYaqobi.App/ViewModels/Sections/HistorySectionViewModel.cs"));
         Assert.Contains("Classes.hit=\"{Binding IsHighlighted}\"", R("PumpYaqobi.App/Views/Sections/CompanyPurchasesView.axaml"));
         Assert.Contains("SelectedItem=\"{Binding SelectedRow}\"", R("PumpYaqobi.App/Views/Sections/CompanyArchiveView.axaml"));
         Assert.Contains("SyncBackup.IsEncrypted", R("PumpYaqobi.App/ViewModels/Sections/BackupSectionViewModel.cs"));
-        Assert.Contains("Trash.ResyncWaraqSales = ShiftWaraqSync.ResyncSalesAsync", R("PumpYaqobi.App/Services/AppHost.cs"));
+        Assert.Contains("Trash.ResyncWaraqSales = ShiftWaraqSync.ResyncSalesAsync", R("PumpYaqobi.Shell/Services/AppHost.cs"));
     }
 
     private static string FindRoot()

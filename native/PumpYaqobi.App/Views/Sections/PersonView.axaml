@@ -45,6 +45,8 @@
           </Button>
         </StackPanel>
         <Button Classes="ghost info" Content="PDF" Command="{Binding PdfCommand}" />
+        <Button Classes="ghost" Content="📁 پرونده" Command="{Binding DossierCommand}"
+                ToolTip.Tip="پروندهٔ همین حساب: الباقی، میانگینِ رسید و تاریخچهٔ ماه‌به‌ماه (PDF)" />
         <!-- «📲 کیو‌آر» — در سایت داخلِ کشوییِ «⋯ بیشتر» است و در نیتیو اصلاً
              نبود: نه کیو‌آری ساخته می‌شد و نه دیده می‌شد. -->
         <Button Classes="ghost" Content="کیو‌آر" Command="{Binding ShowQrCommand}"

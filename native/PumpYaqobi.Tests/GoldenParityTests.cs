@@ -36,7 +36,7 @@ public class GoldenParityTests
     {
         var p = Path.Combine(AppContext.BaseDirectory, "golden-from-html.json");
         if (!File.Exists(p)) p = "golden-from-html.json";
-        return JsonSerializer.Deserialize<List<Case>>(File.ReadAllText(p))!;
+        return JsonSerializer.Deserialize<List<Case>>(SrcText.Read(p))!;
     }
 
     private static DebtAccount ToAccount(Acc a)

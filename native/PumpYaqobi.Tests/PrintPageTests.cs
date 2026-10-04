@@ -23,7 +23,7 @@ public class PrintPageTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
 
     /// <summary>
     /// کامنت‌های سی‌شارپ را برمی‌دارد — برای آزمون‌های «دیگر نباید باشد».
@@ -326,7 +326,7 @@ public class PrintPageTests
     {
         var dir = Path.Combine(Root, "PumpYaqobi.Reporting", "Pdf");
         foreach (var f in Directory.GetFiles(dir, "*Report.cs"))
-            Assert.DoesNotContain("t.Header(", NoComments(File.ReadAllText(f)));
+            Assert.DoesNotContain("t.Header(", NoComments(SrcText.Read(f)));
     }
 
     /// <summary>
@@ -521,12 +521,12 @@ public class PrintPageTests
     //        فقط قفل می‌کنیم که کادر و تیک‌ها هر دو در ستونِ تنظیمات هستند.
     public void TheSheetTicksAndThePagesBoxAreInTheRail()
     {
-        var v = File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Views", "DocumentPreviewWindow.axaml"));
+        var v = SrcText.Read(Path.Combine(Root, "PumpYaqobi.App", "Views", "DocumentPreviewWindow.axaml"));
         Assert.Contains("{Binding PagesText}", v);
         Assert.Contains("{Binding PageChecks}", v);
         Assert.Contains("IsChecked=\"{Binding IsOn}\"", v);
         Assert.Contains("IsVisible=\"{Binding IsPages}\"", v);
-        var vm = File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Printing", "DocumentPreview.cs"));
+        var vm = SrcText.Read(Path.Combine(Root, "PumpYaqobi.App", "Printing", "DocumentPreview.cs"));
         Assert.Contains("\"pages\"", vm);
         Assert.Contains("PrintJob.FormatPages(PageChecks", vm);
     }

@@ -38,11 +38,11 @@ public class DataHomeTests : IDisposable
 
         Assert.Equal(target, r.Root);
         Assert.NotEqual("", r.Moved);
-        Assert.Equal("ledger", File.ReadAllText(Path.Combine(target, "pump.db")));
-        Assert.Equal("b1", File.ReadAllText(Path.Combine(target, "backups", "pump-1405-07-05.db")));
-        Assert.Equal("acct", File.ReadAllText(Path.Combine(target, "accounts", "usr_1", "pump.db")));
+        Assert.Equal("ledger", SrcText.Read(Path.Combine(target, "pump.db")));
+        Assert.Equal("b1", SrcText.Read(Path.Combine(target, "backups", "pump-1405-07-05.db")));
+        Assert.Equal("acct", SrcText.Read(Path.Combine(target, "accounts", "usr_1", "pump.db")));
         //  ⛔ جای کهنه پاک نمی‌شود — فقط یک یادداشت می‌گیرد
-        Assert.Equal("ledger", File.ReadAllText(Path.Combine(legacy, "pump.db")));
+        Assert.Equal("ledger", SrcText.Read(Path.Combine(legacy, "pump.db")));
         Assert.True(File.Exists(Path.Combine(legacy, "backups", "pump-1405-07-05.db")));
         Assert.True(File.Exists(Path.Combine(legacy, DataHome.MovedNote)));
         //  و هیچ پوشهٔ موقتی نمی‌ماند
@@ -61,7 +61,7 @@ public class DataHomeTests : IDisposable
 
         Assert.Equal(target, r.Root);
         Assert.Equal("", r.Moved);
-        Assert.Equal("current", File.ReadAllText(Path.Combine(target, "pump.db")));
+        Assert.Equal("current", SrcText.Read(Path.Combine(target, "pump.db")));
         Assert.False(File.Exists(Path.Combine(legacy, DataHome.MovedNote)));
     }
 
@@ -78,8 +78,8 @@ public class DataHomeTests : IDisposable
         var r = DataHome.Settle(target, previous, legacy);
 
         Assert.Equal(target, r.Root);
-        Assert.Equal("previous-install", File.ReadAllText(Path.Combine(target, "pump.db")));
-        Assert.Equal("previous-install", File.ReadAllText(Path.Combine(previous, "pump.db")));
+        Assert.Equal("previous-install", SrcText.Read(Path.Combine(target, "pump.db")));
+        Assert.Equal("previous-install", SrcText.Read(Path.Combine(previous, "pump.db")));
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public class DataHomeTests : IDisposable
     [Fact]
     public void FaghatBarnameyeVaghei_RuyeWindows()
     {
-        var src = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
+        var src = SrcText.Read(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
                                                 "PumpYaqobi.Services", "Data", "DataHome.cs"));
         Assert.Contains("!OperatingSystem.IsWindows() || !IsRealApp()", src);
         Assert.Contains("\"PumpYaqobi.exe\"", src);
@@ -177,13 +177,13 @@ public class DataHomeAtomicTests : IDisposable
             //  اجرای بعد
             var r = DataHome.Settle(target, null, legacy);
             Assert.Equal(target, r.Root);
-            Assert.Equal("ledger", File.ReadAllText(Path.Combine(target, "pump.db")));
-            Assert.Equal("{\"x\":1}", File.ReadAllText(Path.Combine(target, "settings.json")));
-            Assert.Equal("chat", File.ReadAllText(Path.Combine(target, "chat.db")));
-            Assert.Equal("b", File.ReadAllText(Path.Combine(target, "backups", "b.db")));
+            Assert.Equal("ledger", SrcText.Read(Path.Combine(target, "pump.db")));
+            Assert.Equal("{\"x\":1}", SrcText.Read(Path.Combine(target, "settings.json")));
+            Assert.Equal("chat", SrcText.Read(Path.Combine(target, "chat.db")));
+            Assert.Equal("b", SrcText.Read(Path.Combine(target, "backups", "b.db")));
             Assert.False(File.Exists(Path.Combine(target, DataHome.Incomplete)), $"گام {cutAt} ({steps[cutAt]}): نشان ماند");
             //  ⛔ جای کهنه دست‌نخورده
-            Assert.Equal("ledger", File.ReadAllText(Path.Combine(legacy, "pump.db")));
+            Assert.Equal("ledger", SrcText.Read(Path.Combine(legacy, "pump.db")));
         }
     }
 }

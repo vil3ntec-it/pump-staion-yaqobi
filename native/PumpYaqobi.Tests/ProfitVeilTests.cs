@@ -54,7 +54,7 @@ public class ProfitVeilTests
     [Fact]
     public void HarJayeMafad_AzProfitVeil_Mikhanad()
     {
-        string R(params string[] p) => File.ReadAllText(Path.Combine(new[] { Root() }.Concat(p).ToArray()));
+        string R(params string[] p) => SrcText.Read(Path.Combine(new[] { Root() }.Concat(p).ToArray()));
         Assert.Contains("Banner[2].Value = ProfitVeil.Show(_bannerProfit);", R("PumpYaqobi.App", "ViewModels", "MainViewModel.cs"));
         var dash = R("PumpYaqobi.App", "ViewModels", "Sections", "DashboardSectionViewModel.cs");
         Assert.Contains("TrendProfitShown => ProfitVeil.Hidden", dash);
@@ -84,7 +84,7 @@ public class ProfitVeilTests
     [Fact]
     public void KadreVazneMakhzan_HamGhadeDigaran()
     {
-        var x = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections", "StorageSectionView.axaml"));
+        var x = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections", "StorageSectionView.axaml"));
         Assert.Contains("StringFormat=وزن · {0} تن}\" Classes=\"label\"", x);
         Assert.DoesNotContain("StringFormat={}{0} تن}\" Classes=\"muted\"", x);
     }

@@ -594,6 +594,9 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     /// <summary>همان «رسید قبلی»ِ کادرِ صفحه — برای سندِ چاپی.</summary>
     internal decimal HeadRasidOf(FuelType fuel) => HeadRasid(fuel);
 
+    /// <summary>شورا چ۵ — همان «الباقی»ِ سربرگ، برای پروندهٔ قرض‌دار (دو جای تصمیم نه).</summary>
+    internal decimal RemainderOf(FuelType fuel) => Remainder(fuel);
+
     private decimal HeadRasid(FuelType fuel)
     {
         var t = fuel == FuelType.Diesel ? Totals.Diesel : Totals.Petrol;
@@ -1413,6 +1416,26 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
 
         return Documents.ShowAsync(() => new DebtorStatementReport(input, calc),
                                    input.AccountTitle);
+    }
+
+    /// <summary>
+    /// شورا چ۵ — «پروندهٔ قرض‌دار» برای حسابی که باز است: حالِ فعلی (همان الباقیِ
+    /// سربرگ)، میانگینِ رسید و فاصلهٔ دو رسید، و تاریخچهٔ ماه‌به‌ماه. فقط‌خواندنی.
+    /// </summary>
+    [RelayCommand]
+    private Task DossierAsync()
+    {
+        var acct = Current;
+        if (acct is null) return Task.CompletedTask;
+        var isSub = acct.Entity.MainOfDebtorId is null;
+        var input = new DebtorDossierInput(
+            AccountTitle: isSub ? "📄 " + acct.Title : "حساب " + Name,
+            IsMoneyLedger: acct.IsMoney,
+            Dossier: DebtorDossierService.Build(acct.Rows.Select(r => r.Entity), acct.IsMoney),
+            RemainderPetrol: acct.RemainderOf(FuelType.Petrol),
+            RemainderDiesel: acct.RemainderOf(FuelType.Diesel),
+            Dates: DocDates.Line());
+        return Documents.ShowAsync(() => new DebtorDossierReport(input), "پرونده — " + input.AccountTitle);
     }
 
     /// <summary>برگشت به فهرست — از راهِ خودِ بخش، تا ذخیرهٔ نیمه‌کاره جا نماند.</summary>

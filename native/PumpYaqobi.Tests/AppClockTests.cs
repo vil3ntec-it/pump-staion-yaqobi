@@ -271,12 +271,7 @@ public class AppClockTests : IDisposable
         Assert.Equal(real - 5_000, f.ClockFloorMs);
     }
 
-    [Fact]
-    public void MohreAyandeh_TazeSaziyeMajvozRaKhamushNemikonad()
-    {
-        var src = Read("PumpYaqobi.App", "Services", "CloudLink.cs");
-        Assert.Contains("var due = _settings.CloudSyncedAt <= 0 || since < 0 || since >= (long)LicenseTick.TotalMilliseconds;", src);
-    }
+    //  «مُهرِ آینده تازه‌سازی را خاموش نمی‌کند» ⇒ رفتاری: CloudLoginBehaviourTests (شورا، ت۳)
 
     // ── ۵) هیچ پاکِ همیشگی‌ای با ساعتِ نامطمئن ─────────────────────────
 
@@ -385,7 +380,7 @@ public class AppClockTests : IDisposable
         return d!.FullName;
     }
 
-    private static string Read(params string[] parts) => File.ReadAllText(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
+    private static string Read(params string[] parts) => SrcText.Read(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
 }
 
 /// <summary>
@@ -416,7 +411,7 @@ public class SeenNoticesTests : IDisposable
         SeenNotices.MarkSeen("ntc_1");
         Assert.True(SeenNotices.Seen("ntc_1"));      // اجرای بعدیِ برنامه همان فایل را می‌خواند
 
-        var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Services", "SyncEngine.cs"));
+        var src = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.Shell", "Services", "SyncEngine.cs"));
         Assert.Contains("if (SeenNotices.Seen(n.Id)) { await MarkReadAsync(cloud, n.Id, ct); continue; }", src);
         Assert.Contains("await cloud.NoticeReadAsync(id, ct);", src);
     }
@@ -426,7 +421,7 @@ public class SeenNoticesTests : IDisposable
     {
         SeenNotices.DismissedBanner = "closed";
         Assert.Equal("closed", SeenNotices.DismissedBanner);
-        var vm = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "MainViewModel.cs"));
+        var vm = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "MainViewModel.cs"));
         var i = vm.IndexOf("private void CloseNotice()", StringComparison.Ordinal);
         var body = vm[i..vm.IndexOf("\n    }", i)];
         Assert.Contains("SeenNotices.DismissedBanner = SoftLock.BannerKind();", body);

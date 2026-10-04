@@ -138,7 +138,7 @@ public class AlertWatchTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Src(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
 
     /// <summary>
     /// ⛔ زنگِ داشبورد قاعدهٔ جدا ندارد: از <c>LiveAlerts</c> می‌خواند، و
@@ -151,7 +151,7 @@ public class AlertWatchTests
         var dash = Src("PumpYaqobi.App", "ViewModels", "Sections", "DashboardSectionViewModel.cs");
         var build = dash[dash.IndexOf("private void BuildAlerts()", StringComparison.Ordinal)..];
         build = build[..build.IndexOf("private void BuildRecent()", StringComparison.Ordinal)];
-        Assert.Contains("_host.LiveAlerts.Current", build);
+        //  «زنگ از همان فهرست» ⇒ رفتاری: DashboardAlertsBehaviourTests (شورا، ت۳). این‌جا فقط ممنوعه‌ها.
         Assert.DoesNotContain("_threshold", build);
         Assert.DoesNotContain("t.Raw", build);
     }
@@ -175,10 +175,10 @@ public class AlertWatchTests
     [Fact]
     public void Tormoz_Version_Va_BiKhandaneHamePArcheha()
     {
-        var w = Src("PumpYaqobi.App", "Services", "AlertWatch.cs");
+        var w = Src("PumpYaqobi.Shell", "Services", "AlertWatch.cs");
         Assert.Contains("version == _lastVersion) return false;", w);
         Assert.Contains("AppClock.Mono - _lastRun < MinGap", w);
-        var snap = Src("PumpYaqobi.App", "Services", "StationSnapshot.cs");
+        var snap = Src("PumpYaqobi.Shell", "Services", "StationSnapshot.cs");
         var tank = snap[snap.IndexOf("internal static async Task<Dictionary<string, object?>> TankAsync", StringComparison.Ordinal)..];
         tank = tank[..tank.IndexOf("return tank;", StringComparison.Ordinal)];
         Assert.Contains("ShiftSumsAsync(fuel, ct)", tank);

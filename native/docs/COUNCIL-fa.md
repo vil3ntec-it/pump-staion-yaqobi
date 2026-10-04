@@ -45,6 +45,31 @@
 
 ---
 
+## ۱ب) کارنامهٔ دوم (۱۴۰۵/۰۷/۲۰، کدِ امروزِ شاخه، نسخهٔ ۳.۱.۲۴۳)
+
+| عضو | نمره | ۱۰ نشد چون… |
+|---|---|---|
+| ⏱️ اجراگر | ۸ (بود ۷) | ت۵ عمداً «فعلاً نه»؛ ث۳ در پنل/بات/ایمیل منتظرِ صاحب ریپو؛ دروازهٔ «پایدار» با صفر گزارشِ کرش هم پایدار می‌کند؛ ت۴ پیش از مرجِ سمتِ سرور نمی‌دود |
+| 🔍 مخالف‌خوان | ۷ (بود ۵) | ب۱ در راهِ عادیِ موتور رخنه دارد؛ پ۱ دو کارِ صاحب ریپو مانده؛ `mut.sh` در مخزن نیست |
+| 🏠 اصول پایه | ۷ (بود ۶) | ج۴ (`CloudLink.cs` ۲٬۹۵۷ خط)، ج۶ (مقایسهٔ متنیِ «امروز») و ج۷ (پیام‌رسان بیرونِ `Modules`) نیمه‌اند |
+| ❓ غریبه | ۸ (بود ۵) | ث۳ و ث۵ در پنل/بات/ایمیل منتظرِ صاحب ریپو؛ ث۷ در `payam/` نیمه |
+| ↗️ فرصت‌بین | ۸ (بود ۷) | چ۱/چ۲ تصمیم‌اند نه ساخت (قیدِ صاحب ریپو)؛ ت۵؛ پمپِ پرداخت‌کنندهٔ واقعی از کد دیده نمی‌شود |
+
+**سنجیده‌شده روی کد به‌دستِ رئیسِ شورا:**
+
+| ادعا | حال |
+|---|---|
+| `_justPushed` پایانِ **هر** دور پاک می‌شود ولی گرفتن فقط هر ۳۰ ثانیه (`SyncEngine.cs:370` · `:397`) ⇒ opِ کهنه‌ترِ کامپیوترِ دیگر می‌تواند روی مقدارِ تازه‌تر بنشیند | ✔ درست — ایرادِ جدی |
+| `crashCountFor` صفر ردیف را «بی‌کرش» می‌شمرد، با سقفِ ۵۰۰ (`mirror.js:212-229`) | ✔ درست |
+| `fix-needs-test.sh` «درست» را زیررشته‌ای می‌گیرد («درستی» هم) | ✔ درست |
+| `payam/` هنوز «پمپ یعقوبی» دارد (`sw.js:80` · `index.html:13,425` · `manifest.json`) و `PumpBrandTests` آن‌جا را نمی‌گردد | ✔ درست |
+| `CloudLink.cs` ۲٬۹۵۷ خط و بیرونِ `GiantFileTests` | ✔ درست |
+| «امروز» با `DateShamsi == today` (متن) — `StationSnapshot.cs:793` · `MainViewModel.Ledger.cs:253` · `ExpenseSectionViewModel.cs:122` | ✔ درست |
+| پیام‌رسان حلقهٔ خودش را دارد، بیرونِ `Modules` (`ChatSectionViewModel.cs:861`) | ✔ درست |
+| `LedgerParityService.DailyOnceAsync` خطا را بی‌صدا می‌بلعد (`catch { return -1; }`) | ✔ درست |
+
+---
+
 ## ۲) پرامپت‌ها
 
 **طرزِ کار:** هر پرامپت را جدا بدهید (یک سیزن، یک PR). ترتیب مهم است — گروه
@@ -314,7 +339,7 @@ DataHome.CopyTree دو rename پشتِ سرِ هم دارد؛ رفتنِ برق 
 سرخ و روی PR سبز باشد (دو اجرا). استثنا با برچسبِ «no-test» و دلیل در PR.
 ```
 
-#### ت۳ — آزمونِ رفتاری به‌جای «متن در سورس هست»  ⏳
+#### ت۳ — آزمونِ رفتاری به‌جای «متن در سورس هست»  ✅ شد (۴۸ آزمونِ رفتاریِ تازه، هر کدام با سنجشِ دندان — `PersonAccountBehaviourTests` · `WaraqPageBehaviourTests` · `StorageBuyBehaviourTests` · `DebtorListBehaviourTests` · `KarBooksTests` · `DashboardAlertsBehaviourTests` · `CloudLoginBehaviourTests` · `AccountStepBehaviourTests` · `PumpBindBehaviourTests` · `AccountLedgerBehaviourTests` · `SyncPrimeBehaviourTests` · `NoPasswordBehaviourTests` · `HomeAndWireBehaviourTests`؛ آزمونِ فقط‌سورس ۴۳۴ ⇐ ۴۱۰ — نسخه 3.1.243)
 
 ```
 بخشِ بزرگی از آزمون‌ها Assert.Contains روی متنِ فایل‌اند. کار: ۵۰ تا از مهم‌ترینِ
@@ -364,7 +389,7 @@ shop/server و پنلِ server را کلون کند، پشته را بالا ب�
 نشود.
 ```
 
-#### ث۳ — یک مسیرِ ورود، یک نامِ روشن برای هر کد  ⏳
+#### ث۳ — یک مسیرِ ورود، یک نامِ روشن برای هر کد  ✅ شد در برنامه و اپِ گوشی (`CodeNamesTests` · بخشِ «ث۳»ِ سنجهٔ `quickstart` — نسخه 3.1.243) · 👤 پنل، بات و نامهٔ ایمیل: پرسیده شد، بی پاسخ عوض نشد
 
 ```
 سه «کد» هست: کدِ ایمیل، کدِ هشت‌رقمیِ پمپ، کدِ اشتراکِ آفلاین. کار: هر جا که
@@ -441,7 +466,7 @@ desktop، android، homelab-panel…). کار: هر کدام یا در README «
 ⛔ پیش از جابه‌جایی deploy-pages.yml و هر ورک‌فلو را بگرد.
 ```
 
-#### ج۴ — شکستنِ فایل‌های غول  ⏳
+#### ج۴ — شکستنِ فایل‌های غول  ✅ شد (`ExcelGrid` و `MainViewModel` هر کدام شش تکهٔ partial، هیچ تکه بالای ۱٬۰۰۰ خط — `GiantFileTests`؛ همهٔ آزمون‌ها و سنجه‌های رابطِ نام‌برده سبز، bigtable/scrollperf هم‌پای main — نسخه 3.1.243)
 
 ```
 ExcelGrid.cs ۳٬۷۲۸، CloudLink ۲٬۹۵۷، MainViewModel ۲٬۰۹۸ خط. کار: ExcelGrid را
@@ -451,7 +476,7 @@ waraqtype، bigtable، scrollend، undokeys، coldrag) و همهٔ آزمون‌
 bigtable/scrollperf با main مقایسه (A/B). همین برای MainViewModel.
 ```
 
-#### ج۵ — پوسته به زیرساخت، ویومدل بی DbContext  ⏳
+#### ج۵ — پوسته به زیرساخت، ویومدل بی DbContext  ✅ شد (گامِ ۱: پروژهٔ `PumpYaqobi.Shell` — ۴۰ فایل، بی آوالونیا، هویت از برنامه — `ShellIdentityTests`؛ گامِ ۲: هیچ ویومدلی به DbContext/DbFactory دست نمی‌زند — `ArchitectureTests` با خواندنِ IL — نسخه 3.1.243)
 
 ```
 CloudLink، SyncEngine، StationPublisher، BackupPusher، LicenseGuard، TimeSync در
@@ -462,7 +487,7 @@ CloudLink، SyncEngine، StationPublisher، BackupPusher، LicenseGuard، TimeSy
 ⛔ هر گام با همهٔ سنجه‌ها و idle/years سبز.
 ```
 
-#### ج۶ — تاریخ یک شکلِ کانونی  ⏳
+#### ج۶ — تاریخ یک شکلِ کانونی  ✅ شد (`DateKeys` تنها قاعده؛ `PumpDbContext.DeriveDateKeys` با هر ذخیره؛ برابریِ روزانهٔ `CheckDatesAsync` — `DateKeyCanonTests` ۱۱ سبز — نسخه 3.1.243)
 
 ```
 هر ردیف DateShamsi (متنِ کاربر) + DateKey + MonthKey دارد. کار: DateKey منبعِ
@@ -470,7 +495,7 @@ CloudLink، SyncEngine، StationPublisher، BackupPusher، LicenseGuard، TimeSy
 که کاربر نوشت. یک «سنجهٔ برابری» شبانه که ناجورها را درست کند (مثلِ الف۳).
 ```
 
-#### ج۷ — حاشیه جداشدنی  ⏳
+#### ج۷ — حاشیه جداشدنی  ✅ شد (شش ماژول پشتِ `Modules.Start`/`Run`؛ باگ فقط همان را خاموش می‌کند و پروفایل می‌گوید، شبکه نه — `ModulesTests`: با شکستنِ همهٔ ماژول‌ها ورود، پارچه و ورق سالم — نسخه 3.1.243)
 
 ```
 چت، بات، دوربین، تلگرام‌نرخ، LiveConfig، آینه — دفتر باید بی هیچ‌کدام بالا بیاید.
@@ -498,7 +523,7 @@ CloudLink، SyncEngine، StationPublisher، BackupPusher، LicenseGuard، TimeSy
 ⛔ قیمت را از خودش پر نکند.
 ```
 
-#### چ۳ — نماینده‌های فروش  ⏳
+#### چ۳ — نماینده‌های فروش  ✅ شد (سرورِ حساب ۲.۱۱.۱۸: `sales_reps` + کدِ تخفیفِ هر نماینده + `/api/rep/me` فقط فروش‌های خودش، درصد فقط از پنل و بی پیش‌فرض — `test/sales-reps.test.js` و `test/portal-rep.mjs`ِ ریپوی shop؛ پنل ۱.۵۰.۳۴ زبانهٔ «نماینده‌ها» — `account-admin.mjs`ِ ریپوی server)
 
 ```
 نقشِ «نماینده» در سرورِ حساب و پنل: کدِ تخفیفِ هر نماینده، فروش‌های او، و
@@ -506,7 +531,7 @@ CloudLink، SyncEngine، StationPublisher، BackupPusher، LicenseGuard، TimeSy
 جداسازی و آزمونِ گزارش.
 ```
 
-#### چ۴ — پلنِ چندپمپی  ⏳
+#### چ۴ — پلنِ چندپمپی  ✅ شد (اپِ گوشی: «🗂 پمپ‌هایم» — هر پمپ با کدِ خودش، مخزن و حالِ قرض‌داران کنارِ هم، عددهای «حساب‌ها» فقط با رمزِ همان پمپ — `tools/check-kar-pumps.mjs` و بخشِ ۵ی `tools/check-multi-account.mjs` روی پشتهٔ واقعی — نسخه 3.1.243)
 
 ```
 یک حساب، چند پمپ: داشبوردِ تجمیعی (فروش، مفاد، مخزن، الباقیِ قرض‌داران هر پمپ
@@ -514,7 +539,7 @@ CloudLink، SyncEngine، StationPublisher، BackupPusher، LicenseGuard، TimeSy
 check-multi-account گسترش یابد).
 ```
 
-#### چ۵ — گزارش برای بانک/اتحادیه و پروندهٔ قرض‌دار  ⏳
+#### چ۵ — گزارش برای بانک/اتحادیه و پروندهٔ قرض‌دار  ✅ شد («📑 گزارشِ ماهانهٔ پمپ» با مخزنِ اول/آخرِ ماه و «📁 پرونده»ی هر حساب — `PumpReportsTests` — نسخه 3.1.243)
 
 ```
 دو PDFِ تازه از همان DocStyle: «گزارشِ ماهانهٔ پمپ» (فروش، خرید، مخزن، مفاد)
@@ -522,6 +547,18 @@ check-multi-account گسترش یابد).
 ```
 
 ---
+
+### 🆕 دورِ دوم — پرامپت‌های تازه (۱۴۰۵/۰۷/۲۰)
+
+| بند | پرامپت | حال |
+|---|---|---|
+| د۱ | «همین حالا رفته» تا گرفتنِ بعدی بماند (یا پس از هر فرستادنِ موفق گرفتن اجباری شود)؛ آزمون با مکثِ واقعیِ `pullDue`، نه `Step`ی که همیشه پس از فرستادن می‌گیرد | ✅ ترتیبِ سرور (`SyncOp.ServerSeq`) روی دیسک، نه حافظه — `SyncConflictTests.FerestadanBiGereftan_DorBaad_BazHamYekAdad` (با و بی بازشدنِ دوباره؛ پیش از اصلاح سرخ) |
+| د۲ | وقتی opِ رسیده یک فیلد را می‌بَرد، `Albaqi/Bardagi`ِ همان opِ ما هم از نو حساب شود | ✅ `SyncConflictTests.RasideResideh_AlbaqiHamanJaSakhteMishavad` (دندان با `tools/mut.sh` سنجیده شد) |
+| د۳ | `LedgerParityService` بینِ خواندن و نوشتن قفل/نسخه بسنجد و خطا را بی‌صدا نبلعد | ✅ خواندنِ دوباره در یک تراکنش و ثبتِ `parity.failed` — `LedgerParityTests.Barabari_ResideMianeKhandanONeveshtan_AlbaqiTaze` |
+| د۴ | «امروز» با `DateKey`، نه با متن (سه جای نام‌برده + `ExpenseReport` · `ShiftsReport`) | ✅ `Shamsi.SameDay` در چهار جا — `DateKeyCanonTests.Emruz_BaKelid_NaBaMatn`. ⚠️ `ShiftsReport` اصلاً «امروز» را نمی‌سنجد؛ چیزی برای عوض کردن نداشت |
+| د۵ | پیام‌رسان پشتِ `Modules`؛ `CloudLink.cs` تکه شود و در `GiantFileTests` بنشیند | ✅ `ModulesTests.PayamResan_AzDareModules`؛ `CloudLink.cs` ⇒ شش تکه، متن خط‌به‌خط همان — `GiantFileTests` |
+| د۶ | دروازهٔ «پایدار» دستِ‌کم N نصبِ واقعی بخواهد، نه فقط «صفر کرش»؛ سقفِ ۵۰۰ برداشته شود | ✅ سرورِ حساب ۲.۱۱.۱۹ `version-health` (شمرده، بی سقف) و پنل ۱.۵۰.۳۵ کمینهٔ ۳ دستگاه — بخشِ ۷ی `pump-mirror.mjs` (۶۴) و بندِ آخرِ `sync-v1.test.js` |
+| د۷ | `payam/` به نامِ تازه و در `PumpBrandTests`؛ `fix-needs-test` واژهٔ کامل بگیرد؛ `mut.sh` در مخزن | ✅ `PumpBrandTests.SafheyeDanlod_AppeGooshi_VaQr_HamPompBenzin` (حالا هر «یعقوبی»ِ دیدنی) · `ToolsRuleTests` · `tools/mut.sh` |
 
 ## ۳) داوریِ دوباره — پرامپت و معیارِ «۱۰»
 
@@ -563,3 +600,4 @@ check-multi-account گسترش یابد).
 | تاریخ | نسخه | اجراگر | مخالف‌خوان | اصول پایه | غریبه | فرصت‌بین | میانگین |
 |---|---|---|---|---|---|---|---|
 | ۱۴۰۵/۰۷/۱۹ | ۳.۱.۲۳۷ | ۷ | ۵ | ۶ | ۵ | ۷ | **۶** |
+| ۱۴۰۵/۰۷/۲۰ | ۳.۱.۲۴۳ | ۸ | ۷ | ۷ | ۸ | ۸ | **۷٫۶** |

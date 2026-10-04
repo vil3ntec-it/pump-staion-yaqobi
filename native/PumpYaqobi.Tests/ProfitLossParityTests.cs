@@ -38,7 +38,7 @@ public class ProfitLossParityTests
     {
         var p = Path.Combine(AppContext.BaseDirectory, "golden-profit.json");
         if (!File.Exists(p)) p = "golden-profit.json";
-        return JsonSerializer.Deserialize<Golden>(File.ReadAllText(p))!;
+        return JsonSerializer.Deserialize<Golden>(SrcText.Read(p))!;
     }
 
     private static void Close(double expected, decimal actual, string what)

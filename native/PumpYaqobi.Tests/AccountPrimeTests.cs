@@ -38,7 +38,7 @@ public class AccountPrimeTests : IDisposable
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Src(string rel) =>
-        File.ReadAllText(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar)));
+        SrcText.Read(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar)));
 
     // ── ۱) «پرده کِی می‌آید» — یک جای تصمیم، و هر دو شرط لازم ──────────
 
@@ -125,27 +125,15 @@ public class AccountPrimeTests : IDisposable
     // ── ۳) پرده هیچ‌وقت دیوار نیست ─────────────────────────────────────
 
     /// <summary>
-    /// ⛔ «ادامه در پس‌زمینه» همیشه روی پرده هست، و <b>هر</b> شکستی خودش
-    /// پرده را می‌برد. برنامه آفلاین هم باید کار کند (قاعدهٔ ۱۴۰۵/۰۶/۳۰).
+    /// ⛔ «ادامه در پس‌زمینه» همیشه روی پرده هست — دکمه نباید برود. رفتارِ
+    /// پرده (هر شکست می‌بردش، یک بار در هر اجرا، تا آخرین صفحه) در
+    /// <see cref="SyncPrimeBehaviourTests"/> با موتورِ واقعی سنجیده می‌شود.
     /// </summary>
     [Fact]
-    public void Parde_Divar_Nist()
+    public void Dokmeye_AdameDarPasZamine_RooyeParde_Ast()
     {
-        var engine = Src("PumpYaqobi.App/Services/SyncEngine.cs");
-        var view = Src("PumpYaqobi.App/Views/MainWindow.axaml");
-        var main = Src("PumpYaqobi.App/ViewModels/MainViewModel.cs");
-
-        //  راهِ بیرون آمدن، در هر سه لایه
-        Assert.Contains("public void DismissPrime()", engine);
-        Assert.Contains("DismissSyncPrimeCommand", view);
-        Assert.Contains("private void DismissSyncPrime()", main);
-
-        //  و هر شکستی پرده را می‌برد — نه فقط یکی
-        Assert.Contains("if (priming) EndPrime(false, pull.Why);", engine);
-        Assert.Contains("if (priming) EndPrime(false, res.Why);", engine);
-
-        //  ⛔ یک بار در هر اجرا: شبکهٔ لرزان نباید پرده را روشن و خاموش کند
-        Assert.Contains("_primeOver = true;", engine);
+        Assert.Contains("DismissSyncPrimeCommand", Src("PumpYaqobi.App/Views/MainWindow.axaml"));
+        Assert.Contains("private void DismissSyncPrime()", Src("PumpYaqobi.App/ViewModels/MainViewModel.cs"));
     }
 
     /// <summary>
@@ -173,7 +161,7 @@ public class AccountPrimeTests : IDisposable
     [Fact]
     public void Voroode_Tamam_Shod_HamanLahze_Migirad()
     {
-        var engine = Src("PumpYaqobi.App/Services/SyncEngine.cs");
+        var engine = Src("PumpYaqobi.Shell/Services/SyncEngine.cs");
         var account = Src("PumpYaqobi.App/ViewModels/Sections/AccountSectionViewModel.cs");
 
         //  ⛔ نه یک `Task.Delay`ِ شکست‌ناپذیر

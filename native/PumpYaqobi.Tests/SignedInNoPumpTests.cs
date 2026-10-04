@@ -28,7 +28,7 @@ public class SignedInNoPumpTests
     private static string Src(string rel) =>
         //  ⚠️ روی ویندوز (CI) فایل‌ها با CRLF بیرون می‌آیند؛ سنجه‌های «تا پایانِ متد»
         //  با `\n` می‌گردند، پس همه‌جا یک‌شکل می‌شوند.
-        File.ReadAllText(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar))).Replace("\r\n", "\n");
+        SrcText.Read(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar))).Replace("\r\n", "\n");
 
     private const string Main = "PumpYaqobi.App/ViewModels/MainViewModel.cs";
     private const string Vm = "PumpYaqobi.App/ViewModels/Sections/AccountSectionViewModel.cs";
@@ -98,11 +98,7 @@ public class SignedInNoPumpTests
     {
         var s = Src(Main);
         Assert.Contains("UnboundWhy(_signedInCache)", s);
-        var i = s.IndexOf("private static string UnboundWhy", StringComparison.Ordinal);
-        var body = s[i..s.IndexOf(";\n", i, StringComparison.Ordinal)];
-        Assert.Contains("هنوز وارد حساب نشده‌اید", body);
-        Assert.Contains("AccountHasStation == false", body);
-        Assert.Contains("LastBindWhy", body);
+        //  «هر حال جملهٔ خودش» ⇒ رفتاری: AccountStepBehaviourTests (شورا، ت۳)
         //  ⛔ جملهٔ کهنه که بی‌حساب را به «ساختنِ پمپ» می‌فرستاد، برنگشت
         Assert.DoesNotContain("در «پروفایل» پمپ را بسازید", s);
         Assert.DoesNotContain("نامِ پمپ را بنویسید", s);
@@ -114,7 +110,7 @@ public class SignedInNoPumpTests
         Assert.Contains("await GoAsync(Account);", click);
         //  ⛔ و هیچ پمپی بی‌خبر نمی‌سازد — «هر حساب یک پمپ»
         Assert.DoesNotContain("EnsureStationAsync", click);
-        var pub = Src("PumpYaqobi.App/Services/StationPublisher.cs");
+        var pub = Src("PumpYaqobi.Shell/Services/StationPublisher.cs");
         Assert.DoesNotContain("EnsureStationAsync", pub);
     }
 
@@ -146,10 +142,10 @@ public class SignedInNoPumpTests
     [Fact]
     public void SabteNashode_HalgheHarDagighe_NemiZanad()
     {
-        var c = Src("PumpYaqobi.App/Services/CloudLink.cs");
+        var c = Src("PumpYaqobi.Shell/Services/CloudLink.cs");
         Assert.Contains("var bindDue = forceBind || AppClock.Mono - _lastBindFailAt >= BindRetryAfterFail;", c);
         Assert.Contains("if (!Activated && acctStation.Length > 0 && bindDue)", c);
-        var pub = Src("PumpYaqobi.App/Services/StationPublisher.cs");
+        var pub = Src("PumpYaqobi.Shell/Services/StationPublisher.cs");
         Assert.Contains("await CloudKeepAsync(ct, forceBind: true);", pub);
     }
 
@@ -160,7 +156,7 @@ public class SignedInNoPumpTests
     [Fact]
     public void NeshasteMorde_Dastgah_Ra_HaminHala_MiPorsad()
     {
-        var pub = Src("PumpYaqobi.App/Services/StationPublisher.cs");
+        var pub = Src("PumpYaqobi.Shell/Services/StationPublisher.cs");
         var i = pub.IndexOf("await cloud.HomeFromAccountAsync(ct, forceBind);", StringComparison.Ordinal);
         var after = pub[i..(i + 1400)];
         Assert.Contains("if (!cloud.SignedIn && cloud.Activated)", after);
@@ -195,6 +191,6 @@ public class SignedInNoPumpTests
         Assert.Contains("public Task EnsureReadyOnOpenAsync() => EnsureReadySafeAsync();", vm);
         //  ⛔ نصبِ وصل‌شده هیچ درخواستی نمی‌زند
         Assert.Contains("if (!string.IsNullOrWhiteSpace(AppSettings.Load().CloudDeviceToken)) return;", vm);
-        Assert.DoesNotContain("EnsureStationAsync", Src("PumpYaqobi.App/Services/StationPublisher.cs"));
+        Assert.DoesNotContain("EnsureStationAsync", Src("PumpYaqobi.Shell/Services/StationPublisher.cs"));
     }
 }

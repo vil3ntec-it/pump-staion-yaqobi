@@ -11,7 +11,7 @@ namespace PumpYaqobi.Tests;
 public class LiveInputTests
 {
     private static string R(params string[] p) =>
-        File.ReadAllText(Path.Combine(new[] { Root() }.Concat(p).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root() }.Concat(p).ToArray()));
 
     private static string Root()
     {
@@ -154,7 +154,7 @@ public class LiveInputTests
         Assert.Contains("IsChecked=\"{Binding ShowHeader}\"", dash);
         Assert.Contains("IsChecked=\"{Binding ShowBanner}\"", dash);
         //  مقدارِ راحتی ⇒ هر دو فهرست
-        var s = R("PumpYaqobi.App", "Services", "AppSettings.cs");
+        var s = R("PumpYaqobi.Shell", "Services", "AppSettings.cs");
         Assert.Contains("live.ShowHeader = ShowHeader;", s);
         Assert.Contains("ShowBanner, ShowHeader, SimpleMode);", s);   // ComfortSnap (شورا، ث۶ هم)
         //  جای نوارِ بخش‌ها: سربرگِ پنهان صفر شمرده می‌شود

@@ -120,7 +120,9 @@ public sealed class DebtCalculationService
     /// ⚠️ «نرخِ خودکار» عمداً حذف شده بود — اگر فی خالی باشد بردگی صفر می‌ماند.
     /// ردیفِ دفترِ پول بردگی‌اش دستی است و از این فرمول نمی‌آید.
     /// </summary>
-    public decimal RowBardagi(DebtRow r)
+    public decimal RowBardagi(DebtRow r) => RowBardagiOf(r);
+
+    private static decimal RowBardagiOf(DebtRow r)
     {
         if (r is null) return 0m;
         if (r.ByMoney) return r.Bardagi;
@@ -144,14 +146,20 @@ public sealed class DebtCalculationService
     ///   ۲) بردگی و الباقی محاسبه و گرد می‌شوند و روی خودِ ردیف می‌نشینند.
     /// خروجی می‌گوید آیا چیزی عوض شد (تا فقط همان‌وقت ذخیره شود).
     /// </summary>
-    public bool NormalizeRow(DebtRow r)
+    public bool NormalizeRow(DebtRow r) => Normalize(r);
+
+    /// <summary>
+    /// همان <see cref="NormalizeRow"/>، بی وابستگی به نرخ — برای جایی که سرویس در دست
+    /// نیست (نشاندنِ opِ رسیده در ‎SyncStore‎). هیچ قاعدهٔ دومی نیست: همین یکی است.
+    /// </summary>
+    public static bool Normalize(DebtRow r)
     {
         if (r is null) return false;
         var healed = false;
 
         if (r.ByMoney && r.Bardagi == 0m && r.Liters > 0m) { r.ByMoney = false; healed = true; }
 
-        var bardagi = Round0(r.ByMoney ? r.Bardagi : RowBardagi(r));
+        var bardagi = Round0(r.ByMoney ? r.Bardagi : RowBardagiOf(r));
         var albaqi = Round0(bardagi - r.Rasid);
         if (r.Bardagi != bardagi) { r.Bardagi = bardagi; healed = true; }
         if (r.Albaqi != albaqi) { r.Albaqi = albaqi; healed = true; }

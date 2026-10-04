@@ -41,7 +41,7 @@ public class LegacyFullImportTests : IDisposable
         return File.Exists(p) ? p : n;
     }
 
-    private static string Json() => File.ReadAllText(Fixture("legacy-full-backup.json"));
+    private static string Json() => SrcText.Read(Fixture("legacy-full-backup.json"));
 
     private sealed record MFuel(double a, double l, double p, int c);
     private sealed record MBuyJ(double l, double a);
@@ -62,7 +62,7 @@ public class LegacyFullImportTests : IDisposable
                                    List<StaffJ> staffShort, string today);
 
     private static Expected Want() =>
-        JsonSerializer.Deserialize<Expected>(File.ReadAllText(Fixture("legacy-full-expected.json")))!;
+        JsonSerializer.Deserialize<Expected>(SrcText.Read(Fixture("legacy-full-expected.json")))!;
 
     private static void Close(double expected, decimal actual, double tol = 1e-6)
     {

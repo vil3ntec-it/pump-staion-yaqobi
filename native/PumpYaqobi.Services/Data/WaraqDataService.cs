@@ -38,6 +38,13 @@ public sealed class WaraqDataService
         return await q.OrderByDescending(w => w.DateKey).ToListAsync(ct);
     }
 
+    /// <summary>شورا ث۱/ج۵: «نخستین ردیفِ نام‌دارِ ورق نوشته شده؟» — فقط یک EXISTS.</summary>
+    public async Task<bool> AnyNamedTxnAsync(CancellationToken ct = default)
+    {
+        await using var db = _dbf.Create();
+        return await db.WaraqTransactions.AnyAsync(t => t.Name != null && t.Name != "", ct);
+    }
+
     /// <summary>
     /// تاریخِ همهٔ ورق‌ها — فقط همان یک ستون. ⛔ برای «کدام روز ورق دارد»
     /// همهٔ ورق‌ها با شیفت‌ها، پایه‌ها و تراکنش‌هایشان خوانده نشود (ده سال یعنی

@@ -34,7 +34,7 @@ public class AmanatParityTests
     {
         var p = Path.Combine(AppContext.BaseDirectory, "golden-amanat.json");
         if (!File.Exists(p)) p = "golden-amanat.json";
-        return JsonSerializer.Deserialize<Golden>(File.ReadAllText(p))!;
+        return JsonSerializer.Deserialize<Golden>(SrcText.Read(p))!;
     }
 
     private static decimal? Opt(JsonElement e) =>

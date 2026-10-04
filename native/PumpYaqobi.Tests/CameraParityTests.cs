@@ -23,7 +23,7 @@ public class CameraParityTests
     {
         var p = Path.Combine(AppContext.BaseDirectory, "golden-camera.json");
         if (!File.Exists(p)) p = "golden-camera.json";
-        return JsonSerializer.Deserialize<Golden>(File.ReadAllText(p))!;
+        return JsonSerializer.Deserialize<Golden>(SrcText.Read(p))!;
     }
 
     private static CameraKind Parse(string s) => s switch

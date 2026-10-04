@@ -268,7 +268,7 @@ public class CloudEventsTests : IDisposable
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Src(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
 
     /// <summary>
     /// ⛔ <b>خبرها پشتِ اشتراک نیستند</b> — همان قاعده‌ای که سرور دارد:
@@ -281,12 +281,12 @@ public class CloudEventsTests : IDisposable
     [Fact]
     public void Khabarha_Poshte_Eshterak_Nistand_Vali_Akse_Zende_Hast()
     {
-        var src = Src("PumpYaqobi.App", "Services", "StationPublisher.cs");
+        var src = Src("PumpYaqobi.Shell", "Services", "StationPublisher.cs");
 
         //  ⛔ از ۱۴۰۵/۰۷/۱۴ خبر از عکس نمی‌رود: هر تیکِ پنج‌ثانیه‌ای، کلِ فهرستِ
         //  باز به «حالِ زنده» (سرور خودش تازه‌ها را می‌سنجد) — و پشتِ هیچ قفلی نیست.
         Assert.DoesNotContain("PublishAlertsAsync(snap, ct)", src);
-        Assert.Contains("try { await AlertTickAsync(ct); }", src);
+        Assert.Contains("try { await Modules.Run(\"alerts\", () => AlertTickAsync(ct), ct); }", src);   //  از ج۷ از درِ ماژولِ خودش
         var push = src[src.IndexOf("internal async Task<bool> PushStateAsync", StringComparison.Ordinal)..];
         push = push[..push.IndexOf("private static List<object?> AsSnapshot", StringComparison.Ordinal)];
         Assert.DoesNotContain("Entitlements.Allows(Entitlements.QrLive)", push);

@@ -37,7 +37,7 @@ public class PdfTests
     public void DebtorStatement_ProducesARealPdfWithEmbeddedPersianFont()
     {
         PdfEngine.Initialize();
-        var json = File.ReadAllText(Path2("sample-backup.json"));
+        var json = SrcText.Read(Path2("sample-backup.json"));
         var (debtors, _, _, _, _, _) = new LegacyBackupImporter().Parse(json);
         var p = debtors.First(d => d.MainAccount.FuelRows.Count > 2);
 

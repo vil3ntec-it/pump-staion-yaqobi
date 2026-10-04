@@ -118,16 +118,15 @@ public class StorageBuyEditTests : IDisposable
     public void Sors_FaghatVaznVaSaghlatLazemAnd_VaGhalamRuyeKart()
     {
         var root = FindRoot();
-        var vm = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App/ViewModels/Sections/StorageSectionViewModel.cs"));
-        Assert.DoesNotContain("priceTon <= 0m || usdRate <= 0m)\n        {\n            _host.Toast(\"لطفاً همه مقادیر", vm);
-        Assert.Contains("if (kg <= 0m || density <= 0m)", vm);
+        var vm = SrcText.Read(Path.Combine(root, "PumpYaqobi.App/ViewModels/Sections/StorageSectionViewModel.cs"));
+        //  «فقط وزن و ثقلت لازم‌اند» ⇒ رفتاری: StorageBuyBehaviourTests (شورا، ت۳)
         Assert.Contains("private void EditPurchase(PurchaseRowViewModel? row)", vm);
 
-        var view = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App/Views/Sections/StorageSectionView.axaml"));
+        var view = SrcText.Read(Path.Combine(root, "PumpYaqobi.App/Views/Sections/StorageSectionView.axaml"));
         Assert.Contains("EditPurchaseCommand", view);
         Assert.Contains("x:Name=\"BuyCard\" Classes=\"modal\" KeyboardNavigation.TabNavigation=\"Cycle\"", view);
 
-        var nav = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App/Services/FieldNavigation.cs"));
+        var nav = SrcText.Read(Path.Combine(root, "PumpYaqobi.App/Services/FieldNavigation.cs"));
         Assert.Contains("ModalOf(from)", nav);
     }
 

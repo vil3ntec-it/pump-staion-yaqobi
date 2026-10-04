@@ -24,7 +24,7 @@ public class NoWholeAppLockTests
         while (d is not null && !Directory.Exists(Path.Combine(d.FullName, "PumpYaqobi.App")))
             d = d.Parent;
         Assert.NotNull(d);
-        return File.ReadAllText(Path.Combine(d!.FullName, rel));
+        return SrcText.Read(Path.Combine(d!.FullName, rel));
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class NoWholeAppLockTests
     [Fact]
     public void TokeneDastgaheDigar_BePompeKhodeHesab_Mirasad()
     {
-        var s = Src("PumpYaqobi.App/Services/CloudLink.cs");
+        var s = Src("PumpYaqobi.Shell/Services/CloudLink.cs");
         var i = s.IndexOf("private async Task<bool> ReseatToAccountPumpAsync", StringComparison.Ordinal);
         Assert.True(i > 0);
         var body = s[i..s.IndexOf("public async Task<CloudResult> BindAsync", i, StringComparison.Ordinal)];

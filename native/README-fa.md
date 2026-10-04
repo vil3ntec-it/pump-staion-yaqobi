@@ -11,6 +11,7 @@
 | `PumpYaqobi.Application` — منطقِ مالی | 🟡 قرض‌داران، گاوصندوق، صرافی، ابزارها | ✅ برابریِ عددی با HTML |
 | `PumpYaqobi.Persistence` — SQLite + EF Core | ✅ کامل | ✅ روی فایلِ واقعی |
 | `PumpYaqobi.Infrastructure` — ابزارِ مهاجرت | ✅ کامل | ✅ با بکاپِ واقعی |
+| `PumpYaqobi.Shell` — پوستهٔ بی آوالونیا (سرورِ حساب، همگام‌سازی، ناشر، مجوز) | ✅ کامل | ✅ `ShellIdentityTests` |
 | `PumpYaqobi.Reporting` — PDF بومی | 🟡 صورتِ حسابِ قرض‌دار | ✅ فایلِ واقعی ساخته شد |
 | `PumpYaqobi.App` — رابط کاربری Avalonia | ✅ بیست‌وسه بخش | ✅ عکسِ بی‌نمایشگر از هر بخش |
 

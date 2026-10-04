@@ -111,7 +111,7 @@ public class AcctViewTests
         var page = Path.GetFullPath(Path.Combine(Root, "..", "view", "index.html"));
         Assert.True(File.Exists(page), "صفحهٔ ‎view/index.html‎ نیست");
 
-        var html = File.ReadAllText(page);
+        var html = SrcText.Read(page);
         Assert.Contains("d=([^&]+)", html);          // همان تکهٔ ‎#d=…‎
         Assert.Contains("deflate-raw", html);        // همان فشرده‌سازیِ برنامه
         Assert.DoesNotContain("token", html);        // نه رمزی می‌خواهد
@@ -188,8 +188,8 @@ public class KarLinkTests
         var root = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory, "..", "..", "..", "..", "..", "kar"));
 
-        var html = File.ReadAllText(Path.Combine(root, "index.html"));
-        var js = File.ReadAllText(Path.Combine(root, "app.js"));
+        var html = SrcText.Read(Path.Combine(root, "index.html"));
+        var js = SrcText.Read(Path.Combine(root, "app.js"));
 
         Assert.Contains("pbkdf2", js);            // همان قالبِ PasswordHasher
         Assert.Contains("PBKDF2", js);            // و همان الگوریتم در مرورگر

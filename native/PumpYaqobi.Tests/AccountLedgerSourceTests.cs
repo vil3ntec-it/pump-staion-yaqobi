@@ -15,12 +15,12 @@ public class AccountLedgerSourceTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Src(string rel) =>
-        File.ReadAllText(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar)));
+        SrcText.Read(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar)));
 
-    private const string Host = "PumpYaqobi.App/Services/AppHost.cs";
+    private const string Host = "PumpYaqobi.Shell/Services/AppHost.cs";
     private const string Ledger = "PumpYaqobi.Services/Data/AccountLedger.cs";
     private const string Main = "PumpYaqobi.App/ViewModels/MainViewModel.cs";
-    private const string Engine = "PumpYaqobi.App/Services/SyncEngine.cs";
+    private const string Engine = "PumpYaqobi.Shell/Services/SyncEngine.cs";
 
     /// <summary>
     /// ⛔ <b>عوض کردنِ حساب هیچ داده‌ای را پاک نمی‌کند.</b> خواستهٔ صریحِ
@@ -62,67 +62,14 @@ public class AccountLedgerSourceTests
     }
 
     /// <summary>
-    /// ⛔ <b>پوشهٔ حساب‌ها کنارِ دفتری می‌نشیند که برنامه با آن بالا آمد</b>،
-    /// نه کنارِ <c>PumpDbFactory.DefaultPath</c>.
-    ///
-    /// سنجه‌ها و ابزارِ عکس‌گیری دیتابیسِ موقتِ خودشان را می‌دهند؛ با مسیرِ
-    /// پیش‌فرض، نخستین «حساب عوض شد» آن‌ها را به پوشهٔ <b>واقعیِ</b> کاربر
-    /// می‌برد و روی دفترِ خودِ صاحبِ پمپ می‌نوشتند.
+    /// ⛔ <b>میزبان پیش از جابه‌جاییِ دفتر حلقهٔ همگام‌سازی را نگه می‌دارد.</b>
+    /// رفتارِ خودِ حلقه (دفترِ درست پیش از هر خواندن، و هیچ دوری وسطِ
+    /// جابه‌جایی) در <see cref="AccountLedgerBehaviourTests"/> با موتورِ واقعی
+    /// سنجیده می‌شود؛ این‌جا فقط «میزبان واقعاً نگهش می‌دارد» نباید برگردد.
     /// </summary>
     [Fact]
-    public void Pusheye_Hesabha_Kenare_Daftare_Hamin_Ejra_Ast()
+    public void Mizban_Halghe_Ra_Negah_Midarad()
     {
-        var host = Src(Host);
-        Assert.Contains("_rootDb = Db.DbPath;", host);
-        Assert.Contains("AccountLedger.PathFor(_rootDb,", host);
-        Assert.DoesNotContain("AccountLedger.PathFor(PumpDbFactory.DefaultPath", host);
-    }
-
-    /// <summary>
-    /// ⛔ <b>خروج از حساب دفتر را عوض نمی‌کند.</b> بی این، خروجِ حسابِ دوم
-    /// دفترِ حسابِ اول را جلوی چشمش می‌گذاشت.
-    /// </summary>
-    [Fact]
-    public void Khoruj_Az_Hesab_Daftar_Ra_Avaz_Nemikonad()
-    {
-        Assert.Contains("if (id.Length == 0 && LedgerAccountId.Length > 0) return false;", Src(Host));
-    }
-
-    /// <summary>
-    /// ⛔ <b>صاحبِ دفترِ ریشه با <c>Save()</c>ی بادوام می‌نشیند.</b> گم شدنش
-    /// یعنی دفترِ ریشه دوباره «بی‌صاحب» دیده می‌شود و حسابِ بعدی آن را
-    /// برمی‌دارد — یعنی کاربر دفترِ حسابِ دیگری را جلوی چشمش می‌بیند.
-    /// </summary>
-    [Fact]
-    public void Sahebe_Daftare_Rishe_Badavam_Mineshinad()
-    {
-        var host = Src(Host);
-        var at = host.IndexOf("file.LedgerAccountId = id;", StringComparison.Ordinal);
-        Assert.True(at > 0, "جای نشاندنِ صاحبِ دفترِ ریشه پیدا نشد");
-        var after = host[at..Math.Min(host.Length, at + 220)];
-        Assert.Contains("file.Save()", after);
-        Assert.DoesNotContain("SaveSoon", after);
-    }
-
-    /// <summary>
-    /// ⛔ <b>حلقهٔ همگام‌سازی پیش از هر خواندنی از دفتر، دفترِ درست را
-    /// می‌خواهد.</b> آن حلقه روی نخِ دیگری می‌دود و بی این، یک دور opهای
-    /// دفترِ حسابِ <b>قبلی</b> را با توکنِ حسابِ <b>تازه</b> می‌فرستاد —
-    /// یعنی دادهٔ یک مشتری در دفترِ ابریِ مشتریِ دیگر.
-    /// </summary>
-    [Fact]
-    public void Halgheye_Hamgamsazi_Aval_Daftare_Dorost_Ra_Mikhahad()
-    {
-        var src = Src(Engine);
-        var use = src.IndexOf("_host.UseLedgerOf(mine)", StringComparison.Ordinal);
-        var read = src.IndexOf("var state = _store.State();", StringComparison.Ordinal);
-        Assert.True(use > 0, "حلقه اصلاً دفتر را نمی‌سنجد");
-        Assert.True(read > 0);
-        Assert.True(use < read, "دفتر باید **پیش از** خواندنِ حالِ همگام‌سازی سنجیده شود");
-
-        //  و وسطِ جابه‌جایی هیچ دوری نمی‌دود
-        Assert.Contains("public void Hold(bool on)", src);
-        Assert.Contains("if (Volatile.Read(ref _held)) return;", src);
         Assert.Contains("sync?.Hold(true);", Src(Host));
     }
 
@@ -166,33 +113,6 @@ public class AccountLedgerSourceTests
         var guard = main.IndexOf("_afterSignIn = true;", StringComparison.Ordinal);
         var subs = main.IndexOf("sync.PrimeFinished +=", StringComparison.Ordinal);
         Assert.True(guard > 0 && subs > guard, "شنونده‌ها باید **بعد** از نگهبان باشند");
-    }
-
-    /// <summary>
-    /// ⛔ <b>نخستین ورود، دفترِ بی‌حساب را با خودش می‌برد</b> — و ترتیبِ این
-    /// سه خط همان چیزی است که <see cref="AccountFirstLoginCarryTests"/> با
-    /// <b>رفتار</b> می‌سنجد: اول صاحبِ ریشه برداشته می‌شود، بعد مسیر حساب
-    /// می‌شود، و فقط بعدش جابه‌جایی.
-    ///
-    /// ⚠️ برعکسش یعنی مسیر پیش از برداشته شدنِ صاحبِ ریشه حساب می‌شود، و
-    /// آن‌وقت نخستین حساب یک پوشهٔ <b>خالیِ</b> تازه می‌گرفت — کاربر پس از
-    /// ورود دفترِ خالی می‌دید.
-    /// </summary>
-    [Fact]
-    public void Nokhostin_Vorood_Daftare_BiHesab_Ra_Ba_Khodash_Mibarad()
-    {
-        var host = Src(Host);
-        var at = host.IndexOf("public bool UseLedgerOf(", StringComparison.Ordinal);
-        Assert.True(at > 0, "UseLedgerOf پیدا نشد");
-
-        var body = host[at..];
-        var claim = body.IndexOf("AccountLedger.ShouldClaimRoot(", StringComparison.Ordinal);
-        var route = body.IndexOf("AccountLedger.PathFor(", StringComparison.Ordinal);
-        var jump = body.IndexOf("Db.SwitchTo(", StringComparison.Ordinal);
-
-        Assert.True(claim > 0, "صاحبِ دفترِ ریشه اصلاً برداشته نمی‌شود");
-        Assert.True(route > claim, "مسیر باید **پس از** برداشته شدنِ صاحبِ ریشه حساب شود");
-        Assert.True(jump > route, "جابه‌جایی باید **پس از** تصمیمِ مسیر باشد");
     }
 
     private static int Count(string src, string needle)

@@ -26,7 +26,7 @@ public class DarkInkTests
     }
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(Root(), Path.Combine(parts)));
+        SrcText.Read(Path.Combine(Root(), Path.Combine(parts)));
 
     private static readonly string[] Colored = { "Ok", "Warn", "Danger", "Info", "Orange", "Accent", "Purple", "Diesel" };
 
@@ -39,7 +39,7 @@ public class DarkInkTests
         var rx = new Regex(@"(Foreground=""|Property=""(TextBlock\.)?Foreground"" Value="")\{DynamicResource Pump\.(" +
                            string.Join("|", Colored) + @")\}");
         foreach (var f in Directory.EnumerateFiles(app, "*.axaml", SearchOption.AllDirectories))
-            foreach (Match m in rx.Matches(File.ReadAllText(f)))
+            foreach (Match m in rx.Matches(SrcText.Read(f)))
                 bad.Add(Path.GetFileName(f) + ": " + m.Value);
         Assert.True(bad.Count == 0, "نوشتهٔ رنگیِ بی ‎Ink‎:\n" + string.Join("\n", bad));
     }
@@ -73,7 +73,7 @@ public class DarkInkTests
         var rx = new Regex(@"<TextBlock[^>]*Foreground=""\{Binding [A-Za-z.]+, Converter=\{x:Static th:ResourceKeyToBrushConverter.Instance\}\}""");
         var bad = new List<string>();
         foreach (var f in Directory.EnumerateFiles(app, "*.axaml", SearchOption.AllDirectories))
-            foreach (Match m in rx.Matches(File.ReadAllText(f)))
+            foreach (Match m in rx.Matches(SrcText.Read(f)))
                 bad.Add(Path.GetFileName(f));
         Assert.True(bad.Count == 0, "نوشتهٔ کلیدیِ بی ‎ink‎: " + string.Join(", ", bad));
     }

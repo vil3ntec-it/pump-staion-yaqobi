@@ -161,6 +161,9 @@ await page.goto(base);
 await joinAs('A');
 ok(await vis('btnOther'), '⛔ دکمهٔ «پمپِ دیگر» در خودِ برنامه دیده می‌شود (پمپِ بی‌رمز صفحهٔ قفل ندارد)');
 await page.click('#btnOther');
+//  ⇄ از ۱۴۰۵/۰۷/۱۶ پیش از خروج می‌پرسد (‎askLeave‎) — سنجه تا امروز تأییدش نمی‌کرد و همین‌جا می‌ماسید
+await page.waitForSelector('#dlgOk', { state: 'visible', timeout: 5000 }).catch(() => {});
+await page.click('#dlgOk').catch(() => {});
 await page.waitForFunction(() => !document.getElementById('codePane').classList.contains('hidden'), null, { timeout: 10000 }).catch(() => {});
 ok(await vis('codePane'), '«پمپِ دیگر» ⇒ دوباره صفحهٔ کد');
 ok(!(await storage()).includes(acc.A.debtor), '⛔ هیچ ردی از دادهٔ A در حافظهٔ گوشی نماند');
@@ -172,6 +175,26 @@ await page.waitForFunction((n) => (document.getElementById('staffList') || {}).t
 const after = await staffText();
 ok(has(after, 'B') && !has(after, 'A'), 'باز شدنِ دوباره ⇒ هنوز فقط پمپِ B');
 ok(!(await storage()).includes(acc.A.debtor), '⛔ و حافظهٔ گوشی هیچ دادهٔ A ندارد');
+
+// ── ۵) شورا چ۴ — «پمپ‌هایم»: همان گوشی، A و B کنارِ هم، هیچ قاطی ──────────
+console.log('══ ۵) اپِ گوشی — «🗂 پمپ‌هایم» با هر دو پمپ');
+await page.click('#btnPumpsTop');
+await page.click('#btnPumpsAdd');
+await joinAs('A');
+await page.click('#btnPumpsTop');
+await page.waitForFunction(() => document.querySelectorAll('.pump-card .fig').length >= 4, null, { timeout: 60000 }).catch(() => {});
+const mine = await page.evaluate(() => (document.getElementById('pumpsList') || {}).textContent || '');
+ok(await page.evaluate(() => document.querySelectorAll('.pump-card').length) === 2, 'هر دو پمپ در «پمپ‌هایم»، هر کدام کارتِ خودش');
+ok(!has(mine, 'A') && !has(mine, 'B'), '⛔ نامِ هیچ قرض‌داری در «پمپ‌هایم» نیست');
+for (const t of ['A', 'B']) {
+  const c = await page.evaluate((stn) => {
+    const e = document.querySelector('.pump-card[data-key="' + stn + '"]'); return e ? e.textContent : '';
+  }, acc[t].station);
+  ok(c.length > 0 && !c.includes('در حالِ خواندن'), `کارتِ ${t} از عکسِ ابریِ خودِ ${t} پر شد`);
+}
+ok(!(await storage()).includes(acc.B.debtor), '⛔ پس از دیدنِ «پمپ‌هایم»، حافظهٔ گوشی هیچ دادهٔ B ندارد (A باز است)');
+await page.click('#btnPumpsBack');
+
 ok(errors.length === 0, 'هیچ خطای جاوااسکریپت', errors.join(' | '));
 await browser.close();
 srv.close();

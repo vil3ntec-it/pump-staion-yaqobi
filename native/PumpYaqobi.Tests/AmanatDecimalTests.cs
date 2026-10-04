@@ -78,7 +78,7 @@ public class AmanatDecimalTests
         var root = AppContext.BaseDirectory;
         while (root is not null && !File.Exists(Path.Combine(root, "PumpYaqobi.sln"))) root = Path.GetDirectoryName(root);
         Assert.NotNull(root);
-        var src = File.ReadAllText(Path.Combine(root!, "PumpYaqobi.Application", "Services", "AmanatService.cs"));
+        var src = SrcText.Read(Path.Combine(root!, "PumpYaqobi.Application", "Services", "AmanatService.cs"));
         Assert.DoesNotContain("double", src);
         Assert.DoesNotContain("Math.Pow", src);
     }

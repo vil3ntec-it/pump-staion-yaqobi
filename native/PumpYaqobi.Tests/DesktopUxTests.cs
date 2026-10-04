@@ -25,7 +25,7 @@ public class DesktopUxTests
     }
 
     private static string App(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root(), "PumpYaqobi.App" }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root(), "PumpYaqobi.App" }.Concat(parts).ToArray()));
 
     private static string View(string n) => App("Views", "Sections", n + ".axaml");
     private static string NoComments(string s) => Regex.Replace(s, "<!--.*?-->", "", RegexOptions.Singleline);

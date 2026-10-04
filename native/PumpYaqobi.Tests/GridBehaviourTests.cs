@@ -26,7 +26,7 @@ public class GridBehaviourTests
     }
 
     private static string View(string n) =>
-        File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections", n + ".axaml"));
+        SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections", n + ".axaml"));
 
     private static string NoComments(string s) =>
         Regex.Replace(s, "<!--.*?-->", "", RegexOptions.Singleline);
@@ -213,7 +213,7 @@ public class GridBehaviourTests
     [Fact]
     public void ColumnHeadersAreCentred()
     {
-        var t = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Themes", "Controls.axaml"));
+        var t = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Themes", "Controls.axaml"));
         Assert.Contains("<Style Selector=\"DataGridColumnHeader TextBlock\">", t);
 
         var at = t.IndexOf("<Style Selector=\"DataGridColumnHeader TextBlock\">", StringComparison.Ordinal);
@@ -246,7 +246,7 @@ public class GridBehaviourTests
     [Fact]
     public void ArrowKeysAreMirroredInRightToLeft()
     {
-        var src = File.ReadAllText(Path.Combine(
+        var src = SrcText.Read(Path.Combine(
             Root(), "PumpYaqobi.App", "Services", "FieldNavigation.cs"));
         Assert.Contains("IsRtl(from)", src);
         Assert.Contains("dir == Dir.Left ? Dir.Right : Dir.Left", src);
@@ -258,7 +258,7 @@ public class GridBehaviourTests
     [Fact]
     public void ComboBoxesOpenOnTheFirstClick()
     {
-        var src = File.ReadAllText(Path.Combine(
+        var src = SrcText.Read(Path.Combine(
             Root(), "PumpYaqobi.App", "Controls", "ExcelGrid.cs"));
         // ⚠️ حالا روی فازِ ‎Tunnel‎ است، نه یک کمکیِ جدا با ‎Dispatcher‎ —
         // همان چیزی که صاحب ریپو خواست: «با delay مشکل را پنهان نکن».
@@ -273,7 +273,7 @@ public class GridBehaviourTests
     [Fact]
     public void ClickingACellDoesNotScrollThePage()
     {
-        var src = File.ReadAllText(Path.Combine(
+        var src = SrcText.Read(Path.Combine(
             Root(), "PumpYaqobi.App", "Controls", "ExcelGrid.cs"));
         Assert.Contains("RequestBringIntoViewEvent", src);
         // ⚠️ شرطِ «فقط وقتی از کلیک آمده» برداشته شد: درخواست همیشه در مرزِ
@@ -292,7 +292,7 @@ public class GridBehaviourTests
     [Fact]
     public void TypingInACellLooksLikeExcel()
     {
-        var t = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Themes", "Controls.axaml"));
+        var t = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Themes", "Controls.axaml"));
         Assert.Contains("Rectangle#CurrencyVisual", t);
         Assert.Contains("Rectangle#FocusVisual", t);
         // ⚠️ قاعدهٔ نام‌دارِ ‎#PART_EditingElement‎ برداشته شد: نامِ اجزای قالبِ

@@ -705,7 +705,7 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
 
     private void DropStaleLastBase()
     {
-        var ver = PumpYaqobi.Persistence.PumpDbContext.Version;
+        var ver = PumpYaqobi.Services.Data.DataVersion.Current;
         if (ver == _lastBaseVer) return;
         _lastBase.Clear();
         _lastBaseVer = ver;
@@ -830,10 +830,10 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
     {
         try
         {
-            var ver = PumpYaqobi.Persistence.PumpDbContext.Version;
+            var ver = PumpYaqobi.Services.Data.DataVersion.Current;
             var v = await _host.ParchaData.PrevEndAsync(key.Fuel, key.Num, key.DateKey, key.Report, key.Night, key.Self);
             //  ⚠️ دفتر وسطِ پرسش عوض شد ⇒ این جوابِ کهنه در کَش نمی‌نشیند
-            if (ver == PumpYaqobi.Persistence.PumpDbContext.Version && ver == _lastBaseVer)
+            if (ver == PumpYaqobi.Services.Data.DataVersion.Current && ver == _lastBaseVer)
                 _lastBase[key] = v;
             //  ⚠️ فقط اگر کارت هنوز همان‌جاست (تاریخ/پایه وسطِ پرسش عوض نشده)
             if (key.Fuel == Fuel && form.StartValue > 0m && ChainKey(form) == key)

@@ -9,7 +9,7 @@ namespace PumpYaqobi.Tests;
 /// </summary>
 public class ParchaEnterTests
 {
-    private static string Src(string rel) => File.ReadAllText(Path.GetFullPath(
+    private static string Src(string rel) => SrcText.Read(Path.GetFullPath(
         Path.Combine(AppContext.BaseDirectory, "../../../../PumpYaqobi.App", rel)));
 
     [Fact]

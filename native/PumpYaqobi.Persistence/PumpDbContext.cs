@@ -651,6 +651,10 @@ public sealed class PumpDbContext : DbContext
             }
             else continue;
 
+            //  ⛔ شورا ج۶: کلیدهای تاریخ از متنِ همان ردیف — پیش از دفترِ تغییرات،
+            //  تا op هم همان کلیدِ درست را ببرد. حذفِ نرم دست نمی‌زند.
+            if (was != EntityState.Deleted) DeriveDateKeys(entry);
+
             // ══ دفترِ تغییرات ═══════════════════════════════════════════════
             // همین‌جا و نه جای دیگر: هر سرویسی که چیزی می‌نویسد سرِ آخر به
             // همین `SaveChanges` می‌رسد، پس «یک نقطه»ی بندِ ۲۰٫۱ همین است.
@@ -671,5 +675,33 @@ public sealed class PumpDbContext : DbContext
             ops = ops.OrderBy(o => rank.GetValueOrDefault(o.TableName)).ToList();
         }
         if (ops is { Count: > 0 }) SyncOps.AddRange(ops);
+    }
+
+    /// <summary>
+    /// ══ شورا، ج۶ — کلیدهای تاریخ یک جا ساخته می‌شوند ══════════════════════════
+    ///
+    /// هر جدولی که <c>DateShamsi</c> (متن) و <c>DateKey</c> (عدد) دارد، با هر
+    /// ذخیره کلیدش را از <b>متنِ همان ردیف</b> می‌گیرد (<see cref="DateKeys"/>)؛ و اگر
+    /// <c>MonthKey</c> هم دارد، ماه از همان کلید. پس هیچ راهی که کلید را فراموش کند
+    /// ردیفِ بی‌ماه یا ماهِ غلط نمی‌گذارد.
+    ///
+    /// ⚠️ متنِ ناخوانا یا خالی <b>هیچ</b> چیزی را عوض نمی‌کند: کلیدِ موجود همان
+    /// می‌ماند (ردیف‌هایی که فقط کلید دارند). و متنِ کاربر هرگز نوشته نمی‌شود.
+    /// ⛔ جدولی که <c>MonthKey</c>ش معنای دیگری دارد (مثلِ ماهِ معاش) نباید
+    /// <c>DateKey</c> داشته باشد — <c>DateKeyCanonTests</c> فهرستِ این جدول‌ها را قفل کرده.
+    /// </summary>
+    internal static void DeriveDateKeys(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry entry)
+    {
+        var t = entry.Metadata;
+        var dk = t.FindProperty("DateKey");
+        if (dk is null || dk.ClrType != typeof(int) || t.FindProperty("DateShamsi") is null) return;
+        var k = DateKeys.Key(entry.Property("DateShamsi").CurrentValue as string);
+        if (k == 0) return;
+        var pk = entry.Property("DateKey");
+        if (!Equals(pk.CurrentValue, k)) pk.CurrentValue = k;
+        if (t.FindProperty("MonthKey") is null) return;
+        var m = DateKeys.Month(k);
+        var pm = entry.Property("MonthKey");
+        if (!string.Equals(pm.CurrentValue as string, m, StringComparison.Ordinal)) pm.CurrentValue = m;
     }
 }

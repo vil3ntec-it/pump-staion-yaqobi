@@ -80,7 +80,7 @@ public class IntegrityTests : IDisposable
             case "manifest": File.Delete(Path.Combine(_dir, Integrity.ManifestName)); break;
             case "deps": Put("PumpYaqobi.deps.json", "{\"x\":1}"); break;
             case "sig":
-                var m = File.ReadAllText(Path.Combine(_dir, Integrity.ManifestName));
+                var m = SrcText.Read(Path.Combine(_dir, Integrity.ManifestName));
                 Put(Integrity.ManifestName, m.Replace("\"services\"", "\"x\""));
                 //  هشِ تازهٔ فایلِ عوض‌شده در فهرست — بی امضای تازه
                 var doc = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(m)!;

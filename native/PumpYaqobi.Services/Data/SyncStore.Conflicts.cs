@@ -28,36 +28,28 @@ namespace PumpYaqobi.Services.Data;
 /// </summary>
 public sealed partial class SyncStore
 {
-    /// <summary>‎"جدول|ردیف|فیلد"‎ ⇒ (مقدارِ خامی که همین دور فرستادیم، ‎server_seq‎ِ همان op).</summary>
-    private readonly Dictionary<string, (string Raw, long Seq)> _justPushed = new(StringComparer.Ordinal);
-
     /// <summary>شمارِ تعارض‌هایی که از بالا آمدنِ برنامه دیده شد.</summary>
     public int Conflicts { get; private set; }
 
     /// <summary>
-    /// پس از فرستادنِ موفق: این فیلدها همین حالا با این شماره‌ها روی سرور نشستند.
-    /// ‎SyncEngine‎ پایانِ همین دور <see cref="ClearPushed"/> را می‌زند.
+    /// پس از فرستادنِ موفق: این opها با این شماره‌ها روی سرور نشستند.
+    /// ⛔ شورا د۱ — شماره <b>روی خودِ op در دیسک</b> می‌نشیند (<see cref="SyncOp.ServerSeq"/>)،
+    /// نه در حافظهٔ یک دور: گرفتن هر سی ثانیه است، پس دوری که می‌فرستد خیلی وقت‌ها
+    /// نمی‌گیرد، و برنامه می‌تواند میانِ فرستادن و گرفتن بسته شود. پیش از این ردِ
+    /// «همین حالا رفته» با پایانِ همان دور پاک می‌شد و opِ کهنه‌ترِ کامپیوترِ دیگر
+    /// دورِ بعد روی مقدارِ تازه‌ترِ ما می‌نشست — دو عدد برای همیشه، بی هیچ ردپایی.
     /// opی که سرور شماره‌اش را نگفت (سرورِ کهنه) شمرده نمی‌شود — همان رفتارِ پیشین.
     /// </summary>
     public void NotePushed(IEnumerable<SyncOp> ops, IReadOnlyDictionary<string, long> seqs)
     {
-        foreach (var op in ops)
-        {
-            if (op.OpType != "update" && op.OpType != "insert") continue;
-            if (!seqs.TryGetValue(op.OpId, out var seq) || seq <= 0) continue;
-            if (JsonNode.Parse(op.FieldsJson ?? "{}") is not JsonObject o) continue;
-            foreach (var kv in o)
-            {
-                if (kv.Key.EndsWith('@')) continue;
-                var key = op.TableName + "|" + op.RowUid + "|" + kv.Key;
-                if (!_justPushed.TryGetValue(key, out var had) || had.Seq < seq)
-                    _justPushed[key] = (kv.Value?.ToJsonString() ?? "null", seq);
-            }
-        }
+        var want = ops.Where(o => seqs.TryGetValue(o.OpId, out var q) && q > 0).Select(o => o.OpId).ToList();
+        if (want.Count == 0) return;
+        using var db = _dbf.Create();
+        foreach (var chunk in want.Chunk(500))
+            foreach (var row in db.SyncOps.Where(x => chunk.Contains(x.OpId)).ToList())
+                row.ServerSeq = seqs[row.OpId];
+        Quiet(db);
     }
-
-    /// <summary>پایانِ دور — «همین حالا رفته» دیگر معنا ندارد.</summary>
-    public void ClearPushed() => _justPushed.Clear();
 
     /// <summary>تعارض‌های باز، تازه‌ترین اول.</summary>
     public IReadOnlyList<SyncConflict> OpenConflicts()
@@ -130,23 +122,36 @@ public sealed partial class SyncStore
     {
         private readonly PumpDbContext _db;
         private readonly Dictionary<string, List<(SyncOp Op, JsonObject Fields)>> _pending = new(StringComparer.Ordinal);
-        private readonly IReadOnlyDictionary<string, (string Raw, long Seq)> _pushed;
+        //  ‎"جدول|ردیف|فیلد"‎ ⇒ (مقدارِ خامی که فرستادیم، ‎server_seq‎ِ همان op) — از دیسک
+        private readonly Dictionary<string, (string Raw, long Seq)> _pushed = new(StringComparer.Ordinal);
         private readonly long _at;
         private readonly HashSet<SyncOp> _dirty = new();
         public int Made { get; private set; }
 
-        public ConflictCtx(PumpDbContext db, IEnumerable<(string Table, string Uid)> rows,
-                           IReadOnlyDictionary<string, (string Raw, long Seq)> pushed, DateTime now)
+        public ConflictCtx(PumpDbContext db, IEnumerable<(string Table, string Uid)> rows, long cursor, DateTime now)
         {
-            _db = db; _pushed = pushed;
+            _db = db;
             _at = new DateTimeOffset(DateTime.SpecifyKind(now, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
             var uids = rows.Select(r => r.Uid).Distinct().ToList();
             if (uids.Count == 0) return;
             //  ⚡ فقط ردیف‌های همین دسته — صفِ بلند خوانده نمی‌شود
             foreach (var chunk in uids.Chunk(500))
             {
-                var list = db.SyncOps.Where(o => !o.Synced && o.OpType == "update" && chunk.Contains(o.RowUid)).ToList();
-                foreach (var o in list)
+                var list = db.SyncOps.Where(o => o.OpType != "delete" && chunk.Contains(o.RowUid)
+                                                 && (!o.Synced || o.ServerSeq > cursor)).ToList();
+                foreach (var o in list.Where(o => o.Synced && o.ServerSeq > cursor))
+                {
+                    //  ⛔ د۱ — رفته و هنوز پس از مکان‌نما: گرفتن هنوز از آن نگذشته
+                    if (JsonNode.Parse(o.FieldsJson ?? "{}") is not JsonObject pf) continue;
+                    foreach (var kv in pf)
+                    {
+                        if (kv.Key.EndsWith('@')) continue;
+                        var k = o.TableName + "|" + o.RowUid + "|" + kv.Key;
+                        if (!_pushed.TryGetValue(k, out var had) || had.Seq < o.ServerSeq)
+                            _pushed[k] = (kv.Value?.ToJsonString() ?? "null", o.ServerSeq);
+                    }
+                }
+                foreach (var o in list.Where(o => !o.Synced && o.OpType == "update"))
                 {
                     if (JsonNode.Parse(o.FieldsJson ?? "{}") is not JsonObject f) continue;
                     var key = o.TableName + "|" + o.RowUid;
@@ -165,19 +170,17 @@ public sealed partial class SyncStore
             if (remote.ValueKind == JsonValueKind.Object && remote.TryGetProperty("$inc", out _)) return true;
             var remoteRaw = remote.GetRawText();
 
-            //  ۱) همین دور رفته ⇒ ترتیبِ سرور تصمیم می‌گیرد (همان قاعدهٔ ‎applyOp‎ِ سرور)
-            if (op.ServerSeq > 0 && _pushed.TryGetValue(table + "|" + op.RowUid + "|" + field, out var mine))
+            //  ۱) رفته و گرفتن هنوز از آن نگذشته ⇒ ترتیبِ سرور تصمیم می‌گیرد (همان قاعدهٔ ‎applyOp‎ِ سرور)
+            //  ⛔ د۱: فقط جایی که مالِ ما <b>جلوتر</b> است تصمیم این‌جاست. رسیدهٔ پس از مالِ ما
+            //  همان راهِ عادی را می‌رود — ردِ ما روی دیسک می‌ماند و نباید هر ویرایشِ بعدیِ
+            //  کامپیوترِ دیگر را «تعارض» بخواند.
+            if (op.ServerSeq > 0 && _pushed.TryGetValue(table + "|" + op.RowUid + "|" + field, out var mine)
+                && op.ServerSeq < mine.Seq)
             {
+                //  این op پیش از مالِ ما نشسته بود ⇒ روی سرور مالِ ما جلوتر است و همین‌جا می‌ماند
                 var mineObj = new JsonObject { [field] = JsonNode.Parse(mine.Raw) }.ToJsonString();
-                if (op.ServerSeq < mine.Seq)
-                {
-                    //  این op پیش از مالِ ما نشسته بود ⇒ روی سرور مالِ ما جلوتر است و همین‌جا می‌ماند
-                    if (!Same(mine.Raw, remoteRaw)) Add(table, op, field, mineObj, remoteRaw, "local");
-                    return false;
-                }
-                //  پس از مالِ ما نشسته ⇒ رسیده جلوتر است؛ مالِ ما در ردپا
-                if (!Same(mine.Raw, remoteRaw)) Add(table, op, field, mineObj, remoteRaw, "remote");
-                return true;
+                if (!Same(mine.Raw, remoteRaw)) Add(table, op, field, mineObj, remoteRaw, "local");
+                return false;
             }
 
             //  ۲) هنوز نرفته ⇒ رسیده می‌نشیند، فیلد از opِ ما برداشته می‌شود، مالِ ما در ردپا

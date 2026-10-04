@@ -27,7 +27,7 @@ public class CompanyParityTests
     {
         var p = Path.Combine(AppContext.BaseDirectory, "golden-company.json");
         if (!File.Exists(p)) p = "golden-company.json";
-        return JsonSerializer.Deserialize<List<Case>>(File.ReadAllText(p))!;
+        return JsonSerializer.Deserialize<List<Case>>(SrcText.Read(p))!;
     }
 
     private static CompanyRow Map(Row r) => new()

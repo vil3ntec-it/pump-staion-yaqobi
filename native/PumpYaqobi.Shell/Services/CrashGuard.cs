@@ -1,0 +1,169 @@
+using PumpYaqobi.Domain;
+
+namespace PumpYaqobi.App.Services;
+
+/// <summary>
+/// ══ تورِ ایمنی ═════════════════════════════════════════════════════════════
+///
+/// گزارشِ صاحب ریپو: «بخشِ شرکت‌های تیل، می‌خواهم شرکتی اضافه کنم، از برنامه
+/// می‌اندازد بیرون.» ریشه‌اش یک باگِ آن دکمه نبود — برنامه <b>هیچ</b> توری
+/// نداشت: هر استثنایی که از یک فرمان یا رویداد بیرون می‌زد، مستقیم پنجره را
+/// می‌بست و کاربر هیچ نمی‌فهمید چه شد. یک ردیفِ خرابِ دیتابیس یا یک اجازهٔ
+/// نداشته، کلِ کار را می‌بست.
+///
+/// حالا:
+///   ۱) خطای نخِ رابط (که فرمان‌های ‎AsyncRelayCommand‎ هم از همان‌جا بیرون
+///      می‌زنند) گرفته می‌شود، برنامه باز می‌ماند و پیامِ کوتاهی پایین صفحه
+///      نشان داده می‌شود.
+///   ۲) هر خطایی — گرفته‌شده یا نه — در ‎crash.log‎ کنارِ دیتابیس نوشته
+///      می‌شود، تا وقتی صاحب ریپو می‌گوید «بیرونم انداخت» چیزی برای خواندن
+///      باشد.
+///
+/// ⚠️ این تور جای درست‌کردنِ باگ را نمی‌گیرد. کارش این است که یک باگِ کوچک،
+/// دفترِ بازِ کاربر را نبندد.
+/// </summary>
+public static class CrashGuard
+{
+    private static readonly object Lock = new();
+
+    /// <summary>
+    /// ══ تورِ بی‌آوالونیا — در ‎Program.Main‎ ═══════════════════════════════
+    ///
+    /// فقط دو گیرندهٔ خودِ دات‌نت. عمداً هیچ چیزِ آوالونیا این‌جا لمس نمی‌شود.
+    ///
+    /// ⚠️ درسی که گران تمام شد: نسخهٔ اول همین‌جا ‎Dispatcher.UIThread‎ را هم
+    /// می‌گرفت. آوالونیا با همان دست زدن، دیسپچر را <b>همان لحظه</b> می‌سازد —
+    /// و چون هنوز ‎UsePlatformDetect()‎ اجرا نشده بود، دیسپچر به حلقهٔ پیام‌های
+    /// ویندوز وصل نمی‌شد. برنامه بالا می‌آمد، نوارِ عنوان می‌آمد، و بعد هیچ
+    /// کارِ چیدمان و رسمی اجرا نمی‌شد: <b>یک پنجرهٔ سفیدِ مرده</b>.
+    ///
+    /// روی CIِ لینوکسیِ بی‌نمایشگر پیدا نشد، چون آن‌جا دیسپچر دستی پمپ می‌شود.
+    /// پس گیرندهٔ نخِ رابط رفت به <see cref="InstallUi"/> که بعد از بالا آمدنِ
+    /// آوالونیا صدا زده می‌شود. این ترتیب را عوض نکنید.
+    /// </summary>
+    public static void Install()
+    {
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            Write("AppDomain", e.ExceptionObject as Exception);
+
+        // ‎Task‎ی که کسی نتیجه‌اش را نخوانده و خطا داده — مثلاً ‎_ = DoAsync()‎
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            Write("Task", e.Exception);
+            e.SetObserved();
+        };
+    }
+
+    /// <summary>
+    /// گیرندهٔ خطای نخِ رابط — <b>فقط بعد از</b> راه‌اندازیِ آوالونیا
+    /// (‎App.OnFrameworkInitializationCompleted‎). این‌جا دیسپچر از قبل ساخته
+    /// شده و به پلتفرمِ درست وصل است، پس دست زدن به آن بی‌خطر است.
+    /// </summary>
+    public static void InstallUi()
+    {
+        //  ⛔ شورا ج۵: از درِ `UiThread` — برنامه آن را به `Dispatcher.UIThread` وصل می‌کند
+        UiThread.HookUnhandled(ex =>
+        {
+            Write("UI", ex);
+            try { AppHost.Current.Toast(Friendly(ex), ToastKind.Error); } catch { }
+            return true;
+        });
+    }
+
+    /// <summary>
+    /// اجرای یک کارِ کاربر با تور. اگر شکست، برنامه باز می‌ماند و کاربر
+    /// می‌فهمد چه نشد — نه اینکه پنجره بی‌حرف بسته شود.
+    /// </summary>
+    public static async Task RunAsync(string what, Func<Task> work)
+    {
+        try { await work(); }
+        catch (Exception ex)
+        {
+            Write(what, ex);
+            try { AppHost.Current.Toast("⚠️ " + what + " نشد — " + Friendly(ex), ToastKind.Error); }
+            catch { }
+        }
+    }
+
+    /// <summary>
+    /// کوتاه‌ترین جمله‌ای که به دردِ کاربر می‌خورد.
+    /// ⛔ متنِ خامِ استثنا نه — شرحش بالای <see cref="ErrorText"/>. متنِ خام
+    /// فقط در <c>crash.log</c>ِ همین کامپیوتر می‌ماند (<see cref="Write"/>).
+    /// </summary>
+    private static string Friendly(Exception? ex) => ErrorText.Friendly(ex);
+
+    /// <summary>
+    /// نوشتنِ خطا در ‎crash.log‎. خودش هیچ استثنایی بیرون نمی‌دهد — تورِ ایمنی
+    /// که خودش بیفتد، هیچ‌کاره است.
+    /// </summary>
+    /// <param name="report">
+    /// به سرور هم گزارش شود؟ ⚠️ برای خطایی که <b>باگ نیست</b> (ورقی که با
+    /// این تنظیم جا نمی‌شود، دوربینی که خاموش است) <c>false</c>: همان متنِ
+    /// خام فقط در همین کامپیوتر می‌ماند و گزارشِ سرور با آن پر نمی‌شود.
+    /// </param>
+    public static void Write(string where, Exception? ex, bool report = true)
+    {
+        if (ex is null) return;
+        try
+        {
+            var path = Path.Combine(AppSettings.Dir, "crash.log");
+            Directory.CreateDirectory(AppSettings.Dir);
+            var line = $"── {AppClock.Now:yyyy-MM-dd HH:mm:ss} · {where} ─────────────{Environment.NewLine}"
+                     + ex + Environment.NewLine + Environment.NewLine;
+            lock (Lock) File.AppendAllText(path, line);
+        }
+        catch { }
+
+        if (report) Report(where, ex);
+    }
+
+    // ══ گزارشِ خطا به سرور — بندِ ۲۰٫۸ ═════════════════════════════════════
+    //
+    //  «من قبل از تماسِ مشتری خبر داشته باشم.»
+    //
+    //  ⛔ **با اجازهٔ کاربر**: کلیدِ «گزارشِ خطا» در تنظیمات ← همگام‌سازی.
+    //  خاموش که باشد، هیچ چیزی نمی‌رود.
+    //  ⛔ **هیچ دادهٔ مشتری نمی‌رود** — فقط پیام، نوعِ استثنا و ردپای کوتاه.
+    //  خودِ سرور هم هر چیزی شبیهِ ایمیل و شماره و توکن را می‌پوشاند.
+    //  ⚠️ و هیچ‌وقت منتظرش نمی‌مانیم: گزارشِ خطا نباید خودش کاری را کُند کند.
+
+    /// <summary>خاموشِ صریح — سنجه‌ها و ابزارِ عکس‌گیری هیچ‌وقت گزارش نمی‌دهند.</summary>
+    public static bool ReportingOff { get; set; }
+
+    private static DateTime _lastReport = DateTime.MinValue;
+
+    /// <summary>
+    /// گزارشی که از یک استثنا نیامده (مثلاً سنجشِ یکپارچگیِ فایل‌ها) — همان راه،
+    /// همان اجازهٔ کاربر، همان ترمز.
+    /// </summary>
+    public static void Notice(string where, string message)
+    {
+        try { Write(where, new InvalidDataException(message)); } catch { }
+    }
+
+    private static void Report(string where, Exception ex)
+    {
+        try
+        {
+            if (ReportingOff || CloudLink.TestTransport is not null) return;
+
+            //  ⚠️ ترمز: یک حلقهٔ خطا نباید هر ثانیه یک درخواست بزند
+            if (AppClock.Mono - _lastReport < TimeSpan.FromMinutes(1)) return;
+
+            //  انتخابِ خودِ کاربر
+            var file = AppSettings.Load();
+            if (file.ReportErrorsOff) return;
+
+            _lastReport = AppClock.Mono;
+            var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
+            //  ⛔ به سرور: نوعِ استثنا و پیامِ خام، ولی **پاک‌شده** — مسیرِ
+            //  پوشهٔ کاربر، نامِ کامپیوتر و نامِ کاربرِ ویندوز جایشان را به
+            //  نشانه‌ای ثابت می‌دهند (`ErrorText.Scrub`). ردپای دات‌نت مسیرِ
+            //  فایل دارد، و مسیرِ پوشهٔ کاربر می‌گفت این پمپ مالِ کیست.
+            var stack = ErrorText.Scrub(ex.StackTrace ?? "");
+            var message = where + ": " + ex.GetType().Name + ": " + ErrorText.Scrub(ex.Message);
+            _ = Task.Run(() => cloud.ReportErrorAsync(message, stack));
+        }
+        catch { /* گزارشِ خطا هیچ‌وقت خودش خطا نمی‌دهد */ }
+    }
+}

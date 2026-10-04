@@ -82,7 +82,7 @@ public class ToolsParityTests
     {
         var p = Path.Combine(AppContext.BaseDirectory, "golden-tools.json");
         if (!File.Exists(p)) p = "golden-tools.json";
-        return JsonSerializer.Deserialize<Golden>(File.ReadAllText(p))!;
+        return JsonSerializer.Deserialize<Golden>(SrcText.Read(p))!;
     }
 
     private static void Close(double expected, decimal actual)

@@ -36,7 +36,7 @@ public class SecurityHardeningTests : IDisposable
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Src(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
 
     // ══ D) رمزِ نوشتنِ سرورِ خانگی بیرون از pump.db ══════════════════════
 
@@ -59,7 +59,7 @@ public class SecurityHardeningTests : IDisposable
         Assert.Null(host.Settings.Get(SettingsService.SyncCode));
         Assert.Equal("tok-legacy", AppSettings.Load().ServerToken);
         //  ⛔ و روی دیسک خام نیست
-        Assert.DoesNotContain("tok-legacy", File.ReadAllText(Path.Combine(_dir, "settings.json")));
+        Assert.DoesNotContain("tok-legacy", SrcText.Read(Path.Combine(_dir, "settings.json")));
 
         //  ب) تنظیمات رمزِ خودش را دارد ⇒ همان می‌ماند و ردیفِ دیتابیس فقط پاک می‌شود
         host.Settings.Set(SettingsService.SyncCode, "read-key-mistaken-for-token");
@@ -73,7 +73,7 @@ public class SecurityHardeningTests : IDisposable
         foreach (var f in Directory.EnumerateFiles(Path.Combine(Root(), "PumpYaqobi.App"), "*.cs", SearchOption.AllDirectories))
         {
             if (f.Contains("/obj/") || f.Contains("\\obj\\")) continue;
-            Assert.DoesNotContain("Set(SettingsService.SyncCode", File.ReadAllText(f));
+            Assert.DoesNotContain("Set(SettingsService.SyncCode", SrcText.Read(f));
         }
     }
 
@@ -136,7 +136,7 @@ public class SecurityHardeningTests : IDisposable
     public void DllHa_FaghatAzSystem32()
     {
         var wave = Src("PumpYaqobi.App", "Services", "WaveRecorder.cs");
-        var secret = Src("PumpYaqobi.App", "Services", "SecretStore.cs");
+        var secret = Src("PumpYaqobi.Shell", "Services", "SecretStore.cs");
         Assert.Equal(CountOf(wave, "[DllImport(\"winmm.dll\")"),
                      CountOf(wave, "DefaultDllImportSearchPaths(DllImportSearchPath.System32)"));
         Assert.Equal(CountOf(secret, "[DllImport("),
@@ -198,7 +198,7 @@ public class SecurityHardeningTests : IDisposable
     [Fact]
     public void CrashGuard_BeKarbar_MatneKham_NemiDahad()
     {
-        var src = Src("PumpYaqobi.App", "Services", "CrashGuard.cs");
+        var src = Src("PumpYaqobi.Shell", "Services", "CrashGuard.cs");
         Assert.Contains("ErrorText.Friendly(ex)", src);
         Assert.Contains("ErrorText.Scrub(ex.StackTrace", src);
         Assert.DoesNotContain("e?.Message is", src);
@@ -207,8 +207,8 @@ public class SecurityHardeningTests : IDisposable
         {
             new[] { "PumpYaqobi.App", "ViewModels", "Sections", "KeysSectionViewModel.cs" },
             new[] { "PumpYaqobi.App", "ViewModels", "Sections", "BackupSectionViewModel.cs" },
-            new[] { "PumpYaqobi.App", "Services", "BackupPusher.cs" },
-            new[] { "PumpYaqobi.App", "Services", "StationLink.cs" },
+            new[] { "PumpYaqobi.Shell", "Services", "BackupPusher.cs" },
+            new[] { "PumpYaqobi.Shell", "Services", "StationLink.cs" },
             new[] { "PumpYaqobi.App", "Services", "VlcVideoFeed.cs" },
         })
         {

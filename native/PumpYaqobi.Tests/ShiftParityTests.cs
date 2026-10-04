@@ -56,7 +56,7 @@ public class ShiftParityTests : IDisposable
     {
         var p = Path.Combine(AppContext.BaseDirectory, "golden-shift.json");
         if (!File.Exists(p)) p = "golden-shift.json";
-        return JsonSerializer.Deserialize<Golden>(File.ReadAllText(p))!;
+        return JsonSerializer.Deserialize<Golden>(SrcText.Read(p))!;
     }
 
     private static void Close(double expected, decimal actual, string what)

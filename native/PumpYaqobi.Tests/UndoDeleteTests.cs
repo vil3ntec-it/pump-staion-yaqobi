@@ -172,7 +172,7 @@ public class UndoDeleteTests : IDisposable
         var dir = AppContext.BaseDirectory;
         while (dir is not null && !Directory.Exists(Path.Combine(dir, "PumpYaqobi.App")))
             dir = Path.GetDirectoryName(dir);
-        return File.ReadAllText(Path.Combine(new[] { dir!, "PumpYaqobi.App" }.Concat(p).ToArray()));
+        return SrcText.Read(Path.Combine(new[] { dir!, "PumpYaqobi.App" }.Concat(p).ToArray()));
     }
 
     /// <summary>
@@ -202,15 +202,6 @@ public class UndoDeleteTests : IDisposable
         Assert.Contains("&& e.Column is not DataGridCheckBoxColumn)", g);
     }
 
-    /// <summary>⛔ عوض شدنِ دفتر (حسابِ دیگر) تاریخچهٔ برگشت را پاک می‌کند.</summary>
-    [Fact]
-    public void DaftareDigar_Tarikhche_Ra_Pak_Mikonad()
-    {
-        var h = Src("Services", "AppHost.cs");
-        var i = h.IndexOf("UndoHub.Clear();", StringComparison.Ordinal);
-        var j = h.IndexOf("LedgerSwitched?.Invoke();", StringComparison.Ordinal);
-        Assert.True(i > 0 && j > i);
-    }
 
     /// <summary>
     /// ⛔ تکملهٔ خودکار کم‌رنگ است، نه هم‌رنگِ نوشتهٔ کاربر — و کلاسش با برخاستنِ

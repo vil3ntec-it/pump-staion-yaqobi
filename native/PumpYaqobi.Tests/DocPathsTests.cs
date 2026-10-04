@@ -21,7 +21,7 @@ public class DocPathsTests
     [MemberData(nameof(Docs))]
     public void HarMasireNamborde_Hast(string doc)
     {
-        var text = File.ReadAllText(Path.Combine(Repo, doc));
+        var text = SrcText.Read(Path.Combine(Repo, doc));
         var paths = Regex.Matches(text, "`([^`\\s]+)`").Select(m => m.Groups[1].Value)
             .Where(p => p.Contains('/') && !p.Contains("://") && !p.StartsWith("/api") && !p.StartsWith("?"))
             .Distinct().ToList();
@@ -33,7 +33,7 @@ public class DocPathsTests
     [Fact]
     public void HarPusheyeRishe_DarReadme_Ast()
     {
-        var readme = File.ReadAllText(Path.Combine(Repo, "README.md"));
+        var readme = SrcText.Read(Path.Combine(Repo, "README.md"));
         var dirs = Directory.GetDirectories(Repo).Select(Path.GetFileName)
             .Where(d => d is not null && !d.StartsWith('.') && d != "node_modules").ToList();
         var missing = dirs.Where(d => !readme.Contains("`" + d + "/`", StringComparison.Ordinal)).ToList();

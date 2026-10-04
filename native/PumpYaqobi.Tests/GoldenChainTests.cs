@@ -48,7 +48,7 @@ public class GoldenChainTests : IDisposable
     private static Ref Load()
     {
         var p = Path.Combine(AppContext.BaseDirectory, "golden-chain.json");
-        return JsonSerializer.Deserialize<Ref>(File.ReadAllText(p))!;
+        return JsonSerializer.Deserialize<Ref>(SrcText.Read(p))!;
     }
 
     private sealed record H(PumpDbFactory Db, ParchaDataService Parcha, ShiftWaraqSyncService Sync,

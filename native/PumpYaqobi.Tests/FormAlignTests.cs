@@ -26,7 +26,7 @@ public class FormAlignTests
     }
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(Root(), Path.Combine(parts)));
+        SrcText.Read(Path.Combine(Root(), Path.Combine(parts)));
 
     /// <summary>⛔ کارتِ ورق دیگر نشانِ ☀️🌙 ندارد.</summary>
     [Fact]
@@ -219,7 +219,7 @@ public class FormAlignTests
         Assert.Contains("کدِ پیگیری", vm);
 
         //  ⛔ و خودِ پرسش یک درخواستِ ساده است، نه منطقِ دوم
-        var link = Read("PumpYaqobi.App", "Services", "CloudLink.cs");
+        var link = Read("PumpYaqobi.Shell", "Services", "CloudLink.cs");
         var has = link.Split("public async Task<bool> HasStationAsync(")[1].Split("\n    }")[0];
         Assert.Contains("/api/pump/me", has);
         //  و هیچ چیزی نمی‌سازد و هیچ چیزی را عوض نمی‌کند

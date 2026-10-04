@@ -23,7 +23,7 @@ public class StartupWarmTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
 
     private static string Shell() => Read("PumpYaqobi.App", "Views", "MainWindow.axaml");
 
@@ -174,7 +174,7 @@ public class DashboardReadsTests
     private static readonly string Root =
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
-    private static string Dash() => File.ReadAllText(Path.Combine(
+    private static string Dash() => SrcText.Read(Path.Combine(
         Root, "PumpYaqobi.App", "ViewModels", "Sections", "DashboardSectionViewModel.cs"));
 
     [Fact]
@@ -209,7 +209,7 @@ public class DashboardReadsTests
         // ⚠️ ‎SUM‎ هرگز به SQLite داده نمی‌شود: مبلغ‌ها متن‌اند و
         // ‎CAST(... AS REAL)‎ برای حساب‌داری خطرناک است. کامنت‌ها کنار
         // گذاشته می‌شوند، وگرنه خودِ همین هشدار آزمون را قرمز می‌کند.
-        var led = File.ReadAllText(Path.Combine(
+        var led = SrcText.Read(Path.Combine(
             Root, "PumpYaqobi.Services", "Data", "LedgerService.cs"));
         var code = string.Join("\n", led.Split('\n')
                                         .Where(l => !l.TrimStart().StartsWith("//")));

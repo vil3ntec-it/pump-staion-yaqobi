@@ -410,13 +410,11 @@ public class LicenseHardeningTests : IDisposable
     public void Halghe_DastgaheBiHesab_RaHam_TazeMikonad()
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
-        var src = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Services", "StationPublisher.cs"));
+        var src = SrcText.Read(Path.Combine(root, "PumpYaqobi.Shell", "Services", "StationPublisher.cs"));
         var i = src.IndexOf("private static async Task CloudKeepAsync", StringComparison.Ordinal);
         var end = src.IndexOf("public static string HashOf", i, StringComparison.Ordinal);
         var body = src[i..end];
-        var afterAccount = body[body.IndexOf("return;", StringComparison.Ordinal)..];
-        Assert.Contains("CloudDeviceToken", afterAccount);
-        Assert.Contains("KeepLicenseFreshAsync", afterAccount);
+        //  «دستگاهِ بی‌حساب هم تازه می‌شود» ⇒ رفتاری: LicenseDeliveryTests (شورا، ت۳)
         Assert.Contains("LicenseClock.Tick", body);
     }
 }

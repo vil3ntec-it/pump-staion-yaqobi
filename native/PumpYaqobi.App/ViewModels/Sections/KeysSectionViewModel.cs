@@ -184,7 +184,7 @@ public sealed partial class KeysSectionViewModel : SectionViewModel
     /// </summary>
     public string AppLockHint => HasAppPassword
         ? "همین رمز، رمزِ اپِ کارمندان روی گوشی هم هست. با عوض کردنش، گوشی‌ها هم از همان لحظه رمزِ تازه می‌خواهند."
-        : "بی رمز، اپِ کارمندان روی گوشی فقط با کدِ هشت‌رقمیِ پمپ باز می‌شود. رمزی که این‌جا بگذارید همان رمزِ اپِ گوشی هم می‌شود.";
+        : "بی رمز، اپِ کارمندان روی گوشی فقط با کدِ اپِ گوشی باز می‌شود. رمزی که این‌جا بگذارید همان رمزِ اپِ گوشی هم می‌شود.";
 
     [RelayCommand]
     private void ChangeAppPassword()
@@ -226,7 +226,7 @@ public sealed partial class KeysSectionViewModel : SectionViewModel
         if (Current.Length == 0) { AppError = "برای برداشتنِ رمز، رمزِ فعلی را بنویسید."; return; }
 
         if (!await Dialogs.ConfirmAsync("برداشتنِ رمزِ برنامه",
-                "رمز برداشته شود؟ از آن پس برنامه بی هیچ رمزی باز می‌شود و اپِ کارمندان روی گوشی فقط با کدِ هشت‌رقمیِ پمپ. "
+                "رمز برداشته شود؟ از آن پس برنامه بی هیچ رمزی باز می‌شود و اپِ کارمندان روی گوشی فقط با کدِ اپِ گوشی. "
                 + "هیچ داده‌ای پاک نمی‌شود."))
             return;
 

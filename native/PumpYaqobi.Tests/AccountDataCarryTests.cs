@@ -218,7 +218,7 @@ public class AccountDataCarryTests : IDisposable
     public void Halgheye_Hamgamsazi_Vagheaan_BindTo_Ra_Mizanad()
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
-        var src = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Services", "SyncEngine.cs"));
+        var src = SrcText.Read(Path.Combine(root, "PumpYaqobi.Shell", "Services", "SyncEngine.cs"));
         Assert.Contains("_store.BindTo(mine)", src);
         Assert.Contains("file.CloudUserId", src);      // شناسهٔ خودِ حساب، نه چیزِ دیگری
 
@@ -227,7 +227,7 @@ public class AccountDataCarryTests : IDisposable
                   < src.IndexOf("_store.SeedStep()", StringComparison.Ordinal));
 
         //  ⛔ و خودِ بند شدن هیچ جدولِ داده‌ای را دست نمی‌زند
-        var store = File.ReadAllText(Path.Combine(root, "PumpYaqobi.Services", "Data", "SyncStore.cs"));
+        var store = SrcText.Read(Path.Combine(root, "PumpYaqobi.Services", "Data", "SyncStore.cs"));
         var i = store.IndexOf("public BindReport BindTo(", StringComparison.Ordinal);
         var body = store[i..store.IndexOf("\n    // ── صفِ فرستادنی", i, StringComparison.Ordinal)];
         Assert.Contains("db.SyncOps.ExecuteDelete()", body);
@@ -239,7 +239,7 @@ public class AccountDataCarryTests : IDisposable
         //  ⛔ ستونِ تازه روی **دفترِ مشتری** هم بنشیند: فهرستِ `PatchColumns`
         //  دستی است و ستونی که آن‌جا نوشته نشود، روی نصبِ امروزی هیچ‌وقت
         //  ساخته نمی‌شود — و همگام‌سازی همان لحظه با خطای SQLite می‌ایستد.
-        var fac = File.ReadAllText(Path.Combine(root, "PumpYaqobi.Services", "Data", "PumpDbFactory.cs"));
+        var fac = SrcText.Read(Path.Combine(root, "PumpYaqobi.Services", "Data", "PumpDbFactory.cs"));
         Assert.Contains("(\"SyncState\", \"AccountId\"", fac);
     }
 }

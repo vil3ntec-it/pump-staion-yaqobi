@@ -19,7 +19,7 @@ public class TotalsRowTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string View(string name) =>
-        File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Views", "Sections", name + ".axaml"));
+        SrcText.Read(Path.Combine(Root, "PumpYaqobi.App", "Views", "Sections", name + ".axaml"));
 
     /// <summary>
     /// همان ویو، ولی بی کامنت‌های XML.
@@ -60,7 +60,7 @@ public class TotalsRowTests
     [Fact]
     public void TheTotalsBarIsNeverAGridRow()
     {
-        var src = File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Controls", "TotalsBar.cs"));
+        var src = SrcText.Read(Path.Combine(Root, "PumpYaqobi.App", "Controls", "TotalsBar.cs"));
         Assert.DoesNotContain(": DataGrid", src);
         Assert.Contains("TemplatedControl", src);
     }
@@ -106,12 +106,12 @@ public class TotalsRowTests
         Assert.DoesNotContain("<RadioButton", v);
 
         // رفتارِ رادیو در ویومدل سرِ جایش است: همیشه دقیقاً یکی
-        var row = File.ReadAllText(Path.Combine(
+        var row = SrcText.Read(Path.Combine(
             Root, "PumpYaqobi.App", "ViewModels", "Sections", "PersonViewModel.cs"));
         Assert.Contains("private void ToggleFuel() =>", row);
         Assert.Contains("Fuel = IsDiesel ? FuelType.Petrol : FuelType.Diesel;", row);
 
-        var vm = File.ReadAllText(Path.Combine(
+        var vm = SrcText.Read(Path.Combine(
             Root, "PumpYaqobi.App", "ViewModels", "Sections", "PersonViewModel.cs"));
         Assert.Contains("public string FuelChipText", vm);
     }
@@ -212,7 +212,7 @@ public class TotalsRowTests
         var app = Path.Combine(Root, "PumpYaqobi.App");
         var hits = Directory.EnumerateFiles(app, "*.*", SearchOption.AllDirectories)
             .Where(f => f.EndsWith(".cs") || f.EndsWith(".axaml"))
-            .Where(f => File.ReadAllText(f).Contains("VoiceTeach"))
+            .Where(f => SrcText.Read(f).Contains("VoiceTeach"))
             .ToList();
         Assert.Empty(hits);
     }

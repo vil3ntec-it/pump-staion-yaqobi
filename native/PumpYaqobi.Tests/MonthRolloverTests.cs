@@ -65,7 +65,7 @@ public class MonthRolloverTests
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
         string Read(params string[] parts) =>
-            File.ReadAllText(Path.Combine(new[] { root }.Concat(parts).ToArray()));
+            SrcText.Read(Path.Combine(new[] { root }.Concat(parts).ToArray()));
 
         var mv = Read("PumpYaqobi.App", "ViewModels", "MainViewModel.cs");
         Assert.Contains("foreach (var p in AllPages) p.OnDayChanged();", mv);

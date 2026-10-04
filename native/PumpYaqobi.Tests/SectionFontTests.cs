@@ -21,7 +21,7 @@ public class SectionFontTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Theme() =>
-        File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Themes", "Controls.axaml"));
+        SrcText.Read(Path.Combine(Root, "PumpYaqobi.App", "Themes", "Controls.axaml"));
 
     private sealed class Fake : SectionViewModel
     {

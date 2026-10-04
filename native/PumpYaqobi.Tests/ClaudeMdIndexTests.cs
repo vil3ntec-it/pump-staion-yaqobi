@@ -18,7 +18,7 @@ public class ClaudeMdIndexTests
         return d?.FullName ?? throw new InvalidOperationException("ریشهٔ مخزن پیدا نشد");
     }
 
-    static string Read(string rel) => File.ReadAllText(Path.Combine(Root(), rel)).Replace("\r\n", "\n");
+    static string Read(string rel) => SrcText.Read(Path.Combine(Root(), rel)).Replace("\r\n", "\n");
 
     static string Norm(string s) => Regex.Replace(s, @"\s+", " ").Trim();
 
@@ -65,7 +65,7 @@ public class ClaudeMdIndexTests
     public void HarNameAzmoon_DarShakhes_VaghanHast()
     {
         var exist = Directory.EnumerateFiles(Path.Combine(Root(), "native", "PumpYaqobi.Tests"), "*.cs", SearchOption.AllDirectories)
-            .SelectMany(f => Regex.Matches(File.ReadAllText(f), @"class ([A-Za-z0-9]+Tests)\b").Select(m => m.Groups[1].Value))
+            .SelectMany(f => Regex.Matches(SrcText.Read(f), @"class ([A-Za-z0-9]+Tests)\b").Select(m => m.Groups[1].Value))
             .ToHashSet();
         var named = Regex.Matches(Read("CLAUDE.md"), @"`([A-Z][A-Za-z0-9]*Tests)(?:\.[A-Za-z0-9_]+)?`")
             .Select(m => m.Groups[1].Value).Distinct().Where(n => !exist.Contains(n)).ToList();

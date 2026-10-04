@@ -28,7 +28,7 @@ public class WaraqSheetFixTests
     }
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
 
     private static string Bare(string x) => System.Text.RegularExpressions.Regex.Replace(
         x, "<!--.*?-->", "", System.Text.RegularExpressions.RegexOptions.Singleline);
@@ -71,8 +71,7 @@ public class WaraqSheetFixTests
         var x = Page();
         Assert.Contains("IsVisible=\"{Binding FuelEditable}\"", x);
         Assert.Contains("Classes=\"fuelchip locked\" IsVisible=\"{Binding FromParcha}\"", x);
-        var vm = Read("PumpYaqobi.App", "ViewModels", "Sections", "WaraqSectionViewModel.cs");
-        Assert.Contains("if (FromParcha) return;", vm);
+        //  «تیلِ پارچه در ورق عوض نمی‌شود» ⇒ رفتاری: WaraqPageBehaviourTests (شورا، ت۳)
     }
 
     [Fact]

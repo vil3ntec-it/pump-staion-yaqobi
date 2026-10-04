@@ -95,7 +95,7 @@ public class AmanatSettingsTests
     public void TheSectionHasTheAdminSettingsButton()
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
-        var view = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "AmanatSectionView.axaml"));
+        var view = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "AmanatSectionView.axaml"));
         Assert.Contains("⚙️ تنظیمات مدیر", view);
         Assert.Contains("ToggleSettingsCommand", view);
         Assert.Contains("برگشت به ضریب‌های منبع", view);

@@ -6,7 +6,7 @@ namespace PumpYaqobi.Tests;
 /// </summary>
 public class CiGateTests
 {
-    private static string Wf(string name) => File.ReadAllText(Path.Combine(
+    private static string Wf(string name) => SrcText.Read(Path.Combine(
         AppContext.BaseDirectory, "..", "..", "..", "..", "..", ".github", "workflows", name));
 
     [Fact]

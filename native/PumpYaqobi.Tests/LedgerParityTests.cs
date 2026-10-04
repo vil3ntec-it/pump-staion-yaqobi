@@ -136,4 +136,48 @@ public class LedgerParityTests : IDisposable
         using var db2 = dbf.Create();
         Assert.Equal(500m, db2.DebtAccounts.Single().RasidFuelPetrol);
     }
+
+    /// <summary>
+    /// ⛔ شورا د۳ — کاربر درست میانِ خواندن و نوشتنِ سنجهٔ برابری رسیدی را عوض می‌کند.
+    /// «الباقی»ی که می‌نشیند باید از رسیدِ <b>همین لحظه</b> باشد، نه از آن‌چه سنجه چند
+    /// میلی‌ثانیه پیش خوانده بود؛ و رسیدِ کاربر دست نمی‌خورد.
+    /// </summary>
+    [Fact]
+    public async Task Barabari_ResideMianeKhandanONeveshtan_AlbaqiTaze()
+    {
+        var file = Path.Combine(Path.GetTempPath(), $"pump-parity-race-{Guid.NewGuid():N}.db");
+        var dbf = new PumpDbFactory(file);
+        dbf.EnsureReady();
+        var calc = new DebtCalculationService(new NoRatesP());
+        var parity = new LedgerParityService(dbf, calc);
+        long rowId;
+        using (var db = dbf.Create())
+        {
+            var d = new Debtor { LegacyId = "r", Name = "مشتری", MainAccount = new DebtAccount { Name = "مشتری" } };
+            var r = new DebtRow { DateShamsi = "1405/07/10", Fuel = FuelType.Petrol, Liters = 100, PricePerLiter = 70m, Rasid = 1000 };
+            d.MainAccount.FuelRows.Add(r);
+            db.Debtors.Add(d);
+            db.SaveChanges();
+            rowId = r.Id;
+        }
+        //  عددِ مشتقِ ناجور تا سنجه کاری داشته باشد
+        using (var db = dbf.Create()) db.Database.ExecuteSqlRaw($"UPDATE DebtRows SET Albaqi = '1', Bardagi = '2' WHERE Id = {rowId}");
+
+        parity.BetweenReadAndWrite = async () =>
+        {
+            await using var db = dbf.Create();
+            var r = db.DebtRows.Single(x => x.Id == rowId);
+            r.Rasid = 3000m;                         //  کاربر همین حالا رسید را عوض کرد
+            await db.SaveChangesAsync();
+        };
+        await parity.CheckAsync(fix: true);
+
+        using var check = dbf.Create();
+        var row = check.DebtRows.AsNoTracking().Single(x => x.Id == rowId);
+        Assert.Equal(3000m, row.Rasid);
+        Assert.Equal(7000m, row.Bardagi);
+        Assert.Equal(4000m, row.Albaqi);             // ⛔ نه ۶۰۰۰ِ ساخته‌شده از رسیدِ کهنه
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        try { File.Delete(file); } catch { }
+    }
 }

@@ -24,7 +24,7 @@ public class DebtRowHealParityTests
     {
         var p = Path.Combine(AppContext.BaseDirectory, "golden-debtrow.json");
         if (!File.Exists(p)) p = "golden-debtrow.json";
-        return JsonSerializer.Deserialize<List<Case>>(File.ReadAllText(p))!;
+        return JsonSerializer.Deserialize<List<Case>>(SrcText.Read(p))!;
     }
 
     private static DebtRow Map(Before b) => new()

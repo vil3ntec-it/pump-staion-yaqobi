@@ -115,7 +115,7 @@ UPDATE "SafeEntries" SET "SyncUid" = '<ریشه>-' || "Id" WHERE "SyncUid" IS NU
 
 ## ۳. موتورِ همگام‌سازی (بندِ ۳)
 
-`PumpYaqobi.App/Services/SyncEngine.cs`
+`PumpYaqobi.Shell/Services/SyncEngine.cs`
 
 | خواسته | حال |
 |---|---|

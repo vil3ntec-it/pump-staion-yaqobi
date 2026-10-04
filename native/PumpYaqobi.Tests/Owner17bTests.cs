@@ -64,13 +64,13 @@ public class Owner17bTests : IDisposable
     [Fact]
     public void KadreShomare_MaleHesabeJeloyeCheshm_Ast()
     {
-        var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections", "PersonViewModel.cs"));
+        var src = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections", "PersonViewModel.cs"));
         Assert.Contains("get => Current?.PhoneText", src);
         Assert.Contains("get => Current?.BuyFeeText", src);
         Assert.Contains("(Entity.IsMain ? _person.Entity.Phone : Entity.Phone)", src);
         Assert.Contains("(Entity.IsMain ? _person.Entity.BuyFeeNote : Entity.BuyFeeNote)", src);
         Assert.Contains("partial void OnCurrentChanged(AccountViewModel? value)", src);
-        var fac = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.Services", "Data", "PumpDbFactory.cs"));
+        var fac = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.Services", "Data", "PumpDbFactory.cs"));
         Assert.Contains("(\"DebtAccounts\", \"Phone\", \"TEXT\")", fac);
         Assert.Contains("(\"DebtAccounts\", \"BuyFeeNote\", \"TEXT\")", fac);
     }
@@ -80,7 +80,7 @@ public class Owner17bTests : IDisposable
     [Fact]
     public void KashoyeKarha_YekTikBad_BeKarhaBarmigardad()
     {
-        var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections", "CompanySectionViewModel.cs"));
+        var src = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections", "CompanySectionViewModel.cs"));
         var i = src.IndexOf("partial void OnActionChanged", StringComparison.Ordinal);
         var body = src[i..src.IndexOf("internal void ResetAction()", i, StringComparison.Ordinal)];
         Assert.DoesNotContain("Action = Actions[0];", body);          // نه داخلِ خبرِ خودش
@@ -123,12 +123,12 @@ public class Owner17bTests : IDisposable
     public void Jostoju_HamisheSafheRaBazMikonad_BaSarbargeRahnama()
     {
         var root = Root();
-        var vm = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "Sections", "CompanySectionViewModel.cs"));
+        var vm = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "Sections", "CompanySectionViewModel.cs"));
         var i = vm.IndexOf("public Task FindInlineAsync", StringComparison.Ordinal);
         var body = vm[i..vm.IndexOf("[ObservableProperty] private string _findText", i, StringComparison.Ordinal)];
         Assert.DoesNotContain("GoToAsync", body);                       // دیگر بی‌خبر به حسابی نمی‌پرد
         Assert.Contains("Overlay = sp;", body);
-        var view = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "CompanySearchView.axaml"));
+        var view = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "CompanySearchView.axaml"));
         Assert.Contains("{Binding GuideText}", view);
         Assert.Contains("{Binding CompanyText}", view);
         Assert.Contains("{Binding DateText}", view);

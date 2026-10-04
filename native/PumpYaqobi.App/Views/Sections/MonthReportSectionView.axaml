@@ -19,6 +19,8 @@
         <ComboBox ItemsSource="{Binding Picker.Months}" SelectedItem="{Binding Picker.Selected}"
                   ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="140" />
         <Button Classes="ghost info" Content="PDF" Command="{Binding PdfCommand}" />
+        <Button Classes="ghost" Content="📑 گزارشِ ماهانهٔ پمپ" Command="{Binding MonthlyPdfCommand}"
+                ToolTip.Tip="برای بانک و اتحادیه: فروش، خرید، مخزنِ هر تیل و خلاصه (PDF)" />
       </StackPanel>
     </c:SectionPage.Toolbar>
 

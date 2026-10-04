@@ -1,3 +1,4 @@
+using PumpYaqobi.Application.Localization;
 using System.Linq;
 using PumpYaqobi.App.Services;
 using Xunit;
@@ -24,10 +25,10 @@ public class AppLinksTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
 
     private static string RepoRead(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root, ".." }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root, ".." }.Concat(parts).ToArray()));
 
     // ── ۱) دو لینک ─────────────────────────────────────────────────────────
 
@@ -103,7 +104,7 @@ public class AppLinksTests
         //  بی کد هم پیام سالم است — فقط خطِ کد ندارد
         var noCode = KarLink.ShareText("", "پمپ یعقوبی");
         Assert.Contains(KarLink.ApkUrl(), noCode);
-        Assert.DoesNotContain("کدِ پمپ:", noCode);
+        Assert.DoesNotContain(CodeNames.PhoneApp + ":", noCode);
     }
 
     // ── ۳) صفحهٔ تازه در تنظیمات ───────────────────────────────────────────
@@ -257,15 +258,12 @@ public class AppLinksTests
         Assert.Contains("ResetPass = \"\"; ResetPass2 = \"\";", vm);
         Assert.DoesNotContain("CloudResetPass", vm);
 
-        var settings = Read("PumpYaqobi.App", "Services", "AppSettings.cs");
+        var settings = Read("PumpYaqobi.Shell", "Services", "AppSettings.cs");
         Assert.DoesNotContain("Password", settings);
 
-        var link = Read("PumpYaqobi.App", "Services", "CloudLink.cs");
-        //  رمز فقط در بدنهٔ همان دو درخواست است
-        Assert.Contains("\"/api/auth/login\"", link);
+        var link = Read("PumpYaqobi.Shell", "Services", "CloudLink.cs");
         Assert.DoesNotContain("_settings.CloudPassword", link);
-        //  و اگر سرور این راه را نداشت، «رمز غلط» نمی‌گوید
-        Assert.Contains("no_route", link);
+        //  «رمز روی هیچ فایلی نمی‌نشیند» رفتاری است: CloudLoginBehaviourTests (شورا، ت۳)
     }
 
     /// <summary>
@@ -301,7 +299,7 @@ public class AppLinksTests
         //  پیدا کن مثلِ همون که بود ولی با کیفیت و جزئیات.»
         var svg = Path.Combine(Root, "PumpYaqobi.App", "Assets", "login-art.svg");
         Assert.True(File.Exists(svg), "نقشهٔ SVGِ صفحهٔ ورود نیست.");
-        var art = File.ReadAllText(svg);
+        var art = SrcText.Read(svg);
         //  پرجزئیات: نقشهٔ دست‌سازِ قبلی ~۵۰ شکلِ ساده بود؛ این ۵۰ مسیرِ
         //  واقعی با خم و سایه دارد
         Assert.True(art.Split("<path").Length - 1 >= 40,
@@ -589,7 +587,7 @@ public class AppLinksTests
             Path.Combine("Services", "StationPublisher.cs"),
         })
         {
-            var src = Read("PumpYaqobi.App", f);
+            var src = File.Exists(Path.Combine(Root, "PumpYaqobi.App", f)) ? Read("PumpYaqobi.App", f) : Read("PumpYaqobi.Shell", f);
             Assert.DoesNotContain("AppSettings.Load().Save()", src);
             if (src.Contains("new CloudLink("))
                 Assert.Contains("file.Save()", src);
@@ -629,10 +627,10 @@ public class AppLinksTests
     [Fact]
     public void CheraghSarvar_HaghighatRaMigooyad()
     {
-        var src = Read("PumpYaqobi.App", "Services", "StationPublisher.cs");
+        var src = Read("PumpYaqobi.Shell", "Services", "StationPublisher.cs");
         //  اتصال جدا از انتشار است و حلقه هر دو را می‌زند
         Assert.Contains("public async Task<bool> KeepLinkAsync(", src);
-        Assert.Contains("await KeepLinkAsync(false, ct)", src);
+        Assert.Contains("Modules.Run(\"publisher\", () => KeepLinkAsync(false, ct), ct)", src);   //  از ج۷ از درِ ماژولِ خودش
         //  و اتصال زودتر از بیست ثانیه سنجیده می‌شود
         Assert.Contains("LinkTick = TimeSpan.FromSeconds(5)", src);
         //  ⚠️ ولی قفلِ اشتراک روی خودِ انتشار سرِ جایش است
@@ -785,14 +783,5 @@ public class AppLinksTests
         Assert.Contains("متنِ شرایط فعلاً در دسترس نیست.", vm);
     }
 
-    /// <summary>
-    /// ۴۲۹ («تلاشِ زیاد») همیشه پیامِ آدمیزاد می‌دهد، نه «سرور جواب نداد».
-    /// </summary>
-    [Fact]
-    public void ChaharSadBistONoh_Hamishe_Payame_Adamizad_Midahad()
-    {
-        var link = Read("PumpYaqobi.App", "Services", "CloudLink.cs");
-        Assert.Contains("if (status == 429)", link);
-        Assert.Contains("تلاشِ زیاد — چند دقیقه صبر کنید و دوباره بزنید", link);
-    }
+    //  «۴۲۹ ⇒ جملهٔ آدمیزاد» ⇒ رفتاری: CloudLoginBehaviourTests (شورا، ت۳)
 }

@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Threading;
@@ -58,6 +59,7 @@ internal static class QuickStartProbe
 
         // ۱) حساب — کادرِ ایمیلِ صفحهٔ ورود
         Step(win, vm, dash, QuickStart.Account, "account", "login-email");
+        LoginOnePath(win, vm, shots);
         var f = AppSettings.Load(); f.CloudAccountToken = "qs-test"; f.Save();   // «ساختنِ حساب» — ابرِ واقعی در سنجه نیست
         vm.Account.RefreshAll();
         GoDash(win, vm, dash);
@@ -144,6 +146,56 @@ internal static class QuickStartProbe
         Check($"کادرِ «{spot}» برجسته شد", host is not null && Spot.Last!.Classes.Contains("spot"),
               Spot.Last is null ? "هیچ کادری برجسته نشد" : "کادرِ دیگری برجسته شد");
         Check("و فوکوس روی همان است", Spot.Last?.IsFocused == true || Spot.Last is Button);
+    }
+
+    /// <summary>
+    /// شورا، ث۳ — «صفحهٔ ورود فقط یک مسیرِ اصلی (ایمیل ⇐ کد ⇐ تمام) و بقیه زیرِ
+    /// «راه‌های دیگر»». با پنجره و کلیکِ واقعی: آن‌چه دیده می‌شود، نه آن‌چه
+    /// ویومدل می‌گوید.
+    /// </summary>
+    private static void LoginOnePath(Window win, MainViewModel vm, string shots)
+    {
+        Console.WriteLine("── ث۳) صفحهٔ ورود: یک مسیرِ اصلی ──");
+        bool Seen(string text) => win.GetVisualDescendants().OfType<Control>().Any(c => c.IsEffectivelyVisible && c switch
+        {
+            TextBlock t => t.Text == text,
+            ContentControl cc => cc.Content as string == text,
+            TextBox tb => tb.Watermark == text,
+            _ => false,
+        });
+        Button? Btn(string text) => win.GetVisualDescendants().OfType<Button>()
+            .FirstOrDefault(b => b.IsEffectivelyVisible && b.Content as string == text);
+
+        Check("مسیرِ اصلی: «ورود یا ساختنِ حساب»", Seen("ورود یا ساختنِ حساب"));
+        Check("و دکمه‌اش «فرستادنِ کد به ایمیل» است", Btn("فرستادنِ کد به ایمیل") is not null);
+        Check("کادرِ رمز در مسیرِ اصلی نیست", !Seen("دستِ‌کم هشت نویسه"));
+        Check("نامِ کاربر و تکرارِ رمز و شرایط هم نیستند",
+              !Seen("نامِ شما") && !Seen("تکرارِ رمز") && !Seen("شرایط و ضوابط"));
+        Check("کلیدِ دوتکهٔ «حساب می‌سازم/حساب دارم» جلوی چشم نیست",
+              Btn("حساب می‌سازم") is null && Btn("حساب دارم") is null);
+        Check("عنوانِ دوم («ساختنِ حساب»/«خوش آمدید») روی عنوانِ اول نمی‌نشیند",
+              !Seen("ساختنِ حساب") && !Seen("خوش آمدید"));
+        Check("«ورود با ایمیل و رمز» پیش از باز کردنِ «راه‌های دیگر» پنهان است", Btn("🔑 ورود با ایمیل و رمز") is null);
+
+        var ways = win.GetVisualDescendants().OfType<ToggleButton>().FirstOrDefault(t => t.Name == "OtherWays");
+        Check("«راه‌های دیگر ▾» دیده می‌شود", ways is { IsEffectivelyVisible: true });
+        if (ways is null) return;
+        Shot(win, shots, "1-login");
+        Click(win, ways);
+        Shot(win, shots, "1b-other-ways");
+        var pass = Btn("🔑 ورود با ایمیل و رمز");
+        Check("پس از کلیک، دو راهِ رمزدار هست", pass is not null && Btn("🆕 ساختنِ حساب با رمز") is not null);
+        if (pass is null) return;
+        Click(win, pass);
+        Check("«ورود با رمز» ⇒ کادرِ رمز و «خوش آمدید»", Seen("دستِ‌کم هشت نویسه") && Seen("خوش آمدید"));
+        Check("و همان کلیدِ دوتکهٔ همیشگی برگشت", Btn("حساب می‌سازم") is not null && Btn("حساب دارم") is not null);
+        var back = Btn("‹ برگشت به ورود با کدِ تأییدِ ایمیل (بی رمز)");
+        Check("راهِ برگشت به مسیرِ اصلی هست", back is not null);
+        if (back is not null) Click(win, back);
+        Check("و برگشت: باز مسیرِ اصلی، بی رمز", Seen("ورود یا ساختنِ حساب") && !Seen("دستِ‌کم هشت نویسه"));
+        Check("نامِ کهنهٔ کد هیچ‌جای صفحه نیست",
+              !win.GetVisualDescendants().OfType<TextBlock>().Any(t => t.IsEffectivelyVisible
+                  && PumpYaqobi.Application.Localization.CodeNames.OldNameIn(t.Text) is not null));
     }
 
     private static bool Done(DashboardSectionViewModel d, string id) => d.QuickSteps.FirstOrDefault(s => s.Id == id)?.Done == true;
