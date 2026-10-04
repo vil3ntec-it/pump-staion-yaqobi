@@ -224,6 +224,11 @@ jobs:
           if (-not (Select-String -Path $log -Pattern 'Run as: Original user' -SimpleMatch)) { Fail "برنامه با کاربرِ اصلی باز نشد" }
           Select-String -Path $log -Pattern 'Run entry|Run as|Parameters: --after' | ForEach-Object { "   " + $_.Line }
           Remove-Item $log -ErrorAction SilentlyContinue
+          #      نسخه‌های پیش از ۳.۱.۲۳۱ ‎/RELAUNCH‎ نمی‌فرستادند — فقط ‎/SILENT /NORESTART /RESTARTAPPLICATIONS‎
+          $p = Start-Process -FilePath $newer -ArgumentList @('/SILENT','/SUPPRESSMSGBOXES','/NORESTART','/RESTARTAPPLICATIONS',"/LOG=$log") -Wait -PassThru
+          if (-not (Select-String -Path $log -Pattern 'Parameters: --after-update' -SimpleMatch)) { Fail "به‌روزرسانی از نسخهٔ کهنه (بی /RELAUNCH) برنامه را دوباره باز نکرد" }
+          "✔ به‌روزرسانی از نسخهٔ کهنه هم برنامه را دوباره باز می‌کند"
+          Remove-Item $log -ErrorAction SilentlyContinue
           $p = Start-Process -FilePath $newer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/LOG=$log") -Wait -PassThru
           if (Select-String -Path $log -Pattern 'Parameters: --after-update' -SimpleMatch) { Fail "بی /RELAUNCH هم برنامه باز شد" }
           "✔ به‌روزرسانیِ درون‌برنامه برنامه را دوباره باز می‌کند (با کاربرِ خودش)، و نصبِ بی‌صدای دیگر نه"

@@ -239,6 +239,9 @@ public sealed partial class MainViewModel
     /// </summary>
     public async Task OfferBackupBeforeExitAsync()
     {
+        //  ⛔ برای نصب بسته می‌شود ⇒ نپرس (‎Update.UpdateExit‎): پنجرهٔ پرسش برنامه را
+        //  باز نگه می‌داشت و نسخهٔ تازه دوباره باز نمی‌شد.
+        if (Update.UpdateExit.Active) return;
         if (Phase != AppPhase.Ready || !ExitBackup.Needed(AppSettings.Load().AskBackupOnExit)) return;
         var last = BackupSectionViewModel.LastFullPath();
         var where = last is null ? "روی همین کامپیوتر (عکسِ امروز)" : $"در فایلِ قبلی «{Path.GetFileName(last)}»";

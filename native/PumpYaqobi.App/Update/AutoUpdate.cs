@@ -147,6 +147,7 @@ public static class AutoUpdate
             try { ReadyChanged?.Invoke(); } catch { }
             return;
         }
+        UpdateExit.Arm();
         AppHost.Current.Toast("برنامه بسته می‌شود و با نسخهٔ تازه باز می‌شود", ToastKind.Info);
         _ = Task.Run(async () =>
         {

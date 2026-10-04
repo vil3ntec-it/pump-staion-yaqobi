@@ -19,6 +19,9 @@ public class RelaunchAfterUpdateTests
         var iss = Src("installer/PumpYaqobi.iss");
         Assert.Contains("Parameters: \"--after-update\"; Flags: nowait skipifnotsilent runasoriginaluser; Check: WantRelaunch", iss);
         Assert.Contains("Result := ExpandConstant('{param:RELAUNCH|0}') = '1';", iss);
+        //  ⛔ و نسخه‌های پیش از ۳.۱.۲۳۱ که ‎/RELAUNCH‎ نمی‌فرستادند (۱۴۰۵/۰۷/۲۰)
+        Assert.Contains("Result := WizardSilent and HasSwitch('/RESTARTAPPLICATIONS');", iss);
+        Assert.Contains("if CompareText(ParamStr(I), S) = 0 then Result := True;", iss);
         //  خطِ ویزارد همان ماند — نصبِ دستی همان «اجرای برنامه» را دارد
         Assert.Contains("Flags: nowait postinstall skipifsilent", iss);
     }
@@ -70,5 +73,44 @@ public class RelaunchAfterUpdateTests
         Assert.True(mine.WaitOne(TimeSpan.FromSeconds(10)));   // با انتظار ⇒ می‌گیرد
         mine.ReleaseMutex();
         old.Join();
+    }
+
+    // ══ پرسشِ «پیش از بستن بکاپ؟» برنامه را باز نگه می‌داشت (۱۴۰۵/۰۷/۲۰) ══════
+    [Fact]
+    public void BastanBarayeNasb_PorsesheBackupRaRadMikonad_BaMohlat()
+    {
+        var t0 = new DateTime(2026, 1, 1, 10, 0, 0);
+        Assert.False(PumpYaqobi.App.Update.UpdateExit.Armed(null, t0));
+        Assert.True(PumpYaqobi.App.Update.UpdateExit.Armed(t0, t0));
+        Assert.True(PumpYaqobi.App.Update.UpdateExit.Armed(t0, t0.AddMinutes(9)));
+        Assert.False(PumpYaqobi.App.Update.UpdateExit.Armed(t0, t0.AddMinutes(11)));   // ویزارد لغو شد ⇒ دوباره می‌پرسد
+        Assert.False(PumpYaqobi.App.Update.UpdateExit.Armed(t0, t0.AddMinutes(-1)));
+
+        PumpYaqobi.App.Update.UpdateExit.TestReset();
+        Assert.False(PumpYaqobi.App.Update.UpdateExit.Active);
+        PumpYaqobi.App.Update.UpdateExit.Arm();
+        Assert.True(PumpYaqobi.App.Update.UpdateExit.Active);
+        PumpYaqobi.App.Update.UpdateExit.TestReset();
+    }
+
+    [Fact]
+    public void HarSeDarNasb_MohrMizanand_VaPorseshRadMishavad()
+    {
+        var life = Src("PumpYaqobi.App/ViewModels/MainViewModel.Lifecycle.cs");
+        var offer = life[life.IndexOf("public async Task OfferBackupBeforeExitAsync()", StringComparison.Ordinal)..];
+        offer = offer[..offer.IndexOf("ConfirmAsync", StringComparison.Ordinal)];
+        Assert.Contains("if (Update.UpdateExit.Active) return;", offer);
+
+        var auto = Src("PumpYaqobi.App/Update/AutoUpdate.cs");
+        var a = auto[auto.IndexOf("InstallAndExitAsync", StringComparison.Ordinal)..];
+        Assert.True(a.IndexOf("UpdateExit.Arm();", StringComparison.Ordinal) is > 0 and var i
+                    && i < a.IndexOf("d.Shutdown();", StringComparison.Ordinal));
+
+        var bk = Src("PumpYaqobi.App/ViewModels/Sections/BackupSectionViewModel.cs");
+        var inst = bk[bk.IndexOf("private async Task InstallUpdateAsync()", StringComparison.Ordinal)..];
+        Assert.True(inst.IndexOf("UpdateExit.Arm();", StringComparison.Ordinal) is > 0 and var j
+                    && j < inst.IndexOf("d.Shutdown();", StringComparison.Ordinal));
+        var off = bk[bk.IndexOf("UpdateService.LaunchOffline(path)", StringComparison.Ordinal)..];
+        Assert.Contains("UpdateExit.Arm();", off[..off.IndexOf("نصاب باز شد", StringComparison.Ordinal)]);
     }
 }

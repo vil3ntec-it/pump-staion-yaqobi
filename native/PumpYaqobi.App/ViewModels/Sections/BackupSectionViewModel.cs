@@ -618,6 +618,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             OfflineStatusBrushKey = "Pump.Danger";
             return;
         }
+        UpdateExit.Arm();
         OfflineStatus = "نصاب باز شد — برنامه را برای نصب می‌بندد";
         //  ⚠️ برنامه خودش بسته نمی‌شود: نصاب (CloseApplications) می‌پرسد و
         //  می‌بندد. اگر کاربر ویزارد را لغو کند، برنامه سرِ جایش می‌ماند.
@@ -786,6 +787,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             return;
         }
 
+        UpdateExit.Arm();
         UpdateStatus = "برنامه بسته می‌شود و با نسخهٔ تازه باز می‌شود";
         _host.Toast("برنامه بسته می‌شود و با نسخهٔ تازه باز می‌شود", ToastKind.Info);
 
