@@ -552,13 +552,13 @@ check-multi-account گسترش یابد).
 
 | بند | پرامپت | حال |
 |---|---|---|
-| د۱ | «همین حالا رفته» تا گرفتنِ بعدی بماند (یا پس از هر فرستادنِ موفق گرفتن اجباری شود)؛ آزمون با مکثِ واقعیِ `pullDue`، نه `Step`ی که همیشه پس از فرستادن می‌گیرد | ⬜ |
-| د۲ | وقتی opِ رسیده یک فیلد را می‌بَرد، `Albaqi/Bardagi`ِ همان opِ ما هم از نو حساب شود | ⬜ |
-| د۳ | `LedgerParityService` بینِ خواندن و نوشتن قفل/نسخه بسنجد و خطا را بی‌صدا نبلعد | ⬜ |
-| د۴ | «امروز» با `DateKey`، نه با متن (سه جای نام‌برده + `ExpenseReport` · `ShiftsReport`) | ⬜ |
-| د۵ | پیام‌رسان پشتِ `Modules`؛ `CloudLink.cs` تکه شود و در `GiantFileTests` بنشیند | ⬜ |
-| د۶ | دروازهٔ «پایدار» دستِ‌کم N نصبِ واقعی بخواهد، نه فقط «صفر کرش»؛ سقفِ ۵۰۰ برداشته شود | ⬜ |
-| د۷ | `payam/` به نامِ تازه و در `PumpBrandTests`؛ `fix-needs-test` واژهٔ کامل بگیرد؛ `mut.sh` در مخزن | ⬜ |
+| د۱ | «همین حالا رفته» تا گرفتنِ بعدی بماند (یا پس از هر فرستادنِ موفق گرفتن اجباری شود)؛ آزمون با مکثِ واقعیِ `pullDue`، نه `Step`ی که همیشه پس از فرستادن می‌گیرد | ✅ ترتیبِ سرور (`SyncOp.ServerSeq`) روی دیسک، نه حافظه — `SyncConflictTests.FerestadanBiGereftan_DorBaad_BazHamYekAdad` (با و بی بازشدنِ دوباره؛ پیش از اصلاح سرخ) |
+| د۲ | وقتی opِ رسیده یک فیلد را می‌بَرد، `Albaqi/Bardagi`ِ همان opِ ما هم از نو حساب شود | ✅ `SyncConflictTests.RasideResideh_AlbaqiHamanJaSakhteMishavad` (دندان با `tools/mut.sh` سنجیده شد) |
+| د۳ | `LedgerParityService` بینِ خواندن و نوشتن قفل/نسخه بسنجد و خطا را بی‌صدا نبلعد | ✅ خواندنِ دوباره در یک تراکنش و ثبتِ `parity.failed` — `LedgerParityTests.Barabari_ResideMianeKhandanONeveshtan_AlbaqiTaze` |
+| د۴ | «امروز» با `DateKey`، نه با متن (سه جای نام‌برده + `ExpenseReport` · `ShiftsReport`) | ✅ `Shamsi.SameDay` در چهار جا — `DateKeyCanonTests.Emruz_BaKelid_NaBaMatn`. ⚠️ `ShiftsReport` اصلاً «امروز» را نمی‌سنجد؛ چیزی برای عوض کردن نداشت |
+| د۵ | پیام‌رسان پشتِ `Modules`؛ `CloudLink.cs` تکه شود و در `GiantFileTests` بنشیند | ✅ `ModulesTests.PayamResan_AzDareModules`؛ `CloudLink.cs` ⇒ شش تکه، متن خط‌به‌خط همان — `GiantFileTests` |
+| د۶ | دروازهٔ «پایدار» دستِ‌کم N نصبِ واقعی بخواهد، نه فقط «صفر کرش»؛ سقفِ ۵۰۰ برداشته شود | ✅ سرورِ حساب ۲.۱۱.۱۹ `version-health` (شمرده، بی سقف) و پنل ۱.۵۰.۳۵ کمینهٔ ۳ دستگاه — بخشِ ۷ی `pump-mirror.mjs` (۶۴) و بندِ آخرِ `sync-v1.test.js` |
+| د۷ | `payam/` به نامِ تازه و در `PumpBrandTests`؛ `fix-needs-test` واژهٔ کامل بگیرد؛ `mut.sh` در مخزن | ✅ `PumpBrandTests.SafheyeDanlod_AppeGooshi_VaQr_HamPompBenzin` (حالا هر «یعقوبی»ِ دیدنی) · `ToolsRuleTests` · `tools/mut.sh` |
 
 ## ۳) داوریِ دوباره — پرامپت و معیارِ «۱۰»
 
