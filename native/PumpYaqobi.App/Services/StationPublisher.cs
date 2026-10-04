@@ -710,7 +710,8 @@ public sealed class StationPublisher : IAsyncDisposable
         var cts = new CancellationTokenSource();
         _loop = cts;
         _ = Task.Run(() => LoopAsync(cts.Token), cts.Token);
-        _ = Task.Run(() => RateWatchLoopAsync(cts.Token), cts.Token);
+        //  ⛔ شورا ج۷: نرخِ اتحادیه ماژولِ جدای خودش است — شکستنش فقط خودش را می‌بندد
+        Modules.Start("rate", () => _ = Task.Run(() => RateWatchLoopAsync(cts.Token), cts.Token));
     }
 
     /// <summary>پیش از اولین انتشار — تا ورود و اولین صفحه بی رقیب بمانند.</summary>
@@ -735,13 +736,15 @@ public sealed class StationPublisher : IAsyncDisposable
         {
             //  ۱) اتصال — هر پنج ثانیه، بی هیچ هزینه‌ای (وصل باشیم، همین
             //     بی‌درنگ برمی‌گردد). چراغِ سربرگ از همین حرف می‌زند.
-            try { await KeepLinkAsync(false, ct); }
+            //  ⛔ شورا ج۷: هر گام از درِ ماژولِ خودش (`Modules.Run`) — خطای شبکه همان
+            //  «سرورِ خاموش»ِ همیشه است، ولی باگ فقط همان ماژول را خاموش می‌کند.
+            try { await Modules.Run("publisher", () => KeepLinkAsync(false, ct), ct); }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
             catch { /* سرورِ خاموش خطا نیست */ }
 
             //  ۱ب) هشدارها — همین تیکِ پنج‌ثانیه‌ای، با ترمزِ `Version`:
             //      داده عوض نشده ⇒ صفر دستورِ دیتابیس. شرحش بالای `AlertTickAsync`.
-            try { await AlertTickAsync(ct); }
+            try { await Modules.Run("alerts", () => AlertTickAsync(ct), ct); }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
             catch { /* خبر رفاه است، دفتر اصل */ }
 
@@ -750,7 +753,7 @@ public sealed class StationPublisher : IAsyncDisposable
             if (AppClock.Mono - lastPublish >= Interval)
             {
                 lastPublish = AppClock.Mono;
-                try { await PublishOnceAsync(false, ct); }
+                try { await Modules.Run("publisher", () => PublishOnceAsync(false, ct), ct); }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
                 catch { /* سرورِ خاموش خطا نیست */ }
             }
@@ -771,7 +774,7 @@ public sealed class StationPublisher : IAsyncDisposable
                 catch { /* بی‌اینترنت خطا نیست */ }
                 //  🏷️ نرخِ اتحادیه از تلگرام حلقهٔ «درجا»ی خودش را دارد (`RateWatchLoopAsync`)
                 //  ⚙️ «تنظیماتِ زنده» — فقط وقتی نسخه روی همان پاسخِ بالا عوض شده باشد
-                try { await LiveConfigTickAsync(ct); }
+                try { await Modules.Run("liveconfig", () => LiveConfigTickAsync(ct), ct); }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
                 catch { /* بی‌اینترنت خطا نیست */ }
             }
@@ -919,11 +922,15 @@ public sealed class StationPublisher : IAsyncDisposable
         try { await Task.Delay(FirstDelay, ct); } catch { return; }
         while (!ct.IsCancellationRequested)
         {
-            TimeSpan next;
+            if (!Modules.Alive("rate")) return;
+            TimeSpan next = RateRetry;
             try
             {
-                var poll = await RateTickAsync(RateWait, ct);
-                next = RateNextDelay(poll);
+                await Modules.Run("rate", async () =>
+                {
+                    var poll = await RateTickAsync(RateWait, ct);
+                    next = RateNextDelay(poll);
+                }, ct);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
             catch { next = RateRetry; }

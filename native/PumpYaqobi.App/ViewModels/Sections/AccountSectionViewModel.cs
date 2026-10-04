@@ -44,6 +44,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
             if (IsCodeLogin && !Busy && LoginStep == 2) VerifyEmailCommand.Execute(null);
         };
         _host = host;
+        Modules.Changed += () => Avalonia.Threading.Dispatcher.UIThread.Post(() => ModulesLine = Modules.FailedLine());
         ShowAccount();
         ShowSubscription();
         ShowAccessCode();
@@ -336,6 +337,9 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     /// ساخته می‌شد ولی در هیچ صفحه‌ای نشسته نبود — کاربر فقط قفل را می‌دید.
     /// </summary>
     [ObservableProperty] private string _watchLine = SubscriptionWatch.Line();
+
+    /// <summary>⛔ شورا ج۷: حاشیه‌ای که شکست و خاموش ماند — گفته می‌شود، نه بی‌صدا.</summary>
+    [ObservableProperty] private string _modulesLine = Modules.FailedLine();
 
     /// <summary>🛤️ شورا، ت۱ — کانالِ به‌روزرسانیِ همین کامپیوتر.</summary>
     [ObservableProperty] private bool _testingChannel = Update.UpdateService.TestingChannel;
@@ -1777,6 +1781,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
 
     public override async Task OnActivatedAsync()
     {
+        ModulesLine = Modules.FailedLine();
         RefreshAll();
         ShowLogin();
         //  واردشده ولی هنوز وصل نشده ⇒ خودش همین حالا (بی کارت و بی دکمه).

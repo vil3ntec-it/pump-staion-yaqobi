@@ -1039,6 +1039,9 @@
                        IsVisible="{Binding SubStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             <TextBlock Text="{Binding WatchLine}" Classes="muted" FontSize="11.5" TextWrapping="Wrap"
                        IsVisible="{Binding WatchLine, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <!-- ⛔ شورا ج۷: بخشی از حاشیه که شکست و خاموش ماند (دفتر سالم است) -->
+            <TextBlock Text="{Binding ModulesLine}" FontSize="12" TextWrapping="Wrap" FontWeight="Bold"
+                       IsVisible="{Binding ModulesLine, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
             <!-- 🛤️ شورا، ت۱: کانالِ به‌روزرسانی (پیش‌فرض: پایدار) -->
             <TextBlock Text="{Binding ChannelText}" Classes="muted" FontSize="11.5" TextWrapping="Wrap" />

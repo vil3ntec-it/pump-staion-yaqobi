@@ -630,7 +630,7 @@ public class AppLinksTests
         var src = Read("PumpYaqobi.App", "Services", "StationPublisher.cs");
         //  اتصال جدا از انتشار است و حلقه هر دو را می‌زند
         Assert.Contains("public async Task<bool> KeepLinkAsync(", src);
-        Assert.Contains("await KeepLinkAsync(false, ct)", src);
+        Assert.Contains("Modules.Run(\"publisher\", () => KeepLinkAsync(false, ct), ct)", src);   //  از ج۷ از درِ ماژولِ خودش
         //  و اتصال زودتر از بیست ثانیه سنجیده می‌شود
         Assert.Contains("LinkTick = TimeSpan.FromSeconds(5)", src);
         //  ⚠️ ولی قفلِ اشتراک روی خودِ انتشار سرِ جایش است

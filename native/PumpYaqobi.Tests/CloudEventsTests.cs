@@ -286,7 +286,7 @@ public class CloudEventsTests : IDisposable
         //  ⛔ از ۱۴۰۵/۰۷/۱۴ خبر از عکس نمی‌رود: هر تیکِ پنج‌ثانیه‌ای، کلِ فهرستِ
         //  باز به «حالِ زنده» (سرور خودش تازه‌ها را می‌سنجد) — و پشتِ هیچ قفلی نیست.
         Assert.DoesNotContain("PublishAlertsAsync(snap, ct)", src);
-        Assert.Contains("try { await AlertTickAsync(ct); }", src);
+        Assert.Contains("try { await Modules.Run(\"alerts\", () => AlertTickAsync(ct), ct); }", src);   //  از ج۷ از درِ ماژولِ خودش
         var push = src[src.IndexOf("internal async Task<bool> PushStateAsync", StringComparison.Ordinal)..];
         push = push[..push.IndexOf("private static List<object?> AsSnapshot", StringComparison.Ordinal)];
         Assert.DoesNotContain("Entitlements.Allows(Entitlements.QrLive)", push);

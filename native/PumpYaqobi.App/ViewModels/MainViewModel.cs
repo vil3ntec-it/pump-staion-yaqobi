@@ -134,11 +134,12 @@ public sealed partial class MainViewModel : ObservableObject
             // ⚠️ بعد از ورود، نه در سازنده: پیش از ورود هیچ اجازه‌ای نداریم و
             // لایهٔ سرویس درست هم رد می‌کند. اگر سروری تنظیم نشده باشد، این
             // حلقه بی‌صدا هیچ کاری نمی‌کند.
-            AppHost.Current.Publisher.Start();
+            //  ⛔ شورا ج۷: هر حاشیه از درِ ماژولِ خودش — شکستنِ یکی بقیه و دفتر را نمی‌برد
+            Modules.Start("publisher", AppHost.Current.Publisher.Start);
 
             // ══ به‌روزرسانیِ خودکار (۱۴۰۵/۰۷/۱۶) — خودش می‌بیند و می‌گیرد، و هر
             // نسخه را یک بار پیشنهاد می‌کند. شرح: ‎Update/AutoUpdate.cs‎
-            Update.AutoUpdate.Start();
+            Modules.Start("autoupdate", Update.AutoUpdate.Start);
 
             // ══ حسابِ واردشده ⇒ آماده، بی باز کردنِ پروفایل (۱۴۰۵/۰۷/۱۳) ═════
             // گزارشِ صاحب ریپو پس از ۳.۱.۱۷۹: «حسابی که قبلاً آزمایشی نداشت،
@@ -188,7 +189,7 @@ public sealed partial class MainViewModel : ObservableObject
             // ══ پشتیبانِ هر شش ساعت روی سرورِ خانگی ═════════════════════════
             // خواستهٔ صاحب ریپو: «هر ۶ ساعت بک‌آپ برود به سرور و سه روز بماند؛
             // نرفت، به مدیر بگو.» شرحِ کامل در ‎BackupPusher‎.
-            AppHost.Current.BackupToServer.Start();
+            Modules.Start("backup-push", AppHost.Current.BackupToServer.Start);
 
             // ══ گذرِ دومِ گرم کردن ═══════════════════════════════════════════
             // پردهٔ لودینگ **پیش از** این اتفاق افتاده و صفحه‌ها را ساخته و
