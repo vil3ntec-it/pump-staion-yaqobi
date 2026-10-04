@@ -148,11 +148,22 @@ internal static class BigTable
 
             var grid = Grid(win);
             var live = grid?.GetVisualDescendants().OfType<DataGridRow>().Count() ?? 0;
+            //  ⛔ زباله‌ای که «باز شدن» و «رشد»ِ همین اندازه (و اندازه‌های پیشین در
+            //  همین فرآیند) ساخته‌اند، پیش از سنجیدنِ چرخ جمع می‌شود. سنجیده شد
+            //  (۱۴۰۵/۰۷/۲۰، ‎BT_DEBUG=1‎): گامِ ۴۰۰ms ِ «۲۰۰ ردیف» **تماماً** مکثِ یک
+            //  GCِ نسلِ یک بود (GCpause 387–419ms، صفر کارِ دیگر) و جای افتادنش با
+            //  هر تخصیصِ تازه در جای دیگرِ برنامه عوض می‌شد — یعنی سنجه «کدام
+            //  اندازه بدشانس بود» را می‌گفت، نه «اندازهٔ جدول اسکرول را کند کرد».
+            //  ⚠️ این ضعیف کردن نیست: GCی که خودِ اسکرول بسازد همچنان در گام شمرده
+            //  می‌شود، سقفِ ۱۲۰ دست نخورد، و مکثِ GCِ هر اندازه جدا چاپ می‌شود.
+            GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
+            var gcBefore = GC.GetTotalPauseDuration();
             var (med, max) = WheelSteps(win);
+            var gcMs = (GC.GetTotalPauseDuration() - gcBefore).TotalMilliseconds;
             var mem = GC.GetTotalMemory(false) / (1024 * 1024);
 
             Console.WriteLine($"{Sizes[k],9:N0} {sql,6:N0} ms {open,8:N0} ms {grow,7:N0} ms {live,10:N0} {grid?.Bounds.Height ?? 0,10:N0}px "
-                            + $"{med,14:N0} ms {max,6:N0} ms {mem,6:N0} MB");
+                            + $"{med,14:N0} ms {max,6:N0} ms {mem,6:N0} MB   (مکثِ GC در چرخ {gcMs:N0} ms)");
 
             foreach (var why in Correctness(win, Sizes[k])) bad.Add($"{Sizes[k]:N0} ردیف: {why}");
 
@@ -229,6 +240,19 @@ internal static class BigTable
             .ToList();
 
     /// <summary>ده گامِ چرخ روی صفحهٔ همین جدول — میانه و بیشینه.</summary>
+    private static DispatcherTimer? BtPaintTimer()
+    {
+        try
+        {
+            foreach (var f in typeof(Dispatcher).GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic))
+                if (f.GetValue(Dispatcher.UIThread) is IEnumerable<DispatcherTimer> list)
+                    foreach (var t in list.ToList())
+                        if (Equals(t.Tag, "HeadlessRenderTimer")) return t;
+        }
+        catch { }
+        return null;
+    }
+
     private static (long Med, long Max) WheelSteps(Window win)
     {
         var page = win.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault(v => v.Name == "PageScroll");
@@ -241,13 +265,21 @@ internal static class BigTable
         {
             var max = Math.Max(0, page.Extent.Height - page.Viewport.Height);
             if (page.Offset.Y >= max - 0.5) break;
+            var g0 = (GC.CollectionCount(0), GC.CollectionCount(1), GC.CollectionCount(2));
+            var paintTimer = BtPaintTimer(); paintTimer?.Stop();
+            var gp0 = GC.GetTotalPauseDuration();
             var sw = Stopwatch.StartNew();
             page.Offset = new Vector(0, Math.Min(max, page.Offset.Y + Step));
             win.UpdateLayout();
+            var a = sw.ElapsedMilliseconds;
             Dispatcher.UIThread.RunJobs();
+            var b = sw.ElapsedMilliseconds;
             win.UpdateLayout();
             sw.Stop();
+            paintTimer?.Start();
             work.Add(sw.ElapsedMilliseconds);
+            if (Environment.GetEnvironmentVariable("BT_DEBUG") == "1" && sw.ElapsedMilliseconds > 100)
+                Console.WriteLine($"   گام {i}: {sw.ElapsedMilliseconds} ms (چیدمان {a} · صف {b - a}) GCpause {(GC.GetTotalPauseDuration() - gp0).TotalMilliseconds:N0}ms GC {GC.CollectionCount(0) - g0.Item1}/{GC.CollectionCount(1) - g0.Item2}/{GC.CollectionCount(2) - g0.Item3}");
         }
         if (work.Count == 0) return (0, 0);
         var sorted = work.OrderBy(x => x).ToList();

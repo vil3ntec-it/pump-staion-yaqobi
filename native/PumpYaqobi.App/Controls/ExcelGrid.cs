@@ -2492,8 +2492,8 @@ public class ExcelGrid : DataGrid
         PagesShown -= OnPagesShown;
         PagesShown += OnPagesShown;
         HookOutside();
-        //  شورا، ث۵ — سرستونی که واژهٔ برنامه است (پایه، ختم، الباقی…) معنایش را می‌گوید
-        Dispatcher.UIThread.Post(GlossaryTips, DispatcherPriority.Background);
+        //  شورا، ث۵ — سرستونی که واژهٔ برنامه است معنایش را می‌گوید؛ تنبل، زیرِ ماوس
+        Themes.GlossaryTips.Install();
         if (_wired) return;
         _wired = true;
         // تنها منبعِ درستِ «الان در حال ویرایشیم» — خودِ جدول می‌گوید.
@@ -3806,20 +3806,5 @@ public class ExcelGrid : DataGrid
         ScrollIntoView(list[next], CurrentColumn);
         // ⚠️ یک پاسِ چیدمان بعد: ردیفِ تازه هنوز ساخته نشده و مختصاتش صفر است.
         Dispatcher.UIThread.Post(FollowCell, DispatcherPriority.Background);
-    }
-
-    /// <summary>شورا، ث۵ — ToolTipِ واژه‌نامه روی سرستون‌ها (یک بار، بی هیچ شنوندهٔ چیدمان).</summary>
-    private void GlossaryTips()
-    {
-        try
-        {
-            foreach (var h in this.GetVisualDescendants().OfType<Avalonia.Controls.DataGridColumnHeader>())
-            {
-                if (ToolTip.GetTip(h) is not null) continue;
-                var text = h.Content as string ?? (h.Content as TextBlock)?.Text;
-                if (PumpYaqobi.Application.Localization.Glossary.MeaningIn(text) is { } tip) ToolTip.SetTip(h, tip);
-            }
-        }
-        catch { /* راهنما رفاه است */ }
     }
 }

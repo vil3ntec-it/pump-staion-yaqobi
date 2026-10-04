@@ -53,6 +53,7 @@ internal static class UxProbe
         Hints.Show = Toasts.Add;
 
         Strips(win, vm);
+        GlossaryHover(win, vm);
         WaraqName(win, vm);
         LinkPanel(win, vm, shots);
         Simple(win, vm);
@@ -88,6 +89,23 @@ internal static class UxProbe
         Settle(win);
         Check("نوارِ همان کلید در بخشِ دیگر هم دیگر نیست",
               !win.GetVisualDescendants().OfType<HintStrip>().Any(s => s.HintKey == "rows" && s.IsEffectivelyVisible));
+    }
+
+    private static void GlossaryHover(Window win, MainViewModel vm)
+    {
+        Console.WriteLine("── ث۵) واژه‌نامه زیرِ ماوس ──");
+        Wait(win, vm.GoAsync(vm.Sections.First(s => s.Id == "debtrasid")));
+        Settle(win);
+        var h = win.GetVisualDescendants().OfType<Avalonia.Controls.DataGridColumnHeader>()
+            .FirstOrDefault(x => x.IsEffectivelyVisible
+                && PumpYaqobi.Application.Localization.Glossary.MeaningIn(x.Content as string) is not null);
+        Check("سرستونی با واژهٔ برنامه پیدا شد", h is not null);
+        if (h is null) return;
+        Check("⚡ پیش از ماوس هیچ ToolTipی گذاشته نشده (تنبل)", ToolTip.GetTip(h) is null);
+        var p = h.TranslatePoint(new Point(h.Bounds.Width / 2, h.Bounds.Height / 2), win);
+        if (p is not null) win.MouseMove(p.Value);
+        Settle(win);
+        Check($"زیرِ ماوس معنایش آمد («{ToolTip.GetTip(h)}»)", ToolTip.GetTip(h) is string t && t.Contains(':'));
     }
 
     private static void WaraqName(Window win, MainViewModel vm)

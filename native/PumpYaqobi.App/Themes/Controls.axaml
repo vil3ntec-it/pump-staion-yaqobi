@@ -1170,8 +1170,7 @@
                    دارد: عنوان و ابزار یک ردیف، توضیح یک خط زیرشان. -->
               <Grid ColumnDefinitions="Auto,Auto,*">
                 <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
-                  <TextBlock Text="{TemplateBinding Header}" Classes="card-title"
-                             ToolTip.Tip="{Binding Header, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static th:GlossaryTipConverter.Instance}}" />
+                  <TextBlock Text="{TemplateBinding Header}" Classes="card-title" />
                 </StackPanel>
 
                 <!-- ══ ‎A−‎ / ‎A+‎ / ‎↺‎ِ همین بخش ═════════════════════════════
