@@ -126,9 +126,9 @@
            امضاشده و بسته به همین کامپیوتر است و بی سرور کار می‌کند. -->
       <Border Classes="card calm" Padding="22,18">
         <StackPanel Spacing="10">
-          <TextBlock Text="🔑 کدِ اشتراکِ آفلاین (بی اینترنت)" Classes="card-title" FontSize="16" />
+          <TextBlock Text="🔑 کلیدِ اشتراکِ بی‌اینترنت" Classes="card-title" FontSize="16" />
           <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                     Text="بی اینترنت: کدِ این کامپیوتر را بفرستید و کدِ اشتراک را این‌جا بزنید." />
+                     Text="بی اینترنت: کدِ این کامپیوتر را بفرستید و کلیدِ اشتراکِ بی‌اینترنت را این‌جا بزنید." />
 
           <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,4,0,0">
             <TextBlock Grid.Column="0" Text="کدِ این کامپیوتر:" Classes="kvl" Margin="0,0,10,0" />
@@ -147,7 +147,7 @@
                ولی نوشتهٔ راهنمای فارسی در کادرِ LTR وارونه می‌شکست. -->
           <TextBox Text="{Binding OfflineInput}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="74"
                    FontFamily="Consolas, monospace" FontSize="13"
-                   Watermark="کدِ اشتراک را این‌جا بچسبانید (XXXXX-XXXXX-…)" />
+                   Watermark="کلیدِ اشتراکِ بی‌اینترنت را این‌جا بچسبانید (XXXXX-XXXXX-…)" />
           <WrapPanel Classes="sec-tools">
             <Button Classes="accent" Content="✔ ثبتِ کد" Command="{Binding ApplyOfflineCommand}" Margin="0,0,8,0" />
             <Button Content="📂 انتخابِ فایلِ ‎.pumpkey‎" Command="{Binding PickOfflineFileCommand}" Margin="0,0,8,0" />

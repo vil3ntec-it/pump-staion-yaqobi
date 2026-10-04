@@ -266,7 +266,7 @@ public static class Entitlements
             if (!open)
             {
                 feats = offline.Features; listed = true;
-                plan = offline.PlanTitle + " (کدِ آفلاین)";
+                plan = offline.PlanTitle + " (کلیدِ اشتراکِ بی‌اینترنت)";
             }
             else if (listed)
                 feats = feats.Union(offline.Features).ToArray();
@@ -281,7 +281,7 @@ public static class Entitlements
         c.Permanent ? c.IssuedAt + 50L * 365 * 86_400_000 : c.EndsAt;
 
     private static EntitlementState FromOffline(OfflineCheck c, long now) =>
-        new(true, c.Features, c.PlanTitle + " (کدِ آفلاین)", OfflineUntil(c), now, false, Listed: true);
+        new(true, c.Features, c.PlanTitle + " (کلیدِ اشتراکِ بی‌اینترنت)", OfflineUntil(c), now, false, Listed: true);
 
     /// <summary>
     /// مُهرِ «دیدیم که باز است» را روی دیسک به‌روز می‌کند — از
@@ -402,7 +402,7 @@ public sealed record EntitlementState(
     /// <summary>جملهٔ «چرا بسته است» برای همان کار.</summary>
     public string Why(string title) =>
         NotActivated
-            ? title + " با اشتراک کار می‌کند — کدِ اشتراک را در «پروفایل» بزنید."
+            ? title + " با اشتراک کار می‌کند — وارد حسابتان شوید، یا کلیدِ اشتراکِ بی‌اینترنت را در «پروفایل» بزنید."
             : !Open && GraceEndsAt > 0 && NowMs >= GraceEndsAt
                 ? "اشتراکِ این پمپ تمام شده، پس " + title + " خاموش است. دفترِ خودتان و "
                   + "پشتیبانی باز است."

@@ -845,7 +845,7 @@
     wsLive = false;
     cloudPoll(true);
     if (rejected >= n) {
-      live(false, 'رمزِ سرور پذیرفته نشد — کدِ پمپ را دوباره بزنید');
+      live(false, 'رمزِ سرور پذیرفته نشد — کدِ اپِ گوشی را دوباره بزنید');
     } else {
       live(!!data, waitingText());
     }
@@ -1019,7 +1019,7 @@
   function joinWithCode(raw) {
     if (joining || !window.PumpCloud) return;
     var code = PumpCloud.normalizeCode(raw);
-    if (code.length !== 8) { codeMsg('کدِ پمپ هشت رقم است — مثلِ 4829-1736.', true); return; }
+    if (code.length !== 8) { codeMsg('کدِ اپِ گوشی هشت رقم است — مثلِ 4829-1736.', true); return; }
     joining = true;
     $('btnJoin').disabled = true;
     codeMsg('در حالِ پیدا کردنِ پمپ…');
@@ -1349,7 +1349,7 @@
   function askLeave() {
     var nm = (data && data.station && data.station.name) || cfg.name || 'این پمپ';
     askSure('خروج از «' + nm + '»؟',
-      'کدِ پمپ و هر چه از این پمپ در این گوشی مانده پاک می‌شود. برای برگشتن باید کدِ هشت‌رقمی را دوباره بزنید. '
+      'کدِ اپِ گوشی و هر چه از این پمپ در این گوشی مانده پاک می‌شود. برای برگشتن باید کدِ اپِ گوشی را دوباره بزنید. '
       + 'هیچ چیزی از دفترِ پمپ پاک نمی‌شود.', 'بله، خارج شو')
       .then(function (yes) { if (yes) forgetAll(''); });
   }

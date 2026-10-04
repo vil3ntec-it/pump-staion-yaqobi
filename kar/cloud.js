@@ -301,7 +301,7 @@
   function joinWithCode(code) {
     var clean = normalizeCode(code);
     if (clean.length !== 8) {
-      var e = new Error('کدِ پمپ هشت رقم است، مثلِ 4829-1736');
+      var e = new Error('کدِ اپِ گوشی هشت رقم است، مثلِ 4829-1736');
       e.code = 'bad_access_code';
       return Promise.reject(e);
     }

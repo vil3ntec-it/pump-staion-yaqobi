@@ -68,7 +68,7 @@ public static class KarLink
         if (clean.Length > 0)
         {
             lines.Add("");
-            lines.Add("🔑 کدِ پمپ: " + FormatCode(clean));
+            lines.Add("🔑 کدِ اپِ گوشی: " + FormatCode(clean));
             lines.Add("همین کد را در اپ بزنید — فقط حساب‌های همین پمپ را می‌بینید.");
         }
         return string.Join("\n", lines);

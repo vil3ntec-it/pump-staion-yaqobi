@@ -238,9 +238,9 @@ public static class OfflineKey
         var raw = Clean(code);
         if (raw.Length == 0) return OfflineCheck.None;
         var buf = Decode(raw, TotalLen);
-        if (buf is null || buf[0] != 1) return OfflineCheck.Bad("این کدِ اشتراک خوانده نشد — کد را کامل و درست بزنید");
+        if (buf is null || buf[0] != 1) return OfflineCheck.Bad("این کلیدِ اشتراکِ بی‌اینترنت خوانده نشد — کد را کامل و درست بزنید");
         var plan = PlanOf(buf[1]);
-        if (plan.Length == 0) return OfflineCheck.Bad("این کدِ اشتراک خوانده نشد — کد را کامل و درست بزنید");
+        if (plan.Length == 0) return OfflineCheck.Bad("این کلیدِ اشتراکِ بی‌اینترنت خوانده نشد — کد را کامل و درست بزنید");
 
         var kid = Convert.ToHexString(buf, 26, 8).ToLowerInvariant();
         if (!keys.TryGetValue(kid, out var spki))
@@ -257,9 +257,9 @@ public static class OfflineKey
             Array.Copy(buf, 0, signed, Domain.Length, BodyLen);
             if (!ec.VerifyData(signed, buf.AsSpan(BodyLen, 64), HashAlgorithmName.SHA256,
                     DSASignatureFormat.IeeeP1363FixedFieldConcatenation))
-                return OfflineCheck.Bad("این کدِ اشتراک دست‌کاری شده یا اشتباه است");
+                return OfflineCheck.Bad("این کلیدِ اشتراکِ بی‌اینترنت دست‌کاری شده یا اشتباه است");
         }
-        catch { return OfflineCheck.Bad("این کدِ اشتراک دست‌کاری شده یا اشتباه است"); }
+        catch { return OfflineCheck.Bad("این کلیدِ اشتراکِ بی‌اینترنت دست‌کاری شده یا اشتباه است"); }
 
         var mine = MachineBytes(fingerprint);
         if (mine.Length == 0 || !buf.AsSpan(2, 10).SequenceEqual(mine))
@@ -274,7 +274,7 @@ public static class OfflineKey
         return new OfflineCheck(
             Valid: permanent || nowMs < ends,
             Expired: !permanent && nowMs >= ends,
-            Why: !permanent && nowMs >= ends ? "مهلتِ این کدِ اشتراک تمام شده است" : "",
+            Why: !permanent && nowMs >= ends ? "مهلتِ این کلیدِ اشتراکِ بی‌اینترنت تمام شده است" : "",
             Plan: plan, Serial: serial, IssuedAt: issued, EndsAt: ends, Permanent: permanent,
             Canonical: Pretty(raw));
     }
@@ -356,7 +356,7 @@ public static class OfflineKey
     {
         if (!c.Genuine) return c;
         var expired = !c.Permanent && nowMs >= c.EndsAt;
-        return c with { Valid = !expired, Expired = expired, Why = expired ? "مهلتِ این کدِ اشتراک تمام شده است" : "" };
+        return c with { Valid = !expired, Expired = expired, Why = expired ? "مهلتِ این کلیدِ اشتراکِ بی‌اینترنت تمام شده است" : "" };
     }
 }
 

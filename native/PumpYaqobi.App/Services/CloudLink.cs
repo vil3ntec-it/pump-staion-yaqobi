@@ -1810,7 +1810,7 @@ public sealed partial class CloudLink
                                                        CancellationToken ct = default)
     {
         var clean = new string((emailCode ?? "").Where(char.IsDigit).ToArray());
-        if (clean.Length != 6) return CloudResult.No("کدِ ایمیل باید شش رقم باشد");
+        if (clean.Length != 6) return CloudResult.No("کدِ تأییدِ ایمیل باید شش رقم باشد");
 
         var res = await SendFull(Build(HttpMethod.Post, "/api/auth/register/verify",
             new { email = (email ?? "").Trim(), code = clean, app = "pump" }, null), ct);
@@ -1838,7 +1838,7 @@ public sealed partial class CloudLink
                                                          bool termsAccepted,
                                                          CancellationToken ct = default)
     {
-        if (_registerTicket.Length == 0) return CloudResult.No("اول کدِ ایمیل را بزنید");
+        if (_registerTicket.Length == 0) return CloudResult.No("اول کدِ تأییدِ ایمیل را بزنید");
         if (!termsAccepted) return CloudResult.No("برای ساختنِ حساب باید شرایط را بپذیرید", "terms_required");
 
         var res = await SendFull(Build(HttpMethod.Post, "/api/auth/register/complete", new
@@ -2071,7 +2071,7 @@ public sealed partial class CloudLink
                                                       CancellationToken ct = default)
     {
         var clean = new string((emailCode ?? "").Where(char.IsDigit).ToArray());
-        if (clean.Length != 6) return CloudResult.No("کدِ ایمیل باید شش رقم باشد");
+        if (clean.Length != 6) return CloudResult.No("کدِ تأییدِ ایمیل باید شش رقم باشد");
 
         var res = await SendFull(Build(HttpMethod.Post, "/api/auth/password/reset", new
         {

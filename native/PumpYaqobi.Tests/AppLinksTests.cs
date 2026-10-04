@@ -1,3 +1,4 @@
+using PumpYaqobi.Application.Localization;
 using System.Linq;
 using PumpYaqobi.App.Services;
 using Xunit;
@@ -103,7 +104,7 @@ public class AppLinksTests
         //  بی کد هم پیام سالم است — فقط خطِ کد ندارد
         var noCode = KarLink.ShareText("", "پمپ یعقوبی");
         Assert.Contains(KarLink.ApkUrl(), noCode);
-        Assert.DoesNotContain("کدِ پمپ:", noCode);
+        Assert.DoesNotContain(CodeNames.PhoneApp + ":", noCode);
     }
 
     // ── ۳) صفحهٔ تازه در تنظیمات ───────────────────────────────────────────

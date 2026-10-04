@@ -63,7 +63,7 @@
       <Border Classes="panel" Padding="0">
         <StackPanel>
           <Border Classes="card-head">
-            <TextBlock Text="📲 کدِ اپِ کارمندان" FontWeight="Bold"
+            <TextBlock Text="📲 کدِ اپِ گوشی" FontWeight="Bold"
                        Foreground="{DynamicResource Pump.Ink.Accent}" />
           </Border>
           <StackPanel Margin="14" Spacing="6">

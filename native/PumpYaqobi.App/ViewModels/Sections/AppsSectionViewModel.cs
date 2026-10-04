@@ -81,7 +81,7 @@ public sealed partial class AppsSectionViewModel : SectionViewModel
             : HasCode
             ? ""
             : string.IsNullOrWhiteSpace(file.CloudDeviceToken)
-                ? "کدِ پمپ بعد از فعال شدنِ اشتراک از سرور می‌آید — «پروفایل»."
+                ? "کدِ اپِ گوشی بعد از فعال شدنِ اشتراک از سرور می‌آید — «پروفایل»."
                 : "هنوز از سرور گرفته نشده — در «پروفایل» دکمهٔ «گرفتنِ کد» را بزنید.";
 
         //  و پیامِ آماده هم کدی را که نداریم جا نمی‌گذارد
@@ -98,7 +98,7 @@ public sealed partial class AppsSectionViewModel : SectionViewModel
     private Task CopyIphoneAsync() => CopyAsync(IphoneLink, "لینکِ آیفون");
 
     [RelayCommand]
-    private Task CopyCodeAsync() => HasCode ? CopyAsync(CodeText, "کدِ پمپ") : Task.CompletedTask;
+    private Task CopyCodeAsync() => HasCode ? CopyAsync(CodeText, "کدِ اپِ گوشی") : Task.CompletedTask;
 
     /// <summary>همان چیزی که در واتساپ چسبانده می‌شود — هر سه با هم.</summary>
     [RelayCommand]
@@ -124,13 +124,13 @@ public sealed partial class AppsSectionViewModel : SectionViewModel
     /// همان چیزی که در پروفایل هم هست، پس همان قفلِ اشتراک را دارد.
     /// </summary>
     [RelayCommand]
-    private Task ShowQrAsync() => CrashGuard.RunAsync("کیو‌آرِ کدِ پمپ", async () =>
+    private Task ShowQrAsync() => CrashGuard.RunAsync("کیو‌آرِ کدِ اپِ گوشی", async () =>
     {
         if (!HasCode) return;
         if (!Entitlements.Gate(_host, Entitlements.Kar)) return;
         var link = KarLink.ForCode(_code, _host.Settings.GetString(SettingsService.ViewerUrl));
         var png = await Task.Run(() => PumpYaqobi.Services.Vision.QrWriter.EncodePng(link));
-        await Dialogs.ShowQrAsync("📲 کدِ پمپ — " + CodeText, link, png,
+        await Dialogs.ShowQrAsync("📲 کدِ اپِ گوشی — " + CodeText, link, png,
             "کارمند این را اسکن کند یا همین کد را در اپ بزند. هیچ رمزِ سروری در این کد نیست.");
     });
 

@@ -162,8 +162,8 @@ public sealed partial class VipSectionViewModel : SectionViewModel
     public bool HasComputerCode => ComputerCode.Length > 0;
 
     public string ComputerNote => HasComputerCode
-        ? "این کد را برای صاحبِ سامانه بفرستید؛ کدِ اشتراک فقط روی همین کامپیوتر کار می‌کند."
-        : "این سیستم شناسه‌ای نداد — کدِ آفلاین روی آن ساختنی نیست.";
+        ? "این کد را برای صاحبِ سامانه بفرستید؛ کلیدِ اشتراکِ بی‌اینترنت فقط روی همین کامپیوتر کار می‌کند."
+        : "این سیستم شناسه‌ای نداد — کلیدِ اشتراکِ بی‌اینترنت روی آن ساختنی نیست.";
 
     [ObservableProperty] private string _offlineInput = "";
     [ObservableProperty] private string _offlineStatus = "";
@@ -175,7 +175,7 @@ public sealed partial class VipSectionViewModel : SectionViewModel
     private async Task CopyComputerAsync()
     {
         if (!HasComputerCode) return;
-        var ok = await Dialogs.CopyAsync("کدِ کامپیوترِ من برای اشتراکِ آفلاینِ «" + PumpBrand.Name + "»: " + ComputerCode);
+        var ok = await Dialogs.CopyAsync("کدِ کامپیوترِ من برای کلیدِ اشتراکِ بی‌اینترنتِ «" + PumpBrand.Name + "»: " + ComputerCode);
         _host.Toast(ok ? "📋 کدِ کامپیوتر کپی شد — در واتساپ بچسبانید" : "کپی نشد", ok ? ToastKind.Ok : ToastKind.Warn);
     }
 
@@ -185,7 +185,7 @@ public sealed partial class VipSectionViewModel : SectionViewModel
     [RelayCommand]
     private async Task PickOfflineFileAsync()
     {
-        var path = await Dialogs.PickFileAsync("فایلِ کدِ اشتراک را انتخاب کنید", "کدِ اشتراک", new[] { "*.pumpkey" });
+        var path = await Dialogs.PickFileAsync("فایلِ کلیدِ اشتراکِ بی‌اینترنت را انتخاب کنید", "کلیدِ اشتراکِ بی‌اینترنت", new[] { "*.pumpkey" });
         if (path is null) return;
         await ApplyKeyFileAsync(path);
     }
@@ -197,7 +197,7 @@ public sealed partial class VipSectionViewModel : SectionViewModel
         try
         {
             //  فایلِ کوچکی است؛ بزرگ‌تر از این یعنی فایلِ اشتباه
-            if (new FileInfo(path).Length > 16_384) { SetStatus("❌ این فایل، فایلِ کدِ اشتراک نیست", "Pump.Danger"); return; }
+            if (new FileInfo(path).Length > 16_384) { SetStatus("❌ این فایل، فایلِ کلیدِ اشتراکِ بی‌اینترنت نیست", "Pump.Danger"); return; }
             text = await File.ReadAllTextAsync(path);
         }
         catch { SetStatus("❌ این فایل خوانده نشد", "Pump.Danger"); return; }
@@ -207,8 +207,8 @@ public sealed partial class VipSectionViewModel : SectionViewModel
     [RelayCommand]
     private async Task RemoveOfflineAsync()
     {
-        if (!await Dialogs.ConfirmAsync("برداشتنِ کدِ آفلاین",
-                "کدِ اشتراکِ آفلاین از همین کامپیوتر برداشته شود؟ دفتر هیچ تغییری نمی‌کند؛ "
+        if (!await Dialogs.ConfirmAsync("برداشتنِ کلیدِ اشتراکِ بی‌اینترنت",
+                "کلیدِ اشتراکِ بی‌اینترنت از همین کامپیوتر برداشته شود؟ دفتر هیچ تغییری نمی‌کند؛ "
                 + "فقط بخش‌هایی که با این کد باز بودند بسته می‌شوند.")) return;
         OfflineKey.Remove(AppSettings.Load());
         OfflineInput = "";
@@ -222,10 +222,10 @@ public sealed partial class VipSectionViewModel : SectionViewModel
         var c = OfflineKey.Apply(f, text);
         if (!c.Valid) { SetStatus("❌ " + c.Why, "Pump.Danger"); return; }
         OfflineInput = "";
-        SetStatus("✅ کدِ اشتراک پذیرفته شد — " + c.PlanTitle + " · "
+        SetStatus("✅ کلیدِ اشتراکِ بی‌اینترنت پذیرفته شد — " + c.PlanTitle + " · "
                   + (c.Permanent ? "دائمی" : "تا " + OfflineKey.Localize(c.EndsAt))
                   + ". قفل‌ها همین حالا باز شدند.", "Pump.Ok");
-        _host.Toast("🔓 کدِ اشتراکِ آفلاین پذیرفته شد — " + c.PlanTitle, ToastKind.Ok);
+        _host.Toast("🔓 کلیدِ اشتراکِ بی‌اینترنت پذیرفته شد — " + c.PlanTitle, ToastKind.Ok);
         Show();
     }
 
@@ -239,7 +239,7 @@ public sealed partial class VipSectionViewModel : SectionViewModel
     {
         var c = OfflineKey.Stored(f, now);
         HasOfflineCode = f.OfflineCode.Length > 0;
-        if (!HasOfflineCode) { OfflineCurrent = "هیچ کدِ آفلاینی روی این کامپیوتر نیست."; return; }
+        if (!HasOfflineCode) { OfflineCurrent = "هیچ کلیدِ اشتراکِ بی‌اینترنتی روی این کامپیوتر نیست."; return; }
         if (!c.Genuine) { OfflineCurrent = "⚠️ کدِ روی این کامپیوتر پذیرفته نیست — " + c.Why; return; }
         var server = f.OfflineCodeRedeemed.StartsWith(c.Serial + "@", StringComparison.Ordinal)
             ? f.OfflineCodeRedeemed.Contains('!')

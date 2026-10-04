@@ -259,7 +259,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     {
         var yes = await Dialogs.ConfirmAsync(
             "جدا کردنِ این دستگاه از این پمپ",
-            "اشتراک، کدِ اپِ کارمندان و نشانیِ سرورِ خانگیِ این پمپ از این کامپیوتر "
+            "اشتراک، کدِ اپِ گوشی و نشانیِ سرورِ خانگیِ این پمپ از این کامپیوتر "
             + "برداشته می‌شوند. برای وصل شدنِ دوباره از «حساب و ورود» وارد شوید و نامِ پمپ را بزنید.\n\n"
             + "⛔ دفتر و حساب‌های روی این کامپیوتر دست نمی‌خورند.",
             "جدا کن", "بی‌خیال");
@@ -283,7 +283,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     /// </summary>
     private string SwitchNote() => Cloud.AccountSwitched
         ? "⚠️ این کامپیوتر پیش از این به حسابِ دیگری وصل بود، پس بندهای پمپِ قبلی "
-          + "(اشتراک، کدِ اپِ کارمندان و نشانیِ سرور) برداشته شدند. دفتر دست نخورده است — "
+          + "(اشتراک، کدِ اپِ گوشی و نشانیِ سرور) برداشته شدند. دفتر دست نخورده است — "
           + "با زدنِ نامِ پمپ، این کامپیوتر به پمپِ همین حساب وصل می‌شود."
         : "";
 
@@ -469,12 +469,12 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         var file = AppSettings.Load();
         AccessCode = file.CloudAccessCode ?? "";
         AccessStatus = string.IsNullOrWhiteSpace(file.CloudDeviceToken)
-            ? "کدِ پمپ بعد از فعال شدنِ اشتراک از سرور می‌آید."
+            ? "کدِ اپِ گوشی بعد از فعال شدنِ اشتراک از سرور می‌آید."
             : HasAccessCode ? "" : "هنوز از سرور گرفته نشده — «گرفتنِ کد» را بزنید.";
     }
 
     [RelayCommand]
-    private Task LoadAccessCodeAsync() => CrashGuard.RunAsync("کدِ پمپ", async () =>
+    private Task LoadAccessCodeAsync() => CrashGuard.RunAsync("کدِ اپِ گوشی", async () =>
     {
         Busy = true;
         AccessStatus = "در حالِ گرفتن از سرور…";
@@ -492,9 +492,9 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     /// وصل‌اند سرِ کارند تا رمزِ خواندنِ سرورِ خانگی عوض نشود.
     /// </summary>
     [RelayCommand]
-    private Task RotateAccessCodeAsync() => CrashGuard.RunAsync("عوض کردنِ کدِ پمپ", async () =>
+    private Task RotateAccessCodeAsync() => CrashGuard.RunAsync("عوض کردنِ کدِ اپِ گوشی", async () =>
     {
-        if (!await Dialogs.ConfirmAsync("عوض کردنِ کدِ پمپ",
+        if (!await Dialogs.ConfirmAsync("عوض کردنِ کدِ اپِ گوشی",
                 "کدِ قبلی همان لحظه از کار می‌افتد و باید کدِ تازه را به کارمندان بدهید. مطمئنید؟",
                 "عوض کن")) return;
         Busy = true;
@@ -509,7 +509,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     });
 
     [RelayCommand]
-    private Task CopyAccessCodeAsync() => CrashGuard.RunAsync("کپیِ کدِ پمپ", async () =>
+    private Task CopyAccessCodeAsync() => CrashGuard.RunAsync("کپیِ کدِ اپِ گوشی", async () =>
     {
         if (!HasAccessCode) return;
         AccessStatus = await Dialogs.CopyAsync(AccessCodeDisplay) ? "📋 کپی شد." : "";
@@ -517,13 +517,13 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
 
     /// <summary>کیو‌آرِ «با کدِ پمپ» — اسکنش اپ را باز می‌کند و کد را خودش می‌زند.</summary>
     [RelayCommand]
-    private Task ShowAccessQrAsync() => CrashGuard.RunAsync("کیو‌آرِ کدِ پمپ", async () =>
+    private Task ShowAccessQrAsync() => CrashGuard.RunAsync("کیو‌آرِ کدِ اپِ گوشی", async () =>
     {
         if (!HasAccessCode) return;
         if (!Entitlements.Gate(_host, Entitlements.Kar)) return;
         var link = KarLink.ForCode(AccessCode, _host.Settings.GetString(SettingsService.ViewerUrl));
         var png = await Task.Run(() => PumpYaqobi.Services.Vision.QrWriter.EncodePng(link));
-        await Dialogs.ShowQrAsync("📲 کدِ پمپ — " + AccessCodeDisplay, link, png,
+        await Dialogs.ShowQrAsync("📲 کدِ اپِ گوشی — " + AccessCodeDisplay, link, png,
             "کارمند این را اسکن کند یا همین کد را در اپ بزند. فقط حساب‌های همین پمپ را می‌بیند "
             + "و بعدش رمزِ برنامه را هم می‌خواهد. هیچ رمزِ سروری در این کد نیست.");
     });
@@ -842,8 +842,13 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     //  همان `verify`ِ موفق ساخته می‌شود. پس کاربر نه رمزی می‌سازد و نه
     //  رمزی گم می‌کند.
 
-    /// <summary>روی «ورود با کدِ ایمیلی» هستیم — از دو حالتِ بالا جلوتر است.</summary>
-    [ObservableProperty] private bool _isCodeLogin;
+    /// <summary>روی «ورود با کدِ تأییدِ ایمیل» هستیم — از دو حالتِ بالا جلوتر است.</summary>
+    ///
+    /// ⛔ <b>شورا، ث۳: پیش‌فرض همین است</b> — «صفحهٔ ورود فقط یک مسیرِ اصلی
+    /// (ایمیل ⇐ کد ⇐ تمام) و بقیه زیرِ «راه‌های دیگر»». هیچ راهی برداشته نشد:
+    /// «حساب دارم» و «حساب می‌سازم» همان دو فرمانِ همیشگی‌اند، فقط دیگر اولِ کار
+    /// جلوی چشم نیستند.
+    [ObservableProperty] private bool _isCodeLogin = true;
 
     /// <summary>شش خانهٔ کد — پرشِ خودکار، Paste، ارقامِ فارسی، ارسالِ خودکار.</summary>
     public CodeBoxesViewModel CodeBoxes { get; } = new();
@@ -1183,7 +1188,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
                 CodeMasked = Cloud.CodeMaskedEmail;
                 CodeDelivery = "";
                 StartCountdown(Cloud.CodeResendAfter);
-                LoginStatus = "✅ کدِ شش‌رقمی به "
+                LoginStatus = "✅ کدِ تأییدِ ایمیل به "
                             + (CodeMasked.Length > 0 ? CodeMasked : email) + " فرستاده شد.";
                 RefreshAll();
                 LoginStep = 2;
@@ -1200,7 +1205,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
                 //  ⚠️ رمز این‌جا پاک نمی‌شود: پلهٔ سوم خودش رمز را می‌خواهد.
                 //  فقط روی دیسک نمی‌نشیند — همان قاعدهٔ همیشه.
                 EmailCode = "";
-                LoginStatus = "✅ کدِ شش‌رقمی به " + email + " فرستاده شد.";
+                LoginStatus = "✅ کدِ تأییدِ ایمیل به " + email + " فرستاده شد.";
                 RefreshAll();
                 LoginStep = 2;
                 return;
@@ -1228,13 +1233,13 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
     /// از دیدِ کاربر یک کار است: «کد را زدم، حسابم ساخته شد».
     /// </summary>
     [RelayCommand]
-    private Task VerifyEmailAsync() => CrashGuard.RunAsync("تاییدِ کدِ ایمیل", async () =>
+    private Task VerifyEmailAsync() => CrashGuard.RunAsync("کدِ تأییدِ ایمیل", async () =>
     {
         if (IsCodeLogin) { await VerifyCodeLoginAsync(); return; }
 
         var code = LoginRules.Digits(EmailCode);
         var pass = LoginPassword ?? "";
-        if (code.Length != 6) { LoginStatus = "❌ کدِ ایمیل باید شش رقم باشد."; return; }
+        if (code.Length != 6) { LoginStatus = "❌ کدِ تأییدِ ایمیل باید شش رقم باشد."; return; }
         if (pass.Length < 8) { LoginStatus = "❌ رمز گم شد — از گامِ حساب دوباره شروع کنید."; return; }
 
         Busy = true;
@@ -1650,7 +1655,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
             var res = await Cloud.ForgotPasswordAsync(email);
             if (!res.Ok) { LoginStatus = "❌ " + res.Why; return; }
             ResetSent = true;
-            LoginStatus = "✅ اگر این ایمیل حسابی داشته باشد، کدِ شش‌رقمی برایش رفت.";
+            LoginStatus = "✅ اگر این ایمیل حسابی داشته باشد، کدِ تأییدِ ایمیل برایش رفت.";
         }
         finally { Busy = false; }
     });
@@ -1663,7 +1668,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         var code = new string((ResetCode ?? "").Where(char.IsDigit).ToArray());
         var pass = ResetPass ?? "";
 
-        if (code.Length != 6) { LoginStatus = "❌ کدِ ایمیل باید شش رقم باشد."; return; }
+        if (code.Length != 6) { LoginStatus = "❌ کدِ تأییدِ ایمیل باید شش رقم باشد."; return; }
         if (LoginRules.WeakPassword(pass) is { } why) { LoginStatus = "❌ " + why; return; }
         if (pass != (ResetPass2 ?? "")) { LoginStatus = "❌ دو رمز یکی نیستند."; return; }
 

@@ -201,6 +201,25 @@
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="TextBlock.Foreground" Value="#3f8cff" />
     </Style>
+    <!-- «راه‌های دیگر ▾» (شورا، ث۳) — همان رنگِ `Button.link`؛ باز و بسته
+         شدنش فقط دیدن است و از خودِ همین کنترل خوانده می‌شود، نه ویومدل. -->
+    <Style Selector="Border.loginpage ToggleButton.ways">
+      <Setter Property="Foreground" Value="#6c5ce7" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="MinHeight" Value="26" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="4,0" />
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.loginpage ToggleButton.ways /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="TextBlock.Foreground" Value="#6c5ce7" />
+    </Style>
+    <Style Selector="Border.loginpage ToggleButton.ways:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="TextBlock.Foreground" Value="#3f8cff" />
+    </Style>
     <!-- لینک‌های روی آسمان — روشن، نه بنفشِ تیره روی تیره -->
     <Style Selector="Border.loginpage Button.linkw">
       <Setter Property="Foreground" Value="#dbe7ff" />
@@ -366,37 +385,42 @@
                     <!-- ⛔ عنوان از همان حالت‌های موجود می‌آید، نه از یک
                          خاصیتِ تازه در ویومدل: خواستهٔ صریحِ صاحب ریپو این
                          بود که «منطق دست نخوره». -->
-                    <TextBlock Text="ساختنِ حساب" Classes="h1" HorizontalAlignment="Center"
-                               IsVisible="{Binding IsSignUp}" />
-                    <TextBlock Text="خوش آمدید" Classes="h1" HorizontalAlignment="Center"
-                               IsVisible="{Binding IsSignIn}" />
-                    <TextBlock Text="ورود با کدِ ایمیلی" Classes="h1" HorizontalAlignment="Center"
+                    <!-- ⚠️ شورا، ث۳: «ساختنِ حساب» و «خوش آمدید» فقط در راه‌های رمزدار —
+                         تا امروز با «کدِ ایمیلی» دو عنوان روی هم دیده می‌شد، چون
+                         `IsSignUp` همان‌جا هم راست بود. قابِ بیرونی «و»ِ دو حال است. -->
+                    <StackPanel IsVisible="{Binding !IsCodeLogin}">
+                      <TextBlock Text="ساختنِ حساب" Classes="h1" HorizontalAlignment="Center"
+                                 IsVisible="{Binding IsSignUp}" />
+                      <TextBlock Text="خوش آمدید" Classes="h1" HorizontalAlignment="Center"
+                                 IsVisible="{Binding IsSignIn}" />
+                      <TextBlock Classes="dim" FontSize="12.5" TextAlignment="Center"
+                                 HorizontalAlignment="Center" Margin="0,7,0,0"
+                                 Text="چند ثانیه، و دفترتان روی حسابِ خودتان می‌نشیند."
+                                 IsVisible="{Binding IsSignUp}" />
+                      <TextBlock Classes="dim" FontSize="12.5" TextAlignment="Center"
+                                 HorizontalAlignment="Center" Margin="0,7,0,0"
+                                 Text="با ایمیل و رمزتان وارد شوید."
+                                 IsVisible="{Binding IsSignIn}" />
+                    </StackPanel>
+                    <TextBlock Text="ورود یا ساختنِ حساب" Classes="h1" HorizontalAlignment="Center"
                                IsVisible="{Binding IsCodeLogin}" />
-                    <TextBlock Classes="dim" FontSize="12.5" TextAlignment="Center"
-                               HorizontalAlignment="Center" Margin="0,7,0,0"
-                               Text="چند ثانیه، و دفترتان روی حسابِ خودتان می‌نشیند."
-                               IsVisible="{Binding IsSignUp}" />
-                    <TextBlock Classes="dim" FontSize="12.5" TextAlignment="Center"
-                               HorizontalAlignment="Center" Margin="0,7,0,0"
-                               Text="با ایمیل و رمزتان وارد شوید."
-                               IsVisible="{Binding IsSignIn}" />
-                    <TextBlock Classes="dim" FontSize="12.5" TextAlignment="Center"
-                               HorizontalAlignment="Center" Margin="0,7,0,0"
-                               Text="بی رمز — یک کدِ شش‌رقمی به ایمیلتان می‌رود."
+                    <TextBlock Classes="dim" FontSize="12.5" TextAlignment="Center" TextWrapping="Wrap"
+                               HorizontalAlignment="Center" Margin="0,7,0,20"
+                               Text="فقط ایمیلتان — یک کدِ تأییدِ ایمیل برایش می‌رود و همان کافی است؛ حسابِ تازه هم همین‌جا ساخته می‌شود."
                                IsVisible="{Binding IsCodeLogin}" />
 
-                    <!-- «حساب داری یا نه؟» — سه راهِ جدا و دیدنی -->
+                    <!-- ⛔ شورا، ث۳: «یک مسیرِ اصلی (ایمیل ⇐ کد ⇐ تمام) و بقیه زیرِ
+                         «راه‌های دیگر»». پس این کلیدِ دوتکه فقط وقتی دیده می‌شود
+                         که کاربر خودش یکی از راه‌های رمزدار را برگزیده؛ مسیرِ
+                         اصلی (`IsCodeLogin`، پیش‌فرض) هیچ انتخابی جلوی چشم ندارد. -->
                     <Border CornerRadius="999" Background="#eef2fb" Padding="4"
-                            HorizontalAlignment="Center" Margin="0,18,0,20">
+                            HorizontalAlignment="Center" Margin="0,18,0,20"
+                            IsVisible="{Binding !IsCodeLogin}">
                       <StackPanel Orientation="Horizontal" Spacing="4">
                         <Button Classes="mode" Classes.active="{Binding IsSignUp}" Content="حساب می‌سازم"
                                 Command="{Binding SetSignUpCommand}" CommandParameter="yes" />
                         <Button Classes="mode" Classes.active="{Binding IsSignIn}" Content="حساب دارم"
                                 Command="{Binding SetSignUpCommand}" CommandParameter="no" />
-                        <!-- درِ سوم: بی رمز. بندِ ۲۰٫۷ی پرامپت — ایمیل ⇒ کدِ
-                             شش‌رقمی ⇒ نشست. ثبت‌نام و ورود در این راه یکی‌اند. -->
-                        <Button Classes="mode" Classes.active="{Binding IsCodeLogin}" Content="کدِ ایمیلی"
-                                Command="{Binding SetSignUpCommand}" CommandParameter="code" />
                       </StackPanel>
                     </Border>
 
@@ -406,14 +430,16 @@
                          ⚠️ **Enter هم فرم را می‌فرستد.** روی خودِ کادرها
                          می‌نشیند، نه روی صفحه، وگرنه Enter در هر جای
                          دیگری هم دکمه را می‌زد. -->
-                    <StackPanel IsVisible="{Binding IsSignUp}" Margin="0,0,0,13">
-                      <TextBlock Text="نامِ شما" Classes="lbl" />
-                      <TextBox Text="{Binding LoginName}" Watermark="نام و نامِ خانوادگی">
-                        <TextBox.KeyBindings>
-                          <KeyBinding Gesture="Enter" Command="{Binding AccountStepCommand}" />
-                        </TextBox.KeyBindings>
-                      </TextBox>
-                    </StackPanel>
+                    <Panel IsVisible="{Binding !IsCodeLogin}">
+                      <StackPanel IsVisible="{Binding IsSignUp}" Margin="0,0,0,13">
+                        <TextBlock Text="نامِ شما" Classes="lbl" />
+                        <TextBox Text="{Binding LoginName}" Watermark="نام و نامِ خانوادگی">
+                          <TextBox.KeyBindings>
+                            <KeyBinding Gesture="Enter" Command="{Binding AccountStepCommand}" />
+                          </TextBox.KeyBindings>
+                        </TextBox>
+                      </StackPanel>
+                    </Panel>
 
                     <StackPanel Margin="0,0,0,13">
                       <TextBlock Text="ایمیل" Classes="lbl" />
@@ -437,15 +463,17 @@
                       </TextBox>
                     </StackPanel>
 
-                    <StackPanel IsVisible="{Binding IsSignUp}" Margin="0,0,0,13">
-                      <TextBlock Text="تکرارِ رمز" Classes="lbl" />
-                      <TextBox Text="{Binding LoginPassword2}" PasswordChar="{Binding PassChar}"
-                               Watermark="همان رمز را دوباره بنویسید">
-                        <TextBox.KeyBindings>
-                          <KeyBinding Gesture="Enter" Command="{Binding AccountStepCommand}" />
-                        </TextBox.KeyBindings>
-                      </TextBox>
-                    </StackPanel>
+                    <Panel IsVisible="{Binding !IsCodeLogin}">
+                      <StackPanel IsVisible="{Binding IsSignUp}" Margin="0,0,0,13">
+                        <TextBlock Text="تکرارِ رمز" Classes="lbl" />
+                        <TextBox Text="{Binding LoginPassword2}" PasswordChar="{Binding PassChar}"
+                                 Watermark="همان رمز را دوباره بنویسید">
+                          <TextBox.KeyBindings>
+                            <KeyBinding Gesture="Enter" Command="{Binding AccountStepCommand}" />
+                          </TextBox.KeyBindings>
+                        </TextBox>
+                      </StackPanel>
+                    </Panel>
 
                     <!-- «چشم» و «رمزم را فراموش کرده‌ام» -->
                     <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4"
@@ -468,17 +496,19 @@
                          ⛔ و منطق عوض نشد: همان `AcceptTerms` و همان
                             `LoadTermsCommand`ِ همیشگی — فقط آن‌چه
                             `ShowTerms` نشان می‌دهد حالا یک صفحه است. -->
-                    <Border IsVisible="{Binding IsSignUp}" Margin="0,10,0,0"
-                            Background="#f0f5ff" BorderBrush="#dbe5f7" BorderThickness="1"
-                            CornerRadius="14" Padding="14,11">
-                      <StackPanel Orientation="Horizontal" Spacing="2">
-                        <CheckBox IsChecked="{Binding AcceptTerms}" VerticalAlignment="Center" />
-                        <Button Classes="link" Content="شرایط و ضوابط" VerticalAlignment="Center"
-                                Command="{Binding LoadTermsCommand}" />
-                        <TextBlock Text="را خوانده‌ام و می‌پذیرم" FontSize="12.5" Foreground="#5a6a8c"
-                                   VerticalAlignment="Center" />
-                      </StackPanel>
-                    </Border>
+                    <Panel IsVisible="{Binding !IsCodeLogin}">
+                      <Border IsVisible="{Binding IsSignUp}" Margin="0,10,0,0"
+                              Background="#f0f5ff" BorderBrush="#dbe5f7" BorderThickness="1"
+                              CornerRadius="14" Padding="14,11">
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                          <CheckBox IsChecked="{Binding AcceptTerms}" VerticalAlignment="Center" />
+                          <Button Classes="link" Content="شرایط و ضوابط" VerticalAlignment="Center"
+                                  Command="{Binding LoadTermsCommand}" />
+                          <TextBlock Text="را خوانده‌ام و می‌پذیرم" FontSize="12.5" Foreground="#5a6a8c"
+                                     VerticalAlignment="Center" />
+                        </StackPanel>
+                      </Border>
+                    </Panel>
 
                     <Button Classes="go" Content="{Binding AccountButtonText}" Margin="0,18,0,0"
                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
@@ -487,21 +517,43 @@
                     <!-- ⛔ زیرِ دکمه هیچ ردیفِ «ورود با …» و هیچ نشانِ
                          سرویسِ بیرونی‌ای نیست: هیچ‌کدامِ آن راه‌ها در این
                          برنامه وجود ندارد و یک دکمهٔ بی‌کار از نبودنش بدتر
-                         است. راهِ سومِ واقعیِ خودمان همان «کدِ ایمیلی»ِ
-                         بالاست. -->
-                    <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center"
-                                Margin="0,14,0,0" IsVisible="{Binding IsSignUp}">
-                      <TextBlock Text="حساب دارید؟" FontSize="12.5" VerticalAlignment="Center"
-                                 Foreground="#8d9ab5" />
-                      <Button Classes="link" Content="وارد شوید"
-                              Command="{Binding SetSignUpCommand}" CommandParameter="no" />
+                         است.
+
+                         ══ شورا، ث۳ — «راه‌های دیگر» ══
+                         مسیرِ اصلی (ایمیل ⇐ کدِ تأییدِ ایمیل ⇐ تمام) هیچ انتخابی
+                         جلوی چشم ندارد. ورود و ساختنِ حساب **با رمز** حذف نشدند —
+                         فقط زیرِ این کشویی‌اند، و همان دو فرمانِ همیشگی را می‌زنند.
+                         ⚠️ باز و بسته شدنش فقط دیدن است (`#OtherWays.IsChecked`)؛
+                         ویومدل هیچ خاصیتِ تازه‌ای نگرفت. -->
+                    <StackPanel IsVisible="{Binding IsCodeLogin}" Margin="0,14,0,0" Spacing="6">
+                      <ToggleButton Name="OtherWays" Classes="ways" HorizontalAlignment="Center"
+                                    Content="راه‌های دیگر ▾" />
+                      <StackPanel IsVisible="{Binding #OtherWays.IsChecked}" Spacing="2"
+                                  HorizontalAlignment="Center">
+                        <Button Classes="link" Content="🔑 ورود با ایمیل و رمز" HorizontalAlignment="Center"
+                                Command="{Binding SetSignUpCommand}" CommandParameter="no" />
+                        <Button Classes="link" Content="🆕 ساختنِ حساب با رمز" HorizontalAlignment="Center"
+                                Command="{Binding SetSignUpCommand}" CommandParameter="yes" />
+                      </StackPanel>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center"
-                                Margin="0,14,0,0" IsVisible="{Binding !IsSignUp}">
-                      <TextBlock Text="حساب ندارید؟" FontSize="12.5" VerticalAlignment="Center"
-                                 Foreground="#8d9ab5" />
-                      <Button Classes="link" Content="یک حساب بسازید"
-                              Command="{Binding SetSignUpCommand}" CommandParameter="yes" />
+                    <StackPanel IsVisible="{Binding !IsCodeLogin}">
+                      <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center"
+                                  Margin="0,14,0,0" IsVisible="{Binding IsSignUp}">
+                        <TextBlock Text="حساب دارید؟" FontSize="12.5" VerticalAlignment="Center"
+                                   Foreground="#8d9ab5" />
+                        <Button Classes="link" Content="وارد شوید"
+                                Command="{Binding SetSignUpCommand}" CommandParameter="no" />
+                      </StackPanel>
+                      <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center"
+                                  Margin="0,14,0,0" IsVisible="{Binding !IsSignUp}">
+                        <TextBlock Text="حساب ندارید؟" FontSize="12.5" VerticalAlignment="Center"
+                                   Foreground="#8d9ab5" />
+                        <Button Classes="link" Content="یک حساب بسازید"
+                                Command="{Binding SetSignUpCommand}" CommandParameter="yes" />
+                      </StackPanel>
+                      <Button Classes="link" Content="‹ برگشت به ورود با کدِ تأییدِ ایمیل (بی رمز)"
+                              HorizontalAlignment="Center" Margin="0,8,0,0"
+                              Command="{Binding SetSignUpCommand}" CommandParameter="code" />
                     </StackPanel>
                   </StackPanel>
 
@@ -513,7 +565,7 @@
                     <TextBlock Text="رمزِ تازه" Classes="h1" HorizontalAlignment="Center" />
                     <TextBlock Classes="dim" FontSize="12.5" TextWrapping="Wrap" TextAlignment="Center"
                                Margin="0,8,0,18"
-                               Text="ایمیلتان را بنویسید تا یک کدِ شش‌رقمی برایش بفرستیم، بعد رمزِ تازه را بگذارید." />
+                               Text="ایمیلتان را بنویسید تا یک کدِ تأییدِ ایمیل برایش بفرستیم، بعد رمزِ تازه را بگذارید." />
 
                     <TextBlock Text="ایمیل" Classes="lbl" />
                     <TextBox Text="{Binding LoginEmail}" Watermark="you@example.com" c:Spot.Id="login-email"
@@ -528,7 +580,7 @@
 
                     <!-- تا کد نرفته، نیمهٔ دوم دیده نمی‌شود -->
                     <StackPanel Spacing="0" IsVisible="{Binding ResetSent}" Margin="0,16,0,0">
-                      <TextBlock Text="کدِ ایمیل" Classes="lbl" />
+                      <TextBlock Text="کدِ تأییدِ ایمیل" Classes="lbl" />
                       <TextBox Text="{Binding ResetCode}" MaxLength="6" Watermark="شش رقم"
                                FlowDirection="LeftToRight" Margin="0,0,0,13" />
                       <TextBlock Text="رمزِ تازه" Classes="lbl" />
@@ -557,10 +609,10 @@
                   <!-- ══════════ گامِ ۲: کدِ ایمیل ══════════
                        ⚠️ این کد **کدِ ایمیل** است، نه کدِ اشتراک. -->
                   <StackPanel Spacing="0" IsVisible="{Binding StepEmailCode}">
-                    <TextBlock Text="کدِ ایمیل" Classes="h1" HorizontalAlignment="Center" />
+                    <TextBlock Text="کدِ تأییدِ ایمیل" Classes="h1" HorizontalAlignment="Center" />
                     <TextBlock Classes="dim" FontSize="12.5" TextWrapping="Wrap" TextAlignment="Center"
                                Margin="0,8,0,18"
-                               Text="یک کدِ شش‌رقمی به ایمیلتان فرستادیم. همان را این‌جا بزنید تا حساب ساخته شود." />
+                               Text="یک کدِ تأییدِ ایمیل به ایمیلتان فرستادیم. همان را این‌جا بزنید تا حساب ساخته شود." />
 
                     <!-- ══ شش خانهٔ کد ══
                          پرشِ خودکار، Paste، ارقامِ فارسی/انگلیسی و ارسالِ
@@ -600,7 +652,7 @@
 
                     <!-- راهِ رمز همان کادرِ تک‌خطیِ همیشگی‌اش را دارد -->
                     <StackPanel IsVisible="{Binding !IsCodeLogin}">
-                      <TextBlock Text="کدِ ایمیل" Classes="lbl" />
+                      <TextBlock Text="کدِ تأییدِ ایمیل" Classes="lbl" />
                       <TextBox Text="{Binding EmailCode}" MaxLength="6"
                                Watermark="شش رقم" FlowDirection="LeftToRight">
                         <TextBox.KeyBindings>
@@ -863,7 +915,7 @@
               </Border>
               <Border Classes="kvrow">
                 <Grid ColumnDefinitions="150,*">
-                  <TextBlock Grid.Column="0" Text="کدِ پمپ روی سرورِ حساب" Classes="kvl" />
+                  <TextBlock Grid.Column="0" Text="شناسهٔ پمپ روی سرورِ حساب" Classes="kvl" />
                   <TextBlock Grid.Column="1" Text="{Binding PumpCodeLine}" Classes="kvv" />
                 </Grid>
               </Border>
@@ -897,7 +949,7 @@
           <!-- کدِ اپِ کارمندان — همان چیزی که هر کارمند در گوشی می‌زند -->
           <Border Classes="card calm" Padding="22,18">
             <StackPanel Spacing="12">
-              <TextBlock Text="📲 کدِ پمپ برای اپِ کارمندان" Classes="ptitle" />
+              <TextBlock Text="📲 کدِ اپِ گوشی" Classes="ptitle" />
 
               <Border Classes="stat" Padding="20,14" HorizontalAlignment="Left"
                       MinWidth="250" IsVisible="{Binding HasAccessCode}">
@@ -934,7 +986,7 @@
                         Command="{Binding ForgetPumpCommand}" IsEnabled="{Binding !Busy}"
                         ToolTip.Tip="برای بردنِ این کامپیوتر به پمپِ دیگر" />
                 <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                           Text="اشتراک و کدِ اپِ کارمندان و نشانیِ سرورِ این پمپ برداشته می‌شوند؛ دفتر و حساب‌ها دست نمی‌خورند." />
+                           Text="اشتراک و کدِ اپِ گوشی و نشانیِ سرورِ این پمپ برداشته می‌شوند؛ دفتر و حساب‌ها دست نمی‌خورند." />
               </StackPanel>
             </StackPanel>
           </Border>

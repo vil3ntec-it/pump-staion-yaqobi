@@ -1,3 +1,4 @@
+using PumpYaqobi.Application.Localization;
 using PumpYaqobi.App.Services;
 using Xunit;
 
@@ -150,7 +151,7 @@ public class OfflineKeyTests : IDisposable
         Assert.True(after.Listed);
         Assert.Contains("kar_app", after.Features);
         Assert.Contains("dashboard", after.Features);
-        Assert.Contains("کدِ آفلاین", after.PlanTitle);
+        Assert.Contains(CodeNames.OfflineKey, after.PlanTitle);
         Assert.True(after.EntitledUntil > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 
         //  برداشتن ⇒ همان حالِ پیشین
