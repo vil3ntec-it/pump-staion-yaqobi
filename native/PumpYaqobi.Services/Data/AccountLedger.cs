@@ -94,4 +94,21 @@ public static class AccountLedger
     /// </summary>
     public static bool ShouldClaimRoot(string? accountId, string? rootOwnerId) =>
         (accountId ?? "").Trim().Length > 0 && (rootOwnerId ?? "").Trim().Length == 0;
+
+    /// <summary>
+    /// «صاحبِ» ساختگیِ دفترِ ریشه وقتی آن دفتر مالِ این حساب نمی‌شود (دفترِ
+    /// کامپیوترِ دیگر، و حسابِ بی‌اشتراکِ پولی) — فقط برای <see cref="PathFor"/>،
+    /// هرگز روی دیسک. حساب دفترِ تازهٔ خودش را می‌گیرد؛ دفترِ ریشه دست نمی‌خورد.
+    /// </summary>
+    public const string ForeignRoot = "~foreign";
+
+    /// <summary>
+    /// ══ دفترِ ریشه به این حساب برسد؟ (۱۴۰۵/۰۷/۲۰) ══ خالص.
+    /// </summary>
+    /// <param name="ownLedgerExists">این حساب از قبل دفترِ جدای خودش را دارد —
+    /// پس نوشته‌هایش آن‌جاست و دفترِ ریشه دیگر به او نمی‌رسد (چیزی پنهان نشود).</param>
+    /// <param name="stampTrusted">مُهرِ دفترِ ریشه مالِ همین کامپیوتر است (<c>LedgerStamp.Trusted</c>).</param>
+    /// <param name="paid">اشتراکِ پولی دارد — همان درِ «آوردنِ بکاپ».</param>
+    public static bool MayClaimRoot(bool ownLedgerExists, bool stampTrusted, bool paid) =>
+        !ownLedgerExists && (stampTrusted || paid);
 }

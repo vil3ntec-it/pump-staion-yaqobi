@@ -44,7 +44,8 @@ public static class ErrorText
 
         //  ⛔ قفلِ «فقط‌خواندنی» (۱۴۰۵/۰۷/۲۰) خطا نیست — می‌گوید چرا و کجا باز می‌شود
         if (Denied(ex) is { } pd)
-            return PumpYaqobi.Application.Security.PermissionService.ReadOnlyHook?.Invoke() == true
+            return pd.Reason.Length > 0 ? pd.Reason
+                : PumpYaqobi.Application.Security.PermissionService.ReadOnlyHook?.Invoke() == true
                 ? AppLock.Denied : "اجازهٔ این کار را ندارید — فقط مدیر می‌تواند.";
 
         //  پیامِ خودِ این برنامه، به فارسی — همان‌طور

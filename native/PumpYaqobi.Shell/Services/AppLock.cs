@@ -94,6 +94,30 @@ public static class AppLock
         _ => "",
     };
 
+    /// <summary>
+    /// ══ آوردنِ بکاپ — فقط با اشتراکِ پولی (۱۴۰۵/۰۷/۲۰) ══════════════════════
+    /// «فایل‌های بک‌اپ برای استاندارد، وی‌آی‌پی و دائمی قابلِ آوردن باشد…
+    /// هیچ‌کس دیگر، حتی آزمایشی‌ها.» راهِ سوءاستفاده: بکاپِ یک دفتر روی حسابِ
+    /// آزمایشیِ تازه، و دوباره، و دوباره.
+    ///
+    /// ⇒ ‎null‎ یعنی آزاد؛ وگرنه جملهٔ کاربر.
+    /// ⛔ «پولی» یعنی مجوزِ <b>امضاشده و زنده</b> که آزمایشی نیست، یا کدِ
+    /// بی‌اینترنتِ معتبر (هر سه پلنِ آن پولی‌اند). حرفِ بی‌امضای سرور و ارفاقِ
+    /// پس از پایان کافی نیست.
+    /// </summary>
+    public static string? RestoreBlocked(bool open, LicenseCheck? check, bool offlinePaid)
+    {
+        if (offlinePaid) return null;
+        if (open && check is { SignatureOk: true, IsTrial: false }) return null;
+        return check is { SignatureOk: true, IsTrial: true } && open ? RestoreTrial : RestoreNoPlan;
+    }
+
+    public const string RestoreTrial =
+        "🔒 آوردنِ بکاپ در دورهٔ آزمایشی نیست — فقط با اشتراکِ استاندارد، وی‌آی‌پی یا دائمی. ساختنِ بکاپ همیشه باز است.";
+
+    public const string RestoreNoPlan =
+        "🔒 آوردنِ بکاپ فقط با اشتراکِ استاندارد، وی‌آی‌پی یا دائمی است. ساختنِ بکاپ همیشه باز است.";
+
     /// <summary>پیامِ کوتاهِ «این کار نشد» وقتی کسی در حالِ قفل می‌خواهد بنویسد.</summary>
     public const string Denied = "🔒 برنامه فقط‌خواندنی است — برای نوشتن اشتراک لازم است (پروفایل ← اشتراک).";
 }

@@ -78,6 +78,28 @@ public static class SoftLock
         return c;
     }
 
+    /// <summary>
+    /// آوردنِ بکاپ مجاز است؟ ‎null‎ ⇒ بله؛ وگرنه جملهٔ کاربر. تصمیم در
+    /// <see cref="AppLock.RestoreBlocked"/>؛ این‌جا فقط ورودی‌ها از روی دیسک.
+    /// ⚠️ برخلافِ قفلِ نوشتن، خطای خواندنِ مجوز این‌جا «باز» نیست: آوردنِ بکاپِ
+    /// بیرونی کارِ روزمره نیست و درِ سوءاستفاده است — با مجوزِ ناخوانا بسته.
+    /// </summary>
+    public static string? RestoreBlocked()
+    {
+        if (Disabled) return null;
+        if (Entitlements.Unlocked && !Entitlements.TestDeny) return null;
+        try
+        {
+            var f = AppSettings.Load();
+            var now = LicenseClock.Now(f);
+            if (Entitlements.TestDeny) return AppLock.RestoreBlocked(false, null, false);
+            var offline = OfflineKey.Stored(f, now).Valid;
+            var check = string.IsNullOrWhiteSpace(f.CloudDeviceToken) ? null : LicenseGuard.CheckStored(f, now);
+            return AppLock.RestoreBlocked(Entitlements.State(f).Open, check, offline);
+        }
+        catch { return AppLock.RestoreNoPlan; }
+    }
+
     /// <summary>مجوز یا حساب عوض شد — حالِ قفل همان لحظه دوباره سنجیده شود.</summary>
     public static void Invalidate() => _cached = null;
 
@@ -162,6 +184,7 @@ public static class SoftLock
     public static void Install()
     {
         PermissionService.ReadOnlyHook = () => ReadOnly;
+        PermissionService.RestoreGateHook = RestoreBlocked;
         CloudLink.LicenseChanged -= Invalidate;
         CloudLink.LicenseChanged += Invalidate;
     }

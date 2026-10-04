@@ -78,6 +78,13 @@ public class SyncStateRow
     /// <summary>همیشه ۱.</summary>
     public long Id { get; set; } = 1;
 
+    /// <summary>
+    /// اثرِ انگشتِ کامپیوتری که این دفتر رویش ساخته شد (یا نخستین بار با این
+    /// نسخه باز شد) — ‎LedgerStamp‎. دفترِ کپی‌شده از کامپیوترِ دیگر به
+    /// حسابِ بی‌اشتراکِ تازه نمی‌رسد (۱۴۰۵/۰۷/۲۰). خالی یعنی هنوز مُهری نیست.
+    /// </summary>
+    public string LedgerMachine { get; set; } = string.Empty;
+
     /// <summary>شناسهٔ این دستگاه، همان که سرور می‌بیند.</summary>
     public string DeviceId { get; set; } = string.Empty;
 

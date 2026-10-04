@@ -235,13 +235,21 @@ public sealed class AppHost
             //  نخستین حساب، دفترِ موجود را برمی‌دارد — همان چیزی که دادهٔ
             //  «بی‌حساب» را به حسابِ تازه می‌رساند (قاعدهٔ ۱۴۰۵/۰۷/۰۷).
             //  ⚠️ `Save()`ی بادوام، نه `SaveSoon()`: بالای خودِ خاصیت نوشته چرا.
+            var owner = file.LedgerAccountId;
             if (AccountLedger.ShouldClaimRoot(id, file.LedgerAccountId))
             {
-                file.LedgerAccountId = id;
-                try { file.Save(); } catch { /* نشد ⇒ دورِ بعد دوباره */ }
+                //  ⛔ دفترِ کپی‌شده از کامپیوترِ دیگر فقط به حسابِ پولی می‌رسد
+                //  (۱۴۰۵/۰۷/۲۰، ‎LedgerStamp‎) — همان درِ «آوردنِ بکاپ».
+                if (RootClaimAllowed(id))
+                {
+                    file.LedgerAccountId = id;
+                    owner = id;
+                    try { file.Save(); } catch { /* نشد ⇒ دورِ بعد دوباره */ }
+                }
+                else owner = AccountLedger.ForeignRoot;
             }
 
-            var want = AccountLedger.PathFor(_rootDb, id, file.LedgerAccountId);
+            var want = AccountLedger.PathFor(_rootDb, id, owner);
 
             //  همان فایل است (حسابِ صاحبِ ریشه، یا هنوز بی‌حساب) ⇒ فقط نامش
             //  را می‌نویسیم و هیچ چیزی از نو خوانده نمی‌شود.
@@ -270,6 +278,28 @@ public sealed class AppHost
         UndoHub.Clear();
         LedgerSwitched?.Invoke();
         return true;
+    }
+
+    /// <summary>
+    /// دفترِ ریشه به این حساب برسد؟ تصمیم در <c>AccountLedger.MayClaimRoot</c>؛
+    /// این‌جا فقط ورودی‌ها. ⚠️ نرسیدن به هر ورودی ⇒ «مالِ همین کامپیوتر» —
+    /// همان رفتارِ پیشین، تا هیچ مشتریِ امروزی دفترش را گم نکند.
+    /// </summary>
+    private bool RootClaimAllowed(string id)
+    {
+        try
+        {
+            var own = File.Exists(AccountLedger.PathFor(_rootDb, id, AccountLedger.ForeignRoot));
+            var root = string.Equals(Path.GetFullPath(Db.DbPath), Path.GetFullPath(_rootDb),
+                                     StringComparison.OrdinalIgnoreCase) ? Db : new PumpDbFactory(_rootDb);
+            var trusted = LedgerStamp.Trusted(LedgerStamp.Read(root), CloudConfig.MachineFingerprint());
+            //  ⚠️ قلاب هنوز ننشسته (سرِ بالا آمدن) ⇒ «پولی نیست»: دفترِ بیگانه
+            //  فقط با اشتراکِ سنجیده‌شده برداشته می‌شود، نه با «نمی‌دانیم».
+            var gate = PermissionService.RestoreGateHook;
+            var paid = gate is not null && gate() is not { Length: > 0 };
+            return AccountLedger.MayClaimRoot(own, trusted, paid);
+        }
+        catch { return true; }
     }
 
     /// <summary>
@@ -452,6 +482,9 @@ public sealed class AppHost
         //  کاربر بروند.
         if (dbPath is null)
         {
+            //  ⛔ مُهرِ کامپیوترِ دفترِ ریشه — پیش از هر تصمیمِ «صاحبِ دفتر» (‎LedgerStamp‎)
+            try { LedgerStamp.StampIfEmpty(Current.Db, CloudConfig.MachineFingerprint()); }
+            catch { /* رفاه؛ نبودنش یعنی «مالِ همین کامپیوتر» */ }
             try { Current.UseLedgerOf(AppSettings.Load().CloudUserId); }
             catch { /* دفترِ ریشه سرِ جایش است؛ برنامه باید بالا بیاید */ }
 

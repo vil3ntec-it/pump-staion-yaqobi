@@ -36,7 +36,14 @@ public sealed class PermissionDeniedException : Exception
     public PermissionDeniedException(Permission p)
         : base("اجازهٔ این کار را ندارید: " + p) { Permission = p; }
 
+    /// <summary>با دلیلِ فارسیِ خودِ برنامه — همان جمله‌ای که کاربر می‌بیند.</summary>
+    public PermissionDeniedException(Permission p, string reason)
+        : base(reason) { Permission = p; Reason = reason; }
+
     public Permission Permission { get; }
+
+    /// <summary>دلیلِ خواندنی برای کاربر؛ خالی یعنی «اجازه ندارید»ِ نقش.</summary>
+    public string Reason { get; } = "";
 }
 
 /// <summary>
@@ -81,6 +88,33 @@ public sealed class PermissionService
     /// که پولش تمام شده باید بتواند دفترش را ببرد.
     /// </summary>
     public static Func<bool>? ReadOnlyHook { get; set; }
+
+    /// <summary>
+    /// ══ آوردنِ بکاپ فقط با اشتراکِ پولی (۱۴۰۵/۰۷/۲۰) ══════════════════════
+    ///
+    /// «یارو بک‌اپ رو روی کامپیوترِ دیگه می‌گیره و ده‌ها حساب درست می‌کنه و
+    /// دیگه لازم نداره اشتراک بخره… فقط کسایی که اشتراک دارن بتونن فایل‌های
+    /// بک‌اپ رو بیارن، حتی آزمایشی‌ها نه.»
+    ///
+    /// خالی/‎null‎ ⇒ آزاد؛ وگرنه همان جمله‌ای که کاربر می‌بیند. تصمیم در
+    /// <c>AppLock.RestoreBlocked</c>ِ پوسته است؛ این‌جا فقط تنها نقطهٔ اعمال.
+    /// ⛔ <b>فقط آوردن</b> (<see cref="Permission.Restore"/> و
+    /// <see cref="Permission.Import"/>)؛ ساختنِ بکاپ و خروجی همیشه باز است.
+    /// </summary>
+    public static Func<string?>? RestoreGateHook { get; set; }
+
+    /// <summary>همان در برای همین نمونه — فقط آزمون‌ها (قلابِ سراسری را دست نمی‌زنند).</summary>
+    public Func<string?>? RestoreGate { get; set; }
+
+    /// <summary>
+    /// آوردنِ هر بکاپ یا فایلی که دفتر را از بیرون پر می‌کند — نقش و اشتراک هر دو.
+    /// </summary>
+    public void RequireRestore(Permission p = Permission.Restore)
+    {
+        Require(p);
+        if ((RestoreGate ?? RestoreGateHook)?.Invoke() is { Length: > 0 } why)
+            throw new PermissionDeniedException(p, why);
+    }
 
     /// <summary>این اجازه «نوشتن» است؟</summary>
     private static bool Writes(Permission p) =>
