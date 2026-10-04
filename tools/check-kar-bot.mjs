@@ -759,5 +759,33 @@ console.log('\n══ فقط دیدن — هیچ راهی به نوشتنِ حس
   ok(/👁 فقط دیدن/.test(read('kar/index.html')) && /👁 فقط دیدن/.test(view), 'هر دو صفحه روی خودشان «👁 فقط دیدن» دارند');
 }
 
+// ══ شورا، چ۴ — «پمپ‌هایم»: فهرست و خلاصه، خالص ═══════════════════════════
+{
+  const { pumpListAdd, pumpListDrop, pumpSummary } = bot;
+  let l = pumpListAdd([], { code: '11112222', stn: 'ac-a', name: 'الف' });
+  l = pumpListAdd(l, { code: '33334444', stn: 'ac-b', name: 'ب' });
+  l = pumpListAdd(l, { code: '11112222', stn: 'ac-a', name: '' });
+  ok(l.length === 2 && l[0].name === 'الف', 'پمپ‌هایم: همان پمپ دوباره ⇒ یک ردیف، نامش نمی‌رود');
+  l = pumpListAdd(l, { code: '99990000', stn: 'ac-a', name: 'الفِ تازه' });
+  ok(l.length === 2 && l[0].code === '99990000', 'پمپ‌هایم: کدِ عوض‌شدهٔ همان پمپ جای قبلی را می‌گیرد');
+  ok(pumpListAdd(l, { stn: 'x' }).length === 2, 'پمپ‌هایم: بی کد هیچ ردیفی');
+  ok(pumpListDrop(l, 'ac-a').length === 1 && pumpListDrop(l, 'ac-a')[0].stn === 'ac-b', 'پمپ‌هایم: خروج فقط همان پمپ را برمی‌دارد');
+  ok(Object.keys(l[0]).sort().join() === 'code,name,stn', '⛔ پمپ‌هایم: هر ردیف فقط کد و نام');
+
+  const snap = { at: '1405/07/20', gate: 'g-A', station: { name: 'الف' },
+    banner: [['قرض کل', '91,111', 'danger']],
+    tank: { petrol: { show: '7,000', low: false }, diesel: { show: 10, low: true } },
+    debtors: [{ name: 'هارون', status: 'out' }, { name: 'کریم', status: 'ok' }, { name: 'علی', status: 'low' }] };
+  const s0 = pumpSummary(snap, '');
+  ok(s0.tank.petrol.show === 7000 && s0.tank.diesel.low && s0.counts.out === 1 && s0.counts.ok === 1 && s0.counts.low === 1,
+     'پمپ‌هایم: مخزن و شمارِ قرض‌داران از عکسِ همان پمپ');
+  ok(s0.banner === null, '⛔ پمپ‌هایم: بی رمز، چهار عددِ «حساب‌ها» نه');
+  ok(pumpSummary(snap, 'g-B').banner === null, '⛔ پمپ‌هایم: رمزِ پمپِ دیگر (هشِ دیگر) هیچ عددی را باز نمی‌کند');
+  ok(pumpSummary(snap, 'g-A').banner[0][1] === '91,111', 'پمپ‌هایم: رمزِ همان پمپ ⇒ عددهای همان پمپ');
+  ok(!JSON.stringify(pumpSummary(snap, 'g-A')).includes('هارون'), '⛔ پمپ‌هایم: نامِ هیچ قرض‌داری در خلاصه نیست');
+  ok(pumpSummary({ gate: '' , banner: [['x', '1', '']] }, '').banner === null, '⛔ پمپ‌هایم: پمپِ بی‌رمز هم عددِ «حساب‌ها» را بی‌رمز نمی‌دهد');
+  ok(pumpSummary(null, 'g') === null, 'پمپ‌هایم: بی عکس ⇒ هیچ');
+}
+
 console.log(bad ? '\n' + bad + ' آزمون شکست خورد' : '\nهمه درست');
 process.exit(bad ? 1 : 0);

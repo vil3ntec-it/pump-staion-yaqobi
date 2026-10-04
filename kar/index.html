@@ -495,8 +495,23 @@
       <!-- ⚠️ راهِ کیو‌آر برداشته نشد: پمپی که برنامه‌اش هنوز به‌روز نشده، و
            جایی که شبکهٔ پمپ هست ولی اینترنت نیست، فقط همین را دارند. -->
       <button id="btnManual">اینترنت ندارم — با کیو‌آر وصل می‌شوم</button>
+      <button id="btnCodePumps" class="hidden">↩ برگشت به پمپ‌هایم</button>
     </div>
   </div>
+</div>
+
+<!-- ══ شورا چ۴ — پمپ‌هایم ═════════════════════════════════════════════
+     ⛔ عکسِ هر پمپ با کدِ خودش و فقط در حافظهٔ همین صفحه؛ رمزِ هر پمپ جدا. -->
+<div class="wrap hidden" id="pumpsPane">
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <h1>📊 پمپ‌هایم</h1>
+      <button id="btnPumpsBack" class="icb" title="برگشت">↩</button>
+    </div>
+    <div class="sub">هر پمپ جدا و با کدِ خودش خوانده می‌شود؛ نامِ هیچ قرض‌داری این‌جا نیست. چهار عددِ «حساب‌ها»ی هر پمپ فقط با رمزِ برنامهٔ کامپیوترِ همان پمپ.</div>
+  </div>
+  <div id="pumpsList"></div>
+  <button class="p big" id="btnPumpsAdd">➕ پمپِ دیگر</button>
 </div>
 
 <!-- ══ ۰ب) ورود با گوگل — راهِ صاحبِ پمپ ═══════════════════════════════
@@ -637,6 +652,8 @@
       <button id="btnLock" class="icb" title="قفلِ دوبارهٔ حساب‌ها">🔒</button>
       <!-- ⛔ همیشه دیده می‌شود: پمپِ بی‌رمز صفحهٔ قفل ندارد، پس «پمپِ دیگر»ِ آن‌جا
            هیچ‌وقت در دسترس نبود و گوشی برای همیشه به پمپِ اول می‌چسبید. -->
+      <!-- شورا چ۴: پمپ‌هایم — یک گوشی، چند پمپ؛ از هر صفحه، نه فقط از خانه -->
+      <button id="btnPumpsTop" class="icb" title="پمپ‌هایم — همه کنارِ هم، یا پمپِ دیگر">🗂</button>
       <button id="btnOther" class="icb" title="پمپِ دیگر / خروج از این پمپ">⇄</button>
     </div>
     <div class="row" style="margin-top:6px">
@@ -667,6 +684,15 @@
       </button>
     </div>
     <div class="card" style="margin-top:12px"><div class="sub">هر دو فقط می‌خوانند؛ هیچ حسابی از گوشی عوض نمی‌شود. بی اینترنت هم آخرین عکس دیده می‌شود.</div></div>
+    <!-- شورا چ۴: یک گوشی، چند پمپ — هر پمپ با کدِ خودش، هیچ قاطی -->
+    <div class="home" style="margin-top:12px">
+      <button class="door hidden" id="btnPumps"><span class="ic">📊</span>
+        <span class="grow"><b>📊 همهٔ پمپ‌هایم</b>
+          <span class="sub">مخزن و حالِ قرض‌دارانِ هر پمپ کنارِ هم؛ چهار عددِ «حساب‌ها» با رمزِ همان پمپ.</span></span></button>
+      <button class="door" id="btnAddPump"><span class="ic">➕</span>
+        <span class="grow"><b>پمپِ دیگر را اضافه کن</b>
+          <span class="sub">با «کدِ اپِ گوشی»ِ همان پمپ. این پمپ هم در فهرست می‌ماند.</span></span></button>
+    </div>
   </section>
 
   <!-- ══ هشدارها — بالای همه‌چیز، در هر دو در ══ -->
