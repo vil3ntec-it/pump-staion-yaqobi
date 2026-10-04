@@ -299,6 +299,8 @@ public sealed partial class DebtReceiptSectionViewModel : SectionViewModel
     [RelayCommand]
     public async Task SubmitAsync()
     {
+        //  ⛔ «12a» رسیدِ صفر نشود (شورا، بندِ ۱)
+        if (Shamsi.FirstUnreadable(("رسید", AmountText)) is { } bad) { _host.Toast("«" + bad + "» عدد نیست — ذخیره نشد.", ToastKind.Warn); return; }
         var amount = Shamsi.Num(AmountText);
         //  ⛔ رسیدِ منفی نیست (۱۴۰۵/۰۷/۱۶): «-500»، «500-» و «(500)» همه ۵۰۰− خوانده
         //  می‌شدند و رسیدِ منفی بدهیِ مشتری را بی‌صدا **بالا** می‌برد.

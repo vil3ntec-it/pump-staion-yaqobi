@@ -183,6 +183,7 @@ public class ExcelGrid : DataGrid
         {
             if (!IsEffectivelyVisible) return;
             SpreadColumns(); PinOnUserResize(); DragStep(); if (!KeepInsideStep() && !FillGapStep()) RememberWidths(); Settle(); SyncSticky();
+            EnsureGridLinesForWidths();
         };
 
         // ══ دوبار-کلیک روی خطِ ستون = هم‌قدِ محتوا، مثلِ اکسل ═════════════════
@@ -1783,6 +1784,36 @@ public class ExcelGrid : DataGrid
     /// جای خانه‌ها: قابِ جدول منهای ستونِ شمارهٔ ردیف (‎#‎) و دو خطِ لبه.
     /// ⛔ هر حسابِ «جا می‌شود؟» از همین است — ستونِ «#» هم جا می‌گیرد.
     /// </summary>
+    // ══ خطِ عمودیِ آخرین ستون — همان لحظه که پهناها عوض شد (۱۴۰۵/۰۷/۱۹) ══
+    //
+    //  سنجهٔ ‎themeflip‎ در ورقِ روز «۱ پیکسل جابه‌جایی پس از تعویضِ تم» نشان
+    //  می‌داد. ریشه تم نبود: ‎DataGrid‎ی آوالونیا خطِ راستِ <b>آخرین ستون</b> را
+    //  فقط وقتی می‌کشد که ستون‌ها قاب را پر نکرده‌اند (ستونِ پُرکننده فعال
+    //  است)، و این تصمیم را هنگامِ ساختنِ هر خانه می‌گیرد. ‎SpreadColumns‎ پس از
+    //  آن ستون‌ها را به اندازهٔ قاب می‌کند ولی خانه‌های ساخته‌شده خبردار نمی‌شوند،
+    //  پس آخرین ستون یک خطِ اضافه و ۱ پیکسل کمتر جا داشت — تا اولین
+    //  بی‌اعتبارسازیِ بزرگ (همان تعویضِ تم). حالا هر بار که جمعِ پهناها عوض
+    //  شد، خط‌ها از همان راهِ خودِ ‎DataGrid‎ دوباره سنجیده می‌شوند
+    //  (‎GridLinesVisibility‎). ⚡ فقط با عوض شدنِ پهنا، و فقط ردیف‌های زنده.
+    private double _gridLineSig = double.NaN;
+
+    private void EnsureGridLinesForWidths()
+    {
+        if (!_spread) return;
+        var v = GridLinesVisibility;
+        if (!v.HasFlag(DataGridGridLinesVisibility.Vertical)) return;
+        double sig = 0; var n = 0;
+        foreach (var c in Columns)
+            if (c.IsVisible) { var w = c.ActualWidth; if (double.IsNaN(w)) return; sig += w; n++; }
+        sig += n * 100000 + Math.Round(CellRoom());
+        if (Math.Abs(sig - _gridLineSig) < 0.5) return;
+        var first = double.IsNaN(_gridLineSig);
+        _gridLineSig = sig;
+        if (first && RowCount() == 0) return;
+        SetCurrentValue(GridLinesVisibilityProperty, DataGridGridLinesVisibility.Horizontal);
+        SetCurrentValue(GridLinesVisibilityProperty, v);
+    }
+
     private double CellRoom()
     {
         var head = HeadersVisibility.HasFlag(DataGridHeadersVisibility.Row) && !double.IsNaN(RowHeaderWidth)
@@ -2434,6 +2465,16 @@ public class ExcelGrid : DataGrid
     /// <summary>ردیفی که یکی از خانه‌هایش همین حالا باز است.</summary>
     private RowViewModel? _editRow;
 
+    /// <summary>کادرِ خانهٔ عددی: نوشتهٔ ناخوانا ⇐ کلاسِ ‎badnum‎ (لبهٔ سرخ).</summary>
+    private static void WatchBadNumber(TextBox box)
+    {
+        static void Check(TextBox b) => b.Classes.Set("badnum", !PumpYaqobi.Application.Localization.Shamsi.IsReadable(b.Text));
+        Check(box);
+        if (box.Tag as string == "badnum-hooked") return;
+        box.Tag = "badnum-hooked";
+        box.TextChanged += (_, _) => Check(box);
+    }
+
     private void EndRowEdit()
     {
         var r = _editRow;
@@ -2488,6 +2529,8 @@ public class ExcelGrid : DataGrid
                 var p = PathOf(e.Column);
                 LiveFormat.Attach(fbox, p is "DateShamsi" ? "date"
                                       : RowViewModel.IsNumberColumn(p) ? "number" : null);
+                //  ⛔ عددِ ناخوانا (شورا، بندِ ۱): خانه همان لحظه سرخ — ردیف مقدارش را عوض نمی‌کند
+                if (p is "DensityText" || RowViewModel.IsNumberColumn(p)) WatchBadNumber(fbox);
             }
             if (pendingTyped is { } typed
                 && (e.EditingElement as TextBox ?? e.EditingElement?.GetVisualDescendants().OfType<TextBox>().FirstOrDefault()) is { } ready)
@@ -2503,7 +2546,19 @@ public class ExcelGrid : DataGrid
         };
         // ⚠️ پیش از نشستنِ مقدار در ردیف: تکملهٔ پذیرفته‌نشدهٔ پیشنهادِ خودکار
         // برداشته شود، وگرنه «س»ی کاربر «سلام من هارون هستم» ذخیره می‌شد.
-        CellEditEnding += (_, _) => Suggest.Settle();
+        CellEditEnding += (_, e) =>
+        {
+            Suggest.Settle();
+            //  ⛔ خانهٔ عددیِ ناخوانا بسته نمی‌شود (شورا، بندِ ۱): می‌ماند و سرخ است تا
+            //  درست شود، یا Esc همان عددِ قبلی را برگرداند. هیچ صفری ذخیره نمی‌شود.
+            if (e.EditAction == DataGridEditAction.Commit
+                && (e.EditingElement as TextBox ?? e.EditingElement?.GetVisualDescendants().OfType<TextBox>().FirstOrDefault()) is { } eb
+                && eb.Classes.Contains("badnum"))
+            {
+                e.Cancel = true;
+                AppHost.Current?.Toast("«" + (eb.Text ?? "").Trim() + "» عدد نیست — ذخیره نشد. درستش کنید یا Esc بزنید.", ToastKind.Warn);
+            }
+        };
         CellEditEnded += (_, _) =>
         {
             EndRowEdit();

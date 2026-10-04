@@ -78,6 +78,8 @@ public sealed class AppHost
         Voice = new VoiceDataService(Db, Permissions);
         LegacyImport = new LegacyImportService(Db, Permissions, Settings);
         Backup = new BackupService(Db, Permissions);
+        Health = new LedgerHealthService(Db);
+        Parity = new LedgerParityService(Db, Debt);
         History = new HistoryService(Db, Permissions, Exchange, Retail, Company, AmanatCalc, Amanat, Waraq);
         SafeLedger = new LedgerService<SafeEntry>(Db, Permissions, Trash, "safe",
             r => (r.Title ?? "") + " — " + Shamsi.Money(r.Amount));
@@ -373,6 +375,12 @@ public sealed class AppHost
 
     /// <summary>خوراکِ همهٔ ابزارهای بالا و دو دفترِ کوچکشان.</summary>
     public ToolsDataService Tools { get; }
+
+    /// <summary>«🩺 سلامتِ دفتر» — عددهای ناخوانای روی دیسک (فقط گزارش).</summary>
+    public LedgerHealthService Health { get; }
+
+    /// <summary>«سنجهٔ برابری» — عددهای مشتقِ ذخیره‌شده با ردیف‌ها (روزی یک بار).</summary>
+    public LedgerParityService Parity { get; }
 
     /// <summary>دفترِ دوربین‌های مداربسته — افزودن و حذفش پشتِ اجازهٔ مدیر.</summary>
     public CameraDataService Cameras { get; }

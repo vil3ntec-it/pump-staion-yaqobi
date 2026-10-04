@@ -98,9 +98,9 @@ public sealed partial class ParchaReceiptRowViewModel : RowViewModel
             OnPropertyChanged(n);
     }
 
-    public string LitersText { get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters)); set { Typed(nameof(LitersText), value); Liters = Shamsi.Num(value); } }
-    public string PriceText { get => Shown(nameof(PriceText), Shamsi.MoneyOrBlank(PricePerLiter)); set { Typed(nameof(PriceText), value); PricePerLiter = Shamsi.Num(value); } }
-    public string RasidText { get => Shown(nameof(RasidText), Shamsi.MoneyOrBlank(Rasid)); set { Typed(nameof(RasidText), value); Rasid = Shamsi.Num(value); } }
+    public string LitersText { get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters)); set { if (!Typed(nameof(LitersText), value)) return; Liters = Shamsi.Num(value); } }
+    public string PriceText { get => Shown(nameof(PriceText), Shamsi.MoneyOrBlank(PricePerLiter)); set { if (!Typed(nameof(PriceText), value)) return; PricePerLiter = Shamsi.Num(value); } }
+    public string RasidText { get => Shown(nameof(RasidText), Shamsi.MoneyOrBlank(Rasid)); set { if (!Typed(nameof(RasidText), value)) return; Rasid = Shamsi.Num(value); } }
 
     internal decimal Bardagi =>
         Math.Round(PostingService.FuelBardagi(Liters, PricePerLiter), 0, MidpointRounding.AwayFromZero);

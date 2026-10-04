@@ -52,6 +52,8 @@ internal static class YearsAudit
     private static readonly long BudgetMs = 120_000L * Years;
     private static bool _outOfTime;
 
+    private static int ParityBad;
+
     public static int Run()
     {
         var dir = Path.Combine(Path.GetTempPath(), "pump-years-" + Guid.NewGuid().ToString("N"));
@@ -82,6 +84,12 @@ internal static class YearsAudit
         Mark("خواندنِ فهرستِ قرض‌داران (بی صفحه)", () => host.Debtors.ListAsync(false).GetAwaiter().GetResult());
         Mark("جمع‌های همهٔ حساب‌ها (بی صفحه)", () => host.Debtors.CardAccountsAsync(false).GetAwaiter().GetResult());
         Mark("عکسِ زندهٔ ایستگاه (StationSnapshot)", () => StationSnapshot.BuildAsync(host).GetAwaiter().GetResult());
+        //  ⛔ شورا، الف۳: سنجهٔ برابری روی همین دادهٔ چندساله باید صفر ناجور بدهد
+        var parity = new List<PumpYaqobi.Services.Data.ParityMismatch>();
+        Mark("سنجهٔ برابری (همهٔ حساب‌ها، فقط خواندن)", () => parity = host.Parity.CheckAsync(fix: false).GetAwaiter().GetResult());
+        Console.WriteLine($"   ناجورِ عددهای مشتق: {parity.Count}");
+        foreach (var m in parity.Take(5)) Console.WriteLine($"     · حساب {m.AccountId} ردیف {m.RowId} {m.Field}: {m.Stored} ≠ {m.Truth}");
+        if (parity.Count > 0) ParityBad = parity.Count;
         Mark("قرض‌های کهنه (همهٔ ردیف‌ها)", () =>
             host.Tools.AgingAsync(PumpYaqobi.Application.Services.AgingFilter.All).GetAwaiter().GetResult());
 
@@ -226,6 +234,7 @@ internal static class YearsAudit
         }
         var bad = Marks.Where(m => m.Ms > Broken).ToList();
         Console.WriteLine();
+        if (ParityBad > 0) { Console.WriteLine($"❌ سنجهٔ برابری: {ParityBad} عددِ مشتقِ ناجور"); return 1; }
         if (bad.Count == 0) { Console.WriteLine($"✅ با {Years} سال داده هیچ کاری از {Broken:N0} ms نگذشت"); return 0; }
         foreach (var (what, ms) in bad) Console.WriteLine($"❌ {what}: {ms:N0} ms");
         return 1;
@@ -319,8 +328,10 @@ internal static class YearsAudit
                     row.Set("Fuel", k % 3 == 0 ? 2 : 1);
                     var liters = k % 50 + 5;
                     row.Set("Liters", liters.ToString()); row.Set("PricePerLiter", "62");
-                    row.Set("Bardagi", (liters * 62).ToString()); row.Set("Rasid", k % 4 == 0 ? "1000" : "0");
-                    row.Set("RasidFuel", "0"); row.Set("Albaqi", (liters * 62).ToString()); row.Set("ByMoney", 0);
+                    var rRasid = k % 4 == 0 ? 1000 : 0;
+                    row.Set("Bardagi", (liters * 62).ToString()); row.Set("Rasid", rRasid.ToString());
+                    //  الباقی = بردگی − رسید (همان ‎NormalizeRow‎) — داده‌ای که خودِ برنامه می‌سازد
+                    row.Set("RasidFuel", "0"); row.Set("Albaqi", (liters * 62 - rRasid).ToString()); row.Set("ByMoney", 0);
                     row.Set("CreatedAt", now); row.Set("UpdatedAt", now);
                     row.Run(); debtRows++;
                 }

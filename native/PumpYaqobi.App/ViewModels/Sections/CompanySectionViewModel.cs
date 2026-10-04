@@ -78,12 +78,12 @@ public sealed partial class CompanyRowViewModel : RowViewModel, ILockedRow
         _owner.Recalc();
     }
 
-    public string KgText { get => Shown(nameof(KgText), Shamsi.MoneyOrBlank(Kg)); set { Typed(nameof(KgText), value); Kg = Shamsi.Num(value); } }
+    public string KgText { get => Shown(nameof(KgText), Shamsi.MoneyOrBlank(Kg)); set { if (!Typed(nameof(KgText), value)) return; Kg = Shamsi.Num(value); } }
     /// <summary>ستونِ «خرید (تن)» — ردیفِ کهنه که فقط کیلو دارد هم به تن دیده می‌شود (‎cmpTon‎).</summary>
-    public string TonText { get => Shown(nameof(TonText), Shamsi.MoneyOrBlank(_owner.Calc.Ton(_r))); set { Typed(nameof(TonText), value); Ton = Shamsi.Num(value); } }
-    public string UsdText { get => Shown(nameof(UsdText), Shamsi.MoneyOrBlank(Usd)); set { Typed(nameof(UsdText), value); Usd = Shamsi.Num(value); } }
-    public string RateText { get => Shown(nameof(RateText), Shamsi.MoneyOrBlank(Rate)); set { Typed(nameof(RateText), value); Rate = Shamsi.Num(value); } }
-    public string PoulText { get => Shown(nameof(PoulText), Shamsi.MoneyOrBlank(Poul)); set { Typed(nameof(PoulText), value); Poul = Shamsi.Num(value); } }
+    public string TonText { get => Shown(nameof(TonText), Shamsi.MoneyOrBlank(_owner.Calc.Ton(_r))); set { if (!Typed(nameof(TonText), value)) return; Ton = Shamsi.Num(value); } }
+    public string UsdText { get => Shown(nameof(UsdText), Shamsi.MoneyOrBlank(Usd)); set { if (!Typed(nameof(UsdText), value)) return; Usd = Shamsi.Num(value); } }
+    public string RateText { get => Shown(nameof(RateText), Shamsi.MoneyOrBlank(Rate)); set { if (!Typed(nameof(RateText), value)) return; Rate = Shamsi.Num(value); } }
+    public string PoulText { get => Shown(nameof(PoulText), Shamsi.MoneyOrBlank(Poul)); set { if (!Typed(nameof(PoulText), value)) return; Poul = Shamsi.Num(value); } }
 
     /// <summary>گزینه‌های کشویی — رشته، نه ‎ComboBoxItem‎ (باگِ ‎SelectedItem‎).</summary>
     public static string[] PoulCurrencyOptions { get; } = { "افغانی", "دالر" };

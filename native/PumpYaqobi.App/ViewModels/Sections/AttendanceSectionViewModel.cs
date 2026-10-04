@@ -175,6 +175,7 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
     {
         var n = NewName.Trim();
         if (n.Length == 0) return;
+        if (Shamsi.FirstUnreadable(("معاش", NewSalary)) is { } bad) { _host.Toast("«" + bad + "» عدد نیست — ذخیره نشد.", ToastKind.Warn); return; }
         await FlushRowsAsync();
         await _host.Attendance.AddStaffAsync(n, Shamsi.Num(NewSalary));
         NewName = ""; NewSalary = "";

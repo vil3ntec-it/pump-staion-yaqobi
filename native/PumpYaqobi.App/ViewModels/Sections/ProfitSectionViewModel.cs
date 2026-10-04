@@ -214,6 +214,7 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
     private void SaveUnion(FuelType fuel, string value)
     {
         if (_filling) return;
+        if (!Shamsi.IsReadable(value)) return;   // ⛔ «۸a» نرخِ اتحادیه را صفر نکند (شورا، بندِ ۱)
         var rate = Shamsi.Num(value);
         _host.Settings.Set(fuel == FuelType.Diesel
             ? PumpYaqobi.Services.Data.SettingsService.UnionRateDiesel
@@ -383,6 +384,7 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
     [RelayCommand]
     private async Task AddBulkAsync()
     {
+        if (Shamsi.FirstUnreadable(("مقدار تیل", BulkQty), ("قیمت خرید", BulkBuy), ("قیمت بازار", BulkMarket)) is { } bad) { _host.Toast("«" + bad + "» عدد نیست — ذخیره نشد.", ToastKind.Warn); return; }
         var qty = Shamsi.Num(BulkQty);
         var buy = Shamsi.Num(BulkBuy);
         var market = Shamsi.Num(BulkMarket);

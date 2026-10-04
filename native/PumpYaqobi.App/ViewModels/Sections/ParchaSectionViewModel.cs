@@ -164,6 +164,14 @@ public sealed partial class ShiftFormViewModel : ObservableObject
         _writingProfitPer = false;
     }
 
+    /// <summary>
+    /// ⛔ نخستین کادرِ عددیِ ناخوانا (شورا، بندِ ۱) — پیش از این ‎Shamsi.Num‎ آن را ۰
+    /// می‌خواند و پارچه با شروع/ختم/فیِ صفر ذخیره و به ورق و گاوصندوق می‌رفت.
+    /// </summary>
+    public string? BadNumber() => Shamsi.FirstUnreadable(
+        ("شمارهٔ پایه", PumpNum), ("شروع پایه", Start), ("ختم پایه", End),
+        ("فی لیتر", Price), ("جمله قرض", Debt), ("فایده فی لیتر", ProfitPer));
+
     public decimal StartValue => Shamsi.Num(Start);
     public decimal EndValue => Shamsi.Num(End);
     public decimal DebtValue => Shamsi.Num(Debt);
@@ -441,6 +449,8 @@ public sealed partial class ReportShiftEditor : ObservableObject
     [RelayCommand]
     private async Task Save()
     {
+        if (Shamsi.FirstUnreadable(("شمارهٔ پایه", PumpNum), ("شروع", Start), ("ختم", End), ("فی", Price), ("قرض", Debt)) is { } bad)
+        { Error = "⚠️ «" + bad + "» عدد نیست — ذخیره نشد"; return; }
         if (EndValue < StartValue) { Error = "⚠️ ختم پایه نمی‌تواند کمتر از شروع باشد"; return; }
         Busy = true; Error = "";
         try { await _save(ReportId, Kind, this); }
@@ -958,6 +968,11 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
     /// </summary>
     internal async Task<bool> SaveShiftAsync(ShiftFormViewModel form)
     {
+        if (form.BadNumber() is { } bad)
+        {
+            _host.Toast("«" + bad + "» عدد نیست — پارچه ذخیره نشد.", ToastKind.Warn);
+            return false;
+        }
         var fuel = Fuel;
         var kind = form.Kind;
 
@@ -1237,3 +1252,4 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
         await ReloadLogAsync();
     }
 }
+

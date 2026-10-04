@@ -82,15 +82,15 @@ public sealed partial class DebtArchiveRowViewModel : RowViewModel
         _owner.RefreshFigures();
     }
 
-    public string LitersText { get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters)); set { Typed(nameof(LitersText), value); Liters = Shamsi.Num(value); } }
-    public string PriceText { get => Shown(nameof(PriceText), Shamsi.MoneyOrBlank(Price)); set { Typed(nameof(PriceText), value); Price = Shamsi.Num(value); } }
-    public string RasidText { get => Shown(nameof(RasidText), Shamsi.MoneyOrBlank(Rasid)); set { Typed(nameof(RasidText), value); Rasid = Shamsi.Num(value); } }
-    public string RasidFuelText { get => Shown(nameof(RasidFuelText), Shamsi.MoneyOrBlank(RasidFuel)); set { Typed(nameof(RasidFuelText), value); RasidFuel = Shamsi.Num(value); } }
+    public string LitersText { get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters)); set { if (!Typed(nameof(LitersText), value)) return; Liters = Shamsi.Num(value); } }
+    public string PriceText { get => Shown(nameof(PriceText), Shamsi.MoneyOrBlank(Price)); set { if (!Typed(nameof(PriceText), value)) return; Price = Shamsi.Num(value); } }
+    public string RasidText { get => Shown(nameof(RasidText), Shamsi.MoneyOrBlank(Rasid)); set { if (!Typed(nameof(RasidText), value)) return; Rasid = Shamsi.Num(value); } }
+    public string RasidFuelText { get => Shown(nameof(RasidFuelText), Shamsi.MoneyOrBlank(RasidFuel)); set { if (!Typed(nameof(RasidFuelText), value)) return; RasidFuel = Shamsi.Num(value); } }
     /// <summary>بردگی — لیتر × فی، یا عددِ دستیِ ردیفِ پولی (‎_personRowBardagi‎).</summary>
     public string BardagiText
     {
         get => Shown(nameof(BardagiText), Shamsi.MoneyOrBlank(_owner.Calc.RowBardagi(_r)));
-        set { Typed(nameof(BardagiText), value); ManualBardagi = Shamsi.Num(value); _r.ByMoney = true; Touch(); Refresh(); }
+        set { if (!Typed(nameof(BardagiText), value)) return; ManualBardagi = Shamsi.Num(value); _r.ByMoney = true; Touch(); Refresh(); }
     }
     /// <summary>الباقیِ همین ردیف — بردگی − رسید، مثلِ ستونِ آخرِ جدولِ زنده.</summary>
     public string AlbaqiText =>

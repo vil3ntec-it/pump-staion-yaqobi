@@ -61,9 +61,9 @@ public sealed partial class InvoiceRowViewModel : RowViewModel
     public bool IsPending => !IsApproved;
     public string StatusText => IsApproved ? "تایید شده" : "در انتظارِ تایید";
 
-    public string PriceText { get => Shown(nameof(PriceText), Shamsi.MoneyOrBlank(Price)); set { Typed(nameof(PriceText), value); Price = Shamsi.Num(value); } }
-    public string LitersText { get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters)); set { Typed(nameof(LitersText), value); Liters = Shamsi.Num(value); } }
-    public string AmountText { get => Shown(nameof(AmountText), Shamsi.MoneyOrBlank(Amount)); set { Typed(nameof(AmountText), value); Amount = Shamsi.Num(value); } }
+    public string PriceText { get => Shown(nameof(PriceText), Shamsi.MoneyOrBlank(Price)); set { if (!Typed(nameof(PriceText), value)) return; Price = Shamsi.Num(value); } }
+    public string LitersText { get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters)); set { if (!Typed(nameof(LitersText), value)) return; Liters = Shamsi.Num(value); } }
+    public string AmountText { get => Shown(nameof(AmountText), Shamsi.MoneyOrBlank(Amount)); set { if (!Typed(nameof(AmountText), value)) return; Amount = Shamsi.Num(value); } }
 
     /// <summary>«فقط مبلغ» یا «تیل» — همان تفکیکی که همهٔ رفتارها به آن بند است.</summary>
     public string KindText => InvoiceService.IsMoneyOnly(_v) ? "فقط مبلغ" : "تیل";
@@ -429,6 +429,7 @@ public sealed partial class InvoiceSectionViewModel : SectionViewModel
         var name = FCustomer.Trim();
         if (name.Length == 0) { _host.Toast("نام مشتری را بنویسید", ToastKind.Error); return; }
 
+        if (Shamsi.FirstUnreadable(("فی", FPrice), ("لیتر", FLiters), ("مبلغ", FAmount), ("شمارهٔ فاکتور", FNumber)) is { } bad) { _host.Toast("«" + bad + "» عدد نیست — ذخیره نشد.", ToastKind.Warn); return; }
         var price = Shamsi.Num(FPrice);
         var liters = Shamsi.Num(FLiters);
         var amount = Shamsi.Num(FAmount);

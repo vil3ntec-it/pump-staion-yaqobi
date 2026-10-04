@@ -64,11 +64,11 @@ public sealed partial class AmanatRowViewModel : RowViewModel
 
     public void RefreshAll() => Refresh();
 
-    public string LitersText { get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters)); set { Typed(nameof(LitersText), value); Liters = Shamsi.Num(value); } }
-    public string TakenText { get => Shown(nameof(TakenText), Shamsi.MoneyOrBlank(Taken)); set { Typed(nameof(TakenText), value); Taken = Shamsi.Num(value); } }
-    public string DaysText { get => Shown(nameof(DaysText), Shamsi.MoneyOrBlank(Days)); set { Typed(nameof(DaysText), value); Days = Shamsi.Num(value); } }
-    public string TempText { get => Shown(nameof(TempText), Shamsi.MoneyOrBlank(Temp)); set { Typed(nameof(TempText), value); Temp = Shamsi.Num(value); } }
-    public string ActualText { get => Shown(nameof(ActualText), Shamsi.MoneyOrBlank(Actual)); set { Typed(nameof(ActualText), value); Actual = Shamsi.Num(value); } }
+    public string LitersText { get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters)); set { if (!Typed(nameof(LitersText), value)) return; Liters = Shamsi.Num(value); } }
+    public string TakenText { get => Shown(nameof(TakenText), Shamsi.MoneyOrBlank(Taken)); set { if (!Typed(nameof(TakenText), value)) return; Taken = Shamsi.Num(value); } }
+    public string DaysText { get => Shown(nameof(DaysText), Shamsi.MoneyOrBlank(Days)); set { if (!Typed(nameof(DaysText), value)) return; Days = Shamsi.Num(value); } }
+    public string TempText { get => Shown(nameof(TempText), Shamsi.MoneyOrBlank(Temp)); set { if (!Typed(nameof(TempText), value)) return; Temp = Shamsi.Num(value); } }
+    public string ActualText { get => Shown(nameof(ActualText), Shamsi.MoneyOrBlank(Actual)); set { if (!Typed(nameof(ActualText), value)) return; Actual = Shamsi.Num(value); } }
 
     private AmanatRowCalc C => _owner.CalcOf(_r);
 
@@ -197,7 +197,7 @@ public sealed partial class AmanatAccountViewModel : ObservableObject, IRowBatch
     [ObservableProperty] private string _totalRest = "";
     [ObservableProperty] private string _totalShare = "";
 
-    public string MyPctText { get => Shamsi.MoneyOrBlank(MyPct); set => MyPct = Shamsi.Num(value); }
+    public string MyPctText { get => Shamsi.MoneyOrBlank(MyPct); set { if (Shamsi.IsReadable(value)) MyPct = Shamsi.Num(value); } }
 
     partial void OnNameChanged(string v) { Entity.Name = v; Save(); }
 
@@ -532,11 +532,11 @@ public sealed partial class AmanatSectionViewModel : SectionViewModel
 /// <summary>یک ردیفِ جدولِ «در هر گرما چقدر تبخیر می‌شود» — ‎_amTempTableHtml‎.</summary>
 public sealed class AmanatTempRowViewModel
 {
-    public AmanatTempRowViewModel(decimal temp, double factor, decimal perMonth, decimal thermalPct, bool near)
+    public AmanatTempRowViewModel(decimal temp, decimal factor, decimal perMonth, decimal thermalPct, bool near)
     {
         // ‎_amFmt(n, dec)‎ — تا ‎dec‎ رقمِ اعشار، بی صفرهای انتهایی («۱×»، نه «۱٫۰۰×»)
         TempText = F(temp, 0) + "°C";
-        FactorText = F((decimal)factor, 2) + "×";
+        FactorText = F(factor, 2) + "×";
         MonthText = F(perMonth, 3) + "٪";
         YearText = F(perMonth * 12m, 3) + "٪";
         ThermalText = (thermalPct >= 0m ? "+" : "−") + F(Math.Abs(thermalPct), 2) + "٪";
@@ -697,7 +697,7 @@ public sealed partial class AmanatSettingsEditorViewModel : ObservableObject
         foreach (var t in TempRowsC)
         {
             var f = _calc.TempFactor(t, s);
-            var perMonth = s.BasePct * (decimal)f * ff * s.TankFactor;      // ٪ در ماه
+            var perMonth = s.BasePct * f * ff * s.TankFactor;      // ٪ در ماه
             var th = _calc.Thermal(1m, t, FuelType.Petrol, s).Pct;
             rows.Add(new AmanatTempRowViewModel(t, f, perMonth, th, Math.Abs(t - s.DefTemp) < 2.5m));
         }

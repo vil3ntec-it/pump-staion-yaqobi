@@ -58,6 +58,7 @@ internal static class LiveFormatProbe
         }
 
         GridCells(win, vm);
+        BadNumbers(win, vm);
         FormBoxes(win, vm);
         foreach (var id in new[] { "safe", "sarrafi", "rasid", "expenses" }) Toggles(win, vm, id, false);
         //  ستون‌ها جابه‌جا شده‌اند (کشیدنِ سربرگ) — ‎Enter‎/‎Tab‎ باز هم همان کپسول را عوض کنند
@@ -104,6 +105,59 @@ internal static class LiveFormatProbe
         var val = row.GetType().GetProperty("Amount")?.GetValue(row);
         Check($"پس از Enter ردیف «{amt}» ({val})", amt == "12,500" && Equals(val, 12500m));
 
+    }
+
+    // ── شورا، بندِ ۱) عددِ ناخوانا بی‌صدا صفر نشود ─────────────────────────────
+    //  روی کدِ پیش از اصلاح: «12a» در خانهٔ مبلغ ⇐ ‎Amount = 0‎ و همان صفر ذخیره می‌شد.
+    private static void BadNumbers(Window win, MainViewModel vm)
+    {
+        Console.WriteLine("── عددِ ناخوانا (شورا، بندِ ۱) ──");
+        var grid = win.GetVisualDescendants().OfType<ExcelGrid>().FirstOrDefault(g => g.IsEffectivelyVisible
+                       && g.Columns.Any(c => (c.Header as string) == "تاریخ"));
+        if (grid?.ItemsSource is not System.Collections.IList list || list.Count == 0) { Check("جدولِ مصارف پیدا شد", false); return; }
+        var ri = list.Count - 1;
+        var row = list[ri]!;
+        var cols = grid.Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).ToList();
+        var amountCol = cols.FindIndex(c => c is DataGridBoundColumn { Binding: Avalonia.Data.Binding { Path: "AmountText" } });
+        decimal Amount() => (decimal)row.GetType().GetProperty("Amount")!.GetValue(row)!;
+        var before = Amount();
+        Check($"پیش از آزمون مبلغِ ردیف {before}", before == 12500m);
+
+        ClickCell(win, grid, ri, amountCol);
+        foreach (var ch in "12a") { win.KeyTextInput(ch.ToString()); Settle(win); }
+        var box = win.FocusManager?.GetFocusedElement() as TextBox;
+        Check($"خانهٔ «{box?.Text}» سرخ است (badnum)", box is not null && box.Classes.Contains("badnum"));
+        Check($"وسطِ نوشتن مبلغِ ردیف صفر نشد ({Amount()})", Amount() == before);
+        Tap(win, PhysicalKey.Enter);
+        Settle(win);
+        var still = win.FocusManager?.GetFocusedElement() as TextBox;
+        Check("Enter خانهٔ ناخوانا را نبست (هنوز در حالِ نوشتن)", still is not null && still.Classes.Contains("badnum"));
+        Check($"پس از Enter مبلغ همان {before} ماند ({Amount()})", Amount() == before);
+        Tap(win, PhysicalKey.Escape);
+        Settle(win);
+        var shown = (string?)row.GetType().GetProperty("AmountText")?.GetValue(row);
+        Check($"Esc ⇐ همان عددِ قبلی «{shown}»", shown == "12,500" && Amount() == before);
+        if (row is RowViewModel rv) Wait(win, rv.FlushAsync());
+        using (var db = AppHost.Current.Db.Create())
+        {
+            var onDisk = db.Expenses.AsNoTracking().OrderByDescending(e => e.Id).Select(e => e.Amount).FirstOrDefault();
+            Check($"روی دیسک همان {before} است ({onDisk})", onDisk == before);
+        }
+
+        //  کادرِ فرم: پارچه با «شروعِ» ناخوانا ذخیره نمی‌شود
+        var pa = (ParchaSectionViewModel)vm.Sections.First(s => s.Id == "shifts");
+        Wait(win, vm.GoAsync(pa));
+        int Count() { using var db = AppHost.Current.Db.Create(); return db.ShiftDataSet.Count(); }
+        var n0 = Count();
+        pa.Day.Name = "کارمندِ آزمون"; pa.Day.PumpNum = "9"; pa.Day.Start = "3a0000"; pa.Day.End = "301000"; pa.Day.Price = "62";
+        Wait(win, pa.Day.SaveCommand.ExecuteAsync(null));
+        Check($"پارچه با شروعِ «3a0000» ذخیره نشد (شیفت‌ها {n0} ⇐ {Count()})", Count() == n0);
+        pa.Day.Start = "300000";
+        Wait(win, pa.Day.SaveCommand.ExecuteAsync(null));
+        Check($"با شروعِ درست ذخیره شد ({n0} ⇐ {Count()})", Count() > n0);
+        foreach (var f in new[] { pa.Day, pa.Night }) { f.Start = ""; f.End = ""; f.PumpNum = ""; f.Name = ""; }
+        var ex = vm.Sections.First(s => s.Id == "expenses");
+        Wait(win, vm.GoAsync(ex));
     }
 
     // ── ۳ و ۴) کادرهای فرم — پارچه ───────────────────────────────────────────

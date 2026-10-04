@@ -111,22 +111,22 @@ public sealed partial class HistoryRowViewModel : ObservableObject
     public string EditStart
     {
         get => Shamsi.Money(_start);
-        set { var v = Shamsi.Num(value); if (v == _start) { Raise(); return; } Set(() => _start = v); }
+        set { if (!Shamsi.IsReadable(value)) { Raise(); return; } var v = Shamsi.Num(value); if (v == _start) { Raise(); return; } Set(() => _start = v); }
     }
     public string EditEnd
     {
         get => Shamsi.Money(_end);
-        set { var v = Shamsi.Num(value); if (v == _end) { Raise(); return; } Set(() => _end = v); }
+        set { if (!Shamsi.IsReadable(value)) { Raise(); return; } var v = Shamsi.Num(value); if (v == _end) { Raise(); return; } Set(() => _end = v); }
     }
     public string EditPrice
     {
         get => Shamsi.Money(_price);
-        set { var v = Shamsi.Num(value); if (v == _price) { Raise(); return; } Set(() => _price = v); }
+        set { if (!Shamsi.IsReadable(value)) { Raise(); return; } var v = Shamsi.Num(value); if (v == _price) { Raise(); return; } Set(() => _price = v); }
     }
     public string EditDebt
     {
         get => Shamsi.Money(_debt);
-        set { var v = Shamsi.Num(value); if (v == _debt) { Raise(); return; } Set(() => _debt = v); }
+        set { if (!Shamsi.IsReadable(value)) { Raise(); return; } var v = Shamsi.Num(value); if (v == _debt) { Raise(); return; } Set(() => _debt = v); }
     }
 
     /// <summary>لیتر و پول از همان عددها — همان «فروش × فی»ِ پارچه.</summary>

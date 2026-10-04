@@ -55,12 +55,44 @@ public readonly record struct AmanatAccountCalc(
 public sealed class AmanatService
 {
     /// <summary>‎amTempFactor(T, s)‎ — هر ‎tDouble‎ درجه، بخار دو برابر.</summary>
-    public double TempFactor(decimal temp, AmanatSettings s)
+    /// <remarks>
+    /// ⛔ (شورا، بندِ ۲ — ۱۴۰۵/۰۷/۱۹) تمامِ راه ‎decimal‎ است، نه عددِ شناور: لیتر و پولِ
+    /// بخار از همین می‌آیند و عددِ شناور ته‌ماندهٔ ‎…0000004‎ یا ‎…9999999‎ می‌ساخت که
+    /// در جمع‌ها و «باقی تیل» می‌نشست. توانِ کسریِ ۲ با سریِ ‎exp‎ در ‎decimal‎
+    /// (۲۸ رقم) حساب می‌شود؛ توانِ درست (۱، ۲، ۴، ½…) دقیقاً همان است.
+    /// </remarks>
+    public decimal TempFactor(decimal temp, AmanatSettings s)
     {
         var step = s.TDouble > 0m ? s.TDouble : 10m;
-        var f = Math.Pow(2, (double)(temp - s.RefTemp) / (double)step);
-        return double.IsFinite(f) && f > 0 ? f : 0;
+        return Pow2((temp - s.RefTemp) / step);
     }
+
+    private const decimal Ln2 = 0.6931471805599453094172321215m;
+
+    /// <summary>۲ به توانِ ‎x‎ در ‎decimal‎ — بخشِ صحیح دقیق، بخشِ کسری با سری.</summary>
+    public static decimal Pow2(decimal x)
+    {
+        var n = decimal.Floor(x);
+        var f = x - n;                       // ۰ ≤ f < ۱
+        if (n > 90m) return MaxFactor;       //  بخار به‌هرحال به خودِ تیل بریده می‌شود
+        if (n < -90m) return 0m;
+        var whole = 1m;
+        for (var i = 0; i < (int)Math.Abs(n); i++) whole = n > 0 ? whole * 2m : whole / 2m;
+        if (f == 0m) return whole;
+        //  e^(f·ln2) — جمله‌ها تا کمتر از ۱e-۲۸ (حداکثر ۴۰)
+        var y = f * Ln2;
+        decimal sum = 1m, term = 1m;
+        for (var k = 1; k <= 40; k++)
+        {
+            term = term * y / k;
+            if (term == 0m) break;
+            sum += term;
+        }
+        return whole * sum;
+    }
+
+    /// <summary>سقفِ ضریب — هرچه بالاتر، بخار به‌هرحال همان «همهٔ تیل» است.</summary>
+    private const decimal MaxFactor = 1e12m;
 
     public decimal FuelFactor(FuelType fuel, AmanatSettings s) =>
         fuel == FuelType.Diesel ? s.FDiesel : s.FPetrol;
@@ -74,11 +106,15 @@ public sealed class AmanatService
         var p = basePct ?? s.BasePct;
         var t = temp ?? s.DefTemp;
 
-        var loss = (double)l * (double)(p / 100m) * (double)(d / 30m)
-                   * TempFactor(t, s) * (double)FuelFactor(fuel, s) * (double)s.TankFactor;
-        if (!double.IsFinite(loss) || loss < 0) loss = 0;
-        var res = (decimal)loss;
-        return res > l ? l : res;
+        decimal loss;
+        try
+        {
+            //  ⚠️ تقسیم یک بار و آخر — ‎d / 30‎ جدا (۰٫۲۳۳۳…) گردکردنِ زودرس می‌ساخت
+            loss = l * p * d * TempFactor(t, s) * FuelFactor(fuel, s) * s.TankFactor / 3000m;
+        }
+        catch (OverflowException) { loss = l; }
+        if (loss < 0m) loss = 0m;
+        return loss > l ? l : loss;
     }
 
     /// <summary>ضریب‌های انبساطِ گرمایی — بخار نیست و با سرد شدن برمی‌گردد.</summary>

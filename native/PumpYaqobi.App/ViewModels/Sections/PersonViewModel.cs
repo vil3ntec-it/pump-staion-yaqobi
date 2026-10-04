@@ -78,11 +78,11 @@ public sealed partial class DebtRowViewModel : RowViewModel
         _owner.RefreshTotals();
     }
 
-    public string LitersText { get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters)); set { Typed(nameof(LitersText), value); Liters = Shamsi.Num(value); } }
-    public string PriceText { get => Shown(nameof(PriceText), Shamsi.MoneyOrBlank(Price)); set { Typed(nameof(PriceText), value); Price = Shamsi.Num(value); } }
-    public string ManualBardagiText { get => Shown(nameof(ManualBardagiText), Shamsi.MoneyOrBlank(ManualBardagi)); set { Typed(nameof(ManualBardagiText), value); ManualBardagi = Shamsi.Num(value); } }
-    public string RasidText { get => Shown(nameof(RasidText), Shamsi.MoneyOrBlank(Rasid)); set { Typed(nameof(RasidText), value); Rasid = Shamsi.Num(value); } }
-    public string RasidFuelText { get => Shown(nameof(RasidFuelText), Shamsi.MoneyOrBlank(RasidFuel)); set { Typed(nameof(RasidFuelText), value); RasidFuel = Shamsi.Num(value); } }
+    public string LitersText { get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters)); set { if (!Typed(nameof(LitersText), value)) return; Liters = Shamsi.Num(value); } }
+    public string PriceText { get => Shown(nameof(PriceText), Shamsi.MoneyOrBlank(Price)); set { if (!Typed(nameof(PriceText), value)) return; Price = Shamsi.Num(value); } }
+    public string ManualBardagiText { get => Shown(nameof(ManualBardagiText), Shamsi.MoneyOrBlank(ManualBardagi)); set { if (!Typed(nameof(ManualBardagiText), value)) return; ManualBardagi = Shamsi.Num(value); } }
+    public string RasidText { get => Shown(nameof(RasidText), Shamsi.MoneyOrBlank(Rasid)); set { if (!Typed(nameof(RasidText), value)) return; Rasid = Shamsi.Num(value); } }
+    public string RasidFuelText { get => Shown(nameof(RasidFuelText), Shamsi.MoneyOrBlank(RasidFuel)); set { if (!Typed(nameof(RasidFuelText), value)) return; RasidFuel = Shamsi.Num(value); } }
 
     /// <summary>بردگیِ پولیِ همین ردیف — از همان سرویسِ آزموده، نه حسابِ دستی.</summary>
     /// <summary>
@@ -98,7 +98,7 @@ public sealed partial class DebtRowViewModel : RowViewModel
     public string BardagiText
     {
         get => Shown(nameof(BardagiText), Shamsi.MoneyOrBlank(_owner.Calc.RowBardagi(_r)));
-        set { Typed(nameof(BardagiText), value); ManualBardagi = Shamsi.Num(value); _r.ByMoney = true; Touch(); Refresh(); }
+        set { if (!Typed(nameof(BardagiText), value)) return; ManualBardagi = Shamsi.Num(value); _r.ByMoney = true; Touch(); Refresh(); }
     }
 
     /// <summary>
@@ -319,6 +319,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         get => PercentPetrolText == PercentDieselText ? PercentPetrolText : "";
         set
         {
+            if (!Shamsi.IsReadable(value)) return;   // ⛔ ناخوانا صفر نشود (شورا، بندِ ۱)
             var v = Shamsi.Num(value);
             _host.Debt.SetPercent(Entity, null, v == 0m ? null : v);
             _settingBoth = true;
@@ -356,13 +357,13 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     public string PercentPetrolText
     {
         get => PercentPetrol == 0m ? "" : Shamsi.Money(PercentPetrol);
-        set => PercentPetrol = Shamsi.Num(value);
+        set { if (Shamsi.IsReadable(value)) PercentPetrol = Shamsi.Num(value); }
     }
 
     public string PercentDieselText
     {
         get => PercentDiesel == 0m ? "" : Shamsi.Money(PercentDiesel);
-        set => PercentDiesel = Shamsi.Num(value);
+        set { if (Shamsi.IsReadable(value)) PercentDiesel = Shamsi.Num(value); }
     }
 
     // ══ سربرگِ دو حساب + ردیفِ «جمله» ══════════════════════════════════════
@@ -1065,16 +1066,17 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         get => Entity.MoneyDeposit is { } v && v != 0m ? Shamsi.Money(v) : "";
         set
         {
+            if (!Shamsi.IsReadable(value)) return;   // ⛔ ناخوانا صفر نشود (شورا، بندِ ۱)
             var v = Shamsi.Num(value);
             Entity.MoneyDeposit = v == 0m ? null : v;
             SaveAccount();
             OnPropertyChanged(nameof(MoneyDepositText));
         }
     }
-    public string RasidFuelPetrolText { get => Shamsi.MoneyOrBlank(RasidFuelPetrol); set => RasidFuelPetrol = Shamsi.Num(value); }
-    public string RasidFuelDieselText { get => Shamsi.MoneyOrBlank(RasidFuelDiesel); set => RasidFuelDiesel = Shamsi.Num(value); }
-    public string RasidMoneyPetrolText { get => Shamsi.MoneyOrBlank(RasidMoneyPetrol); set => RasidMoneyPetrol = Shamsi.Num(value); }
-    public string RasidMoneyDieselText { get => Shamsi.MoneyOrBlank(RasidMoneyDiesel); set => RasidMoneyDiesel = Shamsi.Num(value); }
+    public string RasidFuelPetrolText { get => Shamsi.MoneyOrBlank(RasidFuelPetrol); set { if (Shamsi.IsReadable(value)) RasidFuelPetrol = Shamsi.Num(value); } }
+    public string RasidFuelDieselText { get => Shamsi.MoneyOrBlank(RasidFuelDiesel); set { if (Shamsi.IsReadable(value)) RasidFuelDiesel = Shamsi.Num(value); } }
+    public string RasidMoneyPetrolText { get => Shamsi.MoneyOrBlank(RasidMoneyPetrol); set { if (Shamsi.IsReadable(value)) RasidMoneyPetrol = Shamsi.Num(value); } }
+    public string RasidMoneyDieselText { get => Shamsi.MoneyOrBlank(RasidMoneyDiesel); set { if (Shamsi.IsReadable(value)) RasidMoneyDiesel = Shamsi.Num(value); } }
 
     private void SaveAccount()
     {

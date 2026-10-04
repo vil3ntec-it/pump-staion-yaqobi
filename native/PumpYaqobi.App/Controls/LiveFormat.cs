@@ -88,6 +88,8 @@ public static class LiveFormat
         st.Last = text;
         var user = st.User;
         st.User = false;
+        //  ⛔ عددِ ناخوانا (شورا، بندِ ۱): لبهٔ سرخ — هر نوشته‌ای، چه کاربر چه ویومدل
+        if (kind == "number") box.Classes.Set("badnum", !PumpYaqobi.Application.Localization.Shamsi.IsReadable(text));
         //  ⚠️ تکملهٔ کم‌رنگ را خودِ ‎Suggest‎ می‌گذارد (نه کاربر) — ولی «پیشین» باید
         //  همان تکهٔ تایپ‌شده باشد، وگرنه حرفِ بعدی «کوتاه‌تر شدن» دیده می‌شد و
         //  خانهٔ تاریخِ جدول «/» نمی‌گرفت (‎liveformat‎ گرفتش).
