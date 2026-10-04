@@ -106,7 +106,7 @@ public sealed partial class BackupSectionViewModel
         Conflicts.Clear();
         try
         {
-            foreach (var c in new SyncStore(_host.Db).OpenConflicts().Take(200)) Conflicts.Add(new ConflictRowViewModel(c, this));
+            foreach (var c in _host.Store.OpenConflicts().Take(200)) Conflicts.Add(new ConflictRowViewModel(c, this));
         }
         catch { /* جدول هنوز ساخته نشده (دفترِ خیلی کهنه) — چیزی برای نشان دادن نیست */ }
         OnPropertyChanged(nameof(HasConflicts));
@@ -118,7 +118,7 @@ public sealed partial class BackupSectionViewModel
     private void KeepConflict(ConflictRowViewModel? row)
     {
         if (row is null) return;
-        new SyncStore(_host.Db).KeepConflict(row.Entity.Id);
+        _host.Store.KeepConflict(row.Entity.Id);
         LoadConflicts();
     }
 
@@ -127,7 +127,7 @@ public sealed partial class BackupSectionViewModel
     private void RestoreConflict(ConflictRowViewModel? row)
     {
         if (row is null) return;
-        var ok = new SyncStore(_host.Db).RestoreConflict(row.Entity.Id);
+        var ok = _host.Store.RestoreConflict(row.Entity.Id);
         _host.Toast(ok ? "↩ مقدارِ دیگر برگشت و به کامپیوترهای دیگر هم می‌رود" : "❌ نشد — آن ردیف دیگر نیست",
                     ok ? ToastKind.Ok : ToastKind.Error);
         if (ok) _host.Sync.Nudge();

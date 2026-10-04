@@ -59,6 +59,13 @@ public sealed class ParchaDataService
         return list.LastOrDefault();
     }
 
+    /// <summary>شورا ث۱/ج۵: «هیچ پارچه‌ای ثبت شده؟» — برای چک‌لیستِ شروعِ سریع (فقط یک EXISTS).</summary>
+    public async Task<bool> AnyShiftAsync(CancellationToken ct = default)
+    {
+        await using var db = _dbf.Create();
+        return await db.ShiftDataSet.AnyAsync(ct);
+    }
+
     /// <summary>
     /// ══ ‎saveShift(type, fuel)‎ — کلِ جریان، یک‌جا ═══════════════════════════
     ///

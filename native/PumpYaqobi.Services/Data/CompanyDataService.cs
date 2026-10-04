@@ -29,6 +29,14 @@ public sealed class CompanyDataService
                        .OrderBy(c => c.Name).ToListAsync(ct);
     }
 
+    /// <summary>شورا ج۵: نام و شناسهٔ شرکت‌ها — فقط دو ستون (کشوی «فایلِ حساب»).</summary>
+    public List<(long Id, string Name)> NameList()
+    {
+        using var db = _dbf.Create();
+        return db.TilCompanies.AsNoTracking().Where(c => c.DeletedAt == null).OrderBy(c => c.Name)
+            .Select(c => new { c.Id, c.Name }).AsEnumerable().Select(c => (c.Id, c.Name ?? "")).ToList();
+    }
+
     public async Task<TilCompany?> LoadAsync(long id, CancellationToken ct = default)
     {
         _perm.Require(Permission.ViewData);

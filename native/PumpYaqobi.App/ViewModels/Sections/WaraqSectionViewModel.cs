@@ -1099,7 +1099,7 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
 
     private async Task EnsureUnitsAsync()
     {
-        var v = PumpYaqobi.Persistence.PumpDbContext.Version;
+        var v = PumpYaqobi.Services.Data.DataVersion.Current;
         if (_units is not null && _unitsVersion == v) return;
 
         //  ⚡ روی نخِ دیگر و یکی در هر لحظه — این با هر حرفِ تایپ صدا زده می‌شود (۱۴۰۵/۰۷/۱۹)
@@ -1383,7 +1383,7 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
         if (!Months.Contains(Month)) Months.Insert(0, Month);
         BuildPickers();
         RefreshDot();
-        _seenVersion = PumpYaqobi.Persistence.PumpDbContext.Version;
+        _seenVersion = PumpYaqobi.Services.Data.DataVersion.Current;
         await ReloadAsync();
     }
 
@@ -1427,7 +1427,7 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
     /// </summary>
     public override async Task OnActivatedAsync()
     {
-        if (_seenVersion == PumpYaqobi.Persistence.PumpDbContext.Version) return;
+        if (_seenVersion == PumpYaqobi.Services.Data.DataVersion.Current) return;
         //  ⛔ ورقِ باز هم از نو خوانده می‌شود (۱۴۰۵/۰۷/۱۶): پارچه‌ای که در همین فاصله
         //  ختمِ پایه را درست کرد ردیفِ پایهٔ ورق را سرِ جایش به‌روز می‌کند؛ صفحهٔ کهنه
         //  همان عددِ قبلی را نشان می‌داد و ویرایشِ بعدیِ همان ردیف اصلاحِ پارچه را پس

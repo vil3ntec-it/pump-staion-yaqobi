@@ -477,7 +477,7 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
     {
         try
         {
-            var dir = Path.GetDirectoryName(_host.Db.DbPath);
+            var dir = Path.GetDirectoryName(_host.DbPath);
             if (string.IsNullOrEmpty(dir)) return;
             _store = new ChatStore(dir);
             _store.Sweep(Now);

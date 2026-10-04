@@ -93,7 +93,7 @@ public sealed partial class SyncSectionViewModel : SectionViewModel
         LastOkText = sync.LastOkAt is { } at ? at.ToString("yyyy/MM/dd HH:mm") : "—";
         LastErrorText = sync.LastError.Length > 0 ? sync.LastError : "—";
 
-        var state = new SyncStore(_host.Db).State();
+        var state = _host.Store.State();
         CursorText = state.Cursor.ToString();
         DeviceText = state.DeviceId.Length > 0 ? state.DeviceId : "—";
         SchemaText = state.Holding
@@ -145,7 +145,7 @@ public sealed partial class SyncSectionViewModel : SectionViewModel
         {
             //  ⛔ هر سه کارِ سنگین روی نخِ دیگر (۱۴۰۵/۰۷/۱۶) — ‎VACUUM‎ و رمزنگاریِ کلِ دفتر و
             //  نشاندنِ صدها هزار ردیف روی نخِ رابط پنجره را «پاسخ نمی‌دهد» می‌کرد.
-            var copy = await Task.Run(() => SyncBackup.Write(_host.Db, label: "pre-restore"));
+            var copy = await Task.Run(() => _host.WriteSyncBackup("pre-restore"));
             if (copy is null)
             {
                 _host.Toast("❌ پشتیبانِ پیش از بازیابی گرفته نشد — بازیابی انجام نشد", ToastKind.Error);
@@ -164,7 +164,7 @@ public sealed partial class SyncSectionViewModel : SectionViewModel
             //  و هم‌زمان با حلقهٔ همگام‌سازی نه — مکان‌نما را هر دو می‌نویسند
             SyncStore.RestoreReport report;
             using (_host.SyncIfStarted is { } se ? await se.PauseAsync() : null)
-                report = await Task.Run(() => new SyncStore(_host.Db).RestoreSnapshot(json));
+                report = await Task.Run(() => _host.Store.RestoreSnapshot(json));
             Refresh();
             _host.Toast($"✅ {report.Applied} ردیف از سرور نشست"
                         + (report.Failed > 0 ? $" · {report.Failed} ننشست" : ""),
@@ -177,7 +177,7 @@ public sealed partial class SyncSectionViewModel : SectionViewModel
     [RelayCommand]
     private async Task BackupNowAsync()
     {
-        var path = await Task.Run(() => SyncBackup.Write(_host.Db, label: "manual"));
+        var path = await Task.Run(() => _host.WriteSyncBackup("manual"));
         _host.Toast(path is null ? "❌ پشتیبان گرفته نشد" : "✅ پشتیبانِ رمزشده ساخته شد",
                     path is null ? ToastKind.Error : ToastKind.Ok);
     }

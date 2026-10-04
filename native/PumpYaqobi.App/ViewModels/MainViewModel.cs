@@ -1974,7 +1974,7 @@ public sealed partial class MainViewModel : ObservableObject
         try
         {
             var host = AppHost.Current;
-            var path = host.Db.DbPath;
+            var path = host.DbPath;
             if (_healthChecked == path) return;
             _healthChecked = path;
             var bad = await Task.Run(() => host.Health.ScanAsync());
@@ -2043,7 +2043,7 @@ public sealed partial class MainViewModel : ObservableObject
         // نشده، عددها همان‌اند.
         // ⚠️ روز هم بخشی از کلید است: «مفادِ امروز» و «مصارفِ امروز» با نیمه‌شب
         // عوض می‌شوند بی آن‌که چیزی ذخیره شده باشد (چک‌لیستِ تحویل، بندِ ۶۲).
-        var version = PumpYaqobi.Persistence.PumpDbContext.Version * 100000L + AppClock.Now.DayOfYear;
+        var version = PumpYaqobi.Services.Data.DataVersion.Current * 100000L + AppClock.Now.DayOfYear;
         if (version == _bannerVersion) return;
         _bannerVersion = version;
 

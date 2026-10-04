@@ -79,6 +79,14 @@ public sealed class DebtorService
         return self.Length == 0 || self == who ? who : who + " › " + self;
     }
 
+    /// <summary>شورا ج۵: نام و شناسهٔ قرض‌دارها — فقط دو ستون، نه ردیف‌ها (کشوی «فایلِ حساب»).</summary>
+    public List<(long Id, string Name)> NameList()
+    {
+        using var db = _dbf.Create();
+        return db.Debtors.AsNoTracking().Where(d => d.DeletedAt == null).OrderBy(d => d.Name)
+            .Select(d => new { d.Id, d.Name }).AsEnumerable().Select(d => (d.Id, d.Name)).ToList();
+    }
+
     /// <summary>
     /// صاحبِ یک حساب (اصلی یا فرعی) — برای ستونِ «مشخصات»ِ پیام‌رسان.
     /// فقط‌خواندنی؛ یک پرس‌وجوی تک‌ستونه. ‎null‎ یعنی چنین حسابی نیست.

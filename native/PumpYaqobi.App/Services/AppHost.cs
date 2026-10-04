@@ -102,6 +102,15 @@ public sealed class AppHost
     }
 
     public PumpDbFactory Db { get; }
+
+    //  ══ شورا، ج۵ — درهای ویومدل به دیتابیس، بی دادنِ خودِ DbFactory ══════════════
+    //  ⛔ ویومدل `Db` را نمی‌گیرد (`ArchitectureTests`)؛ فقط همین سرویس‌ها.
+    /// <summary>مسیرِ فایلِ دفترِ باز.</summary>
+    public string DbPath => Db.DbPath;
+    /// <summary>دفترِ همگام‌سازی — هر بار نمونهٔ تازه، همان کاری که ویومدل‌ها پیش از این می‌کردند.</summary>
+    public SyncStore Store => new(Db);
+    /// <summary>عکسِ رمزدارِ دفتر برای «پیش از بازگردانی» و «همین حالا».</summary>
+    public string? WriteSyncBackup(string label) => SyncBackup.Write(Db, label: label);
     public ToastService Toasts { get; }
 
     private StationPublisher? _publisher;
