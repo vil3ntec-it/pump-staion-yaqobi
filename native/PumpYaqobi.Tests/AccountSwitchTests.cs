@@ -134,7 +134,7 @@ public class AccountSwitchTests : IDisposable
     [Fact]
     public void JabejayiyeHesab_DaftarRa_DastNemizanad()
     {
-        var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Services", "CloudLink.cs"));
+        var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.Shell", "Services", "CloudLink.cs"));
         var body = Between(src, "private async Task ReleaseIfOtherAccountAsync", "public bool AccountSwitched")
                  + Between(src, "public async Task ForgetStationAsync", "HomeFromAccountAsync");
         var code = string.Join('\n', body.Split('\n')

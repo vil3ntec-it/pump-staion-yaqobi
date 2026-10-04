@@ -216,7 +216,7 @@ public class OfflineKeyTests : IDisposable
         Assert.Contains("vars.OFFLINE_PUBLIC_KEYS", wf);
         var csproj = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.App", "PumpYaqobi.App.csproj"));
         Assert.Contains("<AssemblyMetadata Include=\"OfflineKeys\" Value=\"$(OfflineKeys)\" />", csproj);
-        var cfg = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.App", "Services", "CloudConfig.cs"));
+        var cfg = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.Shell", "Services", "CloudConfig.cs"));
         Assert.Contains("Metadata(\"OfflineKeys\")", cfg);
         //  ⛔ نشانیِ دریافتِ کلید همان نشانیِ قفل‌شدهٔ برنامه است، نه نشانیِ دیگری
         Assert.Contains("https://api.vill3n.top/api/license/public-key", wf);
@@ -226,10 +226,10 @@ public class OfflineKeyTests : IDisposable
     [Fact]
     public void HalgheyePasZamine_KodRa_BeSarvar_Mibarad()
     {
-        var pub = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.App", "Services", "StationPublisher.cs"));
+        var pub = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.Shell", "Services", "StationPublisher.cs"));
         Assert.Contains("await cloud.RedeemOfflineAsync(ct);", pub);
         Assert.Contains("await device.RedeemOfflineAsync(ct);", pub);
-        var link = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.App", "Services", "CloudLink.cs"));
+        var link = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.Shell", "Services", "CloudLink.cs"));
         Assert.Contains("\"/api/pump/device/offline-code\"", link);
         Assert.Contains("code == \"code_revoked\"", link);
     }

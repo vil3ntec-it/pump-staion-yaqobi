@@ -175,10 +175,10 @@ public class AlertWatchTests
     [Fact]
     public void Tormoz_Version_Va_BiKhandaneHamePArcheha()
     {
-        var w = Src("PumpYaqobi.App", "Services", "AlertWatch.cs");
+        var w = Src("PumpYaqobi.Shell", "Services", "AlertWatch.cs");
         Assert.Contains("version == _lastVersion) return false;", w);
         Assert.Contains("AppClock.Mono - _lastRun < MinGap", w);
-        var snap = Src("PumpYaqobi.App", "Services", "StationSnapshot.cs");
+        var snap = Src("PumpYaqobi.Shell", "Services", "StationSnapshot.cs");
         var tank = snap[snap.IndexOf("internal static async Task<Dictionary<string, object?>> TankAsync", StringComparison.Ordinal)..];
         tank = tank[..tank.IndexOf("return tank;", StringComparison.Ordinal)];
         Assert.Contains("ShiftSumsAsync(fuel, ct)", tank);

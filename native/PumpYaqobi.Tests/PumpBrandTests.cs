@@ -90,7 +90,7 @@ public class PumpBrandTests
         var w = Read("PumpYaqobi.App", "Views", "MainWindow.axaml");
         Assert.Contains("Title=\"{Binding BrandName}\"", w);
         Assert.Contains("Text=\"{Binding BrandName}\" FontSize=\"21\"", w);
-        var host = Read("PumpYaqobi.App", "Services", "AppHost.cs");
+        var host = Read("PumpYaqobi.Shell", "Services", "AppHost.cs");
         //  هر نوشتنِ نامِ پمپ، هر جا — و دفترِ دیگر / بازگردانی ⇒ نامِ همان دفتر
         Assert.Contains("SettingsService.Written += (k, v) => { if (k == SettingsService.StationName) PumpBrand.Set(v); };", host);
         var sw = host[host.IndexOf("public bool UseLedgerOf", StringComparison.Ordinal)..];

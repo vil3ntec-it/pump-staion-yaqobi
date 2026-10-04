@@ -197,7 +197,7 @@ public class SubscriptionWatchTests : IDisposable
     public void GereftaneMojavezNashod_ShodGoftehNemishavad()
     {
         //  ⛔ ریشهٔ همان گزارش: `RefreshAsync` شکستِ گرفتنِ مجوز را «شد» می‌گفت
-        var s = Src("PumpYaqobi.App/Services/CloudLink.cs");
+        var s = Src("PumpYaqobi.Shell/Services/CloudLink.cs");
         var i = s.IndexOf("public async Task<CloudResult> RefreshAsync", StringComparison.Ordinal);
         var body = s[i..s.IndexOf("private CloudResult? AdoptLicense", i, StringComparison.Ordinal)];
         Assert.Contains("if (!licOk) return CloudResult.No(licWhy, licCode);", body);
@@ -206,7 +206,7 @@ public class SubscriptionWatchTests : IDisposable
     [Fact]
     public void Peygir_DarHalgheh_Va_BaPayameServer_Va_BargashtaneInternet()
     {
-        var pub = Src("PumpYaqobi.App/Services/StationPublisher.cs");
+        var pub = Src("PumpYaqobi.Shell/Services/StationPublisher.cs");
         var keep = pub.IndexOf("await cloud.KeepLicenseFreshAsync(ct);", StringComparison.Ordinal);
         var watch = pub.IndexOf("await cloud.WatchSubscriptionAsync(forceBind, ct);", StringComparison.Ordinal);
         Assert.True(keep > 0 && watch > keep, "پیگیر پس از گرفتنِ حالِ سرور");
@@ -222,7 +222,7 @@ public class SubscriptionWatchTests : IDisposable
     [Fact]
     public void Peygir_HichPompiNemisazad_Va_BeDaftarDastNemizanad()
     {
-        var w = Src("PumpYaqobi.App/Services/CloudLink.Watch.cs");
+        var w = Src("PumpYaqobi.Shell/Services/CloudLink.Watch.cs");
         Assert.DoesNotContain("EnsureStationAsync", w);
         Assert.DoesNotContain("Db.", w);
         //  ⚠️ سکسکهٔ گذرا اول فقط دوباره امتحان می‌شود، نه وصلِ دوباره

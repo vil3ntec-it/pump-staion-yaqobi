@@ -9451,3 +9451,44 @@ dotnet run --project PumpYaqobi.UiTests -c Release -- quickstart [پوشهٔ ع�
   **همهٔ** ماژول‌ها عمداً شکسته ⇒ ورود انجام می‌شود، پارچه و ورق ذخیره می‌شوند و
   پروفایل همه را می‌گوید. دندان: برگرداندنِ `Publisher.Start()`ِ مستقیم، `throw`ِ
   دوباره در `Modules.Start`، و برداشتنِ استثنای شبکه — هر سه سرخ.
+
+## 🧱 شورا، ج۵ — پوسته جدا از آوالونیا، ویومدل بی DbContext (از ۱۴۰۵/۰۷/۲۰، نسخهٔ 3.1.243)
+
+دو گام، هر دو با آزمونِ معماری.
+
+**گامِ ۱ — پروژهٔ `PumpYaqobi.Shell`.** پل‌های بیرونِ برنامه و میزبانِ سرویس‌ها
+(CloudLink، SyncEngine، StationPublisher، BackupPusher، LicenseGuard، TimeSync، AppHost،
+AppSettings و بقیهٔ همان زنجیره — ۴۰ فایل) با `git mv` از `PumpYaqobi.App/Services`
+به `PumpYaqobi.Shell/Services` رفتند؛ **فضای نام همان ماند** (`PumpYaqobi.App.Services`)،
+پس هیچ کدی در برنامه عوض نشد.
+
+- ⛔ **`PumpYaqobi.Shell` هیچ ارجاعی به آوالونیا و به خودِ برنامه ندارد**
+  (`ShellIdentityTests`). نخِ رابط فقط از درِ `UiThread`؛ برنامه آن را در
+  `UiThreadAvalonia` (یک `ModuleInitializer`) به `Dispatcher.UIThread` وصل می‌کند و
+  `ShellBoot.Ensure` مطمئن می‌شود این سیم‌کشی پیش از نخستین استفادهٔ پوسته دویده است.
+- ⛔ **نسخه و ریشه‌های اعتماد از اسمبلیِ برنامه، نه پوسته** (`AppIdentity`). پیش از
+  جدایی `typeof(CloudConfig).Assembly` همان برنامه بود؛ پس از جدایی همان خط **بی‌صدا**
+  کلیدهای خالی می‌خواند — مجوز با TOFU و به‌روزرسانی بی امضا. `AppVersion` و
+  `CloudConfig.Metadata` هر دو از `AppIdentity` می‌خوانند، و سنجه با نشانِ ثابتِ
+  `AppIdentityProbe` (در `PumpYaqobi.App.csproj`) همان در را تا ته می‌سنجد.
+- ⚠️ نامش «Infrastructure» نیست: آن پروژه **زیرِ** Services نشسته (Services به آن
+  ارجاع دارد) و این‌ها خودشان Services را می‌خواهند — یعنی دور.
+- ⚠️ نشانیِ منبعِ به‌روزرسانی همچنان فقط در `UpdateService.cs` است؛ میزبان‌های ساعتِ
+  گیت‌هاب از همان‌جا با سیم‌کشیِ برنامه به `TimeSync` می‌رسند (`TimeSync.UpdateTimeHosts`)،
+  و فهرستشان تنبل ساخته می‌شود تا ترتیبِ مقداردهی آن را خالی نگذارد.
+- ⚠️ بستهٔ کوچکِ به‌روزرسانی هر فایلِ `PumpYaqobi*` را می‌برد، پس
+  `PumpYaqobi.Shell.dll` همراهِ همان بسته می‌رسد؛ امضای یکپارچگی هم همین الگو را دارد.
+  مسیرهای `live-stack.yml` به پوسته عوض شدند.
+
+**گامِ ۲ — ویومدل بی DbContext.**
+
+- ⛔ **هیچ نوعی زیرِ `PumpYaqobi.App.ViewModels` به `PumpDbContext` یا `PumpDbFactory`
+  دست نمی‌زند** — نه سازنده، نه فیلد، نه فراخوانی. `ArchitectureTests` این را با
+  خواندنِ **IL**ِ هر متد (و ماشین‌های حالتِ async و لامبداها) و
+  `Module.ResolveMember` می‌سنجد، نه با گشتنِ متن.
+- ترمزِ `Version` از `DataVersion.Current`؛ دفترِ همگام‌سازی از `AppHost.Store`؛ مسیرِ
+  فایل از `AppHost.DbPath`؛ چک‌لیستِ شروعِ سریع از `AnyShiftAsync` و `AnyNamedTxnAsync`؛
+  کشوی «فایلِ حساب» از `NameList`.
+- آزمون: `ArchitectureTests` (اسکن + دندانِ خودِ اسکن) و `ShellIdentityTests`. دندان:
+  برگرداندنِ `_host.Db.DbPath` یا `PumpDbContext.Version` در یک ویومدل، و خواندنِ
+  کلید/نسخه از اسمبلیِ خودِ پوسته — هر چهار سرخ.

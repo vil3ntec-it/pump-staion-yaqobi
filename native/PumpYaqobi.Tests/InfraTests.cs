@@ -167,7 +167,7 @@ public class InfraTests : IDisposable
         //  خودِ بدنهٔ تابع است: جز `_settings`ِ در حافظه و ذخیرهٔ همان،
         //  هیچ سرویس و هیچ دیتابیسی در کار نیست.
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
-            "..", "..", "..", "..", "PumpYaqobi.App", "Services"));
+            "..", "..", "..", "..", "PumpYaqobi.Shell", "Services"));
         var src = File.ReadAllText(Path.Combine(root, "CloudLink.cs"));
         var i = src.IndexOf("public async Task ForgetStationAsync()", StringComparison.Ordinal);
         Assert.True(i > 0, "ForgetStationAsync پیدا نشد.");
@@ -263,7 +263,7 @@ public class InfraTests : IDisposable
     public void Poshtiban_FileRa_YekJa_DarHafeze_Nemikhanad()
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
-            "..", "..", "..", "..", "PumpYaqobi.App", "Services"));
+            "..", "..", "..", "..", "PumpYaqobi.Shell", "Services"));
         var src = File.ReadAllText(Path.Combine(root, "BackupPusher.cs"));
         //  ⚠️ روی خودِ **کد** می‌گردیم، نه توضیحات: نامِ قدیمی در کامنتِ
         //  «پیش از این چه بود» هست و باید هم باشد.

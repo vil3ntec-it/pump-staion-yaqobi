@@ -367,7 +367,7 @@ public sealed class ChatRoomTests : IDisposable
     {
         var root = SrcRoot();
         var vm = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "Sections", "ChatSectionViewModel.cs"));
-        var cloud = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Services", "CloudLink.cs"));
+        var cloud = File.ReadAllText(Path.Combine(root, "PumpYaqobi.Shell", "Services", "CloudLink.cs"));
         var state = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Services", "SupportState.cs"));
         var ctl = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Themes", "Controls.axaml"));
         var xaml = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "ChatSectionView.axaml"));

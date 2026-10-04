@@ -1095,18 +1095,7 @@ public sealed class UpdateService
     }
 }
 
-/// <summary>نسخهٔ همین ساخت — از خودِ اسمبلی خوانده می‌شود، نه دستی.</summary>
-public static class AppVersion
-{
-    public static string Current
-    {
-        get
-        {
-            var v = typeof(AppVersion).Assembly.GetName().Version;
-            return v is null ? "1.0.0" : $"{v.Major}.{v.Minor}.{v.Build}";
-        }
-    }
-}
+//  ⛔ شورا ج۵: ‎AppVersion‎ به پوسته رفت (‎PumpYaqobi.Shell/Update/AppVersion.cs‎) و نسخهٔ برنامه را از ‎AppIdentity‎ می‌خواند.
 
 /// <summary>
 /// ══ معماریِ همین نصب ═══════════════════════════════════════════════════════

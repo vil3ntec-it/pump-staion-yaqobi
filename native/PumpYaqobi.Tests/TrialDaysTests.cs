@@ -84,8 +84,8 @@ public class TrialDaysTests
         {
             Read("PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs"),
             Read("PumpYaqobi.App", "ViewModels", "Sections", "VipSectionViewModel.cs"),
-            Read("PumpYaqobi.App", "Services", "AcctLive.cs"),
-            Read("PumpYaqobi.App", "Services", "CloudLink.cs"),
+            Read("PumpYaqobi.Shell", "Services", "AcctLive.cs"),
+            Read("PumpYaqobi.Shell", "Services", "CloudLink.cs"),
         };
         foreach (var src in files)
         {

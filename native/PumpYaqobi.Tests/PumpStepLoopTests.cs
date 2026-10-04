@@ -30,9 +30,9 @@ public class PumpStepLoopTests
     private static string Src(string rel) =>
         File.ReadAllText(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar)));
 
-    private const string Cloud = "PumpYaqobi.App/Services/CloudLink.cs";
+    private const string Cloud = "PumpYaqobi.Shell/Services/CloudLink.cs";
     private const string Vm = "PumpYaqobi.App/ViewModels/Sections/AccountSectionViewModel.cs";
-    private const string Settings = "PumpYaqobi.App/Services/AppSettings.cs";
+    private const string Settings = "PumpYaqobi.Shell/Services/AppSettings.cs";
 
     /// <summary>
     /// ⛔ <b>«تمام» به بند شدنِ دستگاه بند نیست.</b> بند شدن کاری نیست که

@@ -161,7 +161,7 @@ public class AccountPrimeTests : IDisposable
     [Fact]
     public void Voroode_Tamam_Shod_HamanLahze_Migirad()
     {
-        var engine = Src("PumpYaqobi.App/Services/SyncEngine.cs");
+        var engine = Src("PumpYaqobi.Shell/Services/SyncEngine.cs");
         var account = Src("PumpYaqobi.App/ViewModels/Sections/AccountSectionViewModel.cs");
 
         //  ⛔ نه یک `Task.Delay`ِ شکست‌ناپذیر

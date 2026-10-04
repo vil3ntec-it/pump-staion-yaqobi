@@ -92,7 +92,7 @@ public class PrinterTests
         Assert.Contains("LoadPrintersCommand", ax);
 
         //  انتخابِ چاپگر مقدارِ راحتی است — در هر دو فهرستِ ‎SaveSoon‎
-        var st = Src("PumpYaqobi.App", "Services", "AppSettings.cs");
+        var st = Src("PumpYaqobi.Shell", "Services", "AppSettings.cs");
         Assert.Contains("live.LastPrinter = LastPrinter;", st);
     }
 }

@@ -95,7 +95,7 @@ public class TenYearsTests
     [Fact]
     public void Nasher_NoskheyeSarvar_Ra_Miferestad()
     {
-        var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Services", "StationPublisher.cs"));
+        var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.Shell", "Services", "StationPublisher.cs"));
         Assert.Contains("PutFileAsync(CloudLiveFile, StationSnapshot.ForCloud(snap), ct)", src);
         Assert.Contains("\"body_too_large\"", src);
         //  ⛔ ساختنِ عکس دست‌بالا پنج درصدِ یک هسته

@@ -451,7 +451,7 @@ waraqtype، bigtable، scrollend، undokeys، coldrag) و همهٔ آزمون‌
 bigtable/scrollperf با main مقایسه (A/B). همین برای MainViewModel.
 ```
 
-#### ج۵ — پوسته به زیرساخت، ویومدل بی DbContext  ⏳
+#### ج۵ — پوسته به زیرساخت، ویومدل بی DbContext  ✅ شد (گامِ ۱: پروژهٔ `PumpYaqobi.Shell` — ۴۰ فایل، بی آوالونیا، هویت از برنامه — `ShellIdentityTests`؛ گامِ ۲: هیچ ویومدلی به DbContext/DbFactory دست نمی‌زند — `ArchitectureTests` با خواندنِ IL — نسخه 3.1.243)
 
 ```
 CloudLink، SyncEngine، StationPublisher، BackupPusher، LicenseGuard، TimeSync در

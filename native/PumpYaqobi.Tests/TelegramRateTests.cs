@@ -142,7 +142,7 @@ public class TelegramRateTests : IDisposable
     public void Barname_HarDaghighe_Mipursad_VaSafhe_ZendeTazeMishavad()
     {
         string R(params string[] p) => File.ReadAllText(Path.Combine(new[] { Root() }.Concat(p).ToArray()));
-        var pub = R("PumpYaqobi.App", "Services", "StationPublisher.cs");
+        var pub = R("PumpYaqobi.Shell", "Services", "StationPublisher.cs");
         //  «درجا»: حلقهٔ خودش، با همان توقفِ حلقهٔ اصلی
         Assert.Contains("Task.Run(() => RateWatchLoopAsync(cts.Token), cts.Token)", pub);
         Assert.Contains("await RateTickAsync(RateWait, ct);", pub);

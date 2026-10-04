@@ -102,7 +102,7 @@ public class SyncTenYearsTests : IDisposable
     [Fact]
     public void Motor_Hamin_Ghavaed_Ra_Darad()
     {
-        var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Services", "SyncEngine.cs"));
+        var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.Shell", "Services", "SyncEngine.cs"));
         Assert.Contains("cloud.SyncDeviceOverride = CloudLink.SyncDeviceFor(state.DeviceId, state.UidSeed, cloud.DeviceUid);", src);
         Assert.Contains("x.DeviceId = cloud.SyncDevice;", src);
         Assert.Contains("if (Queued > 0) Nudge();", src);

@@ -284,7 +284,7 @@ public class CloudAddressLockTests
     [Fact]
     public void NeshaniyeAbr_DarKhodeCode_Ast()
     {
-        var src = Read("PumpYaqobi.App/Services/CloudConfig.cs");
+        var src = Read("PumpYaqobi.Shell/Services/CloudConfig.cs");
         Assert.Contains("\"https://api.vill3n.top\"", src);
         Assert.Contains("const string BaseUrl", src);
     }
@@ -348,7 +348,7 @@ public class CloudAddressLockTests
         //  ⚠️ قلبِ ماجرا: اگر BaseUrl از تنظیمات یا محیط خوانده شود، هر
         //  کسی می‌تواند برنامه را به سرورِ خودش ببرد و مجوزِ ساختگیِ خودش
         //  را قبول کند.
-        var src = Read("PumpYaqobi.App/Services/CloudConfig.cs");
+        var src = Read("PumpYaqobi.Shell/Services/CloudConfig.cs");
         var after = src[src.IndexOf("BaseUrl", StringComparison.Ordinal)..];
         var line = after[..after.IndexOf(';', StringComparison.Ordinal)];
 
@@ -422,7 +422,7 @@ public class CloudAddressLockTests
     [Fact]
     public void Tanzimat_NeshaniyeAbr_Negah_Nemidarad()
     {
-        var src = Read("PumpYaqobi.App/Services/AppSettings.cs");
+        var src = Read("PumpYaqobi.Shell/Services/AppSettings.cs");
         Assert.DoesNotContain("api.vill3n.top", src);
         //  توکن و کلید و مجوز نگه داشته می‌شوند — آن‌ها را سرور داده،
         //  نه کاربر

@@ -17,10 +17,10 @@ public class AccountLedgerSourceTests
     private static string Src(string rel) =>
         File.ReadAllText(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar)));
 
-    private const string Host = "PumpYaqobi.App/Services/AppHost.cs";
+    private const string Host = "PumpYaqobi.Shell/Services/AppHost.cs";
     private const string Ledger = "PumpYaqobi.Services/Data/AccountLedger.cs";
     private const string Main = "PumpYaqobi.App/ViewModels/MainViewModel.cs";
-    private const string Engine = "PumpYaqobi.App/Services/SyncEngine.cs";
+    private const string Engine = "PumpYaqobi.Shell/Services/SyncEngine.cs";
 
     /// <summary>
     /// ⛔ <b>عوض کردنِ حساب هیچ داده‌ای را پاک نمی‌کند.</b> خواستهٔ صریحِ

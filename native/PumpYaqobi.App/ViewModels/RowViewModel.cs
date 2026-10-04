@@ -21,10 +21,10 @@ public abstract partial class RowViewModel : ObservableObject, IPendingWrite
     /// روی ردیفی با همان شماره (شماره‌ها در هر دفتر از ۱ شروع می‌شوند) و با شناسهٔ
     /// همگام‌سازیِ الف، یعنی دادهٔ یک حساب در دفترِ حسابِ دیگر.
     /// </summary>
-    private static int _ledgerGen;
-    public static int LedgerGeneration => Volatile.Read(ref _ledgerGen);
-    public static void NewLedger() => Interlocked.Increment(ref _ledgerGen);
-    private readonly int _gen = Volatile.Read(ref _ledgerGen);
+    //  ⛔ شورا ج۵: شمارنده در پوسته (‎LedgerGen‎) — همان یک شمارنده، چون میزبان هم می‌زندش
+    public static int LedgerGeneration => Services.LedgerGen.Current;
+    public static void NewLedger() => Services.LedgerGen.Next();
+    private readonly int _gen = Services.LedgerGen.Current;
 
     // ══════════════════════════════════════════════════════════════════════
     //  ══ خانه‌ای که در حالِ نوشتن است، زیرِ دستِ کاربر عوض نمی‌شود (۱۴۰۵/۰۷/۱۹) ══

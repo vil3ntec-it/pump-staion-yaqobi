@@ -281,7 +281,7 @@ public class CloudEventsTests : IDisposable
     [Fact]
     public void Khabarha_Poshte_Eshterak_Nistand_Vali_Akse_Zende_Hast()
     {
-        var src = Src("PumpYaqobi.App", "Services", "StationPublisher.cs");
+        var src = Src("PumpYaqobi.Shell", "Services", "StationPublisher.cs");
 
         //  ⛔ از ۱۴۰۵/۰۷/۱۴ خبر از عکس نمی‌رود: هر تیکِ پنج‌ثانیه‌ای، کلِ فهرستِ
         //  باز به «حالِ زنده» (سرور خودش تازه‌ها را می‌سنجد) — و پشتِ هیچ قفلی نیست.

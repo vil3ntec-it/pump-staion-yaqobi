@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- ══ شورا، ج۵ — پوسته جدا از آوالونیا ═══════════════════════════════════════
+       پل‌های بیرونِ برنامه (سرورِ حساب، همگام‌سازی، ناشرِ عکسِ زنده، پشتیبانِ
+       سرور، مجوز، ساعت) و میزبانِ سرویس‌ها. ⛔ هیچ ارجاعی به آوالونیا — نخِ رابط
+       فقط از درِ `UiThread` (برنامه پرش می‌کند).
+       ⚠️ نامش «Infrastructure» نیست: آن پروژه زیرِ Services نشسته (Services به آن
+       ارجاع دارد) و این‌ها خودشان Services را می‌خواهند — یعنی دور. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>PumpYaqobi.App</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- همان عضوهای «internal» که پیش از جدایی برنامه می‌دید -->
+    <InternalsVisibleTo Include="PumpYaqobi" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PumpYaqobi.Domain\PumpYaqobi.Domain.csproj" />
+    <ProjectReference Include="..\PumpYaqobi.Application\PumpYaqobi.Application.csproj" />
+    <ProjectReference Include="..\PumpYaqobi.Persistence\PumpYaqobi.Persistence.csproj" />
+    <ProjectReference Include="..\PumpYaqobi.Infrastructure\PumpYaqobi.Infrastructure.csproj" />
+    <ProjectReference Include="..\PumpYaqobi.Reporting\PumpYaqobi.Reporting.csproj" />
+    <ProjectReference Include="..\PumpYaqobi.Services\PumpYaqobi.Services.csproj" />
+  </ItemGroup>
+
+</Project>

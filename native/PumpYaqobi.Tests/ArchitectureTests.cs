@@ -74,7 +74,7 @@ public class ArchitectureTests
     [Fact]
     public void Viewmodel_BeDbContext_DastNemizanad()
     {
-        var app = typeof(PumpYaqobi.App.Services.AppHost).Assembly;
+        var app = typeof(PumpYaqobi.App.ViewModels.MainViewModel).Assembly;
         var vms = app.GetTypes().Where(t => t.Namespace?.StartsWith("PumpYaqobi.App.ViewModels", StringComparison.Ordinal) == true).ToList();
         Assert.True(vms.Count > 50, "ویومدل‌ها پیدا نشدند — آزمون توخالی است");
 

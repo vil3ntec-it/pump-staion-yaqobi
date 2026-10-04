@@ -1,4 +1,3 @@
-using Avalonia.Threading;
 using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.Services;
@@ -62,12 +61,13 @@ public static class CrashGuard
     /// </summary>
     public static void InstallUi()
     {
-        Dispatcher.UIThread.UnhandledException += (_, e) =>
+        //  ⛔ شورا ج۵: از درِ `UiThread` — برنامه آن را به `Dispatcher.UIThread` وصل می‌کند
+        UiThread.HookUnhandled(ex =>
         {
-            Write("UI", e.Exception);
-            e.Handled = true;
-            try { AppHost.Current.Toast(Friendly(e.Exception), ToastKind.Error); } catch { }
-        };
+            Write("UI", ex);
+            try { AppHost.Current.Toast(Friendly(ex), ToastKind.Error); } catch { }
+            return true;
+        });
     }
 
     /// <summary>

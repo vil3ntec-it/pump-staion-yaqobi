@@ -177,8 +177,10 @@ public class CloudReachTests : IDisposable
         }
     }
 
+    //  ⚠️ شورا ج۵: پل‌های بیرونی به ‎PumpYaqobi.Shell‎ رفتند (همان فضای نام) — اول برنامه، بعد پوسته
     private static string App(string rel) =>
-        File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", rel));
+        File.ReadAllText(File.Exists(Path.Combine(Root, "PumpYaqobi.App", rel))
+            ? Path.Combine(Root, "PumpYaqobi.App", rel) : Path.Combine(Root, "PumpYaqobi.Shell", rel));
 
     /// <summary>
     /// ⛔ حلقهٔ پس‌زمینه باید **خودش** سراغِ ابر برود. تا دیروز هیچ تماسی با

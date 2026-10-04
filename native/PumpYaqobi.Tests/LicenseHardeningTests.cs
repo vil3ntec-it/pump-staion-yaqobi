@@ -410,7 +410,7 @@ public class LicenseHardeningTests : IDisposable
     public void Halghe_DastgaheBiHesab_RaHam_TazeMikonad()
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
-        var src = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Services", "StationPublisher.cs"));
+        var src = File.ReadAllText(Path.Combine(root, "PumpYaqobi.Shell", "Services", "StationPublisher.cs"));
         var i = src.IndexOf("private static async Task CloudKeepAsync", StringComparison.Ordinal);
         var end = src.IndexOf("public static string HashOf", i, StringComparison.Ordinal);
         var body = src[i..end];

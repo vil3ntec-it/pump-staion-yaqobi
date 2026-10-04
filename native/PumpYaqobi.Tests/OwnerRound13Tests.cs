@@ -217,7 +217,7 @@ public class OwnerRound13Tests
     [Fact]
     public void BarkhordeKod_FaghatBiRamzVaBiPin_JaygozinMigirad()
     {
-        var src = Read("PumpYaqobi.App", "Services", "StationLink.cs");
+        var src = Read("PumpYaqobi.Shell", "Services", "StationLink.cs");
         //  ⛔ نصبی که رمزِ پوشهٔ **همین حساب** را دارد هیچ‌وقت کدش عوض نمی‌شود؛
         //  فقط پوشه‌ای که مالِ این حساب نیست جابه‌جا می‌شود، و رمزش همراه نمی‌رود
         Assert.Contains("var moving = token.Length > 0 && !Same(saved, code);", src);

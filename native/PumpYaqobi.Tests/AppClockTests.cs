@@ -411,7 +411,7 @@ public class SeenNoticesTests : IDisposable
         SeenNotices.MarkSeen("ntc_1");
         Assert.True(SeenNotices.Seen("ntc_1"));      // اجرای بعدیِ برنامه همان فایل را می‌خواند
 
-        var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Services", "SyncEngine.cs"));
+        var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.Shell", "Services", "SyncEngine.cs"));
         Assert.Contains("if (SeenNotices.Seen(n.Id)) { await MarkReadAsync(cloud, n.Id, ct); continue; }", src);
         Assert.Contains("await cloud.NoticeReadAsync(id, ct);", src);
     }

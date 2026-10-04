@@ -72,7 +72,7 @@ public class ProfilePillTests
         Assert.Contains("Cloud.AccessCodeAsync(rotate: true)", vm);
         Assert.DoesNotContain("Binding AccessCode}", Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml"));
 
-        var link = Read("PumpYaqobi.App", "Services", "CloudLink.cs");
+        var link = Read("PumpYaqobi.Shell", "Services", "CloudLink.cs");
         Assert.Contains("/api/pump/device/access-code", link);
         Assert.Contains("/api/pump/device/access-code/rotate", link);
     }
@@ -99,7 +99,7 @@ public class ProfilePillTests
     [Fact]
     public void Tanzimat_KodePump_RaNegahMidarad()
     {
-        var s = Read("PumpYaqobi.App", "Services", "AppSettings.cs");
+        var s = Read("PumpYaqobi.Shell", "Services", "AppSettings.cs");
         Assert.Contains("CloudAccessCode", s);
     }
 

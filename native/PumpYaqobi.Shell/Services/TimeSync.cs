@@ -33,8 +33,21 @@ public static class TimeSync
     /// <summary>هر چند وقت یک بار ساعت را از نو بپرسیم وقتی هیچ پاسخِ دیگری نیامده.</summary>
     public static readonly TimeSpan Recheck = TimeSpan.FromHours(6);
 
-    private static readonly string[] TrustedHosts =
-        new[] { new Uri(CloudConfig.Url("/")).Host }.Concat(Update.UpdateService.TimeHosts).ToArray();
+    //  ⛔ شورا ج۵: میزبان‌های گیت‌هاب از ‎UpdateService‎ِ برنامه می‌آیند (نشانیِ منبع فقط
+    //  همان‌جا نوشته می‌شود) — برنامه این دو در را سیم‌کشی می‌کند (‎UiThreadAvalonia‎).
+    public static Func<IEnumerable<string>> UpdateTimeHosts { get; set; } = () => Array.Empty<string>();
+    public static Func<string> UpdateProbeUrl { get; set; } = () => "";
+
+    //  ⚠️ تنبل، نه در سازندهٔ ایستا: سیم‌کشیِ برنامه خودش اول به همین کلاس دست می‌زند
+    //  (‎UpdateTimeHosts = …‎) و فهرستی که آن لحظه ساخته شود میزبان‌های گیت‌هاب را ندارد.
+    private static string[]? _trusted;
+    private static string[] TrustedHosts => _trusted ??= Hosts();
+
+    private static string[] Hosts()
+    {
+        ShellBoot.Ensure();
+        return new[] { new Uri(CloudConfig.Url("/")).Host }.Concat(UpdateTimeHosts()).ToArray();
+    }
 
     private static long _lastPersistMono = long.MinValue;
 
@@ -67,8 +80,10 @@ public static class TimeSync
     /// </summary>
     public static async Task<bool> CheckAsync(CancellationToken ct = default)
     {
-        foreach (var url in new[] { CloudConfig.Url("/api/health"), Update.UpdateService.TimeProbeUrl })
+        ShellBoot.Ensure();
+        foreach (var url in new[] { CloudConfig.Url("/api/health"), UpdateProbeUrl() })
         {
+            if (string.IsNullOrEmpty(url)) continue;
             try
             {
                 using var req = new HttpRequestMessage(HttpMethod.Head, url);

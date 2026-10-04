@@ -57,7 +57,7 @@ public class SectionOpenSpeedTests
         Assert.DoesNotContain("_settings.Save();", code);
 
         //  و خودِ `SaveSoon` واقعاً تأخیری و بیرونِ نخِ رابط است
-        var st = Read("PumpYaqobi.App", "Services", "AppSettings.cs");
+        var st = Read("PumpYaqobi.Shell", "Services", "AppSettings.cs");
         Assert.Contains("public void SaveSoon()", st);
         Assert.Contains("System.Threading.Timer", st);
         //  ⛔ و نوشتنِ بادوام دست‌نخورده ماند — این سنجه دربارهٔ **کجا**ست،

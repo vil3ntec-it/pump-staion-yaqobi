@@ -110,7 +110,7 @@ public class VisualQualityTests
         var style = File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Themes", "TableStyle.cs"));
         Assert.Contains("new Thickness(line, sum, line, line)", style);
         Assert.Contains("TableSumLine { get; set; } = 2;",
-            File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Services", "AppSettings.cs")));
+            File.ReadAllText(Path.Combine(Root, "PumpYaqobi.Shell", "Services", "AppSettings.cs")));
     }
 
     /// <summary>

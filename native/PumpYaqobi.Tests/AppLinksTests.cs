@@ -258,10 +258,10 @@ public class AppLinksTests
         Assert.Contains("ResetPass = \"\"; ResetPass2 = \"\";", vm);
         Assert.DoesNotContain("CloudResetPass", vm);
 
-        var settings = Read("PumpYaqobi.App", "Services", "AppSettings.cs");
+        var settings = Read("PumpYaqobi.Shell", "Services", "AppSettings.cs");
         Assert.DoesNotContain("Password", settings);
 
-        var link = Read("PumpYaqobi.App", "Services", "CloudLink.cs");
+        var link = Read("PumpYaqobi.Shell", "Services", "CloudLink.cs");
         Assert.DoesNotContain("_settings.CloudPassword", link);
         //  «رمز روی هیچ فایلی نمی‌نشیند» رفتاری است: CloudLoginBehaviourTests (شورا، ت۳)
     }
@@ -587,7 +587,7 @@ public class AppLinksTests
             Path.Combine("Services", "StationPublisher.cs"),
         })
         {
-            var src = Read("PumpYaqobi.App", f);
+            var src = File.Exists(Path.Combine(Root, "PumpYaqobi.App", f)) ? Read("PumpYaqobi.App", f) : Read("PumpYaqobi.Shell", f);
             Assert.DoesNotContain("AppSettings.Load().Save()", src);
             if (src.Contains("new CloudLink("))
                 Assert.Contains("file.Save()", src);
@@ -627,7 +627,7 @@ public class AppLinksTests
     [Fact]
     public void CheraghSarvar_HaghighatRaMigooyad()
     {
-        var src = Read("PumpYaqobi.App", "Services", "StationPublisher.cs");
+        var src = Read("PumpYaqobi.Shell", "Services", "StationPublisher.cs");
         //  اتصال جدا از انتشار است و حلقه هر دو را می‌زند
         Assert.Contains("public async Task<bool> KeepLinkAsync(", src);
         Assert.Contains("Modules.Run(\"publisher\", () => KeepLinkAsync(false, ct), ct)", src);   //  از ج۷ از درِ ماژولِ خودش

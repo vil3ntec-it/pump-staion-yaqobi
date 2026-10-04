@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PumpYaqobi.UiTests", "PumpY
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PumpYaqobi.Services", "PumpYaqobi.Services\PumpYaqobi.Services.csproj", "{C2AA6EE9-353A-4A97-9183-656B0599DA75}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PumpYaqobi.Shell", "PumpYaqobi.Shell\PumpYaqobi.Shell.csproj", "{B02C073A-CDB0-4262-8115-25274B99C8DB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -66,5 +68,9 @@ Global
 		{C2AA6EE9-353A-4A97-9183-656B0599DA75}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C2AA6EE9-353A-4A97-9183-656B0599DA75}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C2AA6EE9-353A-4A97-9183-656B0599DA75}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B02C073A-CDB0-4262-8115-25274B99C8DB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B02C073A-CDB0-4262-8115-25274B99C8DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B02C073A-CDB0-4262-8115-25274B99C8DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B02C073A-CDB0-4262-8115-25274B99C8DB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

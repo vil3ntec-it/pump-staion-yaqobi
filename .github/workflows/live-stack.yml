@@ -12,12 +12,12 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - 'native/PumpYaqobi.App/Services/CloudLink*.cs'
-      - 'native/PumpYaqobi.App/Services/StationPublisher*.cs'
-      - 'native/PumpYaqobi.App/Services/StationLink*.cs'
-      - 'native/PumpYaqobi.App/Services/HomeSync*.cs'
-      - 'native/PumpYaqobi.App/Services/Entitlements.cs'
-      - 'native/PumpYaqobi.App/Services/LicenseGuard*.cs'
+      - 'native/PumpYaqobi.Shell/Services/CloudLink*.cs'
+      - 'native/PumpYaqobi.Shell/Services/StationPublisher*.cs'
+      - 'native/PumpYaqobi.Shell/Services/StationLink*.cs'
+      - 'native/PumpYaqobi.Shell/Services/HomeSync*.cs'
+      - 'native/PumpYaqobi.Shell/Services/Entitlements.cs'
+      - 'native/PumpYaqobi.Shell/Services/LicenseGuard*.cs'
       - 'native/PumpYaqobi.App/Update/**'
       - 'native/PumpYaqobi.App/ViewModels/Sections/AccountSectionViewModel.cs'
       - 'native/PumpYaqobi.UiTests/**'

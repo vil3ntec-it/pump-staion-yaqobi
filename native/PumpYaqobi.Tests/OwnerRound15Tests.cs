@@ -205,7 +205,7 @@ public class OwnerRound15Tests
         Assert.Contains("_vm.NavSections", go);
         Assert.DoesNotContain("_vm.Sections[", go);
         //  مقدارِ راحتی ⇒ ‎SaveSoon‎ و فهرستِ ‎SaveComfortOnly‎
-        var st = Read("PumpYaqobi.App", "Services", "AppSettings.cs");
+        var st = Read("PumpYaqobi.Shell", "Services", "AppSettings.cs");
         Assert.Contains("live.NavOrder = NavOrder;", st);
         var w = Bare(Read("PumpYaqobi.App", "Views", "MainWindow.axaml"));
         //  ⛔ ۱۴۰۵/۰۷/۱۶: جابه‌جایی با کشیدن و رها کردن، نه منوی «اولِ نوار / یک خانه جلوتر»

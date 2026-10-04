@@ -172,7 +172,8 @@ public static class CloudConfig
     {
         try
         {
-            foreach (var a in typeof(CloudConfig).Assembly
+            //  ⛔ شورا ج۵: اسمبلیِ برنامه، نه پوسته — کلیدها آن‌جا نشسته‌اند (‎AppIdentity‎)
+            foreach (var a in AppIdentity.Assembly
                          .GetCustomAttributes(typeof(System.Reflection.AssemblyMetadataAttribute), false))
                 if (a is System.Reflection.AssemblyMetadataAttribute m && m.Key == key)
                     return (m.Value ?? "").Trim();

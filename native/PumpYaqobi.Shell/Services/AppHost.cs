@@ -258,7 +258,7 @@ public sealed class AppHost
             {
                 if (!Db.SwitchTo(want)) { LedgerAccountId = id; return false; }
                 LedgerAccountId = id;
-                ViewModels.RowViewModel.NewLedger();      // ⛔ ردیف‌های دفترِ قبلی دیگر نمی‌نویسند
+                LedgerGen.Next();                         // ⛔ ردیف‌های دفترِ قبلی دیگر نمی‌نویسند
             }
             finally { try { sync?.Hold(false); } catch { /* رفاه */ } }
         }

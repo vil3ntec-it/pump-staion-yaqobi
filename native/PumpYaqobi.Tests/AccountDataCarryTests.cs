@@ -218,7 +218,7 @@ public class AccountDataCarryTests : IDisposable
     public void Halgheye_Hamgamsazi_Vagheaan_BindTo_Ra_Mizanad()
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
-        var src = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Services", "SyncEngine.cs"));
+        var src = File.ReadAllText(Path.Combine(root, "PumpYaqobi.Shell", "Services", "SyncEngine.cs"));
         Assert.Contains("_store.BindTo(mine)", src);
         Assert.Contains("file.CloudUserId", src);      // شناسهٔ خودِ حساب، نه چیزِ دیگری
 

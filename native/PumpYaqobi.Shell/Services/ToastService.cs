@@ -20,9 +20,9 @@ public sealed partial class ToastService : ObservableObject
     {
         //  ⛔ همیشه روی نخِ رابط (۱۴۰۵/۰۷/۱۶): ناشر، پشتیبان‌گیر و به‌روزرسانیِ خودکار از
         //  نخِ پس‌زمینه صدا می‌زنند؛ ‎_hide‎ی بی‌قفل آن‌جا توستِ تازه‌تر را زود پنهان می‌کرد.
-        if (!Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+        if (!UiThread.CheckAccess())
         {
-            Avalonia.Threading.Dispatcher.UIThread.Post(() => Show(text, kind, ms));
+            UiThread.Post(() => Show(text, kind, ms));
             return;
         }
         Text = text; Kind = kind; Visible = true;

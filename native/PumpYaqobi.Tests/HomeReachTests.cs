@@ -64,7 +64,7 @@ public class HomeReachTests
     [Fact]
     public void SabteKhodkar_NeshaniyeResidani_RaMigirad_NaAvvalinJavab()
     {
-        var src = Read("PumpYaqobi.App", "Services", "StationLink.cs");
+        var src = Read("PumpYaqobi.Shell", "Services", "StationLink.cs");
         Assert.DoesNotContain("ServerFinder.FindFirstAsync(", src);
         Assert.Contains("ServerFinder.FindReachableAsync(ct: ct)", src);
     }
@@ -72,7 +72,7 @@ public class HomeReachTests
     [Fact]
     public void NeshaniyeMorde_DobareGashte_Mishavad()
     {
-        var src = Read("PumpYaqobi.App", "Services", "StationPublisher.cs");
+        var src = Read("PumpYaqobi.Shell", "Services", "StationPublisher.cs");
         var at = src.IndexOf("if (!await _sync.ConnectAsync(ct))", StringComparison.Ordinal);
         Assert.True(at > 0);
         var body = src[at..(at + 1800)];
@@ -86,7 +86,7 @@ public class HomeReachTests
     public void Nasher_HamanNeshaniyeGooshi_Ra_Miferestad()
     {
         //  ⛔ قاعدهٔ خودش رفتاری است (HomeAndWireBehaviourTests)؛ این فقط می‌گوید ناشر هم از همان در می‌رود
-        Assert.Contains("var url = HomeLink.ShareUrl(_host);", Read("PumpYaqobi.App", "Services", "StationPublisher.cs"));
+        Assert.Contains("var url = HomeLink.ShareUrl(_host);", Read("PumpYaqobi.Shell", "Services", "StationPublisher.cs"));
     }
 
     [Fact]
