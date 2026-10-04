@@ -1,0 +1,22 @@
+{
+ "days": 30,
+ "safeSales": 1231350,
+ "karimFuelAlbaqi": 27000,
+ "karimShopMoneyAlbaqi": 15000,
+ "rahimDieselAlbaqi": 21000,
+ "rahimDieselLiters": 300,
+ "expensesTotal": 4500,
+ "editDay": 15,
+ "editExtraLiters": 10,
+ "editSafeDelta": 600,
+ "deleteDay": 30,
+ "deleteSafeDelta": -33600,
+ "companyTon": 20,
+ "companyUsd": 900,
+ "karimMoneyReceiptPerDay": 300,
+ "karimMainMoneyAlbaqi": -5000,
+ "karimRasidMoneyPetrol": 5000,
+ "karimMoneyInvoice": 5000,
+ "rahimFuelInvoiceLiters": 100,
+ "rahimRasidFuelPetrol": 100
+}

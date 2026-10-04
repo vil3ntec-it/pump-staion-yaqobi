@@ -1,3 +1,4 @@
+using PumpYaqobi.Application.Localization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using PumpYaqobi.App.Services;
 
@@ -88,11 +89,23 @@ public abstract partial class RowViewModel : ObservableObject, IPendingWrite
     public static bool IsNumberColumn(string? path) =>
         path is { Length: > 0 } && path != "DensityText" && _numberCols.Contains(path);
 
-    /// <summary>نویسندهٔ ستونِ نوشتنی — نوشتهٔ خام را برای همان خانهٔ باز نگه می‌دارد.</summary>
-    protected void Typed(string property, string? raw)
+    /// <summary>
+    /// نویسندهٔ ستونِ نوشتنی — نوشتهٔ خام را برای همان خانهٔ باز نگه می‌دارد.
+    /// ⛔ (شورا، بندِ ۱ — ۱۴۰۵/۰۷/۱۹) برمی‌گرداند که نوشته <b>خوانا</b> هست یا نه.
+    /// ناخوانا («12a»، «abc») ⇐ نویسنده مقدار را <b>عوض نمی‌کند</b>: پیش از این
+    /// ‎Shamsi.Num‎ آن را بی‌صدا ۰ می‌کرد و همان صفر ذخیره و در جمع‌ها شمرده می‌شد.
+    /// خانه سرخ می‌ماند (‎ExcelGrid‎، کلاسِ ‎badnum‎) تا درست یا با Esc رها شود.
+    /// </summary>
+    protected bool Typed(string property, string? raw)
     {
         if (_editingProp == property) _editRaw = raw ?? "";
+        if (Shamsi.IsReadable(raw)) return true;
+        BadInput?.Invoke(property, raw ?? "");
+        return false;
     }
+
+    /// <summary>نوشتهٔ ناخوانایی رد شد (ستون، نوشته) — برای سنجه‌ها و پیام.</summary>
+    public static event Action<string, string>? BadInput;
 
     protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
     {

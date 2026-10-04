@@ -38,7 +38,7 @@ public sealed partial class ExpenseRowViewModel : RowViewModel
     partial void OnAmountChanged(decimal v) { Touch(); OnPropertyChanged(nameof(AmountText)); }
     partial void OnNoteChanged(string v) => Touch();
 
-    public string AmountText { get => Shown(nameof(AmountText), Shamsi.MoneyOrBlank(Amount)); set { Typed(nameof(AmountText), value); Amount = Shamsi.Num(value); } }
+    public string AmountText { get => Shown(nameof(AmountText), Shamsi.MoneyOrBlank(Amount)); set { if (!Typed(nameof(AmountText), value)) return; Amount = Shamsi.Num(value); } }
 
     protected override void Apply()
     {

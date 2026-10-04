@@ -223,7 +223,31 @@ public static class Shamsi
     public static string MoneyOrBlank(decimal v) => v == 0m ? "" : Money(v);
 
     /// <summary>مقدارِ تایپ‌شده → عدد. مثل <c>parseFloat(x)||0</c>ِ نسخهٔ وب.</summary>
-    public static decimal Num(string? s)
+    /// <remarks>
+    /// ⛔ متنِ ناخوانا این‌جا ۰ می‌شود — پس هر جا نوشتهٔ <b>کاربر</b> به عدد تبدیل
+    /// می‌شود، اول <see cref="TryNum"/> بپرسد (شورای ۱۴۰۵/۰۷/۱۹، بندِ ۱): «12a» در
+    /// خانهٔ مبلغ نباید بی‌صدا صفر شود و در جمع‌ها صفر شمرده شود.
+    /// </remarks>
+    public static decimal Num(string? s) => TryNum(s, out var d) ? d : 0m;
+
+    /// <summary>
+    /// خوانا هست؟ خالی (و فقط فاصله/جداکننده) ⇐ خوانا با مقدارِ ۰ — خانهٔ خالی یعنی صفر،
+    /// همان قاعدهٔ «صفرِ نامرئی». هر نوشتهٔ دیگری که عدد نیست ⇐ نه.
+    /// </summary>
+    public static bool IsReadable(string? s) => TryNum(s, out _);
+
+    /// <summary>
+    /// برچسبِ نخستین کادرِ ناخوانا، یا ‎null‎ — پیش از هر «ذخیره»ی فرمی که عدد می‌خواند
+    /// (شورا، بندِ ۱): «12a» دیگر ۰ ذخیره نمی‌شود، فرم می‌گوید کدام کادر.
+    /// </summary>
+    public static string? FirstUnreadable(params (string Label, string? Text)[] fields)
+    {
+        foreach (var (label, text) in fields)
+            if (!IsReadable(text)) return label;
+        return null;
+    }
+
+    public static bool TryNum(string? s, out decimal value)
     {
         //  ⛔ نویسه‌های نامرئیِ صفحه‌کلید (‎RLM/LRM/ZWNJ‎، فاصلهٔ نشکن) و «٫»ی
         //  اعشارِ فارسی، عدد را صفر نکنند — «۷۰۰۰» با یک ‎RLM‎ پیش از این صفر
@@ -238,6 +262,10 @@ public static class Shamsi
             sb.Append(ch);
         }
         var t = sb.ToString();
-        return decimal.TryParse(t, NumberStyles.Any, CultureInfo.InvariantCulture, out var d) ? d : 0m;
+        value = 0m;
+        if (t.Length == 0) return true;
+        //  ⚠️ ‎NumberStyles.Any‎ «$» و پرانتزِ حسابداری را هم می‌پذیرد و همیشه می‌پذیرفت —
+        //  همان می‌ماند تا هیچ عددِ خوانای امروزی ناخوانا نشود.
+        return decimal.TryParse(t, NumberStyles.Any, CultureInfo.InvariantCulture, out value);
     }
 }

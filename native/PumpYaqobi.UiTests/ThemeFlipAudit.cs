@@ -440,8 +440,20 @@ internal static class ThemeFlipAudit
 
     private readonly record struct FrameData(byte[] Bytes, int Stride, int W, int H);
 
+    /// <summary>
+    /// ⚠️ نخستین ‎CaptureRenderedFrame‎ پس از رفتن به بخشِ دیگر هنوز فریمِ <b>پیشین</b>
+    /// را می‌دهد (سنجیده شد: پس از «داشبورد ⇐ پارچه‌ها» عکسِ داشبورد آمد و همان
+    /// لحظه عکسِ دوم پارچه‌ها). پس «طلاییِ تازه vs پس از تعویض» ۴۰ تا ۸۵٪ فرقِ
+    /// <b>دروغ</b> می‌داد. یک عکسِ دور‌ریختنی پیش از هر سنجش.
+    /// </summary>
+    private static void Fresh(Window win)
+    {
+        try { win.CaptureRenderedFrame()?.Dispose(); } catch { }
+    }
+
     private static FrameData Frame(Window win)
     {
+        Fresh(win);
         using var frame = win.CaptureRenderedFrame();
         if (frame is null) return new(Array.Empty<byte>(), 0, 0, 0);
         using var fb = frame.Lock();
@@ -490,6 +502,7 @@ internal static class ThemeFlipAudit
     /// <summary>پیکسل‌های پنجره (BGRA). سربرگِ ۱۳۰ پیکسلیِ بالا (ساعت) ماسک می‌شود.</summary>
     private static byte[] Pixels(Window win)
     {
+        Fresh(win);
         using var frame = win.CaptureRenderedFrame();
         if (frame is null) return Array.Empty<byte>();
         using var fb = frame.Lock();

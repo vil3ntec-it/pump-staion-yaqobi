@@ -169,10 +169,10 @@ public sealed partial class WaraqPumpViewModel : RowViewModel, IFlaggedRow
             OnPropertyChanged(n);
     }
 
-    public string StartText { get => Shown(nameof(StartText), Shamsi.MoneyOrBlank(Start)); set { Typed(nameof(StartText), value); Start = Shamsi.Num(value); } }
-    public string EndText { get => Shown(nameof(EndText), Shamsi.MoneyOrBlank(End)); set { Typed(nameof(EndText), value); End = Shamsi.Num(value); } }
-    public string PriceText { get => Shown(nameof(PriceText), Shamsi.MoneyOrBlank(Price)); set { Typed(nameof(PriceText), value); Price = Shamsi.Num(value); } }
-    public string DebtText { get => Shown(nameof(DebtText), Shamsi.MoneyOrBlank(Debt)); set { Typed(nameof(DebtText), value); Debt = Shamsi.Num(value); } }
+    public string StartText { get => Shown(nameof(StartText), Shamsi.MoneyOrBlank(Start)); set { if (!Typed(nameof(StartText), value)) return; Start = Shamsi.Num(value); } }
+    public string EndText { get => Shown(nameof(EndText), Shamsi.MoneyOrBlank(End)); set { if (!Typed(nameof(EndText), value)) return; End = Shamsi.Num(value); } }
+    public string PriceText { get => Shown(nameof(PriceText), Shamsi.MoneyOrBlank(Price)); set { if (!Typed(nameof(PriceText), value)) return; Price = Shamsi.Num(value); } }
+    public string DebtText { get => Shown(nameof(DebtText), Shamsi.MoneyOrBlank(Debt)); set { if (!Typed(nameof(DebtText), value)) return; Debt = Shamsi.Num(value); } }
 
     /// <summary>لیترِ منفی وجود ندارد — ‎Math.max(0, end−start)‎.</summary>
     public decimal Liters => Math.Max(0m, End - Start);
@@ -305,8 +305,8 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
         OnPropertyChanged(nameof(EffectiveAmountText));
     }
 
-    public string LitersText { get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters)); set { Typed(nameof(LitersText), value); Liters = Shamsi.Num(value); } }
-    public string AmountText { get => Shown(nameof(AmountText), Shamsi.MoneyOrBlank(Amount)); set { Typed(nameof(AmountText), value); Amount = Shamsi.Num(value); } }
+    public string LitersText { get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters)); set { if (!Typed(nameof(LitersText), value)) return; Liters = Shamsi.Num(value); } }
+    public string AmountText { get => Shown(nameof(AmountText), Shamsi.MoneyOrBlank(Amount)); set { if (!Typed(nameof(AmountText), value)) return; Amount = Shamsi.Num(value); } }
 
     /// <summary>مبلغی که واقعاً در جمع‌ها شمرده می‌شود.</summary>
     public string EffectiveAmountText => Shamsi.Money(_owner.Calc.TxnAmount(_owner.Shift!, _t));
@@ -591,7 +591,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
     public string FabricDebtText
     {
         get => Shamsi.Money(FabricDebt);
-        set => FabricDebt = Shamsi.Num(value);
+        set { if (Shamsi.IsReadable(value)) FabricDebt = Shamsi.Num(value); }
     }
 
     partial void OnIsNightChanged(bool v) { OnPropertyChanged(nameof(IsDay)); Build(); }

@@ -894,6 +894,17 @@
        روی کادر می‌گذارد: زمینهٔ انتخاب برداشته و خودِ تکمله کم‌رنگ
        (‎Pump.Ghost‎ — نیمه‌راهِ کارت و ‎Muted‎، شبیهِ نوشتهٔ راهنمای کادر).
        ⚠️ باید **پس از** دو سبکِ بالا بیاید: در آوالونیا سبکِ بعدی برنده است. -->
+  <!-- ⛔ عددِ ناخوانا (شورا، بندِ ۱ — ۱۴۰۵/۰۷/۱۹): لبهٔ سرخ، و ذخیره نمی‌شود.
+       پس از سبک‌های ‎:focus‎ و ‎:pointerover‎ تا برنده باشد. -->
+  <Style Selector="TextBox.badnum /template/ Border#PART_BorderElement">
+    <Setter Property="BorderBrush" Value="{DynamicResource Pump.Danger}" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="TextBox.badnum">
+    <Setter Property="Foreground" Value="{DynamicResource Pump.Ink.Danger}" />
+    <Setter Property="ToolTip.Tip" Value="این عدد خوانده نشد — درستش کنید یا Esc بزنید" />
+  </Style>
   <Style Selector="TextBox.ghost">
     <Setter Property="SelectionBrush" Value="Transparent" />
     <Setter Property="SelectionForegroundBrush" Value="{DynamicResource Pump.Ghost}" />

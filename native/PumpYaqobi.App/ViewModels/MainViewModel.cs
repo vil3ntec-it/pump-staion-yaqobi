@@ -95,6 +95,11 @@ public sealed partial class MainViewModel : ObservableObject
             //  ⛔ «فروش ورق»های قدیمیِ گاوصندوق منهای قرض (یک بار برای هر دفتر، ۱۴۰۵/۰۷/۱۸) —
             //  پیش از نگهبانِ یک‌بارمصرف، چون دفترِ تازه (حسابِ دیگر) مهرِ خودش را می‌خواهد.
             _ = AppHost.Current.ShiftWaraqSync.StartFixOldSales();
+            //  ⛔ شورا، الف۱: عددِ ناخوانای روی دیسک (از نسخه‌های پیشین یا opِ خراب) گفته شود —
+            //  فقط گزارش، روی نخِ دیگر، یک بار برای هر دفتر
+            _ = ReportLedgerHealthAsync();
+            //  ⛔ شورا، الف۳: عددهای مشتقِ ذخیره‌شده با ردیف‌ها — روزی یک بار برای هر دفتر
+            _ = AppHost.Current.Parity.StartDaily();
 
             if (_afterSignIn) return;
             _afterSignIn = true;
@@ -1274,6 +1279,8 @@ public sealed partial class MainViewModel : ObservableObject
         //  (‎MonthDot‎) که همین ‎OnDayChanged‎ی بخش‌ها می‌نشاندش.
         QueueBannerRefresh();
         foreach (var p in AllPages) p.OnDayChanged();
+        //  «هر شب یک بار» (شورا، الف۳) — برنامه‌ای که شب باز مانده
+        if (_afterSignIn) _ = AppHost.Current.Parity.StartDaily();
     }
 
     public LockViewModel Lock { get; }
@@ -1889,6 +1896,23 @@ public sealed partial class MainViewModel : ObservableObject
 
     /// <summary>کارهای یک‌بارمصرفِ پس از نخستین ورود انجام شده‌اند؟</summary>
     private bool _afterSignIn;
+
+    private string? _healthChecked;
+    private async Task ReportLedgerHealthAsync()
+    {
+        try
+        {
+            var host = AppHost.Current;
+            var path = host.Db.DbPath;
+            if (_healthChecked == path) return;
+            _healthChecked = path;
+            var bad = await Task.Run(() => host.Health.ScanAsync());
+            if (bad.Count > 0)
+                host.Toast($"🩺 {bad.Count} عددِ ناخوانا در دفتر هست — «تنظیمات ← بک‌اپ ← سلامتِ دفتر» جایشان را می‌گوید.",
+                           ToastKind.Warn);
+        }
+        catch { }
+    }
 
     private bool _bannerBusy, _bannerAgain;
 

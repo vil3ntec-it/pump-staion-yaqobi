@@ -167,6 +167,7 @@ public sealed partial class StaffShortSectionViewModel : SectionViewModel
     {
         if (Selected is null) { _host.Toast("اول کارمند را انتخاب کنید", ToastKind.Error); return; }
         _kind = kind;
+        if (Shamsi.FirstUnreadable(("مقدار", Amount)) is { } bad) { _host.Toast("«" + bad + "» عدد نیست — ذخیره نشد.", ToastKind.Warn); return; }
 
         var ok = await _host.Tools.SettleAsync(Selected.Row, kind, Shamsi.Num(Amount));
         if (!ok)

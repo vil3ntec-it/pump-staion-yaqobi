@@ -73,10 +73,10 @@ public sealed partial class PurchaseRowViewModel : RowViewModel
             OnPropertyChanged(n);
     }
 
-    public string KgText { get => Shown(nameof(KgText), Shamsi.MoneyOrBlank(Kg)); set { Typed(nameof(KgText), value); Kg = Shamsi.Num(value); } }
-    public string DensityText { get => Shown(nameof(DensityText), Shamsi.MoneyOrBlank(Density)); set { Typed(nameof(DensityText), value); Density = DensityInput.Parse(value); } }
-    public string PriceTonText { get => Shown(nameof(PriceTonText), Shamsi.MoneyOrBlank(PriceTon)); set { Typed(nameof(PriceTonText), value); PriceTon = Shamsi.Num(value); } }
-    public string UsdRateText { get => Shown(nameof(UsdRateText), Shamsi.MoneyOrBlank(UsdRate)); set { Typed(nameof(UsdRateText), value); UsdRate = Shamsi.Num(value); } }
+    public string KgText { get => Shown(nameof(KgText), Shamsi.MoneyOrBlank(Kg)); set { if (!Typed(nameof(KgText), value)) return; Kg = Shamsi.Num(value); } }
+    public string DensityText { get => Shown(nameof(DensityText), Shamsi.MoneyOrBlank(Density)); set { if (!Typed(nameof(DensityText), value)) return; Density = DensityInput.Parse(value); } }
+    public string PriceTonText { get => Shown(nameof(PriceTonText), Shamsi.MoneyOrBlank(PriceTon)); set { if (!Typed(nameof(PriceTonText), value)) return; PriceTon = Shamsi.Num(value); } }
+    public string UsdRateText { get => Shown(nameof(UsdRateText), Shamsi.MoneyOrBlank(UsdRate)); set { if (!Typed(nameof(UsdRateText), value)) return; UsdRate = Shamsi.Num(value); } }
 
     private PurchaseNumbers N => _owner.Calc.Compute(Kg, Density, PriceTon, UsdRate);
 
@@ -158,8 +158,8 @@ public sealed partial class DipRowViewModel : RowViewModel
     /// <summary>چقدر از این میله‌زنی واقعاً به دفتر رفت — صفر یعنی هیچ.</summary>
     public string BookAdjustText => ApplyToBook ? Shamsi.Money(Measured - Expected) : "—";
 
-    public string MeasuredText { get => Shown(nameof(MeasuredText), Shamsi.MoneyOrBlank(Measured)); set { Typed(nameof(MeasuredText), value); Measured = Shamsi.Num(value); } }
-    public string ExpectedText { get => Shown(nameof(ExpectedText), Shamsi.MoneyOrBlank(Expected)); set { Typed(nameof(ExpectedText), value); Expected = Shamsi.Num(value); } }
+    public string MeasuredText { get => Shown(nameof(MeasuredText), Shamsi.MoneyOrBlank(Measured)); set { if (!Typed(nameof(MeasuredText), value)) return; Measured = Shamsi.Num(value); } }
+    public string ExpectedText { get => Shown(nameof(ExpectedText), Shamsi.MoneyOrBlank(Expected)); set { if (!Typed(nameof(ExpectedText), value)) return; Expected = Shamsi.Num(value); } }
 
     /// <summary>مثبت یعنی مخزن بیشتر از دفتر دارد.</summary>
     public string DiffText => Shamsi.Money(Measured - Expected);
@@ -504,6 +504,8 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     [RelayCommand]
     private Task SaveBuyAsync() => CrashGuard.RunAsync("ثبت خرید", async () =>
     {
+        //  ⛔ عددِ ناخوانا صفر نشود (شورا، بندِ ۱)
+        if (Shamsi.FirstUnreadable(("وزن", BuyKg), ("ثقلت", BuyDensity), ("قیمت هر تن", BuyPriceTon), ("نرخ دالر", BuyUsdRate)) is { } bad) { _host.Toast("«" + bad + "» عدد نیست — ذخیره نشد.", ToastKind.Warn); return; }
         var kg = KgOf(BuyKg);
         var density = DensityInput.Parse(BuyDensity);   //  «0730» ⇐ ۰٫۷۳۰ (۱۴۰۵/۰۷/۱۷)
         var priceTon = Math.Max(0m, Shamsi.Num(BuyPriceTon));

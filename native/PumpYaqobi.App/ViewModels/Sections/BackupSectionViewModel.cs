@@ -188,6 +188,30 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         finally { Busy = false; }
     }
 
+    // ══ «🩺 سلامتِ دفتر» (شورا، بندِ ۱) ══════════════════════════════════════
+    //  فقط گزارش: کدام جدول، کدام ستون، کدام ردیف، چه نوشته‌ای. هیچ چیزی «درست»
+    //  نمی‌شود — عددِ درست را فقط آدم می‌داند.
+    [ObservableProperty] private string _healthText = "";
+    [ObservableProperty] private string _healthBrushKey = "Pump.Ok";
+
+    [RelayCommand]
+    private async Task CheckHealthAsync()
+    {
+        Busy = true;
+        try
+        {
+            var bad = await Task.Run(() => _host.Health.ScanAsync());
+            HealthBrushKey = bad.Count == 0 ? "Pump.Ok" : "Pump.Danger";
+            HealthText = bad.Count == 0
+                ? "✅ همهٔ " + _host.Health.NumberColumns().Count + " ستونِ عددیِ دفتر خوانا است."
+                : "⚠️ " + bad.Count + " خانهٔ عددیِ ناخوانا: " + string.Join(" · ",
+                      bad.Take(8).Select(b => $"{b.Table}.{b.Column} #{b.Id} «{b.Raw}»"))
+                  + (bad.Count > 8 ? " …" : "") + " — این‌ها در جمع‌ها صفر شمرده می‌شوند؛ با دست درستشان کنید.";
+        }
+        catch (Exception ex) { HealthBrushKey = "Pump.Danger"; HealthText = "❌ سنجش نشد: " + ErrorText.Friendly(ex); }
+        finally { Busy = false; }
+    }
+
     [RelayCommand]
     private Task RestoreNewestAsync() =>
         Newest is null ? Task.CompletedTask : RestoreFromAsync(Newest.Entity.Path, "عکسِ " + Newest.Day);

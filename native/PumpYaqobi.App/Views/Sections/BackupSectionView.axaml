@@ -45,6 +45,9 @@
                       Command="{Binding SendToServerCommand}" IsEnabled="{Binding !SendingToServer}" />
               <Button Classes="ghost" Content="📂 پوشهٔ بکاپ‌ها"
                       Command="{Binding OpenBackupFolderCommand}" />
+              <!-- ⛔ شورا، بندِ ۱: عددِ ناخوانای روی دیسک دیده شود، نه بی‌صدا صفر -->
+              <Button Classes="ghost" Content="🩺 سلامتِ دفتر"
+                      Command="{Binding CheckHealthCommand}" IsEnabled="{Binding !Busy}" />
               <Button Classes="ghost danger" Content="↩ بازگرداندنِ همین بکاپ"
                       Command="{Binding RestoreNewestCommand}"
                       IsVisible="{Binding CanRestore}" IsEnabled="{Binding !Busy}" />
@@ -53,6 +56,9 @@
                       IsVisible="{Binding CanRestore}" IsEnabled="{Binding !Busy}" />
             </WrapPanel>
 
+            <TextBlock Text="{Binding HealthText}" TextWrapping="Wrap" FontWeight="Bold"
+                       Foreground="{Binding HealthBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
+                       IsVisible="{Binding HealthText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             <ProgressBar IsIndeterminate="{Binding SendingToServer}" Height="5"
                          IsVisible="{Binding SendingToServer}" />
             <TextBlock Text="{Binding ServerStatus}" TextWrapping="Wrap" FontWeight="Bold"

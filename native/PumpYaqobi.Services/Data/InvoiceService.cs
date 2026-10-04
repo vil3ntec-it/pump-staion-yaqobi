@@ -230,7 +230,12 @@ public sealed class InvoiceService
                 DateShamsi = v.DateShamsi,
                 DateKey = Shamsi.Key(v.DateShamsi),
                 Name = $"رسیدِ فاکتور شماره {v.InvoiceNumber}",
-                Albaqi = -v.Liters,
+                //  ⛔ شورا، الف۳ (۱۴۰۵/۰۷/۱۹): تا امروز ‎-Liters‎ بود — لیتر در ستونِ
+                //  پولیِ «الباقی». صفحهٔ حساب سرِ باز شدن (‎NormalizeRow‎: بردگی − رسیدِ
+                //  پولی) همان را صفر می‌کرد، پس تا آن لحظه جمعِ الباقیِ حساب لیتر را
+                //  افغانی می‌شمرد. رسیدِ تیل بدهیِ پولی را کم نمی‌کند — همان قاعدهٔ
+                //  رسیدِ سریعِ تیل (‎DebtQuickReceiptService‎).
+                Albaqi = 0m,
                 SortIndex = account.FuelRows.Count,
             };
             db.DebtRows.Add(row);

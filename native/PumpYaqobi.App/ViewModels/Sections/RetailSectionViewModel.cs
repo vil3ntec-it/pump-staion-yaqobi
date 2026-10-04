@@ -69,10 +69,10 @@ public sealed partial class RetailRowViewModel : RowViewModel
         OnPropertyChanged(nameof(BardagiText)); OnPropertyChanged(nameof(AlbaqiText));
     }
 
-    public string LitersText { get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters)); set { Typed(nameof(LitersText), value); Liters = Shamsi.Num(value); } }
-    public string PriceText { get => Shown(nameof(PriceText), Shamsi.MoneyOrBlank(PricePerLiter)); set { Typed(nameof(PriceText), value); PricePerLiter = Shamsi.Num(value); } }
-    public string ManualBardagiText { get => Shown(nameof(ManualBardagiText), Shamsi.MoneyOrBlank(ManualBardagi)); set { Typed(nameof(ManualBardagiText), value); ManualBardagi = Shamsi.Num(value); } }
-    public string RasidText { get => Shown(nameof(RasidText), Shamsi.MoneyOrBlank(Rasid)); set { Typed(nameof(RasidText), value); Rasid = Shamsi.Num(value); } }
+    public string LitersText { get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters)); set { if (!Typed(nameof(LitersText), value)) return; Liters = Shamsi.Num(value); } }
+    public string PriceText { get => Shown(nameof(PriceText), Shamsi.MoneyOrBlank(PricePerLiter)); set { if (!Typed(nameof(PriceText), value)) return; PricePerLiter = Shamsi.Num(value); } }
+    public string ManualBardagiText { get => Shown(nameof(ManualBardagiText), Shamsi.MoneyOrBlank(ManualBardagi)); set { if (!Typed(nameof(ManualBardagiText), value)) return; ManualBardagi = Shamsi.Num(value); } }
+    public string RasidText { get => Shown(nameof(RasidText), Shamsi.MoneyOrBlank(Rasid)); set { if (!Typed(nameof(RasidText), value)) return; Rasid = Shamsi.Num(value); } }
 
     /// <summary>
     /// «مقدار بردگی» — یک خانهٔ ویرایش‌پذیر، درست مثلِ نسخهٔ وب: خوانده‌شدنش
@@ -81,7 +81,7 @@ public sealed partial class RetailRowViewModel : RowViewModel
     public string BardagiText
     {
         get => Shown(nameof(BardagiText), Shamsi.Money(_owner.Calc.Bardagi(_e)));
-        set { Typed(nameof(BardagiText), value); ManualBardagi = Shamsi.Num(value); ByMoney = true; }
+        set { if (!Typed(nameof(BardagiText), value)) return; ManualBardagi = Shamsi.Num(value); ByMoney = true; }
     }
     public string AlbaqiText => Shamsi.Money(_owner.Calc.Albaqi(_e));
 

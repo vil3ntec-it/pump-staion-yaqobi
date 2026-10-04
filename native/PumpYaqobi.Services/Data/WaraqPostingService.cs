@@ -353,7 +353,15 @@ public sealed class WaraqPostingService
         // بار شمرده. ردیفِ زنده با همان کلید (بازگردانده از سطل) مثلِ همیشه.
         if (archived is not null && archived.Contains(srcKey)
             && t.Type != WaraqTxnType.Expense && !HasLiveRow(people, srcKey))
+        {
+            //  ⛔ شورا، الف۵ (آزمونِ تصادفی گرفتش): مصرف یا چکنه‌ای که همین کلید را از
+            //  ردیفِ پیشینِ همین جا دارد (ردیفی که حذف شد و بقیه یک خانه بالا آمدند)
+            //  مالِ این ردیفِ قرض نیست و باید برود — وگرنه یک مصرفِ حذف‌شده برای
+            //  همیشه در مصارف می‌ماند و دو بار شمرده می‌شد.
+            DropExpense(expenses, srcKey, outcome);
+            DropRetail(retail, srcKey, outcome);
             return;
+        }
         var name = (t.Name ?? "").Trim();
         var amount = Round0(calc.TxnAmount(sd, t));
         var liters = t.Liters;

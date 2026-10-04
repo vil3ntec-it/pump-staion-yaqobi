@@ -52,7 +52,7 @@ public sealed partial class SafeRowViewModel : RowViewModel
     public string AmountText
     {
         get => Shown(nameof(AmountText), Shamsi.Money(Amount));
-        set { Typed(nameof(AmountText), value); Amount = Shamsi.Num(value); }
+        set { if (!Typed(nameof(AmountText), value)) return; Amount = Shamsi.Num(value); }
     }
 
     /// <summary>گزینه‌های کشویی — رشته، نه ‎ComboBoxItem‎ (باگِ ‎SelectedItem‎).</summary>
