@@ -250,6 +250,11 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- headrasid
 
+      # ══ بی‌اشتراک = فقط‌خواندنی؛ پولیِ تمام‌شده یک هفته فرصت (۱۴۰۵/۰۷/۲۰) ══
+      - name: سنجشِ قفلِ فقط‌خواندنی
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- readonly
+
       # ══ تیل امانت در حالِ ساخت (رمزِ توسعه) و دوربین‌ها پنهان ══
       - name: سنجشِ بخش‌های بسته
         working-directory: native

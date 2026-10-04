@@ -70,7 +70,9 @@ public static class Modules
     /// <summary>قطعیِ شبکه، تایم‌اوت و لغو — «خطای ماژول» نیستند.</summary>
     public static bool Transient(Exception e) => e is OperationCanceledException
         or System.Net.Http.HttpRequestException or System.Net.Sockets.SocketException
-        or System.IO.IOException or TimeoutException;
+        or System.IO.IOException or TimeoutException
+        //  ⛔ قفلِ «فقط‌خواندنی» (۱۴۰۵/۰۷/۲۰) خرابی نیست — با تمدید خودش باز می‌شود
+        or PumpYaqobi.Application.Security.PermissionDeniedException;
 
     public static void Fail(string id, Exception e)
     {

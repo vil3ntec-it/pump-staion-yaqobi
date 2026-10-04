@@ -49,7 +49,8 @@ internal static class FakeLicense
 
     /// <summary>یک مجوزِ واقعاً امضاشده برای همین دستگاه و همین پمپ.</summary>
     public static string Token(string deviceUid, string stationId,
-                              IReadOnlyList<string> features, string planTitle = "VIP")
+                              IReadOnlyList<string> features, string planTitle = "VIP",
+                              string plan = "", long? subEnds = null, long? exp = null)
     {
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var head = B64(Encoding.UTF8.GetBytes("""{"alg":"ES256","typ":"JWT"}"""));
@@ -59,9 +60,10 @@ internal static class FakeLicense
             aud = CloudConfig.Audience,
             duid = deviceUid,
             stn = stationId,
-            nbf = now - 60_000,
-            exp = now + 7L * 24 * 3600 * 1000,
-            sub_ends = now + 42L * 24 * 3600 * 1000,
+            nbf = Math.Min(now, exp ?? now) - 60_000,
+            exp = exp ?? now + 7L * 24 * 3600 * 1000,
+            sub_ends = subEnds ?? now + 42L * 24 * 3600 * 1000,
+            plan = plan,
             plan_title = planTitle,
             feat = features,
             core = Array.Empty<string>(),
@@ -79,14 +81,15 @@ internal static class FakeLicense
     /// <returns>کدِ اپِ کارمندانی که روی تنظیمات نشست.</returns>
     public static string Grant(IReadOnlyList<string>? features = null,
                                string planTitle = "VIP",
-                               string stationId = "stn-verify")
+                               string stationId = "stn-verify",
+                               string plan = "", long? subEnds = null, long? exp = null)
     {
         var f = AppSettings.Load();
         var uid = CloudConfig.DeviceUid(f);          // اگر نبود، همان‌جا ساخته می‌شود
         f.CloudDeviceToken = "pd_verify_probe";
         f.CloudPublicKey = Convert.ToBase64String(Key.ExportSubjectPublicKeyInfo());
         f.CloudStationId = stationId;
-        f.CloudLicense = Token(uid, stationId, features ?? VipFeatures, planTitle);
+        f.CloudLicense = Token(uid, stationId, features ?? VipFeatures, planTitle, plan, subEnds, exp);
         if (string.IsNullOrWhiteSpace(f.CloudAccessCode)) f.CloudAccessCode = "K7PM3XQ2";
         f.Save();
         return f.CloudAccessCode;

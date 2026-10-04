@@ -45,8 +45,15 @@ public sealed record LicenseCheck(
     bool HasFeatureList = false,
     bool SignatureOk = false,
     bool Expired = false,
-    long IssuedAt = 0)
+    long IssuedAt = 0,
+    string Plan = "")
 {
+    /// <summary>
+    /// مجوزِ دورهٔ آزمایشی؟ — سرورِ حساب برای آزمایشی ‎plan = "trial"‎ می‌نویسد
+    /// (‎routes/pump-device.js signFor‎). پس از پایانش هیچ هفتهٔ هشداری نیست (۱۴۰۵/۰۷/۲۰).
+    /// </summary>
+    public bool IsTrial => string.Equals(Plan, "trial", StringComparison.OrdinalIgnoreCase);
+
     public static LicenseCheck Fail(string why) =>
         new(false, why, Array.Empty<string>(), Array.Empty<string>(), 0, 0, "");
 }
@@ -205,7 +212,8 @@ public static class LicenseGuard
             hasFeat,
             SignatureOk: true,
             Expired: expired,
-            IssuedAt: Num(payload, "iat"));
+            IssuedAt: Num(payload, "iat"),
+            Plan: Str(payload, "plan"));
 
         if (nbf > 0 && nowMs + SkewMs < nbf) return Signed(false, "زمانِ مجوز هنوز نرسیده است", false);
         if (exp > 0 && nowMs - SkewMs > exp) return Signed(false, "مجوز منقضی شده — یک بار آنلاین شوید", true);

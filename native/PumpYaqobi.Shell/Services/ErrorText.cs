@@ -42,6 +42,11 @@ public static class ErrorText
         var e = Unwrap(ex);
         if (e is null) return Generic;
 
+        //  ⛔ قفلِ «فقط‌خواندنی» (۱۴۰۵/۰۷/۲۰) خطا نیست — می‌گوید چرا و کجا باز می‌شود
+        if (Denied(ex) is { } pd)
+            return PumpYaqobi.Application.Security.PermissionService.ReadOnlyHook?.Invoke() == true
+                ? AppLock.Denied : "اجازهٔ این کار را ندارید — فقط مدیر می‌تواند.";
+
         //  پیامِ خودِ این برنامه، به فارسی — همان‌طور
         if (Ours(e)) return e.Message.Trim();
 
@@ -57,6 +62,14 @@ public static class ErrorText
         }
         if (e is OperationCanceledException) return Cancelled;
         return Generic;
+    }
+
+    /// <summary>استثنای «اجازه نیست» — هر جا که در زنجیره پیچیده شده باشد.</summary>
+    public static PumpYaqobi.Application.Security.PermissionDeniedException? Denied(Exception? ex)
+    {
+        for (var x = Unwrap(ex); x is not null; x = Unwrap(x.InnerException))
+            if (x is PumpYaqobi.Application.Security.PermissionDeniedException pd) return pd;
+        return null;
     }
 
     private static Exception? Unwrap(Exception? ex)

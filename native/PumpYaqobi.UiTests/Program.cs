@@ -76,6 +76,7 @@ internal static class Program
         // چرایی و کارش در ‎PersonAudit‎ نوشته شده.
         if (outDir.Equals("person", StringComparison.OrdinalIgnoreCase)) return PersonAudit.Run();
         if (outDir.Equals("headrasid", StringComparison.OrdinalIgnoreCase)) return HeadRasidProbe.Run();
+        if (outDir.Equals("readonly", StringComparison.OrdinalIgnoreCase)) return ReadOnlyProbe.Run();
         if (outDir.Equals("sectiongate", StringComparison.OrdinalIgnoreCase)) return SectionGateProbe.Run();
         if (outDir.Equals("ux", StringComparison.OrdinalIgnoreCase)) return UxProbe.Run(args);
         if (outDir.Equals("quickstart", StringComparison.OrdinalIgnoreCase)) return QuickStartProbe.Run(args);

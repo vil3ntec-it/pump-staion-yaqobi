@@ -104,6 +104,9 @@ public static class CrashGuard
     public static void Write(string where, Exception? ex, bool report = true)
     {
         if (ex is null) return;
+        //  ⛔ نوشتن در حالِ «فقط‌خواندنی» باگ نیست: نه «UI/AppDomain» در crash.log
+        //  (سنجهٔ app-smoke آن را کرش می‌خواند) و نه گزارش به سرور.
+        if (ErrorText.Denied(ex) is not null) { where = "ReadOnly"; report = false; }
         try
         {
             var path = Path.Combine(AppSettings.Dir, "crash.log");
