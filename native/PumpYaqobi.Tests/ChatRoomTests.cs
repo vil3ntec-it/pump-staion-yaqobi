@@ -172,7 +172,7 @@ public sealed class ChatRoomTests : IDisposable
         Assert.Equal(CloudConfig.Url("/api/stations/p1b5feb57/chat"), doors[1]);
         Assert.False(new StationChat(() => new AppSettings()).Ready);
 
-        var src = File.ReadAllText(Path.Combine(SrcRoot(), "PumpYaqobi.App", "Services", "StationChat.cs"));
+        var src = SrcText.Read(Path.Combine(SrcRoot(), "PumpYaqobi.App", "Services", "StationChat.cs"));
         Assert.Contains("\"/api/stations/\" + code + \"/chat\"", src);
         Assert.DoesNotContain("/api/notify", src);
         Assert.DoesNotContain("topic", src);
@@ -281,7 +281,7 @@ public sealed class ChatRoomTests : IDisposable
         Assert.Equal("image", img!.Kind);
         Assert.Null(GroupMessage.Parse(J("""{"seq":2,"from":"x","text":"","kind":"image","mediaId":"../x"}""")));
         Assert.Equal("text", GroupMessage.Parse(J("""{"seq":3,"from":"x","text":"hi","kind":"exe","mediaId":"mABCDEFGHIJK12345"}"""))!.Kind);
-        var src = File.ReadAllText(Path.Combine(SrcRoot(), "PumpYaqobi.App", "ViewModels", "Sections", "ChatSectionViewModel.cs"));
+        var src = SrcText.Read(Path.Combine(SrcRoot(), "PumpYaqobi.App", "ViewModels", "Sections", "ChatSectionViewModel.cs"));
         Assert.Contains("CanAttach => IsCustomer || IsSupportDesk || IsGroup", src);
         //  ⛔ نسخهٔ خودمان پیش از فرستادنِ پیام روی همین کامپیوتر
         var i = src.IndexOf("private async Task UploadAndSendGroupAsync", StringComparison.Ordinal);
@@ -333,8 +333,8 @@ public sealed class ChatRoomTests : IDisposable
     public void Safhe_TamamSafhe_SeSotoone_BiSectionPage()
     {
         var root = SrcRoot();
-        var xaml = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "ChatSectionView.axaml"));
-        var vm = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "Sections", "ChatSectionViewModel.cs"));
+        var xaml = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "ChatSectionView.axaml"));
+        var vm = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "Sections", "ChatSectionViewModel.cs"));
 
         Assert.Contains("ColumnDefinitions=\"310,*,320\"", xaml);
         Assert.DoesNotContain("<c:SectionPage", xaml);
@@ -355,8 +355,8 @@ public sealed class ChatRoomTests : IDisposable
     public void Safhe_BiShenavandeyeChidman_VaSayehBiMahv()
     {
         var root = SrcRoot();
-        var cs = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "ChatSectionView.axaml.cs"));
-        var xaml = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "ChatSectionView.axaml"));
+        var cs = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "ChatSectionView.axaml.cs"));
+        var xaml = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "ChatSectionView.axaml"));
         Assert.DoesNotContain("LayoutUpdated", cs);
         Assert.Contains("ClientSizeProperty", cs);
         // سه ستونِ صفحه‌قد «panel»اند (سایهٔ بی‌محو)، نه «card»ِ محو
@@ -366,11 +366,11 @@ public sealed class ChatRoomTests : IDisposable
     public void Resid_DideShod_VaPishnevisBarMigardad()
     {
         var root = SrcRoot();
-        var vm = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "Sections", "ChatSectionViewModel.cs"));
-        var cloud = File.ReadAllText(Path.Combine(root, "PumpYaqobi.Shell", "Services", "CloudLink.cs"));
-        var state = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Services", "SupportState.cs"));
-        var ctl = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Themes", "Controls.axaml"));
-        var xaml = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "ChatSectionView.axaml"));
+        var vm = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "Sections", "ChatSectionViewModel.cs"));
+        var cloud = SrcText.Read(Path.Combine(root, "PumpYaqobi.Shell", "Services", "CloudLink.cs"));
+        var state = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "Services", "SupportState.cs"));
+        var ctl = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "Themes", "Controls.axaml"));
+        var xaml = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "ChatSectionView.axaml"));
         // ✓✓ از «دیده‌شدهٔ مشتری»ی خودِ سرور است، نه حدس
         Assert.Contains("Num(t, \"custSeenSeq\")", cloud);
         Assert.Contains("CustSeenSeq", state);

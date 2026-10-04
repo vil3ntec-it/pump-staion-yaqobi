@@ -46,7 +46,7 @@ public class UpdateTests
             if (rel == allowed) continue;
             if (rel.EndsWith("UpdateTests.cs")) continue;   // خودِ همین آزمون
 
-            var text = File.ReadAllText(file);
+            var text = SrcText.Read(file);
             foreach (var n in needles)
                 if (text.Contains(n, StringComparison.OrdinalIgnoreCase))
                 { offenders.Add($"{rel} → «{n}»"); break; }
@@ -60,7 +60,7 @@ public class UpdateTests
     public void TheUpdateServiceItselfKeepsTheAddressPrivate()
     {
         var path = Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs");
-        var text = File.ReadAllText(path);
+        var text = SrcText.Read(path);
 
         // نشانی باید ثابتِ private باشد، نه چیزی که به بیرون داده شود
         Assert.Contains("private const string FeedUrl", text);
@@ -125,7 +125,7 @@ public class UpdateTests
     [Fact]
     public void TheUpdaterAsksForPermissionInsteadOfFailingSilently()
     {
-        var svc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        var svc = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
         Assert.Contains("\"runas\"", svc);                 // اجازهٔ مدیر
         Assert.Contains("IsWritable(appDir)", svc);       // فقط وقتی لازم است
         Assert.Contains("if %RC% GEQ 8", svc);            // نتیجهٔ robocopy سنجیده می‌شود
@@ -145,7 +145,7 @@ public class UpdateTests
         //  می‌شود: رانرِ ویندوز فایل را CRLF می‌گیرد، پس «۱۲۰۰ نویسه بعد از /SILENT»
         //  آن‌جا کوتاه‌تر بود و همین سنجه ساختِ main ِ ۳.۱.۱۸۶ را انداخت — روی
         //  لینوکس سبز، روی ویندوز «runas را ندید»، در حالی که کد درست بود.
-        var svc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"))
+        var svc = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"))
             .Replace("\r\n", "\n");
         var i = svc.IndexOf("Arguments = \"/SILENT", StringComparison.Ordinal);
         Assert.True(i > 0, "اجرای نصاب پیدا نشد");
@@ -169,13 +169,13 @@ public class UpdateTests
     [Fact]
     public void TheResultIsJudgedByVersion_NotByTheScriptExitCode()
     {
-        var svc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        var svc = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
         Assert.Contains("MarkPending", svc);
         Assert.Contains("Compare(AppVersion.Current, target)", svc);
 
         // و نسخهٔ هدف باید واقعاً از رابط کاربری پاس داده شود
         // کارتِ به‌روزرسانی از ۱۴۰۵/۰۶/۲۸ در صفحهٔ «بک‌اپ و به‌روزرسانی‌ها» است.
-        var vm = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections",
+        var vm = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections",
                                                "BackupSectionViewModel.cs"));
         Assert.Contains("Launch(_downloaded, _info?.LatestVersion)", vm);
     }
@@ -187,7 +187,7 @@ public class UpdateTests
     [Fact]
     public void BothOutcomesReachTheUser()
     {
-        var view = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections",
+        var view = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections",
                                                  "BackupSectionView.axaml"));
         Assert.Contains("LastSuccess", view);
         Assert.Contains("LastFailure", view);
@@ -236,7 +236,7 @@ public class UpdateTests
     [Fact]
     public void TheScreenShowsTheHonestSentence()
     {
-        var vm = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections",
+        var vm = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections",
                                                "BackupSectionViewModel.cs"));
         // ⚠️ بی زیرخط سنجیده می‌شود و این عمدی است: پاسخ در یک متغیرِ محلی
         // (‎info‎) می‌نشیند تا نگهبانِ «کلیکِ تازه‌تر آمد» بتواند پیش از
@@ -247,7 +247,7 @@ public class UpdateTests
         Assert.Contains("info.StatusBrushKey", vm);
         Assert.DoesNotContain("\"برنامه به‌روز است\"", vm);
 
-        var view = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections",
+        var view = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections",
                                                  "BackupSectionView.axaml"));
         Assert.Contains("UpdateStatusBrushKey", view);
     }
@@ -265,7 +265,7 @@ public class UpdateTests
     [Fact]
     public void APlainButtonHasItsOwnSurface_NotTheCardsOwn()
     {
-        var controls = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Themes", "Controls.axaml"));
+        var controls = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Themes", "Controls.axaml"));
         var i = controls.IndexOf("<Style Selector=\"Button\">", StringComparison.Ordinal);
         Assert.True(i > 0, "سبکِ پایهٔ دکمه پیدا نشد");
 
@@ -274,7 +274,7 @@ public class UpdateTests
         Assert.DoesNotContain("{DynamicResource Pump.Card}", block);
 
         // و در هر دو تم، آن سطح با سطحِ کارت یکی نیست
-        var theme = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Themes", "PumpTheme.cs"));
+        var theme = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Themes", "PumpTheme.cs"));
         foreach (var name in new[] { "Blue", "Gold" })
         {
             var t = theme.IndexOf("PumpTheme " + name + " = new(", StringComparison.Ordinal);
@@ -287,7 +287,7 @@ public class UpdateTests
     [Fact]
     public void TheCheckButtonIsThePrimaryActionOfItsCard()
     {
-        var view = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections",
+        var view = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections",
                                                  "BackupSectionView.axaml"));
         var i = view.IndexOf("بررسیِ به‌روزرسانی", StringComparison.Ordinal);
         Assert.True(i > 0, "دکمهٔ بررسی پیدا نشد");
@@ -303,7 +303,7 @@ public class UpdateTests
     [Fact]
     public void TheRawExceptionNeverReachesTheUser()
     {
-        var svc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        var svc = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
         Assert.DoesNotContain("e.Message", svc);
     }
 
@@ -349,13 +349,13 @@ public class UpdateTests
     [Fact]
     public void TheCheckButtonNeverDisablesItself()
     {
-        var vm = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections",
+        var vm = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections",
                                                "BackupSectionViewModel.cs"));
         var i = vm.IndexOf("private async Task CheckUpdateAsync", StringComparison.Ordinal);
         Assert.True(i > 0, "CheckUpdateAsync پیدا نشد");
         Assert.Contains("AllowConcurrentExecutions = true", vm[Math.Max(0, i - 400)..i]);
 
-        var view = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections",
+        var view = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections",
                                                  "BackupSectionView.axaml"));
         var b = view.IndexOf("بررسیِ به‌روزرسانی\"", StringComparison.Ordinal);
         Assert.True(b > 0, "دکمهٔ بررسی پیدا نشد");
@@ -374,7 +374,7 @@ public class UpdateTests
     [Fact]
     public void EveryFailurePathLeavesASentenceOnTheScreen()
     {
-        var vm = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections",
+        var vm = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections",
                                                "BackupSectionViewModel.cs"));
 
         var i = vm.IndexOf("private async Task CheckUpdateAsync", StringComparison.Ordinal);
@@ -391,7 +391,7 @@ public class UpdateTests
         Assert.Contains("Pump.Danger", down);
 
         // و خودِ سرویس هم استثنا بیرون نمی‌دهد
-        var svc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        var svc = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
         var g = svc.IndexOf("public async Task<string?> DownloadAsync", StringComparison.Ordinal);
         Assert.True(g > 0);
         Assert.Contains("catch { return null; }", svc[g..Math.Min(svc.Length, g + 900)]);
@@ -410,14 +410,14 @@ public class UpdateTests
     [Fact]
     public void TheInstallerIsPointedAtTheFolderTheAppIsRunningFrom()
     {
-        var svc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        var svc = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
         var i = svc.IndexOf("/SILENT /NORESTART /RESTARTAPPLICATIONS", StringComparison.Ordinal);
         Assert.True(i > 0, "آرگومان‌های نصاب پیدا نشد");
         Assert.Contains("/DIR=", svc[i..Math.Min(svc.Length, i + 200)]);
         Assert.Contains("InstallDir", svc[i..Math.Min(svc.Length, i + 200)]);
 
         // و خودِ نصاب هم همان پوشه را نگه می‌دارد
-        var iss = File.ReadAllText(Path.Combine(Root(), "installer", "PumpYaqobi.iss"));
+        var iss = SrcText.Read(Path.Combine(Root(), "installer", "PumpYaqobi.iss"));
         Assert.Contains("UsePreviousAppDir=yes", iss);
     }
 
@@ -429,15 +429,15 @@ public class UpdateTests
     [Fact]
     public void NoButtonOpensTheRepositoryPage()
     {
-        var svc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        var svc = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
         Assert.DoesNotContain("OpenDownloadPage", svc);
 
-        var vm = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections",
+        var vm = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections",
                                                "BackupSectionViewModel.cs"));
         Assert.DoesNotContain("OpenDownloadPage", vm);
         Assert.DoesNotContain("صفحهٔ دانلود", vm);
 
-        var view = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections",
+        var view = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections",
                                                  "BackupSectionView.axaml"));
         Assert.DoesNotContain("OpenDownloadPageCommand", view);
         Assert.DoesNotContain("صفحهٔ دانلود", view);
@@ -455,13 +455,13 @@ public class UpdateTests
     [Fact]
     public void TheUpdatePathItselfIsUnderBehaviourTest()
     {
-        var svc = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        var svc = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
         Assert.Contains("public static Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>? TestTransport",
                         svc);
 
         var behaviour = Path.Combine(Root(), "PumpYaqobi.Tests", "UpdateBehaviourTests.cs");
         Assert.True(File.Exists(behaviour), "آزمونِ رفتاریِ به‌روزرسانی پیدا نشد");
-        var t = File.ReadAllText(behaviour);
+        var t = SrcText.Read(behaviour);
         Assert.Contains("CheckAsync()", t);
         Assert.Contains("DownloadAsync(", t);
     }

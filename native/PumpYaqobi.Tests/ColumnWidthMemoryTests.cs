@@ -28,7 +28,7 @@ public class ColumnWidthMemoryTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
 
     /// <summary>پهنا نوشته می‌شود و همان برمی‌گردد — با بقیهٔ تنظیمات دست‌نخورده.</summary>
     [Fact]

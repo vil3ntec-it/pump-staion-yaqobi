@@ -361,7 +361,7 @@ public class ReportSuiteTests
         while (d is not null && !Directory.Exists(Path.Combine(d.FullName, "PumpYaqobi.Reporting")))
             d = d.Parent;
         Assert.NotNull(d);
-        var src = File.ReadAllText(Path.Combine(
+        var src = SrcText.Read(Path.Combine(
             d!.FullName, "PumpYaqobi.Reporting", "Pdf", "WaraqReport.cs"));
 
         Assert.Contains("private string NameWithFuel(WaraqTransaction x)", src);

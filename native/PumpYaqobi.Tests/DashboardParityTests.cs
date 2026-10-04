@@ -29,7 +29,7 @@ public class DashboardParityTests
     {
         var p = Path.Combine(AppContext.BaseDirectory, "golden-dash.json");
         if (!File.Exists(p)) p = "golden-dash.json";
-        return JsonSerializer.Deserialize<Golden>(File.ReadAllText(p))!;
+        return JsonSerializer.Deserialize<Golden>(SrcText.Read(p))!;
     }
 
     /// <summary>لحظهٔ محلیِ همان اجرای جاوااسکریپت.</summary>

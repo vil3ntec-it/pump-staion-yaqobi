@@ -183,7 +183,7 @@ public class CompanyArchiveTests : IDisposable
     public void ThePageHasNoKiloColumn_AndHasTheSitesTools()
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
-        var v = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "CompanyPageView.axaml"));
+        var v = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "CompanyPageView.axaml"));
         Assert.DoesNotContain("Header=\"کیلو\"", v);
         Assert.Contains("Header=\"خرید (تن)\"", v);
         //  ⛔ ستونِ «📦» به خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۳) برداشته شد و برنمی‌گردد
@@ -213,15 +213,15 @@ public class CompanyArchiveTests : IDisposable
         //  «جستجو» از ۱۴۰۵/۰۷/۱۳ کادرِ همین صفحه است، نه صفحهٔ جدا — همان کار، درِ تازه
         Assert.Contains("FindCommand", v);
         Assert.Contains("{Binding FindText}", v);
-        var vmSrc = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "Sections", "CompanySectionViewModel.cs"));
+        var vmSrc = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "Sections", "CompanySectionViewModel.cs"));
         foreach (var act in new[] { "\"buy-petrol\"", "\"buy-diesel\"", "\"new\"" })
             Assert.Contains("case " + act + ":", vmSrc);
         Assert.Contains("OpenPurchasesAsync", vmSrc);
         Assert.Contains("OpenArchiveAsync", vmSrc);
         Assert.Contains("SearchAsync", vmSrc);
-        Assert.Contains("RowAddCommand", File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "Sections", "CompanySectionViewModel.cs")));   // نوارِ ردیف از خودِ SectionPage
+        Assert.Contains("RowAddCommand", SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "Sections", "CompanySectionViewModel.cs")));   // نوارِ ردیف از خودِ SectionPage
         Assert.Contains("PrevCommand", v);
-        var s = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "CompanySectionView.axaml"));
+        var s = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "CompanySectionView.axaml"));
         foreach (var t in new[] { "CompanyPurchasesView", "CompanyArchiveView", "CompanySearchView" }) Assert.Contains(t, s);
     }
 
@@ -237,7 +237,7 @@ public class CompanyArchiveTests : IDisposable
     public void TheCompanyArchiveLooksLikeTheDebtorArchive()
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
-        var v = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "CompanyArchiveView.axaml"));
+        var v = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "CompanyArchiveView.axaml"));
 
         // ۱) کشویی — همان نوارِ رنگیِ آرشیوِ قرض‌داران
         Assert.Contains("Classes=\"arc-bar\"", v);
@@ -251,7 +251,7 @@ public class CompanyArchiveTests : IDisposable
             Assert.Contains(t, v);
 
         // ۳) ستون‌هایش مو‌به‌مو ستون‌های جدولِ اصلی
-        var live = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "CompanyPageView.axaml"));
+        var live = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "CompanyPageView.axaml"));
         Assert.DoesNotContain("Header=\"📦\"", live);
         Assert.DoesNotContain("Header=\"📦\"", v);
         foreach (var h in new[] { "تاریخ", "نام", "خرید (تن)", "قیمت تن ($)", "کل ($)",
@@ -266,7 +266,7 @@ public class CompanyArchiveTests : IDisposable
         Assert.Contains("{Binding Search}", v);
 
         // ۵) و هر دو تیل یک‌جا — نه یک صفحه برای پطرول و یک صفحه برای دیزل
-        var vm = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "Sections", "CompanyPagesViewModel.cs"));
+        var vm = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "Sections", "CompanyPagesViewModel.cs"));
         Assert.DoesNotContain("arcs.Where(h => h.Fuel == fuel)", vm);
         Assert.Contains("arcs.OrderByDescending(h => h.Id)", vm);
     }

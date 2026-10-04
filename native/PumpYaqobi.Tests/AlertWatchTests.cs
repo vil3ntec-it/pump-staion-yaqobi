@@ -138,7 +138,7 @@ public class AlertWatchTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Src(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
 
     /// <summary>
     /// ⛔ زنگِ داشبورد قاعدهٔ جدا ندارد: از <c>LiveAlerts</c> می‌خواند، و

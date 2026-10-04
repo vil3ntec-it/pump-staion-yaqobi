@@ -96,15 +96,15 @@ public class DebtArchivePageTests : IDisposable
     public void TheArchivePage_LooksLikeTheLiveAccount()
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
-        var v = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "DebtArchiveView.axaml"));
+        var v = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "DebtArchiveView.axaml"));
         foreach (var t in new[] { "⛽ حساب پطرول", "🟤 حساب دیزل", "HeadPetrolRasidEdit", "HeadDieselRasidEdit",
                                   "SetFilterCommand", "حساب جداگانه پطرول", "Header=\"مقدار بردگی\"", "Header=\"رسید تیل\"",
                                   "GrowsOnEnter=\"True\"", "RowAddBar", "DeleteCommand", "PercentPetrolText", "NoteText" })
             Assert.Contains(t, v);
-        var person = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "PersonView.axaml"));
+        var person = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "PersonView.axaml"));
         Assert.DoesNotContain("IsArchiveOpen", person);
         Assert.Contains("ToggleArchivesCommand", person);
-        var debt = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "DebtSectionView.axaml"));
+        var debt = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "Views", "Sections", "DebtSectionView.axaml"));
         Assert.Contains("DebtArchiveView", debt);
     }
 }

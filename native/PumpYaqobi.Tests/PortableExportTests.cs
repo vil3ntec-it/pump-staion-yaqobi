@@ -179,7 +179,7 @@ public class PortableExportTests : IDisposable
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../"));
         foreach (var f in new[] { "PumpYaqobi.Services/Data/PortableFile.cs", "PumpYaqobi.App/Views/Sections/BackupSectionView.axaml" })
         {
-            var src = File.ReadAllText(Path.Combine(root, f));
+            var src = SrcText.Read(Path.Combine(root, f));
             Assert.DoesNotContain(".xlsx", src);
             Assert.DoesNotContain("فایلِ اکسل", src);
         }

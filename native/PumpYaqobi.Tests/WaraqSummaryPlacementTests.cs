@@ -21,7 +21,7 @@ public class WaraqSummaryPlacementTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string View() =>
-        File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Views", "Sections", "WaraqPageView.axaml"));
+        SrcText.Read(Path.Combine(Root, "PumpYaqobi.App", "Views", "Sections", "WaraqPageView.axaml"));
 
     /// <summary>
     /// همان ویو بی کامنت‌ها. ⚠️ برای «این چیز دیگر نباید باشد» حتماً از این

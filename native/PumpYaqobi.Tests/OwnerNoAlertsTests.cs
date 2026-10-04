@@ -85,8 +85,8 @@ public class OwnerNoAlertsTests
     public void BiHoshdar_BaRastKlikeKart_NaDarNavareHesab()
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../PumpYaqobi.App"));
-        var card = File.ReadAllText(Path.Combine(root, "Views/Sections/DebtSectionView.axaml"));
-        var person = File.ReadAllText(Path.Combine(root, "Views/Sections/PersonView.axaml"));
+        var card = SrcText.Read(Path.Combine(root, "Views/Sections/DebtSectionView.axaml"));
+        var person = SrcText.Read(Path.Combine(root, "Views/Sections/PersonView.axaml"));
         Assert.Contains("<Button.ContextMenu>", card);
         Assert.Contains("Owner.ToggleMuteCommand", card);
         Assert.DoesNotContain("IsChecked=\"{Binding NoAlerts}\"", person);

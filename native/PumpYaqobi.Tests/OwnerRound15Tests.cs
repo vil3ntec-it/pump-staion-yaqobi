@@ -21,7 +21,7 @@ public class OwnerRound15Tests
     }
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
 
     private static string Bare(string x) => System.Text.RegularExpressions.Regex.Replace(
         x, "<!--.*?-->", "", System.Text.RegularExpressions.RegexOptions.Singleline);
@@ -147,7 +147,7 @@ public class OwnerRound15Tests
                      && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")
                      && !f.EndsWith("DisplayClock.cs"))
             .Where(f => File.ReadAllText(f).Contains("DisplayClock.Now"))
-            .Select(Path.GetFileName).OrderBy(x => x).ToArray();
+            .Select(f => SrcText.ClassFile(Path.GetFileName(f)!)).Distinct().OrderBy(x => x).ToArray();   //  شورا ج۴: تکهٔ کلاس ⇒ همان کلاس
         Assert.Equal(new[] { "Clock.cs", "ClockViewModel.cs", "ClockWindow.axaml.cs", "DashboardSectionViewModel.cs", "MainViewModel.cs", "MainWindow.axaml.cs" }, uses);
         //  ⛔ هیچ هشدارِ «ساعتِ ویندوز جلو/عقب است» در سربرگ
         var w = Read("PumpYaqobi.App", "Views", "MainWindow.axaml");

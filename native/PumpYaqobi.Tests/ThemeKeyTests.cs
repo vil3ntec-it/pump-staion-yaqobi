@@ -35,7 +35,7 @@ public class ThemeKeyTests
     {
         var keys = new HashSet<string>(StringComparer.Ordinal);
 
-        var mgr = File.ReadAllText(Path.Combine(App, "Themes", "ThemeManager.cs"));
+        var mgr = SrcText.Read(Path.Combine(App, "Themes", "ThemeManager.cs"));
 
         // ‎Br("Accent", …)‎ ⇒ ‎Pump.Accent‎ و ‎Pump.AccentColor‎
         foreach (Match m in Regex.Matches(mgr, @"Br\(""([A-Za-z.]+)"""))
@@ -54,14 +54,14 @@ public class ThemeKeyTests
         foreach (var f in Directory.GetFiles(App, "*.cs", SearchOption.AllDirectories))
         {
             if (IsBuildOutput(f)) continue;
-            var code = File.ReadAllText(f);
+            var code = SrcText.Read(f);
             foreach (Match m in Regex.Matches(code, @"\[""(Pump\.[A-Za-z.]+)""\]\s*="))
                 keys.Add(m.Groups[1].Value);
         }
 
         // و کلیدهای ایستا در خودِ فایل‌های XAML
         foreach (var f in Directory.GetFiles(App, "*.axaml", SearchOption.AllDirectories))
-            foreach (Match m in Regex.Matches(File.ReadAllText(f), @"x:Key=""(Pump\.[A-Za-z.]+)"""))
+            foreach (Match m in Regex.Matches(SrcText.Read(f), @"x:Key=""(Pump\.[A-Za-z.]+)"""))
                 keys.Add(m.Groups[1].Value);
 
         return keys;
@@ -79,7 +79,7 @@ public class ThemeKeyTests
 
         foreach (var f in Directory.GetFiles(App, "*.axaml", SearchOption.AllDirectories))
         {
-            var text = File.ReadAllText(f);
+            var text = SrcText.Read(f);
             foreach (Match m in Regex.Matches(text, @"DynamicResource (Pump\.[A-Za-z.]+)"))
             {
                 var key = m.Groups[1].Value;
@@ -107,7 +107,7 @@ public class ThemeKeyTests
         {
             if (IsBuildOutput(f)) continue;
 
-            foreach (Match m in Regex.Matches(File.ReadAllText(f), @"""(Pump\.[A-Za-z.]+)"""))
+            foreach (Match m in Regex.Matches(SrcText.Read(f), @"""(Pump\.[A-Za-z.]+)"""))
             {
                 var key = m.Groups[1].Value;
                 if (!defined.Contains(key)) missing.Add($"{Path.GetFileName(f)}: {key}");

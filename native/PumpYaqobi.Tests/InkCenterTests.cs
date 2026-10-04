@@ -18,7 +18,7 @@ public class InkCenterTests
 
     private static string Fix()
     {
-        var s = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Controls", "RtlTrim.cs"));
+        var s = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Controls", "RtlTrim.cs"));
         var i = s.IndexOf("public static double CenterFix(TextBlock t)", StringComparison.Ordinal);
         var j = s.IndexOf("private static void Recenter(TextBlock t)", i, StringComparison.Ordinal);
         Assert.True(i > 0 && j > i);

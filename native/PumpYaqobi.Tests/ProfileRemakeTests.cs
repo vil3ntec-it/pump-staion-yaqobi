@@ -22,7 +22,7 @@ public class ProfileRemakeTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
 
     private static string Account() =>
         Read("PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml");

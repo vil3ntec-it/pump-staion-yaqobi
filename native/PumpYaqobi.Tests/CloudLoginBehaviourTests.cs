@@ -74,7 +74,7 @@ public class CloudLoginBehaviourTests : IDisposable
         Assert.Equal("acc-1", AppSettings.Load().CloudAccountToken);   // ورود واقعاً نشست
 
         foreach (var file in Directory.EnumerateFiles(_dir, "*", SearchOption.AllDirectories))
-            Assert.DoesNotContain(pass, File.ReadAllText(file));
+            Assert.DoesNotContain(pass, SrcText.Read(file));
     }
 
     /// <summary>⛔ ۴۲۹ِ سرور ⇒ «تلاشِ زیاد — چند دقیقه صبر کنید»، نه «رمز غلط».</summary>

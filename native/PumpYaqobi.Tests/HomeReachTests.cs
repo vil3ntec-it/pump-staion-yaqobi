@@ -25,7 +25,7 @@ public class HomeReachTests
     }
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
 
     [Theory]
     [InlineData("http://127.0.0.1:4700", true)]

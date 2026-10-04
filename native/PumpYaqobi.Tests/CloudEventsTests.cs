@@ -268,7 +268,7 @@ public class CloudEventsTests : IDisposable
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Src(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
 
     /// <summary>
     /// ⛔ <b>خبرها پشتِ اشتراک نیستند</b> — همان قاعده‌ای که سرور دارد:

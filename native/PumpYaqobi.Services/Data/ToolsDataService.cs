@@ -441,6 +441,18 @@ public sealed class ToolsDataService
             await db.TankerUnloads.AsNoTracking().ToListAsync(ct));
     }
 
+    /// <summary>
+    /// شورا چ۵ — همهٔ میله‌زنی‌ها برای «گزارشِ ماهانهٔ پمپ» (فقط‌خواندنی). جدا از
+    /// <see cref="MonthSourceAsync"/> تا گزارشِ پایانِ ماه بارِ اضافه نگیرد: فقط با
+    /// زدنِ همان دکمهٔ PDF خوانده می‌شود.
+    /// </summary>
+    public async Task<List<TankDip>> AllDipsAsync(CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        return await db.TankDips.AsNoTracking().ToListAsync(ct);
+    }
+
     public List<string> MonthKeys(MonthReportSource s) => _month.AllKeys(s, Shamsi.Today());
     public MonthReport Month(MonthReportSource s, string key) => _month.Compute(s, key);
 }

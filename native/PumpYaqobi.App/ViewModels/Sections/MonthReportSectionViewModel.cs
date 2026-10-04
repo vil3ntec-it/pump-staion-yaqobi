@@ -136,6 +136,26 @@ public sealed partial class MonthReportSectionViewModel : SectionViewModel
         return Documents.ShowAsync(() => new MonthEndReport(input), "گزارش ماه " + Label(key));
     }
 
+    /// <summary>
+    /// شورا چ۵ — «گزارشِ ماهانهٔ پمپ» برای بانک و اتحادیه: فروش، خرید، مخزنِ هر
+    /// تیل (اولِ ماه ⇐ آخرِ ماه) و خلاصه. فقط‌خواندنی؛ مفاد پشتِ همان پرده.
+    /// </summary>
+    [RelayCommand]
+    private async Task MonthlyPdfAsync()
+    {
+        if (_src is null || Month is null) return;
+        var src = _src;
+        var key = Month;
+        var dips = await _host.Tools.AllDipsAsync();
+        var pm = new PumpMonthlyService();
+        var input = new PumpMonthlyInput(
+            Label(key), _host.Tools.Month(src, key),
+            pm.Tank(Domain.Enums.FuelType.Petrol, key, src.Purchases, src.Reports, dips),
+            pm.Tank(Domain.Enums.FuelType.Diesel, key, src.Purchases, src.Reports, dips),
+            ProfitLocked, DocDates.Line());
+        await Documents.ShowAsync(() => new PumpMonthlyReport(input), "گزارشِ ماهانهٔ پمپ " + Label(key));
+    }
+
     private void Recalc()
     {
         if (_src is null || Month is null) return;

@@ -25,7 +25,7 @@ public class PdfShortcutTests
     /// <summary>فایل‌هایی که یک ‎[RelayCommand]‎ به نامِ ‎PdfAsync‎ دارند.</summary>
     private static List<string> FilesWithPdfCommand() =>
         Directory.EnumerateFiles(SectionsDir, "*.cs")
-                 .Where(f => Regex.IsMatch(File.ReadAllText(f),
+                 .Where(f => Regex.IsMatch(SrcText.Read(f),
                              @"\[RelayCommand\][\s\S]{0,200}?Task PdfAsync\s*\("))
                  .Select(Path.GetFileName)
                  .Select(x => x!)
@@ -59,7 +59,7 @@ public class PdfShortcutTests
     [Fact]
     public void TheShortcutIsActuallyWiredUp()
     {
-        var src = File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Services", "Shortcuts.cs"));
+        var src = SrcText.Read(Path.Combine(Root, "PumpYaqobi.App", "Services", "Shortcuts.cs"));
         Assert.Contains("Key.P", src);
         Assert.Contains("TryPdf()", src);
         Assert.DoesNotContain("هنوز نیست: در نسخهٔ نیتیو هیچ بخشی", src);
@@ -73,7 +73,7 @@ public class PdfShortcutTests
     [Fact]
     public void TheOpenPageWinsOverTheSection()
     {
-        var src = File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Services", "Shortcuts.cs"));
+        var src = SrcText.Read(Path.Combine(Root, "PumpYaqobi.App", "Services", "Shortcuts.cs"));
         var i = src.IndexOf("ActivePage", StringComparison.Ordinal);
         // «بخش» یعنی آن‌چه جلوی چشم است: ‎ActiveSection‎ (زیربخشِ باز، وگرنه
         // خودِ بخش). پیش از این ‎_vm.Current‎ بود و با آمدنِ زیربخش‌ها،

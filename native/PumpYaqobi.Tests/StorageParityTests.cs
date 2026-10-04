@@ -20,7 +20,7 @@ public class StorageParityTests
     {
         var p = Path.Combine(AppContext.BaseDirectory, "golden-purchase.json");
         if (!File.Exists(p)) p = "golden-purchase.json";
-        return JsonSerializer.Deserialize<List<Case>>(File.ReadAllText(p))!;
+        return JsonSerializer.Deserialize<List<Case>>(SrcText.Read(p))!;
     }
 
     private static void Close(double expected, decimal actual)

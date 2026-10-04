@@ -26,7 +26,7 @@ public class SectionOpenSpeedTests
     }
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
 
     /// <summary>
     /// ⛔ <b>«آخرین بخش» هیچ‌وقت روی نخِ رابط روی دیسک نمی‌نشیند.</b>

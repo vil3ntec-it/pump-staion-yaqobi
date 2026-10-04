@@ -38,7 +38,7 @@ public class AccountPrimeTests : IDisposable
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Src(string rel) =>
-        File.ReadAllText(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar)));
+        SrcText.Read(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar)));
 
     // ── ۱) «پرده کِی می‌آید» — یک جای تصمیم، و هر دو شرط لازم ──────────
 

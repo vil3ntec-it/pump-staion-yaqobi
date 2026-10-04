@@ -26,7 +26,7 @@ public class NavOrderTests
     /// <summary>‎id‎ی هجده دکمهٔ نوارِ سایت، به ترتیبِ خودِ صفحه.</summary>
     private static List<string> SiteNav()
     {
-        var html = File.ReadAllText(Path.Combine(Root, "..", "archive", "old-site", "index.html"));
+        var html = SrcText.Read(Path.Combine(Root, "..", "archive", "old-site", "index.html"));
 
         // فقط دکمه‌های نوار: ‎<button class="nav-btn" onclick="showSection('x',this)">‎
         //
@@ -43,7 +43,7 @@ public class NavOrderTests
     /// <summary>شناسهٔ بخش‌های نیتیو، به ترتیبِ ‎BuildSections‎.</summary>
     private static List<string> NativeSections()
     {
-        var cs = File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "ViewModels", "MainViewModel.cs"));
+        var cs = SrcText.Read(Path.Combine(Root, "PumpYaqobi.App", "ViewModels", "MainViewModel.cs"));
         var i = cs.IndexOf("private IEnumerable<SectionViewModel> BuildSections", StringComparison.Ordinal);
         Assert.True(i >= 0, "‎BuildSections‎ پیدا نشد");
         var end = cs.IndexOf("\n    };", i, StringComparison.Ordinal);
@@ -59,7 +59,7 @@ public class NavOrderTests
         {
             var file = Path.Combine(Root, "PumpYaqobi.App", "ViewModels", "Sections",
                                     n + "SectionViewModel.cs");
-            var src = File.ReadAllText(file);
+            var src = SrcText.Read(file);
 
             // دو شکلِ ممکن در سازنده:
             //   ‎: base("safe", …)‎

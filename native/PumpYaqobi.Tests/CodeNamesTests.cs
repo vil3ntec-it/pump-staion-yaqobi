@@ -41,8 +41,8 @@ public class CodeNamesTests
                 if (f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
                     || f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")) continue;
                 IEnumerable<string> visible =
-                    f.EndsWith(".cs") ? CsLiterals(File.ReadAllText(f))
-                    : f.EndsWith(".axaml") ? new[] { Regex.Replace(File.ReadAllText(f), "<!--.*?-->", "", RegexOptions.Singleline) }
+                    f.EndsWith(".cs") ? CsLiterals(SrcText.Read(f))
+                    : f.EndsWith(".axaml") ? new[] { Regex.Replace(SrcText.Read(f), "<!--.*?-->", "", RegexOptions.Singleline) }
                     : Array.Empty<string>();
                 //  خودِ فهرستِ نام‌های کهنه تنها جایی است که باید آن‌ها را بنویسد
                 if (f.EndsWith("CodeNames.cs")) continue;
@@ -62,7 +62,7 @@ public class CodeNamesTests
         {
             var p = Path.Combine(kar, name);
             if (!File.Exists(p)) continue;
-            foreach (var (line, i) in StripWebComments(File.ReadAllText(p)).Split('\n').Select((l, i) => (l, i + 1)))
+            foreach (var (line, i) in StripWebComments(SrcText.Read(p)).Split('\n').Select((l, i) => (l, i + 1)))
                 if (CodeNames.OldNameIn(line) is { } old) bad.Add($"kar/{name}:{i}: «{old}»");
         }
         Assert.True(bad.Count == 0, "نامِ کهنه در اپِ گوشی:\n" + string.Join("\n", bad));
@@ -71,8 +71,8 @@ public class CodeNamesTests
     [Fact]
     public void SafheyeVorud_YekMasireAsli_VaBaghiyeZireRahhayeDigar()
     {
-        var x = File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml"));
-        var vm = File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs"));
+        var x = SrcText.Read(Path.Combine(Root, "PumpYaqobi.App", "Views", "Sections", "AccountSectionView.axaml"));
+        var vm = SrcText.Read(Path.Combine(Root, "PumpYaqobi.App", "ViewModels", "Sections", "AccountSectionViewModel.cs"));
 
         //  پیش‌فرض: ایمیل ⇐ کد ⇐ تمام
         Assert.Contains("private bool _isCodeLogin = true;", vm);

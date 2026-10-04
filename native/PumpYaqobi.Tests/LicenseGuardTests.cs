@@ -279,7 +279,7 @@ public class CloudAddressLockTests
     }
 
     private static string Read(string rel) =>
-        File.ReadAllText(Path.Combine(Root, rel));
+        SrcText.Read(Path.Combine(Root, rel));
 
     [Fact]
     public void NeshaniyeAbr_DarKhodeCode_Ast()

@@ -95,7 +95,7 @@ public class TenYearsTests
     [Fact]
     public void Nasher_NoskheyeSarvar_Ra_Miferestad()
     {
-        var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.Shell", "Services", "StationPublisher.cs"));
+        var src = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.Shell", "Services", "StationPublisher.cs"));
         Assert.Contains("PutFileAsync(CloudLiveFile, StationSnapshot.ForCloud(snap), ct)", src);
         Assert.Contains("\"body_too_large\"", src);
         //  ⛔ ساختنِ عکس دست‌بالا پنج درصدِ یک هسته
@@ -106,11 +106,11 @@ public class TenYearsTests
     [Fact]
     public void Dashboard_HameyeHoshdarha_Ra_Nemisazad()
     {
-        var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections", "DashboardSectionViewModel.cs"));
+        var src = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections", "DashboardSectionViewModel.cs"));
         Assert.Contains(".Take(AlertLimit)", src);
         Assert.Contains("BellCount = all.Count;", src);         // زنگ همهٔ هشدارها را می‌شمارد
         //  فهرستِ زنگ (پنجرهٔ بازشو) هم همان دوازده‌تا و «و N دیگر» را دارد
-        var view = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections", "DashboardSectionView.axaml"));
+        var view = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections", "DashboardSectionView.axaml"));
         var popup = view[view.IndexOf("<Popup x:Name=\"AlertsPopup\"", StringComparison.Ordinal)..view.IndexOf("</Popup>", StringComparison.Ordinal)];
         Assert.Contains("{Binding AlertsMore}", popup);
         Assert.True(PumpYaqobi.App.ViewModels.Sections.DashboardSectionViewModel.AlertLimit <= 20);

@@ -765,7 +765,7 @@ public class CloudSessionTests : IDisposable
         Assert.Equal("ref-new", f.CloudRefreshToken);
         Assert.Equal("haroon@gmail.com", f.CloudEmail);
         //  ⛔ و رمز هیچ‌جا روی دیسک ننشست
-        Assert.DoesNotContain("tazeh-ramz-1", File.ReadAllText(Path.Combine(_dir, "settings.json")));
+        Assert.DoesNotContain("tazeh-ramz-1", SrcText.Read(Path.Combine(_dir, "settings.json")));
     }
 
     /// <summary>کدِ غلط ⇒ پیامِ خودِ سرور، و هیچ نشستی ساخته نمی‌شود.</summary>

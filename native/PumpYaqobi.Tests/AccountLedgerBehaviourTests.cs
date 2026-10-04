@@ -64,7 +64,7 @@ public class AccountLedgerBehaviourTests : IDisposable
     {
         var f = Path.Combine(_dir, "settings.json");
         Assert.True(File.Exists(f), "تنظیمات اصلاً روی دیسک ننشست");
-        using var doc = JsonDocument.Parse(File.ReadAllText(f));
+        using var doc = JsonDocument.Parse(SrcText.Read(f));
         return doc.RootElement.TryGetProperty("LedgerAccountId", out var v) ? v.GetString() ?? "" : "";
     }
 

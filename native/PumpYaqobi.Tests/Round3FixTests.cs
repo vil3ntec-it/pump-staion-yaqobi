@@ -189,7 +189,7 @@ public class Round3FixTests : IDisposable
     public void Sors_HarPanjBand()
     {
         var root = FindRoot();
-        string R(string p) => File.ReadAllText(Path.Combine(root, p));
+        string R(string p) => SrcText.Read(Path.Combine(root, p));
 
         Assert.Contains("RecordRateAsync", R("PumpYaqobi.App/ViewModels/Sections/ProfitSectionViewModel.cs"));
         Assert.Contains("keepFilters: true", R("PumpYaqobi.App/ViewModels/Sections/HistorySectionViewModel.cs"));

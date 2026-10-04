@@ -441,7 +441,7 @@ desktop، android، homelab-panel…). کار: هر کدام یا در README «
 ⛔ پیش از جابه‌جایی deploy-pages.yml و هر ورک‌فلو را بگرد.
 ```
 
-#### ج۴ — شکستنِ فایل‌های غول  ⏳
+#### ج۴ — شکستنِ فایل‌های غول  ✅ شد (`ExcelGrid` و `MainViewModel` هر کدام شش تکهٔ partial، هیچ تکه بالای ۱٬۰۰۰ خط — `GiantFileTests`؛ همهٔ آزمون‌ها و سنجه‌های رابطِ نام‌برده سبز، bigtable/scrollperf هم‌پای main — نسخه 3.1.243)
 
 ```
 ExcelGrid.cs ۳٬۷۲۸، CloudLink ۲٬۹۵۷، MainViewModel ۲٬۰۹۸ خط. کار: ExcelGrid را
@@ -514,7 +514,7 @@ CloudLink، SyncEngine، StationPublisher، BackupPusher، LicenseGuard، TimeSy
 check-multi-account گسترش یابد).
 ```
 
-#### چ۵ — گزارش برای بانک/اتحادیه و پروندهٔ قرض‌دار  ⏳
+#### چ۵ — گزارش برای بانک/اتحادیه و پروندهٔ قرض‌دار  ✅ شد («📑 گزارشِ ماهانهٔ پمپ» با مخزنِ اول/آخرِ ماه و «📁 پرونده»ی هر حساب — `PumpReportsTests` — نسخه 3.1.243)
 
 ```
 دو PDFِ تازه از همان DocStyle: «گزارشِ ماهانهٔ پمپ» (فروش، خرید، مخزن، مفاد)

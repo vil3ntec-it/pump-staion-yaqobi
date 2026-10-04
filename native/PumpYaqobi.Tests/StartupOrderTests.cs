@@ -20,7 +20,7 @@ public class StartupOrderTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root, "PumpYaqobi.App" }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root, "PumpYaqobi.App" }.Concat(parts).ToArray()));
 
     /// <summary>
     /// ‎Program.Main‎ پیش از راه‌اندازیِ آوالونیا اجرا می‌شود، پس حق ندارد به

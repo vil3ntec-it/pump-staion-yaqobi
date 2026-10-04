@@ -15,7 +15,7 @@ public class AccountLedgerSourceTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Src(string rel) =>
-        File.ReadAllText(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar)));
+        SrcText.Read(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar)));
 
     private const string Host = "PumpYaqobi.Shell/Services/AppHost.cs";
     private const string Ledger = "PumpYaqobi.Services/Data/AccountLedger.cs";

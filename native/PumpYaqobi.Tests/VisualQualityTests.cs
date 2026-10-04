@@ -17,7 +17,7 @@ public class VisualQualityTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Theme() =>
-        File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Themes", "Controls.axaml"));
+        SrcText.Read(Path.Combine(Root, "PumpYaqobi.App", "Themes", "Controls.axaml"));
 
     /// <summary>
     /// ══ خطِ جدول ═════════════════════════════════════════════════════════
@@ -107,10 +107,10 @@ public class VisualQualityTests
         var bar = Between(t, "<Style Selector=\"c|TotalsBar\">", "</Style>");
         // ضخامتش هم از تنظیمات می‌آید — پیش‌فرضش همان ‎1,2,1,1‎ است
         Assert.Contains("BorderThickness=\"{DynamicResource Pump.Table.SumBorder}\"", bar);
-        var style = File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Themes", "TableStyle.cs"));
+        var style = SrcText.Read(Path.Combine(Root, "PumpYaqobi.App", "Themes", "TableStyle.cs"));
         Assert.Contains("new Thickness(line, sum, line, line)", style);
         Assert.Contains("TableSumLine { get; set; } = 2;",
-            File.ReadAllText(Path.Combine(Root, "PumpYaqobi.Shell", "Services", "AppSettings.cs")));
+            SrcText.Read(Path.Combine(Root, "PumpYaqobi.Shell", "Services", "AppSettings.cs")));
     }
 
     /// <summary>
@@ -122,7 +122,7 @@ public class VisualQualityTests
     [Fact]
     public void ThePrintPreviewOpensFullScreenAndCanZoom()
     {
-        var w = File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Views",
+        var w = SrcText.Read(Path.Combine(Root, "PumpYaqobi.App", "Views",
                                               "DocumentPreviewWindow.axaml"));
         Assert.Contains("WindowState=\"Maximized\"", w);
         Assert.Contains("ZoomInCommand", w);
@@ -156,7 +156,7 @@ public class VisualQualityTests
 /// </summary>
 public class PersonColumnsTests
 {
-    private static string View() => File.ReadAllText(Path.GetFullPath(Path.Combine(
+    private static string View() => SrcText.Read(Path.GetFullPath(Path.Combine(
         AppContext.BaseDirectory, "..", "..", "..", "..",
         "PumpYaqobi.App", "Views", "Sections", "PersonView.axaml")));
 
@@ -193,7 +193,7 @@ public class PersonColumnsTests
     // و همان قاعده برای «نوع تیل» (خطِ ۳۴۲۹۸): در حسابِ جداگانهٔ پطرول یا
     // دیزل که همهٔ ردیف‌ها یک تیل‌اند، آن ستون بی‌معناست.
 
-    private static string Vm() => File.ReadAllText(Path.GetFullPath(Path.Combine(
+    private static string Vm() => SrcText.Read(Path.GetFullPath(Path.Combine(
         AppContext.BaseDirectory, "..", "..", "..", "..",
         "PumpYaqobi.App", "ViewModels", "Sections", "PersonViewModel.cs")));
 
@@ -228,7 +228,7 @@ public class PersonColumnsTests
     [Fact]
     public void TheColumnsAreDrivenFromCodeBehind()
     {
-        var cs = File.ReadAllText(Path.GetFullPath(Path.Combine(
+        var cs = SrcText.Read(Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory, "..", "..", "..", "..",
             "PumpYaqobi.App", "Views", "Sections", "PersonView.axaml.cs")));
 

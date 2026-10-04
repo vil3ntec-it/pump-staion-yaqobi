@@ -43,10 +43,10 @@ public class ThirtyTwoBitTests : IDisposable
     private static readonly string Repo = Path.GetFullPath(Path.Combine(Native, ".."));
 
     private static string Workflow() =>
-        File.ReadAllText(Path.Combine(Repo, ".github", "workflows", "build-native.yml"));
+        SrcText.Read(Path.Combine(Repo, ".github", "workflows", "build-native.yml"));
 
     private static string Iss() =>
-        File.ReadAllText(Path.Combine(Native, "installer", "PumpYaqobi.iss"));
+        SrcText.Read(Path.Combine(Native, "installer", "PumpYaqobi.iss"));
 
     private static HttpResponseMessage Json(string body) =>
         new(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
@@ -116,7 +116,7 @@ public class ThirtyTwoBitTests : IDisposable
         Assert.Equal("/ARCH=x86", AppArch.ArchArg);
         AppArch.Override = "x64";
         Assert.Equal("/ARCH=x64", AppArch.ArchArg);
-        var up = File.ReadAllText(Path.Combine(Native, "PumpYaqobi.App", "Update", "UpdateService.cs"));
+        var up = SrcText.Read(Path.Combine(Native, "PumpYaqobi.App", "Update", "UpdateService.cs"));
         var launch = up.Split("public static bool Launch(")[1].Split("private static bool LaunchZip(")[0];
         Assert.Contains("AppArch.ArchArg", launch);
     }

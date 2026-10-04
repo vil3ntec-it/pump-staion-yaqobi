@@ -22,7 +22,7 @@ public class GridWidthsTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
                                       "PumpYaqobi.App"));
 
-    private static string Grid() => File.ReadAllText(Path.Combine(App, "Controls", "ExcelGrid.cs"));
+    private static string Grid() => SrcText.Read(Path.Combine(App, "Controls", "ExcelGrid.cs"));
 
     /// <summary>
     /// ⛔ تا ۳.۱.۱۵۷ فقط **سه** جدول ‎WidthKey‎ داشتند (هر سه در ورق) و

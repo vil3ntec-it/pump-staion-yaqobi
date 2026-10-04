@@ -27,10 +27,10 @@ public class SiteMetricsTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Controls() =>
-        File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Themes", "Controls.axaml"));
+        SrcText.Read(Path.Combine(Root, "PumpYaqobi.App", "Themes", "Controls.axaml"));
 
     private static string MainWindow() =>
-        File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Views", "MainWindow.axaml"));
+        SrcText.Read(Path.Combine(Root, "PumpYaqobi.App", "Views", "MainWindow.axaml"));
 
     /// <summary>مقدارِ یک ‎Setter‎ داخلِ سبکی که با ‎selector‎ شروع می‌شود.</summary>
     private static string? Setter(string xaml, string selector, string property)
@@ -162,7 +162,7 @@ public class SiteMetricsTests
         var offenders = new List<string>();
         foreach (var f in Directory.GetFiles(dir, "*.axaml"))
         {
-            var s = File.ReadAllText(f);
+            var s = SrcText.Read(f);
             var i = s.IndexOf("<DataGrid.Columns>", StringComparison.Ordinal);
             if (i < 0) continue;
             var end = s.IndexOf("</DataGrid.Columns>", i, StringComparison.Ordinal);

@@ -134,7 +134,7 @@ public class AccountSwitchTests : IDisposable
     [Fact]
     public void JabejayiyeHesab_DaftarRa_DastNemizanad()
     {
-        var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.Shell", "Services", "CloudLink.cs"));
+        var src = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.Shell", "Services", "CloudLink.cs"));
         var body = Between(src, "private async Task ReleaseIfOtherAccountAsync", "public bool AccountSwitched")
                  + Between(src, "public async Task ForgetStationAsync", "HomeFromAccountAsync");
         var code = string.Join('\n', body.Split('\n')
@@ -249,14 +249,14 @@ public class AccountSwitchTests : IDisposable
     [Fact]
     public void JodaKardaneDasti_DarKhodePerofile_Hast()
     {
-        var vm = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections",
+        var vm = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "ViewModels", "Sections",
                                                "AccountSectionViewModel.cs"));
         Assert.Contains("ForgetPumpAsync", vm);
         Assert.Contains("Cloud.ForgetStationAsync()", vm);
         //  ⚠️ و پیش از انجام پرسیده می‌شود
         Assert.Contains("Dialogs.ConfirmAsync", Between(vm, "private Task ForgetPumpAsync", "RefreshAll();"));
 
-        var view = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections",
+        var view = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Views", "Sections",
                                                  "AccountSectionView.axaml"));
         Assert.Contains("ForgetPumpCommand", view);
         //  فقط وقتی بندی هست

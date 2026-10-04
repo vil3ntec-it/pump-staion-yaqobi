@@ -18,7 +18,7 @@ public class KeyboardAndZeroTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Grid() =>
-        File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Controls", "ExcelGrid.cs"));
+        SrcText.Read(Path.Combine(Root, "PumpYaqobi.App", "Controls", "ExcelGrid.cs"));
 
     /// <summary>
     /// ‎Tab‎ روی خانهٔ کشویی/رادیویی مقدار را عوض می‌کند و فوکوس را نمی‌بَرد —
@@ -143,7 +143,7 @@ public class KeyboardAndZeroTests
     [Fact]
     public void TheNavStripScrollsWithAHorizontalSwipe()
     {
-        var n = File.ReadAllText(Path.Combine(Root, "PumpYaqobi.App", "Controls", "NavStrip.cs"));
+        var n = SrcText.Read(Path.Combine(Root, "PumpYaqobi.App", "Controls", "NavStrip.cs"));
         Assert.Contains("e.Delta.X", n);
     }
 

@@ -190,7 +190,7 @@ public class SubscriptionWatchTests : IDisposable
         while (d is not null && !Directory.Exists(Path.Combine(d.FullName, "PumpYaqobi.App")))
             d = d.Parent;
         Assert.NotNull(d);
-        return File.ReadAllText(Path.Combine(d!.FullName, rel));
+        return SrcText.Read(Path.Combine(d!.FullName, rel));
     }
 
     [Fact]

@@ -53,7 +53,7 @@ public class QuickStartTests
         };
         foreach (var s in QuickStart.Steps(false, false, false, false, false))
         {
-            var xaml = File.ReadAllText(Path.Combine(views, files[s.Section]));
+            var xaml = SrcText.Read(Path.Combine(views, files[s.Section]));
             Assert.Contains($"c:Spot.Id=\"{s.Spot}\"", xaml);
         }
     }

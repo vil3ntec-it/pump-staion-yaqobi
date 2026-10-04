@@ -35,7 +35,7 @@ public class BugHunt16Tests : IDisposable
     }
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
 
     //  ⚠️ شورا ج۵: پل‌های بیرونی به ‎PumpYaqobi.Shell‎ رفتند (همان فضای نام) — اول برنامه، بعد پوسته
     private static string App(params string[] parts) =>

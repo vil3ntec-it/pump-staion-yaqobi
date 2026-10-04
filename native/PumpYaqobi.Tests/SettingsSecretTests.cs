@@ -42,7 +42,7 @@ public class SettingsSecretTests : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private string FileText() => File.ReadAllText(Path.Combine(_dir, "settings.json"));
+    private string FileText() => SrcText.Read(Path.Combine(_dir, "settings.json"));
 
     // ── ۱) رفت و برگشت ────────────────────────────────────────────────────
 
@@ -232,7 +232,7 @@ public class SettingsDurabilityTests : IDisposable
         AppSettings.Load().Save();
 
         //  «برنامه وسطِ نوشتن بسته شد» — فایلِ اصلی نصفه
-        var good = File.ReadAllText(Path_);
+        var good = SrcText.Read(Path_);
         File.WriteAllText(Path_, good[..(good.Length / 2)]);
 
         var after = AppSettings.Load();
@@ -274,7 +274,7 @@ public class SettingsDurabilityTests : IDisposable
 
         //  ⚠️ «۳۸ تا» به تنهایی هیچ چیزی نمی‌گوید. اگر باز هم سرخ شد، لاگِ
         //  CI باید بگوید روی دیسک چه مانده — وگرنه سیزنِ بعدی هم حدس می‌زند.
-        var onDisk = File.Exists(Path_) ? File.ReadAllText(Path_) : "«فایل نیست»";
+        var onDisk = File.Exists(Path_) ? SrcText.Read(Path_) : "«فایل نیست»";
         Assert.True(bad == 0,
             $"{bad} خواندن از ۴۰ تا توکن را ندید.\n"
             + $"آخرین خواندن: «{AppSettings.Load().CloudDeviceToken}»\n"
@@ -301,7 +301,7 @@ public class SettingsDurabilityTests : IDisposable
         //  `\u002B` می‌نویسد، پس رشتهٔ خوانده‌شده در متنِ فایل پیدا نمی‌شود
         //  و آزمون بی‌صدا هیچ‌کاری نمی‌کرد (خودش گرفتش).
         var doc = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
-            File.ReadAllText(Path_))!;
+            SrcText.Read(Path_))!;
         var blob = doc["CloudDeviceTokenEnc"].GetString()!;
         var body = Convert.FromBase64String(blob["enc:v1:".Length..]);
         body[^1] ^= 0xFF;
@@ -318,13 +318,13 @@ public class SettingsDurabilityTests : IDisposable
         //  ⛔ ولی ذخیرهٔ بعدی بلوک را پاک نمی‌کند
         f.Save();
         Assert.Equal(broken, JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
-            File.ReadAllText(Path_))!["CloudDeviceTokenEnc"].GetString());
+            SrcText.Read(Path_))!["CloudDeviceTokenEnc"].GetString());
 
         //  و رازِ تازه که آمد، بلوکِ کهنه دور انداخته می‌شود
         f.CloudDeviceToken = "token-taze";
         f.Save();
         Assert.NotEqual(broken, JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
-            File.ReadAllText(Path_))!["CloudDeviceTokenEnc"].GetString());
+            SrcText.Read(Path_))!["CloudDeviceTokenEnc"].GetString());
         Assert.Equal("token-taze", AppSettings.Load().CloudDeviceToken);
     }
 
@@ -575,7 +575,7 @@ public class SettingsCollectionRuleTests
 
         foreach (var file in Directory.GetFiles(Path.Combine(Root, "PumpYaqobi.Tests"), "*.cs"))
         {
-            var src = File.ReadAllText(file);
+            var src = SrcText.Read(file);
             if (!src.Contains("DirOverride") && !src.Contains("AppHost.Start")) continue;
 
             //  هر اعلانِ کلاس، با هر چه بالایش نوشته شده

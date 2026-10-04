@@ -25,7 +25,7 @@ public class SafeExchangeParityTests
     {
         var p = Path.Combine(AppContext.BaseDirectory, "golden-safe-exchange.json");
         if (!File.Exists(p)) p = "golden-safe-exchange.json";
-        return JsonSerializer.Deserialize<Golden>(File.ReadAllText(p))!;
+        return JsonSerializer.Deserialize<Golden>(SrcText.Read(p))!;
     }
 
     [Fact]

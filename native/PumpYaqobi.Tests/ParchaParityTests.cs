@@ -18,7 +18,7 @@ public class ParchaParityTests
     {
         var p = Path.Combine(AppContext.BaseDirectory, "golden-parcha.json");
         if (!File.Exists(p)) p = "golden-parcha.json";
-        return JsonSerializer.Deserialize<List<Case>>(File.ReadAllText(p))!;
+        return JsonSerializer.Deserialize<List<Case>>(SrcText.Read(p))!;
     }
 
     private static void Close(double expected, decimal actual)

@@ -11,7 +11,7 @@ namespace PumpYaqobi.Tests;
 public class SectionGateTests
 {
     private static string Src(string rel) =>
-        File.ReadAllText(Path.Combine(RepoRoot(), "native", "PumpYaqobi.App", rel));
+        SrcText.Read(Path.Combine(RepoRoot(), "native", "PumpYaqobi.App", rel));
 
     private static string RepoRoot()
     {

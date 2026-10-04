@@ -17,7 +17,7 @@ public class WaraqStableRowsTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Src(string rel) =>
-        File.ReadAllText(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar)));
+        SrcText.Read(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar)));
 
     private const string Vm = "PumpYaqobi.App/ViewModels/Sections/WaraqSectionViewModel.cs";
 

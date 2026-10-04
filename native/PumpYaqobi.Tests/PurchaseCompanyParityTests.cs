@@ -42,7 +42,7 @@ public class PurchaseCompanyParityTests : IDisposable
     {
         var p = Path.Combine(AppContext.BaseDirectory, "golden-purchase-company.json");
         if (!File.Exists(p)) p = "golden-purchase-company.json";
-        return JsonSerializer.Deserialize<Golden>(File.ReadAllText(p))!;
+        return JsonSerializer.Deserialize<Golden>(SrcText.Read(p))!;
     }
 
     private static void Close(double expected, decimal actual, string what)

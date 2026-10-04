@@ -20,7 +20,7 @@ public class OwnerRound13Tests
     }
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
 
     private static string Bare(string x) => System.Text.RegularExpressions.Regex.Replace(
         x, "<!--.*?-->", "", System.Text.RegularExpressions.RegexOptions.Singleline);

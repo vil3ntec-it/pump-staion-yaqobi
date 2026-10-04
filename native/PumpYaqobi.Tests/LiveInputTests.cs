@@ -11,7 +11,7 @@ namespace PumpYaqobi.Tests;
 public class LiveInputTests
 {
     private static string R(params string[] p) =>
-        File.ReadAllText(Path.Combine(new[] { Root() }.Concat(p).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root() }.Concat(p).ToArray()));
 
     private static string Root()
     {

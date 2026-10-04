@@ -32,7 +32,7 @@ public class HintsTests : IDisposable
         try { Directory.Delete(_dir, true); } catch { }
     }
 
-    private static string Read(string rel) => File.ReadAllText(Path.Combine(Native, "PumpYaqobi.App", rel));
+    private static string Read(string rel) => SrcText.Read(Path.Combine(Native, "PumpYaqobi.App", rel));
 
     [Fact]
     public void HarRahnama_JaiNeshasteAst()

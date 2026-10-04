@@ -74,7 +74,7 @@ public class RowRetireTests
     public void HarMasireHazf_RadifRa_BaznashasteMikonad()
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
-        string Src(string rel) => File.ReadAllText(Path.Combine(root, rel.Replace('/', Path.DirectorySeparatorChar)));
+        string Src(string rel) => SrcText.Read(Path.Combine(root, rel.Replace('/', Path.DirectorySeparatorChar)));
         foreach (var f in new[]
         {
             "PumpYaqobi.App/ViewModels/LedgerSectionViewModel.cs",

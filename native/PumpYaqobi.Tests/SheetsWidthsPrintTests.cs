@@ -17,7 +17,7 @@ public class SheetsWidthsPrintTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Src(string rel) =>
-        File.ReadAllText(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar)));
+        SrcText.Read(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar)));
 
     // ── ۱) ورق‌ها ناپدید نبودند؛ ماه عوض شده بود ────────────────────────────
 

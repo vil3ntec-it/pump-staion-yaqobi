@@ -168,7 +168,7 @@ public class InfraTests : IDisposable
         //  هیچ سرویس و هیچ دیتابیسی در کار نیست.
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
             "..", "..", "..", "..", "PumpYaqobi.Shell", "Services"));
-        var src = File.ReadAllText(Path.Combine(root, "CloudLink.cs"));
+        var src = SrcText.Read(Path.Combine(root, "CloudLink.cs"));
         var i = src.IndexOf("public async Task ForgetStationAsync()", StringComparison.Ordinal);
         Assert.True(i > 0, "ForgetStationAsync پیدا نشد.");
         var body = src[i..src.IndexOf("\n    }", i, StringComparison.Ordinal)];
@@ -264,7 +264,7 @@ public class InfraTests : IDisposable
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
             "..", "..", "..", "..", "PumpYaqobi.Shell", "Services"));
-        var src = File.ReadAllText(Path.Combine(root, "BackupPusher.cs"));
+        var src = SrcText.Read(Path.Combine(root, "BackupPusher.cs"));
         //  ⚠️ روی خودِ **کد** می‌گردیم، نه توضیحات: نامِ قدیمی در کامنتِ
         //  «پیش از این چه بود» هست و باید هم باشد.
         var code = string.Join("\n", src.Split('\n')

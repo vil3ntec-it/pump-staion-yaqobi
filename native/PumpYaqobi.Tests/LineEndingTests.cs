@@ -69,7 +69,7 @@ public class LineEndingTests
                      Path.Combine(".github", "workflows", "build-native.yml"),
                  })
         {
-            var text = File.ReadAllText(Path.Combine(root, rel));
+            var text = SrcText.Read(Path.Combine(root, rel));
             Assert.False(text.Contains('\r'), $"{rel} روی این دیسک CRLF دارد — .gitattributes اثر نکرده است");
         }
     }

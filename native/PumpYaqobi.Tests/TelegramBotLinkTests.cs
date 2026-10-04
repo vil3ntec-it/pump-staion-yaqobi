@@ -95,7 +95,7 @@ public class TelegramBotLinkTests : IDisposable
                      .Where(f => !f.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar)
                               && !f.Contains(Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar)))
         {
-            var s = File.ReadAllText(file);
+            var s = SrcText.Read(file);
             Assert.DoesNotContain("api.telegram.org", s);
             Assert.False(System.Text.RegularExpressions.Regex.IsMatch(s, @"\b\d{6,}:[A-Za-z0-9_-]{30,}\b"),
                 Path.GetFileName(file) + " چیزی شبیهِ رمزِ باتِ تلگرام دارد");
@@ -105,11 +105,11 @@ public class TelegramBotLinkTests : IDisposable
     [Fact]
     public void SafheyeApp_LinkeBat_Ra_Neshan_Midahad()
     {
-        var view = File.ReadAllText(Path.Combine(App, "Views", "Sections", "AppsSectionView.axaml"));
+        var view = SrcText.Read(Path.Combine(App, "Views", "Sections", "AppsSectionView.axaml"));
         Assert.Contains("{Binding BotLink}", view);
         Assert.Contains("CopyBotCommand", view);
         Assert.Contains("{Binding BotHint}", view);
-        var vm = File.ReadAllText(Path.Combine(App, "ViewModels", "Sections", "AppsSectionViewModel.cs"));
+        var vm = SrcText.Read(Path.Combine(App, "ViewModels", "Sections", "AppsSectionViewModel.cs"));
         Assert.Contains("CloudLink.TelegramBotUrlAsync()", vm);
     }
 }

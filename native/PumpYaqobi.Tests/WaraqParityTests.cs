@@ -30,7 +30,7 @@ public class WaraqParityTests
     {
         var p = Path.Combine(AppContext.BaseDirectory, "golden-waraq.json");
         if (!File.Exists(p)) p = "golden-waraq.json";
-        return JsonSerializer.Deserialize<List<Case>>(File.ReadAllText(p))!;
+        return JsonSerializer.Deserialize<List<Case>>(SrcText.Read(p))!;
     }
 
     private static FuelType F(string s) => s == "diesel" ? FuelType.Diesel : FuelType.Petrol;

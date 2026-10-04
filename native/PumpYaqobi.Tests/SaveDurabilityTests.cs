@@ -113,7 +113,7 @@ public class SaveDurabilityTests
                                       "PumpYaqobi.App"));
 
     private static string Src(params string[] parts) =>
-        File.ReadAllText(Path.Combine(App, Path.Combine(parts)));
+        SrcText.Read(Path.Combine(App, Path.Combine(parts)));
 
     /// <summary>
     /// ⛔ تا ۳.۱.۱۵۷ در کلِ برنامه <b>یک</b> شنوندهٔ <c>Closing</c> نبود

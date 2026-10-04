@@ -25,10 +25,10 @@ public class AppLinksTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
 
     private static string RepoRead(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root, ".." }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root, ".." }.Concat(parts).ToArray()));
 
     // ── ۱) دو لینک ─────────────────────────────────────────────────────────
 
@@ -299,7 +299,7 @@ public class AppLinksTests
         //  پیدا کن مثلِ همون که بود ولی با کیفیت و جزئیات.»
         var svg = Path.Combine(Root, "PumpYaqobi.App", "Assets", "login-art.svg");
         Assert.True(File.Exists(svg), "نقشهٔ SVGِ صفحهٔ ورود نیست.");
-        var art = File.ReadAllText(svg);
+        var art = SrcText.Read(svg);
         //  پرجزئیات: نقشهٔ دست‌سازِ قبلی ~۵۰ شکلِ ساده بود؛ این ۵۰ مسیرِ
         //  واقعی با خم و سایه دارد
         Assert.True(art.Split("<path").Length - 1 >= 40,

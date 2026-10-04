@@ -13,7 +13,7 @@ public class PumpBrandTests
     private static readonly string Native =
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
-    private static string Read(params string[] p) => File.ReadAllText(Path.Combine(new[] { Native }.Concat(p).ToArray()));
+    private static string Read(params string[] p) => SrcText.Read(Path.Combine(new[] { Native }.Concat(p).ToArray()));
 
     [Theory]
     [InlineData(null, "پمپ بنزین")]

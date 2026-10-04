@@ -48,7 +48,7 @@ public class OpenRequestTests : IDisposable
     [Fact]
     public void AzHamanDareDokmeha()
     {
-        string Src(params string[] p) => File.ReadAllText(Path.Combine(
+        string Src(params string[] p) => SrcText.Read(Path.Combine(
             new[] { AppContext.BaseDirectory, "..", "..", "..", "..", "PumpYaqobi.App" }.Concat(p).ToArray()));
         var main = Src("ViewModels", "MainViewModel.cs");
         Assert.Contains("await b.ImportFullFromAsync(path)", main);

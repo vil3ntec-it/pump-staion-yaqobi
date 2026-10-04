@@ -22,7 +22,7 @@ public class TableGrowthTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root }.Concat(parts).ToArray()));
 
     private static string Grid() => Read("PumpYaqobi.App", "Controls", "ExcelGrid.cs");
     private static string Theme() => Read("PumpYaqobi.App", "Themes", "Controls.axaml");

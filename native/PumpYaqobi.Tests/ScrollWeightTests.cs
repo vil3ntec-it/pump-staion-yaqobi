@@ -50,7 +50,7 @@ public class ScrollWeightTests : IDisposable
     }
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
 
     /// <summary>کامنت‌های XML بیرون می‌روند تا نامِ چیزِ برداشته‌شده در توضیح، سنجه را گول نزند.</summary>
     private static string NoComments(string xml) => Regex.Replace(xml, "<!--.*?-->", "", RegexOptions.Singleline);

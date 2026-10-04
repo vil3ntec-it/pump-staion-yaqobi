@@ -17,7 +17,7 @@ public class SiteFlowParityTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Read(params string[] p) =>
-        File.ReadAllText(Path.Combine(new[] { Root }.Concat(p).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root }.Concat(p).ToArray()));
 
     // ── ورق با تاریخ ─────────────────────────────────────────────────────────
 
@@ -209,7 +209,7 @@ public class SiteFlowParityTests
         var views = Directory.GetFiles(
             Path.Combine(Root, "PumpYaqobi.App", "Views"), "*.axaml", SearchOption.AllDirectories);
         foreach (var v in views)
-            Assert.DoesNotContain("<DataGridTextColumn Header=\"#\"", File.ReadAllText(v));
+            Assert.DoesNotContain("<DataGridTextColumn Header=\"#\"", SrcText.Read(v));
 
         // و نوارِ «جمله» پهنای همین ستون را حساب می‌کند تا جا‌به‌جا نشود
         var t = Read("PumpYaqobi.App", "Controls", "TotalsBar.cs");

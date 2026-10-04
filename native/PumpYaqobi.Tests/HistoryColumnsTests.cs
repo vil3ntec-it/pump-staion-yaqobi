@@ -155,7 +155,7 @@ public class HistoryColumnsTests : IDisposable
         {
             var d = new DirectoryInfo(AppContext.BaseDirectory);
             while (d is not null && !File.Exists(Path.Combine(d.FullName, "PumpYaqobi.sln"))) d = d.Parent;
-            return File.ReadAllText(Path.Combine(new[] { d!.FullName }.Concat(p).ToArray()));
+            return SrcText.Read(Path.Combine(new[] { d!.FullName }.Concat(p).ToArray()));
         }
         var x = Read("PumpYaqobi.App", "Views", "Sections", "HistorySectionView.axaml");
         Assert.Contains("HeaderFollows=\"False\"", x);

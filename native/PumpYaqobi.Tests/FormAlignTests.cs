@@ -26,7 +26,7 @@ public class FormAlignTests
     }
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(Root(), Path.Combine(parts)));
+        SrcText.Read(Path.Combine(Root(), Path.Combine(parts)));
 
     /// <summary>⛔ کارتِ ورق دیگر نشانِ ☀️🌙 ندارد.</summary>
     [Fact]

@@ -172,7 +172,7 @@ public class UndoDeleteTests : IDisposable
         var dir = AppContext.BaseDirectory;
         while (dir is not null && !Directory.Exists(Path.Combine(dir, "PumpYaqobi.App")))
             dir = Path.GetDirectoryName(dir);
-        return File.ReadAllText(Path.Combine(new[] { dir!, "PumpYaqobi.App" }.Concat(p).ToArray()));
+        return SrcText.Read(Path.Combine(new[] { dir!, "PumpYaqobi.App" }.Concat(p).ToArray()));
     }
 
     /// <summary>

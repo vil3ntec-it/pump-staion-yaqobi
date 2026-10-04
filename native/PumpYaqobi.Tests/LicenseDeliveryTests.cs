@@ -573,7 +573,7 @@ public class LicenseDeliveryTests : IDisposable
     [Fact]
     public void NavareFaghatKhandani_BaMojaveze_Taze_Taze_Mishavad()
     {
-        var vm = File.ReadAllText(Path.Combine(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..")),
+        var vm = SrcText.Read(Path.Combine(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..")),
             "PumpYaqobi.App", "ViewModels", "MainViewModel.cs"));
         //  هندلر یک تابعِ نام‌دار است (`OnLicenseMoved` — مرزِ آفلاینِ مجوز هم
         //  همان را می‌زند)، پس همان تابع سنجیده می‌شود.

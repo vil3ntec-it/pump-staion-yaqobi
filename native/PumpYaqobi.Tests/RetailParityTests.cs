@@ -22,7 +22,7 @@ public class RetailParityTests
     {
         var p = Path.Combine(AppContext.BaseDirectory, "golden-chakana.json");
         if (!File.Exists(p)) p = "golden-chakana.json";
-        return JsonSerializer.Deserialize<List<Case>>(File.ReadAllText(p))!;
+        return JsonSerializer.Deserialize<List<Case>>(SrcText.Read(p))!;
     }
 
     private static RetailRow Map(Row r) => new()

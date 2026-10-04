@@ -28,7 +28,7 @@ public class PumpStepLoopTests
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
 
     private static string Src(string rel) =>
-        File.ReadAllText(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar)));
+        SrcText.Read(Path.Combine(Root, rel.Replace('/', Path.DirectorySeparatorChar)));
 
     private const string Cloud = "PumpYaqobi.Shell/Services/CloudLink.cs";
     private const string Vm = "PumpYaqobi.App/ViewModels/Sections/AccountSectionViewModel.cs";

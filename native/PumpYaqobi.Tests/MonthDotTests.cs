@@ -42,7 +42,7 @@ public class MonthDotTests : IDisposable
     }
 
     private static string Src(string rel) =>
-        File.ReadAllText(Path.Combine(Root(), rel.Replace('/', Path.DirectorySeparatorChar)));
+        SrcText.Read(Path.Combine(Root(), rel.Replace('/', Path.DirectorySeparatorChar)));
 
     // ── ۱) کدام ماه ──────────────────────────────────────────────────────────
 

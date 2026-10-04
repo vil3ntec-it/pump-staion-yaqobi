@@ -37,7 +37,7 @@ public class StationCodePerAccountTests
     }
 
     private static string Read(params string[] parts) =>
-        File.ReadAllText(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
+        SrcText.Read(Path.Combine(new[] { Root() }.Concat(parts).ToArray()));
 
     /// <summary>کد را بی توضیح‌ها برمی‌گرداند — نامِ ‎pump1‎ در توضیح‌ها هست و باید باشد.</summary>
     private static string Code(string src) =>
@@ -147,7 +147,7 @@ public class StationCodePerAccountTests
         var files = Directory.GetFiles(Path.Combine(Root(), "PumpYaqobi.App"), "*.cs", SearchOption.AllDirectories);
         foreach (var f in files)
         {
-            var code = Code(File.ReadAllText(f));
+            var code = Code(SrcText.Read(f));
             if (!code.Contains("\"pump1\"")) continue;
             //  ⛔ تنها جای مجاز: نامِ کدِ کهنه برای **شناختنِ** نصب‌هایی که باید جابه‌جا شوند
             Assert.EndsWith("StationLink.cs", f);

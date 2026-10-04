@@ -24,7 +24,7 @@ public class PostingParityTests
     {
         var p = Path.Combine(AppContext.BaseDirectory, "golden-posting.json");
         if (!File.Exists(p)) p = "golden-posting.json";
-        return JsonSerializer.Deserialize<Golden>(File.ReadAllText(p))!;
+        return JsonSerializer.Deserialize<Golden>(SrcText.Read(p))!;
     }
 
     private static List<Debtor> People(Golden g) => g.persons.Select(p => new Debtor

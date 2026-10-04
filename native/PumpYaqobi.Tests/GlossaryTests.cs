@@ -30,9 +30,9 @@ public class GlossaryTests
     public void DarF1_Va_Sarsotoonha_Khande_Mishavad()
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
-        var sw = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Views", "ShortcutsWindow.axaml.cs"));
+        var sw = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "Views", "ShortcutsWindow.axaml.cs"));
         Assert.Contains("Glossary.All", sw, StringComparison.Ordinal);
-        var g = File.ReadAllText(Path.Combine(root, "PumpYaqobi.App", "Controls", "ExcelGrid.cs"));
+        var g = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "Controls", "ExcelGrid.cs"));
         Assert.Contains("Glossary", g, StringComparison.Ordinal);
     }
 }

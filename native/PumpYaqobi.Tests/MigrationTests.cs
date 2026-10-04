@@ -47,8 +47,8 @@ public class MigrationTests : IDisposable
     [Fact]
     public void Import_MovesEverythingAndKeepsTheNumbersIdentical()
     {
-        var json = File.ReadAllText(Path2("sample-backup.json"));
-        var expected = JsonSerializer.Deserialize<ExpectedRoot>(File.ReadAllText(Path2("sample-backup-expected.json")))!;
+        var json = SrcText.Read(Path2("sample-backup.json"));
+        var expected = JsonSerializer.Deserialize<ExpectedRoot>(SrcText.Read(Path2("sample-backup-expected.json")))!;
 
         var (debtors, safe, exch, exp, ret, rep) = new LegacyBackupImporter().Parse(json);
 
