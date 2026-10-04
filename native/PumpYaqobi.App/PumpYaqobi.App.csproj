@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -78,6 +78,9 @@
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.2.3" />
     <PackageReference Include="Avalonia.Desktop" Version="11.2.3" />
+    <!-- ممیزیِ عرضه (۱۴۰۵/۰۷/۲۰): Tmds.DBus.Protocol 0.20.0ِ همراهِ Avalonia «High» است
+         (GHSA-xrw6-gwf8-vvr9؛ فقط مسیرِ لینوکس). نسخهٔ وصله‌شده سنجاق شد. -->
+    <PackageReference Include="Tmds.DBus.Protocol" Version="0.21.3" />
     <!-- ⚠️ فقط برای نقشهٔ برداریِ صفحهٔ ورود (`Assets/login-art.svg`): بی آن
          باید عکسِ پیکسلی بگذاریم و «کیفیتِ خیلی بالا» از دست می‌رود. -->
     <PackageReference Include="Avalonia.Svg.Skia" Version="11.2.0.2" />

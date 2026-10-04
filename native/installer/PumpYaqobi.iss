@@ -175,6 +175,9 @@ Source: "{#SourceDir86}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdir
 ; آیکونِ میان‌برها — فایلِ جدا، نه آیکونِ داخلِ exe: ویندوز آیکونِ هر مسیر را کَش
 ; می‌کند و exeِ هم‌مسیر آیکونِ کهنه را نشان می‌داد (عکسِ صاحب ریپو، ۱۴۰۵/۰۷/۱۵).
 Source: "..\PumpYaqobi.App\Assets\app.ico"; DestDir: "{app}"; DestName: "PumpYaqobi.ico"; Flags: ignoreversion
+; ممیزیِ عرضه (۱۴۰۵/۰۷/۲۰): مجوزِ کتابخانه‌ها همراهِ برنامه — LGPLِ LibVLC و بقیه
+; (ساخته از tools/third-party-notices.py؛ آزمون: ThirdPartyNoticesTests).
+Source: "THIRD-PARTY-NOTICES.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [InstallDelete]
 ; نامِ کهنهٔ برنامه (۱۴۰۵/۰۷/۱۵): میان‌برهای «پمپ یعقوبی» برداشته می‌شوند تا کنارِ

@@ -6,6 +6,9 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.11" />
+    <!-- ممیزیِ عرضه (۱۴۰۵/۰۷/۲۰): SQLiteِ همراهِ EF 8 (2.1.6) آسیب‌پذیریِ «High» دارد
+         (GHSA-2m69-gcr7-jv3q). همان شاخهٔ 2.1، نسخهٔ وصله‌شده — بی تغییرِ API. -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.13" />
   </ItemGroup>
 
   <PropertyGroup>
