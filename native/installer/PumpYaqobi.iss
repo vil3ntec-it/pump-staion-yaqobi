@@ -456,10 +456,25 @@ begin
     Result := DefaultArch();
 end;
 
-// فقط وقتی خودِ برنامه با ‎/RELAUNCH=1‎ صدا زده (به‌روزرسانیِ درون‌برنامه)
+function HasSwitch(const S: String): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 1 to ParamCount do
+    if CompareText(ParamStr(I), S) = 0 then Result := True;
+end;
+
+// فقط به‌روزرسانیِ درون‌برنامه (بی‌صدا): ‎/RELAUNCH=1‎ از ۳.۱.۲۳۱ به بعد.
+//  ⛔ و نسخه‌های پیش از آن (۱۴۰۵/۰۷/۲۰): آن‌ها ‎/RELAUNCH‎ نمی‌فرستادند ولی
+//  همیشه ‎/SILENT /RESTARTAPPLICATIONS‎ می‌فرستادند — پس هر کامپیوتری که از
+//  نسخهٔ کهنه به‌روز می‌شد، برنامه‌اش بسته می‌ماند. نصبِ بی‌صدای دیگر (آزمون‌ها،
+//  ‎/FRESH‎) هیچ‌کدام را ندارد و برنامه را باز نمی‌کند.
 function WantRelaunch(): Boolean;
 begin
   Result := ExpandConstant('{param:RELAUNCH|0}') = '1';
+  if not Result then
+    Result := WizardSilent and HasSwitch('/RESTARTAPPLICATIONS');
 end;
 
 function WantX64(): Boolean;

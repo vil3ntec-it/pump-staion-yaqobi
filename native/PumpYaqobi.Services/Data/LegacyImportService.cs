@@ -91,7 +91,7 @@ public sealed class LegacyImportService
     public async Task<ImportOutcome> ImportAsync(string json, bool replaceExisting = false,
                                                  CancellationToken ct = default)
     {
-        _perm.Require(Permission.Import);
+        _perm.RequireRestore(Permission.Import);
 
         LegacyBundle bundle;
         try { bundle = new LegacyOperationsImporter().ParseAll(json); }

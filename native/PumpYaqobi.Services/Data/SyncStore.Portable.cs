@@ -203,12 +203,20 @@ public sealed partial class SyncStore
         return v;
     }
 
+    /// <summary>درِ «آوردن فقط با اشتراکِ پولی» برای همین نمونه — فقط آزمون‌ها.</summary>
+    public Func<string?>? RestoreGate { get; set; }
+
     /// <summary>
     /// فایلِ یک بخش را می‌نشاند — شرحِ قاعده‌ها بالای همین کلاس.
     /// ⚠️ پیش از این، صدا زننده یک پشتیبان می‌گیرد (‎SyncBackup‎/‎BackupService‎).
     /// </summary>
     public PortableImport ImportPortable(JsonElement snapshot)
     {
+        //  ⛔ آوردنِ فایلِ بخش هم «آوردنِ بکاپ» است — همان درِ اشتراکِ پولی (۱۴۰۵/۰۷/۲۰)
+        if ((RestoreGate ?? PumpYaqobi.Application.Security.PermissionService.RestoreGateHook)?.Invoke()
+                is { Length: > 0 } why)
+            throw new PumpYaqobi.Application.Security.PermissionDeniedException(
+                PumpYaqobi.Application.Security.Permission.Restore, why);
         if (snapshot.ValueKind != JsonValueKind.Object
             || !snapshot.TryGetProperty("format", out var f) || f.GetString() != PortableFormat
             || !snapshot.TryGetProperty("tables", out var tables) || tables.ValueKind != JsonValueKind.Object)

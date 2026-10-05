@@ -297,7 +297,7 @@ public sealed partial class CloudLink
                 }
                 //  کدی که پمپِ دیگری پیش از این برداشته، یا برای کامپیوترِ دیگر
                 //  است: دوباره زدنش هر دقیقه جوابِ دیگری نمی‌گیرد.
-                if (code is "code_used_elsewhere" or "computer_mismatch" or "bad_offline_code")
+                if (code is "code_used_elsewhere" or "computer_mismatch" or "bad_offline_code" or "account_mismatch")
                 {
                     _settings.OfflineCodeRedeemed = mark + "!" + code;
                     await _save();

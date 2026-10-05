@@ -243,8 +243,21 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         await RestoreFromAsync(path, Path.GetFileName(path));
     }
 
+    /// <summary>
+    /// ⛔ آوردنِ بکاپ فقط با اشتراکِ پولی (۱۴۰۵/۰۷/۲۰) — پیش از هر پرسش و هر
+    /// خواندنِ فایل گفته می‌شود. خودِ سرویس هم همین را دوباره می‌سنجد
+    /// (‎PermissionService.RequireRestore‎)؛ این فقط برای جملهٔ زودتر است.
+    /// </summary>
+    private bool RestoreAllowed()
+    {
+        if (PermissionService.RestoreGateHook?.Invoke() is not { Length: > 0 } why) return true;
+        _host.Toast(why, ToastKind.Error);
+        return false;
+    }
+
     private async Task RestoreFromAsync(string path, string what)
     {
+        if (!RestoreAllowed()) return;
         //  ⛔ پشتیبانِ رمزشده (‎.pyq‎) اول در یک فایلِ موقت باز می‌شود و همان راهِ
         //  همیشگی رویش می‌رود (سنجش، پرسش، عکسِ ایمنی). پس از کار پاک می‌شود.
         string? temp = null;
@@ -286,9 +299,9 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         //  ⛔ همگام‌سازی تا پایانِ جایگزینی می‌ایستد — هیچ اتصالی به دفتر باز نماند
         using var paused = _host.SyncIfStarted is { } se ? await se.PauseAsync() : null;
         try { outcome = await Task.Run(() => _host.Backup.Restore(path)); }
-        catch (PermissionDeniedException)
+        catch (PermissionDeniedException pd)
         {
-            _host.Toast("❌ بازگردانی فقط از مدیر برمی‌آید", ToastKind.Error);
+            _host.Toast(pd.Reason.Length > 0 ? pd.Reason : "❌ بازگردانی فقط از مدیر برمی‌آید", ToastKind.Error);
             return;
         }
         finally { Busy = false; }
@@ -415,6 +428,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             _host.Toast("❌ آوردنِ فایلِ کامل فقط از مدیر برمی‌آید", ToastKind.Error);
             return;
         }
+        if (!RestoreAllowed()) return;
 
         Busy = true;
         FullStatus = "در حالِ خواندن و سنجیدنِ فایل…";
@@ -452,10 +466,10 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
                 RestoreOutcome outcome;
                 using var paused = _host.SyncIfStarted is { } se ? await se.PauseAsync() : null;
                 try { outcome = await Task.Run(() => FullBackup.Restore(_host.Backup, info)); }
-                catch (PermissionDeniedException)
+                catch (PermissionDeniedException pd)
                 {
                     FullStatus = "";
-                    _host.Toast("❌ آوردن فقط از مدیر برمی‌آید", ToastKind.Error);
+                    _host.Toast(pd.Reason.Length > 0 ? pd.Reason : "❌ آوردن فقط از مدیر برمی‌آید", ToastKind.Error);
                     return;
                 }
 
@@ -604,6 +618,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             OfflineStatusBrushKey = "Pump.Danger";
             return;
         }
+        UpdateExit.Arm();
         OfflineStatus = "نصاب باز شد — برنامه را برای نصب می‌بندد";
         //  ⚠️ برنامه خودش بسته نمی‌شود: نصاب (CloseApplications) می‌پرسد و
         //  می‌بندد. اگر کاربر ویزارد را لغو کند، برنامه سرِ جایش می‌ماند.
@@ -772,6 +787,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             return;
         }
 
+        UpdateExit.Arm();
         UpdateStatus = "برنامه بسته می‌شود و با نسخهٔ تازه باز می‌شود";
         _host.Toast("برنامه بسته می‌شود و با نسخهٔ تازه باز می‌شود", ToastKind.Info);
 

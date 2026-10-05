@@ -1,4 +1,5 @@
 using PumpYaqobi.Application.Security;
+using PumpYaqobi.Domain;
 
 namespace PumpYaqobi.App.Services;
 
@@ -49,24 +50,81 @@ public static class SoftLock
     public static readonly TimeSpan Warn = TimeSpan.FromDays(7);
 
     /// <summary>
-    /// برنامه فقط‌خواندنی است؟ — ⛔ <b>هرگز.</b> (از ۱۴۰۵/۰۷/۱۴)
+    /// برنامه فقط‌خواندنی است؟ — از ۱۴۰۵/۰۷/۲۰ <b>بله، وقتی اشتراک نیست</b>.
     ///
-    /// جملهٔ صریحِ صاحب ریپو: «من بخش‌های محدودی رو گفتم باید با اشتراک
-    /// کار کنن یا نکنن، ولی تو تمامِ برنامه رو قفل یا غیرِ قابلِ استفاده
-    /// کردی.» پس قفلِ اشتراک <b>فقط</b> همان شش دروازهٔ
-    /// <see cref="Entitlements.Paid"/> است (اپِ کارمندان · کیو‌آرِ زنده ·
-    /// بک‌اپِ ابری · مفاد/ضرر · تاریخچه‌ها · داشبورد). دفتر، نوشتن، ویرایش،
-    /// حذف، بازگردانی و ورود — بی اشتراک هم همیشه باز.
-    ///
-    /// ⚠️ این یک باگِ واقعی بود، نه سلیقه: هر مجوزی که یک لحظه روی دیسک
-    /// سنجیده نمی‌شد (شناسهٔ دستگاهِ ناجور، مجوزِ خالی پس از جابه‌جاییِ
-    /// پمپ…) کلِ برنامه را با «اجازهٔ این کار را ندارید: EditData» می‌بست.
-    ///
-    /// ⛔ این را به «!state.Open» برنگردانید. خودِ قلاب
-    /// (<c>PermissionService.ReadOnlyHook</c>) می‌ماند، ولی این‌جا دیگر
-    /// نشانده نمی‌شود (<see cref="Install"/>).
+    /// ↩ قاعدهٔ ۱۴۰۵/۰۷/۱۴ («هرگز؛ فقط شش بخش») به خواستهٔ تازهٔ صاحب ریپو پس
+    /// گرفته شد. تصمیم فقط در <see cref="AppLock.Decide"/> است؛ این‌جا فقط
+    /// ورودی‌هایش از روی دیسک جمع می‌شود.
+    /// ⛔ ولی آن درسِ ۰۷/۱۴ سرِ جایش است: مجوزی که یک لحظه سنجیده نمی‌شود کلِ
+    /// برنامه را نمی‌بندد — فقط <b>نبودِ حساب</b> یا <b>مجوزِ امضاشدهٔ تمام‌شده</b>
+    /// یا <b>حسابِ بی هیچ مجوز</b>.
     /// </summary>
-    public static bool ReadOnly => false;
+    public static bool ReadOnly => Status().ReadOnly;
+
+    /// <summary>فقط برای آزمون‌های واحد (پوشهٔ موقتِ بی‌حساب) — برنامهٔ واقعی هرگز.</summary>
+    public static bool Disabled { get; set; }
+
+    private static LockStatus? _cached;
+    private static DateTime _cachedAt = DateTime.MinValue;
+
+    /// <summary>حالِ قفل — سه ثانیه در حافظه، چون هر نوشتن می‌پرسد و سنجشِ امضا ارزان نیست.</summary>
+    public static LockStatus Status()
+    {
+        if (Disabled) return LockStatus.Open;
+        var c = _cached;
+        if (c is not null && AppClock.Mono - _cachedAt < TimeSpan.FromSeconds(3)) return c;
+        c = Compute();
+        _cached = c; _cachedAt = AppClock.Mono;
+        return c;
+    }
+
+    /// <summary>
+    /// آوردنِ بکاپ مجاز است؟ ‎null‎ ⇒ بله؛ وگرنه جملهٔ کاربر. تصمیم در
+    /// <see cref="AppLock.RestoreBlocked"/>؛ این‌جا فقط ورودی‌ها از روی دیسک.
+    /// ⚠️ برخلافِ قفلِ نوشتن، خطای خواندنِ مجوز این‌جا «باز» نیست: آوردنِ بکاپِ
+    /// بیرونی کارِ روزمره نیست و درِ سوءاستفاده است — با مجوزِ ناخوانا بسته.
+    /// </summary>
+    public static string? RestoreBlocked()
+    {
+        if (Disabled) return null;
+        if (Entitlements.Unlocked && !Entitlements.TestDeny) return null;
+        try
+        {
+            var f = AppSettings.Load();
+            var now = LicenseClock.Now(f);
+            if (Entitlements.TestDeny) return AppLock.RestoreBlocked(false, null, false);
+            var offline = OfflineKey.Stored(f, now).Valid;
+            var check = string.IsNullOrWhiteSpace(f.CloudDeviceToken) ? null : LicenseGuard.CheckStored(f, now);
+            return AppLock.RestoreBlocked(Entitlements.State(f).Open, check, offline);
+        }
+        catch { return AppLock.RestoreNoPlan; }
+    }
+
+    /// <summary>مجوز یا حساب عوض شد — حالِ قفل همان لحظه دوباره سنجیده شود.</summary>
+    public static void Invalidate() => _cached = null;
+
+    private static LockStatus Compute()
+    {
+        try
+        {
+            if (Disabled) return LockStatus.Open;
+            if (Entitlements.Unlocked && !Entitlements.TestDeny) return LockStatus.Open;
+            var f = AppSettings.Load();
+            var hasAccount = !string.IsNullOrWhiteSpace(f.CloudAccountToken)
+                          || !string.IsNullOrWhiteSpace(f.CloudUserId)
+                          || !string.IsNullOrWhiteSpace(f.CloudDeviceToken);
+            if (Entitlements.TestDeny) return new LockStatus(true, hasAccount ? LockKind.NoSubscription : LockKind.NoAccount);
+            var now = LicenseClock.Now(f);
+            var state = Entitlements.State(f);
+            var check = string.IsNullOrWhiteSpace(f.CloudDeviceToken) ? null : LicenseGuard.CheckStored(f, now);
+            return AppLock.Decide(hasAccount, state.Open, check, now);
+        }
+        catch
+        {
+            //  ⛔ خواندنِ تنظیمات یا مجوز شکست ⇒ باز. قفلِ ناخواسته بدتر از بازِ ناخواسته است.
+            return LockStatus.Open;
+        }
+    }
 
     /// <summary>
     /// جملهٔ نوارِ بالای صفحه — خالی یعنی چیزی برای گفتن نیست.
@@ -99,27 +157,35 @@ public static class SoftLock
     public static string Banner()
     {
         if (Entitlements.Unlocked && !Entitlements.TestDeny) return "";
+        var lockState = Status();
+        if (lockState.Kind != LockKind.None) return AppLock.Sentence(lockState);
+
         var state = Entitlements.State();
         if (state.NotActivated) return "";
 
         if (state.InGrace)
-            return $"⏳ {state.GraceDaysLeft} روز ارفاق — اشتراک تمام شده ولی هنوز چیزی بسته نشده.";
+            return $"⏳ {state.GraceDaysLeft} روز ارفاق — مجوز تازه نشده؛ یک بار به اینترنت وصل شوید.";
 
-        //  ⛔ دیگر هیچ‌وقت «برنامه فقط‌خواندنی است» گفته نمی‌شود — نیست.
         if (!state.Open)
             return "🔒 اشتراک فعال نیست — بخش‌های اشتراکی (اپِ کارمندان، کیو‌آرِ زنده، بک‌اپِ ابری، "
-                 + "مفاد/ضرر، تاریخچه‌ها، داشبورد) بسته‌اند. دفتر و بقیهٔ برنامه کامل کار می‌کند.";
+                 + "مفاد/ضرر، تاریخچه‌ها، داشبورد) بسته‌اند.";
 
         var left = state.EntitledUntil - Entitlements.Now();
         if (left <= 0 || left > (long)Warn.TotalMilliseconds) return "";
         var days = (int)Math.Ceiling(left / 86_400_000d);
-        return $"⏳ {days} روز تا پایانِ اشتراک — پس از آن فقط بخش‌های اشتراکی بسته می‌شوند؛ دفتر همیشه باز است.";
+        return $"⏳ {days} روز تا پایانِ اشتراک — پس از آن برنامه فقط‌خواندنی می‌شود (اشتراکِ پولی یک هفته فرصت دارد).";
     }
 
     /// <summary>
     /// یک بار، سرِ بالا آمدنِ برنامه.
     /// </summary>
-    /// ⛔ از ۱۴۰۵/۰۷/۱۴ قلابی نمی‌نشاند و قلابِ مانده از پیش را هم برمی‌دارد:
-    /// پایانِ اشتراک هیچ نوشتنی را نمی‌بندد.
-    public static void Install() => PermissionService.ReadOnlyHook = null;
+    /// ⛔ از ۱۴۰۵/۰۷/۲۰ قلابِ «فقط‌خواندنی» را می‌نشاند — تنها درِ اعمالِ
+    /// <see cref="AppLock"/>؛ همهٔ نوشتن‌های دفتر از <c>PermissionService</c> می‌گذرند.
+    public static void Install()
+    {
+        PermissionService.ReadOnlyHook = () => ReadOnly;
+        PermissionService.RestoreGateHook = RestoreBlocked;
+        CloudLink.LicenseChanged -= Invalidate;
+        CloudLink.LicenseChanged += Invalidate;
+    }
 }

@@ -260,7 +260,7 @@ public sealed class BackupService
     /// </summary>
     public RestoreOutcome Restore(string path)
     {
-        _perm.Require(Permission.Restore);
+        _perm.RequireRestore();
 
         var records = Inspect(path);
         if (records < 0)

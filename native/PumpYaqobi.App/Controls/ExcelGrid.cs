@@ -198,6 +198,8 @@ public partial class ExcelGrid : DataGrid
         BeginningEdit += (_, e) =>
         {
             if (e.Row?.DataContext is ViewModels.ILockedRow { IsLocked: true }) { e.Cancel = true; return; }
+            //  ⛔ برنامهٔ «فقط‌خواندنی» (۱۴۰۵/۰۷/۲۰) ویرایشگر باز نمی‌کند — دیدن و کپی باز
+            if (LockedForWriting()) { e.Cancel = true; return; }
 
             // ══ کلیکِ تک فقط «انتخاب» است، نه «ویرایش» — مثلِ اکسل ══════════════
             //
@@ -894,5 +896,23 @@ public partial class ExcelGrid : DataGrid
             if (sw.ElapsedMilliseconds > DiagChunkMaxMs) { DiagChunkMaxMs = sw.ElapsedMilliseconds; DiagChunkMaxRows = grew; }
         }
         return size.WithHeight(want);
+    }
+
+    private static long _lockToastAt = long.MinValue / 2;
+
+    /// <summary>
+    /// برنامه «فقط‌خواندنی» است؟ اگر بله، یک توستِ کوتاه (حداکثر هر سه ثانیه یک بار)
+    /// می‌گوید چرا — پس تایپ در جدول بی‌صدا گم نمی‌شود. تصمیم فقط در <c>AppLock</c>.
+    /// </summary>
+    internal static bool LockedForWriting()
+    {
+        if (!Services.SoftLock.ReadOnly) return false;
+        var now = Environment.TickCount64;
+        if (now - _lockToastAt > 3000)
+        {
+            _lockToastAt = now;
+            try { Services.AppHost.Current.Toast(Services.AppLock.Denied, Services.ToastKind.Warn); } catch { }
+        }
+        return true;
     }
 }

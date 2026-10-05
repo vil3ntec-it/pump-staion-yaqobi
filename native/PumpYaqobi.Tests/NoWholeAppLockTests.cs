@@ -27,33 +27,44 @@ public class NoWholeAppLockTests
         return SrcText.Read(Path.Combine(d!.FullName, rel));
     }
 
+    //  ↩ قاعدهٔ ۱۴۰۵/۰۷/۱۴ («هیچ حالی برنامه را فقط‌خواندنی نمی‌کند») به خواستهٔ
+    //  تازهٔ صاحب ریپو (۱۴۰۵/۰۷/۲۰) پس گرفته شد — قاعدهٔ تازه در `AppLockTests`.
+    //  آن‌چه از آن روز می‌ماند: فقط <b>نوشتن</b> بسته می‌شود، از <b>یک</b> در.
     [Fact]
-    public void PayaneEshterak_HichNeveshtaniRa_NemiBandad()
+    public void QoflFaqatNeveshtanRaMibandad_DidanBaz()
     {
-        //  ⛔ هیچ حالی از اشتراک برنامه را فقط‌خواندنی نمی‌کند
-        Assert.False(SoftLock.ReadOnly);
-
-        //  ⛔ نصب کردنش هیچ قلابی نمی‌نشاند — پس مدیر با هر حالِ اشتراک می‌نویسد
-        SoftLock.Install();
-        Assert.Null(PermissionService.ReadOnlyHook);
-        var session = new UserSession();
-        session.SignIn(UserRole.Admin, "admin");
-        var perm = new PermissionService(session);
-        Assert.True(perm.Can(Permission.EditData));
-        Assert.True(perm.Can(Permission.DeleteData));
+        var old = PermissionService.ReadOnlyHook;
+        try
+        {
+            PermissionService.ReadOnlyHook = () => true;
+            var session = new UserSession();
+            session.SignIn(UserRole.Admin, "admin");
+            var perm = new PermissionService(session);
+            Assert.False(perm.Can(Permission.EditData));
+            Assert.False(perm.Can(Permission.DeleteData));
+            Assert.False(perm.Can(Permission.Import));
+            Assert.False(perm.Can(Permission.Restore));
+            //  ⛔ دیدن، بکاپ، مفاد و تنظیمات همیشه باز
+            Assert.True(perm.Can(Permission.ViewData));
+            Assert.True(perm.Can(Permission.Backup));
+            Assert.True(perm.Can(Permission.ViewProfit));
+            Assert.True(perm.Can(Permission.ManageSettings));
+        }
+        finally { PermissionService.ReadOnlyHook = old; }
     }
 
     [Fact]
-    public void SoftLock_Dar_Source_Hamishe_Baz_Ast()
+    public void SoftLock_TasmimRaFaqatAzAppLockMigirad()
     {
         var s = Src("PumpYaqobi.App/Services/SoftLock.cs");
-        Assert.Contains("public static bool ReadOnly => false;", s);
-        Assert.Contains("PermissionService.ReadOnlyHook = null;", s);
-        Assert.DoesNotContain("ReadOnlyHook = () =>", s);
-        //  ⛔ نوار دیگر دروغِ «برنامه فقط‌خواندنی است» را نمی‌گوید
-        Assert.DoesNotContain("\"🔒 اشتراک تمام شده — برنامه فقط‌خواندنی", s);
-        Assert.DoesNotContain("پس از آن برنامه فقط‌خواندنی می‌شود", s);
-        Assert.Contains("دفتر و بقیهٔ برنامه کامل کار می‌کند", s);
+        Assert.Contains("PermissionService.ReadOnlyHook = () => ReadOnly;", s);
+        Assert.Contains("AppLock.Decide(", s);
+        //  ⛔ خطای خواندنِ تنظیمات یا مجوز ⇒ باز، نه قفل
+        Assert.Contains("return LockStatus.Open;", s[s.IndexOf("catch", s.IndexOf("Compute()"))..]);
+        //  ⛔ جدول ویرایشگر باز نمی‌کند و کپی/پیست نمی‌نویسد
+        var g = Src("PumpYaqobi.App/Controls/ExcelGrid.cs");
+        Assert.Contains("if (LockedForWriting()) { e.Cancel = true; return; }", g);
+        Assert.Contains("if (LockedForWriting()) return false;", Src("PumpYaqobi.App/Controls/ExcelGrid.Clipboard.cs"));
     }
 
     [Fact]

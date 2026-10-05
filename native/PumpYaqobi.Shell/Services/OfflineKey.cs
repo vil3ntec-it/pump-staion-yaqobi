@@ -38,6 +38,22 @@ public static class OfflineKey
     private const uint Permanent = 0xFFFFFFFF;
     private static readonly byte[] Domain = Encoding.Latin1.GetBytes("PYOC1\0");
 
+    //  ── نسخهٔ ۲ (۱۴۰۵/۰۷/۲۰): ۱۳۸ نویسه، بسته به کامپیوتر **و** حساب، بی ‎kid‎ ──
+    //  شکلِ بایت‌ها بالای ‎offline-codes.js‎ نوشته شده و همین را مو‌به‌مو می‌خواند.
+    private const int Body2 = 22;
+    private const int Total2 = Body2 + 64;
+    private const ushort Permanent2 = 0xFFFF;
+    private static readonly byte[] Domain2 = Encoding.Latin1.GetBytes("PYOC2\0");
+    private static readonly long EpochDay = (long)(new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+        - DateTime.UnixEpoch).TotalDays;
+    private const long DayMs = 86_400_000;
+
+    /// <summary>۴ بایتِ «حساب» در کدِ نسخهٔ ۲ — همان ‎accountTag‎ِ سرورِ حساب. خالی ⇒ صفر.</summary>
+    public static byte[] AccountTag(string? userId) =>
+        string.IsNullOrWhiteSpace(userId)
+            ? new byte[4]
+            : SHA256.HashData(Encoding.UTF8.GetBytes("pump-yaqobi|offline-acct|v2|" + userId))[..4];
+
     /// <summary>نامِ پلن در کد ⇒ همان کدِ پلنِ سرورِ حساب.</summary>
     public static string PlanOf(byte b) => b switch { 1 => "std", 2 => "vip", 3 => "perm", _ => "" };
 
@@ -233,10 +249,11 @@ public static class OfflineKey
     /// سنجش — خالص: امضا، <c>kid</c>، کامپیوتر، تاریخ. هیچ‌وقت استثنا نمی‌دهد.
     /// </summary>
     public static OfflineCheck Check(string? code, string fingerprint, long nowMs,
-        IReadOnlyDictionary<string, string> keys)
+        IReadOnlyDictionary<string, string> keys, string? account = null)
     {
         var raw = Clean(code);
         if (raw.Length == 0) return OfflineCheck.None;
+        if (raw.Length == (Total2 * 8 + 4) / 5) return Check2(raw, fingerprint, nowMs, keys, account);
         var buf = Decode(raw, TotalLen);
         if (buf is null || buf[0] != 1) return OfflineCheck.Bad("این کلیدِ اشتراکِ بی‌اینترنت خوانده نشد — کد را کامل و درست بزنید");
         var plan = PlanOf(buf[1]);
@@ -279,6 +296,67 @@ public static class OfflineKey
             Canonical: Pretty(raw));
     }
 
+
+    private const string Unreadable = "این کلیدِ اشتراکِ بی‌اینترنت خوانده نشد — کد را کامل و درست بزنید";
+
+    /// <summary>
+    /// نسخهٔ ۲: امضا با <b>هر</b> کلیدِ داخلِ برنامه آزموده می‌شود (کد ‎kid‎ ندارد)،
+    /// کامپیوتر ۶۴ بیت، و اگر کد به حسابی بسته است، همان حساب باید روی این
+    /// کامپیوتر وارد باشد.
+    /// </summary>
+    private static OfflineCheck Check2(string raw, string fingerprint, long nowMs,
+        IReadOnlyDictionary<string, string> keys, string? account)
+    {
+        var buf = Decode(raw, Total2);
+        if (buf is null || buf[0] != 2) return OfflineCheck.Bad(Unreadable);
+        var plan = PlanOf(buf[1]);
+        if (plan.Length == 0) return OfflineCheck.Bad(Unreadable);
+        if (keys.Count == 0) return OfflineCheck.Bad("این نسخهٔ برنامه کلیدِ سرورِ حساب را ندارد — نسخهٔ تازه را نصب کنید");
+
+        var signed = new byte[Domain2.Length + Body2];
+        Domain2.CopyTo(signed, 0);
+        Array.Copy(buf, 0, signed, Domain2.Length, Body2);
+        var ok = false;
+        foreach (var spki in keys.Values.Distinct(StringComparer.Ordinal))
+        {
+            try
+            {
+                using var ec = ECDsa.Create();
+                ec.ImportSubjectPublicKeyInfo(Convert.FromBase64String(spki), out _);
+                if (ec.VerifyData(signed, buf.AsSpan(Body2, 64), HashAlgorithmName.SHA256,
+                        DSASignatureFormat.IeeeP1363FixedFieldConcatenation)) { ok = true; break; }
+            }
+            catch { }
+        }
+        if (!ok) return OfflineCheck.Bad("این کلیدِ اشتراکِ بی‌اینترنت دست‌کاری شده یا اشتباه است");
+
+        var mine = MachineBytes(fingerprint);
+        if (mine.Length == 0 || !buf.AsSpan(2, 8).SequenceEqual(mine.AsSpan(0, 8)))
+            return OfflineCheck.Bad("این کد برای کامپیوترِ دیگری ساخته شده است — کدِ کامپیوترِ همین‌جا را بفرستید");
+
+        var tag = buf.AsSpan(10, 4);
+        if (tag.IndexOfAnyExcept((byte)0) >= 0)
+        {
+            if (string.IsNullOrWhiteSpace(account))
+                return OfflineCheck.Bad("این کد برای یک حسابِ مشخص ساخته شده — اول با همان حساب وارد شوید");
+            if (!tag.SequenceEqual(AccountTag(account)))
+                return OfflineCheck.Bad("این کد برای حسابِ دیگری ساخته شده است");
+        }
+
+        var issuedDay = System.Buffers.Binary.BinaryPrimitives.ReadUInt16BigEndian(buf.AsSpan(18, 2));
+        var endDay = System.Buffers.Binary.BinaryPrimitives.ReadUInt16BigEndian(buf.AsSpan(20, 2));
+        var permanent = endDay == Permanent2;
+        var issued = (EpochDay + issuedDay) * DayMs;
+        var ends = permanent ? 0 : (EpochDay + endDay) * DayMs;
+        var serial = Convert.ToHexString(buf, 14, 4).ToLowerInvariant();
+        var expired = !permanent && nowMs >= ends;
+        return new OfflineCheck(
+            Valid: !expired, Expired: expired,
+            Why: expired ? "مهلتِ این کلیدِ اشتراکِ بی‌اینترنت تمام شده است" : "",
+            Plan: plan, Serial: serial, IssuedAt: issued, EndsAt: ends, Permanent: permanent,
+            Canonical: Pretty(raw));
+    }
+
     private static readonly object CacheGate = new();
     private static (string Key, OfflineCheck At0)? _cache;
 
@@ -295,12 +373,13 @@ public static class OfflineKey
         if (string.IsNullOrWhiteSpace(f.OfflineCode)) return OfflineCheck.None;
         var fp = CloudConfig.MachineFingerprint();
         var keys = TrustedKeys(f);
-        var key = f.OfflineCode + "|" + fp + "|" + string.Join(",", keys.Keys.OrderBy(k => k, StringComparer.Ordinal));
+        var acct = f.CloudUserId;
+        var key = f.OfflineCode + "|" + fp + "|" + acct + "|" + string.Join(",", keys.Keys.OrderBy(k => k, StringComparer.Ordinal));
         OfflineCheck at0;
         lock (CacheGate)
         {
             if (_cache is { } c && c.Key == key) at0 = c.At0;
-            else { at0 = Check(f.OfflineCode, fp, 0, keys); _cache = (key, at0); }
+            else { at0 = Check(f.OfflineCode, fp, 0, keys, acct); _cache = (key, at0); }
         }
         return At(at0, nowMs);
     }
@@ -314,7 +393,13 @@ public static class OfflineKey
     {
         var code = Extract(text);
         if (Clean(code).Length == 0) return OfflineCheck.Bad("کد را بچسبانید یا فایلِ ‎.pumpkey‎ را انتخاب کنید");
-        var c = Check(code, CloudConfig.MachineFingerprint(), LicenseClock.Now(f), TrustedKeys(f));
+        var c = Check(code, CloudConfig.MachineFingerprint(), LicenseClock.Now(f), TrustedKeys(f), f.CloudUserId);
+        //  ⛔ «یک بار استفاده بشه»: کدی که این‌جا به کار رفته و برداشته یا جایگزین شده،
+        //  دوباره پذیرفته نمی‌شود. زدنِ دوبارهٔ همان کدِ فعلی بی‌خطر است.
+        var current = string.IsNullOrWhiteSpace(f.OfflineCode) ? "" : OfflineKey.Check(
+            f.OfflineCode, CloudConfig.MachineFingerprint(), 0, TrustedKeys(f), f.CloudUserId).Serial;
+        if (c.Genuine && c.Serial != current && IsUsed(f, c.Serial))
+            return OfflineCheck.Bad("این کد یک بار روی همین کامپیوتر به کار رفته است — کدِ تازه بگیرید");
         if (!c.Valid)
         {
             if (c.Expired)
@@ -322,6 +407,8 @@ public static class OfflineKey
                                       + "اگر ساعت و تاریخِ این کامپیوتر درست نیست، اول درستش کنید" };
             return c;
         }
+        if (current.Length > 0 && current != c.Serial) MarkUsed(f, current);
+        MarkUsed(f, c.Serial);
         f.OfflineCode = c.Canonical;
         f.OfflineCodeRedeemed = "";
         //  ساعتِ کامپیوترِ قدیمی گاهی عقب است؛ کفِ ساعتِ مجوز دستِ‌کم روزِ
@@ -336,10 +423,25 @@ public static class OfflineKey
     public static void Remove(AppSettings f)
     {
         if (f.OfflineCode.Length == 0) return;
+        var serial = Check(f.OfflineCode, CloudConfig.MachineFingerprint(), 0, TrustedKeys(f), f.CloudUserId).Serial;
+        if (serial.Length > 0) MarkUsed(f, serial);
         f.OfflineCode = "";
         f.OfflineCodeRedeemed = "";
         f.Save();
         CloudLink.NotifyLicenseChanged();
+    }
+
+    /// <summary>این سریال روی همین کامپیوتر به کار رفته؟</summary>
+    public static bool IsUsed(AppSettings f, string serial) =>
+        serial.Length > 0 && f.OfflineCodesUsed.Split(',').Contains(serial, StringComparer.Ordinal);
+
+    private static void MarkUsed(AppSettings f, string serial)
+    {
+        if (serial.Length == 0 || IsUsed(f, serial)) return;
+        var list = f.OfflineCodesUsed.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
+        list.Add(serial);
+        //  سقف: صد سریالِ آخر — فهرست بی‌پایان بزرگ نمی‌شود
+        f.OfflineCodesUsed = string.Join(",", list.TakeLast(100));
     }
 
     /// <summary>تاریخِ شمسی برای پیام‌ها.</summary>

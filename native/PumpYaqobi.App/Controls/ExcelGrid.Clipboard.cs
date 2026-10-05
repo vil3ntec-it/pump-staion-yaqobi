@@ -133,6 +133,7 @@ public partial class ExcelGrid
     {
         if (col.IsReadOnly) return false;
         if (item is ViewModels.ILockedRow { IsLocked: true }) return false;
+        if (LockedForWriting()) return false;
         var path = PathOf(col);
         if (string.IsNullOrEmpty(path)) return false;
         var p = item.GetType().GetProperty(path);

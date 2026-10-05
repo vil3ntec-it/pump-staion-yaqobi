@@ -73,6 +73,12 @@ internal static class TestSettingsHome
             //  `StationPublisher.Disabled` را ببینید).
             PumpYaqobi.App.Services.StationPublisher.Disabled = true;
 
+            //  ⛔ **قفلِ «فقط‌خواندنی» (۱۴۰۵/۰۷/۲۰) در آزمون‌ها خاموش است**: پوشهٔ
+            //  موقت «بی‌حساب» است و هر آزمونی که پنجره می‌سازد قلابِ سراسری را
+            //  می‌نشاند — یعنی آزمون‌های ثبتِ دیگر در همان فرآیند بی‌دلیل قفل
+            //  می‌شدند. خودِ قاعده در `AppLockTests` سنجیده می‌شود.
+            PumpYaqobi.App.Services.SoftLock.Disabled = true;
+
             //  بخش‌های پنهان و در حالِ ساخت (‎SectionGate‎) در آزمون‌ها بازند؛ قاعدهٔ
             //  خودشان در ‎SectionGateTests‎ جدا سنجیده می‌شود
             PumpYaqobi.App.Services.SectionGate.TestOpenAll = true;
