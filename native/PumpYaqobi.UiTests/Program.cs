@@ -213,6 +213,8 @@ internal static class Program
         if (outDir.Equals("signuptrial", StringComparison.OrdinalIgnoreCase)) return SignUpTrialProbe.Run(args);
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- linkstates <live.json> [پوشه]
         if (outDir.Equals("linkstates", StringComparison.OrdinalIgnoreCase)) return LinkStatesProbe.Run(args);
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- plantiers <live.json>   (سه پلن روی پشتهٔ واقعی)
+        if (outDir.Equals("plantiers", StringComparison.OrdinalIgnoreCase)) return PlanTiersLiveProbe.Run(args);
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- oldacct <live.json> [پوشه]
         if (outDir.Equals("oldacct", StringComparison.OrdinalIgnoreCase)) return OldAccountProbe.Run(args);
         if (outDir.Equals("pumpmirror", StringComparison.OrdinalIgnoreCase)) return PumpMirrorProbe.Run(args);
