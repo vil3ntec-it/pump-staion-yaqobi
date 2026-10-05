@@ -112,6 +112,20 @@ public static class AppLock
         return check is { SignatureOk: true, IsTrial: true } && open ? RestoreTrial : RestoreNoPlan;
     }
 
+    /// <summary>
+    /// ══ فایلِ یک حساب یا یک ماه (‎.pumphesab‎) — همه، جز آزمایشی (۱۴۰۵/۰۷/۲۰) ══
+    /// «حساب‌های تکی یا ماه‌های تکی… تو هر حسابی بشه گذاشت، حتی بدون حساب هم
+    /// مشکلی نباشه، اما برای آزمایشی نشه.» ⇒ ‎null‎ یعنی آزاد.
+    /// ⛔ فقط مجوزِ <b>امضاشدهٔ</b> آزمایشی می‌بندد (زنده یا تمام‌شده)؛ کدِ
+    /// بی‌اینترنتِ معتبر (پولی) همیشه باز. بکاپِ کامل همان درِ
+    /// <see cref="RestoreBlocked"/> را دارد و دست نخورد.
+    /// </summary>
+    public static string? PortableBlocked(LicenseCheck? check, bool offlinePaid) =>
+        !offlinePaid && check is { SignatureOk: true, IsTrial: true } ? PortableTrial : null;
+
+    public const string PortableTrial =
+        "🔒 آوردنِ فایلِ حساب یا ماه در حسابِ آزمایشی نیست — با اشتراکِ استاندارد، وی‌آی‌پی یا دائمی، یا بی حساب. ساختنِ فایل همیشه باز است.";
+
     public const string RestoreTrial =
         "🔒 آوردنِ بکاپ در دورهٔ آزمایشی نیست — فقط با اشتراکِ استاندارد، وی‌آی‌پی یا دائمی. ساختنِ بکاپ همیشه باز است.";
 

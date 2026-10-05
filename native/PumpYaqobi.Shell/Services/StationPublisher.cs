@@ -155,6 +155,8 @@ public sealed class StationPublisher : IAsyncDisposable
     /// </summary>
     public async Task<bool> PublishOnceAsync(bool force = false, CancellationToken ct = default)
     {
+        //  ⛔ بی خدماتِ سرور هیچ عکسی (مخزن، قرض‌دار) از این کامپیوتر بیرون نمی‌رود
+        if (Entitlements.PlanDenies(Entitlements.Online)) return false;
         try
         {
             // ══ قفلِ اشتراک ═══════════════════════════════════════════════
@@ -328,6 +330,8 @@ public sealed class StationPublisher : IAsyncDisposable
         {
             var file = AppSettings.Load();
             if (string.IsNullOrWhiteSpace(file.CloudDeviceToken)) return false;   // هنوز به پمپی بند نیست
+            //  ⛔ حالِ مخزن و قرض‌دار فقط با خدماتِ سرور (سرور هم ‎plan_no_services‎ می‌دهد)
+            if (Entitlements.PlanDenies(Entitlements.Online)) return false;
             var now = AppClock.Mono;
             if (now < _stateRetryAt) return false;
 
@@ -587,6 +591,9 @@ public sealed class StationPublisher : IAsyncDisposable
     /// </summary>
     public async Task<bool> KeepLinkAsync(bool force = false, CancellationToken ct = default)
     {
+        //  ⛔ پلنی که خدماتِ سرور ندارد (استاندارد، دائمیِ بی‌تمدید) اصلاً به سرورِ
+        //  خانگی وصل نمی‌شود — ‎Entitlements.Online‎ (۱۴۰۵/۰۷/۲۰).
+        if (Entitlements.PlanDenies(Entitlements.Online)) return false;
         try { return await ReadyAsync(force, ct); }
         catch { return false; }
     }
@@ -857,6 +864,8 @@ public sealed class StationPublisher : IAsyncDisposable
     {
         var file = AppSettings.Load();
         if (string.IsNullOrWhiteSpace(file.CloudDeviceToken)) return RatePoll.None;
+        //  ⛔ نرخ از تلگرام مالِ بات است — بی خدماتِ سرور هیچ پرسشی
+        if (Entitlements.PlanDenies(Entitlements.Online)) return RatePoll.None;
         var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
         var poll = await cloud.RatePollAsync(wait, ct);
         var cmd = poll.Cmd;
@@ -949,6 +958,7 @@ public sealed class StationPublisher : IAsyncDisposable
     private static async Task LiveConfigTickAsync(CancellationToken ct)
     {
         if (!LiveConfig.NeedsFetch) return;
+        if (Entitlements.PlanDenies(Entitlements.Online)) return;
         var file = AppSettings.Load();
         if (string.IsNullOrWhiteSpace(file.CloudDeviceToken)) return;
         var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
@@ -986,7 +996,8 @@ public sealed class StationPublisher : IAsyncDisposable
             //  🤖 پیگیرِ اشتراک — حرفِ سرور را با مجوزِ این‌جا می‌سنجد؛ یکی
             //  نبودند ⇒ خودش می‌رساند. شرحش بالای `SubscriptionWatch`.
             await cloud.WatchSubscriptionAsync(forceBind, ct);
-            await cloud.KeepAccessCodeAsync(ct);
+            //  ⛔ کدِ اپِ گوشی فقط با اپِ گوشی در پلن
+            if (!Entitlements.PlanDenies(Entitlements.Kar)) await cloud.KeepAccessCodeAsync(ct);
             //  🔑 کدِ اشتراکِ آفلاینِ این کامپیوتر ⇒ «سرور همون کد رو ببینه»
             await cloud.RedeemOfflineAsync(ct);
             return;
@@ -1001,7 +1012,7 @@ public sealed class StationPublisher : IAsyncDisposable
         {
             var device = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
             await device.KeepLicenseFreshAsync(ct);
-            await device.KeepAccessCodeAsync(ct);
+            if (!Entitlements.PlanDenies(Entitlements.Kar)) await device.KeepAccessCodeAsync(ct);
             await device.RedeemOfflineAsync(ct);
         }
 

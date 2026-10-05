@@ -56,6 +56,37 @@
                       IsVisible="{Binding CanRestore}" IsEnabled="{Binding !Busy}" />
             </WrapPanel>
 
+            <!-- ⛔ بکاپ‌های روی سرورِ حساب — دیدن و برگرداندن (۱۴۰۵/۰۷/۲۰): تا امروز فقط فرستاده می‌شد -->
+            <Border Classes="card calm" Padding="12">
+              <StackPanel Spacing="8">
+                <TextBlock Text="☁️ بکاپ‌های روی سرورِ حساب" FontWeight="Bold" />
+                <TextBlock Classes="muted" TextWrapping="Wrap"
+                           Text="روی کامپیوترِ تازه یا پس از نصبِ دوباره، با همان حساب وارد شوید و بکاپِ دلخواه را برگردانید. پیش از جایگزینی، شمارِ رکوردها گفته می‌شود و از حالِ فعلی یک بکاپِ ایمنی گرفته می‌شود." />
+                <WrapPanel>
+                  <Button Classes="accent" Content="🔄 دیدنِ بکاپ‌های روی سرور" Margin="0,0,8,0"
+                          Command="{Binding LoadCloudBackupsCommand}" IsEnabled="{Binding !CloudBusy}" />
+                  <TextBlock Text="{Binding CloudStatus}" TextWrapping="Wrap" FontWeight="Bold" VerticalAlignment="Center"
+                             Foreground="{Binding CloudStatusBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}"
+                             IsVisible="{Binding CloudStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </WrapPanel>
+                <ProgressBar IsIndeterminate="{Binding CloudBusy}" Height="5" IsVisible="{Binding CloudBusy}" />
+                <ItemsControl ItemsSource="{Binding CloudBackups}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CloudBackupRowViewModel">
+                      <Grid ColumnDefinitions="*,Auto" Margin="0,4">
+                        <StackPanel Spacing="2">
+                          <TextBlock Text="{Binding Title}" FontWeight="Bold" TextWrapping="Wrap" />
+                          <TextBlock Text="{Binding Detail}" Classes="muted" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Classes="ghost danger" Content="↩ برگرداندن" VerticalAlignment="Center"
+                                Command="{Binding Owner.RestoreCloudCommand}" CommandParameter="{Binding}" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
+
             <!-- ⛔ شورا ب۵: بکاپی که فقط روی همین دیسک است، با یک دیسکِ سوخته می‌رود -->
             <Border Classes="card calm" Padding="12" IsVisible="{Binding OnlyLocal}">
               <StackPanel Spacing="8">

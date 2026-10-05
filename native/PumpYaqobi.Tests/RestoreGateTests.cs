@@ -15,6 +15,7 @@ namespace PumpYaqobi.Tests;
 /// و دیگه لازم نداره اشتراک بخره… فقط کسایی که اشتراک دارن بتونن فایل‌های
 /// بک‌اپ رو بیارن، حتی آزمایشی‌ها نه.»
 /// </summary>
+[Collection(AppHostCollection.Name)]
 public class RestoreGateTests : IDisposable
 {
     private const long Day = 86_400_000L;
@@ -82,22 +83,85 @@ public class RestoreGateTests : IDisposable
         using (var db = dst.Create()) Assert.Single(db.Debtors.ToList());
     }
 
+    // ── فایلِ یک حساب یا ماه: همه، جز آزمایشی (۱۴۰۵/۰۷/۲۰) ───────────────
+    //  «حساب‌های تکی یا ماه‌های تکی… تو هر حسابی بشه گذاشت، حتی بدون حساب هم
+    //  مشکلی نباشه، اما برای آزمایشی نشه.»
+
     [Fact]
-    public void FayleBakhsh_HamRad()
+    public void FayleBakhsh_Tasmim_FaghatAzmayeshiBaste()
     {
-        var (src, _, _) = Host("a");
+        Assert.Null(AppLock.PortableBlocked(null, false));                          // بی حساب
+        Assert.Null(AppLock.PortableBlocked(Signed(true, ""), false));              // پولیِ زنده
+        Assert.Null(AppLock.PortableBlocked(Signed(false, ""), false));             // پولیِ تمام‌شده
+        Assert.Null(AppLock.PortableBlocked(Signed(true, "") with { SignatureOk = false }, false));
+        Assert.Equal(AppLock.PortableTrial, AppLock.PortableBlocked(Signed(true, "trial"), false));
+        Assert.Equal(AppLock.PortableTrial, AppLock.PortableBlocked(Signed(false, "trial"), false));
+        //  کدِ بی‌اینترنت پولی است ⇒ باز، حتی کنارِ مجوزِ آزمایشی
+        Assert.Null(AppLock.PortableBlocked(Signed(true, "trial"), offlinePaid: true));
+    }
+
+    private (string Path, JsonElement Root, JsonDocument Doc) PartFile(string name)
+    {
+        var (src, _, _) = Host(name + "-src");
         long id;
         using (var db = src.Create()) { var d = new Debtor { Name = "بیگانه" }; db.Debtors.Add(d); db.SaveChanges(); id = d.Id; }
         var ex = new SyncStore(src).ExportPortable(new PortablePick("debtor", id));
-        var path = Path.Combine(_dir, "part" + PortableFile.Extension);
+        var path = Path.Combine(_dir, name + PortableFile.Extension);
         PortableFile.Write(path, "آزمون", ex);
-        using var doc = JsonDocument.Parse(PortableFile.ReadSnapshot(path)!);
+        var doc = JsonDocument.Parse(PortableFile.ReadSnapshot(path)!);
+        return (path, doc.RootElement, doc);
+    }
 
-        var (dst, _, _) = Host("b");
-        var store = new SyncStore(dst) { RestoreGate = () => AppLock.RestoreNoPlan };
-        var e = Assert.Throws<PermissionDeniedException>(() => store.ImportPortable(doc.RootElement));
-        Assert.Equal(AppLock.RestoreNoPlan, e.Reason);
+    [Fact]
+    public void FayleBakhsh_Azmayeshi_Rad_VaDaftarDastNamikhorad()
+    {
+        var (_, root, doc) = PartFile("trial");
+        using var _d = doc;
+        var (dst, _, _) = Host("trial-dst");
+        var store = new SyncStore(dst) { RestoreGate = () => AppLock.PortableBlocked(Signed(true, "trial"), false) };
+        var e = Assert.Throws<PermissionDeniedException>(() => store.ImportPortable(root));
+        Assert.Equal(AppLock.PortableTrial, e.Reason);
         using (var db = dst.Create()) Assert.Empty(db.Debtors.ToList());
+    }
+
+    [Fact]
+    public void FayleBakhsh_BiHesab_VaBiEshterak_MiNeshinad()
+    {
+        var (_, root, doc) = PartFile("free");
+        using var _d = doc;
+        //  ⛔ درِ سخت‌ترِ بکاپِ کامل (بی‌اشتراک ⇒ بسته) این‌جا نمی‌نشیند: فقط درِ
+        //  فایلِ بخش. اگر روزی ‎ImportPortable‎ دوباره ‎RestoreGateHook‎ را بخواند، سرخ.
+        var oldR = PermissionService.RestoreGateHook;
+        var oldP = PermissionService.PortableGateHook;
+        try
+        {
+            PermissionService.RestoreGateHook = () => AppLock.RestoreNoPlan;
+            PermissionService.PortableGateHook = () => AppLock.PortableBlocked(null, false);
+            var (dst, _, _) = Host("free-dst");
+            var rep = new SyncStore(dst).ImportPortable(root);
+            Assert.Equal(0, rep.Failed);
+            using var db = dst.Create();
+            Assert.Single(db.Debtors.ToList());
+        }
+        finally { PermissionService.RestoreGateHook = oldR; PermissionService.PortableGateHook = oldP; }
+    }
+
+    [Fact]
+    public void FayleBakhsh_DarePishFarz_DareFayleBakhshAst()
+    {
+        var (_, root, doc) = PartFile("hook");
+        using var _d = doc;
+        var oldR = PermissionService.RestoreGateHook;
+        var oldP = PermissionService.PortableGateHook;
+        try
+        {
+            PermissionService.RestoreGateHook = null;
+            PermissionService.PortableGateHook = () => AppLock.PortableTrial;
+            var (dst, _, _) = Host("hook-dst");
+            var e = Assert.Throws<PermissionDeniedException>(() => new SyncStore(dst).ImportPortable(root));
+            Assert.Equal(AppLock.PortableTrial, e.Reason);
+        }
+        finally { PermissionService.RestoreGateHook = oldR; PermissionService.PortableGateHook = oldP; }
     }
 
     [Fact]

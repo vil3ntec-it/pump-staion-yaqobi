@@ -129,8 +129,87 @@ public sealed partial class CloudLink
 
         using var req = new HttpRequestMessage(HttpMethod.Post, CloudConfig.Url(path)) { Content = body };
         req.Headers.Add("Authorization", $"Bearer {_settings.CloudDeviceToken}");
-        var (ok, _, why, code) = await Send(req, ct);
-        return ok ? CloudResult.Done : CloudResult.No(why, code);
+        //  ⛔ با مهلتِ بلند (‎BigHttp‎)، نه بیست ثانیه — شرحش بالای ‎BigHttp‎.
+        var r = await SendOn(BigHttp, req, ct);
+        return r.Ok ? CloudResult.Done : CloudResult.No(r.Why, r.Code);
+    }
+
+    /// <summary>
+    /// ══ گرفتنِ یک پشتیبانِ ابریِ همین پمپ — به یک فایلِ محلی (۱۴۰۵/۰۷/۲۰) ══
+    /// تا امروز برنامه فقط می‌فرستاد و <b>هیچ راهی برای پس گرفتن نداشت</b>.
+    /// </summary>
+    /// <remarks>
+    /// ⛔ جریانی، و اول در ‎.part‎؛ فقط وقتی هشِ سرور (‎X-Backup-Sha256‎) خواند
+    /// جای خودش می‌نشیند. فایلِ نیمه یا دست‌خورده هرگز به بازگردانی نمی‌رسد.
+    /// ⛔ با توکنِ <b>دستگاهِ همین پمپ</b>: سرور فقط پشتیبانِ همین پمپ را می‌دهد.
+    /// </remarks>
+    public async Task<CloudResult> BackupDownloadAsync(string id, string target, CancellationToken ct = default)
+    {
+        if (!Activated) return CloudResult.No("فعال نشده", "not_activated");
+        if (string.IsNullOrWhiteSpace(id)) return CloudResult.No("پشتیبان پیدا نشد", "not_found");
+        var part = target + ".part";
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get,
+                CloudConfig.Url("/api/pump/device/backups/" + Uri.EscapeDataString(id)));
+            Stamp(req);
+            req.Headers.Add("Authorization", $"Bearer {_settings.CloudDeviceToken}");
+            using var res = TestTransport is null
+                ? await BigHttp.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct)
+                : await TestTransport(req, ct);
+            if (!res.IsSuccessStatusCode)
+                return CloudResult.No($"سرور پشتیبان را نداد ({(int)res.StatusCode})", ((int)res.StatusCode).ToString());
+            var want = res.Headers.TryGetValues("X-Backup-Sha256", out var v) ? v.FirstOrDefault() ?? "" : "";
+
+            string got;
+            await using (var src = await res.Content.ReadAsStreamAsync(ct))
+            await using (var dst = new FileStream(part, FileMode.Create, FileAccess.Write, FileShare.None, 64 * 1024, true))
+            using (var sha = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256))
+            {
+                var buf = new byte[64 * 1024];
+                int n;
+                while ((n = await src.ReadAsync(buf, ct)) > 0)
+                {
+                    sha.AppendData(buf, 0, n);
+                    await dst.WriteAsync(buf.AsMemory(0, n), ct);
+                }
+                got = Convert.ToHexString(sha.GetHashAndReset()).ToLowerInvariant();
+            }
+            if (new FileInfo(part).Length == 0 || (want.Length > 0 && !string.Equals(want, got, StringComparison.OrdinalIgnoreCase)))
+            {
+                try { File.Delete(part); } catch { }
+                return CloudResult.No("فایلِ گرفته‌شده با نسخهٔ سرور نمی‌خواند — دوباره بزنید", "hash_mismatch");
+            }
+            File.Move(part, target, overwrite: true);
+            return CloudResult.Done;
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            try { File.Delete(part); } catch { }
+            return CloudResult.No("سرور دیر جواب داد — دوباره بزنید", "timeout");
+        }
+        catch (Exception)
+        {
+            try { File.Delete(part); } catch { }
+            return CloudResult.No("به سرور نرسیدیم — اینترنت را بررسی کنید", "offline");
+        }
+    }
+
+    /// <summary>
+    /// کلیدِ بکاپِ <b>همین</b> پمپ از سرورِ حساب (‎/api/pump/device/backup-key‎) — فقط با
+    /// توکنِ دستگاهِ همین پمپ. شرح: ‎BackupSeal‎ و ‎lib/backup-key.js‎ِ سرورِ حساب.
+    /// </summary>
+    public async Task<(bool Ok, string StationId, byte[] Key, string Why)> BackupKeyAsync(CancellationToken ct = default)
+    {
+        if (!Activated) return (false, "", Array.Empty<byte>(), "فعال نشده");
+        var (ok, json, why, _) = await DevGetAsync("/api/pump/device/backup-key", ct);
+        if (!ok) return (false, "", Array.Empty<byte>(), why);
+        var station = Str(json, "stationId");
+        byte[] key;
+        try { key = Convert.FromBase64String(Str(json, "key")); }
+        catch { return (false, "", Array.Empty<byte>(), "کلیدِ بکاپ ناخوانا آمد"); }
+        if (station.Length == 0 || key.Length != 32) return (false, "", Array.Empty<byte>(), "کلیدِ بکاپ ناقص آمد");
+        return (true, station, key, "");
     }
 
     /// <summary>فهرستِ پشتیبان‌های ابریِ همین پمپ، تازه‌ترین اول.</summary>

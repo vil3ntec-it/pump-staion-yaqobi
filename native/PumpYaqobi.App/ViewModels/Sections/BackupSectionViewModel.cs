@@ -255,9 +255,21 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         return false;
     }
 
-    private async Task RestoreFromAsync(string path, string what)
+    private async Task RestoreFromAsync(string path, string what, bool ownCloud = false)
     {
-        if (!RestoreAllowed()) return;
+        //  ⛔ بکاپِ خودِ همین حساب از سرورِ حساب از درِ اشتراک رد نمی‌شود — شرحش در
+        //  ‎PermissionService.TrustOwnCloudBackup‎.
+        //  ⛔ مُهرِ پمپ: مالِ همین پمپ ⇒ باز (با هر اشتراکی)؛ مالِ پمپِ دیگر ⇒ هرگز
+        var seal = await BackupKeys.OpenForRestoreAsync(path, _host.Backup.SnapshotDir);
+        if (!seal.Ok) { _host.Toast(seal.Why, ToastKind.Error); return; }
+        ownCloud |= seal.OwnPump;
+        if (seal.Temp)
+        {
+            try { await RestoreFromAsync(seal.Path, what, ownCloud); }
+            finally { try { File.Delete(seal.Path); } catch { } }
+            return;
+        }
+        if (!ownCloud && !RestoreAllowed()) return;
         //  ⛔ پشتیبانِ رمزشده (‎.pyq‎) اول در یک فایلِ موقت باز می‌شود و همان راهِ
         //  همیشگی رویش می‌رود (سنجش، پرسش، عکسِ ایمنی). پس از کار پاک می‌شود.
         string? temp = null;
@@ -270,11 +282,11 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
                 return;
             }
         }
-        try { await RestorePlainAsync(temp ?? path, what); }
+        try { await RestorePlainAsync(temp ?? path, what, ownCloud); }
         finally { if (temp is not null) try { File.Delete(temp); } catch { } }
     }
 
-    private async Task RestorePlainAsync(string path, string what)
+    private async Task RestorePlainAsync(string path, string what, bool ownCloud = false)
     {
         var records = BackupService.Inspect(path);
         if (records < 0)
@@ -298,7 +310,11 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         RestoreOutcome outcome;
         //  ⛔ همگام‌سازی تا پایانِ جایگزینی می‌ایستد — هیچ اتصالی به دفتر باز نماند
         using var paused = _host.SyncIfStarted is { } se ? await se.PauseAsync() : null;
-        try { outcome = await Task.Run(() => _host.Backup.Restore(path)); }
+        try
+        {
+            using var trust = ownCloud ? PermissionService.TrustOwnCloudBackup() : null;
+            outcome = await Task.Run(() => _host.Backup.Restore(path));
+        }
         catch (PermissionDeniedException pd)
         {
             _host.Toast(pd.Reason.Length > 0 ? pd.Reason : "❌ بازگردانی فقط از مدیر برمی‌آید", ToastKind.Error);
@@ -391,9 +407,13 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             var settings = _main.CapturePortableSettings();
             var info = await Task.Run(() =>
                 FullBackup.Write(_host.Backup, target, AppVersion.Current, settings, pump));
+            //  ⛔ مُهرِ پمپ (۱۴۰۵/۰۷/۲۰): فایل فقط با همین حساب باز می‌شود — شرح: ‎BackupKeys‎
+            var sealedToPump = await BackupKeys.SealIfPossibleAsync(target);
             FullStatus = $"✅ ساخته و سنجیده شد: {Path.GetFileName(target)}\n"
                        + $"{Shamsi.Money(info.TotalRows)} ردیف در {Shamsi.Money(info.Tables.Count)} جدول · "
-                       + SizeText(info.FileBytes) + " · با تم و تنظیمات";
+                       + SizeText(info.FileBytes) + " · با تم و تنظیمات"
+                       + (sealedToPump ? " · 🔒 فقط با همین حساب باز می‌شود"
+                                       : " · ⚠️ هنوز به حسابی قفل نیست (وارد حساب نشده‌اید)");
             FullStatusBrushKey = "Pump.Ok";
             _host.Toast("📦 فایلِ کامل ساخته شد — می‌شود روی فلش برد", ToastKind.Ok);
             try { var st = AppSettings.Load(); st.PortablePaths["full"] = target; st.LastFullExportAt = AppClock.UtcNow.ToString("O"); st.Save(); } catch { }
@@ -428,7 +448,28 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             _host.Toast("❌ آوردنِ فایلِ کامل فقط از مدیر برمی‌آید", ToastKind.Error);
             return;
         }
-        if (!RestoreAllowed()) return;
+        //  ⛔ مُهرِ پمپ (۱۴۰۵/۰۷/۲۰): مالِ همین پمپ ⇒ باز، حتی بی اشتراک (فقط‌خواندنی می‌ماند)؛
+        //  مالِ پمپِ دیگر (حسابِ دوم، آزمایشیِ دوباره) ⇒ هرگز؛ بی مُهر ⇒ فقط اشتراکِ پولی.
+        var seal = await BackupKeys.OpenForRestoreAsync(path, _host.Backup.SnapshotDir);
+        if (!seal.Ok)
+        {
+            FullStatus = "❌ " + seal.Why;
+            FullStatusBrushKey = "Pump.Danger";
+            _host.Toast(seal.Why, ToastKind.Error);
+            return;
+        }
+        if (seal.Temp)
+        {
+            try { await ImportFullCoreAsync(seal.Path, ownPump: true); }
+            finally { try { File.Delete(seal.Path); } catch { } }
+            return;
+        }
+        await ImportFullCoreAsync(path, ownPump: false);
+    }
+
+    private async Task ImportFullCoreAsync(string path, bool ownPump)
+    {
+        if (!ownPump && !RestoreAllowed()) return;
 
         Busy = true;
         FullStatus = "در حالِ خواندن و سنجیدنِ فایل…";
@@ -465,7 +506,11 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
                 try { await SaveGuard.FlushAllAsync(); } catch { }
                 RestoreOutcome outcome;
                 using var paused = _host.SyncIfStarted is { } se ? await se.PauseAsync() : null;
-                try { outcome = await Task.Run(() => FullBackup.Restore(_host.Backup, info)); }
+                try
+                {
+                    using var trust = ownPump ? PermissionService.TrustOwnCloudBackup() : null;
+                    outcome = await Task.Run(() => FullBackup.Restore(_host.Backup, info));
+                }
                 catch (PermissionDeniedException pd)
                 {
                     FullStatus = "";
@@ -561,7 +606,8 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             //  ⛔ روی نخِ دیگر (۱۴۰۵/۰۷/۱۶): ‎VACUUM INTO‎ِ کلِ دفتر پیش از نخستین ‎await‎ِ واقعی
             //  روی نخِ رابط می‌دوید و پنجره چند ثانیه «پاسخ نمی‌داد».
             var ok = await Task.Run(() => pusher.RunOnceAsync(manual: true));
-            (ServerStatus, ServerStatusBrushKey) = ServerResult(ok, pusher.LastHomeOk, pusher.LastCloudOk, pusher.LastError);
+            (ServerStatus, ServerStatusBrushKey) = ServerResult(ok, pusher.LastHomeOk, pusher.LastCloudOk, pusher.LastError,
+                                                                pusher.LastHomeWhy, pusher.LastCloudWhy);
             _host.Toast(ServerStatus, ok ? ToastKind.Ok : ToastKind.Error);
         }
         catch (Exception ex)
@@ -574,12 +620,16 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
     }
 
     /// <summary>جملهٔ نتیجه — هر مقصد جدا گفته می‌شود، راست.</summary>
-    public static (string Text, string Brush) ServerResult(bool ok, bool home, bool cloud, string why)
+    public static (string Text, string Brush) ServerResult(bool ok, bool home, bool cloud, string why,
+                                                           string homeWhy = "", string cloudWhy = "")
     {
         var at = AppClock.Now.ToString("HH:mm");
+        static string Because(string w) => string.IsNullOrWhiteSpace(w) ? "" : " (" + w + ")";
         if (home && cloud) return ($"✅ ساعتِ {at} روی سرورِ خانگی و سرورِ حساب نشست", "Pump.Ok");
-        if (home) return ($"✅ ساعتِ {at} روی سرورِ خانگی نشست · سرورِ حساب نه", "Pump.Ok");
-        if (cloud) return ($"✅ ساعتِ {at} روی سرورِ حساب نشست · سرورِ خانگی نه", "Pump.Ok");
+        //  ⛔ نیمه‌رفته زرد است، نه سبز (۱۴۰۵/۰۷/۲۰): بکاپی که فقط روی سرورِ خانگیِ
+        //  همان پمپ است با کامپیوترِ دیگر یا نصبِ دوباره برنمی‌گردد.
+        if (home) return ($"⚠️ ساعتِ {at} فقط روی سرورِ خانگی نشست · سرورِ حساب نه{Because(cloudWhy)}", "Pump.Warn");
+        if (cloud) return ($"✅ ساعتِ {at} روی سرورِ حساب نشست · سرورِ خانگی نه{Because(homeWhy)}", "Pump.Ok");
         return ("❌ به هیچ سروری نرسید" + (string.IsNullOrWhiteSpace(why) ? "" : " — " + why)
                 + " · بکاپِ روی همین کامپیوتر سالم است", "Pump.Danger");
     }

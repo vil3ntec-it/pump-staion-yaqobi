@@ -100,6 +100,26 @@ public static class SoftLock
         catch { return AppLock.RestoreNoPlan; }
     }
 
+    /// <summary>
+    /// آوردنِ فایلِ یک حساب یا ماه مجاز است؟ تصمیم در <see cref="AppLock.PortableBlocked"/>.
+    /// ⚠️ مجوزِ ناخوانا این‌جا «باز» است: این در فقط آزمایشی را می‌بندد و بی حساب هم
+    /// باز است، پس خطای خواندن هیچ راهِ سوءاستفاده‌ای نمی‌سازد.
+    /// </summary>
+    public static string? PortableBlocked()
+    {
+        if (Disabled) return null;
+        if (Entitlements.Unlocked && !Entitlements.TestDeny) return null;
+        try
+        {
+            var f = AppSettings.Load();
+            var now = LicenseClock.Now(f);
+            var offline = OfflineKey.Stored(f, now).Valid;
+            var check = string.IsNullOrWhiteSpace(f.CloudDeviceToken) ? null : LicenseGuard.CheckStored(f, now);
+            return AppLock.PortableBlocked(check, offline);
+        }
+        catch { return null; }
+    }
+
     /// <summary>مجوز یا حساب عوض شد — حالِ قفل همان لحظه دوباره سنجیده شود.</summary>
     public static void Invalidate() => _cached = null;
 
@@ -185,6 +205,7 @@ public static class SoftLock
     {
         PermissionService.ReadOnlyHook = () => ReadOnly;
         PermissionService.RestoreGateHook = RestoreBlocked;
+        PermissionService.PortableGateHook = PortableBlocked;
         CloudLink.LicenseChanged -= Invalidate;
         CloudLink.LicenseChanged += Invalidate;
     }

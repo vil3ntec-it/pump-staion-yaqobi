@@ -178,6 +178,14 @@ public sealed partial class CloudLink
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(20) };
 
     /// <summary>
+    /// ⛔ فرستنده و گیرندهٔ <b>فایلِ پشتیبان</b> — مهلتِ بلند (۱۴۰۵/۰۷/۲۰).
+    /// پیش از این پشتیبان با همان <see cref="Http"/>ِ بیست‌ثانیه‌ای می‌رفت: دفترِ
+    /// چند مگابایتی روی اینترنتِ معمولی هیچ‌وقت در بیست ثانیه نمی‌رسید و هر بار
+    /// «سرور دیر جواب داد» می‌شد — دستی و خودکار، هر دو.
+    /// </summary>
+    public static readonly HttpClient BigHttp = new() { Timeout = TimeSpan.FromMinutes(30) };
+
+    /// <summary>
     /// ⚠️ **تنها راهِ سنجش** — یک شنوندهٔ ساختگی به جای شبکه، تا سنجشِ
     /// `cloudlogin` بتواند «ثبت‌نام، ورود، و زدنِ کدِ شش‌رقمی» را واقعاً تا
     /// تهِ کار ببرد بی این‌که به سرورِ واقعیِ اشتراک دست بزند.

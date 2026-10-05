@@ -24,7 +24,13 @@ public static class ProfitVeil
     {
         get
         {
-            try { return AppHost.Current?.Locks.NeedsUnlock(SectionLockService.Profit) == true; }
+            //  ⛔ پلنِ بی مفاد (استاندارد، ۱۴۰۵/۰۷/۲۰) همه‌جا تار است — هیچ رمزی بازش نمی‌کند.
+            //  ⚠️ ‎PlanDenies‎ نه ‎Allows‎: فقط پلنی که صریحاً مفاد ندارد؛ بی‌مجوز همان رفتارِ پیشین.
+            try
+            {
+                return Entitlements.PlanDenies(Entitlements.Profit)
+                       || AppHost.Current?.Locks.NeedsUnlock(SectionLockService.Profit) == true;
+            }
             catch { return false; }
         }
     }

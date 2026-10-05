@@ -161,6 +161,14 @@ public sealed partial class AppsSectionViewModel : SectionViewModel
     private async Task LoadBotAsync()
     {
         if (_botAsking) return;
+        //  ⛔ بات مالِ پلنی است که اپِ گوشی و بات دارد (۱۴۰۵/۰۷/۲۰) — سرور هم برای
+        //  پمپِ بی‌بات هیچ پاسخی نمی‌دهد؛ این‌جا لینکی که کار نمی‌کند داده نمی‌شود.
+        if (!Entitlements.Allows(Entitlements.Kar))
+        {
+            BotLink = "";
+            BotHint = "🔒 " + Entitlements.Why(Entitlements.Kar);
+            return;
+        }
         _botAsking = true;
         try
         {

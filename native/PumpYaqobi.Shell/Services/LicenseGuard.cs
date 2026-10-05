@@ -46,7 +46,8 @@ public sealed record LicenseCheck(
     bool SignatureOk = false,
     bool Expired = false,
     long IssuedAt = 0,
-    string Plan = "")
+    string Plan = "",
+    long ServicesEndsAt = 0)
 {
     /// <summary>
     /// مجوزِ دورهٔ آزمایشی؟ — سرورِ حساب برای آزمایشی ‎plan = "trial"‎ می‌نویسد
@@ -213,7 +214,9 @@ public static class LicenseGuard
             SignatureOk: true,
             Expired: expired,
             IssuedAt: Num(payload, "iat"),
-            Plan: Str(payload, "plan"));
+            Plan: Str(payload, "plan"),
+            //  دائمی: پایانِ خدماتِ سرور (۰ ⇒ محدودیتی نیست) — ‎lib/pump-services.js‎
+            ServicesEndsAt: Num(payload, "svc_ends"));
 
         if (nbf > 0 && nowMs + SkewMs < nbf) return Signed(false, "زمانِ مجوز هنوز نرسیده است", false);
         if (exp > 0 && nowMs - SkewMs > exp) return Signed(false, "مجوز منقضی شده — یک بار آنلاین شوید", true);

@@ -279,8 +279,8 @@ public sealed partial class MainViewModel
     /// </summary>
     private static string? PlanFeatureOf(string? id) => id switch
     {
-        "profit"    => Entitlements.Profit,
-        "priceloss" => Entitlements.Profit,   // زیربخشِ همان «ضرر»
+        //  ⛔ «مفاد/ضرر» از ۱۴۰۵/۰۷/۲۰ بسته نمی‌شود، **تار** می‌شود — پرده‌اش در خودِ
+        //  بخش است (‎ProfitSectionViewModel.PlanVeiled‎ و ‎ProfitVeil‎).
         "history"   => Entitlements.History,
         "dashboard" => Entitlements.Dashboard,
         _ => null,

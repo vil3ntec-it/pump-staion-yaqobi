@@ -88,7 +88,19 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
     //  ⚠️ با رفتن از بخش دوباره قفل می‌شود (‎OnDeactivated‎)، و دکمهٔ «🔒» هم.
 
     /// <summary>عددها پشتِ پرده‌اند؟ (رمز دارد و هنوز زده نشده.)</summary>
-    public bool Veiled => _host.Locks.NeedsUnlock(SectionLockService.Profit);
+    public bool Veiled => PlanVeiled || _host.Locks.NeedsUnlock(SectionLockService.Profit);
+
+    /// <summary>
+    /// ⛔ پلن مفاد را ندارد (استاندارد) ⇒ همان پرده، و هیچ رمزی بازش نمی‌کند
+    /// (۱۴۰۵/۰۷/۲۰): «چارتِ مفاد و ضرر تار دیده بشن، با مصارف و فایدهٔ زیرِ
+    /// چارت.» ‎Entitlements.Allows(Profit)‎ تنها تصمیم است.
+    /// </summary>
+    public bool PlanVeiled => !Entitlements.Allows(Entitlements.Profit);
+
+    /// <summary>نوشتهٔ روی پرده — رمز، یا «در پلنِ شما نیست».</summary>
+    public string VeilText => PlanVeiled
+        ? "🔒 مفاد، مصارف و نمودار در پلنِ شما تار است — با وی‌آی‌پی یا دائمی دیده می‌شود"
+        : "🔒 برای دیدنِ مفاد، مصارف و نمودار رمز بزنید";
 
     /// <summary>دکمهٔ «🔒 دوباره قفل کن» — فقط وقتی رمز هست و باز است.</summary>
     public bool CanRelock => _host.Locks.HasPassword(SectionLockService.Profit) && !Veiled;
@@ -97,7 +109,7 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
     private static readonly double[] VeilTrend = { 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30 };
 
     public string NetShown => Veiled ? VeilMoney : NetText;
-    public string NetCaptionShown => Veiled ? "🔒 پنهان — برای دیدن رمز بزنید" : NetCaption;
+    public string NetCaptionShown => !Veiled ? NetCaption : PlanVeiled ? "🔒 در پلنِ شما نیست" : "🔒 پنهان — برای دیدن رمز بزنید";
     public string IncomeTitleShown => Veiled ? "📈 درآمدها" : IncomeTitle;
     public string IncomeShown => Veiled ? VeilMoney : IncomeText;
     public string ExpenseShown => Veiled ? VeilMoney : ExpenseText;
@@ -110,7 +122,7 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
     {
         foreach (var n in new[]
                  {
-                     nameof(Veiled), nameof(CanRelock), nameof(NetShown), nameof(NetCaptionShown),
+                     nameof(Veiled), nameof(PlanVeiled), nameof(VeilText), nameof(CanRelock), nameof(NetShown), nameof(NetCaptionShown),
                      nameof(IncomeTitleShown), nameof(IncomeShown), nameof(ExpenseShown), nameof(TrendShown),
                      nameof(TrendBrushShown), nameof(IncomeBrushShown), nameof(ExpenseBrushShown),
                  })
@@ -122,6 +134,8 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
     private async Task RevealAsync()
     {
         if (!Veiled) return;
+        //  ⛔ پلن ندارد ⇒ هیچ رمزی بازش نمی‌کند؛ خودش می‌گوید چرا
+        if (PlanVeiled) { Entitlements.Gate(_host, Entitlements.Profit); return; }
         await MainViewModel.AskSectionPasswordAsync(SectionLockService.Profit, Title);
         RaiseVeil();
     }

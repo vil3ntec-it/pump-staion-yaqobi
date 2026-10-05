@@ -29,7 +29,15 @@ public sealed partial class MainViewModel
     {
         var sync = AppHost.Current.PublisherIfStarted;
         string key, why;
-        if (sync is null || !sync.Configured)
+        //  ⛔ پلنی که خدماتِ سرور ندارد اصلاً وصل نمی‌شود (۱۴۰۵/۰۷/۲۰) — خرابی نیست،
+        //  خاکستری است و چراغِ یکی‌شده با سرورِ حسابِ سالم سبز می‌ماند.
+        DeviceBound();
+        if (_planOfflineCache)
+        {
+            key = "Pump.Muted";
+            why = "سرورِ خانگی در پلنِ شما نیست — دفتر فقط روی همین کامپیوتر است";
+        }
+        else if (sync is null || !sync.Configured)
         {
             key = "Pump.Muted";
             //  ⚠️ «از پروفایل وارد شوید» غلط بود: یافتنِ سرورِ خانگی هیچ حسابی
@@ -80,6 +88,7 @@ public sealed partial class MainViewModel
     //  تنظیمات (با رازهای رمزشده) همان کارِ دوره‌ایِ بی‌ترمزی است که قدغن است.
     private bool _boundCache;
     private bool _signedInCache;
+    private bool _planOfflineCache;
     private DateTime _boundAt = DateTime.MinValue;
     private bool DeviceBound()
     {
@@ -90,6 +99,7 @@ public sealed partial class MainViewModel
             var f = Services.AppSettings.Load();
             _boundCache = !string.IsNullOrWhiteSpace(f.CloudDeviceToken);
             _signedInCache = !string.IsNullOrWhiteSpace(f.CloudAccountToken);
+            _planOfflineCache = Services.Entitlements.PlanDenies(Services.Entitlements.Online);
         }
         catch { /* همان مقدارِ قبلی */ }
         return _boundCache;
