@@ -786,6 +786,27 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
             : "—";
         SubDaysText = !check.Valid ? "—" : SubPermanent ? "دائمی" : $"{Shamsi.Money(VipDays)} روز";
         SubSourceText = check.Valid ? "مجوزِ امضاشدهٔ سرور" : activated ? check.Reason : "وارد حساب شوید و نامِ پمپ را بزنید";
+        SubServicesText = ServicesLine(check, Entitlements.Now());
+    }
+
+    /// <summary>ردیفِ «خدماتِ سرور» — خالی یعنی ردیفی نیست (وی‌آی‌پی).</summary>
+    [ObservableProperty] private string _subServicesText = "";
+
+    /// <summary>
+    /// ⛔ «خدماتِ سرور» در پروفایل (۱۴۰۵/۰۷/۲۰) — خالص، آزمون دارد. دائمی ⇒ تا کی
+    /// (سالِ اول رایگان، بعد تمدیدِ مدیر)؛ استاندارد ⇒ «در پلنِ شما نیست».
+    /// </summary>
+    public static string ServicesLine(LicenseCheck check, long nowMs)
+    {
+        if (!check.SignatureOk) return "";
+        if (check.ServicesEndsAt > 0)
+            return check.ServicesEndsAt > nowMs
+                ? "تا " + Shamsi.Of(DateTimeOffset.FromUnixTimeMilliseconds(check.ServicesEndsAt).LocalDateTime)
+                  + " — همگام‌سازی، کیو‌آر، اپِ گوشی، بات و بکاپِ سرور"
+                : "تمام شده — دفتر و همهٔ بخش‌ها کار می‌کنند؛ برای همگام‌سازی، کیو‌آر، اپ و بات تمدید لازم است (پشتیبانی)";
+        if (check.HasFeatureList && !EntitlementState.OnlineKeys.Any(check.Features.Contains))
+            return "در پلنِ شما نیست — دفتر فقط روی همین کامپیوتر است";
+        return "";
     }
 
     // ══ 🪪 ثبت‌نام و ورود — دو گام، و بس ════════════════════════════════════

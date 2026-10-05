@@ -72,7 +72,8 @@ public static class OfflineKey
     /// </summary>
     public static IReadOnlyList<string> FeaturesOf(string plan) => plan switch
     {
-        "std" => new[] { "cloudbackup" },
+        //  ⛔ ۱۴۰۵/۰۷/۲۰: استاندارد بی خدماتِ سرور؛ داشبورد و تاریخچه باز، مفاد تار (‎042_pump_plan_tiers.sql‎)
+        "std" => new[] { "dashboard", "history", "multi_device" },
         "vip" or "perm" => new[]
         {
             "dashboard", "kar_app", "bot", "messenger", "cloud", "cloudbackup", "profit", "history", "multi_device",

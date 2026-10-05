@@ -147,7 +147,7 @@
           <Border CornerRadius="14" Padding="18,10"
                   Background="{DynamicResource Pump.Card}"
                   BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="1">
-            <TextBlock Text="🔒 برای دیدنِ مفاد، مصارف و نمودار رمز بزنید"
+            <TextBlock Text="{Binding VeilText}"
                        FontSize="15" FontWeight="Bold"
                        Foreground="{DynamicResource Pump.Ink.Accent}" />
           </Border>

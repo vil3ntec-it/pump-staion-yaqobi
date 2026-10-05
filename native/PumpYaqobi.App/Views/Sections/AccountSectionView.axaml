@@ -1025,6 +1025,14 @@
                   <TextBlock Grid.Column="1" Text="{Binding SubEndsText}" Classes="kvv" />
                 </Grid>
               </Border>
+              <!-- ⛔ دائمی: خدماتِ سرور تا کی · استاندارد: در پلن نیست (۱۴۰۵/۰۷/۲۰) -->
+              <Border Classes="kvrow"
+                      IsVisible="{Binding SubServicesText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <Grid ColumnDefinitions="90,*">
+                  <TextBlock Grid.Column="0" Text="خدماتِ سرور" Classes="kvl" />
+                  <TextBlock Grid.Column="1" Text="{Binding SubServicesText}" Classes="kvv" TextWrapping="Wrap" />
+                </Grid>
+              </Border>
               <Border Classes="kvrow" BorderThickness="0">
                 <Grid ColumnDefinitions="90,*">
                   <TextBlock Grid.Column="0" Text="وضعیت" Classes="kvl" />

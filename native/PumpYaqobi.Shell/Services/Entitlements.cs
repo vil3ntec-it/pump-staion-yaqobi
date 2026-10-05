@@ -72,6 +72,21 @@ public static class Entitlements
     /// <summary>صفحهٔ داشبورد.</summary>
     public const string Dashboard = "dashboard";
 
+    /// <summary>
+    /// ══ «خدماتِ سرور» — هر اتصالی جز گرفتنِ اشتراک و پشتیبانی (۱۴۰۵/۰۷/۲۰) ══
+    ///
+    /// «استاندارد… اطلاعاتِ تانکِ تیلش به سرور نیاید و اصلاً به سرور وصل حتی
+    /// نشه، ولی از سرور اشتراک بتونه دریافت کنه.» و دائمی همین را پس از سالِ
+    /// اولِ رایگان، تا مدیر تمدید کند (سرورِ حساب: ‎lib/pump-services.js‎).
+    ///
+    /// ⛔ زیرش: سرورِ خانگی (اتصال، عکسِ زنده، صندوق)، حالِ پمپ و خبرها،
+    /// همگام‌سازی، نرخِ تلگرام و تنظیماتِ زنده. ⛔ بیرونش و همیشه باز: گرفتن و
+    /// تازه کردنِ اشتراک، پشتیبانی، به‌روزرسانی، و دیدن/پس گرفتنِ بکاپ‌های قبلی.
+    /// ⚠️ کلیدِ جدایی روی سرور ندارد: هر کدام از کلیدهای خدماتِ سرور
+    /// (‎kar_app · bot · messenger · cloud · cloudbackup‎) آن را باز می‌کند.
+    /// </summary>
+    public const string Online = "online";
+
     /// <summary>چتِ پشتیبانی — «یکی از واجبات است»، پس هرگز قفل نمی‌شود.</summary>
     public const string Support = "support";
 
@@ -86,7 +101,7 @@ public static class Entitlements
 
     /// <summary>همهٔ چیزهایی که اشتراک می‌خواهند — بی ترتیبِ خاص.</summary>
     public static readonly string[] Paid =
-        { Kar, QrLive, CloudBackup, Profit, History, Dashboard };
+        { Kar, QrLive, CloudBackup, Profit, History, Dashboard, Online };
 
     /// <summary>نامِ فارسیِ هر کدام، برای پیام و صفحهٔ پروفایل.</summary>
     public static string TitleOf(string feature) => feature switch
@@ -97,6 +112,7 @@ public static class Entitlements
         Profit => "مفاد / ضرر / اتحادیه",
         History => "تاریخچه‌ها",
         Dashboard => "داشبورد",
+        Online => "خدماتِ سرور (همگام‌سازی، سرورِ خانگی، خبرها)",
         Support => "چتِ پشتیبانی",
         _ => feature,
     };
@@ -184,6 +200,21 @@ public static class Entitlements
         if (Allows(feature)) return true;
         host.Toast("🔒 " + Why(feature), ToastKind.Warn);
         return false;
+    }
+
+    /// <summary>
+    /// «پلنِ این پمپ صریحاً این را ندارد» — برای کارهای پس‌زمینه‌ای که سرور هم
+    /// خودش می‌بندد (‎plan_no_services‎). برخلافِ <see cref="Allows"/> فقط وقتی
+    /// «نه» می‌گوید که فهرستِ پلن (مجوزِ امضاشده، پاسخِ سرور یا کدِ بی‌اینترنت)
+    /// <b>آمده و آن را ندارد</b>؛ بی مجوز تصمیم با خودِ سرور است، نه با حدسِ این‌جا.
+    /// </summary>
+    public static bool PlanDenies(string feature)
+    {
+        if (TestDeny) return Array.IndexOf(Paid, feature) >= 0;
+        if (Unlocked) return false;
+        if (Array.IndexOf(Paid, feature) < 0) return false;
+        try { return State().Denies(feature); }
+        catch { return false; }
     }
 
     /// <summary>چرا بسته است — یک جملهٔ آمادهٔ نمایش. خالی یعنی باز است.</summary>
@@ -373,6 +404,9 @@ public sealed record EntitlementState(
         return !Listed || Has(feature);
     }
 
+    /// <summary>فهرستِ پلن آمده و این را ندارد — ‎Entitlements.PlanDenies‎.</summary>
+    public bool Denies(string feature) => Listed && !Has(feature);
+
     /// <summary>
     /// ⛔ <b>نامِ قابلیت در برنامه و روی سرور یکی نیست — و این یک بار
     /// نزدیک بود همهٔ مشتری‌های پولی را قفل کند.</b>
@@ -393,6 +427,9 @@ public sealed record EntitlementState(
     /// از بازِ ناخواسته است.</b> پس هر دو نام باز می‌کنند، و هیچ‌کدام
     /// چیزی را نمی‌بندد.
     /// </summary>
+    /// <summary>کلیدهای خدماتِ سرور — مو‌به‌مو ‎ONLINE_KEYS‎ِ سرورِ حساب.</summary>
+    public static readonly string[] OnlineKeys = { "kar_app", "bot", "messenger", "cloud", "cloudbackup" };
+
     private bool Has(string feature)
     {
         if (Features.Contains(feature)) return true;
@@ -402,6 +439,8 @@ public sealed record EntitlementState(
             Entitlements.Kar         => Features.Contains("kar_app") || Features.Contains("bot"),
             Entitlements.QrLive      => Features.Contains("cloud"),
             Entitlements.CloudBackup => Features.Contains("cloud"),
+            //  هر کدام از خدماتِ سرور ⇒ اتصال (‎lib/pump-services.js‎ ⇒ ONLINE_KEYS)
+            Entitlements.Online      => OnlineKeys.Any(Features.Contains),
             //  ⚠️ این سه هنوز روی سرور نیستند (‎docs/PLANS-fa.md‎، «کارِ
             //  سرور»). تا آن روز فقط نامِ خودِ برنامه کار می‌کند.
             _ => false,

@@ -398,6 +398,17 @@ public sealed class SyncEngine : IAsyncDisposable
         var version = PumpDbContext.Version;
         var pullDue = force || AppClock.Mono - _lastPull >= PullTick;
         if (!force && version == _lastVersion && Queued == 0 && !pullDue) return;
+
+        //  ⚠️ پس از ترمزِ ‎Version‎: سنجیدنِ مجوز هر تیک نه.
+        //  ⛔ پلنی که خدماتِ سرور ندارد (استاندارد، دائمیِ بی‌تمدید) دفترش فقط روی
+        //  همین کامپیوتر است — ‎Entitlements.Online‎ (۱۴۰۵/۰۷/۲۰). سرور هم
+        //  ‎plan_no_services‎ می‌دهد؛ این‌جا فقط تا هیچ درخواستی نرود.
+        if (Entitlements.PlanDenies(Entitlements.Online))
+        {
+            SetPrime(false, "");
+            Set(SyncLight.Idle, "همگام‌سازی با سرور در پلنِ شما نیست — دفتر فقط روی همین کامپیوتر است", 0);
+            return;
+        }
         _lastVersion = version;
 
         // ── ۰) این دفتر مالِ کدام حساب است؟ ────────────────────────────
