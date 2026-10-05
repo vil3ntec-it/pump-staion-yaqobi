@@ -100,7 +100,14 @@ public sealed partial class MainViewModel : ObservableObject
             //  دو بار صدا زدن را یکی می‌کنند؛ مشکل شنونده‌ها بودند.
             //  ⛔ «فروش ورق»های قدیمیِ گاوصندوق منهای قرض (یک بار برای هر دفتر، ۱۴۰۵/۰۷/۱۸) —
             //  پیش از نگهبانِ یک‌بارمصرف، چون دفترِ تازه (حسابِ دیگر) مهرِ خودش را می‌خواهد.
-            _ = AppHost.Current.ShiftWaraqSync.StartFixOldSales();
+            //  ⛔ ۱۴۰۵/۰۷/۲۰ (مهرِ v2): «منهای قرض و مصرف» — و گفته می‌شود که شد، نه بی‌صدا.
+            _ = AppHost.Current.ShiftWaraqSync.StartFixOldSales().ContinueWith(t =>
+            {
+                if (t.IsCompletedSuccessfully && t.Result > 0)
+                    Avalonia.Threading.Dispatcher.UIThread.Post(() => AppHost.Current.Toast(
+                        $"✅ فروشِ {t.Result} ورقِ قدیمی در گاوصندوق درست شد — فروش منهای قرض و مصرف. هیچ ورق یا حسابی پاک نشد.",
+                        ToastKind.Ok));
+            }, TaskScheduler.Default);
             //  ⛔ شورا، الف۱: عددِ ناخوانای روی دیسک (از نسخه‌های پیشین یا opِ خراب) گفته شود —
             //  فقط گزارش، روی نخِ دیگر، یک بار برای هر دفتر
             _ = ReportLedgerHealthAsync();
