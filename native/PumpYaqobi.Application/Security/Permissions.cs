@@ -103,6 +103,12 @@ public sealed class PermissionService
     /// </summary>
     public static Func<string?>? RestoreGateHook { get; set; }
 
+    /// <summary>
+    /// درِ فایلِ یک حساب یا یک ماه (‎.pumphesab‎): همه، جز آزمایشی —
+    /// <c>AppLock.PortableBlocked</c>ِ پوسته. خالی/‎null‎ ⇒ آزاد.
+    /// </summary>
+    public static Func<string?>? PortableGateHook { get; set; }
+
     /// <summary>همان در برای همین نمونه — فقط آزمون‌ها (قلابِ سراسری را دست نمی‌زنند).</summary>
     public Func<string?>? RestoreGate { get; set; }
 

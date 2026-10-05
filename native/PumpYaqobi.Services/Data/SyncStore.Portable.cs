@@ -203,7 +203,7 @@ public sealed partial class SyncStore
         return v;
     }
 
-    /// <summary>درِ «آوردن فقط با اشتراکِ پولی» برای همین نمونه — فقط آزمون‌ها.</summary>
+    /// <summary>درِ «آوردنِ فایلِ بخش» برای همین نمونه — فقط آزمون‌ها.</summary>
     public Func<string?>? RestoreGate { get; set; }
 
     /// <summary>
@@ -212,8 +212,9 @@ public sealed partial class SyncStore
     /// </summary>
     public PortableImport ImportPortable(JsonElement snapshot)
     {
-        //  ⛔ آوردنِ فایلِ بخش هم «آوردنِ بکاپ» است — همان درِ اشتراکِ پولی (۱۴۰۵/۰۷/۲۰)
-        if ((RestoreGate ?? PumpYaqobi.Application.Security.PermissionService.RestoreGateHook)?.Invoke()
+        //  ⛔ فایلِ یک حساب یا ماه: در هر حسابی و بی حساب هم، جز آزمایشی (۱۴۰۵/۰۷/۲۰) —
+        //  ‎AppLock.PortableBlocked‎. بکاپِ کامل درِ سخت‌ترِ خودش را دارد.
+        if ((RestoreGate ?? PumpYaqobi.Application.Security.PermissionService.PortableGateHook)?.Invoke()
                 is { Length: > 0 } why)
             throw new PumpYaqobi.Application.Security.PermissionDeniedException(
                 PumpYaqobi.Application.Security.Permission.Restore, why);

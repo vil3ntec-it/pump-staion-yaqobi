@@ -184,7 +184,12 @@ public sealed partial class BackupSectionViewModel
     public async Task ImportPortableFromAsync(string path)
     {
         if (!CanRestore) { _host.Toast("❌ آوردن فقط از مدیر برمی‌آید", ToastKind.Error); return; }
-        if (!RestoreAllowed()) return;
+        //  ⛔ همه، جز آزمایشی — نه درِ بکاپِ کامل (‎AppLock.PortableBlocked‎)
+        if (PermissionService.PortableGateHook?.Invoke() is { Length: > 0 } why)
+        {
+            _host.Toast(why, ToastKind.Error);
+            return;
+        }
         var json = await Task.Run(() => PortableFile.ReadSnapshot(path));
         if (json is null)
         {
