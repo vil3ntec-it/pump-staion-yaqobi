@@ -74,6 +74,7 @@ internal static class ProfitStorageProbe
     private sealed record Item(string Month, string Kind, decimal Value);
 
     private sealed record Seeded(List<Item> Items, List<(InvoiceRate Rate, string Month)> Rates,
+                                 List<(PendingRate Rate, string Month)> Pending,
                                  string M1, string M0, string Old);
 
     private static string PrevMonth(string m)
@@ -92,6 +93,7 @@ internal static class ProfitStorageProbe
         var old = $"{int.Parse(m1[..4]) - 1:0000}/11";
         var items = new List<Item>();
         var rates = new List<(InvoiceRate, string)>();
+        var pending = new List<(PendingRate, string)>();
 
         using var db = h.Db.Create();
 
@@ -104,12 +106,31 @@ internal static class ProfitStorageProbe
                 DayShift = new ShiftData { Profit = dayP, Sale = dayP * 10 },
                 NightShift = nightP == 0 ? null : new ShiftData { Profit = nightP, Sale = nightP * 10 },
             });
-            items.Add(new Item(month, fuel == FuelType.Diesel ? "diesel" : "petrol", dayP + nightP));
+            //  ⛔ ۱۴۰۵/۰۷/۲۱: فایدهٔ پارچه دیگر در مفاد و ضرر نیست — فقط برای بخشِ مخزن می‌ماند
+            items.Add(new Item(month, "parcha", dayP + nightP));
         }
         Report(m1, 2, FuelType.Petrol, 1000, 500);
         Report(m1, 3, FuelType.Diesel, 200, 0);
         Report(m0, 12, FuelType.Petrol, 700, 0);
         Report(old, 5, FuelType.Petrol, 300, 40);
+
+        //  ورق‌ها — مفاد و ضرر = لیترِ فروخته‌شده × فی، پطرول و دیزل (۱۴۰۵/۰۷/۲۱)
+        void Waraq(string month, int day, (FuelType Fuel, decimal Liters, decimal Price)[] pumps)
+        {
+            var w = new WaraqEntry { DateShamsi = $"{month}/{day:00}", DateKey = Key(month, day) };
+            var sd = new WaraqShift { Kind = ShiftKind.Day };
+            var i = 0;
+            foreach (var (fuel, liters, price) in pumps)
+            {
+                sd.Pumps.Add(new WaraqPump { SortIndex = i++, Num = i, Fuel = fuel, Start = 1000, End = 1000 + liters, PricePerLiter = price });
+                items.Add(new Item(month, fuel == FuelType.Diesel ? "diesel" : "petrol", liters * price));
+            }
+            w.Shifts.Add(sd);
+            db.WaraqEntries.Add(w);
+        }
+        Waraq(m1, 2, new[] { (FuelType.Petrol, 30m, 60m), (FuelType.Diesel, 10m, 80m) });
+        Waraq(m0, 12, new[] { (FuelType.Petrol, 12m, 60m) });
+        Waraq(old, 5, new[] { (FuelType.Petrol, 5m, 55m) });
 
         //  درآمدِ اضافی و مصرف — با ‎MonthKey‎ی خودشان
         void Extra(string month, decimal v)
@@ -141,6 +162,22 @@ internal static class ProfitStorageProbe
         Inv(1, Key(m1, 1), DateTime.UtcNow, 100, 60, null, 62, m1);           // +۲۰۰ همین ماه
         Inv(2, Key(m0, 9), null, 50, 0, 70, 65, m0);                          // بی روزِ تایید ⇒ تاریخِ خودش
         Inv(3, Key(m0, 5), DateTime.UtcNow, 10, 60, null, 64, m1);            // ساخته در ماهِ پیش، تایید امروز ⇒ همین ماه
+        //  ⛔ ۱۴۰۵/۰۷/۲۱: تاییدشده‌ها دیگر در مفاد و ضرر نیستند؛ فقط فاکتورهای در صف با نرخِ امروز
+        //  مستقیم در جدول — این‌جا پیش از ورود است و ‎Settings.Set‎ اجازهٔ مدیر می‌خواهد
+        db.Settings.Add(new Setting { Key = PumpYaqobi.Services.Data.SettingsService.UnionRatePetrol, Value = "64" });
+        db.Settings.Add(new Setting { Key = PumpYaqobi.Services.Data.SettingsService.UnionRateDiesel, Value = "80" });
+        void Pend(int n, string month, int day, FuelType fuel, decimal liters, decimal rate, bool received = false)
+        {
+            db.Invoices.Add(new Invoice
+            {
+                InvoiceNumber = n, Status = InvoiceStatus.Pending, Fuel = fuel, DateShamsi = $"{month}/{day:00}",
+                DateKey = Key(month, day), Liters = liters, PricePerLiter = rate, RateOnCreate = rate, RateDiffReceived = received,
+            });
+            if (!received) pending.Add((new PendingRate(fuel, liters, rate, Key(month, day)), month));
+        }
+        Pend(10, m1, 3, FuelType.Petrol, 50, 60);              // ضرر ۲۰۰
+        Pend(11, m0, 4, FuelType.Diesel, 20, 85);              // مفاد ۱۰۰
+        Pend(12, m1, 5, FuelType.Petrol, 100, 60, true);       // «ضرر دریافت شد» ⇒ شمرده نمی‌شود
 
         //  قرض‌دارِ «بی‌فاکتور» — بردگیِ دفترِ تیلش مستقیم درآمد است
         var debtor = new Debtor { Name = "بی‌فاکتورِ آزمون", IsNoInvoice = true };
@@ -161,7 +198,8 @@ internal static class ProfitStorageProbe
         Row(m1, 7, 10); Row(m0, 8, 5);
         db.SaveChanges();
 
-        return new Seeded(items, rates, m1, m0, old);
+        h.Settings.Invalidate();
+        return new Seeded(items, rates, pending, m1, m0, old);
     }
 
     /// <summary>عددِ خالصِ یک دوره، فقط از روی دادهٔ خودِ سنجه — با همان فرمولِ برنامه.</summary>
@@ -170,13 +208,13 @@ internal static class ProfitStorageProbe
         decimal Sum(string kind) => s.Items.Where(i => i.Kind == kind && inPeriod(i.Month)).Sum(i => i.Value);
         var input = new ProfitInput
         {
-            ShiftProfitPetrol = Sum("petrol"),
-            ShiftProfitDiesel = Sum("diesel"),
+            WaraqSalesPetrol = Sum("petrol"),
+            WaraqSalesDiesel = Sum("diesel"),
             NoInvoiceSum = Sum("noinv"),
             ExtraIncomeSum = Sum("extra"),
             ExpenseSum = Sum("expense"),
-            InvoiceRateDiffSum = ProfitLossService.InvoiceRateDiff(
-                s.Rates.Where(r => inPeriod(r.Month)).Select(r => r.Rate)),
+            InvoiceRateDiffSum = ProfitLossService.PendingRateDiff(
+                s.Pending.Where(r => inPeriod(r.Month)).Select(r => r.Rate), 64m, 80m),
         };
         var r = ProfitLossService.Compute(input, 0, 0);
         return Shamsi.Money(Math.Round(Math.Abs(r.Net), 0, MidpointRounding.AwayFromZero)) + " افغانی"
@@ -205,8 +243,7 @@ internal static class ProfitStorageProbe
         Check($"ماهِ «{Shamsi.MonthLabel(s.M1)}»: فقط دادهٔ همان ماه", Shown(p) == Expected(s, m => m == s.M1),
               Shown(p) + " / " + Expected(s, m => m == s.M1));
         Check("و برچسبِ دوره همان ماه", p.PeriodText == Shamsi.MonthLabel(s.M1), p.PeriodText);
-        Check("فاکتورِ ساخته‌شده در ماهِ پیش و تاییدشده امروز، در همین ماه است",
-              s.Rates.Count(r => r.Month == s.M1) == 2);
+        Check("«از کجا آمد» شیفتِ ورقِ همین ماه را نشان می‌دهد", p.Sources.Count == 1, p.Sources.Count.ToString());
         Shot(win, shots, "01-profit-month");
 
         Pick(win, p, s.M0[..4], s.M0);
