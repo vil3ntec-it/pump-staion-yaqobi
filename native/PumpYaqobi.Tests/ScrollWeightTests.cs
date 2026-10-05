@@ -255,9 +255,12 @@ public class ScrollWeightTests : IDisposable
         Assert.DoesNotContain("ListAsync(null)", profit);
         Assert.DoesNotContain("ReportsAsync(", profit);
         Assert.DoesNotContain("Invoices.ListAsync(", profit);
-        Assert.Contains("ShiftSumsAsync(", profit);
+        //  ⛔ ۱۴۰۵/۰۷/۲۰: فایده از ورق‌ها و ضررِ نرخ از فاکتورهای در صف — هر دو
+        //  همچنان فقط ستون‌های لازم (‎SalesLinesAsync‎ · ‎PendingRatesAsync‎)، نه ردیفِ کامل.
+        Assert.Contains("SalesLinesAsync(", profit);
         Assert.Contains("SumAsync(e => e.Amount)", profit);
-        Assert.Contains("ApprovedRatesAsync()", profit);
+        Assert.Contains("PendingRatesAsync()", profit);
+        Assert.DoesNotContain("WaraqData.ListAsync(", profit);
 
         var storage = Read("PumpYaqobi.App", "ViewModels", "Sections", "StorageSectionViewModel.cs");
         Assert.DoesNotContain("ReportsAsync(", storage);

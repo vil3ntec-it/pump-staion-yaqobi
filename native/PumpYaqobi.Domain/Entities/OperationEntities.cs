@@ -400,6 +400,11 @@ public class Invoice : EntityBase
     public decimal? RateOnCreate { get; set; }
     /// <summary>نرخِ روزِ تایید — اختلافش با بالایی «زیانِ افزایشِ قیمت» است.</summary>
     public decimal? RateOnApprove { get; set; }
+    /// <summary>
+    /// «ضررِ نرخ دریافت شد» (۱۴۰۵/۰۷/۲۰) — فرقِ نرخِ روزِ گرفتن با نرخِ امروز از
+    /// خودِ مشتری گرفته شده، پس در مفاد و ضرر ضرر شمرده نمی‌شود.
+    /// </summary>
+    public bool RateDiffReceived { get; set; }
 
     /// <summary>حسابِ قرض‌داری که فاکتور رویش نشسته.</summary>
     [SyncParent(typeof(DebtAccount))]

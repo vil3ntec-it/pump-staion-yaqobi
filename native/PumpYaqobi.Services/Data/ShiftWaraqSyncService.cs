@@ -216,11 +216,15 @@ public sealed class ShiftWaraqSyncService
     /// می‌رفت؛ پس هر ردیفِ «فروش ورق» همین‌جا از نو ساخته می‌شود — با همان
     /// ‎SyncSalesToSafeAsync‎ که ذخیرهٔ هر ورق می‌زند، نه قاعدهٔ دوم.
     ///
+    /// ⛔ بارِ دوم (۱۴۰۵/۰۷/۲۰، مهرِ ‎v2‎): «منهای قرض و مصرف» — صاحب ریپو: «قبلن
+    /// همه رفته بودن اتومات اما منها نشدن… این اشتباه رو درست کن». دفترهایی که
+    /// مهرِ ‎v1‎ دارند هم یک بارِ دیگر از همین در می‌گذرند؛ ردیفِ منفی بردگی
+    /// می‌شود و ردیفی که ‎v1‎ (فروش ≤ قرض) پاک کرده بود دوباره ساخته می‌شود.
     /// ⛔ فقط ردیف‌های ‎wq-sales-*‎ دست می‌خورند؛ هیچ ورق، پایه، قرض یا حسابی نه.
     /// ⚠️ مهرش در جدولِ تنظیماتِ **همان دفتر** است (همگام نمی‌شود)، پس هر حساب
     /// و هر دفتر یک بار. نشد ⇒ مهر نمی‌خورد و بارِ بعد دوباره.
     /// </summary>
-    public const string NetSalesKey = "waraq.sales.net.v1";
+    public const string NetSalesKey = "waraq.sales.cash.v2";
 
     /// <summary>کارِ در جریانِ <see cref="StartFixOldSales"/> — سنجه‌ها منتظرش می‌مانند.</summary>
     public Task<int>? FixOldSalesTask { get; private set; }
@@ -436,19 +440,25 @@ public sealed class ShiftWaraqSyncService
             var sd = w.Shifts.FirstOrDefault(s => s.Kind == kind);
             if (sd is null) continue;
 
-            var sales = Math.Round(_waraq.ShiftTotals(sd).Net, 0, MidpointRounding.AwayFromZero);   // ⛔ منهای قرض‌ها
+            //  ⛔ فروش − قرض − مصرف (‎WaraqShiftTotals.Cash‎، ۱۴۰۵/۰۷/۲۰)
+            var cash = Math.Round(_waraq.ShiftTotals(sd).Cash, 0, MidpointRounding.AwayFromZero);
             var srcKey = SrcKeys.WaraqSales(w, kind);
             var row = await db.SafeEntries.FirstOrDefaultAsync(e => e.SrcKey == srcKey, ct);
 
-            if (sales <= 0m)
+            //  صفر ⇒ هیچ پولی جابه‌جا نشده ⇒ ردیفی نیست. ⛔ ولی منفی (مصرف و قرض
+            //  بیش از فروش) دیگر بی‌صدا پاک نمی‌شود: همان مقدار از گاوصندوق رفته
+            //  و یک ردیفِ «بردگی» است.
+            if (cash == 0m)
             {
                 if (row is not null) db.SafeEntries.Remove(row);
                 continue;
             }
+            var sales = Math.Abs(cash);
 
             var title = "📝 فروش ورق " + (w.DateShamsi ?? "") + " — "
                       + (kind == ShiftKind.Night ? "شب" : "روز")
-                      + (string.IsNullOrWhiteSpace(w.Station) ? "" : " (" + w.Station + ")");
+                      + (string.IsNullOrWhiteSpace(w.Station) ? "" : " (" + w.Station + ")")
+                      + (cash < 0m ? " — مصرف و قرض بیش از فروش" : "");
 
             var month = Shamsi.MonthKey(w.DateShamsi ?? "");
 
@@ -476,8 +486,8 @@ public sealed class ShiftWaraqSyncService
                     .FirstOrDefaultAsync(ct);
                 if (row is null) { row = new SafeEntry(); db.SafeEntries.Add(row); }
                 row.SrcKey = srcKey;
-                row.Kind = SafeEntryKind.Mandagi;
             }
+            row.Kind = cash < 0m ? SafeEntryKind.Bardagi : SafeEntryKind.Mandagi;
 
             row.Title = title;
             row.Amount = sales;

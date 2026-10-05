@@ -124,4 +124,91 @@ public class WaraqNetSalesTests : IDisposable
         Assert.Equal(0, await h.Sync.FixOldSalesOnceAsync());
         Assert.Equal(6000m, await SafeSales(h.Db));
     }
+
+    // ══ گاوصندوق = فروش − قرض − مصرف (۱۴۰۵/۰۷/۲۰) ════════════════════════════
+
+    private static async Task AddTxn(PumpDbFactory dbf, string name, decimal amount, WaraqTxnType type, int sort)
+    {
+        await using var db = dbf.Create();
+        var sd = await db.WaraqShifts.FirstAsync(s => s.Kind == ShiftKind.Day);
+        db.WaraqTransactions.Add(new WaraqTransaction
+        {
+            ShiftId = sd.Id, Name = name, Amount = amount, AmountAuto = false, Type = type, SortIndex = sort,
+        });
+        await db.SaveChangesAsync();
+    }
+
+    private static async Task<SafeEntry> SafeRow(PumpDbFactory dbf)
+    {
+        await using var db = dbf.Create();
+        return await db.SafeEntries.AsNoTracking().SingleAsync(e => e.SrcKey != null && e.SrcKey.StartsWith("wq-sales-"));
+    }
+
+    [Fact]
+    public void Gavsanduq_FurushMenhayeGharzVaMasraf_Ast()
+    {
+        var sd = new WaraqShift
+        {
+            Pumps = { new WaraqPump { Start = 0m, End = 100m, PricePerLiter = 60m } },
+            Transactions =
+            {
+                new WaraqTransaction { Name = "کریم", Amount = 2000m, AmountAuto = false, Type = WaraqTxnType.Debt },
+                new WaraqTransaction { Name = "نان", Amount = 300m, AmountAuto = false, Type = WaraqTxnType.Expense },
+            },
+        };
+        var t = new WaraqService().ShiftTotals(sd);
+        Assert.Equal(4000m, t.Net);            // کادرِ «جمله فروش» همان منهای قرض
+        Assert.Equal(3700m, t.Cash);           // ⛔ گاوصندوق: منهای مصرف هم
+    }
+
+    [Fact]
+    public async Task Gavsanduq_MasrafeVaraq_KamMishavad()
+    {
+        var h = Make();
+        var r = await h.Parcha.SaveShiftFlowAsync(new ShiftSaveRequest(FuelType.Petrol, ShiftKind.Day,
+            "1405/07/10", "کریم", 1, 0m, 100m, 60m, 0m, 0m, 0m, "", 20m, false));
+        Assert.True(r.Ok, r.Error);
+        var wid = await AddDebt(h.Db, 2000m);
+        await AddTxn(h.Db, "نان", 300m, WaraqTxnType.Expense, 10);
+        await h.Sync.ResyncSalesAsync(new[] { wid });
+        var row = await SafeRow(h.Db);
+        Assert.Equal(3700m, row.Amount);
+        Assert.Equal(SafeEntryKind.Mandagi, row.Kind);
+    }
+
+    [Fact]
+    public async Task MasrafBishAzForush_RadifPakNemishavad_BardagiMishavad()
+    {
+        var h = Make();
+        var r = await h.Parcha.SaveShiftFlowAsync(new ShiftSaveRequest(FuelType.Petrol, ShiftKind.Day,
+            "1405/07/10", "کریم", 1, 0m, 10m, 60m, 0m, 0m, 0m, "", 20m, false));
+        Assert.True(r.Ok, r.Error);
+        var wid = await AddDebt(h.Db, 500m);
+        await AddTxn(h.Db, "نان", 300m, WaraqTxnType.Expense, 10);
+        await h.Sync.ResyncSalesAsync(new[] { wid });
+        var row = await SafeRow(h.Db);
+        Assert.Equal(200m, row.Amount);                       // 600 − 500 − 300 = −200
+        Assert.Equal(SafeEntryKind.Bardagi, row.Kind);
+    }
+
+    [Fact]
+    public async Task TarmimeYekbare_DaftareMohreV1Dar_HamDobaraDorostMishavad()
+    {
+        var h = Make();
+        var r = await h.Parcha.SaveShiftFlowAsync(new ShiftSaveRequest(FuelType.Petrol, ShiftKind.Day,
+            "1405/07/10", "کریم", 1, 0m, 100m, 60m, 0m, 0m, 0m, "", 20m, false));
+        Assert.True(r.Ok, r.Error);
+        await AddDebt(h.Db, 2000m);
+        await AddTxn(h.Db, "نان", 300m, WaraqTxnType.Expense, 10);
+        await using (var db = h.Db.Create())
+        {
+            //  دفتری که ترمیمِ ۰۷/۱۸ (منهای قرض) را دیده و ردیفش 4000 است
+            db.Settings.Add(new Setting { Key = "waraq.sales.net.v1", Value = "1" });
+            (await db.SafeEntries.FirstAsync(e => e.SrcKey!.StartsWith("wq-sales-"))).Amount = 4000m;
+            await db.SaveChangesAsync();
+        }
+        Assert.Equal(1, await h.Sync.FixOldSalesOnceAsync());
+        Assert.Equal(3700m, (await SafeRow(h.Db)).Amount);
+        Assert.Equal(0, await h.Sync.FixOldSalesOnceAsync());   // فقط یک بار
+    }
 }

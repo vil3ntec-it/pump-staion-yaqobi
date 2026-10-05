@@ -17,6 +17,14 @@ public readonly record struct ProfitResult(decimal Income, decimal Expenses, dec
     public bool IsProfit => Net >= 0;
 }
 
+/// <summary>یک شیفتِ یک ورق در «از کجا آمد»ِ مفاد و ضرر — لیتر و پولِ هر تیل.</summary>
+public readonly record struct WaraqSaleLine(
+    string DateShamsi, int DateKey, ShiftKind Kind,
+    decimal PetrolLiters, decimal PetrolMoney, decimal DieselLiters, decimal DieselMoney);
+
+/// <summary>یک فاکتورِ در صف برای ضرر/مفادِ نرخ — فقط همان چهار ستون.</summary>
+public readonly record struct PendingRate(FuelType Fuel, decimal Liters, decimal RateOnCreate, int DateKey);
+
 /// <summary>ورودیِ محاسبهٔ مفاد/ضرر — همه‌اش فقط خوانده می‌شود.</summary>
 public sealed class ProfitInput
 {
@@ -44,6 +52,9 @@ public sealed class ProfitInput
     public decimal? ExpenseSum { get; init; }
     /// <summary>جمعِ مفادِ هر دو شیفتِ پارچه‌های پطرول.</summary>
     public decimal? ShiftProfitPetrol { get; init; }
+    /// <summary>⛔ ۱۴۰۵/۰۷/۲۰: پولِ لیترِ فروخته‌شدهٔ ورق‌ها — اگر هست، جای فایدهٔ پارچه می‌نشیند.</summary>
+    public decimal? WaraqSalesPetrol { get; init; }
+    public decimal? WaraqSalesDiesel { get; init; }
     /// <summary>جمعِ مفادِ هر دو شیفتِ پارچه‌های دیزل.</summary>
     public decimal? ShiftProfitDiesel { get; init; }
     /// <summary>
@@ -164,6 +175,27 @@ public sealed class ProfitLossService
         return (ra - rc) * v.Liters;
     }
 
+    /// <summary>
+    /// ══ ضرر/مفادِ نرخِ فاکتورهای <b>در صف</b> (۱۴۰۵/۰۷/۲۰) ══════════════════
+    /// صاحب ریپو: «فاکتورهایی که توی صف استن، روزی که گرفته بودی با نرخِ امروز
+    /// مقایسه بشه؛ اگه فرق داشت ضرر میشه، اگه نرخی که داده بودم بالا بود و نرخِ
+    /// امروز پایین فایده حساب بشه؛ اون‌هایی که تایید شدن جزِ این‌ها نشن؛ و یک
+    /// کادر که ضررها دریافت شد.» ⇒ مثبت = ضرر، منفی = مفاد (همان علامتِ
+    /// ‎InvoiceRateDiff‎). فاکتوری که «دریافت شد» خورده، پیش از این‌جا کنار رفته.
+    /// نرخِ امروزِ صفر یعنی «نمی‌دانیم» ⇒ آن تیل شمرده نمی‌شود.
+    /// </summary>
+    public static decimal PendingRateDiff(IEnumerable<PendingRate> rows, decimal todayPetrol, decimal todayDiesel)
+    {
+        decimal sum = 0;
+        foreach (var r in rows)
+        {
+            var now = r.Fuel == FuelType.Diesel ? todayDiesel : todayPetrol;
+            if (now <= 0 || r.RateOnCreate <= 0 || r.Liters <= 0) continue;
+            sum += (now - r.RateOnCreate) * r.Liters;
+        }
+        return sum;
+    }
+
     /// <summary>‎_plBreakdownData‎ — همان منبع‌ها، جدا‌جدا.</summary>
     public static ProfitBreakdown Breakdown(ProfitInput db)
     {
@@ -176,6 +208,8 @@ public sealed class ProfitLossService
         //  جمعِ از-پیش-خوانده جای پیمایشِ فهرست می‌نشیند (شرحش بالای ‎ProfitInput‎)
         if (db.ShiftProfitPetrol is { } sp) petrol = sp;
         if (db.ShiftProfitDiesel is { } sd) diesel = sd;
+        if (db.WaraqSalesPetrol is { } wp) petrol = wp;
+        if (db.WaraqSalesDiesel is { } wd) diesel = wd;
 
         decimal noinv = 0;
         foreach (var a in db.NoInvoiceAccounts)
