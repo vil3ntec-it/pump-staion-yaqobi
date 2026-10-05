@@ -26,12 +26,18 @@ on:
       - '.github/workflows/app-smoke.yml'
       - '.github/workflows/build-native.yml'
   workflow_dispatch:
+    inputs:
+      release:
+        description: 'برچسبِ انتشار (مثلاً v3.1.246) — خالی: ساختِ همین شاخه'
+        required: false
+        default: ''
 
 permissions:
   contents: read
 
 jobs:
   build:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.release == '' }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -76,8 +82,39 @@ jobs:
           path: rel/PumpYaqobi-Setup.exe
           retention-days: 3
 
+  # ── همان فایلی که مشتری دانلود می‌کند (۱۴۰۵/۰۷/۲۰) ──────────────────────────
+  #  صاحب ریپو: «نصاب می‌گوید فایل خراب است.» ساختِ PR فایلِ **خودش** را می‌سازد؛
+  #  این‌جا خودِ فایلِ منتشرشده از همان لینکِ دانلود گرفته می‌شود، با SHA256SUMS.txt
+  #  و مُهرش سنجیده می‌شود و همان مسیرِ ویزارد/باز شدن رویش می‌دود.
+  fetch:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.release != '' }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: دانلودِ نصابِ منتشرشده و سنجشِ هش و مُهر
+        shell: pwsh
+        env:
+          TAG: ${{ inputs.release }}
+        run: |
+          $base = "https://github.com/${{ github.repository }}/releases/download/$env:TAG"
+          New-Item -ItemType Directory -Force -Path rel | Out-Null
+          $ProgressPreference = 'SilentlyContinue'
+          Invoke-WebRequest "$base/PumpYaqobi-Setup.exe" -OutFile rel/PumpYaqobi-Setup.exe
+          Invoke-WebRequest "$base/SHA256SUMS.txt" -OutFile rel/SHA256SUMS.txt
+          $want = ((Get-Content rel/SHA256SUMS.txt) | Where-Object { $_ -match 'PumpYaqobi-Setup\.exe$' }) -split '\s+' | Select-Object -First 1
+          $got = (Get-FileHash rel/PumpYaqobi-Setup.exe -Algorithm SHA256).Hash.ToLower()
+          "اندازه: {0:N0} بایت · هش: $got" -f (Get-Item rel/PumpYaqobi-Setup.exe).Length
+          if ($got -ne $want.ToLower()) { throw "هشِ نصاب با SHA256SUMS.txt نمی‌خواند" }
+          & native/installer/seal.ps1 -Path rel/PumpYaqobi-Setup.exe -Check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: setup
+          path: rel/PumpYaqobi-Setup.exe
+          retention-days: 3
+
   smoke:
-    needs: build
+    needs: [build, fetch]
+    if: ${{ !cancelled() && (needs.build.result == 'success' || needs.fetch.result == 'success') }}
     strategy:
       fail-fast: false
       matrix:
