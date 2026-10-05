@@ -202,8 +202,13 @@ public class SheetsWidthsPrintTests
     [Fact]
     public void TarikhVaAdad_DoKhat_Nemishavand()
     {
+        //  ⚠️ از ۱۴۰۵/۰۷/۲۰ قاعدهٔ «خانهٔ کوتاهِ رقم‌دار یک خط است» به «هر خانه
+        //  یک خط است» رسید (‎DocStyle.Line‎) و رفتارش با بلندیِ واقعیِ هر خانه در
+        //  ‎PrintOneLineTests‎ سنجیده می‌شود. این‌جا فقط درِ آن قاعده قفل است.
         var s = Src("PumpYaqobi.Reporting/Pdf/DocStyle.cs");
-        Assert.Contains("Compact(text) ? cell.MaxHeight(CellSize * OneLine).ScaleToFit() : cell", s);
+        Assert.Contains("Line(cell, Tight(text), CellSize, Ink(color ?? CellFg), Weight.SemiBold);", s);
+        Assert.Contains("Line(Th(Probe(c, \"th\", text)), text, HeadSize, InkOn(HeadFg, HeadBg), Weight.Bold);", s);
+        Assert.Contains("Line(x, Tight(text), HeadSize, InkOn(HeadFg, HeadBg), Weight.Bold)", s);
     }
 
     [Fact]

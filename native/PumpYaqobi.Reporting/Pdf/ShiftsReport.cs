@@ -204,8 +204,8 @@ public sealed class ShiftsReport : ISetupDocument
         c.Border(1).BorderColor(DocStyle.Edge(Line)).Column(col =>
     {
         col.Item().Background(DocStyle.Paint(day ? DayBg : NightBg)).Padding(4).AlignCenter()
-           .Text(label).FontSize(DocStyle.BoxLabel).Bold()
-           .FontColor(DocStyle.Ink(day ? Amber : DocStyle.Blue));
+           .Element(x => DocStyle.Line(x, label, DocStyle.BoxLabel,
+                                       DocStyle.Ink(day ? Amber : DocStyle.Blue), DocStyle.Weight.Bold));
 
         if (s is null || string.IsNullOrWhiteSpace(s.Name))
         {
@@ -217,9 +217,10 @@ public sealed class ShiftsReport : ISetupDocument
         void Line2(string l, string v, string? color = null) =>
             col.Item().BorderTop(1).BorderColor(DocStyle.Edge(DocStyle.CellLine)).Padding(3).Row(r =>
             {
-                r.RelativeItem().Text(l).FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Ink(DocStyle.Sub));
-                r.RelativeItem().AlignLeft().Text(v)
-                 .FontSize(DocStyle.BoxLabel).Bold().FontColor(DocStyle.Ink(color ?? DocStyle.CellFg));
+                // ⛔ یک خط — نامِ بلندِ کارمند کارت را بلند نکند (۱۴۰۵/۰۷/۲۰)
+                r.RelativeItem().Element(x => DocStyle.Line(x, l, DocStyle.BoxLabel, DocStyle.Ink(DocStyle.Sub)));
+                r.RelativeItem().AlignLeft().Element(x => DocStyle.Line(x, v, DocStyle.BoxLabel,
+                    DocStyle.Ink(color ?? DocStyle.CellFg), DocStyle.Weight.Bold));
             });
 
         Line2("کارمند", s.Name + (s.PumpNum > 0 ? " (پایه #" + PersianText.Num(s.PumpNum) + ")" : ""));
@@ -237,23 +238,23 @@ public sealed class ShiftsReport : ISetupDocument
         }
         if (!string.IsNullOrWhiteSpace(s.Note))
             col.Item().BorderTop(1).BorderColor(DocStyle.Edge(DocStyle.CellLine)).Padding(3)
-               .Text("📝 " + s.Note).FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Ink(DocStyle.Sub));
+               .Element(x => DocStyle.Line(x, "📝 " + s.Note, DocStyle.BoxLabel, DocStyle.Ink(DocStyle.Sub)));
     });
 
     private void SumLine(IContainer c, string title, decimal sale, decimal money,
                          decimal profit, bool grand, string head) =>
         c.Border(grand ? 1.4f : 1).BorderColor(DocStyle.Edge(grand ? head : Line)).Padding(5).Row(row =>
     {
-        row.ConstantItem(120).Text(title)
-           .FontSize(DocStyle.BoxLabel).Bold().FontColor(DocStyle.Ink(grand ? head : DocStyle.Sub));
+        row.ConstantItem(120).Element(x => DocStyle.Line(x, title, DocStyle.BoxLabel,
+            DocStyle.Ink(grand ? head : DocStyle.Sub), DocStyle.Weight.Bold));
 
         void Cell(string l, string v, string color)
         {
             row.RelativeItem().Row(r =>
             {
                 r.AutoItem().Text(l).FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Ink(DocStyle.Sub));
-                r.RelativeItem().PaddingRight(4).Text(v)
-                 .FontSize(DocStyle.BoxLabel).Bold().FontColor(DocStyle.Ink(color));
+                r.RelativeItem().PaddingRight(4).Element(x => DocStyle.Line(x, v, DocStyle.BoxLabel,
+                    DocStyle.Ink(color), DocStyle.Weight.Bold));
             });
         }
 
