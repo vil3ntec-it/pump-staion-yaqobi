@@ -537,10 +537,13 @@ internal static class ParchaWaraqAudit
         Wait(win, safeList);
         var sales = safeList.Result
             .Where(e => (e.SrcKey ?? "").StartsWith("wq-sales-", StringComparison.Ordinal)).ToList();
+        //  ⛔ ۱۴۰۵/۰۷/۲۱: گاوصندوق = فروش − قرض − مصرف (‎Cash‎)؛ منفی ⇒ ردیفِ بردگی با همان مقدار
         var want = page.Shift is null ? 0m
-                 : Math.Round(host.Waraq.ShiftTotals(page.Shift).Net, 0, MidpointRounding.AwayFromZero);
+                 : Math.Round(host.Waraq.ShiftTotals(page.Shift).Cash, 0, MidpointRounding.AwayFromZero);
         Check("«جمله فروش»ِ همین شیفت خودش در گاوصندوق نشست",
-              want <= 0m ? sales.Count == 0 : sales.Any(e => e.Amount == want),
+              want == 0m ? sales.Count == 0
+              : sales.Any(e => e.Amount == Math.Abs(want)
+                            && e.Kind == (want < 0m ? SafeEntryKind.Bardagi : SafeEntryKind.Mandagi)),
               "فروش " + want + " · " + sales.Count + " ردیف");
 
         // ردیف پاک شود تا سنجش‌های بعدی روی دادهٔ تمیز بدوند
