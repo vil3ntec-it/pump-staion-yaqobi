@@ -244,6 +244,10 @@ public sealed partial class VipSectionViewModel : SectionViewModel
                 ? " · سرورِ حساب نپذیرفت"
                 : " · سرورِ حساب هم دید ✅"
             : " · سرورِ حساب هنوز ندیده (وقتی اینترنت و حساب بود، خودش می‌رود)";
+        //  ⛔ دلیلِ واقعیِ «سرور هنوز خدماتِ سرور را باز نکرده» (۱۴۰۵/۰۷/۲۱) — همان جمله‌ای
+        //  که همگام‌سازی هم می‌گوید، از یک جا (‎CloudLink.OfflineServerWhy‎)
+        if (c.Valid && CloudLink.OfflineServerWhy.Length > 0)
+            server = " · ⚠️ روی سرورِ حساب ننشسته — " + CloudLink.OfflineServerWhy;
         OfflineCurrent = c.Valid
             ? "🔑 " + c.PlanTitle + " · " + (c.Permanent ? "دائمی" : Shamsi.Money(c.DaysLeft(now)) + " روز مانده — تا "
                   + OfflineKey.Localize(c.EndsAt)) + server

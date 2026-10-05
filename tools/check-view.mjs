@@ -25,7 +25,7 @@ const ok = (c, m) => { if (!c) { bad++; console.error('  ✗ ' + m); } else cons
 // ── DOMِ کوچک ────────────────────────────────────────────────────────────────
 // فقط همان چند چیزی که صفحه به کار می‌برد. هر چیزِ بیشتری یعنی آزمونی که
 // خودش را می‌سنجد نه صفحه را.
-function makePage(hash, fetchImpl) {
+function makePage(hash, fetchImpl, extra) {
   const app = {
     innerHTML: '<div class="card"></div>',
     _click: null,
@@ -61,6 +61,7 @@ function makePage(hash, fetchImpl) {
   };
   // ‎fetch‎ فقط وقتی هست که آزمون بدهد — صفحهٔ بی‌‎fetch‎ باید بی‌صدا ایستا بماند.
   if (fetchImpl) ctx.fetch = fetchImpl;
+  if (extra) extra(ctx);
   ctx.window.document = ctx.document;
   vm.createContext(ctx);
 
@@ -342,6 +343,51 @@ console.log('\n۱۲) سه باگِ ۱۴۰۵/۰۷/۱۶');
      'زدنِ اعلان پنجرهٔ **همان** حساب را جلو می‌آورد، نه کیو‌آرِ دیگری');
   ok(/if \(chatMsgs\[k\]\.id === m\.id\) \{ chatMsgs\[k\] = m; had = true;/.test(html),
      'پیامِ فرستاده‌شده دوتا نمی‌شود اگر پرسشِ دوره‌ای زودتر آورده بود');
+}
+
+console.log('\n۱۳) «درجا» و آیفون (۱۴۰۵/۰۷/۲۱)');
+{
+  //  کیو‌آرِ زنده: تا صفحه جلوی چشم است زود می‌پرسد، صفحهٔ پنهان هیچ
+  const ticks = [];
+  let liveCalls = 0;
+  const pg = makePage(liveHash, async (url) => {
+    if (/\/acct\/d7\?k=/.test(String(url))) liveCalls++;
+    return okJson({ at: 1, d: snapV2, messages: [] });
+  }, (ctx) => {
+    ctx.setInterval = (fn, ms) => { ticks.push({ fn, ms }); return ticks.length; };
+    ctx.document.visibilityState = 'visible';
+  });
+  await settle();
+  const liveTick = ticks.find((t) => t.ms <= 20000);
+  ok(!!liveTick, 'تا صفحه جلوی چشم است، کیو‌آرِ زنده دست‌کم هر ۲۰ ثانیه می‌پرسد (بود هر ۶۰)');
+  if (liveTick) {
+    const before = liveCalls;
+    pg.ctx.document.visibilityState = 'hidden';
+    liveTick.fn(); await settle();
+    ok(liveCalls === before, 'صفحهٔ پنهان هیچ درخواستی نمی‌زند');
+    pg.ctx.document.visibilityState = 'visible';
+    liveTick.fn(); await settle();
+    ok(liveCalls === before + 1, 'صفحهٔ جلوی چشم همان دور می‌پرسد');
+  }
+
+  //  سافاریِ کهنه: ‎requestPermission‎ با callback و بی Promise ⇒ نباید استثنا بدهد
+  const html = readFileSync(new URL('../view/index.html', import.meta.url), 'utf8');
+  const fn = html.slice(html.indexOf('function askNotify'), html.indexOf('function b64key'));
+  let got = null, threw = false;
+  try {
+    const ask = new Function('Notification', fn + '; return askNotify;')({ requestPermission(cb) { cb('granted'); } });
+    got = await ask();
+  } catch (e) { threw = true; }
+  ok(!threw && got === 'granted', 'اجازهٔ اعلان در سافاریِ کهنه (callback، بی Promise) هم کار می‌کند');
+  let got2 = null;
+  try {
+    const ask2 = new Function('Notification', fn + '; return askNotify;')({ requestPermission() { return Promise.resolve('denied'); } });
+    got2 = await ask2();
+  } catch (e) { got2 = null; }
+  ok(got2 === 'denied', 'و در مرورگرِ امروزی (Promise) همان');
+  ok(!/Notification\.requestPermission\(\)\.then/.test(html), 'هیچ ‎requestPermission().then‎ِ بی‌پشتوانه‌ای در صفحه نمانده');
+  ok(/\.chat\{position:fixed;top:0;right:0;bottom:0;left:0;inset:0;/.test(html),
+     'قابِ چت در سافاریِ پیش از ۱۴٫۵ (بی ‎inset‎) هم تمام‌صفحه است');
 }
 
 console.log(bad === 0 ? '\n✅ صفحهٔ view/ سالم است\n' : `\n❌ ${bad} ایراد\n`);

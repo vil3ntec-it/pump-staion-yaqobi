@@ -191,7 +191,7 @@
   .live .lbtns{display:flex;gap:6px;flex-wrap:wrap}
   .live .n{background:var(--red);color:#fff;border-radius:999px;font-size:.7rem;padding:0 6px}
   .fab .n{background:var(--red);color:#fff;border-radius:999px;font-size:.72rem;padding:1px 7px;min-width:20px;text-align:center}
-  .chat{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column}
+  .chat{position:fixed;top:0;right:0;bottom:0;left:0;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column}
   .chat.hidden{display:none}
   .chat-head{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--card);
              border-bottom:1px solid var(--line)}
@@ -234,7 +234,7 @@
             box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer}
   .chat-rec{color:var(--red);font-size:.8rem;font-weight:800;white-space:nowrap}
   .chat-err{background:rgba(229,62,62,.12);color:var(--red);text-align:center;padding:6px;font-size:.8rem}
-  .chat-lb{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center}
+  .chat-lb{position:fixed;top:0;right:0;bottom:0;left:0;inset:0;z-index:60;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center}
   .chat-lb img{max-width:96vw;max-height:88vh;border-radius:8px}
   .chat-lb button{position:absolute;top:12px;right:12px;border:0;border-radius:999px;width:40px;height:40px;
                   background:#fff;color:#000;font-size:1.1rem;cursor:pointer}
@@ -628,6 +628,13 @@
   // صفحه.) اگر روزی ابر جای دیگری رفت، همین یک خط عوض می‌شود.
   var LIVE_API = 'https://api.vill3n.top';
   var LIVE_EVERY = 60 * 1000;
+  // ⛔ «درجا» (۱۴۰۵/۰۷/۲۱): تا صفحه جلوی چشم است هر ۱۵ ثانیه، و صفحهٔ پنهان هیچ
+  // (همان ‎visibilitychange‎ِ پایین سرِ برگشتن همان لحظه می‌پرسد). یک ‎SELECT‎ِ کوچک
+  // روی سرورِ حساب — و فقط برای گوشی‌ای که همین حالا نگاه می‌کند.
+  var LIVE_VISIBLE_EVERY = 15 * 1000;
+  function pageHidden() {
+    return typeof document !== 'undefined' && document.visibilityState === 'hidden';
+  }
 
   var live = null;                               // {s, a, k, t} یا null
   var liveAt = 0;                                // زمانِ عکسی که حالا روی صفحه است
@@ -722,7 +729,7 @@
     liveCheck();
     chatPull();
     if (typeof setInterval === 'function') setInterval(function () { if (!chatOpenNow) chatPull(); }, LIVE_EVERY);
-    if (typeof setInterval === 'function') setInterval(liveCheck, LIVE_EVERY);
+    if (typeof setInterval === 'function') setInterval(function () { if (!pageHidden()) liveCheck(); }, LIVE_VISIBLE_EVERY);
     // ⚠️ گوشی که از جیب درمی‌آید باید همان لحظه بپرسد، نه تا ۶۰ ثانیهٔ بعد.
     if (document.addEventListener) {
       document.addEventListener('visibilitychange', function () {
@@ -1169,6 +1176,18 @@
            Notification.permission !== 'denied';
   }
 
+  // ⛔ سافاریِ پیش از ۱۵ و وب‌ویوهای کهنه ‎requestPermission‎ را با callback دارند و
+  // هیچ Promiseی برنمی‌گردانند — ‎.then‎ روی ‎undefined‎ همان لحظه استثنا می‌داد و
+  // دکمه هیچ کاری نمی‌کرد (۱۴۰۵/۰۷/۲۱). هر دو شکل این‌جا یکی می‌شوند.
+  function askNotify() {
+    return new Promise(function (done) {
+      try {
+        var p = Notification.requestPermission(function (perm) { done(perm); });
+        if (p && typeof p.then === 'function') p.then(done, function () { done('default'); });
+      } catch (e) { done('default'); }
+    });
+  }
+
   function b64key(s) {
     var pad = '='.repeat((4 - s.length % 4) % 4);
     var raw = atob((s + pad).replace(/-/g, '+').replace(/_/g, '/'));
@@ -1179,7 +1198,7 @@
 
   function chatPush() {
     if (!canPush()) return;
-    Notification.requestPermission().then(function (perm) {
+    askNotify().then(function (perm) {
       if (perm !== 'granted') return;
       return navigator.serviceWorker.register('sw.js').then(function (reg) {
         return reg.pushManager.getSubscription().then(function (sub) {

@@ -257,6 +257,79 @@ public sealed partial class CloudLink
 
     private static DateTime _offlineNextTry = DateTime.MinValue;
 
+    // ══ کدِ بی‌اینترنت ⇄ خدماتِ سرورِ همان پمپ (۱۴۰۵/۰۷/۲۱) ═══════════════════
+    //
+    //  گزارشِ صاحب ریپو: سربرگ «VIP · ۳۵۷ روز · بدون ورود» و همگام‌سازی «۵۵۷ در
+    //  صف — این کار در پلنِ شما نیست (خدماتِ سرور)». برنامه از کدِ بی‌اینترنت
+    //  وی‌آی‌پی می‌دید و سرورِ حساب برای همان پمپ هیچ خدماتِ سروری نداشت —
+    //  پس همگام‌سازی، کیو‌آرِ زنده (‎files/acct-*‎) و چتِ مشتری همه بسته بودند.
+    //  سه جای این زنجیره بی‌صدا بود و هر سه این‌جا بسته شد:
+    //    ۱) ‎200 covered‎ «رسید» شمرده می‌شد، حتی وقتی پاسخ خدماتِ سرور نداشت؛
+    //    ۲) ‎plan_no_services‎ِ سرور هیچ‌وقت کد را دوباره به سرور نمی‌برد؛
+    //    ۳) دلیلِ واقعی (‎OfflineServerWhy‎) هیچ‌جا گفته نمی‌شد.
+
+    /// <summary>
+    /// چرا کدِ بی‌اینترنتِ همین کامپیوتر هنوز خدماتِ سرور را روی پمپ باز نکرده —
+    /// خالی یعنی «نشسته» یا «کدی نیست». فقط در حافظه؛ هر دورِ ‎RedeemOfflineAsync‎ نو می‌شود.
+    /// </summary>
+    public static string OfflineServerWhy { get; private set; } = "";
+
+    /// <summary>سرور «خدماتِ سرور نداری» گفت ⇒ کد یک بار دیگر برود (نه زودتر از این).</summary>
+    public static readonly TimeSpan OfflineRecheckGap = TimeSpan.FromMinutes(30);
+
+    private static bool _offlineRecheck;
+    private static DateTime _offlineRecheckAt = DateTime.MinValue;
+
+    /// <summary>برای آزمون: حالِ ایستای این بخش از نو.</summary>
+    public static void ResetOfflineServerState()
+    {
+        OfflineServerWhy = "";
+        _offlineRecheck = false;
+        _offlineRecheckAt = DateTime.MinValue;
+        _offlineNextTry = DateTime.MinValue;
+    }
+
+    /// <summary>
+    /// سرورِ حساب گفت این پمپ خدماتِ سرور ندارد (‎plan_no_services‎ / ‎subscription_required‎).
+    /// ⚡ فقط یک نشان؛ خودِ فرستادن در دورِ بعدِ ‎RedeemOfflineAsync‎ — و هر
+    /// <see cref="OfflineRecheckGap"/> دست‌بالا یک بار، پس هر ۴۰۳ِ همگام‌سازی سیلِ درخواست نمی‌سازد.
+    /// </summary>
+    internal static void NoteServicesDenied()
+    {
+        var now = AppClock.Mono;
+        if (now - _offlineRecheckAt < OfflineRecheckGap) return;
+        _offlineRecheckAt = now;
+        _offlineRecheck = true;
+        _offlineNextTry = DateTime.MinValue;
+    }
+
+    /// <summary>
+    /// جملهٔ «در صف — …» وقتی سرور ‎plan_no_services‎ داد. ⛔ اگر کدِ بی‌اینترنتِ همین
+    /// کامپیوتر خدماتِ سرور دارد، جملهٔ عمومیِ پلن دروغ است (سربرگ وی‌آی‌پی می‌گوید):
+    /// دلیلِ واقعی گفته می‌شود. بی چنین کدی، همان جملهٔ خودِ سرور.
+    /// </summary>
+    public string ServicesDeniedReason(string serverWhy)
+    {
+        var c = OfflineKey.Stored(_settings, LicenseClock.Now(_settings));
+        if (!OfflineKey.GivesServices(c, LicenseClock.Now(_settings))) return serverWhy;
+        var why = OfflineServerWhy.Length > 0
+            ? OfflineServerWhy
+            : "برنامه همین حالا کد را دوباره به سرورِ حساب می‌فرستد";
+        return $"کدِ بی‌اینترنتِ {c.PlanTitle} هنوز روی سرور ننشسته — دلیل: {why}";
+    }
+
+    /// <summary>کدِ ماشینیِ سرور ⇒ دلیلی که صاحبِ پمپ بفهمد و بداند چه کند.</summary>
+    internal static string OfflineWhyOf(string code, string why) => code switch
+    {
+        "account_mismatch" => "این کد برای حسابِ دیگری ساخته شده است — با همان حساب وارد شوید یا کدِ تازه بگیرید",
+        "code_used_elsewhere" => "این کد پیش از این روی پمپِ دیگری ثبت شده است — کدِ تازه بگیرید",
+        "computer_mismatch" => "این کد برای کامپیوترِ دیگری ساخته شده است",
+        "bad_offline_code" => "سرورِ حساب امضای این کد را نپذیرفت — کدِ تازه بگیرید",
+        "subscription_suspended" => "اشتراکِ این پمپ روی سرورِ حساب معلق است — با پشتیبانی تماس بگیرید",
+        "not_found" or "404" => "سرورِ حساب کهنه است و درِ کدِ بی‌اینترنت را ندارد — سرورِ حساب را به‌روز کنید",
+        _ => why.Length > 0 ? why : "به سرورِ حساب نرسید",
+    };
+
     /// <summary>
     /// ══ کدِ اشتراکِ آفلاین ⇒ سرورِ حساب ═════════════════════════════════════
     ///
@@ -276,17 +349,52 @@ public sealed partial class CloudLink
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(_settings.OfflineCode) || !Activated) return CloudResult.Done;
-            var chk = OfflineKey.Stored(_settings, LicenseClock.Now(_settings));
+            if (string.IsNullOrWhiteSpace(_settings.OfflineCode)) { OfflineServerWhy = ""; return CloudResult.Done; }
+            var nowMs = LicenseClock.Now(_settings);
+            var chk = OfflineKey.Stored(_settings, nowMs);
             if (!chk.Genuine) return CloudResult.Done;
+            var wantsServices = OfflineKey.GivesServices(chk, nowMs);
+            if (!Activated)
+            {
+                //  ⛔ بی بند شدن به پمپی، سرور جایی برای نشاندنِ این کد ندارد — گفته می‌شود، حدس زده نمی‌شود
+                OfflineServerWhy = wantsServices
+                    ? "این کامپیوتر هنوز به پمپی روی سرورِ حساب بند نیست — از «پروفایل» وارد حسابِ پمپ شوید"
+                    : "";
+                return CloudResult.Done;
+            }
             var mark = chk.Serial + "@" + _settings.CloudStationId;
-            if (_settings.OfflineCodeRedeemed.StartsWith(mark, StringComparison.Ordinal)) return CloudResult.Done;
+            if (_settings.OfflineCodeRedeemed.StartsWith(mark + "!", StringComparison.Ordinal))
+            {
+                //  ردِ قطعیِ سرور (حسابِ دیگر، پمپِ دیگر، …) — دوباره زدن جوابِ دیگری نمی‌گیرد
+                var failed = _settings.OfflineCodeRedeemed[(mark.Length + 1)..];
+                OfflineServerWhy = wantsServices ? OfflineWhyOf(failed, "") : "";
+                return CloudResult.Done;
+            }
+            //  ⛔ «رسید» فقط تا وقتی که سرور خلافش را نگفته: ‎plan_no_services‎ (‎NoteServicesDenied‎) ⇒ یک بار دیگر
+            if (_settings.OfflineCodeRedeemed == mark && !(_offlineRecheck && wantsServices)) return CloudResult.Done;
             if (AppClock.Mono < _offlineNextTry) return CloudResult.Done;
+            _offlineRecheck = false;
 
-            var (ok, _, why, code) = await DevPostAsync("/api/pump/device/offline-code",
+            var (ok, json, why, code) = await DevPostAsync("/api/pump/device/offline-code",
                 new { code = chk.Canonical, computer = OfflineKey.ComputerCode() }, ct);
+            if (ok && wantsServices && !ServicesIn(json))
+            {
+                //  ⛔ سرور کد را دید ولی خدماتِ سرور را روی پمپ باز نکرد (سرورِ حسابِ پیش از
+                //  ۲.۱۱.۲۵ اشتراکِ استانداردِ بلندتر را «covered» می‌شمرد). «رسید» نیست: نشان
+                //  نمی‌خورد، دلیل گفته می‌شود، و چند ساعت بعد — نه هر دقیقه — دوباره.
+                var status = Str(json, "status");
+                OfflineServerWhy = status == "expired"
+                    ? "سرورِ حساب مهلتِ این کد را تمام‌شده می‌بیند — تاریخ و ساعتِ این کامپیوتر را بسنجید"
+                    : "سرورِ حساب کد را دید ولی خدماتِ سرور را روی این پمپ باز نکرد ("
+                      + (status.Length > 0 ? status : "?") + ") — سرورِ حساب را به‌روز کنید یا با پشتیبانی تماس بگیرید";
+                if (_settings.OfflineCodeRedeemed == mark) { _settings.OfflineCodeRedeemed = ""; await _save(); }
+                _offlineNextTry = AppClock.Mono.AddHours(6);
+                await RefreshAsync(ct);
+                return CloudResult.No(OfflineServerWhy, "services_missing");
+            }
             if (!ok)
             {
+                OfflineServerWhy = wantsServices ? OfflineWhyOf(code, why) : "";
                 if (code == "code_revoked")
                 {
                     _settings.OfflineCode = "";
@@ -306,6 +414,7 @@ public sealed partial class CloudLink
                 return CloudResult.No(why, code);
             }
             _settings.OfflineCodeRedeemed = mark;
+            OfflineServerWhy = "";
             await _save();
             await RefreshAsync(ct);
             return CloudResult.Done;
@@ -315,6 +424,18 @@ public sealed partial class CloudLink
             _offlineNextTry = AppClock.Mono.AddMinutes(10);
             return CloudResult.No(ErrorText.Friendly(ex), "error");
         }
+    }
+
+    /// <summary>پاسخِ سرور دستِ‌کم یکی از خدماتِ سرور را دارد؟ (‎features‎ یا ‎entitlement.features‎)</summary>
+    private static bool ServicesIn(JsonElement json)
+    {
+        static bool Has(JsonElement arr) => arr.ValueKind == JsonValueKind.Array
+            && arr.EnumerateArray().Any(x => x.ValueKind == JsonValueKind.String
+                                             && Array.IndexOf(EntitlementState.OnlineKeys, x.GetString()) >= 0);
+        if (json.ValueKind != JsonValueKind.Object) return false;
+        if (json.TryGetProperty("features", out var f) && Has(f)) return true;
+        return json.TryGetProperty("entitlement", out var e) && e.ValueKind == JsonValueKind.Object
+               && e.TryGetProperty("features", out var ef) && Has(ef);
     }
 
     /// <summary>
