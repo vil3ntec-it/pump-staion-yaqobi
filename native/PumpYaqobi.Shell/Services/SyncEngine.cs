@@ -535,10 +535,13 @@ public sealed class SyncEngine : IAsyncDisposable
             {
                 _fails++;
                 _store.CountAttempt(batch.Select(x => x.OpId));
-                _store.Update(x => x.LastError = res.Why);
-                LastError = res.Why;
-                Set(SyncLight.Queued, "در صف — " + res.Why, pending);
-                if (priming) EndPrime(false, res.Why);
+                //  ⛔ ‎plan_no_services‎ با کدِ بی‌اینترنتِ وی‌آی‌پی روی همین کامپیوتر: جملهٔ
+                //  عمومیِ پلن دروغ است (سربرگ وی‌آی‌پی می‌گوید) ⇒ دلیلِ واقعی (۱۴۰۵/۰۷/۲۱)
+                var why = DeniedWhy(cloud, res.Code, res.Why);
+                _store.Update(x => x.LastError = why);
+                LastError = why;
+                Set(SyncLight.Queued, "در صف — " + why, pending);
+                if (priming) EndPrime(false, why);
                 return;
             }
             else
@@ -596,8 +599,11 @@ public sealed class SyncEngine : IAsyncDisposable
             if (!pull.Ok)
             {
                 _fails++;
-                LastError = pull.Why;
-                Set(SyncLight.Queued, "به سرورِ حساب نمی‌رسیم — " + pull.Why, Queued);
+                LastError = DeniedWhy(cloud, pull.Code, pull.Why);
+                //  ⚠️ ‎plan_no_services‎ یعنی رسیدیم و سرور نه گفت — «نمی‌رسیم» نیست
+                Set(SyncLight.Queued, pull.Code == "plan_no_services"
+                    ? "در صف — " + LastError
+                    : "به سرورِ حساب نمی‌رسیم — " + pull.Why, Queued);
                 //  ⛔ پرده می‌رود و دیگر برنمی‌گردد. حلقه خودش عقب‌نشینی
                 //  می‌کند و باز می‌کوشد؛ ولی کاربر نباید پشتِ یک پردهٔ
                 //  بی‌پایان بماند — برنامه آفلاین هم باید کار کند.
@@ -747,6 +753,10 @@ public sealed class SyncEngine : IAsyncDisposable
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch { /* یادِ محلی کافی است */ }
     }
+
+    /// <summary>دلیلِ ردِ سرور، با کدِ بی‌اینترنتِ همین کامپیوتر سنجیده (‎CloudLink.ServicesDeniedReason‎).</summary>
+    private static string DeniedWhy(CloudLink cloud, string code, string why) =>
+        code == "plan_no_services" ? cloud.ServicesDeniedReason(why) : why;
 
     private void Set(SyncLight light, string reason, int queued)
     {

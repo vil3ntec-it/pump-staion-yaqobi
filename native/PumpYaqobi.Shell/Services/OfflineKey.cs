@@ -81,6 +81,24 @@ public static class OfflineKey
         _ => Array.Empty<string>(),
     };
 
+    /// <summary>
+    /// این کد <b>همین حالا</b> خدماتِ سرور (همگام‌سازی، کیو‌آرِ زنده، چت، …) را هم
+    /// می‌دهد؟ — همان قاعدهٔ سرورِ حساب (‎offline-codes.planKeysOf‎): وی‌آی‌پی تا پایانش،
+    /// دائمی فقط سالِ اولِ پس از صدور، استاندارد هرگز.
+    /// </summary>
+    public static bool GivesServices(OfflineCheck c, long nowMs)
+    {
+        if (!c.Valid) return false;
+        if (c.Plan == "vip") return true;
+        if (c.Plan != "perm") return false;
+        try
+        {
+            var year = DateTimeOffset.FromUnixTimeMilliseconds(c.IssuedAt).AddYears(1).ToUnixTimeMilliseconds();
+            return nowMs < year;
+        }
+        catch { return false; }
+    }
+
     // ══ base32ِ کراکفورد ════════════════════════════════════════════════════
 
     public static string Encode(ReadOnlySpan<byte> buf)

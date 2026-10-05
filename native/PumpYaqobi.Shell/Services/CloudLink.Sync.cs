@@ -23,6 +23,9 @@ public sealed record SyncPushResult(bool Ok, int Applied, long Cursor,
     /// <summary>سرور بدنه را «بیش از حد بزرگ» (۴۱۳) رد کرد — تلاشِ دوباره هرگز نمی‌رسد.</summary>
     public bool TooLarge { get; init; }
 
+    /// <summary>کدِ ماشینیِ خطای سرور (مثلاً ‎plan_no_services‎) — خالی یعنی رفت.</summary>
+    public string Code { get; init; } = "";
+
     /// <summary>‎op_id ⇒ server_seq‎ِ همان op (شورا ب۱).</summary>
     public IReadOnlyDictionary<string, long> Seqs { get; init; } = new Dictionary<string, long>();
 }
@@ -33,6 +36,9 @@ public sealed record SyncPullResult(bool Ok, IReadOnlyList<IncomingOp> Ops, long
 {
     public static SyncPullResult No(string why) =>
         new(false, Array.Empty<IncomingOp>(), 0, false, why);
+
+    /// <summary>کدِ ماشینیِ خطای سرور — خالی یعنی رسید.</summary>
+    public string Code { get; init; } = "";
 }
 
 /// <summary>یک اعلانِ مدیر، همان‌طور که سرور می‌دهد.</summary>
@@ -154,8 +160,8 @@ public sealed partial class CloudLink
         if (!res.Ok)
         {
             //  سرور صریح گفته «برنامه جلوتر است»
-            if (res.Status == 426) return SyncPushResult.No(res.Why, upgradeRequired: true);
-            return SyncPushResult.No(res.Why) with { TooLarge = res.Status == 413 };
+            if (res.Status == 426) return SyncPushResult.No(res.Why, upgradeRequired: true) with { Code = res.Code };
+            return SyncPushResult.No(res.Why) with { TooLarge = res.Status == 413, Code = res.Code };
         }
 
         var map = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -229,7 +235,7 @@ public sealed partial class CloudLink
 
         var path = $"{SyncRoot}/pull?device_id={Uri.EscapeDataString(SyncDevice)}&since={since}&limit=500";
         var res = await SendSync(Build(HttpMethod.Get, path, null, token), ct);
-        if (!res.Ok) return SyncPullResult.No(res.Why);
+        if (!res.Ok) return SyncPullResult.No(res.Why) with { Code = res.Code };
 
         var ops = new List<IncomingOp>();
         if (res.Json.TryGetProperty("ops", out var arr) && arr.ValueKind == JsonValueKind.Array)

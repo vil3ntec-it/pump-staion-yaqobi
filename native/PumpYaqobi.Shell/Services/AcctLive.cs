@@ -244,10 +244,44 @@ public sealed class AcctLivePublisher
     /// یک دور. ‎homeSet‎ی ‎null‎ یعنی «سرورِ خانگی راهِ حساب‌ها را ندارد» (درِ
     /// قدیمی)، ‎cloudPut‎ی ‎null‎ یعنی «برنامه هنوز فعال نشده».
     /// </summary>
-    public async Task<int> PublishAsync(
+    public Task<int> PublishAsync(
         IReadOnlyList<AcctLive.Item> items,
         Func<string, object, CancellationToken, Task<bool>>? homeSet,
         Func<string, object, CancellationToken, Task<bool>>? cloudPut,
+        CancellationToken ct = default)
+        => PublishCodedAsync(items, homeSet,
+            cloudPut is null ? null : async (p, v, c) => await cloudPut(p, v, c) ? CloudPut.Sent : CloudPut.Failed, ct);
+
+    /// <summary>نتیجهٔ یک فرستادن به سرورِ حساب.</summary>
+    public enum CloudPut { Sent, Failed, Refused }
+
+    /// <summary>
+    /// چند حساب را سرورِ حساب <b>صریح رد کرد</b> (پلنِ این پمپ خدماتِ سرور ندارد) —
+    /// این‌ها «طلبکار» نیستند.
+    /// </summary>
+    public int CloudRefused => _cloudRefused.Count;
+
+    private readonly Dictionary<string, string> _cloudRefused = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// اشتراکِ این پمپ عوض شد ⇒ هر حساب دوباره به سرورِ حساب برود (رد‌شده‌ها هم).
+    /// </summary>
+    public void ForgetCloud() { _cloud.Clear(); _cloudRefused.Clear(); }
+
+    /// <summary>
+    /// همان دور، با پاسخِ سه‌حالته از سرورِ حساب.
+    ///
+    /// ⛔ <b>ردِ صریحِ سرور «طلبکار» نیست</b> (۱۴۰۵/۰۷/۲۱). سرورِ حسابی که ‎403
+    /// subscription_required‎ می‌دهد (پمپ خدماتِ سرور ندارد) با تلاشِ دوباره جوابِ دیگری
+    /// نمی‌دهد؛ ولی تا امروز همان ۴۰۳ ‎Pending‎ را بالا نگه می‌داشت و ترمزِ ‎Version‎ِ ناشر
+    /// (‎_accts.Pending == 0‎) هیچ‌وقت نمی‌گرفت — عکسِ کاملِ پمپ هر بیست برابرِ زمانِ ساختنش
+    /// از نو ساخته می‌شد، تا ابد. حالا ردشده تا عوض شدنِ همان حساب یا اشتراک (‎ForgetCloud‎)
+    /// دوباره زده نمی‌شود.
+    /// </summary>
+    public async Task<int> PublishCodedAsync(
+        IReadOnlyList<AcctLive.Item> items,
+        Func<string, object, CancellationToken, Task<bool>>? homeSet,
+        Func<string, object, CancellationToken, Task<CloudPut>>? cloudPut,
         CancellationToken ct = default)
     {
         var alive = new HashSet<string>(items.Select(i => i.Id), StringComparer.Ordinal);
@@ -255,6 +289,7 @@ public sealed class AcctLivePublisher
         // روزی برگشت دوباره فرستاده شود.
         foreach (var k in _home.Keys.Where(k => !alive.Contains(k)).ToList()) _home.Remove(k);
         foreach (var k in _cloud.Keys.Where(k => !alive.Contains(k)).ToList()) _cloud.Remove(k);
+        foreach (var k in _cloudRefused.Keys.Where(k => !alive.Contains(k)).ToList()) _cloudRefused.Remove(k);
 
         var sent = 0;
         var pending = 0;
@@ -262,14 +297,17 @@ public sealed class AcctLivePublisher
         //  رد می‌شود: سرورِ خاموش با مهلتِ هر درخواست × صدها حساب حلقهٔ ناشر را
         //  دقیقه‌ها نگه می‌داشت (نه عکسِ زنده، نه چراغ، نه پشتیبان). دورِ بعد
         //  دوباره امتحان می‌شود.
-        bool homeDown = false, cloudDown = false;
+        bool homeDown = false, cloudDown = false, cloudRefusedNow = false;
         foreach (var it in items)
         {
             ct.ThrowIfCancellationRequested();
             var hash = AcctLive.HashOf(it.Snap);
             var needHome = homeSet is not null && (!_home.TryGetValue(it.Id, out var h) || h != hash);
-            var needCloud = cloudPut is not null && (!_cloud.TryGetValue(it.Id, out var c) || c != hash);
+            var needCloud = cloudPut is not null && (!_cloud.TryGetValue(it.Id, out var c) || c != hash)
+                            && !(_cloudRefused.TryGetValue(it.Id, out var r) && r == hash);
             if (needHome && homeDown) { pending++; needHome = false; }
+            //  همان ردِ صریح برای بقیهٔ حساب‌های همین دور — همان پمپ، همان پلن
+            if (needCloud && cloudRefusedNow) { _cloudRefused[it.Id] = hash; needCloud = false; }
             if (needCloud && cloudDown) { pending++; needCloud = false; }
             if (!needHome && !needCloud) continue;
 
@@ -285,11 +323,13 @@ public sealed class AcctLivePublisher
             }
             if (needCloud)
             {
-                var ok = false;
-                try { ok = await cloudPut!(AcctLive.CloudPrefix + it.Id, env, ct); }
+                var res = CloudPut.Failed;
+                try { res = await cloudPut!(AcctLive.CloudPrefix + it.Id, env, ct); }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
                 catch { /* ابر نرسید یا مهلت تمام شد — دورِ بعد */ }
-                if (ok) { _cloud[it.Id] = hash; went = true; } else { pending++; cloudDown = true; }
+                if (res == CloudPut.Sent) { _cloud[it.Id] = hash; _cloudRefused.Remove(it.Id); went = true; }
+                else if (res == CloudPut.Refused) { _cloudRefused[it.Id] = hash; cloudRefusedNow = true; }
+                else { pending++; cloudDown = true; }
             }
             if (went) sent++;
         }

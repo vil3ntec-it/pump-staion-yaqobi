@@ -161,6 +161,9 @@ public sealed partial class CloudLink
             //  کدِ ماشینی: اگر سرور نداد، خودِ شمارهٔ HTTP. (`AuthAsync` از
             //  همین برای تشخیصِ «این راه روی سرور نیست» استفاده می‌کند.)
             if (code.Length == 0) code = status.ToString();
+            //  ⛔ سرور گفت «این پمپ خدماتِ سرور ندارد» ⇒ اگر کدِ بی‌اینترنتِ وی‌آی‌پی این‌جاست،
+            //  یک بار دیگر به سرور برود (‎CloudLink.License‎ ⇒ ‎NoteServicesDenied‎)
+            if (code is "plan_no_services" or "subscription_required") NoteServicesDenied();
             return new CloudReply(false, json, why, code, status);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)

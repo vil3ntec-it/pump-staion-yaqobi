@@ -2606,8 +2606,13 @@
       if (typeof Notification === 'undefined') return;
       // ⚠️ درخواستِ اجازه باید از دلِ یک کلیکِ واقعی بیاید، وگرنه مرورگر
       // بی‌صدا ردش می‌کند و کاربر فکر می‌کند خراب است.
+      // ⛔ سافاری/وب‌ویوی کهنه: ‎requestPermission‎ با callback و بی Promise — ‎.then‎ روی
+      // ‎undefined‎ استثنا بود و هیچ اتفاقی نمی‌افتاد (۱۴۰۵/۰۷/۲۱). هر دو شکل.
+      var once = false;
+      var after = function () { if (once) return; once = true; renderAlerts(); registerPush(true); };
       try {
-        Notification.requestPermission().then(function () { renderAlerts(); registerPush(true); });
+        var p = Notification.requestPermission(after);
+        if (p && typeof p.then === 'function') p.then(after, after);
       } catch (e) { }
       try { if (window.PumpAlerts && window.PumpAlerts.checkNow) window.PumpAlerts.checkNow(); } catch (e) { }
     });

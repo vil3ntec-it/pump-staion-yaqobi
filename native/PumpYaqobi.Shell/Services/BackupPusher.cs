@@ -153,7 +153,9 @@ public sealed class BackupPusher : IAsyncDisposable
         var file = _host.Backup.SnapshotToday();
         if (file is null || !File.Exists(file))
         {
-            LastError = "عکسِ پشتیبان گرفته نشد";
+            //  ⛔ دلیلِ واقعی (۱۴۰۵/۰۷/۲۱) — «گرفته نشد» به‌تنهایی هیچ کاری دستِ کاربر نمی‌داد
+            var why = _host.Backup.LastSnapshotError;
+            LastError = "عکسِ پشتیبان گرفته نشد" + (string.IsNullOrWhiteSpace(why) ? "" : " (" + why + ")");
             Warn();
             return false;
         }

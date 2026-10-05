@@ -212,6 +212,43 @@ public class AcctLiveTests
         Assert.Equal(5, pub.Pending);                                  // و همه طلبکار ماندند
     }
 
+    /// <summary>
+    /// ⛔ ردِ صریحِ سرورِ حساب (‎403 subscription_required‎ — پمپ خدماتِ سرور ندارد)
+    /// «طلبکار» نیست (۱۴۰۵/۰۷/۲۱). تا امروز همان رد ‎Pending‎ را بالا نگه می‌داشت و
+    /// ترمزِ ‎Version‎ِ ‎StationPublisher‎ هیچ‌وقت نمی‌گرفت — عکسِ کاملِ پمپ تا ابد از نو
+    /// ساخته می‌شد. و با عوض شدنِ اشتراک (‎ForgetCloud‎) همه همان دورِ بعد می‌روند.
+    /// </summary>
+    [Fact]
+    public async Task ARefusalIsNotPendingAndTheLicenseChangeSendsEverythingAgain()
+    {
+        var pub = new AcctLivePublisher();
+        var calls = 0;
+        var answer = AcctLivePublisher.CloudPut.Refused;
+        Task<AcctLivePublisher.CloudPut> Cloud(string p, object v, CancellationToken _) { calls++; return Task.FromResult(answer); }
+
+        var items = Enumerable.Range(1, 4).Select(i => new AcctLive.Item("d" + i, "k" + i, Snap("ن" + i))).ToList();
+        Assert.Equal(0, await pub.PublishCodedAsync(items, null, Cloud));
+        Assert.Equal(1, calls);                         // یک بار پرسیده شد
+        Assert.Equal(0, pub.Pending);                   // ⛔ و هیچ‌کدام طلبکار نیست
+        Assert.Equal(4, pub.CloudRefused);
+
+        //  دورِ بعد بی تغییر ⇒ صفر درخواست (همان ترمز)
+        Assert.Equal(0, await pub.PublishCodedAsync(items, null, Cloud));
+        Assert.Equal(1, calls);
+
+        //  کد روی سرور نشست ⇒ ‎ForgetCloud‎ ⇒ هر چهار حساب، بی هیچ ویرایشی
+        answer = AcctLivePublisher.CloudPut.Sent;
+        pub.ForgetCloud();
+        Assert.Equal(4, await pub.PublishCodedAsync(items, null, Cloud));
+        Assert.Equal(0, pub.CloudRefused);
+
+        //  شکستِ گذرا همچنان طلبکار است (رفتارِ پیشین)
+        answer = AcctLivePublisher.CloudPut.Failed;
+        items[0] = new("d1", "k1", Snap("ن1", 9));
+        await pub.PublishCodedAsync(items, null, Cloud);
+        Assert.Equal(1, pub.Pending);
+    }
+
     [Fact]
     public async Task NoHomeDoorMeansCloudOnlyAndTheOtherWayRound()
     {

@@ -122,7 +122,27 @@ public sealed class StationPublisher : IAsyncDisposable
     private readonly HashSet<string> _seenNotes = new(StringComparer.Ordinal);
 
     public StationPublisher(AppHost host, HomeSync sync, Func<string> stationCode)
-    { _host = host; _sync = sync; _stationCode = stationCode; }
+    {
+        _host = host; _sync = sync; _stationCode = stationCode;
+        CloudLink.LicenseChanged += OnLicenseChanged;
+    }
+
+    /// <summary>
+    /// اشتراکِ این پمپ عوض شد (مثلاً کدِ بی‌اینترنت همین حالا روی سرورِ حساب نشست) ⇒
+    /// حساب‌های کیو‌آردار که سرور ردشان کرده بود، همان دورِ بعد بروند — نه پس از ویرایشِ بعدی.
+    /// ⚡ فقط وقتی ردی در کار بوده؛ وگرنه هیچ کاری.
+    /// </summary>
+    private void OnLicenseChanged()
+    {
+        if (_accts.CloudRefused == 0 && !_cloudLiveRefused) return;
+        _accts.ForgetCloud();
+        _cloudLiveRefused = false;
+        _cloudLiveHash = "";
+        _lastAcctHash = "";
+        _lastVersion = -1;
+    }
+
+    private bool _cloudLiveRefused;
 
     /// <summary>پیامی از گوشی رسید.</summary>
     public event Action<StationNote>? NoteArrived;
@@ -229,7 +249,8 @@ public sealed class StationPublisher : IAsyncDisposable
                 //  ⛔ نسخهٔ سرورِ حساب زیرِ سقفِ خودِ سرور بریده می‌شود — شرحش بالای
                 //  ‎StationSnapshot.ForCloud‎. عکسِ سرورِ خانگی کامل می‌ماند.
                 var put = await link.PutFileAsync(CloudLiveFile, StationSnapshot.ForCloud(snap), ct);
-                if (put.Ok) { _cloudLiveHash = hash; _cloudLivePending = false; }
+                if (put.Ok) { _cloudLiveHash = hash; _cloudLivePending = false; _cloudLiveRefused = false; }
+                if (put.Code is "subscription_required" or "plan_no_services") _cloudLiveRefused = true;
                 //  اشتراک تمام شده یا فایل بیش از حد بزرگ است ⇒ تا عکس عوض نشده دوباره نزن
                 //  ⚠️ «بیش از حد بزرگ» دو کد دارد: سقفِ فایل (‎too_large‎) و سقفِ بدنهٔ
                 //  درخواست (‎body_too_large‎) — هر دو یعنی «تا عکس عوض نشده نزن».
@@ -459,15 +480,25 @@ public sealed class StationPublisher : IAsyncDisposable
                     ? (p, v, c) => _sync.SetAsync(p, v, c)
                     : null;
 
-            Func<string, object, CancellationToken, Task<bool>>? cloud = null;
+            Func<string, object, CancellationToken, Task<AcctLivePublisher.CloudPut>>? cloud = null;
             var file = AppSettings.Load();
             if (!string.IsNullOrWhiteSpace(file.CloudDeviceToken))
             {
                 var link = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
-                cloud = async (p, v, c) => (await link.PutFileAsync(p, v, c)).Ok;
+                cloud = async (p, v, c) =>
+                {
+                    var put = await link.PutFileAsync(p, v, c);
+                    //  ⛔ ردِ صریحِ سرور (پمپ خدماتِ سرور ندارد) طلبکار نیست — وگرنه ترمزِ
+                    //  ‎Version‎ هیچ‌وقت نمی‌گرفت و عکسِ کامل تا ابد از نو ساخته می‌شد. با
+                    //  عوض شدنِ اشتراک (‎CloudLink.LicenseChanged‎) دوباره می‌رود.
+                    return put.Ok ? AcctLivePublisher.CloudPut.Sent
+                        : put.Code is "subscription_required" or "plan_no_services"
+                            ? AcctLivePublisher.CloudPut.Refused
+                            : AcctLivePublisher.CloudPut.Failed;
+                };
             }
 
-            await _accts.PublishAsync(items, home, cloud, ct);
+            await _accts.PublishCodedAsync(items, home, cloud, ct);
         }
         catch (OperationCanceledException) { throw; }
         catch { /* پیش از ورود، یا سرورِ خاموش — دورِ بعد */ }
@@ -1053,6 +1084,7 @@ public sealed class StationPublisher : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        CloudLink.LicenseChanged -= OnLicenseChanged;
         var cts = _loop;
         _loop = null;
         if (cts is not null)
