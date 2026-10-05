@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
@@ -549,6 +550,41 @@ public class LicenseDeliveryTests : IDisposable
         Assert.Equal("dev-2", disk.CloudDeviceToken);
         Assert.True(LicenseGuard.CheckStored(disk).Valid);
         Assert.True(Entitlements.State(disk).Open);
+    }
+
+    /// <summary>
+    /// ⛔ <b>دو دورِ هم‌زمانِ ابر یک ثبت می‌زنند، نه دو</b> (۱۴۰۵/۰۷/۲۰، ‎live/linkstates‎
+    /// روی CI: «حلقه در دوازده دور حداکثر یک بار ثبت را امتحان کرد — 2»). حلقهٔ
+    /// پس‌زمینه و کلیکِ چراغ یا باز شدنِ پروفایل هر دو ‎CloudKeepAsync‎ را می‌زنند؛
+    /// هر دو پیش از آن‌که اولی ‎_lastBindFailAt‎ را بنویسد «وقتِ ثبت است» می‌دیدند و
+    /// دو ‎device/bind‎ می‌رفت — همان سقفِ نرخِ سرور که ترمزِ ده‌دقیقه‌ای برایش است.
+    /// </summary>
+    [Fact]
+    public async Task DoDoreHamzaman_YekSabt_Mizanand()
+    {
+        Bound(f => f.CloudDeviceToken = "");      // دستگاه از پنل جدا شده ⇒ وقتِ ثبت است
+        typeof(CloudLink).GetField("_lastBindFailAt", BindingFlags.NonPublic | BindingFlags.Static)!
+            .SetValue(null, DateTime.MinValue);
+        var binds = 0;
+        CloudLink.TestTransport = async (req, ct) =>
+        {
+            var path = req.RequestUri!.AbsolutePath;
+            lock (_hits) _hits.Add(path);
+            if (path == "/api/pump/device/bind")
+            {
+                Interlocked.Increment(ref binds);
+                await Task.Delay(400, ct);          // سرورِ کند ⇒ دو دور واقعاً روی هم می‌افتند
+                return Json(HttpStatusCode.Forbidden,
+                    """{"error":{"code":"device_revoked","message":"این کامپیوتر از پمپ جدا شده است"}}""");
+            }
+            return path == "/api/pump/me" ? Json(HttpStatusCode.OK, Me(true, Days(30))) : Json(HttpStatusCode.NotFound, "{}");
+        };
+        var keep = typeof(StationPublisher).GetMethod("CloudKeepAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
+        Task Run() => (Task)keep.Invoke(null, new object[] { CancellationToken.None, false })!;
+
+        await Task.WhenAll(Run(), Run());
+
+        Assert.Equal(1, binds);
     }
 
     /// <summary>
