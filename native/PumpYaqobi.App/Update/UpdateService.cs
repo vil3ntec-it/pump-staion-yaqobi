@@ -24,7 +24,7 @@ namespace PumpYaqobi.App.Update;
 public sealed record UpdateInfo(
     bool Available, string CurrentVersion, string LatestVersion,
     string? DownloadUrl, long SizeBytes, string? Notes, bool IsSmallPackage = false,
-    string Problem = "", string? SumsUrl = null)
+    string Problem = "", string? SumsUrl = null, bool IsTester = false)
 {
     /// <summary>بررسی به جایی نرسید — نه «به‌روز است» و نه «تازه‌ای هست».</summary>
     public bool Failed => Problem.Length > 0;
@@ -35,6 +35,7 @@ public sealed record UpdateInfo(
     /// </summary>
     public string StatusText =>
         Failed ? "❌ " + Problem
+        : Available && IsTester ? "🧪 نسخهٔ آزمایشی آماده است (فقط برای کامپیوترهای آزمایشیِ شما): " + LatestVersion
         : Available ? "نسخهٔ تازه آماده است: " + LatestVersion
         : "برنامه به‌روز است — نسخهٔ " + CurrentVersion;
 
@@ -209,12 +210,82 @@ public sealed class UpdateService
         HttpRequestMessage req, HttpCompletionOption how, CancellationToken ct)
     {
         var sent = PumpYaqobi.Domain.AppClock.MonoSource();
-        var res = TestTransport is null
-            ? await Http.SendAsync(req, how, ct)
-            : await TestTransport(req, ct);
+        //  🧪 هویتِ پمپ فقط به درِ به‌روزرسانیِ سرورِ خودمان، فقط https، و با
+        //  کلاینتی که تغییرِ مسیر را دنبال نمی‌کند — رمز هرگز به میزبانِ دیگر نمی‌رود.
+        var withStation = AttachStation(req);
+        var res = TestTransport is not null
+            ? await TestTransport(req, ct)
+            : withStation ? await ServerHttp.SendAsync(req, how, ct)
+            : await Http.SendAsync(req, how, ct);
         //  ⛔ ساعتِ واقعی از پاسخِ گیت‌هاب هم (سرآیندِ Date) — ‎TimeSync‎
         Services.TimeSync.From(req, res, sent);
         return res;
+    }
+
+    /// <summary>
+    /// ══ 🧪 کامپیوترهای آزمایشی (۱۴۰۵/۰۷/۲۱) ═════════════════════════════════
+    /// خواستهٔ صاحب سامانه: «نسخهٔ آزمایشی را دونه‌دونه دستی نصب می‌کنم؛ همین را
+    /// توی برنامه آپدیت بشه.» برنامه کدِ پمپ و **رمزِ برنامهٔ** همان پمپ در سرورِ
+    /// خانگی را همراهِ پرسشِ به‌روزرسانی می‌فرستد؛ اگر مدیر این پمپ را در پنل
+    /// «آزمایشی» تیک زده باشد، سرور تازه‌ترین نسخه را می‌دهد (<c>tester: true</c>)،
+    /// وگرنه همان پاسخِ همیشگی.
+    ///
+    /// ⛔ فقط به درِ به‌روزرسانیِ سرورِ خودمان (<see cref="ServerFeed"/>: همان طرح،
+    /// میزبان و درگاه، مسیرِ ‎/api/pump-updates/‎) و فقط https — نه گیت‌هاب و نه
+    /// هیچ جای دیگر. ⛔ رمز هیچ‌جا نوشته یا چاپ نمی‌شود.
+    /// ⛔ سنجشِ چک‌سام و امضا دست نخورد: نسخهٔ آزمایشی هم همان راه را می‌رود.
+    /// ⚠️ تزریق‌پذیر فقط برای آزمون.
+    /// </summary>
+    public static Func<(string Code, string Token)?> StationCredential { get; set; } = DefaultStation;
+
+    private static (string Code, string Token)? DefaultStation()
+    {
+        try
+        {
+            var s = Services.AppSettings.Load();
+            var code = s.StationCode.Trim();
+            var token = s.ServerToken.Trim();
+            return code.Length > 0 && token.Length > 0 ? (code, token) : null;
+        }
+        catch { return null; }
+    }
+
+    /// <summary>این نشانی درِ به‌روزرسانیِ سرورِ خودِ پمپ است؟ (خالص)</summary>
+    public static bool IsServerUpdateUrl(Uri? u)
+    {
+        var feed = ServerFeed();
+        if (u is null || !u.IsAbsoluteUri || string.IsNullOrEmpty(feed)
+            || !Uri.TryCreate(feed, UriKind.Absolute, out var f)) return false;
+        return u.Scheme == Uri.UriSchemeHttps
+            && f.Scheme == Uri.UriSchemeHttps
+            && string.IsNullOrEmpty(u.UserInfo)
+            && string.Equals(u.IdnHost, f.IdnHost, StringComparison.OrdinalIgnoreCase)
+            && u.Port == f.Port
+            && u.AbsolutePath.StartsWith("/api/pump-updates/", StringComparison.Ordinal);
+    }
+
+    /// <summary>سرآیندهای پمپ را می‌گذارد اگر و فقط اگر نشانی همان درِ سرور باشد.</summary>
+    public static bool AttachStation(HttpRequestMessage req)
+    {
+        if (!IsServerUpdateUrl(req.RequestUri)) return false;
+        var cred = StationCredential();
+        if (cred is not { } c || c.Code.Length == 0 || c.Token.Length == 0) return false;
+        req.Headers.Remove("X-Station-Code");
+        req.Headers.Remove("X-Station-Token");
+        req.Headers.TryAddWithoutValidation("X-Station-Code", c.Code);
+        req.Headers.TryAddWithoutValidation("X-Station-Token", c.Token);
+        return true;
+    }
+
+    /// <summary>کلاینتِ درخواست‌های رمزدار — بی دنبال کردنِ تغییرِ مسیر.</summary>
+    private static readonly HttpClient ServerHttp = CreateServerClient();
+
+    private static HttpClient CreateServerClient()
+    {
+        var c = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(25) };
+        c.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PumpYaqobi", AppVersion.Current));
+        c.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+        return c;
     }
 
     private static Task<HttpResponseMessage> GetAsync(string url, CancellationToken ct)
@@ -367,7 +438,9 @@ public sealed class UpdateService
             var notes = root.TryGetProperty("body", out var b) ? b.GetString() : null;
             var newer = Compare(latest, current) > 0;
             if (newer && url is null) return (null, "");   // انتشار فایلی ندارد — درِ دوم
-            return (new UpdateInfo(newer, current, latest, url, size, notes, small, "", sums), "");
+            //  🧪 فقط سرورِ خودمان این نشان را می‌گذارد (پمپِ آزمایشیِ مدیر)
+            var tester = root.TryGetProperty("tester", out var tt) && tt.ValueKind == JsonValueKind.True;
+            return (new UpdateInfo(newer, current, latest, url, size, notes, small, "", sums, tester), "");
         }
         catch (Exception e)
         {

@@ -37,12 +37,14 @@ public class UpdateBehaviourTests : IDisposable
         AppBase.LocalIdOverride = "abc12345";
         //  آزمون‌های گیت‌هاب‌ـمحورِ پایین مسیرِ «سرور نرسید» را می‌سنجند
         UpdateService.ServerFeed = () => null;
+        UpdateService.StationCredential = () => null;
     }
 
     public void Dispose()
     {
         UpdateService.TestTransport = null;
         UpdateService.ServerFeed = () => UpdateService.ServerFeedUrl;
+        UpdateService.StationCredential = () => null;
         UpdateService.TestStart = null;
         UpdateService.UpdateKeyOverride = null;
         AppBase.LocalIdOverride = null;
@@ -823,5 +825,119 @@ public class UpdateBehaviourTests : IDisposable
         //  ⛔ میزبانِ دیگر و http همچنان رد
         Assert.False(UpdateService.AllowedUrl("https://evil.example/api/pump-updates/files/1/x.exe"));
         Assert.False(UpdateService.AllowedUrl(CloudConfig.Url("/x").Replace("https://", "http://")));
+    }
+
+    // ══ 🧪 کامپیوترهای آزمایشی (۱۴۰۵/۰۷/۲۱) ═══════════════════════════════
+
+    private static string HeaderOf(HttpRequestMessage r, string name)
+        => r.Headers.TryGetValues(name, out var v) ? string.Join(",", v) : "";
+
+    [Fact]
+    public async Task Azmayeshi_HoviyatePompBeServerMiravadVaNoskheBaNeshanMiayad()
+    {
+        UpdateService.ServerFeed = () => Srv;
+        UpdateService.StationCredential = () => ("tst-a", "secret-token-1");
+        var seen = new List<(string Url, string Code, string Token)>();
+        UpdateService.TestTransport = (req, _) =>
+        {
+            seen.Add((req.RequestUri!.ToString(), HeaderOf(req, "X-Station-Code"), HeaderOf(req, "X-Station-Token")));
+            var json = ServerFeedJson("v99.9.9", LocalBase()).Replace("\"body\":", "\"tester\": true, \"body\":");
+            return Task.FromResult(Json(json));
+        };
+
+        var info = await new UpdateService().CheckAsync();
+
+        Assert.Single(seen);
+        Assert.Equal(("tst-a", "secret-token-1"), (seen[0].Code, seen[0].Token));
+        Assert.True(info.Available);
+        Assert.True(info.IsTester);
+        Assert.Contains("آزمایشی", info.StatusText);
+        Assert.StartsWith("🧪", AutoUpdate.OfferText(info));
+        Assert.Contains("99.9.9", AutoUpdate.OfferText(info));
+    }
+
+    [Fact]
+    public async Task Azmayeshi_BiNeshan_HamanJomleyeHamishegi()
+    {
+        UpdateService.ServerFeed = () => Srv;
+        UpdateService.StationCredential = () => ("tst-a", "secret-token-1");
+        UpdateService.TestTransport = (_, _) => Task.FromResult(Json(ServerFeedJson("v99.9.9", LocalBase())));
+
+        var info = await new UpdateService().CheckAsync();
+
+        Assert.True(info.Available);
+        Assert.False(info.IsTester);
+        Assert.Equal("نسخهٔ تازه آماده است: 99.9.9", info.StatusText);
+        Assert.DoesNotContain("آزمایشی", AutoUpdate.OfferText(info));
+    }
+
+    [Fact]
+    public async Task Azmayeshi_BiRamz_HichSarayandiNemiravad()
+    {
+        UpdateService.ServerFeed = () => Srv;
+        UpdateService.StationCredential = () => null;
+        var heads = new List<string>();
+        UpdateService.TestTransport = (req, _) =>
+        {
+            heads.Add(HeaderOf(req, "X-Station-Code") + HeaderOf(req, "X-Station-Token"));
+            return Task.FromResult(Json(ServerFeedJson("v99.9.9", LocalBase())));
+        };
+        await new UpdateService().CheckAsync();
+        Assert.All(heads, h => Assert.Equal("", h));
+    }
+
+    [Fact]
+    public async Task Azmayeshi_RamzHargezBeGithubNemiravad()
+    {
+        //  ⛔ سرور نیست (یا ۴۰۴ داد) ⇒ گیت‌هاب — و آن‌جا هیچ هویتی
+        UpdateService.ServerFeed = () => Srv;
+        UpdateService.StationCredential = () => ("tst-a", "secret-token-1");
+        var seen = new List<(string Url, string Code)>();
+        UpdateService.TestTransport = (req, _) =>
+        {
+            var url = req.RequestUri!.ToString();
+            seen.Add((url, HeaderOf(req, "X-Station-Code") + HeaderOf(req, "X-Station-Token")));
+            if (url == Srv) return Task.FromResult(Json("""{"error":"not_found"}""", HttpStatusCode.NotFound));
+            return Task.FromResult(Json(Feed("v99.9.9", LocalBase())));
+        };
+
+        var info = await new UpdateService().CheckAsync();
+
+        Assert.True(info.Available);
+        Assert.False(info.IsTester);
+        Assert.Contains(seen, x => x.Url != Srv);
+        Assert.All(seen.Where(x => x.Url != Srv), x => Assert.Equal("", x.Code));
+    }
+
+    [Theory]
+    [InlineData("https://pump-server.test/api/pump-updates/files/9.9.9/PumpYaqobi-Setup.exe", true)]
+    [InlineData("https://pump-server.test/api/pump-updates/files/9.9.9/SHA256SUMS.txt", true)]
+    [InlineData("http://pump-server.test/api/pump-updates/files/9.9.9/PumpYaqobi-Setup.exe", false)]
+    [InlineData("https://pump-server.test:8443/api/pump-updates/latest", false)]
+    [InlineData("https://evil.example/api/pump-updates/latest", false)]
+    [InlineData("https://pump-server.test.evil.example/api/pump-updates/latest", false)]
+    [InlineData("https://pump-server.test/api/stations/x/live", false)]
+    [InlineData("https://u:p@pump-server.test/api/pump-updates/latest", false)]
+    [InlineData("https://github.com/x/releases/download/a/PumpYaqobi-Setup.exe", false)]
+    public void Azmayeshi_SarayandFaghatBeDareServer(string url, bool attached)
+    {
+        UpdateService.ServerFeed = () => Srv;
+        UpdateService.StationCredential = () => ("tst-a", "secret-token-1");
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        Assert.Equal(attached, UpdateService.AttachStation(req));
+        Assert.Equal(attached ? "secret-token-1" : "", HeaderOf(req, "X-Station-Token"));
+    }
+
+    [Fact]
+    public void Azmayeshi_ServerHttpNabashad_HichSarayandi()
+    {
+        //  ⛔ سرورِ تزریق‌شدهٔ http (یا نبودِ سرور) هرگز رمز نمی‌گیرد
+        UpdateService.StationCredential = () => ("tst-a", "secret-token-1");
+        UpdateService.ServerFeed = () => "http://pump-server.test/api/pump-updates/latest";
+        using var a = new HttpRequestMessage(HttpMethod.Get, "http://pump-server.test/api/pump-updates/latest");
+        Assert.False(UpdateService.AttachStation(a));
+        UpdateService.ServerFeed = () => null;
+        using var b = new HttpRequestMessage(HttpMethod.Get, Srv);
+        Assert.False(UpdateService.AttachStation(b));
     }
 }
