@@ -255,9 +255,11 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         return false;
     }
 
-    private async Task RestoreFromAsync(string path, string what)
+    private async Task RestoreFromAsync(string path, string what, bool ownCloud = false)
     {
-        if (!RestoreAllowed()) return;
+        //  ⛔ بکاپِ خودِ همین حساب از سرورِ حساب از درِ اشتراک رد نمی‌شود — شرحش در
+        //  ‎PermissionService.TrustOwnCloudBackup‎.
+        if (!ownCloud && !RestoreAllowed()) return;
         //  ⛔ پشتیبانِ رمزشده (‎.pyq‎) اول در یک فایلِ موقت باز می‌شود و همان راهِ
         //  همیشگی رویش می‌رود (سنجش، پرسش، عکسِ ایمنی). پس از کار پاک می‌شود.
         string? temp = null;
@@ -270,11 +272,11 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
                 return;
             }
         }
-        try { await RestorePlainAsync(temp ?? path, what); }
+        try { await RestorePlainAsync(temp ?? path, what, ownCloud); }
         finally { if (temp is not null) try { File.Delete(temp); } catch { } }
     }
 
-    private async Task RestorePlainAsync(string path, string what)
+    private async Task RestorePlainAsync(string path, string what, bool ownCloud = false)
     {
         var records = BackupService.Inspect(path);
         if (records < 0)
@@ -298,7 +300,11 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         RestoreOutcome outcome;
         //  ⛔ همگام‌سازی تا پایانِ جایگزینی می‌ایستد — هیچ اتصالی به دفتر باز نماند
         using var paused = _host.SyncIfStarted is { } se ? await se.PauseAsync() : null;
-        try { outcome = await Task.Run(() => _host.Backup.Restore(path)); }
+        try
+        {
+            using var trust = ownCloud ? PermissionService.TrustOwnCloudBackup() : null;
+            outcome = await Task.Run(() => _host.Backup.Restore(path));
+        }
         catch (PermissionDeniedException pd)
         {
             _host.Toast(pd.Reason.Length > 0 ? pd.Reason : "❌ بازگردانی فقط از مدیر برمی‌آید", ToastKind.Error);
@@ -561,7 +567,8 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             //  ⛔ روی نخِ دیگر (۱۴۰۵/۰۷/۱۶): ‎VACUUM INTO‎ِ کلِ دفتر پیش از نخستین ‎await‎ِ واقعی
             //  روی نخِ رابط می‌دوید و پنجره چند ثانیه «پاسخ نمی‌داد».
             var ok = await Task.Run(() => pusher.RunOnceAsync(manual: true));
-            (ServerStatus, ServerStatusBrushKey) = ServerResult(ok, pusher.LastHomeOk, pusher.LastCloudOk, pusher.LastError);
+            (ServerStatus, ServerStatusBrushKey) = ServerResult(ok, pusher.LastHomeOk, pusher.LastCloudOk, pusher.LastError,
+                                                                pusher.LastHomeWhy, pusher.LastCloudWhy);
             _host.Toast(ServerStatus, ok ? ToastKind.Ok : ToastKind.Error);
         }
         catch (Exception ex)
@@ -574,12 +581,16 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
     }
 
     /// <summary>جملهٔ نتیجه — هر مقصد جدا گفته می‌شود، راست.</summary>
-    public static (string Text, string Brush) ServerResult(bool ok, bool home, bool cloud, string why)
+    public static (string Text, string Brush) ServerResult(bool ok, bool home, bool cloud, string why,
+                                                           string homeWhy = "", string cloudWhy = "")
     {
         var at = AppClock.Now.ToString("HH:mm");
+        static string Because(string w) => string.IsNullOrWhiteSpace(w) ? "" : " (" + w + ")";
         if (home && cloud) return ($"✅ ساعتِ {at} روی سرورِ خانگی و سرورِ حساب نشست", "Pump.Ok");
-        if (home) return ($"✅ ساعتِ {at} روی سرورِ خانگی نشست · سرورِ حساب نه", "Pump.Ok");
-        if (cloud) return ($"✅ ساعتِ {at} روی سرورِ حساب نشست · سرورِ خانگی نه", "Pump.Ok");
+        //  ⛔ نیمه‌رفته زرد است، نه سبز (۱۴۰۵/۰۷/۲۰): بکاپی که فقط روی سرورِ خانگیِ
+        //  همان پمپ است با کامپیوترِ دیگر یا نصبِ دوباره برنمی‌گردد.
+        if (home) return ($"⚠️ ساعتِ {at} فقط روی سرورِ خانگی نشست · سرورِ حساب نه{Because(cloudWhy)}", "Pump.Warn");
+        if (cloud) return ($"✅ ساعتِ {at} روی سرورِ حساب نشست · سرورِ خانگی نه{Because(homeWhy)}", "Pump.Ok");
         return ("❌ به هیچ سروری نرسید" + (string.IsNullOrWhiteSpace(why) ? "" : " — " + why)
                 + " · بکاپِ روی همین کامپیوتر سالم است", "Pump.Danger");
     }

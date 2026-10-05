@@ -111,9 +111,36 @@ public sealed class PermissionService
     /// </summary>
     public void RequireRestore(Permission p = Permission.Restore)
     {
+        //  ⛔ بکاپِ <b>خودِ همین حساب</b> از سرورِ حساب (۱۴۰۵/۰۷/۲۰): نه درِ اشتراک،
+        //  نه قفلِ فقط‌خواندنی — فقط نقش. سوءاستفادهٔ «یک بکاپ، ده حساب» این‌جا
+        //  نیست: سرور با توکنِ دستگاهِ همین پمپ فقط بکاپِ همین پمپ را می‌دهد.
+        //  بی این، کسی که برنامه را از نو نصب کرده دادهٔ خودش را پس نمی‌گرفت.
+        if (_ownCloud.Value)
+        {
+            if (!(Map.TryGetValue(_session.Role, out var set) && set.Contains(p)))
+                throw new PermissionDeniedException(p);
+            return;
+        }
         Require(p);
         if ((RestoreGate ?? RestoreGateHook)?.Invoke() is { Length: > 0 } why)
             throw new PermissionDeniedException(p, why);
+    }
+
+    private static readonly AsyncLocal<bool> _ownCloud = new();
+
+    /// <summary>
+    /// تنها درِ «بکاپِ خودِ همین حساب از سرور»: فقط پس از گرفتنِ فایل با توکنِ
+    /// دستگاهِ همین پمپ و خواندنِ هشِ سرور. <c>using</c> تا پایانِ همان بازگردانی.
+    /// </summary>
+    public static IDisposable TrustOwnCloudBackup()
+    {
+        _ownCloud.Value = true;
+        return new Scope();
+    }
+
+    private sealed class Scope : IDisposable
+    {
+        public void Dispose() => _ownCloud.Value = false;
     }
 
     /// <summary>این اجازه «نوشتن» است؟</summary>

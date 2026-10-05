@@ -117,6 +117,8 @@ public sealed class SyncEngine : IAsyncDisposable
     private readonly List<IncomingOp> _deferred = new();
     private readonly Dictionary<string, int> _deferTries = new(StringComparer.Ordinal);
     public const int DeferMaxTries = 20;
+    /// <summary>کنارگذاشته‌ها مالِ کدام دفترند — دفترِ دیگر یعنی از دیسکِ همان دفتر.</summary>
+    private string _deferredLedger = "";
     private DateTime _lastBeat = DateTime.MinValue;
     private readonly HashSet<string> _toldNotices = new(StringComparer.Ordinal);
 
@@ -423,7 +425,7 @@ public sealed class SyncEngine : IAsyncDisposable
         //  جابه‌جا که شد، همین دور رها می‌شود و دورِ بعد روی دفترِ درست
         //  از نو شروع می‌کند.
         var mine = (file.CloudUserId ?? "").Trim();
-        if (_host.UseLedgerOf(mine)) { _lastVersion = -1; _deferred.Clear(); _deferTries.Clear(); Nudge(); return; }
+        if (_host.UseLedgerOf(mine)) { _lastVersion = -1; _deferred.Clear(); _deferTries.Clear(); _deferredLedger = ""; Nudge(); return; }
 
         //  ⛔ دفتر ممکن است <b>وسطِ همین دور</b> عوض شود (ورودِ حسابِ دیگر روی
         //  نخِ رابط، در حالی که این‌جا منتظرِ شبکه‌ایم). پس از هر ‎await‎ پیش از
@@ -442,7 +444,7 @@ public sealed class SyncEngine : IAsyncDisposable
             state = _store.State();
             if (bind.Rebound)
             {
-                _deferred.Clear(); _deferTries.Clear();
+                _deferred.Clear(); _deferTries.Clear(); _deferredLedger = "";
                 //  ⚠️ همین‌جا می‌ایستیم و دورِ بعد را همین حالا صدا می‌زنیم:
                 //  وگرنه پیام در همین دور با پیامِ «بارِ اول» عوض می‌شد و
                 //  کاربر هیچ‌وقت نمی‌فهمید چرا کلِ دفترش دوباره می‌رود.
@@ -470,7 +472,8 @@ public sealed class SyncEngine : IAsyncDisposable
         if (priming) _primeRun = true;
 
         // ── ۱) بارِ اول: ردیف‌هایی که پیش از این نسخه ساخته شده‌اند ──────
-        if (state.SeededAt == 0)
+        //  ⚠️ و یک بار «بذرِ ترمیم» برای دفتری که پیش از ۱۴۰۵/۰۷/۲۰ بذر شده بود
+        if (state.SeededAt == 0 || state.RepairSeed < SyncStore.RepairVersion)
         {
             var step = _store.SeedStep();
             if (!step.Done)
@@ -593,6 +596,13 @@ public sealed class SyncEngine : IAsyncDisposable
 
             _fails = 0;
             var applyWhy = "";
+            //  ⛔ کنارگذاشته‌ها روی دیسک‌اند (۱۴۰۵/۰۷/۲۰): بستنِ برنامه گمشان نمی‌کند
+            if (!string.Equals(_deferredLedger, ledger, StringComparison.Ordinal))
+            {
+                _deferred.Clear(); _deferTries.Clear(); _deferredLedger = "";
+                _deferred.AddRange(_store.LoadDeferred());
+                _deferredLedger = ledger;
+            }
             if (pull.Ops.Count > 0 || _deferred.Count > 0)
             {
                 //  کنارگذاشته‌های دورِ قبل اول (قدیمی‌ترند)، بعد رسیده‌های تازه
@@ -603,7 +613,9 @@ public sealed class SyncEngine : IAsyncDisposable
                 foreach (var op in applied.FailedOps)
                 {
                     var key = op.OpId + "|" + op.RowUid;
-                    var tries = _deferTries.GetValueOrDefault(key) + 1;
+                    //  ⛔ تا سرور هنوز صفحهٔ بعد دارد، پدر شاید همان‌جاست — شمرده نمی‌شود.
+                    //  پیش از این بیست صفحه (۱۰٬۰۰۰ op) که می‌گذشت دور ریخته می‌شد.
+                    var tries = _deferTries.GetValueOrDefault(key) + (pull.HasMore ? 0 : 1);
                     if (tries >= DeferMaxTries) { _deferTries.Remove(key); continue; }
                     _deferTries[key] = tries;
                     _deferred.Add(op);
@@ -643,6 +655,7 @@ public sealed class SyncEngine : IAsyncDisposable
             _store.Update(x =>
             {
                 x.Cursor = pull.Cursor;
+                x.DeferredJson = SyncStore.DeferredText(_deferred);
                 x.LastPullAt = AppClock.UnixMs;
                 x.LastOkAt = AppClock.UnixMs;
                 x.LastError = applyWhy;

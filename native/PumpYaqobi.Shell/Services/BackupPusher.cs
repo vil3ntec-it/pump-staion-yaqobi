@@ -116,9 +116,27 @@ public sealed class BackupPusher : IAsyncDisposable
     /// <summary>دورِ آخر به سرورِ حساب رسید؟</summary>
     public bool LastCloudOk { get; private set; }
 
+    /// <summary>چرا دورِ آخر به سرورِ خانگی نرسید — خالی یعنی رسید یا تنظیم نیست.</summary>
+    public string LastHomeWhy { get; private set; } = "";
+
+    /// <summary>چرا دورِ آخر به سرورِ حساب نرسید — خالی یعنی رسید.</summary>
+    public string LastCloudWhy { get; private set; } = "";
+
+    /// <summary>
+    /// ⛔ <b>دفترِ خالی هرگز فرستاده نمی‌شود</b> (۱۴۰۵/۰۷/۲۰). کامپیوترِ تازه یا نصبِ
+    /// دوباره ۴۵ ثانیه پس از ورود دفترِ <b>خالیِ</b> خودش را می‌فرستاد و هر شش ساعت
+    /// دوباره؛ سرورِ حساب فقط تازه‌ترین‌ها را نگه می‌دارد، پس بکاپِ خالی «تازه‌ترین»
+    /// می‌شد و بکاپ‌های واقعی از ته پاک می‌شدند. خالص و آزمون‌دار.
+    /// </summary>
+    public static string? SkipReason(int records) =>
+        records < 0 ? "عکسِ پشتیبان خوانده نشد"
+        : records == 0 ? "دفتر خالی است — بکاپِ خالی فرستاده نمی‌شود تا جای بکاپ‌های قبلیِ روی سرور را نگیرد"
+        : null;
+
     private async Task<bool> RunCoreAsync(bool manual, CancellationToken ct)
     {
         LastHomeOk = LastCloudOk = false;
+        LastHomeWhy = LastCloudWhy = "";
         // ══ قفلِ اشتراک ═══════════════════════════════════════════════════
         //  بک‌اپِ خودکارِ روی سرور با اشتراک است. ⚠️ بک‌اپِ **محلی** هرگز قفل
         //  نمی‌شود — نه این‌جا نه جای دیگر: دادهٔ کاربر مالِ خودش است و
@@ -140,8 +158,18 @@ public sealed class BackupPusher : IAsyncDisposable
             return false;
         }
 
+        var records = PumpYaqobi.Services.Data.BackupService.Inspect(file);
+        if (SkipReason(records) is { } skip)
+        {
+            LastError = skip;
+            //  ⚠️ هشدارِ «نرفته» نه: نرفتنِ دفترِ خالی خرابی نیست.
+            WarningText = "";
+            return false;
+        }
+
         var sent = await SendAsync(file, ct);
         LastHomeOk = sent;
+        if (!sent) LastHomeWhy = LastError;
 
         /*
          *  ══ و همان فایل، روی ابر ═════════════════════════════════════
@@ -160,15 +188,15 @@ public sealed class BackupPusher : IAsyncDisposable
          *  خانگی‌اش را راه نینداخته، نباید هر شش ساعت هشدارِ «پشتیبان
          *  نرفته» ببیند در حالی که نسخه‌اش روی ابر سالم نشسته.
          */
-        var toCloud = await SendToCloudAsync(file, manual, ct);
+        var toCloud = await SendToCloudAsync(file, manual, records, ct);
         LastCloudOk = toCloud;
 
         if (sent || toCloud)
         {
             LastSentAt = AppClock.Now;
             LastError = sent && toCloud ? ""
-                : sent ? "روی سرورِ حساب ننشست — فقط سرورِ خانگی"
-                : "روی سرورِ خانگی ننشست — فقط ابر";
+                : sent ? "روی سرورِ حساب ننشست — " + LastCloudWhy
+                : "روی سرورِ خانگی ننشست — " + LastHomeWhy;
             var s = AppSettings.Load();
             s.LastBackupSentAt = LastSentAt.Value.ToString("O");
             s.Save();
@@ -176,6 +204,9 @@ public sealed class BackupPusher : IAsyncDisposable
             return true;
         }
 
+        //  ⛔ هر دو دلیل گفته می‌شود، نه فقط مالِ سرورِ خانگی (۱۴۰۵/۰۷/۲۰): پیش از
+        //  این دلیلِ سرورِ حساب بی‌صدا گم می‌شد و کاربر فقط «به سرور نرسید» می‌دید.
+        LastError = "سرورِ حساب: " + LastCloudWhy + " · سرورِ خانگی: " + LastHomeWhy;
         Warn();
         return false;
     }
@@ -192,7 +223,7 @@ public sealed class BackupPusher : IAsyncDisposable
     /// <c>InfraTests.Poshtiban_FileRa_YekJa_DarHafeze_Nemikhanad</c> همان
     /// لحظه قرمز شد و درست هم شد: دفترِ چندصد مگابایتی، دو برابر رم.
     /// </remarks>
-    private async Task<bool> SendToCloudAsync(string file, bool manual, CancellationToken ct)
+    private async Task<bool> SendToCloudAsync(string file, bool manual, int records, CancellationToken ct)
     {
         try
         {
@@ -204,23 +235,26 @@ public sealed class BackupPusher : IAsyncDisposable
              */
             var file2 = AppSettings.Load();
             var cloud = new CloudLink(file2, () => { file2.Save(); return Task.CompletedTask; });
-            if (!cloud.Activated) return false;
+            if (!cloud.Activated) { LastCloudWhy = "این کامپیوتر هنوز به حساب وصل نیست (پروفایل)"; return false; }
 
             var info = new FileInfo(file);
-            if (!info.Exists || info.Length == 0) return false;
+            if (!info.Exists || info.Length == 0) { LastCloudWhy = "عکسِ پشتیبان خالی است"; return false; }
             //  بزرگ‌تر از سقفِ سرور اصلاً فرستاده نمی‌شود: سرور ردش می‌کند
             //  و فرستادنش فقط پهنای باند است.
-            if (info.Length > CloudMaxBytes) return false;
+            if (info.Length > CloudMaxBytes)
+            { LastCloudWhy = $"دفتر از سقفِ {CloudMaxBytes / 1048576} مگابایتیِ سرور بزرگ‌تر است — فایلِ بکاپ را روی فلش بگیرید"; return false; }
 
+            //  ⚠️ شمارِ رکوردها در برچسب می‌رود تا در فهرستِ سرور «خالی» از «پر» پیداست.
             var res = await cloud.BackupUploadAsync(
                 file,
-                label: Shamsi.Today(),
+                label: Shamsi.Today() + " · " + records.ToString("N0") + " رکورد",
                 manual: manual,
                 ext: "db",
                 ct: ct);
+            if (!res.Ok) LastCloudWhy = res.Why;
             return res.Ok;
         }
-        catch { return false; }
+        catch (Exception e) { LastCloudWhy = ErrorText.Friendly(e); return false; }
     }
 
     /// <summary>
@@ -241,7 +275,7 @@ public sealed class BackupPusher : IAsyncDisposable
         var code = HomeLink.StationCode(_host);
         if (url.Length == 0 || token.Length == 0)
         {
-            LastError = "سرورِ خانگی تنظیم نشده";
+            LastError = "تنظیم نشده";
             return false;
         }
 
@@ -275,7 +309,7 @@ public sealed class BackupPusher : IAsyncDisposable
         }
         catch (Exception e)
         {
-            LastError = "به سرور نرسید: " + ErrorText.Friendly(e);
+            LastError = "در این شبکه دیده نمی‌شود: " + ErrorText.Friendly(e);
             return false;
         }
     }

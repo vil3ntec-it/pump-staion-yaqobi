@@ -183,6 +183,7 @@ public sealed partial class SyncStore
         state.SeededAt = 0;
         state.SeedCursor = "";
         state.Cursor = 0;
+        state.DeferredJson = "";
         //  ⛔ حسابِ تازه یعنی دفترِ تازه‌ای که هنوز نیامده — پس پردهٔ
         //  «آوردنِ اطلاعاتِ حساب» دوباره حق دارد بیاید.
         state.PrimedAt = 0;
@@ -268,13 +269,21 @@ public sealed partial class SyncStore
             foreach (var g in byTable)
             {
                 var t = map[g.Key];
-                var nodes = new Dictionary<string, (SyncOp Op, System.Text.Json.Nodes.JsonObject Node)>(StringComparer.Ordinal);
+                //  ⛔ <b>همهٔ opهای یک ردیف</b>، نه فقط آخری (۱۴۰۵/۰۷/۲۰). پیش از این
+                //  کلید ‎RowUid‎ بود و opِ بعدی جای قبلی را می‌گرفت: ‎insert‎ + ‎update‎ِ همان
+                //  ردیف در یک دسته (ساختنِ قرض‌دار و مُهرِ ‎ReceiptsMigrated‎، یا تایپِ خانه)
+                //  یعنی ‎insert‎ با کلیدِ موقتِ منفیِ EF و بی پیوندِ پدر به سرور می‌رفت. روی
+                //  کامپیوترِ دوم حساب بی‌پدر می‌نشست و ردیف‌هایش زیرِ حسابی یتیم — «قرض‌دار
+                //  هست، ردیف‌ها نیستند». آزمون: ‎TwoComputersSyncTests‎.
+                var nodes = new Dictionary<string, List<(SyncOp Op, System.Text.Json.Nodes.JsonObject Node)>>(StringComparer.Ordinal);
                 foreach (var op in g)
                 {
                     System.Text.Json.Nodes.JsonObject? node;
                     try { node = System.Text.Json.Nodes.JsonNode.Parse(op.FieldsJson ?? "{}") as System.Text.Json.Nodes.JsonObject; }
                     catch { continue; }
-                    if (node is not null) nodes[op.RowUid] = (op, node);
+                    if (node is null) continue;
+                    if (!nodes.TryGetValue(op.RowUid, out var list)) nodes[op.RowUid] = list = new();
+                    list.Add((op, node));
                 }
                 if (nodes.Count == 0) continue;
 
@@ -296,18 +305,21 @@ public sealed partial class SyncStore
 
                 foreach (var row in rows)
                 {
-                    if (row.GetValueOrDefault("u") is not string uid || !nodes.TryGetValue(uid, out var e)) continue;
-                    for (var i = 0; i < t.Fks.Count; i++)
+                    if (row.GetValueOrDefault("u") is not string uid || !nodes.TryGetValue(uid, out var all)) continue;
+                    foreach (var e in all)
                     {
-                        var fk = t.Fks[i];
-                        if (!e.Node.ContainsKey(fk.Property)) continue;
-                        var id = row.GetValueOrDefault("f" + i);
-                        var parentUid = row.GetValueOrDefault("p" + i) as string;
-                        e.Node[fk.Property] = id is long l ? System.Text.Json.Nodes.JsonValue.Create(l)
-                                            : id is null ? null : System.Text.Json.Nodes.JsonValue.Create(Convert.ToInt64(id, CultureInfo.InvariantCulture));
-                        e.Node[Sidecar(fk.Property)] = string.IsNullOrEmpty(parentUid) ? null : parentUid;
+                        for (var i = 0; i < t.Fks.Count; i++)
+                        {
+                            var fk = t.Fks[i];
+                            if (!e.Node.ContainsKey(fk.Property)) continue;
+                            var id = row.GetValueOrDefault("f" + i);
+                            var parentUid = row.GetValueOrDefault("p" + i) as string;
+                            e.Node[fk.Property] = id is long l ? System.Text.Json.Nodes.JsonValue.Create(l)
+                                                : id is null ? null : System.Text.Json.Nodes.JsonValue.Create(Convert.ToInt64(id, CultureInfo.InvariantCulture));
+                            e.Node[Sidecar(fk.Property)] = string.IsNullOrEmpty(parentUid) ? null : parentUid;
+                        }
+                        e.Op.FieldsJson = e.Node.ToJsonString();
                     }
-                    e.Op.FieldsJson = e.Node.ToJsonString();
                 }
             }
         }
@@ -391,6 +403,19 @@ public sealed partial class SyncStore
     {
         using var db = _dbf.Create();
         var state = Load(db);
+        //  ⛔ بذرِ ترمیم — یک بار برای هر دفتر (شرحش بالای ‎SyncStateRow.RepairSeed‎).
+        //  دفترِ تازه (هنوز بذر نشده) ترمیم نمی‌خواهد: بذرِ عادی‌اش با قاعدهٔ درست می‌رود.
+        if (state.RepairSeed < RepairVersion)
+        {
+            state.RepairSeed = RepairVersion;
+            if (state.SeededAt > 0)
+            {
+                state.SeededAt = 0;
+                state.SeedCursor = "";
+                state.SeedFrom = AppClock.UnixMs;
+            }
+            Quiet(db);
+        }
         if (state.SeededAt > 0) return new SeedReport(true, 0, "");
 
         var tables = DataTables(db);
@@ -401,7 +426,7 @@ public sealed partial class SyncStore
         {
             if (done.Contains(t.Entity)) continue;
 
-            var made = SeedTable(db, t, batch);
+            var made = SeedTable(db, t, batch, state.SeedFrom);
             if (made > 0)
             {
                 Quiet(db);
@@ -417,18 +442,45 @@ public sealed partial class SyncStore
 
         state.SeededAt = AppClock.UnixMs;
         state.SeedCursor = "";
+        state.SeedFrom = 0;
         Quiet(db);
         return new SeedReport(true, 0, "");
     }
 
-    private static int SeedTable(PumpDbContext db, TableInfo t, int batch)
+    /// <summary>opهای کنارگذاشتهٔ روی دیسک (‎SyncStateRow.DeferredJson‎).</summary>
+    public List<IncomingOp> LoadDeferred()
     {
-        //  ردیف‌هایی که هنوز هیچ opی ندارند
+        var raw = State().DeferredJson;
+        if (string.IsNullOrWhiteSpace(raw)) return new();
+        try { return JsonSerializer.Deserialize<List<IncomingOp>>(raw) ?? new(); }
+        catch { return new(); }
+    }
+
+    /// <summary>متنِ ذخیرهٔ opهای کنارگذاشته — خالی یعنی هیچ.</summary>
+    public static string DeferredText(IReadOnlyCollection<IncomingOp> ops) =>
+        ops.Count == 0 ? "" : JsonSerializer.Serialize(ops);
+
+    /// <summary>نسخهٔ بذرِ ترمیم — بالا بردنش یعنی هر دفتر یک بار دیگر کامل می‌رود.</summary>
+    public const int RepairVersion = 1;
+
+    private static int SeedTable(PumpDbContext db, TableInfo t, int batch, long seedFrom = 0)
+    {
+        var repair = seedFrom > 0;
+        //  ⛔ بذرِ عادی: ردیف‌هایی که هنوز <b>opِ insert</b> ندارند — نه «هیچ opی».
+        //  ردیفی که پیش از بذر فقط ویرایش شده بود (opِ ‎update‎ داشت) با قاعدهٔ قبلی
+        //  هرگز کامل نمی‌رفت و روی کامپیوترِ دوم نیمه و بی‌پدر می‌نشست (۱۴۰۵/۰۷/۲۰).
+        //  ⛔ بذرِ ترمیم: فقط ردیف‌های <b>همین دفتر</b> (opِ محلی دارند) — ردیفی که از
+        //  کامپیوترِ دیگر رسیده op ندارد و از این‌جا دوباره فرستاده نمی‌شود.
+        var where = repair
+            ? $"AND \"SyncUid\" IN (SELECT \"RowUid\" FROM \"SyncOps\" WHERE \"TableName\" = $t) " +
+              $"AND \"SyncUid\" NOT IN (SELECT \"RowUid\" FROM \"SyncOps\" WHERE \"TableName\" = $t AND \"OpType\" = 'insert' AND \"ClientTs\" >= $from) "
+            : $"AND \"SyncUid\" NOT IN (SELECT \"RowUid\" FROM \"SyncOps\" WHERE \"TableName\" = $t AND \"OpType\" = 'insert') ";
         var rows = ReadRows(db,
             $"SELECT * FROM \"{t.Table}\" WHERE \"SyncUid\" IS NOT NULL AND \"SyncUid\" <> '' " +
-            $"AND \"SyncUid\" NOT IN (SELECT \"RowUid\" FROM \"SyncOps\" WHERE \"TableName\" = $t) " +
+            where +
             $"ORDER BY \"Id\" LIMIT {Math.Clamp(batch, 1, 2000)};",
-            ("$t", t.Entity));
+            ("$t", t.Entity), ("$from", seedFrom));
+        var fkProps = t.Fks.Select(f => f.Property).ToHashSet(StringComparer.Ordinal);
 
         var now = AppClock.UnixMs;
         var made = 0;
@@ -441,6 +493,9 @@ public sealed partial class SyncStore
             {
                 if (col.Name is "Id" or "SyncUid") continue;
                 if (!row.TryGetValue(col.Column, out var v)) continue;
+                //  ⛔ در ترمیم، پیوندِ تهی فرستاده نمی‌شود: ردیفی که این‌جا (به‌خاطرِ همان
+                //  باگ) بی‌پدر مانده، نباید پیوندِ درستِ کامپیوترِ دیگر را روی سرور پاک کند.
+                if (repair && fkProps.Contains(col.Name) && (v is null || v is DBNull)) continue;
                 fields[col.Name] = OpLog.Plain(FromDb(v, col.Clr));
             }
 
