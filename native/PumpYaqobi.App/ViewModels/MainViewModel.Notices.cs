@@ -43,6 +43,28 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>
+    /// ⛔ نوارِ قفل خودش را درست می‌کند (۱۴۰۵/۰۷/۲۰، عکسِ صاحب ریپو: سربرگ
+    /// «دائمی · فعال» و پایینِ همان صفحه «برنامه فقط‌خواندنی است — حساب بسازید»).
+    /// نوار فقط سرِ باز شدن و با «مجوز عوض شد» ساخته می‌شد؛ ورود به حساب یا
+    /// رسیدنِ کدِ بی‌اینترنت که مجوزِ تازه‌ای نمی‌سازد، آن را کهنه می‌گذاشت.
+    /// حالا ساعتِ سربرگ هر ۳۰ ثانیه همان جمله را دوباره از همان درِ یگانه
+    /// (‎SoftLock.VisibleBanner‎) می‌پرسد. ⛔ پیامِ مدیر (📣) دست نمی‌خورد.
+    /// </summary>
+    public void RefreshLockBanner(bool force = false)
+    {
+        if (!force && AppClock.Mono - _bannerAt < BannerEvery) return;
+        _bannerAt = AppClock.Mono;
+        NoticeText = NextNotice(NoticeText, SoftLock.VisibleBanner());
+    }
+
+    internal static readonly TimeSpan BannerEvery = TimeSpan.FromSeconds(30);
+    private DateTime _bannerAt = DateTime.MinValue;
+
+    /// <summary>تصمیمِ خالص: پیامِ مدیر می‌ماند؛ وگرنه همان جملهٔ تازهٔ قفل.</summary>
+    public static string NextNotice(string current, string lockBanner) =>
+        current.StartsWith("📣", StringComparison.Ordinal) ? current : lockBanner;
+
+    /// <summary>
     /// اعلانِ تازه: هم بنرِ داخلِ برنامه، هم اعلانِ خودِ ویندوز.
     ///
     /// ⚠️ هر دو از <b>یک</b> جا می‌آیند. قاعدهٔ جدا ننویسید، وگرنه روزی
