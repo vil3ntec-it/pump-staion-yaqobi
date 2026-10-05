@@ -1,3 +1,4 @@
+using QuestPDF.Elements;
 using QuestPDF.Elements.Table;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -262,11 +263,11 @@ public static class DocStyle
     /// <summary>یک «کادرِ خلاصه» — برچسبِ کوچک بالا، عددِ پررنگ پایین.</summary>
     public static void SumBox(IContainer c, string label, string value, string color)
     {
-        c.Border(1).BorderColor(Edge(CellLine)).Padding(5).Column(col =>
+        Probe(c, "box", label + " | " + value).Border(1).BorderColor(Edge(CellLine)).Padding(5).Column(col =>
         {
-            col.Item().AlignCenter().Text(label).FontSize(BoxLabel).FontColor(Ink(Sub));
-            col.Item().PaddingTop(2).AlignCenter().Text(value)
-               .FontSize(BoxValue).Bold().FontColor(Ink(color));
+            col.Item().AlignCenter().Element(x => Line(x, label, BoxLabel, Ink(Sub), Weight.Normal));
+            col.Item().PaddingTop(2).AlignCenter()
+               .Element(x => Line(x, value, BoxValue, Ink(color), Weight.Bold));
         });
     }
 
@@ -334,6 +335,31 @@ public static class DocStyle
     /// <summary>خطِ خانه — با «خطوطِ جدول» خاموش، هیچ.</summary>
     private static string Line(string hex) => Current.Gridlines ? Edge(hex) : Colors.Transparent;
 
+    // ══ سنجه: بلندیِ واقعیِ هر خانه روی ورق ═══════════════════════════════
+    //
+    // ⚠️ فقط برای آزمون (‎PrintOneLineTests‎). وقتی تهی است هیچ چیزی به ورق
+    // اضافه نمی‌شود. وقتی هست، پشتِ هر خانه یک لایهٔ خالی می‌نشیند که موتور
+    // با **اندازهٔ واقعیِ کشیده‌شدهٔ** همان خانه صدایش می‌زند — یعنی بلندیِ
+    // همان ردیفی که روی کاغذ می‌آید، نه حدس.
+
+    /// <summary>‎(نوع، نوشته، بلندی)‎ — فقط آزمون پرش می‌کند.</summary>
+    [ThreadStatic] public static Action<string, string, float>? CellProbe;
+
+    private const string EmptySvg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1\" height=\"1\"/>";
+
+    private static IContainer Probe(IContainer c, string kind, string text)
+    {
+        var p = CellProbe;
+        if (p is null) return c;
+        var primary = c;
+        c.Layers(l =>
+        {
+            l.Layer().Svg(size => { p(kind, text, size.Height); return EmptySvg; });
+            primary = l.PrimaryLayer();
+        });
+        return primary;
+    }
+
     /// <summary>سرستونِ جدول — نوارِ تیره با نوشتهٔ روشن.</summary>
     public static IContainer Th(IContainer c) =>
         c.Background(Paint(HeadBg)).Border(1).BorderColor(Line(HeadLine))
@@ -343,7 +369,7 @@ public static class DocStyle
     /// <summary>سرستون — کادر و نوشته با هم. یک‌جا انجام می‌شود تا کادر دوبار
     /// کشیده نشود (یک‌بار همین شد و دورِ هر خانه یک کادرِ اضافه افتاد).</summary>
     public static void ThText(IContainer c, string text) =>
-        Th(c).Text(text).FontSize(HeadSize).Bold().FontColor(InkOn(HeadFg, HeadBg));
+        Line(Th(Probe(c, "th", text)), text, HeadSize, InkOn(HeadFg, HeadBg), Weight.Bold);
 
     /// <summary>
     /// سرستونِ جدول — فقط در ورقِ اول، مگر «تکرارِ سطرِ عنوان» روشن باشد.
@@ -374,42 +400,180 @@ public static class DocStyle
     /// </summary>
     public static void TdText(IContainer c, bool even, string text, string? color = null)
     {
-        var cell = Td(c, even);
+        var cell = Td(Probe(c, "td", text), even);
         if (string.IsNullOrEmpty(text)) { cell.Text(string.Empty); return; }
-        // ⛔ تاریخ و عدد **هرگز دو خط نمی‌شوند** (۱۴۰۵/۰۷/۱۲). ‎Tight‎ فقط فاصله
-        // را نشکن می‌کند، ولی «1405/07/01» فاصله ندارد و در ستونِ باریکِ صرافی
-        // «1405/07/0» + «1» چاپ می‌شد — همان «تاریخ دو خط شده» که صاحب ریپو با
-        // عکس گفت. حالا خانهٔ کوتاهِ عددی اگر جا نشد **کمی کوچک** می‌شود،
-        // نه شکسته. متنِ آزاد (نام، یادداشت) مثلِ همیشه می‌شکند.
-        //  ⚠️ سقفِ بلندیِ یک خط لازم است: بی آن، شکستن به دو خط هم «جا
-        //  شدن» حساب می‌شد و ‎ScaleToFit‎ هیچ‌وقت کوچک نمی‌کرد (سنجیده شد).
-        var box = Compact(text) ? cell.MaxHeight(CellSize * OneLine).ScaleToFit() : cell;
-        box.Text(Tight(text)).FontSize(CellSize).SemiBold().FontColor(Ink(color ?? CellFg));
+        // ⛔ **هیچ خانه‌ای دو خط نمی‌شود** (۱۴۰۵/۰۷/۲۰) — نه فقط تاریخ و عدد.
+        // پیش از این قاعدهٔ یک‌خطی فقط مالِ «خانهٔ کوتاهِ رقم‌دار» بود و نام و
+        // یادداشت می‌پیچیدند؛ یک یادداشتِ بلند یعنی ردیفی سه-چهار برابر و همان
+        // گزارشِ صاحب ریپو: «توی تمام پی‌دی‌اف‌ها طولِ کادرها بزرگ می‌شن».
+        Line(cell, Tight(text), CellSize, Ink(color ?? CellFg), Weight.SemiBold);
     }
 
     /// <summary>
-    /// خانه‌ای که <b>همیشه یک خط</b> است — نامِ ردیفِ ورق (۱۴۰۵/۰۷/۱۸). گزارشِ
-    /// صاحب ریپو: «طولِ جدول‌ها توی پرینت خیلی بزرگ شده» — نامِ بلند دو-سه خط
-    /// می‌شد و بلندیِ هر ردیف با بلندترین خانه‌اش بالا می‌رفت. حالا جا نشد ⇒
-    /// کمی کوچک، نه شکسته. (همان سقفِ یک‌خطیِ خانهٔ عددی.)
+    /// خانه‌ای که <b>همیشه یک خط</b> است — نامِ ردیفِ ورق (۱۴۰۵/۰۷/۱۸). از
+    /// ۱۴۰۵/۰۷/۲۰ همان <see cref="TdText"/> است، چون هر خانه‌ای یک خط است.
     /// </summary>
-    public static void TdOneLine(IContainer c, bool even, string text, string? color = null)
+    public static void TdOneLine(IContainer c, bool even, string text, string? color = null) =>
+        TdText(c, even, text, color);
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  ══ یک خط، همیشه — کوچک تا یک کف، و بعد بریده با «…» ═══════════════════
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    //  گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۲۰): «توی تمام پی‌دی‌اف‌ها همه‌شون طولِ
+    //  کادرهاشون بزرگ می‌شن… طول نباید بزرگ بشه از کادرهای توی پرینت.»
+    //
+    //  ⛔ <see cref="Line"/> تنها راهِ نوشتن در خانهٔ جدول، سرستون، ردیفِ
+    //  «جمله» و کادرِ خلاصه است، و نوشته‌اش هرگز به خطِ دوم نمی‌رود:
+    //    ۱) در یک خط جا شد ⇒ همان اندازه، دست‌نخورده؛
+    //    ۲) نشد ولی تا <see cref="MinScale"/> کوچک شدن جا می‌دهد ⇒ همان‌قدر
+    //       کوچک که جا شود (‎ScaleToFit‎ زیرِ سقفِ بلندیِ همان یک خط)؛
+    //    ۳) باز هم نشد (یادداشتِ خیلی بلند) ⇒ در کوچک‌ترین اندازه، یک خط و
+    //       ته‌اش «…». ⚠️ ‎ScaleToFit‎ِ تنها کف ندارد و یادداشتِ بلند را تا
+    //       ریزِ ناخوانا کوچک می‌کرد.
+    //
+    //  ⚠️ چرا جزءِ پویا (‎IDynamicComponent‎): «جا می‌شود یا نه» به پهنای
+    //  **واقعیِ** ستون بسته است و آن فقط هنگامِ چیدن معلوم است. اندازه‌گیری با
+    //  خودِ موتور و همان قلم است، نه شمردنِ نویسه.
+    //  ⚠️ «یک خط» هم از خودِ موتور است (همان نوشته با ‎ClampLines(1)‎)، نه یک
+    //  ضریبِ ثابتِ قلم — ایموجیِ قلمِ جایگزین خطِ بلندتری دارد.
+
+    /// <summary>کوچک‌ترین اندازه نسبت به قلمِ خودِ خانه — زیرِ این بریده می‌شود.</summary>
+    public const float MinScale = 0.6f;
+
+    /// <summary>وزنِ قلمِ یک خط.</summary>
+    public enum Weight { Normal, SemiBold, Bold }
+
+    /// <summary>
+    /// یک خطِ نوشته که هرگز دو خط نمی‌شود — برای هر خانه و کادری که بلندی‌اش
+    /// نباید با نوشته بالا برود. <paramref name="color"/> رنگِ نهایی است (از
+    /// ‎Ink‎/‎InkOn‎ رد شده).
+    /// </summary>
+    public static void Line(IContainer c, string text, float size, string color, Weight weight = Weight.Normal)
     {
-        var cell = Td(c, even);
-        if (string.IsNullOrEmpty(text)) { cell.Text(string.Empty); return; }
-        cell.MaxHeight(CellSize * OneLine).ScaleToFit()
-            .Text(text).FontSize(CellSize).SemiBold().FontColor(Ink(color ?? CellFg));
+        if (string.IsNullOrEmpty(text)) { c.Text(string.Empty).FontSize(size); return; }
+        var box = Probe(c, "line:" + size.ToString(System.Globalization.CultureInfo.InvariantCulture), text)
+            .AlignMiddle();
+
+        // ⚡ نوشتهٔ کوتاه (عدد، تاریخ، نامِ کوتاه — بیشترِ خانه‌های هر ورق) راهِ
+        // ایستا دارد: سقفِ یک خط + ‎ScaleToFit‎، بی هیچ اندازه‌گیریِ پویا. کوتاه
+        // است، پس کوچک شدنِ بی‌کفش هم ناخوانا نمی‌شود. جزءِ پویا گران است
+        // (سنجهٔ ‎printperf‎: ۶۰۰ ردیف از ۱٫۶ به ۵٫۴ ثانیه رفت وقتی همه پویا
+        // بودند)، پس فقط مالِ نوشتهٔ بلند است که کف و «…» لازم دارد.
+        if (text.Length <= ShortLine)
+        {
+            Style(box.MaxHeight(size * OneLineFactor).ScaleToFit().Text(text), size, color, weight);
+            return;
+        }
+        box.ShowEntire().Dynamic(new OneLineText(text, size, color, weight));
     }
 
-    /// <summary>بلندیِ یک خطِ نوشته به نسبتِ اندازهٔ قلم (با قلمِ وزیرمتن).</summary>
-    private const float OneLine = 1.75f;
+    /// <summary>تا این‌قدر نویسه راهِ ایستا (بی کف) کافی است.</summary>
+    private const int ShortLine = 24;
 
-    /// <summary>خانهٔ کوتاهی که رقم دارد — تاریخ، مبلغ، لیتر.</summary>
-    private static bool Compact(string text)
+    /// <summary>
+    /// سقفِ بلندیِ یک خط به نسبتِ قلم — بیشتر از یک خطِ وزیرمتن (~۱٫۵۶) و
+    /// ایموجیِ جایگزین، و کمتر از دو خط (~۳٫۱). همان عددِ پیشینِ خانهٔ عددی.
+    /// </summary>
+    private const float OneLineFactor = 1.75f;
+
+    private static void Style(TextBlockDescriptor t, float size, string color, Weight weight)
     {
-        if (text.Length > TightMax) return false;
-        foreach (var ch in text) if (char.IsDigit(ch)) return true;
-        return false;
+        t.FontSize(size).FontColor(color);
+        if (weight == Weight.Bold) t.Bold();
+        else if (weight == Weight.SemiBold) t.SemiBold();
+        else t.NormalWeight();
+    }
+
+    private sealed class OneLineText : IDynamicComponent
+    {
+        private readonly string _text;
+        private readonly float _size;
+        private readonly string _color;
+        private readonly Weight _weight;
+
+        // تصمیم برای همان پهنا یک بار گرفته می‌شود؛ موتور یک خانه را چند بار
+        // می‌چیند (اندازه‌گیری و کشیدن) و پهنا عوض نمی‌شود.
+        private float _forWidth = float.NaN;
+        private int _mode;          // ۱ تا جا شود کوچک (مقیاسِ ۱ اگر جا بود) · ۲ کوچک‌ترین + «…»
+        private float _lineHeight;
+
+        public OneLineText(string text, float size, string color, Weight weight)
+        { _text = text; _size = size; _color = color; _weight = weight; }
+
+        private void Write(IContainer c, bool clamp)
+        {
+            var t = c.Text(_text);
+            Style(t, _size, _color, _weight);
+            if (clamp) t.ClampLines(1, "…");
+        }
+
+        // ⚠️ ‎CreateElement‎ با فضای **بی‌سقف** اندازه می‌گیرد (سنجیده شد: یادداشتِ
+        // بلند در ستونِ ۱۰۰pt هم «یک خط» درمی‌آمد)، پس پهنا را خودمان می‌بندیم.
+        // بلندی آزاد می‌ماند — همان چیزی که برای «چند خط می‌شود؟» لازم است.
+        private float Height(DynamicContext ctx, Action<IContainer> write) =>
+            ctx.CreateElement(x => write(x.Width(_forWidth))).Size.Height;
+
+        private void Decide(DynamicContext ctx)
+        {
+            // دو اندازه‌گیری، نه بیشتر — هر کدام یک چیدنِ کاملِ متنِ بلند است
+            // (سنجهٔ ‎printperf‎ و ۶۰۰ ردیفِ یادداشت‌دار):
+            //   • بلندیِ یک خطِ همین نوشته (با ‎ClampLines(1)‎ — ایموجیِ قلمِ
+            //     جایگزین خطِ بلندتری دارد، پس ضریبِ ثابت نه)؛
+            //   • همین نوشته در کوچک‌ترین اندازه. ‎Scale‎ خطی است، پس «یک خط در
+            //     کوچک‌ترین اندازه» همان ‎one × MinScale‎ است.
+            // نوشته‌ای که در اندازهٔ کامل جا می‌شود هم از حالتِ ۱ می‌گذرد:
+            // ‎ScaleToFit‎ در مقیاسِ ۱ همان بارِ اول جا می‌شود.
+            var one = Height(ctx, x => Write(x, true));
+            var small = Height(ctx, x => Write(x.Scale(MinScale), false));
+            _lineHeight = one;
+            _mode = small <= one * MinScale + 0.5f ? 1 : 2;
+            // ⚠️ کفِ بلندیِ آن‌چه کشیده می‌شود، نه «یک خطِ اندازهٔ کامل»: نوشتهٔ
+            // کوچک‌شده کوتاه‌تر است و ستون همان‌قدر جا به آن می‌دهد؛ سنجیدن با یک
+            // خطِ کامل یعنی «جا نیست» برای همیشه. (در حالتِ ۱ اگر جا از این بیشتر
+            // و از اندازهٔ انتخابی کمتر بود، ‎ScaleToFit‎ خودش کمی بیشتر کوچک می‌کند.)
+            _need = one * MinScale;
+        }
+
+        private float _need;
+
+        private void Content(IContainer x)
+        {
+            switch (_mode)
+            {
+                case 1: Write(x.MaxHeight(_lineHeight + 0.01f).ScaleToFit(), false); break;
+                default: Write(x.Scale(MinScale), true); break;
+            }
+        }
+
+        public DynamicComponentComposeResult Compose(DynamicContext ctx)
+        {
+            var w = ctx.AvailableSize.Width;
+            // پهنای صفر (اندازه‌گیریِ کمینهٔ خودِ موتور) هیچ تصمیمی نمی‌سازد
+            if (w <= 0f)
+                return new DynamicComponentComposeResult { Content = ctx.CreateElement(_ => { }), HasMoreContent = true };
+            if (w != _forWidth) { _forWidth = w; Decide(ctx); _content = null; }
+
+            // ته ورق جای همین یک خط نیست ⇒ «بقیه در ورقِ بعد»؛ ‎ShowEntire‎ِ
+            // بیرونی آن را «کلِ ردیف به ورقِ بعد» می‌کند، نه نیم‌خانه.
+            if (ctx.AvailableSize.Height + 0.01f < _need)
+                return new DynamicComponentComposeResult { Content = ctx.CreateElement(_ => { }), HasMoreContent = true };
+
+            // ⚡ همان عنصر برای همان پهنا دوباره به کار می‌رود: موتور یک خانه را
+            // چند بار اندازه می‌گیرد و هر ساختنِ تازه یعنی چیدنِ دوبارهٔ متنِ بلند.
+            // ⚠️ فقط برای همان فضای در دسترس: عنصری که یک بار کشیده شده حالِ
+            // «کشیده شد» دارد و دوباره به کار بردنش در اندازه‌گیریِ ورقِ دیگر چیدمان
+            // را می‌شکست (سنجهٔ ‎shifts‎ همین را گرفت).
+            if (_content is null || ctx.AvailableSize.Width != _contentFor.Width || ctx.AvailableSize.Height != _contentFor.Height)
+            {
+                _content = ctx.CreateElement(Content);
+                _contentFor = ctx.AvailableSize;
+            }
+            return new DynamicComponentComposeResult { Content = _content, HasMoreContent = false };
+        }
+
+        private IDynamicElement? _content;
+        private Size _contentFor;
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -457,11 +621,10 @@ public static class DocStyle
 
     /// <summary>ردیفِ «جمله» — همان نوارِ تیرهٔ پایینِ جدول.</summary>
     public static void Tf(IContainer c, string text) =>
-        c.Background(Paint(HeadBg)).Border(1).BorderColor(Line(HeadLine))
+        Probe(c, "tf", text).Background(Paint(HeadBg)).Border(1).BorderColor(Line(HeadLine))
          .PaddingVertical(6).PaddingHorizontal(4)
          .AlignCenter().AlignMiddle()
-         .Element(x => Compact(text) ? x.MaxHeight(HeadSize * OneLine).ScaleToFit() : x)
-         .Text(Tight(text)).FontSize(HeadSize).Bold().FontColor(InkOn(HeadFg, HeadBg));
+         .Element(x => Line(x, Tight(text), HeadSize, InkOn(HeadFg, HeadBg), Weight.Bold));
 
     /// <summary>«—» برای خانهٔ خالی — مثلِ خودِ سند، نه صفر.</summary>
     public static string Dash(string? s) => string.IsNullOrWhiteSpace(s) ? "—" : s!;

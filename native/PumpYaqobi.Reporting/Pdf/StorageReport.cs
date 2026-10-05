@@ -60,26 +60,26 @@ public sealed class StorageReport : ISetupDocument
         {
             row.RelativeItem().Column(m =>
             {
-                m.Item().AlignCenter().Text("موجودی فعلی مخزن")
-                 .FontSize(DocStyle.SubSize).FontColor(DocStyle.Ink(DocStyle.Sub));
-                m.Item().AlignCenter().Text(R(t.Display))
-                 .FontSize(26).Bold().FontColor(DocStyle.Ink(Color));
-                m.Item().AlignCenter().Text("لیتر")
-                 .FontSize(DocStyle.SubSize).FontColor(DocStyle.Ink(DocStyle.Sub));
+                m.Item().AlignCenter().Element(x => DocStyle.Line(x, "موجودی فعلی مخزن",
+                 DocStyle.SubSize, DocStyle.Ink(DocStyle.Sub)));
+                m.Item().AlignCenter().Element(x => DocStyle.Line(x, R(t.Display),
+                 26, DocStyle.Ink(Color), DocStyle.Weight.Bold));
+                m.Item().AlignCenter().Element(x => DocStyle.Line(x, "لیتر",
+                 DocStyle.SubSize, DocStyle.Ink(DocStyle.Sub)));
             });
             row.ConstantItem(150).AlignMiddle().Column(m =>
             {
-                m.Item().AlignCenter().Text("جمله ورودی")
-                 .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Ink(DocStyle.Sub));
-                m.Item().AlignCenter().Text(R(t.In) + " لیتر")
-                 .FontSize(DocStyle.BoxValue).Bold().FontColor(DocStyle.Ink("#0f7a4d"));
+                m.Item().AlignCenter().Element(x => DocStyle.Line(x, "جمله ورودی",
+                 DocStyle.BoxLabel, DocStyle.Ink(DocStyle.Sub)));
+                m.Item().AlignCenter().Element(x => DocStyle.Line(x, R(t.In) + " لیتر",
+                 DocStyle.BoxValue, DocStyle.Ink("#0f7a4d"), DocStyle.Weight.Bold));
             });
             row.ConstantItem(150).AlignMiddle().Column(m =>
             {
-                m.Item().AlignCenter().Text("جمله فروش")
-                 .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Ink(DocStyle.Sub));
-                m.Item().AlignCenter().Text(R(t.Out) + " لیتر")
-                 .FontSize(DocStyle.BoxValue).Bold().FontColor(DocStyle.Ink("#b3261e"));
+                m.Item().AlignCenter().Element(x => DocStyle.Line(x, "جمله فروش",
+                 DocStyle.BoxLabel, DocStyle.Ink(DocStyle.Sub)));
+                m.Item().AlignCenter().Element(x => DocStyle.Line(x, R(t.Out) + " لیتر",
+                 DocStyle.BoxValue, DocStyle.Ink("#b3261e"), DocStyle.Weight.Bold));
             });
         });
 

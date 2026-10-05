@@ -126,4 +126,32 @@ public class AppLockTests
         }
         finally { PumpYaqobi.Application.Security.PermissionService.ReadOnlyHook = old; }
     }
+
+    // ══ نوارِ قفلِ کهنه (۱۴۰۵/۰۷/۲۰، عکسِ صاحب ریپو) ═══════════════════════
+    //  سربرگ «دائمی · فعال» و همان لحظه «برنامه فقط‌خواندنی است — حساب بسازید»:
+    //  نوار فقط سرِ باز شدن ساخته می‌شد و پس از ورود دوباره پرسیده نمی‌شد.
+
+    [Fact]
+    public void NavareGhofl_KohneMimanad_JomleyeTazeJayashMinshinad()
+    {
+        var stale = AppLock.Sentence(new LockStatus(true, LockKind.NoAccount));
+        Assert.Equal("", PumpYaqobi.App.ViewModels.MainViewModel.NextNotice(stale, ""));
+    }
+
+    [Fact]
+    public void PayameModir_BaNavareGhofl_PakNemishavad()
+    {
+        Assert.Equal("📣 خبر", PumpYaqobi.App.ViewModels.MainViewModel.NextNotice("📣 خبر", "🔒 x"));
+    }
+
+    [Fact]
+    public void SaateSarbarg_NavareGhoflRa_DobaraMiporsad()
+    {
+        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
+        var win = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "Views", "MainWindow.axaml.cs"));
+        var tick = win[win.IndexOf("_clock.Tick +=", StringComparison.Ordinal)..win.IndexOf("_clock.Start();", StringComparison.Ordinal)];
+        Assert.Contains("vm.RefreshLockBanner();", tick);
+        var life = SrcText.Read(Path.Combine(root, "PumpYaqobi.App", "ViewModels", "MainViewModel.Lifecycle.cs"));
+        Assert.Contains("RefreshLockBanner(force: true)", life);
+    }
 }

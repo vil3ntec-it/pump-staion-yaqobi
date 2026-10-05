@@ -209,6 +209,27 @@ public partial class ExcelGrid
         var room = CellRoom();
         if (room <= 0) return;
 
+        // ══ جدولِ خالی: پهنای طبیعیِ آخرین محتوای همین جدول، نه سرستون‌ها ══════
+        //
+        //  گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۲۱): «چپ/راست رفتنِ خط‌ها و نوشته‌ها پس از
+        //  عوض کردنِ ماه — همهٔ بخش‌ها». سنجهٔ ‎monthshift‎ ریشه را نشان داد:
+        //  ماهِ تازه خالی شروع می‌شود، پس بخش روی جدولِ **خالی** باز می‌شود و
+        //  پهنای «طبیعی» فقط پهنای سرستون‌هاست. نخستین ماهی که ردیف دارد
+        //  (‎_spreadRows == 0‎ ⇒ کهنه) ستون‌ها را از نو می‌چید و هر خطِ عمودی
+        //  تا ۲۰۰ پیکسل می‌پرید — در هر بخش، با هر باز شدنِ برنامه.
+        //
+        //  ⛔ حالا پهنای طبیعیِ **محتوا** پس از هر چیدن روی ردیفِ واقعی به یاد
+        //  می‌ماند (‎AutoMemoryKey‎ — کلیدِ جدا از پهنای کاربر، پس هرگز جای
+        //  «خواستهٔ کاربر» نمی‌نشیند) و جدولِ خالی همان را می‌گیرد؛ آمدنِ
+        //  ردیف‌ها دیگر چیزی را از نو نمی‌چیند. نخستین بارِ عمرِ یک جدول همان
+        //  سرستون‌هاست، چون هیچ محتوایی ندیده‌ایم.
+        var empty = RowCount() == 0;
+        double[]? remembered = null;
+        if (empty && Saved(cols.Count) is null && AutoMemoryKey(cols.Count) is { } mk
+            && AutoMemory(mk) is { } mem && mem.Length == cols.Count
+            && mem.All(x => x >= FloorWidth))
+            natural = remembered = (double[])mem.Clone();
+
         // ══ چرا حتی وقتی جای اضافه نیست هم پهنا سفت می‌شود ═══════════════════
         //
         // گزارشِ صاحب ریپو: «نباید Input هنگام تایپ بزرگ شود، نباید باعث تغییر
@@ -241,6 +262,7 @@ public partial class ExcelGrid
         // (‎PinOnUserResize‎، دست‌نخورده). این‌جا فقط بارِ خودکار است، که
         // کاربر انتخابش نکرده و از آن انتظارِ اسکرولِ افقی هم ندارد.
         var wanted = (double[])natural.Clone();
+        _naturalSeen = (double[])natural.Clone();
         if (!spare) natural = FitToRoom(natural, room);
 
         // ══ پهنای ذخیره‌شده مقدم است ═════════════════════════════════════════
@@ -284,8 +306,61 @@ public partial class ExcelGrid
         if (_starNatural is not null) StarFloors(room);
 
         _spreadRows = RowCount();
+        _spreadGuess = empty && remembered is null;
         _spread = true;
+
+        //  پهنای طبیعیِ همین محتوا برای جدولِ خالیِ بعدی (شرحش بالا). فقط وقتی
+        //  عوض شده، و با همان صفِ تأخیریِ تنظیمات — نه نوشتنِ فایل در چیدمان.
+        if (!empty && _saved is null && AutoMemoryKey(cols.Count) is { } wk)
+        {
+            var nat = (double[])_naturalSeen!;
+            var had = AutoMemory(wk);
+            if (had is null || had.Length != nat.Length || had.Zip(nat, (a, b) => Math.Abs(a - b) >= 0.5).Any(x => x))
+            {
+                AutoMem[wk] = nat;
+                Services.AppSettings.SaveColumnWidths(wk, nat);
+            }
+        }
     }
+
+    /// <summary>
+    /// حافظهٔ «پهنای طبیعی» — هر کلید یک بار از دیسک خوانده می‌شود، چون این
+    /// مسیرِ چیدمان است (همان قاعدهٔ ‎Saved‎).
+    /// </summary>
+    private static readonly Dictionary<string, double[]?> AutoMem = new();
+
+    private static double[]? AutoMemory(string key)
+    {
+        if (!AutoMem.TryGetValue(key, out var w))
+            AutoMem[key] = w = Services.AppSettings.LoadColumnWidths(key);
+        return w;
+    }
+
+    /// <summary>
+    /// پهنای این بار از روی سرستون‌ها حدس زده شد (جدولِ خالی، بی حافظه) —
+    /// نخستین محتوا باید از نو بچیند. جانشینِ «‎_spreadRows == 0‎»ی تنها.
+    /// </summary>
+    private bool _spreadGuess;
+
+    /// <summary>پهنای طبیعیِ همین چیدن، پیش از هر کوچک‌سازی.</summary>
+    private double[]? _naturalSeen;
+
+    /// <summary>
+    /// کلیدِ «پهنای طبیعیِ محتوا» — همان کلیدِ جدول بی دامنهٔ حساب (همهٔ حساب‌های
+    /// یک جدول یک شکل دارند) و با پیشوندی که هرگز کلیدِ پهنای کاربر نیست.
+    /// </summary>
+    private string? AutoMemoryKey(int visible)
+    {
+        var k = EffectiveKey(visible);
+        if (string.IsNullOrWhiteSpace(k)) return null;
+        var scope = WidthScope;
+        if (!string.IsNullOrWhiteSpace(scope) && k.EndsWith("@" + scope, StringComparison.Ordinal))
+            k = k[..^(scope.Length + 1)];
+        return AutoPrefix + k;
+    }
+
+    /// <summary>پیشوندِ کلیدِ «پهنای طبیعی» در همان دفترِ پهناها.</summary>
+    internal const string AutoPrefix = "auto|";
 
     // ══════════════════════════════════════════════════════════════════════
     //  ══ هر جدولی پهنایش را یادش می‌ماند — نه فقط سه جدولِ ورق ══════════════

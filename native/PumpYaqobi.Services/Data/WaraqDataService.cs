@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Application.Security;
+using PumpYaqobi.Application.Services;
 using PumpYaqobi.Domain.Entities;
 
 namespace PumpYaqobi.Services.Data;
@@ -36,6 +37,44 @@ public sealed class WaraqDataService
             q = q.Where(w => w.DateKey >= from && w.DateKey <= from + 99);
         }
         return await q.OrderByDescending(w => w.DateKey).ToListAsync(ct);
+    }
+
+    /// <summary>
+    /// ══ فروشِ ورق‌ها برای «مفاد و ضرر» (۱۴۰۵/۰۷/۲۰) ════════════════════════
+    /// صاحب ریپو: «نه از پارچه حساب بشه؛ همون قد لیتری که فروخته شده، پولِ
+    /// همون لیتر بیاد توی مفاد و ضرر — دیزل و پطرول هر دو جمع بشن — و یک بخش
+    /// باشه که این‌ها از کجا اومدن.» پس هر شیفتِ هر ورق یک سطر: لیتر و پولِ
+    /// پطرول و دیزل، از همان قرائتِ پایه‌ها (‎(ختم−شروع) × فی‎ — همان
+    /// ‎WaraqService.ShiftTotals‎؛ پارچه‌ها هم از راهِ پایهٔ ‎SrcKey‎دار در ورق‌اند).
+    /// ⛔ فقط چهار ستون خوانده می‌شود، نه ورقِ کامل. ‎null‎ یعنی همهٔ زمان‌ها.
+    /// </summary>
+    public async Task<List<WaraqSaleLine>> SalesLinesAsync((int Lo, int Hi)? keys, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        var q = db.WaraqPumps.AsNoTracking().Where(p => p.Shift != null && p.Shift.Waraq != null);
+        if (keys is { } k) q = q.Where(p => p.Shift!.Waraq!.DateKey >= k.Lo && p.Shift!.Waraq!.DateKey <= k.Hi);
+        var rows = await q.Select(p => new
+        {
+            p.Shift!.WaraqId, p.Shift!.Waraq!.DateShamsi, p.Shift!.Waraq!.DateKey, p.Shift!.Kind,
+            p.Fuel, p.Start, p.End, p.PricePerLiter,
+        }).ToListAsync(ct);
+        return rows.GroupBy(r => (r.WaraqId, r.Kind))
+                   .Select(g =>
+                   {
+                       decimal pl = 0, pm = 0, dl = 0, dm = 0;
+                       foreach (var r in g)
+                       {
+                           var l = Math.Max(0m, r.End - r.Start);
+                           if (r.Fuel == Domain.Enums.FuelType.Diesel) { dl += l; dm += l * r.PricePerLiter; }
+                           else { pl += l; pm += l * r.PricePerLiter; }
+                       }
+                       var f = g.First();
+                       return new WaraqSaleLine(f.DateShamsi ?? "", f.DateKey, f.Kind, pl, pm, dl, dm);
+                   })
+                   .Where(x => x.PetrolLiters != 0 || x.DieselLiters != 0)
+                   .OrderBy(x => x.DateKey).ThenBy(x => x.Kind)
+                   .ToList();
     }
 
     /// <summary>شورا ث۱/ج۵: «نخستین ردیفِ نام‌دارِ ورق نوشته شده؟» — فقط یک EXISTS.</summary>

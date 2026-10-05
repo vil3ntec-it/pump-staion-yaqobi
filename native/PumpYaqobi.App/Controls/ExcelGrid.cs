@@ -680,13 +680,23 @@ public partial class ExcelGrid : DataGrid
     /// اولین بی‌اعتبارسازیِ بزرگ — تعویضِ تم — دوباره می‌شمرد، ۴۲ می‌شد و همهٔ
     /// خط‌های عمودی ۴۲ پیکسل جابه‌جا می‌شدند. پهنای صریح در هر دو حال یکی است.
     /// عدد از شمارِ ردیف‌ها درمی‌آید تا ۶۴٬۰۰۰ هم جا شود.
+    ///
+    /// <para>⛔ <b>با عوض شدنِ ماه تکان نمی‌خورد</b> (۱۴۰۵/۰۷/۲۱). گزارشِ صاحب ریپو:
+    /// «چپ/راست رفتنِ خط‌ها و نوشته‌ها پس از عوض کردنِ ماه — همهٔ بخش‌ها». سنجهٔ
+    /// ‎monthshift‎ نشان داد: «همهٔ ماه‌ها» یا ماهی با ۱۰۰ ردیف و بیشتر این ستون
+    /// را ۴۲ ⇒ ۵۰ می‌کرد و برگشت به ماهِ کم‌ردیف ۵۰ ⇒ ۴۲ — با هر رفت‌وبرگشت همهٔ
+    /// خط‌های عمودی ۸ پیکسل می‌پریدند و هر ستونِ ستاره‌ای پهنایش عوض می‌شد.
+    /// حالا کفِ سه رقم است (تا ۹۹۹ ردیف هیچ‌وقت عوض نمی‌شود) و ⛔ <b>فقط
+    /// بزرگ می‌شود، هرگز کوچک</b>: جدولی که یک بار هزار ردیف نشان داد، با ماهِ
+    /// کم‌ردیف دوباره جمع نمی‌شود.</para>
     /// </summary>
     private void FixRowHeaderWidth()
     {
         if (!RowNumbers) return;
-        var digits = Math.Max(2, RowCount().ToString().Length);
-        var w = 26 + 8 * digits;                       // دو رقم ⇒ همان ۴۲ی همیشگی
-        if (double.IsNaN(RowHeaderWidth) || Math.Abs(RowHeaderWidth - w) > 0.5) RowHeaderWidth = w;
+        var digits = Math.Max(3, RowCount().ToString().Length);
+        var w = 26 + 8 * digits;                       // سه رقم ⇒ ۵۰
+        if (!double.IsNaN(RowHeaderWidth) && RowHeaderWidth >= w - 0.5) return;   // فقط بزرگ‌تر
+        RowHeaderWidth = w;
     }
 
     private void OnRowsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -734,7 +744,10 @@ public partial class ExcelGrid : DataGrid
             //  **خالی** بود — همان حالتِ ورقی که با ردیف‌های خالی باز می‌شد
             //  و این کار برایش نوشته شد. جدولی که با ردیفِ واقعی چیده شده،
             //  همان پهنا را نگه می‌دارد.
-            var stale = !_spread || _spreadRows == 0;
+            //  ⛔ «کهنه» یعنی پهنا از روی سرستون‌ها **حدس** زده شده (جدولِ خالی و
+            //  بی حافظه)، نه هر چیدن روی جدولِ خالی — جدولِ خالی‌ای که پهنای طبیعیِ
+            //  محتوای پیشین را گرفت، با آمدنِ ردیف‌ها نمی‌پرد (‎monthshift‎).
+            var stale = !_spread || (_spreadRows == 0 && _spreadGuess);
             if (_saved is null && stale)
             {
                 _spread = false; _pinned = false; _anyRowLoaded = false; _autoWidths = null; _starBase = null; _starNatural = null;

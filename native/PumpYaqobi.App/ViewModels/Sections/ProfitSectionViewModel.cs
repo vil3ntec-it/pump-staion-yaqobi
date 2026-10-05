@@ -291,9 +291,10 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         foreach (var m in await _host.Debtors.NoInvoiceMonthsAsync()) months.Add(m);
         foreach (var m in await _host.ExpenseLedger.MonthsAsync()) months.Add(m);
         foreach (var m in await _host.ExtraIncomeLedger.MonthsAsync()) months.Add(m);
-        _rates = await _host.Invoices.ApprovedRatesDatedAsync();
-        foreach (var (_, key) in _rates)
-            if (key > 0) months.Add($"{key / 10000:0000}/{key / 100 % 100:00}");
+        foreach (var m in await _host.WaraqData.MonthsAsync()) months.Add(m);
+        _pending = await _host.Invoices.PendingRatesAsync();
+        foreach (var r in _pending)
+            if (r.DateKey > 0) months.Add($"{r.DateKey / 10000:0000}/{r.DateKey / 100 % 100:00}");
 
         _loadingPicker = true;
         try { Picker.Load(months, PeriodKey(_period)); }
@@ -304,8 +305,20 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         await ComputeAsync();
     }
 
-    /// <summary>فاکتورهای تاییدشده با روزِ تایید — یک بار در هر تازه‌سازی.</summary>
-    private List<(InvoiceRate Rate, int ApproveKey)> _rates = new();
+    /// <summary>
+    /// فاکتورهای در صف (بی «ضرر دریافت شد») — یک بار در هر تازه‌سازی. ⛔ از
+    /// ۱۴۰۵/۰۷/۲۰ فاکتورِ تاییدشده در مفاد و ضرر نیست (خواستهٔ صاحب ریپو).
+    /// </summary>
+    private List<PendingRate> _pending = new();
+
+    /// <summary>«از کجا آمد» — هر شیفتِ هر ورق یک سطر (‎WaraqDataService.SalesLinesAsync‎).</summary>
+    public BulkRows<ProfitSourceLine> Sources { get; } = new();
+    [ObservableProperty] private string _sourcesNote = "";
+    [ObservableProperty] private string _salesPetrolText = "";
+    [ObservableProperty] private string _salesDieselText = "";
+    [ObservableProperty] private string _rateDiffText = "";
+    [ObservableProperty] private string _expenseLineText = "";
+    [ObservableProperty] private string _otherIncomeText = "";
 
     /// <summary>
     /// عددهای همین دوره. «همهٔ زمان‌ها» <b>همان راهِ پیشین</b> است، مو‌به‌مو —
@@ -323,8 +336,14 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         //  روی همان نخِ صداکننده می‌کند، آن خواندن روی نخِ رابط بود: همان
         //  مکثی که کاربر درست سرِ اسکرولِ این صفحه حس می‌کرد.
         //  حالا هر پنج عدد از همان یکی-دو ستونِ خودشان می‌آیند.
-        var petrol = await _host.StorageData.ShiftSumsAsync(FuelType.Petrol, keys);
-        var diesel = await _host.StorageData.ShiftSumsAsync(FuelType.Diesel, keys);
+        //  ⛔ ۱۴۰۵/۰۷/۲۰: فایده = پولِ لیترِ فروخته‌شدهٔ ورق‌ها، پطرول و دیزل هر دو —
+        //  نه فایدهٔ پارچه (صاحب ریپو: «نه از پارچه حساب بشه»).
+        var lines = await _host.WaraqData.SalesLinesAsync(keys);
+        var petrol = lines.Sum(l => l.PetrolMoney);
+        var diesel = lines.Sum(l => l.DieselMoney);
+        var todayP = _host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.UnionRatePetrol);
+        var todayD = _host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.UnionRateDiesel);
+        var rateDiff = ProfitLossService.PendingRateDiff(_pending.Where(r => period.Contains(r.DateKey)), todayP, todayD);
 
         decimal extraSum, expenseSum;
         ProfitInput input;
@@ -337,12 +356,12 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
                 .Values.SelectMany(x => x).ToList();
             input = new ProfitInput
             {
-                ShiftProfitPetrol = petrol.Profit,
-                ShiftProfitDiesel = diesel.Profit,
+                WaraqSalesPetrol = petrol,
+                WaraqSalesDiesel = diesel,
                 NoInvoiceAccounts = noinvAccounts,
                 ExtraIncomeSum = extraSum,
                 ExpenseSum = expenseSum,
-                InvoiceRateDiffSum = ProfitLossService.InvoiceRateDiff(await _host.Invoices.ApprovedRatesAsync()),
+                InvoiceRateDiffSum = rateDiff,
             };
         }
         else
@@ -352,14 +371,12 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
             expenseSum = await _host.ExpenseLedger.SumAsync(e => e.Amount, period.MonthFilter);
             input = new ProfitInput
             {
-                ShiftProfitPetrol = petrol.Profit,
-                ShiftProfitDiesel = diesel.Profit,
+                WaraqSalesPetrol = petrol,
+                WaraqSalesDiesel = diesel,
                 NoInvoiceSum = await _host.Debtors.NoInvoiceBardagiAsync(keys),
                 ExtraIncomeSum = extraSum,
                 ExpenseSum = expenseSum,
-                //  ⛔ همان قاعدهٔ اختلافِ نرخ (‎RateDiffOf‎)، فقط فاکتورهایی که روزِ تاییدشان در دوره است
-                InvoiceRateDiffSum = ProfitLossService.InvoiceRateDiff(
-                    _rates.Where(r => period.Contains(r.ApproveKey)).Select(r => r.Rate)),
+                InvoiceRateDiffSum = rateDiff,
             };
         }
         //  دوره وسطِ خواندن عوض شد ⇒ این جواب کهنه است
@@ -375,8 +392,31 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
 
         PeriodText = PeriodLabel(period);
         BulkSumText = Money(extraSum);
+        ShowSources(lines, ProfitLossService.Breakdown(input));
         Recalc();
     }
+
+    /// <summary>سقفِ سطرهای «از کجا آمد» — تازه‌ترین‌ها؛ جمع‌ها همیشه از همه.</summary>
+    public const int SourceLimit = 120;
+
+    private void ShowSources(List<WaraqSaleLine> lines, ProfitBreakdown b)
+    {
+        decimal pl = lines.Sum(l => l.PetrolLiters), dl = lines.Sum(l => l.DieselLiters);
+        SalesPetrolText = $"⛽ پطرول: {Liters(pl)} لیتر — {Money(b.Petrol)}";
+        SalesDieselText = $"🟤 دیزل: {Liters(dl)} لیتر — {Money(b.Diesel)}";
+        RateDiffText = b.InvoiceRateDiff > 0 ? $"📉 ضررِ نرخِ فاکتورهای در صف: {Money(b.InvoiceRateDiff)}"
+                     : b.InvoiceRateDiff < 0 ? $"📈 مفادِ نرخِ فاکتورهای در صف: {Money(-b.InvoiceRateDiff)}"
+                     : "⚪ نرخِ فاکتورهای در صف: بی‌تفاوت";
+        ExpenseLineText = $"💸 مصارف: {Money(b.Expenses)}";
+        OtherIncomeText = $"➕ بی‌فاکتورها: {Money(b.NoInvoice)} · درآمدِ اضافی: {Money(b.Extra)}";
+        var shown = lines.Count > SourceLimit ? lines.Skip(lines.Count - SourceLimit).ToList() : lines;
+        Sources.ResetTo(shown.AsEnumerable().Reverse().Select(l => new ProfitSourceLine(l)));
+        SourcesNote = lines.Count == 0 ? "در این دوره هیچ ورقی با فروش نیست."
+                    : lines.Count > SourceLimit ? $"{SourceLimit} شیفتِ تازه‌تر از {lines.Count} — جمع‌ها از همه است."
+                    : $"{lines.Count} شیفت";
+    }
+
+    private static string Liters(decimal v) => Shamsi.Money(Math.Round(v, 2), 2);
 
     private void Recalc()
     {
@@ -418,4 +458,21 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         _host.Toast("✅ ثبت شد", ToastKind.Ok);
         await RefreshAsync();
     }
+}
+
+/// <summary>یک سطرِ «از کجا آمد»: تاریخ، شیفت و پولِ هر تیل.</summary>
+public sealed class ProfitSourceLine
+{
+    public ProfitSourceLine(WaraqSaleLine l)
+    {
+        Title = "📝 ورق " + l.DateShamsi + " — " + (l.Kind == ShiftKind.Night ? "شب" : "روز");
+        var parts = new List<string>();
+        if (l.PetrolLiters != 0) parts.Add($"⛽ {Shamsi.Money(Math.Round(l.PetrolLiters, 2), 2)} لیتر = {Shamsi.Money(Math.Round(l.PetrolMoney, 0, MidpointRounding.AwayFromZero))}");
+        if (l.DieselLiters != 0) parts.Add($"🟤 {Shamsi.Money(Math.Round(l.DieselLiters, 2), 2)} لیتر = {Shamsi.Money(Math.Round(l.DieselMoney, 0, MidpointRounding.AwayFromZero))}");
+        Detail = string.Join(" · ", parts);
+        Total = Shamsi.Money(Math.Round(l.PetrolMoney + l.DieselMoney, 0, MidpointRounding.AwayFromZero)) + " افغانی";
+    }
+    public string Title { get; }
+    public string Detail { get; }
+    public string Total { get; }
 }

@@ -263,6 +263,13 @@ public sealed partial class ShiftFormViewModel : ObservableObject
     public bool HasUnsavedInput => IsEdited
         && new[] { Name, PumpNum, Start, End, Debt, Note }.Any(x => (x ?? "").Trim().Length > 0);
 
+    /// <summary>
+    /// کارت یک شیفتِ ذخیره‌شده را نشان می‌داد و کاربر همهٔ کادرهایش را پاک کرد
+    /// (فیِ خودکار شمرده نمی‌شود). با عوض شدنِ تیل همین «خالی» به یاد می‌ماند.
+    /// </summary>
+    public bool ClearedByUser => _loadedId != 0 && IsEdited
+        && new[] { Name, PumpNum, Start, End, Debt, Note }.All(x => (x ?? "").Trim().Length == 0);
+
     /// <summary>همین حالا ذخیره شد — آن‌چه روی کارت است همان شیفتِ ثبت‌شده است.</summary>
     public void MarkSaved(long shiftId) { _loadedPrint = Print(); _loadedId = shiftId; }
 
@@ -612,6 +619,11 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
         OnPropertyChanged(nameof(UnionRate));
         Day.Recalc(); Night.Recalc();
         OnPropertyChanged(nameof(BaseHistoryToggleText));
+        //  ⛔ کارتی که کاربر خودش خالی کرد، با برگشتن به همین تیل خالی می‌ماند
+        //  (۱۴۰۵/۰۷/۲۰) — همان قاعدهٔ ‎_blank‎ برای «خالی شد پس از ذخیره».
+        var left = v ? FuelType.Petrol : FuelType.Diesel;
+        if (Day.ClearedByUser) MarkBlank(left, ShiftKind.Day);
+        if (Night.ClearedByUser) MarkBlank(left, ShiftKind.Night);
         _ = Services.CrashGuard.RunAsync("خواندنِ پارچه‌ها", LoadAsync);
     }
 
@@ -857,8 +869,27 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
 
     private void LoadCard(ShiftFormViewModel form, ShiftKind kind, ShiftData? s)
     {
-        if (IsBlankCard(Fuel, kind)) form.Clear();
+        if (IsBlankCard(Fuel, kind) || !SameDayAsBox(_current)) form.Clear();
         else form.Load(s);
+    }
+
+    /// <summary>
+    /// ══ پارچهٔ روزِ دیگر در کارت نمی‌نشیند (۱۴۰۵/۰۷/۲۰) ═════════════════════
+    ///
+    /// گزارشِ صاحب ریپو: «وقتی نوع رو عوض کنی پارچهٔ روزِ قبل رو خودکار میاره
+    /// داخل؛ پاک هم کنی، نوع رو عوض و دوباره برگردونی همونه.» ریشه: ‎CurrentAsync‎
+    /// <b>آخرین</b> پارچهٔ همان تیل است، هر تاریخی که داشته باشد، و ‎LoadCurrentAsync‎
+    /// (سرِ باز شدن و با <b>هر</b> عوض شدنِ تیل) آن را در کارت می‌نشاند — در حالی
+    /// که کادرِ تاریخ امروز را می‌گوید. ذخیرهٔ آن کارت هم پارچهٔ <b>تازه‌ای</b> با
+    /// عددهای دیروز می‌ساخت (تاریخ فرق دارد).
+    /// ⛔ پس کارت فقط پارچه‌ای را نشان می‌دهد که تاریخش همان کادرِ تاریخ است.
+    /// هیچ داده‌ای عوض نمی‌شود؛ پارچهٔ دیروز در گزارش‌ها و ورق سرِ جایش است.
+    /// </summary>
+    private bool SameDayAsBox(ParchaReport? r)
+    {
+        if (r is null) return true;            //  هیچ پارچه‌ای نیست ⇒ ‎Load(null)‎ همان خالی است
+        var k = Shamsi.Key((r.DateShamsi ?? "").Trim());
+        return k > 0 && k == Shamsi.Key((PaDate ?? "").Trim());
     }
 
     /// <summary>

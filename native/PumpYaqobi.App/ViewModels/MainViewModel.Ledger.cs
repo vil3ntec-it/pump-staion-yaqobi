@@ -246,12 +246,11 @@ public sealed partial class MainViewModel
         decimal debt = 0;
         foreach (var list in accounts.Values) debt += host.Debt.SumTotals(list).All.Albaqi;
 
-        // ۳) مفادِ امروز — جمعِ فایدهٔ هر دو شیفتِ پارچه‌های همین تاریخ
-        var today = Shamsi.Today();
-        var reports = (await host.StorageData.ReportsAsync(FuelType.Petrol))
-            .Concat(await host.StorageData.ReportsAsync(FuelType.Diesel))
-            .Where(r => Shamsi.SameDay(r.DateShamsi, today));
-        var profit = reports.Sum(r => (r.DayShift?.Profit ?? 0) + (r.NightShift?.Profit ?? 0));
+        // ۳) مفادِ امروز — ⛔ از ۱۴۰۵/۰۷/۲۰ همان قاعدهٔ «مفاد و ضرر»: پولِ لیترِ
+        //    فروخته‌شدهٔ ورقِ امروز، پطرول و دیزل هر دو (نه فایدهٔ پارچه). فقط همان
+        //    چهار ستونِ امروز خوانده می‌شود، نه همهٔ پارچه‌ها.
+        var tk = Shamsi.Key(Shamsi.Today());
+        var profit = (await host.WaraqData.SalesLinesAsync((tk, tk))).Sum(l => l.PetrolMoney + l.DieselMoney);
 
         // ۴) مصارفِ امروز — فقط ماهِ جاری، نه همهٔ مصارفِ تاریخ. «امروز» همیشه
         //    داخلِ همین ماه است، پس عدد همان است و خواندن هزار برابر کمتر.

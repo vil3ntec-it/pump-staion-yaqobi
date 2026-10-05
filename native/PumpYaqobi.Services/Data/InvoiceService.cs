@@ -102,6 +102,32 @@ public sealed class InvoiceService
                                      : r.DateKey)).ToList();
     }
 
+    /// <summary>
+    /// فاکتورهای تیلیِ <b>در صف</b> که ضررِ نرخشان هنوز «دریافت شد» نخورده —
+    /// همان چهار ستونی که ‎ProfitLossService.PendingRateDiff‎ می‌خواند (۱۴۰۵/۰۷/۲۰).
+    /// </summary>
+    public async Task<List<PendingRate>> PendingRatesAsync(CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        var rows = await db.Invoices.AsNoTracking()
+                           .Where(v => v.Status == InvoiceStatus.Pending && !v.ByMoney && !v.RateDiffReceived)
+                           .Select(v => new { v.Fuel, v.Liters, v.RateOnCreate, v.PricePerLiter, v.DateKey })
+                           .ToListAsync(ct);
+        return rows.Select(r => new PendingRate(r.Fuel, r.Liters, r.RateOnCreate ?? r.PricePerLiter, r.DateKey)).ToList();
+    }
+
+    /// <summary>کادرِ «ضرر دریافت شد» روی یک فاکتور — فقط همین یک ستون.</summary>
+    public async Task SetRateDiffReceivedAsync(long id, bool received, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.EditData);
+        await using var db = _dbf.Create();
+        var v = await db.Invoices.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (v is null || v.RateDiffReceived == received) return;
+        v.RateDiffReceived = received;
+        await db.SaveChangesAsync(ct);
+    }
+
     /// <summary>شمارهٔ یکتای بعدی — هیچ‌وقت تکراری نمی‌شود.</summary>
     public async Task<int> NextNumberAsync(CancellationToken ct = default)
     {

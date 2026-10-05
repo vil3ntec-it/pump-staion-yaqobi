@@ -141,6 +141,34 @@
               </StackPanel>
             </Border>
           </Grid>
+
+          <!-- ══ «از کجا آمد» (۱۴۰۵/۰۷/۲۰) — صاحب ریپو: «یک بخش هم باشه توی مفاد و
+               ضرر که این‌ها از کجا اومدن». جمعِ هر منبع، و هر شیفتِ هر ورق یک سطر. -->
+          <Border Classes="card calm" Padding="16,14">
+            <StackPanel Spacing="6">
+              <DockPanel LastChildFill="False">
+                <TextBlock DockPanel.Dock="Left" Text="📋 از کجا آمد" Classes="label" FontSize="13" />
+                <TextBlock DockPanel.Dock="Right" Text="{Binding SourcesNote}" FontSize="11.5" Classes="muted" />
+              </DockPanel>
+              <TextBlock Text="{Binding SalesPetrolText}" FontSize="13.5" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding SalesDieselText}" FontSize="13.5" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding OtherIncomeText}" FontSize="13" />
+              <TextBlock Text="{Binding RateDiffText}" FontSize="13" />
+              <TextBlock Text="{Binding ExpenseLineText}" FontSize="13" />
+              <ItemsControl ItemsSource="{Binding Sources}" Margin="0,6,0,0">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ProfitSourceLine">
+                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,2">
+                      <TextBlock Grid.Column="0" Text="{Binding Title}" FontSize="12.5" FontWeight="SemiBold" />
+                      <TextBlock Grid.Column="1" Text="{Binding Detail}" FontSize="12" Margin="12,0" Classes="muted"
+                                 TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="2" Text="{Binding Total}" FontSize="12.5" FontWeight="Bold" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
         </StackPanel>
         <Button Classes="veil" IsVisible="{Binding Veiled}" Command="{Binding RevealCommand}"
                 ToolTip.Tip="برای دیدنِ مفاد و مصارف رمز بزنید">

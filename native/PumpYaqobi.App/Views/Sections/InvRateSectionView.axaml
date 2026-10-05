@@ -107,6 +107,16 @@
             </DataGridTemplateColumn>
             <!-- ⚠️ سقفِ پهنا: «حال» پیش از این جای دو ستون را می‌گرفت -->
             <DataGridTextColumn Header="حال" Binding="{Binding NoteText}" Width="Auto" MaxWidth="170" />
+            <!-- «ضرر دریافت شد» (۱۴۰۵/۰۷/۲۰) — فقط فاکتورِ در صف؛ تیک‌خورده در مفاد و ضرر شمرده نمی‌شود -->
+            <DataGridTemplateColumn Header="ضرر دریافت شد" Width="Auto">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <CheckBox IsChecked="{Binding Received, Mode=TwoWay}" IsVisible="{Binding CanReceive}"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            ToolTip.Tip="فرقِ نرخ از مشتری گرفته شد — دیگر ضرر حساب نشود" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
           </DataGrid.Columns>
         </c:ExcelGrid>
       </Border>

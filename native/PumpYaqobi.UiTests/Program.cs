@@ -166,6 +166,8 @@ internal static class Program
         //  «حساب‌های دیر رسیده» و «هیچ جدولی کاربر را به چپ و راست نبرد» (۱۴۰۵/۰۷/۱۶)
         if (outDir.Equals("latemonths", StringComparison.OrdinalIgnoreCase)) return LateMonthProbe.Run(args);
         if (outDir.Equals("oldmonths", StringComparison.OrdinalIgnoreCase)) return OldMonthProbe.Run(args);
+        //  «چپ/راست رفتنِ خط‌ها و نوشته‌ها پس از عوض کردنِ ماه» (۱۴۰۵/۰۷/۲۱)
+        if (outDir.Equals("monthshift", StringComparison.OrdinalIgnoreCase)) return MonthShiftProbe.Run(args);
         if (outDir.Equals("waraqtype", StringComparison.OrdinalIgnoreCase)) return WaraqTypeProbe.Run();
         if (outDir.Equals("typeall", StringComparison.OrdinalIgnoreCase)) return TypeAllProbe.Run(args);
         if (outDir.Equals("reportedit", StringComparison.OrdinalIgnoreCase)) return ReportEditProbe.Run();

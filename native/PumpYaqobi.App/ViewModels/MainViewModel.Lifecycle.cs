@@ -58,7 +58,7 @@ public sealed partial class MainViewModel
                                   nameof(RoleText), nameof(RoleBrushKey) })
             OnPropertyChanged(n);
         //  دکمهٔ «پروفایل»ِ سربرگ همان لحظهٔ ورود درست بگوید VIP هست یا نه
-        if (v == AppPhase.Ready) Account.RefreshAll();
+        if (v == AppPhase.Ready) { Account.RefreshAll(); RefreshLockBanner(force: true); }
         //  فایلی که با دوبار-کلیک آمده، پس از ورود (‎OpenRequest‎)
         if (v == AppPhase.Ready) Dispatcher.UIThread.Post(() => _ = HandleOpenRequestsAsync());
         //  اطلاعات از درایوِ C به پوشهٔ برنامه آمد (‎DataHome‎) — یک بار گفته شود

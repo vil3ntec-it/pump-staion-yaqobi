@@ -45,26 +45,26 @@ public sealed class ExchangeReport : ISetupDocument
             row.RelativeItem().PaddingLeft(6).Background(DocStyle.Paint(BoxBg)).Border(1).BorderColor(DocStyle.Edge(DocStyle.CellLine))
                .Padding(8).Column(b =>
             {
-                b.Item().AlignCenter().Text("$ جمله دالر این ماه")
-                 .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Ink(DocStyle.Sub));
-                b.Item().PaddingTop(3).AlignCenter()
-                 .Text("$ " + PersianText.Num(Math.Round(s.TotalUsd, 2)))
-                 .FontSize(DocStyle.BoxValue + 2).Bold().FontColor(DocStyle.Ink(Blue));
+                b.Item().AlignCenter().Element(x => DocStyle.Line(x, "$ جمله دالر این ماه",
+                    DocStyle.BoxLabel, DocStyle.Ink(DocStyle.Sub)));
+                b.Item().PaddingTop(3).AlignCenter().Element(x => DocStyle.Line(x,
+                    "$ " + PersianText.Num(Math.Round(s.TotalUsd, 2)),
+                    DocStyle.BoxValue + 2, DocStyle.Ink(Blue), DocStyle.Weight.Bold));
             });
             row.RelativeItem().Background(DocStyle.Paint(BoxBg)).Border(1).BorderColor(DocStyle.Edge(DocStyle.CellLine))
                .Padding(8).Column(b =>
             {
-                b.Item().AlignCenter().Text("💵 جمله بردگی این ماه")
-                 .FontSize(DocStyle.BoxLabel).FontColor(DocStyle.Ink(DocStyle.Sub));
-                b.Item().PaddingTop(3).AlignCenter()
-                 .Text("$ " + PersianText.Num(Math.Round(s.TotalBardagi, 2)))
-                 .FontSize(DocStyle.BoxValue + 2).Bold().FontColor(DocStyle.Ink(DocStyle.Money));
+                b.Item().AlignCenter().Element(x => DocStyle.Line(x, "💵 جمله بردگی این ماه",
+                    DocStyle.BoxLabel, DocStyle.Ink(DocStyle.Sub)));
+                b.Item().PaddingTop(3).AlignCenter().Element(x => DocStyle.Line(x,
+                    "$ " + PersianText.Num(Math.Round(s.TotalBardagi, 2)),
+                    DocStyle.BoxValue + 2, DocStyle.Ink(DocStyle.Money), DocStyle.Weight.Bold));
             });
         });
 
         col.Item().PaddingTop(6).Border(1).BorderColor(DocStyle.Edge(GreenLine)).Padding(9).AlignCenter()
-           .Text("🟢 الباقی صرافی نزد پمپ: $ " + PersianText.Num(Math.Round(s.Baqi, 2)))
-           .FontSize(DocStyle.BoxValue + 1).Bold().FontColor(DocStyle.Ink(DocStyle.Money));
+           .Element(x => DocStyle.Line(x, "🟢 الباقی صرافی نزد پمپ: $ " + PersianText.Num(Math.Round(s.Baqi, 2)),
+                                       DocStyle.BoxValue + 1, DocStyle.Ink(DocStyle.Money), DocStyle.Weight.Bold));
 
         col.Item().PaddingTop(8).Element(Table);
     });

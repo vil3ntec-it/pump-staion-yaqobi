@@ -79,6 +79,8 @@ public partial class MainWindow : Window
             if (Services.DisplayClock.Now.Date != shownDay) { shownDay = Services.DisplayClock.Now.Date; vm.DisplayDayChanged(); }
             //  یک چراغ در سربرگ — و خودش هر دو تیک را می‌زند
             vm.TickLinkDot();
+            //  نوارِ قفل هر ۳۰ ثانیه از همان درِ یگانه (‎RefreshLockBanner‎)
+            vm.RefreshLockBanner();
             // ══ نیمه‌شب: تاریخِ سربرگ و نوار هم عوض شوند ══════════════════
             // چک‌لیستِ تحویل (بندِ ۶۲–۶۴): پیش از این «امروز» فقط یک بار در
             // ساخت خوانده می‌شد و برنامه‌ای که شب باز مانده بود، صبح هنوز

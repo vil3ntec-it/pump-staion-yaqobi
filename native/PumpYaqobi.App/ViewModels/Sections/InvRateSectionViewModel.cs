@@ -16,10 +16,15 @@ namespace PumpYaqobi.App.ViewModels.Sections;
 /// شده‌اند (‎RateOnCreate‎ و ‎RateOnApprove‎) و همان‌ها خوانده می‌شوند. پس عددِ
 /// این صفحه با گزارشِ «زیان افزایش قیمت» همیشه یکی است.
 /// </summary>
-public sealed class InvRateRowViewModel
+public sealed partial class InvRateRowViewModel : ObservableObject
 {
-    public InvRateRowViewModel(Invoice v, int index, decimal nowRate)
+    private readonly Action<InvRateRowViewModel, bool>? _onReceived;
+
+    public InvRateRowViewModel(Invoice v, int index, decimal nowRate, Action<InvRateRowViewModel, bool>? onReceived = null)
     {
+        Id = v.Id;
+        _received = v.RateDiffReceived;
+        _onReceived = onReceived;
         Index = index;
         Number = v.InvoiceNumber;
         DateShamsi = v.DateShamsi ?? "";
@@ -40,6 +45,23 @@ public sealed class InvRateRowViewModel
         NowRate = Approved ? 0m : nowRate;
         Pdpl = !Approved && Rc > 0m && NowRate > 0m ? NowRate - Rc : 0m;
         PendDiff = Pdpl * Liters;
+    }
+
+    public long Id { get; }
+
+    /// <summary>
+    /// ══ «ضرر دریافت شد» (۱۴۰۵/۰۷/۲۰) ════════════════════════════════════
+    /// صاحب ریپو: «یک کادر هم بزار که ضررها دریافت شد.» فقط برای فاکتورِ در صف
+    /// (همان‌هایی که در مفاد و ضرر شمرده می‌شوند)؛ تیک‌خورده دیگر ضرر نیست.
+    /// </summary>
+    [ObservableProperty] private bool _received;
+
+    public bool CanReceive => !Approved;
+
+    partial void OnReceivedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(NoteText));
+        _onReceived?.Invoke(this, value);
     }
 
     public int Index { get; }
@@ -94,6 +116,7 @@ public sealed class InvRateRowViewModel
     /// </summary>
     public string NoteText =>
         HasDiff ? (Diff > 0m ? "🔴 زیان" : Diff < 0m ? "🟢 مفاد" : "⚪ بی‌تفاوت")
+        : !Approved && Received ? "✅ ضرر دریافت شد"
         : !Approved ? "🟡 در صف — با نرخ امروز"
         : "⚪ بی‌نرخ";
 
@@ -220,12 +243,24 @@ public sealed partial class InvRateSectionViewModel : SectionViewModel
 
         _all = list.OrderByDescending(v => v.InvoiceNumber)
                    .Select((v, i) => new InvRateRowViewModel(
-                       v, i + 1, v.Fuel == FuelType.Diesel ? diesel : petrol))
+                       v, i + 1, v.Fuel == FuelType.Diesel ? diesel : petrol, OnReceived))
                    .ToList();
 
         Sum();
         ApplyFilter();
     }
+
+    /// <summary>تیکِ «ضرر دریافت شد» — همان لحظه روی دیسک؛ نشد ⇒ تیک برمی‌گردد و گفته می‌شود.</summary>
+    private void OnReceived(InvRateRowViewModel row, bool value) =>
+        _ = Services.CrashGuard.RunAsync("ضرر دریافت شد", async () =>
+        {
+            try { await _host.Invoices.SetRateDiffReceivedAsync(row.Id, value); }
+            catch (Exception ex)
+            {
+                _host.Toast("ذخیره نشد: " + ex.Message, ToastKind.Warn);
+                await RefreshAsync();
+            }
+        });
 
     /// <summary>
     /// شش کارتِ بالا — مو‌به‌مو ‎_invRateTotals()‎، ولی روی «دامنه»: همهٔ
