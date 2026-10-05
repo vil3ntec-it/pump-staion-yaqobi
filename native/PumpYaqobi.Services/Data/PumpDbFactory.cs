@@ -33,9 +33,14 @@ public sealed class DbWatch : DbCommandInterceptor
     /// <summary>ضبطِ متنِ دستورها برای سنجش‌ها. در برنامهٔ واقعی خاموش است.</summary>
     public static bool Recording;
 
+    /// <summary>سنجه‌ها: هر نوشتن این‌قدر دیر می‌شود (دیسکِ کندِ ویندوز). صفر در برنامهٔ واقعی.</summary>
+    public static int WriteDelayMs;
+
     private static void Seen(DbCommand cmd)
     {
         Interlocked.Increment(ref _count);
+        if (WriteDelayMs > 0 && (cmd.CommandText.Contains("UPDATE ") || cmd.CommandText.Contains("INSERT ")))
+            Thread.Sleep(WriteDelayMs);
         if (!Recording) return;
         Log.Enqueue(cmd.CommandText.Length > 160 ? cmd.CommandText[..160] : cmd.CommandText);
         while (Log.Count > 400) Log.TryDequeue(out _);

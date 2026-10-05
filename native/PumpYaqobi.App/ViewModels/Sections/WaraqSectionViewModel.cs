@@ -785,7 +785,12 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
 
     public async Task SaveTxnAsync(WaraqTransaction t)
     {
-        await _host.WaraqData.SaveTxnAsync(t);
+        //  ⛔ روی نخِ دیگر (۱۴۰۵/۰۷/۲۰، سنجهٔ ‎waraqtype‎ «دیسکِ کند»): ‎SaveChangesAsync‎ِ SQLite
+        //  در واقع هم‌زمان است، پس روی نخِ رابط هر نوشتنِ کند (دیسکِ ویندوز، ضدِ ویروس، قفلِ
+        //  لحظه‌ای) همان‌قدر تایپ را می‌خشکاند — روی رانرِ ویندوز تا ۱۰۲۸ms. ردیف همچنان پشتِ
+        //  همان دروازهٔ ‎RowViewModel.WriteAsync‎ است، پس دو نوشتنِ یک ردیف هم‌زمان نمی‌شوند.
+        var data = _host.WaraqData;
+        await Task.Run(() => data.SaveTxnAsync(t));
         Recalc();
         PostSoon();
     }

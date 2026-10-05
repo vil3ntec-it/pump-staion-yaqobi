@@ -965,7 +965,26 @@ public sealed class StationPublisher : IAsyncDisposable
         await cloud.LiveConfigTickAsync(ct);
     }
 
+    //  ⛔ یک دورِ ابر در یک زمان (۱۴۰۵/۰۷/۲۰، ‎live/linkstates‎ روی CI): حلقهٔ پس‌زمینه،
+    //  کلیکِ چراغ و باز شدنِ پروفایل هر سه همین را می‌زنند. دو دورِ هم‌زمان هر دو پیش از
+    //  نوشته شدنِ ‎_lastBindFailAt‎ «وقتِ ثبت است» می‌دیدند و دو ‎device/bind‎ می‌رفت — همان
+    //  سقفِ نرخِ سرور. هر کس وسطِ یک دور برسد منتظرِ همان می‌ماند، نه دورِ دوم.
+    //  آزمون: ‎LicenseDeliveryTests.DoDoreHamzaman_YekSabt_Mizanand‎.
+    private static readonly SemaphoreSlim KeepGate = new(1, 1);
+
     private static async Task CloudKeepAsync(CancellationToken ct, bool forceBind = false)
+    {
+        if (!await KeepGate.WaitAsync(0, ct))
+        {
+            await KeepGate.WaitAsync(ct);   // دورِ در جریان تمام شد — نتیجه‌اش همین حالا تازه است
+            KeepGate.Release();
+            return;
+        }
+        try { await CloudKeepOnceAsync(ct, forceBind); }
+        finally { KeepGate.Release(); }
+    }
+
+    private static async Task CloudKeepOnceAsync(CancellationToken ct, bool forceBind)
     {
         var file = AppSettings.Load();
         //  کفِ ساعتِ مجوز — هر دقیقه، هم‌پای زمانی که برنامه باز است

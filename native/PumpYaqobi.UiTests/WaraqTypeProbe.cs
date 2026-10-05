@@ -106,6 +106,28 @@ internal static class WaraqTypeProbe
                   t.Name == "کریم احمدی بابت نان و چای" && t.Liters == 12500m);
         }
 
+        //  ══ دیسکِ کند (۱۴۰۵/۰۷/۲۰) ════════════════════════════════════════════
+        //  ‎align-windows‎ روی رانرِ ویندوز سه بار از هفت بار سرخ شد (۲۳۶ · ۵۴۵ · ۱۰۲۸ms) و
+        //  محلی سبز بود: ذخیرهٔ ردیف روی نخِ رابط می‌دوید و ‎SaveChangesAsync‎ِ SQLite در واقع
+        //  هم‌زمان است، پس هر نوشتنِ کند (دیسکِ ویندوز، ضدِ ویروس) همان‌قدر نوشتن را می‌خشکاند.
+        //  این‌جا همان دیسکِ کند ساخته می‌شود (هر نوشتن ۳۰۰ms) تا سنجه به سرعتِ ماشین بند نباشد.
+        //  دندان: روی ‎main‎ِ پیش از اصلاح ۶۷۰ms ✖؛ پس از آن ۲۹ms.
+        DbWatch.WriteDelayMs = 300;
+        try
+        {
+            Console.WriteLine();
+            Console.WriteLine("── دیسکِ کند: هر نوشتن ۳۰۰ms ──");
+            TypeInto(win, grid, ri, Col("نام"), "حمید رسولی", () => row.Name);
+            Wait(win, SaveGuard.FlushAllAsync());
+        }
+        finally { DbWatch.WriteDelayMs = 0; }
+        for (var i = 0; i < 40; i++) { Pump(win); Thread.Sleep(20); }
+        using (var db = h.Db.Create())
+        {
+            var t = db.Set<PumpYaqobi.Domain.Entities.WaraqTransaction>().AsNoTracking().Single(x => x.Id == row.Entity.Id);
+            Check($"دیسکِ کند: روی دیسک همان نوشته («{t.Name}»)", t.Name == "حمید رسولی");
+        }
+
         Console.WriteLine();
         if (Bad.Count == 0) { Console.WriteLine("✅ نوشتن در ورق روان است و هیچ حرفی گم یا پاک نشد"); return 0; }
         Console.WriteLine($"❌ {Bad.Count} ایراد:");
