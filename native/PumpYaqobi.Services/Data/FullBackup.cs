@@ -324,18 +324,9 @@ public static class FullBackup
         catch { return false; }
     }
 
-    private static SqliteConnection ReadOnly(string dbPath)
-    {
-        //  ⚠️ Pooling=False: دفترِ موقت باید همان لحظه آزاد شود تا پاک شود
-        //  (روی ویندوز فایلِ باز پاک نمی‌شود).
-        var cs = new SqliteConnectionStringBuilder
-        {
-            DataSource = dbPath, Mode = SqliteOpenMode.ReadOnly, Pooling = false,
-        }.ToString();
-        var con = new SqliteConnection(cs);
-        con.Open();
-        return con;
-    }
+    //  ⚠️ Pooling=False: دفترِ موقت باید همان لحظه آزاد شود تا پاک شود (روی
+    //  ویندوز فایلِ باز پاک نمی‌شود) — همان یک درِ ‎BackupService.OpenReadOnly‎.
+    private static SqliteConnection ReadOnly(string dbPath) => BackupService.OpenReadOnly(dbPath);
 
     public static string Sha256(string file)
     {

@@ -183,7 +183,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         {
             var path = await Task.Run(() => _host.Backup.SnapshotToday());
             if (path is not null) ExitBackup.Mark();
-            _host.Toast(path is null ? "❌ عکس گرفته نشد" : "📸 عکسِ امروز تازه شد",
+            _host.Toast(path is null ? "❌ عکس گرفته نشد — " + _host.Backup.LastSnapshotError : "📸 عکسِ امروز تازه شد",
                         path is null ? ToastKind.Error : ToastKind.Ok);
             await RefreshAsync();
         }

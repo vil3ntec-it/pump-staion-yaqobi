@@ -71,7 +71,12 @@ public sealed class RestoreDrill
         for (var attempt = 0; attempt < 2; attempt++)
         {
             var snap = _backup.SnapshotToday();
-            if (snap is null) { why = "عکس گرفته نشد"; continue; }
+            if (snap is null)
+            {
+                var r = _backup.LastSnapshotError;
+                why = "عکس گرفته نشد" + (string.IsNullOrWhiteSpace(r) ? "" : " (" + r + ")");
+                continue;
+            }
             why = Verify(snap, _dbf.DbPath, out n);
             if (why is null) break;
         }

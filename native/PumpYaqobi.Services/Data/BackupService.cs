@@ -44,6 +44,37 @@ public sealed class BackupService
     /// <summary>چهارده عکسِ آخر — همان عددِ نسخهٔ وب.</summary>
     public const int KeepSnapshots = 14;
 
+    /// <summary>فقط برای آزمون: جابه‌جاییِ قفل‌شده روی ویندوز را روی لینوکس بازمی‌سازد.</summary>
+    public static Action<string, string>? MoveForTests;
+
+    /// <summary>
+    /// ⛔ چرا عکسِ آخر گرفته نشد — خالی یعنی گرفته شد. ‎SnapshotToday‎ عمداً استثنا
+    /// بیرون نمی‌دهد، ولی دیگر دلیل را هم نمی‌خورد: «عکسِ پشتیبان گرفته نشد» بی
+    /// دلیل هیچ کاری دستِ کاربر نمی‌داد.
+    /// </summary>
+    public string LastSnapshotError { get; private set; } = "";
+
+    /// <summary>
+    /// ══ تنها درِ خواندنِ یک فایلِ بکاپ/عکس (۱۴۰۵/۰۷/۲۱) ══════════════════════
+    /// ⛔ <b>‎Pooling = false‎</b>: اتصالِ استخری پس از ‎Dispose‎ باز می‌ماند و روی
+    /// ویندوز فایلِ باز نه جایگزین می‌شود نه پاک — ‎Inspect‎ِ عکسِ امروز همین بود و
+    /// عکسِ بعدیِ همان روز را برای همیشه می‌شکست («به هیچ سروری نرسید — عکسِ
+    /// پشتیبان گرفته نشد»). هر کسی که فایلی جز دفترِ زنده را باز می‌کند از این‌جا.
+    /// </summary>
+    public static SqliteConnection OpenReadOnly(string path)
+    {
+        var cs = new SqliteConnectionStringBuilder
+        {
+            DataSource = path,
+            Mode = SqliteOpenMode.ReadOnly,
+            Pooling = false,
+        }.ToString();
+        var con = new SqliteConnection(cs);
+        try { con.Open(); }
+        catch { con.Dispose(); throw; }
+        return con;
+    }
+
     private readonly PumpDbFactory _dbf;
     private readonly PermissionService _perm;
 
@@ -86,7 +117,9 @@ public sealed class BackupService
     /// </summary>
     private static readonly object SnapshotGate = new();
 
-    private void WriteSnapshotCore(string target)
+    /// <returns>مسیری که عکس واقعاً در آن نشست — همان <paramref name="target"/>، یا
+    /// اگر آن فایل قفل بود، نامِ تازه‌ای کنارش.</returns>
+    private string WriteSnapshotCore(string target)
     {
         var dir = Path.GetDirectoryName(target);
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
@@ -107,13 +140,51 @@ public sealed class BackupService
                     var quoted = part.Replace("'", "''");
                     db.Database.ExecuteSqlRaw($"VACUUM INTO '{quoted}';");
                 }
-                File.Move(part, target, overwrite: true);
+                return PlaceSnapshot(part, target);
             }
             finally
             {
                 try { if (File.Exists(part)) File.Delete(part); } catch { /* دورِ بعد */ }
             }
         }
+    }
+
+    /// <summary>
+    /// ⛔ روی ویندوز فایلی که کسی بازش نگه داشته (اتصالِ استخریِ جامانده، ضدِ ویروس،
+    /// نمایه‌ساز، برنامهٔ بکاپِ دیگر) جایگزین نمی‌شود. پس: چند بار با فاصله و پس از
+    /// خالی کردنِ استخرِ اتصال‌ها؛ و اگر باز هم نشد، عکس با <b>نامِ تازه</b> کنارش
+    /// می‌نشیند — بکاپ هرگز به‌خاطرِ قفلِ عکسِ قبلی شکست نمی‌خورد. ‎Prune‎ بعداً
+    /// کهنه‌ها را برمی‌دارد.
+    /// </summary>
+    private static string PlaceSnapshot(string part, string target)
+    {
+        Exception? last = null;
+        for (var attempt = 0; attempt < 4; attempt++)
+        {
+            try
+            {
+                if (MoveForTests is { } mv) mv(part, target); else File.Move(part, target, overwrite: true);
+                return target;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                last = ex;
+                try { SqliteConnection.ClearAllPools(); } catch { /* رفاه */ }
+                Thread.Sleep(150 * (attempt + 1));
+            }
+        }
+        var dir = Path.GetDirectoryName(target) ?? ".";
+        var stem = Path.GetFileNameWithoutExtension(target);
+        var ext = Path.GetExtension(target);
+        for (var n = 0; n < 50; n++)
+        {
+            var alt = Path.Combine(dir, stem + "-" + AppClock.Now.ToString("HHmmss")
+                                   + (n == 0 ? "" : "-" + n) + ext);
+            if (File.Exists(alt)) continue;
+            if (MoveForTests is { } mv) mv(part, alt); else File.Move(part, alt, overwrite: false);
+            return alt;
+        }
+        throw last ?? new IOException("فایلِ عکس قفل است");
     }
 
     /// <summary>
@@ -129,11 +200,33 @@ public sealed class BackupService
         {
             var day = Shamsi.Today().Replace('/', '-');
             var target = Path.Combine(SnapshotDir, "pump-" + day + ".db");
-            WriteSnapshotCore(target);
+            var made = WriteSnapshotCore(target);
+            LastSnapshotError = "";
             Prune();
-            return target;
+            return made;
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            //  ⛔ استثنا بیرون نمی‌رود، ولی دلیل هم گم نمی‌شود
+            LastSnapshotError = Why(ex);
+            return null;
+        }
+    }
+
+    /// <summary>جملهٔ کوتاهِ فارسی برای کاربر — بی مسیر و متنِ خام.</summary>
+    public static string Why(Exception ex)
+    {
+        for (var x = ex; x is not null; x = x.InnerException)
+        {
+            if (x is UnauthorizedAccessException)
+                return "اجازهٔ نوشتن در پوشهٔ بکاپ نیست";
+            if (x is SqliteException se)
+                return se.SqliteErrorCode == 13 ? "دیسک پر است" : "دفتر همین حالا خوانده نشد — دوباره بزنید";
+            if (x is IOException io)
+                return (io.HResult & 0xFFFF) is 0x70 or 0x27 ? "دیسک پر است"
+                    : "فایلِ بکاپ باز یا قفل است — شاید برنامهٔ دیگری بازش کرده";
+        }
+        return "عکس ساخته نشد (" + ex.GetType().Name + ")";
     }
 
     /// <summary>کهنه‌ترها را می‌برد و فقط چهارده تای آخر می‌ماند.</summary>
@@ -173,8 +266,9 @@ public sealed class BackupService
             FileInfo fi;
             try { fi = new FileInfo(path); } catch { continue; }
             var stem = Path.GetFileNameWithoutExtension(path);
+            //  ⚠️ عکسی که کنارِ فایلِ قفل‌شده نشسته پسوندِ ساعت دارد («pump-1405-07-21-083012»)
             var day = stem.StartsWith("pump-", StringComparison.Ordinal)
-                ? stem[5..].Replace('-', '/') : stem;
+                ? string.Join('/', stem[5..].Split('-').Take(3)) : stem;
             list.Add(new BackupFile(path, day, fi.LastWriteTime, fi.Length));
         }
         return list.OrderByDescending(x => x.TakenAt).ToList();
@@ -193,14 +287,7 @@ public sealed class BackupService
         try
         {
             if (!File.Exists(path)) return -1;
-            var cs = new SqliteConnectionStringBuilder
-            {
-                DataSource = path,
-                Mode = SqliteOpenMode.ReadOnly,
-            }.ToString();
-
-            using var con = new SqliteConnection(cs);
-            con.Open();
+            using var con = OpenReadOnly(path);
 
             using var check = con.CreateCommand();
             check.CommandText =
@@ -317,8 +404,7 @@ public sealed class BackupService
             {
                 var target = Path.Combine(SnapshotDir, n == 1 ? stem + ".db" : $"{stem}-{n}.db");
                 if (File.Exists(target)) continue;
-                WriteSnapshotCore(target);
-                return target;
+                return WriteSnapshotCore(target);
             }
             return null;
         }
