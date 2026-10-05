@@ -244,15 +244,28 @@ public sealed class BackupPusher : IAsyncDisposable
             if (info.Length > CloudMaxBytes)
             { LastCloudWhy = $"دفتر از سقفِ {CloudMaxBytes / 1048576} مگابایتیِ سرور بزرگ‌تر است — فایلِ بکاپ را روی فلش بگیرید"; return false; }
 
-            //  ⚠️ شمارِ رکوردها در برچسب می‌رود تا در فهرستِ سرور «خالی» از «پر» پیداست.
-            var res = await cloud.BackupUploadAsync(
-                file,
-                label: Shamsi.Today() + " · " + records.ToString("N0") + " رکورد",
-                manual: manual,
-                ext: "db",
-                ct: ct);
-            if (!res.Ok) LastCloudWhy = res.Why;
-            return res.Ok;
+            //  ⛔ مُهرِ پمپ (۱۴۰۵/۰۷/۲۰): نسخهٔ روی سرور هم فقط با همین حساب باز می‌شود —
+            //  وگرنه همان فایل از پورتالِ صاحب گرفته و در حسابِ آزمایشیِ تازه آورده می‌شد.
+            string? sealedCopy = null;
+            if (await BackupKeys.ForCurrentAsync(network: true, ct) is { } key
+                && (AppSettings.Load().CloudStationId ?? "").Trim() is { Length: > 0 } station)
+            {
+                sealedCopy = file + ".sealed";
+                await Task.Run(() => PumpYaqobi.Services.Data.BackupSeal.Seal(file, sealedCopy, station, key), ct);
+            }
+            try
+            {
+                //  ⚠️ شمارِ رکوردها در برچسب می‌رود تا در فهرستِ سرور «خالی» از «پر» پیداست.
+                var res = await cloud.BackupUploadAsync(
+                    sealedCopy ?? file,
+                    label: Shamsi.Today() + " · " + records.ToString("N0") + " رکورد",
+                    manual: manual,
+                    ext: "db",
+                    ct: ct);
+                if (!res.Ok) LastCloudWhy = res.Why;
+                return res.Ok;
+            }
+            finally { if (sealedCopy is not null) try { File.Delete(sealedCopy); } catch { } }
         }
         catch (Exception e) { LastCloudWhy = ErrorText.Friendly(e); return false; }
     }

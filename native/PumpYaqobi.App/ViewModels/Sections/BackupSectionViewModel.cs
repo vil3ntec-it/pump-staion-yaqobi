@@ -259,6 +259,16 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
     {
         //  ⛔ بکاپِ خودِ همین حساب از سرورِ حساب از درِ اشتراک رد نمی‌شود — شرحش در
         //  ‎PermissionService.TrustOwnCloudBackup‎.
+        //  ⛔ مُهرِ پمپ: مالِ همین پمپ ⇒ باز (با هر اشتراکی)؛ مالِ پمپِ دیگر ⇒ هرگز
+        var seal = await BackupKeys.OpenForRestoreAsync(path, _host.Backup.SnapshotDir);
+        if (!seal.Ok) { _host.Toast(seal.Why, ToastKind.Error); return; }
+        ownCloud |= seal.OwnPump;
+        if (seal.Temp)
+        {
+            try { await RestoreFromAsync(seal.Path, what, ownCloud); }
+            finally { try { File.Delete(seal.Path); } catch { } }
+            return;
+        }
         if (!ownCloud && !RestoreAllowed()) return;
         //  ⛔ پشتیبانِ رمزشده (‎.pyq‎) اول در یک فایلِ موقت باز می‌شود و همان راهِ
         //  همیشگی رویش می‌رود (سنجش، پرسش، عکسِ ایمنی). پس از کار پاک می‌شود.
@@ -397,9 +407,13 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             var settings = _main.CapturePortableSettings();
             var info = await Task.Run(() =>
                 FullBackup.Write(_host.Backup, target, AppVersion.Current, settings, pump));
+            //  ⛔ مُهرِ پمپ (۱۴۰۵/۰۷/۲۰): فایل فقط با همین حساب باز می‌شود — شرح: ‎BackupKeys‎
+            var sealedToPump = await BackupKeys.SealIfPossibleAsync(target);
             FullStatus = $"✅ ساخته و سنجیده شد: {Path.GetFileName(target)}\n"
                        + $"{Shamsi.Money(info.TotalRows)} ردیف در {Shamsi.Money(info.Tables.Count)} جدول · "
-                       + SizeText(info.FileBytes) + " · با تم و تنظیمات";
+                       + SizeText(info.FileBytes) + " · با تم و تنظیمات"
+                       + (sealedToPump ? " · 🔒 فقط با همین حساب باز می‌شود"
+                                       : " · ⚠️ هنوز به حسابی قفل نیست (وارد حساب نشده‌اید)");
             FullStatusBrushKey = "Pump.Ok";
             _host.Toast("📦 فایلِ کامل ساخته شد — می‌شود روی فلش برد", ToastKind.Ok);
             try { var st = AppSettings.Load(); st.PortablePaths["full"] = target; st.LastFullExportAt = AppClock.UtcNow.ToString("O"); st.Save(); } catch { }
@@ -434,7 +448,28 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             _host.Toast("❌ آوردنِ فایلِ کامل فقط از مدیر برمی‌آید", ToastKind.Error);
             return;
         }
-        if (!RestoreAllowed()) return;
+        //  ⛔ مُهرِ پمپ (۱۴۰۵/۰۷/۲۰): مالِ همین پمپ ⇒ باز، حتی بی اشتراک (فقط‌خواندنی می‌ماند)؛
+        //  مالِ پمپِ دیگر (حسابِ دوم، آزمایشیِ دوباره) ⇒ هرگز؛ بی مُهر ⇒ فقط اشتراکِ پولی.
+        var seal = await BackupKeys.OpenForRestoreAsync(path, _host.Backup.SnapshotDir);
+        if (!seal.Ok)
+        {
+            FullStatus = "❌ " + seal.Why;
+            FullStatusBrushKey = "Pump.Danger";
+            _host.Toast(seal.Why, ToastKind.Error);
+            return;
+        }
+        if (seal.Temp)
+        {
+            try { await ImportFullCoreAsync(seal.Path, ownPump: true); }
+            finally { try { File.Delete(seal.Path); } catch { } }
+            return;
+        }
+        await ImportFullCoreAsync(path, ownPump: false);
+    }
+
+    private async Task ImportFullCoreAsync(string path, bool ownPump)
+    {
+        if (!ownPump && !RestoreAllowed()) return;
 
         Busy = true;
         FullStatus = "در حالِ خواندن و سنجیدنِ فایل…";
@@ -471,7 +506,11 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
                 try { await SaveGuard.FlushAllAsync(); } catch { }
                 RestoreOutcome outcome;
                 using var paused = _host.SyncIfStarted is { } se ? await se.PauseAsync() : null;
-                try { outcome = await Task.Run(() => FullBackup.Restore(_host.Backup, info)); }
+                try
+                {
+                    using var trust = ownPump ? PermissionService.TrustOwnCloudBackup() : null;
+                    outcome = await Task.Run(() => FullBackup.Restore(_host.Backup, info));
+                }
                 catch (PermissionDeniedException pd)
                 {
                     FullStatus = "";

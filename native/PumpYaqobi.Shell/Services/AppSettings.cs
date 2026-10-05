@@ -461,6 +461,27 @@ public sealed class AppSettings
         }
     }
 
+    /// <summary>
+    /// ⛔ کلیدِ بکاپِ هر پمپ (‎ایستگاه=کلیدِ base64;…‎) — از سرورِ حساب، فقط برای عضوِ
+    /// همان پمپ (‎BackupSeal‎، ۱۴۰۵/۰۷/۲۰). روی دیسک فقط رمزشده. ⚠️ فقط کلیدِ پمپِ
+    /// <b>فعلی</b> به کار می‌رود (‎BackupKeys.ForCurrent‎)؛ کلیدِ پمپِ حسابِ قبلی روی
+    /// همین کامپیوتر بکاپِ آن را برای حسابِ تازه باز نمی‌کند.
+    /// </summary>
+    [JsonIgnore] public string BackupKeys { get; set; } = "";
+    private string _backupKeysBlob = "";
+
+    [JsonPropertyName("BackupKeysEnc")]
+    public string BackupKeysEnc
+    {
+        get => Keep(BackupKeys, _backupKeysBlob);
+        set
+        {
+            var v = SecretStore.Unprotect(value);
+            if (v.Length > 0) { BackupKeys = v; _backupKeysBlob = ""; }
+            else _backupKeysBlob = value ?? "";
+        }
+    }
+
     //  ── و خواندنِ فایلِ کهنه ───────────────────────────────────────────
     //  ⚠️ این چهار تا فقط **خوانده** می‌شوند: `get` همیشه `null` است، پس
     //  `WhenWritingNull` آن‌ها را در فایلِ تازه نمی‌نویسد و کلیدِ خام با

@@ -195,6 +195,23 @@ public sealed partial class CloudLink
         }
     }
 
+    /// <summary>
+    /// کلیدِ بکاپِ <b>همین</b> پمپ از سرورِ حساب (‎/api/pump/device/backup-key‎) — فقط با
+    /// توکنِ دستگاهِ همین پمپ. شرح: ‎BackupSeal‎ و ‎lib/backup-key.js‎ِ سرورِ حساب.
+    /// </summary>
+    public async Task<(bool Ok, string StationId, byte[] Key, string Why)> BackupKeyAsync(CancellationToken ct = default)
+    {
+        if (!Activated) return (false, "", Array.Empty<byte>(), "فعال نشده");
+        var (ok, json, why, _) = await DevGetAsync("/api/pump/device/backup-key", ct);
+        if (!ok) return (false, "", Array.Empty<byte>(), why);
+        var station = Str(json, "stationId");
+        byte[] key;
+        try { key = Convert.FromBase64String(Str(json, "key")); }
+        catch { return (false, "", Array.Empty<byte>(), "کلیدِ بکاپ ناخوانا آمد"); }
+        if (station.Length == 0 || key.Length != 32) return (false, "", Array.Empty<byte>(), "کلیدِ بکاپ ناقص آمد");
+        return (true, station, key, "");
+    }
+
     /// <summary>فهرستِ پشتیبان‌های ابریِ همین پمپ، تازه‌ترین اول.</summary>
     public async Task<(bool Ok, List<CloudBackup> Items, CloudBackupStats Stats, string Why)>
         BackupListAsync(CancellationToken ct = default)
