@@ -64,9 +64,13 @@ jobs:
           echo "version=${MAJOR_MINOR}.${patch}" >> "$GITHUB_OUTPUT"
           echo "نسخهٔ این ساخت: ${MAJOR_MINOR}.${patch}"
 
+      #  ⛔ (۱۴۰۵/۰۷/۲۱) ساختِ ۳.۱.۲۴۹ در همین گام ۴۶ دقیقه گیر کرد و انتشار ایستاد؛
+      #  بی سقف، پیش‌فرضِ گیت‌هاب شش ساعت است. حالا آزمونِ گیرکرده ده دقیقه بعد با
+      #  نامِ خودش سرخ می‌شود (‎--blame-hang‎) و کلِ گام سقفِ ۴۰ دقیقه دارد.
       - name: آزمون‌ها
         working-directory: native
-        run: dotnet test PumpYaqobi.Tests -c Release --nologo
+        timeout-minutes: 40
+        run: dotnet test PumpYaqobi.Tests -c Release --nologo --blame-hang-timeout 10m
 
       # self-contained تا روی ویندوزی که دات‌نت ندارد هم باز شود
       #

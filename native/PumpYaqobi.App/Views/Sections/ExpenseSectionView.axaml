@@ -29,12 +29,12 @@
         <!-- نقطهٔ سرخ روی کشوی سال/ماه و کنارِ ماهِ پیش (‎MonthDot‎) -->
         <Panel IsVisible="{Binding Picker.HasYears}">
           <ComboBox ItemsSource="{Binding Picker.Years}" SelectedItem="{Binding Picker.Year}"
-                    ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="110" />
+                    c:PickerWidth.Stable="True" ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="110" />
           <Ellipse Classes="monthdot badge" IsVisible="{Binding Picker.HasYearDot}" />
         </Panel>
         <Panel>
           <ComboBox ItemsSource="{Binding Picker.Months}" SelectedItem="{Binding Picker.Selected}"
-                    ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="140" />
+                    c:PickerWidth.Stable="True" ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="140" />
           <Ellipse Classes="monthdot badge" IsVisible="{Binding Picker.HasMonthDot}" />
         </Panel>
       </StackPanel>
