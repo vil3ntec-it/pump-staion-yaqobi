@@ -275,7 +275,19 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
         Touch();
         if (!Loading) _owner.AutoFromName(this);
     }
-    partial void OnLitersChanged(decimal v) { _t.AmountAuto ??= true; Touch(); Refresh(); }
+    //  ══ مبلغ = مقدار × فی — «آخرین چیزی که نوشتی برنده است» (۱۴۰۵/۰۷/۲۲) ══════
+    //  گزارشِ صاحب ریپو: «مقدارِ تیل را می‌زنم اما با فی ضرب نمی‌شود و به مبلغ اضافه
+    //  نمی‌شود.» ریشه: مبلغی که یک بار دستی نوشته شده بود (یا نیمه روی دیسک مانده بود)
+    //  ردیف را برای همیشه «دستی» می‌کرد؛ دیگر هیچ مقداری ضرب نمی‌شد.
+    //  ⛔ کاربر مقدار را نوشت ⇒ مبلغ دوباره خودکار (مقدار × فی). کاربر مبلغ نوشت ⇒ دستی.
+    //  ⛔ مبلغِ خالی یا صفر ⇒ خودکار (همان قاعدهٔ سایت: ‎amountAuto = !(amount > 0)‎) —
+    //  پیش از این پاک کردنِ مبلغ ردیف را تا ابد صفر نگه می‌داشت.
+    partial void OnLitersChanged(decimal v)
+    {
+        if (Loading) _t.AmountAuto ??= true;
+        else _t.AmountAuto = true;
+        Touch(); Refresh();
+    }
     partial void OnIsExpenseChanged(bool v)
     {
         Touch();
@@ -294,7 +306,7 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
     /// <summary>مبلغی که کاربر خودش بنویسد دیگر خودکار نیست و بازحساب نمی‌شود.</summary>
     partial void OnAmountChanged(decimal v)
     {
-        if (!Loading) _t.AmountAuto = false;
+        if (!Loading) _t.AmountAuto = v > 0m ? false : true;
         Touch(); Refresh();
     }
 
@@ -305,7 +317,19 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
         OnPropertyChanged(nameof(EffectiveAmountText));
     }
 
-    public string LitersText { get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters)); set { if (!Typed(nameof(LitersText), value)) return; Liters = Shamsi.Num(value); } }
+    public string LitersText
+    {
+        get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters));
+        set
+        {
+            if (!Typed(nameof(LitersText), value)) return;
+            var v = Shamsi.Num(value);
+            //  ⛔ همان عدد دوباره نوشته شد (مبلغِ دستیِ کهنه کنارش) ⇒ باز هم «مقدار × فی»؛
+            //  خاصیت عوض نمی‌شود پس ‎OnLitersChanged‎ نمی‌آمد و مبلغِ غلط می‌ماند.
+            if (v == Liters && !Loading && _t.AmountAuto != true) { _t.AmountAuto = true; Touch(); Refresh(); return; }
+            Liters = v;
+        }
+    }
     public string AmountText { get => Shown(nameof(AmountText), Shamsi.MoneyOrBlank(Amount)); set { if (!Typed(nameof(AmountText), value)) return; Amount = Shamsi.Num(value); } }
 
     /// <summary>مبلغی که واقعاً در جمع‌ها شمرده می‌شود.</summary>
