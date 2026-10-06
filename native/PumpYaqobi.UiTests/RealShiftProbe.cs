@@ -82,9 +82,16 @@ internal static class RealShiftProbe
         await Idle();
         var prev = Prev();
         var last = $"{prev}/31";
+        var j = 0;
         foreach (var r in Rows(s))
         {
             r.GetType().GetProperty("DateShamsi")!.SetValue(r, last);
+            //  ‎RS_POSTED=1‎: هر ردیفِ سوم مثلِ ردیفی که از ورق ثبت شده (عنوانِ ایموجی‌دار + مبلغ) — همان ردیف‌های ۴/۷/۱۰ و ۲/۳ِ عکس
+            if (Environment.GetEnvironmentVariable("RS_POSTED") == "1" && j++ % 3 == (id == "safe" ? 1 : 0))
+            {
+                r.GetType().GetProperty("Title")!.SetValue(r, $"📝 فروش ورق {last} — روز");
+                r.GetType().GetProperty("Amount")!.SetValue(r, 48250m);
+            }
             await r.FlushAsync();
         }
         //  ماهِ جاری با نوشته‌ها و عددهای بلند ⇒ پهنای ستون‌ها با عوض شدنِ ماه عوض می‌شود
