@@ -413,7 +413,9 @@ internal static class MonthShiftAllProbe
         var h = (HistorySectionViewModel)Open(win, vm, "history");
         WaitRows(win);
         Settle(win);
-        foreach (var kind in h.Cards.Where(c => c.Entity.Count > 0).Select(c => c.Entity.Key).ToList())
+        var onlyKind = Environment.GetEnvironmentVariable("MS_HIST");
+        foreach (var kind in h.Cards.Where(c => c.Entity.Count > 0).Select(c => c.Entity.Key)
+                              .Where(k => string.IsNullOrEmpty(onlyKind) || onlyKind.Split(',').Contains(k)).ToList())
         {
             Wait(win, h.OpenAsync(kind));
             WaitRows(win);
@@ -877,7 +879,13 @@ internal static class MonthShiftAllProbe
                 //  بیرون زده (لبهٔ دیدنی‌اش سرِ جا ولی خودش جابه‌جا) هم گرفته شود
                 //  ⚠️ خانهٔ کناریِ نوارِ «جمله» زیرِ سرستونش است و سرستون تا خطِ بیرونیِ جدول می‌رود،
                 //  در حالی که نوار درونِ قابِ خودش (خطِ ‎SumBorder‎) است: همان یک خط روی هم می‌افتد
-                var tol = p is TotalsStrip ? 2.5 : 1;
+                var tol = 1.0;
+                if (p is TotalsStrip && p.GetVisualAncestors().OfType<Border>().FirstOrDefault(b => b.BorderThickness.Left > 0) is { } fb)
+                {
+                    var sc = Avalonia.Layout.LayoutHelper.GetLayoutScale(fb);
+                    var th = Avalonia.Layout.LayoutHelper.RoundLayoutThickness(fb.BorderThickness, sc, sc);
+                    tol = th.Left + th.Right + 0.5;
+                }
                 if (c.Bounds.X - c.Margin.Left < -tol || c.Bounds.Right + c.Margin.Right > p.Bounds.Width + tol)
                 {
                     bad.Add($"«{Label(c)}» در «{Label(p)}»: {c.Bounds.X - c.Margin.Left:0}..{c.Bounds.Right + c.Margin.Right:0} از {p.Bounds.Width:0}");
@@ -1080,7 +1088,12 @@ internal static class MonthShiftAllProbe
                 var dx = RtlTrim.CenterFix(tb);
                 var want = tb.FlowDirection == FlowDirection.RightToLeft ? -dx : dx;
                 var have = (tb.RenderTransform as TranslateTransform)?.X ?? 0;
-                if (Math.Abs(want - have) > 2) bad.Add($"وسط‌چینیِ کهنهٔ «{tb.Text}»: دارد {have:0.#} باید {want:0.#}");
+                if (Math.Abs(want - have) > 2)
+                {
+                    bad.Add($"وسط‌چینیِ کهنهٔ «{tb.Text}»: دارد {have:0.#} باید {want:0.#}");
+                    if (Dbg)
+                        Console.WriteLine($"     ‹کهنه› #{System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(tb)} b={tb.Bounds} d={tb.DesiredSize} mv={tb.IsMeasureValid} av={tb.IsArrangeValid} wrap={tb.TextWrapping} max={tb.MaxLines} trim={tb.TextTrimming} fs={tb.FontSize} lines={tb.TextLayout?.TextLines.Count} w0={tb.TextLayout?.TextLines[0].Width:0.#} pad={tb.Padding} parent={(tb.GetVisualParent() as Control)?.Bounds} rt={tb.RenderTransform?.GetType().Name} owned={tb.GetValue((AvaloniaProperty)typeof(RtlTrim).GetField("OwnedProperty", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!)}");
+                }
             }
         }
         finally

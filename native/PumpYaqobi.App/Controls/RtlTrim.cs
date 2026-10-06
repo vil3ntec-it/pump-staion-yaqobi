@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.VisualTree;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.TextFormatting;
@@ -204,8 +205,43 @@ public static class RtlTrim
         char.IsWhiteSpace(c) || c is '\u200b' or '\u200c' or '\u200d' or '\u200e' or '\u200f'
             or '\u061c' or '\ufeff' or (>= '\u202a' and <= '\u202e') or (>= '\u2066' and <= '\u2069');
 
+    private static readonly AttachedProperty<bool> PendingProperty =
+        AvaloniaProperty.RegisterAttached<TextBlock, TextBlock, bool>("RtlTrimPending");
+
+    /// <summary>یک بار، پس از نخستین چیدمانِ کاملِ همین نوشته.</summary>
+    private static void AfterLayout(TextBlock t)
+    {
+        if (t.GetValue(PendingProperty) || t.GetVisualRoot() is null) return;
+        t.SetValue(PendingProperty, true);
+        EventHandler? h = null;
+        h = (_, _) =>
+        {
+            //  ⚠️ نوشتهٔ پنهان (ردیفِ بازیافتی یا قابِ چسبانِ پنهان) همین‌جا برمی‌گردد و منتظر
+            //  می‌ماند: وقتی دوباره دیده شود، با همان کادر چیده می‌شود و ‎Bounds‎ عوض نمی‌شود — پس
+            //  این تنها فرصتِ سنجیدنش است. از درخت که رفت، شنونده هم می‌رود.
+            if (t.GetVisualRoot() is null) { t.LayoutUpdated -= h; t.SetValue(PendingProperty, false); return; }
+            if (!t.IsEffectivelyVisible || !t.IsMeasureValid || !t.IsArrangeValid) return;
+            t.LayoutUpdated -= h;
+            t.SetValue(PendingProperty, false);
+            Recenter(t);
+        };
+        t.LayoutUpdated += h;
+    }
+
     private static void Recenter(TextBlock t)
     {
+        //  ⛔ چیدمانِ نیمه‌کاره را «وسط است» نخوان (۱۴۰۵/۰۷/۲۱): پستِ پس از عوض شدنِ متن گاهی
+        //  پیش از چیدمانِ تازه می‌رسد؛ ‎CenterFix‎ آن‌جا صفر می‌دهد و تصحیح پاک می‌شد (یا تصحیحِ
+        //  متنِ پیشینِ همین خانهٔ بازیافتی می‌ماند)، و چون خانه همان پهنا را داشت (‎Bounds‎ عوض
+        //  نشد) دیگر کسی دوباره نمی‌سنجید — «هارون بابت …» در تاریخچهٔ صرافی در ۱۲۵٪ با تصحیحِ
+        //  «کریم»ِ پیشین (۶٫۹ پیکسل) ماند (‎monthshift all‎). حالا یک بار پس از همان چیدمان دوباره:
+        //  شنوندهٔ ‎LayoutUpdated‎ِ <b>یک‌باره و فقط روی همین نوشته</b>، که با نخستین سنجشِ دیدنی
+        //  برداشته می‌شود — نه شنوندهٔ همیشگی؛ تا نوشته پنهان است فقط ‎IsEffectivelyVisible‎ می‌پرسد.
+        if (!t.IsMeasureValid || !t.IsArrangeValid)
+        {
+            AfterLayout(t);
+            return;
+        }
         var dx = CenterFix(t);
         var owned = t.GetValue(OwnedProperty);
         //  ⛔ جابه‌جاییِ کسِ دیگر دست نمی‌خورد
