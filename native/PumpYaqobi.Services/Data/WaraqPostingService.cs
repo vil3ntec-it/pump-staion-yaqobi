@@ -410,7 +410,10 @@ public sealed class WaraqPostingService
             return;
         }
         var name = (t.Name ?? "").Trim();
-        var amount = Round0(calc.TxnAmount(sd, t));
+        //  ⛔ (۱۴۰۵/۰۷/۲۲، بازبینی) دو رقمِ اعشار، نه افغانیِ درست: مبلغِ دستیِ «100.5» در ورق
+        //  همان 100.5 از «جمله فروش» کم می‌شود، پس حساب هم همان را می‌گیرد (‎RoundMoney‎ِ
+        //  حسابِ قرض‌دار). مبلغِ خودکار از پیش در ‎TxnAmount‎ گرد شده و دست نمی‌خورد.
+        var amount = DebtCalculationService.RoundMoney(calc.TxnAmount(sd, t));
         var liters = t.Liters;
 
         // پُرکردنِ دوطرفهٔ تیل ↔ پول با نرخِ همین ورق، مثلِ سایت:
@@ -629,10 +632,10 @@ public sealed class WaraqPostingService
                                        List<Debtor> people, ArchivedSrc arch)
     {
         //  آرشیوِ کهنه (پیش از ‎SrcTxn‎) — همان حساب و همان مبلغ
-        var amount = Round0(calc.TxnAmount(sd, t));
+        var amount = DebtCalculationService.RoundMoney(calc.TxnAmount(sd, t));
         var rate = calc.RepPrice(sd, t.Fuel);
         if (amount <= 0 && t.Liters > 0 && rate > 0) amount = Round0(t.Liters * rate);
-        if (amount != Round0(arch.Bardagi)) return false;
+        if (amount != DebtCalculationService.RoundMoney(arch.Bardagi)) return false;
         if (PostingService.RetailName((t.Name ?? "").Trim()) is not null) return arch.AccountId == 0;
         var m = PostingService.MatchWaraqName(people, t.Name);
         if (m.Found is not { } f) return false;
