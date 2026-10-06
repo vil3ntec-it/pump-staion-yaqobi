@@ -157,8 +157,9 @@ public class WaraqNetSalesTests : IDisposable
             },
         };
         var t = new WaraqService().ShiftTotals(sd);
-        Assert.Equal(4000m, t.Net);            // کادرِ «جمله فروش» همان منهای قرض
-        Assert.Equal(3700m, t.Cash);           // ⛔ گاوصندوق: منهای مصرف هم
+        //  ⛔ (۱۴۰۵/۰۷/۲۲) کادرِ «جمله فروش» هم منهای مصرف — همان عددِ گاوصندوق
+        Assert.Equal(3700m, t.Net);
+        Assert.Equal(3700m, t.Cash);
     }
 
     [Fact]

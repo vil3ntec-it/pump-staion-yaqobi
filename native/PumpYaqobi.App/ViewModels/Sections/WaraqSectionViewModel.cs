@@ -603,7 +603,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
 
     /// <summary>جمعِ ستونِ «جمله قرض»ِ پایه‌ها — خانهٔ ‎#wq-total-debt‎ی سایت.</summary>
     [ObservableProperty] private string _pumpDebt = "";
-    /// <summary>جمعِ ستونِ «فروش»ِ جدولِ پایه‌ها (لیتر × فی) — «جمله فروش»ِ خلاصه منهای قرض است.</summary>
+    /// <summary>جمعِ ستونِ «فروش»ِ جدولِ پایه‌ها (لیتر × فی) — «جمله فروش»ِ خلاصه منهای قرض و مصرف است.</summary>
     [ObservableProperty] private string _pumpSales = "";
 
     /// <summary>عددِ خامِ کمبودی/اضافی — فقط برای رنگِ کادرِ ششم.</summary>
@@ -695,7 +695,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         var t = Calc.ShiftTotals(sd);
         PetrolLiters = Shamsi.Money(t.PetrolLiters);
         DieselLiters = Shamsi.Money(t.DieselLiters);
-        Sales = Shamsi.Money(Math.Round(t.Net, 0, MidpointRounding.AwayFromZero));   // ⛔ منهای قرض‌ها
+        Sales = Shamsi.Money(Math.Round(t.Net, 0, MidpointRounding.AwayFromZero));   // ⛔ منهای قرض و مصرف
         PumpSales = Shamsi.Money(Math.Round(t.Sales, 0, MidpointRounding.AwayFromZero)) + " افغانی";
         Debt = Shamsi.Money(Math.Round(t.Debt, 0, MidpointRounding.AwayFromZero));
         Expenses = Shamsi.Money(Math.Round(t.Expenses, 0, MidpointRounding.AwayFromZero));
@@ -1067,7 +1067,7 @@ public sealed class WaraqCardViewModel
         SubText = (w.Station ?? "") + (workers.Length > 0 ? " — " + string.Join(" / ", workers) : "");
 
         // عددِ ساده — «فروشِ ورق · افغانی» زیرش در کارت می‌آید
-        SalesText = Money(d.Net + n.Net);   // ⛔ منهای قرض‌ها
+        SalesText = Money(d.Net + n.Net);   // ⛔ منهای قرض و مصرف
         DebtText = "قرض: " + Money(d.Debt + n.Debt);
         ExpenseText = "مصرف: " + Money(d.Expenses + n.Expenses);
     }
