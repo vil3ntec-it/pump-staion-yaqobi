@@ -47,19 +47,28 @@ jobs:
       - name: نوشتهٔ خانه‌ها پس از عوض کردنِ ماه — پنجرهٔ واقعی ۱۰۰٪ · ۱۲۵٪ · ۱۵۰٪
         if: ${{ !cancelled() }}
         working-directory: native
+        shell: bash
         run: |
           set -e
+          #  عکسِ صفحه (‎import‎) بی آن نمی‌شود — و بی عکس سنجه خودش سرخ است
+          command -v import >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick; }
           dotnet build PumpYaqobi.UiTests -c Release -v q
+          set +e -o pipefail
+          rc=0
+          run() { "$@" 2>&1 | tee -a realshift.log; r=$?; [ $r -ne 0 ] && rc=$r; }
           for sc in 1 1.25 1.5; do
             for drag in 0 1; do
-              echo "════ مقیاس $sc · پهنای دستی $drag ════"
-              RS_ROWS=70 RS_POSTED=1 RS_DRAG=$drag AVALONIA_GLOBAL_SCALE_FACTOR=$sc xvfb-run -a -s "-screen 0 2400x1500x24" \
+              echo "════ مقیاس $sc · پهنای دستی $drag ════" | tee -a realshift.log
+              RS_ROWS=70 RS_POSTED=1 RS_DRAG=$drag AVALONIA_GLOBAL_SCALE_FACTOR=$sc run xvfb-run -a -s "-screen 0 2400x1500x24" \
                 dotnet run --no-build --project PumpYaqobi.UiTests -c Release -- realshift
             done
-            echo "════ مقیاس $sc · ماهِ کم‌ردیف ════"
-            AVALONIA_GLOBAL_SCALE_FACTOR=$sc xvfb-run -a -s "-screen 0 2400x1500x24" \
+            echo "════ مقیاس $sc · ماهِ کم‌ردیف ════" | tee -a realshift.log
+            AVALONIA_GLOBAL_SCALE_FACTOR=$sc run xvfb-run -a -s "-screen 0 2400x1500x24" \
               dotnet run --no-build --project PumpYaqobi.UiTests -c Release -- realshift
           done
+          #  لاگِ ‎CI‎ همیشه بیرون خواندنی نیست — سرخ‌ها یادداشتِ چک هم می‌شوند
+          grep -E '════|✖|❌|جوهر|عکسِ صفحه' realshift.log | grep -B1 -E '✖|❌|جوهر|عکسِ صفحه' | head -40 | sed 's/^/::error::/'
+          exit $rc
 
       # رفتارهای فهرستِ ۱۴۰۵/۰۶/۲۵ که فقط از روی کد نوشته شده بودند و صاحب ریپو
       # گفت «با تست بگو، نه با حدس»: رسیدِ سربرگ در اولین ردیفِ خالی، رها شدنِ
