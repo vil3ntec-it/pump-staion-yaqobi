@@ -20,9 +20,12 @@ namespace PumpYaqobi.UiTests;
 /// آن‌جا سنجه خودش چیدمان را پیش از هر قاب ته‌نشین می‌کند؛ این‌جا حلقهٔ واقعیِ پنجره
 /// (X11) و زمان‌سنجِ کشیدنِ قاب می‌دود و سنجه فقط مثلِ کاربر صبر می‌کند.
 ///
-/// برای هر خانهٔ دیدنی: آن ‎TextLayout‎ی که <b>کشیده می‌شود</b> باید با پهنای همان
-/// خانه ساخته شده باشد و خطِ وسط‌چینش وسطِ آن باشد (≤ ۱ واحد). همین دو عدد است که
-/// اگر غلط باشد نوشته به لبه می‌چسبد.
+/// برای هر خانهٔ دیدنی دو سنجه: ساختاری (‎TextLayout‎ با پهنای همان خانه و خطِ وسط‌چینش
+/// وسطِ آن) و <b>پیکسلی</b> — جوهرِ همان خانه از عکسِ واقعیِ صفحه (‎import‎). ⛔ دومی است که
+/// باگ را گرفت: همهٔ اندازه‌ها درست بودند و صفحه کج، چون نقاشیِ کهنه دوباره کشیده نشده بود
+/// (‎RtlTrim.Recenter‎). صحنهٔ عکس: ‎RS_ROWS=70 RS_POSTED=1‎ (ماهِ پیشِ پُر، هر سومی مثلِ
+/// ردیفِ ثبت‌شده از ورق). ‎RS_DUMP=1‎ حالِ هر خانه را چاپ می‌کند، ‎RS_INV=1‎ پس از عکس همه را
+/// دوباره می‌کشد و عکسِ دوم می‌گیرد، ‎RS_LOG=1‎ هشدارهای چیدمانِ آوالونیا.
 ///
 ///     xvfb-run -a -s "-screen 0 1600x1000x24" dotnet run --project PumpYaqobi.UiTests -c Release -- realshift [expenses|safe]
 ///     AVALONIA_GLOBAL_SCALE_FACTOR=1.5 … (مقیاسِ ۱۵۰٪)
@@ -42,7 +45,9 @@ internal static class RealShiftProbe
         var file = System.IO.Path.Combine(dir, "pump.db");
         AppHost.Start(file);
         FakeLicense.Grant();
-        AppBuilder.Configure<PumpYaqobi.App.App>().UsePlatformDetect().SetupWithoutStarting();
+        var ab = AppBuilder.Configure<PumpYaqobi.App.App>().UsePlatformDetect();
+        if (Environment.GetEnvironmentVariable("RS_LOG") == "1") { System.Diagnostics.Trace.Listeners.Add(new System.Diagnostics.TextWriterTraceListener(Console.Out)); ab = ab.LogToTrace(Avalonia.Logging.LogEventLevel.Warning, "Layout"); }
+        ab.SetupWithoutStarting();
         var win = new MainWindow { Width = 1440, Height = 900, Position = new PixelPoint(0, 0) };
         win.Show();
         var only = args.Skip(1).FirstOrDefault();
@@ -78,7 +83,7 @@ internal static class RealShiftProbe
         Console.WriteLine($"════ {s.Title} · مقیاس {win.RenderScaling} ════");
         //  ردیف‌های خالی در ماهِ جاری ⇒ تاریخشان آخرین روزِ ماهِ پیش، مثلِ عکس
         var add = s.GetType().GetMethod("AddRowsAsync")!;
-        await (Task)add.Invoke(s, new object[] { id == "safe" ? 3 : 11 })!;
+        await (Task)add.Invoke(s, new object[] { int.TryParse(Environment.GetEnvironmentVariable("RS_ROWS"), out var nr) ? nr : id == "safe" ? 3 : 11 })!;
         await Idle();
         var prev = Prev();
         var last = $"{prev}/31";
@@ -194,6 +199,15 @@ internal static class RealShiftProbe
                                  .Where(t => t.IsEffectivelyVisible && !string.IsNullOrEmpty(t.Text) && t.TextAlignment == TextAlignment.Center))
                     {
                         cells++;
+                        //  ⚠️ خانهٔ ستونِ آخر از کادرِ جدول پهن‌تر است و بریده می‌شود — آن‌چه دیده می‌شود سنجیده می‌شود
+                        if (cell.TranslatePoint(new Point(0, 0), win) is { } c0 && cell.TranslatePoint(new Point(cell.Bounds.Width, cell.Bounds.Height), win) is { } c1
+                            && g.TranslatePoint(new Point(0, 0), win) is { } g0 && g.TranslatePoint(new Point(g.Bounds.Width, g.Bounds.Height), win) is { } g1)
+                        {
+                            var cr = new Rect(new Point(Math.Min(c0.X, c1.X), Math.Min(c0.Y, c1.Y)), new Point(Math.Max(c0.X, c1.X), Math.Max(c0.Y, c1.Y)));
+                            var gr = new Rect(new Point(Math.Min(g0.X, g1.X), Math.Min(g0.Y, g1.Y)), new Point(Math.Max(g0.X, g1.X), Math.Max(g0.Y, g1.Y)));
+                            if (cr.Intersect(gr) is { Width: > 0 } vis && vis.Width >= cr.Width - 1)
+                                _rects.Add((vis, row.Index + 1, tb.Text!));
+                        }
                         var tl = tb.TextLayout;
                         if (tl is null || tl.TextLines.Count == 0) continue;
                         var inner = tb.Bounds.Width - tb.Padding.Left - tb.Padding.Right;
@@ -217,12 +231,77 @@ internal static class RealShiftProbe
                         else if (Math.Abs(dx) > 3 && !RtlTrim.IsRtl(tb.Text))
                             bad.Add($"ردیفِ {row.Index + 1} «{tb.Text}»: جابه‌جاییِ {dx:0.#} روی نوشتهٔ لاتین");
                     }
+        if (Environment.GetEnvironmentVariable("RS_DUMP") == "1")
+            foreach (var t in win.GetVisualDescendants().OfType<TextBlock>().Where(t => t.Text is { } x && (x.StartsWith("1405/") || x == "48,250")))
+            {
+                var p0 = t.TranslatePoint(new Point(0, 0), win);
+                var tl0 = t.TextLayout;
+                var chain = string.Join("<", t.GetVisualAncestors().Take(6).Select(a => a.GetType().Name));
+                Console.WriteLine($"      DUMP «{t.Text}» at {p0?.X:0},{p0?.Y:0} w={t.Bounds.Width:0.#} vis={t.IsEffectivelyVisible} mw={tl0?.MaxWidth:0.#} start={(tl0?.TextLines.Count > 0 ? tl0.TextLines[0].Start : -1):0.#} tr={(t.RenderTransform as TranslateTransform)?.X:0.#} ha={t.HorizontalAlignment} ta={t.TextAlignment} fd={t.FlowDirection} mv={t.IsMeasureValid}/{t.IsArrangeValid} {chain}");
+            }
         _checks++;
         Shot(win, tag);
+        bad.AddRange(PixelCheck(win, tag));
+        _rects.Clear();
+        if (bad.Count > 0 && !_reported.Contains(tag)) { _reported.Add(tag); _bad++; Console.WriteLine($"  ✖ {what} (پیکسل): {bad.Count}"); foreach (var b in bad.Take(12)) Console.WriteLine("      " + b); }
+        if (Environment.GetEnvironmentVariable("RS_INV") == "1")
+        {
+            foreach (var t in win.GetVisualDescendants().OfType<TextBlock>()) t.InvalidateVisual();
+            Dispatcher.UIThread.RunJobs();
+            System.Threading.Thread.Sleep(600);
+            Dispatcher.UIThread.RunJobs();
+            Shot(win, tag + "-inv");
+        }
         if (bad.Count == 0) { Console.WriteLine($"  ✔ {what}: {cells} خانه"); return; }
         _bad++;
         Console.WriteLine($"  ✖ {what}: {bad.Count} از {cells} خانه");
         foreach (var b in bad.Take(12)) Console.WriteLine("      " + b);
+    }
+
+    private static readonly List<(Rect r, int row, string text)> _rects = new();
+    private static readonly HashSet<string> _reported = new();
+
+    /// <summary>
+    /// ⛔ آن‌چه واقعاً روی صفحه کشیده شده: جوهرِ هر خانه از عکسِ واقعیِ پنجره (‎import‎)، نه از
+    /// ‎TextLayout‎. سنجهٔ ساختاری سبز بود و صفحه کج — نقاشیِ کهنه‌ای که دوباره کشیده نشده بود.
+    /// </summary>
+    private static List<string> PixelCheck(Window win, string tag)
+    {
+        var bad = new List<string>();
+        var path = System.IO.Path.Combine(_shots, tag + ".png");
+        //  ⛔ بی عکس سبز نیست — سنجه‌ای که نسنجید ایراد است، نه «همه سرِ جایش»
+        if (!File.Exists(path)) { bad.Add("عکسِ صفحه گرفته نشد (‎import‎ نیست؟) — پیکسل‌ها سنجیده نشدند"); return bad; }
+        using var bmp = new Avalonia.Media.Imaging.Bitmap(path);
+        var w = bmp.PixelSize.Width; var h = bmp.PixelSize.Height;
+        var buf = new byte[w * h * 4];
+        var hnd = System.Runtime.InteropServices.GCHandle.Alloc(buf, System.Runtime.InteropServices.GCHandleType.Pinned);
+        try { bmp.CopyPixels(new PixelRect(0, 0, w, h), hnd.AddrOfPinnedObject(), buf.Length, w * 4); }
+        finally { hnd.Free(); }
+        var sc = win.RenderScaling;
+        var origin = win.PointToScreen(new Point(0, 0));
+        foreach (var (r, row, text) in _rects)
+        {
+            //  حاشیه با مقیاس: خطِ دورِ جدول در ۱۵۰٪ از ۴ پیکسل کلفت‌تر است
+            var m = (int)Math.Ceiling(6 * sc);
+            int x0 = (int)(origin.X + r.X * sc) + m, x1 = (int)(origin.X + r.Right * sc) - m;
+            int y0 = (int)(origin.Y + r.Y * sc) + m, y1 = (int)(origin.Y + r.Bottom * sc) - m;
+            if (x0 < 0 || y0 < 0 || x1 >= w || y1 >= h || x1 - x0 < 10) continue;
+            //  رنگِ زمینه = گوشهٔ خانه
+            int bi = (y0 * w + x0) * 4;
+            int lo = int.MaxValue, hi = int.MinValue;
+            for (var y = y0; y <= y1; y++)
+                for (var x = x0; x <= x1; x++)
+                {
+                    int i = (y * w + x) * 4;
+                    var d = Math.Abs(buf[i] - buf[bi]) + Math.Abs(buf[i + 1] - buf[bi + 1]) + Math.Abs(buf[i + 2] - buf[bi + 2]);
+                    if (d > 120) { if (x < lo) lo = x; if (x > hi) hi = x; }
+                }
+            if (hi <= lo) continue;
+            var off = (lo + hi) / 2.0 - (x0 + x1) / 2.0;
+            if (Math.Abs(off) > 3 * sc && hi - lo < (x1 - x0) - 6)
+                bad.Add($"ردیفِ {row} «{text}»: جوهرِ کشیده‌شده {off / sc:0.#} از وسط");
+        }
+        return bad;
     }
 
     private static void Shot(Window win, string tag)

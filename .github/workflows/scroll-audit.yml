@@ -40,20 +40,25 @@ jobs:
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- person
 
       # ══ عکسِ ۱۴۰۵/۰۷/۲۲ با پنجرهٔ واقعی (X11)، نه آوالونیای بی‌سر ══════════
-      # ماهِ پیش با ردیف‌های خالی، ماهِ جاری با نوشته‌های بلند، پهنای دستیِ ستون؛
-      # هر خانه: کادرِ نوشته وسطِ خانه و ‎TextLayout‎ی که کشیده می‌شود با پهنای خودش.
-      - name: نوشتهٔ خانه‌ها پس از عوض کردنِ ماه — پنجرهٔ واقعی ۱۰۰٪ و ۱۵۰٪
+      # ماهِ پیش پُر (۷۰ ردیف، هر سومی مثلِ ردیفِ ثبت‌شده از ورق)، ماهِ جاری با نوشته‌های
+      # بلند، پهنای دستیِ ستون. ⛔ سنجهٔ اصلی <b>پیکسل</b> است: جوهرِ هر خانه از عکسِ
+      # واقعیِ صفحه (‎import‎). بی اصلاحِ نقاشیِ کهنه در ‎RtlTrim.Recenter‎ همین گام در هر سه
+      # مقیاس ۲۸ ایراد می‌دهد — سنجهٔ ساختاری همان‌جا سبز بود.
+      - name: نوشتهٔ خانه‌ها پس از عوض کردنِ ماه — پنجرهٔ واقعی ۱۰۰٪ · ۱۲۵٪ · ۱۵۰٪
         if: ${{ !cancelled() }}
         working-directory: native
         run: |
           set -e
           dotnet build PumpYaqobi.UiTests -c Release -v q
-          for sc in 1 1.5; do
+          for sc in 1 1.25 1.5; do
             for drag in 0 1; do
               echo "════ مقیاس $sc · پهنای دستی $drag ════"
-              RS_DRAG=$drag AVALONIA_GLOBAL_SCALE_FACTOR=$sc xvfb-run -a -s "-screen 0 2400x1500x24" \
+              RS_ROWS=70 RS_POSTED=1 RS_DRAG=$drag AVALONIA_GLOBAL_SCALE_FACTOR=$sc xvfb-run -a -s "-screen 0 2400x1500x24" \
                 dotnet run --no-build --project PumpYaqobi.UiTests -c Release -- realshift
             done
+            echo "════ مقیاس $sc · ماهِ کم‌ردیف ════"
+            AVALONIA_GLOBAL_SCALE_FACTOR=$sc xvfb-run -a -s "-screen 0 2400x1500x24" \
+              dotnet run --no-build --project PumpYaqobi.UiTests -c Release -- realshift
           done
 
       # رفتارهای فهرستِ ۱۴۰۵/۰۶/۲۵ که فقط از روی کد نوشته شده بودند و صاحب ریپو
