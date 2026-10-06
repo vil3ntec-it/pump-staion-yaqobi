@@ -569,7 +569,7 @@ public sealed class PostingService
         to.Liters = from.Liters; to.PricePerLiter = from.PricePerLiter;
         to.Bardagi = from.Bardagi; to.Rasid = from.Rasid; to.RasidFuel = from.RasidFuel;
         to.Albaqi = from.Albaqi; to.ByMoney = from.ByMoney;
-        to.Src = from.Src; to.SrcKey = from.SrcKey;
+        to.Src = from.Src; to.SrcKey = from.SrcKey; to.SrcTxn = from.SrcTxn;
     }
 
     // ── ردیفِ خالی — یک قاعده، یک جا ─────────────────────────────────────

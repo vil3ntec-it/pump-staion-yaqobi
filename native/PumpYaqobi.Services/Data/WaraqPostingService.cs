@@ -354,17 +354,18 @@ public sealed class WaraqPostingService
         //  ⛔ (۱۴۰۵/۰۷/۲۲، ممیزی گرفتش) کلید فقط **جای** ردیف است. ردیفی بالاتر که حذف شود،
         //  ردیفِ شخصِ دیگری به همان جا و همان کلیدِ آرشیوشده می‌رسید و بی‌صدا از حسابش
         //  پاک می‌شد (قرضِ ۵۰۰۰ِ رحیم در ورق و گاوصندوق بود و در حسابش صفر). پس کلیدِ آرشیو
-        //  فقط وقتی جلو را می‌گیرد که همین ردیف **همان** ثبت باشد: همان حساب و همان مبلغ.
-        if (archived is not null && archived.TryGetValue(srcKey, out var arch)
-            && t.Type != WaraqTxnType.Expense && !HasLiveRow(people, srcKey)
-            && arch.Any(a => SameAsArchived(t, sd, calc, people, a)))
+        //  فقط وقتی جلو را می‌گیرد که همین ردیف **همان** ثبت باشد — با شناسهٔ خودِ تراکنش
+        //  (‎DebtRow.SrcTxn‎)، و برای آرشیوِ کهنهٔ بی‌شناسه همان حساب و همان مبلغ (‎IsArchived‎).
+        if (archived is not null && t.Type != WaraqTxnType.Expense && IsArchived(t, srcKey, sd, calc, people, archived))
         {
             //  ⛔ شورا، الف۵ (آزمونِ تصادفی گرفتش): مصرف یا چکنه‌ای که همین کلید را از
             //  ردیفِ پیشینِ همین جا دارد (ردیفی که حذف شد و بقیه یک خانه بالا آمدند)
             //  مالِ این ردیفِ قرض نیست و باید برود — وگرنه یک مصرفِ حذف‌شده برای
-            //  همیشه در مصارف می‌ماند و دو بار شمرده می‌شد.
+            //  همیشه در مصارف می‌ماند و دو بار شمرده می‌شد. همان برای ردیفِ حسابی که
+            //  مالِ تراکنشِ دیگری بود (‎SrcTxn‎ِ دیگر).
             DropExpense(expenses, srcKey, outcome);
             DropRetail(retail, srcKey, outcome);
+            if (!string.IsNullOrEmpty(t.SyncUid)) DropRows(people, srcKey, outcome);
             return;
         }
         var name = (t.Name ?? "").Trim();
@@ -455,6 +456,7 @@ public sealed class WaraqPostingService
             ByMoney = byMoney,
             Src = "waraq",
             SrcKey = srcKey,
+            SrcTxn = string.IsNullOrEmpty(t.SyncUid) ? null : t.SyncUid,
         };
 
         var money = t.Unit == LedgerMode.Money;
@@ -529,6 +531,7 @@ public sealed class WaraqPostingService
         if (r.Rasid != 0m || r.RasidFuel != 0m)
         {
             r.SrcKey = null;
+            r.SrcTxn = null;
             r.Src = null;
             r.Liters = 0m;
             r.PricePerLiter = 0m;
@@ -550,13 +553,41 @@ public sealed class WaraqPostingService
     /// آرشیوهایی خوانده می‌شوند که متنشان پیشوندِ همین ورق را دارد (یک ‎instr‎ی
     /// خودِ SQLite)، نه همهٔ آرشیوها.
     /// </summary>
-    /// <summary>ثبتی که با «جدول جدید» به آرشیوِ یک حساب رفته: کدام حساب، چه مبلغی.</summary>
-    public readonly record struct ArchivedSrc(long AccountId, decimal Bardagi);
+    /// <summary>ثبتی که با «جدول جدید» به آرشیوِ یک حساب رفته: کدام حساب، چه مبلغی، کدام تراکنش.</summary>
+    public readonly record struct ArchivedSrc(long AccountId, decimal Bardagi, string? Txn = null);
+
+    /// <summary>
+    /// این تراکنشِ ورق پیش از این با «جدول جدید» به آرشیوِ یک حساب رفته؟
+    ///
+    /// ⛔ (۱۴۰۵/۰۷/۲۲) کلیدِ منبع فقط <b>جای</b> ردیف است. پس با شناسهٔ خودِ تراکنش
+    /// (‎SrcTxn‎ = ‎SyncUid‎) پرسیده می‌شود، در <b>هر</b> کلیدِ این ورق: تراکنشی که پس از
+    /// حذفِ ردیفی بالاتر یک خانه بالا آمده هم همان ثبتِ آرشیوشده است و دوباره نمی‌رود،
+    /// و ردیفِ دیگری (حتی همان شخص و همان مبلغ) که به کلیدِ آرشیوشده رسیده، ثبتِ تازه
+    /// است و می‌رود. ردیفِ زندهٔ همین تراکنش (بازگشته از سطل) مثلِ همیشه به‌روز می‌شود.
+    /// آرشیوِ کهنهٔ بی‌شناسه همان قاعدهٔ «همان کلید، همان حساب، همان مبلغ».
+    /// </summary>
+    private static bool IsArchived(WaraqTransaction t, string srcKey, WaraqShift sd, WaraqService calc,
+                                   List<Debtor> people, IReadOnlyDictionary<string, List<ArchivedSrc>> archived)
+    {
+        var uid = t.SyncUid;
+        if (!string.IsNullOrEmpty(uid))
+        {
+            if (PostingService.RetailName((t.Name ?? "").Trim()) is not null) return false;
+            if (archived.Values.Any(l => l.Any(a => string.Equals(a.Txn, uid, StringComparison.Ordinal))))
+                return !people.Where(p => p is not null).SelectMany(p => p.AllAccounts())
+                              .Any(a => a.FuelRows.Concat(a.MoneyRows)
+                                         .Any(r => r.SrcKey == srcKey && string.Equals(r.SrcTxn, uid, StringComparison.Ordinal)));
+        }
+        return archived.TryGetValue(srcKey, out var arch) && !HasLiveRow(people, srcKey)
+               && arch.Any(a => (string.IsNullOrEmpty(a.Txn) || string.IsNullOrEmpty(uid))
+                                && SameAsArchived(t, sd, calc, people, a));
+    }
 
     /// <summary>این ردیفِ ورق همان ثبتی است که با این کلید به آرشیو رفت؟</summary>
     private static bool SameAsArchived(WaraqTransaction t, WaraqShift sd, WaraqService calc,
                                        List<Debtor> people, ArchivedSrc arch)
     {
+        //  آرشیوِ کهنه (پیش از ‎SrcTxn‎) — همان حساب و همان مبلغ
         var amount = Round0(calc.TxnAmount(sd, t));
         var rate = calc.RepPrice(sd, t.Fuel);
         if (amount <= 0 && t.Liters > 0 && rate > 0) amount = Round0(t.Liters * rate);
@@ -593,7 +624,9 @@ public sealed class WaraqPostingService
                         && k.GetString() is { } key && key.StartsWith(prefix, StringComparison.Ordinal))
                         (keys.TryGetValue(key, out var l) ? l : keys[key] = new()).Add(new ArchivedSrc(hit.AccountId,
                             el.TryGetProperty("Bardagi", out var b) && b.ValueKind == System.Text.Json.JsonValueKind.Number
-                                ? b.GetDecimal() : 0m));
+                                ? b.GetDecimal() : 0m,
+                            el.TryGetProperty("SrcTxn", out var tx) && tx.ValueKind == System.Text.Json.JsonValueKind.String
+                                ? tx.GetString() : null));
             }
             catch (System.Text.Json.JsonException) { /* آرشیوِ خراب — نادیده */ }
         }
