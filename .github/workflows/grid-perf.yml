@@ -45,7 +45,16 @@ jobs:
       # بخش‌ها و حساب‌ها گرفته می‌شود.
       - name: کند نشدن با دادهٔ بزرگ
         working-directory: native
-        run: dotnet run --project PumpYaqobi.UiTests -c Release -- perf
+        shell: bash
+        # هر کارِ کُند و عددِ «🎯 ردند» به‌شکلِ یادداشتِ چک هم چاپ می‌شود: لاگِ ‎CI‎
+        # همیشه بیرون خواندنی نیست، و بی آن معلوم نمی‌شد کدام کار از سقف گذشت.
+        run: |
+          set +e -o pipefail
+          dotnet run --project PumpYaqobi.UiTests -c Release -- perf 2>&1 | tee perf.log
+          rc=$?
+          grep -E '^❌|^   ' perf.log | sed 's/^/::warning::perf /' | head -20
+          grep -E '^❌' perf.log | sed 's/^/::error::/'
+          exit $rc
 
       # ══ «حسابی که ردیف‌هایش زیاد است دیر باز می‌شود» ═══════════════════════
       # سنجهٔ بالایی («کند نشدن با دادهٔ بزرگ») فقط یک عددِ سربسته می‌داد. این
