@@ -111,7 +111,7 @@ public class WaraqPostingFuzzTests : IDisposable
         }
 
         var rnd = new Random(seed);
-        var archived = new Dictionary<string, List<(long Account, decimal Bardagi)>>();
+        var archived = new HashSet<string>(StringComparer.Ordinal);   // ‎SrcTxn‎ِ هر ثبتِ آرشیوشده
         var sort = 0;
         for (var op = 0; op < Ops; op++)
         {
@@ -144,9 +144,9 @@ public class WaraqPostingFuzzTests : IDisposable
                         var to = new[] { Dest.Karim, Dest.Rahim, Dest.Salim, Dest.Shop }[rnd.Next(4)];
                         var keys = await db.DebtRows.AsNoTracking()
                                            .Where(r => r.FuelAccountId == acct[to] && r.SrcKey != null)   // آرشیو فقط دفترِ تیل را می‌برد
-                                           .Select(r => new { r.SrcKey, r.Bardagi }).ToListAsync();
-                        foreach (var k in keys)
-                            (archived.TryGetValue(k.SrcKey!, out var l) ? l : archived[k.SrcKey!] = new()).Add((acct[to], k.Bardagi));
+                                           .Select(r => r.SrcTxn).ToListAsync();
+                        Assert.All(keys, k => Assert.False(string.IsNullOrEmpty(k), "ردیفِ ورق بی شناسهٔ تراکنش"));
+                        foreach (var k in keys) archived.Add(k!);
                         await debtors.ArchiveTableAsync(acct[to], "1405/06/18");
                         what = "آرشیوِ " + to;
                     }
@@ -154,18 +154,13 @@ public class WaraqPostingFuzzTests : IDisposable
                 await db.SaveChangesAsync();
             }
 
-            //  کلیدهایی که پیش از این همگام‌سازی ردیفِ زنده در حساب داشتند — ثبتِ زندهٔ همان
-            //  جا به‌روز می‌شود، حتی اگر با ثبتِ آرشیوشده‌ای هم‌حساب و هم‌مبلغ شده باشد
-            HashSet<string> liveBefore;
-            await using (var db = dbf.Create())
-                liveBefore = (await db.DebtRows.AsNoTracking().Where(r => r.SrcKey != null).Select(r => r.SrcKey!).ToListAsync()).ToHashSet();
             await post.SyncAsync(w.Id);
-            await Check(dbf, w, shiftId, acct, archived, liveBefore, manualCount, manualRasid, $"بذر {seed} · کارِ {op} ({what})");
+            await Check(dbf, w, shiftId, acct, archived, manualCount, manualRasid, $"بذر {seed} · کارِ {op} ({what})");
         }
     }
 
     private static async Task Check(PumpDbFactory dbf, WaraqEntry w, long shiftId, Dictionary<Dest, long> acct,
-                                    Dictionary<string, List<(long Account, decimal Bardagi)>> archived, HashSet<string> liveBefore, int manualCount, decimal manualRasid, string where)
+                                    HashSet<string> archived, int manualCount, decimal manualRasid, string where)
     {
         await using var db = dbf.Create();
         var txns = await db.WaraqTransactions.AsNoTracking().Where(t => t.ShiftId == shiftId)
@@ -201,10 +196,9 @@ public class WaraqPostingFuzzTests : IDisposable
             Assert.True(mineExp.Count == 0, What() + " — قرض در مصارف هم هست: "
                 + string.Join(" ; ", mineExp.Select(e => $"#{e.Id} «{e.Title}» {e.Amount} {e.SrcKey}"))
                 + " | ردیف‌ها: " + string.Join(" ; ", txns.Select((x, j) => $"{j}:{x.Name}/{x.Type}/{x.Amount}")));
-            //  ⛔ (۱۴۰۵/۰۷/۲۲) کلیدِ آرشیو فقط برای **همان** ثبت (همان حساب، همان مبلغ) — ردیفِ
-            //  شخصِ دیگری که پس از حذفی بالاتر به همان جا رسید باید ثبت شود
-            if (archived.TryGetValue(key, out var arch) && !liveBefore.Contains(key) && n.To is not Dest.None and not Dest.Retail
-                && arch.Any(a => acct[n.To] == a.Account && t.Amount == a.Bardagi))
+            //  ⛔ (۱۴۰۵/۰۷/۲۲) آرشیو فقط **همان** تراکنش را نگه می‌دارد، در هر جایی که حالا
+            //  نشسته — ردیفِ دیگری (حتی همان شخص و همان مبلغ) که به کلیدِ آرشیوشده رسید ثبت می‌شود
+            if (t.SyncUid is { } uid && archived.Contains(uid) && n.To is not Dest.Retail)
             {
                 Assert.True(mineRows.Count + mineRetail.Count == 0, What() + " — کلیدِ آرشیوشده دوباره ساخته شد");
                 continue;
