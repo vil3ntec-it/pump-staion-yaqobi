@@ -882,9 +882,11 @@ internal static class MonthShiftAllProbe
                 var tol = 1.0;
                 if (p is TotalsStrip && p.GetVisualAncestors().OfType<Border>().FirstOrDefault(b => b.BorderThickness.Left > 0) is { } fb)
                 {
-                    var sc = Avalonia.Layout.LayoutHelper.GetLayoutScale(fb);
-                    var th = Avalonia.Layout.LayoutHelper.RoundLayoutThickness(fb.BorderThickness, sc, sc);
-                    tol = th.Left + th.Right + 0.5;
+                    //  ملاک برای این خانه‌ها لبهٔ بیرونیِ خودِ قابِ نوار است (همان خطی که با خطِ جدول یکی است)
+                    var fe = Edges(fb, p); var ce0 = Edges(c, p);
+                    if (ce0.L < fe.L - 0.5 || ce0.R > fe.R + 0.5)
+                        bad.Add($"«{Label(c)}» از قابِ نوارِ «جمله» بیرون زد: {ce0.L:0.#}..{ce0.R:0.#} از {fe.L:0.#}..{fe.R:0.#}");
+                    continue;
                 }
                 if (c.Bounds.X - c.Margin.Left < -tol || c.Bounds.Right + c.Margin.Right > p.Bounds.Width + tol)
                 {
