@@ -39,6 +39,23 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- person
 
+      # ══ عکسِ ۱۴۰۵/۰۷/۲۲ با پنجرهٔ واقعی (X11)، نه آوالونیای بی‌سر ══════════
+      # ماهِ پیش با ردیف‌های خالی، ماهِ جاری با نوشته‌های بلند، پهنای دستیِ ستون؛
+      # هر خانه: کادرِ نوشته وسطِ خانه و ‎TextLayout‎ی که کشیده می‌شود با پهنای خودش.
+      - name: نوشتهٔ خانه‌ها پس از عوض کردنِ ماه — پنجرهٔ واقعی ۱۰۰٪ و ۱۵۰٪
+        if: ${{ !cancelled() }}
+        working-directory: native
+        run: |
+          set -e
+          dotnet build PumpYaqobi.UiTests -c Release -v q
+          for sc in 1 1.5; do
+            for drag in 0 1; do
+              echo "════ مقیاس $sc · پهنای دستی $drag ════"
+              RS_DRAG=$drag AVALONIA_GLOBAL_SCALE_FACTOR=$sc xvfb-run -a -s "-screen 0 2400x1500x24" \
+                dotnet run --no-build --project PumpYaqobi.UiTests -c Release -- realshift
+            done
+          done
+
       # رفتارهای فهرستِ ۱۴۰۵/۰۶/۲۵ که فقط از روی کد نوشته شده بودند و صاحب ریپو
       # گفت «با تست بگو، نه با حدس»: رسیدِ سربرگ در اولین ردیفِ خالی، رها شدنِ
       # فوکوس، Ctrl+Delete، تاریخچهٔ بخش، Tab/Enter در پیشنهاد، ماشین‌حساب.
@@ -381,7 +398,14 @@ jobs:
           OM_MANY: '1'
           OM_DEBUG: '1'
           OM_SHOTS: ${{ runner.temp }}/om
-        run: dotnet run --project PumpYaqobi.UiTests -c Release -- oldmonths
+        shell: bash
+        # هر سطرِ ✖ یک یادداشتِ خطا روی همین چک — لاگ از بیرون خوانده نمی‌شود
+        run: |
+          set +e -o pipefail
+          dotnet run --project PumpYaqobi.UiTests -c Release -- oldmonths 2>&1 | tee "${{ runner.temp }}/om.log"
+          rc=$?
+          grep -E '✖|❌' "${{ runner.temp }}/om.log" | head -40 | while IFS= read -r l; do echo "::error::$l"; done
+          exit $rc
       - name: ماه‌های قبل ۱۲۵٪ (ویندوز)
         if: ${{ !cancelled() }}
         working-directory: native
@@ -409,6 +433,34 @@ jobs:
         env:
           OP_DEBUG: '1'
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- oldpost ${{ runner.temp }}/oldpost
+      # ══ عکسِ ۱۴۰۵/۰۷/۲۲: «سنبله» با ردیف‌های خالی (فقط تاریخ و «0») در مصارف و گاوصندوق ══
+      # دفترِ تهی، مثلِ کامپیوترِ صاحب ریپو؛ رفت‌وبرگشتِ ماه و سال؛ جوهرِ هر خانه با پیکسلِ ویندوز.
+      - name: ردیف‌های خالیِ ماهِ پیش — ۱۰۰٪ و ۱۲۵٪ و ۱۵۰٪ (ویندوز)
+        if: ${{ !cancelled() }}
+        working-directory: native
+        shell: bash
+        env:
+          MS_EMPTY: '1'
+        run: |
+          set -e
+          for sc in 1.0 1.25 1.5; do
+            for s in blank-expenses blank-safe; do
+              echo "════ $s · $sc ════"
+              MS_SCALE=$sc MS_SHOTS="${{ runner.temp }}/blank-$sc" dotnet run --project PumpYaqobi.UiTests -c Release -- monthshift all $s
+            done
+          done
+      - name: مصارف و گاوصندوق با دفترِ دوساله — ۱۲۵٪ (ویندوز)
+        if: ${{ !cancelled() }}
+        working-directory: native
+        shell: bash
+        env:
+          MS_SCALE: '1.25'
+          MS_WIDTH: '1366'
+          MS_HEIGHT: '768'
+          MS_SHOTS: ${{ runner.temp }}/ms125
+        run: |
+          set -e
+          for s in expenses safe; do dotnet run --project PumpYaqobi.UiTests -c Release -- monthshift all $s; done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -417,4 +469,6 @@ jobs:
             ${{ runner.temp }}/clab
             ${{ runner.temp }}/om
             ${{ runner.temp }}/oldpost
+            ${{ runner.temp }}/blank-*
+            ${{ runner.temp }}/ms125
           if-no-files-found: ignore

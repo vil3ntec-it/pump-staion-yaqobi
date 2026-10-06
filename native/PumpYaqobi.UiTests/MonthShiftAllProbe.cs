@@ -70,8 +70,9 @@ internal static class MonthShiftAllProbe
         PumpYaqobi.App.Services.AppSettings.DirOverride = dir;
         var file = System.IO.Path.Combine(dir, "pump.db");
         Console.WriteLine("ساختنِ دفترِ واقعی‌نما (RealLedger: دو سال، ۱۴۰۴/۱۱ تا ماهِ جاری، با ردِ نسخه‌های پیشین)…");
-        var st = RealLedger.Build(file);
-        Console.WriteLine($"   دفترِ پول {st.MoneyRows} · رسیدِ تیل {st.RasidFuelRows} · ردیفِ کهنه {st.StaleRows} · کلیدِ صفر {st.ZeroKeys} · سربرگِ کهنه {st.StaleHeads} · فاکتورِ در صف {st.Pending}");
+        var empty = Environment.GetEnvironmentVariable("MS_EMPTY") == "1";
+        var st = empty ? null : RealLedger.Build(file);
+        if (st is not null) Console.WriteLine($"   دفترِ پول {st.MoneyRows} · رسیدِ تیل {st.RasidFuelRows} · ردیفِ کهنه {st.StaleRows} · کلیدِ صفر {st.ZeroKeys} · سربرگِ کهنه {st.StaleHeads} · فاکتورِ در صف {st.Pending}");
         ShotDir = Environment.GetEnvironmentVariable("MS_SHOTS")
                   ?? System.IO.Path.Combine(FindNative(), "shots-monthshift");
         var parityOn = args.Skip(2).FirstOrDefault() is null or "parity";
@@ -97,7 +98,7 @@ internal static class MonthShiftAllProbe
         var end = DateTime.UtcNow + TimeSpan.FromSeconds(180);
         while (vm.Phase == MainViewModel.AppPhase.Starting && DateTime.UtcNow < end)
         { Dispatcher.UIThread.RunJobs(); win.UpdateLayout(); Thread.Sleep(2); }
-        SeedFewYear(AppHost.Current);
+        if (!empty) SeedFewYear(AppHost.Current);
         Settle(win);
         AppHost.Current.Toasts.Visible = false;
         if (Environment.GetEnvironmentVariable("MS_THEME") is { Length: > 0 } th
@@ -117,6 +118,9 @@ internal static class MonthShiftAllProbe
 
         //  «ردیف‌های فروشِ ورق را که از گاوصندوق پاک می‌کنم، همه برمی‌گردند وسط»
         if (Want("safedel")) Run("safedel", () => SafeDelete(win, vm));
+        //  عکسِ صاحب ریپو (۱۴۰۵/۰۷/۲۲): ماهِ پیش با ردیف‌های خالیِ تازه (فقط تاریخ و «0»)
+        foreach (var id in new[] { "expenses", "safe" })
+            if (Want("blank-" + id)) Run("blank-" + id, () => BlankRows(win, vm, id));
         if (Want("history")) Run("history", () => History(win, vm));
         if (Want("dashboard")) Run("dashboard", () => Dashboard(win, vm));
         if (Want("shifts")) Run("shifts", () => ParchaReports(win, vm));
@@ -139,6 +143,8 @@ internal static class MonthShiftAllProbe
         }
         Console.WriteLine($"   قابِ بدنهٔ بخش‌ها (‎ScaleBody‎) در کلِ اجرا {TotalCorrections} بار بدنهٔ لغزنده را سرِ جایش برگرداند");
         Console.WriteLine($"   ⚠️ خانهٔ نوارِ «جمله» زیرِ خطِ قابِ نوار (همان سرستونِ بریده‌شده): {FrameOverlap} بار، بیشترین {FrameOverlapMax:0.#}px");
+        //  ⛔ صفر سنجه سبز نیست — بخشی که پیدا نشد یعنی هیچ چیزی سنجیده نشد
+        if (_checks == 0) { Console.WriteLine("❌ هیچ سنجه‌ای ندوید"); return 1; }
         Console.WriteLine(_bad == 0 ? $"✅ {_checks} سنجه، همه سرِ جایش" : $"❌ {_bad} ایراد از {_checks} سنجه");
         return _bad == 0 ? 0 : 1;
     }
@@ -544,6 +550,58 @@ internal static class MonthShiftAllProbe
             Measure(win, $"گاوصندوق ⇒ {n} ردیفِ فروشِ ورق پاک شد (همان لحظه)", pixels: false);
             Settle(win);
             Measure(win, $"گاوصندوق ⇒ {n} ردیفِ فروشِ ورق پاک شد (پس از ته‌نشینی)");
+        }
+    }
+
+    /// <summary>
+    /// ══ عکسِ ۱۴۰۵/۰۷/۲۲: «سنبله» با یازده ردیفِ خالی در مصارف و سه در گاوصندوق ══
+    /// ماهِ پیش ⇒ «➕ چندتایی» ⇒ رفت‌وبرگشت میانِ ماه‌ها و سال‌ها؛ پس از هر حالت جوهرِ هر
+    /// خانه (تاریخ، «0»، …) با پیکسلِ واقعی وسطِ کادرش.
+    /// </summary>
+    private static void BlankRows(MainWindow win, MainViewModel vm, string id)
+    {
+        var s = Open(win, vm, id);
+        var add = s.GetType().GetMethod("AddRowsAsync")!;
+        WaitRows(win); Settle(win);
+        var prev = MonthBack(1);
+        Pick(win, prev[..4], prev); Settle(win);
+        Wait(win, (Task)add.Invoke(s, new object[] { id == "safe" ? 3 : 11 })!);
+        WaitRows(win); Settle(win);
+        //  دفترِ تهی: ماهِ پیش در کشو نیست — ردیف‌ها در ماهِ جاری ساخته و به آخرین روزِ ماهِ پیش برده می‌شوند
+        if (Environment.GetEnvironmentVariable("MS_EMPTY") == "1")
+        {
+            var last = Shamsi.DateInMonth(prev);
+            for (var d = 31; d >= 29; d--) { var c = $"{prev}/{d:00}"; if (Shamsi.Key(c) > 0) { last = c; break; } }
+            var rows = ((System.Collections.IEnumerable)s.GetType().GetProperty("Rows")!.GetValue(s)!).Cast<RowViewModel>().ToList();
+            foreach (var r in rows)
+            {
+                r.GetType().GetProperty("DateShamsi")!.SetValue(r, last);
+                Wait(win, r.FlushAsync());
+            }
+            Pick(win, Shamsi.ThisMonth()[..4], Shamsi.ThisMonth()); Settle(win);
+            Open(win, vm, "dashboard"); Open(win, vm, id); WaitRows(win); Settle(win);
+            Pick(win, prev[..4], prev); Settle(win);
+            Console.WriteLine($"   {rows.Count} ردیفِ خالی با تاریخِ {last}");
+        }
+        Base = null;
+        CurTag = "blank " + prev;
+        Measure(win, $"{s.Title} ⇒ {prev} با ردیف‌های خالیِ تازه");
+        var (yb, mb) = Boxes(win);
+        var years = yb?.Items.OfType<YearMonthItem>().Select(i => i.Key).Where(k => k.Length == 4).ToList() ?? new();
+        var plan = new List<(string Y, string M)> { (Shamsi.ThisMonth()[..4], Shamsi.ThisMonth()), (prev[..4], prev) };
+        foreach (var y in years.OrderBy(y => y)) plan.Add((y, ""));
+        foreach (var back in new[] { 2, 3, 6 }) { var mk = MonthBack(back); plan.Add((mk[..4], mk)); }
+        plan.Add((prev[..4], prev));
+        plan.Add((Shamsi.ThisMonth()[..4], Shamsi.ThisMonth()));
+        plan.Add((prev[..4], prev));
+        foreach (var (y, m) in plan)
+        {
+            CurTag = "blank ⇒ " + y + " " + m;
+            Pick(win, y, m);
+            for (var f = 0; f < 4; f++) Frame(win);
+            Measure(win, $"{s.Title} ⇒ {y} {m} (همان لحظه)");
+            Settle(win);
+            Measure(win, $"{s.Title} ⇒ {y} {m} (پس از ته‌نشینی)");
         }
     }
 

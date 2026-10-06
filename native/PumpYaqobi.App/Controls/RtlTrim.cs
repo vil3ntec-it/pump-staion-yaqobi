@@ -69,6 +69,14 @@ public static class RtlTrim
         {
             if (!Wants(t)) return;
             if (GetEnabled(t)) Apply(t);
+            //  ⛔ تصحیحِ متنِ پیشین با متنِ تازه نمی‌ماند (۱۴۰۵/۰۷/۲۲): همان لحظه برداشته می‌شود و
+            //  پس از چیدمانِ تازه از نو سنجیده — خانهٔ بازیافتی‌ای که هنگامِ عوض شدنِ متن در درخت
+            //  نبود (‎AfterLayout‎ همان‌جا برمی‌گشت) دیگر جابه‌جاییِ متنِ دیگری را با خودش نمی‌برد.
+            if (t.GetValue(OwnedProperty))
+            {
+                t.RenderTransform = null;
+                t.SetValue(OwnedProperty, false);
+            }
             //  جای خطِ تازه پس از چیدمانِ همین فریم معلوم است
             Avalonia.Threading.Dispatcher.UIThread.Post(() => Recenter(t),
                 Avalonia.Threading.DispatcherPriority.Loaded);
@@ -78,6 +86,11 @@ public static class RtlTrim
             if (Wants(t))
                 Avalonia.Threading.Dispatcher.UIThread.Post(() => Recenter(t),
                     Avalonia.Threading.DispatcherPriority.Loaded);
+        });
+        //  خانهٔ بازیافتی که دوباره به درخت برگشت: یک بار سنجیده شود (‎Bounds‎ِ هم‌اندازه خبری نمی‌دهد)
+        Control.LoadedEvent.AddClassHandler<TextBlock>((t, _) =>
+        {
+            if (Wants(t)) Recenter(t);
         });
         //  ⚡ پس از هر چیدمان (نه ‎LayoutUpdated‎ی سراسری): فقط همین نوشته
         Visual.BoundsProperty.Changed.AddClassHandler<TextBlock>((t, _) =>
@@ -205,6 +218,10 @@ public static class RtlTrim
         char.IsWhiteSpace(c) || c is '\u200b' or '\u200c' or '\u200d' or '\u200e' or '\u200f'
             or '\u061c' or '\ufeff' or (>= '\u202a' and <= '\u202e') or (>= '\u2066' and <= '\u2069');
 
+    /// <summary>آخرین (متن|پهنا)ای که برای ‎TextLayout‎ِ ناجور از نو چیده شد.</summary>
+    private static readonly AttachedProperty<string?> RelaidProperty =
+        AvaloniaProperty.RegisterAttached<TextBlock, TextBlock, string?>("RtlTrimRelaid");
+
     private static readonly AttachedProperty<bool> PendingProperty =
         AvaloniaProperty.RegisterAttached<TextBlock, TextBlock, bool>("RtlTrimPending");
 
@@ -239,6 +256,20 @@ public static class RtlTrim
         //  برداشته می‌شود — نه شنوندهٔ همیشگی؛ تا نوشته پنهان است فقط ‎IsEffectivelyVisible‎ می‌پرسد.
         if (!t.IsMeasureValid || !t.IsArrangeValid)
         {
+            AfterLayout(t);
+            return;
+        }
+        //  ⛔ وسط‌چینی با پهنای کهنه کشیده نمی‌شود (۱۴۰۵/۰۷/۲۲): ‎TextLayout‎ی که کشیده می‌شود باید با
+        //  پهنای امروزِ همین نوشته ساخته شده باشد. عکسِ صاحب ریپو نوشتهٔ خانه را به لبهٔ همان خانه
+        //  چسبیده نشان داد، با خطِ خانه سرِ جایش — همان چیزی که ‎TextLayout‎ِ پهنای دیگر (یا بی‌نهایت)
+        //  می‌کشد. ناجور ⇒ یک بار از نو چیده می‌شود و پس از آن چیدمان دوباره سنجیده.
+        //  ⚠️ یک بار برای هر (متن، پهنا) — ناجوریِ ماندگار (گردکردنِ چیدمان) حلقهٔ چیدمان نمی‌سازد.
+        if (GetEnabled(t) && t.TextLayout is { } lay
+            && (double.IsInfinity(lay.MaxWidth) || Math.Abs(lay.MaxWidth - (t.Bounds.Width - t.Padding.Left - t.Padding.Right)) > 0.5)
+            && t.GetValue(RelaidProperty) != $"{t.Text}|{t.Bounds.Width}")
+        {
+            t.SetValue(RelaidProperty, $"{t.Text}|{t.Bounds.Width}");
+            t.InvalidateMeasure();
             AfterLayout(t);
             return;
         }
