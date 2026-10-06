@@ -7,8 +7,8 @@ namespace PumpYaqobi.Tests;
 ///
 /// عکسِ صاحب ریپو با آخرین نسخه: در «مصارف» تاریخِ ردیف‌های ۴، ۷ و ۱۰ و در «گاوصندوق»
 /// «0»ِ ردیف‌های ۲ و ۳ به لبهٔ چپِ همان خانه چسبیده بودند و خطِ خانه سرِ جایش بود —
-/// یعنی وسط‌چینیِ <b>داخلِ</b> نوشته (‎TextAlignment‎ روی کادرِ هم‌پهنای خانه، که به
-/// پهنای یک بارِ چیدن بند است) از کار افتاده بود، نه خودِ خانه.
+/// یعنی خانه درست چیده شده بود و فقط وسط‌چینیِ <b>داخلِ</b> نوشته (‎TextAlignment‎، که
+/// به ‎TextLayout‎ِ ساخته‌شده با پهنای یک بارِ چیدن بند است) از کار افتاده بود.
 ///
 /// رفتار با پنجرهٔ واقعی سنجیده می‌شود (‎realshift‎ زیرِ X11، و ‎monthshift all blank-*‎
 /// روی ویندوز در سه مقیاس). این‌جا خودِ قاعده‌ها قفل‌اند تا برنگردند.
@@ -26,20 +26,28 @@ public class CellTextCenterTests
 
     private static string Read(params string[] p) => SrcText.Read(Path.Combine(new[] { Root() }.Concat(p).ToArray()));
 
-    /// <summary>⛔ کادرِ نوشتهٔ خانه هم‌قدِ نوشته است و خانه وسطش می‌گذارد.</summary>
+    /// <summary>
+    /// ⛔ نوشتهٔ خانه هم‌پهنای خانه می‌ماند (‎Stretch‎) و ‎TextLayout‎ِ پهنای کهنه یا بی‌نهایت از نو
+    /// چیده می‌شود. ⚠️ «کادرِ هم‌قدِ نوشته» (‎HorizontalAlignment=Center‎) آزموده و پس گرفته شد:
+    /// روی ویندوز «حوالهٔ 1» و «مصرفِ شمارهٔ 1» را ۵ پیکسل کج کرد (‎align-windows‎ ⇒ ‎oldmonths‎).
+    /// </summary>
     [Fact]
-    public void Neveshte_RaKhane_VasatMigozarad()
+    public void LayoutKohne_AzNoChideMishavad_VaKadrHamPahnayeKhane()
     {
         var t = Read("PumpYaqobi.App", "Themes", "Controls.axaml");
-        var i = t.IndexOf("<Style Selector=\"DataGridCell > TextBlock\">", StringComparison.Ordinal);
-        Assert.True(i > 0, "سبکِ «DataGridCell > TextBlock» نیست");
-        var block = t[i..t.IndexOf("</Style>", i, StringComparison.Ordinal)];
-        Assert.Contains("<Setter Property=\"HorizontalAlignment\" Value=\"Center\" />", block);
-        //  وسط‌چینیِ داخلِ نوشته و ‎RtlTrim‎ سرِ جایشان
+        Assert.DoesNotContain("<Style Selector=\"DataGridCell > TextBlock\">", t);
         var cell = t[t.IndexOf("<Style Selector=\"DataGridCell TextBlock\">", StringComparison.Ordinal)..];
         cell = cell[..cell.IndexOf("</Style>", StringComparison.Ordinal)];
+        Assert.Contains("<Setter Property=\"HorizontalAlignment\" Value=\"Stretch\" />", cell);
         Assert.Contains("<Setter Property=\"TextAlignment\" Value=\"Center\" />", cell);
         Assert.Contains("c:RtlTrim.Enabled", cell);
+
+        var s = Read("PumpYaqobi.App", "Controls", "RtlTrim.cs");
+        var r = s.IndexOf("private static void Recenter", StringComparison.Ordinal);
+        var body = s[r..s.IndexOf("var dx = CenterFix(t);", r, StringComparison.Ordinal)];
+        Assert.Contains("double.IsInfinity(lay.MaxWidth)", body);
+        Assert.Contains("t.InvalidateMeasure();", body);
+        Assert.Contains("RelaidProperty", body);      //  یک بار برای هر (متن، پهنا) — بی حلقهٔ چیدمان
     }
 
     /// <summary>⛔ جابه‌جاییِ وسط‌چینیِ متنِ پیشین با متنِ تازه نمی‌ماند؛ خانهٔ برگشته دوباره سنجیده می‌شود.</summary>

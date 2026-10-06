@@ -192,8 +192,10 @@ internal static class RealShiftProbe
                         var inner = tb.Bounds.Width - tb.Padding.Left - tb.Padding.Right;
                         //  ⛔ کادرِ نوشته وسطِ خانه‌اش (خانه − ‎Margin‎ِ نوشته)، و نه پهن‌تر از آن
                         var room = cell.Bounds.Width - cell.Padding.Left - cell.Padding.Right - tb.Margin.Left - tb.Margin.Right;
-                        var o = tb.TranslatePoint(default, cell)!.Value.X;
-                        var e2 = tb.TranslatePoint(new Point(tb.Bounds.Width, 0), cell)!.Value.X;
+                        //  جای چیدنِ کادر در پدر — بی ‎RenderTransform‎ِ تصحیحِ جوهرِ ‎RtlTrim‎ (آن عمدی است)
+                        var par = (Visual)tb.GetVisualParent()!;
+                        var o = par.TranslatePoint(new Point(tb.Bounds.X, 0), cell)!.Value.X;
+                        var e2 = par.TranslatePoint(new Point(tb.Bounds.Right, 0), cell)!.Value.X;
                         var mid = (Math.Min(o, e2) + Math.Max(o, e2)) / 2;
                         if (tb.Bounds.Width > room + 1.5 || Math.Abs(mid - cell.Bounds.Width / 2) > 1.5)
                             bad.Add($"ردیفِ {row.Index + 1} «{tb.Text}»: کادرِ نوشته {tb.Bounds.Width:0.#} وسطش {mid:0.#} در خانهٔ {cell.Bounds.Width:0.#}");
