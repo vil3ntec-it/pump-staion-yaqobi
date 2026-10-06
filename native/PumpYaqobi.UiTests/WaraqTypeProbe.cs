@@ -135,6 +135,47 @@ internal static class WaraqTypeProbe
             Check($"دیسکِ کند، کلید وسطِ ذخیره، بیرون از ورق: مبلغ روی دیسک {t.Amount} (باید 12500)", t.Amount == 12500m);
         }
 
+        //  ══ بی Enter، مستقیم بیرون — و دوباره داخلِ همان ورق (۱۴۰۵/۰۷/۲۲، بازبینی) ══════
+        //  «بیرون شدم و دوباره داخل، یک عدد کم شده بود / ضرب نشده بود»: نوشتنِ مقدار روی ردیفی
+        //  که مبلغِ دستی داشت، **بی Enter**، دیسکِ کند، بیرون از ورق ⇒ روی دیسک و پس از باز
+        //  کردنِ دوباره همان مقدار و مبلغِ خودکار (مقدار × فی).
+        var rowId = row.Entity.Id;
+        DbWatch.WriteDelayMs = 300;
+        try
+        {
+            Wait(win, wq.OpenCommand.ExecuteAsync(wq.Sheets.First()));
+            Settle(win);
+            var p2 = wq.Page!;
+            if (p2.IsNight) { p2.IsNight = false; Settle(win); }
+            var r2 = p2.Txns.First(x => x.Entity.Id == rowId);
+            var g2 = win.GetVisualDescendants().OfType<ExcelGrid>()
+                .First(g => g.IsEffectivelyVisible && g.ItemsSource is System.Collections.IList l && l.Contains(r2));
+            var ri2 = ((System.Collections.IList)g2.ItemsSource!).IndexOf(r2);
+            var cols2 = g2.Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).ToList();
+            TypeInto(win, g2, ri2, cols2.FindIndex(c => (c.Header as string) == "مقدار تیل"), "777",
+                     () => r2.LitersText.Replace(",", ""), gapMs: 200, enter: false);
+            Wait(win, wq.BackCommand.ExecuteAsync(null));
+        }
+        finally { DbWatch.WriteDelayMs = 0; }
+        for (var i = 0; i < 40; i++) { Pump(win); Thread.Sleep(20); }
+        decimal fee;
+        using (var db = h.Db.Create())
+        {
+            var t = db.Set<PumpYaqobi.Domain.Entities.WaraqTransaction>().AsNoTracking().Single(x => x.Id == rowId);
+            var sd = db.Set<PumpYaqobi.Domain.Entities.WaraqShift>().AsNoTracking().Single(x => x.Id == t.ShiftId);
+            fee = new PumpYaqobi.Application.Services.WaraqService().RepPrice(sd, t.Fuel);
+            Check($"بی Enter، بیرون از ورق: مقدار روی دیسک {t.Liters} (باید 777) · مبلغ خودکار شد: {t.AmountAuto == true}",
+                  t.Liters == 777m && t.AmountAuto == true);
+        }
+        Wait(win, wq.OpenCommand.ExecuteAsync(wq.Sheets.First()));
+        Settle(win);
+        var r3 = wq.Page!.Txns.First(x => x.Entity.Id == rowId);
+        var want3 = Math.Round(777m * fee, 0, MidpointRounding.AwayFromZero);
+        var eff3 = wq.Page.Calc.TxnAmount(wq.Page.Shift!, r3.Entity);
+        Check($"دوباره داخلِ ورق: مقدار «{r3.LitersText}» · مبلغ {eff3} (باید 777 × {fee} = {want3})",
+              r3.LitersText.Replace(",", "") == "777" && eff3 == want3);
+        Wait(win, wq.BackCommand.ExecuteAsync(null));
+
         Console.WriteLine();
         if (Bad.Count == 0) { Console.WriteLine("✅ نوشتن در ورق روان است و هیچ حرفی گم یا پاک نشد"); return 0; }
         Console.WriteLine($"❌ {Bad.Count} ایراد:");
@@ -142,7 +183,7 @@ internal static class WaraqTypeProbe
         return 1;
     }
 
-    private static void TypeInto(Window win, DataGrid g, int row, int col, string text, Func<string> model, int gapMs = GapMs)
+    private static void TypeInto(Window win, DataGrid g, int row, int col, string text, Func<string> model, int gapMs = GapMs, bool enter = true)
     {
         Console.WriteLine();
         Console.WriteLine($"── نوشتنِ «{text}» حرف‌به‌حرف (هر {gapMs}ms) ──");
@@ -187,6 +228,7 @@ internal static class WaraqTypeProbe
               worst <= StallGoal);
         Check(lost.Count == 0 ? "هیچ حرفی گم، پاک یا نصفه نشد" : $"{lost.Count} بار کادر چیزِ دیگری نشان داد: " + string.Join(" · ", lost.Take(4)),
               lost.Count == 0);
+        if (!enter) return;
         Tap(win, PhysicalKey.Enter);
         Settle(win);
         Check($"پس از Enter ردیف همان را دارد («{model()}»)", model() == text);

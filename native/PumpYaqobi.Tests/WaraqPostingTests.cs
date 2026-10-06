@@ -55,6 +55,23 @@ public class WaraqPostingTests
     private static List<DebtRow> Fuel(Debtor p) => p.MainAccount.FuelRows;
     private static List<DebtRow> Money(Debtor p) => p.MainAccount.MoneyRows;
 
+    /// <summary>
+    /// ⛔ (۱۴۰۵/۰۷/۲۲، بازبینی) مبلغِ دستیِ اعشاری همان عدد به حساب می‌رسد که از «جمله فروش»
+    /// کم شد — نه گردشده به افغانیِ درست (۱۰۰٫۵ ⇐ ۱۰۱ بود).
+    /// </summary>
+    [Fact]
+    public void Decimal_manual_amount_reaches_the_account_exactly()
+    {
+        var p = Person("کریم");
+        var w = Sheet(Txn("کریم", amount: 100.5m, unit: LedgerMode.Money));
+
+        WaraqPostingService.Apply(w, new List<Debtor> { p }, new List<Expense>(), Calc);
+
+        var row = Assert.Single(Money(p));
+        Assert.Equal(100.5m, row.Bardagi);
+        Assert.Equal(100.5m, Calc.ShiftTotals(w.Shifts[0]).Debt);
+    }
+
     // ══ نام ════════════════════════════════════════════════════════════════
 
     /// <summary>«هارون» باید به حسابِ «محمد هارون» برسد — خواستهٔ صریحِ صاحب ریپو.</summary>

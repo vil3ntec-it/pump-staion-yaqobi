@@ -192,30 +192,34 @@ public sealed class LedgerParityService
         {
             foreach (var (table, hasMonth) in tables)
             {
-                var bad = new List<(long Id, int Key, string Month)>();
+                var bad = new List<(long Id, int Key, string Month, string Text)>();
                 await using (var cmd = conn.CreateCommand())
                 {
                     cmd.CommandText = $"SELECT \"Id\", \"DateShamsi\", \"DateKey\"{(hasMonth ? ", \"MonthKey\"" : "")} FROM \"{table}\"";
                     await using var rd = await cmd.ExecuteReaderAsync(ct);
                     while (await rd.ReadAsync(ct))
                     {
-                        var k = PumpYaqobi.Domain.DateKeys.Key(rd.IsDBNull(1) ? null : rd.GetString(1));
+                        var text = rd.IsDBNull(1) ? null : rd.GetString(1);
+                        var k = PumpYaqobi.Domain.DateKeys.Key(text);
                         if (k == 0) continue;
                         var m = PumpYaqobi.Domain.DateKeys.Month(k);
                         var storedK = rd.IsDBNull(2) ? 0 : rd.GetInt32(2);
                         var storedM = hasMonth && !rd.IsDBNull(3) ? rd.GetString(3) : "";
-                        if (storedK != k || (hasMonth && storedM != m)) bad.Add((rd.GetInt64(0), k, m));
+                        if (storedK != k || (hasMonth && storedM != m)) bad.Add((rd.GetInt64(0), k, m, text!));
                     }
                 }
                 found += bad.Count;
                 if (!fix || bad.Count == 0) continue;
 
                 await using var tx = await conn.BeginTransactionAsync(ct);
-                foreach (var (id, k, m) in bad)
+                foreach (var (id, k, m, text) in bad)
                 {
                     await using var up = conn.CreateCommand();
                     up.Transaction = tx;
-                    up.CommandText = $"UPDATE \"{table}\" SET \"DateKey\" = $k{(hasMonth ? ", \"MonthKey\" = $m" : "")} WHERE \"Id\" = $id";
+                    up.CommandText = $"UPDATE \"{table}\" SET \"DateKey\" = $k{(hasMonth ? ", \"MonthKey\" = $m" : "")} WHERE \"Id\" = $id AND \"DateShamsi\" = $t";
+                    //  ⛔ فقط اگر متنِ تاریخ هنوز همان است که خواندیم — کاربری که همین میان تاریخ را
+                    //  عوض کرد، کلیدِ درستش را خودِ ذخیره (‎DeriveDateKeys‎) نوشته؛ کلیدِ کهنه رویش نمی‌نشیند.
+                    var pt = up.CreateParameter(); pt.ParameterName = "$t"; pt.Value = text; up.Parameters.Add(pt);
                     var pk = up.CreateParameter(); pk.ParameterName = "$k"; pk.Value = k; up.Parameters.Add(pk);
                     var pi = up.CreateParameter(); pi.ParameterName = "$id"; pi.Value = id; up.Parameters.Add(pi);
                     if (hasMonth) { var pm = up.CreateParameter(); pm.ParameterName = "$m"; pm.Value = m; up.Parameters.Add(pm); }
