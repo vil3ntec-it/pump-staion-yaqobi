@@ -78,9 +78,17 @@ public static class CloudConfig
     /// می‌شود و دیگری نه.
     /// </summary>
     public static string WsUrl(string path) =>
+        TestWsBase is { Length: > 0 } test ? test.TrimEnd('/') + path :
         (BaseUrl.StartsWith("https://", StringComparison.Ordinal)
             ? "wss://" + BaseUrl["https://".Length..]
             : "ws://" + BaseUrl["http://".Length..]) + path;
+
+    /// <summary>
+    /// ⛔ فقط برای سنجهٔ ‎livesync‎ (پشتهٔ واقعی روی همین ماشین): سوکتِ زنده به همان
+    /// پورتِ عمومی‌ای می‌رود که ‎CloudLink.TestTransport‎ درخواست‌ها را می‌برد. در
+    /// برنامهٔ واقعی هیچ‌جا نوشته نمی‌شود و نشانیِ قفل‌شده همان می‌ماند.
+    /// </summary>
+    public static string? TestWsBase { get; set; }
 
     /// <summary>صادرکنندهٔ مجوز.</summary>
     public const string Issuer = "tohid-license-server";
