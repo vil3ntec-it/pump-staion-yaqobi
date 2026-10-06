@@ -97,9 +97,7 @@ public sealed partial class DebtRowViewModel : RowViewModel
     /// </summary>
     public string BardagiText
     {
-        //  ⛔ (۱۴۰۵/۰۷/۲۲) همان عددِ گردشده‌ای که روی دیسک، در «الباقی» و در «جمله» است —
-        //  پیش از این «349.65» روی صفحه و ۳۵۰ در جمع، پس ستون با جمعش نمی‌خواند.
-        get => Shown(nameof(BardagiText), Shamsi.MoneyOrBlank(DebtCalculationService.Round0(_owner.Calc.RowBardagi(_r))));
+        get => Shown(nameof(BardagiText), Shamsi.MoneyOrBlank(_owner.Calc.RowBardagi(_r)));
         //  ⛔ پاک کردنِ بردگیِ دستی ⇒ ردیف همان لحظه دوباره «لیتر × فی» (همان قاعدهٔ ‎NormalizeRow‎)،
         //  نه خانهٔ خالی که فقط پس از ذخیره روی دیسک درست می‌شد و صفحه خبردار نمی‌شد.
         set { if (!Typed(nameof(BardagiText), value)) return; var v = Shamsi.Num(value); ManualBardagi = v; _r.ByMoney = v != 0m || Liters <= 0m; Touch(); Refresh(); }
@@ -188,13 +186,7 @@ public sealed partial class DebtRowViewModel : RowViewModel
         _r.RasidFuel = RasidFuel;
     }
 
-    protected override async Task SaveAsync()
-    {
-        await _owner.SaveRowAsync(_r);
-        //  ‎NormalizeRow‎ هنگامِ ذخیره ممکن است ردیف را درست کند — خانه‌های خودِ ردیف هم بدانند
-        OnPropertyChanged(nameof(BardagiText));
-        OnPropertyChanged(nameof(AlbaqiText));
-    }
+    protected override Task SaveAsync() => _owner.SaveRowAsync(_r);
 }
 
 /// <summary>

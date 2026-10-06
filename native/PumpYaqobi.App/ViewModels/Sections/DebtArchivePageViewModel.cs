@@ -89,7 +89,7 @@ public sealed partial class DebtArchiveRowViewModel : RowViewModel
     /// <summary>بردگی — لیتر × فی، یا عددِ دستیِ ردیفِ پولی (‎_personRowBardagi‎).</summary>
     public string BardagiText
     {
-        get => Shown(nameof(BardagiText), Shamsi.MoneyOrBlank(DebtCalculationService.Round0(_owner.Calc.RowBardagi(_r))));
+        get => Shown(nameof(BardagiText), Shamsi.MoneyOrBlank(_owner.Calc.RowBardagi(_r)));
         set { if (!Typed(nameof(BardagiText), value)) return; ManualBardagi = Shamsi.Num(value); _r.ByMoney = true; Touch(); Refresh(); }
     }
     /// <summary>الباقیِ همین ردیف — بردگی − رسید، مثلِ ستونِ آخرِ جدولِ زنده.</summary>
@@ -284,7 +284,7 @@ public sealed partial class DebtArchiveViewModel : ObservableObject, IRowBatchHo
         {
             var shown = Rows.Select(r => r.Entity).ToList();
             var t = Calc.SplitTotals(shown).All;
-            var bard = shown.Sum(r => DebtCalculationService.Round0(Calc.RowBardagi(r)));
+            var bard = shown.Sum(r => Calc.RowBardagi(r));
             var alb = bard - t.Rasid;
             // ⚠️ هر جمع زیرِ ستونِ خودش؛ ستونی که در این دفتر پنهان است، جمعش هم نمی‌آید
             var cells = new List<TotalCell>
