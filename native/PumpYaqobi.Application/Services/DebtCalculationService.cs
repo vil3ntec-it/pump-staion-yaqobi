@@ -139,11 +139,21 @@ public sealed class DebtCalculationService
     public static decimal Round0(decimal v) => Math.Round(v, 0, MidpointRounding.AwayFromZero);
 
     /// <summary>
+    /// ══ بردگی با اعشار حساب و ذخیره می‌شود (۱۴۰۵/۰۷/۲۲) ════════════════════════
+    /// صاحب ریپو: «بردگی تیل آره با اعشاریه حساب بشه و با همون اعشاریه هم ضرب.»
+    /// پیش از این بردگی و الباقیِ هر ردیف و سربرگ به افغانیِ درست گرد می‌شد (‎_round0‎ِ سایت):
+    /// «60.14» ⇐ ۶۰ روی دیسک، و ۱۰٫۵ × ۳۳٫۳ ⇐ ۳۵۰ — در حالی که خانه عددِ تایپ‌شده را نشان
+    /// می‌داد. ⛔ حالا پول تا دو رقمِ اعشار (افغانی و پول) — در ردیف، جمله، سربرگ، آرشیو،
+    /// کیو‌آر و PDF یک قاعده. نصفه‌ها همچنان از صفر دور می‌شوند (مثلِ ‎toFixed‎).
+    /// </summary>
+    public static decimal RoundMoney(decimal v) => Math.Round(v, 2, MidpointRounding.AwayFromZero);
+
+    /// <summary>
     /// ‎خوددرمانیِ ردیف‎ — همان کاری که ‎renderPersonRows‎ پیش از کشیدنِ جدول
     /// روی هر ردیف می‌کند:
     ///   ۱) ردیفی که «پولی» علامت خورده ولی بردگی‌اش صفر و لیتر دارد، در اصل
     ///      ردیفِ تیل است (وگرنه فیِ حساب خراب می‌شد).
-    ///   ۲) بردگی و الباقی محاسبه و گرد می‌شوند و روی خودِ ردیف می‌نشینند.
+    ///   ۲) بردگی و الباقی محاسبه و تا دو رقمِ اعشار گرد می‌شوند و روی خودِ ردیف می‌نشینند.
     /// خروجی می‌گوید آیا چیزی عوض شد (تا فقط همان‌وقت ذخیره شود).
     /// </summary>
     public bool NormalizeRow(DebtRow r) => Normalize(r);
@@ -159,8 +169,8 @@ public sealed class DebtCalculationService
 
         if (r.ByMoney && r.Bardagi == 0m && r.Liters > 0m) { r.ByMoney = false; healed = true; }
 
-        var bardagi = Round0(r.ByMoney ? r.Bardagi : RowBardagiOf(r));
-        var albaqi = Round0(bardagi - r.Rasid);
+        var bardagi = RoundMoney(r.ByMoney ? r.Bardagi : RowBardagiOf(r));
+        var albaqi = RoundMoney(bardagi - r.Rasid);
         if (r.Bardagi != bardagi) { r.Bardagi = bardagi; healed = true; }
         if (r.Albaqi != albaqi) { r.Albaqi = albaqi; healed = true; }
         return healed;
@@ -194,7 +204,7 @@ public sealed class DebtCalculationService
             var rasid = hdr + rowRasid;
             var bord = money ? t.Bardagi : t.Liters;
             var comm = rasid * pct / 100m;
-            return new ArchiveFuelFigures(hdr, rowRasid, rasid, bord, Round0(comm), Round0(bord + comm - rasid));
+            return new ArchiveFuelFigures(hdr, rowRasid, rasid, bord, RoundMoney(comm), RoundMoney(bord + comm - rasid));
         }
         return new ArchiveFigures(st, One(st.Petrol, pctP, hdrP), One(st.Diesel, pctD, hdrD));
     }

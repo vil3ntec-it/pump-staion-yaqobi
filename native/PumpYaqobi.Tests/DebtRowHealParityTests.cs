@@ -49,9 +49,19 @@ public class DebtRowHealParityTests
         {
             var r = Map(c.before);
             svc.NormalizeRow(r);
+            //  درمانِ «پولیِ خراب» مو‌به‌مو همان نسخهٔ وب است
             Assert.Equal(c.byMoney, r.ByMoney);
-            Assert.Equal(c.bardagi, (double)r.Bardagi, 6);
-            Assert.Equal(c.albaqi, (double)r.Albaqi, 6);
+            //  ⛔ (۱۴۰۵/۰۷/۲۲) گردِ پول دو رقمِ اعشار است، نه افغانیِ درستِ نسخهٔ وب — صاحب ریپو:
+            //  «بردگی تیل آره با اعشاریه حساب بشه و با همون اعشاریه هم ضرب.» پس عدد از خودِ
+            //  ورودی‌ها حساب می‌شود، و همان عدد گردشده به افغانی هنوز با نسخهٔ وب یک واحد فاصله ندارد.
+            var b = c.before;
+            var raw = r.ByMoney ? (decimal)b.bardagi
+                    : b.fuel <= 0 ? 0m
+                    : (decimal)b.fuel * (b.priceper.ValueKind == JsonValueKind.Number ? (decimal)b.priceper.GetDouble() : 0m);
+            var want = DebtCalculationService.RoundMoney(raw);
+            Assert.Equal(want, r.Bardagi);
+            Assert.Equal(DebtCalculationService.RoundMoney(want - (decimal)b.rasid), r.Albaqi);
+            Assert.True(Math.Abs((double)r.Bardagi - c.bardagi) <= 0.5 + 1e-6, $"بردگی {r.Bardagi} از نسخهٔ وب ({c.bardagi}) بیش از نیم افغانی دور است");
             n++;
         }
         Assert.Equal(600, n);

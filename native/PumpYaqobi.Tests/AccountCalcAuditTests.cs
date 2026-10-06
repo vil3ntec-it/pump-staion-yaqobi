@@ -84,4 +84,26 @@ public class AccountCalcAuditTests
         Assert.Equal(Shamsi.Money(1000m), acct.SumBardagiText);
         Assert.Equal(Shamsi.Money(1000m), row.BardagiText);
     }
+
+    // ── ۳) بردگی با اعشار: دستی همان عدد، و لیتر × فی بی گرد کردن به افغانیِ درست ──
+    //  صاحب ریپو (۱۴۰۵/۰۷/۲۲): «بردگی تیل آره با اعشاریه حساب بشه و با همون اعشاریه هم ضرب.»
+    [Fact]
+    public async Task Person_Bardagi_KeepsDecimals_OnDiskTotalAndCell()
+    {
+        var (host, acct) = await OpenPerson();
+        await acct.AddRowCommand.ExecuteAsync(null);
+        await acct.AddRowCommand.ExecuteAsync(null);
+        var manual = acct.Rows[0];
+        manual.BardagiText = "60.14";                   // دستی
+        var calc = acct.Rows[1];
+        calc.LitersText = "10.5"; calc.PriceText = "33.3";   // ۳۴۹٫۶۵
+        await acct.FlushAsync();
+
+        Assert.Equal(60.14m, manual.Entity.Bardagi);
+        Assert.Equal(349.65m, calc.Entity.Bardagi);
+        Assert.Equal(Shamsi.Money(60.14m), manual.BardagiText);
+        Assert.Equal(Shamsi.Money(349.65m), calc.BardagiText);
+        //  «جمله»ی ته جدول همان جمعِ دو خانه است
+        Assert.Equal(Shamsi.Money(409.79m), acct.SumBardagiText);
+    }
 }

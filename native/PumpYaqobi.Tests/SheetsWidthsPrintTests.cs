@@ -146,7 +146,7 @@ public class SheetsWidthsPrintTests
         Assert.Contains("bardagi - r.Rasid", r);
         //  علامتِ الباقی همان صفحه است، نه قرینه
         Assert.DoesNotContain("var show = -rem;", r);
-        Assert.Contains("var show = Math.Round(bord + comm - rasid", r);
+        Assert.Contains("var show = DebtCalculationService.RoundMoney(bord + comm - rasid", r);
 
         //  و رسید همان «رسید قبلی»ِ کادرِ صفحه است
         var vm = Src("PumpYaqobi.App/ViewModels/Sections/PersonViewModel.cs");

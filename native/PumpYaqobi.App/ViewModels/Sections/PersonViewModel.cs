@@ -109,7 +109,7 @@ public sealed partial class DebtRowViewModel : RowViewModel
     /// آخرین ستونِ عددیِ جدولِ شخص است.
     /// </summary>
     public string AlbaqiText =>
-        Shamsi.Money(Math.Round(_owner.Calc.RowBardagi(_r) - Rasid, 0, MidpointRounding.AwayFromZero));
+        Shamsi.Money(DebtCalculationService.RoundMoney(_owner.Calc.RowBardagi(_r) - Rasid));
 
     /// <summary>
     /// ══ نوع تیل — دو کادرِ رادیویی، نه کشویی ═══════════════════════════════
@@ -627,14 +627,14 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         var bord = IsMoney ? t.Bardagi : t.Liters;
         var rasid = HeadRasid(fuel);
         var comm = rasid * pct / 100m;
-        return DebtCalculationService.Round0(bord + comm - rasid);
+        return DebtCalculationService.RoundMoney(bord + comm - rasid);
     }
 
     /// <summary>فیصدیِ ما — همان ‎comm‎ی سایت.</summary>
     public string HeadPetrolCommText =>
-        Shamsi.Money(DebtCalculationService.Round0(HeadRasid(FuelType.Petrol) * PercentPetrol / 100m));
+        Shamsi.Money(DebtCalculationService.RoundMoney(HeadRasid(FuelType.Petrol) * PercentPetrol / 100m));
     public string HeadDieselCommText =>
-        Shamsi.Money(DebtCalculationService.Round0(HeadRasid(FuelType.Diesel) * PercentDiesel / 100m));
+        Shamsi.Money(DebtCalculationService.RoundMoney(HeadRasid(FuelType.Diesel) * PercentDiesel / 100m));
 
     /// <summary>
     /// رسیدِ تازه از سربرگ — یک **ردیفِ واقعی** در همین جدول می‌سازد.
