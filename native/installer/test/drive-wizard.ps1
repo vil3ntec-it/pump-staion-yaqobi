@@ -69,6 +69,12 @@ $name = [IO.Path]::GetFileNameWithoutExtension($Setup)
 
 $r = [ordered]@{ DirPage = $false; DirPrefill = ''; DirsUsed = @(); Finished = $false; Messages = @(); Pages = @(); ExitCode = $null }
 $dirIx = 0; $ansIx = 0; $lastPage = ''; $lastSig = ''; $seenAny = $false; $started = Get-Date
+#  ⛔ (۱۴۰۵/۰۷/۲۲) یک کلیک در هر صفحه: صفحه‌ای که پس از کلیک هنوز همان است «جلو نرفت» نیست،
+#  فقط کند است. روی رانرِ کندِ windows-2025 جابه‌جاییِ پس از صفحهٔ ۳۲/۶۴ گاهی بیش از ۹۰۰ms شد،
+#  راننده همان صفحه را دید و دوباره «بعدی» زد — و کلیکِ دوم روی **صفحهٔ پوشه** نشست و آن را پیش
+#  از دیده شدن رد کرد (DirPage: False، نصب در پوشهٔ پیش‌فرض، «فایلِ برنامه نشست ✖»). حالا تا
+#  امضای صفحه عوض نشده، کلیکِ دوم فقط پس از ۸ ثانیه.
+$clickSig = ''; $clickAt = [datetime]::MinValue
 $deadline = (Get-Date).AddSeconds($TimeoutSec)
 
 function Plain($s) { ($s -replace '&', '').Trim() }
@@ -140,7 +146,10 @@ while ((Get-Date) -lt $deadline) {
     }
     if ($page -eq 'busy') { break }
     $btn = $buttons | Where-Object { (Plain ([PyqW]::Text($_))) -in @('نصب', 'بعدی') } | Select-Object -First 1
-    if ($btn) { [PyqW]::Click($btn); $acted = $true }
+    $here = "$page|$sig"
+    if ($btn -and ($here -ne $clickSig -or ((Get-Date) - $clickAt).TotalSeconds -gt 8)) {
+      [PyqW]::Click($btn); $acted = $true; $clickSig = $here; $clickAt = Get-Date
+    }
     break
   }
   if (-not $seenAny -and $r.Pages.Count -eq 0 -and ((Get-Date) - $started).TotalSeconds -gt 20) {

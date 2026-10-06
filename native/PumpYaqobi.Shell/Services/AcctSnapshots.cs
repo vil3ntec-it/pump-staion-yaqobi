@@ -208,8 +208,8 @@ public static class AcctSnapshots
     {
         var bord = money ? t.Bardagi : t.Liters;
         var rasid = money ? t.Rasid : t.RasidFuel;
-        var comm = DebtCalculationService.Round0(rasid * pct / 100m);
-        return (bord, rasid, comm, DebtCalculationService.Round0(bord + comm - rasid));
+        var comm = DebtCalculationService.RoundMoney(rasid * pct / 100m);
+        return (bord, rasid, comm, DebtCalculationService.RoundMoney(bord + comm - rasid));
     }
 
     // ══════════════════════════════════════════════════════════════════════

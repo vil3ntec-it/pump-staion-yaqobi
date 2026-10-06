@@ -53,7 +53,8 @@ public class LedgerParityOldDataTests : IDisposable
                                           r.Fuel, r.Liters, r.PricePerLiter, r.Rasid, r.RasidFuel, r.SortIndex)).ToList();
     }
 
-    private static decimal R0(decimal v) => Math.Round(v, 0, MidpointRounding.AwayFromZero);
+    //  ⛔ (۱۴۰۵/۰۷/۲۲) بردگی با دو رقمِ اعشار — «با اعشاریه حساب بشه و با همون اعشاریه هم ضرب»
+    private static decimal R0(decimal v) => Math.Round(v, 2, MidpointRounding.AwayFromZero);
 
     /// <summary>همهٔ عددهای مشتقِ روی دیسک — برای «پاسِ دوم هیچ چیزی را عوض نکرد».</summary>
     private static string Derived(PumpDbFactory dbf)
@@ -206,11 +207,11 @@ public class LedgerParityOldDataTests : IDisposable
             new() { DateShamsi = "1403/02/12", Fuel = FuelType.Petrol, ByMoney = true, Bardagi = 0, Liters = 10, PricePerLiter = 70, Albaqi = 5 },
         });
         var rows = DebtorService.ArchiveRows(new DebtTableArchive { RowsJson = json });
-        Assert.Equal(879m, rows[0].Bardagi);
-        Assert.Equal(779m, rows[0].Albaqi);
+        Assert.Equal(878.75m, rows[0].Bardagi);           //  ۱۲٫۵ × ۷۰٫۳ — با اعشار
+        Assert.Equal(778.75m, rows[0].Albaqi);
         Assert.Equal(12.5m, rows[0].Liters);               //  ⛔ عددِ کاربر همان
-        Assert.Equal(5001m, rows[1].Bardagi);
-        Assert.Equal(4001m, rows[1].Albaqi);
+        Assert.Equal(5000.5m, rows[1].Bardagi);
+        Assert.Equal(4000.5m, rows[1].Albaqi);
         Assert.False(rows[2].ByMoney);                     //  پولیِ خراب ⇒ ردیفِ تیل
         Assert.Equal(700m, rows[2].Bardagi);
         Assert.Equal(700m, rows[2].Albaqi);
