@@ -80,7 +80,13 @@ public sealed partial class CompanyRowViewModel : RowViewModel, ILockedRow
 
     public string KgText { get => Shown(nameof(KgText), Shamsi.MoneyOrBlank(Kg)); set { if (!Typed(nameof(KgText), value)) return; Kg = Shamsi.Num(value); } }
     /// <summary>ستونِ «خرید (تن)» — ردیفِ کهنه که فقط کیلو دارد هم به تن دیده می‌شود (‎cmpTon‎).</summary>
-    public string TonText { get => Shown(nameof(TonText), Shamsi.MoneyOrBlank(_owner.Calc.Ton(_r))); set { if (!Typed(nameof(TonText), value)) return; Ton = Shamsi.Num(value); } }
+    public string TonText
+    {
+        get => Shown(nameof(TonText), Shamsi.MoneyOrBlank(_owner.Calc.Ton(_r)));
+        //  ⛔ (۱۴۰۵/۰۷/۲۲) تنِ تایپ‌شده جای «کیلو»ی کهنه را هم می‌گیرد: پیش از این پاک کردنِ
+        //  خانه در ردیفِ کهنه (فقط کیلو) هیچ نمی‌کرد و «5»ِ کیلو برمی‌گشت و در جمع می‌ماند.
+        set { if (!Typed(nameof(TonText), value)) return; if (Kg != 0m) Kg = 0m; Ton = Shamsi.Num(value); }
+    }
     public string UsdText { get => Shown(nameof(UsdText), Shamsi.MoneyOrBlank(Usd)); set { if (!Typed(nameof(UsdText), value)) return; Usd = Shamsi.Num(value); } }
     public string RateText { get => Shown(nameof(RateText), Shamsi.MoneyOrBlank(Rate)); set { if (!Typed(nameof(RateText), value)) return; Rate = Shamsi.Num(value); } }
     public string PoulText { get => Shown(nameof(PoulText), Shamsi.MoneyOrBlank(Poul)); set { if (!Typed(nameof(PoulText), value)) return; Poul = Shamsi.Num(value); } }

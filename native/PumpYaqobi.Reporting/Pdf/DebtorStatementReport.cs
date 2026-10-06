@@ -152,7 +152,7 @@ public sealed class DebtorStatementReport : ISetupDocument
             var n = ++i;
             void Td(string s, string? color = null) => DocStyle.TdText(t.Cell(), even, s, color);
 
-            var bardagi = _calc.RowBardagi(r);
+            var bardagi = DebtCalculationService.Round0(_calc.RowBardagi(r));   // همان عددِ جمع
 
             Td(PersianText.Num(n), DocStyle.Index);
             Td(DocStyle.Dash(r.DateShamsi));
