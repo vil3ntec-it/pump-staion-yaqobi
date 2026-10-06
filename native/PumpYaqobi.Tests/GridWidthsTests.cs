@@ -56,11 +56,34 @@ public class GridWidthsTests
     {
         var g = Grid();
         Assert.Contains("private static double[] FitToRoom(", g);
-        Assert.Contains("if (!spare) natural = FitToRoom(natural, room);", g);
+        Assert.Contains("if (!spare) natural = FitToRoom(natural, room, Chips(cols));", g);
 
         //  ⚠️ و ‎PinOnUserResize‎ — همان جایی که کشیدنِ کاربر را پیکسلی
         //  می‌کند — دست نخورده است.
         Assert.Contains("private void PinOnUserResize()", g);
+    }
+
+    /// <summary>
+    /// ⛔ کپسولِ ستونِ قالبی («پطرول ⇄ دیزل») برای جا شدن کوچک نمی‌شود (۱۴۰۵/۰۷/۲۱) — جا از
+    /// ستون‌های نوشته‌ای گرفته می‌شود. پیش از این شرکت‌ها در ۱۰۹۳ پیکسل کپسولِ ۶۲ پیکسلی را در
+    /// خانهٔ تنگ‌تر می‌چیدند و دو پیکسل از هر دو سوی خانه بیرون می‌زد.
+    /// </summary>
+    [Fact]
+    public void Kapsul_BarayeJaShodan_KuchakNemishavad()
+    {
+        var fit = typeof(PumpYaqobi.App.Controls.ExcelGrid).GetMethod("FitToRoom",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        var natural = new double[] { 300, 70, 400, 70 };
+        var keep = new[] { false, true, false, true };
+        var w = (double[])fit.Invoke(null, new object?[] { natural, 600.0, keep })!;
+        Assert.Equal(70, w[1], 3);
+        Assert.Equal(70, w[3], 3);
+        Assert.InRange(w.Sum(), 0, 600.01);
+        //  بی نشانِ کپسول، همان پخشِ همیشگی کپسول را هم کوچک می‌کند — همان چیزی که برنگردد
+        var w0 = (double[])fit.Invoke(null, new object?[] { natural, 160.0, null })!;
+        Assert.True(w0[1] < 70);
+        Assert.Contains("private static bool[] Chips(", Grid());
+        Assert.Contains("c is DataGridTemplateColumn", Grid());
     }
 
     /// <summary>

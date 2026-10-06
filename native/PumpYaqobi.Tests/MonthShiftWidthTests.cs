@@ -49,7 +49,33 @@ public class MonthShiftWidthTests
         Assert.DoesNotContain("Math.Max(3,", b);
         Assert.DoesNotContain("Math.Max(2,", b);
         //  کوچک‌تر نمی‌شود: پهنای بزرگ‌ترِ موجود همان‌جا برمی‌گرداند
-        Assert.Matches(new Regex(@"RowHeaderWidth\s*>=\s*w\s*-\s*0\.5\)\s*return;"), b);
+        //  (اغماضِ ۰٫۰۱، نه ۰٫۵: پهنای گردشده به پیکسلِ نمایشگر — ۵۸ ⇐ ۵۸٫۴ در ۱۲۵٪ — باید بنشیند)
+        Assert.Matches(new Regex(@"RowHeaderWidth\s*>=\s*w\s*-\s*0\.01\)\s*return;"), b);
+        //  ⛔ روی مرزِ پیکسلِ نمایشگر
+        Assert.Contains("SnapToDevice(", b);
+        Assert.Contains("GetLayoutScale(this)", b);
+    }
+
+    /// <summary>
+    /// ⛔ ستونِ «#» روی پیکسلِ کاملِ نمایشگر: در ۱۲۵٪ «۵۸» همان ۵۸٫۴ است که چیدن می‌دهد —
+    /// وگرنه جمعِ ستون‌های ستاره‌ای ۰٫۴ پیکسل از جا بیشتر و سرستون و خانه‌ها ۱٫۶ پیکسل جدا (سنجهٔ
+    /// ‎monthshift all safedel‎ با ‎MS_SCALE=1.25‎ گرفتش: با پاک کردنِ «فروشِ ورق» همه برمی‌گشتند).
+    /// </summary>
+    [Theory]
+    [InlineData(58, 1.0, 58)]
+    [InlineData(58, 1.25, 58.4)]
+    [InlineData(58, 1.5, 58)]
+    [InlineData(57, 1.5, 57.333333)]
+    [InlineData(58, 1.75, 58.285714)]
+    [InlineData(66, 2.0, 66)]
+    [InlineData(58.4, 1.25, 58.4)]
+    public void SotooneShomare_RooyePixeleNamayeshgar(double w, double scale, double want)
+    {
+        var got = PumpYaqobi.App.Controls.ExcelGrid.SnapToDevice(w, scale);
+        Assert.InRange(got, want - 0.001, want + 0.001);
+        Assert.True(got >= w - 1e-9);
+        var px = got * scale;
+        Assert.InRange(px - Math.Round(px), -1e-6, 1e-6);
     }
 
     /// <summary>

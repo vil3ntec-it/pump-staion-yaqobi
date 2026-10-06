@@ -156,8 +156,8 @@ public class SectionFontTests
     public void OnlyTheBodyScalesNotTheToolbar()
     {
         var t = Theme();
-        var open = t.IndexOf("<LayoutTransformControl", StringComparison.Ordinal);
-        var close = t.IndexOf("</LayoutTransformControl>", StringComparison.Ordinal);
+        var open = t.IndexOf("<c:ScaleBody", StringComparison.Ordinal);
+        var close = t.IndexOf("</c:ScaleBody>", StringComparison.Ordinal);
         Assert.True(open > 0 && close > open);
 
         var toolbar = t.IndexOf("Content=\"{TemplateBinding Toolbar}\"", StringComparison.Ordinal);
