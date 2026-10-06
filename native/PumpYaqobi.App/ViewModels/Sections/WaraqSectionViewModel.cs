@@ -789,11 +789,33 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         //  در واقع هم‌زمان است، پس روی نخِ رابط هر نوشتنِ کند (دیسکِ ویندوز، ضدِ ویروس، قفلِ
         //  لحظه‌ای) همان‌قدر تایپ را می‌خشکاند — روی رانرِ ویندوز تا ۱۰۲۸ms. ردیف همچنان پشتِ
         //  همان دروازهٔ ‎RowViewModel.WriteAsync‎ است، پس دو نوشتنِ یک ردیف هم‌زمان نمی‌شوند.
+        //
+        //  ⛔ (۱۴۰۵/۰۷/۲۲) نخِ دیگر **نسخه‌ای جدا** را می‌نویسد، نه خودِ ‎t‎ را. خودِ ‎t‎ همان
+        //  لحظه زیرِ دستِ کاربر عوض می‌شود (‎Apply‎ با هر کلید) و از راهِ ‎t.Shift‎ به کلِ ورق
+        //  وصل است: ‎Attach‎ روی نخِ دیگر همهٔ ردیف‌ها و پایه‌های ورق را می‌پیمود — هم‌زمان با
+        //  رابط — و عدد را نیمه‌خوانده می‌نوشت. نسخه فقط ستون‌های خودش را دارد.
         var data = _host.WaraqData;
-        await Task.Run(() => data.SaveTxnAsync(t));
+        var copy = Detached(t);
+        await Task.Run(() => data.SaveTxnAsync(copy));
+        if (t.Id == 0) t.Id = copy.Id;
+        t.SyncUid ??= copy.SyncUid;
+        t.CreatedAt = copy.CreatedAt;
+        t.UpdatedAt = copy.UpdatedAt;
         Recalc();
         PostSoon();
     }
+
+    /// <summary>
+    /// نسخهٔ جدای یک ردیف — فقط ستون‌ها، بی ‎Shift‎. ⛔ ستونِ تازه‌ای که به
+    /// ‎WaraqTransaction‎ اضافه شود باید این‌جا هم بنشیند (‎WaraqDetachedSaveTests‎ می‌شمارد).
+    /// </summary>
+    public static WaraqTransaction Detached(WaraqTransaction t) => new()
+    {
+        Id = t.Id, CreatedAt = t.CreatedAt, UpdatedAt = t.UpdatedAt, DeletedAt = t.DeletedAt,
+        SyncUid = t.SyncUid, ShiftId = t.ShiftId, SortIndex = t.SortIndex, Name = t.Name,
+        Liters = t.Liters, Amount = t.Amount, Type = t.Type, Fuel = t.Fuel,
+        AmountAuto = t.AmountAuto, Unit = t.Unit,
+    };
 
     // ══════════════════════════════════════════════════════════════════════
     //  ══ «توی ورق نوشتن خیلی کند است… یک دفعه نوشته می‌شه» (۱۴۰۵/۰۷/۱۹) ══
