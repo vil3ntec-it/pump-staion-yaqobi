@@ -69,6 +69,14 @@ public static class RtlTrim
         {
             if (!Wants(t)) return;
             if (GetEnabled(t)) Apply(t);
+            //  ⛔ تصحیحِ متنِ پیشین با متنِ تازه نمی‌ماند (۱۴۰۵/۰۷/۲۲): همان لحظه برداشته می‌شود و
+            //  پس از چیدمانِ تازه از نو سنجیده — خانهٔ بازیافتی‌ای که هنگامِ عوض شدنِ متن در درخت
+            //  نبود (‎AfterLayout‎ همان‌جا برمی‌گشت) دیگر جابه‌جاییِ متنِ دیگری را با خودش نمی‌برد.
+            if (t.GetValue(OwnedProperty))
+            {
+                t.RenderTransform = null;
+                t.SetValue(OwnedProperty, false);
+            }
             //  جای خطِ تازه پس از چیدمانِ همین فریم معلوم است
             Avalonia.Threading.Dispatcher.UIThread.Post(() => Recenter(t),
                 Avalonia.Threading.DispatcherPriority.Loaded);
@@ -78,6 +86,11 @@ public static class RtlTrim
             if (Wants(t))
                 Avalonia.Threading.Dispatcher.UIThread.Post(() => Recenter(t),
                     Avalonia.Threading.DispatcherPriority.Loaded);
+        });
+        //  خانهٔ بازیافتی که دوباره به درخت برگشت: یک بار سنجیده شود (‎Bounds‎ِ هم‌اندازه خبری نمی‌دهد)
+        Control.LoadedEvent.AddClassHandler<TextBlock>((t, _) =>
+        {
+            if (Wants(t)) Recenter(t);
         });
         //  ⚡ پس از هر چیدمان (نه ‎LayoutUpdated‎ی سراسری): فقط همین نوشته
         Visual.BoundsProperty.Changed.AddClassHandler<TextBlock>((t, _) =>
