@@ -137,6 +137,24 @@ public abstract partial class RowViewModel : ObservableObject, IPendingWrite
 
     private bool _dirty;
 
+    //  ══ نوشتنی که وسطِ ذخیره رسید، گم نمی‌شود (۱۴۰۵/۰۷/۲۲) ══════════════════
+    //
+    //  گزارشِ صاحب ریپو: «توی ورق نام و مقدار و مبلغ را نوشتم؛ وقتی بیرون شدم
+    //  عددها نصفه یا پاک شده بودند و به حساب‌ها اشتباه رفته بودند.»
+    //
+    //  ریشه: ‎WriteAsync‎ پس از ذخیره ‎_dirty = false‎ می‌کرد — بی آن‌که بپرسد
+    //  «در این فاصله چیزِ تازه‌ای تایپ شد؟». تا ۳.۱.۲۴۵ ذخیرهٔ ‎SQLite‎ عملاً روی
+    //  همان نخِ رابط تمام می‌شد و هیچ کلیدی وسطش نمی‌رسید؛ از ۳.۱.۲۴۶ ذخیرهٔ ورق
+    //  روی نخِ دیگر است، پس کلیدهای وسطِ ذخیره ‎Touch‎ می‌زدند، نوشتنِ بعدی پشتِ
+    //  دروازه منتظر می‌ماند، و وقتی نوبتش می‌رسید ردیف «پاک» بود و برمی‌گشت.
+    //  یعنی روی دیسک «125» به‌جای «12500»، و ثبت به حساب‌ها و بازخوانیِ صفحه هم
+    //  همان نیمه را می‌دیدند.
+    //
+    //  ⛔ هر ‎Touch‎ این شماره را بالا می‌برد؛ ردیف فقط وقتی «پاک» می‌شود که شماره
+    //  از پیش از ‎Apply‎ تا پس از ذخیره عوض نشده باشد — وگرنه همان‌جا دوباره
+    //  نوشته می‌شود. این قاعده برای هر جدولی است، نه فقط ورق.
+    private int _editVersion;
+
     /// <summary>این ردیف تغییرِ ذخیره‌نشده دارد؟ (سنجش‌ها می‌خوانند)</summary>
     public bool IsDirty => _dirty;
 
@@ -148,6 +166,7 @@ public abstract partial class RowViewModel : ObservableObject, IPendingWrite
     {
         if (Loading || _retired) return;
         _dirty = true;
+        Interlocked.Increment(ref _editVersion);
         //  ⛔ از همین لحظه این ردیف «در صف»ِ نگهبان است: بسته شدنِ برنامه،
         //  عوض شدنِ دفتر و ‎Ctrl+S‎ همه از همان یک فهرست می‌نویسند.
         SaveGuard.Track(this);
@@ -231,9 +250,19 @@ public abstract partial class RowViewModel : ObservableObject, IPendingWrite
                     try { await Task.Delay(Backoff[i]); } catch { }
                 try
                 {
-                    Apply();
-                    await SaveAsync();
-                    _dirty = false;
+                    int v;
+                    var rounds = 0;
+                    do
+                    {
+                        v = Volatile.Read(ref _editVersion);
+                        Apply();
+                        await SaveAsync();
+                        if (_retired || _gen != LedgerGeneration) break;
+                    }
+                    //  نوشتهٔ تازه‌ای وسطِ ذخیره رسید ⇒ همان را هم بنویس (سقف فقط برای ایمنی)
+                    while (v != Volatile.Read(ref _editVersion) && ++rounds < 50);
+                    if (v == Volatile.Read(ref _editVersion)) _dirty = false;
+                    else _ = DelayedSaveAsync(CancellationToken.None);
                     SaveGuard.ReportSaved();
                     return;
                 }

@@ -98,7 +98,9 @@ public sealed partial class DebtRowViewModel : RowViewModel
     public string BardagiText
     {
         get => Shown(nameof(BardagiText), Shamsi.MoneyOrBlank(_owner.Calc.RowBardagi(_r)));
-        set { if (!Typed(nameof(BardagiText), value)) return; ManualBardagi = Shamsi.Num(value); _r.ByMoney = true; Touch(); Refresh(); }
+        //  ⛔ پاک کردنِ بردگیِ دستی ⇒ ردیف همان لحظه دوباره «لیتر × فی» (همان قاعدهٔ ‎NormalizeRow‎)،
+        //  نه خانهٔ خالی که فقط پس از ذخیره روی دیسک درست می‌شد و صفحه خبردار نمی‌شد.
+        set { if (!Typed(nameof(BardagiText), value)) return; var v = Shamsi.Num(value); ManualBardagi = v; _r.ByMoney = v != 0m || Liters <= 0m; Touch(); Refresh(); }
     }
 
     /// <summary>
@@ -107,7 +109,7 @@ public sealed partial class DebtRowViewModel : RowViewModel
     /// آخرین ستونِ عددیِ جدولِ شخص است.
     /// </summary>
     public string AlbaqiText =>
-        Shamsi.Money(Math.Round(_owner.Calc.RowBardagi(_r) - Rasid, 0, MidpointRounding.AwayFromZero));
+        Shamsi.Money(DebtCalculationService.RoundMoney(_owner.Calc.RowBardagi(_r) - Rasid));
 
     /// <summary>
     /// ══ نوع تیل — دو کادرِ رادیویی، نه کشویی ═══════════════════════════════
@@ -625,14 +627,14 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         var bord = IsMoney ? t.Bardagi : t.Liters;
         var rasid = HeadRasid(fuel);
         var comm = rasid * pct / 100m;
-        return DebtCalculationService.Round0(bord + comm - rasid);
+        return DebtCalculationService.RoundMoney(bord + comm - rasid);
     }
 
     /// <summary>فیصدیِ ما — همان ‎comm‎ی سایت.</summary>
     public string HeadPetrolCommText =>
-        Shamsi.Money(DebtCalculationService.Round0(HeadRasid(FuelType.Petrol) * PercentPetrol / 100m));
+        Shamsi.Money(DebtCalculationService.RoundMoney(HeadRasid(FuelType.Petrol) * PercentPetrol / 100m));
     public string HeadDieselCommText =>
-        Shamsi.Money(DebtCalculationService.Round0(HeadRasid(FuelType.Diesel) * PercentDiesel / 100m));
+        Shamsi.Money(DebtCalculationService.RoundMoney(HeadRasid(FuelType.Diesel) * PercentDiesel / 100m));
 
     /// <summary>
     /// رسیدِ تازه از سربرگ — یک **ردیفِ واقعی** در همین جدول می‌سازد.

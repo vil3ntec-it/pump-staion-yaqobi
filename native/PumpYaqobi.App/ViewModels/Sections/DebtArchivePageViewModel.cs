@@ -94,7 +94,7 @@ public sealed partial class DebtArchiveRowViewModel : RowViewModel
     }
     /// <summary>الباقیِ همین ردیف — بردگی − رسید، مثلِ ستونِ آخرِ جدولِ زنده.</summary>
     public string AlbaqiText =>
-        Shamsi.Money(Math.Round(_owner.Calc.RowBardagi(_r) - Rasid, 0, MidpointRounding.AwayFromZero));
+        Shamsi.Money(DebtCalculationService.RoundMoney(_owner.Calc.RowBardagi(_r) - Rasid));
     public bool IsDiesel => Fuel == FuelType.Diesel;
     public string FuelText => Fuel.ToPersian();
     public string FuelChipText => Fuel.ToPersian();
@@ -290,11 +290,11 @@ public sealed partial class DebtArchiveViewModel : ObservableObject, IRowBatchHo
             var cells = new List<TotalCell>
             {
                 new("مقدار تیل", Shamsi.Money(t.Liters)),
-                new("مقدار بردگی", Shamsi.Money(DebtCalculationService.Round0(bard))),
+                new("مقدار بردگی", Shamsi.Money(DebtCalculationService.RoundMoney(bard))),
             };
             if (IsMoney) cells.Add(new("رسید", Shamsi.Money(t.Rasid), "Pump.Ok"));
             else cells.Add(new("رسید تیل", Shamsi.Money(t.RasidFuel), "Pump.Ok"));
-            cells.Add(new("الباقی", Shamsi.Money(DebtCalculationService.Round0(alb)), alb > 0m ? "Pump.Danger" : "Pump.Ok"));
+            cells.Add(new("الباقی", Shamsi.Money(DebtCalculationService.RoundMoney(alb)), alb > 0m ? "Pump.Danger" : "Pump.Ok"));
             return cells;
         }
     }

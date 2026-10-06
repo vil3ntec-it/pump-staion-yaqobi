@@ -118,7 +118,13 @@ internal static class WaraqTypeProbe
             Console.WriteLine();
             Console.WriteLine("── دیسکِ کند: هر نوشتن ۳۰۰ms ──");
             TypeInto(win, grid, ri, Col("نام"), "حمید رسولی", () => row.Name);
-            Wait(win, SaveGuard.FlushAllAsync());
+            //  ══ کلیدِ وسطِ ذخیره (۱۴۰۵/۰۷/۲۲) ══════════════════════════════════
+            //  «وقتی بیرون شدم عددها نصفه یا پاک شده بودند»: هر کلید ۲۰۰ms پس از
+            //  قبلی (بیش از مکثِ ۱۵۰msِ ذخیره) پس هر رقم وسطِ نوشتنِ ۳۰۰msیِ رقمِ
+            //  قبلی می‌رسد؛ بعد همان «بیرون رفتن از ورق». دندان: پیش از اصلاحِ
+            //  ‎RowViewModel.WriteAsync‎ روی دیسک «125» یا «1250» می‌ماند.
+            TypeInto(win, grid, ri, Col("مبلغ"), "12500", () => row.AmountText.Replace(",", "").Replace("٬", ""), gapMs: 200);
+            Wait(win, wq.BackCommand.ExecuteAsync(null));
         }
         finally { DbWatch.WriteDelayMs = 0; }
         for (var i = 0; i < 40; i++) { Pump(win); Thread.Sleep(20); }
@@ -126,6 +132,7 @@ internal static class WaraqTypeProbe
         {
             var t = db.Set<PumpYaqobi.Domain.Entities.WaraqTransaction>().AsNoTracking().Single(x => x.Id == row.Entity.Id);
             Check($"دیسکِ کند: روی دیسک همان نوشته («{t.Name}»)", t.Name == "حمید رسولی");
+            Check($"دیسکِ کند، کلید وسطِ ذخیره، بیرون از ورق: مبلغ روی دیسک {t.Amount} (باید 12500)", t.Amount == 12500m);
         }
 
         Console.WriteLine();
@@ -135,10 +142,10 @@ internal static class WaraqTypeProbe
         return 1;
     }
 
-    private static void TypeInto(Window win, DataGrid g, int row, int col, string text, Func<string> model)
+    private static void TypeInto(Window win, DataGrid g, int row, int col, string text, Func<string> model, int gapMs = GapMs)
     {
         Console.WriteLine();
-        Console.WriteLine($"── نوشتنِ «{text}» حرف‌به‌حرف (هر {GapMs}ms) ──");
+        Console.WriteLine($"── نوشتنِ «{text}» حرف‌به‌حرف (هر {gapMs}ms) ──");
         ClickCell(win, g, row, col);
         var worst = 0L; var worstAt = -1; var worstGc = 0.0;
         var lost = new List<string>();
@@ -151,7 +158,7 @@ internal static class WaraqTypeProbe
             //  بینِ دو کلید: هر کاری که برنامه در این فاصله می‌کند
             var until = Stopwatch.StartNew();
             //  مکثِ میانِ دو واژه — همان‌جا ذخیره و ثبت به حساب‌ها می‌دود
-            var gap = text[i] == ' ' ? 450 : GapMs;
+            var gap = text[i] == ' ' ? 450 : gapMs;
             while (until.ElapsedMilliseconds < gap)
             {
                 var gc0 = GC.GetTotalPauseDuration();

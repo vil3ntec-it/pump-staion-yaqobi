@@ -275,7 +275,19 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
         Touch();
         if (!Loading) _owner.AutoFromName(this);
     }
-    partial void OnLitersChanged(decimal v) { _t.AmountAuto ??= true; Touch(); Refresh(); }
+    //  ══ مبلغ = مقدار × فی — «آخرین چیزی که نوشتی برنده است» (۱۴۰۵/۰۷/۲۲) ══════
+    //  گزارشِ صاحب ریپو: «مقدارِ تیل را می‌زنم اما با فی ضرب نمی‌شود و به مبلغ اضافه
+    //  نمی‌شود.» ریشه: مبلغی که یک بار دستی نوشته شده بود (یا نیمه روی دیسک مانده بود)
+    //  ردیف را برای همیشه «دستی» می‌کرد؛ دیگر هیچ مقداری ضرب نمی‌شد.
+    //  ⛔ کاربر مقدار را نوشت ⇒ مبلغ دوباره خودکار (مقدار × فی). کاربر مبلغ نوشت ⇒ دستی.
+    //  ⛔ مبلغِ خالی یا صفر ⇒ خودکار (همان قاعدهٔ سایت: ‎amountAuto = !(amount > 0)‎) —
+    //  پیش از این پاک کردنِ مبلغ ردیف را تا ابد صفر نگه می‌داشت.
+    partial void OnLitersChanged(decimal v)
+    {
+        if (Loading) _t.AmountAuto ??= true;
+        else _t.AmountAuto = true;
+        Touch(); Refresh();
+    }
     partial void OnIsExpenseChanged(bool v)
     {
         Touch();
@@ -294,7 +306,7 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
     /// <summary>مبلغی که کاربر خودش بنویسد دیگر خودکار نیست و بازحساب نمی‌شود.</summary>
     partial void OnAmountChanged(decimal v)
     {
-        if (!Loading) _t.AmountAuto = false;
+        if (!Loading) _t.AmountAuto = v > 0m ? false : true;
         Touch(); Refresh();
     }
 
@@ -305,7 +317,19 @@ public sealed partial class WaraqTxnViewModel : RowViewModel
         OnPropertyChanged(nameof(EffectiveAmountText));
     }
 
-    public string LitersText { get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters)); set { if (!Typed(nameof(LitersText), value)) return; Liters = Shamsi.Num(value); } }
+    public string LitersText
+    {
+        get => Shown(nameof(LitersText), Shamsi.MoneyOrBlank(Liters));
+        set
+        {
+            if (!Typed(nameof(LitersText), value)) return;
+            var v = Shamsi.Num(value);
+            //  ⛔ همان عدد دوباره نوشته شد (مبلغِ دستیِ کهنه کنارش) ⇒ باز هم «مقدار × فی»؛
+            //  خاصیت عوض نمی‌شود پس ‎OnLitersChanged‎ نمی‌آمد و مبلغِ غلط می‌ماند.
+            if (v == Liters && !Loading && _t.AmountAuto != true) { _t.AmountAuto = true; Touch(); Refresh(); return; }
+            Liters = v;
+        }
+    }
     public string AmountText { get => Shown(nameof(AmountText), Shamsi.MoneyOrBlank(Amount)); set { if (!Typed(nameof(AmountText), value)) return; Amount = Shamsi.Num(value); } }
 
     /// <summary>مبلغی که واقعاً در جمع‌ها شمرده می‌شود.</summary>
@@ -579,7 +603,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
 
     /// <summary>جمعِ ستونِ «جمله قرض»ِ پایه‌ها — خانهٔ ‎#wq-total-debt‎ی سایت.</summary>
     [ObservableProperty] private string _pumpDebt = "";
-    /// <summary>جمعِ ستونِ «فروش»ِ جدولِ پایه‌ها (لیتر × فی) — «جمله فروش»ِ خلاصه منهای قرض است.</summary>
+    /// <summary>جمعِ ستونِ «فروش»ِ جدولِ پایه‌ها (لیتر × فی) — «جمله فروش»ِ خلاصه منهای قرض و مصرف است.</summary>
     [ObservableProperty] private string _pumpSales = "";
 
     /// <summary>عددِ خامِ کمبودی/اضافی — فقط برای رنگِ کادرِ ششم.</summary>
@@ -671,7 +695,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         var t = Calc.ShiftTotals(sd);
         PetrolLiters = Shamsi.Money(t.PetrolLiters);
         DieselLiters = Shamsi.Money(t.DieselLiters);
-        Sales = Shamsi.Money(Math.Round(t.Net, 0, MidpointRounding.AwayFromZero));   // ⛔ منهای قرض‌ها
+        Sales = Shamsi.Money(Math.Round(t.Net, 0, MidpointRounding.AwayFromZero));   // ⛔ منهای قرض و مصرف
         PumpSales = Shamsi.Money(Math.Round(t.Sales, 0, MidpointRounding.AwayFromZero)) + " افغانی";
         Debt = Shamsi.Money(Math.Round(t.Debt, 0, MidpointRounding.AwayFromZero));
         Expenses = Shamsi.Money(Math.Round(t.Expenses, 0, MidpointRounding.AwayFromZero));
@@ -789,11 +813,33 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         //  در واقع هم‌زمان است، پس روی نخِ رابط هر نوشتنِ کند (دیسکِ ویندوز، ضدِ ویروس، قفلِ
         //  لحظه‌ای) همان‌قدر تایپ را می‌خشکاند — روی رانرِ ویندوز تا ۱۰۲۸ms. ردیف همچنان پشتِ
         //  همان دروازهٔ ‎RowViewModel.WriteAsync‎ است، پس دو نوشتنِ یک ردیف هم‌زمان نمی‌شوند.
+        //
+        //  ⛔ (۱۴۰۵/۰۷/۲۲) نخِ دیگر **نسخه‌ای جدا** را می‌نویسد، نه خودِ ‎t‎ را. خودِ ‎t‎ همان
+        //  لحظه زیرِ دستِ کاربر عوض می‌شود (‎Apply‎ با هر کلید) و از راهِ ‎t.Shift‎ به کلِ ورق
+        //  وصل است: ‎Attach‎ روی نخِ دیگر همهٔ ردیف‌ها و پایه‌های ورق را می‌پیمود — هم‌زمان با
+        //  رابط — و عدد را نیمه‌خوانده می‌نوشت. نسخه فقط ستون‌های خودش را دارد.
         var data = _host.WaraqData;
-        await Task.Run(() => data.SaveTxnAsync(t));
+        var copy = Detached(t);
+        await Task.Run(() => data.SaveTxnAsync(copy));
+        if (t.Id == 0) t.Id = copy.Id;
+        t.SyncUid ??= copy.SyncUid;
+        t.CreatedAt = copy.CreatedAt;
+        t.UpdatedAt = copy.UpdatedAt;
         Recalc();
         PostSoon();
     }
+
+    /// <summary>
+    /// نسخهٔ جدای یک ردیف — فقط ستون‌ها، بی ‎Shift‎. ⛔ ستونِ تازه‌ای که به
+    /// ‎WaraqTransaction‎ اضافه شود باید این‌جا هم بنشیند (‎WaraqDetachedSaveTests‎ می‌شمارد).
+    /// </summary>
+    public static WaraqTransaction Detached(WaraqTransaction t) => new()
+    {
+        Id = t.Id, CreatedAt = t.CreatedAt, UpdatedAt = t.UpdatedAt, DeletedAt = t.DeletedAt,
+        SyncUid = t.SyncUid, ShiftId = t.ShiftId, SortIndex = t.SortIndex, Name = t.Name,
+        Liters = t.Liters, Amount = t.Amount, Type = t.Type, Fuel = t.Fuel,
+        AmountAuto = t.AmountAuto, Unit = t.Unit,
+    };
 
     // ══════════════════════════════════════════════════════════════════════
     //  ══ «توی ورق نوشتن خیلی کند است… یک دفعه نوشته می‌شه» (۱۴۰۵/۰۷/۱۹) ══
@@ -1021,7 +1067,7 @@ public sealed class WaraqCardViewModel
         SubText = (w.Station ?? "") + (workers.Length > 0 ? " — " + string.Join(" / ", workers) : "");
 
         // عددِ ساده — «فروشِ ورق · افغانی» زیرش در کارت می‌آید
-        SalesText = Money(d.Net + n.Net);   // ⛔ منهای قرض‌ها
+        SalesText = Money(d.Net + n.Net);   // ⛔ منهای قرض و مصرف
         DebtText = "قرض: " + Money(d.Debt + n.Debt);
         ExpenseText = "مصرف: " + Money(d.Expenses + n.Expenses);
     }

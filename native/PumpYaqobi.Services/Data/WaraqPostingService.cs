@@ -311,7 +311,7 @@ public sealed class WaraqPostingService
     /// </summary>
     public static WaraqPostOutcome Apply(WaraqEntry w, List<Debtor> people,
                                          List<Expense> expenses, WaraqService calc,
-                                         IReadOnlySet<string>? archived = null,
+                                         IReadOnlyDictionary<string, List<ArchivedSrc>>? archived = null,
                                          List<RetailRow>? retail = null)
     {
         var outcome = new WaraqPostOutcome();
@@ -340,7 +340,7 @@ public sealed class WaraqPostingService
     private static void One(WaraqEntry w, ShiftKind kind, WaraqShift sd, WaraqTransaction t,
                             int index, List<Debtor> people, List<Expense> expenses,
                             WaraqService calc, string date, WaraqPostOutcome outcome,
-                            IReadOnlySet<string>? archived = null,
+                            IReadOnlyDictionary<string, List<ArchivedSrc>>? archived = null,
                             List<RetailRow>? retail = null)
     {
         retail ??= new List<RetailRow>();
@@ -350,8 +350,14 @@ public sealed class WaraqPostingService
         // (۱۴۰۵/۰۷/۱۶): آرشیو ردیف را از جدولِ زنده برمی‌دارد، پس هر ویرایشِ بعدیِ
         // همان ورقِ قدیمی آن قرض را **دوباره** در جدولِ نو می‌نشاند — یک قرض، دو
         // بار شمرده. ردیفِ زنده با همان کلید (بازگردانده از سطل) مثلِ همیشه.
-        if (archived is not null && archived.Contains(srcKey)
-            && t.Type != WaraqTxnType.Expense && !HasLiveRow(people, srcKey))
+        //
+        //  ⛔ (۱۴۰۵/۰۷/۲۲، ممیزی گرفتش) کلید فقط **جای** ردیف است. ردیفی بالاتر که حذف شود،
+        //  ردیفِ شخصِ دیگری به همان جا و همان کلیدِ آرشیوشده می‌رسید و بی‌صدا از حسابش
+        //  پاک می‌شد (قرضِ ۵۰۰۰ِ رحیم در ورق و گاوصندوق بود و در حسابش صفر). پس کلیدِ آرشیو
+        //  فقط وقتی جلو را می‌گیرد که همین ردیف **همان** ثبت باشد: همان حساب و همان مبلغ.
+        if (archived is not null && archived.TryGetValue(srcKey, out var arch)
+            && t.Type != WaraqTxnType.Expense && !HasLiveRow(people, srcKey)
+            && arch.Any(a => SameAsArchived(t, sd, calc, people, a)))
         {
             //  ⛔ شورا، الف۵ (آزمونِ تصادفی گرفتش): مصرف یا چکنه‌ای که همین کلید را از
             //  ردیفِ پیشینِ همین جا دارد (ردیفی که حذف شد و بقیه یک خانه بالا آمدند)
@@ -544,29 +550,50 @@ public sealed class WaraqPostingService
     /// آرشیوهایی خوانده می‌شوند که متنشان پیشوندِ همین ورق را دارد (یک ‎instr‎ی
     /// خودِ SQLite)، نه همهٔ آرشیوها.
     /// </summary>
-    private static async Task<HashSet<string>> ArchivedKeysAsync(PumpDbContext db,
+    /// <summary>ثبتی که با «جدول جدید» به آرشیوِ یک حساب رفته: کدام حساب، چه مبلغی.</summary>
+    public readonly record struct ArchivedSrc(long AccountId, decimal Bardagi);
+
+    /// <summary>این ردیفِ ورق همان ثبتی است که با این کلید به آرشیو رفت؟</summary>
+    private static bool SameAsArchived(WaraqTransaction t, WaraqShift sd, WaraqService calc,
+                                       List<Debtor> people, ArchivedSrc arch)
+    {
+        var amount = Round0(calc.TxnAmount(sd, t));
+        var rate = calc.RepPrice(sd, t.Fuel);
+        if (amount <= 0 && t.Liters > 0 && rate > 0) amount = Round0(t.Liters * rate);
+        if (amount != Round0(arch.Bardagi)) return false;
+        if (PostingService.RetailName((t.Name ?? "").Trim()) is not null) return arch.AccountId == 0;
+        var m = PostingService.MatchWaraqName(people, t.Name);
+        if (m.Found is not { } f) return false;
+        var acct = PostingService.ResolveAccount(f.Person, m.AccountText, f.Account);
+        return arch.AccountId == 0 || acct.Id == arch.AccountId;
+    }
+
+    private static async Task<Dictionary<string, List<ArchivedSrc>>> ArchivedKeysAsync(PumpDbContext db,
                                                                  string prefix, CancellationToken ct)
     {
-        var keys = new HashSet<string>(StringComparer.Ordinal);
+        //  یک کلید ممکن است در چند آرشیو باشد (همان جا، ثبت‌های پیاپی) — همه نگه داشته می‌شوند
+        var keys = new Dictionary<string, List<ArchivedSrc>>(StringComparer.Ordinal);
         //  نامِ کلید در ‎RowsJson‎ همان است که ‎JsonSerializer‎ نوشته — ممکن است
         //  نویسه‌ای را با ‎\uXXXX‎ نوشته باشد، پس هر دو شکل پرسیده می‌شود.
         var escaped = System.Text.Json.JsonSerializer.Serialize(prefix).Trim('"');
         var hits = await db.DebtTableArchives
             .Where(x => x.RowsJson != null && (x.RowsJson.Contains(prefix) || x.RowsJson.Contains(escaped)))
-            .Select(x => x.RowsJson)
+            .Select(x => new { x.AccountId, x.RowsJson })
             .ToListAsync(ct);
-        foreach (var json in hits)
+        foreach (var hit in hits)
         {
             try
             {
-                using var doc = System.Text.Json.JsonDocument.Parse(json!);
+                using var doc = System.Text.Json.JsonDocument.Parse(hit.RowsJson!);
                 if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Array) continue;
                 foreach (var el in doc.RootElement.EnumerateArray())
                     if (el.ValueKind == System.Text.Json.JsonValueKind.Object
                         && el.TryGetProperty("SrcKey", out var k)
                         && k.ValueKind == System.Text.Json.JsonValueKind.String
                         && k.GetString() is { } key && key.StartsWith(prefix, StringComparison.Ordinal))
-                        keys.Add(key);
+                        (keys.TryGetValue(key, out var l) ? l : keys[key] = new()).Add(new ArchivedSrc(hit.AccountId,
+                            el.TryGetProperty("Bardagi", out var b) && b.ValueKind == System.Text.Json.JsonValueKind.Number
+                                ? b.GetDecimal() : 0m));
             }
             catch (System.Text.Json.JsonException) { /* آرشیوِ خراب — نادیده */ }
         }

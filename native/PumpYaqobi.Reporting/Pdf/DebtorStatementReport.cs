@@ -95,7 +95,7 @@ public sealed class DebtorStatementReport : ISetupDocument
         var bord = petrol ? _in.BordPetrol : _in.BordDiesel;
         var comm = rasid * pct / 100m;
         // همان ‎PersonViewModel.Remainder‎: برد + فیصدی − رسید، و همان علامت
-        var show = Math.Round(bord + comm - rasid, 0, MidpointRounding.AwayFromZero);
+        var show = DebtCalculationService.RoundMoney(bord + comm - rasid);
 
         var line = petrol ? DocStyle.Petrol : DocStyle.Diesel;
 
@@ -163,13 +163,13 @@ public sealed class DebtorStatementReport : ISetupDocument
             Td((r.PricePerLiter ?? 0m) > 0m ? PersianText.Num(r.PricePerLiter!.Value) : "—");
             //  ⛔ گردِ «دور از صفر» مثلِ الباقیِ همین ردیف و خودِ برنامه — ‎Math.Round‎ِ بی‌پارامتر
             //  بانکی است و ۱۰۱۲٫۵ را ۱۰۱۲ چاپ می‌کرد در حالی که الباقیِ همان ردیف ۱۰۱۳ بود.
-            Td(PersianText.Num(Math.Round(bardagi, 0, MidpointRounding.AwayFromZero)), DocStyle.Hawala);
+            Td(PersianText.Num(DebtCalculationService.RoundMoney(bardagi)), DocStyle.Hawala);
             if (_in.IsMoneyLedger)
                 Td(r.Rasid > 0m ? PersianText.Num(r.Rasid) : "—", DocStyle.Money);
             else
                 Td(r.RasidFuel > 0m ? PersianText.Num(r.RasidFuel) + " لیتر" : "—", DocStyle.Fuel);
             //  همان ‎DebtRowViewModel.AlbaqiText‎ی جدولِ برنامه: بردگی − رسید
-            Td(PersianText.Num(Math.Round(bardagi - r.Rasid, 0, MidpointRounding.AwayFromZero)),
+            Td(PersianText.Num(DebtCalculationService.RoundMoney(bardagi - r.Rasid)),
                DocStyle.Blue);
         }
 

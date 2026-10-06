@@ -662,7 +662,7 @@ internal static class ParchaWaraqAudit
         string[] labels =
         {
             "⛽ جمله پطرول", "🟤 جمله دیزل", "🟣 جمله مصرف",
-            "💳 جمله قرض", "📊 جمله فروش (منهای قرض)",
+            "💳 جمله قرض", "📊 جمله فروش (منهای قرض و مصرف)",
         };
 
         var texts = win.GetVisualDescendants().OfType<TextBlock>().ToList();
