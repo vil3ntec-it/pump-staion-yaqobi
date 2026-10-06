@@ -35,13 +35,13 @@
           <!-- نقطهٔ سرخ روی کشوی سال/ماه و کنارِ ماهِ پیش (‎MonthDot‎) -->
           <Panel>
             <ComboBox ItemsSource="{Binding Years}" SelectedItem="{Binding YearItem}"
-                      ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="100" />
+                      c:PickerWidth.Stable="True" ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="100" />
             <Ellipse Classes="monthdot badge" IsVisible="{Binding HasYearDot}" />
           </Panel>
           <TextBlock Text="ماه" Classes="label" VerticalAlignment="Center" />
           <Panel>
             <ComboBox ItemsSource="{Binding MonthOptions}" SelectedItem="{Binding SelectedMonth}"
-                      ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="150" />
+                      c:PickerWidth.Stable="True" ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="150" />
             <Ellipse Classes="monthdot badge" IsVisible="{Binding HasMonthDot}" />
           </Panel>
         </StackPanel>

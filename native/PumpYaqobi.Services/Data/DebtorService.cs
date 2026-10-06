@@ -866,8 +866,13 @@ public sealed class DebtorService
     {
         try
         {
-            var rows = System.Text.Json.JsonSerializer.Deserialize<List<DebtRow>>(h.RowsJson ?? "[]");
-            return rows ?? new List<DebtRow>();
+            var rows = System.Text.Json.JsonSerializer.Deserialize<List<DebtRow>>(h.RowsJson ?? "[]") ?? new List<DebtRow>();
+            //  ⛔ ۱۴۰۵/۰۷/۲۱ — آرشیوِ کهنه بردگی و الباقیِ ذخیره‌شده دارد (گاهی گردنشده یا کهنه،
+            //  از نسخهٔ وب) و سربرگِ آرشیو «برد» را از همان جمع می‌زند. سنجهٔ برابری به
+            //  ‎RowsJson‎ نمی‌رسد، پس همان قاعدهٔ همیشگی (‎DebtCalculationService.Normalize‎)
+            //  همین‌جا، فقط در حافظه، روی هر ردیف — مثلِ صفحهٔ حساب سرِ باز شدن.
+            foreach (var r in rows) DebtCalculationService.Normalize(r);
+            return rows;
         }
         catch { return new List<DebtRow>(); }
     }

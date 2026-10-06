@@ -40,12 +40,13 @@ public class MonthShiftWidthTests
         return src[open..];
     }
 
-    /// <summary>⛔ ستونِ «#» کفِ سه رقم دارد و هرگز کوچک نمی‌شود.</summary>
+    /// <summary>⛔ ستونِ «#» کفِ چهار رقم دارد (هزار ردیفِ «همهٔ ماه‌ها» آن را نپراند) و هرگز کوچک نمی‌شود.</summary>
     [Fact]
     public void SotooneShomare_BaMaah_KuchakNemishavad()
     {
         var b = Body(Grid(), "private void FixRowHeaderWidth()");
-        Assert.Contains("Math.Max(3,", b);
+        Assert.Contains("Math.Max(4,", b);
+        Assert.DoesNotContain("Math.Max(3,", b);
         Assert.DoesNotContain("Math.Max(2,", b);
         //  کوچک‌تر نمی‌شود: پهنای بزرگ‌ترِ موجود همان‌جا برمی‌گرداند
         Assert.Matches(new Regex(@"RowHeaderWidth\s*>=\s*w\s*-\s*0\.5\)\s*return;"), b);
@@ -80,5 +81,40 @@ public class MonthShiftWidthTests
         Assert.Contains("return AutoPrefix + k;", Body(g, "private string? AutoMemoryKey(int visible)"));
         Assert.DoesNotContain("AutoPrefix", Body(g, "private double[]? Saved(int count)"));
         Assert.DoesNotContain("AutoPrefix", Body(g, "private void RememberWidths()"));
+    }
+
+    /// <summary>
+    /// ⛔ ۱۴۰۵/۰۷/۲۱ (‎monthshift all‎): هر کشوی سال و ماه پهنای پایدار دارد — وگرنه با
+    /// برچسبِ هر ماه پهن و باریک می‌شد و هر چیزِ کنارش (و در مفاد/ضرر تا ۳۲px) می‌پرید.
+    /// </summary>
+    [Fact]
+    public void HarKashoyeSaloMah_PahnayePaydar()
+    {
+        var views = Directory.GetFiles(Path.Combine(Root(), "PumpYaqobi.App", "Views"), "*.axaml", SearchOption.AllDirectories);
+        var n = 0;
+        foreach (var f in views)
+        {
+            var t = File.ReadAllText(f);
+            foreach (Match m in Regex.Matches(t, @"<ComboBox\s[^>]*?ItemTemplate=""\{StaticResource Pump\.MonthDotItem\}""[^>]*?/?>", RegexOptions.Singleline))
+            {
+                n++;
+                Assert.True(m.Value.Contains("c:PickerWidth.Stable=\"True\""), Path.GetFileName(f) + ": " + m.Value);
+            }
+        }
+        Assert.True(n >= 20, "کشوهای سال/ماه پیدا شدند: " + n);
+    }
+
+    /// <summary>
+    /// پهنا از <b>پهن‌ترین برچسبِ ممکن</b> است، نه از ماه‌های همین سال: «میزان — 1405/07»
+    /// هر دوازده نامِ ماه را با رقمِ پهن‌ترین می‌سازد، پس رفتن به سالی که «حوت» دارد
+    /// پهنای تازه‌ای نمی‌سازد.
+    /// </summary>
+    [Fact]
+    public void PahnayeKasho_AzHameyeMahha_NaAzHaminSal()
+    {
+        var c = PumpYaqobi.App.Controls.PickerWidth.Candidates(new[] { "میزان — 1405/07" }, '8').ToList();
+        foreach (var name in new[] { "حمل", "ثور", "جوزا", "سرطان", "اسد", "سنبله", "میزان", "عقرب", "قوس", "جدی", "دلو", "حوت" })
+            Assert.Contains(name + " — 8888/88", c);
+        Assert.DoesNotContain(c, x => x.Contains('1') || x.Contains('5'));
     }
 }

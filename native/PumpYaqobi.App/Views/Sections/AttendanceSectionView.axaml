@@ -22,9 +22,9 @@
         <TextBlock Text="ماه" Classes="label" VerticalAlignment="Center" />
         <ComboBox ItemsSource="{Binding Picker.Years}" SelectedItem="{Binding Picker.Year}"
                   IsVisible="{Binding Picker.HasYears}"
-                  ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="90" />
+                  c:PickerWidth.Stable="True" ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="90" />
         <ComboBox ItemsSource="{Binding Picker.Months}" SelectedItem="{Binding Picker.Selected}"
-                  ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="120" />
+                  c:PickerWidth.Stable="True" ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="120" />
         <TextBox Text="{Binding NewName}" Watermark="نامِ کارمندِ تازه" Width="150" Margin="8,0,0,0" />
         <TextBox Text="{Binding NewSalary}" Watermark="معاش" Width="90" c:LiveFormat.Kind="number" />
         <Button Classes="accent" Content="افزودن" Command="{Binding AddStaffCommand}" />

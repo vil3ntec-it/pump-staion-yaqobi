@@ -81,9 +81,9 @@
         <TextBlock Text="دوره" Classes="label" VerticalAlignment="Center" />
         <ComboBox ItemsSource="{Binding Picker.Years}" SelectedItem="{Binding Picker.Year}"
                   IsVisible="{Binding Picker.HasYears}"
-                  ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="120" />
+                  c:PickerWidth.Stable="True" ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="120" />
         <ComboBox ItemsSource="{Binding Picker.Months}" SelectedItem="{Binding Picker.Selected}"
-                  ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="160" />
+                  c:PickerWidth.Stable="True" ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="160" />
       </StackPanel>
     </c:SectionPage.Filters>
 
