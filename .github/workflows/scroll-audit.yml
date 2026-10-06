@@ -409,6 +409,34 @@ jobs:
         env:
           OP_DEBUG: '1'
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- oldpost ${{ runner.temp }}/oldpost
+      # ══ عکسِ ۱۴۰۵/۰۷/۲۲: «سنبله» با ردیف‌های خالی (فقط تاریخ و «0») در مصارف و گاوصندوق ══
+      # دفترِ تهی، مثلِ کامپیوترِ صاحب ریپو؛ رفت‌وبرگشتِ ماه و سال؛ جوهرِ هر خانه با پیکسلِ ویندوز.
+      - name: ردیف‌های خالیِ ماهِ پیش — ۱۰۰٪ و ۱۲۵٪ و ۱۵۰٪ (ویندوز)
+        if: ${{ !cancelled() }}
+        working-directory: native
+        shell: bash
+        env:
+          MS_EMPTY: '1'
+        run: |
+          set -e
+          for sc in 1.0 1.25 1.5; do
+            for s in blank-expenses blank-safe; do
+              echo "════ $s · $sc ════"
+              MS_SCALE=$sc MS_SHOTS="${{ runner.temp }}/blank-$sc" dotnet run --project PumpYaqobi.UiTests -c Release -- monthshift all $s
+            done
+          done
+      - name: مصارف و گاوصندوق با دفترِ دوساله — ۱۲۵٪ (ویندوز)
+        if: ${{ !cancelled() }}
+        working-directory: native
+        shell: bash
+        env:
+          MS_SCALE: '1.25'
+          MS_WIDTH: '1366'
+          MS_HEIGHT: '768'
+          MS_SHOTS: ${{ runner.temp }}/ms125
+        run: |
+          set -e
+          for s in expenses safe; do dotnet run --project PumpYaqobi.UiTests -c Release -- monthshift all $s; done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -417,4 +445,6 @@ jobs:
             ${{ runner.temp }}/clab
             ${{ runner.temp }}/om
             ${{ runner.temp }}/oldpost
+            ${{ runner.temp }}/blank-*
+            ${{ runner.temp }}/ms125
           if-no-files-found: ignore
