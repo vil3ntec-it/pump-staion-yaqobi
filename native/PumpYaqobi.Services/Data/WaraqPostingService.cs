@@ -243,6 +243,14 @@ public sealed class WaraqPostingService
                          .Where(r => r.Id != 0).Select(r => r.Id).ToHashSet();
         db.DebtRows.RemoveRange(mine.Where(r => !live.Contains(r.Id)));
 
+        //  ⛔ (۱۴۰۵/۰۷/۲۲، بازبینی) این همگام‌سازی روی نخِ دیگر و **پس از** خواندنِ ورق می‌دود،
+        //  و ‎NormalizeTxns‎ مبلغِ خودکارِ ردیف‌های همان ورق را روی موجودیتِ ردیابی‌شده عوض
+        //  می‌کند. اگر کاربر در همان فاصله ردیفی را نوشت و ذخیره شد، ‎SaveChanges‎ِ این‌جا مبلغِ
+        //  «لیترِ کهنه × فی» را روی نوشتهٔ تازهٔ او می‌نشاند — همان «عدد خراب شد». پس نوشتن در
+        //  یک تراکنشِ ‎IMMEDIATE‎ است (هیچ ذخیرهٔ دیگری وسطش نمی‌رسد) و ردیفی که روی دیسک از
+        //  بارِ خواندن عوض شده دست نمی‌خورد (‎KeepNewerTxnsAsync‎). ثبتِ بعدی با دادهٔ تازه می‌آید.
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await KeepNewerTxnsAsync(db, ct);
         await db.SaveChangesAsync(ct);
 
         // ══ «جمله فروش» ⇐ گاوصندوق ═════════════════════════════════════════
@@ -257,8 +265,41 @@ public sealed class WaraqPostingService
         // همگام‌سازیِ ورق هر دو را با هم می‌کند.
         await _safe.SyncSalesToSafeAsync(db, w, ct);
         await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
 
         return outcome.Report;
+    }
+
+    /// <summary>
+    /// ردیفِ ورقی که پس از خوانده شدن روی دیسک عوض شده، از این نوشتن بیرون می‌رود —
+    /// نوشتهٔ تازهٔ کاربر بر مبلغِ بازحسابِ کهنه برنده است. ⚠️ درونِ همان تراکنشِ نوشتن صدا
+    /// زده شود، وگرنه ذخیره‌ای میانِ سنجش و نوشتن می‌لغزد.
+    /// </summary>
+    public static async Task KeepNewerTxnsAsync(PumpDbContext db, CancellationToken ct)
+    {
+        var changed = db.ChangeTracker.Entries<WaraqTransaction>()
+                        .Where(e => e.State == EntityState.Modified).ToList();
+        if (changed.Count == 0) return;
+        var ids = changed.Select(e => e.Entity.Id).ToList();
+        var disk = await db.WaraqTransactions.AsNoTracking().IgnoreQueryFilters()
+            .Where(t => ids.Contains(t.Id))
+            .Select(t => new { t.Id, t.UpdatedAt, t.DeletedAt, t.Liters, t.Amount, t.AmountAuto, t.Name, t.Fuel, t.Unit, t.Type })
+            .ToDictionaryAsync(x => x.Id, ct);
+        foreach (var e in changed)
+        {
+            var o = e.OriginalValues;
+            var same = disk.TryGetValue(e.Entity.Id, out var d)
+                && d.DeletedAt is null
+                && d.UpdatedAt == o.GetValue<DateTime>(nameof(WaraqTransaction.UpdatedAt))
+                && d.Liters == o.GetValue<decimal>(nameof(WaraqTransaction.Liters))
+                && d.Amount == o.GetValue<decimal>(nameof(WaraqTransaction.Amount))
+                && d.AmountAuto == o.GetValue<bool?>(nameof(WaraqTransaction.AmountAuto))
+                && d.Name == o.GetValue<string?>(nameof(WaraqTransaction.Name))
+                && d.Fuel == o.GetValue<FuelType>(nameof(WaraqTransaction.Fuel))
+                && d.Unit == o.GetValue<LedgerMode>(nameof(WaraqTransaction.Unit))
+                && d.Type == o.GetValue<WaraqTxnType>(nameof(WaraqTransaction.Type));
+            if (!same) e.State = EntityState.Unchanged;
+        }
     }
 
     /// <summary>
@@ -369,7 +410,10 @@ public sealed class WaraqPostingService
             return;
         }
         var name = (t.Name ?? "").Trim();
-        var amount = Round0(calc.TxnAmount(sd, t));
+        //  ⛔ (۱۴۰۵/۰۷/۲۲، بازبینی) دو رقمِ اعشار، نه افغانیِ درست: مبلغِ دستیِ «100.5» در ورق
+        //  همان 100.5 از «جمله فروش» کم می‌شود، پس حساب هم همان را می‌گیرد (‎RoundMoney‎ِ
+        //  حسابِ قرض‌دار). مبلغِ خودکار از پیش در ‎TxnAmount‎ گرد شده و دست نمی‌خورد.
+        var amount = DebtCalculationService.RoundMoney(calc.TxnAmount(sd, t));
         var liters = t.Liters;
 
         // پُرکردنِ دوطرفهٔ تیل ↔ پول با نرخِ همین ورق، مثلِ سایت:
@@ -588,10 +632,10 @@ public sealed class WaraqPostingService
                                        List<Debtor> people, ArchivedSrc arch)
     {
         //  آرشیوِ کهنه (پیش از ‎SrcTxn‎) — همان حساب و همان مبلغ
-        var amount = Round0(calc.TxnAmount(sd, t));
+        var amount = DebtCalculationService.RoundMoney(calc.TxnAmount(sd, t));
         var rate = calc.RepPrice(sd, t.Fuel);
         if (amount <= 0 && t.Liters > 0 && rate > 0) amount = Round0(t.Liters * rate);
-        if (amount != Round0(arch.Bardagi)) return false;
+        if (amount != DebtCalculationService.RoundMoney(arch.Bardagi)) return false;
         if (PostingService.RetailName((t.Name ?? "").Trim()) is not null) return arch.AccountId == 0;
         var m = PostingService.MatchWaraqName(people, t.Name);
         if (m.Found is not { } f) return false;
