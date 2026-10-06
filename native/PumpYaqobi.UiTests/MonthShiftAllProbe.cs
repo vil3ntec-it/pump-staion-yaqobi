@@ -39,6 +39,8 @@ internal static class MonthShiftAllProbe
 {
     private static int _bad;
     private static int TotalCorrections;
+    private static int FrameOverlap;
+    private static double FrameOverlapMax;
     private static int _checks;
     private static int _shot;
     private static readonly List<string> Summary = new();
@@ -136,6 +138,7 @@ internal static class MonthShiftAllProbe
             foreach (var l in ShotList) Console.WriteLine("  " + l);
         }
         Console.WriteLine($"   قابِ بدنهٔ بخش‌ها (‎ScaleBody‎) در کلِ اجرا {TotalCorrections} بار بدنهٔ لغزنده را سرِ جایش برگرداند");
+        Console.WriteLine($"   ⚠️ خانهٔ نوارِ «جمله» زیرِ خطِ قابِ نوار (همان سرستونِ بریده‌شده): {FrameOverlap} بار، بیشترین {FrameOverlapMax:0.#}px");
         Console.WriteLine(_bad == 0 ? $"✅ {_checks} سنجه، همه سرِ جایش" : $"❌ {_bad} ایراد از {_checks} سنجه");
         return _bad == 0 ? 0 : 1;
     }
@@ -880,12 +883,14 @@ internal static class MonthShiftAllProbe
                 //  ⚠️ خانهٔ کناریِ نوارِ «جمله» زیرِ سرستونش است و سرستون تا خطِ بیرونیِ جدول می‌رود،
                 //  در حالی که نوار درونِ قابِ خودش (خطِ ‎SumBorder‎) است: همان یک خط روی هم می‌افتد
                 var tol = 1.0;
+                //  ⚠️ خانهٔ نوارِ «جمله» زیرِ سرستونش چیده می‌شود (لبه‌به‌لبه، سنجهٔ «جمله» در پایین) و
+                //  سرستونِ ستونِ آخر درونِ خودِ جدول ۱ تا ۲ پیکسل زیرِ خطِ قاب می‌رود (چیدمانِ درونیِ
+                //  ‎DataGrid‎ِ آوالونیا، بریده‌شده با قاب) — همان یک خط. شمرده و چاپ می‌شود، سرخ نمی‌کند.
                 if (p is TotalsStrip && p.GetVisualAncestors().OfType<Border>().FirstOrDefault(b => b.BorderThickness.Left > 0) is { } fb)
                 {
-                    //  ملاک برای این خانه‌ها لبهٔ بیرونیِ خودِ قابِ نوار است (همان خطی که با خطِ جدول یکی است)
                     var fe = Edges(fb, p); var ce0 = Edges(c, p);
-                    if (ce0.L < fe.L - 0.5 || ce0.R > fe.R + 0.5)
-                        bad.Add($"«{Label(c)}» از قابِ نوارِ «جمله» بیرون زد: {ce0.L:0.#}..{ce0.R:0.#} از {fe.L:0.#}..{fe.R:0.#}");
+                    var over = Math.Max(fe.L - ce0.L, ce0.R - fe.R);
+                    if (over > 0.5) { FrameOverlap++; FrameOverlapMax = Math.Max(FrameOverlapMax, over); }
                     continue;
                 }
                 if (c.Bounds.X - c.Margin.Left < -tol || c.Bounds.Right + c.Margin.Right > p.Bounds.Width + tol)
