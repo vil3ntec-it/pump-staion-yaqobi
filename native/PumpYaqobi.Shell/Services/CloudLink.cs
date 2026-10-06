@@ -583,6 +583,18 @@ public sealed partial class CloudLink
         return false;
     }
 
+    /// <summary>
+    /// ══ توکنِ دستگاهِ مرده ⇒ همان لحظه از نو بند شو (۱۴۰۵/۰۷/۲۲) ══════════════
+    ///
+    /// سرورِ حساب برای توکنِ دستگاهی که دیگر نمی‌شناسد فقط ‎401 invalid_token‎ می‌دهد
+    /// (نه ‎device_revoked‎). سنجهٔ ‎livesync‎ روی پشتهٔ واقعی دید: کامپیوتری که توکنش
+    /// این‌طور مرده بود **برای همیشه** «نشست شما منقضی شده» می‌گرفت و هیچ تغییرش به
+    /// سرور نمی‌رسید — در حالی که حسابش سالم بود. ⛔ همان ‎BindAsync‎ِ همیشگی با توکنِ
+    /// حساب؛ نشد ⇒ همان توکن و مجوزِ قبلی برمی‌گردد. یک بیت از دفتر لمس نمی‌شود.
+    /// </summary>
+    public Task<bool> RebindDeviceAsync(CancellationToken ct = default) =>
+        SignedIn && Activated ? ReseatToAccountPumpAsync(leaveOther: false, ct) : Task.FromResult(false);
+
     public async Task<CloudResult> BindAsync(CancellationToken ct = default, bool adopt = false)
     {
         if (!SignedIn) return CloudResult.No("اول وارد حساب شوید", "no_account");

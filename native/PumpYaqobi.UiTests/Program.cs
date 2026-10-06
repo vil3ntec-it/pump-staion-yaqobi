@@ -255,6 +255,8 @@ internal static class Program
         // ══ «پنج سال استفاده از اپ» — کندی و باگ با دفترِ پنج‌ساله ═══════════
         //     dotnet run --project PumpYaqobi.UiTests -- years
         if (outDir.Equals("tensync", StringComparison.OrdinalIgnoreCase)) return TenSyncProbe.Run(args);
+        //     dotnet run … -- livesync <live.json> a|b <پوشهٔ مشترک>   (دو کامپیوتر، حلقهٔ واقعی)
+        if (outDir.Equals("livesync", StringComparison.OrdinalIgnoreCase)) return LiveSyncProbe.Run(args);
         if (outDir.Equals("years", StringComparison.OrdinalIgnoreCase)) return YearsAudit.Run();
         // ══ «برنامه چرا دیر باز می‌شود؟» — اجرای سرد، مرحله به مرحله ═════════
         //     dotnet run --project PumpYaqobi.UiTests -- startup

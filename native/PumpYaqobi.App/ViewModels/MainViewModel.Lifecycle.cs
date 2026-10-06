@@ -254,6 +254,59 @@ public sealed partial class MainViewModel
         try { if (await Task.Run(() => AppHost.Current.Backup.SnapshotToday()) is not null) ExitBackup.Mark(); } catch { }
     }
 
+    // ══ پس از بستن هم دل جمع: آخرین تغییرها و یک بکاپ به سرور (۱۴۰۵/۰۷/۲۲) ══
+    //
+    //  خواستهٔ صاحب ریپو: «یک بک‌اپ هم بعد از این‌که بخواهد بیرون شود برود به سرور،
+    //  تا بعد از بیرون شدن هم دلِ آدم جمع باشد که اطلاعاتش سالم است.»
+    //  ⛔ فقط وقتی در این اجرا چیزی نوشته شده (‎BackupPusher.ChangedSinceSend‎)؛
+    //  باز کردن و نگاه کردن هیچ بکاپی نمی‌فرستد. ⛔ سقف دارد (‎ExitSendCap‎) و
+    //  «بستن بی‌انتظار» همیشه هست — برنامه‌ای که بسته نمی‌شود بدتر است. نوشته‌ها
+    //  پیش از این روی دیسکِ همین کامپیوتر نشسته‌اند؛ این فقط نسخهٔ سرور است.
+
+    /// <summary>بیشترین انتظارِ بکاپِ پایانی.</summary>
+    public static readonly TimeSpan ExitSendCap = TimeSpan.FromMinutes(3);
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsExitSending))]
+    private string _exitSendText = "";
+
+    public bool IsExitSending => ExitSendText.Length > 0;
+
+    private CancellationTokenSource? _exitSendCts;
+
+    [RelayCommand]
+    private void SkipExitSend() { try { _exitSendCts?.Cancel(); } catch { } }
+
+    public async Task SendToServerBeforeExitAsync()
+    {
+        if (Update.UpdateExit.Active || Phase != AppPhase.Ready || ExitBackup.Disabled) return;
+        var host = AppHost.Current;
+        using var cts = new CancellationTokenSource(ExitSendCap);
+        _exitSendCts = cts;
+        try
+        {
+            //  ۱) تغییرهای در صفِ همگام‌سازی همین حالا — نه سی ثانیهٔ دیگر
+            if (host.SyncIfStarted is { Queued: > 0 } sync)
+            {
+                ExitSendText = $"📤 رساندنِ {sync.Queued} تغییرِ آخر به سرور…";
+                try { await sync.SyncNowAsync(cts.Token).WaitAsync(TimeSpan.FromSeconds(20), cts.Token); } catch { }
+            }
+            //  ۲) بکاپِ پایانی — فقط اگر چیزی نوشته شده و پلن خدماتِ سرور دارد
+            var pusher = host.BackupToServer;
+            if (cts.IsCancellationRequested || !pusher.ChangedSinceSend
+                || !Entitlements.Allows(Entitlements.CloudBackup)) return;
+            ExitSendText = "📤 بکاپِ پایانی به سرور می‌رود…";
+            void Show() => Dispatcher.UIThread.Post(() =>
+            { if (ExitSendText.Length > 0 && pusher.Progress.Length > 0) ExitSendText = pusher.Progress; });
+            pusher.ProgressChanged += Show;
+            try { await Task.Run(() => pusher.RunOnceAsync(manual: false, cts.Token), cts.Token); }
+            catch { /* نرسید — نسخهٔ این کامپیوتر سالم است */ }
+            finally { pusher.ProgressChanged -= Show; }
+        }
+        catch { /* بستن هرگز نمی‌شکند */ }
+        finally { _exitSendCts = null; ExitSendText = ""; }
+    }
+
     /// <summary>
     /// ══ «همه‌اش را همین حالا بنویس» ════════════════════════════════════════
     /// پیش از بسته شدنِ برنامه و با <c>Ctrl+S</c>.

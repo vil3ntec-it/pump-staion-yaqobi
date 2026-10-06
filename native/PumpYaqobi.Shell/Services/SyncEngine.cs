@@ -538,6 +538,7 @@ public sealed class SyncEngine : IAsyncDisposable
                 //  ⛔ ‎plan_no_services‎ با کدِ بی‌اینترنتِ وی‌آی‌پی روی همین کامپیوتر: جملهٔ
                 //  عمومیِ پلن دروغ است (سربرگ وی‌آی‌پی می‌گوید) ⇒ دلیلِ واقعی (۱۴۰۵/۰۷/۲۱)
                 var why = DeniedWhy(cloud, res.Code, res.Why);
+                await HealDeadTokenAsync(cloud, res.Code, ct);
                 _store.Update(x => x.LastError = why);
                 LastError = why;
                 Set(SyncLight.Queued, "در صف — " + why, pending);
@@ -600,6 +601,7 @@ public sealed class SyncEngine : IAsyncDisposable
             {
                 _fails++;
                 LastError = DeniedWhy(cloud, pull.Code, pull.Why);
+                await HealDeadTokenAsync(cloud, pull.Code, ct);
                 //  ⚠️ ‎plan_no_services‎ یعنی رسیدیم و سرور نه گفت — «نمی‌رسیم» نیست
                 Set(SyncLight.Queued, pull.Code == "plan_no_services"
                     ? "در صف — " + LastError
@@ -754,6 +756,23 @@ public sealed class SyncEngine : IAsyncDisposable
         catch { /* یادِ محلی کافی است */ }
     }
 
+    /// <summary>
+    /// ⛔ توکنِ دستگاهِ مرده (‎invalid_token‎) خودش درست می‌شود — شرحش بالای
+    /// ‎CloudLink.RebindDeviceAsync‎. دست‌بالا هر دو دقیقه یک بار، تا سقفِ نرخِ ورود پر نشود.
+    /// </summary>
+    private async Task HealDeadTokenAsync(CloudLink cloud, string code, CancellationToken ct)
+    {
+        if (code != "invalid_token" || !cloud.Activated || !cloud.SignedIn) return;
+        if (AppClock.Mono - _lastHeal < HealGap) return;
+        _lastHeal = AppClock.Mono;
+        try { if (await cloud.RebindDeviceAsync(ct)) { _fails = 0; Nudge(); } }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch { /* دورِ بعد دوباره */ }
+    }
+
+    public static readonly TimeSpan HealGap = TimeSpan.FromMinutes(2);
+    private DateTime _lastHeal = DateTime.MinValue;
+
     /// <summary>دلیلِ ردِ سرور، با کدِ بی‌اینترنتِ همین کامپیوتر سنجیده (‎CloudLink.ServicesDeniedReason‎).</summary>
     private static string DeniedWhy(CloudLink cloud, string code, string why) =>
         code == "plan_no_services" ? cloud.ServicesDeniedReason(why) : why;
@@ -789,8 +808,8 @@ public sealed class SyncEngine : IAsyncDisposable
 
     private async Task LiveAsync(string token, string deviceId, CancellationToken ct)
     {
-        //  ⚠️ سنجه‌ها شبکه ندارند و نباید سوکت باز کنند
-        if (CloudLink.TestTransport is not null) return;
+        //  ⚠️ سنجه‌ها شبکه ندارند و نباید سوکت باز کنند — مگر سنجهٔ پشتهٔ واقعی (‎TestWsBase‎)
+        if (CloudLink.TestTransport is not null && CloudConfig.TestWsBase is null) return;
 
         try
         {

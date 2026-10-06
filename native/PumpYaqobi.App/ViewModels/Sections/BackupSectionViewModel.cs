@@ -269,6 +269,15 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             finally { try { File.Delete(seal.Path); } catch { } }
             return;
         }
+        //  ⛔ بکاپِ فشردهٔ سرور (۱۴۰۵/۰۷/۲۲) — اول باز، بعد همان راهِ همیشگی
+        if (BackupService.IsGzip(path))
+        {
+            var plain = await Task.Run(() => BackupService.ExpandIfGzip(path, _host.Backup.SnapshotDir));
+            if (plain is null) { _host.Toast("❌ بکاپِ فشرده باز نشد — فایل ناقص یا دست‌خورده است", ToastKind.Error); return; }
+            try { await RestoreFromAsync(plain, what, ownCloud); }
+            finally { foreach (var f in new[] { plain, plain + "-wal", plain + "-shm" }) try { File.Delete(f); } catch { } }
+            return;
+        }
         if (!ownCloud && !RestoreAllowed()) return;
         //  ⛔ پشتیبانِ رمزشده (‎.pyq‎) اول در یک فایلِ موقت باز می‌شود و همان راهِ
         //  همیشگی رویش می‌رود (سنجش، پرسش، عکسِ ایمنی). پس از کار پاک می‌شود.
@@ -603,9 +612,15 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         {
             try { await SaveGuard.FlushAllAsync(); } catch { }
             var pusher = _host.BackupToServer;
+            //  ⛔ «یک ساعت لودینگ» (۱۴۰۵/۰۷/۲۲): هر گام و درصدِ رفته همین‌جا دیده می‌شود
+            void Show() => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            { if (SendingToServer && pusher.Progress.Length > 0) ServerStatus = pusher.Progress; });
+            pusher.ProgressChanged += Show;
             //  ⛔ روی نخِ دیگر (۱۴۰۵/۰۷/۱۶): ‎VACUUM INTO‎ِ کلِ دفتر پیش از نخستین ‎await‎ِ واقعی
             //  روی نخِ رابط می‌دوید و پنجره چند ثانیه «پاسخ نمی‌داد».
-            var ok = await Task.Run(() => pusher.RunOnceAsync(manual: true));
+            bool ok;
+            try { ok = await Task.Run(() => pusher.RunOnceAsync(manual: true)); }
+            finally { pusher.ProgressChanged -= Show; }
             (ServerStatus, ServerStatusBrushKey) = ServerResult(ok, pusher.LastHomeOk, pusher.LastCloudOk, pusher.LastError,
                                                                 pusher.LastHomeWhy, pusher.LastCloudWhy);
             _host.Toast(ServerStatus, ok ? ToastKind.Ok : ToastKind.Error);

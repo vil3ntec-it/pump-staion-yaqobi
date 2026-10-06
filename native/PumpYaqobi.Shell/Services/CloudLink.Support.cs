@@ -106,7 +106,7 @@ public sealed partial class CloudLink
     /// </remarks>
     public async Task<CloudResult> BackupUploadAsync(
         string file, string label = "", bool manual = false, string ext = "db",
-        CancellationToken ct = default)
+        CancellationToken ct = default, Action<long>? progress = null)
     {
         if (!Activated) return CloudResult.No("فعال نشده", "not_activated");
         if (string.IsNullOrWhiteSpace(file) || !File.Exists(file))
@@ -122,7 +122,8 @@ public sealed partial class CloudLink
             bufferSize: 64 * 1024, useAsync: true);
         if (stream.Length == 0) return CloudResult.No("فایلِ پشتیبان خالی است", "empty_backup");
 
-        using var body = new StreamContent(stream, 64 * 1024);
+        //  ⚠️ پیشرفت از روی بایت‌های خوانده‌شده — دکمه و پردهٔ خروج «چند درصد رفت» را می‌گویند
+        using var body = new StreamContent(progress is null ? stream : new ReadCounter(stream, progress), 64 * 1024);
         body.Headers.ContentType =
             new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
         body.Headers.ContentLength = stream.Length;
@@ -523,5 +524,41 @@ public sealed partial class CloudLink
     {
         var c = (code ?? "").Trim().ToUpperInvariant();
         return c.Length == 8 ? c[..4] + "-" + c[4..] : c;
+    }
+
+    /// <summary>جریانِ فقط‌خواندنی که بایت‌های رفته را می‌شمارد — هر ۲۵۶ کیلوبایت یک خبر.</summary>
+    private sealed class ReadCounter : Stream
+    {
+        private readonly Stream _inner;
+        private readonly Action<long> _report;
+        private long _done, _told;
+
+        public ReadCounter(Stream inner, Action<long> report) { _inner = inner; _report = report; }
+
+        private int Count(int n)
+        {
+            _done += n;
+            if (n == 0 || _done - _told >= 256 * 1024)
+            {
+                _told = _done;
+                try { _report(_done); } catch { /* نمایش رفاه است */ }
+            }
+            return n;
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) => Count(_inner.Read(buffer, offset, count));
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default) =>
+            Count(await _inner.ReadAsync(buffer, ct));
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken ct) =>
+            Count(await _inner.ReadAsync(buffer.AsMemory(offset, count), ct));
+        public override bool CanRead => true;
+        public override bool CanSeek => _inner.CanSeek;
+        public override bool CanWrite => false;
+        public override long Length => _inner.Length;
+        public override long Position { get => _inner.Position; set { _inner.Position = value; _done = value; _told = value; } }
+        public override void Flush() { }
+        public override long Seek(long offset, SeekOrigin origin) { var p = _inner.Seek(offset, origin); _done = _told = p; return p; }
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 }

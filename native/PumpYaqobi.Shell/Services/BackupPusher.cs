@@ -40,8 +40,13 @@ namespace PumpYaqobi.App.Services;
 /// </summary>
 public sealed class BackupPusher : IAsyncDisposable
 {
-    /// <summary>هر شش ساعت یک بار — خواستهٔ صریحِ صاحب ریپو.</summary>
-    public static readonly TimeSpan Every = TimeSpan.FromHours(6);
+    /// <summary>
+    /// هر سه ساعت یک بار، تا برنامه باز است — خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۲۲:
+    /// «هر وقت باز بود هر سه ساعت بک‌اپ برود به سرور، و یکی هم بعد از بیرون شدن»).
+    /// پیش از آن شش ساعت بود. ⚠️ دفترِ عوض‌نشده دوباره نمی‌رود (‎ChangedSinceSend‎):
+    /// سرورِ حساب فقط تازه‌ترین‌ها را نگه می‌دارد و کپیِ یکسان بکاپِ متفاوتِ قبلی را از ته می‌برد.
+    /// </summary>
+    public static readonly TimeSpan Every = TimeSpan.FromHours(3);
 
     /// <summary>
     /// اولین دور، کمی بعد از ورود. عکسِ ایستگاه ۱۲ ثانیه صبر می‌کند
@@ -79,9 +84,41 @@ public sealed class BackupPusher : IAsyncDisposable
         try { await Task.Delay(FirstDelay, ct); } catch { return; }
         while (!ct.IsCancellationRequested)
         {
-            try { await RunOnceAsync(ct); } catch { /* هیچ خطایی بیرون نمی‌رود */ }
+            //  ⛔ نخستین دور همیشه؛ بعدش فقط اگر دفتر از آخرین بکاپِ رسیده عوض شده باشد
+            if (_sentVersion < 0 || ChangedSinceSend)
+                try { await RunOnceAsync(ct); } catch { /* هیچ خطایی بیرون نمی‌رود */ }
             try { await Task.Delay(Every, ct); } catch { return; }
         }
+    }
+
+    /// <summary>
+    /// ‎PumpDbContext.Version‎ در لحظهٔ آخرین بکاپی که واقعاً به سرور رسید (‎-1‎: هنوز هیچ).
+    /// </summary>
+    private long _sentVersion = -1;
+
+    /// <summary>از آخرین بکاپِ رسیده (یا اگر هنوز هیچ، از باز شدنِ برنامه) چیزی نوشته شده؟</summary>
+    public bool ChangedSinceSend =>
+        PumpYaqobi.Persistence.PumpDbContext.Version
+        != (_sentVersion >= 0 ? _sentVersion : Interlocked.Read(ref _openVersion));
+
+    private long _openVersion = PumpYaqobi.Persistence.PumpDbContext.Version;
+
+    /// <summary>«از این‌جا بشمار» — پس از ورود (دفترِ حساب باز شد).</summary>
+    public void MarkOpen() => Interlocked.Exchange(ref _openVersion, PumpYaqobi.Persistence.PumpDbContext.Version);
+
+    // ══ پیشرفت — دکمه و پردهٔ خروج همین را نشان می‌دهند ═════════════════════
+
+    /// <summary>جملهٔ «الان چه می‌کند» — خالی یعنی کاری نمی‌کند.</summary>
+    public string Progress { get; private set; } = "";
+
+    /// <summary>هر بار که <see cref="Progress"/> عوض شد (از نخِ پس‌زمینه).</summary>
+    public event Action? ProgressChanged;
+
+    private void Say(string text)
+    {
+        if (Progress == text) return;
+        Progress = text;
+        try { ProgressChanged?.Invoke(); } catch { /* نمایش رفاه است */ }
     }
 
     /// <summary>
@@ -104,8 +141,14 @@ public sealed class BackupPusher : IAsyncDisposable
     public async Task<bool> RunOnceAsync(bool manual, CancellationToken ct = default)
     {
         await _gate.WaitAsync(ct);
-        try { return await RunCoreAsync(manual, ct); }
-        finally { _gate.Release(); }
+        var version = PumpYaqobi.Persistence.PumpDbContext.Version;
+        try
+        {
+            var ok = await RunCoreAsync(manual, ct);
+            if (ok) _sentVersion = version;
+            return ok;
+        }
+        finally { _gate.Release(); Say(""); }
     }
 
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -150,6 +193,7 @@ public sealed class BackupPusher : IAsyncDisposable
             return false;
         }
 
+        Say("📸 گرفتنِ عکسِ دفتر…");
         var file = _host.Backup.SnapshotToday();
         if (file is null || !File.Exists(file))
         {
@@ -169,9 +213,10 @@ public sealed class BackupPusher : IAsyncDisposable
             return false;
         }
 
-        var sent = await SendAsync(file, ct);
-        LastHomeOk = sent;
-        if (!sent) LastHomeWhy = LastError;
+        //  ⛔ دو مقصد **هم‌زمان** (۱۴۰۵/۰۷/۲۲)، نه پشتِ سرِ هم: سرورِ خانگیِ
+        //  خاموش یا نشانیِ کهنه‌اش دیگر فرستادن به سرورِ حساب را معطل نمی‌کند.
+        Say("📤 فرستادن به سرور…");
+        var homeTask = SendAsync(file, ct);
 
         /*
          *  ══ و همان فایل، روی ابر ═════════════════════════════════════
@@ -192,6 +237,9 @@ public sealed class BackupPusher : IAsyncDisposable
          */
         var toCloud = await SendToCloudAsync(file, manual, records, ct);
         LastCloudOk = toCloud;
+        var (sent, homeWhy) = await homeTask;
+        LastHomeOk = sent;
+        if (!sent) LastHomeWhy = homeWhy;
 
         if (sent || toCloud)
         {
@@ -241,36 +289,58 @@ public sealed class BackupPusher : IAsyncDisposable
 
             var info = new FileInfo(file);
             if (!info.Exists || info.Length == 0) { LastCloudWhy = "عکسِ پشتیبان خالی است"; return false; }
-            //  بزرگ‌تر از سقفِ سرور اصلاً فرستاده نمی‌شود: سرور ردش می‌کند
-            //  و فرستادنش فقط پهنای باند است.
-            if (info.Length > CloudMaxBytes)
-            { LastCloudWhy = $"دفتر از سقفِ {CloudMaxBytes / 1048576} مگابایتیِ سرور بزرگ‌تر است — فایلِ بکاپ را روی فلش بگیرید"; return false; }
 
-            //  ⛔ مُهرِ پمپ (۱۴۰۵/۰۷/۲۰): نسخهٔ روی سرور هم فقط با همین حساب باز می‌شود —
-            //  وگرنه همان فایل از پورتالِ صاحب گرفته و در حسابِ آزمایشیِ تازه آورده می‌شد.
+            //  ══ فشرده، نه خام (۱۴۰۵/۰۷/۲۲) ══════════════════════════════════
+            //  گزارشِ صاحب ریپو: «بکاپِ دستی یک ساعت لودینگ نشان می‌دهد.» سنجیده شد:
+            //  دفترِ پنج‌ساله ۴۷ مگابایت است و **خام** از اینترنتِ پمپ و تونل بالا
+            //  می‌رفت؛ فشرده‌اش ۶ مگابایت است — هفت برابر کمتر، هفت برابر زودتر. سرور
+            //  پسوندِ ‎db.gz‎ را نگه می‌دارد و برگرداندن (‎BackupService.ExpandIfGzip‎)
+            //  خودش بازش می‌کند؛ بکاپ‌های خامِ قبلی همان‌طور برمی‌گردند.
+            Say("🗜️ فشرده کردنِ بکاپ…");
+            var packed = file + ".gz";
+            await Task.Run(() => PumpYaqobi.Services.Data.BackupService.Gzip(file, packed), ct);
             string? sealedCopy = null;
-            if (await BackupKeys.ForCurrentAsync(network: true, ct) is { } key
-                && (AppSettings.Load().CloudStationId ?? "").Trim() is { Length: > 0 } station)
-            {
-                sealedCopy = file + ".sealed";
-                await Task.Run(() => PumpYaqobi.Services.Data.BackupSeal.Seal(file, sealedCopy, station, key), ct);
-            }
             try
             {
+                //  بزرگ‌تر از سقفِ سرور اصلاً فرستاده نمی‌شود: سرور ردش می‌کند
+                //  و فرستادنش فقط پهنای باند است.
+                if (new FileInfo(packed).Length > CloudMaxBytes)
+                { LastCloudWhy = $"دفتر از سقفِ {CloudMaxBytes / 1048576} مگابایتیِ سرور بزرگ‌تر است — فایلِ بکاپ را روی فلش بگیرید"; return false; }
+
+                //  ⛔ مُهرِ پمپ (۱۴۰۵/۰۷/۲۰): نسخهٔ روی سرور هم فقط با همین حساب باز می‌شود —
+                //  وگرنه همان فایل از پورتالِ صاحب گرفته و در حسابِ آزمایشیِ تازه آورده می‌شد.
+                if (await BackupKeys.ForCurrentAsync(network: true, ct) is { } key
+                    && (AppSettings.Load().CloudStationId ?? "").Trim() is { Length: > 0 } station)
+                {
+                    sealedCopy = packed + ".sealed";
+                    await Task.Run(() => PumpYaqobi.Services.Data.BackupSeal.Seal(packed, sealedCopy, station, key), ct);
+                }
+                var upload = sealedCopy ?? packed;
+                var total = new FileInfo(upload).Length;
                 //  ⚠️ شمارِ رکوردها در برچسب می‌رود تا در فهرستِ سرور «خالی» از «پر» پیداست.
                 var res = await cloud.BackupUploadAsync(
-                    sealedCopy ?? file,
+                    upload,
                     label: Shamsi.Today() + " · " + records.ToString("N0") + " رکورد",
                     manual: manual,
-                    ext: "db",
-                    ct: ct);
+                    ext: "db.gz",
+                    ct: ct,
+                    progress: sent => Say($"📤 فرستادن به سرورِ حساب… {Percent(sent, total)}٪ از {SizeMb(total)}"));
                 if (!res.Ok) LastCloudWhy = res.Why;
                 return res.Ok;
             }
-            finally { if (sealedCopy is not null) try { File.Delete(sealedCopy); } catch { } }
+            finally
+            {
+                try { File.Delete(packed); } catch { }
+                if (sealedCopy is not null) try { File.Delete(sealedCopy); } catch { }
+            }
         }
         catch (Exception e) { LastCloudWhy = ErrorText.Friendly(e); return false; }
     }
+
+    private static int Percent(long sent, long total) =>
+        total <= 0 ? 0 : (int)Math.Clamp(sent * 100 / total, 0, 100);
+
+    private static string SizeMb(long bytes) => (bytes / 1048576.0).ToString("0.0") + " مگابایت";
 
     /// <summary>
     /// بزرگ‌ترین فایلی که ارزشِ خواندن در حافظه را دارد.
@@ -283,21 +353,21 @@ public sealed class BackupPusher : IAsyncDisposable
     /// ⚠️ ‎POST‎ی ساده و بدنهٔ خام: فایلِ SQLite چند مگابایت است و داخلِ JSON
     /// نمی‌گنجد. وب‌سوکتِ دفتر هم برای فایل ساخته نشده.
     /// </summary>
-    private async Task<bool> SendAsync(string file, CancellationToken ct)
+    private async Task<(bool Ok, string Why)> SendAsync(string file, CancellationToken ct)
     {
         var url = HomeLink.Url(_host).Trim();
         var token = HomeLink.Token(_host).Trim();
         var code = HomeLink.StationCode(_host);
         if (url.Length == 0 || token.Length == 0)
-        {
-            LastError = "تنظیم نشده";
-            return false;
-        }
+            return (false, "تنظیم نشده");
 
         try
         {
             var target = url.TrimEnd('/') + "/api/stations/" + Uri.EscapeDataString(code) + "/backup";
-            using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
+            //  ⛔ وصل شدن ده ثانیه، نه پنج دقیقه (۱۴۰۵/۰۷/۲۲): نشانیِ کهنهٔ سرورِ خانگی
+            //  (مودمی که آی‌پی‌اش عوض شده) دکمه را دقیقه‌ها روی «در حالِ فرستادن» نگه می‌داشت.
+            using var http = new HttpClient(new SocketsHttpHandler { ConnectTimeout = TimeSpan.FromSeconds(10) })
+            { Timeout = TimeSpan.FromMinutes(5) };
             //  ⚠️ **فایل جریانی می‌رود، نه یک‌جا در حافظه.** پیش از این
             //  ‎File.ReadAllBytesAsync‎ بود: دفترِ چندصد مگابایتیِ یک پمپِ
             //  چندساله همان‌قدر رم می‌خواست، یک‌جا، هر شش ساعت. حالا هرچه
@@ -318,14 +388,12 @@ public sealed class BackupPusher : IAsyncDisposable
                 "pump-" + Shamsi.Today().Replace('/', '-') + "-" + AppClock.Now.ToString("HHmm") + ".db");
 
             using var res = await http.SendAsync(req, ct);
-            if (res.IsSuccessStatusCode) return true;
-            LastError = "سرور نپذیرفت (" + (int)res.StatusCode + ")";
-            return false;
+            if (res.IsSuccessStatusCode) return (true, "");
+            return (false, "سرور نپذیرفت (" + (int)res.StatusCode + ")");
         }
         catch (Exception e)
         {
-            LastError = "در این شبکه دیده نمی‌شود: " + ErrorText.Friendly(e);
-            return false;
+            return (false, "در این شبکه دیده نمی‌شود: " + ErrorText.Friendly(e));
         }
     }
 

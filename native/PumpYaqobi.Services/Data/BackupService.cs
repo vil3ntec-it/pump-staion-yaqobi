@@ -274,6 +274,73 @@ public sealed class BackupService
         return list.OrderByDescending(x => x.TakenAt).ToList();
     }
 
+    // ── فشرده‌سازیِ بکاپِ سرور (۱۴۰۵/۰۷/۲۲) ─────────────────────────────────
+    //
+    //  بکاپی که به سرورِ حساب می‌رود ‎gzip‎ است (دفترِ پنج‌ساله ۴۷ ⇒ ۶ مگابایت)؛
+    //  برگرداندن از روی چهار بایتِ اولِ خودِ فایل می‌فهمد، نه از پسوند — پس
+    //  بکاپ‌های خامِ قبلی همان‌طور برمی‌گردند.
+
+    /// <summary>فایل را فشرده می‌نویسد (اول در ‎.part‎، بعد جابه‌جا).</summary>
+    public static void Gzip(string src, string dst)
+    {
+        var part = dst + ".part";
+        using (var input = new FileStream(src, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, 1 << 16))
+        using (var output = new FileStream(part, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 16))
+        using (var gz = new System.IO.Compression.GZipStream(output, System.IO.Compression.CompressionLevel.Optimal))
+            input.CopyTo(gz, 1 << 16);
+        File.Move(part, dst, overwrite: true);
+    }
+
+    /// <summary>این فایل ‎gzip‎ است؟ (‎1F 8B‎)</summary>
+    public static bool IsGzip(string path)
+    {
+        try
+        {
+            using var f = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            return f.ReadByte() == 0x1F && f.ReadByte() == 0x8B;
+        }
+        catch { return false; }
+    }
+
+    /// <summary>
+    /// اگر ‎gzip‎ است، بازش در یک فایلِ موقت در <paramref name="dir"/> و همان مسیر؛
+    /// وگرنه ‎null‎. ⛔ سقف دارد (۲ گیگابایت) تا یک فایلِ دست‌خورده دیسک را پر نکند.
+    /// </summary>
+    public static string? ExpandIfGzip(string path, string dir)
+    {
+        if (!IsGzip(path)) return null;
+        Directory.CreateDirectory(dir);
+        var temp = Path.Combine(dir, "tmp-gunzip-" + Guid.NewGuid().ToString("N")[..8] + ".db");
+        try
+        {
+            using var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 16);
+            using var gz = new System.IO.Compression.GZipStream(input, System.IO.Compression.CompressionMode.Decompress);
+            using var output = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 16);
+            var buf = new byte[1 << 16];
+            long total = 0;
+            int n;
+            while ((n = gz.Read(buf, 0, buf.Length)) > 0)
+            {
+                total += n;
+                if (total > 2L * 1024 * 1024 * 1024) throw new InvalidDataException("بکاپ بیش از اندازه بزرگ است");
+                output.Write(buf, 0, n);
+            }
+            //  ⛔ ‎GZipStream‎ فایلِ بریده را بی‌صدا تا همان‌جا می‌خواند؛ چهار بایتِ تهِ
+            //  ‎gzip‎ (‎ISIZE‎) اندازهٔ واقعی را دارد — جور نبود ⇒ ناقص، نه «بکاپ».
+            input.Seek(-4, SeekOrigin.End);
+            var tail = new byte[4];
+            input.ReadExactly(tail);
+            if (BitConverter.ToUInt32(tail, 0) != (uint)(total & 0xFFFFFFFF))
+                throw new InvalidDataException("بکاپِ فشرده ناقص است");
+            return temp;
+        }
+        catch
+        {
+            try { File.Delete(temp); } catch { }
+            return null;
+        }
+    }
+
     // ── خواندن پیش از برگرداندن ──────────────────────────────────────────────
 
     /// <summary>

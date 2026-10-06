@@ -120,6 +120,7 @@ public partial class MainWindow : Window
             try { Controls.ExcelGrid.CommitFocused(this); } catch { }
             try { await vm.FlushEverythingAsync(); } catch { }
             try { await vm.OfferBackupBeforeExitAsync(); } catch { }
+            try { await vm.SendToServerBeforeExitAsync(); } catch { }
             _flushed = true;
             Close();
         };

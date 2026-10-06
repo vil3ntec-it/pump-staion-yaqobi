@@ -40,8 +40,25 @@ public sealed record StationNote(string Id, string Text, string From, string Kin
 /// </summary>
 public sealed class StationPublisher : IAsyncDisposable
 {
-    /// <summary>هر چند وقت یک‌بار دنبالِ تغییر بگردد.</summary>
-    public static readonly TimeSpan Interval = TimeSpan.FromSeconds(20);
+    /// <summary>
+    /// کوتاه‌ترین فاصلهٔ دو انتشار. ⛔ از ۱۴۰۵/۰۷/۲۲ سه ثانیه، نه بیست — و حلقه با هر ذخیره
+    /// بیدار می‌شود (‎SaveDebounce‎)، پس گوشیِ کارمند و صفحهٔ کیو‌آر تغییر را چند ثانیه‌ای
+    /// می‌بینند. ⚠️ هزینه بالا نرفت: ترمزِ ‎Version‎ (دادهٔ عوض‌نشده ⇒ صفر کار) و سقفِ
+    /// ۵٪ِ CPU (‎_nextBuildAt‎) هر دو سرِ جایشان‌اند.
+    /// </summary>
+    public static readonly TimeSpan Interval = TimeSpan.FromSeconds(3);
+
+    /// <summary>پس از ذخیره این‌قدر صبر — رگبارِ تایپ یک انتشار است، نه ده‌تا.</summary>
+    public static readonly TimeSpan SaveDebounce = TimeSpan.FromMilliseconds(1500);
+
+    private readonly SemaphoreSlim _saved = new(0, 1);
+
+    private void OnSaved()
+    {
+        try { if (_saved.CurrentCount == 0) _saved.Release(); }
+        catch (SemaphoreFullException) { /* از پیش بیدار است */ }
+        catch (ObjectDisposedException) { }
+    }
 
     /// <summary>
     /// هر چند وقت یک‌بار **خودِ اتصال** سنجیده شود — جدا از انتشار.
@@ -276,8 +293,11 @@ public sealed class StationPublisher : IAsyncDisposable
     /// <summary>نامِ فایلِ عکسِ زنده روی سرورِ حساب — همان که `/api/pump/public/live` می‌خواند.</summary>
     public const string CloudLiveFile = "live.json";
 
-    /// <summary>عکسِ عوض‌شده دست‌بالا هر این‌قدر یک بار به سرورِ حساب می‌رود.</summary>
-    public static readonly TimeSpan CloudLiveGap = TimeSpan.FromSeconds(60);
+    /// <summary>
+    /// عکسِ عوض‌شده دست‌بالا هر این‌قدر یک بار به سرورِ حساب می‌رود. ⛔ پانزده ثانیه از
+    /// ۱۴۰۵/۰۷/۲۲ (بود شصت) — «اطلاعات در لحظه»؛ عکسِ عوض‌نشده اصلاً نمی‌رود.
+    /// </summary>
+    public static readonly TimeSpan CloudLiveGap = TimeSpan.FromSeconds(15);
 
     private string _cloudLiveHash = "";
     private DateTime _cloudLiveAt = DateTime.MinValue;
@@ -747,6 +767,7 @@ public sealed class StationPublisher : IAsyncDisposable
         catch { /* سیستمی که خبرِ شبکه نمی‌دهد — همان تیکِ یک‌دقیقه‌ای کافی است */ }
         var cts = new CancellationTokenSource();
         _loop = cts;
+        PumpYaqobi.Persistence.PumpDbContext.Saved += OnSaved;
         _ = Task.Run(() => LoopAsync(cts.Token), cts.Token);
         //  ⛔ شورا ج۷: نرخِ اتحادیه ماژولِ جدای خودش است — شکستنش فقط خودش را می‌بندد
         Modules.Start("rate", () => _ = Task.Run(() => RateWatchLoopAsync(cts.Token), cts.Token));
@@ -830,7 +851,12 @@ public sealed class StationPublisher : IAsyncDisposable
                 catch { /* بی‌اینترنت خطا نیست */ }
             }
 
-            try { await Task.Delay(LinkTick, ct); }
+            //  ⛔ ذخیرهٔ تازه ⇒ زودتر از پنج ثانیه، پس از مکثِ رگبار (۱۴۰۵/۰۷/۲۲)
+            try
+            {
+                if (await _saved.WaitAsync(LinkTick, ct))
+                    await Task.Delay(SaveDebounce, ct);
+            }
             catch { return; }
         }
     }
@@ -1085,6 +1111,7 @@ public sealed class StationPublisher : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         CloudLink.LicenseChanged -= OnLicenseChanged;
+        PumpYaqobi.Persistence.PumpDbContext.Saved -= OnSaved;
         var cts = _loop;
         _loop = null;
         if (cts is not null)

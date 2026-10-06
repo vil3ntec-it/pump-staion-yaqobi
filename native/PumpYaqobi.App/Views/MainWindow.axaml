@@ -727,6 +727,31 @@
       </StackPanel>
     </Border>
 
+    <!-- ══ 📤 پیش از بستن: آخرین تغییرها و بکاپِ پایانی به سرور (۱۴۰۵/۰۷/۲۲) ══
+         ⛔ «بستن بی‌انتظار» همیشه هست؛ نوشته‌ها از قبل روی همین کامپیوترند. -->
+    <Border IsVisible="{Binding IsExitSending}"
+            Background="{DynamicResource Pump.AppBg}">
+      <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
+        <TextBlock Text="پیش از بستن، اطلاعات به سرور می‌رود" HorizontalAlignment="Center"
+                   FontSize="20" FontWeight="ExtraBold"
+                   Foreground="{DynamicResource Pump.Ink.Accent}" />
+        <TextBlock Text="{Binding ExitSendText}" HorizontalAlignment="Center"
+                   FontSize="14" Opacity="0.85" MaxWidth="460" TextWrapping="Wrap"
+                   TextAlignment="Center" />
+        <Border Width="340" Height="8" CornerRadius="999"
+                Background="{DynamicResource Pump.Hover}"
+                HorizontalAlignment="Center" ClipToBounds="True">
+          <ProgressBar IsIndeterminate="{Binding IsExitSending}" Height="8" CornerRadius="999"
+                       Foreground="{DynamicResource Pump.Ink.Accent}"
+                       Background="Transparent" />
+        </Border>
+        <TextBlock Text="همهٔ نوشته‌ها روی همین کامپیوتر ذخیره شده‌اند — این نسخهٔ سرور است."
+                   HorizontalAlignment="Center" FontSize="12" Opacity="0.65" />
+        <Button Content="بستن بی‌انتظار" Command="{Binding SkipExitSendCommand}"
+                HorizontalAlignment="Center" Padding="18,8" />
+      </StackPanel>
+    </Border>
+
     <!-- ══ توست — پیامِ کوتاهِ پایینِ صفحه ══ -->
     <Border DataContext="{Binding Toasts}" IsVisible="{Binding Visible}"
             HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,26"
