@@ -263,7 +263,10 @@ public partial class ExcelGrid
         // کاربر انتخابش نکرده و از آن انتظارِ اسکرولِ افقی هم ندارد.
         var wanted = (double[])natural.Clone();
         _naturalSeen = (double[])natural.Clone();
-        if (!spare) natural = FitToRoom(natural, room);
+        //  ⛔ کپسول‌ها (ستونِ قالبی: «پطرول ⇄ دیزل»، «قرض ⇄ مصرف») جمع نمی‌شوند (۱۴۰۵/۰۷/۲۱):
+        //  ‎MinWidth‎ِ کپسول ۶۲ است و ستونِ تنگ‌تر آن را دو پیکسل از هر دو سوی خانه بیرون می‌زد
+        //  (شرکت‌ها در ۱۰۹۳ پیکسل، سنجهٔ ‎monthshift all‎). جا از ستون‌های نوشته‌ای گرفته می‌شود.
+        if (!spare) natural = FitToRoom(natural, room, Chips(cols));
 
         // ══ پهنای ذخیره‌شده مقدم است ═════════════════════════════════════════
         // اگر کاربر یک بار این جدول را تنظیم کرده، همان می‌نشیند — نه پهنای
@@ -740,9 +743,13 @@ public partial class ExcelGrid
     /// ستون (چند ردیفِ اول). عددِ بریده در دفترِ حساب از نامِ بریده بدتر است،
     /// پس وقتی جا کم است اول نام و یادداشت کوتاه می‌شوند.
     /// </summary>
+    /// <summary>ستون‌های قالبی (کپسول) — جایشان را برای جا شدن کوچک نمی‌کنیم.</summary>
+    private static bool[] Chips(List<DataGridColumn> cols) =>
+        cols.Select(c => c is DataGridTemplateColumn).ToArray();
+
     private bool[] Numeric(List<DataGridColumn> cols)
     {
-        var flags = new bool[cols.Count];
+        var flags = Chips(cols);
         if (ItemsSource is not System.Collections.IEnumerable src) return flags;
         var items = src.Cast<object?>().Take(6).Where(x => x is not null).ToList();
         for (var i = 0; i < cols.Count; i++)
@@ -756,7 +763,7 @@ public partial class ExcelGrid
                 var digits = t.Count(char.IsDigit);
                 if (digits > 0 && digits * 2 >= t.Count(ch => !char.IsWhiteSpace(ch))) num++;
             }
-            flags[i] = seen > 0 && num * 2 >= seen;
+            flags[i] |= seen > 0 && num * 2 >= seen;
         }
         return flags;
     }
