@@ -398,7 +398,14 @@ jobs:
           OM_MANY: '1'
           OM_DEBUG: '1'
           OM_SHOTS: ${{ runner.temp }}/om
-        run: dotnet run --project PumpYaqobi.UiTests -c Release -- oldmonths
+        shell: bash
+        # هر سطرِ ✖ یک یادداشتِ خطا روی همین چک — لاگ از بیرون خوانده نمی‌شود
+        run: |
+          set -o pipefail
+          dotnet run --project PumpYaqobi.UiTests -c Release -- oldmonths 2>&1 | tee "${{ runner.temp }}/om.log"
+          rc=$?
+          grep -E '✖|❌' "${{ runner.temp }}/om.log" | head -40 | while IFS= read -r l; do echo "::error::$l"; done
+          exit $rc
       - name: ماه‌های قبل ۱۲۵٪ (ویندوز)
         if: ${{ !cancelled() }}
         working-directory: native
