@@ -38,6 +38,7 @@ namespace PumpYaqobi.UiTests;
 internal static class MonthShiftAllProbe
 {
     private static int _bad;
+    private static int TotalCorrections;
     private static int _checks;
     private static int _shot;
     private static readonly List<string> Summary = new();
@@ -83,10 +84,13 @@ internal static class MonthShiftAllProbe
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
             .SetupWithoutStarting();
 
-        var win = new MainWindow { Width = 1440, Height = 900 };
+        var win = new MainWindow { Width = WinW, Height = WinH };
+        if (Scale != 1.0) SetScale(win, Scale);
         win.Show();
+        Console.WriteLine($"   پنجره {WinW}×{WinH} · RenderScaling {win.RenderScaling} · LayoutScale {Avalonia.Layout.LayoutHelper.GetLayoutScale(win)}");
         Pump(win);
         var vm = (MainViewModel)win.DataContext!;
+        Vm = vm;
         LockIn.Wait(vm.Lock);
         var end = DateTime.UtcNow + TimeSpan.FromSeconds(180);
         while (vm.Phase == MainViewModel.AppPhase.Starting && DateTime.UtcNow < end)
@@ -94,6 +98,10 @@ internal static class MonthShiftAllProbe
         SeedFewYear(AppHost.Current);
         Settle(win);
         AppHost.Current.Toasts.Visible = false;
+        if (Environment.GetEnvironmentVariable("MS_THEME") is { Length: > 0 } th
+            && PumpYaqobi.App.Themes.PumpTheme.All.FirstOrDefault(t => t.Id == th) is { } pt)
+        { vm.SelectedTheme = pt; Settle(win); }
+        Console.WriteLine($"   تم {vm.SelectedTheme.Id} · چرخهٔ تم {(ThemeCycle ? "روشن" : "خاموش")} · چرخهٔ تایپ {(EditCycle ? "روشن" : "خاموش")}");
 
         if (parityOn) ParityPhase(win, vm, file);
         var only = args.Skip(2).FirstOrDefault();
@@ -105,6 +113,8 @@ internal static class MonthShiftAllProbe
                                    "attendance", "monthreport", "profit" })
             if (Want(id)) Run(id, () => PickerSection(win, vm, id));
 
+        //  «ردیف‌های فروشِ ورق را که از گاوصندوق پاک می‌کنم، همه برمی‌گردند وسط»
+        if (Want("safedel")) Run("safedel", () => SafeDelete(win, vm));
         if (Want("history")) Run("history", () => History(win, vm));
         if (Want("dashboard")) Run("dashboard", () => Dashboard(win, vm));
         if (Want("shifts")) Run("shifts", () => ParchaReports(win, vm));
@@ -125,6 +135,7 @@ internal static class MonthShiftAllProbe
             Console.WriteLine("════ عکس‌ها (" + ShotDir + ") ════");
             foreach (var l in ShotList) Console.WriteLine("  " + l);
         }
+        Console.WriteLine($"   قابِ بدنهٔ بخش‌ها (‎ScaleBody‎) در کلِ اجرا {TotalCorrections} بار بدنهٔ لغزنده را سرِ جایش برگرداند");
         Console.WriteLine(_bad == 0 ? $"✅ {_checks} سنجه، همه سرِ جایش" : $"❌ {_bad} ایراد از {_checks} سنجه");
         return _bad == 0 ? 0 : 1;
     }
@@ -365,11 +376,26 @@ internal static class MonthShiftAllProbe
 
     // ══ بخش‌ها ═════════════════════════════════════════════════════════════
 
+    /// <summary>‎MS_FONT=n‎: هر بخش ‎n‎ بار «‎A+‎» (یا با منفی «‎A−‎») — همان دکمهٔ سربرگِ بخش.</summary>
+    private static readonly int FontSteps = int.TryParse(Environment.GetEnvironmentVariable("MS_FONT"), out var fs0) ? fs0 : 0;
+
+    private static void ApplyFont(MainWindow win, SectionViewModel s)
+    {
+        if (FontSteps == 0) return;
+        var want = Math.Round(1 + FontSteps * SectionViewModel.FontStep, 2);
+        if (Math.Abs(s.FontScale - want) < 0.005) return;
+        s.FontResetCommand.Execute(null);
+        for (var i = 0; i < Math.Abs(FontSteps); i++)
+            (FontSteps > 0 ? s.FontBiggerCommand : s.FontSmallerCommand).Execute(null);
+        Settle(win);
+    }
+
     private static SectionViewModel Open(MainWindow win, MainViewModel vm, string id)
     {
         if (vm.Sections.FirstOrDefault(x => x.Id == id) is { } top)
         {
             Wait(win, vm.GoAsync(top));
+            ApplyFont(win, top);
             return top;
         }
         var parent = vm.Sections.First(x => x.SubSections.Any(s => s.Id == id));
@@ -377,6 +403,7 @@ internal static class MonthShiftAllProbe
         var sub = parent.SubSections.First(s => s.Id == id);
         parent.ShowSubCommand.Execute(sub);
         Settle(win);
+        ApplyFont(win, sub);
         return sub;
     }
 
@@ -408,6 +435,7 @@ internal static class MonthShiftAllProbe
         var name = title ?? s.Title;
         CurTag = "open " + Shamsi.ThisMonth();
         Measure(win, $"{name} (باز شدن)");
+        Cycles(win, name);
 
         var (yearBox, monthBox) = Boxes(win);
         if (monthBox is null) { Check($"{name}: کشوی ماه پیدا شد", false); return; }
@@ -480,6 +508,109 @@ internal static class MonthShiftAllProbe
 
     private const string AllYears = "*years";
 
+    /// <summary>
+    /// گاوصندوقِ ماهِ جاری با ردیف‌های «📝 فروش ورق»ِ خودکار ⇒ پاک کردنِ همان‌ها یکی‌یکی (همان
+    /// فرمانِ حذفِ ردیف) — پس از هر حذف همهٔ لبه‌ها با «باز شدن» سنجیده می‌شوند.
+    /// </summary>
+    private static void SafeDelete(MainWindow win, MainViewModel vm)
+    {
+        var s = (SafeSectionViewModel)Open(win, vm, "safe");
+        WaitRows(win); Settle(win);
+        static bool Auto(SafeRowViewModel r) => (r.Entity.SrcKey ?? "").StartsWith("wq-sales", StringComparison.Ordinal);
+        foreach (var back in new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 })
+        {
+            if (s.Rows.Any(Auto)) break;
+            var mk = MonthBack(back);
+            Pick(win, mk[..4], mk); Settle(win);
+        }
+        Base = null;
+        CurTag = "safe with waraq rows";
+        Measure(win, "گاوصندوق با ردیف‌های فروشِ ورق");
+        var auto = s.Rows.Where(Auto).ToList();
+        Console.WriteLine($"   {auto.Count} ردیفِ فروشِ ورق از {s.Rows.Count}");
+        var n = 0;
+        foreach (var r in auto)
+        {
+            s.DeleteRowCommand.Execute(r);
+            WaitRows(win);
+            if (++n % Math.Max(1, auto.Count / 4) != 0 && n != auto.Count) continue;
+            for (var f = 0; f < 4; f++) Frame(win);
+            CurTag = $"safe after deleting {n}/{auto.Count}";
+            Measure(win, $"گاوصندوق ⇒ {n} ردیفِ فروشِ ورق پاک شد (همان لحظه)", pixels: false);
+            Settle(win);
+            Measure(win, $"گاوصندوق ⇒ {n} ردیفِ فروشِ ورق پاک شد (پس از ته‌نشینی)");
+        }
+    }
+
+    private static MainViewModel? Vm;
+    private static readonly bool ThemeCycle = Environment.GetEnvironmentVariable("MS_THEMEFLIP") != "0";
+    private static readonly bool EditCycle = Environment.GetEnvironmentVariable("MS_EDIT") != "0";
+
+    /// <summary>
+    /// ══ همان صفحه، بی عوض شدنِ ماه: تمِ دیگر و برگشت · تایپ در یک خانه و ثبت ══
+    /// هر دو با همان ‎Base‎ِ «باز شدن» سنجیده می‌شوند — هیچ لبه‌ای نپرد.
+    /// </summary>
+    private static void Cycles(MainWindow win, string name)
+    {
+        if (ThemeCycle && Vm is { } vm)
+        {
+            var first = vm.SelectedTheme;
+            foreach (var t in PumpYaqobi.App.Themes.PumpTheme.All.Where(t => !ReferenceEquals(t, first)).Append(first).ToList())
+            {
+                var tag = CurTag;
+                CurTag = tag + " theme " + t.Id;
+                vm.SelectedTheme = t;
+                for (var f = 0; f < 4; f++) Frame(win);
+                Measure(win, $"{name} ⇒ تمِ {t.Id} (همان لحظه)", pixels: false);
+                Settle(win);
+                Measure(win, $"{name} ⇒ تمِ {t.Id} (پس از ته‌نشینی)");
+                CurTag = tag;
+            }
+        }
+        if (EditCycle) EditOnce(win, name);
+    }
+
+    /// <summary>
+    /// تایپ در نخستین خانهٔ متنیِ نوشتنیِ نخستین جدولِ دیدنی، ثبت، و برگرداندنِ
+    /// همان متن — مثلِ کاربر: دوبار-کلیکِ خانه، تایپ، ‎Enter‎.
+    /// </summary>
+    private static void EditOnce(MainWindow win, string name)
+    {
+        var g = Roots(win).SelectMany(r => r.GetVisualDescendants().OfType<ExcelGrid>())
+                          .FirstOrDefault(x => x.IsEffectivelyVisible && x.Bounds.Width > 50 && !x.IsReadOnly && InView(x, win));
+        if (g is null || g.ItemsSource is not System.Collections.IEnumerable src) return;
+        var item = src.Cast<object>().FirstOrDefault();
+        if (item is null) return;
+        var col = g.Columns.OfType<DataGridTextColumn>().Where(c => c.IsVisible && !c.IsReadOnly)
+                   .OrderBy(c => c.DisplayIndex)
+                   .FirstOrDefault(c => c.Binding is Avalonia.Data.Binding b && !string.IsNullOrEmpty(b.Path)
+                                         && item.GetType().GetProperty(b.Path) is { CanWrite: true, PropertyType: var pt } && pt == typeof(string)
+                                         && !b.Path.Contains("Date"));
+        if (col is null) return;
+        var path = ((Avalonia.Data.Binding)col.Binding!).Path;
+        var prop = item.GetType().GetProperty(path)!;
+        var orig = prop.GetValue(item) as string ?? "";
+        foreach (var (text, label) in new[] { (orig + " 1234567 تایپِ آزمایشی", "تایپ و ثبت"), (orig, "برگرداندنِ متن") })
+        {
+            g.ScrollIntoView(item, col);
+            g.SelectedItem = item;
+            g.CurrentColumn = col;
+            Settle(win);
+            g.BeginEdit();
+            Settle(win);
+            var box = g.GetVisualDescendants().OfType<TextBox>().FirstOrDefault(t => t.IsEffectivelyVisible && t.FindAncestorOfType<DataGridCell>() is not null);
+            if (box is null) { Console.WriteLine($"   ◦ {name}: خانهٔ «{col.Header}» باز نشد"); g.CancelEdit(); return; }
+            box.Text = text;
+            for (var f = 0; f < 3; f++) Frame(win);
+            var tag = CurTag; CurTag = tag + " edit";
+            Measure(win, $"{name} ⇒ وسطِ تایپ در «{col.Header}»", pixels: false);
+            g.CommitEdit();
+            WaitRows(win); Settle(win);
+            Measure(win, $"{name} ⇒ {label} در «{col.Header}»");
+            CurTag = tag;
+        }
+    }
+
     private static string Ascii(string t) =>
         new string(t.Select(ch => ch < 128 ? ch : char.IsDigit(ch) ? (char)('0' + (int)char.GetNumericValue(ch)) : ' ').ToArray()).Trim();
 
@@ -532,6 +663,7 @@ internal static class MonthShiftAllProbe
         Base = null;
         CurTag = "range day";
         Measure(win, "داشبورد (امروز)");
+        Cycles(win, "داشبورد");
         foreach (var (r, label) in new[] { ("week", "هفته"), ("month", "ماه"), ("year", "سال"), ("day", "برگشت به امروز") })
         {
             CurTag = "range " + r;
@@ -551,6 +683,7 @@ internal static class MonthShiftAllProbe
         Base = null;
         CurGroup = "form"; CurTag = "parcha form";
         Measure(win, "پارچه‌ها (فرم)");
+        Cycles(win, "پارچه‌ها");
         Revisit(win, vm, "shifts", openAgain: false);
         Compose("shifts-form"); Shots.Clear();
         s.OpenReportsCommand.Execute(null);
@@ -603,6 +736,7 @@ internal static class MonthShiftAllProbe
             string Book(object? c) => c?.GetType().GetProperty("IsMoney")?.GetValue(c) is true ? "money" : "fuel";
             CurGroup = Book(cur); CurTag = $"account #{n} {CurGroup}";
             Measure(win, $"حسابِ شمارهٔ {n} (باز شدن)");
+            Cycles(win, $"حسابِ {n}");
             var accounts = (person?.GetType().GetProperty("Accounts")?.GetValue(person) as System.Collections.IEnumerable)?.Cast<object>().ToList();
             if (cur?.GetType().GetProperty("ToggleModeCommand")?.GetValue(cur) is System.Windows.Input.ICommand t)
             {
@@ -648,6 +782,7 @@ internal static class MonthShiftAllProbe
             var p = page?.GetType().GetProperty("IsDiesel");
             CurGroup = $"company{ci}-" + (p?.GetValue(page) is true ? "diesel" : "petrol"); CurTag = $"company {ci} {CurGroup}";
             Measure(win, $"شرکتِ «{card.GetType().GetProperty("Name")?.GetValue(card)}» (باز شدن)");
+            Cycles(win, $"شرکتِ {ci}");
             if (p is not null && p.CanWrite)
             {
                 var was = (bool)p.GetValue(page)!;
@@ -669,7 +804,7 @@ internal static class MonthShiftAllProbe
         var s = Open(win, vm, id);
         WaitRows(win); Settle(win);
         CurTag = "open " + Shamsi.ThisMonth();
-        if (openAgain) { Base = null; Measure(win, $"{s.Title} (باز شدن)"); }
+        if (openAgain) { Base = null; Measure(win, $"{s.Title} (باز شدن)"); Cycles(win, s.Title); }
         var keep = (Base, BaseCounts);
         Open(win, vm, "expenses");
         Settle(win);
@@ -695,6 +830,84 @@ internal static class MonthShiftAllProbe
     // ══ سنجش ═══════════════════════════════════════════════════════════════
 
     private static readonly bool Dbg = Environment.GetEnvironmentVariable("MS_DEBUG") == "1";
+    private static readonly double WinW = double.TryParse(Environment.GetEnvironmentVariable("MS_WIDTH"), out var w0) ? w0 : 1440;
+    private static readonly double Scale = double.TryParse(Environment.GetEnvironmentVariable("MS_SCALE"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var s0) ? s0 : 1.0;
+
+    /// <summary>
+    /// پنجرهٔ بی‌سرِ آوالونیا ‎RenderScaling‎ را ثابتِ ۱ نگه می‌دارد (ویژگیِ فقط‌خواندنی).
+    /// همان فیلدِ پشتیبانش نوشته می‌شود تا گردکردنِ چیدمان (‎UseLayoutRounding‎) مثلِ
+    /// ویندوزِ ۱۲۵٪ و ۱۵۰٪ رفتار کند.
+    /// </summary>
+    private static void SetScale(Window win, double scale)
+    {
+        var impl = win.PlatformImpl!;
+        var f = impl.GetType().GetField("<RenderScaling>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
+        if (f is null) { Console.WriteLine("   ⚠️ فیلدِ RenderScaling پیدا نشد — مقیاس سنجیده نمی‌شود"); return; }
+        f.SetValue(impl, scale);
+        (impl.GetType().GetProperty("ScalingChanged")?.GetValue(impl) as Action<double>)?.Invoke(scale);
+    }
+    private static readonly double WinH = double.TryParse(Environment.GetEnvironmentVariable("MS_HEIGHT"), out var h0) ? h0 : 900;
+
+    /// <summary>
+    /// ══ «یک کادرِ جدول را پاک کردم، همهٔ سربرگ‌ها برگشتند وسط» (۱۴۰۵/۰۷/۲۱) ══
+    /// هیچ چیزی در صفحهٔ بخش از جای خودش (پدر) پهن‌تر چیده نشود، صفحه از قابِ
+    /// اسکرولِ پنجره بیرون نزند، و هیچ اسکرولِ افقیِ درونی (جدول) بیش از قابش نلغزد.
+    /// </summary>
+    private static void Overflow(Window win, List<Visual> roots, List<string> bad)
+    {
+        var page = win.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault(s => s.Name == "PageScroll");
+        var vw = page?.Viewport.Width ?? win.Bounds.Width;
+        foreach (var root in roots)
+        {
+            var re = Edges(root, page ?? (Visual)win);
+            if (re.L < -1 || re.R > vw + 1) bad.Add($"صفحهٔ بخش {re.L:0}..{re.R:0} از قابِ {vw:0} بیرون زد");
+            //  «سربرگ وسطِ قاب»: کادرِ بخش با دو حاشیهٔ برابر — چه ‎MaxWidth‎ داشته باشد چه نه
+            if (root is SectionPage && Math.Abs(re.L - (vw - re.R)) > 1)
+                bad.Add($"کادرِ بخش وسطِ قاب نیست: چپ {re.L:0.#} · راست {vw - re.R:0.#}");
+            foreach (var c in root.GetVisualDescendants().OfType<Control>().Where(c => c.IsEffectivelyVisible && c.Bounds.Width > 1))
+            {
+                if (c.GetVisualParent() is not Control p) continue;
+                if (p.Bounds.Width < 1) continue;   //  ظرفِ بازیافتیِ ‎ItemsRepeater‎ (صفر پهنا، کشیده نمی‌شود)
+                if (p is Avalonia.Controls.Presenters.ScrollContentPresenter or Viewbox || c is Popup
+                    || c.Classes.Contains("badge") || p.GetType().Name == "ViewboxContainer"
+                    || c.FindAncestorOfType<ScrollBar>() is not null
+                    //  ردیفِ جدول ستونِ پرکنندهٔ ته را هم دارد و ‎presenter‎ می‌بُردش؛ لبهٔ خانه‌ها جدا سنجیده می‌شود
+                    || c is DataGridRow && p is Avalonia.Controls.Primitives.DataGridRowsPresenter) continue;
+                //  جای چیده‌شده = لبه‌ها به‌علاوهٔ حاشیهٔ خودِ کنترل — فرزندی که با حاشیه‌اش از پدر
+                //  بیرون زده (لبهٔ دیدنی‌اش سرِ جا ولی خودش جابه‌جا) هم گرفته شود
+                //  ⚠️ خانهٔ کناریِ نوارِ «جمله» زیرِ سرستونش است و سرستون تا خطِ بیرونیِ جدول می‌رود،
+                //  در حالی که نوار درونِ قابِ خودش (خطِ ‎SumBorder‎) است: همان یک خط روی هم می‌افتد
+                var tol = p is TotalsStrip ? 2.5 : 1;
+                if (c.Bounds.X - c.Margin.Left < -tol || c.Bounds.Right + c.Margin.Right > p.Bounds.Width + tol)
+                {
+                    bad.Add($"«{Label(c)}» در «{Label(p)}»: {c.Bounds.X - c.Margin.Left:0}..{c.Bounds.Right + c.Margin.Right:0} از {p.Bounds.Width:0}");
+                    if (Dbg)
+                        Console.WriteLine("     ‹زنجیره› " + string.Join(" ← ", new[] { c }.Concat(c.GetVisualAncestors().OfType<Control>().Take(7))
+                            .Select(a => $"{Label(a)} b={a.Bounds.Width:0.#} d={a.DesiredSize.Width:0.#} mv={a.IsMeasureValid} av={a.IsArrangeValid}"
+                                       + (a is TotalsStrip ts ? " slots=" + string.Join(",", ((System.Collections.IDictionary)typeof(TotalsStrip).GetField("_slots", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(ts)!).Values.Cast<double>().Select(v => v.ToString("0"))) : ""))));
+                }
+            }
+            if (Dbg)
+                foreach (var g in root.GetVisualDescendants().OfType<ExcelGrid>().Where(x => x.IsEffectivelyVisible))
+                {
+                    var rp = g.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.DataGridRowsPresenter>().FirstOrDefault();
+                    var rh = g.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.DataGridRowHeader>().FirstOrDefault(x => x.IsEffectivelyVisible);
+                    var hs = g.GetVisualDescendants().OfType<ScrollBar>().Where(b => b.Orientation == Avalonia.Layout.Orientation.Horizontal)
+                              .Select(b => $"{b.IsVisible}/{b.Maximum:0}/{b.Value:0}");
+                    Console.WriteLine($"     ‹جدول {g.Bounds.Width:0.#} · RowHeaderWidth {g.RowHeaderWidth:0.#} · سرِ ردیف {rh?.Bounds.Width:0.#} · ستون‌ها {g.Columns.Where(c => c.IsVisible).Sum(c => c.ActualWidth):0.##} [{string.Join(",", g.Columns.Where(c => c.IsVisible).Select(c => c.ActualWidth.ToString("0.##") + c.Width.UnitType.ToString()[0]))}] · presenter {rp?.Bounds.Width:0.#} · hbar {string.Join(";", hs)}›");
+                }
+            //  ⚠️ کادرِ تایپ متنِ بلندِ خودش را درونِ خودش می‌لغزاند — آن جابه‌جاییِ چیدمان نیست
+            foreach (var sv in root.GetVisualDescendants().OfType<ScrollViewer>()
+                         .Where(s => s.IsEffectivelyVisible && s.FindAncestorOfType<TextBox>() is null))
+                if (sv.Extent.Width > sv.Viewport.Width + 1)
+                    bad.Add($"اسکرولِ افقیِ «{Label(sv.GetVisualParent() as Control ?? sv)}»: {sv.Extent.Width:0} در {sv.Viewport.Width:0}");
+        }
+    }
+
+    private static string Label(Control c) =>
+        c.GetType().Name + (string.IsNullOrEmpty(c.Name) ? "" : "#" + c.Name)
+        + (c is TextBlock t ? "«" + (t.Text?.Length > 30 ? t.Text[..30] : t.Text) + "»" : "")
+        + (c.Classes.Count > 0 ? "." + string.Join(".", c.Classes) : "");
     private static Dictionary<string, (double L, double R)>? Base;
     private static Dictionary<string, int>? BaseCounts;
     private static byte[]? LastPng;
@@ -783,6 +996,13 @@ internal static class MonthShiftAllProbe
                     && Math.Max(Math.Abs(b0.L - e.L), Math.Abs(b0.R - e.R)) > 1)
                     bad.Add($"«{k}» جابه‌جا شد: {b0.L:0}..{b0.R:0} ⇒ {e.L:0}..{e.R:0}");
 
+        if (Environment.GetEnvironmentVariable("MS_OVERFLOW") != "0")
+        {
+            var ov = new List<string>();
+            Overflow(win, roots, ov);
+            var g = ov.GroupBy(x => System.Text.RegularExpressions.Regex.Replace(x, @"-?\d+(\.\d+)?", "N")).ToList();
+            foreach (var x in g) bad.Add(x.First() + (x.Count() > 1 ? $" (×{x.Count()})" : ""));
+        }
         //  ۱ تا ۳ و ۵) هر جدولِ دیدنی
         int cellN = 0, totN = 0, inkN = 0, fixN = 0;
         SkiaSharp.SKBitmap? frame = null;
@@ -825,7 +1045,7 @@ internal static class MonthShiftAllProbe
                             foreach (var tb in cell.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible && !string.IsNullOrEmpty(t.Text)))
                             {
                                 inkN++;
-                                if (OldMonthProbe.Off(tb, cell, frame) is { } o && o > 3) bad.Add($"جوهرِ «{tb.Text}» {o:0}px" + (Dbg ? $" y={cell.TranslatePoint(default, win)!.Value.Y:0} h={cell.Bounds.Height:0} w={cell.Bounds.Width:0}" : ""));
+                                if (OldMonthProbe.Off(tb, cell, frame) is { } o && o / win.RenderScaling > 3) bad.Add($"جوهرِ «{tb.Text}» {o:0}px" + (Dbg ? $" y={cell.TranslatePoint(default, win)!.Value.Y:0} h={cell.Bounds.Height:0} w={cell.Bounds.Width:0}" : ""));
                             }
                     }
                 if (frame is not null)
@@ -833,7 +1053,7 @@ internal static class MonthShiftAllProbe
                         foreach (var tb in h.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible && !string.IsNullOrEmpty(t.Text)))
                         {
                             inkN++;
-                            if (OldMonthProbe.Off(tb, h, frame) is { } o && o > 3) bad.Add($"جوهرِ سرستونِ «{tb.Text}» {o:0}px");
+                            if (OldMonthProbe.Off(tb, h, frame) is { } o && o / win.RenderScaling > 3) bad.Add($"جوهرِ سرستونِ «{tb.Text}» {o:0}px");
                         }
                 var strip = win.GetVisualDescendants().OfType<TotalsStrip>().FirstOrDefault(t => t.IsEffectivelyVisible
                                 && ReferenceEquals(BarGrid(t.FindAncestorOfType<TotalsBar>()), g));
@@ -885,6 +1105,12 @@ internal static class MonthShiftAllProbe
             Shots.Add(new Shot(CurGroup, CurTag, pngBytes, edges, rowsN, bad.Count == 0));
         }
         LastPng = null;
+        if (ScaleBody.Corrections > 0)
+        {
+            Console.WriteLine($"     ‹قابِ بدنه {ScaleBody.Corrections} بار سرِ جایش برگشت · بیشترین لغزشِ گرفته‌شده {ScaleBody.LargestCorrection:0.#}px›");
+            TotalCorrections += ScaleBody.Corrections;
+            ScaleBody.ResetCorrections();
+        }
         Check($"{what}: {now.Count} نشان · {cellN} خانه · {totN} جمله · {fixN} وسط‌چین" + (pixels ? $" · {inkN} جوهر" : ""),
               bad.Count == 0, bad.Count == 0 ? null : $"{bad.Count}: " + string.Join("، ", bad.Take(8)));
     }

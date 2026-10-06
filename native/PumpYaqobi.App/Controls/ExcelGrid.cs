@@ -694,12 +694,23 @@ public partial class ExcelGrid : DataGrid
     /// باری که کاربر آن را می‌دید ستون ۵۰ ⇒ ۵۸ می‌شد و همهٔ خط‌ها یک بار ۸ پیکسل
     /// می‌پریدند. «فقط بزرگ‌تر» جلوی برگشتن را می‌گرفت، نه جلوی همان پرشِ نخست.</para>
     /// </summary>
+    /// <summary>کوچک‌ترین پهنای ≥ <paramref name="w"/> که پیکسلِ کاملِ نمایشگر است (۱۲۵٪ ⇒ مضربِ ۰٫۸).</summary>
+    public static double SnapToDevice(double w, double scale)
+    {
+        if (!(scale > 0) || double.IsInfinity(scale)) scale = 1;
+        return Math.Ceiling(w * scale - 1e-6) / scale;
+    }
+
     private void FixRowHeaderWidth()
     {
         if (!RowNumbers) return;
         var digits = Math.Max(4, RowCount().ToString().Length);
-        var w = 26 + 8 * digits;                       // چهار رقم ⇒ ۵۸
-        if (!double.IsNaN(RowHeaderWidth) && RowHeaderWidth >= w - 0.5) return;   // فقط بزرگ‌تر
+        //  ⛔ روی مرزِ پیکسلِ واقعیِ نمایشگر (۱۴۰۵/۰۷/۲۱): در ۱۲۵٪ «۵۸» در چیدن ۵۸٫۴ می‌شود، ولی
+        //  جدول جای ستون‌های ستاره‌ای را یک بار با ۵۸ و یک بار با ۵۸٫۴ حساب می‌کرد — جمعِ ستون‌ها
+        //  ۰٫۴ پیکسل از جا بیشتر، سرستونِ آخر بیرون از قاب و خانه‌های همان ستون ۱٫۶ پیکسل دور از
+        //  سرستونشان؛ و با کم و زیاد شدنِ ردیف‌ها (پاک کردنِ «فروشِ ورق» در گاوصندوق) همه برمی‌گشتند.
+        var w = SnapToDevice(26 + 8 * digits, Avalonia.Layout.LayoutHelper.GetLayoutScale(this));   // چهار رقم ⇒ ۵۸
+        if (!double.IsNaN(RowHeaderWidth) && RowHeaderWidth >= w - 0.01) return;   // فقط بزرگ‌تر
         RowHeaderWidth = w;
     }
 

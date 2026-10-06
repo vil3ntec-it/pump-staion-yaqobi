@@ -1269,7 +1269,11 @@
             <!-- ══ بدنهٔ کادر ══ -->
             <!-- ⚠️ فقط پنج ردیف مانده: کارت‌های زیربخش و نوارِ فیلتر رفتند
                  بالا، کنارِ نوارِ ابزار. -->
-            <LayoutTransformControl Grid.Row="1" x:CompileBindings="False"
+            <!-- ⛔ ‎c:ScaleBody‎، نه ‎LayoutTransformControl‎ِ خام (۱۴۰۵/۰۷/۲۱): آن یکی فرزندِ
+                 پهن‌تر از جا را به همان پهنا می‌چید و «وسط» می‌گذاشت — یک ردیفِ بلند یا عددِ
+                 درازترِ ماهی دیگر کلِ بدنه (جدول، سرستون‌ها، کارت‌ها) را ۱۴ پیکسل می‌لغزاند.
+                 شرحش در ‎Controls/ScaleBody.cs‎. -->
+            <c:ScaleBody Grid.Row="1" x:CompileBindings="False"
                                     HorizontalAlignment="Stretch" VerticalAlignment="Top"
                                     LayoutTransform="{Binding FontScale,
                                                       Converter={x:Static th:FontScaleConverter.Instance},
@@ -1353,7 +1357,7 @@
                              IsVisible="{Binding RowAddCommand, Converter={x:Static ObjectConverters.IsNotNull},
                                          FallbackValue=False}" />
             </Grid>
-            </LayoutTransformControl>
+            </c:ScaleBody>
           </Grid>
         </Border>
       </ControlTemplate>
@@ -2012,10 +2016,13 @@
     <Setter Property="HorizontalAlignment" Value="Left" />
     <Setter Property="Template">
       <ControlTemplate>
-        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-          <Button Name="PART_Add" Classes="accent" Content="➕ ردیف"
+        <!-- ⛔ ‎DockPanel‎، نه ‎StackPanel‎ِ افقی (۱۴۰۵/۰۷/۲۱): نوارِ میانبرها در ‎StackPanel‎
+             با پهنای بی‌نهایت اندازه می‌شد، پس هرگز نمی‌شکست و در پنجرهٔ تنگ (یا با ‎A+‎)
+             از لبهٔ کادر بیرون می‌زد. حالا جای مانده را می‌گیرد و می‌شکند. -->
+        <DockPanel VerticalAlignment="Center">
+          <Button Name="PART_Add" DockPanel.Dock="Left" Classes="accent" Content="➕ ردیف"
                   Command="{TemplateBinding AddRowCommand}" />
-          <Border Classes="panel" Padding="7,4">
+          <Border Classes="panel" DockPanel.Dock="Left" Margin="8,0" Padding="7,4">
             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
               <TextBlock Text="تعداد:" Classes="muted" VerticalAlignment="Center" />
               <TextBox Width="62" Text="{Binding Count, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
@@ -2026,7 +2033,7 @@
           </Border>
           <!-- شورا، ث۲: میانبرهای همین جدول — بسته‌شدنی، یادِ همین کامپیوتر -->
           <c:HintStrip HintKey="rows" Margin="0" MaxWidth="620" VerticalAlignment="Center" />
-        </StackPanel>
+        </DockPanel>
       </ControlTemplate>
     </Setter>
   </Style>
@@ -2060,8 +2067,13 @@
                        شش عددِ گاوصندوق دیگر یک تودهٔ به‌هم‌چسبیده نیستند. -->
                   <Border BorderBrush="{DynamicResource Pump.Table.Border}"
                           BorderThickness="1,0,0,0" Padding="4,0">
-                    <StackPanel Spacing="1" Margin="0,9" VerticalAlignment="Center">
-                      <TextBlock Text="{Binding Label}" FontSize="11" TextAlignment="Center"
+                    <!-- ⛔ ‎DockPanel‎، نه ‎StackPanel‎ (۱۴۰۵/۰۷/۲۱): ‎StackPanel‎ِ عمودی فرزندش را
+                         به پهنای «دلخواهِ» خودش می‌چیند حتی وقتی خانه تنگ‌تر است — عددِ
+                         بلندِ «۸۵۲,۳۰۰ افغانی · ۸۵۱,۷۰۰ $» از خانه بیرون می‌زد و وسط‌چینی‌اش
+                         به اندازهٔ همان سرریز کج می‌شد. ‎DockPanel‎ همان پهنای خانه را می‌دهد و
+                         «…» کار می‌کند. -->
+                    <DockPanel Margin="0,9" VerticalAlignment="Center">
+                      <TextBlock DockPanel.Dock="Top" Margin="0,0,0,1" Text="{Binding Label}" FontSize="11" TextAlignment="Center"
                                  TextTrimming="CharacterEllipsis"
                                  Foreground="{DynamicResource Pump.OnHeadBandMuted}" />
                       <!-- ‎ConverterParameter=band‎: همان کلیدِ رنگِ ویومدل، ولی نسخهٔ
@@ -2069,7 +2081,7 @@
                       <TextBlock Text="{Binding Value}" FontWeight="ExtraBold" FontSize="14"
                                  TextAlignment="Center" TextTrimming="CharacterEllipsis"
                                  Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=band}" />
-                    </StackPanel>
+                    </DockPanel>
                   </Border>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
