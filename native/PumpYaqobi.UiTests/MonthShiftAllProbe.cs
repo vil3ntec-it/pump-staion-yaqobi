@@ -143,6 +143,8 @@ internal static class MonthShiftAllProbe
         }
         Console.WriteLine($"   قابِ بدنهٔ بخش‌ها (‎ScaleBody‎) در کلِ اجرا {TotalCorrections} بار بدنهٔ لغزنده را سرِ جایش برگرداند");
         Console.WriteLine($"   ⚠️ خانهٔ نوارِ «جمله» زیرِ خطِ قابِ نوار (همان سرستونِ بریده‌شده): {FrameOverlap} بار، بیشترین {FrameOverlapMax:0.#}px");
+        //  ⛔ صفر سنجه سبز نیست — بخشی که پیدا نشد یعنی هیچ چیزی سنجیده نشد
+        if (_checks == 0) { Console.WriteLine("❌ هیچ سنجه‌ای ندوید"); return 1; }
         Console.WriteLine(_bad == 0 ? $"✅ {_checks} سنجه، همه سرِ جایش" : $"❌ {_bad} ایراد از {_checks} سنجه");
         return _bad == 0 ? 0 : 1;
     }
