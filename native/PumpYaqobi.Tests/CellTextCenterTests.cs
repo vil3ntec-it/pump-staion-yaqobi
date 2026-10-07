@@ -50,6 +50,22 @@ public class CellTextCenterTests
         Assert.Contains("RelaidProperty", body);      //  یک بار برای هر (متن، پهنا) — بی حلقهٔ چیدمان
     }
 
+    /// <summary>
+    /// ⛔ نقاشیِ کهنه نمی‌ماند: پس از چیدمانِ تمام، ‎Recenter‎ همان نوشته را یک بار دوباره می‌کشد.
+    /// با پنجرهٔ واقعی سنجیده شد (‎realshift‎، پیکسل): بی این خط در هر سه مقیاس ۲۸ ایراد، با آن صفر.
+    /// </summary>
+    [Fact]
+    public void NaqqashiyeKohne_PasAzChidman_DobareKeshideMishavad()
+    {
+        var s = Read("PumpYaqobi.App", "Controls", "RtlTrim.cs");
+        var r = s.IndexOf("private static void Recenter", StringComparison.Ordinal);
+        var guard = s.IndexOf("if (!t.IsMeasureValid || !t.IsArrangeValid)", r, StringComparison.Ordinal);
+        var paint = s.IndexOf("t.InvalidateVisual();", r, StringComparison.Ordinal);
+        var fix = s.IndexOf("var dx = CenterFix(t);", r, StringComparison.Ordinal);
+        Assert.True(guard > r && paint > guard && paint < fix,
+            "‎InvalidateVisual‎ باید پس از سنجشِ چیدمانِ تمام و پیش از ‎CenterFix‎ در ‎Recenter‎ باشد");
+    }
+
     /// <summary>⛔ جابه‌جاییِ وسط‌چینیِ متنِ پیشین با متنِ تازه نمی‌ماند؛ خانهٔ برگشته دوباره سنجیده می‌شود.</summary>
     [Fact]
     public void JabejayiKohne_BaMatneTaze_Nemimanad()
