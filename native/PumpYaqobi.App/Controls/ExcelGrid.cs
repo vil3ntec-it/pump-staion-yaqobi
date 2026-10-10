@@ -567,8 +567,10 @@ public partial class ExcelGrid : DataGrid
     /// </summary>
     private void OnPagesShown()
     {
-        if (!_parkedAway || GrowsToContent) return;
+        if (GrowsToContent) return;
         if (!SectionShown()) return;
+        _parkAt.Remove(this);                     // دوباره دیده شد پیش از مهلت ⇒ ردیف‌ها سرِ جایشان
+        if (!_parkedAway) return;
         _parkedAway = false;
         var back = _parked;
         _parked = null;
@@ -598,18 +600,69 @@ public partial class ExcelGrid : DataGrid
         if (!shown)
         {
             if (_parkedAway || _editing || ItemsSource is null) return;
-            _parked = ItemsSource;
-            _parkedAway = true;
-            SetCurrentValue(ItemsSourceProperty, null);
+            //  ⚡ مهلتِ پارک (۱۴۰۵/۰۷/۲۲) — بندِ ۱ِ کندی‌ها، خواستهٔ صاحب ریپو: رفت‌وبرگشتِ
+            //  تند میانِ بخش‌ها ردیف‌ها را از نو نسازد. ساختنِ دوبارهٔ ردیف‌ها کارِ خودِ
+            //  ‎DataGrid‎ است (قالب و سبکِ هر خانه، سنجشِ ‎years‎: ۳۰۰ تا ۴۰۰ms برای ۲۹ ردیف).
+            //  ⛔ قاعدهٔ «بخشِ پنهان صفر ردیفِ زنده» سرِ جایش است، فقط پس از ‎ParkGrace‎:
+            //  جدولِ نامرئی در این چند ثانیه نه چیده می‌شود، نه کشیده، نه دیتابیس می‌خواند.
+            if (ParkGrace > TimeSpan.Zero) { ParkSoon(this); return; }
+            ParkNow();
         }
-        else if (_parkedAway)
+        else
         {
+            _parkAt.Remove(this);
+            if (!_parkedAway) return;
             _parkedAway = false;
             var back = _parked;
             _parked = null;
             if (back is not null) SetCurrentValue(ItemsSourceProperty, back);
         }
     }
+
+    /// <summary>چند ثانیه پس از پنهان شدن، ردیف‌ها دور ریخته شوند (صفر ⇒ همان لحظه).</summary>
+    public static TimeSpan ParkGrace { get; set; } = TimeSpan.FromSeconds(8);
+
+    private static readonly Dictionary<ExcelGrid, DateTime> _parkAt = new();
+    private static DispatcherTimer? _parkTimer;
+
+    private void ParkNow()
+    {
+        if (_parkedAway || _editing || ItemsSource is null) return;
+        _parked = ItemsSource;
+        _parkedAway = true;
+        SetCurrentValue(ItemsSourceProperty, null);
+    }
+
+    private static void ParkSoon(ExcelGrid g)
+    {
+        _parkAt[g] = DateTime.UtcNow + ParkGrace;
+        if (_parkTimer is null)
+        {
+            //  ⚠️ فقط تا وقتی جدولی در صفِ پارک است می‌تپد؛ صفِ خالی ⇒ ایستاده (بی‌کاری صفر)
+            _parkTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _parkTimer.Tick += (_, _) => ParkDue(DateTime.UtcNow);
+        }
+        if (!_parkTimer.IsEnabled) _parkTimer.Start();
+    }
+
+    /// <summary>هر جدولی که مهلتش گذشته و هنوز پنهان است پارک می‌شود.</summary>
+    private static void ParkDue(DateTime now)
+    {
+        foreach (var (g, at) in _parkAt.ToList())
+        {
+            if (at > now) continue;
+            _parkAt.Remove(g);
+            if (g.GetVisualRoot() is null || g.IsEffectivelyVisible || g.SectionShown()) continue;
+            g.ParkNow();
+        }
+        if (_parkAt.Count == 0) _parkTimer?.Stop();
+    }
+
+    /// <summary>سنجه‌ها: همهٔ جدول‌های در صف همین حالا پارک شوند (مثلِ گذشتنِ مهلت).</summary>
+    public static void ParkPendingNow() => ParkDue(DateTime.MaxValue);
+
+    /// <summary>شمارِ جدول‌هایی که منتظرِ پارک‌اند — برای سنجه.</summary>
+    public static int ParkPendingCount => _parkAt.Count;
 
     /// <summary>
     /// بخشی که این جدول در آن نشسته هنوز جلوی چشم است؟
@@ -855,6 +908,7 @@ public partial class ExcelGrid : DataGrid
         UnhookOutside();
         PagesChanged -= OnPagesChanged;
         PagesShown -= OnPagesShown;
+        _parkAt.Remove(this);
         if (_pageHooked && _page is { } page) page.ScrollChanged -= OnPageScroll;
         _pageHooked = false;
         _page = null;

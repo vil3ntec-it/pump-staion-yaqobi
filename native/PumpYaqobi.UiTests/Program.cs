@@ -25,6 +25,13 @@ internal static class Program
     {
         var outDir = args.Length > 0 ? args[0] : "shots";
 
+        //  ⚡ مهلتِ پارکِ جدول‌ها (۱۴۰۵/۰۷/۲۲) در سنجه‌ها صفر است، تا هر سنجه‌ای که ردیفِ زنده
+        //  می‌شمارد همان رفتارِ پیشین را ببیند؛ فقط ‎idle‎ (خودِ مهلت را می‌سنجد) و ‎years‎
+        //  (سرعتِ برگشت با همان چیزی که کاربر دارد) مهلتِ واقعیِ برنامه را نگه می‌دارند.
+        if (!outDir.Equals("idle", StringComparison.OrdinalIgnoreCase)
+            && !outDir.Equals("years", StringComparison.OrdinalIgnoreCase))
+            PumpYaqobi.App.Controls.ExcelGrid.ParkGrace = TimeSpan.Zero;
+
         // ══ حلقهٔ همگام‌سازی در سنجه‌ها روشن نمی‌شود ═════════════════════════
         //
         // ⛔ هر سنجه‌ای که پنجره می‌سازد از راهِ `Lock.SignedIn` موتورِ

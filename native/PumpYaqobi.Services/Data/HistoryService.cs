@@ -502,7 +502,16 @@ public sealed class HistoryService
         }
 
         var list = new List<HistoryRow>();
-        foreach (var r in await db.DebtRows.AsNoTracking().ToListAsync(ct))
+        //  ⚡ فقط همان ده ستونی که این‌جا خوانده می‌شود (۱۴۰۵/۰۷/۲۲) — نه کلِ ردیفِ دفتر.
+        //  با پنج سال داده (۶۴هزار ردیف) خواندنِ کلِ ردیف‌ها ۱٫۲ ثانیه بود. همان عددها، همان ترتیب.
+        var rows = await db.DebtRows.AsNoTracking()
+            .Select(x => new
+            {
+                x.ByMoney, x.Bardagi, x.Liters, x.PricePerLiter, x.Rasid,
+                x.MoneyAccountId, x.FuelAccountId, x.DateShamsi, x.DateKey, x.Name,
+            })
+            .ToListAsync(ct);
+        foreach (var r in rows)
         {
             var bardagi = r.ByMoney ? r.Bardagi : r.Liters * (r.PricePerLiter ?? 0m);
             if (bardagi == 0m && r.Rasid == 0m && r.Liters == 0m) continue;

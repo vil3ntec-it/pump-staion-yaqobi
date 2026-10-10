@@ -253,7 +253,13 @@ internal static class YearsAudit
         {
             Wait(win, vm.GoAsync(hs)); Settle(win);
             foreach (var (k, l) in PumpYaqobi.Services.Data.HistoryService.Kinds)
+            {
+                //  جدا کردنِ «خواندنِ داده» از «ساختنِ صفحه» — تا کندی سرِ جای درستش گفته شود
+                var n = 0;
+                Mark("  تاریخچه (فقط داده): " + l, () => n = host.History.FeedAsync(k).GetAwaiter().GetResult().Count);
+                Console.WriteLine($"     ({n:N0} ردیف)");
                 Mark("تاریخچه: " + l, () => { Wait(win, hs.OpenAsync(k)); Settle(win); });
+            }
         }
 
         // ══ تم ═════════════════════════════════════════════════════════════

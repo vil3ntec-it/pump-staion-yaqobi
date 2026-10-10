@@ -134,6 +134,7 @@ internal static class IdleAudit
         Console.WriteLine(new string('-', 104));
 
         var bad = new List<string>();
+        var graceChecked = false;
 
         foreach (var sec in vm.Sections.ToList())
         {
@@ -154,6 +155,18 @@ internal static class IdleAudit
             var idle = DbWatch.Count - idleBefore - backup;
             DbWatch.Recording = false;
 
+            //  ⚡ مهلتِ پارک (۱۴۰۵/۰۷/۲۲): جدولِ بخشی که همین حالا پنهان شد ‎ExcelGrid.ParkGrace‎
+            //  ثانیه ردیف‌هایش را نگه می‌دارد تا برگشتِ تند ارزان باشد. بارِ اول واقعاً همان مهلت صبر
+            //  می‌کنیم و می‌سنجیم که خودش پارک کرد؛ بعد برای تند ماندنِ سنجه، صف همان لحظه خالی می‌شود.
+            if (!graceChecked && PumpYaqobi.App.Controls.ExcelGrid.ParkPendingCount > 0)
+            {
+                graceChecked = true;
+                SitIdle(win, PumpYaqobi.App.Controls.ExcelGrid.ParkGrace + TimeSpan.FromSeconds(1.5));
+                if (PumpYaqobi.App.Controls.ExcelGrid.ParkPendingCount > 0)
+                    bad.Add($"«{sec.Id}»: پس از مهلتِ پارک هنوز {PumpYaqobi.App.Controls.ExcelGrid.ParkPendingCount} جدول پارک نشده");
+            }
+            PumpYaqobi.App.Controls.ExcelGrid.ParkPendingNow();
+            Settle(win);
             var strayRows = StrayRows(win);
             var strayLaid = StrayLaidOut(win);
 
