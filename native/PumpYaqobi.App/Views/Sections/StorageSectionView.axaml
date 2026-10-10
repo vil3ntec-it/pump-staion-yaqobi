@@ -7,6 +7,32 @@
              x:DataType="vm:StorageSectionViewModel">
   <!-- یک قد برای چهار خانهٔ زیرِ عددِ مخزن — دو کادرِ تایپ و دو کادرِ خواندنی -->
   <UserControl.Styles>
+    <Style Selector="Border.tankcard">
+      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
+    </Style>
+    <Style Selector="Border.tankactive">
+      <Setter Property="BorderBrush" Value="{DynamicResource Pump.Ok}" />
+    </Style>
+    <Style Selector="Border.tanklow">
+      <Setter Property="BorderBrush" Value="{DynamicResource Pump.Danger}" />
+    </Style>
+    <Style Selector="Button.tanktab">
+      <Setter Property="MinWidth" Value="44" />
+      <Setter Property="Height" Value="36" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.tanktab.num">
+      <Setter Property="FontSize" Value="16" />
+    </Style>
+    <Style Selector="Button.tanklowtab">
+      <Setter Property="BorderBrush" Value="{DynamicResource Pump.Danger}" />
+      <Setter Property="BorderThickness" Value="2" />
+    </Style>
+    <Style Selector="TextBlock.danger">
+      <Setter Property="Foreground" Value="{DynamicResource Pump.Ink.Danger}" />
+    </Style>
     <Style Selector="TextBox.tankbox">
       <Setter Property="MinHeight" Value="40" />
       <Setter Property="Height" Value="40" />
@@ -35,7 +61,48 @@
 
         <!-- ══ کارتِ مخزن با نقشهٔ مخزن ══ -->
         <Border Classes="panel" Padding="16">
-          <Grid ColumnDefinitions="Auto,18,*">
+          <StackPanel Spacing="12">
+          <!-- ══ شماره‌های مخزن بالای نقشه — «همه · ۱ · ۲ · ۳ · ▾ · ＋» (۱۴۰۵/۰۷/۲۲) ══
+               خواستهٔ صاحب ریپو با عکس: شماره‌ها همین‌جا، بیش از سه ⇒ کشویی، و زدنِ هر
+               شماره همان مخزن را روی همین کارت نشان دهد — مثلِ هر پایه در پارچه؛ پطرول
+               و دیزل جدا (‎Fuel‎). ⛔ «همه» همان کارتِ همیشگی است و منطقش دست نخورد.
+               ⚠️ همهٔ دکمه‌ها پیش از نقشه‌اند — آزمونِ ‎TankGaugeTests‎ از نقشه تا
+               سربرگِ پول‌ها هیچ دکمه‌ای نمی‌خواهد. -->
+          <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center">
+            <Button Classes="tanktab" Classes.accent="{Binding IsAllShown}" Content="همهٔ مخزن‌ها"
+                    Margin="3" Command="{Binding SelectTankCommand}" CommandParameter="{x:Null}"
+                    ToolTip.Tip="موجودیِ کلِ همین تیل" />
+            <ItemsControl ItemsSource="{Binding VisibleTankTabs}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TankCardViewModel">
+                  <Button Classes="tanktab num" Classes.accent="{Binding Selected}" Classes.tanklowtab="{Binding IsLow}"
+                          Content="{Binding NumText}" Margin="3" ToolTip.Tip="{Binding TabText}"
+                          Command="{Binding $parent[ItemsControl].((vm:StorageSectionViewModel)DataContext).SelectTankCommand}"
+                          CommandParameter="{Binding}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <ComboBox ItemsSource="{Binding OverflowTankTabs}" SelectedItem="{Binding OverflowPick}"
+                      IsVisible="{Binding HasOverflowTanks}" PlaceholderText="بقیهٔ مخزن‌ها"
+                      MinWidth="140" Height="36" Margin="3" VerticalAlignment="Center">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:TankCardViewModel">
+                  <TextBlock Text="{Binding TabText}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button Classes="tanktab" Content="＋" Margin="3" Command="{Binding NewTankCommand}"
+                    ToolTip.Tip="مخزنِ تازه با شمارهٔ بعدی" />
+            <Button Classes="ghost" Content="✏️ ظرفیت" Margin="10,3,3,3" IsVisible="{Binding IsTankShown}"
+                    Command="{Binding EditTankCapacityCommand}" CommandParameter="{Binding SelectedTank}" />
+            <Button Classes="ghost danger" Content="🗑" Margin="3" IsVisible="{Binding IsTankShown}"
+                    Command="{Binding DeleteTankCommand}" CommandParameter="{Binding SelectedTank}"
+                    ToolTip.Tip="حذفِ همین مخزن" />
+          </WrapPanel>
+          <Grid ColumnDefinitions="Auto,18,*" IsVisible="{Binding IsAllShown}">
 
             <!-- ══ نقشهٔ مخزن — به‌جای نوارِ عمودیِ پرشدگی (۱۴۰۵/۰۷/۱۳) ══
                  خواستهٔ صریحِ صاحب ریپو با تصویر: «اون نشانه‌گرِ مخزن که الان تو
@@ -126,6 +193,34 @@
               </UniformGrid>
             </StackPanel>
           </Grid>
+
+          <!-- ══ یک مخزنِ شماره‌دار روی همین کارت ══ -->
+          <Grid ColumnDefinitions="Auto,18,*" IsVisible="{Binding IsTankShown}">
+            <c:TankGauge Grid.Column="0" Width="400" Height="250" VerticalAlignment="Center"
+                         FillPercent="{Binding ShownFillPercent}" FillText="{Binding ShownFillText}"
+                         ThresholdPercent="{Binding ShownThresholdPercent}" CaptionText="{Binding ThresholdText}"
+                         BodyBrush="{DynamicResource Pump.Card}" BodyDeepBrush="{DynamicResource Pump.Input}"
+                         RimBrush="{DynamicResource Pump.ChromeBorder}"
+                         LabelBrush="{DynamicResource Pump.Text}" TextBrush="{DynamicResource Pump.Text}"
+                         ThresholdBrush="{DynamicResource Pump.Danger}" />
+            <StackPanel Grid.Column="2" Spacing="6" VerticalAlignment="Center">
+              <TextBlock Text="{Binding ShownTitle}" Classes="h2" TextAlignment="Center"
+                         HorizontalAlignment="Stretch" Foreground="{DynamicResource Pump.Ink.Accent}" />
+              <TextBlock Text="{Binding ShownCurrent}" FontSize="40" FontWeight="Bold" TextAlignment="Center"
+                         HorizontalAlignment="Stretch" Foreground="{DynamicResource Pump.Ink.Accent}" />
+              <TextBlock Text="لیتر در همین مخزن" Classes="muted" TextAlignment="Center" HorizontalAlignment="Stretch" />
+              <Border CornerRadius="9" Padding="10,4" HorizontalAlignment="Center" Margin="0,4,0,0"
+                      Background="{DynamicResource Pump.Panel}"
+                      BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="1">
+                <TextBlock Text="{Binding ShownState}" FontSize="12" FontWeight="SemiBold" />
+              </Border>
+              <TextBlock Text="{Binding ShownCapacityText}" Classes="muted"
+                         TextAlignment="Center" HorizontalAlignment="Stretch" Margin="0,6,0,0" />
+              <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Stretch"
+                         Text="فروش از کوچک‌ترین شماره‌ای که تیل دارد کشیده می‌شود؛ تمام شد ⇒ مخزنِ بعدی." />
+            </StackPanel>
+          </Grid>
+          </StackPanel>
         </Border>
 
         <!-- ══ خلاصه پول‌ها ══ -->
@@ -181,6 +276,60 @@
           </StackPanel>
         </Border>
 
+        <!-- ══ مخزن‌های شماره‌دار (۱۴۰۵/۰۷/۲۲) ══════════════════════════════════
+             خرید میانِ مخزن‌ها تقسیم می‌شود و فروش از کوچک‌ترین شماره‌ای که تیل دارد
+             کشیده می‌شود؛ تمام شد ⇒ مخزنِ بعدی. ⛔ موجودیِ کل همان کارتِ بالاست. -->
+        <Border Classes="panel" Padding="0">
+          <StackPanel>
+            <Border Classes="card-head">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="🛢️ مخزن‌های شماره‌دار" FontWeight="Bold" FontSize="15" />
+                  <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                             Text="مخزن‌ها با شماره بالای نقشهٔ مخزن‌اند («＋» مخزنِ تازه). خرید را با «🛢️» روی کارتِ هر خرید میانِ مخزن‌ها تقسیم کنید؛ فروش از کوچک‌ترین شماره کشیده می‌شود و وقتی تمام شد از مخزنِ بعدی." />
+                </StackPanel>
+              </Grid>
+            </Border>
+            <Border IsVisible="{Binding TankAlert, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                    Margin="14,10,14,0" Padding="10,6" CornerRadius="8" Background="{DynamicResource Pump.Panel}"
+                    BorderBrush="{DynamicResource Pump.Warn}" BorderThickness="1">
+              <TextBlock Text="{Binding TankAlert}" FontWeight="SemiBold" TextWrapping="Wrap" />
+            </Border>
+            <TextBlock IsVisible="{Binding !HasTanks}" Classes="muted" Margin="14,12" TextWrapping="Wrap"
+                       Text="هنوز مخزنی ساخته نشده — با «＋» بالای نقشه بسازید؛ تا آن وقت همهٔ تیلِ این نوع یک مخزن است، مثلِ همیشه." />
+
+            <!-- تقسیمِ یک خرید: یک کادر برای هر مخزن؛ باقی‌مانده به مخزنِ اول -->
+            <Border IsVisible="{Binding SplitFor, Converter={x:Static ObjectConverters.IsNotNull}}"
+                    Margin="14,0,14,14" Padding="12" CornerRadius="10"
+                    Background="{DynamicResource Pump.Panel}" BorderBrush="{DynamicResource Pump.Accent}" BorderThickness="1">
+              <StackPanel Spacing="8">
+                <TextBlock Text="{Binding SplitTitle}" FontWeight="Bold" />
+                <ItemsControl ItemsSource="{Binding SplitShares}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:TankShareViewModel">
+                      <StackPanel Spacing="3" Margin="0,0,10,4" Width="140">
+                        <TextBlock Text="{Binding Label}" Classes="label" FontSize="11" />
+                        <TextBox Text="{Binding Liters}" Height="34" Watermark="0" HorizontalContentAlignment="Center" c:LiveFormat.Kind="number" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="{Binding SplitRemainText}" VerticalAlignment="Center" FontWeight="SemiBold"
+                             Classes.danger="{Binding SplitOver}" />
+                  <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                    <Button Content="بستن" Command="{Binding CloseSplitCommand}" />
+                    <Button Classes="accent" Content="✅ ثبتِ تقسیم" Command="{Binding SaveSplitCommand}" IsEnabled="{Binding !SplitOver}" />
+                  </StackPanel>
+                </Grid>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </Border>
+
         <!-- ══ خریدها — هر خرید یک کارت، مثلِ خودِ برنامه ══
              ⛔ فهرست به ‎PurchaseCards‎ بسته است، نه ‎Purchases‎: فقط تازه‌ترین
              ‎StorageSectionViewModel.PurchasePage‎ کارت ساخته می‌شود و بقیه پشتِ
@@ -204,6 +353,10 @@
                       </StackPanel>
                       <!-- ✏️ «بعد از ثبت هم بشه ویرایشش کرد… یک قلم بزار» (۱۴۰۵/۰۷/۱۶) -->
                       <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                        <Button Classes="ghost" Content="🛢️" Padding="9,2"
+                                ToolTip.Tip="تقسیمِ این خرید میانِ مخزن‌های شماره‌دار"
+                                Command="{Binding $parent[ItemsControl].((vm:StorageSectionViewModel)DataContext).OpenSplitCommand}"
+                                CommandParameter="{Binding}" />
                         <Button Classes="ghost" Content="✏️" Padding="9,2"
                                 ToolTip.Tip="ویرایشِ این خرید — قیمت، نرخ یا هر چیزِ دیگر"
                                 Command="{Binding $parent[ItemsControl].((vm:StorageSectionViewModel)DataContext).EditPurchaseCommand}"

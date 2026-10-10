@@ -722,6 +722,8 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         _bookNow = t.Current;
         _tank = t;
         RefreshDip();
+        //  مخزن‌های شماره‌دار همان موجودی را تقسیم می‌کنند — پس با هر بار حساب، آن‌ها هم
+        await LoadTanksAsync();
     }
 
     public async Task SavePurchaseAsync(FuelPurchase p)

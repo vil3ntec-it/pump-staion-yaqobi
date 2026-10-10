@@ -61,6 +61,8 @@ public sealed class PumpDbContext : DbContext
     public DbSet<ExtraIncome> ExtraIncomes => Set<ExtraIncome>();
     public DbSet<RateHistoryEntry> RateHistory => Set<RateHistoryEntry>();
     public DbSet<FuelConversion> FuelConversions => Set<FuelConversion>();
+    public DbSet<FuelTank> FuelTanks => Set<FuelTank>();
+    public DbSet<TankFill> TankFills => Set<TankFill>();
     public DbSet<TrashItem> Trash => Set<TrashItem>();
     public DbSet<Setting> Settings => Set<Setting>();
     public DbSet<AppUser> Users => Set<AppUser>();
@@ -435,6 +437,23 @@ public sealed class PumpDbContext : DbContext
             e.HasKey(x => x.Id);
             e.HasIndex(x => x.DateKey);
             e.HasIndex(x => x.MonthKey);
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        b.Entity<FuelTank>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.Fuel, x.Num });
+            e.Property(x => x.Fuel).HasConversion<int>();
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        b.Entity<TankFill>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.PurchaseId);
+            e.HasOne(x => x.Purchase).WithMany().HasForeignKey(x => x.PurchaseId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Tank).WithMany().HasForeignKey(x => x.TankId).OnDelete(DeleteBehavior.Cascade);
             e.HasQueryFilter(x => x.DeletedAt == null);
         });
 

@@ -57,7 +57,7 @@ public sealed class WaraqDataService
         var rows = await q.Select(p => new
         {
             p.Shift!.WaraqId, p.Shift!.Waraq!.DateShamsi, p.Shift!.Waraq!.DateKey, p.Shift!.Kind,
-            p.Fuel, p.Start, p.End, p.PricePerLiter,
+            p.Fuel, p.Start, p.End, p.TestLiters, p.PricePerLiter,
         }).ToListAsync(ct);
         return rows.GroupBy(r => (r.WaraqId, r.Kind))
                    .Select(g =>
@@ -65,7 +65,7 @@ public sealed class WaraqDataService
                        decimal pl = 0, pm = 0, dl = 0, dm = 0;
                        foreach (var r in g)
                        {
-                           var l = Math.Max(0m, r.End - r.Start);
+                           var l = Math.Max(0m, ParchaService.SoldLiters(r.Start, r.End, r.TestLiters));
                            if (r.Fuel == Domain.Enums.FuelType.Diesel) { dl += l; dm += l * r.PricePerLiter; }
                            else { pl += l; pm += l * r.PricePerLiter; }
                        }

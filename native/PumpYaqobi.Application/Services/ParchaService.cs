@@ -70,10 +70,16 @@ public readonly record struct ParchaTotals(
 /// </summary>
 public sealed class ParchaService
 {
+    /// <summary>
+    /// ‎فروش = ختم − شروع − لیترِ آزمایشی‎ — تنها جای این قاعده (۱۴۰۵/۰۷/۲۲). پارچه، ورق،
+    /// PDF و گزارش‌ها همه همین را صدا می‌زنند تا یک لیتر دو جا دو جور شمرده نشود.
+    /// </summary>
+    public static decimal SoldLiters(decimal start, decimal end, decimal test = 0m) => end - start - test;
+
     public ShiftNumbers Compute(decimal start, decimal end, decimal price,
-                                decimal profitPer, decimal debt)
+                                decimal profitPer, decimal debt, decimal test = 0m)
     {
-        var sale = end - start;
+        var sale = SoldLiters(start, end, test);
         var money = sale * price;
         return new ShiftNumbers(sale, money, sale * profitPer, money - debt);
     }
@@ -109,9 +115,9 @@ public sealed class ParchaService
     /// </summary>
     /// <param name="boxProfitPer">عددی که همین حالا در کادرِ فایده نوشته شده.</param>
     public ShiftCalc CalcShift(decimal start, decimal end, decimal price, decimal debt,
-                               decimal buyPerLiter, decimal boxProfitPer)
+                               decimal buyPerLiter, decimal boxProfitPer, decimal test = 0m)
     {
-        var sale = end - start;
+        var sale = SoldLiters(start, end, test);
         var money = sale * price;
 
         decimal profitPer;
@@ -138,11 +144,15 @@ public sealed class ParchaService
     public static decimal Fixed1(decimal v) => Math.Round(v, 1, MidpointRounding.AwayFromZero);
 
     public ShiftNumbers Compute(ShiftData s) =>
-        s is null ? default : Compute(s.Start, s.End, s.Price, s.ProfitPer, s.Debt);
+        s is null ? default : Compute(s.Start, s.End, s.Price, s.ProfitPer, s.Debt, s.TestLiters);
 
     /// <summary>همان بررسی‌ای که نسخهٔ وب پیش از ذخیره می‌کرد.</summary>
     public static bool IsValid(string? name, decimal start, decimal end) =>
         !string.IsNullOrWhiteSpace(name) && end >= start;
+
+    /// <summary>لیترِ آزمایشی منفی نیست و از لیترِ خودِ پایه بیشتر نیست.</summary>
+    public static bool TestValid(decimal start, decimal end, decimal test) =>
+        test >= 0m && test <= end - start;
 
     /// <summary>مقدارهای حساب‌شده را روی خودِ شیفت می‌نشاند (مثلِ shiftData).</summary>
     public void Apply(ShiftData s)
