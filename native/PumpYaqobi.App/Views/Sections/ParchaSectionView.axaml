@@ -274,12 +274,21 @@
           <Button Content="🌙 پارچهٔ شب" ToolTip.Tip="پارچهٔ جدید شب" Command="{Binding NewParchaNightCommand}" />
         </StackPanel>
         <StackPanel Classes="grp">
-          <Button Classes="ghost info" Content="🕘" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" Command="{Binding OpenHistoryCommand}" IsVisible="{Binding HasHistory}" />
           <Button Content="{Binding FuelToggleText}" Command="{Binding ToggleFuelCommand}" />
-          <Button Classes="accent" Content="📄 PDF" ToolTip.Tip="PDF همهٔ گزارش‌ها" Command="{Binding PdfCommand}" />
         </StackPanel>
       </WrapPanel>
     </c:SectionPage.Toolbar>
+
+    <!-- ══ «☰ کارها» (۱۴۰۵/۰۷/۲۲) — خواستهٔ صاحب ریپو: «PDF و تاریخچه‌ها و گزارش‌ها را در یک
+         کادرِ کشویی بگذار.» ⛔ فقط جا عوض شد؛ همان فرمان‌ها. کادرِ جدای «گزارش‌های ۲۴ ساعته»
+         پایینِ صفحه هم برداشته شد و همین‌جاست. -->
+    <c:SectionPage.More>
+      <StackPanel Spacing="4">
+        <Button Classes="ghost info menu-item" Content="🕘 تاریخچه" Command="{Binding OpenHistoryCommand}" IsVisible="{Binding HasHistory}" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
+        <Button Classes="ghost info menu-item" Content="{Binding ReportsCountText, StringFormat=📑 همهٔ گزارش‌ها — {0}}" Command="{Binding OpenReportsCommand}" ToolTip.Tip="همهٔ گزارش‌ها، ماه‌به‌ماه و سال‌به‌سال — فقط برای دیدن" />
+        <Button Classes="ghost info menu-item" Content="📄 PDF همهٔ گزارش‌ها" Command="{Binding PdfCommand}" />
+      </StackPanel>
+    </c:SectionPage.More>
 
     <Panel>
     <Grid RowDefinitions="Auto,14,Auto,*" IsVisible="{Binding ShowMain}">
@@ -303,21 +312,6 @@
       </Border>
 
 
-      <!-- ══ گزارش‌های ۲۴ ساعته — فقط یک کادرِ کوچک ═════════════════════════
-           ⛔ فهرستِ کارت‌ها دیگر زیرِ پارچه‌ها نیست (خواستهٔ صاحب ریپو،
-           ۱۴۰۵/۰۷/۱۳): کادر صفحهٔ جدای گزارش‌ها را باز می‌کند. -->
-      <Border Grid.Row="3" Classes="panel" Padding="16,12">
-        <Grid ColumnDefinitions="*,Auto">
-          <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
-            <TextBlock Text="📑 گزارش‌های ۲۴ ساعته" FontWeight="Bold"
-                       Foreground="{DynamicResource Pump.Ink.Accent}" />
-            <TextBlock Text="{Binding ReportsCountText}" Classes="muted" />
-          </StackPanel>
-          <Button Grid.Column="1" Classes="accent" Content="📂 دیدنِ همهٔ گزارش‌ها ›"
-                  Command="{Binding OpenReportsCommand}"
-                  ToolTip.Tip="همهٔ گزارش‌ها، ماه‌به‌ماه و سال‌به‌سال — فقط برای دیدن" />
-        </Grid>
-      </Border>
     </Grid>
 
     <!-- ══ صفحهٔ گزارش‌ها — ماه‌به‌ماه و سال‌به‌سال، فقط‌خواندنی ═════════════ -->
