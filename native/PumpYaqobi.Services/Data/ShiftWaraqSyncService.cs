@@ -239,6 +239,10 @@ public sealed class ShiftWaraqSyncService
         }
     }
 
+    /// <summary>اندازهٔ هر تکه و مکثِ میانِ تکه‌ها — کارِ پس‌زمینه رابط را کُند نکند.</summary>
+    public const int FixChunk = 25;
+    public static TimeSpan FixPause { get; set; } = TimeSpan.FromMilliseconds(120);
+
     public async Task<int> FixOldSalesOnceAsync(CancellationToken ct = default)
     {
         try
@@ -249,8 +253,15 @@ public sealed class ShiftWaraqSyncService
                 if (await db.Settings.AnyAsync(x => x.Key == NetSalesKey, ct)) return 0;
                 ids = await db.WaraqEntries.AsNoTracking().Select(w => w.Id).ToListAsync(ct);
             }
-            foreach (var chunk in ids.Chunk(100))
+            //  ⛔ سبک، نه یک‌نفس (۱۴۰۵/۰۷/۲۲): تکه‌های ۲۵تایی با مکثِ کوتاه، و «داده عوض شد» فقط یک
+            //  بار در پایان (‎QuietSaves‎). یک‌نفس با ۱۰۰تایی، رابط را تا پایانِ کار کُند می‌کرد و هر
+            //  بخشِ بازشده از نو ساخته می‌شد (سنجهٔ ‎years‎: زیربخش‌ها ۲ ثانیه به‌جای ۰٫۵).
+            using var quiet = PumpYaqobi.Persistence.PumpDbContext.QuietSaves();
+            var first = true;
+            foreach (var chunk in ids.Chunk(FixChunk))
             {
+                if (!first) await Task.Delay(FixPause, ct);
+                first = false;
                 await using var db = _dbf.Create();
                 //  ⛔ ‎AsNoTracking‎: ‎ShiftTotals‎ ⇒ ‎NormalizeTxns‎ ‎AmountAuto‎ِ ردیف‌های کهنه را در
                 //  حافظه پر می‌کند؛ با ورقِ ردیابی‌شده همان هزاران ‎UPDATE‎ و هزاران opِ
@@ -268,10 +279,16 @@ public sealed class ShiftWaraqSyncService
                 db.Settings.Add(new Setting { Key = NetSalesKey, Value = "1" });
                 await db.SaveChangesAsync(ct);
             }
+            PumpYaqobi.Persistence.PumpDbContext.Bump();
             return ids.Count;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-        catch { return -1; }   // بارِ بعد دوباره
+        catch
+        {
+            //  تکه‌هایی که پیش از خطا نوشته شدند بی‌صدا نمانند (‎QuietSaves‎)
+            PumpYaqobi.Persistence.PumpDbContext.Bump();
+            return -1;   // بارِ بعد دوباره
+        }
     }
 
     /// <summary>

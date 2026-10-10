@@ -555,6 +555,25 @@ public sealed class PumpDbContext : DbContext
     /// </summary>
     public static event Action? Saved;
 
+    /// <summary>
+    /// ══ «کارِ بلندِ پس‌زمینه: یک خبر در پایان، نه یکی برای هر تکه» (۱۴۰۵/۰۷/۲۲) ══
+    /// گزارشِ صاحب ریپو: «رفتن توی بعضی بخش‌ها کمی طول می‌کشد.» سنجهٔ ‎years‎ و دوپاره‌جویی
+    /// (‎bisect‎) نشان داد: کارِ یک‌بارهٔ «فروشِ ورق‌های قدیم» (‎FixOldSales‎) با هر تکهٔ صدتایی
+    /// ‎Version‎ را بالا می‌برد، پس هر بخشی که همان لحظه باز می‌شد «داده عوض شد» می‌دید و از نو
+    /// می‌خواند و می‌ساخت — زیربخش‌ها ۲ ثانیه به‌جای ۰٫۵. در این دامنه ذخیره‌ها ‎Bump‎ نمی‌زنند
+    /// و خودِ کار یک بار در پایان می‌زند. ⛔ فقط برای کارِ پس‌زمینه‌ای که خودش در پایان ‎Bump‎ می‌زند.
+    /// </summary>
+    public static IDisposable QuietSaves()
+    {
+        _quiet.Value = true;
+        return new Quiet();
+    }
+    private static readonly AsyncLocal<bool> _quiet = new();
+    private sealed class Quiet : IDisposable { public void Dispose() => _quiet.Value = false; }
+
+    /// <summary>‎Bump‎ِ پس از ذخیره — جز در دامنهٔ <see cref="QuietSaves"/>.</summary>
+    private static void BumpAfterSave() { if (!_quiet.Value) Bump(); }
+
     public static void Bump()
     {
         Interlocked.Increment(ref _version);
@@ -564,13 +583,13 @@ public sealed class PumpDbContext : DbContext
     public override int SaveChanges()
     {
         var book = OnlyBookkeeping(); Stamp(); var t = NewTrash();
-        var n = base.SaveChanges(); if (!book) Bump(); RaiseTrash(t); return n;
+        var n = base.SaveChanges(); if (!book) BumpAfterSave(); RaiseTrash(t); return n;
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken ct = default)
     {
         var book = OnlyBookkeeping(); Stamp(); var t = NewTrash();
-        var n = await base.SaveChangesAsync(ct); if (!book) Bump(); RaiseTrash(t); return n;
+        var n = await base.SaveChangesAsync(ct); if (!book) BumpAfterSave(); RaiseTrash(t); return n;
     }
 
     /// <summary>
