@@ -237,7 +237,7 @@ public sealed class StationPublisher : IAsyncDisposable
             if (ready && (force || hash != _lastHash))
             {
                 var path = _sync.Mode == HomeSyncMode.Station ? LivePath : PathOf(_stationCode());
-                if (path.Length > 0 && await _sync.SetAsync(path, snap, ct))
+                if (path.Length > 0 && await _sync.SetAsync(path, OwnerSeal.ForPhones(snap, _host.Auth.AdminPasswordHash()), ct))
                 {
                     _lastHash = hash;
                     went = true;
@@ -265,7 +265,9 @@ public sealed class StationPublisher : IAsyncDisposable
                 var link = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
                 //  ⛔ نسخهٔ سرورِ حساب زیرِ سقفِ خودِ سرور بریده می‌شود — شرحش بالای
                 //  ‎StationSnapshot.ForCloud‎. عکسِ سرورِ خانگی کامل می‌ماند.
-                var put = await link.PutFileAsync(CloudLiveFile, StationSnapshot.ForCloud(snap), ct);
+                //  ⛔ بخشِ مالی فقط رمزشده (‎OwnerSeal‎) — همان قاعدهٔ سرورِ خانگی.
+                var put = await link.PutFileAsync(CloudLiveFile,
+                    OwnerSeal.ForPhones(StationSnapshot.ForCloud(snap), _host.Auth.AdminPasswordHash()), ct);
                 if (put.Ok) { _cloudLiveHash = hash; _cloudLivePending = false; _cloudLiveRefused = false; }
                 if (put.Code is "subscription_required" or "plan_no_services") _cloudLiveRefused = true;
                 //  اشتراک تمام شده یا فایل بیش از حد بزرگ است ⇒ تا عکس عوض نشده دوباره نزن

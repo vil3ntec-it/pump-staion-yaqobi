@@ -14,6 +14,7 @@ on:
       - 'kar/**'
       - 'view/**'
       - 'tools/check-kar-bot.mjs'
+      - 'tools/check-kar-seal.mjs'
       - 'tools/check-kar-ui.mjs'
       - 'tools/check-view.mjs'
       - 'tools/check-view-buttons.mjs'
@@ -27,6 +28,7 @@ on:
       - 'kar/**'
       - 'view/**'
       - 'tools/check-kar-bot.mjs'
+      - 'tools/check-kar-seal.mjs'
       - 'tools/check-kar-ui.mjs'
       - 'tools/check-view.mjs'
       - 'tools/check-view-buttons.mjs'
@@ -44,6 +46,9 @@ jobs:
           node-version: '22'
       - name: ربات، ماه‌ها و قفلِ رمز
         run: node tools/check-kar-bot.mjs
+      # «حساب‌ها» رمزشده: بردارِ مستقل، رمزِ درست/غلط، عکسِ کهنه (شورای آمادگیِ عرضه)
+      - name: حساب‌های رمزشده
+        run: node tools/check-kar-seal.mjs
       # صفحهٔ کیو‌آرِ مشتری (‎view/‎) — تا امروز هیچ CIای نمی‌دواندش
       - name: صفحهٔ کیو‌آرِ مشتری
         run: node tools/check-view.mjs
@@ -60,3 +65,5 @@ jobs:
         run: node tools/check-kar-print.mjs
       - name: پمپ‌هایم — یک گوشی، چند پمپ، هیچ قاطی (شورا چ۴)
         run: node tools/check-kar-pumps.mjs
+      - name: پمپ‌هایم — با عکسِ رمزشده (رمزِ «حساب‌ها» روی گوشی باز می‌کند)
+        run: SEALED=1 node tools/check-kar-pumps.mjs
