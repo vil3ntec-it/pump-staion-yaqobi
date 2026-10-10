@@ -164,6 +164,14 @@
               </Grid>
             </StackPanel>
 
+            <!-- ⛔ لیترِ آزمایشیِ پمپ (۱۴۰۵/۰۷/۲۲): تیلی که در پیمانه ریخته و به مخزن برگشت.
+                 از «فروش (لیتر)» کم می‌شود، پس پول، فایده و موجودیِ مخزن هم درست می‌مانند؛
+                 نه قرض است نه مصرف. در ورق ستونِ «آزمایشی» دارد. -->
+            <StackPanel Spacing="4">
+              <TextBlock Text="لیتر آزمایشی — به مخزن برگشت (از فروش کم می‌شود)" Classes="fld" />
+              <TextBox Classes="wfield" Text="{Binding Test}" Watermark="0" c:LiveFormat.Kind="number" />
+            </StackPanel>
+
             <StackPanel Spacing="4">
               <TextBlock Text="جمله قرض (افغانی)" Classes="fld" />
               <TextBox Classes="wfield" Text="{Binding Debt}" Watermark="0" c:LiveFormat.Kind="number" />
@@ -244,22 +252,32 @@
          سربرگِ کارت به همین نوار آمدند و آن سربرگ برداشته شد. نوعِ تیل همان دکمهٔ
          تیل و سربرگِ دو شیفت است. ⛔ فقط جا عوض شد؛ همان فرمان‌ها. -->
     <c:SectionPage.Toolbar>
-      <WrapPanel Orientation="Horizontal">
-        <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,3,8,3" Command="{Binding OpenHistoryCommand}" IsVisible="{Binding HasHistory}" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
-        <Button Content="{Binding FuelToggleText}" Margin="0,3,8,3" Command="{Binding ToggleFuelCommand}" />
-        <Button Classes="accent" Content="PDF همه گزارش‌ها" Margin="0,3,14,3" Command="{Binding PdfCommand}" />
-        <TextBlock Text="📅 تاریخ:" Classes="muted" VerticalAlignment="Center" Margin="0,3,7,3" />
-        <TextBox Text="{Binding PaDate, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="120" HorizontalContentAlignment="Center"
-                 Margin="0,3,8,3" c:LiveFormat.Kind="date" />
-        <Border Classes="chip" Margin="0,3,8,3" VerticalAlignment="Center">
-          <TextBlock Text="{Binding ReportNumText, StringFormat=گزارش #{0}}" />
-        </Border>
-        <Button Classes="accent" Content="گزارش جدید" Margin="0,3,8,3"
-                Command="{Binding StartNewReportCommand}" />
-        <Button Content="پارچهٔ جدید روز" Margin="0,3,8,3"
-                Command="{Binding NewParchaDayCommand}" />
-        <Button Content="پارچهٔ جدید شب" Margin="0,3,8,3"
-                Command="{Binding NewParchaNightCommand}" />
+      <!-- سه گروهِ هم‌قد (۳۴) — [تاریخ · شمارهٔ گزارش] [گزارش/پارچهٔ تازه] [تاریخچه · تیل · PDF].
+           ⚠️ هر گروه یک تکه است: در پنجرهٔ تنگ کلِ گروه به خطِ بعد می‌رود، نه نصفِ آن. -->
+      <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <WrapPanel.Styles>
+          <Style Selector="Button"><Setter Property="Height" Value="34" /><Setter Property="Padding" Value="9,0" />
+            <Setter Property="VerticalContentAlignment" Value="Center" /><Setter Property="Margin" Value="0,3,6,3" /></Style>
+          <Style Selector="StackPanel.grp"><Setter Property="Orientation" Value="Horizontal" /><Setter Property="Margin" Value="0,0,8,0" /></Style>
+        </WrapPanel.Styles>
+        <StackPanel Classes="grp">
+          <TextBox Text="{Binding PaDate, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="98" Height="34" Margin="0,3,6,3"
+                   HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                   ToolTip.Tip="📅 تاریخِ پارچه" c:LiveFormat.Kind="date" />
+          <Border Classes="chip" Height="34" Margin="0,3,0,3" VerticalAlignment="Center" ToolTip.Tip="شمارهٔ گزارش">
+            <TextBlock Text="{Binding ReportNumText, StringFormat=#{0}}" VerticalAlignment="Center" />
+          </Border>
+        </StackPanel>
+        <StackPanel Classes="grp">
+          <Button Classes="accent" Content="＋ گزارش" ToolTip.Tip="گزارشِ جدید" Command="{Binding StartNewReportCommand}" />
+          <Button Content="☀️ پارچهٔ روز" ToolTip.Tip="پارچهٔ جدید روز" Command="{Binding NewParchaDayCommand}" />
+          <Button Content="🌙 پارچهٔ شب" ToolTip.Tip="پارچهٔ جدید شب" Command="{Binding NewParchaNightCommand}" />
+        </StackPanel>
+        <StackPanel Classes="grp">
+          <Button Classes="ghost info" Content="🕘" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" Command="{Binding OpenHistoryCommand}" IsVisible="{Binding HasHistory}" />
+          <Button Content="{Binding FuelToggleText}" Command="{Binding ToggleFuelCommand}" />
+          <Button Classes="accent" Content="📄 PDF" ToolTip.Tip="PDF همهٔ گزارش‌ها" Command="{Binding PdfCommand}" />
+        </StackPanel>
       </WrapPanel>
     </c:SectionPage.Toolbar>
 

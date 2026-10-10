@@ -63,6 +63,8 @@ public sealed partial class ShiftFormViewModel : ObservableObject
     [ObservableProperty] private string _pumpNum = "";
     [ObservableProperty] private string _start = "";
     [ObservableProperty] private string _end = "";
+    /// <summary>لیترِ آزمایشیِ پمپ (۱۴۰۵/۰۷/۲۲) — از فروش کم می‌شود؛ نه قرض نه مصرف.</summary>
+    [ObservableProperty] private string _test = "";
     [ObservableProperty] private string _debt = "";
     [ObservableProperty] private string _price = "";
     [ObservableProperty] private string _profitPer = "";
@@ -142,6 +144,7 @@ public sealed partial class ShiftFormViewModel : ObservableObject
         if (!_loading) _owner.RecheckSibling(this);
     }
     partial void OnDebtChanged(string v) => Recalc();
+    partial void OnTestChanged(string v) => Recalc();
     partial void OnPriceChanged(string v) => Recalc();
 
     /// <summary>
@@ -169,18 +172,19 @@ public sealed partial class ShiftFormViewModel : ObservableObject
     /// می‌خواند و پارچه با شروع/ختم/فیِ صفر ذخیره و به ورق و گاوصندوق می‌رفت.
     /// </summary>
     public string? BadNumber() => Shamsi.FirstUnreadable(
-        ("شمارهٔ پایه", PumpNum), ("شروع پایه", Start), ("ختم پایه", End),
+        ("شمارهٔ پایه", PumpNum), ("شروع پایه", Start), ("ختم پایه", End), ("لیتر آزمایشی", Test),
         ("فی لیتر", Price), ("جمله قرض", Debt), ("فایده فی لیتر", ProfitPer));
 
     public decimal StartValue => Shamsi.Num(Start);
     public decimal EndValue => Shamsi.Num(End);
+    public decimal TestValue => Shamsi.Num(Test);
     public decimal DebtValue => Shamsi.Num(Debt);
     public decimal PriceValue => Shamsi.Num(Price);
     public decimal ProfitPerValue => Shamsi.Num(ProfitPer);
 
     /// <summary>‎calcShift(p)‎ با همان ورودی‌هایی که آن تابع از DOM می‌خواند.</summary>
     public ShiftCalc N => _owner.Calc.CalcShift(
-        StartValue, EndValue, PriceValue, DebtValue, _owner.BuyPerLiter, ProfitPerValue);
+        StartValue, EndValue, PriceValue, DebtValue, _owner.BuyPerLiter, ProfitPerValue, TestValue);
 
     // خانه‌های خودکار و نوشته‌هایشان از خودِ ShiftCalc می‌آیند تا آزمونِ
     // برابری همان چیزی را بسنجد که این‌جا نشان داده می‌شود.
@@ -220,6 +224,7 @@ public sealed partial class ShiftFormViewModel : ObservableObject
         PumpNum = s is null || s.PumpNum == 0 ? "" : s.PumpNum.ToString();
         Start = s is null || s.Start == 0m ? "" : Shamsi.Money(s.Start);
         End = s is null || s.End == 0m ? "" : Shamsi.Money(s.End);
+        Test = s is null || s.TestLiters == 0m ? "" : Shamsi.Money(s.TestLiters);
         Debt = s is null || s.Debt == 0m ? "" : Shamsi.Money(s.Debt);
         Note = s?.Note ?? "";
         Saved = s is not null && s.Id != 0;
@@ -248,7 +253,7 @@ public sealed partial class ShiftFormViewModel : ObservableObject
     private string _loadedPrint = "";
     private long _loadedId;
 
-    private string Print() => string.Join("|", Name, PumpNum, Start, End, Debt, Price, Note);
+    private string Print() => string.Join("|", Name, PumpNum, Start, End, Test, Debt, Price, Note);
 
     /// <summary>از آخرین بار شدن، کاربر چیزی را عوض کرده؟</summary>
     public bool IsEdited => Print() != _loadedPrint;
@@ -382,13 +387,14 @@ public sealed class ReportShiftView
         Editor = s is null || save is null ? null : new ReportShiftEditor(s, reportId, kind, save);
         Title = title;
         Has = s is not null && (s.Start != 0m || s.End != 0m || !string.IsNullOrWhiteSpace(s.Name));
-        var liters = s is null ? 0m : Math.Max(0m, s.End - s.Start);
+        var liters = s is null ? 0m : Math.Max(0m, ParchaService.SoldLiters(s.Start, s.End, s.TestLiters));
         Lines = !Has || s is null ? Array.Empty<(string, string)>() : new (string, string)[]
         {
             ("نام کارمند", string.IsNullOrWhiteSpace(s.Name) ? "—" : s.Name!),
             ("شماره پایه", s.PumpNum > 0 ? s.PumpNum.ToString() : "—"),
             ("شروع پایه", Shamsi.Money(s.Start)),
             ("ختم پایه", Shamsi.Money(s.End)),
+            ("آزمایشی", s.TestLiters == 0m ? "—" : Shamsi.Money(s.TestLiters)),
             ("لیتر", Shamsi.Money(liters)),
             ("فی لیتر", Shamsi.Money(s.Price)),
             ("فروش", Shamsi.Money(s.Sale)),
@@ -1051,7 +1057,8 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
             Note: form.Note,
             BuyPerLiter: BuyPerLiter,
             ForceNew: force,
-            LowBase: form.LowBaseUnacked));
+            LowBase: form.LowBaseUnacked,
+            TestLiters: form.TestValue));
 
         if (!res.Ok) { _host.Toast(res.Error ?? "", ToastKind.Error); return false; }
 

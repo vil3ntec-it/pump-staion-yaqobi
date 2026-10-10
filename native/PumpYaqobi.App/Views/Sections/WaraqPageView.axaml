@@ -85,6 +85,9 @@
                برداشتنِ نشان: راست‌کلیک روی ردیف ⇐ «نشانِ سرخ را بردار». -->
           <c:IssueTextColumn Header="شروع" Binding="{Binding StartText}" Width="Auto" IssuePath="StartIssue" />
           <c:IssueTextColumn Header="ختم" Binding="{Binding EndText}" Width="Auto" IssuePath="EndIssue" />
+          <!-- ⛔ لیترِ آزمایشی (۱۴۰۵/۰۷/۲۲): تیلی که در پیمانه ریخته و به مخزن برگشت — از «لیتر» و
+               «فروش» کم می‌شود؛ نه قرض است نه مصرف. از پارچه می‌آید و این‌جا هم درست‌کردنی است. -->
+          <DataGridTextColumn Header="آزمایشی" Binding="{Binding TestText}" Width="Auto" />
           <DataGridTextColumn Header="لیتر" Binding="{Binding LitersText}" Width="Auto" IsReadOnly="True" />
           <DataGridTextColumn Header="فی" Binding="{Binding PriceText}" Width="Auto" />
           <DataGridTextColumn Header="فروش" Binding="{Binding SalesText}" Width="Auto" IsReadOnly="True" />

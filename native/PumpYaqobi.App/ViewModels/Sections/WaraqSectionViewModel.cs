@@ -24,7 +24,7 @@ public sealed partial class WaraqPumpViewModel : RowViewModel, IFlaggedRow
     {
         _p = p; _owner = owner;
         Loading = true;
-        _num = p.Num; _fuel = p.Fuel; _start = p.Start; _end = p.End;
+        _num = p.Num; _fuel = p.Fuel; _start = p.Start; _end = p.End; _test = p.TestLiters;
         _price = p.PricePerLiter; _debt = p.Debt; _note = p.Note ?? "";
         _worker = p.Worker ?? ""; _pumpDate = p.DateShamsi ?? "";
         _lowBase = p.LowBase;
@@ -37,6 +37,8 @@ public sealed partial class WaraqPumpViewModel : RowViewModel, IFlaggedRow
     [ObservableProperty] private FuelType _fuel;
     [ObservableProperty] private decimal _start;
     [ObservableProperty] private decimal _end;
+    /// <summary>لیترِ آزمایشیِ پمپ — به مخزن برگشت؛ از «لیتر» و «فروش» کم می‌شود (۱۴۰۵/۰۷/۲۲).</summary>
+    [ObservableProperty] private decimal _test;
     [ObservableProperty] private decimal _price;
     [ObservableProperty] private decimal _debt;
     [ObservableProperty] private string _note = "";
@@ -129,7 +131,9 @@ public sealed partial class WaraqPumpViewModel : RowViewModel, IFlaggedRow
     public string EndIssue =>
         End > 0m && Start > 0m && End < Start
             ? "⚠️ ختم از شروع کمتر است\nشروع: " + Shamsi.Money(Start) + " · ختم: " + Shamsi.Money(End)
-            : "";
+            : Test != 0m && !ParchaService.TestValid(Start, End, Test)
+                ? "⚠️ لیترِ آزمایشی از لیترِ این پایه بیشتر است\nآزمایشی: " + Shamsi.Money(Test) + " · لیترِ پایه: " + Shamsi.Money(End - Start)
+                : "";
 
     bool IFlaggedRow.Flagged => LowBase;
     System.Windows.Input.ICommand IFlaggedRow.ClearFlagCommand => ClearLowBaseCommand;
@@ -158,24 +162,26 @@ public sealed partial class WaraqPumpViewModel : RowViewModel, IFlaggedRow
         RefreshIssues();
     }
     partial void OnEndChanged(decimal v) { Touch(); Refresh(); RefreshIssues(); }
+    partial void OnTestChanged(decimal v) { Touch(); Refresh(); RefreshIssues(); }
     partial void OnPriceChanged(decimal v) { Touch(); Refresh(); }
     partial void OnDebtChanged(decimal v) { Touch(); Refresh(); }
     partial void OnNoteChanged(string v) => Touch();
 
     private void Refresh()
     {
-        foreach (var n in new[] { nameof(StartText), nameof(EndText), nameof(PriceText),
+        foreach (var n in new[] { nameof(StartText), nameof(EndText), nameof(TestText), nameof(PriceText),
                                   nameof(DebtText), nameof(LitersText), nameof(SalesText) })
             OnPropertyChanged(n);
     }
 
     public string StartText { get => Shown(nameof(StartText), Shamsi.MoneyOrBlank(Start)); set { if (!Typed(nameof(StartText), value)) return; Start = Shamsi.Num(value); } }
     public string EndText { get => Shown(nameof(EndText), Shamsi.MoneyOrBlank(End)); set { if (!Typed(nameof(EndText), value)) return; End = Shamsi.Num(value); } }
+    public string TestText { get => Shown(nameof(TestText), Shamsi.MoneyOrBlank(Test)); set { if (!Typed(nameof(TestText), value)) return; Test = Shamsi.Num(value); } }
     public string PriceText { get => Shown(nameof(PriceText), Shamsi.MoneyOrBlank(Price)); set { if (!Typed(nameof(PriceText), value)) return; Price = Shamsi.Num(value); } }
     public string DebtText { get => Shown(nameof(DebtText), Shamsi.MoneyOrBlank(Debt)); set { if (!Typed(nameof(DebtText), value)) return; Debt = Shamsi.Num(value); } }
 
-    /// <summary>لیترِ منفی وجود ندارد — ‎Math.max(0, end−start)‎.</summary>
-    public decimal Liters => Math.Max(0m, End - Start);
+    /// <summary>لیترِ منفی وجود ندارد — ‎Math.max(0, end−start−آزمایشی)‎ (همان ‎ParchaService.SoldLiters‎).</summary>
+    public decimal Liters => Math.Max(0m, ParchaService.SoldLiters(Start, End, Test));
     public string LitersText => Shamsi.Money(Liters);
     public string SalesText => Shamsi.Money(Liters * Price);
 
@@ -211,7 +217,7 @@ public sealed partial class WaraqPumpViewModel : RowViewModel, IFlaggedRow
 
     protected override void Apply()
     {
-        _p.Num = Num; _p.Fuel = Fuel; _p.Start = Start; _p.End = End;
+        _p.Num = Num; _p.Fuel = Fuel; _p.Start = Start; _p.End = End; _p.TestLiters = Test;
         _p.PricePerLiter = Price; _p.Debt = Debt; _p.Note = Note;
         _p.Worker = Worker; _p.DateShamsi = PumpDate; _p.LowBase = LowBase;
     }

@@ -19,6 +19,13 @@ public class ShiftData : EntityBase
     public int PumpNum { get; set; }
     public decimal Start { get; set; }
     public decimal End { get; set; }
+    /// <summary>
+    /// ══ لیترِ آزمایشی (۱۴۰۵/۰۷/۲۲) ══
+    /// تیلی که برای سنجشِ پمپ در پیمانه ریخته و به مخزن برگردانده شد. از فروشِ همین
+    /// پایه کم می‌شود (‎فروش = ختم − شروع − آزمایشی‎): نه پول دارد، نه فایده، نه قرض است
+    /// نه مصرف — و چون فروش نیست، از موجودیِ مخزن هم کم نمی‌شود. صفر ⇒ همان رفتارِ همیشه.
+    /// </summary>
+    public decimal TestLiters { get; set; }
     public decimal Price { get; set; }
     public decimal ProfitPer { get; set; }
     public decimal BuyPerLiter { get; set; }
@@ -308,6 +315,13 @@ public class WaraqPump : EntityBase
     public string? Note { get; set; }
     public decimal Start { get; set; }
     public decimal End { get; set; }
+    /// <summary>
+    /// ══ لیترِ آزمایشی (۱۴۰۵/۰۷/۲۲) ══
+    /// تیلی که برای سنجشِ پمپ در پیمانه ریخته و به مخزن برگردانده شد. از فروشِ همین
+    /// پایه کم می‌شود (‎فروش = ختم − شروع − آزمایشی‎): نه پول دارد، نه فایده، نه قرض است
+    /// نه مصرف — و چون فروش نیست، از موجودیِ مخزن هم کم نمی‌شود. صفر ⇒ همان رفتارِ همیشه.
+    /// </summary>
+    public decimal TestLiters { get; set; }
     public decimal PricePerLiter { get; set; }
     public decimal Debt { get; set; }
 
