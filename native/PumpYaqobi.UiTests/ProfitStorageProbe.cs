@@ -489,10 +489,12 @@ internal static class ProfitStorageProbe
             Check("و هیچ دکمه‌ای روی نوشتهٔ عنوان نیفتاده", tw > 0 && bs.All(b => b.Right <= tc - tw / 2 - 4 || b.Left >= tc + tw / 2 + 4),
                   $"عنوان {tc - tw / 2:0}…{tc + tw / 2:0}");
         }
-        //  ⛔ و در خودِ کارتِ مخزن دیگر دکمه‌ای نیست
+        //  ⛔ و در خودِ کارتِ مخزن دیگر دکمه‌ای نیست — جز شماره‌های مخزن در کنجِ بالا (‎TankTabs‎، ۱۴۰۵/۰۷/۲۲)
         var tankCard = gauge?.GetVisualAncestors().OfType<Border>().FirstOrDefault(b => b.Classes.Contains("panel"));
-        Check("کارتِ مخزن دیگر ردیفِ دکمه ندارد",
-              tankCard is not null && !tankCard.GetVisualDescendants().OfType<Button>().Any(b => b.IsEffectivelyVisible));
+        var tabs = tankCard?.GetVisualDescendants().OfType<WrapPanel>().FirstOrDefault(w => w.Name == "TankTabs");
+        Check("کارتِ مخزن دیگر ردیفِ دکمه ندارد (جز شماره‌های مخزن)",
+              tankCard is not null && tabs is not null && !tankCard.GetVisualDescendants().OfType<Button>()
+                  .Any(b => b.IsEffectivelyVisible && !b.GetVisualAncestors().Contains(tabs)));
 
         Shot(win, shots, "04-storage");
         //  و همان صفحه با تمِ تیره — نقشه باید در هر دو تم خوانا باشد
