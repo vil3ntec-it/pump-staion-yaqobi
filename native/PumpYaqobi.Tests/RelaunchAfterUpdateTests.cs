@@ -37,7 +37,7 @@ public class RelaunchAfterUpdateTests
         Assert.Contains("{relaunch}", svc);
         Assert.DoesNotContain("            start \"\" \"{exe}\"\n", svc.Replace("\r\n", "\n"));
         //  ‎tasklist‎ خراب هم اسکریپت را تا ابد نگه نمی‌دارد
-        Assert.Contains("if %N% GEQ 120 goto go", svc);
+        Assert.Contains("if %N% GEQ 60 goto kill", svc);
     }
 
     [Fact]
@@ -101,15 +101,20 @@ public class RelaunchAfterUpdateTests
         offer = offer[..offer.IndexOf("ConfirmAsync", StringComparison.Ordinal)];
         Assert.Contains("if (Update.UpdateExit.Active) return;", offer);
 
+        //  (۱۴۰۵/۰۷/۲۲) هر دو درِ نصب از یک جا می‌بندند: ‎UpdateExit.CloseForInstall‎ — مُهر
+        //  پیش از ‎Shutdown‎، و نگهبانی که پروسه را حتماً می‌بَرَد.
         var auto = Src("PumpYaqobi.App/Update/AutoUpdate.cs");
-        var a = auto[auto.IndexOf("InstallAndExitAsync", StringComparison.Ordinal)..];
-        Assert.True(a.IndexOf("UpdateExit.Arm();", StringComparison.Ordinal) is > 0 and var i
-                    && i < a.IndexOf("d.Shutdown();", StringComparison.Ordinal));
-
+        Assert.Contains("UpdateExit.CloseForInstall();", auto[auto.IndexOf("InstallAndExitAsync", StringComparison.Ordinal)..]);
+        Assert.DoesNotContain("d.Shutdown();", auto);
         var bk = Src("PumpYaqobi.App/ViewModels/Sections/BackupSectionViewModel.cs");
         var inst = bk[bk.IndexOf("private async Task InstallUpdateAsync()", StringComparison.Ordinal)..];
-        Assert.True(inst.IndexOf("UpdateExit.Arm();", StringComparison.Ordinal) is > 0 and var j
-                    && j < inst.IndexOf("d.Shutdown();", StringComparison.Ordinal));
+        Assert.Contains("UpdateExit.CloseForInstall();", inst);
+        Assert.DoesNotContain("d.Shutdown();", inst);
+        var ex = Src("PumpYaqobi.App/Update/UpdateExit.cs");
+        var close = ex[ex.IndexOf("public static void CloseForInstall()", StringComparison.Ordinal)..];
+        Assert.True(close.IndexOf("Arm();", StringComparison.Ordinal) is > 0 and var i
+                    && i < close.IndexOf("d.Shutdown();", StringComparison.Ordinal));
+        Assert.Contains("await Task.Delay(ForceAfter);\n                Environment.Exit(0);", close.Replace("\r\n", "\n"));
         var off = bk[bk.IndexOf("UpdateService.LaunchOffline(path)", StringComparison.Ordinal)..];
         Assert.Contains("UpdateExit.Arm();", off[..off.IndexOf("نصاب باز شد", StringComparison.Ordinal)]);
     }

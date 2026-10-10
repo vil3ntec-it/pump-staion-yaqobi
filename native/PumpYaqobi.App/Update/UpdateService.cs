@@ -1082,6 +1082,50 @@ public sealed class UpdateService
             ? $"explorer.exe \"{exe}\""
             : $"start \"\" /D \"{appDir}\" \"{exe}\" --after-update";
 
+    /// <summary>
+    /// ══ اسکریپتِ جای‌گزینیِ بستهٔ زیپ (۱۴۰۵/۰۷/۲۲، بارِ سوم) ══════════════════════
+    /// گزارشِ صاحب ریپو: «می‌گوید بسته و دوباره باز می‌شود؛ هرگز باز نمی‌شود، و خودم که
+    /// باز می‌کنم آپدیتی نشده.» دو ریشه، هر دو این‌جا:
+    ///
+    ///   • ⛔ <c>timeout</c> در پروسهٔ بی‌پنجره (همان <c>CreateNoWindow</c>ِ این‌جا) کار
+    ///     نمی‌کند — «Input redirection is not supported» و همان لحظه بیرون. پس «۱۲۰
+    ///     ثانیه صبر» در عمل ~۲۰ ثانیه بود. انتظار حالا با <c>ping</c> است که بی کنسول
+    ///     هم یک ثانیهٔ واقعی می‌خوابد.
+    ///   • ⛔ نمونهٔ کهنه که پس از مهلت هنوز زنده است (پنجره رفته، پروسه نه) فایل‌هایش را
+    ///     قفل نگه می‌داشت: ‎robocopy‎ شکست می‌خورد و نمونهٔ تازه پشتِ قفلِ تک‌نمونه ۶۰
+    ///     ثانیه می‌ماند و بیرون می‌رفت. حالا پس از مهلت با <c>taskkill /F</c> بسته
+    ///     می‌شود — نوشته‌ها پیش از این روی دیسک نشسته‌اند (‎SaveGuard‎).
+    ///
+    /// ⛔ خالص است و جدا آزمون می‌شود، و روی ویندوز واقعاً اجرا می‌شود
+    /// (‎ApplyUpdateScriptTests‎).
+    /// </summary>
+    public static string ApplyScript(int pid, string src, string appDir, string result,
+                                       string relaunch, string staging) => $"""
+            @echo off
+            chcp 65001 >nul
+            set N=0
+            :wait
+            tasklist /FI "PID eq {pid}" 2>nul | find "{pid}" >nul
+            if not errorlevel 1 (
+              set /a N+=1
+              if %N% GEQ 60 goto kill
+              ping -n 2 127.0.0.1 >nul
+              goto wait
+            )
+            goto go
+            :kill
+            taskkill /F /PID {pid} >nul 2>&1
+            ping -n 3 127.0.0.1 >nul
+            :go
+            ping -n 2 127.0.0.1 >nul
+            robocopy "{src}" "{appDir}" /E /IS /IT /R:10 /W:2 >nul
+            set RC=%ERRORLEVEL%
+            if %RC% GEQ 8 (>"{result}" echo %RC%) else (del "{result}" >nul 2>&1)
+            {relaunch}
+            rmdir /s /q "{staging}" >nul 2>&1
+            exit /b 0
+            """;
+
     private static bool LaunchZip(string zipPath, Stream verified)
     {
         var exe = Environment.ProcessPath;
@@ -1109,29 +1153,8 @@ public sealed class UpdateService
         // نشانهٔ کهنه پاک شود تا نتیجهٔ همین بار خوانده شود، نه نتیجهٔ دفعهٔ پیش
         try { if (File.Exists(result)) File.Delete(result); } catch { }
 
-        // ‎robocopy‎ کدِ خروجیِ ۰ تا ۷ را «موفق» می‌شمارد و ۸ به بالا یعنی
-        // شکست؛ پس همان عدد نوشته می‌شود و اسکریپت با ‎exit /b 0‎ بسته می‌شود.
-        File.WriteAllText(script, $"""
-            @echo off
-            chcp 65001 >nul
-            set N=0
-            :wait
-            tasklist /FI "PID eq {pid}" 2>nul | find "{pid}" >nul
-            if not errorlevel 1 (
-              set /a N+=1
-              if %N% GEQ 120 goto go
-              timeout /t 1 /nobreak >nul
-              goto wait
-            )
-            :go
-            timeout /t 1 /nobreak >nul
-            robocopy "{src}" "{appDir}" /E /IS /IT /R:10 /W:2 >nul
-            set RC=%ERRORLEVEL%
-            if %RC% GEQ 8 (>"{result}" echo %RC%) else (del "{result}" >nul 2>&1)
-            {relaunch}
-            rmdir /s /q "{staging}" >nul 2>&1
-            exit /b 0
-            """, new System.Text.UTF8Encoding(false));      // ⛔ بی BOM — وگرنه خطِ اول «@echo off» خطا می‌داد
+        File.WriteAllText(script, ApplyScript(pid, src, appDir, result, relaunch, staging),
+                          new System.Text.UTF8Encoding(false));      // ⛔ بی BOM — وگرنه خطِ اول «@echo off» خطا می‌داد
 
         var psi = new System.Diagnostics.ProcessStartInfo
         {

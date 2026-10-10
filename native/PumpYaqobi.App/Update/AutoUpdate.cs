@@ -148,19 +148,8 @@ public static class AutoUpdate
             try { ReadyChanged?.Invoke(); } catch { }
             return;
         }
-        UpdateExit.Arm();
         AppHost.Current.Toast("برنامه بسته می‌شود و با نسخهٔ تازه باز می‌شود", ToastKind.Info);
-        _ = Task.Run(async () =>
-        {
-            await Task.Delay(1200);
-            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (Avalonia.Application.Current?.ApplicationLifetime
-                    is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime d)
-                    d.Shutdown();
-                else Environment.Exit(0);
-            });
-        });
+        UpdateExit.CloseForInstall();
     }
 
     /// <summary>فقط برای آزمون‌ها.</summary>
