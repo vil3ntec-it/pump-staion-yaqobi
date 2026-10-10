@@ -665,6 +665,16 @@ public partial class ExcelGrid : DataGrid
     public static int ParkPendingCount => _parkAt.Count;
 
     /// <summary>
+    /// جدول‌هایی که مهلتشان (به‌اضافهٔ ‎slack‎) گذشته و هنوز در صف‌اند — یعنی تپشِ پارک کار نکرد.
+    /// ⚠️ جدولی که وسطِ صبر دوباره پنهان شد مهلتِ تازه گرفته و این‌جا شمرده نمی‌شود.
+    /// </summary>
+    public static int ParkOverdueCount(TimeSpan slack)
+    {
+        var limit = PumpYaqobi.Domain.AppClock.Mono - slack;
+        return _parkAt.Values.Count(at => at <= limit);
+    }
+
+    /// <summary>
     /// بخشی که این جدول در آن نشسته هنوز جلوی چشم است؟
     ///
     /// ⚠️ از روی **ویومدل** پرسیده می‌شود، نه از روی ‎IsEffectivelyVisible‎ی

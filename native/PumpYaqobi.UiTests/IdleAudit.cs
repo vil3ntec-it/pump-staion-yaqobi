@@ -162,8 +162,11 @@ internal static class IdleAudit
             {
                 graceChecked = true;
                 SitIdle(win, PumpYaqobi.App.Controls.ExcelGrid.ParkGrace + TimeSpan.FromSeconds(1.5));
-                if (PumpYaqobi.App.Controls.ExcelGrid.ParkPendingCount > 0)
-                    bad.Add($"«{sec.Id}»: پس از مهلتِ پارک هنوز {PumpYaqobi.App.Controls.ExcelGrid.ParkPendingCount} جدول پارک نشده");
+                //  ⚠️ فقط جدولی که مهلتش واقعاً گذشته (+۱٫۵ث برای تپشِ یک‌ثانیه‌ای) — جدولی که وسطِ صبر
+                //  دوباره پنهان شد مهلتِ تازه دارد و «پارک نشده» نیست (رانرِ CI همین را گرفت: «sarrafi»)
+                var overdue = PumpYaqobi.App.Controls.ExcelGrid.ParkOverdueCount(TimeSpan.FromSeconds(1.5));
+                if (overdue > 0)
+                    bad.Add($"«{sec.Id}»: {overdue} جدول با مهلتِ گذشته هنوز پارک نشده");
             }
             PumpYaqobi.App.Controls.ExcelGrid.ParkPendingNow();
             Settle(win);
