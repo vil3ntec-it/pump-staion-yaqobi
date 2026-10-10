@@ -661,7 +661,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         //  نخستین باز شدنِ «مخزن» ظرفیتِ پیش‌فرضِ ۱۰٬۰۰۰ را ذخیره می‌کرد (و اجازهٔ
         //  تنظیمات می‌خواست)، پس ظرفیتی که داشبورد از موجودی می‌سازد دیگر هرگز به کار نمی‌رفت.
         _ready = false;
-        Capacity = Shamsi.Money(_host.Settings.GetDecimal(CapacityKey, 10000m));
+        Capacity = Shamsi.Money(DashboardService.TankCapacity(_host.Settings.GetDecimal(CapacityKey, 0m)));
         LowStock = Shamsi.Money(_host.Settings.GetDecimal(
             PumpYaqobi.Services.Data.SettingsService.LowStockThreshold, 1000m));
         _ready = true;
