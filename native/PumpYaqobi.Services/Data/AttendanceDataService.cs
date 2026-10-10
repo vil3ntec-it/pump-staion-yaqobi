@@ -36,6 +36,19 @@ public sealed class AttendanceDataService
                        .OrderBy(r => r.DateKey).ToListAsync(ct);
     }
 
+    /// <summary>ماه‌هایی که حاضری یا پرداختِ معاش دارند — فقط کلیدها (۱۴۰۵/۰۷/۱۸).</summary>
+    public async Task<List<string>> MonthsAsync(CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        var keys = await db.Attendance.AsNoTracking().Where(r => r.DateKey > 0)
+                           .Select(r => r.DateKey).Distinct().ToListAsync(ct);
+        var months = keys.Select(k => $"{k / 10000:0000}/{k / 100 % 100:00}").ToHashSet(StringComparer.Ordinal);
+        foreach (var m in await db.SalaryPayments.AsNoTracking().Select(p => p.MonthKey).ToListAsync(ct))
+            if (!string.IsNullOrWhiteSpace(m)) months.Add(m!);
+        return months.ToList();
+    }
+
     public async Task<List<SalaryPayment>> PaymentsAsync(CancellationToken ct = default)
     {
         _perm.Require(Permission.ViewData);

@@ -404,8 +404,45 @@ public partial class ExcelGrid
     /// است، پس با مرتب‌سازی و صافی هم درست می‌ماند و با بازچرخانیِ ردیف‌ها
     /// (مجازی‌سازی) دوباره نوشته می‌شود.
     /// </summary>
-    private static void OnNumberRow(object? sender, DataGridRowEventArgs e) =>
+    private static void OnNumberRow(object? sender, DataGridRowEventArgs e)
+    {
         e.Row.Header = RowNumber(e.Row);
+        WatchNumber(e.Row);
+    }
+
+    /// <summary>
+    /// ══ شمارهٔ ردیف همان لحظه تازه می‌شود (۱۴۰۵/۰۷/۱۸) ══════════════════════════
+    /// شماره فقط سرِ ‎LoadingRow‎ نوشته می‌شد؛ پس وقتی ورق ‎Index‎ِ ردیف‌ها را با «➕ ردیف»
+    /// عوض می‌کرد (‎Renumber‎)، ردیف‌های ساخته‌شده شمارهٔ کهنه را نگه می‌داشتند (عکسِ
+    /// ‎waraqadd‎: «۱ تا ۱۰» و بعد «۲۱» در جدولی که باید از ۱۱ شروع می‌شد) تا «خروج و ورود».
+    /// حالا ردیف به ‎Index‎/‎IndexText‎ِ ویومدلِ خودش گوش می‌دهد — و با بازیافتِ ردیف شنونده
+    /// جابه‌جا می‌شود، نه انباشته.
+    /// </summary>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<DataGridRow, NumberWatch> _numWatch = new();
+
+    private sealed class NumberWatch
+    {
+        public System.ComponentModel.INotifyPropertyChanged? Source;
+        public System.ComponentModel.PropertyChangedEventHandler? Handler;
+    }
+
+    private static void WatchNumber(DataGridRow row)
+    {
+        var w = _numWatch.GetValue(row, _ => new NumberWatch());
+        if (w.Source is not null && w.Handler is not null) w.Source.PropertyChanged -= w.Handler;
+        w.Source = null; w.Handler = null;
+        if (row.DataContext is not System.ComponentModel.INotifyPropertyChanged npc) return;
+        var t = npc.GetType();
+        if (t.GetProperty("IndexText") is null && t.GetProperty("Index") is null) return;
+        w.Source = npc;
+        w.Handler = (s, a) =>
+        {
+            if (a.PropertyName is not ("Index" or "IndexText")) return;
+            if (!ReferenceEquals(row.DataContext, s)) return;
+            row.Header = RowNumber(row);
+        };
+        npc.PropertyChanged += w.Handler;
+    }
 
     /// <summary>
     /// ══ شمارهٔ ردیف: اول از خودِ ردیف بپرس ══════════════════════════════════
@@ -461,7 +498,7 @@ public partial class ExcelGrid
         CommitEdit(DataGridEditingUnit.Cell, true);
 
         if (e.Key is Key.Up or Key.Down) MoveRow(e.Key == Key.Down ? +1 : -1);
-        else MoveColumnFrom(cols, from, e.Key == Key.Right ? -1 : +1);
+        else if (!MoveColumnFrom(cols, from, e.Key == Key.Right ? -1 : +1)) CrossToNeighbour(e.Key);
 
         e.Handled = true;
     }
@@ -779,6 +816,54 @@ public partial class ExcelGrid
     //     **تازه** حساب می‌شد و یک خانه پرت می‌افتاد؛ فشارِ بعدی از جای
     //     درست شروع می‌کرد و «درست» به نظر می‌رسید. حالا ستونِ مبدأ **پیش
     //     از** بستنِ ویرایش برداشته می‌شود.
+
+    /// <summary>
+    /// ══ لبهٔ جدول ⇒ جدولِ کناری (۱۴۰۵/۰۷/۱۸) ═════════════════════════════════
+    /// گزارشِ صاحب ریپو: «در ورق‌ها حرکت بین تراکنش‌های راست و چپ متوقف می‌شود.»
+    /// چپ/راست در لبهٔ جدول کلید را می‌خورد و هیچ کدی فوکوس را به جدولِ بغلی
+    /// نمی‌داد. حالا اگر در همان جهت جدولِ دیدنیِ دیگری (هم‌ردیف، در همان صفحهٔ
+    /// بخش) باشد، فوکوس به همان شمارهٔ ردیف در آن جدول و به ستونِ لبهٔ نزدیک می‌رود.
+    /// ⛔ جهت از جای واقعیِ روی صفحه است (<see cref="Services.FieldNavigationService.ScreenX"/>)،
+    /// نه از ترتیبِ ستون‌ها؛ جدولِ بی‌ردیف مقصد نیست.
+    /// </summary>
+    internal bool CrossToNeighbour(Key key)
+    {
+        var scope = this.FindAncestorOfType<SectionPage>() as Control
+                    ?? this.FindAncestorOfType<UserControl>() as Control;
+        if (scope is null || Services.FieldNavigationService.ScreenRect(this) is not { } me) return false;
+
+        var wantLeft = key == Key.Left;
+        ExcelGrid? best = null;
+        var bestGap = double.PositiveInfinity;
+        foreach (var g in scope.GetVisualDescendants().OfType<ExcelGrid>())
+        {
+            if (ReferenceEquals(g, this) || !g.IsEffectivelyVisible || !g.IsEffectivelyEnabled) continue;
+            if (g.ItemsSource is not System.Collections.IList { Count: > 0 }) continue;
+            if (Services.FieldNavigationService.ScreenRect(g) is not { } r) continue;
+            // هم‌ردیف: بازهٔ عمودی‌شان هم‌پوشانی دارد
+            if (r.Bottom <= me.Top || r.Top >= me.Bottom) continue;
+            var gap = wantLeft ? me.Left - r.Right : r.Left - me.Right;
+            if (gap < -4) continue;
+            if (gap < bestGap) { bestGap = gap; best = g; }
+        }
+        if (best is null) return false;
+
+        if (_editing) CommitEdit(DataGridEditingUnit.Cell, true);
+        var list = (System.Collections.IList)best.ItemsSource!;
+        var row = Math.Clamp(SelectedIndex < 0 ? 0 : SelectedIndex, 0, list.Count - 1);
+        var cols = best.VisibleCols();
+        if (cols.Count == 0) return false;
+        // ستون ۰ سمتِ راست است (کلِ برنامه راست‌به‌چپ): رفتن به چپ ⇒ لبهٔ راستِ جدولِ چپ
+        var col = wantLeft ? cols[0] : cols[^1];
+        best.SelectedIndex = row;
+        best.CurrentColumn = col;
+        best.ResetRange(cols.IndexOf(col));
+        best.ScrollIntoView(list[row], col);
+        best.Focus(NavigationMethod.Directional);
+        best.PaintRange();
+        Dispatcher.UIThread.Post(best.FollowCell, DispatcherPriority.Background);
+        return true;
+    }
 
     /// <summary>همان جابه‌جایی، ولی با ستونِ مبدأی که خودِ صدازننده می‌دهد.</summary>
     private bool MoveColumnFrom(List<DataGridColumn> cols, int cur, int step, bool extend = false)

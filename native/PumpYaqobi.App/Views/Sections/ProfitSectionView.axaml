@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:vmb="using:PumpYaqobi.App.ViewModels"
              xmlns:c="using:PumpYaqobi.App.Controls"
              xmlns:th="using:PumpYaqobi.App.Themes"
              x:Class="PumpYaqobi.App.Views.Sections.ProfitSectionView"
@@ -54,6 +55,35 @@
       </Setter>
       <Setter Property="IsHitTestVisible" Value="False" />
     </Style>
+    <!-- ⛔ «لیتر اضافه داده شده»: کادرِ سرخ (۱۴۰۵/۰۷/۱۸) -->
+    <Style Selector="TextBox.overliters">
+      <Setter Property="BorderBrush" Value="{DynamicResource Pump.Danger}" />
+      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="Foreground" Value="{DynamicResource Pump.Ink.Danger}" />
+    </Style>
+    <Style Selector="Border.overliters">
+      <Setter Property="BorderBrush" Value="{DynamicResource Pump.Danger}" />
+      <Setter Property="BorderThickness" Value="2" />
+    </Style>
+    <Style Selector="Border.overliters TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource Pump.Ink.Danger}" />
+    </Style>
+    <Style Selector="Border.convrow">
+      <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+    </Style>
+    <Style Selector="Border.convrow.loss">
+      <Setter Property="BorderBrush" Value="{DynamicResource Pump.Danger}" />
+    </Style>
+    <Style Selector="Button.subcard">
+      <Setter Property="Background" Value="{DynamicResource Pump.Card}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="MinHeight" Value="52" />
+    </Style>
     <Style Selector="Button.veil">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
@@ -93,11 +123,42 @@
            گزارشِ «مفاد/ضرر خیلی سنگین اسکرول می‌شود» (۱۴۰۵/۰۷/۱۳)؛ شرحش روی
            ‎Border.card.calm‎ در ‎Controls.axaml‎. -->
       <!-- ⛔ نمودار، مفاد و مصارف پشتِ یک پرده‌اند؛ زدن روی پرده رمز می‌خواهد -->
+      <!-- ══ کادرهای ورود به صفحه‌های جدا (۱۴۰۵/۰۷/۱۸) ════════════════════════
+           گزارشِ صاحب ریپو: «کادر و دکمهٔ ورود به صفحهٔ جداگانه درست کار نمی‌کند… با
+           کلیک روی کادر صفحهٔ مربوطه باز شود.» تا امروز دو زیربخش فقط در کشوییِ «☰ کارها»
+           بودند و روی صفحه هیچ کادری نبود. حالا هر کدام یک کادرِ کامل است و کلیک روی **هر
+           جای** کادر همان ‎ShowSubCommand‎ِ همیشگی را می‌زند (همان در، همان قفل). -->
+      <ItemsControl ItemsSource="{Binding SubSections}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <UniformGrid Rows="1" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vmb:SectionViewModel">
+            <Button Classes="subcard" Margin="0,0,8,0" Padding="16,12"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                    Command="{Binding $parent[ItemsControl].((vmb:SectionViewModel)DataContext).ShowSubCommand}"
+                    CommandParameter="{Binding}"
+                    ToolTip.Tip="باز کردنِ همین صفحه">
+              <DockPanel LastChildFill="False">
+                <TextBlock DockPanel.Dock="Left" Text="{Binding LinkTitle}" FontSize="14" FontWeight="Bold"
+                           VerticalAlignment="Center" />
+                <TextBlock DockPanel.Dock="Right" Text="باز کن ‹" FontSize="12" VerticalAlignment="Center"
+                           Foreground="{DynamicResource Pump.Ink.Accent}" />
+              </DockPanel>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
       <Panel Classes="veilable">
         <StackPanel Spacing="12" Classes.veiled="{Binding Veiled}">
       <!-- ══ کادرِ بزرگِ «مفاد / ضرر خالص» ══════════════════════════════════
-               همان ‎.pl-result‎: عنوان، عددِ بزرگ، جملهٔ حال و خطِ روند. -->
-          <Border Classes="card calm" Padding="18,16" MinHeight="180">
+               همان ‎.pl-result‎: عنوان، عددِ بزرگ، جملهٔ حال و خطِ روند.
+               ⛔ (۱۴۰۵/۰۷/۱۸) کنارش کارتِ «💰 سودِ واقعی» — فروش جدا از سود. -->
+          <Grid ColumnDefinitions="*,12,*">
+          <Border Grid.Column="0" Classes="card calm" Padding="18,16" MinHeight="180">
             <Grid RowDefinitions="Auto,Auto,Auto,*">
               <DockPanel Grid.Row="0" LastChildFill="False">
                 <!-- ⚠️ چپ/راست این‌جا منطقی است: در راست‌به‌چپ «Left» یعنی سمتِ راستِ چشم -->
@@ -123,6 +184,36 @@
                             GridBrush="{DynamicResource Pump.GridLine}" />
             </Grid>
           </Border>
+
+          <!-- ══ 💰 سودِ واقعی (۱۴۰۵/۰۷/۱۸) ══════════════════════════════════════
+               خواستهٔ صاحب ریپو: «سودِ واقعی از مبلغِ کلِ فروشِ تیل تفکیک شود؛ سودِ هر
+               لیتر، هزینه‌ها، سودِ ناخالص و سودِ خالص جداگانه، با قیمتِ خریدِ واقعیِ
+               تیل.» فرمول: ‎RealProfitService‎. ⛔ پشتِ همان پرده (‎RealRows‎). -->
+          <Border Grid.Column="2" Classes="card calm" Padding="16,14" MinHeight="180">
+            <StackPanel Spacing="6">
+              <DockPanel LastChildFill="False">
+                <TextBlock DockPanel.Dock="Left" Text="💰 سودِ واقعی" Classes="label" FontSize="13" FontWeight="Bold" />
+                <TextBlock DockPanel.Dock="Right" Text="با قیمتِ خریدِ مخزن" FontSize="11" Classes="muted" />
+              </DockPanel>
+              <ItemsControl ItemsSource="{Binding RealRows}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:RealProfitRow">
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+                      <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12.5" VerticalAlignment="Center"
+                                 TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="13" FontWeight="Bold"
+                                 Margin="10,0,0,0" VerticalAlignment="Center"
+                                 Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="{Binding RealNote}" FontSize="11.5" TextWrapping="Wrap"
+                         IsVisible="{Binding RealNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                         Foreground="{DynamicResource Pump.Ink.Danger}" />
+            </StackPanel>
+          </Border>
+          </Grid>
 
           <!-- ══ درآمدها و مصارف ══ -->
           <Grid ColumnDefinitions="*,12,*">
@@ -241,42 +332,34 @@
                        Text="یک نفر می‌خواهد تیلش را به تو بفروشد؛ تو عمده می‌گیری. درآمد اضافی = مقدار × (نرخ بازار − فی عمده)." />
           </StackPanel>
 
-          <!-- ⛔ ورودی‌ها و نتیجه‌ها **یک** شبکه‌اند با ستون‌های مشترک، پس هر
-               کادرِ نتیجه دقیقاً زیرِ کادرِ تایپِ خودش است و دکمهٔ ثبت هم‌پهنای
-               ستونِ سوم. دو شبکهٔ جدا یعنی دو قالبِ ستون و لبه‌هایی که هیچ‌جا روی
-               هم نمی‌افتند — همان «تراز نیست». -->
-          <Grid ColumnDefinitions="*,16,*,16,*" RowDefinitions="Auto,6,Auto,14,Auto" MaxWidth="720">
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="مقدار تیل (لیتر)"
-                       Classes="label pllabel" VerticalAlignment="Bottom" />
-            <TextBlock Grid.Row="0" Grid.Column="2" Text="فی خرید عمده"
-                       Classes="label pllabel" VerticalAlignment="Bottom" />
-            <TextBlock Grid.Row="0" Grid.Column="4" Text="نرخ بازار"
-                       Classes="label pllabel" VerticalAlignment="Bottom" />
+          <!-- ⛔ (۱۴۰۵/۰۷/۱۸) همهٔ کادرها **افقی، در یک ردیف** — خواستهٔ صاحب ریپو: «تمام
+               کادرهای خرید عمده را افقی و در یک ردیف قرار بده، نه زیر یکدیگر.» یک شبکهٔ
+               شش‌ستونه: سه کادرِ تایپ، دو نتیجه و دکمهٔ ثبت؛ برچسب‌ها ردیفِ بالای همان ستون.
+               هیچ اتصالی عوض نشد. -->
+          <Grid ColumnDefinitions="*,10,*,10,*,10,*,10,*,10,Auto" RowDefinitions="Auto,6,Auto">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="مقدار تیل (لیتر)" Classes="label pllabel" VerticalAlignment="Bottom" />
+            <TextBlock Grid.Row="0" Grid.Column="2" Text="فی خرید عمده" Classes="label pllabel" VerticalAlignment="Bottom" />
+            <TextBlock Grid.Row="0" Grid.Column="4" Text="نرخ بازار" Classes="label pllabel" VerticalAlignment="Bottom" />
+            <TextBlock Grid.Row="0" Grid.Column="6" Text="پول فروشنده (قابل پرداخت)" Classes="label pllabel" VerticalAlignment="Bottom" />
+            <TextBlock Grid.Row="0" Grid.Column="8" Text="درآمد اضافی" Classes="label pllabel" VerticalAlignment="Bottom" />
 
             <TextBox Grid.Row="2" Grid.Column="0" Classes="plbox" Text="{Binding BulkQty}" Watermark="0" c:LiveFormat.Kind="number" />
             <TextBox Grid.Row="2" Grid.Column="2" Classes="plbox" Text="{Binding BulkBuy}" Watermark="0" c:LiveFormat.Kind="number" />
             <TextBox Grid.Row="2" Grid.Column="4" Classes="plbox" Text="{Binding BulkMarket}" Watermark="0" c:LiveFormat.Kind="number" />
-
-            <Border Grid.Row="4" Grid.Column="0" Classes="panel plresult">
-              <StackPanel Spacing="4">
-                <TextBlock Text="پول فروشنده (قابل پرداخت)" Classes="label pllabel" />
-                <TextBlock Text="{Binding BulkSellerText}" FontWeight="ExtraBold" FontSize="18"
-                           TextAlignment="Center"
-                           Foreground="{DynamicResource Pump.Ink.Accent}" />
-              </StackPanel>
+            <Border Grid.Row="2" Grid.Column="6" Classes="panel" MinHeight="48" Padding="8,4">
+              <TextBlock Text="{Binding BulkSellerText}" FontWeight="ExtraBold" FontSize="16"
+                         TextAlignment="Center" VerticalAlignment="Center"
+                         Foreground="{DynamicResource Pump.Ink.Accent}" />
             </Border>
-            <Border Grid.Row="4" Grid.Column="2" Classes="panel plresult">
-              <StackPanel Spacing="4">
-                <TextBlock Text="درآمد اضافی" Classes="label pllabel" />
-                <TextBlock Text="{Binding BulkIncomeText}" FontWeight="ExtraBold" FontSize="18"
-                           TextAlignment="Center"
-                           Foreground="{DynamicResource Pump.Ink.Ok}" />
-              </StackPanel>
+            <Border Grid.Row="2" Grid.Column="8" Classes="panel" MinHeight="48" Padding="8,4">
+              <TextBlock Text="{Binding BulkIncomeText}" FontWeight="ExtraBold" FontSize="16"
+                         TextAlignment="Center" VerticalAlignment="Center"
+                         Foreground="{DynamicResource Pump.Ink.Ok}" />
             </Border>
-            <Button Grid.Row="4" Grid.Column="4" Classes="accent" Content="➕ ثبت"
-                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+            <Button Grid.Row="2" Grid.Column="10" Classes="accent" Content="➕ ثبت"
+                    VerticalAlignment="Stretch" MinWidth="90"
                     HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                    FontSize="16" MinHeight="76" Command="{Binding AddBulkCommand}" />
+                    FontSize="15" Command="{Binding AddBulkCommand}" />
           </Grid>
 
           <TextBlock FontSize="12" TextAlignment="Center"
@@ -285,6 +368,101 @@
             <Run Text="{Binding BulkSumText}" FontWeight="Bold"
                  Foreground="{DynamicResource Pump.Ink.Ok}" />
           </TextBlock>
+        </StackPanel>
+      </Border>
+
+      <!-- ══ 🔁 تبدیلِ تیل — پطرول ⇄ دیزل (۱۴۰۵/۰۷/۱۸) ════════════════════════════
+           ارزشِ مبدأ با قیمتِ خریدِ واقعیِ مخزن ⇐ تقسیم بر قیمتِ خریدِ مقصد ⇐ لیترِ مجاز.
+           تحویلِ بیشتر از مجاز ⇒ کادرِ سرخ و «لیتر اضافه داده شده». فرمول: ‎FuelConversionService‎. -->
+      <Border Classes="card calm" Padding="18,16">
+        <StackPanel Spacing="12">
+          <StackPanel Spacing="4" HorizontalAlignment="Center">
+            <TextBlock Text="🔁 تبدیلِ تیل" Classes="h2" TextAlignment="Center" />
+            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="640"
+                       Text="ارزشِ تیلِ مبدأ = لیتر × قیمتِ خریدِ مخزن (نه نرخِ اتحادیه)؛ لیترِ مقصدِ قابلِ دریافت = ارزش ÷ قیمتِ خریدِ هر لیترِ مقصد." />
+          </StackPanel>
+
+          <Grid ColumnDefinitions="Auto,10,*,10,*,10,*,10,*" RowDefinitions="Auto,6,Auto,4,Auto">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="نوعِ تبدیل" Classes="label pllabel" VerticalAlignment="Bottom" />
+            <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding ConvQtyLabel}" Classes="label pllabel" VerticalAlignment="Bottom" />
+            <TextBlock Grid.Row="0" Grid.Column="4" Text="{Binding ConvFromPriceLabel}" Classes="label pllabel" VerticalAlignment="Bottom" />
+            <TextBlock Grid.Row="0" Grid.Column="6" Text="{Binding ConvToPriceLabel}" Classes="label pllabel" VerticalAlignment="Bottom" />
+            <TextBlock Grid.Row="0" Grid.Column="8" Text="{Binding ConvDeliveredLabel}" Classes="label pllabel" VerticalAlignment="Bottom" />
+
+            <Button Grid.Row="2" Grid.Column="0" Classes="accent" MinHeight="48" MinWidth="170"
+                    Content="{Binding ConvDirectionText}" Command="{Binding ToggleConvDirectionCommand}"
+                    ToolTip.Tip="زدنش جهتِ تبدیل را عوض می‌کند (پطرول ⇄ دیزل)" />
+            <TextBox Grid.Row="2" Grid.Column="2" Classes="plbox" Text="{Binding ConvQty}" Watermark="0" c:LiveFormat.Kind="number" />
+            <TextBox Grid.Row="2" Grid.Column="4" Classes="plbox" Text="{Binding ConvFromPrice}" Watermark="0" c:LiveFormat.Kind="number" />
+            <TextBox Grid.Row="2" Grid.Column="6" Classes="plbox" Text="{Binding ConvToPrice}" Watermark="0" c:LiveFormat.Kind="number" />
+            <TextBox Grid.Row="2" Grid.Column="8" Classes="plbox" Classes.overliters="{Binding ConvOver}"
+                     Text="{Binding ConvDelivered}" Watermark="همان مجاز" c:LiveFormat.Kind="number" />
+
+            <TextBlock Grid.Row="4" Grid.Column="4" Text="{Binding ConvFromSourceText}" Classes="muted" FontSize="11" TextAlignment="Center" />
+            <TextBlock Grid.Row="4" Grid.Column="6" Text="{Binding ConvToSourceText}" Classes="muted" FontSize="11" TextAlignment="Center" />
+          </Grid>
+
+          <Grid ColumnDefinitions="*,10,*,10,2*,10,Auto">
+            <Border Grid.Column="0" Classes="panel" Padding="10,8">
+              <StackPanel Spacing="3">
+                <TextBlock Text="ارزشِ کلِ تیلِ مبدأ" Classes="label pllabel" />
+                <TextBlock Text="{Binding ConvValueText}" FontWeight="ExtraBold" FontSize="16" TextAlignment="Center"
+                           Foreground="{DynamicResource Pump.Ink.Accent}" />
+              </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Classes="panel" Padding="10,8">
+              <StackPanel Spacing="3">
+                <TextBlock Text="لیترِ قابلِ دریافت (مجاز)" Classes="label pllabel" />
+                <TextBlock Text="{Binding ConvAllowedText}" FontWeight="ExtraBold" FontSize="16" TextAlignment="Center"
+                           Foreground="{DynamicResource Pump.Ink.Ok}" />
+              </StackPanel>
+            </Border>
+            <Border Grid.Column="4" Classes="panel" Classes.overliters="{Binding ConvOver}" Padding="10,8">
+              <TextBlock Text="{Binding ConvResultText}" FontWeight="Bold" FontSize="14" TextWrapping="Wrap"
+                         TextAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <Button Grid.Column="6" Classes="accent" Content="➕ ثبتِ تبدیل" MinWidth="120" VerticalAlignment="Stretch"
+                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                    Command="{Binding SaveConversionCommand}" />
+          </Grid>
+
+          <!-- ══ تاریخچهٔ تبدیل‌ها — دائمی، با صافیِ سال و ماه و تیل و جست‌وجو ══ -->
+          <Border Classes="panel" Padding="12,10">
+            <StackPanel Spacing="8">
+              <WrapPanel Orientation="Horizontal">
+                <WrapPanel.Styles>
+                  <Style Selector="WrapPanel > :is(Control)">
+                    <Setter Property="Margin" Value="0,0,10,6" />
+                    <Setter Property="VerticalAlignment" Value="Center" />
+                  </Style>
+                </WrapPanel.Styles>
+                <TextBlock Text="🕘 تاریخچهٔ تبدیل‌ها" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" />
+                <ComboBox ItemsSource="{Binding ConvPicker.Years}" SelectedItem="{Binding ConvPicker.Year}"
+                          IsVisible="{Binding ConvPicker.HasYears}" c:PickerWidth.Stable="True"
+                          ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="110" />
+                <ComboBox ItemsSource="{Binding ConvPicker.Months}" SelectedItem="{Binding ConvPicker.Selected}"
+                          c:PickerWidth.Stable="True" ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="150" />
+                <ComboBox ItemsSource="{Binding ConvFuelFilters}" SelectedItem="{Binding ConvFuelFilter}" MinWidth="170" />
+                <TextBox Classes="plbox" Text="{Binding ConvSearch}" Watermark="🔍 تاریخ، وضعیت…" MinWidth="170" />
+                <Button Content="📄 PDF و 🖨 چاپ" Command="{Binding PdfConversionsCommand}" />
+              </WrapPanel>
+              <TextBlock Text="{Binding ConvSummary}" Classes="muted" FontSize="12" />
+              <ItemsControl ItemsSource="{Binding ConvRows}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ConversionRow">
+                    <Border Classes="convrow" Classes.loss="{Binding IsLoss}" Padding="10,6" Margin="0,0,0,6">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="13" />
+                        <TextBlock Text="{Binding Source}" FontSize="12" />
+                        <TextBlock Text="{Binding Target}" FontSize="12" />
+                        <TextBlock Text="{Binding Result}" FontSize="12.5" FontWeight="SemiBold" />
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
         </StackPanel>
       </Border>
 

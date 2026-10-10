@@ -30,6 +30,7 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         : base("profit", "profit", "مفاد / ضرر / اتحادیه")
     {
         _host = host;
+        InitConversion();
         //  «همهٔ ماه‌ها» همان «همهٔ زمان‌ها»ی پیش‌فرض است — عددی که کاربر تا
         //  امروز می‌دید، بی هیچ تغییری، تا خودش دوره‌ای برگزیند.
         Picker = new YearMonthPicker(k =>
@@ -125,6 +126,7 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
                      nameof(Veiled), nameof(PlanVeiled), nameof(VeilText), nameof(CanRelock), nameof(NetShown), nameof(NetCaptionShown),
                      nameof(IncomeTitleShown), nameof(IncomeShown), nameof(ExpenseShown), nameof(TrendShown),
                      nameof(TrendBrushShown), nameof(IncomeBrushShown), nameof(ExpenseBrushShown),
+                     nameof(RealRows), nameof(RealNote),
                  })
             OnPropertyChanged(n);
     }
@@ -303,6 +305,9 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         _period = ProfitPeriod.FromKey(Picker.SelectedKey);
 
         await ComputeAsync();
+        //  🔁 تبدیلِ تیل: قیمت‌های خودکار از همان خریدهای مخزن، و تاریخچه
+        FillConvPrices(force: false);
+        await LoadConversionsAsync();
     }
 
     /// <summary>
@@ -390,11 +395,60 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         UnionDiesel = d == 0 ? "" : Shamsi.Money(d);
         _filling = false;
 
+        //  💰 سودِ واقعی (۱۴۰۵/۰۷/۱۸): همان لیترها × قیمتِ خریدِ واقعیِ مخزن، منهای مصارف
+        var prices = await _host.StorageData.BuyPricesAsync();
+        _prices = prices;
+        if (period != _period) return;
+        _real = RealProfitService.Compute(lines, prices,
+            _host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.BuyPerLiterPetrol),
+            _host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.BuyPerLiterDiesel),
+            expenseSum);
+        OnPropertyChanged(nameof(RealRows));
+        OnPropertyChanged(nameof(RealNote));
+
         PeriodText = PeriodLabel(period);
         BulkSumText = Money(extraSum);
         ShowSources(lines, ProfitLossService.Breakdown(input));
         Recalc();
     }
+
+    // ══ 💰 سودِ واقعی — کنارِ کادرِ نمودار (۱۴۰۵/۰۷/۱۸) ═══════════════════════
+    //  شرحِ فرمول بالای ‎RealProfitService‎. ⛔ پشتِ همان پرده: تا پرده هست، عددِ واقعی
+    //  به صفحه نمی‌رسد (همان قاعدهٔ ‎NetShown‎).
+    private RealProfit _real;
+
+    public IReadOnlyList<RealProfitRow> RealRows => Veiled
+        ? new[]
+        {
+            new RealProfitRow("💵 فروشِ تیل", VeilMoney, "Pump.Muted"),
+            new RealProfitRow("🏷️ بهای خریدِ همان لیترها", VeilMoney, "Pump.Muted"),
+            new RealProfitRow("📊 سودِ ناخالص", VeilMoney, "Pump.Muted"),
+            new RealProfitRow("💸 هزینه‌ها (مصارف)", VeilMoney, "Pump.Muted"),
+            new RealProfitRow("✅ سودِ خالص", VeilMoney, "Pump.Muted", true),
+        }
+        : new[]
+        {
+            new RealProfitRow("💵 فروشِ تیل (مبلغِ کل)", Money(_real.Sales), "Pump.Info"),
+            new RealProfitRow("🏷️ بهای خریدِ همان لیترها", Money(_real.Cost), "Pump.Warn"),
+            new RealProfitRow("⛽ پطرول — سودِ هر لیتر", PerLiterText(_real.Petrol), "Pump.Accent"),
+            new RealProfitRow("🟤 دیزل — سودِ هر لیتر", PerLiterText(_real.Diesel), "Pump.Accent"),
+            new RealProfitRow("📊 سودِ ناخالص (فروش − خرید)", Signed(_real.Gross), _real.Gross >= 0 ? "Pump.Ok" : "Pump.Danger"),
+            new RealProfitRow("💸 هزینه‌ها (مصارف)", Money(_real.Expenses), "Pump.Danger"),
+            new RealProfitRow("✅ سودِ خالص (ناخالص − هزینه‌ها)", Signed(_real.Net), _real.Net >= 0 ? "Pump.Ok" : "Pump.Danger", true),
+        };
+
+    /// <summary>هشدارِ لیترهایی که قیمتِ خرید ندارند — یا خالی.</summary>
+    public string RealNote => Veiled || _real.UnpricedLiters == 0 ? ""
+        : $"⚠️ {Liters(_real.UnpricedLiters)} لیتر قیمتِ خرید ندارد (در مخزن خریدی از آن تیل ثبت نشده) — در بهای خرید شمرده نشد.";
+
+    private static string PerLiterText(RealFuel f) =>
+        f.Liters == 0 ? "فروشی نیست"
+        : f.PricedLiters == 0 ? $"فروش {Rate(f.SalePerLiter)} · قیمتِ خرید ثبت نشده"
+        : $"فروش {Rate(f.SalePerLiter)} − خرید {Rate(f.BuyPerLiter)} = {Rate(f.ProfitPerLiter)}";
+
+    private static string Rate(decimal v) => Shamsi.Money(Math.Round(v, 2), 2);
+
+    private static string Signed(decimal v) => (v < 0 ? "−" : "") + Money(Math.Abs(v));
 
     /// <summary>سقفِ سطرهای «از کجا آمد» — تازه‌ترین‌ها؛ جمع‌ها همیشه از همه.</summary>
     public const int SourceLimit = 120;
@@ -476,3 +530,6 @@ public sealed class ProfitSourceLine
     public string Detail { get; }
     public string Total { get; }
 }
+
+/// <summary>یک سطرِ کارتِ «💰 سودِ واقعی».</summary>
+public sealed record RealProfitRow(string Label, string Value, string BrushKey, bool Strong = false);

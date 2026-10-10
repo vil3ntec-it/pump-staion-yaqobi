@@ -485,6 +485,38 @@ public sealed class CompanyDataService
     /// پشتش باشد — همان چیزی که ‎ExchangeCompanySyncService.UnlinkAsync‎ برای
     /// صرافی می‌گیرد و این‌جا نبود.
     /// </summary>
+    /// <summary>
+    /// ══ شرکتی که این خرید همین حالا در حسابش نشسته (۱۴۰۵/۰۷/۱۸) ══════════════
+    /// گزارشِ صاحب ریپو: «هنگامِ ویرایشِ خریدِ ثبت‌شده، تغییرِ نامِ شرکت یا قیمت
+    /// باعثِ ایجادِ شرکتِ جدید می‌شود.» ویرایش هر بار شرکت را از روی نامِ تایپی
+    /// <b>از نو</b> می‌جست و پیوندِ موجود را نمی‌دید. این همان پیوند است:
+    /// شناسه و نامِ شرکت، نامِ فروشنده‌ای که ردیف با آن نوشته شد، و این‌که آیا
+    /// شرکت جز ردیف‌های همین خرید ردیفِ پرِ دیگری هم دارد.
+    /// </summary>
+    public async Task<PurchaseLink?> PurchaseLinkAsync(string? purchaseId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(purchaseId)) return null;
+        await using var db = _dbf.Create();
+        var row = await db.CompanyRows.AsNoTracking()
+                          .Where(r => r.SourcePurchaseId == purchaseId)
+                          .OrderBy(r => r.Id).FirstOrDefaultAsync(ct);
+        if (row is null) return null;
+        var company = await db.TilCompanies.AsNoTracking().FirstOrDefaultAsync(c => c.Id == row.CompanyId, ct);
+        if (company is null) return null;
+        var others = await db.CompanyRows.AsNoTracking()
+                             .Where(r => r.CompanyId == company.Id
+                                      && (r.SourcePurchaseId == null || r.SourcePurchaseId != purchaseId))
+                             .ToListAsync(ct);
+        return new PurchaseLink(company.Id, company.Name ?? "", row.Name ?? "", others.Any(r => !r.IsEmpty));
+    }
+
+    /// <summary>همهٔ شرکت‌ها، بی ردیف — برای تطبیقِ دقیقِ نام.</summary>
+    public async Task<List<TilCompany>> CompaniesOnlyAsync(CancellationToken ct = default)
+    {
+        await using var db = _dbf.Create();
+        return await db.TilCompanies.AsNoTracking().ToListAsync(ct);
+    }
+
     /// <summary>این خرید همین حالا ردیفی در حسابِ شرکتی دارد؟</summary>
     public async Task<bool> HasPurchaseRowAsync(string? purchaseId, CancellationToken ct = default)
     {
@@ -506,3 +538,7 @@ public sealed class CompanyDataService
         return rows.Count;
     }
 }
+
+/// <summary>پیوندِ یک خریدِ مخزن با حسابِ شرکت — ‎<see cref="CompanyDataService.PurchaseLinkAsync"/>‎.</summary>
+public sealed record PurchaseLink(long CompanyId, string CompanyName, string RowName, bool HasOtherRows);
+

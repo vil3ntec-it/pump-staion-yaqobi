@@ -160,7 +160,8 @@ public partial class ExcelGrid
             //     ‎←‎ خانهٔ سمتِ چپ    ⇒ ایندکسِ بیشتر
             case Key.Left:
             case Key.Right:
-                MoveColumn(e.Key == Key.Right ? -1 : +1, shift);
+                if (!MoveColumn(e.Key == Key.Right ? -1 : +1, shift) && !shift)
+                    CrossToNeighbour(e.Key);
                 e.Handled = true;
                 return;
 

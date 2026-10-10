@@ -99,6 +99,9 @@ public sealed class AppHost
             Permission.ManagerOnly);
         ExtraIncomeLedger = new LedgerService<ExtraIncome>(Db, Permissions, Trash, "extraincome",
             r => (r.Seller ?? "") + " — " + Shamsi.Money(r.Amount));
+        // 🔁 تبدیلِ تیل (۱۴۰۵/۰۷/۱۸) — تاریخچهٔ دائمی؛ صفحه هیچ دکمهٔ حذفی ندارد.
+        FuelConversionLedger = new LedgerService<FuelConversion>(Db, Permissions, Trash, "fuelconv",
+            r => Shamsi.Money(r.Qty) + " لیتر — " + (r.Status ?? ""));
     }
 
     public PumpDbFactory Db { get; }
@@ -446,6 +449,7 @@ public sealed class AppHost
     public LedgerService<Expense> ExpenseLedger { get; }
     public LedgerService<RetailRow> RetailLedger { get; }
     public LedgerService<ExtraIncome> ExtraIncomeLedger { get; }
+    public LedgerService<FuelConversion> FuelConversionLedger { get; }
 
     /// <summary>نمونهٔ زندهٔ برنامه.</summary>
     public static AppHost Current { get; private set; } = null!;

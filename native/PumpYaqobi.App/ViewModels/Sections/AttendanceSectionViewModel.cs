@@ -100,9 +100,24 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
 
     internal AttendanceService Calc => _host.AttendanceCalc;
 
-    /// <summary>دوازده ماهِ اخیر — کافی است، و فهرست را از دیتابیس نمی‌خواهد.</summary>
-    public ObservableCollection<string> Months { get; } = new(
-        Enumerable.Range(0, 12).Select(i => Shamsi.MonthOf(AppClock.Now.AddMonths(-i))));
+    /// <summary>
+    /// ماه‌های کشویی — ماهِ جاری، و از ۱۴۰۵/۰۷/۱۸ هر ماهی که حاضری، پرداختِ معاش یا ورق دارد
+    /// (‎RefreshMonthsAsync‎). تا امروز فقط دوازده ماهِ اخیرِ ساعت بود: ماهِ کهنه‌تر با داده
+    /// برگزیدنی نبود و ماهِ بی‌داده فهرست می‌شد.
+    /// </summary>
+    public ObservableCollection<string> Months { get; } = new(new[] { Shamsi.ThisMonth() });
+
+    private async Task RefreshMonthsAsync()
+    {
+        var set = new HashSet<string>(StringComparer.Ordinal) { Shamsi.ThisMonth(), Month };
+        foreach (var m in await _host.Attendance.MonthsAsync()) set.Add(m);
+        foreach (var m in await _host.Tools.StaffShortMonthsAsync()) if (m.Length == 7) set.Add(m);
+        var list = set.Where(m => m.Length == 7).OrderByDescending(m => m, StringComparer.Ordinal).ToList();
+        if (list.SequenceEqual(Months)) return;
+        Months.Clear();
+        foreach (var m in list) Months.Add(m);
+        Picker.Load(Months, Month);
+    }
 
     public ObservableCollection<StaffViewModel> Staff { get; } = new();
     /// <summary>⚠️ ‎BulkRows‎: پر شدنِ جدول یک خبر می‌دهد نه ‎n‎ خبر
@@ -148,11 +163,21 @@ public sealed partial class AttendanceSectionViewModel : SectionViewModel
         var staff = await _host.Attendance.StaffAsync();
         var rows = await _host.Attendance.RowsAsync(Month);
         var pays = await _host.Attendance.PaymentsAsync();
-        var shorts = await _host.Attendance.ShortagesAsync();
+        await RefreshMonthsAsync();
+
+        //  ⛔ کمبودیِ کارتِ هر کارمند فقط از ورق‌های **همین ماه** (۱۴۰۵/۰۷/۱۸) — همان عددِ
+        //  «کمبودی کارمندان» (‎StaffShortPeriodAsync‎، منهای رسیدهای همین ماه)، با نامِ نرمال‌شده.
+        //  پیش از این از جدولِ ‎StaffShortages‎ می‌آمد که هیچ جای برنامه در آن نمی‌نوشت.
+        var (shortRows, _, _) = await _host.Tools.StaffShortPeriodAsync(ProfitPeriod.FromKey(Month));
+        var shortBy = shortRows.ToDictionary(r => r.Key, r => r.RemainShort);
 
         Staff.Clear();
         foreach (var s in staff)
-            Staff.Add(new StaffViewModel(s, Calc.Month(s, rows, pays, shorts, Month), this));
+        {
+            var m = Calc.Month(s, rows, pays, Array.Empty<StaffShortage>(), Month);
+            m = m with { Shortage = shortBy.TryGetValue(PostingService.NormFa(s.Name ?? ""), out var sh) ? sh : 0m };
+            Staff.Add(new StaffViewModel(s, m, this));
+        }
 
         var byId = staff.ToDictionary(s => s.Id, s => s.Name ?? "");
         using (Rows.Batch())

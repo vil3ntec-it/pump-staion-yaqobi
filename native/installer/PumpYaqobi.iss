@@ -220,6 +220,20 @@ Root: HKA; Subkey: "Software\Classes\.pumpkey\OpenWithProgids"; ValueType: strin
 Root: HKA; Subkey: "Software\Classes\PumpYaqobi.Key"; ValueType: string; ValueName: ""; ValueData: "کدِ اشتراکِ {#AppName}"; Flags: uninsdeletekey
 Root: HKA; Subkey: "Software\Classes\PumpYaqobi.Key\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\PumpYaqobi.ico"
 Root: HKA; Subkey: "Software\Classes\PumpYaqobi.Key\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"" ""%1"""
+; ── بکاپ‌های پوشهٔ «backups» (۱۴۰۵/۰۷/۱۸) ── «بکاپ‌ها آیکون ندارند و باز نمی‌شوند»
+;   .pyq ⇒ پشتیبانِ رمزشدهٔ خودِ برنامه — آیکون و دوبار-کلیک ⇒ «مشاهدهٔ بکاپ» (فقط دیدن)
+;   .db  ⇒ فقط در «Open with»؛ پیش‌فرضِ .db فقط وقتی گرفته می‌شود که هیچ برنامهٔ دیگری
+;          صاحبش نیست (NoDbOwner) — فایلِ .dbِ برنامه‌های دیگر دست نمی‌خورد.
+Root: HKA; Subkey: "Software\Classes\.pyq"; ValueType: string; ValueName: ""; ValueData: "PumpYaqobi.Backup"; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\.pyq\OpenWithProgids"; ValueType: string; ValueName: "PumpYaqobi.Backup"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\.db\OpenWithProgids"; ValueType: string; ValueName: "PumpYaqobi.Backup"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\.db"; ValueType: string; ValueName: ""; ValueData: "PumpYaqobi.Backup"; Flags: uninsdeletevalue; Check: NoDbOwner
+Root: HKA; Subkey: "Software\Classes\PumpYaqobi.Backup"; ValueType: string; ValueName: ""; ValueData: "بکاپِ {#AppName}"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\PumpYaqobi.Backup\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\PumpYaqobi.ico"
+Root: HKA; Subkey: "Software\Classes\PumpYaqobi.Backup\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"" ""%1"""
+Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\SupportedTypes"; ValueType: string; ValueName: ".pyq"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\SupportedTypes"; ValueType: string; ValueName: ".db"; ValueData: ""
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.pyq\UserChoice"; ValueType: none; Flags: deletekey
 Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "{#AppName}"; Flags: uninsdeletekey
 Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\SupportedTypes"; ValueType: string; ValueName: ".pumpyaqobi"; ValueData: ""
 Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\SupportedTypes"; ValueType: string; ValueName: ".pumpkey"; ValueData: ""
@@ -470,6 +484,16 @@ end;
 //  همیشه ‎/SILENT /RESTARTAPPLICATIONS‎ می‌فرستادند — پس هر کامپیوتری که از
 //  نسخهٔ کهنه به‌روز می‌شد، برنامه‌اش بسته می‌ماند. نصبِ بی‌صدای دیگر (آزمون‌ها،
 //  ‎/FRESH‎) هیچ‌کدام را ندارد و برنامه را باز نمی‌کند.
+// ⛔ پیش‌فرضِ .db فقط وقتی هیچ برنامهٔ دیگری صاحبش نیست (۱۴۰۵/۰۷/۱۸)
+function NoDbOwner(): Boolean;
+var
+  V: String;
+begin
+  Result := True;
+  if RegQueryStringValue(HKCR, '.db', '', V) then
+    Result := (V = '') or (V = 'PumpYaqobi.Backup');
+end;
+
 function WantRelaunch(): Boolean;
 begin
   Result := ExpandConstant('{param:RELAUNCH|0}') = '1';

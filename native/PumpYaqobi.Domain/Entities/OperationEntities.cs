@@ -492,6 +492,13 @@ public class StaffShortSettle : EntityBase, ILedgerRow
     public string? DateShamsi { get; set; }
     public int DateKey { get; set; }
     public string? MonthKey { get; set; }
+    /// <summary>
+    /// ماهی که این رسید کمبودیِ **آن** را تسویه می‌کند («1405/07») — خالی یعنی «همهٔ ماه‌ها»
+    /// (رسیدهای کهنه و رسیدی که روی «همهٔ ماه‌ها» گرفته شد). (۱۴۰۵/۰۷/۱۸)
+    /// </summary>
+    public string? ForMonth { get; set; }
+    /// <summary>ماندهٔ همان دوره پیش از این رسید — برای خودِ رسیدِ چاپی.</summary>
+    public decimal RemainBefore { get; set; }
 }
 
 public enum StaffSettleKind { Short = 1, Excess = 2 }
@@ -542,6 +549,43 @@ public class ExtraIncome : EntityBase, ILedgerRow
     public decimal Market { get; set; }
     public string? Seller { get; set; }
     public decimal Amount { get; set; }
+    public string? Note { get; set; }
+}
+
+/// <summary>
+/// ══ تبدیلِ تیل — پطرول ⇄ دیزل (۱۴۰۵/۰۷/۱۸) ══════════════════════════════════
+/// هر تبدیل یک ردیفِ دائمی: ارزشِ تیلِ مبدأ با قیمتِ خریدِ واقعیِ مخزن ⇐ تقسیم بر قیمتِ
+/// خریدِ هر لیترِ تیلِ مقصد ⇐ لیترِ مجاز. همهٔ عددها همان لحظهٔ ثبت نوشته می‌شوند، پس
+/// عوض شدنِ بعدیِ قیمت‌ها گذشته را عوض نمی‌کند. محاسبه: ‎FuelConversionService‎.
+/// </summary>
+public class FuelConversion : EntityBase, ILedgerRow
+{
+    public string? DateShamsi { get; set; }
+    public int DateKey { get; set; }
+    public string? MonthKey { get; set; }
+    /// <summary>ساعتِ ثبت («14:05»).</summary>
+    public string? TimeText { get; set; }
+    public FuelType FromFuel { get; set; } = FuelType.Petrol;
+    public FuelType ToFuel { get; set; } = FuelType.Diesel;
+    /// <summary>لیترِ تیلِ مبدأ.</summary>
+    public decimal Qty { get; set; }
+    /// <summary>قیمتِ خریدِ هر لیترِ مبدأ.</summary>
+    public decimal FromPrice { get; set; }
+    public string? FromPriceSource { get; set; }
+    /// <summary>ارزشِ کلِ مبدأ = لیتر × قیمتِ خرید.</summary>
+    public decimal FromValue { get; set; }
+    /// <summary>قیمتِ خریدِ هر لیترِ مقصد.</summary>
+    public decimal ToPrice { get; set; }
+    public string? ToPriceSource { get; set; }
+    /// <summary>لیترِ مقصدِ قابلِ دریافت = ارزش ÷ قیمتِ مقصد.</summary>
+    public decimal AllowedLiters { get; set; }
+    /// <summary>لیترِ واقعاً تحویل‌شده.</summary>
+    public decimal DeliveredLiters { get; set; }
+    /// <summary>تحویل − مجاز (مثبت یعنی اضافه داده شد).</summary>
+    public decimal DiffLiters { get; set; }
+    /// <summary>سود (+) یا ضرر (−) = (مجاز − تحویل) × قیمتِ مقصد.</summary>
+    public decimal ProfitLoss { get; set; }
+    public string? Status { get; set; }
     public string? Note { get; set; }
 }
 

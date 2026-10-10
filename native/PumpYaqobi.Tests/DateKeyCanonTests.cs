@@ -142,7 +142,7 @@ public class DateKeyCanonTests
             .Select(t => t.ClrType.Name).OrderBy(n => n, StringComparer.Ordinal).ToArray();
         Assert.Equal(new[]
         {
-            "DebtQuickReceipt", "ExchangeRow", "Expense", "ExtraIncome", "RateHistoryEntry",
+            "DebtQuickReceipt", "ExchangeRow", "Expense", "ExtraIncome", "FuelConversion", "RateHistoryEntry",
             "RetailRow", "SafeEntry", "StaffShortSettle", "TankDip", "TankerUnload",
         }, withMonth);
 

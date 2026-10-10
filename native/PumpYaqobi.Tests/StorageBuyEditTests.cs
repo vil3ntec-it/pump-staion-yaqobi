@@ -114,6 +114,92 @@ public class StorageBuyEditTests : IDisposable
         Assert.Empty(await RowsOf(dbf, p.LegacyId));
     }
 
+    // ══ ویرایشِ خریدِ پیوندخورده هیچ‌وقت شرکتِ تازه نمی‌سازد (۱۴۰۵/۰۷/۱۸) ══════
+
+    private static async Task<List<TilCompany>> Companies(PumpDbFactory dbf)
+    {
+        await using var db = dbf.Create();
+        return await db.TilCompanies.AsNoTracking().ToListAsync();
+    }
+
+    [Fact]
+    public async Task VirayesheGheymat_HamanSherkat_BiSherkateTaze()
+    {
+        var (storage, _, _, dbf) = Host();
+        var p = await storage.AddPurchaseAsync(Buy("حمید", 1000m, 70m));
+        var before = await Companies(dbf);
+        Assert.Single(before);
+
+        // شرکت در بخشِ شرکت‌ها نامش عوض شد ⇒ ویرایشِ قیمت باز همان شرکت
+        await using (var db = dbf.Create())
+        {
+            var c = await db.TilCompanies.FirstAsync();
+            c.Name = "شرکت نفتی ستاره";
+            await db.SaveChangesAsync();
+        }
+        p.PriceTon = 1200m;
+        await storage.UpdatePurchaseAsync(p);
+
+        var after = await Companies(dbf);
+        Assert.Single(after);
+        Assert.Equal("شرکت نفتی ستاره", after[0].Name);
+        var rows = await RowsOf(dbf, p.LegacyId);
+        Assert.Single(rows);
+        Assert.Equal(after[0].Id, rows[0].CompanyId);
+        Assert.Equal(1200m, rows[0].Usd);
+    }
+
+    [Fact]
+    public async Task VirayesheNam_HamanSherkatNamashDorostMishavad()
+    {
+        var (storage, _, _, dbf) = Host();
+        var p = await storage.AddPurchaseAsync(Buy("شرکت الف", 1000m, 70m));
+        var id = (await Companies(dbf)).Single().Id;
+
+        p.Seller = "شرکت کاملاً دیگر";
+        await storage.UpdatePurchaseAsync(p);
+
+        var after = await Companies(dbf);
+        Assert.Single(after);
+        Assert.Equal(id, after[0].Id);
+        Assert.Equal("شرکت کاملاً دیگر", after[0].Name);
+        Assert.Equal(id, (await RowsOf(dbf, p.LegacyId)).Single().CompanyId);
+    }
+
+    [Fact]
+    public async Task VirayesheNam_BeSherkateMojud_JabejaMishavad_BiSherkateTaze()
+    {
+        var (storage, _, _, dbf) = Host();
+        var a = await storage.AddPurchaseAsync(Buy("شرکت الف", 1000m, 70m));
+        await storage.AddPurchaseAsync(Buy("شرکت ب", 1000m, 70m));
+        var b = (await Companies(dbf)).Single(c => c.Name == "شرکت ب");
+
+        a.Seller = "شرکت ب";
+        await storage.UpdatePurchaseAsync(a);
+
+        Assert.Equal(2, (await Companies(dbf)).Count);
+        Assert.Equal(b.Id, (await RowsOf(dbf, a.LegacyId)).Single().CompanyId);
+    }
+
+    [Fact]
+    public async Task VirayesheNam_SherkatiKeKharideDigarDarad_NamashDastNemikhorad()
+    {
+        var (storage, _, _, dbf) = Host();
+        var a = await storage.AddPurchaseAsync(Buy("شرکت الف", 1000m, 70m));
+        await storage.AddPurchaseAsync(Buy("شرکت الف", 900m, 70m));
+        var id = (await Companies(dbf)).Single().Id;
+
+        a.Seller = "نامِ غلطِ تازه";
+        await storage.UpdatePurchaseAsync(a);
+
+        var after = await Companies(dbf);
+        Assert.Single(after);
+        Assert.Equal("شرکت الف", after[0].Name);
+        var row = (await RowsOf(dbf, a.LegacyId)).Single();
+        Assert.Equal(id, row.CompanyId);
+        Assert.Equal("نامِ غلطِ تازه", row.Name);
+    }
+
     [Fact]
     public void Sors_FaghatVaznVaSaghlatLazemAnd_VaGhalamRuyeKart()
     {
