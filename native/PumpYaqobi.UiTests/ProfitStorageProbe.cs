@@ -281,7 +281,7 @@ internal static class ProfitStorageProbe
         //  خاصیتی که کاربر تایپ می‌کند (بی هیچ نوشتنی در دیتابیس)، و دو کادرِ
         //  باقی‌مانده همان دو نرخِ اتحادیه‌اند.
         p.BulkQty = "11"; p.BulkBuy = "22"; p.BulkMarket = "33"; p.ManualIncome = "44"; p.ManualExpense = "55";
-        p.ConvQty = "66"; p.ConvFromPrice = "77"; p.ConvToPrice = "88"; p.ConvDelivered = "99"; p.ConvSearch = "zz";
+        p.ConvQty = "66"; p.ConvPetrolPrice = "77"; p.ConvDieselPrice = "88"; p.ConvDelivered = "99"; p.ConvSearch = "zz";
         Settle(win);
         TextBox Box(string text) => boxes.First(b => b.Text == text);
         var qty = Box("11"); var buy = Box("22"); var mkt = Box("33");
@@ -332,7 +332,7 @@ internal static class ProfitStorageProbe
         Settle(win);
         Shot(win, shots, "03-profit-boxes");
         p.BulkQty = p.BulkBuy = p.BulkMarket = p.ManualIncome = p.ManualExpense = "";
-        p.ConvQty = p.ConvFromPrice = p.ConvToPrice = p.ConvDelivered = p.ConvSearch = "";
+        p.ConvQty = p.ConvPetrolPrice = p.ConvDieselPrice = p.ConvDelivered = p.ConvSearch = "";
         Settle(win);
     }
 

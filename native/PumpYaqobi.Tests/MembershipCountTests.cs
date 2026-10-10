@@ -109,4 +109,29 @@ public class SyncBookkeepingVersionTests : IDisposable
         }
         Assert.True(PumpYaqobi.Persistence.PumpDbContext.Version > v0);
     }
+
+    /// <summary>
+    /// کارِ بلندِ پس‌زمینه (‎FixOldSales‎) در ‎QuietSaves‎ ‎Version‎ را با هر تکه بالا نمی‌برد — وگرنه
+    /// هر بخشِ بازشده همان لحظه از نو خوانده و ساخته می‌شد (۱۴۰۵/۰۷/۲۲) — و بیرونِ آن مثلِ همیشه.
+    /// </summary>
+    [Fact]
+    public void QuietSaves_VersionRaBalaNemibarad_BiruneshMibarad()
+    {
+        var dbf = new PumpDbFactory(_file);
+        dbf.EnsureReady();
+        var v0 = PumpYaqobi.Persistence.PumpDbContext.Version;
+        using (PumpYaqobi.Persistence.PumpDbContext.QuietSaves())
+        {
+            using var db = dbf.Create();
+            db.Debtors.Add(new Debtor { Name = "آرام", LegacyId = "q1" });
+            db.SaveChanges();
+        }
+        Assert.Equal(v0, PumpYaqobi.Persistence.PumpDbContext.Version);
+        using (var db = dbf.Create())
+        {
+            db.Debtors.Add(new Debtor { Name = "عادی", LegacyId = "q2" });
+            db.SaveChanges();
+        }
+        Assert.True(PumpYaqobi.Persistence.PumpDbContext.Version > v0);
+    }
 }

@@ -22,13 +22,15 @@ public sealed partial class ProfitSectionViewModel
 {
     private List<BuyPrice> _prices = new();
     private bool _convFilling;
-    private string _fromSource = "";
-    private string _toSource = "";
+    private string _petrolSource = "";
+    private string _dieselSource = "";
 
+    //  ⚠️ کادرهای قیمت به نامِ تیل‌اند، نه «مبدأ/مقصد» (۱۴۰۵/۰۷/۱۹): عوض کردنِ جهت
+    //  قیمتِ دستیِ نوشته‌شده را پاک نمی‌کند و همیشه معلوم است کدام فی مالِ کدام تیل است.
     [ObservableProperty] private string _convQty = "";
     [ObservableProperty] private bool _convPetrolToDiesel = true;
-    [ObservableProperty] private string _convFromPrice = "";
-    [ObservableProperty] private string _convToPrice = "";
+    [ObservableProperty] private string _convPetrolPrice = "";
+    [ObservableProperty] private string _convDieselPrice = "";
     [ObservableProperty] private string _convDelivered = "";
 
     public FuelType ConvFrom => ConvPetrolToDiesel ? FuelType.Petrol : FuelType.Diesel;
@@ -36,75 +38,104 @@ public sealed partial class ProfitSectionViewModel
     private static string FuelName(FuelType f) => f == FuelType.Diesel ? "🟤 دیزل" : "⛽ پطرول";
     public string ConvFromName => FuelName(ConvFrom);
     public string ConvToName => FuelName(ConvTo);
+    /// <summary>دکمهٔ «نوعِ تیل» — زدنش جهت را برعکس می‌کند (همان دکمهٔ ۳.۱.۲۵۸ که صاحب ریپو خواست بماند).</summary>
     public string ConvDirectionText => FuelName(ConvFrom) + " ⇐ " + FuelName(ConvTo);
-    public string ConvQtyLabel => "مقدارِ " + FuelName(ConvFrom) + " (لیتر)";
-    public string ConvFromPriceLabel => "قیمتِ خریدِ هر لیترِ " + FuelName(ConvFrom);
-    public string ConvToPriceLabel => "قیمتِ خریدِ هر لیترِ " + FuelName(ConvTo);
-    public string ConvDeliveredLabel => FuelName(ConvTo) + "ِ تحویل‌شده (لیتر)";
-    public string ConvFromSourceText => SourceText(_fromSource);
-    public string ConvToSourceText => SourceText(_toSource);
 
-    private static string SourceText(string s) => s.Length == 0 ? "قیمتی ثبت نشده — دستی بنویسید" : "منبع: " + s;
+    public string ConvQtyLabel => "مقدارِ تیل — " + FuelName(ConvFrom) + " (لیتر)";
+    public string ConvDeliveredLabel => FuelName(ConvTo) + "ِ داده‌شده (لیتر)";
+    public string ConvPetrolSourceText => SourceText(_petrolSource);
+    public string ConvDieselSourceText => SourceText(_dieselSource);
+    private string ConvFromPrice => ConvFrom == FuelType.Petrol ? ConvPetrolPrice : ConvDieselPrice;
+    private string ConvToPrice => ConvTo == FuelType.Petrol ? ConvPetrolPrice : ConvDieselPrice;
+    private string FromSource => ConvFrom == FuelType.Petrol ? _petrolSource : _dieselSource;
+    private string ToSource => ConvTo == FuelType.Petrol ? _petrolSource : _dieselSource;
+
+    private static string SourceText(string s) => s.Length == 0 ? "⚠️ خریدی در مخزن نیست — دستی بنویسید" : "منبع: " + s;
 
     [ObservableProperty] private string _convValueText = "—";
     [ObservableProperty] private string _convAllowedText = "—";
+    [ObservableProperty] private string _convDueText = "—";
+    [ObservableProperty] private string _convDeliveredHint = "همان مقدارِ حق";
     [ObservableProperty] private string _convResultText = "";
     [ObservableProperty] private bool _convOver;
+    [ObservableProperty] private bool _convUnder;
     [ObservableProperty] private bool _convReady;
 
     partial void OnConvQtyChanged(string value) => ConvRecalc();
     partial void OnConvDeliveredChanged(string value) => ConvRecalc();
-    partial void OnConvFromPriceChanged(string value)
+    partial void OnConvPetrolPriceChanged(string value)
     {
-        if (!_convFilling) { _fromSource = "دستی"; OnPropertyChanged(nameof(ConvFromSourceText)); }
+        if (!_convFilling) { _petrolSource = "دستی"; OnPropertyChanged(nameof(ConvPetrolSourceText)); }
         ConvRecalc();
     }
-    partial void OnConvToPriceChanged(string value)
+    partial void OnConvDieselPriceChanged(string value)
     {
-        if (!_convFilling) { _toSource = "دستی"; OnPropertyChanged(nameof(ConvToSourceText)); }
+        if (!_convFilling) { _dieselSource = "دستی"; OnPropertyChanged(nameof(ConvDieselSourceText)); }
         ConvRecalc();
     }
     partial void OnConvPetrolToDieselChanged(bool value)
     {
         foreach (var n in new[] { nameof(ConvFrom), nameof(ConvTo), nameof(ConvFromName), nameof(ConvToName),
-                                  nameof(ConvDirectionText), nameof(ConvQtyLabel), nameof(ConvFromPriceLabel),
-                                  nameof(ConvToPriceLabel), nameof(ConvDeliveredLabel) })
+                                  nameof(ConvDirectionText), nameof(ConvQtyLabel),
+                                  nameof(ConvDeliveredLabel) })
             OnPropertyChanged(n);
-        FillConvPrices(force: true);
+        ConvRecalc();
     }
 
     [RelayCommand]
     private void ToggleConvDirection() => ConvPetrolToDiesel = !ConvPetrolToDiesel;
 
     /// <summary>
-    /// قیمتِ خرید از مخزن: تازه‌ترین خریدِ همان تیل تا امروز (‎RealProfitService.PriceAt‎)، وگرنه
-    /// فیِ خریدِ ذخیره‌شده. ⛔ قیمتی که کاربر دستی نوشته با بازخوانیِ صفحه پاک نمی‌شود —
-    /// فقط با عوض کردنِ جهت.
+    /// تازه‌ترین خریدِ همان تیل در مخزن تا امروز (همان قاعدهٔ ‎RealProfitService.PriceAt‎: اگر تا
+    /// امروز نبود، نخستین خریدِ پس از آن). ⛔ نرخِ اتحادیه هرگز این‌جا نمی‌آید.
+    /// </summary>
+    public static BuyPrice? LatestBuy(IEnumerable<BuyPrice> prices, FuelType fuel, int today)
+    {
+        BuyPrice? before = null, after = null;
+        foreach (var p in prices)
+        {
+            if (p.Fuel != fuel || p.PerLiter <= 0) continue;
+            if (p.DateKey <= today)
+            {
+                if (before is not { } b || (p.DateKey, p.Id).CompareTo((b.DateKey, b.Id)) > 0) before = p;
+            }
+            else if (after is not { } a || (p.DateKey, p.Id).CompareTo((a.DateKey, a.Id)) < 0) after = p;
+        }
+        return before ?? after;
+    }
+
+    /// <summary>
+    /// فیِ هر تیل از خریدهای مخزن (با تاریخِ همان خرید)، وگرنه فیِ خریدِ ذخیره‌شده، وگرنه خالی
+    /// تا دستی نوشته شود. ⛔ قیمتی که کاربر دستی نوشته با بازخوانیِ صفحه پاک نمی‌شود.
     /// </summary>
     private void FillConvPrices(bool force)
     {
         var today = Shamsi.Key(Shamsi.Today());
         (string Text, string Source) Auto(FuelType f)
         {
+            if (LatestBuy(_prices, f, today) is { } b)
+                return (Shamsi.Money(Math.Round(b.PerLiter, 2), 2), "خریدِ مخزن " + Shamsi.FromKey(b.DateKey));
             var fb = _host.Settings.GetDecimal(f == FuelType.Diesel
                 ? PumpYaqobi.Services.Data.SettingsService.BuyPerLiterDiesel
                 : PumpYaqobi.Services.Data.SettingsService.BuyPerLiterPetrol);
-            var fromStore = RealProfitService.PriceAt(_prices, f, today);
-            if (fromStore is { } v) return (Shamsi.Money(Math.Round(v, 2), 2), "خریدِ مخزن");
             if (fb > 0) return (Shamsi.Money(Math.Round(fb, 2), 2), "فیِ خریدِ ذخیره‌شده");
             return ("", "");
         }
         _convFilling = true;
         try
         {
-            if (force || _fromSource != "دستی") { var a = Auto(ConvFrom); ConvFromPrice = a.Text; _fromSource = a.Source; }
-            if (force || _toSource != "دستی") { var b = Auto(ConvTo); ConvToPrice = b.Text; _toSource = b.Source; }
+            if (force || _petrolSource != "دستی") { var a = Auto(FuelType.Petrol); ConvPetrolPrice = a.Text; _petrolSource = a.Source; }
+            if (force || _dieselSource != "دستی") { var b = Auto(FuelType.Diesel); ConvDieselPrice = b.Text; _dieselSource = b.Source; }
         }
         finally { _convFilling = false; }
-        OnPropertyChanged(nameof(ConvFromSourceText));
-        OnPropertyChanged(nameof(ConvToSourceText));
+        OnPropertyChanged(nameof(ConvPetrolSourceText));
+        OnPropertyChanged(nameof(ConvDieselSourceText));
         ConvRecalc();
     }
+
+    /// <summary>«↺ از مخزن» — هر دو فی دوباره از خریدهای مخزن.</summary>
+    [RelayCommand]
+    private void ResetConvPrices() => FillConvPrices(force: true);
 
     private ConversionResult _conv;
 
@@ -114,20 +145,29 @@ public sealed partial class ProfitSectionViewModel
                                               Shamsi.Num(ConvToPrice), Shamsi.Num(ConvDelivered));
         ConvReady = _conv.Ok;
         ConvOver = _conv.Ok && _conv.Over;
+        ConvUnder = _conv.Ok && _conv.Diff < 0;
         if (!_conv.Ok)
         {
             ConvValueText = "—";
             ConvAllowedText = "—";
-            ConvResultText = "مقدار و دو قیمتِ خرید را بنویسید.";
+            ConvDueText = "—";
+            ConvDeliveredHint = "همان مقدارِ حق";
+            ConvResultText = Shamsi.Num(ConvQty) <= 0
+                ? "مقدارِ تیل را بنویسید."
+                : "فیِ خریدِ " + (Shamsi.Num(ConvFromPrice) <= 0 ? ConvFromName : ConvToName) + " را بنویسید.";
             return;
         }
+        var to = ConvToName;
         ConvValueText = Money(_conv.FromValue);
-        ConvAllowedText = Lit(_conv.Allowed) + " لیتر " + FuelName(ConvTo);
+        ConvAllowedText = Lit(_conv.Allowed) + " لیتر " + to;
+        ConvDueText = ConvAllowedText + " · " + ConvValueText;
+        ConvDeliveredHint = Lit(_conv.Allowed);
+        var should = $"باید {Lit(_conv.Allowed)} لیتر {to} داده شود";
         ConvResultText = _conv.Over
-            ? $"⛔ لیتر اضافه داده شده: {Lit(_conv.ExtraLiters)} لیتر — ضررِ احتمالی {Money(_conv.Loss)}"
+            ? $"⛔ ضرر — لیتر اضافه داده شده: {Lit(_conv.ExtraLiters)} لیتر {to} ({Money(_conv.Loss)}) بیشتر از حق به مشتری رفته.\n{should}، نه {Lit(_conv.Delivered)}."
             : _conv.Diff < 0
-                ? $"✅ {Lit(-_conv.Diff)} لیتر کمتر از مجاز — سود {Money(_conv.ProfitLoss)}"
-                : "✅ درست — مقدارِ تحویل همان مقدارِ مجاز است";
+                ? $"✅ فایده — {Lit(-_conv.Diff)} لیتر کمتر از حق داده شد ({Money(_conv.ProfitLoss)}).\n{should}."
+                : $"✅ درست — نه ضرر، نه فایده.\n{should} (به ارزشِ {Money(_conv.FromValue)}).";
     }
 
     private static string Lit(decimal v) => Shamsi.Money(Math.Round(v, 2), 2);
@@ -136,13 +176,13 @@ public sealed partial class ProfitSectionViewModel
     [RelayCommand]
     private async Task SaveConversionAsync()
     {
-        if (Shamsi.FirstUnreadable(("مقدار", ConvQty), ("قیمتِ مبدأ", ConvFromPrice),
-                                   ("قیمتِ مقصد", ConvToPrice), ("تحویل‌شده", ConvDelivered)) is { } bad)
+        if (Shamsi.FirstUnreadable(("مقدار", ConvQty), ("فیِ پطرول", ConvPetrolPrice),
+                                   ("فیِ دیزل", ConvDieselPrice), ("تحویل‌شده", ConvDelivered)) is { } bad)
         { _host.Toast("«" + bad + "» عدد نیست — ثبت نشد.", ToastKind.Warn); return; }
         ConvRecalc();
-        if (!_conv.Ok) { _host.Toast("مقدار و هر دو قیمتِ خرید را بنویسید.", ToastKind.Warn); return; }
+        if (!_conv.Ok) { _host.Toast(ConvResultText, ToastKind.Warn); return; }
         if (_conv.Over && !await Dialogs.ConfirmAsync("لیتر اضافه داده شده",
-                $"{Lit(_conv.ExtraLiters)} لیتر بیشتر از مجاز ({Lit(_conv.Allowed)}) داده شده — ضررِ احتمالی {Money(_conv.Loss)}.\nبا همین ثبت شود؟"))
+                $"{Lit(_conv.ExtraLiters)} لیتر بیشتر از حق ({Lit(_conv.Allowed)}) داده شده — ضرر {Money(_conv.Loss)}.\nبا همین ثبت شود؟"))
             return;
 
         var now = AppClock.Now;
@@ -153,9 +193,9 @@ public sealed partial class ProfitSectionViewModel
             TimeText = now.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture),
             FromFuel = ConvFrom, ToFuel = ConvTo,
             Qty = Shamsi.Num(ConvQty),
-            FromPrice = Shamsi.Num(ConvFromPrice), FromPriceSource = _fromSource,
+            FromPrice = Shamsi.Num(ConvFromPrice), FromPriceSource = FromSource,
             FromValue = _conv.FromValue,
-            ToPrice = Shamsi.Num(ConvToPrice), ToPriceSource = _toSource,
+            ToPrice = Shamsi.Num(ConvToPrice), ToPriceSource = ToSource,
             AllowedLiters = _conv.Allowed, DeliveredLiters = _conv.Delivered,
             DiffLiters = _conv.Diff, ProfitLoss = _conv.ProfitLoss, Status = _conv.Status,
         });

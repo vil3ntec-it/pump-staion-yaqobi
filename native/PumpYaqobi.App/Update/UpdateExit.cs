@@ -34,4 +34,43 @@ public static class UpdateExit
 
     /// <summary>فقط برای آزمون‌ها.</summary>
     public static void TestReset() => _armedAt = null;
+
+    /// <summary>
+    /// ══ بستن برای نصب — و پروسه واقعاً می‌رود (۱۴۰۵/۰۷/۲۲، بارِ سوم) ══════════════
+    /// گزارشِ صاحب ریپو: «می‌گوید بسته و دوباره باز می‌شود؛ هرگز باز نمی‌شود و آپدیتی
+    /// نشده.» بستنِ پنجره با رفتنِ پروسه یکی نیست: هر کاری که پس از ‎Shutdown‎ هنوز
+    /// بدود، فایل‌های برنامه و قفلِ تک‌نمونه را نگه می‌دارد — نصاب یا اسکریپتِ زیپ
+    /// نمی‌تواند جایشان بنویسد و نمونهٔ تازه پشتِ قفل می‌ماند و بیرون می‌رود.
+    ///
+    /// ⛔ پس پس از <see cref="ForceAfter"/> پروسه با ‎Environment.Exit‎ می‌رود. نوشته‌ها
+    /// پیش از این روی دیسک نشسته‌اند (‎SaveGuard.FlushAllAsync‎ پیش از ‎Launch‎ و
+    /// ‎ShutdownRequested‎)، و تنها درِ «بستن برای نصب» همین است — دو صفحه، یک کد.
+    /// </summary>
+    public static readonly TimeSpan ForceAfter = TimeSpan.FromSeconds(6);
+
+    public static void CloseForInstall()
+    {
+        Arm();
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(1200);
+            //  نگهبان: هر چه پس از ‎Shutdown‎ ماند، پروسه را نگه ندارد
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(ForceAfter);
+                Environment.Exit(0);
+            });
+            try
+            {
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (Avalonia.Application.Current?.ApplicationLifetime
+                        is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime d)
+                        d.Shutdown();
+                    else Environment.Exit(0);
+                });
+            }
+            catch { Environment.Exit(0); }
+        });
+    }
 }

@@ -26,6 +26,12 @@ namespace PumpYaqobi.UiTests;
 /// باز کردنِ حسابی که پنج سال ردیف دارد، ورقِ پنج سال پیش، تاریخچه‌ها…
 ///
 ///     dotnet run --project PumpYaqobi.UiTests -- years
+///
+/// ریشه‌یابیِ یک کندی (۱۴۰۵/۰۷/۲۲)، بی دوازده دقیقه انتظار:
+///     PUMP_YEARS_ONLY=debt,invoices   فقط همین بخش‌ها
+///     PUMP_YEARS_REPEAT=3             هر زیربخش چند بارِ دیگر (بارِ دوم: ساختِ صفحه، شمارِ ردیف‌ها)
+///     PUMP_YEARS_SETTLED=1            اول کارِ پس‌زمینهٔ «فروشِ ورق‌های قدیم» تمام شود
+///     PUMP_YEARS_IDLE=40              و چند ثانیه بی‌کاری (کارهای روزانهٔ پس از ورود)
 /// </summary>
 internal static class YearsAudit
 {
@@ -112,12 +118,26 @@ internal static class YearsAudit
             Settle(win);
         });
 
+        if (Environment.GetEnvironmentVariable("PUMP_YEARS_SETTLED") == "1")
+        {
+            var fx = Stopwatch.StartNew();
+            var t = AppHost.Current.ShiftWaraqSync.FixOldSalesTask;
+            if (t is not null) Wait(win, t);
+            var idle = int.TryParse(Environment.GetEnvironmentVariable("PUMP_YEARS_IDLE"), out var ii) ? ii : 0;
+            var until = DateTime.UtcNow.AddSeconds(idle);
+            while (DateTime.UtcNow < until) { Pump(win); Thread.Sleep(20); }
+            Console.WriteLine($"کارِ پس‌زمینهٔ «فروشِ ورق‌های قدیم» تمام شد: {fx.ElapsedMilliseconds}ms · نتیجه {(t?.IsCompleted == true ? t.Result : -99)}");
+        }
         var thisMonth = Shamsi.ThisMonth();
         var oldMonth = (int.Parse(thisMonth[..4]) - 3) + "/03";
 
         // ══ هر بخش و هر زیربخش ═════════════════════════════════════════════
+        //  ‎PUMP_YEARS_ONLY=debt,invoices‎ — فقط همین بخش‌ها (برای ریشه‌یابیِ یک کندی، بی دوازده دقیقه انتظار)
+        var only = (Environment.GetEnvironmentVariable("PUMP_YEARS_ONLY") ?? "")
+                   .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         foreach (var sec in vm.Sections.ToList())
         {
+            if (only.Length > 0 && !only.Contains(sec.Id)) continue;
             Mark("بخشِ " + sec.Id + " — رفتن (داده + اولین چیدمان)", () => Wait(win, vm.GoAsync(sec)));
             Mark("  " + sec.Id + ": ته‌نشین شدنِ چیدمان", () => Settle(win));
             Console.WriteLine($"     ({LastPasses} پاس · {GridDiag(win)})");
@@ -126,8 +146,38 @@ internal static class YearsAudit
                 // ⚠️ مثلِ خودِ کاربر: فقط باز کردن، و انتظار برای همان باری که
                 // ‎MainViewModel‎ می‌کند — نه یک ‎OnActivatedAsync‎ی اضافه از این‌جا.
                 Mark("  زیربخشِ " + sub.Id, () => { sec.ShowSub(sub); Wait(win, vm.LastSubOpen ?? Task.CompletedTask); Settle(win); });
+                Console.WriteLine($"     ({LastPasses} پاس · {GridDiag(win)})");
                 sec.CloseSub();
                 Settle(win);
+                var reps = int.TryParse(Environment.GetEnvironmentVariable("PUMP_YEARS_REPEAT"), out var rr) ? rr : 1;
+                for (var rep = 0; only.Length > 0 && rep < reps; rep++)
+                {
+                    //  بارِ دوم — بی خواندنِ دوبارهٔ داده (فعال‌سازی رد می‌شود): فقط ساختِ صفحه و چیدمان
+                    var v0 = PumpYaqobi.Services.Data.DataVersion.Current;
+                    long tw = 0, ts = 0;
+                    Mark("  زیربخشِ " + sub.Id + " (بارِ دوم)", () =>
+                    {
+                        var q = Stopwatch.StartNew();
+                        var loads = 0;
+                        var grids = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(win).OfType<PumpYaqobi.App.Controls.ExcelGrid>().ToList();
+                        EventHandler<DataGridRowEventArgs> onLoad = (_, _) => loads++;
+                        foreach (var g in grids) g.LoadingRow += onLoad;
+                        sec.ShowSub(sub); var tShow = q.ElapsedMilliseconds;
+                        var t = vm.LastSubOpen ?? Task.CompletedTask; var pumps = 0; long tDone = -1;
+                        while (!t.IsCompleted) { Pump(win); pumps++; }
+                        tDone = q.ElapsedMilliseconds;
+                        var p1 = Stopwatch.StartNew(); Dispatcher.UIThread.RunJobs(); var rj = p1.ElapsedMilliseconds;
+                        win.UpdateLayout(); var ul = p1.ElapsedMilliseconds - rj;
+                        Pump(win); tw = q.ElapsedMilliseconds;
+                        foreach (var g in grids) g.LoadingRow -= onLoad;
+                        Console.WriteLine($"     ({grids.Count} جدول در درخت · {loads} بار ساختِ ردیف)");
+                        Console.WriteLine($"     (ShowSub {tShow}ms · کارِ داده تا {tDone}ms در {pumps} پمپ · RunJobs {rj}ms · UpdateLayout {ul}ms)");
+                        Settle(win); ts = q.ElapsedMilliseconds - tw;
+                    });
+                    Console.WriteLine($"     (نسخهٔ داده {v0} ⇒ {PumpYaqobi.Services.Data.DataVersion.Current} · باز شدن {tw}ms · چیدمان {ts}ms)");
+                    sec.CloseSub();
+                    Settle(win);
+                }
             }
 
             // ماهِ سه سال پیش و برگشت — دفترهای ماهانه

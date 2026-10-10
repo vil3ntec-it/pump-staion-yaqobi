@@ -319,13 +319,19 @@ public sealed class DashboardService
     }
 
     /// <summary>
-    /// ‎_dashTankInfo‎ — ظرفیتِ تنظیم‌شده، وگرنه بالاگردِ هزارِ بزرگ‌ترینِ
-    /// (موجودی، ۴×آستانه، ۱۰۰۰).
+    /// ظرفیتِ مخزنی که هنوز نوشته نشده — همان عددی که کادرِ «ظرفیت» در بخشِ مخزن نشان می‌دهد.
+    /// ⛔ تنها جای این عدد (۱۴۰۵/۰۷/۱۹): داشبورد تا امروز ظرفیت را از خودِ موجودی «می‌ساخت»
+    /// (بالاگردِ هزارِ موجودی/۴×آستانه)، پس با ۳٬۰۰۰ لیتر داشبورد ۷۵٪ می‌گفت و مخزن ۳۰٪.
     /// </summary>
+    public const decimal DefaultTankCapacity = 10000m;
+
+    /// <summary>ظرفیتِ نوشته‌شده، وگرنه <see cref="DefaultTankCapacity"/> — همان قاعدهٔ بخشِ مخزن.</summary>
+    public static decimal TankCapacity(decimal? setCapacity) => setCapacity is > 0 ? setCapacity.Value : DefaultTankCapacity;
+
+    /// <summary>‎_dashTankInfo‎ — درصد با همان ظرفیتِ بخشِ مخزن (<see cref="TankCapacity"/>).</summary>
     public static DashTank Tank(FuelType fuel, decimal stock, decimal? setCapacity, decimal threshold)
     {
-        var cap = setCapacity is > 0 ? setCapacity.Value
-                : Math.Ceiling(Math.Max(Math.Max(stock, threshold * 4), 1000m) / 1000m) * 1000m;
+        var cap = TankCapacity(setCapacity);
         var name = fuel == FuelType.Petrol ? "⛽ پطرول" : "🟤 دیزل";
         return new DashTank(fuel, name, Math.Max(0, stock), cap, stock);
     }
