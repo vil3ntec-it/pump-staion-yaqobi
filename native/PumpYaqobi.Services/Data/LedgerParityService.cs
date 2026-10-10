@@ -242,12 +242,12 @@ public sealed class LedgerParityService
     public Task<int>? DailyTask { get; private set; }
 
     /// <summary>یک بار در روز برای هر دفتر، روی نخِ دیگر؛ دو صدا زدنِ هم‌زمان یکی می‌شوند.</summary>
-    public Task<int> StartDaily()
+    public Task<int> StartDaily(TimeSpan after = default)
     {
         lock (this)
         {
             if (DailyTask is { IsCompleted: false } running) return running;
-            return DailyTask = Task.Run(() => DailyOnceAsync());
+            return DailyTask = StartDelay.After(after, () => DailyOnceAsync());
         }
     }
 

@@ -234,12 +234,12 @@ public sealed class ShiftWaraqSyncService
     public Task<int>? FixOldSalesTask { get; private set; }
 
     /// <summary>روی نخِ دیگر، و یک بار در هر لحظه (دو ورودِ پشتِ سرِ هم دو بار نمی‌دوانند).</summary>
-    public Task<int> StartFixOldSales()
+    public Task<int> StartFixOldSales(TimeSpan after = default)
     {
         lock (this)
         {
             if (FixOldSalesTask is { IsCompleted: false } running) return running;
-            return FixOldSalesTask = Task.Run(() => FixOldSalesOnceAsync());
+            return FixOldSalesTask = StartDelay.After(after, () => FixOldSalesOnceAsync());
         }
     }
 

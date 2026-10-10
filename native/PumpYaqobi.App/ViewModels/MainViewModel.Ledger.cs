@@ -159,6 +159,9 @@ public sealed partial class MainViewModel
             var path = host.DbPath;
             if (_healthChecked == path) return;
             _healthChecked = path;
+            var wait = PumpYaqobi.Services.Data.StartDelay.Seconds(8);
+            if (wait > TimeSpan.Zero) await Task.Delay(wait);
+            if (host.DbPath != path) return;          // در این چند ثانیه دفترِ دیگری باز شد
             var bad = await Task.Run(() => host.Health.ScanAsync());
             if (bad.Count > 0)
                 host.Toast($"🩺 {bad.Count} عددِ ناخوانا در دفتر هست — «تنظیمات ← بک‌اپ ← سلامتِ دفتر» جایشان را می‌گوید.",

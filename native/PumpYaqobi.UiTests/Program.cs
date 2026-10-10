@@ -31,6 +31,9 @@ internal static class Program
         if (!outDir.Equals("idle", StringComparison.OrdinalIgnoreCase)
             && !outDir.Equals("years", StringComparison.OrdinalIgnoreCase))
             PumpYaqobi.App.Controls.ExcelGrid.ParkGrace = TimeSpan.Zero;
+        //  ⚡ و کارهای پس از ورود بی مکث (‎StartDelay‎) — هر سنجه همان ترتیبِ پیشین را می‌بیند
+        if (Environment.GetEnvironmentVariable("PUMP_START_DELAY") != "1")
+            PumpYaqobi.Services.Data.StartDelay.Factor = 0;
 
         // ══ حلقهٔ همگام‌سازی در سنجه‌ها روشن نمی‌شود ═════════════════════════
         //
