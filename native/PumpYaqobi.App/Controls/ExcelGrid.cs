@@ -635,12 +635,12 @@ public partial class ExcelGrid : DataGrid
 
     private static void ParkSoon(ExcelGrid g)
     {
-        _parkAt[g] = DateTime.UtcNow + ParkGrace;
+        _parkAt[g] = PumpYaqobi.Domain.AppClock.Mono + ParkGrace;
         if (_parkTimer is null)
         {
             //  ⚠️ فقط تا وقتی جدولی در صفِ پارک است می‌تپد؛ صفِ خالی ⇒ ایستاده (بی‌کاری صفر)
             _parkTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-            _parkTimer.Tick += (_, _) => ParkDue(DateTime.UtcNow);
+            _parkTimer.Tick += (_, _) => ParkDue(PumpYaqobi.Domain.AppClock.Mono);
         }
         if (!_parkTimer.IsEnabled) _parkTimer.Start();
     }
