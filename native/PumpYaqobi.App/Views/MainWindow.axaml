@@ -258,6 +258,15 @@
               </Flyout>
             </Button.Flyout>
           </Button>
+          <!-- ⏳ کارِ پس‌زمینه (۱۴۰۵/۰۷/۲۲، بندِ ۴ِ کندی‌ها) — «برنامه الان چه می‌کند و چند درصد».
+               فقط وقتی کاری هست دیده می‌شود؛ متن از ‎BackgroundWork.Text‎. -->
+          <Border Name="BgWorkChip" IsVisible="{Binding HasBackgroundWork}" CornerRadius="9" Padding="10,3"
+                  Margin="6,0,0,0" VerticalAlignment="Center"
+                  Background="{DynamicResource Pump.Panel}" BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="1"
+                  ToolTip.Tip="کارِ پس‌زمینهٔ خودِ برنامه — داده‌ای پاک نمی‌شود؛ تمام که شد این نشان می‌رود">
+            <TextBlock Text="{Binding BackgroundWorkText}" FontSize="12" FontWeight="SemiBold" MaxWidth="320"
+                       TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Pump.Ink.Info}" />
+          </Border>
         </StackPanel>
 
         <TextBlock Grid.Column="1" Text="{Binding Current.Title}"
