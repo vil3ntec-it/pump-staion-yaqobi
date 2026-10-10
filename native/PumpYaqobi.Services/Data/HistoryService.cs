@@ -674,12 +674,40 @@ public sealed class HistoryService
     /// دارد — مو‌به‌مو همان ردیف‌هایی که در آن جمع شمرده می‌شوند.
     /// ⚠️ شیفتی که نه پایه دارد نه ردیفِ نام‌دار نمی‌آید (کارت هم همان را می‌شمارد).
     /// </summary>
+    /// <summary>
+    /// ⚡ فقط ستون‌هایی که ‎ShiftTotals‎ و همین تاریخچه می‌خوانند (۱۴۰۵/۰۷/۲۲) — نه کلِ ردیف‌های
+    /// ورق، پایه و حساب. با پنج سال داده خواندنِ همه‌چیز ۰٫۸۶ ثانیه بود. همان ترتیبِ شناسه‌ها،
+    /// همان حساب (‎WaraqRows‎ِ مشترک).
+    /// </summary>
     private async Task<List<HistoryRow>> WaraqAsync(Persistence.PumpDbContext db, CancellationToken ct)
     {
         var entries = await db.WaraqEntries.AsNoTracking().AsSplitQuery()
-            .Include(w => w.Shifts).ThenInclude(s => s.Pumps)
-            .Include(w => w.Shifts).ThenInclude(s => s.Transactions)
+            .OrderBy(w => w.Id)
+            .Select(w => new WaraqEntry
+            {
+                Id = w.Id, DateShamsi = w.DateShamsi, DateKey = w.DateKey,
+                Shifts = w.Shifts.OrderBy(s => s.Id).Select(s => new WaraqShift
+                {
+                    Id = s.Id, WaraqId = s.WaraqId, Kind = s.Kind, WorkerName = s.WorkerName,
+                    FabricDebt = s.FabricDebt, PricePerLiter = s.PricePerLiter, PricePerLiterDiesel = s.PricePerLiterDiesel,
+                    Pumps = s.Pumps.OrderBy(p => p.Id).Select(p => new WaraqPump
+                    {
+                        Id = p.Id, Fuel = p.Fuel, Worker = p.Worker, Start = p.Start, End = p.End,
+                        TestLiters = p.TestLiters, PricePerLiter = p.PricePerLiter, Debt = p.Debt,
+                    }).ToList(),
+                    Transactions = s.Transactions.OrderBy(t => t.Id).Select(t => new WaraqTransaction
+                    {
+                        Id = t.Id, Type = t.Type, Name = t.Name, Liters = t.Liters, Fuel = t.Fuel,
+                        Amount = t.Amount, AmountAuto = t.AmountAuto,
+                    }).ToList(),
+                }).ToList(),
+            })
             .ToListAsync(ct);
+        return WaraqRows(entries);
+    }
+
+    private List<HistoryRow> WaraqRows(List<WaraqEntry> entries)
+    {
 
         var list = new List<HistoryRow>();
         foreach (var w in entries)
