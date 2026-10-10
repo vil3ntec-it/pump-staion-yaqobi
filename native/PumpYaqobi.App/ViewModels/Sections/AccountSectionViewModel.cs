@@ -61,6 +61,12 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
 
     /// <summary>خطِ دومِ دکمه — نامِ حساب یا «وارد نشده».</summary>
     [ObservableProperty] private string _pillSub = "";
+    /// <summary>عددِ کوچکِ روی دکمهٔ گردِ پروفایل — روزهای مانده، «∞» برای دائمی، خالی بی اشتراک.</summary>
+    [ObservableProperty] private string _pillBadge = "";
+    /// <summary>راهنمای دکمهٔ گرد: همان دو خطِ کپسولِ پیشین.</summary>
+    public string PillTip => "پروفایل — " + PillText + (PillSub.Length > 0 ? " · " + PillSub : "");
+    partial void OnPillTextChanged(string value) => OnPropertyChanged(nameof(PillTip));
+    partial void OnPillSubChanged(string value) => OnPropertyChanged(nameof(PillTip));
 
     /// <summary>اشتراکِ فعال ⇒ رنگِ طلایی؛ وگرنه خنثی.</summary>
     [ObservableProperty] private bool _vipActive;
@@ -119,6 +125,7 @@ public sealed partial class AccountSectionViewModel : SectionViewModel
         PillText = !SubActive ? "پروفایل"
             : SubPermanent ? $"{SubKind} · دائمی"
             : $"{SubKind} · {VipDays} روز";
+        PillBadge = !SubActive ? "" : SubPermanent ? "∞" : Shamsi.Money(VipDays);
         PillSub = SignedIn
             ? (AccountName.Trim().Length > 0 ? AccountName.Trim() : AccountEmail.Trim())
             : (SubActive ? "بدون ورود" : "وارد نشده");

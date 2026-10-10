@@ -501,6 +501,52 @@
     <Setter Property="Background" Value="{DynamicResource Pump.Danger}" />
     <Setter Property="TextBlock.Foreground" Value="White" />
   </Style>
+  <!-- ══ دکمه‌های گردِ سربرگ (۱۴۰۵/۰۷/۲۲) — خواستهٔ صاحب ریپو: «همه را دایره‌ای کن و آیکون
+       بساز، دقیق که دیده شود.» نام هر کدام در ‎ToolTip‎ است؛ رنگ‌ها همان کپسول‌های پیشین. -->
+  <Style Selector="Button.round">
+    <Setter Property="Width" Value="40" />
+    <Setter Property="Height" Value="40" />
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="20" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.round">
+    <Setter Property="Width" Value="40" />
+    <Setter Property="Height" Value="40" />
+    <Setter Property="CornerRadius" Value="20" />
+  </Style>
+  <Style Selector="Path.hicon">
+    <Setter Property="Width" Value="21" />
+    <Setter Property="Height" Value="21" />
+    <Setter Property="Stretch" Value="Uniform" />
+    <Setter Property="Stroke" Value="White" />
+    <Setter Property="StrokeThickness" Value="2.1" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="StrokeJoin" Value="Round" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- عددِ کوچکِ گوشهٔ دکمهٔ گرد (روزِ اشتراک، پیامِ نخوانده) -->
+  <Style Selector="Border.hbadge">
+    <Setter Property="MinWidth" Value="18" />
+    <Setter Property="Height" Value="18" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Padding" Value="4,0" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="Margin" Value="0,-5,-5,0" />
+    <Setter Property="BorderBrush" Value="White" />
+    <Setter Property="BorderThickness" Value="1.5" />
+  </Style>
+  <Style Selector="Border.hbadge TextBlock">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontWeight" Value="Black" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
   <!-- دکمهٔ پشتیبانی رنگِ تاکید، نه سرخ — سرخ مالِ «قفل» است -->
   <Style Selector="Button.pill-btn.support">
     <Setter Property="Background" Value="{DynamicResource Pump.Accent}" />

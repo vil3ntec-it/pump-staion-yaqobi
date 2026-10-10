@@ -38,7 +38,9 @@ public class ProfilePillTests
 
         //  به بخشِ حساب می‌رود و همان لحظه VIP و روزهایش را می‌گوید
         Assert.Contains("CommandParameter=\"{Binding Account}\"", xaml);
-        Assert.Contains("Binding Account.PillText", xaml);
+        //  ⛔ دکمهٔ گرد (۱۴۰۵/۰۷/۲۲): متنِ «VIP · ۴۲ روز» در راهنما، روزها روی گوشه
+        Assert.Contains("Binding Account.PillTip", xaml);
+        Assert.Contains("Binding Account.PillBadge", xaml);
         Assert.Contains("Binding Account.VipActive", xaml);
     }
 

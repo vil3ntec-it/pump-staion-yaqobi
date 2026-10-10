@@ -147,7 +147,8 @@ public class SiteMetricsTests
         var w = MainWindow();
         Assert.Contains("SignOutCommand", w);
         Assert.Contains("RoleText", w);
-        Assert.Contains("Classes=\"pill\"", w);
+        //  ⛔ از ۱۴۰۵/۰۷/۲۲ دکمه‌های سربرگ گرد و آیکون‌دارند («همه را دایره‌ای کن») — نشانِ نقش هم
+        Assert.Contains("Classes=\"pill round\"", w);
     }
 
     /// <summary>
