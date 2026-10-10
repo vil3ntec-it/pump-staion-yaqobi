@@ -55,7 +55,10 @@ internal static class TankVideoShots
         MarketingShots.Wait(win, vm.GoAsync(st));
         MarketingShots.Shot(win, Path.Combine(outDir, "storage.png"));
 
-        var gauge = win.GetVisualDescendants().OfType<TankGauge>().FirstOrDefault();
+        //  همان نقشه‌ای که روی صفحه دیده می‌شود (نقشهٔ دیزل و داشبورد پنهان‌اند)
+        var gauge = win.GetVisualDescendants().OfType<TankGauge>()
+            .Where(g => g.IsEffectivelyVisible && g.Bounds.Width > 300)
+            .OrderByDescending(g => g.Bounds.Width).FirstOrDefault();
         if (gauge is not null)
         {
             var p = gauge.TranslatePoint(new Point(0, 0), win) ?? new Point();
