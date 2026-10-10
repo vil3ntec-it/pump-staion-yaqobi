@@ -39,6 +39,11 @@ on:
 permissions:
   contents: write
 
+env:
+  #  کلیدِ عمومیِ P-256ِ امضای ‎SHA256SUMS.txt‎ (SPKIِ base64) — راز نیست. نیمهٔ
+  #  خصوصی فقط در رازِ ‎UPDATE_SIGNING_KEY‎. متغیرِ ‎UPDATE_PUBLIC_KEY‎ جلوتر است.
+  DEFAULT_UPDATE_PUBLIC_KEY: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwIvQv0PPqbhqJ8XvHCpmig3oBJMihfDFtpXKW2Dbhy4avVLuj1XyLy8jXMKCo+dFAyJKKOpqHybdhO14tMRq2w==
+
 jobs:
   build:
     runs-on: windows-latest
@@ -84,8 +89,17 @@ jobs:
       #  ‎settings.json‎ دیگر ریشهٔ اعتماد نیست.
       #  ‎UPDATE_PUBLIC_KEY‎: کلیدِ عمومیِ P-256 (SPKIِ base64) که امضای
       #  ‎SHA256SUMS.txt.sig‎ را می‌سنجد ⇒ ‎UpdateService‎.
-      #  ⚠️ هر دو اختیاری‌اند: خالی ⇒ TOFU و فقط-هش، همان رفتارِ دیروز — و
-      #  ساخت **نمی‌شکند**.
+      #  ⛔ (۱۴۰۵/۰۷/۲۳، شورای آمادگیِ عرضه) هیچ‌کدام دیگر اختیاری نیست. ساختِ
+      #  ۳.۱.۲۵۹ با هر دو خالی منتشر شد: قفلِ اشتراک با یک ویرایشِ
+      #  ‎settings.json‎ (کلیدِ TOFU) دور زده می‌شد و هر کس منبعِ به‌روزرسانی را
+      #  می‌گرفت بسته و هشِ جور با آن را با هم به همهٔ پمپ‌ها می‌داد.
+      #  • ‎LICENSE_PUBLIC_KEYS‎ خالی ⇒ همان کلیدی که این گام از
+      #    ‎/api/license/public-key‎ می‌گیرد (همان کلیدِ امضای مجوز و کدِ آفلاین —
+      #    ‎OfflineKey.TrustedKeys‎ هم بی کلیدِ داخلی به همان کلیدِ TOFUِ مجوز
+      #    برمی‌گردد). هیچ‌کدام نبود ⇒ ساخت **می‌شکند**، نه انتشارِ بی‌قفل.
+      #  • ‎UPDATE_PUBLIC_KEY‎ خالی ⇒ ‎DEFAULT_UPDATE_PUBLIC_KEY‎ِ همین فایل (کلیدِ
+      #    عمومی است، راز نیست). نیمهٔ خصوصی‌اش فقط رازِ ‎UPDATE_SIGNING_KEY‎ است
+      #    و گامِ «امضای چک‌سام‌ها» بی آن می‌شکند.
       #  ⚠️ خطِ فرمانِ MSBuild «;» و «,» را جداکنندهٔ خاصیت‌ها می‌خواند، پس
       #  به «|» برگردانده می‌شوند (کد همه را می‌پذیرد).
       - name: ساخت
@@ -95,12 +109,13 @@ jobs:
           LICENSE_PUBLIC_KEYS: ${{ vars.LICENSE_PUBLIC_KEYS }}
           UPDATE_PUBLIC_KEY: ${{ vars.UPDATE_PUBLIC_KEY }}
           OFFLINE_PUBLIC_KEYS: ${{ vars.OFFLINE_PUBLIC_KEYS }}
+          DEFAULT_UPDATE_PUBLIC_KEY: ${{ env.DEFAULT_UPDATE_PUBLIC_KEY }}
         run: |
           $lk = ("$env:LICENSE_PUBLIC_KEYS" -replace '[;,\s]+', '|').Trim('|')
           $uk = ("$env:UPDATE_PUBLIC_KEY").Trim()
-          $trust = @()
-          if ($lk) { $trust += "-p:LicenseKeys=$lk" } else { Write-Host "::notice::LICENSE_PUBLIC_KEYS خالی است — مجوز با TOFU سنجیده می‌شود" }
-          if ($uk) { $trust += "-p:UpdateKey=$uk" }   else { Write-Host "::notice::UPDATE_PUBLIC_KEY خالی است — به‌روزرسانی فقط با هش سنجیده می‌شود" }
+          if (-not $uk) { $uk = "$env:DEFAULT_UPDATE_PUBLIC_KEY".Trim() }
+          if (-not $uk) { throw "کلیدِ عمومیِ به‌روزرسانی نیست — نسخهٔ بی‌امضا منتشر نمی‌شود" }
+          $trust = @("-p:UpdateKey=$uk")
           # ── کلیدِ کدِ اشتراکِ آفلاین (‎CloudConfig.OfflineKeys‎) ──────────────
           #  کامپیوتری که هرگز اینترنت ندیده هیچ کلیدِ TOFUی ندارد، پس کلیدِ
           #  سرورِ حساب باید داخلِ خودِ برنامه باشد. اول متغیرِ مخزن
@@ -116,6 +131,11 @@ jobs:
             } catch { Write-Host "::warning::کلیدِ سرورِ حساب گرفته نشد — کدِ آفلاین فقط با کلیدِ TOFU سنجیده می‌شود: $($_.Exception.Message)" }
           }
           if ($ok) { $trust += "-p:OfflineKeys=$ok"; Write-Host "کلیدِ کدِ آفلاین: $($ok.Substring(0, [Math]::Min(40, $ok.Length)))…" }
+          # ── ریشهٔ اعتمادِ مجوز (‎CloudConfig.LicenseKeys‎) — هرگز خالی ─────────
+          if (-not $lk) { $lk = $ok }
+          if (-not $lk) { throw "کلیدِ عمومیِ مجوز نیست (نه LICENSE_PUBLIC_KEYS، نه کلیدِ سرورِ حساب) — نسخه‌ای که قفلش با ویرایشِ settings.json باز می‌شود منتشر نمی‌شود" }
+          $trust += "-p:LicenseKeys=$lk"
+          Write-Host "کلیدِ مجوز: $($lk.Substring(0, [Math]::Min(40, $lk.Length)))…"
           # ── شورا، پ۲: کلیدِ یک‌بارمصرفِ یکپارچگی (‎installer/integrity-sign.ps1‎) ──
           $ik = & installer/integrity-sign.ps1 -Key
           $trust += "-p:IntegrityKey=$ik"
@@ -331,13 +351,13 @@ jobs:
         shell: pwsh
         env:
           UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
-          UPDATE_PUBLIC_KEY: ${{ vars.UPDATE_PUBLIC_KEY }}
+          UPDATE_PUBLIC_KEY: ${{ vars.UPDATE_PUBLIC_KEY || env.DEFAULT_UPDATE_PUBLIC_KEY }}
         run: |
+          #  ⛔ بی امضا منتشر نمی‌شود: برنامهٔ ساخته‌شده کلیدِ عمومی را دارد و
+          #  نسخهٔ بی‌امضا را نصب نمی‌کند — انتشارِ بی‌امضا یعنی همهٔ پمپ‌ها بی‌صدا
+          #  از به‌روزرسانی می‌افتند.
           if (-not "$env:UPDATE_SIGNING_KEY".Trim()) {
-            if ("$env:UPDATE_PUBLIC_KEY".Trim()) {
-              Write-Host "::warning::UPDATE_PUBLIC_KEY هست ولی رازِ UPDATE_SIGNING_KEY نیست — این نسخه امضا ندارد و برنامه نصبش نمی‌کند"
-            }
-            exit 0
+            throw "رازِ UPDATE_SIGNING_KEY نیست — Settings › Secrets and variables › Actions › New repository secret"
           }
           $ec = [System.Security.Cryptography.ECDsa]::Create()
           $ec.ImportFromPem($env:UPDATE_SIGNING_KEY)

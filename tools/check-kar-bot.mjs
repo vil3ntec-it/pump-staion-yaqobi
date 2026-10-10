@@ -459,8 +459,10 @@ console.log('\n── کدِ پمپ و جداسازیِ پمپ‌ها ───�
      && !/addEventListener\('click', function \(\) \{ forgetAll\(''\); \}\)/.test(appSrc),
      '⛔ هر دو درِ خروج (⇄ و صفحهٔ قفل) پیش از پاک کردن تایید می‌خواهند');
   //  ⛔ «حساب‌ها» رمزِ برنامهٔ کامپیوتر را هر بار می‌خواهد؛ بی رمز باز نمی‌شود
-  ok(/function ownerOk\(\) \{\s*return !!data && !!data\.gate && ownerPassed === data\.gate;/.test(appSrc)
-     && !/localStorage\.setItem\(stnKey\('ok'\)/.test(appSrc),
+  //  عکسِ رمزشده (۱۴۰۵/۰۷/۲۳): همان قاعده، و کلید فقط در حافظهٔ همین اجرا
+  ok(/function ownerOk\(\) \{\s*if \(isSealed\(data\)\) return !!ownerKey && !!ownerOpen && ownerPassed === data\.gate;\s*return !!data && !!data\.gate && ownerPassed === data\.gate;/.test(appSrc)
+     && !/localStorage\.setItem\(stnKey\('ok'\)/.test(appSrc)
+     && !/localStorage\.setItem\([^)]*ownerKey/.test(appSrc),
      '⛔ «حساب‌ها» فقط با رمزِ درستِ همین اجرا باز است؛ بی رمزِ برنامه باز نمی‌شود و رمز روی گوشی نمی‌ماند');
   //  ⛔ نشانِ برنامه داخلِ صفحه است — پوشهٔ icons در فایلِ نصبِ اندروید نیست
   {
@@ -688,6 +690,7 @@ console.log('\n— بازبینیِ دوم (۱۴۰۵/۰۷/۱۶)');
     var data = null, fromCloud = false, shown = 0;
     function stnKey(k) { return k; }
     function render() { shown++; }
+    function attachOwner() {} function refreshSeal() {}   // «حساب‌ها»ی رمزشده — این‌جا بی‌اثر
     var localStorage = { setItem() {} };
     var Date = { now: function () { return now; } };
     ${body}
