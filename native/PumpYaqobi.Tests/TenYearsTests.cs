@@ -96,7 +96,9 @@ public class TenYearsTests
     public void Nasher_NoskheyeSarvar_Ra_Miferestad()
     {
         var src = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.Shell", "Services", "StationPublisher.cs"));
-        Assert.Contains("PutFileAsync(CloudLiveFile, StationSnapshot.ForCloud(snap), ct)", src);
+        //  ⛔ نسخهٔ بریدهٔ سرور، و از ۳.۱.۲۶۰ مُهرشده (‎OwnerSeal‎) — بریدن پیش از مُهر
+        Assert.Contains("PutFileAsync(CloudLiveFile,", src);
+        Assert.Contains("OwnerSeal.ForPhones(StationSnapshot.ForCloud(snap),", src);
         Assert.Contains("\"body_too_large\"", src);
         //  ⛔ ساختنِ عکس دست‌بالا پنج درصدِ یک هسته
         Assert.Contains("if (!force && AppClock.Mono < _nextBuildAt) return false;", src);

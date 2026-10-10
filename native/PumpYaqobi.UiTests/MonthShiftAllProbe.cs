@@ -1163,6 +1163,16 @@ internal static class MonthShiftAllProbe
         }
         finally
         {
+            //  ⚠️ قابِ گرفته‌شده گاهی هنوز قابِ پیشین است (رانرِ کندِ ویندوز، و حتی شمارِ
+            //  گرفتن‌ها نتیجه را عوض می‌کند) و جوهرِ «جابه‌جا»ی دروغ می‌دهد — هر بار در خانهٔ
+            //  دیگری. پس جوهر فقط وقتی سرخ است که در سه قابِ تازهٔ پشتِ سرِ هم هم بماند؛
+            //  جابه‌جاییِ واقعی در هر قاب همان است.
+            if (frame is not null && bad.Any(b => b.StartsWith("جوهر", StringComparison.Ordinal)))
+                for (var t = 0; t < 3; t++)
+                {
+                    Pump(win);
+                    if (!InkStale(win, roots)) { bad.RemoveAll(b => b.StartsWith("جوهر", StringComparison.Ordinal)); break; }
+                }
             if (Dbg && frame is not null && bad.Any(b => b.StartsWith("جوهر", StringComparison.Ordinal)))
             {
                 var png = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"mshift-ink-{++_shot}.png");
@@ -1224,6 +1234,25 @@ internal static class MonthShiftAllProbe
     private static void Pump(Window w)
     {
         for (var i = 0; i < 8; i++) { Dispatcher.UIThread.RunJobs(); w.UpdateLayout(); }
+    }
+
+    /// <summary>قابِ همین حالا با جای نوشته‌های خانه‌ها و سرستون‌ها یکی نیست؟</summary>
+    private static bool InkStale(Window win, List<Visual> roots)
+    {
+        win.CaptureRenderedFrame()?.Dispose();
+        using var shot = win.CaptureRenderedFrame();
+        if (shot is null) return false;
+        using var ms = new MemoryStream();
+        shot.Save(ms);
+        ms.Position = 0;
+        using var frame = SkiaSharp.SKBitmap.Decode(ms);
+        foreach (var g in roots.SelectMany(r => r.GetVisualDescendants().OfType<ExcelGrid>())
+                               .Where(x => x.IsEffectivelyVisible && x.Bounds.Width > 50 && InView(x, win)))
+            foreach (var box in g.GetVisualDescendants().OfType<Control>()
+                         .Where(c => c is DataGridCell or DataGridColumnHeader && c.IsEffectivelyVisible && c.Bounds.Width > 4))
+                foreach (var tb in box.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible && !string.IsNullOrEmpty(t.Text)))
+                    if (OldMonthProbe.Off(tb, box, frame) is { } o && o / win.RenderScaling > 3) return true;
+        return false;
     }
 
     private static void Settle(Window w)
