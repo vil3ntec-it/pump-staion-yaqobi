@@ -83,6 +83,30 @@ internal static class TanksProbe
             Shot(win, shots, "tanks");
         }
 
+        // ══ دکمه‌های شماره بالای نقشه: «همه · ۱ · ۲ · ۳ · ▾» ══
+        st.TankNewCapacity = "5000"; Wait(win, st.AddTankCommand.ExecuteAsync(null)); Settle(win);
+        st.TankNewCapacity = "4000"; Wait(win, st.AddTankCommand.ExecuteAsync(null)); Settle(win);
+        Check("سه شماره روی کارت، بقیه در کشویی", st.VisibleTankTabs.Count == 3 && st.OverflowTankTabs.Count == 1 && st.HasOverflowTanks,
+              $"{st.VisibleTankTabs.Count}+{st.OverflowTankTabs.Count}");
+        Check("پیش‌فرض «همه» — همان کارتِ همیشگی", st.IsAllShown && st.ShownCurrent == st.Current);
+        var t1 = st.VisibleTankTabs[0];
+        st.SelectTankCommand.Execute(t1); Settle(win);
+        Check("زدنِ ۱ ⇒ همان مخزن روی کارت", st.IsTankShown && st.ShownFillText == t1.FillText
+              && Shamsi.Num(st.ShownCurrent) == Math.Round(t1.Value) && t1.Selected, st.ShownTitle);
+        if (shots is not null)
+        {
+            win.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(t => t.Text == st.ShownTitle)?.BringIntoView();
+            Settle(win); Shot(win, shots, "tanks-tab1");
+        }
+        st.OverflowPick = st.OverflowTankTabs[0]; Settle(win);
+        Check("کشویی ⇒ مخزنِ ۴", st.SelectedTank?.Entity.Num == 4 && st.OverflowPick?.Entity.Num == 4);
+        st.ToggleFuelCommand.Execute(null); Settle(win); Settle(win);
+        Check("دیزل جدا: مخزن‌های پطرول نیست و «همه» برگشت", st.Tanks.Count == 0 && st.IsAllShown);
+        st.ToggleFuelCommand.Execute(null); Settle(win); Settle(win);
+        st.SelectTankCommand.Execute(null); Settle(win);
+        Check("«همه» برگشت", st.IsAllShown && !st.Tanks.Any(t => t.Selected));
+        if (shots is not null) { Settle(win); Shot(win, shots, "tanks-all"); }
+
         var dash = (DashboardSectionViewModel)vm.Sections.First(s => s.Id == "dashboard");
         Wait(win, vm.GoAsync(dash)); Settle(win);
         var rows = dash.FuelStatus.Select(r => r.Name).ToList();

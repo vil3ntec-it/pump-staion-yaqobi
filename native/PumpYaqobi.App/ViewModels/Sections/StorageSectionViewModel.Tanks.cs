@@ -24,7 +24,22 @@ public sealed class TankCardViewModel
         IsLow = Active && cur <= threshold;
         IsEmpty = cur <= 0m;
         StateText = IsEmpty ? "⛔ خالی" : Active ? (IsLow ? "⚠️ در حالِ کشیدن — کم مانده" : "▶ در حالِ کشیدن") : "⏸ منتظر";
+        Value = cur;
+        NumText = Shamsi.Money(t.Num);
+        TabText = "مخزنِ " + NumText;
+        ThresholdPercent = t.Capacity > 0m ? (double)Math.Min(100m, Math.Max(0m, threshold / t.Capacity * 100m)) : 0;
     }
+
+    /// <summary>موجودیِ همین مخزن (منفی ⇒ صفر).</summary>
+    public decimal Value { get; }
+    /// <summary>برچسبِ دکمهٔ شماره — «۱»، «۲»، …</summary>
+    public string NumText { get; }
+    /// <summary>«مخزنِ ۴» — برای کشوییِ شماره‌های بیش از سه.</summary>
+    public string TabText { get; }
+    /// <summary>آستانهٔ هشدار نسبت به ظرفیتِ همین مخزن — خطِ نقطه‌چینِ نقشه.</summary>
+    public double ThresholdPercent { get; }
+    /// <summary>همین مخزن روی کارتِ بزرگ است؟ (رنگِ دکمه)</summary>
+    public bool Selected { get; set; }
 
     public FuelTank Entity { get; }
     public string Title { get; }
@@ -50,7 +65,7 @@ public sealed partial class TankShareViewModel : ObservableObject
     public FuelTank Tank { get; }
     public string Label => "مخزنِ " + Shamsi.Money(Tank.Num);
     [ObservableProperty] private string _liters = "";
-    partial void OnLitersChanged(string v) => _changed();
+    partial void OnLitersChanged(string value) => _changed();
     public decimal Value => Shamsi.Num(Liters);
 }
 
@@ -73,12 +88,72 @@ public sealed partial class StorageSectionViewModel
         var defs = await _host.StorageData.TanksAsync(Fuel);
         var levels = defs.Count == 0 ? new List<TankLevel>() : await _host.StorageData.TankLevelsAsync(Fuel);
         var threshold = _host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.LowStockThreshold, 1000m);
+        var keep = SelectedTank?.Entity.Id;
         Tanks.Clear();
         foreach (var t in defs)
             Tanks.Add(new TankCardViewModel(t, levels.FirstOrDefault(l => l.Id == t.Id) is { Id: > 0 } l ? l : null, threshold));
         HasTanks = Tanks.Count > 0;
         TankNewNum = Shamsi.Money(defs.Count == 0 ? 1 : defs.Max(x => x.Num) + 1);
         TankAlert = TankAlertText(Tanks);
+        var pick = Tanks.FirstOrDefault(t => t.Entity.Id == keep);
+        if (ReferenceEquals(pick, SelectedTank)) RefreshTankTabs(); else SelectedTank = pick;
+    }
+
+    // ══ دکمه‌های شماره روی کارتِ بزرگ — «همه · ۱ · ۲ · ۳ · ▾» (۱۴۰۵/۰۷/۲۲) ══
+    // خواستهٔ صاحب ریپو با عکس: شماره‌ها بالای نقشهٔ مخزن، بیش از سه ⇒ کشویی، و زدنِ هر
+    // شماره همان مخزن را روی کارتِ بزرگ نشان دهد — مثلِ هر پایه در پارچه. ⛔ «همه» همان
+    // کارتِ همیشگی است و موجودیِ کل از همان ‎StorageService.Tank‎ می‌آید.
+    public const int VisibleTabs = 3;
+    public ObservableCollection<TankCardViewModel> VisibleTankTabs { get; } = new();
+    public ObservableCollection<TankCardViewModel> OverflowTankTabs { get; } = new();
+    [ObservableProperty] private bool _hasOverflowTanks;
+    [ObservableProperty] private TankCardViewModel? _selectedTank;
+
+    partial void OnSelectedTankChanged(TankCardViewModel? value) => RefreshTankTabs();
+
+    public bool IsAllShown => SelectedTank is null;
+    public bool IsTankShown => SelectedTank is not null;
+    public string ShownTitle => SelectedTank is { } t ? TankTitle + " — مخزنِ " + t.NumText : TankTitle;
+    public string ShownCurrent => SelectedTank is { } t ? Shamsi.Money(Math.Round(t.Value)) : Current;
+    public double ShownFillPercent => SelectedTank?.FillPercent ?? FillPercent;
+    public string ShownFillText => SelectedTank?.FillText ?? FillText;
+    public string ShownState => SelectedTank?.StateText ?? StateText;
+    public string ShownCapacityText => SelectedTank is not { } t ? ""
+        : t.Entity.Capacity > 0m ? "ظرفیت: " + Shamsi.Money(t.Entity.Capacity) + " لیتر" : "ظرفیت نوشته نشده — «✏️ ظرفیت» را بزنید";
+    public double ShownThresholdPercent => SelectedTank?.ThresholdPercent ?? ThresholdPercent;
+
+    /// <summary>کشوییِ شماره‌های بیش از سه: همان مخزنِ انتخاب‌شده اگر در کشویی است.</summary>
+    public TankCardViewModel? OverflowPick
+    {
+        get => SelectedTank is { } t && OverflowTankTabs.Contains(t) ? t : null;
+        set { if (value is not null) SelectedTank = value; }
+    }
+
+    private void RefreshTankTabs()
+    {
+        foreach (var t in Tanks) t.Selected = ReferenceEquals(t, SelectedTank);
+        VisibleTankTabs.Clear(); OverflowTankTabs.Clear();
+        foreach (var t in Tanks.Take(VisibleTabs)) VisibleTankTabs.Add(t);
+        foreach (var t in Tanks.Skip(VisibleTabs)) OverflowTankTabs.Add(t);
+        HasOverflowTanks = OverflowTankTabs.Count > 0;
+        foreach (var n in new[] { nameof(IsAllShown), nameof(IsTankShown), nameof(ShownTitle), nameof(ShownCurrent),
+                                  nameof(ShownFillPercent), nameof(ShownFillText), nameof(ShownState), nameof(ShownCapacityText), nameof(ShownThresholdPercent), nameof(OverflowPick) })
+            OnPropertyChanged(n);
+    }
+
+    [RelayCommand]
+    private void SelectTank(TankCardViewModel? t) => SelectedTank = t;
+
+    /// <summary>«＋» — مخزنِ تازه با شمارهٔ بعدی؛ ظرفیت پرسیده می‌شود.</summary>
+    [RelayCommand]
+    private async Task NewTankAsync()
+    {
+        var num = (int)Shamsi.Num(TankNewNum);
+        var cap = await Dialogs.PromptAsync("مخزنِ تازهٔ " + FuelLabel + " — شمارهٔ " + Shamsi.Money(num), "ظرفیت به لیتر:", "");
+        if (cap is null) return;
+        TankNewCapacity = cap;
+        await AddTankAsync();
+        SelectedTank = Tanks.FirstOrDefault(x => x.Entity.Num == num);
     }
 
     /// <summary>هشدارِ مخزن‌ها: کدام در حالِ کشیدن است، کدام کم مانده و کدام تمام شد.</summary>
