@@ -68,6 +68,10 @@
     <Style Selector="Border.overliters TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource Pump.Ink.Danger}" />
     </Style>
+    <Style Selector="Border.underliters">
+      <Setter Property="BorderBrush" Value="{DynamicResource Pump.Ok}" />
+      <Setter Property="BorderThickness" Value="2" />
+    </Style>
     <Style Selector="Border.convrow">
       <Setter Property="BorderBrush" Value="{DynamicResource Pump.ChromeBorder}" />
       <Setter Property="BorderThickness" Value="1" />
@@ -402,49 +406,47 @@
           <StackPanel Spacing="4" HorizontalAlignment="Center">
             <TextBlock Text="🔁 تبدیلِ تیل" Classes="h2" TextAlignment="Center" />
             <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="640"
-                       Text="ارزشِ تیلِ مبدأ = لیتر × قیمتِ خریدِ مخزن (نه نرخِ اتحادیه)؛ لیترِ مقصدِ قابلِ دریافت = ارزش ÷ قیمتِ خریدِ هر لیترِ مقصد." />
+                       Text="ارزشِ تیلِ مبدأ = لیتر × قیمتِ خریدِ مخزن (نه نرخِ اتحادیه)؛ مثال: ۱۰۰ لیتر پطرول × ۷۰ = ۷٬۰۰۰ افغانی ÷ دیزلِ ۸۰ = ۸۷٫۵ لیتر دیزل — نه ۱۰۰ لیتر." />
           </StackPanel>
 
-          <Grid ColumnDefinitions="Auto,10,*,10,*,10,*,10,*" RowDefinitions="Auto,6,Auto,4,Auto">
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="نوعِ تبدیل" Classes="label pllabel" VerticalAlignment="Bottom" />
-            <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding ConvQtyLabel}" Classes="label pllabel" VerticalAlignment="Bottom" />
-            <TextBlock Grid.Row="0" Grid.Column="4" Text="{Binding ConvFromPriceLabel}" Classes="label pllabel" VerticalAlignment="Bottom" />
-            <TextBlock Grid.Row="0" Grid.Column="6" Text="{Binding ConvToPriceLabel}" Classes="label pllabel" VerticalAlignment="Bottom" />
-            <TextBlock Grid.Row="0" Grid.Column="8" Text="{Binding ConvDeliveredLabel}" Classes="label pllabel" VerticalAlignment="Bottom" />
+          <!-- ۱۴۰۵/۰۷/۱۹ به خواستهٔ صاحب ریپو: همهٔ کادرها هم‌اندازه (پنج ستونِ برابر، بلندیِ ۴۸)،
+               و جهت همان دکمهٔ «پطرول ⇐ دیزل» که با زدن برعکس می‌شود. ردیفِ ۱: مقدار ⇐ جهت ⇐ فیِ
+               پطرول ⇐ فیِ دیزل ⇐ حقِ مشتری؛ ردیفِ ۲: لیترِ داده‌شده ⇐ حکم ⇐ ثبت. -->
+          <Grid ColumnDefinitions="*,10,*,10,*,10,*,10,*" RowDefinitions="Auto,6,Auto,4,Auto,10,Auto,6,Auto">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding ConvQtyLabel}" Classes="label pllabel" VerticalAlignment="Bottom" />
+            <TextBlock Grid.Row="0" Grid.Column="2" Text="نوعِ تیل" Classes="label pllabel" VerticalAlignment="Bottom" />
+            <TextBlock Grid.Row="0" Grid.Column="4" Text="فیِ خریدِ ⛽ پطرول" Classes="label pllabel" VerticalAlignment="Bottom" />
+            <TextBlock Grid.Row="0" Grid.Column="6" Text="فیِ خریدِ 🟤 دیزل" Classes="label pllabel" VerticalAlignment="Bottom" />
+            <TextBlock Grid.Row="0" Grid.Column="8" Text="حقِ مشتری — باید داده شود" Classes="label pllabel" VerticalAlignment="Bottom" />
 
-            <Button Grid.Row="2" Grid.Column="0" Classes="accent" MinHeight="48" MinWidth="170"
+            <TextBox Grid.Row="2" Grid.Column="0" Classes="plbox" Height="48" Text="{Binding ConvQty}" Watermark="0" c:LiveFormat.Kind="number" />
+            <Button Grid.Row="2" Grid.Column="2" Classes="accent" Height="48" HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
                     Content="{Binding ConvDirectionText}" Command="{Binding ToggleConvDirectionCommand}"
                     ToolTip.Tip="زدنش جهتِ تبدیل را عوض می‌کند (پطرول ⇄ دیزل)" />
-            <TextBox Grid.Row="2" Grid.Column="2" Classes="plbox" Text="{Binding ConvQty}" Watermark="0" c:LiveFormat.Kind="number" />
-            <TextBox Grid.Row="2" Grid.Column="4" Classes="plbox" Text="{Binding ConvFromPrice}" Watermark="0" c:LiveFormat.Kind="number" />
-            <TextBox Grid.Row="2" Grid.Column="6" Classes="plbox" Text="{Binding ConvToPrice}" Watermark="0" c:LiveFormat.Kind="number" />
-            <TextBox Grid.Row="2" Grid.Column="8" Classes="plbox" Classes.overliters="{Binding ConvOver}"
-                     Text="{Binding ConvDelivered}" Watermark="همان مجاز" c:LiveFormat.Kind="number" />
-
-            <TextBlock Grid.Row="4" Grid.Column="4" Text="{Binding ConvFromSourceText}" Classes="muted" FontSize="11" TextAlignment="Center" />
-            <TextBlock Grid.Row="4" Grid.Column="6" Text="{Binding ConvToSourceText}" Classes="muted" FontSize="11" TextAlignment="Center" />
-          </Grid>
-
-          <Grid ColumnDefinitions="*,10,*,10,2*,10,Auto">
-            <Border Grid.Column="0" Classes="panel" Padding="10,8">
-              <StackPanel Spacing="3">
-                <TextBlock Text="ارزشِ کلِ تیلِ مبدأ" Classes="label pllabel" />
-                <TextBlock Text="{Binding ConvValueText}" FontWeight="ExtraBold" FontSize="16" TextAlignment="Center"
-                           Foreground="{DynamicResource Pump.Ink.Accent}" />
-              </StackPanel>
+            <TextBox Grid.Row="2" Grid.Column="4" Classes="plbox" Height="48" Text="{Binding ConvPetrolPrice}" Watermark="دستی" c:LiveFormat.Kind="number" />
+            <TextBox Grid.Row="2" Grid.Column="6" Classes="plbox" Height="48" Text="{Binding ConvDieselPrice}" Watermark="دستی" c:LiveFormat.Kind="number" />
+            <Border Grid.Row="2" Grid.Column="8" Classes="panel" Height="48" Padding="8,0">
+              <TextBlock Text="{Binding ConvDueText}" FontWeight="ExtraBold" FontSize="14" TextAlignment="Center"
+                         VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                         ToolTip.Tip="{Binding ConvDueText}" Foreground="{DynamicResource Pump.Ink.Ok}" />
             </Border>
-            <Border Grid.Column="2" Classes="panel" Padding="10,8">
-              <StackPanel Spacing="3">
-                <TextBlock Text="لیترِ قابلِ دریافت (مجاز)" Classes="label pllabel" />
-                <TextBlock Text="{Binding ConvAllowedText}" FontWeight="ExtraBold" FontSize="16" TextAlignment="Center"
-                           Foreground="{DynamicResource Pump.Ink.Ok}" />
-              </StackPanel>
-            </Border>
-            <Border Grid.Column="4" Classes="panel" Classes.overliters="{Binding ConvOver}" Padding="10,8">
-              <TextBlock Text="{Binding ConvResultText}" FontWeight="Bold" FontSize="14" TextWrapping="Wrap"
+
+            <TextBlock Grid.Row="4" Grid.Column="4" Text="{Binding ConvPetrolSourceText}" Classes="muted" FontSize="11" TextAlignment="Center" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="4" Grid.Column="6" Text="{Binding ConvDieselSourceText}" Classes="muted" FontSize="11" TextAlignment="Center" TextWrapping="Wrap" />
+            <Button Grid.Row="4" Grid.Column="8" Content="↺ فی از مخزن" FontSize="11" Padding="6,2" HorizontalAlignment="Center"
+                    ToolTip.Tip="هر دو فی دوباره از تازه‌ترین خریدِ مخزن" Command="{Binding ResetConvPricesCommand}" />
+
+            <TextBlock Grid.Row="6" Grid.Column="0" Text="{Binding ConvDeliveredLabel}" Classes="label pllabel" VerticalAlignment="Bottom" />
+            <TextBlock Grid.Row="6" Grid.Column="2" Grid.ColumnSpan="5" Text="نتیجه — ضرر یا فایده" Classes="label pllabel" VerticalAlignment="Bottom" />
+            <TextBox Grid.Row="8" Grid.Column="0" Classes="plbox" Height="48" Classes.overliters="{Binding ConvOver}"
+                     Text="{Binding ConvDelivered}" Watermark="{Binding ConvDeliveredHint}" c:LiveFormat.Kind="number" />
+            <Border Grid.Row="8" Grid.Column="2" Grid.ColumnSpan="5" Classes="panel" MinHeight="48" Classes.overliters="{Binding ConvOver}"
+                    Classes.underliters="{Binding ConvUnder}" Padding="10,4">
+              <TextBlock Text="{Binding ConvResultText}" FontWeight="Bold" FontSize="13" TextWrapping="Wrap"
                          TextAlignment="Center" VerticalAlignment="Center" />
             </Border>
-            <Button Grid.Column="6" Classes="accent" Content="➕ ثبتِ تبدیل" MinWidth="120" VerticalAlignment="Stretch"
+            <Button Grid.Row="8" Grid.Column="8" Classes="accent" Content="➕ ثبتِ تبدیل" Height="48" HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
                     Command="{Binding SaveConversionCommand}" />
           </Grid>

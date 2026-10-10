@@ -114,18 +114,39 @@ internal static class Profit18Probe
 
         // ── تبدیلِ تیل ──
         sec.ConvPetrolToDiesel = true; Settle(win);
-        sec.ConvFromPrice = "70"; sec.ConvToPrice = "80"; sec.ConvQty = "100"; sec.ConvDelivered = "";
+        Check("فیِ خودکار از خریدهای مخزن (نه اتحادیه)",
+              sec.ConvPetrolSourceText.Contains("خریدِ مخزن") || sec.ConvPetrolSourceText.Contains("دستی بنویسید"), sec.ConvPetrolSourceText);
+        var combo = win.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => ReferenceEquals(b.Command, sec.ToggleConvDirectionCommand));
+        Check("دکمهٔ «نوعِ تیل» (پطرول ⇐ دیزل) دیده می‌شود", combo is { IsEffectivelyVisible: true } && sec.ConvDirectionText.StartsWith("⛽"), sec.ConvDirectionText);
+        sec.ConvPetrolPrice = "70"; sec.ConvDieselPrice = "80"; sec.ConvQty = "100"; sec.ConvDelivered = "";
         Settle(win);
         Check("۱۰۰ × ۷۰ ÷ ۸۰ = ۸۷٫۵ لیتر", sec.ConvAllowedText.StartsWith("87.5"), sec.ConvAllowedText);
         Check("ارزشِ کل ۷٬۰۰۰", sec.ConvValueText.StartsWith("7,000"), sec.ConvValueText);
-        Check("منبعِ قیمت «دستی» گفته می‌شود", sec.ConvFromSourceText.Contains("دستی"), sec.ConvFromSourceText);
+        Check("منبعِ قیمت «دستی» گفته می‌شود", sec.ConvPetrolSourceText.Contains("دستی"), sec.ConvPetrolSourceText);
+        var boxes = win.GetVisualDescendants().OfType<Control>()
+            .Where(c => c.IsEffectivelyVisible && c.Height == 48 && c.FindAncestorOfType<Grid>() is { } g && g.ColumnDefinitions.Count == 9
+                        && (c is TextBox || c is Button || c is Border)).Select(c => c.Bounds.Width).ToList();
+        Check("همهٔ کادرهای تبدیل هم‌اندازه", boxes.Count >= 7 && boxes.Max() - boxes.Min() < 1.5,
+              string.Join(" ", boxes.Select(w => w.ToString("0"))));
+        Check("حقِ مشتری: لیتر و پول در یک کادر", sec.ConvDueText.Contains("87.50") && sec.ConvDueText.Contains("7,000"), sec.ConvDueText);
+        Check("می‌گوید چقدر باید داده شود", sec.ConvResultText.Contains("باید 87.50 لیتر"), sec.ConvResultText);
+        sec.ConvDelivered = "100"; Settle(win);
+        Check("۱۰۰ لیتر سر به سر ⇒ سرخ و «ضرر» (۱۲٫۵ × ۸۰ = ۱٬۰۰۰)",
+              sec.ConvOver && sec.ConvResultText.Contains("ضرر") && sec.ConvResultText.Contains("1,000"), sec.ConvResultText);
+        if (shots is not null && combo is not null)
+        {
+            var save = win.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => Equals(b.Content, "➕ ثبتِ تبدیل"));
+            (save ?? (Control)combo).BringIntoView(); Settle(win); Wait(win, Task.Delay(100)); Settle(win);
+            Shot(win, shots, "conversion");
+        }
+        sec.ConvDelivered = ""; Settle(win);
 
         sec.ConvDelivered = "101"; Settle(win);
         var delivered = ByText(win, "101");
         Check("تحویلِ ۱۰۱ ⇒ کادرِ سرخ و «لیتر اضافه داده شده»",
               sec.ConvOver && delivered?.Classes.Contains("overliters") == true && sec.ConvResultText.Contains("لیتر اضافه داده شده"),
               sec.ConvResultText);
-        Check("ضررِ احتمالی ۱٬۰۸۰ (۱۳٫۵ × ۸۰)", sec.ConvResultText.Contains("1,080"), sec.ConvResultText);
+        Check("ضرر ۱٬۰۸۰ (۱۳٫۵ × ۸۰)", sec.ConvResultText.Contains("1,080"), sec.ConvResultText);
         if (shots is not null)
         {
             win.Height = 2600; Settle(win);
@@ -139,9 +160,11 @@ internal static class Profit18Probe
         Check("ثبت شد و در تاریخچه آمد", sec.ConvRows.Count == 1, sec.ConvSummary);
 
         // دومی: دیزل ⇐ پطرول
-        sec.ConvPetrolToDiesel = false; Settle(win);
-        sec.ConvFromPrice = "80"; sec.ConvToPrice = "70"; sec.ConvQty = "87.5"; sec.ConvDelivered = ""; Settle(win);
-        Check("دیزل ⇐ پطرول: ۸۷٫۵ × ۸۰ ÷ ۷۰ = ۱۰۰", sec.ConvAllowedText.StartsWith("100"), sec.ConvAllowedText);
+        sec.ToggleConvDirectionCommand.Execute(null); Settle(win);
+        Check("عوض کردنِ جهت فیِ دستی را پاک نکرد", sec.ConvPetrolPrice.StartsWith("70") && sec.ConvDieselPrice.StartsWith("80"),
+              sec.ConvPetrolPrice + " / " + sec.ConvDieselPrice);
+        sec.ConvQty = "87.5"; sec.ConvDelivered = ""; Settle(win);
+        Check("دیزل به پطرول: ۸۷٫۵ × ۸۰ ÷ ۷۰ = ۱۰۰", sec.ConvAllowedText.StartsWith("100"), sec.ConvAllowedText);
         Wait(win, sec.SaveConversionCommand.ExecuteAsync(null)); Settle(win);
         Check("دو تبدیل در تاریخچه", sec.ConvRows.Count == 2, sec.ConvSummary);
 
