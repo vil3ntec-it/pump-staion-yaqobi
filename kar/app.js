@@ -162,6 +162,46 @@
     return diff === 0;
   }
 
+  /*
+   *  ══ «حساب‌ها» رمزشده می‌آید (۱۴۰۵/۰۷/۲۳، شورای آمادگیِ عرضه) ══════════
+   *
+   *  ⛔ برنامهٔ کامپیوتر دیگر دفترِ مالی (‎sections‎ و ‎banner‎) را خام
+   *  نمی‌فرستد، و ‎gate‎ فقط «روش + نمک» است، بی هش (‎OwnerSeal.cs‎). پس
+   *  رمزِ خواندنِ کارمند یا یک ‎curl‎ دیگر هیچ عددی از «حساب‌ها» نمی‌دهد.
+   *  کلید = SHA-256("pump-owner-seal-v1" ‖ PBKDF2(رمز، نمک، دور)) و ‎seal‎ با
+   *  AES-GCM باز می‌شود؛ رمزِ غلط ⇒ برچسب نمی‌خورد ⇒ ‎null‎.
+   *  ⚠️ عکسِ برنامه‌های کهنه (‎gate‎ِ پنج‌تکه، ‎sections‎ِ خام) همان راهِ قبلی را
+   *  می‌رود (‎verifyPassword‎).
+   */
+  function isSealed(snap) {
+    return !!(snap && snap.seal && typeof snap.gate === 'string' && snap.gate.split('$').length === 4);
+  }
+
+  async function ownerSealKey(password, gate) {
+    var p = String(gate || '').split('$');
+    if (p.length !== 4 || p[0] !== 'pbkdf2' || p[1] !== 'sha256') return null;
+    var iter = parseInt(p[2], 10);
+    if (!(iter > 0)) return null;
+    var base = await crypto.subtle.importKey(
+      'raw', new TextEncoder().encode(String(password || '')), 'PBKDF2', false, ['deriveBits']);
+    var dk = new Uint8Array(await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', salt: b64bytes(p[3]), iterations: iter, hash: 'SHA-256' }, base, 256));
+    var info = new TextEncoder().encode('pump-owner-seal-v1');
+    var buf = new Uint8Array(info.length + dk.length);
+    buf.set(info); buf.set(dk, info.length);
+    var raw = await crypto.subtle.digest('SHA-256', buf);
+    return crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
+  }
+
+  async function openSeal(key, seal) {
+    if (!key || !seal || !seal.iv || !seal.ct) return null;
+    try {
+      var pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64bytes(seal.iv) }, key, b64bytes(seal.ct));
+      var o = JSON.parse(new TextDecoder().decode(pt));
+      return o && typeof o === 'object' ? o : null;
+    } catch (e) { return null; }
+  }
+
   // ══════════════════════════════════════════════════════════════════════
   //  ربات — موتورِ جست‌وجوی همان دادهٔ برنامه
   // ══════════════════════════════════════════════════════════════════════
@@ -553,14 +593,16 @@
     var c = { out: 0, low: 0, ok: 0 };
     people.forEach(function (p) { if (p && c[p.status] !== undefined) c[p.status]++; });
     function tk(x) { x = x || {}; return { show: num(x.show), low: !!x.low, near: !!x.near }; }
-    var owned = !!snap.gate && !!ownedGate && ownedGate === snap.gate;
+    var og = ownedGate && typeof ownedGate === 'object' ? ownedGate.gate : ownedGate;
+    var owned = !!snap.gate && !!og && og === snap.gate;
+    var ban = ownedGate && typeof ownedGate === 'object' && ownedGate.banner ? ownedGate.banner : snap.banner;
     return {
       name: (snap.station && snap.station.name) || '',
       at: snap.at || '',
       tank: { petrol: tk(t.petrol), diesel: tk(t.diesel) },
       counts: c, people: people.length,
       hasGate: !!snap.gate,
-      banner: owned ? (snap.banner || []).map(function (b) { return [String(b[0] || ''), String(b[1] || ''), String(b[2] || '')]; }) : null
+      banner: owned ? (ban || []).map(function (b) { return [String(b[0] || ''), String(b[1] || ''), String(b[2] || '')]; }) : null
     };
   }
 
@@ -568,6 +610,7 @@
     module.exports = {
       answer: answer, askedMonth: askedMonth, monthHit: monthHit, anyWord: anyWord,
       norm: norm, num: num, verifyPassword: verifyPassword,
+      isSealed: isSealed, ownerSealKey: ownerSealKey, openSeal: openSeal,
       wsBaseOf: wsBaseOf, doorsFor: doorsFor, freshAlerts: freshAlerts,
       httpBaseOf: httpBaseOf, pushBases: pushBases, b64uBytes: b64uBytes, TUNNEL: TUNNEL,
       pumpListAdd: pumpListAdd, pumpListDrop: pumpListDrop, pumpSummary: pumpSummary
@@ -649,7 +692,7 @@
       localStorage.removeItem(KEY + '.told');
     } catch (e) { }
     cfg.stn = next;
-    ownerPassed = '';
+    dropOwner();
     data = null;
     toldKeys = {};
     unlocked = false;
@@ -672,7 +715,9 @@
     data = v;
     fromCloud = !!viaCloud;
     try { localStorage.setItem(stnKey('snap'), JSON.stringify(data)); } catch (e) { }
+    attachOwner(data);
     render();
+    refreshSeal();
     return true;
   }
 
@@ -1337,9 +1382,33 @@
    */
   var pendingOwner = false;
   var ownerPassed = '';   // هشِ رمزی که در همین اجرا درست زده شد — نه روی دیسک
+  //  عکسِ رمزشده: کلیدِ همین اجرا (فقط در حافظه) و آن‌چه با آن باز شد
+  var ownerKey = null, ownerOpen = null;
+
+  function dropOwner() { ownerPassed = ''; ownerKey = null; ownerOpen = null; }
+
+  /** بخشِ مالیِ بازشده را روی عکسِ تازه بنشان — فقط در حافظه، نه روی دیسک. */
+  function attachOwner(d) {
+    if (!d || !isSealed(d) || !ownerOpen || ownerPassed !== d.gate) return;
+    d.sections = ownerOpen.sections || {};
+    d.banner = ownerOpen.banner || [];
+  }
+
+  /** عکسِ تازهٔ رمزشده با همان کلید دوباره باز می‌شود؛ نشد ⇒ «حساب‌ها» قفل. */
+  async function refreshSeal() {
+    var d = data;
+    if (!isSealed(d) || !ownerKey || ownerPassed !== d.gate) return;
+    var o = await openSeal(ownerKey, d.seal);
+    if (d !== data) return;
+    if (!o) { dropOwner(); render(); return; }
+    ownerOpen = o;
+    attachOwner(d);
+    render();
+  }
 
   /** درِ «حساب‌ها» باز است؟ فقط با رمزِ درستِ همین اجرا. */
   function ownerOk() {
+    if (isSealed(data)) return !!ownerKey && !!ownerOpen && ownerPassed === data.gate;
     return !!data && !!data.gate && ownerPassed === data.gate;
   }
 
@@ -1524,9 +1593,16 @@
     var inp = card.querySelector('input'), er = card.querySelector('.pump-err');
     if (!got || !got.live || !got.live.gate || !inp) return;
     var ok = false;
-    try { ok = await verifyPassword(inp.value, got.live.gate); } catch (e) { ok = false; }
+    var opened = null;
+    try {
+      if (isSealed(got.live)) {
+        opened = await openSeal(await ownerSealKey(inp.value, got.live.gate), got.live.seal);
+        ok = !!opened;
+      } else ok = await verifyPassword(inp.value, got.live.gate);
+    } catch (e) { ok = false; }
     if (!ok) { if (er) { er.textContent = 'رمز درست نیست.'; er.classList.remove('hidden'); } return; }
-    pumpsOwned[k] = got.live.gate;               // فقط همین پمپ، فقط همین اجرا
+    //  فقط همین پمپ، فقط همین اجرا — و از عکسِ رمزشده فقط چهار عددِ نوار
+    pumpsOwned[k] = opened ? { gate: got.live.gate, banner: opened.banner || [] } : got.live.gate;
     renderPumps();
   }
 
@@ -1537,13 +1613,20 @@
     if (!data || !data.gate) return;
     $('btnUnlock').disabled = true;
     try {
-      var ok = await verifyPassword(pass, data.gate);
+      var d = data, ok = false, key = null, opened = null;
+      if (isSealed(d)) {
+        key = await ownerSealKey(pass, d.gate);
+        opened = await openSeal(key, d.seal);
+        ok = !!opened;
+      } else ok = await verifyPassword(pass, d.gate);
       if (!ok) {
         err.textContent = 'رمز درست نیست.';
         err.classList.remove('hidden');
         return;
       }
-      ownerPassed = data.gate;
+      ownerPassed = d.gate;
+      ownerKey = key; ownerOpen = opened;
+      attachOwner(d);
       enterOwner();
     } catch (e) {
       err.textContent = 'رمز سنجیده نشد: ' + e;
@@ -2473,7 +2556,7 @@
     $('btnLock').addEventListener('click', function () {
       //  🔒 = «حساب‌ها» دوباره قفل.
       //  ⛔ کارمندان قفل نمی‌شوند — از همان صفحه یک دکمه تا آن‌جاست.
-      ownerPassed = '';
+      dropOwner();
       clearOwnerPanes();
       mode = '';
       try { localStorage.removeItem(stnKey('mode')); } catch (e) { }

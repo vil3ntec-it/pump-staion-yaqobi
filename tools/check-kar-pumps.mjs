@@ -51,6 +51,21 @@ for (const t of ['A', 'B']) {
     alerts: [], sections: {},
   };
 }
+//  ‎SEALED=1‎: همان عکس به شکلِ برنامهٔ ۳.۱.۲۶۰ به بعد (‎OwnerSeal.cs‎) — نوار و
+//  بخش‌ها فقط رمزشده، ‎gate‎ بی هش. همهٔ بندهای پایین باید همان‌طور سبز بمانند.
+const SEALED = process.env.SEALED === '1';
+if (SEALED) for (const p of Object.values(P)) {
+  const [a, b, iter, salt] = p.snap.gate.split('$');
+  const dk = crypto.pbkdf2Sync(p.pass, Buffer.from(salt, 'base64'), +iter, 32, 'sha256');
+  const key = crypto.createHash('sha256').update(Buffer.concat([Buffer.from('pump-owner-seal-v1'), dk])).digest();
+  const iv = crypto.randomBytes(12);
+  const c = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const pt = Buffer.from(JSON.stringify({ sections: p.snap.sections, banner: p.snap.banner }));
+  const ct = Buffer.concat([c.update(pt), c.final(), c.getAuthTag()]);
+  delete p.snap.sections; delete p.snap.banner;
+  p.snap.gate = [a, b, iter, salt].join('$');
+  p.snap.seal = { v: 1, iv: iv.toString('base64'), ct: ct.toString('base64') };
+}
 const byCode = (c) => Object.values(P).find((p) => p.code === c);
 
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium/chrome-linux/chrome' }).catch(() => chromium.launch());
