@@ -702,7 +702,9 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         IsLow = t.IsLow;
         ThresholdText = "حد هشدار: " + Shamsi.Money(threshold) + " لیتر";
 
-        // فیِ لیترِ خرید و تاریخِ آخرین خرید — همان دو عددِ «خلاصه پول‌ها»
+        // فیِ لیترِ خرید و تاریخِ آخرین خرید — همان دو عددِ «خلاصه پول‌ها». فی = همان خریدی
+        // که الان از مخزن کشیده می‌شود (‎RefreshBuyPerLiterAsync‎، ۱۴۰۵/۰۷/۲۲)
+        await _host.StorageData.RefreshBuyPerLiterAsync(Fuel);
         var last = Purchases.FirstOrDefault();
         PerLiter = Shamsi.Money(Math.Round(
             _host.Settings.GetDecimal(Fuel == FuelType.Diesel

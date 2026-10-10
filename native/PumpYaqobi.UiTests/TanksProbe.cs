@@ -76,6 +76,10 @@ internal static class TanksProbe
         var cur = Shamsi.Num(st.Current);
         Check("جمعِ مخزن‌ها = موجودیِ کارتِ بالا (گرد به لیتر)", Math.Abs(sum - cur) <= 2m, $"{sum} / {cur}");
         Check("یک مخزن در حالِ کشیدن", st.Tanks.Count(t => t.Active) == 1);
+        //  فی لیترِ خرید = همان خریدی که مخزنِ «در حالِ کشیدن» از آن می‌کشد (۱۴۰۵/۰۷/۲۲)
+        var prices = st.Purchases.Select(p => Math.Round(p.Entity.PerLiter, 1)).ToList();
+        Check("فی لیترِ خرید از یکی از خریدهای همین تیل است", prices.Contains(Shamsi.Num(st.PerLiter)),
+              st.PerLiter + " از " + string.Join("، ", prices.Distinct()));
         if (shots is not null)
         {
             var title = win.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(t => t.Text == "🛢️ مخزن‌های شماره‌دار");

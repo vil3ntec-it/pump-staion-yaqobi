@@ -87,6 +87,7 @@ public sealed class StorageDataService
         }
 
         RememberPerLiter(p);
+        await RefreshBuyPerLiterAsync(p.Fuel, ct);
 
         await LinkToCompanyAsync(p, ct);
         return p;
@@ -204,6 +205,8 @@ public sealed class StorageDataService
                                  .OrderByDescending(x => x.Id).Select(x => x.Id).FirstOrDefaultAsync(ct);
             if (newest == p.Id) RememberPerLiter(p);
         }
+        //  و از ۱۴۰۵/۰۷/۲۲ فی همان خریدی است که الان کشیده می‌شود
+        await RefreshBuyPerLiterAsync(p.Fuel, ct);
 
         if (!await _companies.HasPurchaseRowAsync(p.LegacyId, ct))
         {
@@ -274,6 +277,7 @@ public sealed class StorageDataService
         await _trash.RememberAsync(db, "purchase", (p.Seller ?? "") + " — " + (p.DateShamsi ?? ""), p, ct);
         db.FuelPurchases.Remove(p);
         await db.SaveChangesAsync(ct);
+        await RefreshBuyPerLiterAsync(p.Fuel, ct);
 
         // ⛔ ردیفِ حسابِ شرکت عمداً دست‌نخورده می‌ماند — همان چیزی که نسخهٔ
         // وب هم در پرسشِ قبل از حذف صریح می‌گوید: «ردیفِ همین خرید در
@@ -408,6 +412,7 @@ public sealed class StorageDataService
         if (t.Id == 0) db.FuelTanks.Add(t);
         else { db.FuelTanks.Attach(t); db.Entry(t).State = EntityState.Modified; }
         await db.SaveChangesAsync(ct);
+        await RefreshBuyPerLiterAsync(t.Fuel, ct);
         return null;
     }
 
@@ -422,6 +427,7 @@ public sealed class StorageDataService
         foreach (var f in await db.TankFills.Where(f => f.TankId == id).ToListAsync(ct)) f.DeletedAt = now;
         t.DeletedAt = now;
         await db.SaveChangesAsync(ct);
+        await RefreshBuyPerLiterAsync(t.Fuel, ct);
     }
 
     /// <summary>سهم‌های همهٔ خریدهای یک تیل — ‎PurchaseId ⇒ (TankId ⇒ لیتر)‎.</summary>
@@ -456,6 +462,7 @@ public sealed class StorageDataService
             if (liters > 0m && valid.Contains(tankId))
                 db.TankFills.Add(new TankFill { PurchaseId = purchaseId, TankId = tankId, Liters = liters });
         await db.SaveChangesAsync(ct);
+        await RefreshBuyPerLiterAsync(p.Fuel, ct);
         return null;
     }
 
@@ -463,6 +470,54 @@ public sealed class StorageDataService
     /// حالِ هر مخزنِ یک تیل: خریدها (با سهم‌هایشان) آمدن، فروشِ هر روزِ پارچه‌ها و اصلاحِ
     /// میله‌زنی رفتن — به ترتیبِ تاریخ (‎TankSplitService‎). بی مخزنِ تعریف‌شده ⇒ فهرستِ خالی.
     /// </summary>
+    /// <summary>
+    /// «فی لیترِ خرید» = فیِ همان خریدی که الان از مخزن کشیده می‌شود (‎DrawPriceService‎)، برای همین
+    /// تیل؛ با مخزن‌های شماره‌دار، خریدی که در مخزنِ «در حالِ کشیدن» است. همان عدد در تنظیمات
+    /// می‌نشیند تا پارچه، مفاد و تبدیلِ تیل همه همان را بخوانند. ‎null‎ ⇒ چیزی عوض نشد.
+    /// </summary>
+    public async Task<decimal?> RefreshBuyPerLiterAsync(FuelType fuel, CancellationToken ct = default)
+    {
+        await using var db = _dbf.Create();
+        var purchases = await db.FuelPurchases.AsNoTracking().Where(p => p.Fuel == fuel)
+                                .Select(p => new { p.Id, p.DateKey, p.Liters, p.PerLiter }).ToListAsync(ct);
+        if (purchases.Count == 0) return null;
+        var sales = await db.Reports.AsNoTracking().Where(r => r.Fuel == fuel)
+            .Select(r => new { Day = (decimal?)r.DayShift!.Sale, Night = (decimal?)r.NightShift!.Sale }).ToListAsync(ct);
+        var adjust = await db.TankDips.AsNoTracking().Where(d => d.Fuel == fuel && d.BookAdjust != 0m)
+                             .Select(d => d.BookAdjust).ToListAsync(ct);
+        var consumed = sales.Sum(r => (r.Day ?? 0m) + (r.Night ?? 0m)) - adjust.Sum();
+        var ins = purchases.Select(p => new DrawIn(p.DateKey, p.Id, p.Liters, p.PerLiter)).ToList();
+
+        var tanks = await db.FuelTanks.AsNoTracking().Where(t => t.Fuel == fuel)
+                            .Select(t => new { t.Id, t.Num }).ToListAsync(ct);
+        if (tanks.Count > 0)
+        {
+            var levels = await TankLevelsAsync(fuel, ct);
+            if (levels.FirstOrDefault(l => l.Active) is { Id: > 0 } act)
+            {
+                var first = tanks.OrderBy(t => t.Num).First().Id;
+                var fills = await db.TankFills.AsNoTracking()
+                    .Where(f => f.Purchase != null && f.Purchase.Fuel == fuel)
+                    .Select(f => new { f.PurchaseId, f.TankId, f.Liters }).ToListAsync(ct);
+                var mine = new List<DrawIn>();
+                foreach (var p in purchases)
+                {
+                    var fs = fills.Where(f => f.PurchaseId == p.Id).ToList();
+                    var l = fs.Where(f => f.TankId == act.Id).Sum(f => f.Liters);
+                    if (act.Id == first) l += p.Liters - fs.Sum(f => f.Liters);
+                    if (l > 0m) mine.Add(new DrawIn(p.DateKey, p.Id, l, p.PerLiter));
+                }
+                if (mine.Count > 0) { ins = mine; consumed = mine.Sum(i => i.Liters) - act.Current; }
+            }
+        }
+
+        var price = DrawPriceService.Current(ins, consumed);
+        if (price is not { } v) return null;
+        var key = fuel == FuelType.Diesel ? SettingsService.BuyPerLiterDiesel : SettingsService.BuyPerLiterPetrol;
+        if (_settings.GetDecimal(key) != v) _settings.Set(key, v);
+        return v;
+    }
+
     public async Task<List<TankLevel>> TankLevelsAsync(FuelType fuel, CancellationToken ct = default)
     {
         _perm.Require(Permission.ViewData);

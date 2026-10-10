@@ -83,16 +83,21 @@ public class StorageBuyEditTests : IDisposable
     }
 
     [Fact]
-    public async Task VirayesheKharideKohne_FiLitreEmruzRaAvazNemikonad()
+    //  ⛔ پس گرفته شد (۱۴۰۵/۰۷/۲۲): «ویرایشِ خریدِ کهنه فیِ امروز را عوض نمی‌کند». خواستهٔ صاحب
+    //  ریپو: فی = همان خریدی که الان کشیده می‌شود. خریدِ کهنه‌ای که هنوز تیلش نفروخته شده همان
+    //  است؛ پس قیمت‌دار شدنش فیِ امروز می‌شود (‎DrawPriceService‎، آزمونش ‎DrawPriceTests‎).
+    public async Task VirayesheKharideKohne_KeHanuzKashideMishavad_FiEmruzMishavad()
     {
         var (storage, _, settings, _) = Host();
         var old = await storage.AddPurchaseAsync(Buy("", 0m, 0m, "1405/06/01"));
-        await storage.AddPurchaseAsync(Buy("", 1000m, 70m));
-        var now = settings.GetDecimal(SettingsService.BuyPerLiterPetrol);
+        var newer = await storage.AddPurchaseAsync(Buy("", 1000m, 70m));
+        //  کهنه بی‌قیمت است ⇒ فیِ بعدیِ قیمت‌دار
+        Assert.Equal(newer.PerLiter, settings.GetDecimal(SettingsService.BuyPerLiterPetrol));
 
         old.PriceTon = 2000m; old.UsdRate = 80m;
         await storage.UpdatePurchaseAsync(old);
-        Assert.Equal(now, settings.GetDecimal(SettingsService.BuyPerLiterPetrol));
+        Assert.True(old.PerLiter > 0m && old.PerLiter != newer.PerLiter);
+        Assert.Equal(old.PerLiter, settings.GetDecimal(SettingsService.BuyPerLiterPetrol));
     }
 
     [Fact]

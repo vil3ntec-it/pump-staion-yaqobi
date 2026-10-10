@@ -615,6 +615,18 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
     public decimal BuyPerLiter => _host.Settings.GetDecimal(
         IsDiesel ? SettingsService.BuyPerLiterDiesel : SettingsService.BuyPerLiterPetrol);
 
+    /// <summary>فیِ خریدِ هر دو تیل را از خریدِ «در حالِ کشیدن» تازه می‌کند.</summary>
+    private async Task RefreshBuyAsync()
+    {
+        try
+        {
+            await _host.StorageData.RefreshBuyPerLiterAsync(FuelType.Petrol);
+            await _host.StorageData.RefreshBuyPerLiterAsync(FuelType.Diesel);
+            OnPropertyChanged(nameof(BuyPerLiter));
+        }
+        catch (Exception ex) { Services.CrashGuard.Write("فیِ خریدِ در حالِ کشیدن", ex, report: false); }
+    }
+
     partial void OnIsDieselChanged(bool v)
     {
         OnPropertyChanged(nameof(FuelLabel));
@@ -648,6 +660,8 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
     public override async Task OnActivatedAsync()
     {
         Services.Hints.DidYouKnow("parcha");                 // شورا، ث۲ — فقط بارِ اول
+        //  فیِ خرید = همان خریدی که الان از مخزن کشیده می‌شود، هر تیل جدا (۱۴۰۵/۰۷/۲۲)
+        await RefreshBuyAsync();
         //  ⛔ فقط کارتی که همین حالا یک شیفتِ ذخیره‌شده را نشان می‌دهد و کاربر در
         //  آن چیزی ننوشته، با نسخهٔ تازهٔ **همان** شیفت پر می‌شود. کارتِ خالی
         //  («پارچهٔ جدید»، دیزلِ پس از ذخیره) و کارتِ تایپ‌شده دست نمی‌خورند.
@@ -1061,6 +1075,8 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
             TestLiters: form.TestValue));
 
         if (!res.Ok) { _host.Toast(res.Error ?? "", ToastKind.Error); return false; }
+        //  فروشِ تازه شاید خریدِ کشیده‌شده را جلو برد ⇒ فیِ خریدِ پارچهٔ بعدی
+        await RefreshBuyAsync();
 
         SetForceNew(fuel, kind, false);
         _blank.Remove((fuel, kind));
