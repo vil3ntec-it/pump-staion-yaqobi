@@ -174,6 +174,14 @@
               <TextBox Classes="wfield" Text="{Binding Price}" Watermark="0" c:LiveFormat.Kind="number" />
             </StackPanel>
 
+            <!-- ⛔ جای «فروش (لیتر)» و «فایده فی لیتر» به خواستهٔ صاحب ریپو عوض شد (۱۴۰۵/۰۷/۲۲)؛ منطق دست نخورد -->
+            <StackPanel Spacing="4">
+              <TextBlock Text="فروش (لیتر) — خودکار" Classes="fld" />
+              <Border Classes="calc wfield">
+                <TextBlock Text="{Binding SaleText}" VerticalAlignment="Center" />
+              </Border>
+            </StackPanel>
+
             <!-- فایدهٔ فیِ لیتر — و زیرش همان جملهٔ کج‌نوشتهٔ «فی خرید…» سایت -->
             <StackPanel Spacing="4">
               <TextBlock Text="فایده فی لیتر (افغانی) — اتومات از مخزن" Classes="fld" />
@@ -181,13 +189,6 @@
                        Watermark="اتومات پر می‌شه" c:LiveFormat.Kind="number" />
               <TextBlock Text="{Binding BuyPerLabel}" FontSize="11" FontStyle="Italic"
                          Foreground="{DynamicResource Pump.Muted}" />
-            </StackPanel>
-
-            <StackPanel Spacing="4">
-              <TextBlock Text="فروش (لیتر) — خودکار" Classes="fld" />
-              <Border Classes="calc wfield">
-                <TextBlock Text="{Binding SaleText}" VerticalAlignment="Center" />
-              </Border>
             </StackPanel>
 
             <StackPanel Spacing="4">
@@ -237,12 +238,29 @@
   <c:SectionPage>
     <c:SectionPage.Header>پارچه‌ها</c:SectionPage.Header>
 
+    <!-- ══ یک نوار، نه دو (۱۴۰۵/۰۷/۲۲) ══════════════════════════════════════
+         خواستهٔ صاحب ریپو با عکس: «این‌ها چرا جدا هستند؟ یک‌جا باشند، جا کمتر
+         نمی‌گیرند؟» تاریخ، شمارهٔ گزارش و سه دکمهٔ «گزارش جدید / پارچهٔ جدید» از
+         سربرگِ کارت به همین نوار آمدند و آن سربرگ برداشته شد. نوعِ تیل همان دکمهٔ
+         تیل و سربرگِ دو شیفت است. ⛔ فقط جا عوض شد؛ همان فرمان‌ها. -->
     <c:SectionPage.Toolbar>
-      <StackPanel Orientation="Horizontal" Spacing="8">
-        <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0" Command="{Binding OpenHistoryCommand}" IsVisible="{Binding HasHistory}" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
-        <Button Content="{Binding FuelToggleText}" Command="{Binding ToggleFuelCommand}" />
-        <Button Classes="accent" Content="PDF همه گزارش‌ها" Command="{Binding PdfCommand}" />
-      </StackPanel>
+      <WrapPanel Orientation="Horizontal">
+        <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,3,8,3" Command="{Binding OpenHistoryCommand}" IsVisible="{Binding HasHistory}" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
+        <Button Content="{Binding FuelToggleText}" Margin="0,3,8,3" Command="{Binding ToggleFuelCommand}" />
+        <Button Classes="accent" Content="PDF همه گزارش‌ها" Margin="0,3,14,3" Command="{Binding PdfCommand}" />
+        <TextBlock Text="📅 تاریخ:" Classes="muted" VerticalAlignment="Center" Margin="0,3,7,3" />
+        <TextBox Text="{Binding PaDate, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="120" HorizontalContentAlignment="Center"
+                 Margin="0,3,8,3" c:LiveFormat.Kind="date" />
+        <Border Classes="chip" Margin="0,3,8,3" VerticalAlignment="Center">
+          <TextBlock Text="{Binding ReportNumText, StringFormat=گزارش #{0}}" />
+        </Border>
+        <Button Classes="accent" Content="گزارش جدید" Margin="0,3,8,3"
+                Command="{Binding StartNewReportCommand}" />
+        <Button Content="پارچهٔ جدید روز" Margin="0,3,8,3"
+                Command="{Binding NewParchaDayCommand}" />
+        <Button Content="پارچهٔ جدید شب" Margin="0,3,8,3"
+                Command="{Binding NewParchaNightCommand}" />
+      </WrapPanel>
     </c:SectionPage.Toolbar>
 
     <Panel>
@@ -250,36 +268,10 @@
 
       <!-- ══ کارتِ «ثبت پارچه فعلی» ══ -->
       <Border Grid.Row="0" Classes="panel" Padding="0">
-        <Grid RowDefinitions="Auto,Auto">
-
-          <!-- سربرگِ کارت: عنوان بالا، ابزار زیرش.
-               یک‌ردیفه بود و در ستونِ ۱۰۰۰ پیکسلی «پارچهٔ جدید شب» می‌افتاد
-               خطِ بعد و بی‌قواره می‌شد. حالا هر چه هم پنجره باریک شود، مرتب
-               می‌ماند: هر ابزار حاشیهٔ پایین دارد پس شکستنِ خط هم تمیز است. -->
-          <Border Grid.Row="0" Classes="card-head">
-            <StackPanel Spacing="10">
-              <TextBlock Text="{Binding CardTitle}" FontWeight="Bold" FontSize="15"
-                         Foreground="{DynamicResource Pump.Ink.Accent}" />
-              <WrapPanel Orientation="Horizontal">
-                <TextBlock Text="📅 تاریخ:" Classes="muted" VerticalAlignment="Center"
-                           Margin="0,0,7,6" />
-                <TextBox Text="{Binding PaDate, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="120" HorizontalContentAlignment="Center"
-                         Margin="0,0,8,6" c:LiveFormat.Kind="date" />
-                <Border Classes="chip" Margin="0,0,8,6">
-                  <TextBlock Text="{Binding ReportNumText, StringFormat=گزارش #{0}}" />
-                </Border>
-                <Button Classes="accent" Content="گزارش جدید" Margin="0,0,8,6"
-                        Command="{Binding StartNewReportCommand}" />
-                <Button Content="پارچهٔ جدید روز" Margin="0,0,8,6"
-                        Command="{Binding NewParchaDayCommand}" />
-                <Button Content="پارچهٔ جدید شب" Margin="0,0,8,6"
-                        Command="{Binding NewParchaNightCommand}" />
-              </WrapPanel>
-            </StackPanel>
-          </Border>
+        <Grid>
 
           <!-- دو کارتِ شیفت، کنارِ هم -->
-          <StackPanel Grid.Row="1" Margin="14">
+          <StackPanel Margin="14">
             <Grid ColumnDefinitions="*,14,*">
               <ContentControl Name="DayCard" Grid.Column="0" Content="{Binding Day}" c:Spot.Id="parcha-day"
                               ContentTemplate="{StaticResource ShiftCard}" />
