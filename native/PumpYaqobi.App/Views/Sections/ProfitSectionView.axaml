@@ -218,33 +218,36 @@
                            Foreground="{Binding TrendBrushShown, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                 <TextBlock Grid.Row="1" Text="{Binding NetCaptionShown}" FontSize="13" Margin="0,4,0,0"
                            Foreground="{Binding TrendBrushShown, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
-                <c:SparkChart Grid.Row="2" ShowAxis="False" FlowDirection="LeftToRight" MinHeight="80"
+                <c:SparkChart x:Name="NetChart" Grid.Row="2" ShowAxis="False" FlowDirection="LeftToRight" MinHeight="80"
                               Margin="0,10,0,0"
                               Values="{Binding TrendShown}"
                               LineBrush="{Binding TrendBrushShown, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
                               GridBrush="{DynamicResource Pump.GridLine}" />
               </Grid>
 
-              <!-- ══ 💰 سودِ واقعی: ‎RealProfitService‎ — ⛔ پشتِ همان پرده (‎RealRows‎) ══ -->
-              <StackPanel Grid.Row="1" Spacing="6" Margin="0,10,0,0" IsVisible="{Binding ShowReal}">
-                <TextBlock Text="💰 سودِ واقعی — با قیمتِ خریدِ مخزن" FontSize="13" FontWeight="Bold" />
-                <ItemsControl ItemsSource="{Binding RealRows}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:RealProfitRow">
-                      <Grid ColumnDefinitions="*,Auto" Margin="0,2">
-                        <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="13" VerticalAlignment="Center"
-                                   TextTrimming="CharacterEllipsis" />
-                        <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="14" FontWeight="Bold"
-                                   Margin="10,0,0,0" VerticalAlignment="Center"
-                                   Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
-                      </Grid>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <TextBlock Text="{Binding RealNote}" FontSize="11.5" TextWrapping="Wrap"
+              <!-- ══ 💰 سودِ واقعی (۱۴۰۵/۰۷/۱۸، سوم): همان شکلِ نمودار — عددِ بزرگ = لیتر × فایدهٔ فی
+                   لیتر (همان کادرِ پارچه)، دو جمله «فی لیتر · فایده در هر لیتر» و نمودارِ فایدهٔ فی
+                   لیترِ هر روز. ⛔ هیچ مبلغِ فروش یا لیتری نوشته نمی‌شود؛ پشتِ همان پرده. ══ -->
+              <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto,Auto,Auto,*" IsVisible="{Binding ShowReal}">
+                <TextBlock Grid.Row="0" Text="{Binding RealProfitShown}" FontWeight="Bold" FontSize="34"
+                           Margin="0,8,0,0"
+                           Foreground="{Binding RealProfitBrush, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+                <TextBlock Grid.Row="1" Text="💰 فایده = مقدارِ فروخته‌شده × فایدهٔ فی لیتر (قیمتِ خرید از مخزن)"
+                           FontSize="12" Margin="0,4,0,0" Foreground="{DynamicResource Pump.Muted}" />
+                <TextBlock Grid.Row="2" Text="{Binding RealPetrolText}" FontSize="13.5" FontWeight="SemiBold"
+                           Margin="0,8,0,0" Foreground="{DynamicResource Pump.Ink.Info}" />
+                <TextBlock Grid.Row="3" Text="{Binding RealDieselText}" FontSize="13.5" FontWeight="SemiBold"
+                           Margin="0,4,0,0" Foreground="{DynamicResource Pump.Ink.Warn}" />
+                <c:SparkChart x:Name="RealChart" Grid.Row="5" ShowAxis="True" FlowDirection="LeftToRight" MinHeight="150"
+                              Margin="0,10,0,0" Unit="افغانی" FirstName="پطرول" SecondName="دیزل"
+                              Values="{Binding RealPetrolTrend}" SecondValues="{Binding RealDieselTrend}"
+                              Labels="{Binding RealLabels}"
+                              LineBrush="{DynamicResource Pump.Info}" SecondLineBrush="{DynamicResource Pump.Warn}"
+                              GridBrush="{DynamicResource Pump.GridLine}" LabelBrush="{DynamicResource Pump.Muted}" />
+                <TextBlock Grid.Row="4" Text="{Binding RealNote}" FontSize="11.5" TextWrapping="Wrap" Margin="0,4,0,0"
                            IsVisible="{Binding RealNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                            Foreground="{DynamicResource Pump.Ink.Danger}" />
-              </StackPanel>
+              </Grid>
             </Grid>
           </Border>
 

@@ -49,11 +49,20 @@ public class SparkChart : Control
     public static readonly StyledProperty<string> UnitProperty =
         AvaloniaProperty.Register<SparkChart, string>(nameof(Unit), "لیتر");
 
+    /// <summary>نامِ دو خط در حبابِ زیرِ ماوس — پیش‌فرض همان «مصارف»ِ کنارِ مفاد.</summary>
+    public static readonly StyledProperty<string> FirstNameProperty =
+        AvaloniaProperty.Register<SparkChart, string>(nameof(FirstName), "");
+    public static readonly StyledProperty<string> SecondNameProperty =
+        AvaloniaProperty.Register<SparkChart, string>(nameof(SecondName), "مصارف");
+
+    public string FirstName { get => GetValue(FirstNameProperty); set => SetValue(FirstNameProperty, value); }
+    public string SecondName { get => GetValue(SecondNameProperty); set => SetValue(SecondNameProperty, value); }
+
     static SparkChart()
     {
         AffectsRender<SparkChart>(ValuesProperty, SecondValuesProperty, LabelsProperty,
             LineBrushProperty, SecondLineBrushProperty, PointBrushProperty, GridBrushProperty, LabelBrushProperty,
-            ShowAxisProperty, SelectedIndexProperty, UnitProperty);
+            ShowAxisProperty, SelectedIndexProperty, UnitProperty, FirstNameProperty, SecondNameProperty);
     }
 
     public IReadOnlyList<double>? Values { get => GetValue(ValuesProperty); set => SetValue(ValuesProperty, value); }
@@ -199,8 +208,8 @@ public class SparkChart : Control
                          new Point(hx, top), new Point(hx, bottom));
             var parts = new List<string>();
             if (Labels is { } l2 && _hover < l2.Count) parts.Add(l2[_hover]);
-            if (vals is not null) parts.Add(Fmt(vals[_hover]) + " " + Unit);
-            if (second is { } s2 && _hover < s2.Count && vals is not null) parts.Add("مصارف " + Fmt(s2[_hover]));
+            if (vals is not null) parts.Add((FirstName.Length > 0 ? FirstName + " " : "") + Fmt(vals[_hover]) + " " + Unit);
+            if (second is { } s2 && _hover < s2.Count && vals is not null) parts.Add(SecondName + " " + Fmt(s2[_hover]));
             else if (second is { } s3 && _hover < s3.Count) parts.Add(Fmt(s3[_hover]) + " " + Unit);
             var tip = string.Join(" · ", parts);
             var ft = new FormattedText(tip, System.Globalization.CultureInfo.CurrentCulture,
@@ -226,8 +235,10 @@ public class SparkChart : Control
         return v;
     }
 
-    private static string Fmt(double v) =>
-        Math.Round(v).ToString("#,##0", System.Globalization.CultureInfo.InvariantCulture);
+    //  عددِ کوچک (فایدهٔ فی لیتر: ۳٫۵) یک رقمِ اعشار نگه می‌دارد؛ بزرگ‌ها همان گرد.
+    private static string Fmt(double v) => Math.Abs(v) < 100
+        ? Math.Round(v, 1).ToString("#,##0.#", System.Globalization.CultureInfo.InvariantCulture)
+        : Math.Round(v).ToString("#,##0", System.Globalization.CultureInfo.InvariantCulture);
 
     private static Point[] Points(IReadOnlyList<double> v, Func<int, double> X, Func<double, double> Y)
     {

@@ -68,24 +68,31 @@ internal static class Profit18Probe
 
         // ── سودِ واقعی ──
         Check("پرده نیست (پلن‌دار، بی رمز)", !sec.Veiled);
-        var rows = sec.RealRows;
-        Check("کارتِ سودِ واقعی هفت سطر دارد", rows.Count == 7, string.Join(" | ", rows.Select(r => r.Label + ": " + r.Value)));
-        Check("فروش و سود جدا: «فروشِ تیل» ≠ «سودِ ناخالص»",
-              rows.Count == 7 && rows[0].Value != rows[4].Value, rows.Count == 7 ? rows[0].Value + " / " + rows[4].Value : null);
-
+        //  (۱۴۰۵/۰۷/۱۸، سوم) «همه لیتر و غیره را نشان نده؛ همان چارت با فایدهٔ فی لیتر»
+        Check("نمای سودِ واقعی: «فی لیتر · فایده در هر لیتر … افغانی» برای پطرول",
+              sec.RealPetrolText.Contains("فی لیتر") && (sec.RealPetrolText.Contains("فایده در هر لیتر") || sec.RealPetrolText.Contains("فروشی نیست")
+                                                         || sec.RealPetrolText.Contains("ثبت نشده")), sec.RealPetrolText);
+        Check("عددِ بزرگ = لیتر × فایدهٔ فی لیتر (نه مبلغِ فروش)", sec.RealProfitShown.Contains("افغانی"), sec.RealProfitShown);
         // ── (۱۴۰۵/۰۷/۱۸، دوم) «سودِ واقعی» داخلِ همان کارتِ نمودار، با یک دکمه ──
         Control? Named(string n) => win.GetVisualDescendants().OfType<Control>().FirstOrDefault(c => c.Name == n);
-        bool Seen<T>() where T : Control => win.GetVisualDescendants().OfType<T>().Any(c => c.IsEffectivelyVisible);
-        Check("پیش‌فرض: نمودار دیده می‌شود", !sec.ShowReal && Seen<PumpYaqobi.App.Controls.SparkChart>());
+        Check("پیش‌فرض: نمودار دیده می‌شود", !sec.ShowReal && Named("NetChart")?.IsEffectivelyVisible == true && Named("RealChart")?.IsEffectivelyVisible != true);
         var toggle = Named("RealToggle") as Button;
         Check("دکمهٔ «💰 سودِ واقعی» روی کارتِ نمودار", toggle?.IsEffectivelyVisible == true, toggle?.Content?.ToString());
         toggle?.Command?.Execute(null); Settle(win);
-        var realSeen = win.GetVisualDescendants().OfType<TextBlock>()
-                          .Any(t => t.IsEffectivelyVisible && t.Text == rows.FirstOrDefault()?.Label);
-        Check("زدن ⇒ همان کارت سودِ واقعی را نشان می‌دهد، نمودار پنهان",
-              sec.ShowReal && realSeen && !Seen<PumpYaqobi.App.Controls.SparkChart>(), toggle?.Content?.ToString());
+        var visTexts = win.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible)
+                          .Select(t => t.Text ?? "").ToList();
+        var realChart = Named("RealChart") as PumpYaqobi.App.Controls.SparkChart;
+        var normalChartSeen = Named("NetChart")?.IsEffectivelyVisible == true;
+        Check("زدن ⇒ همان کارت نمودارِ «فایده فی لیتر» را نشان می‌دهد، نمودارِ معمولی پنهان",
+              sec.ShowReal && realChart?.IsEffectivelyVisible == true && !normalChartSeen
+              && visTexts.Contains(sec.RealPetrolText) && visTexts.Contains(sec.RealDieselText), toggle?.Content?.ToString());
+        Check("نقطه‌های نمودار فایدهٔ فی لیتر‌اند (هر نقطه کوچک‌تر از فیِ فروش)",
+              realChart?.Values is { Count: >= 2 } v && v.All(x => x < 200), realChart?.Values is { } vv ? string.Join(",", vv.Take(6)) : "خالی");
+        Check("هیچ مبلغِ فروش یا لیتری روی نما نیست",
+              !visTexts.Any(t => t.Contains("فروشِ تیل") || t.Contains("بهای خرید") || t.Contains("سودِ ناخالص")));
+        if (shots is not null) Shot(win, shots, "profit-real");
         toggle?.Command?.Execute(null); Settle(win);
-        Check("دوباره زدن ⇒ نمودارِ معمولی", !sec.ShowReal && Seen<PumpYaqobi.App.Controls.SparkChart>());
+        Check("دوباره زدن ⇒ نمودارِ معمولی", !sec.ShowReal && Named("NetChart")?.IsEffectivelyVisible == true && Named("RealChart")?.IsEffectivelyVisible != true);
 
         // ── «📋 از کجا آمد»: یک کادر ⇒ صفحهٔ جدا ──
         var srcCard = Named("SourcesCard") as Button;

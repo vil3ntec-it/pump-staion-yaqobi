@@ -42,31 +42,72 @@ public static class RealProfitService
         return fallback > 0 ? fallback : null;
     }
 
+    /// <summary>
+    /// فایدهٔ هر لیتر — فیِ فروش منهای قیمتِ خرید، گرد به یک رقم: **همان** عددِ کادرِ «فایده فی
+    /// لیتر (افغانی) — اتومات از مخزن»ِ پارچه (‎ParchaService.CalcShift‎ ⇒ ‎Fixed1‎).
+    /// </summary>
+    public static decimal ProfitPer(decimal salePerLiter, decimal buyPerLiter) =>
+        ParchaService.Fixed1(salePerLiter - buyPerLiter);
+
     public static RealProfit Compute(IEnumerable<WaraqSaleLine> lines, IReadOnlyList<BuyPrice> prices,
                                      decimal fallbackPetrol, decimal fallbackDiesel, decimal expenses)
     {
-        decimal pl = 0, pm = 0, pc = 0, pu = 0, dl = 0, dm = 0, dc = 0, du = 0;
+        decimal pl = 0, pm = 0, pc = 0, pu = 0, pp = 0, dl = 0, dm = 0, dc = 0, du = 0, dp = 0;
         foreach (var l in lines)
         {
             pl += l.PetrolLiters; pm += l.PetrolMoney;
             dl += l.DieselLiters; dm += l.DieselMoney;
             if (l.PetrolLiters != 0)
             {
-                if (PriceAt(prices, FuelType.Petrol, l.DateKey, fallbackPetrol) is { } bp) pc += l.PetrolLiters * bp;
+                if (PriceAt(prices, FuelType.Petrol, l.DateKey, fallbackPetrol) is { } bp)
+                {
+                    pc += l.PetrolLiters * bp;
+                    pp += l.PetrolLiters * ProfitPer(l.PetrolMoney / l.PetrolLiters, bp);
+                }
                 else pu += l.PetrolLiters;
             }
             if (l.DieselLiters != 0)
             {
-                if (PriceAt(prices, FuelType.Diesel, l.DateKey, fallbackDiesel) is { } bd) dc += l.DieselLiters * bd;
+                if (PriceAt(prices, FuelType.Diesel, l.DateKey, fallbackDiesel) is { } bd)
+                {
+                    dc += l.DieselLiters * bd;
+                    dp += l.DieselLiters * ProfitPer(l.DieselMoney / l.DieselLiters, bd);
+                }
                 else du += l.DieselLiters;
             }
         }
-        return new RealProfit(new RealFuel(pl, pm, pc, pu), new RealFuel(dl, dm, dc, du), expenses);
+        return new RealProfit(new RealFuel(pl, pm, pc, pu, pp), new RealFuel(dl, dm, dc, du, dp), expenses);
+    }
+
+    /// <summary>
+    /// نمودارِ «فایده فی لیتر»: هر روزِ فروش یک نقطه — فیِ فروش و فایدهٔ هر لیترِ هر تیل
+    /// (همان ‎ProfitPer‎ روی هر شیفت، میانگینِ وزنی با لیتر). تازه‌ترین روز اول (قاعدهٔ
+    /// ‎SparkChart‎: «امروز باید اول باشد»)، حداکثر ‎max‎ روز.
+    /// </summary>
+    public static IReadOnlyList<RealDay> Daily(IEnumerable<WaraqSaleLine> lines, IReadOnlyList<BuyPrice> prices,
+                                               decimal fallbackPetrol, decimal fallbackDiesel, int max = 31)
+    {
+        var days = new List<RealDay>();
+        foreach (var g in lines.GroupBy(l => l.DateKey > 0 ? l.DateKey.ToString() : l.DateShamsi)
+                               .OrderByDescending(g => g.Max(l => l.DateKey)).Take(max))
+        {
+            var p = Compute(g, prices, fallbackPetrol, fallbackDiesel, 0m);
+            days.Add(new RealDay(g.First().DateShamsi, g.Max(l => l.DateKey), p.Petrol, p.Diesel));
+        }
+        return days;
     }
 }
 
+/// <summary>یک روزِ نمودارِ «فایده فی لیتر».</summary>
+public readonly record struct RealDay(string DateShamsi, int DateKey, RealFuel Petrol, RealFuel Diesel);
+
 /// <summary>یک تیل: لیتر، پولِ فروش، بهای خرید، و لیترهایی که قیمتِ خرید ندارند.</summary>
-public readonly record struct RealFuel(decimal Liters, decimal Sales, decimal Cost, decimal UnpricedLiters)
+/// <remarks>
+/// ‎Profit‎ = جمعِ «لیتر × فایدهٔ فی لیتر»ِ هر شیفت — همان ضربی که پارچه با کادرِ «فایده فی لیتر»
+/// می‌کند (‎ShiftCalc.Profit‎)، نه «فروش منهای خرید»ِ بی‌گرد.
+/// </remarks>
+public readonly record struct RealFuel(decimal Liters, decimal Sales, decimal Cost, decimal UnpricedLiters,
+                                       decimal Profit = 0m)
 {
     public decimal PricedLiters => Liters - UnpricedLiters;
     public decimal Gross => Sales - Cost;
@@ -76,6 +117,8 @@ public readonly record struct RealFuel(decimal Liters, decimal Sales, decimal Co
     public decimal BuyPerLiter => PricedLiters == 0 ? 0 : Cost / PricedLiters;
     /// <summary>سودِ هر لیتر = فیِ فروش − قیمتِ خرید (فقط اگر قیمتِ خرید هست).</summary>
     public decimal ProfitPerLiter => PricedLiters == 0 ? 0 : SalePerLiter - BuyPerLiter;
+    /// <summary>فایدهٔ هر لیتر همان‌طور که پارچه می‌گوید: ‎Profit ÷ لیترهای قیمت‌دار‎.</summary>
+    public decimal ProfitPerLiterBox => PricedLiters == 0 ? 0 : Profit / PricedLiters;
 }
 
 public readonly record struct RealProfit(RealFuel Petrol, RealFuel Diesel, decimal Expenses)
@@ -85,4 +128,6 @@ public readonly record struct RealProfit(RealFuel Petrol, RealFuel Diesel, decim
     public decimal Gross => Sales - Cost;
     public decimal Net => Gross - Expenses;
     public decimal UnpricedLiters => Petrol.UnpricedLiters + Diesel.UnpricedLiters;
+    /// <summary>فایده = لیتر × فایدهٔ فی لیتر، هر دو تیل — عددِ بزرگِ نمای «سودِ واقعی».</summary>
+    public decimal Profit => Petrol.Profit + Diesel.Profit;
 }

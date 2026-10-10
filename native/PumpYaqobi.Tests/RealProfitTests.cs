@@ -70,4 +70,31 @@ public class RealProfitTests
         Assert.Equal(-500m, r.Net);
         Assert.Equal(85m, r.Diesel.SalePerLiter);
     }
+
+    /// <summary>
+    /// (۱۴۰۵/۰۷/۱۸، سوم) فایده = لیتر × «فایده فی لیتر»ِ گردِ یک‌رقمی — همان ضربِ کادرِ پارچه
+    /// (‎ParchaService.CalcShift‎)، و نمودارِ روزانه تازه‌ترین روز را اول می‌دهد.
+    /// </summary>
+    [Fact]
+    public void Faide_LiterZarbeFaideFiLiter_HamanParcha()
+    {
+        var prices = new List<BuyPrice> { new(FuelType.Petrol, 14050701, 1, 70.04m), new(FuelType.Diesel, 14050701, 2, 80m) };
+        var lines = new[] { Line(14050702, 100m, 73.5m, 10m, 84m), Line(14050703, 200m, 74m) };
+        var r = RealProfitService.Compute(lines, prices, 0, 0, 0m);
+        var parcha = new ParchaService();
+        var p1 = parcha.CalcShift(0, 100m, 73.5m, 0, 70.04m, 0).Profit;   // فی ۳٫۴۶ ⇒ کادر ۳٫۵
+        var box1 = ParchaService.Fixed1(73.5m - 70.04m);
+        Assert.Equal(3.5m, box1);
+        Assert.Equal(100m * box1 + 200m * ParchaService.Fixed1(74m - 70.04m), r.Petrol.Profit);
+        Assert.Equal(10m * 4m, r.Diesel.Profit);
+        Assert.Equal(r.Petrol.Profit + r.Diesel.Profit, r.Profit);
+        Assert.True(p1 > 0);
+
+        var days = RealProfitService.Daily(lines, prices, 0, 0);
+        Assert.Equal(2, days.Count);
+        Assert.Equal(14050703, days[0].DateKey);                // تازه‌ترین اول
+        Assert.Equal(4m, days[0].Petrol.ProfitPerLiterBox);     // ۷۴ − ۷۰٫۰۴ = ۳٫۹۶ ⇒ ۴
+        Assert.Equal(3.5m, days[1].Petrol.ProfitPerLiterBox);
+        Assert.Equal(0m, days[0].Diesel.Liters);
+    }
 }
