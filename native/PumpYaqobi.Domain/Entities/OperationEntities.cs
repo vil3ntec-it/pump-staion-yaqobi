@@ -81,6 +81,33 @@ public class FuelPurchase : EntityBase
     public string? Note { get; set; }
 }
 
+/// <summary>
+/// ══ یک مخزن با شماره — مثلِ «شمارهٔ پایه» (۱۴۰۵/۰۷/۲۲) ══
+/// خواستهٔ صاحب ریپو: «خرید را در مخزن‌های مختلف می‌برم؛ تیل از اولی کم می‌شود و وقتی تمام شد
+/// روی مخزنِ دوم می‌رود.» شماره ترتیبِ کشیدن هم هست: کوچک‌ترین شماره‌ای که تیل دارد.
+/// ⛔ تا هیچ مخزنی تعریف نشده، مخزن همان یک مخزنِ همیشگیِ هر تیل است — هیچ عددی عوض نمی‌شود.
+/// </summary>
+public class FuelTank : EntityBase
+{
+    public FuelType Fuel { get; set; } = FuelType.Petrol;
+    public int Num { get; set; }
+    public decimal Capacity { get; set; }
+    public string? Note { get; set; }
+}
+
+/// <summary>
+/// سهمِ یک خرید در یک مخزن (لیتر). خریدی که هیچ سهمی ندارد (خریدهای پیش از این نسخه) به
+/// کوچک‌ترین مخزن می‌رود. ⛔ جمعِ سهم‌های یک خرید هرگز از لیترِ همان خرید بیشتر نیست.
+/// </summary>
+public class TankFill : EntityBase
+{
+    public long PurchaseId { get; set; }
+    public FuelPurchase? Purchase { get; set; }
+    public long TankId { get; set; }
+    public FuelTank? Tank { get; set; }
+    public decimal Liters { get; set; }
+}
+
 /// <summary>میله‌زنیِ مخزن (DB.tankDips) — اندازهٔ واقعی در برابر اندازهٔ دفتری.</summary>
 public class TankDip : EntityBase, ILedgerRow
 {
