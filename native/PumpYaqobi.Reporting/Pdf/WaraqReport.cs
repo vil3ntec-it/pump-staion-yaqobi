@@ -118,7 +118,7 @@ public sealed class WaraqReport : ISetupDocument
             var even = i % 2 == 1;
             i++;
             // ⚠️ لیترِ منفی در ورق دیده نمی‌شود — همان ‎Math.max(0, end−start)‎
-            var liters = Math.Max(0m, p.End - p.Start);
+            var liters = Math.Max(0m, PumpYaqobi.Application.Services.ParchaService.SoldLiters(p.Start, p.End, p.TestLiters));
             var amount = liters * p.PricePerLiter;
             void Td(string s, string? cl = null) => DocStyle.TdText(t.Cell(), even, s, cl);
 
@@ -173,7 +173,7 @@ public sealed class WaraqReport : ISetupDocument
             decimal l = 0m, s = 0m, d = 0m;
             foreach (var p in ps)
             {
-                var liters = Math.Max(0m, p.End - p.Start);
+                var liters = Math.Max(0m, PumpYaqobi.Application.Services.ParchaService.SoldLiters(p.Start, p.End, p.TestLiters));
                 l += liters; s += liters * p.PricePerLiter; d += p.Debt;
             }
             return (l, s, d);

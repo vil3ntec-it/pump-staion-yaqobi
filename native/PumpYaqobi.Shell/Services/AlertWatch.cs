@@ -93,7 +93,10 @@ public sealed class AlertWatch
         {
             var tank = await StationSnapshot.TankAsync(host, ct);
             var people = await StationSnapshot.DebtorsLiteAsync(host, ct);
-            var list = FromSnapshot(StationSnapshot.Alerts(people, tank));
+            var list = FromSnapshot(StationSnapshot.Alerts(people, tank)).ToList();
+            //  مخزن‌های شماره‌دار (۱۴۰۵/۰۷/۲۲): «تیلش کم شد هشدار برود» — و وقتی تمام شد و
+            //  نوبت به مخزنِ بعدی رسید، گفته شود. ⚠️ جدا از هشدارِ کلِ تیل: آن سرِ جایش است.
+            try { list.AddRange(await NumberedTankAlertsAsync(host, ct)); } catch (OperationCanceledException) { throw; } catch { }
             Accept(list, tank, people);
             _lastVersion = version;
             return true;
@@ -106,6 +109,29 @@ public sealed class AlertWatch
     /// فهرستِ تازه را می‌نشاند و فرقش را خبر می‌دهد — جدا از خواندنِ دیتابیس
     /// تا آزمون‌پذیر باشد.
     /// </summary>
+    /// <summary>هشدارِ مخزن‌های شماره‌دار — فقط مخزنِ «در حالِ کشیدن» و مخزن‌هایی که پیش از آن تمام شدند.</summary>
+    internal static async Task<List<AlertItem>> NumberedTankAlertsAsync(AppHost host, CancellationToken ct)
+    {
+        var res = new List<AlertItem>();
+        var threshold = host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.LowStockThreshold, 1000m);
+        foreach (var fuel in new[] { PumpYaqobi.Domain.Enums.FuelType.Petrol, PumpYaqobi.Domain.Enums.FuelType.Diesel })
+        {
+            var levels = await host.StorageData.TankLevelsAsync(fuel, ct);
+            if (levels.Count == 0) continue;
+            var f = fuel == PumpYaqobi.Domain.Enums.FuelType.Diesel ? "diesel" : "petrol";
+            var name = fuel == PumpYaqobi.Domain.Enums.FuelType.Diesel ? "دیزل" : "پطرول";
+            var act = levels.FirstOrDefault(l => l.Active);
+            foreach (var l in levels.TakeWhile(l => !l.Active).Where(l => l.Display <= 0m))
+                if (act.Display > 0m)
+                    res.Add(new AlertItem($"tank-{f}-n{l.Num}-switched", $"مخزنِ {l.Num} {name}", f, "low",
+                        $"مخزنِ {l.Num} {name} تمام شد — حالا از مخزنِ {act.Num} کشیده می‌شود"));
+            if (act.Display > 0m && act.Display <= threshold)
+                res.Add(new AlertItem($"tank-{f}-n{act.Num}-low", $"مخزنِ {act.Num} {name}", f, "low",
+                    $"مخزنِ {act.Num} {name} کم مانده: {Math.Round(act.Display):N0} لیتر"));
+        }
+        return res;
+    }
+
     public IReadOnlyList<AlertItem> Accept(IReadOnlyList<AlertItem> list,
                                            Dictionary<string, object?>? tank = null,
                                            List<object?>? people = null)

@@ -702,7 +702,9 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         IsLow = t.IsLow;
         ThresholdText = "حد هشدار: " + Shamsi.Money(threshold) + " لیتر";
 
-        // فیِ لیترِ خرید و تاریخِ آخرین خرید — همان دو عددِ «خلاصه پول‌ها»
+        // فیِ لیترِ خرید و تاریخِ آخرین خرید — همان دو عددِ «خلاصه پول‌ها». فی = همان خریدی
+        // که الان از مخزن کشیده می‌شود (‎RefreshBuyPerLiterAsync‎، ۱۴۰۵/۰۷/۲۲)
+        await _host.StorageData.RefreshBuyPerLiterAsync(Fuel);
         var last = Purchases.FirstOrDefault();
         PerLiter = Shamsi.Money(Math.Round(
             _host.Settings.GetDecimal(Fuel == FuelType.Diesel
@@ -722,6 +724,8 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         _bookNow = t.Current;
         _tank = t;
         RefreshDip();
+        //  مخزن‌های شماره‌دار همان موجودی را تقسیم می‌کنند — پس با هر بار حساب، آن‌ها هم
+        await LoadTanksAsync();
     }
 
     public async Task SavePurchaseAsync(FuelPurchase p)

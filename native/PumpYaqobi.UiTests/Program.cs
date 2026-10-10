@@ -142,6 +142,7 @@ internal static class Program
         if (outDir.Equals("keys", StringComparison.OrdinalIgnoreCase)) return KeyAudit.Run();
         if (outDir.Equals("arrows", StringComparison.OrdinalIgnoreCase)) return ArrowNavProbe.Run();
         if (outDir.Equals("waraqadd", StringComparison.OrdinalIgnoreCase)) return WaraqAddProbe.Run(args.Length > 1 ? args[1] : null);
+        if (outDir.Equals("tanks", StringComparison.OrdinalIgnoreCase)) return TanksProbe.Run(args.Length > 1 ? args[1] : null);
         if (outDir.Equals("profit18", StringComparison.OrdinalIgnoreCase)) return Profit18Probe.Run(args.Length > 1 ? args[1] : null);
         if (outDir.Equals("staffshort", StringComparison.OrdinalIgnoreCase)) return StaffShortProbe.Run();
         if (outDir.Equals("backupview", StringComparison.OrdinalIgnoreCase)) return BackupViewProbe.Run();

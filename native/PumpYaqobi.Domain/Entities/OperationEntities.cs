@@ -19,6 +19,13 @@ public class ShiftData : EntityBase
     public int PumpNum { get; set; }
     public decimal Start { get; set; }
     public decimal End { get; set; }
+    /// <summary>
+    /// ══ لیترِ آزمایشی (۱۴۰۵/۰۷/۲۲) ══
+    /// تیلی که برای سنجشِ پمپ در پیمانه ریخته و به مخزن برگردانده شد. از فروشِ همین
+    /// پایه کم می‌شود (‎فروش = ختم − شروع − آزمایشی‎): نه پول دارد، نه فایده، نه قرض است
+    /// نه مصرف — و چون فروش نیست، از موجودیِ مخزن هم کم نمی‌شود. صفر ⇒ همان رفتارِ همیشه.
+    /// </summary>
+    public decimal TestLiters { get; set; }
     public decimal Price { get; set; }
     public decimal ProfitPer { get; set; }
     public decimal BuyPerLiter { get; set; }
@@ -72,6 +79,33 @@ public class FuelPurchase : EntityBase
     public decimal TotalAfn { get; set; }
     public decimal PerLiter { get; set; }
     public string? Note { get; set; }
+}
+
+/// <summary>
+/// ══ یک مخزن با شماره — مثلِ «شمارهٔ پایه» (۱۴۰۵/۰۷/۲۲) ══
+/// خواستهٔ صاحب ریپو: «خرید را در مخزن‌های مختلف می‌برم؛ تیل از اولی کم می‌شود و وقتی تمام شد
+/// روی مخزنِ دوم می‌رود.» شماره ترتیبِ کشیدن هم هست: کوچک‌ترین شماره‌ای که تیل دارد.
+/// ⛔ تا هیچ مخزنی تعریف نشده، مخزن همان یک مخزنِ همیشگیِ هر تیل است — هیچ عددی عوض نمی‌شود.
+/// </summary>
+public class FuelTank : EntityBase
+{
+    public FuelType Fuel { get; set; } = FuelType.Petrol;
+    public int Num { get; set; }
+    public decimal Capacity { get; set; }
+    public string? Note { get; set; }
+}
+
+/// <summary>
+/// سهمِ یک خرید در یک مخزن (لیتر). خریدی که هیچ سهمی ندارد (خریدهای پیش از این نسخه) به
+/// کوچک‌ترین مخزن می‌رود. ⛔ جمعِ سهم‌های یک خرید هرگز از لیترِ همان خرید بیشتر نیست.
+/// </summary>
+public class TankFill : EntityBase
+{
+    public long PurchaseId { get; set; }
+    public FuelPurchase? Purchase { get; set; }
+    public long TankId { get; set; }
+    public FuelTank? Tank { get; set; }
+    public decimal Liters { get; set; }
 }
 
 /// <summary>میله‌زنیِ مخزن (DB.tankDips) — اندازهٔ واقعی در برابر اندازهٔ دفتری.</summary>
@@ -308,6 +342,13 @@ public class WaraqPump : EntityBase
     public string? Note { get; set; }
     public decimal Start { get; set; }
     public decimal End { get; set; }
+    /// <summary>
+    /// ══ لیترِ آزمایشی (۱۴۰۵/۰۷/۲۲) ══
+    /// تیلی که برای سنجشِ پمپ در پیمانه ریخته و به مخزن برگردانده شد. از فروشِ همین
+    /// پایه کم می‌شود (‎فروش = ختم − شروع − آزمایشی‎): نه پول دارد، نه فایده، نه قرض است
+    /// نه مصرف — و چون فروش نیست، از موجودیِ مخزن هم کم نمی‌شود. صفر ⇒ همان رفتارِ همیشه.
+    /// </summary>
+    public decimal TestLiters { get; set; }
     public decimal PricePerLiter { get; set; }
     public decimal Debt { get; set; }
 

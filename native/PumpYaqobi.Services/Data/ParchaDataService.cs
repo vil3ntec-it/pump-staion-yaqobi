@@ -14,7 +14,7 @@ public sealed record ShiftSaveRequest(
     FuelType Fuel, ShiftKind Kind, string DateShamsi,
     string Name, int PumpNum, decimal Start, decimal End, decimal Price,
     decimal Debt, decimal BoxProfitPer, decimal AvailMan, string Note,
-    decimal BuyPerLiter, bool ForceNew, bool LowBase = false);
+    decimal BuyPerLiter, bool ForceNew, bool LowBase = false, decimal TestLiters = 0m);
 
 /// <summary>نتیجهٔ ذخیره — پیامِ خطا همان پیامِ نسخهٔ وب است.</summary>
 public sealed record ShiftSaveResult(
@@ -92,6 +92,8 @@ public sealed class ParchaDataService
             return new ShiftSaveResult(false, "نام کارمند را وارد کنید", null, null, null);
         if (req.End < req.Start)
             return new ShiftSaveResult(false, "ختم پایه نمی‌تواند کمتر از شروع باشد", null, null, null);
+        if (!ParchaService.TestValid(req.Start, req.End, req.TestLiters))
+            return new ShiftSaveResult(false, "لیترِ آزمایشی نمی‌تواند منفی یا بیشتر از لیترِ همین پایه باشد", null, null, null);
 
         _perm.Require(Permission.EditData);
 
@@ -103,7 +105,7 @@ public sealed class ParchaDataService
             : await PetrolTargetAsync(req, shDate, ct);
 
         var n = _calc.CalcShift(req.Start, req.End, req.Price, req.Debt,
-                                req.BuyPerLiter, req.BoxProfitPer);
+                                req.BuyPerLiter, req.BoxProfitPer, req.TestLiters);
 
         var existing = req.Kind == ShiftKind.Day ? rep.DayShift : rep.NightShift;
         var shift = existing ?? new ShiftData();
@@ -111,6 +113,7 @@ public sealed class ParchaDataService
         shift.PumpNum = req.PumpNum;
         shift.Start = req.Start;
         shift.End = req.End;
+        shift.TestLiters = req.TestLiters;
         shift.Price = req.Price;
         // ‎saveShift‎ عددِ **کادر** را می‌خواند، یعنی گردشدهٔ toFixed(1)
         shift.ProfitPer = n.ProfitPerBox;
@@ -483,6 +486,8 @@ public sealed class ParchaDataService
         if (rep is null || s is null)
             return new ShiftEditResult(false, "این پارچه دیگر نیست", Array.Empty<long>());
 
+        if (!ParchaService.TestValid(start, end, s.TestLiters))
+            return new ShiftEditResult(false, "لیترِ آزمایشیِ این پایه از لیترش بیشتر می‌شود — اول آن را کم کنید", Array.Empty<long>());
         if (!ShiftWaraqSyncService.ApplyToShift(s, name, pumpNum, start, end, price, debt))
             return new ShiftEditResult(true, null, Array.Empty<long>());
         await db.SaveChangesAsync(ct);

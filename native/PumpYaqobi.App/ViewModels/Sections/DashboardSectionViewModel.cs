@@ -428,6 +428,9 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
         var dDip = await _host.StorageData.DipsAsync(FuelType.Diesel);
         _petrolStock = _host.Storage.Tank(pPur, petrolReports, _threshold, pDip).Current;
         _dieselStock = _host.Storage.Tank(dPur, dieselReports, _threshold, dDip).Current;
+        //  مخزن‌های شماره‌دار (۱۴۰۵/۰۷/۲۲): هر مخزن ردیفِ خودش در «وضعیت سوخت‌ها»
+        _petrolTanks = await _host.StorageData.TankLevelsAsync(FuelType.Petrol);
+        _dieselTanks = await _host.StorageData.TankLevelsAsync(FuelType.Diesel);
         _petrolCap = _host.Settings.GetDecimal("tankCapacity_petrol", 0m);
         _dieselCap = _host.Settings.GetDecimal("tankCapacity_diesel", 0m);
 
@@ -628,10 +631,42 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
             : "هیچ تیلی در مخزن نیست";
     }
 
+    private List<TankLevel> _petrolTanks = new(), _dieselTanks = new();
+
     private void BuildFuelStatus()
     {
         FuelStatus.Clear();
         foreach (var (t, sec) in new[] { (PetrolTank, "storage"), (DieselTank, "storage-diesel") })
+        {
+            AddFuelRow(t, sec);
+            //  ⛔ هر مخزنِ شماره‌دار زیرِ همان تیل — همه یک‌جا (خواستهٔ صاحب ریپو، ۱۴۰۵/۰۷/۲۲)
+            foreach (var lv in t.Fuel == FuelType.Petrol ? _petrolTanks : _dieselTanks)
+            {
+                var cur = lv.Display;
+                string state, color;
+                if (cur <= 0) { state = "خالی"; color = "Pump.Danger"; }
+                else if (lv.Active && cur <= _threshold) { state = "در حالِ کشیدن — کم مانده"; color = "Pump.Danger"; }
+                else if (lv.Active) { state = "در حالِ کشیدن"; color = "Pump.Ok"; }
+                else { state = "منتظر"; color = "Pump.Muted"; }
+                var pct = (int)Math.Floor(lv.Percent + 0.5m);
+                FuelStatus.Add(new FuelStatusViewModel
+                {
+                    Icon = "🛢️",
+                    Name = (t.Fuel == FuelType.Petrol ? "پطرول" : "دیزل") + " — مخزنِ " + Money(lv.Num),
+                    State = state,
+                    ColorKey = color,
+                    Percent = pct,
+                    PercentText = pct + "٪",
+                    CurrentText = "موجودی: " + Money(cur) + " لیتر",
+                    CapacityText = lv.Capacity > 0 ? "ظرفیت: " + Money(lv.Capacity) + " لیتر" : "ظرفیت نوشته نشده",
+                    GoSection = sec,
+                });
+            }
+        }
+    }
+
+    private void AddFuelRow(DashTank t, string sec)
+    {
         {
             string state, color;
             if (t.Raw <= 0) { state = "تمام شده"; color = "Pump.Danger"; }

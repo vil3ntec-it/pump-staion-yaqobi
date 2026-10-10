@@ -115,14 +115,16 @@ public sealed class ShiftWaraqSyncService
     /// ‎CalcShift‎ی ذخیره از نو می‌سازد. برمی‌گرداند که چیزی واقعاً عوض شد یا نه.
     /// ⚠️ نامِ خالی نامِ کارمندِ پارچه را پاک نمی‌کند.
     /// </summary>
+    /// <param name="test">لیترِ آزمایشی؛ ‎null‎ یعنی همانی که روی شیفت هست دست نخورد.</param>
     public static bool ApplyToShift(ShiftData s, string? name, int pumpNum, decimal start,
-                                    decimal end, decimal price, decimal debt)
+                                    decimal end, decimal price, decimal debt, decimal? test = null)
     {
         if (s is null) return false;
         var nm = (name ?? "").Trim();
         var newName = nm.Length > 0 ? nm : s.Name;
+        var newTest = test ?? s.TestLiters;
         if (s.Name == newName && s.PumpNum == pumpNum && s.Start == start && s.End == end
-            && s.Price == price && s.Debt == debt)
+            && s.Price == price && s.Debt == debt && s.TestLiters == newTest)
             return false;
 
         s.Name = newName;
@@ -131,8 +133,9 @@ public sealed class ShiftWaraqSyncService
         s.End = end;
         s.Price = price;
         s.Debt = debt;
+        s.TestLiters = newTest;
 
-        var n = new ParchaService().CalcShift(start, end, price, debt, s.BuyPerLiter, s.ProfitPer);
+        var n = new ParchaService().CalcShift(start, end, price, debt, s.BuyPerLiter, s.ProfitPer, newTest);
         s.ProfitPer = n.ProfitPerBox;
         s.Sale = n.Sale;
         s.Money = n.Money;
@@ -153,7 +156,7 @@ public sealed class ShiftWaraqSyncService
                           .FirstOrDefaultAsync(ct);
         var s = rep is null ? null : kind == ShiftKind.Night ? rep.NightShift : rep.DayShift;
         if (s is null) return false;
-        return ApplyToShift(s, p.Worker, p.Num, p.Start, p.End, p.PricePerLiter, p.Debt);
+        return ApplyToShift(s, p.Worker, p.Num, p.Start, p.End, p.PricePerLiter, p.Debt, p.TestLiters);
     }
 
     /// <summary>
@@ -175,6 +178,7 @@ public sealed class ShiftWaraqSyncService
             if (!string.IsNullOrWhiteSpace(s.Name)) p.Worker = s.Name;
             p.Start = s.Start;
             p.End = s.End;
+            p.TestLiters = s.TestLiters;
             p.PricePerLiter = s.Price;
             p.Debt = s.Debt;
             if (p.Shift is { } sh) waraqIds.Add(sh.WaraqId);
@@ -409,6 +413,7 @@ public sealed class ShiftWaraqSyncService
         entry.Worker = shift.Name ?? "";
         entry.Start = shift.Start;
         entry.End = shift.End;
+        entry.TestLiters = shift.TestLiters;
         entry.PricePerLiter = shift.Price;
         entry.Debt = shift.Debt;
         if (lowBase is bool low) entry.LowBase = low;

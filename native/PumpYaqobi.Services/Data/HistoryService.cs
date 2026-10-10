@@ -756,6 +756,7 @@ public sealed class HistoryService
                 if (shift.PumpNum > 0) bits.Add("پایهٔ " + Shamsi.Money(shift.PumpNum));
                 bits.Add("شروع " + Shamsi.Money(shift.Start) + " · ختم " + Shamsi.Money(shift.End));
                 if (shift.Sale != 0m) bits.Add("🛢️ " + Shamsi.Money(Math.Round(shift.Sale)) + " لیتر");
+                if (shift.TestLiters != 0m) bits.Add("🧪 آزمایشی " + Shamsi.Money(shift.TestLiters) + " لیتر");
 
                 var fuel = rep.Fuel == FuelType.Diesel ? "🟤 دیزل" : "⛽ پطرول";
                 list.Add(new HistoryRow("shift", rep.DateShamsi ?? "", rep.DateKey,

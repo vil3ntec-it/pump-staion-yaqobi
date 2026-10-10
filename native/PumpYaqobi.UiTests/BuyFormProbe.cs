@@ -158,8 +158,14 @@ internal static class BuyFormProbe
               card is { MissingPrice: false } && card.TotalUsdText.Replace(",", "").Replace("٬", "") .StartsWith("6000"),
               card?.TotalUsdText);
         var perLiterEdit = h.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.BuyPerLiterPetrol);
-        Check("قیمتِ تازه‌ترین خرید ⇒ فی‌لیترِ خرید تازه", perLiterEdit == after.PerLiter && after.PerLiter > 0m,
-              $"{perLiterEdit} · {after.PerLiter}");
+        //  ⛔ از ۱۴۰۵/۰۷/۲۲ فی = همان خریدی که الان کشیده می‌شود، نه تازه‌ترین (‎DrawPriceService‎)
+        var drawnTask = h.StorageData.RefreshBuyPerLiterAsync(PumpYaqobi.Domain.Enums.FuelType.Petrol);
+        Wait(win, drawnTask);
+        var drawn = drawnTask.Result;
+        var priced = Db(db => db.FuelPurchases.AsNoTracking().Where(x => x.Fuel == PumpYaqobi.Domain.Enums.FuelType.Petrol && x.PerLiter > 0m)
+                                .Select(x => x.PerLiter).ToList());
+        Check("ویرایشِ خرید ⇒ فی‌لیترِ خرید همان خریدِ در حالِ کشیدن است", drawn is { } dv && perLiterEdit == dv && priced.Contains(dv),
+              $"{perLiterEdit} · کشیده {drawn} · ویرایش‌شده {after.PerLiter}");
 
         // خریدِ بی‌فروشنده ⇒ فروشنده بعداً ⇒ همان لحظه در حسابِ شرکت
         st.OpenBuyCommand.Execute(null);

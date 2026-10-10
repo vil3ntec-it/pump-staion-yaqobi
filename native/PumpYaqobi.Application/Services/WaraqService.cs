@@ -213,7 +213,7 @@ public sealed class WaraqService
         decimal petrol = 0, diesel = 0, sales = 0, declared = 0;
         foreach (var p in sd.Pumps)
         {
-            var l = Math.Max(0m, p.End - p.Start);
+            var l = Math.Max(0m, ParchaService.SoldLiters(p.Start, p.End, p.TestLiters));
             if (p.Fuel == FuelType.Diesel) diesel += l; else petrol += l;
             sales += l * p.PricePerLiter;
             declared += p.Debt;
