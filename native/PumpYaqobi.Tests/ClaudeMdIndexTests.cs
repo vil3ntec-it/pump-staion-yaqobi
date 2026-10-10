@@ -4,7 +4,7 @@ using Xunit;
 namespace PumpYaqobi.Tests;
 
 /// <summary>
-/// شورا، ج۲ — CLAUDE.md شاخصِ قاعده‌های زنده است و شرحِ کامل در
+/// شورا، ج۲ — native/docs/RULES-fa.md (پیش‌تر CLAUDE.md) شاخصِ قاعده‌های زنده است و شرحِ کامل در
 /// native/docs/HISTORY-fa.md. این سنجه‌ها می‌گویند هیچ چیزی بی‌صدا گم نشده:
 /// هر بخشِ تاریخچه در شاخص عنوان دارد، هر خطِ ⛔ِ شاخص عیناً در تاریخچه هست،
 /// تاریخچه کوتاه نشده، و هر نامِ آزمونِ شاخص واقعاً وجود دارد.
@@ -29,7 +29,7 @@ public class ClaudeMdIndexTests
     [Fact]
     public void HarBakhsheTarikhche_DarShakhes_Onvan_Darad()
     {
-        var index = Titles(Read("CLAUDE.md")).ToHashSet();
+        var index = Titles(Read("native/docs/RULES-fa.md")).ToHashSet();
         var missing = Read("native/docs/HISTORY-fa.md").Split('\n')
             .Where(l => l.StartsWith("## ")).Select(l => l[3..].Trim())
             .Where(t => !index.Contains(t)).ToList();
@@ -41,7 +41,7 @@ public class ClaudeMdIndexTests
     {
         var hist = Norm(Read("native/docs/HISTORY-fa.md"));
         var bad = new List<string>();
-        foreach (var l in Read("CLAUDE.md").Split('\n'))
+        foreach (var l in Read("native/docs/RULES-fa.md").Split('\n'))
         {
             if (!l.StartsWith("- ⛔")) continue;
             var t = Regex.Replace(l[2..], @" \(\+\d+ ⛔ در تاریخچه\)$", "");
@@ -58,7 +58,15 @@ public class ClaudeMdIndexTests
         var hist = Read("native/docs/HISTORY-fa.md");
         Assert.True(hist.Split('\n').Length >= 9300, "تاریخچه کوتاه شده");
         Assert.True(Regex.Matches(hist, "⛔").Count >= 991, "خطوطِ ⛔ِ تاریخچه کم شده");
-        Assert.True(Read("CLAUDE.md").Split('\n').Length < 900, "شاخص دوباره دراز شده — شرح جایش در تاریخچه است");
+        Assert.True(Read("native/docs/RULES-fa.md").Split('\n').Length < 900, "شاخص دوباره دراز شده — شرح جایش در تاریخچه است");
+    }
+
+    // CLAUDE.md در هر سیزن خودکار خوانده می‌شود (۱۴۰۵/۰۷/۱۸: «سلامِ خالی ۴۰۰ هزار توکن») — کوتاه می‌ماند.
+    [Fact]
+    public void ClaudeMd_KutahMimanad()
+    {
+        var t = Read("CLAUDE.md");
+        Assert.True(t.Length < 4000, $"CLAUDE.md دراز شده ({t.Length} نویسه) — قاعدهٔ تازه به native/docs/RULES-fa.md");
     }
 
     [Fact]
@@ -67,7 +75,7 @@ public class ClaudeMdIndexTests
         var exist = Directory.EnumerateFiles(Path.Combine(Root(), "native", "PumpYaqobi.Tests"), "*.cs", SearchOption.AllDirectories)
             .SelectMany(f => Regex.Matches(SrcText.Read(f), @"class ([A-Za-z0-9]+Tests)\b").Select(m => m.Groups[1].Value))
             .ToHashSet();
-        var named = Regex.Matches(Read("CLAUDE.md"), @"`([A-Z][A-Za-z0-9]*Tests)(?:\.[A-Za-z0-9_]+)?`")
+        var named = Regex.Matches(Read("native/docs/RULES-fa.md"), @"`([A-Z][A-Za-z0-9]*Tests)(?:\.[A-Za-z0-9_]+)?`")
             .Select(m => m.Groups[1].Value).Distinct().Where(n => !exist.Contains(n)).ToList();
         Assert.True(named.Count == 0, "آزمونِ نبوده در شاخص: " + string.Join(" · ", named));
     }
