@@ -133,8 +133,8 @@ public sealed partial class StorageSectionViewModel
     {
         foreach (var t in Tanks) t.Selected = ReferenceEquals(t, SelectedTank);
         VisibleTankTabs.Clear(); OverflowTankTabs.Clear();
-        foreach (var t in Tanks.Take(VisibleTabs)) VisibleTankTabs.Add(t);
-        foreach (var t in Tanks.Skip(VisibleTabs)) OverflowTankTabs.Add(t);
+        // تا سه مخزن ⇒ دکمه؛ بیشتر ⇒ همه (آن سه هم) در یک کشویی — خواستهٔ صاحب ریپو
+        foreach (var t in Tanks) (Tanks.Count > VisibleTabs ? OverflowTankTabs : VisibleTankTabs).Add(t);
         HasOverflowTanks = OverflowTankTabs.Count > 0;
         foreach (var n in new[] { nameof(IsAllShown), nameof(IsTankShown), nameof(ShownTitle), nameof(ShownCurrent),
                                   nameof(ShownFillPercent), nameof(ShownFillText), nameof(ShownState), nameof(ShownCapacityText), nameof(ShownThresholdPercent), nameof(OverflowPick) })

@@ -85,11 +85,12 @@ internal static class TanksProbe
 
         // ══ دکمه‌های شماره بالای نقشه: «همه · ۱ · ۲ · ۳ · ▾» ══
         st.TankNewCapacity = "5000"; Wait(win, st.AddTankCommand.ExecuteAsync(null)); Settle(win);
+        Check("سه مخزن ⇒ سه دکمه، بی کشویی", st.VisibleTankTabs.Count == 3 && !st.HasOverflowTanks);
         st.TankNewCapacity = "4000"; Wait(win, st.AddTankCommand.ExecuteAsync(null)); Settle(win);
-        Check("سه شماره روی کارت، بقیه در کشویی", st.VisibleTankTabs.Count == 3 && st.OverflowTankTabs.Count == 1 && st.HasOverflowTanks,
+        Check("بیش از سه ⇒ هر چهار در کشویی، بی دکمه", st.VisibleTankTabs.Count == 0 && st.OverflowTankTabs.Count == 4 && st.HasOverflowTanks,
               $"{st.VisibleTankTabs.Count}+{st.OverflowTankTabs.Count}");
         Check("پیش‌فرض «همه» — همان کارتِ همیشگی", st.IsAllShown && st.ShownCurrent == st.Current);
-        var t1 = st.VisibleTankTabs[0];
+        var t1 = st.OverflowTankTabs[0];
         st.SelectTankCommand.Execute(t1); Settle(win);
         Check("زدنِ ۱ ⇒ همان مخزن روی کارت", st.IsTankShown && st.ShownFillText == t1.FillText
               && Shamsi.Num(st.ShownCurrent) == Math.Round(t1.Value) && t1.Selected, st.ShownTitle);
@@ -98,7 +99,7 @@ internal static class TanksProbe
             win.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(t => t.Text == st.ShownTitle)?.BringIntoView();
             Settle(win); Shot(win, shots, "tanks-tab1");
         }
-        st.OverflowPick = st.OverflowTankTabs[0]; Settle(win);
+        st.OverflowPick = st.OverflowTankTabs[3]; Settle(win);
         Check("کشویی ⇒ مخزنِ ۴", st.SelectedTank?.Entity.Num == 4 && st.OverflowPick?.Entity.Num == 4);
         st.ToggleFuelCommand.Execute(null); Settle(win); Settle(win);
         Check("دیزل جدا: مخزن‌های پطرول نیست و «همه» برگشت", st.Tanks.Count == 0 && st.IsAllShown);

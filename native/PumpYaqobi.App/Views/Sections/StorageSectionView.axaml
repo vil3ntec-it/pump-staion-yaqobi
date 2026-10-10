@@ -62,7 +62,8 @@
         <!-- ══ کارتِ مخزن با نقشهٔ مخزن ══ -->
         <Border Classes="panel" Padding="16">
           <StackPanel Spacing="12">
-          <!-- ══ شماره‌های مخزن بالای نقشه — «همه · ۱ · ۲ · ۳ · ▾ · ＋» (۱۴۰۵/۰۷/۲۲) ══
+          <!-- ══ شماره‌های مخزن در کنجِ راستِ بالا — «همه · ۱ · ۲ · ۳ · ＋» (۱۴۰۵/۰۷/۲۲) ══
+               بیش از سه مخزن ⇒ دکمه‌ها نیستند و همهٔ مخزن‌ها (آن سه هم) در یک کشویی‌اند.
                خواستهٔ صاحب ریپو با عکس: شماره‌ها همین‌جا، بیش از سه ⇒ کشویی، و زدنِ هر
                شماره همان مخزن را روی همین کارت نشان دهد — مثلِ هر پایه در پارچه؛ پطرول
                و دیزل جدا (‎Fuel‎). ⛔ «همه» همان کارتِ همیشگی است و منطقش دست نخورد.
@@ -86,7 +87,7 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
             <ComboBox ItemsSource="{Binding OverflowTankTabs}" SelectedItem="{Binding OverflowPick}"
-                      IsVisible="{Binding HasOverflowTanks}" PlaceholderText="بقیهٔ مخزن‌ها"
+                      IsVisible="{Binding HasOverflowTanks}" PlaceholderText="انتخابِ مخزن"
                       MinWidth="140" Height="36" Margin="3" VerticalAlignment="Center">
               <ComboBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:TankCardViewModel">
