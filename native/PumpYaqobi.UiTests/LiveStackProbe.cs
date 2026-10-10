@@ -117,7 +117,10 @@ internal static class LiveStackProbe
             if (url is not null)
             {
                 using var r = Http.GetAsync(url).GetAwaiter().GetResult();
-                liveOk = r.IsSuccessStatusCode && r.Content.ReadAsStringAsync().GetAwaiter().GetResult().Contains("sections");
+                //  ⛔ از ۳.۱.۲۶۰ بخشِ مالی (‎sections‎) فقط رمزشده می‌رود (‎OwnerSeal‎)؛
+                //  پس ملاک «عکس رسید» مخزن است و نبودنِ دفترِ مالیِ خام هم سنجیده می‌شود
+                var liveBody = r.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                liveOk = r.IsSuccessStatusCode && liveBody.Contains("\"tank\"") && !liveBody.Contains("\"sections\"");
             }
             if (!liveOk) Thread.Sleep(1000);
         }
