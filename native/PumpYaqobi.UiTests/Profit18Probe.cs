@@ -55,7 +55,7 @@ internal static class Profit18Probe
 
         // ── کادرهای ورود به صفحهٔ جدا ──
         var cards = win.GetVisualDescendants().OfType<Button>()
-                       .Where(b => b.Classes.Contains("subcard") && b.IsEffectivelyVisible).ToList();
+                       .Where(b => b.Classes.Contains("subcard") && b.IsEffectivelyVisible && b.Name != "SourcesCard").ToList();
         Check("دو کادرِ ورود به صفحهٔ جدا دیده می‌شوند", cards.Count == 2, cards.Count.ToString());
         if (cards.Count > 0)
         {
@@ -72,6 +72,30 @@ internal static class Profit18Probe
         Check("کارتِ سودِ واقعی هفت سطر دارد", rows.Count == 7, string.Join(" | ", rows.Select(r => r.Label + ": " + r.Value)));
         Check("فروش و سود جدا: «فروشِ تیل» ≠ «سودِ ناخالص»",
               rows.Count == 7 && rows[0].Value != rows[4].Value, rows.Count == 7 ? rows[0].Value + " / " + rows[4].Value : null);
+
+        // ── (۱۴۰۵/۰۷/۱۸، دوم) «سودِ واقعی» داخلِ همان کارتِ نمودار، با یک دکمه ──
+        Control? Named(string n) => win.GetVisualDescendants().OfType<Control>().FirstOrDefault(c => c.Name == n);
+        bool Seen<T>() where T : Control => win.GetVisualDescendants().OfType<T>().Any(c => c.IsEffectivelyVisible);
+        Check("پیش‌فرض: نمودار دیده می‌شود", !sec.ShowReal && Seen<PumpYaqobi.App.Controls.SparkChart>());
+        var toggle = Named("RealToggle") as Button;
+        Check("دکمهٔ «💰 سودِ واقعی» روی کارتِ نمودار", toggle?.IsEffectivelyVisible == true, toggle?.Content?.ToString());
+        toggle?.Command?.Execute(null); Settle(win);
+        var realSeen = win.GetVisualDescendants().OfType<TextBlock>()
+                          .Any(t => t.IsEffectivelyVisible && t.Text == rows.FirstOrDefault()?.Label);
+        Check("زدن ⇒ همان کارت سودِ واقعی را نشان می‌دهد، نمودار پنهان",
+              sec.ShowReal && realSeen && !Seen<PumpYaqobi.App.Controls.SparkChart>(), toggle?.Content?.ToString());
+        toggle?.Command?.Execute(null); Settle(win);
+        Check("دوباره زدن ⇒ نمودارِ معمولی", !sec.ShowReal && Seen<PumpYaqobi.App.Controls.SparkChart>());
+
+        // ── «📋 از کجا آمد»: یک کادر ⇒ صفحهٔ جدا ──
+        var srcCard = Named("SourcesCard") as Button;
+        Check("کادرِ «📋 از کجا آمد» روی صفحه", srcCard?.IsEffectivelyVisible == true);
+        srcCard?.Command?.Execute(null); Settle(win);
+        Check("زدن ⇒ صفحهٔ جدا، بقیهٔ صفحه پنهان", sec.SourcesPage && srcCard?.IsEffectivelyVisible == false
+              && win.GetVisualDescendants().OfType<TextBlock>().Any(t => t.IsEffectivelyVisible && t.Text == sec.SalesPetrolText));
+        if (shots is not null) Shot(win, shots, "profit-sources");
+        sec.CloseSourcesCommand.Execute(null); Settle(win);
+        Check("«‹ برگشت» ⇒ صفحهٔ مفاد", !sec.SourcesPage && srcCard?.IsEffectivelyVisible == true);
 
         // ── خریدِ عمده: یک ردیف ──
         sec.BulkQty = "11"; sec.BulkBuy = "22"; sec.BulkMarket = "33"; Settle(win);

@@ -268,7 +268,8 @@ internal static class ProfitStorageProbe
                       .FirstOrDefault(v => v.IsEffectivelyVisible);
         if (view is null) { Check("صفحهٔ مفاد/ضرر پیدا شد", false); return; }
         var boxes = view.GetVisualDescendants().OfType<TextBox>().Where(t => t.Classes.Contains("plbox")).ToList();
-        Check("هفت کادرِ تایپ، همه یک سبک", boxes.Count == 7, boxes.Count.ToString());
+        //  ۷ کادرِ پیشین + ۴ کادرِ تبدیلِ تیل + جست‌وجوی تاریخچهٔ تبدیل (۱۴۰۵/۰۷/۱۸)
+        Check("دوازده کادرِ تایپ، همه یک سبک", boxes.Count == 12, boxes.Count.ToString());
         var hs = boxes.Select(b => Math.Round(b.Bounds.Height, 1)).Distinct().ToList();
         Check("همه یک قد", hs.Count == 1, string.Join("، ", hs));
         var fs = boxes.Select(b => b.FontSize).Distinct().ToList();
@@ -280,6 +281,7 @@ internal static class ProfitStorageProbe
         //  خاصیتی که کاربر تایپ می‌کند (بی هیچ نوشتنی در دیتابیس)، و دو کادرِ
         //  باقی‌مانده همان دو نرخِ اتحادیه‌اند.
         p.BulkQty = "11"; p.BulkBuy = "22"; p.BulkMarket = "33"; p.ManualIncome = "44"; p.ManualExpense = "55";
+        p.ConvQty = "66"; p.ConvFromPrice = "77"; p.ConvToPrice = "88"; p.ConvDelivered = "99"; p.ConvSearch = "zz";
         Settle(win);
         TextBox Box(string text) => boxes.First(b => b.Text == text);
         var qty = Box("11"); var buy = Box("22"); var mkt = Box("33");
@@ -289,18 +291,24 @@ internal static class ProfitStorageProbe
         Check("سه کادرِ خرید عمده هم‌پهنا", ws.Max() - ws.Min() <= 1, string.Join("، ", ws));
         Check("و روی یک خط", three.Select(r => Math.Round(r.Y)).Distinct().Count() == 1);
 
-        var results = view.GetVisualDescendants().OfType<Border>().Where(b => b.Classes.Contains("plresult"))
+        //  دو نتیجه همان دو کادرِ شبکهٔ همین سه کادرند (۱۴۰۵/۰۷/۱۸: یک ردیف)
+        var results = ((Grid)qty.Parent!).Children.OfType<Border>()
                           .Select(R).OrderByDescending(r => r.X).ToList();
         var add = view.GetVisualDescendants().OfType<Button>()
                       .First(b => ReferenceEquals(b.Command, p.AddBulkCommand));
-        var cols = three.OrderByDescending(r => r.X).ToList();
-        var below = results.Concat(new[] { R(add) }).OrderByDescending(r => r.X).ToList();
-        var edge = cols.Zip(below, (a, b) => Math.Max(Math.Abs(a.Left - b.Left), Math.Abs(a.Right - b.Right))).Max();
-        Check("دو نتیجه و دکمهٔ ثبت دقیقاً زیرِ همان سه کادر", edge < 1, $"بیشترین اختلافِ لبه {edge:0.0}px");
+        //  ⛔ (۱۴۰۵/۰۷/۱۸) همه در **یک ردیف**: سه کادر، دو نتیجه و دکمهٔ ثبت، راست به چپ به همین ترتیب
+        var row = three.Concat(results).Concat(new[] { R(add) }).ToList();
+        var tops = row.Select(r => r.Top).ToList();
+        Check("سه کادر، دو نتیجه و دکمهٔ ثبت روی یک ردیف", row.Count == 6 && tops.Max() - tops.Min() < 1,
+              $"{row.Count} تا · اختلافِ بالا {tops.Max() - tops.Min():0.0}px");
+        var order = row.Select(r => r.Right).ToList();
+        Check("به ترتیبِ راست به چپ", order.Zip(order.Skip(1), (a, b) => a > b).All(x => x));
+        var below = results.Concat(new[] { R(add) }).ToList();
         var bh = below.Select(r => Math.Round(r.Height, 1)).Distinct().ToList();
         Check("و هم‌قد", bh.Count == 1, string.Join("، ", bh));
 
-        var union = boxes.Where(b => b.Text is not ("11" or "22" or "33" or "44" or "55")).Select(R).ToList();
+        var union = boxes.Where(b => b.Text is not ("11" or "22" or "33" or "44" or "55" or "66" or "77" or "88" or "99" or "zz"))
+                         .Select(R).ToList();
         Check("دو کادرِ نرخِ اتحادیه پیدا شد", union.Count == 2, union.Count.ToString());
         if (union.Count != 2) return;
         Check("دو کادرِ نرخِ اتحادیه هم‌پهنا", Math.Abs(union[0].Width - union[1].Width) < 1,
@@ -309,7 +317,7 @@ internal static class ProfitStorageProbe
         Check("دو کادرِ دستی هم‌پهنا", Math.Abs(manual[0].Width - manual[1].Width) < 1,
               $"{manual[0].Width:0.0} / {manual[1].Width:0.0}");
         var mid = (R(view).Left + R(view).Right) / 2;
-        foreach (var (name, rs) in new[] { ("خرید عمده", three), ("اتحادیه", union), ("دستی", manual) })
+        foreach (var (name, rs) in new[] { ("خرید عمده", row), ("اتحادیه", union), ("دستی", manual) })
         {
             var c = (rs.Min(r => r.Left) + rs.Max(r => r.Right)) / 2;
             Check($"شبکهٔ «{name}» وسطِ صفحه", Math.Abs(c - mid) < 20, $"{c - mid:+0;-0} px");
@@ -324,6 +332,7 @@ internal static class ProfitStorageProbe
         Settle(win);
         Shot(win, shots, "03-profit-boxes");
         p.BulkQty = p.BulkBuy = p.BulkMarket = p.ManualIncome = p.ManualExpense = "";
+        p.ConvQty = p.ConvFromPrice = p.ConvToPrice = p.ConvDelivered = p.ConvSearch = "";
         Settle(win);
     }
 

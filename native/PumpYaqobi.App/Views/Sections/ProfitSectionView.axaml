@@ -117,7 +117,41 @@
       </StackPanel>
     </c:SectionPage.Filters>
 
-          <StackPanel Spacing="12">
+    <Panel>
+      <!-- ══ صفحهٔ جدای «📋 از کجا آمد» (۱۴۰۵/۰۷/۱۸، دوم) — کادرش در صفحهٔ اصلی است ══ -->
+      <StackPanel Spacing="12" IsVisible="{Binding SourcesPage}">
+        <Button Classes="ghost" HorizontalAlignment="Left" Content="‹ برگشت به مفاد / ضرر"
+                Command="{Binding CloseSourcesCommand}" />
+        <Border Classes="card calm" Padding="16,14">
+          <StackPanel Spacing="6">
+            <DockPanel LastChildFill="False">
+              <TextBlock DockPanel.Dock="Left" Text="📋 از کجا آمد" Classes="label" FontSize="15" FontWeight="Bold" />
+              <TextBlock DockPanel.Dock="Right" Text="{Binding PeriodText}" FontSize="12" FontWeight="SemiBold"
+                         Foreground="{DynamicResource Pump.Ink.Info}" />
+            </DockPanel>
+            <TextBlock Text="{Binding SourcesNote}" FontSize="12" Classes="muted" />
+            <TextBlock Text="{Binding SalesPetrolText}" FontSize="14" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding SalesDieselText}" FontSize="14" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding OtherIncomeText}" FontSize="13.5" />
+            <TextBlock Text="{Binding RateDiffText}" FontSize="13.5" />
+            <TextBlock Text="{Binding ExpenseLineText}" FontSize="13.5" />
+            <ItemsControl ItemsSource="{Binding Sources}" Margin="0,8,0,0">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ProfitSourceLine">
+                  <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,3">
+                    <TextBlock Grid.Column="0" Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" />
+                    <TextBlock Grid.Column="1" Text="{Binding Detail}" FontSize="12.5" Margin="12,0" Classes="muted"
+                               TextWrapping="Wrap" />
+                    <TextBlock Grid.Column="2" Text="{Binding Total}" FontSize="13" FontWeight="Bold" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+          <StackPanel Spacing="12" IsVisible="{Binding MainPage}">
 
       <!-- ⚠️ همهٔ کارت‌های این صفحه تمام‌عرض‌اند و ‎calm‎ (سایهٔ بی‌محو):
            گزارشِ «مفاد/ضرر خیلی سنگین اسکرول می‌شود» (۱۴۰۵/۰۷/۱۳)؛ شرحش روی
@@ -157,63 +191,62 @@
       <!-- ══ کادرِ بزرگِ «مفاد / ضرر خالص» ══════════════════════════════════
                همان ‎.pl-result‎: عنوان، عددِ بزرگ، جملهٔ حال و خطِ روند.
                ⛔ (۱۴۰۵/۰۷/۱۸) کنارش کارتِ «💰 سودِ واقعی» — فروش جدا از سود. -->
-          <Grid ColumnDefinitions="*,12,*">
-          <Border Grid.Column="0" Classes="card calm" Padding="18,16" MinHeight="180">
-            <Grid RowDefinitions="Auto,Auto,Auto,*">
+          <!-- ⛔ (۱۴۰۵/۰۷/۱۸، دوم) «💰 سودِ واقعی» داخلِ همین کارت است، نه کنارش: دکمهٔ سربرگ
+               نما را عوض می‌کند (‎ShowReal‎) و دوباره زدن همان نمودار را برمی‌گرداند. -->
+          <Border Classes="card calm" Padding="18,16" MinHeight="200">
+            <Grid RowDefinitions="Auto,*">
               <DockPanel Grid.Row="0" LastChildFill="False">
                 <!-- ⚠️ چپ/راست این‌جا منطقی است: در راست‌به‌چپ «Left» یعنی سمتِ راستِ چشم -->
                 <TextBlock DockPanel.Dock="Left" Text="مفاد / ضرر خالص" Classes="label" FontSize="13"
                            VerticalAlignment="Center" />
                 <!-- کدام دوره: «همهٔ زمان‌ها» · «سالِ 1405» · «میزان 1405» -->
-                <Border DockPanel.Dock="Right" CornerRadius="9" Padding="10,3"
+                <Border DockPanel.Dock="Right" CornerRadius="9" Padding="10,3" VerticalAlignment="Center"
                         Background="{DynamicResource Pump.Input}"
                         BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="1">
                   <TextBlock Text="{Binding PeriodText}" FontSize="12" FontWeight="SemiBold"
                              Foreground="{DynamicResource Pump.Ink.Info}" />
                 </Border>
+                <Button x:Name="RealToggle" DockPanel.Dock="Right" Classes="ghost info" Margin="0,0,8,0"
+                        Padding="10,3" FontSize="12" VerticalAlignment="Center"
+                        Content="{Binding RealToggleText}" Command="{Binding ToggleRealCommand}"
+                        ToolTip.Tip="سودِ واقعی (با قیمتِ خریدِ مخزن) ⇄ نمودارِ مفاد" />
               </DockPanel>
-              <TextBlock Grid.Row="1" Text="{Binding NetShown}" FontWeight="Bold" FontSize="34"
-                         Margin="0,8,0,0"
-                         Foreground="{Binding TrendBrushShown, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
-              <TextBlock Grid.Row="2" Text="{Binding NetCaptionShown}" FontSize="13" Margin="0,4,0,0"
-                         Foreground="{Binding TrendBrushShown, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
-              <c:SparkChart Grid.Row="3" ShowAxis="False" FlowDirection="LeftToRight" MinHeight="80"
-                            Margin="0,10,0,0"
-                            Values="{Binding TrendShown}"
-                            LineBrush="{Binding TrendBrushShown, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
-                            GridBrush="{DynamicResource Pump.GridLine}" />
+
+              <Grid Grid.Row="1" RowDefinitions="Auto,Auto,*" IsVisible="{Binding !ShowReal}">
+                <TextBlock Grid.Row="0" Text="{Binding NetShown}" FontWeight="Bold" FontSize="34"
+                           Margin="0,8,0,0"
+                           Foreground="{Binding TrendBrushShown, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+                <TextBlock Grid.Row="1" Text="{Binding NetCaptionShown}" FontSize="13" Margin="0,4,0,0"
+                           Foreground="{Binding TrendBrushShown, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+                <c:SparkChart Grid.Row="2" ShowAxis="False" FlowDirection="LeftToRight" MinHeight="80"
+                              Margin="0,10,0,0"
+                              Values="{Binding TrendShown}"
+                              LineBrush="{Binding TrendBrushShown, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
+                              GridBrush="{DynamicResource Pump.GridLine}" />
+              </Grid>
+
+              <!-- ══ 💰 سودِ واقعی: ‎RealProfitService‎ — ⛔ پشتِ همان پرده (‎RealRows‎) ══ -->
+              <StackPanel Grid.Row="1" Spacing="6" Margin="0,10,0,0" IsVisible="{Binding ShowReal}">
+                <TextBlock Text="💰 سودِ واقعی — با قیمتِ خریدِ مخزن" FontSize="13" FontWeight="Bold" />
+                <ItemsControl ItemsSource="{Binding RealRows}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:RealProfitRow">
+                      <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+                        <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="13" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="14" FontWeight="Bold"
+                                   Margin="10,0,0,0" VerticalAlignment="Center"
+                                   Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{Binding RealNote}" FontSize="11.5" TextWrapping="Wrap"
+                           IsVisible="{Binding RealNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                           Foreground="{DynamicResource Pump.Ink.Danger}" />
+              </StackPanel>
             </Grid>
           </Border>
-
-          <!-- ══ 💰 سودِ واقعی (۱۴۰۵/۰۷/۱۸) ══════════════════════════════════════
-               خواستهٔ صاحب ریپو: «سودِ واقعی از مبلغِ کلِ فروشِ تیل تفکیک شود؛ سودِ هر
-               لیتر، هزینه‌ها، سودِ ناخالص و سودِ خالص جداگانه، با قیمتِ خریدِ واقعیِ
-               تیل.» فرمول: ‎RealProfitService‎. ⛔ پشتِ همان پرده (‎RealRows‎). -->
-          <Border Grid.Column="2" Classes="card calm" Padding="16,14" MinHeight="180">
-            <StackPanel Spacing="6">
-              <DockPanel LastChildFill="False">
-                <TextBlock DockPanel.Dock="Left" Text="💰 سودِ واقعی" Classes="label" FontSize="13" FontWeight="Bold" />
-                <TextBlock DockPanel.Dock="Right" Text="با قیمتِ خریدِ مخزن" FontSize="11" Classes="muted" />
-              </DockPanel>
-              <ItemsControl ItemsSource="{Binding RealRows}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:RealProfitRow">
-                    <Grid ColumnDefinitions="*,Auto" Margin="0,2">
-                      <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12.5" VerticalAlignment="Center"
-                                 TextTrimming="CharacterEllipsis" />
-                      <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="13" FontWeight="Bold"
-                                 Margin="10,0,0,0" VerticalAlignment="Center"
-                                 Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
-                    </Grid>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-              <TextBlock Text="{Binding RealNote}" FontSize="11.5" TextWrapping="Wrap"
-                         IsVisible="{Binding RealNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                         Foreground="{DynamicResource Pump.Ink.Danger}" />
-            </StackPanel>
-          </Border>
-          </Grid>
 
           <!-- ══ درآمدها و مصارف ══ -->
           <Grid ColumnDefinitions="*,12,*">
@@ -235,31 +268,18 @@
 
           <!-- ══ «از کجا آمد» (۱۴۰۵/۰۷/۲۰) — صاحب ریپو: «یک بخش هم باشه توی مفاد و
                ضرر که این‌ها از کجا اومدن». جمعِ هر منبع، و هر شیفتِ هر ورق یک سطر. -->
-          <Border Classes="card calm" Padding="16,14">
-            <StackPanel Spacing="6">
-              <DockPanel LastChildFill="False">
-                <TextBlock DockPanel.Dock="Left" Text="📋 از کجا آمد" Classes="label" FontSize="13" />
-                <TextBlock DockPanel.Dock="Right" Text="{Binding SourcesNote}" FontSize="11.5" Classes="muted" />
-              </DockPanel>
-              <TextBlock Text="{Binding SalesPetrolText}" FontSize="13.5" FontWeight="SemiBold" />
-              <TextBlock Text="{Binding SalesDieselText}" FontSize="13.5" FontWeight="SemiBold" />
-              <TextBlock Text="{Binding OtherIncomeText}" FontSize="13" />
-              <TextBlock Text="{Binding RateDiffText}" FontSize="13" />
-              <TextBlock Text="{Binding ExpenseLineText}" FontSize="13" />
-              <ItemsControl ItemsSource="{Binding Sources}" Margin="0,6,0,0">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:ProfitSourceLine">
-                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,2">
-                      <TextBlock Grid.Column="0" Text="{Binding Title}" FontSize="12.5" FontWeight="SemiBold" />
-                      <TextBlock Grid.Column="1" Text="{Binding Detail}" FontSize="12" Margin="12,0" Classes="muted"
-                                 TextTrimming="CharacterEllipsis" />
-                      <TextBlock Grid.Column="2" Text="{Binding Total}" FontSize="12.5" FontWeight="Bold" />
-                    </Grid>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </StackPanel>
-          </Border>
+          <!-- ⛔ (۱۴۰۵/۰۷/۱۸، دوم) فقط یک کادر؛ جزئیات در صفحهٔ جدا (‎OpenSourcesCommand‎) -->
+          <Button x:Name="SourcesCard" Classes="subcard" Padding="16,12"
+                  HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                  Command="{Binding OpenSourcesCommand}" ToolTip.Tip="جزئیات در صفحهٔ جدا">
+            <DockPanel LastChildFill="False">
+              <TextBlock DockPanel.Dock="Left" Text="📋 از کجا آمد" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" />
+              <TextBlock DockPanel.Dock="Left" Text="{Binding SourcesNote}" FontSize="12" Classes="muted"
+                         Margin="12,0,0,0" VerticalAlignment="Center" />
+              <TextBlock DockPanel.Dock="Right" Text="باز کن ‹" FontSize="12" VerticalAlignment="Center"
+                         Foreground="{DynamicResource Pump.Ink.Accent}" />
+            </DockPanel>
+          </Button>
         </StackPanel>
         <Button Classes="veil" IsVisible="{Binding Veiled}" Command="{Binding RevealCommand}"
                 ToolTip.Tip="برای دیدنِ مفاد و مصارف رمز بزنید">
@@ -480,6 +500,6 @@
         </StackPanel>
       </Border>
       </StackPanel>
-    
+    </Panel>
   </c:SectionPage>
 </UserControl>

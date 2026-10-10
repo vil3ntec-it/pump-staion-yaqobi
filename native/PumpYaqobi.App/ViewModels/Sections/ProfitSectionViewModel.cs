@@ -119,6 +119,25 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
     public string IncomeBrushShown => Veiled ? "Pump.Muted" : IncomeBrushKey;
     public string ExpenseBrushShown => Veiled ? "Pump.Muted" : "Pump.Danger";
 
+    // ══ (۱۴۰۵/۰۷/۱۸، دوم) صاحب ریپو با عکس: «سودِ واقعی کنارِ چارت نیاد؛ یک کادر باشه بزنم
+    //  توی همون چارت بیاد و دوباره بزنم چارتِ معمولی» و «از کجا آمد یک کادر باشه بزنم بره
+    //  صفحهٔ جداگانه». ⛔ هیچ عددی این‌جا ساخته نمی‌شود — فقط کدام نما دیده شود.
+
+    /// <summary>کارتِ نمودار «سودِ واقعی» را نشان می‌دهد، نه خطِ روند.</summary>
+    [ObservableProperty] private bool _showReal;
+    public string RealToggleText => ShowReal ? "📈 نمودار" : "💰 سودِ واقعی";
+    partial void OnShowRealChanged(bool value) => OnPropertyChanged(nameof(RealToggleText));
+    [RelayCommand] private void ToggleReal() => ShowReal = !ShowReal;
+
+    /// <summary>صفحهٔ جدای «📋 از کجا آمد». ⛔ پشتِ همان پرده: با پرده هرگز باز نیست.</summary>
+    [ObservableProperty] private bool _sourcesOpen;
+    public bool SourcesPage => SourcesOpen && !Veiled;
+    public bool MainPage => !SourcesPage;
+    partial void OnSourcesOpenChanged(bool value)
+    { OnPropertyChanged(nameof(SourcesPage)); OnPropertyChanged(nameof(MainPage)); }
+    [RelayCommand] private void OpenSources() { if (!Veiled) SourcesOpen = true; }
+    [RelayCommand] private void CloseSources() => SourcesOpen = false;
+
     private void RaiseVeil()
     {
         foreach (var n in new[]
@@ -126,7 +145,7 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
                      nameof(Veiled), nameof(PlanVeiled), nameof(VeilText), nameof(CanRelock), nameof(NetShown), nameof(NetCaptionShown),
                      nameof(IncomeTitleShown), nameof(IncomeShown), nameof(ExpenseShown), nameof(TrendShown),
                      nameof(TrendBrushShown), nameof(IncomeBrushShown), nameof(ExpenseBrushShown),
-                     nameof(RealRows), nameof(RealNote),
+                     nameof(RealRows), nameof(RealNote), nameof(SourcesPage), nameof(MainPage),
                  })
             OnPropertyChanged(n);
     }

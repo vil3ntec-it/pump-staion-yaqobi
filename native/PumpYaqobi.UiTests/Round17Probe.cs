@@ -402,25 +402,36 @@ internal static class Round17Probe
         var second = page.TxnsSecond.ToList();
         var r0 = second[0];
 
-        //  الف) نوشتن در جدولِ دوم، بعد «➕ ردیف» — هیچ ردیفی جابه‌جا نشود
+        //  الف) نوشتن در جدولِ دوم، بعد «➕ ردیف»
+        //  ⛔ (۱۴۰۵/۰۷/۱۸، دوم) قاعدهٔ «هیچ ردیفی جابه‌جا نشود» پس گرفته شد: دو جدول همان
+        //  تقسیمِ «خروج و ورود» را دارند (وگرنه زیرِ جدولِ اول سفید می‌ماند) و دست‌بالا یک
+        //  ردیفِ مرز جابه‌جا می‌شود؛ ترتیبِ داده و نوشته‌ها هرگز.
         ClickCell(win, g2, 0, 0);
         win.KeyTextInput("کریم دیزل");
         Settle(win);
         Tap(win, PhysicalKey.Enter);
         Settle(win);
         Check($"نامِ نوشته‌شده همان ماند («{r0.Name}»)", r0.Name == "کریم دیزل");
+        var order = page.TxnsFirst.Concat(page.TxnsSecond).ToList();
         Wait(win, page.AddTxnCommand.ExecuteAsync(null));
         Settle(win);
-        Check($"«➕ ردیف» هیچ ردیفی را جابه‌جا نکرد (جدولِ اول {page.TxnsFirst.Count}، دوم {page.TxnsSecond.Count})",
-              page.TxnsFirst.SequenceEqual(first)
-              && page.TxnsSecond.Take(second.Count).SequenceEqual(second)
-              && page.TxnsSecond.Count == second.Count + 1
-              && ReferenceEquals(page.TxnsSecond[0], r0));
+        var all = page.TxnsFirst.Concat(page.TxnsSecond).ToList();
+        var mid = (int)Math.Ceiling(all.Count / 2.0);
+        Check($"«➕ ردیف» همان تقسیمِ ورودِ دوباره (جدولِ اول {page.TxnsFirst.Count}، دوم {page.TxnsSecond.Count})",
+              page.TxnsFirst.Count == mid && all.Take(order.Count).SequenceEqual(order)
+              && Math.Abs(page.TxnsFirst.Count - first.Count) <= 1);
         Check($"شمارهٔ ردیف‌ها پیوسته ({page.TxnsSecond[^1].Index})",
               page.TxnsSecond[^1].Index == Shamsi.Money(page.Txns.Count));
 
+        //  جدول و ردیفِ همان ردیف — هر جا که هست
+        var g1 = win.GetVisualDescendants().OfType<ExcelGrid>()
+            .FirstOrDefault(g => g.IsEffectivelyVisible && ReferenceEquals(g.ItemsSource, page.TxnsFirst))!;
+        (DataGrid G, int I) At(WaraqTxnViewModel r) =>
+            page.TxnsFirst.IndexOf(r) is var i and >= 0 ? (g1, i) : (g2, page.TxnsSecond.IndexOf(r));
+
         //  ب) «دیزل» در نام ⇒ لیترش زیرِ «جمله دیزل»
-        ClickCell(win, g2, 0, 1);
+        var (gr0, ir0) = At(r0);
+        ClickCell(win, gr0, ir0, 1);
         win.KeyTextInput("40");
         Tap(win, PhysicalKey.Enter);
         Settle(win);
@@ -438,8 +449,9 @@ internal static class Round17Probe
               r0.Fuel == FuelType.Petrol && page.TxnPetrolLiters.Contains(Shamsi.Money(50m)) && page.TxnDieselLiters.Contains(" 0 "));
 
         //  ج) تکمله فقط با Tab/Enter؛ فلش آن را نمی‌پذیرد
-        var r1 = page.TxnsSecond[1];
-        ClickCell(win, g2, 1, 0);
+        var r1 = order[order.IndexOf(r0) + 1];
+        var (gr1, ir1) = At(r1);
+        ClickCell(win, gr1, ir1, 0);
         win.KeyTextInput("کر");
         Settle(win);
         var ghost = Suggest.Ghost;
@@ -451,8 +463,8 @@ internal static class Round17Probe
         Wait(win, SaveGuard.FlushAllAsync());
         Settle(win);
         Check($"تکمله («{ghost}») با فلش پذیرفته نشد — نام «{r1.Name}»", r1.Name == "کر");
-        Check("و ردیف‌ها هنوز سرِ جایشان‌اند",
-              page.TxnsFirst.SequenceEqual(first) && ReferenceEquals(page.TxnsSecond[0], r0));
+        Check("و ترتیبِ ردیف‌ها همان ماند",
+              page.TxnsFirst.Concat(page.TxnsSecond).Take(order.Count).SequenceEqual(order));
     }
 
     private static ShiftData? ShiftOf(PumpDbFactory dbf, long reportId)
