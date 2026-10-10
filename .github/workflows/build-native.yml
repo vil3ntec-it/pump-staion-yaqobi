@@ -42,7 +42,7 @@ permissions:
 env:
   #  کلیدِ عمومیِ P-256ِ امضای ‎SHA256SUMS.txt‎ (SPKIِ base64) — راز نیست. نیمهٔ
   #  خصوصی فقط در رازِ ‎UPDATE_SIGNING_KEY‎. متغیرِ ‎UPDATE_PUBLIC_KEY‎ جلوتر است.
-  DEFAULT_UPDATE_PUBLIC_KEY: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwIvQv0PPqbhqJ8XvHCpmig3oBJMihfDFtpXKW2Dbhy4avVLuj1XyLy8jXMKCo+dFAyJKKOpqHybdhO14tMRq2w==
+  DEFAULT_UPDATE_PUBLIC_KEY: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/Li3MvLz49PcHxpdc7g9MrrDfhV56NaC8P63c3xc+LBR0VTOAd/18P03kukRKNArWmfs356JbWMJaDXChP0Alw==
 
 jobs:
   build:
