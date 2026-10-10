@@ -22,6 +22,21 @@ public static class OpenRequest
 {
     public const string FullExt = ".pumpyaqobi";
     public const string KeyExt = ".pumpkey";
+    /// <summary>
+    /// ⛔ (۱۴۰۵/۰۷/۱۸) بکاپ‌های پوشهٔ «backups» — ‎.pyq‎ (رمزشده) و ‎.db‎ (دفتر). دوبار-کلیک
+    /// فقط <b>مشاهده</b> را باز می‌کند (‎BackupSectionViewModel.ViewFileAsync‎)، نه بازیابی.
+    /// تا امروز این دو هیچ برنامه‌ای نداشتند: بی آیکون، و دوبار-کلیک «پیدا نشد».
+    /// </summary>
+    public const string BackupExt = ".pyq";
+    public const string LedgerExt = ".db";
+
+    /// <summary>این فایل بکاپی است که فقط باید دیده شود؟</summary>
+    public static bool IsViewOnly(string path)
+    {
+        var ext = Path.GetExtension(path);
+        return ext.Equals(BackupExt, StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(LedgerExt, StringComparison.OrdinalIgnoreCase);
+    }
 
     private static readonly object Gate = new();
     private static readonly Queue<string> Pending = new();
@@ -39,7 +54,8 @@ public static class OpenRequest
             if (string.IsNullOrWhiteSpace(a) || a.StartsWith('/') && !File.Exists(a)) continue;
             var ext = Path.GetExtension(a);
             if ((ext.Equals(FullExt, StringComparison.OrdinalIgnoreCase)
-                 || ext.Equals(KeyExt, StringComparison.OrdinalIgnoreCase)) && File.Exists(a))
+                 || ext.Equals(KeyExt, StringComparison.OrdinalIgnoreCase)
+                 || IsViewOnly(a)) && File.Exists(a))
                 return Path.GetFullPath(a);
         }
         return null;

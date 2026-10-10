@@ -1,3 +1,4 @@
+using PumpYaqobi.Application.Localization;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.App.ViewModels.Sections;
 using PumpYaqobi.Domain.Entities;
@@ -28,29 +29,45 @@ public class WaraqPageBehaviourTests
     }
 
     /// <summary>
-    /// ⛔ «➕ ردیف» ته جدولِ دوم می‌نشیند و حذف فقط همان ردیف را برمی‌دارد —
-    /// هیچ ردیفِ دیگری از جدولی به جدولِ دیگر نمی‌پرد.
+    /// ⛔ (۱۴۰۵/۰۷/۱۸) دو جدول پس از «➕ ردیف»، «➕➕ چندتایی» و حذف **همان** تقسیمی را دارند
+    /// که پس از «خروج و ورود» درمی‌آید (‎ceil(n/2)‎)، ترتیبِ ردیف‌ها هیچ‌جا عوض نمی‌شود، و هر
+    /// ردیفِ تازه دستِ‌بالا یک ردیف را از مرزِ دو جدول جابه‌جا می‌کند. پیش از این همهٔ ردیف‌های
+    /// تازه تهِ جدولِ دوم می‌نشستند و زیرِ جدولِ اول سفید می‌ماند تا ورودِ دوباره.
     /// </summary>
     [Fact]
-    public async Task RadifeTaze_VaHazf_HichRadifeDigariRa_JabejaNemikonad()
+    public async Task RadifeTaze_VaHazf_DoJadval_HamanTaghsimeVorudeDobare()
     {
-        var (_, page) = await Open();
-        Assert.NotEmpty(page.TxnsFirst);
-        Assert.NotEmpty(page.TxnsSecond);
-        var first = page.TxnsFirst.ToList();
-        var second = page.TxnsSecond.ToList();
+        var (host, page) = await Open();
+        void Same()
+        {
+            var all = page.TxnsFirst.Concat(page.TxnsSecond).ToList();
+            Assert.Equal(page.Txns, all);                                       // ترتیبِ داده
+            Assert.Equal((int)Math.Ceiling(all.Count / 2.0), page.TxnsFirst.Count);
+        }
+        Same();
+        for (var i = 0; i < 3; i++)
+        {
+            var before = page.TxnsFirst.ToList();
+            await page.AddTxnCommand.ExecuteAsync(null);
+            Same();
+            Assert.True(page.TxnsFirst.Take(before.Count).SequenceEqual(before));  // ردیفِ جدولِ اول نپرید
+            Assert.True(page.TxnsFirst.Count - before.Count is 0 or 1);
+        }
+        await page.AddRowsAsync(10);
+        Same();
+        await page.DeleteTxnCommand.ExecuteAsync(page.TxnsFirst[1]);
+        Same();
+        await page.DeleteTxnCommand.ExecuteAsync(page.TxnsSecond[^1]);
+        Same();
 
-        await page.AddTxnCommand.ExecuteAsync(null);
-        await page.AddTxnCommand.ExecuteAsync(null);
-        Assert.Equal(first, page.TxnsFirst);
-        Assert.Equal(second, page.TxnsSecond.Take(second.Count));
-        Assert.Equal(second.Count + 2, page.TxnsSecond.Count);
-        var added = page.TxnsSecond.Skip(second.Count).ToList();
-
-        var gone = first[1];
-        await page.DeleteTxnCommand.ExecuteAsync(gone);
-        Assert.Equal(first.Where(r => r != gone), page.TxnsFirst);
-        Assert.Equal(second.Concat(added), page.TxnsSecond);
+        // همان ورق از نو باز شود ⇒ همان دو جدول
+        var full = (await host.WaraqData.LoadAsync(page.Entity.Id))!;
+        var re = new WaraqPageViewModel(host, full, new WaraqSectionViewModel(host));
+        Assert.Equal(page.TxnsFirst.Select(r => r.Entity.Id), re.TxnsFirst.Select(r => r.Entity.Id));
+        Assert.Equal(page.TxnsSecond.Select(r => r.Entity.Id), re.TxnsSecond.Select(r => r.Entity.Id));
+        // شمارهٔ ستونِ «#» پیوسته است
+        Assert.Equal(Enumerable.Range(1, page.Txns.Count).Select(i => Shamsi.Money(i)),
+                     page.TxnsFirst.Concat(page.TxnsSecond).Select(r => r.Index));
     }
 
     /// <summary>

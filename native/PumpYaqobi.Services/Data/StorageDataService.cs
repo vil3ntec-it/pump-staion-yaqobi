@@ -36,6 +36,21 @@ public sealed class StorageDataService
                        .OrderByDescending(p => p.DateKey).ThenByDescending(p => p.Id).ToListAsync(ct);
     }
 
+    /// <summary>
+    /// قیمتِ خریدِ هر لیترِ هر خرید — فقط چهار ستون (۱۴۰۵/۰۷/۱۸). برای «سودِ واقعی»ِ مفاد و
+    /// ضرر و «تبدیلِ تیل»؛ فقط خریدهایی که قیمت دارند.
+    /// </summary>
+    public async Task<List<PumpYaqobi.Application.Services.BuyPrice>> BuyPricesAsync(CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        var rows = await db.FuelPurchases.AsNoTracking()
+                           .Select(p => new { p.Fuel, p.DateKey, p.Id, p.PerLiter }).ToListAsync(ct);
+        return rows.Where(r => r.PerLiter > 0)
+                   .Select(r => new PumpYaqobi.Application.Services.BuyPrice(r.Fuel, r.DateKey, r.Id, r.PerLiter))
+                   .ToList();
+    }
+
     /// <summary>هر دو تیل، به ترتیبِ ثبت — برای کادرِ «خریدهای شرکت» و «جستجوی خرید».</summary>
     public async Task<List<FuelPurchase>> AllPurchasesAsync(CancellationToken ct = default)
     {
@@ -198,9 +213,56 @@ public sealed class StorageDataService
             await LinkToCompanyAsync(p, ct);
             return;
         }
-        if (string.IsNullOrWhiteSpace(p.Seller)) await _companies.UnlinkPurchaseAsync(p.LegacyId, ct);
-        else await LinkToCompanyAsync(p, ct);
+        if (string.IsNullOrWhiteSpace(p.Seller)) { await _companies.UnlinkPurchaseAsync(p.LegacyId, ct); return; }
+
+        //  ⛔ خریدِ پیوندخورده همان شرکتش را نگه می‌دارد (۱۴۰۵/۰۷/۱۸) — شرکت دیگر از
+        //  روی نامِ تایپی از نو جسته نمی‌شود، پس ویرایشِ قیمت یا نام هیچ‌وقت
+        //  شرکتِ تازه یا تکراری نمی‌سازد (`EditTarget`).
+        var link = await _companies.PurchaseLinkAsync(p.LegacyId, ct);
+        if (link is null) { await LinkToCompanyAsync(p, ct); return; }
+        var decision = EditTarget(link, p.Seller!, await _companies.CompaniesOnlyAsync(ct));
+        if (decision.RenameTo is { } nm) await _companies.RenameAsync(link.CompanyId, nm, ct);
+        await PutIntoAsync(decision.CompanyId, p, ct);
     }
+
+    /// <summary>
+    /// ══ ویرایشِ خریدِ پیوندخورده ⇒ کدام شرکت (خالص، آزمون‌دار) ══════════════
+    ///
+    ///   • نامِ فروشنده عوض نشده (یا فقط قیمت و تُن) ⇒ همان شرکت.
+    ///   • نام عوض شده و دقیقاً نامِ شرکتِ <b>دیگرِ موجودی</b> است ⇒ ردیف به آن
+    ///     شرکت می‌رود (هیچ شرکتی ساخته نمی‌شود).
+    ///   • نام عوض شده و شرکت فقط همین خرید را دارد ⇒ همان شرکت نامش درست
+    ///     می‌شود (ویرایشِ همان شرکت، نه ساختنِ دومی).
+    ///   • نام عوض شده ولی شرکت ردیف‌های دیگری هم دارد ⇒ همان شرکت می‌ماند و نامِ
+    ///     شرکت دست نمی‌خورد (حسابِ دیگران عوض نمی‌شود)؛ فقط ردیفِ همین خرید نامِ تازه
+    ///     را می‌گیرد.
+    /// ⛔ در هیچ حالتی شرکتِ تازه ساخته نمی‌شود.
+    /// </summary>
+    public static (long CompanyId, string? RenameTo) EditTarget(PurchaseLink link, string seller,
+                                                               IEnumerable<TilCompany> companies)
+    {
+        var q = CompanyDataService.NormalizeName(seller);
+        if (q.Length == 0 || q == CompanyDataService.NormalizeName(link.RowName)
+                          || q == CompanyDataService.NormalizeName(link.CompanyName))
+            return (link.CompanyId, null);
+
+        var exact = companies.FirstOrDefault(c => c.Id != link.CompanyId
+                                                 && CompanyDataService.NormalizeName(c.Name) == q);
+        if (exact is not null) return (exact.Id, null);
+
+        return link.HasOtherRows ? (link.CompanyId, null) : (link.CompanyId, seller.Trim());
+    }
+
+    private Task PutIntoAsync(long companyId, FuelPurchase p, CancellationToken ct) =>
+        _companies.PutReceiptAsync(companyId, p.Fuel, new CompanyRow
+        {
+            Name = (p.Seller ?? "").Trim(),
+            DateShamsi = p.DateShamsi,
+            Ton = p.Ton,
+            Usd = p.PriceTon,
+            Rate = p.UsdRate,
+            SourcePurchaseId = p.LegacyId,
+        }, ct);
 
     public async Task DeletePurchaseAsync(long id, CancellationToken ct = default)
     {

@@ -106,13 +106,17 @@ internal static class TypeAllProbe
                 if (head.Contains("تاریخ")) continue;
                 foreach (var text in Inputs)
                 {
+                    var item = (g.ItemsSource as System.Collections.IList)?.Cast<object>().FirstOrDefault();
                     var box = OpenCell(win, g, 0, col);
                     if (box is null) break;
                     _cells++;
                     var lost = TypeChars(win, text);
                     Tap(win, PhysicalKey.Enter);
                     Round14Probe.Settle(win);
-                    var shown = CellText(g, 0, col);
+                    //  (۱۴۰۵/۰۷/۱۸) ورق پس از Enter دو جدولش را دوباره تقسیم می‌کند
+                    //  (‎WaraqPageViewModel.Rebalance‎) و ردیفِ مرز به جدولِ دیگر می‌رود؛ پس همان
+                    //  ردیف سنجیده می‌شود، هر جا که حالا نشسته — نه «ردیفِ اولِ همین جدول».
+                    var shown = ShownOf(win, g, item, col);
                     var why = Compare(text, shown);
                     var at = $"{where} · جدول «{head}»";
                     if (lost is not null) Bad.Add($"{at}: هنگامِ نوشتنِ «{text}» {lost}");
@@ -242,6 +246,23 @@ internal static class TypeAllProbe
                 .FirstOrDefault(c => ReferenceEquals(c.GetType().GetProperty("OwningColumn",
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic
                     | System.Reflection.BindingFlags.Public)?.GetValue(c), col));
+    }
+
+    private static string ShownOf(Window win, DataGrid g, object? item, DataGridColumn col)
+    {
+        if (item is null || (g.ItemsSource as System.Collections.IList)?.IndexOf(item) is 0)
+            return CellText(g, 0, col);
+        var head = col.Header as string;
+        foreach (var other in win.GetVisualDescendants().OfType<ExcelGrid>())
+        {
+            if (other.ItemsSource is not System.Collections.IList l || l.IndexOf(item) is var i && i < 0) continue;
+            var oc = other.Columns.FirstOrDefault(c => c.Header as string == head);
+            if (oc is null) continue;
+            other.ScrollIntoView(item, oc);
+            Round14Probe.Settle(win);
+            return CellText(other, l.IndexOf(item), oc);
+        }
+        return CellText(g, 0, col);
     }
 
     private static string CellText(DataGrid g, int row, DataGridColumn col) =>

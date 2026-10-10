@@ -99,7 +99,8 @@ public sealed partial class MainViewModel
         parent.ShowSub(sub);
         if (LastSubOpen is { } opening) { try { await opening; } catch { } }
 
-        if (sub is BackupSectionViewModel b) await b.ImportFullFromAsync(path);
+        if (sub is BackupSectionViewModel bv && OpenRequest.IsViewOnly(path)) await bv.ViewFileAsync(path);
+        else if (sub is BackupSectionViewModel b) await b.ImportFullFromAsync(path);
         else if (sub is VipSectionViewModel v) await v.ApplyKeyFileAsync(path);
     }
 

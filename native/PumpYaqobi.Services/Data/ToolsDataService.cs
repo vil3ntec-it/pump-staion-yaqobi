@@ -262,18 +262,31 @@ public sealed class ToolsDataService
     }
 
     // ── کمبودی/اضافیِ کارمندان ─────────────────────────────────────────────
-    public async Task<List<StaffShortRow>> StaffShortAsync(CancellationToken ct = default)
+    public async Task<List<StaffShortRow>> StaffShortAsync(CancellationToken ct = default) =>
+        (await StaffShortPeriodAsync(ProfitPeriod.All, ct)).Rows;
+
+    /// <summary>
+    /// ══ کمبودیِ یک دوره — جدولِ کارمندان و سهمِ هر ورق (۱۴۰۵/۰۷/۱۸) ══════════════
+    /// ورق‌های همان ماه/سال (با ‎DateKey‎، در خودِ پرس‌وجو) و رسیدهای همان دوره
+    /// (‎StaffShortService.SettleIn‎). «همه» همان جدولِ پیشین است.
+    /// </summary>
+    public async Task<(List<StaffShortRow> Rows, List<StaffShortLine> Lines, List<StaffShortSettle> Settles)>
+        StaffShortPeriodAsync(ProfitPeriod period, CancellationToken ct = default)
     {
         _perm.Require(Permission.ViewData);
         await using var db = _dbf.Create();
         // ⚠️ ‎AsSplitQuery‎: «پمپ‌ها» و «تراکنش‌ها» دو مجموعهٔ کنارِ هم زیرِ یک
         // شیفت‌اند؛ در یک کوئری، هر پمپ در هر تراکنش ضرب می‌شود.
-        var entries = await db.WaraqEntries.AsNoTracking().AsSplitQuery()
+        var q = db.WaraqEntries.AsNoTracking().AsSplitQuery()
             .Include(w => w.Shifts).ThenInclude(s => s.Pumps)
             .Include(w => w.Shifts).ThenInclude(s => s.Transactions)
-            .OrderByDescending(w => w.DateKey).ToListAsync(ct);
-        var settles = await db.StaffShortSettles.AsNoTracking().ToListAsync(ct);
-        return _staff.Rows(entries, settles);
+            .AsQueryable();
+        if (period.Keys is { } k) q = q.Where(w => w.DateKey >= k.Lo && w.DateKey <= k.Hi);
+        var entries = await q.OrderByDescending(w => w.DateKey).ToListAsync(ct);
+        var settles = (await db.StaffShortSettles.AsNoTracking().ToListAsync(ct))
+                      .Where(s => StaffShortService.SettleIn(s, period))
+                      .OrderByDescending(s => s.Id).ToList();
+        return (_staff.RowsFor(entries, settles, period), _staff.Lines(entries), settles);
     }
 
     public async Task<List<StaffShortSettle>> SettlesAsync(CancellationToken ct = default)
@@ -284,6 +297,19 @@ public sealed class ToolsDataService
                        .OrderByDescending(s => s.Id).ToListAsync(ct);
     }
 
+    /// <summary>ماه‌هایی که ورق یا رسیدِ کمبودی دارند — فقط کلیدها.</summary>
+    public async Task<List<string>> StaffShortMonthsAsync(CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        var keys = await db.WaraqEntries.AsNoTracking().Where(w => w.DateKey > 0)
+                           .Select(w => w.DateKey).Distinct().ToListAsync(ct);
+        var months = keys.Select(k => $"{k / 10000:0000}/{k / 100 % 100:00}").ToHashSet(StringComparer.Ordinal);
+        foreach (var f in await db.StaffShortSettles.AsNoTracking().Select(s => s.ForMonth).ToListAsync(ct))
+            if (!string.IsNullOrWhiteSpace(f)) months.Add(f!);
+        return months.OrderByDescending(m => m, StringComparer.Ordinal).ToList();
+    }
+
     /// <summary>
     /// ثبتِ «رسیدِ کمبودی» یا «پرداختِ اضافی».
     ///
@@ -291,23 +317,34 @@ public sealed class ToolsDataService
     /// ثبت می‌گذاشت. برگشتِ ‎false‎ یعنی مبلغ نامعتبر بود و چیزی نوشته نشد.
     /// </summary>
     public async Task<bool> SettleAsync(StaffShortRow row, StaffSettleKind kind, decimal amount,
-                                        CancellationToken ct = default)
+                                        CancellationToken ct = default) =>
+        await SettleForAsync(row, kind, amount, null, ct) is not null;
+
+    /// <summary>
+    /// همان ثبت، برای یک ماه (‎forMonth‎ «1405/07» یا خالی برای همه) — و خودِ رسیدِ ثبت‌شده
+    /// برمی‌گردد تا همان لحظه چاپ شود. ‎null‎ یعنی مبلغ نامعتبر بود و چیزی نوشته نشد.
+    /// </summary>
+    public async Task<StaffShortSettle?> SettleForAsync(StaffShortRow row, StaffSettleKind kind, decimal amount,
+                                                        string? forMonth, CancellationToken ct = default)
     {
         _perm.Require(Permission.ManagerOnly);
         var cap = kind == StaffSettleKind.Excess ? row.RemainExcess : row.RemainShort;
         var amt = TankDipService.JsRound(amount);
-        if (amt <= 0m || amt > cap) return false;
+        if (amt <= 0m || amt > cap) return null;
 
         var today = Shamsi.Today();
-        await using var db = _dbf.Create();
-        db.StaffShortSettles.Add(new StaffShortSettle
+        var settle = new StaffShortSettle
         {
             LegacyId = "ss" + AppClock.UniqueTicks().ToString("x"),
             NameKey = row.Key, Name = row.Name, Kind = kind, Amount = amt,
             DateShamsi = today, DateKey = Shamsi.Key(today), MonthKey = Shamsi.MonthKey(today),
-        });
+            ForMonth = string.IsNullOrWhiteSpace(forMonth) ? null : forMonth,
+            RemainBefore = cap,
+        };
+        await using var db = _dbf.Create();
+        db.StaffShortSettles.Add(settle);
         await db.SaveChangesAsync(ct);
-        return true;
+        return settle;
     }
 
     public async Task DeleteSettleAsync(long id, CancellationToken ct = default)

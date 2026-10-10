@@ -45,6 +45,72 @@ public sealed class FieldNavigationService
         // Bubble: اول خودِ کنترل (و جدول) فرصت دارد؛ ما فقط چیزی را می‌گیریم
         // که کسی برنداشته است.
         _root.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Bubble);
+        //  ⛔ چپ/راستِ کادرِ متن **تونلی** هم شنیده می‌شود (۱۴۰۵/۰۷/۱۸) — شرح در
+        //  <see cref="OnPreviewArrow"/>.
+        _root.AddHandler(InputElement.KeyDownEvent, OnPreviewArrow, RoutingStrategies.Tunnel);
+    }
+
+    /// <summary>
+    /// ══ «کلیدها به‌جای جابه‌جایی بین کادرها، داخلِ نوشته حرکت می‌کنند» ══════════
+    /// گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۸) از پارچه‌ها (رفتن به کارتِ شب) و فرم‌های دیگر.
+    ///
+    /// ریشه در ترتیبِ رویدادها بود، نه در الگوریتمِ انتخاب: این سرویس حبابی گوش
+    /// می‌داد، و ‎TextBox‎ِ آوالونیا (۱۱.۲.۳) چپ/راست را **پیش از** ما می‌گیرد و هر
+    /// بار که کُرسر جابه‌جا شود ‎Handled‎ می‌کند. پس از رسیدن به کادر همه‌چیز
+    /// انتخاب است (‎SelectAll‎)؛ یکی از دو کلید انتخاب را جمع می‌کرد و کُرسر را به سرِ
+    /// متن می‌برد ⇒ «جابه‌جا شد» ⇒ کلید خورده شد و ناوبری هرگز اجرا نمی‌شد. قاعدهٔ
+    /// نوشته‌شدهٔ همین فایل («وسطِ متن = ویرایش، وگرنه ناوبری») هیچ‌وقت واقعاً اجرا
+    /// نمی‌شد.
+    ///
+    /// حالا همان قاعده **پیش از** کادر سنجیده می‌شود: کُرسر وسطِ متن ⇒ دست نمی‌زنیم
+    /// (ویرایشِ عادی)؛ انتخاب یا کُرسر سرِ/تهِ متن ⇒ نزدیک‌ترین کادر در همان جهت.
+    /// کادرِ چندخطی، جدول، ‎Shift‎ (انتخابِ متن) و تکملهٔ باز دست نمی‌خورند.
+    /// </summary>
+    private void OnPreviewArrow(object? sender, KeyEventArgs e)
+    {
+        if (e.Handled || e.Key is not (Key.Left or Key.Right) || e.KeyModifiers != KeyModifiers.None) return;
+        if (_root.FocusManager?.GetFocusedElement() is not TextBox tb || !IsField(tb)) return;
+        if (tb.AcceptsReturn || tb.FindAncestorOfType<DataGrid>() is not null) return;
+        if (Controls.Suggest.Showing > 0) return;
+        if (CaretInsideText(tb)) return;
+        if (Navigate(tb, e.Key)) e.Handled = true;
+    }
+
+    /// <summary>
+    /// مستطیلِ کنترل همان‌طور که روی صفحه دیده می‌شود — راست یعنی راستِ چشم،
+    /// با همان سنجشِ <see cref="Mirrored"/> (نه با فرض).
+    /// </summary>
+    public static Rect? ScreenRect(Control c)
+    {
+        if (c.GetVisualRoot() is not Visual root) return null;
+        var a = c.TranslatePoint(new Point(0, 0), root);
+        var b = c.TranslatePoint(new Point(c.Bounds.Width, c.Bounds.Height), root);
+        if (a is not { } p || b is not { } q) return null;
+        double l = Math.Min(p.X, q.X), r = Math.Max(p.X, q.X);
+        if (IsRtl(c) && !Mirrored(c, root) && root is Control rc)
+            (l, r) = (rc.Bounds.Width - r, rc.Bounds.Width - l);
+        return new Rect(l, Math.Min(p.Y, q.Y), r - l, Math.Abs(q.Y - p.Y));
+    }
+
+    /// <summary>جابه‌جایی به نزدیک‌ترین کادر در جهتِ کلید؛ ‎false‎ یعنی کادری نبود.</summary>
+    private bool Navigate(Control from, Key key)
+    {
+        if (ScopeOf(from) is not { } scope) return false;
+        var dir = key switch
+        {
+            Key.Up => Dir.Up,
+            Key.Down or Key.Enter => Dir.Down,
+            Key.Left => Dir.Left,
+            _ => Dir.Right,
+        };
+        if (dir is Dir.Left or Dir.Right && IsRtl(from)
+            && from.GetVisualRoot() is Visual vr && !Mirrored(from, vr))
+            dir = dir == Dir.Left ? Dir.Right : Dir.Left;
+        var best = Pick(from, dir, Fields(scope));
+        if (best is null) return false;
+        best.Focus(NavigationMethod.Directional);
+        if (best is TextBox t) t.SelectAll();
+        return true;
     }
 
     private void OnKeyDown(object? sender, KeyEventArgs e)

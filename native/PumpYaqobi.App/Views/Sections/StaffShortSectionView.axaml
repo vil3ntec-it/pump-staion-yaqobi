@@ -9,6 +9,18 @@
   <c:SectionPage Header="کمبودی و اضافیِ کارمندان"
                  SubHeader="از خودِ ورق‌های روزانه — به هیچ ورقی دست زده نمی‌شود">
 
+    <!-- ⛔ (۱۴۰۵/۰۷/۱۸) کشوی سال و ماه: فقط ورق‌ها و رسیدهای همان دوره — دوره‌ها قاطی نمی‌شوند -->
+    <c:SectionPage.Filters>
+      <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <TextBlock Text="دوره" Classes="label" VerticalAlignment="Center" />
+        <ComboBox ItemsSource="{Binding Picker.Years}" SelectedItem="{Binding Picker.Year}"
+                  IsVisible="{Binding Picker.HasYears}"
+                  c:PickerWidth.Stable="True" ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="120" />
+        <ComboBox ItemsSource="{Binding Picker.Months}" SelectedItem="{Binding Picker.Selected}"
+                  c:PickerWidth.Stable="True" ItemTemplate="{StaticResource Pump.MonthDotItem}" MinWidth="160" />
+      </StackPanel>
+    </c:SectionPage.Filters>
+
     <c:SectionPage.Toolbar>
       <Button Classes="ghost info" Content="PDF" Command="{Binding PdfCommand}" />
     </c:SectionPage.Toolbar>
@@ -94,15 +106,39 @@
       <TextBlock Text="هنوز ورقی با کمبودی/اضافی ثبت نشده" Classes="label"
                  IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center" Margin="0,10" />
 
-      <!-- ثبتِ تسویه -->
+      <!-- ثبتِ تسویه — می‌گوید برای کیست، کدام دوره و چقدر مانده (۱۴۰۵/۰۷/۱۸) -->
       <Border Classes="panel" Padding="12,10">
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <TextBlock Text="مبلغ:" Classes="label" VerticalAlignment="Center" />
-          <TextBox Text="{Binding Amount}" Width="130" HorizontalContentAlignment="Center" c:LiveFormat.Kind="number" />
-          <Button Classes="danger" Content="رسید کمبودی گرفتم"
-                  Command="{Binding SettleShortCommand}" />
-          <Button Classes="accent" Content="اضافی را پرداخت کردم"
-                  Command="{Binding SettleExcessCommand}" />
+        <StackPanel Spacing="8">
+          <TextBlock Text="{Binding SelectedTitle}" FontWeight="Bold" TextWrapping="Wrap" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="مبلغ:" Classes="label" VerticalAlignment="Center" />
+            <TextBox x:Name="AmountBox" Text="{Binding Amount}" Width="130" HorizontalContentAlignment="Center" c:LiveFormat.Kind="number" />
+            <Button Classes="danger" Content="رسید کمبودی گرفتم"
+                    Command="{Binding SettleShortCommand}" />
+            <Button Classes="accent" Content="اضافی را پرداخت کردم"
+                    Command="{Binding SettleExcessCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- سهمِ هر ورق برای کارمندِ انتخاب‌شده — تاریخ، شیفت، دلیل و مبلغ -->
+      <Border Classes="panel" Padding="12,10" IsVisible="{Binding HasSelected}">
+        <StackPanel Spacing="6">
+          <TextBlock Text="📋 از کجا آمد — ورق‌های همین کارمند در همین دوره" FontWeight="Bold"
+                     Foreground="{DynamicResource Pump.Ink.Accent}" />
+          <ItemsControl ItemsSource="{Binding SelectedLines}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:StaffShortLineViewModel">
+                <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,2">
+                  <TextBlock Grid.Column="0" Text="{Binding Title}" FontWeight="SemiBold" FontSize="12.5" />
+                  <TextBlock Grid.Column="1" Text="{Binding Reason}" Classes="muted" FontSize="12" Margin="12,0"
+                             TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="2" Text="{Binding Amount}" FontWeight="Bold" FontSize="12.5"
+                             Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
         </StackPanel>
       </Border>
 
@@ -128,6 +164,16 @@
               </DataGridTemplateColumn>
               <DataGridTextColumn Header="مبلغ" Binding="{Binding AmountText}" Width="Auto" />
               <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
+              <DataGridTextColumn Header="دوره" Binding="{Binding ForText}" Width="Auto" />
+              <DataGridTemplateColumn Header="رسید" Width="Auto">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <Button Classes="ghost info" Content="🧾 چاپ" Padding="8,3" FontSize="11"
+                            Command="{Binding $parent[UserControl].DataContext.ReceiptCommand}"
+                            CommandParameter="{Binding}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
             </DataGrid.Columns>
           </c:ExcelGrid>
         </Grid>

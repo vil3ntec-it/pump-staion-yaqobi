@@ -3,6 +3,7 @@
              xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
              xmlns:c="using:PumpYaqobi.App.Controls"
              xmlns:th="using:PumpYaqobi.App.Themes"
+             xmlns:data="using:PumpYaqobi.Services.Data"
              x:Class="PumpYaqobi.App.Views.Sections.BackupSectionView"
              x:DataType="vm:BackupSectionViewModel">
 
@@ -25,6 +26,9 @@
 
             <StackPanel Spacing="8" IsVisible="{Binding !NoBackups}">
               <TextBlock Text="{Binding Newest.OneLine}" FontSize="17" FontWeight="Bold" />
+              <TextBlock Classes="muted" TextWrapping="Wrap">
+                <Run Text="{Binding Newest.Kind}" /><Run Text=" · " /><Run Text="{Binding Newest.Name}" />
+              </TextBlock>
               <TextBlock Text="{Binding KeepText}" Classes="muted" TextWrapping="Wrap" />
             </StackPanel>
 
@@ -48,6 +52,12 @@
               <!-- ⛔ شورا، بندِ ۱: عددِ ناخوانای روی دیسک دیده شود، نه بی‌صدا صفر -->
               <Button Classes="ghost" Content="🩺 سلامتِ دفتر"
                       Command="{Binding CheckHealthCommand}" IsEnabled="{Binding !Busy}" />
+              <!-- ⛔ (۱۴۰۵/۰۷/۱۸) مشاهده جدا از بازیابی: فقط دیدن، هیچ چیزی عوض نمی‌شود -->
+              <Button Classes="ghost info" Content="👁 مشاهدهٔ همین بکاپ"
+                      Command="{Binding ViewBackupCommand}" CommandParameter="{Binding Newest}"
+                      IsVisible="{Binding !NoBackups}" IsEnabled="{Binding !Busy}" />
+              <Button Classes="ghost info" Content="👁 مشاهدهٔ بکاپ از فایل"
+                      Command="{Binding ViewFromFileCommand}" IsEnabled="{Binding !Busy}" />
               <Button Classes="ghost danger" Content="↩ بازگرداندنِ همین بکاپ"
                       Command="{Binding RestoreNewestCommand}"
                       IsVisible="{Binding CanRestore}" IsEnabled="{Binding !Busy}" />
@@ -55,6 +65,40 @@
                       Command="{Binding RestoreFromFileCommand}"
                       IsVisible="{Binding CanRestore}" IsEnabled="{Binding !Busy}" />
             </WrapPanel>
+
+            <!-- ══ «👁 مشاهدهٔ بکاپ» (۱۴۰۵/۰۷/۱۸) — فقط خواندن؛ «♻ بازیابی» از همان راهِ همیشگی ══ -->
+            <Border x:Name="BackupViewer" Classes="card calm" Padding="12" IsVisible="{Binding IsViewing}">
+              <StackPanel Spacing="8">
+                <TextBlock Text="{Binding ViewTitle}" FontWeight="Bold" TextWrapping="Wrap"
+                           Foreground="{DynamicResource Pump.Ink.Accent}" />
+                <TextBlock Text="{Binding ViewSummary}" FontWeight="Bold" TextWrapping="Wrap"
+                           Foreground="{Binding ViewBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+                <TextBlock Text="{Binding ViewIntegrity}" TextWrapping="Wrap"
+                           IsVisible="{Binding ViewIntegrity, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                           Foreground="{Binding ViewBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+                <ItemsControl ItemsSource="{Binding ViewTables}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="data:BackupPeekTable">
+                      <Border Classes="panel" Padding="10,6" Margin="0,0,8,8" MinWidth="150">
+                        <StackPanel Spacing="2">
+                          <TextBlock Text="{Binding Label}" Classes="muted" FontSize="12" />
+                          <TextBlock Text="{Binding Count, StringFormat={}{0:N0}}" FontWeight="Bold" FontSize="15" />
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <WrapPanel>
+                  <Button Classes="ghost danger" Content="♻ بازیابیِ همین بکاپ" Margin="0,0,8,0"
+                          Command="{Binding RestoreViewedCommand}"
+                          IsVisible="{Binding CanRestore}" IsEnabled="{Binding !Busy}" />
+                  <Button Classes="ghost" Content="✕ بستن" Command="{Binding CloseViewCommand}" />
+                </WrapPanel>
+              </StackPanel>
+            </Border>
 
             <!-- ⛔ بکاپ‌های روی سرورِ حساب — دیدن و برگرداندن (۱۴۰۵/۰۷/۲۰): تا امروز فقط فرستاده می‌شد -->
             <Border Classes="card calm" Padding="12">
@@ -184,7 +228,24 @@
               <DataGrid.Columns>
                 <DataGridTextColumn Header="روز" Binding="{Binding Day}" Width="Auto" />
                 <DataGridTextColumn Header="ساعت" Binding="{Binding TakenText}" Width="Auto" />
-                <DataGridTextColumn Header="اندازه" Binding="{Binding SizeText}" Width="*" />
+                <DataGridTextColumn Header="نوع" Binding="{Binding Kind}" Width="Auto" />
+                <DataGridTextColumn Header="اندازه" Binding="{Binding SizeText}" Width="Auto" />
+                <DataGridTextColumn Header="فایل" Binding="{Binding Name}" Width="*" />
+                <DataGridTemplateColumn Header="عمل" Width="Auto">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <Button Classes="ghost info" Content="👁 مشاهده" Padding="8,3" FontSize="11"
+                                Command="{Binding Owner.ViewBackupCommand}" CommandParameter="{Binding}" />
+                        <Button Classes="ghost danger" Content="♻ بازیابی" Padding="8,3" FontSize="11"
+                                IsVisible="{Binding Owner.CanRestore}"
+                                Command="{Binding Owner.RestoreBackupCommand}" CommandParameter="{Binding}" />
+                        <Button Classes="ghost" Content="📂" Padding="8,3" FontSize="11" ToolTip.Tip="نشان دادن در پوشه"
+                                Command="{Binding Owner.ShowInFolderCommand}" CommandParameter="{Binding}" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
               </DataGrid.Columns>
             </c:ExcelGrid>
             <Button Classes="ghost danger" Margin="14,10" HorizontalAlignment="Right"

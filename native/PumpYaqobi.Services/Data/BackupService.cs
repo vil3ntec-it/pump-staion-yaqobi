@@ -11,8 +11,11 @@ namespace PumpYaqobi.Services.Data;
 /// <param name="Day">تاریخِ شمسیِ روزی که گرفته شده (‎1404/06/16‎).</param>
 /// <param name="TakenAt">زمانِ واقعیِ ساخت.</param>
 /// <param name="Bytes">اندازه.</param>
-public sealed record BackupFile(string Path, string Day, DateTime TakenAt, long Bytes)
+public sealed record BackupFile(string Path, string Day, DateTime TakenAt, long Bytes, string Kind = "")
 {
+    /// <summary>نامِ خودِ فایل — همان چیزی که در پوشه دیده می‌شود.</summary>
+    public string Name => System.IO.Path.GetFileName(Path);
+
     public string SizeText => Bytes >= 1024 * 1024
         ? Shamsi.Money(Math.Round(Bytes / 1048576m, 1), 1) + " مگابایت"
         : Shamsi.Money(Math.Round(Bytes / 1024m)) + " کیلوبایت";
@@ -270,6 +273,50 @@ public sealed class BackupService
             var day = stem.StartsWith("pump-", StringComparison.Ordinal)
                 ? string.Join('/', stem[5..].Split('-').Take(3)) : stem;
             list.Add(new BackupFile(path, day, fi.LastWriteTime, fi.Length));
+        }
+        return list.OrderByDescending(x => x.TakenAt).ToList();
+    }
+
+    // ══ همهٔ بکاپ‌های پوشه — نه فقط عکسِ روزانه (۱۴۰۵/۰۷/۱۸) ════════════════
+    //
+    //  گزارشِ صاحب ریپو: «بکاپ‌هایی که در پوشه هستند… روی آن‌ها کلیک می‌کنم پیامِ
+    //  خالی یا پیدا نشد می‌دهد.» ⇐ ‎List()‎ فقط ‎pump-*.db‎ را می‌دید؛ عکسِ ایمنیِ
+    //  «پیش‌از‌بازگردانی»، پشتیبانِ رمزشدهٔ ‎.pyq‎ و نسخهٔ بی‌رمزِ دفترِ بزرگ
+    //  (‎SyncBackup.Write‎ ⇐ ‎*.db‎) همه در همان پوشه بودند و در برنامه هیچ‌جا.
+    //  ⛔ ‎List()‎ دست نخورد: ‎Prune‎ از آن می‌خواند و عکسِ ایمنی نباید با سقفِ
+    //  چهارده‌تاییِ روزانه پاک شود. ⛔ فایل‌های موقت (‎tmp-*‎) هرگز.
+
+    /// <summary>نوعِ بکاپ از روی نامِ فایل.</summary>
+    public static string KindOf(string path)
+    {
+        var name = System.IO.Path.GetFileName(path);
+        if (name.EndsWith(SyncBackup.Extension, StringComparison.OrdinalIgnoreCase)) return "🔒 رمزشده";
+        if (name.StartsWith("پیش‌از‌بازگردانی-", StringComparison.Ordinal)) return "🛟 ایمنی";
+        if (name.StartsWith("pump-", StringComparison.Ordinal)) return "📅 روزانه";
+        return "💾 پشتیبان";
+    }
+
+    /// <summary>هر بکاپی که در پوشهٔ بکاپ‌های همین دفتر است، از تازه به کهنه.</summary>
+    public IReadOnlyList<BackupFile> ListAll()
+    {
+        if (!Directory.Exists(SnapshotDir)) return Array.Empty<BackupFile>();
+        var list = new List<BackupFile>();
+        IEnumerable<string> files;
+        try { files = Directory.EnumerateFiles(SnapshotDir).ToList(); }
+        catch { return Array.Empty<BackupFile>(); }
+        foreach (var path in files)
+        {
+            var name = System.IO.Path.GetFileName(path);
+            if (name.StartsWith("tmp-", StringComparison.Ordinal) || name.EndsWith(".part", StringComparison.Ordinal)) continue;
+            if (!name.EndsWith(".db", StringComparison.OrdinalIgnoreCase)
+                && !name.EndsWith(SyncBackup.Extension, StringComparison.OrdinalIgnoreCase)) continue;
+            FileInfo fi;
+            try { fi = new FileInfo(path); } catch { continue; }
+            var stem = System.IO.Path.GetFileNameWithoutExtension(path);
+            var day = stem.StartsWith("pump-", StringComparison.Ordinal)
+                ? string.Join('/', stem[5..].Split('-').Take(3))
+                : Shamsi.Of(fi.LastWriteTime);
+            list.Add(new BackupFile(path, day, fi.LastWriteTime, fi.Length, KindOf(path)));
         }
         return list.OrderByDescending(x => x.TakenAt).ToList();
     }

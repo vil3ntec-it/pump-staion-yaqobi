@@ -253,18 +253,20 @@ public class ProfitPeriodTests : IDisposable
 
         //  هر کادرِ تایپ یک سبک (قد و قلم یک جا نوشته شده)
         var boxes = Regex.Matches(xaml, "<TextBox [^>]*>").Select(m => m.Value).ToList();
-        Assert.Equal(7, boxes.Count);
+        //  ۷ کادرِ پیشین + ۴ کادرِ تبدیلِ تیل + جست‌وجوی تاریخچهٔ تبدیل (۱۴۰۵/۰۷/۱۸)
+        Assert.Equal(12, boxes.Count);
         Assert.All(boxes, b => Assert.Contains("Classes=\"plbox\"", b));
         Assert.All(boxes, b => Assert.DoesNotContain("MinHeight=", b));
         Assert.All(boxes, b => Assert.DoesNotContain("FontSize=", b));
 
-        //  ⛔ ورودی و نتیجهٔ خریدِ عمده یک شبکه‌اند، با یک قالبِ ستون
-        var bulk = Regex.Match(xaml, "<Grid ColumnDefinitions=\"\\*,16,\\*,16,\\*\" RowDefinitions=\"[^\"]+\"[^>]*>(.*?)</Grid>",
+        //  ⛔ ورودی و نتیجهٔ خریدِ عمده یک شبکه‌اند — و از ۱۴۰۵/۰۷/۱۸ همه در **یک ردیف**
+        //  («همهٔ کادرهای خریدِ عمده افقی و در یک ردیف»)
+        var bulk = Regex.Match(xaml, "<Grid ColumnDefinitions=\"\\*,10,\\*,10,\\*,10,\\*,10,\\*,10,Auto\" RowDefinitions=\"[^\"]+\"[^>]*>(.*?)</Grid>",
                                RegexOptions.Singleline);
         Assert.True(bulk.Success, "شبکهٔ یگانهٔ خریدِ عمده نیست");
         foreach (var bind in new[] { "BulkQty", "BulkBuy", "BulkMarket", "BulkSellerText", "BulkIncomeText", "AddBulkCommand" })
             Assert.Contains(bind, bulk.Groups[1].Value);
-        Assert.Single(Regex.Matches(xaml, "ColumnDefinitions=\"\\*,16,\\*,16,\\*\""));
+        Assert.Single(Regex.Matches(xaml, "ColumnDefinitions=\"\\*,10,\\*,10,\\*,10,\\*,10,\\*,10,Auto\""));
 
         //  ⛔ هیچ منطقی عوض نشد: همان اتصال‌ها. سه عددِ حساس از ۱۴۰۵/۰۷/۱۶ از
         //  درِ پرده («…Shown») می‌آیند که بی پرده همان عددِ واقعی است.

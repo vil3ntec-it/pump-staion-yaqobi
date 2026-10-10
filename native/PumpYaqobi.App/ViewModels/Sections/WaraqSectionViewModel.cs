@@ -564,18 +564,51 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         Renumber();
     }
 
-    /// <summary>ردیفِ تازه به تهِ جدولِ دوم — مگر جدولِ دوم هنوز خالی و جدولِ اول هم خالی است.</summary>
+    /// <summary>
+    /// ══ ردیفِ تازه — دو جدول همان تقسیمی را دارند که پس از «خروج و ورود» (۱۴۰۵/۰۷/۱۸) ══
+    /// گزارشِ صاحب ریپو: «هنگامِ اضافه‌کردن در تراکنش‌ها جدولِ جدید ایجاد می‌شود اما بخشِ
+    /// دیگری سفید می‌شود؛ با خروج و ورودِ دوباره درست می‌شود.» سنجه (‎waraqadd‎) گرفتش: هر
+    /// ردیفِ تازه تهِ جدولِ دوم می‌نشست، پس با «➕➕ ده» جدولِ چپ ۲۰ ردیف و جدولِ راست ۱۰
+    /// ردیف داشت و زیرِ جدولِ راست ۴۵۰ پیکسل سفید می‌ماند — و باز کردنِ دوباره (‎SplitTxns‎)
+    /// نیمه‌به‌نیمه می‌چید. دو قاعده برای یک چیز.
+    ///
+    /// حالا یک قاعده (‎Rebalance‎): همان ‎ceil(n/2)‎ِ ‎SplitTxns‎، ولی با **کمترین جابه‌جایی**
+    /// — هر ردیفِ تازه دستِ‌بالا یک ردیف را از سرِ جدولِ دوم به تهِ جدولِ اول می‌برد. ترتیبِ
+    /// داده (‎SortIndex‎، کلیدِ ثبت به حساب‌ها، PDF) دست نمی‌خورد و هیچ ‎Reset‎ی نیست، پس
+    /// خانه‌ای که در حالِ نوشتن است بسته نمی‌شود (درسِ ۱۴۰۵/۰۷/۱۸ سرِ جایش است).
+    /// </summary>
     private void PlaceNewTxn(WaraqTxnViewModel vm)
     {
-        if (TxnsFirst.Count == 0 && TxnsSecond.Count == 0) TxnsFirst.Add(vm);
-        else TxnsSecond.Add(vm);
-        Renumber();
+        TxnsSecond.Add(vm);
+        Rebalance();
     }
 
-    /// <summary>ردیفِ رفته فقط از جدولِ خودش برداشته می‌شود.</summary>
+    /// <summary>ردیفِ رفته از جدولِ خودش برداشته می‌شود و دو جدول دوباره هم‌قد می‌شوند.</summary>
     private void RemoveTxnRow(WaraqTxnViewModel vm)
     {
         if (!TxnsFirst.Remove(vm)) TxnsSecond.Remove(vm);
+        Rebalance();
+    }
+
+    /// <summary>
+    /// جدولِ اول ‎ceil(n/2)‎ ردیف — مو‌به‌مو همان ‎SplitTxns‎ — با جابه‌جاییِ مرزی، نه ساختنِ دوباره.
+    /// پیش‌شرط: ‎TxnsFirst‎ پشتِ سرش ‎TxnsSecond‎ همان ترتیبِ ‎Txns‎ است.
+    /// </summary>
+    internal void Rebalance()
+    {
+        var f = (int)Math.Ceiling((TxnsFirst.Count + TxnsSecond.Count) / 2.0);
+        while (TxnsFirst.Count > f)
+        {
+            var r = TxnsFirst[^1];
+            TxnsFirst.RemoveAt(TxnsFirst.Count - 1);
+            TxnsSecond.Insert(0, r);
+        }
+        while (TxnsFirst.Count < f && TxnsSecond.Count > 0)
+        {
+            var r = TxnsSecond[0];
+            TxnsSecond.RemoveAt(0);
+            TxnsFirst.Add(r);
+        }
         Renumber();
     }
 

@@ -30,6 +30,7 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         : base("profit", "profit", "مفاد / ضرر / اتحادیه")
     {
         _host = host;
+        InitConversion();
         //  «همهٔ ماه‌ها» همان «همهٔ زمان‌ها»ی پیش‌فرض است — عددی که کاربر تا
         //  امروز می‌دید، بی هیچ تغییری، تا خودش دوره‌ای برگزیند.
         Picker = new YearMonthPicker(k =>
@@ -118,6 +119,25 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
     public string IncomeBrushShown => Veiled ? "Pump.Muted" : IncomeBrushKey;
     public string ExpenseBrushShown => Veiled ? "Pump.Muted" : "Pump.Danger";
 
+    // ══ (۱۴۰۵/۰۷/۱۸، دوم) صاحب ریپو با عکس: «سودِ واقعی کنارِ چارت نیاد؛ یک کادر باشه بزنم
+    //  توی همون چارت بیاد و دوباره بزنم چارتِ معمولی» و «از کجا آمد یک کادر باشه بزنم بره
+    //  صفحهٔ جداگانه». ⛔ هیچ عددی این‌جا ساخته نمی‌شود — فقط کدام نما دیده شود.
+
+    /// <summary>کارتِ نمودار «سودِ واقعی» را نشان می‌دهد، نه خطِ روند.</summary>
+    [ObservableProperty] private bool _showReal;
+    public string RealToggleText => ShowReal ? "📈 نمودار" : "💰 سودِ واقعی";
+    partial void OnShowRealChanged(bool value) => OnPropertyChanged(nameof(RealToggleText));
+    [RelayCommand] private void ToggleReal() => ShowReal = !ShowReal;
+
+    /// <summary>صفحهٔ جدای «📋 از کجا آمد». ⛔ پشتِ همان پرده: با پرده هرگز باز نیست.</summary>
+    [ObservableProperty] private bool _sourcesOpen;
+    public bool SourcesPage => SourcesOpen && !Veiled;
+    public bool MainPage => !SourcesPage;
+    partial void OnSourcesOpenChanged(bool value)
+    { OnPropertyChanged(nameof(SourcesPage)); OnPropertyChanged(nameof(MainPage)); }
+    [RelayCommand] private void OpenSources() { if (!Veiled) SourcesOpen = true; }
+    [RelayCommand] private void CloseSources() => SourcesOpen = false;
+
     private void RaiseVeil()
     {
         foreach (var n in new[]
@@ -125,8 +145,10 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
                      nameof(Veiled), nameof(PlanVeiled), nameof(VeilText), nameof(CanRelock), nameof(NetShown), nameof(NetCaptionShown),
                      nameof(IncomeTitleShown), nameof(IncomeShown), nameof(ExpenseShown), nameof(TrendShown),
                      nameof(TrendBrushShown), nameof(IncomeBrushShown), nameof(ExpenseBrushShown),
+                     nameof(RealNote), nameof(SourcesPage), nameof(MainPage),
                  })
             OnPropertyChanged(n);
+        RaiseReal();
     }
 
     /// <summary>زدن روی پرده ⇒ رمز. درست ⇒ همان لحظه عددها پیدا.</summary>
@@ -303,6 +325,9 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         _period = ProfitPeriod.FromKey(Picker.SelectedKey);
 
         await ComputeAsync();
+        //  🔁 تبدیلِ تیل: قیمت‌های خودکار از همان خریدهای مخزن، و تاریخچه
+        FillConvPrices(force: false);
+        await LoadConversionsAsync();
     }
 
     /// <summary>
@@ -390,11 +415,80 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         UnionDiesel = d == 0 ? "" : Shamsi.Money(d);
         _filling = false;
 
+        //  💰 سودِ واقعی (۱۴۰۵/۰۷/۱۸): همان لیترها × قیمتِ خریدِ واقعیِ مخزن، منهای مصارف
+        var prices = await _host.StorageData.BuyPricesAsync();
+        _prices = prices;
+        if (period != _period) return;
+        _real = RealProfitService.Compute(lines, prices,
+            _host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.BuyPerLiterPetrol),
+            _host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.BuyPerLiterDiesel),
+            expenseSum);
+        _realDays = RealProfitService.Daily(lines, prices,
+            _host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.BuyPerLiterPetrol),
+            _host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.BuyPerLiterDiesel));
+        RaiseReal();
+
         PeriodText = PeriodLabel(period);
         BulkSumText = Money(extraSum);
         ShowSources(lines, ProfitLossService.Breakdown(input));
         Recalc();
     }
+
+    // ══ 💰 سودِ واقعی — کنارِ کادرِ نمودار (۱۴۰۵/۰۷/۱۸) ═══════════════════════
+    //  شرحِ فرمول بالای ‎RealProfitService‎. ⛔ پشتِ همان پرده: تا پرده هست، عددِ واقعی
+    //  به صفحه نمی‌رسد (همان قاعدهٔ ‎NetShown‎).
+    private RealProfit _real;
+
+    private IReadOnlyList<RealDay> _realDays = Array.Empty<RealDay>();
+
+    // (۱۴۰۵/۰۷/۱۸، سوم) صاحب ریپو: «همه لیتر و غیره را نشان نده؛ همان چارت باشد و تویش عددهای
+    //  فایده فی لیتر — فی لیتر این‌قدر بود و فایده در هر لیتر این‌قدر افغانی — و فایده = مقدار ×
+    //  همان ضریب، مثلِ کادرِ پارچه.» ⇒ عددِ بزرگ = ‎RealProfit.Profit‎، دو جمله برای دو تیل، و
+    //  نمودارِ «فایده فی لیتر» روز به روز. ⛔ هیچ مبلغِ فروش یا لیتری این‌جا نوشته نمی‌شود.
+
+    /// <summary>عددِ بزرگِ نمای سودِ واقعی: جمعِ «لیتر × فایدهٔ فی لیتر».</summary>
+    public string RealProfitShown => Veiled ? VeilMoney : Signed(_real.Profit);
+    public string RealProfitBrush => Veiled ? "Pump.Muted" : _real.Profit >= 0 ? "Pump.Ok" : "Pump.Danger";
+    public string RealPetrolText => Veiled ? "⛽ پطرول: 🔒" : "⛽ پطرول: " + PerLiterText(_real.Petrol);
+    public string RealDieselText => Veiled ? "🟤 دیزل: 🔒" : "🟤 دیزل: " + PerLiterText(_real.Diesel);
+
+    /// <summary>نقطه‌های نمودار — فایدهٔ هر لیترِ پطرول، تازه‌ترین روز اول.</summary>
+    public IReadOnlyList<double> RealPetrolTrend => Veiled ? VeilTrend : Series(d => d.Petrol);
+    public IReadOnlyList<double> RealDieselTrend => Veiled ? Array.Empty<double>() : Series(d => d.Diesel);
+
+    //  تیلی که در این دوره هیچ لیترِ قیمت‌دار ندارد خط نمی‌گیرد — خطِ صفر یعنی «فایده صفر بود»،
+    //  که دروغ است؛ جمله‌اش همان «قیمتِ خرید در مخزن ثبت نشده» را می‌گوید.
+    public IReadOnlyList<string> RealLabels => Veiled ? Array.Empty<string>()
+        : Pad(_realDays.Select(d => (d.DateShamsi.Length >= 10 ? d.DateShamsi[5..] : d.DateShamsi)).ToList());
+
+    private IReadOnlyList<double> Series(Func<RealDay, RealFuel> f) =>
+        _realDays.All(d => f(d).PricedLiters == 0) ? Array.Empty<double>()
+        : Pad(_realDays.Select(d => (double)Math.Round(f(d).ProfitPerLiterBox, 1)).ToList());
+
+    /// <summary>یک روزِ تنها هم خط بگیرد (‎SparkChart‎ دستِ‌کم دو نقطه می‌خواهد).</summary>
+    private static IReadOnlyList<T> Pad<T>(List<T> v) { if (v.Count == 1) v.Add(v[0]); return v; }
+
+    private void RaiseReal()
+    {
+        foreach (var n in new[] { nameof(RealProfitShown), nameof(RealProfitBrush), nameof(RealPetrolText),
+                                  nameof(RealDieselText), nameof(RealPetrolTrend), nameof(RealDieselTrend),
+                                  nameof(RealLabels), nameof(RealNote) })
+            OnPropertyChanged(n);
+    }
+
+    /// <summary>هشدارِ لیترهایی که قیمتِ خرید ندارند — یا خالی.</summary>
+    public string RealNote => Veiled || _real.UnpricedLiters == 0 ? ""
+        : "⚠️ برای بخشی از فروش در مخزن قیمتِ خرید ثبت نشده — فایدهٔ آن شمرده نشد.";
+
+    private static string PerLiterText(RealFuel f) =>
+        f.Liters == 0 ? "فروشی نیست"
+        : f.PricedLiters == 0 ? $"فی لیتر {Rate(f.SalePerLiter)} · قیمتِ خرید در مخزن ثبت نشده"
+        : $"فی لیتر {Rate(f.SalePerLiter)} · فایده در هر لیتر {Rate(f.ProfitPerLiterBox)} افغانی";
+
+    private static string Rate(decimal v) =>
+        Math.Round(v, 2).ToString("#,##0.##", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static string Signed(decimal v) => (v < 0 ? "−" : "") + Money(Math.Abs(v));
 
     /// <summary>سقفِ سطرهای «از کجا آمد» — تازه‌ترین‌ها؛ جمع‌ها همیشه از همه.</summary>
     public const int SourceLimit = 120;
@@ -476,3 +570,5 @@ public sealed class ProfitSourceLine
     public string Detail { get; }
     public string Total { get; }
 }
+
+/// <summary>یک سطرِ کارتِ «💰 سودِ واقعی».</summary>

@@ -13,10 +13,17 @@ namespace PumpYaqobi.App.ViewModels.Sections;
 /// <summary>یک عکسِ بکاپ روی دیسک.</summary>
 public sealed class BackupRowViewModel
 {
-    public BackupRowViewModel(BackupFile f, int index) { Entity = f; Index = index; }
+    public BackupRowViewModel(BackupFile f, int index, BackupSectionViewModel? owner = null)
+    { Entity = f; Index = index; Owner = owner; }
 
     public BackupFile Entity { get; }
     public int Index { get; }
+    /// <summary>برای دکمه‌های هر ردیف (👁 · ♻ · 📂) — بی ‎$parent‎ در درختِ دیداری.</summary>
+    public BackupSectionViewModel? Owner { get; }
+
+    /// <summary>روزانه · ایمنی · رمزشده · پشتیبان (‎BackupService.KindOf‎).</summary>
+    public string Kind => Entity.Kind.Length > 0 ? Entity.Kind : BackupService.KindOf(Entity.Path);
+    public string Name => Entity.Name;
 
     public string Day => Entity.Day;
     public string SizeText => Entity.SizeText;
@@ -153,11 +160,16 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
             });
         }
 
+        //  ⛔ (۱۴۰۵/۰۷/۱۸) همهٔ بکاپ‌های پوشه، نه فقط ‎pump-*.db‎ — عکسِ ایمنی، ‎.pyq‎ و
+        //  پشتیبانِ بی‌رمز هم دیده و باز می‌شوند (‎BackupService.ListAll‎).
         Older.Clear();
-        var all = _host.Backup.List();
-        Newest = all.Count > 0 ? new BackupRowViewModel(all[0], 1) : null;
+        AllBackups.Clear();
+        var all = _host.Backup.ListAll();
+        Newest = all.Count > 0 ? new BackupRowViewModel(all[0], 1, this) : null;
         var i = 1;
-        foreach (var b in all.Skip(1)) Older.Add(new BackupRowViewModel(b, ++i));
+        foreach (var b in all.Skip(1)) Older.Add(new BackupRowViewModel(b, ++i, this));
+        if (Newest is not null) AllBackups.Add(Newest);
+        foreach (var o in Older) AllBackups.Add(o);
 
         OnPropertyChanged(nameof(NoBackups));
         OnPropertyChanged(nameof(HasOlder));
@@ -306,8 +318,11 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
 
         // ⚠️ عددِ رکوردها **پیش از** پرسیدن نشان داده می‌شود: کاربر باید بداند
         // دارد چه چیزی را جایگزینِ چه چیزی می‌کند، نه بعد از اینکه دیر شد.
+        //  ⛔ (۱۴۰۵/۰۷/۱۸) هر بخش جدا: «حالا ⇐ پس از بازیابی» — نه فقط یک عددِ کل.
+        var replace = await Task.Run(() => ReplaceText(path));
         if (!await Dialogs.ConfirmAsync("بازگردانی",
                 $"همهٔ حساب‌های فعلی با «{what}» ({Shamsi.Money(records)} رکورد) جایگزین شود؟\n"
+                + (replace.Length > 0 ? replace + "\n" : "")
                 + "پیش از این کار، از حالِ فعلی یک عکسِ ایمنی گرفته می‌شود."))
             return;
 

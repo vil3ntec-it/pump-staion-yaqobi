@@ -211,6 +211,34 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- moremenu
 
+      # کلیدهای جهت‌نما (۱۴۰۵/۰۷/۱۸): کادرِ پر و انتخاب‌شده ⇒ ← و → به کادرِ کناری؛
+      # کُرسرِ وسطِ متن ⇒ ویرایش؛ لبهٔ جدولِ راستِ ورق ⇒ جدولِ چپ و برگشت.
+      - name: کلیدهای جهت‌نما
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- arrows
+
+      # ورق (۱۴۰۵/۰۷/۱۸): «➕ ردیف» و «➕➕» و «پایهٔ تازه» ⇒ دو جدول همانِ «خروج و ورود»،
+      # هیچ جای سفید، و شمارهٔ ردیف‌ها پیوسته — در دو پهنای پنجره.
+      - name: ردیفِ تازه در ورق
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- waraqadd
+
+      # مفاد و ضرر (۱۴۰۵/۰۷/۱۸): کادرهای ورود به صفحهٔ جدا، سودِ واقعی، خریدِ عمده در یک
+      # ردیف، تبدیلِ تیل (۸۷٫۵ لیتر، کادرِ سرخ، تاریخچه با صافیِ ماه و تیل، PDF).
+      - name: مفاد و ضرر و تبدیلِ تیل
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- profit18
+
+      # ۱۴۰۵/۰۷/۱۸: کمبودیِ کارمندان — کشوی ماه، «رسید کمبودی»، رسیدِ چاپی
+      - name: کمبودیِ کارمندان
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- staffshort
+
+      # ۱۴۰۵/۰۷/۱۸: بکاپ‌ها — همهٔ فایل‌های پوشه، «👁 مشاهده» بی تغییر، «♻ بازیابی» با گفتنِ جایگزینی
+      - name: مشاهده و بازیابیِ بکاپ
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- backupview
+
       # شورا، ث۲/ث۴/ث۶: نوارِ میانبرها و «💡»، کادرِ چراغ، و حالتِ ساده —
       # با کلیک و پنجرهٔ واقعی.
       - name: تجربهٔ کاربر (شورا، ث)

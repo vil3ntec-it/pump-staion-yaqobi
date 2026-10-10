@@ -378,14 +378,17 @@ internal static class ParchaWaraqAudit
 
         while (page.Txns.Count < 5) { page.AddTxnCommand.Execute(null); Settle(win); }
 
-        // ⛔ «➕ ردیف» هیچ ردیفی را از جدولی به جدولِ دیگر نمی‌برد (۱۴۰۵/۰۷/۱۸)
-        var firstBefore = page.TxnsFirst.ToList();
-        var secondBefore = page.TxnsSecond.ToList();
+        // ⛔ (۱۴۰۵/۰۷/۱۸، دوم) «➕ ردیف» همان تقسیمِ «خروج و ورود» را نگه می‌دارد — ترتیبِ
+        //  داده دست نمی‌خورد و دست‌بالا یک ردیفِ مرز جابه‌جا می‌شود (قاعدهٔ «هیچ ردیفی جابه‌جا
+        //  نشود» پس گرفته شد: زیرِ جدولِ اول سفید می‌ماند تا ورودِ دوباره).
+        var before = page.TxnsFirst.Concat(page.TxnsSecond).ToList();
+        var firstCount = page.TxnsFirst.Count;
         page.AddTxnCommand.Execute(null); Settle(win);
-        Check("ردیفِ تازه هیچ ردیفی را جابه‌جا نکرد",
-              page.TxnsFirst.SequenceEqual(firstBefore)
-              && page.TxnsSecond.Take(secondBefore.Count).SequenceEqual(secondBefore)
-              && page.TxnsSecond.Count == secondBefore.Count + 1,
+        var after = page.TxnsFirst.Concat(page.TxnsSecond).ToList();
+        Check("ردیفِ تازه همان تقسیمِ ورودِ دوباره را نگه داشت",
+              after.Take(before.Count).SequenceEqual(before)
+              && page.TxnsFirst.Count == (int)Math.Ceiling(after.Count / 2.0)
+              && Math.Abs(page.TxnsFirst.Count - firstCount) <= 1,
               page.TxnsFirst.Count + " و " + page.TxnsSecond.Count);
 
         // تقسیمِ نیمه‌به‌نیمه فقط سرِ باز شدنِ ورق است
@@ -430,7 +433,7 @@ internal static class ParchaWaraqAudit
     /// </summary>
     private static void GrowsWithRows(Window win, WaraqPageViewModel page, List<DataGrid> grids)
     {
-        //  ⛔ ردیفِ تازه تهِ جدولِ **دوم** می‌نشیند (۱۴۰۵/۰۷/۱۸) — جدولِ اول تکان نمی‌خورد
+        //  ⛔ (۱۴۰۵/۰۷/۱۸، دوم) ردیف‌های تازه همان تقسیمِ ورودِ دوباره را نگه می‌دارند
         var grid = grids.FirstOrDefault(g => ReferenceEquals(g.ItemsSource, page.TxnsSecond));
         if (grid is null) { Check("جدولِ دومِ تراکنش‌ها پیدا شد", false); return; }
 
@@ -445,8 +448,9 @@ internal static class ParchaWaraqAudit
         var after = grid.Bounds.Height;
         var added = page.TxnsSecond.Count - rowsBefore;
 
-        Check($"ردیف‌های جدولِ دوم {rowsBefore} ⇒ {page.TxnsSecond.Count} و جدولِ اول همان {firstBefore}",
-              added > 0 && page.TxnsFirst.Count == firstBefore, added + " ردیفِ تازه");
+        var total = page.TxnsFirst.Count + page.TxnsSecond.Count;
+        Check($"ردیف‌ها {firstBefore}+{rowsBefore} ⇒ {page.TxnsFirst.Count}+{page.TxnsSecond.Count} — نیمه‌به‌نیمه، مثلِ ورودِ دوباره",
+              added > 0 && page.TxnsFirst.Count == (int)Math.Ceiling(total / 2.0), added + " ردیفِ تازه");
         Check("و جدول به همان اندازه بلندتر شد (نه کادرِ ثابت)",
               added <= 0 || after > before + added * 20,
               $"{before:0} ⇒ {after:0} پیکسل");

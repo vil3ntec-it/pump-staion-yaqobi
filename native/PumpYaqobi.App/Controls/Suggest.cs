@@ -345,9 +345,25 @@ public static class Suggest
         return true;
     }
 
+    /// <summary>
+    /// (۱۴۰۵/۰۷/۱۸) کاربر خودِ حرف‌های تکمله را تایپ کرد: هر حرف جای همان حرفِ برجسته
+    /// نشست، پس متن **عوض نشد** و ‎OnBoxText‎ نیامد — تکمله «زنده» می‌ماند در حالی که
+    /// هیچ انتخابی نبود. آن‌وقت ‎Enter‎ فقط «پذیرفتن» می‌شد و خانه بسته نمی‌شد، و رفتنِ
+    /// فوکوس متن را به نیمهٔ پیش از تکمله برمی‌گرداند (نوشتهٔ کاربر بریده می‌شد).
+    /// تکمله‌ای که انتخابی ندارد دیگر تکمله نیست — همان نوشتهٔ کاربر است.
+    /// </summary>
+    private static void DropIfTypedThrough()
+    {
+        if (_ghost.Length == 0 || _box is not { } box || box.SelectionStart != box.SelectionEnd) return;
+        _typed = box.Text ?? "";
+        _ghost = "";
+        Ghostly(false);
+    }
+
     /// <summary>تکمله را برمی‌دارد و همان چیزی می‌ماند که تایپ شده بود.</summary>
     private static bool Revert()
     {
+        DropIfTypedThrough();
         if (_ghost.Length == 0 || _box is not { } box) return false;
         _busy = true;
         try
@@ -364,6 +380,7 @@ public static class Suggest
 
     private static void OnBoxKey(object? sender, KeyEventArgs e)
     {
+        DropIfTypedThrough();
         switch (e.Key)
         {
             // پاک‌کن‌ها: اول تکمله می‌رود (مثلِ مرورگر)، بارِ بعد خودِ حرف

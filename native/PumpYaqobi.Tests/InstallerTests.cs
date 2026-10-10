@@ -324,6 +324,13 @@ public class InstallerTests
             Assert.Contains($"Subkey: \"Software\\Classes\\{prog}\\shell\\open\\command\"; ValueType: string; ValueName: \"\"; ValueData: \"\"\"{{app}}\\{{#AppExe}}\"\" \"\"%1\"\"\"", s);
             Assert.Contains($"FileExts\\{ext}\\UserChoice\"; ValueType: none; Flags: deletekey", s);
         }
+        //  ⛔ (۱۴۰۵/۰۷/۱۸) بکاپ‌ها آیکون و «باز کردن با برنامه» دارند؛ ‎.db‎ِ برنامه‌های دیگر دست نمی‌خورد
+        Assert.Contains("Subkey: \"Software\\Classes\\.pyq\"; ValueType: string; ValueName: \"\"; ValueData: \"PumpYaqobi.Backup\"", s);
+        Assert.Contains("Subkey: \"Software\\Classes\\PumpYaqobi.Backup\\DefaultIcon\"", s);
+        Assert.Contains("Subkey: \"Software\\Classes\\.db\\OpenWithProgids\"; ValueType: string; ValueName: \"PumpYaqobi.Backup\"", s);
+        Assert.Contains("ValueData: \"PumpYaqobi.Backup\"; Flags: uninsdeletevalue; Check: NoDbOwner", s);
+        Assert.Contains("function NoDbOwner(): Boolean;", s);
+        Assert.DoesNotContain("FileExts\\.db\\UserChoice", s);
         Assert.Contains("DestName: \"PumpYaqobi.ico\"", s);
         Assert.Contains("Name: \"{autodesktop}\\{#AppName}\";        Filename: \"{app}\\{#AppExe}\"; IconFilename: \"{app}\\PumpYaqobi.ico\"", s);
         Assert.Contains("ie4uinit.exe", s);

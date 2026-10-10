@@ -325,8 +325,12 @@ public class AutoRowPlacementTests : IDisposable
     [Fact]
     public async Task ChangingTheSellerMovesTheRowAndLeavesNothingBehind()
     {
+        //  ⛔ (۱۴۰۵/۰۷/۱۸) پس گرفته شد: «تغییرِ نام یا قیمت شرکتِ تازه می‌سازد — باید همان
+        //  شرکت و همان خرید ویرایش شود». نامِ تازه‌ای که شرکتی ندارد ⇒ همان شرکت، نامش
+        //  درست می‌شود؛ ردیف جا نمی‌ماند و شرکتِ دومی ساخته نمی‌شود (‎StorageBuyEditTests‎).
         var (_, _, dbf, storage, companies) = Host();
         var p = await storage.AddPurchaseAsync(Buy("شرکتِ الف", 10m));
+        var before = (await companies.ListAsync()).Single();
 
         p.Seller = "شرکتِ ب";
         await storage.UpdatePurchaseAsync(p);
@@ -335,10 +339,10 @@ public class AutoRowPlacementTests : IDisposable
         Assert.Single(rows);
 
         var list = await companies.ListAsync();
-        var alef = list.First(c => c.Name == "شرکتِ الف");
-        var be = list.First(c => c.Name == "شرکتِ ب");
+        var be = Assert.Single(list);
+        Assert.Equal("شرکتِ ب", be.Name);
+        Assert.Equal(before.Id, be.Id);
         Assert.Equal(be.Id, rows[0].CompanyId);
-        Assert.NotEqual(alef.Id, rows[0].CompanyId);
     }
 
     /// <summary>

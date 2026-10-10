@@ -160,7 +160,8 @@ public partial class ExcelGrid
             //     ‎←‎ خانهٔ سمتِ چپ    ⇒ ایندکسِ بیشتر
             case Key.Left:
             case Key.Right:
-                MoveColumn(e.Key == Key.Right ? -1 : +1, shift);
+                if (!MoveColumn(e.Key == Key.Right ? -1 : +1, shift) && !shift)
+                    CrossToNeighbour(e.Key);
                 e.Handled = true;
                 return;
 
@@ -342,5 +343,32 @@ public partial class ExcelGrid
         ScrollIntoView(list[next], CurrentColumn);
         // ⚠️ یک پاسِ چیدمان بعد: ردیفِ تازه هنوز ساخته نشده و مختصاتش صفر است.
         Dispatcher.UIThread.Post(FollowCell, DispatcherPriority.Background);
+    }
+
+    /// <summary>
+    /// مقدارهای همین ستون برای تکمیلِ خودکار — از این جدول و جدول‌های هم‌جنسِ همان صفحه.
+    /// ⛔ (۱۴۰۵/۰۷/۱۸، دوم) دو جدولِ تراکنشِ ورق دو نیمهٔ یک فهرست‌اند و ردیفِ مرز با «➕ ردیف»
+    /// از یکی به دیگری می‌رود؛ بی این، نامی که در نیمهٔ دیگر نوشته شده بود پیشنهاد نمی‌شد
+    /// (‎keys17‎ گرفتش). فقط جدولی که ردیف‌هایش همان نوع‌اند و ستونش همان مسیر را دارد.
+    /// </summary>
+    private IReadOnlyList<string> PeerColumnValues(DataGridColumn column)
+    {
+        var own = Suggest.ColumnValues(ItemsSource, column);
+        if (column is not DataGridBoundColumn { Binding: Avalonia.Data.Binding { Path: { Length: > 0 } path } }) return own;
+        var type = ItemsSource?.Cast<object>().FirstOrDefault(x => x is not null)?.GetType();
+        var scope = this.FindAncestorOfType<SectionPage>() as Control ?? this.FindAncestorOfType<UserControl>();
+        if (type is null || scope is null) return own;
+        List<string>? all = null;
+        foreach (var g in scope.GetVisualDescendants().OfType<ExcelGrid>())
+        {
+            if (ReferenceEquals(g, this) || g.ItemsSource is null) continue;
+            if (g.ItemsSource.Cast<object>().FirstOrDefault(x => x is not null)?.GetType() != type) continue;
+            var col = g.Columns.FirstOrDefault(c => c is DataGridBoundColumn { Binding: Avalonia.Data.Binding b } && b.Path == path);
+            if (col is null) continue;
+            all ??= new List<string>(own);
+            foreach (var v in Suggest.ColumnValues(g.ItemsSource, col))
+                if (all.Count < 400 && !all.Contains(v)) all.Add(v);
+        }
+        return all ?? own;
     }
 }
