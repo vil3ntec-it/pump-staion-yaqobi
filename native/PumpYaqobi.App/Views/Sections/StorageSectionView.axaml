@@ -68,8 +68,8 @@
                و دیزل جدا (‎Fuel‎). ⛔ «همه» همان کارتِ همیشگی است و منطقش دست نخورد.
                ⚠️ همهٔ دکمه‌ها پیش از نقشه‌اند — آزمونِ ‎TankGaugeTests‎ از نقشه تا
                سربرگِ پول‌ها هیچ دکمه‌ای نمی‌خواهد. -->
-          <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center">
-            <Button Classes="tanktab" Classes.accent="{Binding IsAllShown}" Content="همهٔ مخزن‌ها"
+          <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,-6,0,0">
+            <Button Classes="tanktab" Classes.accent="{Binding IsAllShown}" Content="همه"
                     Margin="3" Command="{Binding SelectTankCommand}" CommandParameter="{x:Null}"
                     ToolTip.Tip="موجودیِ کلِ همین تیل" />
             <ItemsControl ItemsSource="{Binding VisibleTankTabs}">
