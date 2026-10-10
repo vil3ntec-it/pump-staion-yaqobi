@@ -65,6 +65,7 @@ internal static class TankVideoShots
             File.WriteAllText(Path.Combine(outDir, "gauge.txt"),
                 $"{(int)(p.X * 2)} {(int)(p.Y * 2)} {(int)(gauge.Bounds.Width * 2)} {(int)(gauge.Bounds.Height * 2)}");
             var target = gauge.FillPercent;
+            var targetText = gauge.FillText;
             var threshold = gauge.ThresholdPercent;
             const int n = 48;
             for (var i = 0; i <= n; i++)
@@ -83,8 +84,9 @@ internal static class TankVideoShots
                 gauge.FillText = v.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + "%";
                 MarketingShots.Shot(win, Path.Combine(outDir, $"low-{i:000}.png"));
             }
-            gauge.ClearValue(TankGauge.FillPercentProperty);
-            gauge.ClearValue(TankGauge.FillTextProperty);
+            //  ⚠️ ClearValue بایند را هم می‌بُرد و نقشه ۰٪ می‌ماند — همان عددِ واقعی برمی‌گردد
+            gauge.FillPercent = target;
+            gauge.FillText = targetText;
             MarketingShots.Settle(win);
         }
 
