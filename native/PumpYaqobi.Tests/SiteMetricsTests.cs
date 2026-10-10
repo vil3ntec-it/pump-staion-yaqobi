@@ -146,9 +146,9 @@ public class SiteMetricsTests
     {
         var w = MainWindow();
         Assert.Contains("SignOutCommand", w);
-        Assert.Contains("RoleText", w);
-        //  ⛔ از ۱۴۰۵/۰۷/۲۲ دکمه‌های سربرگ گرد و آیکون‌دارند («همه را دایره‌ای کن») — نشانِ نقش هم
-        Assert.Contains("Classes=\"pill round\"", w);
+        //  ⛔ نشانِ نقش («مدیر») به خواستهٔ صاحب ریپو برداشته شد (۱۴۰۵/۰۷/۲۲): «لازم نیست»
+        Assert.DoesNotContain("Binding RoleText", w);
+        Assert.Contains("Classes=\"pill-btn round\"", w);
     }
 
     /// <summary>

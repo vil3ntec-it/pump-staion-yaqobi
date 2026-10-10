@@ -32,9 +32,9 @@ public class ProfilePillTests
         Assert.True(theme > 0, "دکمه‌های تم در سربرگ نیستند");
         Assert.DoesNotContain("ItemsSource=\"{Binding Themes}\"", xaml);
         Assert.True(pill > theme, "دکمهٔ پروفایل باید بعد از کادرِ تم بنشیند — «بغلِ تم»");
-        //  و پیش از نشانِ نقش، تا واقعاً کنارِ تم باشد نه تهِ ردیف
-        var role = xaml.IndexOf("Binding RoleText", StringComparison.Ordinal);
-        Assert.True(pill < role, "دکمهٔ پروفایل باید پیش از نشانِ نقش باشد");
+        //  و پیش از پشتیبانی، تا واقعاً کنارِ تم باشد نه تهِ ردیف (نشانِ نقش از ۱۴۰۵/۰۷/۲۲ برداشته شد)
+        var support = xaml.IndexOf("Name=\"SupportBtn\"", StringComparison.Ordinal);
+        Assert.True(pill < support, "دکمهٔ پروفایل باید پیش از پشتیبانی باشد");
 
         //  به بخشِ حساب می‌رود و همان لحظه VIP و روزهایش را می‌گوید
         Assert.Contains("CommandParameter=\"{Binding Account}\"", xaml);

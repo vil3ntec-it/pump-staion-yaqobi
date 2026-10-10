@@ -517,14 +517,12 @@
     <Setter Property="Height" Value="40" />
     <Setter Property="CornerRadius" Value="20" />
   </Style>
+  <!-- ⛔ آیکونِ پُر (شکل‌های استانداردِ ‎Material‎، ۲۴×۲۴)، نه خطی — خطیِ نازک در ۴۰ پیکسل «بی‌کیفیت» دیده می‌شد -->
   <Style Selector="Path.hicon">
-    <Setter Property="Width" Value="21" />
-    <Setter Property="Height" Value="21" />
+    <Setter Property="Width" Value="22" />
+    <Setter Property="Height" Value="22" />
     <Setter Property="Stretch" Value="Uniform" />
-    <Setter Property="Stroke" Value="White" />
-    <Setter Property="StrokeThickness" Value="2.1" />
-    <Setter Property="StrokeLineCap" Value="Round" />
-    <Setter Property="StrokeJoin" Value="Round" />
+    <Setter Property="Fill" Value="White" />
     <Setter Property="HorizontalAlignment" Value="Center" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
