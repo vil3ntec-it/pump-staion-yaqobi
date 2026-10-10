@@ -465,6 +465,27 @@ internal static class Round17Probe
         Check($"تکمله («{ghost}») با فلش پذیرفته نشد — نام «{r1.Name}»", r1.Name == "کر");
         Check("و ترتیبِ ردیف‌ها همان ماند",
               page.TxnsFirst.Concat(page.TxnsSecond).Take(order.Count).SequenceEqual(order));
+
+        //  د) (۱۴۰۵/۰۷/۱۸) حرف‌های تکمله را خودش تایپ کرد: هر حرف جای همان حرفِ برجسته
+        //  نشست و متن عوض نشد — تکمله «زنده» می‌ماند، ‎Enter‎ خانه را نمی‌بست و رفتنِ فوکوس
+        //  نوشته را به «کر» برمی‌گرداند (‎typeall‎ گرفتش). ‎Suggest.DropIfTypedThrough‎.
+        var r2 = order[order.IndexOf(r1) + 1];
+        var (gr2, ir2) = At(r2);
+        ClickCell(win, gr2, ir2, 0);
+        win.KeyTextInput("کر");
+        Settle(win);
+        Check($"دوباره تکمله آمد («{Suggest.Ghost}»)", Suggest.Ghost == "کریم");
+        win.KeyTextInput("ی"); Settle(win);
+        win.KeyTextInput("م"); Settle(win);
+        Tap(win, PhysicalKey.Enter);
+        Settle(win);
+        var stillEditing = win.FocusManager?.GetFocusedElement() is TextBox tbx && tbx.FindAncestorOfType<DataGrid>() is not null;
+        Check("حرف‌های تکمله را خودش زد ⇒ یک Enter خانه را بست", !stillEditing);
+        Tap(win, PhysicalKey.Escape);
+        Settle(win);
+        Wait(win, SaveGuard.FlushAllAsync());
+        Settle(win);
+        Check($"و نوشته همان ماند («{r2.Name}»)", r2.Name == "کریم");
     }
 
     private static ShiftData? ShiftOf(PumpDbFactory dbf, long reportId)
