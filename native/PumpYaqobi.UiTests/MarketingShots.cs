@@ -287,7 +287,7 @@ internal static class MarketingShots
         }
     }
 
-    private static void Shot(Window w, string path)
+    internal static void Shot(Window w, string path)
     {
         Settle(w);
         AppHost.Current.Toasts.Visible = false;   // توستِ گذرا روی عکس ننشیند
@@ -302,12 +302,12 @@ internal static class MarketingShots
         for (var i = 0; i < 8; i++) { Dispatcher.UIThread.RunJobs(); w.UpdateLayout(); }
     }
 
-    private static void Settle(Window w)
+    internal static void Settle(Window w)
     {
         for (var i = 0; i < 60; i++) { Pump(w); Thread.Sleep(5); }
     }
 
-    private static void Wait(Window w, Task t)
+    internal static void Wait(Window w, Task t)
     {
         for (var i = 0; i < 1500 && !t.IsCompleted; i++) { Pump(w); Thread.Sleep(2); }
         Settle(w);

@@ -1,0 +1,51 @@
+name: قاب‌های ویدیوی تبلیغِ مخزن
+
+# خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۱۸): ویدیوی تبلیغاتیِ بخشِ مخزن از خودِ برنامه.
+# ‎PumpYaqobi.UiTests -- tankvideo‎ پنجرهٔ واقعی را بی‌نمایشگر می‌سازد و قاب‌ها را
+# می‌گیرد؛ این‌جا به چند کلیپِ کوچک تبدیل و روی شاخهٔ جدای ‎video-assets‎ گذاشته
+# می‌شوند (بی کد، فقط خروجی). دستی یا با پوش به همین دو فایل.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - native/PumpYaqobi.UiTests/TankVideoShots.cs
+      - .github/workflows/tank-video.yml
+
+permissions:
+  contents: write
+
+jobs:
+  frames:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: قاب‌ها
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- tankvideo "$GITHUB_WORKSPACE/tv"
+      - name: کلیپ‌ها
+        run: |
+          set -e
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null
+          mkdir -p out
+          cd tv
+          ffmpeg -y -loglevel error -framerate 24 -i fill-%03d.png -c:v libx264 -pix_fmt yuv420p -crf 16 ../out/fill.mp4
+          ffmpeg -y -loglevel error -framerate 24 -i low-%03d.png  -c:v libx264 -pix_fmt yuv420p -crf 16 ../out/low.mp4
+          ffmpeg -y -loglevel error -framerate 8  -i buy-%02d.png  -c:v libx264 -pix_fmt yuv420p -crf 16 ../out/buy.mp4
+          cp storage.png dip.png gauge.txt fill-048.png buy-00.png ../out/
+          ls -la ../out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tank-video-frames
+          path: out
+      - name: شاخهٔ video-assets
+        run: |
+          cd out
+          git init -q -b video-assets
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git add -A
+          git commit -q -m "قاب‌های ویدیوی مخزن از ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" video-assets
