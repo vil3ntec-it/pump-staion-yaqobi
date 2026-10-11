@@ -27,6 +27,7 @@ public sealed partial class DebtRowViewModel : RowViewModel
         _dateShamsi = r.DateShamsi ?? "";
         _name = r.Name ?? "";
         _hawala = r.Hawala ?? "";
+        _plate = r.Plate ?? "";
         _fuel = r.Fuel;
         _liters = r.Liters;
         _price = r.PricePerLiter ?? 0m;
@@ -41,6 +42,8 @@ public sealed partial class DebtRowViewModel : RowViewModel
     [ObservableProperty] private string _dateShamsi = "";
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private string _hawala = "";
+    /// <summary>پلاکِ موتر (۳.۱.۲۶۸) — فقط یادداشت، در هیچ حسابی نیست.</summary>
+    [ObservableProperty] private string _plate = "";
     [ObservableProperty] private FuelType _fuel;
     [ObservableProperty] private decimal _liters;
     [ObservableProperty] private decimal _price;
@@ -51,6 +54,7 @@ public sealed partial class DebtRowViewModel : RowViewModel
     partial void OnDateShamsiChanged(string v) => Touch();
     partial void OnNameChanged(string v) => Touch();
     partial void OnHawalaChanged(string v) => Touch();
+    partial void OnPlateChanged(string v) => Touch();
     partial void OnFuelChanged(FuelType v)
     {
         Touch();
@@ -178,6 +182,7 @@ public sealed partial class DebtRowViewModel : RowViewModel
         _r.DateKey = Shamsi.Key(DateShamsi);
         _r.Name = Name;
         _r.Hawala = Hawala;
+        _r.Plate = string.IsNullOrWhiteSpace(Plate) ? null : Plate.Trim();
         _r.Fuel = Fuel;
         _r.Liters = Liters;
         _r.PricePerLiter = Price == 0m ? null : Price;

@@ -178,6 +178,21 @@
           </c:ExcelGrid>
         </Grid>
       </Border>
+
+      <!-- 📊 فروشِ هر کارمند و هر پایه در همین دوره (۳.۱.۲۶۸) — فقط گزارش -->
+      <Expander Header="📊 فروشِ هر کارمند و هر پایه در همین دوره" HorizontalAlignment="Stretch"
+                IsExpanded="{Binding IsSalesOpen}">
+        <Grid ColumnDefinitions="*,16,*">
+          <StackPanel Grid.Column="0" Spacing="4">
+            <TextBlock Text="👷 فروشِ هر کارمند" FontWeight="Bold" Foreground="{DynamicResource Pump.Ink.Accent}" />
+            <ItemsControl ItemsSource="{Binding SalesByWorker}" />
+          </StackPanel>
+          <StackPanel Grid.Column="2" Spacing="4">
+            <TextBlock Text="⛽ فروشِ هر پایه" FontWeight="Bold" Foreground="{DynamicResource Pump.Ink.Accent}" />
+            <ItemsControl ItemsSource="{Binding SalesByPump}" />
+          </StackPanel>
+        </Grid>
+      </Expander>
     </StackPanel>
   </c:SectionPage>
 </UserControl>

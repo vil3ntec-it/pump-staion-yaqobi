@@ -133,6 +133,11 @@ public sealed partial class DipRowViewModel : RowViewModel
     /// <summary>آبِ تهِ مخزن در همین میله‌زنی — فقط خواندنی؛ خالی یعنی آب نبود.</summary>
     public string WaterText => _d.Water > 0m ? Shamsi.Money(_d.Water) : "";
 
+    /// <summary>«حجم در ۱۵ درجه» — خالی اگر دما ثبت نشده.</summary>
+    public string At15Text => _d.Temperature is { } t
+        ? Shamsi.Money(TankDipService.At15(_d.Measured, t, _d.Fuel)) + " (" + Shamsi.Money(t) + "°)"
+        : "";
+
     [ObservableProperty] private string _dateShamsi = "";
     [ObservableProperty] private decimal _measured;
     [ObservableProperty] private decimal _expected;
@@ -322,6 +327,16 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
 
     /// <summary>آبِ تهِ مخزن (لیتر) — کادرِ کنارِ لیترِ میله‌زنی؛ خالی یعنی آب نبود.</summary>
     [ObservableProperty] private string _dipWater = "";
+
+    /// <summary>دمای تیل (°C) — اختیاری؛ فقط برای «حجم در ۱۵ درجه».</summary>
+    [ObservableProperty] private string _dipTemp = "";
+
+    public string DipAt15Text =>
+        Shamsi.Num(DipMeasured) is var m && m > 0m && DipTemp.Trim().Length > 0 && Shamsi.IsReadable(DipTemp)
+            ? "🌡️ در ۱۵ درجه: " + Shamsi.Money(TankDipService.At15(m, Shamsi.Num(DipTemp), Fuel)) + " لیتر"
+            : "";
+
+    partial void OnDipTempChanged(string v) => OnPropertyChanged(nameof(DipAt15Text));
 
     [ObservableProperty] private bool _isDiesel;
     [ObservableProperty] private string _current = "";
@@ -624,7 +639,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
 
     partial void OnIsLowChanged(bool v) => OnPropertyChanged(nameof(StateText));
 
-    partial void OnDipMeasuredChanged(string v) => RefreshDip();
+    partial void OnDipMeasuredChanged(string v) { RefreshDip(); OnPropertyChanged(nameof(DipAt15Text)); }
 
     /// <summary>
     /// ‎dipLiveCalc‎ — همان چهار عددی که نسخهٔ وب هنگام تایپ نشان می‌داد:
@@ -822,6 +837,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
             Measured = measured, Expected = expected,
             BookAdjust = DipApplyToBook ? diff : 0m,
             Water = water,
+            Temperature = DipTemp.Trim().Length > 0 && Shamsi.IsReadable(DipTemp) ? Shamsi.Num(DipTemp) : null,
         };
         await _host.StorageData.SaveDipAsync(d);
         Dips.Insert(0, new DipRowViewModel(d, this));
@@ -837,6 +853,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
             _host.Toast("💧 " + Shamsi.Money(water) + " لیتر آب تهِ مخزن — پیش از فروش تخلیه کنید", ToastKind.Warn);
         DipMeasured = "";
         DipWater = "";
+        DipTemp = "";
         RefreshDipTotals();
         await RecalcAsync();
     }

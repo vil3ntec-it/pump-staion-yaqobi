@@ -208,7 +208,37 @@ public sealed partial class StaffShortSectionViewModel : SectionViewModel
 
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(HasSettles));
+
+        if (IsSalesOpen) await LoadSalesAsync();
     }
+
+    /// <summary>
+    /// ⚡ فقط وقتی کادر باز است (۳.۱.۲۶۸): خواندنِ پایه‌های همهٔ ورق‌های دوره با هر
+    /// باز شدنِ بخش، ‎perf-compare‎ را ۵۲٪ کند کرد (staffshort ۴۴۰ ⇐ ۶۷۲ms).
+    /// </summary>
+    [ObservableProperty] private bool _isSalesOpen;
+
+    partial void OnIsSalesOpenChanged(bool v)
+    {
+        if (v) _ = CrashGuard.RunAsync("فروشِ کارمندان", LoadSalesAsync);
+    }
+
+    private async Task LoadSalesAsync()
+    {
+        var period = _period;
+        var (byWorker, byPump) = await _host.Tools.SalesByPeriodAsync(period);
+        if (period != _period) return;
+        SalesByWorker = byWorker.Select(SalesText).ToList();
+        SalesByPump = byPump.Select(SalesText).ToList();
+    }
+
+    // ── فروشِ هر کارمند و هر پایه در همین دوره (۳.۱.۲۶۸) — فقط گزارش ──────────
+    [ObservableProperty] private IReadOnlyList<string> _salesByWorker = Array.Empty<string>();
+    [ObservableProperty] private IReadOnlyList<string> _salesByPump = Array.Empty<string>();
+
+    private static string SalesText(SalesLine l) =>
+        $"{l.Name}: {Shamsi.Money(Math.Round(l.Liters, 0, MidpointRounding.AwayFromZero))} لیتر · "
+        + $"{Shamsi.Money(Math.Round(l.Money, 0, MidpointRounding.AwayFromZero))} افغانی · {Shamsi.Money(l.Count)} قرائت";
 
     /// <summary>ورقِ همین جدول — با فهرستِ تسویه‌ها زیرش.</summary>
     [RelayCommand]

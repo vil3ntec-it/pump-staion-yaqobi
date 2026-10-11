@@ -158,6 +158,7 @@ public sealed class TrashService
         "staffshort"       => "👷 تسویهٔ کمبودیِ کارمند",
         "tanker"           => "🚚 تخلیهٔ تانکر",
         "tankdip"          => "📏 میله‌زنی",
+        "calib"            => "🧪 سنجشِ پایه",
         "camera"           => "📷 دوربین",
         _                  => kind ?? "",
     };
@@ -233,7 +234,7 @@ public sealed class TrashService
         "debtor" or "debtaccount" or "company" or "amanat" or "waraq" or "parcha"
         or "debtrow" or "debtQuickReceipt" or "companyrow" or "amanatrow" or "parchaReceipt"
         or "purchase" or "invoice" or "safe" or "sarrafi" or "expense" or "chakana"
-        or "extraincome" or "staff" or "staffshort" or "tanker" or "tankdip" or "camera";
+        or "extraincome" or "staff" or "staffshort" or "tanker" or "tankdip" or "calib" or "camera";
 
     /// <summary>
     /// ‎Ctrl+Y‎ی یک حذفِ برگشته: <b>همان</b> رکوردها دوباره حذفِ نرم می‌شوند و
@@ -420,6 +421,7 @@ public sealed class TrashService
             case "staffshort":       return await ReviveOne(db.StaffShortSettles, id, got, ct);
             case "tanker":           return await ReviveOne(db.TankerUnloads, id, got, ct);
             case "tankdip":          return await ReviveOne(db.TankDips, id, got, ct);
+            case "calib":            return await ReviveOne(db.PumpCalibrations, id, got, ct);
             case "camera":           return await ReviveOne(db.Cameras, id, got, ct);
 
             default: throw new NotSupportedException(kind ?? "");

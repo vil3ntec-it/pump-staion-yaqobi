@@ -136,6 +136,12 @@ public class TankDip : EntityBase, ILedgerRow
     /// </summary>
     public decimal Water { get; set; }
 
+    /// <summary>
+    /// دمای تیل هنگامِ میله‌زنی (°C) — ۳.۱.۲۶۸. null یعنی سنجیده نشد. فقط برای نشان دادنِ
+    /// «حجم در ۱۵ درجه» (‎TankDipService.At15‎)؛ موجودی و دفتر همان لیترِ میله می‌مانند.
+    /// </summary>
+    public decimal? Temperature { get; set; }
+
     public string? Note { get; set; }
 }
 
@@ -174,6 +180,25 @@ public class TankerUnload : EntityBase, ILedgerRow
     /// در هیچ محاسبه‌ای نیست.
     /// </summary>
     public decimal Liters { get; set; }
+}
+
+/// <summary>
+/// سنجشِ درستیِ یک پایه (نازل) با پیمانه — ۳.۱.۲۶۸. مثلاً ۲۰ لیتر در پیمانه، و آن‌چه
+/// شمارندهٔ پایه نشان داد. ⚠️ فقط دفترِ سنجش است: لیترِ آزمایشیِ برگشته به مخزن جای
+/// خودش را دارد (‎TestLiters‎ی ورق و پارچه) و این‌جا به هیچ موجودی یا فروشی نمی‌رسد.
+/// </summary>
+public class PumpCalibration : EntityBase
+{
+    public FuelType Fuel { get; set; } = FuelType.Petrol;
+    public string? DateShamsi { get; set; }
+    public int DateKey { get; set; }
+    /// <summary>شمارهٔ پایه، همان شمارهٔ ورق و پارچه.</summary>
+    public int PumpNum { get; set; }
+    /// <summary>لیترِ واقعیِ پیمانه.</summary>
+    public decimal CanLiters { get; set; }
+    /// <summary>لیتری که شمارندهٔ پایه نشان داد.</summary>
+    public decimal MeterLiters { get; set; }
+    public string? Note { get; set; }
 }
 
 // ══ شرکت‌های تیل ══════════════════════════════════════════════════════════════
@@ -331,6 +356,12 @@ public class WaraqShift : EntityBase
     public decimal PricePerLiter { get; set; }
     /// <summary>فیِ کهنهٔ دیزلِ همین شیفت — همان کاربرد.</summary>
     public decimal PricePerLiterDiesel { get; set; }
+
+    /// <summary>
+    /// شمارشِ نوت هنگامِ تحویلِ شیفت (۳.۱.۲۶۸) — «نوت:تعداد» با ویرگول («1000:3,500:2»).
+    /// ⚠️ فقط ثبت و مقایسه با «جمله فروش»؛ در هیچ حسابی نیست. خالی یعنی شمرده نشده.
+    /// </summary>
+    public string? CashCount { get; set; }
     public List<WaraqPump> Pumps { get; set; } = new();
     public List<WaraqTransaction> Transactions { get; set; } = new();
 }

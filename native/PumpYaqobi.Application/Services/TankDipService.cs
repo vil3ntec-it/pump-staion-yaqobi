@@ -29,6 +29,21 @@ public readonly record struct DipNumbers(
 /// </summary>
 public sealed class TankDipService
 {
+    /// <summary>
+    /// ══ حجم به دمای ۱۵ درجه (۳.۱.۲۶۸) ══
+    /// تیل در گرما منبسط می‌شود؛ همان لیترِ میله در تابستان «بیشتر» و در زمستان «کمتر» دیده
+    /// می‌شود. ضریبِ تصحیح (VCF) با فرمولِ جدولِ ‎ASTM 54B‎:
+    /// ‎VCF = e^(−α·ΔT·(1 + 0.8·α·ΔT))‎، ‎ΔT = دما − ۱۵‎، و ‎α‎ برای پطرول ۰٫۰۰۱۲۵ و برای
+    /// دیزل ۰٫۰۰۰۸۳ (چگالیِ معمولِ ۷۴۰ و ۸۴۰). ⚠️ فقط نمایش — هیچ موجودی یا حسابی عوض نمی‌شود.
+    /// </summary>
+    public static decimal At15(decimal liters, decimal tempC, FuelType fuel)
+    {
+        var alpha = fuel == FuelType.Diesel ? 0.00083 : 0.00125;
+        var dt = (double)tempC - 15.0;
+        var vcf = Math.Exp(-alpha * dt * (1.0 + 0.8 * alpha * dt));
+        return Math.Round(liters * (decimal)vcf, 0, MidpointRounding.AwayFromZero);
+    }
+
     /// <summary>حد مجاز اختلاف با دفتر: نیم درصدِ ظرفیت (کفِ ۵۰ لیتر).</summary>
     public const decimal AllowedDiffPercent = 0.5m;
 
