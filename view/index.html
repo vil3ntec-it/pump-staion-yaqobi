@@ -631,7 +631,7 @@
   // ⛔ «درجا» (۱۴۰۵/۰۷/۲۱): تا صفحه جلوی چشم است هر ۱۵ ثانیه، و صفحهٔ پنهان هیچ
   // (همان ‎visibilitychange‎ِ پایین سرِ برگشتن همان لحظه می‌پرسد). یک ‎SELECT‎ِ کوچک
   // روی سرورِ حساب — و فقط برای گوشی‌ای که همین حالا نگاه می‌کند.
-  var LIVE_VISIBLE_EVERY = 15 * 1000;
+  var LIVE_VISIBLE_EVERY = 5 * 1000; // ⛔ ۳.۱.۲۶۶: بود ۱۵ — سقفِ سرور ۶۰۰ در ربع ساعت، این ۱۸۰
   function pageHidden() {
     return typeof document !== 'undefined' && document.visibilityState === 'hidden';
   }

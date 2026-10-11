@@ -46,10 +46,10 @@ public sealed class StationPublisher : IAsyncDisposable
     /// می‌بینند. ⚠️ هزینه بالا نرفت: ترمزِ ‎Version‎ (دادهٔ عوض‌نشده ⇒ صفر کار) و سقفِ
     /// ۵٪ِ CPU (‎_nextBuildAt‎) هر دو سرِ جایشان‌اند.
     /// </summary>
-    public static readonly TimeSpan Interval = TimeSpan.FromSeconds(3);
+    public static readonly TimeSpan Interval = TimeSpan.FromSeconds(2); // ⛔ ۳.۱.۲۶۶: «همه سریع‌تر» — بود ۳
 
     /// <summary>پس از ذخیره این‌قدر صبر — رگبارِ تایپ یک انتشار است، نه ده‌تا.</summary>
-    public static readonly TimeSpan SaveDebounce = TimeSpan.FromMilliseconds(1500);
+    public static readonly TimeSpan SaveDebounce = TimeSpan.FromMilliseconds(600); // بود ۱۵۰۰
 
     private readonly SemaphoreSlim _saved = new(0, 1);
 
@@ -299,7 +299,7 @@ public sealed class StationPublisher : IAsyncDisposable
     /// عکسِ عوض‌شده دست‌بالا هر این‌قدر یک بار به سرورِ حساب می‌رود. ⛔ پانزده ثانیه از
     /// ۱۴۰۵/۰۷/۲۲ (بود شصت) — «اطلاعات در لحظه»؛ عکسِ عوض‌نشده اصلاً نمی‌رود.
     /// </summary>
-    public static readonly TimeSpan CloudLiveGap = TimeSpan.FromSeconds(15);
+    public static readonly TimeSpan CloudLiveGap = TimeSpan.FromSeconds(5); // ⛔ ۳.۱.۲۶۶: بود ۱۵
 
     private string _cloudLiveHash = "";
     private DateTime _cloudLiveAt = DateTime.MinValue;
@@ -336,7 +336,7 @@ public sealed class StationPublisher : IAsyncDisposable
     public static readonly TimeSpan StateHeartbeat = TimeSpan.FromMinutes(10);
 
     /// <summary>خلاصهٔ قرض‌داران (برای جست‌وجوی بات) دست‌بالا هر این‌قدر یک بار.</summary>
-    public static readonly TimeSpan DebtorsGap = TimeSpan.FromSeconds(90);
+    public static readonly TimeSpan DebtorsGap = TimeSpan.FromSeconds(30); // ⛔ ۳.۱.۲۶۶: بود ۹۰
 
     private string _pushedAlerts = "\u0001";
     private DateTime _lastStatePush = DateTime.MinValue;
