@@ -38,6 +38,8 @@ public class CopyrightExposureTests
                      Read("native", "installer", "LICENSE.txt").TrimStart('\uFEFF').Replace("\r\n", "\n").Trim());
         Assert.Contains("<StartupHookSupport>false</StartupHookSupport>", Read("native", "PumpYaqobi.App", "PumpYaqobi.App.csproj"));
         Assert.Contains("-p:DebugType=none", Read(".github", "workflows", "build-native.yml"));
+        //  ⛔ ترتیبِ ایستا: ‎RealNow‎ پیش از ‎Now‎ — وگرنه ساعتِ مجوز تهی بود و برنامه می‌افتاد
+        Assert.NotNull(PumpYaqobi.App.Services.Entitlements.RealNow);
     }
 
     [Fact]
