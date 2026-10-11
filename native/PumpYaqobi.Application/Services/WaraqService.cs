@@ -34,6 +34,9 @@ public readonly record struct WaraqShiftTotals(
     public decimal Cash => Sales - Debt - Expenses;
 }
 
+/// <summary>یک ردیفِ گزارشِ فروش: نام، لیتر، پول و شمارِ قرائت‌ها.</summary>
+public readonly record struct SalesLine(string Name, decimal Liters, decimal Money, int Count);
+
 public readonly record struct WaraqShortage(
     decimal Shortage, decimal Excess, decimal Declared, decimal Covered);
 
@@ -207,6 +210,37 @@ public sealed class WaraqService
     }
 
     /// <summary>‎computeShiftTotals(sd)‎</summary>
+    /// <summary>
+    /// ══ فروشِ هر کارمند و هر پایه در یک دوره (۳.۱.۲۶۸) ══════════════════════
+    /// لیتر = ختم − شروع − آزمایشی (همان ‎ShiftTotals‎)، پول = لیتر × فیِ همان پایه.
+    /// کارمند = نامِ همان پایه، وگرنه کارمندِ شیفت. ⚠️ فقط گزارش؛ هیچ حسابی عوض نمی‌شود.
+    /// </summary>
+    public static (List<SalesLine> ByWorker, List<SalesLine> ByPump) SalesBy(IEnumerable<WaraqEntry> entries)
+    {
+        var w = new Dictionary<string, SalesLine>(StringComparer.Ordinal);
+        var p = new Dictionary<string, SalesLine>(StringComparer.Ordinal);
+        foreach (var e in entries)
+        foreach (var s in e.Shifts)
+        foreach (var pump in s.Pumps)
+        {
+            var l = Math.Max(0m, ParchaService.SoldLiters(pump.Start, pump.End, pump.TestLiters));
+            if (l <= 0m) continue;
+            var money = l * pump.PricePerLiter;
+            var who = (string.IsNullOrWhiteSpace(pump.Worker) ? s.WorkerName : pump.Worker)?.Trim();
+            if (string.IsNullOrEmpty(who)) who = "بی‌نام";
+            Add(w, who, l, money);
+            Add(p, (pump.Fuel == FuelType.Diesel ? "🟤 دیزل" : "⛽ پطرول") + " · پایهٔ " + pump.Num, l, money);
+        }
+        return (w.Values.OrderByDescending(x => x.Liters).ToList(),
+                p.Values.OrderBy(x => x.Name, StringComparer.Ordinal).ToList());
+
+        static void Add(Dictionary<string, SalesLine> map, string key, decimal l, decimal m)
+        {
+            map.TryGetValue(key, out var cur);
+            map[key] = new SalesLine(key, cur.Liters + l, cur.Money + m, cur.Count + 1);
+        }
+    }
+
     public WaraqShiftTotals ShiftTotals(WaraqShift sd)
     {
         if (sd is null) return default;

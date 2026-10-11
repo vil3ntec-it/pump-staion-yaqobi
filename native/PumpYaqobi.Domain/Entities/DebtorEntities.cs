@@ -237,6 +237,8 @@ public class DebtRow : EntityBase
     public string? Name { get; set; }
     /// <summary>«حواله» — متن یا عدد، آزاد.</summary>
     public string? Hawala { get; set; }
+    /// <summary>پلاکِ موتری که تیل برد — برای مشتریانِ شرکتی (۳.۱.۲۶۸). اختیاری، در هیچ حسابی نیست.</summary>
+    public string? Plate { get; set; }
     public FuelType Fuel { get; set; } = FuelType.Petrol;
     /// <summary>لیترِ برده‌شده.</summary>
     public decimal Liters { get; set; }

@@ -62,6 +62,7 @@ public sealed class PumpDbContext : DbContext
     public DbSet<RateHistoryEntry> RateHistory => Set<RateHistoryEntry>();
     public DbSet<FuelConversion> FuelConversions => Set<FuelConversion>();
     public DbSet<FuelTank> FuelTanks => Set<FuelTank>();
+    public DbSet<PumpCalibration> PumpCalibrations => Set<PumpCalibration>();
     public DbSet<TankFill> TankFills => Set<TankFill>();
     public DbSet<TrashItem> Trash => Set<TrashItem>();
     public DbSet<Setting> Settings => Set<Setting>();
@@ -437,6 +438,14 @@ public sealed class PumpDbContext : DbContext
             e.HasKey(x => x.Id);
             e.HasIndex(x => x.DateKey);
             e.HasIndex(x => x.MonthKey);
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        b.Entity<PumpCalibration>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.Fuel, x.DateKey });
+            e.Property(x => x.Fuel).HasConversion<int>();
             e.HasQueryFilter(x => x.DeletedAt == null);
         });
 

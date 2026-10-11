@@ -176,6 +176,7 @@ public sealed class WaraqDataService
         row.AvailableFromShift = s.AvailableFromShift;
         row.PricePerLiter = s.PricePerLiter;
         row.PricePerLiterDiesel = s.PricePerLiterDiesel;
+        row.CashCount = s.CashCount;
         await db.SaveChangesAsync(ct);
     }
 

@@ -109,6 +109,57 @@
         </StackPanel>
       </Border>
 
+      <!-- 🧪 سنجشِ پایه‌ها با پیمانه (۳.۱.۲۶۸) — فقط دفترِ سنجش؛ نوعِ تیل همان دکمهٔ بالا -->
+      <Border Classes="panel" Padding="14,10">
+        <StackPanel Spacing="8">
+          <TextBlock Text="🧪 سنجشِ پایه‌ها با پیمانه" FontWeight="Bold"
+                     Foreground="{DynamicResource Pump.Ink.Accent}" />
+          <WrapPanel Orientation="Horizontal">
+            <StackPanel Spacing="3" Width="110" Margin="0,0,10,6">
+              <TextBlock Text="شمارهٔ پایه" Classes="label" />
+              <TextBox Text="{Binding CalPump}" Watermark="1" c:LiveFormat.Kind="number" />
+            </StackPanel>
+            <StackPanel Spacing="3" Width="130" Margin="0,0,10,6">
+              <TextBlock Text="لیترِ پیمانه" Classes="label" />
+              <TextBox Text="{Binding CalCan}" Watermark="20" c:LiveFormat.Kind="number" />
+            </StackPanel>
+            <StackPanel Spacing="3" Width="130" Margin="0,0,10,6">
+              <TextBlock Text="لیترِ شمارنده" Classes="label" />
+              <TextBox Text="{Binding CalMeter}" Watermark="0" c:LiveFormat.Kind="number" />
+            </StackPanel>
+            <StackPanel Spacing="3" Width="180" Margin="0,0,10,6">
+              <TextBlock Text="یادداشت" Classes="label" />
+              <TextBox Text="{Binding CalNote}" Watermark="اختیاری" />
+            </StackPanel>
+            <StackPanel Spacing="3" Width="130" Margin="0,0,10,6">
+              <TextBlock Text=" " Classes="label" />
+              <Button Classes="accent" Content="ثبتِ سنجش" Command="{Binding AddCalibrationCommand}"
+                      HorizontalAlignment="Stretch" />
+            </StackPanel>
+          </WrapPanel>
+          <c:ExcelGrid ItemsSource="{Binding Calibs}" x:CompileBindings="False" IsVisible="{Binding HasCalibs}"
+                       IsReadOnly="True" BorderThickness="0" CornerRadius="0"
+                       RowDeleteCommand="{Binding $parent[UserControl].DataContext.DeleteCalibrationCommand}">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
+              <DataGridTextColumn Header="نوع تیل" Binding="{Binding FuelText}" Width="Auto" />
+              <DataGridTextColumn Header="پایه" Binding="{Binding PumpText}" Width="Auto" />
+              <DataGridTextColumn Header="پیمانه" Binding="{Binding CanText}" Width="Auto" />
+              <DataGridTextColumn Header="شمارنده" Binding="{Binding MeterText}" Width="Auto" />
+              <DataGridTemplateColumn Header="خطا" Width="Auto">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding ErrorText}" FontWeight="Bold" VerticalAlignment="Center"
+                               Foreground="{Binding ErrorBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="Auto" />
+            </DataGrid.Columns>
+          </c:ExcelGrid>
+        </StackPanel>
+      </Border>
+
       <TextBlock Text="هنوز تخلیه‌ای ثبت نشده" Classes="label"
                  IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center" Margin="0,10" />
     </StackPanel>

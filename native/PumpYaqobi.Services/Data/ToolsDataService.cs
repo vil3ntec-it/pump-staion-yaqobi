@@ -289,6 +289,17 @@ public sealed class ToolsDataService
         return (_staff.RowsFor(entries, settles, period), _staff.Lines(entries), settles);
     }
 
+    /// <summary>فروشِ هر کارمند و هر پایه در همان دوره (۳.۱.۲۶۸) — ‎WaraqService.SalesBy‎.</summary>
+    public async Task<(List<SalesLine> ByWorker, List<SalesLine> ByPump)> SalesByPeriodAsync(
+        ProfitPeriod period, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        var q = db.WaraqEntries.AsNoTracking().Include(w => w.Shifts).ThenInclude(s => s.Pumps).AsQueryable();
+        if (period.Keys is { } k) q = q.Where(w => w.DateKey >= k.Lo && w.DateKey <= k.Hi);
+        return WaraqService.SalesBy(await q.ToListAsync(ct));
+    }
+
     public async Task<List<StaffShortSettle>> SettlesAsync(CancellationToken ct = default)
     {
         _perm.Require(Permission.ViewData);
@@ -400,6 +411,54 @@ public sealed class ToolsDataService
         await db.SaveChangesAsync(ct);
         return u;
     }
+
+    // ── سنجشِ پایه‌ها با پیمانه (۳.۱.۲۶۸) ──────────────────────────────────
+    public async Task<List<PumpCalibration>> CalibrationsAsync(CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        return await db.PumpCalibrations.AsNoTracking()
+                       .OrderByDescending(c => c.DateKey).ThenByDescending(c => c.Id)
+                       .ToListAsync(ct);
+    }
+
+    /// <summary>ثبتِ یک سنجش. پیمانه و شمارنده هر دو لازم‌اند؛ پایه از ۱ به بالا.</summary>
+    public async Task<PumpCalibration?> AddCalibrationAsync(FuelType fuel, int pumpNum, decimal can, decimal meter,
+                                                            string? note, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.EditData);
+        if (pumpNum <= 0 || can <= 0m || meter <= 0m) return null;
+        var today = Shamsi.Today();
+        var c = new PumpCalibration
+        {
+            Fuel = fuel, PumpNum = pumpNum, CanLiters = can, MeterLiters = meter,
+            Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
+            DateShamsi = today, DateKey = Shamsi.Key(today),
+        };
+        await using var db = _dbf.Create();
+        db.PumpCalibrations.Add(c);
+        await db.SaveChangesAsync(ct);
+        return c;
+    }
+
+    public async Task DeleteCalibrationAsync(long id, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ManagerOnly);
+        await using var db = _dbf.Create();
+        var row = await db.PumpCalibrations.FirstOrDefaultAsync(c => c.Id == id, ct);
+        if (row is null) return;
+        await _trash.RememberAsync(db, "calib",
+            "پایهٔ " + Shamsi.Money(row.PumpNum) + ": " + Shamsi.Money(row.CanLiters) + " → " + Shamsi.Money(row.MeterLiters), row, ct);
+        db.PumpCalibrations.Remove(row);
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// خطای پایه به درصد: (شمارنده − پیمانه) ÷ پیمانه × ۱۰۰. مثبت یعنی پایه بیشتر از
+    /// آن‌چه داده می‌شمارد (مشتری کم می‌گیرد)، منفی یعنی پمپ ضرر می‌کند.
+    /// </summary>
+    public static decimal CalibrationErrorPct(decimal can, decimal meter) =>
+        can <= 0m ? 0m : Math.Round((meter - can) / can * 100m, 2, MidpointRounding.AwayFromZero);
 
     public async Task DeleteUnloadAsync(long id, CancellationToken ct = default)
     {

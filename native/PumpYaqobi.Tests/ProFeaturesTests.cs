@@ -136,4 +136,106 @@ public class ProFeaturesTests : IDisposable
         Assert.Contains("{Binding WaterText}", xaml);
         Assert.Contains("{Binding ForecastText}", xaml);
     }
+
+    // ── ۱۱) شمارشِ نوت ───────────────────────────────────────────────────
+
+    [Fact]
+    public void ShomaresheNot_BastanVaBazkardan()
+    {
+        var W = typeof(PumpYaqobi.App.ViewModels.Sections.WaraqPageViewModel);
+        var packed = PumpYaqobi.App.ViewModels.Sections.WaraqPageViewModel.PackCash(new[] { (1000, 3m), (500, 0m), (100, 7m) });
+        Assert.Equal("1000:3,100:7", packed);
+        var back = PumpYaqobi.App.ViewModels.Sections.WaraqPageViewModel.UnpackCash(packed);
+        Assert.Equal(2, back.Count);
+        Assert.Equal(3m, back[1000]);
+        Assert.Equal(7m, back[100]);
+        Assert.Empty(PumpYaqobi.App.ViewModels.Sections.WaraqPageViewModel.UnpackCash("خراب,1000:x,:3"));
+        Assert.NotNull(W);
+    }
+
+    [Fact]
+    public async Task ShomaresheNot_RoyeShift_ZakhireMishavad()
+    {
+        var dbf = new PumpDbFactory(_file);
+        dbf.EnsureReady();
+        long sid;
+        await using (var db = dbf.Create())
+        {
+            var w = new WaraqEntry { DateShamsi = "1405/07/20", DateKey = 14050720 };
+            w.Shifts.Add(new WaraqShift { Kind = ShiftKind.Day });
+            db.WaraqEntries.Add(w);
+            await db.SaveChangesAsync();
+            sid = w.Shifts[0].Id;
+        }
+        var session = new UserSession();
+        session.SignIn(UserRole.Admin, "آزمون");
+        var perm = new PermissionService(session);
+        var svc = new WaraqDataService(dbf, perm, new TrashService(dbf, perm, session));
+        await svc.SaveShiftAsync(new WaraqShift { Id = sid, CashCount = "1000:3" });
+        await using (var db = dbf.Create())
+            Assert.Equal("1000:3", db.WaraqShifts.Single(x => x.Id == sid).CashCount);
+    }
+
+    // ── ۸) فروشِ هر کارمند و هر پایه ─────────────────────────────────────
+
+    [Fact]
+    public void ForosheKarmandVaPaye()
+    {
+        var shift = new WaraqShift { WorkerName = "علی" };
+        shift.Pumps.Add(new WaraqPump { Num = 1, Fuel = FuelType.Petrol, Start = 100m, End = 300m, PricePerLiter = 80m });
+        shift.Pumps.Add(new WaraqPump { Num = 2, Fuel = FuelType.Diesel, Start = 0m, End = 120m, TestLiters = 20m, PricePerLiter = 70m, Worker = "رحیم" });
+        var e = new WaraqEntry { Shifts = { shift } };
+        var shift2 = new WaraqShift { WorkerName = "علی" };
+        shift2.Pumps.Add(new WaraqPump { Num = 1, Fuel = FuelType.Petrol, Start = 300m, End = 350m, PricePerLiter = 80m });
+        var e2 = new WaraqEntry { Shifts = { shift2 } };
+
+        var (w, p) = WaraqService.SalesBy(new[] { e, e2 });
+        var ali = w.Single(x => x.Name == "علی");
+        Assert.Equal(250m, ali.Liters);
+        Assert.Equal(20000m, ali.Money);
+        Assert.Equal(2, ali.Count);
+        var rahim = w.Single(x => x.Name == "رحیم");
+        Assert.Equal(100m, rahim.Liters);   // آزمایشی فروش نیست
+        Assert.Equal(7000m, rahim.Money);
+        Assert.Equal(2, p.Count);
+        Assert.Equal(250m, p.Single(x => x.Name.Contains("پطرول")).Liters);
+    }
+
+    // ── ۲) حجم در ۱۵ درجه ────────────────────────────────────────────────
+
+    [Fact]
+    public void HajmDar15Daraje()
+    {
+        Assert.Equal(10000m, TankDipService.At15(10000m, 15m, FuelType.Diesel));     // در ۱۵ درجه همان
+        Assert.Equal(9748m, TankDipService.At15(10000m, 35m, FuelType.Petrol));      // گرما ⇒ کمتر
+        Assert.True(TankDipService.At15(10000m, 0m, FuelType.Petrol) > 10000m);      // سرما ⇒ بیشتر
+        Assert.True(TankDipService.At15(10000m, 35m, FuelType.Diesel) > 9748m);      // دیزل کمتر منبسط می‌شود
+    }
+
+    // ── ۱۰) پلاکِ موتر روی ردیفِ قرض ─────────────────────────────────────
+
+    [Fact]
+    public async Task PelakRoyeRadifeGharz()
+    {
+        var dbf = new PumpDbFactory(_file);
+        dbf.EnsureReady();
+        long rid;
+        await using (var db = dbf.Create())
+        {
+            var p = new Debtor { Name = "شرکتِ آریا", LegacyId = "pro10" };
+            db.Debtors.Add(p);
+            await db.SaveChangesAsync();
+            var a = new DebtAccount { MainOfDebtorId = p.Id, Name = "شرکتِ آریا" };
+            db.DebtAccounts.Add(a);
+            await db.SaveChangesAsync();
+            var r = new DebtRow { FuelAccountId = a.Id, DateShamsi = "1405/07/20", Liters = 50m, Plate = "کابل ۴۵۶" };
+            db.DebtRows.Add(r);
+            await db.SaveChangesAsync();
+            rid = r.Id;
+        }
+        await using (var db = dbf.Create())
+            Assert.Equal("کابل ۴۵۶", db.DebtRows.Single(x => x.Id == rid).Plate);
+        var xaml = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App/Views/Sections/PersonView.axaml"));
+        Assert.Contains("Header=\"پلاک\" Binding=\"{Binding Plate}\"", xaml);
+    }
 }

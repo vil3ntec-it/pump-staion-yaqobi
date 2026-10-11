@@ -674,6 +674,76 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         SaveShift();
     }
 
+    // ══ 💵 شمارشِ نوت هنگامِ تحویلِ شیفت (۳.۱.۲۶۸) ══════════════════════════
+    //  ⚠️ فقط ثبت و مقایسه با «جمله فروش (منهای قرض و مصرف)» — هیچ حسابی عوض نمی‌شود.
+
+    public static readonly int[] Denoms = { 1000, 500, 100, 50, 20, 10, 5, 2, 1 };
+    public ObservableCollection<CashNoteViewModel> CashNotes { get; } = new();
+    private decimal _netCash;
+
+    public static string PackCash(IEnumerable<(int Denom, decimal Count)> notes) =>
+        string.Join(",", notes.Where(n => n.Count > 0m).Select(n => $"{n.Denom}:{n.Count}"));
+
+    public static Dictionary<int, decimal> UnpackCash(string? raw)
+    {
+        var map = new Dictionary<int, decimal>();
+        foreach (var part in (raw ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var kv = part.Split(':');
+            if (kv.Length == 2 && int.TryParse(kv[0], out var d)
+                && decimal.TryParse(kv[1], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var c) && c > 0m)
+                map[d] = c;
+        }
+        return map;
+    }
+
+    public decimal CashTotal => CashNotes.Sum(n => n.Denom * Shamsi.Num(n.Count));
+    public string CashTotalText => Shamsi.Money(CashTotal) + " افغانی";
+    public bool HasCashCount => CashTotal > 0m;
+
+    public string CashDiffText
+    {
+        get
+        {
+            if (!HasCashCount) return "";
+            var d = Math.Round(CashTotal - _netCash, 0, MidpointRounding.AwayFromZero);
+            return d == 0m ? "✅ برابر با جمله فروش"
+                 : d < 0m ? "⚠️ کم: " + Shamsi.Money(-d) + " افغانی نسبت به جمله فروش"
+                 : "➕ زیاد: " + Shamsi.Money(d) + " افغانی نسبت به جمله فروش";
+        }
+    }
+
+    public string CashDiffBrushKey =>
+        !HasCashCount ? "Pump.Muted" : CashTotal - _netCash < -0.5m ? "Pump.Danger" : "Pump.Ok";
+
+    internal void CashChanged()
+    {
+        RefreshCash();
+        if (_filling) return;
+        var sd = Shift;
+        if (sd is null) return;
+        sd.CashCount = PackCash(CashNotes.Select(n => (n.Denom, Shamsi.Num(n.Count))));
+        if (sd.CashCount.Length == 0) sd.CashCount = null;
+        SaveGuard.Watch(_host.WaraqData.SaveShiftAsync(sd), "شمارشِ نوت");
+    }
+
+    private void RefreshCash()
+    {
+        OnPropertyChanged(nameof(CashTotalText));
+        OnPropertyChanged(nameof(HasCashCount));
+        OnPropertyChanged(nameof(CashDiffText));
+        OnPropertyChanged(nameof(CashDiffBrushKey));
+    }
+
+    private void BuildCash(WaraqShift sd)
+    {
+        var have = UnpackCash(sd.CashCount);
+        CashNotes.Clear();
+        foreach (var d in Denoms)
+            CashNotes.Add(new CashNoteViewModel(d, have.TryGetValue(d, out var c) ? Shamsi.Money(c) : "", this));
+        RefreshCash();
+    }
+
     private void SaveShift()
     {
         if (_filling) return;
@@ -695,6 +765,7 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         _filling = true;
         WorkerName = sd.WorkerName ?? "";
         FabricDebt = sd.FabricDebt;
+        BuildCash(sd);
         _filling = false;
 
         foreach (var p in sd.Pumps.OrderBy(p => p.SortIndex).ThenBy(p => p.Id))
@@ -735,6 +806,8 @@ public sealed partial class WaraqPageViewModel : ObservableObject, IRowBatchHost
         PetrolLiters = Shamsi.Money(t.PetrolLiters);
         DieselLiters = Shamsi.Money(t.DieselLiters);
         Sales = Shamsi.Money(Math.Round(t.Net, 0, MidpointRounding.AwayFromZero));   // ⛔ منهای قرض و مصرف
+        _netCash = t.Net;
+        RefreshCash();
         PumpSales = Shamsi.Money(Math.Round(t.Sales, 0, MidpointRounding.AwayFromZero)) + " افغانی";
         Debt = Shamsi.Money(Math.Round(t.Debt, 0, MidpointRounding.AwayFromZero));
         Expenses = Shamsi.Money(Math.Round(t.Expenses, 0, MidpointRounding.AwayFromZero));
@@ -1744,4 +1817,22 @@ public sealed partial class WaraqSectionViewModel : SectionViewModel
         await _host.WaraqData.DeleteAsync(w.Id);
         await ReloadAsync();
     }
+}
+
+/// <summary>یک نوت در «شمارشِ نوت» — مبلغِ نوت و تعدادش (۳.۱.۲۶۸).</summary>
+public sealed partial class CashNoteViewModel : ObservableObject
+{
+    private readonly WaraqPageViewModel _owner;
+
+    public CashNoteViewModel(int denom, string count, WaraqPageViewModel owner)
+    {
+        Denom = denom; _count = count; _owner = owner;
+    }
+
+    public int Denom { get; }
+    public string DenomText => Shamsi.Money(Denom);
+
+    [ObservableProperty] private string _count = "";
+
+    partial void OnCountChanged(string v) => _owner.CashChanged();
 }

@@ -53,6 +53,21 @@ public class ToolsServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Sanjesh_Pomp_KhataVaHazf()
+    {
+        var (tools, _, _) = Host();
+        Assert.Null(await tools.AddCalibrationAsync(FuelType.Petrol, 0, 20m, 20m, null));
+        Assert.Null(await tools.AddCalibrationAsync(FuelType.Petrol, 3, 20m, 0m, null));
+        var c = await tools.AddCalibrationAsync(FuelType.Petrol, 3, 20m, 20.2m, "صبح");
+        Assert.NotNull(c);
+        Assert.Equal(1m, ToolsDataService.CalibrationErrorPct(20m, 20.2m));
+        Assert.Equal(-0.5m, ToolsDataService.CalibrationErrorPct(20m, 19.9m));
+        Assert.Single(await tools.CalibrationsAsync());
+        await tools.DeleteCalibrationAsync(c!.Id);
+        Assert.Empty(await tools.CalibrationsAsync());
+    }
+
+    [Fact]
     public async Task Unload_PlakVaSherkat_ZakhireMishavand()
     {
         var (tools, _, _) = Host();

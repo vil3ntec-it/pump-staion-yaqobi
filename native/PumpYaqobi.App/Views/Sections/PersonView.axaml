@@ -479,6 +479,7 @@
           <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
           <DataGridTextColumn Header="نام"   Binding="{Binding Name}" Width="Auto" />
           <DataGridTextColumn Header="حواله" Binding="{Binding Hawala}" Width="Auto" />
+          <DataGridTextColumn Header="پلاک" Binding="{Binding Plate}" Width="Auto" />
           <!-- ══ نوع تیل — یک کپسول، بی دایرهٔ رادیو ═══════════════════════
                مو‌به‌مو ‎.ft-pick‎ی سایت آن‌طور که **امروز** دیده می‌شود: هر ردیف
                یک کپسولِ کوچکِ رنگی دارد، «پطرول» یا «دیزل».

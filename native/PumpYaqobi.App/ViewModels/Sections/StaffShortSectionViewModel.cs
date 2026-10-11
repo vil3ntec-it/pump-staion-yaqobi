@@ -208,7 +208,20 @@ public sealed partial class StaffShortSectionViewModel : SectionViewModel
 
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(HasSettles));
+
+        var (byWorker, byPump) = await _host.Tools.SalesByPeriodAsync(period);
+        if (period != _period) return;
+        SalesByWorker = byWorker.Select(SalesText).ToList();
+        SalesByPump = byPump.Select(SalesText).ToList();
     }
+
+    // ── فروشِ هر کارمند و هر پایه در همین دوره (۳.۱.۲۶۸) — فقط گزارش ──────────
+    [ObservableProperty] private IReadOnlyList<string> _salesByWorker = Array.Empty<string>();
+    [ObservableProperty] private IReadOnlyList<string> _salesByPump = Array.Empty<string>();
+
+    private static string SalesText(SalesLine l) =>
+        $"{l.Name}: {Shamsi.Money(Math.Round(l.Liters, 0, MidpointRounding.AwayFromZero))} لیتر · "
+        + $"{Shamsi.Money(Math.Round(l.Money, 0, MidpointRounding.AwayFromZero))} افغانی · {Shamsi.Money(l.Count)} قرائت";
 
     /// <summary>ورقِ همین جدول — با فهرستِ تسویه‌ها زیرش.</summary>
     [RelayCommand]

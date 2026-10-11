@@ -281,6 +281,30 @@
             </StackPanel>
           </Border>
         </c:AutoFillPanel>
+
+        <!-- 💵 شمارشِ نوت هنگامِ تحویلِ شیفت (۳.۱.۲۶۸) — فقط ثبت و مقایسه، در هیچ حسابی نیست -->
+        <Expander Header="💵 شمارشِ نوت هنگامِ تحویلِ شیفت" HorizontalAlignment="Stretch" Margin="0,6,0,0">
+          <StackPanel Spacing="8">
+            <ItemsControl ItemsSource="{Binding CashNotes}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <StackPanel Spacing="3" Width="96" Margin="0,0,8,6">
+                    <TextBlock Text="{Binding DenomText, StringFormat={}نوتِ {0}}" Classes="label" />
+                    <TextBox Text="{Binding Count}" Watermark="0" c:LiveFormat.Kind="number" />
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel Orientation="Horizontal" Spacing="16">
+              <TextBlock Text="{Binding CashTotalText, StringFormat={}جمعِ شمرده: {0}}" FontWeight="Bold" />
+              <TextBlock Text="{Binding CashDiffText}" FontWeight="Bold"
+                         Foreground="{Binding CashDiffBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+            </StackPanel>
+          </StackPanel>
+        </Expander>
       </StackPanel>
     </Grid>
   </c:SectionPage>
