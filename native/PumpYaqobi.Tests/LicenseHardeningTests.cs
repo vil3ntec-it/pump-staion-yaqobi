@@ -230,6 +230,38 @@ public class LicenseHardeningTests : IDisposable
     }
 
     /// <summary>
+    /// ⛔ ۳.۱.۲۶۶: CI کلید را بی‌نام («#1») می‌نشاند و سرور `kid` را از خودِ کلید
+    /// می‌سازد (۱۶ نویسهٔ hexِ SHA-256ِ SPKI) ⇒ اشتراکِ داده‌شده هرگز به برنامه
+    /// نمی‌رسید. همان kid باید پذیرفته شود؛ کلیدِ بیگانه با kidِ خودش رد.
+    /// </summary>
+    [Fact]
+    public void KelideBiNam_KidSarvarPazirofteMishavad()
+    {
+        CloudConfig.TestLicenseKeys = CloudConfig.ParseKeys(Pub(_real));
+        try
+        {
+            var f = AppSettings.Load();
+            f.CloudDeviceToken = "dev-1";
+            f.CloudStationId = Station;
+            var uid = CloudConfig.DeviceUid(f);
+            var kid = Convert.ToHexString(SHA256.HashData(_real.ExportSubjectPublicKeyInfo())).ToLowerInvariant()[..16];
+            Assert.Equal(kid, LicenseGuard.KeyId(Pub(_real)));
+
+            f.CloudLicense = Sign(_real, uid, Now, new[] { "cloudbackup" }, kid: kid);
+            Assert.True(LicenseGuard.CheckStored(f).Valid);
+
+            var evilKid = LicenseGuard.KeyId(Pub(_evil));
+            f.CloudLicense = Sign(_evil, uid, Now, Entitlements.Paid, kid: evilKid);
+            Assert.False(LicenseGuard.CheckStored(f).Valid);
+
+            //  امضای بیگانه زیرِ kidِ درست ⇒ باز هم رد
+            f.CloudLicense = Sign(_evil, uid, Now, Entitlements.Paid, kid: kid);
+            Assert.False(LicenseGuard.CheckStored(f).Valid);
+        }
+        finally { CloudConfig.TestLicenseKeys = null; }
+    }
+
+    /// <summary>
     /// ⛔ و با همان فهرست، سرورِ جعلی نمی‌تواند کلیدِ «قفل‌شده»ای را که
     /// داخلِ فهرست نیست به تنظیمات بنشاند.
     /// </summary>

@@ -151,7 +151,12 @@ public static class LicenseGuard
         if (trusted.Count == 0) keys = new[] { pinnedPublicKey! };
         else if (kid.Length > 0)
         {
-            if (!trusted.TryGetValue(kid, out var one))
+            //  ⛔ ۳.۱.۲۶۶: CI کلید را بی‌نام («#1») می‌نشاند ولی سرور `kid` را از
+            //  خودِ کلید می‌سازد (۱۶ نویسهٔ hexِ SHA-256ِ SPKI) ⇒ هیچ مجوزی
+            //  پذیرفته نمی‌شد. همان `kid` را از کلیدهای داخلِ برنامه حساب می‌کنیم؛
+            //  ریشهٔ اعتماد همان فهرست می‌ماند.
+            if (!trusted.TryGetValue(kid, out var one)
+                && (one = trusted.Values.FirstOrDefault(k => KeyId(k) == kid)) is null)
                 return LicenseCheck.Fail("کلیدِ امضای این مجوز برای این برنامه شناخته نیست");
             keys = new[] { one };
         }
@@ -262,6 +267,13 @@ public static class LicenseGuard
     }
 
     // ── ریزه‌کاری‌ها ───────────────────────────────────────────────────
+
+    /// <summary><c>kid</c>ِ سرورِ حساب: ۱۶ نویسهٔ اولِ hexِ SHA-256ِ SPKIِ DER.</summary>
+    public static string KeyId(string spki)
+    {
+        try { return Convert.ToHexString(SHA256.HashData(Convert.FromBase64String(spki.Trim()))).ToLowerInvariant()[..16]; }
+        catch { return ""; }
+    }
 
     private static byte[] FromB64Url(string s)
     {
