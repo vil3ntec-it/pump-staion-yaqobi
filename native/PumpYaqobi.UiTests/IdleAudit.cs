@@ -164,7 +164,15 @@ internal static class IdleAudit
                 SitIdle(win, PumpYaqobi.App.Controls.ExcelGrid.ParkGrace + TimeSpan.FromSeconds(1.5));
                 //  ⚠️ فقط جدولی که مهلتش واقعاً گذشته (+۱٫۵ث برای تپشِ یک‌ثانیه‌ای) — جدولی که وسطِ صبر
                 //  دوباره پنهان شد مهلتِ تازه دارد و «پارک نشده» نیست (رانرِ CI همین را گرفت: «sarrafi»)
+                //  ⚠️ (۱۴۰۵/۰۷/۲۳) پشتیبانِ خودکار (‎VACUUM INTO‎) گاهی درست وسطِ همین صبر می‌افتد و نخِ رابط
+                //  چند ثانیه بند است؛ تپش پس از آن می‌رسد، نه سرِ وقت (رانرِ CI: «sarrafi»، ۱۳ ثانیه). پس
+                //  تا سه ثانیهٔ دیگر هم فرصت دارد — تپشی که هرگز نرسد همچنان سرخ است.
                 var overdue = PumpYaqobi.App.Controls.ExcelGrid.ParkOverdueCount(TimeSpan.FromSeconds(1.5));
+                for (var t = 0; overdue > 0 && t < 30; t++)
+                {
+                    SitIdle(win, TimeSpan.FromMilliseconds(100));
+                    overdue = PumpYaqobi.App.Controls.ExcelGrid.ParkOverdueCount(TimeSpan.FromSeconds(1.5));
+                }
                 if (overdue > 0)
                     bad.Add($"«{sec.Id}»: {overdue} جدول با مهلتِ گذشته هنوز پارک نشده");
             }

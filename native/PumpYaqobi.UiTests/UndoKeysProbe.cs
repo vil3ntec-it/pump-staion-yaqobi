@@ -66,6 +66,7 @@ internal static class UndoKeysProbe
         AckInsideTheBox(win, vm);
         DayAndNightTogether(win, vm);
         WrongBaseDeleted(win, vm);
+        OldDateStart(win, vm);
         PriceLossIsEmpty(win, vm);
         Console.WriteLine();
         Console.WriteLine("عکس‌ها: " + ShotDir);
@@ -486,6 +487,55 @@ internal static class UndoKeysProbe
 
     // ══ «شروعِ پایه را اشتباه زدم و پاک کردم؛ عددِ درست را قبول نمی‌کند» (۱۴۰۵/۰۷/۱۹) ══
     //   همان کارِ صاحب ریپو: پارچه با ختمِ غلطِ ۱۰۰٬۰۰۰ ⇒ از «گزارش‌ها» پاک ⇒ شروعِ درست.
+
+    /// <summary>
+    /// ══ روزِ قدیمیِ جامانده — شروعِ پایهٔ همان تاریخ (۱۴۰۵/۰۷/۲۳) ══
+    ///  روزهای ۱۰ و ۱۲ رسانده شده‌اند؛ حالا روزِ ۱۱. پیشنهادِ کادر = ختمِ روزِ ۱۰ (نه ۱۲)، «⤵ همان» آن را
+    ///  می‌نشاند و هشداری نیست؛ و شروعی که پیش از عوض کردنِ تاریخ زده شده با تاریخِ تازه دوباره سنجیده می‌شود.
+    /// </summary>
+    private static void OldDateStart(Window win, MainViewModel vm)
+    {
+        Console.WriteLine();
+        Console.WriteLine("── روزِ قدیمیِ جامانده: شروعِ پایهٔ همان تاریخ ──");
+        var sec = vm.Sections.First(s => s.Id == "shifts");
+        Wait(win, vm.GoAsync(sec));
+        Settle(win);
+        if (sec is not ParchaSectionViewModel p) { Fail("بخشِ پارچه‌ها نبود"); return; }
+        if (p.IsDiesel) { p.IsDiesel = false; Settle(win); }
+        var d = p.Day;
+
+        void Save(string date, string start, string end)
+        {
+            Wait(win, p.StartNewReportCommand.ExecuteAsync(null));
+            p.PaDate = date; Settle(win);
+            d.Name = "کارمندِ آزمون"; d.PumpNum = "7"; d.Start = start; d.End = end;
+            Settle(win);
+            Wait(win, d.SaveCommand.ExecuteAsync(null));
+            Settle(win);
+        }
+        Save("1405/07/10", "500000", "510000");
+        Save("1405/07/12", "520000", "530000");
+
+        //  شروع پیش از عوض کردنِ تاریخ زده شد (با امروز ⇒ ختمِ ۱۲ مرجع است) …
+        Wait(win, p.StartNewReportCommand.ExecuteAsync(null));
+        d.Name = "کارمندِ آزمون"; d.PumpNum = "7"; d.Start = "510000";
+        Settle(win);
+        Check($"با تاریخِ امروز، «510,000» با ختمِ ۱۲ (530,000) نمی‌خورد ({d.LowBaseText})", d.LowBase);
+        //  … و حالا تاریخِ روزِ جامانده
+        p.PaDate = "1405/07/11";
+        Settle(win); Settle(win);
+        Check($"تاریخِ ۱۱ ⇒ همان شروع با ختمِ ۱۰ سنجیده شد و هشدار رفت («{d.LowBaseText}»)", !d.LowBase && d.LowBaseText == "");
+        Check($"پیشنهادِ کادر ختمِ ۱۰ است، نه ۱۲ ({d.PrevEndHint})", d.PrevEnd == 510000m);
+
+        d.Start = "";
+        Settle(win);
+        Check("کادرِ خالی ⇒ «⤵ همان» دیده می‌شود", d.CanUsePrevEnd);
+        d.UsePrevEndCommand.Execute(null);
+        Settle(win);
+        Check($"«⤵ همان» ⇒ شروع = 510,000 و بی هشدار ({d.Start})", Shamsi.Num(d.Start) == 510000m && !d.LowBase && !d.CanUsePrevEnd);
+        foreach (var f in new[] { p.Day, p.Night }) { f.Start = ""; f.End = ""; f.PumpNum = ""; f.Name = ""; }
+        Settle(win);
+    }
 
     private static void WrongBaseDeleted(Window win, MainViewModel vm)
     {

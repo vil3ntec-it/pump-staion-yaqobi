@@ -131,8 +131,28 @@ public sealed partial class ShiftFormViewModel : ObservableObject
         _owner.RecheckSibling(this);
     }
 
+    // ══ «ختمِ قبلی در همین تاریخ» — پیشنهادِ شروعِ پایه (۱۴۰۵/۰۷/۲۳) ═══════════
+    //  گزارشِ صاحب ریپو: «روزهای زیادی را رساندم؛ حالا روزِ قدیمیِ جامانده را می‌زنم و شروعِ پایهٔ
+    //  همان تاریخ را نمی‌آورد که بزنم — همان آخرین را نشان می‌دهد و هشدار می‌دهد.» حالا ختمِ شیفتِ
+    //  **درست پیش از همین تاریخ** (همان زنجیرهٔ ‎PrevEndAsync‎ِ هشدار) در کادر دیده می‌شود و «⤵ همان»
+    //  می‌نشاندش. ⛔ خودکار در کادر نوشته نمی‌شود: کارت را «ذخیره‌نشده» می‌کرد و عددِ کاربر را می‌پوشاند.
+    [ObservableProperty] private decimal _prevEnd;
+    [ObservableProperty] private string _prevEndHint = "0";
+    public bool CanUsePrevEnd => PrevEnd > 0m && StartValue != PrevEnd;
+    public string UsePrevEndTip => "شروعِ پایه = ختمِ شیفتِ پیش از همین تاریخ: " + PrevEndHint;
+    partial void OnPrevEndChanged(decimal v)
+    {
+        PrevEndHint = v > 0m ? Shamsi.Money(v) : "0";
+        OnPropertyChanged(nameof(CanUsePrevEnd));
+        OnPropertyChanged(nameof(UsePrevEndTip));
+    }
+
+    [RelayCommand]
+    private void UsePrevEnd() { if (PrevEnd > 0m) Start = Shamsi.Money(PrevEnd); }
+
     partial void OnStartChanged(string v)
     {
+        OnPropertyChanged(nameof(CanUsePrevEnd));
         Recalc();
         if (_loading) return;
         LowBaseAcked = false;
@@ -755,9 +775,44 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
             if (f.LowBaseText.Length > 0 && f.StartValue > 0m) CheckLowBase(f);
     }
 
+    /// <summary>«ختمِ قبلی» برای کادرِ شروعِ این کارت — همان مرجعِ هشدار، از کَش یا یک پرسش.</summary>
+    internal void RefreshPrevEnd(ShiftFormViewModel form)
+    {
+        if (DayEndFor(form) is decimal typed) { form.PrevEnd = typed; return; }
+        DropStaleLastBase();
+        var key = ChainKey(form);
+        if (_lastBase.TryGetValue(key, out var prev)) { form.PrevEnd = prev ?? 0m; return; }
+        _ = FillPrevEndAsync(key, form);
+    }
+
+    private async Task FillPrevEndAsync((FuelType Fuel, int Num, int DateKey, long Report, bool Night, long Self) key,
+                                        ShiftFormViewModel form)
+    {
+        try
+        {
+            var ver = PumpYaqobi.Services.Data.DataVersion.Current;
+            var v = await _host.ParchaData.PrevEndAsync(key.Fuel, key.Num, key.DateKey, key.Report, key.Night, key.Self);
+            if (ver == PumpYaqobi.Services.Data.DataVersion.Current && ver == _lastBaseVer) _lastBase[key] = v;
+            if (key.Fuel == Fuel && ChainKey(form) == key && DayEndFor(form) is null) form.PrevEnd = v ?? 0m;
+        }
+        catch { /* پیشنهاد رفاه است، نه اصل */ }
+    }
+
+    /// <summary>تاریخ یا پارچه عوض شد ⇒ پیشنهاد و هشدارِ هر دو کارت از نو، با همان تاریخِ تازه.</summary>
+    private void RecheckForDate()
+    {
+        DropStaleLastBase();
+        foreach (var f in new[] { Day, Night })
+        {
+            if (f.StartValue > 0m && !f.Saved) CheckLowBase(f);
+            else RefreshPrevEnd(f);
+        }
+    }
+
     internal void CheckLowBase(ShiftFormViewModel form)
     {
         DropStaleLastBase();
+        RefreshPrevEnd(form);
         var num = (int)Shamsi.Num(form.PumpNum);
         var start = form.StartValue;
         if (start <= 0m) { form.LowBase = false; form.LowBaseText = ""; return; }
@@ -885,6 +940,7 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
         ReportNumText = _current is null ? "—" : _current.ReportNum.ToString();
         LoadCard(Day, ShiftKind.Day, _current?.DayShift);
         LoadCard(Night, ShiftKind.Night, _current?.NightShift);
+        RecheckForDate();
     }
 
     private void LoadCard(ShiftFormViewModel form, ShiftKind kind, ShiftData? s)
@@ -1186,6 +1242,7 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
             await _host.ParchaData.SaveReportAsync(_current);
             await ReloadLogAsync();
         }
+        RecheckForDate();
     }
 
     /// <summary>«➕ گزارش جدید» — ‎startNewReport()‎.</summary>
@@ -1220,6 +1277,7 @@ public sealed partial class ParchaSectionViewModel : SectionViewModel, ICtrlTabH
     {
         SetForceNew(Fuel, kind, true);
         (kind == ShiftKind.Day ? Day : Night).Clear();
+        RefreshPrevEnd(kind == ShiftKind.Day ? Day : Night);
         _host.Toast("🆕 پارچهٔ " + (IsDiesel ? "دیزل " : "") + "جدید "
                     + (kind == ShiftKind.Day ? "روز" : "شب")
                     + " — فرم خالی شد، حالا پر و ذخیره کن", ToastKind.Info);
