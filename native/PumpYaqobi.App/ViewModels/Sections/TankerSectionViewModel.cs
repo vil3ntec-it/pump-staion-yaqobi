@@ -76,6 +76,25 @@ public sealed partial class TankerSectionViewModel : SectionViewModel
     [ObservableProperty] private string _manifest = "";
     [ObservableProperty] private string _actual = "";
     [ObservableProperty] private string _driver = "";
+    [ObservableProperty] private string _plate = "";
+    [ObservableProperty] private string _company = "";
+
+    /// <summary>
+    /// کم‌آمدِ هر راننده و هر شرکت — از بیشترین به کمترین (۳.۱.۲۶۸). فقط کسانی که
+    /// دست‌کم یک لیتر کم آورده‌اند. ⚠️ فقط نمایش؛ موجودیِ مخزن را عوض نمی‌کند.
+    /// </summary>
+    public IReadOnlyList<string> ShortByDriver => Group(r => r.Entity.Driver, "🚚");
+    public IReadOnlyList<string> ShortByCompany => Group(r => r.Entity.Company, "🏭");
+    public bool HasShortList => ShortByDriver.Count + ShortByCompany.Count > 0;
+
+    private IReadOnlyList<string> Group(Func<TankerRowViewModel, string?> key, string icon) =>
+        Rows.Where(r => !string.IsNullOrWhiteSpace(key(r)))
+            .GroupBy(r => key(r)!.Trim())
+            .Select(g => (Name: g.Key, N: g.Count(), Short: g.Sum(r => r.Diff < 0m ? -r.Diff : 0m)))
+            .Where(x => x.Short > 0m)
+            .OrderByDescending(x => x.Short)
+            .Select(x => $"{icon} {x.Name} — {Shamsi.Money(x.N)} تخلیه — کم‌آمد {Shamsi.Money(x.Short)} لیتر")
+            .ToList();
     [ObservableProperty] private string _note = "";
 
     public bool IsEmpty => Rows.Count == 0;
@@ -126,6 +145,9 @@ public sealed partial class TankerSectionViewModel : SectionViewModel
         }
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(TotalCells));
+        OnPropertyChanged(nameof(ShortByDriver));
+        OnPropertyChanged(nameof(ShortByCompany));
+        OnPropertyChanged(nameof(HasShortList));
     }
 
     [RelayCommand]
@@ -136,7 +158,7 @@ public sealed partial class TankerSectionViewModel : SectionViewModel
     {
         var u = await _host.Tools.AddUnloadAsync(
             IsDiesel ? FuelType.Diesel : FuelType.Petrol,
-            Shamsi.Num(Manifest), Shamsi.Num(Actual), Driver.Trim(), Note.Trim());
+            Shamsi.Num(Manifest), Shamsi.Num(Actual), Driver.Trim(), Note.Trim(), Plate, Company);
 
         if (u is null)
         {

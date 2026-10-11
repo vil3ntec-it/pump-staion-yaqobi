@@ -373,8 +373,15 @@ public sealed class ToolsDataService
     /// ثبتِ یک تخلیه. بارنامه و تحویل هر دو لازم‌اند — همان شرطِ نسخهٔ وب،
     /// چون با یکی از این دو «کم‌آمد» بی‌معناست.
     /// </summary>
+    public Task<TankerUnload?> AddUnloadAsync(FuelType fuel, decimal manifest, decimal actual,
+                                                    string? driver, string? note,
+                                                    CancellationToken ct = default) =>
+        AddUnloadAsync(fuel, manifest, actual, driver, note, null, null, ct);
+
+    /// <summary>همان، با پلاکِ تانکر و شرکتِ فروشنده (۳.۱.۲۶۸) — هر دو اختیاری.</summary>
     public async Task<TankerUnload?> AddUnloadAsync(FuelType fuel, decimal manifest, decimal actual,
                                                     string? driver, string? note,
+                                                    string? plate, string? company,
                                                     CancellationToken ct = default)
     {
         _perm.Require(Permission.ManagerOnly);
@@ -384,6 +391,8 @@ public sealed class ToolsDataService
         var u = new TankerUnload
         {
             Fuel = fuel, Manifest = manifest, Actual = actual, Driver = driver, Note = note,
+            Plate = string.IsNullOrWhiteSpace(plate) ? null : plate.Trim(),
+            Company = string.IsNullOrWhiteSpace(company) ? null : company.Trim(),
             DateShamsi = today, DateKey = Shamsi.Key(today), MonthKey = Shamsi.MonthKey(today),
         };
         await using var db = _dbf.Create();

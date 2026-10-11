@@ -142,6 +142,11 @@
                       BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="1">
                 <TextBlock Text="{Binding StateText}" FontSize="12" FontWeight="SemiBold" />
               </Border>
+              <!-- پیش‌بینیِ تمام شدن (۳.۱.۲۶۸) — فقط نمایش -->
+              <TextBlock Text="{Binding ForecastText}" FontSize="12" FontWeight="SemiBold"
+                         TextAlignment="Center" HorizontalAlignment="Stretch" TextWrapping="Wrap"
+                         IsVisible="{Binding ForecastText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                         Foreground="{DynamicResource Pump.Ink.Info}" />
 
               <!-- سه عددِ مخزن، پخش‌شده در تمامِ عرضِ کارت. پیش از این کنارِ
                    هم و چسبیده به راست بودند و وسطِ کارت خالی می‌ماند. -->
@@ -485,6 +490,11 @@
                   <TextBlock Text="لیترِ میله‌زنی" Classes="label" />
                   <TextBox Text="{Binding DipMeasured}" Watermark="0" c:LiveFormat.Kind="number" />
                 </StackPanel>
+                <StackPanel Spacing="3" Width="120" Margin="0,0,10,6">
+                  <TextBlock Text="💧 آبِ تهِ مخزن (لیتر)" Classes="label" />
+                  <TextBox Text="{Binding DipWater}" Watermark="0" c:LiveFormat.Kind="number"
+                           ToolTip.Tip="خالی یعنی آب نبود — فقط ثبت و هشدار، موجودی را عوض نمی‌کند" />
+                </StackPanel>
                 <StackPanel Spacing="3" Width="150" Margin="0,0,10,6">
                   <TextBlock Text="موجودی دفتری" Classes="label" />
                   <TextBlock Text="{Binding TankBookText}" FontWeight="Bold" Margin="0,6,0,0"
@@ -526,6 +536,15 @@
               <TextBlock Text="{Binding DipWarnText}" TextWrapping="Wrap" FontWeight="Bold"
                          IsVisible="{Binding DipWarnVisible}"
                          Foreground="{DynamicResource Pump.Ink.Danger}" />
+
+              <!-- روندِ کسر و اضافهٔ مخزن (۳.۱.۲۶۸) — فقط نمایش -->
+              <StackPanel Spacing="4" IsVisible="{Binding HasDipTrend}">
+                <TextBlock Text="📉 روندِ کسر و اضافه (اختلافِ میله با دفتر، آخرین ۳۰ میله‌زنی)" Classes="label" />
+                <c:SparkChart ShowAxis="False" FlowDirection="LeftToRight" MinHeight="90"
+                              Values="{Binding DipTrend}"
+                              LineBrush="{DynamicResource Pump.Ink.Info}"
+                              GridBrush="{DynamicResource Pump.GridLine}" />
+              </StackPanel>
             </StackPanel>
 
             <c:ExcelGrid Grid.Row="2" ItemsSource="{Binding Dips}" x:CompileBindings="False"
@@ -538,6 +557,7 @@
                 <DataGridTextColumn Header="اختلاف" Binding="{Binding DiffText}" Width="Auto" IsReadOnly="True" />
                 <DataGridCheckBoxColumn Header="دفتر برابر شود" Binding="{Binding ApplyToBook}" Width="Auto" />
                 <DataGridTextColumn Header="رفته به دفتر" Binding="{Binding BookAdjustText}" Width="Auto" IsReadOnly="True" />
+                <DataGridTextColumn Header="💧 آب" Binding="{Binding WaterText}" Width="Auto" IsReadOnly="True" />
                 <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="Auto" />
               </DataGrid.Columns>
             </c:ExcelGrid>
