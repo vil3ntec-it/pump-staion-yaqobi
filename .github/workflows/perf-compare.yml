@@ -1,0 +1,62 @@
+name: کند نشدن نسبت به main
+
+# ══ بندِ ۵ِ کندی‌ها (۱۴۰۵/۰۷/۲۲) ══════════════════════════════════════════════
+# کندیِ ۹/۳۰ تا گزارشِ صاحب ریپو هیچ سنجه‌ای را سرخ نکرده بود: سقف‌های ثابت (‎perf‎)
+# فقط «خیلی کند» را می‌گیرند، نه «کندتر از دیروز». این‌جا سنجهٔ پنج‌ساله (‎years‎) روی
+# همان رانر یک بار با کدِ ‎main‎ و یک بار با همین شاخه می‌دود — دو بار هر کدام، یک‌درمیان،
+# و کمینهٔ هر کار — و اگر کاری بیش از ۴۰٪ (و ۲۰۰ms) کند شده باشد سرخ می‌شود.
+# مقایسه: ‎native/tools/perf-compare.py‎.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'native/**'
+      - '.github/workflows/perf-compare.yml'
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: کدِ main کنارِ همین شاخه
+        shell: bash
+        run: |
+          base="${{ github.base_ref }}"; base="${base:-main}"
+          git fetch origin "$base" --depth=200
+          git worktree add ../base "origin/$base"
+
+      - name: ساختن (هر دو)
+        shell: bash
+        run: |
+          dotnet build native/PumpYaqobi.UiTests -c Release
+          dotnet build ../base/native/PumpYaqobi.UiTests -c Release
+
+      - name: سنجهٔ پنج‌ساله — main و شاخه، یک‌درمیان
+        shell: bash
+        env:
+          PUMP_YEARS_SETTLED: '1'
+        run: |
+          set +e
+          for i in 1 2; do
+            (cd ../base/native && dotnet run --project PumpYaqobi.UiTests -c Release --no-build -- years > "$GITHUB_WORKSPACE/base$i.log" 2>&1)
+            (cd native && dotnet run --project PumpYaqobi.UiTests -c Release --no-build -- years > "$GITHUB_WORKSPACE/head$i.log" 2>&1)
+          done
+          exit 0
+
+      - name: مقایسه
+        shell: bash
+        run: python3 native/tools/perf-compare.py base1.log base2.log -- head1.log head2.log
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf-compare
+          path: '*.log'
+          if-no-files-found: ignore

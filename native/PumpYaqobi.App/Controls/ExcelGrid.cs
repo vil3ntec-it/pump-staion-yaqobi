@@ -540,6 +540,7 @@ public partial class ExcelGrid : DataGrid
 
     public static void NotifyPagesChanged()
     {
+        _wave++;
         //  ۱) برگرداندن: همین حالا، پیش از چیدمانِ همین پاس
         PagesShown?.Invoke();
 
@@ -567,8 +568,10 @@ public partial class ExcelGrid : DataGrid
     /// </summary>
     private void OnPagesShown()
     {
-        if (!_parkedAway || GrowsToContent) return;
+        if (GrowsToContent) return;
         if (!SectionShown()) return;
+        _parkAt.Remove(this); _parkWave.Remove(this);   // دوباره دیده شد پیش از مهلت ⇒ ردیف‌ها سرِ جایشان
+        if (!_parkedAway) return;
         _parkedAway = false;
         var back = _parked;
         _parked = null;
@@ -598,12 +601,18 @@ public partial class ExcelGrid : DataGrid
         if (!shown)
         {
             if (_parkedAway || _editing || ItemsSource is null) return;
-            _parked = ItemsSource;
-            _parkedAway = true;
-            SetCurrentValue(ItemsSourceProperty, null);
+            //  ⚡ مهلتِ پارک (۱۴۰۵/۰۷/۲۲) — بندِ ۱ِ کندی‌ها، خواستهٔ صاحب ریپو: رفت‌وبرگشتِ
+            //  تند میانِ بخش‌ها ردیف‌ها را از نو نسازد. ساختنِ دوبارهٔ ردیف‌ها کارِ خودِ
+            //  ‎DataGrid‎ است (قالب و سبکِ هر خانه، سنجشِ ‎years‎: ۳۰۰ تا ۴۰۰ms برای ۲۹ ردیف).
+            //  ⛔ قاعدهٔ «بخشِ پنهان صفر ردیفِ زنده» سرِ جایش است، فقط پس از ‎ParkGrace‎:
+            //  جدولِ نامرئی در این چند ثانیه نه چیده می‌شود، نه کشیده، نه دیتابیس می‌خواند.
+            if (ParkGrace > TimeSpan.Zero) { ParkSoon(this); return; }
+            ParkNow();
         }
-        else if (_parkedAway)
+        else
         {
+            _parkAt.Remove(this); _parkWave.Remove(this);
+            if (!_parkedAway) return;
             _parkedAway = false;
             var back = _parked;
             _parked = null;
@@ -855,6 +864,7 @@ public partial class ExcelGrid : DataGrid
         UnhookOutside();
         PagesChanged -= OnPagesChanged;
         PagesShown -= OnPagesShown;
+        _parkAt.Remove(this); _parkWave.Remove(this);
         if (_pageHooked && _page is { } page) page.ScrollChanged -= OnPageScroll;
         _pageHooked = false;
         _page = null;

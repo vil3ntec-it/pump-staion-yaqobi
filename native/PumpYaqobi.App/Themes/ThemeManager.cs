@@ -86,6 +86,9 @@ public static class ThemeManager
 
     public static void Apply(PumpTheme t, Avalonia.Application? app = null)
     {
+        //  ⚡ ردیف‌های پنهانِ در مهلتِ پارک همین حالا پارک شوند — وگرنه تم آن‌ها را هم از نو سبک می‌دهد
+        //  (سنجهٔ ‎perf-compare‎: تعویضِ تم ۱۶۹ ⇒ ۸۲۷ms با ردیف‌های زندهٔ پنهان)
+        PumpYaqobi.App.Controls.ExcelGrid.ParkPendingNow();
         app ??= Avalonia.Application.Current;
         if (app is null) return;
         Current = t;

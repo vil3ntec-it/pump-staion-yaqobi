@@ -146,8 +146,9 @@ public class SiteMetricsTests
     {
         var w = MainWindow();
         Assert.Contains("SignOutCommand", w);
-        Assert.Contains("RoleText", w);
-        Assert.Contains("Classes=\"pill\"", w);
+        //  ⛔ نشانِ نقش («مدیر») به خواستهٔ صاحب ریپو برداشته شد (۱۴۰۵/۰۷/۲۲): «لازم نیست»
+        Assert.DoesNotContain("Binding RoleText", w);
+        Assert.Contains("Classes=\"pill-btn round\"", w);
     }
 
     /// <summary>

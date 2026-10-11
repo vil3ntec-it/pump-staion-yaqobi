@@ -234,12 +234,12 @@ public sealed class ShiftWaraqSyncService
     public Task<int>? FixOldSalesTask { get; private set; }
 
     /// <summary>روی نخِ دیگر، و یک بار در هر لحظه (دو ورودِ پشتِ سرِ هم دو بار نمی‌دوانند).</summary>
-    public Task<int> StartFixOldSales()
+    public Task<int> StartFixOldSales(TimeSpan after = default)
     {
         lock (this)
         {
             if (FixOldSalesTask is { IsCompleted: false } running) return running;
-            return FixOldSalesTask = Task.Run(() => FixOldSalesOnceAsync());
+            return FixOldSalesTask = StartDelay.After(after, () => FixOldSalesOnceAsync());
         }
     }
 
@@ -247,7 +247,16 @@ public sealed class ShiftWaraqSyncService
     public const int FixChunk = 25;
     public static TimeSpan FixPause { get; set; } = TimeSpan.FromMilliseconds(120);
 
+    /// <summary>کلیدِ همین کار در نشانِ «کارِ پس‌زمینه» (‎BackgroundWork‎).</summary>
+    public const string FixWorkKey = "fix-old-sales";
+
     public async Task<int> FixOldSalesOnceAsync(CancellationToken ct = default)
+    {
+        try { return await FixOldSalesCoreAsync(ct); }
+        finally { BackgroundWork.Clear(FixWorkKey); }
+    }
+
+    private async Task<int> FixOldSalesCoreAsync(CancellationToken ct)
     {
         try
         {
@@ -262,6 +271,8 @@ public sealed class ShiftWaraqSyncService
             //  بخشِ بازشده از نو ساخته می‌شد (سنجهٔ ‎years‎: زیربخش‌ها ۲ ثانیه به‌جای ۰٫۵).
             using var quiet = PumpYaqobi.Persistence.PumpDbContext.QuietSaves();
             var first = true;
+            var done = 0;
+            BackgroundWork.Set(FixWorkKey, "مرتب کردنِ فروشِ ورق‌های قدیم", 0, ids.Count);
             foreach (var chunk in ids.Chunk(FixChunk))
             {
                 if (!first) await Task.Delay(FixPause, ct);
@@ -277,6 +288,8 @@ public sealed class ShiftWaraqSyncService
                                    .ToListAsync(ct);
                 foreach (var w in list) await SyncSalesToSafeAsync(db, w, ct);
                 await db.SaveChangesAsync(ct);
+                done += chunk.Length;
+                BackgroundWork.Set(FixWorkKey, "مرتب کردنِ فروشِ ورق‌های قدیم", done, ids.Count);
             }
             await using (var db = _dbf.Create())
             {
@@ -289,6 +302,7 @@ public sealed class ShiftWaraqSyncService
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch
         {
+            BackgroundWork.Clear(FixWorkKey);
             //  تکه‌هایی که پیش از خطا نوشته شدند بی‌صدا نمانند (‎QuietSaves‎)
             PumpYaqobi.Persistence.PumpDbContext.Bump();
             return -1;   // بارِ بعد دوباره

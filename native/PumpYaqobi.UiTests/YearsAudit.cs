@@ -122,7 +122,16 @@ internal static class YearsAudit
         {
             var fx = Stopwatch.StartNew();
             var t = AppHost.Current.ShiftWaraqSync.FixOldSalesTask;
-            if (t is not null) Wait(win, t);
+            //  ⏳ نشانِ کارِ پس‌زمینه وسطِ همین کارِ واقعی چه می‌گوید (بندِ ۴ِ کندی‌ها)
+            if (t is not null)
+            {
+                var peek = DateTime.UtcNow.AddSeconds(3);
+                while (!t.IsCompleted && DateTime.UtcNow < peek) { Pump(win); Thread.Sleep(20); }
+                Console.WriteLine($"   نشانِ کارِ پس‌زمینه وسطِ کار: «{vm.BackgroundWorkText}»");
+                Wait(win, t);
+                Pump(win);
+                Console.WriteLine($"   و پس از پایان: «{vm.BackgroundWorkText}»");
+            }
             var idle = int.TryParse(Environment.GetEnvironmentVariable("PUMP_YEARS_IDLE"), out var ii) ? ii : 0;
             var until = DateTime.UtcNow.AddSeconds(idle);
             while (DateTime.UtcNow < until) { Pump(win); Thread.Sleep(20); }
@@ -253,7 +262,13 @@ internal static class YearsAudit
         {
             Wait(win, vm.GoAsync(hs)); Settle(win);
             foreach (var (k, l) in PumpYaqobi.Services.Data.HistoryService.Kinds)
+            {
+                //  جدا کردنِ «خواندنِ داده» از «ساختنِ صفحه» — تا کندی سرِ جای درستش گفته شود
+                var n = 0;
+                Mark("  تاریخچه (فقط داده): " + l, () => n = host.History.FeedAsync(k).GetAwaiter().GetResult().Count);
+                Console.WriteLine($"     ({n:N0} ردیف)");
                 Mark("تاریخچه: " + l, () => { Wait(win, hs.OpenAsync(k)); Settle(win); });
+            }
         }
 
         // ══ تم ═════════════════════════════════════════════════════════════

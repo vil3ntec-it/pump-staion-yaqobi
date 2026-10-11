@@ -262,6 +262,28 @@ public sealed partial class MainViewModel
     //  ⚠️ و هیچ تصمیمی این‌جا گرفته نمی‌شود: فقط ‎SyncEngine‎ خوانده می‌شود،
     //  که خودش از جوابِ واقعیِ سرور پر می‌شود.
 
+    // ══ ⏳ کارِ پس‌زمینه (۱۴۰۵/۰۷/۲۲) — همان ‎BackgroundWork.Text‎، روی نخِ رابط ══
+    [ObservableProperty] private string _backgroundWorkText = "";
+    public bool HasBackgroundWork => BackgroundWorkText.Length > 0;
+    partial void OnBackgroundWorkTextChanged(string value) => OnPropertyChanged(nameof(HasBackgroundWork));
+    private bool _bgWorkQueued;
+
+    private void WatchBackgroundWork()
+    {
+        PumpYaqobi.Services.Data.BackgroundWork.Changed += () =>
+        {
+            //  ⚡ رگبارِ گزارش‌ها یک کارِ رابط: فقط یک ‎Post‎ در صف
+            if (_bgWorkQueued) return;
+            _bgWorkQueued = true;
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                _bgWorkQueued = false;
+                BackgroundWorkText = PumpYaqobi.Services.Data.BackgroundWork.Text;
+            }, Avalonia.Threading.DispatcherPriority.Background);
+        };
+        BackgroundWorkText = PumpYaqobi.Services.Data.BackgroundWork.Text;
+    }
+
     [ObservableProperty] private string _syncDotBrushKey = "Pump.Muted";
     [ObservableProperty] private string _syncDotReason = "همگام‌سازی هنوز شروع نشده";
     [ObservableProperty] private string _syncDotText = "همگام‌سازی";

@@ -32,13 +32,15 @@ public class ProfilePillTests
         Assert.True(theme > 0, "دکمه‌های تم در سربرگ نیستند");
         Assert.DoesNotContain("ItemsSource=\"{Binding Themes}\"", xaml);
         Assert.True(pill > theme, "دکمهٔ پروفایل باید بعد از کادرِ تم بنشیند — «بغلِ تم»");
-        //  و پیش از نشانِ نقش، تا واقعاً کنارِ تم باشد نه تهِ ردیف
-        var role = xaml.IndexOf("Binding RoleText", StringComparison.Ordinal);
-        Assert.True(pill < role, "دکمهٔ پروفایل باید پیش از نشانِ نقش باشد");
+        //  و پیش از پشتیبانی، تا واقعاً کنارِ تم باشد نه تهِ ردیف (نشانِ نقش از ۱۴۰۵/۰۷/۲۲ برداشته شد)
+        var support = xaml.IndexOf("Name=\"SupportBtn\"", StringComparison.Ordinal);
+        Assert.True(pill < support, "دکمهٔ پروفایل باید پیش از پشتیبانی باشد");
 
         //  به بخشِ حساب می‌رود و همان لحظه VIP و روزهایش را می‌گوید
         Assert.Contains("CommandParameter=\"{Binding Account}\"", xaml);
-        Assert.Contains("Binding Account.PillText", xaml);
+        //  ⛔ دکمهٔ گرد (۱۴۰۵/۰۷/۲۲): متنِ «VIP · ۴۲ روز» در راهنما، روزها روی گوشه
+        Assert.Contains("Binding Account.PillTip", xaml);
+        Assert.Contains("Binding Account.PillBadge", xaml);
         Assert.Contains("Binding Account.VipActive", xaml);
     }
 

@@ -25,6 +25,19 @@ internal static class Program
     {
         var outDir = args.Length > 0 ? args[0] : "shots";
 
+        //  ⚡ مهلتِ پارکِ جدول‌ها (۱۴۰۵/۰۷/۲۲) در سنجه‌ها صفر است، تا هر سنجه‌ای که ردیفِ زنده
+        //  می‌شمارد همان رفتارِ پیشین را ببیند؛ فقط ‎idle‎ (خودِ مهلت را می‌سنجد) و ‎years‎
+        //  (سرعتِ برگشت با همان چیزی که کاربر دارد) مهلتِ واقعیِ برنامه را نگه می‌دارند.
+        if (!outDir.Equals("idle", StringComparison.OrdinalIgnoreCase)
+            && !outDir.Equals("years", StringComparison.OrdinalIgnoreCase))
+            PumpYaqobi.App.Controls.ExcelGrid.ParkGrace = TimeSpan.Zero;
+        //  ⚡ و کارهای پس از ورود بی مکث (‎StartDelay‎) — هر سنجه همان ترتیبِ پیشین را می‌بیند
+        if (Environment.GetEnvironmentVariable("PUMP_START_DELAY") != "1")
+            PumpYaqobi.Services.Data.StartDelay.Factor = 0;
+        //  عکسِ نمودار وسطِ انیمیشنِ «بالا آمدن» گرفته نشود (‎PUMP_ANIM=1‎ ⇒ همان رفتارِ برنامه)
+        if (Environment.GetEnvironmentVariable("PUMP_ANIM") != "1")
+            PumpYaqobi.App.Controls.SparkChart.AnimMs = 0;
+
         // ══ حلقهٔ همگام‌سازی در سنجه‌ها روشن نمی‌شود ═════════════════════════
         //
         // ⛔ هر سنجه‌ای که پنجره می‌سازد از راهِ `Lock.SignedIn` موتورِ
@@ -143,6 +156,8 @@ internal static class Program
         if (outDir.Equals("arrows", StringComparison.OrdinalIgnoreCase)) return ArrowNavProbe.Run();
         if (outDir.Equals("waraqadd", StringComparison.OrdinalIgnoreCase)) return WaraqAddProbe.Run(args.Length > 1 ? args[1] : null);
         if (outDir.Equals("tanks", StringComparison.OrdinalIgnoreCase)) return TanksProbe.Run(args.Length > 1 ? args[1] : null);
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- bgwork [پوشهٔ عکس]
+        if (outDir.Equals("bgwork", StringComparison.OrdinalIgnoreCase)) return BgWorkProbe.Run(args.Length > 1 ? args[1] : null);
         if (outDir.Equals("profit18", StringComparison.OrdinalIgnoreCase)) return Profit18Probe.Run(args.Length > 1 ? args[1] : null);
         if (outDir.Equals("staffshort", StringComparison.OrdinalIgnoreCase)) return StaffShortProbe.Run();
         if (outDir.Equals("backupview", StringComparison.OrdinalIgnoreCase)) return BackupViewProbe.Run();

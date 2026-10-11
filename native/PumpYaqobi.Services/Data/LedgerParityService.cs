@@ -242,12 +242,12 @@ public sealed class LedgerParityService
     public Task<int>? DailyTask { get; private set; }
 
     /// <summary>یک بار در روز برای هر دفتر، روی نخِ دیگر؛ دو صدا زدنِ هم‌زمان یکی می‌شوند.</summary>
-    public Task<int> StartDaily()
+    public Task<int> StartDaily(TimeSpan after = default)
     {
         lock (this)
         {
             if (DailyTask is { IsCompleted: false } running) return running;
-            return DailyTask = Task.Run(() => DailyOnceAsync());
+            return DailyTask = StartDelay.After(after, () => DailyOnceAsync());
         }
     }
 
@@ -258,8 +258,14 @@ public sealed class LedgerParityService
             var today = Shamsi.Today();
             await using (var db = _dbf.Create())
                 if (await db.Settings.AnyAsync(x => x.Key == DayKey && x.Value == today, ct)) return 0;
-            var fixedCount = (await CheckAsync(fix: true, ct)).Count
+            BackgroundWork.Set("parity", "سنجشِ برابریِ حساب‌ها");
+            int fixedCount;
+            try
+            {
+                fixedCount = (await CheckAsync(fix: true, ct)).Count
                            + await CheckDatesAsync(fix: true, ct);      //  شورا ج۶
+            }
+            finally { BackgroundWork.Clear("parity"); }
             await using (var db = _dbf.Create())
             {
                 var s = await db.Settings.FirstOrDefaultAsync(x => x.Key == DayKey, ct);

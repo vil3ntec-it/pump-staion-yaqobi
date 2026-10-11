@@ -258,6 +258,15 @@
               </Flyout>
             </Button.Flyout>
           </Button>
+          <!-- ⏳ کارِ پس‌زمینه (۱۴۰۵/۰۷/۲۲، بندِ ۴ِ کندی‌ها) — «برنامه الان چه می‌کند و چند درصد».
+               فقط وقتی کاری هست دیده می‌شود؛ متن از ‎BackgroundWork.Text‎. -->
+          <Border Name="BgWorkChip" IsVisible="{Binding HasBackgroundWork}" CornerRadius="9" Padding="10,3"
+                  Margin="6,0,0,0" VerticalAlignment="Center"
+                  Background="{DynamicResource Pump.Panel}" BorderBrush="{DynamicResource Pump.ChromeBorder}" BorderThickness="1"
+                  ToolTip.Tip="کارِ پس‌زمینهٔ خودِ برنامه — داده‌ای پاک نمی‌شود؛ تمام که شد این نشان می‌رود">
+            <TextBlock Text="{Binding BackgroundWorkText}" FontSize="12" FontWeight="SemiBold" MaxWidth="320"
+                       TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Pump.Ink.Info}" />
+          </Border>
         </StackPanel>
 
         <TextBlock Grid.Column="1" Text="{Binding Current.Title}"
@@ -324,51 +333,50 @@
                بالای صفحه بغلِ تم بگذار به اسمِ پروفایل که آن‌جا هم بتواند
                لاگین با جیمیل را انجام بدهد و هم VIP و مدتش را ببیند.» متنش
                همین‌جا می‌گوید: «VIP · ۴۲ روز» یا «پروفایل». -->
-          <Button Classes="pill-btn profile" Padding="13,4"
-                  Command="{Binding GoCommand}" CommandParameter="{Binding Account}"
-                  ToolTip.Tip="پروفایل: حساب، اشتراک و کدِ اپِ گوشی">
-            <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
-              <TextBlock Text="👤" FontSize="13" VerticalAlignment="Center" />
-              <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="{Binding Account.PillText}" FontSize="12.5" FontWeight="ExtraBold"
-                           Foreground="White" TextWrapping="NoWrap" />
-                <TextBlock Text="{Binding Account.PillSub}" FontSize="9.5" FontWeight="SemiBold"
-                           Foreground="White" Opacity="0.85" TextWrapping="NoWrap"
-                           IsVisible="{Binding Account.PillSub, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-              </StackPanel>
-              <Border Classes="pill" Background="#FFD700" Padding="6,0" IsVisible="{Binding Account.VipActive}">
-                <TextBlock Text="فعال" FontSize="10" FontWeight="Black" Foreground="#1a1a1a" />
-              </Border>
-            </StackPanel>
+          <!-- ══ چهار دکمهٔ گرد با آیکونِ پُر (۱۴۰۵/۰۷/۲۲) — «همه را دایره‌ای کن و آیکون بساز». نشانِ
+               نقش («مدیر») به خواستهٔ صاحب ریپو برداشته شد: «لازم نیست». همان
+               فرمان‌ها و همان رنگ‌ها؛ نامِ هر کدام در ‎ToolTip‎. پروفایل روزهای اشتراک را روی
+               گوشه می‌گوید (‎PillBadge‎) و حلقهٔ طلایی یعنی اشتراکِ فعال (‎Account.VipActive‎). -->
+          <Panel>
+            <Button Classes="pill-btn profile" Classes.round="True" Name="ProfileBtn"
+                    Command="{Binding GoCommand}" CommandParameter="{Binding Account}"
+                    ToolTip.Tip="{Binding Account.PillTip}">
+              <!-- 👤 شخص -->
+              <Path Classes="hicon" Data="M12,12 C14.21,12 16,10.21 16,8 C16,5.79 14.21,4 12,4 C9.79,4 8,5.79 8,8 C8,10.21 9.79,12 12,12 Z M12,14 C9.33,14 4,15.34 4,18 L4,20 L20,20 L20,18 C20,15.34 14.67,14 12,14 Z" />
+            </Button>
+            <!-- حلقهٔ طلایی ⇒ اشتراکِ فعال؛ عددِ گوشه ⇒ روزهای مانده — بیرونِ دکمه تا بریده نشود -->
+            <Border Classes="round" BorderBrush="#FFD700" BorderThickness="2.5" IsHitTestVisible="False"
+                    IsVisible="{Binding Account.VipActive}" />
+            <Border Classes="hbadge" Background="#FFD700" IsHitTestVisible="False"
+                    IsVisible="{Binding Account.PillBadge, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+              <TextBlock Text="{Binding Account.PillBadge}" Foreground="#1a1a1a" />
+            </Border>
+          </Panel>
+
+
+          <!-- 💬 پشتیبانی — پیام‌های مشتری‌های کیو‌آر؛ نخوانده روی گوشه -->
+          <Panel>
+            <Button Classes="pill-btn support round" Name="SupportBtn"
+                    Command="{Binding GoCommand}" CommandParameter="{Binding Chat}"
+                    ToolTip.Tip="پشتیبانی — پیام‌رسانِ مشتری‌ها">
+              <Path Classes="hicon" Data="M20,2 L4,2 C2.9,2 2.01,2.9 2.01,4 L2,22 L6,18 L20,18 C21.1,18 22,17.1 22,16 L22,4 C22,2.9 21.1,2 20,2 Z M6,9 L18,9 L18,11 L6,11 Z M14,14 L6,14 L6,12 L14,12 Z M18,8 L6,8 L6,6 L18,6 Z" />
+            </Button>
+            <Border Classes="hbadge" Background="White" IsHitTestVisible="False" IsVisible="{Binding Chat.HasSupportUnread}">
+              <TextBlock Text="{Binding Chat.SupportUnread}" Foreground="{DynamicResource Pump.Ink.Danger}" />
+            </Border>
+          </Panel>
+
+          <!-- 🧮 ماشین‌حسابِ شناور — هر جای برنامه، با همین دکمه یا ‎Ctrl+K‎ -->
+          <Button Classes="pill-btn round" Name="CalcBtn" Command="{Binding Calculator.ToggleCommand}"
+                  ToolTip.Tip="ماشین‌حساب (Ctrl+K)">
+            <Path Classes="hicon" Data="M19,3 L5,3 C3.9,3 3,3.9 3,5 L3,19 C3,20.1 3.9,21 5,21 L19,21 C20.1,21 21,20.1 21,19 L21,5 C21,3.9 20.1,3 19,3 Z M6,7.25 L11,7.25 L11,8.75 L6,8.75 Z M11.5,16 L9.5,16 L9.5,18 L8,18 L8,16 L6,16 L6,14.5 L8,14.5 L8,12.5 L9.5,12.5 L9.5,14.5 L11.5,14.5 Z M18,17.25 L13,17.25 L13,15.75 L18,15.75 Z M18,14.75 L13,14.75 L13,13.25 L18,13.25 Z M14.09,6 L15.5,7.41 L16.91,6 L17.97,7.06 L16.56,8.47 L17.97,9.88 L16.91,10.94 L15.5,9.53 L14.09,10.94 L13.03,9.88 L14.44,8.47 L13.03,7.06 Z" />
           </Button>
 
-          <!-- نشانِ نقش و دکمهٔ قفل — کپسولی، مثلِ نسخهٔ وب.
-               «قفل» به همان ‎SignOut‎ی وصل است که تا امروز ساخته شده بود ولی
-               هیچ دکمه‌ای صدایش نمی‌زد. -->
-          <Border Classes="pill" Background="{Binding RoleBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
-                  Padding="11,5">
-            <TextBlock Text="{Binding RoleText}" FontSize="12.5" FontWeight="ExtraBold" Foreground="White" />
-          </Border>
-          <!-- 💬 پشتیبانی — پیام‌های مشتری‌های کیو‌آر، همیشه جلوی چشم (خواستهٔ
-               صاحب ریپو: «چتِ بخشِ پمپ رو ببرن بالا جای قفل و غیره»). با
-               نخوانده، شماره می‌گیرد. -->
-          <Button Classes="pill-btn support" FontSize="12.5" FontWeight="ExtraBold" Padding="13,5"
-                  Command="{Binding GoCommand}" CommandParameter="{Binding Chat}"
-                  ToolTip.Tip="پیام‌رسان و پشتیبانیِ مشتری‌ها">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <TextBlock Text="💬 پشتیبانی" FontSize="12.5" FontWeight="ExtraBold" Foreground="White" />
-              <Border Classes="pill" Background="White" Padding="6,0" IsVisible="{Binding Chat.HasSupportUnread}">
-                <TextBlock Text="{Binding Chat.SupportUnread}" FontSize="11" FontWeight="ExtraBold"
-                           Foreground="{DynamicResource Pump.Ink.Danger}" />
-              </Border>
-            </StackPanel>
+          <!-- 🔒 قفل — همان ‎SignOut‎ -->
+          <Button Classes="pill-btn round" Name="LockBtn" Command="{Binding SignOutCommand}"
+                  ToolTip.Tip="قفلِ برنامه — دوباره رمز می‌خواهد">
+            <Path Classes="hicon" Data="M18,8 L17,8 L17,6 C17,3.24 14.76,1 12,1 C9.24,1 7,3.24 7,6 L7,8 L6,8 C4.9,8 4,8.9 4,10 L4,20 C4,21.1 4.9,22 6,22 L18,22 C19.1,22 20,21.1 20,20 L20,10 C20,8.9 19.1,8 18,8 Z M12,17 C10.9,17 10,16.1 10,15 C10,13.9 10.9,13 12,13 C13.1,13 14,13.9 14,15 C14,16.1 13.1,17 12,17 Z M15.1,8 L8.9,8 L8.9,6 C8.9,4.29 10.29,2.9 12,2.9 C13.71,2.9 15.1,4.29 15.1,6 Z" />
           </Button>
-          <!-- ماشین‌حسابِ شناور — هر جای برنامه، با همین دکمه یا ‎Ctrl+K‎ -->
-          <Button Classes="pill-btn" Content="ماشین‌حساب" FontSize="12.5" FontWeight="ExtraBold"
-                  Padding="13,5" Command="{Binding Calculator.ToggleCommand}"
-                  ToolTip.Tip="ماشین‌حساب (Ctrl+K)" />
-          <Button Classes="pill-btn" Content="قفل" FontSize="12.5" FontWeight="ExtraBold"
-                  Padding="13,5" Command="{Binding SignOutCommand}" />
         </StackPanel>
       </Grid>
     </Border>

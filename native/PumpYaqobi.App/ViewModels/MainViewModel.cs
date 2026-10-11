@@ -1,3 +1,4 @@
+using PumpYaqobi.Services.Data;
 using Avalonia.Controls;
 using System.Collections.ObjectModel;
 using Avalonia.Threading;
@@ -79,6 +80,7 @@ public sealed partial class MainViewModel : ObservableObject
         //   ۱) پیش از ورود هیچ اجازه‌ای نداریم و لایهٔ سرویس درست هم رد می‌کند.
         //   ۲) وقتی در سازنده بار می‌شد، عددهای نوارِ بالا و داشبورد روی همان
         //      لحظهٔ صفرِ پیش از ورود می‌ماندند و کاربر «۰ افغانی» می‌دید.
+        WatchBackgroundWork();
         Lock.SignedIn += () =>
         {
             // ⚠️ ترتیب مهم است: اول بخشِ آغازین بار می‌شود، بعد پرده کنار
@@ -101,7 +103,9 @@ public sealed partial class MainViewModel : ObservableObject
             //  ⛔ «فروش ورق»های قدیمیِ گاوصندوق منهای قرض (یک بار برای هر دفتر، ۱۴۰۵/۰۷/۱۸) —
             //  پیش از نگهبانِ یک‌بارمصرف، چون دفترِ تازه (حسابِ دیگر) مهرِ خودش را می‌خواهد.
             //  ⛔ ۱۴۰۵/۰۷/۲۰ (مهرِ v2): «منهای قرض و مصرف» — و گفته می‌شود که شد، نه بی‌صدا.
-            _ = AppHost.Current.ShiftWaraqSync.StartFixOldSales().ContinueWith(t =>
+            //  ⚡ کندی ۲ (۱۴۰۵/۰۷/۲۲): کارهای سنگینِ پس از ورود پشتِ سرِ هم و پس از صفحهٔ اول —
+            //  فروشِ ورق‌ها ۵ث · سلامتِ دفتر ۸ث · سنجهٔ برابری ۱۲ث · عکسِ روزانه ۱۶ث (‎StartDelay‎).
+            _ = AppHost.Current.ShiftWaraqSync.StartFixOldSales(StartDelay.Seconds(5)).ContinueWith(t =>
             {
                 if (t.IsCompletedSuccessfully && t.Result > 0)
                     Avalonia.Threading.Dispatcher.UIThread.Post(() => AppHost.Current.Toast(
@@ -112,7 +116,7 @@ public sealed partial class MainViewModel : ObservableObject
             //  فقط گزارش، روی نخِ دیگر، یک بار برای هر دفتر
             _ = ReportLedgerHealthAsync();
             //  ⛔ شورا، الف۳: عددهای مشتقِ ذخیره‌شده با ردیف‌ها — روزی یک بار برای هر دفتر
-            _ = AppHost.Current.Parity.StartDaily();
+            _ = AppHost.Current.Parity.StartDaily(StartDelay.Seconds(12));
 
             if (_afterSignIn) return;
             _afterSignIn = true;
@@ -124,8 +128,10 @@ public sealed partial class MainViewModel : ObservableObject
             // بیرون نمی‌دهد — بکاپِ خودکار نباید ورودِ کاربر را بشکند.
             //  ⛔ شورا ب۵: و ماهی یک بار همان عکس در پوشهٔ موقت باز و با دفتر سنجیده می‌شود
             //  (پشتِ سرِ عکس، نه هم‌زمان با آن). سرخ شد ⇒ یک توست، و نتیجه در پروفایل.
-            _ = Task.Run(() =>
+            _ = Task.Run(async () =>
             {
+                var wait = StartDelay.Seconds(16);
+                if (wait > TimeSpan.Zero) await Task.Delay(wait);
                 AppHost.Current.Backup.SnapshotToday();
                 if (RestoreDrillDisabled) return;
                 var d = AppHost.Current.Drill.MonthlyOnce();
