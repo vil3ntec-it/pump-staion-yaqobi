@@ -117,12 +117,11 @@ public sealed class DashboardService
     private sealed record Made(List<DashBucket> Buckets, Func<(int Y, int M, int D), int> Assign,
                                (int Y, int M, int D) Today, int Slot);
 
-    private Made MakeBuckets(DashRange range, bool todayLast = false)
+    private Made MakeBuckets(DashRange range)
     {
         var today = ParseDate(Shamsi.Of(_now()));
         var n = Cols(range);
-        //  ‎todayLast‎: «امروز» آخرین خانه — فقط گذشته، بی فردا و پس‌فردا (خطِ روندِ داشبورد، ۱۴۰۵/۰۷/۲۲)
-        var slot = todayLast ? n - 1 : TodaySlot(range, n);
+        var slot = TodaySlot(range, n);
         int oFirst = -slot - 1, oLast = n - 1 - slot;   // اندیس ۰ فقط پایهٔ رشد است
         int At(int o) => o - oFirst;
 
@@ -211,9 +210,9 @@ public sealed class DashboardService
     }
 
     /// <summary>‎_dashSeries()‎ — یک منبعِ دادهٔ مشترک برای همهٔ کارت‌ها و نمودارها.</summary>
-    public DashSeries Series(DashRange range, DashInput db, bool todayLast = false)
+    public DashSeries Series(DashRange range, DashInput db)
     {
-        var mk = MakeBuckets(range, todayLast);
+        var mk = MakeBuckets(range);
         var b = mk.Buckets;
 
         foreach (var r in db.Reports)

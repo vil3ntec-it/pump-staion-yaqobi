@@ -258,8 +258,7 @@ public class ScrollWeightTests : IDisposable
         //  ⛔ ۱۴۰۵/۰۷/۲۰: فایده از ورق‌ها و ضررِ نرخ از فاکتورهای در صف — هر دو
         //  همچنان فقط ستون‌های لازم (‎SalesLinesAsync‎ · ‎PendingRatesAsync‎)، نه ردیفِ کامل.
         Assert.Contains("SalesLinesAsync(", profit);
-        //  ۱۴۰۵/۰۷/۲۲: نمودارِ مفاد روز به روز ⇒ همان دو ستون (تاریخ و مبلغ)، نه ردیفِ کامل
-        Assert.Contains("SelectAsync(e => new DatedAmount(e.DateKey, e.Amount))", profit);
+        Assert.Contains("SumAsync(e => e.Amount)", profit);
         Assert.Contains("PendingRatesAsync()", profit);
         Assert.DoesNotContain("WaraqData.ListAsync(", profit);
 

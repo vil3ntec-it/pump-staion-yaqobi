@@ -83,8 +83,48 @@ public class SparkChart : Control
     //  نمی‌رود و عدد را دروغ نمی‌کند)، سطحِ گرادیانیِ هر دو خط، خط‌کشِ نقطه‌چینِ
     //  کم‌رنگ، نقطه‌های حلقه‌ای، و با بردنِ ماوس روی نمودار یک خطِ راهنما و حبابِ
     //  عدد. ⛔ هیچ عددی این‌جا ساخته نمی‌شود — فقط همان ‎Values‎ کشیده می‌شود.
-    //  ⚡ کشیدن فقط با تغییرِ داده یا جای ماوس؛ هیچ زمان‌سنج یا انیمیشنی نیست.
+    //  ⚡ کشیدن فقط با تغییرِ داده یا جای ماوس؛ هیچ زمان‌سنجی نیست (انیمیشنِ نیم‌ثانیه‌ایِ پایین).
     private int _hover = -1;
+
+    // ══ انیمیشنِ سبک (۱۴۰۵/۰۷/۲۲) ════════════════════════════════════════════
+    //  صاحب ریپو: «منطق‌شان را دست نزن؛ شکل را حرفه‌ای‌تر و جذاب‌تر کن و یک انیمیشن بده که
+    //  سنگین نباشد.» ⇒ فقط وقتی داده عوض می‌شود، نمودار در ‎AnimMs‎ از خطِ پایه بالا می‌آید
+    //  (‎ease-out‎). ⚡ نه زمان‌سنج، نه حلقهٔ همیشگی: ‎RequestAnimationFrame‎ فقط تا پایانِ همان
+    //  نیم ثانیه فریم می‌خواهد و بعد هیچ هزینه‌ای ندارد. ⛔ هیچ عددی عوض نمی‌شود — فقط ارتفاعِ
+    //  کشیدن در همان لحظه ضرب در ‎_grow‎ است و در پایان دقیقاً ۱.
+    /// <summary>مدتِ بالا آمدن؛ ‎0‎ ⇒ بی انیمیشن (سنجه‌های تصویری).</summary>
+    public static double AnimMs { get; set; } = 550;
+    private double _grow = 1;
+    private TimeSpan? _animStart;
+    private bool _animRunning;
+
+    /// <summary>‎ease-out cubic‎ — تند شروع، نرم تمام؛ ‎t ≥ 1 ⇒ 1‎.</summary>
+    public static double Ease(double t) => t >= 1 ? 1 : t <= 0 ? 0 : 1 - Math.Pow(1 - t, 3);
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == ValuesProperty || change.Property == SecondValuesProperty) StartGrow();
+    }
+
+    private void StartGrow()
+    {
+        if (AnimMs <= 0 || TopLevel.GetTopLevel(this) is not { } top) { _grow = 1; return; }
+        _grow = 0;
+        _animStart = null;
+        if (_animRunning) return;
+        _animRunning = true;
+        top.RequestAnimationFrame(Tick);
+    }
+
+    private void Tick(TimeSpan now)
+    {
+        _animStart ??= now;
+        _grow = Ease((now - _animStart.Value).TotalMilliseconds / AnimMs);
+        InvalidateVisual();
+        if (_grow < 1 && TopLevel.GetTopLevel(this) is { } top) top.RequestAnimationFrame(Tick);
+        else { _grow = 1; _animRunning = false; }
+    }
 
     protected override void OnPointerMoved(Avalonia.Input.PointerEventArgs e)
     {
@@ -133,23 +173,11 @@ public class SparkChart : Control
         var vmax = 1.0;
         if (vals is not null) vmax = Math.Max(vmax, vals.Max());
         if (second is { Count: > 0 }) vmax = Math.Max(vmax, second.Max());
-        //  ⛔ (۱۴۰۵/۰۷/۲۲) روزِ ضرر زیرِ صفر کشیده می‌شود، نه روی صفر — نمودارِ مفاد/ضرر.
-        //  گامِ خط‌کش گرد است و صفر همیشه روی یک خط‌کش می‌افتد. بی عددِ منفی همه‌چیز مثلِ پیش.
-        var vmin = 0.0;
-        if (vals is { Count: > 0 }) vmin = Math.Min(vmin, vals.Min());
-        if (second is { Count: > 0 }) vmin = Math.Min(vmin, second.Min());
-        double tick;
-        if (vmin < 0)
-        {
-            tick = Nice((vmax - vmin) / 4);
-            vmax = Math.Max(tick, Math.Ceiling(vmax / tick) * tick);
-            vmin = Math.Floor(vmin / tick) * tick;
-        }
-        else { vmax = Nice(vmax); tick = vmax / 4; }
+        vmax = Nice(vmax);
 
         double X(int i) => left + i / (double)(n - 1) * (right - left);
-        double Y(double v) => bottom - (Math.Max(vmin, v) - vmin) / (vmax - vmin) * (bottom - top);
-        var zeroY = Y(0);
+        var grow = _grow;
+        double Y(double v) => bottom - Math.Max(0, v) * grow / vmax * (bottom - top);
 
         var grid = GridBrush ?? Brushes.Gray;
         var line = LineBrush ?? Brushes.Teal;
@@ -159,20 +187,17 @@ public class SparkChart : Control
         var basePen = new Pen(grid, 1.2);
 
         // ── خط‌کش‌های افقیِ نقطه‌چین و عددهایشان ──
-        var vabs = Math.Max(vmax, -vmin);
-        var unitDiv = vabs >= 1e6 ? 1e6 : vabs >= 1000 ? 1000 : 1;
-        var unitTxt = vabs >= 1e6 ? "میلیون" : vabs >= 1000 ? "هزار" : "";
-        var lines = (int)Math.Round((vmax - vmin) / tick);
-        for (var g = 0; g <= lines; g++)
+        var unitDiv = vmax >= 1e6 ? 1e6 : vmax >= 1000 ? 1000 : 1;
+        var unitTxt = vmax >= 1e6 ? "میلیون" : vmax >= 1000 ? "هزار" : "";
+        for (var g = 0; g <= 4; g++)
         {
-            var v = vmax - tick * g;
+            var v = vmax * (1 - g / 4.0);
             var y = Y(v);
-            ctx.DrawLine(g == lines || Math.Abs(v) < tick / 1000 ? basePen : gridPen, new Point(left, y), new Point(right, y));
+            ctx.DrawLine(g == 4 ? basePen : gridPen, new Point(left, y), new Point(right, y));
             if (!ShowAxis) continue;
             var x = v / unitDiv;
-            var txt = (Math.Abs(x) >= 10 || x == 0 ? Math.Round(x) : Math.Round(x * 10) / 10)
+            var txt = (x >= 10 || x == 0 ? Math.Round(x) : Math.Round(x * 10) / 10)
                       .ToString(System.Globalization.CultureInfo.InvariantCulture);
-            if (txt.StartsWith('-')) txt = "\u200E" + txt;   //  منفی سمتِ چپِ عدد بماند
             //  ⛔ جعبهٔ ۵۰ پیکسلی **پیش از** ‎left‎ می‌نشیند (در حاشیهٔ چپ)؛ تا
             //  امروز از ‎left−6‎ شروع می‌شد و عدد ۴۴ پیکسل داخلِ نمودار روی خط‌ها
             //  و نقطهٔ اول می‌افتاد.
@@ -185,14 +210,23 @@ public class SparkChart : Control
         if (second is { Count: > 1 })
         {
             var p2 = Points(second, X, Y);
-            Area(ctx, p2, zeroY, line2, vals is null ? 0.30 : 0.16);
-            ctx.DrawGeometry(null, new Pen(line2, 2.4, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round), Smooth(p2));
+            Area(ctx, p2, bottom, line2, vals is null ? 0.34 : 0.18);
+            var g2 = Smooth(p2);
+            ctx.DrawGeometry(null, new Pen(new SolidColorBrush(WithAlpha(line2, 0.16)), 7, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round), g2);
+            ctx.DrawGeometry(null, new Pen(line2, 2.4, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round), g2);
         }
         if (vals is not null)
         {
             var p1 = Points(vals, X, Y);
-            Area(ctx, p1, zeroY, line, 0.32);
-            ctx.DrawGeometry(null, new Pen(line, 2.8, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round), Smooth(p1));
+            Area(ctx, p1, bottom, line, 0.40);
+            //  هالهٔ نرمِ زیرِ خط — همان رنگ، پهن و کم‌رنگ؛ خط برجسته و «شیشه‌ای» دیده می‌شود
+            var g1 = Smooth(p1);
+            ctx.DrawGeometry(null, new Pen(new SolidColorBrush(WithAlpha(line, 0.18)), 8, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round), g1);
+            ctx.DrawGeometry(null, new Pen(line, 2.8, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round), g1);
+            //  نقطهٔ امروز (چپ‌ترین) — حلقهٔ سفید با هاله، تا چشم بداند خط از کجا می‌آید
+            var head = p1[0];
+            ctx.DrawEllipse(new SolidColorBrush(WithAlpha(line, 0.20)), null, head, 9, 9);
+            ctx.DrawEllipse(Brushes.White, new Pen(line, 2.6), head, 4.4, 4.4);
         }
 
         // ── برچسبِ زیرِ محور، کم‌پشت وقتی جا تنگ است ──
@@ -272,7 +306,8 @@ public class SparkChart : Control
             GradientStops =
             {
                 new GradientStop(WithAlpha(line, alpha), 0),
-                new GradientStop(WithAlpha(line, alpha * 0.35), 0.6),
+                new GradientStop(WithAlpha(line, alpha * 0.45), 0.45),
+                new GradientStop(WithAlpha(line, alpha * 0.12), 0.8),
                 new GradientStop(WithAlpha(line, 0.0), 1),
             },
         };

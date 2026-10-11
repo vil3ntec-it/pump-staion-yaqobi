@@ -589,15 +589,10 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
         ChartSub = DashboardService.FuelWord(Fuel) + " — روی هر ستون کلیک کنید تا جزئیات و رشد همان بازه بیاید";
         AreaSub = "فروش تیل (لیتر) " + bucketWord + " — " + DashboardService.FuelWord(Fuel) + " · روی هر نقطه بزنید";
 
-        //  ⛔ خطِ روند فقط روزهای واقعی (۱۴۰۵/۰۷/۲۲) — گزارشِ صاحب ریپو: «شکلِ چارت داغون است و از
-        //  یک کنج به کنجِ دیگرش وصل نمی‌شود.» نوارِ ستونی خانهٔ «امروز» را می‌چرخاند، پس فردا و پس‌فردا
-        //  صفر بودند و خط وسطِ کار به کف سقوط می‌کرد. حالا همان بازه‌ها ولی از امروز به عقب: امروز اول
-        //  (چپ‌ترین — همان خواستهٔ پیشینِ «امروز باید اول باشد») و خط سراسرِ نمودار. همان عددها.
-        var trend = _calc.Series(Range, _db, todayLast: true).Buckets.Skip(1).Reverse().ToList();
-        AreaValues = trend.Select(b => (double)Math.Max(0, DashboardService.Pick(b, Fuel).Liters)).ToList();
-        AreaLabels = trend.Select(b => b.Label).ToList();
-        TrendProfit = trend.Select(b => (double)Math.Max(0, DashboardService.Pick(b, Fuel).Profit)).ToList();
-        TrendExpense = trend.Select(b => (double)Math.Max(0, b.Exp)).ToList();
+        AreaValues = _disp.Select(b => (double)Math.Max(0, DashboardService.Pick(b, Fuel).Liters)).ToList();
+        AreaLabels = _disp.Select(b => b.Label).ToList();
+        TrendProfit = _disp.Select(b => (double)Math.Max(0, DashboardService.Pick(b, Fuel).Profit)).ToList();
+        TrendExpense = _disp.Select(b => (double)Math.Max(0, b.Exp)).ToList();
     }
 
     private DashTank PetrolTank => DashboardService.Tank(FuelType.Petrol, _petrolStock,

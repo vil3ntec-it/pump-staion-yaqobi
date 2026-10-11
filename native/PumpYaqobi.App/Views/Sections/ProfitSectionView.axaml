@@ -222,16 +222,9 @@
                            Foreground="{Binding TrendBrushShown, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
                 <TextBlock Grid.Row="1" Text="{Binding NetCaptionShown}" FontSize="13" Margin="0,4,0,0"
                            Foreground="{Binding TrendBrushShown, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
-                <!-- ⛔ (۱۴۰۵/۰۷/۲۲) مفادِ خالصِ واقعیِ هر روز (دورهٔ بلند: هر ماه)، با محور و تاریخ، از این
-                     کنج تا آن کنج — نه سیزده عددِ تزئینیِ ثابت. روزِ ضرر زیرِ صفر. ‎ProfitTrend.Build‎ -->
-                <TextBlock Grid.Row="2" Text="در این دوره هنوز فروش یا مصرفی ثبت نشده" FontSize="12.5"
-                           HorizontalAlignment="Center" Margin="0,24" Foreground="{DynamicResource Pump.Muted}"
-                           IsVisible="{Binding !HasTrend}" />
-                <c:SparkChart x:Name="NetChart" Grid.Row="2" ShowAxis="True" FlowDirection="LeftToRight" MinHeight="170"
-                              Margin="0,10,0,0" Unit="افغانی" FirstName="مفادِ خالص"
-                              IsVisible="{Binding HasTrend}"
-                              Values="{Binding TrendShown}" Labels="{Binding TrendLabels}"
-                              LabelBrush="{DynamicResource Pump.Muted}"
+                <c:SparkChart x:Name="NetChart" Grid.Row="2" ShowAxis="False" FlowDirection="LeftToRight" MinHeight="120"
+                              Margin="0,10,0,0"
+                              Values="{Binding TrendShown}"
                               LineBrush="{Binding TrendBrushShown, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}"
                               GridBrush="{DynamicResource Pump.GridLine}" />
               </Grid>

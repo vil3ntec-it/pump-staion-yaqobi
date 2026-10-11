@@ -34,6 +34,9 @@ internal static class Program
         //  ⚡ و کارهای پس از ورود بی مکث (‎StartDelay‎) — هر سنجه همان ترتیبِ پیشین را می‌بیند
         if (Environment.GetEnvironmentVariable("PUMP_START_DELAY") != "1")
             PumpYaqobi.Services.Data.StartDelay.Factor = 0;
+        //  عکسِ نمودار وسطِ انیمیشنِ «بالا آمدن» گرفته نشود (‎PUMP_ANIM=1‎ ⇒ همان رفتارِ برنامه)
+        if (Environment.GetEnvironmentVariable("PUMP_ANIM") != "1")
+            PumpYaqobi.App.Controls.SparkChart.AnimMs = 0;
 
         // ══ حلقهٔ همگام‌سازی در سنجه‌ها روشن نمی‌شود ═════════════════════════
         //
