@@ -111,6 +111,7 @@ jobs:
           OFFLINE_PUBLIC_KEYS: ${{ vars.OFFLINE_PUBLIC_KEYS }}
           DEFAULT_UPDATE_PUBLIC_KEY: ${{ env.DEFAULT_UPDATE_PUBLIC_KEY }}
           HAS_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY != '' }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           $lk = ("$env:LICENSE_PUBLIC_KEYS" -replace '[;,\s]+', '|').Trim('|')
           $uk = ("$env:UPDATE_PUBLIC_KEY").Trim()
@@ -130,10 +131,37 @@ jobs:
           #  نمی‌شود (برنامه همین را راست می‌گوید).
           $ok = ("$env:OFFLINE_PUBLIC_KEYS" -replace '[;,\s]+', '|').Trim('|')
           if (-not $ok) {
+            #  ⛔ ۳.۱.۲۷۰: یک بار ۵۳۰ از سرورِ حساب کلِ انتشار را ایستاند ⇒ پنج بار، با فاصله.
+            foreach ($try in 1..5) {
+              try {
+                $pk = (Invoke-RestMethod -Uri 'https://api.vill3n.top/api/license/public-key' -TimeoutSec 20).publicKey
+                if ($pk -match '^[A-Za-z0-9+/]{80,200}={0,2}$') { $ok = $pk; break } else { Write-Host "::warning::کلیدِ سرورِ حساب شکلِ درستی نداشت" }
+              } catch { Write-Host "::warning::کلیدِ سرورِ حساب گرفته نشد (بارِ $try): $($_.Exception.Message)" }
+              if ($try -lt 5) { Start-Sleep -Seconds 20 }
+            }
+          }
+          if (-not $ok) {
+            #  ⛔ سرورِ حساب در دسترس نیست ⇒ همان کلیدی که نسخهٔ منتشرشدهٔ پیشین داخلِ خودش دارد
+            #  (‎AssemblyMetadata("OfflineKeys")‎ِ ‎PumpYaqobi.App.dll‎). کلیدِ عمومی است، راز نیست؛
+            #  و چون از انتشارِ خودِ همین مخزن می‌آید، ریشهٔ اعتماد عوض نمی‌شود.
             try {
-              $pk = (Invoke-RestMethod -Uri 'https://api.vill3n.top/api/license/public-key' -TimeoutSec 20).publicKey
-              if ($pk -match '^[A-Za-z0-9+/]{80,200}={0,2}$') { $ok = $pk } else { Write-Host "::warning::کلیدِ سرورِ حساب شکلِ درستی نداشت" }
-            } catch { Write-Host "::warning::کلیدِ سرورِ حساب گرفته نشد — کدِ آفلاین فقط با کلیدِ TOFU سنجیده می‌شود: $($_.Exception.Message)" }
+              $prev = Join-Path $env:RUNNER_TEMP 'prev-release'
+              New-Item -ItemType Directory -Force $prev | Out-Null
+              gh release download --repo $env:GITHUB_REPOSITORY --pattern 'PumpYaqobi-app-*.zip' -D $prev --clobber
+              foreach ($z in Get-ChildItem $prev -Filter '*.zip') {
+                $x = Join-Path $prev $z.BaseName
+                Expand-Archive $z.FullName -DestinationPath $x -Force
+                $dll = Get-ChildItem $x -Recurse -Filter 'PumpYaqobi.App.dll' | Select-Object -First 1
+                if (-not $dll) { continue }
+                #  ⚠️ بستهٔ ۳۲بیتی در این فرآیندِ ۶۴بیتی بار نمی‌شود — همان را رد کن، نه همه را
+                try {
+                  $meta = [System.Reflection.Assembly]::LoadFile($dll.FullName).GetCustomAttributesData() |
+                    Where-Object { $_.AttributeType.Name -eq 'AssemblyMetadataAttribute' -and $_.ConstructorArguments[0].Value -eq 'OfflineKeys' }
+                  $v = "$($meta.ConstructorArguments[1].Value)".Trim()
+                } catch { continue }
+                if ($v -match '^[A-Za-z0-9+/]{80,200}={0,2}$') { $ok = $v; Write-Host "::warning::کلید از نسخهٔ منتشرشدهٔ پیشین برداشته شد"; break }
+              }
+            } catch { Write-Host "::warning::کلیدِ نسخهٔ پیشین هم خوانده نشد: $($_.Exception.Message)" }
           }
           if ($ok) { $trust += "-p:OfflineKeys=$ok"; Write-Host "کلیدِ کدِ آفلاین: $($ok.Substring(0, [Math]::Min(40, $ok.Length)))…" }
           # ── ریشهٔ اعتمادِ مجوز (‎CloudConfig.LicenseKeys‎) — هرگز خالی ─────────
