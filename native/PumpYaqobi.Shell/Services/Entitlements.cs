@@ -172,8 +172,10 @@ public static class Entitlements
     public static bool Unlocked { get; set; } = UnlockedForNow;
 
     /// <summary>حالا — تزریق‌پذیر تا آزمون بتواند زمان را جلو ببرد.</summary>
-    public static Func<long> Now { get; set; } =
-        () => AppClock.UnixMs;
+    public static Func<long> Now { get; set; } = RealNow;
+
+    /// <summary>ساعتِ واقعی — برای شناختنِ «ساعتِ ساختگیِ آزمون» (‎LicenseClock‎ کفِ پنهان را فقط با این می‌نویسد).</summary>
+    public static readonly Func<long> RealNow = () => AppClock.UnixMs;
 
     /// <summary>
     /// این کار باز است؟

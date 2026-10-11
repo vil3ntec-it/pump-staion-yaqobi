@@ -19,8 +19,12 @@
     <Product>پمپ یعقوبی</Product>
     <AssemblyTitle>پمپ یعقوبی</AssemblyTitle>
     <Description>حسابداریِ پمپ یعقوبی</Description>
-    <Company>پمپ یعقوبی</Company>
-    <Copyright>© VILL3N — همهٔ حقوق محفوظ است. All rights reserved.</Copyright>
+    <Company>VILL3N</Company>
+    <Copyright>© VILL3N — همهٔ حقوق محفوظ است. کپی، تغییر، مهندسیِ معکوس یا فروشِ دوباره بی اجازهٔ کتبیِ VILL3N ممنوع است. All rights reserved.</Copyright>
+    <!-- ⛔ امنیت (۳.۱.۲۷۰): ‎DOTNET_STARTUP_HOOKS‎ بسته — بی این، یک متغیرِ محیطی DLLِ
+         بیگانه را پیش از برنامه بار می‌کرد و می‌توانست قفل‌ها را از درونِ حافظه بردارد،
+         بی آن‌که سنجشِ یکپارچگی (هشِ فایل‌ها) چیزی ببیند. -->
+    <StartupHookSupport>false</StartupHookSupport>
     <RootNamespace>PumpYaqobi.App</RootNamespace>
     <InvariantGlobalization>false</InvariantGlobalization>
     <!-- ══ کدِ از پیش کامپایل‌شده (ReadyToRun) ═══════════════════════════════

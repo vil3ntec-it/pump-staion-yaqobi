@@ -70,11 +70,14 @@ AppId={#AppGuid}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
-AppPublisher={#AppName}
+AppPublisher=VILL3N
 VersionInfoVersion={#AppVersion}
 ; پروانهٔ اختصاصی — همان LICENSEِ ریشهٔ مخزن
-AppCopyright=© VILL3N — All rights reserved.
+AppCopyright=© VILL3N — All rights reserved. Copying, modifying, reverse engineering or reselling without written permission from VILL3N is prohibited.
 VersionInfoCopyright=© VILL3N — All rights reserved.
+; ⛔ پروانهٔ اختصاصی پیش از نصب نشان داده می‌شود و باید پذیرفته شود (۳.۱.۲۷۰) — رونوشتِ
+; ‎LICENSE‎ِ ریشه با BOM تا فارسی درست دیده شود (آزمون: ‎CopyrightExposureTests‎).
+LicenseFile=LICENSE.txt
 
 ; نصب برای همین کاربر — بی اجازهٔ مدیر
 PrivilegesRequired=lowest
@@ -170,8 +173,9 @@ Name: "{app}\data"; Permissions: users-modify; Flags: uninsneveruninstall
 
 [Files]
 ; ⛔ هر دو بار داخلِ فایل‌اند؛ فقط یکی می‌نشیند (WantX64 / WantX86).
-Source: "{#SourceDir64}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: WantX64
-Source: "{#SourceDir86}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: WantX86
+; ⛔ امنیت (۳.۱.۲۷۰): نمادهای اشکال‌زدایی (‎*.pdb‎ — نامِ متغیرها و مسیرِ کد) هرگز به مشتری نمی‌رسند.
+Source: "{#SourceDir64}\*"; DestDir: "{app}"; Excludes: "*.pdb"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: WantX64
+Source: "{#SourceDir86}\*"; DestDir: "{app}"; Excludes: "*.pdb"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: WantX86
 ; آیکونِ میان‌برها — فایلِ جدا، نه آیکونِ داخلِ exe: ویندوز آیکونِ هر مسیر را کَش
 ; می‌کند و exeِ هم‌مسیر آیکونِ کهنه را نشان می‌داد (عکسِ صاحب ریپو، ۱۴۰۵/۰۷/۱۵).
 Source: "..\PumpYaqobi.App\Assets\app.ico"; DestDir: "{app}"; DestName: "PumpYaqobi.ico"; Flags: ignoreversion

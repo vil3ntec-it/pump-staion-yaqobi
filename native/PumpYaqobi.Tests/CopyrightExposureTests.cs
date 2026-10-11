@@ -32,6 +32,12 @@ public class CopyrightExposureTests
         Assert.Contains("artificial-intelligence", lic);
         Assert.Contains("VILL3N", Read("native", "PumpYaqobi.App", "PumpYaqobi.App.csproj"));
         Assert.Contains("AppCopyright=", Read("native", "installer", "PumpYaqobi.iss"));
+        //  ۳.۱.۲۷۰: پروانه پیش از نصب پذیرفته می‌شود — رونوشتِ همان LICENSE
+        Assert.Contains("LicenseFile=LICENSE.txt", Read("native", "installer", "PumpYaqobi.iss"));
+        Assert.Equal(lic.Replace("\r\n", "\n").Trim(),
+                     Read("native", "installer", "LICENSE.txt").TrimStart('\uFEFF').Replace("\r\n", "\n").Trim());
+        Assert.Contains("<StartupHookSupport>false</StartupHookSupport>", Read("native", "PumpYaqobi.App", "PumpYaqobi.App.csproj"));
+        Assert.Contains("-p:DebugType=none", Read(".github", "workflows", "build-native.yml"));
     }
 
     [Fact]

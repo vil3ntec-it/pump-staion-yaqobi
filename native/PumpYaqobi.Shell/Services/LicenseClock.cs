@@ -55,6 +55,64 @@ public static class LicenseClock
     /// <summary>ساعتِ دیوار — همان تزریق‌پذیرِ <see cref="Entitlements.Now"/>.</summary>
     public static long Wall() => Entitlements.Now();
 
+    // ══ رونوشتِ پنهانِ کفِ ساعت (۳.۱.۲۷۰) ═══════════════════════════════════
+    //  ⛔ کفِ ساعت فقط عددی خام در ‎settings.json‎ بود: صفر کردنش + عقب بردنِ ساعتِ
+    //  ویندوز + آفلاین ماندن، اشتراکِ تمام‌شده را تا ابد زنده می‌کرد. حالا رونوشتی
+    //  رمزشده با DPAPI (‎SecretStore‎) در رجیستریِ همین کاربر هم هست و کف = بیشترینِ
+    //  هر دو. ⚠️ نامِ مقدار از هشِ پوشهٔ تنظیمات است، پس آزمون‌ها (هر کدام پوشهٔ خودش)
+    //  به هم نشت نمی‌کنند. روی غیرِ ویندوز هیچ کاری نمی‌کند.
+
+    private const string SealKey = @"Software\VILL3N\PumpYaqobi";
+    private static readonly Dictionary<string, long> SealCache = new(StringComparer.Ordinal);
+
+    private static string SealName() =>
+        "cf" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(AppSettings.Dir.ToLowerInvariant())))[..12];
+
+    internal static long Floor(AppSettings f) => Math.Max(f.ClockFloorMs, Sealed());
+
+    /// <summary>فقط ویندوز و فقط با ساعتِ واقعی — آزمونی که ساعت را جابه‌جا می‌کند رجیستری را نمی‌آلاید.</summary>
+    private static bool SealOn() =>
+        OperatingSystem.IsWindows() && ReferenceEquals(Entitlements.Now, Entitlements.RealNow);
+
+    private static long Sealed()
+    {
+        if (!SealOn()) return 0;
+        var name = SealName();
+        lock (SealCache)
+        {
+            if (SealCache.TryGetValue(name, out var c)) return c;
+            long v = 0;
+            try
+            {
+                using var k = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(SealKey);
+                if (k?.GetValue(name) is string raw
+                    && long.TryParse(SecretStore.Unprotect(raw), System.Globalization.NumberStyles.Integer,
+                                     System.Globalization.CultureInfo.InvariantCulture, out var x)) v = x;
+            }
+            catch { /* رجیستریِ ناخوانا هیچ‌وقت برنامه را نمی‌بندد */ }
+            SealCache[name] = v;
+            return v;
+        }
+    }
+
+    private static void Seal(long floor, bool force = false)
+    {
+        if (!SealOn() || floor <= 0) return;
+        var name = SealName();
+        lock (SealCache)
+        {
+            if (!force && SealCache.TryGetValue(name, out var c) && c >= floor) return;
+            SealCache[name] = floor;
+        }
+        try
+        {
+            using var k = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(SealKey);
+            k.SetValue(name, SecretStore.Protect(floor.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        }
+        catch { }
+    }
+
     private static long RunningFloor()
     {
         lock (Gate)
@@ -66,11 +124,11 @@ public static class LicenseClock
 
     /// <summary>«حالا» برای سنجشِ مجوز — هرگز عقب‌تر از کف.</summary>
     public static long Now(AppSettings f) =>
-        Math.Max(Wall(), Math.Max(f.ClockFloorMs, RunningFloor()));
+        Math.Max(Wall(), Math.Max(Floor(f), RunningFloor()));
 
     /// <summary>ساعتِ دیوار از کف عقب‌تر است — «ساعتِ این کامپیوتر عقب است».</summary>
     public static bool Behind(AppSettings f) =>
-        Wall() < Math.Max(f.ClockFloorMs, RunningFloor()) - BehindMs;
+        Wall() < Math.Max(Floor(f), RunningFloor()) - BehindMs;
 
     /// <summary>
     /// کف را جلو می‌برد — از حلقهٔ پس‌زمینه (هر دقیقه) صدا می‌خورد.
@@ -86,12 +144,13 @@ public static class LicenseClock
             var running = 0L;
             if (Running.TryGetValue(key, out var r))
                 running = r.Floor + (long)Stopwatch.GetElapsedTime(r.Ticks).TotalMilliseconds;
-            floor = Math.Max(Math.Max(f.ClockFloorMs, Wall()), running);
+            floor = Math.Max(Math.Max(Floor(f), Wall()), running);
             Running[key] = (floor, Stopwatch.GetTimestamp());
         }
         if (floor < f.ClockFloorMs + PersistStepMs) return false;
         f.ClockFloorMs = floor;
         f.SaveSoon();
+        Seal(floor);
         return true;
     }
 
@@ -106,10 +165,11 @@ public static class LicenseClock
     public static void Anchor(AppSettings f, long issuedAt, bool fresh)
     {
         if (issuedAt <= 0) return;
+        var reset = false;
         lock (Gate)
         {
             var key = AppSettings.Dir;
-            var floor = Math.Max(f.ClockFloorMs, RunningFloorUnlocked(key));
+            var floor = Math.Max(Floor(f), RunningFloorUnlocked(key));
             var wall = Wall();
             if (fresh && floor - issuedAt > ResetGapMs && Math.Abs(wall - issuedAt) < ResetGapMs / 2)
             {
@@ -117,12 +177,15 @@ public static class LicenseClock
                 //  راهِ Stopwatch دوباره برمی‌گشت.
                 f.ClockFloorMs = issuedAt;
                 Running[key] = (issuedAt, Stopwatch.GetTimestamp());
-                return;
+                reset = true;
             }
+            else
             //  ⚠️ کفِ درونِ حافظه را فقط `Tick` (حلقهٔ خودِ برنامه) بالا می‌برد؛
             //  این‌جا فقط کفِ همین تنظیمات جلو می‌رود.
             f.ClockFloorMs = Math.Max(f.ClockFloorMs, issuedAt);
         }
+        //  کفِ پنهان هم همراهِ کفِ تنظیمات: پایین آمدنِ مجازِ بالا (ساعتِ خرابِ پیشین) هم.
+        Seal(f.ClockFloorMs, force: reset);
     }
 
     private static long RunningFloorUnlocked(string key) =>
