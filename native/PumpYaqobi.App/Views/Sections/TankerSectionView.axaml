@@ -37,6 +37,16 @@
               <TextBox Text="{Binding Driver}" Watermark="اختیاری" />
             </StackPanel>
 
+            <StackPanel Spacing="3" Width="120" Margin="0,0,10,6">
+              <TextBlock Text="پلاک" Classes="label" />
+              <TextBox Text="{Binding Plate}" Watermark="اختیاری" />
+            </StackPanel>
+
+            <StackPanel Spacing="3" Width="150" Margin="0,0,10,6">
+              <TextBlock Text="شرکت" Classes="label" />
+              <TextBox Text="{Binding Company}" Watermark="اختیاری" />
+            </StackPanel>
+
             <StackPanel Spacing="3" Width="200" Margin="0,0,10,6">
               <TextBlock Text="یادداشت" Classes="label" />
               <TextBox Text="{Binding Note}" Watermark="اختیاری" />
@@ -78,6 +88,8 @@
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
               <DataGridTextColumn Header="راننده" Binding="{Binding Driver}" Width="Auto" />
+              <DataGridTextColumn Header="پلاک" Binding="{Binding Entity.Plate}" Width="Auto" />
+              <DataGridTextColumn Header="شرکت" Binding="{Binding Entity.Company}" Width="Auto" />
               <DataGridTextColumn Header="یادداشت" Binding="{Binding Note}" Width="Auto" />
             </DataGrid.Columns>
           </c:ExcelGrid>
@@ -85,6 +97,16 @@
           <!-- ردیفِ «جمله» — بارنامه، تحویل و جمعِ کم‌آمد -->
           <c:TotalsBar Grid.Row="2" ItemsSource="{Binding TotalCells}" />
         </Grid>
+      </Border>
+
+      <!-- کم‌آمدِ هر راننده و هر شرکت (۳.۱.۲۶۸) -->
+      <Border Classes="panel" Padding="14,10" IsVisible="{Binding HasShortList}">
+        <StackPanel Spacing="4">
+          <TextBlock Text="کم‌آمدِ هر راننده و هر شرکت" FontWeight="Bold"
+                     Foreground="{DynamicResource Pump.Ink.Danger}" />
+          <ItemsControl ItemsSource="{Binding ShortByDriver}" />
+          <ItemsControl ItemsSource="{Binding ShortByCompany}" />
+        </StackPanel>
       </Border>
 
       <TextBlock Text="هنوز تخلیه‌ای ثبت نشده" Classes="label"

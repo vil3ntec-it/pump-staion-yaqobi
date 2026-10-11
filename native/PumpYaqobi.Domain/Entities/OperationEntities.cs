@@ -130,6 +130,12 @@ public class TankDip : EntityBase, ILedgerRow
     /// </summary>
     public decimal BookAdjust { get; set; }
 
+    /// <summary>
+    /// آبِ تهِ مخزن (لیتر) در همین میله‌زنی — ۳.۱.۲۶۸. صفر یعنی آب نبود یا سنجیده نشد.
+    /// ⚠️ فقط ثبت و هشدار: موجودیِ مخزن و هیچ حسابی را عوض نمی‌کند.
+    /// </summary>
+    public decimal Water { get; set; }
+
     public string? Note { get; set; }
 }
 
@@ -151,6 +157,8 @@ public class TankerUnload : EntityBase, ILedgerRow
     public string? MonthKey { get; set; }
     public string? Driver { get; set; }
     public string? Plate { get; set; }
+    /// <summary>شرکتِ فروشندهٔ همین بار — برای جمعِ کم‌آمدِ هر شرکت (۳.۱.۲۶۸). اختیاری.</summary>
+    public string? Company { get; set; }
     /// <summary>لیترِ نوشته‌شده در بارنامه.</summary>
     public decimal Manifest { get; set; }
     /// <summary>لیتری که واقعاً تحویل گرفته شد.</summary>

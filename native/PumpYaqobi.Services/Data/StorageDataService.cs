@@ -338,6 +338,26 @@ public sealed class StorageDataService
         return new ShiftSums(sale, profit);
     }
 
+    /// <summary>
+    /// میانگینِ فروشِ روزانه (لیتر) از آخرین <paramref name="days"/> روزی که پارچه دارند —
+    /// برای پیش‌بینیِ «موجودی تا چند روز بس است» (۳.۱.۲۶۸). روزهای بی‌پارچه حساب نمی‌شوند،
+    /// پس چند روز تعطیلی میانگین را پایین نمی‌کشد. صفر یعنی دادهٔ کافی نیست.
+    /// </summary>
+    public async Task<decimal> AvgDailySaleAsync(FuelType fuel, int days = 14, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        var keys = await db.Reports.AsNoTracking().Where(r => r.Fuel == fuel && r.DateKey > 0)
+            .Select(r => r.DateKey).Distinct().OrderByDescending(k => k).Take(days).ToListAsync(ct);
+        if (keys.Count == 0) return 0m;
+        var lo = keys.Min();
+        var rows = await db.Reports.AsNoTracking().Where(r => r.Fuel == fuel && r.DateKey >= lo)
+            .Select(r => new { D = (decimal?)r.DayShift!.Sale, N = (decimal?)r.NightShift!.Sale })
+            .ToListAsync(ct);
+        var sum = rows.Sum(r => (r.D ?? 0m) + (r.N ?? 0m));
+        return sum <= 0m ? 0m : sum / keys.Count;
+    }
+
     /// <summary>ماه‌هایی که پارچه دارند («1405/07») — فقط برای کشوی دورهٔ مفاد/ضرر.</summary>
     public async Task<List<string>> ReportMonthsAsync(CancellationToken ct = default)
     {

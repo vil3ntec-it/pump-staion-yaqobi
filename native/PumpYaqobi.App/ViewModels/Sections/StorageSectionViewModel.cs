@@ -130,6 +130,9 @@ public sealed partial class DipRowViewModel : RowViewModel
 
     public TankDip Entity => _d;
 
+    /// <summary>آبِ تهِ مخزن در همین میله‌زنی — فقط خواندنی؛ خالی یعنی آب نبود.</summary>
+    public string WaterText => _d.Water > 0m ? Shamsi.Money(_d.Water) : "";
+
     [ObservableProperty] private string _dateShamsi = "";
     [ObservableProperty] private decimal _measured;
     [ObservableProperty] private decimal _expected;
@@ -301,7 +304,24 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         }
     }
 
-    public void RefreshDipTotals() => OnPropertyChanged(nameof(DipTotalCells));
+    public void RefreshDipTotals()
+    {
+        OnPropertyChanged(nameof(DipTotalCells));
+        OnPropertyChanged(nameof(DipTrend));
+        OnPropertyChanged(nameof(HasDipTrend));
+    }
+
+    /// <summary>
+    /// روندِ کسر و اضافه: اختلافِ میله با دفتر در آخرین ۳۰ میله‌زنی، از کهنه به تازه (۳.۱.۲۶۸).
+    /// کمبودِ کم‌کمِ هر روز (نشت، دزدی، تبخیر) فقط در همین روند دیده می‌شود. ⚠️ فقط نمایش.
+    /// </summary>
+    public IReadOnlyList<double> DipTrend =>
+        Dips.Take(30).Reverse().Select(d => (double)(d.Measured - d.Expected)).ToList();
+
+    public bool HasDipTrend => Dips.Count >= 2;
+
+    /// <summary>آبِ تهِ مخزن (لیتر) — کادرِ کنارِ لیترِ میله‌زنی؛ خالی یعنی آب نبود.</summary>
+    [ObservableProperty] private string _dipWater = "";
 
     [ObservableProperty] private bool _isDiesel;
     [ObservableProperty] private string _current = "";
@@ -312,6 +332,23 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
     [ObservableProperty] private string _perLiter = "";
     [ObservableProperty] private string _lastBuyDate = "—";
     [ObservableProperty] private bool _isLow;
+
+    /// <summary>«موجودی حدودِ N روز بس است» — خالی یعنی دادهٔ کافی نیست (۳.۱.۲۶۸).</summary>
+    [ObservableProperty] private string _forecastText = "";
+
+    /// <summary>
+    /// پیش‌بینیِ تمام شدن از میانگینِ فروشِ آخرین ۱۴ روزِ پارچه‌دار. ⚠️ فقط نمایش —
+    /// هیچ عددِ مخزن یا هشدارِ آستانه عوض نمی‌شود.
+    /// </summary>
+    public static string Forecast(decimal stock, decimal avgDaily)
+    {
+        if (avgDaily <= 0m || stock <= 0m) return "";
+        var days = stock / avgDaily;
+        var avg = Shamsi.Money(Math.Round(avgDaily, 0, MidpointRounding.AwayFromZero));
+        var d = days < 1m ? "کمتر از یک روز" : $"حدودِ {Shamsi.Money(Math.Floor(days))} روز";
+        var order = days <= 3m ? " — ⚠️ وقتِ سفارش است" : "";
+        return $"📈 میانگینِ فروشِ روزانه {avg} لیتر ⇐ موجودی {d} بس است{order}";
+    }
     [ObservableProperty] private string _capacity = "";
 
     /// <summary>
@@ -656,6 +693,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         Dips.Clear();
         foreach (var d in dips) Dips.Add(new DipRowViewModel(d, this));
         RefreshDipTotals();
+        RefreshDipTotals();
 
         //  ⛔ پر کردنِ کادرها چیزی روی تنظیمات نمی‌نویسد (۱۴۰۵/۰۷/۱۶) — پیش از این
         //  نخستین باز شدنِ «مخزن» ظرفیتِ پیش‌فرضِ ۱۰٬۰۰۰ را ذخیره می‌کرد (و اجازهٔ
@@ -701,6 +739,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         TotalUsd = Shamsi.Money(Math.Round(t.TotalUsd, 2));
         IsLow = t.IsLow;
         ThresholdText = "حد هشدار: " + Shamsi.Money(threshold) + " لیتر";
+        ForecastText = Forecast(t.Display, await _host.StorageData.AvgDailySaleAsync(Fuel));
 
         // فیِ لیترِ خرید و تاریخِ آخرین خرید — همان دو عددِ «خلاصه پول‌ها». فی = همان خریدی
         // که الان از مخزن کشیده می‌شود (‎RefreshBuyPerLiterAsync‎، ۱۴۰۵/۰۷/۲۲)
@@ -776,11 +815,13 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         var expected = Math.Round(_bookNow, 0, MidpointRounding.AwayFromZero);
         var diff = TankDipService.JsRound(measured - _bookNow);
 
+        var water = Math.Max(0m, Shamsi.Num(DipWater));
         var d = new TankDip
         {
             Fuel = Fuel, DateShamsi = Shamsi.Today(),
             Measured = measured, Expected = expected,
             BookAdjust = DipApplyToBook ? diff : 0m,
+            Water = water,
         };
         await _host.StorageData.SaveDipAsync(d);
         Dips.Insert(0, new DipRowViewModel(d, this));
@@ -792,7 +833,11 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
               + (DipApplyToBook ? " — دفتر برابر شد" : ""),
             diff < 0m ? ToastKind.Warn : ToastKind.Ok);
 
+        if (water > 0m)
+            _host.Toast("💧 " + Shamsi.Money(water) + " لیتر آب تهِ مخزن — پیش از فروش تخلیه کنید", ToastKind.Warn);
         DipMeasured = "";
+        DipWater = "";
+        RefreshDipTotals();
         await RecalcAsync();
     }
 
@@ -803,6 +848,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         if (row is null) return;
         await row.RetireWhileAsync(() => _host.Tools.DeleteDipAsync(row.Entity.Id));
         Dips.Remove(row);
+        RefreshDipTotals();
         await RecalcAsync();
     }
 }

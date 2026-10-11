@@ -401,6 +401,13 @@
              ‎personArchiveModal‎). دکمه‌اش در نوارِ حساب، بغلِ «٪ فیصدی» است و
              هیچ چیزی زیرِ جدول پهن نمی‌شود — پیش از این آکاردئونی خواندنی بود
              که نه سربرگِ حسابِ زنده را داشت، نه فیلترِ تیل و نه ویرایش. -->
+
+        <!-- ⚠️ سقفِ قرض (۳.۱.۲۶۸) — فقط هشدار، هیچ ردیفی رد نمی‌شود -->
+        <Border Classes="panel" Padding="12,8" IsVisible="{Binding Current.OverLimit}"
+                BorderBrush="{DynamicResource Pump.Ink.Danger}" BorderThickness="2">
+          <TextBlock Text="{Binding Current.OverLimitText}" FontWeight="Black" FontSize="15"
+                     Foreground="{DynamicResource Pump.Ink.Danger}" TextWrapping="Wrap" />
+        </Border>
       </StackPanel>
 
       <!-- ══ فیصدی — بسته، مگر این‌که خودت بازش کنی ══════════════════════
@@ -450,6 +457,10 @@
           <StackPanel Orientation="Horizontal" Spacing="8">
             <TextBlock Text="هر دو" Classes="pl" />
             <TextBox Text="{Binding PercentBothText}" Classes="pv" Watermark="هر دو" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="سقفِ قرض" Classes="pl" ToolTip.Tip="به واحدِ همین حساب — گذشتنِ الباقی از آن فقط هشدار می‌دهد" />
+            <TextBox Text="{Binding CreditLimitText}" Classes="pv" c:LiveFormat.Kind="number" Watermark="بی‌سقف" />
           </StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="8"
                       IsVisible="{Binding IsMoney}">

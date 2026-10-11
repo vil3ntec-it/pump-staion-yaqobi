@@ -992,8 +992,10 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
             nameof(HeadPetrolPercentLabel), nameof(HeadDieselPercentLabel),
             nameof(HeadPetrolPercentValue), nameof(HeadDieselPercentValue),
             nameof(ModeToggleText), nameof(IsFuelUnit),
+            nameof(OverLimit), nameof(OverLimitText),
         })
             OnPropertyChanged(n);
+        WarnLimitCrossing();
     }
 
     /// <summary>
@@ -1064,6 +1066,42 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
             _person.AccountInfoChanged(this);
         }
     }
+
+    /// <summary>«سقفِ قرض» — خالی یعنی بی‌سقف. به واحدِ همین حساب.</summary>
+    public string CreditLimitText
+    {
+        get => Entity.CreditLimit is { } v && v > 0m ? Shamsi.Money(v) : "";
+        set
+        {
+            if (!Shamsi.IsReadable(value)) return;   // ⛔ ناخوانا صفر نشود
+            var v = Shamsi.Num(value);
+            Entity.CreditLimit = v <= 0m ? null : v;
+            SaveAccount();
+            OnPropertyChanged(nameof(CreditLimitText));
+            RefreshTotals();
+        }
+    }
+
+    /// <summary>«الباقی» از سقف گذشته؟ ⚠️ فقط هشدار — هیچ عددی عوض نمی‌شود.</summary>
+    public bool OverLimit => Entity.CreditLimit is { } lim && lim > 0m && Totals.All.Albaqi > lim;
+
+    public string OverLimitText => Entity.CreditLimit is { } lim && OverLimit
+        ? $"⚠️ از سقفِ قرض گذشت: الباقی {Shamsi.Money(Totals.All.Albaqi)} {UnitText} — سقف {Shamsi.Money(lim)} {UnitText}"
+        : "";
+
+    private bool _wasOver;
+
+    /// <summary>توست فقط در لحظهٔ گذشتن از سقف، نه با هر بار تازه شدن.</summary>
+    private void WarnLimitCrossing()
+    {
+        var over = OverLimit;
+        if (over && !_wasOver && _limitPrimed)
+            _host.Toast(OverLimitText, ToastKind.Warn);
+        _wasOver = over;
+        _limitPrimed = true;
+    }
+
+    private bool _limitPrimed;
 
     /// <summary>سپردهٔ پولِ همین حساب — خالی یعنی چیزی نوشته نشده.</summary>
     public string MoneyDepositText

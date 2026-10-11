@@ -53,6 +53,17 @@ public class ToolsServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Unload_PlakVaSherkat_ZakhireMishavand()
+    {
+        var (tools, _, _) = Host();
+        await tools.AddUnloadAsync(FuelType.Petrol, 30000m, 29900m, "احمد", null, " کابل ۱۲۳ ", "شرکتِ آریا");
+        var u = (await tools.UnloadsAsync()).Single();
+        Assert.Equal("کابل ۱۲۳", u.Plate);
+        Assert.Equal("شرکتِ آریا", u.Company);
+        Assert.Equal(-100m, TankDipService.UnloadDifference(u));
+    }
+
+    [Fact]
     public async Task Unload_KeepsTheShortfall_AndCanBeDeleted()
     {
         var (tools, _, _) = Host();
