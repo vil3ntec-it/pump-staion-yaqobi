@@ -3,14 +3,17 @@ name: کند نشدن نسبت به main
 # ══ بندِ ۵ِ کندی‌ها (۱۴۰۵/۰۷/۲۲) ══════════════════════════════════════════════
 # کندیِ ۹/۳۰ تا گزارشِ صاحب ریپو هیچ سنجه‌ای را سرخ نکرده بود: سقف‌های ثابت (‎perf‎)
 # فقط «خیلی کند» را می‌گیرند، نه «کندتر از دیروز». این‌جا سنجهٔ پنج‌ساله (‎years‎) روی
-# همان رانر یک بار با کدِ ‎main‎ و یک بار با همین شاخه می‌دود — دو بار هر کدام، یک‌درمیان،
+# همان رانر یک بار با کدِ ‎main‎ و یک بار با همین شاخه می‌دود — سه بار هر کدام، یک‌درمیان،
 # و کمینهٔ هر کار — و اگر کاری بیش از ۴۰٪ (و ۲۰۰ms) کند شده باشد سرخ می‌شود.
 # مقایسه: ‎native/tools/perf-compare.py‎.
+# ⚠️ (۱۴۰۵/۰۷/۲۳) دو بار کم بود: PRِ #857 که هیچ کدِ برنامه‌ای عوض نکرده بود «chakana» را
+# ۲۷۵ ⇒ ۵۳۲ms سرخ کرد — کدِ دو طرف یکی بود. پس سه بار، و سندها (‎native/docs‎) سنجه را راه نمی‌اندازند.
 on:
   workflow_dispatch:
   pull_request:
     paths:
       - 'native/**'
+      - '!native/docs/**'
       - '.github/workflows/perf-compare.yml'
 
 jobs:
@@ -44,7 +47,7 @@ jobs:
           PUMP_YEARS_SETTLED: '1'
         run: |
           set +e
-          for i in 1 2; do
+          for i in 1 2 3; do
             (cd ../base/native && dotnet run --project PumpYaqobi.UiTests -c Release --no-build -- years > "$GITHUB_WORKSPACE/base$i.log" 2>&1)
             (cd native && dotnet run --project PumpYaqobi.UiTests -c Release --no-build -- years > "$GITHUB_WORKSPACE/head$i.log" 2>&1)
           done
@@ -52,7 +55,7 @@ jobs:
 
       - name: مقایسه
         shell: bash
-        run: python3 native/tools/perf-compare.py base1.log base2.log -- head1.log head2.log
+        run: python3 native/tools/perf-compare.py base1.log base2.log base3.log -- head1.log head2.log head3.log
 
       - uses: actions/upload-artifact@v4
         if: always()
