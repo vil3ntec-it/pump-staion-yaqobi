@@ -33,6 +33,10 @@
 
         <TextBlock Classes="muted" TextWrapping="Wrap" HorizontalAlignment="Center"
                    Text="رمز با PBKDF2 و نمکِ تصادفی نگه داشته می‌شود — نه خودِ رمز، نه چیزی که بشود از آن بازش کرد." />
+
+        <!-- ⛔ هشدارِ کپی‌رایت (۳.۱.۲۷۰) — همان پروانهٔ ‎LICENSE‎ِ ریشه -->
+        <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center"
+                   Text="© VILL3N — همهٔ حقوق محفوظ است. کپی، تغییر، دیکامپایل، دور زدنِ قفل یا فروشِ دوباره بی اجازهٔ کتبیِ VILL3N ممنوع و پیگردِ قانونی دارد." />
       </StackPanel>
     </Border>
   </Border>

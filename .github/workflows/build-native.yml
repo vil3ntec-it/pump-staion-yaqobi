@@ -159,6 +159,7 @@ jobs:
             dotnet publish PumpYaqobi.App -c Release -r $rid --self-contained true `
               -p:Version=${{ steps.ver.outputs.version }} `
               -p:PublishSingleFile=false `
+              -p:DebugType=none -p:DebugSymbols=false `
               @trust `
               -o "publish/$rid"
             if ($LASTEXITCODE -ne 0) { throw "ساختِ $rid شکست خورد" }
