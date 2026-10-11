@@ -133,10 +133,23 @@ public class SparkChart : Control
         var vmax = 1.0;
         if (vals is not null) vmax = Math.Max(vmax, vals.Max());
         if (second is { Count: > 0 }) vmax = Math.Max(vmax, second.Max());
-        vmax = Nice(vmax);
+        //  ⛔ (۱۴۰۵/۰۷/۲۲) روزِ ضرر زیرِ صفر کشیده می‌شود، نه روی صفر — نمودارِ مفاد/ضرر.
+        //  گامِ خط‌کش گرد است و صفر همیشه روی یک خط‌کش می‌افتد. بی عددِ منفی همه‌چیز مثلِ پیش.
+        var vmin = 0.0;
+        if (vals is { Count: > 0 }) vmin = Math.Min(vmin, vals.Min());
+        if (second is { Count: > 0 }) vmin = Math.Min(vmin, second.Min());
+        double tick;
+        if (vmin < 0)
+        {
+            tick = Nice((vmax - vmin) / 4);
+            vmax = Math.Max(tick, Math.Ceiling(vmax / tick) * tick);
+            vmin = Math.Floor(vmin / tick) * tick;
+        }
+        else { vmax = Nice(vmax); tick = vmax / 4; }
 
         double X(int i) => left + i / (double)(n - 1) * (right - left);
-        double Y(double v) => bottom - Math.Max(0, v) / vmax * (bottom - top);
+        double Y(double v) => bottom - (Math.Max(vmin, v) - vmin) / (vmax - vmin) * (bottom - top);
+        var zeroY = Y(0);
 
         var grid = GridBrush ?? Brushes.Gray;
         var line = LineBrush ?? Brushes.Teal;
@@ -146,17 +159,20 @@ public class SparkChart : Control
         var basePen = new Pen(grid, 1.2);
 
         // ── خط‌کش‌های افقیِ نقطه‌چین و عددهایشان ──
-        var unitDiv = vmax >= 1e6 ? 1e6 : vmax >= 1000 ? 1000 : 1;
-        var unitTxt = vmax >= 1e6 ? "میلیون" : vmax >= 1000 ? "هزار" : "";
-        for (var g = 0; g <= 4; g++)
+        var vabs = Math.Max(vmax, -vmin);
+        var unitDiv = vabs >= 1e6 ? 1e6 : vabs >= 1000 ? 1000 : 1;
+        var unitTxt = vabs >= 1e6 ? "میلیون" : vabs >= 1000 ? "هزار" : "";
+        var lines = (int)Math.Round((vmax - vmin) / tick);
+        for (var g = 0; g <= lines; g++)
         {
-            var v = vmax * (1 - g / 4.0);
+            var v = vmax - tick * g;
             var y = Y(v);
-            ctx.DrawLine(g == 4 ? basePen : gridPen, new Point(left, y), new Point(right, y));
+            ctx.DrawLine(g == lines || Math.Abs(v) < tick / 1000 ? basePen : gridPen, new Point(left, y), new Point(right, y));
             if (!ShowAxis) continue;
             var x = v / unitDiv;
-            var txt = (x >= 10 || x == 0 ? Math.Round(x) : Math.Round(x * 10) / 10)
+            var txt = (Math.Abs(x) >= 10 || x == 0 ? Math.Round(x) : Math.Round(x * 10) / 10)
                       .ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (txt.StartsWith('-')) txt = "\u200E" + txt;   //  منفی سمتِ چپِ عدد بماند
             //  ⛔ جعبهٔ ۵۰ پیکسلی **پیش از** ‎left‎ می‌نشیند (در حاشیهٔ چپ)؛ تا
             //  امروز از ‎left−6‎ شروع می‌شد و عدد ۴۴ پیکسل داخلِ نمودار روی خط‌ها
             //  و نقطهٔ اول می‌افتاد.
@@ -169,13 +185,13 @@ public class SparkChart : Control
         if (second is { Count: > 1 })
         {
             var p2 = Points(second, X, Y);
-            Area(ctx, p2, bottom, line2, vals is null ? 0.30 : 0.16);
+            Area(ctx, p2, zeroY, line2, vals is null ? 0.30 : 0.16);
             ctx.DrawGeometry(null, new Pen(line2, 2.4, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round), Smooth(p2));
         }
         if (vals is not null)
         {
             var p1 = Points(vals, X, Y);
-            Area(ctx, p1, bottom, line, 0.32);
+            Area(ctx, p1, zeroY, line, 0.32);
             ctx.DrawGeometry(null, new Pen(line, 2.8, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round), Smooth(p1));
         }
 

@@ -143,7 +143,7 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         foreach (var n in new[]
                  {
                      nameof(Veiled), nameof(PlanVeiled), nameof(VeilText), nameof(CanRelock), nameof(NetShown), nameof(NetCaptionShown),
-                     nameof(IncomeTitleShown), nameof(IncomeShown), nameof(ExpenseShown), nameof(TrendShown),
+                     nameof(IncomeTitleShown), nameof(IncomeShown), nameof(ExpenseShown), nameof(TrendShown), nameof(TrendLabels),
                      nameof(TrendBrushShown), nameof(IncomeBrushShown), nameof(ExpenseBrushShown),
                      nameof(RealNote), nameof(SourcesPage), nameof(MainPage),
                  })
@@ -211,16 +211,27 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
     [ObservableProperty] private string _incomeBrushKey = "Pump.Ok";
     [ObservableProperty] private string _expenseText = "0";
 
-    /// <summary>خطِ روندِ کادرِ بالا — صعودی برای مفاد، نزولی برای ضرر.</summary>
-    public IReadOnlyList<double> TrendValues => IsProfit
-        ? new double[] { 4, 16, 10, 28, 21, 37, 30, 47, 40, 57, 50, 68, 76 }
-        : new double[] { 76, 64, 70, 52, 59, 43, 50, 33, 40, 23, 30, 12, 4 };
+    //  ⛔ (۱۴۰۵/۰۷/۲۲) خطِ روند دیگر عددِ تزئینیِ ثابت نیست: مفادِ خالصِ هر روز (یا ماه) از
+    //  همان داده — ‎ProfitTrend.Build‎. تازه‌ترین اول؛ یک نقطهٔ تنها دوتا می‌شود تا خط بکشد.
+    private IReadOnlyList<TrendPoint> _trend = Array.Empty<TrendPoint>();
+
+    /// <summary>خطِ روندِ کادرِ بالا — مفادِ خالصِ واقعیِ هر روز یا ماه.</summary>
+    public IReadOnlyList<double> TrendValues => Pad(_trend.Select(t => (double)t.Net).ToList());
+    public IReadOnlyList<string> TrendLabels => Veiled ? Array.Empty<string>() : Pad(_trend.Select(t => t.Label).ToList());
+    public bool HasTrend => _trend.Count > 0;
+
+    private void RaiseTrend()
+    {
+        OnPropertyChanged(nameof(TrendValues));
+        OnPropertyChanged(nameof(TrendShown));
+        OnPropertyChanged(nameof(TrendLabels));
+        OnPropertyChanged(nameof(HasTrend));
+    }
 
     public string TrendBrushKey => IsProfit ? "Pump.Ok" : "Pump.Danger";
 
     partial void OnIsProfitChanged(bool v)
     {
-        OnPropertyChanged(nameof(TrendValues));
         OnPropertyChanged(nameof(TrendBrushKey));
         OnPropertyChanged(nameof(TrendShown));
         OnPropertyChanged(nameof(TrendBrushShown));
@@ -371,11 +382,14 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         var rateDiff = ProfitLossService.PendingRateDiff(_pending.Where(r => period.Contains(r.DateKey)), todayP, todayD);
 
         decimal extraSum, expenseSum;
+        List<DatedAmount> extras, expenses;
         ProfitInput input;
         if (period.IsAll)
         {
-            extraSum = await _host.ExtraIncomeLedger.SumAsync(e => e.Amount);
-            expenseSum = await _host.ExpenseLedger.SumAsync(e => e.Amount);
+            extras = await _host.ExtraIncomeLedger.SelectAsync(e => new DatedAmount(e.DateKey, e.Amount));
+            expenses = await _host.ExpenseLedger.SelectAsync(e => new DatedAmount(e.DateKey, e.Amount));
+            extraSum = extras.Sum(e => e.Amount);
+            expenseSum = expenses.Sum(e => e.Amount);
             // «بی‌فاکتور»ها — بردگی‌شان مستقیم درآمد است (از قبل جمعِ خودِ SQLite بود)
             var noinvAccounts = (await _host.Debtors.CardAccountsAsync(noInvoice: true))
                 .Values.SelectMany(x => x).ToList();
@@ -392,8 +406,10 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         else
         {
             //  همان یک ستون، فقط ماه یا سالِ همین دوره (‎MonthKey‎ی خودِ ردیف)
-            extraSum = await _host.ExtraIncomeLedger.SumAsync(e => e.Amount, period.MonthFilter);
-            expenseSum = await _host.ExpenseLedger.SumAsync(e => e.Amount, period.MonthFilter);
+            extras = await _host.ExtraIncomeLedger.SelectAsync(e => new DatedAmount(e.DateKey, e.Amount), period.MonthFilter);
+            expenses = await _host.ExpenseLedger.SelectAsync(e => new DatedAmount(e.DateKey, e.Amount), period.MonthFilter);
+            extraSum = extras.Sum(e => e.Amount);
+            expenseSum = expenses.Sum(e => e.Amount);
             input = new ProfitInput
             {
                 WaraqSalesPetrol = petrol,
@@ -407,6 +423,8 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         //  دوره وسطِ خواندن عوض شد ⇒ این جواب کهنه است
         if (period != _period) return;
         _db = input;
+        _trend = ProfitTrend.Build(lines, extras, expenses);
+        RaiseTrend();
 
         _filling = true;
         var p = _host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.UnionRatePetrol);
