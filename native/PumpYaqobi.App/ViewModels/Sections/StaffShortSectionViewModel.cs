@@ -209,6 +209,23 @@ public sealed partial class StaffShortSectionViewModel : SectionViewModel
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(HasSettles));
 
+        if (IsSalesOpen) await LoadSalesAsync();
+    }
+
+    /// <summary>
+    /// ⚡ فقط وقتی کادر باز است (۳.۱.۲۶۸): خواندنِ پایه‌های همهٔ ورق‌های دوره با هر
+    /// باز شدنِ بخش، ‎perf-compare‎ را ۵۲٪ کند کرد (staffshort ۴۴۰ ⇐ ۶۷۲ms).
+    /// </summary>
+    [ObservableProperty] private bool _isSalesOpen;
+
+    partial void OnIsSalesOpenChanged(bool v)
+    {
+        if (v) _ = CrashGuard.RunAsync("فروشِ کارمندان", LoadSalesAsync);
+    }
+
+    private async Task LoadSalesAsync()
+    {
+        var period = _period;
         var (byWorker, byPump) = await _host.Tools.SalesByPeriodAsync(period);
         if (period != _period) return;
         SalesByWorker = byWorker.Select(SalesText).ToList();

@@ -180,7 +180,8 @@
       </Border>
 
       <!-- 📊 فروشِ هر کارمند و هر پایه در همین دوره (۳.۱.۲۶۸) — فقط گزارش -->
-      <Border Classes="panel" Padding="14,10">
+      <Expander Header="📊 فروشِ هر کارمند و هر پایه در همین دوره" HorizontalAlignment="Stretch"
+                IsExpanded="{Binding IsSalesOpen}">
         <Grid ColumnDefinitions="*,16,*">
           <StackPanel Grid.Column="0" Spacing="4">
             <TextBlock Text="👷 فروشِ هر کارمند" FontWeight="Bold" Foreground="{DynamicResource Pump.Ink.Accent}" />
@@ -191,7 +192,7 @@
             <ItemsControl ItemsSource="{Binding SalesByPump}" />
           </StackPanel>
         </Grid>
-      </Border>
+      </Expander>
     </StackPanel>
   </c:SectionPage>
 </UserControl>
