@@ -281,8 +281,9 @@ public sealed partial class MainViewModel
     {
         //  ⛔ «مفاد/ضرر» از ۱۴۰۵/۰۷/۲۰ بسته نمی‌شود، **تار** می‌شود — پرده‌اش در خودِ
         //  بخش است (‎ProfitSectionViewModel.PlanVeiled‎ و ‎ProfitVeil‎).
+        //  ⛔ داشبورد از ۳.۱.۲۶۶ بی اشتراک هم باز است — خواستهٔ صاحب ریپو
+        //  (۱۴۰۵/۰۷/۲۰): «قفل شو بردار بدون اشتراک داخل بخش اش بره».
         "history"   => Entitlements.History,
-        "dashboard" => Entitlements.Dashboard,
         _ => null,
     };
 
