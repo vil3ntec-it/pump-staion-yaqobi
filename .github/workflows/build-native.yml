@@ -110,12 +110,17 @@ jobs:
           UPDATE_PUBLIC_KEY: ${{ vars.UPDATE_PUBLIC_KEY }}
           OFFLINE_PUBLIC_KEYS: ${{ vars.OFFLINE_PUBLIC_KEYS }}
           DEFAULT_UPDATE_PUBLIC_KEY: ${{ env.DEFAULT_UPDATE_PUBLIC_KEY }}
+          HAS_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY != '' }}
         run: |
           $lk = ("$env:LICENSE_PUBLIC_KEYS" -replace '[;,\s]+', '|').Trim('|')
           $uk = ("$env:UPDATE_PUBLIC_KEY").Trim()
           if (-not $uk) { $uk = "$env:DEFAULT_UPDATE_PUBLIC_KEY".Trim() }
-          if (-not $uk) { throw "کلیدِ عمومیِ به‌روزرسانی نیست — نسخهٔ بی‌امضا منتشر نمی‌شود" }
-          $trust = @("-p:UpdateKey=$uk")
+          #  ⛔ (۱۴۰۵/۰۷/۲۳) صاحب ریپو رازِ ‎UPDATE_SIGNING_KEY‎ را نمی‌گذارد. کلیدِ عمومی فقط
+          #  وقتی در برنامه می‌نشیند که همین ساخت بتواند امضا کند — وگرنه نسخهٔ ساخته‌شده هیچ
+          #  به‌روزرسانیِ بعدی را نمی‌پذیرفت. بی راز ⇒ حالتِ «فقط هش» (همان ۳.۱.۲۶۰).
+          $trust = @()
+          if ("$env:HAS_SIGNING_KEY" -eq 'true') { $trust += "-p:UpdateKey=$uk" }
+          else { Write-Host "::warning::رازِ UPDATE_SIGNING_KEY نیست — نسخه بی امضا و فقط با هشِ چک‌سام منتشر می‌شود" }
           # ── کلیدِ کدِ اشتراکِ آفلاین (‎CloudConfig.OfflineKeys‎) ──────────────
           #  کامپیوتری که هرگز اینترنت ندیده هیچ کلیدِ TOFUی ندارد، پس کلیدِ
           #  سرورِ حساب باید داخلِ خودِ برنامه باشد. اول متغیرِ مخزن
@@ -356,8 +361,10 @@ jobs:
           #  ⛔ بی امضا منتشر نمی‌شود: برنامهٔ ساخته‌شده کلیدِ عمومی را دارد و
           #  نسخهٔ بی‌امضا را نصب نمی‌کند — انتشارِ بی‌امضا یعنی همهٔ پمپ‌ها بی‌صدا
           #  از به‌روزرسانی می‌افتند.
+          #  بی راز ⇒ گامِ «ساخت» هم کلیدِ عمومی را در برنامه نگذاشته، پس بی امضا سازگار است.
           if (-not "$env:UPDATE_SIGNING_KEY".Trim()) {
-            throw "رازِ UPDATE_SIGNING_KEY نیست — Settings › Secrets and variables › Actions › New repository secret"
+            Write-Host "::warning::رازِ UPDATE_SIGNING_KEY نیست — SHA256SUMS.txt.sig ساخته نمی‌شود (فقط هش)"
+            exit 0
           }
           $ec = [System.Security.Cryptography.ECDsa]::Create()
           $ec.ImportFromPem($env:UPDATE_SIGNING_KEY)
