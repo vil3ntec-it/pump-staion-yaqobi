@@ -10305,5 +10305,5 @@ MS_FULL=1 dotnet run --project PumpYaqobi.UiTests -c Release -- monthshift  ما
   · `StartupHookSupport=false` — `DOTNET_STARTUP_HOOKS` دیگر DLLِ بیگانه را پیش از برنامه بار نمی‌کند (راهِ برداشتنِ قفل از حافظه بی تغییرِ فایل).
   · نمادهای اشکال‌زدایی (`*.pdb`) به مشتری نمی‌رسند: `-p:DebugType=none` در ساخت و `Excludes: "*.pdb"` در نصاب.
   · کفِ ساعتِ اشتراک رونوشتی رمزشده (DPAPI) در رجیستریِ کاربر دارد (`LicenseClock.Floor`/`Seal`) — صفر کردنِ `ClockFloorMs` در settings.json دیگر اشتراکِ تمام‌شده را زنده نمی‌کند. فقط با ساعتِ واقعی (`Entitlements.RealNow`)، پس آزمون‌ها رجیستری را نمی‌آلایند.
-  · پروانهٔ اختصاصی پیش از نصب پذیرفته می‌شود (`installer/LICENSE.txt`، رونوشتِ LICENSE)، ناشر و شرکت «VILL3N»، و هشدارِ کپی‌رایت زیرِ صفحهٔ ورود.
+  · پروانهٔ اختصاصی (`installer/LICENSE.txt`، رونوشتِ LICENSE) کنارِ برنامه نصب می‌شود — صفحهٔ «پذیرفتنِ پروانه» سنجهٔ installer-check و نصبِ بی‌صدا را می‌شکست؛ ناشر و شرکت «VILL3N»، و هشدارِ کپی‌رایت زیرِ صفحهٔ ورود.
   ⛔ عمداً نشد: هشِ DLLهای دات‌نت در سنجشِ یکپارچگی (به‌روزرسانیِ فقط-PumpYaqobi با رانتایمِ تازهٔ CI مشتریِ درستکار را «دست‌کاری‌شده» می‌دید) و مبهم‌سازی (Obfuscar با ViewLocator و ReflectionBinding و JSONِ تنظیمات می‌شکند). مانده و نیازمندِ سرور: شناسهٔ ماشین داخلِ مجوزِ امضاشده تا کپیِ settings.json به کامپیوترِ دیگر کار نکند.

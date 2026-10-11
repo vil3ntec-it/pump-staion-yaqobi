@@ -75,9 +75,6 @@ VersionInfoVersion={#AppVersion}
 ; پروانهٔ اختصاصی — همان LICENSEِ ریشهٔ مخزن
 AppCopyright=© VILL3N — All rights reserved. Copying, modifying, reverse engineering or reselling without written permission from VILL3N is prohibited.
 VersionInfoCopyright=© VILL3N — All rights reserved.
-; ⛔ پروانهٔ اختصاصی پیش از نصب نشان داده می‌شود و باید پذیرفته شود (۳.۱.۲۷۰) — رونوشتِ
-; ‎LICENSE‎ِ ریشه با BOM تا فارسی درست دیده شود (آزمون: ‎CopyrightExposureTests‎).
-LicenseFile=LICENSE.txt
 
 ; نصب برای همین کاربر — بی اجازهٔ مدیر
 PrivilegesRequired=lowest
@@ -182,6 +179,9 @@ Source: "..\PumpYaqobi.App\Assets\app.ico"; DestDir: "{app}"; DestName: "PumpYaq
 ; ممیزیِ عرضه (۱۴۰۵/۰۷/۲۰): مجوزِ کتابخانه‌ها همراهِ برنامه — LGPLِ LibVLC و بقیه
 ; (ساخته از tools/third-party-notices.py؛ آزمون: ThirdPartyNoticesTests).
 Source: "THIRD-PARTY-NOTICES.txt"; DestDir: "{app}"; Flags: ignoreversion
+; ⛔ پروانهٔ اختصاصیِ VILL3N کنارِ برنامه (۳.۱.۲۷۰) — رونوشتِ ‎LICENSE‎ِ ریشه با BOM.
+; ⚠️ صفحهٔ «پذیرفتنِ پروانه» نه: نصبِ بی‌صدا و سنجهٔ ‎installer-check‎ را می‌شکست.
+Source: "LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [InstallDelete]
 ; نامِ کهنهٔ برنامه (۱۴۰۵/۰۷/۱۵): میان‌برهای «پمپ یعقوبی» برداشته می‌شوند تا کنارِ
