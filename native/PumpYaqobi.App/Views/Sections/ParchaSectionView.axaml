@@ -110,9 +110,15 @@
                      (‎InnerRightContent‎) و جملهٔ کامل روی خودِ ⚠️ و «دیدم»
                      (‎ToolTip‎) است. ⛔ پس نه چیزی جابه‌جا می‌شود و نه جایی
                      گرفته می‌شود؛ و مانعِ ذخیره هم نیست. -->
-                <TextBox Grid.Column="0" Classes="wfield" Text="{Binding Start}" Watermark="0"
+                <!-- ⤵ ختمِ شیفتِ پیش از همین تاریخ (۱۴۰۵/۰۷/۲۳): در کادرِ خالی دیده می‌شود و «⤵ همان» می‌نشاندش. -->
+                <TextBox Grid.Column="0" Classes="wfield" Text="{Binding Start}" Watermark="{Binding PrevEndHint}"
                          Foreground="{Binding StartBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" c:LiveFormat.Kind="number">
                   <TextBox.InnerRightContent>
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                    <Button x:Name="UsePrevEndBtn" Content="⤵ همان" Classes="ghost" Padding="7,1" Margin="4,0"
+                            FontSize="11" VerticalAlignment="Center"
+                            IsVisible="{Binding CanUsePrevEnd}" ToolTip.Tip="{Binding UsePrevEndTip}"
+                            Command="{Binding UsePrevEndCommand}" />
                     <StackPanel Orientation="Horizontal" Spacing="4" Margin="4,0"
                                 VerticalAlignment="Center" IsVisible="{Binding LowBase}">
                       <TextBlock Text="⚠️" FontSize="14" VerticalAlignment="Center"
@@ -121,6 +127,7 @@
                               FontSize="11" VerticalAlignment="Center"
                               ToolTip.Tip="{Binding LowBaseText}"
                               Command="{Binding AckLowBaseCommand}" />
+                    </StackPanel>
                     </StackPanel>
                   </TextBox.InnerRightContent>
                 </TextBox>
