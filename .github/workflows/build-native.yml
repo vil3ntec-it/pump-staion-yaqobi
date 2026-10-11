@@ -139,6 +139,17 @@ jobs:
           # ── ریشهٔ اعتمادِ مجوز (‎CloudConfig.LicenseKeys‎) — هرگز خالی ─────────
           if (-not $lk) { $lk = $ok }
           if (-not $lk) { throw "کلیدِ عمومیِ مجوز نیست (نه LICENSE_PUBLIC_KEYS، نه کلیدِ سرورِ حساب) — نسخه‌ای که قفلش با ویرایشِ settings.json باز می‌شود منتشر نمی‌شود" }
+          #  ⛔ ۳.۱.۲۶۶: کلیدِ بی‌نام زیرِ «#1» می‌نشست و سرور مجوز را با ‎kid‎ = ۱۶ نویسهٔ hexِ
+          #  SHA-256ِ SPKI امضا می‌کند ⇒ در ۳.۱.۲۶۵ هیچ اشتراکی پذیرفته نشد. هر کلیدِ بی‌نام
+          #  همین‌جا به ‎kid‎ِ خودِ سرور نام می‌گیرد (برنامه هم دیگر بی این کار می‌کند).
+          $lk = (($lk -split '\|') | ForEach-Object {
+            $i = $_.IndexOf('=')
+            if ($i -gt 0 -and $i -lt $_.Length - 2) { $_ }
+            else {
+              $h = [Security.Cryptography.SHA256]::Create().ComputeHash([Convert]::FromBase64String($_))
+              "$((([BitConverter]::ToString($h)) -replace '-', '').ToLowerInvariant().Substring(0, 16))=$_"
+            }
+          }) -join '|'
           $trust += "-p:LicenseKeys=$lk"
           Write-Host "کلیدِ مجوز: $($lk.Substring(0, [Math]::Min(40, $lk.Length)))…"
           # ── شورا، پ۲: کلیدِ یک‌بارمصرفِ یکپارچگی (‎installer/integrity-sign.ps1‎) ──
