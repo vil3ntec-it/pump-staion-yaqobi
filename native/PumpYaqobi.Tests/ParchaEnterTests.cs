@@ -47,4 +47,25 @@ public class ParchaEnterTests
         Assert.Contains("if (!_loading) _owner.RecheckSibling(this);", vm);
         Assert.Contains("_owner.RecheckSibling(this);", vm[vm.IndexOf("partial void OnPumpNumChanged", StringComparison.Ordinal)..]);
     }
+
+    /// <summary>
+    /// ⛔ (۱۴۰۵/۰۷/۲۴، نسخه 3.1.272) ترتیبِ کادرهای فرمِ پارچه به خواستهٔ صاحب ریپو: نام · شروع · ختم
+    /// سرِ جایشان، بعد ۴ قرض · ۵ فی لیتر · ۶ فروش لیتر خودکار · ۷ تیل آزمایشی، بعد بقیه.
+    /// ناوبریِ Enter و جهت‌نما با جای دیدنی است، پس همین ترتیبِ فایل ترتیبِ کلید هم هست.
+    /// </summary>
+    [Fact]
+    public void TartibeKadrhayeParcha_KhasteyeSahebRepo()
+    {
+        var x = Src("Views/Sections/ParchaSectionView.axaml");
+        string[] order =
+        {
+            "Text=\"نام کارمند\"", "Text=\"شروع پایه (لیتر)\"", "Text=\"ختم پایه (لیتر)\"",
+            "Text=\"جمله قرض (افغانی)\"", "Text=\"فی لیتر (افغانی)\"", "Text=\"فروش (لیتر) — خودکار\"",
+            "Text=\"لیتر آزمایشی", "Text=\"فایده فی لیتر (افغانی)",
+        };
+        var at = order.Select(o => x.IndexOf(o, StringComparison.Ordinal)).ToList();
+        Assert.All(at, i => Assert.True(i > 0));
+        for (var k = 1; k < at.Count; k++)
+            Assert.True(at[k - 1] < at[k], $"«{order[k - 1]}» باید پیش از «{order[k]}» باشد");
+    }
 }
