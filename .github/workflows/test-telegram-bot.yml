@@ -1,0 +1,35 @@
+name: باتِ تلگرامِ پمپ
+
+# باتِ پمپ این‌جاست (telegram-bot/) و داخلِ سرورِ حساب اجرا می‌شود؛ پس روی
+# آخرین سرورِ حسابِ واقعی (ریپوی عمومیِ shop، PGlite) آزموده می‌شود.
+on:
+  push:
+    branches: ['claude/**', 'ccr-**', main]
+    paths:
+      - 'telegram-bot/**'
+      - '.github/workflows/test-telegram-bot.yml'
+  pull_request:
+    paths:
+      - 'telegram-bot/**'
+      - '.github/workflows/test-telegram-bot.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: telegram-bot-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: آزمون‌های باتِ پمپ
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: بات روی سرورِ حسابِ واقعی
+        run: bash telegram-bot/run-tests.sh
