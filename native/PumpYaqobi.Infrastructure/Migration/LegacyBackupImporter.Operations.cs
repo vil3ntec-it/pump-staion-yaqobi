@@ -378,7 +378,7 @@ public sealed class LegacyOperationsImporter
                     DateShamsi = S(r, "date"), DateKey = Key(S(r, "date")),
                     Name = S(r, "name"), ToAccount = S(r, "toAcct"),
                     Liters = DN(r, "liters"), Taken = DN(r, "taken"),
-                    Days = DN(r, "days"), Temp = DN(r, "temp"),
+                    Days = DN(r, "days"), Temp = DN(r, "temp"), MyPct = DN(r, "myPct"),
                     State = S(r, "state") == "closed" ? AmanatRowState.Closed : AmanatRowState.Open,
                     CloseDate = S(r, "closeDate"), Lid = S(r, "lid"),
                     BasePct = DN(r, "basePct"), Actual = DN(r, "actual"), Note = S(r, "note"),

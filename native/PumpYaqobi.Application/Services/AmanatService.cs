@@ -28,7 +28,15 @@ public readonly record struct AmanatRowCalc(
     decimal Loss, decimal LossPct, decimal Rest,
     bool HasActual, decimal? Actual, decimal? RealLoss, decimal? Diff,
     decimal? MyPct, decimal? TargetL, decimal? NeedPct, decimal? AskPct,
-    decimal? NetIfMy, decimal? AskL, decimal? NetIfAsk);
+    decimal? NetIfMy, decimal? AskL, decimal? NetIfAsk)
+{
+    /// <summary>«مدت زمان» دستی نوشته شده؟ (‎c.manual‎)</summary>
+    public bool Manual { get; init; }
+    /// <summary>روزِ خودکار از تاریخ تا امروز/بسته‌شدن (‎c.autoDays‎) — نشانِ خانهٔ خالیِ «مدت زمان».</summary>
+    public decimal AutoDays { get; init; }
+    /// <summary>فیصدی از خودِ ردیف است، نه ارث از حساب (‎c.rowOwnPct‎).</summary>
+    public bool RowOwnPct { get; init; }
+}
 
 public readonly record struct AmanatAccountCalc(
     int Count, int Open, decimal Liters, decimal LitersOpen, decimal Taken,
@@ -156,7 +164,8 @@ public sealed class AmanatService
         decimal? realLoss = hasActual ? liters - taken - actual!.Value : null;
         decimal? diff = hasActual ? realLoss!.Value - loss : null;
 
-        decimal? myPct = acc is null ? null : acc.MyPct;
+        //  ‎myRaw‎ی سایت: فیصدیِ خودِ ردیف، وگرنه فیصدیِ حساب (در جدول با «↑»)
+        decimal? myPct = row.MyPct ?? acc?.MyPct;
         decimal? targetL = myPct is null ? null : liters * myPct.Value / 100m;
         decimal? needPct = myPct is null ? null : myPct.Value + lossPct + s.HandlingPct;
         decimal? askPct = needPct is null ? null : Math.Ceiling(needPct.Value * 10m) / 10m;
@@ -169,7 +178,12 @@ public sealed class AmanatService
 
         return new AmanatRowCalc(liters, taken, days, temp, basePct, closed,
             loss, lossPct, rest, hasActual, actual, realLoss, diff,
-            myPct, targetL, needPct, askPct, netIfMy, askL, netIfAsk);
+            myPct, targetL, needPct, askPct, netIfMy, askL, netIfAsk)
+        {
+            Manual = row.Days.HasValue,
+            AutoDays = autoDays,
+            RowOwnPct = row.MyPct.HasValue,
+        };
     }
 
     /// <summary>شمارِ خودکارِ روز — از تاریخِ ردیف تا امروز، یا تا روزِ بسته‌شدن.</summary>
@@ -227,4 +241,226 @@ public sealed class AmanatService
             myPct, targetL, needPct, askPct, askL, netIfMy, netIfAsk,
             rate, lossMoney, myMoney, diffMoney);
     }
+
+    // ══ چیزهایی که سایت در «خلاصه و ابزارها» و «برآوردِ دستی» حساب می‌کند ══════
+
+    /// <summary>‎Math.ceil(x * 10) / 10‎ — گِرد به یک‌دهمِ بالا.</summary>
+    public static decimal CeilTenth(decimal x) => Math.Ceiling(x * 10m) / 10m;
+
+    /// <summary>
+    /// ‎amSuggest‎ — سربه‌سر = بخار٪ + اندازه‌گیری٪؛ پیشنهاد = گِردِ بالای (سربه‌سر +
+    /// هدف). هدف = ‎wantPct‎ (فیصدیِ من) اگر هست، وگرنه «سودِ هدف»ِ تنظیمات.
+    /// </summary>
+    public AmanatSuggest Suggest(decimal liters, decimal days, decimal? temp, FuelType fuel,
+                                 decimal? basePct, AmanatSettings s, decimal? wantPct)
+    {
+        var l = Math.Max(0m, liters);
+        var loss = Loss(l, days, temp, fuel, basePct, s);
+        var lossPct = l > 0m ? loss / l * 100m : 0m;
+        var even = lossPct + s.HandlingPct;
+        var want = wantPct ?? s.ProfitPct;
+        var pct = CeilTenth(even + Math.Max(0m, want));
+        return new AmanatSuggest(l, loss, lossPct, s.HandlingPct, even, want, pct);
+    }
+
+    /// <summary>‎amFeeAdvice‎ — ماشین‌حسابِ فیصدیِ صفحهٔ «خلاصه و ابزارها».</summary>
+    public AmanatFeeAdvice FeeAdvice(decimal liters, decimal days, decimal? temp, FuelType fuel,
+                                     decimal? myPct, AmanatSettings s)
+    {
+        var l = Math.Max(0m, liters);
+        var loss = Loss(l, days, temp, fuel, null, s);
+        var need = l > 0m ? loss / l * 100m : 0m;
+        var safe = need * (1m + s.SafetyPct / 100m);
+        decimal? myL = myPct is null ? null : l * myPct.Value / 100m;
+        decimal? diff = myL is null ? null : myL.Value - loss;
+        return new AmanatFeeAdvice(l, loss, need, safe, myPct, myL, diff);
+    }
+
+    /// <summary>مدت‌های جدولِ راهنمای ماشین‌حساب — ‎AM_GUIDE_DAYS‎.</summary>
+    public static readonly int[] GuideDays = { 7, 15, 30, 45, 60, 90, 120, 180 };
+
+    /// <summary>نزدیک‌ترین مدتِ جدولِ راهنما به روزِ نوشته‌شده (ردیفِ نشان‌دار).</summary>
+    public static int NearestGuideDay(decimal days) =>
+        GuideDays.Aggregate(GuideDays[0], (p, c) => Math.Abs(c - days) < Math.Abs(p - days) ? c : p);
+
+    /// <summary>
+    /// ‎_amWhatIfPaint‎ — «🧾 برآوردِ دستی». هیچ چیزی از جدول نمی‌خواند و در آن نمی‌نویسد.
+    /// </summary>
+    public AmanatWhatIf WhatIf(decimal liters, decimal days, decimal? temp, FuelType fuel,
+                               decimal? myPct, decimal? rate, AmanatSettings s)
+    {
+        var l = Math.Max(0m, liters);
+        var d = Math.Max(0m, days);
+        var t = temp ?? s.DefTemp;
+        var loss = Loss(l, d, t, fuel, null, s);
+        var lossPct = l > 0m ? loss / l * 100m : 0m;
+        decimal? share = myPct is null ? null : l * myPct.Value / 100m;
+        decimal? net = share is null ? null : share.Value - loss;
+        var rest = l - (share ?? 0m);
+        decimal? need = myPct is null ? null : myPct.Value + lossPct + s.HandlingPct;
+        decimal? ask = need is null ? null : CeilTenth(need.Value);
+        decimal? askL = ask is null ? null : l * ask.Value / 100m;
+        decimal? netIfAsk = askL is null ? null : askL.Value - loss;
+        var sug = Suggest(l, d, t, fuel, null, s, myPct);
+
+        // «اگر رویِ‌هم این‌قدر بماند» — روزِ کل، نه «+چند روز»
+        var future = new List<AmanatWhatIfDay>();
+        foreach (var add in new[] { 0, 30, 60, 90, 180 })
+        {
+            var dd = d + add;
+            var lo = Loss(l, dd, t, fuel, null, s);
+            var lp = l > 0m ? lo / l * 100m : 0m;
+            var ev = lp + s.HandlingPct;
+            var sg = CeilTenth(ev + Math.Max(0m, myPct ?? s.ProfitPct));
+            decimal? n2 = myPct is null ? null : l * myPct.Value / 100m - lo;
+            future.Add(new AmanatWhatIfDay(dd, add == 0, lo, ev, sg, n2));
+        }
+        return new AmanatWhatIf(l, d, t, loss, lossPct, myPct, share, net, rest, need, ask,
+                                askL, netIfAsk, rate, sug, future);
+    }
+
+    /// <summary>
+    /// ‎amAccounts()‎: ردیفِ بسته‌ای که فیصدیِ خودش را ننوشته، فیصدیِ فعلیِ حساب را
+    /// می‌گیرد — هیچ عددی امروز عوض نمی‌شود، فقط قفل می‌شود تا با عوض شدنِ فیصدیِ
+    /// حساب عقب‌گرد نکند. ردیف‌های عوض‌شده را برمی‌گرداند (برای ذخیره).
+    /// </summary>
+    public static List<AmanatRow> LockClosedRowPcts(AmanatAccount acc)
+    {
+        var changed = new List<AmanatRow>();
+        if (acc.MyPct is not { } my) return changed;
+        foreach (var r in acc.Rows)
+            if (r.State == AmanatRowState.Closed && r.MyPct is null) { r.MyPct = my; changed.Add(r); }
+        return changed;
+    }
+
+    /// <summary>
+    /// ‎_amSortedRows‎ — به ترتیبِ تاریخ؛ ردیفِ بی‌تاریخ آخر، هم‌تاریخ‌ها به ترتیبِ
+    /// خودشان (مرتب‌سازیِ پایدار).
+    /// </summary>
+    public static List<AmanatRow> SortedRows(IEnumerable<AmanatRow> rows) =>
+        rows.Select((r, i) => (r, i))
+            .OrderBy(x => x.r.DateKey > 0 ? x.r.DateKey : int.MaxValue)
+            .ThenBy(x => x.i)
+            .Select(x => x.r).ToList();
+
+    /// <summary>
+    /// ‎_amAccMatch‎ — فیلترِ سوخت و جست‌وجو. جست‌وجو نامِ حساب، یادداشتش و نام و
+    /// «به حسابهٔ»ِ همهٔ ردیف‌ها را می‌گردد (‎normFa‎).
+    /// </summary>
+    public static bool Matches(AmanatAccount a, string fuelFilter, string? search)
+    {
+        if (fuelFilter == "petrol" && a.Fuel != FuelType.Petrol) return false;
+        if (fuelFilter == "diesel" && a.Fuel != FuelType.Diesel) return false;
+        var q = PostingService.NormFa(search);
+        if (q.Length == 0) return true;
+        var parts = new List<string> { a.Name ?? "", a.Note ?? "" };
+        parts.AddRange(a.Rows.Select(r => (r.Name ?? "") + " " + (r.ToAccount ?? "")));
+        return PostingService.NormFa(string.Join(" ", parts)).Contains(q, StringComparison.Ordinal);
+    }
+
+    /// <summary>‎amAccLabel‎ — «نام (پطرول)».</summary>
+    public static string AccLabel(AmanatAccount a) =>
+        (string.IsNullOrWhiteSpace(a.Name) ? "حسابِ بی‌نام" : a.Name!.Trim())
+        + " (" + (a.Fuel == FuelType.Diesel ? "دیزل" : "پطرول") + ")";
+
+    /// <summary>
+    /// ‎_amPaint‎ — کادرهای خلاصهٔ پطرول/دیزل (همهٔ حساب‌ها، بی فیلتر) و هشدارها
+    /// (فقط حساب‌هایی که با فیلتر جورند).
+    /// </summary>
+    public AmanatOverview Overview(IReadOnlyList<AmanatAccount> accounts, AmanatSettings s,
+                                   Func<AmanatAccount, AmanatRow, decimal> autoDaysOf,
+                                   Func<AmanatAccount, bool> matches)
+    {
+        var petrol = new AmanatFuelTotals();
+        var diesel = new AmanatFuelTotals();
+        var errors = new List<string>();
+        var warns = new List<string>();
+        foreach (var a in accounts)
+        {
+            var t = AccountCalc(a, s, r => autoDaysOf(a, r));
+            var p = a.Fuel == FuelType.Diesel ? diesel : petrol;
+            p.Count++; p.Liters += t.Liters; p.Taken += t.Taken; p.Loss += t.Loss;
+            p.Rest += t.Rest; p.Share += t.Share;
+            if (!matches(a)) continue;
+            var label = AccLabel(a);
+            var ri = 0;
+            foreach (var r in a.Rows.OrderBy(x => x.SortIndex).ThenBy(x => x.Id))
+            {
+                ri++;
+                var c = RowCalc(r, a, s, autoDaysOf(a, r));
+                var at = label + " — ردیفِ " + ri + ": ";
+                if ((r.Liters ?? 0m) < 0m) errors.Add(at + "رسید تیل نمی‌تواند کمتر از صفر باشد.");
+                if (c.Taken > c.Liters + 0.0001m) errors.Add(at + "برده شده از رسید تیل بیشتر است.");
+                if (c.Liters > 0m && r.DateKey <= 0 && !c.Manual)
+                    warns.Add(at + "تاریخ ثبت نشده، پس مدت زمان خودکار شمرده نمی‌شود.");
+                if (r.Temp is { } tt && (tt < -50m || tt > 80m)) warns.Add(at + "درجه گرمای واردشده غیرعادی است.");
+                if (c.LossPct > 1m)
+                    warns.Add(at + "تبخیرِ " + Fmt(c.LossPct, 2)
+                        + "٪ خیلی بالاتر از اندازه‌گیری‌های منتشرشده است — «پایه»، «مدت زمان» یا «درجه گرما» را یک بار ببینید.");
+            }
+        }
+        return new AmanatOverview(petrol, diesel, errors, warns);
+    }
+
+    /// <summary>
+    /// ‎_amFmt(n, dec)‎ — ‎toLocaleString('en-US')‎: جداکنندهٔ هزارگان، تا ‎dec‎ رقمِ اعشار،
+    /// بی صفرِ انتهایی؛ گردِ نیمه رو به دورتر از صفر.
+    /// </summary>
+    public static string Fmt(decimal v, int dec = 2)
+    {
+        var r = Math.Round(v, dec, MidpointRounding.AwayFromZero);
+        if (r == 0m) r = 0m;   // «-0» نشود
+        return r.ToString(dec <= 0 ? "#,##0" : "#,##0." + new string('#', dec),
+                          System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>‎_amFmt2‎ — همیشه دقیقاً دو رقمِ اعشار.</summary>
+    public static string Fmt2(decimal v)
+    {
+        var r = Math.Round(v, 2, MidpointRounding.AwayFromZero);
+        if (r == 0m) r = 0m;
+        return r.ToString("#,##0.00", System.Globalization.CultureInfo.InvariantCulture);
+    }
 }
+
+/// <summary>خروجیِ ‎amSuggest‎.</summary>
+public readonly record struct AmanatSuggest(
+    decimal Liters, decimal Loss, decimal LossPct, decimal Handling, decimal EvenPct,
+    decimal Want, decimal Pct)
+{
+    /// <summary>‎netAt(p)‎ — با فیصدیِ ‎p‎، بعد از بخار چقدر می‌ماند.</summary>
+    public decimal NetAt(decimal p) => Liters * p / 100m - Loss;
+}
+
+/// <summary>خروجیِ ‎amFeeAdvice‎.</summary>
+public readonly record struct AmanatFeeAdvice(
+    decimal Liters, decimal Loss, decimal NeedPct, decimal SafePct,
+    decimal? MyPct, decimal? MyLiters, decimal? Diff);
+
+/// <summary>یک ردیفِ جدولِ «اگر رویِ‌هم این‌قدر بماند».</summary>
+public readonly record struct AmanatWhatIfDay(
+    decimal Days, bool IsNow, decimal Loss, decimal EvenPct, decimal SuggestPct, decimal? Net);
+
+/// <summary>خروجیِ «🧾 برآوردِ دستی».</summary>
+public sealed record AmanatWhatIf(
+    decimal Liters, decimal Days, decimal Temp, decimal Loss, decimal LossPct,
+    decimal? MyPct, decimal? Share, decimal? Net, decimal Rest,
+    decimal? NeedPct, decimal? AskPct, decimal? AskL, decimal? NetIfAsk,
+    decimal? Rate, AmanatSuggest Suggest, IReadOnlyList<AmanatWhatIfDay> Future);
+
+/// <summary>جمعِ یک سوخت در کادرِ خلاصه.</summary>
+public sealed class AmanatFuelTotals
+{
+    public int Count { get; set; }
+    public decimal Liters { get; set; }
+    public decimal Taken { get; set; }
+    public decimal Loss { get; set; }
+    public decimal Rest { get; set; }
+    public decimal Share { get; set; }
+    public decimal LossPct => Liters > 0m ? Loss / Liters * 100m : 0m;
+}
+
+/// <summary>کادرهای خلاصه و هشدارهای صفحهٔ «خلاصه و ابزارها».</summary>
+public sealed record AmanatOverview(
+    AmanatFuelTotals Petrol, AmanatFuelTotals Diesel,
+    IReadOnlyList<string> Errors, IReadOnlyList<string> Warnings);
