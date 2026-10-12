@@ -13,8 +13,13 @@ namespace PumpYaqobi.App.ViewModels.Sections;
 
 /// <summary>
 /// ══ 🔁 تبدیلِ تیل — پطرول ⇄ دیزل (۱۴۰۵/۰۷/۱۸) ════════════════════════════════
-/// خواستهٔ صاحب ریپو: مقدارِ تیل، جهتِ تبدیل، قیمتِ خریدِ هر لیترِ مقصد (خودکار از
-/// خریدهای مخزن و دستی‌پذیر)، مقدارِ نهایی و مبلغ، و «لیتر اضافه داده شده» با کادرِ سرخ.
+/// خواستهٔ صاحب ریپو: مقدارِ تیل، جهتِ تبدیل، دو فی (خودکار و دستی‌پذیر)، مقدارِ نهایی
+/// و مبلغ، و «لیتر اضافه داده شده» با کادرِ سرخ.
+///
+/// ⛔ کدام فی (۱۴۰۵/۰۷/۲۰): «تیلی که می‌دهد با فیِ عمدهٔ مخزن، تیلی که می‌گیرد با فیِ
+/// لیترِ اتحادیه» — هر دو جهت همین. پس مبدأ = خریدِ مخزنِ همان تیل، مقصد = نرخِ
+/// اتحادیهٔ همان تیل. هر چهار فی (دو تیل × عمده/اتحادیه) جدا نگه داشته می‌شوند تا
+/// عوض کردنِ جهت فیِ دستیِ نوشته‌شده را پاک نکند.
 /// محاسبه فقط در ‎FuelConversionService‎ است؛ این‌جا فقط کادرها، ثبت و تاریخچه.
 /// ⛔ ثبت دائمی است: این صفحه هیچ دکمهٔ حذف یا ویرایشی برای تاریخچه ندارد.
 /// </summary>
@@ -22,15 +27,21 @@ public sealed partial class ProfitSectionViewModel
 {
     private List<BuyPrice> _prices = new();
     private bool _convFilling;
-    private string _petrolSource = "";
-    private string _dieselSource = "";
 
-    //  ⚠️ کادرهای قیمت به نامِ تیل‌اند، نه «مبدأ/مقصد» (۱۴۰۵/۰۷/۱۹): عوض کردنِ جهت
-    //  قیمتِ دستیِ نوشته‌شده را پاک نمی‌کند و همیشه معلوم است کدام فی مالِ کدام تیل است.
+    /// <summary>منبعِ دستیِ یک فی — بازخوانی و «↺» بی ‎force‎ آن را عوض نمی‌کنند.</summary>
+    internal const string ManualSource = "دستی";
+    internal const string UnionSource = "نرخِ اتحادیه";
+
+    //  چهار فی: (تیل، اتحادیه؟) ⇐ (نوشته، منبع). کادرِ مبدأ همیشه عمدهٔ تیلِ مبدأ است و
+    //  کادرِ مقصد همیشه اتحادیهٔ تیلِ مقصد.
+    private readonly Dictionary<(FuelType Fuel, bool Union), (string Text, string Source)> _convPrices = new();
+
     [ObservableProperty] private string _convQty = "";
     [ObservableProperty] private bool _convPetrolToDiesel = true;
-    [ObservableProperty] private string _convPetrolPrice = "";
-    [ObservableProperty] private string _convDieselPrice = "";
+    /// <summary>فیِ عمدهٔ تیلِ مبدأ (خریدِ مخزن).</summary>
+    [ObservableProperty] private string _convFromPrice = "";
+    /// <summary>فیِ لیترِ اتحادیهٔ تیلِ مقصد.</summary>
+    [ObservableProperty] private string _convToPrice = "";
     [ObservableProperty] private string _convDelivered = "";
 
     public FuelType ConvFrom => ConvPetrolToDiesel ? FuelType.Petrol : FuelType.Diesel;
@@ -43,14 +54,17 @@ public sealed partial class ProfitSectionViewModel
 
     public string ConvQtyLabel => "مقدارِ تیل — " + FuelName(ConvFrom) + " (لیتر)";
     public string ConvDeliveredLabel => FuelName(ConvTo) + "ِ داده‌شده (لیتر)";
-    public string ConvPetrolSourceText => SourceText(_petrolSource);
-    public string ConvDieselSourceText => SourceText(_dieselSource);
-    private string ConvFromPrice => ConvFrom == FuelType.Petrol ? ConvPetrolPrice : ConvDieselPrice;
-    private string ConvToPrice => ConvTo == FuelType.Petrol ? ConvPetrolPrice : ConvDieselPrice;
-    private string FromSource => ConvFrom == FuelType.Petrol ? _petrolSource : _dieselSource;
-    private string ToSource => ConvTo == FuelType.Petrol ? _petrolSource : _dieselSource;
+    public string ConvFromPriceLabel => "فیِ عمدهٔ " + FuelName(ConvFrom) + " (مخزن)";
+    public string ConvToPriceLabel => "فیِ لیترِ اتحادیهٔ " + FuelName(ConvTo);
+    private string FromSource => PriceOf(ConvFrom, false).Source;
+    private string ToSource => PriceOf(ConvTo, true).Source;
+    public string ConvFromSourceText => FromSource.Length == 0
+        ? "⚠️ خریدی در مخزن نیست — دستی بنویسید" : "منبع: " + FromSource;
+    public string ConvToSourceText => ToSource.Length == 0
+        ? "⚠️ نرخِ اتحادیه نوشته نشده — دستی بنویسید" : "منبع: " + ToSource;
 
-    private static string SourceText(string s) => s.Length == 0 ? "⚠️ خریدی در مخزن نیست — دستی بنویسید" : "منبع: " + s;
+    private (string Text, string Source) PriceOf(FuelType f, bool union) =>
+        _convPrices.TryGetValue((f, union), out var v) ? v : ("", "");
 
     [ObservableProperty] private string _convValueText = "—";
     [ObservableProperty] private string _convAllowedText = "—";
@@ -63,22 +77,37 @@ public sealed partial class ProfitSectionViewModel
 
     partial void OnConvQtyChanged(string value) => ConvRecalc();
     partial void OnConvDeliveredChanged(string value) => ConvRecalc();
-    partial void OnConvPetrolPriceChanged(string value)
+    partial void OnConvFromPriceChanged(string value)
     {
-        if (!_convFilling) { _petrolSource = "دستی"; OnPropertyChanged(nameof(ConvPetrolSourceText)); }
+        if (!_convFilling) { _convPrices[(ConvFrom, false)] = (value, ManualSource); OnPropertyChanged(nameof(ConvFromSourceText)); }
         ConvRecalc();
     }
-    partial void OnConvDieselPriceChanged(string value)
+    partial void OnConvToPriceChanged(string value)
     {
-        if (!_convFilling) { _dieselSource = "دستی"; OnPropertyChanged(nameof(ConvDieselSourceText)); }
+        if (!_convFilling) { _convPrices[(ConvTo, true)] = (value, ManualSource); OnPropertyChanged(nameof(ConvToSourceText)); }
         ConvRecalc();
     }
     partial void OnConvPetrolToDieselChanged(bool value)
     {
         foreach (var n in new[] { nameof(ConvFrom), nameof(ConvTo), nameof(ConvFromName), nameof(ConvToName),
                                   nameof(ConvDirectionText), nameof(ConvQtyLabel),
-                                  nameof(ConvDeliveredLabel) })
+                                  nameof(ConvDeliveredLabel), nameof(ConvFromPriceLabel), nameof(ConvToPriceLabel) })
             OnPropertyChanged(n);
+        ShowConvPrices();
+    }
+
+    /// <summary>دو کادر را از همان چهار فی پر می‌کند — بی آن‌که «دستی» شوند.</summary>
+    private void ShowConvPrices()
+    {
+        _convFilling = true;
+        try
+        {
+            ConvFromPrice = PriceOf(ConvFrom, false).Text;
+            ConvToPrice = PriceOf(ConvTo, true).Text;
+        }
+        finally { _convFilling = false; }
+        OnPropertyChanged(nameof(ConvFromSourceText));
+        OnPropertyChanged(nameof(ConvToSourceText));
         ConvRecalc();
     }
 
@@ -105,12 +134,18 @@ public sealed partial class ProfitSectionViewModel
     }
 
     /// <summary>
-    /// فیِ هر تیل از خریدهای مخزن (با تاریخِ همان خرید)، وگرنه فیِ خریدِ ذخیره‌شده، وگرنه خالی
-    /// تا دستی نوشته شود. ⛔ قیمتی که کاربر دستی نوشته با بازخوانیِ صفحه پاک نمی‌شود.
+    /// فیِ عمدهٔ هر تیل از خریدهای مخزن (با تاریخِ همان خرید)، وگرنه فیِ خریدِ ذخیره‌شده؛ فیِ
+    /// اتحادیه از نرخِ اتحادیهٔ همان تیل. نبود ⇒ خالی تا دستی نوشته شود.
+    /// ⛔ قیمتی که کاربر دستی نوشته با بازخوانیِ صفحه پاک نمی‌شود.
     /// </summary>
     private void FillConvPrices(bool force)
     {
         var today = Shamsi.Key(Shamsi.Today());
+        (string Text, string Source) Union(FuelType f)
+        {
+            var r = _host.Settings.UnionRate(f);
+            return r > 0 ? (Shamsi.Money(Math.Round(r, 2), 2), UnionSource) : ("", "");
+        }
         (string Text, string Source) Auto(FuelType f)
         {
             if (LatestBuy(_prices, f, today) is { } b)
@@ -121,19 +156,15 @@ public sealed partial class ProfitSectionViewModel
             if (fb > 0) return (Shamsi.Money(Math.Round(fb, 2), 2), "فیِ خریدِ ذخیره‌شده");
             return ("", "");
         }
-        _convFilling = true;
-        try
+        foreach (var f in new[] { FuelType.Petrol, FuelType.Diesel })
         {
-            if (force || _petrolSource != "دستی") { var a = Auto(FuelType.Petrol); ConvPetrolPrice = a.Text; _petrolSource = a.Source; }
-            if (force || _dieselSource != "دستی") { var b = Auto(FuelType.Diesel); ConvDieselPrice = b.Text; _dieselSource = b.Source; }
+            if (force || PriceOf(f, false).Source != ManualSource) _convPrices[(f, false)] = Auto(f);
+            if (force || PriceOf(f, true).Source != ManualSource) _convPrices[(f, true)] = Union(f);
         }
-        finally { _convFilling = false; }
-        OnPropertyChanged(nameof(ConvPetrolSourceText));
-        OnPropertyChanged(nameof(ConvDieselSourceText));
-        ConvRecalc();
+        ShowConvPrices();
     }
 
-    /// <summary>«↺ از مخزن» — هر دو فی دوباره از خریدهای مخزن.</summary>
+    /// <summary>«↺» — فیِ عمده دوباره از مخزن و فیِ اتحادیه دوباره از نرخِ اتحادیه.</summary>
     [RelayCommand]
     private void ResetConvPrices() => FillConvPrices(force: true);
 
@@ -154,7 +185,9 @@ public sealed partial class ProfitSectionViewModel
             ConvDeliveredHint = "همان مقدارِ حق";
             ConvResultText = Shamsi.Num(ConvQty) <= 0
                 ? "مقدارِ تیل را بنویسید."
-                : "فیِ خریدِ " + (Shamsi.Num(ConvFromPrice) <= 0 ? ConvFromName : ConvToName) + " را بنویسید.";
+                : Shamsi.Num(ConvFromPrice) <= 0
+                    ? "فیِ عمدهٔ " + ConvFromName + " را بنویسید."
+                    : "فیِ اتحادیهٔ " + ConvToName + " را بنویسید.";
             return;
         }
         var to = ConvToName;
@@ -176,8 +209,8 @@ public sealed partial class ProfitSectionViewModel
     [RelayCommand]
     private async Task SaveConversionAsync()
     {
-        if (Shamsi.FirstUnreadable(("مقدار", ConvQty), ("فیِ پطرول", ConvPetrolPrice),
-                                   ("فیِ دیزل", ConvDieselPrice), ("تحویل‌شده", ConvDelivered)) is { } bad)
+        if (Shamsi.FirstUnreadable(("مقدار", ConvQty), ("فیِ عمده", ConvFromPrice),
+                                   ("فیِ اتحادیه", ConvToPrice), ("تحویل‌شده", ConvDelivered)) is { } bad)
         { _host.Toast("«" + bad + "» عدد نیست — ثبت نشد.", ToastKind.Warn); return; }
         ConvRecalc();
         if (!_conv.Ok) { _host.Toast(ConvResultText, ToastKind.Warn); return; }

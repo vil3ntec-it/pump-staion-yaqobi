@@ -399,24 +399,24 @@
       </Border>
 
       <!-- ══ 🔁 تبدیلِ تیل — پطرول ⇄ دیزل (۱۴۰۵/۰۷/۱۸) ════════════════════════════
-           ارزشِ مبدأ با قیمتِ خریدِ واقعیِ مخزن ⇐ تقسیم بر قیمتِ خریدِ مقصد ⇐ لیترِ مجاز.
+           ارزشِ مبدأ با فیِ عمدهٔ مخزن ⇐ تقسیم بر فیِ لیترِ اتحادیهٔ مقصد ⇐ لیترِ مجاز (۱۴۰۵/۰۷/۲۰).
            تحویلِ بیشتر از مجاز ⇒ کادرِ سرخ و «لیتر اضافه داده شده». فرمول: ‎FuelConversionService‎. -->
       <Border Classes="card calm" Padding="18,16">
         <StackPanel Spacing="12">
           <StackPanel Spacing="4" HorizontalAlignment="Center">
             <TextBlock Text="🔁 تبدیلِ تیل" Classes="h2" TextAlignment="Center" />
             <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="640"
-                       Text="ارزشِ تیلِ مبدأ = لیتر × قیمتِ خریدِ مخزن (نه نرخِ اتحادیه)؛ مثال: ۱۰۰ لیتر پطرول × ۷۰ = ۷٬۰۰۰ افغانی ÷ دیزلِ ۸۰ = ۸۷٫۵ لیتر دیزل — نه ۱۰۰ لیتر." />
+                       Text="تیلی که مشتری می‌دهد با فیِ عمدهٔ مخزن، تیلی که می‌گیرد با فیِ لیترِ اتحادیه؛ مثال: ۱۰۰ لیتر پطرول × عمدهٔ ۷۰ = ۷٬۰۰۰ افغانی ÷ دیزلِ اتحادیهٔ ۸۰ = ۸۷٫۵ لیتر دیزل — نه ۱۰۰ لیتر." />
           </StackPanel>
 
           <!-- ۱۴۰۵/۰۷/۱۹ به خواستهٔ صاحب ریپو: همهٔ کادرها هم‌اندازه (پنج ستونِ برابر، بلندیِ ۴۸)،
                و جهت همان دکمهٔ «پطرول ⇐ دیزل» که با زدن برعکس می‌شود. ردیفِ ۱: مقدار ⇐ جهت ⇐ فیِ
-               پطرول ⇐ فیِ دیزل ⇐ حقِ مشتری؛ ردیفِ ۲: لیترِ داده‌شده ⇐ حکم ⇐ ثبت. -->
+               عمدهٔ مبدأ ⇐ فیِ اتحادیهٔ مقصد ⇐ حقِ مشتری؛ ردیفِ ۲: لیترِ داده‌شده ⇐ حکم ⇐ ثبت. -->
           <Grid ColumnDefinitions="*,10,*,10,*,10,*,10,*" RowDefinitions="Auto,6,Auto,4,Auto,10,Auto,6,Auto">
             <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding ConvQtyLabel}" Classes="label pllabel" VerticalAlignment="Bottom" />
             <TextBlock Grid.Row="0" Grid.Column="2" Text="نوعِ تیل" Classes="label pllabel" VerticalAlignment="Bottom" />
-            <TextBlock Grid.Row="0" Grid.Column="4" Text="فیِ خریدِ ⛽ پطرول" Classes="label pllabel" VerticalAlignment="Bottom" />
-            <TextBlock Grid.Row="0" Grid.Column="6" Text="فیِ خریدِ 🟤 دیزل" Classes="label pllabel" VerticalAlignment="Bottom" />
+            <TextBlock Grid.Row="0" Grid.Column="4" Text="{Binding ConvFromPriceLabel}" Classes="label pllabel" VerticalAlignment="Bottom" />
+            <TextBlock Grid.Row="0" Grid.Column="6" Text="{Binding ConvToPriceLabel}" Classes="label pllabel" VerticalAlignment="Bottom" />
             <TextBlock Grid.Row="0" Grid.Column="8" Text="حقِ مشتری — باید داده شود" Classes="label pllabel" VerticalAlignment="Bottom" />
 
             <TextBox Grid.Row="2" Grid.Column="0" Classes="plbox" Height="48" Text="{Binding ConvQty}" Watermark="0" c:LiveFormat.Kind="number" />
@@ -424,18 +424,18 @@
                     HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
                     Content="{Binding ConvDirectionText}" Command="{Binding ToggleConvDirectionCommand}"
                     ToolTip.Tip="زدنش جهتِ تبدیل را عوض می‌کند (پطرول ⇄ دیزل)" />
-            <TextBox Grid.Row="2" Grid.Column="4" Classes="plbox" Height="48" Text="{Binding ConvPetrolPrice}" Watermark="دستی" c:LiveFormat.Kind="number" />
-            <TextBox Grid.Row="2" Grid.Column="6" Classes="plbox" Height="48" Text="{Binding ConvDieselPrice}" Watermark="دستی" c:LiveFormat.Kind="number" />
+            <TextBox Grid.Row="2" Grid.Column="4" Classes="plbox" Height="48" Text="{Binding ConvFromPrice}" Watermark="دستی" c:LiveFormat.Kind="number" />
+            <TextBox Grid.Row="2" Grid.Column="6" Classes="plbox" Height="48" Text="{Binding ConvToPrice}" Watermark="دستی" c:LiveFormat.Kind="number" />
             <Border Grid.Row="2" Grid.Column="8" Classes="panel" Height="48" Padding="8,0">
               <TextBlock Text="{Binding ConvDueText}" FontWeight="ExtraBold" FontSize="14" TextAlignment="Center"
                          VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                          ToolTip.Tip="{Binding ConvDueText}" Foreground="{DynamicResource Pump.Ink.Ok}" />
             </Border>
 
-            <TextBlock Grid.Row="4" Grid.Column="4" Text="{Binding ConvPetrolSourceText}" Classes="muted" FontSize="11" TextAlignment="Center" TextWrapping="Wrap" />
-            <TextBlock Grid.Row="4" Grid.Column="6" Text="{Binding ConvDieselSourceText}" Classes="muted" FontSize="11" TextAlignment="Center" TextWrapping="Wrap" />
-            <Button Grid.Row="4" Grid.Column="8" Content="↺ فی از مخزن" FontSize="11" Padding="6,2" HorizontalAlignment="Center"
-                    ToolTip.Tip="هر دو فی دوباره از تازه‌ترین خریدِ مخزن" Command="{Binding ResetConvPricesCommand}" />
+            <TextBlock Grid.Row="4" Grid.Column="4" Text="{Binding ConvFromSourceText}" Classes="muted" FontSize="11" TextAlignment="Center" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="4" Grid.Column="6" Text="{Binding ConvToSourceText}" Classes="muted" FontSize="11" TextAlignment="Center" TextWrapping="Wrap" />
+            <Button Grid.Row="4" Grid.Column="8" Content="↺ فی از مخزن و اتحادیه" FontSize="11" Padding="6,2" HorizontalAlignment="Center"
+                    ToolTip.Tip="فیِ عمده دوباره از تازه‌ترین خریدِ مخزن، فیِ اتحادیه از نرخِ اتحادیه" Command="{Binding ResetConvPricesCommand}" />
 
             <TextBlock Grid.Row="6" Grid.Column="0" Text="{Binding ConvDeliveredLabel}" Classes="label pllabel" VerticalAlignment="Bottom" />
             <TextBlock Grid.Row="6" Grid.Column="2" Grid.ColumnSpan="5" Text="نتیجه — ضرر یا فایده" Classes="label pllabel" VerticalAlignment="Bottom" />
