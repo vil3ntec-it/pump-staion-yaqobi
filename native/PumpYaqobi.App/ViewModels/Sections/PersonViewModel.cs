@@ -805,8 +805,9 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
                 IsMoney
                     ? new TotalCell("رسید", Shamsi.Money(t.All.Rasid), "Pump.Ok")
                     : new TotalCell("رسید تیل", Shamsi.Money(t.All.RasidFuel), "Pump.Ok"),
+                //  ⛔ (۱۴۰۵/۰۷/۲۴) جدول ستونِ «الباقی» ندارد — الباقی فقط این‌جا، در «جمله»
                 new TotalCell("الباقی", Shamsi.Money(t.All.Albaqi),
-                              t.All.Albaqi > 0m ? "Pump.Danger" : "Pump.Ok"),
+                              t.All.Albaqi > 0m ? "Pump.Danger" : "Pump.Ok", TotalCell.NoColumn),
             };
         }
     }
