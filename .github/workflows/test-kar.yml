@@ -20,6 +20,7 @@ on:
       - 'tools/check-view-buttons.mjs'
       - 'tools/check-kar-print.mjs'
       - 'tools/check-kar-pumps.mjs'
+      - 'tools/check-kar-clear.mjs'
       - '.github/workflows/test-kar.yml'
   push:
     branches-ignore:
@@ -34,6 +35,7 @@ on:
       - 'tools/check-view-buttons.mjs'
       - 'tools/check-kar-print.mjs'
       - 'tools/check-kar-pumps.mjs'
+      - 'tools/check-kar-clear.mjs'
       - '.github/workflows/test-kar.yml'
 
 jobs:
@@ -65,5 +67,7 @@ jobs:
         run: node tools/check-kar-print.mjs
       - name: پمپ‌هایم — یک گوشی، چند پمپ، هیچ قاطی (شورا چ۴)
         run: node tools/check-kar-pumps.mjs
+      - name: کی تیل دارد، کی قرضدار — هر حساب جدا، هر عدد با واحد، مخزن از ظرفیت
+        run: node tools/check-kar-clear.mjs
       - name: پمپ‌هایم — با عکسِ رمزشده (رمزِ «حساب‌ها» روی گوشی باز می‌کند)
         run: SEALED=1 node tools/check-kar-pumps.mjs

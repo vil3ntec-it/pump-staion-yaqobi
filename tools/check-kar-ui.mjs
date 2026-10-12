@@ -43,9 +43,10 @@ const snap = {
   banner: [['شرکت ها تیل (الباقی)', '12,000', 'accent'], ['قرض کل', '5,000', 'danger'], ['مفاد امروز', '800', 'ok'], ['مصارف امروز', '300', 'warn']],
   tank: { petrol: { in: 10000, out: 2500, show: 7500 }, diesel: { in: 4000, out: 3900, show: 100, low: true } },
   debtors: [
-    { id: 1, name: 'هارون', status: 'ok', bal: { money: 0, petrol: 200, diesel: 0 }, accounts: [] },
-    { id: 2, name: 'محمد', status: 'out', bal: { money: -500, petrol: 0, diesel: 0 }, accounts: [] },
-    { id: 3, name: 'علی', status: 'low', bal: { money: 0, petrol: 10, diesel: 0 }, accounts: [] },
+    //  ⛔ علامتِ الباقی همان برنامه است (‎DebtCalculationService.Balances‎): منفی = تیل دارد، مثبت = قرضدار
+    { id: 1, name: 'هارون', status: 'ok', bal: { money: 0, petrol: -200, diesel: 0 }, accounts: [] },
+    { id: 2, name: 'محمد', status: 'out', bal: { money: 500, petrol: 0, diesel: 0 }, accounts: [] },
+    { id: 3, name: 'علی', status: 'low', bal: { money: 0, petrol: -10, diesel: 0 }, accounts: [] },
   ],
   alerts: [{ k: 'd2-out', s: 'out', t: 'محمد — اضافه برد' }],
   sections: { expense: { t: 'مصارف', head: ['تاریخ', 'مبلغ'], rows: [['1405/06/01', '300']], m: ['1405/06'], sum: [['جمله مصارف', '300']] },
@@ -142,8 +143,12 @@ ok(await vis('nav'), 'نوارِ پایین آمد');
 await page.waitForFunction(() => document.querySelectorAll('#staffList .st-row').length === 3, null, { timeout: 8000 });
 const rows = await page.$$eval('#staffList .st-row', els => els.map(e => e.className + '|' + e.querySelector('.n').textContent));
 ok(rows.length === 3 && rows[0].includes('out') && rows[0].includes('محمد'), 'چراغِ سرخ اول می‌آید: ' + rows.join(' , '));
-await page.click('#staffCounts button[data-f="ok"]');
-ok((await page.$$('#staffList .st-row')).length === 1, 'فیلترِ «دارد» یک نفر');
+ok(rows[0].includes('s-owe') && rows[1].includes('علی') && rows[2].includes('هارون'), 'قرضدار ⇐ کم‌مانده ⇐ دارد');
+await page.click('#staffCounts button[data-f="owe"]');
+ok((await page.$$('#staffList .st-row')).length === 1, 'فیلترِ «🔴 قرضدار» یک نفر');
+await page.click('#staffCounts button[data-f="has"]');
+ok((await page.$$('#staffList .st-row')).length === 2, 'فیلترِ «🛢️ دارد» دو نفر');
+ok((await page.textContent('#staffList')).includes('200') && (await page.textContent('#staffList')).includes('لیتر'), 'عدد با واحدش («لیتر»)');
 await page.click('#staffCounts button[data-f=""]');
 await page.click('#staffList .st-row');
 ok(await vis('paneBot'), 'کلیک روی نفر ⇒ حال و الباقی');

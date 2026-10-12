@@ -322,9 +322,13 @@
   function tankBlock(d) {
     var t = (d && d.tank) || {}, kv = [];
     [['petrol', 'پطرول'], ['diesel', 'دیزل']].forEach(function (p) {
-      var x = t[p[0]] || {};
+      var x = t[p[0]] || {}, v = tankView(x);
       kv.push([p[1] + ' — موجودی', fmt(x.show) + ' لیتر' +
         (x.low ? ' ⛔ کم آمده' : (x.near ? ' ⚠️ نزدیکِ حدِ کمبود' : ''))]);
+      if (v.pct >= 0) kv.push([p[1] + ' — پُر', '٪' + fmt(v.pct) + ' از ظرفیتِ ' + fmt(v.cap) + ' لیتر']);
+      v.tanks.forEach(function (k) {
+        kv.push([p[1] + ' — مخزنِ ' + k.n, fmt(k.cur) + ' لیتر' + (k.cap > 0 ? ' از ' + fmt(k.cap) + ' (٪' + fmt(k.pct) + ')' : '') + ' · ' + k.state]);
+      });
       kv.push([p[1] + ' — وارد / فروش', fmt(x['in']) + ' / ' + fmt(x.out) + ' لیتر']);
     });
     return { title: 'مخزن', kv: kv, table: null, note: '' };
@@ -333,11 +337,18 @@
   function personBlock(p) {
     var kv = [
       ['حال', p.status === 'out' ? 'تمام شده — تیلِ اضافه ندهید'
-        : p.status === 'low' ? 'کم مانده' : p.status === 'ok' ? 'موجودی دارد' : 'ردیفی ندارد'],
-      ['الباقیِ پول', fmt(p.bal && p.bal.money) + ' افغانی'],
-      ['الباقیِ پطرول', fmt(p.bal && p.bal.petrol) + ' لیتر'],
-      ['الباقیِ دیزل', fmt(p.bal && p.bal.diesel) + ' لیتر']
+        : p.status === 'low' ? 'کم مانده' : p.status === 'ok' ? 'موجودی دارد' : 'ردیفی ندارد']
     ];
+    var acc = p.accounts || [];
+    //  ⛔ هر حساب جدا، با واحدِ خودش — هیچ جمعی میانِ حساب‌ها نیست
+    if (acc.length) acc.forEach(function (a) {
+      var s = acctState(a);
+      kv.push(['📒 ' + (a.title || 'حسابِ اصلی') + ' (' + s.bookWord + ')',
+        s.icon + ' ' + s.word + (s.lines.length ? ' — ' + s.lines.map(lineText).join(' · ') : '')]);
+    });
+    else kv.push(['الباقیِ پول', fmt(p.bal && p.bal.money) + ' افغانی'],
+      ['الباقیِ پطرول', fmt(p.bal && p.bal.petrol) + ' لیتر'],
+      ['الباقیِ دیزل', fmt(p.bal && p.bal.diesel) + ' لیتر']);
     if (p.phone) kv.push(['تلفن', p.phone]);
     return {
       title: p.name + (p.noinv ? ' (بی‌فاکتور)' : ''), kv: kv,
@@ -582,6 +593,156 @@
     });
   }
 
+  // ══════════════════════════════════════════════════════════════════════
+  //  «کی تیل دارد، کی قرضدار، کی صاف» — هر حساب جدا (۱۴۰۵/۰۷/۲۰)
+  // ══════════════════════════════════════════════════════════════════════
+  //
+  //  صاحب ریپو: «دقیق آدم متوجه نمی‌شود کی تیل دارد و کی نه… در حسابِ یک شخص
+  //  چندین حسابِ فرعی است و آن‌ها را هم در یک حساب نشان می‌دهد در حالی که حسابِ
+  //  جداگانه است… نمی‌شود دید که حسابش واحدِ تیل است یا پول… که یک آدمِ بی‌سواد
+  //  هم بفهمد.»
+  //
+  //  ⛔ هیچ عددی این‌جا ساخته نمی‌شود. «الباقی»ی هر تیل همان خانهٔ پنجمِ ‎fuels‎
+  //  است (‎AcctSnapshots.Leg‎: برد + فیصدی − رسید) و فقط علامتش خوانده می‌شود:
+  //      بیشتر از صفر ⇒ 🔴 قرضدار   ·   کمتر از صفر ⇒ 🛢️ تیل دارد / 💵 پول دارد   ·   صفر ⇒ ⚪ صاف
+  //  همان «تمام‌شده/موجودی دارد»ِ برنامهٔ کامپیوتر (‎DebtCalculationService.Status‎:
+  //  مانده = اعتبار − مصرف = −الباقی).
+  //  ⛔ هر حساب (اصلی و هر فرعی) کارتِ خودش، حالِ خودش و واحدِ خودش را دارد —
+  //  هیچ جمعی میانِ حساب‌ها زده نمی‌شود.
+
+  /** «حساب به لیتر» یا «حساب به پول» — واحدِ دفترِ فعالِ همان حساب در برنامه. */
+  var BOOK_WORD = { fuel: 'حساب به لیتر', money: 'حساب به پول' };
+  var UNIT_WORD = { fuel: 'لیتر', money: 'افغانی' };
+
+  /** دو دفترِ یک حساب؛ برنامهٔ کهنه‌تر فقط دفترِ فعال را می‌فرستد. */
+  function booksOf(a) {
+    a = a || {};
+    if (a.books && a.books.length) return a.books.map(function (b) {
+      return { money: !!b.money, on: !!b.on, sum: b.s || [], fuels: b.f || [], head: b.h || [], rows: b.r || [] };
+    });
+    return [{ money: a.unit === 'money', on: true, sum: a.sum || [], fuels: a.fuels || [],
+              head: a.head || [], rows: a.rows || [], legacy: true }];
+  }
+
+  /** علامتِ الباقی ⇒ حال. نیم‌سنت (گردِ دو رقمِ اعشار) صفر است. */
+  function standOf(v) {
+    v = num(v);
+    return v > 0.004 ? 'owe' : v < -0.004 ? 'has' : 'zero';
+  }
+
+  /** نشان و واژهٔ هر حال — یک جا، برای کارت، صفحهٔ شخص و ربات. */
+  function standLabel(stand, unit) {
+    if (stand === 'owe') return { i: '🔴', w: 'قرضدار' };
+    if (stand === 'has') return unit === 'money' ? { i: '💵', w: 'پول دارد' } : { i: '🛢️', w: 'تیل دارد' };
+    return { i: '⚪', w: 'صاف' };
+  }
+
+  /** خط‌های یک دفتر: هر تیلی که عددی دارد، با الباقی و واحدش. */
+  function bookLines(b) {
+    var unit = b && b.money ? 'money' : 'fuel', out = [];
+    ((b && b.fuels) || []).forEach(function (f) {
+      if (![1, 2, 4].some(function (k) { return num(f[k]) !== 0; })) return;
+      var alb = num(f[4]);
+      out.push({ fuel: /دیزل/.test(f[0]) ? 'diesel' : 'petrol', unit: unit, alb: alb,
+                 amt: Math.abs(alb), stand: standOf(alb) });
+    });
+    return out;
+  }
+
+  /** حالِ چند خط: یکی قرضدار ⇒ قرضدار؛ وگرنه یکی دارد ⇒ دارد؛ وگرنه صاف. */
+  function linesStand(lines) {
+    var owe = lines.filter(function (l) { return l.stand === 'owe'; })[0];
+    if (owe) return { stand: 'owe', unit: owe.unit };
+    var has = lines.filter(function (l) { return l.stand === 'has'; })[0];
+    return has ? { stand: 'has', unit: has.unit } : { stand: 'zero', unit: '' };
+  }
+
+  /**
+   *  حالِ یک حساب. ‎book‎ = همان دفتری که روی صفحه است (پیش‌فرض: دفترِ فعالِ برنامه).
+   *  ‎other‎ = خط‌های دفترِ دیگر که الباقی دارند — فقط برای یادآوری، در حالِ کارت شمرده نمی‌شوند.
+   */
+  function acctState(a, book) {
+    a = a || {};
+    var bs = booksOf(a), on = book || bs.filter(function (b) { return b.on; })[0] || bs[0];
+    var unit = on.money ? 'money' : 'fuel';
+    var lines = bookLines(on), st = linesStand(lines);
+    var lab = standLabel(st.stand, st.unit || unit);
+    var other = [];
+    bs.forEach(function (b) {
+      if (b === on) return;
+      bookLines(b).forEach(function (l) { if (l.stand !== 'zero') other.push(l); });
+    });
+    var warn = st.stand === 'owe' && a.st === 'out' ? '⛔ اعتبارش تمام شده — اضافه ندهید'
+      : st.stand === 'has' && a.st === 'low' ? '⚠️ کم مانده — با احتیاط بدهید' : '';
+    return { unit: unit, unitWord: UNIT_WORD[unit], bookWord: BOOK_WORD[unit], stand: st.stand,
+             icon: lab.i, word: lab.w, lines: lines, other: other, warn: warn };
+  }
+
+  /**
+   *  برنامهٔ خیلی کهنه که حساب‌ها را نمی‌فرستد: همان سه الباقیِ شخص (‎bal‎) و حالش.
+   *  ‎bal‎ همان علامت را دارد (‎DebtCalculationService.Balances‎: بیشتر از صفر = قرضدار).
+   */
+  function personState(p) {
+    p = p || {};
+    var b = p.bal || {}, lines = [];
+    [['petrol', 'fuel', b.petrol], ['diesel', 'fuel', b.diesel], ['money', 'money', b.money]].forEach(function (x) {
+      var v = num(x[2]);
+      if (v !== 0) lines.push({ fuel: x[0], unit: x[1], alb: v, amt: Math.abs(v), stand: standOf(v) });
+    });
+    var st = lines.length ? linesStand(lines)
+      : { stand: p.status === 'out' ? 'owe' : p.status === 'ok' || p.status === 'low' ? 'has' : 'zero', unit: 'fuel' };
+    var lab = standLabel(st.stand, st.unit);
+    var warn = st.stand === 'owe' && p.status === 'out' ? '⛔ اعتبارش تمام شده — اضافه ندهید'
+      : st.stand === 'has' && p.status === 'low' ? '⚠️ کم مانده — با احتیاط بدهید' : '';
+    return { unit: '', unitWord: '', bookWord: '', stand: st.stand, icon: lab.i, word: lab.w,
+             lines: lines, other: [], warn: warn };
+  }
+
+  /** «⛽ پطرول: 320 لیتر قرضدار» — یک خط، با واحد. */
+  function lineText(l) {
+    var name = l.fuel === 'diesel' ? '🟤 دیزل' : l.fuel === 'money' ? '💵 پول' : '⛽ پطرول';
+    var w = standLabel(l.stand, l.unit).w;
+    return name + ': ' + (l.stand === 'zero' ? 'صاف' : fmt(l.amt) + ' ' + UNIT_WORD[l.unit] + ' ' + w);
+  }
+
+  /**
+   *  هر حساب یک کارتِ جدا: شخصی با سه حساب ⇒ سه کارت. شخصی که برنامه‌اش حساب
+   *  نفرستاده ⇒ یک کارت از روی خودِ شخص. ‎i‎ = شمارهٔ حساب در ‎p.accounts‎.
+   */
+  function acctEntries(p) {
+    var acc = (p && p.accounts) || [];
+    if (!acc.length) return [{ p: p, a: null, i: -1, st: p.status || 'none', s: personState(p) }];
+    return acc.map(function (a, i) { return { p: p, a: a, i: i, st: a.st || 'none', s: acctState(a) }; });
+  }
+
+  /** ترتیبِ فهرست: قرضدارِ تمام‌شده، قرضدار، کم‌مانده، دارد، صاف. */
+  function entryRank(e) {
+    var s = e.s.stand;
+    return s === 'owe' ? (e.st === 'out' ? 0 : 1) : s === 'has' ? (e.st === 'low' ? 2 : 3) : 4;
+  }
+
+  /**
+   *  مخزنِ یک تیل برای نمایش — همان عددهای برنامه. ‎pct = -1‎ یعنی برنامهٔ کهنه
+   *  ظرفیت نفرستاده (درصد از هیچ جای دیگری ساخته نمی‌شود).
+   */
+  function tankView(x) {
+    x = x || {};
+    var cap = num(x.cap), show = num(x.show);
+    var pct = cap > 0 ? (x.pct != null ? num(x.pct) : Math.max(0, Math.min(100, Math.round(show / cap * 1000) / 10))) : -1;
+    var thr = num(x.threshold);
+    return {
+      show: show, cap: cap, capSet: x.capSet !== false, pct: pct, threshold: thr,
+      thrPct: cap > 0 && thr > 0 ? Math.max(0, Math.min(100, thr / cap * 100)) : -1,
+      level: x.low ? 'out' : x.near ? 'low' : 'ok',
+      tanks: (x.tanks || []).map(function (t) {
+        var cur = num(t.cur), tc = num(t.cap);
+        return { n: t.n, cap: tc, cur: cur, pct: tc > 0 ? num(t.pct) : -1, act: !!t.act, low: !!t.low,
+                 empty: cur <= 0,
+                 state: cur <= 0 ? '⛔ خالی' : t.act ? (t.low ? '⚠️ از این می‌کشد — کم مانده' : '▶ از این می‌کشد') : '⏸ منتظر — بعد از مخزنِ پیشین' };
+      })
+    };
+  }
+
   /**
    *  خلاصهٔ یک پمپ برای کارتِ «همهٔ پمپ‌ها». ‎ownedGate‎ = هشی که رمزش در همین
    *  اجرا برای **همین** پمپ درست زده شده؛ فقط اگر با ‎gate‎ِ همین عکس یکی باشد،
@@ -613,7 +774,9 @@
       isSealed: isSealed, ownerSealKey: ownerSealKey, openSeal: openSeal,
       wsBaseOf: wsBaseOf, doorsFor: doorsFor, freshAlerts: freshAlerts,
       httpBaseOf: httpBaseOf, pushBases: pushBases, b64uBytes: b64uBytes, TUNNEL: TUNNEL,
-      pumpListAdd: pumpListAdd, pumpListDrop: pumpListDrop, pumpSummary: pumpSummary
+      pumpListAdd: pumpListAdd, pumpListDrop: pumpListDrop, pumpSummary: pumpSummary,
+      standOf: standOf, acctState: acctState, personState: personState, acctEntries: acctEntries,
+      entryRank: entryRank, lineText: lineText, tankView: tankView, booksOf: booksOf
     };
 
   if (typeof document === 'undefined') return;   // آزمونِ Node این‌جا می‌ایستد
@@ -1659,39 +1822,50 @@
     return h + '</tbody></table></div>';
   }
 
-  /** حالِ یک قرض‌دار با یک جمله — همان سه حالِ برنامهٔ کامپیوتر. */
-  function statusWord(s) {
-    return s === 'out' ? 'تمام شده' : s === 'low' ? 'کم مانده' : s === 'ok' ? 'موجودی دارد' : 'ردیفی ندارد';
-  }
-  function statusIcon(s) { return s === 'out' ? '⛔' : s === 'low' ? '⚠️' : s === 'ok' ? '✅' : '•'; }
-
   /** سه عددِ الباقی (پول · پطرول · دیزل) — همان عددهای عکس، بی هیچ حسابی. */
   function balMini(b) {
     b = b || {};
     return [['پول', b.money, 'افغانی'], ['پطرول', b.petrol, 'لیتر'], ['دیزل', b.diesel, 'لیتر']].map(function (x) {
-      return '<div class="mini"><div class="l">' + x[0] + '</div><div class="v">' + fmt(x[1]) + '</div></div>';
+      return '<div class="mini"><div class="l">' + x[0] + ' (' + x[2] + ')</div><div class="v">' + fmt(x[1]) + '</div></div>';
     }).join('');
   }
 
-  /** سربرگِ یک شخص: حرفِ اول، نام، و «چه کنم» با رنگِ حالش. */
+  /**
+   * سربرگِ یک شخص: حرفِ اول، نام، تلفن.
+   * ⛔ شخصی که حساب دارد حالِ «جمع» نمی‌گیرد — هر حسابِ زیرش حالِ خودش را دارد
+   * (صاحب ریپو: «حسابِ فرعی حسابِ جداگانه است»). فقط برنامهٔ کهنه که حساب
+   * نمی‌فرستد، حالِ خودِ شخص را می‌بیند.
+   */
   function whoHtml(p, title, withAccounts) {
-    var s = esc(p.status || 'none');
-    var say = p.status === 'out' ? '⛔ تمام شده — تیلِ اضافه ندهید'
-      : p.status === 'low' ? '⚠️ کم مانده — با احتیاط بدهید'
-      : p.status === 'ok' ? '✅ موجودی دارد' : 'هنوز ردیفی ندارد';
-    return '<div class="pwho ' + s + '"><div class="av">' + esc(String(p.name || '؟').charAt(0)) + '</div>' +
+    var n = (p.accounts || []).length;
+    var s = withAccounts ? null : personState(p);
+    var h = '<div class="pwho ' + (s ? 's-' + s.stand : 's-zero') + '"><div class="av">' + esc(String(p.name || '؟').charAt(0)) + '</div>' +
       '<div class="grow"><div class="nm">' + esc(title) + '</div>' +
-      (p.phone ? '<div class="sub">📞 <span class="num">' + esc(p.phone) + '</span></div>' : '') + '</div></div>' +
-      '<div class="say ' + s + '">' + say + '</div>' +
-      //  ⛔ کارت‌های حساب زیرش هستند ⇒ سه عددِ پول/پطرول/دیزل این‌جا تکرار نمی‌شوند
-      //  («سربرگ‌های هر دو داخلِ هم‌اند»)؛ هر عدد در دفترِ خودش است.
-      (withAccounts ? '' : '<div class="three" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">' + balMini(p.bal) + '</div>');
+      (p.phone ? '<div class="sub">📞 <span class="num">' + esc(p.phone) + '</span></div>' : '') + '</div></div>';
+    if (withAccounts) return h + (n > 1
+      ? '<div class="many">📒 این شخص <b>' + fmt(n) + ' حسابِ جدا</b> دارد — هر حساب حالِ خودش را دارد و با هم جمع نمی‌شوند.</div>' : '');
+    return h + standHtml(s, '') +
+      '<div class="three" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">' + balMini(p.bal) + '</div>';
+  }
+
+  /** نوارِ درشتِ حال: «🔴 قرضدار» / «🛢️ تیل دارد» / «⚪ صاف» + هر خط با واحدش. */
+  function standHtml(s, unitChip) {
+    var h = '<div class="stand s-' + s.stand + '"><span class="si">' + s.icon + '</span><b>' + s.word + '</b>' + unitChip + '</div>';
+    if (s.lines.length) h += '<div class="slines">' + s.lines.map(function (l) {
+      return '<div class="sl s-' + l.stand + '">' + esc(lineText(l)) + '</div>';
+    }).join('') + '</div>';
+    if (s.warn) h += '<div class="swarn">' + s.warn + '</div>';
+    return h;
+  }
+
+  function unitChip(unit) {
+    return unit ? '<span class="unit ' + unit + '">' + (unit === 'money' ? '💵 ' : '🛢️ ') + BOOK_WORD[unit] + '</span>' : '';
   }
 
   function blockHtml(b) {
     if (b.who) {
       var w = '<div class="card ans">' + whoHtml(b.who, b.title, !!(b.person && (b.person.accounts || []).length));
-      if (b.person) w += personAccountsHtml(b.person, b.staff);
+      if (b.person) w += personAccountsHtml(b.person, b.staff, b.focus);
       if (b.note) w += '<div class="sub">' + esc(b.note) + '</div>';
       return w + '</div>';
     }
@@ -1711,12 +1885,15 @@
    * (‎detail === false‎)، به‌جای یک جدولِ خالی صریح گفته می‌شود چرا — وگرنه
    * کارمند خیال می‌کند حساب خالی است.
    */
-  function personAccountsHtml(p, staff) {
-    var h = '', detail = !data || data.detail !== false;
-    (p.accounts || []).forEach(function (a, i) {
-      a.__pid = p.id; a.__i = i;
-      h += acctCard(a, staff, detail);
-    });
+  function personAccountsHtml(p, staff, focus) {
+    var h = '', detail = !data || data.detail !== false, acc = p.accounts || [];
+    acc.forEach(function (a, i) { a.__pid = p.id; a.__i = i; });
+    //  ⛔ حسابی که روی کارتش زده شد اول می‌آید؛ بقیه زیرش، هر کدام کارتِ جدا
+    var f = focus != null && focus >= 0 && focus < acc.length ? focus : -1;
+    if (f >= 0) h += acctCard(acc[f], staff, detail);
+    var rest = acc.filter(function (a, i) { return i !== f; });
+    if (f >= 0 && rest.length) h += '<h3 class="others">📒 حساب‌های دیگرِ همین شخص — هر کدام جدا</h3>';
+    rest.forEach(function (a) { h += acctCard(a, staff, detail); });
     return h;
   }
 
@@ -1753,14 +1930,6 @@
   var bookSel = {};      // ‎«pid|i» ⇒ 'fuel' | 'money'‎ — فقط در حافظه
   var acctReg = {};      // ‎«pid|i» ⇒ {a, staff, detail}‎ برای کشیدنِ دوبارهٔ همان کارت
 
-  function booksOf(a) {
-    if (a.books && a.books.length) return a.books.map(function (b) {
-      return { money: !!b.money, on: !!b.on, sum: b.s || [], fuels: b.f || [], head: b.h || [], rows: b.r || [] };
-    });
-    return [{ money: a.unit === 'money', on: true, sum: a.sum || [], fuels: a.fuels || [],
-              head: a.head || [], rows: a.rows || [], legacy: true }];
-  }
-
   function bookOf(a) {
     var bs = booksOf(a), want = bookSel[a.__pid + '|' + a.__i];
     if (want) {
@@ -1782,9 +1951,11 @@
       return '<button class="btab ' + (m ? 'money' : 'fuel') + (m === money ? ' on' : '') + '" data-book="' + esc(key) + '|' +
         (m ? 'money' : 'fuel') + '">' + (m ? '💵 واحد پول' : '⛽ واحد تیل') + (m === active ? ' <small>•فعال</small>' : '') + '</button>';
     }
-    var h = '<div class="acard ' + st + '" data-acct="' + esc(key) + '" data-staff="' + (staff ? 1 : 0) + '"><div class="ahd">' +
-      '<span class="an">📒 ' + esc(a.title || 'حسابِ اصلی') + '</span>' +
-      '<span class="badge ' + st + '">' + statusIcon(a.st) + ' ' + statusWord(a.st) + '</span></div>' +
+    //  ⛔ حالِ همین حساب و همین دفترِ روی صفحه — نه جمعِ حساب‌های شخص (۱۴۰۵/۰۷/۲۰)
+    var sv = bk.empty ? null : acctState(a, bk);
+    var h = '<div class="acard ' + st + (sv ? ' s-' + sv.stand : '') + '" data-acct="' + esc(key) + '" data-staff="' + (staff ? 1 : 0) + '"><div class="ahd">' +
+      '<span class="an">📒 ' + esc(a.title || 'حسابِ اصلی') + '</span>' + unitChip(active ? 'money' : 'fuel') + '</div>' +
+      (sv ? '<div class="astand">' + standHtml(sv, '') + '</div>' : '') +
       '<div class="btabs">' + tab(false) + tab(true) + '</div>';
     if (bk.empty) {
       return h + '<div class="sub" style="padding:10px 12px">' + (bk.legacy
@@ -1805,6 +1976,7 @@
       h += '</div>';
     }
     var unitWord = money ? 'افغانی' : 'لیتر';
+    if (fuels.length) h += '<div class="uline">عددهای زیر همه به <b>' + unitWord + '</b> است</div>';
     fuels.forEach(function (f) {
       var diesel = /دیزل/.test(f[0]);
       var alb = num(f[4]);
@@ -1817,8 +1989,8 @@
             '</span><span class="v">' + esc(f[3]) + '</span></div>') +
           '<div class="fb rasid"><span class="l">رسید</span><span class="v">' + esc(f[2]) + '</span></div>' +
           '<div class="fb bord"><span class="l">برد</span><span class="v">' + esc(f[1]) + '</span></div>' +
-          '<div class="fb alb ' + (alb > 0 ? 'owe' : alb < 0 ? 'cred' : '') + '" title="' + unitWord + '"><span class="l">الباقی' +
-            '</span><span class="v">' + esc(f[4]) + '</span></div>' +
+          '<div class="fb alb ' + (alb > 0 ? 'owe' : alb < 0 ? 'cred' : '') + '" title="' + unitWord + '"><span class="l">' +
+            (alb > 0 ? 'قرض' : alb < 0 ? 'دارد' : 'الباقی') + '</span><span class="v">' + esc(fmt(Math.abs(alb))) + '</span></div>' +
         '</div></div>';
     });
     if (!staff) {
@@ -2011,31 +2183,48 @@
   }
 
   /**
-   * کارتِ مربعیِ یک قرض‌دار — همان کارتِ بخشِ «قرض‌داران»ِ برنامهٔ کامپیوتر:
-   * نوارِ زنده بالا، نام درشت، الباقیِ پول درشت، نشانِ «اتمام تیل/پول» و خطِ
-   * پایینِ ⛽/🟤. رنگِ لبه از حالِ حساب.
+   * ══ کارتِ هر حساب در فهرست (۱۴۰۵/۰۷/۲۰) ══════════════════════════════════
+   * صاحب ریپو: «دقیق آدم متوجه نمی‌شود کی تیل دارد و کی نه… حسابِ فرعی را در یک
+   * حساب نشان می‌دهد… که یک آدمِ بی‌سواد هم بفهمد.» پس هر حساب (اصلی و هر فرعی)
+   * یک کارتِ جدا: بالا نوارِ درشتِ رنگی (🔴 قرضدار · 🛢️ تیل دارد · 💵 پول دارد ·
+   * ⚪ صاف)، بعد نامِ شخص، نامِ حساب، «حساب به لیتر/پول»، و هر تیل با عدد و واحدش.
+   * ⛔ هیچ جمعی میانِ حساب‌ها نیست. ‎data-pid‎ همان شخص، ‎data-acc‎ همان حساب.
    */
-  function debtCard(p, extra) {
-    var b = p.bal || {}, u = p.use || {};
-    var pct = -1;
-    ['stP', 'stD', 'stM'].forEach(function (k) {
-      var x = u[k];
-      if (x && Number(x[0]) > 0) pct = Math.max(pct, Math.round(Number(x[1]) / Number(x[0]) * 100));
-    });
-    var bar = pct >= 0 ? Math.max(0, Math.min(100, pct)) : 0;
-    var fuelOut = p.stP === 'out' || p.stD === 'out', moneyOut = p.stM === 'out';
-    var nAc = (p.accounts || []).length;
-    return '<button class="dcard ' + (extra ? extra + ' ' : '') + esc(p.status || 'none') + '" data-pid="' + esc(p.id) + '">' +
-      '<span class="meter"><i style="width:' + bar + '%"></i></span>' +
-      '<span class="top"><span class="badge ' + esc(p.status || 'none') + '">' + statusIcon(p.status) + ' ' + statusWord(p.status) + '</span>' +
-        (pct >= 0 ? '<span class="pc">٪' + fmt(pct) + '</span>' : '') + '</span>' +
+  function entryCard(e, extra) {
+    var p = e.p, a = e.a, s = e.s;
+    var many = (p.accounts || []).length > 1;
+    var lines = s.lines.length ? s.lines.map(function (l) {
+      var name = l.fuel === 'diesel' ? '🟤 دیزل' : l.fuel === 'money' ? '💵 پول' : '⛽ پطرول';
+      return '<span class="ln s-' + l.stand + '"><span class="f">' + name + '</span>' +
+        (l.stand === 'zero' ? '<b>صاف</b>' : '<b class="num">' + fmt(l.amt) + '</b><small>' + UNIT_WORD[l.unit] + '</small>' +
+          '<em>' + standLabel(l.stand, l.unit).w + '</em>') + '</span>';
+    }).join('') : '<span class="ln s-zero"><span class="f">هنوز چیزی ثبت نشده</span></span>';
+    var other = s.other.length ? '<span class="oth">' + (s.unit === 'money' ? 'دفترِ لیتر' : 'دفترِ پول') + ' هم: ' +
+      esc(s.other.map(lineText).join(' · ')) + '</span>' : '';
+    return '<button class="dcard ' + (extra ? extra + ' ' : '') + esc(e.st) + ' s-' + s.stand + '" data-pid="' + esc(p.id) + '"' +
+      (e.i >= 0 ? ' data-acc="' + e.i + '"' : '') + '>' +
+      '<span class="stand s-' + s.stand + '"><span class="si">' + s.icon + '</span><b>' + s.word + '</b></span>' +
       '<span class="n">' + esc(p.name) + '</span>' +
-      '<span class="big">' + fmt(b.money) + '</span>' +
-      '<span class="lbl">الباقی · افغانی</span>' +
-      '<span class="flags">' + (fuelOut ? '<em>⛔ اتمام تیل</em>' : '') + (moneyOut ? '<em>⛔ اتمام پول</em>' : '') +
-        (nAc > 1 ? '<i>📒 ' + fmt(nAc) + ' حساب</i>' : '') + '</span>' +
-      '<span class="foot"><span>⛽ ' + fmt(b.petrol) + '</span><span>🟤 ' + fmt(b.diesel) + '</span></span>' +
+      (a && (many || a.title) ? '<span class="an">📒 ' + esc(a.title || 'حسابِ اصلی') + (many ? ' <small>— حسابِ جدا (' + fmt(e.i + 1) + ' از ' + fmt(p.accounts.length) + ')</small>' : '') + '</span>' : '') +
+      (s.unit ? '<span class="unit ' + s.unit + '">' + (s.unit === 'money' ? '💵 ' : '🛢️ ') + s.bookWord + '</span>' : '') +
+      '<span class="lines">' + lines + '</span>' + other +
+      (s.warn ? '<span class="swarn">' + s.warn + '</span>' : '') +
       '</button>';
+  }
+
+  /** همهٔ کارت‌های فهرست — صافی با حال و نام (نامِ شخص یا نامِ حساب). */
+  function entryList(people, want, q) {
+    var out = [];
+    (people || []).forEach(function (p) {
+      acctEntries(p).forEach(function (e) {
+        if (want && e.s.stand !== want) return;
+        if (q && norm(p.name).indexOf(q) < 0 && !(e.a && norm(e.a.title || '').indexOf(q) >= 0)) return;
+        out.push(e);
+      });
+    });
+    return out.sort(function (x, y) {
+      return entryRank(x) - entryRank(y) || String(x.p.name).localeCompare(String(y.p.name), 'fa') || x.i - y.i;
+    });
   }
 
   /** چهار عددِ نوارِ بالای برنامهٔ کامپیوتر + مخزن + کاشیِ بخش‌ها — درِ «حساب‌ها». */
@@ -2069,49 +2258,60 @@
 
   var staffFilter = '';
 
-  /** چراغِ هر قرض‌دار — درِ «کارمندان». سبز: دارد · زرد: کم · سرخ: تمام/اضافه. */
+  /** حالِ هر حساب — درِ «کارمندان». 🔴 قرضدار · 🛢️ دارد · ⚪ صاف؛ هر حساب کارتِ خودش. */
   function renderStaff() {
     var list = $('staffList');
     if (!list) return;
     var people = (data && data.debtors) || [];
     var q = norm(($('inStaffFind') || {}).value || '');
-    var c = { '': people.length, out: 0, low: 0, ok: 0 };
-    people.forEach(function (p) { if (c[p.status] !== undefined) c[p.status]++; });
-    $('staffCounts').innerHTML = [['', 'همه'], ['out', '⛔ تمام‌شده'], ['low', '⚠️ کم مانده'], ['ok', '✅ دارد']]
+    var all = entryList(people, '', '');
+    var c = { '': all.length, owe: 0, has: 0, zero: 0 };
+    all.forEach(function (e) { c[e.s.stand]++; });
+    $('staffCounts').innerHTML = [['', '📋', 'همه'], ['owe', '🔴', 'قرضدار'], ['has', '🛢️', 'دارد'], ['zero', '⚪', 'صاف']]
       .map(function (f) {
-        return '<button data-f="' + f[0] + '" aria-selected="' + (staffFilter === f[0]) + '">' +
-          '<b>' + fmt(c[f[0]] || 0) + '</b>' + f[1] + '</button>';
+        return '<button data-f="' + f[0] + '" class="f-' + (f[0] || 'all') + '" aria-selected="' + (staffFilter === f[0]) + '">' +
+          '<span class="fi">' + f[1] + '</span><b>' + fmt(c[f[0]] || 0) + '</b>' + f[2] + '</button>';
       }).join('');
-
-    //  ⚠️ سرخ اول، بعد زرد، بعد سبز — ‎out‎ صفر است، پس ‎||‎ نه (صفر را ۳ می‌کرد
-    //  و تمام‌شده‌ها تهِ فهرست می‌رفتند؛ آزمونِ مرورگر همین را گرفت).
-    var order = { out: 0, low: 1, ok: 2, none: 3 };
-    var rank = function (p) { return p.status in order ? order[p.status] : 3; };
-    var rows = people.filter(function (p) {
-      if (staffFilter && p.status !== staffFilter) return false;
-      return !q || norm(p.name).indexOf(q) >= 0;
-    }).sort(function (a, b) {
-      return rank(a) - rank(b) || String(a.name).localeCompare(String(b.name), 'fa');
-    });
-    //  ⛔ همان کارتِ مربعیِ «قرض‌داران» (۱۴۰۵/۰۷/۱۶) — خواستهٔ صاحب ریپو:
-    //  «برای صفحهٔ کارمندان همون مدل باشه». کلاسِ ‎st-row‎ برای آزمون‌ها می‌ماند.
-    list.innerHTML = rows.map(function (p) { return debtCard(p, 'st-row'); }).join('')
+    //  ⚠️ قرضدارِ تمام‌شده اول، بعد قرضدار، کم‌مانده، دارد، صاف (‎entryRank‎)
+    list.innerHTML = entryList(people, staffFilter, q).map(function (e) { return entryCard(e, 'st-row'); }).join('')
       || '<div class="sub">کسی پیدا نشد.</div>';
   }
 
-  /** کارتِ هر تیل: موجودی درشت، حال، و وارد/فروش — همان عددهای عکس. */
+  /**
+   * ══ کارتِ هر تیل — همان عددهای بخشِ مخزنِ برنامه (۱۴۰۵/۰۷/۲۰) ══════════════
+   * صاحب ریپو: «دقیق مخزن‌ها را نشان نمی‌دهد.» موجودی درشت با «لیتر»، درصد و نوار
+   * از **ظرفیت** (‎tank.cap/pct‎ — همان ‎FillPercent‎ِ بخشِ مخزن؛ پیش از این از «کلِ
+   * واردشده» ساخته می‌شد که هیچ‌جای برنامه نیست)، خطِ حدِ هشدار، و هر مخزنِ
+   * شماره‌دار جدا با موجودی/ظرفیت/درصد و «از این می‌کشد». ⛔ هیچ عددی این‌جا ساخته نمی‌شود.
+   */
   function tankCard(name, x, compact) {
-    var cls = x.low ? ' bad' : (x.near ? ' warn' : '');
-    var badge = x.low ? '<span class="badge out">⛔ کم آمده</span>'
-      : x.near ? '<span class="badge low">⚠️ نزدیکِ حد</span>' : '<span class="badge ok">✅ کافی</span>';
-    //  نوارِ پرشدگی: موجودی نسبت به کلِ واردشده — فقط وقتی هر دو عدد هست
-    var inL = Number(x['in']) || 0, showL = Number(x.show) || 0;
-    var pct = inL > 0 ? Math.max(0, Math.min(100, Math.round(showL / inL * 100))) : -1;
-    return '<div class="tank' + cls + (name === 'دیزل' ? ' diesel' : '') + '"><div class="hd"><b>' + (name === 'پطرول' ? '🟠 ' : '🔵 ') + name + '</b>' + badge + '</div>' +
-      '<div class="sub">موجودی</div><div class="big">' + fmt(x.show) + ' <small>لیتر</small></div>' +
-      (pct >= 0 ? '<div class="gauge" title="' + pct + '٪ از واردشده"><i style="width:' + pct + '%"></i></div>' : '') +
-      (compact ? '' : '<div class="io"><div class="mini"><div class="l">وارد</div><div class="v">' + fmt(x['in']) + '</div></div>' +
-        '<div class="mini"><div class="l">فروش</div><div class="v">' + fmt(x.out) + '</div></div></div>') + '</div>';
+    var v = tankView(x), diesel = name === 'دیزل';
+    var badge = v.level === 'out' ? '<span class="badge out">⛔ کم آمده — سفارش بدهید</span>'
+      : v.level === 'low' ? '<span class="badge low">⚠️ نزدیکِ حد</span>' : '<span class="badge ok">✅ کافی</span>';
+    function bar(pct, thr) {
+      return '<div class="gauge" role="img" aria-label="٪' + fmt(pct) + ' پر"><i style="width:' + pct + '%"></i>' +
+        (thr >= 0 ? '<s style="inset-inline-start:' + thr + '%" title="حدِ هشدار"></s>' : '') + '</div>';
+    }
+    var h = '<div class="tank t-' + v.level + (diesel ? ' diesel' : '') + '"><div class="hd"><b>' + (diesel ? '🟤 ' : '⛽ ') + name + '</b>' + badge + '</div>' +
+      '<div class="tnow"><span class="big num">' + fmt(v.show) + '</span><span class="u">لیتر در مخزن</span></div>';
+    if (v.pct >= 0) {
+      h += bar(v.pct, v.thrPct) +
+        '<div class="tcap"><b class="num">٪' + fmt(v.pct) + '</b> پُر — ظرفیت <span class="num">' + fmt(v.cap) + '</span> لیتر' +
+        (v.capSet ? '' : ' <small>(ظرفیت در برنامه نوشته نشده؛ پیش‌فرض)</small>') + '</div>';
+    } else h += '<div class="sub">درصدِ پُری: برنامهٔ کامپیوترِ پمپ را به‌روز کنید تا ظرفیت بیاید.</div>';
+    if (v.threshold > 0) h += '<div class="sub">حدِ هشدار: <span class="num">' + fmt(v.threshold) + '</span> لیتر</div>';
+    if (v.tanks.length && !compact) {
+      h += '<div class="tlist">' + v.tanks.map(function (t) {
+        return '<div class="tn' + (t.act ? ' act' : '') + (t.low ? ' low' : '') + (t.empty ? ' empty' : '') + '">' +
+          '<div class="th"><b>🛢️ مخزنِ ' + esc(t.n) + '</b><span>' + t.state + '</span></div>' +
+          '<div class="tv"><span class="num">' + fmt(t.cur) + '</span> لیتر' +
+            (t.cap > 0 ? ' از <span class="num">' + fmt(t.cap) + '</span> · <b class="num">٪' + fmt(t.pct) + '</b>' : ' · ظرفیت نوشته نشده') + '</div>' +
+          (t.pct >= 0 ? bar(t.pct, -1) : '') + '</div>';
+      }).join('') + '</div>';
+    } else if (v.tanks.length) h += '<div class="sub">🛢️ ' + fmt(v.tanks.length) + ' مخزن — جزئیات در «⛽ مخزن»</div>';
+    if (!compact) h += '<div class="io"><div class="mini"><div class="l">همهٔ واردشده</div><div class="v">' + fmt(x['in']) + ' <small>لیتر</small></div></div>' +
+        '<div class="mini"><div class="l">همهٔ فروخته‌شده</div><div class="v">' + fmt(x.out) + ' <small>لیتر</small></div></div></div>';
+    return h + '</div>';
   }
 
   function tankFigs(compact) {
@@ -2131,13 +2331,7 @@
 
   function renderDebtors() {
     var q = norm($('inFind').value), want = $('selSt').value;
-    var people = (data && data.debtors) || [];
-    var h = '';
-    people.forEach(function (p) {
-      if (want && p.status !== want) return;
-      if (q && norm(p.name).indexOf(q) < 0) return;
-      h += debtCard(p, '');
-    });
+    var h = entryList((data && data.debtors) || [], want, q).map(function (e) { return entryCard(e, ''); }).join('');
     $('debtList').innerHTML = h || '<div class="sub">کسی پیدا نشد.</div>';
   }
 
@@ -2604,6 +2798,8 @@
       staffFilter = b.getAttribute('data-f');
       renderStaff();
     });
+    //  کدام حسابِ همان شخص زده شد — اول همان دیده می‌شود
+    function accOf(b) { var v = b.getAttribute('data-acc'); return v == null ? -1 : parseInt(v, 10); }
     $('staffList').addEventListener('click', function (e) {
       var b = e.target.closest('button[data-pid]');
       if (!b) return;
@@ -2612,7 +2808,7 @@
       if (!p) return;
       //  کارمند حسابِ کامل را نمی‌خواهد؛ فقط حال و الباقی — همان بلوکِ ربات
       //  ⛔ همان سربرگِ مربعیِ هر حساب، ولی بی فیصدیِ پمپ و بی جدول (‎staff‎)
-      var blk = personBlock(p); blk.staff = true;
+      var blk = personBlock(p); blk.staff = true; blk.focus = accOf(b);
       $('botOut').innerHTML = '<button class="back" id="btnBackStaff">› برگرد به فهرست</button>' + blockHtml(blk);
       goPane('paneBot');
       $('paneBot').classList.add('solo');   // فقط همین شخص، بی کادرِ پرسش
@@ -2640,7 +2836,8 @@
       var id = b.getAttribute('data-pid');
       var p = ((data && data.debtors) || []).filter(function (x) { return String(x.id) === id; })[0];
       if (!p) return;
-      $('botOut').innerHTML = '<button class="back" id="btnBackDebt">› برگرد به قرض‌داران</button>' + blockHtml(personBlock(p));
+      var blk = personBlock(p); blk.focus = accOf(b);
+      $('botOut').innerHTML = '<button class="back" id="btnBackDebt">› برگرد به قرض‌داران</button>' + blockHtml(blk);
       goPane('paneBot');
       $('paneBot').classList.add('solo');
       $('btnBackDebt').addEventListener('click', function () { goPane('paneDebt'); });

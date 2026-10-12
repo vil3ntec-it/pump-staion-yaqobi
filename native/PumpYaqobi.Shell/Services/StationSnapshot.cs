@@ -72,6 +72,7 @@ public static class StationSnapshot
             ["detail"] = detailed,
             ["sections"] = await SectionsAsync(host, ct),
         };
+        await AddTankListAsync(host, (Dictionary<string, object?>)snap["tank"]!, ct);
         snap["alerts"] = Alerts(snap["debtors"] as List<object?>, snap["tank"] as Dictionary<string, object?>);
         // چهار عددِ نوارِ بالای برنامهٔ کامپیوتر — همان ‎MainViewModel.Banner‎، تا
         // صاحبِ پمپ در گوشی هم اول همین چهار عدد را ببیند.
@@ -284,6 +285,12 @@ public static class StationSnapshot
 
             // ⚠️ همان تابعی که خودِ بخشِ مخزن و داشبورد از آن می‌خوانند
             var t = host.Storage.Tank(purchases, sold.Sale, threshold, dips);
+            //  ⛔ ظرفیت و درصد (۱۴۰۵/۰۷/۲۰): همان ‎DashboardService.TankCapacity‎ و همان فرمولِ
+            //  نوارِ بخشِ مخزن (‎StorageSectionViewModel.RecalcAsync‎: نمایش ÷ ظرفیت، یک رقمِ
+            //  اعشار). گوشی تا امروز درصد را از «کلِ واردشده» می‌ساخت — عددی که هیچ‌جای
+            //  برنامه نیست. ‎capSet‎: ظرفیت را کاربر نوشته یا پیش‌فرض است.
+            var setCap = host.Settings.GetDecimal("tankCapacity_" + key, 0m);
+            var cap = DashboardService.TankCapacity(setCap);
             tank[key] = new Dictionary<string, object?>
             {
                 ["in"] = D(t.In),
@@ -293,9 +300,45 @@ public static class StationSnapshot
                 ["low"] = t.IsLow,
                 ["near"] = t.IsNear,
                 ["threshold"] = D(threshold),
+                ["cap"] = D(cap),
+                ["capSet"] = setCap > 0m,
+                ["pct"] = D(FillPercent(t.Display, cap)),
             };
         }
         return tank;
+    }
+
+    /// <summary>درصدِ پرشدگی — عینِ ‎FillPercent‎ِ بخشِ مخزن: ‎[0, 100]‎، یک رقمِ اعشار.</summary>
+    public static decimal FillPercent(decimal display, decimal cap) =>
+        cap > 0m ? Math.Round(Math.Min(100m, Math.Max(0m, display / cap * 100m)), 1, MidpointRounding.AwayFromZero) : 0m;
+
+    /// <summary>
+    /// ══ مخزن‌های شماره‌دار به گوشی (۱۴۰۵/۰۷/۲۰) ══════════════════════════════
+    /// صاحب ریپو: «دقیق مخزن‌ها را هم نشان نمی‌دهد.» هر مخزنِ شماره‌دار همان کارتِ بخشِ مخزن
+    /// (‎TankCardViewModel‎): ‎n‎ شماره، ‎cap‎ ظرفیت، ‎cur‎ موجودی (منفی ⇒ صفر)، ‎pct‎ درصد،
+    /// ‎act‎ «در حالِ کشیدن»، ‎low‎ = در حالِ کشیدن و زیرِ حدِ هشدار. ⛔ از همان
+    /// ‎StorageDataService.TankLevelsAsync‎ — هیچ تقسیمِ تازه‌ای این‌جا نیست. بی مخزنِ
+    /// تعریف‌شده کلیدِ ‎tanks‎ اصلاً نمی‌آید (یک کوئریِ شمارش، نه بیشتر).
+    /// ⚠️ فقط در <see cref="BuildAsync"/>، نه در <see cref="TankAsync"/> — آن یکی با هر ذخیره از
+    /// ‎AlertWatch‎ هم صدا زده می‌شود و خودش ‎TankLevelsAsync‎ را جدا می‌خواند.
+    /// </summary>
+    internal static async Task AddTankListAsync(AppHost host, Dictionary<string, object?> tank, CancellationToken ct)
+    {
+        var threshold = host.Settings.GetDecimal(SettingsService.LowStockThreshold, 1000m);
+        foreach (var (key, fuel) in new[] { ("petrol", FuelType.Petrol), ("diesel", FuelType.Diesel) })
+        {
+            var levels = await host.StorageData.TankLevelsAsync(fuel, ct);
+            if (levels.Count == 0 || tank.GetValueOrDefault(key) is not Dictionary<string, object?> one) continue;
+            one["tanks"] = levels.Select(l => new Dictionary<string, object?>
+            {
+                ["n"] = l.Num,
+                ["cap"] = D(l.Capacity),
+                ["cur"] = D(l.Display),
+                ["pct"] = D(Math.Round(l.Percent, 1, MidpointRounding.AwayFromZero)),
+                ["act"] = l.Active,
+                ["low"] = l.Active && l.Display <= threshold,
+            }).ToList();
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════════

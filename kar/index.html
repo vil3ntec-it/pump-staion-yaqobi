@@ -450,6 +450,82 @@
   .arows{margin:0 11px 10px}
   .arows summary{cursor:pointer;font-weight:800;color:var(--accent);padding:8px 0;list-style:none}
   .arows summary::-webkit-details-marker{display:none}
+
+  /* ══ «کی تیل دارد، کی قرضدار، کی صاف» — با یک نگاه، هر حساب کارتِ خودش (۱۴۰۵/۰۷/۲۰) ══
+     رنگ همیشه با نشان و واژه می‌آید (🔴 قرضدار · 🛢️ تیل دارد · 💵 پول دارد · ⚪ صاف)
+     تا بی‌رنگ‌بین و بی‌سواد هم بفهمد. هر عدد واحدش را کنارش دارد. */
+  .dgrid{grid-template-columns:1fr;gap:12px}
+  @media (min-width:640px){ .dgrid{grid-template-columns:repeat(auto-fill,minmax(290px,1fr))} }
+  .dcard{min-height:0;border-width:2px;padding-bottom:12px;gap:0}
+  .dcard.s-owe{border-color:var(--red)} .dcard.s-has{border-color:var(--ok)} .dcard.s-zero{border-color:var(--line)}
+  .dcard .n{font-size:1.2rem;padding:8px 14px 0;white-space:normal}
+  .dcard .an{display:block;padding:2px 14px 0;font-weight:800;font-size:.95rem;color:var(--txt)}
+  .dcard .an small{color:var(--muted);font-weight:700}
+  .dcard .unit,.acard .unit{display:inline-flex;align-self:flex-start;align-items:center;gap:4px;margin:6px 14px 0;
+    font-size:.82rem;font-weight:900;border-radius:999px;padding:3px 12px;border:2px solid}
+  .acard .unit{margin:0}
+  .unit.fuel{color:var(--ok);border-color:var(--ok);background:var(--ok-bg)}
+  .unit.money{color:var(--info);border-color:var(--info);background:var(--info-bg)}
+  .stand{display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:1.3rem;font-weight:900;line-height:1.3;
+    border-inline-start:8px solid var(--line);background:var(--card2);color:var(--muted)}
+  .stand .si{font-size:1.7rem;line-height:1}
+  .stand.s-owe{background:var(--red-bg);color:var(--red);border-inline-start-color:var(--red)}
+  .stand.s-has{background:var(--ok-bg);color:var(--ok);border-inline-start-color:var(--ok)}
+  .dcard .lines{display:flex;flex-direction:column;gap:6px;padding:10px 14px 0}
+  .ln{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;background:var(--card2);border-radius:10px;padding:7px 10px;
+    font-weight:800;border-inline-start:5px solid var(--line)}
+  .ln .f{min-width:74px;color:var(--txt)}
+  .ln b{font-size:1.35rem;font-weight:900} .ln small{font-size:.85rem;font-weight:800;color:var(--muted)}
+  .ln em{font-style:normal;font-size:.9rem;font-weight:900;margin-inline-start:auto}
+  .ln.s-owe{border-inline-start-color:var(--red)} .ln.s-owe b,.ln.s-owe em{color:var(--red)}
+  .ln.s-has{border-inline-start-color:var(--ok)} .ln.s-has b,.ln.s-has em{color:var(--ok)}
+  .ln.s-zero{color:var(--muted)}
+  .dcard .oth{display:block;padding:6px 14px 0;font-size:.8rem;color:var(--muted);font-weight:700}
+  .swarn{display:block;margin:8px 14px 0;padding:6px 10px;border-radius:10px;font-weight:900;font-size:.9rem;
+    background:var(--warn-bg);color:var(--warn)}
+  .dcard.out .swarn,.acard .s-owe~.swarn{background:var(--red-bg);color:var(--red)}
+  .counts button{min-height:64px;font-size:.82rem;font-weight:800}
+  .counts button .fi{display:block;font-size:1.15rem;line-height:1.1}
+  .counts button b{font-size:1.2rem}
+  .pwho.s-owe .av{background:var(--red-bg);color:var(--red)} .pwho.s-has .av{background:var(--ok-bg);color:var(--ok)}
+  .many{border-radius:12px;padding:10px 12px;margin-bottom:6px;background:var(--info-bg);color:var(--txt);font-weight:700}
+  .others{font-size:.95rem;margin:18px 2px 0;color:var(--muted)}
+  .acard.s-owe{border-color:var(--red)} .acard.s-has{border-color:var(--ok)} .acard.s-zero{border-color:var(--line)}
+  .acard .an{font-size:1.05rem}
+  .astand .stand{border-radius:0}
+  .slines{display:flex;flex-direction:column;gap:4px;padding:8px 11px 0}
+  .sl{font-weight:800;font-size:1rem;padding:5px 10px;border-radius:9px;background:var(--card2);border-inline-start:5px solid var(--line)}
+  .sl.s-owe{color:var(--red);border-inline-start-color:var(--red)} .sl.s-has{color:var(--ok);border-inline-start-color:var(--ok)}
+  .astand .swarn{margin:8px 11px 0}
+  .card.ans > .stand{border-radius:12px} .card.ans > .slines{padding:8px 0 10px}
+  .uline{padding:8px 11px 0;font-size:.85rem;color:var(--muted);font-weight:700}
+  .uline b{color:var(--txt)}
+  .fb .l{font-size:.72rem} .fb .v{font-size:1rem}
+
+  /* ── مخزن: موجودی، درصد از ظرفیت، خطِ حدِ هشدار و هر مخزنِ شماره‌دار ── */
+  #tankBox,#dashTank{grid-template-columns:1fr}
+  .tank{padding:14px}
+  .tank .hd{flex-wrap:wrap}
+  .tank .hd b{font-size:1.15rem}
+  .tank .tnow{display:flex;align-items:baseline;gap:8px;margin:6px 0 2px}
+  .tank .tnow .big{font-size:2rem;font-weight:900;margin:0}
+  .tank .tnow .u{font-weight:800;color:var(--muted)}
+  .tank .gauge{position:relative;height:16px;overflow:visible}
+  .tank .gauge i{border-radius:999px}
+  .tank .gauge s{position:absolute;top:-4px;bottom:-4px;width:3px;background:var(--red);border-radius:2px;text-decoration:none}
+  .tank.t-out .gauge i{background:var(--red)}
+  .tank.t-out{box-shadow:0 0 0 2px var(--red),var(--shadow)} .tank.t-low{box-shadow:0 0 0 2px var(--warn),var(--shadow)}
+  .tank .tcap{font-weight:800;margin-bottom:4px} .tank .tcap b{font-size:1.15rem} .tank .tcap small{color:var(--muted);font-weight:600}
+  .tank .tlist{display:flex;flex-direction:column;gap:8px;margin:10px 0}
+  .tank .tn{border:1.5px solid var(--line);border-radius:12px;padding:8px 10px;background:var(--card2)}
+  .tank .tn.act{border-color:var(--accent2)} .tank .tn.low{border-color:var(--warn);background:var(--warn-bg)}
+  .tank .tn.empty{opacity:.75}
+  .tank .tn .th{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-weight:800}
+  .tank .tn .th span{font-size:.85rem}
+  .tank .tn .tv{font-weight:800;margin:2px 0}
+  .tank .tn .gauge{height:10px;margin:4px 0 2px}
+  .tank .io .v small{font-size:.7rem;color:var(--muted)}
+
 </style>
 <!-- تمِ برگزیدهٔ همین گوشی — پیش از کشیدنِ صفحه، تا یک لحظه تمِ دیگر دیده نشود -->
 <script>try{var t=localStorage.getItem('pumpKar.theme');if(t=='dark'||t=='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
@@ -745,9 +821,9 @@
         <div class="grow"><input id="inFind" placeholder="نامِ قرض‌دار…"></div>
         <select id="selSt" style="width:auto">
           <option value="">همه</option>
-          <option value="out">تمام‌شده</option>
-          <option value="low">کم مانده</option>
-          <option value="ok">موجودی دارد</option>
+          <option value="owe">🔴 قرضدار</option>
+          <option value="has">🛢️ تیل/پول دارد</option>
+          <option value="zero">⚪ صاف</option>
         </select>
       </div>
     </div>
