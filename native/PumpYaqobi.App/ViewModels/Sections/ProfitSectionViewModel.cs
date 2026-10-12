@@ -237,8 +237,10 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
     [ObservableProperty] private string _unionPetrol = "";
     [ObservableProperty] private string _unionDiesel = "";
 
-    partial void OnUnionPetrolChanged(string v) => SaveUnion(FuelType.Petrol, v);
-    partial void OnUnionDieselChanged(string v) => SaveUnion(FuelType.Diesel, v);
+    //  🔁 تبدیلِ تیل فیِ مقصد را از همین نرخ می‌گیرد (۱۴۰۵/۰۷/۲۰) ⇒ هر تغییرِ نرخ همان‌جا
+    //  به کادرِ «فیِ اتحادیه» می‌رسد، مگر آن کادر دستی نوشته شده باشد.
+    partial void OnUnionPetrolChanged(string v) { SaveUnion(FuelType.Petrol, v); FillConvPrices(force: false); }
+    partial void OnUnionDieselChanged(string v) { SaveUnion(FuelType.Diesel, v); FillConvPrices(force: false); }
 
     private bool _filling;
 

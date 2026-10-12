@@ -69,4 +69,24 @@ public class FuelConversionTests
         Assert.Equal(68m, ProfitSectionViewModel.LatestBuy(p, FuelType.Petrol, 14050601)?.PerLiter);
         Assert.Null(ProfitSectionViewModel.LatestBuy(p[..3], FuelType.Diesel, 14050715));
     }
+
+    /// <summary>
+    /// ۱۴۰۵/۰۷/۲۰ — «تیلی که می‌دهد با فیِ عمدهٔ مخزن، تیلی که می‌گیرد با فیِ لیترِ اتحادیه»،
+    /// هر دو جهت؛ چهار فی جدا تا عوض کردنِ جهت فیِ دستی را پاک نکند.
+    /// </summary>
+    [Fact]
+    public void Mabda_OmdeMakhzan_Maghsad_NerkhEttehadie()
+    {
+        var root = AppContext.BaseDirectory;
+        while (root is not null && !File.Exists(Path.Combine(root, "PumpYaqobi.sln"))) root = Path.GetDirectoryName(root);
+        var c = File.ReadAllText(Path.Combine(root!, "PumpYaqobi.App/ViewModels/Sections/ProfitSectionViewModel.Conversion.cs"));
+        Assert.Contains("ConvFromPrice = PriceOf(ConvFrom, false).Text;", c);   // مبدأ ⇐ عمده
+        Assert.Contains("ConvToPrice = PriceOf(ConvTo, true).Text;", c);        // مقصد ⇐ اتحادیه
+        Assert.Contains("_host.Settings.UnionRate(f)", c);
+        Assert.Contains("if (force || PriceOf(f, true).Source != ManualSource) _convPrices[(f, true)] = Union(f);", c);
+        Assert.Contains("_convPrices[(ConvTo, true)] = (value, ManualSource);", c);
+        Assert.Contains("_convPrices[(ConvFrom, false)] = (value, ManualSource);", c);
+        //  فرمول همان ماند: ۱۰۰ × عمدهٔ ۷۰ ÷ اتحادیهٔ ۸۰ = ۸۷٫۵
+        Assert.Equal(87.5m, FuelConversionService.Compute(100m, 70m, 80m, 0m).Allowed);
+    }
 }
