@@ -45,9 +45,27 @@ public class CellTextCenterTests
         var s = Read("PumpYaqobi.App", "Controls", "RtlTrim.cs");
         var r = s.IndexOf("private static void Recenter", StringComparison.Ordinal);
         var body = s[r..s.IndexOf("var dx = CenterFix(t);", r, StringComparison.Ordinal)];
-        Assert.Contains("double.IsInfinity(lay.MaxWidth)", body);
+        //  (۱۴۰۵/۰۷/۲۴، نسخه 3.1.272) سنجشِ «ناجور» به ‎Stale‎ رفت؛ اول همان‌جا، پیش از کشیدن، با همان
+        //  کادرِ پیشین دوباره چیده می‌شود و فقط اگر نشد چیدمانِ بعدی
+        Assert.Contains("Stale(t)", body);
+        Assert.Contains("double.IsInfinity(lay.MaxWidth)", s[s.IndexOf("private static bool Stale", StringComparison.Ordinal)..]);
+        Assert.Contains("t.Arrange(prev);", body);
         Assert.Contains("t.InvalidateMeasure();", body);
         Assert.Contains("RelaidProperty", body);      //  یک بار برای هر (متن، پهنا) — بی حلقهٔ چیدمان
+    }
+
+    /// <summary>
+    /// ⛔ (۱۴۰۵/۰۷/۲۴، نسخه 3.1.272) «اول چپ می‌رود و بعد وسط می‌پرد»: پس از عوض شدنِ متن، تصحیح در
+    /// پایانِ همان پاسِ چیدمان (‎LayoutUpdated‎ِ یک‌باره) می‌رسد، پیش از کشیدنِ همان قاب — نه با پستِ
+    /// ‎Loaded‎ که پس از کشیدن می‌رسید. سنجهٔ رابط: ‎monthshift‎ ⇒ «قابِ 1..4».
+    /// </summary>
+    [Fact]
+    public void TasihPishAzKeshidaneHamanQab()
+    {
+        var s = Read("PumpYaqobi.App", "Controls", "RtlTrim.cs");
+        var i = s.IndexOf("TextBlock.TextProperty.Changed.AddClassHandler", StringComparison.Ordinal);
+        var body = s[i..s.IndexOf("TextBlock.TextAlignmentProperty.Changed", i, StringComparison.Ordinal)];
+        Assert.Contains("AfterLayout(t);", body);
     }
 
     /// <summary>

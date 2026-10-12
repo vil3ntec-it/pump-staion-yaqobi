@@ -77,7 +77,12 @@ public static class RtlTrim
                 t.RenderTransform = null;
                 t.SetValue(OwnedProperty, false);
             }
-            //  جای خطِ تازه پس از چیدمانِ همین فریم معلوم است
+            //  ⛔ «اول چپ می‌رود و بعد وسط می‌پرد» (۱۴۰۵/۰۷/۲۴، نسخه 3.1.272): جای خطِ تازه پس از
+            //  چیدمانِ همین قاب معلوم است، و باید <b>پیش از کشیدنِ همین قاب</b> سنجیده شود. پستِ
+            //  ‎Loaded‎ پس از کشیدن می‌رسید، پس قابِ نخستِ ماهِ تازه نوشته را بی تصحیح (کج) نشان می‌داد
+            //  و قابِ بعد وسط می‌پرید (‎monthshift‎ ⇒ «قابِ 1»). ‎LayoutUpdated‎ِ یک‌باره همین نوشته در
+            //  پایانِ همان پاسِ چیدمان می‌رسد، پیش از کشیدن. پست فقط پشتوانه است (اگر پاسی نیامد).
+            AfterLayout(t);
             Avalonia.Threading.Dispatcher.UIThread.Post(() => Recenter(t),
                 Avalonia.Threading.DispatcherPriority.Loaded);
         });
@@ -264,14 +269,25 @@ public static class RtlTrim
         //  چسبیده نشان داد، با خطِ خانه سرِ جایش — همان چیزی که ‎TextLayout‎ِ پهنای دیگر (یا بی‌نهایت)
         //  می‌کشد. ناجور ⇒ یک بار از نو چیده می‌شود و پس از آن چیدمان دوباره سنجیده.
         //  ⚠️ یک بار برای هر (متن، پهنا) — ناجوریِ ماندگار (گردکردنِ چیدمان) حلقهٔ چیدمان نمی‌سازد.
-        if (GetEnabled(t) && t.TextLayout is { } lay
-            && (double.IsInfinity(lay.MaxWidth) || Math.Abs(lay.MaxWidth - (t.Bounds.Width - t.Padding.Left - t.Padding.Right)) > 0.5)
-            && t.GetValue(RelaidProperty) != $"{t.Text}|{t.Bounds.Width}")
+        if (GetEnabled(t) && Stale(t))
         {
-            t.SetValue(RelaidProperty, $"{t.Text}|{t.Bounds.Width}");
-            t.InvalidateMeasure();
-            AfterLayout(t);
-            return;
+            //  ⛔ همین‌جا، پیش از کشیدنِ همین قاب (۱۴۰۵/۰۷/۲۴، نسخه 3.1.272): ستونِ خودکار خانه را
+            //  با پهنای بی‌نهایت سنجیده و چیدنِ هم‌اندازه دیگر ‎TextLayout‎ را با پهنای خانه نساخته.
+            //  دوباره چیدن با همان کادرِ پیشین ‎TextLayout‎ را با پهنای درست از نو می‌سازد — بی تغییرِ
+            //  اندازه، پس بی پاسِ تازهٔ پدر و بی حلقه. نشد ⇒ همان راهِ پیشین (چیدمانِ بعدی).
+            if (Avalonia.Layout.LayoutInformation.GetPreviousArrangeBounds(t) is { } prev)
+            {
+                t.InvalidateArrange();
+                t.Arrange(prev);
+            }
+            //  ⚠️ یک بار برای هر (متن، پهنا) — ناجوریِ ماندگار (گردکردنِ چیدمان) حلقهٔ چیدمان نمی‌سازد.
+            if ((!t.IsArrangeValid || Stale(t)) && t.GetValue(RelaidProperty) != $"{t.Text}|{t.Bounds.Width}")
+            {
+                t.SetValue(RelaidProperty, $"{t.Text}|{t.Bounds.Width}");
+                t.InvalidateMeasure();
+                AfterLayout(t);
+                return;
+            }
         }
         //  ⛔ نقاشیِ کهنه نمی‌ماند (۱۴۰۵/۰۷/۲۲، با عکسِ واقعیِ پنجره): با عوض شدنِ ماه متنِ خانه عوض
         //  می‌شود و آوالونیا همان لحظه نقاشی‌اش را با ‎TextLayout‎ِ نیمه‌کاره (پهنای بی‌نهایتِ ستونِ
@@ -300,6 +316,11 @@ public static class RtlTrim
         t.SetValue(OwnedProperty, true);
         t.RenderTransform = new TranslateTransform(x, 0);
     }
+
+    /// <summary>‎TextLayout‎ی که کشیده می‌شود با پهنای دیگری (یا بی‌نهایت) ساخته شده؟</summary>
+    private static bool Stale(TextBlock t) =>
+        t.TextLayout is { } lay
+        && (double.IsInfinity(lay.MaxWidth) || Math.Abs(lay.MaxWidth - (t.Bounds.Width - t.Padding.Left - t.Padding.Right)) > 0.5);
 
     /// <summary>نوشته حرفِ راست‌به‌چپ (فارسی/عربی) دارد؟</summary>
     public static bool IsRtl(string? s)
