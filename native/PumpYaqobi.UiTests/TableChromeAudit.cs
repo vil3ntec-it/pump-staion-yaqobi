@@ -156,6 +156,31 @@ internal static class TableChromeAudit
             }
         }
 
+        // ══ لبه و خطِ هر خانهٔ «جمله» با خطِ ستون‌های جدول — همهٔ بخش‌ها و زیربخش‌ها ══
+        //  ⛔ (۱۴۰۵/۰۷/۲۴، نسخه 3.1.272) صاحب ریپو: «در همهٔ جدول‌ها جمله با خطِ ستون‌ها تراز نیست.»
+        //  مرکز بس نبود: خانه‌ای که مرکزش درست است ولی خطش یک پیکسل کنارِ خطِ جدول، همان «دقیق نیست» است.
+        Console.WriteLine();
+        var bars = 0;
+        foreach (var sec in vm.Sections.ToList())
+        {
+            var targets = new List<SectionViewModel?> { null };
+            targets.AddRange(sec.SubSections);
+            foreach (var sub in targets)
+            {
+                Wait(win, vm.GoAsync(sec));
+                if (sub is not null) { sec.ShowSubCommand.Execute(sub); Wait(win, Task.CompletedTask); }
+                for (var k = 0; k < 6; k++) { Dispatcher.UIThread.RunJobs(); Pump(win); }
+                foreach (var strip in win.GetVisualDescendants().OfType<TotalsStrip>().Where(t => t.IsEffectivelyVisible).ToList())
+                {
+                    if (MonthShiftProbe.BarGrid(strip.FindAncestorOfType<TotalsBar>()) is not DataGrid g || !g.IsEffectivelyVisible) continue;
+                    bars++;
+                    foreach (var x in MonthShiftProbe.BarLines(g, strip))
+                        bad.Add($"{sub?.Id ?? sec.Id} · {x}");
+                }
+            }
+        }
+        Console.WriteLine($"نوارِ «جمله»ِ سنجیده (لبه و خط): {bars}");
+
         // ── رنگِ نوارِ سر و ته جدول ──────────────────────────────────────────
         Console.WriteLine();
         foreach (var key in new[] { "Pump.HeadBand", "Pump.OnHeadBand", "Pump.Table.Border" })

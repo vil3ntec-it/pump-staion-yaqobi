@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.VisualTree;
 
 namespace PumpYaqobi.App.Controls;
@@ -381,38 +382,66 @@ public class TotalsStrip : Panel
             var from = Math.Max(tail, TitleGutter());
             if (!Snap(loose, bounds, from, h))
                 ArrangeLoose(loose, from, finalSize.Width, h, !anyPlaced);
+            SetLines(bounds, TitleGutter(), loose);
             return finalSize;
         }
 
         // جدولی پیدا نشد — همان چیدنِ پشتِ‌سرِ‌هم، تا دستِ‌کم چیزی گم نشود
         ArrangeLoose(Children.ToList(), TitleGutter(), finalSize.Width, h, true);
+        SetLines(new List<(double L, double R)>(), TitleGutter(), Children.ToList());
         return finalSize;
     }
 
-    /// <summary>
-    /// خانه‌هایی که زیرِ هیچ ستونی نیستند.
-    ///
-    /// <para>اگر <b>هیچ</b> خانه‌ای ستون نداشته باشد (مثلِ گاوصندوق، که یک
-    /// ستونِ «مبلغ» دارد و شش جمع) نوار یک ردیفِ کاملِ خودش است: جا به
-    /// تساوی بینشان پخش می‌شود، از بعدِ «جمله» تا لبهٔ راست. این‌طور هر عدد
-    /// کادرِ خودش را دارد و نوار هم‌قدِ جدول دیده می‌شود.</para>
-    ///
-    /// <para>اگر بعضی ستون دارند و بعضی نه، بی‌ستون‌ها پشتِ آخرین
-    /// خانهٔ چیده‌شده می‌نشینند — همان رفتارِ همیشگی — ولی دیگر از لبهٔ نوار
-    /// بیرون نمی‌زنند.</para>
-    /// </summary>
-    /// <summary>
-    /// ══ خانهٔ بی‌ستون روی مرزِ ستون‌های واقعی می‌نشیند ═══════════════════════
-    ///
-    /// هر خانه یک یا چند ستونِ **کامل** را می‌گیرد، پس هر دو لبه‌اش دقیقاً روی
-    /// خطِ عمودیِ خودِ جدول می‌افتد — همان «وصل بودن» و «هم‌اندازه بودن».
-    ///
-    /// ⛔ <b>و اگر جا نبود، دست نمی‌زند</b> (‎false‎ برمی‌گرداند و چیدنِ
-    /// همیشگی سرِ جایش است): خانه‌های بیشتر از ستون‌های آزاد یعنی چسباندنی
-    /// در کار نیست، و نصفه‌چسباندن از نچسباندن بدتر است.
-    /// ⚠️ ستون‌هایی که پشتِ «جمله» یا پشتِ خانه‌های ستون‌دار مانده‌اند کنار
-    /// گذاشته می‌شوند؛ مرزِ کار همان <paramref name="start"/> است.
-    /// </summary>
+    // ══ خطِ ستون‌ها در نوارِ «جمله» — همان خطِ خودِ جدول (۱۴۰۵/۰۷/۲۴، نسخه 3.1.272) ══════
+    //
+    // گزارشِ صاحب ریپو: «در همهٔ جدول‌ها خانه‌های جمله با خطِ ستون‌های جدول تراز نیستند،
+    // دقیق نیست.» هر خانه پیش از این خطِ خودش را می‌کشید (‎BorderThickness="1,0,0,0"‎): سرِ
+    // <b>آغازِ</b> خانه و همیشه ۱ پیکسل — در حالی که جدول خطش را سرِ <b>پایانِ</b> هر خانه
+    // (‎PART_RightGridLine‎) و به ضخامتِ «ظاهرِ جدول‌ها» (‎Pump.Table.Line‎) می‌کشد. پس با ضخامتِ ۲
+    // یا ۳ خط‌ها یک پیکسل کنارِ هم می‌افتادند، و ستونی که جمع نداشت در نوار هیچ خطی نداشت.
+    // حالا خودِ نوار، سرِ پایانِ <b>هر</b> ستون، همان خطِ جدول را با همان رنگ و ضخامت می‌کشد —
+    // جز جایی که یک خانهٔ چندستونی (یا «🧮 جمله») رویش افتاده، مثلِ ‎colspan‎ِ ‎tfoot‎ِ سایت.
+    // ⚠️ مختصات همان مختصاتِ محلیِ سرستون‌هاست، پس آینهٔ راست‌به‌چپ و لغزشِ افقی را خودش دارد.
+
+    private List<double> _lines = new();
+
+    /// <summary>جای خط‌ها (لبهٔ پایانیِ ستون، مختصاتِ محلیِ همین نوار) — برای سنجه.</summary>
+    public IReadOnlyList<double> Lines => _lines;
+
+    private void SetLines(List<(double L, double R)> bounds, double gutter, List<Control> looseCells)
+    {
+        //  ⚠️ فقط خانه‌های بی‌ستون: خانهٔ ستون‌دار درست یک ستون است و هیچ مرزی درونش نیست. سرستون‌های
+        //  ‎ExcelGrid‎ یک تا دو پیکسل روی هم می‌افتند (خطِ مشترک)، پس لبهٔ خانهٔ ستون‌دار را مرز گرفتن خطِ
+        //  دوم را یک پیکسل کنارِ خطِ جدول می‌کشید و مرزِ واقعی را «درونِ خانهٔ همسایه» می‌دید (‎monthshift‎).
+        var loose = looseCells.Where(c => c.IsVisible && c.Bounds.Width > 0)
+                              .Select(c => (L: c.Bounds.Left, R: c.Bounds.Right)).ToList();
+        var cols = bounds.Select(b => b.R).ToList();
+        //  لبهٔ خانهٔ بی‌ستون به نزدیک‌ترین مرزِ ستون (≤ ۳px) می‌چسبد — همان مرزی که ‎Snap‎ داد
+        double Near(double e) => cols.Where(v => Math.Abs(v - e) <= 3).OrderBy(v => Math.Abs(v - e)).Cast<double?>().FirstOrDefault() ?? e;
+        var edges = new List<double>();
+        void Add(double e)
+        {
+            if (edges.Any(v => Math.Abs(v - e) < 0.5)) return;
+            //  خطی که از وسطِ یک خانهٔ چندستونی می‌گذرد کشیده نمی‌شود (مثلِ ‎colspan‎)
+            if (loose.Any(sp => e > Near(sp.L) + 3 && e < Near(sp.R) - 3)) return;
+            edges.Add(e);
+        }
+        //  لبهٔ پایانیِ هر ستون، پس از «🧮 جمله»
+        foreach (var b in bounds)
+            if (b.R >= gutter - 0.5) Add(b.R);
+        //  و دو لبهٔ هر خانهٔ بی‌ستون (بی‌جدول هم کادرِ خودش را دارد)
+        foreach (var sp in loose) { Add(Near(sp.L)); Add(Near(sp.R)); }
+        edges.Sort();
+        if (edges.Count == _lines.Count && edges.Zip(_lines).All(z => Math.Abs(z.First - z.Second) < 0.01)) return;
+        _lines = edges;
+        LinesView?.Show(this);
+    }
+
+    private TotalsLines? _linesView;
+    private TotalsLines? LinesView =>
+        _linesView is { } v && v.GetVisualRoot() is not null ? v
+            : _linesView = Bar?.GetVisualDescendants().OfType<TotalsLines>().FirstOrDefault();
+
     private static bool Snap(List<Control> loose, List<(double L, double R)> bounds,
                              double start, double h)
     {
@@ -458,6 +487,52 @@ public class TotalsStrip : Panel
             var w = Math.Min(child.DesiredSize.Width, Math.Max(0, width - x));
             child.Arrange(new Rect(x, 0, w, h));
             x += w;
+        }
+    }
+}
+
+/// <summary>
+/// خطِ ستون‌ها زیرِ خانه‌های نوارِ «جمله» (۱۴۰۵/۰۷/۲۴، نسخه 3.1.272) — ‎Render‎ِ ‎Panel‎ مُهرشده
+/// است، پس خط‌ها را این لایهٔ بی‌چیدمان، زیرِ ‎TotalsStrip‎ و هم‌اندازهٔ آن، می‌کشد. جایشان را
+/// ‎TotalsStrip.Lines‎ می‌دهد؛ رنگ و ضخامت همان خطِ عمودیِ جدول (‎Pump.Table.Border‎ ·
+/// ‎Pump.Table.Line‎)، و درونِ ستون چسبیده به لبهٔ پایانی‌اش — همان جای ‎PART_RightGridLine‎.
+/// </summary>
+public sealed class TotalsLines : Control
+{
+    private TotalsStrip? _strip;
+
+    internal void Show(TotalsStrip strip)
+    {
+        _strip = strip;
+        InvalidateVisual();
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        ResourcesChanged += OnRes;
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        ResourcesChanged -= OnRes;
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    private void OnRes(object? s, EventArgs e) => InvalidateVisual();
+
+    public override void Render(DrawingContext context)
+    {
+        var strip = _strip;
+        if (strip is null || strip.Lines.Count == 0 || strip.GetVisualRoot() is null) return;
+        if (!this.TryFindResource("Pump.Table.Border", ActualThemeVariant, out var b) || b is not IBrush brush) return;
+        var w = this.TryFindResource("Pump.Table.Line", ActualThemeVariant, out var lw) && lw is double d && d > 0 ? d : 1d;
+        var h = Bounds.Height;
+        foreach (var e in strip.Lines)
+        {
+            if (strip.TranslatePoint(new Point(Math.Max(0, e - w), 0), this) is not { } a
+                || strip.TranslatePoint(new Point(e, 0), this) is not { } z) continue;
+            context.FillRectangle(brush, new Rect(Math.Min(a.X, z.X), 0, Math.Abs(z.X - a.X), h));
         }
     }
 }

@@ -176,8 +176,10 @@ internal static class MonthShiftProbe
                  })
         {
             Pick(win, s, key);
-            //  همان چند قابی که کاربر پس از کلیک می‌بیند — بی ‎Settle‎ی بلند
-            for (var f = 0; f < 4; f++) Frame(win);
+            //  همان چند قابی که کاربر پس از کلیک می‌بیند — بی ‎Settle‎ی بلند.
+            //  ⛔ (۱۴۰۵/۰۷/۲۴، نسخه 3.1.272) جوهرِ <b>هر</b> قاب، همان قابی که کشیده شد: صاحب ریپو
+            //  «اول چپ می‌رود و بعد وسط می‌پرد» دید — سنجهٔ «پس از ته‌نشینی» آن یک قاب را نمی‌دید.
+            for (var f = 0; f < 4; f++) FrameInk(win, $"{s.Title} ⇒ {label} (قابِ {f + 1})");
             Measure(win, $"{s.Title} ⇒ {label} (همان لحظه)", pixels: false);
             Settle(win);
             Measure(win, $"{s.Title} ⇒ {label} (پس از ته‌نشینی)");
@@ -212,6 +214,52 @@ internal static class MonthShiftProbe
     private static void WaitRows(MainWindow win)
     {
         for (var i = 0; i < 60; i++) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(3); }
+    }
+
+    /// <summary>
+    /// یک قابِ برنامه و جوهرِ همان قاب — بی هیچ کارِ دیگری میانِ چیدن و کشیدن؛ نوشته‌ای که
+    /// در این قاب کج کشیده شد، همان «اول چپ، بعد وسط» است.
+    /// </summary>
+    private static void FrameInk(Window w, string what)
+    {
+        //  همان کارِ ‎Measure‎: پیامِ گذرا (‎Toast‎) روی جدول نیفتد — جوهرِ پیام جوهرِ خانه نیست
+        AppHost.Current.Toasts.Visible = false;
+        Dispatcher.UIThread.RunJobs();
+        w.UpdateLayout();
+        using var shot = w.CaptureRenderedFrame();
+        if (shot is null) return;
+        var g = w.GetVisualDescendants().OfType<ExcelGrid>()
+                   .Where(x => x.IsEffectivelyVisible && x.Bounds.Width > 50)
+                   .OrderByDescending(x => x.Bounds.Width * Math.Min(x.Bounds.Height, 2000)).FirstOrDefault();
+        if (g is null) return;
+        using var ms = new MemoryStream();
+        shot.Save(ms);
+        ms.Position = 0;
+        using var frame = SkiaSharp.SKBitmap.Decode(ms);
+        var bad = new List<string>();
+        var n = 0;
+        foreach (var r in g.GetVisualDescendants().OfType<DataGridRow>().Where(r => r.IsEffectivelyVisible && InView(r, w)))
+            foreach (var cell in r.GetVisualDescendants().OfType<DataGridCell>().Where(c => c.IsEffectivelyVisible && c.Bounds.Width > 4))
+                foreach (var tb in cell.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible && !string.IsNullOrEmpty(t.Text)))
+                {
+                    n++;
+                    if (OldMonthProbe.Off(tb, cell, frame) is { } o && o > 3)
+                    {
+                        //  ⚠️ جدا کردنِ دو چیز: (۱) خودِ نوشته کج کشیده شد — تصحیحِ ‎RtlTrim‎ هنوز نرسیده یا
+                        //  ‎TextLayout‎ با پهنای دیگری است: همان «اول چپ، بعد وسط»، ایراد. (۲) تصحیح و چیدمانِ
+                        //  نوشته درست است و جوهرِ دیگری (نوشتهٔ ستونِ همسایه وقتی پهنای خودکارِ ستون‌ها با
+                        //  ردیف‌های تازه هنوز می‌نشیند) در کادر افتاده — هشدار، نه ایرادِ وسط‌چینی.
+                        var dx = RtlTrim.CenterFix(tb);
+                        var want = tb.FlowDirection == FlowDirection.RightToLeft ? -dx : dx;
+                        var have = (tb.RenderTransform as TranslateTransform)?.X ?? 0;
+                        var lay = tb.TextLayout;
+                        var own = Math.Abs(want - have) > 0.5 || !tb.IsArrangeValid
+                                  || double.IsInfinity(lay.MaxWidth) || Math.Abs(lay.MaxWidth - (tb.Bounds.Width - tb.Padding.Left - tb.Padding.Right)) > 0.5;
+                        if (own) bad.Add($"جوهرِ «{tb.Text}» {o:0}px (تصحیح {have:0.#}، باید {want:0.#})");
+                        else Console.WriteLine($"  ⚠ {what}: جوهرِ «{tb.Text}» {o:0}px — وسط‌چینیِ خودش درست است؛ جوهرِ دیگری در کادر (پهنای ستون در حالِ نشستن)");
+                    }
+                }
+        Check($"{what}: {n} جوهر", bad.Count == 0, bad.Count == 0 ? null : $"{bad.Count}: " + string.Join("، ", bad.Take(6)));
     }
 
     /// <summary>یک قابِ برنامه: کارهای صف، یک پاسِ چیدمان، کشیدن.</summary>
@@ -290,6 +338,7 @@ internal static class MonthShiftProbe
                 var d = Math.Max(Math.Abs(te.L - he.L), Math.Abs(te.R - he.R));
                 if (d > 1) bad.Add($"جملهٔ «{tc.Column}»: {d:0.#}px از سرستونش");
             }
+        if (strip is not null) bad.AddRange(BarLines(g, strip));
 
         //  ۴) جابه‌جاییِ وسط‌چینیِ ‎RtlTrim‎ کهنه نیست
         int fixN = 0;
@@ -334,7 +383,54 @@ internal static class MonthShiftProbe
               bad.Count == 0, bad.Count == 0 ? null : $"{bad.Count}: " + string.Join("، ", bad.Take(6)));
     }
 
-    private static object? BarGrid(TotalsBar? b) =>
+    /// <summary>
+    /// ⛔ (۱۴۰۵/۰۷/۲۴، نسخه 3.1.272) «خانه‌های جمله با خطِ ستون‌ها تراز نیستند»: هر خانهٔ ستون‌دارِ
+    /// نوار لبه به لبه با سرستونش (≤ ۱px)، و خطِ نوار سرِ هر دو لبه‌اش درست روی خطِ عمودیِ
+    /// خودِ جدول (‎PART_RightGridLine‎ِ همان ستون‌ها، ≤ ۱px) — همان رنگ و ضخامت.
+    /// </summary>
+    internal static List<string> BarLines(DataGrid g, TotalsStrip strip)
+    {
+        var bad = new List<string>();
+        //  خطِ عمودیِ جدول، از نخستین ردیفِ دیدنی: لبه‌ها در مختصاتِ جدول
+        var row = g.GetVisualDescendants().OfType<DataGridRow>().FirstOrDefault(r => r.IsEffectivelyVisible && r.Bounds.Height > 0);
+        if (row is null) return bad;
+        var grid = new List<(double L, double R)>();
+        foreach (var cell in row.GetVisualDescendants().OfType<DataGridCell>().Where(c => c.IsEffectivelyVisible && c.Bounds.Width > 1))
+            if (cell.GetVisualDescendants().OfType<Rectangle>().FirstOrDefault(x => x.Name == "PART_RightGridLine") is { IsEffectivelyVisible: true } ln
+                && ln.Bounds.Width > 0)
+                grid.Add(Edges(ln, g));
+        if (grid.Count == 0) return bad;
+        var lw = grid[0].R - grid[0].L;
+        //  خطِ نوار: لبهٔ پایانیِ محلی، ‎lw‎ پیکسل به درون
+        var mine = strip.Lines.Select(e =>
+        {
+            var a = strip.TranslatePoint(new Point(e - lw, 0), g)!.Value.X;
+            var b = strip.TranslatePoint(new Point(e, 0), g)!.Value.X;
+            return (L: Math.Min(a, b), R: Math.Max(a, b));
+        }).ToList();
+        var heads = g.GetVisualDescendants().OfType<DataGridColumnHeader>().Where(h => h.IsEffectivelyVisible && h.Bounds.Width > 1)
+                     .GroupBy(h => h.Content?.ToString()?.Trim() ?? "").ToDictionary(x => x.Key, x => x.First());
+        foreach (var ch in strip.Children.OfType<Control>().Where(c => c.IsVisible && c.Bounds.Width > 0))
+        {
+            if (ch.DataContext is not TotalCell tc || string.IsNullOrEmpty(tc.Column) || !heads.TryGetValue(tc.Column, out var hd)) continue;
+            var te = Edges(ch, g);
+            var he = Edges(hd, g);
+            var d = Math.Max(Math.Abs(te.L - he.L), Math.Abs(te.R - he.R));
+            if (d > 1) bad.Add($"لبهٔ جملهٔ «{tc.Column}» {d:0.#}px از لبهٔ ستونش");
+            //  هر دو لبهٔ خانه: خطِ جدول آن‌جا هست ⇒ خطِ نوار هم دقیقاً همان‌جا
+            foreach (var edge in new[] { te.L, te.R })
+            {
+                var gl = grid.Where(x => Math.Min(Math.Abs(x.L - edge), Math.Abs(x.R - edge)) <= 1.5).ToList();
+                if (gl.Count == 0) continue;
+                var target = gl[0];
+                var near = mine.Select(m => Math.Max(Math.Abs(m.L - target.L), Math.Abs(m.R - target.R))).DefaultIfEmpty(999).Min();
+                if (near > 1) bad.Add($"خطِ کنارِ جملهٔ «{tc.Column}» {(near >= 999 ? "نیست" : $"{near:0.#}px از خطِ جدول")}");
+            }
+        }
+        return bad;
+    }
+
+    internal static object? BarGrid(TotalsBar? b) =>
         b is null ? null : typeof(TotalsBar).GetMethod("ResolveGrid", BindingFlags.Instance | BindingFlags.NonPublic)?.Invoke(b, null);
 
     private static bool InView(Visual v, Window win)
