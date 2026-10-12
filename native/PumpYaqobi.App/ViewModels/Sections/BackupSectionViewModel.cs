@@ -75,6 +75,13 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
         var last = UpdateService.ConsumeLastResult();
         _lastFailure = last is null || last.Ok ? "" : last.Message;
         _lastSuccess = last is not null && last.Ok ? last.Message : "";
+        //  ⛔ (۳.۱.۲۷۲) نصب نگرفت ⇒ برنامهٔ کهنه دوباره باز شده؛ پیام همان لحظه دیده شود،
+        //  نه فقط اگر کاربر خودش به این صفحه بیاید.
+        if (last is not null)
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                try { _host.Toast(last.Message, last.Ok ? ToastKind.Ok : ToastKind.Error); } catch { }
+            });
     }
 
     // ══ بکاپ‌ها ═══════════════════════════════════════════════════════════════
@@ -243,7 +250,7 @@ public sealed partial class BackupSectionViewModel : SectionViewModel
     {
         var path = await Dialogs.PickFileAsync("فایلِ بکاپ را انتخاب کنید",
                                                "بکاپِ پمپ",
-                                               new[] { "*" + FullBackup.Extension, "*.db", "*" + SyncBackup.Extension });
+                                               new[] { "*" + FullBackup.Extension, "*" + BackupService.SnapshotExt, "*.db", "*" + SyncBackup.Extension });
         if (path is null) return;
         //  ⛔ فایلِ کامل (‎.pumpyaqobi‎) از همان راهِ سنجیده‌اش می‌آید — بکاپ و
         //  «فایلِ کامل» از ۱۴۰۵/۰۷/۱۶ یک درند.

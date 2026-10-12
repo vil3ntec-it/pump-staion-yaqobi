@@ -147,14 +147,17 @@ public class UpdateTests
         //  لینوکس سبز، روی ویندوز «runas را ندید»، در حالی که کد درست بود.
         var svc = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"))
             .Replace("\r\n", "\n");
-        var i = svc.IndexOf("Arguments = \"/SILENT", StringComparison.Ordinal);
+        //  (۳.۱.۲۷۲) نصاب از راهِ اسکریپتِ بیرونی اجرا می‌شود — همان ‎RunScript‎ِ زیپ
+        var i = svc.IndexOf("private static bool LaunchSetup(", StringComparison.Ordinal);
         Assert.True(i > 0, "اجرای نصاب پیدا نشد");
-        var end = svc.IndexOf("Start(psi);", i, StringComparison.Ordinal);
-        Assert.True(end > i, "نصاب پس از آرگومان‌هایش اجرا نمی‌شود");
-        // در همان بلوکِ نصاب، و **پیش از** اجرا، شرطِ «پوشه اجازه می‌خواهد» باید باشد
+        var end = svc.IndexOf("private static bool LaunchZip(", i, StringComparison.Ordinal);
+        Assert.True(end > i);
         var block = svc[i..end];
-        Assert.Contains("InstallDirWritable", block);
-        Assert.Contains("\"runas\"", block);
+        Assert.Contains("var writable = IsWritable(appDir);", block);
+        Assert.Contains("RunScript(script, appDir, writable, result)", block);
+        var run = block[block.IndexOf("private static bool RunScript(", StringComparison.Ordinal)..];
+        Assert.Contains("if (writable)", run);
+        Assert.Contains("psi.Verb = \"runas\";", run);
     }
 
     /// <summary>
@@ -411,10 +414,10 @@ public class UpdateTests
     public void TheInstallerIsPointedAtTheFolderTheAppIsRunningFrom()
     {
         var svc = SrcText.Read(Path.Combine(Root(), "PumpYaqobi.App", "Update", "UpdateService.cs"));
-        var i = svc.IndexOf("/SILENT /NORESTART /RESTARTAPPLICATIONS", StringComparison.Ordinal);
+        Assert.Contains("/DIR=\"D:\\Pump (Ali)\"", PumpYaqobi.App.Update.UpdateService.SetupArgs("/ARCH=x64", "D:\\Pump (Ali)"));
+        var i = svc.IndexOf("private static bool LaunchSetup(", StringComparison.Ordinal);
         Assert.True(i > 0, "آرگومان‌های نصاب پیدا نشد");
-        Assert.Contains("/DIR=", svc[i..Math.Min(svc.Length, i + 200)]);
-        Assert.Contains("InstallDir", svc[i..Math.Min(svc.Length, i + 200)]);
+        Assert.Contains("var appDir = InstallDir;", svc[i..Math.Min(svc.Length, i + 400)]);
 
         // و خودِ نصاب هم همان پوشه را نگه می‌دارد
         var iss = SrcText.Read(Path.Combine(Root(), "installer", "PumpYaqobi.iss"));

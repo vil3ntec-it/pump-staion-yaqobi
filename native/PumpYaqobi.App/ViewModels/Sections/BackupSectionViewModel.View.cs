@@ -77,7 +77,7 @@ public sealed partial class BackupSectionViewModel
     private async Task ViewFromFileAsync()
     {
         var path = await Dialogs.PickFileAsync("فایلِ بکاپ برای مشاهده", "بکاپِ پمپ",
-            new[] { "*" + FullBackup.Extension, "*.db", "*" + SyncBackup.Extension });
+            new[] { "*" + FullBackup.Extension, "*" + BackupService.SnapshotExt, "*.db", "*" + SyncBackup.Extension });
         if (path is not null) await ViewFileAsync(path);
     }
 

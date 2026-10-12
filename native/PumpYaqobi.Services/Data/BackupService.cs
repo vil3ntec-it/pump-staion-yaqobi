@@ -88,9 +88,31 @@ public sealed class BackupService
     public string SnapshotDir =>
         Path.Combine(Path.GetDirectoryName(_dbf.DbPath) ?? ".", "backups");
 
+    /// <summary>
+    /// ══ پسوندِ بکاپِ دفتر (۳.۱.۲۷۲) ══════════════════════════════════════════
+    /// گزارشِ صاحب ریپو: «بکاپ‌های پوشه (مثلاً ‎pump-1405-07-19‎، نوعِ "Data") با دوبار-کلیک
+    /// باز نمی‌شوند.» عکس‌ها ‎.db‎ بودند و ‎.db‎ را ویندوز (یا برنامهٔ دیگری) از پیش صاحب است
+    /// — نصاب عمداً پیش‌فرضش را نمی‌گیرد (‎NoDbOwner‎)، پس دوبار-کلیک هرگز به برنامه نمی‌رسید.
+    /// ⛔ عکس‌های تازه پسوندِ خودِ برنامه را دارند و نصاب همین را به «مشاهدهٔ بکاپ» می‌سپارد.
+    /// محتوا همان دفترِ SQLite است. ⚠️ عکس‌های کهنهٔ ‎.db‎ (و بی‌پسوند) همچنان خوانده می‌شوند.
+    /// </summary>
+    public const string SnapshotExt = ".pumpbak";
+
+    /// <summary>
+    /// این نام یک بکاپِ دفتر است؟ ‎.pumpbak‎ِ تازه، ‎.db‎ِ کهنه، یا «pump-…»ِ بی‌پسوند.
+    /// </summary>
+    public static bool IsLedgerBackupName(string name)
+    {
+        name = System.IO.Path.GetFileName(name ?? "");
+        if (name.EndsWith(SnapshotExt, StringComparison.OrdinalIgnoreCase)
+            || name.EndsWith(".db", StringComparison.OrdinalIgnoreCase)) return true;
+        //  «pump-1405-07-19» ⇒ بی نقطه، بی پسوند
+        return name.StartsWith("pump-", StringComparison.Ordinal) && System.IO.Path.GetExtension(name).Length == 0;
+    }
+
     /// <summary>نامِ پیشنهادی برای فایلی که کاربر ذخیره می‌کند.</summary>
     public static string SuggestedFileName() =>
-        "pump-backup-" + Shamsi.Today().Replace('/', '-') + ".db";
+        "pump-backup-" + Shamsi.Today().Replace('/', '-') + SnapshotExt;
 
     // ── گرفتن ────────────────────────────────────────────────────────────────
 
@@ -202,7 +224,7 @@ public sealed class BackupService
         try
         {
             var day = Shamsi.Today().Replace('/', '-');
-            var target = Path.Combine(SnapshotDir, "pump-" + day + ".db");
+            var target = Path.Combine(SnapshotDir, "pump-" + day + SnapshotExt);
             var made = WriteSnapshotCore(target);
             LastSnapshotError = "";
             Prune();
@@ -237,16 +259,36 @@ public sealed class BackupService
     {
         try
         {
+            MigrateOldNames();
             var extra = List().Skip(KeepSnapshots).ToList();
             foreach (var f in extra)
                 try { File.Delete(f.Path); } catch { }
             //  ⛔ بقیهٔ نسخه‌ها هم سقف دارند (۱۴۰۵/۰۷/۱۶): «پیش‌از‌بازگردانی» با هر
             //  بازگردانی و هر آوردنِ «فایلِ کامل» یک دفترِ کامل می‌ساخت و ‎.pyq‎های
             //  رمزشده هم، و هیچ‌کدام هرگز پاک نمی‌شدند — پوشه بی‌سقف بزرگ می‌شد.
-            PruneByName("پیش‌از‌بازگردانی-*.db", KeepSafety);
+            PruneByName("پیش‌از‌بازگردانی-*", KeepSafety);
             PruneByName("*" + SyncBackup.Extension, KeepEncrypted);
         }
         catch { }
+    }
+
+    /// <summary>
+    /// ⛔ (۳.۱.۲۷۲) عکس‌های کهنهٔ <c>pump-*.db</c> و «پیش‌از‌بازگردانی-*.db» همان پوشه
+    /// به ‎.pumpbak‎ نام عوض می‌کنند تا آن‌ها هم با دوبار-کلیک باز شوند. فقط تغییرِ نام —
+    /// هیچ چیزی پاک نمی‌شود؛ فایلِ قفل یا هم‌نام همان‌طور می‌ماند و باز هم خوانده می‌شود.
+    /// </summary>
+    private void MigrateOldNames()
+    {
+        if (!Directory.Exists(SnapshotDir)) return;
+        foreach (var path in Directory.EnumerateFiles(SnapshotDir, "*.db").ToList())
+        {
+            var name = Path.GetFileName(path);
+            if (!name.EndsWith(".db", StringComparison.OrdinalIgnoreCase)) continue;
+            if (!name.StartsWith("pump-", StringComparison.Ordinal)
+                && !name.StartsWith("پیش‌از‌بازگردانی-", StringComparison.Ordinal)) continue;
+            var target = Path.ChangeExtension(path, SnapshotExt);
+            try { if (!File.Exists(target)) File.Move(path, target); } catch { /* دورِ بعد */ }
+        }
     }
 
     public const int KeepSafety = 5, KeepEncrypted = 10;
@@ -264,8 +306,11 @@ public sealed class BackupService
     {
         if (!Directory.Exists(SnapshotDir)) return Array.Empty<BackupFile>();
         var list = new List<BackupFile>();
-        foreach (var path in Directory.EnumerateFiles(SnapshotDir, "pump-*.db"))
+        foreach (var path in Directory.EnumerateFiles(SnapshotDir, "pump-*"))
         {
+            //  ⛔ ‎.pumpbak‎ِ تازه و ‎.db‎ِ کهنه، هر دو (۳.۱.۲۷۲) — نه ‎.part‎ و نه چیزِ دیگر
+            if (!path.EndsWith(SnapshotExt, StringComparison.OrdinalIgnoreCase)
+                && !path.EndsWith(".db", StringComparison.OrdinalIgnoreCase)) continue;
             FileInfo fi;
             try { fi = new FileInfo(path); } catch { continue; }
             var stem = Path.GetFileNameWithoutExtension(path);
@@ -308,7 +353,7 @@ public sealed class BackupService
         {
             var name = System.IO.Path.GetFileName(path);
             if (name.StartsWith("tmp-", StringComparison.Ordinal) || name.EndsWith(".part", StringComparison.Ordinal)) continue;
-            if (!name.EndsWith(".db", StringComparison.OrdinalIgnoreCase)
+            if (!IsLedgerBackupName(name)
                 && !name.EndsWith(SyncBackup.Extension, StringComparison.OrdinalIgnoreCase)) continue;
             FileInfo fi;
             try { fi = new FileInfo(path); } catch { continue; }
@@ -516,7 +561,7 @@ public sealed class BackupService
             var stem = "پیش‌از‌بازگردانی-" + AppClock.Now.ToString("yyyyMMdd-HHmmss");
             for (var n = 1; n <= 200; n++)
             {
-                var target = Path.Combine(SnapshotDir, n == 1 ? stem + ".db" : $"{stem}-{n}.db");
+                var target = Path.Combine(SnapshotDir, n == 1 ? stem + SnapshotExt : $"{stem}-{n}{SnapshotExt}");
                 if (File.Exists(target)) continue;
                 return WriteSnapshotCore(target);
             }

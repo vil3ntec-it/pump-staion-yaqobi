@@ -651,9 +651,7 @@ public sealed class UpdateService
             if (Compare(AppVersion.Current, target) >= 0)
                 return new Outcome(true, "✅ برنامه به نسخهٔ " + AppVersion.Current + " به‌روز شد");
 
-            var why = code.Length > 0 && code != "0"
-                ? " (فایل‌ها جای‌گزین نشدند)"
-                : "";
+            var why = FailureDetail(code);
 
             return new Outcome(false,
                 "به‌روزرسانی کامل نشد" + why + " — برنامه هنوز روی نسخهٔ "
@@ -662,6 +660,18 @@ public sealed class UpdateService
                 + "یک‌بار برنامه را «به‌عنوان مدیر» باز کنید و دوباره بزنید.");
         }
         catch { return null; }
+    }
+
+    /// <summary>
+    /// کدِ ‎apply-result.txt‎ ⇒ تکهٔ فارسیِ پیام. «setup:N» کدِ خروجیِ نصاب است
+    /// (<see cref="SetupScript"/>)، عددِ تنها کدِ ‎robocopy‎ِ بستهٔ زیپ.
+    /// </summary>
+    public static string FailureDetail(string code)
+    {
+        code = (code ?? "").Trim();
+        if (code.StartsWith("setup:", StringComparison.Ordinal))
+            return " (نصب‌کنندهٔ نسخهٔ تازه کامل نشد — کدِ " + code[6..] + ")";
+        return code.Length > 0 && code != "0" ? " (فایل‌ها جای‌گزین نشدند)" : "";
     }
 
     /// <summary>«v2.9.430» یا «2.9.430» → «2.9.430».</summary>
@@ -992,35 +1002,11 @@ public sealed class UpdateService
                 return LaunchZip(packagePath, held);
 
             // ── نصاب ──
-            // ‎/SILENT‎ تا کاربر وسطِ به‌روزرسانی با پنجرهٔ ویزارد روبه‌رو نشود؛
-            // نصابِ ما ‎CloseApplications=yes‎ دارد، پس خودش برنامهٔ باز را
-            // می‌بندد، فایل‌ها را عوض می‌کند و دوباره بازش می‌کند.
-            // (بارِ اول که کاربر خودش ‎setup.exe‎ را می‌زند، بی‌آرگومان اجرا
-            //  می‌شود و ویزارد کامل را می‌بیند — این مسیر فقط به‌روزرسانی است.)
-            // ⛔ ‎/DIR‎ لازم است — شرحش بالای همین متد.
-            var psi = new System.Diagnostics.ProcessStartInfo(packagePath)
-            {
-                //  ⛔ ‎/RELAUNCH=1‎ — تنها چیزی که نصاب را وامی‌دارد پس از نصبِ بی‌صدا
-                //  برنامه را دوباره باز کند (‎WantRelaunch‎ در ‎PumpYaqobi.iss‎).
-                Arguments = "/SILENT /NORESTART /RESTARTAPPLICATIONS /RELAUNCH=1"
-                          + " " + AppArch.ArchArg
-                          + " /DIR=\"" + InstallDir + "\"",
-                UseShellExecute = true,
-            };
-
-            // ⚠️ اگر پوشهٔ نصب اجازهٔ مدیر بخواهد (‎Program Files‎)، نصابِ
-            // بی‌صدا **نمی‌تواند** خودش پنجرهٔ اجازه را بالا بیاورد و کارش
-            // نیمه‌کاره می‌ماند. مسیرِ زیپ این را از اول رعایت می‌کرد و این
-            // مسیر نه — پس به‌روزرسانیِ نصابی در چنان پوشه‌ای همیشه شکست
-            // می‌خورد، بی آنکه کسی بفهمد.
-            if (!InstallDirWritable)
-            {
-                psi.Verb = "runas";
-                psi.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
-            }
-
-            Start(psi);
-            return true;
+            //  ⛔ (۳.۱.۲۷۲) نصاب دیگر مستقیم و هم‌زمان با برنامه اجرا نمی‌شود؛ شرحِ
+            //  ریشه بالای ‎SetupArgs‎ است. حالا همان الگوی زیپ: اسکریپتی بیرونی صبر
+            //  می‌کند برنامه بسته شود، نصاب را اجرا می‌کند و تا پایانش می‌ماند، و
+            //  <b>چه نصب گرفت چه نه</b> برنامه را دوباره باز می‌کند.
+            return LaunchSetup(packagePath);
         }
         catch
         {
@@ -1101,23 +1087,7 @@ public sealed class UpdateService
     /// </summary>
     public static string ApplyScript(int pid, string src, string appDir, string result,
                                        string relaunch, string staging) => $"""
-            @echo off
-            chcp 65001 >nul
-            set N=0
-            :wait
-            tasklist /FI "PID eq {pid}" 2>nul | find "{pid}" >nul
-            if not errorlevel 1 (
-              set /a N+=1
-              if %N% GEQ 60 goto kill
-              ping -n 2 127.0.0.1 >nul
-              goto wait
-            )
-            goto go
-            :kill
-            taskkill /F /PID {pid} >nul 2>&1
-            ping -n 3 127.0.0.1 >nul
-            :go
-            ping -n 2 127.0.0.1 >nul
+            {WaitForExit(pid)}
             robocopy "{src}" "{appDir}" /E /IS /IT /R:10 /W:2 >nul
             set RC=%ERRORLEVEL%
             if %RC% GEQ 8 (>"{result}" echo %RC%) else (del "{result}" >nul 2>&1)
@@ -1125,6 +1095,113 @@ public sealed class UpdateService
             rmdir /s /q "{staging}" >nul 2>&1
             exit /b 0
             """;
+
+    /// <summary>
+    /// سرِ همهٔ اسکریپت‌های به‌روزرسانی: صبر تا پروسهٔ <paramref name="pid"/> برود
+    /// (با ‎ping‎، نه ‎timeout‎ — شرحش بالای <see cref="ApplyScript"/>)، و پس از ~۶۰
+    /// ثانیه ‎taskkill /F‎.
+    /// </summary>
+    public static string WaitForExit(int pid) => $"""
+        @echo off
+        chcp 65001 >nul
+        set N=0
+        :wait
+        tasklist /FI "PID eq {pid}" 2>nul | find "{pid}" >nul
+        if not errorlevel 1 (
+          set /a N+=1
+          if %N% GEQ 60 goto kill
+          ping -n 2 127.0.0.1 >nul
+          goto wait
+        )
+        goto go
+        :kill
+        taskkill /F /PID {pid} >nul 2>&1
+        ping -n 3 127.0.0.1 >nul
+        :go
+        ping -n 2 127.0.0.1 >nul
+        """;
+
+    /// <summary>
+    /// ══ «از داخلِ برنامه به‌روز می‌کنم؛ بسته می‌شود و دیگر باز نمی‌شود، یا نسخهٔ تازه
+    /// نصب نمی‌شود» (۳.۱.۲۷۲) ═══════════════════════════════════════════════════════
+    ///
+    /// ریشه: مسیرِ نصاب (‎.exe‎) هم <b>جای‌گزینی</b> و هم <b>دوباره باز کردن</b> را به خودِ
+    /// نصاب می‌سپرد (‎/RELAUNCH=1‎ ⇐ خطِ ‎[Run]‎ِ ‎PumpYaqobi.iss‎) و برنامه در هر حال
+    /// بسته می‌شد (‎UpdateExit.CloseForInstall‎). آن خطِ ‎[Run]‎ فقط پس از نصبِ
+    /// <b>موفق</b> می‌دود؛ پس هر شکستی — نصاب هم‌زمان با بسته شدنِ برنامه بالا می‌آمد و
+    /// ‎Restart Manager‎ فایلِ قفل را می‌دید، پیامِ «فایل در حالِ استفاده است / تلاشِ
+    /// دوباره؟» که در ‎/SILENT‎ (و با پنجرهٔ پنهانِ ‎runas‎) کسی نمی‌دیدش، ردِ نسخه در
+    /// ‎InitializeSetup‎ — یعنی برنامه رفت و هیچ‌کس بازش نکرد. همان دو گزارش: «باز
+    /// نمی‌شود» و «خودم باز می‌کنم، آپدیت نشده».
+    ///
+    /// حالا: نصاب <b>پس از</b> رفتنِ کاملِ برنامه اجرا می‌شود (‎start /wait‎)، هر پیامش
+    /// با ‎/SUPPRESSMSGBOXES‎ پاسخِ پیش‌فرض می‌گیرد (هرگز نمی‌ماند)، کدِ خروجیِ
+    /// ناصفرش در ‎apply-result.txt‎ می‌نشیند، و برنامه <b>همیشه</b> دوباره باز می‌شود —
+    /// نسخهٔ تازه اگر گرفت، نسخهٔ کهنه با پیامِ فارسیِ <see cref="ConsumeLastResult"/>
+    /// اگر نگرفت. ⛔ ‎/RELAUNCH=1‎ و ‎/RESTARTAPPLICATIONS‎ عمداً فرستاده نمی‌شوند: باز
+    /// کردن کارِ همین اسکریپت است، نه دو جا.
+    /// </summary>
+    public static string SetupArgs(string arch, string installDir) =>
+        "/SILENT /SUPPRESSMSGBOXES /NORESTART " + arch + " /DIR=\"" + installDir + "\"";
+
+    /// <summary>اسکریپتِ نصاب — خالص، و جدا آزمون می‌شود (‎SetupUpdateScriptTests‎).</summary>
+    public static string SetupScript(int pid, string setup, string args, string result, string relaunch) => $"""
+            {WaitForExit(pid)}
+            start "" /wait "{setup}" {args}
+            set RC=%ERRORLEVEL%
+            if not "%RC%"=="0" (>"{result}" echo setup:%RC%) else (del "{result}" >nul 2>&1)
+            {relaunch}
+            exit /b 0
+            """;
+
+    private static bool LaunchSetup(string setupPath)
+    {
+        var exe = Environment.ProcessPath;
+        if (exe is null) return false;
+        var appDir = InstallDir;
+        var writable = IsWritable(appDir);
+        var result = ResultFile;
+        Directory.CreateDirectory(Path.GetDirectoryName(result)!);
+        try { if (File.Exists(result)) File.Delete(result); } catch { }
+
+        var script = Path.Combine(Path.GetDirectoryName(setupPath)!, "run-setup.cmd");
+        File.WriteAllText(script,
+            SetupScript(Environment.ProcessId, setupPath, SetupArgs(AppArch.ArchArg, appDir), result,
+                        RelaunchLine(exe, appDir, elevated: !writable)),
+            new System.Text.UTF8Encoding(false));      // ⛔ بی BOM
+        return RunScript(script, appDir, writable, result);
+    }
+
+    /// <summary>اسکریپت را بی‌پنجره اجرا می‌کند؛ پوشهٔ نصبِ بی‌اجازه ⇒ با اجازهٔ مدیر.</summary>
+    private static bool RunScript(string script, string appDir, bool writable, string result)
+    {
+        var psi = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "cmd.exe",
+            //  ⛔ ‎/s‎ و گیومهٔ دوتایی — شرحش در ‎LaunchZip‎
+            Arguments = "/s /c \"\"" + script + "\"\"",
+            WorkingDirectory = appDir,
+        };
+        if (writable)
+        {
+            psi.UseShellExecute = false;
+            psi.CreateNoWindow = true;
+        }
+        else
+        {
+            psi.UseShellExecute = true;
+            psi.Verb = "runas";
+            psi.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+        }
+        try { Start(psi); }
+        catch
+        {
+            // کاربر پنجرهٔ اجازهٔ مدیر را رد کرد ⇒ برنامه باز می‌ماند و چیزی عوض نشد
+            try { File.WriteAllText(result, "8"); } catch { }
+            return false;
+        }
+        return true;
+    }
 
     private static bool LaunchZip(string zipPath, Stream verified)
     {
@@ -1156,38 +1233,11 @@ public sealed class UpdateService
         File.WriteAllText(script, ApplyScript(pid, src, appDir, result, relaunch, staging),
                           new System.Text.UTF8Encoding(false));      // ⛔ بی BOM — وگرنه خطِ اول «@echo off» خطا می‌داد
 
-        var psi = new System.Diagnostics.ProcessStartInfo
-        {
-            FileName = "cmd.exe",
-            //  ⛔ ‎/s‎ و گیومهٔ دوتایی (۱۴۰۵/۰۷/۱۶): بی آن، پوشه‌ای با «( ) & @ ^» (مثلاً
-            //  نامِ کاربرِ «Ali (Work)» در مسیرِ نصب) گیومه را می‌شکست و به‌روزرسانی
-            //  برنامه را می‌بست و هیچ فایلی جا به جا نمی‌کرد.
-            Arguments = "/s /c \"\"" + script + "\"\"",
-            WorkingDirectory = appDir,
-        };
-
-        if (writable)
-        {
-            psi.UseShellExecute = false;
-            psi.CreateNoWindow = true;
-        }
-        else
-        {
-            // پوشهٔ نصب اجازهٔ مدیر می‌خواهد — بی این، ‎robocopy‎ بی‌صدا
-            // شکست می‌خورد و برنامه با نسخهٔ کهنه باز می‌شود.
-            psi.UseShellExecute = true;
-            psi.Verb = "runas";
-            psi.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
-        }
-
-        try { Start(psi); }
-        catch
-        {
-            // کاربر پنجرهٔ اجازهٔ مدیر را رد کرد
-            try { File.WriteAllText(result, "8"); } catch { }
-            return false;
-        }
-        return true;
+        //  ⛔ ‎/s‎ و گیومهٔ دوتایی (۱۴۰۵/۰۷/۱۶): بی آن، پوشه‌ای با «( ) & @ ^» (مثلاً
+        //  نامِ کاربرِ «Ali (Work)» در مسیرِ نصب) گیومه را می‌شکست و به‌روزرسانی
+        //  برنامه را می‌بست و هیچ فایلی جا به جا نمی‌کرد. پوشهٔ بی‌اجازه ⇒ ‎runas‎،
+        //  وگرنه ‎robocopy‎ بی‌صدا شکست می‌خورد و برنامه با نسخهٔ کهنه باز می‌شد.
+        return RunScript(script, appDir, writable, result);
     }
 }
 
