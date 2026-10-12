@@ -255,8 +255,9 @@ public sealed partial class AmanatAccountViewModel : ObservableObject, IRowBatch
         _fuelIndex = a.Fuel == FuelType.Diesel ? 1 : 0;
 
         //  ‎amAccounts()‎: ردیفِ بسته‌ای که فیصدیِ خودش را ننوشته، همین حالا قفل می‌شود
-        foreach (var r in AmanatService.LockClosedRowPcts(a))
-            SaveGuard.Watch(_host.Amanat.SaveRowAsync(r), "ردیفِ امانت");
+        //  ⚠️ یک ذخیرهٔ گروهی، نه یکی برای هر ردیف — سنجهٔ ‎perf-compare‎ (۲۱ ثانیه)
+        var locked = AmanatService.LockClosedRowPcts(a);
+        if (locked.Count > 0) SaveGuard.Watch(Task.Run(() => _host.Amanat.SaveRowsAsync(locked)), "ردیف‌های امانت");
 
         //  ‎_amSortedRows‎ — به ترتیبِ تاریخ؛ بی‌تاریخ آخر
         var ordered = AmanatService.SortedRows(a.Rows.OrderBy(r => r.SortIndex).ThenBy(r => r.Id));
