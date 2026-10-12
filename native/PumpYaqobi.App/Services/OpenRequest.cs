@@ -29,13 +29,22 @@ public static class OpenRequest
     /// </summary>
     public const string BackupExt = ".pyq";
     public const string LedgerExt = ".db";
+    /// <summary>
+    /// ⛔ (۳.۱.۲۷۲) عکسِ دفتر با پسوندِ خودِ برنامه — ‎.db‎ را ویندوز صاحب بود و دوبار-کلیک
+    /// هرگز به برنامه نمی‌رسید (‎BackupService.SnapshotExt‎). همان «مشاهده» ⇐ «♻ بازیابی»ِ
+    /// با پرسش؛ ⛔ هرگز بازیابیِ خودکار.
+    /// </summary>
+    public const string SnapshotExt = PumpYaqobi.Services.Data.BackupService.SnapshotExt;
 
-    /// <summary>این فایل بکاپی است که فقط باید دیده شود؟</summary>
+    /// <summary>
+    /// این فایل بکاپی است که فقط باید دیده شود؟ ‎.pyq‎، ‎.pumpbak‎، ‎.db‎ و عکسِ کهنهٔ
+    /// بی‌پسوندِ «pump-…» (از «Open with»).
+    /// </summary>
     public static bool IsViewOnly(string path)
     {
         var ext = Path.GetExtension(path);
         return ext.Equals(BackupExt, StringComparison.OrdinalIgnoreCase)
-            || ext.Equals(LedgerExt, StringComparison.OrdinalIgnoreCase);
+            || PumpYaqobi.Services.Data.BackupService.IsLedgerBackupName(path);
     }
 
     private static readonly object Gate = new();

@@ -529,15 +529,20 @@ internal static class Program
         {
             Wait(win, vm.GoAsync(am));
             Pump(win);
-            // «⚙️ تنظیمات مدیر» — کادرِ ضریب‌ها باز، عکس، بسته
+            // «📊 خلاصه و ابزارها» ⇐ «⚙️ تنظیمات مدیر» — کادرِ ضریب‌ها باز، عکس، بسته
+            am.OpenToolsCommand.Execute(null);
+            am.ToggleFeeCommand.Execute(null);
             am.ToggleSettingsCommand.Execute(null);
             Pump(win);
             Dispatcher.UIThread.RunJobs();
             Pump(win);
             Shot(win, Path.Combine(outDir, "24-amanat-settings.png"));
             am.ToggleSettingsCommand.Execute(null);
+            am.CloseToolsCommand.Execute(null);
             Pump(win);
             am.OpenCommand.Execute(am.Cards.FirstOrDefault());
+            am.Page?.ToggleWhatIfCommand.Execute(null);
+            if (am.Page is { } amp) amp.WiLiters = "100000";
             Pump(win);
             Dispatcher.UIThread.RunJobs();
             Pump(win);
