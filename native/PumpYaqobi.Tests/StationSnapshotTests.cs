@@ -147,6 +147,74 @@ public class StationSnapshotTests
     }
 
     /// <summary>
+    /// ⛔ «دقیق مخزن‌ها را نشان نمی‌دهد» (۱۴۰۵/۰۷/۲۰): ظرفیت و درصد همان بخشِ مخزن —
+    /// ظرفیتِ نوشته‌شده، وگرنه پیش‌فرضِ ‎DashboardService.TankCapacity‎؛ درصد = موجودی ÷ ظرفیت.
+    /// </summary>
+    [Fact]
+    public async Task TheTankCapacityAndPercentAreTheStorageSectionNumbers()
+    {
+        var host = Host();
+        await host.StorageData.AddPurchaseAsync(new FuelPurchase
+        {
+            Fuel = FuelType.Petrol, Kg = 8000m, Density = 0.8m,
+            PriceTon = 700m, UsdRate = 70m, DateShamsi = "1405/06/01",
+        });
+
+        var tank = Json(await StationSnapshot.BuildAsync(host)).GetProperty("tank").GetProperty("petrol");
+        Assert.Equal((double)PumpYaqobi.Application.Services.DashboardService.DefaultTankCapacity, tank.GetProperty("cap").GetDouble(), 2);
+        Assert.False(tank.GetProperty("capSet").GetBoolean());
+        Assert.Equal(100d, tank.GetProperty("pct").GetDouble(), 2);
+        Assert.False(tank.TryGetProperty("tanks", out _));   // بی مخزنِ شماره‌دار ⇒ کلید نمی‌آید
+
+        host.Settings.Set("tankCapacity_petrol", 32000m);
+        tank = Json(await StationSnapshot.BuildAsync(host)).GetProperty("tank").GetProperty("petrol");
+        Assert.Equal(32000d, tank.GetProperty("cap").GetDouble(), 2);
+        Assert.True(tank.GetProperty("capSet").GetBoolean());
+        Assert.Equal(31.3d, tank.GetProperty("pct").GetDouble(), 2);   // ۱۰٬۰۰۰ ÷ ۳۲٬۰۰۰ = ۳۱٫۲۵ ⇒ ۳۱٫۳
+        Assert.Equal(31.3m, StationSnapshot.FillPercent(10000m, 32000m));
+        Assert.Equal(0m, StationSnapshot.FillPercent(-50m, 1000m));
+        Assert.Equal(100m, StationSnapshot.FillPercent(5000m, 1000m));
+    }
+
+    /// <summary>هر مخزنِ شماره‌دار جدا — همان ‎TankLevelsAsync‎ِ بخشِ مخزن، با شماره، ظرفیت و «در حالِ کشیدن».</summary>
+    [Fact]
+    public async Task EveryNumberedTankReachesThePhoneWithItsOwnLevel()
+    {
+        var host = Host();
+        host.Settings.Set(SettingsService.LowStockThreshold, 7000m);
+        Assert.Null(await host.StorageData.SaveTankAsync(new FuelTank { Fuel = FuelType.Petrol, Num = 1, Capacity = 8000m }));
+        Assert.Null(await host.StorageData.SaveTankAsync(new FuelTank { Fuel = FuelType.Petrol, Num = 2, Capacity = 5000m }));
+        var defs = await host.StorageData.TanksAsync(FuelType.Petrol);
+        var buy = new FuelPurchase
+        {
+            Fuel = FuelType.Petrol, Kg = 8000m, Density = 0.8m,
+            PriceTon = 700m, UsdRate = 70m, DateShamsi = "1405/06/01",
+        };
+        await host.StorageData.AddPurchaseAsync(buy);
+        Assert.Null(await host.StorageData.SetFillsAsync(buy.Id, new Dictionary<long, decimal>
+            { [defs[0].Id] = 6000m, [defs[1].Id] = 4000m }));
+
+        var tanks = Json(await StationSnapshot.BuildAsync(host)).GetProperty("tank").GetProperty("petrol").GetProperty("tanks");
+        var levels = await host.StorageData.TankLevelsAsync(FuelType.Petrol);
+        Assert.Equal(2, tanks.GetArrayLength());
+        for (var i = 0; i < 2; i++)
+        {
+            var t = tanks[i];
+            Assert.Equal(levels[i].Num, t.GetProperty("n").GetInt32());
+            Assert.Equal((double)levels[i].Capacity, t.GetProperty("cap").GetDouble(), 2);
+            Assert.Equal((double)levels[i].Display, t.GetProperty("cur").GetDouble(), 2);
+            Assert.Equal(levels[i].Active, t.GetProperty("act").GetBoolean());
+        }
+        Assert.Equal(6000d, tanks[0].GetProperty("cur").GetDouble(), 2);
+        Assert.Equal(75d, tanks[0].GetProperty("pct").GetDouble(), 2);
+        Assert.True(tanks[0].GetProperty("act").GetBoolean());
+        Assert.True(tanks[0].GetProperty("low").GetBoolean());       // در حالِ کشیدن و زیرِ ۷٬۰۰۰
+        Assert.Equal(80d, tanks[1].GetProperty("pct").GetDouble(), 2);
+        Assert.False(tanks[1].GetProperty("low").GetBoolean());      // منتظر ⇒ هشدار ندارد
+        Assert.False(Json(await StationSnapshot.BuildAsync(host)).GetProperty("tank").GetProperty("diesel").TryGetProperty("tanks", out _));
+    }
+
+    /// <summary>
     /// ⚠️ «چیزی عوض شده؟» نباید به زمان نگاه کند، وگرنه هر بیست ثانیه کلِ
     /// داده بی‌دلیل روی شبکه می‌رود.
     /// </summary>
