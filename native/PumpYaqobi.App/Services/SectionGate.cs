@@ -27,7 +27,9 @@ public static class SectionGate
     public static bool TestOpenAll { get; set; }
 
     public static readonly IReadOnlySet<string> Hidden = new HashSet<string> { "cameras" };
-    public static readonly IReadOnlySet<string> Building = new HashSet<string> { "amanat" };
+    //  ⛔ (۱۴۰۵/۰۷/۲۰) «تیل امانت» از این فهرست بیرون آمد — صاحب ریپو: «رمزش را هم بردار».
+    //  سازوکار برای بخشِ نیمه‌کارهٔ بعدی می‌ماند؛ فهرست خالی یعنی هیچ بخشی رمز نمی‌خواهد.
+    public static readonly IReadOnlySet<string> Building = new HashSet<string>();
 
     /// <summary>چند بار زدنِ پشتِ سرِ هم تا رمز پرسیده شود.</summary>
     public const int TapsForPin = 3;

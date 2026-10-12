@@ -2094,8 +2094,10 @@
             <!-- «جمله» روی خانهٔ اولِ ردیف می‌نشیند، درست مثلِ ‎tfoot‎ی سایت.
                  ⚠️ نامش ‎PART_Title‎ است چون ‎TotalsStrip‎ پهنایش را می‌خواند:
                  خانه‌هایی که زیرِ هیچ ستونی نیستند نباید رویش بیفتند. -->
+            <!-- ⛔ (۱۴۰۵/۰۷/۲۰) «جمله» و عددهایش هم‌اندازه و هم‌وزنِ سرِ جدول (۱۷، ‎ExtraBold‎) —
+                 صاحب ریپو: «اندازهٔ فونتِ سرِ جدول با جمله یکی نیست، توی همهٔ بخش‌ها، و کلفتی». -->
             <TextBlock Name="PART_Title" Text="{TemplateBinding Title}"
-                       FontWeight="ExtraBold" FontSize="13"
+                       FontWeight="ExtraBold" FontSize="17"
                        VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0"
                        Foreground="{DynamicResource Pump.OnHeadBand}" />
             <!-- ⛔ (۱۴۰۵/۰۷/۲۴) خطِ ستون‌ها، همان خطِ جدول — جایش را ‎TotalsStrip‎ می‌دهد -->
@@ -2125,7 +2127,7 @@
                                  Foreground="{DynamicResource Pump.OnHeadBandMuted}" />
                       <!-- ‎ConverterParameter=band‎: همان کلیدِ رنگِ ویومدل، ولی نسخهٔ
                            خواندنی‌اش روی نوارِ تیره. ویومدل دست‌نخورده می‌ماند. -->
-                      <TextBlock Text="{Binding Value}" FontWeight="ExtraBold" FontSize="14"
+                      <TextBlock Text="{Binding Value}" FontWeight="ExtraBold" FontSize="17"
                                  TextAlignment="Center" TextTrimming="CharacterEllipsis"
                                  Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=band}" />
                     </DockPanel>

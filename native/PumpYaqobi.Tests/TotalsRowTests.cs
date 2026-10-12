@@ -216,4 +216,21 @@ public class TotalsRowTests
             .ToList();
         Assert.Empty(hits);
     }
+
+    /// <summary>
+    /// ⛔ (۱۴۰۵/۰۷/۲۰) «اندازهٔ فونتِ سرِ جدول با جمله یکی نیست، توی همهٔ بخش‌ها، و کلفتی» —
+    /// عنوانِ «جمله» و عددِ هر خانه همان ۱۷ و ‎ExtraBold‎ِ سرستون‌اند.
+    /// </summary>
+    [Fact]
+    public void JomleHamAndazeyeSareJadval()
+    {
+        var root = AppContext.BaseDirectory;
+        while (root is not null && !File.Exists(Path.Combine(root, "PumpYaqobi.sln"))) root = Path.GetDirectoryName(root);
+        var x = SrcText.Read(Path.Combine(root!, "PumpYaqobi.App", "Themes", "Controls.axaml"));
+        var head = System.Text.RegularExpressions.Regex.Match(x,
+            @"<Style Selector=""DataGridColumnHeader"">\s*<Setter Property=""Cursor""[\s\S]*?FontSize"" Value=""(\d+)""").Groups[1].Value;
+        Assert.Equal("17", head);
+        Assert.Contains("Name=\"PART_Title\" Text=\"{TemplateBinding Title}\"\n                       FontWeight=\"ExtraBold\" FontSize=\"" + head + "\"", x.Replace("\r\n", "\n"));
+        Assert.Contains("Text=\"{Binding Value}\" FontWeight=\"ExtraBold\" FontSize=\"" + head + "\"", x);
+    }
 }

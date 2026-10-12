@@ -240,7 +240,7 @@ public sealed class WaraqReport : ISetupDocument
         {
             var even = i % 2 == 1;
             var n = offset + ++i;
-            var debt = x.Type == WaraqTxnType.Debt;
+            var debt = WaraqService.IsDebtRow(x);   // ⛔ بی‌نام ⇒ مصرف، همان جمع‌ها
             void Td(string s, string? cl = null) => DocStyle.TdText(t.Cell(), even, s, cl);
 
             Td(PersianText.Num(n), DocStyle.Index);

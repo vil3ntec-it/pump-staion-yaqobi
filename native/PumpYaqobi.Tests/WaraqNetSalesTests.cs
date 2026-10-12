@@ -72,6 +72,34 @@ public class WaraqNetSalesTests : IDisposable
         Assert.Equal(3500m, t.Net);            // ⛔ منهای قرض‌ها
     }
 
+    /// <summary>
+    /// ⛔ (۱۴۰۵/۰۷/۲۰) ردیفِ بی‌نام — قرض یا مصرف — به جمعِ مصرف می‌رود و از
+    /// «جمله فروش» کم می‌شود؛ فقط قرضِ با نام قرض است (‎WaraqService.IsDebtRow‎).
+    /// </summary>
+    [Fact]
+    public void RadifeBiNam_BeJameMasraf_Miravad()
+    {
+        var sd = new WaraqShift
+        {
+            Pumps = { new WaraqPump { Start = 0m, End = 100m, PricePerLiter = 60m } },
+            Transactions =
+            {
+                new WaraqTransaction { Name = "کریم", Amount = 2000m, AmountAuto = false, Type = WaraqTxnType.Debt },
+                new WaraqTransaction { Name = "", Amount = 300m, AmountAuto = false, Type = WaraqTxnType.Debt },
+                new WaraqTransaction { Name = "  ", Amount = 200m, AmountAuto = false, Type = WaraqTxnType.Expense },
+                new WaraqTransaction { Name = "نان", Amount = 100m, AmountAuto = false, Type = WaraqTxnType.Expense },
+                new WaraqTransaction(),                                   // خالی ⇒ صفر
+            },
+        };
+        var t = new WaraqService().ShiftTotals(sd);
+        Assert.Equal(2000m, t.Debt);           // فقط قرضِ با نام
+        Assert.Equal(600m, t.Expenses);        // ۳۰۰ + ۲۰۰ + ۱۰۰
+        Assert.Equal(3400m, t.Net);            // ۶۰۰۰ − ۲۰۰۰ − ۶۰۰
+        Assert.Equal(t.Net, t.Cash);
+        Assert.False(WaraqService.IsDebtRow(sd.Transactions[1]));
+        Assert.True(WaraqService.IsDebtRow(sd.Transactions[0]));
+    }
+
     [Fact]
     public async Task Gavsanduq_ForusheMenhayeGharz_Migirad()
     {

@@ -137,21 +137,7 @@ public class ProFeaturesTests : IDisposable
         Assert.Contains("{Binding ForecastText}", xaml);
     }
 
-    // ── ۱۱) شمارشِ نوت ───────────────────────────────────────────────────
-
-    [Fact]
-    public void ShomaresheNot_BastanVaBazkardan()
-    {
-        var W = typeof(PumpYaqobi.App.ViewModels.Sections.WaraqPageViewModel);
-        var packed = PumpYaqobi.App.ViewModels.Sections.WaraqPageViewModel.PackCash(new[] { (1000, 3m), (500, 0m), (100, 7m) });
-        Assert.Equal("1000:3,100:7", packed);
-        var back = PumpYaqobi.App.ViewModels.Sections.WaraqPageViewModel.UnpackCash(packed);
-        Assert.Equal(2, back.Count);
-        Assert.Equal(3m, back[1000]);
-        Assert.Equal(7m, back[100]);
-        Assert.Empty(PumpYaqobi.App.ViewModels.Sections.WaraqPageViewModel.UnpackCash("خراب,1000:x,:3"));
-        Assert.NotNull(W);
-    }
+    // ── ۱۱) شمارشِ نوت (کادرش برداشته شد؛ ستونِ داده می‌ماند) ───────────────────────────────────────────────────
 
     [Fact]
     public async Task ShomaresheNot_RoyeShift_ZakhireMishavad()
@@ -235,7 +221,25 @@ public class ProFeaturesTests : IDisposable
         }
         await using (var db = dbf.Create())
             Assert.Equal("کابل ۴۵۶", db.DebtRows.Single(x => x.Id == rid).Plate);
+        //  ⛔ (۱۴۰۵/۰۷/۲۰) «حواله و پلاک یکی است» — ستونِ جدا نیست؛ پلاکِ کهنه در «حواله» دیده می‌شود
         var xaml = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App/Views/Sections/PersonView.axaml"));
-        Assert.Contains("Header=\"پلاک\" Binding=\"{Binding Plate}\"", xaml);
+        Assert.DoesNotContain("Header=\"پلاک\"", xaml);
+        Assert.Equal("کابل ۴۵۶", PumpYaqobi.App.ViewModels.Sections.DebtRowViewModel.MergeHawala(null, "کابل ۴۵۶"));
+        Assert.Equal("12 · کابل ۴۵۶", PumpYaqobi.App.ViewModels.Sections.DebtRowViewModel.MergeHawala("12", "کابل ۴۵۶"));
+        Assert.Equal("12", PumpYaqobi.App.ViewModels.Sections.DebtRowViewModel.MergeHawala("12", null));
+    }
+
+    [Theory]
+    [InlineData("کریم پلاک 1234", "1234", "کریم")]
+    [InlineData("کریم پلاک ۴-۱۲۳۴۵", "4-12345", "کریم")]
+    [InlineData("کریم حواله 55", "55", "کریم")]
+    [InlineData("کریم بدون پلاک", PumpYaqobi.Application.Services.PostingService.NoHawala, "کریم")]
+    [InlineData("کریم بدون حواله", PumpYaqobi.Application.Services.PostingService.NoHawala, "کریم")]
+    [InlineData("کریم", "", "کریم")]
+    public void PelakVaHavaleYekiAst_DarVaraq(string text, string num, string clean)
+    {
+        var h = PumpYaqobi.Application.Services.PostingService.ExtractHawala(text);
+        Assert.Equal(num, h.Num);
+        Assert.Equal(clean, h.Clean);
     }
 }
