@@ -716,9 +716,10 @@ public sealed class HistoryService
                 if (sd.Pumps.Count == 0 && !sd.Transactions.Any(t => !string.IsNullOrWhiteSpace(t.Name))) continue;
 
                 var t = _waraq.ShiftTotals(sd);
-                var debtN = sd.Transactions.Count(x => x.Type == WaraqTxnType.Debt
+                //  ⛔ همان قاعدهٔ جمع‌ها (‎WaraqService.IsDebtRow‎): بی‌نام ⇒ مصرف
+                var debtN = sd.Transactions.Count(WaraqService.IsDebtRow);
+                var expN = sd.Transactions.Count(x => !WaraqService.IsDebtRow(x)
                                                  && (!string.IsNullOrWhiteSpace(x.Name) || _waraq.TxnAmount(sd, x) != 0m));
-                var expN = sd.Transactions.Count(x => x.Type != WaraqTxnType.Debt && !string.IsNullOrWhiteSpace(x.Name));
                 var workers = string.Join("، ", sd.Pumps.Select(p => p.Worker?.Trim()).Where(x => !string.IsNullOrEmpty(x)).Distinct());
                 if (workers.Length == 0) workers = string.IsNullOrWhiteSpace(sd.WorkerName) ? "—" : sd.WorkerName!.Trim();
                 var when = sd.Kind == ShiftKind.Night ? "🌙 شب" : "☀️ روز";

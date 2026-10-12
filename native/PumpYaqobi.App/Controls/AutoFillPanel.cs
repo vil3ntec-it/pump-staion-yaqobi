@@ -28,6 +28,22 @@ public class AutoFillPanel : Panel
     public static readonly StyledProperty<double> GapProperty =
         AvaloniaProperty.Register<AutoFillPanel, double>(nameof(Gap), 12d);
 
+    /// <summary>
+    /// ══ همهٔ کارت‌ها هم‌قد (۱۴۰۵/۰۷/۲۰) ═══════════════════════════════════
+    /// صاحب ریپو: «دو کادرِ جمله پطرول و جمله دیزل بزرگ‌تر از آن چهار تا
+    /// هستند، همه را برابر کن.» آن دو یک خطِ لیترِ اضافه دارند؛ با این گزینه
+    /// قدِ همهٔ کارت‌ها قدِ بلندترینشان می‌شود — در هر ردیف و هر شکستنی.
+    /// ⚠️ پیش‌فرض خاموش است تا شبکه‌های دیگر دست نخورند.
+    /// </summary>
+    public static readonly StyledProperty<bool> UniformHeightProperty =
+        AvaloniaProperty.Register<AutoFillPanel, bool>(nameof(UniformHeight));
+
+    public bool UniformHeight
+    {
+        get => GetValue(UniformHeightProperty);
+        set => SetValue(UniformHeightProperty, value);
+    }
+
     public double MinItemWidth
     {
         get => GetValue(MinItemWidthProperty);
@@ -42,7 +58,7 @@ public class AutoFillPanel : Panel
 
     static AutoFillPanel()
     {
-        AffectsMeasure<AutoFillPanel>(MinItemWidthProperty, GapProperty);
+        AffectsMeasure<AutoFillPanel>(MinItemWidthProperty, GapProperty, UniformHeightProperty);
     }
 
     /// <summary>
@@ -74,11 +90,14 @@ public class AutoFillPanel : Panel
             ? MinItemWidth
             : Column(0, cols, availableSize.Width, gap).width;
 
+        for (var i = 0; i < kids.Count; i++)
+            kids[i].Measure(new Size(colW, double.PositiveInfinity));
+        var uniform = UniformHeight ? TallestKid() : 0d;
+
         double total = 0, rowH = 0;
         for (var i = 0; i < kids.Count; i++)
         {
-            kids[i].Measure(new Size(colW, double.PositiveInfinity));
-            rowH = Math.Max(rowH, kids[i].DesiredSize.Height);
+            rowH = Math.Max(rowH, Math.Max(uniform, kids[i].DesiredSize.Height));
             // پایانِ ردیف (یا پایانِ کار) → قدِ ردیف را به جمع اضافه کن
             if ((i + 1) % cols == 0 || i == kids.Count - 1)
             {
@@ -109,6 +128,14 @@ public class AutoFillPanel : Panel
         return (l, Math.Max(1, r - l));
     }
 
+    private double TallestKid()
+    {
+        double h = 0;
+        foreach (var k in Children)
+            if (k.IsVisible) h = Math.Max(h, k.DesiredSize.Height);
+        return h;
+    }
+
     protected override Size ArrangeOverride(Size finalSize)
     {
         var kids = Children;
@@ -117,15 +144,17 @@ public class AutoFillPanel : Panel
         var gap = Math.Max(0, Gap);
         var cols = Columns(finalSize.Width);
 
+        var uniform = UniformHeight ? TallestKid() : 0d;
         double y = 0, rowH = 0;
         for (var i = 0; i < kids.Count; i++)
         {
             var (x, w) = Column(i % cols, cols, finalSize.Width, gap);
+            var h = Math.Max(uniform, kids[i].DesiredSize.Height);
             // چیدمان همیشه در مختصاتِ چپ‌به‌راست است؛ خودِ Avalonia برای
             // ‎FlowDirection="RightToLeft"‎ آینه‌اش می‌کند، پس این‌جا کاری
             // با راست‌به‌چپ نداریم.
-            kids[i].Arrange(new Rect(x, y, w, kids[i].DesiredSize.Height));
-            rowH = Math.Max(rowH, kids[i].DesiredSize.Height);
+            kids[i].Arrange(new Rect(x, y, w, h));
+            rowH = Math.Max(rowH, h);
 
             if ((i + 1) % cols == 0)
             {

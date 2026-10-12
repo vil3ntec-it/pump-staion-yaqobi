@@ -137,21 +137,7 @@ public class ProFeaturesTests : IDisposable
         Assert.Contains("{Binding ForecastText}", xaml);
     }
 
-    // ── ۱۱) شمارشِ نوت ───────────────────────────────────────────────────
-
-    [Fact]
-    public void ShomaresheNot_BastanVaBazkardan()
-    {
-        var W = typeof(PumpYaqobi.App.ViewModels.Sections.WaraqPageViewModel);
-        var packed = PumpYaqobi.App.ViewModels.Sections.WaraqPageViewModel.PackCash(new[] { (1000, 3m), (500, 0m), (100, 7m) });
-        Assert.Equal("1000:3,100:7", packed);
-        var back = PumpYaqobi.App.ViewModels.Sections.WaraqPageViewModel.UnpackCash(packed);
-        Assert.Equal(2, back.Count);
-        Assert.Equal(3m, back[1000]);
-        Assert.Equal(7m, back[100]);
-        Assert.Empty(PumpYaqobi.App.ViewModels.Sections.WaraqPageViewModel.UnpackCash("خراب,1000:x,:3"));
-        Assert.NotNull(W);
-    }
+    // ── ۱۱) شمارشِ نوت (کادرش برداشته شد؛ ستونِ داده می‌ماند) ───────────────────────────────────────────────────
 
     [Fact]
     public async Task ShomaresheNot_RoyeShift_ZakhireMishavad()
