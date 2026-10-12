@@ -471,8 +471,8 @@ console.log('\n── کدِ پمپ و جداسازیِ پمپ‌ها ───�
        '⛔ نشانِ سربرگ و صفحهٔ کد از خودِ صفحه است، نه ./icons (در اندروید شکسته دیده می‌شد)');
   }
   //  ⛔ هر حساب دو دفتر دارد و گوشی هر دو را نشان می‌دهد
-  ok(/function bookOf\(a\)/.test(appSrc) && /data-book=/.test(appSrc) && /var bk = bookOf\(a\);\s*var money = bk\.money/.test(appSrc),
-     '⛔ کارتِ حساب دو دکمهٔ «واحد تیل / واحد پول» دارد و PDF همان دفترِ روی صفحه است');
+  ok(/function shownBooks\(a\)/.test(appSrc) && !/data-book=/.test(appSrc) && /var bs = shownBooks\(a\), bk = bs\[k \|\| 0\]/.test(appSrc),
+     '⛔ یک حساب = یک واحد از روی داده (بی دکمهٔ «واحد تیل / واحد پول») و PDF همان دفترِ روی صفحه است');
   ok(/function acceptSnapshot\(/.test(appSrc) && /\(v\.seq \|\| 0\) < data\.seq/.test(appSrc),
      'عکسِ کهنه (چه از ابر چه از خانه) جای تازه را نمی‌گیرد');
   ok(/function cloudFallback\(/.test(appSrc) && /if \(!wsLive\) \{ live\(false, waitingText\(\)\); cloudPoll\(true\); \}/.test(appSrc),

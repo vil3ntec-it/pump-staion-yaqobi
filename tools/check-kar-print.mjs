@@ -138,28 +138,23 @@ ok(doc.includes('counter(page, persian)') && doc.includes('counter(pages, persia
 ok(/<td class="tf" colspan="\d+">جمله<\/td>/.test(doc) && doc.includes('12,400'), 'ردیفِ «جمله» با جمعِ بردگیِ خودِ برنامه');
 ok(!/body\{margin/.test(doc) || doc.includes('#printRoot{'), 'سبکِ ورق فقط روی ورقِ چاپ می‌نشیند، نه روی کلِ اپ');
 
-console.log('۱ب) دو دفترِ هر حساب — «واحد تیل» و «واحد پول»');
+console.log('۱ب) دو دفترِ هر حساب — یک واحد از روی داده، بی دکمهٔ عوض کردن');
 {
   const card = '#botOut .acard[data-acct="2|0"]';
-  ok(await page.$$eval(card + ' .btab', b => b.length) === 2, 'دو دکمهٔ «واحد تیل / واحد پول» روی کارت');
-  ok((await page.textContent(card + ' .btab.on')).includes('واحد پول'), 'اول همان دفترِ فعالِ کامپیوتر (پول) دیده می‌شود');
+  ok(await page.$$eval('#botOut .btab', b => b.length) === 0, '⛔ دکمهٔ «واحد تیل / واحد پول» نیست');
+  ok(await page.$$eval('#botOut .acard', b => b.length) === 1, 'فقط همان یک حساب — حسابِ فرعیِ «دکان» این‌جا نیست');
   ok(!(await page.$('#botOut .three')), '⛔ سه عددِ پول/پطرول/دیزل بالای کارت‌ها تکرار نشده');
-  await page.click(card + ' .btab.fuel');
-  ok((await page.textContent(card + ' .btab.on')).includes('واحد تیل'), 'زدنِ «واحد تیل» ⇒ همان دفتر');
-  const txt = await page.textContent(card);
-  ok(txt.includes('10,220') && !txt.includes('3,568'), 'سربرگ و عددها فقط از دفترِ تیل — نه قاطیِ دفترِ پول');
-  await page.click(card + ' [data-print-acct]');
+  const bl = await page.$$eval(card + ' .bblk', b => b.map(x => x.textContent));
+  ok(bl.length === 2 && bl[0].includes('واحد پول') && bl[0].includes('3,568') && !bl[0].includes('10,220')
+     && bl[1].includes('واحد تیل') && bl[1].includes('10,220'), 'هر دو دفتر چیز دارند ⇒ فعال (پول) اول، تیل دوم، هر کدام جدا');
+  await page.click(card + ' .bblk.second [data-print-acct]');
   const fdoc = (await page.evaluate(() => window.__printed)).slice(-1)[0] || '';
-  ok(fdoc.includes('حساب قرض‌دار — واحد تیل') && fdoc.includes('10,220') && fdoc.includes('<th>مقدار تیل</th>'), 'PDF همان دفترِ روی صفحه (تیل)');
-  await page.click(card + ' .btab.money');
-  ok((await page.textContent(card)).includes('3,568'), 'برگشت به «واحد پول»');
-  //  نفرِ اول برنامهٔ کهنه دارد (‎books‎ ندارد) ⇒ دکمهٔ دیگر می‌گوید چرا خالی است
+  ok(fdoc.includes('حساب قرض‌دار — واحد تیل') && fdoc.includes('10,220') && fdoc.includes('<th>مقدار تیل</th>'), 'PDFِ بلوکِ دوم همان دفترِ تیل');
 }
 await page.evaluate(() => { window.__printed = []; });
 await page.click('#btnBackDebt');
 await page.click('#debtList button[data-pid="1"]');
-await page.click('#botOut .acard[data-acct="1|0"] .btab.money');
-ok((await page.textContent('#botOut .acard[data-acct="1|0"]')).includes('به‌روز کنید'), 'برنامهٔ کامپیوترِ کهنه ⇒ دفترِ دیگر می‌گوید چرا نیامده');
+ok((await page.textContent('#botOut .acard[data-acct="1|0"]')).includes('3,568'), 'برنامهٔ کامپیوترِ کهنه (بی ‎books‎) ⇒ همان یک دفترِ فعال');
 await page.click('#btnBackDebt');
 await page.click('#debtList button[data-pid="2"]');
 
