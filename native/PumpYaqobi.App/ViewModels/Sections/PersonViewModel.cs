@@ -26,8 +26,8 @@ public sealed partial class DebtRowViewModel : RowViewModel
         Loading = true;
         _dateShamsi = r.DateShamsi ?? "";
         _name = r.Name ?? "";
-        _hawala = r.Hawala ?? "";
-        _plate = r.Plate ?? "";
+        //  ⛔ (۱۴۰۵/۰۷/۲۰) «حواله و پلاک یکی است» — پلاکِ ردیف‌های ۳.۱.۲۶۹ در همان ستونِ حواله
+        _hawala = MergeHawala(r.Hawala, r.Plate);
         _fuel = r.Fuel;
         _liters = r.Liters;
         _price = r.PricePerLiter ?? 0m;
@@ -37,13 +37,25 @@ public sealed partial class DebtRowViewModel : RowViewModel
         Loading = false;
     }
 
+    /// <summary>
+    /// حواله + پلاکِ کهنه ⇒ یک خانهٔ «حواله». هر دو بود ⇒ «حواله · پلاک»؛ هیچ چیز گم نمی‌شود.
+    /// با نخستین ذخیرهٔ ردیف، پلاک در حواله می‌نشیند و ستونِ ‎Plate‎ خالی می‌شود.
+    /// </summary>
+    public static string MergeHawala(string? hawala, string? plate)
+    {
+        var h = (hawala ?? "").Trim();
+        var p = (plate ?? "").Trim();
+        if (p.Length == 0) return hawala ?? "";
+        if (h.Length == 0 || h == p) return p;
+        return h + " · " + p;
+    }
+
     public DebtRow Entity => _r;
 
     [ObservableProperty] private string _dateShamsi = "";
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private string _hawala = "";
     /// <summary>پلاکِ موتر (۳.۱.۲۶۸) — فقط یادداشت، در هیچ حسابی نیست.</summary>
-    [ObservableProperty] private string _plate = "";
     [ObservableProperty] private FuelType _fuel;
     [ObservableProperty] private decimal _liters;
     [ObservableProperty] private decimal _price;
@@ -54,7 +66,6 @@ public sealed partial class DebtRowViewModel : RowViewModel
     partial void OnDateShamsiChanged(string v) => Touch();
     partial void OnNameChanged(string v) => Touch();
     partial void OnHawalaChanged(string v) => Touch();
-    partial void OnPlateChanged(string v) => Touch();
     partial void OnFuelChanged(FuelType v)
     {
         Touch();
@@ -192,7 +203,7 @@ public sealed partial class DebtRowViewModel : RowViewModel
         _r.DateKey = Shamsi.Key(DateShamsi);
         _r.Name = Name;
         _r.Hawala = Hawala;
-        _r.Plate = string.IsNullOrWhiteSpace(Plate) ? null : Plate.Trim();
+        _r.Plate = null;   // پلاک از این پس همان حواله است (‎MergeHawala‎)
         _r.Fuel = Fuel;
         _r.Liters = Liters;
         _r.PricePerLiter = Price == 0m ? null : Price;

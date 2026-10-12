@@ -449,8 +449,15 @@ public sealed class PostingService
         if (m.Success)
             return new HawalaText(m.Groups[1].Value, Tidy(t.Replace(m.Value, "")));
 
+        //  ⛔ (۱۴۰۵/۰۷/۲۰) «حواله و پلاک یکی است» — «پلاک ۱۲۳۴» (یا «۴-۱۲۳۴») در ستونِ حواله.
+        //  پس از الگوی حواله، تا رفتارِ «حواله ۱۲»ِ سایت مو‌به‌مو بماند.
+        var pm = System.Text.RegularExpressions.Regex.Match(
+            t, @"پلاک\s*(?:نمبر|شماره)?\s*[:#]?\s*(\d[\d\-/]*)");
+        if (pm.Success)
+            return new HawalaText(pm.Groups[1].Value, Tidy(t.Replace(pm.Value, "")));
+
         var nm = System.Text.RegularExpressions.Regex.Match(
-            t, @"(?:بدون|بی[ \u200c]?)\s*(?:نمبر|شماره)?\s*حواله|حواله\s*(?:ای)?\s*(?:ندار[دم]|نیست|نداره)");
+            t, @"(?:بدون|بی[ \u200c]?)\s*(?:نمبر|شماره)?\s*(?:حواله|پلاک)|(?:حواله|پلاک)\s*(?:ای)?\s*(?:ندار[دم]|نیست|نداره)");
         if (nm.Success)
             return new HawalaText(NoHawala, Tidy(t.Replace(nm.Value, "")));
 

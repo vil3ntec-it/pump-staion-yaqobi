@@ -221,7 +221,25 @@ public class ProFeaturesTests : IDisposable
         }
         await using (var db = dbf.Create())
             Assert.Equal("کابل ۴۵۶", db.DebtRows.Single(x => x.Id == rid).Plate);
+        //  ⛔ (۱۴۰۵/۰۷/۲۰) «حواله و پلاک یکی است» — ستونِ جدا نیست؛ پلاکِ کهنه در «حواله» دیده می‌شود
         var xaml = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App/Views/Sections/PersonView.axaml"));
-        Assert.Contains("Header=\"پلاک\" Binding=\"{Binding Plate}\"", xaml);
+        Assert.DoesNotContain("Header=\"پلاک\"", xaml);
+        Assert.Equal("کابل ۴۵۶", PumpYaqobi.App.ViewModels.Sections.DebtRowViewModel.MergeHawala(null, "کابل ۴۵۶"));
+        Assert.Equal("12 · کابل ۴۵۶", PumpYaqobi.App.ViewModels.Sections.DebtRowViewModel.MergeHawala("12", "کابل ۴۵۶"));
+        Assert.Equal("12", PumpYaqobi.App.ViewModels.Sections.DebtRowViewModel.MergeHawala("12", null));
+    }
+
+    [Theory]
+    [InlineData("کریم پلاک 1234", "1234", "کریم")]
+    [InlineData("کریم پلاک ۴-۱۲۳۴۵", "4-12345", "کریم")]
+    [InlineData("کریم حواله 55", "55", "کریم")]
+    [InlineData("کریم بدون پلاک", PumpYaqobi.Application.Services.PostingService.NoHawala, "کریم")]
+    [InlineData("کریم بدون حواله", PumpYaqobi.Application.Services.PostingService.NoHawala, "کریم")]
+    [InlineData("کریم", "", "کریم")]
+    public void PelakVaHavaleYekiAst_DarVaraq(string text, string num, string clean)
+    {
+        var h = PumpYaqobi.Application.Services.PostingService.ExtractHawala(text);
+        Assert.Equal(num, h.Num);
+        Assert.Equal(clean, h.Clean);
     }
 }
