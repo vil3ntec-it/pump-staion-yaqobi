@@ -254,11 +254,6 @@ public sealed partial class AmanatAccountViewModel : ObservableObject, IRowBatch
         _myPct = a.MyPct ?? 0m;
         _fuelIndex = a.Fuel == FuelType.Diesel ? 1 : 0;
 
-        //  ‎amAccounts()‎: ردیفِ بسته‌ای که فیصدیِ خودش را ننوشته، همین حالا قفل می‌شود
-        //  ⚠️ یک ذخیرهٔ گروهی، نه یکی برای هر ردیف — سنجهٔ ‎perf-compare‎ (۲۱ ثانیه)
-        var locked = AmanatService.LockClosedRowPcts(a);
-        if (locked.Count > 0) SaveGuard.Watch(Task.Run(() => _host.Amanat.SaveRowsAsync(locked)), "ردیف‌های امانت");
-
         //  ‎_amSortedRows‎ — به ترتیبِ تاریخ؛ بی‌تاریخ آخر
         var ordered = AmanatService.SortedRows(a.Rows.OrderBy(r => r.SortIndex).ThenBy(r => r.Id));
         foreach (var r in ordered)
@@ -315,6 +310,11 @@ public sealed partial class AmanatAccountViewModel : ObservableObject, IRowBatch
 
     partial void OnMyPctChanged(decimal v)
     {
+        //  ‎amAccounts()‎ی سایت: ردیفِ بسته‌ای که فیصدیِ خودش را ننوشته، با فیصدیِ
+        //  پیشینِ حساب قفل می‌شود تا عقب‌گرد نکند. ⚠️ فقط همین‌جا، نه هنگامِ باز شدنِ
+        //  بخش — آن‌جا هزاران UPDATE می‌فرستاد (سنجه‌های ‎perf‎ و ‎perf-compare‎).
+        var locked = AmanatService.LockClosedRowPcts(Entity);
+        if (locked.Count > 0) SaveGuard.Watch(_host.Amanat.SaveRowsAsync(locked), "ردیف‌های امانت");
         Entity.MyPct = v == 0m ? null : v;
         OnPropertyChanged(nameof(MyPctText));
         Save();
