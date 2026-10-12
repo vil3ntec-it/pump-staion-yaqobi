@@ -68,36 +68,20 @@ internal static class SectionGateProbe
                      .FirstOrDefault(b => ReferenceEquals(b.CommandParameter, am));
         Check("دکمهٔ واقعیِ نوار پیدا شد", btn is not null);
 
+        //  ⛔ (۱۴۰۵/۰۷/۲۰) «رمزش را هم بردار» — یک زدن، بی رمز، بی «در حالِ ساخت»
         string? asked = null;
-        var answer = "1111";
-        Dialogs.PromptHook = (t, m) => { asked = t; return answer; };
+        Dialogs.PromptHook = (t, m) => { asked = t; return ""; };
 
         void Click() { btn!.Command!.Execute(btn.CommandParameter); Pump(win, 20); }
 
         Click();
-        Check("زدنِ اول: باز نشد", !ReferenceEquals(vm.Current, am));
-        Check("زدنِ اول: «در حالِ ساخت» گفته شد",
-              AppHost.Current.Toasts.Text.Contains("در حالِ ساخت"), AppHost.Current.Toasts.Text);
-        Check("زدنِ اول: رمزی پرسیده نشد", asked is null);
-        Click();
-        Check("زدنِ دوم: هنوز رمزی پرسیده نشد و باز نشد", asked is null && !ReferenceEquals(vm.Current, am));
-        Click();
-        Check("زدنِ سوم: رمز پرسیده شد", asked is not null, asked);
-        Check("رمزِ نادرست ⇒ باز نشد", !ReferenceEquals(vm.Current, am));
-
-        asked = null; answer = "۶۰۰۸";   // با صفحه‌کلیدِ فارسی
-        Click(); Click(); Click();
-        Check("سه زدنِ دیگر + ۶۰۰۸ ⇒ تیل امانت باز شد", ReferenceEquals(vm.Current, am),
-              vm.Current?.Id);
-        asked = null;
-        Wait(win, vm.GoAsync(vm.Sections.First(s => s.Id == "safe")));
-        Click();
-        Check("در همین اجرا دوباره با یک زدن باز می‌شود، بی رمز", ReferenceEquals(vm.Current, am) && asked is null);
+        Check("یک زدن ⇒ تیل امانت باز شد", ReferenceEquals(vm.Current, am), vm.Current?.Id);
+        Check("رمزی پرسیده نشد", asked is null, asked);
 
         SectionGate.ResetForTests();
         Wait(win, vm.GoAsync(vm.Sections.First(s => s.Id == "safe")));
         Click();
-        Check("اجرای بعدی (حافظه پاک) ⇒ دوباره بسته", !ReferenceEquals(vm.Current, am));
+        Check("اجرای بعدی (حافظه پاک) ⇒ باز هم بی رمز باز می‌شود", ReferenceEquals(vm.Current, am) && asked is null);
 
         Dialogs.PromptHook = null;
         Console.WriteLine(_bad == 0 ? "✅ همه سبز" : $"❌ {_bad} ایراد");

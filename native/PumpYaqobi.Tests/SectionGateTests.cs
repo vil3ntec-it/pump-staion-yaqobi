@@ -21,11 +21,13 @@ public class SectionGateTests
     }
 
     [Fact]
-    public void AmanatDarHaleSakht_VaDoorbinhaPenhan()
+    public void AmanatBazAst_BiRamz_VaDoorbinhaPenhan()
     {
-        Assert.Contains("amanat", SectionGate.Building);
+        //  ⛔ (۱۴۰۵/۰۷/۲۰) «رمزش را هم بردار» — تیل امانت دیگر «در حالِ ساخت» نیست
+        Assert.DoesNotContain("amanat", SectionGate.Building);
+        Assert.False(SectionGate.IsBuilding("amanat"));
         Assert.Contains("cameras", SectionGate.Hidden);
-        Assert.DoesNotContain("amanat", SectionGate.Hidden);   // در نوار هست؛ فقط باز نمی‌شود
+        Assert.DoesNotContain("amanat", SectionGate.Hidden);
     }
 
     [Fact]
