@@ -260,6 +260,12 @@ public static class ThemeManager
         // سطح‌های مشتق‌شده — همان چیزی که در CSS با color-mix ساخته می‌شد
         Br("Hover", Mix(t.Card, t.Accent, t.IsDark ? 0.14 : 0.10));
         Br("Selected", Mix(t.Card, t.Accent, t.IsDark ? 0.26 : 0.18));
+        //  ⛔ (۱۴۰۵/۰۷/۲۰) رنگِ «انتخابِ متن» در کادرهای تایپ — نارنجیِ روشن با نوشتهٔ تیره.
+        //  صاحب ریپو: «رنگِ انتخابِ متن را از آبی به نارنجی تغییر بده تا روی پس‌زمینهٔ آبی
+        //  دیده شود.» ‎Selected‎ِ بالا (آبیِ کم‌رنگ) برای ردیف‌ها می‌ماند؛ این فقط مالِ متن است.
+        //  نوشتهٔ ‎#1b1200‎ روی ‎#ffa94d‎ ≈ ۱۰× خوانا.
+        Br("TextSelection", PumpTheme.C("#ffa94d"));
+        Br("OnTextSelection", PumpTheme.C("#1b1200"));
         Br("GridLine", Mix(t.Card, t.Border, 0.75));
         Br("RowAlt", Mix(t.Card, t.IsDark ? Colors.White : Colors.Black, 0.035));
         Br("Shadow", WithAlpha(Colors.Black, t.IsDark ? 0.55 : 0.16));

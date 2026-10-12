@@ -270,7 +270,41 @@ internal static class UndoKeysProbe
         Settle(win);
         focused = win.FocusManager?.GetFocusedElement();
         Check($"دوبار-کلیک ⇒ ویرایش باز شد ({focused?.GetType().Name})", focused is TextBox);
+        //  ⛔ (۱۴۰۵/۰۷/۲۰) مکان‌نما پیدا، نه «همهٔ متن انتخاب‌شده» — وگرنه حرفِ بعدی همه را جایگزین می‌کرد
+        if (focused is TextBox dbox)
+            Check($"دوبار-کلیک ⇒ مکان‌نما دیده می‌شود، همهٔ متن انتخاب نشد ({dbox.SelectionStart}..{dbox.SelectionEnd} از {(dbox.Text ?? "").Length})",
+                  dbox.SelectionStart == dbox.SelectionEnd);
         grid.CancelEdit();
+        Settle(win);
+
+        //  ⛔ (۱۴۰۵/۰۷/۲۰) چسباندن و بعد فاصله و ادامهٔ تایپ — متنِ چسبانده نباید پاک شود
+        var vcols = grid.Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).ToList();
+        var item = grid.ItemsSource?.Cast<object>().ElementAtOrDefault(1);
+        var prop = (vcols[col] as DataGridBoundColumn)?.Binding is Avalonia.Data.Binding bnd && item is not null
+            ? item.GetType().GetProperty(bnd.Path) : null;
+        var before = prop?.GetValue(item) as string;
+        var clip = TopLevel.GetTopLevel(win)?.Clipboard;
+        if (clip is null || prop is null) { Console.WriteLine("  ◦ کلیپ‌بورد یا ستون در این محیط نیست — چسباندن سنجیده نشد"); return; }
+        Wait(win, clip.SetTextAsync("برق"));
+        ClickCell(win, grid, 1, col);
+        Ctrl(win, PhysicalKey.V);
+        Settle(win);
+        var pb = win.FocusManager?.GetFocusedElement() as TextBox;
+        Check($"چسباندن ⇒ همان خانه در ویرایش، مکان‌نما ته متن («{pb?.Text}» · {pb?.CaretIndex})",
+              pb is not null && pb.Text == "برق" && pb.SelectionStart == pb.SelectionEnd && pb.CaretIndex == 3);
+        win.KeyTextInput(" ");
+        Settle(win);
+        win.KeyTextInput("دکان");
+        Settle(win);
+        pb = win.FocusManager?.GetFocusedElement() as TextBox;
+        //  تکملهٔ کم‌رنگِ پیشنهادی (تکهٔ انتخاب‌شدهٔ ته) جزوِ نوشتهٔ کاربر نیست
+        var typedNow = pb?.Text ?? "";
+        if (pb is not null && pb.SelectionStart != pb.SelectionEnd && Math.Max(pb.SelectionStart, pb.SelectionEnd) == typedNow.Length)
+            typedNow = typedNow[..Math.Min(pb.SelectionStart, pb.SelectionEnd)];
+        Check($"فاصله و ادامهٔ تایپ پشتِ متنِ چسبانده («{typedNow}»)", typedNow == "برق دکان");
+        grid.CancelEdit();
+        Settle(win);
+        try { prop.SetValue(item, before); } catch { }
         Settle(win);
     }
 
