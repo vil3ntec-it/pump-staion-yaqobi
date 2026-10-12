@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.Application.Localization;
+using PumpYaqobi.Reporting.Pdf;
 using PumpYaqobi.Services.Data;
 
 namespace PumpYaqobi.App.ViewModels.Sections;
@@ -466,6 +468,82 @@ public sealed partial class HistorySectionViewModel : SectionViewModel
         _feed = new List<HistoryRow>();
         await RefreshCardsAsync();
     }
+
+    // ══ 🖨 PDFِ همان چیزی که دیده می‌شود (۱۴۰۵/۰۷/۲۰) ════════════════════════
+    //
+    // گزارشِ صاحب ریپو: «هیچ‌کدام از تاریخچه‌ها PDF ندارند.» هر تاریخچه (هر
+    // سیزده کارت) با همان ستون‌ها، همان ردیف‌ها و همان صافیِ جاری (ماه/سال/همه،
+    // و برای پارچه‌ها تیل و پایه) — خانه‌ها همان نوشته‌های صفحه‌اند.
+    // ⚠️ نخِ رابط فقط فهرستِ ردیف‌ها را برمی‌دارد؛ خانه‌ها و ورق‌ها بیرونِ آن
+    // (در ‎Documents.ShowAsync‎) ساخته می‌شوند — تاریخچهٔ پنج‌ساله برنامه را نمی‌خواباند.
+
+    /// <summary>صافیِ جاری به زبانِ آدم — زیرنویسِ سند.</summary>
+    public string FilterText
+    {
+        get
+        {
+            var parts = new List<string> { Month == AllMonths ? AllMonths : MonthWords };
+            if (OpenKind == "shift")
+            {
+                if (_fuelPick == "petrol") parts.Add("⛽ پطرول");
+                else if (_fuelPick == "diesel") parts.Add("🟤 دیزل");
+                if (_pumpPick > 0) parts.Add("پایهٔ " + Shamsi.Money(_pumpPick));
+            }
+            return string.Join(" · ", parts);
+        }
+    }
+
+    [RelayCommand]
+    private Task PdfAsync()
+    {
+        if (IsListVisible || OpenKind.Length == 0) return Task.CompletedTask;
+        var rows = Rows.ToList();
+        var (kind, cols, filter) = (OpenKind, Columns, FilterText);
+        return Documents.ShowAsync(
+            () => new HistoryReport(PdfInput(kind, cols, rows, filter, DocDates.Line())),
+            "تاریخچهٔ " + HistoryService.LabelOf(kind));
+    }
+
+    /// <summary>
+    /// ردیف‌های صفحه ⇐ ورودیِ سند. ستون‌ها همان ‎ColumnsOf‎ (یا جدولِ کلیِ
+    /// «تاریخ · چه بود · توضیح · مبلغ»)؛ خانه‌ای که ‎Path‎ دارد از همان خاصیتِ
+    /// ردیف خوانده می‌شود که جدول نشان می‌دهد (پارچهٔ ویرایش‌شده هم همان عددِ تازه).
+    /// </summary>
+    public static HistoryReportInput PdfInput(string kind, IReadOnlyList<HistoryCol>? cols,
+                                              IReadOnlyList<HistoryRowViewModel> rows,
+                                              string filter, string dates)
+    {
+        if (cols is null)
+        {
+            var g = new[]
+            {
+                new HistoryReportColumn("تاریخ"), new HistoryReportColumn("چه بود"),
+                new HistoryReportColumn("توضیح", Wide: true), new HistoryReportColumn("مبلغ", Brush: "tone"),
+            };
+            return new HistoryReportInput(HistoryService.LabelOf(kind), filter, g,
+                rows.Select(r => new HistoryReportRow(
+                    new[] { r.DateText, r.Title, r.Detail, r.AmountText }, r.Entity.Tone)).ToList(),
+                dates);
+        }
+        var heads = cols.Select(c => new HistoryReportColumn(c.Header, c.Wide, c.Brush)).ToList();
+        var list = rows.Select(r => new HistoryReportRow(
+            cols.Select((c, i) => CellOf(r, c, i)).ToList(), r.Entity.Tone)).ToList();
+        return new HistoryReportInput(HistoryService.LabelOf(kind), filter, heads, list, dates);
+    }
+
+    private static string CellOf(HistoryRowViewModel r, HistoryCol c, int i) => c.Path switch
+    {
+        "" => i < r.Cells.Count ? r.Cells[i] : "",
+        nameof(HistoryRowViewModel.EditName) => r.EditName,
+        nameof(HistoryRowViewModel.EditPump) => r.EditPump,
+        nameof(HistoryRowViewModel.EditStart) => r.EditStart,
+        nameof(HistoryRowViewModel.EditEnd) => r.EditEnd,
+        nameof(HistoryRowViewModel.EditPrice) => r.EditPrice,
+        nameof(HistoryRowViewModel.EditDebt) => r.EditDebt,
+        nameof(HistoryRowViewModel.LitersCell) => r.LitersCell,
+        nameof(HistoryRowViewModel.MoneyCell) => r.MoneyCell,
+        _ => i < r.Cells.Count ? r.Cells[i] : "",
+    };
 
     partial void OnMonthChanged(string value) => Apply();
 

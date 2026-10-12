@@ -5,45 +5,251 @@
              xmlns:th="using:PumpYaqobi.App.Themes"
              x:Class="PumpYaqobi.App.Views.Sections.AmanatSectionView"
              x:DataType="vm:AmanatSectionViewModel">
+  <UserControl.Resources>
+    <!-- «برچسب ⇐ عدد» — کادرهای خلاصه، تحلیل و خانه‌های برآورد (‎.am-rows‎ی سایت) -->
+    <DataTemplate x:Key="AmLine" x:DataType="vm:AmanatLine">
+      <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+        <TextBlock Grid.Column="0" Text="{Binding Label}" Classes="muted" TextWrapping="Wrap" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1" Text="{Binding Value}" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center"
+                   Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+      </Grid>
+    </DataTemplate>
+    <!-- یک کادرِ کوچک: برچسب بالا، عدد پایین (‎.am-wi-c‎ / ‎.am-fee-box‎) -->
+    <DataTemplate x:Key="AmCell" x:DataType="vm:AmanatLine">
+      <Border Classes="stat" Margin="0,0,6,6" MinWidth="150">
+        <StackPanel Spacing="3">
+          <TextBlock Text="{Binding Label}" Classes="label" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Value}" FontWeight="Bold" FontSize="15"
+                     Foreground="{Binding BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+        </StackPanel>
+      </Border>
+    </DataTemplate>
+    <!-- یک ردیفِ ‎table.am-guide‎ — ردیفِ «همین» پررنگ و سبز -->
+    <DataTemplate x:Key="AmGuideRow" x:DataType="vm:AmanatGuideRow">
+      <Grid ColumnDefinitions="2*,1.4*,1.2*,1.2*,1.6*" Margin="0,2">
+        <TextBlock Grid.Column="0" Text="{Binding C1}" FontWeight="Bold" TextWrapping="Wrap"
+                   Foreground="{Binding RowBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+        <TextBlock Grid.Column="1" Text="{Binding C2}" />
+        <TextBlock Grid.Column="2" Text="{Binding C3}" />
+        <TextBlock Grid.Column="3" Text="{Binding C4}" />
+        <TextBlock Grid.Column="4" Text="{Binding C5}"
+                   Foreground="{Binding C5BrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+      </Grid>
+    </DataTemplate>
+  </UserControl.Resources>
   <Panel>
 
-    <!-- ══ شبکهٔ کارت‌ها ══════════════════════════════════════════════════
+    <!-- ══ شبکهٔ کارت‌ها — ‎#sec-amanat‎ ═══════════════════════════════════════
          صفحهٔ اصلیِ «تیل امانت» در نسخهٔ وب فقط کارتِ حساب‌هاست؛ جدول و
-         تحلیل با زدنِ کارت باز می‌شوند. -->
+         تحلیل با زدنِ کارت باز می‌شوند، و خلاصه/ماشین‌حساب/تنظیمات در صفحهٔ
+         جدای «📊 خلاصه و ابزارها». -->
     <c:SectionPage IsVisible="{Binding IsListVisible}" Header="تیل امانت">
 
       <c:SectionPage.Toolbar>
         <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
-          <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0" Command="{Binding OpenHistoryCommand}" ToolTip.Tip="تاریخچهٔ همین بخش با تاریخ و روزِ هفته" />
-          <Button Classes="ghost" Content="خلاصه و ابزارها" Margin="0,0,6,0" />
-          <Button Classes="ghost info" Content="PDF" Margin="0,0,6,0"
-                  Command="{Binding PdfCommand}" />
-          <Button Classes="seg" Content="⚙️ تنظیمات مدیر" Margin="0,0,6,0"
-                  Classes.on="{Binding ShowSettings}" Command="{Binding ToggleSettingsCommand}" />
-          <Button Classes="accent" Content="حساب جدید" Command="{Binding AddAccountCommand}" />
+          <Button Classes="ghost info" Content="🕘 تاریخچه" Margin="0,0,6,0" Command="{Binding OpenHistoryCommand}" ToolTip.Tip="تاریخچهٔ تیل امانت" />
+          <Button Classes="ghost" Content="📊 خلاصه و ابزارها" Margin="0,0,6,0" Command="{Binding OpenToolsCommand}" />
+          <Button Classes="info" Content="📄 PDF" Margin="0,0,6,0" Command="{Binding PdfCommand}" />
+          <Button Classes="accent" Content="➕ حساب جدید" Command="{Binding AddAccountCommand}" />
         </WrapPanel>
       </c:SectionPage.Toolbar>
 
       <c:SectionPage.Filters>
+        <!-- جست‌وجو — یک خط، درست مثلِ قرض‌داران؛ و چیپِ فیلترِ سوخت که در
+             «خلاصه و ابزارها» روشن مانده (‎#am-filter-chip‎) -->
         <StackPanel Orientation="Horizontal" Spacing="8">
           <TextBox Width="250" Text="{Binding Search}" Watermark="🔍 جست‌وجوی نام حساب…" />
-          <Button Classes="seg" Classes.on="{Binding IsAll}" Content="همه"
-                  Command="{Binding SetFuelCommand}" CommandParameter="all" />
-          <Button Classes="seg" Classes.on="{Binding IsPetrol}" Content="⛽ پطرول"
-                  Command="{Binding SetFuelCommand}" CommandParameter="petrol" />
-          <Button Classes="seg" Classes.on="{Binding IsDieselFilter}" Content="🟤 دیزل"
-                  Command="{Binding SetFuelCommand}" CommandParameter="diesel" />
           <Button Classes="seg on" Content="{Binding FuelChipText}" IsVisible="{Binding HasFuelChip}"
                   Command="{Binding ClearFuelCommand}" />
         </StackPanel>
       </c:SectionPage.Filters>
 
       <StackPanel Spacing="10">
+        <Panel>
+          <TextBlock Text="{Binding EmptyText}" Classes="muted" HorizontalAlignment="Center"
+                     Margin="0,40,0,0" IsVisible="{Binding !Cards.Count}" />
+          <ItemsRepeater ItemsSource="{Binding Cards}">
+            <ItemsRepeater.Layout>
+              <!-- ══ کارت‌ها: هم‌اندازه، شش تا هشت تا در هر ردیف ══════════════
+                   گزارشِ صاحب ریپو با عکس: «کادرهایشان برابرِ هم نیستند … در هر
+                   صفحه شش تا هشت تا جا بشود، نه با فاصلهٔ زیاد، برابر و استاندارد.» -->
+              <UniformGridLayout MinItemWidth="200" MinItemHeight="200"
+                                 MaximumRowsOrColumns="8" ItemsStretch="Fill"
+                                 MinColumnSpacing="10" MinRowSpacing="10" />
+            </ItemsRepeater.Layout>
+            <ItemsRepeater.ItemTemplate>
+              <DataTemplate x:DataType="vm:AmanatCardViewModel">
+                <Button Classes="card-shell" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                        Command="{Binding $parent[ItemsRepeater].((vm:AmanatSectionViewModel)DataContext).OpenCommand}"
+                        CommandParameter="{Binding}">
+                  <Border Classes="person-card">
+                    <!-- ⚠️ ردیفِ آخر ‎Auto‎ است و ردیفِ خالیِ پیش از آن ‎*‎: فضای اضافه در
+                         ردیفِ خالی جذب می‌شود و کفِ کارت پایین می‌چسبد، ولی اگر
+                         جا کم بیاید هیچ محتوایی ناپدید نمی‌شود. -->
+                    <Grid RowDefinitions="Auto,Auto,*,Auto">
+                      <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="10,9,10,0">
+                        <Button Grid.Column="0" Classes="card-x" Content="✕" ToolTip.Tip="حذف حساب"
+                                Command="{Binding $parent[ItemsRepeater].((vm:AmanatSectionViewModel)DataContext).DeleteCardCommand}"
+                                CommandParameter="{Binding}" />
+                        <Button Grid.Column="2" Classes="qr" Content="📄" Padding="8,3" FontSize="12" ToolTip.Tip="PDF این حساب"
+                                Command="{Binding $parent[ItemsRepeater].((vm:AmanatSectionViewModel)DataContext).PdfCardCommand}"
+                                CommandParameter="{Binding}" />
+                      </Grid>
 
-        <!-- ══ ⚙️ تنظیمات مدیر — ضریب‌های محاسبه ═══════════════════════════
-             همان ‎#am-settings‎ی سایت (§۲۰): نُه ضریب، فرمول، جدولِ «تبخیر در هر
-             گرما» و منابع. هر خانه همان لحظه ذخیره می‌شود و همهٔ حساب‌ها از نو
-             حساب می‌شوند. -->
+                      <TextBlock Grid.Row="1" Text="{Binding Name}" Classes="pname"
+                                 ToolTip.Tip="{Binding Name}" />
+
+                      <!-- همان زبانِ کارتِ قرض‌دار و شرکت‌ها -->
+                      <StackPanel Grid.Row="3">
+                        <TextBlock Text="{Binding RestText}" Classes="cmp-fig"
+                                   Foreground="{Binding RestBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+                        <TextBlock Text="باقیِ مشتری · لیتر" Classes="card-sub" />
+                        <TextBlock Text="{Binding State}" Classes="card-sub"
+                                   Foreground="{Binding StateBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+                        <TextBlock Text="{Binding PctText}" Classes="card-sub" />
+                        <Border Classes="card-rule" Margin="11,10,11,0" />
+                        <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="11,8,11,9">
+                          <TextBlock Grid.Column="0" Text="{Binding LitersText}" FontWeight="Bold" FontSize="12"
+                                     Foreground="{DynamicResource Pump.Muted}" ToolTip.Tip="رسید کل" />
+                          <TextBlock Grid.Column="1" Text="{Binding LossText}" FontWeight="Bold" FontSize="12"
+                                     Margin="12,0,0,0" Foreground="{DynamicResource Pump.Ink.Accent}" ToolTip.Tip="بخارِ تخمینی" />
+                          <TextBlock Grid.Column="3" Text="{Binding Index}" FontWeight="Bold" FontSize="11.5"
+                                     Foreground="{DynamicResource Pump.Muted}" />
+                        </Grid>
+                      </StackPanel>
+                    </Grid>
+                  </Border>
+                </Button>
+              </DataTemplate>
+            </ItemsRepeater.ItemTemplate>
+          </ItemsRepeater>
+        </Panel>
+
+        <!-- ‎.row-add-bar‎ی پایینِ بخش -->
+        <Button Classes="ghost" Content="➕ حساب جدید" HorizontalAlignment="Left" Command="{Binding AddAccountCommand}" />
+      </StackPanel>
+
+    </c:SectionPage>
+
+    <!-- ══ 📊 خلاصه و ابزارهای تیل امانت — ‎#amanatToolsModal‎ ════════════════
+         خواستهٔ صاحب ریپو: صفحهٔ اصلی فقط کارتِ حساب‌ها باشد و توضیح‌ها و
+         ماشین‌حساب و کادرهای خلاصه در یک صفحهٔ جدا. -->
+    <Panel IsVisible="{Binding IsToolsVisible}">
+    <c:SectionPage Header="📊 خلاصه و ابزارهای تیل امانت">
+      <c:SectionPage.Toolbar>
+        <Button Classes="accent" Content="✕ بستن" Command="{Binding CloseToolsCommand}" />
+      </c:SectionPage.Toolbar>
+
+      <c:SectionPage.Filters>
+        <!-- کدام سوخت · و «⚙️ تنظیمات مدیر» -->
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button Classes="seg" Classes.on="{Binding IsAll}" Content="همه"
+                  Command="{Binding SetFuelCommand}" CommandParameter="all" />
+          <Button Classes="seg" Classes.on="{Binding IsPetrol}" Content="⛽ پطرول"
+                  Command="{Binding SetFuelCommand}" CommandParameter="petrol" />
+          <Button Classes="seg" Classes.on="{Binding IsDieselFilter}" Content="🟤 دیزل"
+                  Command="{Binding SetFuelCommand}" CommandParameter="diesel" />
+          <Button Classes="seg" Content="⚙️ تنظیمات مدیر"
+                  Classes.on="{Binding ShowSettings}" Command="{Binding ToggleSettingsCommand}" />
+        </StackPanel>
+      </c:SectionPage.Filters>
+
+      <StackPanel Spacing="10">
+        <!-- ‎#am-summary‎ — دو کادرِ پطرول و دیزل -->
+        <UniformGrid Columns="2">
+          <Border Classes="panel" Margin="0,0,6,0" BorderBrush="{DynamicResource Pump.Ink.Accent}">
+            <StackPanel Spacing="4">
+              <TextBlock Text="{Binding PetrolSumTitle}" FontWeight="Bold" Foreground="{DynamicResource Pump.Ink.Accent}" />
+              <ItemsControl ItemsSource="{Binding PetrolSum}" ItemTemplate="{StaticResource AmLine}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="panel" Margin="6,0,0,0">
+            <StackPanel Spacing="4">
+              <TextBlock Text="{Binding DieselSumTitle}" FontWeight="Bold" />
+              <ItemsControl ItemsSource="{Binding DieselSum}" ItemTemplate="{StaticResource AmLine}" />
+            </StackPanel>
+          </Border>
+        </UniformGrid>
+
+        <!-- ‎#am-warns‎ -->
+        <ItemsControl ItemsSource="{Binding Errors}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource Pump.Ink.Danger}" FontWeight="Bold" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <ItemsControl ItemsSource="{Binding Warnings}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource Pump.Ink.Warn}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- ‎.am-disclaimer‎ -->
+        <Border Classes="panel">
+          <TextBlock Text="{x:Static vm:AmanatSectionViewModel.Disclaimer}" TextWrapping="Wrap" Classes="muted" />
+        </Border>
+
+        <!-- ── 🧮 ماشین‌حسابِ فیصدی — پیش‌فرض بسته ─────────────────────── -->
+        <Border Classes="panel">
+          <StackPanel Spacing="8">
+            <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding ToggleFeeCommand}">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="🧮 ماشین‌حسابِ فیصدی — برای تیلی که هنوز ثبت نشده" FontWeight="Bold" />
+                <TextBlock Grid.Column="1" Text="{Binding FeeCaret}" FontWeight="Bold" />
+              </Grid>
+            </Button>
+            <StackPanel Spacing="8" IsVisible="{Binding ShowFee}">
+              <TextBlock Classes="muted" TextWrapping="Wrap"
+                         Text="مقدار تیل و مدت و گرما را بنویسید؛ می‌گوید بخار چقدر می‌شود و برای جبرانش چند فیصد باید بگیرید. اگر فیصدیِ خودتان را هم بنویسید، می‌گوید کم می‌آید یا اضافه.&#10;برای حساب‌هایی که در جدول ثبت شده‌اند، همین تحلیل داخلِ خودِ کادرِ حساب هست." />
+              <c:AutoFillPanel MinItemWidth="160" Gap="8">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="مقدار تیل (لیتر)" Classes="muted" />
+                  <TextBox Text="{Binding FeeLiters}" Watermark="10000" />
+                </StackPanel>
+                <StackPanel Spacing="3">
+                  <TextBlock Text="مدت زمان (روز)" Classes="muted" />
+                  <TextBox Text="{Binding FeeDays}" Watermark="30" />
+                </StackPanel>
+                <StackPanel Spacing="3">
+                  <TextBlock Text="درجه گرما (°C)" Classes="muted" />
+                  <TextBox Text="{Binding FeeTemp}" Watermark="25" />
+                </StackPanel>
+                <StackPanel Spacing="3">
+                  <TextBlock Text="نوع تیل" Classes="muted" />
+                  <ComboBox SelectedIndex="{Binding FeeFuelIndex}" HorizontalAlignment="Stretch">
+                    <ComboBoxItem Content="⛽ پطرول" />
+                    <ComboBoxItem Content="🟤 دیزل" />
+                  </ComboBox>
+                </StackPanel>
+                <StackPanel Spacing="3">
+                  <TextBlock Text="فیصدیِ من (٪)" Classes="muted" />
+                  <TextBox Text="{Binding FeeMy}" Watermark="0" />
+                </StackPanel>
+              </c:AutoFillPanel>
+              <ItemsControl ItemsSource="{Binding FeeBoxes}" ItemTemplate="{StaticResource AmCell}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              </ItemsControl>
+              <TextBlock Text="{Binding FeeVerdict}" TextWrapping="Wrap" FontWeight="Bold"
+                         Foreground="{Binding FeeVerdictBrush, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+              <TextBlock Text="📋 جدولِ راهنما — بخار با مدت کم و زیاد می‌شود" Classes="label" FontWeight="Bold" />
+              <Grid ColumnDefinitions="2*,1.4*,1.2*,1.2*,1.6*">
+                <TextBlock Grid.Column="0" Text="مدت زمان" Classes="label" />
+                <TextBlock Grid.Column="1" Text="کمبودی" Classes="label" />
+                <TextBlock Grid.Column="2" Text="فیصدیِ سربه‌سر" Classes="label" />
+                <TextBlock Grid.Column="3" Text="فیصدیِ پیشنهادی" Classes="label" />
+                <TextBlock Grid.Column="4" Text="با فیصدیِ شما" Classes="label" />
+              </Grid>
+              <ItemsControl ItemsSource="{Binding FeeGuide}" ItemTemplate="{StaticResource AmGuideRow}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- ══ ⚙️ تنظیمات مدیر — ضریب‌های محاسبه (‎#am-settings‎، §۲۰) ═══════
+             نُه ضریب، فرمول، جدولِ «تبخیر در هر گرما» و منابع. هر خانه همان
+             لحظه ذخیره می‌شود و همهٔ حساب‌ها از نو حساب می‌شوند. -->
         <Panel IsVisible="{Binding ShowSettings}">
         <Border Classes="panel"
                 DataContext="{Binding SettingsEditor}" x:DataType="vm:AmanatSettingsEditorViewModel">
@@ -110,6 +316,7 @@
                 </DataGrid.Columns>
               </c:ExcelGrid>
             </Border>
+            <TextBlock Text="{Binding TableNote}" Classes="muted" TextWrapping="Wrap" />
 
             <TextBlock Text="📚 این عددها از کجا آمده‌اند" Classes="label" Foreground="{DynamicResource Pump.Ink.Ok}" />
             <TextBlock Text="{Binding SourcesText}" Classes="muted" TextWrapping="Wrap" />
@@ -119,154 +326,291 @@
           </StackPanel>
         </Border>
         </Panel>
-
-              <Panel>
-          <TextBlock Text="{Binding EmptyText}" Classes="muted" HorizontalAlignment="Center"
-                     Margin="0,40,0,0" IsVisible="{Binding !Cards.Count}" />
-          <ItemsRepeater ItemsSource="{Binding Cards}">
-            <ItemsRepeater.Layout>
-              <!-- ══ کارت‌ها: هم‌اندازه، شش تا هشت تا در هر ردیف ══════════════
-                   گزارشِ صاحب ریپو با عکس: «کادرهایشان برابرِ هم نیستند، یکی
-                   کوچک یکی بزرگ، یا خیلی فاصله دارند … در هر صفحه شش تا هشت تا
-                   جا بشود، نه با فاصلهٔ زیاد، برابر و استاندارد.»
-
-                   دو چیز کم بود:
-                   • ‎MinItemHeight‎ نبود، پس هر کارت به قدِ محتوای خودش بود —
-                     کارتی که «اتمام پول» داشت بلندتر از بقیه می‌شد و ردیف
-                     ناهموار می‌ماند. حالا همه یک قد دارند و کارت هم عمودی
-                     کِش می‌آید تا قابش پر شود.
-                   • ‎MaximumRowsOrColumns‎ نبود، پس روی نمایشگرِ پهن ‎ItemsStretch‎
-                     کارت‌ها را بی‌جهت پهن می‌کرد. حالا سقفِ هشت‌تا دارد و
-                     ‎MinItemWidth‎ی ۲۰۰ روی باریک‌ترین صفحه هم شش‌تا می‌دهد. -->
-              <UniformGridLayout MinItemWidth="200" MinItemHeight="200"
-                                 MaximumRowsOrColumns="8" ItemsStretch="Fill"
-                                 MinColumnSpacing="10" MinRowSpacing="10" />
-            </ItemsRepeater.Layout>
-            <ItemsRepeater.ItemTemplate>
-              <DataTemplate x:DataType="vm:AmanatCardViewModel">
-                <Button Classes="card-shell" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
-                        Command="{Binding $parent[ItemsRepeater].((vm:AmanatSectionViewModel)DataContext).OpenCommand}"
-                        CommandParameter="{Binding}">
-                  <Border Classes="person-card">
-                    <!-- ⚠️ ردیفِ آخر ‎Auto‎ است و ردیفِ خالیِ پیش از آن ‎*‎: فضای اضافه در
-                         ردیفِ خالی جذب می‌شود و کفِ کارت پایین می‌چسبد، ولی اگر
-                         جا کم بیاید هیچ محتوایی ناپدید نمی‌شود. (ردیفِ ‎*‎ِ
-                         محتوادار وقتی جا کم بیاید تا صفر جمع می‌شود — همان
-                         «دیزل و پطرول زیرِ کادر گم شدند».) -->
-                    <Grid RowDefinitions="Auto,Auto,*,Auto">
-                      <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="10,9,10,0">
-                        <Button Grid.Column="0" Classes="card-x" Content="✕"
-                                Command="{Binding $parent[ItemsRepeater].((vm:AmanatSectionViewModel)DataContext).DeleteCardCommand}"
-                                CommandParameter="{Binding}" />
-                        <Button Grid.Column="2" Classes="qr" Content="📄" Padding="8,3" FontSize="12"
-                                Command="{Binding $parent[ItemsRepeater].((vm:AmanatSectionViewModel)DataContext).PdfCardCommand}"
-                                CommandParameter="{Binding}" />
-                      </Grid>
-
-                      <TextBlock Grid.Row="1" Text="{Binding Name}" Classes="pname"
-                                 ToolTip.Tip="{Binding Name}" />
-
-                      <!-- همان زبانِ کارتِ قرض‌دار و شرکت‌ها -->
-                      <StackPanel Grid.Row="3">
-                        <TextBlock Text="{Binding RestText}" Classes="cmp-fig"
-                                   Foreground="{Binding RestBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
-                        <TextBlock Text="باقیِ مشتری · لیتر" Classes="card-sub" />
-                        <TextBlock Text="{Binding State}" Classes="card-sub"
-                                   Foreground="{Binding StateBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
-                        <TextBlock Text="{Binding PctText}" Classes="card-sub" />
-                        <Border Classes="card-rule" Margin="11,10,11,0" />
-                        <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="11,8,11,9">
-                          <TextBlock Grid.Column="0" Text="{Binding LitersText}" FontWeight="Bold" FontSize="12"
-                                     Foreground="{DynamicResource Pump.Muted}" />
-                          <TextBlock Grid.Column="1" Text="{Binding LossText}" FontWeight="Bold" FontSize="12"
-                                     Margin="12,0,0,0" Foreground="{DynamicResource Pump.Ink.Accent}" />
-                          <TextBlock Grid.Column="3" Text="{Binding Index}" FontWeight="Bold" FontSize="11.5"
-                                     Foreground="{DynamicResource Pump.Muted}" />
-                        </Grid>
-                      </StackPanel>
-                    </Grid>
-                  </Border>
-                </Button>
-              </DataTemplate>
-            </ItemsRepeater.ItemTemplate>
-          </ItemsRepeater>
-        </Panel>
       </StackPanel>
-
     </c:SectionPage>
+    </Panel>
 
-    <!-- ══ صفحهٔ یک حساب ══
-         مثلِ صفحهٔ قرض‌دار و شرکت، داخلِ همان قالبِ مشترک — تا سربرگ و کادر و
-         فاصله‌هایش با بقیهٔ برنامه یکی باشد. پیش از این تنها صفحه‌ای بود که
-         بی‌کادر و چسبیده به لبهٔ پنجره کشیده می‌شد. -->
-    <Panel IsVisible="{Binding !IsListVisible}">
+    <!-- ══ صفحهٔ یک حساب — ‎#amanatAccModal‎ ══════════════════════════════════
+         تمام‌صفحه، مثلِ حسابِ قرض‌دار: مشخصات، سربرگِ کارت‌ها، برآوردِ دستی،
+         جدولِ رسیدها، نرخ‌های مرجع و «حذفِ این حساب» دور از دکمه‌های هر روزه. -->
+    <Panel IsVisible="{Binding Page, Converter={x:Static ObjectConverters.IsNotNull}}">
     <c:SectionPage DataContext="{Binding Page}" x:CompileBindings="False"
-                   Header="{Binding Name}" SubHeader="حسابِ تیلِ امانت">
+                   Header="{Binding Title}" SubHeader="حسابِ تیلِ امانت">
 
       <c:SectionPage.Toolbar>
         <StackPanel Orientation="Horizontal" Spacing="8">
-          <Button Classes="ghost info" Content="PDF حساب" Command="{Binding PdfCommand}" />
+          <Button Classes="info" Content="📄 PDF" Command="{Binding PdfCommand}" />
           <Button Classes="accent" Content="بازگشت به حساب‌ها" Command="{Binding BackCommand}" />
         </StackPanel>
       </c:SectionPage.Toolbar>
 
       <c:SectionPage.Filters>
-        <UniformGrid Rows="1" Classes="stats">
-          <StackPanel Spacing="3" Margin="6,0">
-            <TextBlock Text="نامِ حساب" Classes="label" />
-            <TextBox Text="{Binding Name}" />
-          </StackPanel>
-          <StackPanel Spacing="3" Margin="6,0">
-            <TextBlock Text="فیصدیِ من" Classes="label" />
-            <TextBox Text="{Binding MyPctText}" />
-          </StackPanel>
-          <StackPanel Spacing="3" Margin="6,0">
-            <TextBlock Text="کلِ رسید (لیتر)" Classes="label" />
-            <TextBlock Text="{Binding TotalLiters}" FontWeight="Bold" FontSize="15" Margin="0,4,0,0" />
-          </StackPanel>
-          <StackPanel Spacing="3" Margin="6,0">
-            <TextBlock Text="کلِ بخار" Classes="label" />
-            <TextBlock Text="{Binding TotalLoss}" FontWeight="Bold" FontSize="15" Margin="0,4,0,0" />
-          </StackPanel>
-          <StackPanel Spacing="3" Margin="6,0">
-            <TextBlock Text="سهمِ من" Classes="label" />
-            <TextBlock Text="{Binding TotalShare}" FontWeight="Bold" FontSize="15" Margin="0,4,0,0" />
-          </StackPanel>
-          <StackPanel Spacing="3" Margin="6,0">
-            <TextBlock Text="باقیِ تیلِ مشتری" Classes="label" />
-            <TextBlock Text="{Binding TotalRest}" FontWeight="Bold" FontSize="15"
-                       Foreground="{DynamicResource Pump.Ink.Accent}" Margin="0,4,0,0" />
-          </StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom" Margin="0,0,0,4">
+        <StackPanel Spacing="8">
+          <!-- ‎.am-acc-r1‎ — نام، سوخت، ➕ ردیف. «حذف حساب» عمداً این‌جا نیست. -->
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBox Width="260" Text="{Binding Name}" Watermark="نام حساب / صاحب تیل" />
+            <ComboBox SelectedIndex="{Binding FuelIndex}" MinWidth="120">
+              <ComboBoxItem Content="⛽ پطرول" />
+              <ComboBoxItem Content="🟤 دیزل" />
+            </ComboBox>
             <c:RowAddBar Host="{Binding}" AddRowCommand="{Binding AddRowCommand}" />
-            <Button Classes="ghost danger" Content="حذفِ حساب"
-                    Command="{Binding DeleteAccountCommand}" Padding="10,4" />
           </StackPanel>
-        </UniformGrid>
+
+          <!-- ══ سربرگِ حساب — کارت‌ها، مثلِ «شرکت‌های تیل» ══════════════════
+               «فیصدیِ من و فیصدیِ بخار» یک کارت‌اند و «سهمیهٔ من و به من می‌رسد» هم یک کارت. -->
+          <UniformGrid Rows="1" Classes="stats">
+            <Border Classes="stat">
+              <StackPanel Spacing="3">
+                <TextBlock Text="🛢️ رسید کل" Classes="label" />
+                <TextBlock Text="{Binding SumLiters}" Classes="num" />
+                <TextBlock Text="{Binding SumTakenSub}" Classes="muted" Foreground="{DynamicResource Pump.Ink.Danger}" />
+              </StackPanel>
+            </Border>
+            <Border Classes="stat">
+              <StackPanel Spacing="3">
+                <TextBlock Text="💨 تیلِ بخار" Classes="label" />
+                <TextBlock Text="{Binding SumLoss}" Classes="num" Foreground="{DynamicResource Pump.Ink.Accent}" />
+                <TextBlock Text="{Binding SumLossSub}" Classes="muted" />
+              </StackPanel>
+            </Border>
+            <Border Classes="stat">
+              <StackPanel Spacing="3">
+                <TextBlock Text="٪ فیصدی‌ها" Classes="label" />
+                <Grid ColumnDefinitions="*,Auto"><TextBlock Text="فیصدیِ من" Classes="muted" /><TextBlock Grid.Column="1" Text="{Binding SumMyPct}" FontWeight="Bold" Foreground="{DynamicResource Pump.Ink.Info}" /></Grid>
+                <Grid ColumnDefinitions="*,Auto"><TextBlock Text="فیصدیِ بخار" Classes="muted" /><TextBlock Grid.Column="1" Text="{Binding SumLossPct}" FontWeight="Bold" Foreground="{DynamicResource Pump.Ink.Accent}" /></Grid>
+              </StackPanel>
+            </Border>
+            <Border Classes="stat">
+              <StackPanel Spacing="3">
+                <TextBlock Text="سهمِ من (لیتر)" Classes="label" />
+                <Grid ColumnDefinitions="*,Auto"><TextBlock Text="سهمیهٔ من" Classes="muted" /><TextBlock Grid.Column="1" Text="{Binding SumTarget}" FontWeight="Bold" Foreground="{DynamicResource Pump.Ink.Info}" /></Grid>
+                <Grid ColumnDefinitions="*,Auto"><TextBlock Text="به من می‌رسد" Classes="muted" /><TextBlock Grid.Column="1" Text="{Binding SumNet}" FontWeight="Bold"
+                          Foreground="{Binding SumNetBrush, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" /></Grid>
+              </StackPanel>
+            </Border>
+            <Border Classes="stat">
+              <StackPanel Spacing="3">
+                <TextBlock Text="الباقیِ طرف" Classes="label" />
+                <TextBlock Text="{Binding SumRest}" Classes="num"
+                           Foreground="{Binding SumRestBrush, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+              </StackPanel>
+            </Border>
+            <Border Classes="stat" IsVisible="{Binding HasActual}">
+              <StackPanel Spacing="3">
+                <TextBlock Text="📏 اندازه‌گیری" Classes="label" />
+                <Grid ColumnDefinitions="*,Auto"><TextBlock Text="موجودی واقعی" Classes="muted" /><TextBlock Grid.Column="1" Text="{Binding SumActual}" FontWeight="Bold" Foreground="{DynamicResource Pump.Ink.Accent}" /></Grid>
+                <Grid ColumnDefinitions="*,Auto"><TextBlock Text="اختلاف" Classes="muted" /><TextBlock Grid.Column="1" Text="{Binding SumRealDiff}" FontWeight="Bold"
+                          Foreground="{Binding SumRealDiffBrush, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" /></Grid>
+              </StackPanel>
+            </Border>
+          </UniformGrid>
+        </StackPanel>
       </c:SectionPage.Filters>
 
-      <!-- جدول + ردیفِ «جمله»ی همین حساب (حساب‌ها با هم جمع نمی‌شوند) -->
-      <Grid RowDefinitions="*,Auto">
-      <c:ExcelGrid Grid.Row="0" ItemsSource="{Binding Rows}"
-                  RowDeleteCommand="{Binding DeleteRowCommand}">
-        <DataGrid.Columns>
-          <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
-          <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="Auto" />
-          <DataGridTextColumn Header="رسید (لیتر)" Binding="{Binding LitersText}" Width="Auto" />
-          <DataGridTextColumn Header="برده‌شده" Binding="{Binding TakenText}" Width="Auto" />
-          <DataGridTextColumn Header="روز" Binding="{Binding DaysText}" Width="Auto" />
-          <DataGridTextColumn Header="گرما" Binding="{Binding TempText}" Width="Auto" />
-          <DataGridTextColumn Header="بخار" Binding="{Binding LossText}" Width="Auto" IsReadOnly="True" />
-          <DataGridTextColumn Header="٪ بخار" Binding="{Binding LossPctText}" Width="Auto" IsReadOnly="True" />
-          <DataGridTextColumn Header="سهمِ من" Binding="{Binding ShareText}" Width="Auto" IsReadOnly="True" />
-          <DataGridTextColumn Header="به من می‌رسد" Binding="{Binding NetText}" Width="Auto" IsReadOnly="True" />
-          <DataGridTextColumn Header="فیصدیِ لازم" Binding="{Binding AskPctText}" Width="Auto" IsReadOnly="True" />
-          <DataGridTextColumn Header="باقیِ تیل" Binding="{Binding RestText}" Width="Auto" IsReadOnly="True" />
-          <DataGridTextColumn Header="اندازهٔ واقعی" Binding="{Binding ActualText}" Width="Auto" />
-          <DataGridCheckBoxColumn Header="بسته" Binding="{Binding IsClosed}" Width="Auto" />
-        </DataGrid.Columns>
-      </c:ExcelGrid>
-      <c:TotalsBar Grid.Row="1" ItemsSource="{Binding TotalCells}" />
+      <Grid RowDefinitions="Auto,Auto,*,Auto,Auto,Auto">
+
+        <!-- ══ 🧾 برآوردِ دستی — «تیلِ این طرف را قبول کنم یا نه؟» ═══════════
+             «آن یک بخشِ جدا باشد، به جدول ربطش نده. و برایش یک کادرِ کشویی درست
+             کن که پنهان و دیده شود.» — هیچ عددی از جدول نمی‌خواند و در آن نمی‌نویسد. -->
+        <Border Grid.Row="0" Classes="panel" Margin="0,0,0,8">
+          <StackPanel Spacing="8">
+            <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding ToggleWhatIfCommand}">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="🧾 برآوردِ دستی — قبول کنم؟ چند فیصد بگیرم؟" FontWeight="Bold" />
+                <TextBlock Grid.Column="1" Text="{Binding WhatIfCaret}" FontWeight="Bold" />
+              </Grid>
+            </Button>
+            <ScrollViewer IsVisible="{Binding ShowWhatIf}" MaxHeight="440" HorizontalScrollBarVisibility="Disabled">
+              <StackPanel Spacing="8">
+                <c:AutoFillPanel MinItemWidth="160" Gap="8">
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="🛢️ تیلِ طرف (لیتر)" Classes="muted" />
+                    <TextBox Text="{Binding WiLiters}" Watermark="مثلاً 100000" />
+                  </StackPanel>
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="📅 چند روز پیشِ من می‌ماند" Classes="muted" />
+                    <TextBox Text="{Binding WiDays}" Watermark="30" />
+                  </StackPanel>
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="🌡️ درجه گرما (°C)" Classes="muted" />
+                    <TextBox Text="{Binding WiTemp}" />
+                  </StackPanel>
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="٪ فیصدیِ من" Classes="muted" />
+                    <TextBox Text="{Binding WiMyPct}" Watermark="مثلاً 3" />
+                  </StackPanel>
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="🎯 سودِ هدف (وقتی «فیصدیِ من» خالی باشد)" Classes="muted" TextWrapping="Wrap" />
+                    <TextBox Text="{Binding WiProfit}"
+                             ToolTip.Tip="اگر «فیصدیِ من» را ننویسید، پیشنهاد از روی همین ساخته می‌شود: سربه‌سر + همین عدد. اگر «فیصدیِ من» نوشته شده باشد، هدف همان است و این عدد کاری نمی‌کند." />
+                  </StackPanel>
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="💰 نرخ هر لیتر (دلخواه)" Classes="muted" />
+                    <TextBox Text="{Binding WiRate}" Watermark="خالی" />
+                  </StackPanel>
+                </c:AutoFillPanel>
+
+                <TextBlock Text="{Binding WiEmptyNote}" Classes="muted" IsVisible="{Binding !WiHasLiters}" />
+                <StackPanel Spacing="8" IsVisible="{Binding WiHasLiters}">
+                  <ItemsControl ItemsSource="{Binding WiCells}" ItemTemplate="{StaticResource AmCell}">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  </ItemsControl>
+                  <TextBlock Text="{Binding WiVerdict}" TextWrapping="Wrap" FontWeight="Bold"
+                             Foreground="{Binding WiVerdictBrush, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+                  <Grid ColumnDefinitions="2*,1.4*,1.2*,1.2*,1.6*">
+                    <TextBlock Grid.Column="0" Text="اگر رویِ‌هم این‌قدر بماند" Classes="label" TextWrapping="Wrap" />
+                    <TextBlock Grid.Column="1" Text="بخار" Classes="label" />
+                    <TextBlock Grid.Column="2" Text="سربه‌سر" Classes="label" />
+                    <TextBlock Grid.Column="3" Text="پیشنهاد" Classes="label" />
+                    <TextBlock Grid.Column="4" Text="با فیصدیِ شما" Classes="label" />
+                  </Grid>
+                  <ItemsControl ItemsSource="{Binding WiFuture}" ItemTemplate="{StaticResource AmGuideRow}" />
+                  <TextBlock Text="{x:Static vm:AmanatAccountViewModel.WiFutureNote}" Classes="muted" TextWrapping="Wrap" />
+
+                  <!-- 🧮 تحلیل — «آن تحلیل را هم توی برآورد دستی بگذار» -->
+                  <Border Classes="panel" IsVisible="{Binding WiHasAnalysis}">
+                    <StackPanel Spacing="4">
+                      <TextBlock Text="🧮 تحلیل — چند فیصد بگیرم که ضرر نکنم؟" FontWeight="Bold" Foreground="{DynamicResource Pump.Ink.Ok}" />
+                      <ItemsControl ItemsSource="{Binding WiAnalysis}" ItemTemplate="{StaticResource AmLine}" />
+                      <TextBlock Text="{Binding WiAnalysisVerdict}" TextWrapping="Wrap" FontWeight="Bold"
+                                 Foreground="{Binding WiAnalysisBrush, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+                      <TextBlock Text="{Binding WiThermal}" Classes="muted" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Border>
+                </StackPanel>
+                <Button Classes="ghost" Content="↺ پاک کردن" HorizontalAlignment="Right" Command="{Binding ResetWhatIfCommand}" />
+              </StackPanel>
+            </ScrollViewer>
+          </StackPanel>
+        </Border>
+
+        <!-- 📊 جدولِ رسیدها — و «📏 اندازه‌گیری» -->
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+          <TextBlock Text="📊 جدولِ رسیدها" FontWeight="Bold" VerticalAlignment="Center" />
+          <Button Grid.Column="1" Classes="seg" Content="📏 اندازه‌گیری"
+                  Classes.on="{Binding Section.ShowMeasure}" Command="{Binding Section.ToggleMeasureCommand}" />
+        </Grid>
+
+        <!-- ══ سربرگِ دوطبقه — خواستهٔ صاحب ریپو ═══════════════════════════════
+             خطِ اول «سرگروه» (شناسه · 🛢️ تیل · 🌡️ شرایطِ نگهداری · ٪ فیصدی‌ها ·
+             سهمِ من · 📏 اندازه‌گیری)، خطِ دوم نامِ ستون. ردیف‌ها به ترتیبِ تاریخ. -->
+        <c:ExcelGrid Grid.Row="2" x:Name="AccGrid" ItemsSource="{Binding Rows}"
+                     RowDeleteCommand="{Binding DeleteRowCommand}">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="شناسه&#10;تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
+            <DataGridTextColumn Header="شناسه&#10;نام" Binding="{Binding Name}" Width="Auto" />
+            <DataGridTextColumn Header="شناسه&#10;به حسابهٔ" Binding="{Binding ToAccount}" Width="Auto" />
+            <DataGridTextColumn Header="🛢️ تیل (لیتر)&#10;رسید تیل" Binding="{Binding LitersText}" Width="Auto" />
+            <DataGridTextColumn Header="🛢️ تیل (لیتر)&#10;برده شده" Binding="{Binding TakenText}" Width="Auto" />
+            <c:HintTextColumn Header="🌡️ شرایطِ نگهداری&#10;مدت زمان" Binding="{Binding DaysText}" HintPath="DaysHint" Width="Auto" />
+            <c:HintTextColumn Header="🌡️ شرایطِ نگهداری&#10;درجه گرما" Binding="{Binding TempText}" HintPath="TempHint" Width="Auto" />
+            <DataGridTemplateColumn Header="تیلِ بخار (لیتر)" Width="Auto" IsReadOnly="True">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding LossText}" VerticalAlignment="Center" Margin="6,0" Foreground="{DynamicResource Pump.Ink.Accent}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <c:HintTextColumn Header="٪ فیصدی‌ها&#10;فیصدیِ من" Binding="{Binding MyPctText}" HintPath="MyPctHint"
+                              ChipTextPath="ChipText" ChipCommandPath="UseSuggestCommand" ChipTipPath="ChipTip" ChipBrushPath="ChipBrushKey" Width="Auto" />
+            <DataGridTemplateColumn Header="٪ فیصدی‌ها&#10;فیصدیِ بخار" Width="Auto" IsReadOnly="True">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding LossPctText}" VerticalAlignment="Center" Margin="6,0" Foreground="{DynamicResource Pump.Ink.Accent}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTemplateColumn Header="٪ فیصدی‌ها&#10;فیصدیِ لازم" Width="Auto" IsReadOnly="True">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding NeedText}" VerticalAlignment="Center" Margin="6,0" Foreground="{DynamicResource Pump.Ink.Info}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTemplateColumn Header="سهمِ من (لیتر)&#10;سهمیهٔ من" Width="Auto" IsReadOnly="True">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding ShareText}" VerticalAlignment="Center" Margin="6,0" Foreground="{DynamicResource Pump.Ink.Info}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTemplateColumn Header="سهمِ من (لیتر)&#10;به من می‌رسد" Width="Auto" IsReadOnly="True">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding NetText}" VerticalAlignment="Center" Margin="6,0"
+                             Foreground="{Binding NetBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTemplateColumn Header="الباقیِ طرف (لیتر)" Width="Auto" IsReadOnly="True">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding RestText}" VerticalAlignment="Center" Margin="6,0" FontWeight="Bold"
+                             Foreground="{Binding RestBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <c:HintTextColumn Header="📏 اندازه‌گیری&#10;موجودی واقعی" Binding="{Binding ActualText}" HintPath="ActualHint" Width="Auto" />
+            <DataGridTemplateColumn Header="📏 اندازه‌گیری&#10;اختلاف" Width="Auto" IsReadOnly="True">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding DiffText}" VerticalAlignment="Center" Margin="6,0"
+                             Foreground="{Binding DiffBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </c:ExcelGrid>
+        <!-- ردیفِ «جمله»ی همین حساب (حساب‌ها با هم جمع نمی‌شوند) -->
+        <c:TotalsBar Grid.Row="3" ItemsSource="{Binding TotalCells}" />
+
+        <!-- 🌡️ در هر گرما چقدر تبخیر می‌شود؟ — برای سوختِ همین حساب -->
+        <Border Grid.Row="4" Classes="panel" Margin="0,8,0,0">
+          <StackPanel Spacing="8">
+            <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding ToggleRefCommand}">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="🌡️ در هر گرما چقدر تبخیر می‌شود؟" FontWeight="Bold" Foreground="{DynamicResource Pump.Ink.Info}" />
+                <TextBlock Grid.Column="1" Text="{Binding RefCaret}" FontWeight="Bold" />
+              </Grid>
+            </Button>
+            <StackPanel Spacing="6" IsVisible="{Binding ShowRef}">
+              <ItemsControl ItemsSource="{Binding RefRows}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="*,*,*,*,*" Margin="0,1">
+                      <TextBlock Grid.Column="0" Text="{Binding TempText}" FontWeight="Bold"
+                                 Foreground="{Binding NearBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+                      <TextBlock Grid.Column="1" Text="{Binding FactorText}" />
+                      <TextBlock Grid.Column="2" Text="{Binding MonthText}" />
+                      <TextBlock Grid.Column="3" Text="{Binding YearText}" />
+                      <TextBlock Grid.Column="4" Text="{Binding ThermalText}" Foreground="{DynamicResource Pump.Muted}" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="گرما · ضریب · تبخیر در ماه · تبخیر در سال · انبساط گرمایی" Classes="label" />
+              <TextBlock Text="{Binding RefNote}" Classes="muted" TextWrapping="Wrap" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- ══ جای امنِ «حذف حساب» — ته صفحه، پشتِ یک کشو ═══════════════════ -->
+        <Border Grid.Row="5" Classes="panel" Margin="0,8,0,0" BorderBrush="{DynamicResource Pump.Ink.Danger}">
+          <StackPanel Spacing="8">
+            <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding ToggleDangerCommand}">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="🗑️ حذفِ این حساب" FontWeight="Bold" Foreground="{DynamicResource Pump.Ink.Danger}" />
+                <TextBlock Grid.Column="1" Text="{Binding DangerCaret}" FontWeight="Bold" Foreground="{DynamicResource Pump.Ink.Danger}" />
+              </Grid>
+            </Button>
+            <StackPanel Spacing="6" IsVisible="{Binding ShowDanger}">
+              <TextBlock Classes="muted" TextWrapping="Wrap"
+                         Text="کلِ کادرِ حساب با همهٔ ردیف‌هایش پاک می‌شود. تا ۳۰ روز از «تنظیمات ← سطل زباله» برمی‌گردد." />
+              <Button Classes="ghost danger" Content="🗑️ بله، این حساب پاک شود" HorizontalAlignment="Left"
+                      Command="{Binding DeleteAccountCommand}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
       </Grid>
     </c:SectionPage>
     </Panel>

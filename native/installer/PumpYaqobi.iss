@@ -230,6 +230,10 @@ Root: HKA; Subkey: "Software\Classes\PumpYaqobi.Key\shell\open\command"; ValueTy
 ;          صاحبش نیست (NoDbOwner) — فایلِ .dbِ برنامه‌های دیگر دست نمی‌خورد.
 Root: HKA; Subkey: "Software\Classes\.pyq"; ValueType: string; ValueName: ""; ValueData: "PumpYaqobi.Backup"; Flags: uninsdeletevalue
 Root: HKA; Subkey: "Software\Classes\.pyq\OpenWithProgids"; ValueType: string; ValueName: "PumpYaqobi.Backup"; ValueData: ""; Flags: uninsdeletevalue
+; ⛔ (۳.۱.۲۷۲) «بکاپ‌های پوشه با دوبار-کلیک باز نمی‌شوند»: عکس‌های دفتر ‎.db‎ بودند و ‎.db‎ صاحبِ
+;   دیگری داشت (NoDbOwner ⇒ پیش‌فرض گرفته نمی‌شد). عکس‌های تازه ‎.pumpbak‎اند — پسوندِ خودِ برنامه.
+Root: HKA; Subkey: "Software\Classes\.pumpbak"; ValueType: string; ValueName: ""; ValueData: "PumpYaqobi.Backup"; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\.pumpbak\OpenWithProgids"; ValueType: string; ValueName: "PumpYaqobi.Backup"; ValueData: ""; Flags: uninsdeletevalue
 Root: HKA; Subkey: "Software\Classes\.db\OpenWithProgids"; ValueType: string; ValueName: "PumpYaqobi.Backup"; ValueData: ""; Flags: uninsdeletevalue
 Root: HKA; Subkey: "Software\Classes\.db"; ValueType: string; ValueName: ""; ValueData: "PumpYaqobi.Backup"; Flags: uninsdeletevalue; Check: NoDbOwner
 Root: HKA; Subkey: "Software\Classes\PumpYaqobi.Backup"; ValueType: string; ValueName: ""; ValueData: "بکاپِ {#AppName}"; Flags: uninsdeletekey
@@ -237,7 +241,9 @@ Root: HKA; Subkey: "Software\Classes\PumpYaqobi.Backup\DefaultIcon"; ValueType: 
 Root: HKA; Subkey: "Software\Classes\PumpYaqobi.Backup\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"" ""%1"""
 Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\SupportedTypes"; ValueType: string; ValueName: ".pyq"; ValueData: ""
 Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\SupportedTypes"; ValueType: string; ValueName: ".db"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\SupportedTypes"; ValueType: string; ValueName: ".pumpbak"; ValueData: ""
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.pyq\UserChoice"; ValueType: none; Flags: deletekey
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.pumpbak\UserChoice"; ValueType: none; Flags: deletekey
 Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "{#AppName}"; Flags: uninsdeletekey
 Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\SupportedTypes"; ValueType: string; ValueName: ".pumpyaqobi"; ValueData: ""
 Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\SupportedTypes"; ValueType: string; ValueName: ".pumpkey"; ValueData: ""
@@ -636,6 +642,10 @@ begin
   Result := FileExists(AddBackslash(Dir) + 'pump.db') or FileExists(AddBackslash(Dir) + 'settings.json');
 end;
 
+// ⛔ (۳.۱.۲۷۲) نصب به ‎ssPostInstall‎ رسید؟ نه ⇒ ‎DeinitializeSetup‎ برنامهٔ کهنه را باز می‌کند.
+var
+  InstallFinished: Boolean;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   OldDir, NewDir, Tool: String;
@@ -654,6 +664,7 @@ begin
     Exit;
   end;
   if CurStep <> ssPostInstall then Exit;
+  InstallFinished := True;
 
   NewDir := ExpandConstant('{app}\data');
   if (not FreshChosen()) and (InstalledDir <> '') and (not SameDir(InstalledDir, ExpandConstant('{app}'))) then
@@ -672,6 +683,30 @@ begin
   begin
     Exec(Tool, '-show', '', SW_HIDE, ewWaitUntilTerminated, Code);
     Exec(Tool, '-ClearIconCache', '', SW_HIDE, ewWaitUntilTerminated, Code);
+  end;
+end;
+
+// ══ «به‌روزرسانی برنامه را بست و دیگر باز نکرد» (۳.۱.۲۷۲) ═══════════════════
+//  برنامه‌هایی که با ‎/RELAUNCH=1‎ (یا ‎/RESTARTAPPLICATIONS‎ِ کهنه) نصاب را صدا
+//  می‌زنند، باز کردنِ دوباره را به خطِ ‎[Run]‎ می‌سپارند — و آن خط فقط پس از نصبِ
+//  موفق می‌دود. نصابی که نیمه‌راه ماند (پیامِ فایلِ قفل، ردِ نسخه، لغو) برنامه را
+//  بسته می‌گذاشت. حالا همان نسخهٔ کهنه دوباره باز می‌شود و خودش می‌گوید «کامل نشد».
+procedure DeinitializeSetup();
+var
+  Dir, Exe: String;
+  Code: Integer;
+begin
+  if InstallFinished then Exit;
+  if not WizardSilent then Exit;
+  if not WantRelaunch() then Exit;
+  Dir := ExpandConstant('{param:DIR|}');
+  if Dir = '' then Dir := InstalledDir;
+  if Dir = '' then Exit;
+  Exe := AddBackslash(Dir) + '{#AppExe}';
+  if FileExists(Exe) then
+  begin
+    ExecAsOriginalUser(Exe, '--after-update', Dir, SW_SHOWNORMAL, ewNoWait, Code);
+    Log('PYRELAUNCH old after failed update');
   end;
 end;
 

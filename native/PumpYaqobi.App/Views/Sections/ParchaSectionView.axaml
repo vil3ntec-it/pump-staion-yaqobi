@@ -171,14 +171,6 @@
               </Grid>
             </StackPanel>
 
-            <!-- ⛔ لیترِ آزمایشیِ پمپ (۱۴۰۵/۰۷/۲۲): تیلی که در پیمانه ریخته و به مخزن برگشت.
-                 از «فروش (لیتر)» کم می‌شود، پس پول، فایده و موجودیِ مخزن هم درست می‌مانند؛
-                 نه قرض است نه مصرف. در ورق ستونِ «آزمایشی» دارد. -->
-            <StackPanel Spacing="4">
-              <TextBlock Text="لیتر آزمایشی — به مخزن برگشت (از فروش کم می‌شود)" Classes="fld" />
-              <TextBox Classes="wfield" Text="{Binding Test}" Watermark="0" c:LiveFormat.Kind="number" />
-            </StackPanel>
-
             <StackPanel Spacing="4">
               <TextBlock Text="جمله قرض (افغانی)" Classes="fld" />
               <TextBox Classes="wfield" Text="{Binding Debt}" Watermark="0" c:LiveFormat.Kind="number" />
@@ -195,6 +187,17 @@
               <Border Classes="calc wfield">
                 <TextBlock Text="{Binding SaleText}" VerticalAlignment="Center" />
               </Border>
+            </StackPanel>
+
+            <!-- ⛔ لیترِ آزمایشیِ پمپ (۱۴۰۵/۰۷/۲۲): تیلی که در پیمانه ریخته و به مخزن برگشت.
+                 از «فروش (لیتر)» کم می‌شود، پس پول، فایده و موجودیِ مخزن هم درست می‌مانند؛
+                 نه قرض است نه مصرف. در ورق ستونِ «آزمایشی» دارد.
+                 ⛔ ترتیبِ کادرها به خواستهٔ صاحب ریپو (۱۴۰۵/۰۷/۲۴، نسخه 3.1.272): نام · شروع · ختم
+                 سرِ جایشان، بعد ۴ قرض · ۵ فی لیتر · ۶ فروش لیتر خودکار · ۷ تیل آزمایشی، بعد بقیه.
+                 فقط جا؛ Enter و کلیدهای جهت‌نما با جای دیدنی می‌روند (‎FieldNavigationService‎). -->
+            <StackPanel Spacing="4">
+              <TextBlock Text="لیتر آزمایشی — به مخزن برگشت (از فروش کم می‌شود)" Classes="fld" />
+              <TextBox Classes="wfield" Text="{Binding Test}" Watermark="0" c:LiveFormat.Kind="number" />
             </StackPanel>
 
             <!-- فایدهٔ فیِ لیتر — و زیرش همان جملهٔ کج‌نوشتهٔ «فی خرید…» سایت -->

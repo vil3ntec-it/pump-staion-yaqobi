@@ -320,6 +320,8 @@ public class AmanatRow : EntityBase
     public decimal? Taken { get; set; }
     public decimal? Days { get; set; }
     public decimal? Temp { get; set; }
+    /// <summary>‎row.myPct‎ی سایت — فیصدیِ هدفِ همین ردیف. ‎null‎ ⇐ از ‎AmanatAccount.MyPct‎ (با «↑»).</summary>
+    public decimal? MyPct { get; set; }
     public AmanatRowState State { get; set; } = AmanatRowState.Open;
     public string? CloseDate { get; set; }
     /// <summary>«سرپوش» — باز یا بسته بودنِ درِ تانکر.</summary>

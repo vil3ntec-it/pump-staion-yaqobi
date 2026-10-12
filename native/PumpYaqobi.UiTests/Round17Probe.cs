@@ -158,6 +158,24 @@ internal static class Round17Probe
         Settle(win);
         Check($"Tab دوباره ⇒ پطرول ({parcha.FuelLabel})", !parcha.IsDiesel);
 
+        //  ⛔ (۱۴۰۵/۰۷/۲۴، نسخه 3.1.272) ترتیبِ تازهٔ کادرها: ختم ⇒ قرض ⇒ فی لیتر ⇒ (فروش، خودکار) ⇒
+        //  تیل آزمایشی ⇒ فایده فی لیتر — کلیدِ «پایین» همان ترتیبِ دیدنی را می‌رود
+        {
+            var order = new[] { nameof(ShiftFormViewModel.Debt), nameof(ShiftFormViewModel.Price),
+                              nameof(ShiftFormViewModel.Test), nameof(ShiftFormViewModel.ProfitPer) };
+            DayBox(win, parcha, nameof(ShiftFormViewModel.End))?.Focus();
+            Settle(win);
+            var got = new List<string>();
+            foreach (var _ in order)
+            {
+                Tap(win, PhysicalKey.ArrowDown);
+                Settle(win);
+                var f = win.FocusManager?.GetFocusedElement();
+                got.Add(order.FirstOrDefault(q => ReferenceEquals(DayBox(win, parcha, q), f)) ?? "?");
+            }
+            Check($"پارچه: «پایین» از ختم ⇒ {string.Join(" ⇒ ", got)}", got.SequenceEqual(order));
+        }
+
         //  تکملهٔ باز: Tab همان را می‌پذیرد، تیل عوض نمی‌شود
         var name = DayBox(win, parcha, nameof(ShiftFormViewModel.Name));
         if (name is not null)

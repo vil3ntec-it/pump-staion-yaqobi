@@ -22,6 +22,15 @@ public class RelaunchAfterUpdateTests
         //  ⛔ و نسخه‌های پیش از ۳.۱.۲۳۱ که ‎/RELAUNCH‎ نمی‌فرستادند (۱۴۰۵/۰۷/۲۰)
         Assert.Contains("Result := WizardSilent and HasSwitch('/RESTARTAPPLICATIONS');", iss);
         Assert.Contains("if CompareText(ParamStr(I), S) = 0 then Result := True;", iss);
+        //  (۳.۱.۲۷۲) و نصابی که نیمه‌راه ماند، برنامهٔ کهنه را باز می‌کند — نه این‌که بسته بماند
+        var n = iss.Replace("\r\n", "\n");
+        var d = n.IndexOf("procedure DeinitializeSetup();", StringComparison.Ordinal);
+        Assert.True(d > 0);
+        var deinit = n[d..n.IndexOf("\nend;", d, StringComparison.Ordinal)];
+        Assert.Contains("if InstallFinished then Exit;", deinit);
+        Assert.Contains("if not WantRelaunch() then Exit;", deinit);
+        Assert.Contains("ExecAsOriginalUser(Exe, '--after-update', Dir, SW_SHOWNORMAL, ewNoWait, Code);", deinit);
+        Assert.Contains("  if CurStep <> ssPostInstall then Exit;\n  InstallFinished := True;", n);
         //  خطِ ویزارد همان ماند — نصبِ دستی همان «اجرای برنامه» را دارد
         Assert.Contains("Flags: nowait postinstall skipifsilent", iss);
     }
@@ -30,7 +39,9 @@ public class RelaunchAfterUpdateTests
     public void BarnameyeKhodash_Relaunch_MiKhahad()
     {
         var svc = Src("PumpYaqobi.App/Update/UpdateService.cs");
-        Assert.Contains("/SILENT /NORESTART /RESTARTAPPLICATIONS /RELAUNCH=1", svc);
+        //  (۳.۱.۲۷۲) نصاب را اسکریپتِ بیرونی اجرا می‌کند و خودش برنامه را باز می‌کند — نصاب نه
+        Assert.Contains("SetupScript(Environment.ProcessId, setupPath, SetupArgs(AppArch.ArchArg, appDir), result,", svc);
+        Assert.DoesNotContain("/RELAUNCH=1", PumpYaqobi.App.Update.UpdateService.SetupArgs("/ARCH=x64", "D"));
         //  مسیرِ زیپ: برنامهٔ تازه با ‎--after-update‎ و پوشهٔ کارِ درست؛ بالابرده ⇒ explorer
         Assert.Contains("start \\\"\\\" /D \\\"{appDir}\\\" \\\"{exe}\\\" --after-update", svc);
         Assert.Contains("explorer.exe \\\"{exe}\\\"", svc);

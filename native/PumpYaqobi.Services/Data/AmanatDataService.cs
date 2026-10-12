@@ -83,6 +83,22 @@ public sealed class AmanatDataService
         await db.SaveChangesAsync(ct);
     }
 
+    /// <summary>چند ردیف با یک ‎SaveChanges‎ — قفلِ فیصدیِ ردیف‌های بسته هنگامِ باز شدنِ بخش
+    /// (ذخیرهٔ تک‌تک با هزاران ردیف بخش را ده‌ها ثانیه می‌ایستاند).</summary>
+    public async Task SaveRowsAsync(IReadOnlyList<AmanatRow> rows, CancellationToken ct = default)
+    {
+        if (rows.Count == 0) return;
+        _perm.Require(Permission.EditData);
+        await using var db = _dbf.Create();
+        foreach (var r in rows)
+        {
+            r.DateKey = Shamsi.Key(r.DateShamsi);
+            if (r.Id == 0) db.AmanatRows.Add(r);
+            else { db.AmanatRows.Attach(r); db.Entry(r).State = EntityState.Modified; }
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
     public async Task DeleteRowAsync(long id, CancellationToken ct = default)
     {
         _perm.Require(Permission.DeleteData);

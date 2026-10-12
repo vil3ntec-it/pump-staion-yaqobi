@@ -168,10 +168,16 @@ public class PersonColumnsTests
     public void ThereIsNoManualBardagiColumn()
         => Assert.DoesNotContain("بردگیِ دستی", Bare());
 
-    /// <summary>ستونِ «الباقی» که اصلاً نبود، حالا هست.</summary>
+    /// <summary>
+    /// ⛔ (۱۴۰۵/۰۷/۲۴، نسخه 3.1.272) خواستهٔ صاحب ریپو: «در بخشِ قرض‌داران الباقیِ داخلِ ردیف‌های
+    /// جدول دیده نشود، فقط در جمله». پس ستونِ «الباقی» در جدولِ حساب نیست و جمعش در نوارِ «جمله» هست.
+    /// </summary>
     [Fact]
-    public void TheAlbaqiColumnExists()
-        => Assert.Contains("Header=\"الباقی\"", Bare());
+    public void TheAlbaqiShowsOnlyInTheTotals()
+    {
+        Assert.DoesNotContain("Header=\"الباقی\"", Bare());
+        Assert.Contains("new TotalCell(\"الباقی\"", Vm());
+    }
 
     /// <summary>نامِ ستون‌ها همان‌های سایت‌اند.</summary>
     [Theory]

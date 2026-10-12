@@ -545,8 +545,9 @@
                               CellStyleClasses="num" />
           <DataGridTextColumn Header="رسید تیل" Binding="{Binding RasidFuelText}" Width="Auto"
                               CellStyleClasses="num" />
-          <DataGridTextColumn Header="الباقی" Binding="{Binding AlbaqiText}" Width="Auto"
-                              IsReadOnly="True" />
+          <!-- ⛔ (۱۴۰۵/۰۷/۲۴، نسخه 3.1.272) ستونِ «الباقی»ِ ردیف‌ها برداشته شد — خواستهٔ صاحب
+               ریپو: «الباقیِ داخلِ جدول دیده نشود، فقط در جمله». الباقی فقط در نوارِ «جمله» و
+               سربرگ است؛ ‎DebtRowViewModel.AlbaqiText‎ و هیچ محاسبه‌ای دست نخورد. -->
         </DataGrid.Columns>
       </c:ExcelGrid>
 

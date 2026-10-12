@@ -7,6 +7,10 @@
 
   <c:SectionPage Header="تاریخچهٔ نرخ اتحادیه"
                  SubHeader="با هر تغییرِ نرخ در بخشِ «مفاد / ضرر / اتحادیه»، این‌جا خودکار ثبت می‌شود — روی هیچ محاسبه‌ای اثر ندارد">
+    <c:SectionPage.Toolbar>
+      <Button Classes="ghost info" Content="🖨 PDF" Command="{Binding PdfCommand}"
+              ToolTip.Tip="PDF و چاپِ تاریخچهٔ نرخ" />
+    </c:SectionPage.Toolbar>
 
     <StackPanel Spacing="10">
 
