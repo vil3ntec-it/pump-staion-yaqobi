@@ -181,6 +181,9 @@ public class PersonColumnsTests
         Assert.Contains("new TotalCell(\"الباقی\"", Vm());
         Assert.Contains("column: \"الباقی\"", Vm());
         Assert.Contains("_owner.ShowRowAlbaqi ? AlbaqiText : \"\"", Vm());
+        //  «ذخیره هم بشود» — همان کلید خوانده و نوشته می‌شود
+        Assert.Contains("host.Settings.GetString(RowAlbaqiKey) == \"1\"", Vm());
+        Assert.Contains("_host.Settings.Set(RowAlbaqiKey, v ? \"1\" : \"0\")", Vm());
     }
 
     /// <summary>نامِ ستون‌ها همان‌های سایت‌اند.</summary>

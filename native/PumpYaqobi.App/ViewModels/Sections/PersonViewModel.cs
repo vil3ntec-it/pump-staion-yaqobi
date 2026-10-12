@@ -217,6 +217,8 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     public AccountViewModel(AppHost host, DebtAccount a, PersonViewModel person)
     {
         _host = host; _person = person; Entity = a;
+        //  «👁 الباقیِ هر ردیف» یادِ همین برنامه می‌ماند — «ذخیره هم بشود» (۱۴۰۵/۰۷/۲۰)
+        try { _showRowAlbaqi = host.Settings.GetString(RowAlbaqiKey) == "1"; } catch { _showRowAlbaqi = false; }
         Adopt(a);
     }
 
@@ -604,11 +606,16 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     /// <summary>ستونِ «رسید تیل» — فقط در دفترِ تیل.</summary>
     public bool ShowRasidFuelColumn => !IsMoney;
 
-    /// <summary>«👁 الباقیِ هر ردیف» — پیش‌فرض خاموش: خانه‌های ستونِ «الباقی» خالی می‌مانند.</summary>
+    /// <summary>
+    /// «👁 الباقیِ هر ردیف» — پیش‌فرض خاموش: خانه‌های ستونِ «الباقی» خالی می‌مانند.
+    /// ⛔ در تنظیمات ذخیره می‌شود (یکی برای همهٔ حساب‌ها)، مثلِ «📏 اندازه‌گیری»ِ تیل امانت.
+    /// </summary>
     [ObservableProperty] private bool _showRowAlbaqi;
+    public const string RowAlbaqiKey = "debt.rowAlbaqi";
 
     partial void OnShowRowAlbaqiChanged(bool v)
     {
+        try { _host.Settings.Set(RowAlbaqiKey, v ? "1" : "0"); } catch { }
         foreach (var r in Rows) r.RaiseAlbaqiCell();
         OnPropertyChanged(nameof(RowAlbaqiButtonText));
     }
