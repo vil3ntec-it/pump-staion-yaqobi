@@ -25,8 +25,9 @@ public class CellEditingTests
     {
         var k = Src("PumpYaqobi.App/Controls/ExcelGrid.Keys.cs");
         Assert.Contains("if (e.EditingEventArgs is PointerPressedEventArgs press) CaretAtPointer(eb2, press);", k);
-        Assert.Contains("tp.MoveCaretToPoint(press.GetPosition(tp));", k);
-        Assert.Contains("box.SelectionStart = box.SelectionEnd = i;", k);
+        var caret = Src("PumpYaqobi.App/Controls/ExcelGrid.Caret.cs");
+        Assert.Contains("tp.MoveCaretToPoint(press.GetPosition(tp));", caret);
+        Assert.Contains("box.SelectionStart = box.SelectionEnd = i;", caret);
     }
 
     [Fact]
