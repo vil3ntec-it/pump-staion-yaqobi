@@ -220,6 +220,10 @@ public class OfflineKeyTests : IDisposable
         Assert.Contains("Metadata(\"OfflineKeys\")", cfg);
         //  ⛔ نشانیِ دریافتِ کلید همان نشانیِ قفل‌شدهٔ برنامه است، نه نشانیِ دیگری
         Assert.Contains("https://api.vill3n.top/api/license/public-key", wf);
+        //  ⛔ ۳.۱.۲۷۲: سرورِ حساب ۵۳۰ داد و راهِ دوم فایلِ ‎PumpYaqobi.App.dll‎ را می‌جست که
+        //  در بسته نیست (نامِ اسمبلی ‎PumpYaqobi.dll‎ است) ⇒ انتشار ایستاد.
+        Assert.Contains("'PumpYaqobi.dll'", wf);
+        Assert.Contains("OfflineKeys.([A-Za-z0-9+/]{80,200}={0,2})", wf);
     }
 
     /// <summary>برنامه آنلاین شد ⇒ کد به سرورِ حساب می‌رود — از هر دو راهِ حلقه.</summary>

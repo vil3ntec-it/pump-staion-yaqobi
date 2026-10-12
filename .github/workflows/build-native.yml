@@ -151,14 +151,15 @@ jobs:
               foreach ($z in Get-ChildItem $prev -Filter '*.zip') {
                 $x = Join-Path $prev $z.BaseName
                 Expand-Archive $z.FullName -DestinationPath $x -Force
-                $dll = Get-ChildItem $x -Recurse -Filter 'PumpYaqobi.App.dll' | Select-Object -First 1
-                if (-not $dll) { continue }
-                #  ⚠️ بستهٔ ۳۲بیتی در این فرآیندِ ۶۴بیتی بار نمی‌شود — همان را رد کن، نه همه را
-                try {
-                  $meta = [System.Reflection.Assembly]::LoadFile($dll.FullName).GetCustomAttributesData() |
-                    Where-Object { $_.AttributeType.Name -eq 'AssemblyMetadataAttribute' -and $_.ConstructorArguments[0].Value -eq 'OfflineKeys' }
-                  $v = "$($meta.ConstructorArguments[1].Value)".Trim()
-                } catch { continue }
+                #  ⛔ ۳.۱.۲۷۲: نامِ اسمبلی ‎PumpYaqobi.dll‎ است نه ‎PumpYaqobi.App.dll‎ — پس هیچ فایلی
+                #  پیدا نمی‌شد و انتشار باز ایستاد. بی بار کردن (۳۲/۶۴بیت، وابستگی‌ها): همان
+                #  ‎AssemblyMetadata("OfflineKeys")‎ از بایت‌های خودِ فایل خوانده می‌شود.
+                $v = ''
+                foreach ($dll in Get-ChildItem $x -Recurse -Include 'PumpYaqobi.dll','PumpYaqobi.App.dll') {
+                  $txt = [Text.Encoding]::Latin1.GetString([IO.File]::ReadAllBytes($dll.FullName))
+                  $m = [regex]::Match($txt, 'OfflineKeys.([A-Za-z0-9+/]{80,200}={0,2})')
+                  if ($m.Success) { $v = $m.Groups[1].Value; break }
+                }
                 if ($v -match '^[A-Za-z0-9+/]{80,200}={0,2}$') { $ok = $v; Write-Host "::warning::کلید از نسخهٔ منتشرشدهٔ پیشین برداشته شد"; break }
               }
             } catch { Write-Host "::warning::کلیدِ نسخهٔ پیشین هم خوانده نشد: $($_.Exception.Message)" }
