@@ -143,6 +143,14 @@
   .al .t{font-weight:800;font-size:.9rem;line-height:1.5}
   .al .a{font-size:.8rem;color:var(--txt);opacity:.85;margin-top:2px}
   .al.out{background:var(--red-bg);border-color:rgba(239,68,68,.35)}
+  #alertCard{padding:8px 10px}
+  .altog{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:6px 12px;border-radius:12px;
+    background:var(--warn-bg);color:var(--warn);border:1.5px solid var(--warn);font-weight:900;font-size:.95rem;text-align:right}
+  .altog.crit{background:var(--red-bg);color:var(--red);border-color:var(--red)}
+  .altog b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .altog .go{flex:none;font-size:.85rem}
+  #alertBody{margin-top:8px}
+  #alertBox{max-height:45vh;overflow-y:auto;overscroll-behavior:contain}
   .al.low{border-color:rgba(234,179,8,.35)}
 
   /* ── چراغِ قرض‌داران (درِ کارمندان) ─────────────────────────────────── */
@@ -428,13 +436,6 @@
     border-bottom:1px solid var(--line)}
   .acard .an{font-weight:900;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .acard .unit{font-size:.74rem;font-weight:800;border-radius:8px;padding:2px 8px;border:1.5px solid}
-  /* دو دفترِ هر حساب — یکی دیده می‌شود، نه هر دو داخلِ هم */
-  .acard .btabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:8px 11px 0}
-  .acard .btab{padding:8px 6px;border-radius:10px;font-weight:800;font-size:.84rem;background:var(--card2);
-    border:1.5px solid var(--line);color:var(--muted)}
-  .acard .btab small{font-weight:600;opacity:.8}
-  .acard .btab.fuel.on{color:var(--ok);background:var(--ok-bg);border-color:var(--ok);border-width:2px}
-  .acard .btab.money.on{color:var(--info);background:var(--info-bg);border-color:var(--info);border-width:2px}
   .acard .unit.fuel{color:var(--ok);border-color:var(--ok)} .acard .unit.money{color:var(--info);border-color:var(--info)}
   .frow{display:flex;gap:8px;align-items:stretch;padding:9px 11px;border-bottom:1px dashed var(--line)}
   .frow:last-of-type{border-bottom:0}
@@ -488,8 +489,6 @@
   .counts button .fi{display:block;font-size:1.15rem;line-height:1.1}
   .counts button b{font-size:1.2rem}
   .pwho.s-owe .av{background:var(--red-bg);color:var(--red)} .pwho.s-has .av{background:var(--ok-bg);color:var(--ok)}
-  .many{border-radius:12px;padding:10px 12px;margin-bottom:6px;background:var(--info-bg);color:var(--txt);font-weight:700}
-  .others{font-size:.95rem;margin:18px 2px 0;color:var(--muted)}
   .acard.s-owe{border-color:var(--red)} .acard.s-has{border-color:var(--ok)} .acard.s-zero{border-color:var(--line)}
   .acard .an{font-size:1.05rem}
   .astand .stand{border-radius:0}
@@ -498,6 +497,43 @@
   .sl.s-owe{color:var(--red);border-inline-start-color:var(--red)} .sl.s-has{color:var(--ok);border-inline-start-color:var(--ok)}
   .astand .swarn{margin:8px 11px 0}
   .card.ans > .stand{border-radius:12px} .card.ans > .slines{padding:8px 0 10px}
+  /* ⛔ هیچ ردیفی روی ردیفِ دیگر نمی‌افتد: بلندیِ خودکار، نوشته می‌شکند (۱۴۰۵/۰۷/۲۰) */
+  .stand{flex-wrap:wrap;min-height:0;height:auto;overflow:visible}
+  .stand b{line-height:1.45} .stand small{font-size:.8rem;font-weight:700;opacity:.85}
+  .acard .ahd{flex-direction:column;align-items:flex-start;gap:2px}
+  .acard .an{white-space:normal;line-height:1.5;width:100%}
+  .psub{display:block;font-size:.8rem;color:var(--muted);font-weight:700}
+  .dcard .psub{padding:0 14px}
+  .bsep{display:block;margin-top:10px;padding-top:4px;border-top:1px dashed var(--line)}
+  .bhd{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 11px 0}
+  .bblk.second{border-top:2px dashed var(--line);margin-top:8px}
+  .pwho .nm{white-space:normal;overflow-wrap:anywhere}
+  .fsq{width:62px;padding:4px 2px} .fsq b{text-align:center;line-height:1.25}
+  /* ══ ساده (۱۴۰۵/۰۷/۲۰): نام · یک واژهٔ حال · عدد با واحد — یک رنگ برای هر حال، یک فاصله ══ */
+  .dcard{border-width:1.5px;padding:12px 14px;gap:6px;min-height:0}
+  .dcard.s-owe,.acard.s-owe{border-color:var(--red)} .dcard.s-has,.acard.s-has{border-color:var(--ok)}
+  .dcard.s-zero,.acard.s-zero{border-color:var(--line)}
+  .hrow{display:flex;align-items:center;gap:10px;min-width:0}
+  .hrow .n,.dcard .hrow .n{flex:1;min-width:0;padding:0;font-size:1.2rem;font-weight:900;line-height:1.45;
+    white-space:normal;overflow-wrap:anywhere;color:var(--txt)}
+  .hrow .stand{flex:none;display:inline-block;border:0;border-radius:999px;padding:2px 12px;font-size:.95rem;font-weight:900;
+    line-height:1.6;background:var(--card2);color:var(--muted)}
+  .hrow .stand.s-owe{background:var(--red-bg);color:var(--red)} .hrow .stand.s-has{background:var(--ok-bg);color:var(--ok)}
+  .hrow .stand small{font-size:.75rem}
+  .psub,.dcard .psub{display:block;padding:0;font-size:.8rem;color:var(--muted);font-weight:700;line-height:1.4}
+  .nums{display:flex;flex-direction:column;gap:4px}
+  .nums.none{color:var(--muted);font-size:.85rem;font-weight:700}
+  .nums .ln{display:flex;align-items:baseline;gap:6px;padding:0;background:none;border:0;border-radius:0}
+  .nums .ln .f{min-width:74px;color:var(--txt);font-weight:800}
+  .nums .ln b{font-size:1.35rem;font-weight:900} .nums .ln small{font-size:.85rem;font-weight:800;color:var(--muted)}
+  .nums .ln.s-owe b{color:var(--red)} .nums .ln.s-has b{color:var(--ok)}
+  .acard{padding:12px 14px;display:flex;flex-direction:column;gap:8px;overflow:visible}
+  .acard.solo1{margin-top:0;border:0;padding:0}
+  .acard .ahd{display:block;padding:0;background:none;border:0}
+  .acard .frow{padding:8px 0}
+  .bhd{padding:6px 0 0;font-weight:900;color:var(--muted);font-size:.85rem}
+  .bblk.second{border-top:1px dashed var(--line);margin-top:4px}
+  .fb .l{white-space:normal;line-height:1.3}
   .uline{padding:8px 11px 0;font-size:.85rem;color:var(--muted);font-weight:700}
   .uline b{color:var(--txt)}
   .fb .l{font-size:.72rem} .fb .v{font-size:1rem}
@@ -772,13 +808,16 @@
   </section>
 
   <!-- ══ هشدارها — بالای همه‌چیز، در هر دو در ══ -->
+  <!-- ⛔ جمع‌شده به یک خط: صد هشدار هم فهرستِ قرض‌داران را پایین نمی‌برد (۱۴۰۵/۰۷/۲۰) -->
   <div class="card hidden" id="alertCard">
-    <div class="alerts-h">
-      <h2>🔔 خبرهای همین حالا</h2>
-      <button id="btnNotify" title="اجازهٔ اعلانِ گوشی">🔔 اعلان روشن شود</button>
+    <button class="altog" id="alertToggle" aria-expanded="false" aria-controls="alertBody">
+      <span class="ai">🔔</span><b id="alertCount">هشدار</b><span class="go" id="alertGo">دیدن ▾</span></button>
+    <div id="alertBody" class="hidden">
+      <div class="alerts-h"><h2>🔔 خبرهای همین حالا</h2>
+        <button id="btnNotify" title="اجازهٔ اعلانِ گوشی">🔔 اعلان روشن شود</button></div>
+      <div id="alertBox"></div>
+      <div class="sub" id="alertHint"></div>
     </div>
-    <div id="alertBox"></div>
-    <div class="sub" id="alertHint"></div>
   </div>
 
   <!-- ══ حساب‌های پمپ: داشبورد ══ -->
