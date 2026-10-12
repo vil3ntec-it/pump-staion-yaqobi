@@ -282,6 +282,16 @@ public partial class ExcelGrid
                 ready.SelectionStart = ready.SelectionEnd = end;
                 ready.Focus();
             }
+            else if ((e.EditingElement as TextBox ?? e.EditingElement?.GetVisualDescendants().OfType<TextBox>().FirstOrDefault()) is { } eb2)
+            {
+                //  ⛔ (۱۴۰۵/۰۷/۲۰) دوبار-کلیک ⇒ مکان‌نما همان جایی که کلیک شد؛ پس از چسباندن ⇒ ته متن.
+                //  ریشه: ‎DataGridTextColumn.PrepareCellForEdit‎ی آوالونیا هر ویرایشی را که با ‎F2‎ باز
+                //  نشده با «انتخابِ همهٔ متن» باز می‌کند. پس مکان‌نما زیرِ انتخاب گم بود و نخستین
+                //  حرف/فاصله کلِ نوشته را جایگزین می‌کرد. این شنونده پس از همان انتخاب می‌دود.
+                if (e.EditingEventArgs is PointerPressedEventArgs press) CaretAtPointer(eb2, press);
+                else if (_caretToEnd) CaretAtEnd(eb2);
+            }
+            _caretToEnd = false;
         };
         // ⚠️ پیش از نشستنِ مقدار در ردیف: تکملهٔ پذیرفته‌نشدهٔ پیشنهادِ خودکار
         // برداشته شود، وگرنه «س»ی کاربر «سلام من هارون هستم» ذخیره می‌شد.

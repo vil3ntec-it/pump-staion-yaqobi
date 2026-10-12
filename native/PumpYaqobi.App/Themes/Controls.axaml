@@ -580,7 +580,8 @@
          ‎.ro-tbl td input{text-align:center}‎ی سایت. -->
     <Setter Property="TextAlignment" Value="Center" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
-    <Setter Property="SelectionBrush" Value="{DynamicResource Pump.Selected}" />
+    <Setter Property="SelectionBrush" Value="{DynamicResource Pump.TextSelection}" />
+    <Setter Property="SelectionForegroundBrush" Value="{DynamicResource Pump.OnTextSelection}" />
     <Setter Property="CaretBrush" Value="{DynamicResource Pump.Accent}" />
   </Style>
   <Style Selector="TextBox:focus">
@@ -921,14 +922,18 @@
     <Setter Property="MaxLines" Value="1" />
     <Setter Property="ClipToBounds" Value="True" />
     <Setter Property="Foreground" Value="{DynamicResource Pump.Text}" />
-    <Setter Property="FontWeight" Value="Bold" />
+    <!-- ⛔ (۱۴۰۵/۰۷/۲۰) وزنِ نوشته همان وزنِ خودِ خانه — نه ‎Bold‎. صاحب ریپو: «اعداد، متنِ تایپ‌شده
+         و متنِ پیست‌شده باید اندازه و ارتفاعِ یکسان داشته باشند.» کادرِ تایپ ‎Bold‎ بود و خانه
+         نه، پس هر عددی که نوشته می‌شد پهن‌تر و بزرگ‌تر از همان عددِ ذخیره‌شده دیده می‌شد. -->
+    <Setter Property="FontWeight" Value="Normal" />
     <!-- ⚠️ ‎Margin‎ی صفر لازم است: بی آن، کادرِ ویرایشی چند پیکسل تو می‌رفت و
          به‌صورتِ یک «کادرِ کوچکِ جدا» وسطِ خانه دیده می‌شد — همان چیزی که در
          عکسِ صاحب ریپو بود. و نشانگر و انتخاب باید دیده شوند، وگرنه معلوم
          نیست کجای متن هستی. -->
     <Setter Property="Margin" Value="0" />
     <Setter Property="CaretBrush" Value="{DynamicResource Pump.Accent}" />
-    <Setter Property="SelectionBrush" Value="{DynamicResource Pump.Selected}" />
+    <Setter Property="SelectionBrush" Value="{DynamicResource Pump.TextSelection}" />
+    <Setter Property="SelectionForegroundBrush" Value="{DynamicResource Pump.OnTextSelection}" />
   </Style>
   <!-- ══ تکملهٔ خودکار: خاکستری، نه هم‌رنگِ نوشتهٔ خودِ کاربر ══════════════
        گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۲): «پیشنهادی‌هایی که میاد خیلی تیره‌اند،

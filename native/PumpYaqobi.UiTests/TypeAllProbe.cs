@@ -54,6 +54,7 @@ internal static class TypeAllProbe
             Console.WriteLine($"── {where} ──");
             try { open(); } catch (Exception ex) { Console.WriteLine("   (باز نشد: " + ex.Message + ")"); return; }
             Round14Probe.Settle(win);
+            _where = where;
             Sweep(win, where);
         }
 
@@ -83,6 +84,7 @@ internal static class TypeAllProbe
 
         Console.WriteLine();
         Console.WriteLine($"{_cells} خانهٔ جدول و {_boxes} کادرِ تایپ سنجیده شد");
+        ReportSpeed();
         if (Bad.Count == 0) { Console.WriteLine("✅ هیچ عدد یا نوشته‌ای هنگامِ تایپ عوض، کم یا جابه‌جا نشد"); return 0; }
         Console.WriteLine($"❌ {Bad.Count} ایراد:");
         foreach (var b in Bad.Distinct()) Console.WriteLine("   • " + b);
@@ -196,9 +198,20 @@ internal static class TypeAllProbe
         {
             //  کلیدِ واقعی: ‎KeyDown‎ ⇒ ‎TextInput‎ ⇒ ‎KeyUp‎ — همان راهی که ویندوز می‌رود
             var phys = PhysOf(text[i]);
+            //  ⛔ (۱۴۰۵/۰۷/۲۰) زمانِ هر کلید — از فشردن تا نشستنِ حرف و چیدمانِ بعدش، بی خوابِ آزمون
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             if (phys != PhysicalKey.None) win.KeyPressQwerty(phys, RawInputModifiers.None);
             win.KeyTextInput(text[i].ToString());
             if (phys != PhysicalKey.None) win.KeyReleaseQwerty(phys, RawInputModifiers.None);
+            //  ⚠️ در تایپِ تند (‎TA_FAST‎) عمداً هیچ کاری میانِ دو حرف نمی‌دود — آن‌جا سنجیده نمی‌شود
+            if (!Fast)
+            {
+                Dispatcher.UIThread.RunJobs();
+                win.UpdateLayout();
+                sw.Stop();
+                if (!KeyMs.TryGetValue(_where, out var list)) KeyMs[_where] = list = new List<double>();
+                list.Add(sw.Elapsed.TotalMilliseconds);
+            }
             if (Environment.GetEnvironmentVariable("TA_DEBUG") == "1")
             {
                 var f0 = win.FocusManager?.GetFocusedElement();
@@ -220,6 +233,34 @@ internal static class TypeAllProbe
     }
 
     private static bool Fast => Environment.GetEnvironmentVariable("TA_FAST") == "1";
+
+    // ══ سرعتِ تایپ در هر بخش (۱۴۰۵/۰۷/۲۰) ═══════════════════════════════════
+    //  صاحب ریپو: «نوشتن توی ستون‌های جدول کند نیست؟ یک بخش برایم کند بود، یادم نیست کدام.»
+    //  هر کلید از فشردن تا نشستنِ حرف و چیدمانِ بعدش اندازه گرفته می‌شود؛ هر بخش یک ردیف:
+    //  میانه، صدکِ ۹۵ و بیشترین. ⛔ صدکِ ۹۵ بالای ‎SlowKeyMs‎ یعنی تایپِ کند — سرخ.
+    private const double SlowKeyMs = 200;
+    private static string _where = "";
+    private static readonly Dictionary<string, List<double>> KeyMs = new();
+
+    private static void ReportSpeed()
+    {
+        Console.WriteLine();
+        Console.WriteLine("سرعتِ تایپ (میلی‌ثانیه برای هر کلید)      کلید   میانه   صدکِ۹۵   بیشترین");
+        foreach (var (where, ms) in KeyMs.OrderByDescending(kv => P(kv.Value, 0.95)))
+        {
+            var p95 = P(ms, 0.95);
+            var ok = p95 <= SlowKeyMs;
+            Console.WriteLine($"  {(ok ? "✔" : "✖")} {where,-36} {ms.Count,5} {P(ms, 0.5),7:0.0} {p95,8:0.0} {ms.Max(),9:0.0}");
+            if (!ok) Bad.Add($"«{where}»: تایپ کند است — صدکِ ۹۵ِ هر کلید {p95:0} میلی‌ثانیه (سقف {SlowKeyMs:0})");
+        }
+    }
+
+    private static double P(List<double> v, double q)
+    {
+        if (v.Count == 0) return 0;
+        var s = v.OrderBy(x => x).ToList();
+        return s[Math.Min(s.Count - 1, (int)Math.Floor(q * (s.Count - 1)))];
+    }
 
     private static PhysicalKey PhysOf(char c) => c switch
     {

@@ -286,6 +286,17 @@ public partial class ExcelGrid
         if (log.Count == 0) return;
         PushUndo(log);
         AppHost.Current.Toasts.Show($"📋 {log.Count} خانه چسبانده شد", ToastKind.Ok);
+
+        //  ⛔ (۱۴۰۵/۰۷/۲۰) یک مقدار در یک خانه ⇒ همان خانه در حالتِ ویرایش، مکان‌نما ته متن.
+        //  صاحب ریپو: «پیست کردم و بعد نوشتم یا فاصله زدم، متنِ قبلی پاک شد.» ریشه: چسباندن
+        //  خانه را در حالتِ «انتخاب» می‌گذاشت و حرفِ بعدی (‎OnTextInput‎) — درست مثلِ اکسل —
+        //  کلِ خانه را جایگزین می‌کرد. حالا ادامهٔ تایپ پشتِ همان متن می‌نشیند.
+        if (log.Count == 1 && cells.Count == 1 && cells[0].Length == 1 && !_editing)
+        {
+            _caretToEnd = true;
+            _typedIn = false;
+            if (!BeginEdit()) _caretToEnd = false;
+        }
     }
 
     /// <summary>‎Ctrl+A‎ — همهٔ ردیف‌ها و همهٔ ستون‌ها.</summary>

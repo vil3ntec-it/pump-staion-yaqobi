@@ -15,7 +15,8 @@ internal static class SrcText
     private static readonly Dictionary<string, string[]> Split = new(StringComparer.Ordinal)
     {
         ["ExcelGrid.cs"] = new[] { "ExcelGrid.cs", "ExcelGrid.Sticky.cs", "ExcelGrid.Widths.cs",
-                                   "ExcelGrid.Keys.cs", "ExcelGrid.Clipboard.cs", "ExcelGrid.Commit.cs", "ExcelGrid.Park.cs" },
+                                   "ExcelGrid.Keys.cs", "ExcelGrid.Clipboard.cs", "ExcelGrid.Commit.cs", "ExcelGrid.Park.cs",
+                                   "ExcelGrid.Caret.cs" },
         ["MainViewModel.cs"] = new[] { "MainViewModel.cs", "MainViewModel.Lights.cs", "MainViewModel.Notices.cs",
                                        "MainViewModel.Lifecycle.cs", "MainViewModel.Navigation.cs", "MainViewModel.Ledger.cs" },
         //  شورا، د۵: پنج تکهٔ اول همان فایلِ پیشین‌اند، به همان ترتیب؛ چهار تای آخر از
