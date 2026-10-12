@@ -412,7 +412,8 @@
         <!-- ══ 🧾 برآوردِ دستی — «تیلِ این طرف را قبول کنم یا نه؟» ═══════════
              «آن یک بخشِ جدا باشد، به جدول ربطش نده. و برایش یک کادرِ کشویی درست
              کن که پنهان و دیده شود.» — هیچ عددی از جدول نمی‌خواند و در آن نمی‌نویسد. -->
-        <Border Grid.Row="0" Classes="panel" Margin="0,0,0,8">
+        <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,8">
+        <Border Classes="panel">
           <StackPanel Spacing="8">
             <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding ToggleWhatIfCommand}">
               <Grid ColumnDefinitions="*,Auto">
@@ -420,9 +421,11 @@
                 <TextBlock Grid.Column="1" Text="{Binding WhatIfCaret}" FontWeight="Bold" />
               </Grid>
             </Button>
-            <ScrollViewer IsVisible="{Binding ShowWhatIf}" MaxHeight="440" HorizontalScrollBarVisibility="Disabled">
+            <!-- ⛔ بی ‎ScrollViewer‎ِ درونی (۱۴۰۵/۰۷/۲۰): جعبهٔ ۴۴۰ پیکسلی نوشته‌های بالا را
+                 بیرونِ دید می‌برد — «نوشته‌های بالایی رفتن بیرون صفحه». خودِ صفحه می‌لغزد. -->
+            <StackPanel IsVisible="{Binding ShowWhatIf}">
               <StackPanel Spacing="8">
-                <c:AutoFillPanel MinItemWidth="160" Gap="8">
+                <c:AutoFillPanel MinItemWidth="160" Gap="8" UniformHeight="True">
                   <StackPanel Spacing="3">
                     <TextBlock Text="🛢️ تیلِ طرف (لیتر)" Classes="muted" />
                     <TextBox Text="{Binding WiLiters}" Watermark="مثلاً 100000" />
@@ -440,7 +443,8 @@
                     <TextBox Text="{Binding WiMyPct}" Watermark="مثلاً 3" />
                   </StackPanel>
                   <StackPanel Spacing="3">
-                    <TextBlock Text="🎯 سودِ هدف (وقتی «فیصدیِ من» خالی باشد)" Classes="muted" TextWrapping="Wrap" />
+                    <TextBlock Text="🎯 سودِ هدف ٪" Classes="muted"
+                               ToolTip.Tip="فقط وقتی «فیصدیِ من» خالی باشد به کار می‌آید" />
                     <TextBox Text="{Binding WiProfit}"
                              ToolTip.Tip="اگر «فیصدیِ من» را ننویسید، پیشنهاد از روی همین ساخته می‌شود: سربه‌سر + همین عدد. اگر «فیصدیِ من» نوشته شده باشد، هدف همان است و این عدد کاری نمی‌کند." />
                   </StackPanel>
@@ -452,11 +456,15 @@
 
                 <TextBlock Text="{Binding WiEmptyNote}" Classes="muted" IsVisible="{Binding !WiHasLiters}" />
                 <StackPanel Spacing="8" IsVisible="{Binding WiHasLiters}">
+                  <!-- کادرهای نتیجه هم‌اندازه — «یکی بزرگ یکی کوچیک، یکی بالا یکی پایین» -->
                   <ItemsControl ItemsSource="{Binding WiCells}" ItemTemplate="{StaticResource AmCell}">
-                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><c:AutoFillPanel MinItemWidth="160" Gap="2" UniformHeight="True" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                   </ItemsControl>
                   <TextBlock Text="{Binding WiVerdict}" TextWrapping="Wrap" FontWeight="Bold"
                              Foreground="{Binding WiVerdictBrush, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+                  <!-- جزئیات پشتِ یک کشو — صفحه شلوغ نباشد؛ جواب همان خطِ بالاست -->
+                  <Expander Header="📋 جزئیات — اگر بیشتر بماند، و تحلیلِ کامل" HorizontalAlignment="Stretch">
+                  <StackPanel Spacing="8">
                   <Grid ColumnDefinitions="2*,1.4*,1.2*,1.2*,1.6*">
                     <TextBlock Grid.Column="0" Text="اگر رویِ‌هم این‌قدر بماند" Classes="label" TextWrapping="Wrap" />
                     <TextBlock Grid.Column="1" Text="بخار" Classes="label" />
@@ -477,12 +485,48 @@
                       <TextBlock Text="{Binding WiThermal}" Classes="muted" TextWrapping="Wrap" />
                     </StackPanel>
                   </Border>
+                  </StackPanel>
+                  </Expander>
                 </StackPanel>
                 <Button Classes="ghost" Content="↺ پاک کردن" HorizontalAlignment="Right" Command="{Binding ResetWhatIfCommand}" />
               </StackPanel>
-            </ScrollViewer>
+            </StackPanel>
           </StackPanel>
         </Border>
+
+        <!-- ══ ⚠️ اگر قیمت بالا برود (۱۴۰۵/۰۷/۲۰) ═════════════════════════════
+             «یارو ۱۰۰٬۰۰۰ تیل داده بود، ۵۰٬۰۰۰ را به ۶۵ فروختم، حالا ۸۵ شده… غرق
+             شدم. شفاف بگو که راهِ برگشت نیست — ساده و بی شلوغی.» سه خانه، چهار
+             عدد، یک جمله. هیچ چیزی ذخیره نمی‌شود. -->
+        <Expander HorizontalAlignment="Stretch">
+          <Expander.Header>
+            <TextBlock Text="⚠️ اگر قیمت بالا برود — ضررِ تیلِ امانتیِ فروخته‌شده" FontWeight="Bold"
+                       Foreground="{DynamicResource Pump.Ink.Danger}" />
+          </Expander.Header>
+          <StackPanel Spacing="8">
+            <c:AutoFillPanel MinItemWidth="180" Gap="8" UniformHeight="True">
+              <StackPanel Spacing="3">
+                <TextBlock Text="🛢️ چند لیترِ امانتی را فروختید" Classes="muted" />
+                <TextBox Text="{Binding RkSold}" Watermark="مثلاً 50000" />
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Text="💰 به چه قیمتی فروختید (هر لیتر)" Classes="muted" />
+                <TextBox Text="{Binding RkSalePrice}" Watermark="مثلاً 65" />
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Text="📈 قیمتِ امروز (هر لیتر)" Classes="muted" />
+                <TextBox Text="{Binding RkNowPrice}" Watermark="مثلاً 85" />
+              </StackPanel>
+            </c:AutoFillPanel>
+            <ItemsControl ItemsSource="{Binding RkLines}" ItemTemplate="{StaticResource AmCell}" IsVisible="{Binding RkHas}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><c:AutoFillPanel MinItemWidth="180" Gap="2" UniformHeight="True" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+            </ItemsControl>
+            <TextBlock Text="{Binding RkVerdict}" TextWrapping="Wrap" FontWeight="Bold" IsVisible="{Binding RkHas}"
+                       Foreground="{Binding RkVerdictBrush, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+            <TextBlock Text="{x:Static vm:AmanatAccountViewModel.RiskRule}" Classes="muted" TextWrapping="Wrap" />
+          </StackPanel>
+        </Expander>
+        </StackPanel>
 
         <!-- 📊 جدولِ رسیدها — و «📏 اندازه‌گیری» -->
         <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,0,0,6">
@@ -491,50 +535,50 @@
                   Classes.on="{Binding Section.ShowMeasure}" Command="{Binding Section.ToggleMeasureCommand}" />
         </Grid>
 
-        <!-- ══ سربرگِ دوطبقه — خواستهٔ صاحب ریپو ═══════════════════════════════
-             خطِ اول «سرگروه» (شناسه · 🛢️ تیل · 🌡️ شرایطِ نگهداری · ٪ فیصدی‌ها ·
-             سهمِ من · 📏 اندازه‌گیری)، خطِ دوم نامِ ستون. ردیف‌ها به ترتیبِ تاریخ. -->
+        <!-- ══ سربرگِ یک‌خطی (۱۴۰۵/۰۷/۲۰) ════════════════════════════════════
+             صاحب ریپو: «چرا سرِ جدول‌ها دو خط دو خط نوشته… نه منظم نه فهمیده
+             می‌شود.» نام‌ها همان ‎AmanatColumns.Short‎ِ PDF‌اند. ردیف‌ها به ترتیبِ تاریخ. -->
         <c:ExcelGrid Grid.Row="2" x:Name="AccGrid" ItemsSource="{Binding Rows}"
                      RowDeleteCommand="{Binding DeleteRowCommand}">
           <DataGrid.Columns>
-            <DataGridTextColumn Header="شناسه&#10;تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
-            <DataGridTextColumn Header="شناسه&#10;نام" Binding="{Binding Name}" Width="Auto" />
-            <DataGridTextColumn Header="شناسه&#10;به حسابهٔ" Binding="{Binding ToAccount}" Width="Auto" />
-            <DataGridTextColumn Header="🛢️ تیل (لیتر)&#10;رسید تیل" Binding="{Binding LitersText}" Width="Auto" />
-            <DataGridTextColumn Header="🛢️ تیل (لیتر)&#10;برده شده" Binding="{Binding TakenText}" Width="Auto" />
-            <c:HintTextColumn Header="🌡️ شرایطِ نگهداری&#10;مدت زمان" Binding="{Binding DaysText}" HintPath="DaysHint" Width="Auto" />
-            <c:HintTextColumn Header="🌡️ شرایطِ نگهداری&#10;درجه گرما" Binding="{Binding TempText}" HintPath="TempHint" Width="Auto" />
-            <DataGridTemplateColumn Header="تیلِ بخار (لیتر)" Width="Auto" IsReadOnly="True">
+            <DataGridTextColumn Header="تاریخ" Binding="{Binding DateShamsi}" Width="Auto" />
+            <DataGridTextColumn Header="نام" Binding="{Binding Name}" Width="Auto" />
+            <DataGridTextColumn Header="به حسابِ" Binding="{Binding ToAccount}" Width="Auto" />
+            <DataGridTextColumn Header="رسید (لیتر)" Binding="{Binding LitersText}" Width="Auto" />
+            <DataGridTextColumn Header="برده شده (لیتر)" Binding="{Binding TakenText}" Width="Auto" />
+            <c:HintTextColumn Header="روز" Binding="{Binding DaysText}" HintPath="DaysHint" Width="Auto" />
+            <c:HintTextColumn Header="گرما °C" Binding="{Binding TempText}" HintPath="TempHint" Width="Auto" />
+            <DataGridTemplateColumn Header="بخار (لیتر)" Width="Auto" IsReadOnly="True">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate>
                   <TextBlock Text="{Binding LossText}" VerticalAlignment="Center" Margin="6,0" Foreground="{DynamicResource Pump.Ink.Accent}" />
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <c:HintTextColumn Header="٪ فیصدی‌ها&#10;فیصدیِ من" Binding="{Binding MyPctText}" HintPath="MyPctHint"
+            <c:HintTextColumn Header="فیصدیِ من" Binding="{Binding MyPctText}" HintPath="MyPctHint"
                               ChipTextPath="ChipText" ChipCommandPath="UseSuggestCommand" ChipTipPath="ChipTip" ChipBrushPath="ChipBrushKey" Width="Auto" />
-            <DataGridTemplateColumn Header="٪ فیصدی‌ها&#10;فیصدیِ بخار" Width="Auto" IsReadOnly="True">
+            <DataGridTemplateColumn Header="فیصدیِ بخار" Width="Auto" IsReadOnly="True">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate>
                   <TextBlock Text="{Binding LossPctText}" VerticalAlignment="Center" Margin="6,0" Foreground="{DynamicResource Pump.Ink.Accent}" />
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTemplateColumn Header="٪ فیصدی‌ها&#10;فیصدیِ لازم" Width="Auto" IsReadOnly="True">
+            <DataGridTemplateColumn Header="فیصدیِ لازم" Width="Auto" IsReadOnly="True">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate>
                   <TextBlock Text="{Binding NeedText}" VerticalAlignment="Center" Margin="6,0" Foreground="{DynamicResource Pump.Ink.Info}" />
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTemplateColumn Header="سهمِ من (لیتر)&#10;سهمیهٔ من" Width="Auto" IsReadOnly="True">
+            <DataGridTemplateColumn Header="سهمیهٔ من (لیتر)" Width="Auto" IsReadOnly="True">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate>
                   <TextBlock Text="{Binding ShareText}" VerticalAlignment="Center" Margin="6,0" Foreground="{DynamicResource Pump.Ink.Info}" />
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTemplateColumn Header="سهمِ من (لیتر)&#10;به من می‌رسد" Width="Auto" IsReadOnly="True">
+            <DataGridTemplateColumn Header="به من می‌رسد (لیتر)" Width="Auto" IsReadOnly="True">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate>
                   <TextBlock Text="{Binding NetText}" VerticalAlignment="Center" Margin="6,0"
@@ -550,8 +594,8 @@
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <c:HintTextColumn Header="📏 اندازه‌گیری&#10;موجودی واقعی" Binding="{Binding ActualText}" HintPath="ActualHint" Width="Auto" />
-            <DataGridTemplateColumn Header="📏 اندازه‌گیری&#10;اختلاف" Width="Auto" IsReadOnly="True">
+            <c:HintTextColumn Header="موجودیِ واقعی" Binding="{Binding ActualText}" HintPath="ActualHint" Width="Auto" />
+            <DataGridTemplateColumn Header="اختلاف" Width="Auto" IsReadOnly="True">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate>
                   <TextBlock Text="{Binding DiffText}" VerticalAlignment="Center" Margin="6,0"

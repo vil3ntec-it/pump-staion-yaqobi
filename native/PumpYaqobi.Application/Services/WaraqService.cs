@@ -209,6 +209,20 @@ public sealed class WaraqService
         }
     }
 
+    /// <summary>
+    /// ══ قرض یا مصرف؟ — تنها جای این تصمیم برای جمع‌ها (۱۴۰۵/۰۷/۲۰) ══════════
+    /// صاحب ریپو: «وقتی نه اسمِ قرض‌دار نوشتم نه چکنه، به جمعِ مصارف دربیاد —
+    /// حتی اگر نوعش مصرف بود؛ اسم که جلویش دادم قرض‌دار حساب می‌شود.»
+    /// پس فقط ردیفِ «قرض» **با نام** قرض است؛ ردیفِ بی‌نام (هر نوعی) و ردیفِ
+    /// «مصرف» به جمعِ مصرف می‌روند. پیش از این ردیفِ قرضِ بی‌نام قرضِ بی‌صاحب
+    /// شمرده می‌شد (به هیچ حسابی نمی‌رفت) و مصرفِ بی‌نام اصلاً شمرده نمی‌شد —
+    /// پولی که از گاوصندوق رفته بود و از «جمله فروش» کم نمی‌شد.
+    /// ⚠️ نامِ ناشناس (به هیچ قرض‌داری نمی‌خورد) قرض می‌ماند: شاید غلطِ تایپی یا
+    /// قرض‌دارِ تازه باشد و ثبت همان‌جا هشدار می‌دهد.
+    /// </summary>
+    public static bool IsDebtRow(WaraqTransaction t) =>
+        t.Type == WaraqTxnType.Debt && !string.IsNullOrWhiteSpace(t.Name);
+
     /// <summary>‎computeShiftTotals(sd)‎</summary>
     /// <summary>
     /// ══ فروشِ هر کارمند و هر پایه در یک دوره (۳.۱.۲۶۸) ══════════════════════
@@ -257,8 +271,8 @@ public sealed class WaraqService
         decimal debt = sd.FabricDebt, expenses = 0;
         foreach (var t in sd.Transactions)
         {
-            if (t.Type == WaraqTxnType.Debt) debt += TxnAmount(sd, t);
-            else if (!string.IsNullOrWhiteSpace(t.Name)) expenses += TxnAmount(sd, t);
+            if (IsDebtRow(t)) debt += TxnAmount(sd, t);
+            else expenses += TxnAmount(sd, t);
         }
         return new WaraqShiftTotals(petrol, diesel, sales, debt, expenses, declared);
     }

@@ -89,15 +89,26 @@ public class WaraqParityTests
             Close(c.tot.petrolL, t.PetrolLiters);
             Close(c.tot.dieselL, t.DieselLiters);
             Close(c.tot.sales, t.Sales);
-            Close(c.tot.debt, t.Debt);
-            Close(c.tot.expenses, t.Expenses);
             Close(c.tot.declaredDebt, t.DeclaredDebt);
 
+            //  ⛔ (۱۴۰۵/۰۷/۲۰) تنها جدایی‌ِ عمدی از نسخهٔ وب — خواستهٔ صاحب ریپو:
+            //  ردیفِ بی‌نام (هر نوعی) به جمعِ مصرف می‌رود (‎WaraqService.IsDebtRow‎).
+            //  وب قرضِ بی‌نام را قرض می‌شمرد و مصرفِ بی‌نام را هیچ. پس پاسخِ وب
+            //  همین‌قدر جابه‌جا می‌شود و بقیهٔ عددها مو‌به‌مو همان می‌مانند.
+            decimal namelessDebt = 0m, namelessExp = 0m;
+            foreach (var x in sd.Transactions.Where(x => string.IsNullOrWhiteSpace(x.Name)))
+                if (x.Type == WaraqTxnType.Debt) namelessDebt += svc.TxnAmount(sd, x);
+                else namelessExp += svc.TxnAmount(sd, x);
+            Close(c.tot.debt - (double)namelessDebt, t.Debt);
+            Close(c.tot.expenses + (double)(namelessDebt + namelessExp), t.Expenses);
+
             var sh = svc.Shortage(t);
-            Close(c.sh.shortage, sh.Shortage);
-            Close(c.sh.excess, sh.Excess);
+            var covered = c.sh.covered + (double)namelessExp;
+            var net = c.sh.declared - covered;
+            Close(net > 0 ? net : 0, sh.Shortage);
+            Close(net < 0 ? -net : 0, sh.Excess);
             Close(c.sh.declared, sh.Declared);
-            Close(c.sh.covered, sh.Covered);
+            Close(covered, sh.Covered);
         }
     }
 

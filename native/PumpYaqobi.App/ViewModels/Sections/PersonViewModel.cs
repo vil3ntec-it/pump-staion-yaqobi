@@ -26,8 +26,8 @@ public sealed partial class DebtRowViewModel : RowViewModel
         Loading = true;
         _dateShamsi = r.DateShamsi ?? "";
         _name = r.Name ?? "";
-        _hawala = r.Hawala ?? "";
-        _plate = r.Plate ?? "";
+        //  ⛔ (۱۴۰۵/۰۷/۲۰) «حواله و پلاک یکی است» — پلاکِ ردیف‌های ۳.۱.۲۶۹ در همان ستونِ حواله
+        _hawala = MergeHawala(r.Hawala, r.Plate);
         _fuel = r.Fuel;
         _liters = r.Liters;
         _price = r.PricePerLiter ?? 0m;
@@ -37,13 +37,25 @@ public sealed partial class DebtRowViewModel : RowViewModel
         Loading = false;
     }
 
+    /// <summary>
+    /// حواله + پلاکِ کهنه ⇒ یک خانهٔ «حواله». هر دو بود ⇒ «حواله · پلاک»؛ هیچ چیز گم نمی‌شود.
+    /// با نخستین ذخیرهٔ ردیف، پلاک در حواله می‌نشیند و ستونِ ‎Plate‎ خالی می‌شود.
+    /// </summary>
+    public static string MergeHawala(string? hawala, string? plate)
+    {
+        var h = (hawala ?? "").Trim();
+        var p = (plate ?? "").Trim();
+        if (p.Length == 0) return hawala ?? "";
+        if (h.Length == 0 || h == p) return p;
+        return h + " · " + p;
+    }
+
     public DebtRow Entity => _r;
 
     [ObservableProperty] private string _dateShamsi = "";
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private string _hawala = "";
     /// <summary>پلاکِ موتر (۳.۱.۲۶۸) — فقط یادداشت، در هیچ حسابی نیست.</summary>
-    [ObservableProperty] private string _plate = "";
     [ObservableProperty] private FuelType _fuel;
     [ObservableProperty] private decimal _liters;
     [ObservableProperty] private decimal _price;
@@ -54,7 +66,6 @@ public sealed partial class DebtRowViewModel : RowViewModel
     partial void OnDateShamsiChanged(string v) => Touch();
     partial void OnNameChanged(string v) => Touch();
     partial void OnHawalaChanged(string v) => Touch();
-    partial void OnPlateChanged(string v) => Touch();
     partial void OnFuelChanged(FuelType v)
     {
         Touch();
@@ -78,6 +89,7 @@ public sealed partial class DebtRowViewModel : RowViewModel
         OnPropertyChanged(nameof(ManualBardagiText)); OnPropertyChanged(nameof(RasidText));
         OnPropertyChanged(nameof(RasidFuelText)); OnPropertyChanged(nameof(BardagiText));
         OnPropertyChanged(nameof(AlbaqiText));
+        OnPropertyChanged(nameof(AlbaqiCellText));
         // سربرگِ دو تیل و ردیفِ «جمله» هم به همین ردیف بند‌اند
         _owner.RefreshTotals();
     }
@@ -114,6 +126,15 @@ public sealed partial class DebtRowViewModel : RowViewModel
     /// </summary>
     public string AlbaqiText =>
         Shamsi.Money(DebtCalculationService.RoundMoney(_owner.Calc.RowBardagi(_r) - Rasid));
+
+    /// <summary>
+    /// ⛔ (۱۴۰۵/۰۷/۲۰) خانهٔ ستونِ «الباقی»: خالی، مگر «👁 الباقیِ هر ردیف» روشن باشد.
+    /// صاحب ریپو: «کادرِ الباقی‌ها باشد ولی توی ستون‌ها چیزی نشان ندهد، و یک دکمه که
+    /// اگر بخواهی نشان بدهد.» جمعش همیشه زیرِ همین ستون، در نوارِ «جمله» است.
+    /// </summary>
+    public string AlbaqiCellText => _owner.ShowRowAlbaqi ? AlbaqiText : "";
+
+    internal void RaiseAlbaqiCell() => OnPropertyChanged(nameof(AlbaqiCellText));
 
     /// <summary>
     /// ══ نوع تیل — دو کادرِ رادیویی، نه کشویی ═══════════════════════════════
@@ -182,7 +203,7 @@ public sealed partial class DebtRowViewModel : RowViewModel
         _r.DateKey = Shamsi.Key(DateShamsi);
         _r.Name = Name;
         _r.Hawala = Hawala;
-        _r.Plate = string.IsNullOrWhiteSpace(Plate) ? null : Plate.Trim();
+        _r.Plate = null;   // پلاک از این پس همان حواله است (‎MergeHawala‎)
         _r.Fuel = Fuel;
         _r.Liters = Liters;
         _r.PricePerLiter = Price == 0m ? null : Price;
@@ -207,6 +228,8 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     public AccountViewModel(AppHost host, DebtAccount a, PersonViewModel person)
     {
         _host = host; _person = person; Entity = a;
+        //  «👁 الباقیِ هر ردیف» یادِ همین برنامه می‌ماند — «ذخیره هم بشود» (۱۴۰۵/۰۷/۲۰)
+        try { _showRowAlbaqi = host.Settings.GetString(RowAlbaqiKey) == "1"; } catch { _showRowAlbaqi = false; }
         Adopt(a);
     }
 
@@ -594,6 +617,25 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     /// <summary>ستونِ «رسید تیل» — فقط در دفترِ تیل.</summary>
     public bool ShowRasidFuelColumn => !IsMoney;
 
+    /// <summary>
+    /// «👁 الباقیِ هر ردیف» — پیش‌فرض خاموش: خانه‌های ستونِ «الباقی» خالی می‌مانند.
+    /// ⛔ در تنظیمات ذخیره می‌شود (یکی برای همهٔ حساب‌ها)، مثلِ «📏 اندازه‌گیری»ِ تیل امانت.
+    /// </summary>
+    [ObservableProperty] private bool _showRowAlbaqi;
+    public const string RowAlbaqiKey = "debt.rowAlbaqi";
+
+    partial void OnShowRowAlbaqiChanged(bool v)
+    {
+        try { _host.Settings.Set(RowAlbaqiKey, v ? "1" : "0"); } catch { }
+        foreach (var r in Rows) r.RaiseAlbaqiCell();
+        OnPropertyChanged(nameof(RowAlbaqiButtonText));
+    }
+
+    public string RowAlbaqiButtonText => ShowRowAlbaqi ? "🙈 پنهان کردنِ الباقیِ هر ردیف" : "👁 نشان دادنِ الباقیِ هر ردیف";
+
+    [RelayCommand]
+    private void ToggleRowAlbaqi() => ShowRowAlbaqi = !ShowRowAlbaqi;
+
     /// <summary>ستونِ «نوع تیل» — وقتی فیلترِ یک‌تیله روشن است، بی‌معناست.</summary>
     public bool ShowFuelTypeColumn => RowFilter == "all";
 
@@ -805,9 +847,9 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
                 IsMoney
                     ? new TotalCell("رسید", Shamsi.Money(t.All.Rasid), "Pump.Ok")
                     : new TotalCell("رسید تیل", Shamsi.Money(t.All.RasidFuel), "Pump.Ok"),
-                //  ⛔ (۱۴۰۵/۰۷/۲۴) جدول ستونِ «الباقی» ندارد — الباقی فقط این‌جا، در «جمله»
+                //  ⛔ (۱۴۰۵/۰۷/۲۰) ستونِ «الباقی» برگشت با خانه‌های خالی؛ جمعش زیرِ همان ستون
                 new TotalCell("الباقی", Shamsi.Money(t.All.Albaqi),
-                              t.All.Albaqi > 0m ? "Pump.Danger" : "Pump.Ok", TotalCell.NoColumn),
+                              t.All.Albaqi > 0m ? "Pump.Danger" : "Pump.Ok", column: "الباقی"),
             };
         }
     }
