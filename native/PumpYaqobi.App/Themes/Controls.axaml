@@ -2098,6 +2098,8 @@
                        FontWeight="ExtraBold" FontSize="13"
                        VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0"
                        Foreground="{DynamicResource Pump.OnHeadBand}" />
+            <!-- ⛔ (۱۴۰۵/۰۷/۲۴) خطِ ستون‌ها، همان خطِ جدول — جایش را ‎TotalsStrip‎ می‌دهد -->
+            <c:TotalsLines IsHitTestVisible="False" />
             <ItemsControl ItemsSource="{TemplateBinding ItemsSource}" x:CompileBindings="False">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
@@ -2109,8 +2111,9 @@
                   <!-- ⚠️ خطِ عمودیِ کنارِ هر خانه — همان چیزی که یک ‎&lt;td&gt;‎ دارد و
                        این نوار نداشت. با آن، هر جمع «کادرِ خودش» را دارد و
                        شش عددِ گاوصندوق دیگر یک تودهٔ به‌هم‌چسبیده نیستند. -->
-                  <Border BorderBrush="{DynamicResource Pump.Table.Border}"
-                          BorderThickness="1,0,0,0" Padding="4,0">
+                  <!-- ⛔ (۱۴۰۵/۰۷/۲۴) خط دیگر از خودِ خانه نیست: ‎TotalsStrip‎ سرِ پایانِ هر ستون همان
+                       خطِ جدول (رنگ و ضخامتِ ‎Pump.Table.Line‎) را می‌کشد — مو‌به‌مو روی خطِ ستون‌ها. -->
+                  <Border Padding="4,0">
                     <!-- ⛔ ‎DockPanel‎، نه ‎StackPanel‎ (۱۴۰۵/۰۷/۲۱): ‎StackPanel‎ِ عمودی فرزندش را
                          به پهنای «دلخواهِ» خودش می‌چیند حتی وقتی خانه تنگ‌تر است — عددِ
                          بلندِ «۸۵۲,۳۰۰ افغانی · ۸۵۱,۷۰۰ $» از خانه بیرون می‌زد و وسط‌چینی‌اش

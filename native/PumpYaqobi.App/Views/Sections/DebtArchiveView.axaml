@@ -140,7 +140,7 @@
                     <DataGridTextColumn Header="مقدار بردگی" Binding="{Binding BardagiText}" Width="Auto" CellStyleClasses="num" />
                     <DataGridTextColumn Header="رسید" Binding="{Binding RasidText}" Width="Auto" CellStyleClasses="num" />
                     <DataGridTextColumn Header="رسید تیل" Binding="{Binding RasidFuelText}" Width="Auto" CellStyleClasses="num" />
-                    <DataGridTextColumn Header="الباقی" Binding="{Binding AlbaqiText}" Width="Auto" IsReadOnly="True" />
+                    <!-- ⛔ (۱۴۰۵/۰۷/۲۴) ستونِ «الباقی»ِ ردیف‌ها نیست — فقط در «جمله»، مثلِ جدولِ زنده -->
                   </DataGrid.Columns>
                 </c:ExcelGrid>
                 <c:TotalsBar ItemsSource="{Binding TotalCells}" />

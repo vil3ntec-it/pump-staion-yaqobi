@@ -294,7 +294,8 @@ public sealed partial class DebtArchiveViewModel : ObservableObject, IRowBatchHo
             };
             if (IsMoney) cells.Add(new("رسید", Shamsi.Money(t.Rasid), "Pump.Ok"));
             else cells.Add(new("رسید تیل", Shamsi.Money(t.RasidFuel), "Pump.Ok"));
-            cells.Add(new("الباقی", Shamsi.Money(DebtCalculationService.RoundMoney(alb)), alb > 0m ? "Pump.Danger" : "Pump.Ok"));
+            //  ⛔ (۱۴۰۵/۰۷/۲۴) جدول ستونِ «الباقی» ندارد — الباقی فقط در «جمله»
+            cells.Add(new("الباقی", Shamsi.Money(DebtCalculationService.RoundMoney(alb)), alb > 0m ? "Pump.Danger" : "Pump.Ok", TotalCell.NoColumn));
             return cells;
         }
     }
