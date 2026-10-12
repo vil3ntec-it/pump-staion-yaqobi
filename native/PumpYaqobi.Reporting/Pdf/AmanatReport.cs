@@ -146,29 +146,12 @@ public sealed class AmanatReport : ISetupDocument
             cd.RelativeColumn(1.2f);   // اختلاف
         });
 
-        // سربرگِ دوطبقه — همان گروه‌بندیِ ورقِ نسخهٔ وب
+        // ⛔ سربرگِ یک‌خطی (۱۴۰۵/۰۷/۲۰) — صاحب ریپو: «چرا سرِ جدول‌ها دو خط دو خط
+        // نوشته… هیچ منظم نیستند.» همان هفده ستون، هر کدام یک نامِ کوتاه.
         DocStyle.Head(t, cell =>
         {
-            void Group(string s, uint span, uint rows = 1) =>
-                DocStyle.ThText(cell().ColumnSpan(span).RowSpan(rows), s);
-
-            Group("#", 1, 2);
-            Group("شناسه", 3);
-            Group("🛢️ تیل (لیتر)", 2);
-            Group("🌡️ شرایطِ نگهداری", 2);
-            Group("تیلِ بخار (لیتر)", 1, 2);
-            Group("٪ فیصدی‌ها", 3);
-            Group("سهمِ من (لیتر)", 2);
-            Group("الباقیِ طرف (لیتر)", 1, 2);
-            Group("📏 اندازه‌گیری", 2);
-
-            void Th(string s) => DocStyle.ThText(cell(), s);
-            Th("تاریخ"); Th("نام"); Th("به حسابهٔ");
-            Th("رسید تیل"); Th("برده شده");
-            Th("مدت زمان"); Th("درجه گرما");
-            Th("فیصدیِ من"); Th("فیصدیِ بخار"); Th("فیصدیِ لازم");
-            Th("سهمیهٔ من"); Th("به من می‌رسد");
-            Th("موجودی واقعی"); Th("اختلاف");
+            foreach (var h in AmanatColumns.Short)
+                DocStyle.ThText(cell(), h);
         });
 
         var i = 0;
@@ -212,4 +195,18 @@ public sealed class AmanatReport : ISetupDocument
         t.Cell().Element(x => DocStyle.Tf(x, tt.HasActual ? F2(tt.Actual) : "—"));
         t.Cell().Element(x => DocStyle.Tf(x, tt.HasActual ? F2(tt.RealDiff) : "—"));
     });
+}
+
+/// <summary>
+/// ══ نامِ یک‌خطیِ ستون‌های جدولِ تیل امانت — تنها جای این نام‌ها ══════════════
+/// صفحه و PDF هر دو همین را نشان می‌دهند تا دو جا دو چیز نگویند.
+/// </summary>
+public static class AmanatColumns
+{
+    public static readonly string[] Short =
+    {
+        "#", "تاریخ", "نام", "به حسابِ", "رسید (لیتر)", "برده شده (لیتر)",
+        "روز", "گرما °C", "بخار (لیتر)", "فیصدیِ من", "فیصدیِ بخار", "فیصدیِ لازم",
+        "سهمیهٔ من (لیتر)", "به من می‌رسد (لیتر)", "الباقیِ طرف (لیتر)", "موجودیِ واقعی", "اختلاف",
+    };
 }

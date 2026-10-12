@@ -410,17 +410,17 @@ public sealed partial class AmanatAccountViewModel : ObservableObject, IRowBatch
     [ObservableProperty] private string _sumRealDiff = "";
     [ObservableProperty] private string _sumRealDiffBrush = "Pump.Ok";
 
-    /// <summary>سربرگ‌های دوطبقهٔ جدول — همان گروه‌بندیِ ‎tr.am-hgrp‎ی سایت.</summary>
-    public const string HLiters = "🛢️ تیل (لیتر)\nرسید تیل";
-    public const string HTaken = "🛢️ تیل (لیتر)\nبرده شده";
-    public const string HLoss = "تیلِ بخار (لیتر)";
-    public const string HLossPct = "٪ فیصدی‌ها\nفیصدیِ بخار";
-    public const string HNeed = "٪ فیصدی‌ها\nفیصدیِ لازم";
-    public const string HShare = "سهمِ من (لیتر)\nسهمیهٔ من";
-    public const string HNet = "سهمِ من (لیتر)\nبه من می‌رسد";
+    /// <summary>سربرگ‌های یک‌خطیِ جدول (۱۴۰۵/۰۷/۲۰) — همان ‎AmanatColumns.Short‎ِ PDF.</summary>
+    public const string HLiters = "رسید (لیتر)";
+    public const string HTaken = "برده شده (لیتر)";
+    public const string HLoss = "بخار (لیتر)";
+    public const string HLossPct = "فیصدیِ بخار";
+    public const string HNeed = "فیصدیِ لازم";
+    public const string HShare = "سهمیهٔ من (لیتر)";
+    public const string HNet = "به من می‌رسد (لیتر)";
     public const string HRest = "الباقیِ طرف (لیتر)";
-    public const string HActual = "📏 اندازه‌گیری\nموجودی واقعی";
-    public const string HDiff = "📏 اندازه‌گیری\nاختلاف";
+    public const string HActual = "موجودیِ واقعی";
+    public const string HDiff = "اختلاف";
 
     /// <summary>
     /// ردیفِ «جمله»ی ته جدول — همتای ‎&lt;tfoot&gt;‎ی سایت (‎am-ft-*‎).
@@ -546,6 +546,52 @@ public sealed partial class AmanatAccountViewModel : ObservableObject, IRowBatch
         RefRows.ResetTo(AmanatSettingsEditorViewModel.TempTable(Calc, Settings, Entity.Fuel));
         RefNote = AmanatSettingsEditorViewModel.TempTableNote(Settings, Entity.Fuel);
     }
+
+    // ══ ⚠️ اگر قیمت بالا برود — تیلِ امانتیِ فروخته‌شده (۱۴۰۵/۰۷/۲۰) ══════════
+    //  صاحب ریپو: «یارو ۱۰۰٬۰۰۰ تیل داده بود، نزدیکِ ۵۰٬۰۰۰ را به ۶۵ فروختم، حالا
+    //  ۸۵ شده و تیلش را می‌خواهد… غرق شدم. شفاف بگو که اگر قیمت به این‌جا برسد راهِ
+    //  برگشتی نیست، ساده و بی شلوغی.» یک دفترِ پیش‌نویس: نه از جدول می‌خواند، نه
+    //  ذخیره می‌شود. حساب در ‎AmanatPriceRisk.Of‎ است.
+    [ObservableProperty] private string _rkSold = "";
+    [ObservableProperty] private string _rkSalePrice = "";
+    [ObservableProperty] private string _rkNowPrice = "";
+    [ObservableProperty] private bool _rkHas;
+    [ObservableProperty] private IReadOnlyList<AmanatLine> _rkLines = Array.Empty<AmanatLine>();
+    [ObservableProperty] private string _rkVerdict = "";
+    [ObservableProperty] private string _rkVerdictBrush = "Pump.Text";
+
+    partial void OnRkSoldChanged(string v) => PaintRisk();
+    partial void OnRkSalePriceChanged(string v) => PaintRisk();
+    partial void OnRkNowPriceChanged(string v) => PaintRisk();
+
+    private void PaintRisk()
+    {
+        var sold = Math.Max(0m, Has(RkSold) ?? 0m);
+        var sale = Math.Max(0m, Has(RkSalePrice) ?? 0m);
+        var now = Math.Max(0m, Has(RkNowPrice) ?? 0m);
+        RkHas = sold > 0m && sale > 0m && now > 0m;
+        if (!RkHas) { RkLines = Array.Empty<AmanatLine>(); RkVerdict = ""; return; }
+
+        var r = AmanatPriceRisk.Of(sold, sale, now);
+        static string M(decimal v) => Shamsi.Money(Math.Round(v, 0, MidpointRounding.AwayFromZero)) + " افغانی";
+        RkLines = new[]
+        {
+            new AmanatLine("پولی که از فروش گرفتید", M(r.Got), "Pump.Ok"),
+            new AmanatLine("برای پس دادنِ همان تیل امروز باید بدهید", M(r.NeedNow), "Pump.Info"),
+            new AmanatLine(r.Loss >= 0m ? "ضرر" : "سود", M(Math.Abs(r.Loss)), r.Loss > 0m ? "Pump.Danger" : "Pump.Ok"),
+            new AmanatLine("هر ۱ افغانی بالا رفتنِ قیمت", M(r.PerAfghani) + " ضررِ بیشتر", "Pump.Danger"),
+        };
+        (RkVerdict, RkVerdictBrush) = r.Loss > 0m
+            ? ($"⛔ {Shamsi.Money(sold)} لیتر را به {Shamsi.Money(sale)} فروختید؛ حالا قیمت {Shamsi.Money(now)} است. "
+               + $"برای پس دادن {M(r.Loss)} از جیبِ خودتان می‌رود — این پول برنمی‌گردد.", "Pump.Danger")
+            : r.Loss < 0m
+                ? ("✅ قیمت پایین آمده؛ پس دادنِ تیل ارزان‌تر از پولی است که گرفتید.", "Pump.Ok")
+                : ("قیمت همان است؛ نه ضرر، نه سود.", "Pump.Text");
+    }
+
+    public const string RiskRule =
+        "قاعدهٔ ساده: تیلِ امانتی مالِ شما نیست. اگر آن را بفروشید، پولش را کنار بگذارید یا همان روز همان‌قدر تیل بخرید — "
+        + "وگرنه هر افغانی که قیمت بالا برود، ضربِ لیترهای فروخته‌شده از جیبِ شما می‌رود و راهِ برگشت نیست.";
 
     // ══ 🧾 برآوردِ دستی — «قبول کنم؟ چند فیصد بگیرم؟» ════════════════════════
     //  یک دفترِ پیش‌نویس: نه از جدول می‌خواند، نه در آن می‌نویسد، نه ذخیره می‌شود.
@@ -1352,4 +1398,21 @@ public sealed partial class AmanatSettingsEditorViewModel : ObservableObject
         + "نسبت به دمای مرجعِ ۱۵٫۶°C کم و زیاد نشان می‌دهد و با سرد شدنِ هوا برمی‌گردد — رویش فیصدی نگیرید. "
         + "عددها برای " + (fuel == FuelType.Diesel ? "دیزل" : "پطرول") + " و با ضریبِ مخزنِ "
         + AmanatService.Fmt(s.TankFactor, 2) + " حساب شده‌اند.";
+}
+
+/// <summary>
+/// ══ ضررِ تیلِ امانتیِ فروخته‌شده وقتی قیمت بالا می‌رود (۱۴۰۵/۰۷/۲۰) ══════════
+/// پولِ گرفته = لیترِ فروخته × نرخِ فروش؛ پولِ لازم برای پس دادن = همان لیتر × نرخِ امروز.
+/// ضرر = تفاوتِ این دو (منفی یعنی سود). هر یک افغانی بالا رفتنِ نرخ = همان لیترها ضرر.
+/// </summary>
+public static class AmanatPriceRisk
+{
+    public readonly record struct Result(decimal Got, decimal NeedNow, decimal Loss, decimal PerAfghani);
+
+    public static Result Of(decimal soldLiters, decimal salePrice, decimal nowPrice)
+    {
+        var got = soldLiters * salePrice;
+        var need = soldLiters * nowPrice;
+        return new Result(got, need, need - got, soldLiters);
+    }
 }
