@@ -34,6 +34,7 @@ dotnet run --project PumpYaqobi.UiTests -c Release -- fullscan        # رابط
 | `view/` | ✅ زنده | صفحهٔ کیو‌آرِ مشتری |
 | `android/` | ✅ زنده | پوستهٔ اندرویدِ اپِ کارمندان (`build-kar-apk.yml`) |
 | `tools/` | ✅ زنده | سنجه‌ها و اسکریپت‌های CI |
+| `telegram-bot/` | ✅ زنده | باتِ تلگرامِ پمپ (افزونهٔ سرورِ حساب؛ `telegram-bot/README-fa.md`) |
 | `tablighat/` · `icons/` · `assets/` | ✅ زنده | عکس‌های تبلیغ، نشان‌ها و قلمِ صفحه‌های وب |
 | `index.html` · `sw.js` | ✅ زنده | صفحهٔ دانلود و پاک‌کنندهٔ سایتِ قدیم |
 | `payam/` | 🟡 منتشر می‌شود | پیام‌رسانِ PWAِ قدیمی؛ تغییری نمی‌گیرد |
