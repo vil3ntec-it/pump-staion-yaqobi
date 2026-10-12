@@ -1,5 +1,8 @@
 using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.Input;
+using PumpYaqobi.App.Printing;
 using PumpYaqobi.App.Services;
+using PumpYaqobi.Reporting.Pdf;
 using PumpYaqobi.Application.Localization;
 using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
@@ -63,4 +66,19 @@ public sealed partial class RateHistorySectionViewModel : SectionViewModel
         }
         OnPropertyChanged(nameof(IsEmpty));
     }
+
+    /// <summary>🖨 PDF — همان سه ستونِ جدول (۱۴۰۵/۰۷/۲۰). ورق‌ها بیرونِ نخِ رابط ساخته می‌شوند.</summary>
+    [RelayCommand]
+    private Task PdfAsync()
+    {
+        var rows = Rows.ToList();
+        return Documents.ShowAsync(() => new HistoryReport(PdfInput(rows, DocDates.Line())), "تاریخچهٔ نرخ اتحادیه");
+    }
+
+    public static HistoryReportInput PdfInput(IReadOnlyList<RateHistoryRowViewModel> rows, string dates) =>
+        new("نرخ اتحادیه", "همهٔ ثبت‌ها",
+            new[] { new HistoryReportColumn("نوع تیل"), new HistoryReportColumn("نرخ", Brush: "Pump.Ok"),
+                    new HistoryReportColumn("تاریخ") },
+            rows.Select(r => new HistoryReportRow(new[] { r.FuelText, r.RateText, r.DateShamsi })).ToList(),
+            dates);
 }
