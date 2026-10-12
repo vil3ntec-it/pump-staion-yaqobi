@@ -78,6 +78,7 @@ public sealed partial class DebtRowViewModel : RowViewModel
         OnPropertyChanged(nameof(ManualBardagiText)); OnPropertyChanged(nameof(RasidText));
         OnPropertyChanged(nameof(RasidFuelText)); OnPropertyChanged(nameof(BardagiText));
         OnPropertyChanged(nameof(AlbaqiText));
+        OnPropertyChanged(nameof(AlbaqiCellText));
         // سربرگِ دو تیل و ردیفِ «جمله» هم به همین ردیف بند‌اند
         _owner.RefreshTotals();
     }
@@ -114,6 +115,15 @@ public sealed partial class DebtRowViewModel : RowViewModel
     /// </summary>
     public string AlbaqiText =>
         Shamsi.Money(DebtCalculationService.RoundMoney(_owner.Calc.RowBardagi(_r) - Rasid));
+
+    /// <summary>
+    /// ⛔ (۱۴۰۵/۰۷/۲۰) خانهٔ ستونِ «الباقی»: خالی، مگر «👁 الباقیِ هر ردیف» روشن باشد.
+    /// صاحب ریپو: «کادرِ الباقی‌ها باشد ولی توی ستون‌ها چیزی نشان ندهد، و یک دکمه که
+    /// اگر بخواهی نشان بدهد.» جمعش همیشه زیرِ همین ستون، در نوارِ «جمله» است.
+    /// </summary>
+    public string AlbaqiCellText => _owner.ShowRowAlbaqi ? AlbaqiText : "";
+
+    internal void RaiseAlbaqiCell() => OnPropertyChanged(nameof(AlbaqiCellText));
 
     /// <summary>
     /// ══ نوع تیل — دو کادرِ رادیویی، نه کشویی ═══════════════════════════════
@@ -594,6 +604,20 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     /// <summary>ستونِ «رسید تیل» — فقط در دفترِ تیل.</summary>
     public bool ShowRasidFuelColumn => !IsMoney;
 
+    /// <summary>«👁 الباقیِ هر ردیف» — پیش‌فرض خاموش: خانه‌های ستونِ «الباقی» خالی می‌مانند.</summary>
+    [ObservableProperty] private bool _showRowAlbaqi;
+
+    partial void OnShowRowAlbaqiChanged(bool v)
+    {
+        foreach (var r in Rows) r.RaiseAlbaqiCell();
+        OnPropertyChanged(nameof(RowAlbaqiButtonText));
+    }
+
+    public string RowAlbaqiButtonText => ShowRowAlbaqi ? "🙈 پنهان کردنِ الباقیِ هر ردیف" : "👁 نشان دادنِ الباقیِ هر ردیف";
+
+    [RelayCommand]
+    private void ToggleRowAlbaqi() => ShowRowAlbaqi = !ShowRowAlbaqi;
+
     /// <summary>ستونِ «نوع تیل» — وقتی فیلترِ یک‌تیله روشن است، بی‌معناست.</summary>
     public bool ShowFuelTypeColumn => RowFilter == "all";
 
@@ -805,9 +829,9 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
                 IsMoney
                     ? new TotalCell("رسید", Shamsi.Money(t.All.Rasid), "Pump.Ok")
                     : new TotalCell("رسید تیل", Shamsi.Money(t.All.RasidFuel), "Pump.Ok"),
-                //  ⛔ (۱۴۰۵/۰۷/۲۴) جدول ستونِ «الباقی» ندارد — الباقی فقط این‌جا، در «جمله»
+                //  ⛔ (۱۴۰۵/۰۷/۲۰) ستونِ «الباقی» برگشت با خانه‌های خالی؛ جمعش زیرِ همان ستون
                 new TotalCell("الباقی", Shamsi.Money(t.All.Albaqi),
-                              t.All.Albaqi > 0m ? "Pump.Danger" : "Pump.Ok", TotalCell.NoColumn),
+                              t.All.Albaqi > 0m ? "Pump.Danger" : "Pump.Ok", column: "الباقی"),
             };
         }
     }

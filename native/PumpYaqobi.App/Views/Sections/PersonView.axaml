@@ -545,9 +545,11 @@
                               CellStyleClasses="num" />
           <DataGridTextColumn Header="رسید تیل" Binding="{Binding RasidFuelText}" Width="Auto"
                               CellStyleClasses="num" />
-          <!-- ⛔ (۱۴۰۵/۰۷/۲۴، نسخه 3.1.272) ستونِ «الباقی»ِ ردیف‌ها برداشته شد — خواستهٔ صاحب
-               ریپو: «الباقیِ داخلِ جدول دیده نشود، فقط در جمله». الباقی فقط در نوارِ «جمله» و
-               سربرگ است؛ ‎DebtRowViewModel.AlbaqiText‎ و هیچ محاسبه‌ای دست نخورد. -->
+          <!-- ⛔ (۱۴۰۵/۰۷/۲۰) ستونِ «الباقی» هست ولی خانه‌هایش خالی‌اند (‎AlbaqiCellText‎) —
+               صاحب ریپو: «کادرِ الباقی‌ها باشد ولی توی ستون‌ها چیزی نشان ندهد؛ جمع زیرش، و یک
+               دکمه که اگر بخواهی نشان بدهد». دکمهٔ «👁» زیرِ جدول است. -->
+          <DataGridTextColumn Header="الباقی" Binding="{Binding AlbaqiCellText}" Width="Auto"
+                              IsReadOnly="True" CellStyleClasses="num" />
         </DataGrid.Columns>
       </c:ExcelGrid>
 
@@ -560,8 +562,13 @@
              سایت ‎.add-row-btn‎ می‌نشیند. کنارش «➕➕ چندتایی» که در سایت هست
              (‎addPersonRowsBulk‎) و این‌جا نبود؛ نوارش همان نوارِ مشترکِ بقیهٔ
              بخش‌هاست. -->
-        <c:RowAddBar HorizontalAlignment="Left"
-                     Host="{Binding}" AddRowCommand="{Binding AddRowCommand}" />
+        <WrapPanel Orientation="Horizontal">
+          <c:RowAddBar HorizontalAlignment="Left" Margin="0,0,10,0"
+                       Host="{Binding}" AddRowCommand="{Binding AddRowCommand}" />
+          <Button Classes="seg" Classes.on="{Binding ShowRowAlbaqi}" VerticalAlignment="Center"
+                  Content="{Binding RowAlbaqiButtonText}" Command="{Binding ToggleRowAlbaqiCommand}"
+                  ToolTip.Tip="ستونِ «الباقی» خالی می‌ماند و جمعش زیرش است؛ این دکمه عددِ هر ردیف را نشان می‌دهد یا پنهان می‌کند" />
+        </WrapPanel>
 
         <!-- ══ نوتِ حساب — همتای ‎#pm-note-area‎ی سایت ═════════════════════ -->
         <StackPanel Spacing="5">

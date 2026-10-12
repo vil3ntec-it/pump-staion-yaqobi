@@ -169,14 +169,18 @@ public class PersonColumnsTests
         => Assert.DoesNotContain("بردگیِ دستی", Bare());
 
     /// <summary>
-    /// ⛔ (۱۴۰۵/۰۷/۲۴، نسخه 3.1.272) خواستهٔ صاحب ریپو: «در بخشِ قرض‌داران الباقیِ داخلِ ردیف‌های
-    /// جدول دیده نشود، فقط در جمله». پس ستونِ «الباقی» در جدولِ حساب نیست و جمعش در نوارِ «جمله» هست.
+    /// ⛔ (۱۴۰۵/۰۷/۲۰، نسخه 3.1.275) صاحب ریپو: «کادرِ الباقی‌ها باشد ولی توی ستون‌ها چیزی
+    /// نشان ندهد، و یک دکمه که اگر بخواهی نشان بدهد.» ستون هست، خانه‌ها از ‎AlbaqiCellText‎
+    /// (پیش‌فرض خالی) و جمعش زیرِ همان ستون.
     /// </summary>
     [Fact]
-    public void TheAlbaqiShowsOnlyInTheTotals()
+    public void TheAlbaqiColumnIsThere_EmptyByDefault_TotalUnderIt()
     {
-        Assert.DoesNotContain("Header=\"الباقی\"", Bare());
+        Assert.Contains("Header=\"الباقی\" Binding=\"{Binding AlbaqiCellText}\"", Bare());
+        Assert.Contains("ToggleRowAlbaqiCommand", Bare());
         Assert.Contains("new TotalCell(\"الباقی\"", Vm());
+        Assert.Contains("column: \"الباقی\"", Vm());
+        Assert.Contains("_owner.ShowRowAlbaqi ? AlbaqiText : \"\"", Vm());
     }
 
     /// <summary>نامِ ستون‌ها همان‌های سایت‌اند.</summary>
