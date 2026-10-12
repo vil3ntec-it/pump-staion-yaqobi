@@ -695,6 +695,7 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
 
     protected override async Task LoadAsync()
     {
+        _soldCache = null;   // تیلِ دیگر ⇒ فروشِ دیگر؛ تا حسابِ کاملِ بعدی از دیتابیس
         var buys = await _host.StorageData.PurchasesAsync(Fuel);
         Purchases.Clear();
         foreach (var p in buys) Purchases.Add(Track(new PurchaseRowViewModel(p, this)));
@@ -732,8 +733,26 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
 
     private PurchaseRowViewModel Track(PurchaseRowViewModel r)
     {
-        r.Recalculated += () => _ = RecalcAsync();
+        r.Recalculated += RecalcTyping;
         return r;
+    }
+
+    //  ══ تایپ در جدولِ خرید کند بود (۱۴۰۵/۰۷/۲۰) ════════════════════════════
+    //  گزارشِ صاحب ریپو: «نوشتن توی ستون‌های جدول در یک بخش کند بود.» ریشه:
+    //  هر کلید در خانهٔ خرید ‎RecalcAsync‎ی کامل می‌زد — جمعِ فروشِ همهٔ
+    //  پارچه‌ها، میانگینِ فروش (دو دستور)، فیِ لیتر و مخزن‌های شماره‌دار، یعنی
+    //  چند دستورِ SQLite روی نخِ رابط **برای هر حرف**. همان حسابِ کامل پس از
+    //  ذخیرهٔ ردیف (‎SavePurchaseAsync‎، ۱۵۰ میلی‌ثانیه پس از آخرین کلید) دوباره
+    //  می‌دود، پس این‌جا فقط حسابِ حافظه‌ای می‌ماند: همان ‎Calc.Tank‎ با همان
+    //  فروشِ پارچه‌ها که آخرین حسابِ کامل خوانده بود — عددها همان لحظه درست‌اند.
+    //  ⛔ هیچ حسابی عوض نشد؛ فقط خواندنِ تکراریِ دیتابیس در میانهٔ تایپ رفت.
+    private decimal? _soldCache;
+    private decimal _avgCache;
+
+    private void RecalcTyping()
+    {
+        if (_soldCache is not { } sold) { _ = RecalcAsync(); return; }
+        ShowTank(sold, _avgCache);
     }
 
     private async Task RecalcAsync()
@@ -741,6 +760,26 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         // ⛔ فقط ستونِ ‎Sale‎ — نه کلِ پارچه‌های پنج سال با هر دو شیفت (۱۴۰۵/۰۷/۱۳).
         //  این تابع با هر باز شدنِ بخش **و هر ویرایشِ هر خرید** می‌دود.
         var sold = (await _host.StorageData.ShiftSumsAsync(Fuel)).Sale;
+        var avg = await _host.StorageData.AvgDailySaleAsync(Fuel);
+        _soldCache = sold;
+        _avgCache = avg;
+        ShowTank(sold, avg);
+
+        // فیِ لیترِ خرید و تاریخِ آخرین خرید — همان دو عددِ «خلاصه پول‌ها». فی = همان خریدی
+        // که الان از مخزن کشیده می‌شود (‎RefreshBuyPerLiterAsync‎، ۱۴۰۵/۰۷/۲۲)
+        await _host.StorageData.RefreshBuyPerLiterAsync(Fuel);
+        PerLiter = Shamsi.Money(Math.Round(
+            _host.Settings.GetDecimal(Fuel == FuelType.Diesel
+                ? PumpYaqobi.Services.Data.SettingsService.BuyPerLiterDiesel
+                : PumpYaqobi.Services.Data.SettingsService.BuyPerLiterPetrol), 1));
+
+        //  مخزن‌های شماره‌دار همان موجودی را تقسیم می‌کنند — پس با هر بار حساب، آن‌ها هم
+        await LoadTanksAsync();
+    }
+
+    /// <summary>بخشِ حافظه‌ایِ حساب — بی هیچ دستورِ دیتابیس (‎RecalcTyping‎).</summary>
+    private void ShowTank(decimal sold, decimal avg)
+    {
         var threshold = _host.Settings.GetDecimal(
             PumpYaqobi.Services.Data.SettingsService.LowStockThreshold, 1000m);
         // میله‌زنی‌ها هم به موجودی می‌رسند: «برابر کردنِ دفتر با عددِ واقعی»
@@ -754,16 +793,8 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         TotalUsd = Shamsi.Money(Math.Round(t.TotalUsd, 2));
         IsLow = t.IsLow;
         ThresholdText = "حد هشدار: " + Shamsi.Money(threshold) + " لیتر";
-        ForecastText = Forecast(t.Display, await _host.StorageData.AvgDailySaleAsync(Fuel));
-
-        // فیِ لیترِ خرید و تاریخِ آخرین خرید — همان دو عددِ «خلاصه پول‌ها». فی = همان خریدی
-        // که الان از مخزن کشیده می‌شود (‎RefreshBuyPerLiterAsync‎، ۱۴۰۵/۰۷/۲۲)
-        await _host.StorageData.RefreshBuyPerLiterAsync(Fuel);
+        ForecastText = Forecast(t.Display, avg);
         var last = Purchases.FirstOrDefault();
-        PerLiter = Shamsi.Money(Math.Round(
-            _host.Settings.GetDecimal(Fuel == FuelType.Diesel
-                ? PumpYaqobi.Services.Data.SettingsService.BuyPerLiterDiesel
-                : PumpYaqobi.Services.Data.SettingsService.BuyPerLiterPetrol), 1));
         LastBuyDate = last?.DateShamsi ?? "—";
 
         // نقشهٔ مخزن: نسبتِ موجودی به ظرفیت، سقفِ صد درصد — و آستانه روی همان محور
@@ -778,8 +809,6 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         _bookNow = t.Current;
         _tank = t;
         RefreshDip();
-        //  مخزن‌های شماره‌دار همان موجودی را تقسیم می‌کنند — پس با هر بار حساب، آن‌ها هم
-        await LoadTanksAsync();
     }
 
     public async Task SavePurchaseAsync(FuelPurchase p)

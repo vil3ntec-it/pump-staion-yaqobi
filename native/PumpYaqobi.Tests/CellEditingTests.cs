@@ -65,4 +65,25 @@ public class CellEditingTests
         Assert.Contains("<Setter Property=\"FontWeight\" Value=\"Normal\" />", box);
         Assert.DoesNotContain("<Setter Property=\"FontWeight\" Value=\"Bold\" />", box);
     }
+
+    /// <summary>تایپ در جدولِ خرید مخزن: هر حرف چند دستورِ SQLite روی نخِ رابط می‌زد.</summary>
+    [Fact]
+    public void TaypDarKharidMakhzan_BiDasturDatabase()
+    {
+        var s = Src("PumpYaqobi.App/ViewModels/Sections/StorageSectionViewModel.cs");
+        Assert.Contains("r.Recalculated += RecalcTyping;", s);
+        Assert.DoesNotContain("r.Recalculated += () => _ = RecalcAsync();", s);
+        var a = s.IndexOf("private void RecalcTyping()", StringComparison.Ordinal);
+        var b = s.IndexOf("private async Task RecalcAsync()", StringComparison.Ordinal);
+        Assert.True(a > 0 && b > a);
+        var typing = s[a..b];
+        Assert.DoesNotContain("await", typing);
+        Assert.DoesNotContain("StorageData", typing);
+        var c = s.IndexOf("private void ShowTank(", StringComparison.Ordinal);
+        var show = s[c..s.IndexOf("RefreshDip();", c, StringComparison.Ordinal)];
+        Assert.DoesNotContain("await", show);
+        Assert.DoesNotContain("_host.StorageData", show);
+        //  حسابِ کامل پس از ذخیرهٔ ردیف هنوز همان است
+        Assert.Contains("await _host.StorageData.UpdatePurchaseAsync(p);\n        await RecalcAsync();", s.Replace("\r\n", "\n"));
+    }
 }
