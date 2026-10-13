@@ -196,7 +196,8 @@ test('۳) برنامه قطع شد ⇒ یک پیام؛ دوباره ⇒ هیچ؛
 
   await state(dev, { alerts: [], tank: { petrol: { show: 10, threshold: 1, low: false } } });
   clear();
-  await telegram.pcWatchTick(Date.now() < at(12) ? at(12) : Date.now());
+  //  ⛔ ساعتِ روز، نه ساعتِ اجرا: شب «دوباره وصل شد» عمداً نمی‌آید
+  await telegram.pcWatchTick(at(12) + 60_000);
   await telegram.flushOutbox();
   assert.ok(sent().some(c => c.params.chat_id === '9203' && /دوباره وصل شد/.test(c.params.text)), 'برگشت گفته نشد');
 });

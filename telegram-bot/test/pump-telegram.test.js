@@ -27,6 +27,8 @@ let responder = null;
 let updateId = 1000;
 
 test.before(async () => {
+  //  ⛔ ساعتِ آرام (۲۲ تا ۷ِ کابل) این‌جا سنجیده نمی‌شود — آزمون به ساعتِ اجرا وابسته نباشد
+  telegram.setQuietHours(0, 0);
   await h.start();
   const pw = require('../src/lib/password');
   await query(

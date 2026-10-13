@@ -2481,9 +2481,15 @@ module.exports = function createPumpBot({ req }) {
      ⛔ هشدارِ فوری («تمام شد»، «اضافه داده شد»، مخزنِ خالی) هرگز نگه داشته نمی‌شود.
      ⛔ چیزی گم نمی‌شود: هشدارِ باز در «/status» و اعلامیهٔ صبح هست. */
   const CALM_CAP = 12;
-  const QUIET_FROM = 22;
-  const QUIET_TO = 7;
-  const isQuietHour = (t) => { const hr = kabulHour(t); return hr >= QUIET_FROM || hr < QUIET_TO; };
+  let QUIET_FROM = 22;
+  let QUIET_TO = 7;
+  const isQuietHour = (t) => {
+    if (QUIET_FROM === QUIET_TO) return false;
+    const hr = kabulHour(t);
+    return hr >= QUIET_FROM || hr < QUIET_TO;
+  };
+  /** فقط برای آزمون‌ها: ساعتِ آرام را جابه‌جا یا (با `from === to`) خاموش می‌کند — آزمون‌ها به ساعتِ کابل وابسته نباشند. */
+  function setQuietHours(from = 22, to = 7) { QUIET_FROM = from; QUIET_TO = to; }
 
   /** این پیامِ «کم مانده» برود؟ ⇒ ‎{ ok, notice }‎ — شمارنده همین‌جا یکی بالا می‌رود. */
   async function calmGate(c, t) {
@@ -3077,7 +3083,7 @@ module.exports = function createPumpBot({ req }) {
     relayCustomer, rateDone, desktopOnline, DESKTOP_ONLINE_MS,
     setTransport, handleUpdate, pollOnce, flushOutbox, notifyStation,
     start, stop, reload, status, configure, publicInfo, appLinks,
-    formatAlert, announcementText, announceTick, pcWatchTick, subTick, alertKeyboard, CALM_CAP, parseCommand, asciiDigits, normEmail, normName, notifyResolved, searchText, chunks,
+    formatAlert, announcementText, announceTick, pcWatchTick, subTick, alertKeyboard, CALM_CAP, setQuietHours, parseCommand, asciiDigits, normEmail, normName, notifyResolved, searchText, chunks,
     _reset,
   };
 };
