@@ -26,6 +26,8 @@ let updateId = 5000;
 let msgSeq = 100;
 
 test.before(async () => {
+  //  آزمون برنامهٔ کامپیوترِ واقعی ندارد ⇒ هشدارِ مخزن متن (عکسش در pump-telegram-reports)
+  telegram.setAutoTankImage(false);
   await h.start();
   const pw = require('../src/lib/password');
   await query(
@@ -173,7 +175,7 @@ test('۲) سقفِ روزانه: «کم مانده» پس از سقف یک با�
   await telegram.flushOutbox();
   await telegram.flushOutbox();
   const mine = sent().filter(c => c.params.chat_id === '9202');
-  assert.equal(mine.filter(c => /🚨/.test(c.params.text)).length, telegram.CALM_CAP, 'بیش از سقف آمد');
+  assert.equal(mine.filter(c => /^👤🟡/.test(c.params.text)).length, telegram.CALM_CAP, 'بیش از سقف آمد');
   assert.equal(mine.filter(c => /🔕 امروز/.test(c.params.text)).length, 1, 'خبرِ سقف یک بار');
   clear();
   await telegram.notifyStation(owner.stationId, [ev('debt', 'd999-stP-out', 'آخر', 'out')], at(12));

@@ -40,6 +40,8 @@ let updateId = 5000;
 let msgSeq = 100;
 
 test.before(async () => {
+  //  آزمون برنامهٔ کامپیوترِ واقعی ندارد ⇒ هشدارِ مخزن متن (عکسش در pump-telegram-reports)
+  telegram.setAutoTankImage(false);
   //  ⛔ ساعتِ آرام (۲۲ تا ۷ِ کابل) این‌جا سنجیده نمی‌شود — آزمون به ساعتِ اجرا وابسته نباشد
   telegram.setQuietHours(0, 0);
   await h.start();
@@ -274,4 +276,33 @@ test('۶) /tanks و «🛢 عکسِ مخزن‌ها»ی وضعیت ⇒ عکسِ 
   const photo = calls.find(c => c.method === 'sendPhoto');
   assert.match(photo.params.caption, /شرکتِ نور/);
   assert.equal(calls.find(c => c.method === 'sendDocument').files.document.name, 'خریدهای پطرول.pdf');
+});
+
+test('۷) هشدارِ مخزن ⇒ همان عکسِ مخزنِ برنامه، خبرِ هشدار بالای زیرنویس — نه متنِ تنها', async () => {
+  const owner = await pumpOwner('هشدارِ مخزن');
+  const dev = await bindDevice(owner, 'pc-tankalert');
+  await linkPrivate(9107, owner);
+  telegram.setAutoTankImage(true);
+  try {
+    clear();
+    await state(dev, { alerts: [tankOut, debtOut(9, 'کاظم')] });
+    const reqs = await pcAnswers(dev, () => ({
+      ok: true,
+      caption: '🛢 مخزن‌ها\n🔴 دیزل: 0 لیتر (0٪)',
+      files: [{ name: 'مخزن‌ها', mime: 'image/png', b64: PNG.toString('base64') }],
+    }));
+    assert.equal(reqs[0].kind, 'tanks');
+    for (let i = 0; i < 40 && !calls.some(c => c.method === 'sendPhoto'); i++) await new Promise(r => setTimeout(r, 50));
+    await telegram.flushOutbox();
+    const photo = calls.find(c => c.method === 'sendPhoto');
+    assert.ok(photo, 'عکسِ مخزن نیامد');
+    assert.equal(photo.params.chat_id, '9107');
+    assert.match(photo.params.caption, /^🛢️🔴 مخزنِ دیزل ته کشید/);
+    assert.match(photo.params.caption, /🔴 دیزل: 0 لیتر/);
+    const texts = sent().filter(c => c.params.chat_id === '9107').map(c => c.params.text);
+    assert.ok(texts.some(t => /^👤🔴 کاظم/.test(t)), 'هشدارِ قرض‌دار جدا نیامد');
+    assert.ok(!texts.some(t => /مخزنِ دیزل/.test(t)), '⛔ مخزن هم متن آمد هم عکس');
+  } finally {
+    telegram.setAutoTankImage(false);
+  }
 });

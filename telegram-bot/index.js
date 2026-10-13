@@ -2340,7 +2340,24 @@ module.exports = function createPumpBot({ req }) {
     return out;
   }
 
-  /** متنِ یک پیام برای یک دسته هشدار — یک پیام، نه یکی برای هر هشدار. */
+  /**
+   * ══ یک هشدار = یک پیامِ کوتاه (۱۴۰۵/۰۷/۲۱، بارِ دوم) ═══════════════════════
+   * صاحب سامانه: «همه پیام‌ها یک‌جا هستند… همه متنی‌اند… گفتم عالی باشد، ساده و دقیق.»
+   * پس هر هشدار پیامِ خودش را دارد: یک خطِ خبر، یک خطِ «👉 چه کنم»، و دکمهٔ خودش (‎📷‎).
+   * نامِ پمپ فقط وقتی می‌آید که این گفت‌وگو به بیش از یک پمپ وصل است.
+   * هشدارِ مخزن عکسِ خودِ مخزن را می‌گیرد (`tankAlertImage`)، نه متن.
+   */
+  function shortAlert(e, stationName = '') {
+    const action = String(e.data?.action || '').trim();
+    return `${iconOf(e)} ${e.title || e.body || ''}`
+      + (action ? `\n👉 ${action}` : '')
+      + (stationName ? `\n⛽ «${stationName}»` : '');
+  }
+
+  /** بیشترین پیامِ جدا در یک دور برای یک گفت‌وگو؛ بیشتر ⇒ یک خطِ «و N هشدارِ دیگر». */
+  const MAX_SEPARATE = 5;
+
+  /** متنِ چند هشدار در یک پیام — فقط برای «/status»ِ کهنه و آزمون؛ هشدارِ تازه `shortAlert` است. */
   function formatAlert(stationName, items) {
     const lines = items.map(e => `${iconOf(e)} ${e.title || e.body || ''}`);
     const todo = actionLines(items.map(e => e.data?.action));
@@ -2513,6 +2530,37 @@ module.exports = function createPumpBot({ req }) {
     return { ok: false };
   }
 
+  /** فقط برای آزمون‌ها: هشدارِ مخزن بی درخواستِ عکس از برنامه (آزمونی که برنامهٔ واقعی ندارد). */
+  let AUTO_TANK_IMAGE = true;
+  function setAutoTankImage(on) { AUTO_TANK_IMAGE = Boolean(on); }
+
+  /**
+   * هشدارِ مخزن ⇒ همان عکسِ مخزنِ برنامه (`BotReports`)، خبرِ هشدار بالای زیرنویسش.
+   * یک درخواست برای همهٔ گفت‌وگوهای این پمپ. ⛔ نشد (برنامهٔ کهنه، خاموش، دیر) ⇒ همان
+   * خبر به شکلِ متنِ کوتاه با دکمهٔ «🛢 مخزن‌ها» — هشدار هیچ‌وقت گم نمی‌شود.
+   */
+  async function tankAlertImage(stationId, targets) {
+    let out = null;
+    try {
+      const state = await req('./pump-state').get(stationId).catch(() => null);
+      if (state && now() - state.updatedAt <= STALE_MS) {
+        out = await req('./station-reports').request(stationId, 'tanks', {});
+      }
+    } catch { out = null; }
+    const hasPhoto = Array.isArray(out?.files) && out.files.some(f => String(f.mime).startsWith('image/'));
+    for (const { c, tanks, name } of targets) {
+      const head = tanks.map(e => shortAlert(e, '')).join('\n') + (name ? `\n⛽ «${name}»` : '');
+      if (hasPhoto) {
+        try {
+          await deliverReport(c.chat_id, { ...out, caption: `${head}\n\n${String(out.caption || '')}`.trim() });
+          continue;
+        } catch { /* ⇒ متن */ }
+      }
+      await queueLong(c.chat_id, stationId, head, now(), c.kind === 'channel' ? null : alertKeyboard(stationId, tanks));
+      kick();
+    }
+  }
+
   async function notifyStation(stationId, saved, at = 0) {
     try {
       const worthy = (saved || []).filter(e => ALERT_KINDS.includes(e.kind));
@@ -2523,6 +2571,17 @@ module.exports = function createPumpBot({ req }) {
       const chats = await alertChats(stationId);
       const t = at || now();
       let queued = 0;
+      //  گفت‌وگویی که به چند پمپ وصل است ⇒ نامِ پمپ زیرِ هر هشدار
+      const multi = new Set();
+      try {
+        const ids = chats.map(c => String(c.chat_id));
+        if (ids.length) {
+          for (const r of await many(
+            `SELECT chat_id FROM telegram_chat_links WHERE chat_id = ANY($1) GROUP BY chat_id HAVING COUNT(*) > 1`, [ids]
+          )) multi.add(String(r.chat_id));
+        }
+      } catch { /* نامِ پمپ رفاه است */ }
+      const tankChats = [];
       for (const c of chats) {
         let items = c.only_out ? worthy.filter(isOut) : worthy;
         //  🔕 کنترلِ شلوغی: «تمام شد»/«اضافه داده شد»/مخزنِ خالی همیشه همان لحظه؛ «کم مانده» در
@@ -2537,12 +2596,33 @@ module.exports = function createPumpBot({ req }) {
         }
         if (c.quiet !== false && isQuietHour(t)) items = items.filter(e => e.kind !== 'shift');
         if (!items.length) continue;
-        await queueLong(c.chat_id, stationId, formatAlert(c.station_name, items), now(),
-          c.kind === 'channel' ? null : alertKeyboard(stationId, items));
-        queued += 1;
+        const name = multi.has(String(c.chat_id)) ? c.station_name : '';
+        const isTank = (e) => e.kind === 'stock_out' || e.kind === 'low_stock';
+        const tanks = items.filter(isTank);
+        const rest = items.filter(e => !isTank(e));
+        //  مخزن ⇒ عکسِ خودِ مخزن با همین خبر در زیرش (پس از حلقه، یک درخواست برای همه)
+        if (tanks.length && AUTO_TANK_IMAGE) tankChats.push({ c, tanks, name });
+        else rest.unshift(...tanks);
+        for (const e of rest.slice(0, MAX_SEPARATE)) {
+          await queueLong(c.chat_id, stationId, shortAlert(e, name), now(),
+            c.kind === 'channel' ? null : alertKeyboard(stationId, [e]));
+          queued += 1;
+        }
+        //  ⛔ بی سقف (قاعدهٔ «همهٔ هشدارها می‌آیند، بریده نمی‌شود»)، ولی نه صد پیام: بقیه در **یک**
+        //  فهرستِ کوتاه — هر هشدار یک خط.
+        if (rest.length > MAX_SEPARATE) {
+          const more = rest.slice(MAX_SEPARATE);
+          await queueLong(c.chat_id, stationId,
+            `➕ ${faNum(more.length)} هشدارِ دیگرِ همین لحظه${name ? ` — ⛽ «${name}»` : ''}:\n`
+              + more.map(e => `${iconOf(e)} ${e.title || e.body || ''}`).join('\n'), now());
+          queued += 1;
+        }
       }
       if (queued) kick();
-      return { queued };
+      if (tankChats.length) {
+        tankAlertImage(stationId, tankChats).catch(err => console.error('[telegram:tankalert]', hide(err.message)));
+      }
+      return { queued, tanks: tankChats.length };
     } catch (err) {
       console.error('[telegram:notify]', hide(err.message));
       return { queued: 0, error: err.message };
@@ -3083,7 +3163,7 @@ module.exports = function createPumpBot({ req }) {
     relayCustomer, rateDone, desktopOnline, DESKTOP_ONLINE_MS,
     setTransport, handleUpdate, pollOnce, flushOutbox, notifyStation,
     start, stop, reload, status, configure, publicInfo, appLinks,
-    formatAlert, announcementText, announceTick, pcWatchTick, subTick, alertKeyboard, CALM_CAP, setQuietHours, parseCommand, asciiDigits, normEmail, normName, notifyResolved, searchText, chunks,
+    formatAlert, announcementText, announceTick, pcWatchTick, subTick, alertKeyboard, CALM_CAP, setQuietHours, setAutoTankImage, shortAlert, parseCommand, asciiDigits, normEmail, normName, notifyResolved, searchText, chunks,
     _reset,
   };
 };

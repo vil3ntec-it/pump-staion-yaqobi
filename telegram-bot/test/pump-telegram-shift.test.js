@@ -25,6 +25,8 @@ let updateId = 5000;
 let msgSeq = 100;
 
 test.before(async () => {
+  //  آزمون برنامهٔ کامپیوترِ واقعی ندارد ⇒ هشدارِ مخزن متن (عکسش در pump-telegram-reports)
+  telegram.setAutoTankImage(false);
   await h.start();
   const pw = require('../src/lib/password');
   await query(
