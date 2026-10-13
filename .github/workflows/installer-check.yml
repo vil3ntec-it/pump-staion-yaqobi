@@ -371,9 +371,10 @@ jobs:
           $bytes[$at] = $bytes[$at] -bxor 0x5A
           [IO.File]::WriteAllBytes($broken, $bytes)
           $before = Get-ItemPropertyValue -Path $unins -Name 'Inno Setup: App Path'
-          #  ۱۴۰۵/۰۷/۲۱: نخست می‌پرسد «نسخهٔ سالم از اینترنت گرفته شود؟» — این‌جا «نه»
-          #  (این نسخه هنوز منتشر نشده و نصابِ دیگری نباید وسطِ سنجه باز شود).
-          $r = & $drive -Setup $broken -SetupArgs @('/ARCH=x64') -Dirs @($dC) -Log $log -TimeoutSec 120 -Answer @('No')
+          #  ۱۴۰۵/۰۷/۲۱: پس از «پوشهٔ تازه؟» (بله) می‌پرسد «نسخهٔ سالم از اینترنت گرفته شود؟» — این‌جا
+          #  «نه»، تا نصابِ دیگری وسطِ سنجه باز نشود. (با «بله» همین سنجه دید: v… نبود ⇒ latest
+          #  گرفته شد، PYSEAL repair url=1 state=1، و نسخهٔ سالم اجرا شد.)
+          $r = & $drive -Setup $broken -SetupArgs @('/ARCH=x64') -Dirs @($dC) -Log $log -TimeoutSec 120 -Answer @('Yes', 'No')
           Show 'ه' $r
           if (-not (Select-String -Path $log -Pattern 'PYSEAL state=2' -Quiet)) { Fail "کپیِ خراب شناخته نشد (PYSEAL state=2 در لاگ نیست)" }
           if (-not (Select-String -Path $log -Pattern 'PYSEAL repair-offer' -Quiet)) { Fail "کپیِ خراب گرفتنِ نسخهٔ سالم را پیشنهاد نکرد" }

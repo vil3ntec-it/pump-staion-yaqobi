@@ -789,6 +789,6 @@ public class InstallerTests
         Assert.Contains("Log('PYSEAL repair-offer');", iss);
         var check = SrcText.Read(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
         Assert.Contains("PYSEAL repair-offer", check);
-        Assert.Contains("-Answer @('No')", check);
+        Assert.Contains("-Answer @('Yes', 'No')", check);
     }
 }
