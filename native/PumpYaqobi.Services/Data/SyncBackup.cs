@@ -45,8 +45,14 @@ public static class SyncBackup
     /// <summary>پسوندِ فایلِ رمزشده.</summary>
     public const string Extension = ".pyq";
 
-    /// <summary>سقفِ رمزگذاری — بالاتر از این، نسخهٔ خامِ سالم می‌ماند.</summary>
-    public const long MaxEncryptBytes = 256L * 1024 * 1024;
+    /// <summary>
+    /// سقفِ رمزگذاری — بالاتر از این، نسخهٔ خامِ سالم می‌ماند.
+    /// ⛔ ۳۲بیتی (۱۴۰۵/۰۷/۲۱): کلِ فضای حافظه ۲ گیگ است و رمز/بازکردن دو تکهٔ پیوستهٔ
+    /// هم‌اندازهٔ دفتر می‌خواهد؛ ۲۵۶ مگ آن‌جا «کمبودِ حافظه» می‌شد و باز کردنِ پشتیبانِ
+    /// خودِ کاربر «مالِ کامپیوترِ دیگر یا دست‌خورده» خوانده می‌شد. پس ۶۴ مگ.
+    /// </summary>
+    public static readonly long MaxEncryptBytes =
+        Environment.Is64BitProcess ? 256L * 1024 * 1024 : 64L * 1024 * 1024;
 
     /// <summary>
     /// یک نسخهٔ سالمِ رمزشده از دیتابیس می‌سازد.
@@ -117,11 +123,11 @@ public static class SyncBackup
             else if (Starts(raw, MagicV1)) key = KeyV1();
             else return false;
 
-            var nonce = raw.AsSpan(Magic.Length, 12).ToArray();
-            var tag = raw.AsSpan(Magic.Length + 12, 16).ToArray();
-            var cipher = raw.AsSpan(Magic.Length + 28).ToArray();
+            //  ⚠️ بی کپیِ دوم (۳۲بیتی): برش‌های همان آرایه، نه ‎ToArray‎ِ کلِ رمزشده
+            var cipher = raw.AsSpan(Magic.Length + 28);
             var plain = new byte[cipher.Length];
-            using (var aes = new AesGcm(key, 16)) aes.Decrypt(nonce, cipher, tag, plain);
+            using (var aes = new AesGcm(key, 16))
+                aes.Decrypt(raw.AsSpan(Magic.Length, 12), cipher, raw.AsSpan(Magic.Length + 12, 16), plain);
 
             File.WriteAllBytes(target, plain);
             return true;

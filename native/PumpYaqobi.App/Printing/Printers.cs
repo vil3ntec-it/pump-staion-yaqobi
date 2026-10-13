@@ -178,13 +178,20 @@ public static class Printers
             var n = 0;
             foreach (var png in pages)
             {
+                //  ⛔ ۳۲بیتی (۱۴۰۵/۰۷/۲۱): ورقِ A4 با ۴۰۰ dpi هر بار ۶۲ مگ است؛ پیش از این
+                //  سه نسخه هم‌زمان زنده بود (خوانده، چرخیده/کپی، Bgra) و در فضای ۲ گیگیِ
+                //  ۳۲بیتی Skia «null» می‌داد و ‎continue‎ ورق را **بی‌صدا** جا می‌انداخت.
+                //  حالا کپی فقط وقتی که لازم است، و ورقِ ساخته‌نشده خطای گفته‌شده است.
+                n++;
                 using var decoded = SKBitmap.Decode(png);
-                if (decoded is null) continue;
+                if (decoded is null) return $"ورقِ {n} ساخته نشد (حافظهٔ کامپیوتر کم است — کیفیتِ چاپ را پایین‌تر بگذارید)";
                 //  ⚠️ ورقِ خوابیده روی کاغذِ ایستاده می‌چرخد، وگرنه کوچک و وسطِ
                 //  کاغذ می‌افتاد.
-                using var bmp = (decoded.Width > decoded.Height) != (pw > ph) ? Rotate(decoded) : decoded.Copy();
-                using var bgra = bmp.ColorType == SKColorType.Bgra8888 ? bmp.Copy() : bmp.Copy(SKColorType.Bgra8888);
-                if (bgra is null) continue;
+                using var turned = (decoded.Width > decoded.Height) != (pw > ph) ? Rotate(decoded) : null;
+                var src = turned ?? decoded;
+                using var converted = src.ColorType == SKColorType.Bgra8888 ? null : src.Copy(SKColorType.Bgra8888);
+                var bgra = src.ColorType == SKColorType.Bgra8888 ? src : converted;
+                if (bgra is null) return $"ورقِ {n} ساخته نشد (حافظهٔ کامپیوتر کم است — کیفیتِ چاپ را پایین‌تر بگذارید)";
 
                 var (x, y, w, h) = Place(bgra.Width, bgra.Height, dpi, dx, dy, pw, ph, ox, oy);
                 if (StartPage(hdc) <= 0) return "چاپگر ورقِ تازه را نپذیرفت";
@@ -203,7 +210,6 @@ public static class Printers
                                           bgra.GetPixels(), ref bi, DIB_RGB_COLORS, SRCCOPY);
                 EndPage(hdc);
                 if (drawn == 0) return "چاپگر تصویرِ ورق را نپذیرفت";
-                n++;
             }
             if (n == 0) return "هیچ ورقی برای چاپ نبود";
             EndDoc(hdc);

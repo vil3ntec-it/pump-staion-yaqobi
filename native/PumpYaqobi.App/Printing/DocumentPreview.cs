@@ -145,7 +145,8 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     public Task<string> PrintToAsync(PrinterItem printer)
     {
         var order = PrintOrder();
-        var dpi = Math.Clamp(Setup.Dpi, 72, 400);
+        //  ⛔ ۳۲بیتی: سقفِ ۳۰۰ — ورقِ ۴۰۰ dpi در فضای ۲ گیگی جا نمی‌شد (Printers.Print)
+        var dpi = Math.Clamp(Setup.Dpi, 72, Environment.Is64BitProcess ? 400 : 300);
         var doc = _doc;
         return Task.Run(() =>
         {
@@ -1105,7 +1106,7 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     /// </summary>
     private IDocument PagesDocument(IReadOnlyList<int> order)
     {
-        var dpi = Math.Clamp(Setup.Dpi, 72, 400);
+        var dpi = Math.Clamp(Setup.Dpi, 72, Environment.Is64BitProcess ? 400 : 300);
         var full = RenderStream(dpi).ToList();
         var picked = order.Where(i => i >= 1 && i <= full.Count).Select(i => full[i - 1]).ToList();
         return new PickedPagesDocument(picked, dpi);

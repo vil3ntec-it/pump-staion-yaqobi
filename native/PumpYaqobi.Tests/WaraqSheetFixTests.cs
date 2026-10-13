@@ -142,7 +142,7 @@ public class WaraqSheetFixTests
         Assert.Contains("public const int SharpMinDpi = 144, SharpMaxDpi = 300;", p);
         Assert.Contains("QueueSharpen();", p);
         //  ⛔ چاپ و ذخیره همان ‎Setup.Dpi‎ی کاربر را دارند، نه ورقِ پیش‌نمایش
-        Assert.Contains("var dpi = Math.Clamp(Setup.Dpi, 72, 400);", p);
+        Assert.Contains("var dpi = Math.Clamp(Setup.Dpi, 72, Environment.Is64BitProcess ? 400 : 300);", p);   // ۳۲بیتی: سقفِ ۳۰۰
         var w = Read("PumpYaqobi.App", "Views", "DocumentPreviewWindow.axaml");
         Assert.Contains("RenderOptions.BitmapInterpolationMode=\"HighQuality\"", w);
     }

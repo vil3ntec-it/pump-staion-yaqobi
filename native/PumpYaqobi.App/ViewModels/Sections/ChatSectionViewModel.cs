@@ -689,6 +689,10 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
         Reload(th);
     }
 
+    /// <summary>بیشترین اندازهٔ فایلِ پیوست — ۳۲بیتی کمتر، چون کلِ فضای حافظه‌اش ۲ گیگ است.</summary>
+    public static readonly long MaxAttachBytes =
+        Environment.Is64BitProcess ? 200L * 1024 * 1024 : 50L * 1024 * 1024;
+
     /// <summary>📎 عکس یا ویدیو یا صدا از روی دیسک — فقط برای مشتری.</summary>
     [RelayCommand]
     private Task AttachAsync() => CrashGuard.RunAsync("فرستادنِ فایل", async () =>
@@ -699,6 +703,15 @@ public sealed partial class ChatSectionViewModel : SectionViewModel
         if (string.IsNullOrEmpty(path)) return;
         var mime = MimeOf(path);
         if (mime.Length == 0) { _host.Toast("این نوعِ فایل پشتیبانی نمی‌شود", ToastKind.Error); return; }
+        //  ⛔ (۱۴۰۵/۰۷/۲۱) ویدیوی چندصدمگی یک‌جا در حافظه می‌آمد و در ۳۲بیتی «کمبودِ حافظه»
+        //  می‌شد (و بالای ۲ گیگ در هر دو)؛ پیش از خواندن اندازه سنجیده می‌شود.
+        var size = new FileInfo(path).Length;
+        if (size > MaxAttachBytes)
+        {
+            _host.Toast($"فایل بزرگ است ({size / (1024 * 1024)} مگابایت) — بیشترین اندازه {MaxAttachBytes / (1024 * 1024)} مگابایت است",
+                        ToastKind.Error);
+            return;
+        }
         var bytes = await File.ReadAllBytesAsync(path, _life.Token);
         await UploadAndSendAsync(th, bytes, mime);
     });
