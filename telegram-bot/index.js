@@ -481,6 +481,19 @@ module.exports = function createPumpBot({ req }) {
     } catch { /* منو رفاه است */ }
   }
 
+  /**
+   * صاحب سامانه پس از به‌روزرسانی: «منو اصلاً برداشته شده و دیگه نیست» — دکمهٔ «/» رفته بود و
+   * کیبورد فقط پس از `/start` می‌آمد. ⇒ با بالا آمدنِ بات خودش به هر خصوصیِ وصل‌شده‌ای که کیبوردِ
+   * این نسخه را ندارد می‌فرستد (یک بار؛ `kb_ver`).
+   */
+  async function pushMainKb() {
+    await ensureOutbox();
+    const list = await many(
+      `SELECT * FROM telegram_chats WHERE kind='private' AND station_id IS NOT NULL AND kb_ver < $1`, [KB_VER]
+    );
+    for (const row of list) await ensureMainKb(row);
+  }
+
   /** دکمهٔ کیبوردِ پایین ⇒ همان کارِ دکمهٔ منو. خروجی: `true` اگر این متن دکمه بود. */
   async function onMainKb(row, text, from) {
     const act = KB_ACT.get(String(text || '').trim());
@@ -1427,6 +1440,8 @@ module.exports = function createPumpBot({ req }) {
   async function onPrivate(chat, cmd, text, from = null) {
     let row = await ensureChat(chat, 'private');
     const linked = isLinked(row);
+    //  هر پیامی در خصوصیِ وصل‌شده ⇒ اگر کیبورد را ندارد، اول کیبورد
+    if (linked && cmd?.name !== 'start' && cmd?.name !== 'menu') await ensureMainKb(row);
     if (linked && !cmd && await onMainKb(row, text, from)) return null;
 
     if (cmd) {
@@ -3074,6 +3089,7 @@ module.exports = function createPumpBot({ req }) {
             const me = await refreshMe();
             if (!me.ok) throw new Error(me.description || 'رمزِ بات پذیرفته نشد');
             await setCommands().catch(() => {});
+            await pushMainKb().catch(() => {});
             prepared = tok;
           }
           if (!alive()) break;
@@ -3210,7 +3226,7 @@ module.exports = function createPumpBot({ req }) {
     relayCustomer, rateDone, desktopOnline, DESKTOP_ONLINE_MS,
     setTransport, handleUpdate, pollOnce, flushOutbox, notifyStation,
     start, stop, reload, status, configure, publicInfo, appLinks,
-    formatAlert, announcementText, announceTick, pcWatchTick, subTick, alertKeyboard, CALM_CAP, setQuietHours, setAutoTankImage, shortAlert, parseCommand, asciiDigits, normEmail, normName, notifyResolved, searchText, chunks,
+    formatAlert, announcementText, announceTick, pcWatchTick, subTick, alertKeyboard, CALM_CAP, setQuietHours, setAutoTankImage, shortAlert, pushMainKb, parseCommand, asciiDigits, normEmail, normName, notifyResolved, searchText, chunks,
     _reset,
   };
 };

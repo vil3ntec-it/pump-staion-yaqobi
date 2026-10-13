@@ -248,3 +248,28 @@ test('۵) منوی پایینِ گفت‌وگو: پس از وصل شدن یک ب
   await msg(9205, '⚙️ تنظیمات');
   assert.ok(rows(lastTo(9205)).flat().some(b => b.callback_data === 'quiet'), 'تنظیمات باز نشد');
 });
+
+test('۶) پس از به‌روزرسانی: گفت‌وگوی وصل‌شده‌ای که کیبورد ندارد بی `/start` کیبورد می‌گیرد', async () => {
+  const owner = await pumpOwner('کیبورد-کهنه');
+  await linkPrivate(9206, owner);
+  await linkPrivate(9207, await pumpOwner('کیبورد-کهنه۲'));
+  //  همان حالِ گفت‌وگوهای پیش از این نسخه
+  await query('UPDATE telegram_chats SET kb_ver=0 WHERE chat_id IN ($1,$2)', ['9206', '9207']);
+  const kbTo = (id) => calls.filter(c => c.method === 'sendMessage' && c.params.chat_id === id && c.params.reply_markup?.keyboard);
+
+  //  بالا آمدنِ بات ⇒ خودش می‌فرستد، یک بار
+  clear();
+  await telegram.pushMainKb();
+  assert.equal(kbTo('9206').length, 1, 'با بالا آمدن کیبورد نیامد');
+  await telegram.pushMainKb();
+  assert.equal(kbTo('9206').length, 1, 'کیبورد دو بار آمد');
+
+  //  یا هر پیامی (جست‌وجو) ⇒ اول کیبورد
+  await query('UPDATE telegram_chats SET kb_ver=0 WHERE chat_id=$1', ['9207']);
+  clear();
+  await msg(9207, 'احمد');
+  assert.equal(kbTo('9207').length, 1, 'با پیام کیبورد نیامد');
+  clear();
+  await msg(9207, 'احمد');
+  assert.equal(kbTo('9207').length, 0, 'کیبورد دوباره آمد');
+});
