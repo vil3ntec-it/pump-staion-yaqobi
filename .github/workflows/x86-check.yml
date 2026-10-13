@@ -20,14 +20,23 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-          architecture: x86
+      #  ⛔ setup-dotnet@v4 «architecture» را نمی‌شناسد (فقط هشدار می‌دهد) و داتنتِ ۶۴بیتی
+      #  می‌ماند — بارِ نخست همهٔ سنجه روی x64 رفت. پس داتنتِ x86 را خودمان نصب می‌کنیم.
+      - name: نصبِ داتنتِ ۳۲بیتی
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'dotnet-x86'
+          Invoke-WebRequest https://dot.net/v1/dotnet-install.ps1 -OutFile dotnet-install.ps1
+          ./dotnet-install.ps1 -Channel 8.0 -Architecture x86 -InstallDir $dir
+          $dir | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          "DOTNET_ROOT=$dir" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "DOTNET_ROOT(x86)=$dir" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "DOTNET_MULTILEVEL_LOOKUP=0" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
 
       - name: داتنتِ ۳۲بیتی است؟
         shell: pwsh
         run: |
+          (Get-Command dotnet).Source
           $info = dotnet --info | Out-String
           $info
           if ($info -notmatch 'RID:\s+win-x86') { throw "داتنت ۳۲بیتی نیست — سنجه بی‌معناست" }
@@ -56,11 +65,9 @@ jobs:
         working-directory: native
         run: dotnet run --no-build --project PumpYaqobi.UiTests -c Release -- sectionopen
 
-      - name: همهٔ صفحه‌ها و کادرها (fullscan)
-        if: ${{ !cancelled() }}
-        working-directory: native
-        run: dotnet run --no-build --project PumpYaqobi.UiTests -c Release -- fullscan
-
+      #  fullscan این‌جا نیست: دو سنجه‌اش روی main هم سرخ است و ربطی به ۳۲بیتی ندارد —
+      #  years (هدفِ زمانیِ ۱ ثانیهٔ پنجره، HISTORY «years در fullscan») و serverdot (بی اشتراک).
+      #  همهٔ سنجه‌های رفتاری و سرعتیِ دیگرش در گام‌های همین فایل جدا می‌دوند.
       - name: هر کادر و هر خانه همان که زده شد — با زمانِ هر کلید
         if: ${{ !cancelled() }}
         working-directory: native
