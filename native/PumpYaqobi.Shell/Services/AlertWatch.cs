@@ -95,7 +95,7 @@ public sealed class AlertWatch
     {
         var version = PumpYaqobi.Persistence.PumpDbContext.Version;
         var hour = HourKey(AppClock.Now);
-        if (!force && _primed && version == _lastVersion && hour == _lastHour) return false;
+        if (!force && _primed && hour == _lastHour && version == _lastVersion) return false;
         if (!force && AppClock.Mono - _lastRun < MinGap) return false;
         _lastRun = AppClock.Mono;
         try
