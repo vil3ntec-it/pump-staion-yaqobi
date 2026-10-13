@@ -5,6 +5,7 @@ using PumpYaqobi.Domain.Entities;
 using PumpYaqobi.Domain.Enums;
 using PumpYaqobi.Reporting.Pdf;
 using PumpYaqobi.Services.Data;
+using QuestPDF.Fluent;
 
 namespace PumpYaqobi.App.Services;
 
@@ -248,7 +249,7 @@ public static class BotReports
     {
         PdfEngine.Initialize();
         using var ms = new MemoryStream();
-        QuestPDF.Fluent.GenerateExtensions.GeneratePdf(doc, ms);
+        doc.GeneratePdf(ms);
         return ms.ToArray();
     }
 

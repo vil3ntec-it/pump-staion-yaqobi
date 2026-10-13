@@ -25,11 +25,11 @@ public static class TankShotRenderer
     public const double Scale = 2.0;
 
     public static Task<byte[]?> RenderAsync(IReadOnlyList<TankShot> shots, string title) =>
-        Dispatcher.UIThread.InvokeAsync(() =>
+        Dispatcher.UIThread.InvokeAsync<byte[]?>(() =>
         {
             try { return Render(shots, title); }
             catch { return null; }
-        });
+        }).GetTask();
 
     private static byte[]? Render(IReadOnlyList<TankShot> shots, string title)
     {

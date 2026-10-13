@@ -97,7 +97,7 @@ public sealed class DebtorCardImage : IDocument
                 foreach (var f in _in.Fuels)
                 {
                     if (f.Length < 5) continue;
-                    var bg = i++ % 2 == 1 ? DocStyle.RowAlt : Colors.White;
+                    string bg = i++ % 2 == 1 ? DocStyle.RowAlt : "#ffffff";
                     void Cell(string s, string color, bool bold = false)
                     {
                         var x = t.Cell().Background(bg).BorderBottom(1).BorderColor(DocStyle.CellLine)

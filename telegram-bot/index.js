@@ -139,8 +139,13 @@ module.exports = function createPumpBot({ req }) {
   let outboxReady = null;
   function ensureOutbox() {
     if (!outboxReady) {
-      outboxReady = query(`ALTER TABLE telegram_outbox ADD COLUMN IF NOT EXISTS markup TEXT NOT NULL DEFAULT ''`)
-        .catch((err) => { outboxReady = null; throw err; });
+      outboxReady = (async () => {
+        await query(`ALTER TABLE telegram_outbox ADD COLUMN IF NOT EXISTS markup TEXT NOT NULL DEFAULT ''`);
+        //  🔕 کنترلِ شلوغی (۱۴۰۵/۰۷/۲۱): ساعتِ آرام و شمارِ هشدارهای «کم مانده»ِ امروز
+        await query(`ALTER TABLE telegram_chats ADD COLUMN IF NOT EXISTS quiet BOOLEAN NOT NULL DEFAULT TRUE`);
+        await query(`ALTER TABLE telegram_chats ADD COLUMN IF NOT EXISTS calm_day TEXT NOT NULL DEFAULT ''`);
+        await query(`ALTER TABLE telegram_chats ADD COLUMN IF NOT EXISTS calm_n INTEGER NOT NULL DEFAULT 0`);
+      })().catch((err) => { outboxReady = null; throw err; });
     }
     return outboxReady;
   }
@@ -1194,13 +1199,18 @@ module.exports = function createPumpBot({ req }) {
       + (row.only_out
         ? '🔕 الان فقط هشدارهای «تمام شد» می‌آید.'
         : '🔔 الان همهٔ هشدارها می‌آید: «تمام شد» و «کم مانده».');
+    text += row.quiet === false
+      ? '\n🌙 ساعتِ آرام خاموش است: «کم مانده» شب هم می‌آید.'
+      : '\n🌙 ساعتِ آرام: از ۱۰ شب تا ۷ صبح فقط هشدارهای فوری («تمام شد»، مخزنِ خالی) می‌آید.';
+    text += `\n📏 در روز بیش از ${faNum(CALM_CAP)} پیامِ «کم مانده» نمی‌آید؛ بقیه در /status و اعلامیهٔ صبح است.`;
     text += `\n\n🏷️ شعبه‌های وصل (${faNum(links.length)}):\n${links.map(l => `▫️ ${l.station_name}`).join('\n')}`;
     if (row.kind === 'private') {
       text += '\n\n➕ شعبهٔ دیگری دارید (حسابِ پمپِ دیگر، با ایمیلِ دیگر)؟ «افزودنِ شعبه» را بزنید — هر شعبه جدا می‌ماند.';
     } else {
       text += '\n\n➕ افزودنِ شعبهٔ دیگر به همین گروه: در گفت‌وگوی خصوصی با بات، با حسابِ همان شعبه «👥 گروه و کانال» ⇐ «افزودن به گروه» ⇐ همین گروه.';
     }
-    const kb = [[{ text: row.only_out ? '🔔 «کم مانده» را هم بفرست' : '🔕 فقط «تمام شد» را بفرست', callback_data: 'toggle' }]];
+    const kb = [[{ text: row.only_out ? '🔔 «کم مانده» را هم بفرست' : '🔕 فقط «تمام شد» را بفرست', callback_data: 'toggle' }],
+      [{ text: row.quiet === false ? '🌙 ساعتِ آرام را روشن کن' : '☀️ ساعتِ آرام را خاموش کن', callback_data: 'quiet' }]];
     if (row.kind === 'private') kb.push([{ text: '➕ افزودنِ شعبه (حسابِ دیگر)', callback_data: 'addacct' }]);
     if (row.kind === 'private' && links.some(l => l.role === 'owner')) {
       kb.push([{ text: '👮 مدیرانِ نرخِ اتحادیه', callback_data: 'rad' }]);
@@ -2044,7 +2054,7 @@ module.exports = function createPumpBot({ req }) {
   }
 
   /** کارهایی که در گروه فقط مدیر (یا وصل‌کننده) می‌کند. */
-  const MANAGE = new Set(['settings', 'toggle', 'unlink', 'unlink_yes', 'code', 'rm', 'rmy', 'addacct', 'chansync', 'mzadd', 'mzrm']);
+  const MANAGE = new Set(['settings', 'toggle', 'quiet', 'unlink', 'unlink_yes', 'code', 'rm', 'rmy', 'addacct', 'chansync', 'mzadd', 'mzrm']);
 
   async function onCallback(q) {
     const answer = (text = '', alert = false) => call('answerCallbackQuery', {
@@ -2122,6 +2132,13 @@ module.exports = function createPumpBot({ req }) {
       case 'help':
         await answer();
         return show(row.chat_id, HELP, isLinked(row) ? [[BACK]] : welcomeKeyboard(), editId);
+      case 'quiet': {
+        if (!isLinked(row)) { await answer(); return notLinked(row, editId); }
+        await ensureOutbox();
+        await query('UPDATE telegram_chats SET quiet = NOT quiet, updated_at=$2 WHERE chat_id=$1', [row.chat_id, now()]);
+        await answer('✔️ ذخیره شد');
+        return sendSettings(await chatRow(row.chat_id), editId, '✔️ ذخیره شد.');
+      }
       case 'toggle': {
         if (!isLinked(row)) { await answer(); return notLinked(row, editId); }
         await query('UPDATE telegram_chats SET only_out = NOT only_out, updated_at=$2 WHERE chat_id=$1',
@@ -2387,8 +2404,9 @@ module.exports = function createPumpBot({ req }) {
    */
   async function alertChats(stationId) {
     if (!(await botStations([{ station_id: stationId }])).length) return [];
+    await ensureOutbox();
     return many(
-      `SELECT c.chat_id, c.kind, c.only_out, l.announced_day, s.name AS station_name
+      `SELECT c.chat_id, c.kind, c.only_out, c.quiet, c.calm_day, c.calm_n, l.announced_day, s.name AS station_name
          FROM telegram_chat_links l
          JOIN telegram_chats c ON c.chat_id=l.chat_id
          JOIN stations s ON s.id=l.station_id AND s.status='active'
@@ -2450,7 +2468,41 @@ module.exports = function createPumpBot({ req }) {
    * ⛔ **هیچ‌وقت استثنا بیرون نمی‌دهد.** ثبتِ خبر کارِ اصلی است و تلگرام
    * رفاه — همان قاعدهٔ پوش.
    */
-  async function notifyStation(stationId, saved) {
+  /* ── 🔕 کنترلِ شلوغی (۱۴۰۵/۰۷/۲۱) ───────────────────────────────────
+     خواستهٔ صاحب سامانه: «جوری نباشد که شلوغی ایجاد شود و صدها پیام روزی بیاید —
+     این را هم کنترل‌شده درست کن.»
+       • ساعتِ آرام (پیش‌فرض روشن، ۱۰ شب تا ۷ صبحِ کابل): فقط هشدارِ فوری.
+       • سقفِ روزانه: بیش از `CALM_CAP` پیامِ «کم مانده» در روز نه؛ یک بار گفته می‌شود.
+     ⛔ هشدارِ فوری («تمام شد»، «اضافه داده شد»، مخزنِ خالی) هرگز نگه داشته نمی‌شود.
+     ⛔ چیزی گم نمی‌شود: هشدارِ باز در «/status» و اعلامیهٔ صبح هست. */
+  const CALM_CAP = 12;
+  const QUIET_FROM = 22;
+  const QUIET_TO = 7;
+  const isQuietHour = (t) => { const hr = kabulHour(t); return hr >= QUIET_FROM || hr < QUIET_TO; };
+
+  /** این پیامِ «کم مانده» برود؟ ⇒ ‎{ ok, notice }‎ — شمارنده همین‌جا یکی بالا می‌رود. */
+  async function calmGate(c, t) {
+    if (c.quiet !== false && isQuietHour(t)) return { ok: false };
+    const day = kabulDay(t);
+    const r = await one(
+      `UPDATE telegram_chats
+          SET calm_n = CASE WHEN calm_day=$2 THEN calm_n + 1 ELSE 1 END, calm_day=$2
+        WHERE chat_id=$1 RETURNING calm_n`,
+      [String(c.chat_id), day]
+    );
+    const n = Number(r?.calm_n) || 1;
+    if (n <= CALM_CAP) return { ok: true };
+    if (n === CALM_CAP + 1) {
+      return {
+        ok: false,
+        notice: `🔕 امروز ${faNum(CALM_CAP)} هشدارِ «کم مانده» آمد؛ بقیهٔ «کم مانده»های امروز دیگر جدا نمی‌آیند `
+          + '(«تمام شد» همچنان همان لحظه می‌آید). همه را در /status و اعلامیهٔ فردا صبح ببینید.',
+      };
+    }
+    return { ok: false };
+  }
+
+  async function notifyStation(stationId, saved, at = 0) {
     try {
       const worthy = (saved || []).filter(e => ALERT_KINDS.includes(e.kind));
       if (!worthy.length || !stationId) return { queued: 0 };
@@ -2458,12 +2510,20 @@ module.exports = function createPumpBot({ req }) {
 
       //  ⛔ قیدِ ۳: عضو، پمپ و حساب — همین لحظه
       const chats = await alertChats(stationId);
-      const t = now();
+      const t = at || now();
       let queued = 0;
       for (const c of chats) {
-        const items = c.only_out ? worthy.filter(isOut) : worthy;
+        let items = c.only_out ? worthy.filter(isOut) : worthy;
+        //  🔕 کنترلِ شلوغی: «تمام شد»/«اضافه داده شد»/مخزنِ خالی همیشه همان لحظه؛ «کم مانده» در
+        //  ساعتِ آرام نمی‌آید و در روز سقف دارد — همه در «/status» و اعلامیهٔ صبح هست.
+        const calm = items.filter(e => !isOut(e));
+        if (calm.length) {
+          const gate = await calmGate(c, t);
+          if (!gate.ok) items = items.filter(isOut);
+          if (gate.notice) await queueLong(c.chat_id, stationId, gate.notice, now());
+        }
         if (!items.length) continue;
-        await queueLong(c.chat_id, stationId, formatAlert(c.station_name, items), t,
+        await queueLong(c.chat_id, stationId, formatAlert(c.station_name, items), now(),
           c.kind === 'channel' ? null : alertKeyboard(stationId, items));
         queued += 1;
       }
@@ -2536,6 +2596,8 @@ module.exports = function createPumpBot({ req }) {
   }
 
   let lastAnnounceTry = 0;
+  let lastPcWatch = 0;
+  let lastSubTick = 0;
 
   /**
    * اعلامیهٔ صبح برای هر گفت‌وگویی که امروز هنوز نگرفته است.
@@ -2571,6 +2633,93 @@ module.exports = function createPumpBot({ req }) {
       return { queued };
     } catch (err) {
       console.error('[telegram:announce]', hide(err.message));
+      return { queued: 0, error: err.message };
+    }
+  }
+
+  /* ── 🖥 برنامهٔ کامپیوتر قطع شد / دوباره وصل شد (۱۴۰۵/۰۷/۲۱) ──────────
+     تا امروز فقط اعلامیهٔ صبح می‌گفت «برنامه خبر نداده» — اگر ظهر قطع می‌شد تا فردا
+     کسی نمی‌فهمید. حالا: بیش از `PC_DOWN_MS` بی خبر و در ساعتِ کار (۷ صبح تا ۱۰ شب)
+     ⇒ یک پیام؛ برگشت ⇒ «✅ دوباره وصل شد». ⛔ هر قطعی یک بار (مُهر در `app_config`)،
+     و پمپی که چند روز است خاموش است دیگر هر روز یادآوری نمی‌گیرد. */
+  const PC_DOWN_MS = 2 * 3600 * 1000;
+  const PC_FORGET_MS = 3 * 24 * 3600 * 1000;
+
+  async function pcWatchTick(t = now()) {
+    try {
+      if (!(await active())) return { queued: 0, skipped: 'off' };
+      const ps = req('./pump-state');
+      let queued = 0;
+      for (const { station_id: sid } of await many('SELECT station_id FROM station_live_state')) {
+        const state = await ps.get(sid);
+        if (!state) continue;
+        const key = `tg_pcdown:${sid}`;
+        const down = (await plans.getConfig(key, '')) === '1';
+        const stale = t - state.updatedAt > PC_DOWN_MS;
+        let text = '';
+        if (stale && !down && !isQuietHour(t) && t - state.updatedAt < PC_FORGET_MS) {
+          await plans.setConfig(key, '1');
+          text = `🖥 برنامهٔ کامپیوترِ پمپِ «{name}» ${ago(state.updatedAt)} آخرین بار خبر داد.\n`
+            + 'اگر باید باز باشد، روشن بودنِ کامپیوتر و اینترنتش را ببینید؛ تا برگردد هشدارهای تازه نمی‌آیند.';
+        } else if (!stale && down) {
+          await plans.setConfig(key, '');
+          text = isQuietHour(t) ? '' : '✅ برنامهٔ کامپیوترِ پمپِ «{name}» دوباره وصل شد.';
+        }
+        if (!text) continue;
+        for (const c of await alertChats(sid)) {
+          await queueLong(c.chat_id, sid, text.replace('{name}', c.station_name), now());
+          queued += 1;
+        }
+      }
+      if (queued) kick();
+      return { queued };
+    } catch (err) {
+      console.error('[telegram:pcwatch]', hide(err.message));
+      return { queued: 0, error: err.message };
+    }
+  }
+
+  /* ── ⏳ اشتراکِ برنامه رو به پایان (۱۴۰۵/۰۷/۲۱) ─────────────────────
+     فقط به گفت‌وگوی **خصوصیِ صاحبِ پمپ** (نه گروهِ کارکنان) — ۵، ۲ و ۱ روز مانده و روزِ
+     تمام شدن، هر کدام یک بار، از ساعتِ ۹ صبحِ کابل. ⛔ تاریخ از خودِ سرور (`entitlement`). */
+  const SUB_WARN_DAYS = [5, 2, 1, 0];
+
+  async function subTick(t = now()) {
+    try {
+      if (!(await active())) return { queued: 0, skipped: 'off' };
+      if (kabulHour(t) < 9 || isQuietHour(t)) return { queued: 0, skipped: 'hour' };
+      const owners = await many(
+        `SELECT l.chat_id, l.station_id, s.name AS station_name
+           FROM telegram_chat_links l
+           JOIN telegram_chats c ON c.chat_id=l.chat_id AND c.kind='private'
+           JOIN stations s ON s.id=l.station_id AND s.status='active'
+           JOIN station_members m ON m.station_id=l.station_id AND m.user_id=l.user_id
+                AND m.status='active' AND m.role='owner'`);
+      const ent = req('./entitlement').pump;
+      let queued = 0;
+      for (const o of owners) {
+        const e = await ent.entitlementOf(o.station_id).catch(() => null);
+        if (!e) continue;
+        const sub = e.subscription?.active ? e.subscription : (e.trial?.active ? e.trial : null);
+        const left = sub ? Number(sub.daysLeft) : (e.subscription?.status === 'expired' ? 0 : -1);
+        if (!SUB_WARN_DAYS.includes(left)) continue;
+        const key = `tg_subwarn:${o.station_id}:${o.chat_id}`;
+        const mark = `${left}:${kabulDay(t)}`;
+        const prev = await plans.getConfig(key, '');
+        if (prev.startsWith(`${left}:`)) continue;             //  همین پله را گفته‌ایم
+        await plans.setConfig(key, mark);
+        const trial = sub && sub === e.trial;
+        const text = left > 0
+          ? `⏳ ${trial ? 'دورهٔ آزمایشیِ' : 'اشتراکِ'} برنامهٔ پمپِ «${o.station_name}» ${faNum(left)} روزِ دیگر تمام می‌شود.\n`
+            + 'برای تمدید به پشتیبانی پیام بدهید تا برنامه و بات بی‌وقفه کار کنند.'
+          : `⚠️ اشتراکِ برنامهٔ پمپِ «${o.station_name}» تمام شد؛ دفترِ شما سالم است. برای تمدید به پشتیبانی پیام بدهید.`;
+        await queueLong(o.chat_id, o.station_id, text, now());
+        queued += 1;
+      }
+      if (queued) kick();
+      return { queued };
+    } catch (err) {
+      console.error('[telegram:sub]', hide(err.message));
       return { queued: 0, error: err.message };
     }
   }
@@ -2798,6 +2947,9 @@ module.exports = function createPumpBot({ req }) {
       flushOutbox().catch(() => {});
       //  اعلامیهٔ صبح — دقیقه‌ای یک بار سنجیده می‌شود، روزی یک بار می‌رود
       if (now() - lastAnnounceTry >= 60_000) { lastAnnounceTry = now(); announceTick().catch(() => {}); }
+      //  🖥 قطع/وصلِ برنامه — پنج دقیقه‌ای؛ ⏳ اشتراک — ساعتی
+      if (now() - lastPcWatch >= 5 * 60_000) { lastPcWatch = now(); pcWatchTick().catch(() => {}); }
+      if (now() - lastSubTick >= 60 * 60_000) { lastSubTick = now(); subTick().catch(() => {}); }
     }, 5000);
     outboxTimer.unref?.();
   }
@@ -2913,7 +3065,7 @@ module.exports = function createPumpBot({ req }) {
     relayCustomer, rateDone, desktopOnline, DESKTOP_ONLINE_MS,
     setTransport, handleUpdate, pollOnce, flushOutbox, notifyStation,
     start, stop, reload, status, configure, publicInfo, appLinks,
-    formatAlert, announcementText, announceTick, parseCommand, asciiDigits, normEmail, normName, notifyResolved, searchText, chunks,
+    formatAlert, announcementText, announceTick, pcWatchTick, subTick, alertKeyboard, CALM_CAP, parseCommand, asciiDigits, normEmail, normName, notifyResolved, searchText, chunks,
     _reset,
   };
 };
