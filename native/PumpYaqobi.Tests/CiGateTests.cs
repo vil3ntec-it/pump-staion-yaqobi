@@ -32,6 +32,14 @@ public class CiGateTests
         Assert.Contains("UninstallString", w);
         Assert.Contains("(AppDomain|UI|Startup)", w);
         Assert.Contains("exit 1", w);
+        //  ۱۴۰۵/۰۷/۲۱: «به‌روزرسانی از داخلِ برنامه» سر تا ته — بسته شد، نسخهٔ تازه، خودش باز شد
+        Assert.Contains("/DAppVersion=9.9.10", w);
+        Assert.Contains("PUMP_SELFTEST_UPDATE", w);
+        Assert.Contains("\"برنامه خودش دوباره باز شد\"", w);
+        var auto = File.ReadAllText(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
+            "PumpYaqobi.App", "Update", "AutoUpdate.cs")));
+        Assert.Contains("await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => InstallAndExitAsync(info, path));", auto);
+        Assert.Contains("Environment.SetEnvironmentVariable(SelfTestEnv, null);", auto);
     }
 
     [Fact]

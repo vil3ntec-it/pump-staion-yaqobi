@@ -52,6 +52,8 @@ public partial class App : Avalonia.Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.MainWindow = new MainWindow();
+            //  سنجهٔ CI: «به‌روزرسانی از داخلِ برنامه» سر تا ته (فقط با ‎PUMP_SELFTEST_UPDATE‎)
+            Update.AutoUpdate.StartSelfTest();
 
             //  نمونهٔ دومی که باز شود فقط همین پنجره را جلو می‌آورد
             //  (`SingleInstance`) — ⚠️ این‌جا، نه در `Program.Main`: آن نخ به

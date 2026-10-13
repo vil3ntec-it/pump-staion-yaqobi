@@ -71,6 +71,36 @@ public static class AutoUpdate
         _ = Task.Run(LoopAsync);
     }
 
+    //  ══ سنجهٔ CI: «به‌روزرسانی از داخلِ برنامه» از سر تا ته روی ویندوزِ واقعی ═══════
+    //  (۱۴۰۵/۰۷/۲۱) صاحب ریپو: «از داخلِ برنامه به‌روز می‌کنم؛ نصاب روی صفحه نمی‌آید،
+    //  برنامه بسته می‌شود و دیگر باز نمی‌شود.» این مسیر هرگز سر تا ته سنجیده نشده بود
+    //  (فقط متنِ اسکریپت‌ها). ‎app-smoke‎ با ‎PUMP_SELFTEST_UPDATE=<نصاب>‎ برنامهٔ نصب‌شده را
+    //  باز می‌کند؛ همان ‎InstallAndExitAsync‎ِ دکمهٔ «نصب» صدا زده می‌شود — همان ‎Launch‎،
+    //  همان اسکریپت، همان بستن. ⛔ فایل بی ‎.sha256‎ِ درست کنارش اجرا نمی‌شود (‎Launch‎).
+    internal const string SelfTestEnv = "PUMP_SELFTEST_UPDATE";
+
+    /// <summary>از ‎App‎، پس از ساختنِ پنجره — نه پس از ورود (نصبِ تازهٔ CI ورود ندارد).</summary>
+    public static void StartSelfTest()
+    {
+        if (SelfTestPath() is { } path) _ = Task.Run(() => SelfTestAsync(path));
+    }
+
+    private static string? SelfTestPath()
+    {
+        var p = Environment.GetEnvironmentVariable(SelfTestEnv);
+        //  ⛔ یک بار: نمونهٔ تازه‌ای که اسکریپت باز می‌کند همین محیط را به ارث می‌برد
+        Environment.SetEnvironmentVariable(SelfTestEnv, null);
+        return string.IsNullOrWhiteSpace(p) || !File.Exists(p) ? null : p;
+    }
+
+    private static async Task SelfTestAsync(string path)
+    {
+        try { await Task.Delay(TimeSpan.FromSeconds(15)); } catch { return; }
+        var ver = Environment.GetEnvironmentVariable(SelfTestEnv + "_VERSION") ?? "";
+        var info = new UpdateInfo(true, AppVersion.Current, ver, null, 0, null);
+        await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => InstallAndExitAsync(info, path));
+    }
+
     private static async Task LoopAsync()
     {
         try { await Task.Delay(FirstDelay); } catch { return; }
