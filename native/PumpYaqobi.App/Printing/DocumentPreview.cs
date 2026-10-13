@@ -781,10 +781,15 @@ public sealed partial class DocumentPreviewViewModel : ObservableObject
     /// <summary>همهٔ ورق‌ها ساخته شده‌اند؟ — سنجش‌ها منتظرِ همین می‌مانند.</summary>
     [ObservableProperty] private bool _allRendered;
 
+    //  ⛔ ۳۲بیتی (۱۴۰۵/۰۷/۲۱): پاسِ اول هم JPEGِ بهترین کیفیت است، نه PNG. GenerateImages تنبل
+    //  نیست و «ورقِ اول» یعنی همهٔ ورق‌ها؛ فشرده‌سازیِ PNG بیشترِ آن کار بود (ورقِ تیز پایین‌تر:
+    //  PNG ۲۲۳ms در برابرِ JPEG ۱۰۲ms). روی رانرِ ۳۲بیتی ورقِ اولِ گزارشِ ۶۰۰ ردیفی ۳٫۵ ثانیه شد.
+    //  این تصویر فقط برای چشم است؛ چاپ و ذخیره همان Setup.Dpi و راهِ خودشان را دارند.
     private IEnumerable<byte[]> RenderStream(int dpi) =>
         _doc.GenerateImages(new ImageGenerationSettings
         {
-            ImageFormat = ImageFormat.Png,
+            ImageFormat = ImageFormat.Jpeg,
+            ImageCompressionQuality = ImageCompressionQuality.Best,
             RasterDpi = Math.Clamp(dpi, 72, 400),
         });
 
