@@ -148,6 +148,7 @@ module.exports = function createPumpBot({ req }) {
         await query(`ALTER TABLE telegram_chats ADD COLUMN IF NOT EXISTS quiet BOOLEAN NOT NULL DEFAULT TRUE`);
         await query(`ALTER TABLE telegram_chats ADD COLUMN IF NOT EXISTS calm_day TEXT NOT NULL DEFAULT ''`);
         await query(`ALTER TABLE telegram_chats ADD COLUMN IF NOT EXISTS calm_n INTEGER NOT NULL DEFAULT 0`);
+        await query(`ALTER TABLE telegram_chats ADD COLUMN IF NOT EXISTS kb_ver INTEGER NOT NULL DEFAULT 0`);
       })().catch((err) => { outboxReady = null; throw err; });
     }
     return outboxReady;
@@ -441,6 +442,61 @@ module.exports = function createPumpBot({ req }) {
       ], mirza];
     }
     return [top, [{ text: '⚙️ تنظیمات (مدیرِ گروه)', callback_data: 'settings' }], mirza];
+  }
+
+  /**
+   * ══ منوی پایینِ گفت‌وگو (۱۴۰۵/۰۷/۲۲) ══════════════════════════════════════
+   * صاحب سامانه، با عکسِ «کنترول سنتر»: «منو را این مدلی نده… توی چت باشد، این مدلی
+   * حرفه‌ای‌تر است.» ⇒ کیبوردِ ثابتِ پایینِ گفت‌وگوی خصوصی (`ReplyKeyboardMarkup`)؛ دکمهٔ
+   * «منو»ی کنارِ کادر (فهرستِ «/») در خصوصی برداشته شد. هر دکمه همان کارِ دکمهٔ منو را می‌کند.
+   * ⚠️ نسخهٔ کیبورد (`KB_VER`) عوض شود ⇒ هر گفت‌وگو یک بار کیبوردِ تازه را می‌گیرد.
+   */
+  const KB_VER = 1;
+  const MAIN_KB = [
+    ['📊 وضعیت', '🛢 مخزن‌ها'],
+    ['🔎 جست‌وجو', '📷 حسابِ قرض‌دار'],
+    ['📱 اپ و کدِ پمپ', '👥 گروه و کانال'],
+    ['💬 چت‌های میرزا', '⚙️ تنظیمات'],
+    ['❓ راهنما'],
+  ];
+  const KB_ACT = new Map([
+    ['📊 وضعیت', 'status'], ['🛢 مخزن‌ها', 'tanks'], ['🔎 جست‌وجو', 'findhelp'], ['📷 حسابِ قرض‌دار', 'accthelp'],
+    ['📱 اپ و کدِ پمپ', 'app'], ['👥 گروه و کانال', 'share'], ['💬 چت‌های میرزا', 'mirza'],
+    ['⚙️ تنظیمات', 'settings'], ['❓ راهنما', 'help'],
+  ]);
+
+  /** کیبوردِ پایین را یک بار (برای هر نسخه) به گفت‌وگوی خصوصیِ وصل‌شده می‌دهد. */
+  async function ensureMainKb(row) {
+    if (!row || row.kind !== 'private' || !isLinked(row)) return;
+    try {
+      await ensureOutbox();
+      const r = await one('SELECT kb_ver FROM telegram_chats WHERE chat_id=$1', [String(row.chat_id)]);
+      if (Number(r?.kb_ver) >= KB_VER) return;
+      const res = await call('sendMessage', {
+        chat_id: String(row.chat_id),
+        text: '⌨️ منو پایینِ همین گفت‌وگوست — هر وقت خواستید یکی را بزنید.',
+        reply_markup: { keyboard: MAIN_KB.map(r2 => r2.map(text => ({ text }))), resize_keyboard: true, is_persistent: true },
+      });
+      if (res.ok) await query('UPDATE telegram_chats SET kb_ver=$2 WHERE chat_id=$1', [String(row.chat_id), KB_VER]);
+    } catch { /* منو رفاه است */ }
+  }
+
+  /** دکمهٔ کیبوردِ پایین ⇒ همان کارِ دکمهٔ منو. خروجی: `true` اگر این متن دکمه بود. */
+  async function onMainKb(row, text, from) {
+    const act = KB_ACT.get(String(text || '').trim());
+    if (!act) return false;
+    if (act === 'findhelp') { await send(row.chat_id, '🔎 نامِ قرض‌دار را همین‌جا بنویسید.'); return true; }
+    if (act === 'accthelp') {
+      await send(row.chat_id, '📷 نامِ قرض‌دار را بنویسید؛ زیرِ نتیجه دکمهٔ «📷» هست — یا مستقیم: /acct هارون');
+      return true;
+    }
+    if (act === 'status') { await sendStatus(row); return true; }
+    if (act === 'tanks') { await askTanks(row); return true; }
+    if (act === 'mirza') { await sendMirza(row); return true; }
+    if (act === 'help') { await show(row.chat_id, HELP, [[BACK]]); return true; }
+    //  بقیه همان دکمه‌های منو — از همان درِ `onCallback`، بی پیامِ «answer»
+    await onCallback({ id: '', data: act, from, message: { chat: { id: row.chat_id, type: 'private' }, message_id: 0 } });
+    return true;
   }
 
   /* ══════════════════════════════════════════════════════════════════
@@ -765,6 +821,8 @@ module.exports = function createPumpBot({ req }) {
     const text = (lead ? `${lead}\n\n` : '') + await menuText(row, links);
     //  ⚠️ در کانال دکمه نمی‌گذاریم: هر خواننده‌ای می‌دیدش
     if (row.kind === 'channel') return send(row.chat_id, text);
+    //  کیبوردِ پایین پیش از منو، تا منوی دکمه‌دار آخرین پیام بماند
+    if (!editId) await ensureMainKb(row);
     return show(row.chat_id, text, menuKeyboard(row, await rateTemplate(links)), editId);
   }
 
@@ -1369,6 +1427,7 @@ module.exports = function createPumpBot({ req }) {
   async function onPrivate(chat, cmd, text, from = null) {
     let row = await ensureChat(chat, 'private');
     const linked = isLinked(row);
+    if (linked && !cmd && await onMainKb(row, text, from)) return null;
 
     if (cmd) {
       if (cmd.name === 'mirza' || cmd.name === 'chats') return sendMirza(row);
@@ -2060,9 +2119,10 @@ module.exports = function createPumpBot({ req }) {
   const MANAGE = new Set(['settings', 'toggle', 'quiet', 'unlink', 'unlink_yes', 'code', 'rm', 'rmy', 'addacct', 'chansync', 'mzadd', 'mzrm']);
 
   async function onCallback(q) {
-    const answer = (text = '', alert = false) => call('answerCallbackQuery', {
+    //  دکمهٔ کیبوردِ پایین (`onMainKb`) شناسهٔ callback ندارد ⇒ پاسخی هم لازم نیست
+    const answer = (text = '', alert = false) => (!q.id ? Promise.resolve({ ok: true }) : call('answerCallbackQuery', {
       callback_query_id: q.id, ...(text ? { text: String(text).slice(0, 190), show_alert: alert } : {}),
-    });
+    }));
     const chat = q.message?.chat;
     if (!chat) return answer();
     let row = await chatRow(chat.id);
@@ -2970,22 +3030,9 @@ module.exports = function createPumpBot({ req }) {
 
   /** فرمان‌های دکمهٔ «منو»ی تلگرام — «منو نداره». */
   async function setCommands() {
-    await call('setMyCommands', {
-      scope: { type: 'all_private_chats' },
-      commands: [
-        { command: 'menu', description: 'منو' },
-        { command: 'status', description: 'هشدارهای باز و موجودیِ مخزن' },
-        { command: 'find', description: 'جست‌وجوی قرض‌دار (یا فقط نام را بنویسید)' },
-        { command: 'tanks', description: 'عکسِ مخزن‌ها، بدهیِ شرکت‌ها و خریدها' },
-        { command: 'acct', description: 'عکس و PDFِ حسابِ قرض‌دار: /acct نام' },
-        { command: 'code', description: 'اپِ اندروید و آیفون و کدِ پمپ' },
-        { command: 'group', description: 'وصل کردنِ گروه یا کانال' },
-        { command: 'mirza', description: 'چت‌های میرزا — پیامِ مشتری‌های کیو‌آر' },
-        { command: 'myid', description: 'شناسهٔ تلگرامِ من (برای مدیرِ نرخ شدن)' },
-        { command: 'settings', description: 'تنظیمات' },
-        { command: 'help', description: 'راهنما' },
-      ],
-    });
+    //  ⛔ خصوصی: منو کیبوردِ پایین است (`MAIN_KB`)، نه دکمهٔ «منو»ی کنارِ کادر — فهرستِ «/» فقط
+    //  فرمان‌هایی که با دست نوشته می‌شوند، و دکمهٔ کنارِ کادر به حالتِ پیش‌فرض.
+    await call('deleteMyCommands', { scope: { type: 'all_private_chats' } });
     await call('setMyCommands', {
       scope: { type: 'all_group_chats' },
       commands: [
@@ -2998,7 +3045,7 @@ module.exports = function createPumpBot({ req }) {
         { command: 'menu', description: 'منو' },
       ],
     });
-    await call('setChatMenuButton', { menu_button: { type: 'commands' } });
+    await call('setChatMenuButton', { menu_button: { type: 'default' } });
     //  نوشتهٔ «پروفایلِ» بات — همان چیزی که پیش از Start دیده می‌شود
     await call('setMyShortDescription', {
       short_description: 'هشدارهای پمپ: حسابِ قرض‌دار تمام شد، کم مانده، مخزن ته کشید — حتی وقتی برنامه بسته است.',

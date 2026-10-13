@@ -60,7 +60,10 @@ public static class TankShotRenderer
             var gauge = new TankGauge
             {
                 Width = 400, Height = 250,
-                FillPercent = s.FillPercent, FillText = s.FillText,
+                //  ⛔ بی برچسبِ «پروب/شناور/پمپ» (۱۴۰۵/۰۷/۲۲: «لازم نیستند»)؛ درصدِ پرشدگی بالای مخزن،
+                //  درشت و جدا — نوشته‌های داخلِ کنترل در عکسِ بیرون از پنجره جابه‌جا می‌افتادند.
+                Compact = true,
+                FillPercent = s.FillPercent, FillText = " ",
                 ThresholdPercent = s.ThresholdPercent, CaptionText = s.Caption,
                 BodyBrush = card, BodyDeepBrush = input, RimBrush = edge,
                 LabelBrush = text, TextBrush = text, ThresholdBrush = danger,
@@ -69,6 +72,7 @@ public static class TankShotRenderer
 
             var stack = new StackPanel { Spacing = 4 };
             stack.Children.Add(T(s.Title, 20, text, FontWeight.Bold));
+            stack.Children.Add(T(s.FillText + " پر", 30, s.Low ? danger : text, FontWeight.Bold));
             stack.Children.Add(T(s.Sub, 14, muted));
             if (s.Low) stack.Children.Add(T("🔴 زیرِ حدِ هشدار", 13, danger, FontWeight.Bold));
             stack.Children.Add(gauge);

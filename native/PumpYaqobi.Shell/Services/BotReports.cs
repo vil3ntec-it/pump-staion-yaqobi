@@ -104,8 +104,11 @@ public static class BotReports
                 cap > 0m ? (double)Math.Min(100m, Math.Max(0m, threshold / cap * 100m)) : 0,
                 "حد هشدار: " + Shamsi.Money(threshold) + " لیتر",
                 low));
-            lines.Add((low ? "🔴 " : "🟢 ") + label + ": " + Shamsi.Money(Math.Round(show, 0, MidpointRounding.AwayFromZero))
-                      + " لیتر (" + Shamsi.Money(Math.Round(pct, 0, MidpointRounding.AwayFromZero)) + "٪)");
+            //  ⛔ هر تیل بخشِ خودش، با یک خطِ خالی پیش از آن (۱۴۰۵/۰۷/۲۲: «نوشته‌ها به هم چسپیده‌اند»)
+            lines.Add("");
+            lines.Add((low ? "🔴 " : "🟢 ") + label);
+            lines.Add(Shamsi.Money(Math.Round(show, 0, MidpointRounding.AwayFromZero)) + " لیتر · "
+                      + Shamsi.Money(Math.Round(pct, 0, MidpointRounding.AwayFromZero)) + "٪ پر");
 
             //  سندِ مخزن — همان دکمهٔ PDFِ بخشِ مخزن
             var buys = await host.StorageData.PurchasesAsync(fuel, ct);
@@ -119,8 +122,8 @@ public static class BotReports
                 foreach (var b in buys.Take(LastBuys))
                 {
                     var n = host.Storage.Compute(b.Kg, b.Density, b.PriceTon, b.UsdRate);
-                    lines.Add("   • " + (b.DateShamsi ?? "") + " · " + Shamsi.Money(Math.Round(n.Liters, 0, MidpointRounding.AwayFromZero))
-                              + " لیتر" + (string.IsNullOrWhiteSpace(b.Seller) ? "" : " · " + b.Seller));
+                    lines.Add("▫️ خرید " + (b.DateShamsi ?? "") + " — " + Shamsi.Money(Math.Round(n.Liters, 0, MidpointRounding.AwayFromZero))
+                              + " لیتر" + (string.IsNullOrWhiteSpace(b.Seller) ? "" : " — " + b.Seller));
                 }
             }
         }
@@ -134,9 +137,9 @@ public static class BotReports
             var parts = new List<string>();
             if (sum.AlbaqiAfn > 0m) parts.Add(Shamsi.Money(Math.Round(sum.AlbaqiAfn, 0, MidpointRounding.AwayFromZero)) + " ؋");
             if (sum.AlbaqiUsd > 0m) parts.Add(Shamsi.Money(Math.Round(sum.AlbaqiUsd, 2)) + " $");
-            owe.Add("   • " + (c.Name ?? "") + ": " + string.Join(" · ", parts));
+            owe.Add("▫️ " + (c.Name ?? "") + ": " + string.Join(" · ", parts));
         }
-        if (owe.Count > 0) { lines.Add(""); lines.Add("🏢 بدهی به شرکت‌ها:"); lines.AddRange(owe.Take(8)); }
+        if (owe.Count > 0) { lines.Add(""); lines.Add("🏢 بدهی به شرکت‌ها"); lines.AddRange(owe.Take(8)); }
 
         if (TankRenderer is { } draw && shots.Count > 0)
         {
@@ -144,7 +147,7 @@ public static class BotReports
             if (png is { Length: > 0 }) files.Insert(0, new BotFile("مخزن‌ها", "image/png", png));
         }
         if (files.Count == 0 && lines.Count == 0) return BotReport.Fail("هنوز مخزنی در برنامه ثبت نشده است.");
-        return new BotReport(true, "", "🛢 مخزن‌ها — " + Shamsi.Today() + "\n" + string.Join("\n", lines),
+        return new BotReport(true, "", "🛢 مخزن‌ها · " + Shamsi.Today() + "\n" + string.Join("\n", lines),
                              files.Take(4).ToList(), new());
     }
 
@@ -181,39 +184,48 @@ public static class BotReports
         var files = new List<BotFile>();
         var extra = new Dictionary<string, string>();
         var caption = new List<string>();
-        var accounts = person.AllAccounts().Where(a => a is not null).ToList();
 
-        foreach (var acct in accounts.Take(2))
+        //  ⛔ فقط حسابِ اصلیِ همین شخص (۱۴۰۵/۰۷/۲۲، با عکس): «چرا حسابِ هارون که در حسابِ اصلیِ
+        //  ح هاشم فرعی است را هم با آن می‌دهی؟» — حسابِ فرعی دکمه و درخواستِ خودش را دارد.
+        var acct = person.MainAccount;
+        var snap = AcctSnapshots.ForDebtAccount(person.Name, null, acct, calc);
+
+        //  ⛔ دفتری که واقعاً ردیف یا عدد دارد (۱۴۰۵/۰۷/۲۲): حسابی که حالتش «پول» است ولی تیل برده،
+        //  کارتِ «۰ افغانی» می‌گرفت. هر دفتری که چیزی دارد یک کارت؛ هیچ ⇒ همان دفترِ فعال.
+        var books = snap.Books.Where(HasData).Take(2).ToList();
+        if (books.Count == 0 && snap.Books.Count > 0) books.Add(snap.Books[0]);
+
+        var st = calc.Status(new List<DebtAccount> { acct }).Worst;
+        var (status, bad) = st switch
         {
-            var title = acct.IsMain ? null : acct.Name;
-            var snap = AcctSnapshots.ForDebtAccount(person.Name, title, acct, calc);
-            var book = snap.Books.Count > 0 ? snap.Books[0] : null;
-            var albaqi = book?.Summary.FirstOrDefault(s => s.Length > 1 && s[0] == "الباقی")?[1] ?? "0";
-            var st = calc.Status(new List<DebtAccount> { acct }).Worst;
-            var (status, bad) = st switch
-            {
-                DebtStatus.Out => ("🔴 تمام شده", true),
-                DebtStatus.Low => ("🟡 رو به تمام", true),
-                _ => ("🟢 روبه‌راه", false),
-            };
+            DebtStatus.Out => ("🔴 تمام شده", true),
+            DebtStatus.Low => ("🟡 رو به تمام", true),
+            _ => ("🟢 روبه‌راه", false),
+        };
 
-            //  کیو‌آر — همان دکمهٔ «📲»ِ صفحهٔ حساب
-            var live = await AcctLive.EnsureAsync(host, acct, ct);
-            var link = AcctLive.LinkFor(host, snap, Marker(person.Id, acct.IsMain ? null : acct.LegacySubId), live);
-            var qr = PumpYaqobi.Services.Vision.QrWriter.EncodePng(link);
-            if (acct.IsMain || !extra.ContainsKey("qr")) extra[acct.IsMain ? "qr" : "qr2"] = link;
+        //  کیو‌آر — همان دکمهٔ «📲»ِ صفحهٔ حساب
+        var live = await AcctLive.EnsureAsync(host, acct, ct);
+        var link = AcctLive.LinkFor(host, snap, Marker(person.Id, null), live);
+        var qr = PumpYaqobi.Services.Vision.QrWriter.EncodePng(link);
+        extra["qr"] = link;
 
-            var card = new DebtorCardInput(PumpBrand.Name, person.Name, title ?? "", snap.Unit, snap.Date,
-                                           book?.Fuels ?? new List<string[]>(), albaqi, status, bad, qr);
-            files.Add(new BotFile((title ?? person.Name) + " — کارت", "image/png", new DebtorCardImage(card).Png()));
+        caption.Add("👤 " + person.Name);
+        caption.Add(status);
+        foreach (var book in books)
+        {
+            var money = book.Unit == "افغانی";
+            var albaqi = book.Summary.FirstOrDefault(s => s.Length > 1 && s[0] == "الباقی")?[1] ?? "0";
 
-            //  PDF — همان ورودی‌های ‎PersonViewModel.PdfAsync‎
-            var rows = acct.ActiveRows();
+            var card = new DebtorCardInput(PumpBrand.Name, person.Name, "", book.Unit, snap.Date,
+                                           book.Fuels, albaqi, status, bad, qr);
+            files.Add(new BotFile(person.Name + " — " + book.Title, "image/png", new DebtorCardImage(card).Png()));
+
+            //  PDF — همان دفترِ همین کارت (نه حالتِ حساب)
+            var rows = money ? acct.MoneyRows : acct.FuelRows;
             var t = calc.SplitTotals(rows);
-            var money = acct.Mode.IsMoney();
             var input = new DebtorStatementInput(
                 PersonName: person.Name,
-                AccountTitle: acct.IsMain ? "حساب " + person.Name : "📄 " + acct.Name,
+                AccountTitle: "حساب " + person.Name + (books.Count > 1 ? " — " + book.Title : ""),
                 IsMoneyLedger: money,
                 Filter: null,
                 Rows: rows,
@@ -225,15 +237,18 @@ public static class BotReports
                 BordDiesel: money ? t.Diesel.Bardagi : t.Diesel.Liters,
                 RasidRowsPetrol: t.Petrol.Rasid, RasidRowsDiesel: t.Diesel.Rasid,
                 Dates: DocDates.Line());
-            files.Add(new BotFile("حساب " + (title ?? person.Name), "application/pdf",
+            files.Add(new BotFile("حساب " + person.Name + (books.Count > 1 ? " — " + book.Title : ""), "application/pdf",
                                   Pdf(new DebtorStatementReport(input, calc))));
 
-            caption.Add((title is null ? "👤 " + person.Name : "📄 " + title) + " · " + status
-                        + " · الباقی " + albaqi + " " + snap.Unit);
+            caption.Add("");
+            caption.Add("الباقی: " + albaqi + " " + book.Unit);
         }
-        if (accounts.Count > 2) caption.Add("(+" + (accounts.Count - 2) + " حسابِ دیگر در برنامه)");
         return new BotReport(true, "", string.Join("\n", caption), files.Take(4).ToList(), extra);
     }
+
+    /// <summary>دفتری که ردیف یا عددی غیرِ صفر دارد — همان ‎AcctSnapshots.HasAnything‎.</summary>
+    private static bool HasData(AcctBook b)
+        => b.Rows.Count > 0 || b.Summary.Any(s => s.Length > 1 && Shamsi.Num(s[1]) != 0m);
 
     // ── ابزار ──────────────────────────────────────────────────────────────
 
