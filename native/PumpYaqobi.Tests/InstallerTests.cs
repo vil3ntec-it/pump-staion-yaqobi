@@ -81,8 +81,13 @@ public class InstallerTests
         Assert.Contains("Name: \"{app}\\libvlc\\win-x64\"; Check: WantX86", s);
         Assert.Contains("Name: \"{app}\\libvlc\\win-x86\"; Check: WantX64", s);
         Assert.DoesNotContain("Name: \"{app}\\*\"", s);
-        //  دیگر هیچ دانلودی وسطِ نصب نیست
-        Assert.DoesNotContain("CreateDownloadPage", s);
+        //  دیگر هیچ دانلودی وسطِ نصب نیست — تنها دانلود «تعمیرِ کپیِ خراب» است (۱۴۰۵/۰۷/۲۱)،
+        //  فقط پس از مُهرِ خراب و با «بله»ِ کاربر (‎RepairFromWeb‎)؛ نصبِ سالم هرگز به اینترنت نمی‌رود.
+        var dl = s.IndexOf("CreateDownloadPage", StringComparison.Ordinal);
+        var rep = s.IndexOf("function RepairFromWeb(): Boolean;", StringComparison.Ordinal);
+        var sealOk = s.IndexOf("function SealOk(): Boolean;", StringComparison.Ordinal);
+        Assert.True(dl > rep && rep > 0 && dl < sealOk, "CreateDownloadPage فقط داخلِ RepairFromWeb");
+        Assert.Equal(dl, s.LastIndexOf("CreateDownloadPage", StringComparison.Ordinal));
         Assert.DoesNotContain("OtherSha", s);
 
         //  ورک‌فلو یک نصاب می‌سازد و برنامه با /ARCH بی‌صدا نصبش می‌کند
