@@ -88,6 +88,35 @@ public class BotReportsTests
         Assert.True(byId.Ok, byId.Error);
     }
 
+    /// <summary>
+    /// ⛔ با عکسِ صاحب ریپو (۱۴۰۵/۰۷/۲۲): «حسابِ ح هاشم هیچ چیز ندارد… واحدِ اشتباه… و حسابِ فرعیِ
+    /// هارون را هم با آن می‌دهی.» حسابی که حالتش «پول» است ولی تیل برده ⇒ کارتِ لیتری با عددِ
+    /// خودش؛ و فقط حسابِ اصلی — نه کارت و PDFِ حسابِ فرعی.
+    /// </summary>
+    [Fact]
+    public async Task MoneyModeAccountWithFuelRowsShowsLitresAndOnlyTheMainAccount()
+    {
+        var host = Host();
+        var person = await host.Debtors.AddDebtorAsync("ح هاشم", null, false);
+        var full = (await host.Debtors.LoadFullAsync(person.Id))!;
+        await host.Debtors.SaveRowAsync(new DebtRow
+        {
+            FuelAccountId = full.MainAccount.Id, DateShamsi = "1405/07/20", Fuel = FuelType.Petrol, Liters = 38m,
+        });
+        full = (await host.Debtors.LoadFullAsync(person.Id))!;
+        full.MainAccount.Mode = LedgerMode.Money;
+        await host.Debtors.UpdateAccountAsync(full.MainAccount);
+        await host.Debtors.AddSubAccountAsync(person.Id, "هارون");
+
+        var rep = await BotReports.BuildAsync(host, Req("debtor", new { id = person.Id }), CancellationToken.None);
+        Assert.True(rep.Ok, rep.Error);
+        Assert.Contains("38 لیتر", rep.Caption);
+        Assert.DoesNotContain("افغانی", rep.Caption);
+        Assert.DoesNotContain("هارون", rep.Caption);
+        Assert.Single(rep.Files, f => f.Mime == "image/png");
+        Assert.Single(rep.Files, f => f.Mime == "application/pdf");
+    }
+
     [Fact]
     public async Task UnknownOrAmbiguousNamesFailWithAClearMessage()
     {
