@@ -146,7 +146,11 @@ test('حالِ زنده: هشدارِ باز ⇒ یک پیام؛ همان حال
   assert.equal(m.length, 1, 'یک پیام برای یک دسته');
   assert.match(m[0].params.text, /کریم/);
   assert.match(m[0].params.text, /مخزنِ دیزل/);
-  assert.equal(m[0].params.reply_markup, undefined, '⛔ پیامِ هشدار دکمه ندارد');
+  //  ⛔ هشدار منو ندارد — فقط «📷 حسابِ فلانی» و «🛢 مخزن‌ها» (۱۴۰۵/۰۷/۲۱: «اگه زدم عکس رو بده»)
+  const kb = m[0].params.reply_markup?.inline_keyboard || [];
+  assert.deepEqual(kb.map(r => r.map(b => b.text)), [['📷 حسابِ کریم'], ['🛢 مخزن‌ها']]);
+  assert.equal(kb[0][0].callback_data, `acct:${owner.stationId}:1`, 'دکمه شناسهٔ همان قرض‌دار و همان پمپ را دارد');
+  assert.equal(kb[1][0].callback_data, `tanks:${owner.stationId}`);
 
   //  ⛔ همان هشدارها، دو بار دیگر — مثلِ بستن و باز کردنِ برنامه
   clear();
@@ -274,7 +278,9 @@ test('⛔ نوشتنِ هر چیزی دیگر منو نمی‌آورد: جست�
   await msg(8203, 'کریم');
   const reply = lastTo(8203);
   assert.equal(reply.method, 'sendMessage');
-  assert.equal(reply.params.reply_markup, undefined, '⛔ پاسخِ جست‌وجو دکمه ندارد');
+  //  ⛔ پاسخِ جست‌وجو منو ندارد — فقط «📷 نام» برای عکس و PDFِ همان حساب (۱۴۰۵/۰۷/۲۱)
+  const sb = (reply.params.reply_markup?.inline_keyboard || []).flat();
+  assert.ok(sb.length >= 2 && sb.every(b => /^📷 /.test(b.text) && /^acctn:/.test(b.callback_data)), JSON.stringify(sb));
   //  «ي/ك»ِ عربی و نیم‌فاصله یکی‌اند
   assert.match(reply.params.text, /كريم احمدی/);
   assert.match(reply.params.text, /کریم‌الله/);
@@ -433,7 +439,10 @@ test('⛔ بی سقف: همهٔ نتیجه‌های جست‌وجو و همهٔ 
   const all = found.map(m => m.params.text).join('\n');
   for (let i = 1; i <= 120; i++) assert.ok(all.includes(`👤 احمد ${i}\n`), `قرض‌دارِ ${i} نیامد`);
   assert.ok(!/نفرِ دیگر/.test(all), '⛔ «… و N نفرِ دیگر» یعنی بریده شد');
-  assert.ok(found.every(m => !m.params.reply_markup), 'جست‌وجو دکمه گرفت');
+  //  دکمه‌های «📷» فقط زیرِ تکهٔ آخر، و نه بیشتر از پنج
+  assert.ok(found.slice(0, -1).every(m => !m.params.reply_markup), 'دکمه روی تکهٔ میانی آمد');
+  const fb = (found.at(-1).params.reply_markup?.inline_keyboard || []).flat();
+  assert.ok(fb.length === 5 && fb.every(b => /^📷 /.test(b.text)), JSON.stringify(fb));
 
   clear();
   await press(8701, 'status', { messageId: 901 });

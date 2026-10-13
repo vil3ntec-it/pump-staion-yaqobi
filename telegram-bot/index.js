@@ -132,14 +132,37 @@ module.exports = function createPumpBot({ req }) {
     return res;
   }
 
-  /** یک متن ⇒ چند ردیفِ صف، به ترتیب (created_at پشتِ سرِ هم). */
-  async function queueLong(chatId, stationId, text, t) {
+  /**
+   * ستونِ دکمه‌های صف (‎markup‎) — بات خودش می‌سازدش، تا جدولِ سرورِ حساب برای
+   * دکمه‌ای که فقط مالِ بات است عوض نشود. یک بار در هر پروسه.
+   */
+  let outboxReady = null;
+  function ensureOutbox() {
+    if (!outboxReady) {
+      outboxReady = (async () => {
+        await query(`ALTER TABLE telegram_outbox ADD COLUMN IF NOT EXISTS markup TEXT NOT NULL DEFAULT ''`);
+        //  🔕 کنترلِ شلوغی (۱۴۰۵/۰۷/۲۱): ساعتِ آرام و شمارِ هشدارهای «کم مانده»ِ امروز
+        await query(`ALTER TABLE telegram_chats ADD COLUMN IF NOT EXISTS quiet BOOLEAN NOT NULL DEFAULT TRUE`);
+        await query(`ALTER TABLE telegram_chats ADD COLUMN IF NOT EXISTS calm_day TEXT NOT NULL DEFAULT ''`);
+        await query(`ALTER TABLE telegram_chats ADD COLUMN IF NOT EXISTS calm_n INTEGER NOT NULL DEFAULT 0`);
+      })().catch((err) => { outboxReady = null; throw err; });
+    }
+    return outboxReady;
+  }
+
+  /**
+   * یک متن ⇒ چند ردیفِ صف، به ترتیب (created_at پشتِ سرِ هم).
+   * `keyboard` (اختیاری) فقط زیرِ **آخرین** تکه می‌آید.
+   */
+  async function queueLong(chatId, stationId, text, t, keyboard = null) {
+    await ensureOutbox();
     const parts = chunks(text);
     for (let i = 0; i < parts.length; i++) {
+      const kb = keyboard && i === parts.length - 1 ? JSON.stringify(keyboard) : '';
       await query(
-        `INSERT INTO telegram_outbox (id, chat_id, station_id, body, next_at, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6)`,
-        [newId('tgo'), chatId, stationId, parts[i], t, t + i]
+        `INSERT INTO telegram_outbox (id, chat_id, station_id, body, next_at, created_at, markup)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [newId('tgo'), chatId, stationId, parts[i], t, t + i, kb]
       );
     }
   }
@@ -228,6 +251,37 @@ module.exports = function createPumpBot({ req }) {
     };
     if (keyboard) params.reply_markup = { inline_keyboard: keyboard };
     return call('sendMessage', params);
+  }
+
+  /**
+   * فرستادنِ یک فایل (عکس یا PDF) — `multipart/form-data`.
+   * ⛔ فایل فقط از حافظه می‌رود؛ هیچ‌جا روی دیسک نوشته نمی‌شود. همان شکلِ پاسخِ `call`.
+   * ⚠️ در آزمون `transport(method, params, tok, files)` صدا زده می‌شود.
+   */
+  async function callFile(method, params, field, file, { timeoutMs = 90000 } = {}) {
+    const t = await token();
+    if (!t) return { ok: false, error_code: 0, description: 'رمزِ بات تنظیم نشده است' };
+    try {
+      if (transport) return await transport(method, params, t, { [field]: file });
+      const form = new FormData();
+      for (const [k, v] of Object.entries(params)) {
+        if (v === undefined || v === null) continue;
+        form.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
+      }
+      form.append(field, new Blob([file.data], { type: file.mime }), file.name);
+      const res = await fetch(`${config.telegram.apiBase}/bot${t}/${method}`, {
+        method: 'POST',
+        body: form,
+        signal: AbortSignal.any([AbortSignal.timeout(timeoutMs), stopSignal()]),
+      });
+      let json = null;
+      try { json = await res.json(); } catch { /* پاسخِ غیرِ JSON */ }
+      return json && typeof json === 'object'
+        ? json
+        : { ok: false, error_code: res.status, description: `پاسخِ نامعتبر (${res.status})` };
+    } catch (err) {
+      return { ok: false, error_code: 0, description: hide(err.cause?.message || err.message, t) };
+    }
   }
 
   /** نامِ بات را از خودِ تلگرام می‌پرسد و نگه می‌دارد. */
@@ -800,6 +854,117 @@ module.exports = function createPumpBot({ req }) {
   /** میانِ دو شعبه — تا هیچ خطی از یک شعبه زیرِ شعبهٔ دیگر خوانده نشود. */
   const BRANCH_SEP = '\n\n━━━━━━━━━━\n\n';
 
+  /* ── 📷 عکس و PDF از خودِ برنامهٔ کامپیوتر (۱۴۰۵/۰۷/۲۱) ─────────────
+
+     خواستهٔ صاحب سامانه: «از مخزن‌ها همین عکس باشد و پیام زیرش، و شرکت‌های تیل و
+     خریدها با یک فایل پایینش… حسابِ قرض‌دار: عکس با رسید، بردگی، الباقی و واحد،
+     و PDF و لینکِ کیو‌آرش… پیام ساده… بشود به واتساپ و جاهای دیگر هم فرستاد.»
+
+     بات ⇒ `station-reports.request` (سرورِ حساب، فقط حافظه) ⇒ برنامهٔ کامپیوترِ
+     همان پمپ ⇒ عکس و PDF ⇒ همین‌جا ⇒ تلگرام. ⛔ هیچ چیز ذخیره نمی‌شود و هیچ نقاشی
+     این‌جا نیست: عکس و سند همان است که خودِ برنامه می‌کشد و چاپ می‌کند. */
+
+  /** یک درخواست در یک زمان برای هر گفت‌وگو، و دست‌کم این فاصله میانِ دو درخواست. */
+  const REPORT_GAP_MS = 4000;
+  const reportBusy = new Map();
+
+  /** دکمه‌های نتیجهٔ جست‌وجو: نام ⇒ نشانیِ کوتاه (نام ممکن است از ۶۴ بایت بلندتر باشد). */
+  const nameRefs = new Map();
+  const NAME_REF_TTL_MS = 6 * 3600 * 1000;
+  function nameRef(stationId, name) {
+    const t = now();
+    for (const [k, v] of nameRefs) if (t - v.at > NAME_REF_TTL_MS) nameRefs.delete(k);
+    if (nameRefs.size > 2000) nameRefs.delete(nameRefs.keys().next().value);
+    const k = crypto.randomBytes(6).toString('base64url');
+    nameRefs.set(k, { stationId, name: String(name), at: t });
+    return k;
+  }
+
+  /** پاسخِ برنامه ⇒ تلگرام: عکس‌ها (اولی با متن)، بعد PDFها، بعد لینکِ کیو‌آر. */
+  async function deliverReport(chatId, out) {
+    const files = Array.isArray(out?.files) ? out.files : [];
+    const photos = files.filter(f => String(f.mime).startsWith('image/'));
+    const docs = files.filter(f => f.mime === 'application/pdf');
+    const caption = String(out?.caption || '').trim();
+    const short = caption.length <= 1000;
+    let captioned = false;
+    for (const p of photos) {
+      const res = await callFile('sendPhoto', {
+        chat_id: String(chatId), ...(!captioned && short && caption ? { caption } : {}),
+      }, 'photo', p);
+      //  عکسِ خیلی بزرگ برای «عکس» ⇒ همان فایل به شکلِ سند (کیفیت دست نمی‌خورد)
+      if (!res.ok) await callFile('sendDocument', { chat_id: String(chatId) }, 'document', p);
+      captioned = captioned || (short && Boolean(caption));
+    }
+    if (caption && !captioned) await sendLong(chatId, caption);
+    for (const d of docs) await callFile('sendDocument', { chat_id: String(chatId) }, 'document', d);
+    const qr = String(out?.extra?.qr || '');
+    if (/^https?:\/\//.test(qr)) {
+      await send(chatId, `🔗 لینکِ حساب (همان کیو‌آر) — برای واتساپ یا هر جای دیگر:\n${qr}`);
+    }
+  }
+
+  /**
+   * یک درخواست از برنامهٔ کامپیوترِ یک شعبه. ⛔ `link` همیشه شعبه‌ای است که همین
+   * گفت‌وگو به آن وصل است (`branch()`/`linksOf`) — هرگز شناسه‌ای خام از دکمه.
+   */
+  async function sendReport(row, link, kind, arg = {}) {
+    const key = String(row.chat_id);
+    const t = now();
+    if ((reportBusy.get(key) || 0) > t) return send(row.chat_id, '⏳ درخواستِ قبلی هنوز در راه است؛ چند لحظه صبر کنید.');
+    reportBusy.set(key, t + 120_000);
+    try {
+      let reports;
+      try { reports = req('./station-reports'); } catch {
+        return send(row.chat_id, '⚠️ سرورِ حساب هنوز این را ندارد؛ پس از به‌روزرسانیِ سرور دوباره بزنید.');
+      }
+      //  برنامه‌ای که مدتی است خبری نداده ⇒ همین حالا راستش را بگو، نه ۴۵ ثانیه انتظار
+      const state = await req('./pump-state').get(link.station_id).catch(() => null);
+      if (state && t - state.updatedAt > STALE_MS) {
+        return send(row.chat_id, `🖥 برنامهٔ کامپیوترِ پمپِ «${link.station_name}» ${ago(state.updatedAt)} آخرین بار خبر داد — `
+          + 'شاید بسته است. وقتی روشن شد دوباره بزنید.');
+      }
+      await call('sendChatAction', { chat_id: key, action: kind === 'tanks' ? 'upload_photo' : 'upload_document' });
+      let out;
+      try {
+        out = await reports.request(link.station_id, kind, arg);
+      } catch (err) {
+        const why = err.code === 'timeout'
+          ? `🖥 برنامهٔ کامپیوترِ پمپِ «${link.station_name}» جواب نداد — باز و به اینترنت وصل است؟ `
+            + '(برنامه‌ای که هنوز به‌روز نشده هم جواب نمی‌دهد.)'
+          : err.code === 'busy' ? '⏳ چند درخواست هنوز در راه است؛ کمی صبر کنید.'
+          : `⚠️ ${String(err.message || 'نشد').slice(0, 300)}`;
+        return send(row.chat_id, why);
+      }
+      return deliverReport(row.chat_id, out);
+    } catch (err) {
+      console.error('[telegram:report]', hide(err.message));
+      return send(row.chat_id, '⚠️ نشد؛ دوباره امتحان کنید.');
+    } finally {
+      reportBusy.set(key, now() + REPORT_GAP_MS);
+    }
+  }
+
+  /** «🛢 مخزن‌ها» بی شعبهٔ معیّن: یک شعبه ⇒ همان؛ چند شعبه ⇒ انتخاب. */
+  async function askTanks(row, editId = 0) {
+    const links = isLinked(row) ? await linksOf(row) : [];
+    if (!links.length) return notLinked(row, editId);
+    if (links.length === 1) return sendReport(row, links[0], 'tanks');
+    return show(row.chat_id, '🛢 مخزن‌های کدام شعبه؟',
+      links.map(l => [{ text: `⛽ ${l.station_name}`.slice(0, 40), callback_data: `tanks:${l.station_id}` }]), editId);
+  }
+
+  /** «/acct نام» — حسابِ یک قرض‌دار؛ چند شعبه ⇒ هر شعبه‌ای که این نام را دارد، دکمه. */
+  async function askAcct(row, name) {
+    const links = isLinked(row) ? await linksOf(row) : [];
+    if (!links.length) return notLinked(row);
+    const q = String(name || '').trim();
+    if (!q) return send(row.chat_id, '📷 بعد از /acct نامِ قرض‌دار را بنویسید؛ مثلاً: /acct هارون');
+    if (links.length === 1) return sendReport(row, links[0], 'debtor', { name: q });
+    return show(row.chat_id, `📷 حسابِ «${q}» در کدام شعبه؟`,
+      links.map(l => [{ text: `⛽ ${l.station_name}`.slice(0, 40), callback_data: `acctn:${nameRef(l.station_id, q)}` }]));
+  }
+
   async function sendStatus(row, editId = 0) {
     const links = isLinked(row) ? await linksOf(row) : [];
     if (!links.length) return notLinked(row, editId);
@@ -807,7 +972,7 @@ module.exports = function createPumpBot({ req }) {
     for (const l of links) texts.push(await statusText(l));
     const text = texts.join(BRANCH_SEP);
     const kb = row.kind === 'channel' ? null
-      : [[{ text: '🔄 تازه کن', callback_data: 'status' }, BACK]];
+      : [[{ text: '🛢 عکسِ مخزن‌ها', callback_data: 'tanks' }], [{ text: '🔄 تازه کن', callback_data: 'status' }, BACK]];
     if (!kb) return sendLong(row.chat_id, text);
     return show(row.chat_id, text, kb, editId);
   }
@@ -1034,13 +1199,18 @@ module.exports = function createPumpBot({ req }) {
       + (row.only_out
         ? '🔕 الان فقط هشدارهای «تمام شد» می‌آید.'
         : '🔔 الان همهٔ هشدارها می‌آید: «تمام شد» و «کم مانده».');
+    text += row.quiet === false
+      ? '\n🌙 ساعتِ آرام خاموش است: «کم مانده» شب هم می‌آید.'
+      : '\n🌙 ساعتِ آرام: از ۱۰ شب تا ۷ صبح فقط هشدارهای فوری («تمام شد»، مخزنِ خالی) می‌آید.';
+    text += `\n📏 در روز بیش از ${faNum(CALM_CAP)} پیامِ «کم مانده» نمی‌آید؛ بقیه در /status و اعلامیهٔ صبح است.`;
     text += `\n\n🏷️ شعبه‌های وصل (${faNum(links.length)}):\n${links.map(l => `▫️ ${l.station_name}`).join('\n')}`;
     if (row.kind === 'private') {
       text += '\n\n➕ شعبهٔ دیگری دارید (حسابِ پمپِ دیگر، با ایمیلِ دیگر)؟ «افزودنِ شعبه» را بزنید — هر شعبه جدا می‌ماند.';
     } else {
       text += '\n\n➕ افزودنِ شعبهٔ دیگر به همین گروه: در گفت‌وگوی خصوصی با بات، با حسابِ همان شعبه «👥 گروه و کانال» ⇐ «افزودن به گروه» ⇐ همین گروه.';
     }
-    const kb = [[{ text: row.only_out ? '🔔 «کم مانده» را هم بفرست' : '🔕 فقط «تمام شد» را بفرست', callback_data: 'toggle' }]];
+    const kb = [[{ text: row.only_out ? '🔔 «کم مانده» را هم بفرست' : '🔕 فقط «تمام شد» را بفرست', callback_data: 'toggle' }],
+      [{ text: row.quiet === false ? '🌙 ساعتِ آرام را روشن کن' : '☀️ ساعتِ آرام را خاموش کن', callback_data: 'quiet' }]];
     if (row.kind === 'private') kb.push([{ text: '➕ افزودنِ شعبه (حسابِ دیگر)', callback_data: 'addacct' }]);
     if (row.kind === 'private' && links.some(l => l.role === 'owner')) {
       kb.push([{ text: '👮 مدیرانِ نرخِ اتحادیه', callback_data: 'rad' }]);
@@ -1224,6 +1394,8 @@ module.exports = function createPumpBot({ req }) {
         if (cmd.name === 'settings') return sendSettings(row);
         if (cmd.name === 'stop') return askUnlink(row);
         if (cmd.name === 'find') return onSearch(row, cmd.arg);
+        if (cmd.name === 'tanks') return askTanks(row);
+        if (cmd.name === 'acct') return askAcct(row, cmd.arg);
         return sendMenu(row);
       }
       await setState(row.chat_id, 'email');
@@ -1255,7 +1427,24 @@ module.exports = function createPumpBot({ req }) {
         ? '🔎 نامِ قرض‌دار را بنویسید.'
         : '🔎 بعد از /find نامِ قرض‌دار را بنویسید؛ مثلاً: /find کریم');
     }
-    return sendLong(row.chat_id, await searchText(links, q));
+    const text = await searchText(links, q);
+    //  📷 زیرِ نتیجه: «حسابِ فلانی» برای پنج نامِ اول (هر شعبه جدا) — عکس و PDF از خودِ برنامه
+    const kb = [];
+    if (row.kind !== 'channel') {
+      const qn = normName(q);
+      for (const l of links) {
+        const found = await branchHits(l, qn).catch(() => null);
+        for (const d of found?.hits || []) {
+          if (kb.length >= 5) break;
+          const label = links.length > 1 ? `${d.n} · ${l.station_name}` : d.n;
+          kb.push([{ text: `📷 ${label}`.slice(0, 48), callback_data: `acctn:${nameRef(l.station_id, d.n)}` }]);
+        }
+      }
+    }
+    if (!kb.length) return sendLong(row.chat_id, text);
+    const parts = chunks(text);
+    for (let i = 0; i < parts.length - 1; i++) await send(row.chat_id, parts[i]);
+    return send(row.chat_id, parts[parts.length - 1], kb);
   }
 
   /* ── دسترسی در گروه ───────────────────────────────────────────── */
@@ -1432,6 +1621,8 @@ module.exports = function createPumpBot({ req }) {
     }
     if (cmd.name === 'status') return sendStatus(row);
     if (cmd.name === 'find') return onSearch(row, cmd.arg);
+    if (cmd.name === 'tanks') return askTanks(row);
+    if (cmd.name === 'acct') return askAcct(row, cmd.arg);
     if (cmd.name === 'code' || cmd.name === 'app') return sendApp(row);
     if (cmd.name === 'settings') {
       if (!(await canManage(row, from))) return send(row.chat_id, '⛔ تنظیماتِ بات فقط در دستِ مدیرانِ گروه است.');
@@ -1863,7 +2054,7 @@ module.exports = function createPumpBot({ req }) {
   }
 
   /** کارهایی که در گروه فقط مدیر (یا وصل‌کننده) می‌کند. */
-  const MANAGE = new Set(['settings', 'toggle', 'unlink', 'unlink_yes', 'code', 'rm', 'rmy', 'addacct', 'chansync', 'mzadd', 'mzrm']);
+  const MANAGE = new Set(['settings', 'toggle', 'quiet', 'unlink', 'unlink_yes', 'code', 'rm', 'rmy', 'addacct', 'chansync', 'mzadd', 'mzrm']);
 
   async function onCallback(q) {
     const answer = (text = '', alert = false) => call('answerCallbackQuery', {
@@ -1893,6 +2084,30 @@ module.exports = function createPumpBot({ req }) {
     };
 
     switch (act) {
+      //  📷 عکس و PDF از خودِ برنامه — ⛔ شعبه فقط اگر به همین گفت‌وگو وصل است
+      case 'tanks': {
+        if (!arg) { await answer(); return askTanks(row); }
+        const l = await branch();
+        if (!l) return answer('این شعبه به این گفت‌وگو وصل نیست.', true);
+        await answer('⏳ از کامپیوترِ پمپ می‌گیرم…');
+        return sendReport(row, l, 'tanks');
+      }
+      case 'acct': {
+        const id = Number(String(q.data || '').split(':')[2]);
+        const l = await branch();
+        if (!l || !(id > 0)) return answer('این شعبه به این گفت‌وگو وصل نیست.', true);
+        await answer('⏳ از کامپیوترِ پمپ می‌گیرم…');
+        return sendReport(row, l, 'debtor', { id });
+      }
+      case 'acctn': {
+        const ref = nameRefs.get(arg);
+        if (!ref) return answer('این دکمه کهنه شده؛ دوباره نام را بنویسید.', true);
+        const links = isLinked(row) ? await linksOf(row) : [];
+        const l = links.find(x => x.station_id === ref.stationId);
+        if (!l) return answer('این شعبه به این گفت‌وگو وصل نیست.', true);
+        await answer('⏳ از کامپیوترِ پمپ می‌گیرم…');
+        return sendReport(row, l, 'debtor', { name: ref.name });
+      }
       case 'menu': await answer(); return sendMenu(row, '', editId);
       case 'status': await answer(); return sendStatus(row, editId);
       case 'app': await answer(); return sendApp(row, editId);
@@ -1917,6 +2132,13 @@ module.exports = function createPumpBot({ req }) {
       case 'help':
         await answer();
         return show(row.chat_id, HELP, isLinked(row) ? [[BACK]] : welcomeKeyboard(), editId);
+      case 'quiet': {
+        if (!isLinked(row)) { await answer(); return notLinked(row, editId); }
+        await ensureOutbox();
+        await query('UPDATE telegram_chats SET quiet = NOT quiet, updated_at=$2 WHERE chat_id=$1', [row.chat_id, now()]);
+        await answer('✔️ ذخیره شد');
+        return sendSettings(await chatRow(row.chat_id), editId, '✔️ ذخیره شد.');
+      }
       case 'toggle': {
         if (!isLinked(row)) { await answer(); return notLinked(row, editId); }
         await query('UPDATE telegram_chats SET only_out = NOT only_out, updated_at=$2 WHERE chat_id=$1',
@@ -2119,10 +2341,35 @@ module.exports = function createPumpBot({ req }) {
   function formatAlert(stationName, items) {
     const lines = items.map(e => `${iconOf(e)} ${e.title || e.body || ''}`);
     const todo = actionLines(items.map(e => e.data?.action));
-    //  ⚠️ بی دکمه (قاعدهٔ ۳): هشدار خبر است، نه منو. راهِ جزئیات یک فرمان است.
+    //  ⚠️ هشدار خبر است، نه منو (قاعدهٔ ۳) — تنها دکمه‌هایش «📷 حسابِ فلانی» و «🛢 مخزن‌ها»
+    //  است (`alertKeyboard`)، به خواستهٔ صاحب سامانه (۱۴۰۵/۰۷/۲۱): «پیامِ کوچک بیاید؛ اگر
+    //  زدم، عکس را بدهد.»
     return `🚨 هشدارِ پمپِ «${stationName}»\n\n${lines.join('\n')}`
       + (todo.length ? `\n\n📋 دستورِ کار:\n${todo.join('\n')}` : '')
       + '\n\n📊 همهٔ هشدارهای باز: /status';
+  }
+
+  /**
+   * دکمه‌های زیرِ هشدار: «📷 حسابِ فلانی» برای هر قرض‌دار (تا ۴ تا) و «🛢 مخزن‌ها» اگر هشدارِ
+   * مخزنی بود. ⇒ عکس و PDF از **خودِ** برنامهٔ کامپیوتر (`sendReport`).
+   * ⚠️ شناسهٔ قرض‌دار از کلیدِ خودِ هشدار (`d<id>-…`)؛ دکمه‌ای که از ۶۴ بایتِ تلگرام
+   * بلندتر شود ساخته نمی‌شود.
+   */
+  function alertKeyboard(stationId, items) {
+    const rows = [];
+    const seen = new Set();
+    for (const e of items) {
+      const m = /^d(\d+)-/.exec(String(e.data?.key || ''));
+      if (e.kind !== 'debt' || !m || seen.has(m[1]) || seen.size >= 4) continue;
+      const data = `acct:${stationId}:${m[1]}`;
+      if (Buffer.byteLength(data) > 64) continue;
+      seen.add(m[1]);
+      rows.push([{ text: `📷 حسابِ ${String(e.data?.who || '').slice(0, 28)}`, callback_data: data }]);
+    }
+    if (items.some(e => e.kind !== 'debt') && Buffer.byteLength(`tanks:${stationId}`) <= 64) {
+      rows.push([{ text: '🛢 مخزن‌ها', callback_data: `tanks:${stationId}` }]);
+    }
+    return rows.length ? rows : null;
   }
 
   /** کلیدِ یک هشدار بی حالش — همان `pump-state.subjectOf`. */
@@ -2157,8 +2404,9 @@ module.exports = function createPumpBot({ req }) {
    */
   async function alertChats(stationId) {
     if (!(await botStations([{ station_id: stationId }])).length) return [];
+    await ensureOutbox();
     return many(
-      `SELECT c.chat_id, c.kind, c.only_out, l.announced_day, s.name AS station_name
+      `SELECT c.chat_id, c.kind, c.only_out, c.quiet, c.calm_day, c.calm_n, l.announced_day, s.name AS station_name
          FROM telegram_chat_links l
          JOIN telegram_chats c ON c.chat_id=l.chat_id
          JOIN stations s ON s.id=l.station_id AND s.status='active'
@@ -2220,7 +2468,41 @@ module.exports = function createPumpBot({ req }) {
    * ⛔ **هیچ‌وقت استثنا بیرون نمی‌دهد.** ثبتِ خبر کارِ اصلی است و تلگرام
    * رفاه — همان قاعدهٔ پوش.
    */
-  async function notifyStation(stationId, saved) {
+  /* ── 🔕 کنترلِ شلوغی (۱۴۰۵/۰۷/۲۱) ───────────────────────────────────
+     خواستهٔ صاحب سامانه: «جوری نباشد که شلوغی ایجاد شود و صدها پیام روزی بیاید —
+     این را هم کنترل‌شده درست کن.»
+       • ساعتِ آرام (پیش‌فرض روشن، ۱۰ شب تا ۷ صبحِ کابل): فقط هشدارِ فوری.
+       • سقفِ روزانه: بیش از `CALM_CAP` پیامِ «کم مانده» در روز نه؛ یک بار گفته می‌شود.
+     ⛔ هشدارِ فوری («تمام شد»، «اضافه داده شد»، مخزنِ خالی) هرگز نگه داشته نمی‌شود.
+     ⛔ چیزی گم نمی‌شود: هشدارِ باز در «/status» و اعلامیهٔ صبح هست. */
+  const CALM_CAP = 12;
+  const QUIET_FROM = 22;
+  const QUIET_TO = 7;
+  const isQuietHour = (t) => { const hr = kabulHour(t); return hr >= QUIET_FROM || hr < QUIET_TO; };
+
+  /** این پیامِ «کم مانده» برود؟ ⇒ ‎{ ok, notice }‎ — شمارنده همین‌جا یکی بالا می‌رود. */
+  async function calmGate(c, t) {
+    if (c.quiet !== false && isQuietHour(t)) return { ok: false };
+    const day = kabulDay(t);
+    const r = await one(
+      `UPDATE telegram_chats
+          SET calm_n = CASE WHEN calm_day=$2 THEN calm_n + 1 ELSE 1 END, calm_day=$2
+        WHERE chat_id=$1 RETURNING calm_n`,
+      [String(c.chat_id), day]
+    );
+    const n = Number(r?.calm_n) || 1;
+    if (n <= CALM_CAP) return { ok: true };
+    if (n === CALM_CAP + 1) {
+      return {
+        ok: false,
+        notice: `🔕 امروز ${faNum(CALM_CAP)} هشدارِ «کم مانده» آمد؛ بقیهٔ «کم مانده»های امروز دیگر جدا نمی‌آیند `
+          + '(«تمام شد» همچنان همان لحظه می‌آید). همه را در /status و اعلامیهٔ فردا صبح ببینید.',
+      };
+    }
+    return { ok: false };
+  }
+
+  async function notifyStation(stationId, saved, at = 0) {
     try {
       const worthy = (saved || []).filter(e => ALERT_KINDS.includes(e.kind));
       if (!worthy.length || !stationId) return { queued: 0 };
@@ -2228,12 +2510,21 @@ module.exports = function createPumpBot({ req }) {
 
       //  ⛔ قیدِ ۳: عضو، پمپ و حساب — همین لحظه
       const chats = await alertChats(stationId);
-      const t = now();
+      const t = at || now();
       let queued = 0;
       for (const c of chats) {
-        const items = c.only_out ? worthy.filter(isOut) : worthy;
+        let items = c.only_out ? worthy.filter(isOut) : worthy;
+        //  🔕 کنترلِ شلوغی: «تمام شد»/«اضافه داده شد»/مخزنِ خالی همیشه همان لحظه؛ «کم مانده» در
+        //  ساعتِ آرام نمی‌آید و در روز سقف دارد — همه در «/status» و اعلامیهٔ صبح هست.
+        const calm = items.filter(e => !isOut(e));
+        if (calm.length) {
+          const gate = await calmGate(c, t);
+          if (!gate.ok) items = items.filter(isOut);
+          if (gate.notice) await queueLong(c.chat_id, stationId, gate.notice, now());
+        }
         if (!items.length) continue;
-        await queueLong(c.chat_id, stationId, formatAlert(c.station_name, items), t);
+        await queueLong(c.chat_id, stationId, formatAlert(c.station_name, items), now(),
+          c.kind === 'channel' ? null : alertKeyboard(stationId, items));
         queued += 1;
       }
       if (queued) kick();
@@ -2305,6 +2596,8 @@ module.exports = function createPumpBot({ req }) {
   }
 
   let lastAnnounceTry = 0;
+  let lastPcWatch = 0;
+  let lastSubTick = 0;
 
   /**
    * اعلامیهٔ صبح برای هر گفت‌وگویی که امروز هنوز نگرفته است.
@@ -2344,6 +2637,93 @@ module.exports = function createPumpBot({ req }) {
     }
   }
 
+  /* ── 🖥 برنامهٔ کامپیوتر قطع شد / دوباره وصل شد (۱۴۰۵/۰۷/۲۱) ──────────
+     تا امروز فقط اعلامیهٔ صبح می‌گفت «برنامه خبر نداده» — اگر ظهر قطع می‌شد تا فردا
+     کسی نمی‌فهمید. حالا: بیش از `PC_DOWN_MS` بی خبر و در ساعتِ کار (۷ صبح تا ۱۰ شب)
+     ⇒ یک پیام؛ برگشت ⇒ «✅ دوباره وصل شد». ⛔ هر قطعی یک بار (مُهر در `app_config`)،
+     و پمپی که چند روز است خاموش است دیگر هر روز یادآوری نمی‌گیرد. */
+  const PC_DOWN_MS = 2 * 3600 * 1000;
+  const PC_FORGET_MS = 3 * 24 * 3600 * 1000;
+
+  async function pcWatchTick(t = now()) {
+    try {
+      if (!(await active())) return { queued: 0, skipped: 'off' };
+      const ps = req('./pump-state');
+      let queued = 0;
+      for (const { station_id: sid } of await many('SELECT station_id FROM station_live_state')) {
+        const state = await ps.get(sid);
+        if (!state) continue;
+        const key = `tg_pcdown:${sid}`;
+        const down = (await plans.getConfig(key, '')) === '1';
+        const stale = t - state.updatedAt > PC_DOWN_MS;
+        let text = '';
+        if (stale && !down && !isQuietHour(t) && t - state.updatedAt < PC_FORGET_MS) {
+          await plans.setConfig(key, '1');
+          text = `🖥 برنامهٔ کامپیوترِ پمپِ «{name}» ${ago(state.updatedAt)} آخرین بار خبر داد.\n`
+            + 'اگر باید باز باشد، روشن بودنِ کامپیوتر و اینترنتش را ببینید؛ تا برگردد هشدارهای تازه نمی‌آیند.';
+        } else if (!stale && down) {
+          await plans.setConfig(key, '');
+          text = isQuietHour(t) ? '' : '✅ برنامهٔ کامپیوترِ پمپِ «{name}» دوباره وصل شد.';
+        }
+        if (!text) continue;
+        for (const c of await alertChats(sid)) {
+          await queueLong(c.chat_id, sid, text.replace('{name}', c.station_name), now());
+          queued += 1;
+        }
+      }
+      if (queued) kick();
+      return { queued };
+    } catch (err) {
+      console.error('[telegram:pcwatch]', hide(err.message));
+      return { queued: 0, error: err.message };
+    }
+  }
+
+  /* ── ⏳ اشتراکِ برنامه رو به پایان (۱۴۰۵/۰۷/۲۱) ─────────────────────
+     فقط به گفت‌وگوی **خصوصیِ صاحبِ پمپ** (نه گروهِ کارکنان) — ۵، ۲ و ۱ روز مانده و روزِ
+     تمام شدن، هر کدام یک بار، از ساعتِ ۹ صبحِ کابل. ⛔ تاریخ از خودِ سرور (`entitlement`). */
+  const SUB_WARN_DAYS = [5, 2, 1, 0];
+
+  async function subTick(t = now()) {
+    try {
+      if (!(await active())) return { queued: 0, skipped: 'off' };
+      if (kabulHour(t) < 9 || isQuietHour(t)) return { queued: 0, skipped: 'hour' };
+      const owners = await many(
+        `SELECT l.chat_id, l.station_id, s.name AS station_name
+           FROM telegram_chat_links l
+           JOIN telegram_chats c ON c.chat_id=l.chat_id AND c.kind='private'
+           JOIN stations s ON s.id=l.station_id AND s.status='active'
+           JOIN station_members m ON m.station_id=l.station_id AND m.user_id=l.user_id
+                AND m.status='active' AND m.role='owner'`);
+      const ent = req('./entitlement').pump;
+      let queued = 0;
+      for (const o of owners) {
+        const e = await ent.entitlementOf(o.station_id).catch(() => null);
+        if (!e) continue;
+        const sub = e.subscription?.active ? e.subscription : (e.trial?.active ? e.trial : null);
+        const left = sub ? Number(sub.daysLeft) : (e.subscription?.status === 'expired' ? 0 : -1);
+        if (!SUB_WARN_DAYS.includes(left)) continue;
+        const key = `tg_subwarn:${o.station_id}:${o.chat_id}`;
+        const mark = `${left}:${kabulDay(t)}`;
+        const prev = await plans.getConfig(key, '');
+        if (prev.startsWith(`${left}:`)) continue;             //  همین پله را گفته‌ایم
+        await plans.setConfig(key, mark);
+        const trial = sub && sub === e.trial;
+        const text = left > 0
+          ? `⏳ ${trial ? 'دورهٔ آزمایشیِ' : 'اشتراکِ'} برنامهٔ پمپِ «${o.station_name}» ${faNum(left)} روزِ دیگر تمام می‌شود.\n`
+            + 'برای تمدید به پشتیبانی پیام بدهید تا برنامه و بات بی‌وقفه کار کنند.'
+          : `⚠️ اشتراکِ برنامهٔ پمپِ «${o.station_name}» تمام شد؛ دفترِ شما سالم است. برای تمدید به پشتیبانی پیام بدهید.`;
+        await queueLong(o.chat_id, o.station_id, text, now());
+        queued += 1;
+      }
+      if (queued) kick();
+      return { queued };
+    } catch (err) {
+      console.error('[telegram:sub]', hide(err.message));
+      return { queued: 0, error: err.message };
+    }
+  }
+
   let flushing = false;
   let again = false;
 
@@ -2363,6 +2743,7 @@ module.exports = function createPumpBot({ req }) {
     let failed = 0;
     try {
       if (!(await token())) return { sent, failed };
+      await ensureOutbox();
       const t = now();
       await query(
         `UPDATE telegram_outbox SET failed_at=$1, error=CASE WHEN error='' THEN 'کهنه شد' ELSE error END
@@ -2377,7 +2758,9 @@ module.exports = function createPumpBot({ req }) {
       );
 
       for (const r of rows) {
-        const res = await send(r.chat_id, r.body);
+        let kb = null;
+        try { kb = r.markup ? JSON.parse(r.markup) : null; } catch { kb = null; }
+        const res = await send(r.chat_id, r.body, kb);
         if (res.ok) {
           await query('UPDATE telegram_outbox SET sent_at=$2, error=\'\' WHERE id=$1', [r.id, now()]);
           sent += 1;
@@ -2495,6 +2878,8 @@ module.exports = function createPumpBot({ req }) {
         { command: 'menu', description: 'منو' },
         { command: 'status', description: 'هشدارهای باز و موجودیِ مخزن' },
         { command: 'find', description: 'جست‌وجوی قرض‌دار (یا فقط نام را بنویسید)' },
+        { command: 'tanks', description: 'عکسِ مخزن‌ها، بدهیِ شرکت‌ها و خریدها' },
+        { command: 'acct', description: 'عکس و PDFِ حسابِ قرض‌دار: /acct نام' },
         { command: 'code', description: 'اپِ اندروید و آیفون و کدِ پمپ' },
         { command: 'group', description: 'وصل کردنِ گروه یا کانال' },
         { command: 'mirza', description: 'چت‌های میرزا — پیامِ مشتری‌های کیو‌آر' },
@@ -2508,6 +2893,8 @@ module.exports = function createPumpBot({ req }) {
       commands: [
         { command: 'status', description: 'هشدارهای باز و موجودیِ مخزن' },
         { command: 'find', description: 'جست‌وجوی قرض‌دار: /find نام' },
+        { command: 'tanks', description: 'عکسِ مخزن‌ها' },
+        { command: 'acct', description: 'عکس و PDFِ حساب: /acct نام' },
         { command: 'mirza', description: 'چت‌های میرزا در همین گروه' },
         { command: 'myid', description: 'شناسهٔ تلگرامِ من' },
         { command: 'menu', description: 'منو' },
@@ -2560,6 +2947,9 @@ module.exports = function createPumpBot({ req }) {
       flushOutbox().catch(() => {});
       //  اعلامیهٔ صبح — دقیقه‌ای یک بار سنجیده می‌شود، روزی یک بار می‌رود
       if (now() - lastAnnounceTry >= 60_000) { lastAnnounceTry = now(); announceTick().catch(() => {}); }
+      //  🖥 قطع/وصلِ برنامه — پنج دقیقه‌ای؛ ⏳ اشتراک — ساعتی
+      if (now() - lastPcWatch >= 5 * 60_000) { lastPcWatch = now(); pcWatchTick().catch(() => {}); }
+      if (now() - lastSubTick >= 60 * 60_000) { lastSubTick = now(); subTick().catch(() => {}); }
     }, 5000);
     outboxTimer.unref?.();
   }
@@ -2675,7 +3065,7 @@ module.exports = function createPumpBot({ req }) {
     relayCustomer, rateDone, desktopOnline, DESKTOP_ONLINE_MS,
     setTransport, handleUpdate, pollOnce, flushOutbox, notifyStation,
     start, stop, reload, status, configure, publicInfo, appLinks,
-    formatAlert, announcementText, announceTick, parseCommand, asciiDigits, normEmail, normName, notifyResolved, searchText, chunks,
+    formatAlert, announcementText, announceTick, pcWatchTick, subTick, alertKeyboard, CALM_CAP, parseCommand, asciiDigits, normEmail, normName, notifyResolved, searchText, chunks,
     _reset,
   };
 };

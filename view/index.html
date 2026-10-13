@@ -1200,7 +1200,9 @@
     if (!canPush()) return;
     askNotify().then(function (perm) {
       if (perm !== 'granted') return;
-      return navigator.serviceWorker.register('sw.js').then(function (reg) {
+      //  لینکِ کوتاه (‎/a/…‎): کارگر همان ‎/a/sw.js‎ است، نه کنارِ مسیرِ حساب
+      var swAt = /\/a\/[^\/]+\/[^\/]+\/[^\/]+\/?$/.test(location.pathname || '') ? '/a/sw.js' : 'sw.js';
+      return navigator.serviceWorker.register(swAt).then(function (reg) {
         return reg.pushManager.getSubscription().then(function (sub) {
           return sub || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64key(chatVapid) });
         });
@@ -1212,10 +1214,26 @@
   }
 
   var hash = (location.hash || '').replace(/^#/, '');
+  // ══ لینکِ کوتاه (۱۴۰۵/۰۷/۲۱): ‎vill3n.top/a/<پمپ>/<حساب>/<رمز>‎ ══
+  // صاحب سامانه: «چرا لینک‌های کیو‌آر این‌قدر بزرگ‌اند و روی ‎vill3n.top‎ نیستند؟»
+  // داده داخلِ لینک نیست؛ همان سه تکهٔ زنده در مسیر است و حساب از سرور خوانده می‌شود.
+  // ⛔ کیو‌آرهای چاپ‌شدهٔ قبلی (‎#…&d=…‎) دست نخوردند و مثلِ همیشه کار می‌کنند.
+  var pm = /\/a\/([^\/?#]+)\/([^\/?#]+)\/([^\/?#]+)\/?$/.exec(location.pathname || '');
+  if (pm && !liveParse(hash)) hash = 's=' + pm[1] + '&a=' + pm[2] + '&k=' + pm[3] + (hash ? '&' + hash : '');
   live = liveParse(hash);
   // ⛔ کیو‌آری که با ساعتِ جلورفتهٔ کامپیوترِ پمپ ساخته شده، عکسِ زنده را قفل نکند
   if (live) liveAt = live.t > Date.now() + 600000 ? 0 : live.t;
   var m = /(?:^|&)d=([^&]+)/.exec(hash);
+  if (!m && live) {
+    // لینکِ کوتاه: حساب از سرور — تا برسد «در حالِ گرفتن»
+    liveCheck().then(function () {
+      if (data) { render(); liveStart(); return; }
+      fail(liveStatus === 'off' ? 'به اینترنت نرسید.' : 'این حساب هنوز به سرور نرسیده است.',
+           liveStatus === 'off' ? 'اینترنتِ گوشی را ببینید و دوباره باز کنید.'
+                                : 'چند دقیقهٔ دیگر دوباره باز کنید؛ برنامهٔ پمپ باید روشن باشد.');
+    });
+    return;
+  }
   if (!m) {
     fail('این نشانی دادهٔ حسابی ندارد.',
          'کیو‌آرِ حسابتان را دوباره اسکن کنید.');

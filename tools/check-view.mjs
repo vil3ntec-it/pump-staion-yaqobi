@@ -390,5 +390,34 @@ console.log('\n۱۳) «درجا» و آیفون (۱۴۰۵/۰۷/۲۱)');
      'قابِ چت در سافاریِ پیش از ۱۴٫۵ (بی ‎inset‎) هم تمام‌صفحه است');
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+console.log('\nلینکِ کوتاه — vill3n.top/a/<پمپ>/<حساب>/<رمز> (۱۴۰۵/۰۷/۲۱)');
+{
+  const short = (fetchImpl) => makePage('', fetchImpl, (ctx) => { ctx.location.pathname = '/a/pump1/d7/abc123'; });
+  const urls = [];
+  const sp = short(async (url) => {
+    urls.push(url);
+    return /\/chat/.test(url) ? okJson({ ok: true, messages: [] }) : okJson({ at: 3000, d: snapV2 });
+  });
+  await settle();
+  await settle();
+  ok(sp.html.includes('محمد هارون'), 'حساب از سرور خوانده و نشان داده شد — بی دادهٔ داخلِ لینک');
+  ok(urls.some((u) => u.startsWith('https://api.vill3n.top/api/pump/public/pump1/acct/d7?k=abc123')),
+     'از همان سه تکهٔ مسیر می‌پرسد: ' + urls[0]);
+  ok(sp.html.includes('زنده — آخرین بررسی'), 'و زنده می‌ماند');
+
+  const off2 = short(async () => { throw new Error('network'); });
+  await settle();
+  ok(off2.html.includes('به اینترنت نرسید'), 'بی‌اینترنت: پیامِ روشن، نه صفحهٔ خالی');
+
+  const none2 = short(async () => okJson({ error: 'not_found' }, 404));
+  await settle();
+  ok(none2.html.includes('هنوز به سرور نرسیده'), 'حسابِ هنوز منتشرنشده: «هنوز به سرور نرسیده»');
+
+  const bare = makePage('', null, (ctx) => { ctx.location.pathname = '/view/'; });
+  await settle();
+  ok(bare.html.includes('دادهٔ حسابی ندارد'), 'نشانیِ بی حساب همان پیامِ قبلی را می‌دهد');
+}
+
 console.log(bad === 0 ? '\n✅ صفحهٔ view/ سالم است\n' : `\n❌ ${bad} ایراد\n`);
 process.exit(bad === 0 ? 0 : 1);

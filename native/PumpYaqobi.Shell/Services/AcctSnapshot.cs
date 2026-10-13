@@ -90,6 +90,27 @@ public static class AcctView
     /// </summary>
     public const string DefaultBase = "https://yaqobipump.top/view/";
 
+    /// <summary>پایهٔ لینکِ کوتاه — صفحهٔ حساب روی سایتِ ‎vill3n.top‎ (مسیرِ ‎/a/‎).</summary>
+    public const string ShortBase = "https://vill3n.top/a/";
+
+    /// <summary>
+    /// ‎s=…&amp;a=…&amp;k=…‎ (‎AcctLive.Fragment‎) ⇒ ‎https://vill3n.top/a/s/a/k?p=marker‎.
+    /// تکهٔ ناقص ⇒ «» (صدا‌زننده همان لینکِ بلند را می‌سازد).
+    /// </summary>
+    public static string ShortUrl(string live, string? marker = null)
+    {
+        string Get(string k)
+        {
+            foreach (var part in (live ?? "").Split('&'))
+                if (part.StartsWith(k + "=", StringComparison.Ordinal)) return Uri.UnescapeDataString(part[(k.Length + 1)..]);
+            return "";
+        }
+        var s = Get("s"); var a = Get("a"); var key = Get("k");
+        if (s.Length == 0 || a.Length == 0 || key.Length == 0) return "";
+        return ShortBase + Uri.EscapeDataString(s) + "/" + Uri.EscapeDataString(a) + "/" + Uri.EscapeDataString(key)
+               + (string.IsNullOrEmpty(marker) ? "" : "?p=" + Uri.EscapeDataString(marker));
+    }
+
     /// <summary>ردیف‌های تازه‌تر مهم‌ترند؛ کمترین شماری که همیشه می‌ماند.</summary>
     private const int MinRows = 5;
 

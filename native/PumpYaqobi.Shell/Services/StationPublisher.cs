@@ -280,7 +280,7 @@ public sealed class StationPublisher : IAsyncDisposable
 
             // کیو‌آرِ زنده: حساب‌های کیو‌آردار، فقط وقتی چیزی عوض شده — یا
             // دورِ پیش یکی‌شان نرفته و هنوز طلبکار است.
-            if (qrOk && (force || hash != _lastAcctHash || _accts.Pending > 0))
+            if (qrOk && (force || hash != _lastAcctHash || _accts.Pending > 0 || AcctLive.TakeFresh()))
             {
                 _lastAcctHash = hash;
                 await PublishAccountsAsync(ready, ct);
@@ -927,6 +927,8 @@ public sealed class StationPublisher : IAsyncDisposable
         if (Entitlements.PlanDenies(Entitlements.Online)) return RatePoll.None;
         var cloud = new CloudLink(file, () => { file.Save(); return Task.CompletedTask; });
         var poll = await cloud.RatePollAsync(wait, ct);
+        //  📷 درخواستِ عکس/PDFِ بات — در پس‌زمینه، تا پرسشِ بعدیِ نرخ منتظرِ ساختنِ PDF نماند
+        foreach (var r in poll.Reqs) _ = AnswerBotAsync(cloud, r, ct);
         var cmd = poll.Cmd;
         if (cmd is null) return poll;
         //  ⛔ همان فرمان دوباره (یعنی «نشست» به سرور نرسید) ⇒ فقط دوباره «نشست» —
@@ -956,6 +958,29 @@ public sealed class StationPublisher : IAsyncDisposable
         if (applied)
             _host.Toast("🏷️ نرخِ اتحادیه از تلگرام نشست: " + CloudLink.RateLine(cmd), ToastKind.Ok);
         return poll;
+    }
+
+    /// <summary>یک درخواستِ بات در یک زمان — ساختنِ PDF و عکس برنامه را سنگین نکند.</summary>
+    private readonly SemaphoreSlim _botGate = new(1, 1);
+
+    /// <summary>
+    /// ══ عکس و PDF برای باتِ تلگرام (۱۴۰۵/۰۷/۲۱) ═══════════════════════════════
+    /// همان سرویس‌ها و همان سندهای خودِ برنامه (<see cref="BotReports"/>)؛ هیچ فایلی روی
+    /// دیسک نمی‌ماند. ⛔ هیچ‌وقت استثنا بیرون نمی‌دهد — درخواستِ بات برنامه را نمی‌خواباند.
+    /// </summary>
+    private async Task AnswerBotAsync(CloudLink cloud, BotRequest req, CancellationToken ct)
+    {
+        try
+        {
+            await _botGate.WaitAsync(ct);
+            try
+            {
+                var report = await BotReports.BuildAsync(_host, req, ct);
+                await cloud.ReportAnswerAsync(req.Id, report, ct);
+            }
+            finally { _botGate.Release(); }
+        }
+        catch { /* بی‌اینترنت یا بسته شدنِ برنامه — بات خودش «جواب نیامد» می‌گوید */ }
     }
 
     /// <summary>آخرین فرمانی که همین‌جا نشست — تا تکرارش دوباره نشانده نشود.</summary>

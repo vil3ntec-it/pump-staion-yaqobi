@@ -24,7 +24,7 @@ internal static class SrcText
         ["CloudLink.cs"] = new[] { "CloudLink.cs", "CloudLink.License.cs", "CloudLink.Support.cs",
                                    "CloudLink.Account.cs", "CloudLink.Session.cs", "CloudLink.Wire.cs",
                                    "CloudLink.Sync.cs", "CloudLink.Rate.cs", "CloudLink.Watch.cs",
-                                   "CloudLink.LiveConfig.cs" },
+                                   "CloudLink.LiveConfig.cs", "CloudLink.Reports.cs" },
     };
 
     public static string Read(string path)
