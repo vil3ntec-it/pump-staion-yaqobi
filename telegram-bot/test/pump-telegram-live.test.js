@@ -28,6 +28,8 @@ let updateId = 5000;
 let msgSeq = 100;
 
 test.before(async () => {
+  //  آزمون برنامهٔ کامپیوترِ واقعی ندارد ⇒ هشدارِ مخزن متن (عکسش در pump-telegram-reports)
+  telegram.setAutoTankImage(false);
   //  ⛔ ساعتِ آرام (۲۲ تا ۷ِ کابل) این‌جا سنجیده نمی‌شود — آزمون به ساعتِ اجرا وابسته نباشد
   telegram.setQuietHours(0, 0);
   await h.start();
@@ -145,14 +147,18 @@ test('حالِ زنده: هشدارِ باز ⇒ یک پیام؛ همان حال
   assert.equal(first.opened, 2);
   await telegram.flushOutbox();
   const m = sent().filter(c => c.params.chat_id === '8101');
-  assert.equal(m.length, 1, 'یک پیام برای یک دسته');
-  assert.match(m[0].params.text, /کریم/);
-  assert.match(m[0].params.text, /مخزنِ دیزل/);
-  //  ⛔ هشدار منو ندارد — فقط «📷 حسابِ فلانی» و «🛢 مخزن‌ها» (۱۴۰۵/۰۷/۲۱: «اگه زدم عکس رو بده»)
-  const kb = m[0].params.reply_markup?.inline_keyboard || [];
-  assert.deepEqual(kb.map(r => r.map(b => b.text)), [['📷 حسابِ کریم'], ['🛢 مخزن‌ها']]);
+  //  ⛔ هر هشدار پیامِ کوتاهِ خودش (۱۴۰۵/۰۷/۲۱: «همه پیام‌ها یک‌جا هستند… ساده و دقیق»)
+  assert.equal(m.length, 2, 'هر هشدار یک پیام');
+  const debt = m.find(x => /کریم/.test(x.params.text));
+  const tank = m.find(x => /مخزنِ دیزل/.test(x.params.text));
+  assert.ok(debt && tank);
+  assert.ok(!/مخزن/.test(debt.params.text) && !/کریم/.test(tank.params.text), 'دو هشدار در یک پیام');
+  //  ⛔ هشدار منو ندارد — فقط دکمهٔ خودش (۱۴۰۵/۰۷/۲۱: «اگه زدم عکس رو بده»)
+  const kb = debt.params.reply_markup?.inline_keyboard || [];
+  assert.deepEqual(kb.map(r => r.map(b => b.text)), [['📷 حسابِ کریم']]);
   assert.equal(kb[0][0].callback_data, `acct:${owner.stationId}:1`, 'دکمه شناسهٔ همان قرض‌دار و همان پمپ را دارد');
-  assert.equal(kb[1][0].callback_data, `tanks:${owner.stationId}`);
+  const tk = tank.params.reply_markup?.inline_keyboard || [];
+  assert.deepEqual(tk.map(r => r.map(b => b.callback_data)), [[`tanks:${owner.stationId}`]]);
 
   //  ⛔ همان هشدارها، دو بار دیگر — مثلِ بستن و باز کردنِ برنامه
   clear();
@@ -184,7 +190,7 @@ test('برطرف شد ⇒ «✅ برطرف شد»؛ ولی «تمام شد ⇒ �
   const fixed = texts.find(t => t.startsWith('✅ برطرف'));
   assert.ok(fixed && fixed.includes('رحیم'), 'رحیم برطرف شد');
   assert.ok(!fixed.includes('نبی'), '⛔ نبی برطرف نشده، فقط حالش عوض شد');
-  assert.ok(texts.some(t => t.includes('🚨') && t.includes('نبی')), 'هشدارِ تازهٔ «کم مانده»ِ نبی');
+  assert.ok(texts.some(t => t.startsWith('👤🟡') && t.includes('نبی')), 'هشدارِ تازهٔ «کم مانده»ِ نبی');
 });
 
 test('«وضعیت» از حالِ زنده حرف می‌زند: هشدارهای باز، مخزن، و این‌که برنامه کِی خبر داد', async () => {
@@ -517,7 +523,7 @@ test('گروه وصل ⇒ هشدار فقط در گروه؛ بی گروه ⇒ د
   const g = sent().filter(c => c.params.chat_id === '-1008901').map(c => c.params.text);
   assert.equal(g.length, 1);
   assert.match(g[0], /جلال/);
-  assert.match(g[0], /🚨/);
+  assert.match(g[0], /^👤🔴 جلال/);
   assert.ok(!g[0].includes('ولی'), 'هشدارِ قدیمی دوباره آمد');
 
   //  منوی خصوصی راستش را می‌گوید
@@ -555,7 +561,7 @@ test('هشدار دستورِ کار دارد؛ ۷۰ ⇒ ۹۰ ⇒ اضافه‌�
   let m = sent().filter(c => c.params.chat_id === '9001').map(c => c.params.text);
   assert.equal(m.length, 1);
   assert.match(m[0], /۳۰ لیتر مانده/);
-  assert.match(m[0], /📋 دستورِ کار:\n▫️ متوجهِ امین باشید\./);
+  assert.match(m[0], /\n👉 متوجهِ امین باشید\./);
 
   for (const [level, t, a] of [
     ['w90', 'امین — ۹۰٪ رفت؛ فقط ۱۰ لیتر مانده', 'به امین بگویید حسابش را پر کند.'],

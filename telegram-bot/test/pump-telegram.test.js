@@ -27,6 +27,8 @@ let responder = null;
 let updateId = 1000;
 
 test.before(async () => {
+  //  آزمون برنامهٔ کامپیوترِ واقعی ندارد ⇒ هشدارِ مخزن متن (عکسش در pump-telegram-reports)
+  telegram.setAutoTankImage(false);
   //  ⛔ ساعتِ آرام (۲۲ تا ۷ِ کابل) این‌جا سنجیده نمی‌شود — آزمون به ساعتِ اجرا وابسته نباشد
   telegram.setQuietHours(0, 0);
   await h.start();
@@ -269,7 +271,7 @@ test('⛔ از یک گفت‌وگو بیش از پنج درخواستِ کد د�
    ۳) هشدار: درجا، یک پیام برای هر دسته، متنِ ساده
    ══════════════════════════════════════════════════════════════════ */
 
-test('حسابِ قرض‌دار و مخزن ⇒ یک پیام در تلگرام، با نامِ پمپ و هر هشدار', async () => {
+test('حسابِ قرض‌دار و مخزن ⇒ هر هشدار یک پیامِ کوتاه در تلگرام', async () => {
   const owner = await pumpOwner('هشدار');
   const dev = await bindDevice(owner, 'pc-alert');
   await linkPrivate(6001, owner);
@@ -282,16 +284,17 @@ test('حسابِ قرض‌دار و مخزن ⇒ یک پیام در تلگرام
     { kind: 'sale', title: 'فروش — نباید برود', clientId: 'a4' },
   ]);
   const out = await telegram.flushOutbox();
-  assert.equal(out.sent, 1);
-  const m = lastTo(6001);
-  assert.ok(m, 'هشداری نرفت');
-  assert.match(m.params.text, new RegExp(owner.stationName));
-  assert.match(m.params.text, /👤🔴 کریم/);
-  assert.match(m.params.text, /👤🟡 نبی/);
-  assert.match(m.params.text, /🛢️🔴 مخزنِ پطرول/);
-  assert.doesNotMatch(m.params.text, /فروش/);
-  //  ⛔ متنِ ساده — نامی که کاربر نوشته نمی‌تواند پیام را دست‌کاری کند
-  assert.equal(m.params.parse_mode, undefined);
+  //  ⛔ هر هشدار پیامِ کوتاهِ خودش (۱۴۰۵/۰۷/۲۱)؛ فروش هیچ
+  assert.equal(out.sent, 3);
+  const mine6001 = sent().filter(c => c.params.chat_id === '6001');
+  const all = mine6001.map(x => x.params.text);
+  assert.ok(all.some(t => /^👤🔴 کریم/.test(t)));
+  assert.ok(all.some(t => /^👤🟡 نبی/.test(t)));
+  assert.ok(all.some(t => /^🛢️🔴 مخزنِ پطرول/.test(t)));
+  assert.ok(all.every(t => !/فروش/.test(t)));
+  //  یک پمپ ⇒ نامِ پمپ لازم نیست؛ متنِ ساده — نامی که کاربر نوشته نمی‌تواند پیام را دست‌کاری کند
+  assert.ok(all.every(t => !t.includes(owner.stationName)));
+  for (const x of mine6001) assert.equal(x.params.parse_mode, undefined);
 
   //  همان خبر دوباره ⇒ هیچ پیامِ تازه‌ای
   clear();
