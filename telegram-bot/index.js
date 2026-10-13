@@ -288,6 +288,40 @@ module.exports = function createPumpBot({ req }) {
     }
   }
 
+  /**
+   * چند فایل در یک پیام (آلبومِ تلگرام، `sendMediaGroup`) — ۱۴۰۵/۰۷/۲۲: «دو عکس را جدا جدا
+   * می‌دهد؛ هر دو را یک‌جا بده، کنارِ هم، مثلِ وقتی در تلگرام دو عکس می‌گذاری.»
+   * `type`: `photo` یا `document`؛ نوشته فقط زیرِ اولی (تلگرام آن را زیرِ آلبوم نشان می‌دهد).
+   */
+  async function callMedia(chatId, type, files, caption = '', { timeoutMs = 120000 } = {}) {
+    const t = await token();
+    if (!t) return { ok: false, error_code: 0, description: 'رمزِ بات تنظیم نشده است' };
+    const media = files.map((f, i) => ({
+      type, media: `attach://f${i}`, ...(i === 0 && caption ? { caption } : {}),
+    }));
+    const params = { chat_id: String(chatId), media };
+    const attach = Object.fromEntries(files.map((f, i) => [`f${i}`, f]));
+    try {
+      if (transport) return await transport('sendMediaGroup', params, t, attach);
+      const form = new FormData();
+      form.append('chat_id', params.chat_id);
+      form.append('media', JSON.stringify(media));
+      files.forEach((f, i) => form.append(`f${i}`, new Blob([f.data], { type: f.mime }), f.name));
+      const res = await fetch(`${config.telegram.apiBase}/bot${t}/sendMediaGroup`, {
+        method: 'POST',
+        body: form,
+        signal: AbortSignal.any([AbortSignal.timeout(timeoutMs), stopSignal()]),
+      });
+      let json = null;
+      try { json = await res.json(); } catch { /* پاسخِ غیرِ JSON */ }
+      return json && typeof json === 'object'
+        ? json
+        : { ok: false, error_code: res.status, description: `پاسخِ نامعتبر (${res.status})` };
+    } catch (err) {
+      return { ok: false, error_code: 0, description: hide(err.cause?.message || err.message, t) };
+    }
+  }
+
   /** نامِ بات را از خودِ تلگرام می‌پرسد و نگه می‌دارد. */
   async function refreshMe(tok = null) {
     const res = await call('getMe', {}, { tok });
@@ -954,15 +988,23 @@ module.exports = function createPumpBot({ req }) {
     return k;
   }
 
-  /** پاسخِ برنامه ⇒ تلگرام: عکس‌ها (اولی با متن)، بعد PDFها، بعد لینکِ کیو‌آر. */
-  async function deliverReport(chatId, out) {
+  /**
+   * پاسخِ برنامه ⇒ تلگرام: عکس‌ها (چند عکس ⇒ یک آلبوم، متن زیرش)، بعد PDFها (چندتا ⇒ یک آلبوم)،
+   * بعد لینکِ کیو‌آر، و دکمه‌های حسابِ شرکت‌ها (گزارشِ مخزن). `link` = شعبه‌ای که پرسیده شده.
+   */
+  async function deliverReport(chatId, out, link = null) {
     const files = Array.isArray(out?.files) ? out.files : [];
     const photos = files.filter(f => String(f.mime).startsWith('image/'));
     const docs = files.filter(f => f.mime === 'application/pdf');
     const caption = String(out?.caption || '').trim();
     const short = caption.length <= 1000;
     let captioned = false;
-    for (const p of photos) {
+    let left = photos;
+    if (photos.length > 1) {
+      const res = await callMedia(chatId, 'photo', photos.slice(0, 10), short ? caption : '');
+      if (res.ok) { left = []; captioned = short && Boolean(caption); }
+    }
+    for (const p of left) {
       const res = await callFile('sendPhoto', {
         chat_id: String(chatId), ...(!captioned && short && caption ? { caption } : {}),
       }, 'photo', p);
@@ -971,10 +1013,18 @@ module.exports = function createPumpBot({ req }) {
       captioned = captioned || (short && Boolean(caption));
     }
     if (caption && !captioned) await sendLong(chatId, caption);
-    for (const d of docs) await callFile('sendDocument', { chat_id: String(chatId) }, 'document', d);
+    const grouped = docs.length > 1 && (await callMedia(chatId, 'document', docs.slice(0, 10))).ok;
+    if (!grouped) for (const d of docs) await callFile('sendDocument', { chat_id: String(chatId) }, 'document', d);
     const qr = String(out?.extra?.qr || '');
     if (/^https?:\/\//.test(qr)) {
       await send(chatId, `🔗 لینکِ حساب (همان کیو‌آر) — برای واتساپ یا هر جای دیگر:\n${qr}`);
+    }
+    //  🏢 هر شرکتی که بدهی دارد ⇒ دکمهٔ کارت، PDF و لینکِ همان شرکت (۱۴۰۵/۰۷/۲۲)
+    const cos = String(out?.extra?.companies || '').split('\n')
+      .map(l => l.split('\t')).filter(([id, n]) => Number(id) > 0 && n).slice(0, 8);
+    if (link && cos.length) {
+      await show(chatId, '🏢 عکس، PDF و لینکِ حسابِ هر شرکت:',
+        cos.map(([id, n]) => [{ text: `🏢 ${n}`.slice(0, 48), callback_data: `co:${link.station_id}:${Number(id)}` }]));
     }
   }
 
@@ -1010,7 +1060,7 @@ module.exports = function createPumpBot({ req }) {
           : `⚠️ ${String(err.message || 'نشد').slice(0, 300)}`;
         return send(row.chat_id, why);
       }
-      return deliverReport(row.chat_id, out);
+      return deliverReport(row.chat_id, out, link);
     } catch (err) {
       console.error('[telegram:report]', hide(err.message));
       return send(row.chat_id, '⚠️ نشد؛ دوباره امتحان کنید.');
@@ -2176,6 +2226,13 @@ module.exports = function createPumpBot({ req }) {
         if (!l || !(id > 0)) return answer('این شعبه به این گفت‌وگو وصل نیست.', true);
         await answer('⏳ از کامپیوترِ پمپ می‌گیرم…');
         return sendReport(row, l, 'debtor', { id });
+      }
+      case 'co': {
+        const id = Number(String(q.data || '').split(':')[2]);
+        const l = await branch();
+        if (!l || !(id > 0)) return answer('این شعبه به این گفت‌وگو وصل نیست.', true);
+        await answer('⏳ از کامپیوترِ پمپ می‌گیرم…');
+        return sendReport(row, l, 'company', { id });
       }
       case 'acctn': {
         const ref = nameRefs.get(arg);

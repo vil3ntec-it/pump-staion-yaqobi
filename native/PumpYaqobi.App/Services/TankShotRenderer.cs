@@ -55,14 +55,14 @@ public static class TankShotRenderer
         };
 
         var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 14, FlowDirection = FlowDirection.RightToLeft };
+        var inner = TankGauge.InnerRect;
         foreach (var s in shots)
         {
             var gauge = new TankGauge
             {
-                Width = 400, Height = 250,
-                //  ⛔ بی برچسبِ «پروب/شناور/پمپ» (۱۴۰۵/۰۷/۲۲: «لازم نیستند»)؛ درصدِ پرشدگی بالای مخزن،
-                //  درشت و جدا — نوشته‌های داخلِ کنترل در عکسِ بیرون از پنجره جابه‌جا می‌افتادند.
-                Compact = true,
+                Width = TankGauge.DesignW, Height = TankGauge.DesignH,
+                //  ⛔ بی برچسبِ «پروب/شناور/پمپ» (۱۴۰۵/۰۷/۲۲: «لازم نیستند») و بی نوشتهٔ خودِ کنترل
+                Compact = true, HideCenterText = true,
                 FillPercent = s.FillPercent, FillText = " ",
                 ThresholdPercent = s.ThresholdPercent, CaptionText = s.Caption,
                 BodyBrush = card, BodyDeepBrush = input, RimBrush = edge,
@@ -70,12 +70,44 @@ public static class TankShotRenderer
             };
             gauge.SetValue(TextElement.FontFamilyProperty, font);
 
+            //  ── درصد و لیترِ مانده «داخلِ مخزن»، مثلِ خودِ برنامه (۱۴۰۵/۰۷/۲۲، با عکس) ──
+            //  روی تیل سفید با سایه؛ روی بدنهٔ خالی رنگِ نوشتهٔ تم — همان قاعدهٔ ‎TankGauge‎.
+            const double pctTop = 88, litTop = 130;
+            var oilTop = TankGauge.LevelsOf(inner.Top, inner.Bottom, s.FillPercent, null, s.ThresholdPercent).OilTop;
+            var overlay = new Canvas { Width = TankGauge.DesignW, Height = TankGauge.DesignH, IsHitTestVisible = false };
+            void OnTank(string str, double size, double top, FontWeight weight, FlowDirection flow)
+            {
+                var onOil = oilTop <= top + size * 0.6;
+                IBrush fg = onOil ? Brushes.White : (s.Low ? danger : text);
+                if (onOil)
+                {
+                    var sh = T(str, size, new SolidColorBrush(Color.FromArgb(0x66, 0, 0, 0)), weight);
+                    sh.Width = 260;
+                    sh.FlowDirection = flow;
+                    Canvas.SetLeft(sh, inner.Center.X - 130 + 1.2);
+                    Canvas.SetTop(sh, top + 1.6);
+                    overlay.Children.Add(sh);
+                }
+                var tb = T(str, size, fg, weight);
+                tb.Width = 260;
+                tb.FlowDirection = flow;
+                Canvas.SetLeft(tb, inner.Center.X - 130);
+                Canvas.SetTop(tb, top);
+                overlay.Children.Add(tb);
+            }
+            OnTank(s.FillText, 34, pctTop, FontWeight.Bold, FlowDirection.LeftToRight);
+            OnTank(s.Liters, 17, litTop, FontWeight.SemiBold, FlowDirection.RightToLeft);
+            //  ⚠️ کنترلِ مخزن چپ‌به‌راست است (‎TankGauge‎)؛ لایهٔ نوشته هم، تا همان مختصات را بخواند
+            var tank = new Grid { Width = TankGauge.DesignW, Height = TankGauge.DesignH, FlowDirection = FlowDirection.LeftToRight };
+            tank.Children.Add(gauge);
+            tank.Children.Add(overlay);
+
             var stack = new StackPanel { Spacing = 4 };
-            stack.Children.Add(T(s.Title, 20, text, FontWeight.Bold));
-            stack.Children.Add(T(s.FillText + " پر", 30, s.Low ? danger : text, FontWeight.Bold));
+            stack.Children.Add(T(s.Title, 22, text, FontWeight.Bold));
             stack.Children.Add(T(s.Sub, 14, muted));
-            if (s.Low) stack.Children.Add(T("🔴 زیرِ حدِ هشدار", 13, danger, FontWeight.Bold));
-            stack.Children.Add(gauge);
+            stack.Children.Add(tank);
+            //  ⛔ بی ایموجی در عکس: قلمِ جایگزینِ ایموجی شکلِ حرف‌های فارسی را می‌شکست (سربرگِ ۰۷/۲۲)
+            stack.Children.Add(T(s.Note, 16, s.Low ? danger : text, FontWeight.Bold));
 
             row.Children.Add(new Border
             {
@@ -88,14 +120,15 @@ public static class TankShotRenderer
             });
         }
 
-        var head = T(title, 18, text, FontWeight.Bold);
-        head.HorizontalAlignment = HorizontalAlignment.Right;
+        //  ⛔ بی سربرگ (۱۴۰۵/۰۷/۲۲): نامِ پمپ و تاریخ زیرِ عکس، در متن است؛ نوشتهٔ سربرگ با ایموجی
+        //  در عکس وارونه و جدا‌جدا کشیده می‌شد.
+        _ = title;
         var root = new Border
         {
             Background = page,
-            Padding = new Thickness(18),
+            Padding = new Thickness(14),
             FlowDirection = FlowDirection.RightToLeft,
-            Child = new StackPanel { Spacing = 12, Children = { head, row } },
+            Child = row,
         };
         root.SetValue(TextElement.FontFamilyProperty, font);
 
