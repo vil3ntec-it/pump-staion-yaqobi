@@ -631,11 +631,13 @@ test('⛔ ذخیرهٔ دوبارهٔ رمز در پنل ⇒ هر پیام **ی�
   const replies = sent().filter(c => c.params.chat_id === '9201');
   assert.equal(replies.length, 1, `پاسخ‌ها: ${replies.length}`);
   //  و منو: فرمان‌ها به تلگرام گفته شدند
+  //  ⛔ خصوصی: منو کیبوردِ پایینِ گفت‌وگوست، نه دکمهٔ «منو»ی کنارِ کادر (۱۴۰۵/۰۷/۲۲)
+  assert.ok(calls.some(c => c.method === 'deleteMyCommands' && c.params.scope?.type === 'all_private_chats'),
+    'فهرستِ «/»ِ خصوصی برداشته نشد');
   const cmds = calls.filter(c => c.method === 'setMyCommands');
-  assert.ok(cmds.some(c => c.params.scope?.type === 'all_private_chats'
-    && ['menu', 'status', 'find', 'code', 'group', 'help'].every(n => c.params.commands.some(x => x.command === n))),
-  'فرمان‌های «منو»');
-  assert.ok(calls.some(c => c.method === 'setChatMenuButton'), 'دکمهٔ منو');
+  assert.ok(cmds.some(c => c.params.scope?.type === 'all_group_chats'
+    && ['status', 'find', 'menu'].every(n => c.params.commands.some(x => x.command === n))), 'فرمان‌های گروه');
+  assert.ok(calls.some(c => c.method === 'setChatMenuButton' && c.params.menu_button?.type === 'default'), 'دکمهٔ منو');
 });
 
 test('⛔ یک به‌روزرسانی دو بار پاسخ نمی‌گیرد، حتی اگر دو بار برسد', async () => {

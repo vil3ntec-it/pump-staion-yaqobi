@@ -197,6 +197,8 @@ test('۳) برنامه قطع شد ⇒ یک پیام؛ دوباره ⇒ هیچ؛
   assert.equal(down.length, 1, 'قطعی باید یک بار گفته شود');
 
   await state(dev, { alerts: [], tank: { petrol: { show: 10, threshold: 1, low: false } } });
+  //  ⛔ همان ساعتِ روز برای «آخرین خبر» هم — آزمون به ساعتِ اجرا وابسته نباشد
+  await query('UPDATE station_live_state SET updated_at=$2 WHERE station_id=$1', [owner.stationId, at(12)]);
   clear();
   //  ⛔ ساعتِ روز، نه ساعتِ اجرا: شب «دوباره وصل شد» عمداً نمی‌آید
   await telegram.pcWatchTick(at(12) + 60_000);
@@ -220,4 +222,29 @@ test('۴) اشتراکِ رو به پایان ⇒ فقط به خصوصیِ صا�
   const mine = sent().filter(c => c.params.chat_id === '9204' && /⏳/.test(c.params.text));
   assert.equal(mine.length, 1, 'یادآوری یک بار');
   assert.match(mine[0].params.text, /۲ روزِ دیگر/);
+});
+
+test('۵) منوی پایینِ گفت‌وگو: پس از وصل شدن یک بار می‌آید؛ دکمه‌هایش همان کارِ منو را می‌کنند', async () => {
+  const owner = await pumpOwner('کیبورد');
+  clear();
+  await linkPrivate(9205, owner);
+  const kb = calls.filter(c => c.method === 'sendMessage' && c.params.chat_id === '9205' && c.params.reply_markup?.keyboard);
+  assert.equal(kb.length, 1, 'کیبوردِ پایین نیامد');
+  const texts = kb[0].params.reply_markup.keyboard.flat().map(b => b.text);
+  for (const t of ['📊 وضعیت', '🛢 مخزن‌ها', '🔎 جست‌وجو', '⚙️ تنظیمات']) assert.ok(texts.includes(t), t);
+  assert.equal(kb[0].params.reply_markup.is_persistent, true);
+
+  //  دوباره منو ⇒ کیبورد دوباره نمی‌آید
+  clear();
+  await msg(9205, '/menu');
+  assert.ok(!calls.some(c => c.params?.reply_markup?.keyboard), 'کیبورد دوباره آمد');
+
+  //  «📊 وضعیت» ⇒ همان وضعیت، نه جست‌وجوی «📊 وضعیت»
+  clear();
+  await msg(9205, '📊 وضعیت');
+  assert.match(lastTo(9205).params.text, /پمپِ «|برنامهٔ کامپیوتر|هشدار/);
+  //  «⚙️ تنظیمات» ⇒ همان صفحهٔ تنظیمات
+  clear();
+  await msg(9205, '⚙️ تنظیمات');
+  assert.ok(rows(lastTo(9205)).flat().some(b => b.callback_data === 'quiet'), 'تنظیمات باز نشد');
 });
