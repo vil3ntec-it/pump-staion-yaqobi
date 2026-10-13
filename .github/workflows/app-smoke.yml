@@ -70,7 +70,12 @@ jobs:
         run: |
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { choco install innosetup --no-progress -y }
-          New-Item -ItemType Directory -Force -Path rel | Out-Null
+          New-Item -ItemType Directory -Force -Path rel, rel2 | Out-Null
+          #  ۱۴۰۵/۰۷/۲۱: نسخهٔ «تازه‌تر» برای سنجهٔ «به‌روزرسانی از داخلِ برنامه» (بندِ ۵ب)
+          & $iscc /Qp "/DAppVersion=9.9.10" "/DSourceDir64=..\publish\win-x64" "/DSourceDir86=..\publish\win-x86" native/installer/PumpYaqobi.iss
+          if ($LASTEXITCODE -ne 0) { throw "ساختِ نصابِ ۹.۹.۱۰ شکست خورد" }
+          & native/installer/seal.ps1 -Path rel/PumpYaqobi-Setup.exe
+          Move-Item rel/PumpYaqobi-Setup.exe rel2/PumpYaqobi-Setup.exe -Force
           & $iscc /Qp "/DAppVersion=9.9.9" "/DSourceDir64=..\publish\win-x64" "/DSourceDir86=..\publish\win-x86" native/installer/PumpYaqobi.iss
           if ($LASTEXITCODE -ne 0) { throw "ساختِ نصاب شکست خورد" }
           & native/installer/seal.ps1 -Path rel/PumpYaqobi-Setup.exe
@@ -80,6 +85,11 @@ jobs:
         with:
           name: setup
           path: rel/PumpYaqobi-Setup.exe
+          retention-days: 3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: setup-next
+          path: rel2/PumpYaqobi-Setup.exe
           retention-days: 3
 
   # ── همان فایلی که مشتری دانلود می‌کند (۱۴۰۵/۰۷/۲۰) ──────────────────────────
@@ -126,6 +136,11 @@ jobs:
         with:
           name: setup
           path: rel
+      - uses: actions/download-artifact@v4
+        if: ${{ needs.build.result == 'success' }}
+        with:
+          name: setup-next
+          path: rel2
       - name: نصب ⇐ باز کردن ⇐ اطلاعات ⇐ دوبار-کلیک ⇐ ۳۲بیتی ⇐ حذف
         shell: pwsh
         run: |
@@ -210,6 +225,44 @@ jobs:
           Check ($u1.Count -eq 1 -and (Get-ItemPropertyValue -Path $unins -Name 'Inno Setup: App Path') -eq $dir) "یک نصب، در همان پوشه"
           RunApp '۳۲بیتی' 40
           Check (Test-Path "$data\pump.db") "همان دفتر سرِ جایش است"
+
+          "── ۵ب) به‌روزرسانی از داخلِ برنامه — همان دکمهٔ «نصب» (۱۴۰۵/۰۷/۲۱)"
+          #  صاحب ریپو: «از داخلِ برنامه به‌روز می‌کنم؛ نصاب روی صفحه نمی‌آید، برنامه بسته
+          #  می‌شود و دیگر باز نمی‌شود.» این‌جا برنامهٔ نصب‌شده (۳۲بیتیِ بندِ ۵) با
+          #  ‎PUMP_SELFTEST_UPDATE‎ همان ‎InstallAndExitAsync‎ را می‌زند و سنجیده می‌شود که
+          #  بسته شد، نسخهٔ تازه نشست و برنامه **خودش** دوباره باز شد.
+          if (Test-Path rel2\PumpYaqobi-Setup.exe) {
+            $upd = Join-Path $env:TEMP 'pyq-upd'
+            Remove-Item -Recurse -Force $upd -ErrorAction SilentlyContinue
+            New-Item -ItemType Directory -Force -Path $upd | Out-Null
+            $pkg = Join-Path $upd 'PumpYaqobi-Setup.exe'
+            Copy-Item (Resolve-Path rel2\PumpYaqobi-Setup.exe).Path $pkg
+            (Get-FileHash $pkg -Algorithm SHA256).Hash.ToLower() | Set-Content -Path "$pkg.sha256" -NoNewline
+            $env:PUMP_SELFTEST_UPDATE = $pkg
+            $env:PUMP_SELFTEST_UPDATE_VERSION = '9.9.10'
+            $t0 = Get-Date
+            $p = Start-Process -FilePath (Join-Path $dir 'PumpYaqobi.exe') -PassThru
+            Remove-Item Env:PUMP_SELFTEST_UPDATE, Env:PUMP_SELFTEST_UPDATE_VERSION
+            $gone = $p.WaitForExit(120000)
+            Check $gone "برنامه برای نصب بسته شد"
+            $v = ''; $np = $null
+            for ($i = 0; $i -lt 300; $i++) {
+              Start-Sleep -Seconds 1
+              $v = (Get-ItemProperty -Path $unins -ErrorAction SilentlyContinue).DisplayVersion
+              $np = Get-Process PumpYaqobi -ErrorAction SilentlyContinue | Where-Object { $_.Id -ne $p.Id -and $_.StartTime -gt $t0 } | Select-Object -First 1
+              if ($v -eq '9.9.10' -and $np) { break }
+            }
+            "   پس از $i ثانیه: نسخهٔ ثبت‌شده $v · برنامهٔ باز: $(if ($np) { $np.Id } else { 'هیچ' })"
+            Check ($v -eq '9.9.10') "نسخهٔ تازه نصب شد (ثبت: $v)"
+            Check ($null -ne $np) "برنامه خودش دوباره باز شد"
+            $res = Join-Path $data 'updates\apply-result.txt'
+            Check (-not (Test-Path $res)) "نصاب بی خطا تمام شد$(if (Test-Path $res) { ': ' + (Get-Content $res -Raw) })"
+            "   ── run-setup.cmd"; Get-Content "$upd\run-setup.cmd" -ErrorAction SilentlyContinue | ForEach-Object { "   $_" }
+            if ($np) { Start-Sleep -Seconds 10; Check (-not $np.HasExited) "برنامهٔ تازه باز ماند" }
+            Get-Process PumpYaqobi -ErrorAction SilentlyContinue | Stop-Process -Force
+            Start-Sleep -Seconds 2
+            Check (-not (Crash)) "به‌روزرسانی — هیچ کرشی نیست"
+          }
 
           "── ۶) حذف ⇒ ‹data› دست نمی‌خورد"
           $u = (Get-ItemPropertyValue -Path $unins -Name UninstallString) -replace '"',''

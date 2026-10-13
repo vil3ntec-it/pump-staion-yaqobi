@@ -89,4 +89,43 @@ public class SetupUpdateScriptTests
         Assert.Equal("setup:5", File.ReadAllText(result).Trim());
         try { Directory.Delete(root, true); } catch { }
     }
+
+    /// <summary>
+    /// ⛔ (۱۴۰۵/۰۷/۲۱) روی ویندوز، واقعاً، با پوشهٔ فارسی و پرانتز — مسیرها فقط آرگومانِ ‎cmd‎اند
+    /// (همان ‎ScriptArgs‎ و همان شکلِ ‎RunScript‎) و متنِ اسکریپت ASCII است، بی ‎chcp‎.
+    /// </summary>
+    [Fact]
+    public void RuyeWindows_PusheyeFarsi_MasirhaArguman_BiChcp()
+    {
+        var text = UpdateService.SetupScript(1, "%~1", UpdateService.SetupArgs("/ARCH=x86", "%~2"), "%~3",
+                                             UpdateService.RelaunchLine("%~4", "%~2", elevated: false));
+        Assert.True(text.All(c => c < 128), "متنِ اسکریپت باید فقط ASCII باشد");
+        Assert.DoesNotContain("chcp", text);
+        if (!OperatingSystem.IsWindows()) return;
+
+        var root = Path.Combine(Path.GetTempPath(), "pyq-fa-" + Guid.NewGuid().ToString("N")[..6], "برنامهٔ پمپ (علی)");
+        Directory.CreateDirectory(root);
+        var marker = Path.Combine(root, "relaunched.txt");
+        var result = Path.Combine(root, "نتیجه.txt");
+        var script = Path.Combine(root, "run-setup.cmd");
+        using var gone = Process.Start(new ProcessStartInfo("cmd.exe", "/c exit 0") { UseShellExecute = false, CreateNoWindow = true })!;
+        gone.WaitForExit();
+        //  «نصاب» = ‎cmd /c exit 7‎ ؛ «باز کردن» = نوشتنِ نشانه در همان پوشهٔ فارسی (‎%~2‎)
+        File.WriteAllText(script,
+            UpdateService.SetupScript(gone.Id, "%~1", "/c exit 7", "%~3", "(echo ok)>\"%~2\\relaunched.txt\""),
+            new System.Text.UTF8Encoding(false));
+        var args = UpdateService.ScriptArgs(Path.Combine(Environment.SystemDirectory, "cmd.exe"), root, result, "x");
+        using var cmd = Process.Start(new ProcessStartInfo
+        {
+            FileName = "cmd.exe",
+            Arguments = "/s /c \"\"" + script + "\" " + args + "\"",
+            WorkingDirectory = root,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        })!;
+        Assert.True(cmd.WaitForExit(120_000), "اسکریپت تمام نشد");
+        Assert.True(File.Exists(marker), "خطِ بازکردن در پوشهٔ فارسی نرسید");
+        Assert.Equal("setup:7", File.ReadAllText(result).Trim());
+        try { Directory.Delete(Path.GetDirectoryName(root)!, true); } catch { }
+    }
 }

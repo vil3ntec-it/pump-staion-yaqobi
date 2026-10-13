@@ -1,0 +1,118 @@
+name: سنجشِ ۳۲بیتی — همهٔ برنامه در فرآیندِ ۳۲بیتی
+
+# ══ «روی کامپیوترِ ۳۲بیت هم تست کن» (صاحب ریپو، ۱۴۰۵/۰۷/۲۱) ══════════════════
+#  گیت‌هاب ویندوزِ ۳۲بیتی ندارد؛ نزدیک‌ترین سنجه همین است: داتنتِ x86 (setup-dotnet،
+#  architecture: x86) ⇒ آزمون‌ها و کاوشگرهای رابط **در فرآیندِ ۳۲بیتی** — همان
+#  اشاره‌گرِ ۴ بایتی، SQLite و Skiaِ x86 و سقفِ حافظهٔ ۳۲بیتی که مشتری دارد.
+#  تا پیش از این ۳۲بیتی فقط «باز شد و ۴۰ ثانیه نیفتاد» سنجیده می‌شد (app-smoke، بندِ ۵).
+#  ⛔ هر گام با !cancelled() می‌دود تا همهٔ ایرادها یک‌جا دیده شوند، نه فقط اولی.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'native/**'
+      - '.github/workflows/x86-check.yml'
+
+jobs:
+  x86:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      #  ⛔ setup-dotnet@v4 «architecture» را نمی‌شناسد (فقط هشدار می‌دهد) و داتنتِ ۶۴بیتی
+      #  می‌ماند — بارِ نخست همهٔ سنجه روی x64 رفت. پس داتنتِ x86 را خودمان نصب می‌کنیم.
+      - name: نصبِ داتنتِ ۳۲بیتی
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'dotnet-x86'
+          Invoke-WebRequest https://dot.net/v1/dotnet-install.ps1 -OutFile dotnet-install.ps1
+          ./dotnet-install.ps1 -Channel 8.0 -Architecture x86 -InstallDir $dir
+          $dir | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          "DOTNET_ROOT=$dir" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "DOTNET_ROOT(x86)=$dir" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "DOTNET_MULTILEVEL_LOOKUP=0" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+
+      - name: داتنتِ ۳۲بیتی است؟
+        shell: pwsh
+        run: |
+          (Get-Command dotnet).Source
+          $info = dotnet --info | Out-String
+          $info
+          if ($info -notmatch 'RID:\s+win-x86') { throw "داتنت ۳۲بیتی نیست — سنجه بی‌معناست" }
+
+      - name: آزمون‌ها (۳۲بیتی)
+        if: ${{ !cancelled() }}
+        working-directory: native
+        run: dotnet test PumpYaqobi.Tests -c Release --nologo
+
+      - name: ساختِ کاوشگرها (۳۲بیتی)
+        if: ${{ !cancelled() }}
+        working-directory: native
+        run: dotnet build PumpYaqobi.UiTests -c Release -v q
+
+      - name: باز شدن و گرم شدن
+        if: ${{ !cancelled() }}
+        working-directory: native
+        shell: pwsh
+        run: |
+          dotnet run --no-build --project PumpYaqobi.UiTests -c Release -- startup
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          dotnet run --no-build --project PumpYaqobi.UiTests -c Release -- warm
+
+      - name: باز شدنِ همهٔ بخش‌ها
+        if: ${{ !cancelled() }}
+        working-directory: native
+        run: dotnet run --no-build --project PumpYaqobi.UiTests -c Release -- sectionopen
+
+      #  fullscan این‌جا نیست: دو سنجه‌اش روی main هم سرخ است و ربطی به ۳۲بیتی ندارد —
+      #  years (هدفِ زمانیِ ۱ ثانیهٔ پنجره، HISTORY «years در fullscan») و serverdot (بی اشتراک).
+      #  همهٔ سنجه‌های رفتاری و سرعتیِ دیگرش در گام‌های همین فایل جدا می‌دوند.
+      - name: هر کادر و هر خانه همان که زده شد — با زمانِ هر کلید
+        if: ${{ !cancelled() }}
+        working-directory: native
+        run: dotnet run --no-build --project PumpYaqobi.UiTests -c Release -- typeall
+
+      - name: کلیدها، خانه‌ها، برگرداندن
+        if: ${{ !cancelled() }}
+        working-directory: native
+        shell: pwsh
+        run: |
+          $rc = 0
+          foreach ($m in 'keys','cells','undokeys','liveformat') {
+            "════ $m ════"
+            dotnet run --no-build --project PumpYaqobi.UiTests -c Release -- $m
+            if ($LASTEXITCODE) { $rc = $LASTEXITCODE; "::error::۳۲بیتی: $m سرخ شد" }
+          }
+          exit $rc
+
+      - name: ماندگاری و رفتارِ اصلاح‌ها
+        if: ${{ !cancelled() }}
+        working-directory: native
+        shell: pwsh
+        run: |
+          $rc = 0
+          foreach ($m in 'persist','verify','bindsweep') {
+            "════ $m ════"
+            dotnet run --no-build --project PumpYaqobi.UiTests -c Release -- $m
+            if ($LASTEXITCODE) { $rc = $LASTEXITCODE; "::error::۳۲بیتی: $m سرخ شد" }
+          }
+          exit $rc
+
+      - name: سرعت با دادهٔ بزرگ (perf · dashperf · gridperf · ledgerperf · personperf · scrollperf)
+        if: ${{ !cancelled() }}
+        working-directory: native
+        shell: pwsh
+        run: |
+          $rc = 0
+          foreach ($m in 'perf','dashperf','gridperf','ledgerperf','personperf','scrollperf') {
+            "════ $m ════"
+            dotnet run --no-build --project PumpYaqobi.UiTests -c Release -- $m
+            if ($LASTEXITCODE) { $rc = $LASTEXITCODE; "::error::۳۲بیتی: $m سرخ شد" }
+          }
+          exit $rc
+
+      - name: چاپ و PDF
+        if: ${{ !cancelled() }}
+        working-directory: native
+        run: dotnet run --no-build --project PumpYaqobi.UiTests -c Release -- printperf

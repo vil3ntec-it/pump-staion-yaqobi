@@ -67,8 +67,17 @@ public static class BindSweep
     private static bool IsCommand(string prop) => prop is "Command" or "CommandParameter";
     private static string Trim(string s) => s.Length > 160 ? s[..160] + "…" : s;
 
+    //  ⛔ هر «باز شدن» دو Settle (۴۰ × Sleep(5)) را هم می‌شمارد. ساعتِ پیش‌فرضِ ویندوز ۱۵٫۶ms است،
+    //  پس Sleep(5) واقعاً ۱۵٫۶ms می‌شود و هر باز شدن ~۱٫۲ ثانیه خوابِ خالی دارد — روی رانرِ ۳۲بیتی
+    //  «حاضری و معاش» ۱٬۵۱۶ms شد که بیشترش همین خواب بود. با ساعتِ ۱ms همان خواب ۵ms می‌ماند و سقفِ
+    //  ۱٫۵ ثانیه دوباره کارِ برنامه را می‌سنجد، نه دانه‌بندیِ ساعتِ ماشین. سقف دست نخورده است.
+    [System.Runtime.InteropServices.DllImport("winmm.dll")]
+    [System.Runtime.InteropServices.DefaultDllImportSearchPaths(System.Runtime.InteropServices.DllImportSearchPath.System32)]
+    private static extern uint timeBeginPeriod(uint ms);
+
     public static int Run(string[] args)
     {
+        if (OperatingSystem.IsWindows()) timeBeginPeriod(1);
         var dir = Path.Combine(Path.GetTempPath(), "pump-bind-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         AppHost.Start(Path.Combine(dir, "pump.db"));
