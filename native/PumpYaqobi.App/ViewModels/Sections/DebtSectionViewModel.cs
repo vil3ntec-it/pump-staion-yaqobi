@@ -406,8 +406,7 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
 
             var live = main is null ? "" : await AcctLive.EnsureAsync(_host, main);
 
-            var link = AcctView.Url(_host.Settings.GetString(SettingsKeys.ViewerUrl), snap,
-                                    AcctLink.Build(card.Entity.Id), live);
+            var link = AcctLive.LinkFor(_host, snap, AcctLink.Build(card.Entity.Id), live);
 
             var png = await Task.Run(() => QrWriter.EncodePng(link));
             var hint = "این کد را به مشتری بدهید؛ با اسکنش حسابِ خودش — با همهٔ "

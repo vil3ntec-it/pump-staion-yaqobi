@@ -280,7 +280,7 @@ public sealed class StationPublisher : IAsyncDisposable
 
             // کیو‌آرِ زنده: حساب‌های کیو‌آردار، فقط وقتی چیزی عوض شده — یا
             // دورِ پیش یکی‌شان نرفته و هنوز طلبکار است.
-            if (qrOk && (force || hash != _lastAcctHash || _accts.Pending > 0))
+            if (qrOk && (force || hash != _lastAcctHash || _accts.Pending > 0 || AcctLive.TakeFresh()))
             {
                 _lastAcctHash = hash;
                 await PublishAccountsAsync(ready, ct);

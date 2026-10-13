@@ -199,8 +199,7 @@ public static class BotReports
 
             //  کیو‌آر — همان دکمهٔ «📲»ِ صفحهٔ حساب
             var live = await AcctLive.EnsureAsync(host, acct, ct);
-            var link = AcctView.Url(host.Settings.GetString(SettingsService.ViewerUrl), snap,
-                                    Marker(person.Id, acct.IsMain ? null : acct.LegacySubId), live);
+            var link = AcctLive.LinkFor(host, snap, Marker(person.Id, acct.IsMain ? null : acct.LegacySubId), live);
             var qr = PumpYaqobi.Services.Vision.QrWriter.EncodePng(link);
             if (acct.IsMain || !extra.ContainsKey("qr")) extra[acct.IsMain ? "qr" : "qr2"] = link;
 

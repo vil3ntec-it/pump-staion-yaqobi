@@ -1580,8 +1580,7 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
         // مشتری هر دقیقه از ابر بپرسد «تازه‌تر شد؟». خالی ⇒ همان کدِ ایستا.
         var live = await AcctLive.EnsureAsync(_host, acct.Entity);
 
-        var link = AcctView.Url(_host.Settings.GetString(SettingsKeys.ViewerUrl), snap,
-                                AcctLink.Build(Entity.Id, sub), live);
+        var link = AcctLive.LinkFor(_host, snap, AcctLink.Build(Entity.Id, sub), live);
 
         var png = await Task.Run(() => QrWriter.EncodePng(link));
         var title = isSub ? "📲 📄 " + acct.Title : "📲 " + Name;

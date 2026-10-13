@@ -885,8 +885,7 @@ public sealed partial class CompanySectionViewModel : SectionViewModel, ICardGri
 
             var live = full is null ? "" : await AcctLive.EnsureAsync(_host, full);
 
-            var link = AcctView.Url(_host.Settings.GetString(SettingsKeys.ViewerUrl), snap,
-                                    AcctLink.Build(card.Entity.Id, null, "company"), live);
+            var link = AcctLive.LinkFor(_host, snap, AcctLink.Build(card.Entity.Id, null, "company"), live);
             var png = await Task.Run(() => QrWriter.EncodePng(link));
 
             await Dialogs.ShowQrAsync("📲 " + card.Name, link, png,

@@ -141,4 +141,35 @@ public class BotReportsTests
         Assert.Equal(AcctLink.Build(7), BotReports.Marker(7, null));
         Assert.Equal(AcctLink.Build(7, "s123"), BotReports.Marker(7, "s123"));
     }
+
+    // ── لینکِ کوتاهِ کیو‌آر روی vill3n.top (۱۴۰۵/۰۷/۲۱) ─────────────────────
+
+    [Fact]
+    public void TheShortLinkIsShortOnVill3nAndStillOpensTheAccountInTheAppScanner()
+    {
+        var live = AcctLive.Fragment("pump-yaqobi", "d7", "abcdef0123456789abcd", 1700000000000);
+        var url = AcctView.ShortUrl(live, AcctLink.Build(12));
+        Assert.Equal("https://vill3n.top/a/pump-yaqobi/d7/abcdef0123456789abcd?p=%23roview-debt-12-pdf", url);
+        Assert.True(url.Length < 100, url.Length.ToString());
+        //  اسکنرِ خودِ برنامه همان شخص را پیدا می‌کند
+        Assert.Equal(12, AcctLink.Parse(Uri.UnescapeDataString(url))!.Value.PersonId);
+        //  تکهٔ ناقص ⇒ هیچ (صدا‌زننده لینکِ بلند را می‌سازد)
+        Assert.Equal("", AcctView.ShortUrl("s=pump1&a=d7"));
+        Assert.Equal("", AcctView.ShortUrl(""));
+    }
+
+    [Fact]
+    public async Task WithoutTheCloudTheQrStaysTheOldSelfContainedLink()
+    {
+        var host = Host();
+        var person = await host.Debtors.AddDebtorAsync("نادر", null, false);
+        var main = (await host.Debtors.LoadFullAsync(person.Id))!.MainAccount;
+        var live = await AcctLive.EnsureAsync(host, main);
+        //  رمزِ تازه ⇒ حساب‌ها در دورِ بعد منتشر شوند (یک بار)
+        Assert.True(AcctLive.TakeFresh());
+        var snap = AcctSnapshots.ForDebtAccount("نادر", null, main, host.Debt);
+        //  این کامپیوترِ آزمون به ابر وصل نیست ⇒ همان لینکِ بلندِ دارای داده
+        var link = AcctLive.LinkFor(host, snap, AcctLink.Build(person.Id), live);
+        Assert.Contains("&d=", link);
+    }
 }

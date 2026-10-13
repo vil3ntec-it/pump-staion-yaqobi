@@ -130,6 +130,7 @@ public static class AcctLive
             {
                 acct.QrKey = NewKey();
                 await host.Debtors.UpdateAccountAsync(acct, ct);
+                Interlocked.Exchange(ref _fresh, 1);
             }
             return Fragment(HomeLink.CloudCode(host), IdOf(acct), acct.QrKey!, NowMs());
         }
@@ -145,6 +146,7 @@ public static class AcctLive
             {
                 company.QrKey = NewKey();
                 await host.Companies.UpdateAsync(company, ct);
+                Interlocked.Exchange(ref _fresh, 1);
             }
             return Fragment(HomeLink.CloudCode(host), IdOf(company), company.QrKey!, NowMs());
         }
@@ -173,6 +175,32 @@ public static class AcctLive
               + "چتِ پشتیبانی هم روی همین صفحه باز است."
             : "، ولی تا این کامپیوتر به پمپِ حسابتان وصل نشود، تغییرهای تازه و "
               + "چتِ پشتیبانی روی گوشیِ مشتری نمی‌آید (پروفایل ← حساب و ورود ← نامِ پمپ).";
+    }
+
+    /// <summary>
+    /// رمزِ تازه‌ای ساخته شد ⇒ حساب‌ها در دورِ بعد منتشر شوند، حتی اگر عکسِ کلِ پمپ عوض
+    /// نشده باشد (۱۴۰۵/۰۷/۲۱). بی این، لینکِ کوتاهِ تازه تا اولین ویرایشِ بعدی «هنوز به
+    /// سرور نرسیده» می‌گفت — لینکِ کوتاه داده‌ای در خودش ندارد.
+    /// </summary>
+    private static int _fresh;
+    public static bool TakeFresh() => Interlocked.Exchange(ref _fresh, 0) == 1;
+
+    /// <summary>
+    /// ══ لینکِ کوتاهِ کیو‌آر روی ‎vill3n.top‎ (۱۴۰۵/۰۷/۲۱) ═════════════════════════
+    ///
+    /// صاحب ریپو: «چرا لینک‌های کیو‌آر این‌قدر بزرگ‌اند و روی ‎vill3n.top‎ نیستند؟»
+    /// حسابی که رمزِ زنده دارد و برنامه‌ای که به ابر وصل است ⇒
+    /// ‎https://vill3n.top/a/&lt;پمپ&gt;/&lt;حساب&gt;/&lt;رمز&gt;?p=…‎ (حدودِ ۹۰ نویسه، نه ۱۴۰۰):
+    /// صفحه حساب را از سرورِ حساب می‌خواند. ⚠️ ‎?p=‎ همان نشانهٔ اسکنرِ خودِ برنامه است.
+    /// ⛔ بی رمز یا بی ابر ⇒ همان لینکِ بلندِ قبلی (داده داخلِ کد) — چون آن‌جا لینکِ
+    /// کوتاه چیزی برای خواندن ندارد. کیو‌آرهای چاپ‌شدهٔ قبلی دست نخوردند.
+    /// </summary>
+    public static string LinkFor(AppHost host, AcctSnapshot snap, string? marker, string live)
+    {
+        var shortUrl = live.Length > 0 && Activated(host) ? AcctView.ShortUrl(live, marker) : "";
+        return shortUrl.Length > 0
+            ? shortUrl
+            : AcctView.Url(host.Settings.GetString(PumpYaqobi.Services.Data.SettingsService.ViewerUrl), snap, marker, live);
     }
 
     /// <summary>برنامه با کدِ شش‌رقمی فعال شده؟ — شرطِ رفتنِ عکسِ حساب به ابر.</summary>
