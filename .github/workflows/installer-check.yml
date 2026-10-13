@@ -371,9 +371,13 @@ jobs:
           $bytes[$at] = $bytes[$at] -bxor 0x5A
           [IO.File]::WriteAllBytes($broken, $bytes)
           $before = Get-ItemPropertyValue -Path $unins -Name 'Inno Setup: App Path'
-          $r = & $drive -Setup $broken -SetupArgs @('/ARCH=x64') -Dirs @($dC) -Log $log -TimeoutSec 120
+          #  ۱۴۰۵/۰۷/۲۱: نخست می‌پرسد «نسخهٔ سالم از اینترنت گرفته شود؟» — این‌جا «نه»
+          #  (این نسخه هنوز منتشر نشده و نصابِ دیگری نباید وسطِ سنجه باز شود).
+          $r = & $drive -Setup $broken -SetupArgs @('/ARCH=x64') -Dirs @($dC) -Log $log -TimeoutSec 120 -Answer @('No')
           Show 'ه' $r
           if (-not (Select-String -Path $log -Pattern 'PYSEAL state=2' -Quiet)) { Fail "کپیِ خراب شناخته نشد (PYSEAL state=2 در لاگ نیست)" }
+          if (-not (Select-String -Path $log -Pattern 'PYSEAL repair-offer' -Quiet)) { Fail "کپیِ خراب گرفتنِ نسخهٔ سالم را پیشنهاد نکرد" }
+          if (Select-String -Path $log -Pattern 'PYSEAL repair url' -Quiet) { Fail "با «نه» هم از اینترنت گرفت" }
           if (-not ($r.Messages | Where-Object { $_ -match 'خراب' })) { Fail "کپیِ خراب بی پیامِ فارسی گذشت: $($r.Messages -join ' | ')" }
           if ($r.Finished) { Fail "کپیِ خراب نصب شد" }
           if (Test-Path "$dC\PumpYaqobi.exe") { Fail "کپیِ خراب فایل روی دیسک گذاشت" }

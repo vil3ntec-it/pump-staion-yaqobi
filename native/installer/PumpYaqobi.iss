@@ -734,7 +734,7 @@ var
   SealBroken: Boolean;
 
 //  0 مُهر ندارد · 1 سالم · 2 خراب · 3 خوانده نشد
-function SealState(P: TOutputProgressWizardPage; var Detail: String): Integer;
+function SealStateOf(const Path: String; P: TOutputProgressWizardPage; var Detail: String): Integer;
 var
   F: TFileStream;
   Total, Left: Int64;
@@ -747,7 +747,7 @@ begin
   F := nil;
   try
     //  $40 = fmShareDenyNone — خودِ Setup هم همین فایل را باز نگه داشته است
-    F := TFileStream.Create(ExpandConstant('{srcexe}'), $40);
+    F := TFileStream.Create(Path, $40);
     Total := F.Size;
     Result := 0;
     if Total > SealLen then
@@ -786,6 +786,73 @@ begin
   if F <> nil then F.Free;
 end;
 
+function SealState(P: TOutputProgressWizardPage; var Detail: String): Integer;
+begin
+  Result := SealStateOf(ExpandConstant('{srcexe}'), P, Detail);
+end;
+
+// ── کپیِ خراب خودش را از اینترنت درست می‌کند (۱۴۰۵/۰۷/۲۱) ──────────────────
+//  صاحب ریپو: «چرا با دانلود یا کپی روی فلش ارور بدهد؛ هر جور کپی شود خراب نشود.»
+//  فایلِ روی سرور سالم است (مُهر و SHA256SUMS هر دو می‌خورند)؛ کپیِ خراب یعنی
+//  بایت‌ها در راه (دانلودکننده، فلش) عوض شده‌اند و هیچ نرم‌افزاری بایتِ ازدست‌رفته
+//  را بی منبعِ سالم برنمی‌گرداند. پس نصاب همان نسخهٔ خودش را از انتشارِ گیت‌هاب
+//  می‌گیرد، با همان مُهر می‌سنجد (state=1، وگرنه اجرا نمی‌شود)، روی دسکتاپ
+//  می‌گذارد و اجرا می‌کند. بی اینترنت ⇒ همان پیامِ «دوباره بگیرید».
+const
+  RepairName = 'PumpYaqobi-Setup.exe';
+
+var
+  RepairPage: TDownloadWizardPage;
+
+function OnRepairProgress(const Url, FileName: String; const Progress, ProgressMax: Int64): Boolean;
+begin
+  Result := True;
+end;
+
+function RepairFromWeb(): Boolean;
+var
+  Urls: array of String;
+  I, State, Code: Integer;
+  Tmp, Dest, Detail: String;
+begin
+  Result := False;
+  SetArrayLength(Urls, 2);
+  Urls[0] := 'https://github.com/vil3ntec-it/pump-staion-yaqobi/releases/download/v{#AppVersion}/' + RepairName;
+  Urls[1] := 'https://github.com/vil3ntec-it/pump-staion-yaqobi/releases/latest/download/' + RepairName;
+  if RepairPage = nil then
+    RepairPage := CreateDownloadPage('گرفتنِ فایلِ سالم',
+      'نسخهٔ سالمِ همین نصاب از اینترنت گرفته می‌شود…', @OnRepairProgress);
+  Tmp := ExpandConstant('{tmp}\') + RepairName;
+  for I := 0 to GetArrayLength(Urls) - 1 do
+  begin
+    RepairPage.Clear;
+    RepairPage.Add(Urls[I], RepairName, '');
+    RepairPage.Show;
+    try
+      try
+        RepairPage.Download;
+        State := SealStateOf(Tmp, nil, Detail);
+        Log('PYSEAL repair url=' + IntToStr(I) + ' state=' + IntToStr(State) + ' ' + Detail);
+        if State = 1 then
+        begin
+          //  دسکتاپ: کپیِ خراب شاید همین حالا از همان‌جا در حالِ اجراست (قفل) ⇒ نامِ جدا
+          Dest := ExpandConstant('{userdesktop}\PumpYaqobi-Setup-salem.exe');
+          if not FileCopy(Tmp, Dest, False) then Dest := Tmp;
+          if ExecAsOriginalUser(Dest, '', '', SW_SHOWNORMAL, ewNoWait, Code) then
+          begin
+            Result := True;
+            Exit;
+          end;
+        end;
+      except
+        Log('PYSEAL repair url=' + IntToStr(I) + ' failed: ' + GetExceptionMessage);
+      end;
+    finally
+      RepairPage.Hide;
+    end;
+  end;
+end;
+
 function SealOk(): Boolean;
 var
   P: TOutputProgressWizardPage;
@@ -808,6 +875,17 @@ begin
   if Result then Exit;
 
   SealBroken := True;
+  Log('PYSEAL repair-offer');
+  if MsgBox('این فایلِ نصب هنگامِ دانلود یا کپی خراب شده است.' + #13#10 +
+            'هیچ چیزی روی این کامپیوتر نوشته نشد و حساب‌های شما دست نخوردند.' + #13#10 + #13#10 +
+            'اگر اینترنت وصل است، نصاب خودش نسخهٔ سالم را می‌گیرد، می‌سنجد و نصب را ادامه می‌دهد' + #13#10 +
+            '(یک نسخهٔ سالم هم با نامِ «PumpYaqobi-Setup-salem» روی دسکتاپ می‌ماند — برای فلش همان را کپی کنید).' + #13#10 + #13#10 +
+            'گرفته شود؟', mbConfirmation, MB_YESNO) = IDYES then
+    if RepairFromWeb() then
+    begin
+      WizardForm.Close;
+      Exit;
+    end;
   if State = 2 then
     MsgBox('این فایلِ نصب خراب است و نصب انجام نمی‌شود.' + #13#10 + #13#10 +
            'فایل پس از ساخته شدن عوض شده — معمولاً هنگامِ دانلود یا کپی روی فلش.' + #13#10 +

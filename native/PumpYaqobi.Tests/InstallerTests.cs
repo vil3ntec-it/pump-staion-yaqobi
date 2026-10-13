@@ -769,4 +769,26 @@ public class InstallerTests
         Assert.Contains("PYSEAL state=1", check);
         Assert.Contains("PYSEAL state=2", check);
     }
+
+    /// <summary>
+    /// ۱۴۰۵/۰۷/۲۱ — «هر جور کپی شود خراب نشود»: کپیِ خراب نسخهٔ سالمِ همین نصاب را از
+    /// انتشار می‌گیرد، با همان مُهر می‌سنجد (state=1، وگرنه اجرا نمی‌شود) و روی دسکتاپ
+    /// می‌گذارد و اجرا می‌کند. «نه» یا بی اینترنت ⇒ همان پیامِ پیشین.
+    /// </summary>
+    [Fact]
+    public void Nasab_KopiyeKharab_NoskheyeSalemRaAzInternetMigirad()
+    {
+        var iss = Iss();
+        Assert.Contains("function SealStateOf(const Path: String;", iss);
+        Assert.Contains("Result := SealStateOf(ExpandConstant('{srcexe}'), P, Detail);", iss);
+        Assert.Contains("releases/download/v{#AppVersion}/' + RepairName", iss);
+        Assert.Contains("releases/latest/download/' + RepairName", iss);
+        Assert.Contains("State := SealStateOf(Tmp, nil, Detail);", iss);
+        Assert.Contains("if State = 1 then", iss);                      // فقط فایلِ سالم اجرا می‌شود
+        Assert.Contains("ExecAsOriginalUser(Dest,", iss);
+        Assert.Contains("Log('PYSEAL repair-offer');", iss);
+        var check = SrcText.Read(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
+        Assert.Contains("PYSEAL repair-offer", check);
+        Assert.Contains("-Answer @('No')", check);
+    }
 }
