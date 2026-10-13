@@ -729,9 +729,11 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
         {
             Alerts.Add(new DashAlertViewModel
             {
-                Icon = a.IsTank ? "🛢️" : (a.IsOut ? "⛔" : "⚠️"),
+                Icon = a.IsTank ? "🛢️" : a.IsShift ? (a.Key.StartsWith("cash-", StringComparison.Ordinal) ? "💰" : "⏰")
+                     : (a.IsOut ? "⛔" : "⚠️"),
                 Text = a.Text,
-                Sub = a.IsOut ? (a.IsTank ? "همین حالا رسیدگی کنید" : "اضافه ندهید") : "رو به پایان",
+                Sub = a.IsShift ? "ورقِ همان شیفت را ببینید"
+                    : a.IsOut ? (a.IsTank ? "همین حالا رسیدگی کنید" : "اضافه ندهید") : "رو به پایان",
                 Action = a.Action ?? "",
                 ColorKey = a.IsOut ? "Pump.Danger" : "Pump.Warn",
                 GoSection = a.Section,

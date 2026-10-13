@@ -83,7 +83,10 @@ module.exports = function createPumpBot({ req }) {
   const PURPOSE = 'telegram';
 
   /** همان سه نوعی که پوش می‌شوند — `events.PUSH_KINDS`. یک فهرست، نه دو. */
-  const ALERT_KINDS = ['stock_out', 'low_stock', 'debt'];
+  const ALERT_KINDS = ['stock_out', 'low_stock', 'debt', 'shift'];
+
+  /** کسریِ صندوق (`cash-…`) یا شیفتِ بسته‌نشده (`shift-…`) — از ورقِ برنامه (`AlertWatch.ShiftAlerts`). */
+  const shiftIcon = (k) => (String(k || '').startsWith('cash-') ? '💰' : String(k || '').startsWith('shift-') ? '⏰' : '');
 
   const LINK_TTL_MS = 15 * 60 * 1000;
   const CODE_WINDOW_MS = 60 * 60 * 1000;
@@ -776,7 +779,7 @@ module.exports = function createPumpBot({ req }) {
 
   function alertLine(a) {
     const out = a.s === 'out';
-    const who = String(a.k || '').startsWith('tank-') ? '🛢️' : '👤';
+    const who = shiftIcon(a.k) || (String(a.k || '').startsWith('tank-') ? '🛢️' : '👤');
     return `${who}${out ? '🔴' : '🟡'} ${a.t || a.n || ''}`;
   }
 
@@ -2314,7 +2317,7 @@ module.exports = function createPumpBot({ req }) {
 
   function iconOf(e) {
     const out = isOut(e);
-    const who = e.kind === 'debt' ? '👤' : '🛢️';
+    const who = e.kind === 'shift' ? (shiftIcon(e.data?.key) || '💰') : e.kind === 'debt' ? '👤' : '🛢️';
     return `${who}${out ? '🔴' : '🟡'}`;
   }
 
@@ -2366,7 +2369,7 @@ module.exports = function createPumpBot({ req }) {
       seen.add(m[1]);
       rows.push([{ text: `📷 حسابِ ${String(e.data?.who || '').slice(0, 28)}`, callback_data: data }]);
     }
-    if (items.some(e => e.kind !== 'debt') && Buffer.byteLength(`tanks:${stationId}`) <= 64) {
+    if (items.some(e => e.kind === 'stock_out' || e.kind === 'low_stock') && Buffer.byteLength(`tanks:${stationId}`) <= 64) {
       rows.push([{ text: '🛢 مخزن‌ها', callback_data: `tanks:${stationId}` }]);
     }
     return rows.length ? rows : null;
@@ -2448,7 +2451,9 @@ module.exports = function createPumpBot({ req }) {
         if (!mine.length) continue;
         const lines = mine.map((a) => (String(a.k).startsWith('tank-')
           ? `🛢️🟢 ${a.n || 'مخزن'} — دیگر کم نیست`
-          : `👤🟢 ${a.n}${a.f ? ` — ${a.f}` : ''}: دیگر هشدار ندارد`));
+          : String(a.k).startsWith('cash-') ? `💰🟢 ${a.n}: کسریِ صندوق درست شد`
+            : String(a.k).startsWith('shift-') ? `⏰🟢 ${a.n}: شیفت بسته شد`
+              : `👤🟢 ${a.n}${a.f ? ` — ${a.f}` : ''}: دیگر هشدار ندارد`));
         await queueLong(c.chat_id, stationId, `✅ برطرف شد — پمپِ «${c.station_name}»\n\n${lines.join('\n')}`, t);
         queued += 1;
       }
@@ -2516,12 +2521,15 @@ module.exports = function createPumpBot({ req }) {
         let items = c.only_out ? worthy.filter(isOut) : worthy;
         //  🔕 کنترلِ شلوغی: «تمام شد»/«اضافه داده شد»/مخزنِ خالی همیشه همان لحظه؛ «کم مانده» در
         //  ساعتِ آرام نمی‌آید و در روز سقف دارد — همه در «/status» و اعلامیهٔ صبح هست.
-        const calm = items.filter(e => !isOut(e));
+        //  💰⏰ کسری و شیفتِ بسته‌نشده: سقفِ «کم مانده» را نمی‌خورند (پولِ گم‌شده است)، ولی ساعتِ
+        //  آرام را رعایت می‌کنند — شب در «/status» و اعلامیهٔ صبح هست.
+        const calm = items.filter(e => !isOut(e) && e.kind !== 'shift');
         if (calm.length) {
           const gate = await calmGate(c, t);
-          if (!gate.ok) items = items.filter(isOut);
+          if (!gate.ok) items = items.filter(e => isOut(e) || e.kind === 'shift');
           if (gate.notice) await queueLong(c.chat_id, stationId, gate.notice, now());
         }
+        if (c.quiet !== false && isQuietHour(t)) items = items.filter(e => e.kind !== 'shift');
         if (!items.length) continue;
         await queueLong(c.chat_id, stationId, formatAlert(c.station_name, items), now(),
           c.kind === 'channel' ? null : alertKeyboard(stationId, items));
@@ -2566,7 +2574,7 @@ module.exports = function createPumpBot({ req }) {
     const tanks = tankLines(state.tank);
     if (tanks.length) parts.push('', '🛢️ مخزن:', ...tanks);
 
-    const debts = state.alerts.filter(a => !String(a.k).startsWith('tank-'));
+    const debts = state.alerts.filter(a => !String(a.k).startsWith('tank-') && !shiftIcon(a.k));
     const groups = [
       ['over', '🔴 بیشتر از حسابشان تیل/پول برده‌اند — بازپرسی شود:'],
       ['out', '🔴 حسابشان تمام شده — دیگر ندهید:'],
@@ -2580,6 +2588,10 @@ module.exports = function createPumpBot({ req }) {
       if (names.length) debtParts.push(label, `   ${names.join('، ')}`);
     }
     if (debtParts.length) parts.push('', '👥 قرض‌داران:', ...debtParts);
+
+    //  💰⏰ کسریِ صندوق و شیفتِ بسته‌نشده — همان متنِ برنامه
+    const shifts = state.alerts.filter(a => shiftIcon(a.k)).map(a => `${shiftIcon(a.k)} ${a.t || a.n || ''}`);
+    if (shifts.length) parts.push('', '🧾 صندوق و شیفت‌ها:', ...shifts);
 
     const owe = oweLines(state.owe);
     if (owe.length) parts.push('', '💼 بدهیِ پمپ به شرکت‌ها:', ...owe);

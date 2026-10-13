@@ -8,10 +8,13 @@ namespace PumpYaqobi.App.Services;
 public sealed record AlertItem(string Key, string Name, string Fuel, string State, string Text, string Action = "")
 {
     public bool IsTank => Key.StartsWith("tank-", StringComparison.Ordinal);
+    /// <summary>کسریِ صندوق یا شیفتِ بسته‌نشده (‎cash-…‎ · ‎shift-…‎) — از ورق.</summary>
+    public bool IsShift => Key.StartsWith("cash-", StringComparison.Ordinal) || Key.StartsWith("shift-", StringComparison.Ordinal);
     public bool IsOut => State == "out";
 
     /// <summary>بخشی که با کلیک روی این هشدار باز می‌شود.</summary>
-    public string Section => IsTank ? (Key.Contains("diesel", StringComparison.Ordinal) ? "storage-diesel" : "storage") : "debt";
+    public string Section => IsTank ? (Key.Contains("diesel", StringComparison.Ordinal) ? "storage-diesel" : "storage")
+                           : IsShift ? "waraq" : "debt";
 }
 
 /// <summary>
@@ -55,6 +58,11 @@ public sealed class AlertWatch
     private IReadOnlyList<AlertItem> _current = Array.Empty<AlertItem>();
     private long _lastVersion = -1;
     private DateTime _lastRun = DateTime.MinValue;
+    /// <summary>
+    /// ساعتِ آخرین محاسبه (‎yyyyMMddHH‎). ⚠️ «شیفتِ دیروز بسته نشد» با گذشتِ زمان باز می‌شود،
+    /// نه با تغییرِ داده؛ پس ترمزِ ‎Version‎ ساعتی یک بار کنار می‌رود — بیشتر نه.
+    /// </summary>
+    private long _lastHour = -1;
     private bool _primed;
 
     /// <summary>هشدارهای بازِ همین حالا.</summary>
@@ -86,7 +94,8 @@ public sealed class AlertWatch
     public async Task<bool> CheckAsync(AppHost host, bool force = false, CancellationToken ct = default)
     {
         var version = PumpYaqobi.Persistence.PumpDbContext.Version;
-        if (!force && _primed && version == _lastVersion) return false;
+        var hour = HourKey(AppClock.Now);
+        if (!force && _primed && hour == _lastHour && version == _lastVersion) return false;
         if (!force && AppClock.Mono - _lastRun < MinGap) return false;
         _lastRun = AppClock.Mono;
         try
@@ -97,8 +106,11 @@ public sealed class AlertWatch
             //  مخزن‌های شماره‌دار (۱۴۰۵/۰۷/۲۲): «تیلش کم شد هشدار برود» — و وقتی تمام شد و
             //  نوبت به مخزنِ بعدی رسید، گفته شود. ⚠️ جدا از هشدارِ کلِ تیل: آن سرِ جایش است.
             try { list.AddRange(await NumberedTankAlertsAsync(host, ct)); } catch (OperationCanceledException) { throw; } catch { }
+            //  کسریِ صندوق و شیفتِ بسته‌نشده (۱۴۰۵/۰۷/۲۱) — از ورقِ چند روزِ آخر
+            try { list.AddRange(await ShiftAlertsAsync(host, ct)); } catch (OperationCanceledException) { throw; } catch { }
             Accept(list, tank, people);
             _lastVersion = version;
+            _lastHour = hour;
             return true;
         }
         catch (OperationCanceledException) { throw; }
@@ -128,6 +140,81 @@ public sealed class AlertWatch
             if (act.Display > 0m && act.Display <= threshold)
                 res.Add(new AlertItem($"tank-{f}-n{act.Num}-low", $"مخزنِ {act.Num} {name}", f, "low",
                     $"مخزنِ {act.Num} {name} کم مانده: {Math.Round(act.Display):N0} لیتر"));
+        }
+        return res;
+    }
+
+    private static long HourKey(DateTime t) => t.Year * 1_000_000L + t.Month * 10_000L + t.Day * 100L + t.Hour;
+
+    /// <summary>چند روزِ آخر که ورقش سنجیده می‌شود (امروز هم).</summary>
+    public const int ShiftDays = 3;
+
+    /// <summary>شیفتِ شبِ دیروز تا این ساعتِ امروز فرصت دارد بسته شود.</summary>
+    public const int NightGraceHour = 12;
+
+    internal static async Task<List<AlertItem>> ShiftAlertsAsync(AppHost host, CancellationToken ct)
+    {
+        var now = AppClock.Now;
+        var from = PumpYaqobi.Application.Localization.Shamsi.Key(now.Date.AddDays(-ShiftDays));
+        var entries = await host.WaraqData.SinceAsync(from, ct);
+        return ShiftAlerts(entries, now, host.Waraq);
+    }
+
+    /// <summary>
+    /// ══ کسریِ صندوق و شیفتِ بسته‌نشده — از ورق (۱۴۰۵/۰۷/۲۱) ══════════════════════
+    ///
+    /// خواستهٔ صاحب ریپو: «کسری صندوق و شیفت بسته‌نشده رو هم درست کن.»
+    ///
+    /// ⛔ قاعدهٔ تازه‌ای برای پول ساخته نمی‌شود:
+    ///   • <b>کسری</b> همان <c>WaraqService.Shortage</c> است — همان «⚠️ کمبودی»ِ ورق و
+    ///     ستونِ «کمبودی»ِ گزارش (قرضِ نوشته‌شده در پایه‌ها منهای قرض و مصرفِ ثبت‌شده).
+    ///   • <b>بسته‌نشده</b> یعنی پایه‌ای که شروع دارد و ختمش خالی است (همان خانهٔ خالیِ ورق).
+    ///
+    /// ⚠️ شیفتِ در حالِ کار هشدار نمی‌دهد:
+    ///   • شیفتِ امروز: روز فقط وقتی شیفتِ فعالِ ورق «شب» شده (تحویل شده)؛ شبِ امروز هرگز.
+    ///   • شبِ دیروز تا ساعتِ <see cref="NightGraceHour"/>ِ امروز فرصت دارد.
+    ///   • کسری فقط برای شیفتِ بسته — نیمه‌کاره هنوز قرض‌هایش را ننوشته.
+    /// ⚠️ کلید شناسهٔ ورق و شیفت را دارد، پس هر شیفت یک بار خبر می‌دهد؛ و با درست شدنِ
+    /// ورق از فهرست می‌افتد («برطرف شد»).
+    /// </summary>
+    public static List<AlertItem> ShiftAlerts(IEnumerable<PumpYaqobi.Domain.Entities.WaraqEntry> entries,
+                                                DateTime now, PumpYaqobi.Application.Services.WaraqService calc)
+    {
+        var res = new List<AlertItem>();
+        var today = PumpYaqobi.Application.Localization.Shamsi.Key(now.Date);
+        var yesterday = PumpYaqobi.Application.Localization.Shamsi.Key(now.Date.AddDays(-1));
+        foreach (var w in entries.OrderByDescending(e => e.DateKey))
+        {
+            if (w.DateKey <= 0 || w.DateKey > today) continue;
+            foreach (var sh in w.Shifts.OrderBy(s => s.Kind))
+            {
+                var night = sh.Kind == PumpYaqobi.Domain.Entities.ShiftKind.Night;
+                var done = night
+                    ? w.DateKey < yesterday || (w.DateKey == yesterday && now.Hour >= NightGraceHour)
+                    : w.DateKey < today || w.ActiveShift == PumpYaqobi.Domain.Entities.ShiftKind.Night;
+                if (!done) continue;
+
+                var open = sh.Pumps.Count(p => p.Start > 0m && p.End <= 0m);
+                var kind = night ? "night" : "day";
+                var label = "شیفتِ " + (night ? "شبِ " : "روزِ ") + (w.DateShamsi ?? "");
+                var who = (sh.WorkerName ?? "").Trim();
+                var whoPart = who.Length > 0 ? " (" + who + ")" : "";
+                if (open > 0)
+                {
+                    res.Add(new AlertItem("shift-" + w.Id + "-" + kind, who.Length > 0 ? who : label, "", "low",
+                        label + whoPart + " بسته نشده — ختمِ " + open + " پایه نوشته نشده",
+                        "ختمِ پایه‌ها را در ورق بنویسید تا فروش و گاوصندوق درست شوند."));
+                    continue;
+                }
+                if (sh.Pumps.Count == 0) continue;
+                var gap = Math.Round(calc.Shortage(calc.ShiftTotals(sh)).Shortage, 0, MidpointRounding.AwayFromZero);
+                if (gap < 1m) continue;
+                var amount = PumpYaqobi.Application.Localization.Shamsi.Money(gap) + " افغانی";
+                res.Add(new AlertItem("cash-" + w.Id + "-" + kind, who.Length > 0 ? who : label, "", "low",
+                    "کسریِ صندوق — " + label + whoPart + ": " + amount + " کم است",
+                    "قرض یا مصرفِ جامانده را در ورق ثبت کنید؛ وگرنه " + amount + " را از "
+                    + (who.Length > 0 ? who : "کارمندِ شیفت") + " بگیرید."));
+            }
         }
         return res;
     }
@@ -166,6 +253,7 @@ public sealed class AlertWatch
             Debtors = new();
             _primed = false;
             _lastVersion = -1;
+            _lastHour = -1;
             _lastRun = DateTime.MinValue;
         }
     }

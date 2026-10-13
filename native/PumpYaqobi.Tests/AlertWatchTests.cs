@@ -177,6 +177,8 @@ public class AlertWatchTests
     {
         var w = Src("PumpYaqobi.Shell", "Services", "AlertWatch.cs");
         Assert.Contains("version == _lastVersion) return false;", w);
+        //  ⏰ ساعتی یک بار هم (شیفتِ دیروز با گذشتِ زمان «بسته‌نشده» می‌شود) — نه بیشتر
+        Assert.Contains("hour == _lastHour && version == _lastVersion", w);
         Assert.Contains("AppClock.Mono - _lastRun < MinGap", w);
         var snap = Src("PumpYaqobi.Shell", "Services", "StationSnapshot.cs");
         var tank = snap[snap.IndexOf("internal static async Task<Dictionary<string, object?>> TankAsync", StringComparison.Ordinal)..];
