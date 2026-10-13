@@ -115,6 +115,16 @@ public class BotReportsTests
         Assert.DoesNotContain("هارون", rep.Caption);
         Assert.Single(rep.Files, f => f.Mime == "image/png");
         Assert.Single(rep.Files, f => f.Mime == "application/pdf");
+
+        //  ۱۴۰۵/۰۷/۲۲: «حساب‌های فرعی را هم اگر خواستم بده» ⇒ دکمه‌اش (‎extra.subs‎) و کارت و PDFِ خودش
+        Assert.True(rep.Extra.TryGetValue("subs", out var subs));
+        var sub = (await host.Debtors.LoadFullAsync(person.Id))!.SubAccounts.Single();
+        Assert.Equal(sub.Id + "\tهارون", subs);
+        var subRep = await BotReports.BuildAsync(host, Req("debtor", new { id = person.Id, sub = sub.Id }), CancellationToken.None);
+        Assert.True(subRep.Ok, subRep.Error);
+        Assert.Contains("حسابِ فرعی: هارون", subRep.Caption);
+        Assert.False(subRep.Extra.ContainsKey("subs"));
+        Assert.Single(subRep.Files, f => f.Mime == "image/png");
     }
 
     [Fact]

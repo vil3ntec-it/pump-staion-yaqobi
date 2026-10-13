@@ -190,6 +190,9 @@ public static class BotReports
             id = pick[0].Id;
         }
         if (id <= 0) return BotReport.Fail("کدام قرض‌دار؟ نامش را بنویسید.");
+        long subId = 0;
+        if (arg.ValueKind == JsonValueKind.Object && arg.TryGetProperty("sub", out var sb)
+            && sb.ValueKind == JsonValueKind.Number) sb.TryGetInt64(out subId);
 
         var person = await host.Debtors.LoadFullAsync(id, ct);
         if (person is null) return BotReport.Fail("این قرض‌دار دیگر در برنامه نیست.");
@@ -201,8 +204,17 @@ public static class BotReports
 
         //  ⛔ فقط حسابِ اصلیِ همین شخص (۱۴۰۵/۰۷/۲۲، با عکس): «چرا حسابِ هارون که در حسابِ اصلیِ
         //  ح هاشم فرعی است را هم با آن می‌دهی؟» — حسابِ فرعی دکمه و درخواستِ خودش را دارد.
+        //  حسابِ فرعی فقط وقتی خواسته شود (۱۴۰۵/۰۷/۲۲: «حساب‌های فرعی را هم اگر خواستم بده») —
+        //  دکمه‌اش زیرِ حسابِ اصلی می‌آید (‎extra.subs‎).
         var acct = person.MainAccount;
-        var snap = AcctSnapshots.ForDebtAccount(person.Name, null, acct, calc);
+        if (subId > 0)
+        {
+            var sub = person.SubAccounts.FirstOrDefault(a => a is not null && a.Id == subId);
+            if (sub is null) return BotReport.Fail("این حسابِ فرعی دیگر در برنامه نیست.");
+            acct = sub;
+        }
+        var isSub = !acct.IsMain;
+        var snap = AcctSnapshots.ForDebtAccount(person.Name, isSub ? acct.Name : null, acct, calc);
 
         //  ⛔ دفتری که واقعاً ردیف یا عدد دارد (۱۴۰۵/۰۷/۲۲): حسابی که حالتش «پول» است ولی تیل برده،
         //  کارتِ «۰ افغانی» می‌گرفت. هر دفتری که چیزی دارد یک کارت؛ هیچ ⇒ همان دفترِ فعال.
@@ -219,18 +231,25 @@ public static class BotReports
 
         //  کیو‌آر — همان دکمهٔ «📲»ِ صفحهٔ حساب
         var live = await AcctLive.EnsureAsync(host, acct, ct);
-        var link = AcctLive.LinkFor(host, snap, Marker(person.Id, null), live);
+        var link = AcctLive.LinkFor(host, snap, Marker(person.Id, isSub ? acct.LegacySubId : null), live);
         var qr = PumpYaqobi.Services.Vision.QrWriter.EncodePng(link);
         extra["qr"] = link;
 
         caption.Add("👤 " + person.Name);
+        if (isSub) caption.Add("📄 حسابِ فرعی: " + acct.Name);
         caption.Add(status);
+        if (!isSub)
+        {
+            var subs = person.SubAccounts.Where(a => a is not null && !a.IsMain)
+                             .Select(a => a.Id + "\t" + (a.Name ?? "").Replace('\t', ' ').Replace('\n', ' ')).Take(8).ToList();
+            if (subs.Count > 0) { extra["subs"] = string.Join("\n", subs); extra["pid"] = person.Id.ToString(); }
+        }
         foreach (var book in books)
         {
             var money = book.Unit == "افغانی";
             var albaqi = book.Summary.FirstOrDefault(s => s.Length > 1 && s[0] == "الباقی")?[1] ?? "0";
 
-            var card = new DebtorCardInput(PumpBrand.Name, person.Name, "", book.Unit, snap.Date,
+            var card = new DebtorCardInput(PumpBrand.Name, person.Name, isSub ? acct.Name ?? "" : "", book.Unit, snap.Date,
                                            book.Fuels, albaqi, status, bad, qr);
             files.Add(new BotFile(person.Name + " — " + book.Title, "image/png", new DebtorCardImage(card).Png()));
 
@@ -239,7 +258,7 @@ public static class BotReports
             var t = calc.SplitTotals(rows);
             var input = new DebtorStatementInput(
                 PersonName: person.Name,
-                AccountTitle: "حساب " + person.Name + (books.Count > 1 ? " — " + book.Title : ""),
+                AccountTitle: "حساب " + person.Name + (isSub ? " — " + acct.Name : "") + (books.Count > 1 ? " — " + book.Title : ""),
                 IsMoneyLedger: money,
                 Filter: null,
                 Rows: rows,
@@ -251,7 +270,7 @@ public static class BotReports
                 BordDiesel: money ? t.Diesel.Bardagi : t.Diesel.Liters,
                 RasidRowsPetrol: t.Petrol.Rasid, RasidRowsDiesel: t.Diesel.Rasid,
                 Dates: DocDates.Line());
-            files.Add(new BotFile("حساب " + person.Name + (books.Count > 1 ? " — " + book.Title : ""), "application/pdf",
+            files.Add(new BotFile("حساب " + person.Name + (isSub ? " — " + acct.Name : "") + (books.Count > 1 ? " — " + book.Title : ""), "application/pdf",
                                   Pdf(new DebtorStatementReport(input, calc))));
 
             caption.Add("");

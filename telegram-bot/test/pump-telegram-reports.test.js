@@ -362,3 +362,58 @@ test('۸) دو کارت ⇒ یک آلبوم با متن زیرش، دو PDF ⇒ 
   assert.equal(reqs[0].arg.id, 7);
   assert.ok(sent().some(c => /vill3n\.top\/a\/x\/c7/.test(c.params.text)), 'لینکِ شرکت نیامد');
 });
+
+test('۹) نامِ با کمی تفاوت یا داخلِ پیامِ بلند ⇒ همان حساب؛ حسابِ فرعی با دکمه، فقط اگر خواسته شود', async () => {
+  const owner = await pumpOwner('نزدیک');
+  const dev = await bindDevice(owner, 'pc-near');
+  await linkPrivate(9109, owner);
+  await state(dev, {
+    alerts: [],
+    debtors: [
+      { n: 'ح هاشم', sp: 'out', sd: 'none', sm: 'none', p: 38, d: 0, m: 0 },
+      { n: 'احمد کریمی', sp: 'ok', sd: 'none', sm: 'none', p: 10, d: 0, m: 0 },
+      { n: 'احمد رحیمی', sp: 'ok', sd: 'none', sm: 'none', p: 10, d: 0, m: 0 },
+    ],
+  });
+  const score = telegram.nameScore;
+  const n = (s) => telegram.normName(s);
+  assert.equal(score('ح هاشم', n('ح هاشم')), 1);
+  assert.ok(score('ح هاشم', n('سلام، لطفاً حساب ح هاشم رو بفرست')) >= 0.9, 'نام داخلِ پیامِ بلند');
+  assert.ok(score('احمد کریمی', n('احمد کریمئ')) >= 0.74, 'غلطِ تایپی');
+  assert.ok(score('احمد کریمی', n('محمود')) < 0.62, 'نامِ دیگر');
+
+  //  پیامِ بلند ⇒ مستقیم همان حساب، و زیرش دکمهٔ حسابِ فرعی
+  clear();
+  const asking = msg(9109, 'سلام، لطفاً حساب ح هاشم رو بفرست');
+  const reqs = await pcAnswers(dev, () => ({
+    ok: true,
+    caption: '👤 ح هاشم\n🔴 تمام شده\n\nالباقی: 38 لیتر',
+    files: [{ name: 'ح هاشم — تیل', mime: 'image/png', b64: PNG.toString('base64') }],
+    extra: { subs: '55\tهارون', pid: '12' },
+  }));
+  await asking;
+  assert.equal(reqs[0].kind, 'debtor');
+  assert.equal(reqs[0].arg.name, 'ح هاشم');
+  const sub = rows(lastTo(9109)).flat().find(b => /هارون/.test(b.text));
+  assert.ok(sub, 'دکمهٔ حسابِ فرعی نیامد');
+  assert.equal(sub.callback_data, `acs:${owner.stationId}:12:55`);
+
+  await new Promise(r => setTimeout(r, 4100));   //  REPORT_GAP_MS
+  clear();
+  const subAsk = press(9109, sub.callback_data);
+  const subReqs = await pcAnswers(dev, () => ({
+    ok: true, caption: '👤 ح هاشم\n📄 حسابِ فرعی: هارون',
+    files: [{ name: 'هارون', mime: 'image/png', b64: PNG.toString('base64') }],
+  }));
+  await subAsk;
+  assert.deepEqual(subReqs[0].arg, { id: 12, sub: 55 });
+
+  //  دو نامِ هم‌اندازه نزدیک ⇒ نه حدس؛ فهرست با دکمه
+  await new Promise(r => setTimeout(r, 4100));
+  clear();
+  await msg(9109, 'احمد');
+  const list = lastTo(9109);
+  assert.match(list.params.text, /احمد کریمی/);
+  assert.match(list.params.text, /احمد رحیمی/);
+  assert.ok(!calls.some(c => c.method === 'sendPhoto' || c.method === 'sendMediaGroup'));
+});
