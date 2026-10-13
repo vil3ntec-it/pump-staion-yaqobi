@@ -1063,7 +1063,7 @@ public sealed class UpdateService
     /// می‌کند تا با <b>کاربرِ خودش</b> بالا بیاید، نه با مدیر؛ و ‎/D‎ پوشهٔ کار را
     /// درست می‌گذارد (با ‎runas‎ پوشهٔ کار ‎System32‎ است).
     /// </summary>
-    internal static string RelaunchLine(string exe, string appDir, bool elevated) =>
+    public static string RelaunchLine(string exe, string appDir, bool elevated) =>
         elevated
             ? $"explorer.exe \"{exe}\""
             : $"start \"\" /D \"{appDir}\" \"{exe}\" --after-update";
@@ -1103,7 +1103,6 @@ public sealed class UpdateService
     /// </summary>
     public static string WaitForExit(int pid) => $"""
         @echo off
-        chcp 65001 >nul
         set N=0
         :wait
         tasklist /FI "PID eq {pid}" 2>nul | find "{pid}" >nul
@@ -1165,21 +1164,35 @@ public sealed class UpdateService
         try { if (File.Exists(result)) File.Delete(result); } catch { }
 
         var script = Path.Combine(Path.GetDirectoryName(setupPath)!, "run-setup.cmd");
+        //  ⛔ (۱۴۰۵/۰۷/۲۱) هیچ مسیری داخلِ متنِ اسکریپت نیست — همه آرگومان‌اند (‎%~1‎…):
+        //  اسکریپت فقط ASCII است و ‎chcp 65001‎ لازم ندارد. شرح بالای ‎ScriptArgs‎.
         File.WriteAllText(script,
-            SetupScript(Environment.ProcessId, setupPath, SetupArgs(AppArch.ArchArg, appDir), result,
-                        RelaunchLine(exe, appDir, elevated: !writable)),
+            SetupScript(Environment.ProcessId, "%~1", SetupArgs(AppArch.ArchArg, "%~2"), "%~3",
+                        RelaunchLine("%~4", "%~2", elevated: !writable)),
             new System.Text.UTF8Encoding(false));      // ⛔ بی BOM
-        return RunScript(script, appDir, writable, result);
+        return RunScript(script, appDir, writable, result, ScriptArgs(setupPath, appDir, result, exe));
     }
 
+    /// <summary>
+    /// ══ «برنامه بسته می‌شود و دیگر باز نمی‌شود» — بارِ چهارم (۱۴۰۵/۰۷/۲۱) ══════════
+    /// اسکریپت‌ها مسیرها (پوشهٔ نصب، نصاب، برنامه) را داخلِ متن داشتند و برای نامِ فارسی
+    /// («برنامهٔ پمپ»، نامِ کاربرِ فارسی) ‎chcp 65001‎ می‌زدند. ⛔ روی ویندوزِ ۷ (کامپیوترهای
+    /// کهنهٔ ۳۲بیتی) ‎chcp 65001‎ وسطِ فایلِ ‎.cmd‎ اجرای بقیهٔ همان فایل را می‌شکند: برنامه
+    /// بسته می‌شد، نصاب هرگز بالا نمی‌آمد و هیچ‌کس برنامه را باز نمی‌کرد — همان گزارش.
+    /// حالا مسیرها آرگومانِ ‎cmd‎اند (‎%~1‎ تا ‎%~5‎، یونی‌کد بی هیچ کدپیجی) و متنِ اسکریپت
+    /// فقط ASCII است. هر آرگومان در گیومه؛ گیومهٔ درونِ مسیر در ویندوز ممکن نیست.
+    /// </summary>
+    public static string ScriptArgs(params string[] paths) =>
+        string.Join(" ", paths.Select(p => "\"" + p + "\""));
+
     /// <summary>اسکریپت را بی‌پنجره اجرا می‌کند؛ پوشهٔ نصبِ بی‌اجازه ⇒ با اجازهٔ مدیر.</summary>
-    private static bool RunScript(string script, string appDir, bool writable, string result)
+    private static bool RunScript(string script, string appDir, bool writable, string result, string args = "")
     {
         var psi = new System.Diagnostics.ProcessStartInfo
         {
             FileName = "cmd.exe",
             //  ⛔ ‎/s‎ و گیومهٔ دوتایی — شرحش در ‎LaunchZip‎
-            Arguments = "/s /c \"\"" + script + "\"\"",
+            Arguments = "/s /c \"\"" + script + "\"" + (args.Length > 0 ? " " + args : "") + "\"",
             WorkingDirectory = appDir,
         };
         if (writable)
@@ -1230,14 +1243,16 @@ public sealed class UpdateService
         // نشانهٔ کهنه پاک شود تا نتیجهٔ همین بار خوانده شود، نه نتیجهٔ دفعهٔ پیش
         try { if (File.Exists(result)) File.Delete(result); } catch { }
 
-        File.WriteAllText(script, ApplyScript(pid, src, appDir, result, relaunch, staging),
+        //  ⛔ مسیرها آرگومان‌اند، نه متن (شرح بالای ‎ScriptArgs‎)
+        relaunch = RelaunchLine("%~5", "%~2", elevated: !writable);
+        File.WriteAllText(script, ApplyScript(pid, "%~1", "%~2", "%~3", relaunch, "%~4"),
                           new System.Text.UTF8Encoding(false));      // ⛔ بی BOM — وگرنه خطِ اول «@echo off» خطا می‌داد
 
         //  ⛔ ‎/s‎ و گیومهٔ دوتایی (۱۴۰۵/۰۷/۱۶): بی آن، پوشه‌ای با «( ) & @ ^» (مثلاً
         //  نامِ کاربرِ «Ali (Work)» در مسیرِ نصب) گیومه را می‌شکست و به‌روزرسانی
         //  برنامه را می‌بست و هیچ فایلی جا به جا نمی‌کرد. پوشهٔ بی‌اجازه ⇒ ‎runas‎،
         //  وگرنه ‎robocopy‎ بی‌صدا شکست می‌خورد و برنامه با نسخهٔ کهنه باز می‌شد.
-        return RunScript(script, appDir, writable, result);
+        return RunScript(script, appDir, writable, result, ScriptArgs(src, appDir, result, staging, exe));
     }
 }
 
