@@ -14,6 +14,9 @@ public sealed record RateCommand(string Id, decimal? Petrol, decimal? Diesel, st
 public sealed record RatePoll(bool Ok, RateCommand? Cmd, int WaitMax)
 {
     public static readonly RatePoll None = new(false, null, 0);
+
+    /// <summary>درخواست‌های عکس/PDFِ بات که روی همین پاسخ آمدند (<c>CloudLink.Reports.cs</c>).</summary>
+    public IReadOnlyList<BotRequest> Reqs { get; init; } = Array.Empty<BotRequest>();
 }
 
 /// <summary>
@@ -48,7 +51,7 @@ public sealed partial class CloudLink
         LiveConfig.NoteServerVersion(json);
         var max = json.TryGetProperty("waitMax", out var w) && w.ValueKind == JsonValueKind.Number
                   && w.TryGetInt32(out var n) ? Math.Max(0, n) : 0;
-        return new RatePoll(true, ParseRateCommand(json), max);
+        return new RatePoll(true, ParseRateCommand(json), max) { Reqs = ParseBotRequests(json) };
     }
 
     /// <summary>‎{cmd: {id, petrol, diesel, by}}‎ ⇒ فرمان. خالص — آزمون دارد.</summary>

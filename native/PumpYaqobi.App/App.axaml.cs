@@ -19,6 +19,8 @@ public partial class App : Avalonia.Application
         Services.CrashGuard.InstallUi();
 
         Services.AppHost.Start();
+        //  📷 عکسِ مخزن‌ها برای باتِ تلگرام با خودِ ‎TankGauge‎ (‎BotReports‎ در لایهٔ پایین‌تر است)
+        Services.BotReports.TankRenderer = Services.TankShotRenderer.RenderAsync;
         ThemeManager.Apply(PumpTheme.ById(Services.AppSettings.Load().ThemeId), this);
 
         // ══ نوشته‌ای که در بخشِ پنهان چپ‌چین کشیده شده، با دیده شدن دوباره کشیده شود ══
