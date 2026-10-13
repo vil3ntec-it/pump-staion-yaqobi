@@ -43,7 +43,7 @@ public class RelaunchAfterUpdateTests
         //  ۱۴۰۵/۰۷/۲۱: مسیرها آرگومانِ ‎cmd‎اند (‎%~1‎…)، متنِ اسکریپت ASCII و بی ‎chcp 65001‎ (ویندوزِ ۷)
         Assert.Contains("SetupScript(Environment.ProcessId, \"%~1\", SetupArgs(AppArch.ArchArg, \"%~2\"), \"%~3\",", svc);
         Assert.Contains("ScriptArgs(setupPath, appDir, result, exe)", svc);
-        Assert.DoesNotContain("chcp 65001", svc);
+        Assert.DoesNotContain("chcp", PumpYaqobi.App.Update.UpdateService.WaitForExit(1));
         Assert.DoesNotContain("/RELAUNCH=1", PumpYaqobi.App.Update.UpdateService.SetupArgs("/ARCH=x64", "D"));
         //  مسیرِ زیپ: برنامهٔ تازه با ‎--after-update‎ و پوشهٔ کارِ درست؛ بالابرده ⇒ explorer
         Assert.Contains("start \\\"\\\" /D \\\"{appDir}\\\" \\\"{exe}\\\" --after-update", svc);

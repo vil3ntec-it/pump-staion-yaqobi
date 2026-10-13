@@ -154,7 +154,7 @@ public class UpdateTests
         Assert.True(end > i);
         var block = svc[i..end];
         Assert.Contains("var writable = IsWritable(appDir);", block);
-        Assert.Contains("RunScript(script, appDir, writable, result)", block);
+        Assert.Contains("RunScript(script, appDir, writable, result, ScriptArgs(", block);
         var run = block[block.IndexOf("private static bool RunScript(", StringComparison.Ordinal)..];
         Assert.Contains("if (writable)", run);
         Assert.Contains("psi.Verb = \"runas\";", run);

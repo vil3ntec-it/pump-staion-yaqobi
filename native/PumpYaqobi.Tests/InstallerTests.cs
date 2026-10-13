@@ -96,7 +96,8 @@ public class InstallerTests
         Assert.Contains("/DSourceDir86=..\\publish\\win-x86", w);
         Assert.DoesNotContain("Setup-x86", w);
         var up = SrcText.Read(Path.Combine(Native, "PumpYaqobi.App", "Update", "UpdateService.cs"));
-        Assert.Contains("SetupArgs(AppArch.ArchArg, appDir)", up);
+        Assert.Contains("SetupArgs(AppArch.ArchArg, \"%~2\")", up);              // مسیر = آرگومانِ ‎%~2‎ (۱۴۰۵/۰۷/۲۱)
+        Assert.Contains("ScriptArgs(setupPath, appDir, result, exe)", up);
 
         //  و installer-check واقعاً نصب می‌کند و بارِ نشسته را می‌سنجد
         var chk = SrcText.Read(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
