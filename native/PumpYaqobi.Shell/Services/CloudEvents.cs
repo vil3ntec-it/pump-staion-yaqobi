@@ -54,7 +54,7 @@ public sealed class CloudEvents
     /// نوعِ خبر از روی کلید و حالِ هشدار.
     ///
     /// <para>
-    /// ⚠️ فقط همین سه نوع روی سرور <b>پوش</b> می‌شوند
+    /// ⚠️ فقط همین چهار نوع (با ‎shift‎) روی سرور <b>پوش</b> می‌شوند
     /// (<c>events.PUSH_KINDS</c>). هر نوعِ دیگری در فهرست می‌نشیند و با
     /// باز شدنِ برنامه دیده می‌شود — نه زنگ.
     /// </para>
@@ -64,6 +64,9 @@ public sealed class CloudEvents
         //  مخزن: «ته کشید» یعنی کالا تمام شد، «دارد ته می‌کشد» یعنی کم مانده
         if (key.StartsWith("tank-", StringComparison.Ordinal))
             return state == "out" ? "stock_out" : "low_stock";
+        //  کسریِ صندوق و شیفتِ بسته‌نشده — از ورق (‎AlertWatch.ShiftAlerts‎)؛ همان ‎kindOf‎ِ سرور
+        if (key.StartsWith("cash-", StringComparison.Ordinal) || key.StartsWith("shift-", StringComparison.Ordinal))
+            return "shift";
         //  قرض‌دار: هر دو حال یک چیزند — قرض از حد گذشت
         return "debt";
     }

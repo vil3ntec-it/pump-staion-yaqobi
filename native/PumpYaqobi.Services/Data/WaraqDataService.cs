@@ -40,6 +40,18 @@ public sealed class WaraqDataService
     }
 
     /// <summary>
+    /// ورق‌های از این روز به بعد (‎DateKey ≥ fromKey‎) — برای هشدارِ کسری و شیفتِ بسته‌نشده
+    /// (‎AlertWatch.ShiftAlerts‎). ⚡ فقط چند روزِ آخر، نه همهٔ ورق‌ها.
+    /// </summary>
+    public async Task<List<WaraqEntry>> SinceAsync(int fromKey, CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        await using var db = _dbf.Create();
+        return await Full(db).AsNoTracking().Where(w => w.DateKey >= fromKey)
+                             .OrderByDescending(w => w.DateKey).ToListAsync(ct);
+    }
+
+    /// <summary>
     /// ══ فروشِ ورق‌ها برای «مفاد و ضرر» (۱۴۰۵/۰۷/۲۰) ════════════════════════
     /// صاحب ریپو: «نه از پارچه حساب بشه؛ همون قد لیتری که فروخته شده، پولِ
     /// همون لیتر بیاد توی مفاد و ضرر — دیزل و پطرول هر دو جمع بشن — و یک بخش
