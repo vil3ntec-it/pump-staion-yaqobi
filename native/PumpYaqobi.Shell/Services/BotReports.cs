@@ -20,9 +20,11 @@ public sealed record BotReport(bool Ok, string Error, string Caption, List<BotFi
     public static BotReport Fail(string why) => new(false, why, "", new(), new());
 }
 
-/// <summary>یک مخزن برای عکس — همان خاصیت‌های ‎TankGauge‎ِ بخشِ مخزن.</summary>
+/// <summary>یک مخزن برای عکس — همان خاصیت‌های ‎TankGauge‎ِ بخشِ مخزن.
+/// <c>Liters</c> و درصد داخلِ مخزن نوشته می‌شوند؛ <c>Note</c> زیرِ مخزن: چقدر تا حدِ هشدار مانده.</summary>
 public sealed record TankShot(string Title, string Sub, double FillPercent, string FillText,
-                              double ThresholdPercent, string Caption, bool Low);
+                              double ThresholdPercent, string Caption, bool Low,
+                              string Liters = "", string Note = "");
 
 /// <summary>
 /// ══ عکس و PDF از خودِ برنامه برای باتِ تلگرام (۱۴۰۵/۰۷/۲۱) ══════════════════
@@ -62,6 +64,7 @@ public static class BotReports
             {
                 "tanks" => await TanksAsync(host, ct),
                 "debtor" => await DebtorAsync(host, req.Arg, ct),
+                "company" => await CompanyAsync(host, req.Arg, ct),
                 _ => BotReport.Fail("این برنامه این درخواست را نمی‌شناسد؛ برنامه را به‌روز کنید."),
             };
         }
@@ -96,19 +99,25 @@ public static class BotReports
             var pct = StationSnapshot.FillPercent(show, cap);
             var low = t.GetValueOrDefault("low") is true;
             //  ⛔ همان سه خاصیتِ بخشِ مخزن (‎StorageSectionViewModel.ShowTank‎)
+            //  ۱۴۰۵/۰۷/۲۲ (با عکس): «دقیق نمی‌گوید چند لیتر دیگر دارم و تا هشدار چقدر مانده»
+            var left = Math.Round(show, 0, MidpointRounding.AwayFromZero);
+            var toAlarm = Math.Round(show - threshold, 0, MidpointRounding.AwayFromZero);
             shots.Add(new TankShot(
                 label,
-                Shamsi.Money(Math.Round(show, 0, MidpointRounding.AwayFromZero)) + " از " + Shamsi.Money(cap) + " لیتر",
+                "ظرفیت " + Shamsi.Money(cap) + " لیتر · حدِ هشدار " + Shamsi.Money(threshold),
                 (double)pct,
                 ((double)pct).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "%",
                 cap > 0m ? (double)Math.Min(100m, Math.Max(0m, threshold / cap * 100m)) : 0,
                 "حد هشدار: " + Shamsi.Money(threshold) + " لیتر",
-                low));
+                low,
+                Shamsi.Money(left) + " لیتر مانده",
+                toAlarm > 0m ? "تا حدِ هشدار " + Shamsi.Money(toAlarm) + " لیتر مانده" : "زیرِ حدِ هشدار — تیل بیاورید"));
             //  ⛔ هر تیل بخشِ خودش، با یک خطِ خالی پیش از آن (۱۴۰۵/۰۷/۲۲: «نوشته‌ها به هم چسپیده‌اند»)
             lines.Add("");
             lines.Add((low ? "🔴 " : "🟢 ") + label);
-            lines.Add(Shamsi.Money(Math.Round(show, 0, MidpointRounding.AwayFromZero)) + " لیتر · "
+            lines.Add(Shamsi.Money(left) + " لیتر مانده · "
                       + Shamsi.Money(Math.Round(pct, 0, MidpointRounding.AwayFromZero)) + "٪ پر");
+            lines.Add(toAlarm > 0m ? "تا حدِ هشدار " + Shamsi.Money(toAlarm) + " لیتر" : "زیرِ حدِ هشدار");
 
             //  سندِ مخزن — همان دکمهٔ PDFِ بخشِ مخزن
             var buys = await host.StorageData.PurchasesAsync(fuel, ct);
@@ -130,6 +139,7 @@ public static class BotReports
 
         //  🏢 بدهیِ شرکت‌های تیل — همان ‎OweAsync‎ی گزارشِ صبح
         var owe = new List<string>();
+        var coRefs = new List<string>();
         foreach (var c in await host.Companies.ListAsync(ct))
         {
             var sum = host.Company.Summarize(c, c.Rows);
@@ -138,6 +148,8 @@ public static class BotReports
             if (sum.AlbaqiAfn > 0m) parts.Add(Shamsi.Money(Math.Round(sum.AlbaqiAfn, 0, MidpointRounding.AwayFromZero)) + " ؋");
             if (sum.AlbaqiUsd > 0m) parts.Add(Shamsi.Money(Math.Round(sum.AlbaqiUsd, 2)) + " $");
             owe.Add("▫️ " + (c.Name ?? "") + ": " + string.Join(" · ", parts));
+            //  دکمهٔ «🏢 نام» زیرِ پیام ⇒ کارت، PDF و لینکِ همان شرکت (‎CompanyAsync‎)
+            coRefs.Add(c.Id + "\t" + (c.Name ?? "").Replace('\t', ' ').Replace('\n', ' '));
         }
         if (owe.Count > 0) { lines.Add(""); lines.Add("🏢 بدهی به شرکت‌ها"); lines.AddRange(owe.Take(8)); }
 
@@ -147,8 +159,10 @@ public static class BotReports
             if (png is { Length: > 0 }) files.Insert(0, new BotFile("مخزن‌ها", "image/png", png));
         }
         if (files.Count == 0 && lines.Count == 0) return BotReport.Fail("هنوز مخزنی در برنامه ثبت نشده است.");
+        var extra = new Dictionary<string, string>();
+        if (coRefs.Count > 0) extra["companies"] = string.Join("\n", coRefs.Take(8));
         return new BotReport(true, "", "🛢 مخزن‌ها · " + Shamsi.Today() + "\n" + string.Join("\n", lines),
-                             files.Take(4).ToList(), new());
+                             files.Take(4).ToList(), extra);
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -176,6 +190,9 @@ public static class BotReports
             id = pick[0].Id;
         }
         if (id <= 0) return BotReport.Fail("کدام قرض‌دار؟ نامش را بنویسید.");
+        long subId = 0;
+        if (arg.ValueKind == JsonValueKind.Object && arg.TryGetProperty("sub", out var sb)
+            && sb.ValueKind == JsonValueKind.Number) sb.TryGetInt64(out subId);
 
         var person = await host.Debtors.LoadFullAsync(id, ct);
         if (person is null) return BotReport.Fail("این قرض‌دار دیگر در برنامه نیست.");
@@ -187,8 +204,17 @@ public static class BotReports
 
         //  ⛔ فقط حسابِ اصلیِ همین شخص (۱۴۰۵/۰۷/۲۲، با عکس): «چرا حسابِ هارون که در حسابِ اصلیِ
         //  ح هاشم فرعی است را هم با آن می‌دهی؟» — حسابِ فرعی دکمه و درخواستِ خودش را دارد.
+        //  حسابِ فرعی فقط وقتی خواسته شود (۱۴۰۵/۰۷/۲۲: «حساب‌های فرعی را هم اگر خواستم بده») —
+        //  دکمه‌اش زیرِ حسابِ اصلی می‌آید (‎extra.subs‎).
         var acct = person.MainAccount;
-        var snap = AcctSnapshots.ForDebtAccount(person.Name, null, acct, calc);
+        if (subId > 0)
+        {
+            var sub = person.SubAccounts.FirstOrDefault(a => a is not null && a.Id == subId);
+            if (sub is null) return BotReport.Fail("این حسابِ فرعی دیگر در برنامه نیست.");
+            acct = sub;
+        }
+        var isSub = !acct.IsMain;
+        var snap = AcctSnapshots.ForDebtAccount(person.Name, isSub ? acct.Name : null, acct, calc);
 
         //  ⛔ دفتری که واقعاً ردیف یا عدد دارد (۱۴۰۵/۰۷/۲۲): حسابی که حالتش «پول» است ولی تیل برده،
         //  کارتِ «۰ افغانی» می‌گرفت. هر دفتری که چیزی دارد یک کارت؛ هیچ ⇒ همان دفترِ فعال.
@@ -205,18 +231,25 @@ public static class BotReports
 
         //  کیو‌آر — همان دکمهٔ «📲»ِ صفحهٔ حساب
         var live = await AcctLive.EnsureAsync(host, acct, ct);
-        var link = AcctLive.LinkFor(host, snap, Marker(person.Id, null), live);
+        var link = AcctLive.LinkFor(host, snap, Marker(person.Id, isSub ? acct.LegacySubId : null), live);
         var qr = PumpYaqobi.Services.Vision.QrWriter.EncodePng(link);
         extra["qr"] = link;
 
         caption.Add("👤 " + person.Name);
+        if (isSub) caption.Add("📄 حسابِ فرعی: " + acct.Name);
         caption.Add(status);
+        if (!isSub)
+        {
+            var subs = person.SubAccounts.Where(a => a is not null && !a.IsMain)
+                             .Select(a => a.Id + "\t" + (a.Name ?? "").Replace('\t', ' ').Replace('\n', ' ')).Take(8).ToList();
+            if (subs.Count > 0) { extra["subs"] = string.Join("\n", subs); extra["pid"] = person.Id.ToString(); }
+        }
         foreach (var book in books)
         {
             var money = book.Unit == "افغانی";
             var albaqi = book.Summary.FirstOrDefault(s => s.Length > 1 && s[0] == "الباقی")?[1] ?? "0";
 
-            var card = new DebtorCardInput(PumpBrand.Name, person.Name, "", book.Unit, snap.Date,
+            var card = new DebtorCardInput(PumpBrand.Name, person.Name, isSub ? acct.Name ?? "" : "", book.Unit, snap.Date,
                                            book.Fuels, albaqi, status, bad, qr);
             files.Add(new BotFile(person.Name + " — " + book.Title, "image/png", new DebtorCardImage(card).Png()));
 
@@ -225,7 +258,7 @@ public static class BotReports
             var t = calc.SplitTotals(rows);
             var input = new DebtorStatementInput(
                 PersonName: person.Name,
-                AccountTitle: "حساب " + person.Name + (books.Count > 1 ? " — " + book.Title : ""),
+                AccountTitle: "حساب " + person.Name + (isSub ? " — " + acct.Name : "") + (books.Count > 1 ? " — " + book.Title : ""),
                 IsMoneyLedger: money,
                 Filter: null,
                 Rows: rows,
@@ -237,13 +270,74 @@ public static class BotReports
                 BordDiesel: money ? t.Diesel.Bardagi : t.Diesel.Liters,
                 RasidRowsPetrol: t.Petrol.Rasid, RasidRowsDiesel: t.Diesel.Rasid,
                 Dates: DocDates.Line());
-            files.Add(new BotFile("حساب " + person.Name + (books.Count > 1 ? " — " + book.Title : ""), "application/pdf",
+            files.Add(new BotFile("حساب " + person.Name + (isSub ? " — " + acct.Name : "") + (books.Count > 1 ? " — " + book.Title : ""), "application/pdf",
                                   Pdf(new DebtorStatementReport(input, calc))));
 
             caption.Add("");
             caption.Add("الباقی: " + albaqi + " " + book.Unit);
         }
         return new BotReport(true, "", string.Join("\n", caption), files.Take(4).ToList(), extra);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  🏢 حسابِ یک شرکتِ تیل: کارت (عکس) + PDF + لینک (۱۴۰۵/۰۷/۲۲)
+    // ══════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// صاحب ریپو: «برای شرکت‌ها هم عکس و PDF و لینک را بساز.» ⛔ همان‌هایی که صفحهٔ شرکت دارد:
+    /// کارت از ‎AcctSnapshots.ForCompany‎ (همان کیو‌آر)، PDF همان ‎CompanyReport‎ِ «هر دو تیل»،
+    /// لینک همان دکمهٔ «📲»ِ شرکت.
+    /// </summary>
+    private static async Task<BotReport> CompanyAsync(AppHost host, JsonElement arg, CancellationToken ct)
+    {
+        long id = 0;
+        if (arg.ValueKind == JsonValueKind.Object && arg.TryGetProperty("id", out var i)
+            && i.ValueKind == JsonValueKind.Number) i.TryGetInt64(out id);
+        var name = arg.ValueKind == JsonValueKind.Object && arg.TryGetProperty("name", out var n)
+                   && n.ValueKind == JsonValueKind.String ? (n.GetString() ?? "").Trim() : "";
+        if (id <= 0 && name.Length > 0)
+        {
+            var all = await host.Companies.ListAsync(ct);
+            var exact = all.Where(c => string.Equals(c.Name?.Trim(), name, StringComparison.Ordinal)).ToList();
+            var pick = exact.Count == 1 ? exact
+                : all.Where(c => (c.Name ?? "").Contains(name, StringComparison.Ordinal)).ToList();
+            if (pick.Count == 0) return BotReport.Fail("شرکتی با نامِ «" + name + "» پیدا نشد.");
+            if (pick.Count > 1)
+                return BotReport.Fail("چند شرکت با این نام هست: " + string.Join("، ", pick.Take(6).Select(p => p.Name))
+                                      + " — نامِ کامل را بنویسید.");
+            id = pick[0].Id;
+        }
+        if (id <= 0) return BotReport.Fail("کدام شرکت؟ نامش را بنویسید.");
+
+        var co = await host.Companies.LoadAsync(id, ct);
+        if (co is null) return BotReport.Fail("این شرکت دیگر در برنامه نیست.");
+
+        var calc = host.Company;
+        var snap = AcctSnapshots.ForCompany(co, calc);
+        var sum = calc.Summarize(co, co.Rows);
+        var book = snap.Books[0];
+        var albaqi = book.Summary.FirstOrDefault(s => s.Length > 1 && s[0] == "الباقی")?[1] ?? "0";
+        var owe = sum.AlbaqiAfn > 0m || sum.AlbaqiUsd > 0m;
+        var status = owe ? "🔴 بدهکاریم" : "🟢 تسویه";
+
+        var live = await AcctLive.EnsureAsync(host, co, ct);
+        var link = AcctLive.LinkFor(host, snap, Marker(co.Id, null, "company"), live);
+        var qr = PumpYaqobi.Services.Vision.QrWriter.EncodePng(link);
+
+        var files = new List<BotFile>();
+        var card = new DebtorCardInput(PumpBrand.Name, co.Name ?? "", "شرکت تیل", "افغانی", snap.Date,
+                                       book.Fuels, albaqi, status, owe, qr,
+                                       Heads: new[] { "تیل", "کلِ افغانی", "پرداخت‌شده", "الباقی" },
+                                       Cols: new[] { 0, 2, 3, 4 });
+        files.Add(new BotFile(co.Name ?? "شرکت", "image/png", new DebtorCardImage(card).Png()));
+
+        var rows = CompanyService.RowsOf(co, FuelType.Petrol).Concat(CompanyService.RowsOf(co, FuelType.Diesel)).ToList();
+        files.Add(new BotFile("حساب " + co.Name, "application/pdf",
+                              Pdf(new CompanyReport(new CompanyReportInput(co, null, rows, DocDates.Line()), calc))));
+
+        var caption = new List<string> { "🏢 " + co.Name, status, "", "الباقی: " + albaqi + " افغانی" };
+        if (sum.AlbaqiUsd > 0m) caption.Add("الباقی: " + Shamsi.Money(Math.Round(sum.AlbaqiUsd, 2)) + " $");
+        return new BotReport(true, "", string.Join("\n", caption), files, new() { ["qr"] = link });
     }
 
     /// <summary>دفتری که ردیف یا عددی غیرِ صفر دارد — همان ‎AcctSnapshots.HasAnything‎.</summary>
@@ -256,8 +350,8 @@ public static class BotReports
     /// نشانهٔ حساب در کیو‌آر — عینِ ‎AcctLink.Build(personId, sub)‎ِ لایهٔ رابط (این لایه
     /// به آن دسترسی ندارد). ⚠️ با آن عوض شود؛ آزمونِ ‎BotReportsTests‎ برابریِ دو را می‌سنجد.
     /// </summary>
-    public static string Marker(long personId, string? subId) =>
-        "#roview-debt-" + personId + (string.IsNullOrWhiteSpace(subId) ? "" : "~" + subId) + "-pdf";
+    public static string Marker(long personId, string? subId, string type = "debt") =>
+        "#roview-" + type + "-" + personId + (string.IsNullOrWhiteSpace(subId) ? "" : "~" + subId) + "-pdf";
 
     private static byte[] Pdf(QuestPDF.Infrastructure.IDocument doc)
     {

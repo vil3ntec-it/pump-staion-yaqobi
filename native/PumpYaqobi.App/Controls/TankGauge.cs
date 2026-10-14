@@ -121,6 +121,15 @@ public class TankGauge : Control
     private const double BodyRadius = 44;
     private static readonly Rect Inner = Body.Deflate(3);
 
+    /// <summary>فضای داخلیِ مخزن در بومِ طراحی — برای نوشتهٔ رویِ عکسِ بات (‎TankShotRenderer‎).</summary>
+    public static Rect InnerRect => Inner;
+
+    /// <summary>
+    /// بی نوشتهٔ وسط (درصد و «میزان پرشدگی») — عکسِ بات آن را با ‎TextBlock‎ِ خودش رویِ مخزن
+    /// می‌گذارد: ‎DrawText‎ِ این کنترل در ‎RenderTargetBitmap‎ِ بیرون از پنجره جابه‌جا می‌افتاد.
+    /// </summary>
+    public bool HideCenterText { get; set; }
+
     private const double ProbeX = 60, FloatX = 146, PumpX = 322, HatchX = 104, VentX = 340;
 
     /// <summary>
@@ -174,6 +183,7 @@ public class TankGauge : Control
         //  ── نوشتهٔ وسط: درصد و «میزان پرشدگی» ──
         //  روی تیل سفید (با سایهٔ نرم)، روی بدنهٔ خالی رنگِ نوشتهٔ تم — وگرنه
         //  با مخزنِ کم، سفید روی سفید می‌شد.
+        if (HideCenterText) return;
         var cx = Inner.Center.X;
         const double pctTop = 100, capTop = 138;
         var fillText = string.IsNullOrEmpty(FillText) ? Math.Round(Math.Clamp(FillPercent, 0, 100)).ToString(CultureInfo.InvariantCulture) + "%" : FillText!;

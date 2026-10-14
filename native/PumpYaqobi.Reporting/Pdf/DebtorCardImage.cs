@@ -4,7 +4,11 @@ using QuestPDF.Infrastructure;
 
 namespace PumpYaqobi.Reporting.Pdf;
 
-/// <summary>یک ردیفِ کارت: [تیل (٪فیصدی), بردگی, رسید, فیصدی, الباقی] — همان ‎AcctBook.Fuels‎.</summary>
+/// <summary>
+/// یک ردیفِ کارت: [تیل (٪فیصدی), بردگی, رسید, فیصدی, الباقی] — همان ‎AcctBook.Fuels‎.
+/// <c>Heads</c>/<c>Cols</c> (۱۴۰۵/۰۷/۲۲): سرستون‌ها و شمارهٔ خانهٔ هر ستون برای کارتی که دفترش
+/// ستون‌های دیگری دارد — شرکتِ تیل: [تیل, تن, کلِ افغانی, پرداخت‌شده, الباقی].
+/// </summary>
 public sealed record DebtorCardInput(
     string Pump,
     string Name,
@@ -15,7 +19,9 @@ public sealed record DebtorCardInput(
     string Albaqi,
     string Status,
     bool Bad,
-    byte[]? Qr);
+    byte[]? Qr,
+    IReadOnlyList<string>? Heads = null,
+    IReadOnlyList<int>? Cols = null);
 
 /// <summary>
 /// ══ کارتِ حسابِ قرض‌دار برای تلگرام (۱۴۰۵/۰۷/۲۱) ═══════════════════════════
@@ -89,14 +95,13 @@ public sealed class DebtorCardImage : IDocument
                 });
                 void Head(string s) => t.Cell().Background(DocStyle.HeadBg).Padding(5).AlignCenter()
                                         .Text(s).FontColor(DocStyle.HeadFg).FontSize(DocStyle.HeadSize).Bold();
-                Head("تیل");
-                Head("رسید");
-                Head("بردگی");
-                Head("الباقی");
+                var heads = _in.Heads is { Count: 4 } h4 ? h4 : new[] { "تیل", "رسید", "بردگی", "الباقی" };
+                var cols = _in.Cols is { Count: 4 } c4 ? c4 : new[] { 0, 2, 1, 4 };
+                foreach (var h in heads) Head(h);
                 var i = 0;
                 foreach (var f in _in.Fuels)
                 {
-                    if (f.Length < 5) continue;
+                    if (f.Length <= cols.Max()) continue;
                     string bg = i++ % 2 == 1 ? DocStyle.RowAlt : "#ffffff";
                     void Cell(string s, string color, bool bold = false)
                     {
@@ -104,10 +109,10 @@ public sealed class DebtorCardImage : IDocument
                                  .Padding(5).AlignCenter().Text(s).FontColor(color);
                         if (bold) x.Bold();
                     }
-                    Cell(f[0], DocStyle.CellFg, true);
-                    Cell(f[2], DocStyle.Money);
-                    Cell(f[1], DocStyle.Hawala);
-                    Cell(f[4], DocStyle.Fuel, true);
+                    Cell(f[cols[0]], DocStyle.CellFg, true);
+                    Cell(f[cols[1]], DocStyle.Money);
+                    Cell(f[cols[2]], DocStyle.Hawala);
+                    Cell(f[cols[3]], DocStyle.Fuel, true);
                 }
             });
 

@@ -115,6 +115,16 @@ public class BotReportsTests
         Assert.DoesNotContain("هارون", rep.Caption);
         Assert.Single(rep.Files, f => f.Mime == "image/png");
         Assert.Single(rep.Files, f => f.Mime == "application/pdf");
+
+        //  ۱۴۰۵/۰۷/۲۲: «حساب‌های فرعی را هم اگر خواستم بده» ⇒ دکمه‌اش (‎extra.subs‎) و کارت و PDFِ خودش
+        Assert.True(rep.Extra.TryGetValue("subs", out var subs));
+        var sub = (await host.Debtors.LoadFullAsync(person.Id))!.SubAccounts.Single();
+        Assert.Equal(sub.Id + "\tهارون", subs);
+        var subRep = await BotReports.BuildAsync(host, Req("debtor", new { id = person.Id, sub = sub.Id }), CancellationToken.None);
+        Assert.True(subRep.Ok, subRep.Error);
+        Assert.Contains("حسابِ فرعی: هارون", subRep.Caption);
+        Assert.False(subRep.Extra.ContainsKey("subs"));
+        Assert.Single(subRep.Files, f => f.Mime == "image/png");
     }
 
     [Fact]
@@ -149,6 +159,70 @@ public class BotReportsTests
             Assert.Contains("پطرول", rep.Caption);
             Assert.Contains("دیزل", rep.Caption);
             Assert.DoesNotContain(rep.Files, f => f.Mime == "image/png");
+        }
+        finally { BotReports.TankRenderer = saved; }
+    }
+
+    /// <summary>
+    /// ۱۴۰۵/۰۷/۲۲: «برای شرکت‌ها هم عکس و PDF و لینک را بساز.» ⇒ کارتِ شرکت (عکس)، PDFِ همان
+    /// ‎CompanyReport‎ و لینکِ همان کیو‌آرِ «📲»ِ شرکت؛ و گزارشِ مخزن‌ها شناسهٔ شرکت را برای دکمه می‌دهد.
+    /// </summary>
+    [Fact]
+    public async Task ACompanyGivesACardThePdfAndTheLinkAndTanksListItForAButton()
+    {
+        var host = Host();
+        var c = await host.Companies.AddAsync("شرکتِ نور");
+        await host.Companies.SaveRowAsync(new CompanyRow
+        {
+            CompanyId = c.Id, Fuel = FuelType.Petrol, DateShamsi = "1405/07/01",
+            Ton = 5m, Usd = 700m, Rate = 70m,
+        });
+
+        var rep = await BotReports.BuildAsync(host, Req("company", new { id = c.Id }), CancellationToken.None);
+        Assert.True(rep.Ok, rep.Error);
+        Assert.Single(rep.Files, f => f.Mime == "image/png" && IsPng(f.Data));
+        Assert.Single(rep.Files, f => f.Mime == "application/pdf" && IsPdf(f.Data));
+        Assert.True(rep.Extra.TryGetValue("qr", out var qr));
+        Assert.StartsWith("http", qr);
+        Assert.Contains("شرکتِ نور", rep.Caption);
+        Assert.Contains("الباقی", rep.Caption);
+
+        var byName = await BotReports.BuildAsync(host, Req("company", new { name = "نور" }), CancellationToken.None);
+        Assert.True(byName.Ok, byName.Error);
+
+        var tanks = await BotReports.BuildAsync(host, Req("tanks", new { }), CancellationToken.None);
+        Assert.True(tanks.Ok, tanks.Error);
+        Assert.True(tanks.Extra.TryGetValue("companies", out var list));
+        Assert.Equal(c.Id + "\tشرکتِ نور", list);
+    }
+
+    [Fact]
+    public void TheCompanyQrMarkerIsExactlyTheUiOne()
+        => Assert.Equal(AcctLink.Build(9, null, "company"), BotReports.Marker(9, null, "company"));
+
+    /// <summary>
+    /// ۱۴۰۵/۰۷/۲۲ (با عکس): «دقیق نمی‌گوید چند لیتر تیل دیگر دارم و تا هشدار چقدر مانده.»
+    /// ⇒ هر مخزن لیترِ مانده و فاصله تا حدِ هشدار را دارد — در عکس و در متن.
+    /// </summary>
+    [Fact]
+    public async Task EachTankSaysLitresLeftAndHowFarToTheAlarm()
+    {
+        var host = Host();
+        var saved = BotReports.TankRenderer;
+        IReadOnlyList<TankShot>? got = null;
+        BotReports.TankRenderer = (shots, _) => { got = shots; return Task.FromResult<byte[]?>(null); };
+        try
+        {
+            var rep = await BotReports.BuildAsync(host, Req("tanks", new { }), CancellationToken.None);
+            Assert.True(rep.Ok, rep.Error);
+            Assert.NotNull(got);
+            Assert.All(got!, s =>
+            {
+                Assert.EndsWith("لیتر مانده", s.Liters);
+                Assert.True(s.Note.Contains("حدِ هشدار"), s.Note);
+            });
+            Assert.Contains("لیتر مانده", rep.Caption);
+            Assert.Contains("حدِ هشدار", rep.Caption);
         }
         finally { BotReports.TankRenderer = saved; }
     }

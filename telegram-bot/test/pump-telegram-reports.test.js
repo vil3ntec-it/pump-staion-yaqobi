@@ -306,3 +306,114 @@ test('۷) هشدارِ مخزن ⇒ همان عکسِ مخزنِ برنامه، 
     telegram.setAutoTankImage(false);
   }
 });
+
+test('۸) دو کارت ⇒ یک آلبوم با متن زیرش، دو PDF ⇒ یک آلبوم؛ شرکت‌ها ⇒ دکمهٔ کارت و PDFِ هر شرکت', async () => {
+  const owner = await pumpOwner('آلبوم');
+  const dev = await bindDevice(owner, 'pc-album');
+  await linkPrivate(9108, owner);
+
+  clear();
+  const asking = msg(9108, '/acct ح هاشم');
+  await pcAnswers(dev, () => ({
+    ok: true,
+    caption: '👤 ح هاشم\n🔴 تمام شده\n\nالباقی: 38 لیتر\n\nالباقی: 0 افغانی',
+    files: [
+      { name: 'ح هاشم — تیل', mime: 'image/png', b64: PNG.toString('base64') },
+      { name: 'حساب ح هاشم — تیل', mime: 'application/pdf', b64: PDF.toString('base64') },
+      { name: 'ح هاشم — پول', mime: 'image/png', b64: PNG.toString('base64') },
+      { name: 'حساب ح هاشم — پول', mime: 'application/pdf', b64: PDF.toString('base64') },
+    ],
+  }));
+  await asking;
+  const albums = calls.filter(c => c.method === 'sendMediaGroup');
+  assert.equal(albums.length, 2, 'آلبوم‌ها نیامدند');
+  assert.deepEqual(albums[0].params.media.map(m => m.type), ['photo', 'photo']);
+  assert.match(albums[0].params.media[0].caption, /38 لیتر/);
+  assert.ok(!albums[0].params.media[1].caption, 'متن فقط یک بار');
+  assert.ok(albums[0].files.f1.data.equals(PNG));
+  assert.deepEqual(albums[1].params.media.map(m => m.type), ['document', 'document']);
+  assert.equal(calls.filter(c => ['sendPhoto', 'sendDocument'].includes(c.method)).length, 0, 'عکس‌ها جدا رفتند');
+
+  //  مخزن‌ها با بدهیِ شرکت ⇒ دکمهٔ «🏢 شرکتِ نور» ⇒ درخواستِ company با همان شناسه
+  await new Promise(r => setTimeout(r, 4100));   //  REPORT_GAP_MS
+  clear();
+  const tanks = msg(9108, '/tanks');
+  await pcAnswers(dev, () => ({
+    ok: true,
+    caption: '🛢 مخزن‌ها',
+    files: [{ name: 'مخزن‌ها', mime: 'image/png', b64: PNG.toString('base64') }],
+    extra: { companies: '7\tشرکتِ نور\n9\tشرکتِ آریا' },
+  }));
+  await tanks;
+  const btns = rows(lastTo(9108)).flat();
+  const nur = btns.find(b => /شرکتِ نور/.test(b.text));
+  assert.ok(nur, `دکمهٔ شرکت نیامد: ${JSON.stringify(btns)}`);
+  assert.equal(nur.callback_data, `co:${owner.stationId}:7`);
+
+  await new Promise(r => setTimeout(r, 4100));   //  REPORT_GAP_MS
+  clear();
+  const co = press(9108, nur.callback_data);
+  const reqs = await pcAnswers(dev, () => ({
+    ok: true, caption: '🏢 شرکتِ نور', files: [{ name: 'شرکتِ نور', mime: 'image/png', b64: PNG.toString('base64') }],
+    extra: { qr: 'https://vill3n.top/a/x/c7/k' },
+  }));
+  await co;
+  assert.equal(reqs[0].kind, 'company');
+  assert.equal(reqs[0].arg.id, 7);
+  assert.ok(sent().some(c => /vill3n\.top\/a\/x\/c7/.test(c.params.text)), 'لینکِ شرکت نیامد');
+});
+
+test('۹) نامِ با کمی تفاوت یا داخلِ پیامِ بلند ⇒ همان حساب؛ حسابِ فرعی با دکمه، فقط اگر خواسته شود', async () => {
+  const owner = await pumpOwner('نزدیک');
+  const dev = await bindDevice(owner, 'pc-near');
+  await linkPrivate(9109, owner);
+  await state(dev, {
+    alerts: [],
+    debtors: [
+      { n: 'ح هاشم', sp: 'out', sd: 'none', sm: 'none', p: 38, d: 0, m: 0 },
+      { n: 'احمد کریمی', sp: 'ok', sd: 'none', sm: 'none', p: 10, d: 0, m: 0 },
+      { n: 'احمد رحیمی', sp: 'ok', sd: 'none', sm: 'none', p: 10, d: 0, m: 0 },
+    ],
+  });
+  const score = telegram.nameScore;
+  const n = (s) => telegram.normName(s);
+  assert.equal(score('ح هاشم', n('ح هاشم')), 1);
+  assert.ok(score('ح هاشم', n('سلام، لطفاً حساب ح هاشم رو بفرست')) >= 0.9, 'نام داخلِ پیامِ بلند');
+  assert.ok(score('احمد کریمی', n('احمد کریمئ')) >= 0.74, 'غلطِ تایپی');
+  assert.ok(score('احمد کریمی', n('محمود')) < 0.62, 'نامِ دیگر');
+
+  //  پیامِ بلند ⇒ مستقیم همان حساب، و زیرش دکمهٔ حسابِ فرعی
+  clear();
+  const asking = msg(9109, 'سلام، لطفاً حساب ح هاشم رو بفرست');
+  const reqs = await pcAnswers(dev, () => ({
+    ok: true,
+    caption: '👤 ح هاشم\n🔴 تمام شده\n\nالباقی: 38 لیتر',
+    files: [{ name: 'ح هاشم — تیل', mime: 'image/png', b64: PNG.toString('base64') }],
+    extra: { subs: '55\tهارون', pid: '12' },
+  }));
+  await asking;
+  assert.equal(reqs[0].kind, 'debtor');
+  assert.equal(reqs[0].arg.name, 'ح هاشم');
+  const sub = rows(lastTo(9109)).flat().find(b => /هارون/.test(b.text));
+  assert.ok(sub, 'دکمهٔ حسابِ فرعی نیامد');
+  assert.equal(sub.callback_data, `acs:${owner.stationId}:12:55`);
+
+  await new Promise(r => setTimeout(r, 4100));   //  REPORT_GAP_MS
+  clear();
+  const subAsk = press(9109, sub.callback_data);
+  const subReqs = await pcAnswers(dev, () => ({
+    ok: true, caption: '👤 ح هاشم\n📄 حسابِ فرعی: هارون',
+    files: [{ name: 'هارون', mime: 'image/png', b64: PNG.toString('base64') }],
+  }));
+  await subAsk;
+  assert.deepEqual(subReqs[0].arg, { id: 12, sub: 55 });
+
+  //  دو نامِ هم‌اندازه نزدیک ⇒ نه حدس؛ فهرست با دکمه
+  await new Promise(r => setTimeout(r, 4100));
+  clear();
+  await msg(9109, 'احمد');
+  const list = lastTo(9109);
+  assert.match(list.params.text, /احمد کریمی/);
+  assert.match(list.params.text, /احمد رحیمی/);
+  assert.ok(!calls.some(c => c.method === 'sendPhoto' || c.method === 'sendMediaGroup'));
+});

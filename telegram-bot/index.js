@@ -288,6 +288,40 @@ module.exports = function createPumpBot({ req }) {
     }
   }
 
+  /**
+   * چند فایل در یک پیام (آلبومِ تلگرام، `sendMediaGroup`) — ۱۴۰۵/۰۷/۲۲: «دو عکس را جدا جدا
+   * می‌دهد؛ هر دو را یک‌جا بده، کنارِ هم، مثلِ وقتی در تلگرام دو عکس می‌گذاری.»
+   * `type`: `photo` یا `document`؛ نوشته فقط زیرِ اولی (تلگرام آن را زیرِ آلبوم نشان می‌دهد).
+   */
+  async function callMedia(chatId, type, files, caption = '', { timeoutMs = 120000 } = {}) {
+    const t = await token();
+    if (!t) return { ok: false, error_code: 0, description: 'رمزِ بات تنظیم نشده است' };
+    const media = files.map((f, i) => ({
+      type, media: `attach://f${i}`, ...(i === 0 && caption ? { caption } : {}),
+    }));
+    const params = { chat_id: String(chatId), media };
+    const attach = Object.fromEntries(files.map((f, i) => [`f${i}`, f]));
+    try {
+      if (transport) return await transport('sendMediaGroup', params, t, attach);
+      const form = new FormData();
+      form.append('chat_id', params.chat_id);
+      form.append('media', JSON.stringify(media));
+      files.forEach((f, i) => form.append(`f${i}`, new Blob([f.data], { type: f.mime }), f.name));
+      const res = await fetch(`${config.telegram.apiBase}/bot${t}/sendMediaGroup`, {
+        method: 'POST',
+        body: form,
+        signal: AbortSignal.any([AbortSignal.timeout(timeoutMs), stopSignal()]),
+      });
+      let json = null;
+      try { json = await res.json(); } catch { /* پاسخِ غیرِ JSON */ }
+      return json && typeof json === 'object'
+        ? json
+        : { ok: false, error_code: res.status, description: `پاسخِ نامعتبر (${res.status})` };
+    } catch (err) {
+      return { ok: false, error_code: 0, description: hide(err.cause?.message || err.message, t) };
+    }
+  }
+
   /** نامِ بات را از خودِ تلگرام می‌پرسد و نگه می‌دارد. */
   async function refreshMe(tok = null) {
     const res = await call('getMe', {}, { tok });
@@ -479,6 +513,19 @@ module.exports = function createPumpBot({ req }) {
       });
       if (res.ok) await query('UPDATE telegram_chats SET kb_ver=$2 WHERE chat_id=$1', [String(row.chat_id), KB_VER]);
     } catch { /* منو رفاه است */ }
+  }
+
+  /**
+   * صاحب سامانه پس از به‌روزرسانی: «منو اصلاً برداشته شده و دیگه نیست» — دکمهٔ «/» رفته بود و
+   * کیبورد فقط پس از `/start` می‌آمد. ⇒ با بالا آمدنِ بات خودش به هر خصوصیِ وصل‌شده‌ای که کیبوردِ
+   * این نسخه را ندارد می‌فرستد (یک بار؛ `kb_ver`).
+   */
+  async function pushMainKb() {
+    await ensureOutbox();
+    const list = await many(
+      `SELECT * FROM telegram_chats WHERE kind='private' AND station_id IS NOT NULL AND kb_ver < $1`, [KB_VER]
+    );
+    for (const row of list) await ensureMainKb(row);
   }
 
   /** دکمهٔ کیبوردِ پایین ⇒ همان کارِ دکمهٔ منو. خروجی: `true` اگر این متن دکمه بود. */
@@ -941,15 +988,23 @@ module.exports = function createPumpBot({ req }) {
     return k;
   }
 
-  /** پاسخِ برنامه ⇒ تلگرام: عکس‌ها (اولی با متن)، بعد PDFها، بعد لینکِ کیو‌آر. */
-  async function deliverReport(chatId, out) {
+  /**
+   * پاسخِ برنامه ⇒ تلگرام: عکس‌ها (چند عکس ⇒ یک آلبوم، متن زیرش)، بعد PDFها (چندتا ⇒ یک آلبوم)،
+   * بعد لینکِ کیو‌آر، و دکمه‌های حسابِ شرکت‌ها (گزارشِ مخزن). `link` = شعبه‌ای که پرسیده شده.
+   */
+  async function deliverReport(chatId, out, link = null, arg = null) {
     const files = Array.isArray(out?.files) ? out.files : [];
     const photos = files.filter(f => String(f.mime).startsWith('image/'));
     const docs = files.filter(f => f.mime === 'application/pdf');
     const caption = String(out?.caption || '').trim();
     const short = caption.length <= 1000;
     let captioned = false;
-    for (const p of photos) {
+    let left = photos;
+    if (photos.length > 1) {
+      const res = await callMedia(chatId, 'photo', photos.slice(0, 10), short ? caption : '');
+      if (res.ok) { left = []; captioned = short && Boolean(caption); }
+    }
+    for (const p of left) {
       const res = await callFile('sendPhoto', {
         chat_id: String(chatId), ...(!captioned && short && caption ? { caption } : {}),
       }, 'photo', p);
@@ -958,10 +1013,25 @@ module.exports = function createPumpBot({ req }) {
       captioned = captioned || (short && Boolean(caption));
     }
     if (caption && !captioned) await sendLong(chatId, caption);
-    for (const d of docs) await callFile('sendDocument', { chat_id: String(chatId) }, 'document', d);
+    const grouped = docs.length > 1 && (await callMedia(chatId, 'document', docs.slice(0, 10))).ok;
+    if (!grouped) for (const d of docs) await callFile('sendDocument', { chat_id: String(chatId) }, 'document', d);
     const qr = String(out?.extra?.qr || '');
     if (/^https?:\/\//.test(qr)) {
       await send(chatId, `🔗 لینکِ حساب (همان کیو‌آر) — برای واتساپ یا هر جای دیگر:\n${qr}`);
+    }
+    //  📄 حساب‌های فرعیِ همین شخص ⇒ دکمه؛ فقط اگر خواسته شود (۱۴۰۵/۰۷/۲۲)
+    const subs = String(out?.extra?.subs || '').split('\n')
+      .map(l => l.split('\t')).filter(([id, n]) => Number(id) > 0 && n).slice(0, 8);
+    if (link && subs.length && Number(arg?.id) > 0) {
+      await show(chatId, '📄 حساب‌های فرعی — هر کدام را بخواهید بزنید:',
+        subs.map(([id, n]) => [{ text: `📄 ${n}`.slice(0, 48), callback_data: `acs:${link.station_id}:${Number(arg.id)}:${Number(id)}` }]));
+    }
+    //  🏢 هر شرکتی که بدهی دارد ⇒ دکمهٔ کارت، PDF و لینکِ همان شرکت (۱۴۰۵/۰۷/۲۲)
+    const cos = String(out?.extra?.companies || '').split('\n')
+      .map(l => l.split('\t')).filter(([id, n]) => Number(id) > 0 && n).slice(0, 8);
+    if (link && cos.length) {
+      await show(chatId, '🏢 عکس، PDF و لینکِ حسابِ هر شرکت:',
+        cos.map(([id, n]) => [{ text: `🏢 ${n}`.slice(0, 48), callback_data: `co:${link.station_id}:${Number(id)}` }]));
     }
   }
 
@@ -997,7 +1067,7 @@ module.exports = function createPumpBot({ req }) {
           : `⚠️ ${String(err.message || 'نشد').slice(0, 300)}`;
         return send(row.chat_id, why);
       }
-      return deliverReport(row.chat_id, out);
+      return deliverReport(row.chat_id, out, link, out?.extra?.pid ? { id: Number(out.extra.pid) } : arg);
     } catch (err) {
       console.error('[telegram:report]', hide(err.message));
       return send(row.chat_id, '⚠️ نشد؛ دوباره امتحان کنید.');
@@ -1021,7 +1091,13 @@ module.exports = function createPumpBot({ req }) {
     if (!links.length) return notLinked(row);
     const q = String(name || '').trim();
     if (!q) return send(row.chat_id, '📷 بعد از /acct نامِ قرض‌دار را بنویسید؛ مثلاً: /acct هارون');
-    if (links.length === 1) return sendReport(row, links[0], 'debtor', { name: q });
+    if (links.length === 1) {
+      //  نامِ با کمی تفاوت ⇒ همان نامِ درستِ برنامه؛ چند نامِ نزدیک ⇒ همان جست‌وجو با دکمه‌ها
+      const r = await branchHits(links[0], normName(q)).catch(() => null);
+      if (r?.sure) return sendReport(row, links[0], 'debtor', { name: r.sure.n });
+      if (r?.hits?.length > 1) return onSearch(row, q);
+      return sendReport(row, links[0], 'debtor', { name: r?.hits?.[0]?.n || q });
+    }
     return show(row.chat_id, `📷 حسابِ «${q}» در کدام شعبه؟`,
       links.map(l => [{ text: `⛽ ${l.station_name}`.slice(0, 40), callback_data: `acctn:${nameRef(l.station_id, q)}` }]));
   }
@@ -1077,14 +1153,71 @@ module.exports = function createPumpBot({ req }) {
   async function branchHits(link, qn) {
     const state = await req('./pump-state').get(link.station_id);
     if (!state || !Array.isArray(state.debtors)) return null;
-    const hits = state.debtors.filter(d => normName(d.n).includes(qn));
-    //  دقیق‌ترین اول: نامِ برابر، بعد آن‌که با همین آغاز می‌شود
-    hits.sort((a, b) => {
-      const ra = normName(a.n) === qn ? 0 : (normName(a.n).startsWith(qn) ? 1 : 2);
-      const rb = normName(b.n) === qn ? 0 : (normName(b.n).startsWith(qn) ? 1 : 2);
-      return ra - rb || a.n.localeCompare(b.n, 'fa');
-    });
-    return { hits, at: state.debtorsAt || state.updatedAt };
+    //  نزدیک‌ترین اول (`nameScore`): برابر، داخلِ پیامِ بلند، بخشی از نام، و بعد با غلطِ تایپی
+    const scored = state.debtors.map(d => ({ d, s: nameScore(d.n, qn) })).filter(x => x.s >= NAME_MIN);
+    scored.sort((a, b) => b.s - a.s || a.d.n.localeCompare(b.d.n, 'fa'));
+    const hits = scored.map(x => x.d);
+    //  «خیلی نزدیک» ⇒ همان یکی (۱۴۰۵/۰۷/۲۲): نمرهٔ بالا و آشکارا جلوتر از دومی
+    const best = scored[0];
+    const alone = best && scored.length === 1 && best.s >= NAME_ALONE && qn.replace(/ /g, '').length >= 3;
+    const sure = best && (alone || (best.s >= NAME_SURE && (!scored[1] || scored[1].s <= best.s - NAME_GAP))) ? best.d : null;
+    return { hits, sure, at: state.debtorsAt || state.updatedAt };
+  }
+
+  /**
+   * ══ نامِ قرض‌دار با کمی تفاوت یا داخلِ پیامِ بلند (۱۴۰۵/۰۷/۲۲) ══════════════
+   * صاحب سامانه: «اگر نامِ قرض‌دار را با کمی تفاوت یا در پیامِ طولانی دادم هم بشناسد، و اگر خیلی
+   * نزدیک بود همان را بیاورد.» نمره از ۰ تا ۱:
+   *   ۱ برابر · ۰.۹۸ بی فاصله برابر · ۰.۹۵ نامِ کامل داخلِ پیام · ۰.۹ نام داخلِ پیام (بی فاصله)
+   *   ۰.۸ بخشی از نام (همان جست‌وجوی پیشین) · زیرِ آن: شباهتِ حرف‌به‌حرف (لِوِنشتاین)
+   *   با کلِ نام یا با هر تکهٔ هم‌اندازهٔ پیام.
+   */
+  const NAME_MIN = 0.62;
+  const NAME_SURE = 0.86;
+  const NAME_GAP = 0.06;
+  /** تنها نامِ پیداشده و دست‌کم این نزدیک (یک غلطِ تایپی در نامِ پنج‌حرفی) ⇒ همان. */
+  const NAME_ALONE = 0.74;
+
+  function lev(a, b) {
+    if (a === b) return 0;
+    if (!a.length) return b.length;
+    if (!b.length) return a.length;
+    let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= a.length; i++) {
+      const cur = [i];
+      for (let j = 1; j <= b.length; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      }
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+  const sim = (a, b) => (a.length || b.length ? 1 - lev(a, b) / Math.max(a.length, b.length) : 0);
+
+  function nameScore(name, qn) {
+    const a = normName(name);
+    const b = qn;
+    if (!a || !b) return 0;
+    if (a === b) return 1;
+    const A = a.replace(/ /g, '');
+    const B = b.replace(/ /g, '');
+    if (A === B) return 0.98;
+    if (b.length > a.length && ` ${b} `.includes(` ${a} `)) return 0.95;
+    if (A.length >= 3 && B.length > A.length && B.includes(A)) return 0.9;
+    if (B.length >= 2 && A.includes(B)) return 0.8;
+    //  غلطِ تایپی: کلِ نام، یا هر تکه از پیام با همان شمارِ واژه (± یک)
+    let best = B.length >= 3 ? sim(A, B) : 0;
+    const qt = b.split(' ');
+    const nt = a.split(' ').length;
+    if (qt.length > 1) {
+      for (let w = Math.max(1, nt - 1); w <= nt + 1; w++) {
+        for (let i = 0; i + w <= qt.length; i++) {
+          const piece = qt.slice(i, i + w).join('');
+          if (piece.length >= 3) best = Math.max(best, sim(A, piece));
+        }
+      }
+    }
+    return best * 0.95;
   }
 
   /**
@@ -1427,6 +1560,8 @@ module.exports = function createPumpBot({ req }) {
   async function onPrivate(chat, cmd, text, from = null) {
     let row = await ensureChat(chat, 'private');
     const linked = isLinked(row);
+    //  هر پیامی در خصوصیِ وصل‌شده ⇒ اگر کیبورد را ندارد، اول کیبورد
+    if (linked && cmd?.name !== 'start' && cmd?.name !== 'menu') await ensureMainKb(row);
     if (linked && !cmd && await onMainKb(row, text, from)) return null;
 
     if (cmd) {
@@ -1488,6 +1623,23 @@ module.exports = function createPumpBot({ req }) {
       return send(row.chat_id, row.kind === 'private'
         ? '🔎 نامِ قرض‌دار را بنویسید.'
         : '🔎 بعد از /find نامِ قرض‌دار را بنویسید؛ مثلاً: /find کریم');
+    }
+    //  «خیلی نزدیک» ⇒ همان حساب، با عکس و PDF (۱۴۰۵/۰۷/۲۲) — فقط وقتی در همهٔ شعبه‌ها یکی است.
+    //  ⛔ فقط خصوصی: در گروه هر «/find» عکس و PDF نمی‌ریزد؛ همان نتیجه با دکمهٔ «📷».
+    if (row.kind === 'private') {
+      const qn = normName(q);
+      const sure = [];
+      let others = 0;
+      for (const l of links) {
+        const r = await branchHits(l, qn).catch(() => null);
+        if (r?.sure) sure.push({ l, d: r.sure });
+        else others += r?.hits?.length || 0;
+      }
+      if (sure.length === 1 && !others) {
+        await send(row.chat_id, `🔎 «${String(q).trim().slice(0, 60)}» ⇒ 👤 ${sure[0].d.n}`
+          + (links.length > 1 ? ` · ${sure[0].l.station_name}` : ''));
+        return sendReport(row, sure[0].l, 'debtor', { name: sure[0].d.n });
+      }
     }
     const text = await searchText(links, q);
     //  📷 زیرِ نتیجه: «حسابِ فلانی» برای پنج نامِ اول (هر شعبه جدا) — عکس و PDF از خودِ برنامه
@@ -2161,6 +2313,20 @@ module.exports = function createPumpBot({ req }) {
         if (!l || !(id > 0)) return answer('این شعبه به این گفت‌وگو وصل نیست.', true);
         await answer('⏳ از کامپیوترِ پمپ می‌گیرم…');
         return sendReport(row, l, 'debtor', { id });
+      }
+      case 'acs': {
+        const [, , pid, sid] = String(q.data || '').split(':').map(Number);
+        const l = await branch();
+        if (!l || !(pid > 0) || !(sid > 0)) return answer('این شعبه به این گفت‌وگو وصل نیست.', true);
+        await answer('⏳ از کامپیوترِ پمپ می‌گیرم…');
+        return sendReport(row, l, 'debtor', { id: pid, sub: sid });
+      }
+      case 'co': {
+        const id = Number(String(q.data || '').split(':')[2]);
+        const l = await branch();
+        if (!l || !(id > 0)) return answer('این شعبه به این گفت‌وگو وصل نیست.', true);
+        await answer('⏳ از کامپیوترِ پمپ می‌گیرم…');
+        return sendReport(row, l, 'company', { id });
       }
       case 'acctn': {
         const ref = nameRefs.get(arg);
@@ -3074,6 +3240,7 @@ module.exports = function createPumpBot({ req }) {
             const me = await refreshMe();
             if (!me.ok) throw new Error(me.description || 'رمزِ بات پذیرفته نشد');
             await setCommands().catch(() => {});
+            await pushMainKb().catch(() => {});
             prepared = tok;
           }
           if (!alive()) break;
@@ -3210,7 +3377,7 @@ module.exports = function createPumpBot({ req }) {
     relayCustomer, rateDone, desktopOnline, DESKTOP_ONLINE_MS,
     setTransport, handleUpdate, pollOnce, flushOutbox, notifyStation,
     start, stop, reload, status, configure, publicInfo, appLinks,
-    formatAlert, announcementText, announceTick, pcWatchTick, subTick, alertKeyboard, CALM_CAP, setQuietHours, setAutoTankImage, shortAlert, parseCommand, asciiDigits, normEmail, normName, notifyResolved, searchText, chunks,
+    formatAlert, announcementText, announceTick, pcWatchTick, subTick, alertKeyboard, CALM_CAP, setQuietHours, setAutoTankImage, shortAlert, pushMainKb, parseCommand, asciiDigits, normEmail, normName, nameScore, notifyResolved, searchText, chunks,
     _reset,
   };
 };
