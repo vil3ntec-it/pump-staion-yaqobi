@@ -89,14 +89,20 @@ public sealed class WaraqReport : ISetupDocument
     });
 
     /// <summary>جدولِ پایه‌ها — همان ده ستونِ ورقِ کاغذی.</summary>
+    //  ⛔ (۱۴۰۵/۰۷/۲۵) خواستهٔ صاحب ریپو: «در قرائتِ پمپ توضیحات و ساعت را بردار و جایش
+    //  آزمایشی را بگذار — اگر نوشته بودم چقدر تیلِ آزمایشی گرفته شده، وگرنه نه.» ستونِ
+    //  «نوع» هم «تیل» شد: در این ورق «نوع» دیگر هیچ جا نیست.
+    private bool HasTest => _in.Shift.Pumps.Any(p => p.TestLiters != 0m);
+
     private void Pumps(IContainer c) => c.Table(t =>
     {
+        var test = HasTest;
         t.ColumnsDefinition(cd =>
         {
             cd.RelativeColumn(0.7f);   // بایه
             cd.RelativeColumn(2.0f);   // نام
-            cd.RelativeColumn(1.0f);   // نوع
-            cd.RelativeColumn(2.0f);   // توضیح/ساعت
+            cd.RelativeColumn(1.0f);   // تیل
+            if (test) cd.RelativeColumn(1.1f);   // آزمایشی
             cd.RelativeColumn(1.3f);   // شروع
             cd.RelativeColumn(1.3f);   // ختم
             cd.RelativeColumn(1.0f);   // فی لیتر
@@ -108,7 +114,7 @@ public sealed class WaraqReport : ISetupDocument
         DocStyle.Head(t, cell =>
         {
             void Th(string s) => DocStyle.ThText(cell(), s);
-            Th("بایه"); Th("نام"); Th("نوع"); Th("توضیح/ساعت"); Th("شروع"); Th("ختم");
+            Th("بایه"); Th("نام"); Th("تیل"); if (test) Th("آزمایشی"); Th("شروع"); Th("ختم");
             Th("فی لیتر"); Th("لیتر"); Th("مبلغ"); Th("جمله قرض");
         });
 
@@ -125,7 +131,7 @@ public sealed class WaraqReport : ISetupDocument
             Td(PersianText.Num(p.Num > 0 ? p.Num : i), DocStyle.Index);
             Td(DocStyle.Dash(p.Worker));
             Td(p.Fuel == FuelType.Diesel ? "دیزل" : "پطرول");
-            Td(DocStyle.Dash(p.Note), DocStyle.Sub);
+            if (test) Td(Dash0(p.TestLiters), DocStyle.Fuel);
             Td(R(p.Start)); Td(R(p.End));
             Td(R(p.PricePerLiter));
             Td(R(liters), DocStyle.Fuel);
@@ -133,7 +139,7 @@ public sealed class WaraqReport : ISetupDocument
             Td(Dash0(p.Debt), DocStyle.Danger);
         }
 
-        Footer(t);
+        Footer(t, test ? 7u : 6u);
     });
 
     /// <summary>
@@ -150,11 +156,11 @@ public sealed class WaraqReport : ISetupDocument
     /// ردیفِ آخر همان «لیتر / فروش / قرضِ پایه»ی نوارِ «جمله این شیفت»ِ صفحه است.
     /// ⚠️ روز و شب هرگز با هم جمع نمی‌شوند؛ این سند فقط همین شیفت را دارد.
     /// </summary>
-    private void Footer(TableDescriptor t)
+    private void Footer(TableDescriptor t, uint span)
     {
         foreach (var r in ShiftTotalRows(_in.Shift))
         {
-            t.Cell().ColumnSpan(7).Element(x => DocStyle.Tf(x, r.Label));
+            t.Cell().ColumnSpan(span).Element(x => DocStyle.Tf(x, r.Label));
             t.Cell().Element(x => DocStyle.Tf(x, R(r.Liters) + " لیتر"));
             t.Cell().Element(x => DocStyle.Tf(x, R(r.Sales)));
             t.Cell().Element(x => DocStyle.Tf(x, Dash0(r.Debt)));
@@ -220,18 +226,17 @@ public sealed class WaraqReport : ISetupDocument
             cd.RelativeColumn(2.4f);   // نام
             cd.RelativeColumn(1.2f);   // مقدار تیل
             cd.RelativeColumn(1.4f);   // مبلغ
-            cd.RelativeColumn(1.0f);   // نوع
         });
 
         DocStyle.Head(t, cell =>
         {
             void Th(string s) => DocStyle.ThText(cell(), s);
-            Th("📋"); Th("نام"); Th("مقدار تیل"); Th("مبلغ"); Th("نوع");
+            Th("📋"); Th("نام"); Th("مقدار تیل"); Th("مبلغ");
         });
 
         if (rows.Count == 0)
         {
-            t.Cell().ColumnSpan(5).Element(x => DocStyle.TdText(x, false, "—", DocStyle.FootFg));
+            t.Cell().ColumnSpan(4).Element(x => DocStyle.TdText(x, false, "—", DocStyle.FootFg));
             return;
         }
 
@@ -244,35 +249,34 @@ public sealed class WaraqReport : ISetupDocument
             void Td(string s, string? cl = null) => DocStyle.TdText(t.Cell(), even, s, cl);
 
             Td(PersianText.Num(n), DocStyle.Index);
-            DocStyle.TdOneLine(t.Cell(), even, NameWithFuel(x));   // ⛔ یک خط — جدول بلند نشود
+            DocStyle.TdOneLine(t.Cell(), even, PdfName(x, debt), debt ? null : Purple);   // ⛔ یک خط — جدول بلند نشود
             Td(Dash0(x.Liters), DocStyle.Fuel);
             Td(Dash0(_calc.TxnAmount(_in.Shift, x)), debt ? DocStyle.Danger : Purple);
-            Td(debt ? "قرض" : "مصرف", DocStyle.Sub);
         }
     });
 
-    /// <summary>
-    /// ══ نوعِ تیل داخلِ خودِ نام ═══════════════════════════════════════════════
-    ///
-    /// گزارشِ صاحب ریپو: «بخشِ ورق‌ها را که پی‌دی‌اف می‌کنم، چند تا کادر نیست
-    /// چون خودم خواستم — ولی الان نوع را نشان نمی‌دهد که پطرول است یا دیزل.
-    /// این هم نمی‌خواهم کادرِ جدولی‌اش بیاید توی پی‌دی‌اف، ولی توی توضیحات یا
-    /// کادرِ نام نوشته بشود که پطرول بوده یا دیزل.»
-    ///
-    /// پس ستونِ تازه‌ای اضافه نشد (ستونِ «نوع»ِ همین جدول قرض/مصرف است، نه
-    /// تیل) و نوعِ تیل داخلِ همان خانهٔ نام می‌نشیند.
-    ///
-    /// ⚠️ فقط وقتی که ردیف واقعاً تیل داشته باشد: ردیفِ مصرفِ نقدیِ بی‌لیتر،
-    /// «پطرول»ِ بی‌معنا نگیرد.
-    /// </summary>
-    private string NameWithFuel(WaraqTransaction x)
+    // ══ نامِ ردیف در PDF — «همه چیز معلوم باشد» (۱۴۰۵/۰۷/۲۵) ══════════════════════
+    //  خواستهٔ صاحب ریپو: «ستونِ نوع نباشد؛ معلوم باشد کدام قرض و کدام مصرف است — اگر مصرف
+    //  زده بودم و خودم ننوشته بودم، در نام بیاید "مصرف روز". در هیچ نامی پطرول و دیزل
+    //  نباشد. و در نام بنویسد حوالهٔ چندم بوده.»
+    //   • مصرف: «مصرف روز/شب» در نام (اگر خودِ نام «مصرف» ندارد) و رنگِ بنفش.
+    //   • پطرول/دیزل (و «پ»/«د»ی تنها) از نام برداشته می‌شوند — همان ‎StripFuelWords‎ِ حساب‌ها.
+    //   • شمارهٔ حواله از نوشتهٔ خامِ ردیف (پیش از خط‌کج) خوانده و ته نام نوشته می‌شود.
+    public string PdfName(WaraqTransaction x, bool debt)
     {
-        //  ⛔ «/هارون» فقط راهنمای حساب است — در ورقِ چاپی دیده نمی‌شود (۱۴۰۵/۰۷/۱۸)
-        var name = DocStyle.Dash(_in.CleanName is { } clean ? clean(x.Name) : x.Name);
-        if (x.Liters == 0m) return name;
+        var hw = PostingService.ExtractHawala(x.Name);
+        var shown = _in.CleanName is { } clean ? clean(x.Name) : x.Name;
+        var name = PostingService.StripFuelWords(PostingService.ExtractHawala(shown).Clean);
 
-        var fuel = x.Fuel == FuelType.Diesel ? "دیزل" : "پطرول";
-        return name is "—" or "" ? fuel : name + " · " + fuel;
+        if (!debt && !name.Contains("مصرف"))
+        {
+            var tag = IsNight ? "مصرف شب" : "مصرف روز";
+            name = name.Length == 0 ? tag : tag + " · " + name;
+        }
+        if (hw.Num.Length > 0)
+            name = (name.Length == 0 ? "" : name + " · ")
+                   + (hw.Num == PostingService.NoHawala ? hw.Num : "حوالهٔ " + hw.Num);
+        return name.Length == 0 ? "—" : name;
     }
 
     private void Summary(IContainer c, WaraqShiftTotals t, WaraqShortage q) => c.Row(row =>
