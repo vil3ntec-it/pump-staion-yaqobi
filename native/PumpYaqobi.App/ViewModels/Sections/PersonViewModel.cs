@@ -987,10 +987,17 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
 
     public async Task LoadHawalaAsync()
     {
+        //  ⚡ پرسشِ دیسک روی نخِ دیگر (‎SQLite‎ِ ‎async‎ در واقع هم‌زمان است) و حالِ حساب فقط اگر
+        //  حواله‌ای هست — حسابِ بی‌حواله هیچ کارِ تازه‌ای روی نخِ رابط نمی‌کند (‎scrollperf‎).
         try
         {
-            var (n, alerts) = await _host.Hawalas.AlertAsync(Entity.Id, _host.Debt.Status(new[] { Entity }));
-            HawalaCount = n; HawalaAlert = alerts > 0;
+            var id = Entity.Id;
+            var qs = await Task.Run(() => _host.Hawalas.ListAsync(id));
+            if (qs.Count == 0) { HawalaCount = 0; HawalaAlert = false; return; }
+            var rows = await Task.Run(() => _host.Hawalas.AccountRowsAsync(id));
+            var st = _host.Debt.Status(new[] { Entity });
+            HawalaCount = qs.Count;
+            HawalaAlert = qs.Any(q => HawalaCalc.Of(q, rows, st).Alert);
         }
         catch { /* نقطهٔ سرخ نباید صفحه را بشکند */ }
     }

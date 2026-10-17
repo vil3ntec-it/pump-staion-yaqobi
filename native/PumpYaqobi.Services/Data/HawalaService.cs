@@ -89,12 +89,18 @@ public sealed class HawalaService
     }
 
     /// <summary>نقطهٔ سرخِ دکمه: دستِ‌کم یک حواله ۷۰٪ رفته یا تمام شده؟ (بی حواله ⇒ یک پرسشِ ارزان)</summary>
-    public async Task<(int Count, int Alerts)> AlertAsync(long accountId, DebtStatusInfo? account = null,
+    /// <remarks>
+    /// ⚡ حالِ حساب (<paramref name="account"/>) <b>فقط اگر حواله‌ای هست</b> حساب می‌شود — با هر
+    /// باز شدنِ حساب صدا زده می‌شود، و حسابِ بی‌حواله (بیشترِ حساب‌ها) نباید حتی یک دور روی
+    /// ردیف‌هایش بزند (‎scrollperf‎: «حسابِ قرض‌دار، بارِ دوم»).
+    /// </remarks>
+    public async Task<(int Count, int Alerts)> AlertAsync(long accountId, Func<DebtStatusInfo>? account = null,
                                                           CancellationToken ct = default)
     {
         var qs = await ListAsync(accountId, ct);
         if (qs.Count == 0) return (0, 0);
         var rows = await AccountRowsAsync(accountId, ct);
-        return (qs.Count, qs.Count(q => HawalaCalc.Of(q, rows, account).Alert));
+        var st = account?.Invoke();
+        return (qs.Count, qs.Count(q => HawalaCalc.Of(q, rows, st).Alert));
     }
 }
