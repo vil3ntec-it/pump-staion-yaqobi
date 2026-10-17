@@ -156,6 +156,8 @@ internal static class Program
         if (outDir.Equals("arrows", StringComparison.OrdinalIgnoreCase)) return ArrowNavProbe.Run();
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- cellfix
         if (outDir.Equals("cellfix", StringComparison.OrdinalIgnoreCase)) return CellFixProbe.Run();
+        //     dotnet run --project PumpYaqobi.UiTests -c Release -- hawala [پوشهٔ عکس]
+        if (outDir.Equals("hawala", StringComparison.OrdinalIgnoreCase)) return HawalaProbe.Run(args.Length > 1 ? args[1] : null);
         if (outDir.Equals("waraqadd", StringComparison.OrdinalIgnoreCase)) return WaraqAddProbe.Run(args.Length > 1 ? args[1] : null);
         if (outDir.Equals("tanks", StringComparison.OrdinalIgnoreCase)) return TanksProbe.Run(args.Length > 1 ? args[1] : null);
         //     dotnet run --project PumpYaqobi.UiTests -c Release -- bgwork [پوشهٔ عکس]

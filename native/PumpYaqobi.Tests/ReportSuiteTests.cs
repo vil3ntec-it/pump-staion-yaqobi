@@ -378,6 +378,8 @@ public class ReportSuiteTests
         Assert.DoesNotContain("توضیح/ساعت", src);
         Assert.Contains("if (test) Th(\"آزمایشی\");", src);
         Assert.Contains("private bool HasTest => _in.Shift.Pumps.Any(p => p.TestLiters != 0m);", src);
+        //  جملهٔ پطرول/دیزل زیرِ جدولِ پایه‌ها نیست — فقط «جمله این شیفت»
+        Assert.Contains("foreach (var r in ShiftTotalRows(_in.Shift).TakeLast(1))", src);
 
         var sd = Waraq();
         sd.Pumps[0].TestLiters = 5m;

@@ -247,6 +247,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         Entity = a;
         OnPropertyChanged(nameof(WidthScope));
         ArchiveCount = 0;
+        HawalaCount = 0; HawalaAlert = false;
         _rowFilter = "all";      // فیلترِ حسابِ قبلی روی حسابِ تازه نماند
         Adopt(a);
         OnPropertyChanged(nameof(Title));
@@ -969,7 +970,37 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         //  می‌خواهیم (اسکنِ کاملِ ۱۴۰۵/۰۶/۳۰).
         try { ArchiveCount = await _host.Debtors.CountArchivesAsync(Entity.Id); }
         catch { /* شمارنده نباید صفحه را بشکند */ }
+        await LoadHawalaAsync();
     }
+
+    // ══ ⛽ تیل چکنهٔ حواله (۱۴۰۵/۰۷/۲۵) — دکمه بغلِ «٪ فیصدی»، نقطهٔ سرخ از ۷۰٪ ═════
+    //  شرح: ‎HawalaPageViewModel‎ و ‎HawalaCalc‎.
+    [ObservableProperty] private int _hawalaCount;
+    [ObservableProperty] private bool _hawalaAlert;
+
+    public string HawalaTipText =>
+        "حواله‌های این حساب: چقدر تیل داشت، چند برداشته شد و چقدر مانده"
+        + (HawalaCount > 0 ? " — " + Shamsi.Money(HawalaCount) + " حواله" : "")
+        + (HawalaAlert ? " — 🔴 یکی کم مانده یا تمام شده" : "");
+    partial void OnHawalaCountChanged(int v) => OnPropertyChanged(nameof(HawalaTipText));
+    partial void OnHawalaAlertChanged(bool v) => OnPropertyChanged(nameof(HawalaTipText));
+
+    public async Task LoadHawalaAsync()
+    {
+        try
+        {
+            var (n, alerts) = await _host.Hawalas.AlertAsync(Entity.Id);
+            HawalaCount = n; HawalaAlert = alerts > 0;
+        }
+        catch { /* نقطهٔ سرخ نباید صفحه را بشکند */ }
+    }
+
+    [RelayCommand]
+    private Task OpenHawalasAsync() => CrashGuard.RunAsync("تیل چکنهٔ حواله", async () =>
+    {
+        await FlushAsync();
+        await _person.OpenHawalasAsync(this);
+    });
 
     /// <summary>‎openPersonArchive‎ — صفحهٔ جداگانهٔ جدول‌های آرشیوِ همین حساب (مثلِ شرکت‌ها).</summary>
     [RelayCommand]
@@ -1536,6 +1567,7 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
 
     /// <summary>صفحهٔ جدول‌های آرشیوِ یک حساب — روی همین شخص باز می‌شود.</summary>
     public Task OpenArchivesAsync(AccountViewModel acct) => _section.OpenArchivesAsync(this, acct);
+    public Task OpenHawalasAsync(AccountViewModel acct) => _section.OpenHawalasAsync(this, acct);
 
     [RelayCommand]
     private Task PrevPerson() => _section.NavigatePersonAsync(-1);

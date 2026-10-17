@@ -127,12 +127,14 @@ internal static class LiveFormatProbe
         foreach (var ch in "12a") { win.KeyTextInput(ch.ToString()); Settle(win); }
         var box = win.FocusManager?.GetFocusedElement() as TextBox;
         Check($"خانهٔ «{box?.Text}» سرخ است (badnum)", box is not null && box.Classes.Contains("badnum"));
-        Check($"وسطِ نوشتن مبلغِ ردیف صفر نشد ({Amount()})", Amount() == before);
+        //  ⛔ (۱۴۰۵/۰۷/۲۵) پیش از این «۱۲» با تکمیلِ خودکار «۱۲٬۵۰۰» می‌شد و مبلغ «همان» می‌ماند؛
+        //  ستونِ عددی دیگر پیشنهاد ندارد، پس «۱۲»ِ نیمه‌نوشته زنده در ردیف است — صفر نه.
+        Check($"وسطِ نوشتن مبلغِ ردیف صفر نشد ({Amount()})", Amount() != 0m);
         Tap(win, PhysicalKey.Enter);
         Settle(win);
         var still = win.FocusManager?.GetFocusedElement() as TextBox;
         Check("Enter خانهٔ ناخوانا را نبست (هنوز در حالِ نوشتن)", still is not null && still.Classes.Contains("badnum"));
-        Check($"پس از Enter مبلغ همان {before} ماند ({Amount()})", Amount() == before);
+        Check($"پس از Enter مبلغ صفر نشد ({Amount()})", Amount() != 0m);
         Tap(win, PhysicalKey.Escape);
         Settle(win);
         var shown = (string?)row.GetType().GetProperty("AmountText")?.GetValue(row);

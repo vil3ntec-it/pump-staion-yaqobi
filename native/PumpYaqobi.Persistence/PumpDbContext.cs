@@ -28,6 +28,7 @@ public sealed class PumpDbContext : DbContext
     public DbSet<DebtRow> DebtRows => Set<DebtRow>();
     public DbSet<RasidEntry> RasidEntries => Set<RasidEntry>();
     public DbSet<DebtTableArchive> DebtTableArchives => Set<DebtTableArchive>();
+    public DbSet<HawalaQuota> HawalaQuotas => Set<HawalaQuota>();
     public DbSet<SafeEntry> SafeEntries => Set<SafeEntry>();
     public DbSet<ExchangeRow> ExchangeRows => Set<ExchangeRow>();
     public DbSet<Expense> Expenses => Set<Expense>();
@@ -124,6 +125,16 @@ public sealed class PumpDbContext : DbContext
             e.Property(x => x.Unit).HasConversion<int>();
             e.Property(x => x.Fuel).HasConversion<int>();
             e.Property(x => x.Value).HasColumnType("TEXT");
+            e.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        //  ⛽ تیل چکنهٔ حواله — سقفِ هر حواله در حسابِ خودش (شرح بالای ‎HawalaQuota‎)
+        b.Entity<HawalaQuota>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.AccountId);
+            e.Property(x => x.Liters).HasColumnType("TEXT");
+            e.HasOne<DebtAccount>().WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Cascade);
             e.HasQueryFilter(x => x.DeletedAt == null);
         });
 

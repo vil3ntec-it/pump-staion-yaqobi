@@ -220,6 +220,34 @@ public class RasidEntry : EntityBase
     public int SortIndex { get; set; }
 }
 
+/// <summary>
+/// ══ ⛽ تیل چکنهٔ حواله — سهمیهٔ یک حواله در حسابِ یک قرض‌دار (۱۴۰۵/۰۷/۲۵) ══════
+/// خواستهٔ صاحب ریپو: «یک بخشِ دولتی ۱۵۰ لیتر تیل گرفته و با حواله به یارو مثلاً
+/// ۵۰ لیتر می‌دهد؛ یارو هر روز ۵ لیتر می‌برد تا تمام شود… می‌خواهم ببینم از هر
+/// حواله چند برداشته شده و چقدر مانده.»
+/// فقط <b>سقف</b> این‌جا نوشته می‌شود؛ برداشت‌ها از ردیف‌های همان حساب با همان شمارهٔ
+/// حواله شمرده می‌شوند (ورق هم حواله را در ستونِ «حواله»ِ همان ردیف می‌نشاند)، پس
+/// هیچ عددی دو جا نوشته نمی‌شود. هر حواله مالِ یک حساب است؛ حواله‌های هم‌شمارهٔ
+/// حساب‌های دیگر به هم کاری ندارند.
+/// </summary>
+public class HawalaQuota : EntityBase
+{
+    public long AccountId { get; set; }
+
+    /// <summary>شمارهٔ حواله — همان چیزی که در ستونِ «حواله»ِ ردیف‌ها نوشته می‌شود.</summary>
+    public string Number { get; set; } = string.Empty;
+
+    /// <summary>کلِ تیلِ این حواله (لیتر).</summary>
+    public decimal Liters { get; set; }
+
+    public string? Note { get; set; }
+
+    /// <summary>تاریخِ شمسیِ ثبت.</summary>
+    public string? DateShamsi { get; set; }
+
+    public int SortIndex { get; set; }
+}
+
 /// <summary>یک ردیفِ جدولِ حساب.</summary>
 public class DebtRow : EntityBase
 {

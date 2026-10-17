@@ -1,0 +1,108 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PumpYaqobi.App.ViewModels.Sections"
+             xmlns:c="using:PumpYaqobi.App.Controls"
+             xmlns:th="using:PumpYaqobi.App.Themes"
+             x:Class="PumpYaqobi.App.Views.Sections.HawalaView"
+             x:DataType="vm:HawalaPageViewModel">
+
+  <!-- ══ ⛽ تیل چکنهٔ حواله — شرح: ‎HawalaPageViewModel‎ ═══════════════════════
+       بالا: ثبتِ حوالهٔ تازه (شماره + مقدارِ تیل). پایین: هر حواله یک کارت با کل،
+       برداشت، مانده و نوارِ درصد؛ نقطهٔ سرخ از ۷۰٪ و وقتی تمام شد. زدنِ کارت
+       برداشت‌ها را (تاریخ، نام، لیتر) باز می‌کند. -->
+  <c:SectionPage Header="{Binding Title}"
+                 SubHeader="هر ردیفی در همین حساب (یا از ورق) که ستونِ «حواله»اش همین شماره باشد، از حواله کم می‌شود.">
+    <c:SectionPage.Toolbar>
+      <Button Classes="accent" Content="✕ بستن" Command="{Binding CloseCommand}" />
+    </c:SectionPage.Toolbar>
+
+    <StackPanel Spacing="12">
+      <Border Classes="panel" Padding="14,10">
+        <WrapPanel Orientation="Horizontal">
+          <WrapPanel.Styles>
+            <Style Selector="WrapPanel > :is(Control)">
+              <Setter Property="Margin" Value="0,0,10,6" />
+            </Style>
+          </WrapPanel.Styles>
+          <TextBlock Text="➕ حوالهٔ تازه:" FontWeight="Bold" VerticalAlignment="Center" />
+          <TextBox Text="{Binding NewNumber}" Width="120" Watermark="شمارهٔ حواله" />
+          <TextBox Text="{Binding NewLiters}" Width="120" Watermark="مقدار تیل (لیتر)" c:LiveFormat.Kind="number" />
+          <TextBox Text="{Binding NewNote}" Width="200" Watermark="یادداشت (مثلاً بخشِ دولتی)" />
+          <Button Classes="accent" Content="ثبتِ حواله" Command="{Binding AddCommand}" IsDefault="True" />
+        </WrapPanel>
+      </Border>
+
+      <TextBlock Text="{Binding SummaryText}" FontWeight="Bold" IsVisible="{Binding !IsEmpty}" />
+      <TextBlock Text="این حساب هنوز حواله‌ای ندارد — بالا شمارهٔ حواله و مقدارِ تیلش را بنویسید."
+                 Classes="muted" HorizontalAlignment="Center" Margin="0,20" IsVisible="{Binding IsEmpty}" />
+
+      <ItemsControl ItemsSource="{Binding Items}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:HawalaItemViewModel">
+            <Border Classes="panel" Padding="14,10" Margin="0,0,0,8"
+                    BorderThickness="2"
+                    BorderBrush="{Binding StateBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
+              <StackPanel Spacing="8">
+                <Grid ColumnDefinitions="Auto,8,*,Auto">
+                  <Ellipse Grid.Column="0" Width="12" Height="12" VerticalAlignment="Center"
+                           Fill="{DynamicResource Pump.Danger}" IsVisible="{Binding Alert}" />
+                  <Button Grid.Column="2" Classes="ghost" Command="{Binding ToggleCommand}" HorizontalAlignment="Left"
+                          ToolTip.Tip="برداشت‌های همین حواله">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                      <TextBlock Text="{Binding IsOpen, Converter={x:Static vm:OpenArrowConverter.Instance}}" VerticalAlignment="Center" />
+                      <TextBlock Text="{Binding Title}" FontWeight="Black" FontSize="15" VerticalAlignment="Center" />
+                      <TextBlock Text="{Binding StateText}" FontWeight="Bold" VerticalAlignment="Center"
+                                 Foreground="{Binding StateBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}, ConverterParameter=ink}" />
+                    </StackPanel>
+                  </Button>
+                  <Button Grid.Column="3" Classes="ghost danger" Content="حذف" Command="{Binding DeleteCommand}" />
+                </Grid>
+
+                <UniformGrid Rows="1">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="کلِ حواله" Classes="fsl" />
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                      <TextBox Text="{Binding LitersEdit}" Width="110" c:LiveFormat.Kind="number"
+                               ToolTip.Tip="مقدارِ کلِ حواله — عوض کنید و «✔» بزنید" />
+                      <Button Classes="ghost" Content="✔" Command="{Binding SaveLitersCommand}" ToolTip.Tip="ذخیرهٔ مقدارِ حواله" />
+                    </StackPanel>
+                  </StackPanel>
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="برداشته شد" Classes="fsl" />
+                    <TextBlock Text="{Binding UsedText}" Classes="fsv" Foreground="{DynamicResource Pump.Ink.Warn}" />
+                  </StackPanel>
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="مانده" Classes="fsl" />
+                    <TextBlock Text="{Binding LeftText}" Classes="fsv" Foreground="{DynamicResource Pump.Ink.Ok}" />
+                  </StackPanel>
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="{Binding DateText}" Classes="fsl" />
+                    <TextBlock Text="{Binding ShareText}" Classes="fsv" />
+                  </StackPanel>
+                </UniformGrid>
+
+                <ProgressBar Minimum="0" Maximum="100" Value="{Binding SharePercent}" Height="8"
+                             Foreground="{Binding StateBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}" />
+
+                <StackPanel IsVisible="{Binding IsOpen}" Spacing="2">
+                  <TextBlock Text="{Binding TakeCountText}" Classes="muted" />
+                  <ItemsControl ItemsSource="{Binding Takings}" IsVisible="{Binding HasTakings}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:HawalaTakeViewModel">
+                        <Grid ColumnDefinitions="110,*,120" Margin="0,2">
+                          <TextBlock Grid.Column="0" Text="{Binding Date}" Classes="muted" />
+                          <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Grid.Column="2" Text="{Binding LitersText}" FontWeight="Bold" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </c:SectionPage>
+</UserControl>

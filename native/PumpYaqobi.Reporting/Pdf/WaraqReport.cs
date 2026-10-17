@@ -158,7 +158,9 @@ public sealed class WaraqReport : ISetupDocument
     /// </summary>
     private void Footer(TableDescriptor t, uint span)
     {
-        foreach (var r in ShiftTotalRows(_in.Shift))
+        //  ⛔ (۱۴۰۵/۰۷/۲۵) فقط «🧮 جمله این شیفت» — ردیف‌های «جمله پطرول/دیزل» برداشته شدند.
+        //  خواستهٔ صاحب ریپو با عکس: «این‌ها را حذف کن، دوباره نباشد؛ همان جملهٔ پایینش بس است.»
+        foreach (var r in ShiftTotalRows(_in.Shift).TakeLast(1))
         {
             t.Cell().ColumnSpan(span).Element(x => DocStyle.Tf(x, r.Label));
             t.Cell().Element(x => DocStyle.Tf(x, R(r.Liters) + " لیتر"));
