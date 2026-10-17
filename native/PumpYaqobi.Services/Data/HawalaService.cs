@@ -89,11 +89,12 @@ public sealed class HawalaService
     }
 
     /// <summary>نقطهٔ سرخِ دکمه: دستِ‌کم یک حواله ۷۰٪ رفته یا تمام شده؟ (بی حواله ⇒ یک پرسشِ ارزان)</summary>
-    public async Task<(int Count, int Alerts)> AlertAsync(long accountId, CancellationToken ct = default)
+    public async Task<(int Count, int Alerts)> AlertAsync(long accountId, DebtStatusInfo? account = null,
+                                                          CancellationToken ct = default)
     {
         var qs = await ListAsync(accountId, ct);
         if (qs.Count == 0) return (0, 0);
         var rows = await AccountRowsAsync(accountId, ct);
-        return (qs.Count, qs.Count(q => HawalaCalc.Of(q, rows).Alert));
+        return (qs.Count, qs.Count(q => HawalaCalc.Of(q, rows, account).Alert));
     }
 }

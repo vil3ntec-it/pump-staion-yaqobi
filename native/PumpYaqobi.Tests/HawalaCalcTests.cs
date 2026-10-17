@@ -56,3 +56,47 @@ public class HawalaCalcTests
         Assert.True(HawalaCalc.Matches(hw.Num, "42"));
     }
 }
+
+/// <summary>
+/// «اگر تیلِ قرض‌دار تمام شد، حواله هم بگوید تمام — آن تیل می‌سوزد» (۱۴۰۵/۰۷/۲۵، بارِ دوم).
+/// </summary>
+public class HawalaBurnTests
+{
+    private static DebtRow Row(decimal liters, PumpYaqobi.Domain.Enums.FuelType f) =>
+        new() { Hawala = "9", Liters = liters, Fuel = f, DateKey = 14050701 };
+
+    private static DebtStatusInfo St(DebtStatus p = DebtStatus.Ok, DebtStatus d = DebtStatus.Ok, DebtStatus m = DebtStatus.None) =>
+        new(DebtStatus.Ok, p, d, m);
+
+    [Fact]
+    public void AccountOut_BurnsWhatIsLeft()
+    {
+        var q = new HawalaQuota { Number = "9", Liters = 50m };
+        var rows = new[] { Row(10m, PumpYaqobi.Domain.Enums.FuelType.Petrol) };
+        Assert.Equal(HawalaCalc.State.Ok, HawalaCalc.Of(q, rows, St()).State);
+        var s = HawalaCalc.Of(q, rows, St(p: DebtStatus.Out));
+        Assert.Equal(HawalaCalc.State.Burned, s.State);
+        Assert.True(s.Alert);
+        Assert.Equal(40m, s.Left);              // ۴۰ لیترِ سوخته
+    }
+
+    [Fact]
+    public void OnlyTheHawalasOwnFuelCounts()
+    {
+        var q = new HawalaQuota { Number = "9", Liters = 50m };
+        var diesel = new[] { Row(10m, PumpYaqobi.Domain.Enums.FuelType.Diesel) };
+        Assert.Equal(HawalaCalc.State.Ok, HawalaCalc.Of(q, diesel, St(p: DebtStatus.Out)).State);
+        Assert.Equal(HawalaCalc.State.Burned, HawalaCalc.Of(q, diesel, St(d: DebtStatus.Out)).State);
+        Assert.Equal(HawalaCalc.State.Burned, HawalaCalc.Of(q, diesel, St(m: DebtStatus.Out)).State);
+        //  بی برداشت ⇒ هر کدام از دو تیل
+        Assert.Equal(HawalaCalc.State.Burned, HawalaCalc.Of(q, Array.Empty<DebtRow>(), St(p: DebtStatus.Out)).State);
+    }
+
+    [Fact]
+    public void AlreadyDone_StaysDone()
+    {
+        var q = new HawalaQuota { Number = "9", Liters = 10m };
+        var rows = new[] { Row(10m, PumpYaqobi.Domain.Enums.FuelType.Petrol) };
+        Assert.Equal(HawalaCalc.State.Done, HawalaCalc.Of(q, rows, St(p: DebtStatus.Out)).State);
+    }
+}

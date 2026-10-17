@@ -51,13 +51,21 @@ internal static class HawalaProbe
         var cards = debt.Cards.Take(2).ToList();
         if (cards.Count < 2) { Check("دو قرض‌دار", false); return 1; }
 
-        // ── حسابِ اول ──
-        Open(win, debt, cards[0].Entity.Id);
+        // ── حسابِ اول: قرض‌دارِ تازه با رسیدِ ۱۰۰ لیتر پطرول (حسابِ «تمام‌نشده») ──
+        //  ⚠️ قرض‌دارِ نمونه بیشتر از رسیدش برده و حسابش «تمام شده» است — آن‌جا حواله از
+        //  همان اول «سوخت» است (بارِ دومِ ۱۴۰۵/۰۷/۲۵)، پس این‌جا حسابِ پاک لازم است.
+        debt.NewName = "ادارهٔ آزمونِ حواله";
+        Wait(win, debt.AddDebtorCommand.ExecuteAsync(null));
+        var freshId = debt.Cards.First(c => c.Name == "ادارهٔ آزمونِ حواله").Entity.Id;
+        Open(win, debt, freshId);
         var acct = debt.Person!.Current!;
-        Wait(win, acct.AddRowsAsync(3));
+        Wait(win, acct.AddRowsAsync(5));
         Pump(win, 20);
-        var rows = acct.Rows.OfType<DebtRowViewModel>().Where(r => string.IsNullOrWhiteSpace(r.Name)).Take(3).ToList();
-        Check("سه ردیفِ تازه", rows.Count == 3, rows.Count.ToString());
+        var rows = acct.Rows.OfType<DebtRowViewModel>().Where(r => string.IsNullOrWhiteSpace(r.Name)).Take(5).ToList();
+        Check("پنج ردیفِ تازه", rows.Count == 5, rows.Count.ToString());
+        rows[4].Name = "رسیدِ ادارهٔ دولتی"; rows[4].RasidFuelText = "100";
+        Wait(win, rows[4].FlushAsync());
+        Wait(win, acct.LoadArchiveCountAsync());
 
         Wait(win, acct.OpenHawalasCommand.ExecuteAsync(null));
         Pump(win, 20);
@@ -96,8 +104,30 @@ internal static class HawalaProbe
         var it = page.Items[0];
         Check("برداشت ۳۶ و مانده ۱۴", it.UsedText.StartsWith("36") && it.LeftText.StartsWith("14"), it.UsedText + " / " + it.LeftText);
         Check("سه برداشت با نام و تاریخ", it.Takings.Count == 3, it.TakeCountText);
+        Check("حسابِ قرض‌دار هنوز تیل دارد ⇒ حواله نسوخته", !it.IsBurned, it.StateText);
         it.IsOpen = true; Pump(win, 10);
         if (shots is not null) { Directory.CreateDirectory(shots); Shot(win, shots, "hawala-70"); }
+
+        // ── «تیلِ قرض‌دار تمام شد ⇒ حواله هم تمام، مانده سوخت» ──
+        Wait(win, page.CloseCommand.ExecuteAsync(null));
+        rows[3].Name = "بی حواله"; rows[3].LitersText = "70";      // ۳۶ + ۷۰ = ۱۰۶ از رسیدِ ۱۰۰
+        Wait(win, rows[3].FlushAsync());
+        Wait(win, acct.OpenHawalasCommand.ExecuteAsync(null));
+        Pump(win, 20);
+        page = (HawalaPageViewModel)debt.Overlay!;
+        it = page.Items[0];
+        Check("حسابِ قرض‌دار تمام شد ⇒ حواله «سوخت»", it.IsBurned && it.IsDone && it.Alert && it.LeftText.Contains("سوخت"),
+              it.StateText + " · " + it.LeftText);
+        if (shots is not null) Shot(win, shots, "hawala-burned");
+        Wait(win, page.CloseCommand.ExecuteAsync(null));
+        Check("نقطهٔ سرخ روی دکمه", acct.HawalaAlert);
+        rows[3].LitersText = ""; rows[3].Name = "";
+        Wait(win, rows[3].FlushAsync());
+        Wait(win, acct.OpenHawalasCommand.ExecuteAsync(null));
+        Pump(win, 20);
+        page = (HawalaPageViewModel)debt.Overlay!;
+        it = page.Items[0];
+        Check("تیل به حساب برگشت ⇒ حواله دوباره باز (۷۲٪)", !it.IsBurned && !it.IsDone, it.StateText);
 
         // تمام شد
         it.LitersEdit = "36";

@@ -989,7 +989,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     {
         try
         {
-            var (n, alerts) = await _host.Hawalas.AlertAsync(Entity.Id);
+            var (n, alerts) = await _host.Hawalas.AlertAsync(Entity.Id, _host.Debt.Status(new[] { Entity }));
             HawalaCount = n; HawalaAlert = alerts > 0;
         }
         catch { /* نقطهٔ سرخ نباید صفحه را بشکند */ }
