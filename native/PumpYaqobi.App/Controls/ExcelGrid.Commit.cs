@@ -118,8 +118,19 @@ public partial class ExcelGrid
         // در «حالتِ ویرایش» (‎F2‎/دوبار کلیک) فلش فقط کُرسر را می‌برد؛ در
         // «حالتِ نوشتن» (با تایپ آمده‌ایم) ذخیره می‌کند و به خانهٔ بعدی می‌رود —
         // دقیقاً مثلِ اکسل. پس این‌جا فقط حالتِ ویرایش برمی‌گردد.
-        if (_editing && !_typedIn && e.Key is Key.Left or Key.Right or Key.Up or Key.Down)
-            return;   // ‎Handled‎ نمی‌شود تا خودِ ‎TextBox‎ کُرسر را ببرد
+        //
+        // ⛔ (۱۴۰۵/۰۷/۲۵) ولی کلیدی که <b>به این‌جا رسید</b> را کادر نخواست — کُرسر در
+        // لبهٔ متن بود. پیش از این ‎Handled‎ نمی‌شد و ‎DataGrid_KeyDown‎ی خودِ
+        // آوالونیا آن را برمی‌داشت: ستون را با جهتِ چپ‌به‌راست (وارونه) می‌برد،
+        // کادرِ چندانتخابی کهنه می‌ماند (‎Delete‎ خانهٔ قبلی را می‌دید) و در لبهٔ
+        // جدول «قفل» می‌کرد. گزارشِ صاحب ریپو: «وسطِ نوشته‌ها حرکت می‌کند… قفل
+        // می‌کند و فقط بالا و پایین می‌رود.» حالا همان ذخیره و خانهٔ بعدی.
+        if (_editing && e.KeyModifiers == KeyModifiers.None && e.Key is Key.Left or Key.Right or Key.Up or Key.Down)
+        {
+            if (LeaveEditBy(e.Key)) Dispatcher.UIThread.Post(FollowCell, DispatcherPriority.Background);
+            e.Handled = true;
+            return;
+        }
 
 
 
@@ -201,11 +212,13 @@ public partial class ExcelGrid
             // به بعد فلش‌ها کُرسر را داخلِ متن می‌برند، نه به خانهٔ بعدی.
             case Key.F2 when _editing:
                 _typedIn = false;
+                _caretMode = true;
                 e.Handled = true;
                 return;
 
             case Key.F2 when !IsReadOnly:
                 BeginEdit();
+                _caretMode = true;
                 e.Handled = true;
                 return;
 

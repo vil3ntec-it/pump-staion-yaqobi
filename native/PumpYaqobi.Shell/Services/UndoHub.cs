@@ -114,7 +114,6 @@ public static class UndoHub
     /// <summary>‎Ctrl+Z‎ — آخرین کار را برمی‌گرداند. خروجی: جملهٔ توست، یا ‎null‎ اگر چیزی نبود.</summary>
     public static async Task<string?> UndoAsync()
     {
-        while (true)
         {
             IStep s;
             lock (Gate)
@@ -128,7 +127,9 @@ public static class UndoHub
             try { ok = await s.UndoAsync(); }
             catch { ok = false; }
             finally { lock (Gate) _replaying = false; }
-            if (!ok) continue;                       // دیگر نیست ⇒ قدمِ قبلی
+            //  ⛔ (۱۴۰۵/۰۷/۲۵) قدمی که دیگر نیست بی‌صدا رد نمی‌شود تا «قبلی‌اش» برگردد —
+            //  کاربر چیزی را می‌دید که نخواسته بود. می‌گوییم و همان‌جا می‌ایستیم.
+            if (!ok) return "این کار دیگر برنمی‌گردد (" + s.What + ") — دوباره Ctrl+Z بزنید";
             lock (Gate) Redo.Add(s);
             await Refresh(s);
             return "↩️ برگشت: " + s.What;
@@ -138,7 +139,6 @@ public static class UndoHub
     /// <summary>‎Ctrl+Y‎ — همان را دوباره انجام می‌دهد.</summary>
     public static async Task<string?> RedoAsync()
     {
-        while (true)
         {
             IStep s;
             lock (Gate)
@@ -152,7 +152,7 @@ public static class UndoHub
             try { ok = await s.RedoAsync(); }
             catch { ok = false; }
             finally { lock (Gate) _replaying = false; }
-            if (!ok) continue;
+            if (!ok) return "این کار دیگر تکرار نمی‌شود (" + s.What + ")";
             lock (Gate) Undo.Add(s);
             await Refresh(s);
             return "↪️ دوباره: " + s.What;
