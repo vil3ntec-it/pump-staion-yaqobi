@@ -80,6 +80,7 @@ public sealed partial class SyncStore
                 Take("DebtRow", $"(\"FuelAccountId\" IN ({accts}) OR \"MoneyAccountId\" IN ({accts})) AND {dateSql}");
                 Take("RasidEntry", $"\"AccountId\" IN ({accts})");
                 Take("DebtTableArchive", $"\"AccountId\" IN ({accts})");
+                Take("HawalaQuota", $"\"AccountId\" IN ({accts})");
                 Take("Invoice", $"\"DebtAccountId\" IN ({accts}) AND {dateSql}");
                 break;
             case "company":

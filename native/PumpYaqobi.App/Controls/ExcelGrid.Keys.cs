@@ -237,7 +237,10 @@ public partial class ExcelGrid
             //  تکمله‌ای نمی‌گرفت (‎keys17‎ گرفتش).
             var pendingTyped = _typeBuf;
             _typeBuf = null;
+            _typedSinceOpen = false;
             AutoDirection(e.EditingElement);
+            if ((e.EditingElement as TextBox ?? e.EditingElement?.GetVisualDescendants().OfType<TextBox>().FirstOrDefault()) is { } watch)
+                WatchTyping(watch);
             //  ⛔ قالبِ ردیف به کادرِ در حالِ نوشتن پس فرستاده نشود — شرحش بالای ‎RowViewModel.BeginCellEdit‎
             if (e.Row?.DataContext is RowViewModel rv && PathOf(e.Column) is { Length: > 0 } path
                 && !path.Contains('.') && !path.Contains('['))
@@ -251,7 +254,8 @@ public partial class ExcelGrid
             if (e.EditingElement is TextBox tb || (e.EditingElement?.GetVisualDescendants().OfType<TextBox>().FirstOrDefault() is { } tb2 && (tb = tb2) is not null))
             {
                 var named = Suggest.Of(Suggest.GetKey(e.Column));
-                var learned = PeerColumnValues(e.Column);
+                //  ⛔ ستونِ عدد و تاریخ پیشنهاد نمی‌گیرد (۱۴۰۵/۰۷/۲۵) — «۵ زدم، ۵۰ شد»
+                var learned = NumericColumn(e.Column) ? (IReadOnlyList<string>)Array.Empty<string>() : PeerColumnValues(e.Column);
                 //  «/هارون» — نامِ حساب پس از خط‌کج (ستونِ نامِ ورق)
                 var slash = Suggest.Of(Suggest.GetSlashKey(e.Column));
                 if (named.Count + learned.Count + slash.Count > 0) Suggest.Attach(tb, named, learned, slash);
@@ -312,7 +316,7 @@ public partial class ExcelGrid
         {
             EndRowEdit();
             _typeBuf = null;
-            _editing = false; _typedIn = false; CaptureEdit();
+            _editing = false; _typedIn = false; _typedSinceOpen = false; _caretMode = false; CaptureEdit();
             // ⛔ خانه‌ای که بسته شد، همان لحظه روی دیسک می‌نشیند — شرحش بالای ‎FlushDirtyRows‎
             FlushDirtyRows();
         };
@@ -496,22 +500,14 @@ public partial class ExcelGrid
     /// </summary>
     private void OnPreviewKey(object? sender, KeyEventArgs e)
     {
-        if (!_editing || !_typedIn) return;
+        if (!_editing || e.KeyModifiers != KeyModifiers.None) return;
         if (e.Key is not (Key.Left or Key.Right or Key.Up or Key.Down)) return;
-
-        //  ⛔ **پیش از** بستنِ ویرایش: خودِ ‎CommitEdit‎ می‌تواند خانهٔ جاری را
-        //  جابه‌جا کند و آن‌وقت گام از جای اشتباه حساب می‌شد — همان «کلیکِ
-        //  دوم درست می‌شود».
-        var cols = VisibleCols();
-        var from = CurIndex(cols);
-
-        CommitEdit(DataGridEditingUnit.Cell, true);
-
-        if (e.Key is Key.Up or Key.Down) MoveRow(e.Key == Key.Down ? +1 : -1);
-        else if (!MoveColumnFrom(cols, from, e.Key == Key.Right ? -1 : +1)) CrossToNeighbour(e.Key);
-
+        //  حالتِ نوشتن، یا خانه‌ای که پس از دوبار-کلیک در آن تایپ شد (مگر ‎F2‎)
+        if (!_typedIn && (_caretMode || !_typedSinceOpen)) return;
+        if (!LeaveEditBy(e.Key)) return;
         e.Handled = true;
     }
+
 
     private void OnOutsidePressed(object? sender, PointerPressedEventArgs e)
     {

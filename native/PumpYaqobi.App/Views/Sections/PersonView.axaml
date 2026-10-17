@@ -353,6 +353,19 @@
                   Command="{Binding Current.TogglePercentCommand}"
                   ToolTip.Tip="فیصدیِ پطرول و دیزل — دو چیزِ کاملاً جدا" />
 
+          <!-- ══ ⛽ تیل چکنهٔ حواله (۱۴۰۵/۰۷/۲۵) — بغلِ «٪ فیصدی»؛ صفحهٔ جدا. نقطهٔ سرخ
+               وقتی یک حواله ۷۰٪ رفته یا تمام شده. شرح: ‎HawalaPageViewModel‎ -->
+          <!-- ⛔ (۱۴۰۵/۰۷/۲۵، عکسِ صاحب ریپو) «بغلِ فیصدی، پایین نیاید، همه تراز» — کوتاه و
+               بی نشانه، تا در همان خطِ نوار بماند؛ شمارِ حواله‌ها در راهنمای ماوس است. -->
+          <Button Classes="ghost" Command="{Binding Current.OpenHawalasCommand}" Padding="8,4"
+                  ToolTip.Tip="{Binding Current.HawalaTipText, FallbackValue='حواله‌های این حساب'}">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <TextBlock Text="تیل چکنهٔ حواله" VerticalAlignment="Center" />
+              <Ellipse Width="8" Height="8" VerticalAlignment="Center" Fill="{DynamicResource Pump.Danger}"
+                       IsVisible="{Binding Current.HawalaAlert, FallbackValue=False}" />
+            </StackPanel>
+          </Button>
+
           <!-- «🗂️ آرشیو» دقیقاً بغلِ «٪ فیصدی» و دقیقاً مثلِ آن — خواستهٔ صریحِ
                صاحب ریپو در سایت: «برای کادر جدول آرشیو هم یک کادر کشویی درست
                کن و بغلِ آن فیصدی بگذار؛ بزنم بیاید و بزنم برود پنهان شود.»

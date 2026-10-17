@@ -259,7 +259,10 @@ internal static class WaraqFit
         var tot = rows.LastOrDefault();
         Check("ردیفِ «جمله این شیفت» ته جدولِ پایه‌های PDF هست", tot.Label?.Contains("جمله این شیفت") == true,
               string.Join(" · ", rows.Select(r => $"{r.Label}: {r.Liters:0} لیتر، فروش {r.Sales:0}، قرض {r.Debt:0}")));
-        Check("جملهٔ پطرول و دیزل جدا نوشته شده", rows.Any(r => r.Label.Contains("جمله پطرول")) && rows.Any(r => r.Label.Contains("جمله دیزل")));
+        //  ⛔ (۱۴۰۵/۰۷/۲۵) PDF فقط ردیفِ آخر را می‌نویسد — «جمله پطرول/دیزل" به خواستهٔ صاحب ریپو رفت
+        Check("جملهٔ پطرول و دیزل در PDF نیست (فقط جمله این شیفت)",
+              File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "PumpYaqobi.Reporting", "Pdf", "WaraqReport.cs"))
+                  .Contains("ShiftTotalRows(_in.Shift).TakeLast(1)"));
         var t2 = h.Waraq.ShiftTotals(page.Shift!);
         Check("عددهای PDF همان عددهای صفحهٔ ورق‌اند (لیتر و فروش)",
               tot.Liters == t2.PetrolLiters + t2.DieselLiters && Math.Round(tot.Sales) == Math.Round(t2.Sales),

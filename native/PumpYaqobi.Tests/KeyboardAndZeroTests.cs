@@ -78,11 +78,14 @@ public class KeyboardAndZeroTests
         //   • با تایپ آمده‌ایم ⇒ فلش ذخیره می‌کند و خانهٔ بعدی (‎OnPreviewKey‎)
         // خواستهٔ صاحب ریپو: «توی اکسل … وسط یا اول یا آخر فرقی نمی‌کند،
         // بخواهی بروی کادرِ بعدی می‌رود.»
-        Assert.Contains("if (_editing && !_typedIn && e.Key is Key.Left or Key.Right or Key.Up or Key.Down)", g);
+        //  ⛔ (۱۴۰۵/۰۷/۲۵) کلیدی که کادر نخواست (کُرسر در لبه) به ‎DataGrid_KeyDown‎ی آوالونیا
+        //  نمی‌رسد — آن ستون را وارونه می‌برد و «قفل» می‌کرد؛ ذخیره و خانهٔ بعدی.
+        Assert.Contains("if (_editing && e.KeyModifiers == KeyModifiers.None && e.Key is Key.Left or Key.Right or Key.Up or Key.Down)", g);
 
         // و آن راهِ دوم روی فازِ ‎Tunnel‎ است، وگرنه کادرِ تایپ کلید را می‌بلعد
         Assert.Contains("AddHandler(KeyDownEvent, OnPreviewKey, RoutingStrategies.Tunnel);", g);
-        Assert.Contains("if (!_editing || !_typedIn) return;", g);
+        //  حالتِ نوشتن، یا خانه‌ای که پس از دوبار-کلیک در آن تایپ شد؛ ‎F2‎ کُرسر را نگه می‌دارد
+        Assert.Contains("if (!_typedIn && (_caretMode || !_typedSinceOpen)) return;", g);
         // حالت از رویدادهای خودِ جدول خوانده می‌شود، نه از جای کُرسر
         Assert.Contains("PreparingCellForEdit", g);
         Assert.Contains("CellEditEnded", g);

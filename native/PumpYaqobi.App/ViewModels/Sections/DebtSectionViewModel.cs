@@ -278,6 +278,14 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
         Overlay = new DebtArchivePageViewModel(_host, person, acct, arcs, this);
     }
 
+    /// <summary>⛽ تیل چکنهٔ حواله — صفحهٔ جداگانه، همان جای آرشیو.</summary>
+    public async Task OpenHawalasAsync(PersonViewModel person, AccountViewModel acct)
+    {
+        var page = new HawalaPageViewModel(_host, person, acct, this);
+        await page.LoadAsync();
+        Overlay = page;
+    }
+
     public async Task CloseOverlayAsync()
     {
         if (Overlay is DebtArchivePageViewModel p) await p.FlushAsync();

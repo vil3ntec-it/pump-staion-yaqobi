@@ -182,6 +182,9 @@
           <DataTemplate DataType="vm:DebtArchivePageViewModel">
             <v:DebtArchiveView />
           </DataTemplate>
+          <DataTemplate DataType="vm:HawalaPageViewModel">
+            <v:HawalaView />
+          </DataTemplate>
         </ContentControl.DataTemplates>
       </ContentControl>
     </Panel>

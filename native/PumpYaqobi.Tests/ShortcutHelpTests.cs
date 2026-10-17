@@ -185,7 +185,9 @@ public class ShortcutHelpTests
     public void Bargasht_Radife_Rafte_Ra_Nemineviseh()
     {
         var g = Grid();
-        Assert.Contains("if (!Live(ed.Item)) continue;", g);
+        //  ⛔ (۱۴۰۵/۰۷/۲۵) ردیفِ رفته نوشته نمی‌شود؛ ردیفِ دوباره‌خوانده با شناسهٔ رکوردش پیدا می‌شود
+        Assert.Contains("if (Resolve(ed.Item) is not { } item) continue;", g);
+        Assert.Contains("if (Live(item)) return item;", g);
         Assert.Contains("private void ForgetHistory()", g);
     }
 }
