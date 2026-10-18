@@ -61,6 +61,12 @@
 #ifndef SourceDir86
   #define SourceDir86 "..\publish\win-x86"
 #endif
+; ⛔ (۱۴۰۵/۰۷/۲۶) هر نصابِ CI پس از ISCC مُهر می‌خورد (seal.ps1)؛ پس «بی مُهر» یعنی
+; فایلِ **ناقص** (دانلود یا کپی تمام نشد و دمِ فایل نیامد). فقط ساختِ محلیِ بی مُهر
+; ‎/DNoSealCheck‎ می‌گیرد.
+#ifndef NoSealCheck
+  #define RequireSeal
+#endif
 #ifndef AppVersion
   #define AppVersion "1.0.0"
 #endif
@@ -151,6 +157,11 @@ fa.RunEntryExec=باز کردنِ %1
 ; ⚠️ همان پیامِ «The source file is corrupted»ِ دو عکسِ صاحب ریپو (۱۴۰۵/۰۷/۱۵).
 ; با مُهرِ سلامت، کپیِ خراب پیش از نصب گرفته می‌شود؛ این برای جایی است که فایل
 ; سالم بود ولی خواندنش از دیسک/فلشِ همین کامپیوتر وسطِ کار خراب درآمد.
+; ⛔ (۱۴۰۵/۰۷/۲۶) پیام‌های بارگذارِ خودِ Inno — پیش از هر کدِ ما، وقتی فایل آن‌قدر ناقص است
+; که حتی ویزارد باز نمی‌شود («دانلود قطع شد و دوباره زدم، گفت خراب است»).
+fa.SetupFileMissing=فایلِ «%1» کنارِ نصاب نیست. فایلِ نصب را دوباره بگیرید:%nhttps://github.com/vil3ntec-it/pump-staion-yaqobi/releases/latest/download/PumpYaqobi-Setup.exe
+fa.SetupFileCorrupt=فایلِ نصب ناقص یا خراب است — دانلود یا کپی تا آخر نرسیده است.%n%nهیچ چیزی روی این کامپیوتر نوشته نشد.%n%nدوباره بگیرید و صبر کنید تا دانلود کامل شود (اندازهٔ درست حدودِ ۱۶۰ مگابایت است):%nhttps://github.com/vil3ntec-it/pump-staion-yaqobi/releases/latest/download/PumpYaqobi-Setup.exe%n%nبرای فلش: اول روی خودِ کامپیوتر کپی کنید، بعد اجرا کنید.
+fa.SetupFileCorruptOrWrongVer=فایلِ نصب ناقص یا خراب است — دانلود یا کپی تا آخر نرسیده است.%n%nهیچ چیزی روی این کامپیوتر نوشته نشد.%n%nدوباره بگیرید و صبر کنید تا دانلود کامل شود:%nhttps://github.com/vil3ntec-it/pump-staion-yaqobi/releases/latest/download/PumpYaqobi-Setup.exe
 fa.SourceIsCorrupted=فایلِ نصب هنگامِ خواندن خراب درآمد. «Cancel»/«انصراف» را بزنید، فایل را روی خودِ همین کامپیوتر (مثلاً دسکتاپ) کپی کنید و از همان‌جا اجرا کنید — نه از روی فلش. اگر باز همین شد، دوباره دانلودش کنید.
 
 [CustomMessages]
@@ -733,7 +744,7 @@ const
 var
   SealBroken: Boolean;
 
-//  0 مُهر ندارد · 1 سالم · 2 خراب · 3 خوانده نشد
+//  0 مُهر ندارد · 1 سالم · 2 خراب · 3 خوانده نشد · 4 ناقص (نصابِ CI بی مُهر = دمِ فایل نیامد)
 function SealStateOf(const Path: String; P: TOutputProgressWizardPage; var Detail: String): Integer;
 var
   F: TFileStream;
@@ -784,6 +795,9 @@ begin
     Result := 3;
   end;
   if F <> nil then F.Free;
+#ifdef RequireSeal
+  if Result = 0 then Result := 4;
+#endif
 end;
 
 function SealState(P: TOutputProgressWizardPage; var Detail: String): Integer;
@@ -873,6 +887,8 @@ begin
   Log('PYSEAL state=' + IntToStr(State) + ' ' + Detail);
   Result := (State = 0) or (State = 1);
   if Result then Exit;
+  if State = 4 then
+    Log('PYSEAL truncated');
 
   SealBroken := True;
   Log('PYSEAL repair-offer');
@@ -886,7 +902,14 @@ begin
       WizardForm.Close;
       Exit;
     end;
-  if State = 2 then
+  if State = 4 then
+    MsgBox('این فایلِ نصب ناقص است و نصب انجام نمی‌شود — دانلود یا کپی تا آخر نرسیده بود.' + #13#10 +
+           'هیچ چیزی روی این کامپیوتر نوشته نشد و حساب‌های شما دست نخوردند.' + #13#10 + #13#10 +
+           'راهِ درست:' + #13#10 +
+           '۱) فایل را دوباره بگیرید و صبر کنید تا دانلود کامل شود (حدودِ ۱۶۰ مگابایت):' + #13#10 +
+           '   https://github.com/vil3ntec-it/pump-staion-yaqobi/releases/latest/download/PumpYaqobi-Setup.exe' + #13#10 +
+           '۲) برای فلش: صبر کنید تا کپی تمام شود و فلش را با «Eject» بیرون بکشید.', mbError, MB_OK)
+  else if State = 2 then
     MsgBox('این فایلِ نصب خراب است و نصب انجام نمی‌شود.' + #13#10 + #13#10 +
            'فایل پس از ساخته شدن عوض شده — معمولاً هنگامِ دانلود یا کپی روی فلش.' + #13#10 +
            'هیچ چیزی روی این کامپیوتر نوشته نشد و حساب‌های شما دست نخوردند.' + #13#10 + #13#10 +
@@ -902,9 +925,138 @@ begin
   WizardForm.Close;
 end;
 
+// ══ اجرا از فلش ⇒ اول کپیِ سنجیده روی خودِ کامپیوتر (۱۴۰۵/۰۷/۲۶) ══════════════════
+//  صاحب ریپو: «نصاب را روی فلش کپی می‌کنم… می‌گوید خراب است، دوباره کپی یا نصب کن.»
+//  Inno فایل‌ها را **هنگامِ نصب** از خودِ نصاب می‌خواند؛ روی فلش هر خطای گذرای
+//  خواندن (فلشِ ارزان، USB شل، کابلِ بلند) همان «The source file is corrupted»ِ وسطِ
+//  نصب است، حتی وقتی فایلِ روی فلش سالم است. پس نصابی که روی درایوِ غیرثابت (فلش،
+//  شبکه، CD) اجرا شود، با «بعدی» ِ صفحهٔ خوش‌آمد خودش را روی همین کامپیوتر کپی
+//  می‌کند (‎{localappdata}\PumpYaqobi-Setup‎)، کپی را با مُهرِ سلامت می‌سنجد — اگر
+//  نخورد دوباره از فلش می‌خواند (تا ۳ بار؛ خطای گذرا با خواندنِ دوباره می‌رود) —
+//  و همان کپیِ سالم را اجرا می‌کند. فلش دیگر وسطِ نصب خوانده نمی‌شود.
+//  ⛔ کپیِ سالم نشد ⇒ هیچ کاری نمی‌شود و همان مسیرِ همیشگی (سنجش با «نصب») می‌ماند.
+function GetDriveTypeW(lpRootPathName: String): Integer;
+  external 'GetDriveTypeW@kernel32.dll stdcall';
+
+const
+  DRIVE_FIXED = 3;
+
+var
+  LocalTried: Boolean;
+  QuietClose: Boolean;
+
+function OnFixedDrive(const Path: String): Boolean;
+var
+  Root: String;
+begin
+  Root := AddBackslash(ExtractFileDrive(Path));
+  Result := GetDriveTypeW(Root) = DRIVE_FIXED;
+end;
+
+function CopyChunked(const Src, Dst: String; P: TOutputProgressWizardPage): Boolean;
+var
+  FIn, FOut: TFileStream;
+  Total, Left: Int64;
+  N, Done, Parts: Integer;
+  Buf: AnsiString;
+begin
+  Result := False;
+  FIn := nil; FOut := nil;
+  try
+    FIn := TFileStream.Create(Src, $40);
+    FOut := TFileStream.Create(Dst, fmCreate);
+    Total := FIn.Size;
+    Left := Total;
+    Parts := (Total + SealChunk - 1) div SealChunk;
+    Done := 0;
+    while Left > 0 do
+    begin
+      if Left > SealChunk then N := SealChunk else N := Left;
+      SetLength(Buf, N);
+      FIn.ReadBuffer(Buf, N);
+      FOut.WriteBuffer(Buf, N);
+      Left := Left - N;
+      Done := Done + 1;
+      if P <> nil then P.SetProgress(Done, Parts);
+    end;
+    Buf := '';
+    Result := True;
+  except
+    Log('PYLOCAL copy failed: ' + GetExceptionMessage);
+  end;
+  if FOut <> nil then FOut.Free;
+  if FIn <> nil then FIn.Free;
+end;
+
+//  همان آرگومان‌ها برای کپیِ محلی؛ لاگِ جدا (دو نصاب یک فایلِ لاگ را باز نگه ندارند)
+function PassParams(): String;
+var
+  I: Integer;
+  A: String;
+begin
+  Result := '';
+  for I := 1 to ParamCount do
+  begin
+    A := ParamStr(I);
+    if CompareText(Copy(A, 1, 5), '/LOG=') = 0 then A := A + '.local.log';
+    if CompareText(A, '/FORCELOCALCOPY') = 0 then Continue;
+    Result := Result + ' "' + A + '"';
+  end;
+  Result := Result + ' /LOCALCOPY';
+end;
+
+//  ‎True‎ ⇒ کپیِ سالم اجرا شد و این ویزارد باید بسته شود
+function RunFromLocalCopy(): Boolean;
+var
+  Src, Dir, Dst, Detail: String;
+  P: TOutputProgressWizardPage;
+  Attempt, State, Code: Integer;
+begin
+  Result := False;
+  if LocalTried or WizardSilent or HasSwitch('/LOCALCOPY') then Exit;
+  LocalTried := True;
+  Src := ExpandConstant('{srcexe}');
+  if OnFixedDrive(Src) and not HasSwitch('/FORCELOCALCOPY') then Exit;
+  Dir := ExpandConstant('{localappdata}\PumpYaqobi-Setup');
+  Dst := AddBackslash(Dir) + ExtractFileName(Src);
+  if CompareText(Src, Dst) = 0 then Exit;
+  ForceDirectories(Dir);
+  Log('PYLOCAL from ' + Src + ' to ' + Dst);
+  P := CreateOutputProgressPage('کپی روی همین کامپیوتر',
+    'فایلِ نصب از روی فلش (یا شبکه) است؛ اول روی همین کامپیوتر کپی و سنجیده می‌شود…');
+  P.SetText('تا نصب وسطِ کار از فلش نخواند و خراب نشود.', '');
+  P.SetProgress(0, 1);
+  P.Show;
+  try
+    for Attempt := 1 to 3 do
+    begin
+      State := 3;
+      if CopyChunked(Src, Dst, P) then
+        State := SealStateOf(Dst, P, Detail);
+      Log('PYLOCAL try=' + IntToStr(Attempt) + ' state=' + IntToStr(State) + ' ' + Detail);
+      //  ۴ (ناقص) یعنی خودِ فایلِ روی فلش ناقص است — خواندنِ دوباره درستش نمی‌کند
+      if (State = 1) or (State = 0) or (State = 4) then Break;
+    end;
+  finally
+    P.Hide;
+  end;
+  if (State = 1) or (State = 0) then
+  begin
+    if Exec(Dst, PassParams(), Dir, SW_SHOWNORMAL, ewNoWait, Code) then
+    begin
+      Log('PYLOCAL relaunch');
+      Result := True;
+      Exit;
+    end;
+    Log('PYLOCAL relaunch failed code=' + IntToStr(Code));
+  end;
+  //  ⚠️ کپیِ ناجور پاک نمی‌شود (این نصاب هیچ پاک‌کردنی ندارد — ‎Uninstalling_never_touches_the_users_data‎)؛
+  //  بارِ بعد ‎fmCreate‎ رویش می‌نویسد.
+end;
+
 procedure CancelButtonClick(CurPageID: Integer; var Cancel, Confirm: Boolean);
 begin
-  if SealBroken then Confirm := False;
+  if SealBroken or QuietClose then Confirm := False;
 end;
 
 // ── پوشه‌ای که نصب در آن نمی‌نشیند، همین‌جا گفته می‌شود — نه وسطِ نصب ─────
@@ -915,6 +1067,13 @@ var
   Dir, Drive: String;
 begin
   Result := True;
+  if (CurPageID = wpWelcome) and RunFromLocalCopy() then
+  begin
+    QuietClose := True;
+    WizardForm.Close;
+    Result := False;
+    Exit;
+  end;
   if (CurPageID = wpReady) and (not WizardSilent) then
   begin
     Result := SealOk();

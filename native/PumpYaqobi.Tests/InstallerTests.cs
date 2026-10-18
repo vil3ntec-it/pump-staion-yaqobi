@@ -761,7 +761,7 @@ public class InstallerTests
         // بی مُهر (ساختِ محلی) ⇒ مثلِ پیش؛ خراب ⇒ پیامِ فارسی و بیرون، بی پرسشِ دوباره
         Assert.Contains("Result := (State = 0) or (State = 1);", iss);
         Assert.Contains("WizardForm.Close;", iss);
-        Assert.Contains("if SealBroken then Confirm := False;", iss);
+        Assert.Contains("if SealBroken or QuietClose then Confirm := False;", iss);
         Assert.Contains("fa.SourceIsCorrupted=", iss);
 
         // مُهر پیش از چک‌سام — وگرنه SHA256SUMS با فایلِ منتشرشده نمی‌خورد
@@ -796,5 +796,46 @@ public class InstallerTests
         var check = SrcText.Read(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
         Assert.Contains("PYSEAL repair-offer", check);
         Assert.Contains("-Answer @('Yes', 'No')", check);
+    }
+
+    /// <summary>
+    /// ۱۴۰۵/۰۷/۲۶ — «روی فلش کپی می‌کنم یا دانلود قطع می‌شود و دوباره می‌زنم، می‌گوید خراب
+    /// است.» سه راه، هر سه در ‎installer-check.yml‎ با پنجرهٔ واقعی (بندهای «و» و «ز»):
+    ///  • فایلِ **ناقص** (دمِ فایل و مُهرش نیامد) ⇒ نصابِ CI همیشه مُهر دارد، پس «بی مُهر» =
+    ///    ناقص (state=4)، با پیامِ فارسی و لینکِ دانلود — نه «مثلِ پیش» که وسطِ نصب می‌شکست.
+    ///  • ناقص‌تر از آن‌که ویزارد باز شود ⇒ پیام‌های بارگذارِ خودِ Inno هم فارسی‌اند.
+    ///  • اجرا از درایوِ غیرثابت (فلش/شبکه) ⇒ اول کپیِ سنجیده روی کامپیوتر، با خواندنِ
+    ///    دوباره تا ۳ بار، و همان کپی اجرا می‌شود — فلش وسطِ نصب خوانده نمی‌شود.
+    /// </summary>
+    [Fact]
+    public void Nasab_NaghesYaRuyeFlash_PishAzNasbDorostMishavad()
+    {
+        var iss = Iss();
+        Assert.Contains("#ifndef NoSealCheck", iss);
+        Assert.Contains("  if Result = 0 then Result := 4;", iss);
+        Assert.Contains("if State = 4 then", iss);
+        Assert.Contains("fa.SetupFileCorrupt=", iss);
+        Assert.Contains("fa.SetupFileCorruptOrWrongVer=", iss);
+        Assert.Contains("releases/latest/download/PumpYaqobi-Setup.exe", iss);
+
+        Assert.Contains("external 'GetDriveTypeW@kernel32.dll stdcall';", iss);
+        Assert.Contains("if OnFixedDrive(Src) and not HasSwitch('/FORCELOCALCOPY') then Exit;", iss);
+        Assert.Contains("if LocalTried or WizardSilent or HasSwitch('/LOCALCOPY') then Exit;", iss);
+        Assert.Contains("for Attempt := 1 to 3 do", iss);
+        Assert.Contains("State := SealStateOf(Dst, P, Detail);", iss);
+        Assert.Contains("(CurPageID = wpWelcome) and RunFromLocalCopy()", iss);
+
+        // هر ساختِ CI پس از ISCC مُهر می‌زند — وگرنه همان نصاب «ناقص» خوانده می‌شود
+        foreach (var wf in new[] { "build-native.yml", "app-smoke.yml", "installer-check.yml" })
+        {
+            var y = File.ReadAllText(Path.Combine(Repo, ".github", "workflows", wf));
+            Assert.True(y.Contains("seal.ps1 -Path"), wf + " نصاب را بی مُهر می‌سازد");
+            Assert.DoesNotContain("NoSealCheck", y);
+        }
+
+        var check = SrcText.Read(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
+        Assert.Contains("PumpYaqobi-Setup-trunc.exe", check);
+        Assert.Contains("/FORCELOCALCOPY", check);
+        Assert.Contains("PYLOCAL try=1 state=1", check);
     }
 }
