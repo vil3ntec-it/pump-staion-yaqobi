@@ -270,6 +270,7 @@ public static class OfflineKey
     public static OfflineCheck Check(string? code, string fingerprint, long nowMs,
         IReadOnlyDictionary<string, string> keys, string? account = null)
     {
+        if (ShortCode.IsStored(code)) return ShortCode.CheckStored(code!, fingerprint, nowMs);
         var raw = Clean(code);
         if (raw.Length == 0) return OfflineCheck.None;
         if (raw.Length == (Total2 * 8 + 4) / 5) return Check2(raw, fingerprint, nowMs, keys, account);
@@ -413,6 +414,8 @@ public static class OfflineKey
     /// </summary>
     public static OfflineCheck Apply(AppSettings f, string? text)
     {
+        var digits = ShortCode.Digits(text);
+        if (digits.Length > 0) return ApplyShort(f, digits);
         var code = Extract(text);
         if (Clean(code).Length == 0) return OfflineCheck.Bad("کد را بچسبانید یا فایلِ ‎.pumpkey‎ را انتخاب کنید");
         var c = Check(code, CloudConfig.MachineFingerprint(), LicenseClock.Now(f), TrustedKeys(f), f.CloudUserId);
@@ -439,6 +442,45 @@ public static class OfflineKey
         f.Save();
         CloudLink.NotifyLicenseChanged();
         return c;
+    }
+
+    /// <summary>
+    /// 🔢 کدِ ۸ رقمی (<see cref="ShortCode"/>): مهلت از همین لحظه؛ هر کد روی هر
+    /// برنامه یک بار. ⛔ پس از <see cref="ShortCode.MaxFails"/> کدِ غلط یک ساعت قفل
+    /// تا ۸ رقم حدس زده نشود. زدنِ دوبارهٔ همان کدِ فعلی مهلت را از نو نمی‌کند.
+    /// </summary>
+    private static OfflineCheck ApplyShort(AppSettings f, string digits)
+    {
+        var now = LicenseClock.Now(f);
+        if (f.ShortCodeLockUntil > now)
+            return OfflineCheck.Bad("چند کدِ غلط پشتِ هم زده شد — "
+                + Math.Max(1, (int)Math.Ceiling((f.ShortCodeLockUntil - now) / 60_000d)) + " دقیقهٔ دیگر دوباره بزنید");
+        var fp = CloudConfig.MachineFingerprint();
+        var c = ShortCode.Of(digits, now, now, "");
+        if (c is null)
+        {
+            f.ShortCodeFails++;
+            if (f.ShortCodeFails >= ShortCode.MaxFails) { f.ShortCodeFails = 0; f.ShortCodeLockUntil = now + ShortCode.LockMs; }
+            f.Save();
+            return OfflineCheck.Bad("این کدِ ۸ رقمی درست نیست — رقم‌ها را دوباره ببینید");
+        }
+        f.ShortCodeFails = 0;
+        var current = string.IsNullOrWhiteSpace(f.OfflineCode) ? OfflineCheck.None
+            : Check(f.OfflineCode, fp, now, TrustedKeys(f), f.CloudUserId);
+        if (current.Serial == c.Serial) { f.Save(); return current; }
+        if (IsUsed(f, c.Serial))
+        {
+            f.Save();
+            return OfflineCheck.Bad("این کد یک بار روی همین برنامه به کار رفته است — کدِ تازه بگیرید");
+        }
+        if (current.Serial.Length > 0) MarkUsed(f, current.Serial);
+        MarkUsed(f, c.Serial);
+        f.OfflineCode = ShortCode.Store(digits, now, fp);
+        f.OfflineCodeRedeemed = "";
+        LicenseClock.Anchor(f, now, fresh: false);
+        f.Save();
+        CloudLink.NotifyLicenseChanged();
+        return c with { Canonical = f.OfflineCode };
     }
 
     /// <summary>برداشتنِ کد از همین کامپیوتر (اشتراکِ سرور دست نمی‌خورد).</summary>
@@ -501,6 +543,9 @@ public sealed record OfflineCheck(
 
     /// <summary>🎁 گیفت‌کارت: به کامپیوتری بسته نیست (هر برنامه یک بار).</summary>
     public bool Gift { get; init; }
+
+    /// <summary>🔢 کدِ ۸ رقمی: فقط روی همین کامپیوتر، به سرورِ حساب نمی‌رود.</summary>
+    public bool Short { get; init; }
 
     /// <summary>امضا و کامپیوتر درست‌اند (شاید منقضی)؟</summary>
     public bool Genuine => Plan.Length > 0;

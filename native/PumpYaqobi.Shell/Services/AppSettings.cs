@@ -265,6 +265,11 @@ public sealed class AppSettings
     /// </summary>
     public string OfflineCodesUsed { get; set; } = "";
 
+    /// <summary>🔢 شمارِ کدهای ۸ رقمیِ غلطِ پشتِ هم و پایانِ قفلِ یک‌ساعته (<see cref="ShortCode"/>). ⛔ در فایلِ کامل نمی‌رود.</summary>
+    public int ShortCodeFails { get; set; }
+
+    public long ShortCodeLockUntil { get; set; }
+
     // ── حسابِ گوگل ─────────────────────────────────────────────────────
     //
     //  خواستهٔ صاحب ریپو: «مثلِ برنامهٔ شاپ باشد که بی اینکه من رمز یا چیزی

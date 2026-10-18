@@ -352,7 +352,8 @@ public sealed partial class CloudLink
             if (string.IsNullOrWhiteSpace(_settings.OfflineCode)) { OfflineServerWhy = ""; return CloudResult.Done; }
             var nowMs = LicenseClock.Now(_settings);
             var chk = OfflineKey.Stored(_settings, nowMs);
-            if (!chk.Genuine) return CloudResult.Done;
+            //  🔢 کدِ ۸ رقمی امضا ندارد و سرورِ حساب آن را نمی‌شناسد — فقط همین کامپیوتر
+            if (!chk.Genuine || chk.Short) { OfflineServerWhy = ""; return CloudResult.Done; }
             var wantsServices = OfflineKey.GivesServices(chk, nowMs);
             if (!Activated)
             {
