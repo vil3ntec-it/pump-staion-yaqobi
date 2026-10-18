@@ -803,7 +803,8 @@ public class InstallerTests
     /// است.» سه راه، هر سه در ‎installer-check.yml‎ با پنجرهٔ واقعی (بندهای «و» و «ز»):
     ///  • فایلِ **ناقص** (دمِ فایل و مُهرش نیامد) ⇒ نصابِ CI همیشه مُهر دارد، پس «بی مُهر» =
     ///    ناقص (state=4)، با پیامِ فارسی و لینکِ دانلود — نه «مثلِ پیش» که وسطِ نصب می‌شکست.
-    ///  • ناقص‌تر از آن‌که ویزارد باز شود ⇒ پیام‌های بارگذارِ خودِ Inno هم فارسی‌اند.
+    ///  • ناقص‌تر از آن‌که ویزارد باز شود ⇒ بارگذارِ خودِ Inno پیش از هر نوشتنی رد می‌کند
+    ///    (سنجیده روی رانر: انگلیسیِ ثابتِ «The setup files are corrupted»).
     ///  • اجرا از درایوِ غیرثابت (فلش/شبکه) ⇒ اول کپیِ سنجیده روی کامپیوتر، با خواندنِ
     ///    دوباره تا ۳ بار، و همان کپی اجرا می‌شود — فلش وسطِ نصب خوانده نمی‌شود.
     /// </summary>
@@ -835,6 +836,7 @@ public class InstallerTests
 
         var check = SrcText.Read(Path.Combine(Repo, ".github", "workflows", "installer-check.yml"));
         Assert.Contains("PumpYaqobi-Setup-trunc.exe", check);
+        Assert.Contains("PYSEAL truncated", check);
         Assert.Contains("/FORCELOCALCOPY", check);
         Assert.Contains("PYLOCAL try=1 state=1", check);
     }

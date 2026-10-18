@@ -398,9 +398,24 @@ jobs:
           Show 'و' $r
           if ($r.Finished) { Fail "کپیِ ناقص نصب شد" }
           if (Test-Path "$dD\PumpYaqobi.exe") { Fail "کپیِ ناقص فایل روی دیسک گذاشت" }
-          if (-not ($r.Messages | Where-Object { $_ -match 'ناقص' })) { Fail "کپیِ ناقص بی پیامِ فارسیِ «ناقص» گذشت: $($r.Messages -join ' | ')" }
+          #  ⚠️ (سنجیده روی رانر) کپیِ ۶۰٪ را **بارگذارِ خودِ Inno** پیش از هر کدِ ما رد می‌کند —
+          #  «The setup files are corrupted…»، انگلیسیِ ثابتِ بارگذار (پیام‌های [Messages] هنوز
+          #  خوانده نشده‌اند). هیچ چیزی نوشته نمی‌شود؛ همین بس است. ناقصیِ کم‌تر (بارگذار می‌گذرد،
+          #  دمِ فایل و مُهر نیامده) را ویزارد با «ناقص» (state=4) می‌گیرد.
+          if (-not ($r.Messages | Where-Object { $_ -match 'ناقص|setup files are corrupted' })) { Fail "کپیِ ناقص بی پیامِ «ناقص/corrupted» گذشت: $($r.Messages -join ' | ')" }
           if ((Get-ItemPropertyValue -Path $unins -Name 'Inno Setup: App Path') -ne $before) { Fail "کپیِ ناقص ثبتِ نصب را عوض کرد" }
-          "✔ کپیِ ناقص با پیامِ فارسیِ «ناقص» رد شد و هیچ فایلی ننشست"
+          "✔ کپیِ ناقص پیش از نوشتنِ هر فایلی رد شد"
+
+          # و۲) ناقصِ کم: فقط دمِ مُهر (۸۰ بایتِ آخر) نیامده ⇒ بارگذار می‌گذرد و ویزارد «ناقص» (state=4) می‌گوید
+          $trunc2 = Join-Path $env:TEMP 'PumpYaqobi-Setup-tail.exe'
+          $all = [IO.File]::ReadAllBytes($new)
+          [IO.File]::WriteAllBytes($trunc2, $all[0..($all.Length - 81)]); $all = $null
+          $r = & $drive -Setup $trunc2 -SetupArgs @('/ARCH=x64') -Dirs @($dD) -Log $log -TimeoutSec 120 -Answer @('Yes', 'No')
+          Show 'و۲' $r
+          if (-not (Select-String -Path $log -Pattern 'PYSEAL truncated' -Quiet)) { Fail "نصابِ بی‌دُم «ناقص» شناخته نشد (PYSEAL truncated در لاگ نیست)" }
+          if (-not ($r.Messages | Where-Object { $_ -match 'ناقص' })) { Fail "نصابِ بی‌دُم بی پیامِ فارسیِ «ناقص» گذشت: $($r.Messages -join ' | ')" }
+          if ($r.Finished -or (Test-Path "$dD\PumpYaqobi.exe")) { Fail "نصابِ بی‌دُم نصب شد" }
+          "✔ نصابِ بی‌دُم با «ناقص» رد شد و هیچ فایلی ننشست"
 
           # ز) (۱۴۰۵/۰۷/۲۶) «روی فلش کپی می‌کنم و از همان‌جا می‌زنم.» نصابِ روی درایوِ غیرثابت
           #    با «بعدی»ِ خوش‌آمد خودش را روی کامپیوتر کپی، با مُهر می‌سنجد و همان کپی را اجرا
