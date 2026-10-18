@@ -247,6 +247,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         Entity = a;
         OnPropertyChanged(nameof(WidthScope));
         ArchiveCount = 0;
+        HawalaCount = 0; HawalaAlert = false;
         _rowFilter = "all";      // فیلترِ حسابِ قبلی روی حسابِ تازه نماند
         Adopt(a);
         OnPropertyChanged(nameof(Title));
@@ -969,7 +970,44 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         //  می‌خواهیم (اسکنِ کاملِ ۱۴۰۵/۰۶/۳۰).
         try { ArchiveCount = await _host.Debtors.CountArchivesAsync(Entity.Id); }
         catch { /* شمارنده نباید صفحه را بشکند */ }
+        await LoadHawalaAsync();
     }
+
+    // ══ ⛽ تیل چکنهٔ حواله (۱۴۰۵/۰۷/۲۵) — دکمه بغلِ «٪ فیصدی»، نقطهٔ سرخ از ۷۰٪ ═════
+    //  شرح: ‎HawalaPageViewModel‎ و ‎HawalaCalc‎.
+    [ObservableProperty] private int _hawalaCount;
+    [ObservableProperty] private bool _hawalaAlert;
+
+    public string HawalaTipText =>
+        "حواله‌های این حساب: چقدر تیل داشت، چند برداشته شد و چقدر مانده"
+        + (HawalaCount > 0 ? " — " + Shamsi.Money(HawalaCount) + " حواله" : "")
+        + (HawalaAlert ? " — 🔴 یکی کم مانده یا تمام شده" : "");
+    partial void OnHawalaCountChanged(int v) => OnPropertyChanged(nameof(HawalaTipText));
+    partial void OnHawalaAlertChanged(bool v) => OnPropertyChanged(nameof(HawalaTipText));
+
+    public async Task LoadHawalaAsync()
+    {
+        //  ⚡ پرسشِ دیسک روی نخِ دیگر (‎SQLite‎ِ ‎async‎ در واقع هم‌زمان است) و حالِ حساب فقط اگر
+        //  حواله‌ای هست — حسابِ بی‌حواله هیچ کارِ تازه‌ای روی نخِ رابط نمی‌کند (‎scrollperf‎).
+        try
+        {
+            var id = Entity.Id;
+            var qs = await Task.Run(() => _host.Hawalas.ListAsync(id));
+            if (qs.Count == 0) { HawalaCount = 0; HawalaAlert = false; return; }
+            var rows = await Task.Run(() => _host.Hawalas.AccountRowsAsync(id));
+            var st = _host.Debt.Status(new[] { Entity });
+            HawalaCount = qs.Count;
+            HawalaAlert = qs.Any(q => HawalaCalc.Of(q, rows, st).Alert);
+        }
+        catch { /* نقطهٔ سرخ نباید صفحه را بشکند */ }
+    }
+
+    [RelayCommand]
+    private Task OpenHawalasAsync() => CrashGuard.RunAsync("تیل چکنهٔ حواله", async () =>
+    {
+        await FlushAsync();
+        await _person.OpenHawalasAsync(this);
+    });
 
     /// <summary>‎openPersonArchive‎ — صفحهٔ جداگانهٔ جدول‌های آرشیوِ همین حساب (مثلِ شرکت‌ها).</summary>
     [RelayCommand]
@@ -1536,6 +1574,7 @@ public sealed partial class PersonViewModel : ObservableObject, IRowBatchHost
 
     /// <summary>صفحهٔ جدول‌های آرشیوِ یک حساب — روی همین شخص باز می‌شود.</summary>
     public Task OpenArchivesAsync(AccountViewModel acct) => _section.OpenArchivesAsync(this, acct);
+    public Task OpenHawalasAsync(AccountViewModel acct) => _section.OpenHawalasAsync(this, acct);
 
     [RelayCommand]
     private Task PrevPerson() => _section.NavigatePersonAsync(-1);

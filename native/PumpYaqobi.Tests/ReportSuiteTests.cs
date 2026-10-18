@@ -345,34 +345,46 @@ public class ReportSuiteTests
               "waraq-day", 4000);
 
     /// <summary>
-    /// ══ نوعِ تیل در PDF، داخلِ خودِ نام ══════════════════════════════════════
-    ///
-    /// گزارشِ صاحب ریپو: «الان نوع را نشان نمی‌دهد که پطرول است یا دیزل … کادرِ
-    /// جدولی‌اش را نمی‌خواهم توی پی‌دی‌اف، ولی توی توضیحات یا کادرِ نام نوشته
-    /// بشود.»
-    ///
-    /// ⚠️ پس دو چیز با هم سنجیده می‌شود: نوع **هست**، و ستونِ تازه‌ای اضافه
-    /// **نشده** — جدولِ ردیف‌ها همان پنج ستون را دارد.
+    /// ══ نامِ ردیف در PDFِ ورق (۱۴۰۵/۰۷/۲۵) ══════════════════════════════════════
+    /// خواستهٔ صاحب ریپو: «ستونِ نوع نباشد، معلوم باشد کدام قرض و کدام مصرف؛ مصرفی که
+    /// خودم ننوشته بودم "مصرف روز" بیاید؛ در هیچ نامی پطرول و دیزل نباشد؛ و بنویسد
+    /// حوالهٔ چندم بوده.» (پیش از این، نوعِ تیل داخلِ نام نوشته می‌شد — پس گرفته شد.)
     /// </summary>
+    [Theory]
+    [InlineData("علی پطرول", WaraqTxnType.Debt, ShiftKind.Day, "علی")]
+    [InlineData("کریم دیزل حواله 42", WaraqTxnType.Debt, ShiftKind.Day, "کریم · حوالهٔ 42")]
+    [InlineData("", WaraqTxnType.Expense, ShiftKind.Day, "مصرف روز")]
+    [InlineData("برق", WaraqTxnType.Expense, ShiftKind.Night, "مصرف شب · برق")]
+    [InlineData("مصرفِ چای", WaraqTxnType.Expense, ShiftKind.Day, "مصرفِ چای")]
+    [InlineData("محمد بدون حواله", WaraqTxnType.Debt, ShiftKind.Day, "محمد · بدون حواله")]
+    public void WaraqSheet_NameSaysEverything(string raw, WaraqTxnType type, ShiftKind kind, string want)
+    {
+        var x = new WaraqTransaction { Name = raw, Type = type, Liters = 10m };
+        var r = new WaraqReport(new WaraqReportInput("پمپ", "1405/07/25", kind, new WaraqShift { Kind = kind }, Dates),
+                                new WaraqService());
+        Assert.Equal(want, r.PdfName(x, WaraqService.IsDebtRow(x)));
+    }
+
+    /// <summary>ستونِ «نوع» و «توضیح/ساعت» رفتند؛ «آزمایشی» فقط اگر نوشته شده باشد.</summary>
     [Fact]
-    public void WaraqSheet_WritesFuelInsideTheNameCell()
+    public void WaraqSheet_NoTypeColumn_TestOnlyWhenWritten()
     {
         var d = new DirectoryInfo(AppContext.BaseDirectory);
         while (d is not null && !Directory.Exists(Path.Combine(d.FullName, "PumpYaqobi.Reporting")))
             d = d.Parent;
-        Assert.NotNull(d);
-        var src = SrcText.Read(Path.Combine(
-            d!.FullName, "PumpYaqobi.Reporting", "Pdf", "WaraqReport.cs"));
+        var src = File.ReadAllText(Path.Combine(d!.FullName, "PumpYaqobi.Reporting", "Pdf", "WaraqReport.cs"));
+        Assert.Contains("Th(\"📋\"); Th(\"نام\"); Th(\"مقدار تیل\"); Th(\"مبلغ\");", src);
+        Assert.DoesNotContain("Th(\"نوع\")", src);
+        Assert.DoesNotContain("توضیح/ساعت", src);
+        Assert.Contains("if (test) Th(\"آزمایشی\");", src);
+        Assert.Contains("private bool HasTest => _in.Shift.Pumps.Any(p => p.TestLiters != 0m);", src);
+        //  جملهٔ پطرول/دیزل زیرِ جدولِ پایه‌ها نیست — فقط «جمله این شیفت»
+        Assert.Contains("foreach (var r in ShiftTotalRows(_in.Shift).TakeLast(1))", src);
 
-        Assert.Contains("private string NameWithFuel(WaraqTransaction x)", src);
-        Assert.Contains("DocStyle.TdOneLine(t.Cell(), even, NameWithFuel(x));", src);
-
-        // ردیفِ بی‌لیتر نباید نوعِ بی‌معنا بگیرد
-        Assert.Contains("if (x.Liters == 0m) return name;", src);
-
-        // و ستونِ تازه‌ای اضافه نشده باشد
-        Assert.Contains("Th(\"📋\"); Th(\"نام\"); Th(\"مقدار تیل\"); Th(\"مبلغ\"); Th(\"نوع\");", src);
-        Assert.Contains("t.Cell().ColumnSpan(5)", src);
+        var sd = Waraq();
+        sd.Pumps[0].TestLiters = 5m;
+        Check(new WaraqReport(new WaraqReportInput("پمپ یعقوبی", "1405/06/09", ShiftKind.Day, sd, Dates), new WaraqService()),
+              "waraq-test", 4000);
     }
 
     /// <summary>ورقِ شب همان ورق است با سربرگِ خودش — نه سندی جدا.</summary>

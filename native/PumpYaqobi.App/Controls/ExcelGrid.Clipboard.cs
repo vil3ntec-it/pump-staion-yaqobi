@@ -96,6 +96,10 @@ public partial class ExcelGrid
         if (cols.Count == 0) return null;
 
         var cur = CurIndex(cols);
+        //  ⛔ کادرِ کهنه‌ای که خانهٔ جاری بیرونش افتاده (جدول ستون را جای دیگری برد)
+        //  دیگر انتخاب نیست — وگرنه ‎Delete‎ خانهٔ قبلی را خالی می‌کرد، نه این یکی.
+        if (_colAnchor >= 0 && (cur < Math.Min(_colAnchor, _colHead) || cur > Math.Max(_colAnchor, _colHead)))
+            _colAnchor = _colHead = -1;
         var lo = _colAnchor < 0 ? cur : Math.Min(_colAnchor, _colHead);
         var hi = _colAnchor < 0 ? cur : Math.Max(_colAnchor, _colHead);
         if (lo < 0 || hi < 0) return null;
@@ -183,17 +187,69 @@ public partial class ExcelGrid
         }, DispatcherPriority.Background);
     }
 
+    // ══ «چیزهایی که پاک می‌شوند را دقیق برنمی‌گرداند» (۱۴۰۵/۰۷/۲۵) ══════════════
+    //  گزارشِ صاحب ریپو: «کنترول زد و کنترول وای… چیزهایی که پاک می‌شوند را دقیق
+    //  برنمی‌گرداند و جلو و عقب رفتنش خیلی داغون است.» سه ریشه:
+    //   ۱) قدم به <b>خودِ شیءِ ردیف</b> بسته بود. هر بار جدول از دیسک دوباره خوانده
+    //      می‌شد (ذخیره، رفتن و برگشتن به ورق، ماهِ دیگر) ردیف‌ها شیءِ تازه بودند،
+    //      پس قدم «دیگر نیست» می‌شد و بی‌صدا رد می‌شد — و ‎UndoHub‎ قدمِ قبل‌ترش را
+    //      برمی‌گرداند: کاربر چیزِ دیگری را می‌دید که عوض شد.
+    //   ۲) برگشت روی خانه‌ای می‌نشست که جلوی چشم نبود — نه انتخاب می‌شد نه دیده.
+    //   ۳) «دوباره»ی چند خانه وارونه اجرا می‌شد.
+    //  حالا ردیف با شناسهٔ رکوردش (‎Entity.Id‎) در فهرستِ تازه هم پیدا می‌شود، خانهٔ
+    //  برگشته انتخاب و دیده می‌شود، همان لحظه روی دیسک می‌نشیند، و ترتیبِ «دوباره»
+    //  همان ترتیبِ کارِ اول است.
     private bool Replay(List<Edit> group, bool forward)
     {
         var any = false;
-        // وارونه، تا اگر دو خانه روی هم نوشته شده بودند ترتیب برعکس باز شود
-        for (var i = group.Count - 1; i >= 0; i--)
+        object? last = null; System.Reflection.PropertyInfo? lastProp = null;
+        // برگشت وارونه، دوباره به همان ترتیبِ اول — تا خانه‌هایی که روی هم نوشته شده بودند درست باز شوند
+        for (var k = 0; k < group.Count; k++)
         {
-            var ed = group[i];
-            if (!Live(ed.Item)) continue;
-            try { ed.Prop.SetValue(ed.Item, forward ? ed.After : ed.Before); any = true; } catch { }
+            var ed = group[forward ? k : group.Count - 1 - k];
+            if (Resolve(ed.Item) is not { } item) continue;
+            var prop = ReferenceEquals(item, ed.Item) ? ed.Prop : item.GetType().GetProperty(ed.Prop.Name) ?? ed.Prop;
+            try { prop.SetValue(item, forward ? ed.After : ed.Before); any = true; last = item; lastProp = prop; } catch { }
         }
+        if (any) { Reveal(last, lastProp?.Name); FlushDirtyRows(); }
         return any;
+    }
+
+    /// <summary>همان ردیف — یا اگر جدول از نو خوانده شده، ردیفِ تازه‌ای با همان رکورد.</summary>
+    private object? Resolve(object item)
+    {
+        if (Live(item)) return item;
+        if (KeyOf(item) is not { } key) return null;
+        var src = ItemsSource ?? (_parkedAway ? _parked : null);
+        return (src as System.Collections.IEnumerable)?.Cast<object>()
+            .FirstOrDefault(o => o is not null && o.GetType() == item.GetType() && KeyOf(o) == key);
+    }
+
+    private static readonly Dictionary<Type, System.Reflection.PropertyInfo?> _entityProp = new();
+
+    /// <summary>شناسهٔ رکوردِ پشتِ ردیف (‎Entity.Id‎)، یا ‎null‎ برای ردیفِ هنوز ذخیره‌نشده.</summary>
+    private static long? KeyOf(object row)
+    {
+        var t = row.GetType();
+        if (!_entityProp.TryGetValue(t, out var p)) _entityProp[t] = p = t.GetProperty("Entity");
+        if (p?.GetValue(row) is PumpYaqobi.Domain.Entities.EntityBase { Id: > 0 } e) return e.Id;
+        return null;
+    }
+
+    /// <summary>خانهٔ برگشته جلوی چشم و انتخاب‌شده.</summary>
+    private void Reveal(object? item, string? path)
+    {
+        if (item is null) return;
+        try
+        {
+            var col = VisibleCols().FirstOrDefault(c => PathOf(c) == path);
+            SelectedItem = item;
+            if (col is not null) { CurrentColumn = col; ResetRange(VisibleCols().IndexOf(col)); }
+            ScrollIntoView(item, col);
+            PaintRange();
+            Dispatcher.UIThread.Post(FollowCell, DispatcherPriority.Background);
+        }
+        catch { /* دیدن رفاه است؛ مقدار نشسته */ }
     }
 
     // ── کلیپ‌بورد ─────────────────────────────────────────────────────────

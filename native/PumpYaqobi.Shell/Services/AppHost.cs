@@ -61,6 +61,7 @@ public sealed class AppHost
         TankDip = new TankDipService();
         Trash = new TrashService(Db, Permissions, Session);
         Debtors = new DebtorService(Db, Permissions, Trash);
+        Hawalas = new HawalaService(Db, Permissions);
         Companies = new CompanyDataService(Db, Permissions, Trash);
         WaraqData = new WaraqDataService(Db, Permissions, Trash);
         ShiftWaraqSync = new ShiftWaraqSyncService(Db, Permissions, Waraq, Settings);
@@ -337,6 +338,8 @@ public sealed class AppHost
     public ExpenseService Expenses { get; }
     public TrashService Trash { get; }
     public DebtorService Debtors { get; }
+    /// <summary>⛽ تیل چکنهٔ حواله — شرح بالای ‎HawalaQuota‎.</summary>
+    public HawalaService Hawalas { get; }
     public CompanyDataService Companies { get; }
     public CompanyService Company { get; }
     /// <summary>خریدهای مخزنِ هر شرکت و «جستجوی خرید» — فقط‌خواندنی.</summary>

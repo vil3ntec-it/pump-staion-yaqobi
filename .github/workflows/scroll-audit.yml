@@ -217,6 +217,17 @@ jobs:
         working-directory: native
         run: dotnet run --project PumpYaqobi.UiTests -c Release -- arrows
 
+      # فهرستِ ۱۴۰۵/۰۷/۲۵: نوشتن پس از دوبار-کلیک + فلش ⇒ ستونِ بعد، بی‌قفل؛ بک‌اسپیس/دیلیت؛
+      # ستونِ عددی بی‌پیشنهاد؛ Ctrl+Z پس از دوباره‌خوانیِ جدول.
+      - name: کلیدهای خانه و برگشت
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- cellfix
+
+      # ⛽ تیل چکنهٔ حواله (۱۴۰۵/۰۷/۲۵): ثبت، برداشت، نقطهٔ سرخ از ۷۰٪، هم‌خطیِ دکمه با «٪ فیصدی».
+      - name: تیل چکنهٔ حواله
+        working-directory: native
+        run: dotnet run --project PumpYaqobi.UiTests -c Release -- hawala
+
       # ورق (۱۴۰۵/۰۷/۱۸): «➕ ردیف» و «➕➕» و «پایهٔ تازه» ⇒ دو جدول همانِ «خروج و ورود»،
       # هیچ جای سفید، و شمارهٔ ردیف‌ها پیوسته — در دو پهنای پنجره.
       - name: ردیفِ تازه در ورق

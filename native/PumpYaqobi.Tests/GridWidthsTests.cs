@@ -121,8 +121,10 @@ public class GridWidthsTests
     public void Dar_Halate_Neveshtan_Mabda_Pish_Az_Commit_Bardashte_Mishavad()
     {
         var g = Grid();
-        var at = g.IndexOf("private void OnPreviewKey(", StringComparison.Ordinal);
-        Assert.True(at > 0, "OnPreviewKey پیدا نشد");
+        //  (۱۴۰۵/۰۷/۲۵) بدنهٔ ‎OnPreviewKey‎ به ‎LeaveEditBy‎ رفت — همان ترتیب آن‌جاست
+        Assert.Contains("if (!LeaveEditBy(e.Key)) return;", g);
+        var at = g.IndexOf("private bool LeaveEditBy(", StringComparison.Ordinal);
+        Assert.True(at > 0, "LeaveEditBy پیدا نشد");
         var body = g[at..Math.Min(g.Length, at + 1400)];
 
         var read = body.IndexOf("var from = CurIndex(cols);", StringComparison.Ordinal);
