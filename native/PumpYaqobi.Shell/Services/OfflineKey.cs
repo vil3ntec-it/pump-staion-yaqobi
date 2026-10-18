@@ -349,8 +349,11 @@ public static class OfflineKey
         }
         if (!ok) return OfflineCheck.Bad("این کلیدِ اشتراکِ بی‌اینترنت دست‌کاری شده یا اشتباه است");
 
+        //  🎁 گیفت‌کارت (۱۴۰۵/۰۷/۲۶): هشت بایتِ کامپیوترِ همه صفر ⇒ به هیچ کامپیوتری
+        //  بسته نیست؛ «یک بار برای هر برنامه» را OfflineCodesUsed در Apply نگه می‌دارد.
+        var gift = buf.AsSpan(2, 8).IndexOfAnyExcept((byte)0) < 0;
         var mine = MachineBytes(fingerprint);
-        if (mine.Length == 0 || !buf.AsSpan(2, 8).SequenceEqual(mine.AsSpan(0, 8)))
+        if (!gift && (mine.Length == 0 || !buf.AsSpan(2, 8).SequenceEqual(mine.AsSpan(0, 8))))
             return OfflineCheck.Bad("این کد برای کامپیوترِ دیگری ساخته شده است — کدِ کامپیوترِ همین‌جا را بفرستید");
 
         var tag = buf.AsSpan(10, 4);
@@ -373,7 +376,7 @@ public static class OfflineKey
             Valid: !expired, Expired: expired,
             Why: expired ? "مهلتِ این کلیدِ اشتراکِ بی‌اینترنت تمام شده است" : "",
             Plan: plan, Serial: serial, IssuedAt: issued, EndsAt: ends, Permanent: permanent,
-            Canonical: Pretty(raw));
+            Canonical: Pretty(raw)) { Gift = gift };
     }
 
     private static readonly object CacheGate = new();
@@ -495,6 +498,9 @@ public sealed record OfflineCheck(
     public static readonly OfflineCheck None = new(false, false, "", "", "", 0, 0, false, "");
 
     public static OfflineCheck Bad(string why) => new(false, false, why, "", "", 0, 0, false, "");
+
+    /// <summary>🎁 گیفت‌کارت: به کامپیوتری بسته نیست (هر برنامه یک بار).</summary>
+    public bool Gift { get; init; }
 
     /// <summary>امضا و کامپیوتر درست‌اند (شاید منقضی)؟</summary>
     public bool Genuine => Plan.Length > 0;

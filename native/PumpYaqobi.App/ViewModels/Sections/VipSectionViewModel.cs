@@ -220,10 +220,10 @@ public sealed partial class VipSectionViewModel : SectionViewModel
         var c = OfflineKey.Apply(f, text);
         if (!c.Valid) { SetStatus("❌ " + c.Why, "Pump.Danger"); return; }
         OfflineInput = "";
-        SetStatus("✅ کلیدِ اشتراکِ بی‌اینترنت پذیرفته شد — " + c.PlanTitle + " · "
+        SetStatus((c.Gift ? "🎁 گیفت‌کارت پذیرفته شد — " : "✅ کلیدِ اشتراکِ بی‌اینترنت پذیرفته شد — ") + c.PlanTitle + " · "
                   + (c.Permanent ? "دائمی" : "تا " + OfflineKey.Localize(c.EndsAt))
                   + ". قفل‌ها همین حالا باز شدند.", "Pump.Ok");
-        _host.Toast("🔓 کلیدِ اشتراکِ بی‌اینترنت پذیرفته شد — " + c.PlanTitle, ToastKind.Ok);
+        _host.Toast((c.Gift ? "🎁 گیفت‌کارت پذیرفته شد — " : "🔓 کلیدِ اشتراکِ بی‌اینترنت پذیرفته شد — ") + c.PlanTitle, ToastKind.Ok);
         Show();
     }
 
