@@ -140,7 +140,9 @@ public static class StationLink
         }
 
         // نشانیِ دستیِ کهنه — شاید سرور جابه‌جا شده. یک‌بار در شبکه بگرد.
-        if (!result.Ok && found is null && file.AutoEnroll)
+        // ⛔ امنیت (۱۴۰۵/۰۷/۲۷): پاسخِ پخشِ شبکه را هر دستگاهی می‌تواند بدهد؛ پس توکن و رمزِ
+        // موجود هرگز به سروری که فقط «پیدا شد» فرستاده نمی‌شود — آن‌جا جفت شدنِ دوباره لازم است.
+        if (!result.Ok && found is null && file.AutoEnroll && token.Length == 0 && pin.Trim().Length == 0)
         {
             var moved = await ServerFinder.FindReachableAsync(ct: ct);
             if (moved is not null && !string.Equals(moved.Url, url, StringComparison.OrdinalIgnoreCase))

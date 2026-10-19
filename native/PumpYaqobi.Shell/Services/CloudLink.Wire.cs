@@ -266,6 +266,7 @@ public sealed partial class CloudLink
             {
                 _settings.CloudDeviceToken = disk.CloudDeviceToken;
                 _settings.CloudLicense = disk.CloudLicense;
+                _settings.CloudLicenseSeal = disk.CloudLicenseSeal;
                 _settings.CloudStationId = disk.CloudStationId;
                 _settings.CloudStationCode = disk.CloudStationCode;
                 return;

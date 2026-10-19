@@ -280,6 +280,8 @@ public sealed class HomeSync : IAsyncDisposable
                 var got = await ws.ReceiveAsync(new ArraySegment<byte>(buf), ct);
                 if (got.MessageType == WebSocketMessageType.Close) return null;
                 all.Write(buf, 0, got.Count);
+                //  ⛔ امنیت (۱۴۰۵/۰۷/۲۷): پیامِ بی‌پایان از سرورِ جعلی حافظه را پر نمی‌کند
+                if (all.Length > 64L * 1024 * 1024) return null;
                 if (got.EndOfMessage) break;
             }
             using var doc = JsonDocument.Parse(Encoding.UTF8.GetString(all.ToArray()));

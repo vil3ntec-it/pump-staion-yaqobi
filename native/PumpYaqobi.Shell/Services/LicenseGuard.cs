@@ -248,6 +248,7 @@ public static class LicenseGuard
     public static LicenseCheck CheckStored(AppSettings f, long? nowMs = null)
     {
         if (CloudConfig.MachineMoved(f)) return LicenseCheck.Fail(CloudConfig.MachineMovedWhy);
+        if (!SealOk(f)) return LicenseCheck.Fail(CloudConfig.MachineMovedWhy);
         return Check(f.CloudLicense, f.CloudPublicKey, CloudConfig.DeviceUid(f), f.CloudStationId,
                      nowMs ?? LicenseClock.Now(f));
     }
@@ -303,5 +304,38 @@ public static class LicenseGuard
         foreach (var item in v.EnumerateArray())
             if (item.ValueKind == JsonValueKind.String) list.Add(item.GetString() ?? "");
         return list;
+    }
+
+    // ══ مُهرِ مجوز به همین کامپیوتر (۱۴۰۵/۰۷/۲۷) ═════════════════════════════
+    //
+    //  ⛔ اثرِ انگشت و شناسهٔ دستگاه هر دو در settings.json‌اند و کپی می‌شوند؛ تنها چیزی که
+    //  از این کامپیوتر بیرون نمی‌رود رمزِ DPAPIِ کاربرِ ویندوز است. پس مجوز فقط وقتی پذیرفته
+    //  است که مُهرِ DPAPIِ خودش این‌جا باز شود. فقط در نسخهٔ رسمی (کلیدِ مجوزِ داخلِ برنامه)
+    //  و ویندوز؛ نصبِ کهنهٔ بی‌مُهر یک بار مُهر می‌خورد، فقط اگر توکنش هم از DPAPIِ همین‌جا آمده.
+
+    private static bool SealRequired =>
+        OperatingSystem.IsWindows() && CloudConfig.TestLicenseKeys is null && CloudConfig.LicenseKeys.Count > 0;
+
+    private static string SealOf(string license) =>
+        Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes("pump-yaqobi|license-seal|v1|" + license)));
+
+    /// <summary>مجوزی که همین حالا از سرور آمد ⇒ مُهرِ همین کامپیوتر.</summary>
+    public static void Seal(AppSettings f)
+    {
+        f.CloudLicenseSeal = f.CloudLicense.Length == 0 || !OperatingSystem.IsWindows()
+            ? "" : SecretStore.Protect(SealOf(f.CloudLicense));
+    }
+
+    private static bool SealOk(AppSettings f)
+    {
+        if (!SealRequired || f.CloudLicense.Length == 0) return true;
+        if (SecretStore.IsProtected(f.CloudLicenseSeal)
+            && string.Equals(SecretStore.Unprotect(f.CloudLicenseSeal), SealOf(f.CloudLicense), StringComparison.Ordinal))
+            return true;
+        if (!f.DeviceTokenBound) return false;
+        Seal(f);
+        try { f.SaveSoon(); } catch { }
+        return SecretStore.IsProtected(f.CloudLicenseSeal);
     }
 }

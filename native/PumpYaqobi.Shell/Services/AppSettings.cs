@@ -229,6 +229,17 @@ public sealed class AppSettings
     /// <summary>آخرین مجوزِ امضاشده. آفلاین هم از روی همین تصمیم گرفته می‌شود.</summary>
     public string CloudLicense { get; set; } = "";
 
+    /// <summary>
+    /// ⛔ امنیت (۱۴۰۵/۰۷/۲۷): مُهرِ DPAPIِ همین کاربرِ ویندوز روی <see cref="CloudLicense"/>
+    /// (<see cref="LicenseGuard.Seal"/>). کپیِ settings.json به کامپیوترِ دیگر مُهر را باز
+    /// نمی‌کند، پس مجوزِ کپی‌شده پذیرفته نمی‌شود — پیش‌تر با پاک کردنِ اثرِ انگشت و یک
+    /// توکنِ خام، یک مجوز روی هر تعداد کامپیوتر می‌نشست.
+    /// </summary>
+    public string CloudLicenseSeal { get; set; } = "";
+
+    /// <summary>توکنِ دستگاه از رمزِ DPAPIِ همین کامپیوتر باز شد (نه مقدارِ خامِ دست‌نوشته).</summary>
+    [JsonIgnore] public bool DeviceTokenBound { get; private set; }
+
     /// <summary>آخرین باری که با ابر حرف زدیم (میلی‌ثانیهٔ یونیکس).</summary>
     public long CloudSyncedAt { get; set; }
 
@@ -425,7 +436,7 @@ public sealed class AppSettings
         set
         {
             var v = SecretStore.Unprotect(value);
-            if (v.Length > 0) { CloudDeviceToken = v; _deviceBlob = ""; }
+            if (v.Length > 0) { CloudDeviceToken = v; _deviceBlob = ""; DeviceTokenBound = SecretStore.IsProtected(value); }
             else _deviceBlob = value ?? "";
         }
     }

@@ -128,6 +128,7 @@ public sealed partial class CloudLink
 
         LicenseClock.Anchor(_settings, check.IssuedAt, fresh: true);
         _settings.CloudLicense = token;
+        LicenseGuard.Seal(_settings);
         if (key != pinned) _settings.CloudPublicKey = key;
         CloudConfig.RecordMachine(_settings);
         return null;

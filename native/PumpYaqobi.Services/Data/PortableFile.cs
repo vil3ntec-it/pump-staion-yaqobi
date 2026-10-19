@@ -54,6 +54,9 @@ public static class PortableFile
         File.Move(part, path, overwrite: true);
     }
 
+    /// <summary>سقفِ ‎part.json‎ — یک حساب یا یک ماه هرگز نزدیکش هم نمی‌شود.</summary>
+    private const long MaxPartBytes = 256L * 1024 * 1024;
+
     /// <summary>عکسِ داخلِ فایل — ‎null‎ یعنی این فایل «فایلِ حساب»ِ سالمِ همین برنامه نیست.</summary>
     public static string? ReadSnapshot(string path)
     {
@@ -63,11 +66,23 @@ public static class PortableFile
             var m = zip.GetEntry("manifest.json");
             var p = zip.GetEntry("part.json");
             if (m is null || p is null) return null;
+            //  ⛔ امنیت (۱۴۰۵/۰۷/۲۷): فایلِ فشرده‌ای که باز شدنش حافظه را پر کند (zip bomb) رد می‌شود
+            if (m.Length > 1024 * 1024 || p.Length > MaxPartBytes) return null;
             JsonNode? manifest;
             using (var s = m.Open()) manifest = JsonNode.Parse(s);
             if ((string?)manifest?["marker"] != Marker) return null;
             byte[] data;
-            using (var s = p.Open()) using (var ms = new MemoryStream()) { s.CopyTo(ms); data = ms.ToArray(); }
+            using (var s = p.Open()) using (var ms = new MemoryStream())
+            {
+                var buf = new byte[81920];
+                int n;
+                while ((n = s.Read(buf, 0, buf.Length)) > 0)
+                {
+                    if (ms.Length + n > MaxPartBytes) return null;   // اندازهٔ دروغینِ سرآیند
+                    ms.Write(buf, 0, n);
+                }
+                data = ms.ToArray();
+            }
             if (!string.Equals((string?)manifest?["sha256"], Convert.ToHexString(SHA256.HashData(data)),
                                StringComparison.OrdinalIgnoreCase)) return null;
             return Encoding.UTF8.GetString(data);

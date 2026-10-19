@@ -497,15 +497,58 @@ public static class OfflineKey
 
     /// <summary>این سریال روی همین کامپیوتر به کار رفته؟</summary>
     public static bool IsUsed(AppSettings f, string serial) =>
-        serial.Length > 0 && f.OfflineCodesUsed.Split(',').Contains(serial, StringComparer.Ordinal);
+        serial.Length > 0 && (f.OfflineCodesUsed.Split(',').Contains(serial, StringComparer.Ordinal)
+                              || UsedElsewhere().Contains(serial));
 
     private static void MarkUsed(AppSettings f, string serial)
     {
-        if (serial.Length == 0 || IsUsed(f, serial)) return;
-        var list = f.OfflineCodesUsed.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
-        list.Add(serial);
-        //  سقف: صد سریالِ آخر — فهرست بی‌پایان بزرگ نمی‌شود
-        f.OfflineCodesUsed = string.Join(",", list.TakeLast(100));
+        if (serial.Length == 0) return;
+        if (!f.OfflineCodesUsed.Split(',').Contains(serial, StringComparer.Ordinal))
+        {
+            var list = f.OfflineCodesUsed.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
+            list.Add(serial);
+            //  سقف: صد سریالِ آخر — فهرست بی‌پایان بزرگ نمی‌شود
+            f.OfflineCodesUsed = string.Join(",", list.TakeLast(100));
+        }
+        RememberElsewhere(serial);
+    }
+
+    //  ══ رونوشتِ «به کار رفته» بیرون از settings.json (۱۴۰۵/۰۷/۲۷) ══════════════
+    //  «جوری است که این کد رو هر حساب یک بار استفاده بشه حتی بدون نت؟» — فهرستِ تنها در
+    //  settings.json با پاک کردنِ آن فایل یا نصبِ دوباره زنده می‌شد. رونوشتِ رمزشده (DPAPI)
+    //  در رجیستریِ همین کاربرِ ویندوز با حذف و نصبِ دوبارهٔ برنامه نمی‌رود. ⚠️ آزمون‌ها
+    //  (‎DirOverride‎) نامِ جدای خودشان را دارند تا به هم نشت نکنند. فقط ویندوز.
+
+    private const string UsedKey = @"Software\VILL3N\PumpYaqobi";
+
+    private static string UsedName() => AppSettings.DirOverride is null ? "ou"
+        : "ou" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(AppSettings.Dir.ToLowerInvariant())))[..12];
+
+    private static HashSet<string> UsedElsewhere()
+    {
+        var set = new HashSet<string>(StringComparer.Ordinal);
+        if (!OperatingSystem.IsWindows()) return set;
+        try
+        {
+            using var k = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(UsedKey);
+            if (k?.GetValue(UsedName()) is string raw)
+                foreach (var x in SecretStore.Unprotect(raw).Split(',', StringSplitOptions.RemoveEmptyEntries)) set.Add(x);
+        }
+        catch { }
+        return set;
+    }
+
+    private static void RememberElsewhere(string serial)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        try
+        {
+            var set = UsedElsewhere();
+            if (!set.Add(serial)) return;
+            using var k = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(UsedKey);
+            k.SetValue(UsedName(), SecretStore.Protect(string.Join(",", set.TakeLast(500))));
+        }
+        catch { }
     }
 
     /// <summary>تاریخِ شمسی برای پیام‌ها.</summary>
