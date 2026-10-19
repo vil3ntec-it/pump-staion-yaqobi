@@ -201,13 +201,13 @@ public sealed partial class AmanatRowViewModel : RowViewModel
 /// <c>_amCardHtml</c> می‌سازد: نام، «باقیِ مشتری»، خطِ وضعیت، دو عددِ
 /// رسید/بخار، خطِ فیصدی و شمارهٔ کارت.
 /// </summary>
-public sealed class AmanatCardViewModel
+public sealed class AmanatCardViewModel : ObservableObject
 {
     public AmanatCardViewModel(AmanatAccount a, AmanatAccountCalc t, int seq)
     {
         Entity = a;
         Name = string.IsNullOrWhiteSpace(a.Name) ? "بی‌نام" : a.Name!.Trim();
-        Index = seq;
+        _index = seq;
         IsDiesel = a.Fuel == FuelType.Diesel;
         // عددِ ساده — برچسبش زیرِ همان عدد در کارت نوشته می‌شود (خواستهٔ صاحب ریپو)
         RestText = AmanatService.Fmt2(t.Rest);
@@ -230,7 +230,10 @@ public sealed class AmanatCardViewModel
 
     public AmanatAccount Entity { get; }
     public string Name { get; }
-    public int Index { get; }
+    private int _index;
+
+    /// <summary>شمارهٔ زیرِ کارت — با جست‌وجو جابه‌جا می‌شود، خودِ کارت نه.</summary>
+    public int Index { get => _index; set => SetProperty(ref _index, value); }
     public bool IsDiesel { get; }
     public string RestText { get; }
     public string RestBrushKey { get; }
@@ -906,7 +909,7 @@ public sealed partial class AmanatSectionViewModel : SectionViewModel
         _host.Toast(ShowMeasure ? "📏 ستون‌های اندازه‌گیری آمد" : "📏 ستون‌های اندازه‌گیری رفت", ToastKind.Info);
     }
 
-    partial void OnSearchChanged(string v) => ApplyFilter();
+    partial void OnSearchChanged(string v) => ApplyFilter(reuse: true);
 
     partial void OnFuelFilterChanged(string v)
     {
@@ -938,16 +941,31 @@ public sealed partial class AmanatSectionViewModel : SectionViewModel
 
     private bool Match(AmanatAccount a) => AmanatService.Matches(a, FuelFilter, Search);
 
-    private void ApplyFilter()
+    /// <summary>
+    /// ⚡ (۱۴۰۵/۰۷/۲۷) با <paramref name="reuse"/> (فقط جست‌وجو — داده عوض نشده) کارت‌های
+    /// مانده همان کارت‌اند و فقط آن‌چه نمی‌خورد بیرون می‌رود: پیش‌تر هر کلید همهٔ کارت‌ها را
+    /// پاک و از نو می‌ساخت و در ۳۲بیتی یک کلید تا ۶۰۰ میلی‌ثانیه می‌ایستاد (‎typeall‎).
+    /// </summary>
+    private void ApplyFilter(bool reuse = false)
     {
         var q = Search.Trim();
-        Cards.Clear();
-        var seq = 0;
+        var have = reuse ? Cards.ToDictionary(c => c.Entity.Id) : new Dictionary<long, AmanatCardViewModel>();
+        var want = new List<AmanatCardViewModel>();
         foreach (var a in _all)
         {
             if (!Match(a.Entity)) continue;
-            Cards.Add(new AmanatCardViewModel(a.Entity, a.Totals, ++seq));
+            want.Add(have.TryGetValue(a.Entity.Id, out var c) ? c : new AmanatCardViewModel(a.Entity, a.Totals, 0));
         }
+        if (!reuse || want.Count == 0) Cards.Clear();   // همه بیرون ⇒ یک خبر، نه یکی‌یکی
+        //  هر دو فهرست به ترتیبِ ‎_all‎اند، پس یک گذر بس است
+        var keep = want.ToHashSet();
+        for (var i = 0; i < want.Count; i++)
+        {
+            while (i < Cards.Count && !keep.Contains(Cards[i])) Cards.RemoveAt(i);
+            if (i >= Cards.Count || !ReferenceEquals(Cards[i], want[i])) Cards.Insert(i, want[i]);
+            want[i].Index = i + 1;
+        }
+        while (Cards.Count > want.Count) Cards.RemoveAt(Cards.Count - 1);
 
         EmptyText = q.Length > 0 ? $"با «{q}» حسابی پیدا نشد."
             : FuelFilter != "all"
