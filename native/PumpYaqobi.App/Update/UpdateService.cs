@@ -728,7 +728,7 @@ public sealed class UpdateService
         var expectedHash = await ExpectedHashAsync(info, ct);
         if (expectedHash is null) return null;           // `LastProblem` را خودش نوشته
 
-        var dir = Path.Combine(Services.AppSettings.Dir, "updates");
+        var dir = UpdatesDir;
         Directory.CreateDirectory(dir);
         var name = "PumpYaqobi-" + info.LatestVersion + Path.GetExtension(new Uri(info.DownloadUrl).AbsolutePath);
         var path = Path.Combine(dir, name);
@@ -819,11 +819,48 @@ public sealed class UpdateService
         && u.Scheme == Uri.UriSchemeHttps
         && u.IsDefaultPort
         && string.IsNullOrEmpty(u.UserInfo)
-        && (Array.IndexOf(AllowedHosts, u.IdnHost.ToLowerInvariant()) >= 0
+        && (Array.IndexOf(AllowedHosts, u.IdnHost.ToLowerInvariant()) >= 0 && OwnGithubPath(u)
             //  ⛔ و سرورِ خودِ پمپ — همان یک نشانیِ قفل‌شدهٔ ‎CloudConfig‎
             || string.Equals(u.IdnHost, ServerHost, StringComparison.OrdinalIgnoreCase));
 
     private static readonly string ServerHost = new Uri(Services.CloudConfig.Url("/")).IdnHost;
+
+    /// <summary>
+    /// ⛔ امنیت (۱۴۰۵/۰۷/۲۷): روی github.com و api.github.com فقط مخزن‌های خودِ ما — نه هر
+    /// مخزنی که خوراکِ دست‌کاری‌شده نشانش بدهد. میزبان‌های دانلودِ گیت‌هاب نشانیِ مخزن ندارند.
+    /// </summary>
+    private static bool OwnGithubPath(Uri u)
+    {
+        var host = u.IdnHost.ToLowerInvariant();
+        var path = u.AbsolutePath;
+        if (host == "github.com") return path.StartsWith("/" + Owner + "/", StringComparison.OrdinalIgnoreCase);
+        if (host == "api.github.com") return path.StartsWith("/repos/" + Owner + "/", StringComparison.OrdinalIgnoreCase);
+        return true;
+    }
+
+    /// <summary>صاحبِ مخزن — از همان نشانیِ خصوصیِ خوراک، نه رشتهٔ دوم.</summary>
+    public static string Owner => new Uri(FeedUrl).Segments[2].TrimEnd('/');
+
+    /// <summary>
+    /// ⛔ امنیت (۱۴۰۵/۰۷/۲۷): بسته و اسکریپتِ نصب جایی که فقط همین کاربرِ ویندوز می‌نویسد.
+    /// پوشهٔ دادهٔ نصبِ همه‌کاربره (‎{app}\data‎، users-modify) برای کاربرِ دیگر هم نوشتنی است و
+    /// اسکریپت آن‌جا با ‎runas‎ اجرا می‌شد ⇒ کاربرِ محدود می‌توانست میانِ دانلود و اجرا جایش بگذارد.
+    /// </summary>
+    internal static string UpdatesDir
+    {
+        get
+        {
+            var data = Path.Combine(Services.AppSettings.Dir, "updates");
+            if (Services.AppSettings.DirOverride is not null) return data;
+            var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (local.Length == 0 || profile.Length == 0) return data;
+            var full = Path.GetFullPath(Services.AppSettings.Dir).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            if (full.StartsWith(Path.GetFullPath(profile).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar,
+                    StringComparison.OrdinalIgnoreCase)) return data;
+            return Path.Combine(local, "PumpYaqobi", "updates");
+        }
+    }
 
     /// <summary>
     /// کلیدِ عمومیِ امضای <c>SHA256SUMS.txt</c> (SPKIِ base64، P-256) — از

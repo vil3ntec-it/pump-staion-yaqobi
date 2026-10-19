@@ -270,6 +270,7 @@ public static class OfflineKey
     public static OfflineCheck Check(string? code, string fingerprint, long nowMs,
         IReadOnlyDictionary<string, string> keys, string? account = null)
     {
+        if (ShortCode.IsStored(code)) return ShortCode.CheckStored(code!, fingerprint, nowMs);
         var raw = Clean(code);
         if (raw.Length == 0) return OfflineCheck.None;
         if (raw.Length == (Total2 * 8 + 4) / 5) return Check2(raw, fingerprint, nowMs, keys, account);
@@ -349,8 +350,11 @@ public static class OfflineKey
         }
         if (!ok) return OfflineCheck.Bad("این کلیدِ اشتراکِ بی‌اینترنت دست‌کاری شده یا اشتباه است");
 
+        //  🎁 گیفت‌کارت (۱۴۰۵/۰۷/۲۶): هشت بایتِ کامپیوترِ همه صفر ⇒ به هیچ کامپیوتری
+        //  بسته نیست؛ «یک بار برای هر برنامه» را OfflineCodesUsed در Apply نگه می‌دارد.
+        var gift = buf.AsSpan(2, 8).IndexOfAnyExcept((byte)0) < 0;
         var mine = MachineBytes(fingerprint);
-        if (mine.Length == 0 || !buf.AsSpan(2, 8).SequenceEqual(mine.AsSpan(0, 8)))
+        if (!gift && (mine.Length == 0 || !buf.AsSpan(2, 8).SequenceEqual(mine.AsSpan(0, 8))))
             return OfflineCheck.Bad("این کد برای کامپیوترِ دیگری ساخته شده است — کدِ کامپیوترِ همین‌جا را بفرستید");
 
         var tag = buf.AsSpan(10, 4);
@@ -373,7 +377,7 @@ public static class OfflineKey
             Valid: !expired, Expired: expired,
             Why: expired ? "مهلتِ این کلیدِ اشتراکِ بی‌اینترنت تمام شده است" : "",
             Plan: plan, Serial: serial, IssuedAt: issued, EndsAt: ends, Permanent: permanent,
-            Canonical: Pretty(raw));
+            Canonical: Pretty(raw)) { Gift = gift };
     }
 
     private static readonly object CacheGate = new();
@@ -410,6 +414,8 @@ public static class OfflineKey
     /// </summary>
     public static OfflineCheck Apply(AppSettings f, string? text)
     {
+        var digits = ShortCode.Digits(text);
+        if (digits.Length > 0) return ApplyShort(f, digits);
         var code = Extract(text);
         if (Clean(code).Length == 0) return OfflineCheck.Bad("کد را بچسبانید یا فایلِ ‎.pumpkey‎ را انتخاب کنید");
         var c = Check(code, CloudConfig.MachineFingerprint(), LicenseClock.Now(f), TrustedKeys(f), f.CloudUserId);
@@ -438,6 +444,45 @@ public static class OfflineKey
         return c;
     }
 
+    /// <summary>
+    /// 🔢 کدِ ۸ رقمی (<see cref="ShortCode"/>): مهلت از همین لحظه؛ هر کد روی هر
+    /// برنامه یک بار. ⛔ پس از <see cref="ShortCode.MaxFails"/> کدِ غلط یک ساعت قفل
+    /// تا ۸ رقم حدس زده نشود. زدنِ دوبارهٔ همان کدِ فعلی مهلت را از نو نمی‌کند.
+    /// </summary>
+    private static OfflineCheck ApplyShort(AppSettings f, string digits)
+    {
+        var now = LicenseClock.Now(f);
+        if (f.ShortCodeLockUntil > now)
+            return OfflineCheck.Bad("چند کدِ غلط پشتِ هم زده شد — "
+                + Math.Max(1, (int)Math.Ceiling((f.ShortCodeLockUntil - now) / 60_000d)) + " دقیقهٔ دیگر دوباره بزنید");
+        var fp = CloudConfig.MachineFingerprint();
+        var c = ShortCode.Of(digits, now, now, "");
+        if (c is null)
+        {
+            f.ShortCodeFails++;
+            if (f.ShortCodeFails >= ShortCode.MaxFails) { f.ShortCodeFails = 0; f.ShortCodeLockUntil = now + ShortCode.LockMs; }
+            f.Save();
+            return OfflineCheck.Bad("این کدِ ۸ رقمی درست نیست — رقم‌ها را دوباره ببینید");
+        }
+        f.ShortCodeFails = 0;
+        var current = string.IsNullOrWhiteSpace(f.OfflineCode) ? OfflineCheck.None
+            : Check(f.OfflineCode, fp, now, TrustedKeys(f), f.CloudUserId);
+        if (current.Serial == c.Serial) { f.Save(); return current; }
+        if (IsUsed(f, c.Serial))
+        {
+            f.Save();
+            return OfflineCheck.Bad("این کد یک بار روی همین برنامه به کار رفته است — کدِ تازه بگیرید");
+        }
+        if (current.Serial.Length > 0) MarkUsed(f, current.Serial);
+        MarkUsed(f, c.Serial);
+        f.OfflineCode = ShortCode.Store(digits, now, fp);
+        f.OfflineCodeRedeemed = "";
+        LicenseClock.Anchor(f, now, fresh: false);
+        f.Save();
+        CloudLink.NotifyLicenseChanged();
+        return c with { Canonical = f.OfflineCode };
+    }
+
     /// <summary>برداشتنِ کد از همین کامپیوتر (اشتراکِ سرور دست نمی‌خورد).</summary>
     public static void Remove(AppSettings f)
     {
@@ -452,15 +497,58 @@ public static class OfflineKey
 
     /// <summary>این سریال روی همین کامپیوتر به کار رفته؟</summary>
     public static bool IsUsed(AppSettings f, string serial) =>
-        serial.Length > 0 && f.OfflineCodesUsed.Split(',').Contains(serial, StringComparer.Ordinal);
+        serial.Length > 0 && (f.OfflineCodesUsed.Split(',').Contains(serial, StringComparer.Ordinal)
+                              || UsedElsewhere().Contains(serial));
 
     private static void MarkUsed(AppSettings f, string serial)
     {
-        if (serial.Length == 0 || IsUsed(f, serial)) return;
-        var list = f.OfflineCodesUsed.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
-        list.Add(serial);
-        //  سقف: صد سریالِ آخر — فهرست بی‌پایان بزرگ نمی‌شود
-        f.OfflineCodesUsed = string.Join(",", list.TakeLast(100));
+        if (serial.Length == 0) return;
+        if (!f.OfflineCodesUsed.Split(',').Contains(serial, StringComparer.Ordinal))
+        {
+            var list = f.OfflineCodesUsed.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
+            list.Add(serial);
+            //  سقف: صد سریالِ آخر — فهرست بی‌پایان بزرگ نمی‌شود
+            f.OfflineCodesUsed = string.Join(",", list.TakeLast(100));
+        }
+        RememberElsewhere(serial);
+    }
+
+    //  ══ رونوشتِ «به کار رفته» بیرون از settings.json (۱۴۰۵/۰۷/۲۷) ══════════════
+    //  «جوری است که این کد رو هر حساب یک بار استفاده بشه حتی بدون نت؟» — فهرستِ تنها در
+    //  settings.json با پاک کردنِ آن فایل یا نصبِ دوباره زنده می‌شد. رونوشتِ رمزشده (DPAPI)
+    //  در رجیستریِ همین کاربرِ ویندوز با حذف و نصبِ دوبارهٔ برنامه نمی‌رود. ⚠️ آزمون‌ها
+    //  (‎DirOverride‎) نامِ جدای خودشان را دارند تا به هم نشت نکنند. فقط ویندوز.
+
+    private const string UsedKey = @"Software\VILL3N\PumpYaqobi";
+
+    private static string UsedName() => AppSettings.DirOverride is null ? "ou"
+        : "ou" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(AppSettings.Dir.ToLowerInvariant())))[..12];
+
+    private static HashSet<string> UsedElsewhere()
+    {
+        var set = new HashSet<string>(StringComparer.Ordinal);
+        if (!OperatingSystem.IsWindows()) return set;
+        try
+        {
+            using var k = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(UsedKey);
+            if (k?.GetValue(UsedName()) is string raw)
+                foreach (var x in SecretStore.Unprotect(raw).Split(',', StringSplitOptions.RemoveEmptyEntries)) set.Add(x);
+        }
+        catch { }
+        return set;
+    }
+
+    private static void RememberElsewhere(string serial)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        try
+        {
+            var set = UsedElsewhere();
+            if (!set.Add(serial)) return;
+            using var k = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(UsedKey);
+            k.SetValue(UsedName(), SecretStore.Protect(string.Join(",", set.TakeLast(500))));
+        }
+        catch { }
     }
 
     /// <summary>تاریخِ شمسی برای پیام‌ها.</summary>
@@ -495,6 +583,12 @@ public sealed record OfflineCheck(
     public static readonly OfflineCheck None = new(false, false, "", "", "", 0, 0, false, "");
 
     public static OfflineCheck Bad(string why) => new(false, false, why, "", "", 0, 0, false, "");
+
+    /// <summary>🎁 گیفت‌کارت: به کامپیوتری بسته نیست (هر برنامه یک بار).</summary>
+    public bool Gift { get; init; }
+
+    /// <summary>🔢 کدِ ۸ رقمی: فقط روی همین کامپیوتر، به سرورِ حساب نمی‌رود.</summary>
+    public bool Short { get; init; }
 
     /// <summary>امضا و کامپیوتر درست‌اند (شاید منقضی)؟</summary>
     public bool Genuine => Plan.Length > 0;

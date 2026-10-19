@@ -259,7 +259,7 @@ public class UpdateBehaviourTests : IDisposable
     //  از پاسخ) دست نخوردند.
 
     /// <summary>نشانیِ دانلودِ یک فایلِ انتشار — شکلِ واقعیِ گیت‌هاب، بی نامِ مخزن.</summary>
-    private static string Rel(string name) => "https://github.com/o/r/releases/download/v99.9.9/" + name;
+    private static string Rel(string name) => "https://github.com/" + UpdateService.Owner + "/r/releases/download/v99.9.9/" + name;
 
     private static string Sha(byte[] b) =>
         Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(b)).ToLowerInvariant();

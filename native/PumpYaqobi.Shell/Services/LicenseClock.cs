@@ -65,7 +65,16 @@ public static class LicenseClock
     private const string SealKey = @"Software\VILL3N\PumpYaqobi";
     private static readonly Dictionary<string, long> SealCache = new(StringComparer.Ordinal);
 
+    //  نامِ رجیستری. ⛔ امنیت (۱۴۰۵/۰۷/۲۷): در نصبِ واقعی نام از «ماشین+کاربر» است نه از
+    //  پوشهٔ نصب، پس حذف و نصبِ دوباره در پوشهٔ دیگر کف را صفر نمی‌کند (پیش‌تر می‌کرد).
+    //  آزمون‌ها (‎DirOverride‎) همان نامِ وابسته به پوشه را دارند تا کفِ هم را نبینند.
     private static string SealName() =>
+        AppSettings.DirOverride is null
+            ? "cf" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes("pump|clock|" + Environment.MachineName + "|" + Environment.UserName)))[..12]
+            : SealNameOfDir();
+
+    private static string SealNameOfDir() =>
         "cf" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
             System.Text.Encoding.UTF8.GetBytes(AppSettings.Dir.ToLowerInvariant())))[..12];
 
@@ -86,9 +95,13 @@ public static class LicenseClock
             try
             {
                 using var k = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(SealKey);
-                if (k?.GetValue(name) is string raw
-                    && long.TryParse(SecretStore.Unprotect(raw), System.Globalization.NumberStyles.Integer,
-                                     System.Globalization.CultureInfo.InvariantCulture, out var x)) v = x;
+                //  نامِ فعلی و — در نصبِ واقعی — نامِ کهنهٔ وابسته به پوشه هم، تا ارتقا کفِ
+                //  قبلی را نبازد. بیشترینِ هر دو.
+                var names = AppSettings.DirOverride is null ? new[] { name, SealNameOfDir() } : new[] { name };
+                foreach (var n in names)
+                    if (k?.GetValue(n) is string raw
+                        && long.TryParse(SecretStore.Unprotect(raw), System.Globalization.NumberStyles.Integer,
+                                         System.Globalization.CultureInfo.InvariantCulture, out var x) && x > v) v = x;
             }
             catch { /* رجیستریِ ناخوانا هیچ‌وقت برنامه را نمی‌بندد */ }
             SealCache[name] = v;

@@ -328,6 +328,7 @@ public sealed partial class CloudLink
         _settings.CloudStationId = StationId(json);
         _settings.CloudStationCode = StationCodeOf(json);
         _settings.CloudLicense = Str(json, "license");
+        LicenseGuard.Seal(_settings);
         _settings.CloudSyncedAt = AppClock.UnixMs;
         Seated();
         ReadSubscription(json);
@@ -680,6 +681,7 @@ public sealed partial class CloudLink
         //  ⚠️ مجوزِ **خالی** هم می‌نشیند: «اشتراک ندارد» یک جوابِ درست
         //  است، و نگه داشتنِ مجوزِ کهنه یعنی قفلی که باز مانده
         _settings.CloudLicense = Str(json, "license");
+        LicenseGuard.Seal(_settings);
         _settings.CloudSyncedAt = AppClock.UnixMs;
         Seated();
         ReadSubscription(json);
@@ -713,6 +715,7 @@ public sealed partial class CloudLink
         if (!ok) return CloudResult.No(why, errCode);
 
         _settings.CloudLicense = Str(json, "license");
+        LicenseGuard.Seal(_settings);
         _settings.CloudSyncedAt = AppClock.UnixMs;
         ReadSubscription(json);
         //  مُهرِ «دیدیم که باز است» — پایهٔ ارفاق (‎Entitlements.Grace‎). بی این،

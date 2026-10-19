@@ -113,7 +113,17 @@ public static class CrashGuard
             Directory.CreateDirectory(AppSettings.Dir);
             var line = $"── {AppClock.Now:yyyy-MM-dd HH:mm:ss} · {where} ─────────────{Environment.NewLine}"
                      + ex + Environment.NewLine + Environment.NewLine;
-            lock (Lock) File.AppendAllText(path, line);
+            lock (Lock)
+            {
+                //  ⛔ (۱۴۰۵/۰۷/۲۷) بی‌پایان بزرگ نمی‌شود: بالای ۲ مگ کنار می‌رود (crash.old.log)
+                try
+                {
+                    if (new FileInfo(path) is { Exists: true, Length: > 2 * 1024 * 1024 })
+                        File.Move(path, Path.Combine(AppSettings.Dir, "crash.old.log"), overwrite: true);
+                }
+                catch { }
+                File.AppendAllText(path, line);
+            }
         }
         catch { }
 

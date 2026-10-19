@@ -220,10 +220,12 @@ public sealed partial class VipSectionViewModel : SectionViewModel
         var c = OfflineKey.Apply(f, text);
         if (!c.Valid) { SetStatus("❌ " + c.Why, "Pump.Danger"); return; }
         OfflineInput = "";
-        SetStatus("✅ کلیدِ اشتراکِ بی‌اینترنت پذیرفته شد — " + c.PlanTitle + " · "
+        var title = c.Short ? "🔢 کدِ ۸ رقمی پذیرفته شد — " + (int)Math.Round((c.EndsAt - c.IssuedAt) / 86_400_000d) + " روز، "
+            : c.Gift ? "🎁 گیفت‌کارت پذیرفته شد — " : "✅ کلیدِ اشتراکِ بی‌اینترنت پذیرفته شد — ";
+        SetStatus(title + c.PlanTitle + " · "
                   + (c.Permanent ? "دائمی" : "تا " + OfflineKey.Localize(c.EndsAt))
                   + ". قفل‌ها همین حالا باز شدند.", "Pump.Ok");
-        _host.Toast("🔓 کلیدِ اشتراکِ بی‌اینترنت پذیرفته شد — " + c.PlanTitle, ToastKind.Ok);
+        _host.Toast((c.Short || c.Gift ? title : "🔓 کلیدِ اشتراکِ بی‌اینترنت پذیرفته شد — ") + c.PlanTitle, ToastKind.Ok);
         Show();
     }
 
@@ -244,6 +246,7 @@ public sealed partial class VipSectionViewModel : SectionViewModel
                 ? " · سرورِ حساب نپذیرفت"
                 : " · سرورِ حساب هم دید ✅"
             : " · سرورِ حساب هنوز ندیده (وقتی اینترنت و حساب بود، خودش می‌رود)";
+        if (c.Short) server = " · کدِ ۸ رقمی (فقط همین کامپیوتر)";
         //  ⛔ دلیلِ واقعیِ «سرور هنوز خدماتِ سرور را باز نکرده» (۱۴۰۵/۰۷/۲۱) — همان جمله‌ای
         //  که همگام‌سازی هم می‌گوید، از یک جا (‎CloudLink.OfflineServerWhy‎)
         if (c.Valid && CloudLink.OfflineServerWhy.Length > 0)
