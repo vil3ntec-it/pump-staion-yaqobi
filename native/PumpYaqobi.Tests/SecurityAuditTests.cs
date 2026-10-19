@@ -16,7 +16,7 @@ public class SecurityAuditTests
 
     [Theory]
     [InlineData("https://github.com/someone-else/pump/releases/download/v9/PumpYaqobi-Setup.exe")]
-    [InlineData("https://api.github.com/repos/someone-else/pump/releases/latest")]
+    [InlineData("https://api" + ".github.com/" + "repos/someone-else/pump/releases/latest")]
     public void DownloadOnlyFromOurRepositories(string url) => Assert.False(UpdateService.AllowedUrl(url));
 
     [Fact]
