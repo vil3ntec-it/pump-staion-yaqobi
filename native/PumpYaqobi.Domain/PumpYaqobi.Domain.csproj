@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- 🌐 فرهنگِ «فارسی ⇐ پشتو» — Lang.cs -->
+    <EmbeddedResource Include="Lang\ps.json" LogicalName="PumpYaqobi.Lang.ps.json" />
+  </ItemGroup>
+
 </Project>

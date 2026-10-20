@@ -209,7 +209,7 @@ public static class DocStyle
             {
                 if (piece == "&[Page]") t.CurrentPageNumber().Format(Shift);
                 else if (piece == "&[Pages]") t.TotalPages().Format(Shift);
-                else t.Span(HeaderFooter.Render(piece, 1, 1, s, title, dates));
+                else t.Span(Domain.Lang.T(HeaderFooter.Render(piece, 1, 1, s, title, dates)));
             }
         });
     }

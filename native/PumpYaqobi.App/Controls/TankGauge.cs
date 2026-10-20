@@ -201,7 +201,7 @@ public class TankGauge : Control
             Centered(ctx, WaterFloatLabel, semi, 11, label, FloatX, 233, 110);
         if (!string.IsNullOrEmpty(CaptionText))
         {
-            var ft = new FormattedText(CaptionText!, CultureInfo.CurrentCulture, FlowDirection.RightToLeft,
+            var ft = new FormattedText(Domain.Lang.T(CaptionText!), CultureInfo.CurrentCulture, FlowDirection.RightToLeft,
                                        semi, 10.5, label) { TextAlignment = TextAlignment.Right, MaxTextWidth = 170 };
             ctx.DrawText(ft, new Point(Body.Right - 170, 233));
         }
@@ -347,6 +347,7 @@ public class TankGauge : Control
                                  double cx, double top, double width, bool shadow = false,
                                  FlowDirection flow = FlowDirection.RightToLeft)
     {
+        s = Domain.Lang.T(s);   // 🌐 نوشتهٔ کشیده‌شده از قلابِ ‎LangHook‎ نمی‌گذرد
         if (shadow)
         {
             var sh = new FormattedText(s, CultureInfo.CurrentCulture, flow, face, size,

@@ -11,6 +11,12 @@ namespace PumpYaqobi.App.Services;
 public sealed class AppSettings
 {
     public string ThemeId { get; set; } = "blue";
+
+    /// <summary>
+    /// 🌐 زبانِ برنامه: «fa» (پیش‌فرض) یا «ps» (پشتو) — <c>Domain.Lang</c>. با بازشدنِ دوبارهٔ
+    /// برنامه اثر می‌کند، پس با <c>Save()</c>ِ بادوام نوشته می‌شود نه <c>SaveSoon()</c>.
+    /// </summary>
+    public string UiLang { get; set; } = "fa";
     public string LastSection { get; set; } = "dashboard";
 
     /// <summary>اندازهٔ ماشین‌حسابِ شناور — «اندازه‌اش ثبت بشه».</summary>

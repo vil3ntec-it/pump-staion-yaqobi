@@ -25,6 +25,23 @@ internal static class Program
     {
         var outDir = args.Length > 0 ? args[0] : "shots";
 
+        //  🌐 ‎PUMP_LANG=ps‎ ⇒ هر سنجه و عکس به پشتو (‎Domain.Lang‎ · ‎LangHook‎)
+        if (Environment.GetEnvironmentVariable("PUMP_LANG") is { Length: > 0 } lang)
+        {
+            PumpYaqobi.Domain.Lang.Use(lang);
+            PumpYaqobi.App.Controls.LangHook.Install();
+            //  ‎PUMP_LANG_MISS=فایل‎ ⇒ هر نوشته‌ای که برگردانده نشد، برای تکمیلِ فرهنگ
+            if (Environment.GetEnvironmentVariable("PUMP_LANG_MISS") is { Length: > 0 } missFile
+                && PumpYaqobi.Domain.Lang.Current is { } cur)
+            {
+                var miss = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
+                cur.Missed = s => miss.TryAdd(s, 0);
+                AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+                    File.WriteAllText(missFile, System.Text.Json.JsonSerializer.Serialize(miss.Keys.Order(),
+                        new System.Text.Json.JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping, WriteIndented = true }));
+            }
+        }
+
         //  ⚡ مهلتِ پارکِ جدول‌ها (۱۴۰۵/۰۷/۲۲) در سنجه‌ها صفر است، تا هر سنجه‌ای که ردیفِ زنده
         //  می‌شمارد همان رفتارِ پیشین را ببیند؛ فقط ‎idle‎ (خودِ مهلت را می‌سنجد) و ‎years‎
         //  (سرعتِ برگشت با همان چیزی که کاربر دارد) مهلتِ واقعیِ برنامه را نگه می‌دارند.

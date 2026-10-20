@@ -53,6 +53,31 @@ public sealed partial class MainViewModel
         _settings.SaveSoon();
     }
 
+    // ══ 🌐 زبان: فارسی ⇄ پشتو (۱۴۰۵/۰۷/۲۸) ═════════════════════════════════
+    //  دکمهٔ سربرگ نامِ زبانِ **دیگر** را می‌گوید. تعویض = نوشتنِ بادوام ⇐ بستن و
+    //  دوباره باز کردن (‎AppRestart‎) — هر نوشتهٔ صفحه از نو به زبانِ تازه ساخته می‌شود.
+    //  ⚠️ پیامِ تعویض به هر دو زبان است: کسی که پشتو می‌خواهد شاید فارسی نخواند.
+
+    public string LangSwitchText => Lang.Code == Lang.Pashto ? "فارسی" : "پښتو";
+
+    [RelayCommand]
+    private async Task SwitchLang()
+    {
+        var toPashto = Lang.Code != Lang.Pashto;
+        var ok = toPashto
+            ? await Dialogs.ConfirmAsync("🌐 زبان · ژبه",
+                "برنامه به پشتو برمی‌گردد — بسته و دوباره باز می‌شود. هیچ نوشته‌ای گم نمی‌شود.\n" +
+                "پروګرام په پښتو اړول کېږي — بندېږي او بیا پرانیستل کېږي. هېڅ لیکنه نه ورکېږي.",
+                "✅ پښتو", "انصراف")
+            : await Dialogs.ConfirmAsync("🌐 ژبه",
+                "پروګرام بېرته فارسي ته اړول کېږي — بندېږي او بیا پرانیستل کېږي. هېڅ لیکنه نه ورکېږي.",
+                "✅ فارسی", "لغوه");
+        if (!ok) return;
+        if (!await AppRestart.SwitchLanguageAsync(_settings, toPashto ? Lang.Pashto : Lang.Persian))
+            AppHost.Current.Toast(toPashto ? "🌐 پښتو — برنامه را ببندید و دوباره باز کنید" : "🌐 فارسی — پروګرام بند او بیا پرانیزئ",
+                  ToastKind.Info);
+    }
+
     /// <summary>
     /// ══ چرا ‎AllowConcurrentExecutions‎ ═══════════════════════════════════
     ///

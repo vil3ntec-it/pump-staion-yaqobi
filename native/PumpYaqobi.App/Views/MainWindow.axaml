@@ -305,6 +305,10 @@
                   IsVisible="{Binding SimpleMode}" Content="{Binding AllNavText}"
                   Command="{Binding ToggleAllNavCommand}"
                   ToolTip.Tip="حالتِ ساده روشن است — بقیهٔ بخش‌ها این‌جا؛ خاموش کردنش در «پروفایل»" />
+          <!-- 🌐 زبان: فارسی ⇄ پشتو (۱۴۰۵/۰۷/۲۸) — نامِ زبانِ دیگر را می‌گوید (‎SwitchLang‎) -->
+          <Button Classes="pill-btn" VerticalAlignment="Center" Margin="0,0,6,0"
+                  Content="{Binding LangSwitchText}" Command="{Binding SwitchLangCommand}"
+                  ToolTip.Tip="🌐 زبانِ برنامه: فارسی ⇄ پشتو" />
           <ToggleButton Classes="themeswitch" VerticalAlignment="Center"
                         IsChecked="{Binding DarkSwitch}"
                         ToolTip.Tip="تم: زدن ⇒ روشن ⇄ تیره">
