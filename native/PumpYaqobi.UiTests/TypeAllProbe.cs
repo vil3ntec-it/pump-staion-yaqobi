@@ -33,7 +33,12 @@ internal static class TypeAllProbe
     {
         var dir = Path.Combine(Path.GetTempPath(), "pump-typeall-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
-        AppHost.Start(Path.Combine(dir, "pump.db"));
+        var file = Path.Combine(dir, "pump.db");
+        //  ‎TA_YEARS=1‎ (۱۴۰۵/۰۷/۲۸): همان پنج سال دادهٔ ‎years‎ — تایپِ کند معمولاً فقط با دادهٔ
+        //  واقعی دیده می‌شود («همه چی زودتر نوشته بشه، حتی نوشتن کند نباشد»). رمزِ آن «1234» است.
+        var years = Environment.GetEnvironmentVariable("TA_YEARS") == "1";
+        if (years) YearsAudit.Seed(file);
+        AppHost.Start(file);
         FakeLicense.Grant();
         AppBuilder.Configure<PumpYaqobi.App.App>().UseSkia()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
@@ -42,6 +47,7 @@ internal static class TypeAllProbe
         win.Show();
         Round14Probe.Settle(win);
         var vm = (MainViewModel)win.DataContext!;
+        if (years) vm.Lock.Password = "1234";
         LockIn.Wait(vm.Lock);
         Round14Probe.Settle(win);
         MarketingShots.Fill(AppHost.Current);
