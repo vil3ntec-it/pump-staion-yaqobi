@@ -357,14 +357,13 @@
                وقتی یک حواله ۷۰٪ رفته یا تمام شده. شرح: ‎HawalaPageViewModel‎ -->
           <!-- ⛔ (۱۴۰۵/۰۷/۲۵، عکسِ صاحب ریپو) «بغلِ فیصدی، پایین نیاید، همه تراز» — کوتاه و
                بی نشانه، تا در همان خطِ نوار بماند؛ شمارِ حواله‌ها در راهنمای ماوس است. -->
-          <Button Classes="ghost" Command="{Binding Current.OpenHawalasCommand}" Padding="8,4"
-                  ToolTip.Tip="{Binding Current.HawalaTipText, FallbackValue='حواله‌های این حساب'}">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <TextBlock Text="تیل چکنهٔ حواله" VerticalAlignment="Center" />
-              <Ellipse Width="8" Height="8" VerticalAlignment="Center" Fill="{DynamicResource Pump.Danger}"
-                       IsVisible="{Binding Current.HawalaAlert, FallbackValue=False}" />
-            </StackPanel>
-          </Button>
+          <!-- 🔴 (۱۴۰۵/۰۷/۲۸) نقطه سرِ گوشهٔ دکمه، مثلِ کشوی ماه و سال (‎monthdot badge‎) — نه داخلِ متن -->
+          <Panel>
+            <Button Classes="ghost" Command="{Binding Current.OpenHawalasCommand}" Padding="8,4"
+                    Content="تیل چکنهٔ حواله"
+                    ToolTip.Tip="{Binding Current.HawalaTipText, FallbackValue='حواله‌های این حساب'}" />
+            <Ellipse Classes="monthdot badge" IsVisible="{Binding Current.HawalaAlert, FallbackValue=False}" />
+          </Panel>
 
           <!-- «🗂️ آرشیو» دقیقاً بغلِ «٪ فیصدی» و دقیقاً مثلِ آن — خواستهٔ صریحِ
                صاحب ریپو در سایت: «برای کادر جدول آرشیو هم یک کادر کشویی درست

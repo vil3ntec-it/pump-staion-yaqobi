@@ -69,6 +69,9 @@ public sealed partial class DebtorCardViewModel : ObservableObject
             : 0d;
     }
 
+    /// <summary>🔴 یک حوالهٔ این قرض‌دار ۷۰٪ رفته، تمام یا سوخته — نقطهٔ گوشهٔ کارت.</summary>
+    [ObservableProperty] private bool _hawalaAlert;
+
     /// <summary>پرشدنِ نوارِ بالای کارت، ۰ تا ۱۰۰.</summary>
     public double Meter { get; }
 
@@ -343,6 +346,25 @@ public sealed partial class DebtSectionViewModel : SectionViewModel, ICardGridHo
             d, accounts.TryGetValue(d.Id, out var a) ? a : new List<DebtAccount>(), _host.Debt)).ToList();
         for (var i = 0; i < _all.Count; i++) { _all[i].Index = i + 1; _all[i].Owner = this; }
         ApplyFilter();
+        await LoadHawalaDotsAsync(_all, accounts);
+    }
+
+    /// <summary>
+    /// ══ 🔴 نقطهٔ سرخِ حواله روی کارتِ قرض‌دار (۱۴۰۵/۰۷/۲۸) ══════════════════════════
+    /// «وقتی ۷۰ تا ۱۰۰ تیلش رفت… بیرون، سرِ کادرِ قرض‌دار هم، مثلِ کشویی‌های ماه و سال.»
+    /// پس از نشستنِ کارت‌ها و روی نخِ دیگر؛ «بی‌هشدار» هیچ نقطه‌ای نمی‌گیرد.
+    /// </summary>
+    private async Task LoadHawalaDotsAsync(List<DebtorCardViewModel> cards, Dictionary<long, List<DebtAccount>> accounts)
+    {
+        try
+        {
+            var byId = new Dictionary<long, DebtAccount>();
+            foreach (var a in accounts.Values.SelectMany(l => l)) byId[a.Id] = a;
+            var hit = await Task.Run(() => _host.Hawalas.AlertAccountsAsync(id =>
+                byId.TryGetValue(id, out var a) ? HawalaCalc.ForMode(_host.Debt.Status(new[] { a }), a.Mode) : null));
+            foreach (var c in cards) c.HawalaAlert = !c.Muted && c.Accounts.Any(a => hit.Contains(a.Id));
+        }
+        catch { /* نقطهٔ سرخ نباید فهرست را بشکند */ }
     }
 
     private void ApplyFilter()

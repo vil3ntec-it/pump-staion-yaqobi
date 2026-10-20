@@ -995,7 +995,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
             var qs = await Task.Run(() => _host.Hawalas.ListAsync(id));
             if (qs.Count == 0) { HawalaCount = 0; HawalaAlert = false; return; }
             var rows = await Task.Run(() => _host.Hawalas.AccountRowsAsync(id));
-            var st = _host.Debt.Status(new[] { Entity });
+            var st = HawalaCalc.ForMode(_host.Debt.Status(new[] { Entity }), Entity.Mode);
             HawalaCount = qs.Count;
             HawalaAlert = qs.Any(q => HawalaCalc.Of(q, rows, st).Alert);
         }

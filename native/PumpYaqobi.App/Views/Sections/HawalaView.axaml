@@ -39,13 +39,13 @@
       <ItemsControl ItemsSource="{Binding Items}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:HawalaItemViewModel">
-            <Border Classes="panel" Padding="14,10" Margin="0,0,0,8"
+            <!-- 🔴 (۱۴۰۵/۰۷/۲۸) نقطه سرِ گوشهٔ کادرِ حواله، مثلِ کشوی ماه و سال -->
+            <Panel Margin="0,0,0,8">
+            <Border Classes="panel" Padding="14,10"
                     BorderThickness="2"
                     BorderBrush="{Binding StateBrushKey, Converter={x:Static th:ResourceKeyToBrushConverter.Instance}}">
               <StackPanel Spacing="8">
                 <Grid ColumnDefinitions="Auto,8,*,Auto">
-                  <Ellipse Grid.Column="0" Width="12" Height="12" VerticalAlignment="Center"
-                           Fill="{DynamicResource Pump.Danger}" IsVisible="{Binding Alert}" />
                   <Button Grid.Column="2" Classes="ghost" Command="{Binding ToggleCommand}" HorizontalAlignment="Left"
                           ToolTip.Tip="برداشت‌های همین حواله">
                     <StackPanel Orientation="Horizontal" Spacing="10">
@@ -100,6 +100,8 @@
                 </StackPanel>
               </StackPanel>
             </Border>
+            <Ellipse Classes="monthdot badge" IsVisible="{Binding Alert}" />
+            </Panel>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>

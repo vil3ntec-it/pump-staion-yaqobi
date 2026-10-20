@@ -115,7 +115,7 @@ public sealed partial class HawalaPageViewModel : ObservableObject
         var rows = qs.Count == 0 ? new List<DebtRow>() : await _host.Hawalas.AccountRowsAsync(Account.Entity.Id);
         var open = Items.Where(i => i.IsOpen).Select(i => i.Entity.Id).ToHashSet();
         //  ⛔ حسابِ خودِ قرض‌دار سقفِ حواله است — شرح بالای ‎HawalaCalc‎
-        var acct = _host.Debt.Status(new[] { Account.Entity });
+        var acct = HawalaCalc.ForMode(_host.Debt.Status(new[] { Account.Entity }), Account.Entity.Mode);
         Items.Clear();
         //  کم‌مانده‌ها و تمام‌شده‌ها اول — همان‌هایی که نقطهٔ سرخ دارند
         foreach (var q in qs)

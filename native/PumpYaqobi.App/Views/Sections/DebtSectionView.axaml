@@ -94,6 +94,8 @@
                             CommandParameter="{Binding}" />
                 </ContextMenu>
               </Button.ContextMenu>
+              <!-- 🔴 نقطهٔ سرخِ حواله سرِ گوشهٔ کارت (۱۴۰۵/۰۷/۲۸) — همان ‎monthdot badge‎ِ کشوی ماه و سال -->
+              <Panel>
               <Border Classes="person-card">
                 <!-- ══ چیدمانِ کارت — همان نمونه‌ای که صاحب ریپو پسندید ══════
                      نوارِ زنده بالا، بعد نام، عددِ درشت، واحد، حالِ حساب، و در
@@ -141,6 +143,9 @@
                       <TextBlock Text="{Binding FuelBadge}" FontSize="13" FontWeight="Bold"
                                  IsVisible="{Binding HasFuelBadge}"
                                  Foreground="{DynamicResource Pump.Ink.Danger}" />
+                      <TextBlock Text="🔴 حواله" FontSize="13" FontWeight="Bold"
+                                 IsVisible="{Binding HawalaAlert}"
+                                 Foreground="{DynamicResource Pump.Ink.Danger}" />
                       <!-- حسابِ خودِ صاحبِ پمپ: هیچ هشداری از آن نمی‌آید -->
                       <TextBlock Text="🔕 بی‌هشدار" FontSize="13" FontWeight="Bold"
                                  IsVisible="{Binding Muted}"
@@ -164,6 +169,9 @@
                   </StackPanel>
                 </Grid>
               </Border>
+              <!-- ⚠️ داخلِ گوشه، نه روی لبه: پوستهٔ دکمهٔ کارت بیرونِ قابش را می‌بُرد -->
+              <Ellipse Classes="monthdot badge" Margin="5,9,0,0" IsVisible="{Binding HawalaAlert}" />
+              </Panel>
               </Button>
             </DataTemplate>
           </c:CardGrid.ItemTemplate>
