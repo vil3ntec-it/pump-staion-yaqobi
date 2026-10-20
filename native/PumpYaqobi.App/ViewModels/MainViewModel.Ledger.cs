@@ -232,40 +232,32 @@ public sealed partial class MainViewModel
         if (version == _bannerVersion) return;
         _bannerVersion = version;
 
-        //  ⚡ هر چهار عدد روی نخِ دیگر (۱۴۰۵/۰۷/۲۸): ‎SQLite‎ِ «async» در واقع هم‌زمان است و
-        //  این خواندن (همهٔ ردیف‌های شرکت‌ها + جمعِ همهٔ حساب‌ها) با پنج سال داده ~۳۰۰ تا ۵۰۰ms
-        //  نخِ رابط را درست سرِ رفتن به بخشِ بعد از هر ویرایش می‌خشکاند. فقط خواندن است و هر
-        //  سرویس دیتابیسِ خودش را می‌سازد؛ نوشتنِ نوار همان‌جا روی نخِ رابط می‌ماند.
-        var (compAlbaqi, debt, profit, expToday) = await Task.Run(async () =>
-        {
-            // ۱) الباقیِ شرکت‌های تیل
-            var companies = await host.Companies.ListAsync();
-            var compAlbaqi = companies.Sum(c => host.Company.Summarize(c, c.Rows).AlbaqiAfn);
+        // ۱) الباقیِ شرکت‌های تیل
+        var companies = await host.Companies.ListAsync();
+        var compAlbaqi = companies.Sum(c => host.Company.Summarize(c, c.Rows).AlbaqiAfn);
 
-            // ۲) قرضِ کلِ قرض‌داران
-            //
-            // ⚠️ این‌جا پیش از این **همهٔ ردیف‌های همهٔ حساب‌ها** خوانده می‌شد — و
-            // چون نوارِ بالا با هر بار عوض کردنِ بخش تازه می‌شود، همان هزینه به
-            // ازای هر جابه‌جایی تکرار می‌گشت. سنجشِ کارایی همین را نشان داد:
-            // باز کردنِ هر بخش، حتی سبک‌ترینشان، شش ثانیهٔ ثابت.
-            //
-            // ‎CardAccountsAsync‎ همان جمع‌ها را از خودِ دیتابیس می‌گیرد (با همان
-            // خوددرمانیِ ردیف، داخلِ کوئری) و هیچ ردیفی نمی‌خواند.
-            var accounts = await host.Debtors.CardAccountsAsync();
-            decimal debt = 0;
-            foreach (var list in accounts.Values) debt += host.Debt.SumTotals(list).All.Albaqi;
+        // ۲) قرضِ کلِ قرض‌داران
+        //
+        // ⚠️ این‌جا پیش از این **همهٔ ردیف‌های همهٔ حساب‌ها** خوانده می‌شد — و
+        // چون نوارِ بالا با هر بار عوض کردنِ بخش تازه می‌شود، همان هزینه به
+        // ازای هر جابه‌جایی تکرار می‌گشت. سنجشِ کارایی همین را نشان داد:
+        // باز کردنِ هر بخش، حتی سبک‌ترینشان، شش ثانیهٔ ثابت.
+        //
+        // ‎CardAccountsAsync‎ همان جمع‌ها را از خودِ دیتابیس می‌گیرد (با همان
+        // خوددرمانیِ ردیف، داخلِ کوئری) و هیچ ردیفی نمی‌خواند.
+        var accounts = await host.Debtors.CardAccountsAsync();
+        decimal debt = 0;
+        foreach (var list in accounts.Values) debt += host.Debt.SumTotals(list).All.Albaqi;
 
-            // ۳) مفادِ امروز — ⛔ از ۱۴۰۵/۰۷/۲۰ همان قاعدهٔ «مفاد و ضرر»: پولِ لیترِ
-            //    فروخته‌شدهٔ ورقِ امروز، پطرول و دیزل هر دو (نه فایدهٔ پارچه). فقط همان
-            //    چهار ستونِ امروز خوانده می‌شود، نه همهٔ پارچه‌ها.
-            var tk = Shamsi.Key(Shamsi.Today());
-            var profit = (await host.WaraqData.SalesLinesAsync((tk, tk))).Sum(l => l.PetrolMoney + l.DieselMoney);
+        // ۳) مفادِ امروز — ⛔ از ۱۴۰۵/۰۷/۲۰ همان قاعدهٔ «مفاد و ضرر»: پولِ لیترِ
+        //    فروخته‌شدهٔ ورقِ امروز، پطرول و دیزل هر دو (نه فایدهٔ پارچه). فقط همان
+        //    چهار ستونِ امروز خوانده می‌شود، نه همهٔ پارچه‌ها.
+        var tk = Shamsi.Key(Shamsi.Today());
+        var profit = (await host.WaraqData.SalesLinesAsync((tk, tk))).Sum(l => l.PetrolMoney + l.DieselMoney);
 
-            // ۴) مصارفِ امروز — فقط ماهِ جاری، نه همهٔ مصارفِ تاریخ. «امروز» همیشه
-            //    داخلِ همین ماه است، پس عدد همان است و خواندن هزار برابر کمتر.
-            var expToday = calc.ExpQuick(await host.ExpenseLedger.ListAsync(Shamsi.ThisMonth())).Day;
-            return (compAlbaqi, debt, profit, expToday);
-        });
+        // ۴) مصارفِ امروز — فقط ماهِ جاری، نه همهٔ مصارفِ تاریخ. «امروز» همیشه
+        //    داخلِ همین ماه است، پس عدد همان است و خواندن هزار برابر کمتر.
+        var expToday = calc.ExpQuick(await host.ExpenseLedger.ListAsync(Shamsi.ThisMonth())).Day;
 
         string M(decimal v) => Shamsi.Money(Math.Round(v, 0, MidpointRounding.AwayFromZero)) + " افغانی";
         Banner[0].Value = M(compAlbaqi);
