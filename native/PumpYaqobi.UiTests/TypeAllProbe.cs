@@ -33,7 +33,12 @@ internal static class TypeAllProbe
     {
         var dir = Path.Combine(Path.GetTempPath(), "pump-typeall-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
-        AppHost.Start(Path.Combine(dir, "pump.db"));
+        var file = Path.Combine(dir, "pump.db");
+        //  ‎TA_YEARS=1‎ (۱۴۰۵/۰۷/۲۸): همان پنج سال دادهٔ ‎years‎ — تایپِ کند معمولاً فقط با دادهٔ
+        //  واقعی دیده می‌شود («همه چی زودتر نوشته بشه، حتی نوشتن کند نباشد»). رمزِ آن «1234» است.
+        var years = Environment.GetEnvironmentVariable("TA_YEARS") == "1";
+        if (years) YearsAudit.Seed(file);
+        AppHost.Start(file);
         FakeLicense.Grant();
         AppBuilder.Configure<PumpYaqobi.App.App>().UseSkia()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
@@ -42,6 +47,7 @@ internal static class TypeAllProbe
         win.Show();
         Round14Probe.Settle(win);
         var vm = (MainViewModel)win.DataContext!;
+        if (years) vm.Lock.Password = "1234";
         LockIn.Wait(vm.Lock);
         Round14Probe.Settle(win);
         MarketingShots.Fill(AppHost.Current);
@@ -211,6 +217,14 @@ internal static class TypeAllProbe
                 sw.Stop();
                 if (!KeyMs.TryGetValue(_where, out var list)) KeyMs[_where] = list = new List<double>();
                 list.Add(sw.Elapsed.TotalMilliseconds);
+                //  ‎TA_SLOW=ms‎: کلیدِ کندتر از این، با جایش — برای پیدا کردنِ ریشه
+                if (int.TryParse(Environment.GetEnvironmentVariable("TA_SLOW"), out var slow) && sw.Elapsed.TotalMilliseconds > slow)
+                {
+                    var fx = win.FocusManager?.GetFocusedElement() as Control;
+                    var gx = fx?.FindAncestorOfType<DataGrid>();
+                    Console.WriteLine($"   ⏱ {sw.Elapsed.TotalMilliseconds:0}ms · {_where} · «{text[..(i + 1)]}» · "
+                                      + (gx is not null ? "جدول " + gx.Name : "کادر " + ((fx as TextBox)?.Watermark ?? fx?.Name ?? fx?.GetType().Name)));
+                }
             }
             if (Environment.GetEnvironmentVariable("TA_DEBUG") == "1")
             {

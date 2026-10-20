@@ -192,6 +192,32 @@ public class CloudSessionTests : IDisposable
     }
 
     /// <summary>
+    /// ⛔ ۴۰۳ِ ناشناس — صفحهٔ ‎HTML‎ِ تونل یا دیوارِ آتشِ کلادفلر — نشست را پاک نمی‌کند؛ فقط
+    /// ۴۰۱/۴۰۳ِ خودِ سرور با شکلِ ‎{error:…}‎ (۱۴۰۵/۰۷/۲۸). پیش از این همه بیرون می‌افتادند.
+    /// </summary>
+    [Fact]
+    public async Task Forbidden_E_Nashenas_Neshast_Ra_Pak_Nemikonad()
+    {
+        Serve((_, _) => new HttpResponseMessage(HttpStatusCode.Forbidden)
+        {
+            Content = new StringContent("<html><title>Attention Required! | Cloudflare</title></html>",
+                                        System.Text.Encoding.UTF8, "text/html"),
+        });
+
+        var (link, _) = Link(s =>
+        {
+            s.CloudAccountToken = "acc-1";
+            s.CloudRefreshToken = "ref-1";
+            s.CloudAccessExpiresAt = AnHourAgo;
+        });
+
+        var (ok, _, _, _, _) = await link.HomeFromAccountAsync();
+        Assert.False(ok);
+        Assert.True(link.SignedIn);
+        Assert.Equal("ref-1", AppSettings.Load().CloudRefreshToken);
+    }
+
+    /// <summary>
     /// ⛔ **بی‌اینترنت هیچ‌وقت کسی را از حسابش بیرون نمی‌اندازد.** این برنامه
     /// اساساً آفلاین است؛ یک قطعیِ مودم نباید نشست را پاک کند.
     /// </summary>

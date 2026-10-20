@@ -354,6 +354,21 @@ public sealed partial class SyncStore
         Quiet(db);
     }
 
+    /// <summary>
+    /// ⛔ «جدولِ ناشناس» (‎unknown_table‎) قطعی نیست: سرورِ حسابی که جدولِ تازهٔ برنامه را هنوز
+    /// نمی‌شناخت (حواله، مخزن‌های شماره‌دار، تقسیمِ خرید، کالیبره و تبدیلِ تیل — تا ۱۴۰۵/۰۷/۲۸)
+    /// همان را رد می‌کرد و op برای همیشه «رفته» می‌ماند؛ کامپیوترِ دوم هیچ‌وقت آن‌ها را نمی‌دید.
+    /// پس با هر بار روشن شدنِ همگام‌سازی دوباره در صف — سرور که شناخت، می‌نشینند.
+    /// </summary>
+    public int RequeueUnknownTables()
+    {
+        using var db = _dbf.Create();
+        var rows = db.SyncOps.Where(x => x.Synced && x.Rejected == "unknown_table").ToList();
+        foreach (var row in rows) { row.Synced = false; row.Rejected = ""; }
+        if (rows.Count > 0) Quiet(db);
+        return rows.Count;
+    }
+
     /// <summary>تلاشِ ناموفق — فقط شمرده می‌شود، هیچ opی دور ریخته نمی‌شود.</summary>
     public void CountAttempt(IEnumerable<string> opIds)
     {
@@ -700,7 +715,12 @@ public sealed partial class SyncStore
         //  ⚠️ **ویرایشِ پس از حذف، ردیف را زنده می‌کند** — همان قاعدهٔ بندِ
         //  ۲۰٫۴ی سرور. بی این، دو دستگاه می‌توانستند سرِ یک ردیف به دو حالِ
         //  جدا برسند.
-        sets.Add("\"DeletedAt\" = NULL");
+        //  ⛔ مگر خودِ op از «DeletedAt» بگوید (حذفِ نرم با نوشتنِ همان ستون — تقسیمِ
+        //  خرید روی مخزن‌ها، حذفِ مخزن، یادداشت؛ و «بارِ اول»): در ‎UPDATE‎ِ SQLite
+        //  آخرین مقدارِ یک ستون برنده است، پس این ‎NULL‎ حذف را روی کامپیوترِ دیگر
+        //  پس می‌گرفت (۱۴۰۵/۰۷/۲۸). مقدارِ خودِ op (یا ماندنِ مالِ ما) تصمیم است.
+        if (!(op.Fields.ValueKind == JsonValueKind.Object && op.Fields.TryGetProperty("DeletedAt", out _)))
+            sets.Add("\"DeletedAt\" = NULL");
         sets.Add($"\"UpdatedAt\" = {{{args.Count}}}");
         args.Add(DbTime(now));
 

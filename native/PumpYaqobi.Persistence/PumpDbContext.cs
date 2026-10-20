@@ -732,7 +732,12 @@ public sealed class PumpDbContext : DbContext
             //  «بارِ اول» هرگز نمی‌فرستد (`SeedTable`).
             if (string.IsNullOrEmpty(entry.Entity.SyncUid)) entry.Entity.SyncUid = Ulid.New(nowMs);
             if (ops is null) continue;
-            if (OpLog.Build(entry, was, nowMs) is { } op) ops.Add(op);
+            //  ⛔ حذفِ نرم با نوشتنِ خودِ ستون (‎x.DeletedAt = now‎، نه ‎Remove‎) هم «حذف» است،
+            //  نه «ویرایش» — وگرنه کامپیوترِ دیگر با قاعدهٔ «ویرایش زنده می‌کند» نگهش می‌داشت (۱۴۰۵/۰۷/۲۸).
+            var opState = was == EntityState.Modified && entry.Entity.DeletedAt is not null
+                          && entry.Property(nameof(EntityBase.DeletedAt)) is { IsModified: true, OriginalValue: null }
+                ? EntityState.Deleted : was;
+            if (OpLog.Build(entry, opState, nowMs) is { } op) ops.Add(op);
         }
 
         // در **همان** تراکنش می‌نشینند: یا داده و دفتر هر دو، یا هیچ‌کدام

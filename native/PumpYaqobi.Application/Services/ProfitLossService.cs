@@ -61,7 +61,9 @@ public sealed class ProfitInput
     /// همان ‎InvoiceRateDiff‎، ولی از پنج ستونِ فاکتورهای تاییدشده
     /// (<see cref="InvoiceRate"/>)، نه از شیءِ کاملِ همهٔ فاکتورها.
     /// </summary>
-    public decimal? InvoiceRateDiffSum { get; init; }
+    /// ⚠️ ‎set‎، نه ‎init‎: تنها عددی که با تایپِ نرخِ اتحادیه عوض می‌شود — صفحه همان را در
+    /// حافظه جابه‌جا می‌کند، بی خواندنِ دوبارهٔ دفتر (‎ProfitSectionViewModel.RecalcIfRateMoved‎).
+    public decimal? InvoiceRateDiffSum { get; set; }
     /// <summary>
     /// جمعِ بردگیِ «بی‌فاکتور»ها — از خودِ SQLite و فقط برای یک <b>دوره</b>
     /// (ماه یا سال). پر ⇒ جای <see cref="NoInvoiceAccounts"/> می‌نشیند؛ همان

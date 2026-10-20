@@ -257,16 +257,21 @@ public sealed class DebtorService
 
     /// <summary>
     /// «بردگیِ» یک ردیف، همان‌طور که کارت‌ها و مفاد/ضرر می‌شمارند.
+    /// ⛔ دو رقمِ اعشار، همان ‎DebtCalculationService.RoundMoney‎ِ ردیف و سربرگ (۱۴۰۵/۰۷/۲۲) —
+    /// تا ۱۴۰۵/۰۷/۲۸ این‌جا افغانیِ درست بود: حسابِ صاف‌شده روی کارت «۱ افغانی قرض» و «⛔ اتمام پول».
+    /// ⚡ ‎ROUND(x*100)/100‎، نه ‎ROUND(x, 2)‎: دومی در SQLite از راهِ متن (‎printf‎) می‌رود و روی
+    /// ۶۴ هزار ردیف دو برابر کند بود (۱۶ ⇐ ۳۰ms هر پاس)؛ اولی همان راهِ تندِ عددی است و
+    /// «2.675 ⇐ 2.68» را هم مثلِ ‎RoundMoney‎ِ C# می‌دهد (‎ROUND(x, 2)‎ می‌گفت 2.67).
     /// ⛔ یک جا — هم ‎RollupsAsync‎ و هم ‎NoInvoiceBardagiAsync‎ همین را می‌خوانند،
     /// وگرنه روزی کارتِ شرکت یک عدد می‌گفت و مفادِ همان ماه عددِ دیگر.
     /// </summary>
-    private const string BardagiSql = @"ROUND(CASE
+    private const string BardagiSql = @"ROUND((CASE
                        WHEN r.ByMoney = 1
                             AND NOT (CAST(r.Bardagi AS REAL) = 0 AND CAST(r.Liters AS REAL) > 0)
                        THEN CAST(r.Bardagi AS REAL)
                        WHEN CAST(r.Liters AS REAL) > 0
                        THEN CAST(r.Liters AS REAL) * COALESCE(CAST(r.PricePerLiter AS REAL), 0)
-                       ELSE 0 END)";
+                       ELSE 0 END) * 100) / 100.0";
 
     /// <summary>
     /// ══ بردگیِ «بی‌فاکتور»ها در یک دوره — برای صفحهٔ مفاد/ضرر ═════════════════
@@ -330,7 +335,7 @@ public sealed class DebtorService
                    SUM(Rasid)           AS SumRasid,
                    SUM(RasidFuel)       AS SumRasidFuel,
                    SUM(Bardagi)         AS SumBardagi,
-                   SUM(ROUND(Bardagi - Rasid)) AS SumAlbaqi
+                   SUM(ROUND((Bardagi - Rasid) * 100) / 100.0) AS SumAlbaqi
             FROM (
               SELECT COALESCE(r.FuelAccountId, r.MoneyAccountId) AS AccountId,
                      CASE WHEN r.FuelAccountId IS NULL THEN 1 ELSE 0 END AS Money,

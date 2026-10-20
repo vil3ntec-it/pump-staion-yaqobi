@@ -243,8 +243,10 @@ public sealed class DashboardService
             if (e.DateShamsi is null or "" || e.Currency == Currency.Usd) continue;
             var i = mk.Assign(ParseDate(e.DateShamsi));
             if (i < 0) continue;
-            if (e.Kind == SafeEntryKind.Bardagi) b[i].SafeIn += e.Amount;
-            else b[i].SafeOut += e.Amount;
+            //  ⛔ همان جهتِ ‎SafeBalance‎/‎SafeService‎: ماندگی ورود، بردگی خروج.
+            //  سایت این‌جا برعکس بود (و موجودی‌اش درست) — دیده نمی‌شد چون تاریخ نمی‌رسید.
+            if (e.Kind == SafeEntryKind.Bardagi) b[i].SafeOut += e.Amount;
+            else b[i].SafeIn += e.Amount;
         }
 
         return new DashSeries { Buckets = b, Slot = mk.Slot, Today = mk.Today };

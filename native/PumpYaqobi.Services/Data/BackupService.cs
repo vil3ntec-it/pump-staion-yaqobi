@@ -519,13 +519,16 @@ public sealed class BackupService
         //  ریشهٔ شناسه‌های دفترِ فعلی — اگر بکاپ خودش ریشه نداشت، همین به ارث
         //  می‌رسد (شرحش بالای ‎PumpDbFactory.RestoreSeedHint‎).
         var liveSeed = LiveSeed();
+        var swapped = false;
         try
         {
             SqliteConnection.ClearAllPools();
 
-            File.Copy(path, _dbf.DbPath, overwrite: true);
-            foreach (var side in new[] { _dbf.DbPath + "-wal", _dbf.DbPath + "-shm" })
-                try { if (File.Exists(side)) File.Delete(side); } catch { }
+            //  ⛔ اول کنارِ دفتر، بعد جابه‌جاییِ یک‌جا — نه کپی روی خودِ دفترِ زنده. برق یا
+            //  دیسکِ پر وسطِ کپی تا ۱۴۰۵/۰۷/۲۸ دفترِ نیمه‌کاره‌ای جا می‌گذاشت در حالی که
+            //  پیام می‌گفت «انجام نشد» و برنامه رویش کار می‌کرد.
+            SwapIn(path, _dbf.DbPath);
+            swapped = true;
 
             PumpDbFactory.RestoreSeedHint = liveSeed;
             try { _dbf.EnsureReady(); }
@@ -533,12 +536,41 @@ public sealed class BackupService
         }
         catch (Exception ex)
         {
+            //  جابه‌جا شد ولی آماده نشد ⇒ همان عکسِ ایمنی سرِ جایش، تا «انجام نشد» راست باشد
+            if (swapped && safety is not null)
+                try { SqliteConnection.ClearAllPools(); SwapIn(safety, _dbf.DbPath); } catch { }
             return new RestoreOutcome(false,
                 "بازگردانی انجام نشد: " + (ex.InnerException?.Message ?? ex.Message), safety);
         }
 
         return new RestoreOutcome(true,
             $"✅ بازگردانی شد — {Shamsi.Money(records)} رکورد", safety, records);
+    }
+
+    /// <summary>
+    /// <paramref name="source"/> ⇒ دفتر: کپی در ‎.restore-part‎ِ کنارش (تا روی دیسک)، بعد
+    /// جایگزینیِ یک‌جا، و ‎-wal/-shm‎ِ کهنه بیرون — ماندنشان یعنی بازپخشِ دفترِ قبلی روی فایلِ تازه.
+    /// </summary>
+    private static void SwapIn(string source, string dbPath)
+    {
+        var part = dbPath + ".restore-part";
+        try
+        {
+            using (var from = File.OpenRead(source))
+            using (var to = new FileStream(part, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                from.CopyTo(to);
+                to.Flush(true);
+            }
+            if (File.Exists(dbPath)) File.Replace(part, dbPath, null, ignoreMetadataErrors: true);
+            else File.Move(part, dbPath);
+        }
+        finally
+        {
+            try { if (File.Exists(part)) File.Delete(part); } catch { }
+        }
+        foreach (var side in new[] { dbPath + "-wal", dbPath + "-shm" })
+            try { if (File.Exists(side)) File.Delete(side); } catch { }
     }
 
     private string? LiveSeed()

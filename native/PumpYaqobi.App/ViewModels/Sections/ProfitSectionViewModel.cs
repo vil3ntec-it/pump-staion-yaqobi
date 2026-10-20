@@ -52,9 +52,38 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         {
             if (k != PumpYaqobi.Services.Data.SettingsService.UnionRatePetrol
                 && k != PumpYaqobi.Services.Data.SettingsService.UnionRateDiesel) return;
-            Avalonia.Threading.Dispatcher.UIThread.Post(RefillUnion);
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => { RefillUnion(); RecalcIfRateMoved(); });
         };
     }
+
+    /// <summary>نرخ‌هایی که عددهای روی صفحه با آن‌ها حساب شده‌اند — ‎null‎ یعنی هنوز هیچ.</summary>
+    private (decimal P, decimal D)? _ratesShown;
+    /// <summary>سطرهای فروشِ همان حساب — برای «از کجا آمد» پس از عوض شدنِ نرخ، بی خواندنِ دوباره.</summary>
+    private List<WaraqSaleLine> _lines = new();
+
+    /// <summary>
+    /// ⛔ نرخِ اتحادیه «تفاوتِ نرخِ فاکتورهای در صف» و خالص را عوض می‌کند ⇒ همان‌جا
+    /// دوباره حساب، نه پس از رفتن و برگشتن به بخش (۱۴۰۵/۰۷/۲۸).
+    /// ⚡ فقط همان یک عدد، در حافظه: فاکتورهای در صف (‎_pending‎) از پیش خوانده شده‌اند و بقیهٔ
+    /// جمع‌ها به نرخ بسته نیستند. ‎ComputeAsync‎ِ کامل این‌جا روی دادهٔ پنج‌ساله ~۴۰۰ms نخِ رابط را
+    /// می‌خشکاند (سنجهٔ ‎typeall‎ با ‎TA_YEARS=1‎ گرفتش).
+    /// </summary>
+    private void RecalcIfRateMoved()
+    {
+        if (_ratesShown is not { } shown) return;
+        var now = CurrentRates();
+        if (shown == now) return;
+        _ratesShown = now;
+        var period = _period;
+        _db.InvoiceRateDiffSum = ProfitLossService.PendingRateDiff(
+            _pending.Where(r => period.Contains(r.DateKey)), now.P, now.D);
+        ShowSources(_lines, ProfitLossService.Breakdown(_db));
+        Recalc();
+    }
+
+    private (decimal P, decimal D) CurrentRates() =>
+        (_host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.UnionRatePetrol),
+         _host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.UnionRateDiesel));
 
     /// <summary>
     /// کادرهای نرخ از روی تنظیمات — فقط اگر واقعاً فرق دارند، تا تایپِ همین
@@ -368,8 +397,8 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         var lines = await _host.WaraqData.SalesLinesAsync(keys);
         var petrol = lines.Sum(l => l.PetrolMoney);
         var diesel = lines.Sum(l => l.DieselMoney);
-        var todayP = _host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.UnionRatePetrol);
-        var todayD = _host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.UnionRateDiesel);
+        var (todayP, todayD) = CurrentRates();
+        _ratesShown = (todayP, todayD);
         var rateDiff = ProfitLossService.PendingRateDiff(_pending.Where(r => period.Contains(r.DateKey)), todayP, todayD);
 
         decimal extraSum, expenseSum;
@@ -409,6 +438,7 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         //  دوره وسطِ خواندن عوض شد ⇒ این جواب کهنه است
         if (period != _period) return;
         _db = input;
+        _lines = lines;
 
         _filling = true;
         var p = _host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.UnionRatePetrol);

@@ -62,9 +62,14 @@ public sealed class ExchangeReport : ISetupDocument
             });
         });
 
-        col.Item().PaddingTop(6).Border(1).BorderColor(DocStyle.Edge(GreenLine)).Padding(9).AlignCenter()
-           .Element(x => DocStyle.Line(x, "🟢 الباقی صرافی نزد پمپ: $ " + PersianText.Num(Math.Round(s.Baqi, 2)),
-                                       DocStyle.BoxValue + 1, DocStyle.Ink(DocStyle.Money), DocStyle.Weight.Bold));
+        //  ⛔ همان جملهٔ صفحه (‎BaqiSentence‎): منفی یعنی پمپ بدهکارِ صرافی است — نه
+        //  «$ -1,200» زیرِ برچسبِ سبزِ «طلبِ پمپ» (تا ۱۴۰۵/۰۷/۲۸ چنین چاپ می‌شد).
+        var owes = s.Baqi < 0;
+        col.Item().PaddingTop(6).Border(1).BorderColor(DocStyle.Edge(owes ? DocStyle.Danger : GreenLine)).Padding(9).AlignCenter()
+           .Element(x => DocStyle.Line(x,
+               (owes ? "🔴 الباقی پمپ نزد صرافی: $ " : "🟢 الباقی صرافی نزد پمپ: $ ")
+               + PersianText.Num(Math.Round(Math.Abs(s.Baqi), 2)),
+               DocStyle.BoxValue + 1, DocStyle.Ink(owes ? DocStyle.Danger : DocStyle.Money), DocStyle.Weight.Bold));
 
         col.Item().PaddingTop(8).Element(Table);
     });

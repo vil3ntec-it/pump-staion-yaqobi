@@ -400,11 +400,20 @@ public sealed partial class DashboardSectionViewModel : SectionViewModel
         var prev = (int.Parse(year) - 1).ToString();
         var expenses = await _host.ExpenseLedger.ListAsync(year + "/");
         expenses = (await _host.ExpenseLedger.ListAsync(prev + "/")).Concat(expenses).ToList();
+        //    ⛔ ولی نوارِ «سال» شش ستون و یک سالِ پایه دارد (‎MakeBuckets‎) — تا
+        //    شش سال پیش. آن سال‌ها فقط تاریخ و مبلغ، نه کلِ شیء؛ وگرنه ستونِ سالِ
+        //    پیش‌تر «۰» و رشدش «داده کافی نیست» بود (۱۴۰۵/۰۷/۲۸).
+        for (var y = int.Parse(year) - 6; y < int.Parse(prev); y++)
+            expenses.AddRange(await _host.ExpenseLedger.SelectAsync(
+                e => new Expense { DateShamsi = e.DateShamsi, Amount = e.Amount }, y + "/"));
 
         // ۲) گاوصندوق: ‎SafeBalance‎ ماندهٔ **همهٔ تاریخ** را می‌خواهد، پس
-        //    ردیف‌ها را نمی‌شود کم کرد — ولی سه ستون بس است، نه کلِ شیء.
+        //    ردیف‌ها را نمی‌شود کم کرد — ولی چهار ستون بس است، نه کلِ شیء.
+        //    ⛔ تاریخ هم: «ورود/خروج»ِ کارت (‎Series‎) ردیفِ بی‌تاریخ را رد می‌کند
+        //    و تا ۱۴۰۵/۰۷/۲۸ همیشه «ورود ۰ · خروج ۰» بود.
         var safe = await _host.SafeLedger.SelectAsync(e => new SafeEntry
         {
+            DateShamsi = e.DateShamsi,
             Kind = e.Kind,
             Amount = e.Amount,
             Currency = e.Currency,
