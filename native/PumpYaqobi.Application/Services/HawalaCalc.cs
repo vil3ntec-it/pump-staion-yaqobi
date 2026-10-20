@@ -78,15 +78,33 @@ public static class HawalaCalc
 
     /// <summary>
     /// حسابِ قرض‌دار برای همین حواله تیل ندارد؟ تیلِ حواله از برداشت‌هایش؛ بی برداشت،
-    /// هر کدام از دو دفترِ تیل. دفترِ پولِ تمام‌شده هم یعنی تیلی نمانده.
+    /// فقط وقتی <b>هیچ</b> دفترِ تیلِ در کار تیل ندارد. دفترِ پولِ تمام‌شده هم یعنی تیلی
+    /// نمانده — ⚠️ فقط در حسابِ پولی؛ حالِ حساب را با <see cref="ForMode"/> بدهید.
     /// </summary>
     public static bool AccountOut(DebtStatusInfo a, IReadOnlyCollection<Take> takes)
     {
         if (a.Money == DebtStatus.Out) return true;
         var fuels = takes.Select(t => t.Fuel).Distinct().ToList();
-        if (fuels.Count == 0) return a.Petrol == DebtStatus.Out || a.Diesel == DebtStatus.Out;
+        if (fuels.Count == 0)
+        {
+            //  ⛔ (۱۴۰۵/۰۷/۲۸) «تیل دارد اما می‌گوید ندارد»: پطرولِ تمام‌شده حوالهٔ کسی را که
+            //  دیزل دارد نمی‌سوزاند — بی برداشت معلوم نیست حواله کدام تیل است.
+            var inUse = new[] { a.Petrol, a.Diesel }.Where(s => s != DebtStatus.None).ToList();
+            return inUse.Count > 0 && inUse.All(s => s == DebtStatus.Out);
+        }
         return fuels.Any(f => (f == Domain.Enums.FuelType.Diesel ? a.Diesel : a.Petrol) == DebtStatus.Out);
     }
+
+    /// <summary>
+    /// ══ «تیل دارد، هم حواله هم طرف، اما می‌گوید تیل ندارد» (۱۴۰۵/۰۷/۲۸) ═════════════
+    /// فقط دفترِ <b>خودِ</b> حساب سقفِ حواله است: حسابِ تیلی (رسیدِ تیل، برداشت با فی)
+    /// رسیدِ پول ندارد، پس دفترِ پولش همیشه «تمام» است و همان حواله را «سوخت» می‌خواند.
+    /// تیلی ⇒ دفترِ پول کنار؛ پولی ⇒ دو دفترِ تیل کنار (رسیدِ تیل ندارد، همیشه «تمام»).
+    /// </summary>
+    public static DebtStatusInfo ForMode(DebtStatusInfo st, Domain.Enums.LedgerMode mode) =>
+        Domain.Enums.LedgerModeExtensions.IsMoney(mode)
+            ? st with { Petrol = DebtStatus.None, Diesel = DebtStatus.None }
+            : st with { Money = DebtStatus.None };
 
     /// <summary>حواله‌ای که هنوز مانده داشت «سوخت»؛ تمام‌شده همان تمام‌شده می‌ماند.</summary>
     public static Status Burn(Status s) =>

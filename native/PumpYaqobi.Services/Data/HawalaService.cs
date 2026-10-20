@@ -88,6 +88,29 @@ public sealed class HawalaService
         await db.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// ══ نقطهٔ سرخِ کارتِ قرض‌دار (۱۴۰۵/۰۷/۲۸) ═════════════════════════════════════
+    /// «وقتی ۷۰ تا ۱۰۰ تیلش رفت… بیرون، سرِ کادرِ قرض‌دار هم، مثلِ کشویی‌های ماه و سال.»
+    /// شناسهٔ حساب‌هایی که دستِ‌کم یک حوالهٔ ۷۰٪ رفته، تمام یا سوخته دارند.
+    /// ⚡ یک پرسش برای همهٔ حواله‌ها؛ ردیف‌ها فقط برای همان چند حسابی که حواله دارند.
+    /// </summary>
+    public async Task<HashSet<long>> AlertAccountsAsync(Func<long, DebtStatusInfo?> account,
+                                                        CancellationToken ct = default)
+    {
+        _perm.Require(Permission.ViewData);
+        List<HawalaQuota> qs;
+        await using (var db = _dbf.Create())
+            qs = await db.HawalaQuotas.AsNoTracking().ToListAsync(ct);
+        var hit = new HashSet<long>();
+        foreach (var g in qs.GroupBy(q => q.AccountId))
+        {
+            var rows = await AccountRowsAsync(g.Key, ct);
+            var st = account(g.Key);
+            if (g.Any(q => HawalaCalc.Of(q, rows, st).Alert)) hit.Add(g.Key);
+        }
+        return hit;
+    }
+
     /// <summary>نقطهٔ سرخِ دکمه: دستِ‌کم یک حواله ۷۰٪ رفته یا تمام شده؟ (بی حواله ⇒ یک پرسشِ ارزان)</summary>
     /// <remarks>
     /// ⚡ حالِ حساب (<paramref name="account"/>) <b>فقط اگر حواله‌ای هست</b> حساب می‌شود — با هر

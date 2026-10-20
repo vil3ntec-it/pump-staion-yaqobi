@@ -88,8 +88,10 @@ public class HawalaBurnTests
         Assert.Equal(HawalaCalc.State.Ok, HawalaCalc.Of(q, diesel, St(p: DebtStatus.Out)).State);
         Assert.Equal(HawalaCalc.State.Burned, HawalaCalc.Of(q, diesel, St(d: DebtStatus.Out)).State);
         Assert.Equal(HawalaCalc.State.Burned, HawalaCalc.Of(q, diesel, St(m: DebtStatus.Out)).State);
-        //  بی برداشت ⇒ هر کدام از دو تیل
-        Assert.Equal(HawalaCalc.State.Burned, HawalaCalc.Of(q, Array.Empty<DebtRow>(), St(p: DebtStatus.Out)).State);
+        //  بی برداشت ⇒ فقط وقتی هیچ دفترِ تیلی تیل ندارد (۱۴۰۵/۰۷/۲۸: «تیل دارد اما می‌گوید ندارد»)
+        Assert.Equal(HawalaCalc.State.Ok, HawalaCalc.Of(q, Array.Empty<DebtRow>(), St(p: DebtStatus.Out)).State);
+        Assert.Equal(HawalaCalc.State.Burned, HawalaCalc.Of(q, Array.Empty<DebtRow>(), St(p: DebtStatus.Out, d: DebtStatus.Out)).State);
+        Assert.Equal(HawalaCalc.State.Burned, HawalaCalc.Of(q, Array.Empty<DebtRow>(), St(p: DebtStatus.Out, d: DebtStatus.None)).State);
     }
 
     [Fact]

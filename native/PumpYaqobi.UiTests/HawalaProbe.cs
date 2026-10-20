@@ -87,7 +87,9 @@ internal static class HawalaProbe
         // ── برداشت‌ها: 5 + 15 = 20 (۴۰٪) ⇒ باز؛ + 16 = 36 (۷۲٪) ⇒ سرخ ──
         void Take(DebtRowViewModel r, string name, string liters)
         {
-            r.Name = name; r.Hawala = "42"; r.LitersText = liters;
+            //  ⛔ با فی، مثلِ دفترِ واقعی (۱۴۰۵/۰۷/۲۸): بردگی هست و رسیدِ پول نیست ⇒ دفترِ پول
+            //  «تمام» است — و حواله نباید از آن «قرض‌دار تیل ندارد» بخواند.
+            r.Name = name; r.Hawala = "42"; r.LitersText = liters; r.PriceText = "68";
             Wait(win, r.FlushAsync());
         }
         Take(rows[0], "روزِ اول", "5");
@@ -151,6 +153,10 @@ internal static class HawalaProbe
 
         // ── حسابِ دوم، همان شماره، بی برداشت ⇒ جدا ──
         Wait(win, debt.BackCommand.ExecuteAsync(null));
+        Wait(win, debt.RefreshAsync());
+        Check("🔴 نقطهٔ سرخِ حواله سرِ کارتِ قرض‌دار", debt.Cards.First(c => c.Entity.Id == freshId).HawalaAlert);
+        Pump(win, 10);
+        if (shots is not null) Shot(win, shots, "hawala-card");
         Open(win, debt, cards[1].Entity.Id);
         var acct2 = debt.Person!.Current!;
         Wait(win, acct2.OpenHawalasCommand.ExecuteAsync(null));
