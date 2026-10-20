@@ -24,7 +24,8 @@ internal static class Program
         //  فایلی که با دوبار-کلیک آمده (‎.pumpyaqobi‎ / ‎.pumpkey‎) — ‎OpenRequest‎
         var opened = OpenRequest.FromArgs(args);
         //  ⛔ پس از به‌روزرسانی، نمونهٔ کهنه شاید هنوز در حالِ بسته شدن باشد — صبر کن، بیرون نرو
-        var afterUpdate = args.Any(a => a == "--after-update");
+        //  🌐 ‎--restart‎ (تعویضِ زبان، ‎AppRestart‎) هم همین‌طور: نمونهٔ قبلی دارد بسته می‌شود
+        var afterUpdate = args.Any(a => a is "--after-update" or "--restart");
         if (!SingleInstance.Acquire(afterUpdate ? TimeSpan.FromSeconds(60) : TimeSpan.Zero))
         {
             //  برنامه از قبل باز است: فایل به همان می‌رسد، نه به نمونهٔ دوم

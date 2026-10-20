@@ -21,7 +21,12 @@ public partial class App : Avalonia.Application
         Services.AppHost.Start();
         //  📷 عکسِ مخزن‌ها برای باتِ تلگرام با خودِ ‎TankGauge‎ (‎BotReports‎ در لایهٔ پایین‌تر است)
         Services.BotReports.TankRenderer = Services.TankShotRenderer.RenderAsync;
-        ThemeManager.Apply(PumpTheme.ById(Services.AppSettings.Load().ThemeId), this);
+        var settings = Services.AppSettings.Load();
+        //  🌐 زبان — پیش از هر پنجره‌ای (‎Domain.Lang‎ · ‎Controls.LangHook‎). فارسی ⇒ هیچ قلابی نیست.
+        //  ⚠️ سنجه‌ها (‎PUMP_LANG‎) زبان را پیش از این گذاشته‌اند — همان بماند
+        if (!Domain.Lang.On) Domain.Lang.Use(settings.UiLang);
+        Controls.LangHook.Install();
+        ThemeManager.Apply(PumpTheme.ById(settings.ThemeId), this);
 
         // ══ نوشته‌ای که در بخشِ پنهان چپ‌چین کشیده شده، با دیده شدن دوباره کشیده شود ══
         // گزارشِ صاحب ریپو (۱۴۰۵/۰۷/۱۵): «در دارک مود نوشته‌ها می‌روند سمتِ چپ».

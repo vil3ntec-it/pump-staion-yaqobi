@@ -261,7 +261,7 @@ public class SparkChart : Control
             if (vals is not null) parts.Add((FirstName.Length > 0 ? FirstName + " " : "") + Fmt(vals[_hover]) + " " + Unit);
             if (second is { } s2 && _hover < s2.Count && vals is not null) parts.Add(SecondName + " " + Fmt(s2[_hover]));
             else if (second is { } s3 && _hover < s3.Count) parts.Add(Fmt(s3[_hover]) + " " + Unit);
-            var tip = string.Join(" · ", parts);
+            var tip = Domain.Lang.T(string.Join(" · ", parts));   // 🌐 کشیده می‌شود، نه ‎TextBlock‎
             var ft = new FormattedText(tip, System.Globalization.CultureInfo.CurrentCulture,
                 FlowDirection.RightToLeft, Typeface.Default, 11.5, Brushes.White);
             var bw = ft.Width + 18;
@@ -382,7 +382,7 @@ public class SparkChart : Control
     private void Text(DrawingContext ctx, string s, double x, double y, IBrush brush,
                       double size, TextAlignment align, double width)
     {
-        var ft = new FormattedText(s, System.Globalization.CultureInfo.CurrentCulture,
+        var ft = new FormattedText(Domain.Lang.T(s), System.Globalization.CultureInfo.CurrentCulture,
             FlowDirection.RightToLeft, Typeface.Default, size, brush)
         { TextAlignment = align, MaxTextWidth = width };
         ctx.DrawText(ft, new Point(x, y));

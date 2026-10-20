@@ -94,7 +94,7 @@ public static class PickerWidth
         double max = 0;
         foreach (var t in Candidates(labels, wide).Distinct())
         {
-            using var tl = new TextLayout(t, face, cb.FontSize, null);
+            using var tl = new TextLayout(Domain.Lang.T(t), face, cb.FontSize, null);   // 🌐 همان که نشان داده می‌شود
             max = Math.Max(max, tl.WidthIncludingTrailingWhitespace);
         }
         //  ⚠️ قاب ثابت است، نه از ‎Padding‎/‎BorderThickness‎ی همین لحظه: آن دو با سبکِ
