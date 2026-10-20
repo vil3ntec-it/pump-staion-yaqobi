@@ -24,10 +24,12 @@ namespace PumpYaqobi.UiTests;
 ///
 ///     dotnet run --project PumpYaqobi.UiTests -c Release -- serverdot
 ///
-/// ⚠️ **بی اشتراک هم سنجیده می‌شود** (`Entitlements.TestDeny`): همان باگ
-/// اصلی این بود که برنامهٔ بی‌اشتراک هیچ‌وقت وصل نمی‌شد، پس چراغ «خاموش»
-/// می‌گفت در حالی که سرور روشن بود. قفلِ اشتراک روی **عکسِ زنده** است، نه
-/// روی خودِ اتصال.
+/// ⚠️ **بی اشتراک سنجیده می‌شود** (نصبِ تازه بی مجوز): همان باگ اصلی این بود
+/// که برنامهٔ بی‌اشتراک هیچ‌وقت وصل نمی‌شد، پس چراغ «خاموش» می‌گفت در حالی
+/// که سرور روشن بود. قفلِ اشتراک روی **عکسِ زنده** است، نه روی خودِ اتصال.
+/// ⛔ ولی پلنی که **صریحاً** خدماتِ سرور ندارد (`Entitlements.TestDeny` ⇒
+/// `PlanDenies`) از ۱۴۰۵/۰۷/۲۰ عمداً وصل نمی‌شود — چراغ خاکستری با «در پلنِ
+/// شما نیست» (بندِ ۵).
 /// </summary>
 internal static class ServerDotProbe
 {
@@ -149,8 +151,11 @@ internal static class ServerDotProbe
         vm.Lock.Password = "1234"; LockIn.Wait(vm.Lock);
         for (var i = 0; i < 40; i++) Pump(win);
 
-        //  ⚠️ **بی اشتراک** — همان حالی که باگ در آن دیده شد
-        Entitlements.TestDeny = true;
+        //  ⚠️ **بی اشتراک** — همان حالی که باگ در آن دیده شد: نصبِ تازه بی هیچ
+        //  مجوزی (‎NotActivated‎). ⛔ نه با ‎TestDeny‎: از ۱۴۰۵/۰۷/۲۰ آن کلید
+        //  «پلنی که صریحاً خدماتِ سرور ندارد» است (‎PlanDenies‎) و چنین پلنی
+        //  عمداً وصل نمی‌شود — همان بندِ ۵ِ پایین.
+        Check("پیش از هر چیز: این نصب اشتراک ندارد", !Entitlements.Allows(Entitlements.Kar));
 
         var pub = host.PublisherIfStarted;
         Check("انتشارکنندهٔ ایستگاه بالا آمده است", pub is not null);
@@ -190,6 +195,14 @@ internal static class ServerDotProbe
         vm.TickServerDot();
         Check("کلیک همان لحظه وصل کرد (بی انتظار)", vm.ServerDotBrushKey == "Pump.Ok",
               vm.ServerDotBrushKey);
+
+        Console.WriteLine("── ۵) پلنی که خدماتِ سرور ندارد ⇒ خاکستری و راست، نه سرخ");
+        //  ⚠️ چراغ پلن را هر ده ثانیه یک بار از دیسک می‌خواند (‎DeviceBound‎)، پس تا ۲۰ ثانیه.
+        Entitlements.TestDeny = true;
+        var muted = WaitDot(win, vm, pub, "Pump.Muted", TimeSpan.FromSeconds(20));
+        Check("چراغ خاکستری شد", muted, vm.ServerDotBrushKey);
+        Check("و می‌گوید «در پلنِ شما نیست»، نه «سرور جواب نمی‌دهد»",
+              vm.ServerDotReason.Contains("در پلنِ شما نیست"), vm.ServerDotReason);
         home3.Stop();
 
         Entitlements.TestDeny = false;
