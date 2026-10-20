@@ -1159,6 +1159,21 @@ public sealed class AppSettings
 
     private object?[] BondSnapshot() => BondFields.Select(p => p.GetValue(this)).ToArray();
 
+    /// <summary>
+    /// ══ مقدارِ برداشته از دیسک «تغییرِ این نمونه» نیست (۱۴۰۵/۰۷/۲۸) ═══════════════
+    /// گزارشِ صاحب ریپو: «لاگین می‌کنم درست است؛ بیرون می‌روم و برمی‌گردم، می‌گوید دوباره با
+    /// همان ایمیل وارد شو.» نمونه‌ای که توکنِ تازه را از دیسک برمی‌داشت (‎CloudLink.AdoptDiskSession‎)
+    /// پایه‌اش را جلو نمی‌برد، پس ذخیرهٔ بعدی‌اش همان را «تغییرِ خودم» می‌شمرد و روی توکنِ تازه‌ترِ
+    /// دیسک می‌نوشت. سرور توکنِ چرخیده را «دزدی» می‌گیرد و کلِ نشست را می‌بندد (‎refresh_reused‎).
+    /// پس هر بندی که از دیسک برداشته شد، پایه‌اش هم همان است. آزمون: ‎SessionStaleTokenTests‎.
+    /// </summary>
+    public void AdoptedFromDisk(params string[] names)
+    {
+        if (_bondBase is null) return;
+        for (var i = 0; i < BondFields.Length; i++)
+            if (Array.IndexOf(names, BondFields[i].Name) >= 0) _bondBase[i] = BondFields[i].GetValue(this);
+    }
+
     private void MergeBondFromDisk()
     {
         if (_bondBase is null) return;

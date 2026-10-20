@@ -313,8 +313,11 @@ public static class LicenseGuard
     //  است که مُهرِ DPAPIِ خودش این‌جا باز شود. فقط در نسخهٔ رسمی (کلیدِ مجوزِ داخلِ برنامه)
     //  و ویندوز؛ نصبِ کهنهٔ بی‌مُهر یک بار مُهر می‌خورد، فقط اگر توکنش هم از DPAPIِ همین‌جا آمده.
 
-    private static bool SealRequired =>
-        OperatingSystem.IsWindows() && CloudConfig.TestLicenseKeys is null && CloudConfig.LicenseKeys.Count > 0;
+    /// <summary>⚠️ فقط برای سنجه‌ها: مُهر روی هر سیستم‌عامل و با کلیدِ آزمون هم روشن.</summary>
+    public static bool TestSealAlways { get; set; }
+
+    private static bool SealRequired => TestSealAlways ||
+        (OperatingSystem.IsWindows() && CloudConfig.TestLicenseKeys is null && CloudConfig.LicenseKeys.Count > 0);
 
     private static string SealOf(string license) =>
         Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
@@ -323,7 +326,7 @@ public static class LicenseGuard
     /// <summary>مجوزی که همین حالا از سرور آمد ⇒ مُهرِ همین کامپیوتر.</summary>
     public static void Seal(AppSettings f)
     {
-        f.CloudLicenseSeal = f.CloudLicense.Length == 0 || !OperatingSystem.IsWindows()
+        f.CloudLicenseSeal = f.CloudLicense.Length == 0 || !(OperatingSystem.IsWindows() || TestSealAlways)
             ? "" : SecretStore.Protect(SealOf(f.CloudLicense));
     }
 

@@ -354,6 +354,9 @@ internal static class CloudLoginProbe
     {
         //  ابرِ ساختگی، پیش از هر کاری
         CloudLink.TestTransport = Cloud;
+        //  ⛔ مُهرِ DPAPIِ مجوز (۱۴۰۵/۰۷/۲۷) در برنامهٔ واقعی روشن است؛ این‌جا هم — وگرنه
+        //  «بسته و باز شدن» همان مسیری نیست که کاربر می‌رود (گزارشِ ۱۴۰۵/۰۷/۲۸).
+        LicenseGuard.TestSealAlways = Environment.GetEnvironmentVariable("PUMP_SEAL") != "0";
         _emailTaken = false;
         _noStation = false;
         _noCreate = false;

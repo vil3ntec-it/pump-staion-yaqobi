@@ -269,6 +269,9 @@ public sealed partial class CloudLink
                 _settings.CloudLicenseSeal = disk.CloudLicenseSeal;
                 _settings.CloudStationId = disk.CloudStationId;
                 _settings.CloudStationCode = disk.CloudStationCode;
+                //  همان قاعدهٔ ‎AdoptDiskSession‎: برداشته از دیسک، پایه هم همین
+                _settings.AdoptedFromDisk(nameof(AppSettings.CloudDeviceToken), nameof(AppSettings.CloudLicense),
+                                          nameof(AppSettings.CloudStationId), nameof(AppSettings.CloudStationCode));
                 return;
             }
         }

@@ -72,6 +72,10 @@ public sealed partial class CloudLink
         _settings.CloudRefreshToken = disk.CloudRefreshToken;
         _settings.CloudAccountToken = disk.CloudAccountToken;
         _settings.CloudAccessExpiresAt = disk.CloudAccessExpiresAt;
+        //  ⛔ برداشته از دیسک ⇒ پایه هم همین؛ وگرنه ذخیرهٔ بعدی همین توکن را روی توکنِ تازه‌ترِ
+        //  دیسک برمی‌گرداند و سرور نشست را می‌بست (‎AppSettings.AdoptedFromDisk‎).
+        _settings.AdoptedFromDisk(nameof(AppSettings.CloudRefreshToken), nameof(AppSettings.CloudAccountToken),
+                                  nameof(AppSettings.CloudAccessExpiresAt));
         return true;
     }
 
