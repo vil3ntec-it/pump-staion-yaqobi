@@ -58,24 +58,27 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
 
     /// <summary>نرخ‌هایی که عددهای روی صفحه با آن‌ها حساب شده‌اند — ‎null‎ یعنی هنوز هیچ.</summary>
     private (decimal P, decimal D)? _ratesShown;
-    private Avalonia.Threading.DispatcherTimer? _rateRecalc;
+    /// <summary>سطرهای فروشِ همان حساب — برای «از کجا آمد» پس از عوض شدنِ نرخ، بی خواندنِ دوباره.</summary>
+    private List<WaraqSaleLine> _lines = new();
 
     /// <summary>
     /// ⛔ نرخِ اتحادیه «تفاوتِ نرخِ فاکتورهای در صف» و خالص را عوض می‌کند ⇒ همان‌جا
-    /// دوباره حساب، نه پس از رفتن و برگشتن به بخش (۱۴۰۵/۰۷/۲۸). فقط اگر صفحه یک بار
-    /// حساب شده و نرخ واقعاً با نرخِ آن حساب فرق دارد؛ نیم‌ثانیه پس از آخرین نویسه.
+    /// دوباره حساب، نه پس از رفتن و برگشتن به بخش (۱۴۰۵/۰۷/۲۸).
+    /// ⚡ فقط همان یک عدد، در حافظه: فاکتورهای در صف (‎_pending‎) از پیش خوانده شده‌اند و بقیهٔ
+    /// جمع‌ها به نرخ بسته نیستند. ‎ComputeAsync‎ِ کامل این‌جا روی دادهٔ پنج‌ساله ~۴۰۰ms نخِ رابط را
+    /// می‌خشکاند (سنجهٔ ‎typeall‎ با ‎TA_YEARS=1‎ گرفتش).
     /// </summary>
     private void RecalcIfRateMoved()
     {
-        if (_ratesShown is not { } shown || shown == CurrentRates()) return;
-        _rateRecalc ??= new Avalonia.Threading.DispatcherTimer(TimeSpan.FromMilliseconds(500),
-            Avalonia.Threading.DispatcherPriority.Background, (_, _) =>
-            {
-                _rateRecalc!.Stop();
-                _ = CrashGuard.RunAsync("مفاد / ضرر", ComputeAsync);
-            });
-        _rateRecalc.Stop();
-        _rateRecalc.Start();
+        if (_ratesShown is not { } shown) return;
+        var now = CurrentRates();
+        if (shown == now) return;
+        _ratesShown = now;
+        var period = _period;
+        _db.InvoiceRateDiffSum = ProfitLossService.PendingRateDiff(
+            _pending.Where(r => period.Contains(r.DateKey)), now.P, now.D);
+        ShowSources(_lines, ProfitLossService.Breakdown(_db));
+        Recalc();
     }
 
     private (decimal P, decimal D) CurrentRates() =>
@@ -435,6 +438,7 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         //  دوره وسطِ خواندن عوض شد ⇒ این جواب کهنه است
         if (period != _period) return;
         _db = input;
+        _lines = lines;
 
         _filling = true;
         var p = _host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.UnionRatePetrol);

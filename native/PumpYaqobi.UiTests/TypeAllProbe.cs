@@ -217,6 +217,14 @@ internal static class TypeAllProbe
                 sw.Stop();
                 if (!KeyMs.TryGetValue(_where, out var list)) KeyMs[_where] = list = new List<double>();
                 list.Add(sw.Elapsed.TotalMilliseconds);
+                //  ‎TA_SLOW=ms‎: کلیدِ کندتر از این، با جایش — برای پیدا کردنِ ریشه
+                if (int.TryParse(Environment.GetEnvironmentVariable("TA_SLOW"), out var slow) && sw.Elapsed.TotalMilliseconds > slow)
+                {
+                    var fx = win.FocusManager?.GetFocusedElement() as Control;
+                    var gx = fx?.FindAncestorOfType<DataGrid>();
+                    Console.WriteLine($"   ⏱ {sw.Elapsed.TotalMilliseconds:0}ms · {_where} · «{text[..(i + 1)]}» · "
+                                      + (gx is not null ? "جدول " + gx.Name : "کادر " + ((fx as TextBox)?.Watermark ?? fx?.Name ?? fx?.GetType().Name)));
+                }
             }
             if (Environment.GetEnvironmentVariable("TA_DEBUG") == "1")
             {
