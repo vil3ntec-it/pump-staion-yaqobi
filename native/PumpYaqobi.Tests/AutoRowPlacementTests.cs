@@ -277,6 +277,44 @@ public class AutoRowPlacementTests : IDisposable
         Assert.Equal(5000m, row.Amount);
     }
 
+    /// <summary>
+    /// ⛔ روز و شب در یک ذخیره یک خانهٔ خالی را نمی‌گیرند (۱۴۰۵/۰۷/۲۸): پرسش به دیسک
+    /// برداشتنِ ذخیره‌نشدهٔ روز را نمی‌دید، پس شب همان خانه را می‌گرفت و فروشِ روز گم می‌شد.
+    /// </summary>
+    [Fact]
+    public async Task DayAndNightNeverShareOneBlankSafeRow()
+    {
+        var (post, data, dbf, _, _) = Host();
+        await using (var db = dbf.Create())
+        {
+            db.SafeEntries.Add(new SafeEntry
+            {
+                DateShamsi = Day, DateKey = Shamsi.Key(Day), MonthKey = Shamsi.MonthKey(Day),
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var w = await SheetAsync(data, dbf, "هارون", 0m);
+        await SalesAsync(dbf, w.Id);                               // روز: ۱۰۰ × ۵۰
+        await using (var db = dbf.Create())
+        {
+            var night = await db.WaraqShifts.Include(s => s.Pumps)
+                                .FirstAsync(s => s.WaraqId == w.Id && s.Kind == ShiftKind.Night);
+            var p = night.Pumps.FirstOrDefault();
+            if (p is null) { p = new WaraqPump { ShiftId = night.Id, Num = 1 }; db.WaraqPumps.Add(p); }
+            p.Fuel = FuelType.Petrol;
+            p.Start = 0m; p.End = 40m; p.PricePerLiter = 50m;      // شب: ۴۰ × ۵۰
+            await db.SaveChangesAsync();
+        }
+        await post.SyncAsync(w.Id);
+
+        await using var db2 = dbf.Create();
+        var sales = await db2.SafeEntries.AsNoTracking()
+                             .Where(e => e.SrcKey != null && e.SrcKey != "")
+                             .ToListAsync();
+        Assert.Equal(new[] { 2000m, 5000m }, sales.Select(e => e.Amount).OrderBy(a => a).ToArray());
+    }
+
     // ══ ۳) مخزن ⇒ حسابِ شرکت ════════════════════════════════════════════════
 
     private static FuelPurchase Buy(string seller, decimal ton, FuelType fuel = FuelType.Petrol) =>

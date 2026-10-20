@@ -31,10 +31,16 @@ public static class HawalaCalc
         public bool Alert => State != State.Ok;
     }
 
-    /// <summary>«۴۲»، «42 »، «حواله 42» ⇒ «42».</summary>
+    /// <summary>«۴۲»، «42 »، «حواله 42»، «‏۴۲» ⇒ «42».</summary>
     public static string Norm(string? s)
     {
-        var t = Shamsi.ToEnDigits(s ?? "").Replace("حواله", " ").Trim();
+        //  ⛔ نویسه‌های نامرئی (‎RLM/LRM/ZWNJ‎، هر ‎Format‎) بیرون — همان ‎Shamsi.TryNum‎:
+        //  صفحه‌کلیدِ فارسیِ ویندوز پیش از عدد ‎RLM‎ می‌گذارد و «‏۴۲» با حوالهٔ ۴۲ نمی‌خورد (۱۴۰۵/۰۷/۲۸).
+        var raw = Shamsi.ToEnDigits(s ?? "");
+        var b = new System.Text.StringBuilder(raw.Length);
+        foreach (var c in raw)
+            if (char.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.Format) b.Append(c);
+        var t = b.ToString().Replace("حواله", " ").Trim();
         return System.Text.RegularExpressions.Regex.Replace(t, @"\s+", " ");
     }
 

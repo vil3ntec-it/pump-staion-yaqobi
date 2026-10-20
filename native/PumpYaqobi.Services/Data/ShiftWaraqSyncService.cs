@@ -123,6 +123,10 @@ public sealed class ShiftWaraqSyncService
         var nm = (name ?? "").Trim();
         var newName = nm.Length > 0 ? nm : s.Name;
         var newTest = test ?? s.TestLiters;
+        //  ⛔ «ختمِ کمتر از شروع هیچ چیزی نمی‌نویسد» — همان قاعدهٔ پارچه و تاریخچه، این‌جا هم.
+        //  پایهٔ ورقی که «ختم»ش پاک یا اشتباه تایپ شد (۱۲۰۵۰ به‌جای ۱۲۰۵۰۰) تا ۱۴۰۵/۰۷/۲۸
+        //  فروشِ منفیِ صدهزار لیتری روی پارچه می‌نشاند و موجودیِ مخزن را می‌پراند.
+        if (end < start || !ParchaService.TestValid(start, end, newTest)) return false;
         if (s.Name == newName && s.PumpNum == pumpNum && s.Start == start && s.End == end
             && s.Price == price && s.Debt == debt && s.TestLiters == newTest)
             return false;
@@ -512,8 +516,16 @@ public sealed class ShiftWaraqSyncService
                 // می‌توانست بدهد. «اولین خانهٔ خالی» یعنی همان که کاربر
                 // بالای جدول می‌بیند — ‎DateKey‎ و بعد ‎Id‎، همان ترتیبی که
                 // خودِ جدول با آن چیده می‌شود.
+                //
+                // ⛔ <b>و نه خانه‌ای که همین ذخیره پیش‌تر برداشت</b>: پرسش به دیسک
+                // می‌رود و برداشتنِ ذخیره‌نشده را نمی‌بیند، پس روز و شب (یا دو ورق
+                // در یک دسته) یک خانه را می‌گرفتند و فروشِ یکی گم می‌شد (۱۴۰۵/۰۷/۲۸).
+                var taken = db.SafeEntries.Local
+                    .Where(e => e.Id > 0 && !string.IsNullOrEmpty(e.SrcKey))
+                    .Select(e => e.Id).ToList();
                 row = await db.SafeEntries
                     .Where(e => e.MonthKey == month
+                             && !taken.Contains(e.Id)
                              && (e.SrcKey == null || e.SrcKey == "")
                              && (e.Title == null || e.Title == "")
                              && e.Amount == 0m

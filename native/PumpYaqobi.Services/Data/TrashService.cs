@@ -354,6 +354,7 @@ public sealed class TrashService
                 var prefix = WaraqPostingService.WaraqKey(w) + "|";
                 await ReviveChildren(db.DebtRows, x => x.SrcKey != null && x.SrcKey.StartsWith(prefix), when, got, ct);
                 await ReviveChildren(db.Expenses, x => x.SrcKey != null && x.SrcKey.StartsWith(prefix), when, got, ct);
+                await ReviveChildren(db.RetailRows, x => x.SrcKey != null && x.SrcKey.StartsWith(prefix), when, got, ct);
                 return 1;
             }
 

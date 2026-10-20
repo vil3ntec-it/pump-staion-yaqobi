@@ -780,6 +780,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
             _person.Recalc();
             RefreshTotals();
             RepaintHeadEdits();
+            RefreshHawalaDot();
             return;
         }
 
@@ -793,6 +794,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         _person.Recalc();
         RefreshTotals();
         RepaintHeadEdits();
+        RefreshHawalaDot();
     }
 
     /// <summary>
@@ -991,15 +993,30 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         //  حواله‌ای هست — حسابِ بی‌حواله هیچ کارِ تازه‌ای روی نخِ رابط نمی‌کند (‎scrollperf‎).
         try
         {
-            var id = Entity.Id;
+            //  ⛔ همین ویومدل با «بعدی» حسابِ دیگری می‌گیرد (‎Load(DebtAccount)‎): جوابِ دیرِ
+            //  حسابِ قبلی نباید شمار و نقطه‌اش را روی حسابِ تازه بنشاند (۱۴۰۵/۰۷/۲۸).
+            var acct = Entity;
+            var id = acct.Id;
             var qs = await Task.Run(() => _host.Hawalas.ListAsync(id));
+            if (!ReferenceEquals(acct, Entity)) return;
             if (qs.Count == 0) { HawalaCount = 0; HawalaAlert = false; return; }
             var rows = await Task.Run(() => _host.Hawalas.AccountRowsAsync(id));
-            var st = HawalaCalc.ForMode(_host.Debt.Status(new[] { Entity }), Entity.Mode);
+            if (!ReferenceEquals(acct, Entity)) return;
+            var st = HawalaCalc.ForMode(_host.Debt.Status(new[] { acct }), acct.Mode);
             HawalaCount = qs.Count;
             HawalaAlert = qs.Any(q => HawalaCalc.Of(q, rows, st).Alert);
         }
         catch { /* نقطهٔ سرخ نباید صفحه را بشکند */ }
+    }
+
+    /// <summary>
+    /// ⛔ ردیفی که ذخیره یا حذف شد (یا رسیدِ سربرگ) می‌تواند حواله را به ۷۰٪ یا «تمام»
+    /// برساند — نقطه همان‌جا تازه می‌شود، نه با بستن و باز کردنِ حساب (۱۴۰۵/۰۷/۲۸).
+    /// حسابِ بی‌حواله هیچ پرسشی نمی‌زند.
+    /// </summary>
+    private void RefreshHawalaDot()
+    {
+        if (HawalaCount > 0) _ = LoadHawalaAsync();
     }
 
     [RelayCommand]
@@ -1169,10 +1186,17 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
     }
 
     /// <summary>«الباقی» از سقف گذشته؟ ⚠️ فقط هشدار — هیچ عددی عوض نمی‌شود.</summary>
-    public bool OverLimit => Entity.CreditLimit is { } lim && lim > 0m && Totals.All.Albaqi > lim;
+    public bool OverLimit => Entity.CreditLimit is { } lim && lim > 0m && LimitAlbaqi > lim;
+
+    /// <summary>
+    /// ⛔ همان «الباقی»ِ سربرگ (پطرول + دیزل)، به واحدِ همین حساب — سقف هم به همین واحد است.
+    /// تا ۱۴۰۵/۰۷/۲۸ پولِ ردیف‌ها (‎Totals.All.Albaqi‎) بود: حسابِ تیلی با سقفِ ۵۰۰ لیتر و
+    /// ۱۰۰ لیتر برداشت «الباقی ۶٬۸۰۰ لیتر» می‌گفت، و بی فی هیچ‌وقت هشدار نمی‌داد.
+    /// </summary>
+    private decimal LimitAlbaqi => Remainder(FuelType.Petrol) + Remainder(FuelType.Diesel);
 
     public string OverLimitText => Entity.CreditLimit is { } lim && OverLimit
-        ? $"⚠️ از سقفِ قرض گذشت: الباقی {Shamsi.Money(Totals.All.Albaqi)} {UnitText} — سقف {Shamsi.Money(lim)} {UnitText}"
+        ? $"⚠️ از سقفِ قرض گذشت: الباقی {Shamsi.Money(LimitAlbaqi)} {UnitText} — سقف {Shamsi.Money(lim)} {UnitText}"
         : "";
 
     private bool _wasOver;
@@ -1287,6 +1311,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         await SyncReceiptsAsync();
         _person.Recalc();
         RefreshTotals();
+        RefreshHawalaDot();
     }
 
     [RelayCommand]
@@ -1331,6 +1356,7 @@ public sealed partial class AccountViewModel : ObservableObject, IRowBatchHost
         await SyncReceiptsAsync();
         _person.Recalc();
         RefreshTotals();
+        RefreshHawalaDot();
     }
 
     public int RowCount => Rows.Count;

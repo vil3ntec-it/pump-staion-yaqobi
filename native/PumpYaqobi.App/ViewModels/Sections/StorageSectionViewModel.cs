@@ -817,7 +817,16 @@ public sealed partial class StorageSectionViewModel : SectionViewModel
         await RecalcAsync();
     }
 
-    public Task SaveDipAsync(TankDip d) => _host.StorageData.SaveDipAsync(d);
+    /// <summary>
+    /// ⛔ ویرایشِ میله‌زنیِ ثبت‌شده («دفتر برابر شود» یا لیترِ اندازه‌گیری) موجودیِ دفتر را
+    /// عوض می‌کند — همان‌جا از نو، وگرنه میله‌زنیِ بعدی اختلافش را با دفترِ کهنه می‌سنجید
+    /// و کم‌آمدِ دروغ برای همیشه ذخیره می‌شد (۱۴۰۵/۰۷/۲۸).
+    /// </summary>
+    public async Task SaveDipAsync(TankDip d)
+    {
+        await _host.StorageData.SaveDipAsync(d);
+        await RecalcAsync();
+    }
 
     // دکمهٔ «ثبت خرید» حالا ‎OpenBuy‎ است (پنجرهٔ کوچک)، نه ساختنِ ردیفِ خالی.
 

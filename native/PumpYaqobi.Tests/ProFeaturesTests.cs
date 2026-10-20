@@ -59,7 +59,9 @@ public class ProFeaturesTests : IDisposable
     {
         var src = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App/ViewModels/Sections/PersonViewModel.cs"));
         Assert.Contains("public bool OverLimit =>", src);
-        Assert.Contains("Totals.All.Albaqi > lim", src);
+        //  ⛔ به واحدِ همین حساب — «الباقی»ِ سربرگ، نه پولِ ردیف‌ها (۱۴۰۵/۰۷/۲۸)
+        Assert.Contains("LimitAlbaqi > lim", src);
+        Assert.Contains("LimitAlbaqi => Remainder(FuelType.Petrol) + Remainder(FuelType.Diesel)", src);
         Assert.Contains("nameof(OverLimit), nameof(OverLimitText)", src);
         var xaml = File.ReadAllText(Path.Combine(Root(), "PumpYaqobi.App/Views/Sections/PersonView.axaml"));
         Assert.Contains("{Binding CreditLimitText}", xaml);

@@ -56,6 +56,10 @@ public sealed partial class CloudLink
             new(false, default, why, code, status);
     }
 
+    /// <summary>پاسخ شکلِ خطای خودِ سرورِ ما را دارد (‎{error:…}‎) — همان سنجهٔ چراغ در ‎SendOn‎.</summary>
+    private static bool OurError(JsonElement json) =>
+        json.ValueKind == JsonValueKind.Object && json.TryGetProperty("error", out _);
+
     /// <summary>
     /// ⚠️ یک <see cref="HttpRequestMessage"/> فقط <b>یک بار</b> فرستادنی
     /// است، پس هر تلاش باید پیامِ خودش را بسازد — همین است که تلاشِ دوم پس

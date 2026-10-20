@@ -257,6 +257,8 @@ public sealed class DebtorService
 
     /// <summary>
     /// «بردگیِ» یک ردیف، همان‌طور که کارت‌ها و مفاد/ضرر می‌شمارند.
+    /// ⛔ دو رقمِ اعشار، همان ‎DebtCalculationService.RoundMoney‎ِ ردیف و سربرگ (۱۴۰۵/۰۷/۲۲) —
+    /// تا ۱۴۰۵/۰۷/۲۸ این‌جا افغانیِ درست بود: حسابِ صاف‌شده روی کارت «۱ افغانی قرض» و «⛔ اتمام پول».
     /// ⛔ یک جا — هم ‎RollupsAsync‎ و هم ‎NoInvoiceBardagiAsync‎ همین را می‌خوانند،
     /// وگرنه روزی کارتِ شرکت یک عدد می‌گفت و مفادِ همان ماه عددِ دیگر.
     /// </summary>
@@ -266,7 +268,7 @@ public sealed class DebtorService
                        THEN CAST(r.Bardagi AS REAL)
                        WHEN CAST(r.Liters AS REAL) > 0
                        THEN CAST(r.Liters AS REAL) * COALESCE(CAST(r.PricePerLiter AS REAL), 0)
-                       ELSE 0 END)";
+                       ELSE 0 END, 2)";
 
     /// <summary>
     /// ══ بردگیِ «بی‌فاکتور»ها در یک دوره — برای صفحهٔ مفاد/ضرر ═════════════════
@@ -330,7 +332,7 @@ public sealed class DebtorService
                    SUM(Rasid)           AS SumRasid,
                    SUM(RasidFuel)       AS SumRasidFuel,
                    SUM(Bardagi)         AS SumBardagi,
-                   SUM(ROUND(Bardagi - Rasid)) AS SumAlbaqi
+                   SUM(ROUND(Bardagi - Rasid, 2)) AS SumAlbaqi
             FROM (
               SELECT COALESCE(r.FuelAccountId, r.MoneyAccountId) AS AccountId,
                      CASE WHEN r.FuelAccountId IS NULL THEN 1 ELSE 0 END AS Money,

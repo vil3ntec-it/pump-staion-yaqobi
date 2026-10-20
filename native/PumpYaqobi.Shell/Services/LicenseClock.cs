@@ -122,6 +122,11 @@ public static class LicenseClock
         {
             using var k = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(SealKey);
             k.SetValue(name, SecretStore.Protect(floor.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            //  ⛔ پایین آوردنِ مجازِ کف (مجوزِ تازهٔ سرور) نامِ کهنهٔ وابسته به پوشه را هم می‌برد —
+            //  ‎Sealed‎ بیشینهٔ هر دو را می‌خواند، پس کفِ آینده‌ای که ساعتِ خراب آن‌جا نشانده بود با
+            //  هر بار باز کردنِ برنامه برمی‌گشت و برنامه را فقط‌خواندنی می‌کرد (۱۴۰۵/۰۷/۲۸).
+            if (force && AppSettings.DirOverride is null && SealNameOfDir() is var old && old != name)
+                k.DeleteValue(old, throwOnMissingValue: false);
         }
         catch { }
     }

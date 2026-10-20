@@ -222,6 +222,7 @@ public sealed class WaraqDataService
     ///   • ردیف‌های «ماندگی»ِ فروش در گاوصندوق (‎removeWaraqSalesFromSafe‎ی سایت)
     ///   • ردیف‌های قرض که از تراکنش‌های همین ورق در حساب‌ها نشسته‌اند
     ///   • مصرف‌هایی که از همین ورق آمده‌اند
+    ///   • ردیف‌های «/چکنه»ِ دفترِ چکنه
     ///
     /// ⚠️ بی این، پاک کردنِ یک ورق قرضِ طرف را در حسابش جا می‌گذاشت — قرضی که
     /// دیگر هیچ ورقی پشتش نبود و هیچ‌جا هم نمی‌شد پیدایش کرد.
@@ -246,6 +247,11 @@ public sealed class WaraqDataService
         db.Expenses.RemoveRange(
             await db.Expenses.Where(e => e.SrcKey != null && e.SrcKey.StartsWith(prefix))
                              .ToListAsync(ct));
+        //  ⛔ و ردیف‌های «/چکنه» که همین ورق در دفترِ چکنه نشانده بود (‎UpsertRetail‎) —
+        //  تا ۱۴۰۵/۰۷/۲۸ می‌ماندند: قرضی که هیچ ورقی پشتش نبود و هیچ پاک‌سازی‌ای به آن نمی‌رسید.
+        db.RetailRows.RemoveRange(
+            await db.RetailRows.Where(r => r.SrcKey != null && r.SrcKey.StartsWith(prefix))
+                               .ToListAsync(ct));
 
         db.WaraqEntries.Remove(w);
         await db.SaveChangesAsync(ct);

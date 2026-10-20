@@ -341,6 +341,8 @@ public sealed class SyncEngine : IAsyncDisposable
         //  ⚠️ «تا پانزده ثانیه صبر کن، مگر کسی بگوید همین حالا»
         //  (<see cref="PrimeNow"/>) — نه یک ‎Task.Delay‎ی شکست‌ناپذیر.
         try { await _startNow.WaitAsync(FirstDelay, ct); } catch { return; }
+        //  ⛔ «جدولِ ناشناس»ِ سرورِ کهنه دوباره در صف — شرحش بالای ‎RequeueUnknownTables‎
+        try { _store.RequeueUnknownTables(); } catch { /* دورِ بعد */ }
 
         while (!ct.IsCancellationRequested)
         {

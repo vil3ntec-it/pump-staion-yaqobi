@@ -830,11 +830,10 @@ public static class StationSnapshot
         decimal debt = 0;
         foreach (var list in accounts.Values) debt += host.Debt.SumTotals(list).All.Albaqi;
 
-        var today = Shamsi.Today();
-        var reports = (await host.StorageData.ReportsAsync(FuelType.Petrol, ct))
-            .Concat(await host.StorageData.ReportsAsync(FuelType.Diesel, ct))
-            .Where(r => Shamsi.SameDay(r.DateShamsi, today));
-        var profit = reports.Sum(r => (r.DayShift?.Profit ?? 0) + (r.NightShift?.Profit ?? 0));
+        //  ⛔ همان قاعدهٔ نوارِ برنامه از ۱۴۰۵/۰۷/۲۰: پولِ لیترِ فروخته‌شدهٔ ورقِ امروز،
+        //  نه فایدهٔ پارچه — تا ۱۴۰۵/۰۷/۲۸ گوشیِ صاحب پمپ عددِ دیگری می‌دید.
+        var tk = Shamsi.Key(Shamsi.Today());
+        var profit = (await host.WaraqData.SalesLinesAsync((tk, tk), ct)).Sum(l => l.PetrolMoney + l.DieselMoney);
 
         var expToday = new PumpYaqobi.Application.Services.DashboardService()
             .ExpQuick(await host.ExpenseLedger.ListAsync(Shamsi.ThisMonth(), ct)).Day;

@@ -683,6 +683,16 @@ public sealed class AppSettings
             //  حالا چنین نمونه‌ای **کور** است و هیچ‌وقت نمی‌نویسد.
             var blind = new AppSettings { _home = Dir };
             if (locked) blind._blind = true;
+            else
+            {
+                //  ⛔ **فایلی نبود (نصبِ تازه) ⇒ پایهٔ ادغام همان پیش‌فرض‌هاست، نه «بی‌پایه».**
+                //  بی‌پایه یعنی ذخیرهٔ بعدی کلِ شیء را می‌نویسد: نمونه‌ای که پیش از ورود ساخته شد
+                //  (‎MainViewModel._settings‎) با «پښتو» توکن‌ها، مجوز و کدِ پمپی را که در این میان
+                //  نمونه‌های دیگر نوشته بودند پاک می‌کرد (۱۴۰۵/۰۷/۲۸). ‎new AppSettings‎ همچنان بی‌پایه است.
+                blind._bondBase = blind.BondSnapshot();
+                blind._comfortBase = blind.ComfortSnap();
+                blind._baseText = JsonSerializer.Serialize(blind, Json);
+            }
             return blind;
         }
     }
@@ -1109,8 +1119,22 @@ public sealed class AppSettings
                     fs.Flush(true);
                 }
 
-                if (File.Exists(File_)) File.Replace(tmp, File_, Backup_, ignoreMetadataErrors: true);
-                else File.Move(tmp, File_);
+                //  ⛔ قفلِ گذرا (ضدِ ویروس، نمایه‌ساز) چند تلاشِ کوتاه می‌گیرد — همان کارِ ‎Read‎.
+                //  توکنِ تازه‌سازیِ چرخیده فقط همین یک بار نوشته می‌شود؛ نشدنش یعنی نوبتِ بعد
+                //  توکنِ کهنه می‌رود، سرور «دزدی» می‌بیند و کاربر از حساب بیرون (۱۴۰۵/۰۷/۲۸).
+                for (var i = 0; ; i++)
+                {
+                    try
+                    {
+                        if (File.Exists(File_)) File.Replace(tmp, File_, Backup_, ignoreMetadataErrors: true);
+                        else File.Move(tmp, File_);
+                        break;
+                    }
+                    catch (Exception ex) when (i < 4 && ex is IOException or UnauthorizedAccessException)
+                    {
+                        Thread.Sleep(25);
+                    }
+                }
                 //  آن‌چه همین حالا نوشته شد، پایهٔ ادغامِ بعدی است
                 if (_bondBase is not null) _bondBase = BondSnapshot();
                 if (_baseText is not null) _baseText = text;

@@ -499,4 +499,30 @@ public class WaraqPostingDbTests : IDisposable
         Assert.Empty(await RowsAsync(dbf));
         Assert.Empty(await SafeSalesAsync(dbf));
     }
+
+    /// <summary>
+    /// ⛔ و ردیفِ «/چکنه» هم با ورق می‌رود — و با بازگردانیِ ورق از سطل برمی‌گردد (۱۴۰۵/۰۷/۲۸).
+    /// پیش از این می‌ماند: قرضی در دفترِ چکنه که هیچ ورقی پشتش نبود.
+    /// </summary>
+    [Fact]
+    public async Task DeletingTheSheetTakesBackItsChakanaRow_AndRestoreBringsItBack()
+    {
+        var (post, data, dbf) = Host();
+        var w = await SheetAsync(data, dbf, "علی /چکنه", 10m);
+        await post.SyncAsync(w.Id);
+        await using (var db = dbf.Create())
+            Assert.Single(await db.RetailRows.AsNoTracking().ToListAsync());
+
+        await data.DeleteAsync(w.Id);
+        await using (var db = dbf.Create())
+            Assert.Empty(await db.RetailRows.AsNoTracking().ToListAsync());
+
+        var session = new UserSession();
+        session.SignIn(UserRole.Admin, "آزمون");
+        var trash = new TrashService(dbf, new PermissionService(session), session);
+        var item = Assert.Single(await trash.ListAsync());
+        Assert.Null(await trash.RestoreAsync(item.Id));
+        await using (var db = dbf.Create())
+            Assert.Single(await db.RetailRows.AsNoTracking().ToListAsync());
+    }
 }

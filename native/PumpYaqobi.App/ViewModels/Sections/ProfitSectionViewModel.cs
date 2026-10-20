@@ -52,9 +52,35 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         {
             if (k != PumpYaqobi.Services.Data.SettingsService.UnionRatePetrol
                 && k != PumpYaqobi.Services.Data.SettingsService.UnionRateDiesel) return;
-            Avalonia.Threading.Dispatcher.UIThread.Post(RefillUnion);
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => { RefillUnion(); RecalcIfRateMoved(); });
         };
     }
+
+    /// <summary>نرخ‌هایی که عددهای روی صفحه با آن‌ها حساب شده‌اند — ‎null‎ یعنی هنوز هیچ.</summary>
+    private (decimal P, decimal D)? _ratesShown;
+    private Avalonia.Threading.DispatcherTimer? _rateRecalc;
+
+    /// <summary>
+    /// ⛔ نرخِ اتحادیه «تفاوتِ نرخِ فاکتورهای در صف» و خالص را عوض می‌کند ⇒ همان‌جا
+    /// دوباره حساب، نه پس از رفتن و برگشتن به بخش (۱۴۰۵/۰۷/۲۸). فقط اگر صفحه یک بار
+    /// حساب شده و نرخ واقعاً با نرخِ آن حساب فرق دارد؛ نیم‌ثانیه پس از آخرین نویسه.
+    /// </summary>
+    private void RecalcIfRateMoved()
+    {
+        if (_ratesShown is not { } shown || shown == CurrentRates()) return;
+        _rateRecalc ??= new Avalonia.Threading.DispatcherTimer(TimeSpan.FromMilliseconds(500),
+            Avalonia.Threading.DispatcherPriority.Background, (_, _) =>
+            {
+                _rateRecalc!.Stop();
+                _ = CrashGuard.RunAsync("مفاد / ضرر", ComputeAsync);
+            });
+        _rateRecalc.Stop();
+        _rateRecalc.Start();
+    }
+
+    private (decimal P, decimal D) CurrentRates() =>
+        (_host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.UnionRatePetrol),
+         _host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.UnionRateDiesel));
 
     /// <summary>
     /// کادرهای نرخ از روی تنظیمات — فقط اگر واقعاً فرق دارند، تا تایپِ همین
@@ -368,8 +394,8 @@ public sealed partial class ProfitSectionViewModel : SectionViewModel
         var lines = await _host.WaraqData.SalesLinesAsync(keys);
         var petrol = lines.Sum(l => l.PetrolMoney);
         var diesel = lines.Sum(l => l.DieselMoney);
-        var todayP = _host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.UnionRatePetrol);
-        var todayD = _host.Settings.GetDecimal(PumpYaqobi.Services.Data.SettingsService.UnionRateDiesel);
+        var (todayP, todayD) = CurrentRates();
+        _ratesShown = (todayP, todayD);
         var rateDiff = ProfitLossService.PendingRateDiff(_pending.Where(r => period.Contains(r.DateKey)), todayP, todayD);
 
         decimal extraSum, expenseSum;
