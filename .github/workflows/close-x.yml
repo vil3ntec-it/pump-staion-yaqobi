@@ -1,0 +1,49 @@
+name: بستن با ✕ روی ویندوزِ واقعی
+
+# ══ چرا ═════════════════════════════════════════════════════════════════════
+# گزارشِ صاحب ریپو (۱۴۰۵/۰۸/۰۲): «با ایکسِ ویندوز می‌خواستم ببندم، بسته نمی‌شد و
+# برنامه هم کار نمی‌کرد؛ صدا از ویندوز می‌آمد؛ انگار یک صفحهٔ جدا پشتِ برنامه بود.»
+# سنجه‌های دیگر بی‌پنجره‌اند و غیرفعال شدنِ پنجره و رو/زیر بودنِ پرسش را نمی‌بینند.
+# این یکی پنجرهٔ واقعیِ ویندوز است — شرحِ کامل بالای ‎CloseXProbe‎.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'native/**'
+      - '.github/workflows/close-x.yml'
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - 'native/**'
+      - '.github/workflows/close-x.yml'
+
+jobs:
+  closex:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: ساخت
+        working-directory: native
+        run: dotnet build PumpYaqobi.UiTests -c Release -v q
+      - name: بستن با ✕ — همهٔ حالت‌ها
+        working-directory: native
+        shell: bash
+        # هر سطرِ ✖ یک یادداشتِ خطا روی همین چک — لاگ از بیرون خوانده نمی‌شود
+        run: |
+          set +e -o pipefail
+          bad=0
+          for m in plain max many min offer offermin; do
+            dotnet run --no-build --project PumpYaqobi.UiTests -c Release -- closex $m 2>&1 | tee "${{ runner.temp }}/closex-$m.log"
+            rc=$?
+            grep -E '✖' "${{ runner.temp }}/closex-$m.log" | head -20 | while IFS= read -r l; do echo "::error::[$m] $l"; done
+            [ $rc -ne 0 ] && bad=$((bad+1))
+          done
+          exit $bad

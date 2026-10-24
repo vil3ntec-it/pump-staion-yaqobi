@@ -204,6 +204,8 @@ internal static class Program
         if (outDir.Equals("verify", StringComparison.OrdinalIgnoreCase)) return VerifyProbe.Run();
         //  «ورق‌ها را پر کردم، بستم، دوباره آمدم — هیچ ورقی نبود»
         if (outDir.Equals("persist", StringComparison.OrdinalIgnoreCase)) return PersistProbe.Run(args);
+        //  «✕ زدم، بسته نشد، صدای ویندوز آمد» — پنجرهٔ واقعیِ ویندوز، نه بی‌پنجره
+        if (outDir.Equals("closex", StringComparison.OrdinalIgnoreCase)) return CloseXProbe.Run(args);
         if (outDir.Equals("audit11", StringComparison.OrdinalIgnoreCase)) return AuditEleven.Run(args);
         //  «حساب‌های دیر رسیده» و «هیچ جدولی کاربر را به چپ و راست نبرد» (۱۴۰۵/۰۷/۱۶)
         if (outDir.Equals("latemonths", StringComparison.OrdinalIgnoreCase)) return LateMonthProbe.Run(args);
