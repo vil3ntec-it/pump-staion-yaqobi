@@ -366,9 +366,7 @@ public partial class ExcelGrid
         }, RoutingStrategies.Tunnel, handledEventsToo: true);
         AddHandler(PointerCaptureLostEvent, (_, _) => { _headerDown = false; _floorsOnMove = false; },
                    RoutingStrategies.Bubble | RoutingStrategies.Tunnel, handledEventsToo: true);
-        //  نخستین حرکت پس از فشار روی سرستون: ‎DataGrid‎ کشیدن را گرفته، حالا کف‌ها بروند
-        //  تا ستون از محتوایش هم باریک‌تر شود (شرح بالای ‎PinOnUserResize‎).
-        AddHandler(PointerMovedEvent, (_, _) =>
+        AddHandler(PointerMovedEvent, (_, _) =>   // ‎DataGrid‎ کشیدن را گرفته ⇒ حالا کف‌ها بروند
         {
             if (!_floorsOnMove || !_headerDown) return;
             _floorsOnMove = false;
@@ -564,11 +562,7 @@ public partial class ExcelGrid
         {
             if (x is DataGridColumnHeader)
             {
-                //  ⛔ کف‌ها همین‌جا برداشته نمی‌شوند، با نخستین حرکت (۱۴۰۵/۰۸/۰۲): برداشتنشان
-                //  ستون‌های ستاره‌ای را درجا از نو پخش می‌کرد، خطِ ستون از زیرِ ماوس در می‌رفت و
-                //  ‎DataGrid‎ همان فشار را «کلیک» می‌گرفت نه «کشیدن» — اولین کشیدن در هر جدول
-                //  نمی‌گرفت (سنجهٔ ‎coldrag‎ با دادهٔ آبان: «پایه» ۸۱ ⇒ ۹۶).
-                _floorsOnMove = true;
+                _floorsOnMove = true;   // ⛔ کف‌ها با نخستین حرکت می‌روند، نه این‌جا — شرح کنارِ ‎_floorsOnMove‎
                 _headerDown = true;
                 _dragGrab = -1; _dragNeighbor = -1;
                 _pressWidths = Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex)
