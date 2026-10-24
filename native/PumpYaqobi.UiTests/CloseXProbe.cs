@@ -87,11 +87,19 @@ internal static class CloseXProbe
         _main = win.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
         Check(_main != IntPtr.Zero, "دستگیرهٔ پنجرهٔ برنامه");
 
-        //  همان «در این اجرا چیزی نوشته شده» — بی آن پرسشِ «پیش از بستن» نمی‌آید
-        await AppHost.Current.SafeLedger.AddAsync(new SafeEntry
+        //  همان «در این اجرا چیزی نوشته شده» — بی آن پرسشِ «پیش از بستن» نمی‌آید.
+        //  ⚠️ ورودِ بی‌رمز ‎SignedIn‎ را ممکن است دوباره بزند (و ‎ExitBackup.Mark‎ را)؛
+        //  پس تا «لازم» شدن، هر ثانیه یک ردیفِ دیگر.
+        win.Closing += (_, e) => Console.WriteLine($"  · Closing شلیک شد (لغو={e.Cancel}) {State(win, vm)}");
+        await Task.Delay(2000);
+        for (var i = 0; i < 10 && !ExitBackup.Needed(AppSettings.Load().AskBackupOnExit); i++)
         {
-            DateShamsi = Shamsi.Today(), Kind = SafeEntryKind.Mandagi, Title = "closex", Amount = 1250,
-        });
+            await AppHost.Current.SafeLedger.AddAsync(new SafeEntry
+            {
+                DateShamsi = Shamsi.Today(), Kind = SafeEntryKind.Mandagi, Title = "closex " + i, Amount = 1250 + i,
+            });
+            await Task.Delay(1000);
+        }
         Check(ExitBackup.Needed(AppSettings.Load().AskBackupOnExit), "پس از نوشتن، «پیش از بستن» پرسیده می‌شود");
 
         if (mode == "max") { win.WindowState = WindowState.Maximized; await Task.Delay(800); }
@@ -120,6 +128,7 @@ internal static class CloseXProbe
         await Until(() => Dialogs_().Count >= want || !win.IsVisible, 30, "پس از ✕، پرسشِ «پیش از بستن» آمد");
         await Task.Delay(800);
         if (mode == "min") { ShowWindow(_main, SW_RESTORE); await Task.Delay(1200); }
+        Console.WriteLine($"  · پس از ✕: {State(win, vm)}");
         Verdict("پس از ✕");
 
         //  کاربر هر پرسش را با دکمهٔ «نه»ی خودش جواب می‌دهد — «بستن بی بکاپ» / «بعداً»
@@ -132,8 +141,25 @@ internal static class CloseXProbe
             await Task.Delay(400);
         }
 
-        await Until(() => !win.IsVisible, 60, "برنامه پس از جواب بسته شد");
+        Console.WriteLine($"  · پس از جواب: {State(win, vm)}");
+        await Until(() => !win.IsVisible, 20, "برنامه پس از جواب بسته شد");
+        if (win.IsVisible)
+        {
+            //  کاربرِ واقعی همین را می‌کند: دوباره ✕
+            Console.WriteLine($"  · ✕ِ دوباره: {State(win, vm)}");
+            PostMessage(_main, WM_SYSCOMMAND, (IntPtr)SC_CLOSE, IntPtr.Zero);
+            await Until(() => !win.IsVisible, 20, "✕ِ دوباره برنامه را بست");
+            if (win.IsVisible) { Console.WriteLine($"  · هنوز باز: {State(win, vm)}"); Console.WriteLine(Dump()); }
+        }
         Console.WriteLine($"  ⏱ از ✕ تا بسته شدن: {sw.ElapsedMilliseconds}ms");
+    }
+
+    private static string State(MainWindow win, MainViewModel vm)
+    {
+        static object? F(object o, string n) =>
+            o.GetType().GetField(n, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(o);
+        return $"[_closing={F(win, "_closing")} _flushed={F(win, "_flushed")} فعال={IsWindowEnabled(_main)} " +
+               $"پرسش‌ها={Dialogs_().Count} ارسال=«{vm.ExitSendText}»]";
     }
 
     private static List<Window> Dialogs_() =>
