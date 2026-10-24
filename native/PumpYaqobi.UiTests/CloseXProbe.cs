@@ -4,9 +4,7 @@ using System.Text;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Interactivity;
 using Avalonia.Threading;
-using Avalonia.VisualTree;
 using PumpYaqobi.App.Services;
 using PumpYaqobi.App.ViewModels;
 using PumpYaqobi.App.Views;
@@ -22,25 +20,26 @@ namespace PumpYaqobi.UiTests;
 /// برنامه هم کار نمی‌کرد؛ انگار یک صفحهٔ جدا پشتِ صفحهٔ برنامه بود که اول اون باید
 /// بسته می‌شد، و بعد اون هم نبود… همه تست‌ها رو روش انجام بده.»
 ///
-/// ⛔ صدای «دینگ»ِ ویندوز یعنی پنجرهٔ برنامه **غیرفعال** است (‎EnableWindow(false)‎) —
-/// همان کاری که ‎ShowDialog‎ با صاحبش می‌کند. پس پرسش این است: پنجرهٔ پرسشِ
-/// «پیش از بستن» (یا هر پرسشِ دیگری) **واقعاً دیده می‌شود**؟
+/// ⛔ صدای «دینگ»ِ ویندوز یعنی پنجرهٔ برنامه **غیرفعال** است — کارِ ‎ShowDialog‎ با صاحبش.
+/// همین سنجه روی کدِ پیشین نشان داد: ✕ (‎WM_SYSCOMMAND/SC_CLOSE‎) روی پنجرهٔ غیرفعال
+/// اصلاً به ‎Closing‎ نمی‌رسد؛ «پیش از بستن» و «نسخهٔ تازه» پنجرهٔ جدا بودند. حالا هر دو
+/// داخلِ خودِ پنجره‌اند (‎MainViewModel.Ask.cs‎) و ✕ِ دوم همیشه می‌بندد (‎HurryExit‎).
 ///
-/// ⚠️ سنجه‌های دیگر بی‌پنجره‌اند (‎Avalonia.Headless‎) و غیرفعال شدن، رو/زیرِ هم بودن و
-/// بیرون از صفحه بودن را **نمی‌بینند**. این یکی پنجرهٔ واقعیِ ویندوز است (‎UsePlatformDetect‎)
-/// با همان ‎App‎ و ‎MainWindow‎ی برنامه، و ✕ را با همان پیامی می‌زند که دکمهٔ ✕ می‌فرستد
-/// (‎WM_SYSCOMMAND/SC_CLOSE‎). حالِ پنجره‌ها را از خودِ ویندوز می‌خواند (‎EnumWindows‎،
-/// ‎IsWindowEnabled‎، ‎DWMWA_CLOAKED‎، ‎MonitorFromRect‎).
+/// ⚠️ سنجه‌های دیگر بی‌پنجره‌اند (‎Avalonia.Headless‎) و غیرفعال شدن را **نمی‌بینند**. این
+/// یکی پنجرهٔ واقعیِ ویندوز است (‎UsePlatformDetect‎) با همان ‎App‎ و ‎MainWindow‎ی برنامه،
+/// ✕ را با همان پیامِ دکمهٔ ✕ می‌زند و حالِ پنجره‌ها را از خودِ ویندوز می‌خواند.
 ///
-/// حالت‌ها (آرگومانِ دوم): ‎plain‎ · ‎max‎ · ‎many‎ (پنج ✕ پشتِ هم) · ‎min‎ (بستن از
-/// نوارِ وظیفه وقتی کوچک است) · ‎offer‎ (پرسشِ «نسخهٔ تازه» باز است) · ‎offermin‎.
-/// ⛔ «گیر» یعنی: پنجرهٔ برنامه غیرفعال است و هیچ پنجرهٔ دیدنیِ فعالی از همین برنامه
-/// روی صفحه نیست. سنجه با سقفِ وقت می‌دود: برنامه‌ای که بسته نشود همین‌جا ✖ می‌گیرد.
+/// حالت‌ها (آرگومانِ دوم): ‎plain‎ (✕ ⇐ «بستن بی بکاپ») · ‎twice‎ (✕ ⇐ ✕) · ‎max‎ · ‎many‎
+/// (پنج ✕ پشتِ هم) · ‎min‎ (بستن از نوارِ وظیفه وقتی کوچک است) · ‎offer‎ (کارتِ «نسخهٔ
+/// تازه» باز است) · ‎offermin‎ · ‎yes‎ («بله، بکاپ بگیر»).
 /// </summary>
 internal static class CloseXProbe
 {
     private static int _bad;
     private static IntPtr _main;
+    private static Stopwatch? _xAt;
+    private static int _closeWithinMs;
+    private static bool _closed;
 
     public static int Run(string[] args)
     {
@@ -55,10 +54,17 @@ internal static class CloseXProbe
         var tmpDb = Path.Combine(Path.GetTempPath(), "pump-closex-" + Guid.NewGuid().ToString("N"), "pump.db");
         AppHost.Start(tmpDb);
         FakeLicense.Grant();
+        ExitBackup.Disabled = false;    // ⛔ خودِ همین پرسش سنجیده می‌شود (‎Program‎ برای بقیه خاموشش کرده)
 
         var life = new ClassicDesktopStyleApplicationLifetime { ShutdownMode = ShutdownMode.OnMainWindowClose };
         AppBuilder.Configure<PumpYaqobi.App.App>().UsePlatformDetect().SetupWithLifetime(life);
         var win = (MainWindow)life.MainWindow!;
+        win.Closed += (_, _) =>
+        {
+            _closed = true;
+            var ms = _xAt?.ElapsedMilliseconds ?? -1;
+            Check(_xAt is not null && ms <= _closeWithinMs, $"برنامه بسته شد — {ms}ms پس از ✕ (سقف {_closeWithinMs}ms)");
+        };
 
         //  ⛔ سقفِ کل: اگر پنجره بسته نشد، همان «کپ»ِ صاحب ریپو است — حال را بنویس و ✖
         var deadline = new Thread(() =>
@@ -72,15 +78,16 @@ internal static class CloseXProbe
 
         Dispatcher.UIThread.Post(async () =>
         {
-            try { await Scenario(life, win, mode); }
+            try { await Scenario(win, mode); }
             catch (Exception ex) { Fail("استثنا در سنجه: " + ex); try { win.Close(); } catch { } }
         });
         life.Start(args);
+        Check(_closed, "برنامه بسته شد");
         Console.WriteLine(_bad == 0 ? "✔ closex سبز" : $"✖ closex: {_bad} مورد");
         return _bad == 0 ? 0 : 1;
     }
 
-    private static async Task Scenario(ClassicDesktopStyleApplicationLifetime life, MainWindow win, string mode)
+    private static async Task Scenario(MainWindow win, string mode)
     {
         var vm = (MainViewModel)win.DataContext!;
         await Until(() => win.IsVisible && vm.Phase == MainViewModel.AppPhase.Ready, 90, "برنامه باز و آماده شد");
@@ -90,77 +97,64 @@ internal static class CloseXProbe
         //  همان «در این اجرا چیزی نوشته شده» — بی آن پرسشِ «پیش از بستن» نمی‌آید.
         //  ⚠️ ورودِ بی‌رمز ‎SignedIn‎ را ممکن است دوباره بزند (و ‎ExitBackup.Mark‎ را)؛
         //  پس تا «لازم» شدن، هر ثانیه یک ردیفِ دیگر.
-        win.Closing += (_, e) => Console.WriteLine($"  · Closing شلیک شد (لغو={e.Cancel}) {State(win, vm)}");
-        await Task.Delay(2000);
+        await Task.Delay(1500);
         for (var i = 0; i < 10 && !ExitBackup.Needed(AppSettings.Load().AskBackupOnExit); i++)
         {
             await AppHost.Current.SafeLedger.AddAsync(new SafeEntry
             {
                 DateShamsi = Shamsi.Today(), Kind = SafeEntryKind.Mandagi, Title = "closex " + i, Amount = 1250 + i,
             });
-            await Task.Delay(1000);
+            await Task.Delay(500);
         }
         Check(ExitBackup.Needed(AppSettings.Load().AskBackupOnExit), "پس از نوشتن، «پیش از بستن» پرسیده می‌شود");
 
         if (mode == "max") { win.WindowState = WindowState.Maximized; await Task.Delay(800); }
+        if (mode is "min" or "offermin") { ShowWindow(_main, SW_MINIMIZE); await Task.Delay(800); }
 
+        Task<bool>? offer = null;
         if (mode is "offer" or "offermin")
         {
-            if (mode == "offermin") { ShowWindow(_main, SW_MINIMIZE); await Task.Delay(800); }
-            _ = Dialogs.ConfirmAsync(PumpYaqobi.App.Update.AutoUpdate.OfferTitle, "closex", "⬆️ نصب کن", "بعداً");
-            await Until(() => Dialogs_().Count == 1, 15, "پرسشِ «نسخهٔ تازه» باز شد");
-            await Task.Delay(600);
+            offer = PumpYaqobi.App.Update.AutoUpdate.Ask(
+                new PumpYaqobi.App.Update.UpdateInfo(true, "3.1.0", "9.9.9", null, 0, null));
+            await Until(() => vm.IsAskingCard, 10, "کارتِ «نسخهٔ تازه» در گوشهٔ خودِ پنجره آمد");
             if (mode == "offermin") { ShowWindow(_main, SW_RESTORE); await Task.Delay(1200); }
-            Verdict("پرسشِ «نسخهٔ تازه» باز است");
+            Check(!vm.IsAskingBlocking, "کارت جلوی کار را نمی‌گیرد");
+            Verdict("کارتِ «نسخهٔ تازه» باز است");
         }
 
-        if (mode == "min") { ShowWindow(_main, SW_MINIMIZE); await Task.Delay(800); }
-
-        var sw = Stopwatch.StartNew();
+        _xAt = Stopwatch.StartNew();
+        _closeWithinMs = mode == "yes" ? 60_000 : 20_000;
         var clicks = mode == "many" ? 5 : 1;
         for (var i = 0; i < clicks; i++)
         {
-            PostMessage(_main, WM_SYSCOMMAND, (IntPtr)SC_CLOSE, IntPtr.Zero);
+            X();
             await Task.Delay(60);
         }
+        if (mode == "many") return;     // ✕ِ دوم همان «همین حالا ببند» است — Closed داوری می‌کند
+        if (mode == "min") { await Task.Delay(800); ShowWindow(_main, SW_RESTORE); }
 
-        var want = mode is "offer" or "offermin" ? 2 : 1;
-        await Until(() => Dialogs_().Count >= want || !win.IsVisible, 30, "پس از ✕، پرسشِ «پیش از بستن» آمد");
-        await Task.Delay(800);
-        if (mode == "min") { ShowWindow(_main, SW_RESTORE); await Task.Delay(1200); }
-        Console.WriteLine($"  · پس از ✕: {State(win, vm)}");
-        Verdict("پس از ✕");
+        await Until(() => vm.IsAskingBlocking || !win.IsVisible, 20, "پس از ✕، «پیش از بستن» داخلِ خودِ پنجره آمد");
+        Check(vm.IsAskingBlocking, "پرسشِ «پیش از بستن» تمام‌پنجره است");
+        await Task.Delay(400);
+        Verdict("پرسشِ «پیش از بستن» باز است");
+        if (offer is not null)
+            Check(offer.IsCompleted && !offer.Result, "✕ وسطِ کارتِ «نسخهٔ تازه» یعنی «بعداً» — نه نصب");
 
-        //  کاربر هر پرسش را با دکمهٔ «نه»ی خودش جواب می‌دهد — «بستن بی بکاپ» / «بعداً»
-        foreach (var d in Dialogs_().ToList())
+        switch (mode)
         {
-            var no = d.GetVisualDescendants().OfType<Button>()
-                      .FirstOrDefault(b => b.Content as string is "بستن بی بکاپ" or "بعداً");
-            Check(no is not null, $"دکمهٔ «نه» در «{d.Title}» پیدا شد");
-            no?.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            await Task.Delay(400);
+            case "twice" or "min" or "offer" or "offermin":
+                X();                                     // کاربرِ واقعی: دوباره ✕
+                break;
+            case "yes":
+                vm.AskAcceptCommand.Execute(null);       // «بله، بکاپ بگیر»
+                break;
+            default:
+                vm.AskDeclineCommand.Execute(null);      // «بستن بی بکاپ»
+                break;
         }
-
-        Console.WriteLine($"  · پس از جواب: {State(win, vm)}");
-        await Until(() => !win.IsVisible, 20, "برنامه پس از جواب بسته شد");
-        if (win.IsVisible)
-        {
-            //  کاربرِ واقعی همین را می‌کند: دوباره ✕
-            Console.WriteLine($"  · ✕ِ دوباره: {State(win, vm)}");
-            PostMessage(_main, WM_SYSCOMMAND, (IntPtr)SC_CLOSE, IntPtr.Zero);
-            await Until(() => !win.IsVisible, 20, "✕ِ دوباره برنامه را بست");
-            if (win.IsVisible) { Console.WriteLine($"  · هنوز باز: {State(win, vm)}"); Console.WriteLine(Dump()); }
-        }
-        Console.WriteLine($"  ⏱ از ✕ تا بسته شدن: {sw.ElapsedMilliseconds}ms");
     }
 
-    private static string State(MainWindow win, MainViewModel vm)
-    {
-        static object? F(object o, string n) =>
-            o.GetType().GetField(n, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(o);
-        return $"[_closing={F(win, "_closing")} _flushed={F(win, "_flushed")} فعال={IsWindowEnabled(_main)} " +
-               $"پرسش‌ها={Dialogs_().Count} ارسال=«{vm.ExitSendText}»]";
-    }
+    private static void X() => PostMessage(_main, WM_SYSCOMMAND, (IntPtr)SC_CLOSE, IntPtr.Zero);
 
     private static List<Window> Dialogs_() =>
         ((IClassicDesktopStyleApplicationLifetime)Avalonia.Application.Current!.ApplicationLifetime!)
@@ -169,22 +163,10 @@ internal static class CloseXProbe
     // ══ داوری با چشمِ خودِ ویندوز ════════════════════════════════════════════
     private static void Verdict(string when)
     {
-        var all = Windows();
-        var main = all.FirstOrDefault(w => w.Hwnd == _main);
-        var others = all.Where(w => w.Hwnd != _main && w.Visible).ToList();
         Console.WriteLine($"  ── {when}:");
         Console.WriteLine(Dump());
-        if (main is null) { Console.WriteLine("  (پنجرهٔ برنامه دیگر نیست)"); return; }
-
-        var seen = others.Where(w => w.Enabled && !w.Cloaked && w.OnScreen && !w.Iconic).ToList();
-        Check(main.Enabled || seen.Count > 0,
-              $"{when}: برنامه غیرفعال است ⇒ دستِ کم یک پنجرهٔ دیدنی و فعال روی صفحه هست");
-        foreach (var w in seen.Where(w => w.Owner == _main))
-            Check(w.Z < main.Z, $"{when}: «{w.Title}» روی پنجرهٔ برنامه است، نه پشتش (z {w.Z} < {main.Z})");
-        var popup = GetLastActivePopup(_main);
-        if (!main.Enabled)
-            Check(popup != _main && seen.Any(w => w.Hwnd == popup),
-                  $"{when}: کلیک روی برنامه ویندوز را به پنجرهٔ پرسشِ دیدنی می‌برد (نه فقط «دینگ»)");
+        Check(IsWindowEnabled(_main), $"{when}: پنجرهٔ برنامه فعال است — کلیک و ✕ به آن می‌رسد (بی «دینگ»)");
+        Check(Dialogs_().Count == 0, $"{when}: هیچ پنجرهٔ جدای پرسشی نیست که پشت یا بیرون بیفتد");
     }
 
     private sealed record Win(IntPtr Hwnd, int Z, string Class, string Title, bool Visible, bool Enabled,
@@ -259,7 +241,6 @@ internal static class CloseXProbe
     [DllImport("user32.dll")] private static extern bool IsWindowEnabled(IntPtr h);
     [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr h);
     [DllImport("user32.dll")] private static extern IntPtr GetWindow(IntPtr h, int cmd);
-    [DllImport("user32.dll")] private static extern IntPtr GetLastActivePopup(IntPtr h);
     [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] private static extern IntPtr MonitorFromRect(ref RECT r, uint flags);
     [DllImport("user32.dll")] private static extern IntPtr GetWindowLongPtr(IntPtr h, int i);

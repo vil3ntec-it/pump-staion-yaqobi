@@ -111,11 +111,14 @@ public partial class MainWindow : Window
         //  ⛔ ✕ِ دوم وسطِ نوشتن هم بستن را لغو می‌کند (۱۴۰۵/۰۷/۱۶) — پیش از این ‎_closing‎
         //  آن را بی ‎Cancel‎ رها می‌کرد، پنجره همان لحظه بسته می‌شد و ردیفی که با دیسکِ
         //  قفل دوباره تلاش می‌کرد گم می‌شد. فقط ‎Close()‎ِ خودمان پس از نوشتن رد می‌شود.
+        //  ⛔ ولی ✕ِ دوم دیگر **بی‌اثر** نیست (۱۴۰۵/۰۸/۰۲ — «✕ زدم، بسته نشد، صدای ویندوز
+        //  آمد»): پرسش و ارسال را کنار می‌زند و بستن پس از نوشتن تمام می‌شود (‎HurryExit‎).
+        //  پیش از این بستنی که پشتِ پرسش یا ارسال ماند، هرگز دوباره ✕ نمی‌پذیرفت.
         Closing += async (_, e) =>
         {
             if (_flushed) return;
             e.Cancel = true;
-            if (_closing) return;
+            if (_closing) { vm.HurryExit(); return; }
             _closing = true;
             try { Controls.ExcelGrid.CommitFocused(this); } catch { }
             try { await vm.FlushEverythingAsync(); } catch { }
@@ -140,6 +143,10 @@ public partial class MainWindow : Window
         {
             if (e.PropertyName == nameof(MainViewModel.Current))
                 this.FindControl<Controls.NavStrip>("Nav")?.BringActiveIntoView();
+            //  پرسشِ تمام‌پنجره فوکوس را می‌گیرد — تایپ به خانهٔ جدولِ پشتش نرسد
+            else if (e.PropertyName == nameof(MainViewModel.IsAskingBlocking) && vm.IsAskingBlocking)
+                Dispatcher.UIThread.Post(() => this.FindControl<Avalonia.Controls.Button>("AskOkButton")?.Focus(),
+                                         DispatcherPriority.Input);
         };
 
         // ══ پردهٔ لودینگ، همان لحظهٔ ورود ═══════════════════════════════════

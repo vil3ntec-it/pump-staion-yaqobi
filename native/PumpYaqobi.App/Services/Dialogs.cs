@@ -39,6 +39,9 @@ public static class Dialogs
         Avalonia.Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime d
             ? d.MainWindow : null;
 
+    /// <summary>ویومدلِ پنجرهٔ برنامه — برای پرسشِ درونِ پنجره (‎MainViewModel.AskConfirmAsync‎).</summary>
+    public static ViewModels.MainViewModel? MainVm => Owner?.DataContext as ViewModels.MainViewModel;
+
     /// <summary>متنی را در کلیپ‌بوردِ سیستم بگذار. ‎false‎ یعنی پنجره‌ای نبود.</summary>
     public static async Task<bool> CopyAsync(string text)
     {

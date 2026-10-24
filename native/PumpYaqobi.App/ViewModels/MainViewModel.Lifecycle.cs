@@ -246,9 +246,11 @@ public sealed partial class MainViewModel
         if (Phase != AppPhase.Ready || !ExitBackup.Needed(AppSettings.Load().AskBackupOnExit)) return;
         var last = BackupSectionViewModel.LastFullPath();
         var where = last is null ? "روی همین کامپیوتر (عکسِ امروز)" : $"در فایلِ قبلی «{Path.GetFileName(last)}»";
-        if (!await Dialogs.ConfirmAsync("پیش از بستن",
+        //  ⛔ داخلِ همین پنجره، نه پنجرهٔ جدا (۱۴۰۵/۰۸/۰۲ — شرح در ‎MainViewModel.Ask.cs‎)؛
+        //  ✕ِ دوباره همان «بستن بی بکاپ» است (‎HurryExit‎).
+        if (_exitHurry || !await AskConfirmAsync("پیش از بستن",
                 "در این اجرا چیزهایی نوشته شده و هنوز بکاپ نگرفته‌اید.\n"
-                + $"بکاپ {where} گرفته شود؟", "بله، بکاپ بگیر", "بستن بی بکاپ"))
+                + $"بکاپ {where} گرفته شود؟", "بله، بکاپ بگیر", "بستن بی بکاپ", blocks: true))
             return;
         var backup = Sections.SelectMany(s => s.SubSections).OfType<BackupSectionViewModel>().FirstOrDefault();
         if (last is not null && backup is not null && await backup.WriteFullAsync(last)) return;
@@ -278,9 +280,25 @@ public sealed partial class MainViewModel
     [RelayCommand]
     private void SkipExitSend() { try { _exitSendCts?.Cancel(); } catch { } }
 
+    private volatile bool _exitHurry;
+
+    /// <summary>
+    /// ══ ✕ِ دوم وسطِ بستن = «همین حالا ببند» (۱۴۰۵/۰۸/۰۲) ══
+    /// ⛔ پیش از این ✕ِ دوم فقط لغو می‌شد؛ اگر بستن پشتِ پرسشی که دیده نمی‌شد یا پشتِ
+    /// ارسالِ کند ماند، برنامه **هرگز** بسته نمی‌شد. حالا پرسشِ باز «نه» می‌گیرد، ارسال
+    /// کنار می‌رود و بستن همان لحظه پس از نوشتنِ همه‌چیز روی دیسک تمام می‌شود.
+    /// ⚠️ نوشتن (‎FlushEverythingAsync‎) هرگز کنار نمی‌رود — سقفِ وقتِ خودش را دارد.
+    /// </summary>
+    public void HurryExit()
+    {
+        _exitHurry = true;
+        AnswerAsk(false);
+        SkipExitSend();
+    }
+
     public async Task SendToServerBeforeExitAsync()
     {
-        if (Update.UpdateExit.Active || Phase != AppPhase.Ready || ExitBackup.Disabled) return;
+        if (_exitHurry || Update.UpdateExit.Active || Phase != AppPhase.Ready || ExitBackup.Disabled) return;
         var host = AppHost.Current;
         using var cts = new CancellationTokenSource(ExitSendCap);
         _exitSendCts = cts;
@@ -300,7 +318,8 @@ public sealed partial class MainViewModel
             void Show() => Dispatcher.UIThread.Post(() =>
             { if (ExitSendText.Length > 0 && pusher.Progress.Length > 0) ExitSendText = pusher.Progress; });
             pusher.ProgressChanged += Show;
-            try { await Task.Run(() => pusher.RunOnceAsync(manual: false, cts.Token), cts.Token); }
+            //  ⚠️ ‎WaitAsync‎: «بستن بی‌انتظار» و ✕ِ دوم همان لحظه برمی‌گردند، حتی وسطِ عکسِ دفتر
+            try { await Task.Run(() => pusher.RunOnceAsync(manual: false, cts.Token), cts.Token).WaitAsync(cts.Token); }
             catch { /* نرسید — نسخهٔ این کامپیوتر سالم است */ }
             finally { pusher.ProgressChanged -= Show; }
         }

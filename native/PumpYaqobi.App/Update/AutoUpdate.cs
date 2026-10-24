@@ -43,8 +43,14 @@ public static class AutoUpdate
     /// <summary>
     /// پرسشِ «نصب شود؟» — تزریق‌پذیر برای سنجه‌ها. خروجی ‎true‎ یعنی کاربر گفت نصب کن.
     /// </summary>
+    /// ⛔ کارتِ گوشهٔ همان پنجره، نه پنجرهٔ جدا (۱۴۰۵/۰۸/۰۲): این پرسش **خودش** وسطِ کار
+    /// می‌آید؛ پنجرهٔ جدا برنامه را غیرفعال می‌کرد و اگر دیده نمی‌شد، برنامه «یک‌دفعه کپ»
+    /// بود و ✕ فقط صدای ویندوز می‌داد. کارت فوکوس نمی‌دزدد و کار ادامه دارد — شرح در
+    /// ‎MainViewModel.Ask.cs‎.
     public static Func<UpdateInfo, Task<bool>> Ask { get; set; } = info =>
-        Dialogs.ConfirmAsync(OfferTitle, OfferText(info), "⬆️ نصب کن", "بعداً");
+        Dialogs.MainVm is { } vm
+            ? vm.AskConfirmAsync(OfferTitle, OfferText(info), "⬆️ نصب کن", "بعداً", blocks: false)
+            : Task.FromResult(false);
 
     public const string OfferTitle = "⬆️ نسخهٔ تازهٔ برنامه آماده است";
 
