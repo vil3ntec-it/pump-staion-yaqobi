@@ -24,7 +24,31 @@ public partial class DialogWindow : Window
     // همان پیامی که صاحب ریپو گرفت و هیچ آزمونی نمی‌دیدش: تنها سنجشی که این
     // مسیر را می‌دواند با ‎Dialogs.PromptHook‎ از خودِ پنجره رد می‌شد. حالا
     // سنجشِ ‎dialogs‎ پنجره‌های واقعی را می‌سازد و همین را می‌پاید.
-    public DialogWindow() => InitializeComponent();
+    public DialogWindow()
+    {
+        InitializeComponent();
+        Opened += (_, _) => KeepOnScreen();
+    }
+
+    /// <summary>
+    /// ⛔ پنجرهٔ پرسشی که روی هیچ نمایشگری نیست برنامه را بی‌صدا قفل می‌کند: صاحبش تا
+    /// جواب غیرفعال است و هر کلیک فقط «دینگ» (۱۴۰۵/۰۸/۰۲ — «انگار یک صفحهٔ جدا پشتِ
+    /// برنامه بود»). پس اگر بیرون افتاد — نمایشگرِ دومِ جداشده، مقیاسِ دیگر — وسطِ
+    /// نمایشگرِ صاحبش می‌نشیند و جلو می‌آید.
+    /// </summary>
+    private void KeepOnScreen()
+    {
+        try
+        {
+            var r = new Avalonia.PixelRect(Position, Avalonia.PixelSize.FromSize(Bounds.Size, DesktopScaling));
+            if (Screens.All.Any(s => s.WorkingArea.Intersects(r))) return;
+            var home = (Owner is Window o ? Screens.ScreenFromWindow(o) : null) ?? Screens.Primary;
+            if (home is null) return;
+            Position = home.WorkingArea.CenterRect(r).Position;
+            Activate();
+        }
+        catch { /* جابه‌جا کردن رفاه است؛ پرسش همچنان باز است */ }
+    }
 
     public static DialogWindow ForPrompt(string title, string message, string initial, string ok)
     {

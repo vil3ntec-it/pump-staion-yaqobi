@@ -18,7 +18,8 @@ internal static class SrcText
                                    "ExcelGrid.Keys.cs", "ExcelGrid.Clipboard.cs", "ExcelGrid.Commit.cs", "ExcelGrid.Park.cs",
                                    "ExcelGrid.Caret.cs", "ExcelGrid.Edit.cs" },
         ["MainViewModel.cs"] = new[] { "MainViewModel.cs", "MainViewModel.Lights.cs", "MainViewModel.Notices.cs",
-                                       "MainViewModel.Lifecycle.cs", "MainViewModel.Navigation.cs", "MainViewModel.Ledger.cs" },
+                                       "MainViewModel.Lifecycle.cs", "MainViewModel.Navigation.cs", "MainViewModel.Ledger.cs",
+                                       "MainViewModel.Ask.cs" },
         //  شورا، د۵: پنج تکهٔ اول همان فایلِ پیشین‌اند، به همان ترتیب؛ چهار تای آخر از
         //  پیش تکهٔ جدا بودند و آزمون‌هایشان همچنان نامِ خودشان را هم می‌خوانند.
         ["CloudLink.cs"] = new[] { "CloudLink.cs", "CloudLink.License.cs", "CloudLink.Support.cs",

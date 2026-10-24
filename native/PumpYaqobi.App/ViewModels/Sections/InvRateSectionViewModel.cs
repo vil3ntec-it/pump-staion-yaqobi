@@ -313,12 +313,19 @@ public sealed partial class InvRateSectionViewModel : SectionViewModel
     }
 
     /// <summary>جست‌وجو روی شمارهٔ فاکتور و نامِ مشتری — خالی یعنی همه.</summary>
-    private bool Match(InvRateRowViewModel r)
+    private bool Match(InvRateRowViewModel r) => Matches(Search, r.Number, r.Customer, r.DateShamsi);
+
+    /// <summary>
+    /// ⛔ تاریخ فقط وقتی سنجیده می‌شود که جست‌وجو خودش تاریخ‌وار است (‎/‎ دارد) —
+    /// ۱۴۰۵/۰۸/۰۲: «۸» در ماهِ ۰۸ همهٔ فاکتورها را بیرون می‌کشید، و «۱»، «۴»، «۰»، «۵» در
+    /// هر روزِ سالِ ۱۴۰۵؛ جست‌وجوی شمارهٔ فاکتور (خواستهٔ صاحب ریپو) عملاً کار نمی‌کرد.
+    /// </summary>
+    public static bool Matches(string search, int number, string customer, string date)
     {
-        var q = Shamsi.ToEnDigits(Search).Trim();
+        var q = Shamsi.ToEnDigits(search ?? "").Trim();
         if (q.Length == 0) return true;
-        return Shamsi.ToEnDigits(r.Customer).Contains(q, StringComparison.OrdinalIgnoreCase)
-            || Shamsi.ToEnDigits(r.Number.ToString()).Contains(q, StringComparison.Ordinal)
-            || Shamsi.ToEnDigits(r.DateShamsi).Contains(q, StringComparison.Ordinal);
+        return Shamsi.ToEnDigits(customer ?? "").Contains(q, StringComparison.OrdinalIgnoreCase)
+            || number.ToString().Contains(q, StringComparison.Ordinal)
+            || (q.Contains('/') && Shamsi.ToEnDigits(date ?? "").Contains(q, StringComparison.Ordinal));
     }
 }
