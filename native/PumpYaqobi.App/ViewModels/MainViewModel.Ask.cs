@@ -46,6 +46,8 @@ public sealed partial class MainViewModel
     /// </summary>
     public Task<bool> AskConfirmAsync(string title, string text, string ok, string no, bool blocks)
     {
+        //  ⚠️ کارتِ «نسخهٔ تازه» جای «پیش از بستن»ِ باز را نمی‌گیرد — برنامه دارد بسته می‌شود
+        if (!blocks && IsAskingBlocking) return Task.FromResult(false);
         AnswerAsk(false);
         var t = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         _ask = t;
