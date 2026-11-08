@@ -193,7 +193,7 @@ public class AppClockTests : IDisposable
         return $"{h}.{b}.{B64(s)}";
     }
 
-    private static AppSettings Vip(long iat)
+    private static AppSettings Vip(long iat, long subDays = 365)
     {
         var (key, pub) = Server();
         return new AppSettings
@@ -207,7 +207,7 @@ public class AppClockTests : IDisposable
                 ["iss"] = "tohid-license-server", ["aud"] = "tohid-pump-app",
                 ["duid"] = "pc-clock", ["stn"] = "stn_clock",
                 ["iat"] = iat, ["nbf"] = iat - 60_000, ["exp"] = iat + 10L * 86_400_000,
-                ["sub_ends"] = iat + 365L * 86_400_000,
+                ["sub_ends"] = iat + subDays * 86_400_000,
                 ["feat"] = Entitlements.Paid, ["plan_title"] = "vip",
             }),
         };
@@ -248,8 +248,8 @@ public class AppClockTests : IDisposable
         try
         {
             Entitlements.Now = () => AppClock.UnixMs;
-            //  مجوزی که یک ماه پیش صادر شد و بیست روز است منقضی شده
-            var f = Vip(AppClock.UnixMs - 30L * 86_400_000);
+            //  اشتراکی که یک ماه پیش صادر شد و بیست روز است تمام شده
+            var f = Vip(AppClock.UnixMs - 30L * 86_400_000, subDays: 10);
             f.CloudLicense = f.CloudLicense;   // همان
             Assert.False(Entitlements.State(f).Open);
 

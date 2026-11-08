@@ -60,38 +60,72 @@ public class AppLockTests
         Assert.False(s.ReadOnly);
     }
 
+    /// <summary>
+    /// ⛔ ۱۴۰۵/۰۸/۱۷: «همون روز و همون ساعت تموم بشه» — پس از پایانِ اشتراکِ پولی
+    /// هیچ هفته‌ای نیست؛ همان لحظه فقط‌خواندنی. (هشدار پیش از پایان در نوار است.)
+    /// </summary>
     [Theory]
-    [InlineData(0, 7)]
-    [InlineData(1, 6)]
-    [InlineData(6, 1)]
-    public void Pooli_TamamShod_YekHafteHoshdar_HanuzMinevisad(int daysAgo, int left)
+    [InlineData(1_000)]
+    [InlineData(60_000)]
+    [InlineData(6 * Day)]
+    public void Pooli_TamamShod_HamanLahze_Qofl(long agoMs)
     {
-        var end = Now - daysAgo * Day - 1000;
-        var s = AppLock.Decide(true, false, Signed(end, end), Now);
-        Assert.False(s.ReadOnly);
-        Assert.Equal(LockKind.PaidWarning, s.Kind);
-        Assert.Equal(left, s.DaysLeft);
-        Assert.Equal(end + 7 * Day, s.LockAt);
-        Assert.Contains($"{left} روز دیگر", AppLock.Sentence(s));
-    }
-
-    [Fact]
-    public void Pooli_PasAzHafte_Qofl()
-    {
-        var end = Now - 7 * Day - 1;
+        var end = Now - agoMs;
         var s = AppLock.Decide(true, false, Signed(end, end), Now);
         Assert.True(s.ReadOnly);
         Assert.Equal(LockKind.PaidEnded, s.Kind);
+    }
+
+    [Fact]
+    public void Pooli_YekDaqiqePishAzPayan_HanuzBaz()
+    {
+        var s = AppLock.Decide(true, false, Signed(Now + 60_000, Now - 1), Now);
+        Assert.False(s.ReadOnly);
+    }
+
+    // ══ آزمایشیِ یک‌ماههٔ همین کامپیوتر (۱۴۰۵/۰۸/۱۷) ══════════════════════
+
+    [Fact]
+    public void BiHesab_AzmayesheKampyuter_Baz()
+    {
+        var s = AppLock.Decide(false, false, null, Now, machineTrialEnd: Now + Day);
+        Assert.False(s.ReadOnly);
+    }
+
+    [Fact]
+    public void BiHesab_AzmayesheKampyuter_TamamShod_Qofl()
+    {
+        var s = AppLock.Decide(false, false, null, Now, machineTrialEnd: Now - 1);
+        Assert.True(s.ReadOnly);
+        Assert.Equal(LockKind.TrialEnded, s.Kind);
+    }
+
+    [Fact]
+    public void HesabeTazeRuyeHamanKampyuter_AzmayesheTazeNamigirad()
+    {
+        //  سرور آزمایشیِ تازه‌ای تا ۲۵ روزِ دیگر داد، ولی آزمایشیِ این کامپیوتر دیروز تمام شد
+        var s = AppLock.Decide(true, false, Signed(Now + 25 * Day, Now + 9 * Day, "trial"), Now, machineTrialEnd: Now - Day);
+        Assert.True(s.ReadOnly);
+        Assert.Equal(LockKind.TrialEnded, s.Kind);
+    }
+
+    [Fact]
+    public void Pooli_BeAzmayesheKampyuter_BastePlanNist()
+    {
+        //  پولی هرگز به دورهٔ آزمایشیِ کامپیوتر بسته نیست
+        var s = AppLock.Decide(true, false, Signed(Now + 25 * Day, Now - 1), Now, machineTrialEnd: Now - Day);
+        Assert.False(s.ReadOnly);
     }
 
     [Fact]
     public void Pooli_MojavezeKohneyeAfline_BishAzErfaq_EtebarNadarad()
     {
-        //  sub_ends دورِ آینده است، ولی مجوز ۳۰ روز است تازه نشده (ارفاقِ آفلاین ۱۴ روز)
+        //  ⛔ ۱۴۰۵/۰۸/۱۷: sub_ends دورِ آینده است و مجوز ۳۰ روز است تازه نشده ⇒ هنوز باز.
+        //  اشتراکِ امضاشده هیچ شرطِ «هر هفته آنلاین شو» ندارد.
         var exp = Now - 30 * Day;
         var s = AppLock.Decide(true, false, Signed(Now + 100 * Day, exp), Now);
-        Assert.Equal(LockKind.PaidEnded, s.Kind);
-        Assert.True(s.ReadOnly);
+        Assert.False(s.ReadOnly);
+        Assert.Equal(LockKind.None, s.Kind);
     }
 
     [Fact]

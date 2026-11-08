@@ -210,6 +210,13 @@ public sealed class AppSettings
     /// </summary>
     public long ClockFloorMs { get; set; }
 
+    /// <summary>
+    /// آغازِ دورهٔ آزمایشیِ یک‌ماههٔ <b>همین کامپیوتر</b> (میلی‌ثانیهٔ یونیکس) —
+    /// یک بار، و فقط پایین می‌آید. ⛔ تنها خواننده و نویسنده <see cref="MachineTrial"/>
+    /// است (رونوشتِ رمزشده‌اش در رجیستری هم هست و زودترینِ هر دو پذیرفته است).
+    /// </summary>
+    public long MachineTrialStartMs { get; set; }
+
     /// <summary>توکنی که ابر پس از فعال‌سازی داده. انقضا ندارد؛ مجوز دارد.</summary>
     [JsonIgnore] public string CloudDeviceToken { get; set; } = "";
 

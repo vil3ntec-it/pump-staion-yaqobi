@@ -135,9 +135,11 @@ public static class SoftLock
                           || !string.IsNullOrWhiteSpace(f.CloudDeviceToken);
             if (Entitlements.TestDeny) return new LockStatus(true, hasAccount ? LockKind.NoSubscription : LockKind.NoAccount);
             var now = LicenseClock.Now(f);
-            var state = Entitlements.State(f);
             var check = string.IsNullOrWhiteSpace(f.CloudDeviceToken) ? null : LicenseGuard.CheckStored(f, now);
-            return AppLock.Decide(hasAccount, state.Open, check, now);
+            //  ⛔ دورهٔ آزمایشیِ یک‌ماههٔ همین کامپیوتر — بی حساب از همین حالا، و آزمایشیِ
+            //  هر حسابی روی همین کامپیوتر هم به همان بسته (‎MachineTrial‎).
+            MachineTrial.Observe(f, hasAccount, check, now);
+            return AppLock.Decide(hasAccount, Entitlements.State(f).Open, check, now, MachineTrial.Ends(f));
         }
         catch
         {
@@ -181,7 +183,15 @@ public static class SoftLock
         if (lockState.Kind != LockKind.None) return AppLock.Sentence(lockState);
 
         var state = Entitlements.State();
-        if (state.NotActivated) return "";
+        if (state.NotActivated)
+        {
+            //  دورهٔ آزمایشیِ بی‌اینترنتِ همین کامپیوتر — هفتهٔ آخر گفته می‌شود
+            var f = AppSettings.Load();
+            var end = MachineTrial.Ends(f);
+            var rest = end - LicenseClock.Now(f);
+            if (end <= 0 || rest <= 0 || rest > (long)Warn.TotalMilliseconds) return "";
+            return $"⏳ {Entitlements.DaysLeft(end, LicenseClock.Now(f))} روز تا پایانِ دورهٔ آزمایشیِ این کامپیوتر — پس از آن برنامه فقط‌خواندنی می‌شود. برای ادامه حساب بسازید و اشتراک بگیرید.";
+        }
 
         if (state.InGrace)
             return $"⏳ {state.GraceDaysLeft} روز ارفاق — مجوز تازه نشده؛ یک بار به اینترنت وصل شوید.";
@@ -193,7 +203,7 @@ public static class SoftLock
         var left = state.EntitledUntil - Entitlements.Now();
         if (left <= 0 || left > (long)Warn.TotalMilliseconds) return "";
         var days = (int)Math.Ceiling(left / 86_400_000d);
-        return $"⏳ {days} روز تا پایانِ اشتراک — پس از آن برنامه فقط‌خواندنی می‌شود (اشتراکِ پولی یک هفته فرصت دارد).";
+        return $"⏳ {days} روز تا پایانِ اشتراک — همان روز و همان ساعت برنامه فقط‌خواندنی می‌شود؛ برای ادامه تمدید کنید.";
     }
 
     /// <summary>

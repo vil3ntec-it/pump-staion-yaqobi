@@ -280,27 +280,42 @@ public static class Entitlements
 
         //  ⛔ هم مجوزِ زنده و هم مجوزِ امضاشدهٔ تازه‌منقضی فهرستِ **خودشان** را
         //  می‌دهند — ارفاق هیچ‌وقت پلن را گشادتر نمی‌کند.
+        //  ⛔ یک آزمایشی برای هر کامپیوتر (۱۴۰۵/۰۸/۱۷): آزمایشیِ هر حسابی روی این
+        //  کامپیوتر به پایانِ دورهٔ همین کامپیوتر بسته است (‎MachineTrial‎).
+        var machineEnd = MachineTrial.Ends(f);
+        var trialSpent = machineEnd > 0 && now >= machineEnd;
+
         if (check.SignatureOk)
         {
             feats = check.Features;
             listed = check.HasFeatureList;
             plan = string.IsNullOrWhiteSpace(check.PlanTitle) ? plan : check.PlanTitle;
-            until = Math.Max(check.SubscriptionEndsAt, check.ExpiresAt);
+            //  ⛔ پایانِ اشتراک ‎sub_ends‎ است؛ ‎exp‎ فقط وقتی سرور پایانی نداده.
+            until = check.SubscriptionEndsAt > 0 ? check.SubscriptionEndsAt : check.ExpiresAt;
+            if (check.IsTrial && machineEnd > 0) until = Math.Min(until, machineEnd);
+            //  ⛔ ارفاقِ آفلاین هرگز از پایانِ خودِ اشتراک جلوتر نمی‌رود — «همون روز تموم بشه».
             if (check.Expired && check.ExpiresAt > 0)
-                graceEnds = check.ExpiresAt + (long)Grace.TotalMilliseconds;
+                graceEnds = check.SubscriptionEndsAt > 0
+                    ? Math.Min(check.ExpiresAt + (long)Grace.TotalMilliseconds, check.SubscriptionEndsAt)
+                    : check.ExpiresAt + (long)Grace.TotalMilliseconds;
+            if (check.IsTrial && machineEnd > 0 && graceEnds > machineEnd) graceEnds = machineEnd;
         }
+
+        var checkOpen = check.Valid && !(check.IsTrial && trialSpent);
+        var liveOpen = live is { Active: true }
+                       && !(trialSpent && string.Equals(live.Source, "trial", StringComparison.OrdinalIgnoreCase));
 
         //  ۳) و اگر سرور همین حالا «فعال» گفته باشد، همان حرفِ آخر است —
         //     حتی اگر مجوزِ تازه هنوز نرسیده باشد (باگِ صدورِ مجوز نباید
         //     مشتریِ پول‌داده را ببندد). ⚠️ فقط برای همین نشست، در حافظه.
-        if (live is { Active: true })
+        if (liveOpen)
         {
-            if (live.Features.Count > 0) { feats = live.Features; listed = true; }
-            if (!string.IsNullOrWhiteSpace(live.PlanTitle)) plan = live.PlanTitle;
-            until = Math.Max(until, live.EndsAt > 0 ? live.EndsAt : now);
+            if (live!.Features.Count > 0) { feats = live.Features; listed = true; }
+            if (!string.IsNullOrWhiteSpace(live!.PlanTitle)) plan = live.PlanTitle;
+            until = Math.Max(until, live!.EndsAt > 0 ? live.EndsAt : now);
         }
 
-        var open = check.Valid || live is { Active: true };
+        var open = checkOpen || liveOpen;
 
         //  کدِ آفلاین کنارِ اشتراکِ سرور: هر کدام باز است، باز. هیچ‌کدام چیزی
         //  را از دیگری کم نمی‌کند — فهرستِ قابلیت‌ها اجتماعِ هر دو است.
