@@ -71,10 +71,10 @@ public static class AppLock
 
         if (check is { SignatureOk: true })
         {
-            //  پایانِ واقعیِ دوره: ‎sub_ends‎ — ولی مجوزی که مدتی آفلاین مانده و
-            //  تازه نشده، بیش از ارفاقِ آفلاین (‎Entitlements.Grace‎) اعتبار ندارد.
+            //  پایانِ واقعیِ دوره: ‎sub_ends‎ — ⛔ بی هیچ شرطِ آنلاین شدن (۱۴۰۵/۰۸/۱۷).
+            //  فقط مجوزِ نسلِ اول (بی ‎sub_ends‎) به ‎exp‎ + ارفاقِ آفلاین بسته است.
             var offlineCap = check.ExpiresAt > 0 ? check.ExpiresAt + (long)Entitlements.Grace.TotalMilliseconds : long.MaxValue;
-            var end = check.SubscriptionEndsAt > 0 ? Math.Min(check.SubscriptionEndsAt, offlineCap) : offlineCap;
+            var end = check.SubscriptionEndsAt > 0 ? check.SubscriptionEndsAt : offlineCap;
             if (end == long.MaxValue) end = 0;
 
             if (check.IsTrial)

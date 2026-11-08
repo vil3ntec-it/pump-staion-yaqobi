@@ -120,11 +120,12 @@ public class AppLockTests
     [Fact]
     public void Pooli_MojavezeKohneyeAfline_BishAzErfaq_EtebarNadarad()
     {
-        //  sub_ends دورِ آینده است، ولی مجوز ۳۰ روز است تازه نشده (ارفاقِ آفلاین ۱۴ روز)
+        //  ⛔ ۱۴۰۵/۰۸/۱۷: sub_ends دورِ آینده است و مجوز ۳۰ روز است تازه نشده ⇒ هنوز باز.
+        //  اشتراکِ امضاشده هیچ شرطِ «هر هفته آنلاین شو» ندارد.
         var exp = Now - 30 * Day;
         var s = AppLock.Decide(true, false, Signed(Now + 100 * Day, exp), Now);
-        Assert.Equal(LockKind.PaidEnded, s.Kind);
-        Assert.True(s.ReadOnly);
+        Assert.False(s.ReadOnly);
+        Assert.Equal(LockKind.None, s.Kind);
     }
 
     [Fact]

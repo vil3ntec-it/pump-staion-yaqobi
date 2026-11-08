@@ -170,11 +170,21 @@ public class LicenseGuardTests
         var (key, pub) = NewServer();
         var token = Sign(key, GoodPayload(now));
 
-        //  یازده روز بعد — مجوز ده‌روزه است
+        //  ⛔ ۱۴۰۵/۰۸/۱۷: یازده روز بعد (مجوز ده‌روزه) ولی اشتراک تا روزِ سی‌ام ⇒ هنوز زنده،
+        //  بی آنلاین شدن. روزِ سی‌ام همان لحظه تمام.
         var later = now + 11L * 24 * 3600 * 1000;
-        var r = LicenseGuard.Check(token, pub, Device, Station, later);
+        Assert.True(LicenseGuard.Check(token, pub, Device, Station, later).Valid);
+        Assert.True(LicenseGuard.Check(token, pub, Device, Station, now + 30L * 24 * 3600 * 1000 - 1).Valid);
+        var r = LicenseGuard.Check(token, pub, Device, Station, now + 30L * 24 * 3600 * 1000);
         Assert.False(r.Valid);
-        Assert.Contains("منقضی", r.Reason);
+        Assert.True(r.Expired);
+        Assert.Contains("تمام", r.Reason);
+
+        //  مجوزِ نسلِ اول (بی sub_ends) همچنان به exp بسته است
+        var p = GoodPayload(now); p.Remove("sub_ends");
+        var g1 = LicenseGuard.Check(Sign(key, p), pub, Device, Station, later);
+        Assert.False(g1.Valid);
+        Assert.Contains("منقضی", g1.Reason);
     }
 
     [Fact]
