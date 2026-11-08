@@ -58,7 +58,7 @@ public class EntitlementsTests : IDisposable
 
     /// <summary>یک برنامهٔ فعال‌شده با مجوزی که <paramref name="feat"/> را دارد.</summary>
     private AppSettings Activated(string[]? feat, long expOffsetMs = 10L * 24 * 3600 * 1000,
-                                  long subOffsetMs = 30L * 24 * 3600 * 1000)
+                                  long subOffsetMs = 30L * 24 * 3600 * 1000, string plan = "")
     {
         var (key, pub) = NewServer();
         var payload = new Dictionary<string, object?>
@@ -75,6 +75,7 @@ public class EntitlementsTests : IDisposable
             ["plan_title"] = "آزمون",
         };
         if (feat is not null) payload["feat"] = feat;
+        if (plan.Length > 0) payload["plan"] = plan;
 
         return new AppSettings
         {
@@ -258,7 +259,7 @@ public class EntitlementsTests : IDisposable
     [Fact]
     public void AnExpiredLicenseStillWorksInsideTheGrace()
     {
-        var f = Activated(new[] { Entitlements.Kar }, expOffsetMs: -3600_000, subOffsetMs: -3600_000);
+        var f = Activated(new[] { Entitlements.Kar }, expOffsetMs: -3600_000, subOffsetMs: 20L * 86_400_000);
 
         var st = Entitlements.State(f);
         Assert.False(st.Open);
@@ -369,7 +370,7 @@ public class EntitlementsTests : IDisposable
     [Fact]
     public void AStandardLicenseInGraceDoesNotOpenAVipOnlyFeature()
     {
-        var f = Activated(new[] { Entitlements.CloudBackup }, expOffsetMs: -86_400_000, subOffsetMs: -86_400_000);
+        var f = Activated(new[] { Entitlements.CloudBackup }, expOffsetMs: -86_400_000, subOffsetMs: 20L * 86_400_000);
 
         var st = Entitlements.State(f);
         Assert.True(st.InGrace);
@@ -379,11 +380,59 @@ public class EntitlementsTests : IDisposable
         Assert.False(st.Allows(Entitlements.Dashboard));
     }
 
-    /// <summary>ارفاق دقیقاً در <c>exp + Grace</c> تمام می‌شود — از خودِ مجوز.</summary>
+    /// <summary>
+    /// ⛔ ۱۴۰۵/۰۸/۱۷: «همون روز تموم بشه» — ارفاقِ آفلاین هرگز از پایانِ خودِ اشتراک
+    /// (‎sub_ends‎) جلوتر نمی‌رود، و مجوزی که عمرش از ‎sub_ends‎ درازتر است پس از آن باز نیست.
+    /// </summary>
+    [Fact]
+    public void SubscriptionEndsExactlyAtSubEnds_NoGraceBeyond()
+    {
+        //  مجوز یک ساعت پیش منقضی، اشتراک یک روزِ دیگر ⇒ ارفاق فقط تا همان یک روز
+        var f = Activated(new[] { Entitlements.Kar }, expOffsetMs: -3_600_000, subOffsetMs: 86_400_000);
+        var st = Entitlements.State(f);
+        Assert.True(st.InGrace);
+        Assert.Equal(_now + 86_400_000, st.GraceUntil);
+        Assert.False((st with { NowMs = st.GraceUntil }).Allows(Entitlements.Kar));
+
+        //  هر دو گذشته ⇒ هیچ ارفاقی
+        var gone = Entitlements.State(Activated(new[] { Entitlements.Kar }, expOffsetMs: -3_600_000, subOffsetMs: -3_600_000));
+        Assert.False(gone.Open);
+        Assert.False(gone.InGrace);
+        Assert.False(gone.Allows(Entitlements.Kar));
+
+        //  مجوزِ دراز (exp ده روزِ دیگر) ولی اشتراک یک دقیقه پیش تمام ⇒ بسته، همان لحظه
+        var longLic = Entitlements.State(Activated(new[] { Entitlements.Kar }, expOffsetMs: 10L * 86_400_000, subOffsetMs: -60_000));
+        Assert.False(longLic.Open);
+        Assert.False(longLic.Allows(Entitlements.Kar));
+    }
+
+    /// <summary>
+    /// ⛔ ۱۴۰۵/۰۸/۱۷: یک آزمایشی برای هر کامپیوتر — آزمایشیِ تازهٔ سرور (حسابِ دوم روی
+    /// همان کامپیوتر) پس از پایانِ دورهٔ همین کامپیوتر چیزی را باز نمی‌کند؛ پولی دست نمی‌خورد.
+    /// </summary>
+    [Fact]
+    public void ServerTrialIsCappedByThisComputersTrial()
+    {
+        var day = 86_400_000L;
+        var trial = Activated(new[] { Entitlements.Kar }, 9 * day, 25 * day, plan: "trial");
+        Assert.True(Entitlements.State(trial).Open);
+
+        trial.MachineTrialStartMs = _now - 40 * day;   // آزمایشیِ این کامپیوتر ده روز پیش تمام شد
+        var st = Entitlements.State(trial);
+        Assert.False(st.Open);
+        Assert.False(st.InGrace);
+        Assert.False(st.Allows(Entitlements.Kar));
+
+        var paid = Activated(new[] { Entitlements.Kar }, 9 * day, 25 * day, plan: "vip");
+        paid.MachineTrialStartMs = _now - 40 * day;
+        Assert.True(Entitlements.State(paid).Open);
+    }
+
+    /// <summary>ارفاق دقیقاً در <c>exp + Grace</c> تمام می‌شود — از خودِ مجوز (وقتی اشتراک هنوز ادامه دارد).</summary>
     [Fact]
     public void GraceEndsExactlyAtExpPlusGrace()
     {
-        var f = Activated(new[] { Entitlements.Kar }, expOffsetMs: -3_600_000, subOffsetMs: -3_600_000);
+        var f = Activated(new[] { Entitlements.Kar }, expOffsetMs: -3_600_000, subOffsetMs: 20L * 86_400_000);
 
         var st = Entitlements.State(f);
         var exp = _now - 3_600_000;

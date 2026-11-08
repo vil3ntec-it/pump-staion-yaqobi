@@ -20,8 +20,8 @@ namespace PumpYaqobi.UiTests;
 ///
 ///     dotnet run --project PumpYaqobi.UiTests -c Release -- readonly
 ///
-/// چهار حال: بی‌حساب · آزمایشیِ تمام‌شده · پولیِ تمام‌شده در هفتهٔ هشدار ·
-/// پولیِ تمام‌شده پس از هفته — و برگشت به «باز» با مجوزِ زنده.
+/// حال‌ها: آزمایشیِ کامپیوتر · آزمایشیِ تمام‌شده · پولیِ نزدیکِ پایان ·
+/// پولیِ تمام‌شده (همان لحظه) — و برگشت به «باز» با مجوزِ زنده.
 /// </summary>
 internal static class ReadOnlyProbe
 {
@@ -58,10 +58,20 @@ internal static class ReadOnlyProbe
         SoftLock.Invalidate();
         Settle(win);
 
-        Console.WriteLine("── ۱) نصبِ بی‌حساب ⇒ فقط‌خواندنی ──");
+        Console.WriteLine("── ۰) نصبِ تازهٔ بی‌حساب ⇒ یک ماه آزمایشیِ همین کامپیوتر، بی اینترنت ──");
         var st = SoftLock.Status();
-        Check("حال: بی‌حساب و فقط‌خواندنی", st.ReadOnly && st.Kind == LockKind.NoAccount, st.Kind.ToString());
-        Check("نوارِ بالا می‌گوید چرا و چه باز است", SoftLock.Banner().Contains("حساب بسازید") && SoftLock.Banner().Contains("PDF"),
+        var f0 = AppSettings.Load();
+        Check("نصبِ تازه می‌نویسد (آزمایشیِ کامپیوتر)", !st.ReadOnly, st.Kind.ToString());
+        Check("پایانِ دوره همان روز و ساعتِ ماهِ بعد است", MachineTrial.Ends(f0) == MachineTrial.EndOf(MachineTrial.Start(f0))
+              && MachineTrial.Start(f0) > 0);
+
+        Console.WriteLine("── ۱) آزمایشیِ کامپیوتر تمام شد، بی‌حساب ⇒ فقط‌خواندنی ──");
+        f0.MachineTrialStartMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - 40 * Day;
+        f0.Save();
+        SoftLock.Invalidate();
+        st = SoftLock.Status();
+        Check("حال: آزمایشی تمام و فقط‌خواندنی", st.ReadOnly && st.Kind == LockKind.TrialEnded, st.Kind.ToString());
+        Check("نوارِ بالا می‌گوید چرا و چه باز است", SoftLock.Banner().Contains("آزمایشی") && SoftLock.Banner().Contains("PDF"),
               SoftLock.Banner());
 
         var exp = vm.Sections.OfType<ExpenseSectionViewModel>().First();
@@ -125,23 +135,23 @@ internal static class ReadOnlyProbe
         st = SoftLock.Status();
         Check("آزمایشیِ تمام‌شده قفل است", st.ReadOnly && st.Kind == LockKind.TrialEnded, st.Kind.ToString());
 
-        Console.WriteLine("── ۳) پولیِ تمام‌شده ⇒ یک هفته هشدار و هنوز می‌نویسد ──");
-        FakeLicense.Grant(subEnds: now - 2 * Day, exp: now - 2 * Day);
+        Console.WriteLine("── ۳) پولی، دو روز مانده ⇒ می‌نویسد و نوار هشدار می‌دهد ──");
+        FakeLicense.Grant(subEnds: now + 2 * Day - 60_000, exp: now + 2 * Day - 60_000);
         SoftLock.Invalidate();
         st = SoftLock.Status();
-        Check("در هفتهٔ هشدار می‌نویسد", !st.ReadOnly && st.Kind == LockKind.PaidWarning, $"{st.Kind} · {st.DaysLeft} روز");
-        Check("و نوار روزهای مانده را می‌گوید", SoftLock.Banner().Contains("5 روز دیگر"), SoftLock.Banner());
+        Check("پیش از پایان می‌نویسد", !st.ReadOnly && st.Kind == LockKind.None, st.Kind.ToString());
+        Check("و نوار روزهای مانده را می‌گوید", SoftLock.Banner().Contains("2 روز تا پایان"), SoftLock.Banner());
         Wait(win, vm.GoAsync(exp));
         var before = exp.Rows.Count;
         exp.AddRowCommand.Execute(null);
         Settle(win);
         Check($"ردیف ساخته شد ({before}⇐{exp.Rows.Count})", exp.Rows.Count == before + 1);
 
-        Console.WriteLine("── ۴) پولی، هفته هم گذشت ⇒ فقط‌خواندنی ──");
-        FakeLicense.Grant(subEnds: now - 8 * Day, exp: now - 8 * Day);
+        Console.WriteLine("── ۴) پولی، یک دقیقه از پایان گذشت ⇒ همان لحظه فقط‌خواندنی ──");
+        FakeLicense.Grant(subEnds: now - 60_000, exp: now - 60_000);
         SoftLock.Invalidate();
         st = SoftLock.Status();
-        Check("پس از هفته قفل است", st.ReadOnly && st.Kind == LockKind.PaidEnded, st.Kind.ToString());
+        Check("پس از پایان قفل است", st.ReadOnly && st.Kind == LockKind.PaidEnded, st.Kind.ToString());
 
         Console.WriteLine("── ۵) تمدید ⇒ همان لحظه باز ──");
         FakeLicense.Grant();

@@ -46,14 +46,26 @@ public sealed record LockStatus(bool ReadOnly, LockKind Kind, long LockAt = 0, i
 /// </summary>
 public static class AppLock
 {
-    /// <summary>هفتهٔ هشدار پس از پایانِ اشتراکِ <b>پولی</b>. آزمایشی ندارد.</summary>
+    /// <summary>
+    /// هفتهٔ هشدار — ⛔ از ۱۴۰۵/۰۸/۱۷ <b>پیش از</b> پایانِ اشتراک (نوارِ ‎SoftLock.Banner‎)، نه پس از آن.
+    /// <see cref="Decide"/> دیگر <see cref="LockKind.PaidWarning"/> نمی‌سازد.
+    /// </summary>
     public static readonly TimeSpan PaidWarning = TimeSpan.FromDays(7);
 
     /// <param name="hasAccount">حسابی روی این کامپیوتر ساخته یا واردش شده.</param>
     /// <param name="open">اشتراک همین حالا باز است (مجوزِ زنده، پاسخِ سرور یا کلیدِ بی‌اینترنت).</param>
     /// <param name="check">مجوزِ امضاشدهٔ روی دیسک (ممکن است منقضی باشد)، یا <c>null</c>.</param>
     /// <param name="nowMs">حالا — از کفِ ساعت، نه ساعتِ خامِ ویندوز.</param>
-    public static LockStatus Decide(bool hasAccount, bool open, LicenseCheck? check, long nowMs)
+    /// <param name="machineTrialEnd">
+    /// پایانِ دورهٔ آزمایشیِ همین کامپیوتر (<see cref="MachineTrial"/>)؛ صفر یعنی هنوز آغاز نشده.
+    /// ⛔ هر آزمایشی روی این کامپیوتر (بی حساب، یا آزمایشیِ حسابِ سرور) به همین بسته است.
+    /// </param>
+    /// <remarks>
+    /// ⛔ <b>پایانِ اشتراکِ پولی دقیق است</b> (۱۴۰۵/۰۸/۱۷): «همون روز که فعال کردم، ماهِ
+    /// بعد همون روز و ساعت تموم بشه». هفتهٔ هشدار حالا <b>پیش از</b> پایان است (نوارِ
+    /// <c>SoftLock.Banner</c>)، نه پس از آن — پس از پایان همان لحظه فقط‌خواندنی.
+    /// </remarks>
+    public static LockStatus Decide(bool hasAccount, bool open, LicenseCheck? check, long nowMs, long machineTrialEnd = 0)
     {
         if (open) return LockStatus.Open;
 
@@ -66,14 +78,17 @@ public static class AppLock
             if (end == long.MaxValue) end = 0;
 
             if (check.IsTrial)
+            {
+                if (machineTrialEnd > 0) end = Math.Min(end, machineTrialEnd);
                 return end > nowMs ? LockStatus.Open : new LockStatus(true, LockKind.TrialEnded);
+            }
 
-            if (end > nowMs) return LockStatus.Open;
-            var lockAt = end + (long)PaidWarning.TotalMilliseconds;
-            return lockAt > nowMs
-                ? new LockStatus(false, LockKind.PaidWarning, lockAt, Entitlements.DaysLeft(lockAt, nowMs))
-                : new LockStatus(true, LockKind.PaidEnded);
+            return end > nowMs ? LockStatus.Open : new LockStatus(true, LockKind.PaidEnded);
         }
+
+        //  دورهٔ آزمایشیِ بی‌اینترنتِ همین کامپیوتر — حساب داشته باشد یا نه.
+        if (machineTrialEnd > 0)
+            return machineTrialEnd > nowMs ? LockStatus.Open : new LockStatus(true, LockKind.TrialEnded);
 
         return new LockStatus(true, hasAccount ? LockKind.NoSubscription : LockKind.NoAccount);
     }

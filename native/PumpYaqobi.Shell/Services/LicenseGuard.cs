@@ -225,6 +225,11 @@ public static class LicenseGuard
 
         if (nbf > 0 && nowMs + SkewMs < nbf) return Signed(false, "زمانِ مجوز هنوز نرسیده است", false);
         if (exp > 0 && nowMs - SkewMs > exp) return Signed(false, "مجوز منقضی شده — یک بار آنلاین شوید", true);
+        //  ⛔ پایانِ اشتراک دقیق است (۱۴۰۵/۰۸/۱۷): «همون روز و ساعت تموم بشه».
+        //  مجوزی که عمرش (‎exp‎) از ‎sub_ends‎ درازتر است، اشتراک را با خودش دراز
+        //  نمی‌کند — بی ارفاقِ ساعت، همان لحظه.
+        var subEnds = Num(payload, "sub_ends");
+        if (subEnds > 0 && nowMs >= subEnds) return Signed(false, "اشتراکِ این پمپ تمام شده است", true);
 
         return Signed(true, "", false);
     }
