@@ -19,6 +19,15 @@ OUT=${LIVE_OUT:-/tmp/live-stack}; mkdir -p "$OUT"
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 port=5200; failed=(); summary=()
 
+# ⛔ سرورِ حساب (shop ‎#941‎ به بعد) در ‎NODE_ENV=production‎ دیگر خودش کلیدِ امضای مجوز
+#  نمی‌سازد و بی کلید ‎/device/license‎ را ‎503 license_key_missing‎ می‌دهد. پشتهٔ آزمون
+#  پایگاه‌دادهٔ تازه دارد، پس یک کلیدِ ES256ِ یک‌بارمصرف برای همین اجرا — از راهِ محیطِ
+#  پنل به سرورِ حساب می‌رسد (‎accountChildEnv‎ محیط را رد می‌کند). برنامه همان TOFU را دارد.
+if [ -z "${LICENSE_PRIVATE_KEY:-}" ]; then
+  LICENSE_PRIVATE_KEY=$(node -e "process.stdout.write(require('crypto').generateKeyPairSync('ec',{namedCurve:'prime256v1',privateKeyEncoding:{type:'pkcs8',format:'pem'},publicKeyEncoding:{type:'spki',format:'pem'}}).privateKey)")
+  export LICENSE_PRIVATE_KEY
+fi
+
 for p in "${PROBES[@]}"; do
   port=$((port + 20)); live="$OUT/$p.json"; rm -f "$live"
   echo "══ $p (پورتِ $port)"
